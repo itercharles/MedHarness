@@ -1,0 +1,5 @@
+id: EXT-RISK-001
+title: Risk Management Plan
+location: "https://sharepoint.company.com/quality/risk_plan_v1.pdf"
+format: pdf
+compliance_tags: ["ISO 14971", "NMPA"]

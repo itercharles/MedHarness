@@ -1,0 +1,5 @@
+id: SDS-001
+title: DICOM Parser Module
+content: The parsing logic shall be encapsulated in the `DicomReader` class, using `pydicom` library.
+links: ["SSR-001"]
+verification_status: PENDING

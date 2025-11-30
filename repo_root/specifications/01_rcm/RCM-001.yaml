@@ -1,0 +1,5 @@
+id: RCM-001
+title: Volume Size Warning
+content: Display a warning to the user when the drawn volume is below a clinical threshold to prevent under-dosing.
+links: ["RISK-001"]
+verification_status: PENDING

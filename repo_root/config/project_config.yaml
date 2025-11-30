@@ -1,0 +1,37 @@
+doc_types:
+  - code: USN
+    name: "User Need"
+    prefix: "USN-"
+    level: 1
+    properties: ["id", "title", "content", "user_group", "source", "reviewer", "review_date"]
+  - code: RISK
+    name: "Risk Analysis"
+    prefix: "RISK-"
+    level: 1
+    properties: ["id", "title", "hazard", "cause", "effect", "severity_pre", "probability_pre", "links", "reviewer", "review_date"]
+  - code: RCM
+    name: "Risk Control Measure"
+    prefix: "RCM-"
+    level: 2
+    allowed_parents: ["RISK"]
+    properties: ["id", "title", "content", "type", "links", "reviewer", "review_date"]
+  - code: SYS
+    name: "System Requirement"
+    prefix: "SYS-"
+    level: 2
+    allowed_parents: ["USN", "RCM"]
+    properties: ["id", "title", "content", "category", "verification_method", "critical_safety", "links", "reviewer", "review_date"]
+  - code: VER
+    name: "Verification Test"
+    prefix: "TC-VER-"
+    type: "test"
+    verifies: ["SYS"]
+    properties: ["id", "title", "prerequisites", "steps", "expected_result", "links", "verification_status", "reviewer", "review_date"]
+  - code: VAL
+    name: "Validation Test"
+    prefix: "TC-VAL-"
+    type: "test"
+    verifies: ["USN"]
+    properties: ["id", "title", "prerequisites", "steps", "expected_result", "links", "verification_status", "reviewer", "review_date"]
+policies:
+  require_test_coverage: ["SYS", "USN"]

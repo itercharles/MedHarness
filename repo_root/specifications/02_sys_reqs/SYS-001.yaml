@@ -1,0 +1,5 @@
+id: SYS-001
+title: DICOM Import
+content: The system shall import CT image series compliant with DICOM 3.0 standard.
+links: ["USN-001"]
+verification_status: PENDING

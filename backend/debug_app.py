@@ -1,0 +1,195 @@
+import streamlit as st
+import pandas as pd
+from pathlib import Path
+from traceability.compliant_flow_core import CompliantFlowCore
+from streamlit_agraph import agraph, Node, Edge, Config
+import networkx as nx
+
+st.set_page_config(layout="wide", page_title="CompliantFlow Debugger")
+
+# Initialize Core
+@st.cache_resource
+def get_core():
+    # Assuming this file is in backend/
+    # Data is in ../repo_root
+    repo_root = Path(__file__).resolve().parent.parent / "repo_root"
+    return CompliantFlowCore(repo_root)
+
+try:
+    core = get_core()
+except Exception as e:
+    st.error(f"Failed to initialize CompliantFlow Core: {e}")
+    st.stop()
+
+# Sidebar
+st.sidebar.title("CompliantFlow")
+st.sidebar.header("Filters")
+
+# Get all items
+items = core.get_all_items()
+st.sidebar.info(f"Loaded {len(items)} items from {core.repo_root}")
+
+if not items:
+    st.warning("No items found! Check your repository path and specifications folder.")
+    df = pd.DataFrame(columns=["id", "title", "content", "verification_status", "links"])
+else:
+    df = pd.DataFrame(items)
+    # Ensure columns exist even if data is partial
+    expected_cols = ["id", "title", "content", "verification_status", "links"]
+    for col in expected_cols:
+        if col not in df.columns:
+            df[col] = None
+
+# Filter by Type
+if core.config:
+    doc_types = [dt.code for dt in core.config.doc_types]
+    selected_types = st.sidebar.multiselect("Document Types", doc_types, default=doc_types)
+else:
+    selected_types = []
+    st.sidebar.warning("No config loaded")
+
+# Filter by Status
+statuses = ["PASS", "FAIL", "PENDING"] # Add more if needed
+selected_statuses = st.sidebar.multiselect("Verification Status", statuses, default=statuses)
+
+# Apply Filters
+if not df.empty:
+    # Filter by Type (prefix)
+    if selected_types:
+        # Create a regex pattern to match any of the selected prefixes
+        # Assuming ID starts with prefix
+        # Actually, let's just check if ID starts with any of the selected type prefixes
+        # We need to map code to prefix first
+        type_prefixes = [core.config.get_doc_type(t).prefix for t in selected_types if core.config.get_doc_type(t)]
+    # Filter by Type (prefix)
+    if selected_types:
+        # Create a regex pattern to match any of the selected prefixes
+        # Assuming ID starts with prefix
+        # Actually, let's just check if ID starts with any of the selected type prefixes
+        # We need to map code to prefix first
+        type_prefixes = [core.config.get_doc_type(t).prefix for t in selected_types if core.config.get_doc_type(t)]
+        mask_type = df['id'].apply(lambda x: any(x.startswith(p) for p in type_prefixes))
+        df = df[mask_type]
+
+    # Filter by Status
+    if selected_statuses:
+        # Handle None/NaN statuses
+        df['verification_status'] = df['verification_status'].fillna('PENDING')
+        df = df[df['verification_status'].isin(selected_statuses)]
+
+# Main Content
+st.title("Traceability Debugger")
+
+tab1, tab2, tab3 = st.tabs(["Data View", "Orphan Analysis", "Graph Visualization"])
+
+with tab1:
+    st.subheader(f"Items ({len(df)})")
+    st.dataframe(
+        df, 
+        use_container_width=True,
+        column_config={
+            "id": "ID",
+            "title": "Title",
+            "verification_status": st.column_config.TextColumn(
+                "Status",
+                help="Verification Status",
+                validate="^(PASS|FAIL|PENDING)$"
+            ),
+            "links": "Links"
+        }
+    )
+
+with tab2:
+    st.subheader("Orphan Analysis")
+    
+    # Find orphans using core graph engine
+    orphans = core.graph.find_orphans()
+    
+    if orphans:
+        st.warning(f"Found {len(orphans)} orphan items.")
+        orphan_df = pd.DataFrame(orphans)
+        st.dataframe(orphan_df, use_container_width=True)
+    else:
+        st.success("No orphan items found! All items are connected.")
+
+    # Stub Existence Check (Manual implementation for now as rule was removed)
+    st.subheader("Stub Existence Check")
+    # Simple check: items with 'TBD' in content
+    if not df.empty and 'content' in df.columns:
+        stubs = df[df['content'].str.contains('TBD', case=False, na=False)]
+        if not stubs.empty:
+            st.warning(f"Found {len(stubs)} potential stubs (containing 'TBD').")
+            st.dataframe(stubs[['id', 'title', 'content']], use_container_width=True)
+        else:
+            st.success("No 'TBD' stubs found.")
+
+with tab3:
+    st.subheader("Traceability Graph")
+    
+    # Graph Settings
+    st.sidebar.header("Graph Settings")
+    show_physics = st.sidebar.checkbox("Enable Physics", value=True)
+    directed = st.sidebar.checkbox("Directed", value=True)
+    
+    # Build Graph for Visualization
+    # We use the filtered dataframe to limit nodes, but we need to include their connections
+    
+    if len(df) > 100:
+        st.warning("Too many items to visualize efficiently. Showing top 100.")
+        viz_ids = set(df.head(100)['id'])
+    else:
+        viz_ids = set(df['id'])
+        
+    nodes = []
+    edges = []
+    
+    # Add Nodes from Graph (ensures we see exactly what's in the engine)
+    # We only show nodes that are in our filtered list
+    for node_id, data in core.graph.graph.nodes(data=True):
+        if node_id not in viz_ids:
+            continue
+            
+        item = data.get('item')
+        if not item:
+            continue
+            
+        # Color based on status
+        color = "#90EE90" # Light Green
+        status = getattr(item, 'verification_status', None)
+        if status == 'FAIL':
+            color = "#FFB6C1" # Light Pink
+        elif status == 'PENDING' or status is None:
+            color = "#D3D3D3" # Light Grey
+            
+        # Shape based on type (heuristic)
+        shape = "box"
+        if node_id.startswith('USN'): shape = "ellipse"
+        elif node_id.startswith('TC'): shape = "diamond"
+            
+        nodes.append(Node(
+            id=node_id,
+            label=node_id,
+            title=item.title or "",
+            color=color,
+            shape=shape
+        ))
+        
+    # Add Edges from Graph
+    for u, v in core.graph.graph.edges():
+        if u in viz_ids and v in viz_ids:
+            edges.append(Edge(
+                source=u,
+                target=v,
+                label="traces",
+                color="#888888"
+            ))
+            
+    config = Config(
+        width=1000,
+        height=600,
+        directed=directed, 
+        physics=show_physics, 
+        hierarchical=False,
+    )
+
+    return_value = agraph(nodes=nodes, edges=edges, config=config)

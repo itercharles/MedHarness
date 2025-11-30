@@ -1,0 +1,5 @@
+id: TC-VER-002
+title: Verify Brush Tool
+content: Select Brush Tool. Drag on canvas. Verify pixels are colored.
+links: ["SYS-002"]
+verification_status: PASS

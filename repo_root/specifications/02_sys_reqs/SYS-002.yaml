@@ -1,0 +1,5 @@
+id: SYS-002
+title: ROI Drawing Tools
+content: The system shall provide a brush tool for defining Regions of Interest (ROI).
+links: ["USN-001", "RCM-001"]
+verification_status: PENDING

@@ -1,0 +1,5 @@
+id: USN-001
+title: Manual Contouring
+content: The radiologist shall be able to manually delineate tumor volumes on CT images.
+links: []
+verification_status: PENDING

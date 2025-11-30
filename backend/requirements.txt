@@ -1,0 +1,12 @@
+fastapi
+uvicorn
+pydantic>=2.0
+networkx
+pyyaml
+python-frontmatter
+jinja2
+python-docx
+gitpython
+python-dateutil
+streamlit
+streamlit-agraph

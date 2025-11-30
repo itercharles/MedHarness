@@ -1,0 +1,5 @@
+id: TC-VER-001
+title: Verify DICOM Parsing
+content: Load test dataset A. Verify Patient Name is 'Doe^John'.
+links: ["SYS-001"]
+verification_status: PASS
