@@ -3,7 +3,7 @@
 import yaml
 from pathlib import Path
 from typing import Dict, Any, Callable, Tuple, Optional
-from ..models.compliance import Regulation, ComplianceReport, PolicyResult, Policy
+from ..models.compliance import PolicyGroup, ComplianceReport, PolicyResult, Policy
 
 class PolicyEngine:
     """Executes compliance policies against the project graph."""
@@ -17,24 +17,24 @@ class PolicyEngine:
             'attribute_presence': self._check_attribute_presence,
         }
 
-    def load_regulation(self, path: Path) -> Optional[Regulation]:
-        """Load a regulation from a YAML file."""
+    def load_policy_group(self, path: Path) -> Optional[PolicyGroup]:
+        """Load a policy group from a YAML file."""
         if not path.exists():
             return None
         try:
             with open(path, 'r') as f:
                 data = yaml.safe_load(f)
-            return Regulation.model_validate(data)
+            return PolicyGroup.model_validate(data)
         except Exception as e:
-            print(f"Error loading regulation {path}: {e}")
+            print(f"Error loading policy group {path}: {e}")
             return None
 
-    def check_compliance(self, regulation: Regulation) -> ComplianceReport:
-        """Run all automated checks for a regulation."""
+    def check_compliance(self, group: PolicyGroup) -> ComplianceReport:
+        """Run all automated checks for a policy group."""
         results = []
         passed_count = 0
         
-        for policy in regulation.policies:
+        for policy in group.policies:
             if not policy.automation:
                 # Manual policies pass if approved, fail otherwise?
                 # For now, we report "Information" or pass if strictly manual.
@@ -83,11 +83,11 @@ class PolicyEngine:
                 passed_count += 1
             results.append(result)
 
-        score = (passed_count / len(regulation.policies) * 100) if regulation.policies else 0.0
+        score = (passed_count / len(group.policies) * 100) if group.policies else 0.0
         
         return ComplianceReport(
-            regulation_id=regulation.id,
-            total_policies=len(regulation.policies),
+            source_id=group.id,
+            total_policies=len(group.policies),
             passed_policies=passed_count,
             results=results,
             score=round(score, 2)

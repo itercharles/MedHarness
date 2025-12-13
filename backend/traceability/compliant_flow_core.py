@@ -236,33 +236,34 @@ class CompliantFlowCore:
             target_doc.prefix
         )
 
-    def get_regulation(self, regulation_id: str) -> Optional[Dict[str, Any]]:
+    def get_policy_group(self, group_id: str) -> Optional[Dict[str, Any]]:
         """
-        Load a regulation without running checks.
+        Load a policy group without running checks.
         
         Args:
-            regulation_id: ID of the regulation
+            group_id: ID of the policy group
             
         Returns:
-            Regulation dictionary or None
+            PolicyGroup dictionary or None
         """
         from .compliance.engine import PolicyEngine
         
         engine = PolicyEngine(self)
-        reg_path = self.repo_root / "governance" / f"{regulation_id}.yaml"
+        # Still using governance directory, but method reflects generic nature
+        path = self.repo_root / "governance" / f"{group_id}.yaml"
         
-        regulation = engine.load_regulation(reg_path)
-        if not regulation:
+        group = engine.load_policy_group(path)
+        if not group:
             return None
             
-        return regulation.model_dump()
+        return group.model_dump()
 
-    def check_compliance(self, regulation_id: str) -> Optional[Dict[str, Any]]:
+    def check_compliance(self, group_id: str) -> Optional[Dict[str, Any]]:
         """
-        Check compliance against a specific regulation.
+        Check compliance against a specific policy group.
         
         Args:
-            regulation_id: ID of the regulation (filename without extension, e.g., 'IEC_62304')
+            group_id: ID of the policy group
             
         Returns:
             Compliance report dictionary or None
@@ -270,12 +271,12 @@ class CompliantFlowCore:
         from .compliance.engine import PolicyEngine
         
         engine = PolicyEngine(self)
-        reg_path = self.repo_root / "governance" / f"{regulation_id}.yaml"
+        path = self.repo_root / "governance" / f"{group_id}.yaml"
         
-        regulation = engine.load_regulation(reg_path)
-        if not regulation:
+        group = engine.load_policy_group(path)
+        if not group:
             return None
             
-        report = engine.check_compliance(regulation)
+        report = engine.check_compliance(group)
         return report.model_dump()
 

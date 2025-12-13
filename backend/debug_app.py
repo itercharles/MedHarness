@@ -235,25 +235,25 @@ with tab3:
 with tab4:
     st.subheader("Compliance Report")
     
-    # Load available regulations (mocked or scanned)
+    # Load available policy groups (mocked or scanned)
     # For now, hardcode IEC_62304 or scan directory
-    regulations_dir = core.repo_root / "governance"
-    if regulations_dir.exists():
-        regulations = [f.stem for f in regulations_dir.glob("*.yaml")]
+    governance_dir = core.repo_root / "governance"
+    if governance_dir.exists():
+        groups = [f.stem for f in governance_dir.glob("*.yaml")]
     else:
-        regulations = []
+        groups = []
         
-    if not regulations:
-        st.info("No governance documents found in repo_root/governance")
+    if not groups:
+        st.info("No policy groups found in repo_root/governance")
     else:
-        selected_reg = st.selectbox("Select Governance Document", regulations)
+        selected_group = st.selectbox("Select Policy Group", groups)
         
-        # Display Regulation Details
-        reg_data = core.get_regulation(selected_reg)
-        if reg_data:
-            st.write(f"**{reg_data.get('title', selected_reg)}** (Version: {reg_data.get('version', 'N/A')})")
+        # Display Group Details
+        group_data = core.get_policy_group(selected_group)
+        if group_data:
+            st.write(f"**{group_data.get('title', selected_group)}** (Version: {group_data.get('version', 'N/A')})")
             
-            policies = reg_data.get('policies', [])
+            policies = group_data.get('policies', [])
             if policies:
                 st.subheader("Defined Policies")
                 p_df = pd.DataFrame(policies)
@@ -277,8 +277,8 @@ with tab4:
                 st.info("No policies defined in this document.")
         
         if st.button("Check Compliance"):
-            with st.spinner(f"Checking {selected_reg}..."):
-                report = core.check_compliance(selected_reg)
+            with st.spinner(f"Checking {selected_group}..."):
+                report = core.check_compliance(selected_group)
                 
             if report:
                 score = report['score']

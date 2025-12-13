@@ -16,11 +16,11 @@ class Policy(BaseModel):
     status: Literal['approved', 'draft', 'rejected'] = Field(default='draft', description="Approval status")
     automation: Optional[PolicyAutomation] = Field(None, description="Automation configuration")
 
-class Regulation(BaseModel):
-    """A collection of policies defining a regulation or procedure."""
-    id: str = Field(..., description="ID of the regulation (e.g. IEC_62304)")
-    title: str = Field(..., description="Title of the regulation")
-    type: Literal['regulation', 'procedure'] = Field(default='regulation', description="Type of governance document")
+class PolicyGroup(BaseModel):
+    """A collection of policies defining a standard, procedure, or guideline."""
+    id: str = Field(..., description="ID of the policy group (e.g. IEC_62304)")
+    title: str = Field(..., description="Title of the document")
+    type: Literal['regulation', 'procedure', 'standard'] = Field(default='regulation', description="Type of governance document")
     version: Optional[str] = Field(None, description="Version string")
     policies: List[Policy] = Field(..., description="List of policies")
 
@@ -32,8 +32,8 @@ class PolicyResult(BaseModel):
     evidence: Optional[Dict[str, Any]] = None
 
 class ComplianceReport(BaseModel):
-    """Full compliance report for a regulation."""
-    regulation_id: str
+    """Full compliance report for a policy group."""
+    source_id: str
     total_policies: int
     passed_policies: int
     results: List[PolicyResult]

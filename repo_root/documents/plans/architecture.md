@@ -7,9 +7,11 @@ CompliantFlow is a lightweight, Docs-as-Code Application Lifecycle Management (A
 
 ### 2.1 Data Layer
 - **Storage**: Structured data (Requirements, Tests, Risks) is stored as YAML files. Unstructured data (Plans, Manuals) is stored as Markdown.
+- **Governance**: Regulations and Procedures are stored as structured YAML policies in `repo_root/governance`.
 - **Version Control**: Git is used as the single source of truth for all data, providing history, branching, and audit trails.
 - **Models**:
     - `Item`: A Pydantic v2 model representing any traceable artifact. Supports dynamic fields via configuration.
+    - `Regulation`/`Policy`: Models for compliance data.
     - `ProjectConfig`: A Pydantic model for validating `project_config.yaml`.
 
 ### 2.2 Logic Layer
@@ -19,13 +21,15 @@ CompliantFlow is a lightweight, Docs-as-Code Application Lifecycle Management (A
     - Resolving internal links.
     - Calculating metrics (coverage, orphan counts).
     - Traversing upstream/downstream dependencies.
+- **Policy Engine**: `PolicyEngine` executes automated checks (e.g., `trace_coverage`, `item_existence`) against the graph.
 - **Persistence**: `ItemLoader` and `ItemSaver` abstract filesystem operations.
 
 ### 2.3 Presentation Layer
 - **Streamlit App**: The primary user interface for debugging and visualization.
     - **Sidebar**: Provides filtering and configuration view.
-    - **Data View**: Uses `st.dataframe` to display tabular data.
+    - **Data View**: dynamically renders tables based on item types and configured properties.
     - **Graph Visualization**: Uses `streamlit-agraph` to render interactive force-directed graphs.
+    - **Compliance Tab**: Allows executing regulatory checks and viewing detailed pass/fail reports.
 
 ## 3. Data Flow
 1.  **Load**: `ItemLoader` scans the repository, parsing YAML files into Pydantic `Item` objects.
