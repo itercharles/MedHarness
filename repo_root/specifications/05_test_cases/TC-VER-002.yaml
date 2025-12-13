@@ -1,5 +1,5 @@
 id: TC-VER-002
-title: Verify Brush Tool
-content: Select Brush Tool. Drag on canvas. Verify pixels are colored.
+title: Verify Graph Integrity
+content: Run graph engine tests. Ensure nodes and edges are correctly created from items and links.
 links: ["SYS-002"]
 verification_status: PASS

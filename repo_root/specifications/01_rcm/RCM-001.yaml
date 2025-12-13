@@ -1,5 +1,5 @@
 id: RCM-001
-title: Volume Size Warning
-content: Display a warning to the user when the drawn volume is below a clinical threshold to prevent under-dosing.
+title: Orphan Detection
+type: software
+content: The system shall automatically detect and report items with missing or invalid links.
 links: ["RISK-001"]
-verification_status: PENDING

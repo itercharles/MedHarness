@@ -1,0 +1,5 @@
+id: SDS-002
+title: Streamlit Visualization
+content: Use streamlit-agraph to render the interactive traceability graph.
+component: Backend.UI
+links: ["SYS-003"]

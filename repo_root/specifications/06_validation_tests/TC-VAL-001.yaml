@@ -1,5 +1,5 @@
 id: TC-VAL-001
-title: Validate Manual Contouring
-content: Radiologist performs a full workflow on a phantom dataset. Confirm that the tumor volume matches the ground truth within 5%.
+title: Validate Traceability Workflow
+content: Perform a user walk-through of defining requirements and viewing the traceability matrix.
 links: ["USN-001"]
 verification_status: PASS

@@ -18,6 +18,15 @@ doc_types:
     relations:
       - target: RISK
         label: mitigates
+  - code: SDS
+    name: "Software Design Specification"
+    prefix: "SDS-"
+    level: 3
+    allowed_parents: ["SYS"]
+    properties: ["id", "title", "content", "component", "links", "reviewer", "review_date"]
+    relations:
+      - target: SYS
+        label: implements
   - code: SYS
     name: "System Requirement"
     prefix: "SYS-"

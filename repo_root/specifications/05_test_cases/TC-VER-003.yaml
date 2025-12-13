@@ -1,0 +1,5 @@
+id: TC-VER-003
+title: Verify Orphan Detection
+content: Create a graph with missing links. Assert that find_orphans() returns the correct items.
+links: ["SYS-004"]
+verification_status: PASS

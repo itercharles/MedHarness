@@ -1,5 +1,8 @@
 id: RISK-001
-title: Incorrect Tumor Volume
-content: Hazard - The user may inadvertently define a tumor volume that is smaller than the actual tumor, leading to under-dosing.
-links: []
-verification_status: PENDING
+title: Broken References
+content: Risk of users defining links to non-existent items leads to compliance gaps.
+hazard: Users may define links to non-existent items.
+cause: Manual editing errors or file deletions.
+effect: Incomplete traceability matrix and compliance gaps.
+severity_pre: 3
+probability_pre: 4

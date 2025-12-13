@@ -1,0 +1,4 @@
+id: SYS-004
+title: Orphan Reporting
+content: The system shall display a list of orphan items in the user interface.
+links: ["RCM-001"]

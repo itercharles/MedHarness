@@ -1,5 +1,4 @@
 id: SYS-002
-title: ROI Drawing Tools
-content: The system shall provide a brush tool for defining Regions of Interest (ROI).
-links: ["USN-001", "RCM-001"]
-verification_status: PENDING
+title: Graph Generation
+content: The system shall build an in-memory directed graph representing the dependencies between items.
+links: ["USN-001"]

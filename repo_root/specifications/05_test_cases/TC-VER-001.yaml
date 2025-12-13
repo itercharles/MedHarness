@@ -1,5 +1,5 @@
 id: TC-VER-001
-title: Verify DICOM Parsing
-content: Load test dataset A. Verify Patient Name is 'Doe^John'.
+title: Verify Specification Parsing
+content: Run parsing unit tests. Ensure YAML files are correctly loaded into Item objects with all properties.
 links: ["SYS-001"]
 verification_status: PASS

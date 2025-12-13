@@ -1,98 +1,34 @@
----
-id: ARCH-DOC-001
-title: "Software Architecture Document"
-author: "Development Team"
-version: "1.0"
-date: "2025-11-28"
----
-
-# Software Architecture Document - Contouring System
+# Architecture Design Specification
 
 ## 1. Introduction
+CompliantFlow is a lightweight, Docs-as-Code Application Lifecycle Management (ALM) tool designed for medical device software development.
 
-This document describes the software architecture for the Contouring System, a medical device software for manual delineation of tumor volumes on CT images.
+## 2. System View
 
-## 2. Architecture Overview
+### 2.1 Data Layer
+- **Storage**: Structured data (Requirements, Tests, Risks) is stored as YAML files. Unstructured data (Plans, Manuals) is stored as Markdown.
+- **Version Control**: Git is used as the single source of truth for all data, providing history, branching, and audit trails.
+- **Models**:
+    - `Item`: A Pydantic v2 model representing any traceable artifact. Supports dynamic fields via configuration.
+    - `ProjectConfig`: A Pydantic model for validating `project_config.yaml`.
 
-The system follows a **layered architecture** pattern:
+### 2.2 Logic Layer
+- **Core Facade**: `CompliantFlowCore` initializes the system, loading configuration and data.
+- **Graph Engine**: `GraphEngine` wraps `networkx.DiGraph`. It handles:
+    - Building the graph from `Item` objects.
+    - Resolving internal links.
+    - Calculating metrics (coverage, orphan counts).
+    - Traversing upstream/downstream dependencies.
+- **Persistence**: `ItemLoader` and `ItemSaver` abstract filesystem operations.
 
-```
-┌─────────────────────────────────┐
-│   Presentation Layer (UI)       │
-├─────────────────────────────────┤
-│   Application Layer             │
-├─────────────────────────────────┤
-│   Domain Layer                  │
-├─────────────────────────────────┤
-│   Infrastructure Layer          │
-└─────────────────────────────────┘
-```
+### 2.3 Presentation Layer
+- **Streamlit App**: The primary user interface for debugging and visualization.
+    - **Sidebar**: Provides filtering and configuration view.
+    - **Data View**: Uses `st.dataframe` to display tabular data.
+    - **Graph Visualization**: Uses `streamlit-agraph` to render interactive force-directed graphs.
 
-## 3. Key Components
-
-### 3.1 DICOM Parser Module
-**Purpose**: Import and parse DICOM CT image series  
-**Implements**: SYS-001 (DICOM Import)  
-**Technology**: Python `pydicom` library  
-**Responsibilities**:
-- Parse DICOM tags (Patient Name, ID, Slice Thickness)
-- Load image pixel data
-- Validate DICOM 3.0 compliance
-
-### 3.2 ROI Drawing Engine
-**Purpose**: Provide interactive tools for tumor delineation  
-**Implements**: SYS-002 (ROI Drawing Tools)  
-**Technology**: OpenGL-based rendering  
-**Responsibilities**:
-- Brush tool for manual painting
-- Real-time volume calculation
-- Undo/Redo functionality
-
-### 3.3 Volume Validation Module
-**Purpose**: Prevent clinical errors through warnings  
-**Implements**: RCM-001 (Risk Control Measure)  
-**Responsibilities**:
-- Monitor drawn volume size
-- Display warning if volume < 1cc
-- Log validation events
-
-## 4. Traceability Matrix
-
-| Component | System Requirement | Risk Control |
-|-----------|-------------------|--------------|
-| DICOM Parser | SYS-001 | - |
-| ROI Drawing Engine | SYS-002 | - |
-| Volume Validation | - | RCM-001 |
-
-## 5. Quality Metrics
-
-**Current Project Status**:
-- Total Requirements: {{ stats.node_count }}
-- System Requirement Coverage: {{ stats.coverage.SYS | default(0) | round(1) }}%
-- User Need Coverage: {{ stats.coverage.USN | default(0) | round(1) }}%
-- Orphaned Items: {{ stats.orphans }}
-
-## 6. Design Decisions
-
-### 6.1 Why Layered Architecture?
-- **Maintainability**: Clear separation of concerns
-- **Testability**: Each layer can be tested independently
-- **Regulatory Compliance**: Easier to trace requirements to implementation
-
-### 6.2 Technology Choices
-- **Python**: Rapid development, strong medical imaging libraries
-- **pydicom**: Industry-standard DICOM parser
-- **OpenGL**: Hardware-accelerated rendering for smooth interaction
-
-## 7. Security Considerations
-
-The architecture implements the following security controls:
-- Input validation for all DICOM files
-- Sandboxed execution environment
-- Audit logging for all user actions
-
-## 8. References
-
-- IEC 62304: Medical device software lifecycle processes
-- DICOM 3.0 Standard
-- ISO 14971: Risk management for medical devices
+## 3. Data Flow
+1.  **Load**: `ItemLoader` scans the repository, parsing YAML files into Pydantic `Item` objects.
+2.  **Build**: `GraphEngine` accepts the list of Items, adding them as nodes and creating edges for valid links.
+3.  **Query**: The UI requests data from `CompliantFlowCore`.
+4.  **Render**: Streamlit displays the processed data to the user.
