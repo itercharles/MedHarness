@@ -80,7 +80,7 @@ if not df.empty:
 # Main Content
 st.title("Traceability Debugger")
 
-tab1, tab2, tab3 = st.tabs(["Data View", "Orphan Analysis", "Graph Visualization"])
+tab1, tab2, tab3, tab4 = st.tabs(["Data View", "Orphan Analysis", "Graph Visualization", "Compliance"])
 
 with tab1:
     st.subheader(f"Items ({len(df)})")
@@ -193,3 +193,57 @@ with tab3:
     )
 
     return_value = agraph(nodes=nodes, edges=edges, config=config)
+
+with tab4:
+    st.subheader("Compliance Report")
+    
+    # Load available regulations (mocked or scanned)
+    # For now, hardcode IEC_62304 or scan directory
+    regulations_dir = core.repo_root / "governance"
+    if regulations_dir.exists():
+        regulations = [f.stem for f in regulations_dir.glob("*.yaml")]
+    else:
+        regulations = []
+        
+    if not regulations:
+        st.info("No governance documents found in repo_root/governance")
+    else:
+        selected_reg = st.selectbox("Select Governance Document", regulations)
+        
+        if st.button("Check Compliance"):
+            with st.spinner(f"Checking {selected_reg}..."):
+                report = core.check_compliance(selected_reg)
+                
+            if report:
+                score = report['score']
+                st.progress(score / 100, text=f"Compliance Score: {score:.1f}%")
+                
+                # Display Results
+                res_df = pd.DataFrame(report['results'])
+                
+                # Status Icon
+                def get_status_icon(passed):
+                    return "✅" if passed else "❌"
+                
+                res_df['Status'] = res_df['passed'].apply(get_status_icon)
+                
+                st.dataframe(
+                    res_df[['Status', 'policy_id', 'details']],
+                    width='stretch',
+                    column_config={
+                        "Status": st.column_config.TextColumn("Status", width="small"),
+                        "policy_id": "Policy ID",
+                        "details": "Details"
+                    }
+                )
+                
+                # Expandable Evidence
+                st.subheader("Detailed Evidence")
+                for res in report['results']:
+                    with st.expander(f"{get_status_icon(res['passed'])} {res['policy_id']}"):
+                        st.write(f"**Passed**: {res['passed']}")
+                        st.write(f"**Details**: {res['details']}")
+                        if res.get('evidence'):
+                            st.json(res['evidence'])
+            else:
+                st.error("Failed to generate report.")

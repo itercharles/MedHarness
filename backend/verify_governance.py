@@ -1,0 +1,39 @@
+import sys
+from pathlib import Path
+
+# Add backend to path
+backend_path = Path(__file__).parent
+sys.path.append(str(backend_path))
+
+from traceability.compliant_flow_core import CompliantFlowCore
+
+def main():
+    repo_root = backend_path.parent / "repo_root"
+    core = CompliantFlowCore(repo_root)
+    
+    # 1. Check IEC_62304 (Regulation)
+    print("\n--- Checking IEC_62304 (Regulation) ---")
+    report_reg = core.check_compliance("IEC_62304")
+    if report_reg:
+        print(f"Score: {report_reg['score']}%")
+        for res in report_reg['results']:
+            status = "PASS" if res['passed'] else "FAIL"
+            print(f"[{status}] {res['policy_id']}")
+    else:
+        print("Failed to load IEC_62304")
+
+    # 2. Check SOP_001 (Procedure)
+    print("\n--- Checking SOP_001 (Procedure) ---")
+    report_sop = core.check_compliance("SOP_001")
+    if report_sop:
+        print(f"Score: {report_sop['score']}%")
+        for res in report_sop['results']:
+            status = "PASS" if res['passed'] else "FAIL"
+            print(f"[{status}] {res['policy_id']}")
+            if not res['passed']:
+                print(f"    Details: {res['details']}")
+    else:
+        print("Failed to load SOP_001")
+
+if __name__ == "__main__":
+    main()

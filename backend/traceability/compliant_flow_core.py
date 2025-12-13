@@ -235,3 +235,26 @@ class CompliantFlowCore:
             source_doc.prefix,
             target_doc.prefix
         )
+
+    def check_compliance(self, regulation_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Check compliance against a specific regulation.
+        
+        Args:
+            regulation_id: ID of the regulation (filename without extension, e.g., 'IEC_62304')
+            
+        Returns:
+            Compliance report dictionary or None
+        """
+        from .compliance.engine import PolicyEngine
+        
+        engine = PolicyEngine(self)
+        reg_path = self.repo_root / "governance" / f"{regulation_id}.yaml"
+        
+        regulation = engine.load_regulation(reg_path)
+        if not regulation:
+            return None
+            
+        report = engine.check_compliance(regulation)
+        return report.model_dump()
+
