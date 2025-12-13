@@ -3,14 +3,14 @@ title: test the change management
 description: test
 type: bug_fix
 priority: medium
-status: under_review
+status: approved
 affected_items:
 - TC-SYS-004
 risk_assessment: null
 created_by: charles chen
 created_date: '2025-12-13T21:00:35.850948'
-reviewed_by: null
-review_date: null
-review_comments: null
+reviewed_by: charles chen
+review_date: '2025-12-13T21:01:58.499442'
+review_comments: ''
 implemented_date: null
 related_changes: []
