@@ -1,4 +1,4 @@
 id: SYS-007
 title: Compliance Reporting
 content: The system shall evaluate and report the pass/fail status of policies.
-links: ["USN-003"]
+links: ["CRS-003"]

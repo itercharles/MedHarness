@@ -1,4 +1,4 @@
-id: TC-VER-002
+id: TC-SYS-002
 title: Verify Graph Integrity
 content: Run graph engine tests. Ensure nodes and edges are correctly created from items and links.
 links: ["SYS-002"]

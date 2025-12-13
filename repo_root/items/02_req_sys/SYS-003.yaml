@@ -1,4 +1,4 @@
 id: SYS-003
 title: Visual Traceability
 content: The system shall provide a graphical visualization of the traceability graph, including item status.
-links: ["USN-001"]
+links: ["CRS-001"]

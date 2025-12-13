@@ -1,5 +1,5 @@
-id: TC-VAL-001
+id: TC-CRS-001
 title: Validate Traceability Workflow
 content: Perform a user walk-through of defining requirements and viewing the traceability matrix.
-links: ["USN-001"]
+links: ["CRS-001"]
 verification_status: PASS

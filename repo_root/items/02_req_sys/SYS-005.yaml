@@ -1,4 +1,4 @@
 id: SYS-005
 title: Governance Definitions
 content: The system shall parse governance documents (Regulations, Procedures) defined in YAML.
-links: ["USN-003"]
+links: ["CRS-003"]

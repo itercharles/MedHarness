@@ -10,7 +10,7 @@ policies:
     automation:
        check: "item_existence"
        params:
-         type_code: "USN"
+         type_code: "CRS"
   - id: "4.3.a"
     section: "4.3"
     text: "System requirements shall be documented and trace to use requirements."
@@ -19,7 +19,7 @@ policies:
        check: "trace_coverage"
        params:
          source_type: "SYS"
-         target_type: "USN"
+         target_type: "CRS"
          min_coverage: 1.0
   - id: "4.4.a"
     section: "4.4"
@@ -29,7 +29,7 @@ policies:
        check: "trace_coverage"
        params:
          source_type: "SYS"
-         target_type: "TC-VER"
+         target_type: "TC-SYS"
          min_coverage: 1.0
   - id: "4.5.a"
     section: "4.5"
@@ -38,6 +38,6 @@ policies:
     automation:
         check: "trace_coverage"
         params:
-            source_type: "USN"
-            target_type: "TC-VAL"
+            source_type: "CRS"
+            target_type: "TC-CRS"
             min_coverage: 1.0

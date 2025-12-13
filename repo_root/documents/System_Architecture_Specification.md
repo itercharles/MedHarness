@@ -36,3 +36,12 @@ CompliantFlow is a lightweight, Docs-as-Code Application Lifecycle Management (A
 2.  **Build**: `GraphEngine` accepts the list of Items, adding them as nodes and creating edges for valid links.
 3.  **Query**: The UI requests data from `CompliantFlowCore`.
 4.  **Render**: Streamlit displays the processed data to the user.
+
+## 3. Traceability to Requirements
+The following table demonstrates the traceability of Software Architecture Design (SDS) items to System Requirements (SYS).
+
+| ID | Title | Trace to Requirements (SYS) |
+|---|---|---|
+| [SDS-001](file:///repo_root/items/04_req_sds/SDS-001.yaml) | Graph Data Structure | [SYS-002](file:///repo_root/items/02_req_sys/SYS-002.yaml) |
+| [SDS-002](file:///repo_root/items/04_req_sds/SDS-002.yaml) | Streamlit Visualization | [SYS-003](file:///repo_root/items/02_req_sys/SYS-003.yaml) |
+| [SDS-003](file:///repo_root/items/04_req_sds/SDS-003.yaml) | Policy Engine | [SYS-006](file:///repo_root/items/02_req_sys/SYS-006.yaml) |

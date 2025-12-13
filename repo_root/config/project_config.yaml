@@ -1,7 +1,7 @@
 doc_types:
-  - code: USN
-    name: "User Need"
-    prefix: "USN-"
+  - code: CRS
+    name: "Customer Requirement"
+    prefix: "CRS-"
     level: 1
     properties: ["id", "title", "content", "user_group", "source", "reviewer", "review_date"]
   - code: RISK
@@ -31,30 +31,39 @@ doc_types:
     name: "System Requirement"
     prefix: "SYS-"
     level: 2
-    allowed_parents: ["USN", "RCM"]
+    allowed_parents: ["CRS", "RCM"]
     properties: ["id", "title", "content", "category", "verification_method", "critical_safety", "links", "reviewer", "review_date"]
     relations:
-      - target: USN
+      - target: CRS
         label: satisfies
       - target: RCM
         label: implements
-  - code: VER
-    name: "Verification Test"
-    prefix: "TC-VER-"
+  - code: TC-SYS
+    name: "System Test"
+    prefix: "TC-SYS-"
     type: "test"
     verifies: ["SYS"]
     properties: ["id", "title", "prerequisites", "steps", "expected_result", "links", "verification_status", "reviewer", "review_date"]
     relations:
       - target: SYS
         label: verifies
-  - code: VAL
-    name: "Validation Test"
-    prefix: "TC-VAL-"
+  - code: TC-CRS
+    name: "Customer Validation Test"
+    prefix: "TC-CRS-"
     type: "test"
-    verifies: ["USN"]
+    verifies: ["CRS"]
     properties: ["id", "title", "prerequisites", "steps", "expected_result", "links", "verification_status", "reviewer", "review_date"]
     relations:
-      - target: USN
+      - target: CRS
         label: validates
+  - code: TC-SDS
+    name: "Design Test"
+    prefix: "TC-SDS-"
+    type: "test"
+    verifies: ["SDS"]
+    properties: ["id", "title", "prerequisites", "steps", "expected_result", "links", "verification_status", "reviewer", "review_date"]
+    relations:
+      - target: SDS
+        label: verifies
 policies:
-  require_test_coverage: ["SYS", "USN"]
+  require_test_coverage: ["SYS", "CRS", "SDS"]

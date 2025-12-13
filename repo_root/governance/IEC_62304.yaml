@@ -21,7 +21,7 @@ policies:
     automation:
       check: "item_existence"
       params:
-        type_code: "USN"
+        type_code: "CRS"
 
   # 5.2.2 Software system requirements
   - id: "5.2.2.a"
@@ -41,7 +41,19 @@ policies:
     automation:
       check: "file_existence"
       params:
-        path: "documents/plans/architecture.md"
+        path: "documents/System_Architecture_Specification.md"
+
+  # 5.3.6 Software Architecture Traceability
+  - id: "5.3.6.a"
+    section: "5.3.6"
+    text: "The MANUFACTURER shall document a TRACEABILITY of the SOFTWARE ARCHITECTURE to the SOFTWARE REQUIREMENTS."
+    status: "approved"
+    automation:
+       check: "trace_coverage"
+       params:
+         source_type: "SYS" # Requirements
+         target_type: "SDS" # Architecture
+         min_coverage: 1.0
 
   # 5.4.1 Software Detailed Design
   - id: "5.4.1.a"
@@ -84,7 +96,7 @@ policies:
        check: "trace_coverage"
        params:
          source_type: "SDS" # Design/Unit
-         target_type: "VER" # Tests
+         target_type: "TC-SDS" # Tests
          min_coverage: 1.0
 
   # 5.6.1 Software Integration and Integration Testing
@@ -95,7 +107,7 @@ policies:
     automation:
       check: "item_existence"
       params:
-        type_code: "VER"
+        type_code: "TC-SYS"
 
   # 5.7.1 Software System Testing
   - id: "5.7.1.a"
@@ -106,5 +118,5 @@ policies:
       check: "trace_coverage"
       params:
         source_type: "SYS" # Requirements
-        target_type: "VER" # Tests
+        target_type: "TC-SYS" # Tests
         min_coverage: 1.0

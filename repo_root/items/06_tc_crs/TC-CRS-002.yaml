@@ -1,5 +1,5 @@
-id: TC-VAL-002
+id: TC-CRS-002
 title: Validate Compliance Workflow
 content: User performs a full compliance check using the Streamlit "Compliance" tab. Verify visual feedback and score calculation.
-links: ["USN-003"]
+links: ["CRS-003"]
 verification_status: PASS

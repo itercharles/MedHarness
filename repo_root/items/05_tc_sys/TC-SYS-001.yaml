@@ -1,4 +1,4 @@
-id: TC-VER-001
+id: TC-SYS-001
 title: Verify Specification Parsing
 content: Run parsing unit tests. Ensure YAML files are correctly loaded into Item objects with all properties.
 links: ["SYS-001"]

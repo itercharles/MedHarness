@@ -17,11 +17,13 @@ def verify_relations():
     
     # Check edges
     valid_relations = {
-        ('TC-VER', 'SYS'): 'verifies',
-        ('TC-VAL', 'USN'): 'validates',
+        ('TC-SYS', 'SYS'): 'verifies',
+        ('TC-SDS', 'SDS'): 'verifies',
+        ('TC-CRS', 'CRS'): 'validates',
         ('RCM', 'RISK'): 'mitigates',
-        ('SYS', 'USN'): 'satisfies',
-        ('SYS', 'RCM'): 'implements'
+        ('SYS', 'CRS'): 'satisfies',
+        ('SYS', 'RCM'): 'implements',
+        ('SDS', 'SYS'): 'implements'
     }
     
     found_relations = 0
@@ -31,13 +33,14 @@ def verify_relations():
         edge_type = data.get('type')
         
         # Get prefixes
-        u_prefix = u.split('-')[0]
-        if 'TC-VER' in u: u_prefix = 'TC-VER'
-        if 'TC-VAL' in u: u_prefix = 'TC-VAL'
-        
-        v_prefix = v.split('-')[0]
-        if 'TC-VER' in v: v_prefix = 'TC-VER'
-        if 'TC-VAL' in v: v_prefix = 'TC-VAL'
+        def get_prefix(node_id):
+            parts = node_id.split('-')
+            if parts[0] == 'TC':
+                return f"{parts[0]}-{parts[1]}"
+            return parts[0]
+
+        u_prefix = get_prefix(u)
+        v_prefix = get_prefix(v)
         
         # Check if this edge matches a known relation pattern
         pair = (u_prefix, v_prefix)
