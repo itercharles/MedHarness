@@ -1,0 +1,16 @@
+id: CR-005
+title: test the change management
+description: test
+type: bug_fix
+priority: medium
+status: submitted
+affected_items:
+- TC-SYS-004
+risk_assessment: null
+created_by: charles chen
+created_date: '2025-12-13T21:00:35.850948'
+reviewed_by: null
+review_date: null
+review_comments: null
+implemented_date: null
+related_changes: []
