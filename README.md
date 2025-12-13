@@ -4,8 +4,8 @@ CompliantFlow is a Docs-as-Code Application Lifecycle Management (ALM) platform 
 
 ## Project Structure
 
-- `repo_root/`: Contains the project data (Requirements, Tests, Config). This is the "Single Source of Truth".
-- `backend/`: Python backend containing the core logic and Streamlit debug application.
+- `DHF/`: Design History File - Contains the project data (Requirements, Tests, Config). This is the "Single Source of Truth".
+- `src/`: Python source code containing the core logic and Streamlit debug application.
 
 ## How to Run
 
@@ -15,7 +15,7 @@ CompliantFlow is a Docs-as-Code Application Lifecycle Management (ALM) platform 
 ### Start the Traceability Debugger (Streamlit)
 
 ```bash
-cd backend
+cd src
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
@@ -23,7 +23,7 @@ streamlit run debug_app.py
 ```
 The app will be available at `http://localhost:8501`.
 
-The project logic is defined in `repo_root/config/project_config.yaml`.
+The project logic is defined in `DHF/config/project_config.yaml`.
 
 ### Document Types
 Define new document types (e.g., Risk Analysis) in `doc_types`:

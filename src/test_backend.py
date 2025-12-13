@@ -6,12 +6,12 @@ import shutil
 client = TestClient(app)
 
 def setup_test_data():
-    # Create dummy data in repo_root for testing
-    # Assuming we are in backend dir
-    repo_root = "../repo_root"
+    # Create dummy data in DHF for testing
+    # Assuming we are in src dir
+    dhf_root = "../DHF"
     
     # Create SRS
-    srs_dir = os.path.join(repo_root, "specifications/03_software_reqs")
+    srs_dir = os.path.join(dhf_root, "specifications/03_software_reqs")
     os.makedirs(srs_dir, exist_ok=True)
     with open(os.path.join(srs_dir, "SRS-001.yaml"), "w") as f:
         f.write("""
@@ -23,7 +23,7 @@ verification_status: PENDING
 """)
 
     # Create Test
-    test_dir = os.path.join(repo_root, "specifications/05_test_cases")
+    test_dir = os.path.join(dhf_root, "specifications/05_test_cases")
     os.makedirs(test_dir, exist_ok=True)
     with open(os.path.join(test_dir, "TC-VER-001.yaml"), "w") as f:
         f.write("""

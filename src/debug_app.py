@@ -11,9 +11,9 @@ st.set_page_config(layout="wide", page_title="CompliantFlow Debugger")
 @st.cache_resource
 def get_core():
     # Assuming this file is in backend/
-    # Data is in ../repo_root
-    repo_root = Path(__file__).resolve().parent.parent / "repo_root"
-    return CompliantFlowCore(repo_root)
+    # Data is in ../DHF
+    dhf_root = Path(__file__).resolve().parent.parent / "DHF"
+    return CompliantFlowCore(dhf_root)
 
 try:
     core = get_core()
@@ -244,7 +244,7 @@ with tab4:
         groups = []
         
     if not groups:
-        st.info("No policy groups found in repo_root/governance")
+        st.info("No policy groups found in DHF/governance")
     else:
         selected_group = st.selectbox("Select Policy Group", groups)
         

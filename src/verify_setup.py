@@ -2,7 +2,7 @@ import yaml
 from app.schema import ProjectConfig, AtomicItem, SmartDocument, ExternalStub, VerificationStatus
 
 def test_config_loading():
-    with open('../repo_root/config/project_config.yaml', 'r') as f:
+    with open('../DHF/config/project_config.yaml', 'r') as f:
         config_data = yaml.safe_load(f)
     
     config = ProjectConfig(**config_data)

@@ -1,16 +1,16 @@
 import sys
 from pathlib import Path
 
-# Add backend to path
-backend_path = Path(__file__).resolve().parent
-sys.path.append(str(backend_path))
+# Add src to path
+src_path = Path(__file__).resolve().parent
+sys.path.append(str(src_path))
 
 from traceability.compliant_flow_core import CompliantFlowCore
 
 def verify_relations():
     # Initialize core
-    repo_root = backend_path.parent / "repo_root"
-    core = CompliantFlowCore(repo_root)
+    dhf_root = src_path.parent / "DHF"
+    core = CompliantFlowCore(dhf_root)
     
     print(f"Loaded {len(core.graph.graph.nodes)} nodes")
     print(f"Loaded {len(core.graph.graph.edges)} edges")

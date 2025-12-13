@@ -7,7 +7,7 @@ CompliantFlow is a lightweight, Docs-as-Code Application Lifecycle Management (A
 
 ### 2.1 Data Layer
 - **Storage**: Structured data (Requirements, Tests, Risks) is stored as YAML files. Unstructured data (Plans, Manuals) is stored as Markdown.
-- **Governance**: Regulations and Procedures are stored as structured YAML policies in `repo_root/governance`.
+- **Governance**: Regulations and Procedures are stored as structured YAML policies in `DHF/governance`.
 - **Version Control**: Git is used as the single source of truth for all data, providing history, branching, and audit trails.
 - **Models**:
     - `Item`: A Pydantic v2 model representing any traceable artifact. Supports dynamic fields via configuration.
@@ -42,6 +42,6 @@ The following table demonstrates the traceability of Software Architecture Desig
 
 | ID | Title | Trace to Requirements (SYS) |
 |---|---|---|
-| [SDS-001](file:///repo_root/items/04_req_sds/SDS-001.yaml) | Graph Data Structure | [SYS-002](file:///repo_root/items/02_req_sys/SYS-002.yaml) |
-| [SDS-002](file:///repo_root/items/04_req_sds/SDS-002.yaml) | Streamlit Visualization | [SYS-003](file:///repo_root/items/02_req_sys/SYS-003.yaml) |
-| [SDS-003](file:///repo_root/items/04_req_sds/SDS-003.yaml) | Policy Engine | [SYS-006](file:///repo_root/items/02_req_sys/SYS-006.yaml) |
+| [SDS-001](file:///DHF/items/04_req_sds/SDS-001.yaml) | Graph Data Structure | [SYS-002](file:///DHF/items/02_req_sys/SYS-002.yaml) |
+| [SDS-002](file:///DHF/items/04_req_sds/SDS-002.yaml) | Streamlit Visualization | [SYS-003](file:///DHF/items/02_req_sys/SYS-003.yaml) |
+| [SDS-003](file:///DHF/items/04_req_sds/SDS-003.yaml) | Policy Engine | [SYS-006](file:///DHF/items/02_req_sys/SYS-006.yaml) |

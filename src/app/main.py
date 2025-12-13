@@ -19,9 +19,9 @@ app.add_middleware(
 )
 
 # Initialize core library
-# Path structure: backend/app/main.py -> backend -> traceability -> repo_root
-repo_root = Path(__file__).parent.parent.parent / "repo_root"
-core = CompliantFlowCore(repo_root=repo_root, auto_commit=False)
+# Path structure: src/app/main.py -> src -> traceability -> DHF
+dhf_root = Path(__file__).parent.parent.parent / "DHF"
+core = CompliantFlowCore(repo_root=dhf_root, auto_commit=False)
 
 
 # Request/Response models
