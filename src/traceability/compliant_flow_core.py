@@ -15,6 +15,9 @@ from .repository.git import GitRepository
 from .change_management.change_tracker import ChangeTracker
 from .change_management.workflow import ChangeWorkflow
 from .change_management.impact_analyzer import ImpactAnalyzer
+from .review.review_tracker import ReviewTracker
+from .review.review_workflow import ReviewWorkflow as ReviewWorkflowEngine
+from .review.checklist_engine import ChecklistEngine
 
 
 class CompliantFlowCore:
@@ -51,6 +54,18 @@ class CompliantFlowCore:
         # Initialize change management
         self.change_tracker = ChangeTracker(self.repo_root, git_repo=self.git)
         self.impact_analyzer = ImpactAnalyzer(self.graph)
+        
+        # Initialize review system
+        self.review_tracker = ReviewTracker(self.repo_root, git_repo=self.git)
+        
+        # Initialize checklist engine (always set attribute even if config missing)
+        checklist_config = self.repo_root / "config" / "review_checklists.yaml"
+        try:
+            self.checklist_engine = ChecklistEngine(checklist_config)
+        except Exception as e:
+            print(f"Warning: Failed to initialize checklist engine: {e}")
+            # Create a minimal checklist engine with empty config
+            self.checklist_engine = ChecklistEngine(Path("/dev/null"))
         
         # Load config and build graph
         self._load_config()
@@ -404,6 +419,67 @@ class CompliantFlowCore:
             change_id,
             reviewer,
             comments
+        )
+        return {'success': success, 'message': message}
+
+    # Review Management Methods
+    
+    def create_review(
+        self,
+        item_id: str,
+        reviewer: str,
+        checklist_id: Optional[str] = None,
+        author: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Create a review for an item."""
+        review = self.review_tracker.create_review(item_id, reviewer, checklist_id, author)
+        return review.model_dump(mode='json')
+    
+    def get_review(self, review_id: str) -> Optional[Dict[str, Any]]:
+        """Get review by ID."""
+        review = self.review_tracker.get_review(review_id)
+        return review.model_dump(mode='json') if review else None
+    
+    def list_reviews(
+        self,
+        status: Optional[str] = None,
+        reviewer: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
+        """List reviews with optional filters."""
+        from .models.review import ReviewStatus
+        status_enum = ReviewStatus(status) if status else None
+        reviews = self.review_tracker.list_reviews(status=status_enum, reviewer=reviewer)
+        return [r.model_dump(mode='json') for r in reviews]
+    
+    def approve_review(
+        self,
+        review_id: str,
+        comments: str,
+        signature: Optional[str] = None,
+        author: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Approve a review."""
+        success, message = ReviewWorkflowEngine.approve_review(
+            self.review_tracker,
+            review_id,
+            comments,
+            signature,
+            author
+        )
+        return {'success': success, 'message': message}
+    
+    def reject_review(
+        self,
+        review_id: str,
+        comments: str,
+        author: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Reject a review."""
+        success, message = ReviewWorkflowEngine.reject_review(
+            self.review_tracker,
+            review_id,
+            comments,
+            author
         )
         return {'success': success, 'message': message}
 

@@ -1,0 +1,7 @@
+id: TC-SDS-001
+title: Unit Test Graph Data Structure
+content: 'Test case to verify: Use NetworkX DiGraph to store items as nodes and traceability
+  links as edges.'
+links:
+- SDS-001
+verification_status: PENDING

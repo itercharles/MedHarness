@@ -1,0 +1,6 @@
+
+id: TC-SYS-006
+title: Verify Traceability Visualization
+content: Check the Graph Visualization tab. Ensure nodes and edges are rendered and physics engine is active.
+links: ["SYS-003"]
+verification_status: PENDING
