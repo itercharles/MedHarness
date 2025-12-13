@@ -248,6 +248,34 @@ with tab4:
     else:
         selected_reg = st.selectbox("Select Governance Document", regulations)
         
+        # Display Regulation Details
+        reg_data = core.get_regulation(selected_reg)
+        if reg_data:
+            st.write(f"**{reg_data.get('title', selected_reg)}** (Version: {reg_data.get('version', 'N/A')})")
+            
+            policies = reg_data.get('policies', [])
+            if policies:
+                st.subheader("Defined Policies")
+                p_df = pd.DataFrame(policies)
+                # Select columns: id, text (rename to Content), status
+                cols = ['id', 'text', 'status']
+                p_df = p_df[cols]
+                
+                st.dataframe(
+                    p_df,
+                    width='stretch',
+                    column_config={
+                        "id": "ID",
+                        "text": "Content",
+                        "status": st.column_config.TextColumn(
+                            "Status",
+                            validate="^(approved|draft|rejected)$"
+                        )
+                    }
+                )
+            else:
+                st.info("No policies defined in this document.")
+        
         if st.button("Check Compliance"):
             with st.spinner(f"Checking {selected_reg}..."):
                 report = core.check_compliance(selected_reg)
@@ -265,15 +293,34 @@ with tab4:
                 
                 res_df['Status'] = res_df['passed'].apply(get_status_icon)
                 
-                st.dataframe(
-                    res_df[['Status', 'policy_id', 'details']],
-                    width='stretch',
-                    column_config={
-                        "Status": st.column_config.TextColumn("Status", width="small"),
-                        "policy_id": "Policy ID",
-                        "details": "Details"
-                    }
-                )
+                # Merge with policy definitions to get Text/Content
+                # We need p_df (defined above)
+                if 'p_df' in locals() and not p_df.empty:
+                    # Rename id to policy_id for merge or vice versa
+                    p_df_merge = p_df.rename(columns={'id': 'policy_id', 'text': 'content'})
+                    merged_df = pd.merge(res_df, p_df_merge, on='policy_id', how='left')
+                    
+                    # Display merged table
+                    st.dataframe(
+                        merged_df[['Status', 'policy_id', 'content', 'details']],
+                        width='stretch',
+                        column_config={
+                            "Status": st.column_config.TextColumn("Status", width="small"),
+                            "policy_id": "Policy ID",
+                            "content": "Content",
+                            "details": "Details"
+                        }
+                    )
+                else:
+                    st.dataframe(
+                        res_df[['Status', 'policy_id', 'details']],
+                        width='stretch',
+                        column_config={
+                            "Status": st.column_config.TextColumn("Status", width="small"),
+                            "policy_id": "Policy ID",
+                            "details": "Details"
+                        }
+                    )
                 
                 # Expandable Evidence
                 st.subheader("Detailed Evidence")

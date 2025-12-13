@@ -236,6 +236,27 @@ class CompliantFlowCore:
             target_doc.prefix
         )
 
+    def get_regulation(self, regulation_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Load a regulation without running checks.
+        
+        Args:
+            regulation_id: ID of the regulation
+            
+        Returns:
+            Regulation dictionary or None
+        """
+        from .compliance.engine import PolicyEngine
+        
+        engine = PolicyEngine(self)
+        reg_path = self.repo_root / "governance" / f"{regulation_id}.yaml"
+        
+        regulation = engine.load_regulation(reg_path)
+        if not regulation:
+            return None
+            
+        return regulation.model_dump()
+
     def check_compliance(self, regulation_id: str) -> Optional[Dict[str, Any]]:
         """
         Check compliance against a specific regulation.
