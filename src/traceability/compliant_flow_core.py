@@ -6,11 +6,15 @@ from typing import List, Optional, Dict, Any
 from .models.item import Item
 from .models.config import ProjectConfig
 from .models.document import Document
+from .models.change_request import ChangeRequest, ChangeStatus
 from .graph.engine import GraphEngine
 from .graph.analysis import generate_traceability_matrix
 from .repository.loader import ItemLoader
 from .repository.saver import ItemSaver
 from .repository.git import GitRepository
+from .change_management.change_tracker import ChangeTracker
+from .change_management.workflow import ChangeWorkflow
+from .change_management.impact_analyzer import ImpactAnalyzer
 
 
 class CompliantFlowCore:
@@ -43,6 +47,10 @@ class CompliantFlowCore:
         self.loader = ItemLoader(self.specs_dir)
         self.saver = ItemSaver(self.specs_dir, git_repo=self.git)
         self.graph = GraphEngine()
+        
+        # Initialize change management
+        self.change_tracker = ChangeTracker(self.repo_root, git_repo=self.git)
+        self.impact_analyzer = ImpactAnalyzer(self.graph)
         
         # Load config and build graph
         self._load_config()
@@ -279,4 +287,123 @@ class CompliantFlowCore:
             
         report = engine.check_compliance(group)
         return report.model_dump()
+
+    # Change Management Methods
+    
+    def create_change_request(
+        self,
+        data: Dict[str, Any],
+        author: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Create a new change request.
+        
+        Args:
+            data: Change request data
+            author: Author name for git commit
+            
+        Returns:
+            Created change request dictionary
+        """
+        change_request = self.change_tracker.create_change_request(data, author=author)
+        return change_request.model_dump(mode='json')
+    
+    def get_change_request(self, change_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Get a change request by ID.
+        
+        Args:
+            change_id: Change request ID
+            
+        Returns:
+            Change request dictionary or None
+        """
+        change_request = self.change_tracker.get_change_request(change_id)
+        if not change_request:
+            return None
+        return change_request.model_dump(mode='json')
+    
+    def list_change_requests(
+        self,
+        status: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
+        """
+        List all change requests, optionally filtered by status.
+        
+        Args:
+            status: Optional status filter
+            
+        Returns:
+            List of change request dictionaries
+        """
+        status_enum = ChangeStatus(status) if status else None
+        change_requests = self.change_tracker.list_change_requests(status=status_enum)
+        return [cr.model_dump(mode='json') for cr in change_requests]
+    
+    def analyze_change_impact(self, change_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Analyze the impact of a change request.
+        
+        Args:
+            change_id: Change request ID
+            
+        Returns:
+            Change impact analysis dictionary or None
+        """
+        change_request = self.change_tracker.get_change_request(change_id)
+        if not change_request:
+            return None
+        
+        impact = self.impact_analyzer.analyze_impact(change_request)
+        return impact.model_dump(mode='json')
+    
+    def approve_change(
+        self,
+        change_id: str,
+        reviewer: str,
+        comments: str = ""
+    ) -> Dict[str, Any]:
+        """
+        Approve a change request.
+        
+        Args:
+            change_id: Change request ID
+            reviewer: Name of reviewer
+            comments: Review comments
+            
+        Returns:
+            Result dictionary with success status and message
+        """
+        success, message = ChangeWorkflow.approve_change(
+            self.change_tracker,
+            change_id,
+            reviewer,
+            comments
+        )
+        return {'success': success, 'message': message}
+    
+    def reject_change(
+        self,
+        change_id: str,
+        reviewer: str,
+        comments: str
+    ) -> Dict[str, Any]:
+        """
+        Reject a change request.
+        
+        Args:
+            change_id: Change request ID
+            reviewer: Name of reviewer
+            comments: Reason for rejection
+            
+        Returns:
+            Result dictionary with success status and message
+        """
+        success, message = ChangeWorkflow.reject_change(
+            self.change_tracker,
+            change_id,
+            reviewer,
+            comments
+        )
+        return {'success': success, 'message': message}
 

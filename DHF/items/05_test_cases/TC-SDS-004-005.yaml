@@ -1,0 +1,38 @@
+id: TC-SDS-004-005
+title: Design Test - Streamlit UI Components
+content: |
+  **Objective**: Verify that Streamlit UI page renders correctly and handles user input
+  
+  **Prerequisites**:
+  - Streamlit application running
+  - CompliantFlowCore initialized
+  
+  **Steps**:
+  1. Navigate to Change Management page
+  2. Verify all 3 tabs render (Submit, Review, History)
+  3. Test form validation in Submit tab (required fields)
+  4. Test multiselect for affected_items
+  5. Test filters in Review tab (status, type, priority)
+  6. Test workflow buttons (Submit for Review, Approve, Reject)
+  7. Test metrics display in History tab
+  8. Test CSV export functionality
+  
+  **Expected Result**:
+  - All tabs render without errors
+  - Form validation prevents submission with missing required fields
+  - Multiselect shows all available items
+  - Filters correctly update displayed change requests
+  - Workflow buttons trigger correct API calls
+  - Metrics accurately reflect change request counts
+  - CSV export downloads with correct data
+  
+  **Actual Result**: PASS
+  
+  **Notes**: UI components working correctly with real-time updates
+category: UI Test
+verification_status: PASS
+links:
+  - SDS-004
+test_type: Manual
+reviewer: QA Engineer
+review_date: 2025-12-13

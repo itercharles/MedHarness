@@ -1,0 +1,38 @@
+id: TC-SDS-004-004
+title: Design Test - ImpactAnalyzer Graph Integration
+content: |
+  **Objective**: Verify that ImpactAnalyzer correctly uses GraphEngine for impact analysis
+  
+  **Prerequisites**:
+  - GraphEngine with test data loaded
+  - ImpactAnalyzer initialized with graph
+  - Test change request with affected_items
+  
+  **Steps**:
+  1. Create change request affecting known item with downstream dependencies
+  2. Call analyze_impact()
+  3. Verify affected_requirements list is correct
+  4. Verify affected_tests list is correct
+  5. Verify affected_risks list is correct
+  6. Verify downstream_count is accurate
+  7. Test significance assessment logic
+  8. Verify impact_summary is generated
+  
+  **Expected Result**:
+  - Graph.get_downstream() is called for each affected item
+  - Items are correctly categorized by prefix (SYS-, TC-, RISK-, etc.)
+  - Downstream count excludes directly affected items
+  - Significance assessment checks safety-critical flags
+  - Significance assessment checks risk control measures
+  - Impact summary is human-readable
+  
+  **Actual Result**: PASS
+  
+  **Notes**: Graph integration working correctly for impact analysis
+category: Integration Test
+verification_status: PASS
+links:
+  - SDS-004
+test_type: Automated
+reviewer: Software Developer
+review_date: 2025-12-13

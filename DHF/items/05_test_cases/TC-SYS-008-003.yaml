@@ -1,0 +1,33 @@
+id: TC-SYS-008-003
+title: Verify Workflow State Transitions
+content: |
+  **Objective**: Verify that change request workflow follows the correct state machine
+  
+  **Preconditions**:
+  - Change request exists in "submitted" status
+  
+  **Test Steps**:
+  1. Submit change request for review (submitted → under_review)
+  2. Approve change request (under_review → approved)
+  3. Mark as implemented (approved → implemented)
+  4. Verify invalid transitions are rejected
+  
+  **Expected Results**:
+  - Valid transitions succeed
+  - Invalid transitions (e.g., submitted → implemented) are rejected with error message
+  - Status updates are persisted to YAML file
+  - Reviewer name and review date are recorded
+  - Review comments are saved
+  
+  **Actual Results**: PASS
+  
+  **Test Data**: Test change request CR-002
+  
+  **Notes**: State machine validation works correctly per IEC 62304 requirements
+category: Functional Test
+verification_status: PASS
+links:
+  - SYS-008
+test_type: Automated
+reviewer: QA Engineer
+review_date: 2025-12-13

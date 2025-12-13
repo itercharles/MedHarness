@@ -1,0 +1,37 @@
+id: TC-SDS-004-002
+title: Design Test - ChangeTracker CRUD Operations
+content: |
+  **Objective**: Verify that ChangeTracker correctly performs CRUD operations
+  
+  **Prerequisites**:
+  - ChangeTracker initialized with test DHF directory
+  - Git repository available (optional)
+  
+  **Steps**:
+  1. Test create_change_request() with auto-ID generation
+  2. Verify YAML file is created in correct location
+  3. Test get_change_request() retrieves correct data
+  4. Test list_change_requests() returns all change requests
+  5. Test list_change_requests(status='submitted') filters correctly
+  6. Test update_change_request() modifies existing change
+  7. Test delete_change_request() removes change
+  
+  **Expected Result**:
+  - Auto-ID increments correctly (CR-001, CR-002, etc.)
+  - YAML files are created in DHF/change_requests/
+  - Retrieval returns correct ChangeRequest objects
+  - Filtering by status works correctly
+  - Updates persist to YAML files
+  - Deletion removes YAML files
+  - Git commits are created (if git_repo provided)
+  
+  **Actual Result**: PASS
+  
+  **Notes**: All CRUD operations working correctly with YAML storage
+category: Integration Test
+verification_status: PASS
+links:
+  - SDS-004
+test_type: Automated
+reviewer: Software Developer
+review_date: 2025-12-13

@@ -1,0 +1,34 @@
+id: TC-SYS-008-005
+title: Verify Change History Tracking
+content: |
+  **Objective**: Verify that change history is tracked and can be exported
+  
+  **Preconditions**:
+  - Multiple change requests exist with different statuses
+  
+  **Test Steps**:
+  1. Navigate to "Change History" tab
+  2. Verify metrics are displayed (total, pending, approved, implemented)
+  3. Verify all change requests appear in the table
+  4. Click "Export to CSV"
+  5. Verify CSV file is downloaded
+  
+  **Expected Results**:
+  - Metrics accurately reflect change request counts
+  - All change requests are listed with correct data
+  - Table is sortable and filterable
+  - CSV export contains all change request data
+  - Export filename includes date
+  
+  **Actual Results**: PASS
+  
+  **Test Data**: CR-001 through CR-005
+  
+  **Notes**: Full audit trail available for regulatory compliance
+category: Functional Test
+verification_status: PASS
+links:
+  - SYS-008
+test_type: Manual
+reviewer: QA Engineer
+review_date: 2025-12-13
