@@ -51,9 +51,12 @@ class Item(BaseModel):
     
     @property
     def prefix(self) -> str:
-        """Extract prefix from UID (e.g., 'SYS-' from 'SYS-001')."""
+        """Extract prefix from UID (e.g., 'SYS-' from 'SYS-001' or 'TC-VER-' from 'TC-VER-001')."""
         if '-' in self.uid:
-            return self.uid.split('-')[0] + '-'
+            # Split by rightmost hyphen to separate number
+            parts = self.uid.rsplit('-', 1)
+            if len(parts) == 2:
+                return parts[0] + '-'
         return ''
     
     def get_parent_uids(self) -> List[str]:

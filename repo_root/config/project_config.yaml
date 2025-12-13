@@ -15,23 +15,37 @@ doc_types:
     level: 2
     allowed_parents: ["RISK"]
     properties: ["id", "title", "content", "type", "links", "reviewer", "review_date"]
+    relations:
+      - target: RISK
+        label: mitigates
   - code: SYS
     name: "System Requirement"
     prefix: "SYS-"
     level: 2
     allowed_parents: ["USN", "RCM"]
     properties: ["id", "title", "content", "category", "verification_method", "critical_safety", "links", "reviewer", "review_date"]
+    relations:
+      - target: USN
+        label: satisfies
+      - target: RCM
+        label: implements
   - code: VER
     name: "Verification Test"
     prefix: "TC-VER-"
     type: "test"
     verifies: ["SYS"]
     properties: ["id", "title", "prerequisites", "steps", "expected_result", "links", "verification_status", "reviewer", "review_date"]
+    relations:
+      - target: SYS
+        label: verifies
   - code: VAL
     name: "Validation Test"
     prefix: "TC-VAL-"
     type: "test"
     verifies: ["USN"]
     properties: ["id", "title", "prerequisites", "steps", "expected_result", "links", "verification_status", "reviewer", "review_date"]
+    relations:
+      - target: USN
+        label: validates
 policies:
   require_test_coverage: ["SYS", "USN"]

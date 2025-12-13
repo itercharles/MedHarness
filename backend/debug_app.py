@@ -86,7 +86,7 @@ with tab1:
     st.subheader(f"Items ({len(df)})")
     st.dataframe(
         df, 
-        use_container_width=True,
+        width='stretch',
         column_config={
             "id": "ID",
             "title": "Title",
@@ -108,7 +108,7 @@ with tab2:
     if orphans:
         st.warning(f"Found {len(orphans)} orphan items.")
         orphan_df = pd.DataFrame(orphans)
-        st.dataframe(orphan_df, use_container_width=True)
+        st.dataframe(orphan_df, width='stretch')
     else:
         st.success("No orphan items found! All items are connected.")
 
@@ -119,7 +119,7 @@ with tab2:
         stubs = df[df['content'].str.contains('TBD', case=False, na=False)]
         if not stubs.empty:
             st.warning(f"Found {len(stubs)} potential stubs (containing 'TBD').")
-            st.dataframe(stubs[['id', 'title', 'content']], use_container_width=True)
+            st.dataframe(stubs[['id', 'title', 'content']], width='stretch')
         else:
             st.success("No 'TBD' stubs found.")
 
@@ -175,12 +175,12 @@ with tab3:
         ))
         
     # Add Edges from Graph
-    for u, v in core.graph.graph.edges():
+    for u, v, data in core.graph.graph.edges(data=True):
         if u in viz_ids and v in viz_ids:
             edges.append(Edge(
                 source=u,
                 target=v,
-                label="traces",
+                label=data.get('type', 'traces'),
                 color="#888888"
             ))
             

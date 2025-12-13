@@ -5,37 +5,23 @@ CompliantFlow is a Docs-as-Code Application Lifecycle Management (ALM) platform 
 ## Project Structure
 
 - `repo_root/`: Contains the project data (Requirements, Tests, Config). This is the "Single Source of Truth".
-- `backend/`: Python FastAPI backend service.
-- `frontend/`: React + Vite frontend application.
+- `backend/`: Python backend containing the core logic and Streamlit debug application.
 
 ## How to Run
 
 ### Prerequisites
 - Python 3.11+
-- Node.js 18+
 
-### 1. Start the Backend
+### Start the Traceability Debugger (Streamlit)
 
 ```bash
 cd backend
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
-uvicorn app.main:app --reload
+streamlit run debug_app.py
 ```
-The API will be available at `http://localhost:8000`.
-API Docs: `http://localhost:8000/docs`
-
-### 2. Start the Frontend
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-The UI will be available at `http://localhost:5173`.
-
-## How to Configure
+The app will be available at `http://localhost:8501`.
 
 The project logic is defined in `repo_root/config/project_config.yaml`.
 

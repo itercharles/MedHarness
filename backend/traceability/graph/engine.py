@@ -39,7 +39,22 @@ class GraphEngine:
         for item in items:
             for parent_uid in item.links:
                 if self.graph.has_node(parent_uid):
-                    self.graph.add_edge(item.uid, parent_uid, type='links')
+                    # Determine relation label
+                    relation_label = "traces"
+                    
+                    if self.config:
+                        # Get source and target doc types to find specific relation
+                        source_type = self.config.get_doc_type_by_prefix(item.prefix)
+                        target_item = self.graph.nodes[parent_uid]['item']
+                        target_type = self.config.get_doc_type_by_prefix(target_item.prefix)
+                        
+                        if source_type and source_type.relations and target_type:
+                            for relation in source_type.relations:
+                                if relation.target == target_type.code:
+                                    relation_label = relation.label
+                                    break
+
+                    self.graph.add_edge(item.uid, parent_uid, type=relation_label)
                 else:
                     print(f"Warning: Link target {parent_uid} not found for item {item.uid}")
     
