@@ -35,5 +35,16 @@ def main():
     else:
         print("Failed to load SOP_001")
 
+    # 3. Check IEC_82304_1 (Standard)
+    print("\n--- Checking IEC_82304_1 (Standard) ---")
+    report_82304 = core.check_compliance("IEC_82304_1")
+    if report_82304:
+        print(f"Score: {report_82304['score']}%")
+        for res in report_82304['results']:
+            status = "PASS" if res['passed'] else "FAIL"
+            print(f"[{status}] {res['policy_id']}")
+    else:
+        print("Failed to load IEC_82304_1")
+
 if __name__ == "__main__":
     main()
