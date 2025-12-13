@@ -83,21 +83,59 @@ st.title("Traceability Debugger")
 tab1, tab2, tab3, tab4 = st.tabs(["Data View", "Orphan Analysis", "Graph Visualization", "Compliance"])
 
 with tab1:
-    st.subheader(f"Items ({len(df)})")
-    st.dataframe(
-        df, 
-        width='stretch',
-        column_config={
+    st.header(f"Items ({len(df)})")
+    
+    if not selected_types:
+        st.info("Select Document Types in sidebar to view items.")
+    
+    for doc_code in selected_types:
+        # Get config for this type
+        doc_type = core.config.get_doc_type(doc_code)
+        if not doc_type:
+            continue
+            
+        # Filter df for this type
+        # Assuming ID starts with prefix.
+        prefix = doc_type.prefix
+        subset = df[df['id'].str.startswith(prefix, na=False)]
+        
+        if subset.empty:
+            continue
+            
+        # Determine columns to display based on config
+        display_cols = ["id"] # Always include ID
+        if doc_type.properties:
+            # Add configured properties if they exist in the dataframe
+            for prop in doc_type.properties:
+                if prop != "id" and prop in subset.columns:
+                    display_cols.append(prop)
+        else:
+            # Fallback if no properties defined
+            target_cols = ["title", "content", "verification_status", "links", "hazard", "cause", "effect"]
+            for col in target_cols:
+                if col in subset.columns:
+                     display_cols.append(col)
+
+        # Dynamic Column Config
+        col_config = {
             "id": "ID",
             "title": "Title",
-            "verification_status": st.column_config.TextColumn(
+            "links": "Links"
+        }
+        
+        if "verification_status" in display_cols:
+             col_config["verification_status"] = st.column_config.TextColumn(
                 "Status",
                 help="Verification Status",
                 validate="^(PASS|FAIL|PENDING)$"
-            ),
-            "links": "Links"
-        }
-    )
+            )
+            
+        with st.expander(f"{doc_type.name} ({len(subset)})", expanded=True):
+            st.dataframe(
+                subset[display_cols], 
+                width='stretch',
+                column_config=col_config
+            )
 
 with tab2:
     st.subheader("Orphan Analysis")
