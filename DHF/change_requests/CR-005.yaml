@@ -3,7 +3,7 @@ title: test the change management
 description: test
 type: bug_fix
 priority: medium
-status: submitted
+status: under_review
 affected_items:
 - TC-SYS-004
 risk_assessment: null
