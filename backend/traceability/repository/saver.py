@@ -131,12 +131,14 @@ class ItemSaver:
         # Map prefixes to directories
         # This is a simple mapping - could be made configurable
         prefix_map = {
-            'USN-': '01_user_needs',
+            'CRS-': '01_req_crs',
             'RISK-': '00_risks',
             'RCM-': '01_rcm',
-            'SYS-': '02_sys_reqs',
-            'TC-VER-': '05_test_cases',
-            'TC-VAL-': '06_validation_tests',
+            'SYS-': '02_req_sys',
+            'SDS-': '04_req_sds',
+            'TC-SYS-': '05_tc_sys',
+            'TC-CRS-': '06_tc_crs',
+            'TC-SDS-': '07_tc_sds',
         }
         
         subdir = prefix_map.get(prefix, 'other')

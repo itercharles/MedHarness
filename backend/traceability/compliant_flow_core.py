@@ -34,7 +34,7 @@ class CompliantFlowCore:
             auto_commit: Whether to auto-commit changes
         """
         self.repo_root = Path(repo_root)
-        self.specs_dir = self.repo_root / "specifications"
+        self.specs_dir = self.repo_root / "items"
         self.config_path = self.repo_root / "config" / "project_config.yaml"
         
         # Initialize components

@@ -201,7 +201,7 @@ with tab3:
             
         # Shape based on type (heuristic)
         shape = "box"
-        if node_id.startswith('USN'): shape = "ellipse"
+        if node_id.startswith('CRS'): shape = "ellipse"
         elif node_id.startswith('TC'): shape = "diamond"
             
         nodes.append(Node(
