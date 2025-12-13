@@ -1,10 +1,10 @@
 id: REV-004
 item_id: SYS-002
 reviewer: charles review
-status: pending
+status: in_review
 checklist_id: system_requirements_review
 comments: null
 created_date: '2025-12-13T22:49:34.009163'
-assigned_date: '2025-12-13T22:49:34.009173'
+assigned_date: '2025-12-13T22:49:43.894931'
 completed_date: null
 approval_signature: null
