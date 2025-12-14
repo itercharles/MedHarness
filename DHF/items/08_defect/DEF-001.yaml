@@ -1,5 +1,6 @@
 id: DEF-001
 title: "Traceability graph not displaying all links correctly"
+content: "The traceability graph visualization is not showing all links between requirements and tests. Some links are missing from the graph even though they exist in the YAML files."
 description: |
   The traceability graph visualization is not showing all links between requirements and tests.
   Some links are missing from the graph even though they exist in the YAML files.
