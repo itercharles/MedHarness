@@ -5,7 +5,7 @@ created_date: '2025-12-14T06:47:53.276638'
 approved_date: null
 released_date: null
 created_by: ccs
-approved_by: null
+approved_by: charles
 included_change_requests:
 - CR-001
 additional_items: []
@@ -53,6 +53,9 @@ stage_approvals:
   developing_to_testing:
     approved_by: charles
     approved_date: '2025-12-14T06:58:44.311364'
+  testing_to_released:
+    approved_by: charles
+    approved_date: '2025-12-14T06:58:54.683823'
 tags:
 - '23'
 comments: []
