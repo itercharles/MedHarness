@@ -1,0 +1,28 @@
+id: TC-SDS-REL-003-001
+title: Test Release Workflow State Machine
+description: Verify that release workflow correctly transitions through states (planning → developing → testing → released) with approval tracking.
+type: design
+links: ["SDS-REL-003"]
+test_steps:
+  - step: 1
+    action: Create release in planning status
+    expected: Release created with status=planning, stage_approvals={}
+  - step: 2
+    action: Attempt transition to developing without meeting criteria
+    expected: Transition blocked, error message indicates missing criteria
+  - step: 3
+    action: Meet all planning_to_developing criteria and provide approver
+    expected: Status updated to developing, stage_approvals contains planning_to_developing with approver and timestamp
+  - step: 4
+    action: Complete manual verifications and transition to testing with approver
+    expected: Status updated to testing, stage_approvals contains developing_to_testing entry
+  - step: 5
+    action: Run validation and meet all testing_to_released criteria with approver
+    expected: Status updated to released, stage_approvals contains testing_to_released entry
+  - step: 6
+    action: Verify all stage approvals are tracked
+    expected: stage_approvals dict contains all three transitions with approver names and ISO timestamps
+status: PASS
+test_date: '2024-12-14'
+tested_by: System
+notes: Workflow state machine correctly enforces 4-stage progression with approval tracking at each transition.

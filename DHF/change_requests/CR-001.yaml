@@ -3,7 +3,7 @@ title: test the change management
 description: add a test to cover the change management
 type: bug_fix
 priority: medium
-status: submitted
+status: approved
 affected_items:
 - TC-SYS-001
 risk_assessment: no risk

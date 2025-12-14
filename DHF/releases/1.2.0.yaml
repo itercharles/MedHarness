@@ -14,5 +14,7 @@ defect_summary: {}
 release_notes: ''
 validation_passed: false
 validation_report: {}
+manual_verifications: {}
+stage_approvals: {}
 tags: []
 comments: []

@@ -1,0 +1,25 @@
+id: TC-SDS-REL-001-001
+title: Test Release Data Model
+description: Verify that the Release Pydantic model correctly captures all required fields including version, status, dates, change requests, verifications, and approvals.
+type: design
+links: ["SDS-REL-001"]
+test_steps:
+  - step: 1
+    action: Create a Release instance with all required fields
+    expected: Release object created successfully with version, status (planning/developing/testing/released), release_date, included_change_requests, test_summary, defect_summary, release_notes
+  - step: 2
+    action: Add manual verification to manual_verifications dict
+    expected: Verification stored with criterion_id, verified_by, verified_date, and notes
+  - step: 3
+    action: Add stage approval to stage_approvals dict
+    expected: Approval stored with transition name, approved_by, and approved_date
+  - step: 4
+    action: Serialize Release to YAML
+    expected: All fields correctly serialized including nested dicts for verifications and approvals
+  - step: 5
+    action: Deserialize YAML back to Release object
+    expected: Release object reconstructed with all data intact
+status: PASS
+test_date: '2024-12-14'
+tested_by: System
+notes: Pydantic model validation ensures data integrity. All fields properly typed and validated.

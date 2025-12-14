@@ -1,0 +1,5 @@
+id: SDS-REL-005
+title: Release Streamlit UI
+content: Implement Streamlit page with three tabs - Create Release (form), Manage Releases (status and actions), Release Reports (view and export documentation). Implement reusable UI components in ui_components.py for manual verification expanders, stage approval forms, and criteria checklists.
+component: Release Management UI
+links: ["SYS-016", "SYS-019"]

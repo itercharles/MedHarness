@@ -6,7 +6,8 @@ approved_date: null
 released_date: null
 created_by: charles chen
 approved_by: null
-included_items: []
+included_change_requests: []
+additional_items: []
 test_summary: {}
 defect_summary: {}
 release_notes: ''

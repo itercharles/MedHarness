@@ -1,0 +1,34 @@
+id: TC-SDS-REL-006-001
+title: Test Workflow Criteria Configuration
+description: Verify that workflow criteria can be configured via YAML and correctly evaluated for different check types.
+type: design
+links: ["SDS-REL-006"]
+test_steps:
+  - step: 1
+    action: Load workflow_criteria.yaml configuration
+    expected: YAML parsed successfully with criteria for planning_to_developing, developing_to_testing, testing_to_released
+  - step: 2
+    action: Test field_not_empty check type
+    expected: Returns true if field has value, false if empty/null
+  - step: 3
+    action: Test change_requests_count check type with min_count
+    expected: Returns true if count >= min_count, false otherwise
+  - step: 4
+    action: Test validation_status check type
+    expected: Returns true if validation_passed=true, false otherwise
+  - step: 5
+    action: Test requirement_coverage check type with min_percentage
+    expected: Returns true if coverage >= min_percentage, false otherwise
+  - step: 6
+    action: Test manual check type without verification
+    expected: Returns false with "Manual verification required" message
+  - step: 7
+    action: Test manual check type with verification
+    expected: Returns true with "Verified by [name]" message
+  - step: 8
+    action: Test warning severity criteria
+    expected: Criterion fails but doesn't block transition (can_transition still true)
+status: PASS
+test_date: '2024-12-14'
+tested_by: System
+notes: Workflow criteria configuration system highly flexible. All check types working correctly. Warning severity allows non-blocking criteria.

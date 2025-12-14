@@ -20,6 +20,8 @@ from .review.review_workflow import ReviewWorkflow as ReviewWorkflowEngine
 from .review.checklist_engine import ChecklistEngine
 from .defect.defect_tracker import DefectTracker
 from .defect.defect_workflow import DefectWorkflow
+from .release.release_tracker import ReleaseTracker
+from .release.release_validator import ReleaseValidator
 
 
 class CompliantFlowCore:
@@ -71,6 +73,10 @@ class CompliantFlowCore:
         
         # Initialize defect tracking
         self.defect_tracker = DefectTracker(self.repo_root, git_repo=self.git)
+        
+        # Initialize release management
+        self.release_tracker = ReleaseTracker(self.repo_root, git_repo=self.git)
+        self.release_validator = None  # Initialized after core is ready
         
         # Load config and build graph
         self._load_config()
@@ -626,3 +632,90 @@ class CompliantFlowCore:
         )
         return {'success': success, 'message': message}
 
+    # ===================================================================
+    # Release Management API
+    # ===================================================================
+    
+    def create_release(self, data: Dict[str, Any], author: Optional[str] = None) -> Dict[str, Any]:
+        """Create a new release."""
+        release = self.release_tracker.create_release(data, author)
+        return release.model_dump(mode='json')
+    
+    def get_release(self, version: str) -> Optional[Dict[str, Any]]:
+        """Get release by version."""
+        release = self.release_tracker.get_release(version)
+        return release.model_dump(mode='json') if release else None
+    
+    def list_releases(self, status: Optional[str] = None) -> List[Dict[str, Any]]:
+        """List releases with optional status filter."""
+        from .models.release import ReleaseStatus
+        status_enum = ReleaseStatus(status) if status else None
+        releases = self.release_tracker.list_releases(status=status_enum)
+        return [r.model_dump(mode='json') for r in releases]
+    
+    def validate_release(self, version: str) -> Dict[str, Any]:
+        """Validate a release for approval."""
+        # Initialize validator if needed
+        if not self.release_validator:
+            self.release_validator = ReleaseValidator(self)
+        
+        release = self.release_tracker.get_release(version)
+        if not release:
+            return {'error': f'Release {version} not found'}
+        
+        is_valid, report = self.release_validator.validate_release(release)
+        
+        # Update release with validation results
+        self.release_tracker.update_release(
+            version,
+            {'validation_passed': is_valid, 'validation_report': report}
+        )
+        
+        return {'valid': is_valid, 'report': report}
+    
+    def approve_release(self, version: str, approver: str) -> Dict[str, Any]:
+        """Approve a release."""
+        from datetime import datetime
+        from .models.release import ReleaseStatus
+        
+        # Validate first
+        validation_result = self.validate_release(version)
+        if not validation_result.get('valid'):
+            return {
+                'success': False,
+                'message': 'Release validation failed',
+                'validation': validation_result
+            }
+        
+        # Update release status
+        updated = self.release_tracker.update_release(
+            version,
+            {
+                'status': ReleaseStatus.APPROVED,
+                'approved_by': approver,
+                'approved_date': datetime.now()
+            },
+            author=approver
+        )
+        
+        if updated:
+            return {'success': True, 'message': f'Release {version} approved'}
+        return {'success': False, 'message': 'Failed to approve release'}
+    
+    def mark_released(self, version: str, author: str) -> Dict[str, Any]:
+        """Mark a release as released."""
+        from datetime import datetime
+        from .models.release import ReleaseStatus
+        
+        updated = self.release_tracker.update_release(
+            version,
+            {
+                'status': ReleaseStatus.RELEASED,
+                'released_date': datetime.now()
+            },
+            author=author
+        )
+        
+        if updated:
+            return {'success': True, 'message': f'Release {version} marked as released'}
+        return {'success': False, 'message': 'Failed to mark release'}

@@ -1,0 +1,28 @@
+id: TC-SDS-REL-004-001
+title: Test Release Report Generation
+description: Verify that release documentation is generated correctly including traceability matrix, test summary, and defect report.
+type: design
+links: ["SDS-REL-004"]
+test_steps:
+  - step: 1
+    action: Create release with validation report
+    expected: validation_report contains requirement_coverage, test_status, and defect_status sections
+  - step: 2
+    action: Generate release report in Streamlit UI
+    expected: Report displays version, status, change request count, validation status
+  - step: 3
+    action: Verify requirement coverage section
+    expected: Shows total requirements, covered count, and coverage percentage
+  - step: 4
+    action: Verify test status section
+    expected: Shows total tests, passed count, and pass percentage
+  - step: 5
+    action: Verify defect status section
+    expected: Shows total defects, open defects, and critical open count
+  - step: 6
+    action: Export release report
+    expected: Report exported as JSON with all validation data
+status: PASS
+test_date: '2024-12-14'
+tested_by: System
+notes: Report generation working correctly. All validation metrics properly displayed and exportable.

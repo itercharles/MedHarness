@@ -1,0 +1,28 @@
+id: TC-SDS-REL-002-001
+title: Test Release Verification and Workflow Criteria
+description: Verify that ReleaseValidator and WorkflowCriteriaChecker correctly validate releases against automated and manual criteria.
+type: design
+links: ["SDS-REL-002"]
+test_steps:
+  - step: 1
+    action: Create release with change requests and run ReleaseValidator
+    expected: Validator checks requirement coverage, test status, and critical defects
+  - step: 2
+    action: Load workflow_criteria.yaml and initialize WorkflowCriteriaChecker
+    expected: Criteria loaded successfully for all transitions (planning_to_developing, developing_to_testing, testing_to_released)
+  - step: 3
+    action: Check automated criteria (field_not_empty, change_requests_count, validation_status)
+    expected: Criteria evaluated correctly with pass/fail status and descriptive messages
+  - step: 4
+    action: Check manual criteria without verification
+    expected: Manual criteria return failed status with "Manual verification required" message
+  - step: 5
+    action: Add manual verification and re-check criteria
+    expected: Manual criteria return passed status with "Verified by [name]" message
+  - step: 6
+    action: Evaluate transition criteria with mixed pass/fail results
+    expected: can_transition returns false if any required criterion fails, true if all pass
+status: PASS
+test_date: '2024-12-14'
+tested_by: System
+notes: Both ReleaseValidator and WorkflowCriteriaChecker working correctly. Criteria system properly enforces workflow gates.
