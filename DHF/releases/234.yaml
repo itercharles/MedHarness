@@ -1,5 +1,5 @@
 version: '234'
-status: developing
+status: testing
 release_date: '2025-12-14'
 created_date: '2025-12-14T06:47:53.276638'
 approved_date: null
@@ -23,7 +23,10 @@ manual_verifications:
     verified_by: charles
     verified_date: '2025-12-14T06:58:38.216593'
     notes: ''
-stage_approvals: {}
+stage_approvals:
+  developing_to_testing:
+    approved_by: charles
+    approved_date: '2025-12-14T06:58:44.311364'
 tags:
 - '23'
 comments: []
