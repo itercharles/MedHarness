@@ -1,0 +1,18 @@
+version: 1.2.0
+status: developing
+release_date: null
+created_date: '2024-12-14T06:13:00'
+approved_date: null
+released_date: null
+created_by: Development Team
+approved_by: null
+included_change_requests:
+- CR-001
+additional_items: []
+test_summary: {}
+defect_summary: {}
+release_notes: ''
+validation_passed: false
+validation_report: {}
+tags: []
+comments: []
