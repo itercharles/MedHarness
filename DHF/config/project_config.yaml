@@ -344,5 +344,48 @@ doc_types:
           to: cancelled
           label: "Cancel"
 
+  - code: RELEASE
+    name: "Release"
+    prefix: "REL-"
+    level: 12
+    properties: ["id", "title", "content", "version", "release_date", "included_items", "verification_status", "verified_by", "verified_date", "release_notes", "links"]
+    
+    # UI Configuration
+    icon: "🚀"
+    page_enabled: true
+    page_number: 4
+    
+    # Lifecycle Configuration
+    lifecycle:
+      states:
+        - {id: planning, label: "Planning", color: "info", icon: "�", is_initial: true}
+        - {id: developing, label: "Developing", color: "warning", icon: "🔧"}
+        - {id: testing, label: "Testing", color: "warning", icon: "🧪"}
+        - {id: released, label: "Released", color: "success", icon: "🚀"}
+      
+      transitions:
+        - from: planning
+          to: developing
+          label: "Start Development"
+          button_type: "primary"
+          criteria:
+            - {id: version_set, name: "Version defined", check_type: "field_not_empty", field: "version", required: true}
+            - {id: items_planned, name: "Items planned", check_type: "field_not_empty", field: "included_items", required: true}
+        
+        - from: developing
+          to: testing
+          label: "Start Testing"
+          button_type: "primary"
+          criteria:
+            - {id: development_complete, name: "Development completed", check_type: "manual", required: true}
+        
+        - from: testing
+          to: released
+          label: "Release"
+          button_type: "primary"
+          criteria:
+            - {id: testing_complete, name: "Testing completed", check_type: "manual", required: true}
+            - {id: verification_done, name: "Verification completed", check_type: "field_not_empty", field: "verification_status", required: true}
+
 policies:
   require_test_coverage: ["SYS", "CRS", "SDS"]
