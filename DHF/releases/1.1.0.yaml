@@ -1,53 +1,16 @@
 version: 1.1.0
-status: released
-release_date: '2024-12-20'
-created_date: '2024-12-14T06:09:00'
-approved_date: '2025-12-14T06:10:39.453406'
-released_date: '2025-12-14T06:10:53.794091'
-created_by: Development Team
-approved_by: charles chen
+status: planning
+release_date: '2025-12-14'
+created_date: '2025-12-14T06:20:20.782986'
+approved_date: null
+released_date: null
+created_by: charles chen
+approved_by: null
 included_items: []
 test_summary: {}
 defect_summary: {}
-release_notes: '# Release 1.1.0 - Feature Update
-
-
-  ## New Features
-
-  - Defect tracking system
-
-  - Release management
-
-
-  ## Status
-
-  - In planning phase
-
-  - Awaiting validation'
-validation_passed: true
-validation_report:
-  requirement_coverage:
-    total_requirements: 0
-    covered: 0
-    uncovered: 0
-    uncovered_items: []
-    coverage_percentage: 100
-  test_status:
-    total_tests: 0
-    passed: 0
-    failed: 0
-    not_run: 0
-    failed_tests: []
-    not_run_tests: []
-    pass_percentage: 100
-  defect_status:
-    total_defects: 6
-    open_defects: 3
-    critical_open: 0
-    critical_open_ids: []
-  overall_status: PASS
-  issues: []
-tags:
-- minor
-- feature-update
+release_notes: ''
+validation_passed: false
+validation_report: {}
+tags: []
 comments: []
