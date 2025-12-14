@@ -2,7 +2,7 @@ id: DEF-005
 title: Test defect from verification script
 description: This is a test defect to verify the system works
 severity: minor
-status: open
+status: investigating
 reported_by: Verification Script
 assigned_to: Test Assignee
 affected_items: []
@@ -14,7 +14,7 @@ resolution: null
 verification: null
 reported_date: '2025-12-14T05:18:06.189086'
 assigned_date: '2025-12-14T05:18:06.262529'
-investigation_started_date: null
+investigation_started_date: '2025-12-14T05:18:06.294131'
 resolved_date: null
 verified_date: null
 closed_date: null
