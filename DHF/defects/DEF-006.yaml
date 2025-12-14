@@ -2,7 +2,7 @@ id: DEF-006
 title: test the change management
 description: the system doesn't work
 severity: major
-status: open
+status: investigating
 reported_by: charles chen
 assigned_to: null
 affected_items:
@@ -15,7 +15,7 @@ resolution: null
 verification: null
 reported_date: '2025-12-14T05:25:51.475926'
 assigned_date: null
-investigation_started_date: null
+investigation_started_date: '2025-12-14T05:26:23.724470'
 resolved_date: null
 verified_date: null
 closed_date: null
