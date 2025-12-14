@@ -1,9 +1,9 @@
 version: '234'
-status: testing
+status: released
 release_date: '2025-12-14'
 created_date: '2025-12-14T06:47:53.276638'
 approved_date: null
-released_date: null
+released_date: '2025-12-14T06:58:54.759938'
 created_by: ccs
 approved_by: charles
 included_change_requests:
