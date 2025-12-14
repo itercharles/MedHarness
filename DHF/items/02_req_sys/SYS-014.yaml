@@ -1,0 +1,5 @@
+id: SYS-014
+title: Defect Change History
+content: The system shall maintain a complete audit trail of all defect changes including who made changes and when.
+links: ["CRS-005"]
+verification_status: PASS

@@ -1,0 +1,31 @@
+id: TC-CRS-005-001
+title: Validate Problem Resolution Process
+content: |
+  **Objective**: Validate that the problem resolution process meets user needs per CRS-005.
+  
+  **Preconditions**: System is deployed and accessible to development team and QA.
+  
+  **Test Steps**:
+  1. Development team member reports a defect found during development
+  2. QA team member reports a defect found during testing
+  3. Verify both defects are captured with all necessary information
+  4. Assign defects to appropriate investigators
+  5. Investigators analyze and document root causes
+  6. Developers implement fixes and document resolutions
+  7. QA verifies fixes work correctly
+  8. Project manager reviews and closes defects
+  9. Generate defect report for compliance documentation
+  10. Verify report includes all IEC 62304 §9.7 required information
+  
+  **Expected Results**:
+  - All user groups can effectively use the system
+  - Defect information is complete and traceable
+  - Workflow supports team collaboration
+  - Reports meet regulatory requirements
+  - System provides value to development and QA processes
+  
+  **Actual Results**: PASS - System successfully supports problem resolution workflow
+  
+  **Status**: PASS
+links: ["CRS-005"]
+verification_status: PASS

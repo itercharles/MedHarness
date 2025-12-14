@@ -1,0 +1,5 @@
+id: SDS-DEF-001
+title: Defect Pydantic Model
+content: Use Pydantic v2 to define Defect model with fields for id, title, description, severity enum (critical/major/minor/cosmetic), status enum, reported_by, assigned_to, affected_items list, steps_to_reproduce, and timestamps.
+component: Defect Tracking
+links: ["SYS-009"]

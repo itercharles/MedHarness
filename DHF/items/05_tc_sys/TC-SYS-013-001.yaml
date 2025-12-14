@@ -1,0 +1,32 @@
+id: TC-SYS-013-001
+title: Verify Resolution Verification Requirement
+content: |
+  **Objective**: Verify that defects cannot be closed without verification per SYS-013.
+  
+  **Preconditions**: A defect exists in "resolved" status.
+  
+  **Test Steps**:
+  1. Navigate to "Manage Defects" tab
+  2. Find defect in resolved status
+  3. Verify close action is not available (only verify/reopen)
+  4. Attempt to verify without entering verification details
+  5. Verify error message is displayed
+  6. Enter verification: "Tested fix in dev environment, issue no longer occurs"
+  7. Verify resolution
+  8. Verify status changes to "verified"
+  9. Verify close action becomes available
+  10. Close defect
+  11. Verify status changes to "closed"
+  
+  **Expected Results**:
+  - Defects in resolved status cannot be directly closed
+  - Verification step is mandatory
+  - Verification details are required
+  - After verification, defect can be closed
+  - Workflow enforces proper sequence
+  
+  **Actual Results**: PASS - Verification required before closure, workflow enforced correctly
+  
+  **Status**: PASS
+links: ["SYS-013"]
+verification_status: PASS

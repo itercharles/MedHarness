@@ -1,0 +1,27 @@
+id: TC-SDS-DEF-005-001
+title: Verify Root Cause Validation
+content: |
+  **Objective**: Verify that root cause and resolution are required per SDS-DEF-005.
+  
+  **Preconditions**: DefectWorkflow class is implemented.
+  
+  **Test Steps**:
+  1. Create a defect in investigating status
+  2. Attempt to call resolve_defect() without root_cause parameter
+  3. Verify error is returned
+  4. Attempt to call resolve_defect() without resolution parameter
+  5. Verify error is returned
+  6. Call resolve_defect() with both root_cause and resolution
+  7. Verify defect status changes to resolved
+  8. Verify root_cause and resolution fields are populated
+  
+  **Expected Results**:
+  - resolve_defect() requires both parameters
+  - Validation prevents resolution without required fields
+  - Fields are persisted correctly
+  
+  **Actual Results**: PASS - Root cause validation implemented correctly
+  
+  **Status**: PASS
+links: ["SDS-DEF-005"]
+verification_status: PASS

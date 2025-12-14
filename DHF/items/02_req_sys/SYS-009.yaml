@@ -1,0 +1,5 @@
+id: SYS-009
+title: Defect Data Capture
+content: The system shall capture defect information including unique ID, title, description, severity level, reporter, affected items, and reproduction steps.
+links: ["CRS-005"]
+verification_status: PASS
