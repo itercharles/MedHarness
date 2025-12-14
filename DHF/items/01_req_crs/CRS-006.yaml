@@ -1,9 +1,17 @@
 id: CRS-006
-title: Release Management
-content: Users shall be able to create, track, and document software releases with
+content: Users shall be able to create, track and document software releases with
   verification that all requirements are tested and defects are resolved. Each stage
   transition shall require approval, and manual verification steps shall be tracked
   with approver identity.
+links: []
+active: true
+title: Release Management
+history: []
+uid: CRS-006
+text: Users shall be able to create, track, and document software releases with verification
+  that all requirements are tested and defects are resolved. Each stage transition
+  shall require approval, and manual verification steps shall be tracked with approver
+  identity.
 user_group: Development Team, Quality Assurance, Regulatory Affairs
-source: "IEC 62304 \xA75.8"
+source: IEC 62304 §5.8
 status: draft

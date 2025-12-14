@@ -214,5 +214,135 @@ doc_types:
     relations:
       - target: SDS
         label: verifies
+
+  - code: DEFECT
+    name: "Defect"
+    prefix: "DEF-"
+    level: 10
+    properties: ["id", "title", "description", "severity", "priority", "found_in_version", "affected_components", "steps_to_reproduce", "expected_behavior", "actual_behavior", "assigned_to", "links"]
+    
+    # UI Configuration
+    icon: "🐛"
+    page_enabled: true
+    page_number: 8
+    
+    # Lifecycle Configuration
+    lifecycle:
+      states:
+        - {id: open, label: "Open", color: "error", icon: "🔴", is_initial: true}
+        - {id: in_progress, label: "In Progress", color: "warning", icon: "🔧"}
+        - {id: resolved, label: "Resolved", color: "info", icon: "✅"}
+        - {id: verified, label: "Verified", color: "success", icon: "🎯"}
+        - {id: closed, label: "Closed", color: "secondary", icon: "🔒"}
+        - {id: reopened, label: "Reopened", color: "error", icon: "🔄"}
+      
+      transitions:
+        - from: open
+          to: in_progress
+          label: "Start Work"
+          button_type: "primary"
+          criteria:
+            - {id: assigned, name: "Assigned to developer", check_type: "field_not_empty", field: "assigned_to", required: true}
+            - {id: severity_set, name: "Severity defined", check_type: "field_not_empty", field: "severity", required: true}
+        
+        - from: in_progress
+          to: resolved
+          label: "Resolve"
+          button_type: "primary"
+          criteria:
+            - {id: fix_implemented, name: "Fix implemented", check_type: "manual", required: true}
+            - {id: root_cause, name: "Root cause documented", check_type: "field_not_empty", field: "description", required: true}
+        
+        - from: resolved
+          to: verified
+          label: "Verify Fix"
+          criteria:
+            - {id: verification_complete, name: "Verification completed", check_type: "manual", required: true}
+        
+        - from: verified
+          to: closed
+          label: "Close"
+          criteria:
+            - {id: closure_approved, name: "Closure approved", check_type: "manual", required: true}
+        
+        - from: closed
+          to: reopened
+          label: "Reopen"
+          criteria:
+            - {id: reopen_reason, name: "Reopen reason documented", check_type: "manual", required: true}
+        
+        - from: reopened
+          to: in_progress
+          label: "Resume Work"
+          button_type: "primary"
+
+  - code: CR
+    name: "Change Request"
+    prefix: "CR-"
+    level: 11
+    properties: ["id", "title", "description", "justification", "impact_assessment", "priority", "requested_by", "assigned_to", "target_version", "links"]
+    
+    # UI Configuration
+    icon: "📝"
+    page_enabled: true
+    page_number: 9
+    
+    # Lifecycle Configuration
+    lifecycle:
+      states:
+        - {id: submitted, label: "Submitted", color: "info", icon: "📥", is_initial: true}
+        - {id: under_review, label: "Under Review", color: "warning", icon: "🔍"}
+        - {id: approved, label: "Approved", color: "success", icon: "✅"}
+        - {id: rejected, label: "Rejected", color: "error", icon: "❌"}
+        - {id: in_progress, label: "In Progress", color: "warning", icon: "🔧"}
+        - {id: completed, label: "Completed", color: "success", icon: "🎯"}
+        - {id: cancelled, label: "Cancelled", color: "secondary", icon: "🚫"}
+      
+      transitions:
+        - from: submitted
+          to: under_review
+          label: "Start Review"
+          button_type: "primary"
+          criteria:
+            - {id: description_complete, name: "Description complete", check_type: "field_not_empty", field: "description", required: true}
+            - {id: justification_provided, name: "Justification provided", check_type: "field_not_empty", field: "justification", required: true}
+        
+        - from: under_review
+          to: approved
+          label: "Approve"
+          button_type: "primary"
+          criteria:
+            - {id: impact_assessed, name: "Impact assessed", check_type: "field_not_empty", field: "impact_assessment", required: true}
+            - {id: review_complete, name: "Review completed", check_type: "manual", required: true}
+        
+        - from: under_review
+          to: rejected
+          label: "Reject"
+          criteria:
+            - {id: rejection_reason, name: "Rejection reason documented", check_type: "manual", required: true}
+        
+        - from: approved
+          to: in_progress
+          label: "Start Implementation"
+          button_type: "primary"
+          criteria:
+            - {id: assigned, name: "Assigned to developer", check_type: "field_not_empty", field: "assigned_to", required: true}
+        
+        - from: in_progress
+          to: completed
+          label: "Complete"
+          button_type: "primary"
+          criteria:
+            - {id: implementation_done, name: "Implementation completed", check_type: "manual", required: true}
+            - {id: testing_done, name: "Testing completed", check_type: "manual", required: true}
+        
+        - from: submitted
+          to: cancelled
+          label: "Cancel"
+        
+        - from: under_review
+          to: cancelled
+          label: "Cancel"
+
 policies:
   require_test_coverage: ["SYS", "CRS", "SDS"]
