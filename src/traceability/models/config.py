@@ -16,7 +16,6 @@ class DocTypeConfig(BaseModel):
     code: str = Field(..., description="Document type code (e.g., 'SYS')")
     name: str = Field(..., description="Human-readable name")
     prefix: str = Field(..., description="ID prefix (e.g., 'SYS-')")
-    level: Optional[int] = Field(None, description="Hierarchy level")
     allowed_parents: Optional[List[str]] = Field(None, description="Allowed parent document types")
     relations: Optional[List[RelationConfig]] = Field(None, description="Relationship configurations")
     type: Optional[str] = Field(None, description="Special type (e.g., 'test')")

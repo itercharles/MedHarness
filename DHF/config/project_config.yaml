@@ -2,7 +2,6 @@ doc_types:
   - code: CRS
     name: "Customer Requirement"
     prefix: "CRS-"
-    level: 1
     properties: ["id", "title", "content", "user_group", "source", "reviewer", "review_date"]
     
     # UI Configuration
@@ -31,7 +30,6 @@ doc_types:
         - from: draft
           to: approved
           label: "Approve"
-          button_type: "primary"
           criteria:
             - id: content_complete
               name: "Content documented"
@@ -56,7 +54,6 @@ doc_types:
         - from: approved
           to: retired
           label: "Retire"
-          button_type: "secondary"
           criteria:
             - id: retirement_reason
               name: "Retirement reason documented"
@@ -78,12 +75,10 @@ doc_types:
   - code: RISK
     name: "Risk Analysis"
     prefix: "RISK-"
-    level: 1
     properties: ["id", "title", "hazard", "cause", "effect", "severity_pre", "probability_pre", "links", "reviewer", "review_date"]
   - code: RCM
     name: "Risk Control Measure"
     prefix: "RCM-"
-    level: 2
     allowed_parents: ["RISK"]
     properties: ["id", "title", "content", "type", "links", "reviewer", "review_date"]
     relations:
@@ -92,7 +87,6 @@ doc_types:
   - code: SDS
     name: "Software Design Specification"
     prefix: "SDS-"
-    level: 3
     allowed_parents: ["SYS"]
     properties: ["id", "title", "content", "component", "links", "reviewer", "review_date"]
     relations:
@@ -115,7 +109,6 @@ doc_types:
         - from: draft
           to: approved
           label: "Approve"
-          button_type: "primary"
           criteria:
             - {id: content_complete, name: "Content documented", check_type: "field_not_empty", field: "content", required: true}
             - {id: title_defined, name: "Title defined", check_type: "field_not_empty", field: "title", required: true}
@@ -140,7 +133,6 @@ doc_types:
   - code: SYS
     name: "System Requirement"
     prefix: "SYS-"
-    level: 2
     allowed_parents: ["CRS", "RCM"]
     properties: ["id", "title", "content", "category", "verification_method", "critical_safety", "links", "reviewer", "review_date"]
     relations:
@@ -165,7 +157,6 @@ doc_types:
         - from: draft
           to: approved
           label: "Approve"
-          button_type: "primary"
           criteria:
             - {id: content_complete, name: "Content documented", check_type: "field_not_empty", field: "content", required: true}
             - {id: title_defined, name: "Title defined", check_type: "field_not_empty", field: "title", required: true}
@@ -218,7 +209,6 @@ doc_types:
   - code: DEFECT
     name: "Defect"
     prefix: "DEF-"
-    level: 10
     properties: ["id", "title", "description", "severity", "priority", "found_in_version", "affected_components", "steps_to_reproduce", "expected_behavior", "actual_behavior", "assigned_to", "links"]
     
     # UI Configuration
@@ -240,7 +230,6 @@ doc_types:
         - from: open
           to: in_progress
           label: "Start Work"
-          button_type: "primary"
           criteria:
             - {id: assigned, name: "Assigned to developer", check_type: "field_not_empty", field: "assigned_to", required: true}
             - {id: severity_set, name: "Severity defined", check_type: "field_not_empty", field: "severity", required: true}
@@ -248,7 +237,6 @@ doc_types:
         - from: in_progress
           to: resolved
           label: "Resolve"
-          button_type: "primary"
           criteria:
             - {id: fix_implemented, name: "Fix implemented", check_type: "manual", required: true}
             - {id: root_cause, name: "Root cause documented", check_type: "field_not_empty", field: "description", required: true}
@@ -274,12 +262,10 @@ doc_types:
         - from: reopened
           to: in_progress
           label: "Resume Work"
-          button_type: "primary"
 
   - code: CR
     name: "Change Request"
     prefix: "CR-"
-    level: 11
     properties: ["id", "title", "description", "justification", "impact_assessment", "priority", "requested_by", "assigned_to", "target_version", "links"]
     
     # UI Configuration
@@ -302,7 +288,6 @@ doc_types:
         - from: submitted
           to: under_review
           label: "Start Review"
-          button_type: "primary"
           criteria:
             - {id: description_complete, name: "Description complete", check_type: "field_not_empty", field: "description", required: true}
             - {id: justification_provided, name: "Justification provided", check_type: "field_not_empty", field: "justification", required: true}
@@ -310,7 +295,6 @@ doc_types:
         - from: under_review
           to: approved
           label: "Approve"
-          button_type: "primary"
           criteria:
             - {id: impact_assessed, name: "Impact assessed", check_type: "field_not_empty", field: "impact_assessment", required: true}
             - {id: review_complete, name: "Review completed", check_type: "manual", required: true}
@@ -324,14 +308,12 @@ doc_types:
         - from: approved
           to: in_progress
           label: "Start Implementation"
-          button_type: "primary"
           criteria:
             - {id: assigned, name: "Assigned to developer", check_type: "field_not_empty", field: "assigned_to", required: true}
         
         - from: in_progress
           to: completed
           label: "Complete"
-          button_type: "primary"
           criteria:
             - {id: implementation_done, name: "Implementation completed", check_type: "manual", required: true}
             - {id: testing_done, name: "Testing completed", check_type: "manual", required: true}
@@ -347,7 +329,6 @@ doc_types:
   - code: RELEASE
     name: "Release"
     prefix: "REL-"
-    level: 12
     properties: ["id", "title", "content", "version", "release_date", "included_items", "verification_status", "verified_by", "verified_date", "release_notes", "links"]
     
     # UI Configuration
@@ -367,7 +348,6 @@ doc_types:
         - from: planning
           to: developing
           label: "Start Development"
-          button_type: "primary"
           criteria:
             - {id: version_set, name: "Version defined", check_type: "field_not_empty", field: "version", required: true}
             - {id: items_planned, name: "Items planned", check_type: "field_not_empty", field: "included_items", required: true}
@@ -375,14 +355,12 @@ doc_types:
         - from: developing
           to: testing
           label: "Start Testing"
-          button_type: "primary"
           criteria:
             - {id: development_complete, name: "Development completed", check_type: "manual", required: true}
         
         - from: testing
           to: released
           label: "Release"
-          button_type: "primary"
           criteria:
             - {id: testing_complete, name: "Testing completed", check_type: "manual", required: true}
             - {id: verification_done, name: "Verification completed", check_type: "field_not_empty", field: "verification_status", required: true}
