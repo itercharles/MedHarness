@@ -18,6 +18,8 @@ from .change_management.impact_analyzer import ImpactAnalyzer
 from .review.review_tracker import ReviewTracker
 from .review.review_workflow import ReviewWorkflow as ReviewWorkflowEngine
 from .review.checklist_engine import ChecklistEngine
+from .defect.defect_tracker import DefectTracker
+from .defect.defect_workflow import DefectWorkflow
 
 
 class CompliantFlowCore:
@@ -66,6 +68,9 @@ class CompliantFlowCore:
             print(f"Warning: Failed to initialize checklist engine: {e}")
             # Create a minimal checklist engine with empty config
             self.checklist_engine = ChecklistEngine(Path("/dev/null"))
+        
+        # Initialize defect tracking
+        self.defect_tracker = DefectTracker(self.repo_root, git_repo=self.git)
         
         # Load config and build graph
         self._load_config()
@@ -479,6 +484,144 @@ class CompliantFlowCore:
             self.review_tracker,
             review_id,
             comments,
+            author
+        )
+        return {'success': success, 'message': message}
+
+    # Defect Management Methods
+    
+    def create_defect(
+        self,
+        data: Dict[str, Any],
+        author: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Create a new defect."""
+        defect = self.defect_tracker.create_defect(data, author=author)
+        return defect.model_dump(mode='json')
+    
+    def get_defect(self, defect_id: str) -> Optional[Dict[str, Any]]:
+        """Get defect by ID."""
+        defect = self.defect_tracker.get_defect(defect_id)
+        return defect.model_dump(mode='json') if defect else None
+    
+    def list_defects(
+        self,
+        status: Optional[str] = None,
+        severity: Optional[str] = None,
+        assigned_to: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
+        """List defects with optional filters."""
+        from .models.defect import DefectStatus, DefectSeverity
+        
+        status_enum = DefectStatus(status) if status else None
+        severity_enum = DefectSeverity(severity) if severity else None
+        
+        defects = self.defect_tracker.list_defects(
+            status=status_enum,
+            severity=severity_enum,
+            assigned_to=assigned_to
+        )
+        return [d.model_dump(mode='json') for d in defects]
+    
+    def assign_defect(
+        self,
+        defect_id: str,
+        assigned_to: str,
+        author: str
+    ) -> Dict[str, Any]:
+        """Assign defect to an investigator."""
+        success, message = DefectWorkflow.assign_defect(
+            self.defect_tracker,
+            defect_id,
+            assigned_to,
+            author
+        )
+        return {'success': success, 'message': message}
+    
+    def start_defect_investigation(
+        self,
+        defect_id: str,
+        author: str
+    ) -> Dict[str, Any]:
+        """Start investigating a defect."""
+        success, message = DefectWorkflow.start_investigation(
+            self.defect_tracker,
+            defect_id,
+            author
+        )
+        return {'success': success, 'message': message}
+    
+    def resolve_defect(
+        self,
+        defect_id: str,
+        root_cause: str,
+        resolution: str,
+        author: str
+    ) -> Dict[str, Any]:
+        """Mark defect as resolved."""
+        success, message = DefectWorkflow.resolve_defect(
+            self.defect_tracker,
+            defect_id,
+            root_cause,
+            resolution,
+            author
+        )
+        return {'success': success, 'message': message}
+    
+    def verify_defect_resolution(
+        self,
+        defect_id: str,
+        verification: str,
+        author: str
+    ) -> Dict[str, Any]:
+        """Verify defect resolution."""
+        success, message = DefectWorkflow.verify_resolution(
+            self.defect_tracker,
+            defect_id,
+            verification,
+            author
+        )
+        return {'success': success, 'message': message}
+    
+    def close_defect(
+        self,
+        defect_id: str,
+        author: str
+    ) -> Dict[str, Any]:
+        """Close a defect."""
+        success, message = DefectWorkflow.close_defect(
+            self.defect_tracker,
+            defect_id,
+            author
+        )
+        return {'success': success, 'message': message}
+    
+    def defer_defect(
+        self,
+        defect_id: str,
+        reason: str,
+        author: str
+    ) -> Dict[str, Any]:
+        """Defer a defect to future release."""
+        success, message = DefectWorkflow.defer_defect(
+            self.defect_tracker,
+            defect_id,
+            reason,
+            author
+        )
+        return {'success': success, 'message': message}
+    
+    def reopen_defect(
+        self,
+        defect_id: str,
+        reason: str,
+        author: str
+    ) -> Dict[str, Any]:
+        """Reopen a closed or resolved defect."""
+        success, message = DefectWorkflow.reopen_defect(
+            self.defect_tracker,
+            defect_id,
+            reason,
             author
         )
         return {'success': success, 'message': message}

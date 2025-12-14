@@ -1,0 +1,31 @@
+id: DEF-003
+title: UI button text truncated on small screens
+description: The "Submit Treatment Plan" button text is truncated on mobile devices
+  and small tablet screens, showing only "Submit Tre..."
+severity: cosmetic
+status: open
+reported_by: UX Team
+assigned_to: null
+affected_items:
+- SDS-UI-002
+related_change_request: null
+steps_to_reproduce: |
+  1. Open application on mobile device (screen width < 768px)
+  2. Navigate to treatment planning screen
+  3. Observe submit button
+  4. Text is truncated
+environment: all
+root_cause: null
+resolution: null
+verification: null
+reported_date: '2025-12-14T08:30:00'
+assigned_date: null
+investigation_started_date: null
+resolved_date: null
+verified_date: null
+closed_date: null
+tags:
+- ui
+- mobile
+- responsive
+comments: []
