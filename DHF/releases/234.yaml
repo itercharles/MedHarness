@@ -1,0 +1,19 @@
+version: '234'
+status: planning
+release_date: '2025-12-14'
+created_date: '2025-12-14T06:47:53.276638'
+approved_date: null
+released_date: null
+created_by: ccs
+approved_by: null
+included_change_requests:
+- CR-001
+additional_items: []
+test_summary: {}
+defect_summary: {}
+release_notes: df
+validation_passed: false
+validation_report: {}
+tags:
+- '23'
+comments: []
