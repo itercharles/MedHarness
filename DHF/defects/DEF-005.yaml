@@ -1,0 +1,22 @@
+id: DEF-005
+title: Test defect from verification script
+description: This is a test defect to verify the system works
+severity: minor
+status: open
+reported_by: Verification Script
+assigned_to: null
+affected_items: []
+related_change_request: null
+steps_to_reproduce: null
+environment: null
+root_cause: null
+resolution: null
+verification: null
+reported_date: '2025-12-14T05:18:06.189086'
+assigned_date: null
+investigation_started_date: null
+resolved_date: null
+verified_date: null
+closed_date: null
+tags: []
+comments: []
