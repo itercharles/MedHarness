@@ -1,85 +1,260 @@
-# Architecture Design Specification
+# System Architecture Specification
 
-## 1. Introduction
-CompliantFlow is a lightweight, Docs-as-Code Application Lifecycle Management (ALM) tool designed for medical device software development.
+## Overview
 
-## 2. System View
+CompliantFlow is a configuration-driven requirements traceability system designed for IEC 62304 compliance. The system uses a universal framework approach where all item types (requirements, defects, releases, etc.) are managed through a single template driven by YAML configuration.
 
-### 2.1 Data Layer
-- **Storage**: Structured data (Requirements, Tests, Risks) is stored as YAML files. Unstructured data (Plans, Manuals) is stored as Markdown.
-- **Governance**: Regulations and Procedures are stored as structured YAML policies in `DHF/governance`.
-- **Version Control**: Git is used as the single source of truth for all data, providing history, branching, and audit trails.
-- **Models**:
-    - `Item`: A Pydantic v2 model representing any traceable artifact. Supports dynamic fields via configuration.
-    - `Regulation`/`Policy`: Models for compliance data.
-    - `ProjectConfig`: A Pydantic model for validating `project_config.yaml`.
+## Architecture Principles
 
-### 2.2 Logic Layer
-- **Core Facade**: `CompliantFlowCore` initializes the system, loading configuration and data.
-- **Graph Engine**: `GraphEngine` wraps `networkx.DiGraph`. It handles:
-    - Building the graph from `Item` objects.
-    - Resolving internal links.
-    - Calculating metrics (coverage, orphan counts).
-    - Traversing upstream/downstream dependencies.
-- **Policy Engine**: `PolicyEngine` executes automated checks (e.g., `trace_coverage`, `item_existence`) against the graph.
-- **Change Management**: `ChangeTracker`, `ChangeWorkflow`, and `ImpactAnalyzer` implement IEC 62304 §6.2 change control:
-    - Change request CRUD operations with auto-ID generation
-    - State machine workflow (submitted → under_review → approved → implemented)
-    - Graph-based impact analysis with MDCG 2020-3 significance assessment
-- **Persistence**: `ItemLoader` and `ItemSaver` abstract filesystem operations.
+### 1. Configuration-Driven Design
+- **Single Source of Truth**: `DHF/config/project_config.yaml` defines all item types, lifecycles, and workflows
+- **No Custom Code Per Type**: Adding new item types requires only configuration changes
+- **Auto-Generated Pages**: Streamlit pages are generated from configuration
 
-### 2.3 Presentation Layer
-- **Streamlit App**: The primary user interface for debugging and visualization.
-    - **Sidebar**: Provides filtering and configuration view.
-    - **Data View**: dynamically renders tables based on item types and configured properties.
-    - **Graph Visualization**: Uses `streamlit-agraph` to render interactive force-directed graphs.
-    - **Compliance Tab**: Allows executing regulatory checks and viewing detailed pass/fail reports.
-    - **Change Management Page**: Multi-tab interface for submitting, reviewing, and tracking change requests per IEC 62304.
+### 2. Universal Item Model
+- All entities (requirements, defects, releases, CRs) use the same `Item` model
+- Consistent storage format (YAML files in `DHF/items/`)
+- Unified CRUD operations through `CompliantFlowCore`
 
-## 3. Data Flow
-1.  **Load**: `ItemLoader` scans the repository, parsing YAML files into Pydantic `Item` objects.
-2.  **Build**: `GraphEngine` accepts the list of Items, adding them as nodes and creating edges for valid links.
-3.  **Query**: The UI requests data from `CompliantFlowCore`.
-4.  **Render**: Streamlit displays the processed data to the user.
+### 3. Dynamic Workflow Engine
+- Workflows defined in configuration, not code
+- State machines with validation criteria
+- Automatic enforcement of transition rules
 
-## 3. Traceability to Requirements
-The following table demonstrates the traceability of Software Architecture Design (SDS) items to System Requirements (SYS).
+## System Components
 
-| ID | Title | Trace to Requirements (SYS) |
-|---|---|---|
-| [SDS-001](file:///DHF/items/04_req_sds/SDS-001.yaml) | Graph Data Structure | [SYS-002](file:///DHF/items/02_req_sys/SYS-002.yaml) |
-| [SDS-002](file:///DHF/items/04_req_sds/SDS-002.yaml) | Streamlit Visualization | [SYS-003](file:///DHF/items/02_req_sys/SYS-003.yaml) |
-| [SDS-003](file:///DHF/items/04_req_sds/SDS-003.yaml) | Policy Engine | [SYS-006](file:///DHF/items/02_req_sys/SYS-006.yaml) |
-| [SDS-004](file:///DHF/items/04_req_sds/SDS-004.yaml) | Change Management Module | [SYS-008](file:///DHF/items/02_req_sys/SYS-008.yaml) |
+### Core Layer (`src/traceability/`)
 
-## 4. Test Traceability
+#### CompliantFlowCore (401 lines)
+**Purpose**: Central orchestrator for all traceability operations
 
-The following tables demonstrate complete V-model test coverage for the Change Management module.
+**Responsibilities**:
+- Load and manage project configuration
+- Provide unified API for item management
+- Coordinate graph engine and workflow engine
+- Handle Git-based audit trail
 
-### 4.1 Customer Validation Tests (TC-CRS)
+**Key Methods**:
+- `get_all_items()` - Retrieve all items
+- `get_item_by_id(uid)` - Get specific item
+- `create_item(doc_type, data)` - Create new item
+- `update_item(uid, updates)` - Update existing item
+- `transition_item(uid, to_state)` - Execute workflow transition
 
-| Test Case ID | Title | Validates | Status |
-|---|---|---|---|
-| [TC-CRS-004-001](file:///DHF/items/05_test_cases/TC-CRS-004-001.yaml) | Customer Validation - Change Management Workflow | [CRS-004](file:///DHF/items/01_req_crs/CRS-004.yaml) | PASS |
+#### DynamicWorkflowEngine
+**Purpose**: Execute lifecycle workflows defined in configuration
 
-### 4.2 System Tests (TC-SYS)
+**Features**:
+- State validation
+- Transition criteria checking
+- Automatic state updates
+- Audit trail generation
 
-| Test Case ID | Title | Verifies | Status |
-|---|---|---|---|
-| [TC-SYS-008-001](file:///DHF/items/05_test_cases/TC-SYS-008-001.yaml) | Verify Change Request Creation | [SYS-008](file:///DHF/items/02_req_sys/SYS-008.yaml) | PASS |
-| [TC-SYS-008-002](file:///DHF/items/05_test_cases/TC-SYS-008-002.yaml) | Verify Impact Analysis | [SYS-008](file:///DHF/items/02_req_sys/SYS-008.yaml) | PASS |
-| [TC-SYS-008-003](file:///DHF/items/05_test_cases/TC-SYS-008-003.yaml) | Verify Workflow State Transitions | [SYS-008](file:///DHF/items/02_req_sys/SYS-008.yaml) | PASS |
-| [TC-SYS-008-004](file:///DHF/items/05_test_cases/TC-SYS-008-004.yaml) | Verify MDCG 2020-3 Significance Assessment | [SYS-008](file:///DHF/items/02_req_sys/SYS-008.yaml) | PASS |
-| [TC-SYS-008-005](file:///DHF/items/05_test_cases/TC-SYS-008-005.yaml) | Verify Change History Tracking | [SYS-008](file:///DHF/items/02_req_sys/SYS-008.yaml) | PASS |
+#### GraphEngine
+**Purpose**: Manage traceability relationships
 
-### 4.3 Design Tests (TC-SDS)
+**Features**:
+- Build dependency graph from item links
+- Detect orphan nodes
+- Generate traceability matrices
+- Validate coverage
 
-| Test Case ID | Title | Verifies | Status |
-|---|---|---|---|
-| [TC-SDS-004-001](file:///DHF/items/05_test_cases/TC-SDS-004-001.yaml) | Design Test - ChangeRequest Data Model | [SDS-004](file:///DHF/items/04_req_sds/SDS-004.yaml) | PASS |
-| [TC-SDS-004-002](file:///DHF/items/05_test_cases/TC-SDS-004-002.yaml) | Design Test - ChangeTracker CRUD Operations | [SDS-004](file:///DHF/items/04_req_sds/SDS-004.yaml) | PASS |
-| [TC-SDS-004-003](file:///DHF/items/05_test_cases/TC-SDS-004-003.yaml) | Design Test - ChangeWorkflow State Machine | [SDS-004](file:///DHF/items/04_req_sds/SDS-004.yaml) | PASS |
-| [TC-SDS-004-004](file:///DHF/items/05_test_cases/TC-SDS-004-004.yaml) | Design Test - ImpactAnalyzer Graph Integration | [SDS-004](file:///DHF/items/04_req_sds/SDS-004.yaml) | PASS |
-| [TC-SDS-004-005](file:///DHF/items/05_test_cases/TC-SDS-004-005.yaml) | Design Test - Streamlit UI Components | [SDS-004](file:///DHF/items/04_req_sds/SDS-004.yaml) | PASS |
+### UI Layer (`src/pages/`)
 
+#### Universal Page Template
+**Purpose**: Single template serving all item types
 
+**Features**:
+- Dynamic table with filtering
+- Detail panel with view/edit modes
+- Workflow transition buttons
+- Create new item forms
+- Link management
+
+**Auto-Generated Pages**:
+- `4_Release.py` - Release management
+- `5_Customer_Requirement.py` - Customer requirements (CRS)
+- `6_System_Requirement.py` - System requirements (SYS)
+- `7_Software_Design_Specification.py` - Design specs (SDS)
+- `8_Defect.py` - Defect tracking
+- `9_Change_Request.py` - Change requests
+
+#### Page Generator (`generate_pages.py`)
+**Purpose**: Auto-generate page files from configuration
+
+**Usage**:
+```bash
+src/venv/bin/python3 src/generate_pages.py
+```
+
+### Data Layer (`DHF/`)
+
+#### Configuration (`DHF/config/`)
+- `project_config.yaml` - Master configuration
+  - Doc type definitions
+  - Lifecycle workflows
+  - Properties and relations
+  - UI settings
+
+#### Items (`DHF/items/`)
+Organized by type with numeric prefixes:
+- `01_req_crs/` - Customer Requirements
+- `02_req_sys/` - System Requirements
+- `04_req_sds/` - Software Design Specifications
+- `07_tc_sds/` - Test Cases
+- `08_defect/` - Defects
+- `09_cr/` - Change Requests
+- `10_release/` - Releases
+
+## Item Lifecycle Management
+
+### Standard Approval Workflow
+Used by: CRS, SYS, SDS
+
+**States**:
+1. `draft` - Initial state
+2. `in_review` - Under review
+3. `approved` - Approved and locked
+
+**Transitions**:
+- draft → in_review (requires: reviewer assigned)
+- in_review → approved (requires: review complete)
+- in_review → draft (reject)
+
+### Defect Workflow
+**States**:
+1. `open` - Newly reported
+2. `in_progress` - Being worked on
+3. `resolved` - Fix implemented
+4. `verified` - Fix verified
+5. `closed` - Completed
+6. `reopened` - Reopened after closure
+
+### Change Request Workflow
+**States**:
+1. `submitted` - Initial submission
+2. `under_review` - Being reviewed
+3. `approved` - Approved for implementation
+4. `rejected` - Rejected
+5. `in_progress` - Being implemented
+6. `completed` - Implementation complete
+7. `cancelled` - Cancelled
+
+### Release Workflow
+**States**:
+1. `planning` - Planning phase
+2. `developing` - Development in progress
+3. `testing` - Testing phase
+4. `released` - Released to production
+
+## Data Model
+
+### Item Model
+```python
+class Item:
+    uid: str                    # Unique identifier (e.g., "SYS-001")
+    title: str                  # Human-readable title
+    content: str                # Main content/description
+    status: str                 # Current lifecycle state
+    links: List[str]            # Links to other items
+    verification_status: str    # PASS, FAIL, PENDING
+    # ... additional properties defined per doc type
+```
+
+### Configuration Model
+```python
+class DocTypeConfig:
+    code: str                   # Type code (e.g., "SYS")
+    name: str                   # Display name
+    prefix: str                 # ID prefix (e.g., "SYS-")
+    properties: List[str]       # Available properties
+    icon: str                   # UI icon
+    page_enabled: bool          # Show in sidebar
+    page_number: int            # Sidebar position
+    lifecycle: LifecycleConfig  # Workflow definition
+```
+
+## Traceability Graph
+
+### Relationship Types
+- **verifies**: Test cases verify requirements
+- **implements**: Design specs implement requirements
+- **links**: Generic relationship
+
+### Coverage Analysis
+- Requirement → Design → Test coverage
+- Orphan node detection
+- Bidirectional link validation
+
+## Compliance Features
+
+### IEC 62304 §9.7 - Problem Resolution
+- Defect tracking with full lifecycle
+- Root cause analysis required
+- Resolution verification
+- Complete audit trail
+
+### Audit Trail
+- Git-based version control
+- All changes tracked with author and timestamp
+- Immutable history
+- Compliance-ready reports
+
+## Extension Points
+
+### Adding New Item Types
+
+1. **Update Configuration**:
+```yaml
+doc_types:
+  - code: NEWTYPE
+    name: "New Type"
+    prefix: "NEW-"
+    properties: ["id", "title", "content", "status", "links"]
+    icon: "🆕"
+    page_enabled: true
+    page_number: 11
+    lifecycle:
+      states:
+        - {id: draft, label: "Draft", is_initial: true}
+        - {id: approved, label: "Approved"}
+      transitions:
+        - {from: draft, to: approved, label: "Approve"}
+```
+
+2. **Generate Pages**:
+```bash
+src/venv/bin/python3 src/generate_pages.py
+```
+
+3. **Create Directory**:
+```bash
+mkdir -p DHF/items/11_newtype
+```
+
+4. **Add Sample Items** - Create YAML files in the new directory
+
+**That's it!** No code changes needed.
+
+## Performance Considerations
+
+- **Lazy Loading**: Items loaded on demand
+- **Caching**: Configuration cached at startup
+- **Incremental Updates**: Only modified items reloaded
+- **Git Efficiency**: Atomic commits per operation
+
+## Security
+
+- **File-Based Storage**: No database vulnerabilities
+- **Git Audit Trail**: Tamper-evident history
+- **No Authentication**: Designed for trusted environments
+- **Local Deployment**: No network exposure by default
+
+## Future Enhancements
+
+- [ ] Real-time collaboration
+- [ ] Advanced search and filtering
+- [ ] Custom report templates
+- [ ] API for external integrations
+- [ ] Automated test execution
+- [ ] Release validation automation
