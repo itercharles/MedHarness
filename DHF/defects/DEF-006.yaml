@@ -1,0 +1,24 @@
+id: DEF-006
+title: test the change management
+description: the system doesn't work
+severity: major
+status: open
+reported_by: charles chen
+assigned_to: null
+affected_items:
+- SYS-007
+related_change_request: null
+steps_to_reproduce: null
+environment: dev
+root_cause: null
+resolution: null
+verification: null
+reported_date: '2025-12-14T05:25:51.475926'
+assigned_date: null
+investigation_started_date: null
+resolved_date: null
+verified_date: null
+closed_date: null
+tags:
+- ui
+comments: []
