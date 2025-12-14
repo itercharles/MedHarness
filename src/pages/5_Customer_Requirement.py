@@ -1,4 +1,4 @@
-"""Releases page - uses universal template."""
+"""Customer Requirement page - uses universal template."""
 
 import streamlit as st
 from pathlib import Path
@@ -12,7 +12,7 @@ core = CompliantFlowCore(dhf_root)
 # Get doc type config
 doc_type = None
 for dt in core.config.doc_types:
-    if dt.code == 'RELEASE':
+    if dt.code == 'CRS':
         doc_type = dt
         break
 
@@ -22,7 +22,7 @@ if doc_type:
         'code': doc_type.code,
         'name': doc_type.name,
         'prefix': doc_type.prefix,
-        'icon': getattr(doc_type, 'icon', '🚀'),
+        'icon': getattr(doc_type, 'icon', '🎯'),
         'lifecycle': getattr(doc_type, 'lifecycle', {}),
         'page_enabled': getattr(doc_type, 'page_enabled', True),
         'has_verification': getattr(doc_type, 'has_verification', False),
@@ -32,4 +32,4 @@ if doc_type:
     # Render page
     render_item_management_page(config_dict, core)
 else:
-    st.error("RELEASE doc type not found in project configuration")
+    st.error("CRS doc type not found in project configuration")
