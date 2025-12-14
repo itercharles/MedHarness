@@ -128,4 +128,99 @@ def render_criteria_checklist(
         elif severity == 'warning':
             st.warning(f"⚠️ {criterion['name']}: {criterion['message']}")
         else:
-            st.error(f"❌ {criterion['name']}: {criterion['message']}")
+            st.error("❌ {criterion['name']}: {criterion['message']}")
+
+
+def render_status_badge(status: str, verification_status: str = None) -> None:
+    """
+    Render status badge with color coding.
+    
+    Args:
+        status: Lifecycle status (draft, approved, retired)
+        verification_status: Verification status (not_verified, verified, failed)
+    """
+    # Lifecycle status
+    if status == "approved":
+        st.success(f"✅ {status.upper()}")
+    elif status == "retired":
+        st.info(f"🔒 {status.upper()}")
+    else:  # draft
+        st.warning(f"📝 {status.upper()}")
+    
+    # Verification status (if provided)
+    if verification_status:
+        if verification_status == "verified":
+            st.success(f"✓ Verified")
+        elif verification_status == "failed":
+            st.error(f"✗ Verification Failed")
+        else:
+            st.info(f"○ Not Verified")
+
+
+def render_item_card(
+    item: Dict[str, Any],
+    item_type: str,
+    core: Any,
+    show_actions: bool = True
+) -> None:
+    """
+    Render expandable card for any item type.
+    
+    Args:
+        item: Item dictionary
+        item_type: Type prefix (CRS, SYS, SDS, etc.)
+        core: CompliantFlowCore instance
+        show_actions: Whether to show action buttons
+    """
+    with st.expander(f"▼ {item['id']} - {item.get('title', 'N/A')}", expanded=False):
+        # Status badges
+        col1, col2 = st.columns(2)
+        with col1:
+            render_status_badge(
+                item.get('status', 'draft'),
+                item.get('verification_status')
+            )
+        with col2:
+            if item.get('approved_by'):
+                st.write(f"**Approved by:** {item['approved_by']}")
+                if item.get('approved_date'):
+                    st.caption(f"on {item['approved_date']}")
+        
+        # Content
+        st.markdown(f"**Content:** {item.get('content', 'N/A')}")
+        
+        # Traceability links
+        if item.get('links'):
+            st.markdown("**Linked Items:**")
+            for link_id in item['links']:
+                linked_item = core.get_item(link_id)
+                if linked_item:
+                    col1, col2 = st.columns([4, 1])
+                    with col1:
+                        link_status = linked_item.get('status', 'unknown')
+                        status_icon = "✅" if link_status == "approved" else "📝"
+                        st.write(f"{status_icon} → {link_id}: {linked_item.get('title', 'N/A')}")
+                    with col2:
+                        if st.button("View", key=f"view_link_{item['id']}_{link_id}"):
+                            st.session_state['selected_item'] = link_id
+                            st.rerun()
+        
+        # Actions
+        if show_actions:
+            st.markdown("---")
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                if st.button("Edit", key=f"edit_{item['id']}", use_container_width=True):
+                    st.session_state['edit_item'] = item['id']
+                    st.rerun()
+            with col2:
+                if item.get('status') == 'draft':
+                    if st.button("Approve", key=f"approve_{item['id']}", type="primary", use_container_width=True):
+                        st.session_state['approve_item'] = item['id']
+                        st.rerun()
+            with col3:
+                if item.get('status') == 'approved':
+                    if st.button("Retire", key=f"retire_{item['id']}", use_container_width=True):
+                        st.session_state['retire_item'] = item['id']
+                        st.rerun()
+

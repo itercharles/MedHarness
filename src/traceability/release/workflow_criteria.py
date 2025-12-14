@@ -154,6 +154,36 @@ class WorkflowCriteriaChecker:
                 return True, f"{critical_count} critical defect(s) open"
             return False, f"{critical_count} critical defect(s) open, max allowed is {max_count}"
         
+        elif check_type == 'linked_items_approved':
+            # Check if all linked items of specific type are approved
+            # Used for hierarchical approval: SYS requires approved CRS, SDS requires approved SYS
+            linked_type = criterion.get('linked_type')  # e.g., "CRS", "SYS"
+            links = release.get('links', [])
+            
+            if not links:
+                return False, f"No linked {linked_type} items found"
+            
+            # Filter links to only the specified type
+            type_links = [link for link in links if link.startswith(linked_type)]
+            
+            if not type_links:
+                return False, f"No linked {linked_type} items found"
+            
+            # Check each linked item's approval status
+            unapproved = []
+            for link_id in type_links:
+                linked_item = self.core.get_item(link_id)
+                if not linked_item:
+                    unapproved.append(f"{link_id} (not found)")
+                elif linked_item.get('status') != 'approved':
+                    status = linked_item.get('status', 'unknown')
+                    unapproved.append(f"{link_id} ({status})")
+            
+            if unapproved:
+                return False, f"Linked {linked_type} not approved: {', '.join(unapproved)}"
+            
+            return True, f"All {len(type_links)} linked {linked_type} items approved"
+        
         elif check_type == 'manual':
             # Manual checks require human verification
             criterion_id = criterion.get('id')

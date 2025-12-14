@@ -1,5 +1,8 @@
 id: SDS-003
 title: Policy Engine
-content: Implement PolicyEngine to parse Governance documents (Regulations/Procedures) and execute automated checks, generating Compliance Reports.
+content: Implement PolicyEngine to parse Governance documents (Regulations/Procedures)
+  and execute automated checks, generating Compliance Reports.
 component: Backend.Compliance
-links: ["SYS-006"]
+links:
+- SYS-006
+status: draft

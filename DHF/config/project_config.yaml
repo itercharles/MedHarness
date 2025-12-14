@@ -4,6 +4,77 @@ doc_types:
     prefix: "CRS-"
     level: 1
     properties: ["id", "title", "content", "user_group", "source", "reviewer", "review_date"]
+    
+    # UI Configuration
+    icon: "🎯"
+    page_enabled: true
+    page_number: 5
+    
+    # Lifecycle Configuration
+    lifecycle:
+      states:
+        - id: draft
+          label: "Draft"
+          color: "warning"
+          icon: "📝"
+          is_initial: true
+        - id: approved
+          label: "Approved"
+          color: "success"
+          icon: "✅"
+        - id: retired
+          label: "Retired"
+          color: "info"
+          icon: "🔒"
+      
+      transitions:
+        - from: draft
+          to: approved
+          label: "Approve"
+          button_type: "primary"
+          criteria:
+            - id: content_complete
+              name: "Content documented"
+              description: "Requirement content must be fully documented"
+              check_type: "field_not_empty"
+              field: "content"
+              required: true
+            
+            - id: title_defined
+              name: "Title defined"
+              description: "Requirement must have a descriptive title"
+              check_type: "field_not_empty"
+              field: "title"
+              required: true
+            
+            - id: review_complete
+              name: "Review completed"
+              description: "Requirement has been reviewed by qualified person"
+              check_type: "manual"
+              required: true
+        
+        - from: approved
+          to: retired
+          label: "Retire"
+          button_type: "secondary"
+          criteria:
+            - id: retirement_reason
+              name: "Retirement reason documented"
+              description: "Reason for retirement must be documented"
+              check_type: "field_not_empty"
+              field: "retired_reason"
+              required: true
+            
+            - id: impact_assessed
+              name: "Impact assessed"
+              description: "Impact of retirement on linked items assessed"
+              check_type: "manual"
+              required: true
+    
+    # Verification tracking
+    has_verification: true
+    verification_states: ["not_verified", "verified", "failed"]
+
   - code: RISK
     name: "Risk Analysis"
     prefix: "RISK-"
@@ -27,6 +98,45 @@ doc_types:
     relations:
       - target: SYS
         label: implements
+    
+    # UI Configuration
+    icon: "📐"
+    page_enabled: true
+    page_number: 7
+    
+    # Lifecycle Configuration
+    lifecycle:
+      states:
+        - {id: draft, label: "Draft", color: "warning", icon: "📝", is_initial: true}
+        - {id: approved, label: "Approved", color: "success", icon: "✅"}
+        - {id: retired, label: "Retired", color: "info", icon: "🔒"}
+      
+      transitions:
+        - from: draft
+          to: approved
+          label: "Approve"
+          button_type: "primary"
+          criteria:
+            - {id: content_complete, name: "Content documented", check_type: "field_not_empty", field: "content", required: true}
+            - {id: title_defined, name: "Title defined", check_type: "field_not_empty", field: "title", required: true}
+            - id: parent_sys_approved
+              name: "Parent SYS approved"
+              description: "All linked system requirements must be approved"
+              check_type: "linked_items_approved"
+              linked_type: "SYS"
+              required: true
+            - {id: review_complete, name: "Review completed", check_type: "manual", required: true}
+        
+        - from: approved
+          to: retired
+          label: "Retire"
+          criteria:
+            - {id: retirement_reason, name: "Retirement reason", check_type: "field_not_empty", field: "retired_reason", required: true}
+            - {id: impact_assessed, name: "Impact assessed", check_type: "manual", required: true}
+    
+    has_verification: true
+    verification_states: ["not_verified", "verified", "failed"]
+
   - code: SYS
     name: "System Requirement"
     prefix: "SYS-"
@@ -38,6 +148,45 @@ doc_types:
         label: satisfies
       - target: RCM
         label: implements
+    
+    # UI Configuration
+    icon: "⚙️"
+    page_enabled: true
+    page_number: 6
+    
+    # Lifecycle Configuration
+    lifecycle:
+      states:
+        - {id: draft, label: "Draft", color: "warning", icon: "📝", is_initial: true}
+        - {id: approved, label: "Approved", color: "success", icon: "✅"}
+        - {id: retired, label: "Retired", color: "info", icon: "🔒"}
+      
+      transitions:
+        - from: draft
+          to: approved
+          label: "Approve"
+          button_type: "primary"
+          criteria:
+            - {id: content_complete, name: "Content documented", check_type: "field_not_empty", field: "content", required: true}
+            - {id: title_defined, name: "Title defined", check_type: "field_not_empty", field: "title", required: true}
+            - id: parent_crs_approved
+              name: "Parent CRS approved"
+              description: "All linked customer requirements must be approved"
+              check_type: "linked_items_approved"
+              linked_type: "CRS"
+              required: true
+            - {id: review_complete, name: "Review completed", check_type: "manual", required: true}
+        
+        - from: approved
+          to: retired
+          label: "Retire"
+          criteria:
+            - {id: retirement_reason, name: "Retirement reason", check_type: "field_not_empty", field: "retired_reason", required: true}
+            - {id: impact_assessed, name: "Impact assessed", check_type: "manual", required: true}
+    
+    has_verification: true
+    verification_states: ["not_verified", "verified", "failed"]
+
   - code: TC-SYS
     name: "System Test"
     prefix: "TC-SYS-"

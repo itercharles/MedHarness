@@ -1,5 +1,11 @@
 id: SDS-REL-001
 title: Release Pydantic Model
-content: Use Pydantic v2 to define Release model with fields for version, status enum (planning, developing, testing, released), release_date, included_change_requests, test_summary, defect_summary, release_notes, manual_verifications (dict tracking verifier and timestamp), and stage_approvals (dict tracking approver and timestamp for each transition).
+content: Use Pydantic v2 to define Release model with fields for version, status enum
+  (planning, developing, testing, released), release_date, included_change_requests,
+  test_summary, defect_summary, release_notes, manual_verifications (dict tracking
+  verifier and timestamp), and stage_approvals (dict tracking approver and timestamp
+  for each transition).
 component: Release Management
-links: ["SYS-016"]
+links:
+- SYS-016
+status: draft

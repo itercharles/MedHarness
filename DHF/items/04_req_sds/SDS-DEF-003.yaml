@@ -1,5 +1,9 @@
 id: SDS-DEF-003
 title: Defect Git Integration
-content: Implement Git version control integration using GitRepository.commit_file() for all defect create, update, and delete operations with descriptive commit messages and author tracking.
+content: Implement Git version control integration using GitRepository.commit_file()
+  for all defect create, update, and delete operations with descriptive commit messages
+  and author tracking.
 component: Defect Tracking
-links: ["SYS-014"]
+links:
+- SYS-014
+status: draft

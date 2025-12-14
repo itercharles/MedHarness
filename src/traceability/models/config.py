@@ -22,6 +22,15 @@ class DocTypeConfig(BaseModel):
     type: Optional[str] = Field(None, description="Special type (e.g., 'test')")
     verifies: Optional[List[str]] = Field(None, description="Document types this verifies")
     properties: Optional[List[str]] = Field(None, description="Properties to display")
+    
+    # Universal framework fields
+    icon: Optional[str] = Field(None, description="Icon for UI display")
+    page_enabled: Optional[bool] = Field(None, description="Whether to generate a page for this type")
+    page_number: Optional[int] = Field(None, description="Page number in Streamlit sidebar")
+    lifecycle: Optional[dict] = Field(None, description="Lifecycle configuration with states and transitions")
+    has_verification: Optional[bool] = Field(None, description="Whether this type supports verification tracking")
+    verification_states: Optional[List[str]] = Field(None, description="Verification states")
+
 
 
 class PoliciesConfig(BaseModel):

@@ -1,19 +1,16 @@
 id: SYS-008
 title: Change Management System
-content: |
-  The system shall provide a change management module that enables tracking, 
-  evaluation, and approval of changes to medical device software per IEC 62304 §6.2.
-  
-  The module shall support:
-  - Creation of change requests with auto-generated IDs
-  - Impact analysis using the traceability graph
-  - Workflow-based approval process
-  - Significance assessment per MDCG 2020-3 criteria
-  - Change history tracking and reporting
+content: "The system shall provide a change management module that enables tracking,\
+  \ \nevaluation, and approval of changes to medical device software per IEC 62304\
+  \ \xA76.2.\n\nThe module shall support:\n- Creation of change requests with auto-generated\
+  \ IDs\n- Impact analysis using the traceability graph\n- Workflow-based approval\
+  \ process\n- Significance assessment per MDCG 2020-3 criteria\n- Change history\
+  \ tracking and reporting\n"
 category: Change Control
 verification_method: Inspection and Testing
 critical_safety: true
 links:
-  - CRS-004
+- CRS-004
 reviewer: Technical Lead
 review_date: 2025-12-13
+status: draft

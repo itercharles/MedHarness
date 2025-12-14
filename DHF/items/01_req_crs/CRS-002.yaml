@@ -1,3 +1,5 @@
 id: CRS-002
 title: Docs-as-Code
-content: Users shall be able to manage requirements and tests as version-controlled text files (YAML/Markdown).
+content: Users shall be able to manage requirements and tests as version-controlled
+  text files (YAML/Markdown).
+status: draft

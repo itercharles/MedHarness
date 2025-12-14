@@ -1,5 +1,9 @@
 id: SYS-017
 title: Release Verification Checks
-content: The system shall verify that all requirements in a release have passing tests before the release can be approved. Verification shall use configurable workflow criteria including automated checks and manual verification requirements.
-links: ["CRS-006"]
+content: The system shall verify that all requirements in a release have passing tests
+  before the release can be approved. Verification shall use configurable workflow
+  criteria including automated checks and manual verification requirements.
+links:
+- CRS-006
 verification_status: PASS
+status: draft

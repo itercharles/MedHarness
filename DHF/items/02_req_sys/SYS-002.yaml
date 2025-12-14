@@ -1,4 +1,7 @@
 id: SYS-002
 title: Graph Generation
-content: The system shall build an in-memory directed graph representing the dependencies between items.
-links: ["CRS-001"]
+content: The system shall build an in-memory directed graph representing the dependencies
+  between items.
+links:
+- CRS-001
+status: draft

@@ -1,10 +1,10 @@
 id: CRS-004
 title: Change Management
-content: |
-  As a regulatory affairs professional, I need a change management system to track 
-  and approve changes to the medical device software, ensuring compliance with 
-  IEC 62304 §6.2 and MDCG 2020-3 guidance on significant changes.
+content: "As a regulatory affairs professional, I need a change management system\
+  \ to track \nand approve changes to the medical device software, ensuring compliance\
+  \ with \nIEC 62304 \xA76.2 and MDCG 2020-3 guidance on significant changes.\n"
 user_group: Regulatory Affairs
 source: IEC 62304 Requirements
 reviewer: QA Manager
 review_date: 2025-12-13
+status: draft
