@@ -2,7 +2,7 @@ id: DEF-006
 title: test the change management
 description: the system doesn't work
 severity: major
-status: resolved
+status: verified
 reported_by: charles chen
 assigned_to: null
 affected_items:
@@ -12,12 +12,12 @@ steps_to_reproduce: null
 environment: dev
 root_cause: I don't know
 resolution: code fix
-verification: null
+verification: tested
 reported_date: '2025-12-14T05:25:51.475926'
 assigned_date: null
 investigation_started_date: '2025-12-14T05:26:23.724470'
 resolved_date: '2025-12-14T05:27:18.713514'
-verified_date: null
+verified_date: '2025-12-14T05:27:52.949884'
 closed_date: null
 tags:
 - ui
