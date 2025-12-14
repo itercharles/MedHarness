@@ -14,6 +14,12 @@ defect_summary: {}
 release_notes: df
 validation_passed: false
 validation_report: {}
+manual_verifications:
+  code_review_done:
+    verified_by: charles
+    verified_date: '2025-12-14T06:58:32.952698'
+    notes: test
+stage_approvals: {}
 tags:
 - '23'
 comments: []
