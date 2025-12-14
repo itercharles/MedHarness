@@ -12,14 +12,9 @@ from .graph.analysis import generate_traceability_matrix
 from .repository.loader import ItemLoader
 from .repository.saver import ItemSaver
 from .repository.git import GitRepository
-from .change_management.change_tracker import ChangeTracker
-from .change_management.workflow import ChangeWorkflow
-from .change_management.impact_analyzer import ImpactAnalyzer
 from .review.review_tracker import ReviewTracker
 from .review.review_workflow import ReviewWorkflow as ReviewWorkflowEngine
 from .review.checklist_engine import ChecklistEngine
-from .defect.defect_tracker import DefectTracker
-from .defect.defect_workflow import DefectWorkflow
 from .release.release_tracker import ReleaseTracker
 from .release.release_validator import ReleaseValidator
 
@@ -55,10 +50,6 @@ class CompliantFlowCore:
         self.saver = ItemSaver(self.specs_dir, git_repo=self.git)
         self.graph = GraphEngine()
         
-        # Initialize change management
-        self.change_tracker = ChangeTracker(self.repo_root, git_repo=self.git)
-        self.impact_analyzer = ImpactAnalyzer(self.graph)
-        
         # Initialize review system
         self.review_tracker = ReviewTracker(self.repo_root, git_repo=self.git)
         
@@ -70,9 +61,6 @@ class CompliantFlowCore:
             print(f"Warning: Failed to initialize checklist engine: {e}")
             # Create a minimal checklist engine with empty config
             self.checklist_engine = ChecklistEngine(Path("/dev/null"))
-        
-        # Initialize defect tracking
-        self.defect_tracker = DefectTracker(self.repo_root, git_repo=self.git)
         
         # Initialize release management
         self.release_tracker = ReleaseTracker(self.repo_root, git_repo=self.git)
