@@ -387,7 +387,7 @@ def render_item_view(
             # String or other simple types
             if len(str(value)) > 100:
                 st.markdown(f"**{field_name}:**")
-                st.text_area("", value, height=100, disabled=True, key=f"field_{prop}_{item['id']}", label_visibility="collapsed")
+                st.text_area(field_name, value, height=100, disabled=True, key=f"field_{prop}_{item['id']}", label_visibility="collapsed")
             else:
                 st.markdown(f"**{field_name}:** `{value}`")
     
