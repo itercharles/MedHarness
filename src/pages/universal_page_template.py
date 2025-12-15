@@ -88,11 +88,36 @@ def render_table_section(
     prefix: str
 ) -> None:
     """Render table section with New button and filters."""
-    # Header with New button
-    col1, col2 = st.columns([3, 1])
+    # Header with Export and New buttons
+    col1, col2, col3 = st.columns([2, 1, 1])
     with col1:
         st.subheader("Items")
     with col2:
+        if st.button("📄 Export PDF", use_container_width=True):
+            # Generate PDF
+            try:
+                from pathlib import Path
+                from traceability.document_generator import DocumentGenerator
+                
+                template_dir = Path(core.repo_root) / "templates"
+                generator = DocumentGenerator(core, template_dir)
+                
+                doc_type_code = doc_type_config['code']
+                pdf_path = generator.generate_requirements_spec(doc_type_code)
+                
+                # Provide download
+                with open(pdf_path, 'rb') as f:
+                    st.download_button(
+                        label=f"⬇️ Download {doc_type_code} Specification",
+                        data=f.read(),
+                        file_name=f"{doc_type_code}_Specification.pdf",
+                        mime="application/pdf",
+                        use_container_width=True
+                    )
+                st.success(f"✅ Generated {doc_type_code} specification PDF!")
+            except Exception as e:
+                st.error(f"Error generating PDF: {str(e)}")
+    with col3:
         if st.button("➕ New", type="primary", use_container_width=True):
             st.session_state['creating_new'] = True
             st.session_state['selected_item_id'] = None

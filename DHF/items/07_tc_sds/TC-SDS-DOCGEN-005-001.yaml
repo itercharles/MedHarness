@@ -1,0 +1,23 @@
+id: TC-SDS-DOCGEN-005-001
+title: Test UI Export Button Integration
+prerequisites: |
+  - Streamlit app running
+  - Document generator integrated
+  - Sample items in database
+steps: |
+  1. Navigate to System Requirement page
+  2. Click "📄 Export PDF" button
+  3. Wait for PDF generation
+  4. Verify download link appears
+  5. Click download link
+  6. Verify PDF downloads successfully
+expected_result: |
+  - Export button is visible in UI
+  - PDF generates without errors
+  - Download link appears after generation
+  - PDF file downloads to browser
+  - PDF contains all SYS requirements
+links:
+- SDS-DOCGEN-005
+verification_status: not_verified
+status: draft

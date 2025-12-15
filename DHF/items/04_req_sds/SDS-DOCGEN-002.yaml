@@ -1,0 +1,23 @@
+id: SDS-DOCGEN-002
+title: Jinja2 Template System
+content: |
+  Implement Jinja2 template rendering system for document generation.
+  
+  **Template Files** (in DHF/templates/):
+  - requirements_specification.md.j2 - For CRS/SYS/SDS specs
+  - traceability_matrix.md.j2 - For traceability matrices
+  - release_documentation.md.j2 - For release packages
+  
+  **Custom Filters**:
+  - status_badge: Format status as emoji badge (✅ Approved, 📝 Draft, etc.)
+  - format_date: Format ISO dates to readable format (YYYY-MM-DD)
+  
+  **Template Data Structure**:
+  - doc_type_code, doc_type_name, project_name
+  - version, generation_date, status
+  - items (list of requirement/test items)
+  - traceability_chains, coverage, orphans (for matrix)
+component: Document Generation
+links:
+- SYS-021
+status: draft

@@ -1,0 +1,20 @@
+id: TC-SDS-DOCGEN-004-001
+title: Test Traceability Matrix Generation
+prerequisites: |
+  - Sample items with traceability links (CRS→SYS→SDS→TC)
+  - traceability_matrix.md.j2 template exists
+steps: |
+  1. Call generate_traceability_matrix()
+  2. Verify traceability chains are built correctly
+  3. Verify coverage metrics are calculated
+  4. Verify orphaned items are detected
+  5. Verify PDF is generated with matrix table
+expected_result: |
+  - PDF contains traceability matrix table
+  - Coverage percentages are displayed
+  - Orphaned items are listed
+  - All requirement chains are shown
+links:
+- SDS-DOCGEN-004
+verification_status: not_verified
+status: draft

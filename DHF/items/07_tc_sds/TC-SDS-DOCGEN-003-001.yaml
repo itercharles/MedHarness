@@ -1,0 +1,22 @@
+id: TC-SDS-DOCGEN-003-001
+title: Test PDF Export Pipeline
+prerequisites: |
+  - Markdown content prepared
+  - WeasyPrint library installed
+  - CSS stylesheet available
+steps: |
+  1. Create sample markdown content with headings, paragraphs, tables
+  2. Call _export_pdf(markdown_content, "test_document")
+  3. Verify markdown is converted to HTML
+  4. Verify CSS is applied to HTML
+  5. Verify PDF is generated
+  6. Open PDF and verify formatting
+expected_result: |
+  - PDF file created at /tmp/test_document.pdf
+  - PDF contains all markdown elements properly formatted
+  - Tables have borders and styling
+  - Headings are styled with colors
+links:
+- SDS-DOCGEN-003
+verification_status: not_verified
+status: draft

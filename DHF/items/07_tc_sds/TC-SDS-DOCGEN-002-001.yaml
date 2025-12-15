@@ -1,0 +1,20 @@
+id: TC-SDS-DOCGEN-002-001
+title: Test Requirements Specification Generation
+prerequisites: |
+  - Sample CRS/SYS/SDS items in database
+  - requirements_specification.md.j2 template exists
+steps: |
+  1. Call generate_requirements_spec('SYS')
+  2. Verify template is rendered with correct data
+  3. Verify all SYS items are included in output
+  4. Verify PDF file is created
+  5. Verify PDF contains formatted content
+expected_result: |
+  - PDF file generated at /tmp/SYS_Specification.pdf
+  - PDF contains all SYS items with titles, content, status
+  - PDF is properly formatted with headings and sections
+links:
+- SDS-DOCGEN-001
+- SDS-DOCGEN-002
+verification_status: not_verified
+status: draft

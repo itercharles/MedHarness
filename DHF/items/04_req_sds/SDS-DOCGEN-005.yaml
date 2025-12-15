@@ -1,0 +1,22 @@
+id: SDS-DOCGEN-005
+title: UI Export Button Integration
+content: |
+  Add PDF export button to Streamlit UI pages.
+  
+  **Location**: In render_table_section() of universal_page_template.py
+  
+  **UI Layout**:
+  - 3-column layout: [Items Header | Export PDF | New]
+  - Export PDF button triggers document generation
+  - Show download link after generation
+  - Display progress indicator during generation
+  
+  **User Flow**:
+  1. User clicks "📄 Export PDF" button
+  2. System generates PDF for current document type
+  3. Download link appears
+  4. User clicks to download PDF
+component: Document Generation
+links:
+- SYS-021
+status: draft

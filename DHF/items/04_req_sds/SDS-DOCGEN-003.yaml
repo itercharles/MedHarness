@@ -1,0 +1,24 @@
+id: SDS-DOCGEN-003
+title: PDF Export Pipeline
+content: |
+  Implement PDF export using WeasyPrint library.
+  
+  **Pipeline Steps**:
+  1. Render Jinja2 template → Markdown
+  2. Convert Markdown to HTML using markdown library
+  3. Wrap HTML in template with CSS styling
+  4. Generate PDF using WeasyPrint
+  
+  **CSS Styling** (DHF/templates/styles/default.css):
+  - Professional typography (Arial, line-height 1.6)
+  - Styled headings with colors and borders
+  - Table formatting with borders and header styling
+  - Page margins (2cm)
+  
+  **Output**:
+  - PDF files saved to /tmp/ directory
+  - Return Path object for download
+component: Document Generation
+links:
+- SYS-021
+status: draft
