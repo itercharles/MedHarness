@@ -1,0 +1,33 @@
+id: CRS-008
+title: Regulatory Document Generation and Export
+content: |
+  As a regulatory affairs professional, I need to generate professional, 
+  regulatory-ready PDF documents from CompliantFlow data to support DHF 
+  submissions and regulatory audits.
+  
+  **User Need**:
+  - Export requirements specifications (CRS, SYS, SDS) as formatted PDFs
+  - Generate traceability matrix showing requirement chains
+  - Produce professional documents with proper styling and formatting
+  - Include metadata (version, date, approval status)
+  - Support regulatory submission requirements
+  
+  **Acceptance Criteria**:
+  - Can export any requirement type (CRS, SYS, SDS) as PDF
+  - PDFs include all requirement details (ID, title, content, status, links)
+  - Professional formatting with headers, footers, page numbers
+  - Traceability matrix shows CRS → SYS → SDS → Test chains
+  - Coverage analysis included (% requirements with tests)
+  - One-click export from UI
+  - PDFs suitable for regulatory submission
+  
+  **Business Value**:
+  - Reduces manual document preparation time
+  - Ensures consistency in regulatory documentation
+  - Provides audit trail with auto-generated dates
+  - Supports FDA 21 CFR Part 11 compliance (electronic records)
+user_group: Regulatory Affairs, Quality Assurance
+source: FDA 21 CFR 820.30, IEC 62304 Section 5.1
+status: approved
+reviewer: Product Owner
+review_date: 2024-12-15
