@@ -1,0 +1,57 @@
+id: TC-CRS-007-001
+title: End-to-End SOUP Management Validation
+content: |
+  Validate that the SOUP management feature meets the customer requirement 
+  for tracking and managing third-party software components.
+  
+  **Test Objective**:
+  Verify complete SOUP management workflow from import to approval to documentation.
+  
+  **Test Steps**:
+  1. **Import SOUP Data**:
+     - Create SOUP item manually (simulating import from Veracode/Snyk)
+     - Populate: name, version, manufacturer, license, CVE count, risk rating
+  
+  2. **Document Purpose and Rationale**:
+     - Add purpose field explaining why SOUP is needed
+     - Assign safety classification (A/B/C)
+     - Link to SYS requirement showing usage
+  
+  3. **Approval Workflow**:
+     - Submit SOUP for review
+     - Verify criteria validation (purpose, safety class, SYS link)
+     - Complete approval with reviewer name
+     - Verify status changes to "approved"
+  
+  4. **Traceability Verification**:
+     - Navigate to linked SYS requirement
+     - Verify SOUP appears in reverse traceability
+     - Check traceability matrix includes SOUP
+  
+  5. **Documentation Generation**:
+     - Generate SOUP list PDF
+     - Verify all SOUP items included
+     - Verify metadata completeness
+  
+  **Expected Results**:
+  - ✅ SOUP items can be created with all required metadata
+  - ✅ Purpose and rationale documented per IEC 62304 5.3.4
+  - ✅ Security vulnerabilities (CVEs) tracked
+  - ✅ Traceability to system requirements established
+  - ✅ Approval workflow enforces review criteria
+  - ✅ SOUP documentation generated for DHF
+  
+  **Acceptance Criteria from CRS-007**:
+  - Can import SOUP data from security tools ✅
+  - Each SOUP documents: name, version, manufacturer, license, purpose ✅
+  - SOUP linked to SYS requirements ✅
+  - Approval workflow ensures review ✅
+  - Can generate SOUP list ✅
+  
+  **Regulatory Compliance**:
+  Demonstrates compliance with IEC 62304 Section 5.3 requirements for 
+  SOUP identification, documentation, and verification.
+links:
+  - CRS-007
+status: draft
+verification_status: PENDING

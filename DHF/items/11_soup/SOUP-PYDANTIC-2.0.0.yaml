@@ -1,0 +1,16 @@
+id: SOUP-PYDANTIC-2.0.0
+title: Pydantic Data Validation
+content: Data validation library using Python type annotations
+name: pydantic
+version: 2.0.0
+manufacturer: Pydantic Contributors
+license: MIT
+purpose: Data validation and settings management for CompliantFlow core data models
+homepage: https://docs.pydantic.dev
+cve_count: 0
+risk_rating: Low
+safety_class: C
+verification_method: Automated testing and type checking
+links:
+  - SYS-001
+status: draft

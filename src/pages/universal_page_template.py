@@ -204,6 +204,15 @@ def render_detail_panel(
         render_new_item_form(doc_type_config, core, workflow_engine)
         return
     
+    # Check if transitioning
+    if st.session_state.get('transition_item') and st.session_state.get('transition_config'):
+        item_id = st.session_state['transition_item']
+        transition = st.session_state['transition_config']
+        item = core.get_item(item_id)
+        if item:
+            render_transition_workflow(item, transition, doc_type_config, core, workflow_engine)
+            return
+    
     # Check if item selected
     selected_item_id = st.session_state.get('selected_item_id')
     if not selected_item_id:
@@ -423,9 +432,32 @@ def render_item_view(
             linked_item = core.get_item(link_id)
             if linked_item:
                 link_status = linked_item.get('status', 'unknown')
-                st.markdown(f"  - **{link_id}**: {linked_item.get('title', 'N/A')} _{({link_status})}_")
+                st.markdown(f"  - **{link_id}**: {linked_item.get('title', 'N/A')} _({link_status})_")
             else:
                 st.markdown(f"  - **{link_id}** _(not found)_")
+    
+    # Workflow transition buttons
+    st.markdown("---")
+    st.markdown("### Workflow Actions")
+    
+    available_transitions = workflow_engine.get_available_transitions(current_state)
+    
+    if available_transitions:
+        cols = st.columns(len(available_transitions))
+        for idx, transition in enumerate(available_transitions):
+            with cols[idx]:
+                if st.button(
+                    transition['label'],
+                    key=f"transition_{item['id']}_{transition['to']}",
+                    use_container_width=True,
+                    type="primary" if idx == 0 else "secondary"
+                ):
+                    st.session_state['transition_item'] = item['id']
+                    st.session_state['transition_config'] = transition
+                    st.rerun()
+    else:
+        st.info(f"No transitions available from {state_info['label']} state")
+
 
 
 def render_item_edit_form(

@@ -1,0 +1,31 @@
+id: CRS-007
+title: Third-Party Software Component Management
+content: |
+  As a medical device manufacturer, I need to track and manage all third-party 
+  software components (SOUP - Software of Unknown Provenance) used in the device 
+  software to ensure regulatory compliance and patient safety.
+  
+  **User Need**:
+  - Identify all third-party libraries and dependencies
+  - Document the purpose and rationale for each component
+  - Track security vulnerabilities (CVEs) in dependencies
+  - Maintain traceability from components to system requirements
+  - Demonstrate compliance with IEC 62304 Section 5.3
+  - Generate SOUP documentation for regulatory submissions
+  
+  **Acceptance Criteria**:
+  - Can import SOUP data from security scanning tools (Veracode, Snyk, etc.)
+  - Each SOUP item documents: name, version, manufacturer, license, purpose
+  - SOUP items linked to system requirements showing usage rationale
+  - Approval workflow ensures proper review before use
+  - Can generate SOUP list for DHF documentation
+  
+  **Regulatory Context**:
+  IEC 62304 Section 5.3 requires manufacturers to identify and document all 
+  SOUP items, including their intended use, functional requirements, and 
+  verification evidence.
+user_group: Quality Assurance, Regulatory Affairs
+source: IEC 62304 Section 5.3, FDA Guidance
+status: approved
+reviewer: Product Owner
+review_date: 2024-12-15

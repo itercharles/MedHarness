@@ -1,0 +1,28 @@
+id: TC-SDS-SOUP-001-001
+title: Test SOUP Document Type Creation
+content: |
+  Verify that SOUP items can be created with all required fields.
+  
+  **Test Steps**:
+  1. Navigate to SOUP page in Streamlit
+  2. Click "New" button
+  3. Fill in required fields:
+     - ID: SOUP-TEST-1.0.0
+     - Title: Test Package
+     - Content: Test description
+     - Name: test-package
+     - Version: 1.0.0
+     - Purpose: Testing SOUP functionality
+     - Safety Class: C
+     - Links: SYS-001
+  4. Click "Create"
+  
+  **Expected Result**:
+  - SOUP item created successfully
+  - Item appears in SOUP list
+  - Status is "draft"
+  - All fields populated correctly
+links:
+  - SDS-SOUP-001
+status: draft
+verification_status: PENDING

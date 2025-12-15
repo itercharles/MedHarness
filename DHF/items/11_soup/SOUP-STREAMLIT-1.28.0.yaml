@@ -1,0 +1,16 @@
+id: SOUP-STREAMLIT-1.28.0
+title: Streamlit Web Framework
+content: Third-party web application framework for building interactive data applications
+name: streamlit
+version: 1.28.0
+manufacturer: Snowflake Inc.
+license: Apache-2.0
+purpose: Web UI framework for CompliantFlow debug interface and document management
+homepage: https://streamlit.io
+cve_count: 0
+risk_rating: Low
+safety_class: C
+verification_method: Automated testing and version pinning
+links:
+  - SYS-001
+status: draft

@@ -1,0 +1,20 @@
+id: SYS-022
+title: SOUP Management
+content: |
+  The system shall provide comprehensive management of Software of Unknown Provenance (SOUP) 
+  to meet IEC 62304 Section 5.3 requirements. This includes:
+  
+  - Import SOUP items from external scanning tools (Veracode, Snyk, OWASP Dependency-Check)
+  - Track SOUP metadata (name, version, manufacturer, license, CVE count, risk rating)
+  - Document SOUP usage purpose and safety classification
+  - Establish traceability from SOUP to system requirements
+  - Manage SOUP approval workflow with verification criteria
+  - Generate SOUP list documentation for regulatory submission
+  
+  This capability ensures compliance with IEC 62304 requirements for identifying, 
+  documenting, and managing third-party software components.
+links:
+  - CRS-007
+status: approved
+reviewer: System Architect
+review_date: 2024-12-15

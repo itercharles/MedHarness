@@ -365,5 +365,86 @@ doc_types:
             - {id: testing_complete, name: "Testing completed", check_type: "manual", required: true}
             - {id: verification_done, name: "Verification completed", check_type: "field_not_empty", field: "verification_status", required: true}
 
+  - code: SOUP
+    name: "Software of Unknown Provenance"
+    prefix: "SOUP-"
+    properties: ["id", "title", "content", "name", "version", "manufacturer", "license", "purpose", "homepage", "cve_count", "risk_rating", "safety_class", "verification_method", "links", "reviewer", "review_date"]
+    
+    # UI Configuration
+    icon: "📦"
+    page_enabled: true
+    page_number: 11
+    
+    # Lifecycle Configuration
+    lifecycle:
+      states:
+        - id: draft
+          label: "Draft"
+          color: "warning"
+          icon: "📝"
+          is_initial: true
+        - id: under_review
+          label: "Under Review"
+          color: "info"
+          icon: "🔍"
+        - id: approved
+          label: "Approved"
+          color: "success"
+          icon: "✅"
+        - id: rejected
+          label: "Rejected"
+          color: "error"
+          icon: "❌"
+      
+      transitions:
+        - from: draft
+          to: under_review
+          label: "Submit for Review"
+          criteria:
+            - id: purpose_set
+              name: "Purpose documented"
+              description: "SOUP usage purpose must be documented per IEC 62304 5.3.4"
+              check_type: "field_not_empty"
+              field: "purpose"
+              required: true
+            
+            - id: safety_class_set
+              name: "Safety class assigned"
+              description: "Safety classification (A/B/C) must be assigned"
+              check_type: "field_not_empty"
+              field: "safety_class"
+              required: true
+            
+            - id: linked_to_req
+              name: "Linked to SYS requirement"
+              description: "SOUP must be linked to at least one system requirement"
+              check_type: "has_links"
+              required: true
+        
+        - from: under_review
+          to: approved
+          label: "Approve"
+          criteria:
+            - id: verification_done
+              name: "Verification completed"
+              description: "SOUP verification evidence documented"
+              check_type: "manual"
+              required: true
+        
+        - from: under_review
+          to: rejected
+          label: "Reject"
+          criteria:
+            - id: rejection_reason
+              name: "Rejection reason"
+              description: "Reason for rejecting SOUP must be documented"
+              check_type: "manual"
+              required: true
+        
+        - from: rejected
+          to: draft
+          label: "Revise"
+          criteria: []
+
 policies:
   require_test_coverage: ["SYS", "CRS", "SDS"]
