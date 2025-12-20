@@ -39,7 +39,6 @@ content: '**Objective**: Verify that root cause and resolution are required per 
   **Status**: PASS'
 links:
 - SDS-DEF-005
-active: true
 title: Verify Root Cause Validation
 verification_status: PASS
 history: []

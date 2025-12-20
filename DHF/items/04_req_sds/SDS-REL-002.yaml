@@ -5,7 +5,6 @@ content: Implement ReleaseValidator class with methods to check requirement cove
   checks (field validation, counts, percentages) and manual verification tracking.
 links:
 - SYS-017
-active: true
 title: Release Verification Logic
 history: []
 status: draft

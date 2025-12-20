@@ -51,7 +51,6 @@ content: '**Objective**: Verify that root cause analysis is mandatory for defect
   **Status**: PASS'
 links:
 - SYS-012
-active: true
 title: Verify Root Cause Analysis Requirement
 verification_status: PASS
 history: []

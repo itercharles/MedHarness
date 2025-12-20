@@ -3,7 +3,6 @@ content: Run check_compliance with known data. Assert item_existence and trace_c
   return correct pass/fail results.
 links:
 - SYS-006
-active: true
 title: Verify Policy Checks
 verification_status: PASS
 history: []

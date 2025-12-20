@@ -3,7 +3,6 @@ content: Run graph engine tests. Ensure nodes and edges are correctly created fr
   items and links.
 links:
 - SYS-002
-active: true
 title: Verify Graph Integrity
 verification_status: PASS
 history: []

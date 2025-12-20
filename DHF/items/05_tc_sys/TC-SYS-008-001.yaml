@@ -12,7 +12,6 @@ content: "**Objective**: Verify that users can create change requests with auto-
   \ CR-005 created successfully"
 links:
 - SYS-008
-active: true
 title: Verify Change Request Creation
 verification_status: PASS
 history: []

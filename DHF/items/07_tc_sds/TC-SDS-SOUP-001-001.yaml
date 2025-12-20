@@ -8,7 +8,6 @@ content: "Verify that SOUP items can be created with all required fields.\n\n**T
   - Item appears in SOUP list\n- Status is \"draft\"\n- All fields populated correctly"
 links:
 - SDS-SOUP-001
-active: true
 title: Test SOUP Document Type Creation
 verification_status: PENDING
 history: []

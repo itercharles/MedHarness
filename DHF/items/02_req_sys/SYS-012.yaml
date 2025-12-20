@@ -3,7 +3,6 @@ content: The system shall require verification and documentation that the defect
   is effective before the defect can be closed.
 links:
 - CRS-005
-active: true
 title: Defect Resolution Verification
 verification_status: PASS
 history: []

@@ -3,7 +3,6 @@ content: 'Test case to verify: Implement PolicyEngine to parse Governance docume
   (Regulations/Procedures) and execute automated checks, generating Compliance Reports.'
 links:
 - SDS-003
-active: true
 title: Unit Test Policy Engine
 verification_status: PENDING
 history: []

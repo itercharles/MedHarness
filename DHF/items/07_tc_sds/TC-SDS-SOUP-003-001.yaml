@@ -9,7 +9,6 @@ content: "Verify that SOUP workflow transitions enforce approval criteria.\n\n**
   \ works\n- State transitions occur\n- Reviewer and date recorded"
 links:
 - SDS-SOUP-003
-active: true
 title: Test SOUP Workflow Transitions
 verification_status: PENDING
 history: []

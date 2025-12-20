@@ -2,7 +2,6 @@ id: SYS-007
 content: The system shall evaluate and report the pass/fail status of policies.
 links:
 - CRS-003
-active: true
 title: Compliance Reporting
 history: []
 status: draft

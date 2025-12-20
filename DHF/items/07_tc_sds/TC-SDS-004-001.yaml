@@ -44,7 +44,6 @@ content: '**Objective**: Verify that the ChangeRequest Pydantic model correctly 
   **Notes**: Pydantic v2 validation working as expected'
 links:
 - SDS-004
-active: true
 title: Design Test - ChangeRequest Data Model
 verification_status: PASS
 history: []

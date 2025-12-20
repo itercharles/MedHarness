@@ -3,7 +3,6 @@ content: The traceability graph visualization is not showing all links between r
   and tests. Some links are missing from the graph even though they exist in the YAML
   files.
 links: []
-active: true
 title: Traceability graph not displaying all links correctly
 history: []
 description: 'The traceability graph visualization is not showing all links between

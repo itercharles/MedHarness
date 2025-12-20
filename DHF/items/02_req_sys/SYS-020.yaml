@@ -3,7 +3,6 @@ content: The system shall maintain a complete history of all releases with versi
   control integration.
 links:
 - CRS-006
-active: true
 title: Release History Tracking
 verification_status: !!python/object/apply:traceability.models.item.VerificationStatus
 - PASS

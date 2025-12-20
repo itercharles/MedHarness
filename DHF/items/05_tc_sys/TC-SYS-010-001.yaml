@@ -44,7 +44,6 @@ content: '**Objective**: Verify that users can report defects with all required 
   **Status**: PASS'
 links:
 - SYS-010
-active: true
 title: Verify Defect Reporting
 verification_status: PASS
 history: []

@@ -15,7 +15,7 @@ sys.path.insert(0, str(src_path))
 
 # Core fields that should always be kept
 CORE_FIELDS = {
-    'id', 'content', 'title', 'links', 'active', 'status', 
+    'id', 'content', 'title', 'links', 'status', 
     'history', 'verification_status', 'manual_verifications'
 }
 

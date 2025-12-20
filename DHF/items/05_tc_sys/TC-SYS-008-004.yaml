@@ -13,7 +13,6 @@ content: "**Objective**: Verify that significance assessment correctly identifie
   \ criteria"
 links:
 - SYS-008
-active: true
 title: Verify MDCG 2020-3 Significance Assessment
 verification_status: PASS
 history: []

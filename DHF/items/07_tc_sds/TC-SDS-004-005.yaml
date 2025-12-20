@@ -52,7 +52,6 @@ content: '**Objective**: Verify that Streamlit UI page renders correctly and han
   **Notes**: UI components working correctly with real-time updates'
 links:
 - SDS-004
-active: true
 title: Design Test - Streamlit UI Components
 verification_status: PASS
 history: []

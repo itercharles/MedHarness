@@ -45,7 +45,6 @@ content: '**Objective**: Verify the Defect Pydantic model implementation per SDS
   **Status**: PASS'
 links:
 - SDS-DEF-001
-active: true
 title: Verify Defect Data Model Implementation
 verification_status: PASS
 history: []

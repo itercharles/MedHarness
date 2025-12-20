@@ -41,7 +41,6 @@ content: '**Objective**: Verify that change request workflow follows the correct
   **Notes**: State machine validation works correctly per IEC 62304 requirements'
 links:
 - SYS-008
-active: true
 title: Verify Workflow State Transitions
 verification_status: PASS
 history: []

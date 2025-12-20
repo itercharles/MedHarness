@@ -3,7 +3,6 @@ content: Implement report generation using Markdown templates to create traceabi
   matrix, test summary, defect report, and release notes.
 links:
 - SYS-019
-active: true
 title: Release Report Generator
 history: []
 status: draft

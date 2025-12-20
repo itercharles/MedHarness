@@ -3,7 +3,6 @@ content: 'Test case to verify: The system shall evaluate and report the pass/fai
   status of policies.'
 links:
 - SYS-007
-active: true
 title: Verify Compliance Reporting
 verification_status: PENDING
 history: []

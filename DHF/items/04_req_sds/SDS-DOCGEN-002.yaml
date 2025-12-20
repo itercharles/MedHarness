@@ -29,7 +29,6 @@ content: 'Implement Jinja2 template rendering system for document generation.
   - traceability_chains, coverage, orphans (for matrix)'
 links:
 - SYS-021
-active: true
 title: Jinja2 Template System
 history: []
 status: draft

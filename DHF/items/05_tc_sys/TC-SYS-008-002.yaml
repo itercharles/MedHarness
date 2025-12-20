@@ -12,7 +12,6 @@ content: "**Objective**: Verify that impact analysis correctly identifies affect
   \ items"
 links:
 - SYS-008
-active: true
 title: Verify Impact Analysis
 verification_status: PASS
 history: []

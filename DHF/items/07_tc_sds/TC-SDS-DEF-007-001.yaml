@@ -42,7 +42,6 @@ content: '**Objective**: Verify affected_items and related_change_request fields
   **Status**: PASS'
 links:
 - SDS-DEF-007
-active: true
 title: Verify Traceability Fields Implementation
 verification_status: PASS
 history: []

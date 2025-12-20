@@ -31,7 +31,6 @@ content: 'Implement PDF export using WeasyPrint library.
   - Return Path object for download'
 links:
 - SYS-021
-active: true
 title: PDF Export Pipeline
 history: []
 status: draft

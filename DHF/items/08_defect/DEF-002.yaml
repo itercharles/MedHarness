@@ -3,7 +3,6 @@ content: When a release is manually verified, the verification status in the UI 
   not update immediately. The user must refresh the page to see the updated status.
 links:
 - SDS-REL-002
-active: true
 title: Release verification status not updating after manual verification
 history: []
 description: 'When a release is manually verified, the verification status in the

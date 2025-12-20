@@ -3,7 +3,6 @@ content: Run parsing unit tests. Ensure YAML files are correctly loaded into Ite
   objects with all properties.
 links:
 - SYS-001
-active: true
 title: Verify Specification Parsing
 verification_status: PASS
 history: []

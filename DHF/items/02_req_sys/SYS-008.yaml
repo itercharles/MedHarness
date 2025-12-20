@@ -7,7 +7,6 @@ content: "The system shall provide a change management module that enables track
   \ tracking and reporting"
 links:
 - CRS-004
-active: true
 title: Change Management System
 reviewer: Technical Lead
 review_date: '2025-12-13'

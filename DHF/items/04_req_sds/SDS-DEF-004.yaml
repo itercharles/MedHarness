@@ -5,7 +5,6 @@ content: Implement Streamlit page with three tabs - Report Defect (form with all
 links:
 - SYS-009
 - SYS-015
-active: true
 title: Defect Streamlit UI
 history: []
 status: draft

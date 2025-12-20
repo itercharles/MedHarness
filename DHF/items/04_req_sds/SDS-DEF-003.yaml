@@ -4,7 +4,6 @@ content: Implement Git version control integration using GitRepository.commit_fi
   and author tracking.
 links:
 - SYS-014
-active: true
 title: Defect Git Integration
 history: []
 status: draft

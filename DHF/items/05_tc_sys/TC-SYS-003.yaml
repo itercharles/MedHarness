@@ -3,7 +3,6 @@ content: Create a graph with missing links. Assert that find_orphans() returns t
   correct items.
 links:
 - SYS-004
-active: true
 title: Verify Orphan Detection
 verification_status: PASS
 history: []

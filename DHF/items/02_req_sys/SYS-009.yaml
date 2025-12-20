@@ -3,7 +3,6 @@ content: The system shall capture defect information including unique ID, title,
   severity level, reporter, affected items, and reproduction steps.
 links:
 - CRS-005
-active: true
 title: Defect Data Capture
 verification_status: PASS
 history: []

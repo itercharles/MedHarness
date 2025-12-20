@@ -52,7 +52,6 @@ content: '**Objective**: Verify that ImpactAnalyzer correctly uses GraphEngine f
   **Notes**: Graph integration working correctly for impact analysis'
 links:
 - SDS-004
-active: true
 title: Design Test - ImpactAnalyzer Graph Integration
 verification_status: PASS
 history: []

@@ -4,7 +4,6 @@ content: Use Pydantic v2 to define Defect model with fields for id, title, descr
   affected_items list, steps_to_reproduce, and timestamps.
 links:
 - SYS-009
-active: true
 title: Defect Pydantic Model
 history: []
 status: draft

@@ -10,7 +10,6 @@ content: "The system shall provide comprehensive management of Software of Unkno
   documenting, and managing third-party software components."
 links:
 - CRS-007
-active: true
 title: SOUP Management
 reviewer: System Architect
 review_date: '2024-12-15'

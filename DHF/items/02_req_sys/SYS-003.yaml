@@ -3,7 +3,6 @@ content: The system shall provide a graphical visualization of the traceability 
   including item status.
 links:
 - CRS-001
-active: true
 title: Visual Traceability
 history: []
 status: draft

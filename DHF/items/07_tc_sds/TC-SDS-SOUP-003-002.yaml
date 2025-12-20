@@ -30,7 +30,6 @@ content: 'Verify that SOUP items can be linked to SYS requirements for traceabil
   - Traceability matrix includes SOUP'
 links:
 - SDS-SOUP-003
-active: true
 title: Test SOUP Traceability to SYS Requirements
 verification_status: PENDING
 history: []

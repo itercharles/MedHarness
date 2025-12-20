@@ -3,7 +3,6 @@ content: The system shall maintain a complete audit trail of all defect changes 
   who made changes and when.
 links:
 - CRS-005
-active: true
 title: Defect Change History
 verification_status: PASS
 history: []

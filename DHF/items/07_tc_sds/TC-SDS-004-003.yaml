@@ -48,7 +48,6 @@ content: '**Objective**: Verify that ChangeWorkflow state machine enforces corre
   **Notes**: State machine correctly enforces IEC 62304 workflow'
 links:
 - SDS-004
-active: true
 title: Design Test - ChangeWorkflow State Machine
 verification_status: PASS
 history: []

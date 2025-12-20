@@ -4,7 +4,6 @@ content: The system shall capture release information including version number, 
   with approver identity, and stage approvals with timestamps.
 links:
 - CRS-006
-active: true
 title: Release Data Capture
 verification_status: PASS
 history: []

@@ -48,7 +48,6 @@ content: '**Objective**: Verify that all defect changes are tracked in Git per S
   **Status**: PASS'
 links:
 - SYS-015
-active: true
 title: Verify Defect Audit Trail
 verification_status: PASS
 history: []

@@ -47,7 +47,6 @@ content: '**Objective**: Verify that defects can be linked to affected items per
   **Status**: PASS'
 links:
 - SYS-014
-active: true
 title: Verify Defect Traceability Links
 verification_status: PASS
 history: []

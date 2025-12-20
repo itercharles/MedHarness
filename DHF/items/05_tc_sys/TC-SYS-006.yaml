@@ -3,7 +3,6 @@ content: Check the Graph Visualization tab. Ensure nodes and edges are rendered 
   physics engine is active.
 links:
 - SYS-003
-active: true
 title: Verify Traceability Visualization
 verification_status: PENDING
 history: []

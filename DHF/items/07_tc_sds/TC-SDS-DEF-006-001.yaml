@@ -39,7 +39,6 @@ content: '**Objective**: Verify that verification is required before closure per
   **Status**: PASS'
 links:
 - SDS-DEF-006
-active: true
 title: Verify Verification Workflow Enforcement
 verification_status: PASS
 history: []

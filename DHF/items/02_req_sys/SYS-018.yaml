@@ -4,7 +4,6 @@ content: The system shall manage release lifecycle through states (planning, dev
   shall enforce configurable criteria before allowing progression.
 links:
 - CRS-006
-active: true
 title: Release Status Workflow
 verification_status: PASS
 history: []

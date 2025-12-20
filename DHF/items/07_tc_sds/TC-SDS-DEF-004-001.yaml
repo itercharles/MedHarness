@@ -14,7 +14,6 @@ content: "**Objective**: Verify Streamlit UI implementation per SDS-DEF-004.\n\n
   \ implemented correctly, all features functional\n\n**Status**: PASS"
 links:
 - SDS-DEF-004
-active: true
 title: Verify UI Components Implementation
 verification_status: PASS
 history: []

@@ -47,7 +47,6 @@ content: '**Objective**: Verify defect filtering and metrics functionality per S
   **Status**: PASS'
 links:
 - SYS-009
-active: true
 title: Verify Defect Filtering and Metrics
 verification_status: PASS
 history: []

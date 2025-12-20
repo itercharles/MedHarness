@@ -4,7 +4,6 @@ content: Add root_cause and resolution fields to Defect model. Implement validat
   change to resolved.
 links:
 - SYS-011
-active: true
 title: Defect Root Cause Fields
 history: []
 status: draft

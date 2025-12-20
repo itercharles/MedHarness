@@ -3,7 +3,6 @@ content: The system shall ingest specification items defined in YAML files from 
   structured directory layout.
 links:
 - CRS-002
-active: true
 title: Parse Specifications
 history: []
 status: draft

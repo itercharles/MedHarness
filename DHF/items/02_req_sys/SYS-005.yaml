@@ -3,7 +3,6 @@ content: The system shall parse governance documents (Regulations, Procedures) d
   in YAML.
 links:
 - CRS-003
-active: true
 title: Governance Definitions
 history: []
 status: draft

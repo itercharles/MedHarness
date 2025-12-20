@@ -42,7 +42,6 @@ content: 'Implements SOUP document type in project configuration with the follow
   - Under Review → Rejected: Requires rejection reason'
 links:
 - SYS-022
-active: true
 title: SOUP Document Type Configuration
 history: []
 status: approved

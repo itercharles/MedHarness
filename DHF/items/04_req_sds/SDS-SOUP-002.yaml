@@ -45,7 +45,6 @@ content: 'Implements import interface for SOUP data from external scanning tools
   while maintaining clean separation of concerns.'
 links:
 - SYS-022
-active: true
 title: SOUP Import Interface
 history: []
 status: approved

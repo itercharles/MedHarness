@@ -4,7 +4,6 @@ content: Implement DefectWorkflow class with state transition validation. Define
   verify_resolution(), close_defect().
 links:
 - SYS-010
-active: true
 title: Defect Workflow State Machine
 history: []
 status: draft

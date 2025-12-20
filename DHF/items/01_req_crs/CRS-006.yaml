@@ -4,7 +4,6 @@ content: Users shall be able to create, track and document software releases wit
   transition shall require approval, and manual verification steps shall be tracked
   with approver identity.
 links: []
-active: true
 title: Release Management
 history:
 - from: draft

@@ -3,7 +3,6 @@ content: Implement PolicyEngine to parse Governance documents (Regulations/Proce
   and execute automated checks, generating Compliance Reports.
 links:
 - SYS-006
-active: true
 title: Policy Engine
 history: []
 component: Backend.Compliance

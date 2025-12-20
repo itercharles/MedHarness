@@ -14,7 +14,6 @@ content: "As a medical device manufacturer, I need to track and manage all third
   \ to identify and document all \nSOUP items, including their intended use, functional\
   \ requirements, and \nverification evidence."
 links: []
-active: true
 title: Third-Party Software Component Management
 reviewer: Product Owner
 review_date: '2024-12-15'

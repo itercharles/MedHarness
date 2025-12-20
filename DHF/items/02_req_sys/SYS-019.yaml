@@ -3,7 +3,6 @@ content: The system shall generate release documentation including traceability 
   test summary, and defect report.
 links:
 - CRS-006
-active: true
 title: Release Documentation Generation
 verification_status: PASS
 history: []

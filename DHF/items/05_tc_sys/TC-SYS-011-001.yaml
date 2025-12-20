@@ -49,7 +49,6 @@ content: '**Objective**: Verify defect lifecycle management through all valid st
   **Status**: PASS'
 links:
 - SYS-011
-active: true
 title: Verify Defect Lifecycle State Transitions
 verification_status: PASS
 history: []

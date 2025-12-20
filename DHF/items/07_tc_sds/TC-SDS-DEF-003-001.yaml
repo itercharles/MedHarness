@@ -45,7 +45,6 @@ content: '**Objective**: Verify DefectTracker CRUD operations per SDS-DEF-003.
   **Status**: PASS'
 links:
 - SDS-DEF-003
-active: true
 title: Verify CRUD Operations Implementation
 verification_status: PASS
 history: []

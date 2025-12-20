@@ -3,7 +3,6 @@ content: The system shall manage defect lifecycle through defined states (open, 
   resolved, verified, closed) with controlled state transitions.
 links:
 - CRS-005
-active: true
 title: Defect Workflow Management
 verification_status: PASS
 history: []

@@ -49,7 +49,6 @@ content: '**Objective**: Verify that ChangeTracker correctly performs CRUD opera
   **Notes**: All CRUD operations working correctly with YAML storage'
 links:
 - SDS-004
-active: true
 title: Design Test - ChangeTracker CRUD Operations
 verification_status: PASS
 history: []

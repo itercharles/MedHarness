@@ -47,7 +47,6 @@ content: '**Objective**: Verify the DefectWorkflow state machine implementation 
   **Status**: PASS'
 links:
 - SDS-DEF-002
-active: true
 title: Verify State Machine Implementation
 verification_status: PASS
 history: []

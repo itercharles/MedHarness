@@ -4,7 +4,6 @@ content: The system shall verify that all requirements in a release have passing
   criteria including automated checks and manual verification requirements.
 links:
 - CRS-006
-active: true
 title: Release Verification Checks
 verification_status: PASS
 history: []

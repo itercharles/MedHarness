@@ -14,7 +14,6 @@ content: "As a regulatory affairs professional, I need to generate professional,
   - Ensures consistency in regulatory documentation\n- Provides audit trail with auto-generated\
   \ dates\n- Supports FDA 21 CFR Part 11 compliance (electronic records)"
 links: []
-active: true
 title: Regulatory Document Generation and Export
 reviewer: Product Owner
 review_date: '2024-12-15'

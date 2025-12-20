@@ -7,7 +7,6 @@ content: Implement configurable workflow criteria system using YAML configuratio
 links:
 - SYS-017
 - SYS-018
-active: true
 title: Workflow Criteria Configuration
 history: []
 status: draft

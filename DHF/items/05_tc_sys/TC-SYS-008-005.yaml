@@ -42,7 +42,6 @@ content: '**Objective**: Verify that change history is tracked and can be export
   **Notes**: Full audit trail available for regulatory compliance'
 links:
 - SYS-008
-active: true
 title: Verify Change History Tracking
 verification_status: PASS
 history: []

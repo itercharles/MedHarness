@@ -6,7 +6,6 @@ content: Implement Streamlit page with three tabs - Create Release (form), Manag
 links:
 - SYS-016
 - SYS-019
-active: true
 title: Release Streamlit UI
 history: []
 status: draft

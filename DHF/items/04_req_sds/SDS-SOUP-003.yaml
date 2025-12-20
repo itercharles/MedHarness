@@ -51,7 +51,6 @@ content: 'Implements SOUP approval workflow and traceability to system requireme
   4. Verification completed (manual check)'
 links:
 - SYS-022
-active: true
 title: SOUP Workflow and Traceability
 history: []
 status: approved

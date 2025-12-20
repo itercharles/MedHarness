@@ -6,7 +6,6 @@ content: Use Pydantic v2 to define Release model with fields for version, status
   for each transition).
 links:
 - SYS-016
-active: true
 title: Release Pydantic Model
 history: []
 status: draft

@@ -3,7 +3,6 @@ content: Use streamlit-agraph to render interactive traceability graph. Implemen
   dynamic Data Views for item properties and a Compliance Tab for regulatory checks.
 links:
 - SYS-003
-active: true
 title: Streamlit Visualization
 history: []
 component: Backend.UI

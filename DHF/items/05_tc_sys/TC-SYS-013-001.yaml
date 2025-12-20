@@ -51,7 +51,6 @@ content: '**Objective**: Verify that defects cannot be closed without verificati
   **Status**: PASS'
 links:
 - SYS-013
-active: true
 title: Verify Resolution Verification Requirement
 verification_status: PASS
 history: []

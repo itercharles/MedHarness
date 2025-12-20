@@ -4,7 +4,6 @@ content: Add affected_items (list) and related_change_request (optional string) 
   to existing items.
 links:
 - SYS-013
-active: true
 title: Defect Traceability Fields
 history: []
 status: draft
