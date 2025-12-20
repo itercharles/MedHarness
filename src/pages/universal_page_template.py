@@ -673,7 +673,7 @@ def render_transition_workflow(
                     # Build metadata with generic pattern
                     metadata = {
                         by_field: performed_by,
-                        date_field: datetime.now().isoformat(),
+                        date_field: datetime.now().date().isoformat(),  # Use date() for date fields
                         'timestamp': datetime.now().isoformat()
                     }
                     updated_item = workflow_engine.perform_transition(item, transition, metadata)

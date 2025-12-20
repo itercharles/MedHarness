@@ -1,0 +1,140 @@
+id: ARCH-002
+content: "## Data Model\n\n### Item Model\nAll traceability items follow a common\
+  \ base structure:\n```python\nclass Item(BaseModel):\n    uid: str             \
+  \       # Unique identifier (alias: id)\n    text: str                   # Main\
+  \ content (alias: content)\n    title: Optional[str]        # Human-readable title\n\
+  \    status: str                 # Current lifecycle state\n    links: List[str]\
+  \            # Links to other items\n    verification_status: Optional[VerificationStatus]\n\
+  \    manual_verifications: Optional[Dict]\n    # ... additional properties per doc\
+  \ type\n```\n\n### Configuration Model\n```python\nclass DocTypeConfig(BaseModel):\n\
+  \    code: str                   # Document type code (e.g., \"SYS\")\n    name:\
+  \ str                   # Display name\n    prefix: str                 # ID prefix\
+  \ (e.g., \"SYS-\")\n    directory: Optional[str]    # Storage directory\n    properties:\
+  \ List[str]       # Allowed fields\n    lifecycle: LifecycleConfig  # Workflow definition\n\
+  \    relations: List[Relation]   # Traceability relations\n```\n\n## Storage Architecture\n\
+  \n### Directory Structure\n```\nDHF/\n├── config/\n│   └── project_config.yaml \
+  \   # Master configuration\n├── items/\n│   ├── 01_req_crs/           # Customer\
+  \ Requirements\n│   ├── 02_req_sys/           # System Requirements\n│   ├── 04_req_sds/\
+  \           # Design Specifications\n│   ├── 05_tc_sys/            # System Tests\n\
+  │   ├── 06_tc_crs/            # Validation Tests\n│   ├── 07_tc_sds/           \
+  \ # Design Tests\n│   ├── 08_defect/            # Defects\n│   ├── 09_cr/      \
+  \          # Change Requests\n│   ├── 10_release/           # Releases\n│   ├──\
+  \ 11_soup/              # SOUP Items\n│   └── 12_arch/              # Architecture\
+  \ Specs\n└── governance/\n    └── IEC_62304.yaml        # Compliance policies\n\
+  ```\n\n### File Format\n- **Format**: YAML (human-readable, Git-friendly)\n- **Naming**:\
+  \ `{ID}.yaml` (e.g., `SYS-001.yaml`)\n- **Validation**: Pydantic models ensure data\
+  \ integrity\n- **Serialization**: `mode='json'` for proper enum handling\n\n## Version\
+  \ Control Integration\n\n### Git-Based Audit Trail\n- Every item change creates\
+  \ a Git commit\n- Commit message includes: action, item ID, author\n- Complete history\
+  \ available via `git log`\n- Tamper-evident audit trail\n\n### Benefits\n- **Immutable\
+  \ History**: Cannot alter past changes\n- **Branching**: Support for parallel development\n\
+  - **Rollback**: Easy to revert to previous versions\n- **Compliance**: Meets IEC\
+  \ 62304 audit requirements"
+links:
+- SYS-003
+- SYS-004
+active: true
+title: Data Model and Storage Architecture
+review_date: '2025-12-20'
+history: []
+component: Data
+architecture_type: data
+design_rationale: 'File-based storage with Git version control chosen for:
+
+
+  **Human-Readable Format**
+
+  - YAML is easy to read and edit manually
+
+  - No special tools required for inspection
+
+  - Facilitates code review and collaboration
+
+
+  **Git-Friendly**
+
+  - Text-based format works well with Git
+
+  - Meaningful diffs for changes
+
+  - Merge conflict resolution possible
+
+
+  **No Database Dependency**
+
+  - Simpler deployment (no DB setup)
+
+  - Easier backup (just copy directory)
+
+  - Better for small to medium datasets
+
+
+  **Regulatory Compliance**
+
+  - Git provides required audit trail
+
+  - File-based storage is transparent
+
+  - Easy to archive for regulatory submission
+
+  '
+alternatives_considered: '**SQL Database (SQLite/PostgreSQL)**
+
+  - Rejected: Adds complexity and deployment overhead
+
+  - File-based approach sufficient for expected data volume
+
+  - Git history provides better audit trail than DB triggers
+
+
+  **NoSQL Database (MongoDB)**
+
+  - Rejected: Overkill for structured, validated data
+
+  - YAML + Pydantic provides similar schema flexibility
+
+
+  **JSON Files**
+
+  - Considered: Similar to YAML but less human-readable
+
+  - YAML chosen for better readability and comments support
+
+  '
+technology_stack: '- **PyYAML**: YAML parsing and serialization
+
+  - **Pydantic v2**: Data validation and type safety
+
+  - **GitPython**: Git operations automation
+
+  - **Pathlib**: File system operations
+
+  '
+interfaces: '**ItemLoader Interface**:
+
+  - `load_item(uid: str) -> Item`
+
+  - `load_all_items() -> List[Item]`
+
+  - `load_items_by_prefix(prefix: str) -> List[Item]`
+
+
+  **ItemSaver Interface**:
+
+  - `save(item: Item, author: str) -> Path`
+
+  - `_get_directory_for_prefix(prefix: str) -> Path`
+
+  - `_build_prefix_map() -> Dict[str, str]`
+
+
+  **GitRepository Interface**:
+
+  - `commit_item_change(uid: str, file_path: Path, action: str, author: str)`
+
+  - `get_file_history(file_path: Path) -> List[Dict]`
+
+  '
+status: review
+review_by: Release Management, UI State
+timestamp: '2025-12-20T12:47:40.085405'

@@ -1,0 +1,102 @@
+id: ARCH-001
+title: CompliantFlow System Architecture
+content: |
+  ## Overview
+  CompliantFlow follows a layered architecture pattern with clear separation of concerns.
+  
+  ## Layers
+  1. **Presentation Layer**: Streamlit UI
+     - Universal page template
+     - Dynamic form generation
+     - Workflow transition UI
+  
+  2. **Business Logic Layer**
+     - CompliantFlowCore: Central orchestrator
+     - DynamicWorkflowEngine: State machine execution
+     - GraphEngine: Traceability analysis
+  
+  3. **Data Access Layer**
+     - ItemLoader: YAML file reading
+     - ItemSaver: YAML file writing with validation
+     - GitRepository: Version control integration
+  
+  4. **Storage Layer**
+     - YAML files for item storage
+     - Git for version control and audit trail
+     - File-based configuration
+  
+  ## Component Diagram
+  ```
+  ┌─────────────────────────────────────────┐
+  │         Streamlit UI Pages              │
+  │  (Universal Template + Page Generator)  │
+  └──────────────┬──────────────────────────┘
+                 │
+  ┌──────────────▼──────────────────────────┐
+  │       CompliantFlowCore                 │
+  │  (Orchestration + API)                  │
+  └──────┬──────────┬──────────┬────────────┘
+         │          │          │
+    ┌────▼───┐  ┌──▼────┐  ┌──▼─────┐
+    │Workflow│  │ Graph │  │ Item   │
+    │Engine  │  │Engine │  │Manager │
+    └────────┘  └───────┘  └────┬───┘
+                                 │
+                    ┌────────────▼──────────┐
+                    │  ItemLoader/Saver     │
+                    │  + GitRepository      │
+                    └────────────┬──────────┘
+                                 │
+                    ┌────────────▼──────────┐
+                    │  YAML Files + Git     │
+                    └───────────────────────┘
+  ```
+
+component: System
+architecture_type: system
+design_rationale: |
+  Layered architecture chosen for:
+  - **Separation of Concerns**: Each layer has a single responsibility
+  - **Testability**: Layers can be tested independently
+  - **Maintainability**: Changes isolated to specific layers
+  - **IEC 62304 Compliance**: Clear software architecture documentation
+  - **Flexibility**: Easy to swap implementations (e.g., different storage backends)
+
+alternatives_considered: |
+  **Microservices Architecture**
+  - Rejected: Too complex for single-user desktop application
+  - Overhead of inter-service communication not justified
+  
+  **Monolithic Architecture**
+  - Rejected: Poor maintainability and testability
+  - Difficult to extend with new document types
+  
+  **Plugin Architecture**
+  - Considered but deferred: Current config-driven approach provides sufficient flexibility
+  - May revisit for future extensibility needs
+
+technology_stack: |
+  - **Python 3.11+**: Core language
+  - **Streamlit**: Web UI framework
+  - **Pydantic v2**: Data validation and serialization
+  - **PyYAML**: Configuration and data persistence
+  - **NetworkX**: Graph analysis for traceability
+  - **GitPython**: Version control integration
+  - **Jinja2**: Template rendering for document generation
+
+interfaces: |
+  **External Interfaces**:
+  - File system (YAML read/write)
+  - Git repository (version control)
+  - Web browser (Streamlit UI)
+  
+  **Internal Interfaces**:
+  - CompliantFlowCore API (get_item, create_item, update_item, transition_item)
+  - WorkflowEngine API (validate_transition, execute_transition)
+  - GraphEngine API (build_graph, find_orphans, calculate_coverage)
+
+links:
+  - SYS-001
+  - SYS-002
+  - SYS-003
+status: draft

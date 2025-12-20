@@ -456,5 +456,57 @@ doc_types:
           label: "Revise"
           criteria: []
 
+  - code: ARCH
+    name: "Architecture Specification"
+    prefix: "ARCH-"
+    directory: "12_arch"
+    properties: ["id", "title", "content", "component", "architecture_type", "design_rationale", "alternatives_considered", "technology_stack", "interfaces", "links", "review_by", "review_date", "approved_by", "approved_date", "deprecated_by", "deprecated_date"]
+    
+    relations:
+      - target: SYS
+        type: realizes
+        label: realizes
+      - target: SDS
+        type: guides
+        label: guides
+    
+    icon: "🏗️"
+    page_enabled: true
+    page_number: 12
+    
+    lifecycle:
+      states:
+        - {id: draft, label: "Draft", is_initial: true, color: warning, icon: "📝"}
+        - {id: review, label: "In Review", color: info, icon: "👀"}
+        - {id: approved, label: "Approved", color: success, icon: "✅"}
+        - {id: deprecated, label: "Deprecated", color: secondary, icon: "🗄️"}
+      
+      transitions:
+        - from: draft
+          to: review
+          label: "Submit for Review"
+          criteria:
+            - {id: content_complete, name: "Content documented", check_type: "field_not_empty", field: "content", required: true}
+            - {id: title_defined, name: "Title defined", check_type: "field_not_empty", field: "title", required: true}
+            - {id: rationale_documented, name: "Design rationale documented", check_type: "field_not_empty", field: "design_rationale", required: true}
+        
+        - from: review
+          to: approved
+          label: "Approve"
+          criteria:
+            - {id: review_complete, name: "Review completed", check_type: "manual", required: true}
+        
+        - from: review
+          to: draft
+          label: "Request Changes"
+          criteria:
+            - {id: changes_requested, name: "Changes documented", check_type: "manual", required: true}
+        
+        - from: approved
+          to: deprecated
+          label: "Deprecate"
+          criteria:
+            - {id: deprecation_reason, name: "Deprecation reason documented", check_type: "manual", required: true}
+
 policies:
   require_test_coverage: ["SYS", "CRS", "SDS"]
