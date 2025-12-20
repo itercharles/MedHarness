@@ -106,6 +106,7 @@ class AutomatedTestScanner:
         
         Supports formats:
         - test_TC_SYS_001_description
+        - test_TC_CRS_009_001_description (with sub-number)
         - test_tc_sys_001_description
         - Docstring: "TC-SYS-001: Title"
         
@@ -114,19 +115,25 @@ class AutomatedTestScanner:
             docstring: Function docstring
         
         Returns:
-            Test ID in format TC-XXX-YYY or None
+            Test ID in format TC-XXX-YYY or TC-XXX-YYY-ZZZ or None
         """
-        # Try function name first
-        pattern = r'test_(TC|tc)[_-]([A-Z]+|[a-z]+)[_-](\d+)'
+        # Try function name first - support optional sub-number
+        # Pattern: test_TC_XXX_123_456_description or test_TC_XXX_123_description
+        pattern = r'test_(TC|tc)[_-]([A-Z]+|[a-z]+)[_-](\d+)(?:[_-](\d+))?'
         match = re.search(pattern, function_name)
         if match:
             prefix = match.group(1).upper()
             doc_type = match.group(2).upper()
             number = match.group(3)
-            return f"{prefix}-{doc_type}-{number}"
+            sub_number = match.group(4)
+            
+            if sub_number:
+                return f"{prefix}-{doc_type}-{number}-{sub_number}"
+            else:
+                return f"{prefix}-{doc_type}-{number}"
         
-        # Try docstring
-        pattern = r'(TC-[A-Z]+-\d+)'
+        # Try docstring - support optional sub-number
+        pattern = r'(TC-[A-Z]+-\d+(?:-\d+)?)'
         match = re.search(pattern, docstring)
         if match:
             return match.group(1)
