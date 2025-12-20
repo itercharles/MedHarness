@@ -1,4 +1,5 @@
 
+status: draft
 id: TC-CRS-003
 title: Validate Docs-as-Code
 content: Verify that users can edit requirements as YAML files and that changes are reflected in the system after reload.

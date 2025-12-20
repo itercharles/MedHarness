@@ -1,4 +1,5 @@
 id: TC-SYS-008-003
+status: draft
 content: '**Objective**: Verify that change request workflow follows the correct state
   machine
 

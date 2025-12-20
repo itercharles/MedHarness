@@ -1,4 +1,5 @@
 id: TC-SDS-004-002
+status: draft
 content: '**Objective**: Verify that ChangeTracker correctly performs CRUD operations
 
 

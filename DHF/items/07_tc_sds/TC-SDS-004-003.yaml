@@ -1,4 +1,5 @@
 id: TC-SDS-004-003
+status: draft
 content: '**Objective**: Verify that ChangeWorkflow state machine enforces correct
   transitions
 

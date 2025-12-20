@@ -1,4 +1,5 @@
 id: TC-SDS-DEF-007-001
+status: draft
 content: '**Objective**: Verify affected_items and related_change_request fields per
   SDS-DEF-007.
 

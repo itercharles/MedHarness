@@ -22,6 +22,7 @@ doc_types:
           label: "Approved"
           color: "success"
           icon: "✅"
+          is_stable: true
         - id: retired
           label: "Retired"
           color: "info"
@@ -80,11 +81,22 @@ doc_types:
   - code: RCM
     name: "Risk Control Measure"
     prefix: "RCM-"
-    allowed_parents: ["RISK"]
-    properties: ["id", "title", "content", "type", "links", "reviewer", "review_date"]
+    directory: "10_rcm"
+    properties: ["id", "title", "content", "links", "status", "control_type", "implementation_status"]
     relations:
       - target: RISK
         label: mitigates
+      - target: SYS
+        label: implements
+    icon: "🛡️"
+    page_enabled: true
+    page_number: 11
+    lifecycle:
+      states:
+        - {id: draft, label: "Draft", color: "warning", icon: "📝", is_initial: true}
+        - {id: approved, label: "Approved", color: "success", icon: "✅", is_stable: true}
+      transitions:
+        - {from: draft, to: approved, label: "Approve"}
   - code: SDS
     name: "Software Design Specification"
     prefix: "SDS-"
@@ -104,7 +116,7 @@ doc_types:
     lifecycle:
       states:
         - {id: draft, label: "Draft", color: "warning", icon: "📝", is_initial: true}
-        - {id: approved, label: "Approved", color: "success", icon: "✅"}
+        - {id: approved, label: "Approved", color: "success", icon: "✅", is_stable: true}
         - {id: retired, label: "Retired", color: "info", icon: "🔒"}
       
       transitions:
@@ -154,7 +166,7 @@ doc_types:
     lifecycle:
       states:
         - {id: draft, label: "Draft", color: "warning", icon: "📝", is_initial: true}
-        - {id: approved, label: "Approved", color: "success", icon: "✅"}
+        - {id: approved, label: "Approved", color: "success", icon: "✅", is_stable: true}
         - {id: retired, label: "Retired", color: "info", icon: "🔒"}
       
       transitions:
@@ -193,6 +205,15 @@ doc_types:
     relations:
       - target: SYS
         label: verifies
+    icon: "🧪"
+    page_enabled: true
+    page_number: 9
+    lifecycle:
+      states:
+        - {id: draft, label: "Draft", color: "warning", icon: "📝", is_initial: true}
+        - {id: approved, label: "Approved", color: "success", icon: "✅", is_stable: true}
+      transitions:
+        - {from: draft, to: approved, label: "Approve"}
   - code: TC-CRS
     name: "Customer Validation Test"
     prefix: "TC-CRS-"
@@ -202,6 +223,12 @@ doc_types:
     relations:
       - target: CRS
         label: validates
+    lifecycle:
+      states:
+        - {id: draft, label: "Draft", color: "warning", icon: "📝", is_initial: true}
+        - {id: approved, label: "Approved", color: "success", icon: "✅", is_stable: true}
+      transitions:
+        - {from: draft, to: approved, label: "Approve"}
   - code: TC-SDS
     name: "Design Test"
     prefix: "TC-SDS-"
@@ -212,6 +239,12 @@ doc_types:
     relations:
       - target: SDS
         label: verifies
+    lifecycle:
+      states:
+        - {id: draft, label: "Draft", color: "warning", icon: "📝", is_initial: true}
+        - {id: approved, label: "Approved", color: "success", icon: "✅", is_stable: true}
+      transitions:
+        - {from: draft, to: approved, label: "Approve"}
 
   - code: DEFECT
     name: "Defect"
@@ -287,7 +320,7 @@ doc_types:
       states:
         - {id: submitted, label: "Submitted", color: "info", icon: "📥", is_initial: true}
         - {id: under_review, label: "Under Review", color: "warning", icon: "🔍"}
-        - {id: approved, label: "Approved", color: "success", icon: "✅"}
+        - {id: approved, label: "Approved", color: "success", icon: "✅", is_stable: true}
         - {id: rejected, label: "Rejected", color: "error", icon: "❌"}
         - {id: in_progress, label: "In Progress", color: "warning", icon: "🔧"}
         - {id: completed, label: "Completed", color: "success", icon: "🎯"}
@@ -351,7 +384,7 @@ doc_types:
         - {id: planning, label: "Planning", color: "info", icon: "�", is_initial: true}
         - {id: developing, label: "Developing", color: "warning", icon: "🔧"}
         - {id: testing, label: "Testing", color: "warning", icon: "🧪"}
-        - {id: released, label: "Released", color: "success", icon: "🚀"}
+        - {id: released, label: "Released", color: "success", icon: "🚀", is_stable: true}
       
       transitions:
         - from: planning
@@ -401,6 +434,7 @@ doc_types:
           label: "Approved"
           color: "success"
           icon: "✅"
+          is_stable: true
         - id: rejected
           label: "Rejected"
           color: "error"
@@ -478,7 +512,7 @@ doc_types:
       states:
         - {id: draft, label: "Draft", is_initial: true, color: warning, icon: "📝"}
         - {id: review, label: "In Review", color: info, icon: "👀"}
-        - {id: approved, label: "Approved", color: success, icon: "✅"}
+        - {id: approved, label: "Approved", color: success, icon: "✅", is_stable: true}
         - {id: deprecated, label: "Deprecated", color: secondary, icon: "🗄️"}
       
       transitions:

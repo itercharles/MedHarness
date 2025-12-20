@@ -1,4 +1,5 @@
 id: TC-SDS-DEF-004-001
+status: draft
 content: "**Objective**: Verify Streamlit UI implementation per SDS-DEF-004.\n\n**Preconditions**:\
   \ Streamlit app is running at localhost:8501.\n\n**Test Steps**:\n1. Navigate to\
   \ Defect Tracking page\n2. Verify three tabs are present: Report Defect, Manage\

@@ -1,4 +1,5 @@
 id: TC-SDS-004-004
+status: draft
 content: '**Objective**: Verify that ImpactAnalyzer correctly uses GraphEngine for
   impact analysis
 

@@ -1,4 +1,5 @@
 id: TC-SDS-DEF-002-001
+status: draft
 content: '**Objective**: Verify the DefectWorkflow state machine implementation per
   SDS-DEF-002.
 

@@ -65,7 +65,38 @@ def get_shape_by_type(item_id: str) -> str:
     else:
         return "box"
 
-def build_matrix_table(all_items: List[dict], path: List[str]) -> pd.DataFrame:
+def should_show_warning(item: dict, core) -> bool:
+    """Check if item should show warning icon based on lifecycle state."""
+    item_status = item.get('status', 'draft')
+    item_id = item['id']
+    
+    # Get doc type for this item
+    doc_type_code = get_doc_type_code(item_id)
+    doc_type_config = core.config.get_doc_type(doc_type_code)
+    
+    if not doc_type_config:
+        raise ValueError(f"Document type configuration not found for: {doc_type_code}")
+    
+    if not doc_type_config.lifecycle:
+        raise ValueError(f"Lifecycle configuration missing for document type: {doc_type_code}")
+    
+    # Get lifecycle states
+    lifecycle = doc_type_config.lifecycle
+    states = lifecycle.get('states', [])
+    
+    if not states:
+        raise ValueError(f"No states defined in lifecycle for document type: {doc_type_code}")
+    
+    # Find stable states (states with is_stable: true)
+    stable_states = [s.get('id') for s in states if s.get('is_stable', False)]
+    
+    if not stable_states:
+        raise ValueError(f"No stable states configured for document type: {doc_type_code}. Add 'is_stable: true' to appropriate states.")
+    
+    # Show warning if not in a stable state
+    return item_status not in stable_states
+
+def build_matrix_table(all_items: List[dict], path: List[str], core) -> pd.DataFrame:
     """Build traceability table for a specific matrix configuration."""
     chains = []
     
@@ -75,20 +106,31 @@ def build_matrix_table(all_items: List[dict], path: List[str]) -> pd.DataFrame:
     
     for start_item in start_items:
         # Recursively build chains through the path
-        _build_chains_recursive(all_items, path, 0, {path[0]: start_item}, chains)
+        _build_chains_recursive(all_items, path, 0, {path[0]: start_item}, chains, core)
     
     return pd.DataFrame(chains)
 
-def _build_chains_recursive(all_items: List[dict], path: List[str], level: int, current_chain: dict, chains: List[dict]):
+def _build_chains_recursive(all_items: List[dict], path: List[str], level: int, current_chain: dict, chains: List[dict], core):
     """Recursively build traceability chains, creating multiple rows for multiple matches."""
     if level >= len(path) - 1:
         # Reached end of path, finalize chain
         chain_row = {}
         for doc_type, item in current_chain.items():
-            chain_row[doc_type] = item['id']
+            # Add ID with warning icon if not in final state
+            item_id = item['id']
+            if should_show_warning(item, core):
+                item_id = f"{item_id} ⚠️"
+            
+            chain_row[doc_type] = item_id
+            
             # Add title for non-last levels
             if doc_type != path[-1]:
                 chain_row[f"{doc_type} Title"] = item.get('title', 'N/A')[:50]
+        
+        # Add verification column if last item has verification_status
+        last_item = current_chain[path[-1]]
+        if 'verification_status' in last_item:
+            chain_row['Verify'] = last_item.get('verification_status', 'PENDING')
         
         # Add status
         complete = len(current_chain) == len(path)
@@ -111,18 +153,27 @@ def _build_chains_recursive(all_items: List[dict], path: List[str], level: int, 
         for next_item in next_items:
             new_chain = current_chain.copy()
             new_chain[next_type] = next_item
-            _build_chains_recursive(all_items, path, level + 1, new_chain, chains)
+            _build_chains_recursive(all_items, path, level + 1, new_chain, chains, core)
     else:
         # No match found, create incomplete chain
         chain_row = {}
         for doc_type, item in current_chain.items():
-            chain_row[doc_type] = item['id']
+            # Add ID with warning icon if not in final state
+            item_id = item['id']
+            if should_show_warning(item, core):
+                item_id = f"{item_id} ⚠️"
+            
+            chain_row[doc_type] = item_id
             if doc_type != path[-1]:
                 chain_row[f"{doc_type} Title"] = item.get('title', 'N/A')[:50]
         
         # Add missing levels as '-'
         for i in range(level + 1, len(path)):
             chain_row[path[i]] = '-'
+        
+        # Check if we should add verification column (based on path)
+        if path[-1].startswith('TC-'):
+            chain_row['Verify'] = '-'
         
         chain_row['Status'] = '⚠️ Incomplete'
         chains.append(chain_row)
@@ -278,7 +329,7 @@ if view_mode == "Matrix Table":
         
         # Build table
         all_items = core.get_all_items()
-        df = build_matrix_table(all_items, matrix_config.path)
+        df = build_matrix_table(all_items, matrix_config.path, core)
         
         if df.empty:
             st.warning(f"No items found for trace path: {' → '.join(matrix_config.path)}")

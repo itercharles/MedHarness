@@ -1,4 +1,5 @@
 id: TC-CRS-001
+status: draft
 title: Validate Traceability Workflow
 content: Perform a user walk-through of defining requirements and viewing the traceability matrix.
 links: ["CRS-001"]

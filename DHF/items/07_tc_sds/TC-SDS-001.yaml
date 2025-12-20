@@ -1,4 +1,5 @@
 id: TC-SDS-001
+status: draft
 content: 'Test case to verify: Use NetworkX DiGraph to store items as nodes and traceability
   links as edges.'
 links:

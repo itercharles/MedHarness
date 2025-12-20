@@ -1,4 +1,5 @@
 id: TC-SDS-002
+status: draft
 content: 'Test case to verify: Use streamlit-agraph to render interactive traceability
   graph. Implement dynamic Data Views for item properties and a Compliance Tab for
   regulatory checks.'

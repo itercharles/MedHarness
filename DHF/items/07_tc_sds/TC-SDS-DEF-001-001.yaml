@@ -1,4 +1,5 @@
 id: TC-SDS-DEF-001-001
+status: draft
 content: '**Objective**: Verify the Defect Pydantic model implementation per SDS-DEF-001.
 
 
