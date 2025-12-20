@@ -1,8 +1,0 @@
-id: TC-SDS-003
-status: draft
-content: 'Test case to verify: Implement PolicyEngine to parse Governance documents
-  (Regulations/Procedures) and execute automated checks, generating Compliance Reports.'
-links:
-- SDS-003
-title: Unit Test Policy Engine
-verification_status: PENDING

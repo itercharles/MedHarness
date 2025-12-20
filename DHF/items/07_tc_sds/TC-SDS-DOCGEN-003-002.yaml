@@ -1,7 +1,0 @@
-id: TC-SDS-DOCGEN-003-002
-title: Test Custom Jinja2 Filters
-links:
-- SDS-DOCGEN-002
-verification_status: PENDING
-status: draft
-content: 'Test case: Test Custom Jinja2 Filters'

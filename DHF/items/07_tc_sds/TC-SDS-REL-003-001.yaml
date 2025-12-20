@@ -1,7 +1,0 @@
-id: TC-SDS-REL-003-001
-title: Test Release Workflow State Machine
-links:
-- SDS-REL-003
-status: draft
-content: 'Test case: Test Release Workflow State Machine'
-verification_status: PASS
