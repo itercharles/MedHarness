@@ -36,6 +36,17 @@ def render_item_management_page(
     st.set_page_config(page_title=name, page_icon=icon, layout="wide")
     st.title(f"{icon} {name}")
     
+    # Clear selection state when switching to a different page
+    current_page_key = f"page_{code}"
+    if 'current_page_key' not in st.session_state or st.session_state['current_page_key'] != current_page_key:
+        # Page changed - clear all selection and editing states
+        st.session_state['current_page_key'] = current_page_key
+        st.session_state.pop('selected_item_id', None)
+        st.session_state.pop('editing_item_id', None)
+        st.session_state.pop('creating_new', None)
+        st.session_state.pop('transition_item', None)
+        st.session_state.pop('transition_config', None)
+    
     # Initialize workflow engine
     workflow_engine = DynamicWorkflowEngine(doc_type_config, core)
     

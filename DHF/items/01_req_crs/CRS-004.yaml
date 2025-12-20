@@ -1,10 +1,32 @@
 id: CRS-004
-title: Change Management
 content: "As a regulatory affairs professional, I need a change management system\
   \ to track \nand approve changes to the medical device software, ensuring compliance\
-  \ with \nIEC 62304 \xA76.2 and MDCG 2020-3 guidance on significant changes.\n"
-user_group: Regulatory Affairs
-source: IEC 62304 Requirements
+  \ with \nIEC 62304 §6.2 and MDCG 2020-3 guidance on significant changes."
+links: []
+active: true
+title: Change Management
 reviewer: QA Manager
 review_date: 2025-12-13
-status: draft
+history:
+- from: draft
+  to: approved
+  timestamp: '2025-12-20T10:24:41.985531'
+  metadata:
+    approved_by: charles
+    approved_date: '2025-12-20T10:24:41.985184'
+    timestamp: '2025-12-20T10:24:41.985531'
+uid: CRS-004
+text: "As a regulatory affairs professional, I need a change management system to\
+  \ track \nand approve changes to the medical device software, ensuring compliance\
+  \ with \nIEC 62304 §6.2 and MDCG 2020-3 guidance on significant changes."
+user_group: Regulatory Affairs
+source: IEC 62304 Requirements
+status: approved
+manual_verifications:
+  review_complete:
+    verified_by: charles
+    verified_date: '2025-12-20T10:24:34.368406'
+    notes: ''
+approved_by: charles
+approved_date: '2025-12-20T10:24:41.985184'
+timestamp: '2025-12-20T10:24:41.985531'
