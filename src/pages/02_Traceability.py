@@ -1,33 +1,50 @@
 """Traceability Matrix - Focused visualization of requirements traceability."""
+"""Traceability Matrix Page - Configurable traceability views."""
 
 import streamlit as st
-from streamlit_agraph import agraph, Node, Edge, Config
+import pandas as pd
 from pathlib import Path
 from typing import Dict, List, Set, Tuple
 from datetime import datetime
 from traceability.compliant_flow_core import CompliantFlowCore
 from traceability.models.item import VerificationStatus
 from traceability.document_generator import DocumentGenerator
+from streamlit_agraph import agraph, Node, Edge, Config
 import networkx as nx
-import pandas as pd
+from test_results import TestResultsProvider
 
+# Page Configuration
 st.set_page_config(
-    page_title="Traceability Matrix",
+    page_title="Traceability - CompliantFlow",
     page_icon="🔗",
     layout="wide"
 )
 
-# Initialize
+# Initialize Core
 @st.cache_resource
 def get_core():
     dhf_root = Path(__file__).resolve().parent.parent.parent / "DHF"
     return CompliantFlowCore(dhf_root)
 
-core = get_core()
+# Initialize Test Results Provider
+@st.cache_resource
+def get_test_provider():
+    core = get_core()
+    config_dict = {}
+    if hasattr(core.config, '_raw_config'):
+        config_dict = core.config._raw_config
+    return TestResultsProvider(config_dict)
+
+try:
+    core = get_core()
+    test_provider = get_test_provider()
+except Exception as e:
+    st.error(f"Failed to initialize: {e}")
+    st.stop()
 
 # Page Header
-st.title("🔗 Traceability Matrix")
-st.caption("Focused visualization of requirements traceability")
+st.title("🔗 Traceability - CompliantFlow")
+st.caption("Configurable traceability views")
 
 # Sidebar: View Mode Selection
 st.sidebar.header("View Mode")
@@ -127,10 +144,26 @@ def _build_chains_recursive(all_items: List[dict], path: List[str], level: int, 
             if doc_type != path[-1]:
                 chain_row[f"{doc_type} Title"] = item.get('title', 'N/A')[:50]
         
-        # Add verification column if last item has verification_status
+        # Add verification status if this is the last level and it's a test case
         last_item = current_chain[path[-1]]
-        if 'verification_status' in last_item:
-            chain_row['Verify'] = last_item.get('verification_status', 'PENDING')
+        if level == len(path) - 1 and last_item['id'].startswith(('TC-', 'tc-')):
+            # Get dynamic verification status from provider
+            try:
+                status_info = test_provider.get_verification_status(last_item)
+                verify_status = status_info.get('status', 'PENDING')
+                
+                # Add source indicator
+                source = status_info.get('source', 'manual')
+                if source == 'automated':
+                    verify_status = f"🤖 {verify_status}"
+                else:
+                    verify_status = f"👤 {verify_status}"
+                
+                chain_row['Verify'] = verify_status
+            except Exception as e:
+                # Fallback to YAML field if provider fails
+                chain_row['Verify'] = last_item.get('verification_status', 'PENDING')
+
         
         # Add status
         complete = len(current_chain) == len(path)

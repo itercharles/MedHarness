@@ -570,3 +570,26 @@ traceability_matrices:
     description: "Design specifications to design tests"
     path: ["SDS", "TC-SDS"]
   
+
+# Test Integration Configuration
+test_integration:
+  # Automated test configuration
+  automated:
+    provider: local  # or 'github' for API mode
+    
+    # Local file mode (default)
+    local:
+      results_file: test-results/latest.xml
+    
+    # GitHub Actions API mode (optional)
+    github:
+      repository: owner/repo  # Update with your repo
+      workflow_name: "Test Suite"
+      artifact_name: "test-results"
+      token_env: GITHUB_TOKEN  # Environment variable name
+  
+  # Manual test configuration
+  manual:
+    audit_log: test-results/manual_tests.log
+    require_verified_by: true
+    require_verification_date: true

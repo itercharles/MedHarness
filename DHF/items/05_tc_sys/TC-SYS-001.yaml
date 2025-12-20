@@ -1,8 +1,12 @@
 id: TC-SYS-001
-status: draft
-content: Run parsing unit tests. Ensure YAML files are correctly loaded into Item
-  objects with all properties.
-links:
-- SYS-001
-title: Verify Specification Parsing
-verification_status: PASS
+test_type: automated
+title: Verify CompliantFlowCore Initialization
+content: Verify that CompliantFlowCore initializes correctly with valid DHF directory.
+prerequisites: DHF directory with valid project_config.yaml
+steps:
+  - Initialize CompliantFlowCore with DHF path
+  - Verify core object is created
+  - Verify config is loaded
+  - Verify doc_types are populated
+expected_result: Core initializes successfully with loaded configuration
+links: ["SYS-001"]

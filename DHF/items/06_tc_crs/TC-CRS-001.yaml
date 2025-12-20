@@ -1,6 +1,17 @@
 id: TC-CRS-001
-status: draft
-title: Validate Traceability Workflow
-content: Perform a user walk-through of defining requirements and viewing the traceability matrix.
-links: ["CRS-001"]
-verification_status: PASS
+test_type: manual
+title: User Acceptance Test - Document Export
+content: Verify that users can export requirements as PDF documents with proper formatting.
+prerequisites: CompliantFlow application running with sample requirements
+steps:
+  - Navigate to Customer Requirements page
+  - Select a requirement
+  - Click "Export PDF" button
+  - Download and open PDF file
+  - Verify formatting and content
+expected_result: PDF contains all requirement details with professional formatting
+links: ["CRS-008"]
+verification_status: PENDING
+verified_by: ""
+verified_date: ""
+verification_notes: ""
