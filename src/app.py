@@ -106,7 +106,6 @@ for page_num, name, icon, func, code in doc_pages_data:
 # Add special pages
 all_pages.append(st.Page("pages/02_Traceability.py", title="Traceability", icon="🔗"))
 all_pages.append(st.Page("pages/03_Compliance.py", title="Compliance", icon="✅"))
-all_pages.append(st.Page("pages/04_Manual_Testing.py", title="Manual Testing", icon="👤"))
 
 # Configure navigation
 pg = st.navigation(all_pages)

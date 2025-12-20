@@ -217,12 +217,16 @@ doc_types:
   - code: TC-CRS
     name: "Customer Validation Test"
     prefix: "TC-CRS-"
+    directory: "06_tc_crs"
     type: "test"
     verifies: ["CRS"]
     properties: ["id", "title", "prerequisites", "steps", "expected_result", "links", "verification_status", "reviewer", "review_date"]
     relations:
       - target: CRS
         label: validates
+    icon: "✅"
+    page_enabled: true
+    page_number: 10
     lifecycle:
       states:
         - {id: draft, label: "Draft", color: "warning", icon: "📝", is_initial: true}
@@ -239,6 +243,9 @@ doc_types:
     relations:
       - target: SDS
         label: verifies
+    icon: "🔬"
+    page_enabled: true
+    page_number: 11
     lifecycle:
       states:
         - {id: draft, label: "Draft", color: "warning", icon: "📝", is_initial: true}
