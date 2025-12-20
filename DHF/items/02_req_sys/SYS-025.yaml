@@ -1,0 +1,5 @@
+id: SYS-025
+status: approved
+title: Policy Group Loading and Selection
+content: The system shall load policy groups from the governance directory and allow users to select a specific policy group for validation.
+links: ["CRS-011"]

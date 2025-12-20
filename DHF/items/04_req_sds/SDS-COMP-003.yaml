@@ -1,0 +1,6 @@
+id: SDS-COMP-003
+status: approved
+title: Policy Results Table and Evidence Display
+content: Implement results dataframe with pass/fail icons, policy descriptions merged from definitions, and expandable evidence panels grouped by pass/fail status.
+links: ["SYS-027"]
+component: Frontend.DataDisplay

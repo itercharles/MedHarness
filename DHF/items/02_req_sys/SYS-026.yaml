@@ -1,0 +1,5 @@
+id: SYS-026
+status: approved
+title: Compliance Score Calculation
+content: The system shall calculate an overall compliance score as a percentage of passed policies and display it with color-coded indicators (green >= 90%, yellow >= 70%, red < 70%).
+links: ["CRS-011"]
