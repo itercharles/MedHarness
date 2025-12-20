@@ -1,8 +1,0 @@
-id: TC-SYS-002
-status: draft
-content: Run graph engine tests. Ensure nodes and edges are correctly created from
-  items and links.
-links:
-- SYS-002
-title: Verify Graph Integrity
-verification_status: PASS
