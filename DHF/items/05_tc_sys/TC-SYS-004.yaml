@@ -1,8 +1,0 @@
-id: TC-SYS-004
-status: draft
-content: Ensure IEC_62304.yaml and SOP_001.yaml are correctly loaded into Regulation
-  objects.
-links:
-- SYS-005
-title: Verify Governance Parsing
-verification_status: PASS

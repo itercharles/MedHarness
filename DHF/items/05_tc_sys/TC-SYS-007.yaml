@@ -1,8 +1,0 @@
-id: TC-SYS-007
-status: draft
-content: 'Test case to verify: The system shall evaluate and report the pass/fail
-  status of policies.'
-links:
-- SYS-007
-title: Verify Compliance Reporting
-verification_status: PENDING

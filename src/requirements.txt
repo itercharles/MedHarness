@@ -10,3 +10,4 @@ gitpython
 python-dateutil
 streamlit
 streamlit-agraph
+markdown
