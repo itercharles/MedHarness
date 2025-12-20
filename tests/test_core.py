@@ -108,15 +108,3 @@ def test_TC_SYS_003_traceability_matrix_config():
         assert hasattr(matrix, 'name')
         assert hasattr(matrix, 'path')
         assert len(matrix.path) >= 2  # At least 2 levels
-
-
-# Example of a skipped test (for demonstration)
-@pytest.mark.skip(reason="Example of skipped test")
-def test_TC_SYS_999_example_skip():
-    """TC-SYS-999: Example of Skipped Test
-    
-    @links: SYS-999
-    
-    This test is intentionally skipped for demonstration purposes.
-    """
-    pass

@@ -83,7 +83,7 @@ class CompliantFlowCore:
         
         # Scan for automated test cases from Python code
         try:
-            from test_results.test_case_scanner import TestCaseScanner
+            from test_results.test_case_scanner import AutomatedTestScanner
             
             # Find tests directory (sibling to src)
             tests_dir = self.repo_root.parent / "tests"

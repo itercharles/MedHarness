@@ -4,6 +4,6 @@ Provides unified interface for retrieving test verification status from
 multiple sources: automated tests (CI/CD) and manual tests (YAML files).
 """
 
-from .provider import TestResultsProvider
+from .provider import VerificationStatusProvider
 
-__all__ = ['TestResultsProvider']
+__all__ = ['VerificationStatusProvider']

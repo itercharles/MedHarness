@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 
-class TestCaseScanner:
+class AutomatedTestScanner:
     """Scans Python test files to extract test case metadata."""
     
     def __init__(self, tests_dir: Path):

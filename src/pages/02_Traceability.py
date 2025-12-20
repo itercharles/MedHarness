@@ -11,7 +11,7 @@ from traceability.models.item import VerificationStatus
 from traceability.document_generator import DocumentGenerator
 from streamlit_agraph import agraph, Node, Edge, Config
 import networkx as nx
-from test_results import TestResultsProvider
+from test_results import VerificationStatusProvider
 
 # Page Configuration
 st.set_page_config(
@@ -33,7 +33,7 @@ def get_test_provider():
     config_dict = {}
     if hasattr(core.config, '_raw_config'):
         config_dict = core.config._raw_config
-    return TestResultsProvider(config_dict)
+    return VerificationStatusProvider(config_dict)
 
 try:
     core = get_core()

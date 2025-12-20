@@ -2,7 +2,7 @@
 
 import pytest
 from pathlib import Path
-from test_results.test_case_scanner import TestCaseScanner
+from test_results.test_case_scanner import AutomatedTestScanner
 from test_results import TestResultsProvider
 import xml.etree.ElementTree as ET
 
@@ -15,7 +15,7 @@ def test_TC_PROVIDER_001_junit_xml_parsing():
     
     Steps:
       1. Create sample JUnit XML content
-      2. Parse XML with TestCaseScanner
+      2. Parse XML with AutomatedTestScanner
       3. Extract test results
       4. Verify status mapping
     
@@ -70,17 +70,17 @@ def test_TC_PROVIDER_002_test_id_extraction():
     """TC-PROVIDER-002: Verify Test ID Extraction from Names
     
     @links: SDS-TRACE-003
-    @prerequisites: TestCaseScanner initialized
+    @prerequisites: AutomatedTestScanner initialized
     
     Steps:
-      1. Create TestCaseScanner instance
+      1. Create AutomatedTestScanner instance
       2. Test ID extraction with various formats
       3. Verify correct ID format returned
     
     Expected Result:
       Test IDs should be extracted correctly from function names
     """
-    scanner = TestCaseScanner(Path("tests"))
+    scanner = AutomatedTestScanner(Path("tests"))
     
     # Test various formats
     test_cases = [
@@ -168,7 +168,7 @@ def test_TC_PROVIDER_005_automated_test_discovery():
     @prerequisites: Python test files in tests/ directory
     
     Steps:
-      1. Create TestCaseScanner
+      1. Create AutomatedTestScanner
       2. Scan tests directory
       3. Verify automated tests found
       4. Check test structure
@@ -177,7 +177,7 @@ def test_TC_PROVIDER_005_automated_test_discovery():
       Scanner should find all automated tests with proper metadata
     """
     tests_dir = Path(__file__).parent
-    scanner = TestCaseScanner(tests_dir)
+    scanner = AutomatedTestScanner(tests_dir)
     
     test_cases = scanner.scan_all_tests()
     

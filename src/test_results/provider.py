@@ -4,7 +4,7 @@ from typing import Dict, Optional
 from datetime import datetime
 
 
-class TestResultsProvider:
+class VerificationStatusProvider:
     """Unified interface for test verification status retrieval.
     
     Routes requests to appropriate provider based on test type:

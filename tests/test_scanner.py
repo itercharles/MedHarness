@@ -1,13 +1,13 @@
-"""Test the TestCaseScanner functionality."""
+"""Test the AutomatedTestScanner functionality."""
 
 import pytest
 from pathlib import Path
-from test_results.test_case_scanner import TestCaseScanner
+from test_results.test_case_scanner import AutomatedTestScanner
 
 
 def test_scanner_extracts_test_id():
     """Test that scanner correctly extracts test IDs from function names."""
-    scanner = TestCaseScanner(Path("tests"))
+    scanner = AutomatedTestScanner(Path("tests"))
     
     # Test various formats
     assert scanner._extract_test_id("test_TC_SYS_001_description", "") == "TC-SYS-001"
@@ -17,7 +17,7 @@ def test_scanner_extracts_test_id():
 
 def test_scanner_parses_docstring():
     """Test that scanner correctly parses docstring metadata."""
-    scanner = TestCaseScanner(Path("tests"))
+    scanner = AutomatedTestScanner(Path("tests"))
     
     docstring = """TC-SYS-001: Test Title
     
@@ -44,7 +44,7 @@ def test_scanner_parses_docstring():
 def test_scanner_finds_test_files():
     """Test that scanner finds test files in tests directory."""
     tests_dir = Path(__file__).parent
-    scanner = TestCaseScanner(tests_dir)
+    scanner = AutomatedTestScanner(tests_dir)
     
     test_cases = scanner.scan_all_tests()
     
