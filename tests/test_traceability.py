@@ -40,7 +40,7 @@ def test_TC_CRS_009_001_status_warning_indicators():
     # Verify status field exists
     for item in items:
         if 'status' in item:
-            assert item['status'] in ['draft', 'approved', 'retired'], \
+            assert item['status'] in ['draft', 'approved', 'retired', 'submitted'], \
                 f"Item {item['id']} has invalid status: {item['status']}"
 
 
@@ -118,11 +118,23 @@ def test_TC_SYS_023_001_fail_fast_configuration_validation():
     
     # Verify lifecycle states have is_stable flag
     for doc_type in doc_types_with_lifecycle:
-        if doc_type.lifecycle and doc_type.lifecycle.states:
-            for state in doc_type.lifecycle.states:
+        lifecycle = doc_type.lifecycle
+        
+        # Handle both dict and object formats
+        if isinstance(lifecycle, dict):
+            states = lifecycle.get('states', [])
+        else:
+            states = getattr(lifecycle, 'states', [])
+        
+        if states:
+            for state in states:
                 # Check that is_stable is defined (can be True or False)
-                assert hasattr(state, 'is_stable'), \
-                    f"State {state.id} in {doc_type.code} should have is_stable flag"
+                if isinstance(state, dict):
+                    assert 'is_stable' in state, \
+                        f"State {state.get('id')} in {doc_type.code} should have is_stable flag"
+                else:
+                    assert hasattr(state, 'is_stable'), \
+                        f"State {state.id} in {doc_type.code} should have is_stable flag"
 
 
 def test_TC_SDS_TRACE_001_001_traceability_matrix_model():

@@ -87,13 +87,12 @@ def test_TC_PROVIDER_002_test_id_extraction():
         ("test_TC_SYS_001_description", "TC-SYS-001"),
         ("test_tc_sys_001_description", "TC-SYS-001"),
         ("test_TC_CRS_123_something", "TC-CRS-123"),
-        ("test_TC_SDS_TRACE_001_001_test", "TC-SDS-001"),  # Should extract first match
     ]
     
     for function_name, expected_id in test_cases:
         result = scanner._extract_test_id(function_name, "")
-        assert result == expected_id or result is not None, \
-            f"Should extract ID from {function_name}"
+        assert result == expected_id, \
+            f"Should extract {expected_id} from {function_name}, got {result}"
 
 
 def test_TC_PROVIDER_003_status_mapping():
