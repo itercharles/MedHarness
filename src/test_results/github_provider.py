@@ -20,10 +20,19 @@ class GitHubActionsProvider:
         """Initialize GitHub provider.
         
         Args:
-            config: Configuration dict with 'github' or 'local' sections
+            config: Configuration dict with GitHub API settings
         """
+
+        # Ensure .env is loaded (for Streamlit caching)
+        from pathlib import Path
+        from dotenv import load_dotenv
+        env_path = Path(__file__).parent.parent.parent / '.env'
+        if env_path.exists():
+            load_dotenv(env_path, override=True)
+        
         self.config = config
-        self.mode = 'local' if config.get('local') else 'github'
+        # Always use GitHub mode
+        self.mode = 'github'
         self._cache = {}
         self._cache_timestamp = None
     
@@ -62,12 +71,9 @@ class GitHubActionsProvider:
             }
     
     def _load_results(self):
-        """Load test results from configured source."""
-        if self.mode == 'local':
-            self._load_from_local_file()
-        else:
-            self._load_from_github_api()
-        
+        """Load test results from GitHub API."""
+
+        self._load_from_github_api()
         self._cache_timestamp = datetime.now()
     
     def _load_from_local_file(self):
@@ -87,27 +93,28 @@ class GitHubActionsProvider:
     
     def _load_from_github_api(self):
         """Load results from GitHub Actions API."""
-        github_config = self.config.get('github', {})
-        
-        # Get configuration
-        repo = github_config.get('repository')
-        workflow_name = github_config.get('workflow_name', 'Test Suite')
-        artifact_name = github_config.get('artifact_name', 'test-results')
-        token_env = github_config.get('token_env', 'GITHUB_TOKEN')
+        # Get configuration directly (no nesting)
+        repo = self.config.get('repository')
+        workflow_name = self.config.get('workflow_name', 'Test Suite')
+        artifact_name = self.config.get('artifact_name', 'test-results')
+        token_env = self.config.get('token_env', 'GITHUB_TOKEN')
         
         if not repo:
-            print("Warning: GitHub repository not configured")
+            print("ERROR: GitHub repository not configured in project_config.yaml")
             self._cache = {}
             return
         
         # Get token from environment
         token = os.getenv(token_env)
         if not token:
-            print(f"Warning: GitHub token not found in ${token_env}")
+            print(f"ERROR: GitHub token not found in environment variable ${token_env}")
+            print(f"Please set {token_env} in your .env file or environment")
             self._cache = {}
             return
         
         try:
+            print(f"[INFO] Fetching test results from GitHub: {repo}")
+            
             # Get latest workflow run
             headers = {
                 'Authorization': f'token {token}',
@@ -121,22 +128,23 @@ class GitHubActionsProvider:
                 'per_page': 10
             }
             
-            response = requests.get(url, headers=headers, params=params)
+            response = requests.get(url, headers=headers, params=params, timeout=10)
             response.raise_for_status()
             
             runs = response.json().get('workflow_runs', [])
             if not runs:
-                print("No completed workflow runs found")
+                print("WARNING: No completed workflow runs found")
                 self._cache = {}
                 return
             
             # Find latest successful run
             latest_run = runs[0]
             run_id = latest_run['id']
+            print(f"[INFO] Found workflow run #{run_id}")
             
             # Get artifacts for this run
             artifacts_url = f'https://api.github.com/repos/{repo}/actions/runs/{run_id}/artifacts'
-            response = requests.get(artifacts_url, headers=headers)
+            response = requests.get(artifacts_url, headers=headers, timeout=10)
             response.raise_for_status()
             
             artifacts = response.json().get('artifacts', [])
@@ -149,13 +157,15 @@ class GitHubActionsProvider:
                     break
             
             if not test_artifact:
-                print(f"Artifact '{artifact_name}' not found in run {run_id}")
+                print(f"WARNING: Artifact '{artifact_name}' not found in run {run_id}")
                 self._cache = {}
                 return
             
+            print(f"[INFO] Downloading artifact: {artifact_name}")
+            
             # Download and parse artifact
             download_url = test_artifact['archive_download_url']
-            response = requests.get(download_url, headers=headers)
+            response = requests.get(download_url, headers=headers, timeout=30)
             response.raise_for_status()
             
             # Save to temporary file and extract
@@ -172,13 +182,20 @@ class GitHubActionsProvider:
                 # Find XML file
                 xml_files = list(Path(tmpdir).glob('*.xml'))
                 if xml_files:
+                    print(f"[INFO] Parsing test results from {xml_files[0].name}")
                     self._parse_junit_xml(xml_files[0])
+                    print(f"[INFO] Loaded {len(self._cache)} test results from GitHub")
                 else:
-                    print("No XML file found in artifact")
+                    print("WARNING: No XML file found in artifact")
                     self._cache = {}
         
+        except requests.exceptions.RequestException as e:
+            print(f"ERROR: GitHub API request failed: {e}")
+            self._cache = {}
         except Exception as e:
-            print(f"Error fetching from GitHub API: {e}")
+            print(f"ERROR: Failed to fetch from GitHub API: {e}")
+            import traceback
+            traceback.print_exc()
             self._cache = {}
     
     def _parse_junit_xml(self, file_path: Path):

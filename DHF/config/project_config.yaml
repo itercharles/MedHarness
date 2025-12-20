@@ -573,20 +573,13 @@ traceability_matrices:
 
 # Test Integration Configuration
 test_integration:
-  # Automated test configuration
+  # Automated test configuration - GitHub API mode only
   automated:
-    provider: local  # or 'github' for API mode
-    
-    # Local file mode (default)
-    local:
-      results_file: test-results/latest.xml
-    
-    # GitHub Actions API mode (optional)
-    github:
-      repository: owner/repo  # Update with your repo
-      workflow_name: "Test Suite"
-      artifact_name: "test-results"
-      token_env: GITHUB_TOKEN  # Environment variable name
+    # GitHub Actions API mode
+    repository: itercharles/CompliantFlow
+    workflow_name: "Test Suite"
+    artifact_name: "test-results"
+    token_env: GITHUB_TOKEN  # Environment variable name
   
   # Manual test configuration
   manual:

@@ -51,6 +51,7 @@ class ProjectConfig(BaseModel):
     doc_types: List[DocTypeConfig] = Field(..., description="Document type configurations")
     policies: PoliciesConfig = Field(default_factory=PoliciesConfig, description="Project policies")
     traceability_matrices: List['TraceabilityMatrix'] = Field(default_factory=list, description="Traceability matrix configurations")
+    test_integration: dict = Field(default_factory=dict, description="Test integration configuration")
     
     def get_doc_type(self, code: str) -> Optional[DocTypeConfig]:
         """Get document type configuration by code."""

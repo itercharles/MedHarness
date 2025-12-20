@@ -30,9 +30,8 @@ def get_core():
 @st.cache_resource
 def get_test_provider():
     core = get_core()
-    config_dict = {}
-    if hasattr(core.config, '_raw_config'):
-        config_dict = core.config._raw_config
+    # Convert Pydantic model to dict
+    config_dict = core.config.model_dump() if core.config else {}
     return VerificationStatusProvider(config_dict)
 
 try:

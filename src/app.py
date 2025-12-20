@@ -1,8 +1,12 @@
 """CompliantFlow - Medical Device Design History File Management System"""
 
+# Load environment variables from .env file FIRST
+from pathlib import Path
+from dotenv import load_dotenv
+load_dotenv(Path(__file__).parent.parent / '.env')
+
 import streamlit as st
 import pandas as pd
-from pathlib import Path
 from traceability.compliant_flow_core import CompliantFlowCore
 from page_generator import generate_doc_type_pages
 

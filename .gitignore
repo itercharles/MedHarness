@@ -33,3 +33,4 @@ ENV/
 
 # Streamlit
 .streamlit/
+.env
