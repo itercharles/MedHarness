@@ -95,6 +95,11 @@ class GitHubActionsProvider:
         artifact_name = github_config.get('artifact_name', 'test-results')
         token_env = github_config.get('token_env', 'GITHUB_TOKEN')
         
+        if not repo:
+            print("Warning: GitHub repository not configured")
+            self._cache = {}
+            return
+        
         # Get token from environment
         token = os.getenv(token_env)
         if not token:
@@ -102,10 +107,79 @@ class GitHubActionsProvider:
             self._cache = {}
             return
         
-        # TODO: Implement GitHub API download
-        # For now, fall back to local file
-        print("GitHub API mode not yet implemented, falling back to local file")
-        self._load_from_local_file()
+        try:
+            # Get latest workflow run
+            headers = {
+                'Authorization': f'token {token}',
+                'Accept': 'application/vnd.github.v3+json'
+            }
+            
+            # Get workflow runs
+            url = f'https://api.github.com/repos/{repo}/actions/runs'
+            params = {
+                'status': 'completed',
+                'per_page': 10
+            }
+            
+            response = requests.get(url, headers=headers, params=params)
+            response.raise_for_status()
+            
+            runs = response.json().get('workflow_runs', [])
+            if not runs:
+                print("No completed workflow runs found")
+                self._cache = {}
+                return
+            
+            # Find latest successful run
+            latest_run = runs[0]
+            run_id = latest_run['id']
+            
+            # Get artifacts for this run
+            artifacts_url = f'https://api.github.com/repos/{repo}/actions/runs/{run_id}/artifacts'
+            response = requests.get(artifacts_url, headers=headers)
+            response.raise_for_status()
+            
+            artifacts = response.json().get('artifacts', [])
+            
+            # Find test-results artifact
+            test_artifact = None
+            for artifact in artifacts:
+                if artifact['name'] == artifact_name:
+                    test_artifact = artifact
+                    break
+            
+            if not test_artifact:
+                print(f"Artifact '{artifact_name}' not found in run {run_id}")
+                self._cache = {}
+                return
+            
+            # Download and parse artifact
+            download_url = test_artifact['archive_download_url']
+            response = requests.get(download_url, headers=headers)
+            response.raise_for_status()
+            
+            # Save to temporary file and extract
+            import tempfile
+            import zipfile
+            import io
+            
+            with tempfile.TemporaryDirectory() as tmpdir:
+                # Extract zip
+                zip_data = io.BytesIO(response.content)
+                with zipfile.ZipFile(zip_data) as zf:
+                    zf.extractall(tmpdir)
+                
+                # Find XML file
+                xml_files = list(Path(tmpdir).glob('*.xml'))
+                if xml_files:
+                    self._parse_junit_xml(xml_files[0])
+                else:
+                    print("No XML file found in artifact")
+                    self._cache = {}
+        
+        except Exception as e:
+            print(f"Error fetching from GitHub API: {e}")
+            self._cache = {}
     
     def _parse_junit_xml(self, file_path: Path):
         """Parse JUnit XML file and extract test results.
@@ -161,6 +235,7 @@ class GitHubActionsProvider:
         
         Supports formats:
         - test_TC_SYS_001
+        - test_TC_CRS_009_001 (with sub-number)
         - test_tc_sys_001
         - TestTCSYS001
         
@@ -169,12 +244,12 @@ class GitHubActionsProvider:
             classname: Test class name
         
         Returns:
-            Test ID in format TC-SYS-001 or None
+            Test ID in format TC-SYS-001 or TC-CRS-009-001 or None
         """
         import re
         
-        # Try to find pattern like TC_SYS_001 or tc_sys_001
-        pattern = r'(TC|tc)[_-]([A-Z]+|[a-z]+)[_-](\d+)'
+        # Try to find pattern like TC_SYS_001 or TC_CRS_009_001
+        pattern = r'(TC|tc)[_-]([A-Z]+|[a-z]+)[_-](\d+)(?:[_-](\d+))?'
         
         for text in [name, classname]:
             match = re.search(pattern, text)
@@ -182,7 +257,12 @@ class GitHubActionsProvider:
                 prefix = match.group(1).upper()
                 doc_type = match.group(2).upper()
                 number = match.group(3)
-                return f"{prefix}-{doc_type}-{number}"
+                sub_number = match.group(4)
+                
+                if sub_number:
+                    return f"{prefix}-{doc_type}-{number}-{sub_number}"
+                else:
+                    return f"{prefix}-{doc_type}-{number}"
         
         return None
     
