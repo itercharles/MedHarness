@@ -60,12 +60,18 @@ class ItemSaver:
         file_path = save_dir / f"{item.uid}.yaml"
         
         # Convert item to dict for YAML
-        # Use model_dump with by_alias=True to convert back to 'id' and 'content'
+        # Use by_alias=True to use 'id' and 'content' instead of 'uid' and 'text'
+        # Use mode='json' to properly serialize enums and other types
         data = item.model_dump(
             by_alias=True,
             exclude_none=True,
-            exclude_unset=True
+            mode='json'  # This converts enums to their values
         )
+        
+        # Remove the original field names if they exist (uid, text)
+        # since we're using aliases (id, content)
+        data.pop('uid', None)
+        data.pop('text', None)
         
         # Write to file
         with open(file_path, 'w', encoding='utf-8') as f:
