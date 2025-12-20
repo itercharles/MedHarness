@@ -58,6 +58,8 @@ class CompliantFlowCore:
                 data = yaml.safe_load(f)
             self.config = ProjectConfig.model_validate(data)
             self.graph.config = self.config
+            # Pass config to saver for dynamic directory mapping
+            self.saver.project_config = self.config
         except Exception as e:
             print(f"Error loading config: {e}")
     

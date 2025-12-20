@@ -1,5 +1,26 @@
 id: CRS-002
-title: Docs-as-Code
 content: Users shall be able to manage requirements and tests as version-controlled
   text files (YAML/Markdown).
-status: draft
+links: []
+active: true
+title: Docs-as-Code
+history:
+- from: draft
+  to: approved
+  timestamp: '2025-12-20T10:29:23.539417'
+  metadata:
+    approved_by: charles
+    approved_date: '2025-12-20T10:29:23.539146'
+    timestamp: '2025-12-20T10:29:23.539417'
+uid: CRS-002
+text: Users shall be able to manage requirements and tests as version-controlled text
+  files (YAML/Markdown).
+status: approved
+manual_verifications:
+  review_complete:
+    verified_by: charles
+    verified_date: '2025-12-20T10:29:17.864452'
+    notes: ''
+approved_by: charles
+approved_date: '2025-12-20T10:29:23.539146'
+timestamp: '2025-12-20T10:29:23.539417'

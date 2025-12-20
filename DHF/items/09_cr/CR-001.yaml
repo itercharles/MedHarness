@@ -1,39 +1,90 @@
 id: CR-001
-title: "Add bulk approval feature for requirements"
-content: "Add functionality to approve multiple requirements at once instead of one at a time, improving efficiency when processing large batches."
-description: |
-  Currently, requirements must be approved one at a time, which is inefficient when
-  processing large batches of requirements. This change request proposes adding a
-  bulk approval feature that allows selecting multiple requirements and approving
-  them all at once.
-justification: |
-  - Improves efficiency when approving large batches of requirements
-  - Reduces time spent on repetitive approval tasks
-  - Maintains audit trail for each individual approval
-  - Common feature request from quality team
-impact_assessment: |
-  **UI Changes:**
-  - Add checkbox column to requirements table
-  - Add "Bulk Actions" dropdown with "Approve Selected" option
-  - Add confirmation dialog showing list of items to be approved
-  
-  **Backend Changes:**
-  - Extend workflow engine to support batch operations
-  - Ensure each item's approval is recorded individually
-  - Maintain complete audit trail
-  
-  **Testing:**
-  - Add test cases for bulk approval functionality
-  - Verify individual approval records are created
-  - Test with various batch sizes
-  
-  **Risk Assessment:** Low
-  - Isolated feature addition
-  - No changes to existing approval logic
-  - Can be feature-flagged if needed
-priority: Medium
-requested_by: "Quality Team"
-assigned_to: ""
-target_version: "1.3.0"
-status: submitted
+content: Add functionality to approve multiple requirements at once instead of one
+  at a time, improving efficiency when processing large batches.
 links: []
+active: true
+title: Add bulk approval feature for requirements
+history:
+- from: submitted
+  to: under_review
+  timestamp: '2025-12-20T10:44:35.673028'
+  metadata:
+    timestamp: '2025-12-20T10:44:35.673028'
+- from: under_review
+  to: approved
+  timestamp: '2025-12-20T10:44:59.289726'
+  metadata:
+    approved_by: charles
+    approved_date: '2025-12-20T10:44:59.289459'
+    timestamp: '2025-12-20T10:44:59.289726'
+uid: CR-001
+text: Add functionality to approve multiple requirements at once instead of one at
+  a time, improving efficiency when processing large batches.
+description: 'Currently, requirements must be approved one at a time, which is inefficient
+  when
+
+  processing large batches of requirements. This change request proposes adding a
+
+  bulk approval feature that allows selecting multiple requirements and approving
+
+  them all at once.
+
+  '
+justification: '- Improves efficiency when approving large batches of requirements
+
+  - Reduces time spent on repetitive approval tasks
+
+  - Maintains audit trail for each individual approval
+
+  - Common feature request from quality team
+
+  '
+impact_assessment: '**UI Changes:**
+
+  - Add checkbox column to requirements table
+
+  - Add "Bulk Actions" dropdown with "Approve Selected" option
+
+  - Add confirmation dialog showing list of items to be approved
+
+
+  **Backend Changes:**
+
+  - Extend workflow engine to support batch operations
+
+  - Ensure each item''s approval is recorded individually
+
+  - Maintain complete audit trail
+
+
+  **Testing:**
+
+  - Add test cases for bulk approval functionality
+
+  - Verify individual approval records are created
+
+  - Test with various batch sizes
+
+
+  **Risk Assessment:** Low
+
+  - Isolated feature addition
+
+  - No changes to existing approval logic
+
+  - Can be feature-flagged if needed
+
+  '
+priority: Medium
+requested_by: Quality Team
+assigned_to: ''
+target_version: 1.3.0
+status: approved
+timestamp: '2025-12-20T10:44:59.289726'
+manual_verifications:
+  review_complete:
+    verified_by: charles
+    verified_date: '2025-12-20T10:44:50.886141'
+    notes: ''
+approved_by: charles
+approved_date: '2025-12-20T10:44:59.289459'

@@ -2,6 +2,7 @@ doc_types:
   - code: CRS
     name: "Customer Requirement"
     prefix: "CRS-"
+    directory: "01_req_crs"
     properties: ["id", "title", "content", "user_group", "source", "reviewer", "review_date"]
     
     # UI Configuration
@@ -87,6 +88,7 @@ doc_types:
   - code: SDS
     name: "Software Design Specification"
     prefix: "SDS-"
+    directory: "04_req_sds"
     allowed_parents: ["SYS"]
     properties: ["id", "title", "content", "component", "links", "reviewer", "review_date"]
     relations:
@@ -133,6 +135,7 @@ doc_types:
   - code: SYS
     name: "System Requirement"
     prefix: "SYS-"
+    directory: "02_req_sys"
     allowed_parents: ["CRS", "RCM"]
     properties: ["id", "title", "content", "category", "verification_method", "critical_safety", "links", "reviewer", "review_date"]
     relations:
@@ -209,6 +212,7 @@ doc_types:
   - code: DEFECT
     name: "Defect"
     prefix: "DEF-"
+    directory: "08_defect"
     properties: ["id", "title", "description", "severity", "priority", "found_in_version", "affected_components", "steps_to_reproduce", "expected_behavior", "actual_behavior", "assigned_to", "links"]
     
     # UI Configuration
@@ -266,6 +270,7 @@ doc_types:
   - code: CR
     name: "Change Request"
     prefix: "CR-"
+    directory: "09_cr"
     properties: ["id", "title", "description", "justification", "impact_assessment", "priority", "requested_by", "assigned_to", "target_version", "links"]
     
     # UI Configuration
@@ -368,6 +373,7 @@ doc_types:
   - code: SOUP
     name: "Software of Unknown Provenance"
     prefix: "SOUP-"
+    directory: "11_soup"
     properties: ["id", "title", "content", "name", "version", "manufacturer", "license", "purpose", "homepage", "cve_count", "risk_rating", "safety_class", "verification_method", "links", "reviewer", "review_date"]
     
     # UI Configuration

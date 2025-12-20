@@ -2,7 +2,7 @@
 
 from pathlib import Path
 import yaml
-from typing import Optional
+from typing import Optional, Dict, Any
 from ..models.item import Item
 from .git import GitRepository
 
@@ -13,7 +13,8 @@ class ItemSaver:
     def __init__(
         self,
         specs_dir: Path,
-        git_repo: Optional[GitRepository] = None
+        git_repo: Optional[GitRepository] = None,
+        project_config: Optional[Any] = None
     ):
         """
         Initialize saver.
@@ -21,9 +22,12 @@ class ItemSaver:
         Args:
             specs_dir: Path to specifications directory
             git_repo: Optional Git repository for auto-commits
+            project_config: Optional ProjectConfig for directory mapping
         """
         self.specs_dir = specs_dir
         self.git_repo = git_repo
+        self.project_config = project_config
+        self._prefix_map = None
     
     def save(
         self,
@@ -118,6 +122,34 @@ class ItemSaver:
         
         return False
     
+    def _build_prefix_map(self) -> Dict[str, str]:
+        """
+        Build prefix-to-directory mapping from project config.
+        
+        Returns:
+            Dictionary mapping prefixes to directory names
+        """
+        if self._prefix_map is not None:
+            return self._prefix_map
+        
+        prefix_map = {}
+        
+        if self.project_config and hasattr(self.project_config, 'doc_types'):
+            # Build mapping from project config
+            # Directory name is derived from prefix by removing trailing dash
+            for doc_type in self.project_config.doc_types:
+                prefix = doc_type.prefix
+                # Use directory if specified, otherwise derive from prefix
+                directory = doc_type.directory if doc_type.directory else prefix.rstrip('-')
+                prefix_map[prefix] = directory
+        else:
+            # Fallback: derive directory from prefix
+            # This shouldn't normally be needed if config is loaded
+            pass
+        
+        self._prefix_map = prefix_map
+        return prefix_map
+    
     def _get_directory_for_prefix(self, prefix: str) -> Path:
         """
         Get appropriate directory for a prefix.
@@ -128,18 +160,6 @@ class ItemSaver:
         Returns:
             Directory path
         """
-        # Map prefixes to directories
-        # This is a simple mapping - could be made configurable
-        prefix_map = {
-            'CRS-': '01_req_crs',
-            'RISK-': '00_risks',
-            'RCM-': '01_rcm',
-            'SYS-': '02_req_sys',
-            'SDS-': '04_req_sds',
-            'TC-SYS-': '05_tc_sys',
-            'TC-CRS-': '06_tc_crs',
-            'TC-SDS-': '07_tc_sds',
-        }
-        
+        prefix_map = self._build_prefix_map()
         subdir = prefix_map.get(prefix, 'other')
         return self.specs_dir / subdir
