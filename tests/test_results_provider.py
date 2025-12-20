@@ -3,7 +3,7 @@
 import pytest
 from pathlib import Path
 from test_results.test_case_scanner import AutomatedTestScanner
-from test_results import TestResultsProvider
+from test_results import VerificationStatusProvider
 import xml.etree.ElementTree as ET
 
 

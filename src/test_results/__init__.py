@@ -1,9 +1,13 @@
-"""Test results integration module.
-
-Provides unified interface for retrieving test verification status from
-multiple sources: automated tests (CI/CD) and manual tests (YAML files).
-"""
+"""Test results integration package."""
 
 from .provider import VerificationStatusProvider
+from .github_provider import GitHubActionsProvider
+from .manual_provider import ManualTestProvider
+from .test_case_scanner import AutomatedTestScanner
 
-__all__ = ['VerificationStatusProvider']
+__all__ = [
+    'VerificationStatusProvider',
+    'GitHubActionsProvider',
+    'ManualTestProvider',
+    'AutomatedTestScanner',
+]
