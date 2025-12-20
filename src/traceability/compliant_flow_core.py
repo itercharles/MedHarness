@@ -88,7 +88,7 @@ class CompliantFlowCore:
             # Find tests directory (sibling to src)
             tests_dir = self.repo_root.parent / "tests"
             if tests_dir.exists():
-                scanner = TestCaseScanner(tests_dir)
+                scanner = AutomatedTestScanner(tests_dir)
                 automated_tests = scanner.scan_all_tests()
                 
                 # Filter out duplicates (prefer YAML if exists)

@@ -40,7 +40,7 @@ def test_TC_CRS_009_001_status_warning_indicators():
     # Verify status field exists
     for item in items:
         if 'status' in item:
-            valid_statuses = ['draft', 'approved', 'retired', 'submitted', 'review', 'open']
+            valid_statuses = ['draft', 'approved', 'retired', 'submitted', 'review', 'open', 'planning']
             assert item['status'] in valid_statuses, \
                 f"Item {item['id']} has invalid status: {item['status']}"
 
