@@ -70,15 +70,36 @@ class CompliantFlowCore:
     
     def get_all_items(self) -> List[Dict[str, Any]]:
         """
-        Get all items as dictionaries.
+        Get all items as dictionaries, including automated tests from code.
         
         Returns:
-            List of item dictionaries
+            List of item dictionaries (YAML items + scanned automated tests)
         """
+        # Get items from YAML files
         items = []
         for node_id in self.graph.graph.nodes:
             item: Item = self.graph.graph.nodes[node_id]['item']
             items.append(item.model_dump(by_alias=True, exclude_none=True))
+        
+        # Scan for automated test cases from Python code
+        try:
+            from test_results.test_case_scanner import TestCaseScanner
+            
+            # Find tests directory (sibling to src)
+            tests_dir = self.repo_root.parent / "tests"
+            if tests_dir.exists():
+                scanner = TestCaseScanner(tests_dir)
+                automated_tests = scanner.scan_all_tests()
+                
+                # Filter out duplicates (prefer YAML if exists)
+                existing_ids = {item['id'] for item in items}
+                for test in automated_tests:
+                    if test['id'] not in existing_ids:
+                        items.append(test)
+        except Exception as e:
+            # Silently fail if scanner not available or tests dir missing
+            print(f"Note: Could not scan automated tests: {e}")
+        
         return items
     
     def get_item(self, uid: str) -> Optional[Dict[str, Any]]:
