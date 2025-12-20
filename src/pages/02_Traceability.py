@@ -4,8 +4,10 @@ import streamlit as st
 from streamlit_agraph import agraph, Node, Edge, Config
 from pathlib import Path
 from typing import Dict, List, Set, Tuple
+from datetime import datetime
 from traceability.compliant_flow_core import CompliantFlowCore
 from traceability.models.item import VerificationStatus
+from traceability.document_generator import DocumentGenerator
 import networkx as nx
 
 st.set_page_config(
@@ -349,3 +351,37 @@ with col2:
     st.markdown("◆ Diamond = Test Cases")
     st.markdown("⬭ Ellipse = Customer Requirements")
     st.markdown("▢ Box = Other Requirements")
+
+# Export Section
+st.markdown("---")
+st.subheader("📥 Export")
+
+col_exp1, col_exp2 = st.columns([3, 1])
+with col_exp1:
+    st.write("Generate a comprehensive PDF traceability matrix report including coverage analysis and orphan detection.")
+with col_exp2:
+    if st.button("📄 Generate PDF Report", type="primary"):
+        with st.spinner("Generating traceability matrix PDF..."):
+            try:
+                # Initialize document generator
+                template_dir = Path(__file__).resolve().parent.parent / "templates"
+                doc_gen = DocumentGenerator(core, template_dir)
+                
+                # Generate PDF
+                pdf_path = doc_gen.generate_traceability_matrix()
+                
+                # Read PDF file
+                with open(pdf_path, 'rb') as f:
+                    pdf_data = f.read()
+                
+                # Offer download
+                st.download_button(
+                    label="⬇️ Download Traceability Matrix PDF",
+                    data=pdf_data,
+                    file_name=f"Traceability_Matrix_{datetime.now().strftime('%Y%m%d')}.pdf",
+                    mime="application/pdf"
+                )
+                st.success("✅ PDF generated successfully!")
+            except Exception as e:
+                st.error(f"❌ Error generating PDF: {e}")
+                st.exception(e)
