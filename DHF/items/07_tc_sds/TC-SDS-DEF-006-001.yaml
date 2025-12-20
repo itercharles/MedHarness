@@ -1,27 +1,45 @@
 id: TC-SDS-DEF-006-001
-title: Verify Verification Workflow Enforcement
-content: |
-  **Objective**: Verify that verification is required before closure per SDS-DEF-006.
-  
+content: '**Objective**: Verify that verification is required before closure per SDS-DEF-006.
+
+
   **Preconditions**: DefectWorkflow class is implemented.
-  
+
+
   **Test Steps**:
+
   1. Create a defect and progress to resolved status
+
   2. Attempt to call close_defect() directly
+
   3. Verify transition is rejected (invalid state transition)
+
   4. Call verify_resolution() with verification details
+
   5. Verify status changes to verified
+
   6. Call close_defect()
+
   7. Verify status changes to closed
+
   8. Verify verification field is populated
-  
+
+
   **Expected Results**:
+
   - Cannot close from resolved status
+
   - Must verify first
+
   - Workflow enforces proper sequence
-  
+
+
   **Actual Results**: PASS - Verification workflow enforced correctly
-  
-  **Status**: PASS
-links: ["SDS-DEF-006"]
+
+
+  **Status**: PASS'
+links:
+- SDS-DEF-006
+active: true
+title: Verify Verification Workflow Enforcement
 verification_status: PASS
+history: []

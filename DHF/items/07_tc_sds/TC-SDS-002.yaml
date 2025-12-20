@@ -1,8 +1,10 @@
 id: TC-SDS-002
-title: Unit Test Streamlit Visualization
 content: 'Test case to verify: Use streamlit-agraph to render interactive traceability
   graph. Implement dynamic Data Views for item properties and a Compliance Tab for
   regulatory checks.'
 links:
 - SDS-002
+active: true
+title: Unit Test Streamlit Visualization
 verification_status: PENDING
+history: []

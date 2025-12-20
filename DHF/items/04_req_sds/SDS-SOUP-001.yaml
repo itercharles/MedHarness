@@ -1,29 +1,48 @@
 id: SDS-SOUP-001
-title: SOUP Document Type Configuration
-content: |
-  Implements SOUP document type in project configuration with the following properties:
-  
+content: 'Implements SOUP document type in project configuration with the following
+  properties:
+
+
   **Properties**:
+
   - id, title, content: Standard identification fields
+
   - name, version, manufacturer: Package identification
+
   - license, homepage: Legal and reference information
+
   - cve_count, risk_rating: Security assessment from external tools
+
   - safety_class: IEC 62304 safety classification (A/B/C)
+
   - purpose: Documented rationale for SOUP usage (IEC 62304 5.3.4)
+
   - verification_method: How SOUP is verified
+
   - links: Traceability to SYS requirements
-  
+
+
   **Lifecycle States**:
+
   - draft: Initial state after import
+
   - under_review: Submitted for approval
+
   - approved: Verified and approved for use
+
   - rejected: Not approved for use
-  
+
+
   **Transition Criteria**:
+
   - Draft → Under Review: Requires purpose, safety class, and SYS requirement link
+
   - Under Review → Approved: Requires verification completion
-  - Under Review → Rejected: Requires rejection reason
-component: Configuration
+
+  - Under Review → Rejected: Requires rejection reason'
 links:
-  - SYS-022
+- SYS-022
+active: true
+title: SOUP Document Type Configuration
+history: []
 status: approved

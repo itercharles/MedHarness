@@ -1,26 +1,40 @@
 id: SYS-021
-title: Document Generation and Export
-content: |
-  The system shall provide document generation capabilities to export CompliantFlow data as regulatory-ready PDF documents.
-  
+content: 'The system shall provide document generation capabilities to export CompliantFlow
+  data as regulatory-ready PDF documents.
+
+
   **Requirements**:
+
   - Generate requirements specification PDFs for CRS, SYS, and SDS
+
   - Generate traceability matrix showing requirement chains and coverage
+
   - Generate release documentation packages
+
   - Use configurable Jinja2 templates for document structure
+
   - Apply professional CSS styling to PDFs
+
   - Provide export functionality through UI
-  
+
+
   **Acceptance Criteria**:
+
   - PDF documents are generated in < 5 seconds
+
   - Documents include all item data (title, content, status, links)
+
   - Traceability matrix shows coverage percentages
-  - PDFs are formatted professionally for regulatory submission
+
+  - PDFs are formatted professionally for regulatory submission'
+links:
+- CRS-008
+active: true
+title: Document Generation and Export
+reviewer: System Architect
+review_date: '2024-12-15'
+history: []
 category: Document Management
 verification_method: Test
 critical_safety: false
-links:
-  - CRS-008
 status: approved
-reviewer: System Architect
-review_date: 2024-12-15

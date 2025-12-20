@@ -1,5 +1,9 @@
 id: TC-SYS-001
+content: Run parsing unit tests. Ensure YAML files are correctly loaded into Item
+  objects with all properties.
+links:
+- SYS-001
+active: true
 title: Verify Specification Parsing
-content: Run parsing unit tests. Ensure YAML files are correctly loaded into Item objects with all properties.
-links: ["SYS-001"]
 verification_status: PASS
+history: []

@@ -1,31 +1,5 @@
 id: TC-SDS-REL-005-001
 title: Test Release Streamlit UI and Reusable Components
-description: Verify that Streamlit UI correctly displays releases, criteria checklists, manual verification forms, and stage approval forms.
-type: design
-links: ["SDS-REL-005"]
-test_steps:
-  - step: 1
-    action: Navigate to Release Management page
-    expected: Three tabs displayed - Create Release, Manage Releases, Release Reports
-  - step: 2
-    action: Create new release with change requests
-    expected: Form accepts version, release_date, created_by, included_change_requests, release_notes, tags
-  - step: 3
-    action: View release in developing status
-    expected: Workflow status shows current stage, criteria checklist displays with pass/fail icons
-  - step: 4
-    action: Click manual verification expander
-    expected: Expander opens showing description, verifier input, notes textarea, and Confirm Verification button
-  - step: 5
-    action: Submit manual verification
-    expected: Verification saved, page reloads, criterion shows as passed with verifier name
-  - step: 6
-    action: View stage approval form when criteria met
-    expected: Approval form displays with approver input and "Approve & [Next Stage]" button
-  - step: 7
-    action: Submit stage approval
-    expected: Status transitions, approval tracked, success message displayed
+links:
+- SDS-REL-005
 status: PASS
-test_date: '2024-12-14'
-tested_by: System
-notes: UI components working correctly. Manual verification expanders and stage approval forms provide clear UX. Reusable components in ui_components.py ensure consistency.

@@ -1,31 +1,53 @@
 id: TC-SYS-009-001
-title: Verify Defect Filtering and Metrics
-content: |
-  **Objective**: Verify defect filtering and metrics functionality per SYS-009.
-  
+content: '**Objective**: Verify defect filtering and metrics functionality per SYS-009.
+
+
   **Preconditions**: Multiple defects exist with different statuses and severities.
-  
+
+
   **Test Steps**:
+
   1. Navigate to "Manage Defects" tab
+
   2. Filter by status "open" → verify only open defects shown
+
   3. Filter by severity "critical" → verify only critical defects shown
+
   4. Filter by assigned to "Test User" → verify only assigned defects shown
+
   5. Combine filters → verify results match all criteria
+
   6. Navigate to "Defect History" tab
+
   7. Verify metrics: Total, Open, Critical, Resolved, Closed
+
   8. Verify table displays all defects correctly
+
   9. Test CSV export functionality
+
   10. Verify exported data matches displayed data
-  
+
+
   **Expected Results**:
+
   - Filters work independently and in combination
+
   - Results update dynamically
+
   - Metrics are accurate
+
   - CSV export includes all data
+
   - Export format is suitable for reporting
-  
+
+
   **Actual Results**: PASS - Filtering and metrics work correctly, CSV export successful
-  
-  **Status**: PASS
-links: ["SYS-009"]
+
+
+  **Status**: PASS'
+links:
+- SYS-009
+active: true
+title: Verify Defect Filtering and Metrics
 verification_status: PASS
+history: []

@@ -1,30 +1,51 @@
 id: TC-SDS-DEF-003-001
-title: Verify CRUD Operations Implementation
-content: |
-  **Objective**: Verify DefectTracker CRUD operations per SDS-DEF-003.
-  
+content: '**Objective**: Verify DefectTracker CRUD operations per SDS-DEF-003.
+
+
   **Preconditions**: DefectTracker class is implemented, DHF/defects/ directory exists.
-  
+
+
   **Test Steps**:
+
   1. Import DefectTracker from traceability.defect.defect_tracker
+
   2. Test create_defect() - verify YAML file created
+
   3. Test get_defect() - verify data retrieved correctly
+
   4. Test list_defects() - verify all defects returned
+
   5. Test list_defects() with filters - verify filtering works
+
   6. Test update_defect() - verify changes persisted
+
   7. Test delete_defect() - verify file removed
+
   8. Verify auto-generated IDs (DEF-001, DEF-002, etc.)
+
   9. Verify YAML file format is correct
+
   10. Verify Git integration for all operations
-  
+
+
   **Expected Results**:
+
   - All CRUD operations work correctly
+
   - Data persisted to YAML files
+
   - Files stored in DHF/defects/
+
   - Git commits created for changes
-  
+
+
   **Actual Results**: PASS - CRUD operations implemented correctly with YAML storage
-  
-  **Status**: PASS
-links: ["SDS-DEF-003"]
+
+
+  **Status**: PASS'
+links:
+- SDS-DEF-003
+active: true
+title: Verify CRUD Operations Implementation
 verification_status: PASS
+history: []

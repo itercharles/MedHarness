@@ -1,8 +1,10 @@
 id: SDS-002
-title: Streamlit Visualization
 content: Use streamlit-agraph to render interactive traceability graph. Implement
   dynamic Data Views for item properties and a Compliance Tab for regulatory checks.
-component: Backend.UI
 links:
 - SYS-003
+active: true
+title: Streamlit Visualization
+history: []
+component: Backend.UI
 status: draft

@@ -1,5 +1,9 @@
 id: TC-SYS-003
+content: Create a graph with missing links. Assert that find_orphans() returns the
+  correct items.
+links:
+- SYS-004
+active: true
 title: Verify Orphan Detection
-content: Create a graph with missing links. Assert that find_orphans() returns the correct items.
-links: ["SYS-004"]
 verification_status: PASS
+history: []

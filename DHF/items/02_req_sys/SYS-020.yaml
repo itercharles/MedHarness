@@ -8,9 +8,6 @@ title: Release History Tracking
 verification_status: !!python/object/apply:traceability.models.item.VerificationStatus
 - PASS
 history: []
-uid: SYS-020
-text: The system shall maintain a complete history of all releases with version control
-  integration.
 status: draft
 manual_verifications:
   review_complete:

@@ -1,5 +1,9 @@
 id: TC-SYS-005
+content: Run check_compliance with known data. Assert item_existence and trace_coverage
+  return correct pass/fail results.
+links:
+- SYS-006
+active: true
 title: Verify Policy Checks
-content: Run check_compliance with known data. Assert item_existence and trace_coverage return correct pass/fail results.
-links: ["SYS-006"]
 verification_status: PASS
+history: []

@@ -14,11 +14,6 @@ history:
     approved_by: charles
     approved_date: '2025-12-20T11:11:45.870891'
     timestamp: '2025-12-20T11:11:45.870897'
-uid: CRS-006
-text: Users shall be able to create, track, and document software releases with verification
-  that all requirements are tested and defects are resolved. Each stage transition
-  shall require approval, and manual verification steps shall be tracked with approver
-  identity.
 user_group: Development Team, Quality Assurance, Regulatory Affairs
 source: IEC 62304 §5.8
 status: approved
@@ -29,4 +24,3 @@ manual_verifications:
     notes: ''
 approved_by: charles
 approved_date: '2025-12-20T11:11:45.870891'
-timestamp: '2025-12-20T11:11:45.870897'

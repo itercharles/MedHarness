@@ -1,8 +1,10 @@
 id: SYS-012
-title: Defect Resolution Verification
 content: The system shall require verification and documentation that the defect resolution
   is effective before the defect can be closed.
 links:
 - CRS-005
+active: true
+title: Defect Resolution Verification
 verification_status: PASS
+history: []
 status: draft

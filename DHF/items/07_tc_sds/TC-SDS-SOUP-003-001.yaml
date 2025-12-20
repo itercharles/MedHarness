@@ -1,27 +1,16 @@
 id: TC-SDS-SOUP-003-001
-title: Test SOUP Workflow Transitions
-content: |
-  Verify that SOUP workflow transitions enforce approval criteria.
-  
-  **Test Steps**:
-  1. Create SOUP item with all required fields
-  2. Click "Submit for Review" button
-  3. Verify criteria checklist appears:
-     - ✅ Purpose documented
-     - ✅ Safety class assigned
-     - ✅ Linked to SYS requirement
-  4. Click "Confirm" to transition
-  5. Verify status changes to "under_review"
-  6. Click "Approve" button
-  7. Complete manual verification
-  8. Verify status changes to "approved"
-  
-  **Expected Result**:
-  - Workflow buttons appear correctly
-  - Criteria validation works
-  - State transitions occur
-  - Reviewer and date recorded
+content: "Verify that SOUP workflow transitions enforce approval criteria.\n\n**Test\
+  \ Steps**:\n1. Create SOUP item with all required fields\n2. Click \"Submit for\
+  \ Review\" button\n3. Verify criteria checklist appears:\n   - ✅ Purpose documented\n\
+  \   - ✅ Safety class assigned\n   - ✅ Linked to SYS requirement\n4. Click \"Confirm\"\
+  \ to transition\n5. Verify status changes to \"under_review\"\n6. Click \"Approve\"\
+  \ button\n7. Complete manual verification\n8. Verify status changes to \"approved\"\
+  \n\n**Expected Result**:\n- Workflow buttons appear correctly\n- Criteria validation\
+  \ works\n- State transitions occur\n- Reviewer and date recorded"
 links:
-  - SDS-SOUP-003
-status: draft
+- SDS-SOUP-003
+active: true
+title: Test SOUP Workflow Transitions
 verification_status: PENDING
+history: []
+status: draft

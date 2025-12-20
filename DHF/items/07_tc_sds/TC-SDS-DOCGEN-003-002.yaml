@@ -1,13 +1,5 @@
 id: TC-SDS-DOCGEN-003-002
 title: Test Custom Jinja2 Filters
-prerequisites: DocumentGenerator instance initialized
-steps: |
-  1. Test status_badge filter with 'approved' → verify returns '✅ Approved'
-  2. Test status_badge filter with 'draft' → verify returns '📝 Draft'
-  3. Test status_badge filter with 'retired' → verify returns '🔒 Retired'
-  4. Test format_date filter with '2024-01-15T10:30:00' → verify returns '2024-01-15'
-  5. Test format_date filter with None → verify returns 'N/A'
-expected_result: All custom filters work correctly and return expected formatted output
 links:
 - SDS-DOCGEN-002
 verification_status: not_verified

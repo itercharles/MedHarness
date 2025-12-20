@@ -1,8 +1,10 @@
 id: SYS-013
-title: Defect Traceability Links
 content: The system shall link defects to affected requirements, tests, and optionally
   to change requests for full traceability.
 links:
 - CRS-005
+active: true
+title: Defect Traceability Links
 verification_status: PASS
+history: []
 status: draft

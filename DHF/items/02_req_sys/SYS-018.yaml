@@ -1,9 +1,11 @@
 id: SYS-018
-title: Release Status Workflow
 content: The system shall manage release lifecycle through states (planning, developing,
   testing, released) with approval required for each stage transition. Each transition
   shall enforce configurable criteria before allowing progression.
 links:
 - CRS-006
+active: true
+title: Release Status Workflow
 verification_status: PASS
+history: []
 status: draft

@@ -1,32 +1,57 @@
 id: TC-SYS-012-001
-title: Verify Root Cause Analysis Requirement
-content: |
-  **Objective**: Verify that root cause analysis is mandatory for defect resolution per SYS-012.
-  
+content: '**Objective**: Verify that root cause analysis is mandatory for defect resolution
+  per SYS-012.
+
+
   **Preconditions**: A defect exists in "investigating" status.
-  
+
+
   **Test Steps**:
+
   1. Navigate to "Manage Defects" tab
+
   2. Find defect in investigating status
+
   3. Attempt to mark as resolved without entering root cause
+
   4. Verify error message is displayed
+
   5. Attempt to mark as resolved without entering resolution
+
   6. Verify error message is displayed
+
   7. Enter root cause: "Null pointer in validation logic"
+
   8. Enter resolution: "Added null check before validation"
+
   9. Mark as resolved
+
   10. Verify status changes to "resolved"
+
   11. Verify root cause and resolution are saved
-  
+
+
   **Expected Results**:
+
   - System prevents resolution without root cause
+
   - System prevents resolution without resolution description
+
   - Error messages guide user to fill required fields
+
   - Resolution succeeds when all fields provided
+
   - Data persisted correctly
-  
-  **Actual Results**: PASS - Root cause and resolution required, validation works correctly
-  
-  **Status**: PASS
-links: ["SYS-012"]
+
+
+  **Actual Results**: PASS - Root cause and resolution required, validation works
+  correctly
+
+
+  **Status**: PASS'
+links:
+- SYS-012
+active: true
+title: Verify Root Cause Analysis Requirement
 verification_status: PASS
+history: []

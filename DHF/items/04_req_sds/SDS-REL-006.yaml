@@ -1,12 +1,13 @@
 id: SDS-REL-006
-title: Workflow Criteria Configuration
 content: Implement configurable workflow criteria system using YAML configuration
   file (DHF/config/workflow_criteria.yaml) to define transition requirements. Support
   multiple check types - field validation, count checks, percentage thresholds, manual
   verifications, and validation status checks. Allow criteria to be marked as required
   or warning-only.
-component: Release Management
 links:
 - SYS-017
 - SYS-018
+active: true
+title: Workflow Criteria Configuration
+history: []
 status: draft

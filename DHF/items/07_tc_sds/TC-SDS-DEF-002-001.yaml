@@ -1,30 +1,53 @@
 id: TC-SDS-DEF-002-001
-title: Verify State Machine Implementation
-content: |
-  **Objective**: Verify the DefectWorkflow state machine implementation per SDS-DEF-002.
-  
+content: '**Objective**: Verify the DefectWorkflow state machine implementation per
+  SDS-DEF-002.
+
+
   **Preconditions**: DefectWorkflow class is implemented.
-  
+
+
   **Test Steps**:
+
   1. Import DefectWorkflow from traceability.defect.defect_workflow
+
   2. Test valid transition: open → investigating
+
   3. Test valid transition: investigating → resolved
+
   4. Test valid transition: resolved → verified
+
   5. Test valid transition: verified → closed
+
   6. Test invalid transition: open → verified (should fail)
+
   7. Test invalid transition: investigating → closed (should fail)
+
   8. Verify validate_transition() method
+
   9. Test all workflow methods (assign, start_investigation, resolve, verify, close)
+
   10. Verify state changes are persisted
-  
+
+
   **Expected Results**:
+
   - All valid transitions succeed
+
   - Invalid transitions are rejected
+
   - Error messages are descriptive
+
   - State machine enforces workflow rules
-  
-  **Actual Results**: PASS - State machine implemented correctly, all transitions validated
-  
-  **Status**: PASS
-links: ["SDS-DEF-002"]
+
+
+  **Actual Results**: PASS - State machine implemented correctly, all transitions
+  validated
+
+
+  **Status**: PASS'
+links:
+- SDS-DEF-002
+active: true
+title: Verify State Machine Implementation
 verification_status: PASS
+history: []

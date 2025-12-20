@@ -1,7 +1,10 @@
 id: CRS-005
-title: Problem Resolution Tracking
 content: Users shall be able to document, track, and resolve software defects throughout
   the development lifecycle with full traceability to affected requirements and tests.
+links: []
+active: true
+title: Problem Resolution Tracking
+history: []
 user_group: Development Team, Quality Assurance, Project Management
-source: "IEC 62304 \xA79.7"
+source: IEC 62304 §9.7
 status: draft

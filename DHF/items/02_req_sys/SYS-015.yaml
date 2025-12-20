@@ -1,8 +1,10 @@
 id: SYS-015
-title: Defect Filtering and Reporting
 content: The system shall provide filtering of defects by status, severity, and assignee,
   and export defect data for compliance reporting.
 links:
 - CRS-005
+active: true
+title: Defect Filtering and Reporting
 verification_status: PASS
+history: []
 status: draft

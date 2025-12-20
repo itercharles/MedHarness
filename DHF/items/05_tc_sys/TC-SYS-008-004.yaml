@@ -1,0 +1,19 @@
+id: TC-SYS-008-004
+content: "**Objective**: Verify that significance assessment correctly identifies\
+  \ significant changes per MDCG 2020-3\n\n**Preconditions**:\n- Change request with\
+  \ risk assessment exists\n- Items with critical_safety flag exist in graph\n\n**Test\
+  \ Steps**:\n1. Create change affecting safety-critical requirement\n2. Analyze impact\n\
+  3. Review significance assessment\n4. Verify rationale is provided\n\n**Expected\
+  \ Results**:\n- Changes affecting safety-critical requirements are marked significant\n\
+  - Changes affecting risk control measures are marked significant\n- Critical priority\
+  \ changes are marked significant\n- Significance rationale explains the determination\n\
+  - Non-significant changes are correctly identified\n\n**Actual Results**: PASS\n\
+  \n**Test Data**: \n- SYS-008 (marked as critical_safety: true)\n- Change request\
+  \ with type: \"new_feature\"\n\n**Notes**: Automated assessment follows MDCG 2020-3\
+  \ criteria"
+links:
+- SYS-008
+active: true
+title: Verify MDCG 2020-3 Significance Assessment
+verification_status: PASS
+history: []

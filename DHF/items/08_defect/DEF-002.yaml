@@ -1,22 +1,34 @@
 id: DEF-002
-title: "Release verification status not updating after manual verification"
-content: "When a release is manually verified, the verification status in the UI does not update immediately. The user must refresh the page to see the updated status."
-description: |
-  When a release is manually verified, the verification status in the UI does not update immediately.
+content: When a release is manually verified, the verification status in the UI does
+  not update immediately. The user must refresh the page to see the updated status.
+links:
+- SDS-REL-002
+active: true
+title: Release verification status not updating after manual verification
+history: []
+description: 'When a release is manually verified, the verification status in the
+  UI does not update immediately.
+
   The user must refresh the page to see the updated status.
+
   This creates confusion about whether the verification was successful.
+
+  '
 severity: Medium
 priority: Medium
-found_in_version: "1.1.0"
-affected_components: "Release Management, UI State"
-steps_to_reproduce: |
-  1. Navigate to Release Management page
+found_in_version: 1.1.0
+affected_components: Release Management, UI State
+steps_to_reproduce: '1. Navigate to Release Management page
+
   2. Select a release
+
   3. Click "Verify" and complete manual verification
+
   4. Observe the verification status
-expected_behavior: "Verification status should update immediately after verification is completed"
-actual_behavior: "Status remains unchanged until page is manually refreshed"
-assigned_to: ""
+
+  '
+expected_behavior: Verification status should update immediately after verification
+  is completed
+actual_behavior: Status remains unchanged until page is manually refreshed
+assigned_to: ''
 status: open
-links:
-  - SDS-REL-002

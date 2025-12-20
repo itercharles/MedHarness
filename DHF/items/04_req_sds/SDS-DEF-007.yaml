@@ -1,9 +1,10 @@
 id: SDS-DEF-007
-title: Defect Traceability Fields
 content: Add affected_items (list) and related_change_request (optional string) fields
   to Defect model. Implement multiselect UI component in Streamlit to link defects
   to existing items.
-component: Defect Tracking
 links:
 - SYS-013
+active: true
+title: Defect Traceability Fields
+history: []
 status: draft

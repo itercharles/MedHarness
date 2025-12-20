@@ -186,6 +186,7 @@ doc_types:
   - code: TC-SYS
     name: "System Test"
     prefix: "TC-SYS-"
+    directory: "05_tc_sys"
     type: "test"
     verifies: ["SYS"]
     properties: ["id", "title", "prerequisites", "steps", "expected_result", "links", "verification_status", "reviewer", "review_date"]
@@ -204,6 +205,7 @@ doc_types:
   - code: TC-SDS
     name: "Design Test"
     prefix: "TC-SDS-"
+    directory: "07_tc_sds"
     type: "test"
     verifies: ["SDS"]
     properties: ["id", "title", "prerequisites", "steps", "expected_result", "links", "verification_status", "reviewer", "review_date"]

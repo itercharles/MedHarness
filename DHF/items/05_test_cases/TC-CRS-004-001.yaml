@@ -1,35 +1,52 @@
 id: TC-CRS-004-001
 title: Customer Validation - Change Management Workflow
-content: |
-  **Objective**: Validate that the change management system meets customer needs for regulatory compliance
-  
+content: '**Objective**: Validate that the change management system meets customer
+  needs for regulatory compliance
+
+
   **Prerequisites**:
+
   - User has regulatory affairs role
+
   - CompliantFlow application is deployed
+
   - Sample change requests exist
-  
+
+
   **Steps**:
+
   1. As a regulatory affairs professional, access the Change Management page
+
   2. Submit a change request for a software modification
+
   3. Review the impact analysis results
+
   4. Approve the change request
+
   5. Verify change history is maintained
+
   6. Export change history for regulatory submission
-  
+
+
   **Expected Result**:
+
   - User can successfully manage changes through the complete workflow
+
   - Impact analysis provides sufficient information for regulatory decision-making
+
   - Change history provides complete audit trail per IEC 62304 §6.2
+
   - Export functionality provides data suitable for regulatory submission
+
   - System meets MDCG 2020-3 requirements for significant change determination
-  
+
+
   **Actual Result**: PASS
-  
+
+
   **Notes**: Customer validated that the system meets regulatory compliance needs
-category: Acceptance Test
+
+  '
 verification_status: PASS
 links:
-  - CRS-004
-test_type: Manual
-reviewer: Regulatory Affairs Manager
-review_date: 2025-12-13
+- CRS-004

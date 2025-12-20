@@ -1,9 +1,11 @@
 id: SYS-016
-title: Release Data Capture
 content: The system shall capture release information including version number, release
   date, included change requests, test results, defect status, manual verifications
   with approver identity, and stage approvals with timestamps.
 links:
 - CRS-006
+active: true
+title: Release Data Capture
 verification_status: PASS
+history: []
 status: draft

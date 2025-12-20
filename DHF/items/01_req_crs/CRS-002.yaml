@@ -12,9 +12,6 @@ history:
     approved_by: charles
     approved_date: '2025-12-20T10:29:23.539146'
     timestamp: '2025-12-20T10:29:23.539417'
-uid: CRS-002
-text: Users shall be able to manage requirements and tests as version-controlled text
-  files (YAML/Markdown).
 status: approved
 manual_verifications:
   review_complete:
@@ -23,4 +20,3 @@ manual_verifications:
     notes: ''
 approved_by: charles
 approved_date: '2025-12-20T10:29:23.539146'
-timestamp: '2025-12-20T10:29:23.539417'

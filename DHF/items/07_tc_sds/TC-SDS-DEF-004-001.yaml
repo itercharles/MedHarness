@@ -1,36 +1,20 @@
 id: TC-SDS-DEF-004-001
+content: "**Objective**: Verify Streamlit UI implementation per SDS-DEF-004.\n\n**Preconditions**:\
+  \ Streamlit app is running at localhost:8501.\n\n**Test Steps**:\n1. Navigate to\
+  \ Defect Tracking page\n2. Verify three tabs are present: Report Defect, Manage\
+  \ Defects, Defect History\n3. Test Report Defect tab:\n   - Verify form has all\
+  \ required fields\n   - Verify submit button is present\n   - Test form submission\n\
+  4. Test Manage Defects tab:\n   - Verify filter controls are present\n   - Verify\
+  \ defect cards display correctly\n   - Verify action buttons change based on status\n\
+  5. Test Defect History tab:\n   - Verify metrics are displayed\n   - Verify table\
+  \ shows all defects\n   - Verify CSV export button works\n6. Test responsive layout\n\
+  7. Verify sidebar information\n\n**Expected Results**:\n- All three tabs render\
+  \ correctly\n- Forms and controls are functional\n- Data displays accurately\n-\
+  \ User interactions work as expected\n\n**Actual Results**: PASS - UI components\
+  \ implemented correctly, all features functional\n\n**Status**: PASS"
+links:
+- SDS-DEF-004
+active: true
 title: Verify UI Components Implementation
-content: |
-  **Objective**: Verify Streamlit UI implementation per SDS-DEF-004.
-  
-  **Preconditions**: Streamlit app is running at localhost:8501.
-  
-  **Test Steps**:
-  1. Navigate to Defect Tracking page
-  2. Verify three tabs are present: Report Defect, Manage Defects, Defect History
-  3. Test Report Defect tab:
-     - Verify form has all required fields
-     - Verify submit button is present
-     - Test form submission
-  4. Test Manage Defects tab:
-     - Verify filter controls are present
-     - Verify defect cards display correctly
-     - Verify action buttons change based on status
-  5. Test Defect History tab:
-     - Verify metrics are displayed
-     - Verify table shows all defects
-     - Verify CSV export button works
-  6. Test responsive layout
-  7. Verify sidebar information
-  
-  **Expected Results**:
-  - All three tabs render correctly
-  - Forms and controls are functional
-  - Data displays accurately
-  - User interactions work as expected
-  
-  **Actual Results**: PASS - UI components implemented correctly, all features functional
-  
-  **Status**: PASS
-links: ["SDS-DEF-004"]
 verification_status: PASS
+history: []

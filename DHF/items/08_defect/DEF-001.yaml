@@ -1,21 +1,33 @@
 id: DEF-001
-title: "Traceability graph not displaying all links correctly"
-content: "The traceability graph visualization is not showing all links between requirements and tests. Some links are missing from the graph even though they exist in the YAML files."
-description: |
-  The traceability graph visualization is not showing all links between requirements and tests.
+content: The traceability graph visualization is not showing all links between requirements
+  and tests. Some links are missing from the graph even though they exist in the YAML
+  files.
+links: []
+active: true
+title: Traceability graph not displaying all links correctly
+history: []
+description: 'The traceability graph visualization is not showing all links between
+  requirements and tests.
+
   Some links are missing from the graph even though they exist in the YAML files.
+
   This affects the ability to verify complete traceability coverage.
+
+  '
 severity: High
 priority: High
-found_in_version: "1.0.0"
-affected_components: "Traceability Graph, UI"
-steps_to_reproduce: |
-  1. Navigate to Traceability page
+found_in_version: 1.0.0
+affected_components: Traceability Graph, UI
+steps_to_reproduce: '1. Navigate to Traceability page
+
   2. Select a requirement with multiple linked tests (e.g., SYS-001)
+
   3. Observe the graph display
+
   4. Compare with the actual links in the YAML file
-expected_behavior: "All linked tests should appear as connected nodes in the graph"
-actual_behavior: "Only some links are displayed, others are missing from the visualization"
-assigned_to: ""
+
+  '
+expected_behavior: All linked tests should appear as connected nodes in the graph
+actual_behavior: Only some links are displayed, others are missing from the visualization
+assigned_to: ''
 status: open
-links: []

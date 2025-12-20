@@ -1,31 +1,55 @@
 id: TC-SYS-011-001
-title: Verify Defect Lifecycle State Transitions
-content: |
-  **Objective**: Verify defect lifecycle management through all valid states per SYS-011.
-  
+content: '**Objective**: Verify defect lifecycle management through all valid states
+  per SYS-011.
+
+
   **Preconditions**: A defect exists in "open" status.
-  
+
+
   **Test Steps**:
+
   1. Navigate to "Manage Defects" tab
+
   2. Expand test defect card
+
   3. Assign to investigator → verify status remains "open"
+
   4. Start investigation → verify status changes to "investigating"
+
   5. Enter root cause and resolution → mark as resolved
+
   6. Verify status changes to "resolved"
+
   7. Enter verification details → verify resolution
+
   8. Verify status changes to "verified"
+
   9. Close defect → verify status changes to "closed"
+
   10. Attempt invalid transition → verify rejection
-  
+
+
   **Expected Results**:
+
   - Each valid state transition succeeds
+
   - Invalid transitions are rejected with error message
+
   - All state changes are persisted
+
   - Timestamps recorded for each transition
+
   - Git commits created for each change
-  
-  **Actual Results**: PASS - Full lifecycle completed: open → investigating → resolved → verified → closed
-  
-  **Status**: PASS
-links: ["SYS-011"]
+
+
+  **Actual Results**: PASS - Full lifecycle completed: open → investigating → resolved
+  → verified → closed
+
+
+  **Status**: PASS'
+links:
+- SYS-011
+active: true
+title: Verify Defect Lifecycle State Transitions
 verification_status: PASS
+history: []

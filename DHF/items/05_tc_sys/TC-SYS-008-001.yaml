@@ -1,0 +1,18 @@
+id: TC-SYS-008-001
+content: "**Objective**: Verify that users can create change requests with auto-generated\
+  \ IDs\n\n**Preconditions**:\n- CompliantFlow application is running\n- User has\
+  \ access to Change Management page\n\n**Test Steps**:\n1. Navigate to Change Management\
+  \ page\n2. Go to \"Submit Change\" tab\n3. Fill in the form:\n   - Title: \"Test\
+  \ Change Request\"\n   - Type: \"bug_fix\"\n   - Priority: \"medium\"\n   - Created\
+  \ by: \"Test User\"\n   - Description: \"Test description\"\n4. Click \"Submit Change\
+  \ Request\"\n\n**Expected Results**:\n- Change request is created with auto-generated\
+  \ ID (CR-XXX format)\n- Success message is displayed\n- YAML file is created in\
+  \ DHF/change_requests/\n- Change request appears in Review Changes tab\n\n**Actual\
+  \ Results**: PASS\n\n**Test Data**: N/A\n\n**Notes**: Verified with CR-001 through\
+  \ CR-005 created successfully"
+links:
+- SYS-008
+active: true
+title: Verify Change Request Creation
+verification_status: PASS
+history: []

@@ -1,35 +1,57 @@
 id: SDS-SOUP-003
-title: SOUP Workflow and Traceability
-content: |
-  Implements SOUP approval workflow and traceability to system requirements.
-  
+content: 'Implements SOUP approval workflow and traceability to system requirements.
+
+
   **Workflow Integration**:
+
   - Leverages DynamicWorkflowEngine for state transitions
+
   - Enforces approval criteria before state changes
+
   - Tracks reviewer and review date
+
   - Supports manual verification for approval
-  
+
+
   **Traceability Model**:
+
   SOUP → SYS Requirements (one-to-many)
-  
+
+
   Each SOUP item must link to at least one SYS requirement to document:
+
   - Why the SOUP is needed (IEC 62304 5.3.4)
+
   - Which system functions depend on it
+
   - Impact analysis for CVE vulnerabilities
+
   - Change impact when upgrading SOUP versions
-  
+
+
   **UI Integration**:
+
   - Auto-generated SOUP page using universal_page_template
+
   - Workflow buttons for state transitions
+
   - Criteria validation before approval
+
   - Link management to SYS requirements
-  
+
+
   **Approval Criteria**:
+
   1. Purpose documented (rationale for use)
+
   2. Safety class assigned (A/B/C)
+
   3. Linked to SYS requirement (traceability)
-  4. Verification completed (manual check)
-component: Workflow Engine
+
+  4. Verification completed (manual check)'
 links:
-  - SYS-022
+- SYS-022
+active: true
+title: SOUP Workflow and Traceability
+history: []
 status: approved

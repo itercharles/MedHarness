@@ -1,8 +1,9 @@
 id: SDS-REL-004
-title: Release Report Generator
 content: Implement report generation using Markdown templates to create traceability
   matrix, test summary, defect report, and release notes.
-component: Release Management
 links:
 - SYS-019
+active: true
+title: Release Report Generator
+history: []
 status: draft

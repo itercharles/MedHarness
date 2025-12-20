@@ -1,12 +1,5 @@
 id: TC-SDS-DOCGEN-001-001
 title: Test Document Generator Initialization
-prerequisites: CompliantFlowCore instance available
-steps: |
-  1. Create DocumentGenerator instance with template_dir path
-  2. Verify Jinja2 environment is initialized
-  3. Verify custom filters are registered (status_badge, format_date)
-  4. Verify template directory is accessible
-expected_result: DocumentGenerator initializes successfully with all components ready
 links:
 - SDS-DOCGEN-001
 verification_status: not_verified

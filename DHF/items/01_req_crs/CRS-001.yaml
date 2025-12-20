@@ -1,4 +1,8 @@
 id: CRS-001
+content: Users shall be able to define and view traceability relationships between
+  different project artifacts (e.g., Requirements -> Tests).
+links: []
+active: true
 title: Traceability Management
-content: Users shall be able to define and view traceability relationships between different project artifacts (e.g., Requirements -> Tests).
+history: []
 status: draft
