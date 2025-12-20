@@ -29,7 +29,16 @@ class ManualTestProvider:
             Status dict with keys: status, source, timestamp, verified_by, details
         """
         # Extract fields from YAML
-        status = test_case.get('verification_status', 'PENDING')
+        status_raw = test_case.get('verification_status', 'PENDING')
+        
+        # Convert to string if it's an enum
+        if hasattr(status_raw, 'value'):
+            status = status_raw.value
+        elif hasattr(status_raw, 'name'):
+            status = status_raw.name
+        else:
+            status = str(status_raw)
+        
         verified_by = test_case.get('verified_by')
         verified_date = test_case.get('verified_date')
         notes = test_case.get('verification_notes')

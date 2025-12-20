@@ -6,10 +6,10 @@ from traceability.compliant_flow_core import CompliantFlowCore
 import yaml
 
 
-def test_TC_CONFIG_001_yaml_parsing():
-    """TC-CONFIG-001: Verify Project Config YAML Parsing
+def test_TC_SYS_004_yaml_parsing():
+    """TC-SYS-004: Verify Project Config YAML Parsing
     
-    @links: SYS-004
+    @links: SYS-001
     @prerequisites: Valid project_config.yaml file
     
     Steps:
@@ -36,10 +36,10 @@ def test_TC_CONFIG_001_yaml_parsing():
     assert len(config_data['doc_types']) > 0, "Should have at least one doc type"
 
 
-def test_TC_CONFIG_002_required_fields():
-    """TC-CONFIG-002: Verify Required Fields Validation
+def test_TC_SYS_005_required_fields():
+    """TC-SYS-005: Verify Required Fields Validation
     
-    @links: SYS-005
+    @links: SYS-001
     @prerequisites: CompliantFlowCore initialized
     
     Steps:
@@ -71,8 +71,8 @@ def test_TC_CONFIG_002_required_fields():
         assert doc_type.directory, "Directory should not be empty"
 
 
-def test_TC_CONFIG_003_traceability_matrices():
-    """TC-CONFIG-003: Verify Traceability Matrix Configuration
+def test_TC_SYS_006_traceability_matrices():
+    """TC-SYS-006: Verify Traceability Matrix Configuration
     
     @links: SYS-021
     @prerequisites: project_config.yaml with traceability_matrices section
@@ -107,10 +107,10 @@ def test_TC_CONFIG_003_traceability_matrices():
             assert code, "Path element should not be empty"
 
 
-def test_TC_CONFIG_004_lifecycle_validation():
-    """TC-CONFIG-004: Verify Lifecycle State Validation
+def test_TC_SYS_007_lifecycle_validation():
+    """TC-SYS-007: Verify Lifecycle State Validation
     
-    @links: SYS-006
+    @links: SYS-001
     @prerequisites: Doc types with lifecycle configuration
     
     Steps:
@@ -153,10 +153,10 @@ def test_TC_CONFIG_004_lifecycle_validation():
             f"{doc_type.code} should have at least one initial state"
 
 
-def test_TC_CONFIG_005_doc_type_prefix_matching():
-    """TC-CONFIG-005: Verify Document Type Prefix Matching
+def test_TC_SYS_008_doc_type_prefix_matching():
+    """TC-SYS-008: Verify Document Type Prefix Matching
     
-    @links: SYS-007
+    @links: SYS-001
     @prerequisites: Multiple doc types configured
     
     Steps:
