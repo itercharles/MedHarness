@@ -30,5 +30,4 @@ content: 'Implement Jinja2 template rendering system for document generation.
 links:
 - SYS-021
 title: Jinja2 Template System
-history: []
 status: draft

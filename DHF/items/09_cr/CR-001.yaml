@@ -3,19 +3,6 @@ content: Add functionality to approve multiple requirements at once instead of o
   at a time, improving efficiency when processing large batches.
 links: []
 title: Add bulk approval feature for requirements
-history:
-- from: submitted
-  to: under_review
-  timestamp: '2025-12-20T10:44:35.673028'
-  metadata:
-    timestamp: '2025-12-20T10:44:35.673028'
-- from: under_review
-  to: approved
-  timestamp: '2025-12-20T10:44:59.289726'
-  metadata:
-    approved_by: charles
-    approved_date: '2025-12-20T10:44:59.289459'
-    timestamp: '2025-12-20T10:44:59.289726'
 description: 'Currently, requirements must be approved one at a time, which is inefficient
   when
 

@@ -5,5 +5,4 @@ content: Implement Git version control integration using GitRepository.commit_fi
 links:
 - SYS-014
 title: Defect Git Integration
-history: []
 status: draft

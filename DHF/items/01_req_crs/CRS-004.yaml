@@ -6,14 +6,6 @@ links: []
 title: Change Management
 reviewer: QA Manager
 review_date: '2025-12-13'
-history:
-- from: draft
-  to: approved
-  timestamp: '2025-12-20T10:24:41.985531'
-  metadata:
-    approved_by: charles
-    approved_date: '2025-12-20T10:24:41.985184'
-    timestamp: '2025-12-20T10:24:41.985531'
 user_group: Regulatory Affairs
 source: IEC 62304 Requirements
 status: approved

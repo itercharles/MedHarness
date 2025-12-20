@@ -3,7 +3,6 @@ content: Users shall be able to document, track, and resolve software defects th
   the development lifecycle with full traceability to affected requirements and tests.
 links: []
 title: Problem Resolution Tracking
-history: []
 user_group: Development Team, Quality Assurance, Project Management
 source: IEC 62304 §9.7
 status: draft

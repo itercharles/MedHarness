@@ -6,5 +6,4 @@ content: Implement ReleaseValidator class with methods to check requirement cove
 links:
 - SYS-017
 title: Release Verification Logic
-history: []
 status: draft

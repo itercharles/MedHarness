@@ -6,5 +6,4 @@ content: Implement release state transitions with validation - planning → deve
 links:
 - SYS-018
 title: Release Workflow State Machine
-history: []
 status: draft

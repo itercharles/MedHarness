@@ -4,7 +4,6 @@ content: Add functionality to automatically generate traceability reports on a s
 links:
 - SDS-REL-004
 title: Implement automated traceability report generation
-history: []
 description: 'Add functionality to automatically generate traceability reports on
   a scheduled basis.
 

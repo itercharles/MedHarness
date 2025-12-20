@@ -5,14 +5,6 @@ content: Users shall be able to create, track and document software releases wit
   with approver identity.
 links: []
 title: Release Management
-history:
-- from: draft
-  to: approved
-  timestamp: '2025-12-20T11:11:45.870897'
-  metadata:
-    approved_by: charles
-    approved_date: '2025-12-20T11:11:45.870891'
-    timestamp: '2025-12-20T11:11:45.870897'
 user_group: Development Team, Quality Assurance, Regulatory Affairs
 source: IEC 62304 §5.8
 status: approved

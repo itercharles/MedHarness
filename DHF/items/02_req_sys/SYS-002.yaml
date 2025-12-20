@@ -4,5 +4,4 @@ content: The system shall build an in-memory directed graph representing the dep
 links:
 - CRS-001
 title: Graph Generation
-history: []
 status: draft

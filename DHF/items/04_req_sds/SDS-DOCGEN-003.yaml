@@ -32,5 +32,4 @@ content: 'Implement PDF export using WeasyPrint library.
 links:
 - SYS-021
 title: PDF Export Pipeline
-history: []
 status: draft

@@ -6,7 +6,6 @@ links:
 title: Release History Tracking
 verification_status: !!python/object/apply:traceability.models.item.VerificationStatus
 - PASS
-history: []
 status: draft
 manual_verifications:
   review_complete:

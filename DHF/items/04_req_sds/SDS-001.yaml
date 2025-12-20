@@ -3,6 +3,5 @@ content: Use NetworkX DiGraph to store items as nodes and traceability links as 
 links:
 - SYS-002
 title: Graph Data Structure
-history: []
 component: Backend.Generic
 status: draft

@@ -5,5 +5,4 @@ content: Add verification field to Defect model. Implement validation in DefectW
 links:
 - SYS-012
 title: Defect Verification Fields
-history: []
 status: draft

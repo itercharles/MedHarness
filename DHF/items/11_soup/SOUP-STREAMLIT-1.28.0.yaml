@@ -3,19 +3,6 @@ content: Third-party web application framework for building interactive data app
 links:
 - SYS-001
 title: Streamlit Web Framework
-history:
-- from: draft
-  to: under_review
-  timestamp: '2025-12-20T10:45:54.124580'
-  metadata:
-    timestamp: '2025-12-20T10:45:54.124580'
-- from: under_review
-  to: approved
-  timestamp: '2025-12-20T10:46:16.314467'
-  metadata:
-    approved_by: charles
-    approved_date: '2025-12-20T10:46:16.314185'
-    timestamp: '2025-12-20T10:46:16.314467'
 status: approved
 manual_verifications:
   verification_done:

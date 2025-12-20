@@ -4,7 +4,6 @@ content: When a release is manually verified, the verification status in the UI 
 links:
 - SDS-REL-002
 title: Release verification status not updating after manual verification
-history: []
 description: 'When a release is manually verified, the verification status in the
   UI does not update immediately.
 

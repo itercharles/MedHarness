@@ -3,19 +3,6 @@ content: Data validation library using Python type annotations
 links:
 - SYS-001
 title: Pydantic Data Validation
-history:
-- from: draft
-  to: under_review
-  timestamp: '2025-12-15T21:59:44.167066'
-  metadata:
-    timestamp: '2025-12-15T21:59:44.167066'
-- from: under_review
-  to: approved
-  timestamp: '2025-12-15T22:00:06.160873'
-  metadata:
-    approved_by: charles chen
-    approved_date: '2025-12-15T22:00:06.160564'
-    timestamp: '2025-12-15T22:00:06.160873'
 status: approved
 manual_verifications:
   verification_done:

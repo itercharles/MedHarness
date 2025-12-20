@@ -3,14 +3,6 @@ content: Users shall be able to manage requirements and tests as version-control
   text files (YAML/Markdown).
 links: []
 title: Docs-as-Code
-history:
-- from: draft
-  to: approved
-  timestamp: '2025-12-20T10:29:23.539417'
-  metadata:
-    approved_by: charles
-    approved_date: '2025-12-20T10:29:23.539146'
-    timestamp: '2025-12-20T10:29:23.539417'
 status: approved
 manual_verifications:
   review_complete:

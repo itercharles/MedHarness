@@ -4,5 +4,4 @@ content: The system shall ingest specification items defined in YAML files from 
 links:
 - CRS-002
 title: Parse Specifications
-history: []
 status: draft

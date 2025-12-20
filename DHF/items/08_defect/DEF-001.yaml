@@ -4,7 +4,6 @@ content: The traceability graph visualization is not showing all links between r
   files.
 links: []
 title: Traceability graph not displaying all links correctly
-history: []
 description: 'The traceability graph visualization is not showing all links between
   requirements and tests.
 

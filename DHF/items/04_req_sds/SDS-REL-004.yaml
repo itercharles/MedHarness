@@ -4,5 +4,4 @@ content: Implement report generation using Markdown templates to create traceabi
 links:
 - SYS-019
 title: Release Report Generator
-history: []
 status: draft

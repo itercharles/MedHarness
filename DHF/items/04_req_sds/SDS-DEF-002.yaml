@@ -5,5 +5,4 @@ content: Implement DefectWorkflow class with state transition validation. Define
 links:
 - SYS-010
 title: Defect Workflow State Machine
-history: []
 status: draft

@@ -5,5 +5,4 @@ content: Use Pydantic v2 to define Defect model with fields for id, title, descr
 links:
 - SYS-009
 title: Defect Pydantic Model
-history: []
 status: draft

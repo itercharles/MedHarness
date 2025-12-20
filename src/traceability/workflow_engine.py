@@ -181,16 +181,16 @@ class DynamicWorkflowEngine:
             for key, value in transition_metadata.items():
                 item[key] = value
         
-        # Add to history
-        if 'history' not in item:
-            item['history'] = []
-        
-        item['history'].append({
-            'from': transition['from'],
-            'to': transition['to'],
-            'timestamp': transition_metadata.get('timestamp') if transition_metadata else None,
-            'metadata': transition_metadata or {}
-        })
+        # History tracking removed - using Git history instead
+        # if 'history' not in item:
+        #     item['history'] = []
+        # 
+        # item['history'].append({
+        #     'from': transition['from'],
+        #     'to': transition['to'],
+        #     'timestamp': transition_metadata.get('timestamp') if transition_metadata else None,
+        #     'metadata': transition_metadata or {}
+        # })
         
         return item
     
