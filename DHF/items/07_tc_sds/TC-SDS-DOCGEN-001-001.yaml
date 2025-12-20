@@ -2,5 +2,6 @@ id: TC-SDS-DOCGEN-001-001
 title: Test Document Generator Initialization
 links:
 - SDS-DOCGEN-001
-verification_status: not_verified
+verification_status: PENDING
 status: draft
+content: 'Test case: Test Document Generator Initialization'

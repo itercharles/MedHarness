@@ -2,5 +2,6 @@ id: TC-SDS-DOCGEN-004-001
 title: Test Traceability Matrix Generation
 links:
 - SDS-DOCGEN-004
-verification_status: not_verified
+verification_status: PENDING
 status: draft
+content: 'Test case: Test Traceability Matrix Generation'

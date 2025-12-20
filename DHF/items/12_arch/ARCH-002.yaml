@@ -33,10 +33,8 @@ content: "## Data Model\n\n### Item Model\nAll traceability items follow a commo
 links:
 - SYS-003
 - SYS-004
-active: true
 title: Data Model and Storage Architecture
 review_date: '2025-12-20'
-history: []
 component: Data
 architecture_type: data
 design_rationale: 'File-based storage with Git version control chosen for:
@@ -137,4 +135,3 @@ interfaces: '**ItemLoader Interface**:
   '
 status: review
 review_by: Release Management, UI State
-timestamp: '2025-12-20T12:47:40.085405'

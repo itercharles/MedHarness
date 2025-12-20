@@ -2,4 +2,6 @@ id: TC-SDS-REL-002-001
 title: Test Release Verification and Workflow Criteria
 links:
 - SDS-REL-002
-status: PASS
+status: draft
+content: 'Test case: Test Release Verification and Workflow Criteria'
+verification_status: PASS

@@ -2,16 +2,7 @@ id: CRS-005
 content: Users shall be able to document, track, and resolve software defects throughout
   the development lifecycle with full traceability to affected requirements and tests.
 links: []
-active: true
 title: Problem Resolution Tracking
-history:
-- from: draft
-  to: approved
-  timestamp: '2025-12-20T11:56:19.238275'
-  metadata:
-    approved_by: Release verification status not updating after manual verification
-    approved_date: '2025-12-20T11:56:19.238269'
-    timestamp: '2025-12-20T11:56:19.238275'
 user_group: Development Team, Quality Assurance, Project Management
 source: IEC 62304 §9.7
 status: approved
@@ -22,4 +13,3 @@ manual_verifications:
     notes: ''
 approved_by: Release verification status not updating after manual verification
 approved_date: '2025-12-20T11:56:19.238269'
-timestamp: '2025-12-20T11:56:19.238275'

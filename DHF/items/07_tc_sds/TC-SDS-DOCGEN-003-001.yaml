@@ -2,5 +2,6 @@ id: TC-SDS-DOCGEN-003-001
 title: Test PDF Export Pipeline
 links:
 - SDS-DOCGEN-003
-verification_status: not_verified
+verification_status: PENDING
 status: draft
+content: 'Test case: Test PDF Export Pipeline'

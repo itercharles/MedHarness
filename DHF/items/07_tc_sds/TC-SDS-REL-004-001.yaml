@@ -2,4 +2,6 @@ id: TC-SDS-REL-004-001
 title: Test Release Report Generation
 links:
 - SDS-REL-004
-status: PASS
+status: draft
+content: 'Test case: Test Release Report Generation'
+verification_status: PASS

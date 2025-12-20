@@ -2,4 +2,6 @@ id: TC-SDS-REL-005-001
 title: Test Release Streamlit UI and Reusable Components
 links:
 - SDS-REL-005
-status: PASS
+status: draft
+content: 'Test case: Test Release Streamlit UI and Reusable Components'
+verification_status: PASS

@@ -3,17 +3,8 @@ content: The system shall link defects to affected requirements, tests, and opti
   to change requests for full traceability.
 links:
 - CRS-005
-active: true
 title: Defect Traceability Links
 verification_status: PASS
-history:
-- from: draft
-  to: approved
-  timestamp: '2025-12-20T11:56:47.549742'
-  metadata:
-    approved_by: chalres
-    approved_date: '2025-12-20T11:56:47.549737'
-    timestamp: '2025-12-20T11:56:47.549742'
 status: approved
 manual_verifications:
   review_complete:
@@ -22,4 +13,3 @@ manual_verifications:
     notes: ''
 approved_by: chalres
 approved_date: '2025-12-20T11:56:47.549737'
-timestamp: '2025-12-20T11:56:47.549742'

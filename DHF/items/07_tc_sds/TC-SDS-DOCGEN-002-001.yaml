@@ -3,5 +3,6 @@ title: Test Requirements Specification Generation
 links:
 - SDS-DOCGEN-001
 - SDS-DOCGEN-002
-verification_status: not_verified
+verification_status: PENDING
 status: draft
+content: 'Test case: Test Requirements Specification Generation'
