@@ -866,13 +866,31 @@ def render_reports_tab(
         if item['id'].startswith(prefix.rstrip('-'))
     ]
     
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.metric("Total", len(type_items))
-    with col2:
-        approved = len([i for i in type_items if i.get('status') == 'approved'])
-        st.metric("Approved", approved)
-    with col3:
-        verified = len([i for i in type_items if i.get('verification_status') == 'verified'])
-        st.metric("Verified", verified)
+    # Get lifecycle states from config
+    lifecycle = doc_type_config.get('lifecycle', {})
+    states = lifecycle.get('states', [])
+    
+    if states:
+        # Show metrics for first few states
+        num_metrics = min(len(states), 3)
+        cols = st.columns(num_metrics + 1)  # +1 for Total
+        
+        with cols[0]:
+            st.metric("Total", len(type_items))
+        
+        for idx, state in enumerate(states[:num_metrics]):
+            state_id = state['id']
+            state_label = state.get('label', state_id.capitalize())
+            count = len([i for i in type_items if i.get('status') == state_id])
+            with cols[idx + 1]:
+                st.metric(state_label, count)
+    else:
+        # Fallback
+        col1, col2 = st.columns(2)
+        with col1:
+            st.metric("Total", len(type_items))
+        with col2:
+            if doc_type_config.get('has_verification'):
+                verified = len([i for i in type_items if i.get('verification_status') == 'PASS'])
+                st.metric("Verified", verified)
 

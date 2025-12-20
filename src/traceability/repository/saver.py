@@ -153,13 +153,31 @@ class ItemSaver:
     def _get_directory_for_prefix(self, prefix: str) -> Path:
         """
         Get appropriate directory for a prefix.
+        Uses longest prefix matching to handle cases like SDS-DEF- matching SDS-.
         
         Args:
-            prefix: Item prefix
+            prefix: Item prefix (e.g., 'SDS-DEF-', 'TC-SYS-')
             
         Returns:
             Directory path
         """
         prefix_map = self._build_prefix_map()
-        subdir = prefix_map.get(prefix, 'other')
+        
+        # Try exact match first
+        if prefix in prefix_map:
+            subdir = prefix_map[prefix]
+        else:
+            # Try longest prefix match
+            # Sort by length descending to match longest first
+            matched_prefix = None
+            for config_prefix in sorted(prefix_map.keys(), key=len, reverse=True):
+                if prefix.startswith(config_prefix):
+                    matched_prefix = config_prefix
+                    break
+            
+            if matched_prefix:
+                subdir = prefix_map[matched_prefix]
+            else:
+                subdir = 'other'
+        
         return self.specs_dir / subdir

@@ -1,8 +1,19 @@
 id: SYS-020
-title: Release History Tracking
 content: The system shall maintain a complete history of all releases with version
   control integration.
 links:
 - CRS-006
-verification_status: PASS
+active: true
+title: Release History Tracking
+verification_status: !!python/object/apply:traceability.models.item.VerificationStatus
+- PASS
+history: []
+uid: SYS-020
+text: The system shall maintain a complete history of all releases with version control
+  integration.
 status: draft
+manual_verifications:
+  review_complete:
+    verified_by: charles
+    verified_date: '2025-12-20T11:12:07.834326'
+    notes: ''

@@ -131,27 +131,39 @@ def render_criteria_checklist(
             st.error("❌ {criterion['name']}: {criterion['message']}")
 
 
-def render_status_badge(status: str, verification_status: str = None) -> None:
+def render_status_badge(status: str, state_config: Dict[str, Any] = None, verification_status: str = None) -> None:
     """
     Render status badge with color coding.
     
     Args:
-        status: Lifecycle status (draft, approved, retired)
-        verification_status: Verification status (not_verified, verified, failed)
+        status: Lifecycle status
+        state_config: State configuration dict with 'color' and 'icon' fields
+        verification_status: Verification status (PASS, FAIL, PENDING)
     """
     # Lifecycle status
-    if status == "approved":
-        st.success(f"✅ {status.upper()}")
-    elif status == "retired":
-        st.info(f"🔒 {status.upper()}")
-    else:  # draft
-        st.warning(f"📝 {status.upper()}")
+    if state_config:
+        color_map = {
+            'success': st.success,
+            'warning': st.warning,
+            'error': st.error,
+            'info': st.info,
+            'secondary': st.info
+        }
+        color = state_config.get('color', 'secondary')
+        icon = state_config.get('icon', '📄')
+        label = state_config.get('label', status.upper())
+        
+        render_func = color_map.get(color, st.info)
+        render_func(f"{icon} {label}")
+    else:
+        # Fallback if no config provided
+        st.info(f"📄 {status.upper()}")
     
     # Verification status (if provided)
     if verification_status:
-        if verification_status == "verified":
+        if verification_status == "PASS":
             st.success(f"✓ Verified")
-        elif verification_status == "failed":
+        elif verification_status == "FAIL":
             st.error(f"✗ Verification Failed")
         else:
             st.info(f"○ Not Verified")
@@ -161,6 +173,7 @@ def render_item_card(
     item: Dict[str, Any],
     item_type: str,
     core: Any,
+    workflow_engine: Any = None,
     show_actions: bool = True
 ) -> None:
     """
@@ -170,21 +183,33 @@ def render_item_card(
         item: Item dictionary
         item_type: Type prefix (CRS, SYS, SDS, etc.)
         core: CompliantFlowCore instance
+        workflow_engine: DynamicWorkflowEngine instance for state info
         show_actions: Whether to show action buttons
     """
     with st.expander(f"▼ {item['id']} - {item.get('title', 'N/A')}", expanded=False):
         # Status badges
         col1, col2 = st.columns(2)
         with col1:
+            current_status = item.get('status', 'unknown')
+            state_config = None
+            if workflow_engine:
+                state_config = workflow_engine.get_state_info(current_status)
+            
             render_status_badge(
-                item.get('status', 'draft'),
+                current_status,
+                state_config,
                 item.get('verification_status')
             )
         with col2:
-            if item.get('approved_by'):
-                st.write(f"**Approved by:** {item['approved_by']}")
-                if item.get('approved_date'):
-                    st.caption(f"on {item['approved_date']}")
+            # Show metadata for current state (e.g., approved_by, approved_date)
+            status = item.get('status', '')
+            by_field = f"{status}_by"
+            date_field = f"{status}_date"
+            
+            if item.get(by_field):
+                st.write(f"**{status.capitalize()} by:** {item[by_field]}")
+                if item.get(date_field):
+                    st.caption(f"on {item[date_field]}")
         
         # Content
         st.markdown(f"**Content:** {item.get('content', 'N/A')}")
@@ -198,29 +223,34 @@ def render_item_card(
                     col1, col2 = st.columns([4, 1])
                     with col1:
                         link_status = linked_item.get('status', 'unknown')
-                        status_icon = "✅" if link_status == "approved" else "📝"
-                        st.write(f"{status_icon} → {link_id}: {linked_item.get('title', 'N/A')}")
+                        # Get state config for linked item to show appropriate icon
+                        link_icon = '📄'
+                        if workflow_engine:
+                            link_state = workflow_engine.get_state_info(link_status)
+                            link_icon = link_state.get('icon', '📄')
+                        st.write(f"{link_icon} → {link_id}: {linked_item.get('title', 'N/A')}")
                     with col2:
                         if st.button("View", key=f"view_link_{item['id']}_{link_id}"):
                             st.session_state['selected_item'] = link_id
                             st.rerun()
         
-        # Actions
-        if show_actions:
-            st.markdown("---")
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                if st.button("Edit", key=f"edit_{item['id']}", use_container_width=True):
-                    st.session_state['edit_item'] = item['id']
-                    st.rerun()
-            with col2:
-                if item.get('status') == 'draft':
-                    if st.button("Approve", key=f"approve_{item['id']}", type="primary", use_container_width=True):
-                        st.session_state['approve_item'] = item['id']
-                        st.rerun()
-            with col3:
-                if item.get('status') == 'approved':
-                    if st.button("Retire", key=f"retire_{item['id']}", use_container_width=True):
-                        st.session_state['retire_item'] = item['id']
-                        st.rerun()
+        # Actions - show available transitions
+        if show_actions and workflow_engine:
+            current_status = item.get('status', workflow_engine.get_initial_state())
+            available_transitions = workflow_engine.get_available_transitions(current_status)
+            
+            if available_transitions:
+                st.markdown("---")
+                cols = st.columns(len(available_transitions))
+                for idx, transition in enumerate(available_transitions):
+                    with cols[idx]:
+                        if st.button(
+                            transition['label'],
+                            key=f"transition_{item['id']}_{transition['to']}",
+                            type="primary" if idx == 0 else "secondary",
+                            use_container_width=True
+                        ):
+                            st.session_state['transition_item'] = item
+                            st.session_state['transition_config'] = transition
+                            st.rerun()
 
