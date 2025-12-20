@@ -1,7 +1,10 @@
+"""Debug app for CompliantFlow - comprehensive traceability view."""
+
 import streamlit as st
 import pandas as pd
 from pathlib import Path
 from traceability.compliant_flow_core import CompliantFlowCore
+from traceability.models.item import VerificationStatus
 from streamlit_agraph import agraph, Node, Edge, Config
 import networkx as nx
 
@@ -49,8 +52,13 @@ else:
     st.sidebar.warning("No config loaded")
 
 # Filter by Status
-statuses = ["PASS", "FAIL", "PENDING"] # Add more if needed
-selected_statuses = st.sidebar.multiselect("Verification Status", statuses, default=statuses)
+# Get verification status values from enum
+verification_statuses = [status.value for status in VerificationStatus]
+selected_statuses = st.sidebar.multiselect(
+    "Verification Status",
+    options=verification_statuses,
+    default=verification_statuses
+)
 
 # Apply Filters
 if not df.empty:
@@ -126,8 +134,7 @@ with tab1:
         if "verification_status" in display_cols:
              col_config["verification_status"] = st.column_config.TextColumn(
                 "Status",
-                help="Verification Status",
-                validate="^(PASS|FAIL|PENDING)$"
+                help="Verification Status"
             )
             
         with st.expander(f"{doc_type.name} ({len(subset)})", expanded=True):
@@ -191,18 +198,26 @@ with tab3:
         if not item:
             continue
             
-        # Color based on status
-        color = "#90EE90" # Light Green
+        # Color based on verification status
+        color = "#90EE90"  # Light Green (PASS)
         status = getattr(item, 'verification_status', None)
-        if status == 'FAIL':
-            color = "#FFB6C1" # Light Pink
-        elif status == 'PENDING' or status is None:
-            color = "#D3D3D3" # Light Grey
+        if status == VerificationStatus.FAIL.value:
+            color = "#FFB6C1"  # Light Pink
+        elif status == VerificationStatus.PENDING.value or status is None:
+            color = "#D3D3D3"  # Light Grey
             
-        # Shape based on type (heuristic)
-        shape = "box"
-        if node_id.startswith('CRS'): shape = "ellipse"
-        elif node_id.startswith('TC'): shape = "diamond"
+        # Shape based on doc type from configuration
+        shape = "box"  # Default
+        # Find doc type by checking which prefix matches
+        for doc_type in core.config.doc_types:
+            if node_id.startswith(doc_type.prefix):
+                # Use doc type to determine shape
+                if doc_type.code.startswith('TC'):  # Test cases
+                    shape = "diamond"
+                elif doc_type.code == 'CRS':  # Customer requirements
+                    shape = "ellipse"
+                # Add more shape mappings as needed
+                break
             
         nodes.append(Node(
             id=node_id,
