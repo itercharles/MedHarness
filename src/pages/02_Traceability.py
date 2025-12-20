@@ -9,6 +9,7 @@ from traceability.compliant_flow_core import CompliantFlowCore
 from traceability.models.item import VerificationStatus
 from traceability.document_generator import DocumentGenerator
 import networkx as nx
+import pandas as pd
 
 st.set_page_config(
     page_title="Traceability Matrix",
@@ -32,8 +33,8 @@ st.caption("Focused visualization of requirements traceability")
 st.sidebar.header("View Mode")
 view_mode = st.sidebar.radio(
     "Select View",
-    ["Vertical View", "Horizontal View"],
-    help="Vertical: Focus on one document type\nHorizontal: Trace one item's path"
+    ["Matrix Table", "Vertical View", "Horizontal View"],
+    help="Matrix Table: Complete traceability table\\nVertical: Focus on one document type\\nHorizontal: Trace one item's path"
 )
 
 # Helper Functions
@@ -63,6 +64,68 @@ def get_shape_by_type(item_id: str) -> str:
         return "ellipse"
     else:
         return "box"
+
+def build_matrix_table(all_items: List[dict], path: List[str]) -> pd.DataFrame:
+    """Build traceability table for a specific matrix configuration."""
+    chains = []
+    
+    # Start with first level items
+    start_type = path[0]
+    start_items = [i for i in all_items if get_doc_type_code(i['id']) == start_type]
+    
+    for start_item in start_items:
+        # Recursively build chains through the path
+        _build_chains_recursive(all_items, path, 0, {path[0]: start_item}, chains)
+    
+    return pd.DataFrame(chains)
+
+def _build_chains_recursive(all_items: List[dict], path: List[str], level: int, current_chain: dict, chains: List[dict]):
+    """Recursively build traceability chains, creating multiple rows for multiple matches."""
+    if level >= len(path) - 1:
+        # Reached end of path, finalize chain
+        chain_row = {}
+        for doc_type, item in current_chain.items():
+            chain_row[doc_type] = item['id']
+            # Add title for non-last levels
+            if doc_type != path[-1]:
+                chain_row[f"{doc_type} Title"] = item.get('title', 'N/A')[:50]
+        
+        # Add status
+        complete = len(current_chain) == len(path)
+        chain_row['Status'] = '✅ Complete' if complete else '⚠️ Incomplete'
+        chains.append(chain_row)
+        return
+    
+    # Find next level items
+    current_type = path[level]
+    next_type = path[level + 1]
+    current_item = current_chain[current_type]
+    
+    # Find all items of next_type that link to current_item
+    next_items = [item for item in all_items 
+                 if get_doc_type_code(item['id']) == next_type 
+                 and current_item['id'] in item.get('links', [])]
+    
+    if next_items:
+        # Create a chain for each match (multiple rows)
+        for next_item in next_items:
+            new_chain = current_chain.copy()
+            new_chain[next_type] = next_item
+            _build_chains_recursive(all_items, path, level + 1, new_chain, chains)
+    else:
+        # No match found, create incomplete chain
+        chain_row = {}
+        for doc_type, item in current_chain.items():
+            chain_row[doc_type] = item['id']
+            if doc_type != path[-1]:
+                chain_row[f"{doc_type} Title"] = item.get('title', 'N/A')[:50]
+        
+        # Add missing levels as '-'
+        for i in range(level + 1, len(path)):
+            chain_row[path[i]] = '-'
+        
+        chain_row['Status'] = '⚠️ Incomplete'
+        chains.append(chain_row)
 
 def build_vertical_view(core, focus_type: str, show_upstream: bool, show_downstream: bool):
     """Build vertical view focusing on one document type."""
@@ -187,7 +250,72 @@ def build_horizontal_view(core, start_item_id: str):
     return nodes, edges
 
 # Main Content based on view mode
-if view_mode == "Vertical View":
+if view_mode == "Matrix Table":
+    st.subheader("📊 Traceability Matrices")
+    st.caption("Configurable traceability matrices showing different trace paths")
+    
+    # Get matrix configurations
+    matrices = core.config.traceability_matrices
+    
+    if not matrices:
+        st.warning("No traceability matrices configured in project_config.yaml")
+        st.info("Add 'traceability_matrices' section to your configuration to define custom trace paths.")
+    else:
+        # Matrix selector
+        matrix_names = [m.name for m in matrices]
+        selected_matrix_name = st.selectbox(
+            "Select Matrix",
+            options=matrix_names,
+            help="Choose which traceability matrix to display"
+        )
+        
+        # Get selected config
+        matrix_config = next(m for m in matrices if m.name == selected_matrix_name)
+        
+        # Display description and path
+        st.write(f"**Description**: {matrix_config.description}")
+        st.write(f"**Trace Path**: {' → '.join(matrix_config.path)}")
+        
+        # Build table
+        all_items = core.get_all_items()
+        df = build_matrix_table(all_items, matrix_config.path)
+        
+        if df.empty:
+            st.warning(f"No items found for trace path: {' → '.join(matrix_config.path)}")
+        else:
+            # Show statistics
+            col1, col2, col3, col4 = st.columns(4)
+            with col1:
+                st.metric("Total Chains", len(df))
+            with col2:
+                complete = len(df[df['Status'] == '✅ Complete'])
+                st.metric("Complete", complete)
+            with col3:
+                incomplete = len(df[df['Status'] != '✅ Complete'])
+                st.metric("Incomplete", incomplete)
+            with col4:
+                coverage = (complete / len(df) * 100) if len(df) > 0 else 0
+                st.metric("Coverage", f"{coverage:.0f}%")
+            
+            # Build column config dynamically
+            column_config = {}
+            for col in df.columns:
+                if col == 'Status':
+                    column_config[col] = st.column_config.TextColumn("Status", width="small")
+                elif 'Title' in col:
+                    column_config[col] = st.column_config.TextColumn(col, width="medium")
+                else:
+                    column_config[col] = st.column_config.TextColumn(col, width="small")
+            
+            # Display table
+            st.dataframe(
+                df,
+                use_container_width=True,
+                height=600,
+                column_config=column_config
+            )
+
+elif view_mode == "Vertical View":
     st.subheader("📊 Vertical View - Document Type Focus")
     st.caption("Focus on one document type and its immediate relationships")
     
@@ -334,24 +462,6 @@ else:  # Horizontal View
             except Exception as e:
                 st.sidebar.error(f"Error: {e}")
 
-# Legend
-st.markdown("---")
-col1, col2 = st.columns(2)
-
-with col1:
-    st.markdown("**Colors:**")
-    st.markdown("🟢 Green = PASS")
-    st.markdown("🔴 Pink = FAIL")
-    st.markdown("⚪ Gray = PENDING")
-    if view_mode == "Horizontal View":
-        st.markdown("🟡 Gold = Traced Item")
-
-with col2:
-    st.markdown("**Shapes:**")
-    st.markdown("◆ Diamond = Test Cases")
-    st.markdown("⬭ Ellipse = Customer Requirements")
-    st.markdown("▢ Box = Other Requirements")
-
 # Export Section
 st.markdown("---")
 st.subheader("📥 Export")
@@ -385,3 +495,21 @@ with col_exp2:
             except Exception as e:
                 st.error(f"❌ Error generating PDF: {e}")
                 st.exception(e)
+
+# Legend
+st.markdown("---")
+col1, col2 = st.columns(2)
+
+with col1:
+    st.markdown("**Colors:**")
+    st.markdown("🟢 Green = PASS")
+    st.markdown("🔴 Pink = FAIL")
+    st.markdown("⚪ Gray = PENDING")
+    if view_mode == "Horizontal View":
+        st.markdown("🟡 Gold = Traced Item")
+
+with col2:
+    st.markdown("**Shapes:**")
+    st.markdown("◆ Diamond = Test Cases")
+    st.markdown("⬭ Ellipse = Customer Requirements")
+    st.markdown("▢ Box = Other Requirements")

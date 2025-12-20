@@ -510,3 +510,24 @@ doc_types:
 
 policies:
   require_test_coverage: ["SYS", "CRS", "SDS"]
+
+traceability_matrices:
+  - name: "Requirements Flow"
+    description: "Customer requirements through system, architecture, to design"
+    path: ["CRS", "SYS", "ARCH", "SDS"]
+  
+  - name: "Requirements to System"
+    description: "Customer requirements to system requirements"
+    path: ["CRS", "SYS"]
+  
+  - name: "Customer Validation"
+    description: "Customer requirements to validation tests"
+    path: ["CRS", "TC-CRS"]
+  
+  - name: "System Verification"
+    description: "System requirements to system tests"
+    path: ["SYS", "TC-SYS"]
+  
+  - name: "Design Verification"
+    description: "Design specifications to design tests"
+    path: ["SDS", "TC-SDS"]

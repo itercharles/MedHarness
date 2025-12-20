@@ -44,6 +44,7 @@ class ProjectConfig(BaseModel):
     
     doc_types: List[DocTypeConfig] = Field(..., description="Document type configurations")
     policies: PoliciesConfig = Field(default_factory=PoliciesConfig, description="Project policies")
+    traceability_matrices: List['TraceabilityMatrix'] = Field(default_factory=list, description="Traceability matrix configurations")
     
     def get_doc_type(self, code: str) -> Optional[DocTypeConfig]:
         """Get document type configuration by code."""
@@ -58,3 +59,9 @@ class ProjectConfig(BaseModel):
             if dt.prefix == prefix:
                 return dt
         return None
+
+class TraceabilityMatrix(BaseModel):
+    """Configuration for a traceability matrix."""
+    name: str = Field(..., description="Matrix name")
+    description: str = Field(..., description="Matrix description")
+    path: List[str] = Field(..., description="List of doc type codes in trace order")
