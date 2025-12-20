@@ -4,5 +4,22 @@ content: Add affected_items (list) and related_change_request (optional string) 
   to existing items.
 links:
 - SYS-013
+active: true
 title: Defect Traceability Fields
-status: draft
+history:
+- from: draft
+  to: approved
+  timestamp: '2025-12-20T11:57:27.177469'
+  metadata:
+    approved_by: chalres
+    approved_date: '2025-12-20T11:57:27.177435'
+    timestamp: '2025-12-20T11:57:27.177469'
+status: approved
+manual_verifications:
+  review_complete:
+    verified_by: chalres
+    verified_date: '2025-12-20T11:57:21.647804'
+    notes: ''
+approved_by: chalres
+approved_date: '2025-12-20T11:57:27.177435'
+timestamp: '2025-12-20T11:57:27.177469'
