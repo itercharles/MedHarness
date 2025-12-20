@@ -119,6 +119,7 @@ doc_types:
               description: "All linked system requirements must be approved"
               check_type: "linked_items_approved"
               linked_type: "SYS"
+              required_status: "approved"
               required: true
             - {id: review_complete, name: "Review completed", check_type: "manual", required: true}
         
@@ -168,6 +169,7 @@ doc_types:
               description: "All linked customer requirements must be approved"
               check_type: "linked_items_approved"
               linked_type: "CRS"
+              required_status: "approved"
               required: true
             - {id: review_complete, name: "Review completed", check_type: "manual", required: true}
         

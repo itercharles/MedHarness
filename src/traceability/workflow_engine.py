@@ -42,9 +42,11 @@ class DynamicWorkflowEngine:
             if state.get('is_initial', False):
                 return state['id']
         
-        # Fallback to first state
-        states = self.lifecycle.get('states', [])
-        return states[0]['id'] if states else 'draft'
+        # No initial state found - this is a configuration error
+        raise ValueError(
+            f"No initial state defined in lifecycle for {self.doc_type_config.get('name', 'document type')}. "
+            "Please add 'is_initial: true' to one of the states."
+        )
     
     def get_available_transitions(self, current_state: str) -> List[Dict[str, Any]]:
         """Get all possible transitions from the current state."""
@@ -106,6 +108,14 @@ class DynamicWorkflowEngine:
         
         elif check_type == 'linked_items_approved':
             linked_type = criterion['linked_type']
+            required_status = criterion.get('required_status')
+            
+            if not required_status:
+                raise ValueError(
+                    f"Criterion '{criterion.get('id')}' with check_type 'linked_items_approved' "
+                    "must specify 'required_status' field"
+                )
+            
             links = item.get('links', [])
             
             if not links:
@@ -117,20 +127,20 @@ class DynamicWorkflowEngine:
             if not type_links:
                 return False, f"No linked {linked_type} items found"
             
-            # Check each linked item's approval status
-            unapproved = []
+            # Check each linked item has the required status
+            not_matching = []
             for link_id in type_links:
                 linked_item = self.core.get_item(link_id)
                 if not linked_item:
-                    unapproved.append(f"{link_id} (not found)")
-                elif linked_item.get('status') != 'approved':
+                    not_matching.append(f"{link_id} (not found)")
+                elif linked_item.get('status') != required_status:
                     status = linked_item.get('status', 'unknown')
-                    unapproved.append(f"{link_id} ({status})")
+                    not_matching.append(f"{link_id} ({status})")
             
-            if unapproved:
-                return False, f"Linked {linked_type} not approved: {', '.join(unapproved)}"
+            if not_matching:
+                return False, f"Linked {linked_type} not in '{required_status}' status: {', '.join(not_matching)}"
             
-            return True, f"All {len(type_links)} linked {linked_type} items approved"
+            return True, f"All {len(type_links)} linked {linked_type} items are '{required_status}'"
         
         elif check_type == 'manual':
             criterion_id = criterion['id']

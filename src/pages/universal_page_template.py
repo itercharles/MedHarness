@@ -76,19 +76,27 @@ def render_metrics(
         if item['id'].startswith(prefix.rstrip('-'))
     ]
     
-    col1, col2, col3, col4 = st.columns(4)
-    with col1:
+    # Get lifecycle states from config
+    lifecycle = doc_type_config.get('lifecycle', {})
+    states = lifecycle.get('states', [])
+    
+    if not states:
+        raise ValueError(f"No lifecycle states defined for {doc_type_config.get('name', 'document type')}")
+    
+    # Show up to 4 state metrics
+    num_cols = min(len(states) + 1, 5)  # +1 for Total
+    cols = st.columns(num_cols)
+    
+    with cols[0]:
         st.metric("Total", len(type_items))
-    with col2:
-        approved = len([i for i in type_items if i.get('status') == 'approved'])
-        st.metric("Approved", approved)
-    with col3:
-        draft = len([i for i in type_items if i.get('status') == 'draft'])
-        st.metric("Draft", draft)
-    with col4:
-        if doc_type_config.get('has_verification'):
-            verified = len([i for i in type_items if i.get('verification_status') == 'verified'])
-            st.metric("Verified", verified)
+    
+    # Show metrics for each state (up to 4)
+    for idx, state in enumerate(states[:4]):
+        state_id = state['id']
+        state_label = state.get('label', state_id.capitalize())
+        count = len([i for i in type_items if i.get('status') == state_id])
+        with cols[idx + 1]:
+            st.metric(state_label, count)
 
 
 
@@ -643,28 +651,31 @@ def render_transition_workflow(
     # Transition form
     if can_transition:
         st.markdown("---")
-        metadata = {}
         
-        if transition['to'] == 'approved':
-            approver = st.text_input("Approved by *", key=f"approver_{item['id']}")
-            if approver:
-                metadata['approved_by'] = approver
-                metadata['approved_date'] = datetime.now().isoformat()
-        elif transition['to'] == 'retired':
-            retired_by = st.text_input("Retired by *", key=f"retired_{item['id']}")
-            if retired_by:
-                metadata['retired_by'] = retired_by
-                metadata['retired_date'] = datetime.now().isoformat()
+        # Collect metadata for transition
+        # Use pattern: {to_state}_by and {to_state}_date
+        to_state = transition['to']
+        by_field = f"{to_state}_by"
+        date_field = f"{to_state}_date"
+        
+        # Show input for who performed the transition
+        performed_by = st.text_input(
+            f"{transition['label']} by *",
+            key=f"transition_by_{item['id']}_{to_state}"
+        )
         
         col1, col2 = st.columns(2)
         with col1:
             if st.button(f"✅ {transition['label']}", type="primary", use_container_width=True, key="confirm_transition"):
-                if transition['to'] == 'approved' and not metadata.get('approved_by'):
-                    st.warning("Please enter approver name")
-                elif transition['to'] == 'retired' and not metadata.get('retired_by'):
-                    st.warning("Please enter name")
+                if not performed_by:
+                    st.warning("Please enter your name")
                 else:
-                    metadata['timestamp'] = datetime.now().isoformat()
+                    # Build metadata with generic pattern
+                    metadata = {
+                        by_field: performed_by,
+                        date_field: datetime.now().isoformat(),
+                        'timestamp': datetime.now().isoformat()
+                    }
                     updated_item = workflow_engine.perform_transition(item, transition, metadata)
                     core.update_item(item['id'], updated_item)
                     st.success(f"✅ {item['id']} transitioned to {transition['to']}")
