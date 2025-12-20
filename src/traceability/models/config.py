@@ -39,6 +39,12 @@ class PoliciesConfig(BaseModel):
     require_test_coverage: List[str] = Field(default_factory=list, description="Document types requiring test coverage")
 
 
+class TraceabilityMatrix(BaseModel):
+    """Configuration for a traceability matrix."""
+    name: str = Field(..., description="Matrix name")
+    description: str = Field(..., description="Matrix description")
+    path: List[str] = Field(..., description="List of doc type codes in trace order")
+
 class ProjectConfig(BaseModel):
     """Project configuration."""
     
@@ -60,8 +66,3 @@ class ProjectConfig(BaseModel):
                 return dt
         return None
 
-class TraceabilityMatrix(BaseModel):
-    """Configuration for a traceability matrix."""
-    name: str = Field(..., description="Matrix name")
-    description: str = Field(..., description="Matrix description")
-    path: List[str] = Field(..., description="List of doc type codes in trace order")
