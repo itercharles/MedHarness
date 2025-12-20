@@ -1,0 +1,5 @@
+id: CRS-009
+status: approved
+title: Visual Indicators for Item Status
+content: The system shall display visual warning indicators for items that are not in their final approved state within traceability views.
+links: []

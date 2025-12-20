@@ -1,0 +1,13 @@
+id: TC-CRS-009-001
+status: approved
+title: Verify Status Warning Indicators
+content: Verify that items not in stable state display warning icons in traceability matrices.
+prerequisites: Traceability page loaded with items in draft and approved states
+steps:
+  - Navigate to Traceability Matrix page
+  - Select any matrix view
+  - Observe items with draft status
+  - Observe items with approved status
+expected_result: Draft status items show ⚠️ warning icon, approved items do not show warning
+links: ["CRS-009"]
+verification_status: PASS

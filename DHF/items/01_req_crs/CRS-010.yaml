@@ -1,0 +1,5 @@
+id: CRS-010
+status: approved
+title: Test Verification Status in Traceability
+content: The system shall display verification status (PASS/FAIL/PENDING) for test cases within traceability matrices.
+links: []

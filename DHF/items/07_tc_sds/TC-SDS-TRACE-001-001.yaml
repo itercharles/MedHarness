@@ -1,0 +1,12 @@
+id: TC-SDS-TRACE-001-001
+status: approved
+title: Verify TraceabilityMatrix Model
+content: Verify that TraceabilityMatrix configuration model correctly parses YAML configuration.
+prerequisites: Project configuration with traceability_matrices section
+steps:
+  - Load project configuration
+  - Access core.config.traceability_matrices
+  - Verify each matrix has name, description, and path attributes
+expected_result: All configured matrices are accessible with correct attributes
+links: ["SDS-TRACE-001"]
+verification_status: PASS

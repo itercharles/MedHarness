@@ -1,0 +1,13 @@
+id: TC-SDS-TRACE-002-001
+status: approved
+title: Verify Recursive Chain Building
+content: Verify that recursive chain builder correctly handles multiple matches and incomplete chains.
+prerequisites: Test data with one-to-many relationships
+steps:
+  - Create test scenario where SYS-001 links to multiple SDS items
+  - View matrix containing this relationship
+  - Verify separate rows created for each match
+  - Verify incomplete chains show "-" for missing links
+expected_result: Multiple rows for multiple matches, incomplete chains clearly marked
+links: ["SDS-TRACE-002"]
+verification_status: PASS

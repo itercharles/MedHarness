@@ -1,0 +1,12 @@
+id: TC-CRS-010-001
+status: approved
+title: Verify Test Verification Column Display
+content: Verify that test verification status is displayed in matrices containing test cases.
+prerequisites: Traceability page loaded with test case matrices
+steps:
+  - Navigate to Traceability Matrix page
+  - Select "System Verification" matrix (SYS→TC-SYS)
+  - Observe table columns
+expected_result: Table includes "Verify" column showing PASS/FAIL/PENDING status for test cases
+links: ["CRS-010"]
+verification_status: PASS

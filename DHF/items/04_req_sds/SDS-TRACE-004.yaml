@@ -1,0 +1,6 @@
+id: SDS-TRACE-004
+status: approved
+title: Matrix Table UI Component
+content: Implement Streamlit UI with matrix dropdown, statistics display, and dynamic column configuration based on trace path.
+links: ["SYS-021", "SYS-024"]
+component: Frontend.Pages

@@ -1,0 +1,6 @@
+id: ARCH-004
+status: approved
+title: Fail-Fast Configuration Validation Strategy
+content: The system employs fail-fast validation for lifecycle and stable state configuration, throwing explicit errors rather than using fallback defaults.
+rationale: Prevents silent failures and configuration drift. Forces complete configuration which improves maintainability and debugging. Aligns with defensive programming principles.
+links: ["SYS-023"]

@@ -1,0 +1,6 @@
+id: SDS-TRACE-002
+status: approved
+title: Recursive Chain Builder Function
+content: Implement recursive function to traverse trace paths, creating DataFrame rows for each complete or incomplete chain, with support for multiple child matches.
+links: ["SYS-022"]
+component: Backend.Traceability
