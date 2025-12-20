@@ -1,0 +1,14 @@
+id: TC-SYS-029-001
+status: approved
+title: Verify Unique URL Path Generation
+content: Verify that each dynamically generated page has a unique URL path to prevent conflicts.
+prerequisites: Multiple doc_types configured with page_enabled=true
+steps:
+  - Start application
+  - Inspect browser network tab or page URLs
+  - Navigate to different document type pages
+  - Verify each page has unique URL path format (e.g., /4_REL, /5_CRS, /6_SYS)
+  - Verify no URL conflicts or duplicate pathname errors
+expected_result: Each page has unique URL path, no StreamlitAPIException for duplicate pathnames
+links: ["SYS-029"]
+verification_status: PASS

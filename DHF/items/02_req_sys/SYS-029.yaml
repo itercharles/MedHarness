@@ -1,0 +1,5 @@
+id: SYS-029
+status: approved
+title: Unique Page URL Generation
+content: The system shall generate unique URL paths for each dynamically created page using page_number and doc_type code to prevent URL conflicts.
+links: ["CRS-012"]
