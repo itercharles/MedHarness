@@ -77,7 +77,38 @@ doc_types:
   - code: RISK
     name: "Risk Analysis"
     prefix: "RISK-"
-    properties: ["id", "title", "hazard", "cause", "effect", "severity_pre", "probability_pre", "links", "reviewer", "review_date"]
+    directory: "items/00_risks"
+    properties:
+      - id
+      - title
+      - hazard
+      - cause
+      - effect
+      - severity_pre
+      - probability_pre
+      - severity_post        # Residual risk severity
+      - probability_post     # Residual risk probability
+      - risk_acceptability   # acceptable/unacceptable
+      - risk_benefit         # Risk-benefit analysis
+      - links
+      - reviewer
+      - review_date
+    relations:
+      - target: RCM
+        label: "mitigated_by"
+    icon: "⚠️"
+    page_enabled: true
+    page_number: 12
+    lifecycle:
+      states:
+        - {id: draft, label: "Draft", color: "warning", icon: "📝", is_initial: true}
+        - {id: under_review, label: "Under Review", color: "info", icon: "🔍"}
+        - {id: approved, label: "Approved", color: "success", icon: "✅", is_stable: true}
+      transitions:
+        - {from: draft, to: under_review, label: "Submit for Review"}
+        - {from: under_review, to: approved, label: "Approve"}
+        - {from: under_review, to: draft, label: "Request Changes"}
+
   - code: RCM
     name: "Risk Control Measure"
     prefix: "RCM-"
