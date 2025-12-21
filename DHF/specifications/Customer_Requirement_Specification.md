@@ -3,7 +3,7 @@
 <div class="doc-info">
 
 **Document ID**: CRS-SPEC  
-**Version**: 1.18  
+**Version**: 1.19  
 **Generated**: 2025-12-21  
 **Status**: Draft  
 **Project**: CompliantFlow Project

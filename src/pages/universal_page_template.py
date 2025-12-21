@@ -133,7 +133,7 @@ def render_table_section(
                     
                     # Show progress
                     with st.spinner("Regenerating document..."):
-                        template_dir = Path(core.repo_root) / "templates"
+                        template_dir = Path(core.repo_root).parent / "DHF" / "documents" / "specifications" / "templates"
                         generator = DocumentGenerator(core, template_dir)
                         
                         doc_type_code = doc_type_config['code']
@@ -185,7 +185,7 @@ def render_table_section(
                 from pathlib import Path
                 from traceability.document_generator import DocumentGenerator
                 
-                template_dir = Path(core.repo_root) / "templates"
+                template_dir = Path(core.repo_root).parent / "DHF" / "documents" / "specifications" / "templates"
                 generator = DocumentGenerator(core, template_dir)
                 
                 doc_type_code = doc_type_config['code']
