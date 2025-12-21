@@ -107,81 +107,158 @@ def render_table_section(
     prefix: str
 ) -> None:
     """Render table section with New button and filters."""
-    # Header with three buttons: Regenerate, Export PDF, New
-    col1, col2, col3, col4 = st.columns([2, 1, 1, 1])
+    # Header with Items title and New button only
+    col1, col2 = st.columns([4, 1])
     with col1:
         st.subheader("Items")
-    
     with col2:
-        if st.button("🔄 Regenerate Document", use_container_width=True, help="Update static markdown file from current YAML items"):
-            # Generate markdown and save to static file
-            try:
-                from pathlib import Path
-                from traceability.document_generator import DocumentGenerator
-                
-                template_dir = Path(core.repo_root) / "templates"
-                generator = DocumentGenerator(core, template_dir)
-                
-                doc_type_code = doc_type_config['code']
-                markdown_content, output_path = generator.generate_markdown_spec(doc_type_code)
-                
-                # Store in session state for display outside columns
-                st.session_state['regenerated_doc'] = {
-                    'content': markdown_content,
-                    'path': output_path
-                }
-                st.success(f"✅ Regenerated {output_path.name}")
-                st.info(f"📝 File updated: `{output_path}`\n\nPlease review changes with `git diff` and commit the updated document.")
-                    
-            except Exception as e:
-                st.error(f"Error regenerating document: {str(e)}")
-                import traceback
-                st.code(traceback.format_exc())
-    
-    with col3:
-        if st.button("📄 Export PDF", use_container_width=True, help="Export static markdown file to PDF"):
-            # Export static file to PDF
-            try:
-                from pathlib import Path
-                from traceability.document_generator import DocumentGenerator
-                
-                template_dir = Path(core.repo_root) / "templates"
-                generator = DocumentGenerator(core, template_dir)
-                
-                doc_type_code = doc_type_config['code']
-                pdf_path = generator.export_static_doc_to_pdf(doc_type_code)
-                
-                # Provide download
-                with open(pdf_path, 'rb') as f:
-                    st.download_button(
-                        label=f"⬇️ Download {doc_type_code} Specification PDF",
-                        data=f.read(),
-                        file_name=f"{doc_type_code}_Specification.pdf",
-                        mime="application/pdf",
-                        use_container_width=True
-                    )
-                st.success(f"✅ Generated PDF from static document!")
-            except FileNotFoundError as e:
-                st.error(f"❌ Static document not found. Please regenerate the document first.")
-                st.info("Click '🔄 Regenerate Document' to create the static markdown file.")
-            except Exception as e:
-                st.error(f"Error generating PDF: {str(e)}")
-                import traceback
-                st.code(traceback.format_exc())
-    
-    with col4:
         if st.button("➕ New", type="primary", use_container_width=True):
             st.session_state['creating_new'] = True
             st.session_state['selected_item_id'] = None
             st.rerun()
     
-    # Show preview outside columns for full width
-    if 'regenerated_doc' in st.session_state:
-        doc_info = st.session_state['regenerated_doc']
-        with st.expander("📄 Preview Generated Document", expanded=False):
-            # Use a container with max height for scrolling
-            with st.container():
-                st.markdown(doc_info['content'], unsafe_allow_html=True)
+    # Document Preview Section - Always visible
+    with st.expander("📄 Preview Specification", expanded=False):
+        st.markdown("**Document Operations**")
+        
+        # Buttons for document operations
+        col_regen, col_export = st.columns(2)
+        
+        with col_regen:
+            if st.button("🔄 Regenerate Document", use_container_width=True, help="Update static markdown file from current YAML items", key="regen_btn"):
+                # Generate markdown and save to static file
+                try:
+                    from pathlib import Path
+                    from traceability.document_generator import DocumentGenerator
+                    
+                    # Show progress
+                    with st.spinner("Regenerating document..."):
+                        template_dir = Path(core.repo_root) / "templates"
+                        generator = DocumentGenerator(core, template_dir)
+                        
+                        doc_type_code = doc_type_config['code']
+                        markdown_content, output_path = generator.generate_markdown_spec(doc_type_code)
+                        
+                        # Store in session state for display - scoped to doc type
+                        st.session_state[f'preview_content_{doc_type_code}'] = markdown_content
+                        st.session_state[f'last_regeneration_{doc_type_code}'] = {
+                            'success': True,
+                            'filename': output_path.name,
+                            'path': str(output_path)
+                        }
+                    
+                    # Show toast notification that persists
+                    st.toast(f"✅ Successfully regenerated {output_path.name}", icon="✅")
+                    st.rerun()
+                        
+                except Exception as e:
+                    doc_type_code = doc_type_config['code']
+                    st.session_state[f'last_regeneration_{doc_type_code}'] = {
+                        'success': False,
+                        'error': str(e)
+                    }
+                    st.toast(f"❌ Error regenerating document", icon="❌")
+                    st.error(f"Error regenerating document: {str(e)}")
+                    import traceback
+                    st.code(traceback.format_exc())
+        
+        # Show status message from last regeneration - scoped to doc type
+        doc_type_code = doc_type_config['code']
+        if f'last_regeneration_{doc_type_code}' in st.session_state:
+            regen_info = st.session_state[f'last_regeneration_{doc_type_code}']
+            if regen_info['success']:
+                st.success(f"✅ Last regenerated: {regen_info['filename']}")
+                st.info(f"📝 File: `{regen_info['path']}`\n\nReview with `git diff` and commit the changes.")
+            else:
+                st.error(f"❌ Last regeneration failed: {regen_info['error']}")
+        
+        with col_export:
+            # Export static file to PDF - one-click download
+            try:
+                from pathlib import Path
+                from traceability.document_generator import DocumentGenerator
+                
+                template_dir = Path(core.repo_root) / "templates"
+                generator = DocumentGenerator(core, template_dir)
+                
+                doc_type_code = doc_type_config['code']
+                
+                # Check if static file exists first
+                import yaml
+                config_path = core.repo_root / 'config' / 'project_config.yaml'
+                with open(config_path, 'r') as f:
+                    project_config = yaml.safe_load(f)
+                
+                doc_specs = project_config.get('document_specifications', {})
+                if doc_type_code in doc_specs:
+                    spec_config = doc_specs[doc_type_code]
+                    static_file_path = core.repo_root.parent / spec_config['output']
+                    
+                    if static_file_path.exists():
+                        # Generate PDF and provide immediate download
+                        pdf_path = generator.export_static_doc_to_pdf(doc_type_code)
+                        
+                        with open(pdf_path, 'rb') as f:
+                            st.download_button(
+                                label="📄 Export PDF",
+                                data=f.read(),
+                                file_name=f"{doc_type_code}_Specification.pdf",
+                                mime="application/pdf",
+                                use_container_width=True,
+                                key="export_pdf_btn",
+                                help="Download specification as PDF"
+                            )
+                    else:
+                        st.button(
+                            "📄 Export PDF",
+                            use_container_width=True,
+                            disabled=True,
+                            help="Static document not found. Regenerate first.",
+                            key="export_pdf_disabled"
+                        )
+                        
+            except Exception as e:
+                st.button(
+                    "📄 Export PDF",
+                    use_container_width=True,
+                    disabled=True,
+                    help=f"Error: {str(e)}",
+                    key="export_pdf_error"
+                )
+        
+        st.markdown("---")
+        st.markdown("**Document Preview**")
+        
+        # Load and display the static file - scoped to doc type
+        try:
+            import yaml
+            config_path = core.repo_root / 'config' / 'project_config.yaml'
+            with open(config_path, 'r') as f:
+                project_config = yaml.safe_load(f)
+            
+            doc_specs = project_config.get('document_specifications', {})
+            doc_type_code = doc_type_config['code']
+            
+            if doc_type_code in doc_specs:
+                spec_config = doc_specs[doc_type_code]
+                static_file_path = core.repo_root.parent / spec_config['output']
+                
+                if static_file_path.exists():
+                    # Load from file if not in session state for this doc type
+                    preview_key = f'preview_content_{doc_type_code}'
+                    if preview_key not in st.session_state:
+                        st.session_state[preview_key] = static_file_path.read_text()
+                    
+                    # Display the preview
+                    st.markdown(st.session_state[preview_key], unsafe_allow_html=True)
+                else:
+                    st.warning(f"📝 Static document not found: `{static_file_path.name}`")
+                    st.info("Click '🔄 Regenerate Document' to create the specification file.")
+            else:
+                st.info(f"No document specification configured for {doc_type_code}")
+                
+        except Exception as e:
+            st.error(f"Error loading preview: {str(e)}")
     
     # Filters
     lifecycle = doc_type_config.get('lifecycle', {})
