@@ -623,6 +623,10 @@ document_specifications:
     template: "requirements_specification.md.j2"
     output: "DHF/documents/specifications/Software_Design_Specification.md"
     doc_type_name: "Software Design Specification"
+  ARCH:
+    template: "architecture_specification.md.j2"
+    output: "DHF/documents/specifications/System_Architecture_Specification.md"
+    doc_type_name: "System Architecture Specification"
   TC-CRS:
     template: "test_specification.md.j2"
     output: "DHF/documents/specifications/Customer_Requirement_Test_Specification.md"
