@@ -96,6 +96,102 @@ class DocumentGenerator:
         # Export to PDF
         return self._export_pdf(markdown_content, f"{doc_type_code}_Specification")
     
+    def generate_markdown_spec(self, doc_type_code: str) -> Tuple[str, Path]:
+        """
+        Generate markdown specification and save to static file location.
+        
+        Args:
+            doc_type_code: Document type code (e.g., 'CRS', 'SYS', 'TC-CRS')
+            
+        Returns:
+            Tuple of (markdown_content, output_path)
+        """
+        # Load document specification config
+        config_path = self.core.repo_root / 'config' / 'project_config.yaml'
+        import yaml
+        with open(config_path, 'r') as f:
+            project_config = yaml.safe_load(f)
+        
+        doc_specs = project_config.get('document_specifications', {})
+        if doc_type_code not in doc_specs:
+            raise ValueError(f"No document specification configured for {doc_type_code}")
+        
+        spec_config = doc_specs[doc_type_code]
+        template_name = spec_config['template']
+        output_rel_path = spec_config['output']
+        output_path = self.core.repo_root.parent / output_rel_path
+        
+        # Get doc type config
+        doc_type_config = self.core.config.get_doc_type(doc_type_code)
+        if not doc_type_config:
+            raise ValueError(f"Unknown document type: {doc_type_code}")
+        
+        # Gather all items of this type
+        all_items = self.core.get_all_items()
+        items = [
+            item for item in all_items 
+            if item['id'].startswith(doc_type_code)
+        ]
+        
+        # Sort by ID
+        items.sort(key=lambda x: x['id'])
+        
+        # Prepare template data
+        data = {
+            'doc_type_code': doc_type_code,
+            'doc_type_name': spec_config.get('doc_type_name', doc_type_config.name),
+            'test_type': spec_config.get('test_type', ''),
+            'project_name': 'CompliantFlow Project',
+            'version': '1.0',
+            'generation_date': datetime.now().isoformat()[:10],
+            'status': 'Draft',
+            'items': items,
+            'directory': doc_type_config.directory if hasattr(doc_type_config, 'directory') else ''
+        }
+        
+        # Render template
+        template = self.jinja_env.get_template(template_name)
+        markdown_content = template.render(**data)
+        
+        # Write to output file
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(markdown_content)
+        
+        return markdown_content, output_path
+    
+    def export_static_doc_to_pdf(self, doc_type_code: str) -> Path:
+        """
+        Export existing static markdown document to PDF.
+        
+        Args:
+            doc_type_code: Document type code (e.g., 'CRS', 'SYS', 'TC-CRS')
+            
+        Returns:
+            Path to generated PDF file
+        """
+        # Load document specification config
+        config_path = self.core.repo_root / 'config' / 'project_config.yaml'
+        import yaml
+        with open(config_path, 'r') as f:
+            project_config = yaml.safe_load(f)
+        
+        doc_specs = project_config.get('document_specifications', {})
+        if doc_type_code not in doc_specs:
+            raise ValueError(f"No document specification configured for {doc_type_code}")
+        
+        spec_config = doc_specs[doc_type_code]
+        static_file_path = self.core.repo_root.parent / spec_config['output']
+        
+        if not static_file_path.exists():
+            raise FileNotFoundError(f"Static document not found: {static_file_path}")
+        
+        # Read static markdown file
+        markdown_content = static_file_path.read_text()
+        
+        # Export to PDF
+        filename = f"{doc_type_code}_Specification_{datetime.now().strftime('%Y%m%d')}"
+        return self._export_pdf(markdown_content, filename)
+    
     def generate_traceability_matrix(self) -> Path:
         """
         Generate traceability matrix PDF.

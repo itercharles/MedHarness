@@ -609,6 +609,36 @@ traceability_matrices:
     path: ["SDS", "TC-SDS"]
   
 
+# Document Generation Configuration
+document_specifications:
+  CRS:
+    template: "requirements_specification.md.j2"
+    output: "DHF/documents/Customer_Requirement_Specification.md"
+    doc_type_name: "Customer Requirement"
+  SYS:
+    template: "requirements_specification.md.j2"
+    output: "DHF/documents/System_Requirement_Specification.md"
+    doc_type_name: "System Requirement"
+  SDS:
+    template: "requirements_specification.md.j2"
+    output: "DHF/documents/Software_Design_Specification.md"
+    doc_type_name: "Software Design Specification"
+  TC-CRS:
+    template: "test_specification.md.j2"
+    output: "DHF/documents/Customer_Requirement_Test_Specification.md"
+    doc_type_name: "Customer Validation Test"
+    test_type: "validation"
+  TC-SYS:
+    template: "test_specification.md.j2"
+    output: "DHF/documents/System_Requirement_Test_Specification.md"
+    doc_type_name: "System Test"
+    test_type: "verification"
+  TC-SDS:
+    template: "test_specification.md.j2"
+    output: "DHF/documents/Software_Design_Test_Specification.md"
+    doc_type_name: "Design Test"
+    test_type: "verification"
+
 # Test Integration Configuration
 test_integration:
   # Automated test configuration - GitHub API mode only
