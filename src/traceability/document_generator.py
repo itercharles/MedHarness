@@ -129,20 +129,15 @@ class DocumentGenerator:
         # Read existing version if file exists
         current_version = "1.0"
         if output_path.exists():
-            try:
-                existing_content = output_path.read_text()
-                # Extract version from existing file (looks for **Version**: X.Y pattern)
-                import re
-                version_match = re.search(r'\*\*Version\*\*:\s*(\d+)\.(\d+)', existing_content)
-                if version_match:
-                    major = int(version_match.group(1))
-                    minor = int(version_match.group(2))
-                    # Increment minor version
-                    minor += 1
-                    current_version = f"{major}.{minor}"
-            except Exception:
-                # If we can't read version, start from 1.0
-                current_version = "1.0"
+            existing_content = output_path.read_text()
+            # Extract version from table format: | **Version** | 1.2 |
+            import re
+            version_match = re.search(r'\|\s*\*\*Version\*\*\s*\|\s*(\d+)\.(\d+)\s*\|', existing_content)
+            if version_match:
+                major = int(version_match.group(1))
+                minor = int(version_match.group(2))
+                # Increment minor version
+                current_version = f"{major}.{minor + 1}"
         
         # Gather all items of this type
         all_items = self.core.get_all_items()

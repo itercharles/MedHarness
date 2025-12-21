@@ -1,14 +1,16 @@
 # Software Design Specification Specification
 
-<div class="doc-info">
+---
 
-**Document ID**: SDS-SPEC  
-**Version**: 2.7  
-**Generated**: 2025-12-21  
-**Status**: Draft  
-**Project**: CompliantFlow Project
+**Document Metadata**
 
-</div>
+| Field | Value |
+|-------|-------|
+| **Document ID** | SDS-SPEC |
+| **Version** | 2.6 |
+| **Generated** | 2025-12-21 |
+| **Status** | Draft |
+| **Project** | CompliantFlow Project |
 
 ---
 
@@ -116,7 +118,37 @@ Implementation of the change management system using:
 
 </div>
 
-### 5. SDS-COMP-001: Compliance Dashboard Page Component
+### 5. SDS-013: Automatic Document Generation with Version Management
+
+<div class="requirement-section">
+
+**Status**: <span class="status-approved">APPROVED</span>  
+
+#### Description
+
+The system shall provide automatic document generation functionality that:
+1. Generates specification documents from YAML item data using Jinja2 templates
+2. Automatically increments document version on each regeneration (minor version)
+3. Resets document status to "Draft" on each regeneration
+4. Saves generated documents as static markdown files for version control
+5. Supports PDF export from static markdown files
+6. Maintains separate preview state for each document type
+
+Implementation details:
+- DocumentGenerator.generate_markdown_spec() reads existing version, increments minor version
+- Version format: Major.Minor (e.g., 1.0, 1.1, 1.2)
+- Status always reset to "Draft" to ensure proper review workflow
+- Templates: requirements_specification.md.j2, test_specification.md.j2
+- Configured document types: CRS, SYS, SDS, TC-CRS, TC-SYS, TC-SDS
+
+#### Linked Items
+
+- SYS-008
+
+
+</div>
+
+### 6. SDS-COMP-001: Compliance Dashboard Page Component
 
 <div class="requirement-section">
 
@@ -134,7 +166,7 @@ Implement Streamlit page (03_Compliance.py) with policy group selector, complian
 
 </div>
 
-### 6. SDS-COMP-002: Compliance Score Visualization
+### 7. SDS-COMP-002: Compliance Score Visualization
 
 <div class="requirement-section">
 
@@ -151,7 +183,7 @@ Implement score calculation, color-coded display (green/yellow/red indicators), 
 
 </div>
 
-### 7. SDS-COMP-003: Policy Results Table and Evidence Display
+### 8. SDS-COMP-003: Policy Results Table and Evidence Display
 
 <div class="requirement-section">
 
@@ -168,7 +200,7 @@ Implement results dataframe with pass/fail icons, policy descriptions merged fro
 
 </div>
 
-### 8. SDS-DEF-001: Defect Pydantic Model
+### 9. SDS-DEF-001: Defect Pydantic Model
 
 <div class="requirement-section">
 
@@ -185,7 +217,7 @@ Use Pydantic v2 to define Defect model with fields for id, title, description, s
 
 </div>
 
-### 9. SDS-DEF-002: Defect Workflow State Machine
+### 10. SDS-DEF-002: Defect Workflow State Machine
 
 <div class="requirement-section">
 
@@ -202,7 +234,7 @@ Implement DefectWorkflow class with state transition validation. Define valid tr
 
 </div>
 
-### 10. SDS-DEF-003: Defect Git Integration
+### 11. SDS-DEF-003: Defect Git Integration
 
 <div class="requirement-section">
 
@@ -219,7 +251,7 @@ Implement Git version control integration using GitRepository.commit_file() for 
 
 </div>
 
-### 11. SDS-DEF-004: Defect Streamlit UI
+### 12. SDS-DEF-004: Defect Streamlit UI
 
 <div class="requirement-section">
 
@@ -237,7 +269,7 @@ Implement Streamlit page with three tabs - Report Defect (form with all fields),
 
 </div>
 
-### 12. SDS-DEF-005: Defect Root Cause Fields
+### 13. SDS-DEF-005: Defect Root Cause Fields
 
 <div class="requirement-section">
 
@@ -254,7 +286,7 @@ Add root_cause and resolution fields to Defect model. Implement validation in De
 
 </div>
 
-### 13. SDS-DEF-006: Defect Verification Fields
+### 14. SDS-DEF-006: Defect Verification Fields
 
 <div class="requirement-section">
 
@@ -271,7 +303,7 @@ Add verification field to Defect model. Implement validation in DefectWorkflow t
 
 </div>
 
-### 14. SDS-DEF-007: Defect Traceability Fields
+### 15. SDS-DEF-007: Defect Traceability Fields
 
 <div class="requirement-section">
 
@@ -288,7 +320,7 @@ Add affected_items (list) and related_change_request (optional string) fields to
 
 </div>
 
-### 15. SDS-DOCGEN-001: Document Generator Module
+### 16. SDS-DOCGEN-001: Document Generator Module
 
 <div class="requirement-section">
 
@@ -318,7 +350,7 @@ Create a DocumentGenerator class that generates PDF documents from Jinja2 templa
 
 </div>
 
-### 16. SDS-DOCGEN-002: Jinja2 Template System
+### 17. SDS-DOCGEN-002: Jinja2 Template System
 
 <div class="requirement-section">
 
@@ -350,7 +382,7 @@ Implement Jinja2 template rendering system for document generation.
 
 </div>
 
-### 17. SDS-DOCGEN-003: PDF Export Pipeline
+### 18. SDS-DOCGEN-003: PDF Export Pipeline
 
 <div class="requirement-section">
 
@@ -383,7 +415,7 @@ Implement PDF export using WeasyPrint library.
 
 </div>
 
-### 18. SDS-DOCGEN-004: Traceability Matrix Builder
+### 19. SDS-DOCGEN-004: Traceability Matrix Builder
 
 <div class="requirement-section">
 
@@ -418,7 +450,7 @@ Each chain contains:
 
 </div>
 
-### 19. SDS-DOCGEN-005: UI Export Button Integration
+### 20. SDS-DOCGEN-005: UI Export Button Integration
 
 <div class="requirement-section">
 
@@ -449,7 +481,7 @@ Add PDF export button to Streamlit UI pages.
 
 </div>
 
-### 20. SDS-DYNPAGE-001: Page Generator Module
+### 21. SDS-DYNPAGE-001: Page Generator Module
 
 <div class="requirement-section">
 
@@ -467,7 +499,7 @@ Implement page_generator.py module with create_doc_page_function() to create uni
 
 </div>
 
-### 21. SDS-DYNPAGE-002: Main Application Navigation
+### 22. SDS-DYNPAGE-002: Main Application Navigation
 
 <div class="requirement-section">
 
@@ -484,7 +516,7 @@ Update app.py to use st.navigation() with dynamically generated pages list, incl
 
 </div>
 
-### 22. SDS-REL-001: Release Pydantic Model
+### 23. SDS-REL-001: Release Pydantic Model
 
 <div class="requirement-section">
 
@@ -501,7 +533,7 @@ Use Pydantic v2 to define Release model with fields for version, status enum (pl
 
 </div>
 
-### 23. SDS-REL-002: Release Verification Logic
+### 24. SDS-REL-002: Release Verification Logic
 
 <div class="requirement-section">
 
@@ -518,7 +550,7 @@ Implement ReleaseValidator class with methods to check requirement coverage, ver
 
 </div>
 
-### 24. SDS-REL-003: Release Workflow State Machine
+### 25. SDS-REL-003: Release Workflow State Machine
 
 <div class="requirement-section">
 
@@ -535,7 +567,7 @@ Implement release state transitions with validation - planning â†’ developing â†
 
 </div>
 
-### 25. SDS-REL-004: Release Report Generator
+### 26. SDS-REL-004: Release Report Generator
 
 <div class="requirement-section">
 
@@ -552,7 +584,7 @@ Implement report generation using Markdown templates to create traceability matr
 
 </div>
 
-### 26. SDS-REL-005: Release Streamlit UI
+### 27. SDS-REL-005: Release Streamlit UI
 
 <div class="requirement-section">
 
@@ -570,7 +602,7 @@ Implement Streamlit page with three tabs - Create Release (form), Manage Release
 
 </div>
 
-### 27. SDS-REL-006: Workflow Criteria Configuration
+### 28. SDS-REL-006: Workflow Criteria Configuration
 
 <div class="requirement-section">
 
@@ -588,7 +620,7 @@ Implement configurable workflow criteria system using YAML configuration file (D
 
 </div>
 
-### 28. SDS-SOUP-001: SOUP Document Type Configuration
+### 29. SDS-SOUP-001: SOUP Document Type Configuration
 
 <div class="requirement-section">
 
@@ -626,7 +658,7 @@ Implements SOUP document type in project configuration with the following proper
 
 </div>
 
-### 29. SDS-SOUP-002: SOUP Import Interface
+### 30. SDS-SOUP-002: SOUP Import Interface
 
 <div class="requirement-section">
 
@@ -666,7 +698,7 @@ while maintaining clean separation of concerns.
 
 </div>
 
-### 30. SDS-SOUP-003: SOUP Workflow and Traceability
+### 31. SDS-SOUP-003: SOUP Workflow and Traceability
 
 <div class="requirement-section">
 
@@ -710,7 +742,7 @@ Each SOUP item must link to at least one SYS requirement to document:
 
 </div>
 
-### 31. SDS-TEST-001: Test Automation System Design
+### 32. SDS-TEST-001: Test Automation System Design
 
 <div class="requirement-section">
 
@@ -961,7 +993,7 @@ Generated dynamically from configuration:
 
 </div>
 
-### 32. SDS-TRACE-001: TraceabilityMatrix Pydantic Model
+### 33. SDS-TRACE-001: TraceabilityMatrix Pydantic Model
 
 <div class="requirement-section">
 
@@ -978,7 +1010,7 @@ Implement TraceabilityMatrix model with name (str), description (str), and path 
 
 </div>
 
-### 33. SDS-TRACE-002: Recursive Chain Builder Function
+### 34. SDS-TRACE-002: Recursive Chain Builder Function
 
 <div class="requirement-section">
 
@@ -995,7 +1027,7 @@ Implement recursive function to traverse trace paths, creating DataFrame rows fo
 
 </div>
 
-### 34. SDS-TRACE-003: Status Warning Helper Function
+### 35. SDS-TRACE-003: Status Warning Helper Function
 
 <div class="requirement-section">
 
@@ -1012,7 +1044,7 @@ Implement should_show_warning function to check item status against lifecycle's 
 
 </div>
 
-### 35. SDS-TRACE-004: Matrix Table UI Component
+### 36. SDS-TRACE-004: Matrix Table UI Component
 
 <div class="requirement-section">
 
@@ -1039,14 +1071,14 @@ Implement Streamlit UI with matrix dropdown, statistics display, and dynamic col
 
 | Metric | Count |
 |--------|-------|
-| **Total Requirements** | 35 |
-| **Approved** | 14 |
+| **Total Requirements** | 36 |
+| **Approved** | 15 |
 | **Draft** | 21 |
 | **Retired** | 0 |
 
 ### 3.2 Approval Status
 
-**Approval Rate**: 40.0% (14/35)
+**Approval Rate**: 41.7% (15/36)
 
 ---
 

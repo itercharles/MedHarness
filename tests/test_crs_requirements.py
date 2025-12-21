@@ -37,7 +37,9 @@ def test_TC_CRS_001_document_export_functionality():
     # Try to import and initialize document generator
     from traceability.document_generator import DocumentGenerator
     
-    template_dir = dhf_root / "templates"
+    template_dir = dhf_root / "documents" / "specifications" / "templates"
+    assert template_dir.exists(), f"Template directory not found at {template_dir}"
+    
     generator = DocumentGenerator(core, template_dir)
     
     assert generator is not None, "DocumentGenerator failed to initialize"

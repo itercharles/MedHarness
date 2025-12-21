@@ -1,14 +1,16 @@
 # Customer Validation Test Test Specification
 
-<div class="doc-info">
+---
 
-**Document ID**: TC-CRS-TEST-SPEC  
-**Version**: 1.1  
-**Generated**: 2025-12-21  
-**Status**: Draft  
-**Project**: CompliantFlow Project
+**Document Metadata**
 
-</div>
+| Field | Value |
+|-------|-------|
+| **Document ID** | TC-CRS-TEST-SPEC |
+| **Version** | 1.1 |
+| **Generated** | 2025-12-21 |
+| **Status** | Draft |
+| **Project** | CompliantFlow Project |
 
 ---
 

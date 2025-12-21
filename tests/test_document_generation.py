@@ -23,8 +23,8 @@ def core():
 
 @pytest.fixture
 def generator(core):
-    """Initialize DocumentGenerator."""
-    template_dir = Path(__file__).parent.parent / "DHF" / "templates"
+    """Create DocumentGenerator instance for testing."""
+    template_dir = core.repo_root.parent / "DHF" / "documents" / "specifications" / "templates"
     return DocumentGenerator(core, template_dir)
 
 
@@ -43,7 +43,7 @@ class TestMarkdownGeneration:
         assert "# Customer Requirement Specification" in markdown_content
         assert "CRS-001" in markdown_content
         assert "Document ID" in markdown_content
-        assert "**Generated**:" in markdown_content
+        assert "| **Generated** |" in markdown_content
         
         # Verify file size is reasonable
         assert len(markdown_content) > 1000, "Document should have substantial content"
@@ -259,13 +259,13 @@ class TestVersionManagement:
         
         # First generation
         markdown_content1, output_path1 = generator.generate_markdown_spec('CRS')
-        version_match1 = re.search(r'\*\*Version\*\*:\s*(\d+)\.(\d+)', markdown_content1)
+        version_match1 = re.search(r'\|\s*\*\*Version\*\*\s*\|\s*(\d+)\.(\d+)\s*\|', markdown_content1)
         assert version_match1, "Version should be present in generated document"
         major1, minor1 = int(version_match1.group(1)), int(version_match1.group(2))
         
         # Second generation - version should increment
         markdown_content2, output_path2 = generator.generate_markdown_spec('CRS')
-        version_match2 = re.search(r'\*\*Version\*\*:\s*(\d+)\.(\d+)', markdown_content2)
+        version_match2 = re.search(r'\|\s*\*\*Version\*\*\s*\|\s*(\d+)\.(\d+)\s*\|', markdown_content2)
         assert version_match2, "Version should be present in regenerated document"
         major2, minor2 = int(version_match2.group(1)), int(version_match2.group(2))
         
@@ -275,7 +275,7 @@ class TestVersionManagement:
         
         # Third generation - version should increment again
         markdown_content3, output_path3 = generator.generate_markdown_spec('CRS')
-        version_match3 = re.search(r'\*\*Version\*\*:\s*(\d+)\.(\d+)', markdown_content3)
+        version_match3 = re.search(r'\|\s*\*\*Version\*\*\s*\|\s*(\d+)\.(\d+)\s*\|', markdown_content3)
         major3, minor3 = int(version_match3.group(1)), int(version_match3.group(2))
         
         assert minor3 == minor2 + 1, f"Minor version should increment from {minor2} to {minor2 + 1}, got {minor3}"
@@ -285,11 +285,11 @@ class TestVersionManagement:
         markdown_content, _ = generator.generate_markdown_spec('CRS')
         
         # Verify status is Draft
-        assert "**Status**: Draft" in markdown_content, "Status should be set to Draft"
+        assert "| **Status** | Draft |" in markdown_content, "Status should be set to Draft"
         
         # Regenerate and verify status is still Draft
         markdown_content2, _ = generator.generate_markdown_spec('CRS')
-        assert "**Status**: Draft" in markdown_content2, "Status should remain Draft after regeneration"
+        assert "| **Status** | Draft |" in markdown_content2, "Status should remain Draft after regeneration"
     
     def test_version_persists_across_doc_types(self, generator):
         """Test that each document type maintains its own version."""
@@ -298,12 +298,12 @@ class TestVersionManagement:
         # Generate CRS twice
         generator.generate_markdown_spec('CRS')
         crs_content, _ = generator.generate_markdown_spec('CRS')
-        crs_version_match = re.search(r'\*\*Version\*\*:\s*(\d+)\.(\d+)', crs_content)
+        crs_version_match = re.search(r'\|\s*\*\*Version\*\*\s*\|\s*(\d+)\.(\d+)\s*\|', crs_content)
         crs_version = f"{crs_version_match.group(1)}.{crs_version_match.group(2)}"
         
         # Generate SYS once
         sys_content, _ = generator.generate_markdown_spec('SYS')
-        sys_version_match = re.search(r'\*\*Version\*\*:\s*(\d+)\.(\d+)', sys_content)
+        sys_version_match = re.search(r'\|\s*\*\*Version\*\*\s*\|\s*(\d+)\.(\d+)\s*\|', sys_content)
         sys_version = f"{sys_version_match.group(1)}.{sys_version_match.group(2)}"
         
         # Versions should be different (CRS should be higher)
@@ -317,18 +317,18 @@ class TestVersionManagement:
         # Generate initial document
         markdown_content1, output_path = generator.generate_markdown_spec('SDS')
         
-        # Manually modify the file to set a specific version
+        # Manually modify the file to set a specific version in table format
         content = output_path.read_text()
         modified_content = re.sub(
-            r'\*\*Version\*\*:\s*\d+\.\d+',
-            '**Version**: 2.5',
+            r'\|\s*\*\*Version\*\*\s*\|\s*\d+\.\d+\s*\|',
+            '| **Version** | 2.5 |',
             content
         )
         output_path.write_text(modified_content)
         
         # Regenerate - should read 2.5 and increment to 2.6
         markdown_content2, _ = generator.generate_markdown_spec('SDS')
-        version_match = re.search(r'\*\*Version\*\*:\s*(\d+)\.(\d+)', markdown_content2)
+        version_match = re.search(r'\|\s*\*\*Version\*\*\s*\|\s*(\d+)\.(\d+)\s*\|', markdown_content2)
         
         assert version_match, "Version should be present"
         major, minor = int(version_match.group(1)), int(version_match.group(2))
