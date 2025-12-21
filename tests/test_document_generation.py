@@ -250,5 +250,91 @@ class TestErrorHandling:
             pass  # File exists, which is fine
 
 
+class TestVersionManagement:
+    """Test document version management."""
+    
+    def test_version_increment_on_regeneration(self, generator, core):
+        """Test that version increments on each regeneration."""
+        import re
+        
+        # First generation
+        markdown_content1, output_path1 = generator.generate_markdown_spec('CRS')
+        version_match1 = re.search(r'\*\*Version\*\*:\s*(\d+)\.(\d+)', markdown_content1)
+        assert version_match1, "Version should be present in generated document"
+        major1, minor1 = int(version_match1.group(1)), int(version_match1.group(2))
+        
+        # Second generation - version should increment
+        markdown_content2, output_path2 = generator.generate_markdown_spec('CRS')
+        version_match2 = re.search(r'\*\*Version\*\*:\s*(\d+)\.(\d+)', markdown_content2)
+        assert version_match2, "Version should be present in regenerated document"
+        major2, minor2 = int(version_match2.group(1)), int(version_match2.group(2))
+        
+        # Verify version incremented
+        assert major2 == major1, "Major version should not change"
+        assert minor2 == minor1 + 1, f"Minor version should increment from {minor1} to {minor1 + 1}, got {minor2}"
+        
+        # Third generation - version should increment again
+        markdown_content3, output_path3 = generator.generate_markdown_spec('CRS')
+        version_match3 = re.search(r'\*\*Version\*\*:\s*(\d+)\.(\d+)', markdown_content3)
+        major3, minor3 = int(version_match3.group(1)), int(version_match3.group(2))
+        
+        assert minor3 == minor2 + 1, f"Minor version should increment from {minor2} to {minor2 + 1}, got {minor3}"
+    
+    def test_status_reset_to_draft(self, generator):
+        """Test that status is always reset to Draft on regeneration."""
+        markdown_content, _ = generator.generate_markdown_spec('CRS')
+        
+        # Verify status is Draft
+        assert "**Status**: Draft" in markdown_content, "Status should be set to Draft"
+        
+        # Regenerate and verify status is still Draft
+        markdown_content2, _ = generator.generate_markdown_spec('CRS')
+        assert "**Status**: Draft" in markdown_content2, "Status should remain Draft after regeneration"
+    
+    def test_version_persists_across_doc_types(self, generator):
+        """Test that each document type maintains its own version."""
+        import re
+        
+        # Generate CRS twice
+        generator.generate_markdown_spec('CRS')
+        crs_content, _ = generator.generate_markdown_spec('CRS')
+        crs_version_match = re.search(r'\*\*Version\*\*:\s*(\d+)\.(\d+)', crs_content)
+        crs_version = f"{crs_version_match.group(1)}.{crs_version_match.group(2)}"
+        
+        # Generate SYS once
+        sys_content, _ = generator.generate_markdown_spec('SYS')
+        sys_version_match = re.search(r'\*\*Version\*\*:\s*(\d+)\.(\d+)', sys_content)
+        sys_version = f"{sys_version_match.group(1)}.{sys_version_match.group(2)}"
+        
+        # Versions should be different (CRS should be higher)
+        assert crs_version != sys_version, "Each document type should have independent versioning"
+    
+    def test_version_extraction_from_existing_file(self, generator):
+        """Test that version is correctly read from existing file."""
+        import re
+        from pathlib import Path
+        
+        # Generate initial document
+        markdown_content1, output_path = generator.generate_markdown_spec('SDS')
+        
+        # Manually modify the file to set a specific version
+        content = output_path.read_text()
+        modified_content = re.sub(
+            r'\*\*Version\*\*:\s*\d+\.\d+',
+            '**Version**: 2.5',
+            content
+        )
+        output_path.write_text(modified_content)
+        
+        # Regenerate - should read 2.5 and increment to 2.6
+        markdown_content2, _ = generator.generate_markdown_spec('SDS')
+        version_match = re.search(r'\*\*Version\*\*:\s*(\d+)\.(\d+)', markdown_content2)
+        
+        assert version_match, "Version should be present"
+        major, minor = int(version_match.group(1)), int(version_match.group(2))
+        assert major == 2, "Major version should be 2"
+        assert minor == 6, f"Minor version should be 6 (2.5 + 1), got {minor}"
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

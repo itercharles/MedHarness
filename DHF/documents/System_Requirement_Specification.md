@@ -3,7 +3,7 @@
 <div class="doc-info">
 
 **Document ID**: SYS-SPEC  
-**Version**: 1.0  
+**Version**: 1.5  
 **Generated**: 2025-12-21  
 **Status**: Draft  
 **Project**: CompliantFlow Project

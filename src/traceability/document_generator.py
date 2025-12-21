@@ -126,6 +126,24 @@ class DocumentGenerator:
         if not doc_type_config:
             raise ValueError(f"Unknown document type: {doc_type_code}")
         
+        # Read existing version if file exists
+        current_version = "1.0"
+        if output_path.exists():
+            try:
+                existing_content = output_path.read_text()
+                # Extract version from existing file (looks for **Version**: X.Y pattern)
+                import re
+                version_match = re.search(r'\*\*Version\*\*:\s*(\d+)\.(\d+)', existing_content)
+                if version_match:
+                    major = int(version_match.group(1))
+                    minor = int(version_match.group(2))
+                    # Increment minor version
+                    minor += 1
+                    current_version = f"{major}.{minor}"
+            except Exception:
+                # If we can't read version, start from 1.0
+                current_version = "1.0"
+        
         # Gather all items of this type
         all_items = self.core.get_all_items()
         items = [
@@ -142,9 +160,9 @@ class DocumentGenerator:
             'doc_type_name': spec_config.get('doc_type_name', doc_type_config.name),
             'test_type': spec_config.get('test_type', ''),
             'project_name': 'CompliantFlow Project',
-            'version': '1.0',
+            'version': current_version,
             'generation_date': datetime.now().isoformat()[:10],
-            'status': 'Draft',
+            'status': 'Draft',  # Always reset to Draft on regeneration
             'items': items,
             'directory': doc_type_config.directory if hasattr(doc_type_config, 'directory') else ''
         }

@@ -139,16 +139,22 @@ def render_table_section(
                         doc_type_code = doc_type_config['code']
                         markdown_content, output_path = generator.generate_markdown_spec(doc_type_code)
                         
+                        # Extract version from generated content
+                        import re
+                        version_match = re.search(r'\*\*Version\*\*:\s*(\d+\.\d+)', markdown_content)
+                        version = version_match.group(1) if version_match else "Unknown"
+                        
                         # Store in session state for display - scoped to doc type
                         st.session_state[f'preview_content_{doc_type_code}'] = markdown_content
                         st.session_state[f'last_regeneration_{doc_type_code}'] = {
                             'success': True,
                             'filename': output_path.name,
-                            'path': str(output_path)
+                            'path': str(output_path),
+                            'version': version
                         }
                     
                     # Show toast notification that persists
-                    st.toast(f"✅ Successfully regenerated {output_path.name}", icon="✅")
+                    st.toast(f"✅ Successfully regenerated {output_path.name} (v{version})", icon="✅")
                     st.rerun()
                         
                 except Exception as e:
@@ -167,7 +173,8 @@ def render_table_section(
         if f'last_regeneration_{doc_type_code}' in st.session_state:
             regen_info = st.session_state[f'last_regeneration_{doc_type_code}']
             if regen_info['success']:
-                st.success(f"✅ Last regenerated: {regen_info['filename']}")
+                version_info = f" (v{regen_info.get('version', 'Unknown')})" if 'version' in regen_info else ""
+                st.success(f"✅ Last regenerated: {regen_info['filename']}{version_info} - Status: Draft")
                 st.info(f"📝 File: `{regen_info['path']}`\n\nReview with `git diff` and commit the changes.")
             else:
                 st.error(f"❌ Last regeneration failed: {regen_info['error']}")
