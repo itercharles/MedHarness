@@ -195,7 +195,7 @@ def test_TC_CRS_008_001_document_generation_workflow():
     # Verify document generator exists
     from traceability.document_generator import DocumentGenerator
     
-    template_dir = dhf_root / "templates"
+    template_dir = dhf_root / "documents" / "specifications" / "templates"
     generator = DocumentGenerator(core, template_dir)
     
     # Verify key generation methods exist
@@ -205,7 +205,7 @@ def test_TC_CRS_008_001_document_generation_workflow():
         "Missing traceability matrix generation"
     
     # Verify template directory exists
-    assert template_dir.exists(), "Template directory not found"
+    assert template_dir.exists(), f"Template directory not found at {template_dir}"
 
 
 def test_TC_CRS_011_001_compliance_dashboard():
