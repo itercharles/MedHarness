@@ -1,14 +1,16 @@
 # Customer Requirement Specification
 
-<div class="doc-info">
+---
 
-**Document ID**: CRS-SPEC  
-**Version**: 1.19  
-**Generated**: 2025-12-21  
-**Status**: Draft  
-**Project**: CompliantFlow Project
+**Document Metadata**
 
-</div>
+| Field | Value |
+|-------|-------|
+| **Document ID** | CRS-SPEC |
+| **Version** | 1.20 |
+| **Generated** | 2025-12-21 |
+| **Status** | Draft |
+| **Project** | CompliantFlow Project |
 
 ---
 
