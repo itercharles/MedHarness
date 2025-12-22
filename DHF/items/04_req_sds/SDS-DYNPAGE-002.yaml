@@ -1,6 +1,0 @@
-id: SDS-DYNPAGE-002
-status: approved
-title: Main Application Navigation
-content: Update app.py to use st.navigation() with dynamically generated pages list, including Home page, document type pages, and special pages (Traceability, Compliance).
-links: ["SYS-028"]
-component: Frontend.Application

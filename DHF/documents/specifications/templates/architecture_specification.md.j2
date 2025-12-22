@@ -14,26 +14,150 @@
 
 ---
 
-## 1. Introduction
+## 1. System Overview
 
-This document specifies the system architecture for {{ project_name }}. This specification is part of the Design History File (DHF) and provides comprehensive documentation of architectural decisions, design rationale, and technical implementation details.
+CompliantFlow is a **web-based Design History File (DHF) management system** for medical device software development compliant with IEC 62304 and ISO 13485.
 
-### 1.1 Purpose
-
-This document provides detailed architecture specifications including:
-- System architecture and component design
-- Data models and storage architecture
-- Technology stack and implementation choices
-- Design rationale and alternatives considered
-- Interface definitions and integration points
-
-### 1.2 Scope
-
-This specification covers all architecture components defined in the CompliantFlow system as of {{ generation_date }}.
+**System Purpose:** Enable development teams to manage requirements, traceability, testing, and regulatory documentation through a structured, auditable workflow.
 
 ---
 
-## 2. Architecture Components
+## 2. System Architecture
+
+### 2.1 Architecture Decision
+
+**System Type:** Pure Software System
+- Web-based Python application for DHF management
+- Single software subsystem architecture
+
+### 2.2 Technology Stack
+
+**Core Technologies:**
+- **Python 3.11+** - Application runtime
+- **Streamlit** - Web framework and UI
+- **NetworkX** - Graph analysis
+- **Pydantic** - Data validation
+- **Jinja2** - Template rendering
+- **WeasyPrint** - PDF generation
+- **YAML** - Data format
+- **Git** - Version control
+
+**Deployment:**
+- Web browser (Chrome, Firefox, Safari)
+- Python virtual environment
+- File system for data storage
+
+---
+
+## 3. Data Management Architecture
+
+### 3.1 Storage Strategy
+
+**File-based with Git version control**
+
+### 3.2 Data Structure
+
+```
+DHF/
+├── items/                    # All DHF items
+│   ├── 01_req_crs/          # Customer requirements
+│   ├── 02_req_sys/          # System requirements
+│   ├── 03_req_srs/          # Software requirements
+│   ├── 04_req_sds/          # Design specifications
+│   ├── 05_test_crs/         # Customer tests
+│   ├── 06_test_sys/         # System tests
+│   ├── 07_risk/             # Risk items
+│   └── 08_defect/           # Defect items
+├── config/
+│   ├── project_config.yaml  # Document types, lifecycles
+│   └── IEC_62304.yaml       # Compliance mapping
+└── documents/
+    ├── specifications/       # Generated documents
+    └── procedures/          # Manual procedures
+```
+
+### 3.3 Design Rationale: File-Based vs Database
+
+**Why File-Based (YAML + Git)?**
+
+✅ **Traceability:** Each item = one file with unique ID  
+✅ **Version Control:** Git provides complete audit trail (IEC 62304 §5.1.9)  
+✅ **Human Readable:** YAML is text-based and easy to review  
+✅ **Portability:** Entire DHF is a directory  
+✅ **Simplicity:** No database server required  
+✅ **Regulatory Compliance:** Supports IEC 62304 §5.1.4, §5.1.9, 21 CFR Part 11
+
+**When Database Would Be Better:**
+- Thousands of items (current: ~100s)
+- Complex queries across items
+- Multiple users editing simultaneously
+
+**CompliantFlow's Scale:** 100-500 requirements, 2-10 users, simple parent-child links
+
+---
+
+## 4. Component Architecture
+
+### 4.1 System Architecture Diagram
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    CompliantFlow System                      │
+├─────────────────────────────────────────────────────────────┤
+│                                                               │
+│  ┌──────────────────┐         ┌──────────────────┐          │
+│  │  User (Browser)  │◄────────┤  Streamlit UI    │          │
+│  └──────────────────┘         └────────┬─────────┘          │
+│                                         │                     │
+│                              ┌──────────▼──────────┐         │
+│                              │  CompliantFlowCore  │         │
+│                              └──────────┬──────────┘         │
+│                                         │                     │
+│         ┌───────────────────────────────┼─────────────┐      │
+│         │                               │             │      │
+│  ┌──────▼────────┐  ┌──────────────────▼──┐  ┌───────▼────┐│
+│  │ GraphEngine   │  │ DocumentGenerator   │  │ Workflow   ││
+│  └──────┬────────┘  └──────────┬──────────┘  │ Engine     ││
+│         │                      │              └───────┬────┘│
+│         │                      │                      │      │
+│  ┌──────▼──────────────────────▼──────────────────────▼────┐│
+│  │              ItemLoader / ItemSaver                      ││
+│  │              (YAML + Git)                                ││
+│  └──────────────────────────────────────────────────────────┘│
+│                                                               │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 4.2 Component Descriptions
+
+**CompliantFlowCore:**
+- Central orchestrator
+- Manages item lifecycle
+- Coordinates graph, documents, workflow
+
+**GraphEngine:**
+- Builds traceability graph using NetworkX
+- Analyzes dependencies
+- Detects orphans and coverage gaps
+
+**DocumentGenerator:**
+- Renders Jinja2 templates
+- Generates markdown specifications
+- Converts to PDF using WeasyPrint
+
+**WorkflowEngine:**
+- Manages item lifecycle states
+- Validates state transitions
+- Enforces approval criteria
+
+**ItemLoader/ItemSaver:**
+- Loads items from YAML files
+- Saves items with Git commits
+- Manages directory structure
+
+---
+
+## 5. Architecture Items
 
 {% for item in items %}
 ### {{ loop.index }}. {{ item.id }}: {{ item.title }}
@@ -86,41 +210,68 @@ This specification covers all architecture components defined in the CompliantFl
 
 ---
 
-## 3. Summary
+## 6. Data Interfaces
 
-### 3.1 Architecture Statistics
+### 6.1 ItemLoader
 
-| Metric | Count |
-|--------|-------|
-| **Total Architecture Components** | {{ items | length }} |
-| **System Architecture** | {{ items | selectattr('architecture_type', 'equalto', 'system') | list | length }} |
-| **Data Architecture** | {{ items | selectattr('architecture_type', 'equalto', 'data') | list | length }} |
-| **UI Architecture** | {{ items | selectattr('architecture_type', 'equalto', 'ui') | list | length }} |
-| **Integration Architecture** | {{ items | selectattr('architecture_type', 'equalto', 'integration') | list | length }} |
+```python
+class ItemLoader:
+    def load_all() -> List[Item]
+    def load_by_uid(uid: str) -> Optional[Item]
+    def load_by_prefix(prefix: str) -> List[Item]
+```
 
-### 3.2 Component Status
+### 6.2 ItemSaver
 
-| Status | Count |
-|--------|-------|
-| **Draft** | {{ items | selectattr('status', 'equalto', 'draft') | list | length }} |
-| **Review** | {{ items | selectattr('status', 'equalto', 'review') | list | length }} |
-| **Approved** | {{ items | selectattr('status', 'equalto', 'approved') | list | length }} |
+```python
+class ItemSaver:
+    def save(item: Item, author: str) -> Path
+    def delete(uid: str, author: str) -> bool
+```
 
-### 3.3 Technology Overview
+### 6.3 GitRepository
 
-This architecture specification documents the following key technologies:
-{% set tech_items = items | selectattr('technology_stack') | list %}
-{% if tech_items %}
-{% for item in tech_items %}
-- **{{ item.title }}**: See {{ item.id }} for details
-{% endfor %}
-{% endif %}
+```python
+class GitRepository:
+    def commit(message: str, files: List[Path]) -> str
+    def get_history(file_path: Path) -> List[Commit]
+```
 
 ---
 
-## 4. Compliance and Traceability
+## 7. Technology Decisions
 
-### 4.1 Requirements Traceability
+### 7.1 Why Python/Streamlit?
+- Rapid development with quick UI prototyping
+- Rich Python ecosystem for data processing
+- Clear audit trail for medical device compliance
+
+### 7.2 Why YAML Files?
+- Human-readable for review and audit
+- Git-friendly text format
+- Supports IEC 62304 §5.1.4 (software item identification)
+
+### 7.3 Why Git?
+- IEC 62304 §5.1.9 (configuration management)
+- Complete version history
+- Industry standard for collaboration
+
+---
+
+## 8. Compliance Mapping
+
+### 8.1 IEC 62304 Requirements
+
+| IEC 62304 Section | CompliantFlow Implementation |
+|-------------------|------------------------------|
+| §5.1.4 Software Item Identification | YAML files with unique IDs |
+| §5.1.9 Configuration Management | Git version control |
+| §5.2 Software Requirements | SRS items in `DHF/items/03_req_srs/` |
+| §5.3 Software Architecture | SWAD items |
+| §5.4 Software Detailed Design | SWDD items |
+| §9.7 Problem Resolution | Defect tracking system |
+
+### 8.2 Requirements Traceability
 
 This architecture specification satisfies the following system requirements:
 {% set all_links = [] %}
@@ -142,17 +293,45 @@ This architecture specification satisfies the following system requirements:
 *No requirement links defined*
 {% endif %}
 
-### 4.2 IEC 62304 Compliance
+---
 
-This architecture documentation supports IEC 62304 compliance by providing:
-- Clear system architecture definition (§5.3.1)
-- Software item identification (§5.3.2)
-- Interface specifications (§5.3.3)
-- Design rationale and alternatives (§5.3.6)
+## 9. Summary
+
+### 9.1 Architecture Statistics
+
+| Metric | Count |
+|--------|-------|
+| **Total Architecture Components** | {{ items | length }} |
+| **System Architecture** | {{ items | selectattr('architecture_type', 'equalto', 'system') | list | length }} |
+| **Data Architecture** | {{ items | selectattr('architecture_type', 'equalto', 'data') | list | length }} |
+| **UI Architecture** | {{ items | selectattr('architecture_type', 'equalto', 'ui') | list | length }} |
+| **Integration Architecture** | {{ items | selectattr('architecture_type', 'equalto', 'integration') | list | length }} |
+
+### 9.2 Component Status
+
+| Status | Count |
+|--------|-------|
+| **Draft** | {{ items | selectattr('status', 'equalto', 'draft') | list | length }} |
+| **Review** | {{ items | selectattr('status', 'equalto', 'review') | list | length }} |
+| **Approved** | {{ items | selectattr('status', 'equalto', 'approved') | list | length }} |
 
 ---
 
-## 5. Document Control
+## 10. Future Considerations
+
+### 10.1 Database Migration
+
+To enable database migration, would need to:
+1. Create abstract `ItemRepository` interface
+2. Refactor `ItemLoader` + `ItemSaver` into `FileBasedRepository`
+3. Create `DatabaseRepository` implementation
+4. Update `CompliantFlowCore` to accept abstract repository
+
+This is documented in the gap analysis but not currently implemented.
+
+---
+
+## 11. Document Control
 
 **Document Owner**: System Architecture Team  
 **Last Updated**: {{ generation_date }}  

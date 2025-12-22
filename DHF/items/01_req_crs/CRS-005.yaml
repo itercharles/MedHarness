@@ -1,15 +1,9 @@
 id: CRS-005
-content: Users shall be able to document, track, and resolve software defects throughout
-  the development lifecycle with full traceability to affected requirements and tests.
-links: []
-title: Problem Resolution Tracking
-user_group: Development Team, Quality Assurance, Project Management
-source: IEC 62304 §9.7
+title: Usability
+content: The system shall be easy to learn and use for engineers with minimal training.
+rationale: User adoption depends on ease of use
+stakeholder: Development Team
+priority: High
+derives_from:
+- UC-001
 status: approved
-manual_verifications:
-  review_complete:
-    verified_by: 1.1.0
-    verified_date: '2025-12-20T11:56:13.991071'
-    notes: ''
-approved_by: Release verification status not updating after manual verification
-approved_date: '2025-12-20T11:56:19.238269'

@@ -1,8 +1,0 @@
-id: SDS-DEF-006
-content: Add verification field to Defect model. Implement validation in DefectWorkflow
-  to enforce resolved → verified → closed sequence, preventing direct closure without
-  verification.
-links:
-- SYS-012
-title: Defect Verification Fields
-status: draft

@@ -1,22 +1,10 @@
 id: CRS-007
-content: "As a medical device manufacturer, I need to track and manage all third-party\
-  \ \nsoftware components (SOUP - Software of Unknown Provenance) used in the device\
-  \ \nsoftware to ensure regulatory compliance and patient safety.\n\n**User Need**:\n\
-  - Identify all third-party libraries and dependencies\n- Document the purpose and\
-  \ rationale for each component\n- Track security vulnerabilities (CVEs) in dependencies\n\
-  - Maintain traceability from components to system requirements\n- Demonstrate compliance\
-  \ with IEC 62304 Section 5.3\n- Generate SOUP documentation for regulatory submissions\n\
-  \n**Acceptance Criteria**:\n- Can import SOUP data from security scanning tools\
-  \ (Veracode, Snyk, etc.)\n- Each SOUP item documents: name, version, manufacturer,\
-  \ license, purpose\n- SOUP items linked to system requirements showing usage rationale\n\
-  - Approval workflow ensures proper review before use\n- Can generate SOUP list for\
-  \ DHF documentation\n\n**Regulatory Context**:\nIEC 62304 Section 5.3 requires manufacturers\
-  \ to identify and document all \nSOUP items, including their intended use, functional\
-  \ requirements, and \nverification evidence."
-links: []
-title: Third-Party Software Component Management
-reviewer: Product Owner
-review_date: '2024-12-15'
-user_group: Quality Assurance, Regulatory Affairs
-source: IEC 62304 Section 5.3, FDA Guidance
+title: Portable DHF
+content: The system shall store DHF in human-readable, version-controlled files that
+  can be easily backed up, archived, and submitted to regulatory authorities.
+rationale: DHF must be preserved for product lifetime (10+ years)
+stakeholder: Quality Assurance
+priority: High
+derives_from:
+- UC-001
 status: approved

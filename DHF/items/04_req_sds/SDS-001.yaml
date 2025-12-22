@@ -1,7 +1,0 @@
-id: SDS-001
-content: Use NetworkX DiGraph to store items as nodes and traceability links as edges.
-links:
-- SYS-002
-title: Graph Data Structure
-component: Backend.Generic
-status: draft

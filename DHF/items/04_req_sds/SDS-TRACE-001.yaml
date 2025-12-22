@@ -1,6 +1,0 @@
-id: SDS-TRACE-001
-status: approved
-title: TraceabilityMatrix Pydantic Model
-content: Implement TraceabilityMatrix model with name (str), description (str), and path (List[str]) fields in config.py.
-links: ["SYS-021"]
-component: Backend.Configuration

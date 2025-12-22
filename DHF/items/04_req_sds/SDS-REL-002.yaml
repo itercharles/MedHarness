@@ -1,9 +1,0 @@
-id: SDS-REL-002
-content: Implement ReleaseValidator class with methods to check requirement coverage,
-  verify all tests pass, and check for open critical defects. Implement WorkflowCriteriaChecker
-  class to evaluate configurable criteria from workflow_criteria.yaml including automated
-  checks (field validation, counts, percentages) and manual verification tracking.
-links:
-- SYS-017
-title: Release Verification Logic
-status: draft

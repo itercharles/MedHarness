@@ -1,17 +1,11 @@
 id: CRS-006
-content: Users shall be able to create, track and document software releases with
-  verification that all requirements are tested and defects are resolved. Each stage
-  transition shall require approval, and manual verification steps shall be tracked
-  with approver identity.
-links: []
-title: Release Management
-user_group: Development Team, Quality Assurance, Regulatory Affairs
-source: IEC 62304 §5.8
+title: Configurable Workflows
+content: The system shall allow customization of document types, workflows, and validation
+  rules without code changes to adapt to different regulatory frameworks.
+rationale: Different products and regions have different requirements
+stakeholder: Process Owner
+priority: Medium
+derives_from:
+- UC-001
+- UC-005
 status: approved
-manual_verifications:
-  review_complete:
-    verified_by: charles
-    verified_date: '2025-12-20T11:11:41.091768'
-    notes: ''
-approved_by: charles
-approved_date: '2025-12-20T11:11:45.870891'

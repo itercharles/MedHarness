@@ -1,6 +1,0 @@
-id: SDS-DYNPAGE-001
-status: approved
-title: Page Generator Module
-content: Implement page_generator.py module with create_doc_page_function() to create unique page functions and generate_doc_type_pages() to build sorted page list from configuration.
-links: ["SYS-028", "SYS-029"]
-component: Backend.PageGeneration

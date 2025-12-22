@@ -1,22 +1,10 @@
 id: CRS-008
-content: "As a regulatory affairs professional, I need to generate professional, \n\
-  regulatory-ready PDF documents from CompliantFlow data to support DHF \nsubmissions\
-  \ and regulatory audits.\n\n**User Need**:\n- Export requirements specifications\
-  \ (CRS, SYS, SDS) as formatted PDFs\n- Generate traceability matrix showing requirement\
-  \ chains\n- Produce professional documents with proper styling and formatting\n\
-  - Include metadata (version, date, approval status)\n- Support regulatory submission\
-  \ requirements\n\n**Acceptance Criteria**:\n- Can export any requirement type (CRS,\
-  \ SYS, SDS) as PDF\n- PDFs include all requirement details (ID, title, content,\
-  \ status, links)\n- Professional formatting with headers, footers, page numbers\n\
-  - Traceability matrix shows CRS → SYS → SDS → Test chains\n- Coverage analysis included\
-  \ (% requirements with tests)\n- One-click export from UI\n- PDFs suitable for regulatory\
-  \ submission\n\n**Business Value**:\n- Reduces manual document preparation time\n\
-  - Ensures consistency in regulatory documentation\n- Provides audit trail with auto-generated\
-  \ dates\n- Supports FDA 21 CFR Part 11 compliance (electronic records)"
-links: []
-title: Regulatory Document Generation and Export
-reviewer: Product Owner
-review_date: '2024-12-15'
-user_group: Regulatory Affairs, Quality Assurance
-source: FDA 21 CFR 820.30, IEC 62304 Section 5.1
+title: Automated Test Integration
+content: The system shall integrate with automated test frameworks to show real-time
+  test results and verification status for requirements.
+rationale: Manual test tracking is error-prone and outdated
+stakeholder: Test Engineering
+priority: Medium
+derives_from:
+- UC-002
 status: approved

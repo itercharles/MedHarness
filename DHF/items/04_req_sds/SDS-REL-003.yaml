@@ -1,9 +1,0 @@
-id: SDS-REL-003
-content: Implement release state transitions with validation - planning → developing
-  → testing → released. Each transition requires approver identity and must pass all
-  criteria defined in DHF/config/workflow_criteria.yaml. Track all stage approvals
-  with timestamp and approver name.
-links:
-- SYS-018
-title: Release Workflow State Machine
-status: draft

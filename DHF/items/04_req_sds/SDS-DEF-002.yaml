@@ -1,8 +1,0 @@
-id: SDS-DEF-002
-content: Implement DefectWorkflow class with state transition validation. Define valid
-  transitions map and methods for assign_defect(), start_investigation(), resolve_defect(),
-  verify_resolution(), close_defect().
-links:
-- SYS-010
-title: Defect Workflow State Machine
-status: draft

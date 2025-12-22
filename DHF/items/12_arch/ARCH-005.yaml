@@ -1,6 +1,0 @@
-id: ARCH-005
-status: approved
-title: Configuration-Driven UI Architecture
-content: The system employs a configuration-driven architecture where UI pages are generated dynamically from YAML configuration rather than hardcoded files. This reduces code duplication, improves maintainability, and enables runtime customization without code changes.
-rationale: Eliminates need to create/maintain separate page files for each document type. Reduces from 8+ hardcoded pages to single page generator. Enables adding new document types via configuration only. Aligns with DRY principle and configuration-driven design philosophy.
-links: ["SYS-028"]

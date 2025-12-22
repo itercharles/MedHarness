@@ -1,6 +1,0 @@
-id: SDS-COMP-002
-status: approved
-title: Compliance Score Visualization
-content: Implement score calculation, color-coded display (green/yellow/red indicators), and progress bar visualization for compliance percentage.
-links: ["SYS-026"]
-component: Frontend.Visualization

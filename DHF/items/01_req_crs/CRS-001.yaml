@@ -1,6 +1,12 @@
 id: CRS-001
-content: Users shall be able to define and view traceability relationships between
-  different project artifacts (e.g., Requirements -> Tests).
-links: []
-title: Traceability Management
-status: draft
+title: IEC 62304 Compliance
+content: The system shall support IEC 62304 medical device software lifecycle processes
+  including requirements management, traceability, verification, and configuration
+  management.
+rationale: Required for medical device regulatory approval
+stakeholder: Regulatory Affairs
+priority: Critical
+derives_from:
+- UC-002
+- UC-005
+status: approved

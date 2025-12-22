@@ -1,9 +1,0 @@
-id: SDS-DEF-004
-content: Implement Streamlit page with three tabs - Report Defect (form with all fields),
-  Manage Defects (filters by status/severity/assignee with expandable cards), Defect
-  History (metrics dashboard and CSV export).
-links:
-- SYS-009
-- SYS-015
-title: Defect Streamlit UI
-status: draft

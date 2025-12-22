@@ -1,8 +1,0 @@
-id: SDS-DEF-005
-content: Add root_cause and resolution fields to Defect model. Implement validation
-  in DefectWorkflow.resolve_defect() to require both fields before allowing status
-  change to resolved.
-links:
-- SYS-011
-title: Defect Root Cause Fields
-status: draft

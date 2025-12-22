@@ -1,16 +1,10 @@
 id: CRS-003
-content: Users shall be able to automatically verify project compliance against regulations
-  and internal procedures.
-links: []
-active: true
-title: Compliance Checking
-history: []
+title: Complete Audit Trail
+content: The system shall provide complete, tamper-evident audit trail of all changes
+  to DHF items including who made changes, when, and why.
+rationale: Required for 21 CFR Part 11 electronic records compliance
+stakeholder: Quality Assurance
+priority: Critical
+derives_from:
+- UC-001
 status: approved
-manual_verifications:
-  review_complete:
-    verified_by: charles
-    verified_date: '2025-12-20T19:30:34.480627'
-    notes: ''
-approved_by: charles release
-approved_date: '2025-12-20'
-timestamp: '2025-12-20T19:30:41.242028'

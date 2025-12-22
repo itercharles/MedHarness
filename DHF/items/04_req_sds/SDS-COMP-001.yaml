@@ -1,6 +1,0 @@
-id: SDS-COMP-001
-status: approved
-title: Compliance Dashboard Page Component
-content: Implement Streamlit page (03_Compliance.py) with policy group selector, compliance check button, and results display sections.
-links: ["SYS-025", "SYS-027"]
-component: Frontend.Pages

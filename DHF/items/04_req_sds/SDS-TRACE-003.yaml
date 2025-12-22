@@ -1,6 +1,0 @@
-id: SDS-TRACE-003
-status: approved
-title: Status Warning Helper Function
-content: Implement should_show_warning function to check item status against lifecycle's stable states, raising ValueError for missing configuration.
-links: ["SYS-023"]
-component: Backend.Traceability
