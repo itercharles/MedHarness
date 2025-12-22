@@ -7,8 +7,8 @@
 | Field | Value |
 |-------|-------|
 | **Document ID** | TC-SYS-TEST-SPEC |
-| **Version** | 1.1 |
-| **Generated** | 2025-12-21 |
+| **Version** | 1.3 |
+| **Generated** | 2025-12-22 |
 | **Status** | Draft |
 | **Project** | CompliantFlow Project |
 
@@ -24,7 +24,7 @@ This document provides a comprehensive list of all verification test cases, incl
 
 ### 1.2 Scope
 
-This specification covers all System Tests defined in the CompliantFlow system as of 2025-12-21.
+This specification covers all System Tests defined in the CompliantFlow system as of 2025-12-22.
 
 ---
 
@@ -134,24 +134,7 @@ Valid project_config.yaml file
 
 </div>
 
-### 5. TC-SYS-004: Verify Governance Parsing
-
-<div class="test-case-section">
-
-**Status**: <span class="status-approved">APPROVED</span>  
-**Verification Status**: <span class="verification-not_verified">NOT VERIFIED</span>  
-
-#### Validates/Verifies
-
-- SYS-005
-
-
-
-
-
-</div>
-
-### 6. TC-SYS-005: Verify Required Fields Validation
+### 5. TC-SYS-005: Verify Required Fields Validation
 
 <div class="test-case-section">
 
@@ -177,24 +160,7 @@ CompliantFlowCore initialized
 
 </div>
 
-### 7. TC-SYS-005: Verify Policy Checks
-
-<div class="test-case-section">
-
-**Status**: <span class="status-approved">APPROVED</span>  
-**Verification Status**: <span class="verification-not_verified">NOT VERIFIED</span>  
-
-#### Validates/Verifies
-
-- SYS-006
-
-
-
-
-
-</div>
-
-### 8. TC-SYS-006: Verify Traceability Matrix Configuration
+### 6. TC-SYS-006: Verify Traceability Matrix Configuration
 
 <div class="test-case-section">
 
@@ -220,24 +186,7 @@ project_config.yaml with traceability_matrices section
 
 </div>
 
-### 9. TC-SYS-006: Verify Graph Visualization
-
-<div class="test-case-section">
-
-**Status**: <span class="status-approved">APPROVED</span>  
-**Verification Status**: <span class="verification-not_verified">NOT VERIFIED</span>  
-
-#### Validates/Verifies
-
-- SYS-007
-
-
-
-
-
-</div>
-
-### 10. TC-SYS-007: Verify Lifecycle State Validation
+### 7. TC-SYS-007: Verify Lifecycle State Validation
 
 <div class="test-case-section">
 
@@ -263,24 +212,7 @@ Doc types with lifecycle configuration
 
 </div>
 
-### 11. TC-SYS-007: Verify Policy Evaluation
-
-<div class="test-case-section">
-
-**Status**: <span class="status-approved">APPROVED</span>  
-**Verification Status**: <span class="verification-not_verified">NOT VERIFIED</span>  
-
-#### Validates/Verifies
-
-- SYS-008
-
-
-
-
-
-</div>
-
-### 12. TC-SYS-008: Verify Document Type Prefix Matching
+### 8. TC-SYS-008: Verify Document Type Prefix Matching
 
 <div class="test-case-section">
 
@@ -306,143 +238,7 @@ Multiple doc types configured
 
 </div>
 
-### 13. TC-SYS-008: Verify Change Request Functionality
-
-<div class="test-case-section">
-
-**Status**: <span class="status-approved">APPROVED</span>  
-**Verification Status**: <span class="verification-not_verified">NOT VERIFIED</span>  
-
-#### Validates/Verifies
-
-- SYS-008
-
-
-
-
-
-</div>
-
-### 14. TC-SYS-009-001: Verify Release Management
-
-<div class="test-case-section">
-
-**Status**: <span class="status-approved">APPROVED</span>  
-**Verification Status**: <span class="verification-not_verified">NOT VERIFIED</span>  
-
-#### Validates/Verifies
-
-- SYS-009
-
-
-
-
-
-</div>
-
-### 15. TC-SYS-010-001: Verify Defect Tracking
-
-<div class="test-case-section">
-
-**Status**: <span class="status-approved">APPROVED</span>  
-**Verification Status**: <span class="verification-not_verified">NOT VERIFIED</span>  
-
-#### Validates/Verifies
-
-- SYS-010
-
-
-
-
-
-</div>
-
-### 16. TC-SYS-011-001: Verify SOUP Tracking
-
-<div class="test-case-section">
-
-**Status**: <span class="status-approved">APPROVED</span>  
-**Verification Status**: <span class="verification-not_verified">NOT VERIFIED</span>  
-
-#### Validates/Verifies
-
-- SYS-011
-
-
-
-
-
-</div>
-
-### 17. TC-SYS-012-001: Verify Document Lifecycle Management
-
-<div class="test-case-section">
-
-**Status**: <span class="status-approved">APPROVED</span>  
-**Verification Status**: <span class="verification-not_verified">NOT VERIFIED</span>  
-
-#### Validates/Verifies
-
-- SYS-012
-
-
-
-
-
-</div>
-
-### 18. TC-SYS-013-001: Verify Traceability Links
-
-<div class="test-case-section">
-
-**Status**: <span class="status-approved">APPROVED</span>  
-**Verification Status**: <span class="verification-not_verified">NOT VERIFIED</span>  
-
-#### Validates/Verifies
-
-- SYS-013
-
-
-
-
-
-</div>
-
-### 19. TC-SYS-014-001: Verify Configuration Management
-
-<div class="test-case-section">
-
-**Status**: <span class="status-approved">APPROVED</span>  
-**Verification Status**: <span class="verification-not_verified">NOT VERIFIED</span>  
-
-#### Validates/Verifies
-
-- SYS-014
-
-
-
-
-
-</div>
-
-### 20. TC-SYS-015-001: Verify YAML Storage
-
-<div class="test-case-section">
-
-**Status**: <span class="status-approved">APPROVED</span>  
-**Verification Status**: <span class="verification-not_verified">NOT VERIFIED</span>  
-
-#### Validates/Verifies
-
-- SYS-015
-
-
-
-
-
-</div>
-
-### 21. TC-SYS-023-001: Verify Fail-Fast Configuration Validation
+### 9. TC-SYS-023-001: Verify Fail-Fast Configuration Validation
 
 <div class="test-case-section">
 
@@ -468,7 +264,7 @@ Project configuration with lifecycle states
 
 </div>
 
-### 22. TC-SYS-024-001: Verify Graph Cycle Detection
+### 10. TC-SYS-024-001: Verify Graph Cycle Detection
 
 <div class="test-case-section">
 
@@ -485,7 +281,7 @@ Project configuration with lifecycle states
 
 </div>
 
-### 23. TC-SYS-025-001: Verify Orphan Node Detection
+### 11. TC-SYS-025-001: Verify Orphan Node Detection
 
 <div class="test-case-section">
 
@@ -502,7 +298,7 @@ Project configuration with lifecycle states
 
 </div>
 
-### 24. TC-SYS-026-001: Verify Compliance Score Color Coding
+### 12. TC-SYS-026-001: Verify Compliance Score Color Coding
 
 <div class="test-case-section">
 
@@ -519,7 +315,7 @@ Project configuration with lifecycle states
 
 </div>
 
-### 25. TC-SYS-027-001: Verify Policy Evaluation Logic
+### 13. TC-SYS-027-001: Verify Policy Evaluation Logic
 
 <div class="test-case-section">
 
@@ -536,7 +332,7 @@ Project configuration with lifecycle states
 
 </div>
 
-### 26. TC-SYS-028-001: Verify Dynamic Page Registration
+### 14. TC-SYS-028-001: Verify Dynamic Page Registration
 
 <div class="test-case-section">
 
@@ -553,7 +349,7 @@ Project configuration with lifecycle states
 
 </div>
 
-### 27. TC-SYS-029-001: Verify Unique URL Path Generation
+### 15. TC-SYS-029-001: Verify Unique URL Path Generation
 
 <div class="test-case-section">
 
@@ -579,8 +375,8 @@ Project configuration with lifecycle states
 
 | Metric | Count |
 |--------|-------|
-| **Total Test Cases** | 27 |
-| **Approved** | 27 |
+| **Total Test Cases** | 15 |
+| **Approved** | 15 |
 | **Draft** | 0 |
 | **Verified** | 0 |
 | **Failed** | 0 |
@@ -588,18 +384,18 @@ Project configuration with lifecycle states
 
 ### 3.2 Test Coverage
 
-**Verification Rate**: 0.0% (0/27)
+**Verification Rate**: 0.0% (0/15)
 
 ### 3.3 Traceability
 
-**Tests with Requirements**: 27/27 (100.0%)
+**Tests with Requirements**: 15/15 (100.0%)
 
 ---
 
 ## 4. Document Control
 
 **Document Owner**: Quality Assurance  
-**Last Updated**: 2025-12-21  
+**Last Updated**: 2025-12-22  
 **Next Review**: TBD
 
 ---

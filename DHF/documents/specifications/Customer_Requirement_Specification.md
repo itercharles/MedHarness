@@ -7,8 +7,8 @@
 | Field | Value |
 |-------|-------|
 | **Document ID** | CRS-SPEC |
-| **Version** | 1.18 |
-| **Generated** | 2025-12-21 |
+| **Version** | 1.40 |
+| **Generated** | 2025-12-22 |
 | **Status** | Draft |
 | **Project** | CompliantFlow Project |
 
@@ -24,27 +24,13 @@ This document provides a comprehensive list of all Customer Requirements, includ
 
 ### 1.2 Scope
 
-This specification covers all Customer Requirements defined in the CompliantFlow system as of 2025-12-21.
+This specification covers all Customer Requirements defined in the CompliantFlow system as of 2025-12-22.
 
 ---
 
 ## 2. Requirements
 
-### 1. CRS-001: Traceability Management
-
-<div class="requirement-section">
-
-**Status**: <span class="status-draft">DRAFT</span>  
-
-#### Description
-
-Users shall be able to define and view traceability relationships between different project artifacts (e.g., Requirements -> Tests).
-
-
-
-</div>
-
-### 2. CRS-002: Docs-as-Code
+### 1. CRS-001: IEC 62304 Compliance
 
 <div class="requirement-section">
 
@@ -52,13 +38,13 @@ Users shall be able to define and view traceability relationships between differ
 
 #### Description
 
-Users shall be able to manage requirements and tests as version-controlled text files (YAML/Markdown).
+The system shall support IEC 62304 medical device software lifecycle processes including requirements management, traceability, verification, and configuration management.
 
 
 
 </div>
 
-### 3. CRS-003: Compliance Checking
+### 2. CRS-002: Complete Traceability
 
 <div class="requirement-section">
 
@@ -66,29 +52,13 @@ Users shall be able to manage requirements and tests as version-controlled text 
 
 #### Description
 
-Users shall be able to automatically verify project compliance against regulations and internal procedures.
+The system shall maintain complete traceability from user needs through requirements, design, implementation, and testing to demonstrate regulatory compliance.
 
 
 
 </div>
 
-### 4. CRS-004: Change Management
-
-<div class="requirement-section">
-
-**Status**: <span class="status-approved">APPROVED</span>  
-**Reviewer**: QA Manager  **Review Date**: 2025-12-13  
-#### Description
-
-As a regulatory affairs professional, I need a change management system to track 
-and approve changes to the medical device software, ensuring compliance with 
-IEC 62304 §6.2 and MDCG 2020-3 guidance on significant changes.
-
-
-
-</div>
-
-### 5. CRS-005: Problem Resolution Tracking
+### 3. CRS-003: Complete Audit Trail
 
 <div class="requirement-section">
 
@@ -96,13 +66,13 @@ IEC 62304 §6.2 and MDCG 2020-3 guidance on significant changes.
 
 #### Description
 
-Users shall be able to document, track, and resolve software defects throughout the development lifecycle with full traceability to affected requirements and tests.
+The system shall provide complete, tamper-evident audit trail of all changes to DHF items including who made changes, when, and why.
 
 
 
 </div>
 
-### 6. CRS-006: Release Management
+### 4. CRS-004: Automated Documentation
 
 <div class="requirement-section">
 
@@ -110,87 +80,13 @@ Users shall be able to document, track, and resolve software defects throughout 
 
 #### Description
 
-Users shall be able to create, track and document software releases with verification that all requirements are tested and defects are resolved. Each stage transition shall require approval, and manual verification steps shall be tracked with approver identity.
+The system shall automatically generate specification documents in formats suitable for regulatory submission to reduce manual effort and errors.
 
 
 
 </div>
 
-### 7. CRS-007: Third-Party Software Component Management
-
-<div class="requirement-section">
-
-**Status**: <span class="status-approved">APPROVED</span>  
-**Reviewer**: Product Owner  **Review Date**: 2024-12-15  
-#### Description
-
-As a medical device manufacturer, I need to track and manage all third-party 
-software components (SOUP - Software of Unknown Provenance) used in the device 
-software to ensure regulatory compliance and patient safety.
-
-**User Need**:
-- Identify all third-party libraries and dependencies
-- Document the purpose and rationale for each component
-- Track security vulnerabilities (CVEs) in dependencies
-- Maintain traceability from components to system requirements
-- Demonstrate compliance with IEC 62304 Section 5.3
-- Generate SOUP documentation for regulatory submissions
-
-**Acceptance Criteria**:
-- Can import SOUP data from security scanning tools (Veracode, Snyk, etc.)
-- Each SOUP item documents: name, version, manufacturer, license, purpose
-- SOUP items linked to system requirements showing usage rationale
-- Approval workflow ensures proper review before use
-- Can generate SOUP list for DHF documentation
-
-**Regulatory Context**:
-IEC 62304 Section 5.3 requires manufacturers to identify and document all 
-SOUP items, including their intended use, functional requirements, and 
-verification evidence.
-
-
-
-</div>
-
-### 8. CRS-008: Regulatory Document Generation and Export
-
-<div class="requirement-section">
-
-**Status**: <span class="status-approved">APPROVED</span>  
-**Reviewer**: Product Owner  **Review Date**: 2024-12-15  
-#### Description
-
-As a regulatory affairs professional, I need to generate professional, 
-regulatory-ready PDF documents from CompliantFlow data to support DHF 
-submissions and regulatory audits.
-
-**User Need**:
-- Export requirements specifications (CRS, SYS, SDS) as formatted PDFs
-- Generate traceability matrix showing requirement chains
-- Produce professional documents with proper styling and formatting
-- Include metadata (version, date, approval status)
-- Support regulatory submission requirements
-
-**Acceptance Criteria**:
-- Can export any requirement type (CRS, SYS, SDS) as PDF
-- PDFs include all requirement details (ID, title, content, status, links)
-- Professional formatting with headers, footers, page numbers
-- Traceability matrix shows CRS → SYS → SDS → Test chains
-- Coverage analysis included (% requirements with tests)
-- One-click export from UI
-- PDFs suitable for regulatory submission
-
-**Business Value**:
-- Reduces manual document preparation time
-- Ensures consistency in regulatory documentation
-- Provides audit trail with auto-generated dates
-- Supports FDA 21 CFR Part 11 compliance (electronic records)
-
-
-
-</div>
-
-### 9. CRS-009: Visual Indicators for Item Status
+### 5. CRS-005: Usability
 
 <div class="requirement-section">
 
@@ -198,7 +94,63 @@ submissions and regulatory audits.
 
 #### Description
 
-The system shall display visual warning indicators for items that are not in their final approved state within traceability views.
+The system shall be easy to learn and use for engineers with minimal training.
+
+
+
+</div>
+
+### 6. CRS-006: Configurable Workflows
+
+<div class="requirement-section">
+
+**Status**: <span class="status-approved">APPROVED</span>  
+
+#### Description
+
+The system shall allow customization of document types, workflows, and validation rules without code changes to adapt to different regulatory frameworks.
+
+
+
+</div>
+
+### 7. CRS-007: Portable DHF
+
+<div class="requirement-section">
+
+**Status**: <span class="status-approved">APPROVED</span>  
+
+#### Description
+
+The system shall store DHF in human-readable, version-controlled files that can be easily backed up, archived, and submitted to regulatory authorities.
+
+
+
+</div>
+
+### 8. CRS-008: Automated Test Integration
+
+<div class="requirement-section">
+
+**Status**: <span class="status-approved">APPROVED</span>  
+
+#### Description
+
+The system shall integrate with automated test frameworks to show real-time test results and verification status for requirements.
+
+
+
+</div>
+
+### 9. CRS-009: Impact Analysis
+
+<div class="requirement-section">
+
+**Status**: <span class="status-approved">APPROVED</span>  
+
+#### Description
+
+The system shall automatically identify all items affected by a proposed change to support change control decisions.
 
 
 
@@ -256,20 +208,20 @@ The system shall automatically generate user interface pages for document types 
 | Metric | Count |
 |--------|-------|
 | **Total Requirements** | 12 |
-| **Approved** | 11 |
-| **Draft** | 1 |
+| **Approved** | 12 |
+| **Draft** | 0 |
 | **Retired** | 0 |
 
 ### 3.2 Approval Status
 
-**Approval Rate**: 91.7% (11/12)
+**Approval Rate**: 100.0% (12/12)
 
 ---
 
 ## 4. Document Control
 
 **Document Owner**: Quality Assurance  
-**Last Updated**: 2025-12-21  
+**Last Updated**: 2025-12-22  
 **Next Review**: TBD
 
 ---

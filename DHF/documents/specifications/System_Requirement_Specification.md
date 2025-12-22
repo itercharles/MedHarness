@@ -7,8 +7,8 @@
 | Field | Value |
 |-------|-------|
 | **Document ID** | SYS-SPEC |
-| **Version** | 1.5 |
-| **Generated** | 2025-12-21 |
+| **Version** | 1.13 |
+| **Generated** | 2025-12-22 |
 | **Status** | Draft |
 | **Project** | CompliantFlow Project |
 
@@ -24,7 +24,7 @@ This document provides a comprehensive list of all System Requirements, includin
 
 ### 1.2 Scope
 
-This specification covers all System Requirements defined in the CompliantFlow system as of 2025-12-21.
+This specification covers all System Requirements defined in the CompliantFlow system as of 2025-12-22.
 
 ---
 
@@ -592,6 +592,74 @@ The system shall generate unique URL paths for each dynamically created page usi
 
 </div>
 
+### 30. SYSARCH-001: Web-Based Application Architecture
+
+<div class="requirement-section">
+
+**Status**: <span class="status-approved">APPROVED</span>  
+
+#### Description
+
+System architecture decisions:
+
+**Deployment Model:**
+- Web-based Python application
+- Browser-based user interface
+- Local or server deployment
+- No database server required
+
+**Technology Choices:**
+- Python 3.11+ runtime
+- Streamlit web framework
+- File-based data storage
+- Git version control
+
+**Rationale:**
+- Simple deployment (no complex infrastructure)
+- Familiar web interface
+- Portable (entire DHF is a directory)
+- Standards-compliant audit trail via Git
+
+
+
+</div>
+
+### 31. SYSARCH-002: File-Based Data Storage Architecture
+
+<div class="requirement-section">
+
+**Status**: <span class="status-approved">APPROVED</span>  
+
+#### Description
+
+Data storage approach:
+
+**Storage Medium:**
+- YAML files for structured data
+- Markdown files for generated documents
+- Git repository for version control
+
+**Directory Structure:**
+- Organized by document type
+- One file per item
+- Human-readable format
+
+**Benefits:**
+- No database setup required
+- Easy to backup (copy directory)
+- Git-friendly (text-based)
+- Transparent (inspect with any editor)
+- Regulatory-friendly (easy to archive)
+
+**Trade-offs:**
+- Not suitable for >1000s of items
+- Limited concurrent editing
+- No complex queries
+
+
+
+</div>
+
 
 ---
 
@@ -601,21 +669,21 @@ The system shall generate unique URL paths for each dynamically created page usi
 
 | Metric | Count |
 |--------|-------|
-| **Total Requirements** | 29 |
-| **Approved** | 10 |
+| **Total Requirements** | 31 |
+| **Approved** | 12 |
 | **Draft** | 19 |
 | **Retired** | 0 |
 
 ### 3.2 Approval Status
 
-**Approval Rate**: 34.5% (10/29)
+**Approval Rate**: 38.7% (12/31)
 
 ---
 
 ## 4. Document Control
 
 **Document Owner**: Quality Assurance  
-**Last Updated**: 2025-12-21  
+**Last Updated**: 2025-12-22  
 **Next Review**: TBD
 
 ---
