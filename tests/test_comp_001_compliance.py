@@ -2,6 +2,10 @@
 
 import pytest
 from pathlib import Path
+import sys
+
+sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+
 from traceability.compliant_flow_core import CompliantFlowCore
 
 
