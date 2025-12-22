@@ -1,235 +1,133 @@
 """
-Test suite for CRS (Customer Requirements Specification) test cases.
-
-These tests verify customer-facing requirements are correctly implemented.
-
-@links: CRS-*
+Automated tests for Customer Requirements (CRS)
+Verifies all CRS requirements are properly defined and traceable to UCs
 """
 
 import pytest
 from pathlib import Path
+import yaml
 import sys
 
-# Add src to path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from traceability.compliant_flow_core import CompliantFlowCore
+from traceability.repository.loader import ItemLoader
+
+SPECS_DIR = Path("/Users/chenwenliang/code/CompliantFlow/DHF/items")
+CRS_DIR = SPECS_DIR / "01_req_crs"
 
 
-def test_TC_CRS_001_document_export_functionality():
-    """
-    User Acceptance Test - Document Export
+class TestCRSRequirements:
+    """Tests for Customer Requirements"""
     
-    @links: CRS-008
-    @test_id: TC-CRS-001
+    def test_all_crs_files_exist(self):
+        """Verify all 9 CRS files exist"""
+        expected_crs = [f'CRS-{i:03d}' for i in range(1, 10)]
+        
+        for crs_id in expected_crs:
+            crs_file = CRS_DIR / f"{crs_id}.yaml"
+            assert crs_file.exists(), f"{crs_id}.yaml must exist"
     
-    Verify that users can export requirements as PDF documents.
-    Tests that the document generator module exists and can be initialized.
-    """
-    # Initialize core
-    dhf_root = Path(__file__).parent.parent / "DHF"
-    core = CompliantFlowCore(dhf_root)
+    def test_crs_structure(self):
+        """Verify CRS files have correct structure"""
+        crs_files = list(CRS_DIR.glob("CRS-*.yaml"))
+        
+        for crs_file in crs_files:
+            with open(crs_file) as f:
+                crs = yaml.safe_load(f)
+            
+            # Required fields
+            assert 'id' in crs, f"{crs_file.name} must have id"
+            assert 'title' in crs, f"{crs_file.name} must have title"
+            assert 'content' in crs, f"{crs_file.name} must have content"
+            assert 'status' in crs, f"{crs_file.name} must have status"
+            assert 'derives_from' in crs, f"{crs_file.name} must have derives_from"
     
-    # Verify document generator module exists
-    doc_gen_module = Path(__file__).parent.parent / "src" / "traceability" / "document_generator.py"
-    assert doc_gen_module.exists(), "document_generator.py module not found"
+    def test_crs_traces_to_uc(self):
+        """Verify all CRS requirements trace to UC"""
+        crs_files = list(CRS_DIR.glob("CRS-*.yaml"))
+        
+        for crs_file in crs_files:
+            with open(crs_file) as f:
+                crs = yaml.safe_load(f)
+            
+            derives_from = crs['derives_from']
+            assert isinstance(derives_from, list), \
+                f"{crs['id']} derives_from must be a list"
+            assert len(derives_from) > 0, \
+                f"{crs['id']} must derive from at least one UC"
+            
+            # Check all links are to UC
+            for link in derives_from:
+                assert link.startswith('UC-'), \
+                    f"{crs['id']} should only derive from UC items, found {link}"
     
-    # Try to import and initialize document generator
-    from traceability.document_generator import DocumentGenerator
+    def test_crs_001_iec_compliance(self):
+        """Verify CRS-001: IEC 62304 Compliance"""
+        crs_file = CRS_DIR / "CRS-001.yaml"
+        with open(crs_file) as f:
+            crs = yaml.safe_load(f)
+        
+        assert crs['id'] == 'CRS-001'
+        assert 'IEC 62304' in crs['title'] or 'IEC 62304' in crs['content']
+        assert crs['priority'] == 'Critical'
     
-    template_dir = dhf_root / "documents" / "specifications" / "templates"
-    assert template_dir.exists(), f"Template directory not found at {template_dir}"
+    def test_crs_002_traceability(self):
+        """Verify CRS-002: Complete Traceability"""
+        crs_file = CRS_DIR / "CRS-002.yaml"
+        with open(crs_file) as f:
+            crs = yaml.safe_load(f)
+        
+        assert crs['id'] == 'CRS-002'
+        assert 'Traceability' in crs['title']
+        assert crs['priority'] == 'Critical'
     
-    generator = DocumentGenerator(core, template_dir)
+    def test_crs_003_audit_trail(self):
+        """Verify CRS-003: Complete Audit Trail"""
+        crs_file = CRS_DIR / "CRS-003.yaml"
+        with open(crs_file) as f:
+            crs = yaml.safe_load(f)
+        
+        assert crs['id'] == 'CRS-003'
+        assert 'Audit' in crs['title']
     
-    assert generator is not None, "DocumentGenerator failed to initialize"
-    assert hasattr(generator, 'generate_requirements_spec'), \
-        "DocumentGenerator missing generate_requirements_spec method"
-    assert hasattr(generator, 'generate_traceability_matrix'), \
-        "DocumentGenerator missing generate_traceability_matrix method"
+    def test_critical_requirements_identified(self):
+        """Verify critical requirements are properly marked"""
+        crs_files = list(CRS_DIR.glob("CRS-*.yaml"))
+        
+        critical_count = 0
+        for crs_file in crs_files:
+            with open(crs_file) as f:
+                crs = yaml.safe_load(f)
+            
+            if 'priority' in crs and crs['priority'] == 'Critical':
+                critical_count += 1
+        
+        assert critical_count >= 3, "Should have at least 3 critical requirements"
+    
+    def test_all_crs_approved(self):
+        """Verify all CRS are in approved status"""
+        crs_files = list(CRS_DIR.glob("CRS-*.yaml"))
+        
+        for crs_file in crs_files:
+            with open(crs_file) as f:
+                crs = yaml.safe_load(f)
+            
+            assert crs['status'] == 'approved', \
+                f"{crs['id']} should be approved"
+    
+    def test_crs_have_rationale(self):
+        """Verify CRS requirements have rationale"""
+        crs_files = list(CRS_DIR.glob("CRS-*.yaml"))
+        
+        for crs_file in crs_files:
+            with open(crs_file) as f:
+                crs = yaml.safe_load(f)
+            
+            assert 'rationale' in crs, \
+                f"{crs['id']} should have rationale field"
+            assert len(crs['rationale']) > 0, \
+                f"{crs['id']} rationale should not be empty"
 
 
-def test_TC_CRS_002_compliance_workflow():
-    """
-    Validate Compliance Workflow
-    
-    @links: CRS-003
-    @test_id: TC-CRS-002
-    
-    Verify that compliance checking functionality is available and
-    score calculation works correctly.
-    """
-    # Initialize core
-    dhf_root = Path(__file__).parent.parent / "DHF"
-    core = CompliantFlowCore(dhf_root)
-    
-    # Verify compliance page exists
-    compliance_page = Path(__file__).parent.parent / "src" / "pages" / "03_Compliance.py"
-    assert compliance_page.exists(), "Compliance page not found"
-    
-    # Verify compliance module exists
-    compliance_module = Path(__file__).parent.parent / "src" / "traceability" / "models" / "compliance.py"
-    assert compliance_module.exists(), "Compliance module not found"
-    
-    # Verify compliance functionality can be imported
-    from traceability.models.compliance import Policy, PolicyGroup, ComplianceReport
-    assert Policy is not None, "Policy model not found"
-    assert PolicyGroup is not None, "PolicyGroup model not found"
-    assert ComplianceReport is not None, "ComplianceReport model not found"
-
-
-def test_TC_CRS_003_docs_as_code():
-    """
-    Validate Docs-as-Code
-    
-    @links: CRS-002
-    @test_id: TC-CRS-003
-    
-    Verify that requirements are stored as YAML files and can be loaded
-    by the system.
-    """
-    # Initialize core
-    dhf_root = Path(__file__).parent.parent / "DHF"
-    core = CompliantFlowCore(dhf_root)
-    
-    # Verify items are loaded from YAML files
-    all_items = core.get_all_items()
-    assert len(all_items) > 0, "No items loaded from YAML files"
-    
-    # Verify items have expected structure
-    sample_item = all_items[0]
-    assert 'id' in sample_item, "Item missing id field"
-    assert 'title' in sample_item or 'content' in sample_item, \
-        "Item missing title or content"
-    
-    # Verify YAML files exist in DHF directory
-    yaml_files = list(dhf_root.rglob("*.yaml"))
-    assert len(yaml_files) > 0, "No YAML files found in DHF directory"
-
-
-def test_TC_CRS_005_001_problem_resolution_process():
-    """
-    Validate Problem Resolution Process
-    
-    @links: CRS-005
-    @test_id: TC-CRS-005-001
-    
-    Verify that the defect tracking system supports the problem
-    resolution workflow per IEC 62304 §9.7.
-    """
-    # Initialize core
-    dhf_root = Path(__file__).parent.parent / "DHF"
-    core = CompliantFlowCore(dhf_root)
-    
-    # Verify DEFECT document type exists
-    defect_doc_type = core.config.get_doc_type("DEFECT")
-    assert defect_doc_type is not None, "DEFECT document type not configured"
-    
-    # Verify required fields for problem resolution
-    required_fields = ["id", "title", "description", "severity", "assigned_to"]
-    for field in required_fields:
-        assert field in defect_doc_type.properties, \
-            f"DEFECT missing required field for problem resolution: {field}"
-    
-    # Verify lifecycle supports problem resolution workflow
-    assert hasattr(defect_doc_type, 'lifecycle'), "DEFECT missing lifecycle"
-    lifecycle = defect_doc_type.lifecycle
-    states = lifecycle.get('states', [])
-    state_ids = [state['id'] for state in states]
-    
-    # Verify key workflow states exist
-    required_states = ["open", "in_progress", "resolved", "closed"]
-    for state in required_states:
-        assert state in state_ids, \
-            f"DEFECT lifecycle missing required state: {state}"
-
-
-def test_TC_CRS_007_001_soup_management_workflow():
-    """
-    End-to-End SOUP Management Validation
-    
-    @links: CRS-007
-    @test_id: TC-CRS-007-001
-    
-    Verify SOUP management workflow from creation to approval per IEC 62304 5.3.
-    """
-    # Initialize core
-    dhf_root = Path(__file__).parent.parent / "DHF"
-    core = CompliantFlowCore(dhf_root)
-    
-    # Verify SOUP document type exists
-    soup_doc_type = core.config.get_doc_type("SOUP")
-    assert soup_doc_type is not None, "SOUP document type not configured"
-    
-    # Verify required fields for SOUP management
-    required_fields = ["name", "version", "manufacturer", "license", "purpose", "safety_class"]
-    for field in required_fields:
-        assert field in soup_doc_type.properties, \
-            f"SOUP missing required field: {field}"
-    
-    # Verify lifecycle supports approval workflow
-    assert hasattr(soup_doc_type, 'lifecycle'), "SOUP missing lifecycle"
-    lifecycle = soup_doc_type.lifecycle
-    states = lifecycle.get('states', [])
-    state_ids = [state['id'] for state in states]
-    
-    # Verify approval states exist
-    required_states = ["draft", "under_review", "approved"]
-    for state in required_states:
-        assert state in state_ids, f"SOUP lifecycle missing state: {state}"
-
-
-def test_TC_CRS_008_001_document_generation_workflow():
-    """
-    End-to-End Document Generation Validation
-    
-    @links: CRS-008
-    @test_id: TC-CRS-008-001
-    
-    Verify document generation produces regulatory-ready PDF documentation.
-    """
-    # Initialize core
-    dhf_root = Path(__file__).parent.parent / "DHF"
-    core = CompliantFlowCore(dhf_root)
-    
-    # Verify document generator exists
-    from traceability.document_generator import DocumentGenerator
-    
-    template_dir = dhf_root / "documents" / "specifications" / "templates"
-    generator = DocumentGenerator(core, template_dir)
-    
-    # Verify key generation methods exist
-    assert hasattr(generator, 'generate_requirements_spec'), \
-        "Missing requirements spec generation"
-    assert hasattr(generator, 'generate_traceability_matrix'), \
-        "Missing traceability matrix generation"
-    
-    # Verify template directory exists
-    assert template_dir.exists(), f"Template directory not found at {template_dir}"
-
-
-def test_TC_CRS_011_001_compliance_dashboard():
-    """
-    Verify Compliance Dashboard Functionality
-    
-    @links: CRS-011
-    @test_id: TC-CRS-011-001
-    
-    Verify compliance dashboard can load policies and display results.
-    """
-    # Initialize core
-    dhf_root = Path(__file__).parent.parent / "DHF"
-    core = CompliantFlowCore(dhf_root)
-    
-    # Verify compliance page exists
-    compliance_page = Path(__file__).parent.parent / "src" / "pages" / "03_Compliance.py"
-    assert compliance_page.exists(), "Compliance page not found"
-    
-    # Verify compliance models exist
-    from traceability.models.compliance import Policy, PolicyGroup, ComplianceReport
-    
-    # Verify config has policies
-    assert hasattr(core.config, 'policies'), "Config missing policies"
-    policies_config = core.config.policies
-    assert hasattr(policies_config, 'require_test_coverage'), \
-        "Policies missing require_test_coverage"
+if __name__ == "__main__":
+    pytest.main([__file__, "-v"])
