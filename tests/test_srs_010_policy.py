@@ -10,7 +10,7 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-POLICIES_DIR = Path("/Users/chenwenliang/code/CompliantFlow/DHF/config/policies")
+POLICIES_DIR = Path(__file__).parent.parent / "DHF/config/policies"
 
 
 class TestComplianceChecking:
@@ -40,7 +40,7 @@ class TestComplianceChecking:
     def test_policy_checks_have_severity(self):
         """Verify policies can have severity levels"""
         # Check if IEC_62304.yaml has severity levels
-        iec_policy = Path("/Users/chenwenliang/code/CompliantFlow/DHF/config/IEC_62304.yaml")
+        iec_policy = Path(__file__).parent.parent / "DHF/config/IEC_62304.yaml"
         
         if iec_policy.exists():
             with open(iec_policy) as f:
@@ -58,7 +58,7 @@ class TestComplianceChecking:
         # This is more of a structural test
         # Policies should have a way to report violations
         
-        iec_policy = Path("/Users/chenwenliang/code/CompliantFlow/DHF/config/IEC_62304.yaml")
+        iec_policy = Path(__file__).parent.parent / "DHF/config/IEC_62304.yaml"
         
         if iec_policy.exists():
             with open(iec_policy) as f:
