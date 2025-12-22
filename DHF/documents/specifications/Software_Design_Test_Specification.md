@@ -7,7 +7,7 @@
 | Field | Value |
 |-------|-------|
 | **Document ID** | TC-SDS-TEST-SPEC |
-| **Version** | 1.3 |
+| **Version** | 1.4 |
 | **Generated** | 2025-12-22 |
 | **Status** | Draft |
 | **Project** | CompliantFlow Project |
