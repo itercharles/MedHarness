@@ -45,12 +45,19 @@ class TestDocumentGeneration:
     
     def test_document_generator_initialization(self):
         """Verify DocumentGenerator can be initialized"""
-        try:
-            generator = DocumentGenerator()
-            assert generator is not None, "DocumentGenerator must initialize"
-        except Exception as e:
-            # If DocumentGenerator doesn't exist yet, that's okay for now
-            pytest.skip(f"DocumentGenerator not fully implemented: {e}")
+        from traceability.document_generator import DocumentGenerator
+        from traceability.core import CompliantFlowCore
+        
+        # Create core instance
+        core = CompliantFlowCore()
+        
+        # DocumentGenerator should initialize with required args
+        generator = DocumentGenerator(core, TEMPLATES_DIR)
+        assert generator is not None, "DocumentGenerator must initialize"
+        
+        # Should have key methods
+        assert hasattr(generator, 'generate') or hasattr(generator, 'generate_document'), \
+            "DocumentGenerator should have generate method"
     
     def test_template_includes_metadata(self):
         """Verify templates support metadata (version, date, status)"""
