@@ -10,7 +10,7 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-SPECS_DIR = Path("/Users/chenwenliang/code/CompliantFlow/DHF/items")
+SPECS_DIR = Path(__file__).parent.parent / "DHF" / "items"
 SYS_DIR = SPECS_DIR / "02_req_sys"
 
 

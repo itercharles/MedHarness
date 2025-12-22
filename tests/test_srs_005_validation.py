@@ -13,7 +13,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 from traceability.repository.loader import ItemLoader
 from traceability.models.item import Item
 
-SPECS_DIR = Path("/Users/chenwenliang/code/CompliantFlow/DHF/items")
+SPECS_DIR = Path(__file__).parent.parent / "DHF" / "items"
 
 
 class TestDataValidation:

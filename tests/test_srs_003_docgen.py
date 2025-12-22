@@ -10,9 +10,9 @@ import sys
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 # Paths
-SPECS_DIR = Path("/Users/chenwenliang/code/CompliantFlow/DHF/items")
-TEMPLATES_DIR = Path("/Users/chenwenliang/code/CompliantFlow/DHF/documents/specifications/templates")
-OUTPUT_DIR = Path("/Users/chenwenliang/code/CompliantFlow/DHF/documents/specifications")
+SPECS_DIR = Path(__file__).parent.parent / "DHF" / "items"
+TEMPLATES_DIR = Path(__file__).parent.parent / "DHF" / "documents" / "specifications" / "templates"
+OUTPUT_DIR = Path(__file__).parent.parent / "DHF" / "documents" / "specifications"
 
 
 class TestDocumentGeneration:

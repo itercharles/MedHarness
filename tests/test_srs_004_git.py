@@ -16,14 +16,14 @@ class TestGitCommits:
     
     def test_git_repository_exists(self):
         """Verify Git repository is initialized"""
-        git_dir = Path("/Users/chenwenliang/code/CompliantFlow/.git")
+        git_dir = Path(__file__).parent.parent / ".git"
         assert git_dir.exists(), "Git repository must exist"
     
     def test_git_history_exists(self):
         """Verify Git history contains commits"""
         result = subprocess.run(
             ["git", "log", "--oneline", "-n", "10"],
-            cwd="/Users/chenwenliang/code/CompliantFlow",
+            cwd=str(Path(__file__).parent.parent),
             capture_output=True,
             text=True
         )
@@ -35,7 +35,7 @@ class TestGitCommits:
         """Verify recent commits reference DHF items"""
         result = subprocess.run(
             ["git", "log", "--oneline", "-n", "20", "--", "DHF/items/"],
-            cwd="/Users/chenwenliang/code/CompliantFlow",
+            cwd=str(Path(__file__).parent.parent),
             capture_output=True,
             text=True
         )
@@ -49,7 +49,7 @@ class TestGitCommits:
         """Verify commit messages include action (created/updated/deleted)"""
         result = subprocess.run(
             ["git", "log", "--format=%s", "-n", "50"],
-            cwd="/Users/chenwenliang/code/CompliantFlow",
+            cwd=str(Path(__file__).parent.parent),
             capture_output=True,
             text=True
         )

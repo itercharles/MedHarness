@@ -14,7 +14,7 @@ from traceability.repository.loader import ItemLoader
 from traceability.repository.saver import ItemSaver
 
 # Path to DHF items
-SPECS_DIR = Path("/Users/chenwenliang/code/CompliantFlow/DHF/items")
+SPECS_DIR = Path(__file__).parent.parent / "DHF" / "items"
 
 
 class TestFilePersistence:
@@ -34,7 +34,7 @@ class TestFilePersistence:
     
     def test_filename_matches_item_id(self):
         """Verify item ID is used as filename"""
-        dhf_items_dir = Path("/Users/chenwenliang/code/CompliantFlow/DHF/items")
+        dhf_items_dir = Path(__file__).parent.parent / "DHF" / "items"
         
         # Check a few item directories
         for subdir in dhf_items_dir.iterdir():
@@ -54,7 +54,7 @@ class TestFilePersistence:
     
     def test_files_organized_by_type(self):
         """Verify files are organized in subdirectories by document type"""
-        dhf_items_dir = Path("/Users/chenwenliang/code/CompliantFlow/DHF/items")
+        dhf_items_dir = Path(__file__).parent.parent / "DHF" / "items"
         
         # Check that subdirectories exist
         subdirs = [d for d in dhf_items_dir.iterdir() if d.is_dir() and not d.name.startswith('.')]
@@ -94,7 +94,7 @@ class TestFilePersistence:
     
     def test_structured_text_format(self):
         """Verify files use structured text format (YAML)"""
-        dhf_items_dir = Path("/Users/chenwenliang/code/CompliantFlow/DHF/items")
+        dhf_items_dir = Path(__file__).parent.parent / "DHF" / "items"
         
         yaml_files = list(dhf_items_dir.rglob("*.yaml"))
         assert len(yaml_files) > 0, "Must have YAML files"

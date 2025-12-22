@@ -14,7 +14,7 @@ from traceability.graph.engine import GraphEngine
 from traceability.repository.loader import ItemLoader
 
 # Path to DHF items
-SPECS_DIR = Path("/Users/chenwenliang/code/CompliantFlow/DHF/items")
+SPECS_DIR = Path(__file__).parent.parent / "DHF" / "items"
 
 
 class TestGraphDataStructure:

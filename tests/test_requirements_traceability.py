@@ -13,7 +13,7 @@ from pathlib import Path
 import yaml
 
 
-DHF_ITEMS = Path("/Users/chenwenliang/code/CompliantFlow/DHF/items")
+DHF_ITEMS = Path(__file__).parent.parent / "DHF" / "items"
 
 
 def load_all_items(directory: Path):

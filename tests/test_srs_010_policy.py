@@ -19,12 +19,12 @@ class TestComplianceChecking:
     def test_policies_directory_exists(self):
         """Verify policies directory exists"""
         # Policies might be in config directory
-        config_dir = Path("/Users/chenwenliang/code/CompliantFlow/DHF/config")
+        config_dir = Path(__file__).parent.parent / "DHF" / "config"
         assert config_dir.exists(), "Config directory must exist for policies"
     
     def test_policy_files_loadable(self):
         """Verify policy files can be loaded"""
-        config_dir = Path("/Users/chenwenliang/code/CompliantFlow/DHF/config")
+        config_dir = Path(__file__).parent.parent / "DHF" / "config"
         
         # Look for policy-related YAML files
         policy_files = list(config_dir.glob("*policy*.yaml")) + list(config_dir.glob("*.yaml"))
@@ -70,7 +70,7 @@ class TestComplianceChecking:
     def test_custom_policy_definitions_supported(self):
         """Verify custom policy definitions are supported"""
         # Check that policy files use flexible YAML structure
-        config_dir = Path("/Users/chenwenliang/code/CompliantFlow/DHF/config")
+        config_dir = Path(__file__).parent.parent / "DHF" / "config"
         policy_files = list(config_dir.glob("*.yaml"))
         
         # Should be able to define custom policies via YAML
