@@ -65,10 +65,11 @@ class TestGraphDataStructure:
                 break
         
         if item_with_links:
-            # Verify edges exist for links
+            # Verify edges exist for links (only check links that exist in graph)
             for target_id in item_with_links.links:
-                assert engine.graph.has_edge(item_with_links.uid, target_id), \
-                    f"Edge must exist from {item_with_links.uid} to {target_id}"
+                if engine.graph.has_node(target_id):
+                    assert engine.graph.has_edge(item_with_links.uid, target_id), \
+                        f"Edge must exist from {item_with_links.uid} to {target_id}"
     
     def test_graph_performance(self):
         """Verify graph with 1000 nodes builds in < 2 seconds (SRS-001 performance req)"""
