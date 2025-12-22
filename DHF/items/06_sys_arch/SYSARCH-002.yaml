@@ -1,0 +1,30 @@
+id: SYSARCH-002
+title: File-Based Data Storage Architecture
+content: |-
+  Data storage approach:
+  
+  **Storage Medium:**
+  - YAML files for structured data
+  - Markdown files for generated documents
+  - Git repository for version control
+  
+  **Directory Structure:**
+  - Organized by document type
+  - One file per item
+  - Human-readable format
+  
+  **Benefits:**
+  - No database setup required
+  - Easy to backup (copy directory)
+  - Git-friendly (text-based)
+  - Transparent (inspect with any editor)
+  - Regulatory-friendly (easy to archive)
+  
+  **Trade-offs:**
+  - Not suitable for >1000s of items
+  - Limited concurrent editing
+  - No complex queries
+informs:
+- SYS-001
+- SYS-004
+status: approved

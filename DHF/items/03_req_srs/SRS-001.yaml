@@ -1,0 +1,8 @@
+id: SRS-001
+title: Graph Data Structure
+content: Software shall use directed graph to represent traceability relationships
+  with DHF items as nodes and links as directed edges.
+derives_from:
+- SYS-002
+performance: Graph with 1000 nodes shall build in < 2 seconds
+status: approved

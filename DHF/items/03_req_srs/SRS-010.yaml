@@ -1,0 +1,11 @@
+id: SRS-010
+title: Policy-Based Compliance Checking
+content: |-
+  Software shall:
+  - Load compliance policies from YAML files
+  - Execute policy checks against DHF structure
+  - Report violations with severity levels
+  - Support custom policy definitions
+derives_from:
+- SYS-009
+status: approved

@@ -1,0 +1,15 @@
+id: SRS-004
+title: Automated Git Commits
+content: |-
+  Software shall automatically create Git commits when:
+  - Creating new items
+  - Updating existing items
+  - Deleting items
+  
+  Commit message shall include:
+  - Action (created/updated/deleted)
+  - Item ID
+  - Author name (if provided)
+derives_from:
+- SYS-004
+status: approved

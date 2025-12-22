@@ -1,0 +1,11 @@
+id: SRS-011
+title: Change Impact Analysis
+content: |-
+  Software shall:
+  - Identify all downstream items affected by a change
+  - Use graph traversal to find descendants
+  - Report impact by document type
+  - Calculate impact score
+derives_from:
+- SYS-010
+status: approved

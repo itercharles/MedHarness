@@ -1,0 +1,11 @@
+id: SRS-002
+title: Structured File Persistence
+content: |-
+  Software shall:
+  - Store each DHF item as a separate structured text file
+  - Use item ID as filename
+  - Organize files by document type in subdirectories
+  - Validate data before saving
+derives_from:
+- SYS-001
+status: approved

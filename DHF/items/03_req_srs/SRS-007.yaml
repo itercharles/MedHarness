@@ -1,0 +1,11 @@
+id: SRS-007
+title: Graph-Based Orphan Detection
+content: |-
+  Software shall identify orphan items by:
+  - Building directed graph of all items
+  - Finding nodes with no incoming edges
+  - Excluding root types (UC, CRS) from orphan check
+  - Grouping orphans by document type
+derives_from:
+- SYS-006
+status: approved

@@ -1,0 +1,11 @@
+id: SRS-009
+title: Project Configuration Validation
+content: |-
+  Software shall:
+  - Define data models for project_config.yaml schema
+  - Validate configuration on application startup
+  - Fail fast with clear error messages for invalid config
+  - Support schema evolution with backward compatibility
+derives_from:
+- SYS-008
+status: approved

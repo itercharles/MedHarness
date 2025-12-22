@@ -1,0 +1,12 @@
+id: SRS-005
+title: Data Validation
+content: |-
+  Software shall:
+  - Define data models for all item types
+  - Validate data on load and save
+  - Enforce required fields
+  - Type-check all properties
+  - Provide clear error messages for validation failures
+derives_from:
+- SYS-001
+status: approved

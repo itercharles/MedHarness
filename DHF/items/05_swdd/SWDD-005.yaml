@@ -1,0 +1,26 @@
+id: SWDD-005
+title: Document Generation Process
+content: |-
+  **Purpose:** Generate specification documents from templates
+  
+  **Process:**
+  1. Load template file for document type
+  2. Gather all items of specified type
+  3. Prepare context data (items, metadata)
+  4. Render template with context
+  5. Save generated markdown
+  6. Return output file path
+  
+  **Template Context:**
+  - items: List of item data
+  - doc_type_name: Display name
+  - version: Document version
+  - generation_date: Timestamp
+  - project_name: Project identifier
+  
+  **Output:** Markdown file ready for PDF conversion
+implements:
+- SRS-003
+guided_by:
+- SWAD-002
+status: approved

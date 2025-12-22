@@ -1,0 +1,24 @@
+id: SWDD-003
+title: Item Serialization Process
+content: |-
+  **Purpose:** Serialize items to structured text files
+  
+  **Process:**
+  1. Determine save directory from item prefix
+  2. Create directory if needed
+  3. Serialize item data with validation
+  4. Convert to structured text format
+  5. Write to file with item ID as filename
+  6. Create version control commit
+  
+  **Key Decisions:**
+  - Use data model serialization for consistency
+  - Exclude internal fields from output
+  - Preserve field order for readability
+  - Atomic write operations
+implements:
+- SRS-002
+- SRS-005
+guided_by:
+- SWAD-003
+status: approved

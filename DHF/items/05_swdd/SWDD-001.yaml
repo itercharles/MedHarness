@@ -1,0 +1,20 @@
+id: SWDD-001
+title: Orphan Detection Algorithm
+content: |-
+  **Purpose:** Identify items without required parent links
+  
+  **Algorithm:**
+  1. Iterate through all document types
+  2. Skip root types (UC, CRS) that don't require parents
+  3. For each type, find all items
+  4. Check if item has incoming edges in graph
+  5. If no incoming edges, mark as orphan
+  6. Return list of orphaned items
+  
+  **Complexity:** O(N) where N = number of nodes
+  **Data Structure:** Directed graph with in-degree tracking
+implements:
+- SRS-007
+guided_by:
+- SWAD-002
+status: approved

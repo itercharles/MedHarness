@@ -1,0 +1,26 @@
+id: SWDD-004
+title: Validation Criteria Framework
+content: |-
+  **Purpose:** Validate state transitions based on configurable criteria
+  
+  **Validation Types:**
+  
+  1. **Field Validation:** Check if required fields have values
+  2. **Link Validation:** Verify linked items meet status requirements
+  3. **Manual Verification:** Require explicit user confirmation
+  
+  **Process:**
+  1. Load validation criteria from configuration
+  2. Execute each criterion in sequence
+  3. Collect validation failures
+  4. Return pass/fail with error messages
+  
+  **Extensibility:**
+  - New validation types added via configuration
+  - Validation functions registered in lookup table
+  - All criteria must pass for transition
+implements:
+- SRS-006
+guided_by:
+- SWAD-002
+status: approved

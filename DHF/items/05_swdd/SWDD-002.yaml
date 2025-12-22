@@ -1,0 +1,20 @@
+id: SWDD-002
+title: Coverage Calculation Algorithm
+content: |-
+  **Purpose:** Calculate test coverage for requirements
+  
+  **Algorithm:**
+  1. Get all requirements of specified type
+  2. For each requirement, find all descendant items
+  3. Check if any descendant is a test case
+  4. Count requirements with test coverage
+  5. Calculate percentage: (verified / total) * 100
+  6. Return coverage metrics and uncovered items
+  
+  **Complexity:** O(N * M) where N = requirements, M = avg descendants
+  **Data Structure:** Directed graph with descendant traversal
+implements:
+- SRS-008
+guided_by:
+- SWAD-002
+status: approved

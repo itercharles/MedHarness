@@ -1,0 +1,40 @@
+id: SWAD-003
+title: Data Access Components
+content: |-
+  **ItemLoader**
+  - Purpose: Load items from YAML files
+  - Responsibilities:
+    - Scan directories for YAML files
+    - Parse YAML content
+    - Validate with Pydantic models
+    - Return Item objects
+  - Interfaces:
+    - load_all() -> List[Item]
+    - load_by_uid(uid: str) -> Optional[Item]
+    - load_by_prefix(prefix: str) -> List[Item]
+  
+  **ItemSaver**
+  - Purpose: Save items to YAML files
+  - Responsibilities:
+    - Serialize Item to YAML
+    - Determine correct directory
+    - Write to file system
+    - Trigger Git commit
+  - Interfaces:
+    - save(item: Item, author: str) -> Path
+    - delete(uid: str, author: str) -> bool
+  
+  **GitRepository**
+  - Purpose: Git version control operations
+  - Responsibilities:
+    - Create commits
+    - Retrieve history
+    - Check repository status
+  - Interfaces:
+    - commit_item_change(uid: str, path: Path, action: str, author: str) -> None
+    - get_file_history(path: Path) -> List[dict]
+implements:
+- SRS-002
+- SRS-004
+- SRS-005
+status: approved

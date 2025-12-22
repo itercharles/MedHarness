@@ -1,4 +1,21 @@
 doc_types:
+  # Use Cases
+  - code: UC
+    name: "Use Case"
+    prefix: "UC-"
+    directory: "00_uc"
+    properties: ["id", "title", "content"]
+    icon: "👤"
+    page_enabled: true
+    page_number: 4
+    lifecycle:
+      states:
+        - {id: draft, label: "Draft", color: "warning", icon: "📝", is_initial: true}
+        - {id: approved, label: "Approved", color: "success", icon: "✅", is_stable: true}
+      transitions:
+        - {from: draft, to: approved, label: "Approve"}
+  
+  # Customer Requirements (existing, keep as is)
   - code: CRS
     name: "Customer Requirement"
     prefix: "CRS-"
@@ -223,6 +240,89 @@ doc_types:
             - {id: retirement_reason, name: "Retirement reason", check_type: "field_not_empty", field: "retired_reason", required: true}
             - {id: impact_assessed, name: "Impact assessed", check_type: "manual", required: true}
     
+    has_verification: true
+    verification_states: ["not_verified", "verified", "failed"]
+
+  # Software Requirements Specification
+  - code: SRS
+    name: "Software Requirement"
+    prefix: "SRS-"
+    directory: "03_req_srs"
+    allowed_parents: ["SYS"]
+    properties: ["id", "title", "content", "derives_from", "performance"]
+    relations:
+      - target: SYS
+        label: derives_from
+    icon: "💻"
+    page_enabled: true
+    page_number: 7
+    lifecycle:
+      states:
+        - {id: draft, label: "Draft", color: "warning", icon: "📝", is_initial: true}
+        - {id: approved, label: "Approved", color: "success", icon: "✅", is_stable: true}
+      transitions:
+        - {from: draft, to: approved, label: "Approve"}
+    has_verification: true
+    verification_states: ["not_verified", "verified", "failed"]
+
+  # System Architecture
+  - code: SYS_ARCH
+    name: "System Architecture"
+    prefix: "SYSARCH-"
+    directory: "06_sys_arch"
+    properties: ["id", "title", "content", "informs"]
+    relations:
+      - target: SYS
+        label: informs
+    icon: "🏗️"
+    page_enabled: true
+    page_number: 8
+    lifecycle:
+      states:
+        - {id: draft, label: "Draft", color: "warning", icon: "📝", is_initial: true}
+        - {id: approved, label: "Approved", color: "success", icon: "✅", is_stable: true}
+      transitions:
+        - {from: draft, to: approved, label: "Approve"}
+
+  # Software Architecture Design
+  - code: SWAD
+    name: "Software Architecture"
+    prefix: "SWAD-"
+    directory: "04_swad"
+    properties: ["id", "title", "content", "implements"]
+    relations:
+      - target: SRS
+        label: implements
+    icon: "🔧"
+    page_enabled: true
+    page_number: 9
+    lifecycle:
+      states:
+        - {id: draft, label: "Draft", color: "warning", icon: "📝", is_initial: true}
+        - {id: approved, label: "Approved", color: "success", icon: "✅", is_stable: true}
+      transitions:
+        - {from: draft, to: approved, label: "Approve"}
+
+  # Software Detailed Design
+  - code: SWDD
+    name: "Software Detailed Design"
+    prefix: "SWDD-"
+    directory: "05_swdd"
+    properties: ["id", "title", "content", "implements", "guided_by"]
+    relations:
+      - target: SRS
+        label: implements
+      - target: SWAD
+        label: guided_by
+    icon: "📋"
+    page_enabled: true
+    page_number: 10
+    lifecycle:
+      states:
+        - {id: draft, label: "Draft", color: "warning", icon: "📝", is_initial: true}
+        - {id: approved, label: "Approved", color: "success", icon: "✅", is_stable: true}
+      transitions:
+        - {from: draft, to: approved, label: "Approve"}
     has_verification: true
     verification_states: ["not_verified", "verified", "failed"]
 

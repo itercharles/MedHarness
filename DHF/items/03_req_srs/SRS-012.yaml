@@ -1,0 +1,13 @@
+id: SRS-012
+title: Streamlit-Based User Interface
+content: |-
+  Software shall:
+  - Use Streamlit framework for web UI
+  - Provide responsive layout
+  - Support browser-based interaction
+  - Enable real-time updates
+derives_from:
+- SYS-001
+- SYS-002
+- SYS-003
+status: approved
