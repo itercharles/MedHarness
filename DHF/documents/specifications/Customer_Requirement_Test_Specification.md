@@ -7,7 +7,7 @@
 | Field | Value |
 |-------|-------|
 | **Document ID** | TC-CRS-TEST-SPEC |
-| **Version** | 1.4 |
+| **Version** | 1.5 |
 | **Generated** | 2025-12-22 |
 | **Status** | Draft |
 | **Project** | CompliantFlow Project |
