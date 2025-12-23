@@ -1,7 +1,7 @@
 id: SYS-018
-content: The system shall manage release lifecycle through states (planning, developing,
-  testing, released) with approval required for each stage transition. Each transition
-  shall enforce configurable criteria before allowing progression.
+content: The system shall support configurable lifecycle workflows with approval gates.
+  Transition criteria and approval requirements shall be defined in configuration
+  and enforced by the system.
 links:
 - CRS-006
 title: Release Status Workflow

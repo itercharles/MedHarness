@@ -1,6 +1,7 @@
 id: SYS-012
-content: The system shall require verification and documentation that the defect resolution
-  is effective before the defect can be closed.
+content: The system shall support configurable verification requirements before state
+  transitions. Required verification fields and criteria shall be defined in configuration
+  and enforced by the system.
 links:
 - CRS-005
 title: Defect Resolution Verification

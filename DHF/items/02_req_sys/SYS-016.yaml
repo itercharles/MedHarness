@@ -1,7 +1,6 @@
 id: SYS-016
-content: The system shall capture release information including version number, release
-  date, included change requests, test results, defect status, manual verifications
-  with approver identity, and stage approvals with timestamps.
+content: The system shall support configurable data fields for items. Field definitions,
+  types, validation rules, and required fields shall be defined in configuration.
 links:
 - CRS-006
 title: Release Data Capture

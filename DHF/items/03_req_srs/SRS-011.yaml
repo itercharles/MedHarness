@@ -7,5 +7,5 @@ content: |-
   - Report impact by document type
   - Calculate impact score
 derives_from:
-- SYS-010
+- SYS-011
 status: approved

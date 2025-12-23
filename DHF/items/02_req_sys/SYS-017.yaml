@@ -1,7 +1,7 @@
 id: SYS-017
-content: The system shall verify that all requirements in a release have passing tests
-  before the release can be approved. Verification shall use configurable workflow
-  criteria including automated checks and manual verification requirements.
+content: The system shall execute configurable verification checks before state transitions.
+  Verification rules and criteria shall be defined in configuration and enforced
+  by the system.
 links:
 - CRS-006
 title: Release Verification Checks

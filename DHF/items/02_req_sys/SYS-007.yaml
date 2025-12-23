@@ -1,5 +1,7 @@
 id: SYS-007
-content: The system shall evaluate and report the pass/fail status of policies.
+content: The system shall execute policy validation rules defined in configuration
+  and report results. Policy definitions and validation logic shall be configurable.
+
 links:
 - CRS-003
 title: Compliance Reporting
