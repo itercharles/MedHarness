@@ -689,13 +689,16 @@ traceability_matrices:
     description: "Full traceability from use cases to detailed design"
     path: ["UC", "CRS", "SYS", "SRS", "SWDD"]
   
-  # Architecture Guidance (SWAD guides SWDD but is not in requirements chain)
-  - name: "Architecture to Detailed Design"
-    description: "Architecture guidance for detailed design"
-    path: ["SWAD", "SWDD"]
+  # Architecture Traceability
+  - name: "System to System Architecture"
+    description: "System requirements to system architecture"
+    path: ["SYS", "SYS_ARCH"]
   
-  # System Architecture Influence
-  - name: "System Architecture to System Requirements"
+  - name: "Software Requirements to Software Architecture"
+    description: "Software requirements to software architecture (implements)"
+    path: ["SRS", "SWAD"]
+
+  - name: "System Architecture Influence"
     description: "System architecture informing system requirements"
     path: ["SYS_ARCH", "SYS"]
   
@@ -721,10 +724,7 @@ traceability_matrices:
     description: "Software requirements to software tests"
     path: ["SRS", "TC-SRS"]
   
-  - name: "Detailed Design Verification"
-    description: "Detailed design to unit tests"
-    path: ["SWDD", "TC-SWDD"]
-  
+
 
 # Document Generation Configuration
 document_specifications:
