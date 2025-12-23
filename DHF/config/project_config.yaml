@@ -270,10 +270,10 @@ doc_types:
     name: "System Architecture"
     prefix: "SYSARCH-"
     directory: "06_sys_arch"
-    properties: ["id", "title", "content", "informs", "status"]
+    properties: ["id", "title", "content", "design", "status"]
     relations:
       - target: SYS
-        label: informs
+        label: design
     icon: "🏗️"
     page_enabled: true
     page_number: 8
@@ -289,10 +289,10 @@ doc_types:
     name: "Software Architecture"
     prefix: "SWAD-"
     directory: "04_swad"
-    properties: ["id", "title", "content", "implements", "status"]
+    properties: ["id", "title", "content", "design", "status"]
     relations:
       - target: SRS
-        label: implements
+        label: design
     icon: "🔧"
     page_enabled: true
     page_number: 9
@@ -689,18 +689,14 @@ traceability_matrices:
     description: "Full traceability from use cases to detailed design"
     path: ["UC", "CRS", "SYS", "SRS", "SWDD"]
   
-  # Architecture Traceability
-  - name: "System to System Architecture"
-    description: "System requirements to system architecture"
+  # Architecture Traceability (Requirements → Architecture)
+  - name: "System Requirements to System Architecture"
+    description: "System requirements and their architectural designs"
     path: ["SYS", "SYS_ARCH"]
   
   - name: "Software Requirements to Software Architecture"
-    description: "Software requirements to software architecture (implements)"
+    description: "Software requirements and their architectural designs"
     path: ["SRS", "SWAD"]
-
-  - name: "System Architecture Influence"
-    description: "System architecture informing system requirements"
-    path: ["SYS_ARCH", "SYS"]
   
   # Risk Management
   - name: "Risk to Control Measures"

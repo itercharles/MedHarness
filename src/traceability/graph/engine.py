@@ -35,9 +35,10 @@ class GraphEngine:
         for item in items:
             self.graph.add_node(item.uid, item=item)
         
-        # Add edges (child -> parent)
+        # Add edges (child -> parent) using ALL typed relationships
         for item in items:
-            for parent_uid in item.links:
+            # Use all_linked_uids to include all relationship types (design, derives_from, implements, etc.)
+            for parent_uid in item.all_linked_uids:
                 if self.graph.has_node(parent_uid):
                     # Determine relation label
                     relation_label = "traces"

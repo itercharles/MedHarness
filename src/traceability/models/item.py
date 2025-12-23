@@ -39,6 +39,7 @@ class Item(BaseModel):
     implements: Optional[List[str]] = Field(default=None, description="Items this implements")
     guided_by: Optional[List[str]] = Field(default=None, description="Items that guide this")
     informs: Optional[List[str]] = Field(default=None, description="Items this informs")
+    design: Optional[List[str]] = Field(default=None, description="Items this designs/addresses")
     
     # Common fields
     title: Optional[str] = Field(None, description="Item title")
@@ -62,6 +63,7 @@ class Item(BaseModel):
             'implements': self.implements or [],
             'guided_by': self.guided_by or [],
             'informs': self.informs or [],
+            'design': self.design or [],
             'links': self.links or []
         }
     
