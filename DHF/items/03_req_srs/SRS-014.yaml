@@ -1,0 +1,10 @@
+id: SRS-014
+title: Configuration Framework
+content: |-
+  Software shall load project configuration from files, validate configuration schema, and provide fail-fast error reporting for invalid configurations. Configuration shall define document types, lifecycle states, transitions, policies, and page registration. Software shall dynamically register pages and generate unique URLs based on configuration.
+derives_from:
+  - SYS-023
+  - SYS-025
+  - SYS-028
+  - SYS-029
+status: approved

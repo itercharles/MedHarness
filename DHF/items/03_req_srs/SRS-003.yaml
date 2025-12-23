@@ -2,10 +2,10 @@ id: SRS-003
 title: Template-Based Document Generation
 content: |-
   Software shall:
-  - Use template engine for document generation
-  - Support markdown output format
-  - Convert markdown to PDF
-  - Include metadata (version, date, status)
+  - Generate documents from configurable templates
+  - Support multiple output formats as defined in configuration
+  - Include metadata (version, date, status) in generated documents
+  - Validate template syntax before generation
 derives_from:
 - SYS-003
 status: approved

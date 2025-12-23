@@ -2,7 +2,7 @@ id: SRS-006
 title: Configuration-Driven Workflow Engine
 content: |-
   Software shall:
-  - Read lifecycle definitions from project_config.yaml
+  - Load lifecycle definitions from configuration files
   - Validate state transitions against configured rules
   - Execute validation criteria before allowing transitions
   - Support extensible validation check types

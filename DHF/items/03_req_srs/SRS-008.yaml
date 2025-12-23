@@ -2,10 +2,10 @@ id: SRS-008
 title: Test Coverage Calculation
 content: |-
   Software shall calculate coverage by:
-  - Identifying all items of requirement type
-  - Finding test items that link to each requirement
-  - Computing percentage: (verified / total) * 100
-  - Reporting uncovered requirements
+  - Identifying source items based on configured item types
+  - Finding verification items that link to source items via configured relationship types
+  - Computing percentage: (verified items / total items) * 100
+  - Reporting items without verification links
 derives_from:
 - SYS-007
 status: approved

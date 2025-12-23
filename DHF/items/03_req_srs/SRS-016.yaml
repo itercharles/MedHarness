@@ -1,0 +1,10 @@
+id: SRS-016
+title: Traceability and Policy Infrastructure
+content: |-
+  Software shall maintain bidirectional traceability links between items, automatically detect verification columns in traceability displays, load policy groups from configuration, execute validation rules, calculate compliance scores, and display validation results. Policy definitions and validation logic shall be configurable.
+derives_from:
+  - SYS-006
+  - SYS-024
+  - SYS-026
+  - SYS-027
+status: approved
