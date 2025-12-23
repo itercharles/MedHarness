@@ -61,22 +61,22 @@ def make_item_columns_clickable(df: pd.DataFrame, core=None) -> tuple[pd.DataFra
         doc_type_codes = {dt.code for dt in core.config.doc_types}
     
     for col in df.columns:
-        # Only make columns clickable if the column name is a doc_type code
+        # Only make columns clickable if they match a configured doc_type code
         # This ensures ID columns are clickable but Title columns are not
-        if col in doc_type_codes:
-            # This is a doc_type column (ID column) - make it clickable
-            if df[col].dtype == 'object':
-                # Convert to page URLs
-                df_copy[col] = df[col].apply(
-                    lambda x: get_page_url_for_item(x, core) if isinstance(x, str) and '-' in x else x
-                )
-                
-                # Configure as link column
-                column_config[col] = st.column_config.LinkColumn(
-                    col,
-                    help=f"Click to view {col} on its page",
-                    display_text=r".*item=([^&]+)",  # Extract and show just the ID
-                )
+        should_be_clickable = col in doc_type_codes
+        
+        if should_be_clickable and df[col].dtype == 'object':
+            # Convert to page URLs
+            df_copy[col] = df[col].apply(
+                lambda x: get_page_url_for_item(x, core) if isinstance(x, str) and '-' in x else x
+            )
+            
+            # Configure as link column
+            column_config[col] = st.column_config.LinkColumn(
+                col,
+                help=f"Click to view {col} on its page",
+                display_text=r".*item=([^&]+)",  # Extract and show just the ID
+            )
     
     return df_copy, column_config
 
