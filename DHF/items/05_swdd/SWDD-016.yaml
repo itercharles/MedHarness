@@ -1,0 +1,47 @@
+id: SWDD-016
+title: Traceability Infrastructure Implementation
+content: |-
+  **Purpose:** Bidirectional link maintenance and verification column detection
+  
+  **Implementation Details:**
+  
+  **Bidirectional Link Maintenance:**
+  
+  **Link Storage:**
+  - Forward links: Stored in item YAML (e.g., derives_from, implements)
+  - Backward links: Computed from graph traversal
+  - All links: Cached in all_linked_uids property
+  
+  **Link Update Process:**
+  1. User adds link in item A → item B
+  2. Save link in item A's YAML file
+  3. Rebuild graph to update backward links
+  4. Item B now shows item A in its upstream links
+  
+  **Link Validation:**
+  - Check target item exists
+  - Warn if target not found
+  - Prevent circular dependencies
+  - Validate relationship type is allowed
+  
+  **Verification Column Detection:**
+  
+  **Algorithm:**
+  1. Analyze traceability matrix columns
+  2. For each column, check if it represents verification
+  3. Verification indicators:
+     - Column name contains "test", "verification", "TC-"
+     - Column type is test case document type
+     - Relationship type is "verifies" or "tests"
+  4. Mark column as verification column
+  5. Apply special formatting (e.g., checkmarks for coverage)
+  
+  **Auto-Detection Rules:**
+  - Test case columns: Always verification
+  - Review columns: Verification if configured
+  - Custom columns: Based on relationship type
+implements:
+- SRS-016
+guided_by:
+- SWAD-006
+status: approved

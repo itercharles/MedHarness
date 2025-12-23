@@ -1,0 +1,52 @@
+id: SWDD-013
+title: Change Impact Analysis Implementation
+content: |-
+  **Purpose:** Calculate downstream impact of item changes
+  
+  **Implementation Details:**
+  
+  **Algorithm: Depth-First Search (DFS)**
+  
+  **Process:**
+  1. Start from changed item node
+  2. Initialize empty impact set
+  3. Traverse all outgoing edges (downstream)
+  4. For each child node:
+     a. Add to impact set
+     b. Recursively traverse its children
+  5. Return complete impact set
+  
+  **Pseudocode:**
+  ```python
+  def get_downstream_impact(uid, visited=None):
+      if visited is None:
+          visited = set()
+      
+      if uid in visited:
+          return visited
+      
+      visited.add(uid)
+      
+      for child in graph.successors(uid):
+          get_downstream_impact(child, visited)
+      
+      return visited
+  ```
+  
+  **Complexity:** O(V + E) where V = vertices, E = edges
+  
+  **Optimization:**
+  - Cache results for frequently queried items
+  - Limit traversal depth if needed (configurable)
+  - Stop at leaf nodes (no children)
+  
+  **Use Cases:**
+  - Show impact before deleting item
+  - Highlight affected items when requirement changes
+  - Generate change notification lists
+  - Calculate re-verification scope
+implements:
+- SRS-011
+guided_by:
+- SWAD-006
+status: approved

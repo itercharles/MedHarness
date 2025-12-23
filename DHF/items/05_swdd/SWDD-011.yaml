@@ -1,0 +1,48 @@
+id: SWDD-011
+title: Configuration Validation Implementation
+content: |-
+  **Purpose:** Validate configuration schema with fail-fast error reporting
+  
+  **Implementation Details:**
+  
+  **Validation Stages:**
+  
+  **1. File Loading:**
+  - Check configuration file exists
+  - Parse YAML/JSON content
+  - Handle syntax errors with line numbers
+  
+  **2. Schema Validation:**
+  - Validate against Pydantic models
+  - Check required fields present
+  - Verify field types (str, int, list, dict)
+  - Validate enum values
+  
+  **3. Semantic Validation:**
+  - Check document type codes are unique
+  - Verify page numbers are unique (if page_enabled)
+  - Validate lifecycle state transitions are acyclic
+  - Check relationship targets exist
+  
+  **Error Reporting:**
+  - Fail-fast: Stop on first critical error
+  - Detailed error messages with context
+  - Include field path (e.g., "doc_types[2].lifecycle.states[0].id")
+  - Suggest corrections when possible
+  
+  **Validation Flow:**
+  ```python
+  try:
+      config = load_yaml(config_path)
+      validated = ProjectConfig(**config)  # Pydantic validation
+      validate_semantics(validated)
+      return validated
+  except ValidationError as e:
+      print_detailed_error(e)
+      sys.exit(1)  # Fail-fast
+  ```
+implements:
+- SRS-009
+guided_by:
+- SWAD-010
+status: approved

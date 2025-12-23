@@ -1,0 +1,53 @@
+id: SWDD-012
+title: Policy Engine Implementation
+content: |-
+  **Purpose:** Execute policy validation rules and calculate compliance scores
+  
+  **Implementation Details:**
+  
+  **Policy Structure:**
+  ```python
+  class Policy:
+      name: str
+      description: str
+      applicable_types: List[str]
+      rules: List[ValidationRule]
+  ```
+  
+  **Validation Rule Types:**
+  
+  **1. Coverage Rules:**
+  - Check source items have verification links
+  - Example: All requirements must have tests
+  - Implementation: Graph traversal to find links
+  
+  **2. Orphan Rules:**
+  - Check items have required parent links
+  - Example: No orphaned requirements
+  - Implementation: In-degree check on graph
+  
+  **3. Status Rules:**
+  - Check items are in required states
+  - Example: All requirements must be approved
+  - Implementation: Filter by status field
+  
+  **Execution Flow:**
+  1. Load policy group from configuration
+  2. Filter items by applicable_types
+  3. For each rule in policy:
+     a. Execute rule against filtered items
+     b. Collect pass/fail results
+     c. Record failing items with details
+  4. Calculate score: (passed_rules / total_rules) * 100
+  5. Generate report with details
+  
+  **Scoring Algorithm:**
+  - Each rule has equal weight (can be configured)
+  - Score = (passed / total) * 100
+  - Round to 2 decimal places
+  - Include pass/fail counts in report
+implements:
+- SRS-010
+guided_by:
+- SWAD-007
+status: approved

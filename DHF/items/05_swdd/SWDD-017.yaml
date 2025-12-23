@@ -1,0 +1,52 @@
+id: SWDD-017
+title: Document Generation Infrastructure Implementation
+content: |-
+  **Purpose:** Template rendering, format conversion, and export capabilities
+  
+  **Implementation Details:**
+  
+  **Template Engine:** Jinja2 (implementation detail, not in SRS)
+  
+  **Template Loading:**
+  - Load from configured template directory
+  - Support multiple template formats (.j2, .md, .html)
+  - Validate template syntax before rendering
+  - Cache compiled templates for performance
+  
+  **Rendering Process:**
+  1. Load template file
+  2. Prepare context data:
+     - items: All DHF items or filtered subset
+     - metadata: Version, date, author, status
+     - config: Project configuration
+     - traceability: Graph data if needed
+  3. Render template with context
+  4. Post-process output (e.g., syntax highlighting)
+  
+  **Format Conversion:**
+  - Markdown → HTML: Using markdown library
+  - HTML → PDF: Using weasyprint or similar
+  - Support for custom converters (configurable)
+  
+  **Metadata Inclusion:**
+  - Document version (from git tag or config)
+  - Generation date (current timestamp)
+  - Author (from config or git)
+  - Item status summary (counts by status)
+  - Traceability metrics (coverage, orphans)
+  
+  **Export Capabilities:**
+  - Single document export
+  - Batch export (all document types)
+  - Custom export formats (via configuration)
+  - Output directory structure preservation
+  
+  **Generation History:**
+  - Log each generation event
+  - Store: timestamp, template, output file, user
+  - Enable regeneration from history
+implements:
+- SRS-017
+guided_by:
+- SWAD-008
+status: approved

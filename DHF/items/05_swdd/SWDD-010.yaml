@@ -1,0 +1,45 @@
+id: SWDD-010
+title: Git Integration Implementation
+content: |-
+  **Purpose:** Automated git commits for item changes
+  
+  **Implementation Details:**
+  
+  **Commit Trigger Points:**
+  - Item creation
+  - Item update
+  - Item deletion
+  - Status transitions
+  
+  **Commit Message Format:**
+  ```
+  [ACTION] ITEM-ID: Brief description
+  
+  Author: User Name <email>
+  Type: Document Type
+  Status: New Status (if applicable)
+  ```
+  
+  **Process Flow:**
+  1. Item change occurs in application
+  2. ItemSaver writes file to disk
+  3. GitRepository.commit_item_change() called
+  4. Generate commit message with item context
+  5. Stage changed file: `git add <file_path>`
+  6. Create commit: `git commit -m "<message>" --author="<author>"`
+  7. Optional: Push to remote if configured
+  
+  **Author Attribution:**
+  - Read from session context or environment
+  - Format: "Name <email>"
+  - Fallback to system user if not provided
+  
+  **Error Handling:**
+  - Log git errors but don't block item save
+  - Retry logic for network failures (push)
+  - Validate git repository exists before operations
+implements:
+- SRS-004
+guided_by:
+- SWAD-010
+status: approved

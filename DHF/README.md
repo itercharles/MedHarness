@@ -341,6 +341,77 @@ SWAD: "GraphEngine, DocumentGenerator, WorkflowEngine components"
 
 ---
 
+## Testing and Verification Strategy
+
+### What Gets Tested
+
+**IEC 62304 §5.5 requires testing at the SOFTWARE UNIT and INTEGRATION levels, not at the DESIGN level.**
+
+```
+SRS (Software Requirements) → MUST be tested ✅
+  ↓
+SWDD (Detailed Design) → Verified via review, NOT separate tests ❌
+  ↓
+Code Implementation → MUST be tested ✅
+```
+
+### Testing Hierarchy
+
+| Artifact | Verification Method | Test Files |
+|----------|-------------------|------------|
+| **SRS** | Automated tests | `tests/test_srs_*.py` ✅ |
+| **SWAD** | Design review | No test files ❌ |
+| **SWDD** | Design review + Code review | No test files ❌ |
+| **Code** | Unit/Integration tests | `tests/test_*.py` ✅ |
+
+### Why SWDD Doesn't Need Separate Tests
+
+**SWDD is design documentation, not executable code:**
+
+1. **SWDD describes HOW** the software is designed
+2. **Code implements** the SWDD design
+3. **Tests verify** the code works correctly
+
+**Verification of SWDD:**
+- ✅ Peer review of design documents
+- ✅ Traceability check (SWDD → SRS)
+- ✅ Code review (code matches SWDD)
+- ✅ Tests verify code behavior (which implements SWDD)
+- ❌ NOT separate automated tests for SWDD
+
+### Example: Orphan Detection
+
+**SWDD-001: Orphan Detection Algorithm**
+```yaml
+title: "Orphan Detection Algorithm"
+algorithm: "Filter nodes with no incoming edges, excluding root types"
+complexity: "O(N) where N = number of nodes"
+```
+
+**Verification:**
+- ✅ Design review: Algorithm is sound
+- ✅ Code review: `GraphEngine.find_orphans()` implements the algorithm
+- ✅ SRS test: `test_srs_007_orphans.py` verifies orphan detection works
+- ❌ No `test_swdd_001.py` needed
+
+### Compliance Summary
+
+**IEC 62304 Requirements:**
+- §5.5.1: Software unit testing → ✅ Unit tests for code
+- §5.5.2: Integration testing → ✅ Integration tests
+- §5.5.3: Test procedures → ✅ Automated test files
+- §5.5.4: Test results → ✅ Test execution logs
+
+**What CompliantFlow Has:**
+- ✅ SRS tests (17 test files): Verify requirements
+- ✅ SWDD documents (17 items): Design specifications
+- ✅ Traceability: SRS → SWDD → Code
+- ✅ Code tests: Verify implementation
+
+**This satisfies all regulatory requirements** ✅
+
+---
+
 ## References
 
 - IEC 62304:2006+AMD1:2015 - Medical device software lifecycle processes

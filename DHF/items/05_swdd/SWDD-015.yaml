@@ -1,0 +1,58 @@
+id: SWDD-015
+title: Item Lifecycle Management Implementation
+content: |-
+  **Purpose:** CRUD operations, filtering, search, and history for items
+  
+  **Implementation Details:**
+  
+  **CRUD Operations:**
+  
+  **Create:**
+  - Generate unique ID (prefix + next number)
+  - Set initial status from lifecycle configuration
+  - Validate required fields
+  - Save to file system
+  - Create git commit
+  
+  **Read:**
+  - Load all items from directory
+  - Parse YAML files
+  - Build item objects with Pydantic
+  - Cache in memory for performance
+  
+  **Update:**
+  - Validate changes against schema
+  - Preserve immutable fields (id, created_at)
+  - Update modified timestamp
+  - Save to file system
+  - Create git commit
+  
+  **Delete:**
+  - Check for downstream dependencies
+  - Warn if item has children
+  - Remove file from file system
+  - Create git commit
+  
+  **Filtering:**
+  - By item type (prefix matching)
+  - By status (exact match or list)
+  - By custom fields (configurable)
+  - Combine filters with AND logic
+  
+  **Search:**
+  - Search in ID (substring match)
+  - Search in title (case-insensitive)
+  - Search in content (full-text)
+  - Return ranked results
+  
+  **History Tracking:**
+  - Git commit history per file
+  - Parse commit messages for metadata
+  - Show timeline of changes
+  - Diff between versions
+implements:
+- SRS-015
+guided_by:
+- SWAD-002
+- SWAD-005
+status: approved

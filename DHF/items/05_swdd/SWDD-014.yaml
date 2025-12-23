@@ -1,0 +1,56 @@
+id: SWDD-014
+title: Streamlit UI Implementation
+content: |-
+  **Purpose:** Web-based user interface for DHF management
+  
+  **Implementation Details:**
+  
+  **Framework:** Streamlit
+  
+  **Page Structure:**
+  - Home page: Overview and metrics
+  - Traceability page: Graph visualization
+  - Dynamic document type pages: Item management
+  - Policy page: Compliance checking
+  
+  **Universal Page Template Pattern:**
+  - Single template handles all document types
+  - Configuration-driven behavior
+  - Dynamic form generation based on item properties
+  - Reusable UI components
+  
+  **Key Components:**
+  
+  **1. Item Table:**
+  - Display all items of type
+  - Sortable columns
+  - Clickable item IDs (hyperlinks)
+  - Status indicators with colors
+  - Filtering by status and search
+  
+  **2. Item Detail Panel:**
+  - Show selected item details
+  - Edit form for item properties
+  - Workflow transition buttons
+  - Relationship links display
+  
+  **3. Workflow UI:**
+  - Show current state
+  - Display available transitions
+  - Validation feedback
+  - Confirmation dialogs
+  
+  **Session State Management:**
+  - selected_item_id: Currently selected item
+  - filters: Active filter settings
+  - page_state: Per-page state preservation
+  
+  **Performance:**
+  - Cache core initialization
+  - Lazy load item details
+  - Pagination for large item lists
+implements:
+- SRS-012
+guided_by:
+- SWAD-004
+status: approved
