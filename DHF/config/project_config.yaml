@@ -4,7 +4,7 @@ doc_types:
     name: "Use Case"
     prefix: "UC-"
     directory: "00_uc"
-    properties: ["id", "title", "content"]
+    properties: ["id", "title", "content", "status"]
     icon: "👤"
     page_enabled: true
     page_number: 4
@@ -20,7 +20,7 @@ doc_types:
     name: "Customer Requirement"
     prefix: "CRS-"
     directory: "01_req_crs"
-    properties: ["id", "title", "content", "user_group", "source", "reviewer", "review_date"]
+    properties: ["id", "title", "content", "user_group", "source", "reviewer", "review_date", "derives_from", "rationale", "stakeholder", "priority", "status"]
     
     # UI Configuration
     icon: "🎯"
@@ -198,7 +198,7 @@ doc_types:
     prefix: "SYS-"
     directory: "02_req_sys"
     allowed_parents: ["CRS", "RCM"]
-    properties: ["id", "title", "content", "category", "verification_method", "critical_safety", "links", "reviewer", "review_date"]
+    properties: ["id", "title", "content", "category", "verification_method", "critical_safety", "links", "reviewer", "review_date", "derives_from", "status"]
     relations:
       - target: CRS
         label: satisfies
@@ -249,7 +249,7 @@ doc_types:
     prefix: "SRS-"
     directory: "03_req_srs"
     allowed_parents: ["SYS"]
-    properties: ["id", "title", "content", "derives_from", "performance"]
+    properties: ["id", "title", "content", "derives_from", "performance", "status"]
     relations:
       - target: SYS
         label: derives_from
@@ -270,7 +270,7 @@ doc_types:
     name: "System Architecture"
     prefix: "SYSARCH-"
     directory: "06_sys_arch"
-    properties: ["id", "title", "content", "informs"]
+    properties: ["id", "title", "content", "informs", "status"]
     relations:
       - target: SYS
         label: informs
@@ -289,7 +289,7 @@ doc_types:
     name: "Software Architecture"
     prefix: "SWAD-"
     directory: "04_swad"
-    properties: ["id", "title", "content", "implements"]
+    properties: ["id", "title", "content", "implements", "status"]
     relations:
       - target: SRS
         label: implements
@@ -308,7 +308,7 @@ doc_types:
     name: "Software Detailed Design"
     prefix: "SWDD-"
     directory: "05_swdd"
-    properties: ["id", "title", "content", "implements", "guided_by"]
+    properties: ["id", "title", "content", "implements", "guided_by", "status"]
     relations:
       - target: SRS
         label: implements

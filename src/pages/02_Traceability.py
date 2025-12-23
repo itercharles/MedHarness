@@ -176,9 +176,10 @@ def _build_chains_recursive(all_items: List[dict], path: List[str], level: int, 
     current_item = current_chain[current_type]
     
     # Find all items of next_type that link to current_item
+    # Use all_linked_uids to support typed relationships
     next_items = [item for item in all_items 
                  if get_doc_type_code(item['id']) == next_type 
-                 and current_item['id'] in item.get('links', [])]
+                 and current_item['id'] in item.get('all_linked_uids', item.get('links', []))]
     
     if next_items:
         # Create a chain for each match (multiple rows)

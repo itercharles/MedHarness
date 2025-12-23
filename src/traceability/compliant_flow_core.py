@@ -79,7 +79,10 @@ class CompliantFlowCore:
         items = []
         for node_id in self.graph.graph.nodes:
             item: Item = self.graph.graph.nodes[node_id]['item']
-            items.append(item.model_dump(by_alias=True, exclude_none=True))
+            item_dict = item.model_dump(by_alias=True, exclude_none=True)
+            # Add computed property for traceability traversal
+            item_dict['all_linked_uids'] = item.all_linked_uids
+            items.append(item_dict)
         
         # Scan for automated test cases from Python code
         try:
