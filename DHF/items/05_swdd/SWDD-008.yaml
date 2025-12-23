@@ -1,0 +1,23 @@
+id: SWDD-008
+title: Universal Page Template Hyperlink Integration
+content: |-
+  **Purpose:** Integrate hyperlink navigation into all dynamically generated document type pages
+  
+  **Algorithm:**
+  1. Import UI helpers (check_and_show_item_detail, make_item_columns_clickable)
+  2. After page title, call check_and_show_item_detail(core)
+  3. If item detail shown, add separator line
+  4. Before rendering main items table:
+     - Create DataFrame with item data
+     - Call make_item_columns_clickable(df) to get column config
+     - Pass column_config to st.dataframe()
+  5. Item ID columns automatically become clickable links
+  
+  **Affected Pages:** All dynamic document pages (UC, CRS, SYS, SRS, SWAD, SWDD, TC-*, etc.)
+  **Complexity:** O(1) overhead per page render
+  **Module:** src/pages/universal_page_template.py
+implements:
+  - SRS-013
+guided_by:
+  - SWAD-001
+status: approved

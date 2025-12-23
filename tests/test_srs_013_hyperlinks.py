@@ -137,6 +137,53 @@ class TestSRS013_AutomaticItemIDColumnDetection:
         assert 'ID' in config
 
 
+class TestSWDD008_UniversalPageTemplateIntegration:
+    """Tests for SWDD-008: Universal Page Template Hyperlink Integration."""
+    
+    def test_universal_page_template_imports_ui_helpers(self):
+        """Verify universal page template imports UI helper functions."""
+        import importlib.util
+        spec = importlib.util.spec_from_file_location(
+            "universal_page_template",
+            Path(__file__).parent.parent / "src" / "pages" / "universal_page_template.py"
+        )
+        module = importlib.util.module_from_spec(spec)
+        
+        # Check that the module can be loaded (imports are valid)
+        try:
+            spec.loader.exec_module(module)
+            assert True, "Module loaded successfully with UI helpers"
+        except ImportError as e:
+            assert False, f"Failed to import UI helpers: {e}"
+    
+    def test_universal_page_has_hyperlink_functions(self):
+        """Verify universal page template has access to hyperlink functions."""
+        from pages.universal_page_template import render_item_management_page
+        import inspect
+        
+        # Get the source code
+        source = inspect.getsource(render_item_management_page)
+        
+        # Verify it uses the hyperlink functions
+        assert 'check_and_show_item_detail' in source, \
+            "Should call check_and_show_item_detail"
+        assert 'make_item_columns_clickable' in source, \
+            "Should call make_item_columns_clickable"
+    
+    def test_column_config_applied_to_dataframe(self):
+        """Verify column config is passed to st.dataframe."""
+        from pages.universal_page_template import render_item_management_page
+        import inspect
+        
+        source = inspect.getsource(render_item_management_page)
+        
+        # Verify column_config is created and passed to dataframe
+        assert 'column_config = make_item_columns_clickable' in source, \
+            "Should create column_config from make_item_columns_clickable"
+        assert 'column_config=column_config' in source, \
+            "Should pass column_config to st.dataframe"
+
+
 class TestHyperlinkIntegration:
     """Integration tests for hyperlink feature."""
     
