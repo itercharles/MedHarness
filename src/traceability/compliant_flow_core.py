@@ -98,6 +98,8 @@ class CompliantFlowCore:
                 existing_ids = {item['id'] for item in items}
                 for test in automated_tests:
                     if test['id'] not in existing_ids:
+                        # Add all_linked_uids for automated tests (empty list since they're scanned)
+                        test['all_linked_uids'] = test.get('links', [])
                         items.append(test)
         except Exception as e:
             # Silently fail if scanner not available or tests dir missing
