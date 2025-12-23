@@ -12,6 +12,7 @@ from traceability.document_generator import DocumentGenerator
 from streamlit_agraph import agraph, Node, Edge, Config
 import networkx as nx
 from test_results import VerificationStatusProvider
+from utils.ui_helpers import check_and_show_item_detail, make_item_columns_clickable
 
 # Page Configuration
 st.set_page_config(
@@ -44,6 +45,10 @@ except Exception as e:
 # Page Header
 st.title("🔗 Traceability - CompliantFlow")
 st.caption("Configurable traceability views")
+
+# Check for item detail query parameter
+if check_and_show_item_detail(core):
+    st.markdown("---")
 
 # Sidebar: View Mode Selection
 st.sidebar.header("View Mode")
@@ -381,15 +386,18 @@ if view_mode == "Matrix Table":
                 coverage = (complete / len(df) * 100) if len(df) > 0 else 0
                 st.metric("Coverage", f"{coverage:.0f}%")
             
-            # Build column config dynamically
-            column_config = {}
+            # Build column config with clickable item IDs
+            column_config = make_item_columns_clickable(df)
+            
+            # Add custom config for other columns
             for col in df.columns:
-                if col == 'Status':
-                    column_config[col] = st.column_config.TextColumn("Status", width="small")
-                elif 'Title' in col:
-                    column_config[col] = st.column_config.TextColumn(col, width="medium")
-                else:
-                    column_config[col] = st.column_config.TextColumn(col, width="small")
+                if col not in column_config:
+                    if col == 'Status':
+                        column_config[col] = st.column_config.TextColumn("Status", width="small")
+                    elif 'Title' in col:
+                        column_config[col] = st.column_config.TextColumn(col, width="medium")
+                    else:
+                        column_config[col] = st.column_config.TextColumn(col, width="small")
             
             # Display table
             st.dataframe(

@@ -1,0 +1,23 @@
+id: SWDD-006
+title: make_item_columns_clickable Function
+content: |-
+  **Purpose:** Automatically detect and configure item ID columns as clickable links
+  
+  **Algorithm:**
+  1. Iterate through DataFrame columns
+  2. For object-type columns, sample first non-null value
+  3. Check if value matches item ID pattern (contains hyphen)
+  4. If match, create LinkColumn config with:
+     - Display text: full item ID
+     - Validation: PREFIX-NUMBER pattern
+     - Help text: "Click to view {col} details"
+  5. Return dictionary of column configurations
+  
+  **Complexity:** O(n) where n = number of columns
+  **Module:** src/utils/ui_helpers.py
+implements:
+  - SRS-013
+  - SRS-015
+guided_by:
+  - SWAD-001
+status: approved

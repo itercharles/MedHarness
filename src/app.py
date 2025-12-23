@@ -9,6 +9,7 @@ import streamlit as st
 import pandas as pd
 from traceability.compliant_flow_core import CompliantFlowCore
 from page_generator import generate_doc_type_pages
+from utils.ui_helpers import check_and_show_item_detail
 
 # Initialize Core
 @st.cache_resource
@@ -32,6 +33,10 @@ pages = {}
 def home_page():
     st.title("📋 CompliantFlow")
     st.markdown("### Medical Device Design History File Management")
+    
+    # Check for item detail query parameter
+    if check_and_show_item_detail(core):
+        st.markdown("---")
     
     st.markdown("""
     Welcome to CompliantFlow, a comprehensive system for managing medical device design history files (DHF) 

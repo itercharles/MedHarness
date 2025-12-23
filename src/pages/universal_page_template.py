@@ -11,6 +11,7 @@ from ui_components import (
     render_manual_verification,
     render_status_badge
 )
+from utils.ui_helpers import check_and_show_item_detail, make_item_columns_clickable
 
 
 def render_item_management_page(
@@ -35,6 +36,10 @@ def render_item_management_page(
     # Page setup
     st.set_page_config(page_title=name, page_icon=icon, layout="wide")
     st.title(f"{icon} {name}")
+    
+    # Check for item detail query parameter
+    if check_and_show_item_detail(core):
+        st.markdown("---")
     
     # Clear selection state when switching to a different page
     current_page_key = f"page_{code}"
@@ -317,6 +322,9 @@ def render_table_section(
         
         df = pd.DataFrame(df_data)
         
+        # Configure clickable item ID columns
+        column_config = make_item_columns_clickable(df)
+        
         # Use dataframe with on_click selection (no checkboxes)
         event = st.dataframe(
             df,
@@ -324,7 +332,8 @@ def render_table_section(
             hide_index=True,
             on_select="rerun",
             selection_mode="single-row",
-            key="items_table"
+            key="items_table",
+            column_config=column_config
         )
         
         # Handle row selection

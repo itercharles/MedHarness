@@ -1,0 +1,26 @@
+id: SWDD-007
+title: check_and_show_item_detail Function
+content: |-
+  **Purpose:** Check for item query parameter and display item details
+  
+  **Algorithm:**
+  1. Check if "item" key exists in st.query_params
+  2. If present, extract item_id value
+  3. Call core.get_item(item_id) to fetch item data
+  4. If item not found, display error and return None
+  5. Create expander with title: "📄 {item_id} - {title}"
+  6. Display item properties in two columns:
+     - Column 1: ID, title, status
+     - Column 2: Type, reviewer, review_date
+  7. Display content section
+  8. Display relationships section with typed links
+  9. Add "Close Item Detail" button that clears query param
+  10. Return item_id
+  
+  **Complexity:** O(1) for item lookup
+  **Module:** src/utils/ui_helpers.py
+implements:
+  - SRS-014
+guided_by:
+  - SWAD-001
+status: approved
