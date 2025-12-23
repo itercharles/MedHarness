@@ -556,8 +556,8 @@ with col_exp2:
     if st.button("📄 Generate PDF Report", type="primary"):
         with st.spinner("Generating traceability matrix PDF..."):
             try:
-                # Initialize document generator
-                template_dir = Path(__file__).resolve().parent.parent / "templates"
+                # Initialize document generator - use DHF templates
+                template_dir = Path(__file__).resolve().parent.parent.parent / "DHF" / "documents" / "specifications" / "templates"
                 doc_gen = DocumentGenerator(core, template_dir)
                 
                 # Generate PDF
