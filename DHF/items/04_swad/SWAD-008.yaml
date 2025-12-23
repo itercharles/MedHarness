@@ -1,0 +1,46 @@
+id: SWAD-008
+title: Document Generation Architecture
+content: |-
+  **Purpose:** Template-based document generation with multiple output formats
+  
+  **Components:**
+  
+  **DocumentGenerator**
+  - Loads templates from configured directory
+  - Renders templates with item data
+  - Supports multiple output formats
+  - Includes metadata in generated documents
+  - Maintains generation history
+  
+  **Design Decisions:**
+  - Template engine for flexibility
+  - Configurable template directory
+  - Support for multiple output formats (defined in config)
+  - Metadata (version, date, status) automatically included
+  - Template syntax validation before generation
+  
+  **Document Generation Flow:**
+  1. Load template from configured directory
+  2. Validate template syntax
+  3. Gather item data for template context
+  4. Render template with data
+  5. Apply output format conversion (if needed)
+  6. Include metadata (version, date, status)
+  7. Save generated document
+  8. Record generation in history
+  
+  **Template Context:**
+  - Items: All DHF items or filtered subset
+  - Metadata: Version, date, author, status
+  - Configuration: Project settings
+  - Traceability: Graph data if needed
+  
+  **Interfaces:**
+  - generate_document(template_name: str, context: dict) → Path
+  - render_template(template: str, context: dict) → str
+  - validate_template(template: str) → (bool, List[str])
+  - get_generation_history() → List[dict]
+implements:
+- SRS-003
+- SRS-017
+status: approved

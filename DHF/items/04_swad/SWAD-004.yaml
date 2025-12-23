@@ -21,4 +21,5 @@ content: |-
   - Easy to maintain and update
 implements:
 - SRS-012
+- SRS-013
 status: approved

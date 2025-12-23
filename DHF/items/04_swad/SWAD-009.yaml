@@ -1,0 +1,41 @@
+id: SWAD-009
+title: Coverage Analysis Architecture
+content: |-
+  **Purpose:** Calculate coverage between source and verification items
+  
+  **Components:**
+  
+  **CoverageAnalyzer**
+  - Identifies source items based on configured types
+  - Finds verification items linked via configured relationships
+  - Calculates coverage percentage
+  - Reports items without verification links
+  
+  **Design Decisions:**
+  - Configuration-driven (item types and relationships from config)
+  - Generic algorithm works for any source/verification pair
+  - Supports multiple relationship types
+  - Detailed reporting of uncovered items
+  
+  **Coverage Calculation Algorithm:**
+  1. Load source item types from configuration
+  2. Load verification relationship types from configuration
+  3. Retrieve all source items
+  4. For each source item:
+     a. Find verification items via configured relationships
+     b. Mark as verified if links exist
+  5. Calculate: (verified items / total items) * 100
+  6. Generate report of uncovered items
+  
+  **Example Configurations:**
+  - Source: Requirements, Verification: Tests
+  - Source: Risks, Verification: Risk Control Measures
+  - Source: Use Cases, Verification: Requirements
+  
+  **Interfaces:**
+  - calculate_coverage(source_type: str, verification_type: str, relationship: str) → CoverageResult
+  - get_uncovered_items(source_type: str) → List[Item]
+  - generate_coverage_report() → dict
+implements:
+- SRS-008
+status: approved
