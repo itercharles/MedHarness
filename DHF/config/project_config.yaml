@@ -684,18 +684,31 @@ policies:
   require_test_coverage: ["SYS", "CRS", "SDS"]
 
 traceability_matrices:
-  - name: "Requirements to Design"
-    description: "Customer requirements through system to design"
-    path: ["CRS", "SYS", "SDS"]
+  # Primary Requirements Chain (UC → CRS → SYS → SRS → SWDD)
+  - name: "Complete Requirements Chain"
+    description: "Full traceability from use cases to detailed design"
+    path: ["UC", "CRS", "SYS", "SRS", "SWDD"]
   
-  - name: "System to Architecture"
-    description: "System requirements to architecture"
-    path: ["SYS", "ARCH"]
-
+  # Architecture Guidance (SWAD guides SWDD but is not in requirements chain)
+  - name: "Architecture to Detailed Design"
+    description: "Architecture guidance for detailed design"
+    path: ["SWAD", "SWDD"]
+  
+  # System Architecture Influence
+  - name: "System Architecture to System Requirements"
+    description: "System architecture informing system requirements"
+    path: ["SYS_ARCH", "SYS"]
+  
+  # Risk Management
+  - name: "Risk to Control Measures"
+    description: "Risks to risk control measures"
+    path: ["RISK", "RCM"]
+  
   - name: "Risk Control to System"
     description: "Risk control measures to system requirements"
     path: ["RCM", "SYS"]
   
+  # Testing & Verification
   - name: "Customer Validation"
     description: "Customer requirements to validation tests"
     path: ["CRS", "TC-CRS"]
@@ -704,9 +717,13 @@ traceability_matrices:
     description: "System requirements to system tests"
     path: ["SYS", "TC-SYS"]
   
-  - name: "Design Verification"
-    description: "Design specifications to design tests"
-    path: ["SDS", "TC-SDS"]
+  - name: "Software Requirements Verification"
+    description: "Software requirements to software tests"
+    path: ["SRS", "TC-SRS"]
+  
+  - name: "Detailed Design Verification"
+    description: "Detailed design to unit tests"
+    path: ["SWDD", "TC-SWDD"]
   
 
 # Document Generation Configuration

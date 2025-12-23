@@ -1,82 +1,69 @@
 # Traceability Matrix
 
 **Project:** {{ project_name }}  
-**Generated:** {{ generation_date }}
+**Generated:** {{ generation_date }}  
+**Matrix:** {{ matrix_name }}
 
 ---
 
-## Executive Summary
+## Overview
 
-This document provides a comprehensive traceability matrix showing the relationships between requirements, design specifications, and test cases.
+{{ matrix_description }}
+
+**Traceability Path:** {{ ' → '.join(trace_path) }}
+
+---
 
 ## Traceability Chains
 
-The following chains show the complete traceability from customer requirements through to test verification:
-
-{% for chain in traceability_chains %}
-### Chain {{ loop.index }}
-
-**Customer Requirement:** {{ chain.crs_id }} - {{ chain.crs_title }}
-
-{% if chain.sys_id %}
-**System Requirement:** {{ chain.sys_id }} - {{ chain.sys_title }}
-
-{% if chain.sds_id %}
-**Design Specification:** {{ chain.sds_id }}
-
-{% if chain.test_id %}
-**Test Case:** {{ chain.test_id }}
+{% if chains %}
+| # | {% for level in trace_path %}{{ level }} | {% endfor %}Status |
+|---|{% for level in trace_path %}---|{% endfor %}---|
+{% for chain in chains %}
+| {{ loop.index }} | {% for level in trace_path %}{{ chain.get(level, '-') }} | {% endfor %}{{ chain.status }} |
+{% endfor %}
 {% else %}
-[WARNING] *No test case linked*
-{% endif %}
-
-{% else %}
-[WARNING] *No design specification linked*
-{% endif %}
-
-{% else %}
-[WARNING] *No system requirement linked*
+*No traceability chains found for this path.*
 {% endif %}
 
 ---
+
+## Coverage Statistics
+
+{% if coverage %}
+**Total Chains:** {{ coverage.total_chains }}  
+**Complete Chains:** {{ coverage.complete_chains }} ({{ coverage.completion_percentage }}%)  
+**Incomplete Chains:** {{ coverage.incomplete_chains }}
+
+### Level-by-Level Coverage
+
+{% for level_stat in coverage.level_stats %}
+**{{ level_stat.level }}:**
+- Total Items: {{ level_stat.total }}
+- With Links: {{ level_stat.with_links }}
+- Coverage: {{ level_stat.coverage_percentage }}%
+{% if level_stat.coverage_percentage < 100 %}
+  - ⚠️ Gap: {{ level_stat.total - level_stat.with_links }} items without links
+{% endif %}
+
 {% endfor %}
-
-## Coverage Analysis
-
-### Requirements Coverage
-
-**CRS → SYS Coverage**: {{ coverage.crs_with_sys }}/{{ coverage.total_crs }} ({{ coverage.crs_to_sys }}%)
-{% if coverage.crs_to_sys < 100 %}
-[WARNING] **Coverage Gap:** {{ coverage.total_crs - coverage.crs_with_sys }} CRS items not linked to SYS
 {% else %}
-[OK] **Full Coverage**
+*Coverage statistics not available.*
 {% endif %}
 
-**SYS → SDS Coverage**: {{ coverage.sys_with_sds }}/{{ coverage.total_sys }} ({{ coverage.sys_to_sds }}%)
-{% if coverage.sys_to_sds < 100 %}
-[WARNING] **Coverage Gap:** {{ coverage.total_sys - coverage.sys_with_sds }} SYS items not linked to SDS
-{% else %}
-[OK] **Full Coverage**
-{% endif %}
-
-**Requirements → Tests Coverage**: {{ coverage.req_with_test }}/{{ coverage.total_req }} ({{ coverage.req_to_test }}%)
-{% if coverage.req_to_test < 100 %}
-[WARNING] **Coverage Gap:** {{ coverage.total_req - coverage.req_with_test }} requirements not covered by tests
-{% else %}
-[OK] **Full Coverage**
-{% endif %}
+---
 
 ## Orphan Items
 
-Items with no traceability links:
+Items with no traceability links in this path:
 
 {% if orphans %}
 {% for orphan in orphans %}
-- **{{ orphan.id }}** ({{ orphan.type }}) - {{ orphan.title }}
+- **{{ orphan.id }}** ({{ orphan.type }}){% if orphan.title %} - {{ orphan.title }}{% endif %}
   - Reason: {{ orphan.reason }}
 {% endfor %}
 {% else %}
-[OK] **No orphan items found**
+✅ **No orphan items found**
 {% endif %}
 
 ---
@@ -85,9 +72,11 @@ Items with no traceability links:
 
 This traceability matrix demonstrates compliance with:
 - IEC 62304 § 5.1.1 (Requirements Specification)
+- IEC 62304 § 5.1.3 (Requirements Traceability)
 - IEC 62304 § 5.3.6 (Software Architecture Traceability)
 - IEC 62304 § 5.5.2 (Detailed Design Traceability)
 - IEC 62304 § 5.6.6 (Unit Testing Traceability)
+- IEC 62304 § 5.7.1 (Integration Testing Traceability)
 
 ---
 
