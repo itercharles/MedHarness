@@ -5,7 +5,7 @@ links:
 - CRS-006
 title: Release History Tracking
 verification_status: PASS
-status: draft
+status: approved
 manual_verifications:
   review_complete:
     verified_by: charles
