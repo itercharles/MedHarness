@@ -1,0 +1,45 @@
+id: SYSARCH-005
+title: Policy-Based Compliance Architecture
+content: |-
+  Configurable policy engine architecture:
+  
+  **Policy Configuration:**
+  - Policy groups defined in configuration
+  - Each policy has name, description, applicable types
+  - Validation rules defined per policy
+  
+  **Policy Engine:**
+  - Load policies from configuration
+  - Execute validation rules against items
+  - Collect pass/fail results
+  - Calculate compliance scores
+  
+  **Validation Rule Types:**
+  - Coverage rules: Check source items have verification
+  - Orphan rules: Check items have required parents
+  - Status rules: Check items in required states
+  - Custom rules: Extensible validation framework
+  
+  **Scoring Algorithm:**
+  - Each rule has equal weight (configurable)
+  - Score = (passed_rules / total_rules) * 100
+  - Detailed results with evidence
+  
+  **Results Display:**
+  - Expandable sections per policy
+  - Pass/fail indicators
+  - Detailed evidence for failures
+  - Actionable recommendations
+  
+  **Rationale:**
+  - Policy-based = flexible compliance checking
+  - Configuration-driven = no code for new policies
+  - Extensible = support custom validation logic
+  - Transparent = clear audit trail
+design:
+- SYS-006
+- SYS-007
+- SYS-025
+- SYS-026
+- SYS-027
+status: approved

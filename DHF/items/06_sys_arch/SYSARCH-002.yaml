@@ -24,7 +24,9 @@ content: |-
   - Not suitable for >1000s of items
   - Limited concurrent editing
   - No complex queries
-informs:
-- SYS-001
-- SYS-004
+design:
+- SYS-008
+- SYS-009
+- SYS-016
+- SYS-022
 status: approved

@@ -43,7 +43,7 @@ content: |-
   - commit_item_change(uid: str, path: Path, action: str, author: str) → None
   - get_file_history(path: Path) → List[Commit]
   - validate_configuration(config_path: Path) → (bool, List[str])
-implements:
+design:
 - SRS-004
 - SRS-009
 status: approved

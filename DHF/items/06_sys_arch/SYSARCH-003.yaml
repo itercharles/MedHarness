@@ -1,0 +1,38 @@
+id: SYSARCH-003
+title: Traceability Graph Architecture
+content: |-
+  Graph-based traceability architecture:
+  
+  **Graph Technology:**
+  - NetworkX directed graph library
+  - Nodes represent DHF items
+  - Edges represent traceability relationships
+  
+  **Graph Structure:**
+  - Node attributes: item ID, type, title, status
+  - Edge attributes: relationship type (derives_from, implements, verifies)
+  - Bidirectional traversal support
+  
+  **Traceability Operations:**
+  - Build graph from all items at startup
+  - Find upstream items (parents)
+  - Find downstream items (children)
+  - Detect orphans (no incoming/outgoing edges)
+  - Calculate coverage (source to verification)
+  
+  **Visualization:**
+  - Interactive graph display
+  - Color-coded by status
+  - Shape-coded by type
+  - Clickable nodes for navigation
+  
+  **Rationale:**
+  - NetworkX provides mature graph algorithms
+  - In-memory graph for fast queries
+  - Supports complex traceability analysis
+  - Standard Python library (well-documented)
+design:
+- SYS-002
+- SYS-003
+- SYS-013
+status: approved

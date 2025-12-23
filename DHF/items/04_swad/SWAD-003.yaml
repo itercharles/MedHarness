@@ -33,7 +33,7 @@ content: |-
   - Interfaces:
     - commit_item_change(uid: str, path: Path, action: str, author: str) -> None
     - get_file_history(path: Path) -> List[dict]
-implements:
+design:
 - SRS-002
 - SRS-004
 - SRS-005

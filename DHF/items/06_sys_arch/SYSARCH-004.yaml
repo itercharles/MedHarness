@@ -1,0 +1,45 @@
+id: SYSARCH-004
+title: Configuration-Driven Workflow Architecture
+content: |-
+  YAML-based configuration architecture for workflows:
+  
+  **Configuration Source:**
+  - project_config.yaml as single source of truth
+  - Pydantic models for schema validation
+  - Fail-fast on invalid configuration
+  
+  **Lifecycle Configuration:**
+  - States: id, label, color, icon, is_stable, is_initial
+  - Transitions: from, to, label, validation_criteria
+  - Per-document-type lifecycle definitions
+  
+  **Workflow Engine:**
+  - Load lifecycle from configuration at startup
+  - Validate state transitions against rules
+  - Execute validation criteria before transitions
+  - Support approval workflows
+  
+  **Status Warning Logic:**
+  - Use is_stable flag to determine warnings
+  - Show ⚠️ for items not in stable states
+  - Configuration-driven (no hardcoded states)
+  
+  **Verification Column Detection:**
+  - Automatic detection based on field presence
+  - Configurable verification status display
+  - Support for automated and manual verification
+  
+  **Rationale:**
+  - Configuration-driven = no code changes for new workflows
+  - YAML = human-readable and version-controllable
+  - Pydantic = strong typing and validation
+  - Fail-fast = catch errors early
+design:
+- SYS-005
+- SYS-010
+- SYS-012
+- SYS-017
+- SYS-018
+- SYS-023
+- SYS-024
+status: approved

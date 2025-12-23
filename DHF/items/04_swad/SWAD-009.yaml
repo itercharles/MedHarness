@@ -36,6 +36,6 @@ content: |-
   - calculate_coverage(source_type: str, verification_type: str, relationship: str) → CoverageResult
   - get_uncovered_items(source_type: str) → List[Item]
   - generate_coverage_report() → dict
-implements:
+design:
 - SRS-008
 status: approved

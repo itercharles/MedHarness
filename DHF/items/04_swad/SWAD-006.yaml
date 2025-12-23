@@ -37,7 +37,7 @@ content: |-
   - get_downstream(uid: str) → Set[str]
   - get_upstream(uid: str) → Set[str]
   - calculate_coverage(source_type: str, target_type: str) → dict
-implements:
+design:
 - SRS-001
 - SRS-007
 - SRS-011

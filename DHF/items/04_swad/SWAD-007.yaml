@@ -36,7 +36,7 @@ content: |-
   - validate_all() → ValidationResults
   - calculate_score(results: ValidationResults) → float
   - generate_report(results: ValidationResults) → str
-implements:
+design:
 - SRS-010
 - SRS-016
 status: approved

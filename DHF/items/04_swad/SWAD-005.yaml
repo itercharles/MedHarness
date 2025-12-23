@@ -30,7 +30,7 @@ content: |-
   - get_available_transitions(current_state: str) → List[Transition]
   - validate_transition(item: Item, to_state: str) → (bool, List[str])
   - execute_transition(item: Item, to_state: str, author: str) → Item
-implements:
+design:
 - SRS-006
 - SRS-015
 status: approved

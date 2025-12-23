@@ -20,10 +20,10 @@ content: |-
   - Familiar web interface
   - Portable (entire DHF is a directory)
   - Standards-compliant audit trail via Git
-informs:
+design:
 - SYS-001
-- SYS-002
-- SYS-003
 - SYS-004
-- SYS-005
+- SYS-015
+- SYS-028
+- SYS-029
 status: approved

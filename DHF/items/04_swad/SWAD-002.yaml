@@ -47,7 +47,7 @@ content: |-
   - Interfaces:
     - generate_specification(doc_type: str) -> Path
     - render_template(template: str, data: dict) -> str
-implements:
+design:
 - SRS-001
 - SRS-003
 - SRS-006

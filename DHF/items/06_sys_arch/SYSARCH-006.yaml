@@ -1,0 +1,47 @@
+id: SYSARCH-006
+title: Document Generation and History Architecture
+content: |-
+  Template-based document generation with Git history:
+  
+  **Template Engine:**
+  - Jinja2 for template rendering
+  - Templates stored in version control
+  - Support for multiple output formats
+  
+  **Generation Process:**
+  - Load template from configured directory
+  - Gather item data for context
+  - Render template with Jinja2
+  - Apply format conversion (if needed)
+  - Include metadata (version, date, status)
+  
+  **History Tracking:**
+  - Git commits for all item changes
+  - Commit messages include item ID and action
+  - Author attribution from user context
+  - Full audit trail via Git log
+  
+  **Change History Display:**
+  - Parse Git log for item files
+  - Show timeline of changes
+  - Display author and timestamp
+  - Support diff between versions
+  
+  **Documentation Generation:**
+  - Automated specification documents
+  - Traceability matrices
+  - Compliance reports
+  - Release notes
+  
+  **Rationale:**
+  - Jinja2 = industry-standard templating
+  - Git = built-in version control and audit trail
+  - Template-based = easy to customize documents
+  - Automated = reduce manual documentation effort
+design:
+- SYS-011
+- SYS-014
+- SYS-019
+- SYS-020
+- SYS-021
+status: approved
