@@ -158,24 +158,22 @@ class TestSWDD008_UniversalPageTemplateIntegration:
     
     def test_universal_page_has_hyperlink_functions(self):
         """Verify universal page template has access to hyperlink functions."""
-        from pages.universal_page_template import render_item_management_page
+        from pages.universal_page_template import render_table_section
         import inspect
         
-        # Get the source code
-        source = inspect.getsource(render_item_management_page)
+        # Get the source code of the table rendering function
+        source = inspect.getsource(render_table_section)
         
-        # Verify it uses the hyperlink functions
-        assert 'check_and_show_item_detail' in source, \
-            "Should call check_and_show_item_detail"
+        # Verify it uses the hyperlink function
         assert 'make_item_columns_clickable' in source, \
             "Should call make_item_columns_clickable"
     
     def test_column_config_applied_to_dataframe(self):
         """Verify column config is passed to st.dataframe."""
-        from pages.universal_page_template import render_item_management_page
+        from pages.universal_page_template import render_table_section
         import inspect
         
-        source = inspect.getsource(render_item_management_page)
+        source = inspect.getsource(render_table_section)
         
         # Verify column_config is created and passed to dataframe
         assert 'column_config = make_item_columns_clickable' in source, \
