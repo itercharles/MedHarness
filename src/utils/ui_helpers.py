@@ -5,16 +5,54 @@ from typing import Dict, List, Optional
 import pandas as pd
 
 
-def make_item_columns_clickable(df: pd.DataFrame) -> Dict:
+def get_page_url_for_item(item_id: str, core=None) -> str:
     """
-    Create column config to make item ID columns clickable.
+    Get the page URL for a given item ID.
+    
+    Args:
+        item_id: Item ID (e.g., SYS-001, UC-002)
+        core: Optional CompliantFlowCore instance for dynamic mapping
+    
+    Returns:
+        Page URL with item selection parameter
+    """
+    # Extract document type from item ID
+    doc_type_prefix = item_id.split('-')[0]
+    
+    # For test cases, extract the prefix (e.g., TC-SYS from TC-SYS-001)
+    if item_id.startswith('TC-'):
+        parts = item_id.split('-')
+        if len(parts) >= 3:
+            doc_type_prefix = f"{parts[0]}-{parts[1]}"
+    
+    # If core is provided, get page mapping from config
+    if core:
+        for doc_type in core.config.doc_types:
+            if doc_type.prefix == doc_type_prefix or doc_type.code == doc_type_prefix:
+                page_num = getattr(doc_type, 'page_number', None)
+                if page_num and getattr(doc_type, 'page_enabled', False):
+                    return f"/{page_num}_{doc_type.code}?item={item_id}"
+    
+    # Fallback: just use query param (will stay on current page)
+    return f"?item={item_id}"
+
+
+def make_item_columns_clickable(df: pd.DataFrame, core=None) -> tuple[pd.DataFrame, Dict]:
+    """
+    Create column config to make item ID columns clickable and transform IDs to URLs.
     
     Args:
         df: DataFrame to configure
+        core: Optional CompliantFlowCore instance for dynamic page mapping
     
     Returns:
-        Dictionary of column configurations for st.dataframe
+        Tuple of (transformed dataframe, column config dictionary)
     """
+    if df.empty:
+        return df, {}
+    
+    # Create a copy to avoid modifying original
+    df_copy = df.copy()
     column_config = {}
     
     for col in df.columns:
@@ -24,15 +62,19 @@ def make_item_columns_clickable(df: pd.DataFrame) -> Dict:
             sample = df[col].dropna().iloc[0] if not df[col].dropna().empty else None
             
             if sample and isinstance(sample, str) and '-' in sample:
-                # This looks like an item ID column - make it a link
+                # This looks like an item ID column - convert to page URLs
+                df_copy[col] = df[col].apply(
+                    lambda x: get_page_url_for_item(x, core) if isinstance(x, str) and '-' in x else x
+                )
+                
+                # Configure as link column
                 column_config[col] = st.column_config.LinkColumn(
                     col,
-                    help=f"Click to view {col} details",
-                    display_text=r"(.*)",  # Show the full ID
-                    validate=r"^[A-Z]+-\d+$",  # Validate item ID format
+                    help=f"Click to view {col} on its page",
+                    display_text=r".*item=([^&]+)",  # Extract and show just the ID
                 )
     
-    return column_config
+    return df_copy, column_config
 
 
 def check_and_show_item_detail(core):

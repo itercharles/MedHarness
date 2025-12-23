@@ -11,7 +11,7 @@ from ui_components import (
     render_manual_verification,
     render_status_badge
 )
-from utils.ui_helpers import check_and_show_item_detail, make_item_columns_clickable
+from utils.ui_helpers import make_item_columns_clickable
 
 
 def render_item_management_page(
@@ -37,9 +37,12 @@ def render_item_management_page(
     st.set_page_config(page_title=name, page_icon=icon, layout="wide")
     st.title(f"{icon} {name}")
     
-    # Check for item detail query parameter
-    if check_and_show_item_detail(core):
-        st.markdown("---")
+    # Check for item query parameter and auto-select
+    item_from_query = None
+    if "item" in st.query_params:
+        item_from_query = st.query_params["item"]
+        # Clear the query param so it doesn't persist
+        del st.query_params["item"]
     
     # Clear selection state when switching to a different page
     current_page_key = f"page_{code}"
@@ -51,6 +54,10 @@ def render_item_management_page(
         st.session_state.pop('creating_new', None)
         st.session_state.pop('transition_item', None)
         st.session_state.pop('transition_config', None)
+    
+    # Set selected item from query param AFTER clearing page state
+    if item_from_query:
+        st.session_state['selected_item_id'] = item_from_query
     
     # Initialize workflow engine
     workflow_engine = DynamicWorkflowEngine(doc_type_config, core)
@@ -323,7 +330,7 @@ def render_table_section(
         df = pd.DataFrame(df_data)
         
         # Configure clickable item ID columns
-        column_config = make_item_columns_clickable(df)
+        df, column_config = make_item_columns_clickable(df, core)
         
         # Use dataframe with on_click selection (no checkboxes)
         event = st.dataframe(

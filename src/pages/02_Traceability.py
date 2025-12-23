@@ -387,7 +387,7 @@ if view_mode == "Matrix Table":
                 st.metric("Coverage", f"{coverage:.0f}%")
             
             # Build column config with clickable item IDs
-            column_config = make_item_columns_clickable(df)
+            df, column_config = make_item_columns_clickable(df, core)
             
             # Add custom config for other columns
             for col in df.columns:

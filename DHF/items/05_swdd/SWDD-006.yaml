@@ -1,23 +1,36 @@
 id: SWDD-006
-title: make_item_columns_clickable Function
+title: UI Helper Functions for Item Hyperlinks
 content: |-
-  **Purpose:** Automatically detect and configure item ID columns as clickable links
+  **Purpose:** Provide helper functions for item hyperlink navigation with page-specific URLs
   
+  **Functions:**
+  
+  ### get_page_url_for_item(item_id, core)
+  **Purpose:** Generate page-specific URLs for item IDs
   **Algorithm:**
-  1. Iterate through DataFrame columns
-  2. For object-type columns, sample first non-null value
-  3. Check if value matches item ID pattern (contains hyphen)
-  4. If match, create LinkColumn config with:
-     - Display text: full item ID
-     - Validation: PREFIX-NUMBER pattern
-     - Help text: "Click to view {col} details"
-  5. Return dictionary of column configurations
+  1. Extract document type prefix from item ID
+  2. For test cases (TC-*), extract first two parts as prefix
+  3. If core provided, iterate through doc_types to find matching page
+  4. Return URL format: /{page_number}_{code}?item={item_id}
+  5. Fallback: return ?item={item_id} if page not found
+  **Complexity:** O(n) where n = number of document types
   
-  **Complexity:** O(n) where n = number of columns
+  ### make_item_columns_clickable(df, core)
+  **Purpose:** Transform DataFrame to make item ID columns clickable
+  **Algorithm:**
+  1. Return early if DataFrame is empty
+  2. Create copy of DataFrame
+  3. For each column with object type data:
+     - Sample first non-null value
+     - If matches item ID pattern (contains hyphen):
+       - Transform values to URLs using get_page_url_for_item()
+       - Create LinkColumn config with display_text regex
+  4. Return tuple of (transformed DataFrame, column config)
+  **Complexity:** O(n*m) where n = rows, m = columns
+  
   **Module:** src/utils/ui_helpers.py
 implements:
   - SRS-013
-  - SRS-015
 guided_by:
   - SWAD-001
 status: approved

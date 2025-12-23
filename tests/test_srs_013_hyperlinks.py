@@ -29,7 +29,7 @@ class TestSRS013_LinkColumnForItemIDs:
             'Status': ['approved', 'draft', 'approved']
         })
         
-        config = make_item_columns_clickable(df)
+        df_transformed, config = make_item_columns_clickable(df)
         
         # Should detect UC and CRS columns as item IDs
         assert 'UC' in config, "UC column should be detected as item ID"
@@ -38,15 +38,19 @@ class TestSRS013_LinkColumnForItemIDs:
         # Should NOT detect Title and Status as item IDs
         assert 'Title' not in config, "Title column should not be detected as item ID"
         assert 'Status' not in config, "Status column should not be detected as item ID"
+        
+        # Check that IDs were transformed to URLs
+        assert df_transformed['UC'].iloc[0] == '?item=UC-001', "Should transform ID to URL"
     
     def test_make_item_columns_clickable_handles_empty_dataframe(self):
         """Verify function handles empty dataframes gracefully."""
         df = pd.DataFrame()
         
-        config = make_item_columns_clickable(df)
+        df_transformed, config = make_item_columns_clickable(df)
         
         assert isinstance(config, dict), "Should return dict even for empty dataframe"
         assert len(config) == 0, "Should return empty config for empty dataframe"
+        assert df_transformed.empty, "Should return empty dataframe"
     
     def test_make_item_columns_clickable_handles_non_id_columns(self):
         """Verify function doesn't detect non-ID columns as item IDs."""
@@ -56,7 +60,7 @@ class TestSRS013_LinkColumnForItemIDs:
             'Flag': [True, False]
         })
         
-        config = make_item_columns_clickable(df)
+        df_transformed, config = make_item_columns_clickable(df)
         
         assert len(config) == 0, "Should not detect any item ID columns"
 
@@ -96,7 +100,7 @@ class TestSRS013_AutomaticItemIDColumnDetection:
             'TC_ID': ['TC-SYS-001', 'TC-SYS-002']
         })
         
-        config = make_item_columns_clickable(df)
+        df_transformed, config = make_item_columns_clickable(df)
         
         # All columns should be detected
         assert len(config) == 4, "Should detect all 4 item ID columns"
@@ -115,7 +119,7 @@ class TestSRS013_AutomaticItemIDColumnDetection:
         df = pd.DataFrame(data)
         
         start = time.time()
-        config = make_item_columns_clickable(df)
+        df_transformed, config = make_item_columns_clickable(df)
         elapsed = time.time() - start
         
         # Should complete quickly (< 100ms for 100 columns)
@@ -130,11 +134,63 @@ class TestSRS013_AutomaticItemIDColumnDetection:
             'Version': ['1.0', '2.0', '3.0']  # Has dots, not hyphens
         })
         
-        config = make_item_columns_clickable(df)
+        df_transformed, config = make_item_columns_clickable(df)
         
         # Only ID column should be detected
         assert len(config) == 1, "Should detect only ID column"
         assert 'ID' in config
+
+
+class TestSWDD006_PageURLGeneration:
+    """Tests for SWDD-006: UI Helper Functions - get_page_url_for_item."""
+    
+    @pytest.fixture
+    def core(self):
+        """Initialize CompliantFlowCore."""
+        dhf_root = Path(__file__).parent.parent / "DHF"
+        return CompliantFlowCore(dhf_root)
+    
+    def test_url_generation_without_core(self):
+        """Verify URL generation falls back to query param without core."""
+        from utils.ui_helpers import get_page_url_for_item
+        
+        url = get_page_url_for_item("SYS-001")
+        assert url == "?item=SYS-001", "Should fallback to query param only"
+    
+    def test_url_generation_with_core(self, core):
+        """Verify URL generation with core creates page-specific URLs."""
+        from utils.ui_helpers import get_page_url_for_item
+        
+        url = get_page_url_for_item("SYS-001", core)
+        # Should generate URL like /3_SYS?item=SYS-001
+        assert "?item=SYS-001" in url, "Should include item query parameter"
+        assert url.startswith("/"), "Should start with /"
+        assert "_SYS" in url, "Should include SYS page identifier"
+    
+    def test_url_generation_for_test_cases(self, core):
+        """Verify URL generation handles test case IDs correctly."""
+        from utils.ui_helpers import get_page_url_for_item
+        
+        url = get_page_url_for_item("TC-SYS-001", core)
+        # Should extract TC-SYS as the document type
+        assert "?item=TC-SYS-001" in url, "Should include full item ID"
+        # May or may not find page depending on config
+    
+    def test_url_generation_performance(self, core):
+        """Verify URL generation completes in O(n) time."""
+        from utils.ui_helpers import get_page_url_for_item
+        import time
+        
+        # Generate URLs for multiple items
+        items = [f"SYS-{i:03d}" for i in range(100)]
+        
+        start = time.time()
+        for item_id in items:
+            get_page_url_for_item(item_id, core)
+        elapsed = time.time() - start
+        
+        # Should complete quickly (< 100ms for 100 items)
+        assert elapsed < 0.1, f"URL generation took {elapsed}s, should be < 0.1s"
 
 
 class TestSWDD008_UniversalPageTemplateIntegration:
