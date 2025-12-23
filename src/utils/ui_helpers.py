@@ -55,14 +55,18 @@ def make_item_columns_clickable(df: pd.DataFrame, core=None) -> tuple[pd.DataFra
     df_copy = df.copy()
     column_config = {}
     
+    # Get list of doc_type codes if core is available
+    doc_type_codes = set()
+    if core:
+        doc_type_codes = {dt.code for dt in core.config.doc_types}
+    
     for col in df.columns:
-        # Check if column contains item IDs (has hyphen pattern like UC-001, CRS-001, etc.)
-        if df[col].dtype == 'object':
-            # Sample first non-null value
-            sample = df[col].dropna().iloc[0] if not df[col].dropna().empty else None
-            
-            if sample and isinstance(sample, str) and '-' in sample:
-                # This looks like an item ID column - convert to page URLs
+        # Only make columns clickable if the column name is a doc_type code
+        # This ensures ID columns are clickable but Title columns are not
+        if col in doc_type_codes:
+            # This is a doc_type column (ID column) - make it clickable
+            if df[col].dtype == 'object':
+                # Convert to page URLs
                 df_copy[col] = df[col].apply(
                     lambda x: get_page_url_for_item(x, core) if isinstance(x, str) and '-' in x else x
                 )
