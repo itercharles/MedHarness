@@ -129,6 +129,45 @@ def build_matrix_table(all_items: List[dict], path: List[str], core) -> pd.DataF
         # Recursively build chains through the path
         _build_chains_recursive(all_items, path, 0, {path[0]: start_item}, chains, core)
     
+    # Add orphan rows for items at each level that aren't in any chain
+    # Track which items are already in chains
+    items_in_chains = {level: set() for level in path}
+    for chain in chains:
+        for level in path:
+            if level in chain and chain[level] != '-':
+                # Extract ID without warning icon
+                item_id = chain[level].replace(' ⚠️', '')
+                items_in_chains[level].add(item_id)
+    
+    # For each level, find orphan items and add them
+    for level_idx, level in enumerate(path):
+        level_items = [i for i in all_items if get_doc_type_code(i['id']) == level]
+        
+        for item in level_items:
+            if item['id'] not in items_in_chains[level]:
+                # This is an orphan item - create a row for it
+                chain_row = {}
+                
+                # Add dashes for all previous levels
+                for i in range(level_idx):
+                    chain_row[path[i]] = '-'
+                
+                # Add this orphan item
+                item_id = item['id']
+                if should_show_warning(item, core):
+                    item_id = f"{item_id} ⚠️"
+                chain_row[level] = item_id
+                if level != path[-1]:
+                    chain_row[f"{level} Title"] = item.get('title', 'N/A')[:50]
+                
+                # Add dashes for all following levels
+                for i in range(level_idx + 1, len(path)):
+                    chain_row[path[i]] = '-'
+                
+                # Mark as orphan
+                chain_row['Status'] = f'⚠️ Orphan {level}'
+                chains.append(chain_row)
+    
     return pd.DataFrame(chains)
 
 def _build_chains_recursive(all_items: List[dict], path: List[str], level: int, current_chain: dict, chains: List[dict], core):
