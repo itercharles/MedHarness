@@ -299,7 +299,8 @@ def render_table_section(
     all_items = core.get_all_items()
     filtered_items = []
     for item in all_items:
-        if not item['id'].startswith(prefix.rstrip('-')):
+        # Use exact prefix match (don't strip hyphen)
+        if not item['id'].startswith(prefix):
             continue
         item_status = item.get('status', workflow_engine.get_initial_state())
         if item_status not in status_filter:
