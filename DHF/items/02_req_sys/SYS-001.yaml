@@ -3,5 +3,11 @@ content: The system shall ingest specification items defined in YAML files from 
   structured directory layout.
 links:
 - CRS-002
+active: true
 title: Parse Specifications
+history: []
 status: approved
+file_path: /Users/chenwenliang/code/CompliantFlow/DHF/items/02_req_sys/SYS-001.yaml
+category: functional
+verification_method: Test
+critical_safety: false
