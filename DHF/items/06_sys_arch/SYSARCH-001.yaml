@@ -1,29 +1,45 @@
 id: SYSARCH-001
-title: Web-Based Application Architecture
-content: |-
-  System architecture decisions:
-  
+content: 'System architecture decisions:
+
+
   **Deployment Model:**
+
   - Web-based Python application
+
   - Browser-based user interface
+
   - Local or server deployment
+
   - No database server required
-  
+
+
   **Technology Choices:**
+
   - Python 3.11+ runtime
+
   - Streamlit web framework
+
   - File-based data storage
+
   - Git version control
-  
+
+
   **Rationale:**
+
   - Simple deployment (no complex infrastructure)
+
   - Familiar web interface
+
   - Portable (entire DHF is a directory)
-  - Standards-compliant audit trail via Git
+
+  - Standards-compliant audit trail via Git'
+links: []
 design:
 - SYS-001
 - SYS-004
 - SYS-015
 - SYS-028
 - SYS-029
-status: approved
+title: Web-Based Application Architecture
+status: draft
+file_path: /Users/chenwenliang/code/CompliantFlow/DHF/items/06_sys_arch/SYSARCH-001.yaml

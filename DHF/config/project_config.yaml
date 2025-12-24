@@ -1,3 +1,9 @@
+# Change Control Configuration
+change_control:
+  enabled: true
+  change_request_type: "CR"  # Document type code for change requests
+  affected_items_field: "affected_items"  # Field name for tracking affected items
+
 doc_types:
   # Use Cases
   - code: UC
@@ -446,7 +452,7 @@ doc_types:
     name: "Change Request"
     prefix: "CR-"
     directory: "09_cr"
-    properties: ["id", "title", "description", "justification", "impact_assessment", "priority", "requested_by", "assigned_to", "target_version", "links"]
+    properties: ["id", "title", "description", "justification", "impact_assessment", "priority", "requested_by", "assigned_to", "target_version", "affected_items", "links"]
     
     # UI Configuration
     icon: "📝"
@@ -458,11 +464,11 @@ doc_types:
       states:
         - {id: submitted, label: "Submitted", color: "info", icon: "📥", is_initial: true}
         - {id: under_review, label: "Under Review", color: "warning", icon: "🔍"}
-        - {id: approved, label: "Approved", color: "success", icon: "✅", is_stable: true}
-        - {id: rejected, label: "Rejected", color: "error", icon: "❌"}
+        - {id: approved, label: "Approved", color: "success", icon: "✅"}
+        - {id: rejected, label: "Rejected", color: "error", icon: "❌", is_stable: true}
         - {id: in_progress, label: "In Progress", color: "warning", icon: "🔧"}
-        - {id: completed, label: "Completed", color: "success", icon: "🎯"}
-        - {id: cancelled, label: "Cancelled", color: "secondary", icon: "🚫"}
+        - {id: completed, label: "Completed", color: "success", icon: "🎯", is_stable: true}
+        - {id: cancelled, label: "Cancelled", color: "secondary", icon: "🚫", is_stable: true}
       
       transitions:
         - from: submitted

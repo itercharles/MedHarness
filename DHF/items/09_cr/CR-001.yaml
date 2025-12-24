@@ -70,3 +70,7 @@ manual_verifications:
     notes: ''
 approved_by: charles
 approved_date: '2025-12-20T10:44:59.289459'
+file_path: /Users/chenwenliang/code/CompliantFlow/DHF/items/09_cr/CR-001.yaml
+affected_items:
+- SYS-001
+- SYSARCH-001

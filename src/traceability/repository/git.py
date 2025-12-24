@@ -89,7 +89,8 @@ class GitRepository:
         item_uid: str,
         file_path: Path,
         action: str = "updated",
-        author: Optional[str] = None
+        author: Optional[str] = None,
+        cr_id: Optional[str] = None
     ) -> bool:
         """
         Commit an item change with auto-generated message.
@@ -99,6 +100,7 @@ class GitRepository:
             file_path: Path to item file
             action: Action performed (created, updated, deleted)
             author: Author name
+            cr_id: Optional Change Request ID for commit reference
             
         Returns:
             True if committed successfully
@@ -107,7 +109,12 @@ class GitRepository:
             return False
         
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        message = f"{action.capitalize()} {item_uid} [{timestamp}]"
+        
+        # Build commit message with CR reference if provided
+        if cr_id:
+            message = f"[{cr_id}] {action.capitalize()} {item_uid}\n\nChange Request: {cr_id}\nTimestamp: {timestamp}"
+        else:
+            message = f"{action.capitalize()} {item_uid} [{timestamp}]"
         
         author_email = f"{author}@compliantflow.local" if author else None
         

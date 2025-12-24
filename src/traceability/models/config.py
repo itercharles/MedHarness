@@ -48,6 +48,7 @@ class TraceabilityMatrix(BaseModel):
 class ProjectConfig(BaseModel):
     """Project configuration."""
     
+    change_control: Optional[dict] = Field(default_factory=dict, description="Change control configuration")
     doc_types: List[DocTypeConfig] = Field(..., description="Document type configurations")
     policies: PoliciesConfig = Field(default_factory=PoliciesConfig, description="Project policies")
     traceability_matrices: List['TraceabilityMatrix'] = Field(default_factory=list, description="Traceability matrix configurations")

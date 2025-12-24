@@ -1,13 +1,19 @@
 id: SYS-001
 content: The system shall ingest specification items defined in YAML files from a
-  structured directory layout.
+  structured directory layout...
 links:
 - CRS-002
-active: true
 title: Parse Specifications
-history: []
 status: approved
 file_path: /Users/chenwenliang/code/CompliantFlow/DHF/items/02_req_sys/SYS-001.yaml
 category: functional
 verification_method: Test
 critical_safety: false
+manual_verifications:
+  review_complete:
+    verified_by: chalres
+    verified_date: '2025-12-24T20:43:27.007273'
+    notes: ''
+approved_by: charles
+approved_date: '2025-12-24'
+timestamp: '2025-12-24T20:43:36.994961'

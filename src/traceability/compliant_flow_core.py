@@ -153,7 +153,8 @@ class CompliantFlowCore:
         self,
         uid: str,
         data: Dict[str, Any],
-        author: Optional[str] = None
+        author: Optional[str] = None,
+        cr_id: Optional[str] = None
     ) -> Optional[Dict[str, Any]]:
         """
         Update an existing item.
@@ -162,6 +163,7 @@ class CompliantFlowCore:
             uid: Item UID
             data: Updated item data
             author: Author name for git commit
+            cr_id: Optional Change Request ID for git commit reference
             
         Returns:
             Updated item dictionary or None
@@ -172,19 +174,117 @@ class CompliantFlowCore:
             return None
         
         # Update with new data
-        updated_data = existing.model_dump()
+        updated_data = existing.model_dump(exclude_unset=True)
         updated_data.update(data)
+        
+        # Check if item was in a stable status before update
+        # If so, reset to draft and clear approval metadata (core business logic)
+        doc_type_config = self.config.get_doc_type_by_prefix(existing.prefix)
+        if doc_type_config and doc_type_config.lifecycle:
+            from traceability.workflow_engine import DynamicWorkflowEngine
+            workflow = DynamicWorkflowEngine(doc_type_config.model_dump(), self)
+            
+            # Check if old status was stable
+            old_status = existing.status if hasattr(existing, 'status') else None
+            if old_status:
+                old_state_info = workflow.get_state_info(old_status)
+                if old_state_info.get('is_stable', False):
+                    # Item was stable - reset to initial state and clear approval fields
+                    initial_state = workflow.get_initial_state()
+                    updated_data['status'] = initial_state
+                    
+                    # Clear approval-related fields
+                    approval_fields = ['approved_by', 'approved_date', 'reviewer', 'review_date',
+                                     'verified_by', 'verified_date', 'released_by', 'released_date',
+                                     'manual_verifications']
+                    for field in approval_fields:
+                        if field in updated_data:
+                            del updated_data[field]
         
         # Validate
         item = Item.model_validate(updated_data)
         
-        # Save
-        self.saver.save(item, author=author)
+        # Save with CR reference - only save fields that were explicitly set
+        # This prevents default fields (active, history) from being added
+        self.saver.save(item, author=author, cr_id=cr_id)
         
         # Refresh graph
         self.refresh()
         
         return item.model_dump(by_alias=True, exclude_none=True)
+    
+    def can_edit_item(self, uid: str) -> tuple[bool, str, Optional[str], Optional[Dict]]:
+        """
+        Check if an item can be edited based on its status and CR requirements.
+        
+        Args:
+            uid: Item UID
+            
+        Returns:
+            Tuple of (can_edit, button_label, cr_id, available_cr)
+            - can_edit: Whether the item can be edited
+            - button_label: Label for the edit button
+            - cr_id: Active CR ID if applicable, None otherwise
+            - available_cr: Available CR dict if item needs to be added, None otherwise
+        """
+        from utils.cr_manager import (
+            is_change_control_enabled,
+            get_cr_for_item,
+            get_non_stable_cr,
+            is_cr_stable,
+            get_cr_doc_type
+        )
+        
+        item = self.get_item(uid)
+        if not item:
+            return False, "Item not found", None, None
+        
+        # Check if item has a stable status
+        doc_type_config = self.config.get_doc_type_by_prefix(item['id'].split('-')[0] + '-')
+        if not doc_type_config or not doc_type_config.lifecycle:
+            # No workflow - can edit
+            return True, "✏️ Edit", None, None
+        
+        from traceability.workflow_engine import DynamicWorkflowEngine
+        workflow = DynamicWorkflowEngine(doc_type_config.model_dump(), self)
+        
+        current_status = item.get('status')
+        if not current_status:
+            # No status - can edit
+            return True, "✏️ Edit", None, None
+        
+        state_info = workflow.get_state_info(current_status)
+        is_stable = state_info.get('is_stable', False)
+        
+        if not is_stable:
+            # Not stable - can edit normally
+            return True, "✏️ Edit", None, None
+        
+        # Item is stable - check change control
+        if not is_change_control_enabled(self):
+            # Change control not enabled - locked
+            return False, "🔒 Locked", None, None
+        
+        # Change control enabled - check for CR
+        existing_cr = get_cr_for_item(uid, self)
+        
+        if existing_cr:
+            # Item is linked to a CR - check if CR is stable
+            if is_cr_stable(existing_cr, self):
+                # CR is stable - can't edit
+                return False, "🔒 Locked", None, None
+            else:
+                # CR is non-stable - can edit
+                return True, f"✏️ Edit ({existing_cr['id']})", existing_cr['id'], None
+        else:
+            # No CR - check if there's an available CR to add to
+            available_cr = get_non_stable_cr(self)
+            if available_cr:
+                # Return info about available CR so UI can show "Add to CR" button
+                return False, f"📝 Add to {available_cr['id']}", None, available_cr
+            else:
+                # No CR available - locked
+                return False, "🔒 Locked", None, None
     
     def delete_item(
         self,

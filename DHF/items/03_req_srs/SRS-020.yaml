@@ -1,0 +1,26 @@
+id: SRS-020
+title: Prevent Editing of Stable Items
+content: |
+  The system shall prevent any edits to items that have a stable status
+  (is_stable: true in workflow configuration).
+  
+  Stable statuses include:
+  - approved: Items that have been formally approved
+  - released: Items that have been released to production
+  
+  This ensures:
+  - Compliance with regulatory requirements for change control
+  - Traceability of approved/released items
+  - Prevention of unauthorized modifications to validated items
+  
+  Implementation:
+  - Edit button is disabled and shows "🔒 Locked" for stable items
+  - Tooltip explains why editing is not allowed
+  - Edit form validates status and blocks access with error message
+  - Users must transition item to non-stable status before editing
+  
+  This is critical for maintaining the integrity of the Design History File (DHF)
+  and ensuring audit trails are not compromised.
+status: approved
+derives_from:
+  - SYS-012

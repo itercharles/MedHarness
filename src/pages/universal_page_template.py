@@ -524,14 +524,68 @@ def render_item_view(
     workflow_engine: DynamicWorkflowEngine
 ) -> None:
     """Render read-only view of item details."""
+    # CR Confirmation Dialog
+    if 'confirm_add_to_cr' in st.session_state:
+        confirm_data = st.session_state['confirm_add_to_cr']
+        
+        st.warning(f"⚠️ **Confirm Action**")
+        st.write(f"Add **{confirm_data['item_id']}** to Change Request **{confirm_data['cr_id']}**?")
+        st.caption(f"CR Title: {confirm_data['cr_title']}")
+        st.caption(f"CR Status: {confirm_data['cr_status']}")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("✅ Confirm", type="primary", use_container_width=True, key="confirm_add_cr"):
+                from utils.cr_manager import add_item_to_cr
+                if add_item_to_cr(confirm_data['cr_id'], confirm_data['item_id'], core):
+                    st.success(f"✅ Added {confirm_data['item_id']} to {confirm_data['cr_id']}")
+                    st.session_state['editing_item_id'] = confirm_data['item_id']
+                    st.session_state['active_cr_id'] = confirm_data['cr_id']
+                    del st.session_state['confirm_add_to_cr']
+                    st.rerun()
+                else:
+                    st.error(f"Failed to add item to CR (CR may be in stable status)")
+                    del st.session_state['confirm_add_to_cr']
+        with col2:
+            if st.button("❌ Cancel", use_container_width=True, key="cancel_add_cr"):
+                del st.session_state['confirm_add_to_cr']
+                st.rerun()
+        
+        st.markdown("---")
+    
     # Header with Edit button
     col1, col2 = st.columns([3, 1])
     with col1:
         st.subheader(f"{item['id']} - {item.get('title', 'N/A')}")
     with col2:
-        if st.button("✏️ Edit", use_container_width=True, key=f"edit_{item['id']}"):
-            st.session_state['editing_item_id'] = item['id']
-            st.rerun()
+        # Check if item can be edited (backend handles all CR logic)
+        can_edit, button_label, cr_id, available_cr = core.can_edit_item(item['id'])
+        
+        if can_edit:
+            if st.button(button_label, use_container_width=True, key=f"edit_{item['id']}"):
+                st.session_state['editing_item_id'] = item['id']
+                if cr_id:
+                    st.session_state['active_cr_id'] = cr_id
+                st.rerun()
+        elif available_cr:
+            # Show "Add to CR" button
+            if st.button(button_label, use_container_width=True, key=f"add_to_cr_{item['id']}"):
+                st.session_state['confirm_add_to_cr'] = {
+                    'item_id': item['id'],
+                    'cr_id': available_cr['id'],
+                    'cr_title': available_cr.get('title', ''),
+                    'cr_status': available_cr.get('status', '')
+                }
+                st.rerun()
+        else:
+            # Locked - no CR available
+            st.button(
+                button_label,
+                use_container_width=True,
+                key=f"edit_{item['id']}",
+                disabled=True,
+                help="Cannot edit items with stable status. Create/approve a CR to modify."
+            )
     
     # Status and metadata in columns
     current_state = item.get('status', workflow_engine.get_initial_state())
@@ -545,6 +599,16 @@ def render_item_view(
             st.markdown(f"**Approved by:** {item['approved_by']}")
         if item.get('approved_date'):
             st.markdown(f"**Approved:** {item['approved_date'][:10]}")
+    
+    # Show CR info if change control is enabled and item is stable
+    if state_info.get('is_stable', False):
+        from utils.cr_manager import is_change_control_enabled, get_cr_for_item, get_cr_doc_type
+        if is_change_control_enabled(core):
+            linked_cr = get_cr_for_item(item['id'], core)
+            if linked_cr:
+                cr_type = get_cr_doc_type(core)
+                cr_status = linked_cr.get('status', '')
+                st.info(f"📝 Linked {cr_type}: [{linked_cr['id']}] {linked_cr.get('title', '')} (Status: {cr_status})")
     
     # Get properties from config to show all fields
     properties = doc_type_config.get('properties', [])
@@ -686,6 +750,9 @@ def render_item_edit_form(
     """Render editable form for item."""
     st.subheader(f"✏️ Edit {item['id']}")
     
+    # Note: Edit permission is already validated by can_edit_item() in the backend
+    # If user reached this form, they have permission to edit
+    
     # Get properties from config
     properties = doc_type_config.get('properties', [])
     
@@ -717,6 +784,31 @@ def render_item_edit_form(
             form_data['links'] = st.multiselect("Links", link_options, default=current_value if current_value else [], key=f"edit_links_{item['id']}")
         elif prop in ['user_group', 'source', 'category', 'component', 'type']:
             form_data[prop] = st.text_input(field_name, value=current_value if current_value else '', key=f"edit_{prop}_{item['id']}")
+        elif prop in ['design', 'derives_from', 'implements', 'guided_by', 'informs', 'mitigated_by']:
+            # Typed relationship fields - filter by allowed types from doc_type relations
+            all_items = core.get_all_items()
+            
+            # Get allowed target types for this relationship from doc_type config
+            allowed_prefixes = set()
+            if hasattr(doc_type_config, 'relations') and doc_type_config.relations:
+                for relation in doc_type_config.relations:
+                    # Check if this relation matches the current property
+                    if relation.get('label') == prop:
+                        target_type = relation.get('target')
+                        if target_type:
+                            # Get the prefix for this target type
+                            target_doc_type = core.config.get_doc_type(target_type)
+                            if target_doc_type and target_doc_type.prefix:
+                                allowed_prefixes.add(target_doc_type.prefix)
+            
+            # Filter items by allowed prefixes
+            if allowed_prefixes:
+                link_options = [i['id'] for i in all_items if i['id'] != item['id'] and any(i['id'].startswith(prefix) for prefix in allowed_prefixes)]
+            else:
+                # Fallback: allow all items
+                link_options = [i['id'] for i in all_items if i['id'] != item['id']]
+            
+            form_data[prop] = st.multiselect(field_name, link_options, default=current_value if isinstance(current_value, list) else [], key=f"edit_{prop}_{item['id']}")
         elif prop == 'verification_method':
             methods = ["Test", "Analysis", "Inspection", "Demonstration"]
             default_idx = methods.index(current_value) if current_value in methods else 0
@@ -760,10 +852,17 @@ def render_item_edit_form(
                 if 'links' not in updated_item:
                     updated_item['links'] = []
                 
-                # Save item
+                # Save item (core will handle status reset if needed)
                 try:
-                    core.update_item(item['id'], updated_item)
+                    # Get active CR if editing stable item
+                    cr_id = st.session_state.get('active_cr_id')
+                    
+                    core.update_item(item['id'], updated_item, cr_id=cr_id)
                     st.success(f"✅ Saved {item['id']}")
+                    
+                    # Clear CR session state
+                    if 'active_cr_id' in st.session_state:
+                        del st.session_state['active_cr_id']
                     del st.session_state['editing_item_id']
                     st.rerun()
                 except Exception as e:

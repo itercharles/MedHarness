@@ -33,7 +33,8 @@ class ItemSaver:
         self,
         item: Item,
         subdirectory: Optional[str] = None,
-        author: Optional[str] = None
+        author: Optional[str] = None,
+        cr_id: Optional[str] = None
     ) -> Path:
         """
         Save an item to a YAML file.
@@ -42,6 +43,7 @@ class ItemSaver:
             item: Item to save
             subdirectory: Optional subdirectory within specs_dir
             author: Optional author name for git commit
+            cr_id: Optional Change Request ID for git commit reference
             
         Returns:
             Path to saved file
@@ -62,9 +64,12 @@ class ItemSaver:
         # Convert item to dict for YAML
         # Use by_alias=True to use 'id' and 'content' instead of 'uid' and 'text'
         # Use mode='json' to properly serialize enums and other types
+        # Use exclude_unset=True to only save fields that were explicitly set
+        # This prevents default fields (active, history) from being added
         data = item.model_dump(
             by_alias=True,
             exclude_none=True,
+            exclude_unset=True,
             mode='json'  # This converts enums to their values
         )
         
@@ -72,6 +77,13 @@ class ItemSaver:
         # since we're using aliases (id, content)
         data.pop('uid', None)
         data.pop('text', None)
+        
+        # Remove fields with default values to keep YAML files clean
+        # These are Item model defaults that shouldn't be in the files
+        if data.get('active') == True:
+            data.pop('active', None)
+        if data.get('history') == []:
+            data.pop('history', None)
         
         # Write to file
         with open(file_path, 'w', encoding='utf-8') as f:
@@ -90,7 +102,8 @@ class ItemSaver:
                 item.uid,
                 file_path,
                 action=action,
-                author=author
+                author=author,
+                cr_id=cr_id
             )
         
         return file_path
