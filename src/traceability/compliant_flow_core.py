@@ -286,6 +286,195 @@ class CompliantFlowCore:
                 # No CR available - locked
                 return False, "🔒 Locked", None, None
     
+    def get_relationship_options(self, item_id: str, relationship_field: str) -> list[str]:
+        """
+        Get allowed item IDs for a relationship field based on doc_type relations config.
+        
+        Args:
+            item_id: ID of the item being edited
+            relationship_field: Name of the relationship field (e.g., 'design', 'mitigated_by')
+            
+        Returns:
+            List of allowed item IDs that can be selected for this relationship
+        """
+        item = self.get_item(item_id)
+        if not item:
+            return []
+        
+        # Get doc type config for this item
+        item_prefix = item['id'].split('-')[0] + '-'
+        doc_type_config = self.config.get_doc_type_by_prefix(item_prefix)
+        if not doc_type_config:
+            return []
+        
+        # Get all items
+        all_items = self.get_all_items()
+        
+        # Get allowed target types from relations config
+        allowed_prefixes = set()
+        if hasattr(doc_type_config, 'relations') and doc_type_config.relations:
+            for relation in doc_type_config.relations:
+                if relation.get('label') == relationship_field:
+                    target_type = relation.get('target')
+                    if target_type:
+                        target_doc_type = self.config.get_doc_type(target_type)
+                        if target_doc_type and target_doc_type.prefix:
+                            allowed_prefixes.add(target_doc_type.prefix)
+        
+        # Filter items by allowed prefixes
+        if allowed_prefixes:
+            return [i['id'] for i in all_items 
+                   if i['id'] != item_id 
+                   and any(i['id'].startswith(prefix) for prefix in allowed_prefixes)]
+        else:
+            # No specific restrictions - return all items except self
+            return [i['id'] for i in all_items if i['id'] != item_id]
+    
+    def get_doc_type_metrics(self, doc_type_code: str) -> Dict[str, Any]:
+        """
+        Calculate metrics for a document type.
+        
+        Args:
+            doc_type_code: Document type code (e.g., 'SYS', 'RISK')
+            
+        Returns:
+            Dictionary with metrics:
+            {
+                'total': 42,
+                'by_status': {'draft': 10, 'approved': 30, 'retired': 2},
+                'completion_rate': 0.71
+            }
+        """
+        doc_type_config = self.config.get_doc_type(doc_type_code)
+        if not doc_type_config:
+            return {'total': 0, 'by_status': {}, 'completion_rate': 0.0}
+        
+        # Get all items for this doc type
+        prefix = doc_type_config.prefix
+        all_items = self.get_all_items()
+        items = [i for i in all_items if i['id'].startswith(prefix)]
+        
+        total = len(items)
+        if total == 0:
+            return {'total': 0, 'by_status': {}, 'completion_rate': 0.0}
+        
+        # Count by status
+        by_status = {}
+        for item in items:
+            status = item.get('status', 'unknown')
+            by_status[status] = by_status.get(status, 0) + 1
+        
+        # Calculate completion rate (items in stable states)
+        if doc_type_config.lifecycle and doc_type_config.lifecycle.states:
+            stable_states = [s.id for s in doc_type_config.lifecycle.states if s.is_stable]
+            stable_count = sum(by_status.get(state, 0) for state in stable_states)
+            completion_rate = stable_count / total if total > 0 else 0.0
+        else:
+            completion_rate = 0.0
+        
+        return {
+            'total': total,
+            'by_status': by_status,
+            'completion_rate': completion_rate
+        }
+    
+    def get_form_schema(self, doc_type_code: str, item_id: Optional[str] = None) -> Dict[str, Any]:
+        """
+        Get form schema for creating/editing items.
+        
+        Args:
+            doc_type_code: Document type code (e.g., 'SYS', 'RISK')
+            item_id: Optional item ID for edit mode (to get current values)
+            
+        Returns:
+            Dictionary with form field definitions:
+            {
+                'fields': [
+                    {
+                        'name': 'title',
+                        'type': 'text',
+                        'label': 'Title',
+                        'required': True,
+                        'current_value': '...',
+                        'options': []  # for select/multiselect
+                    },
+                    ...
+                ]
+            }
+        """
+        doc_type_config = self.config.get_doc_type(doc_type_code)
+        if not doc_type_config:
+            return {'fields': []}
+        
+        # Get current item data if editing
+        current_item = self.get_item(item_id) if item_id else {}
+        
+        # Get properties from config
+        properties = doc_type_config.properties if hasattr(doc_type_config, 'properties') else []
+        
+        # Fields to skip
+        skip_fields = {'id', 'file_path', 'status', 'links', 'active', 'reviewer', 'review_date', 
+                      'verified_by', 'verified_date', 'approved_by', 'approved_date', 
+                      'released_by', 'released_date', 'manual_verifications', 'timestamp'}
+        
+        fields = []
+        
+        for prop in properties:
+            if prop in skip_fields:
+                continue
+            
+            field = {
+                'name': prop,
+                'label': prop.replace('_', ' ').title(),
+                'current_value': current_item.get(prop, ''),
+                'required': prop in ['title', 'content']
+            }
+            
+            # Determine field type and options
+            if prop == 'title':
+                field['type'] = 'text'
+            elif prop == 'content':
+                field['type'] = 'textarea'
+                field['height'] = 150
+            elif prop in ['user_group', 'source', 'category', 'component', 'type']:
+                field['type'] = 'text'
+            elif prop == 'verification_method':
+                field['type'] = 'select'
+                field['options'] = ["Test", "Analysis", "Inspection", "Demonstration"]
+            elif prop == 'critical_safety':
+                field['type'] = 'checkbox'
+            elif prop in ['hazard', 'cause', 'effect', 'prerequisites', 'steps', 'expected_result',
+                         'description', 'justification', 'impact_assessment']:
+                field['type'] = 'textarea'
+                field['height'] = 100
+            elif prop in ['severity_pre', 'probability_pre', 'severity_post', 'probability_post']:
+                field['type'] = 'select'
+                field['options'] = ["Low", "Medium", "High"]
+            elif prop in ['design', 'derives_from', 'implements', 'guided_by', 'informs', 'mitigated_by']:
+                # Relationship fields
+                field['type'] = 'multiselect'
+                field['options'] = self.get_relationship_options(item_id, prop) if item_id else []
+            else:
+                # Generic text input
+                field['type'] = 'text'
+            
+            fields.append(field)
+        
+        # Add links field separately
+        if item_id:
+            all_items = self.get_all_items()
+            link_options = [i['id'] for i in all_items if i['id'] != item_id]
+            fields.append({
+                'name': 'links',
+                'label': 'Links',
+                'type': 'multiselect',
+                'options': link_options,
+                'current_value': current_item.get('links', []),
+                'required': False
+            })
+        
+        return {'fields': fields}
+    
     def delete_item(
         self,
         uid: str,

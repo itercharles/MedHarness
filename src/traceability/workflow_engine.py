@@ -86,6 +86,48 @@ class DynamicWorkflowEngine:
         
         return all_required_pass, results
     
+    def validate_transition(
+        self,
+        item: Dict[str, Any],
+        transition: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Validate if a transition can be executed (UI-friendly wrapper).
+        
+        Args:
+            item: The item to check
+            transition: The transition configuration
+            
+        Returns:
+            {
+                'can_transition': bool,
+                'criteria': [
+                    {
+                        'id': 'review',
+                        'name': 'Review Complete',
+                        'passed': True,
+                        'message': 'Verified by john',
+                        'required': True
+                    },
+                    ...
+                ],
+                'blocking_criteria': ['review', 'tests']  # IDs of failed required criteria
+            }
+        """
+        can_transition, criteria_results = self.check_transition_criteria(item, transition)
+        
+        # Get IDs of failed required criteria
+        blocking_criteria = [
+            c['id'] for c in criteria_results 
+            if c.get('required', True) and not c['passed']
+        ]
+        
+        return {
+            'can_transition': can_transition,
+            'criteria': criteria_results,
+            'blocking_criteria': blocking_criteria
+        }
+    
     def _check_single_criterion(
         self,
         item: Dict[str, Any],

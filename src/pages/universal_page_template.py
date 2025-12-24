@@ -82,11 +82,9 @@ def render_metrics(
     prefix: str
 ) -> None:
     """Render metrics below title."""
-    all_items = core.get_all_items()
-    type_items = [
-        item for item in all_items
-        if item['id'].startswith(prefix.rstrip('-'))
-    ]
+    # Get metrics from backend
+    doc_type_code = doc_type_config.get('code')
+    metrics = core.get_doc_type_metrics(doc_type_code)
     
     # Get lifecycle states from config
     lifecycle = doc_type_config.get('lifecycle', {})
@@ -100,13 +98,13 @@ def render_metrics(
     cols = st.columns(num_cols)
     
     with cols[0]:
-        st.metric("Total", len(type_items))
+        st.metric("Total", metrics['total'])
     
     # Show metrics for each state (up to 4)
     for idx, state in enumerate(states[:4]):
         state_id = state['id']
         state_label = state.get('label', state_id.capitalize())
-        count = len([i for i in type_items if i.get('status') == state_id])
+        count = metrics['by_status'].get(state_id, 0)
         with cols[idx + 1]:
             st.metric(state_label, count)
 
@@ -397,62 +395,35 @@ def render_new_item_form(
     """Render form for creating new item."""
     st.subheader(f"➕ New {doc_type_config['name']}")
     
-    # Get properties from config
-    properties = doc_type_config.get('properties', [])
-    
-    # Form fields - dynamically generate based on properties
+    # Form fields
     form_data = {}
     
-    # ID (always required)
+    # ID (always required for new items)
     form_data['id'] = st.text_input("ID *", placeholder=f"{doc_type_config['prefix']}XXX", key="new_id")
     
-    # Other properties
-    for prop in properties:
-        if prop == 'id':
-            continue  # Already handled
-        elif prop == 'status':
-            continue  # Set automatically
-        elif prop == 'title':
-            form_data['title'] = st.text_input("Title *", key="new_title")
-        elif prop == 'content':
-            form_data['content'] = st.text_area("Content *", height=150, key="new_content")
-        elif prop == 'links':
-            # Multi-select for links
-            all_items = core.get_all_items()
-            link_options = [item['id'] for item in all_items]
-            form_data['links'] = st.multiselect("Links", link_options, key="new_links")
-        elif prop in ['user_group', 'source', 'category', 'component', 'type']:
-            # Text input for string fields
-            form_data[prop] = st.text_input(prop.replace('_', ' ').title(), key=f"new_{prop}")
-        elif prop in ['verification_method', 'critical_safety']:
-            # Special fields
-            if prop == 'verification_method':
-                form_data[prop] = st.selectbox(
-                    "Verification Method",
-                    ["Test", "Analysis", "Inspection", "Demonstration"],
-                    key="new_verification_method"
-                )
-            elif prop == 'critical_safety':
-                form_data[prop] = st.checkbox("Critical Safety", key="new_critical_safety")
-        elif prop in ['hazard', 'cause', 'effect', 'severity_pre', 'probability_pre']:
-            # Risk-specific fields
-            if prop in ['hazard', 'cause', 'effect']:
-                form_data[prop] = st.text_area(prop.title(), height=100, key=f"new_{prop}")
-            else:
-                form_data[prop] = st.selectbox(
-                    prop.replace('_', ' ').title(),
-                    ["Low", "Medium", "High"],
-                    key=f"new_{prop}"
-                )
-        elif prop in ['prerequisites', 'steps', 'expected_result']:
-            # Test case fields
-            form_data[prop] = st.text_area(prop.replace('_', ' ').title(), height=100, key=f"new_{prop}")
-        # Skip metadata fields that are set automatically
-        elif prop not in ['reviewer', 'review_date', 'approved_by', 'approved_date', 
-                          'retired_by', 'retired_date', 'manual_verifications', 
-                          'verification_status', 'verified_by', 'verified_date']:
-            # Generic text input for any other field
-            form_data[prop] = st.text_input(prop.replace('_', ' ').title(), key=f"new_{prop}")
+    # Get form schema from backend (without item_id for create mode)
+    doc_type_code = doc_type_config.get('code')
+    schema = core.get_form_schema(doc_type_code, item_id=None)
+    
+    # Render fields based on schema
+    for field in schema['fields']:
+        field_name = field['name']
+        label = field['label'] + (' *' if field.get('required') else '')
+        field_type = field.get('type', 'text')
+        
+        if field_type == 'text':
+            form_data[field_name] = st.text_input(label, key=f"new_{field_name}")
+        elif field_type == 'textarea':
+            height = field.get('height', 100)
+            form_data[field_name] = st.text_area(label, height=height, key=f"new_{field_name}")
+        elif field_type == 'select':
+            options = field.get('options', [])
+            form_data[field_name] = st.selectbox(label, options, key=f"new_{field_name}")
+        elif field_type == 'multiselect':
+            options = field.get('options', [])
+            form_data[field_name] = st.multiselect(label, options, key=f"new_{field_name}")
+        elif field_type == 'checkbox':
+            form_data[field_name] = st.checkbox(label, key=f"new_{field_name}")
     
     # Action buttons
     col1, col2 = st.columns(2)
@@ -753,79 +724,40 @@ def render_item_edit_form(
     # Note: Edit permission is already validated by can_edit_item() in the backend
     # If user reached this form, they have permission to edit
     
-    # Get properties from config
-    properties = doc_type_config.get('properties', [])
+    # Get form schema from backend
+    doc_type_code = doc_type_config.get('code')
+    schema = core.get_form_schema(doc_type_code, item['id'])
     
-    # Form fields - dynamically generate based on properties
+    # Form fields - dynamically
     form_data = {}
     
-    # Fields to skip (system/internal fields)
-    skip_fields = {'id', 'status', 'approved_by', 'approved_date', 'retired_by', 
-                   'retired_date', 'manual_verifications', 'history',
-                   'active', 'reviewer', 'review_date', 'verified_by', 'verified_date'}
-    
-    # Display all editable fields
-    for prop in properties:
-        if prop in skip_fields:
-            continue
+    # Render fields based on schema
+    for field in schema['fields']:
+        field_name = field['name']
+        label = field['label'] + (' *' if field.get('required') else '')
+        current_value = field.get('current_value', '')
+        field_type = field.get('type', 'text')
         
-        # Get current value
-        current_value = item.get(prop, '')
-        field_name = prop.replace('_', ' ').title()
-        
-        # Render appropriate input based on property
-        if prop == 'title':
-            form_data['title'] = st.text_input("Title *", value=current_value, key=f"edit_title_{item['id']}")
-        elif prop == 'content':
-            form_data['content'] = st.text_area("Content *", value=current_value, height=150, key=f"edit_content_{item['id']}")
-        elif prop == 'links':
-            all_items = core.get_all_items()
-            link_options = [i['id'] for i in all_items if i['id'] != item['id']]
-            form_data['links'] = st.multiselect("Links", link_options, default=current_value if current_value else [], key=f"edit_links_{item['id']}")
-        elif prop in ['user_group', 'source', 'category', 'component', 'type']:
-            form_data[prop] = st.text_input(field_name, value=current_value if current_value else '', key=f"edit_{prop}_{item['id']}")
-        elif prop in ['design', 'derives_from', 'implements', 'guided_by', 'informs', 'mitigated_by']:
-            # Typed relationship fields - filter by allowed types from doc_type relations
-            all_items = core.get_all_items()
-            
-            # Get allowed target types for this relationship from doc_type config
-            allowed_prefixes = set()
-            if hasattr(doc_type_config, 'relations') and doc_type_config.relations:
-                for relation in doc_type_config.relations:
-                    # Check if this relation matches the current property
-                    if relation.get('label') == prop:
-                        target_type = relation.get('target')
-                        if target_type:
-                            # Get the prefix for this target type
-                            target_doc_type = core.config.get_doc_type(target_type)
-                            if target_doc_type and target_doc_type.prefix:
-                                allowed_prefixes.add(target_doc_type.prefix)
-            
-            # Filter items by allowed prefixes
-            if allowed_prefixes:
-                link_options = [i['id'] for i in all_items if i['id'] != item['id'] and any(i['id'].startswith(prefix) for prefix in allowed_prefixes)]
-            else:
-                # Fallback: allow all items
-                link_options = [i['id'] for i in all_items if i['id'] != item['id']]
-            
-            form_data[prop] = st.multiselect(field_name, link_options, default=current_value if isinstance(current_value, list) else [], key=f"edit_{prop}_{item['id']}")
-        elif prop == 'verification_method':
-            methods = ["Test", "Analysis", "Inspection", "Demonstration"]
-            default_idx = methods.index(current_value) if current_value in methods else 0
-            form_data[prop] = st.selectbox("Verification Method", methods, index=default_idx, key=f"edit_vm_{item['id']}")
-        elif prop == 'critical_safety':
-            form_data[prop] = st.checkbox("Critical Safety", value=bool(current_value), key=f"edit_cs_{item['id']}")
-        elif prop in ['hazard', 'cause', 'effect']:
-            form_data[prop] = st.text_area(field_name, value=current_value if current_value else '', height=100, key=f"edit_{prop}_{item['id']}")
-        elif prop in ['severity_pre', 'probability_pre']:
-            levels = ["Low", "Medium", "High"]
-            default_idx = levels.index(current_value) if current_value in levels else 0
-            form_data[prop] = st.selectbox(field_name, levels, index=default_idx, key=f"edit_{prop}_{item['id']}")
-        elif prop in ['prerequisites', 'steps', 'expected_result']:
-            form_data[prop] = st.text_area(field_name, value=current_value if current_value else '', height=100, key=f"edit_{prop}_{item['id']}")
-        else:
-            # Generic text input
-            form_data[prop] = st.text_input(field_name, value=current_value if current_value else '', key=f"edit_{prop}_{item['id']}")
+        if field_type == 'text':
+            form_data[field_name] = st.text_input(label, value=current_value if current_value else '', 
+                                                  key=f"edit_{field_name}_{item['id']}")
+        elif field_type == 'textarea':
+            height = field.get('height', 100)
+            form_data[field_name] = st.text_area(label, value=current_value if current_value else '', 
+                                                height=height, key=f"edit_{field_name}_{item['id']}")
+        elif field_type == 'select':
+            options = field.get('options', [])
+            default_idx = options.index(current_value) if current_value in options else 0
+            form_data[field_name] = st.selectbox(label, options, index=default_idx, 
+                                                key=f"edit_{field_name}_{item['id']}")
+        elif field_type == 'multiselect':
+            options = field.get('options', [])
+            default = current_value if isinstance(current_value, list) else []
+            form_data[field_name] = st.multiselect(label, options, default=default, 
+                                                   key=f"edit_{field_name}_{item['id']}")
+        elif field_type == 'checkbox':
+            form_data[field_name] = st.checkbox(label, value=bool(current_value), 
+                                               key=f"edit_{field_name}_{item['id']}")
     
     # Action buttons
     col1, col2 = st.columns(2)
