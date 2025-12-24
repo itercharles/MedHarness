@@ -618,6 +618,42 @@ def render_item_view(
                     st.rerun()
     else:
         st.info(f"No transitions available from {state_info['label']} state")
+    
+    # Git History Section (collapsible, similar to preview)
+    st.markdown("---")
+    
+    if item.get('file_path'):
+        from utils.git_history import get_status_changes
+        from pathlib import Path
+        
+        with st.expander("📜 Change History", expanded=False):
+            try:
+                item_path = Path(item['file_path'])
+                dhf_root = core.repo_root
+                status_changes = get_status_changes(item_path, dhf_root)
+                
+                if status_changes:
+                    # Create a nice table
+                    import pandas as pd
+                    history_data = []
+                    for change in status_changes:
+                        history_data.append({
+                            'Date': change['timestamp'][:19],
+                            'Author': change['author_name'],
+                            'From': change['from_status'] or '(new)',
+                            'To': change['to_status'],
+                            'Commit': change['commit_hash'][:7]
+                        })
+                    
+                    df = pd.DataFrame(history_data)
+                    st.dataframe(df, use_container_width=True, hide_index=True)
+                else:
+                    st.info("No status change history found in git.")
+            except Exception as e:
+                st.warning(f"Could not load git history: {str(e)}")
+    else:
+        with st.expander("📜 Change History", expanded=False):
+            st.info("Git history not available for this item.")
 
 
 

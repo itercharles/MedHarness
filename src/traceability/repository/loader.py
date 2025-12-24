@@ -64,6 +64,11 @@ class ItemLoader:
             # Pydantic v2 validation
             # The model will handle 'id' -> 'uid' and 'content' -> 'text' aliases
             item = Item.model_validate(data)
+            
+            # Add file_path as an extra field (model allows extra fields)
+            # Store as string for JSON serialization
+            item.file_path = str(file_path.absolute())  # type: ignore
+            
             return item
             
         except Exception as e:
