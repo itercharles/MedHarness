@@ -623,32 +623,52 @@ def render_item_view(
     st.markdown("---")
     
     if item.get('file_path'):
-        from utils.git_history import get_status_changes
+        from utils.git_history import get_full_commit_history
         from pathlib import Path
         
         with st.expander("📜 Change History", expanded=False):
             try:
                 item_path = Path(item['file_path'])
                 dhf_root = core.repo_root
-                status_changes = get_status_changes(item_path, dhf_root)
+                commits = get_full_commit_history(item_path, dhf_root)
                 
-                if status_changes:
-                    # Create a nice table
-                    import pandas as pd
-                    history_data = []
-                    for change in status_changes:
-                        history_data.append({
-                            'Date': change['timestamp'][:19],
-                            'Author': change['author_name'],
-                            'From': change['from_status'] or '(new)',
-                            'To': change['to_status'],
-                            'Commit': change['commit_hash'][:7]
-                        })
-                    
-                    df = pd.DataFrame(history_data)
-                    st.dataframe(df, use_container_width=True, hide_index=True)
+                if commits:
+                    for commit in commits:
+                        # Create a summary line for each commit
+                        commit_date = commit['timestamp'][:19]
+                        commit_hash = commit['commit_hash'][:7]
+                        author = commit['author_name']
+                        message = commit['message']
+                        num_changes = len(commit.get('changes', []))
+                        
+                        # Create an expander for each commit
+                        summary = f"**{commit_date}** | {commit_hash} | {author} | {message[:50]}{'...' if len(message) > 50 else ''}"
+                        if num_changes > 0:
+                            summary += f" ({num_changes} field{'s' if num_changes != 1 else ''} changed)"
+                        
+                        with st.expander(summary, expanded=False):
+                            if commit.get('changes'):
+                                # Show changes as a table
+                                import pandas as pd
+                                changes_data = []
+                                for change in commit['changes']:
+                                    changes_data.append({
+                                        'Field': change['field'],
+                                        'Before': change['old_value'] if change['old_value'] is not None else '(new)',
+                                        'After': change['new_value']
+                                    })
+                                
+                                df = pd.DataFrame(changes_data)
+                                st.dataframe(df, use_container_width=True, hide_index=True)
+                            else:
+                                st.caption("No field changes detected (possibly file creation or non-YAML changes)")
+                            
+                            # Show full commit details
+                            st.caption(f"**Full message:** {message}")
+                            st.caption(f"**Commit:** {commit['commit_hash']}")
+                            st.caption(f"**Author:** {author} ({commit['author_email']})")
                 else:
-                    st.info("No status change history found in git.")
+                    st.info("No commit history found in git.")
             except Exception as e:
                 st.warning(f"Could not load git history: {str(e)}")
     else:
