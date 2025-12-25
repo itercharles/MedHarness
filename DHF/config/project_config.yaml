@@ -452,7 +452,7 @@ doc_types:
     name: "Change Request"
     prefix: "CR-"
     directory: "09_cr"
-    properties: ["id", "title", "description", "justification", "impact_assessment", "priority", "requested_by", "assigned_to", "target_version", "affected_items", "links"]
+    properties: ["id", "title", "description", "justification", "impact_assessment", "priority", "requested_by", "assigned_to", "target_version", "affected_items"]
     
     # UI Configuration
     icon: "📝"
