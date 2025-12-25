@@ -364,9 +364,12 @@ class CompliantFlowCore:
             status = item.get('status', 'unknown')
             by_status[status] = by_status.get(status, 0) + 1
         
+        
         # Calculate completion rate (items in stable states)
-        if doc_type_config.lifecycle and doc_type_config.lifecycle.states:
-            stable_states = [s.id for s in doc_type_config.lifecycle.states if s.is_stable]
+        lifecycle = doc_type_config.lifecycle
+        if lifecycle:
+            states = lifecycle.get('states', [])
+            stable_states = [s.get('id') for s in states if s.get('is_stable', False)]
             stable_count = sum(by_status.get(state, 0) for state in stable_states)
             completion_rate = stable_count / total if total > 0 else 0.0
         else:
