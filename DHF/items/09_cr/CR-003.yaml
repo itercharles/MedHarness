@@ -1,0 +1,59 @@
+id: CR-003
+title: "Automated PR-CR Linking and Traceability System"
+description: |
+  Implement automated workflows to link Pull Requests to Change Requests, ensuring 
+  complete traceability and regulatory compliance.
+  
+  **Objectives:**
+  - Enforce CR references in all PRs
+  - Automatically detect and record affected DHF items
+  - Track PR implementation in CRs
+  - Maintain complete audit trail for regulatory compliance
+  
+  **Scope:**
+  - GitHub Actions workflows for PR validation
+  - Automated affected items detection
+  - PR status tracking throughout lifecycle
+  - CR data model extensions
+  
+justification: |
+  **Regulatory Requirement:**
+  IEC 62304 §6.2 (Change Control) and FDA 21 CFR 820.30(i) require documented 
+  linkage between code changes and change requests.
+  
+  **Current Gap:**
+  Manual tracking is error-prone and does not scale. Automated enforcement ensures 
+  100% compliance and complete traceability.
+  
+  **Benefits:**
+  - Guaranteed regulatory compliance
+  - Complete audit trail
+  - Reduced manual effort
+  - Improved change management process
+  
+impact_assessment: |
+  **Affected Systems:**
+  - GitHub repository workflows
+  - CR document type configuration
+  - Development workflow
+  
+  **Risk Assessment:**
+  - **Technical Risk:** Low - Uses standard GitHub Actions
+  - **Process Risk:** Medium - Requires team adoption of new workflow
+  - **Compliance Risk:** Low - Improves compliance posture
+  
+  **Mitigation:**
+  - Comprehensive testing before enforcement
+  - Team training on new workflow
+  - Clear error messages for validation failures
+  
+priority: High
+requested_by: "Compliance Team"
+assigned_to: "Development Team"
+target_version: "1.1.0"
+status: approved
+approved_by: "System Architect"
+approved_date: "2025-12-26"
+affected_items:
+  - SYS-030
+implementation_prs: []
