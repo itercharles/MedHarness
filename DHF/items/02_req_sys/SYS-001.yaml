@@ -1,6 +1,6 @@
 id: SYS-001
 content: The system shall ingest specification items defined in YAML files from a
-  structured directory layout...
+  structured directory layout.
 links:
 - CRS-002
 title: Parse Specifications
