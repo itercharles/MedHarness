@@ -1,5 +1,8 @@
 id: CR-003
 title: Automated PR-CR Linking and Traceability System
+content: |
+  Implement automated workflows to link Pull Requests to Change Requests, ensuring 
+  complete traceability and regulatory compliance through GitHub Actions automation.
 description: "Implement automated workflows to link Pull Requests to Change Requests,\
   \ ensuring \ncomplete traceability and regulatory compliance.\n\n**Objectives:**\n\
   - Enforce CR references in all PRs\n- Automatically detect and record affected DHF\
