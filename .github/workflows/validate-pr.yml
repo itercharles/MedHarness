@@ -107,7 +107,7 @@ jobs:
           echo -e "$AFFECTED_ITEMS" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
       
-      - name: Update CR with Affected Items
+      - name: Update CR with Affected Items and PR Info
         run: |
           CR_ID="${{ steps.validate.outputs.cr_id }}"
           CR_FILE="DHF/items/09_cr/${CR_ID}.yaml"
@@ -121,9 +121,11 @@ jobs:
           with open(cr_file, 'r') as f:
               cr_data = yaml.safe_load(f)
           
-          # Initialize affected_items if needed
+          # Initialize fields if needed
           if 'affected_items' not in cr_data:
               cr_data['affected_items'] = []
+          if 'implementation_prs' not in cr_data:
+              cr_data['implementation_prs'] = []
           
           # Add new affected items from PR
           affected_items_str = """${{ steps.analyze.outputs.affected_items }}"""
@@ -133,11 +135,31 @@ jobs:
               if item and item not in cr_data['affected_items']:
                   cr_data['affected_items'].append(item)
           
+          # Add PR information
+          pr_number = ${{ github.event.pull_request.number }}
+          pr_url = "${{ github.event.pull_request.html_url }}"
+          pr_title = "${{ github.event.pull_request.title }}"
+          
+          # Check if this PR is already tracked
+          pr_exists = any(pr.get('pr_number') == pr_number for pr in cr_data['implementation_prs'])
+          
+          if not pr_exists:
+              pr_info = {
+                  'pr_number': pr_number,
+                  'pr_url': pr_url,
+                  'title': pr_title,
+                  'status': 'open'
+              }
+              cr_data['implementation_prs'].append(pr_info)
+              print(f"Added PR #{pr_number} to implementation_prs")
+          
           # Write back
           with open(cr_file, 'w') as f:
               yaml.dump(cr_data, f, default_flow_style=False, sort_keys=False)
           
-          print(f"Updated {cr_file} with {len(new_items)} affected items")
+          print(f"Updated {cr_file}")
+          print(f"  Affected items: {len(new_items)} added")
+          print(f"  PR tracked: #{pr_number}")
           PYTHON_SCRIPT
       
       - name: Commit CR Update to PR Branch
