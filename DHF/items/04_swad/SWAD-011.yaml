@@ -16,18 +16,11 @@ content: |
        - Update CR with traceability data
        - Commit updates to PR branch
   
-  2. **link-pr-to-cr.yml Workflow**
-     - Trigger: PR closed (merged)
-     - Responsibilities:
-       - Update PR status to 'merged'
-       - Add merge timestamp
-       - Commit to main with [skip ci]
-  
-  3. **CR Data Model**
+  2. **CR Data Model**
      - Storage: YAML files in DHF/items/09_cr/
      - Fields:
        - affected_items: List[str] - Item IDs modified by PRs
-       - implementation_prs: List[PRInfo] - PR tracking records
+       - implementation_prs: List[PRInfo] - PR tracking records (number, URL, title)
   
   **Data Flow:**
   
@@ -44,13 +37,7 @@ content: |
     ↓
   Commit to PR Branch
     ↓
-  PR Merged
-    ↓
-  link-pr-to-cr.yml
-    ↓
-  Update PR status='merged'
-    ↓
-  Commit to main [skip ci]
+  PR Merged (via GitHub UI)
   ```
   
   **Integration Points:**
@@ -84,6 +71,5 @@ guides:
   - SWDD-020
   - SWDD-021
   - SWDD-022
-  - SWDD-023
 category: architecture
 status: draft
