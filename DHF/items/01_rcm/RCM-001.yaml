@@ -2,5 +2,7 @@ id: RCM-001
 status: draft
 title: Orphan Detection
 type: software
-content: The system shall automatically detect and report items with missing or invalid links.
-links: ["RISK-001"]
+content: The system shall automatically detect and report items with missing or invalid
+  links.
+mitigates:
+- RISK-001

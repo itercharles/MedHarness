@@ -423,7 +423,7 @@ class CompliantFlowCore:
         properties = doc_type_config.properties if hasattr(doc_type_config, 'properties') else []
         
         # Fields to skip
-        skip_fields = {'id', 'file_path', 'status', 'links', 'active', 'reviewer', 'review_date', 
+        skip_fields = {'id', 'file_path', 'status', 'active', 'reviewer', 'review_date', 
                       'verified_by', 'verified_date', 'approved_by', 'approved_date', 
                       'released_by', 'released_date', 'manual_verifications', 'timestamp'}
         

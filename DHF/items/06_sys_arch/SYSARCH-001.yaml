@@ -33,7 +33,6 @@ content: 'System architecture decisions:
   - Portable (entire DHF is a directory)
 
   - Standards-compliant audit trail via Git'
-links: []
 design:
 - SYS-001
 - SYS-004

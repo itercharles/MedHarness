@@ -1,8 +1,8 @@
 id: SYS-011
 content: The system shall require documentation of root cause analysis and resolution
   details before a defect can be marked as resolved.
-links:
-- CRS-005
 title: Defect Root Cause Documentation
 verification_status: PASS
 status: approved
+satisfies:
+- CRS-005
