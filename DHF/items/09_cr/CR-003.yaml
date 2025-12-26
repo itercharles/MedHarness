@@ -1,8 +1,8 @@
 id: CR-003
 title: Automated PR-CR Linking and Traceability System
-content: |
-  Implement automated workflows to link Pull Requests to Change Requests, ensuring 
-  complete traceability and regulatory compliance through GitHub Actions automation.
+content: "Implement automated workflows to link Pull Requests to Change Requests,\
+  \ ensuring \ncomplete traceability and regulatory compliance through GitHub Actions\
+  \ automation.\n"
 description: "Implement automated workflows to link Pull Requests to Change Requests,\
   \ ensuring \ncomplete traceability and regulatory compliance.\n\n**Objectives:**\n\
   - Enforce CR references in all PRs\n- Automatically detect and record affected DHF\
@@ -57,6 +57,45 @@ affected_items:
 - SWDD-020
 - SWDD-021
 - SWDD-022
+- RISK-001
+- RCM-001
+- CRS-010
+- CRS-011
+- CRS-012
+- SYS-001
+- SYS-002
+- SYS-003
+- SYS-004
+- SYS-005
+- SYS-006
+- SYS-007
+- SYS-008
+- SYS-009
+- SYS-010
+- SYS-011
+- SYS-012
+- SYS-013
+- SYS-014
+- SYS-015
+- SYS-016
+- SYS-017
+- SYS-018
+- SYS-019
+- SYS-020
+- SYS-021
+- SYS-022
+- SYS-023
+- SYS-024
+- SYS-025
+- SYS-026
+- SYS-027
+- SYS-028
+- SYS-029
+- SYSARCH-001
+- DEF-001
+- REL-1.0.0
+- REL-1.1.0
+- REL-1.2.0
 implementation_prs:
 - pr_number: 2
   pr_url: https://github.com/itercharles/CompliantFlow/pull/2
@@ -64,3 +103,6 @@ implementation_prs:
 - pr_number: 3
   pr_url: https://github.com/itercharles/CompliantFlow/pull/3
   title: "refactor: remove YAML file existence check for test IDs, allowing aut\u2026"
+- pr_number: 4
+  pr_url: https://github.com/itercharles/CompliantFlow/pull/4
+  title: Feature/improve cr display UI
