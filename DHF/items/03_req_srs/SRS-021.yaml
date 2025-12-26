@@ -1,0 +1,38 @@
+id: SRS-021
+title: "Automated PR-CR Linking and Traceability"
+content: |
+  The software shall provide automated workflows to link Pull Requests (PRs) to Change Requests (CRs), 
+  ensuring complete traceability and regulatory compliance.
+  
+  **Functional Requirements:**
+  
+  1. **PR-CR Validation**
+     - Software shall validate that every PR references a valid CR
+     - Software shall reject PRs that reference non-existent CRs
+     - Software shall reject PRs that reference CRs in stable status
+  
+  2. **Traceability Recording**
+     - Software shall automatically identify which DHF items are affected by PR changes
+     - Software shall record affected items in the corresponding CR
+     - Software shall track PR information in the CR
+  
+  3. **Status Management**
+     - Software shall track PR status (open/merged)
+     - Software shall update PR status when merged
+     - Software shall record merge timestamps
+  
+  **Quality Attributes:**
+  - Automation: All operations shall be automatic, requiring no manual intervention
+  - Accuracy: No duplicate entries in affected items or PR tracking
+  - Auditability: All changes shall be committed with clear attribution
+  
+  **Rationale:** 
+  Supports IEC 62304 §6.2 (Change Control) and FDA 21 CFR 820.30(i) (Design Change Documentation) 
+  by automating complete traceability from code changes to change requests.
+  
+links:
+  - SYS-030
+category: functional
+verification_method: Test
+critical_safety: false
+status: draft

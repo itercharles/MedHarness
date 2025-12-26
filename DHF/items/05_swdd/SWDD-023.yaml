@@ -1,0 +1,23 @@
+id: SWDD-023
+title: "PR Status Update on Merge"
+content: |
+  **Unit:** PR status update in `link-pr-to-cr.yml`
+  
+  **Purpose:** Update PR status from 'open' to 'merged' when PR is merged
+  
+  **Design Approach:**
+  - Extract CR identifier from merged PR
+  - Locate PR entry in CR's implementation list
+  - Update status and add merge timestamp
+  - Commit to main branch (with skip CI flag to prevent loops)
+  
+  **Inputs:** Merged PR metadata
+  
+  **Outputs:** Updated CR with merged PR status
+  
+implements:
+  - SRS-021
+guided_by:
+  - SWAD-011
+category: design
+status: draft

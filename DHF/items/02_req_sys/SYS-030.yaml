@@ -1,0 +1,15 @@
+id: SYS-030
+title: "Automated Change Request Workflow"
+content: |
+  The system shall provide automated workflows to link Pull Requests to Change Requests, 
+  ensuring complete traceability and regulatory compliance.
+  
+  **Rationale**: This requirement supports IEC 62304 §6.2 (Change Control) and FDA 21 CFR 820.30(i) 
+  (Design Change Documentation) by automating the linkage between code changes and change requests.
+  
+links:
+  - CRS-009
+category: functional
+verification_method: Test
+critical_safety: false
+status: draft
