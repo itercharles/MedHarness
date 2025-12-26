@@ -47,17 +47,53 @@ jobs:
       
       - name: Check CR Status
         run: |
-          CR_FILE="DHF/items/09_cr/${{ steps.validate.outputs.cr_id }}.yaml"
-          STATUS=$(grep "^status:" "$CR_FILE" | cut -d' ' -f2)
+          # Lightweight check - only load config, not entire core
+          python3 << 'PYTHON_SCRIPT'
+          import yaml
           
-          # CR must exist and NOT be in stable status (approved, closed, etc.)
-          if [[ "$STATUS" == "approved" || "$STATUS" == "closed" || "$STATUS" == "retired" ]]; then
-            echo "::error::CR ${{ steps.validate.outputs.cr_id }} is in stable status '$STATUS'"
-            echo "::error::Cannot modify code for CRs in stable status"
-            exit 1
-          fi
+          # Load CR
+          cr_id = "${{ steps.validate.outputs.cr_id }}"
+          cr_file = f"DHF/items/09_cr/{cr_id}.yaml"
           
-          echo "CR ${{ steps.validate.outputs.cr_id }} is in valid status: $STATUS"
+          with open(cr_file) as f:
+              cr_data = yaml.safe_load(f)
+          
+          # Load only the config (lightweight)
+          with open("DHF/config/project_config.yaml") as f:
+              config = yaml.safe_load(f)
+          
+          # Find CR document type config
+          cr_config = None
+          for doc_type in config.get('document_types', []):
+              if doc_type.get('code') == 'CR':
+                  cr_config = doc_type
+                  break
+          
+          if not cr_config:
+              print("::error::CR document type not found in config")
+              exit(1)
+          
+          # Check if current status is stable
+          status = cr_data.get('status', '')
+          lifecycle = cr_config.get('lifecycle', {})
+          states = lifecycle.get('states', [])
+          
+          # Find the state info
+          state_info = None
+          for s in states:
+              if s.get('id') == status:
+                  state_info = s
+                  break
+          
+          is_stable = state_info.get('is_stable', False) if state_info else False
+          
+          if is_stable:
+              print(f"::error::CR {cr_id} is in stable status '{status}'")
+              print(f"::error::Cannot modify code for CRs in stable status")
+              exit(1)
+          
+          print(f"✓ CR {cr_id} is in valid (non-stable) status: {status}")
+          PYTHON_SCRIPT
       
       - name: Analyze Changed Items
         id: analyze
