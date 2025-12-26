@@ -31,3 +31,8 @@ status: in_progress
 affected_items:
 - SYS-001
 - SYS-002
+implementation_prs:
+- pr_number: 1
+  pr_url: https://github.com/itercharles/CompliantFlow/pull/1
+  title: '[CR-999] Test GitHub Actions PR automation'
+  status: open
