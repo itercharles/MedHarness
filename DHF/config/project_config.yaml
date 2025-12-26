@@ -100,22 +100,8 @@ doc_types:
   - code: RISK
     name: "Risk Analysis"
     prefix: "RISK-"
-    directory: "items/00_risks"
-    properties:
-      - id
-      - title
-      - hazard
-      - cause
-      - effect
-      - severity_pre
-      - probability_pre
-      - severity_post        # Residual risk severity
-      - probability_post     # Residual risk probability
-      - risk_acceptability   # acceptable/unacceptable
-      - risk_benefit         # Risk-benefit analysis
-      - mitigated_by
-      - reviewer
-      - review_date
+    directory: "00_risks"
+    properties: ["id", "title", "hazard", "cause", "effect", "severity_pre", "probability_pre", "severity_post", "probability_post", "risk_acceptability", "risk_benefit", "mitigated_by", "reviewer", "review_date"]
     relations:
       - target: RCM
         label: "mitigated_by"
