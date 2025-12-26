@@ -35,4 +35,5 @@ implementation_prs:
 - pr_number: 1
   pr_url: https://github.com/itercharles/CompliantFlow/pull/1
   title: '[CR-999] Test GitHub Actions PR automation'
-  status: open
+  status: merged
+  merged_at: '2025-12-26T11:07:29Z'
