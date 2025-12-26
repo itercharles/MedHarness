@@ -1,0 +1,61 @@
+name: Link PR to CR
+
+on:
+  pull_request:
+    types: [closed]
+
+jobs:
+  link-to-cr:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+      
+      - name: Extract CR ID
+        id: extract
+        run: |
+          CR_ID=$(echo "${{ github.event.pull_request.title }}" | grep -oE "CR-[0-9]+" | head -1)
+          echo "cr_id=$CR_ID" >> $GITHUB_OUTPUT
+      
+      - name: Add PR to CR Implementation List
+        run: |
+          CR_ID="${{ steps.extract.outputs.cr_id }}"
+          CR_FILE="DHF/items/09_cr/${CR_ID}.yaml"
+          
+          # Use Python to update CR YAML
+          python3 << 'PYTHON_SCRIPT'
+          import yaml
+          
+          cr_file = "DHF/items/09_cr/${{ steps.extract.outputs.cr_id }}.yaml"
+          
+          with open(cr_file, 'r') as f:
+              cr_data = yaml.safe_load(f)
+          
+          # Initialize implementation_prs if needed
+          if 'implementation_prs' not in cr_data:
+              cr_data['implementation_prs'] = []
+          
+          # Add PR info
+          pr_info = {
+              'pr_number': ${{ github.event.pull_request.number }},
+              'pr_url': "${{ github.event.pull_request.html_url }}",
+              'merged_at': "${{ github.event.pull_request.merged_at }}",
+              'title': "${{ github.event.pull_request.title }}"
+          }
+          cr_data['implementation_prs'].append(pr_info)
+          
+          # Write back
+          with open(cr_file, 'w') as f:
+              yaml.dump(cr_data, f, default_flow_style=False, sort_keys=False)
+          
+          print(f"Added PR #${{ github.event.pull_request.number }} to {cr_file}")
+          PYTHON_SCRIPT
+      
+      - name: Commit CR Update
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add "DHF/items/09_cr/${{ steps.extract.outputs.cr_id }}.yaml"
+          git commit -m "[skip ci] Track PR #${{ github.event.pull_request.number }} in ${{ steps.extract.outputs.cr_id }}"
+          git push

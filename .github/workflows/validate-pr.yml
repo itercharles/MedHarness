@@ -1,0 +1,157 @@
+name: Validate PR
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize]
+
+jobs:
+  validate-cr:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+      
+      - name: Validate CR Reference
+        id: validate
+        run: |
+          PR_TITLE="${{ github.event.pull_request.title }}"
+          PR_BODY="${{ github.event.pull_request.body }}"
+          CR_PATTERN="CR-[0-9]+"
+          
+          if echo "$PR_TITLE $PR_BODY" | grep -qE "$CR_PATTERN"; then
+            CR_ID=$(echo "$PR_TITLE $PR_BODY" | grep -oE "$CR_PATTERN" | head -1)
+            echo "Found CR: $CR_ID"
+            echo "cr_id=$CR_ID" >> $GITHUB_OUTPUT
+          else
+            echo "::error::No CR reference found in PR title or description"
+            echo "::error::Please include CR-XXX in your PR title or description"
+            exit 1
+          fi
+      
+      - name: Validate CR Exists
+        run: |
+          CR_FILE="DHF/items/09_cr/${{ steps.validate.outputs.cr_id }}.yaml"
+          if [ ! -f "$CR_FILE" ]; then
+            echo "::error::CR ${{ steps.validate.outputs.cr_id }} does not exist"
+            exit 1
+          fi
+          echo "CR ${{ steps.validate.outputs.cr_id }} exists"
+      
+      - name: Check CR Status
+        run: |
+          CR_FILE="DHF/items/09_cr/${{ steps.validate.outputs.cr_id }}.yaml"
+          STATUS=$(grep "^status:" "$CR_FILE" | cut -d' ' -f2)
+          
+          # CR must exist and NOT be in stable status (approved, closed, etc.)
+          if [[ "$STATUS" == "approved" || "$STATUS" == "closed" || "$STATUS" == "retired" ]]; then
+            echo "::error::CR ${{ steps.validate.outputs.cr_id }} is in stable status '$STATUS'"
+            echo "::error::Cannot modify code for CRs in stable status"
+            exit 1
+          fi
+          
+          echo "CR ${{ steps.validate.outputs.cr_id }} is in valid status: $STATUS"
+      
+      - name: Analyze Changed Items
+        id: analyze
+        run: |
+          # Get base branch for comparison
+          git fetch origin ${{ github.base_ref }}
+          BASE_SHA=$(git merge-base HEAD origin/${{ github.base_ref }})
+          
+          # Get list of changed files compared to base
+          CHANGED_FILES=$(git diff --name-only $BASE_SHA HEAD)
+          
+          AFFECTED_ITEMS=""
+          
+          # 1. Detect changed YAML items in DHF/items/ (exclude CR files)
+          YAML_FILES=$(echo "$CHANGED_FILES" | grep "^DHF/items/.*\.yaml$" | grep -v "^DHF/items/09_cr/" || true)
+          for file in $YAML_FILES; do
+            if [ -f "$file" ]; then
+              ITEM_ID=$(grep "^id:" "$file" | cut -d' ' -f2)
+              if [ -n "$ITEM_ID" ]; then
+                AFFECTED_ITEMS="$AFFECTED_ITEMS\n  - $ITEM_ID"
+              fi
+            fi
+          done
+          
+          # 2. Detect changed test files
+          TEST_FILES=$(echo "$CHANGED_FILES" | grep "^tests/.*\.py$" || true)
+          for file in $TEST_FILES; do
+            if [ -f "$file" ]; then
+              BASENAME=$(basename "$file" .py)
+              if [[ $BASENAME =~ ^test_([a-z]+)_([0-9]+)_ ]]; then
+                TYPE=$(echo "${BASH_REMATCH[1]}" | tr '[:lower:]' '[:upper:]')
+                NUMBER="${BASH_REMATCH[2]}"
+                TEST_ID="TC-${TYPE}-${NUMBER}"
+                
+                # Check if test case YAML exists
+                for dir in DHF/items/05_tc_sys DHF/items/06_tc_crs DHF/items/07_tc_sds; do
+                  if [ -f "$dir/${TEST_ID}.yaml" ]; then
+                    AFFECTED_ITEMS="$AFFECTED_ITEMS\n  - $TEST_ID"
+                    break
+                  fi
+                done
+              fi
+            fi
+          done
+          
+          echo "affected_items<<EOF" >> $GITHUB_OUTPUT
+          echo -e "$AFFECTED_ITEMS" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+      
+      - name: Update CR with Affected Items
+        run: |
+          CR_ID="${{ steps.validate.outputs.cr_id }}"
+          CR_FILE="DHF/items/09_cr/${CR_ID}.yaml"
+          
+          # Use Python to update CR YAML
+          python3 << 'PYTHON_SCRIPT'
+          import yaml
+          
+          cr_file = "DHF/items/09_cr/${{ steps.validate.outputs.cr_id }}.yaml"
+          
+          with open(cr_file, 'r') as f:
+              cr_data = yaml.safe_load(f)
+          
+          # Initialize affected_items if needed
+          if 'affected_items' not in cr_data:
+              cr_data['affected_items'] = []
+          
+          # Add new affected items from PR
+          affected_items_str = """${{ steps.analyze.outputs.affected_items }}"""
+          new_items = [item.strip().replace('- ', '') for item in affected_items_str.strip().split('\n') if item.strip()]
+          
+          for item in new_items:
+              if item and item not in cr_data['affected_items']:
+                  cr_data['affected_items'].append(item)
+          
+          # Write back
+          with open(cr_file, 'w') as f:
+              yaml.dump(cr_data, f, default_flow_style=False, sort_keys=False)
+          
+          print(f"Updated {cr_file} with {len(new_items)} affected items")
+          PYTHON_SCRIPT
+      
+      - name: Commit CR Update to PR Branch
+        run: |
+          CR_FILE="DHF/items/09_cr/${{ steps.validate.outputs.cr_id }}.yaml"
+          
+          # Check if CR was actually modified
+          if git diff --quiet "$CR_FILE"; then
+            echo "No changes to CR file"
+            exit 0
+          fi
+          
+          # Configure git
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Commit and push to PR branch
+          git add "$CR_FILE"
+          git commit -m "Auto-update ${{ steps.validate.outputs.cr_id }} affected_items"
+          git push origin HEAD:${{ github.head_ref }}
+          
+          echo "✅ Updated CR with affected items and pushed to PR branch"
