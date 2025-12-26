@@ -8,9 +8,9 @@ content: "The system shall provide comprehensive management of Software of Unkno
   \ criteria\n- Generate SOUP list documentation for regulatory submission\n\nThis\
   \ capability ensures compliance with IEC 62304 requirements for identifying, \n\
   documenting, and managing third-party software components."
-links:
-- CRS-007
 title: SOUP Management
 reviewer: System Architect
 review_date: '2024-12-15'
 status: approved
+satisfies:
+- CRS-007

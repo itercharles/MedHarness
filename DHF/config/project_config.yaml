@@ -100,22 +100,8 @@ doc_types:
   - code: RISK
     name: "Risk Analysis"
     prefix: "RISK-"
-    directory: "items/00_risks"
-    properties:
-      - id
-      - title
-      - hazard
-      - cause
-      - effect
-      - severity_pre
-      - probability_pre
-      - severity_post        # Residual risk severity
-      - probability_post     # Residual risk probability
-      - risk_acceptability   # acceptable/unacceptable
-      - risk_benefit         # Risk-benefit analysis
-      - links
-      - reviewer
-      - review_date
+    directory: "00_risks"
+    properties: ["id", "title", "hazard", "cause", "effect", "severity_pre", "probability_pre", "severity_post", "probability_post", "risk_acceptability", "risk_benefit", "mitigated_by", "reviewer", "review_date"]
     relations:
       - target: RCM
         label: "mitigated_by"
@@ -136,7 +122,7 @@ doc_types:
     name: "Risk Control Measure"
     prefix: "RCM-"
     directory: "10_rcm"
-    properties: ["id", "title", "content", "links", "status", "control_type", "implementation_status"]
+    properties: ["id", "title", "content", "mitigates", "implements", "status", "control_type", "implementation_status"]
     relations:
       - target: RISK
         label: mitigates
@@ -156,7 +142,7 @@ doc_types:
     prefix: "SDS-"
     directory: "04_req_sds"
     allowed_parents: ["SYS"]
-    properties: ["id", "title", "content", "component", "links", "reviewer", "review_date"]
+    properties: ["id", "title", "content", "component", "implements", "reviewer", "review_date"]
     relations:
       - target: SYS
         label: implements
@@ -204,7 +190,7 @@ doc_types:
     prefix: "SYS-"
     directory: "02_req_sys"
     allowed_parents: ["CRS", "RCM"]
-    properties: ["id", "title", "content", "category", "verification_method", "critical_safety", "links", "reviewer", "review_date", "derives_from", "status"]
+    properties: ["id", "title", "content", "category", "verification_method", "critical_safety", "satisfies", "implements", "reviewer", "review_date", "derives_from", "status"]
     relations:
       - target: CRS
         label: satisfies
@@ -338,7 +324,7 @@ doc_types:
     directory: "05_tc_sys"
     type: "test"
     verifies: ["SYS"]
-    properties: ["id", "title", "prerequisites", "steps", "expected_result", "links", "verification_status", "reviewer", "review_date"]
+    properties: ["id", "title", "prerequisites", "steps", "expected_result", "verifies", "verification_status", "reviewer", "review_date"]
     relations:
       - target: SYS
         label: verifies
@@ -357,7 +343,7 @@ doc_types:
     directory: "06_tc_crs"
     type: "test"
     verifies: ["CRS"]
-    properties: ["id", "title", "prerequisites", "steps", "expected_result", "links", "verification_status", "reviewer", "review_date"]
+    properties: ["id", "title", "prerequisites", "steps", "expected_result", "validates", "verification_status", "reviewer", "review_date"]
     relations:
       - target: CRS
         label: validates
@@ -376,7 +362,7 @@ doc_types:
     directory: "07_tc_sds"
     type: "test"
     verifies: ["SDS"]
-    properties: ["id", "title", "prerequisites", "steps", "expected_result", "links", "verification_status", "reviewer", "review_date"]
+    properties: ["id", "title", "prerequisites", "steps", "expected_result", "verifies", "verification_status", "reviewer", "review_date"]
     relations:
       - target: SDS
         label: verifies

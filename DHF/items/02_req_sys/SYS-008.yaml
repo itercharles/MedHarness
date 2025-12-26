@@ -5,8 +5,6 @@ content: "The system shall provide a change management module that enables track
   \ IDs\n- Impact analysis using the traceability graph\n- Workflow-based approval\
   \ process\n- Significance assessment per MDCG 2020-3 criteria\n- Change history\
   \ tracking and reporting"
-links:
-- CRS-004
 title: Change Management System
 reviewer: Technical Lead
 review_date: '2025-12-13'
@@ -14,3 +12,5 @@ category: Change Control
 verification_method: Inspection and Testing
 critical_safety: true
 status: approved
+satisfies:
+- CRS-004

@@ -1,8 +1,8 @@
 id: SYS-016
 content: The system shall support configurable data fields for items. Field definitions,
   types, validation rules, and required fields shall be defined in configuration.
-links:
-- CRS-006
 title: Release Data Capture
 verification_status: PASS
 status: approved
+satisfies:
+- CRS-006

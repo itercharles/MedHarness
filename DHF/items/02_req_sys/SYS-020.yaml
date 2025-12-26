@@ -1,8 +1,6 @@
 id: SYS-020
 content: The system shall maintain a complete history of all releases with version
   control integration.
-links:
-- CRS-006
 title: Release History Tracking
 verification_status: PASS
 status: approved
@@ -11,3 +9,5 @@ manual_verifications:
     verified_by: charles
     verified_date: '2025-12-20T11:12:07.834326'
     notes: ''
+satisfies:
+- CRS-006

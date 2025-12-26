@@ -600,6 +600,57 @@ def render_item_view(
         # Format field name with better styling
         field_name = prop.replace('_', ' ').title()
         
+        # Smart rendering for list fields containing item IDs
+        if isinstance(value, list) and value:
+            # Check if this looks like a list of item IDs (e.g., "SYS-001", "RISK-042")
+            # Item IDs typically have format: LETTERS-NUMBERS
+            first_item = value[0] if value else None
+            is_item_list = False
+            
+            if isinstance(first_item, str):
+                # Check if it matches item ID pattern (e.g., SYS-001, RISK-042)
+                import re
+                if re.match(r'^[A-Z]+-\d+', first_item):
+                    is_item_list = True
+            
+            if is_item_list:
+                # Import URL helper
+                from utils.ui_helpers import get_page_url_for_item
+                
+                # Render as clickable links with item details
+                st.markdown(f"**{field_name}:**")
+                for item_id in value:
+                    linked_item = core.get_item(item_id)
+                    if linked_item:
+                        item_title = linked_item.get('title', 'N/A')
+                        item_status = linked_item.get('status', 'unknown')
+                        # Create clickable link using consistent URL helper
+                        item_url = get_page_url_for_item(item_id, core)
+                        st.markdown(f"  - [{item_id}]({item_url}): {item_title} _({item_status})_")
+                    else:
+                        st.markdown(f"  - {item_id} _(not found)_")
+                continue
+        
+        # Special handling for implementation_prs (list of dicts)
+        if prop == 'implementation_prs' and isinstance(value, list):
+            st.markdown(f"**{field_name}:**")
+            if value:
+                for pr in value:
+                    if isinstance(pr, dict):
+                        pr_num = pr.get('pr_number', 'N/A')
+                        pr_url = pr.get('pr_url', '')
+                        pr_title = pr.get('title', 'No title')
+                        # Format PR link nicely
+                        if pr_url:
+                            st.markdown(f"  - [PR #{pr_num}]({pr_url}): {pr_title}")
+                        else:
+                            st.markdown(f"  - PR #{pr_num}: {pr_title}")
+                    else:
+                        st.markdown(f"  - {pr}")
+            else:
+                st.caption("  _(empty)_")
+            continue
+        
         # Display field with visual distinction
         if isinstance(value, list):
             st.markdown(f"**{field_name}:**")
@@ -627,10 +678,16 @@ def render_item_view(
         for link_id in item['links']:
             linked_item = core.get_item(link_id)
             if linked_item:
-                link_status = linked_item.get('status', 'unknown')
-                st.markdown(f"  - **{link_id}**: {linked_item.get('title', 'N/A')} _({link_status})_")
+                item_title = linked_item.get('title', 'N/A')
+                item_status = linked_item.get('status', 'unknown')
+                # Import URL helper if not already imported (it should be at top level but doing it here to be safe given context)
+                from utils.ui_helpers import get_page_url_for_item
+                
+                # Create clickable link consistent with other fields
+                item_url = get_page_url_for_item(link_id, core)
+                st.markdown(f"  - [{link_id}]({item_url}): {item_title} _({item_status})_")
             else:
-                st.markdown(f"  - **{link_id}** _(not found)_")
+                st.markdown(f"  - {link_id} _(not found)_")
     
     # Workflow transition buttons
     st.markdown("---")

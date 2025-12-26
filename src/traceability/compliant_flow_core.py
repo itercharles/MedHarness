@@ -314,12 +314,19 @@ class CompliantFlowCore:
         allowed_prefixes = set()
         if hasattr(doc_type_config, 'relations') and doc_type_config.relations:
             for relation in doc_type_config.relations:
-                if relation.get('label') == relationship_field:
-                    target_type = relation.get('target')
-                    if target_type:
-                        target_doc_type = self.config.get_doc_type(target_type)
-                        if target_doc_type and target_doc_type.prefix:
-                            allowed_prefixes.add(target_doc_type.prefix)
+                # Handle both Pydantic model and dict for robustness
+                if isinstance(relation, dict):
+                    rel_label = relation.get('label')
+                    rel_target = relation.get('target')
+                else:
+                    rel_label = getattr(relation, 'label', None)
+                    rel_target = getattr(relation, 'target', None)
+                
+                if rel_label == relationship_field and rel_target:
+                    target_doc_type = self.config.get_doc_type(rel_target)
+                    if target_doc_type and target_doc_type.prefix:
+                        allowed_prefixes.add(target_doc_type.prefix)
+                        
         
         # Filter items by allowed prefixes
         if allowed_prefixes:
@@ -416,7 +423,7 @@ class CompliantFlowCore:
         properties = doc_type_config.properties if hasattr(doc_type_config, 'properties') else []
         
         # Fields to skip
-        skip_fields = {'id', 'file_path', 'status', 'links', 'active', 'reviewer', 'review_date', 
+        skip_fields = {'id', 'file_path', 'status', 'active', 'reviewer', 'review_date', 
                       'verified_by', 'verified_date', 'approved_by', 'approved_date', 
                       'released_by', 'released_date', 'manual_verifications', 'timestamp'}
         
@@ -453,28 +460,26 @@ class CompliantFlowCore:
             elif prop in ['severity_pre', 'probability_pre', 'severity_post', 'probability_post']:
                 field['type'] = 'select'
                 field['options'] = ["Low", "Medium", "High"]
+            elif prop == 'affected_items':
+                # Affected items can be any item in the system
+                field['type'] = 'multiselect'
+                if item_id:
+                    all_items = self.get_all_items()
+                    field['options'] = [i['id'] for i in all_items if i['id'] != item_id]
+                else:
+                    field['options'] = []
             elif prop in ['design', 'derives_from', 'implements', 'guided_by', 'informs', 'mitigated_by']:
-                # Relationship fields
+                # Relationship fields - use smart filtering based on document type
                 field['type'] = 'multiselect'
                 field['options'] = self.get_relationship_options(item_id, prop) if item_id else []
+            elif prop == 'implementation_prs':
+                # PRs are managed automatically by GitHub Actions, not editable
+                continue
             else:
                 # Generic text input
                 field['type'] = 'text'
             
             fields.append(field)
-        
-        # Add links field separately
-        if item_id:
-            all_items = self.get_all_items()
-            link_options = [i['id'] for i in all_items if i['id'] != item_id]
-            fields.append({
-                'name': 'links',
-                'label': 'Links',
-                'type': 'multiselect',
-                'options': link_options,
-                'current_value': current_item.get('links', []),
-                'required': False
-            })
         
         return {'fields': fields}
     

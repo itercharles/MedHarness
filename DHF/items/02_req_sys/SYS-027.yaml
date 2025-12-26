@@ -1,5 +1,7 @@
 id: SYS-027
 status: approved
 title: Policy Validation Results Display
-content: The system shall display validation results for each policy with pass/fail status, policy description, and detailed evidence in an expandable format.
-links: ["CRS-011"]
+content: The system shall display validation results for each policy with pass/fail
+  status, policy description, and detailed evidence in an expandable format.
+satisfies:
+- CRS-011

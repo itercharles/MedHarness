@@ -9,6 +9,8 @@ probability_pre: 4
 severity_post: 1
 probability_post: 2
 risk_acceptability: acceptable
-risk_benefit: "Risk mitigated by RCM-001 (Orphan Detection). Residual risk is low and acceptable."
-links: ["RCM-001"]
+risk_benefit: Risk mitigated by RCM-001 (Orphan Detection). Residual risk is low and
+  acceptable.
 status: approved
+mitigated_by:
+- RCM-001

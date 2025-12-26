@@ -2,8 +2,8 @@ id: SYS-018
 content: The system shall support configurable lifecycle workflows with approval gates.
   Transition criteria and approval requirements shall be defined in configuration
   and enforced by the system.
-links:
-- CRS-006
 title: Release Status Workflow
 verification_status: PASS
 status: approved
+satisfies:
+- CRS-006

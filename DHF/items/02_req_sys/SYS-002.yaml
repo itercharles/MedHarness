@@ -1,6 +1,7 @@
 id: SYS-002
-content: "The system shall build a directed graph data structure to represent traceability relationships between items. (Test: GitHub Actions automation)"
-links:
-- CRS-001
+content: 'The system shall build a directed graph data structure to represent traceability
+  relationships between items. (Test: GitHub Actions automation)'
 title: Graph Generation
 status: approved
+satisfies:
+- CRS-001

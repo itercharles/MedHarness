@@ -2,8 +2,8 @@ id: SYS-010
 content: The system shall support configurable lifecycle workflows for items, with
   state transitions and validation rules defined in configuration. The system shall
   enforce transition rules and execute validation criteria.
-links:
-- CRS-005
 title: Defect Workflow Management
 verification_status: PASS
 status: approved
+satisfies:
+- CRS-005
