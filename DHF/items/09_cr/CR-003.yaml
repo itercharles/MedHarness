@@ -59,4 +59,5 @@ implementation_prs:
 - pr_number: 2
   pr_url: https://github.com/itercharles/CompliantFlow/pull/2
   title: '[CR-003] Feature/pr cr automation docs'
-  status: open
+  status: merged
+  merged_at: '2025-12-26T14:52:36Z'
