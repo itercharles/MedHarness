@@ -1,6 +1,5 @@
 id: SYS-002
-content: The system shall build a directed graph data structure to represent traceability
-  relationships between items. (Test: GitHub Actions automation)
+content: "The system shall build a directed graph data structure to represent traceability relationships between items. (Test: GitHub Actions automation)"
 links:
 - CRS-001
 title: Graph Generation
