@@ -21,7 +21,7 @@ jobs:
           CR_ID=$(echo "${{ github.event.pull_request.title }}" | grep -oE "CR-[0-9]+" | head -1)
           echo "cr_id=$CR_ID" >> $GITHUB_OUTPUT
       
-      - name: Add PR to CR Implementation List
+      - name: Update PR Status to Merged
         run: |
           CR_ID="${{ steps.extract.outputs.cr_id }}"
           CR_FILE="DHF/items/09_cr/${CR_ID}.yaml"
@@ -35,24 +35,23 @@ jobs:
           with open(cr_file, 'r') as f:
               cr_data = yaml.safe_load(f)
           
-          # Initialize implementation_prs if needed
-          if 'implementation_prs' not in cr_data:
-              cr_data['implementation_prs'] = []
+          # Find and update the PR entry
+          pr_number = ${{ github.event.pull_request.number }}
+          merged_at = "${{ github.event.pull_request.merged_at }}"
           
-          # Add PR info
-          pr_info = {
-              'pr_number': ${{ github.event.pull_request.number }},
-              'pr_url': "${{ github.event.pull_request.html_url }}",
-              'merged_at': "${{ github.event.pull_request.merged_at }}",
-              'title': "${{ github.event.pull_request.title }}"
-          }
-          cr_data['implementation_prs'].append(pr_info)
+          if 'implementation_prs' in cr_data:
+              for pr in cr_data['implementation_prs']:
+                  if pr.get('pr_number') == pr_number:
+                      pr['status'] = 'merged'
+                      pr['merged_at'] = merged_at
+                      print(f"Updated PR #{pr_number} status to merged")
+                      break
           
           # Write back
           with open(cr_file, 'w') as f:
               yaml.dump(cr_data, f, default_flow_style=False, sort_keys=False)
           
-          print(f"Added PR #${{ github.event.pull_request.number }} to {cr_file}")
+          print(f"Updated {cr_file}")
           PYTHON_SCRIPT
       
       - name: Commit CR Update
