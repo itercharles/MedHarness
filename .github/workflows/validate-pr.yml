@@ -64,7 +64,7 @@ jobs:
           
           # Find CR document type config
           cr_config = None
-          for doc_type in config.get('document_types', []):
+          for doc_type in config.get('doc_types', []):
               if doc_type.get('code') == 'CR':
                   cr_config = doc_type
                   break
