@@ -1,0 +1,23 @@
+id: SWDD-020
+title: "PR-CR Validation Workflow"
+content: |
+  **Unit:** GitHub Actions workflow `validate-pr.yml`
+  
+  **Purpose:** Validate that Pull Requests reference valid Change Requests
+  
+  **Design Approach:**
+  - Extract CR identifier from PR metadata using pattern matching
+  - Verify CR file exists in repository
+  - Check CR status is modifiable (not in stable state)
+  - Fail early if validation fails
+  
+  **Inputs:** PR title and description
+  
+  **Outputs:** CR identifier or validation error
+  
+implements:
+  - SRS-021
+guided_by:
+  - SWAD-011
+category: design
+status: draft

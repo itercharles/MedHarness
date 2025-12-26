@@ -1,0 +1,28 @@
+id: SWDD-022
+title: "CR Update with Affected Items and PR Info"
+content: |
+  **Unit:** CR update script in `validate-pr.yml`
+  
+  **Purpose:** Update CR with affected items and PR tracking information
+  
+  **Design Approach:**
+  - Load CR data from YAML file
+  - Merge new affected items into existing list (no duplicates)
+  - Add PR tracking entry if not already present
+  - Write updated CR back to file
+  - Commit changes to PR branch
+  
+  **Data Model:**
+  - affected_items: List of item IDs
+  - implementation_prs: List of PR info objects (number, URL, title, status)
+  
+  **Inputs:** CR file, affected items list, PR metadata
+  
+  **Outputs:** Updated CR YAML file, git commit
+  
+implements:
+  - SRS-021
+guided_by:
+  - SWAD-011
+category: design
+status: draft
