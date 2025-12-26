@@ -1,59 +1,62 @@
 id: CR-003
-title: "Automated PR-CR Linking and Traceability System"
-description: |
-  Implement automated workflows to link Pull Requests to Change Requests, ensuring 
-  complete traceability and regulatory compliance.
-  
-  **Objectives:**
-  - Enforce CR references in all PRs
-  - Automatically detect and record affected DHF items
-  - Track PR implementation in CRs
-  - Maintain complete audit trail for regulatory compliance
-  
-  **Scope:**
-  - GitHub Actions workflows for PR validation
-  - Automated affected items detection
-  - PR status tracking throughout lifecycle
-  - CR data model extensions
-  
-justification: |
-  **Regulatory Requirement:**
-  IEC 62304 §6.2 (Change Control) and FDA 21 CFR 820.30(i) require documented 
-  linkage between code changes and change requests.
-  
-  **Current Gap:**
-  Manual tracking is error-prone and does not scale. Automated enforcement ensures 
-  100% compliance and complete traceability.
-  
-  **Benefits:**
-  - Guaranteed regulatory compliance
-  - Complete audit trail
-  - Reduced manual effort
-  - Improved change management process
-  
-impact_assessment: |
-  **Affected Systems:**
+title: Automated PR-CR Linking and Traceability System
+description: "Implement automated workflows to link Pull Requests to Change Requests,\
+  \ ensuring \ncomplete traceability and regulatory compliance.\n\n**Objectives:**\n\
+  - Enforce CR references in all PRs\n- Automatically detect and record affected DHF\
+  \ items\n- Track PR implementation in CRs\n- Maintain complete audit trail for regulatory\
+  \ compliance\n\n**Scope:**\n- GitHub Actions workflows for PR validation\n- Automated\
+  \ affected items detection\n- PR status tracking throughout lifecycle\n- CR data\
+  \ model extensions\n"
+justification: "**Regulatory Requirement:**\nIEC 62304 \xA76.2 (Change Control) and\
+  \ FDA 21 CFR 820.30(i) require documented \nlinkage between code changes and change\
+  \ requests.\n\n**Current Gap:**\nManual tracking is error-prone and does not scale.\
+  \ Automated enforcement ensures \n100% compliance and complete traceability.\n\n\
+  **Benefits:**\n- Guaranteed regulatory compliance\n- Complete audit trail\n- Reduced\
+  \ manual effort\n- Improved change management process\n"
+impact_assessment: '**Affected Systems:**
+
   - GitHub repository workflows
+
   - CR document type configuration
+
   - Development workflow
-  
+
+
   **Risk Assessment:**
+
   - **Technical Risk:** Low - Uses standard GitHub Actions
+
   - **Process Risk:** Medium - Requires team adoption of new workflow
+
   - **Compliance Risk:** Low - Improves compliance posture
-  
+
+
   **Mitigation:**
+
   - Comprehensive testing before enforcement
+
   - Team training on new workflow
+
   - Clear error messages for validation failures
-  
+
+  '
 priority: High
-requested_by: "Compliance Team"
-assigned_to: "Development Team"
-target_version: "1.1.0"
+requested_by: Compliance Team
+assigned_to: Development Team
+target_version: 1.1.0
 status: approved
-approved_by: "System Architect"
-approved_date: "2025-12-26"
+approved_by: System Architect
+approved_date: '2025-12-26'
 affected_items:
-  - SYS-030
-implementation_prs: []
+- SYS-030
+- SRS-021
+- SWAD-011
+- SWDD-020
+- SWDD-021
+- SWDD-022
+- SWDD-023
+implementation_prs:
+- pr_number: 2
+  pr_url: https://github.com/itercharles/CompliantFlow/pull/2
+  title: '[CR-003] Feature/pr cr automation docs'
+  status: open
