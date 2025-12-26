@@ -58,3 +58,6 @@ implementation_prs:
 - pr_number: 2
   pr_url: https://github.com/itercharles/CompliantFlow/pull/2
   title: '[CR-003] Feature/pr cr automation docs'
+- pr_number: 3
+  pr_url: https://github.com/itercharles/CompliantFlow/pull/3
+  title: "refactor: remove YAML file existence check for test IDs, allowing aut\u2026"
