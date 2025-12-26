@@ -49,7 +49,7 @@ def test_TC_CRS_004_001_change_management_workflow():
     assert cr_doc_type.name == "Change Request", "CR document type has incorrect name"
     
     # Step 2: Verify CR has required fields for compliance
-    required_fields = ["id", "title", "description", "links"]
+    required_fields = ["id", "title", "description", "affected_items"]
     for field in required_fields:
         assert field in cr_doc_type.properties, \
             f"CR missing required field: {field}"
@@ -59,9 +59,9 @@ def test_TC_CRS_004_001_change_management_workflow():
         "CR should have impact_assessment field for documenting impact analysis"
     
     # Step 3: Verify CR can link to affected requirements
-    # CR uses 'links' field for traceability instead of explicit relations
-    assert "links" in cr_doc_type.properties, \
-        "CR should have links field for traceability to affected items"
+    # CR uses 'affected_items' field for traceability
+    assert "affected_items" in cr_doc_type.properties, \
+        "CR should have affected_items field for traceability to affected items"
     
     # If CR has relations defined, verify they include requirements
     if hasattr(cr_doc_type, 'relations') and cr_doc_type.relations:
@@ -98,14 +98,14 @@ def test_TC_CRS_004_001_change_management_workflow():
     all_items = core.get_all_items()
     cr_items = [item for item in all_items if item['id'].startswith('CR-')]
     
-    # If CRs exist, verify they can have links
+    # If CRs exist, verify they can have affected_items
     if cr_items:
-        # Check that at least one CR has links (or that links field exists)
-        cr_with_links = [cr for cr in cr_items if cr.get('links')]
-        # It's OK if no CRs have links yet, but the field should exist
+        # Check that at least one CR has affected_items (or that field exists)
+        cr_with_items = [cr for cr in cr_items if cr.get('affected_items')]
+        # It's OK if no CRs have affected_items yet, but the field should exist
         sample_cr = cr_items[0]
-        assert 'links' in sample_cr or hasattr(cr_doc_type, 'relations'), \
-            "CR items should support links for traceability"
+        assert 'affected_items' in sample_cr or hasattr(cr_doc_type, 'relations'), \
+            "CR items should support affected_items for traceability"
     
     # Verify graph can handle CR relationships
     assert core.graph is not None, "Traceability graph should be initialized"
@@ -150,6 +150,6 @@ def test_TC_CRS_004_002_change_request_impact_analysis():
     # Verify CR can link to affected items
     assert hasattr(cr_doc_type, 'relations'), "CR should support relations to affected items"
     
-    # Verify links field exists for traceability
-    assert "links" in cr_doc_type.properties, \
-        "CR should have links field for traceability to affected items"
+    # Verify affected_items field exists for traceability
+    assert "affected_items" in cr_doc_type.properties, \
+        "CR should have affected_items field for traceability to affected items"
