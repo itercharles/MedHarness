@@ -7,8 +7,8 @@
 | Field | Value |
 |-------|-------|
 | **Document ID** | CRS-SPEC |
-| **Version** | 1.150 |
-| **Generated** | 2025-12-26 |
+| **Version** | 1.139 |
+| **Generated** | 2025-12-22 |
 | **Status** | Draft |
 | **Project** | CompliantFlow Project |
 
@@ -24,7 +24,7 @@ This document provides a comprehensive list of all Customer Requirements, includ
 
 ### 1.2 Scope
 
-This specification covers all Customer Requirements defined in the CompliantFlow system as of 2025-12-26.
+This specification covers all Customer Requirements defined in the CompliantFlow system as of 2025-12-22.
 
 ---
 
@@ -221,7 +221,7 @@ The system shall automatically generate user interface pages for document types 
 ## 4. Document Control
 
 **Document Owner**: Quality Assurance  
-**Last Updated**: 2025-12-26  
+**Last Updated**: 2025-12-22  
 **Next Review**: TBD
 
 ---

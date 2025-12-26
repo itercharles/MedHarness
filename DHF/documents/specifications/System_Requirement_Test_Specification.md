@@ -7,8 +7,8 @@
 | Field | Value |
 |-------|-------|
 | **Document ID** | TC-SYS-TEST-SPEC |
-| **Version** | 1.13 |
-| **Generated** | 2025-12-26 |
+| **Version** | 1.12 |
+| **Generated** | 2025-12-22 |
 | **Status** | Draft |
 | **Project** | CompliantFlow Project |
 
@@ -24,7 +24,7 @@ This document provides a comprehensive list of all verification test cases, incl
 
 ### 1.2 Scope
 
-This specification covers all System Tests defined in the CompliantFlow system as of 2025-12-26.
+This specification covers all System Tests defined in the CompliantFlow system as of 2025-12-22.
 
 ---
 
@@ -395,7 +395,7 @@ Project configuration with lifecycle states
 ## 4. Document Control
 
 **Document Owner**: Quality Assurance  
-**Last Updated**: 2025-12-26  
+**Last Updated**: 2025-12-22  
 **Next Review**: TBD
 
 ---
