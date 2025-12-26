@@ -14,12 +14,7 @@ content: |
   2. **Traceability Recording**
      - Software shall automatically identify which DHF items are affected by PR changes
      - Software shall record affected items in the corresponding CR
-     - Software shall track PR information in the CR
-  
-  3. **Status Management**
-     - Software shall track PR status (open/merged)
-     - Software shall update PR status when merged
-     - Software shall record merge timestamps
+     - Software shall track PR information (number, URL, title) in the CR
   
   **Quality Attributes:**
   - Automation: All operations shall be automatic, requiring no manual intervention
