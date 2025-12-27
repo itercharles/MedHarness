@@ -1155,6 +1155,10 @@ document_specifications:
     template: architecture_specification.md.j2
     output: DHF/documents/specifications/System_Architecture_Specification.md
     doc_type_name: System Architecture Specification
+  SWAD:
+    template: software_architecture_specification.md.j2
+    output: DHF/documents/specifications/Software_Architecture_Specification.md
+    doc_type_name: Software Architecture Specification
   TC-CRS:
     template: test_specification.md.j2
     output: DHF/documents/specifications/Customer_Requirement_Test_Specification.md

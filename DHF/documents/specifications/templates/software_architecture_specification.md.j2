@@ -1,0 +1,395 @@
+# {{ doc_type_name }}
+
+---
+
+**Document Metadata**
+
+| Field | Value |
+|-------|-------|
+| **Document ID** | {{ doc_type_code }}-SPEC |
+| **Version** | {{ version }} |
+| **Generated** | {{ generation_date }} |
+| **Status** | {{ status }} |
+| **Project** | {{ project_name }} |
+
+---
+
+## 1. Software Overview
+
+CompliantFlow software implements a **web-based DHF management system** using Python and modern web technologies.
+
+**Software Purpose:** Provide user interface, business logic, and data management for DHF items with complete traceability and regulatory compliance.
+
+---
+
+## 2. Software Architecture
+
+### 2.1 Architecture Style
+
+**Layered Architecture** with clear separation of concerns:
+- Presentation Layer (Streamlit UI)
+- Business Logic Layer (Core components)
+- Data Access Layer (File I/O, Git)
+- Storage Layer (File system)
+
+### 2.2 Technology Stack
+
+**Programming Language:**
+- **Python 3.11+** - Primary language for all components
+
+**Web Framework:**
+- **Streamlit** - Web UI framework with reactive model
+
+**Data Processing:**
+- **NetworkX** - Graph analysis and traceability
+- **Pydantic** - Data validation and schema enforcement
+- **PyYAML** - YAML file parsing
+
+**Document Generation:**
+- **Jinja2** - Template rendering engine
+- **Python-Markdown** - Markdown to HTML conversion
+- **WeasyPrint** - PDF generation with CSS styling
+
+**Version Control:**
+- **GitPython** - Git operations and history tracking
+
+**Visualization:**
+- **streamlit-agraph** - Interactive graph visualization
+- **Pandas** - Data manipulation and table display
+
+---
+
+## 3. Component Architecture
+
+### 3.1 Software Architecture Diagram
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Streamlit Web Application                 │
+├─────────────────────────────────────────────────────────────┤
+│                                                               │
+│  ┌────────────────────────────────────────────────────────┐ │
+│  │              Presentation Layer                         │ │
+│  │  - Universal Page Template                              │ │
+│  │  - Dynamic Form Generation                              │ │
+│  │  - Workflow Transition UI                               │ │
+│  │  - Visualization Components                             │ │
+│  └────────────────┬───────────────────────────────────────┘ │
+│                   │                                           │
+│  ┌────────────────▼───────────────────────────────────────┐ │
+│  │              Business Logic Layer                       │ │
+│  │                                                          │ │
+│  │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐ │ │
+│  │  │CompliantFlow │  │ GraphEngine  │  │  Workflow    │ │ │
+│  │  │    Core      │  │              │  │   Engine     │ │ │
+│  │  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘ │ │
+│  │         │                  │                  │         │ │
+│  │  ┌──────▼──────────────────▼──────────────────▼───────┐ │ │
+│  │  │           Document Generator                        │ │ │
+│  │  └────────────────────────────────────────────────────┘ │ │
+│  └────────────────┬───────────────────────────────────────┘ │
+│                   │                                           │
+│  ┌────────────────▼───────────────────────────────────────┐ │
+│  │              Data Access Layer                          │ │
+│  │  - ItemLoader (YAML reading)                            │ │
+│  │  - ItemSaver (YAML writing + Git commits)              │ │
+│  │  - ConfigurationLoader (Project config)                 │ │
+│  └────────────────┬───────────────────────────────────────┘ │
+│                   │                                           │
+│  ┌────────────────▼───────────────────────────────────────┐ │
+│  │              Storage Layer                              │ │
+│  │  - File System (YAML files)                             │ │
+│  │  - Git Repository (Version control)                     │ │
+│  └─────────────────────────────────────────────────────────┘ │
+│                                                               │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 3.2 Component Descriptions
+
+**CompliantFlowCore:**
+- Central orchestrator for all operations
+- Provides unified API for item management
+- Coordinates graph, workflow, and document generation
+
+**GraphEngine:**
+- Builds NetworkX directed graph from items
+- Performs traceability analysis
+- Detects orphans and calculates coverage
+
+**WorkflowEngine:**
+- Manages item lifecycle states
+- Validates state transitions
+- Executes transition criteria
+
+**DocumentGenerator:**
+- Renders Jinja2 templates
+- Generates specification documents
+- Exports to PDF format
+
+**ItemLoader/ItemSaver:**
+- YAML file I/O operations
+- Schema validation with Pydantic
+- Git commit automation
+
+---
+
+## 4. Design Patterns
+
+### 4.1 Architectural Patterns
+
+**Layered Architecture**
+- Clear separation between UI, logic, and data
+- Each layer depends only on layers below
+- Enables independent testing and modification
+
+**Repository Pattern**
+- ItemLoader/ItemSaver abstract file storage
+- Enables future database migration
+- Consistent interface for data access
+
+**Strategy Pattern**
+- Workflow validation criteria as strategies
+- Policy validation rules as strategies
+- Extensible without modifying core code
+
+### 4.2 Design Principles
+
+**Configuration-Driven Design**
+- Document types defined in YAML
+- Workflows configured, not hardcoded
+- Policies loaded from configuration
+
+**Fail-Fast Validation**
+- Configuration validated at startup
+- Invalid data rejected immediately
+- Clear error messages for debugging
+
+**Separation of Concerns**
+- UI knows nothing about storage
+- Business logic independent of UI framework
+- Data access isolated from business rules
+
+---
+
+## 5. Software Architecture Components
+
+{% for item in items %}
+### {{ loop.index }}. {{ item.id }}: {{ item.title }}
+
+<div class="architecture-section">
+
+**Status**: <span class="status-{{ item.status }}">{{ item.status | upper }}</span>  
+{% if item.implements %}**Implements**: {{ item.implements | join(', ') }}  {% endif %}
+
+#### Overview
+
+{{ item.content }}
+
+{% if item.technologies %}
+#### Technologies
+
+{{ item.technologies }}
+{% endif %}
+
+{% if item.design_patterns %}
+#### Design Patterns
+
+{{ item.design_patterns }}
+{% endif %}
+
+{% if item.interfaces %}
+#### Interfaces
+
+{{ item.interfaces }}
+{% endif %}
+
+</div>
+
+{% endfor %}
+
+---
+
+## 6. Data Flow
+
+### 6.1 Item Creation Flow
+
+```
+User Input (Streamlit)
+  ↓
+CompliantFlowCore.create_item()
+  ↓
+WorkflowEngine.get_initial_state()
+  ↓
+ItemSaver.save(item)
+  ↓
+YAML File + Git Commit
+  ↓
+GraphEngine.rebuild()
+```
+
+### 6.2 Traceability Analysis Flow
+
+```
+User Request (Streamlit)
+  ↓
+CompliantFlowCore.get_traceability()
+  ↓
+GraphEngine.build_from_items()
+  ↓
+NetworkX Graph Operations
+  ↓
+Traceability Results
+  ↓
+Streamlit Visualization
+```
+
+### 6.3 Document Generation Flow
+
+```
+User Request (Streamlit)
+  ↓
+DocumentGenerator.generate_specification()
+  ↓
+ItemLoader.load_all()
+  ↓
+Jinja2 Template Rendering
+  ↓
+Markdown → HTML → PDF
+  ↓
+Generated Document
+```
+
+---
+
+## 7. Technology Decisions
+
+### 7.1 Why Python?
+- Rich ecosystem for data processing
+- Excellent libraries for graph analysis (NetworkX)
+- Strong template engines (Jinja2)
+- Easy integration with Git
+
+### 7.2 Why Streamlit?
+- Rapid UI development
+- Reactive programming model
+- No frontend JavaScript required
+- Built-in components for forms and tables
+
+### 7.3 Why NetworkX?
+- Mature graph library
+- Comprehensive algorithms
+- Well-documented
+- Excellent performance for our scale
+
+### 7.4 Why File-Based Storage?
+- Simple deployment (no database server)
+- Git-friendly (text-based YAML)
+- Human-readable for audits
+- Easy backup and portability
+
+---
+
+## 8. Performance Considerations
+
+### 8.1 Graph Operations
+- In-memory graph for fast queries
+- Rebuild only when items change
+- Caching for expensive operations
+- Target: < 1 second for 1000 items
+
+### 8.2 Document Generation
+- Template caching
+- Incremental version updates
+- Parallel processing for multiple documents
+- Target: < 10 seconds for 100 items
+
+### 8.3 UI Responsiveness
+- Lazy loading for large datasets
+- Pagination for tables
+- Async operations where possible
+- Target: < 1 second for page loads
+
+---
+
+## 9. Security Considerations
+
+### 9.1 Data Integrity
+- Schema validation before save
+- Git commit signatures
+- File system permissions
+- Audit trail via Git history
+
+### 9.2 Access Control
+- User authentication (future)
+- Role-based permissions (future)
+- Currently: file system permissions
+
+---
+
+## 10. Compliance Mapping
+
+### 10.1 IEC 62304 Requirements
+
+| IEC 62304 Section | Software Implementation |
+|-------------------|-------------------------|
+| §5.3.1 Software Architecture | This document + SWAD items |
+| §5.3.2 Architecture Documentation | Jinja2 templates + PDF generation |
+| §5.3.3 Interface Specification | Component interfaces in SWAD items |
+| §5.3.4 Functional/Performance Requirements | SRS items |
+| §5.3.5 Segregation of SOUP | External libraries documented |
+
+### 10.2 Requirements Traceability
+
+This software architecture specification implements the following software requirements:
+{% set all_implements = [] %}
+{% for item in items %}
+  {% if item.implements %}
+    {% for impl in item.implements %}
+      {% if impl not in all_implements %}
+        {% set _ = all_implements.append(impl) %}
+      {% endif %}
+    {% endfor %}
+  {% endif %}
+{% endfor %}
+
+{% if all_implements %}
+{% for impl in all_implements | sort %}
+- {{ impl }}
+{% endfor %}
+{% else %}
+*No requirement links defined*
+{% endif %}
+
+---
+
+## 11. Summary
+
+### 11.1 Architecture Statistics
+
+| Metric | Count |
+|--------|-------|
+| **Total Architecture Components** | {{ items | length }} |
+| **Presentation Components** | {{ items | selectattr('layer', 'equalto', 'presentation') | list | length }} |
+| **Business Logic Components** | {{ items | selectattr('layer', 'equalto', 'business') | list | length }} |
+| **Data Access Components** | {{ items | selectattr('layer', 'equalto', 'data') | list | length }} |
+
+### 11.2 Component Status
+
+| Status | Count |
+|--------|-------|
+| **Draft** | {{ items | selectattr('status', 'equalto', 'draft') | list | length }} |
+| **Review** | {{ items | selectattr('status', 'equalto', 'review') | list | length }} |
+| **Approved** | {{ items | selectattr('status', 'equalto', 'approved') | list | length }} |
+
+---
+
+## 12. Document Control
+
+**Document Owner**: Software Architecture Team  
+**Last Updated**: {{ generation_date }}  
+**Next Review**: TBD
+
+---
+
+*This document was automatically generated by CompliantFlow from software architecture specification items.*
