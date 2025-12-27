@@ -1100,8 +1100,12 @@ doc_types:
   - name: target_version
     format: short_text
     label: Target Version
-  - affected_items
-  - implementation_prs
+  - name: affected_items
+    format: item_multiselect
+    label: Affected Items
+  - name: implementation_prs
+    format: long_text
+    label: Implementation PRs (JSON List)
   icon: 📝
   page_enabled: true
   page_number: 9

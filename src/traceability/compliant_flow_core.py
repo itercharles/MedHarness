@@ -469,21 +469,7 @@ class CompliantFlowCore:
             # Handle relationship fields
             if prop_config.format in [PropertyFormat.ITEM_REFERENCE, PropertyFormat.ITEM_MULTISELECT]:
                 field['target_types'] = prop_config.target_types
-                field['options'] = self._get_item_options(prop_config.target_types, item_id)
-            elif prop_name in ['design', 'derives_from', 'implements', 'guided_by', 'informs', 'mitigated_by']:
-                # Legacy relationship handling for string-based properties
-                field['options'] = self.get_relationship_options(item_id, prop_name) if item_id else []
-            elif prop_name == 'affected_items':
-                # Special handling for affected_items
-                if item_id:
-                    all_items = self.get_all_items()
-                    field['options'] = [i['id'] for i in all_items if i['id'] != item_id]
-                else:
-                    field['options'] = []
-            
-            # Skip implementation_prs (managed by GitHub Actions)
-            if prop_name == 'implementation_prs':
-                continue
+                field['options'] = self._get_item_options( prop_config.target_types, item_id)
             
             fields.append(field)
         
