@@ -1135,6 +1135,10 @@ traceability_matrices:
   - SRS
   - TC-SRS
 document_specifications:
+  UC:
+    template: requirements_specification.md.j2
+    output: DHF/documents/specifications/Use_Case_Specification.md
+    doc_type_name: Use Case
   CRS:
     template: requirements_specification.md.j2
     output: DHF/documents/specifications/Customer_Requirement_Specification.md
