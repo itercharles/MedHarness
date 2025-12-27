@@ -39,10 +39,8 @@ class TestTypedRelationships:
         """Verify all_links property returns dict of all relationships."""
         item = Item(
             id="TEST-001",
-            content="Test item",
             derives_from=["UC-001"],
-            implements=["SRS-001"],
-            links=["OTHER-001"]
+            implements=["SRS-001"]
         )
         
         all_links = item.all_links
@@ -50,7 +48,7 @@ class TestTypedRelationships:
         assert isinstance(all_links, dict)
         assert all_links['derives_from'] == ["UC-001"]
         assert all_links['implements'] == ["SRS-001"]
-        assert all_links['links'] == ["OTHER-001"]
+        # links field was removed from Item model
         assert all_links['guided_by'] == []  # Empty when None
         assert all_links['informs'] == []
     
@@ -58,22 +56,19 @@ class TestTypedRelationships:
         """Verify all_linked_uids returns flat list of all linked UIDs."""
         item = Item(
             id="TEST-001",
-            content="Test item",
             derives_from=["UC-001", "UC-002"],
             implements=["SRS-001"],
-            guided_by=["SWAD-001"],
-            links=["OTHER-001"]
+            guided_by=["SWAD-001"]
         )
         
         all_uids = item.all_linked_uids
         
         assert isinstance(all_uids, list)
-        assert len(all_uids) == 5
+        assert len(all_uids) == 4  # Updated count after removing links
         assert "UC-001" in all_uids
         assert "UC-002" in all_uids
         assert "SRS-001" in all_uids
         assert "SWAD-001" in all_uids
-        assert "OTHER-001" in all_uids
         # Should be sorted
         assert all_uids == sorted(all_uids)
     
