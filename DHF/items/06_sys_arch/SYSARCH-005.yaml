@@ -1,45 +1,27 @@
 id: SYSARCH-005
-title: Policy-Based Compliance Architecture
+title: Compliance Validation Module
 content: |-
-  Configurable policy engine architecture:
+  Module for validating DHF against regulatory policies and standards.
   
-  **Policy Configuration:**
-  - Policy groups defined in configuration
-  - Each policy has name, description, applicable types
-  - Validation rules defined per policy
+  **Responsibilities**:
+  - Load policy definitions from configuration files
+  - Execute validation rules against DHF items
+  - Calculate compliance scores per policy group
+  - Display validation results with detailed evidence
+  - Support custom policy definitions
   
-  **Policy Engine:**
-  - Load policies from configuration
-  - Execute validation rules against items
-  - Collect pass/fail results
-  - Calculate compliance scores
+  **Key Interfaces**:
+  - `PolicyEngine`: Load and execute validation rules
+  - `ComplianceScorer`: Calculate compliance percentages
+  - `EvidenceCollector`: Gather validation evidence and details
+  - `PolicyValidator`: Validate policy configuration
   
-  **Validation Rule Types:**
-  - Coverage rules: Check source items have verification
-  - Orphan rules: Check items have required parents
-  - Status rules: Check items in required states
-  - Custom rules: Extensible validation framework
-  
-  **Scoring Algorithm:**
-  - Each rule has equal weight (configurable)
-  - Score = (passed_rules / total_rules) * 100
-  - Detailed results with evidence
-  
-  **Results Display:**
-  - Expandable sections per policy
-  - Pass/fail indicators
-  - Detailed evidence for failures
-  - Actionable recommendations
-  
-  **Rationale:**
-  - Policy-based = flexible compliance checking
-  - Configuration-driven = no code for new policies
-  - Extensible = support custom validation logic
-  - Transparent = clear audit trail
+  **Implementation Notes**:
+  - Policy-based architecture for flexibility
+  - Supports multiple policy groups (IEC 62304, FDA 21 CFR 820, etc.)
+  - Extensible validation rule types (coverage, orphan, status checks)
+  - Clear pass/fail results with actionable recommendations
 design:
-- SYS-006
-- SYS-007
-- SYS-025
-- SYS-026
+- SYS-005
 - SYS-027
 status: approved

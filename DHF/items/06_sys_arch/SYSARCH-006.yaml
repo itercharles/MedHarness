@@ -1,47 +1,26 @@
 id: SYSARCH-006
-title: Document Generation and History Architecture
+title: Document Generation Module
 content: |-
-  Template-based document generation with Git history:
+  Module for generating regulatory specification documents from templates.
   
-  **Template Engine:**
-  - Jinja2 for template rendering
-  - Templates stored in version control
-  - Support for multiple output formats
+  **Responsibilities**:
+  - Render Jinja2 templates with item data
+  - Generate specification documents (requirements, architecture, tests)
+  - Export documents to PDF format
+  - Track document versions and generation history
+  - Support configurable document templates
   
-  **Generation Process:**
-  - Load template from configured directory
-  - Gather item data for context
-  - Render template with Jinja2
-  - Apply format conversion (if needed)
-  - Include metadata (version, date, status)
+  **Key Interfaces**:
+  - `TemplateRenderer`: Render Jinja2 templates with context data
+  - `PDFExporter`: Convert markdown to PDF using WeasyPrint
+  - `DocumentVersioner`: Track and increment document versions
+  - `TemplateManager`: Load and validate templates
   
-  **History Tracking:**
-  - Git commits for all item changes
-  - Commit messages include item ID and action
-  - Author attribution from user context
-  - Full audit trail via Git log
-  
-  **Change History Display:**
-  - Parse Git log for item files
-  - Show timeline of changes
-  - Display author and timestamp
-  - Support diff between versions
-  
-  **Documentation Generation:**
-  - Automated specification documents
-  - Traceability matrices
-  - Compliance reports
-  - Release notes
-  
-  **Rationale:**
-  - Jinja2 = industry-standard templating
-  - Git = built-in version control and audit trail
-  - Template-based = easy to customize documents
-  - Automated = reduce manual documentation effort
+  **Implementation Notes**:
+  - Uses Jinja2 for flexible templating
+  - WeasyPrint for professional PDF generation
+  - Automatic version incrementing from existing documents
+  - Templates stored in version control for auditability
 design:
-- SYS-011
-- SYS-014
-- SYS-019
-- SYS-020
 - SYS-021
 status: approved
