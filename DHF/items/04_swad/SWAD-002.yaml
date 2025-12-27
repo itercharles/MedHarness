@@ -1,55 +1,41 @@
 id: SWAD-002
-title: CompliantFlow Core Components
+title: Traceability Graph Component
 content: |-
-  **CompliantFlowCore**
-  - Purpose: Central API and orchestration
-  - Responsibilities:
-    - Item CRUD operations
-    - Graph building coordination
-    - Workflow execution
-    - Document generation
-  - Interfaces:
-    - get_item(uid: str) -> dict
-    - create_item(data: dict, author: str) -> dict
-    - update_item(uid: str, data: dict, author: str) -> dict
-    - delete_item(uid: str, author: str) -> bool
-    - transition_item(uid: str, to_state: str, author: str) -> dict
+  Component for building and analyzing traceability relationships using graph data structures.
   
-  **GraphEngine**
-  - Purpose: Traceability graph analysis
-  - Responsibilities:
-    - Build NetworkX graph from items
-    - Find orphan items
-    - Calculate coverage
-    - Perform impact analysis
-  - Interfaces:
-    - build_from_items(items: List[Item]) -> None
-    - find_orphans() -> List[dict]
-    - calculate_coverage(req_type: str) -> dict
-    - get_downstream(uid: str) -> Set[str]
+  **Technologies**:
+  - NetworkX for directed graph operations
+  - Graph algorithms: DFS for traversal, connectivity analysis
+  - In-memory caching for performance
+  - Python sets for efficient lookups
   
-  **WorkflowEngine**
-  - Purpose: Lifecycle state management
-  - Responsibilities:
-    - Validate transitions
-    - Execute validation criteria
-    - Enforce approval rules
-  - Interfaces:
-    - validate_transition(item: Item, to_state: str) -> (bool, List[str])
-    - execute_transition(item: Item, to_state: str) -> Item
+  **Component Structure**:
+  - GraphBuilder: Construct graph from items
+  - OrphanDetector: Find unlinked items
+  - CoverageAnalyzer: Calculate verification coverage
+  - TraversalEngine: Upstream/downstream navigation
   
-  **DocumentGenerator**
-  - Purpose: Specification document generation
-  - Responsibilities:
-    - Render Jinja2 templates
-    - Generate markdown
-    - Convert to PDF
-  - Interfaces:
-    - generate_specification(doc_type: str) -> Path
-    - render_template(template: str, data: dict) -> str
+  **Key Interfaces**:
+  ```python
+  class GraphEngine:
+      def build_from_items(items: List[Item]) -> nx.DiGraph
+      def find_orphans(doc_type: str) -> List[str]
+      def calculate_coverage(source_type: str, target_type: str) -> float
+      def get_upstream(uid: str) -> Set[str]
+      def get_downstream(uid: str) -> Set[str]
+  ```
+  
+  **Design Patterns**:
+  - Builder pattern for graph construction
+  - Strategy pattern for orphan detection rules
+  - Facade pattern for simplified graph operations
+  
+  **Performance**:
+  - Target: < 1 second for 1000 items
+  - In-memory graph for O(1) lookups
+  - Lazy rebuilding on item changes
 design:
-- SRS-001
+- SRS-002
 - SRS-003
-- SRS-006
-- SRS-015
+- SRS-004
 status: approved

@@ -1,42 +1,45 @@
 id: SWAD-007
-title: Policy and Compliance Engine Architecture
+title: Test Integration Component
 content: |-
-  **Purpose:** Policy-based compliance checking with configurable validation rules
+  Component for retrieving and displaying test results from CI/CD pipeline.
   
-  **Components:**
+  **Technologies**:
+  - GitHub Actions API for workflow data
+  - JUnit XML parser for test results
+  - pytest JSON parser for Python tests
+  - REST API client for GitHub integration
   
-  **PolicyEngine**
-  - Loads policy groups from configuration
-  - Executes validation rules against DHF items
-  - Calculates compliance scores
-  - Generates validation reports
+  **Component Structure**:
+  - TestResultFetcher: Retrieve from GitHub Actions
+  - TestResultParser: Parse test artifacts
+  - TestStatusDisplay: Show results in UI
+  - TestLinkManager: Link tests to requirements
   
-  **Design Decisions:**
-  - Policy definitions in configuration (not code)
-  - Extensible validation rule system
-  - Scoring based on pass/fail results
-  - Support for multiple policy groups
+  **Key Interfaces**:
+  ```python
+  class TestIntegration:
+      def fetch_test_results(workflow_name: str) -> TestResults
+      def parse_results(artifact_path: Path) -> List[TestCase]
+      def link_to_requirements(tests: List[TestCase]) -> dict
   
-  **Policy Validation Flow:**
-  1. Load policy group from configuration
-  2. Retrieve applicable items based on policy scope
-  3. Execute each validation rule
-  4. Collect pass/fail results
-  5. Calculate compliance score
-  6. Generate report with details
+  class TestResultParser:
+      def parse_junit(xml_path: Path) -> List[TestCase]
+      def parse_pytest(json_path: Path) -> List[TestCase]
+  ```
   
-  **Validation Rule Types:**
-  - Coverage checks (e.g., all requirements have tests)
-  - Orphan checks (no unlinked items)
-  - Status checks (items in required states)
-  - Custom validation logic
+  **Design Patterns**:
+  - Adapter pattern for different test formats
+  - Factory pattern for parser selection
+  - Observer pattern for result updates
   
-  **Interfaces:**
-  - load_policy_group(name: str) → PolicyGroup
-  - validate_all() → ValidationResults
-  - calculate_score(results: ValidationResults) → float
-  - generate_report(results: ValidationResults) → str
+  **Supported Formats**:
+  - JUnit XML
+  - pytest JSON
+  - Custom test result formats
+  
+  **Performance**:
+  - Target: Fetch within 5 seconds
+  - Caching for repeated requests
 design:
 - SRS-010
-- SRS-016
 status: approved

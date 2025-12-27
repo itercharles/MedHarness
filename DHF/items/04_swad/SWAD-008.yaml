@@ -1,46 +1,50 @@
 id: SWAD-008
-title: Document Generation Architecture
+title: Web UI Component
 content: |-
-  **Purpose:** Template-based document generation with multiple output formats
+  Component for Streamlit-based web user interface.
   
-  **Components:**
+  **Technologies**:
+  - Streamlit framework for reactive UI
+  - streamlit-agraph for graph visualization
+  - Pandas DataFrames for table display
+  - Markdown rendering for content
+  - Session state for user context
   
-  **DocumentGenerator**
-  - Loads templates from configured directory
-  - Renders templates with item data
-  - Supports multiple output formats
-  - Includes metadata in generated documents
-  - Maintains generation history
+  **Component Structure**:
+  - PageGenerator: Dynamic page creation from configuration
+  - UIComponents: Reusable UI elements (tables, forms, badges)
+  - NavigationManager: Routing and query parameters
+  - VisualizationRenderer: Display graphs and charts
   
-  **Design Decisions:**
-  - Template engine for flexibility
-  - Configurable template directory
-  - Support for multiple output formats (defined in config)
-  - Metadata (version, date, status) automatically included
-  - Template syntax validation before generation
+  **Key Interfaces**:
+  ```python
+  class PageGenerator:
+      def generate_page(doc_type: str) -> None
+      def render_table(items: List[Item]) -> None
+      def render_form(item_type: str) -> dict
   
-  **Document Generation Flow:**
-  1. Load template from configured directory
-  2. Validate template syntax
-  3. Gather item data for template context
-  4. Render template with data
-  5. Apply output format conversion (if needed)
-  6. Include metadata (version, date, status)
-  7. Save generated document
-  8. Record generation in history
+  class UIComponents:
+      def status_badge(status: str) -> str
+      def clickable_table(df: pd.DataFrame) -> None
+      def workflow_transition_ui(item: Item) -> str
+  ```
   
-  **Template Context:**
-  - Items: All DHF items or filtered subset
-  - Metadata: Version, date, author, status
-  - Configuration: Project settings
-  - Traceability: Graph data if needed
+  **Design Patterns**:
+  - Template method for page generation
+  - Factory pattern for UI components
+  - Observer pattern for reactive updates
   
-  **Interfaces:**
-  - generate_document(template_name: str, context: dict) → Path
-  - render_template(template: str, context: dict) → str
-  - validate_template(template: str) → (bool, List[str])
-  - get_generation_history() → List[dict]
+  **UI Features**:
+  - Dynamic page generation from configuration
+  - Interactive tables with filtering
+  - Graph visualization with zoom/pan
+  - Form validation and submission
+  - Workflow transition controls
+  
+  **Performance**:
+  - Target: < 1 second for page loads
+  - Lazy loading for large datasets
+  - Pagination for tables
 design:
-- SRS-003
-- SRS-017
+- SRS-005
 status: approved

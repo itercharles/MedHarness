@@ -1,45 +1,47 @@
 id: SWAD-006
-title: Traceability Graph Architecture
+title: Document Generation Component
 content: |-
-  **Purpose:** Bidirectional traceability graph with analysis capabilities
+  Component for template-based document generation with PDF export.
   
-  **Components:**
+  **Technologies**:
+  - Jinja2 template engine for rendering
+  - Python-Markdown for markdown processing
+  - WeasyPrint for PDF generation
+  - CSS for PDF styling
+  - Regex for version extraction
   
-  **GraphEngine**
-  - Uses NetworkX directed graph for traceability
-  - Maintains bidirectional edges between items
-  - Detects orphan items (no upstream/downstream links)
-  - Performs change impact analysis
-  - Calculates coverage metrics
+  **Component Structure**:
+  - TemplateRenderer: Render Jinja2 templates
+  - PDFExporter: Convert markdown to PDF
+  - DocumentVersioner: Track and increment versions
+  - TemplateValidator: Validate template syntax
   
-  **Design Decisions:**
-  - NetworkX library for graph operations
-  - Directed edges represent traceability relationships
-  - Node attributes store item metadata
-  - Edge attributes store relationship types
+  **Key Interfaces**:
+  ```python
+  class DocumentGenerator:
+      def generate_specification(doc_type: str) -> Path
+      def render_template(template: str, context: dict) -> str
+      def export_to_pdf(markdown: str, output: Path) -> None
   
-  **Orphan Detection Algorithm:**
-  1. Build complete traceability graph
-  2. Identify source item types (e.g., requirements)
-  3. Find items with no incoming edges (no upstream)
-  4. Find items with no outgoing edges (no downstream)
-  5. Report orphans by type
+  class TemplateRenderer:
+      def load_template(name: str) -> Template
+      def render(template: Template, context: dict) -> str
+  ```
   
-  **Change Impact Analysis:**
-  1. Start from changed item
-  2. Traverse downstream edges
-  3. Collect all affected items
-  4. Return impact set
+  **Design Patterns**:
+  - Template method for generation flow
+  - Strategy pattern for output formats
+  - Builder pattern for context creation
   
-  **Interfaces:**
-  - build_from_items(items: List[Item]) → None
-  - find_orphans() → List[dict]
-  - get_downstream(uid: str) → Set[str]
-  - get_upstream(uid: str) → Set[str]
-  - calculate_coverage(source_type: str, target_type: str) → dict
+  **Template Context**:
+  - Items: All DHF items or filtered subset
+  - Metadata: Version, date, author, status
+  - Configuration: Project settings
+  - Traceability: Graph data if needed
+  
+  **Performance**:
+  - Target: < 10 seconds for 100 items
+  - Template caching for reuse
 design:
-- SRS-001
-- SRS-007
-- SRS-011
-- SRS-016
+- SRS-009
 status: approved

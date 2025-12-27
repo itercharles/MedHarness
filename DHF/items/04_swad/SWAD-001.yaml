@@ -1,39 +1,37 @@
 id: SWAD-001
-title: Four-Layer Software Architecture
+title: Item Management Component
 content: |-
-  Software architecture layers:
+  Component for managing DHF items with file-based storage and version control.
   
-  **Layer 1: Presentation (Streamlit UI)**
-  - Universal page template
-  - Dynamic form generation
-  - Workflow transition UI
-  - Visualization components
+  **Technologies**:
+  - PyYAML for YAML parsing and serialization
+  - Pydantic for schema validation
+  - GitPython for version control operations
+  - Pathlib for file system operations
   
-  **Layer 2: Business Logic**
-  - CompliantFlowCore: Central orchestrator
-  - GraphEngine: Traceability analysis
-  - WorkflowEngine: State management
-  - DocumentGenerator: Specification generation
+  **Component Structure**:
+  - ItemLoader: Load items from YAML files
+  - ItemSaver: Save items with Git commits
+  - ItemValidator: Validate against schema
   
-  **Layer 3: Data Access**
-  - ItemLoader: YAML file reading
-  - ItemSaver: YAML file writing
-  - GitRepository: Version control operations
+  **Key Interfaces**:
+  ```python
+  class ItemLoader:
+      def load_all() -> List[Item]
+      def load_by_id(uid: str) -> Optional[Item]
+      def load_by_type(doc_type: str) -> List[Item]
   
-  **Layer 4: Storage**
-  - File system (YAML files)
-  - Git repository
+  class ItemSaver:
+      def save(item: Item, author: str) -> Path
+      def delete(uid: str, author: str) -> bool
   
-  **Benefits:**
-  - Clear separation of concerns
-  - Independent testing of layers
-  - Easy to modify UI without changing logic
-  - Supports future database migration
+  class ItemValidator:
+      def validate(item: dict, schema: dict) -> (bool, List[str])
+  ```
+  
+  **Design Patterns**:
+  - Repository pattern for data access abstraction
+  - Validator pattern for schema enforcement
 design:
 - SRS-001
-- SRS-002
-- SRS-003
-- SRS-004
-- SRS-012
-- SRS-014
 status: approved

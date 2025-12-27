@@ -1,36 +1,45 @@
 id: SWAD-005
-title: Workflow Engine Architecture
+title: Workflow Engine Component
 content: |-
-  **Purpose:** Configuration-driven workflow engine for item lifecycle management
+  Component for managing configurable item lifecycle workflows.
   
-  **Components:**
+  **Technologies**:
+  - Configuration-driven state machines
+  - Python dataclasses for workflow definitions
+  - Validation framework for transition criteria
+  - YAML for workflow configuration
   
-  **DynamicWorkflowEngine**
-  - Loads lifecycle definitions from configuration
-  - Validates state transitions against configured rules
-  - Executes validation criteria before transitions
-  - Supports extensible validation check types
+  **Component Structure**:
+  - WorkflowEngine: State transition management
+  - TransitionValidator: Validate transitions
+  - CriteriaExecutor: Execute validation criteria
+  - WorkflowLoader: Load from configuration
   
-  **Design Decisions:**
-  - State machine pattern for lifecycle management
-  - Configuration-driven (no hardcoded workflows)
-  - Validation criteria defined in configuration
-  - Support for approval workflows
+  **Key Interfaces**:
+  ```python
+  class WorkflowEngine:
+      def validate_transition(item: Item, to_state: str) -> (bool, List[str])
+      def execute_transition(item: Item, to_state: str, author: str) -> Item
+      def get_available_transitions(item: Item) -> List[str]
   
-  **State Transition Flow:**
-  1. User requests transition to new state
-  2. Engine loads lifecycle configuration for item type
-  3. Validates transition is allowed (from → to)
-  4. Executes validation criteria (if configured)
-  5. Updates item status
-  6. Triggers post-transition actions
+  class CriteriaExecutor:
+      def execute(criteria: dict, item: Item) -> (bool, str)
+  ```
   
-  **Interfaces:**
-  - get_initial_state() → str
-  - get_available_transitions(current_state: str) → List[Transition]
-  - validate_transition(item: Item, to_state: str) → (bool, List[str])
-  - execute_transition(item: Item, to_state: str, author: str) → Item
+  **Design Patterns**:
+  - State pattern for lifecycle management
+  - Strategy pattern for validation criteria
+  - Chain of responsibility for criteria execution
+  
+  **Criteria Types**:
+  - Field validation (field_not_empty)
+  - Manual verification checks
+  - Linked item status checks
+  - Custom validation functions
+  
+  **Configuration**:
+  - Per-document-type workflows
+  - Fail-fast validation at startup
 design:
-- SRS-006
-- SRS-015
+- SRS-008
 status: approved

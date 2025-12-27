@@ -1,40 +1,46 @@
 id: SWAD-003
-title: Data Access Components
+title: Compliance Validation Component
 content: |-
-  **ItemLoader**
-  - Purpose: Load items from YAML files
-  - Responsibilities:
-    - Scan directories for YAML files
-    - Parse YAML content
-    - Validate with Pydantic models
-    - Return Item objects
-  - Interfaces:
-    - load_all() -> List[Item]
-    - load_by_uid(uid: str) -> Optional[Item]
-    - load_by_prefix(prefix: str) -> List[Item]
+  Component for policy-based compliance validation with configurable rules.
   
-  **ItemSaver**
-  - Purpose: Save items to YAML files
-  - Responsibilities:
-    - Serialize Item to YAML
-    - Determine correct directory
-    - Write to file system
-    - Trigger Git commit
-  - Interfaces:
-    - save(item: Item, author: str) -> Path
-    - delete(uid: str, author: str) -> bool
+  **Technologies**:
+  - YAML-based policy definitions
+  - Rule engine pattern for validation
+  - Python functions as validation rules
+  - Streamlit for results display
   
-  **GitRepository**
-  - Purpose: Git version control operations
-  - Responsibilities:
-    - Create commits
-    - Retrieve history
-    - Check repository status
-  - Interfaces:
-    - commit_item_change(uid: str, path: Path, action: str, author: str) -> None
-    - get_file_history(path: Path) -> List[dict]
+  **Component Structure**:
+  - PolicyEngine: Load and execute policies
+  - ValidationRule: Abstract base for rules
+  - ComplianceScorer: Calculate scores
+  - ResultsDisplay: Streamlit UI for results
+  
+  **Key Interfaces**:
+  ```python
+  class PolicyEngine:
+      def load_policy(name: str) -> Policy
+      def execute_validation(policy: Policy) -> ValidationResults
+      def calculate_score(results: ValidationResults) -> float
+  
+  class ValidationRule(ABC):
+      @abstractmethod
+      def validate(items: List[Item]) -> (bool, str)
+  ```
+  
+  **Design Patterns**:
+  - Strategy pattern for validation rules
+  - Template method for validation flow
+  - Observer pattern for results updates
+  
+  **Validation Rule Types**:
+  - Coverage checks (requirements have tests)
+  - Orphan checks (no unlinked items)
+  - Status checks (items in required states)
+  - Custom validation logic
+  
+  **Performance**:
+  - Target: < 5 seconds for 1000 items
+  - Parallel rule execution where possible
 design:
-- SRS-002
-- SRS-004
 - SRS-005
 status: approved
