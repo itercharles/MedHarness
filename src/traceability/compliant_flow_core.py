@@ -784,3 +784,35 @@ class CompliantFlowCore:
             filtered = [i for i in filtered if i['id'] != exclude_item_id]
         
         return [i['id'] for i in filtered]
+
+    def _create_property_config_from_format(self, prop_name: str, format_str: str):
+        """Create PropertyConfig from shorthand format string."""
+        from .models.config import PropertyConfig, PropertyFormat
+        
+        # Map format string to PropertyFormat enum
+        format_map = {
+            'text': PropertyFormat.SHORT_TEXT,
+            'short_text': PropertyFormat.SHORT_TEXT,
+            'long_text': PropertyFormat.LONG_TEXT,
+            'textarea': PropertyFormat.LONG_TEXT,
+            'markdown': PropertyFormat.MARKDOWN,
+            'url': PropertyFormat.URL,
+            'select': PropertyFormat.SELECT,
+            'multiselect': PropertyFormat.MULTISELECT,
+            'radio': PropertyFormat.RADIO,
+            'checkbox': PropertyFormat.CHECKBOX,
+            'toggle': PropertyFormat.TOGGLE,
+            'number': PropertyFormat.NUMBER,
+            'slider': PropertyFormat.SLIDER,
+            'date': PropertyFormat.DATE,
+            'datetime': PropertyFormat.DATETIME,
+            'item_reference': PropertyFormat.ITEM_REFERENCE,
+            'item_multiselect': PropertyFormat.ITEM_MULTISELECT,
+            'file_upload': PropertyFormat.FILE_UPLOAD,
+        }
+        
+        # Get format enum, default to SHORT_TEXT if unknown
+        prop_format = format_map.get(format_str.lower(), PropertyFormat.SHORT_TEXT)
+        
+        # Create PropertyConfig with inferred defaults
+        return PropertyConfig(name=prop_name, format=prop_format)

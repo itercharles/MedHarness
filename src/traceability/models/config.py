@@ -70,7 +70,7 @@ class DocTypeConfig(BaseModel):
     relations: Optional[List[RelationConfig]] = Field(None, description="Relationship configurations")
     type: Optional[str] = Field(None, description="Special type (e.g., 'test')")
     verifies: Optional[List[str]] = Field(None, description="Document types this verifies")
-    properties: Optional[List[Union[str, PropertyConfig]]] = Field(None, description="Properties to display (string or PropertyConfig)")
+    properties: Optional[List[Any]] = Field(None, description="Properties to display (string, dict, or PropertyConfig)")
     
     # Universal framework fields
     icon: Optional[str] = Field(None, description="Icon for UI display")

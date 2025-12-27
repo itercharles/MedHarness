@@ -286,7 +286,7 @@ doc_types:
   - RCM
   properties:
   - id
-  - title
+  - title: text
   - name: content
     format: long_text
     label: Requirement Description
@@ -316,11 +316,7 @@ doc_types:
     - Analysis
     - Demonstration
     help: Select applicable verification methods per IEC 62304 5.7
-  - name: critical_safety
-    format: checkbox
-    label: Safety-Critical Requirement
-    default: false
-    help: Check if this requirement is safety-critical (IEC 62304 Class B/C)
+  - critical_safety: checkbox
   - name: satisfies
     format: item_multiselect
     label: Satisfies (Customer Requirements)
