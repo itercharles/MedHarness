@@ -410,21 +410,87 @@ def render_new_item_form(
         field_name = field['name']
         label = field['label'] + (' *' if field.get('required') else '')
         field_type = field.get('type', 'text')
+        placeholder = field.get('placeholder')
+        help_text = field.get('help')
         
         if field_type == 'text':
-            form_data[field_name] = st.text_input(label, key=f"new_{field_name}")
+            form_data[field_name] = st.text_input(label, placeholder=placeholder or '', 
+                                                   help=help_text, key=f"new_{field_name}")
         elif field_type == 'textarea':
             height = field.get('height', 100)
-            form_data[field_name] = st.text_area(label, height=height, key=f"new_{field_name}")
+            form_data[field_name] = st.text_area(label, height=height, placeholder=placeholder or '',
+                                                  help=help_text, key=f"new_{field_name}")
+        elif field_type == 'markdown':
+            height = field.get('height', 150)
+            col1, col2 = st.columns(2)
+            with col1:
+                st.write("**Editor**")
+                form_data[field_name] = st.text_area(label, height=height, placeholder=placeholder or '',
+                                                      help=help_text, key=f"new_{field_name}")
+            with col2:
+                st.write("**Preview**")
+                st.markdown(form_data.get(field_name, ''))
+        elif field_type == 'url':
+            form_data[field_name] = st.text_input(label, placeholder=placeholder or 'https://',
+                                                   help=help_text, key=f"new_{field_name}")
         elif field_type == 'select':
             options = field.get('options', [])
-            form_data[field_name] = st.selectbox(label, options, key=f"new_{field_name}")
+            default_idx = 0
+            if field.get('current_value') and field['current_value'] in options:
+                default_idx = options.index(field['current_value'])
+            form_data[field_name] = st.selectbox(label, options, index=default_idx,
+                                                  help=help_text, key=f"new_{field_name}")
         elif field_type == 'multiselect':
             options = field.get('options', [])
-            form_data[field_name] = st.multiselect(label, options, key=f"new_{field_name}")
+            default = field.get('current_value', [])
+            if isinstance(default, str):
+                default = [default] if default else []
+            form_data[field_name] = st.multiselect(label, options, default=default,
+                                                    help=help_text, key=f"new_{field_name}")
+        elif field_type == 'radio':
+            options = field.get('options', [])
+            form_data[field_name] = st.radio(label, options, help=help_text, key=f"new_{field_name}")
         elif field_type == 'checkbox':
-            form_data[field_name] = st.checkbox(label, key=f"new_{field_name}")
-    
+            default = field.get('current_value', False)
+            form_data[field_name] = st.checkbox(label, value=default, help=help_text, key=f"new_{field_name}")
+        elif field_type == 'toggle':
+            default = field.get('current_value', False)
+            form_data[field_name] = st.toggle(label, value=default, help=help_text, key=f"new_{field_name}")
+        elif field_type == 'number':
+            min_val = field.get('min_value')
+            max_val = field.get('max_value')
+            form_data[field_name] = st.number_input(label, min_value=min_val, max_value=max_val,
+                                                     help=help_text, key=f"new_{field_name}")
+        elif field_type == 'slider':
+            min_val = field.get('min_value', 0)
+            max_val = field.get('max_value', 100)
+            step = field.get('step', 1)
+            form_data[field_name] = st.slider(label, min_value=min_val, max_value=max_val, step=step,
+                                               help=help_text, key=f"new_{field_name}")
+        elif field_type == 'date':
+            form_data[field_name] = st.date_input(label, help=help_text, key=f"new_{field_name}")
+        elif field_type == 'datetime':
+            col1, col2 = st.columns(2)
+            with col1:
+                date_val = st.date_input(f"{label} (Date)", help=help_text, key=f"new_{field_name}_date")
+            with col2:
+                time_val = st.time_input(f"{label} (Time)", key=f"new_{field_name}_time")
+            form_data[field_name] = f"{date_val} {time_val}"
+        elif field_type in ['item_reference', 'item_multiselect']:
+            options = field.get('options', [])
+            if field_type == 'item_reference':
+                form_data[field_name] = st.selectbox(label, options, help=help_text, key=f"new_{field_name}")
+            else:
+                default = field.get('current_value', [])
+                if isinstance(default, str):
+                    default = [default] if default else []
+                form_data[field_name] = st.multiselect(label, options, default=default,
+                                                        help=help_text, key=f"new_{field_name}")
+        elif field_type == 'file_upload':
+            allowed_types = field.get('allowed_extensions')
+            form_data[field_name] = st.file_uploader(label, type=allowed_types, help=help_text,
+                                                      key=f"new_{field_name}")
+
     # Action buttons
     col1, col2 = st.columns(2)
     with col1:
@@ -799,28 +865,93 @@ def render_item_edit_form(
         label = field['label'] + (' *' if field.get('required') else '')
         current_value = field.get('current_value', '')
         field_type = field.get('type', 'text')
+        placeholder = field.get('placeholder')
+        help_text = field.get('help')
         
         if field_type == 'text':
             form_data[field_name] = st.text_input(label, value=current_value if current_value else '', 
-                                                  key=f"edit_{field_name}_{item['id']}")
+                                                   placeholder=placeholder or '', help=help_text,
+                                                   key=f"edit_{field_name}_{item['id']}")
         elif field_type == 'textarea':
             height = field.get('height', 100)
             form_data[field_name] = st.text_area(label, value=current_value if current_value else '', 
-                                                height=height, key=f"edit_{field_name}_{item['id']}")
+                                                 height=height, placeholder=placeholder or '', help=help_text,
+                                                 key=f"edit_{field_name}_{item['id']}")
+        elif field_type == 'markdown':
+            height = field.get('height', 150)
+            col1, col2 = st.columns(2)
+            with col1:
+                st.write("**Editor**")
+                form_data[field_name] = st.text_area(label, value=current_value if current_value else '',
+                                                      height=height, placeholder=placeholder or '', help=help_text,
+                                                      key=f"edit_{field_name}_{item['id']}")
+            with col2:
+                st.write("**Preview**")
+                st.markdown(form_data.get(field_name, current_value or ''))
+        elif field_type == 'url':
+            form_data[field_name] = st.text_input(label, value=current_value if current_value else '',
+                                                   placeholder=placeholder or 'https://', help=help_text,
+                                                   key=f"edit_{field_name}_{item['id']}")
         elif field_type == 'select':
             options = field.get('options', [])
             default_idx = options.index(current_value) if current_value in options else 0
-            form_data[field_name] = st.selectbox(label, options, index=default_idx, 
-                                                key=f"edit_{field_name}_{item['id']}")
+            form_data[field_name] = st.selectbox(label, options, index=default_idx, help=help_text,
+                                                 key=f"edit_{field_name}_{item['id']}")
         elif field_type == 'multiselect':
             options = field.get('options', [])
             default = current_value if isinstance(current_value, list) else []
-            form_data[field_name] = st.multiselect(label, options, default=default, 
-                                                   key=f"edit_{field_name}_{item['id']}")
+            form_data[field_name] = st.multiselect(label, options, default=default, help=help_text,
+                                                    key=f"edit_{field_name}_{item['id']}")
+        elif field_type == 'radio':
+            options = field.get('options', [])
+            default_idx = options.index(current_value) if current_value in options else 0
+            form_data[field_name] = st.radio(label, options, index=default_idx, help=help_text,
+                                              key=f"edit_{field_name}_{item['id']}")
         elif field_type == 'checkbox':
-            form_data[field_name] = st.checkbox(label, value=bool(current_value), 
+            form_data[field_name] = st.checkbox(label, value=bool(current_value), help=help_text,
+                                                 key=f"edit_{field_name}_{item['id']}")
+        elif field_type == 'toggle':
+            form_data[field_name] = st.toggle(label, value=bool(current_value), help=help_text,
                                                key=f"edit_{field_name}_{item['id']}")
-    
+        elif field_type == 'number':
+            min_val = field.get('min_value')
+            max_val = field.get('max_value')
+            val = float(current_value) if current_value else 0.0
+            form_data[field_name] = st.number_input(label, value=val, min_value=min_val, max_value=max_val,
+                                                     help=help_text, key=f"edit_{field_name}_{item['id']}")
+        elif field_type == 'slider':
+            min_val = field.get('min_value', 0)
+            max_val = field.get('max_value', 100)
+            step = field.get('step', 1)
+            val = float(current_value) if current_value else min_val
+            form_data[field_name] = st.slider(label, min_value=min_val, max_value=max_val, value=val, step=step,
+                                               help=help_text, key=f"edit_{field_name}_{item['id']}")
+        elif field_type == 'date':
+            form_data[field_name] = st.date_input(label, value=current_value if current_value else None,
+                                                   help=help_text, key=f"edit_{field_name}_{item['id']}")
+        elif field_type == 'datetime':
+            col1, col2 = st.columns(2)
+            with col1:
+                date_val = st.date_input(f"{label} (Date)", help=help_text,
+                                          key=f"edit_{field_name}_date_{item['id']}")
+            with col2:
+                time_val = st.time_input(f"{label} (Time)", key=f"edit_{field_name}_time_{item['id']}")
+            form_data[field_name] = f"{date_val} {time_val}"
+        elif field_type in ['item_reference', 'item_multiselect']:
+            options = field.get('options', [])
+            if field_type == 'item_reference':
+                default_idx = options.index(current_value) if current_value in options else 0
+                form_data[field_name] = st.selectbox(label, options, index=default_idx, help=help_text,
+                                                      key=f"edit_{field_name}_{item['id']}")
+            else:
+                default = current_value if isinstance(current_value, list) else []
+                form_data[field_name] = st.multiselect(label, options, default=default, help=help_text,
+                                                        key=f"edit_{field_name}_{item['id']}")
+        elif field_type == 'file_upload':
+            allowed_types = field.get('allowed_extensions')
+            form_data[field_name] = st.file_uploader(label, type=allowed_types, help=help_text,
+                                                      key=f"edit_{field_name}_{item['id']}")
+
     # Action buttons
     col1, col2 = st.columns(2)
     with col1:
