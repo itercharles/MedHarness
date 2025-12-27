@@ -2,8 +2,6 @@
 
 These tests simulate actual user interactions through the UI,
 ensuring that the complete workflow from UI action to data persistence works correctly.
-
-Traceability: Tests are marked with @pytest.mark.verifies() to link to requirements.
 """
 import pytest
 from pathlib import Path
@@ -12,13 +10,11 @@ from pathlib import Path
 class TestCreateWorkflows:
     """Test item creation workflows as a user would perform them."""
     
-    @pytest.mark.verifies("SYS-012")
     def test_user_creates_sys_requirement(self, test_core):
         """
         User creates a new SYS requirement through the create form.
         
-        Verifies: SYS-012 (Requirements management)
-        Test Type: Automated
+        @links: SYS-012
         """
         # Simulate UI form data (what universal_page_template.py collects)
         form_data = {
@@ -43,13 +39,11 @@ class TestCreateWorkflows:
         assert retrieved['id'] == 'SYS-100'
         assert retrieved['title'] == 'New System Requirement'
     
-    @pytest.mark.verifies("SYS-030")
     def test_user_creates_change_request(self, test_core):
         """
         User creates a new Change Request.
         
-        Verifies: SYS-030 (PR/CR automation and change control)
-        Test Type: Automated
+        @links: SYS-030
         
         This test would have caught the bug where UI called update_item
         instead of create_item, causing "Item not found" error.
