@@ -914,9 +914,17 @@ def render_item_edit_form(
             default_idx = options.index(current_value) if current_value in options else 0
             form_data[field_name] = st.selectbox(label, options, index=default_idx, help=help_text,
                                                  key=f"edit_{field_name}_{item['id']}")
-        elif field_type == 'multiselect':
+        elif field_type == 'multiselect' or field_type == 'item_multiselect':
             options = field.get('options', [])
-            default = current_value if isinstance(current_value, list) else []
+            # Ensure "default" is a list
+            default = current_value if isinstance(current_value, list) else ([current_value] if current_value else [])
+            
+            # CRITICAL FIX: Ensure all default values are in options to prevent Streamlit crash
+            # This handles stale references or items not returned by get_all_items
+            for val in default:
+                if val not in options:
+                    options.append(val)
+            
             form_data[field_name] = st.multiselect(label, options, default=default, help=help_text,
                                                     key=f"edit_{field_name}_{item['id']}")
         elif field_type == 'radio':
