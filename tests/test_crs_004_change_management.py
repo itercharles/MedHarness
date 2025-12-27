@@ -49,18 +49,21 @@ def test_TC_CRS_004_001_change_management_workflow():
     assert cr_doc_type.name == "Change Request", "CR document type has incorrect name"
     
     # Step 2: Verify CR has required fields for compliance
+    # Extract property names handling both strings and dicts
+    prop_names = {p['name'] if isinstance(p, dict) else p for p in cr_doc_type.properties}
+    
     required_fields = ["id", "title", "description", "affected_items"]
     for field in required_fields:
-        assert field in cr_doc_type.properties, \
+        assert field in prop_names, \
             f"CR missing required field: {field}"
     
     # Verify CR has impact assessment field (important for regulatory compliance)
-    assert "impact_assessment" in cr_doc_type.properties, \
+    assert "impact_assessment" in prop_names, \
         "CR should have impact_assessment field for documenting impact analysis"
     
     # Step 3: Verify CR can link to affected requirements
     # CR uses 'affected_items' field for traceability
-    assert "affected_items" in cr_doc_type.properties, \
+    assert "affected_items" in prop_names, \
         "CR should have affected_items field for traceability to affected items"
     
     # If CR has relations defined, verify they include requirements
@@ -142,14 +145,16 @@ def test_TC_CRS_004_002_change_request_impact_analysis():
     
     # Verify CR has fields for impact analysis
     # Could be 'impact_analysis', 'content', or similar
-    impact_fields = ["impact_analysis", "content", "description", "affected_items"]
-    has_impact_field = any(field in cr_doc_type.properties for field in impact_fields)
+    prop_names = {p['name'] if isinstance(p, dict) else p for p in cr_doc_type.properties}
+    
+    impact_fields = ["impact_assessment", "content", "description", "affected_items"]
+    has_impact_field = any(field in prop_names for field in impact_fields)
     assert has_impact_field, \
-        f"CR should have field for impact analysis, properties: {cr_doc_type.properties}"
+        f"CR should have field for impact analysis, properties: {prop_names}"
     
     # Verify CR can link to affected items
     assert hasattr(cr_doc_type, 'relations'), "CR should support relations to affected items"
     
     # Verify affected_items field exists for traceability
-    assert "affected_items" in cr_doc_type.properties, \
+    assert "affected_items" in prop_names, \
         "CR should have affected_items field for traceability to affected items"

@@ -80,9 +80,11 @@ def test_TC_SDS_DEF_001_001_defect_document_type():
     assert defect_doc_type is not None, "DEFECT document type not found"
     
     # Verify required fields per SDS-DEF-001
+    prop_names = {p['name'] if isinstance(p, dict) else p for p in defect_doc_type.properties}
+    
     required_fields = ["id", "title", "description", "severity", "priority"]
     for field in required_fields:
-        assert field in defect_doc_type.properties, \
+        assert field in prop_names, \
             f"DEFECT missing required field: {field}"
     
     # Verify lifecycle for defect workflow
