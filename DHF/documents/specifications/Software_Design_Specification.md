@@ -8,7 +8,7 @@
 |-------|-------|
 | **Document ID** | SDS-SPEC |
 | **Version** | 2.6 |
-| **Generated** | 2025-12-22 |
+| **Generated** | 2025-12-27 |
 | **Status** | Draft |
 | **Project** | CompliantFlow Project |
 
@@ -24,7 +24,7 @@ This document provides a comprehensive list of all Software Design Specification
 
 ### 1.2 Scope
 
-This specification covers all Software Design Specifications defined in the CompliantFlow system as of 2025-12-22.
+This specification covers all Software Design Specifications defined in the CompliantFlow system as of 2025-12-27.
 
 ---
 
@@ -52,7 +52,7 @@ This specification covers all Software Design Specifications defined in the Comp
 ## 4. Document Control
 
 **Document Owner**: Quality Assurance  
-**Last Updated**: 2025-12-22  
+**Last Updated**: 2025-12-27  
 **Next Review**: TBD
 
 ---

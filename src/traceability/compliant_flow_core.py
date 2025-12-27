@@ -397,21 +397,10 @@ class CompliantFlowCore:
             item_id: Optional item ID for edit mode (to get current values)
             
         Returns:
-            Dictionary with form field definitions:
-            {
-                'fields': [
-                    {
-                        'name': 'title',
-                        'type': 'text',
-                        'label': 'Title',
-                        'required': True,
-                        'current_value': '...',
-                        'options': []  # for select/multiselect
-                    },
-                    ...
-                ]
-            }
+            Dictionary with form field definitions
         """
+        from .models.config import PropertyConfig, PropertyFormat
+        
         doc_type_config = self.config.get_doc_type(doc_type_code)
         if not doc_type_config:
             return {'fields': []}
@@ -430,54 +419,63 @@ class CompliantFlowCore:
         fields = []
         
         for prop in properties:
-            if prop in skip_fields:
+            # Handle both string and PropertyConfig
+            if isinstance(prop, str):
+                prop_name = prop
+                prop_config = self._infer_property_config(prop_name)
+            elif isinstance(prop, PropertyConfig):
+                prop_name = prop.name
+                prop_config = prop
+            else:
+                # Handle dict format (from YAML)
+                prop_name = prop.get('name')
+                prop_config = PropertyConfig(**prop)
+            
+            if prop_name in skip_fields:
                 continue
             
+            # Build field definition from PropertyConfig
             field = {
-                'name': prop,
-                'label': prop.replace('_', ' ').title(),
-                'current_value': current_item.get(prop, ''),
-                'required': prop in ['title', 'content']
+                'name': prop_name,
+                'label': prop_config.display_label,
+                'current_value': current_item.get(prop_name, prop_config.default or ''),
+                'required': prop_config.required,
+                'type': self._format_to_ui_type(prop_config.format),
+                'placeholder': prop_config.placeholder,
+                'help': prop_config.help,
             }
             
-            # Determine field type and options
-            if prop == 'title':
-                field['type'] = 'text'
-            elif prop == 'content':
-                field['type'] = 'textarea'
-                field['height'] = 150
-            elif prop in ['user_group', 'source', 'category', 'component', 'type']:
-                field['type'] = 'text'
-            elif prop == 'verification_method':
-                field['type'] = 'select'
-                field['options'] = ["Test", "Analysis", "Inspection", "Demonstration"]
-            elif prop == 'critical_safety':
-                field['type'] = 'checkbox'
-            elif prop in ['hazard', 'cause', 'effect', 'prerequisites', 'steps', 'expected_result',
-                         'description', 'justification', 'impact_assessment']:
-                field['type'] = 'textarea'
-                field['height'] = 100
-            elif prop in ['severity_pre', 'probability_pre', 'severity_post', 'probability_post']:
-                field['type'] = 'select'
-                field['options'] = ["Low", "Medium", "High"]
-            elif prop == 'affected_items':
-                # Affected items can be any item in the system
-                field['type'] = 'multiselect'
+            # Add format-specific options
+            if prop_config.format in [PropertyFormat.SELECT, PropertyFormat.MULTISELECT, PropertyFormat.RADIO]:
+                field['options'] = prop_config.options or []
+            
+            if prop_config.format in [PropertyFormat.LONG_TEXT, PropertyFormat.MARKDOWN]:
+                field['height'] = prop_config.height or 150
+            
+            if prop_config.format in [PropertyFormat.NUMBER, PropertyFormat.SLIDER]:
+                field['min_value'] = prop_config.min_value
+                field['max_value'] = prop_config.max_value
+                if prop_config.format == PropertyFormat.SLIDER:
+                    field['step'] = prop_config.step or 1
+            
+            # Handle relationship fields
+            if prop_config.format in [PropertyFormat.ITEM_REFERENCE, PropertyFormat.ITEM_MULTISELECT]:
+                field['target_types'] = prop_config.target_types
+                field['options'] = self._get_item_options(prop_config.target_types, item_id)
+            elif prop_name in ['design', 'derives_from', 'implements', 'guided_by', 'informs', 'mitigated_by']:
+                # Legacy relationship handling for string-based properties
+                field['options'] = self.get_relationship_options(item_id, prop_name) if item_id else []
+            elif prop_name == 'affected_items':
+                # Special handling for affected_items
                 if item_id:
                     all_items = self.get_all_items()
                     field['options'] = [i['id'] for i in all_items if i['id'] != item_id]
                 else:
                     field['options'] = []
-            elif prop in ['design', 'derives_from', 'implements', 'guided_by', 'informs', 'mitigated_by']:
-                # Relationship fields - use smart filtering based on document type
-                field['type'] = 'multiselect'
-                field['options'] = self.get_relationship_options(item_id, prop) if item_id else []
-            elif prop == 'implementation_prs':
-                # PRs are managed automatically by GitHub Actions, not editable
+            
+            # Skip implementation_prs (managed by GitHub Actions)
+            if prop_name == 'implementation_prs':
                 continue
-            else:
-                # Generic text input
-                field['type'] = 'text'
             
             fields.append(field)
         
@@ -722,3 +720,99 @@ class CompliantFlowCore:
             comments
         )
         return {'success': success, 'message': message}
+
+    def _infer_property_config(self, prop_name: str):
+        """Infer PropertyConfig from property name (backward compatibility)."""
+        from .models.config import PropertyConfig, PropertyFormat
+        
+        # Infer format based on property name
+        if prop_name == 'title':
+            return PropertyConfig(name=prop_name, format=PropertyFormat.SHORT_TEXT, required=True)
+        elif prop_name == 'content':
+            return PropertyConfig(name=prop_name, format=PropertyFormat.LONG_TEXT, required=True, height=150)
+        elif prop_name in ['description', 'justification', 'impact_assessment', 'hazard', 'cause', 'effect']:
+            return PropertyConfig(name=prop_name, format=PropertyFormat.LONG_TEXT, height=100)
+        elif prop_name == 'verification_method':
+            return PropertyConfig(name=prop_name, format=PropertyFormat.SELECT, 
+                                options=["Test", "Analysis", "Inspection", "Demonstration"])
+        elif prop_name in ['severity_pre', 'probability_pre', 'severity_post', 'probability_post']:
+            return PropertyConfig(name=prop_name, format=PropertyFormat.SELECT, 
+                                options=["Low", "Medium", "High"])
+        elif prop_name == 'critical_safety':
+            return PropertyConfig(name=prop_name, format=PropertyFormat.CHECKBOX)
+        elif prop_name in ['design', 'derives_from', 'implements', 'guided_by', 'informs', 'mitigated_by', 'affected_items']:
+            return PropertyConfig(name=prop_name, format=PropertyFormat.MULTISELECT)
+        else:
+            return PropertyConfig(name=prop_name, format=PropertyFormat.SHORT_TEXT)
+    
+    def _format_to_ui_type(self, format):
+        """Convert PropertyFormat to UI type string."""
+        from .models.config import PropertyFormat
+        
+        mapping = {
+            PropertyFormat.SHORT_TEXT: 'text',
+            PropertyFormat.LONG_TEXT: 'textarea',
+            PropertyFormat.MARKDOWN: 'markdown',
+            PropertyFormat.URL: 'url',
+            PropertyFormat.SELECT: 'select',
+            PropertyFormat.MULTISELECT: 'multiselect',
+            PropertyFormat.RADIO: 'radio',
+            PropertyFormat.CHECKBOX: 'checkbox',
+            PropertyFormat.TOGGLE: 'toggle',
+            PropertyFormat.NUMBER: 'number',
+            PropertyFormat.SLIDER: 'slider',
+            PropertyFormat.DATE: 'date',
+            PropertyFormat.DATETIME: 'datetime',
+            PropertyFormat.ITEM_REFERENCE: 'item_reference',
+            PropertyFormat.ITEM_MULTISELECT: 'item_multiselect',
+            PropertyFormat.FILE_UPLOAD: 'file_upload',
+        }
+        return mapping.get(format, 'text')
+    
+    def _get_item_options(self, target_types: Optional[List[str]], exclude_item_id: Optional[str] = None) -> List[str]:
+        """Get item IDs for item reference fields."""
+        all_items = self.get_all_items()
+        
+        if target_types:
+            # Filter by target types
+            filtered = [i for i in all_items if any(i['id'].startswith(f"{t}-") for t in target_types)]
+        else:
+            filtered = all_items
+        
+        # Exclude current item
+        if exclude_item_id:
+            filtered = [i for i in filtered if i['id'] != exclude_item_id]
+        
+        return [i['id'] for i in filtered]
+
+    def _create_property_config_from_format(self, prop_name: str, format_str: str):
+        """Create PropertyConfig from shorthand format string."""
+        from .models.config import PropertyConfig, PropertyFormat
+        
+        # Map format string to PropertyFormat enum
+        format_map = {
+            'text': PropertyFormat.SHORT_TEXT,
+            'short_text': PropertyFormat.SHORT_TEXT,
+            'long_text': PropertyFormat.LONG_TEXT,
+            'textarea': PropertyFormat.LONG_TEXT,
+            'markdown': PropertyFormat.MARKDOWN,
+            'url': PropertyFormat.URL,
+            'select': PropertyFormat.SELECT,
+            'multiselect': PropertyFormat.MULTISELECT,
+            'radio': PropertyFormat.RADIO,
+            'checkbox': PropertyFormat.CHECKBOX,
+            'toggle': PropertyFormat.TOGGLE,
+            'number': PropertyFormat.NUMBER,
+            'slider': PropertyFormat.SLIDER,
+            'date': PropertyFormat.DATE,
+            'datetime': PropertyFormat.DATETIME,
+            'item_reference': PropertyFormat.ITEM_REFERENCE,
+            'item_multiselect': PropertyFormat.ITEM_MULTISELECT,
+            'file_upload': PropertyFormat.FILE_UPLOAD,
+        }
+        
+        # Get format enum, default to SHORT_TEXT if unknown
+        prop_format = format_map.get(format_str.lower(), PropertyFormat.SHORT_TEXT)
+        
+        # Create PropertyConfig with inferred defaults
+        return PropertyConfig(name=prop_name, format=prop_format)

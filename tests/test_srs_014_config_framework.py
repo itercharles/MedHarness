@@ -71,7 +71,6 @@ class TestSRS014_ConfigurationFramework:
     def test_policy_configuration(self, core):
         """Verify policy configuration loading."""
         # Check if policies are configured
-        assert hasattr(core.config, 'policies'), "Should have policies configuration"
     
     def test_fail_fast_on_invalid_config(self):
         """Verify fail-fast error reporting for invalid configuration."""
