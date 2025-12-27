@@ -428,8 +428,16 @@ class CompliantFlowCore:
                 prop_config = prop
             else:
                 # Handle dict format (from YAML)
-                prop_name = prop.get('name')
-                prop_config = PropertyConfig(**prop)
+                # STRICT: Must be a full config with 'name'
+                if isinstance(prop, dict):
+                    if 'name' not in prop:
+                        raise ValueError(f"Invalid property configuration: {prop}. Property dictionary MUST include a 'name' field.")
+                    
+                    prop_name = prop['name']
+                    prop_config = PropertyConfig(**prop)
+                else:
+                    # Invalid format
+                    raise ValueError(f"Invalid property configuration: {prop}. Must be a string or a PropertyConfig dict with a 'name' field.")
             
             if prop_name in skip_fields:
                 continue

@@ -334,7 +334,7 @@ def render_table_section(
         # Use dataframe with on_click selection (no checkboxes)
         event = st.dataframe(
             df,
-            use_container_width=True,
+            width="stretch",
             hide_index=True,
             on_select="rerun",
             selection_mode="single-row",
@@ -662,14 +662,31 @@ def render_item_view(
     
     # Display all configured fields
     for prop in properties:
-        if prop in skip_fields:
+        # Handle new dictionary format for properties
+        prop_name = prop
+        display_label = None
+        
+        if isinstance(prop, dict):
+            # STRICT: Property config must be a dict with 'name' (validated by core/process)
+            # We assume config is valid or at least try to get 'name'
+            if 'name' in prop:
+                prop_name = prop['name']
+                display_label = prop.get('label')
+            else:
+                st.error(f"Invalid property config in UI: {prop}")
+                continue
+        
+        if prop_name in skip_fields:
             continue
-        
+            
         # Get value from item
-        value = item.get(prop)
+        value = item.get(prop_name)
         
-        # Format field name with better styling
-        field_name = prop.replace('_', ' ').title()
+        # Determine display label
+        if display_label:
+            field_name = display_label
+        else:
+            field_name = prop_name.replace('_', ' ').title()
         
         # Smart rendering for list fields containing item IDs
         if isinstance(value, list) and value:
@@ -822,7 +839,7 @@ def render_item_view(
                                     })
                                 
                                 df = pd.DataFrame(changes_data)
-                                st.dataframe(df, use_container_width=True, hide_index=True)
+                                st.dataframe(df, width="stretch", hide_index=True)
                             else:
                                 st.caption("No field changes detected (possibly file creation or non-YAML changes)")
                             
@@ -1199,7 +1216,7 @@ def render_items_table(
         })
     
     df = pd.DataFrame(df_data)
-    st.dataframe(df, use_container_width=True, hide_index=True)
+    st.dataframe(df, width="stretch", hide_index=True)
     
     # Action buttons for each item
     st.markdown("**Actions:**")

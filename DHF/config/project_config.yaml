@@ -9,9 +9,18 @@ doc_types:
   directory: 00_uc
   properties:
   - id
-  - title
-  - content
-  - status
+  - name: title
+    format: short_text
+    label: Title
+  - name: content
+    format: long_text
+    label: Content
+  - name: status
+    format: select
+    label: Status
+    options:
+    - draft
+    - approved
   icon: 👤
   page_enabled: true
   page_number: 4
@@ -37,17 +46,50 @@ doc_types:
   directory: 01_req_crs
   properties:
   - id
-  - title
-  - content
-  - user_group
-  - source
-  - reviewer
-  - review_date
-  - derives_from
-  - rationale
-  - stakeholder
-  - priority
-  - status
+  - name: title
+    format: short_text
+    label: Title
+  - name: content
+    format: long_text
+    label: Content
+  - name: user_group
+    format: short_text
+    label: User Group
+  - name: source
+    format: short_text
+    label: Source
+  - name: reviewer
+    format: short_text
+    label: Reviewer
+  - name: review_date
+    format: date
+    label: Review Date
+  - name: derives_from
+    format: item_multiselect
+    target_types:
+    - UC
+    label: Derives From
+  - name: rationale
+    format: long_text
+    label: Rationale
+  - name: stakeholder
+    format: short_text
+    label: Stakeholder
+  - name: priority
+    format: select
+    options:
+    - High
+    - Medium
+    - Low
+    default: Medium
+    label: Priority
+  - name: status
+    format: select
+    options:
+    - draft
+    - approved
+    - retired
+    label: Status
   icon: 🎯
   page_enabled: true
   page_number: 5
@@ -115,19 +157,75 @@ doc_types:
   directory: 00_risks
   properties:
   - id
-  - title
-  - hazard
-  - cause
-  - effect
-  - severity_pre
-  - probability_pre
-  - severity_post
-  - probability_post
-  - risk_acceptability
-  - risk_benefit
-  - mitigated_by
-  - reviewer
-  - review_date
+  - name: title
+    format: short_text
+    label: Title
+  - name: hazard
+    format: long_text
+    label: Hazard
+  - name: cause
+    format: long_text
+    label: Cause
+  - name: effect
+    format: long_text
+    label: Effect
+  - name: severity_pre
+    format: select
+    options:
+    - S1
+    - S2
+    - S3
+    - S4
+    - S5
+    label: Severity (Pre-Mitigation)
+  - name: probability_pre
+    format: select
+    options:
+    - P1
+    - P2
+    - P3
+    - P4
+    - P5
+    label: Probability (Pre-Mitigation)
+  - name: severity_post
+    format: select
+    options:
+    - S1
+    - S2
+    - S3
+    - S4
+    - S5
+    label: Severity (Post-Mitigation)
+  - name: probability_post
+    format: select
+    options:
+    - P1
+    - P2
+    - P3
+    - P4
+    - P5
+    label: Probability (Post-Mitigation)
+  - name: risk_acceptability
+    format: select
+    options:
+    - Acceptable
+    - ALARP
+    - Unacceptable
+    label: Risk Acceptability
+  - name: risk_benefit
+    format: long_text
+    label: Risk Benefit
+  - name: mitigated_by
+    format: item_multiselect
+    target_types:
+    - RCM
+    label: Mitigated By
+  - name: reviewer
+    format: short_text
+    label: Reviewer
+  - name: review_date
+    format: date
+    label: Review Date
   relations:
   - target: RCM
     label: mitigated_by
@@ -166,13 +264,42 @@ doc_types:
   directory: 10_rcm
   properties:
   - id
-  - title
-  - content
-  - mitigates
-  - implements
-  - status
-  - control_type
-  - implementation_status
+  - name: title
+    format: short_text
+    label: Title
+  - name: content
+    format: long_text
+    label: Content
+  - name: mitigates
+    format: item_multiselect
+    target_types:
+    - RISK
+    label: Mitigates
+  - name: implements
+    format: item_multiselect
+    target_types:
+    - SYS
+    label: Implemented By
+  - name: status
+    format: select
+    label: Status
+    options:
+    - draft
+    - approved
+  - name: control_type
+    format: select
+    options:
+    - Inherently Safe Design
+    - Protective Measure
+    - Information for Safety
+    label: Control Type
+  - name: implementation_status
+    format: select
+    options:
+    - Planned
+    - Implemented
+    - Verified
+    label: Implementation Status
   relations:
   - target: RISK
     label: mitigates
@@ -205,12 +332,26 @@ doc_types:
   - SYS
   properties:
   - id
-  - title
-  - content
-  - component
-  - implements
-  - reviewer
-  - review_date
+  - name: title
+    format: short_text
+    label: Title
+  - name: content
+    format: long_text
+    label: Content
+  - name: component
+    format: short_text
+    label: Component
+  - name: implements
+    format: item_multiselect
+    target_types:
+    - SYS
+    label: Implements (System Req)
+  - name: reviewer
+    format: short_text
+    label: Reviewer
+  - name: review_date
+    format: date
+    label: Review Date
   relations:
   - target: SYS
     label: implements
@@ -286,7 +427,9 @@ doc_types:
   - RCM
   properties:
   - id
-  - title: text
+  - name: title
+    format: short_text
+    label: Title
   - name: content
     format: long_text
     label: Requirement Description
@@ -316,7 +459,9 @@ doc_types:
     - Analysis
     - Demonstration
     help: Select applicable verification methods per IEC 62304 5.7
-  - critical_safety: checkbox
+  - name: critical_safety
+    format: checkbox
+    label: Critical Safety
   - name: satisfies
     format: item_multiselect
     label: Satisfies (Customer Requirements)
@@ -414,11 +559,26 @@ doc_types:
   - SYS
   properties:
   - id
-  - title
-  - content
-  - derives_from
-  - performance
-  - status
+  - name: title
+    format: short_text
+    label: Title
+  - name: content
+    format: long_text
+    label: Content
+  - name: derives_from
+    format: item_multiselect
+    target_types:
+    - SYS
+    label: Derives From (System Req)
+  - name: performance
+    format: long_text
+    label: Performance
+  - name: status
+    format: select
+    label: Status
+    options:
+    - draft
+    - approved
   relations:
   - target: SYS
     label: derives_from
@@ -452,10 +612,23 @@ doc_types:
   directory: 06_sys_arch
   properties:
   - id
-  - title
-  - content
-  - design
-  - status
+  - name: title
+    format: short_text
+    label: Title
+  - name: content
+    format: long_text
+    label: Content
+  - name: design
+    format: item_multiselect
+    target_types:
+    - SYS
+    label: Designs Requirements
+  - name: status
+    format: select
+    label: Status
+    options:
+    - draft
+    - approved
   relations:
   - target: SYS
     label: design
@@ -484,10 +657,23 @@ doc_types:
   directory: 04_swad
   properties:
   - id
-  - title
-  - content
-  - design
-  - status
+  - name: title
+    format: short_text
+    label: Title
+  - name: content
+    format: long_text
+    label: Content
+  - name: design
+    format: item_multiselect
+    target_types:
+    - SRS
+    label: Designs Requirements
+  - name: status
+    format: select
+    label: Status
+    options:
+    - draft
+    - approved
   relations:
   - target: SRS
     label: design
@@ -516,11 +702,28 @@ doc_types:
   directory: 05_swdd
   properties:
   - id
-  - title
-  - content
-  - implements
-  - guided_by
-  - status
+  - name: title
+    format: short_text
+    label: Title
+  - name: content
+    format: long_text
+    label: Content
+  - name: implements
+    format: item_multiselect
+    target_types:
+    - SRS
+    label: Implements
+  - name: guided_by
+    format: item_multiselect
+    target_types:
+    - SWAD
+    label: Guided By
+  - name: status
+    format: select
+    label: Status
+    options:
+    - draft
+    - approved
   relations:
   - target: SRS
     label: implements
@@ -559,14 +762,36 @@ doc_types:
   - SYS
   properties:
   - id
-  - title
-  - prerequisites
-  - steps
-  - expected_result
-  - verifies
-  - verification_status
-  - reviewer
-  - review_date
+  - name: title
+    format: short_text
+    label: Title
+  - name: prerequisites
+    format: long_text
+    label: Prerequisites
+  - name: steps
+    format: long_text
+    label: Steps
+  - name: expected_result
+    format: long_text
+    label: Expected Result
+  - name: verifies
+    format: item_multiselect
+    target_types:
+    - SYS
+    label: Verifies (SYS)
+  - name: verification_status
+    format: select
+    options:
+    - Pending
+    - Pass
+    - Fail
+    label: Verification Status
+  - name: reviewer
+    format: short_text
+    label: Reviewer
+  - name: review_date
+    format: date
+    label: Review Date
   relations:
   - target: SYS
     label: verifies
@@ -598,14 +823,36 @@ doc_types:
   - CRS
   properties:
   - id
-  - title
-  - prerequisites
-  - steps
-  - expected_result
-  - validates
-  - verification_status
-  - reviewer
-  - review_date
+  - name: title
+    format: short_text
+    label: Title
+  - name: prerequisites
+    format: long_text
+    label: Prerequisites
+  - name: steps
+    format: long_text
+    label: Steps
+  - name: expected_result
+    format: long_text
+    label: Expected Result
+  - name: validates
+    format: item_multiselect
+    target_types:
+    - CRS
+    label: Validates (CRS)
+  - name: verification_status
+    format: select
+    options:
+    - Pending
+    - Pass
+    - Fail
+    label: Verification Status
+  - name: reviewer
+    format: short_text
+    label: Reviewer
+  - name: review_date
+    format: date
+    label: Review Date
   relations:
   - target: CRS
     label: validates
@@ -637,14 +884,36 @@ doc_types:
   - SDS
   properties:
   - id
-  - title
-  - prerequisites
-  - steps
-  - expected_result
-  - verifies
-  - verification_status
-  - reviewer
-  - review_date
+  - name: title
+    format: short_text
+    label: Title
+  - name: prerequisites
+    format: long_text
+    label: Prerequisites
+  - name: steps
+    format: long_text
+    label: Steps
+  - name: expected_result
+    format: long_text
+    label: Expected Result
+  - name: verifies
+    format: item_multiselect
+    target_types:
+    - SDS
+    label: Verifies (SDS)
+  - name: verification_status
+    format: select
+    options:
+    - Pending
+    - Pass
+    - Fail
+    label: Verification Status
+  - name: reviewer
+    format: short_text
+    label: Reviewer
+  - name: review_date
+    format: date
+    label: Review Date
   relations:
   - target: SDS
     label: verifies
@@ -673,16 +942,45 @@ doc_types:
   directory: 08_defect
   properties:
   - id
-  - title
-  - description
-  - severity
-  - priority
-  - found_in_version
-  - affected_components
-  - steps_to_reproduce
-  - expected_behavior
-  - actual_behavior
-  - assigned_to
+  - name: title
+    format: short_text
+    label: Title
+  - name: description
+    format: long_text
+    label: Description
+  - name: severity
+    format: select
+    options:
+    - Critical
+    - Major
+    - Minor
+    - Cosmetic
+    label: Severity
+  - name: priority
+    format: select
+    options:
+    - High
+    - Medium
+    - Low
+    label: Priority
+  - name: found_in_version
+    format: short_text
+    label: Found In Version
+  - name: affected_components
+    format: short_text
+    label: Affected Components
+  - name: steps_to_reproduce
+    format: long_text
+    label: Steps To Reproduce
+  - name: expected_behavior
+    format: long_text
+    label: Expected Behavior
+  - name: actual_behavior
+    format: long_text
+    label: Actual Behavior
+  - name: assigned_to
+    format: short_text
+    label: Assigned To
   icon: 🐛
   page_enabled: true
   page_number: 8
@@ -774,14 +1072,34 @@ doc_types:
   directory: 09_cr
   properties:
   - id
-  - title
-  - description
-  - justification
-  - impact_assessment
-  - priority
-  - requested_by
-  - assigned_to
-  - target_version
+  - name: title
+    format: short_text
+    label: Title
+  - name: description
+    format: long_text
+    label: Description
+  - name: justification
+    format: long_text
+    label: Justification
+  - name: impact_assessment
+    format: long_text
+    label: Impact Assessment
+  - name: priority
+    format: select
+    options:
+    - High
+    - Medium
+    - Low
+    label: Priority
+  - name: requested_by
+    format: short_text
+    label: Requested By
+  - name: assigned_to
+    format: short_text
+    label: Assigned To
+  - name: target_version
+    format: short_text
+    label: Target Version
   - affected_items
   - implementation_prs
   icon: 📝

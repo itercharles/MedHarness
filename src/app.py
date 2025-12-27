@@ -12,7 +12,7 @@ from page_generator import generate_doc_type_pages
 from utils.ui_helpers import check_and_show_item_detail
 
 # Initialize Core
-@st.cache_resource
+# @st.cache_resource
 def get_core():
     dhf_root = Path(__file__).resolve().parent.parent / "DHF"
     return CompliantFlowCore(dhf_root)
@@ -93,7 +93,7 @@ def home_page():
         breakdown_data.append({"Type": name, "Count": count})
     
     if breakdown_data:
-        st.dataframe(pd.DataFrame(breakdown_data), use_container_width=True, hide_index=True)
+        st.dataframe(pd.DataFrame(breakdown_data), width="stretch", hide_index=True)
     
     st.markdown("---")
     st.caption("CompliantFlow - Ensuring regulatory compliance through systematic traceability")
