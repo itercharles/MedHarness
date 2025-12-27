@@ -91,7 +91,7 @@ class TestCreateWorkflows:
         assert 'SYS-001' in created.get('derives_from', [])
         
         # Verify relationship exists in graph
-        assert test_core.graph.has_edge('SRS-001', 'SYS-001')
+        assert test_core.graph.graph.has_edge('SRS-001', 'SYS-001')
     
 
 
@@ -209,7 +209,7 @@ class TestUpdateWorkflows:
         
         # Verify graph was updated
         test_core.refresh()
-        assert test_core.graph.has_edge('SYS-001', 'SYS-PARENT')
+        assert test_core.graph.graph.has_edge('SYS-001', 'SYS-PARENT')
 
 
 class TestFileSystemIntegration:

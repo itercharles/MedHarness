@@ -13,7 +13,7 @@ class TestWorkflowTransitions:
     def test_user_submits_requirement_for_review(self, test_core, draft_sys_item):
         """User transitions requirement from draft to under_review."""
         # Get workflow engine
-        doc_config = test_core.config.get_doc_type_by_code('SYS')
+        doc_config = test_core.config.get_doc_type('SYS')
         workflow = DynamicWorkflowEngine(doc_config.model_dump(), test_core)
         
         # Verify transition is available
@@ -41,7 +41,7 @@ class TestWorkflowTransitions:
         test_core.create_item(item_data)
         
         # Get workflow
-        doc_config = test_core.config.get_doc_type_by_code('SYS')
+        doc_config = test_core.config.get_doc_type('SYS')
         workflow = DynamicWorkflowEngine(doc_config.model_dump(), test_core)
         
         # Verify can approve
@@ -90,7 +90,8 @@ class TestChangeRequestWorkflow:
             'id': 'CR-WORKFLOW-001',
             'title': 'Test Change Request',
             'description': 'Test CR workflow',
-            'justification': 'Testing'
+            'justification': 'Testing',
+            'status': 'submitted'
         }
         
         created = test_core.create_item(cr_data)
@@ -144,7 +145,7 @@ class TestWorkflowValidation:
     
     def test_workflow_prevents_invalid_transitions(self, test_core, draft_sys_item):
         """Workflow should only allow valid state transitions."""
-        doc_config = test_core.config.get_doc_type_by_code('SYS')
+        doc_config = test_core.config.get_doc_type('SYS')
         workflow = DynamicWorkflowEngine(doc_config.model_dump(), test_core)
         
         # Get available transitions from draft
@@ -160,7 +161,7 @@ class TestWorkflowValidation:
     
     def test_stable_state_detection(self, test_core, approved_sys_item):
         """Workflow should correctly identify stable states."""
-        doc_config = test_core.config.get_doc_type_by_code('SYS')
+        doc_config = test_core.config.get_doc_type('SYS')
         workflow = DynamicWorkflowEngine(doc_config.model_dump(), test_core)
         
         # Get state info
