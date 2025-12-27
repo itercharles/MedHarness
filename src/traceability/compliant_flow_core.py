@@ -418,13 +418,26 @@ class CompliantFlowCore:
         
         fields = []
         
+        
         for prop in properties:
-            # Handle both string and PropertyConfig
+            # First, extract the property name (even from string shorthand) to check if we should skip it
+            prop_name = None
+            if isinstance(prop, str):
+                prop_name = prop
+            elif isinstance(prop, PropertyConfig):
+                prop_name = prop.name
+            elif isinstance(prop, dict) and 'name' in prop:
+                prop_name = prop['name']
+            
+            # Skip system-managed fields BEFORE validation
+            if prop_name in skip_fields:
+                continue
+            
+            # Now validate property configuration (after we know it's not a skip field)
             # STRICT: All properties must be explicitly PropertyConfig
             if isinstance(prop, str):
                 raise ValueError(f"Invalid property configuration: '{prop}'. String shorthand is no longer supported. Please use a full PropertyConfig dictionary with a 'name' field.")
             elif isinstance(prop, PropertyConfig):
-                prop_name = prop.name
                 prop_config = prop
             else:
                 # Handle dict format (from YAML)
@@ -433,14 +446,11 @@ class CompliantFlowCore:
                     if 'name' not in prop:
                         raise ValueError(f"Invalid property configuration: {prop}. Property dictionary MUST include a 'name' field.")
                     
-                    prop_name = prop['name']
                     prop_config = PropertyConfig(**prop)
                 else:
                     # Invalid format
                     raise ValueError(f"Invalid property configuration: {prop}. Must be a string or a PropertyConfig dict with a 'name' field.")
-            
-            if prop_name in skip_fields:
-                continue
+
             
             # Build field definition from PropertyConfig
             field = {
