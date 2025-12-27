@@ -8,7 +8,7 @@ load_dotenv(Path(__file__).parent.parent / '.env')
 import streamlit as st
 import pandas as pd
 from traceability.compliant_flow_core import CompliantFlowCore
-from page_generator import generate_doc_type_pages
+from pages.page_generator import generate_doc_type_pages
 from utils.ui_helpers import check_and_show_item_detail
 
 # Initialize Core

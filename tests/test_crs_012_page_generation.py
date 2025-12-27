@@ -45,7 +45,7 @@ def test_TC_CRS_012_001_dynamic_page_generation():
         assert 'page_number' in dt, f"Document type missing 'page_number': {dt}"
     
     # Verify page_generator module exists
-    page_gen_path = Path(__file__).parent.parent / "src" / "page_generator.py"
+    page_gen_path = Path(__file__).parent.parent / "src" / "pages" / "page_generator.py"
     assert page_gen_path.exists(), "page_generator.py not found"
 
 
@@ -102,7 +102,7 @@ def test_TC_SYS_028_001_page_registration():
     import sys
     sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
     
-    from page_generator import generate_doc_type_pages
+    from pages.page_generator import generate_doc_type_pages
     from traceability.compliant_flow_core import CompliantFlowCore
     
     # Initialize core to get config

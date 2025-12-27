@@ -7,7 +7,7 @@ from typing import Dict, Any
 from datetime import datetime
 from traceability.compliant_flow_core import CompliantFlowCore
 from traceability.workflow_engine import DynamicWorkflowEngine
-from ui_components import (
+from .ui_components import (
     render_manual_verification,
     render_status_badge
 )
