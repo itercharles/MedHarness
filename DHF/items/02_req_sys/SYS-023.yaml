@@ -1,7 +1,0 @@
-id: SYS-023
-status: approved
-title: Configuration-Driven Status Warning Logic
-content: The system shall determine warning display based on lifecycle configuration's
-  is_stable flag, with fail-fast validation for missing configuration.
-satisfies:
-- CRS-009

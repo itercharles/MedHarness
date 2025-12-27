@@ -1,7 +1,0 @@
-id: SYS-024
-status: approved
-title: Automatic Verification Column Detection
-content: The system shall automatically add a verification status column when the
-  last item in a trace path contains a verification_status field.
-satisfies:
-- CRS-010

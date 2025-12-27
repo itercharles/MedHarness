@@ -1,6 +1,4 @@
 id: UC-005
 title: Check Compliance Policies
-content: |-
-  **Actor:** Regulatory Affairs Specialist
-  **Goal:** Validate DHF against regulatory requirements
+content: Analyze DHF against regulatory requirements
 status: approved

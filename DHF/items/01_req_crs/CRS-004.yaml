@@ -1,7 +1,6 @@
 id: CRS-004
 title: Automated Documentation
-content: The system shall automatically generate specification documents in formats
-  suitable for regulatory submission to reduce manual effort and errors.
+content: The system shall allow users to generate specification documents in configurable formats to reduce manual effort and errors.
 rationale: Manual documentation is time-consuming and error-prone
 stakeholder: Documentation Team
 priority: High

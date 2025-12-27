@@ -1,8 +1,7 @@
 id: CRS-008
 title: Automated Test Integration
-content: The system shall integrate with automated test frameworks to show real-time
-  test results and verification status for requirements.
-rationale: Manual test tracking is error-prone and outdated
+content: The system show user the pass or fail of tests.
+rationale: 
 stakeholder: Test Engineering
 priority: Medium
 derives_from:

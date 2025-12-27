@@ -1,7 +1,0 @@
-id: SYS-006
-content: The system shall execute automated checks (e.g. coverage, existence) defined
-  in policies.
-title: Compliance Engine
-status: approved
-satisfies:
-- CRS-003

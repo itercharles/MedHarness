@@ -1,7 +1,0 @@
-id: SYS-007
-content: The system shall execute policy validation rules defined in configuration
-  and report results. Policy definitions and validation logic shall be configurable.
-title: Compliance Reporting
-status: approved
-satisfies:
-- CRS-003

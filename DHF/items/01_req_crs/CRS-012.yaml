@@ -1,5 +1,0 @@
-id: CRS-012
-status: approved
-title: Configuration-Driven Page Generation
-content: The system shall automatically generate user interface pages for document
-  types based on configuration, eliminating the need for hardcoded page files.

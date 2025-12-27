@@ -1,11 +1,10 @@
 id: CRS-002
 title: Complete Traceability
-content: The system shall maintain complete traceability from user needs through requirements,
-  design, implementation, and testing to demonstrate regulatory compliance.
+content: The system shall assess and show users the traceability between user needs, requirement, detailed design, architecture, implementation, and testing. 
+  The traceability shall be generated based on the user's configuration.
 rationale: FDA and EU MDR require traceability throughout product lifecycle
 stakeholder: Quality Assurance
 priority: Critical
 derives_from:
-- UC-001
 - UC-002
 status: approved
