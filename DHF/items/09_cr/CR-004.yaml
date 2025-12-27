@@ -1,3 +1,12 @@
 id: CR-004
 title: Improve the format customization of frontend style
 status: submitted
+affected_items:
+- TC-SRS-014
+- TC-SRS-016
+- TC-SYS-007
+- TC-SYS-024
+implementation_prs:
+- pr_number: 6
+  pr_url: https://github.com/itercharles/CompliantFlow/pull/6
+  title: Feature/property format system
