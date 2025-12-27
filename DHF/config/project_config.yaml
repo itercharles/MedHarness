@@ -1,764 +1,1236 @@
-# Change Control Configuration
 change_control:
   enabled: true
-  change_request_type: "CR"  # Document type code for change requests
-  affected_items_field: "affected_items"  # Field name for tracking affected items
-
+  change_request_type: CR
+  affected_items_field: affected_items
 doc_types:
-  # Use Cases
-  - code: UC
-    name: "Use Case"
-    prefix: "UC-"
-    directory: "00_uc"
-    properties: ["id", "title", "content", "status"]
-    icon: "👤"
-    page_enabled: true
-    page_number: 4
-    lifecycle:
-      states:
-        - {id: draft, label: "Draft", color: "warning", icon: "📝", is_initial: true}
-        - {id: approved, label: "Approved", color: "success", icon: "✅", is_stable: true}
-      transitions:
-        - {from: draft, to: approved, label: "Approve"}
-  
-  # Customer Requirements (existing, keep as is)
-  - code: CRS
-    name: "Customer Requirement"
-    prefix: "CRS-"
-    directory: "01_req_crs"
-    properties: ["id", "title", "content", "user_group", "source", "reviewer", "review_date", "derives_from", "rationale", "stakeholder", "priority", "status"]
-    
-    # UI Configuration
-    icon: "🎯"
-    page_enabled: true
-    page_number: 5
-    
-    # Lifecycle Configuration
-    lifecycle:
-      states:
-        - id: draft
-          label: "Draft"
-          color: "warning"
-          icon: "📝"
-          is_initial: true
-        - id: approved
-          label: "Approved"
-          color: "success"
-          icon: "✅"
-          is_stable: true
-        - id: retired
-          label: "Retired"
-          color: "info"
-          icon: "🔒"
-      
-      transitions:
-        - from: draft
-          to: approved
-          label: "Approve"
-          criteria:
-            - id: content_complete
-              name: "Content documented"
-              description: "Requirement content must be fully documented"
-              check_type: "field_not_empty"
-              field: "content"
-              required: true
-            
-            - id: title_defined
-              name: "Title defined"
-              description: "Requirement must have a descriptive title"
-              check_type: "field_not_empty"
-              field: "title"
-              required: true
-            
-            - id: review_complete
-              name: "Review completed"
-              description: "Requirement has been reviewed by qualified person"
-              check_type: "manual"
-              required: true
-        
-        - from: approved
-          to: retired
-          label: "Retire"
-          criteria:
-            - id: retirement_reason
-              name: "Retirement reason documented"
-              description: "Reason for retirement must be documented"
-              check_type: "field_not_empty"
-              field: "retired_reason"
-              required: true
-            
-            - id: impact_assessed
-              name: "Impact assessed"
-              description: "Impact of retirement on linked items assessed"
-              check_type: "manual"
-              required: true
-    
-    # Verification tracking
-    has_verification: true
-    verification_states: ["not_verified", "verified", "failed"]
-
-  - code: RISK
-    name: "Risk Analysis"
-    prefix: "RISK-"
-    directory: "00_risks"
-    properties: ["id", "title", "hazard", "cause", "effect", "severity_pre", "probability_pre", "severity_post", "probability_post", "risk_acceptability", "risk_benefit", "mitigated_by", "reviewer", "review_date"]
-    relations:
-      - target: RCM
-        label: "mitigated_by"
-    icon: "⚠️"
-    page_enabled: true
-    page_number: 12
-    lifecycle:
-      states:
-        - {id: draft, label: "Draft", color: "warning", icon: "📝", is_initial: true}
-        - {id: under_review, label: "Under Review", color: "info", icon: "🔍"}
-        - {id: approved, label: "Approved", color: "success", icon: "✅", is_stable: true}
-      transitions:
-        - {from: draft, to: under_review, label: "Submit for Review"}
-        - {from: under_review, to: approved, label: "Approve"}
-        - {from: under_review, to: draft, label: "Request Changes"}
-
-  - code: RCM
-    name: "Risk Control Measure"
-    prefix: "RCM-"
-    directory: "10_rcm"
-    properties: ["id", "title", "content", "mitigates", "implements", "status", "control_type", "implementation_status"]
-    relations:
-      - target: RISK
-        label: mitigates
-      - target: SYS
-        label: implements
-    icon: "🛡️"
-    page_enabled: true
-    page_number: 11
-    lifecycle:
-      states:
-        - {id: draft, label: "Draft", color: "warning", icon: "📝", is_initial: true}
-        - {id: approved, label: "Approved", color: "success", icon: "✅", is_stable: true}
-      transitions:
-        - {from: draft, to: approved, label: "Approve"}
-  - code: SDS
-    name: "Software Design Specification"
-    prefix: "SDS-"
-    directory: "04_req_sds"
-    allowed_parents: ["SYS"]
-    properties: ["id", "title", "content", "component", "implements", "reviewer", "review_date"]
-    relations:
-      - target: SYS
-        label: implements
-    
-    # UI Configuration
-    icon: "📐"
-    page_enabled: true
-    page_number: 7
-    
-    # Lifecycle Configuration
-    lifecycle:
-      states:
-        - {id: draft, label: "Draft", color: "warning", icon: "📝", is_initial: true}
-        - {id: approved, label: "Approved", color: "success", icon: "✅", is_stable: true}
-        - {id: retired, label: "Retired", color: "info", icon: "🔒"}
-      
-      transitions:
-        - from: draft
-          to: approved
-          label: "Approve"
-          criteria:
-            - {id: content_complete, name: "Content documented", check_type: "field_not_empty", field: "content", required: true}
-            - {id: title_defined, name: "Title defined", check_type: "field_not_empty", field: "title", required: true}
-            - id: parent_sys_approved
-              name: "Parent SYS approved"
-              description: "All linked system requirements must be approved"
-              check_type: "linked_items_approved"
-              linked_type: "SYS"
-              required_status: "approved"
-              required: true
-            - {id: review_complete, name: "Review completed", check_type: "manual", required: true}
-        
-        - from: approved
-          to: retired
-          label: "Retire"
-          criteria:
-            - {id: retirement_reason, name: "Retirement reason", check_type: "field_not_empty", field: "retired_reason", required: true}
-            - {id: impact_assessed, name: "Impact assessed", check_type: "manual", required: true}
-    
-    has_verification: true
-    verification_states: ["not_verified", "verified", "failed"]
-
-  - code: SYS
-    name: "System Requirement"
-    prefix: "SYS-"
-    directory: "02_req_sys"
-    allowed_parents: ["CRS", "RCM"]
-    properties: ["id", "title", "content", "category", "verification_method", "critical_safety", "satisfies", "implements", "reviewer", "review_date", "derives_from", "status"]
-    relations:
-      - target: CRS
-        label: satisfies
-      - target: RCM
-        label: implements
-    
-    # UI Configuration
-    icon: "⚙️"
-    page_enabled: true
-    page_number: 6
-    
-    # Lifecycle Configuration
-    lifecycle:
-      states:
-        - {id: draft, label: "Draft", color: "warning", icon: "📝", is_initial: true}
-        - {id: approved, label: "Approved", color: "success", icon: "✅", is_stable: true}
-        - {id: retired, label: "Retired", color: "info", icon: "🔒"}
-      
-      transitions:
-        - from: draft
-          to: approved
-          label: "Approve"
-          criteria:
-            - {id: content_complete, name: "Content documented", check_type: "field_not_empty", field: "content", required: true}
-            - {id: title_defined, name: "Title defined", check_type: "field_not_empty", field: "title", required: true}
-            - id: parent_crs_approved
-              name: "Parent CRS approved"
-              description: "All linked customer requirements must be approved"
-              check_type: "linked_items_approved"
-              linked_type: "CRS"
-              required_status: "approved"
-              required: true
-            - {id: review_complete, name: "Review completed", check_type: "manual", required: true}
-        
-        - from: approved
-          to: retired
-          label: "Retire"
-          criteria:
-            - {id: retirement_reason, name: "Retirement reason", check_type: "field_not_empty", field: "retired_reason", required: true}
-            - {id: impact_assessed, name: "Impact assessed", check_type: "manual", required: true}
-    
-    has_verification: true
-    verification_states: ["not_verified", "verified", "failed"]
-
-  # Software Requirements Specification
-  - code: SRS
-    name: "Software Requirement"
-    prefix: "SRS-"
-    directory: "03_req_srs"
-    allowed_parents: ["SYS"]
-    properties: ["id", "title", "content", "derives_from", "performance", "status"]
-    relations:
-      - target: SYS
-        label: derives_from
-    icon: "💻"
-    page_enabled: true
-    page_number: 7
-    lifecycle:
-      states:
-        - {id: draft, label: "Draft", color: "warning", icon: "📝", is_initial: true}
-        - {id: approved, label: "Approved", color: "success", icon: "✅", is_stable: true}
-      transitions:
-        - {from: draft, to: approved, label: "Approve"}
-    has_verification: true
-    verification_states: ["not_verified", "verified", "failed"]
-
-  # System Architecture
-  - code: SYS_ARCH
-    name: "System Architecture"
-    prefix: "SYSARCH-"
-    directory: "06_sys_arch"
-    properties: ["id", "title", "content", "design", "status"]
-    relations:
-      - target: SYS
-        label: design
-    icon: "🏗️"
-    page_enabled: true
-    page_number: 8
-    lifecycle:
-      states:
-        - {id: draft, label: "Draft", color: "warning", icon: "📝", is_initial: true}
-        - {id: approved, label: "Approved", color: "success", icon: "✅", is_stable: true}
-      transitions:
-        - {from: draft, to: approved, label: "Approve"}
-
-  # Software Architecture Design
-  - code: SWAD
-    name: "Software Architecture"
-    prefix: "SWAD-"
-    directory: "04_swad"
-    properties: ["id", "title", "content", "design", "status"]
-    relations:
-      - target: SRS
-        label: design
-    icon: "🔧"
-    page_enabled: true
-    page_number: 9
-    lifecycle:
-      states:
-        - {id: draft, label: "Draft", color: "warning", icon: "📝", is_initial: true}
-        - {id: approved, label: "Approved", color: "success", icon: "✅", is_stable: true}
-      transitions:
-        - {from: draft, to: approved, label: "Approve"}
-
-  # Software Detailed Design
-  - code: SWDD
-    name: "Software Detailed Design"
-    prefix: "SWDD-"
-    directory: "05_swdd"
-    properties: ["id", "title", "content", "implements", "guided_by", "status"]
-    relations:
-      - target: SRS
-        label: implements
-      - target: SWAD
-        label: guided_by
-    icon: "📋"
-    page_enabled: true
-    page_number: 10
-    lifecycle:
-      states:
-        - {id: draft, label: "Draft", color: "warning", icon: "📝", is_initial: true}
-        - {id: approved, label: "Approved", color: "success", icon: "✅", is_stable: true}
-      transitions:
-        - {from: draft, to: approved, label: "Approve"}
-    has_verification: true
-    verification_states: ["not_verified", "verified", "failed"]
-
-  - code: TC-SYS
-    name: "System Test"
-    prefix: "TC-SYS-"
-    directory: "05_tc_sys"
-    type: "test"
-    verifies: ["SYS"]
-    properties: ["id", "title", "prerequisites", "steps", "expected_result", "verifies", "verification_status", "reviewer", "review_date"]
-    relations:
-      - target: SYS
-        label: verifies
-    icon: "🧪"
-    page_enabled: true
-    page_number: 9
-    lifecycle:
-      states:
-        - {id: draft, label: "Draft", color: "warning", icon: "📝", is_initial: true}
-        - {id: approved, label: "Approved", color: "success", icon: "✅", is_stable: true}
-      transitions:
-        - {from: draft, to: approved, label: "Approve"}
-  - code: TC-CRS
-    name: "Customer Validation Test"
-    prefix: "TC-CRS-"
-    directory: "06_tc_crs"
-    type: "test"
-    verifies: ["CRS"]
-    properties: ["id", "title", "prerequisites", "steps", "expected_result", "validates", "verification_status", "reviewer", "review_date"]
-    relations:
-      - target: CRS
-        label: validates
-    icon: "✅"
-    page_enabled: true
-    page_number: 10
-    lifecycle:
-      states:
-        - {id: draft, label: "Draft", color: "warning", icon: "📝", is_initial: true}
-        - {id: approved, label: "Approved", color: "success", icon: "✅", is_stable: true}
-      transitions:
-        - {from: draft, to: approved, label: "Approve"}
-  - code: TC-SDS
-    name: "Design Test"
-    prefix: "TC-SDS-"
-    directory: "07_tc_sds"
-    type: "test"
-    verifies: ["SDS"]
-    properties: ["id", "title", "prerequisites", "steps", "expected_result", "verifies", "verification_status", "reviewer", "review_date"]
-    relations:
-      - target: SDS
-        label: verifies
-    icon: "🔬"
-    page_enabled: true
-    page_number: 11
-    lifecycle:
-      states:
-        - {id: draft, label: "Draft", color: "warning", icon: "📝", is_initial: true}
-        - {id: approved, label: "Approved", color: "success", icon: "✅", is_stable: true}
-      transitions:
-        - {from: draft, to: approved, label: "Approve"}
-
-  - code: DEFECT
-    name: "Defect"
-    prefix: "DEF-"
-    directory: "08_defect"
-    properties: ["id", "title", "description", "severity", "priority", "found_in_version", "affected_components", "steps_to_reproduce", "expected_behavior", "actual_behavior", "assigned_to"]
-    
-    # UI Configuration
-    icon: "🐛"
-    page_enabled: true
-    page_number: 8
-    
-    # Lifecycle Configuration
-    lifecycle:
-      states:
-        - {id: open, label: "Open", color: "error", icon: "🔴", is_initial: true}
-        - {id: in_progress, label: "In Progress", color: "warning", icon: "🔧"}
-        - {id: resolved, label: "Resolved", color: "info", icon: "✅"}
-        - {id: verified, label: "Verified", color: "success", icon: "🎯"}
-        - {id: closed, label: "Closed", color: "secondary", icon: "🔒"}
-        - {id: reopened, label: "Reopened", color: "error", icon: "🔄"}
-      
-      transitions:
-        - from: open
-          to: in_progress
-          label: "Start Work"
-          criteria:
-            - {id: assigned, name: "Assigned to developer", check_type: "field_not_empty", field: "assigned_to", required: true}
-            - {id: severity_set, name: "Severity defined", check_type: "field_not_empty", field: "severity", required: true}
-        
-        - from: in_progress
-          to: resolved
-          label: "Resolve"
-          criteria:
-            - {id: fix_implemented, name: "Fix implemented", check_type: "manual", required: true}
-            - {id: root_cause, name: "Root cause documented", check_type: "field_not_empty", field: "description", required: true}
-        
-        - from: resolved
-          to: verified
-          label: "Verify Fix"
-          criteria:
-            - {id: verification_complete, name: "Verification completed", check_type: "manual", required: true}
-        
-        - from: verified
-          to: closed
-          label: "Close"
-          criteria:
-            - {id: closure_approved, name: "Closure approved", check_type: "manual", required: true}
-        
-        - from: closed
-          to: reopened
-          label: "Reopen"
-          criteria:
-            - {id: reopen_reason, name: "Reopen reason documented", check_type: "manual", required: true}
-        
-        - from: reopened
-          to: in_progress
-          label: "Resume Work"
-
-  - code: CR
-    name: "Change Request"
-    prefix: "CR-"
-    directory: "09_cr"
-    properties: ["id", "title", "description", "justification", "impact_assessment", "priority", "requested_by", "assigned_to", "target_version", "affected_items", "implementation_prs"]
-    
-    # UI Configuration
-    icon: "📝"
-    page_enabled: true
-    page_number: 9
-    
-    # Lifecycle Configuration
-    lifecycle:
-      states:
-        - {id: submitted, label: "Submitted", color: "info", icon: "📥", is_initial: true}
-        - {id: under_review, label: "Under Review", color: "warning", icon: "🔍"}
-        - {id: approved, label: "Approved", color: "success", icon: "✅"}
-        - {id: rejected, label: "Rejected", color: "error", icon: "❌", is_stable: true}
-        - {id: in_progress, label: "In Progress", color: "warning", icon: "🔧"}
-        - {id: completed, label: "Completed", color: "success", icon: "🎯", is_stable: true}
-        - {id: cancelled, label: "Cancelled", color: "secondary", icon: "🚫", is_stable: true}
-      
-      transitions:
-        - from: submitted
-          to: under_review
-          label: "Start Review"
-          criteria:
-            - {id: description_complete, name: "Description complete", check_type: "field_not_empty", field: "description", required: true}
-            - {id: justification_provided, name: "Justification provided", check_type: "field_not_empty", field: "justification", required: true}
-        
-        - from: under_review
-          to: approved
-          label: "Approve"
-          criteria:
-            - {id: impact_assessed, name: "Impact assessed", check_type: "field_not_empty", field: "impact_assessment", required: true}
-            - {id: review_complete, name: "Review completed", check_type: "manual", required: true}
-        
-        - from: under_review
-          to: rejected
-          label: "Reject"
-          criteria:
-            - {id: rejection_reason, name: "Rejection reason documented", check_type: "manual", required: true}
-        
-        - from: approved
-          to: in_progress
-          label: "Start Implementation"
-          criteria:
-            - {id: assigned, name: "Assigned to developer", check_type: "field_not_empty", field: "assigned_to", required: true}
-        
-        - from: in_progress
-          to: completed
-          label: "Complete"
-          criteria:
-            - {id: implementation_done, name: "Implementation completed", check_type: "manual", required: true}
-            - {id: testing_done, name: "Testing completed", check_type: "manual", required: true}
-        
-        - from: submitted
-          to: cancelled
-          label: "Cancel"
-        
-        - from: under_review
-          to: cancelled
-          label: "Cancel"
-
-  - code: RELEASE
-    name: "Release"
-    prefix: "REL-"
-    properties: ["id", "title", "content", "version", "release_date", "included_items", "verification_status", "verified_by", "verified_date", "release_notes", "links"]
-    
-    # UI Configuration
-    icon: "🚀"
-    page_enabled: true
-    page_number: 4
-    
-    # Lifecycle Configuration
-    lifecycle:
-      states:
-        - {id: planning, label: "Planning", color: "info", icon: "�", is_initial: true}
-        - {id: developing, label: "Developing", color: "warning", icon: "🔧"}
-        - {id: testing, label: "Testing", color: "warning", icon: "🧪"}
-        - {id: released, label: "Released", color: "success", icon: "🚀", is_stable: true}
-      
-      transitions:
-        - from: planning
-          to: developing
-          label: "Start Development"
-          criteria:
-            - {id: version_set, name: "Version defined", check_type: "field_not_empty", field: "version", required: true}
-            - {id: items_planned, name: "Items planned", check_type: "field_not_empty", field: "included_items", required: true}
-        
-        - from: developing
-          to: testing
-          label: "Start Testing"
-          criteria:
-            - {id: development_complete, name: "Development completed", check_type: "manual", required: true}
-        
-        - from: testing
-          to: released
-          label: "Release"
-          criteria:
-            - {id: testing_complete, name: "Testing completed", check_type: "manual", required: true}
-            - {id: verification_done, name: "Verification completed", check_type: "field_not_empty", field: "verification_status", required: true}
-
-  - code: SOUP
-    name: "Software of Unknown Provenance"
-    prefix: "SOUP-"
-    directory: "11_soup"
-    properties: ["id", "title", "content", "name", "version", "manufacturer", "license", "purpose", "homepage", "cve_count", "risk_rating", "safety_class", "verification_method", "reviewer", "review_date"]
-    
-    # UI Configuration
-    icon: "📦"
-    page_enabled: true
-    page_number: 11
-    
-    # Lifecycle Configuration
-    lifecycle:
-      states:
-        - id: draft
-          label: "Draft"
-          color: "warning"
-          icon: "📝"
-          is_initial: true
-        - id: under_review
-          label: "Under Review"
-          color: "info"
-          icon: "🔍"
-        - id: approved
-          label: "Approved"
-          color: "success"
-          icon: "✅"
-          is_stable: true
-        - id: rejected
-          label: "Rejected"
-          color: "error"
-          icon: "❌"
-      
-      transitions:
-        - from: draft
-          to: under_review
-          label: "Submit for Review"
-          criteria:
-            - id: purpose_set
-              name: "Purpose documented"
-              description: "SOUP usage purpose must be documented per IEC 62304 5.3.4"
-              check_type: "field_not_empty"
-              field: "purpose"
-              required: true
-            
-            - id: safety_class_set
-              name: "Safety class assigned"
-              description: "Safety classification (A/B/C) must be assigned"
-              check_type: "field_not_empty"
-              field: "safety_class"
-              required: true
-            
-            - id: linked_to_req
-              name: "Linked to SYS requirement"
-              description: "SOUP must be linked to at least one system requirement"
-              check_type: "has_links"
-              required: true
-        
-        - from: under_review
-          to: approved
-          label: "Approve"
-          criteria:
-            - id: verification_done
-              name: "Verification completed"
-              description: "SOUP verification evidence documented"
-              check_type: "manual"
-              required: true
-        
-        - from: under_review
-          to: rejected
-          label: "Reject"
-          criteria:
-            - id: rejection_reason
-              name: "Rejection reason"
-              description: "Reason for rejecting SOUP must be documented"
-              check_type: "manual"
-              required: true
-        
-        - from: rejected
-          to: draft
-          label: "Revise"
-          criteria: []
-
-  - code: ARCH
-    name: "Architecture Specification"
-    prefix: "ARCH-"
-    directory: "12_arch"
-    properties: ["id", "title", "content", "component", "architecture_type", "design_rationale", "alternatives_considered", "technology_stack", "interfaces", "links", "review_by", "review_date", "approved_by", "approved_date", "deprecated_by", "deprecated_date"]
-    
-    relations:
-      - target: SYS
-        type: realizes
-        label: realizes
-      - target: SDS
-        type: guides
-        label: guides
-    
-    icon: "🏗️"
-    page_enabled: true
-    page_number: 12
-    
-    lifecycle:
-      states:
-        - {id: draft, label: "Draft", is_initial: true, color: warning, icon: "📝"}
-        - {id: review, label: "In Review", color: info, icon: "👀"}
-        - {id: approved, label: "Approved", color: success, icon: "✅", is_stable: true}
-        - {id: deprecated, label: "Deprecated", color: secondary, icon: "🗄️"}
-      
-      transitions:
-        - from: draft
-          to: review
-          label: "Submit for Review"
-          criteria:
-            - {id: content_complete, name: "Content documented", check_type: "field_not_empty", field: "content", required: true}
-            - {id: title_defined, name: "Title defined", check_type: "field_not_empty", field: "title", required: true}
-            - {id: rationale_documented, name: "Design rationale documented", check_type: "field_not_empty", field: "design_rationale", required: true}
-        
-        - from: review
-          to: approved
-          label: "Approve"
-          criteria:
-            - {id: review_complete, name: "Review completed", check_type: "manual", required: true}
-        
-        - from: review
-          to: draft
-          label: "Request Changes"
-          criteria:
-            - {id: changes_requested, name: "Changes documented", check_type: "manual", required: true}
-        
-        - from: approved
-          to: deprecated
-          label: "Deprecate"
-          criteria:
-            - {id: deprecation_reason, name: "Deprecation reason documented", check_type: "manual", required: true}
-
+- code: UC
+  name: Use Case
+  prefix: UC-
+  directory: 00_uc
+  properties:
+  - id
+  - title
+  - content
+  - status
+  icon: 👤
+  page_enabled: true
+  page_number: 4
+  lifecycle:
+    states:
+    - id: draft
+      label: Draft
+      color: warning
+      icon: 📝
+      is_initial: true
+    - id: approved
+      label: Approved
+      color: success
+      icon: ✅
+      is_stable: true
+    transitions:
+    - from: draft
+      to: approved
+      label: Approve
+- code: CRS
+  name: Customer Requirement
+  prefix: CRS-
+  directory: 01_req_crs
+  properties:
+  - id
+  - title
+  - content
+  - user_group
+  - source
+  - reviewer
+  - review_date
+  - derives_from
+  - rationale
+  - stakeholder
+  - priority
+  - status
+  icon: 🎯
+  page_enabled: true
+  page_number: 5
+  lifecycle:
+    states:
+    - id: draft
+      label: Draft
+      color: warning
+      icon: 📝
+      is_initial: true
+    - id: approved
+      label: Approved
+      color: success
+      icon: ✅
+      is_stable: true
+    - id: retired
+      label: Retired
+      color: info
+      icon: 🔒
+    transitions:
+    - from: draft
+      to: approved
+      label: Approve
+      criteria:
+      - id: content_complete
+        name: Content documented
+        description: Requirement content must be fully documented
+        check_type: field_not_empty
+        field: content
+        required: true
+      - id: title_defined
+        name: Title defined
+        description: Requirement must have a descriptive title
+        check_type: field_not_empty
+        field: title
+        required: true
+      - id: review_complete
+        name: Review completed
+        description: Requirement has been reviewed by qualified person
+        check_type: manual
+        required: true
+    - from: approved
+      to: retired
+      label: Retire
+      criteria:
+      - id: retirement_reason
+        name: Retirement reason documented
+        description: Reason for retirement must be documented
+        check_type: field_not_empty
+        field: retired_reason
+        required: true
+      - id: impact_assessed
+        name: Impact assessed
+        description: Impact of retirement on linked items assessed
+        check_type: manual
+        required: true
+  has_verification: true
+  verification_states:
+  - not_verified
+  - verified
+  - failed
+- code: RISK
+  name: Risk Analysis
+  prefix: RISK-
+  directory: 00_risks
+  properties:
+  - id
+  - title
+  - hazard
+  - cause
+  - effect
+  - severity_pre
+  - probability_pre
+  - severity_post
+  - probability_post
+  - risk_acceptability
+  - risk_benefit
+  - mitigated_by
+  - reviewer
+  - review_date
+  relations:
+  - target: RCM
+    label: mitigated_by
+  icon: ⚠️
+  page_enabled: true
+  page_number: 12
+  lifecycle:
+    states:
+    - id: draft
+      label: Draft
+      color: warning
+      icon: 📝
+      is_initial: true
+    - id: under_review
+      label: Under Review
+      color: info
+      icon: 🔍
+    - id: approved
+      label: Approved
+      color: success
+      icon: ✅
+      is_stable: true
+    transitions:
+    - from: draft
+      to: under_review
+      label: Submit for Review
+    - from: under_review
+      to: approved
+      label: Approve
+    - from: under_review
+      to: draft
+      label: Request Changes
+- code: RCM
+  name: Risk Control Measure
+  prefix: RCM-
+  directory: 10_rcm
+  properties:
+  - id
+  - title
+  - content
+  - mitigates
+  - implements
+  - status
+  - control_type
+  - implementation_status
+  relations:
+  - target: RISK
+    label: mitigates
+  - target: SYS
+    label: implements
+  icon: 🛡️
+  page_enabled: true
+  page_number: 11
+  lifecycle:
+    states:
+    - id: draft
+      label: Draft
+      color: warning
+      icon: 📝
+      is_initial: true
+    - id: approved
+      label: Approved
+      color: success
+      icon: ✅
+      is_stable: true
+    transitions:
+    - from: draft
+      to: approved
+      label: Approve
+- code: SDS
+  name: Software Design Specification
+  prefix: SDS-
+  directory: 04_req_sds
+  allowed_parents:
+  - SYS
+  properties:
+  - id
+  - title
+  - content
+  - component
+  - implements
+  - reviewer
+  - review_date
+  relations:
+  - target: SYS
+    label: implements
+  icon: 📐
+  page_enabled: true
+  page_number: 7
+  lifecycle:
+    states:
+    - id: draft
+      label: Draft
+      color: warning
+      icon: 📝
+      is_initial: true
+    - id: approved
+      label: Approved
+      color: success
+      icon: ✅
+      is_stable: true
+    - id: retired
+      label: Retired
+      color: info
+      icon: 🔒
+    transitions:
+    - from: draft
+      to: approved
+      label: Approve
+      criteria:
+      - id: content_complete
+        name: Content documented
+        check_type: field_not_empty
+        field: content
+        required: true
+      - id: title_defined
+        name: Title defined
+        check_type: field_not_empty
+        field: title
+        required: true
+      - id: parent_sys_approved
+        name: Parent SYS approved
+        description: All linked system requirements must be approved
+        check_type: linked_items_approved
+        linked_type: SYS
+        required_status: approved
+        required: true
+      - id: review_complete
+        name: Review completed
+        check_type: manual
+        required: true
+    - from: approved
+      to: retired
+      label: Retire
+      criteria:
+      - id: retirement_reason
+        name: Retirement reason
+        check_type: field_not_empty
+        field: retired_reason
+        required: true
+      - id: impact_assessed
+        name: Impact assessed
+        check_type: manual
+        required: true
+  has_verification: true
+  verification_states:
+  - not_verified
+  - verified
+  - failed
+- code: SYS
+  name: System Requirement
+  prefix: SYS-
+  directory: 02_req_sys
+  allowed_parents:
+  - CRS
+  - RCM
+  properties:
+  - id
+  - title
+  - name: content
+    format: long_text
+    label: Requirement Description
+    required: true
+    height: 200
+    placeholder: Describe the system requirement in detail...
+    help: Provide a clear, testable requirement statement per IEC 62304
+  - name: category
+    format: select
+    label: Category
+    required: true
+    options:
+    - Functional
+    - Performance
+    - Security
+    - Usability
+    - Reliability
+    - Maintainability
+    default: Functional
+    help: Select the requirement category
+  - name: verification_method
+    format: multiselect
+    label: Verification Methods
+    options:
+    - Test
+    - Inspection
+    - Analysis
+    - Demonstration
+    help: Select applicable verification methods per IEC 62304 5.7
+  - name: critical_safety
+    format: checkbox
+    label: Safety-Critical Requirement
+    default: false
+    help: Check if this requirement is safety-critical (IEC 62304 Class B/C)
+  - name: satisfies
+    format: item_multiselect
+    label: Satisfies (Customer Requirements)
+    target_types:
+    - CRS
+    help: Link to parent customer requirements
+  - name: implements
+    format: item_multiselect
+    label: Implements (Risk Control Measures)
+    target_types:
+    - RCM
+    help: Link to risk control measures this requirement implements
+  - name: derives_from
+    format: item_multiselect
+    label: Derives From
+    target_types:
+    - CRS
+    help: Alternative relationship to customer requirements
+  - reviewer
+  - review_date
+  - status
+  relations:
+  - target: CRS
+    label: satisfies
+  - target: RCM
+    label: implements
+  icon: ⚙️
+  page_enabled: true
+  page_number: 6
+  lifecycle:
+    states:
+    - id: draft
+      label: Draft
+      color: warning
+      icon: 📝
+      is_initial: true
+    - id: approved
+      label: Approved
+      color: success
+      icon: ✅
+      is_stable: true
+    - id: retired
+      label: Retired
+      color: info
+      icon: 🔒
+    transitions:
+    - from: draft
+      to: approved
+      label: Approve
+      criteria:
+      - id: content_complete
+        name: Content documented
+        check_type: field_not_empty
+        field: content
+        required: true
+      - id: title_defined
+        name: Title defined
+        check_type: field_not_empty
+        field: title
+        required: true
+      - id: parent_crs_approved
+        name: Parent CRS approved
+        description: All linked customer requirements must be approved
+        check_type: linked_items_approved
+        linked_type: CRS
+        required_status: approved
+        required: true
+      - id: review_complete
+        name: Review completed
+        check_type: manual
+        required: true
+    - from: approved
+      to: retired
+      label: Retire
+      criteria:
+      - id: retirement_reason
+        name: Retirement reason
+        check_type: field_not_empty
+        field: retired_reason
+        required: true
+      - id: impact_assessed
+        name: Impact assessed
+        check_type: manual
+        required: true
+  has_verification: true
+  verification_states:
+  - not_verified
+  - verified
+  - failed
+- code: SRS
+  name: Software Requirement
+  prefix: SRS-
+  directory: 03_req_srs
+  allowed_parents:
+  - SYS
+  properties:
+  - id
+  - title
+  - content
+  - derives_from
+  - performance
+  - status
+  relations:
+  - target: SYS
+    label: derives_from
+  icon: 💻
+  page_enabled: true
+  page_number: 7
+  lifecycle:
+    states:
+    - id: draft
+      label: Draft
+      color: warning
+      icon: 📝
+      is_initial: true
+    - id: approved
+      label: Approved
+      color: success
+      icon: ✅
+      is_stable: true
+    transitions:
+    - from: draft
+      to: approved
+      label: Approve
+  has_verification: true
+  verification_states:
+  - not_verified
+  - verified
+  - failed
+- code: SYS_ARCH
+  name: System Architecture
+  prefix: SYSARCH-
+  directory: 06_sys_arch
+  properties:
+  - id
+  - title
+  - content
+  - design
+  - status
+  relations:
+  - target: SYS
+    label: design
+  icon: 🏗️
+  page_enabled: true
+  page_number: 8
+  lifecycle:
+    states:
+    - id: draft
+      label: Draft
+      color: warning
+      icon: 📝
+      is_initial: true
+    - id: approved
+      label: Approved
+      color: success
+      icon: ✅
+      is_stable: true
+    transitions:
+    - from: draft
+      to: approved
+      label: Approve
+- code: SWAD
+  name: Software Architecture
+  prefix: SWAD-
+  directory: 04_swad
+  properties:
+  - id
+  - title
+  - content
+  - design
+  - status
+  relations:
+  - target: SRS
+    label: design
+  icon: 🔧
+  page_enabled: true
+  page_number: 9
+  lifecycle:
+    states:
+    - id: draft
+      label: Draft
+      color: warning
+      icon: 📝
+      is_initial: true
+    - id: approved
+      label: Approved
+      color: success
+      icon: ✅
+      is_stable: true
+    transitions:
+    - from: draft
+      to: approved
+      label: Approve
+- code: SWDD
+  name: Software Detailed Design
+  prefix: SWDD-
+  directory: 05_swdd
+  properties:
+  - id
+  - title
+  - content
+  - implements
+  - guided_by
+  - status
+  relations:
+  - target: SRS
+    label: implements
+  - target: SWAD
+    label: guided_by
+  icon: 📋
+  page_enabled: true
+  page_number: 10
+  lifecycle:
+    states:
+    - id: draft
+      label: Draft
+      color: warning
+      icon: 📝
+      is_initial: true
+    - id: approved
+      label: Approved
+      color: success
+      icon: ✅
+      is_stable: true
+    transitions:
+    - from: draft
+      to: approved
+      label: Approve
+  has_verification: true
+  verification_states:
+  - not_verified
+  - verified
+  - failed
+- code: TC-SYS
+  name: System Test
+  prefix: TC-SYS-
+  directory: 05_tc_sys
+  type: test
+  verifies:
+  - SYS
+  properties:
+  - id
+  - title
+  - prerequisites
+  - steps
+  - expected_result
+  - verifies
+  - verification_status
+  - reviewer
+  - review_date
+  relations:
+  - target: SYS
+    label: verifies
+  icon: 🧪
+  page_enabled: true
+  page_number: 9
+  lifecycle:
+    states:
+    - id: draft
+      label: Draft
+      color: warning
+      icon: 📝
+      is_initial: true
+    - id: approved
+      label: Approved
+      color: success
+      icon: ✅
+      is_stable: true
+    transitions:
+    - from: draft
+      to: approved
+      label: Approve
+- code: TC-CRS
+  name: Customer Validation Test
+  prefix: TC-CRS-
+  directory: 06_tc_crs
+  type: test
+  verifies:
+  - CRS
+  properties:
+  - id
+  - title
+  - prerequisites
+  - steps
+  - expected_result
+  - validates
+  - verification_status
+  - reviewer
+  - review_date
+  relations:
+  - target: CRS
+    label: validates
+  icon: ✅
+  page_enabled: true
+  page_number: 10
+  lifecycle:
+    states:
+    - id: draft
+      label: Draft
+      color: warning
+      icon: 📝
+      is_initial: true
+    - id: approved
+      label: Approved
+      color: success
+      icon: ✅
+      is_stable: true
+    transitions:
+    - from: draft
+      to: approved
+      label: Approve
+- code: TC-SDS
+  name: Design Test
+  prefix: TC-SDS-
+  directory: 07_tc_sds
+  type: test
+  verifies:
+  - SDS
+  properties:
+  - id
+  - title
+  - prerequisites
+  - steps
+  - expected_result
+  - verifies
+  - verification_status
+  - reviewer
+  - review_date
+  relations:
+  - target: SDS
+    label: verifies
+  icon: 🔬
+  page_enabled: true
+  page_number: 11
+  lifecycle:
+    states:
+    - id: draft
+      label: Draft
+      color: warning
+      icon: 📝
+      is_initial: true
+    - id: approved
+      label: Approved
+      color: success
+      icon: ✅
+      is_stable: true
+    transitions:
+    - from: draft
+      to: approved
+      label: Approve
+- code: DEFECT
+  name: Defect
+  prefix: DEF-
+  directory: 08_defect
+  properties:
+  - id
+  - title
+  - description
+  - severity
+  - priority
+  - found_in_version
+  - affected_components
+  - steps_to_reproduce
+  - expected_behavior
+  - actual_behavior
+  - assigned_to
+  icon: 🐛
+  page_enabled: true
+  page_number: 8
+  lifecycle:
+    states:
+    - id: open
+      label: Open
+      color: error
+      icon: 🔴
+      is_initial: true
+    - id: in_progress
+      label: In Progress
+      color: warning
+      icon: 🔧
+    - id: resolved
+      label: Resolved
+      color: info
+      icon: ✅
+    - id: verified
+      label: Verified
+      color: success
+      icon: 🎯
+    - id: closed
+      label: Closed
+      color: secondary
+      icon: 🔒
+    - id: reopened
+      label: Reopened
+      color: error
+      icon: 🔄
+    transitions:
+    - from: open
+      to: in_progress
+      label: Start Work
+      criteria:
+      - id: assigned
+        name: Assigned to developer
+        check_type: field_not_empty
+        field: assigned_to
+        required: true
+      - id: severity_set
+        name: Severity defined
+        check_type: field_not_empty
+        field: severity
+        required: true
+    - from: in_progress
+      to: resolved
+      label: Resolve
+      criteria:
+      - id: fix_implemented
+        name: Fix implemented
+        check_type: manual
+        required: true
+      - id: root_cause
+        name: Root cause documented
+        check_type: field_not_empty
+        field: description
+        required: true
+    - from: resolved
+      to: verified
+      label: Verify Fix
+      criteria:
+      - id: verification_complete
+        name: Verification completed
+        check_type: manual
+        required: true
+    - from: verified
+      to: closed
+      label: Close
+      criteria:
+      - id: closure_approved
+        name: Closure approved
+        check_type: manual
+        required: true
+    - from: closed
+      to: reopened
+      label: Reopen
+      criteria:
+      - id: reopen_reason
+        name: Reopen reason documented
+        check_type: manual
+        required: true
+    - from: reopened
+      to: in_progress
+      label: Resume Work
+- code: CR
+  name: Change Request
+  prefix: CR-
+  directory: 09_cr
+  properties:
+  - id
+  - title
+  - description
+  - justification
+  - impact_assessment
+  - priority
+  - requested_by
+  - assigned_to
+  - target_version
+  - affected_items
+  - implementation_prs
+  icon: 📝
+  page_enabled: true
+  page_number: 9
+  lifecycle:
+    states:
+    - id: submitted
+      label: Submitted
+      color: info
+      icon: 📥
+      is_initial: true
+    - id: under_review
+      label: Under Review
+      color: warning
+      icon: 🔍
+    - id: approved
+      label: Approved
+      color: success
+      icon: ✅
+    - id: rejected
+      label: Rejected
+      color: error
+      icon: ❌
+      is_stable: true
+    - id: in_progress
+      label: In Progress
+      color: warning
+      icon: 🔧
+    - id: completed
+      label: Completed
+      color: success
+      icon: 🎯
+      is_stable: true
+    - id: cancelled
+      label: Cancelled
+      color: secondary
+      icon: 🚫
+      is_stable: true
+    transitions:
+    - from: submitted
+      to: under_review
+      label: Start Review
+      criteria:
+      - id: description_complete
+        name: Description complete
+        check_type: field_not_empty
+        field: description
+        required: true
+      - id: justification_provided
+        name: Justification provided
+        check_type: field_not_empty
+        field: justification
+        required: true
+    - from: under_review
+      to: approved
+      label: Approve
+      criteria:
+      - id: impact_assessed
+        name: Impact assessed
+        check_type: field_not_empty
+        field: impact_assessment
+        required: true
+      - id: review_complete
+        name: Review completed
+        check_type: manual
+        required: true
+    - from: under_review
+      to: rejected
+      label: Reject
+      criteria:
+      - id: rejection_reason
+        name: Rejection reason documented
+        check_type: manual
+        required: true
+    - from: approved
+      to: in_progress
+      label: Start Implementation
+      criteria:
+      - id: assigned
+        name: Assigned to developer
+        check_type: field_not_empty
+        field: assigned_to
+        required: true
+    - from: in_progress
+      to: completed
+      label: Complete
+      criteria:
+      - id: implementation_done
+        name: Implementation completed
+        check_type: manual
+        required: true
+      - id: testing_done
+        name: Testing completed
+        check_type: manual
+        required: true
+    - from: submitted
+      to: cancelled
+      label: Cancel
+    - from: under_review
+      to: cancelled
+      label: Cancel
+- code: RELEASE
+  name: Release
+  prefix: REL-
+  properties:
+  - id
+  - title
+  - content
+  - version
+  - release_date
+  - included_items
+  - verification_status
+  - verified_by
+  - verified_date
+  - release_notes
+  - links
+  icon: 🚀
+  page_enabled: true
+  page_number: 4
+  lifecycle:
+    states:
+    - id: planning
+      label: Planning
+      color: info
+      icon: �
+      is_initial: true
+    - id: developing
+      label: Developing
+      color: warning
+      icon: 🔧
+    - id: testing
+      label: Testing
+      color: warning
+      icon: 🧪
+    - id: released
+      label: Released
+      color: success
+      icon: 🚀
+      is_stable: true
+    transitions:
+    - from: planning
+      to: developing
+      label: Start Development
+      criteria:
+      - id: version_set
+        name: Version defined
+        check_type: field_not_empty
+        field: version
+        required: true
+      - id: items_planned
+        name: Items planned
+        check_type: field_not_empty
+        field: included_items
+        required: true
+    - from: developing
+      to: testing
+      label: Start Testing
+      criteria:
+      - id: development_complete
+        name: Development completed
+        check_type: manual
+        required: true
+    - from: testing
+      to: released
+      label: Release
+      criteria:
+      - id: testing_complete
+        name: Testing completed
+        check_type: manual
+        required: true
+      - id: verification_done
+        name: Verification completed
+        check_type: field_not_empty
+        field: verification_status
+        required: true
+- code: SOUP
+  name: Software of Unknown Provenance
+  prefix: SOUP-
+  directory: 11_soup
+  properties:
+  - id
+  - title
+  - content
+  - name
+  - version
+  - manufacturer
+  - license
+  - purpose
+  - homepage
+  - cve_count
+  - risk_rating
+  - safety_class
+  - verification_method
+  - reviewer
+  - review_date
+  icon: 📦
+  page_enabled: true
+  page_number: 11
+  lifecycle:
+    states:
+    - id: draft
+      label: Draft
+      color: warning
+      icon: 📝
+      is_initial: true
+    - id: under_review
+      label: Under Review
+      color: info
+      icon: 🔍
+    - id: approved
+      label: Approved
+      color: success
+      icon: ✅
+      is_stable: true
+    - id: rejected
+      label: Rejected
+      color: error
+      icon: ❌
+    transitions:
+    - from: draft
+      to: under_review
+      label: Submit for Review
+      criteria:
+      - id: purpose_set
+        name: Purpose documented
+        description: SOUP usage purpose must be documented per IEC 62304 5.3.4
+        check_type: field_not_empty
+        field: purpose
+        required: true
+      - id: safety_class_set
+        name: Safety class assigned
+        description: Safety classification (A/B/C) must be assigned
+        check_type: field_not_empty
+        field: safety_class
+        required: true
+      - id: linked_to_req
+        name: Linked to SYS requirement
+        description: SOUP must be linked to at least one system requirement
+        check_type: has_links
+        required: true
+    - from: under_review
+      to: approved
+      label: Approve
+      criteria:
+      - id: verification_done
+        name: Verification completed
+        description: SOUP verification evidence documented
+        check_type: manual
+        required: true
+    - from: under_review
+      to: rejected
+      label: Reject
+      criteria:
+      - id: rejection_reason
+        name: Rejection reason
+        description: Reason for rejecting SOUP must be documented
+        check_type: manual
+        required: true
+    - from: rejected
+      to: draft
+      label: Revise
+      criteria: []
+- code: ARCH
+  name: Architecture Specification
+  prefix: ARCH-
+  directory: 12_arch
+  properties:
+  - id
+  - title
+  - content
+  - component
+  - architecture_type
+  - design_rationale
+  - alternatives_considered
+  - technology_stack
+  - interfaces
+  - links
+  - review_by
+  - review_date
+  - approved_by
+  - approved_date
+  - deprecated_by
+  - deprecated_date
+  relations:
+  - target: SYS
+    type: realizes
+    label: realizes
+  - target: SDS
+    type: guides
+    label: guides
+  icon: 🏗️
+  page_enabled: true
+  page_number: 12
+  lifecycle:
+    states:
+    - id: draft
+      label: Draft
+      is_initial: true
+      color: warning
+      icon: 📝
+    - id: review
+      label: In Review
+      color: info
+      icon: 👀
+    - id: approved
+      label: Approved
+      color: success
+      icon: ✅
+      is_stable: true
+    - id: deprecated
+      label: Deprecated
+      color: secondary
+      icon: 🗄️
+    transitions:
+    - from: draft
+      to: review
+      label: Submit for Review
+      criteria:
+      - id: content_complete
+        name: Content documented
+        check_type: field_not_empty
+        field: content
+        required: true
+      - id: title_defined
+        name: Title defined
+        check_type: field_not_empty
+        field: title
+        required: true
+      - id: rationale_documented
+        name: Design rationale documented
+        check_type: field_not_empty
+        field: design_rationale
+        required: true
+    - from: review
+      to: approved
+      label: Approve
+      criteria:
+      - id: review_complete
+        name: Review completed
+        check_type: manual
+        required: true
+    - from: review
+      to: draft
+      label: Request Changes
+      criteria:
+      - id: changes_requested
+        name: Changes documented
+        check_type: manual
+        required: true
+    - from: approved
+      to: deprecated
+      label: Deprecate
+      criteria:
+      - id: deprecation_reason
+        name: Deprecation reason documented
+        check_type: manual
+        required: true
 policies:
-  require_test_coverage: ["SYS", "CRS", "SDS"]
-
+  require_test_coverage:
+  - SYS
+  - CRS
+  - SDS
 traceability_matrices:
-  # Primary Requirements Chain (UC → CRS → SYS → SRS → SWDD)
-  - name: "Complete Requirements Chain"
-    description: "Full traceability from use cases to detailed design"
-    path: ["UC", "CRS", "SYS", "SRS", "SWDD"]
-  
-  # Architecture Traceability (Requirements → Architecture)
-  - name: "System Requirements to System Architecture"
-    description: "System requirements and their architectural designs"
-    path: ["SYS", "SYS_ARCH"]
-  
-  - name: "Software Requirements to Software Architecture"
-    description: "Software requirements and their architectural designs"
-    path: ["SRS", "SWAD"]
-  
-  # Risk Management
-  - name: "Risk to Control Measures"
-    description: "Risks to risk control measures"
-    path: ["RISK", "RCM"]
-  
-  - name: "Risk Control to System"
-    description: "Risk control measures to system requirements"
-    path: ["RCM", "SYS"]
-  
-  # Testing & Verification
-  - name: "Customer Validation"
-    description: "Customer requirements to validation tests"
-    path: ["CRS", "TC-CRS"]
-  
-  - name: "System Verification"
-    description: "System requirements to system tests"
-    path: ["SYS", "TC-SYS"]
-  
-  - name: "Software Requirements Verification"
-    description: "Software requirements to software tests"
-    path: ["SRS", "TC-SRS"]
-  
-
-
-# Document Generation Configuration
+- name: Complete Requirements Chain
+  description: Full traceability from use cases to detailed design
+  path:
+  - UC
+  - CRS
+  - SYS
+  - SRS
+  - SWDD
+- name: System Requirements to System Architecture
+  description: System requirements and their architectural designs
+  path:
+  - SYS
+  - SYS_ARCH
+- name: Software Requirements to Software Architecture
+  description: Software requirements and their architectural designs
+  path:
+  - SRS
+  - SWAD
+- name: Risk to Control Measures
+  description: Risks to risk control measures
+  path:
+  - RISK
+  - RCM
+- name: Risk Control to System
+  description: Risk control measures to system requirements
+  path:
+  - RCM
+  - SYS
+- name: Customer Validation
+  description: Customer requirements to validation tests
+  path:
+  - CRS
+  - TC-CRS
+- name: System Verification
+  description: System requirements to system tests
+  path:
+  - SYS
+  - TC-SYS
+- name: Software Requirements Verification
+  description: Software requirements to software tests
+  path:
+  - SRS
+  - TC-SRS
 document_specifications:
   CRS:
-    template: "requirements_specification.md.j2"
-    output: "DHF/documents/specifications/Customer_Requirement_Specification.md"
-    doc_type_name: "Customer Requirement"
+    template: requirements_specification.md.j2
+    output: DHF/documents/specifications/Customer_Requirement_Specification.md
+    doc_type_name: Customer Requirement
   SYS:
-    template: "requirements_specification.md.j2"
-    output: "DHF/documents/specifications/System_Requirement_Specification.md"
-    doc_type_name: "System Requirement"
+    template: requirements_specification.md.j2
+    output: DHF/documents/specifications/System_Requirement_Specification.md
+    doc_type_name: System Requirement
   SDS:
-    template: "requirements_specification.md.j2"
-    output: "DHF/documents/specifications/Software_Design_Specification.md"
-    doc_type_name: "Software Design Specification"
+    template: requirements_specification.md.j2
+    output: DHF/documents/specifications/Software_Design_Specification.md
+    doc_type_name: Software Design Specification
   ARCH:
-    template: "architecture_specification.md.j2"
-    output: "DHF/documents/specifications/System_Architecture_Specification.md"
-    doc_type_name: "System Architecture Specification"
+    template: architecture_specification.md.j2
+    output: DHF/documents/specifications/System_Architecture_Specification.md
+    doc_type_name: System Architecture Specification
   TC-CRS:
-    template: "test_specification.md.j2"
-    output: "DHF/documents/specifications/Customer_Requirement_Test_Specification.md"
-    doc_type_name: "Customer Validation Test"
-    test_type: "validation"
+    template: test_specification.md.j2
+    output: DHF/documents/specifications/Customer_Requirement_Test_Specification.md
+    doc_type_name: Customer Validation Test
+    test_type: validation
   TC-SYS:
-    template: "test_specification.md.j2"
-    output: "DHF/documents/specifications/System_Requirement_Test_Specification.md"
-    doc_type_name: "System Test"
-    test_type: "verification"
+    template: test_specification.md.j2
+    output: DHF/documents/specifications/System_Requirement_Test_Specification.md
+    doc_type_name: System Test
+    test_type: verification
   TC-SDS:
-    template: "test_specification.md.j2"
-    output: "DHF/documents/specifications/Software_Design_Test_Specification.md"
-    doc_type_name: "Design Test"
-    test_type: "verification"
-
-# Test Integration Configuration
+    template: test_specification.md.j2
+    output: DHF/documents/specifications/Software_Design_Test_Specification.md
+    doc_type_name: Design Test
+    test_type: verification
 test_integration:
-  # Automated test configuration - GitHub API mode only
   automated:
-    # GitHub Actions API mode
     repository: itercharles/CompliantFlow
-    workflow_name: "Test Suite"
-    artifact_name: "test-results"
-    token_env: GITHUB_TOKEN  # Environment variable name
-  
-  # Manual test configuration
+    workflow_name: Test Suite
+    artifact_name: test-results
+    token_env: GITHUB_TOKEN
   manual:
     audit_log: test-results/manual_tests.log
     require_verified_by: true
