@@ -1,11 +1,21 @@
 id: SRS-007
-title: Graph-Based Orphan Detection
+title: Change Impact Tracking
 content: |-
-  Software shall identify orphan items by:
-  - Building directed graph of all items
-  - Finding nodes with no incoming edges
-  - Excluding root types (UC, CRS) from orphan check
-  - Grouping orphans by document type
+  Software shall automatically track impacted objects and link pull requests to change requests.
+  
+  Behavior:
+  - Parse PR descriptions for CR references
+  - Validate referenced CR exists and is editable
+  - Identify affected items from PR file changes
+  - Track all impacted objects in change request
+  - Update CR with PR information and affected item list
+  
+  Acceptance Criteria:
+  - CR references in PR description are detected (format: CR-XXX)
+  - Invalid CR references are rejected with error
+  - All affected items are identified from file paths
+  - Impacted objects are tracked in CR metadata
+  - CR is updated with PR number, URL, and affected items
 derives_from:
-- SYS-006
+- SYS-030
 status: approved
