@@ -26,7 +26,7 @@ class Item(BaseModel):
         validate_assignment=True,
         extra='allow',  # Allow custom fields for flexibility
         populate_by_name=True,
-    )
+    ) 
     
     # Core fields (Doorstop-inspired)
     uid: str = Field(..., description="Unique identifier", alias="id")
