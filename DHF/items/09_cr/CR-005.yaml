@@ -1,0 +1,9 @@
+id: CR-005
+title: Improve the effectiveness of the auto testing
+status: submitted
+affected_items:
+- TC-SDS-001
+implementation_prs:
+- pr_number: 5
+  pr_url: https://github.com/itercharles/CompliantFlow/pull/5
+  title: Feature/user workflow tests
