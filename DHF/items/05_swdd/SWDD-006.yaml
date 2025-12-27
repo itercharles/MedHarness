@@ -1,36 +1,46 @@
 id: SWDD-006
-title: UI Helper Functions for Item Hyperlinks
+title: Policy Validation Execution
 content: |-
-  **Purpose:** Provide helper functions for item hyperlink navigation with page-specific URLs
+  Detailed design for executing compliance policy validation rules.
   
-  **Functions:**
+  **Component Structure**:
+  - PolicyEngine: Main validation orchestrator
+  - RuleExecutor: Execute individual rules
+  - EvidenceCollector: Gather validation evidence
+  - ScoreCalculator: Compute compliance scores
   
-  ### get_page_url_for_item(item_id, core)
-  **Purpose:** Generate page-specific URLs for item IDs
-  **Algorithm:**
-  1. Extract document type prefix from item ID
-  2. For test cases (TC-*), extract first two parts as prefix
-  3. If core provided, iterate through doc_types to find matching page
-  4. Return URL format: /{page_number}_{code}?item={item_id}
-  5. Fallback: return ?item={item_id} if page not found
-  **Complexity:** O(n) where n = number of document types
+  **Algorithm**:
+  1. Load policy group from YAML configuration
+  2. For each validation rule in policy:
+     a. Execute rule against DHF items
+     b. Collect pass/fail result with evidence
+  3. Calculate compliance score: (passed / total) × 100
+  4. Return ValidationResults with details
   
-  ### make_item_columns_clickable(df, core)
-  **Purpose:** Transform DataFrame to make item ID columns clickable
-  **Algorithm:**
-  1. Return early if DataFrame is empty
-  2. Create copy of DataFrame
-  3. For each column with object type data:
-     - Sample first non-null value
-     - If matches item ID pattern (contains hyphen):
-       - Transform values to URLs using get_page_url_for_item()
-       - Create LinkColumn config with display_text regex
-  4. Return tuple of (transformed DataFrame, column config)
-  **Complexity:** O(n*m) where n = rows, m = columns
+  **Key Interfaces**:
+  ```python
+  class PolicyEngine:
+      def execute_validation(policy_name: str) -> ValidationResults
+      def validate_all() -> dict
+      def get_policy_score(policy_name: str) -> float
   
-  **Module:** src/utils/ui_helpers.py
+  class ValidationRule(ABC):
+      @abstractmethod
+      def validate(items: List[Item]) -> (bool, str)
+  ```
+  
+  **Design Patterns**:
+  - Strategy pattern for validation rules
+  - Template method for validation flow
+  - Composite pattern for rule groups
+  
+  **Rule Types**:
+  - Coverage rules: Check source items have verification
+  - Orphan rules: Check items have required links
+  - Status rules: Check items in required states
+  
+  **Complexity**: O(R × I) where R = rules, I = items per rule
 implements:
-  - SRS-013
-guided_by:
-  - SWAD-001
+- SRS-005
+- SWAD-003
 status: approved

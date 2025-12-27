@@ -1,23 +1,49 @@
 id: SWDD-008
-title: Universal Page Template Hyperlink Integration
+title: PR-CR Linking and Impact Tracking
 content: |-
-  **Purpose:** Integrate hyperlink navigation into all dynamically generated document type pages
+  Detailed design for linking pull requests to change requests and tracking impacted objects.
   
-  **Algorithm:**
-  1. Import UI helpers (check_and_show_item_detail, make_item_columns_clickable)
-  2. After page title, call check_and_show_item_detail(core)
-  3. If item detail shown, add separator line
-  4. Before rendering main items table:
-     - Create DataFrame with item data
-     - Call make_item_columns_clickable(df) to get column config
-     - Pass column_config to st.dataframe()
-  5. Item ID columns automatically become clickable links
+  **Component Structure**:
+  - PRLinker: Link PRs to CRs
+  - CRReferenceParser: Parse CR-XXX from PR description
+  - ImpactAnalyzer: Identify affected items from PR files
+  - CRUpdater: Update CR with PR information
   
-  **Affected Pages:** All dynamic document pages (UC, CRS, SYS, SRS, SWAD, SWDD, TC-*, etc.)
-  **Complexity:** O(1) overhead per page render
-  **Module:** src/pages/universal_page_template.py
+  **Algorithm**:
+  1. Parse PR description with regex for CR-XXX pattern
+  2. Validate referenced CR exists and status is editable
+  3. Extract affected items from PR file changes:
+     a. Get list of changed files from PR
+     b. Map file paths to item IDs (e.g., DHF/items/03_req_srs/SRS-001.yaml → SRS-001)
+  4. Update CR YAML file:
+     a. Add PR info (number, URL, title) to implementation_prs list
+     b. Add affected items to affected_items list
+  5. Commit CR file changes
+  
+  **Key Interfaces**:
+  ```python
+  class PRLinker:
+      def link_pr_to_cr(pr_number: int, cr_id: str) -> None
+      def extract_cr_reference(pr_description: str) -> Optional[str]
+      def get_affected_items(pr_files: List[str]) -> List[str]
+  
+  class ImpactAnalyzer:
+      def analyze_impact(affected_items: List[str]) -> ImpactReport
+      def get_downstream_items(item_ids: List[str]) -> Set[str]
+  ```
+  
+  **Design Patterns**:
+  - Observer pattern for PR events
+  - Strategy pattern for impact analysis
+  - Adapter pattern for GitHub API
+  
+  **Error Handling**:
+  - Reject if CR not found
+  - Reject if CR status not editable
+  - Log warnings for unrecognized file paths
+  
+  **Complexity**: O(F) where F = files in PR
 implements:
-  - SRS-013
-guided_by:
-  - SWAD-001
+- SRS-007
+- SWAD-004
 status: approved

@@ -1,45 +1,48 @@
 id: SWDD-010
-title: Git Integration Implementation
+title: Template Rendering
 content: |-
-  **Purpose:** Automated git commits for item changes
+  Detailed design for rendering Jinja2 templates with DHF item data.
   
-  **Implementation Details:**
+  **Component Structure**:
+  - TemplateRenderer: Main rendering orchestrator
+  - TemplateLoader: Load templates from directory
+  - ContextBuilder: Build template context
+  - MarkdownGenerator: Generate markdown output
   
-  **Commit Trigger Points:**
-  - Item creation
-  - Item update
-  - Item deletion
-  - Status transitions
+  **Algorithm**:
+  1. Load Jinja2 template from configured path
+  2. Gather all items for document type
+  3. Build template context:
+     a. Items list
+     b. Metadata (version, date, status)
+     c. Configuration data
+     d. Traceability data (if needed)
+  4. Render template with Jinja2 engine
+  5. Return generated markdown
   
-  **Commit Message Format:**
+  **Key Interfaces**:
+  ```python
+  class DocumentGenerator:
+      def generate_specification(doc_type: str) -> Path
+      def render_template(template: str, context: dict) -> str
+  
+  class TemplateRenderer:
+      def load_template(name: str) -> Template
+      def render(template: Template, context: dict) -> str
   ```
-  [ACTION] ITEM-ID: Brief description
   
-  Author: User Name <email>
-  Type: Document Type
-  Status: New Status (if applicable)
-  ```
+  **Design Patterns**:
+  - Template method for generation flow
+  - Builder pattern for context creation
+  - Strategy pattern for different document types
   
-  **Process Flow:**
-  1. Item change occurs in application
-  2. ItemSaver writes file to disk
-  3. GitRepository.commit_item_change() called
-  4. Generate commit message with item context
-  5. Stage changed file: `git add <file_path>`
-  6. Create commit: `git commit -m "<message>" --author="<author>"`
-  7. Optional: Push to remote if configured
+  **Template Context Structure**:
+  - items: List[Item]
+  - metadata: dict (version, date, author, status)
+  - config: dict (project settings)
+  - traceability: dict (graph data if needed)
   
-  **Author Attribution:**
-  - Read from session context or environment
-  - Format: "Name <email>"
-  - Fallback to system user if not provided
-  
-  **Error Handling:**
-  - Log git errors but don't block item save
-  - Retry logic for network failures (push)
-  - Validate git repository exists before operations
+  **Complexity**: O(N) where N = items to include
 implements:
-- SRS-004
-guided_by:
-- SWAD-010
+- SRS-009
 status: approved

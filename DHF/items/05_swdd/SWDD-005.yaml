@@ -1,26 +1,39 @@
 id: SWDD-005
-title: Document Generation Process
+title: Coverage Calculation
 content: |-
-  **Purpose:** Generate specification documents from templates
+  Detailed design for calculating verification coverage from source to test items.
   
-  **Process:**
-  1. Load template file for document type
-  2. Gather all items of specified type
-  3. Prepare context data (items, metadata)
-  4. Render template with context
-  5. Save generated markdown
-  6. Return output file path
+  **Component Structure**:
+  - CoverageAnalyzer: Main analysis logic
+  - PathFinder: Find paths in graph
+  - CoverageCalculator: Compute percentages
   
-  **Template Context:**
-  - items: List of item data
-  - doc_type_name: Display name
-  - version: Document version
-  - generation_date: Timestamp
-  - project_name: Project identifier
+  **Algorithm**:
+  1. Get all source items (e.g., requirements)
+  2. For each source: traverse graph to find verification items
+  3. Mark source as verified if path to test exists
+  4. Calculate coverage: (verified_count / total_count) × 100
+  5. Return coverage report with unverified items
   
-  **Output:** Markdown file ready for PDF conversion
+  **Key Interfaces**:
+  ```python
+  class CoverageAnalyzer:
+      def calculate_coverage(source_type: str, target_type: str) -> dict
+      def get_uncovered_items(source_type: str) -> List[str]
+      def get_coverage_report() -> CoverageReport
+  ```
+  
+  **Design Patterns**:
+  - Visitor pattern for graph traversal
+  - Strategy pattern for different coverage types
+  
+  **Coverage Metrics**:
+  - Percentage: (verified / total) × 100
+  - Uncovered items list
+  - Coverage by document type
+  
+  **Complexity**: O(N × D) where N = source items, D = graph depth
 implements:
-- SRS-003
-guided_by:
+- SRS-004
 - SWAD-002
 status: approved

@@ -1,48 +1,41 @@
 id: SWDD-011
-title: Configuration Validation Implementation
+title: PDF Export
 content: |-
-  **Purpose:** Validate configuration schema with fail-fast error reporting
+  Detailed design for exporting markdown documents to PDF format.
   
-  **Implementation Details:**
+  **Component Structure**:
+  - PDFExporter: Main export orchestrator
+  - MarkdownConverter: Convert markdown to HTML
+  - CSSLoader: Load PDF styling
+  - PDFGenerator: Generate PDF with WeasyPrint
   
-  **Validation Stages:**
+  **Algorithm**:
+  1. Convert markdown to HTML using Python-Markdown
+  2. Load CSS stylesheet for PDF styling
+  3. Apply CSS to HTML content
+  4. Generate PDF with WeasyPrint library
+  5. Write PDF to output path
+  6. Return output path
   
-  **1. File Loading:**
-  - Check configuration file exists
-  - Parse YAML/JSON content
-  - Handle syntax errors with line numbers
-  
-  **2. Schema Validation:**
-  - Validate against Pydantic models
-  - Check required fields present
-  - Verify field types (str, int, list, dict)
-  - Validate enum values
-  
-  **3. Semantic Validation:**
-  - Check document type codes are unique
-  - Verify page numbers are unique (if page_enabled)
-  - Validate lifecycle state transitions are acyclic
-  - Check relationship targets exist
-  
-  **Error Reporting:**
-  - Fail-fast: Stop on first critical error
-  - Detailed error messages with context
-  - Include field path (e.g., "doc_types[2].lifecycle.states[0].id")
-  - Suggest corrections when possible
-  
-  **Validation Flow:**
+  **Key Interfaces**:
   ```python
-  try:
-      config = load_yaml(config_path)
-      validated = ProjectConfig(**config)  # Pydantic validation
-      validate_semantics(validated)
-      return validated
-  except ValidationError as e:
-      print_detailed_error(e)
-      sys.exit(1)  # Fail-fast
+  class PDFExporter:
+      def export_to_pdf(markdown: str, output: Path) -> None
+      def convert_to_html(markdown: str) -> str
+      def apply_styling(html: str, css: str) -> str
   ```
+  
+  **Design Patterns**:
+  - Pipeline pattern for conversion flow
+  - Strategy pattern for different output formats
+  
+  **Styling**:
+  - CSS for page layout (margins, headers, footers)
+  - Typography (fonts, sizes, line heights)
+  - Table styling
+  - Code block formatting
+  
+  **Complexity**: O(M) where M = markdown content length
 implements:
 - SRS-009
-guided_by:
-- SWAD-010
 status: approved

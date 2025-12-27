@@ -1,20 +1,37 @@
 id: SWDD-002
-title: Coverage Calculation Algorithm
+title: Item Persistence with Git
 content: |-
-  **Purpose:** Calculate test coverage for requirements
+  Detailed design for saving DHF items to YAML files with Git commit tracking.
   
-  **Algorithm:**
-  1. Get all requirements of specified type
-  2. For each requirement, find all descendant items
-  3. Check if any descendant is a test case
-  4. Count requirements with test coverage
-  5. Calculate percentage: (verified / total) * 100
-  6. Return coverage metrics and uncovered items
+  **Component Structure**:
+  - ItemSaver: Main saving class
+  - YAMLSerializer: Convert items to YAML
+  - GitCommitter: Create Git commits
   
-  **Complexity:** O(N * M) where N = requirements, M = avg descendants
-  **Data Structure:** Directed graph with descendant traversal
+  **Algorithm**:
+  1. Validate item against Pydantic schema
+  2. Serialize item to YAML format
+  3. Write to file atomically (temp file + rename)
+  4. Create Git commit with item ID and author
+  5. Rollback file on Git failure
+  
+  **Key Interfaces**:
+  ```python
+  class ItemSaver:
+      def save(item: Item, author: str) -> Path
+      def delete(uid: str, author: str) -> bool
+  ```
+  
+  **Design Patterns**:
+  - Transaction pattern for atomic operations
+  - Command pattern for Git operations
+  
+  **Error Handling**:
+  - Rollback file write if Git commit fails
+  - Validate before save to prevent corruption
+  
+  **Complexity**: O(1) per item
 implements:
-- SRS-008
-guided_by:
-- SWAD-002
+- SRS-001
+- SWAD-001
 status: approved
