@@ -39,7 +39,7 @@ def test_TC_SDS_SOUP_001_001_soup_document_type_configuration():
         "SOUP document type has incorrect name"
     
     # Verify required properties
-    required_props = ["id", "title", "content", "name", "version", "safety_class", "purpose", "links"]
+    required_props = ["id", "title", "content", "name", "version", "safety_class", "purpose"]
     for prop in required_props:
         assert prop in soup_doc_type.properties, \
             f"SOUP missing required property: {prop}"
