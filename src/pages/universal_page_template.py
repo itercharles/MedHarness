@@ -457,13 +457,9 @@ def render_new_item_form(
                     if key != 'id' and value:  # Skip empty values
                         new_item[key] = value
                 
-                # Ensure links is a list
-                if 'links' not in new_item:
-                    new_item['links'] = []
-                
-                # Save item
+                # Save item using create_item (not update_item)
                 try:
-                    core.update_item(form_data['id'], new_item)
+                    core.create_item(new_item)
                     st.success(f"✅ Created {form_data['id']}")
                     
                     # Clear creation mode and select new item
@@ -851,10 +847,6 @@ def render_item_edit_form(
                     elif key in updated_item:
                         # Remove field if cleared
                         del updated_item[key]
-                
-                # Ensure links is a list
-                if 'links' not in updated_item:
-                    updated_item['links'] = []
                 
                 # Save item (core will handle status reset if needed)
                 try:
