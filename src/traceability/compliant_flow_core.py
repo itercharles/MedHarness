@@ -420,9 +420,9 @@ class CompliantFlowCore:
         
         for prop in properties:
             # Handle both string and PropertyConfig
+            # STRICT: All properties must be explicitly PropertyConfig
             if isinstance(prop, str):
-                prop_name = prop
-                prop_config = self._infer_property_config(prop_name)
+                raise ValueError(f"Invalid property configuration: '{prop}'. String shorthand is no longer supported. Please use a full PropertyConfig dictionary with a 'name' field.")
             elif isinstance(prop, PropertyConfig):
                 prop_name = prop.name
                 prop_config = prop
@@ -715,29 +715,7 @@ class CompliantFlowCore:
         )
         return {'success': success, 'message': message}
 
-    def _infer_property_config(self, prop_name: str):
-        """Infer PropertyConfig from property name (backward compatibility)."""
-        from .models.config import PropertyConfig, PropertyFormat
-        
-        # Infer format based on property name
-        if prop_name == 'title':
-            return PropertyConfig(name=prop_name, format=PropertyFormat.SHORT_TEXT, required=True)
-        elif prop_name == 'content':
-            return PropertyConfig(name=prop_name, format=PropertyFormat.LONG_TEXT, required=True, height=150)
-        elif prop_name in ['description', 'justification', 'impact_assessment', 'hazard', 'cause', 'effect']:
-            return PropertyConfig(name=prop_name, format=PropertyFormat.LONG_TEXT, height=100)
-        elif prop_name == 'verification_method':
-            return PropertyConfig(name=prop_name, format=PropertyFormat.SELECT, 
-                                options=["Test", "Analysis", "Inspection", "Demonstration"])
-        elif prop_name in ['severity_pre', 'probability_pre', 'severity_post', 'probability_post']:
-            return PropertyConfig(name=prop_name, format=PropertyFormat.SELECT, 
-                                options=["Low", "Medium", "High"])
-        elif prop_name == 'critical_safety':
-            return PropertyConfig(name=prop_name, format=PropertyFormat.CHECKBOX)
-        elif prop_name in ['design', 'derives_from', 'implements', 'guided_by', 'informs', 'mitigated_by', 'affected_items']:
-            return PropertyConfig(name=prop_name, format=PropertyFormat.MULTISELECT)
-        else:
-            return PropertyConfig(name=prop_name, format=PropertyFormat.SHORT_TEXT)
+
     
     def _format_to_ui_type(self, format):
         """Convert PropertyFormat to UI type string."""
