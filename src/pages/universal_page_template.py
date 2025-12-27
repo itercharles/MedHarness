@@ -430,12 +430,21 @@ def render_new_item_form(
     with col1:
         if st.button("✅ Create", type="primary", use_container_width=True, key="create_btn"):
             # Validate required fields
+            # Validate required fields dynamically
+            missing_fields = []
             if not form_data.get('id'):
-                st.error("ID is required")
-            elif not form_data.get('title'):
-                st.error("Title is required")
-            elif not form_data.get('content'):
-                st.error("Content is required")
+                missing_fields.append("ID")
+                
+            for field in schema['fields']:
+                if field.get('required') and not form_data.get(field['name']):
+                    # Checkbox/Select might be False/0 but valid?
+                    # For now assume text fields.
+                    if field.get('type') == 'checkbox': continue
+                    missing_fields.append(field['label'].replace(' *', ''))
+            
+            if missing_fields:
+                for missing in missing_fields:
+                    st.error(f"{missing} is required")
             else:
                 # Create new item with all filled fields
                 new_item = {
@@ -821,10 +830,16 @@ def render_item_edit_form(
     with col1:
         if st.button("💾 Save", type="primary", use_container_width=True, key=f"save_edit_{item['id']}"):
             # Validate required fields
-            if not form_data.get('title'):
-                st.error("Title is required")
-            elif not form_data.get('content'):
-                st.error("Content is required")
+            # Validate required fields dynamically
+            missing_fields = []
+            for field in schema['fields']:
+                if field.get('required') and not form_data.get(field['name']):
+                    if field.get('type') == 'checkbox': continue
+                    missing_fields.append(field['label'].replace(' *', ''))
+            
+            if missing_fields:
+                for missing in missing_fields:
+                    st.error(f"{missing} is required")
             else:
                 # Update item with edited values
                 updated_item = item.copy()

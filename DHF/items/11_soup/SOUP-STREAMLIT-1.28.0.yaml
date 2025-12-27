@@ -1,7 +1,5 @@
 id: SOUP-STREAMLIT-1.28.0
 content: Third-party web application framework for building interactive data applications
-links:
-- SYS-001
 title: Streamlit Web Framework
 status: approved
 manual_verifications:

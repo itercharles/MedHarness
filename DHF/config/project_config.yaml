@@ -380,7 +380,7 @@ doc_types:
     name: "Defect"
     prefix: "DEF-"
     directory: "08_defect"
-    properties: ["id", "title", "description", "severity", "priority", "found_in_version", "affected_components", "steps_to_reproduce", "expected_behavior", "actual_behavior", "assigned_to", "links"]
+    properties: ["id", "title", "description", "severity", "priority", "found_in_version", "affected_components", "steps_to_reproduce", "expected_behavior", "actual_behavior", "assigned_to"]
     
     # UI Configuration
     icon: "🐛"
@@ -541,7 +541,7 @@ doc_types:
     name: "Software of Unknown Provenance"
     prefix: "SOUP-"
     directory: "11_soup"
-    properties: ["id", "title", "content", "name", "version", "manufacturer", "license", "purpose", "homepage", "cve_count", "risk_rating", "safety_class", "verification_method", "links", "reviewer", "review_date"]
+    properties: ["id", "title", "content", "name", "version", "manufacturer", "license", "purpose", "homepage", "cve_count", "risk_rating", "safety_class", "verification_method", "reviewer", "review_date"]
     
     # UI Configuration
     icon: "📦"

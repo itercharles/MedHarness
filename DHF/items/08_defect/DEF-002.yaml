@@ -1,8 +1,6 @@
 id: DEF-002
 content: When a release is manually verified, the verification status in the UI does
   not update immediately. The user must refresh the page to see the updated status.
-links:
-- SDS-REL-002
 title: Release verification status not updating after manual verification
 description: 'When a release is manually verified, the verification status in the
   UI does not update immediately.

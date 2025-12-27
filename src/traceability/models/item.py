@@ -30,16 +30,16 @@ class Item(BaseModel):
     
     # Core fields (Doorstop-inspired)
     uid: str = Field(..., description="Unique identifier", alias="id")
-    text: str = Field(..., description="Main content", alias="content")
-    links: List[str] = Field(default_factory=list, description="Generic links to parent items")
-    active: bool = Field(default=True, description="Whether item is active")
-    
     # Typed relationship fields (preserve semantic meaning)
     derives_from: Optional[List[str]] = Field(default=None, description="Items this derives from")
     implements: Optional[List[str]] = Field(default=None, description="Items this implements")
     guided_by: Optional[List[str]] = Field(default=None, description="Items that guide this")
     informs: Optional[List[str]] = Field(default=None, description="Items this informs")
     design: Optional[List[str]] = Field(default=None, description="Items this designs/addresses")
+    mitigated_by: Optional[List[str]] = Field(default=None, description="Items that mitigate this")
+    satisfies: Optional[List[str]] = Field(default=None, description="Items this satisfies")
+    verifies: Optional[List[str]] = Field(default=None, description="Items this verifies")
+    validates: Optional[List[str]] = Field(default=None, description="Items this validates")
     
     # Common fields
     title: Optional[str] = Field(None, description="Item title")
@@ -64,7 +64,10 @@ class Item(BaseModel):
             'guided_by': self.guided_by or [],
             'informs': self.informs or [],
             'design': self.design or [],
-            'links': self.links or []
+            'mitigated_by': self.mitigated_by or [],
+            'satisfies': self.satisfies or [],
+            'verifies': self.verifies or [],
+            'validates': self.validates or []
         }
     
     @property
@@ -88,13 +91,3 @@ class Item(BaseModel):
     def get_parent_uids(self) -> List[str]:
         """Get list of parent UIDs (all linked items)."""
         return self.all_linked_uids
-    
-    def add_link(self, parent_uid: str):
-        """Add a link to a parent item."""
-        if parent_uid not in self.links:
-            self.links.append(parent_uid)
-    
-    def remove_link(self, parent_uid: str):
-        """Remove a link to a parent item."""
-        if parent_uid in self.links:
-            self.links.remove(parent_uid)

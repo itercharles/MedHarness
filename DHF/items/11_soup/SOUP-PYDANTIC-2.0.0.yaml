@@ -1,7 +1,5 @@
 id: SOUP-PYDANTIC-2.0.0
 content: Data validation library using Python type annotations
-links:
-- SYS-001
 title: Pydantic Data Validation
 status: approved
 manual_verifications:
