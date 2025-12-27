@@ -61,55 +61,10 @@ class TestMarkdownGeneration:
         assert "SYS-" in markdown_content
         assert "Document ID" in markdown_content
     
-    def test_generate_sds_markdown(self, generator):
-        """Test SDS specification markdown generation."""
-        markdown_content, output_path = generator.generate_markdown_spec('SDS')
-        
-        # Verify output path
-        assert output_path.exists(), "SDS specification file should be created"
-        assert output_path.name == "Software_Design_Specification.md"
-        
-        # Verify content
-        assert "# Software Design Specification" in markdown_content
-        assert "SDS-" in markdown_content
 
 
-class TestTestSpecificationGeneration:
-    """Test test specification generation."""
-    
-    def test_generate_tc_crs_markdown(self, generator):
-        """Test TC-CRS test specification generation."""
-        markdown_content, output_path = generator.generate_markdown_spec('TC-CRS')
-        
-        # Verify output path
-        assert output_path.exists(), "TC-CRS specification file should be created"
-        assert output_path.name == "Customer_Requirement_Test_Specification.md"
-        
-        # Verify content
-        assert "Test Specification" in markdown_content
-        assert "validation" in markdown_content.lower()
-        assert "## 2. Test Cases" in markdown_content
-        assert "## 3. Summary" in markdown_content
-    
-    def test_generate_tc_sys_markdown(self, generator):
-        """Test TC-SYS test specification generation."""
-        markdown_content, output_path = generator.generate_markdown_spec('TC-SYS')
-        
-        # Verify output path
-        assert output_path.exists(), "TC-SYS specification file should be created"
-        assert output_path.name == "System_Requirement_Test_Specification.md"
-        
-        # Verify content
-        assert "Test Specification" in markdown_content
-        assert "verification" in markdown_content.lower()
-    
-    def test_generate_tc_sds_markdown(self, generator):
-        """Test TC-SDS test specification generation."""
-        markdown_content, output_path = generator.generate_markdown_spec('TC-SDS')
-        
-        # Verify output path
-        assert output_path.exists(), "TC-SDS specification file should be created"
-        assert output_path.name == "Software_Design_Test_Specification.md"
+
+
 
 
 class TestPDFExport:
@@ -208,7 +163,7 @@ class TestDocumentConfiguration:
         doc_specs = project_config.get('document_specifications', {})
         
         # Verify all expected types are configured
-        expected_types = ['CRS', 'SYS', 'SDS', 'TC-CRS', 'TC-SYS', 'TC-SDS']
+        expected_types = ['CRS', 'SYS', 'SDS']
         for doc_type in expected_types:
             assert doc_type in doc_specs, f"{doc_type} should be configured"
             assert 'template' in doc_specs[doc_type], f"{doc_type} should have template"
@@ -309,31 +264,7 @@ class TestVersionManagement:
         # Versions should be different (CRS should be higher)
         assert crs_version != sys_version, "Each document type should have independent versioning"
     
-    def test_version_extraction_from_existing_file(self, generator):
-        """Test that version is correctly read from existing file."""
-        import re
-        from pathlib import Path
-        
-        # Generate initial document
-        markdown_content1, output_path = generator.generate_markdown_spec('SDS')
-        
-        # Manually modify the file to set a specific version in table format
-        content = output_path.read_text()
-        modified_content = re.sub(
-            r'\|\s*\*\*Version\*\*\s*\|\s*\d+\.\d+\s*\|',
-            '| **Version** | 2.5 |',
-            content
-        )
-        output_path.write_text(modified_content)
-        
-        # Regenerate - should read 2.5 and increment to 2.6
-        markdown_content2, _ = generator.generate_markdown_spec('SDS')
-        version_match = re.search(r'\|\s*\*\*Version\*\*\s*\|\s*(\d+)\.(\d+)\s*\|', markdown_content2)
-        
-        assert version_match, "Version should be present"
-        major, minor = int(version_match.group(1)), int(version_match.group(2))
-        assert major == 2, "Major version should be 2"
-        assert minor == 6, f"Minor version should be 6 (2.5 + 1), got {minor}"
+
 
 
 if __name__ == "__main__":

@@ -231,7 +231,7 @@ class DocumentGenerator:
         return self._export_pdf(markdown_content, "Traceability_Matrix")
     
     def _build_traceability_chains(self) -> List[Dict[str, Any]]:
-        """Build CRS → SYS → SDS → Test chains."""
+        """Build CRS → SYS → Test chains."""
         chains = []
         all_items = self.core.get_all_items()
         
@@ -250,16 +250,11 @@ class DocumentGenerator:
                     'crs_title': crs.get('title', 'N/A'),
                     'sys_id': None,
                     'sys_title': None,
-                    'sds_id': None,
                     'test_id': None,
                     'status': crs.get('status', 'draft')
                 })
             else:
                 for sys in sys_items:
-                    # Find linked SDS items
-                    sds_items = [item for item in all_items 
-                                if item['id'].startswith('SDS') and sys['id'] in item.get('links', [])]
-                    
                     # Find test items
                     test_items = [item for item in all_items 
                                  if item['id'].startswith('TC-') and sys['id'] in item.get('links', [])]
@@ -269,7 +264,6 @@ class DocumentGenerator:
                         'crs_title': crs.get('title', 'N/A'),
                         'sys_id': sys['id'],
                         'sys_title': sys.get('title', 'N/A'),
-                        'sds_id': sds_items[0]['id'] if sds_items else None,
                         'test_id': test_items[0]['id'] if test_items else None,
                         'status': sys.get('status', 'draft')
                     })
@@ -282,7 +276,6 @@ class DocumentGenerator:
         
         crs_items = [item for item in all_items if item['id'].startswith('CRS')]
         sys_items = [item for item in all_items if item['id'].startswith('SYS')]
-        sds_items = [item for item in all_items if item['id'].startswith('SDS')]
         test_items = [item for item in all_items if item['id'].startswith('TC-')]
         
         # CRS to SYS coverage
@@ -290,13 +283,8 @@ class DocumentGenerator:
                           if any(sys for sys in sys_items if crs['id'] in sys.get('links', [])))
         crs_to_sys = int((crs_with_sys / len(crs_items) * 100)) if crs_items else 0
         
-        # SYS to SDS coverage
-        sys_with_sds = sum(1 for sys in sys_items 
-                          if any(sds for sds in sds_items if sys['id'] in sds.get('links', [])))
-        sys_to_sds = int((sys_with_sds / len(sys_items) * 100)) if sys_items else 0
-        
         # Requirements to test coverage
-        req_items = crs_items + sys_items + sds_items
+        req_items = crs_items + sys_items
         req_with_test = sum(1 for req in req_items 
                            if any(test for test in test_items if req['id'] in test.get('links', [])))
         req_to_test = int((req_with_test / len(req_items) * 100)) if req_items else 0
@@ -305,9 +293,6 @@ class DocumentGenerator:
             'crs_to_sys': crs_to_sys,
             'crs_with_sys': crs_with_sys,
             'total_crs': len(crs_items),
-            'sys_to_sds': sys_to_sds,
-            'sys_with_sds': sys_with_sds,
-            'total_sys': len(sys_items),
             'req_to_test': req_to_test,
             'req_with_test': req_with_test,
             'total_req': len(req_items)
@@ -319,17 +304,12 @@ class DocumentGenerator:
         
         crs_items = [item for item in all_items if item['id'].startswith('CRS')]
         sys_items = [item for item in all_items if item['id'].startswith('SYS')]
-        sds_items = [item for item in all_items if item['id'].startswith('SDS')]
         test_items = [item for item in all_items if item['id'].startswith('TC-')]
-        req_items = crs_items + sys_items + sds_items
+        req_items = crs_items + sys_items
         
         # CRS without SYS
         crs_no_sys = [crs['id'] for crs in crs_items 
                      if not any(sys for sys in sys_items if crs['id'] in sys.get('links', []))]
-        
-        # SYS without SDS
-        sys_no_sds = [sys['id'] for sys in sys_items 
-                     if not any(sds for sds in sds_items if sys['id'] in sds.get('links', []))]
         
         # Requirements without tests
         req_no_test = [req['id'] for req in req_items 
@@ -337,7 +317,6 @@ class DocumentGenerator:
         
         return {
             'crs': crs_no_sys,
-            'sys': sys_no_sds,
             'req_no_test': req_no_test
         }
     

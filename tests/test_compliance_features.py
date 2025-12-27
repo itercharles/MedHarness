@@ -1,10 +1,8 @@
 """
-Test suite for SDS (Software Design Specification) requirements.
+Test suite for Compliance Features (SOUP, Defect, Release, etc.).
 
-These tests verify that the design requirements are correctly implemented
+These tests verify that the compliance requirements are correctly implemented
 in the CompliantFlow system.
-
-@links: SDS-*
 """
 
 import pytest
@@ -17,12 +15,11 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 from traceability.compliant_flow_core import CompliantFlowCore
 
 
-def test_TC_SDS_SOUP_001_001_soup_document_type_configuration():
+def test_TC_SOUP_001_001_soup_document_type_configuration():
     """
     Verify SOUP Document Type Configuration
     
-    @links: SDS-SOUP-001
-    @test_id: TC-SDS-SOUP-001-001
+    @test_id: TC-SOUP-001-001
     
     Verify that SOUP document type is configured with all required properties
     and lifecycle states per IEC 62304 requirements.
@@ -61,15 +58,14 @@ def test_TC_SDS_SOUP_001_001_soup_document_type_configuration():
     assert len(transitions) > 0, "SOUP should have lifecycle transitions"
 
 
-def test_TC_SDS_DEF_001_001_defect_document_type():
+def test_TC_DEF_001_001_defect_document_type():
     """
     Verify Defect Document Type
     
-    @links: SDS-DEF-001
-    @test_id: TC-SDS-DEF-001-001
+    @test_id: TC-DEF-001-001
     
     Verify that DEFECT document type is configured with required fields
-    for defect tracking per SDS-DEF-001.
+    for defect tracking.
     """
     # Initialize core
     dhf_root = Path(__file__).parent.parent / "DHF"
@@ -79,7 +75,7 @@ def test_TC_SDS_DEF_001_001_defect_document_type():
     defect_doc_type = core.config.get_doc_type("DEFECT")
     assert defect_doc_type is not None, "DEFECT document type not found"
     
-    # Verify required fields per SDS-DEF-001
+    # Verify required fields
     prop_names = {p['name'] if isinstance(p, dict) else p for p in defect_doc_type.properties}
     
     required_fields = ["id", "title", "description", "severity", "priority"]
@@ -99,12 +95,11 @@ def test_TC_SDS_DEF_001_001_defect_document_type():
         assert state in state_ids, f"DEFECT lifecycle missing state: {state}"
 
 
-def test_TC_SDS_DOCGEN_001_001_document_generator_exists():
+def test_TC_DOCGEN_001_001_document_generator_exists():
     """
     Verify Document Generator Module Exists
     
-    @links: SDS-DOCGEN-001
-    @test_id: TC-SDS-DOCGEN-001-001
+    @test_id: TC-DOCGEN-001-001
     
     Verify that document generator module is available for PDF export.
     """
@@ -117,12 +112,11 @@ def test_TC_SDS_DOCGEN_001_001_document_generator_exists():
     assert DocumentGenerator is not None, "DocumentGenerator class not found"
 
 
-def test_TC_SDS_REL_001_001_release_document_type():
+def test_TC_REL_001_001_release_document_type():
     """
     Verify Release Document Type Configuration
     
-    @links: SDS-REL-001
-    @test_id: TC-SDS-REL-001-001
+    @test_id: TC-REL-001-001
     
     Verify that RELEASE document type is configured for release management.
     """
@@ -142,12 +136,11 @@ def test_TC_SDS_REL_001_001_release_document_type():
     assert hasattr(release_doc_type, 'lifecycle'), "RELEASE should have lifecycle"
 
 
-def test_TC_SDS_001_001_networkx_graph_structure():
+def test_TC_CORE_001_001_networkx_graph_structure():
     """
     Verify NetworkX DiGraph Data Structure
     
-    @links: SDS-001
-    @test_id: TC-SDS-001-001
+    @test_id: TC-CORE-001-001
     
     Verify that the system uses NetworkX DiGraph to store items as nodes
     and traceability links as edges.
@@ -172,12 +165,11 @@ def test_TC_SDS_001_001_networkx_graph_structure():
     assert len(G.edges()) > 0, "Graph should have edges (traceability links)"
 
 
-def test_TC_SDS_TRACE_001_001_traceability_matrix_configuration():
+def test_TC_TRACE_001_001_traceability_matrix_configuration():
     """
     Verify Traceability Matrix Configuration
     
-    @links: SDS-TRACE-001
-    @test_id: TC-SDS-TRACE-001-001
+    @test_id: TC-TRACE-001-001
     
     Verify that traceability matrices are configurable in project_config.yaml.
     """

@@ -23,15 +23,11 @@ def generate_missing_tests():
             'prefix': 'TC-CRS',
             'title_prefix': 'Validate'
         },
+        },
         'SYS': {
             'dir': dhf_root / "items/05_tc_sys",
             'prefix': 'TC-SYS',
             'title_prefix': 'Verify'
-        },
-        'SDS': {
-            'dir': dhf_root / "items/07_tc_sds",
-            'prefix': 'TC-SDS',
-            'title_prefix': 'Unit Test'
         }
     }
     
@@ -43,7 +39,7 @@ def generate_missing_tests():
         uid = item['id']
         prefix = uid.split('-')[0]
         
-        if prefix in ['CRS', 'SYS', 'SDS']:
+        if prefix in ['CRS', 'SYS']:
             requirements.append(item)
         elif prefix in ['TC']:
             test_cases.append(item)
@@ -73,13 +69,8 @@ def generate_missing_tests():
             
         # Determine new TC ID
         # We try to match ID if possible: SYS-001 -> TC-SYS-001
-        # If TC-SYS-001 exists (but points elsewhere? unlikely), we might skip or append
-        # But for now, let's assume 1:1 naming is safe if we strictly base it on Req ID
         
-        if req_type == 'SDS':
-             # SDS-001 -> TC-SDS-001
-             tc_id = f"TC-{req_id}"
-        elif req_type == 'SYS':
+        if req_type == 'SYS':
              tc_id = f"TC-{req_id}"
         elif req_type == 'CRS':
              tc_id = f"TC-{req_id}"

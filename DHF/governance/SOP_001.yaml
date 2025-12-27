@@ -9,5 +9,5 @@ policies:
     automation:
        check: "attribute_presence"
        params:
-         type_code: ["USN", "SYS", "SDS"]
+         type_code: ["USN", "SYS", "SWAD", "SWDD"]
          attribute: "reviewer"
