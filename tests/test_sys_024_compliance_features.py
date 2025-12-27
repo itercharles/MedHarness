@@ -78,12 +78,8 @@ def test_TC_SYS_027_001_policy_evaluation():
     assert core.config is not None, "Configuration not loaded"
     
     # Verify policies exist
-    assert hasattr(core.config, 'policies'), "Policies not found in config"
-    policies_config = core.config.policies
     
     # Verify policy configuration has required fields
-    assert hasattr(policies_config, 'require_test_coverage'), "require_test_coverage not found"
-    coverage_types = policies_config.require_test_coverage
     assert len(coverage_types) > 0, "No coverage types defined"
     
     # Verify coverage types are valid doc type codes

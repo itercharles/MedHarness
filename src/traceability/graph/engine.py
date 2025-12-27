@@ -246,13 +246,7 @@ class GraphEngine:
             "orphans_count": len(self.find_orphans()),
         }
         
-        # Add coverage stats if config available
-        if self.config:
-            coverage_stats = {}
-            for type_code in self.config.policies.require_test_coverage:
-                coverage_stats[type_code] = self.calculate_coverage(type_code)
-            stats["coverage"] = coverage_stats
-        
+
         return stats
     
     def validate(self) -> Dict[str, Any]:

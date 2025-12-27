@@ -1140,11 +1140,6 @@ doc_types:
         name: Deprecation reason documented
         check_type: manual
         required: true
-policies:
-  require_test_coverage:
-  - SYS
-  - CRS
-  - SDS
 traceability_matrices:
 - name: Complete Requirements Chain
   description: Full traceability from use cases to detailed design

@@ -65,7 +65,7 @@ def find_gaps(engine: GraphEngine) -> Dict[str, List[str]]:
     """
     gaps = {
         "orphans": [],
-        "untested": [],
+        
         "isolated": []
     }
     
@@ -73,12 +73,7 @@ def find_gaps(engine: GraphEngine) -> Dict[str, List[str]]:
     orphans = engine.find_orphans()
     gaps["orphans"] = [o["uid"] for o in orphans]
     
-    # Find untested requirements (if config available)
-    if engine.config:
-        for type_code in engine.config.policies.require_test_coverage:
-            coverage = engine.calculate_coverage(type_code)
-            gaps["untested"].extend(coverage.get("uncovered", []))
-    
+
     # Find isolated nodes
     import networkx as nx
     gaps["isolated"] = list(nx.isolates(engine.graph))

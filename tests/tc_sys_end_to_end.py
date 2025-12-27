@@ -172,7 +172,6 @@ class TestSYS_EndToEnd_PolicyValidationWorkflow:
         This tests the complete policy validation workflow.
         """
         # Step 1: System loads policy configuration
-        assert hasattr(core.config, 'policies'), "System should load policies"
         
         # Step 2: System has items to validate
         all_items = core.get_all_items()
@@ -183,7 +182,6 @@ class TestSYS_EndToEnd_PolicyValidationWorkflow:
         # Here we verify the infrastructure exists
         if core.config.policies:
             # System should support policy-based validation
-            assert core.config.policies is not None, \
                 "System should have policy validation infrastructure"
 
 

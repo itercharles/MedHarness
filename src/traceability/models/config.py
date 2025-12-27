@@ -82,10 +82,6 @@ class DocTypeConfig(BaseModel):
 
 
 
-class PoliciesConfig(BaseModel):
-    """Project policies configuration."""
-    
-    require_test_coverage: List[str] = Field(default_factory=list, description="Document types requiring test coverage")
 
 
 class TraceabilityMatrix(BaseModel):
@@ -99,7 +95,6 @@ class ProjectConfig(BaseModel):
     
     change_control: Optional[dict] = Field(default_factory=dict, description="Change control configuration")
     doc_types: List[DocTypeConfig] = Field(..., description="Document type configurations")
-    policies: PoliciesConfig = Field(default_factory=PoliciesConfig, description="Project policies")
     traceability_matrices: List['TraceabilityMatrix'] = Field(default_factory=list, description="Traceability matrix configurations")
     test_integration: dict = Field(default_factory=dict, description="Test integration configuration")
     
