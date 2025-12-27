@@ -557,51 +557,6 @@ doc_types:
     - from: draft
       to: approved
       label: Approve
-- code: SWAD
-  name: Software Architecture
-  prefix: SWAD-
-  directory: 04_swad
-  properties:
-  - id
-  - name: title
-    format: short_text
-    label: Title
-  - name: content
-    format: long_text
-    label: Content
-  - name: design
-    format: item_multiselect
-    target_types:
-    - SRS
-    label: Designs Requirements
-  - name: status
-    format: select
-    label: Status
-    options:
-    - draft
-    - approved
-  relations:
-  - target: SRS
-    label: design
-  icon: 🔧
-  page_enabled: true
-  page_number: 9
-  lifecycle:
-    states:
-    - id: draft
-      label: Draft
-      color: warning
-      icon: 📝
-      is_initial: true
-    - id: approved
-      label: Approved
-      color: success
-      icon: ✅
-      is_stable: true
-    transitions:
-    - from: draft
-      to: approved
-      label: Approve
 - code: SWDD
   name: Software Detailed Design
   prefix: SWDD-
@@ -1096,7 +1051,6 @@ traceability_matrices:
   path:
   - UC
   - CRS
-  - SYS
   - SRS
   - SWDD
 - name: System Requirements to System Architecture

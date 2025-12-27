@@ -87,14 +87,9 @@ SYS-001
   ↓ informs
 SYS_ARCH-001 (describes system structure)
 
-SRS-001
-  ↓ informs
-SWAD-001 (describes software structure)
-
-# Cross-references
-SWAD-001
-  ↓ guides
-SWDD-001 (implementation follows architecture)
+# Note: No separate SWAD
+# System Architecture Specification covers software architecture
+# since CompliantFlow is a pure software system
 ```
 
 ---
@@ -129,32 +124,25 @@ content: "Software shall use NetworkX directed graph with nodes and edges"
 derives_from: [SYS-001]
 ```
 
-### SWAD-001: Software Architecture
-```yaml
-id: SWAD-001
-title: "Traceability Architecture"
-content: |
-  Components:
-  - GraphEngine: Builds and analyzes graph
-  - ItemLoader: Loads items from YAML
-  - TraceabilityUI: Streamlit visualization
-  
-  Interfaces:
-  - GraphEngine.build_graph() -> nx.DiGraph
-  - GraphEngine.find_orphans(doc_type) -> List[str]
-implements: [SRS-001]
-```
-
 ### SWDD-001: Detailed Design
 ```yaml
 id: SWDD-001
 title: "Orphan Detection Algorithm"
-content: "Find items without parent links"
-unit_name: "GraphEngine.find_orphans"
-algorithm: "Filter nodes of specified type with no incoming edges, excluding root types"
+content: |-
+  Detailed design for detecting items without required traceability links.
+  
+  Component Structure:
+  - OrphanDetector: Main detection logic
+  - NodeFilter: Filter nodes by criteria
+  
+  Algorithm:
+  Filter nodes by type → Exclude root types → Find in_degree=0 → Group by type
+  
+  Complexity: O(N) where N = nodes
 implements: [SRS-001]
-guided_by: [SWAD-001]
 ```
+
+**Note**: No separate SWAD items. System Architecture Specification covers all architecture since CompliantFlow is a pure software system.
 
 ---
 
@@ -243,7 +231,7 @@ SRS → SWAD
 **IEC 62304 §5.2.6 requires:**
 - Software requirements trace to system requirements ✅ SRS → SYS
 - Software requirements trace to risk controls ✅ SRS → RISK
-- Architecture implements requirements ✅ SWAD → SRS
+- Architecture implements requirements ✅ System Architecture Spec → SYS, SRS
 - Detailed design implements requirements ✅ SWDD → SRS
 
 **Our model provides:**
@@ -251,12 +239,17 @@ SRS → SWAD
 SYS-001
   ↓ derives
 SRS-001
-  ↓ implements (parallel)
-  ├─→ SWAD-001 (architecture view)
-  └─→ SWDD-001 (detailed design)
+  ↓ implements
+SWDD-001 (detailed design)
+
+SYS-001
+  ↓ informs
+SYSARCH-001 (system architecture view)
 ```
 
 All required traceability is maintained ✅
+
+**Note**: No separate SWAD. System Architecture Specification covers software architecture since CompliantFlow is a pure software system.
 
 ---
 
@@ -360,7 +353,7 @@ Code Implementation → MUST be tested ✅
 | Artifact | Verification Method | Test Files |
 |----------|-------------------|------------|
 | **SRS** | Automated tests | `tests/test_srs_*.py` ✅ |
-| **SWAD** | Design review | No test files ❌ |
+| **SYSARCH** | Design review | No test files ❌ |
 | **SWDD** | Design review + Code review | No test files ❌ |
 | **Code** | Unit/Integration tests | `tests/test_*.py` ✅ |
 
