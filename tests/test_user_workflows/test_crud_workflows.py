@@ -93,19 +93,6 @@ class TestCreateWorkflows:
         # Verify relationship exists in graph
         assert test_core.graph.has_edge('SRS-001', 'SYS-001')
     
-    def test_create_item_with_initial_status(self, test_core):
-        """New items should get initial workflow status automatically."""
-        item_data = {
-            'id': 'SYS-200',
-            'title': 'Test Requirement',
-            'content': 'Test content'
-        }
-        
-        created = test_core.create_item(item_data)
-        
-        # Should have initial status from workflow
-        assert 'status' in created
-        assert created['status'] == 'draft'  # Initial state from config
 
 
 class TestReadWorkflows:

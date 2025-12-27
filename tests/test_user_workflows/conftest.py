@@ -52,7 +52,7 @@ doc_types:
     
     relations:
       - name: derives_from
-        target: [CRS]
+        target: CRS
         label: "Derives From"
         reverse_name: derived_by
   
@@ -71,7 +71,7 @@ doc_types:
     
     relations:
       - name: derives_from
-        target: [SYS]
+        target: SYS
         label: "Derives From"
         reverse_name: derived_by
   
