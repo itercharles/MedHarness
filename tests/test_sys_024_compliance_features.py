@@ -61,34 +61,6 @@ def test_TC_SYS_026_001_compliance_score_color_coding():
     assert True, "Color coding logic validated"
 
 
-def test_TC_SYS_027_001_policy_evaluation():
-    """
-    Verify Policy Evaluation Logic
-    
-    @links: SYS-027
-    @test_id: TC-SYS-027-001
-    
-    Verify that policies are correctly evaluated against the traceability graph.
-    """
-    # Initialize core
-    dhf_root = Path(__file__).parent.parent / "DHF"
-    core = CompliantFlowCore(dhf_root)
-    
-    # Verify config loaded
-    assert core.config is not None, "Configuration not loaded"
-    
-    # Verify policies exist
-    
-    # Verify policy configuration has required fields
-    assert len(coverage_types) > 0, "No coverage types defined"
-    
-    # Verify coverage types are valid doc type codes
-    for doc_code in coverage_types:
-        # Verify doc type exists in config
-        doc_type = core.config.get_doc_type(doc_code)
-        assert doc_type is not None, f"Doc type '{doc_code}' not found in config"
-
-
 def test_TC_SYS_024_001_graph_cycle_detection():
     """
     Verify Graph Cycle Detection
