@@ -37,7 +37,7 @@ jobs:
       
       - name: Upload unit test results
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: unit-test-results
           path: unit-test-results.xml
@@ -83,14 +83,14 @@ jobs:
       
       - name: Upload browser test results
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: browser-test-results
           path: browser-test-results.xml
       
       - name: Upload Playwright traces
         if: failure()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: playwright-traces
           path: test-results/
