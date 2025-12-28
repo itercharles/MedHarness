@@ -45,7 +45,7 @@ class TestOrphanDetection:
         
         # Each orphan should have no incoming edges
         for orphan in orphans:
-            orphan_id = orphan['id'] if isinstance(orphan, dict) else orphan
+            orphan_id = orphan['uid'] if isinstance(orphan, dict) else orphan
             in_degree = engine.graph.in_degree(orphan_id)
             
             # Orphans should have in_degree of 0
@@ -62,7 +62,7 @@ class TestOrphanDetection:
         orphans = engine.find_orphans()
         
         # No UC or CRS items should be in orphans list
-        orphan_ids = [o['id'] if isinstance(o, dict) else o for o in orphans]
+        orphan_ids = [o['uid'] if isinstance(o, dict) else o for o in orphans]
         
         for orphan_id in orphan_ids:
             assert not orphan_id.startswith('UC-'), "UC items should not be marked as orphans"
@@ -81,7 +81,7 @@ class TestOrphanDetection:
         # Group orphans by prefix
         orphan_types = {}
         for orphan in orphans:
-            orphan_id = orphan['id'] if isinstance(orphan, dict) else orphan
+            orphan_id = orphan['uid'] if isinstance(orphan, dict) else orphan
             prefix = orphan_id.split('-')[0]
             
             if prefix not in orphan_types:
