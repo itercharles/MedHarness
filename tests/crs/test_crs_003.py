@@ -53,7 +53,7 @@ def test_TC_CRS_003_002_create_change_request(page: Page, streamlit_app):
     # Fill form
     page.fill("input[placeholder='CR-XXX']", "CR-999")
     page.locator("label:has-text('Title')").locator("..").locator("input").fill("Test Change Request")
-    page.locator("label:has-text('Content')").locator("..").locator("textarea").fill("Test change request for browser testing")
+    page.locator("label:has-text('Description')").locator("..").locator("textarea").fill("Test change request for browser testing")
     
     # Click Create button
     page.get_by_role("button", name="✅ Create").click()
