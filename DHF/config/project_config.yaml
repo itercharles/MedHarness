@@ -574,11 +574,7 @@ doc_types:
     target_types:
     - SRS
     label: Implements
-  - name: guided_by
-    format: item_multiselect
-    target_types:
-    - SWAD
-    label: Guided By
+
   - name: status
     format: select
     label: Status
@@ -588,8 +584,7 @@ doc_types:
   relations:
   - target: SRS
     label: implements
-  - target: SWAD
-    label: guided_by
+
   icon: 📋
   page_enabled: true
   page_number: 10
@@ -614,136 +609,7 @@ doc_types:
   - verified
   - failed
 
-- code: DEFECT
-  name: Defect
-  prefix: DEF-
-  directory: 08_defect
-  properties:
-  - id
-  - name: title
-    format: short_text
-    label: Title
-  - name: description
-    format: long_text
-    label: Description
-  - name: severity
-    format: select
-    options:
-    - Critical
-    - Major
-    - Minor
-    - Cosmetic
-    label: Severity
-  - name: priority
-    format: select
-    options:
-    - High
-    - Medium
-    - Low
-    label: Priority
-  - name: found_in_version
-    format: short_text
-    label: Found In Version
-  - name: affected_components
-    format: short_text
-    label: Affected Components
-  - name: steps_to_reproduce
-    format: long_text
-    label: Steps To Reproduce
-  - name: expected_behavior
-    format: long_text
-    label: Expected Behavior
-  - name: actual_behavior
-    format: long_text
-    label: Actual Behavior
-  - name: assigned_to
-    format: short_text
-    label: Assigned To
-  icon: 🐛
-  page_enabled: true
-  page_number: 8
-  lifecycle:
-    states:
-    - id: open
-      label: Open
-      color: error
-      icon: 🔴
-      is_initial: true
-    - id: in_progress
-      label: In Progress
-      color: warning
-      icon: 🔧
-    - id: resolved
-      label: Resolved
-      color: info
-      icon: ✅
-    - id: verified
-      label: Verified
-      color: success
-      icon: 🎯
-    - id: closed
-      label: Closed
-      color: secondary
-      icon: 🔒
-    - id: reopened
-      label: Reopened
-      color: error
-      icon: 🔄
-    transitions:
-    - from: open
-      to: in_progress
-      label: Start Work
-      criteria:
-      - id: assigned
-        name: Assigned to developer
-        check_type: field_not_empty
-        field: assigned_to
-        required: true
-      - id: severity_set
-        name: Severity defined
-        check_type: field_not_empty
-        field: severity
-        required: true
-    - from: in_progress
-      to: resolved
-      label: Resolve
-      criteria:
-      - id: fix_implemented
-        name: Fix implemented
-        check_type: manual
-        required: true
-      - id: root_cause
-        name: Root cause documented
-        check_type: field_not_empty
-        field: description
-        required: true
-    - from: resolved
-      to: verified
-      label: Verify Fix
-      criteria:
-      - id: verification_complete
-        name: Verification completed
-        check_type: manual
-        required: true
-    - from: verified
-      to: closed
-      label: Close
-      criteria:
-      - id: closure_approved
-        name: Closure approved
-        check_type: manual
-        required: true
-    - from: closed
-      to: reopened
-      label: Reopen
-      criteria:
-      - id: reopen_reason
-        name: Reopen reason documented
-        check_type: manual
-        required: true
-    - from: reopened
-      to: in_progress
-      label: Resume Work
+
 - code: CR
   name: Change Request
   prefix: CR-
@@ -1058,11 +924,6 @@ traceability_matrices:
   path:
   - SYS
   - SYS_ARCH
-- name: Software Requirements to Software Architecture
-  description: Software requirements and their architectural designs
-  path:
-  - SRS
-  - SWAD
 - name: Risk to Control Measures
   description: Risks to risk control measures
   path:
