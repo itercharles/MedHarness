@@ -69,11 +69,13 @@ def test_TC_CRS_001_002_view_requirement_details(page: Page, streamlit_app):
     page.wait_for_load_state("networkidle")
     page.wait_for_timeout(1000)  # Give Streamlit time to process selection
     
-    # Verify details view appears - check for heading
+    # Verify SRS-001 details are displayed
     expect(page.get_by_role("heading", name="SRS-001")).to_be_visible()
     
-    # Verify status badge
-    expect(page.locator("text=Approved").first).to_be_visible()
+    # Verify specific SRS-001 field data
+    page_content = page.content()
+    assert "Item Persistence and Versioning" in page_content, "Should display SRS-001 title"
+    assert "approved" in page_content.lower(), "Should display approved status"
 
 
 
@@ -100,5 +102,9 @@ def test_TC_CRS_001_003_search_requirements(page: Page, streamlit_app):
     page.wait_for_load_state("networkidle")
     page.wait_for_timeout(1000)
     
-    # Verify SRS-002 is shown
+    # Verify SRS-002 is shown with its data
     expect(page.get_by_role("heading", name="SRS-002")).to_be_visible()
+    
+    # Verify SRS-002 content is displayed
+    page_content = page.content()
+    assert "SRS-002" in page_content, "Should display SRS-002 ID"
