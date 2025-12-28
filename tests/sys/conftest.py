@@ -112,7 +112,7 @@ def streamlit_app(test_dhf_root):
     # Start Streamlit in background
     process = subprocess.Popen(
         [
-            str(project_root / "venv" / "bin" / "streamlit"),
+            "streamlit",
             "run",
             str(project_root / "src" / "app.py"),
             "--server.port", "8501",
