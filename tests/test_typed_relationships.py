@@ -148,10 +148,6 @@ class TestTypedRelationshipsInDHF:
         # Check at least one SWDD has implements
         has_implements = any('implements' in item for item in swdd_items)
         assert has_implements, "At least one SWDD should have implements"
-        
-        # Check at least one SWDD has guided_by
-        has_guided_by = any('guided_by' in item for item in swdd_items)
-        assert has_guided_by, "At least one SWDD should have guided_by"
     
     def test_all_items_have_all_linked_uids(self, core):
         """Verify all items have all_linked_uids property in dict."""

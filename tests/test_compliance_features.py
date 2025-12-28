@@ -58,43 +58,6 @@ def test_TC_SOUP_001_001_soup_document_type_configuration():
     assert len(transitions) > 0, "SOUP should have lifecycle transitions"
 
 
-def test_TC_DEF_001_001_defect_document_type():
-    """
-    Verify Defect Document Type
-    
-    @test_id: TC-DEF-001-001
-    
-    Verify that DEFECT document type is configured with required fields
-    for defect tracking.
-    """
-    # Initialize core
-    dhf_root = Path(__file__).parent.parent / "DHF"
-    core = CompliantFlowCore(dhf_root)
-    
-    # Verify DEFECT document type exists
-    defect_doc_type = core.config.get_doc_type("DEFECT")
-    assert defect_doc_type is not None, "DEFECT document type not found"
-    
-    # Verify required fields
-    prop_names = {p['name'] if isinstance(p, dict) else p for p in defect_doc_type.properties}
-    
-    required_fields = ["id", "title", "description", "severity", "priority"]
-    for field in required_fields:
-        assert field in prop_names, \
-            f"DEFECT missing required field: {field}"
-    
-    # Verify lifecycle for defect workflow
-    assert hasattr(defect_doc_type, 'lifecycle'), "DEFECT should have lifecycle"
-    lifecycle = defect_doc_type.lifecycle
-    states = lifecycle.get('states', [])
-    state_ids = [state['id'] for state in states]
-    
-    # Verify defect workflow states
-    expected_states = ["open", "in_progress", "resolved", "closed"]
-    for state in expected_states:
-        assert state in state_ids, f"DEFECT lifecycle missing state: {state}"
-
-
 def test_TC_DOCGEN_001_001_document_generator_exists():
     """
     Verify Document Generator Module Exists

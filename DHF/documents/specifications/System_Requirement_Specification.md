@@ -7,8 +7,8 @@
 | Field | Value |
 |-------|-------|
 | **Document ID** | SYS-SPEC |
-| **Version** | 1.61 |
-| **Generated** | 2025-12-27 |
+| **Version** | 1.69 |
+| **Generated** | 2025-12-28 |
 | **Status** | Draft |
 | **Project** | CompliantFlow Project |
 
@@ -24,27 +24,13 @@ This document provides a comprehensive list of all System Requirements, includin
 
 ### 1.2 Scope
 
-This specification covers all System Requirements defined in the CompliantFlow system as of 2025-12-27.
+This specification covers all System Requirements defined in the CompliantFlow system as of 2025-12-28.
 
 ---
 
 ## 2. Requirements
 
-### 1. SYS-001: Parse Specifications
-
-<div class="requirement-section">
-
-**Status**: <span class="status-approved">APPROVED</span>  
-**Category**: functional  **Verification Method**: Test  
-#### Description
-
-The system shall ingest specification items defined in YAML files from a structured directory layout.
-
-
-
-</div>
-
-### 2. SYS-002: Graph Generation
+### 1. SYS-001: Objects management and tracking
 
 <div class="requirement-section">
 
@@ -52,13 +38,16 @@ The system shall ingest specification items defined in YAML files from a structu
 
 #### Description
 
-The system shall build a directed graph data structure to represent traceability relationships between items. (Test: GitHub Actions automation)
+The system shall support configurable object, such as requirement, design item, change request, etc. to maintain a complete history.
 
 
+#### Verification Status
+
+**Status**: VerificationStatus.PASS
 
 </div>
 
-### 3. SYS-003: Visual Traceability
+### 2. SYS-003: Visual Traceability
 
 <div class="requirement-section">
 
@@ -66,13 +55,13 @@ The system shall build a directed graph data structure to represent traceability
 
 #### Description
 
-The system shall provide a graphical visualization of the traceability graph, including item status.
+The system shall provide a view of traceability graph or table, including requirements, architecture, tests, and change requests.
 
 
 
 </div>
 
-### 4. SYS-004: Orphan Reporting
+### 3. SYS-004: Orphan Reporting
 
 <div class="requirement-section">
 
@@ -80,13 +69,13 @@ The system shall provide a graphical visualization of the traceability graph, in
 
 #### Description
 
-The system shall display a list of orphan items in the user interface.
+The system shall display a list of orphan items.
 
 
 
 </div>
 
-### 5. SYS-005: Governance Definitions
+### 4. SYS-005: Compliance Assessment
 
 <div class="requirement-section">
 
@@ -94,41 +83,13 @@ The system shall display a list of orphan items in the user interface.
 
 #### Description
 
-The system shall parse governance documents (Regulations, Procedures) defined in YAML.
+The system shall able to assess the compliance of the DHF by the governance policies (Regulations, Procedures) from configuration files.
 
 
 
 </div>
 
-### 6. SYS-006: Compliance Engine
-
-<div class="requirement-section">
-
-**Status**: <span class="status-approved">APPROVED</span>  
-
-#### Description
-
-The system shall execute automated checks (e.g. coverage, existence) defined in policies.
-
-
-
-</div>
-
-### 7. SYS-007: Compliance Reporting
-
-<div class="requirement-section">
-
-**Status**: <span class="status-approved">APPROVED</span>  
-
-#### Description
-
-The system shall execute policy validation rules defined in configuration and report results. Policy definitions and validation logic shall be configurable.
-
-
-
-</div>
-
-### 8. SYS-008: Change Management System
+### 5. SYS-008: Change Management System
 
 <div class="requirement-section">
 
@@ -136,21 +97,13 @@ The system shall execute policy validation rules defined in configuration and re
 **Reviewer**: Technical Lead  **Review Date**: 2025-12-13  **Category**: Change Control  **Verification Method**: Inspection and Testing  
 #### Description
 
-The system shall provide a change management module that enables tracking, 
-evaluation, and approval of changes to medical device software per IEC 62304 §6.2.
-
-The module shall support:
-- Creation of change requests with auto-generated IDs
-- Impact analysis using the traceability graph
-- Workflow-based approval process
-- Significance assessment per MDCG 2020-3 criteria
-- Change history tracking and reporting
+The system shall provide a change management module that enables tracking, evaluation, and approval of changes.
 
 
 
 </div>
 
-### 9. SYS-009: Defect Data Capture
+### 6. SYS-010: Object Workflow Management
 
 <div class="requirement-section">
 
@@ -158,203 +111,13 @@ The module shall support:
 
 #### Description
 
-The system shall capture defect information including unique ID, title, description, severity level, reporter, affected items, and reproduction steps.
+The system shall support configurable lifecycle workflows for objects (such as requirements, design items, change requests), with state transitions and validation rules defined in configuration. The system shall enforce the custom transition rules.
 
 
-#### Verification Status
-
-**Status**: VerificationStatus.PASS
 
 </div>
 
-### 10. SYS-010: Defect Workflow Management
-
-<div class="requirement-section">
-
-**Status**: <span class="status-approved">APPROVED</span>  
-
-#### Description
-
-The system shall support configurable lifecycle workflows for items, with state transitions and validation rules defined in configuration. The system shall enforce transition rules and execute validation criteria.
-
-
-#### Verification Status
-
-**Status**: VerificationStatus.PASS
-
-</div>
-
-### 11. SYS-011: Defect Root Cause Documentation
-
-<div class="requirement-section">
-
-**Status**: <span class="status-approved">APPROVED</span>  
-
-#### Description
-
-The system shall require documentation of root cause analysis and resolution details before a defect can be marked as resolved.
-
-
-#### Verification Status
-
-**Status**: VerificationStatus.PASS
-
-</div>
-
-### 12. SYS-012: Defect Resolution Verification
-
-<div class="requirement-section">
-
-**Status**: <span class="status-approved">APPROVED</span>  
-
-#### Description
-
-The system shall support configurable verification requirements before state transitions. Required verification fields and criteria shall be defined in configuration and enforced by the system.
-
-
-#### Verification Status
-
-**Status**: VerificationStatus.PASS
-
-</div>
-
-### 13. SYS-013: Defect Traceability Links
-
-<div class="requirement-section">
-
-**Status**: <span class="status-approved">APPROVED</span>  
-
-#### Description
-
-The system shall link defects to affected requirements, tests, and optionally to change requests for full traceability.
-
-
-#### Verification Status
-
-**Status**: VerificationStatus.PASS
-
-</div>
-
-### 14. SYS-014: Defect Change History
-
-<div class="requirement-section">
-
-**Status**: <span class="status-approved">APPROVED</span>  
-
-#### Description
-
-The system shall maintain a complete audit trail of all defect changes including who made changes and when.
-
-
-#### Verification Status
-
-**Status**: VerificationStatus.PASS
-
-</div>
-
-### 15. SYS-015: Defect Filtering and Reporting
-
-<div class="requirement-section">
-
-**Status**: <span class="status-approved">APPROVED</span>  
-
-#### Description
-
-The system shall provide filtering of defects by status, severity, and assignee, and export defect data for compliance reporting.
-
-
-#### Verification Status
-
-**Status**: VerificationStatus.PASS
-
-</div>
-
-### 16. SYS-016: Release Data Capture
-
-<div class="requirement-section">
-
-**Status**: <span class="status-approved">APPROVED</span>  
-
-#### Description
-
-The system shall support configurable data fields for items. Field definitions, types, validation rules, and required fields shall be defined in configuration.
-
-
-#### Verification Status
-
-**Status**: VerificationStatus.PASS
-
-</div>
-
-### 17. SYS-017: Release Verification Checks
-
-<div class="requirement-section">
-
-**Status**: <span class="status-approved">APPROVED</span>  
-
-#### Description
-
-The system shall execute configurable verification checks before state transitions. Verification rules and criteria shall be defined in configuration and enforced by the system.
-
-
-#### Verification Status
-
-**Status**: VerificationStatus.PASS
-
-</div>
-
-### 18. SYS-018: Release Status Workflow
-
-<div class="requirement-section">
-
-**Status**: <span class="status-approved">APPROVED</span>  
-
-#### Description
-
-The system shall support configurable lifecycle workflows with approval gates. Transition criteria and approval requirements shall be defined in configuration and enforced by the system.
-
-
-#### Verification Status
-
-**Status**: VerificationStatus.PASS
-
-</div>
-
-### 19. SYS-019: Release Documentation Generation
-
-<div class="requirement-section">
-
-**Status**: <span class="status-approved">APPROVED</span>  
-
-#### Description
-
-The system shall generate release documentation including traceability matrix, test summary, and defect report.
-
-
-#### Verification Status
-
-**Status**: VerificationStatus.PASS
-
-</div>
-
-### 20. SYS-020: Release History Tracking
-
-<div class="requirement-section">
-
-**Status**: <span class="status-approved">APPROVED</span>  
-
-#### Description
-
-The system shall maintain a complete history of all releases with version control integration.
-
-
-#### Verification Status
-
-**Status**: VerificationStatus.PASS
-
-</div>
-
-### 21. SYS-021: Document Generation and Export
+### 7. SYS-021: Document Generation and Export
 
 <div class="requirement-section">
 
@@ -362,201 +125,41 @@ The system shall maintain a complete history of all releases with version contro
 **Reviewer**: System Architect  **Review Date**: 2024-12-15  **Category**: Document Management  **Verification Method**: Test  
 #### Description
 
-The system shall provide document generation capabilities to export CompliantFlow data as regulatory-ready PDF documents.
-
-**Requirements**:
-- Generate requirements specification PDFs for CRS, SYS, and SDS
-- Generate traceability matrix showing requirement chains and coverage
-- Generate release documentation packages
-- Use configurable Jinja2 templates for document structure
-- Apply professional CSS styling to PDFs
-- Provide export functionality through UI
-
-**Acceptance Criteria**:
-- PDF documents are generated in < 5 seconds
-- Documents include all item data (title, content, status, links)
-- Traceability matrix shows coverage percentages
-- PDFs are formatted professionally for regulatory submission
+The system shall provide document generation capabilities to export CompliantFlow data as regulatory-ready PDF documents. Generate requirements specification PDFs for requirements, design, change requests, etc.
 
 
 
 </div>
 
-### 22. SYS-022: SOUP Management
+### 8. SYS-030: Automated Change Request Workflow
 
 <div class="requirement-section">
 
 **Status**: <span class="status-approved">APPROVED</span>  
-**Reviewer**: System Architect  **Review Date**: 2024-12-15  
-#### Description
-
-The system shall provide comprehensive management of Software of Unknown Provenance (SOUP) 
-to meet IEC 62304 Section 5.3 requirements. This includes:
-
-- Import SOUP items from external scanning tools (Veracode, Snyk, OWASP Dependency-Check)
-- Track SOUP metadata (name, version, manufacturer, license, CVE count, risk rating)
-- Document SOUP usage purpose and safety classification
-- Establish traceability from SOUP to system requirements
-- Manage SOUP approval workflow with verification criteria
-- Generate SOUP list documentation for regulatory submission
-
-This capability ensures compliance with IEC 62304 requirements for identifying, 
-documenting, and managing third-party software components.
-
-
-
-</div>
-
-### 23. SYS-023: Configuration-Driven Status Warning Logic
-
-<div class="requirement-section">
-
-**Status**: <span class="status-approved">APPROVED</span>  
-
-#### Description
-
-The system shall determine warning display based on lifecycle configuration's is_stable flag, with fail-fast validation for missing configuration.
-
-
-
-</div>
-
-### 24. SYS-024: Automatic Verification Column Detection
-
-<div class="requirement-section">
-
-**Status**: <span class="status-approved">APPROVED</span>  
-
-#### Description
-
-The system shall automatically add a verification status column when the last item in a trace path contains a verification_status field.
-
-
-
-</div>
-
-### 25. SYS-025: Policy Group Loading and Selection
-
-<div class="requirement-section">
-
-**Status**: <span class="status-approved">APPROVED</span>  
-
-#### Description
-
-The system shall load policy groups from the governance directory and allow users to select a specific policy group for validation.
-
-
-
-</div>
-
-### 26. SYS-026: Compliance Score Calculation
-
-<div class="requirement-section">
-
-**Status**: <span class="status-approved">APPROVED</span>  
-
-#### Description
-
-The system shall calculate an overall compliance score as a percentage of passed policies and display it with color-coded indicators (green >= 90%, yellow >= 70%, red < 70%).
-
-
-
-</div>
-
-### 27. SYS-027: Policy Validation Results Display
-
-<div class="requirement-section">
-
-**Status**: <span class="status-approved">APPROVED</span>  
-
-#### Description
-
-The system shall display validation results for each policy with pass/fail status, policy description, and detailed evidence in an expandable format.
-
-
-
-</div>
-
-### 28. SYS-028: Dynamic Page Registration
-
-<div class="requirement-section">
-
-**Status**: <span class="status-approved">APPROVED</span>  
-
-#### Description
-
-The system shall read doc_types from project configuration, filter for page_enabled=true, and dynamically register Streamlit pages at application startup.
-
-
-
-</div>
-
-### 29. SYS-029: Unique Page URL Generation
-
-<div class="requirement-section">
-
-**Status**: <span class="status-approved">APPROVED</span>  
-
-#### Description
-
-The system shall generate unique URL paths for each dynamically created page using page_number and doc_type code to prevent URL conflicts.
-
-
-
-</div>
-
-### 30. SYS-030: Automated Change Request Workflow
-
-<div class="requirement-section">
-
-**Status**: <span class="status-draft">DRAFT</span>  
 **Category**: functional  **Verification Method**: Test  
 #### Description
 
-The system shall provide automated workflows to link Pull Requests to Change Requests, 
-ensuring complete traceability and regulatory compliance.
-
-**Rationale**: This requirement supports IEC 62304 §6.2 (Change Control) and FDA 21 CFR 820.30(i) 
-(Design Change Documentation) by automating the linkage between code changes and change requests.
-
+The system shall provide automated workflows to link Pull Requests and changed objects to Change Requests, ensuring complete traceability and regulatory compliance.
 
 
 
 </div>
 
-### 31. SYSARCH-001: Web-Based Application Architecture
+### 9. SYS-031: Test result retrive and display
 
 <div class="requirement-section">
 
-**Status**: <span class="status-draft">DRAFT</span>  
-
+**Status**: <span class="status-approved">APPROVED</span>  
+**Category**: functional  **Verification Method**: Test  
 #### Description
 
-System architecture decisions:
-
-**Deployment Model:**
-- Web-based Python application
-- Browser-based user interface
-- Local or server deployment
-- No database server required
-
-**Technology Choices:**
-- Python 3.11+ runtime
-- Streamlit web framework
-- File-based data storage
-- Git version control
-
-**Rationale:**
-- Simple deployment (no complex infrastructure)
-- Familiar web interface
-- Portable (entire DHF is a directory)
-- Standards-compliant audit trail via Git
+The system shall retrive the test result from pipeline and display it in the system.
 
 
 
 </div>
 
-### 32. SYSARCH-002: File-Based Data Storage Architecture
+### 10. SYSARCH-001: Item Management Module
 
 <div class="requirement-section">
 
@@ -564,35 +167,30 @@ System architecture decisions:
 
 #### Description
 
-Data storage approach:
+Core module for managing DHF items (requirements, design, tests, change requests, etc.).
 
-**Storage Medium:**
-- YAML files for structured data
-- Markdown files for generated documents
-- Git repository for version control
+**Responsibilities**:
+- Load items from YAML files with schema validation
+- Save items with Git commit tracking
+- Support configurable item types from project configuration
+- Maintain item history and audit trail
 
-**Directory Structure:**
-- Organized by document type
-- One file per item
-- Human-readable format
+**Key Interfaces**:
+- `ItemLoader`: Load items from file system by ID, type, or all items
+- `ItemSaver`: Save items with validation and Git commits
+- `ItemValidator`: Validate item schema against configuration
 
-**Benefits:**
-- No database setup required
-- Easy to backup (copy directory)
-- Git-friendly (text-based)
-- Transparent (inspect with any editor)
-- Regulatory-friendly (easy to archive)
-
-**Trade-offs:**
-- Not suitable for >1000s of items
-- Limited concurrent editing
-- No complex queries
+**Implementation Notes**:
+- Uses YAML format for human-readable storage
+- Git integration provides automatic version control
+- Pydantic models for type-safe item validation
+- File-based storage enables simple backup and portability
 
 
 
 </div>
 
-### 33. SYSARCH-003: Traceability Graph Architecture
+### 11. SYSARCH-002: Traceability Analysis Module
 
 <div class="requirement-section">
 
@@ -600,42 +198,32 @@ Data storage approach:
 
 #### Description
 
-Graph-based traceability architecture:
+Module for building and analyzing traceability relationships between DHF items.
 
-**Graph Technology:**
-- NetworkX directed graph library
-- Nodes represent DHF items
-- Edges represent traceability relationships
+**Responsibilities**:
+- Build directed graph from item links
+- Find upstream/downstream dependencies
+- Detect orphan items (no incoming or outgoing links)
+- Calculate coverage metrics (requirements to tests)
+- Support configurable traceability paths from configuration
 
-**Graph Structure:**
-- Node attributes: item ID, type, title, status
-- Edge attributes: relationship type (derives_from, implements, verifies)
-- Bidirectional traversal support
+**Key Interfaces**:
+- `GraphBuilder`: Construct traceability graph from all items
+- `TraceabilityAnalyzer`: Analyze relationships and dependencies
+- `OrphanDetector`: Find items without required links
+- `CoverageCalculator`: Compute verification coverage
 
-**Traceability Operations:**
-- Build graph from all items at startup
-- Find upstream items (parents)
-- Find downstream items (children)
-- Detect orphans (no incoming/outgoing edges)
-- Calculate coverage (source to verification)
-
-**Visualization:**
-- Interactive graph display
-- Color-coded by status
-- Shape-coded by type
-- Clickable nodes for navigation
-
-**Rationale:**
-- NetworkX provides mature graph algorithms
+**Implementation Notes**:
+- Uses NetworkX library for graph operations
 - In-memory graph for fast queries
-- Supports complex traceability analysis
-- Standard Python library (well-documented)
+- Supports bidirectional traversal
+- Configurable relationship types (derives_from, implements, verifies)
 
 
 
 </div>
 
-### 34. SYSARCH-004: Configuration-Driven Workflow Architecture
+### 12. SYSARCH-003: Workflow Engine Module
 
 <div class="requirement-section">
 
@@ -643,45 +231,32 @@ Graph-based traceability architecture:
 
 #### Description
 
-YAML-based configuration architecture for workflows:
+Module for managing item lifecycle states and transitions.
 
-**Configuration Source:**
-- project_config.yaml as single source of truth
-- Pydantic models for schema validation
-- Fail-fast on invalid configuration
+**Responsibilities**:
+- Load workflow configuration from YAML (states, transitions, criteria)
+- Validate state transitions against configured rules
+- Execute transition criteria checks (field validation, manual approval)
+- Enforce approval workflows
+- Support configurable lifecycles per item type
 
-**Lifecycle Configuration:**
-- States: id, label, color, icon, is_stable, is_initial
-- Transitions: from, to, label, validation_criteria
-- Per-document-type lifecycle definitions
+**Key Interfaces**:
+- `WorkflowEngine`: Manage state transitions and validation
+- `TransitionValidator`: Check if transition is allowed
+- `CriteriaExecutor`: Execute validation criteria
+- `ApprovalManager`: Handle approval workflows
 
-**Workflow Engine:**
-- Load lifecycle from configuration at startup
-- Validate state transitions against rules
-- Execute validation criteria before transitions
-- Support approval workflows
-
-**Status Warning Logic:**
-- Use is_stable flag to determine warnings
-- Show ⚠️ for items not in stable states
-- Configuration-driven (no hardcoded states)
-
-**Verification Column Detection:**
-- Automatic detection based on field presence
-- Configurable verification status display
-- Support for automated and manual verification
-
-**Rationale:**
-- Configuration-driven = no code changes for new workflows
-- YAML = human-readable and version-controllable
-- Pydantic = strong typing and validation
-- Fail-fast = catch errors early
+**Implementation Notes**:
+- Configuration-driven (no hardcoded workflows)
+- Supports multiple lifecycle models per document type
+- Extensible criteria system (field checks, manual verification, linked item status)
+- Fail-fast validation with clear error messages
 
 
 
 </div>
 
-### 35. SYSARCH-005: Policy-Based Compliance Architecture
+### 13. SYSARCH-004: Change Management Module
 
 <div class="requirement-section">
 
@@ -689,47 +264,32 @@ YAML-based configuration architecture for workflows:
 
 #### Description
 
-Configurable policy engine architecture:
+Module for tracking and controlling changes to DHF items through change requests.
 
-**Policy Configuration:**
-- Policy groups defined in configuration
-- Each policy has name, description, applicable types
-- Validation rules defined per policy
+**Responsibilities**:
+- Create and manage change request lifecycle
+- Link GitHub Pull Requests to change requests
+- Track affected items in change requests
+- Enforce change control policies (prevent editing stable items)
+- Maintain complete audit trail of changes
 
-**Policy Engine:**
-- Load policies from configuration
-- Execute validation rules against items
-- Collect pass/fail results
-- Calculate compliance scores
+**Key Interfaces**:
+- `ChangeRequestManager`: CR creation, update, approval
+- `ImpactAnalyzer`: Identify items affected by changes
+- `PRLinker`: Link GitHub PRs to CRs automatically
+- `ChangeControlPolicy`: Enforce editing restrictions
 
-**Validation Rule Types:**
-- Coverage rules: Check source items have verification
-- Orphan rules: Check items have required parents
-- Status rules: Check items in required states
-- Custom rules: Extensible validation framework
-
-**Scoring Algorithm:**
-- Each rule has equal weight (configurable)
-- Score = (passed_rules / total_rules) * 100
-- Detailed results with evidence
-
-**Results Display:**
-- Expandable sections per policy
-- Pass/fail indicators
-- Detailed evidence for failures
-- Actionable recommendations
-
-**Rationale:**
-- Policy-based = flexible compliance checking
-- Configuration-driven = no code for new policies
-- Extensible = support custom validation logic
-- Transparent = clear audit trail
+**Implementation Notes**:
+- Integrates with GitHub API for PR information
+- Automated detection of affected items from PR file changes
+- Prevents editing of items in stable status without CR
+- Git commits link to change request IDs
 
 
 
 </div>
 
-### 36. SYSARCH-006: Document Generation and History Architecture
+### 14. SYSARCH-005: Compliance Validation Module
 
 <div class="requirement-section">
 
@@ -737,43 +297,125 @@ Configurable policy engine architecture:
 
 #### Description
 
-Template-based document generation with Git history:
+Module for validating DHF against regulatory policies and standards.
 
-**Template Engine:**
-- Jinja2 for template rendering
-- Templates stored in version control
-- Support for multiple output formats
+**Responsibilities**:
+- Load policy definitions from configuration files
+- Execute validation rules against DHF items
+- Calculate compliance scores per policy group
+- Display validation results with detailed evidence
+- Support custom policy definitions
 
-**Generation Process:**
-- Load template from configured directory
-- Gather item data for context
-- Render template with Jinja2
-- Apply format conversion (if needed)
-- Include metadata (version, date, status)
+**Key Interfaces**:
+- `PolicyEngine`: Load and execute validation rules
+- `ComplianceScorer`: Calculate compliance percentages
+- `EvidenceCollector`: Gather validation evidence and details
+- `PolicyValidator`: Validate policy configuration
 
-**History Tracking:**
-- Git commits for all item changes
-- Commit messages include item ID and action
-- Author attribution from user context
-- Full audit trail via Git log
+**Implementation Notes**:
+- Policy-based architecture for flexibility
+- Supports multiple policy groups (IEC 62304, FDA 21 CFR 820, etc.)
+- Extensible validation rule types (coverage, orphan, status checks)
+- Clear pass/fail results with actionable recommendations
 
-**Change History Display:**
-- Parse Git log for item files
-- Show timeline of changes
-- Display author and timestamp
-- Support diff between versions
 
-**Documentation Generation:**
-- Automated specification documents
-- Traceability matrices
-- Compliance reports
-- Release notes
 
-**Rationale:**
-- Jinja2 = industry-standard templating
-- Git = built-in version control and audit trail
-- Template-based = easy to customize documents
-- Automated = reduce manual documentation effort
+</div>
+
+### 15. SYSARCH-006: Document Generation Module
+
+<div class="requirement-section">
+
+**Status**: <span class="status-approved">APPROVED</span>  
+
+#### Description
+
+Module for generating regulatory specification documents from templates.
+
+**Responsibilities**:
+- Render Jinja2 templates with item data
+- Generate specification documents (requirements, architecture, tests)
+- Export documents to PDF format
+- Track document versions and generation history
+- Support configurable document templates
+
+**Key Interfaces**:
+- `TemplateRenderer`: Render Jinja2 templates with context data
+- `PDFExporter`: Convert markdown to PDF using WeasyPrint
+- `DocumentVersioner`: Track and increment document versions
+- `TemplateManager`: Load and validate templates
+
+**Implementation Notes**:
+- Uses Jinja2 for flexible templating
+- WeasyPrint for professional PDF generation
+- Automatic version incrementing from existing documents
+- Templates stored in version control for auditability
+
+
+
+</div>
+
+### 16. SYSARCH-007: Test Integration Module
+
+<div class="requirement-section">
+
+**Status**: <span class="status-approved">APPROVED</span>  
+
+#### Description
+
+Module for retrieving and displaying test results from CI/CD pipeline.
+
+**Responsibilities**:
+- Fetch test results from GitHub Actions workflows
+- Parse test result artifacts (JUnit XML, pytest reports)
+- Display pass/fail status in UI
+- Link test results to requirement items
+- Track test execution history
+
+**Key Interfaces**:
+- `TestResultFetcher`: Retrieve results from GitHub API
+- `TestResultParser`: Parse various test result formats
+- `TestStatusDisplay`: Show results in UI with details
+- `TestLinkManager`: Link tests to requirements
+
+**Implementation Notes**:
+- Integrates with GitHub Actions API
+- Supports multiple test result formats
+- Caches test results for performance
+- Provides drill-down to test execution logs
+
+
+
+</div>
+
+### 17. SYSARCH-008: Web UI Module
+
+<div class="requirement-section">
+
+**Status**: <span class="status-approved">APPROVED</span>  
+
+#### Description
+
+Streamlit-based web user interface for DHF management.
+
+**Responsibilities**:
+- Render item management pages dynamically from configuration
+- Display traceability visualizations (graphs, matrices)
+- Show compliance dashboards and validation results
+- Provide document preview and export
+- Support navigation, search, and filtering
+
+**Key Interfaces**:
+- `PageGenerator`: Dynamic page creation from configuration
+- `UIComponents`: Reusable UI elements (tables, forms, badges)
+- `NavigationManager`: Handle routing and query parameters
+- `VisualizationRenderer`: Display graphs and charts
+
+**Implementation Notes**:
+- Built with Streamlit framework
+- Configuration-driven page generation
+- Responsive layout with browser compatibility
+- Real-time updates via Streamlit's reactive model
 
 
 
@@ -788,21 +430,21 @@ Template-based document generation with Git history:
 
 | Metric | Count |
 |--------|-------|
-| **Total Requirements** | 36 |
-| **Approved** | 34 |
-| **Draft** | 2 |
+| **Total Requirements** | 17 |
+| **Approved** | 17 |
+| **Draft** | 0 |
 | **Retired** | 0 |
 
 ### 3.2 Approval Status
 
-**Approval Rate**: 94.4% (34/36)
+**Approval Rate**: 100.0% (17/17)
 
 ---
 
 ## 4. Document Control
 
 **Document Owner**: Quality Assurance  
-**Last Updated**: 2025-12-27  
+**Last Updated**: 2025-12-28  
 **Next Review**: TBD
 
 ---

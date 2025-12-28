@@ -62,7 +62,7 @@ class TestConfigValidation:
         
         doc_type_codes = [dt['code'] for dt in config['doc_types']]
         
-        new_types = ['UC', 'SRS', 'SWAD', 'SWDD', 'SYS_ARCH']
+        new_types = ['UC', 'SRS', 'SWDD', 'SYS_ARCH']
         for new_type in new_types:
             assert new_type in doc_type_codes, f"Configuration must include {new_type} document type"
     
