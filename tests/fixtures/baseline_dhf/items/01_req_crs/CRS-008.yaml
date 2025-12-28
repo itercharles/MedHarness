@@ -1,0 +1,9 @@
+id: CRS-008
+title: Automated Test Integration
+content: The system show user the pass or fail of tests.
+rationale: 
+stakeholder: Test Engineering
+priority: Medium
+derives_from:
+- UC-002
+status: approved

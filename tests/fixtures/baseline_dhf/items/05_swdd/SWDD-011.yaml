@@ -1,0 +1,41 @@
+id: SWDD-011
+title: PDF Export
+content: |-
+  Detailed design for exporting markdown documents to PDF format.
+  
+  **Component Structure**:
+  - PDFExporter: Main export orchestrator
+  - MarkdownConverter: Convert markdown to HTML
+  - CSSLoader: Load PDF styling
+  - PDFGenerator: Generate PDF with WeasyPrint
+  
+  **Algorithm**:
+  1. Convert markdown to HTML using Python-Markdown
+  2. Load CSS stylesheet for PDF styling
+  3. Apply CSS to HTML content
+  4. Generate PDF with WeasyPrint library
+  5. Write PDF to output path
+  6. Return output path
+  
+  **Key Interfaces**:
+  ```python
+  class PDFExporter:
+      def export_to_pdf(markdown: str, output: Path) -> None
+      def convert_to_html(markdown: str) -> str
+      def apply_styling(html: str, css: str) -> str
+  ```
+  
+  **Design Patterns**:
+  - Pipeline pattern for conversion flow
+  - Strategy pattern for different output formats
+  
+  **Styling**:
+  - CSS for page layout (margins, headers, footers)
+  - Typography (fonts, sizes, line heights)
+  - Table styling
+  - Code block formatting
+  
+  **Complexity**: O(M) where M = markdown content length
+implements:
+- SRS-009
+status: approved

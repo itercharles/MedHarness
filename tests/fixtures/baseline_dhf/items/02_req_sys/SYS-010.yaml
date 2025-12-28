@@ -1,0 +1,10 @@
+id: SYS-010
+content: The system shall support configurable lifecycle workflows for objects (such as requirements, design items, change requests), with
+  state transitions and validation rules defined in configuration. 
+  The system shall enforce the custom transition rules.
+title: Object Workflow Management
+status: approved
+satisfies:
+- CRS-001
+- CRS-003
+- CRS-005

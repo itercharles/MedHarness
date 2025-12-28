@@ -1,0 +1,37 @@
+id: SWDD-002
+title: Item Persistence with Git
+content: |-
+  Detailed design for saving DHF items to YAML files with Git commit tracking.
+  
+  **Component Structure**:
+  - ItemSaver: Main saving class
+  - YAMLSerializer: Convert items to YAML
+  - GitCommitter: Create Git commits
+  
+  **Algorithm**:
+  1. Validate item against Pydantic schema
+  2. Serialize item to YAML format
+  3. Write to file atomically (temp file + rename)
+  4. Create Git commit with item ID and author
+  5. Rollback file on Git failure
+  
+  **Key Interfaces**:
+  ```python
+  class ItemSaver:
+      def save(item: Item, author: str) -> Path
+      def delete(uid: str, author: str) -> bool
+  ```
+  
+  **Design Patterns**:
+  - Transaction pattern for atomic operations
+  - Command pattern for Git operations
+  
+  **Error Handling**:
+  - Rollback file write if Git commit fails
+  - Validate before save to prevent corruption
+  
+  **Complexity**: O(1) per item
+implements:
+- SRS-001
+- SWAD-001
+status: approved

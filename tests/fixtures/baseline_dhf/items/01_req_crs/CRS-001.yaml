@@ -1,0 +1,10 @@
+id: CRS-001
+title: Requirement definition
+content: The system shall allow users to define requirement items, and generate requirement documents in configurable formats to reduce manual effort and errors.
+  The requirement hierachy and properties shall be customizable.
+rationale: Required for medical device regulatory approval
+stakeholder: Regulatory Affairs
+priority: Critical
+derives_from:
+- UC-001
+status: approved

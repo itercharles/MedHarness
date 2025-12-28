@@ -1,0 +1,10 @@
+id: CRS-011
+title: Regulatory Compliance Validation
+content: The system shall allow users to validate DHF items against
+  regulatory policy groups and display validation results with detailed evidence.
+rationale: 
+stakeholder: Quality Assurance
+priority: High
+derives_from:
+- UC-005
+status: approved

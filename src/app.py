@@ -14,7 +14,14 @@ from utils.ui_helpers import check_and_show_item_detail
 # Initialize Core
 # @st.cache_resource
 def get_core():
-    dhf_root = Path(__file__).resolve().parent.parent / "DHF"
+    import os
+    # Check for DHF_ROOT environment variable (used by tests)
+    dhf_root_env = os.environ.get('DHF_ROOT')
+    if dhf_root_env:
+        dhf_root = Path(dhf_root_env)
+    else:
+        # Default to production DHF directory
+        dhf_root = Path(__file__).resolve().parent.parent / "DHF"
     return CompliantFlowCore(dhf_root)
 
 try:

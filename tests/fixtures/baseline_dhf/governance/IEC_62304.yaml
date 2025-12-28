@@ -1,0 +1,110 @@
+id: IEC_62304
+title: Medical device software - Software life cycle processes
+type: regulation
+version: "1.1"
+policies:
+  # 5.1.1 Software Development Plan
+  - id: "5.1.1.a"
+    section: "5.1.1"
+    text: "The manufacturer shall establish a software development plan."
+    status: "approved"
+    automation:
+      check: "file_existence"
+      params:
+        path: "documents/plans/development_plan.md"
+
+  # 5.2.1 Software Requirements Analysis
+  - id: "5.2.1.a"
+    section: "5.2.1"
+    text: "The manufacturer shall define and document software requirements."
+    status: "approved"
+    automation:
+      check: "item_existence"
+      params:
+        type_code: "CRS"
+
+  # 5.2.2 Software system requirements
+  - id: "5.2.2.a"
+    section: "5.2.2"
+    text: "Existing software requirements shall be contained in the system requirements."
+    status: "approved"
+    automation:
+      check: "item_existence"
+      params:
+        type_code: "SYS"
+
+  # 5.3.1 Software Architecture
+  - id: "5.3.1.a"
+    section: "5.3.1"
+    text: "Transform software requirements into an architecture."
+    status: "approved"
+    automation:
+      check: "file_existence"
+      params:
+        path: "documents/System_Architecture_Specification.md"
+
+  # 5.3.6 Software Architecture Traceability
+  - id: "5.3.6.a"
+    section: "5.3.6"
+    text: "The MANUFACTURER shall document a TRACEABILITY of the SOFTWARE ARCHITECTURE to the SOFTWARE REQUIREMENTS."
+    status: "approved"
+    automation:
+       check: "trace_coverage"
+       params:
+         source_type: "SYS" # Requirements
+         target_type: "SWAD" # Architecture
+         min_coverage: 1.0
+
+  # 5.4.1 Software Detailed Design
+  - id: "5.4.1.a"
+    section: "5.4.1"
+    text: "Subdivide the software into software units."
+    status: "approved"
+    automation:
+       check: "item_existence"
+       params:
+         type_code: "SWDD"
+  
+  # 5.4.2 Detailed Design Traceability
+  - id: "5.4.2.a"
+    section: "5.4.2"
+    text: "Develop a detailed design for each software unit and trace to architecture/requirements."
+    status: "approved"
+    automation:
+      check: "trace_coverage"
+      params:
+        source_type: "SWDD" # Design
+        target_type: "SWAD" # Architecture
+        min_coverage: 1.0
+
+  # 5.5.1 Software Unit Implementation
+  - id: "5.5.1.a"
+    section: "5.5.1"
+    text: "Implement each software unit."
+    status: "approved"
+    automation:
+      check: "item_existence" 
+      params:
+        type_code: "SWDD" 
+
+  # 5.6.1 Software Integration and Integration Testing
+  - id: "5.6.1.a"
+    section: "5.6.1"
+    text: "Integrate software units and test integration."
+    status: "approved"
+    automation:
+      check: "item_existence"
+      params:
+        type_code: "TC-SYS"
+
+  # 5.7.1 Software System Testing
+  - id: "5.7.1.a"
+    section: "5.7.1"
+    text: "Establish tests for software system requirements."
+    status: "approved"
+    automation:
+      check: "trace_coverage"
+      params:
+        source_type: "SYS" # Requirements
+        target_type: "TC-SYS" # Tests
+        min_coverage: 1.0

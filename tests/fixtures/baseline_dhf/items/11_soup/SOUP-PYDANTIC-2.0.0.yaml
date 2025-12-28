@@ -1,0 +1,9 @@
+id: SOUP-PYDANTIC-2.0.0
+content: Data validation library using Python type annotations
+title: Pydantic Data Validation
+status: approved
+manual_verifications:
+  verification_done:
+    verified_by: charles chen
+    verified_date: '2025-12-15T21:59:56.685088'
+    notes: test

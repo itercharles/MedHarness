@@ -1,0 +1,11 @@
+id: CRS-003
+title: Change Control by change request
+content: The system shall allow users to control and monitor the change of DHF items. 
+  It shall provide complete, tamper-evident audit trail of all changes
+  to DHF items including who made changes, when, and why.
+rationale: Required for 21 CFR Part 11 electronic records compliance
+stakeholder: Quality Assurance
+priority: Critical
+derives_from:
+- UC-004
+status: approved

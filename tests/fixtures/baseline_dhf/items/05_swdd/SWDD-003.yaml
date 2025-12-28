@@ -1,0 +1,38 @@
+id: SWDD-003
+title: Graph Construction
+content: |-
+  Detailed design for building traceability graph from DHF items.
+  
+  **Component Structure**:
+  - GraphBuilder: Construct NetworkX graph
+  - NodeFactory: Create graph nodes
+  - EdgeFactory: Create graph edges
+  
+  **Algorithm**:
+  1. Create empty NetworkX DiGraph
+  2. For each item: add node with attributes (ID, type, status, title)
+  3. For each item: parse link fields (derives_from, implements, verifies)
+  4. For each link: add directed edge
+  5. Return constructed graph
+  
+  **Key Interfaces**:
+  ```python
+  class GraphEngine:
+      def build_from_items(items: List[Item]) -> nx.DiGraph
+      def rebuild() -> None
+      def get_graph() -> nx.DiGraph
+  ```
+  
+  **Design Patterns**:
+  - Builder pattern for graph construction
+  - Singleton pattern for graph instance
+  
+  **Data Structures**:
+  - NetworkX DiGraph with node/edge attributes
+  - In-memory graph for fast queries
+  
+  **Complexity**: O(N + E) where N = nodes, E = edges
+implements:
+- SRS-002
+- SWAD-002
+status: approved

@@ -1,0 +1,45 @@
+id: SWDD-012
+title: Test Result Parsing
+content: |-
+  Detailed design for parsing test results from CI/CD pipeline artifacts.
+  
+  **Component Structure**:
+  - TestResultParser: Main parsing orchestrator
+  - JUnitParser: Parse JUnit XML format
+  - PytestParser: Parse pytest JSON format
+  - TestCaseMapper: Map tests to requirements
+  
+  **Algorithm**:
+  1. Fetch test artifact from GitHub Actions
+  2. Detect format (JUnit XML or pytest JSON)
+  3. Parse test results:
+     a. Extract test cases (name, status, duration)
+     b. Extract failure messages if any
+  4. Map test names to requirement IDs:
+     a. Use naming convention (e.g., test_srs_001_* → SRS-001)
+     b. Parse docstrings for requirement references
+  5. Return List[TestCase] with requirement links
+  
+  **Key Interfaces**:
+  ```python
+  class TestResultParser:
+      def parse_junit(xml_path: Path) -> List[TestCase]
+      def parse_pytest(json_path: Path) -> List[TestCase]
+  
+  class TestCaseMapper:
+      def map_to_requirements(tests: List[TestCase]) -> dict
+  ```
+  
+  **Design Patterns**:
+  - Adapter pattern for different test formats
+  - Factory pattern for parser selection
+  - Strategy pattern for mapping strategies
+  
+  **Supported Formats**:
+  - JUnit XML (standard format)
+  - pytest JSON (pytest --json-report)
+  
+  **Complexity**: O(T) where T = number of tests
+implements:
+- SRS-010
+status: approved

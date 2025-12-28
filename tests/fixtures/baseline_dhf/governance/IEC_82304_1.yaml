@@ -1,0 +1,43 @@
+id: IEC_82304_1
+title: Health software - Part 1 General requirements for product safety
+type: standard
+version: "2016"
+policies:
+  - id: "4.2.a"
+    section: "4.2"
+    text: "Use requirements shall be documented."
+    status: "approved"
+    automation:
+       check: "item_existence"
+       params:
+         type_code: "CRS"
+  - id: "4.3.a"
+    section: "4.3"
+    text: "System requirements shall be documented and trace to use requirements."
+    status: "approved"
+    automation:
+       check: "trace_coverage"
+       params:
+         source_type: "SYS"
+         target_type: "CRS"
+         min_coverage: 1.0
+  - id: "4.4.a"
+    section: "4.4"
+    text: "System verification shall be performed."
+    status: "approved"
+    automation:
+       check: "trace_coverage"
+       params:
+         source_type: "SYS"
+         target_type: "TC-SYS"
+         min_coverage: 1.0
+  - id: "4.5.a"
+    section: "4.5"
+    text: "System validation shall be performed."
+    status: "approved"
+    automation:
+        check: "trace_coverage"
+        params:
+            source_type: "CRS"
+            target_type: "TC-CRS"
+            min_coverage: 1.0

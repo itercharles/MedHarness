@@ -1,0 +1,49 @@
+id: SWDD-008
+title: PR-CR Linking and Impact Tracking
+content: |-
+  Detailed design for linking pull requests to change requests and tracking impacted objects.
+  
+  **Component Structure**:
+  - PRLinker: Link PRs to CRs
+  - CRReferenceParser: Parse CR-XXX from PR description
+  - ImpactAnalyzer: Identify affected items from PR files
+  - CRUpdater: Update CR with PR information
+  
+  **Algorithm**:
+  1. Parse PR description with regex for CR-XXX pattern
+  2. Validate referenced CR exists and status is editable
+  3. Extract affected items from PR file changes:
+     a. Get list of changed files from PR
+     b. Map file paths to item IDs (e.g., DHF/items/03_req_srs/SRS-001.yaml → SRS-001)
+  4. Update CR YAML file:
+     a. Add PR info (number, URL, title) to implementation_prs list
+     b. Add affected items to affected_items list
+  5. Commit CR file changes
+  
+  **Key Interfaces**:
+  ```python
+  class PRLinker:
+      def link_pr_to_cr(pr_number: int, cr_id: str) -> None
+      def extract_cr_reference(pr_description: str) -> Optional[str]
+      def get_affected_items(pr_files: List[str]) -> List[str]
+  
+  class ImpactAnalyzer:
+      def analyze_impact(affected_items: List[str]) -> ImpactReport
+      def get_downstream_items(item_ids: List[str]) -> Set[str]
+  ```
+  
+  **Design Patterns**:
+  - Observer pattern for PR events
+  - Strategy pattern for impact analysis
+  - Adapter pattern for GitHub API
+  
+  **Error Handling**:
+  - Reject if CR not found
+  - Reject if CR status not editable
+  - Log warnings for unrecognized file paths
+  
+  **Complexity**: O(F) where F = files in PR
+implements:
+- SRS-007
+- SWAD-004
+status: approved

@@ -1,0 +1,26 @@
+id: SYSARCH-005
+title: Compliance Validation Module
+content: |-
+  Module for validating DHF against regulatory policies and standards.
+  
+  **Responsibilities**:
+  - Load policy definitions from configuration files
+  - Execute validation rules against DHF items
+  - Calculate compliance scores per policy group
+  - Display validation results with detailed evidence
+  - Support custom policy definitions
+  
+  **Key Interfaces**:
+  - `PolicyEngine`: Load and execute validation rules
+  - `ComplianceScorer`: Calculate compliance percentages
+  - `EvidenceCollector`: Gather validation evidence and details
+  - `PolicyValidator`: Validate policy configuration
+  
+  **Implementation Notes**:
+  - Policy-based architecture for flexibility
+  - Supports multiple policy groups (IEC 62304, FDA 21 CFR 820, etc.)
+  - Extensible validation rule types (coverage, orphan, status checks)
+  - Clear pass/fail results with actionable recommendations
+design:
+- SYS-005
+status: approved

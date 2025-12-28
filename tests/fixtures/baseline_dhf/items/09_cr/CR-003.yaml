@@ -1,0 +1,108 @@
+id: CR-003
+title: Automated PR-CR Linking and Traceability System
+content: "Implement automated workflows to link Pull Requests to Change Requests,\
+  \ ensuring \ncomplete traceability and regulatory compliance through GitHub Actions\
+  \ automation.\n"
+description: "Implement automated workflows to link Pull Requests to Change Requests,\
+  \ ensuring \ncomplete traceability and regulatory compliance.\n\n**Objectives:**\n\
+  - Enforce CR references in all PRs\n- Automatically detect and record affected DHF\
+  \ items\n- Track PR implementation in CRs\n- Maintain complete audit trail for regulatory\
+  \ compliance\n\n**Scope:**\n- GitHub Actions workflows for PR validation\n- Automated\
+  \ affected items detection\n- PR status tracking throughout lifecycle\n- CR data\
+  \ model extensions\n"
+justification: "**Regulatory Requirement:**\nIEC 62304 \xA76.2 (Change Control) and\
+  \ FDA 21 CFR 820.30(i) require documented \nlinkage between code changes and change\
+  \ requests.\n\n**Current Gap:**\nManual tracking is error-prone and does not scale.\
+  \ Automated enforcement ensures \n100% compliance and complete traceability.\n\n\
+  **Benefits:**\n- Guaranteed regulatory compliance\n- Complete audit trail\n- Reduced\
+  \ manual effort\n- Improved change management process\n"
+impact_assessment: '**Affected Systems:**
+
+  - GitHub repository workflows
+
+  - CR document type configuration
+
+  - Development workflow
+
+
+  **Risk Assessment:**
+
+  - **Technical Risk:** Low - Uses standard GitHub Actions
+
+  - **Process Risk:** Medium - Requires team adoption of new workflow
+
+  - **Compliance Risk:** Low - Improves compliance posture
+
+
+  **Mitigation:**
+
+  - Comprehensive testing before enforcement
+
+  - Team training on new workflow
+
+  - Clear error messages for validation failures
+
+  '
+priority: High
+requested_by: Compliance Team
+assigned_to: Development Team
+target_version: 1.1.0
+status: approved
+approved_by: System Architect
+approved_date: '2025-12-26'
+affected_items:
+- SYS-030
+- SRS-021
+- SWAD-011
+- SWDD-020
+- SWDD-021
+- SWDD-022
+- RISK-001
+- RCM-001
+- CRS-010
+- CRS-011
+- CRS-012
+- SYS-001
+- SYS-002
+- SYS-003
+- SYS-004
+- SYS-005
+- SYS-006
+- SYS-007
+- SYS-008
+- SYS-009
+- SYS-010
+- SYS-011
+- SYS-012
+- SYS-013
+- SYS-014
+- SYS-015
+- SYS-016
+- SYS-017
+- SYS-018
+- SYS-019
+- SYS-020
+- SYS-021
+- SYS-022
+- SYS-023
+- SYS-024
+- SYS-025
+- SYS-026
+- SYS-027
+- SYS-028
+- SYS-029
+- SYSARCH-001
+- DEF-001
+- REL-1.0.0
+- REL-1.1.0
+- REL-1.2.0
+implementation_prs:
+- pr_number: 2
+  pr_url: https://github.com/itercharles/CompliantFlow/pull/2
+  title: '[CR-003] Feature/pr cr automation docs'
+- pr_number: 3
+  pr_url: https://github.com/itercharles/CompliantFlow/pull/3
+  title: "refactor: remove YAML file existence check for test IDs, allowing aut\u2026"
+- pr_number: 4
+  pr_url: https://github.com/itercharles/CompliantFlow/pull/4
+  title: Feature/improve cr display UI

@@ -1,0 +1,26 @@
+id: SYSARCH-003
+title: Workflow Engine Module
+content: |-
+  Module for managing item lifecycle states and transitions.
+  
+  **Responsibilities**:
+  - Load workflow configuration from YAML (states, transitions, criteria)
+  - Validate state transitions against configured rules
+  - Execute transition criteria checks (field validation, manual approval)
+  - Enforce approval workflows
+  - Support configurable lifecycles per item type
+  
+  **Key Interfaces**:
+  - `WorkflowEngine`: Manage state transitions and validation
+  - `TransitionValidator`: Check if transition is allowed
+  - `CriteriaExecutor`: Execute validation criteria
+  - `ApprovalManager`: Handle approval workflows
+  
+  **Implementation Notes**:
+  - Configuration-driven (no hardcoded workflows)
+  - Supports multiple lifecycle models per document type
+  - Extensible criteria system (field checks, manual verification, linked item status)
+  - Fail-fast validation with clear error messages
+design:
+- SYS-010
+status: approved

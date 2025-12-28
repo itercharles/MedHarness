@@ -1,0 +1,51 @@
+id: SWDD-009
+title: State Transition Validation
+content: |-
+  Detailed design for validating item lifecycle state transitions.
+  
+  **Component Structure**:
+  - WorkflowEngine: Main workflow orchestrator
+  - TransitionValidator: Validate transitions
+  - CriteriaExecutor: Execute validation criteria
+  - WorkflowLoader: Load workflow from configuration
+  
+  **Algorithm**:
+  1. Load workflow configuration for item's document type
+  2. Check if transition exists (from_state → to_state)
+  3. Execute transition criteria in order:
+     a. Field validation (e.g., field_not_empty)
+     b. Manual verification checks
+     c. Linked item status checks
+  4. Collect validation errors
+  5. Return (is_valid, error_messages)
+  
+  **Key Interfaces**:
+  ```python
+  class WorkflowEngine:
+      def validate_transition(item: Item, to_state: str) -> (bool, List[str])
+      def execute_transition(item: Item, to_state: str, author: str) -> Item
+      def get_available_transitions(item: Item) -> List[str]
+  
+  class CriteriaExecutor:
+      def execute(criteria: dict, item: Item) -> (bool, str)
+  ```
+  
+  **Design Patterns**:
+  - State pattern for lifecycle management
+  - Strategy pattern for validation criteria
+  - Chain of responsibility for criteria execution
+  
+  **Criteria Types**:
+  - field_not_empty: Check required fields populated
+  - manual_verification: Require manual approval
+  - linked_items_status: Check linked items in required states
+  
+  **Error Handling**:
+  - Fail-fast: Stop on first failed criterion
+  - Clear error messages for each failure
+  
+  **Complexity**: O(C) where C = number of criteria
+implements:
+- SRS-008
+- SWAD-005
+status: approved
