@@ -21,12 +21,12 @@ class TestStreamlitUI:
     
     def test_streamlit_app_file_exists(self):
         """Verify main Streamlit app file exists"""
-        app_file = Path(__file__).parent.parent / "src" / "app.py"
+        app_file = Path(__file__).parent.parent.parent / "src" / "app.py"
         assert app_file.exists(), "Main app.py file must exist"
     
     def test_app_imports_streamlit(self):
         """Verify app.py imports Streamlit"""
-        app_file = Path(__file__).parent.parent / "src" / "app.py"
+        app_file = Path(__file__).parent.parent.parent / "src" / "app.py"
         
         with open(app_file) as f:
             content = f.read()
@@ -36,12 +36,12 @@ class TestStreamlitUI:
     
     def test_pages_directory_exists(self):
         """Verify Streamlit pages directory exists"""
-        pages_dir = Path(__file__).parent.parent / "src" / "pages"
+        pages_dir = Path(__file__).parent.parent.parent / "src" / "pages"
         assert pages_dir.exists(), "Pages directory must exist"
     
     def test_multiple_pages_defined(self):
         """Verify multiple pages are defined"""
-        pages_dir = Path(__file__).parent.parent / "src" / "pages"
+        pages_dir = Path(__file__).parent.parent.parent / "src" / "pages"
         
         page_files = list(pages_dir.glob("*.py"))
         assert len(page_files) > 0, "Must have at least one page"
@@ -82,7 +82,7 @@ class TestStreamlitUI:
     
     def test_new_pages_exist_for_new_types(self):
         """Verify pages exist for new document types (UC, SRS, SWAD, SWDD, SYS_ARCH)"""
-        pages_dir = Path(__file__).parent.parent / "src" / "pages"
+        pages_dir = Path(__file__).parent.parent.parent / "src" / "pages"
         
         page_files = [f.stem for f in pages_dir.glob("*.py")]
         

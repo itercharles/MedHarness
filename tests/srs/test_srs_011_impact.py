@@ -8,12 +8,12 @@ from pathlib import Path
 import sys
 import networkx as nx
 
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
 from traceability.graph.engine import GraphEngine
 from traceability.repository.loader import ItemLoader
 
-SPECS_DIR = Path(__file__).parent.parent / "DHF" / "items"
+SPECS_DIR = Path(__file__).parent.parent.parent / "DHF" / "items"
 
 
 class TestImpactAnalysis:

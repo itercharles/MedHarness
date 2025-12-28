@@ -8,9 +8,9 @@ from pathlib import Path
 import yaml
 import sys
 
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
-POLICIES_DIR = Path(__file__).parent.parent / "DHF/config/policies"
+POLICIES_DIR = Path(__file__).parent.parent.parent / "DHF/config/policies"
 
 
 class TestComplianceChecking:
@@ -19,12 +19,12 @@ class TestComplianceChecking:
     def test_policies_directory_exists(self):
         """Verify policies directory exists"""
         # Policies might be in config directory
-        config_dir = Path(__file__).parent.parent / "DHF" / "config"
+        config_dir = Path(__file__).parent.parent.parent / "DHF" / "config"
         assert config_dir.exists(), "Config directory must exist for policies"
     
     def test_policy_files_loadable(self):
         """Verify policy files can be loaded"""
-        config_dir = Path(__file__).parent.parent / "DHF" / "config"
+        config_dir = Path(__file__).parent.parent.parent / "DHF" / "config"
         
         # Look for policy-related YAML files
         policy_files = list(config_dir.glob("*policy*.yaml")) + list(config_dir.glob("*.yaml"))
@@ -40,7 +40,7 @@ class TestComplianceChecking:
     def test_policy_checks_have_severity(self):
         """Verify policies can have severity levels"""
         # Check if IEC_62304.yaml has severity levels
-        iec_policy = Path(__file__).parent.parent / "DHF/config/IEC_62304.yaml"
+        iec_policy = Path(__file__).parent.parent.parent / "DHF/config/IEC_62304.yaml"
         
         if iec_policy.exists():
             with open(iec_policy) as f:
@@ -58,7 +58,7 @@ class TestComplianceChecking:
         # This is more of a structural test
         # Policies should have a way to report violations
         
-        iec_policy = Path(__file__).parent.parent / "DHF/config/IEC_62304.yaml"
+        iec_policy = Path(__file__).parent.parent.parent / "DHF/config/IEC_62304.yaml"
         
         if iec_policy.exists():
             with open(iec_policy) as f:
@@ -70,7 +70,7 @@ class TestComplianceChecking:
     def test_custom_policy_definitions_supported(self):
         """Verify custom policy definitions are supported"""
         # Check that policy files use flexible YAML structure
-        config_dir = Path(__file__).parent.parent / "DHF" / "config"
+        config_dir = Path(__file__).parent.parent.parent / "DHF" / "config"
         policy_files = list(config_dir.glob("*.yaml"))
         
         # Should be able to define custom policies via YAML

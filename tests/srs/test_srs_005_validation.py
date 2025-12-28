@@ -8,12 +8,12 @@ from pathlib import Path
 import yaml
 import sys
 
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
 from traceability.repository.loader import ItemLoader
 from traceability.models.item import Item
 
-SPECS_DIR = Path(__file__).parent.parent / "DHF" / "items"
+SPECS_DIR = Path(__file__).parent.parent.parent / "DHF" / "items"
 
 
 class TestDataValidation:

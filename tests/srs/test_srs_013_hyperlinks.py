@@ -10,7 +10,7 @@ from pathlib import Path
 import sys
 import pandas as pd
 
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
 from utils.ui_helpers import make_item_columns_clickable, check_and_show_item_detail
 from traceability.compliant_flow_core import CompliantFlowCore
@@ -22,7 +22,7 @@ class TestSRS013_LinkColumnForItemIDs:
     @pytest.fixture
     def core(self):
         """Initialize CompliantFlowCore."""
-        dhf_root = Path(__file__).parent.parent / "DHF"
+        dhf_root = Path(__file__).parent.parent.parent / "DHF"
         return CompliantFlowCore(dhf_root)
     
     def test_make_item_columns_clickable_detects_id_columns(self, core):
@@ -77,7 +77,7 @@ class TestSRS013_ItemDetailExpanderComponent:
     @pytest.fixture
     def core(self):
         """Initialize CompliantFlowCore."""
-        dhf_root = Path(__file__).parent.parent / "DHF"
+        dhf_root = Path(__file__).parent.parent.parent / "DHF"
         return CompliantFlowCore(dhf_root)
     
     def test_item_detail_function_exists(self, core):
@@ -100,7 +100,7 @@ class TestSRS013_AutomaticItemIDColumnDetection:
     @pytest.fixture
     def core(self):
         """Initialize CompliantFlowCore."""
-        dhf_root = Path(__file__).parent.parent / "DHF"
+        dhf_root = Path(__file__).parent.parent.parent / "DHF"
         return CompliantFlowCore(dhf_root)
     
     def test_detection_with_various_prefixes(self, core):
@@ -161,7 +161,7 @@ class TestSWDD006_PageURLGeneration:
     @pytest.fixture
     def core(self):
         """Initialize CompliantFlowCore."""
-        dhf_root = Path(__file__).parent.parent / "DHF"
+        dhf_root = Path(__file__).parent.parent.parent / "DHF"
         return CompliantFlowCore(dhf_root)
     
     def test_url_generation_without_core(self):
@@ -215,7 +215,7 @@ class TestSWDD008_UniversalPageTemplateIntegration:
         import importlib.util
         spec = importlib.util.spec_from_file_location(
             "universal_page_template",
-            Path(__file__).parent.parent / "src" / "pages" / "universal_page_template.py"
+            Path(__file__).parent.parent.parent / "src" / "pages" / "universal_page_template.py"
         )
         module = importlib.util.module_from_spec(spec)
         
@@ -258,7 +258,7 @@ class TestHyperlinkIntegration:
     @pytest.fixture
     def core(self):
         """Initialize CompliantFlowCore."""
-        dhf_root = Path(__file__).parent.parent / "DHF"
+        dhf_root = Path(__file__).parent.parent.parent / "DHF"
         return CompliantFlowCore(dhf_root)
     
     def test_all_items_can_be_retrieved(self, core):

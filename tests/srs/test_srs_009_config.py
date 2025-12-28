@@ -8,7 +8,7 @@ from pathlib import Path
 import yaml
 import sys
 
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
 
 class TestConfigValidation:
@@ -16,12 +16,12 @@ class TestConfigValidation:
     
     def test_config_file_exists(self):
         """Verify project_config.yaml exists"""
-        config_path = Path(__file__).parent.parent / "DHF" / "config" / "project_config.yaml"
+        config_path = Path(__file__).parent.parent.parent / "DHF" / "config" / "project_config.yaml"
         assert config_path.exists(), "project_config.yaml must exist"
     
     def test_config_is_valid_yaml(self):
         """Verify configuration is valid YAML"""
-        config_path = Path(__file__).parent.parent / "DHF" / "config" / "project_config.yaml"
+        config_path = Path(__file__).parent.parent.parent / "DHF" / "config" / "project_config.yaml"
         
         with open(config_path) as f:
             config = yaml.safe_load(f)
@@ -30,7 +30,7 @@ class TestConfigValidation:
     
     def test_config_has_doc_types(self):
         """Verify configuration defines document types"""
-        config_path = Path(__file__).parent.parent / "DHF" / "config" / "project_config.yaml"
+        config_path = Path(__file__).parent.parent.parent / "DHF" / "config" / "project_config.yaml"
         
         with open(config_path) as f:
             config = yaml.safe_load(f)
@@ -41,7 +41,7 @@ class TestConfigValidation:
     
     def test_doc_types_have_required_fields(self):
         """Verify each document type has required fields"""
-        config_path = Path(__file__).parent.parent / "DHF" / "config" / "project_config.yaml"
+        config_path = Path(__file__).parent.parent.parent / "DHF" / "config" / "project_config.yaml"
         
         with open(config_path) as f:
             config = yaml.safe_load(f)
@@ -55,7 +55,7 @@ class TestConfigValidation:
     
     def test_new_doc_types_present(self):
         """Verify new document types (UC, SRS, SWAD, SWDD, SYS_ARCH) are in config"""
-        config_path = Path(__file__).parent.parent / "DHF" / "config" / "project_config.yaml"
+        config_path = Path(__file__).parent.parent.parent / "DHF" / "config" / "project_config.yaml"
         
         with open(config_path) as f:
             config = yaml.safe_load(f)
@@ -68,7 +68,7 @@ class TestConfigValidation:
     
     def test_config_schema_validation(self):
         """Verify configuration follows expected schema"""
-        config_path = Path(__file__).parent.parent / "DHF" / "config" / "project_config.yaml"
+        config_path = Path(__file__).parent.parent.parent / "DHF" / "config" / "project_config.yaml"
         
         with open(config_path) as f:
             config = yaml.safe_load(f)

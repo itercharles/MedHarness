@@ -8,13 +8,13 @@ from pathlib import Path
 import sys
 
 # Add src to path
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
 from traceability.graph.engine import GraphEngine
 from traceability.repository.loader import ItemLoader
 
 # Path to DHF items
-SPECS_DIR = Path(__file__).parent.parent / "DHF" / "items"
+SPECS_DIR = Path(__file__).parent.parent.parent / "DHF" / "items"
 
 
 class TestGraphDataStructure:

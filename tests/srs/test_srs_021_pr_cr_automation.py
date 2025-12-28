@@ -79,7 +79,7 @@ class TestSRS021_PRCRValidation:
         @links: SRS-021
         @test_id: TC-SRS-021-001
         """
-        dhf_root = Path(__file__).parent.parent / "DHF"
+        dhf_root = Path(__file__).parent.parent.parent / "DHF"
         cr_dir = dhf_root / "items" / "09_cr"
         
         # Test existing CR
@@ -209,7 +209,7 @@ class TestSRS022_AffectedItemsDetection:
         @links: SRS-022
         @test_id: TC-SRS-022-002
         """
-        dhf_root = Path(__file__).parent.parent / "DHF"
+        dhf_root = Path(__file__).parent.parent.parent / "DHF"
         
         # Simulate test file change
         test_file = "test_sys_001_core.py"

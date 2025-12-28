@@ -9,7 +9,7 @@ from pathlib import Path
 import sys
 
 # Add src to path
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
 from traceability.compliant_flow_core import CompliantFlowCore
 from traceability.workflow_engine import DynamicWorkflowEngine
@@ -21,7 +21,7 @@ class TestSRS015_ItemLifecycleManagement:
     @pytest.fixture
     def core(self):
         """Initialize CompliantFlowCore."""
-        dhf_root = Path(__file__).parent.parent / "DHF"
+        dhf_root = Path(__file__).parent.parent.parent / "DHF"
         return CompliantFlowCore(dhf_root)
     
     def test_item_creation_and_retrieval(self, core):
