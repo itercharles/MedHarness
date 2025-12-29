@@ -65,7 +65,7 @@ def test_TC_CRS_001_002_view_requirement_details(page: Page, streamlit_app):
     """
     # Navigate directly to SRS page with item selected via query parameter
     # This uses the existing ?item= functionality in universal_page_template.py
-    page.goto(f"{streamlit_app}/7_SRS?item=SRS-001")
+    page.goto(f"{streamlit_app}/page_SRS?item=SRS-001")
     page.wait_for_load_state("networkidle")
     page.wait_for_timeout(1000)  # Give Streamlit time to process selection
     
@@ -90,7 +90,7 @@ def test_TC_CRS_001_003_search_requirements(page: Page, streamlit_app):
     User searches for requirements by ID or title using query parameter navigation.
     """
     # Test 1: Navigate to specific item by ID
-    page.goto(f"{streamlit_app}/7_SRS?item=SRS-001")
+    page.goto(f"{streamlit_app}/page_SRS?item=SRS-001")
     page.wait_for_load_state("networkidle")
     page.wait_for_timeout(1000)
     
@@ -98,7 +98,7 @@ def test_TC_CRS_001_003_search_requirements(page: Page, streamlit_app):
     expect(page.get_by_role("heading", name="SRS-001")).to_be_visible()
     
     # Test 2: Navigate to different item (SRS-002 has "Graph" in title)
-    page.goto(f"{streamlit_app}/7_SRS?item=SRS-002")
+    page.goto(f"{streamlit_app}/page_SRS?item=SRS-002")
     page.wait_for_load_state("networkidle")
     page.wait_for_timeout(1000)
     

@@ -21,7 +21,7 @@ def test_TC_CRS_008_001_view_test_coverage(page: Page, streamlit_app):
     User views a requirement with verification status.
     """
     # Navigate to SRS-001 detail page
-    page.goto(f"{streamlit_app}/7_SRS?item=SRS-001")
+    page.goto(f"{streamlit_app}/page_SRS?item=SRS-001")
     page.wait_for_load_state("networkidle")
     page.wait_for_timeout(1000)
     

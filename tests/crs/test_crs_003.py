@@ -6,6 +6,7 @@ Tests verify change control workflow through UI.
 @links: CRS-003
 """
 
+import re
 import pytest
 from playwright.sync_api import Page, expect
 
@@ -21,12 +22,12 @@ def test_TC_CRS_003_001_view_change_requests(page: Page, streamlit_app):
     User views list of change requests.
     """
     # Navigate to Change Request page
-    page.goto(f"{streamlit_app}/9_CR")
+    page.goto(f"{streamlit_app}/page_CR")
     page.wait_for_load_state("networkidle")
     page.wait_for_timeout(1000)
     
     # Verify page loaded
-    expect(page.get_by_role("heading", name="Change Request")).to_be_visible()
+    expect(page.get_by_role("heading", name=re.compile(r"Change Request"))).to_be_visible()
     
     # Verify table is displayed
     expect(page.locator("[data-testid='stDataFrame']").first).to_be_visible()
@@ -43,7 +44,7 @@ def test_TC_CRS_003_002_create_change_request(page: Page, streamlit_app):
     User creates a new change request through UI.
     """
     # Navigate to Change Request page
-    page.goto(f"{streamlit_app}/9_CR")
+    page.goto(f"{streamlit_app}/page_CR")
     page.wait_for_load_state("networkidle")
     
     # Click New button

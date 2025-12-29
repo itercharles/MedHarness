@@ -6,6 +6,7 @@ Tests verify architecture management through UI.
 @links: CRS-005
 """
 
+import re
 import pytest
 from playwright.sync_api import Page, expect
 
@@ -21,12 +22,12 @@ def test_TC_CRS_005_001_add_architecture_item(page: Page, streamlit_app):
     User creates a new system architecture item.
     """
     # Navigate to System Architecture page
-    page.goto(f"{streamlit_app}/8_SYS_ARCH")
+    page.goto(f"{streamlit_app}/page_SYSARCH")
     page.wait_for_load_state("networkidle")
     page.wait_for_timeout(1000)
     
     # Verify page loaded
-    expect(page.get_by_role("heading", name="System Architecture")).to_be_visible()
+    expect(page.get_by_role("heading", name=re.compile(r"System Architecture"))).to_be_visible()
     
     # Click New button
     page.get_by_role("button", name="➕ New").click()
@@ -58,7 +59,7 @@ def test_TC_CRS_005_002_edit_architecture_item(page: Page, streamlit_app):
     User views an existing architecture item.
     """
     # Navigate to System Architecture with item selected
-    page.goto(f"{streamlit_app}/8_SYS_ARCH?item=SYSARCH-001")
+    page.goto(f"{streamlit_app}/page_SYSARCH?item=SYSARCH-001")
     page.wait_for_load_state("networkidle")
     page.wait_for_timeout(1000)
     
@@ -77,7 +78,7 @@ def test_TC_CRS_005_003_approve_architecture_item(page: Page, streamlit_app):
     User views architecture item status.
     """
     # Navigate to System Architecture with item selected
-    page.goto(f"{streamlit_app}/8_SYS_ARCH?item=SYSARCH-001")
+    page.goto(f"{streamlit_app}/page_SYSARCH?item=SYSARCH-001")
     page.wait_for_load_state("networkidle")
     page.wait_for_timeout(1000)
     

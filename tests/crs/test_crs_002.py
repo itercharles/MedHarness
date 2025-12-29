@@ -72,7 +72,7 @@ def test_TC_CRS_002_003_navigate_parent_links(page: Page, streamlit_app):
     User navigates through parent requirement links.
     """
     # Navigate to an item with parent links (SRS-001 derives from SYS-001)
-    page.goto(f"{streamlit_app}/7_SRS?item=SRS-001")
+    page.goto(f"{streamlit_app}/page_SRS?item=SRS-001")
     page.wait_for_load_state("networkidle")
     page.wait_for_timeout(1000)
     

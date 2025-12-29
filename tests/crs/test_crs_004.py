@@ -6,6 +6,7 @@ Tests verify document generation through UI.
 @links: CRS-004
 """
 
+import re
 import pytest
 from playwright.sync_api import Page, expect
 
@@ -21,12 +22,12 @@ def test_TC_CRS_004_001_generate_specification(page: Page, streamlit_app):
     User navigates to SRS page and verifies regenerate button exists.
     """
     # Navigate to Software Requirement page
-    page.goto(f"{streamlit_app}/7_SRS")
+    page.goto(f"{streamlit_app}/page_SRS")
     page.wait_for_load_state("networkidle")
     page.wait_for_timeout(1000)
     
     # Verify page loaded with SRS items for document generation
-    expect(page.get_by_role("heading", name="Software Requirement")).to_be_visible()
+    expect(page.get_by_role("heading", name=re.compile(r"Software Requirement"))).to_be_visible()
     
     # Verify SRS items are present (required for document generation)
     page_content = page.content()
@@ -48,12 +49,12 @@ def test_TC_CRS_004_002_view_document_preview(page: Page, streamlit_app):
     User views document preview on SRS page.
     """
     # Navigate to Software Requirement page
-    page.goto(f"{streamlit_app}/7_SRS")
+    page.goto(f"{streamlit_app}/page_SRS")
     page.wait_for_load_state("networkidle")
     page.wait_for_timeout(1000)
     
     # Verify page loaded with document preview capability
-    expect(page.get_by_role("heading", name="Software Requirement")).to_be_visible()
+    expect(page.get_by_role("heading", name=re.compile(r"Software Requirement"))).to_be_visible()
     
     # Verify document preview shows SRS items
     page_content = page.content()
