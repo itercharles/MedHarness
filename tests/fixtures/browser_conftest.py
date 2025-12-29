@@ -117,7 +117,7 @@ def streamlit_app(test_dhf_root, populate_test_dhf_fixture):
     
     # Wait for Streamlit to start and app to be ready
     print("[SETUP] Waiting for Streamlit to start...")
-    max_retries = 30  # 30 seconds
+    max_retries = 40  # 40 seconds
     retry_count = 0
     app_ready = False
     
@@ -127,12 +127,20 @@ def streamlit_app(test_dhf_root, populate_test_dhf_fixture):
         try:
             response = requests.get("http://localhost:8501", timeout=5)
             if response.status_code == 200:
-                # Check if the page has actual content (not just HTML shell)
-                if "streamlit" in response.text.lower() or len(response.text) > 5000:
+                # Check if the app has actually rendered (look for Streamlit-specific content)
+                # The initial HTML shell doesn't have these, but the rendered app does
+                content_lower = response.text.lower()
+                has_streamlit_content = (
+                    'data-testid' in content_lower or  # Streamlit components have data-testid
+                    'st-emotion' in content_lower or    # Streamlit CSS classes
+                    'streamlit-container' in content_lower  # Streamlit containers
+                )
+                
+                if has_streamlit_content:
                     app_ready = True
                     print(f"[OK] Streamlit app is ready (after {retry_count}s, status: {response.status_code})")
-                else:
-                    print(f"[WAIT] Streamlit responding but app not ready yet ({retry_count}s)...")
+                elif retry_count % 5 == 0:  # Log every 5 seconds
+                    print(f"[WAIT] Streamlit responding but app not rendered yet ({retry_count}s)...")
         except Exception as e:
             if retry_count % 5 == 0:  # Log every 5 seconds
                 print(f"[WAIT] Waiting for Streamlit... ({retry_count}s)")
@@ -143,6 +151,7 @@ def streamlit_app(test_dhf_root, populate_test_dhf_fixture):
         stderr_output = process.stderr.read().decode('utf-8', errors='ignore')
         if stderr_output:
             print(f"[STDERR] {stderr_output[:1000]}")
+    
     
     try:
         yield "http://localhost:8501"
