@@ -1,3 +1,4 @@
+import re
 """
 Browser tests for SYS-010: Configurable Lifecycle Workflows
 
@@ -22,7 +23,7 @@ def test_TC_SYS_010_001_view_lifecycle_status(page: Page, streamlit_app):
     Verify system displays lifecycle status for objects.
     """
     # Navigate to an item with lifecycle
-    page.goto(f"{streamlit_app}/7_SRS?item=SRS-001")
+    page.goto(f"{streamlit_app}/page_SRS?item=SRS-001")
     page.wait_for_load_state("networkidle")
     page.wait_for_timeout(1000)
     
@@ -46,7 +47,7 @@ def test_TC_SYS_010_002_view_cr_workflow(page: Page, streamlit_app):
     Verify system displays workflow states for change requests.
     """
     # Navigate to CR page
-    page.goto(f"{streamlit_app}/9_CR?item=CR-001")
+    page.goto(f"{streamlit_app}/page_CR?item=CR-001")
     page.wait_for_load_state("networkidle")
     page.wait_for_timeout(1000)
     
@@ -70,7 +71,7 @@ def test_TC_SYS_010_003_workflow_state_transition(page: Page, streamlit_app):
     Verify system supports workflow state transitions (e.g., draft -> approved).
     """
     # Create a new test item in draft state
-    page.goto(f"{streamlit_app}/7_SRS")
+    page.goto(f"{streamlit_app}/page_SRS")
     page.wait_for_load_state("networkidle")
     page.wait_for_timeout(1000)
     
@@ -89,7 +90,7 @@ def test_TC_SYS_010_003_workflow_state_transition(page: Page, streamlit_app):
     page.wait_for_timeout(1000)
     
     # Navigate to the created item
-    page.goto(f"{streamlit_app}/7_SRS?item=SRS-999")
+    page.goto(f"{streamlit_app}/page_SRS?item=SRS-999")
     page.wait_for_load_state("networkidle")
     page.wait_for_timeout(1000)
     

@@ -54,7 +54,7 @@ def test_TC_SYS_031_002_view_requirement_verification(page: Page, streamlit_app)
     Verify system displays verification status for requirements.
     """
     # Navigate to SRS item with verification status
-    page.goto(f"{streamlit_app}/7_SRS?item=SRS-001")
+    page.goto(f"{streamlit_app}/page_SRS?item=SRS-001")
     page.wait_for_load_state("networkidle")
     page.wait_for_timeout(1000)
     

@@ -1,3 +1,4 @@
+import re
 """
 Browser tests for SYS-021: Document Generation
 
@@ -22,12 +23,12 @@ def test_TC_SYS_021_001_view_document_page(page: Page, streamlit_app):
     Verify system has document generation interface.
     """
     # Navigate to SRS page (which has document generation)
-    page.goto(f"{streamlit_app}/7_SRS")
+    page.goto(f"{streamlit_app}/page_SRS")
     page.wait_for_load_state("networkidle")
     page.wait_for_timeout(1000)
     
     # Verify page loaded with document generation features
-    expect(page.get_by_role("heading", name="Software Requirement")).to_be_visible()
+    expect(page.get_by_role("heading", name=re.compile(r"Software Requirement"))).to_be_visible()
     
     # Verify page contains requirement data that can be exported
     page_content = page.content()
@@ -45,12 +46,12 @@ def test_TC_SYS_021_002_view_specification_preview(page: Page, streamlit_app):
     Verify system can display document preview.
     """
     # Navigate to SRS page
-    page.goto(f"{streamlit_app}/7_SRS")
+    page.goto(f"{streamlit_app}/page_SRS")
     page.wait_for_load_state("networkidle")
     page.wait_for_timeout(1000)
     
     # Verify page loaded with document content
-    expect(page.get_by_role("heading", name="Software Requirement")).to_be_visible()
+    expect(page.get_by_role("heading", name=re.compile(r"Software Requirement"))).to_be_visible()
     
     # Verify document preview/content is displayed
     # The page should show SRS items which form the document content
@@ -75,12 +76,12 @@ def test_TC_SYS_021_003_generate_document(page: Page, streamlit_app, test_dhf_ro
     from pathlib import Path
     
     # Navigate to SRS page
-    page.goto(f"{streamlit_app}/7_SRS")
+    page.goto(f"{streamlit_app}/page_SRS")
     page.wait_for_load_state("networkidle")
     page.wait_for_timeout(1000)
     
     # Verify page loaded
-    expect(page.get_by_role("heading", name="Software Requirement")).to_be_visible()
+    expect(page.get_by_role("heading", name=re.compile(r"Software Requirement"))).to_be_visible()
     
     # Verify SRS items are present for document generation
     page_content = page.content()

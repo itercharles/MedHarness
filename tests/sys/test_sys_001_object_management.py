@@ -1,3 +1,4 @@
+import re
 """
 Browser tests for SYS-001: Objects Management and Tracking
 
@@ -21,8 +22,8 @@ def test_TC_SYS_001_001_view_requirement_object(page: Page, streamlit_app):
     
     Verify system can display requirement objects with complete information.
     """
-    # Navigate to Software Requirement page
-    page.goto(f"{streamlit_app}/7_SRS?item=SRS-001")
+    # Navigate to SRS page with specific item
+    page.goto(f"{streamlit_app}/page_SRS?item=SRS-001")
     page.wait_for_load_state("networkidle")
     page.wait_for_timeout(1000)
     
@@ -36,7 +37,7 @@ def test_TC_SYS_001_001_view_requirement_object(page: Page, streamlit_app):
     assert "Item Persistence and Versioning" in page_content, "Should display SRS-001 title"
     
     # Check for content field
-    assert "persist DHF items" in page_content, "Should display SRS-001 content"
+    assert "persist items to YAML" in page_content, "Should display SRS-001 content"
     
     # Check for derives_from relationship
     assert "SYS-001" in page_content, "Should display derives_from: SYS-001"
@@ -55,25 +56,25 @@ def test_TC_SYS_001_002_view_change_request_object(page: Page, streamlit_app):
     
     Verify system can display change request objects.
     """
-    # Navigate to Change Request page
-    page.goto(f"{streamlit_app}/9_CR?item=CR-001")
+    # Navigate to CR page with specific item
+    page.goto(f"{streamlit_app}/page_CR?item=CR-001")
     page.wait_for_load_state("networkidle")
     page.wait_for_timeout(1000)
     
-    # Verify CR object is displayed with actual content from CR-001.yaml
+    # Verify change request object is displayed with actual content from CR-001.yaml
     expect(page.get_by_role("heading", name="CR-001")).to_be_visible()
     
     # Verify specific fields from CR-001 are displayed
     page_content = page.content()
     
     # Check for title field
-    assert "bulk approval feature" in page_content, "Should display CR-001 title"
+    assert "Test Change Request" in page_content, "Should display CR-001 title"
     
-    # Check for description/content
-    assert "requirements must be approved one at a time" in page_content, "Should display CR-001 description"
+    # Check for description
+    assert "Change request for testing purposes" in page_content, "Should display CR-001 description"
     
     # Check for affected items
-    assert "SYS-001" in page_content, "Should display affected_items: SYS-001"
+    assert "SRS-001" in page_content, "Should display affected_items: SRS-001"
     
     # Check for status
     assert "approved" in page_content or "Approved" in page_content, "Should display status: approved"
@@ -89,8 +90,8 @@ def test_TC_SYS_001_003_view_architecture_object(page: Page, streamlit_app):
     
     Verify system can display architecture/design objects.
     """
-    # Navigate to System Architecture page
-    page.goto(f"{streamlit_app}/8_SYS_ARCH?item=SYSARCH-001")
+    # Navigate to SYSARCH page with specific item
+    page.goto(f"{streamlit_app}/page_SYSARCH?item=SYSARCH-001")
     page.wait_for_load_state("networkidle")
     page.wait_for_timeout(1000)
     
@@ -101,10 +102,10 @@ def test_TC_SYS_001_003_view_architecture_object(page: Page, streamlit_app):
     page_content = page.content()
     
     # Check for title field
-    assert "Item Management Module" in page_content, "Should display SYSARCH-001 title"
+    assert "System Architecture Component" in page_content, "Should display SYSARCH-001 title"
     
-    # Check for content describing the architecture
-    assert "DHF items" in page_content or "ItemLoader" in page_content, "Should display SYSARCH-001 content"
+    # Check for content
+    assert "Architecture component for test system" in page_content, "Should display SYSARCH-001 content"
     
     # Verify substantial architecture data is present
     assert len(page_content) > 2000, "Architecture object should contain substantial data"

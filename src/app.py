@@ -157,10 +157,10 @@ except Exception as e:
 # Generate dynamic pages for each document type
 doc_type_pages = generate_doc_type_pages(st.session_state.core)
 
-# Convert to st.Page objects
+# Convert to st.Page objects with url_path
 all_pages = []
 for page_number, name, icon, page_func, code in doc_type_pages:
-    all_pages.append(st.Page(page_func, title=name, icon=icon))
+    all_pages.append(st.Page(page_func, title=name, icon=icon, url_path=f"page_{code}"))
 
 # Add static pages with absolute paths
 src_dir = Path(__file__).parent

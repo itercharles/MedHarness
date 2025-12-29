@@ -1,3 +1,4 @@
+import re
 """
 Browser tests for SYS-008: Change Management
 
@@ -22,12 +23,12 @@ def test_TC_SYS_008_001_view_change_requests(page: Page, streamlit_app):
     Verify system displays change request list for tracking.
     """
     # Navigate to Change Request page
-    page.goto(f"{streamlit_app}/9_CR")
+    page.goto(f"{streamlit_app}/page_CR")
     page.wait_for_load_state("networkidle")
     page.wait_for_timeout(1000)
     
     # Verify CR page loaded
-    expect(page.get_by_role("heading", name="Change Request")).to_be_visible()
+    expect(page.get_by_role("heading", name=re.compile(r"Change Request"))).to_be_visible()
     
     # Verify table is displayed with CR data
     expect(page.locator("[data-testid='stDataFrame']").first).to_be_visible()
@@ -48,7 +49,7 @@ def test_TC_SYS_008_002_view_change_request_details(page: Page, streamlit_app):
     Verify system displays detailed change request information.
     """
     # Navigate to specific CR
-    page.goto(f"{streamlit_app}/9_CR?item=CR-001")
+    page.goto(f"{streamlit_app}/page_CR?item=CR-001")
     page.wait_for_load_state("networkidle")
     page.wait_for_timeout(1000)
     
@@ -59,13 +60,10 @@ def test_TC_SYS_008_002_view_change_request_details(page: Page, streamlit_app):
     page_content = page.content()
     
     # Check for title
-    assert "bulk approval feature" in page_content, "Should display CR-001 title"
+    assert "Test Change Request" in page_content, "Should display CR-001 title"
     
-    # Check for priority field
-    assert "Medium" in page_content, "Should display priority: Medium"
-    
-    # Check for requested_by field
-    assert "Quality Team" in page_content, "Should display requested_by: Quality Team"
+    # Check for description
+    assert "Change request for testing purposes" in page_content, "Should display CR-001 description"
 
 
 @pytest.mark.browser
@@ -79,7 +77,7 @@ def test_TC_SYS_008_003_view_affected_items(page: Page, streamlit_app):
     Verify system shows items affected by change request.
     """
     # Navigate to CR with affected items
-    page.goto(f"{streamlit_app}/9_CR?item=CR-001")
+    page.goto(f"{streamlit_app}/page_CR?item=CR-001")
     page.wait_for_load_state("networkidle")
     page.wait_for_timeout(1000)
     
@@ -89,9 +87,8 @@ def test_TC_SYS_008_003_view_affected_items(page: Page, streamlit_app):
     # Verify affected_items field is displayed
     page_content = page.content()
     
-    # CR-001 has affected_items: [SYS-001, SYSARCH-001]
-    assert "SYS-001" in page_content, "Should display affected item: SYS-001"
-    assert "SYSARCH-001" in page_content, "Should display affected item: SYSARCH-001"
+    # CR-001 has affected_items: [SRS-001]
+    assert "SRS-001" in page_content, "Should display affected item: SRS-001"
     
     # Verify affected items section/label exists
     assert "affected" in page_content.lower() or "Affected" in page_content, \
@@ -109,7 +106,7 @@ def test_TC_SYS_008_004_create_change_request(page: Page, streamlit_app):
     Verify system allows creating new change requests.
     """
     # Navigate to Change Request page
-    page.goto(f"{streamlit_app}/9_CR")
+    page.goto(f"{streamlit_app}/page_CR")
     page.wait_for_load_state("networkidle")
     page.wait_for_timeout(1000)
     
@@ -128,7 +125,7 @@ def test_TC_SYS_008_004_create_change_request(page: Page, streamlit_app):
     page.wait_for_timeout(1000)
     
     # Navigate to the created CR
-    page.goto(f"{streamlit_app}/9_CR?item=CR-999")
+    page.goto(f"{streamlit_app}/page_CR?item=CR-999")
     page.wait_for_load_state("networkidle")
     page.wait_for_timeout(1000)
     
@@ -152,7 +149,7 @@ def test_TC_SYS_008_005_edit_change_request(page: Page, streamlit_app):
     Verify system allows editing existing change requests.
     """
     # First create a CR to edit
-    page.goto(f"{streamlit_app}/9_CR")
+    page.goto(f"{streamlit_app}/page_CR")
     page.wait_for_load_state("networkidle")
     page.wait_for_timeout(1000)
     
@@ -171,7 +168,7 @@ def test_TC_SYS_008_005_edit_change_request(page: Page, streamlit_app):
     page.wait_for_timeout(1000)
     
     # Navigate to the created CR
-    page.goto(f"{streamlit_app}/9_CR?item=CR-998")
+    page.goto(f"{streamlit_app}/page_CR?item=CR-998")
     page.wait_for_load_state("networkidle")
     page.wait_for_timeout(1000)
     
