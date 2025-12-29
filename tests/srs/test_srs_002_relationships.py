@@ -4,12 +4,6 @@ and SRS-002: Traceability Graph Construction (DHF Integration)
 
 @links: SRS-011, SRS-002
 """
-Automated tests for typed relationships feature.
-
-Tests verify that different relationship types (derives_from, implements, 
-guided_by, informs) are properly handled while preserving semantic meaning
-and supporting graph traversal.
-"""
 
 import pytest
 from pathlib import Path
