@@ -475,7 +475,7 @@ doc_types:
     format: item_multiselect
     target_types:
     - SYS
-    label: Derives From (System Req)
+    label: Derives From
   - name: performance
     format: long_text
     label: Performance

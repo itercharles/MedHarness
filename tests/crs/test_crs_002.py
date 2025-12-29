@@ -79,8 +79,8 @@ def test_TC_CRS_002_003_navigate_parent_links(page: Page, streamlit_app):
     # Verify SRS-001 is displayed with parent links
     expect(page.get_by_role("heading", name="SRS-001")).to_be_visible()
     
-    # Verify "Derives From" section shows parent relationship
-    expect(page.locator("text=/Derives From.*System Req/i").first).to_be_visible()
+    # Verify "Derives From:" section shows parent relationship
+    expect(page.get_by_text("Derives From:", exact=False).first).to_be_visible()
     
     # Verify parent link SYS-001 is displayed
     page_content = page.content()

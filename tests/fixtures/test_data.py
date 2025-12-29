@@ -49,8 +49,8 @@ def create_test_dhf() -> Path:
                 ],
                 'lifecycle': {
                     'states': [
-                        {'id': 'draft', 'label': 'Draft', 'is_initial': True},
-                        {'id': 'approved', 'label': 'Approved', 'is_stable': True}
+                        {'id': 'draft', 'label': 'Draft', 'is_initial': True, 'icon': '📝', 'color': 'warning'},
+                        {'id': 'approved', 'label': 'Approved', 'is_stable': True, 'icon': '✅', 'color': 'success'}
                     ]
                 }
             },
@@ -71,8 +71,8 @@ def create_test_dhf() -> Path:
                 ],
                 'lifecycle': {
                     'states': [
-                        {'id': 'draft', 'label': 'Draft', 'is_initial': True},
-                        {'id': 'approved', 'label': 'Approved', 'is_stable': True}
+                        {'id': 'draft', 'label': 'Draft', 'is_initial': True, 'icon': '📝', 'color': 'warning'},
+                        {'id': 'approved', 'label': 'Approved', 'is_stable': True, 'icon': '✅', 'color': 'success'}
                     ]
                 }
             },
@@ -93,8 +93,8 @@ def create_test_dhf() -> Path:
                 ],
                 'lifecycle': {
                     'states': [
-                        {'id': 'draft', 'label': 'Draft', 'is_initial': True},
-                        {'id': 'approved', 'label': 'Approved', 'is_stable': True}
+                        {'id': 'draft', 'label': 'Draft', 'is_initial': True, 'icon': '📝', 'color': 'warning'},
+                        {'id': 'approved', 'label': 'Approved', 'is_stable': True, 'icon': '✅', 'color': 'success'}
                     ]
                 }
             },
@@ -115,8 +115,8 @@ def create_test_dhf() -> Path:
                 ],
                 'lifecycle': {
                     'states': [
-                        {'id': 'draft', 'label': 'Draft', 'is_initial': True},
-                        {'id': 'approved', 'label': 'Approved', 'is_stable': True}
+                        {'id': 'draft', 'label': 'Draft', 'is_initial': True, 'icon': '📝', 'color': 'warning'},
+                        {'id': 'approved', 'label': 'Approved', 'is_stable': True, 'icon': '✅', 'color': 'success'}
                     ]
                 }
             },
@@ -137,8 +137,8 @@ def create_test_dhf() -> Path:
                 ],
                 'lifecycle': {
                     'states': [
-                        {'id': 'draft', 'label': 'Draft', 'is_initial': True},
-                        {'id': 'approved', 'label': 'Approved', 'is_stable': True}
+                        {'id': 'draft', 'label': 'Draft', 'is_initial': True, 'icon': '📝', 'color': 'warning'},
+                        {'id': 'approved', 'label': 'Approved', 'is_stable': True, 'icon': '✅', 'color': 'success'}
                     ]
                 }
             },
@@ -160,9 +160,9 @@ def create_test_dhf() -> Path:
                 ],
                 'lifecycle': {
                     'states': [
-                        {'id': 'submitted', 'label': 'Submitted', 'is_initial': True},
-                        {'id': 'approved', 'label': 'Approved', 'is_stable': True},
-                        {'id': 'rejected', 'label': 'Rejected', 'is_stable': True}
+                        {'id': 'submitted', 'label': 'Submitted', 'is_initial': True, 'icon': '📝', 'color': 'warning'},
+                        {'id': 'approved', 'label': 'Approved', 'is_stable': True, 'icon': '✅', 'color': 'success'},
+                        {'id': 'rejected', 'label': 'Rejected', 'is_stable': True, 'icon': '❌', 'color': 'danger'}
                     ]
                 }
             }
