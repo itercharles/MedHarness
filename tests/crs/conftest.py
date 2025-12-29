@@ -12,6 +12,7 @@ import yaml
 import subprocess
 import time
 import os
+import requests
 from pathlib import Path
 from playwright.sync_api import sync_playwright
 

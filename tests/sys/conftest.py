@@ -12,6 +12,7 @@ import os
 import tempfile
 import shutil
 import yaml
+import requests
 from pathlib import Path
 import requests
 
