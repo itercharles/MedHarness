@@ -16,6 +16,7 @@ from playwright.sync_api import sync_playwright
 from tests.fixtures.test_data import create_test_dhf, populate_test_dhf
 
 
+
 @pytest.fixture(scope="session")
 def test_dhf_root():
     """Create isolated test DHF directory with proper configuration."""
@@ -84,17 +85,31 @@ def streamlit_app(test_dhf_root, populate_test_dhf_fixture):
     # Get project root
     project_root = Path(__file__).parent.parent.parent
     
-    # Set environment variable
+    # Backup existing app_config.yaml if it exists
+    app_config_path = project_root / "app_config.yaml"
+    backup_config_path = project_root / "app_config.yaml.backup"
+    
+    if app_config_path.exists():
+        shutil.copy(app_config_path, backup_config_path)
+        print(f"[SETUP] Backed up existing app_config.yaml")
+    
+    # Create test config file
+    with open(app_config_path, 'w') as f:
+        f.write(f"dhf_root: {test_dhf_root}\n")
+    
+    # Set environment variable for subprocess
     env = os.environ.copy()
-    env['DHF_ROOT'] = str(test_dhf_root)
     env['PYTHONPATH'] = f"{project_root}/src:{env.get('PYTHONPATH', '')}"
     
     print(f"\n[SETUP] Starting Streamlit with test DHF: {test_dhf_root}")
     
     # Start Streamlit in background
+    # Use venv streamlit
+    streamlit_cmd = str(project_root / "venv" / "bin" / "streamlit")
+    
     process = subprocess.Popen(
         [
-            "streamlit",
+            streamlit_cmd,
             "run",
             str(project_root / "src" / "app.py"),
             "--server.port", "8501",
@@ -117,9 +132,21 @@ def streamlit_app(test_dhf_root, populate_test_dhf_fixture):
     except Exception as e:
         print(f"[WARN] Streamlit failed to start: {e}")
     
-    yield "http://localhost:8501"
-    
-    # Cleanup
-    process.terminate()
-    process.wait(timeout=5)
-    print("\n[CLEANUP] Streamlit stopped")
+    try:
+        yield "http://localhost:8501"
+    finally:
+        # Cleanup - guaranteed to run even if test fails
+        process.terminate()
+        process.wait(timeout=5)
+        
+        # Restore original app_config.yaml
+        if backup_config_path.exists():
+            shutil.move(backup_config_path, app_config_path)
+            print("[CLEANUP] Restored original app_config.yaml")
+        else:
+            # Remove test config if there was no original
+            if app_config_path.exists():
+                app_config_path.unlink()
+                print("[CLEANUP] Removed test app_config.yaml")
+        
+        print("\n[CLEANUP] Streamlit stopped")

@@ -7,115 +7,156 @@ load_dotenv(Path(__file__).parent.parent / '.env')
 
 import streamlit as st
 import pandas as pd
+import yaml
 from traceability.compliant_flow_core import CompliantFlowCore
 from pages.page_generator import generate_doc_type_pages
 from utils.ui_helpers import check_and_show_item_detail
 
-# Initialize Core
-# @st.cache_resource
-def get_core():
-    import os
-    # Check for DHF_ROOT environment variable (used by tests)
-    dhf_root_env = os.environ.get('DHF_ROOT')
-    if dhf_root_env:
-        dhf_root = Path(dhf_root_env)
+
+def get_dhf_root(config_file: str = None) -> Path:
+    """
+    Get DHF root directory from configuration.
+    
+    Args:
+        config_file: Path to app_config.yaml (optional)
+        
+    Returns:
+        Path to DHF directory
+    """
+    # Default to production DHF
+    default_dhf = Path(__file__).resolve().parent.parent / "DHF"
+    
+    # If no config file specified, use default location
+    if config_file is None:
+        config_file = Path(__file__).resolve().parent.parent / "app_config.yaml"
     else:
-        # Default to production DHF directory
-        dhf_root = Path(__file__).resolve().parent.parent / "DHF"
+        config_file = Path(config_file)
+    
+    # If config file doesn't exist, use default
+    if not config_file.exists():
+        return default_dhf
+    
+    # Read config file
+    try:
+        with open(config_file, 'r') as f:
+            config_data = yaml.safe_load(f) or {}
+        
+        if 'dhf_root' in config_data:
+            dhf_path = config_data['dhf_root']
+            # Resolve relative paths from project root
+            if not Path(dhf_path).is_absolute():
+                project_root = Path(__file__).resolve().parent.parent
+                return project_root / dhf_path
+            return Path(dhf_path)
+    except Exception as e:
+        st.warning(f"Failed to load config file {config_file}: {e}. Using default DHF.")
+    
+    return default_dhf
+
+
+# Initialize Core
+@st.cache_resource
+def get_core(_config_file: str = None):
+    """
+    Initialize CompliantFlowCore with DHF from configuration.
+    
+    Args:
+        _config_file: Path to app_config.yaml (optional, prefixed with _ for st.cache)
+    """
+    dhf_root = get_dhf_root(_config_file)
     return CompliantFlowCore(dhf_root)
 
+
+# Get config file path (use default location)
+config_file = None  # Will use default app_config.yaml location
+
 try:
-    core = get_core()
+    core = get_core(config_file)
 except Exception as e:
     st.error(f"Failed to initialize CompliantFlow Core: {e}")
     st.stop()
 
-# Generate dynamic pages for document types
-doc_pages_data = generate_doc_type_pages(core)
+# Configure page
+st.set_page_config(
+    page_title="CompliantFlow",
+    page_icon="📋",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
-# Create page objects
-pages = {}
+# Main page content
+st.title("📋 CompliantFlow")
+st.markdown("""
+Welcome to **CompliantFlow** - your Medical Device Design History File (DHF) management system.
 
-# Home page
-def home_page():
-    st.title("📋 CompliantFlow")
-    st.markdown("### Medical Device Design History File Management")
+### Quick Navigation
+Use the sidebar to navigate between different sections:
+- **📊 Dashboard**: Overview of your DHF status and metrics
+- **📝 Items**: Browse and manage traceability items
+- **🔗 Traceability**: View relationships and traceability matrices
+- **✅ Compliance**: Compliance assessment and reporting
+
+### Getting Started
+1. Browse existing items in the sidebar
+2. Create new items using the "New" button
+3. Link items to establish traceability
+4. Generate compliance reports
+
+---
+""")
+
+# Show recent activity
+st.subheader("📈 Recent Activity")
+
+# Get all items
+all_items = core.get_all_items()
+
+if all_items:
+    # Convert to DataFrame for display
+    df = pd.DataFrame(all_items)
     
-    # Check for item detail query parameter
-    if check_and_show_item_detail(core):
-        st.markdown("---")
-    
-    st.markdown("""
-    Welcome to CompliantFlow, a comprehensive system for managing medical device design history files (DHF) 
-    with full traceability and compliance support.
-    
-    ### Quick Start
-    
-    Use the sidebar to navigate to different sections:
-    
-    - **📋 Document Management Pages**: Create and manage requirements, designs, and test cases
-    - **🔗 Traceability**: View configurable traceability matrices
-    - **✅ Compliance**: Validate against regulatory policies
-    
-    ### Key Features
-    
-    - ✅ **Full Traceability**: Configurable matrices showing requirement chains
-    - ✅ **Lifecycle Management**: Track items through draft, review, and approval
-    - ✅ **Compliance Ready**: Supports IEC 62304, ISO 14971, FDA 21 CFR 820
-    - ✅ **Version Control**: Git-based change tracking
-    - ✅ **PDF Export**: Generate regulatory-ready documentation
-    
-    ### Project Statistics
-    """)
-    
-    # Display project statistics
-    all_items = core.get_all_items()
-    doc_types = {}
-    for item in all_items:
-        item_id = item['id']
-        for dt in core.config.doc_types:
-            if item_id.startswith(dt.prefix):
-                doc_type = dt.code
-                doc_types[doc_type] = doc_types.get(doc_type, 0) + 1
-                break
-    
+    # Show summary statistics
     col1, col2, col3, col4 = st.columns(4)
+    
     with col1:
         st.metric("Total Items", len(all_items))
+    
     with col2:
-        st.metric("Document Types", len(doc_types))
+        # Count by status
+        if 'status' in df.columns:
+            approved_count = len(df[df['status'] == 'approved'])
+            st.metric("Approved Items", approved_count)
+        else:
+            st.metric("Approved Items", "N/A")
+    
     with col3:
-        approved = len([i for i in all_items if i.get('status') == 'approved'])
-        st.metric("Approved Items", approved)
+        # Count unique document types
+        if 'id' in df.columns:
+            doc_types = df['id'].str.extract(r'^([A-Z]+)-')[0].nunique()
+            st.metric("Document Types", doc_types)
+        else:
+            st.metric("Document Types", "N/A")
+    
     with col4:
-        coverage = (approved / len(all_items) * 100) if all_items else 0
-        st.metric("Approval Rate", f"{coverage:.0f}%")
+        # Count items with links
+        if 'all_linked_uids' in df.columns:
+            linked_count = len(df[df['all_linked_uids'].apply(lambda x: len(x) > 0 if isinstance(x, list) else False)])
+            st.metric("Linked Items", linked_count)
+        else:
+            st.metric("Linked Items", "N/A")
     
-    # Document type breakdown
-    st.markdown("### Document Type Breakdown")
-    breakdown_data = []
-    for dt_code, count in sorted(doc_types.items()):
-        dt_config = core.config.get_doc_type(dt_code)
-        name = dt_config.name if dt_config else dt_code
-        breakdown_data.append({"Type": name, "Count": count})
-    
-    if breakdown_data:
-        st.dataframe(pd.DataFrame(breakdown_data), width="stretch", hide_index=True)
-    
-    st.markdown("---")
-    st.caption("CompliantFlow - Ensuring regulatory compliance through systematic traceability")
+    # Show recent items
+    st.subheader("Recent Items")
+    recent_df = df.head(10)[['id', 'title', 'status']].copy() if 'title' in df.columns and 'status' in df.columns else df.head(10)
+    st.dataframe(recent_df, use_container_width=True, hide_index=True)
+else:
+    st.info("No items found in DHF. Create your first item to get started!")
 
-# Build pages list
-all_pages = []
+# Generate dynamic pages for each document type
+all_pages = generate_doc_type_pages(core)
 
-# Home page
-all_pages.append(st.Page(home_page, title="Home", icon="🏠", default=True))
-
-# Add dynamic document type pages
-for page_num, name, icon, func, code in doc_pages_data:
-    all_pages.append(st.Page(func, title=name, icon=icon, url_path=f"{page_num}_{code}"))
-
-# Add special pages
+# Add static pages
+all_pages.append(st.Page("pages/01_Dashboard.py", title="Dashboard", icon="📊"))
 all_pages.append(st.Page("pages/02_Traceability.py", title="Traceability", icon="🔗"))
 all_pages.append(st.Page("pages/03_Compliance.py", title="Compliance", icon="✅"))
 
