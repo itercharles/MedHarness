@@ -1,4 +1,10 @@
-"""Tests for test results provider functionality."""
+"""Tests for SRS-010: Test Result Integration
+
+Verifies parsing test results from CI/CD pipeline, extracting test IDs,
+and mapping test statuses.
+
+@links: SRS-010
+"""
 
 import pytest
 from pathlib import Path
@@ -10,7 +16,7 @@ import xml.etree.ElementTree as ET
 def test_TC_PROVIDER_001_junit_xml_parsing():
     """TC-PROVIDER-001: Verify JUnit XML Parsing
     
-    @links: SDS-TRACE-003
+    @links: SRS-010
     @prerequisites: Sample JUnit XML file
     
     Steps:
@@ -69,7 +75,7 @@ def test_TC_PROVIDER_001_junit_xml_parsing():
 def test_TC_PROVIDER_002_test_id_extraction():
     """TC-PROVIDER-002: Verify Test ID Extraction from Names
     
-    @links: SDS-TRACE-003
+    @links: SRS-010
     @prerequisites: AutomatedTestScanner initialized
     
     Steps:
@@ -98,7 +104,7 @@ def test_TC_PROVIDER_002_test_id_extraction():
 def test_TC_PROVIDER_003_status_mapping():
     """TC-PROVIDER-003: Verify PASS/FAIL/SKIP Mapping
     
-    @links: SDS-TRACE-003
+    @links: SRS-010
     @prerequisites: Test results provider initialized
     
     Steps:
@@ -128,7 +134,7 @@ def test_TC_PROVIDER_003_status_mapping():
 def test_TC_PROVIDER_004_manual_test_reading():
     """TC-PROVIDER-004: Verify Manual Test Status from YAML
     
-    @links: SDS-COMP-001
+    @links: SRS-010
     @prerequisites: Manual test YAML files
     
     Steps:
@@ -164,7 +170,7 @@ def test_TC_PROVIDER_004_manual_test_reading():
 def test_TC_PROVIDER_005_automated_test_discovery():
     """TC-PROVIDER-005: Verify Automated Test Discovery
     
-    @links: SDS-COMP-001
+    @links: SRS-010
     @prerequisites: Python test files in tests/ directory
     
     Steps:
