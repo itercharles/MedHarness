@@ -27,6 +27,14 @@ def test_TC_SYS_001_001_view_requirement_object(page: Page, streamlit_app):
     page.wait_for_load_state("networkidle")
     page.wait_for_timeout(1000)
     
+    # Debug: Check what's actually on the page
+    page_content = page.content()
+    if "SRS-001" not in page_content:
+        print(f"\n[DEBUG] Page content preview (first 500 chars):")
+        print(page_content[:500])
+        page.screenshot(path="debug_srs_page.png")
+        print("[DEBUG] Screenshot saved to debug_srs_page.png")
+    
     # Verify requirement object is displayed with actual content from SRS-001.yaml
     expect(page.get_by_role("heading", name="SRS-001")).to_be_visible()
     

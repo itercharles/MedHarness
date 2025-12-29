@@ -157,7 +157,17 @@ except Exception as e:
 
 # === GENERATE PAGES ===
 # Generate dynamic pages for each document type
-doc_type_pages = generate_doc_type_pages(st.session_state.core)
+try:
+    doc_type_pages = generate_doc_type_pages(st.session_state.core)
+    print(f"[APP] Generated {len(doc_type_pages)} dynamic pages")
+    if not doc_type_pages:
+        st.warning("No document type pages were generated. Check your configuration.")
+except Exception as e:
+    st.error(f"Failed to generate document type pages: {e}")
+    print(f"[ERROR] Page generation failed: {e}")
+    import traceback
+    traceback.print_exc()
+    doc_type_pages = []
 
 # Convert to st.Page objects with url_path
 all_pages = []
