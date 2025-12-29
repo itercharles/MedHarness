@@ -115,20 +115,34 @@ def streamlit_app(test_dhf_root, populate_test_dhf_fixture):
         cwd=str(project_root)
     )
     
-    # Wait for Streamlit to start
+    # Wait for Streamlit to start and app to be ready
     print("[SETUP] Waiting for Streamlit to start...")
-    time.sleep(15)
+    max_retries = 30  # 30 seconds
+    retry_count = 0
+    app_ready = False
     
-    # Verify it's running
-    try:
-        response = requests.get("http://localhost:8501", timeout=5)
-        print(f"[OK] Streamlit is running (status: {response.status_code})")
-    except Exception as e:
-        print(f"[ERROR] Streamlit failed to start: {e}")
+    while retry_count < max_retries and not app_ready:
+        time.sleep(1)
+        retry_count += 1
+        try:
+            response = requests.get("http://localhost:8501", timeout=5)
+            if response.status_code == 200:
+                # Check if the page has actual content (not just HTML shell)
+                if "streamlit" in response.text.lower() or len(response.text) > 5000:
+                    app_ready = True
+                    print(f"[OK] Streamlit app is ready (after {retry_count}s, status: {response.status_code})")
+                else:
+                    print(f"[WAIT] Streamlit responding but app not ready yet ({retry_count}s)...")
+        except Exception as e:
+            if retry_count % 5 == 0:  # Log every 5 seconds
+                print(f"[WAIT] Waiting for Streamlit... ({retry_count}s)")
+    
+    if not app_ready:
+        print(f"[ERROR] Streamlit failed to become ready after {max_retries}s")
         # Print stderr for debugging
         stderr_output = process.stderr.read().decode('utf-8', errors='ignore')
         if stderr_output:
-            print(f"[STDERR] {stderr_output[:1000]}")  # First 1000 chars
+            print(f"[STDERR] {stderr_output[:1000]}")
     
     try:
         yield "http://localhost:8501"
