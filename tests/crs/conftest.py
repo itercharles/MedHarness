@@ -97,10 +97,6 @@ def streamlit_app(test_dhf_root, populate_test_dhf_fixture):
     with open(app_config_path, 'w') as f:
         f.write(f"dhf_root: {test_dhf_root}\n")
     
-    # Set environment variable for subprocess
-    env = os.environ.copy()
-    env['PYTHONPATH'] = f"{project_root}/src:{env.get('PYTHONPATH', '')}"
-    
     print(f"\n[SETUP] Starting Streamlit with test DHF: {test_dhf_root}")
     
     # Start Streamlit in background
@@ -113,7 +109,6 @@ def streamlit_app(test_dhf_root, populate_test_dhf_fixture):
             "--server.port", "8501",
             "--server.headless", "true"
         ],
-        env=env,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         cwd=str(project_root)
