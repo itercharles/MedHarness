@@ -237,6 +237,13 @@ def get_test_dataset() -> List[Dict]:
             'status': 'approved',
             'derives_from': ['SYS-001']
         },
+        {
+            'id': 'SRS-002',
+            'title': 'Graph-based Traceability',
+            'content': 'Software shall provide graph-based traceability visualization',
+            'status': 'approved',
+            'derives_from': ['SYS-001']
+        },
         # System Architecture
         {
             'id': 'SYSARCH-001',
