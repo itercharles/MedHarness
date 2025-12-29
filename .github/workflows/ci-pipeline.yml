@@ -69,7 +69,7 @@ jobs:
       - name: Run SYS Browser Tests
         run: |
           export PYTHONPATH="${PYTHONPATH}:${PWD}/src"
-          pytest tests/sys/ -v --junitxml=sys-test-results.xml
+          pytest tests/sys/ -v -s --junitxml=sys-test-results.xml
       
       - name: Upload SYS test results
         if: always()
@@ -106,7 +106,7 @@ jobs:
       - name: Run CRS Browser Tests
         run: |
           export PYTHONPATH="${PYTHONPATH}:${PWD}/src"
-          pytest tests/crs/ -v --junitxml=crs-test-results.xml
+          pytest tests/crs/ -v -s --junitxml=crs-test-results.xml
       
       - name: Upload CRS test results
         if: always()
