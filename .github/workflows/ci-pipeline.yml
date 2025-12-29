@@ -11,8 +11,8 @@ permissions:
   pull-requests: write
 
 jobs:
-  test:
-    name: Run Tests
+  test-phase1-srs:
+    name: Phase 1 - SRS Unit Tests
     runs-on: ubuntu-latest
     steps:
       - name: Check out code
@@ -42,10 +42,11 @@ jobs:
           name: unit-test-results
           path: unit-test-results.xml
 
-  browser-tests:
-    name: Run Browser Tests (CRS)
+  # Phase 2: SYS Browser Tests (System Requirements)
+  browser-tests-phase2-sys:
+    name: Phase 2 - SYS Browser Tests
     runs-on: ubuntu-latest
-    needs: test
+    needs: test-phase1-srs
     steps:
       - name: Check out code
         uses: actions/checkout@v3
@@ -65,28 +66,54 @@ jobs:
       - name: Install Playwright browsers
         run: playwright install chromium --with-deps
       
-      - name: Start Streamlit app
-        run: |
-          export DHF_ROOT="${PWD}/DHF"
-          streamlit run src/app.py --server.port 8501 --server.headless true &
-          echo "Waiting for Streamlit to start..."
-          sleep 15
-          
-          # Verify Streamlit is running
-          curl -f http://localhost:8501 || (echo "Streamlit failed to start" && exit 1)
-      
-      - name: Run Browser Tests
+      - name: Run SYS Browser Tests
         run: |
           export PYTHONPATH="${PYTHONPATH}:${PWD}/src"
-          export DHF_ROOT="${PWD}/DHF"
-          pytest tests/crs/ -v --junitxml=browser-test-results.xml
+          pytest tests/sys/ -v --junitxml=sys-test-results.xml
       
-      - name: Upload browser test results
+      - name: Upload SYS test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: browser-test-results
-          path: browser-test-results.xml
+          name: sys-test-results
+          path: sys-test-results.xml
+
+
+  # Phase 3: CRS Browser Tests (Customer Requirements)
+  browser-tests-phase3-crs:
+    name: Phase 3 - CRS Browser Tests
+    runs-on: ubuntu-latest
+    needs: browser-tests-phase2-sys
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest playwright pytest-playwright
+          if [ -f src/requirements.txt ]; then pip install -r src/requirements.txt; fi
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+      
+      - name: Install Playwright browsers
+        run: playwright install chromium --with-deps
+      
+      - name: Run CRS Browser Tests
+        run: |
+          export PYTHONPATH="${PYTHONPATH}:${PWD}/src"
+          pytest tests/crs/ -v --junitxml=crs-test-results.xml
+      
+      - name: Upload CRS test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: crs-test-results
+          path: crs-test-results.xml
       
       - name: Upload Playwright traces
         if: failure()
@@ -96,8 +123,8 @@ jobs:
           path: test-results/
 
   validate-cr:
-    name: Validate CR
-    needs: [test, browser-tests]
+    name: Phase 4 - Insert Impacted Items to CR
+    needs: [test-phase1-srs, browser-tests-phase2-sys, browser-tests-phase3-crs]
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
