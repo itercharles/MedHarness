@@ -1,4 +1,9 @@
 """
+Tests for SRS-011: Configurable Document Type Definitions (Item Model)
+and SRS-002: Traceability Graph Construction (DHF Integration)
+
+@links: SRS-011, SRS-002
+"""
 Automated tests for typed relationships feature.
 
 Tests verify that different relationship types (derives_from, implements, 
@@ -17,7 +22,10 @@ from traceability.compliant_flow_core import CompliantFlowCore
 
 
 class TestTypedRelationships:
-    """Tests for typed relationship fields in Item model."""
+    """Tests for typed relationship fields in Item model.
+    
+    @links: SRS-011
+    """
     
     def test_item_has_typed_relationship_fields(self):
         """Verify Item model has all typed relationship fields."""
@@ -101,7 +109,10 @@ class TestTypedRelationships:
 
 
 class TestTypedRelationshipsInDHF:
-    """Tests for typed relationships in actual DHF items."""
+    """Tests for typed relationships in actual DHF items.
+    
+    @links: SRS-002
+    """
     
     @pytest.fixture
     def core(self):

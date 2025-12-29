@@ -1,5 +1,5 @@
 """
-Automated tests for SRS-009: Project Configuration Validation
+Automated tests for SRS-011: Project Configuration Validation
 Verifies: Software shall validate project_config.yaml on startup
 """
 
@@ -12,7 +12,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
 
 class TestConfigValidation:
-    """Tests for SRS-009: Project Configuration Validation"""
+    """Tests for SRS-011: Project Configuration Validation"""
     
     def test_config_file_exists(self):
         """Verify project_config.yaml exists"""
