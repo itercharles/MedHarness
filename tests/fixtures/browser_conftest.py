@@ -102,11 +102,15 @@ def streamlit_app(test_dhf_root, populate_test_dhf_fixture):
     venv_streamlit = project_root / "venv" / "bin" / "streamlit"
     streamlit_cmd = str(venv_streamlit) if venv_streamlit.exists() else "streamlit"
     
-    # Redirect stderr to a temp file for debugging
+    # Redirect stderr and stdout to temp files for debugging
     import tempfile
     stderr_file = tempfile.NamedTemporaryFile(mode='w+', delete=False, suffix='_streamlit_stderr.log')
     stderr_path = stderr_file.name
     stderr_file.close()
+    
+    stdout_file = tempfile.NamedTemporaryFile(mode='w+', delete=False, suffix='_streamlit_stdout.log')
+    stdout_path = stdout_file.name
+    stdout_file.close()
     
     app_path = str(project_root / "src" / "app.py")
     cmd = [
@@ -122,7 +126,7 @@ def streamlit_app(test_dhf_root, populate_test_dhf_fixture):
     
     process = subprocess.Popen(
         cmd,
-        stdout=subprocess.PIPE,
+        stdout=open(stdout_path, 'w'),
         stderr=open(stderr_path, 'w'),
         cwd=str(project_root)
     )
@@ -163,14 +167,37 @@ def streamlit_app(test_dhf_root, populate_test_dhf_fixture):
     if not server_ready:
         print(f"[ERROR] Streamlit server failed to start after {max_retries}s")
         try:
+            with open(stdout_path, 'r') as f:
+                stdout_output = f.read()
+                if stdout_output:
+                    print(f"[STDOUT] Streamlit stdout:\n{stdout_output[-1000:]}")
+        except Exception as e:
+            print(f"[ERROR] Could not read stdout: {e}")
+        try:
             with open(stderr_path, 'r') as f:
                 stderr_output = f.read()
                 if stderr_output:
-                    print(f"[STDERR] Streamlit output:\n{stderr_output}")
-                else:
-                    print("[DEBUG] Stderr is empty")
+                    print(f"[STDERR] Streamlit stderr:\n{stderr_output[-1000:]}")
         except Exception as e:
             print(f"[ERROR] Could not read stderr: {e}")
+    else:
+        # Server started successfully - check logs for any warnings/errors
+        print("[DEBUG] Checking Streamlit logs...")
+        try:
+            with open(stdout_path, 'r') as f:
+                stdout_output = f.read()
+                if stdout_output:
+                    print(f"[STDOUT] Last 500 chars:\n{stdout_output[-500:]}")
+        except:
+            pass
+        try:
+            with open(stderr_path, 'r') as f:
+                stderr_output = f.read()
+                if stderr_output:
+                    print(f"[STDERR] Last 500 chars:\n{stderr_output[-500:]}")
+        except:
+            pass
+    
     
     
     
@@ -183,10 +210,12 @@ def streamlit_app(test_dhf_root, populate_test_dhf_fixture):
         process.terminate()
         process.wait(timeout=5)
         
-        # Clean up stderr file
+        # Clean up temp files
         try:
             if os.path.exists(stderr_path):
                 os.unlink(stderr_path)
+            if os.path.exists(stdout_path):
+                os.unlink(stdout_path)
         except:
             pass
         
