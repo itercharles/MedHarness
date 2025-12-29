@@ -134,8 +134,18 @@ def streamlit_app(test_dhf_root):
     """
     Start Streamlit app with isolated test DHF directory.
     
-    This ensures tests don't modify production DHF data.
+    In CI, uses existing Streamlit instance. Locally, starts new instance.
     """
+    # Check if Streamlit is already running (CI environment)
+    try:
+        response = requests.get("http://localhost:8501", timeout=2)
+        if response.status_code == 200:
+            print("\n✓ Streamlit already running (CI), using existing instance")
+            yield "http://localhost:8501"
+            return
+    except requests.exceptions.RequestException:
+        pass  # Not running, will start it
+    
     # Get project root
     project_root = Path(__file__).parent.parent.parent
     
