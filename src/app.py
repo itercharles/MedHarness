@@ -1,15 +1,22 @@
-"""CompliantFlow - Medical Device Design History File Management System"""
+"""
+CompliantFlow - Medical Device Design History File Management System
+Main Streamlit application entry point.
+"""
 
 # Load environment variables from .env file FIRST
 from pathlib import Path
 from dotenv import load_dotenv
 load_dotenv(Path(__file__).parent.parent / '.env')
 
+print("[APP] Loading app.py module...")
+
 import streamlit as st
-import pandas as pd
 import yaml
 from traceability.compliant_flow_core import CompliantFlowCore
 from pages.page_generator import generate_doc_type_pages
+
+print("[APP] Imports completed successfully")
+import pandas as pd
 from utils.ui_helpers import check_and_show_item_detail
 
 
