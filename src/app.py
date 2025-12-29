@@ -62,6 +62,8 @@ def get_core(_config_file: str = None):
     
     Args:
         _config_file: Path to app_config.yaml (optional, prefixed with _ for st.cache)
+    
+    Note: dhf_root is read from config and used as implicit cache key
     """
     dhf_root = get_dhf_root(_config_file)
     return CompliantFlowCore(dhf_root)

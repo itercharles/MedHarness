@@ -75,18 +75,8 @@ def streamlit_app(test_dhf_root, populate_test_dhf_fixture):
     """
     Start Streamlit app with isolated test DHF directory.
     
-    In CI, uses existing Streamlit instance. Locally, starts new instance.
+    Each test session gets its own Streamlit instance with test data.
     """
-    # Check if Streamlit is already running (CI environment)
-    try:
-        response = requests.get("http://localhost:8501", timeout=2)
-        if response.status_code == 200:
-            print("\n[OK] Streamlit already running (CI), using existing instance")
-            yield "http://localhost:8501"
-            return
-    except requests.exceptions.RequestException:
-        pass  # Not running, will start it
-    
     # Get project root
     project_root = Path(__file__).parent.parent.parent
     
@@ -99,8 +89,11 @@ def streamlit_app(test_dhf_root, populate_test_dhf_fixture):
         print(f"[SETUP] Backed up existing app_config.yaml")
     
     # Create test config file
+    test_config_content = f"dhf_root: {test_dhf_root}\n"
     with open(app_config_path, 'w') as f:
-        f.write(f"dhf_root: {test_dhf_root}\n")
+        f.write(test_config_content)
+    print(f"[SETUP] Wrote test config: {test_config_content.strip()}")
+    print(f"[SETUP] Config file location: {app_config_path}")
     
     print(f"\n[SETUP] Starting Streamlit with test DHF: {test_dhf_root}")
     
@@ -131,7 +124,11 @@ def streamlit_app(test_dhf_root, populate_test_dhf_fixture):
         response = requests.get("http://localhost:8501", timeout=5)
         print(f"[OK] Streamlit is running (status: {response.status_code})")
     except Exception as e:
-        print(f"[WARN] Streamlit failed to start: {e}")
+        print(f"[ERROR] Streamlit failed to start: {e}")
+        # Print stderr for debugging
+        stderr_output = process.stderr.read().decode('utf-8', errors='ignore')
+        if stderr_output:
+            print(f"[STDERR] {stderr_output[:1000]}")  # First 1000 chars
     
     try:
         yield "http://localhost:8501"
