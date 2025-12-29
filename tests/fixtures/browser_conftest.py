@@ -5,6 +5,7 @@ Manages test data isolation and Playwright setup.
 Uses shared test data fixtures from tests/fixtures/test_data.py
 """
 
+import sys
 import pytest
 import shutil
 import subprocess
@@ -14,6 +15,10 @@ import requests
 from pathlib import Path
 from playwright.sync_api import sync_playwright
 from tests.fixtures.test_data import create_test_dhf, populate_test_dhf
+
+# Add project root to path for imports
+project_root = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(project_root))
 
 
 
@@ -100,10 +105,13 @@ def streamlit_app(test_dhf_root, populate_test_dhf_fixture):
     print(f"\n[SETUP] Starting Streamlit with test DHF: {test_dhf_root}")
     
     # Start Streamlit in background
-    # Use system streamlit (works in both local and CI)
+    # Try venv streamlit first (local dev), fall back to system streamlit (CI)
+    venv_streamlit = project_root / "venv" / "bin" / "streamlit"
+    streamlit_cmd = str(venv_streamlit) if venv_streamlit.exists() else "streamlit"
+    
     process = subprocess.Popen(
         [
-            "streamlit",
+            streamlit_cmd,
             "run",
             str(project_root / "src" / "app.py"),
             "--server.port", "8501",
