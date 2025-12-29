@@ -14,7 +14,6 @@ import shutil
 import yaml
 import requests
 from pathlib import Path
-import requests
 
 
 @pytest.fixture(scope="session")
