@@ -1,9 +1,0 @@
-id: SYS-030
-title: Test result retrive and display
-content: The system shall retrive the test result from pipeline and display it in the system.
-category: functional
-verification_method: Test
-critical_safety: false
-status: approved
-satisfies:
-- CRS-008

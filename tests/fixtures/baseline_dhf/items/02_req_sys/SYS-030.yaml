@@ -1,9 +1,0 @@
-id: SYS-030
-title: Automated Change Request Workflow
-content: The system shall provide automated workflows to link Pull Requests and changed objects to Change Requests, ensuring complete traceability and regulatory compliance.
-category: functional
-verification_method: Test
-critical_safety: false
-status: approved
-satisfies:
-- CRS-003
