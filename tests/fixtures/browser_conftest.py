@@ -121,79 +121,51 @@ def streamlit_app(test_dhf_root, populate_test_dhf_fixture):
         cwd=str(project_root)
     )
     
-    # Wait for Streamlit to start and app to be ready
-    print("[SETUP] Waiting for Streamlit to start...")
-    max_retries = 40  # 40 seconds
+    # Wait for Streamlit HTTP server to start
+    # Note: The app won't actually render until a browser connects via WebSocket
+    print("[SETUP] Waiting for Streamlit server to start...")
+    max_retries = 30  # 30 seconds
     retry_count = 0
-    app_ready = False
+    server_ready = False
     
-    while retry_count < max_retries and not app_ready:
+    while retry_count < max_retries and not server_ready:
         time.sleep(1)
         retry_count += 1
         
         # Check if process is still alive
         if process.poll() is not None:
             print(f"[ERROR] Streamlit process died with exit code {process.returncode}")
-            # Read stderr immediately
             try:
                 with open(stderr_path, 'r') as f:
                     stderr_output = f.read()
-                    print(f"[STDERR] Streamlit output:\n{stderr_output}")
+                    if stderr_output:
+                        print(f"[STDERR] Streamlit output:\n{stderr_output}")
             except:
                 pass
             break
         
-        # Check stderr file for errors every 5 seconds
-        if retry_count % 5 == 0:
-            try:
-                with open(stderr_path, 'r') as f:
-                    stderr_content = f.read()
-                    if stderr_content and ('error' in stderr_content.lower() or 'exception' in stderr_content.lower()):
-                        print(f"[ERROR] Streamlit error detected in logs")
-                        print(stderr_content[-500:])  # Last 500 chars
-            except:
-                pass
-        
+        # Just check if HTTP server is responding
         try:
-            response = requests.get("http://localhost:8501", timeout=5)
+            response = requests.get("http://localhost:8501", timeout=2)
             if response.status_code == 200:
-                # Check if the app has actually rendered (look for Streamlit-specific content)
-                content_lower = response.text.lower()
-                has_streamlit_content = (
-                    'data-testid' in content_lower or
-                    'st-emotion' in content_lower or
-                    'streamlit-container' in content_lower
-                )
-                
-                if has_streamlit_content:
-                    app_ready = True
-                    print(f"[OK] Streamlit app is ready (after {retry_count}s, status: {response.status_code})")
-                elif retry_count % 5 == 0:
-                    print(f"[WAIT] Streamlit responding but app not rendered yet ({retry_count}s)...")
-                    # Try accessing healthz endpoint to trigger app load
-                    try:
-                        requests.get("http://localhost:8501/_stcore/health", timeout=2)
-                    except:
-                        pass
-        except Exception as e:
+                server_ready = True
+                print(f"[OK] Streamlit server is ready (after {retry_count}s)")
+        except Exception:
             if retry_count % 5 == 0:
-                print(f"[WAIT] Waiting for Streamlit... ({retry_count}s)")
+                print(f"[WAIT] Waiting for Streamlit server... ({retry_count}s)")
     
-    
-    if not app_ready:
-        print(f"[ERROR] Streamlit failed to become ready after {max_retries}s")
-        # Print full stderr
-        print(f"[DEBUG] Checking stderr file: {stderr_path}")
+    if not server_ready:
+        print(f"[ERROR] Streamlit server failed to start after {max_retries}s")
         try:
             with open(stderr_path, 'r') as f:
                 stderr_output = f.read()
-                print(f"[DEBUG] Stderr file size: {len(stderr_output)} bytes")
                 if stderr_output:
-                    print(f"[STDERR] Full Streamlit output:\n{stderr_output}")
+                    print(f"[STDERR] Streamlit output:\n{stderr_output}")
                 else:
-                    print("[DEBUG] Stderr is empty - no errors logged")
+                    print("[DEBUG] Stderr is empty")
         except Exception as e:
             print(f"[ERROR] Could not read stderr: {e}")
+    
     
     
     
