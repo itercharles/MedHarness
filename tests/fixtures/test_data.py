@@ -9,13 +9,14 @@ import shutil
 import tempfile
 from pathlib import Path
 from typing import Dict, List
+import yaml
 
 
 def create_test_dhf() -> Path:
     """
     Create isolated test DHF directory with proper configuration.
     
-    Copies project_config.yaml from production and creates directory structure.
+    Creates minimal test config from scratch (not copying from production).
     
     Returns:
         Path to the created test DHF directory
@@ -25,14 +26,154 @@ def create_test_dhf() -> Path:
     
     print(f"\n[SETUP] Creating test DHF directory: {test_dir}")
     
-    # Get production DHF path
-    production_dhf = Path(__file__).parent.parent.parent / "DHF"
-    
-    # Copy project configuration from production
-    prod_config_dir = production_dhf / "config"
+    # Create minimal test configuration from scratch
     test_config_dir = test_dir / "config"
-    shutil.copytree(prod_config_dir, test_config_dir)
-    print(f"[OK] Copied project config from production")
+    test_config_dir.mkdir(parents=True)
+    
+    # Create minimal project_config.yaml for testing with lifecycle
+    test_config = {
+        'doc_types': [
+            {
+                'code': 'UC',
+                'name': 'Use Case',
+                'prefix': 'UC-',
+                'directory': '00_uc',
+                'icon': '👤',
+                'page_enabled': True,
+                'page_number': 4,
+                'properties': [
+                    'id',
+                    {'name': 'title', 'format': 'short_text', 'label': 'Title'},
+                    {'name': 'content', 'format': 'long_text', 'label': 'Content'},
+                    {'name': 'status', 'format': 'select', 'label': 'Status', 'options': ['draft', 'approved']}
+                ],
+                'lifecycle': {
+                    'states': [
+                        {'id': 'draft', 'label': 'Draft', 'is_initial': True},
+                        {'id': 'approved', 'label': 'Approved', 'is_stable': True}
+                    ]
+                }
+            },
+            {
+                'code': 'CRS',
+                'name': 'Customer Requirement',
+                'prefix': 'CRS-',
+                'directory': '01_req_crs',
+                'icon': '🎯',
+                'page_enabled': True,
+                'page_number': 5,
+                'properties': [
+                    'id',
+                    {'name': 'title', 'format': 'short_text', 'label': 'Title'},
+                    {'name': 'content', 'format': 'long_text', 'label': 'Content'},
+                    {'name': 'derives_from', 'format': 'item_multiselect', 'target_types': ['UC'], 'label': 'Derives From'},
+                    {'name': 'status', 'format': 'select', 'label': 'Status', 'options': ['draft', 'approved']}
+                ],
+                'lifecycle': {
+                    'states': [
+                        {'id': 'draft', 'label': 'Draft', 'is_initial': True},
+                        {'id': 'approved', 'label': 'Approved', 'is_stable': True}
+                    ]
+                }
+            },
+            {
+                'code': 'SYS',
+                'name': 'System Requirement',
+                'prefix': 'SYS-',
+                'directory': '02_req_sys',
+                'icon': '⚙️',
+                'page_enabled': True,
+                'page_number': 6,
+                'properties': [
+                    'id',
+                    {'name': 'title', 'format': 'short_text', 'label': 'Title'},
+                    {'name': 'content', 'format': 'long_text', 'label': 'Content'},
+                    {'name': 'derives_from', 'format': 'item_multiselect', 'target_types': ['CRS'], 'label': 'Derives From'},
+                    {'name': 'status', 'format': 'select', 'label': 'Status', 'options': ['draft', 'approved']}
+                ],
+                'lifecycle': {
+                    'states': [
+                        {'id': 'draft', 'label': 'Draft', 'is_initial': True},
+                        {'id': 'approved', 'label': 'Approved', 'is_stable': True}
+                    ]
+                }
+            },
+            {
+                'code': 'SRS',
+                'name': 'Software Requirement',
+                'prefix': 'SRS-',
+                'directory': '03_req_srs',
+                'icon': '💻',
+                'page_enabled': True,
+                'page_number': 7,
+                'properties': [
+                    'id',
+                    {'name': 'title', 'format': 'short_text', 'label': 'Title'},
+                    {'name': 'content', 'format': 'long_text', 'label': 'Content'},
+                    {'name': 'derives_from', 'format': 'item_multiselect', 'target_types': ['SYS'], 'label': 'Derives From'},
+                    {'name': 'status', 'format': 'select', 'label': 'Status', 'options': ['draft', 'approved']}
+                ],
+                'lifecycle': {
+                    'states': [
+                        {'id': 'draft', 'label': 'Draft', 'is_initial': True},
+                        {'id': 'approved', 'label': 'Approved', 'is_stable': True}
+                    ]
+                }
+            },
+            {
+                'code': 'SYSARCH',
+                'name': 'System Architecture',
+                'prefix': 'SYSARCH-',
+                'directory': '07_sysarch',
+                'icon': '🏗️',
+                'page_enabled': True,
+                'page_number': 8,
+                'properties': [
+                    'id',
+                    {'name': 'title', 'format': 'short_text', 'label': 'Title'},
+                    {'name': 'content', 'format': 'long_text', 'label': 'Content'},
+                    {'name': 'implements', 'format': 'item_multiselect', 'target_types': ['SYS'], 'label': 'Implements'},
+                    {'name': 'status', 'format': 'select', 'label': 'Status', 'options': ['draft', 'approved']}
+                ],
+                'lifecycle': {
+                    'states': [
+                        {'id': 'draft', 'label': 'Draft', 'is_initial': True},
+                        {'id': 'approved', 'label': 'Approved', 'is_stable': True}
+                    ]
+                }
+            },
+            {
+                'code': 'CR',
+                'name': 'Change Request',
+                'prefix': 'CR-',
+                'directory': '08_cr',
+                'icon': '📝',
+                'page_enabled': True,
+                'page_number': 9,
+                'properties': [
+                    'id',
+                    {'name': 'title', 'format': 'short_text', 'label': 'Title'},
+                    {'name': 'description', 'format': 'long_text', 'label': 'Description'},
+                    {'name': 'justification', 'format': 'long_text', 'label': 'Justification'},
+                    {'name': 'affected_items', 'format': 'item_multiselect', 'label': 'Affected Items'},
+                    {'name': 'status', 'format': 'select', 'label': 'Status', 'options': ['submitted', 'approved', 'rejected']}
+                ],
+                'lifecycle': {
+                    'states': [
+                        {'id': 'submitted', 'label': 'Submitted', 'is_initial': True},
+                        {'id': 'approved', 'label': 'Approved', 'is_stable': True},
+                        {'id': 'rejected', 'label': 'Rejected', 'is_stable': True}
+                    ]
+                }
+            }
+        ]
+    }
+    
+    config_file = test_config_dir / "project_config.yaml"
+    with open(config_file, 'w') as f:
+        yaml.dump(test_config, f, default_flow_style=False, sort_keys=False)
+    
+    print(f"[OK] Created minimal test config with {len(test_config['doc_types'])} document types (with lifecycle)")
     
     # Create directory structure for all document types
     doc_type_dirs = [

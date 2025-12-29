@@ -153,13 +153,22 @@ else:
     st.info("No items found in DHF. Create your first item to get started!")
 
 # Generate dynamic pages for each document type
-all_pages = generate_doc_type_pages(core)
+doc_type_pages = generate_doc_type_pages(core)
 
-# Add static pages with absolute paths
+# Convert to st.Page objects
+all_pages = []
+for page_number, name, icon, page_func, code in doc_type_pages:
+    all_pages.append(st.Page(page_func, title=name, icon=icon))
+
+# Add static pages (only ones that exist)
 src_dir = Path(__file__).parent
-all_pages.append(st.Page(str(src_dir / "pages" / "01_Dashboard.py"), title="Dashboard", icon="📊"))
-all_pages.append(st.Page(str(src_dir / "pages" / "02_Traceability.py"), title="Traceability", icon="🔗"))
-all_pages.append(st.Page(str(src_dir / "pages" / "03_Compliance.py"), title="Compliance", icon="✅"))
+traceability_path = src_dir / "pages" / "02_Traceability.py"
+compliance_path = src_dir / "pages" / "03_Compliance.py"
+
+if traceability_path.exists():
+    all_pages.append(st.Page(str(traceability_path), title="Traceability", icon="🔗"))
+if compliance_path.exists():
+    all_pages.append(st.Page(str(compliance_path), title="Compliance", icon="✅"))
 
 # Configure navigation
 pg = st.navigation(all_pages)
