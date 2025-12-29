@@ -148,7 +148,7 @@ def test_TC_PROVIDER_004_manual_test_reading():
     """
     from traceability.compliant_flow_core import CompliantFlowCore
     
-    dhf_root = Path(__file__).parent.parent / "DHF"
+    dhf_root = Path(__file__).parent.parent.parent / "DHF"
     core = CompliantFlowCore(dhf_root)
     
     items = core.get_all_items()

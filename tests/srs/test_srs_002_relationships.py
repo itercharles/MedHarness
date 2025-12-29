@@ -111,7 +111,7 @@ class TestTypedRelationshipsInDHF:
     @pytest.fixture
     def core(self):
         """Initialize CompliantFlowCore."""
-        dhf_root = Path(__file__).parent.parent / "DHF"
+        dhf_root = Path(__file__).parent.parent.parent / "DHF"
         return CompliantFlowCore(dhf_root)
     
     def test_crs_has_derives_from_links(self, core):
