@@ -108,14 +108,20 @@ def streamlit_app(test_dhf_root, populate_test_dhf_fixture):
     stderr_path = stderr_file.name
     stderr_file.close()
     
+    app_path = str(project_root / "src" / "app.py")
+    cmd = [
+        streamlit_cmd,
+        "run",
+        app_path,
+        "--server.port", "8501",
+        "--server.headless", "true"
+    ]
+    print(f"[DEBUG] Streamlit command: {' '.join(cmd)}")
+    print(f"[DEBUG] Working directory: {project_root}")
+    print(f"[DEBUG] App file exists: {Path(app_path).exists()}")
+    
     process = subprocess.Popen(
-        [
-            streamlit_cmd,
-            "run",
-            str(project_root / "src" / "app.py"),
-            "--server.port", "8501",
-            "--server.headless", "true"
-        ],
+        cmd,
         stdout=subprocess.PIPE,
         stderr=open(stderr_path, 'w'),
         cwd=str(project_root)
