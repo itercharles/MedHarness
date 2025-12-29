@@ -102,6 +102,12 @@ def streamlit_app(test_dhf_root, populate_test_dhf_fixture):
     venv_streamlit = project_root / "venv" / "bin" / "streamlit"
     streamlit_cmd = str(venv_streamlit) if venv_streamlit.exists() else "streamlit"
     
+    # Redirect stderr to a temp file for debugging
+    import tempfile
+    stderr_file = tempfile.NamedTemporaryFile(mode='w+', delete=False, suffix='_streamlit_stderr.log')
+    stderr_path = stderr_file.name
+    stderr_file.close()
+    
     process = subprocess.Popen(
         [
             streamlit_cmd,
@@ -111,7 +117,7 @@ def streamlit_app(test_dhf_root, populate_test_dhf_fixture):
             "--server.headless", "true"
         ],
         stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        stderr=open(stderr_path, 'w'),
         cwd=str(project_root)
     )
     
@@ -124,33 +130,63 @@ def streamlit_app(test_dhf_root, populate_test_dhf_fixture):
     while retry_count < max_retries and not app_ready:
         time.sleep(1)
         retry_count += 1
+        
+        # Check if process is still alive
+        if process.poll() is not None:
+            print(f"[ERROR] Streamlit process died with exit code {process.returncode}")
+            # Read stderr immediately
+            try:
+                with open(stderr_path, 'r') as f:
+                    stderr_output = f.read()
+                    print(f"[STDERR] Streamlit output:\n{stderr_output}")
+            except:
+                pass
+            break
+        
+        # Check stderr file for errors every 5 seconds
+        if retry_count % 5 == 0:
+            try:
+                with open(stderr_path, 'r') as f:
+                    stderr_content = f.read()
+                    if stderr_content and ('error' in stderr_content.lower() or 'exception' in stderr_content.lower()):
+                        print(f"[ERROR] Streamlit error detected in logs")
+                        print(stderr_content[-500:])  # Last 500 chars
+            except:
+                pass
+        
         try:
             response = requests.get("http://localhost:8501", timeout=5)
             if response.status_code == 200:
                 # Check if the app has actually rendered (look for Streamlit-specific content)
-                # The initial HTML shell doesn't have these, but the rendered app does
                 content_lower = response.text.lower()
                 has_streamlit_content = (
-                    'data-testid' in content_lower or  # Streamlit components have data-testid
-                    'st-emotion' in content_lower or    # Streamlit CSS classes
-                    'streamlit-container' in content_lower  # Streamlit containers
+                    'data-testid' in content_lower or
+                    'st-emotion' in content_lower or
+                    'streamlit-container' in content_lower
                 )
                 
                 if has_streamlit_content:
                     app_ready = True
                     print(f"[OK] Streamlit app is ready (after {retry_count}s, status: {response.status_code})")
-                elif retry_count % 5 == 0:  # Log every 5 seconds
+                elif retry_count % 5 == 0:
                     print(f"[WAIT] Streamlit responding but app not rendered yet ({retry_count}s)...")
         except Exception as e:
-            if retry_count % 5 == 0:  # Log every 5 seconds
+            if retry_count % 5 == 0:
                 print(f"[WAIT] Waiting for Streamlit... ({retry_count}s)")
+    
     
     if not app_ready:
         print(f"[ERROR] Streamlit failed to become ready after {max_retries}s")
-        # Print stderr for debugging
-        stderr_output = process.stderr.read().decode('utf-8', errors='ignore')
-        if stderr_output:
-            print(f"[STDERR] {stderr_output[:1000]}")
+        # Print full stderr
+        try:
+            with open(stderr_path, 'r') as f:
+                stderr_output = f.read()
+                if stderr_output:
+                    print(f"[STDERR] Full Streamlit output:\n{stderr_output}")
+        except Exception as e:
+            print(f"[ERROR] Could not read stderr: {e}")
+    
+    
     
     
     try:
@@ -159,6 +195,13 @@ def streamlit_app(test_dhf_root, populate_test_dhf_fixture):
         # Cleanup - guaranteed to run even if test fails
         process.terminate()
         process.wait(timeout=5)
+        
+        # Clean up stderr file
+        try:
+            if os.path.exists(stderr_path):
+                os.unlink(stderr_path)
+        except:
+            pass
         
         # Restore original app_config.yaml
         if backup_config_path.exists():
