@@ -104,12 +104,10 @@ def streamlit_app(test_dhf_root, populate_test_dhf_fixture):
     print(f"\n[SETUP] Starting Streamlit with test DHF: {test_dhf_root}")
     
     # Start Streamlit in background
-    # Use venv streamlit
-    streamlit_cmd = str(project_root / "venv" / "bin" / "streamlit")
-    
+    # Use system streamlit (works in both local and CI)
     process = subprocess.Popen(
         [
-            streamlit_cmd,
+            "streamlit",
             "run",
             str(project_root / "src" / "app.py"),
             "--server.port", "8501",
