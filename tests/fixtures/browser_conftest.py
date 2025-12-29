@@ -170,6 +170,11 @@ def streamlit_app(test_dhf_root, populate_test_dhf_fixture):
                     print(f"[OK] Streamlit app is ready (after {retry_count}s, status: {response.status_code})")
                 elif retry_count % 5 == 0:
                     print(f"[WAIT] Streamlit responding but app not rendered yet ({retry_count}s)...")
+                    # Try accessing healthz endpoint to trigger app load
+                    try:
+                        requests.get("http://localhost:8501/_stcore/health", timeout=2)
+                    except:
+                        pass
         except Exception as e:
             if retry_count % 5 == 0:
                 print(f"[WAIT] Waiting for Streamlit... ({retry_count}s)")
@@ -178,11 +183,15 @@ def streamlit_app(test_dhf_root, populate_test_dhf_fixture):
     if not app_ready:
         print(f"[ERROR] Streamlit failed to become ready after {max_retries}s")
         # Print full stderr
+        print(f"[DEBUG] Checking stderr file: {stderr_path}")
         try:
             with open(stderr_path, 'r') as f:
                 stderr_output = f.read()
+                print(f"[DEBUG] Stderr file size: {len(stderr_output)} bytes")
                 if stderr_output:
                     print(f"[STDERR] Full Streamlit output:\n{stderr_output}")
+                else:
+                    print("[DEBUG] Stderr is empty - no errors logged")
         except Exception as e:
             print(f"[ERROR] Could not read stderr: {e}")
     
