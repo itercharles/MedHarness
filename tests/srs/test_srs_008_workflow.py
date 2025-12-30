@@ -34,11 +34,11 @@ class TestWorkflowTransitions:
         assert 'under_review' in transition_targets, \
             f"Expected 'under_review' in available transitions, got {transition_targets}"
         
-        # Perform transition
-        item = test_core.get_item('SYS-001')
+        # Perform transition using draft item (SYS-002)
+        item = test_core.get_item('SYS-002')
         item['status'] = 'under_review'
         
-        result = test_core.update_item('SYS-001', item)
+        result = test_core.update_item('SYS-002', item)
         
         # Verify new status
         assert result['status'] == 'under_review'
@@ -199,18 +199,18 @@ class TestChangeRequestWorkflow:
             'id': 'CR-MODIFY-001',
             'title': 'Modify SYS-002',
             'description': 'Update approved requirement',
-            'affected_items': ['SYS-002']
+            'affected_items': ['SYS-001']
         }
         test_core.create_item(cr_data)
         
         # Modify stable item
-        item = test_core.get_item('SYS-002')
+        item = test_core.get_item('SYS-001')
         assert item['status'] == 'approved'
         
         item['content'] = 'Modified via CR'
         
         # Update with CR reference
-        result = test_core.update_item('SYS-002', item, cr_id='CR-MODIFY-001')
+        result = test_core.update_item('SYS-001', item, cr_id='CR-MODIFY-001')
         
         # Verify status reset
         assert result['status'] == 'draft'
@@ -318,7 +318,8 @@ class TestCRUDWorkflows:
         
         @links: SRS-008
         """
-        item = test_core.get_item('SYS-002')
+        # Use SYS-001 which is approved in shared test data
+        item = test_core.get_item('SYS-001')
         assert item['status'] == 'approved'
         assert 'approved_by' in item
         

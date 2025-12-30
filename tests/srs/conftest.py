@@ -1,15 +1,15 @@
-```
-"""Shared fixtures for user workflow tests."""
+"""Shared fixtures for SRS workflow tests."""
 import pytest
 from pathlib import Path
 import sys
 
-# Add src to path
-sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
+# Add project root to path for imports
+project_root = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(project_root))
 
 # Import shared test data creation
-from tests.fixtures.test_data import create_test_dhf
-from traceability.compliant_flow_core import CompliantFlowCore
+from tests.fixtures.test_data import create_test_dhf, populate_test_dhf
+from src.traceability.compliant_flow_core import CompliantFlowCore
 
 
 @pytest.fixture
@@ -20,33 +20,29 @@ def test_dhf():
 
 @pytest.fixture
 def test_core(test_dhf):
-    """Initialize CompliantFlowCore with test DHF."""
-    return CompliantFlowCore(repo_root=test_dhf)
+    """Initialize CompliantFlowCore with test DHF and populate with test data."""
+    # Populate test DHF with standard test dataset
+    # Includes: UC-001, CRS-001, SYS-001 (approved), SYS-002 (draft), 
+    #           SRS-001, SRS-002, SYSARCH-001, CR-001
+    core = populate_test_dhf(test_dhf)
+    return core
 
 
 @pytest.fixture
 def draft_sys_item(test_core):
-    """Create a draft SYS requirement for testing."""
-    data = {
-        'id': 'SYS-001',
-        'title': 'Test System Requirement',
-        'content': 'The system shall perform function X',
-        'category': 'Functional',
-        'status': 'draft'
-    }
-    return test_core.create_item(data)
+    """
+    Get the draft SYS-002 item from test dataset.
+    
+    Note: SYS-002 is already created by populate_test_dhf as a draft item
+    """
+    return test_core.get_item('SYS-002')
 
 
 @pytest.fixture
 def approved_sys_item(test_core):
-    """Create an approved (stable) SYS requirement."""
-    data = {
-        'id': 'SYS-002',
-        'title': 'Approved System Requirement',
-        'content': 'The system shall perform function Y',
-        'category': 'Functional',
-        'status': 'approved',
-        'approved_by': 'test_user',
-        'approved_date': '2025-01-01T00:00:00'
-    }
-    return test_core.create_item(data)
+    """
+    Get the approved SYS-001 item from test dataset.
+    
+    Note: SYS-001 is already created by populate_test_dhf as an approved item
+    """
+    return test_core.get_item('SYS-001')

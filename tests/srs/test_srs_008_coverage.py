@@ -27,10 +27,10 @@ class TestCoverageCalculation:
         assert hasattr(engine, 'calculate_coverage') or hasattr(engine, 'get_coverage'), \
             "GraphEngine should have coverage calculation method"
     
-    def test_coverage_identifies_requirements(self):
+    def test_coverage_identifies_requirements(self, test_core):
         """Verify coverage calculation identifies all requirements"""
-        loader = ItemLoader(SPECS_DIR)
-        items = loader.load_all()
+        # loader = ItemLoader(SPECS_DIR)
+        items = test_core.loader.load_all()
         
         engine = GraphEngine()
         engine.build_from_items(items)
@@ -40,10 +40,10 @@ class TestCoverageCalculation:
         
         assert len(srs_items) > 0, "Should have SRS requirements to test coverage"
     
-    def test_coverage_finds_test_descendants(self):
+    def test_coverage_finds_test_descendants(self, test_core):
         """Verify coverage finds test items linked to requirements"""
-        loader = ItemLoader(SPECS_DIR)
-        items = loader.load_all()
+        # loader = ItemLoader(SPECS_DIR)
+        items = test_core.loader.load_all()
         
         engine = GraphEngine()
         engine.build_from_items(items)
@@ -58,10 +58,9 @@ class TestCoverageCalculation:
             # Should be able to get descendants
             assert isinstance(descendants, (list, set)), "Should return descendants"
     
-    def test_coverage_percentage_calculation(self):
+    def test_coverage_percentage_calculation(self, test_core):
         """Verify coverage is calculated as percentage"""
-        loader = ItemLoader(SPECS_DIR)
-        items = loader.load_all()
+        items = test_core.loader.load_all()
         
         engine = GraphEngine()
         engine.build_from_items(items)
@@ -79,10 +78,10 @@ class TestCoverageCalculation:
         except Exception as e:
             pytest.skip(f"Coverage calculation not fully implemented: {e}")
     
-    def test_coverage_reports_uncovered_items(self):
+    def test_coverage_reports_uncovered_items(self, test_core):
         """Verify coverage calculation reports uncovered requirements"""
-        loader = ItemLoader(SPECS_DIR)
-        items = loader.load_all()
+        # loader = ItemLoader(SPECS_DIR)
+        items = test_core.loader.load_all()
         
         engine = GraphEngine()
         engine.build_from_items(items)

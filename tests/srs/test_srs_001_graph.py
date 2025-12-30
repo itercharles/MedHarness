@@ -20,9 +20,9 @@ from traceability.graph.engine import GraphEngine
 class TestGraphDataStructure:
     """Tests for SRS-001: Graph Data Structure"""
     
-    def test_graph_uses_directed_edges(self, test_core, test_items_with_links):
+    def test_graph_uses_directed_edges(self, test_core):
         """Verify graph uses directed edges for traceability"""
-        items = test_core.get_all_items()
+        items = test_core.loader.load_all()
         
         engine = GraphEngine()
         engine.build_from_items(items)
@@ -30,9 +30,9 @@ class TestGraphDataStructure:
         # Verify graph is directed
         assert engine.graph.is_directed(), "Graph must be directed"
     
-    def test_items_are_nodes(self, test_core, test_items_with_links):
+    def test_items_are_nodes(self, test_core):
         """Verify DHF items are represented as nodes"""
-        items = test_core.get_all_items()
+        items = test_core.loader.load_all()
         
         engine = GraphEngine()
         engine.build_from_items(items)
@@ -50,9 +50,9 @@ class TestGraphDataStructure:
         assert item_ids == graph_nodes, \
             f"Graph nodes must exactly match item IDs. Missing: {item_ids - graph_nodes}, Extra: {graph_nodes - item_ids}"
     
-    def test_links_are_edges(self, test_core, test_items_with_links):
+    def test_links_are_edges(self, test_core):
         """Verify links between items are represented as directed edges"""
-        items = test_core.get_all_items()
+        items = test_core.loader.load_all()
         
         engine = GraphEngine()
         engine.build_from_items(items)
@@ -63,11 +63,11 @@ class TestGraphDataStructure:
         assert engine.graph.has_edge('SRS-002', 'SYS-001'), \
             "Edge must exist from SRS-002 to SYS-001"
     
-    def test_graph_performance(self, test_core, test_items_with_links):
+    def test_graph_performance(self, test_core):
         """Verify graph builds quickly with test data"""
         import time
         
-        items = test_core.get_all_items()
+        items = test_core.loader.load_all()
         
         # Performance test with small dataset - should be instant
         start = time.time()
@@ -77,9 +77,9 @@ class TestGraphDataStructure:
         
         assert elapsed < 0.1, f"Graph build took {elapsed:.2f}s, should be < 0.1s for small dataset"
     
-    def test_specific_parent_child_relationship(self, test_core, test_items_with_links):
+    def test_specific_parent_child_relationship(self, test_core):
         """Verify specific parent-child relationship in graph (SRS-001 → SYS-001)"""
-        items = test_core.get_all_items()
+        items = test_core.loader.load_all()
         
         engine = GraphEngine()
         engine.build_from_items(items)

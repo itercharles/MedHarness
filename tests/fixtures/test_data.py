@@ -88,13 +88,20 @@ def create_test_dhf() -> Path:
                     'id',
                     {'name': 'title', 'format': 'short_text', 'label': 'Title'},
                     {'name': 'content', 'format': 'long_text', 'label': 'Content'},
+                    {'name': 'category', 'format': 'short_text', 'label': 'Category'},
                     {'name': 'derives_from', 'format': 'item_multiselect', 'target_types': ['CRS'], 'label': 'Derives From'},
-                    {'name': 'status', 'format': 'select', 'label': 'Status', 'options': ['draft', 'approved']}
+                    {'name': 'status', 'format': 'select', 'label': 'Status', 'options': ['draft', 'under_review', 'approved']}
                 ],
                 'lifecycle': {
                     'states': [
                         {'id': 'draft', 'label': 'Draft', 'is_initial': True, 'icon': '📝', 'color': 'warning'},
+                        {'id': 'under_review', 'label': 'Under Review', 'icon': '👀', 'color': 'info'},
                         {'id': 'approved', 'label': 'Approved', 'is_stable': True, 'icon': '✅', 'color': 'success'}
+                    ],
+                    'transitions': [
+                        {'from': 'draft', 'to': 'under_review', 'label': 'Submit for Review'},
+                        {'from': 'under_review', 'to': 'approved', 'label': 'Approve'},
+                        {'from': 'under_review', 'to': 'draft', 'label': 'Reject'}
                     ]
                 }
             },
@@ -229,6 +236,14 @@ def get_test_dataset() -> List[Dict]:
             'status': 'approved',
             'derives_from': ['CRS-001']
         },
+        {
+            'id': 'SYS-002',
+            'title': 'Draft System Requirement',
+            'content': 'System shall perform function X',
+            'category': 'Functional',
+            'status': 'draft',
+            'derives_from': ['CRS-001']
+        },
         # Software Requirements
         {
             'id': 'SRS-001',
@@ -276,7 +291,7 @@ def populate_test_dhf(test_dhf_root: Path):
     Returns:
         CompliantFlowCore instance with populated data
     """
-    from traceability.compliant_flow_core import CompliantFlowCore
+    from src.traceability.compliant_flow_core import CompliantFlowCore
     
     print(f"\n[DATA] Populating test DHF with test data...")
     
