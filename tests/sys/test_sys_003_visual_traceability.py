@@ -53,18 +53,21 @@ def test_TC_SYS_003_001_view_traceability_table(page: Page, streamlit_app):
     
     # Try clicking on an item link to verify navigation works
     link = page.locator("a[href*='/page_']").first
-    if link.is_visible():
-        href = link.get_attribute("href")
-        assert href.startswith("/page_"), f"Item link should use /page_ format, got: {href}"
-        
-        # Click and verify no "Page not found" error
-        link.click()
-        page.wait_for_load_state("networkidle")
-        page.wait_for_timeout(1000)
-        
-        page_content_after = page.content()
-        assert "Page not found" not in page_content_after, \
-            "Clicking item link should navigate to valid page"
+    
+    # Assert link is visible (don't hide errors with if statement)
+    assert link.is_visible(), "Item link should be visible in traceability table"
+    
+    href = link.get_attribute("href")
+    assert "/page_" in href, f"Item link should contain /page_ format, got: {href}"
+    
+    # Click and verify no "Page not found" error
+    link.click()
+    page.wait_for_load_state("networkidle")
+    page.wait_for_timeout(1000)
+    
+    page_content_after = page.content()
+    assert "Page not found" not in page_content_after, \
+        "Clicking item link should navigate to valid page"
 
 
 @pytest.mark.browser

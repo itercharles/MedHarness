@@ -181,7 +181,7 @@ class CompliantFlowCore:
         # If so, reset to draft and clear approval metadata (core business logic)
         doc_type_config = self.config.get_doc_type_by_prefix(existing.prefix)
         if doc_type_config and doc_type_config.lifecycle:
-            from src.traceability.workflow_engine import DynamicWorkflowEngine
+            from traceability.workflow_engine import DynamicWorkflowEngine
             workflow = DynamicWorkflowEngine(doc_type_config.model_dump(), self)
             
             # Check if old status was stable
@@ -245,7 +245,7 @@ class CompliantFlowCore:
             # No workflow - can edit
             return True, "✏️ Edit", None, None
         
-        from src.traceability.workflow_engine import DynamicWorkflowEngine
+        from traceability.workflow_engine import DynamicWorkflowEngine
         workflow = DynamicWorkflowEngine(doc_type_config.model_dump(), self)
         
         current_status = item.get('status')

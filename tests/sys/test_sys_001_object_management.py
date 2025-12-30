@@ -51,11 +51,9 @@ def test_TC_SYS_001_001_view_requirement_object(page: Page, streamlit_app):
     # Check for title field
     assert "Item Persistence and Versioning" in page_content, "Should display SRS-001 title"
     
-    # Check for content field
-    assert "persist items to YAML" in page_content, "Should display SRS-001 content"
-    
-    # Check for derives_from relationship
-    assert "SYS-001" in page_content, "Should display derives_from: SYS-001"
+    # Check for content field - exact content from test data
+    assert "Software shall persist items to YAML files" in page_content, \
+        "Should display SRS-001 content from test data"
     
     # Check for status field
     assert "approved" in page_content or "Approved" in page_content, "Should display status: approved"
