@@ -26,11 +26,14 @@ class TestFilePersistence:
         items = loader.load_all()
         
         # Each item should have come from a separate file
-        assert len(items) > 0, "Must have at least one item"
+        # DHF currently has 64 items across all types
+        assert len(items) >= 60, \
+            f"Expected at least 60 items in DHF, got {len(items)}"
         
         # Verify each item has unique ID
         item_ids = [item.uid for item in items]
-        assert len(item_ids) == len(set(item_ids)), "Each item must have unique ID"
+        assert len(item_ids) == len(set(item_ids)), \
+            f"Each item must have unique ID. Found {len(item_ids)} items but {len(set(item_ids))} unique IDs"
     
     def test_filename_matches_item_id(self):
         """Verify item ID is used as filename"""
@@ -56,9 +59,10 @@ class TestFilePersistence:
         """Verify files are organized in subdirectories by document type"""
         dhf_items_dir = Path(__file__).parent.parent.parent / "DHF" / "items"
         
-        # Check that subdirectories exist
+        # Check that subdirectories exist (DHF has 11 document type directories)
         subdirs = [d for d in dhf_items_dir.iterdir() if d.is_dir() and not d.name.startswith('.')]
-        assert len(subdirs) > 0, "Items must be organized in subdirectories"
+        assert len(subdirs) >= 10, \
+            f"Expected at least 10 document type subdirectories, got {len(subdirs)}"
         
         # Verify items in each directory have consistent prefix
         for subdir in subdirs:
@@ -97,7 +101,8 @@ class TestFilePersistence:
         dhf_items_dir = Path(__file__).parent.parent.parent / "DHF" / "items"
         
         yaml_files = list(dhf_items_dir.rglob("*.yaml"))
-        assert len(yaml_files) > 0, "Must have YAML files"
+        assert len(yaml_files) >= 60, \
+            f"Expected at least 60 YAML files in DHF, got {len(yaml_files)}"
         
         # Verify files are valid YAML
         for yaml_file in yaml_files[:10]:  # Check first 10

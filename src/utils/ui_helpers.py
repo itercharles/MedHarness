@@ -67,10 +67,20 @@ def make_item_columns_clickable(df: pd.DataFrame, core=None) -> tuple[pd.DataFra
         should_be_clickable = col in doc_type_codes
         
         if should_be_clickable and df[col].dtype == 'object':
-            # Convert to page URLs
-            df_copy[col] = df[col].apply(
-                lambda x: get_page_url_for_item(x, core) if isinstance(x, str) and '-' in x else x
-            )
+            # Convert to page URLs, extracting clean item ID
+            import re
+            
+            def create_link(x):
+                if isinstance(x, str) and '-' in x:
+                    # Extract valid item ID pattern (e.g., SRS-001, TC-SYS-001)
+                    # Pattern: Letters/numbers, hyphen, letters/numbers (repeated for test cases)
+                    match = re.match(r'^([A-Z]+-[A-Z]+-\d+|[A-Z]+-\d+)', x)
+                    if match:
+                        clean_id = match.group(1)
+                        return get_page_url_for_item(clean_id, core)
+                return x
+            
+            df_copy[col] = df[col].apply(create_link)
             
             # Configure as link column
             column_config[col] = st.column_config.LinkColumn(

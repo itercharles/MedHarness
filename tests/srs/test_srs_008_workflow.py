@@ -30,7 +30,9 @@ class TestWorkflowTransitions:
         
         # Verify transition is available
         transitions = workflow.get_available_transitions('draft')
-        assert any(t['to'] == 'under_review' for t in transitions)
+        transition_targets = [t['to'] for t in transitions]
+        assert 'under_review' in transition_targets, \
+            f"Expected 'under_review' in available transitions, got {transition_targets}"
         
         # Perform transition
         item = test_core.get_item('SYS-001')
@@ -64,7 +66,9 @@ class TestWorkflowTransitions:
         
         # Verify can approve
         transitions = workflow.get_available_transitions('under_review')
-        assert any(t['to'] == 'approved' for t in transitions)
+        transition_targets = [t['to'] for t in transitions]
+        assert 'approved' in transition_targets, \
+            f"Expected 'approved' in available transitions from under_review, got {transition_targets}"
         
         # Approve
         item = test_core.get_item('SYS-APPROVE-TEST')

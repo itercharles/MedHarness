@@ -39,15 +39,18 @@ class TestGraphDataStructure:
         engine = GraphEngine()
         engine.build_from_items(items)
         
-        # Verify nodes exist
-        assert len(engine.graph.nodes()) > 0, "Graph must have nodes"
+        # Verify exact node count matches item count
+        expected_node_count = len(items)
+        actual_node_count = len(engine.graph.nodes())
+        assert actual_node_count == expected_node_count, \
+            f"Graph should have exactly {expected_node_count} nodes, got {actual_node_count}"
         
-        # Verify node IDs match item IDs
+        # Verify node IDs match item IDs exactly
         item_ids = {item.uid for item in items}
         graph_nodes = set(engine.graph.nodes())
         
-        # All items should be in graph
-        assert item_ids.issubset(graph_nodes), "All items must be nodes in graph"
+        assert item_ids == graph_nodes, \
+            f"Graph nodes must exactly match item IDs. Missing: {item_ids - graph_nodes}, Extra: {graph_nodes - item_ids}"
     
     def test_links_are_edges(self):
         """Verify links between items are represented as directed edges"""
@@ -128,8 +131,10 @@ class TestGraphDataStructure:
         engine.build_from_items(mock_items)
         
         # Verify exact structure
-        assert set(engine.graph.nodes()) == {"SYS-001", "SRS-001", "SRS-002"}, \
-            "Graph should contain exactly 3 nodes"
+        expected_nodes = {"SYS-001", "SRS-001", "SRS-002"}
+        actual_nodes = set(engine.graph.nodes())
+        assert actual_nodes == expected_nodes, \
+            f"Graph must have exactly {expected_nodes}, got {actual_nodes}"
         
         # Verify exact edges
         assert engine.graph.has_edge("SRS-001", "SYS-001"), "SRS-001 → SYS-001 edge must exist"
@@ -154,9 +159,17 @@ class TestGraphDataStructure:
         engine.build_from_items(mock_items)
         
         # Graph should still build (directed graphs can have cycles)
-        assert len(engine.graph.nodes()) == 2, "Graph should contain 2 nodes"
+        expected_nodes = {"A", "B"}
+        actual_nodes = set(engine.graph.nodes())
+        assert actual_nodes == expected_nodes, \
+            f"Graph must have exactly {expected_nodes}, got {actual_nodes}"
+        
         assert engine.graph.has_edge("A", "B"), "A → B edge must exist"
         assert engine.graph.has_edge("B", "A"), "B → A edge must exist"
+        
+        # Verify exact edge count
+        assert len(list(engine.graph.edges())) == 2, \
+            f"Graph must have exactly 2 edges, got {len(list(engine.graph.edges()))}"
         
         # Verify cycle detection (if implemented)
         # Note: This is an edge case - the system should either:

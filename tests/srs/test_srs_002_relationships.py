@@ -65,14 +65,10 @@ class TestTypedRelationships:
         
         all_uids = item.all_linked_uids
         
-        assert isinstance(all_uids, list)
-        assert len(all_uids) == 4  # Updated count after removing links
-        assert "UC-001" in all_uids
-        assert "UC-002" in all_uids
-        assert "SRS-001" in all_uids
-        assert "SWAD-001" in all_uids
-        # Should be sorted
-        assert all_uids == sorted(all_uids)
+        # EXACT assertion - we know all values
+        expected = ["SRS-001", "SWAD-001", "UC-001", "UC-002"]  # Sorted
+        assert all_uids == expected, \
+            f"all_linked_uids must be exactly {expected}, got {all_uids}"
     
     def test_all_linked_uids_handles_none_values(self):
         """Verify all_linked_uids handles None relationship fields."""

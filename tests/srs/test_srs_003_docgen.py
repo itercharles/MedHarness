@@ -31,9 +31,10 @@ class TestDocumentGeneration:
         assert TEMPLATES_DIR.exists(), "Templates directory must exist"
     
     def test_template_files_exist(self):
-        """Verify template files are present"""
+        # Check template files exist (DHF has 4 Jinja2 templates)
         template_files = list(TEMPLATES_DIR.glob("*.j2"))
-        assert len(template_files) > 0, "Must have at least one template file"
+        assert len(template_files) >= 3, \
+            f"Expected at least 3 template files, got {len(template_files)}"
     
     def test_markdown_output_format(self):
         """Verify documents can be generated in markdown format"""
