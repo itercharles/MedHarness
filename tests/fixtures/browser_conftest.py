@@ -14,13 +14,12 @@ import os
 import requests
 from pathlib import Path
 from playwright.sync_api import sync_playwright
-from tests.fixtures.test_data import create_test_dhf, populate_test_dhf
 
 # Add project root to path for imports
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-
+from fixtures.test_data import create_test_dhf, populate_test_dhf
 
 @pytest.fixture(scope="session")
 def test_dhf_root():
