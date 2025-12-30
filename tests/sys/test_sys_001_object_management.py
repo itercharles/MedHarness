@@ -25,7 +25,14 @@ def test_TC_SYS_001_001_view_requirement_object(page: Page, streamlit_app):
     # Navigate to SRS page with specific item
     page.goto(f"{streamlit_app}/page_SRS?item=SRS-001")
     page.wait_for_load_state("networkidle")
-    page.wait_for_timeout(1000)
+    
+    # Wait for Streamlit to actually render (app executes on first browser connection)
+    # Look for Streamlit-specific elements that appear when app renders
+    try:
+        page.wait_for_selector('[data-testid="stAppViewContainer"]', timeout=10000)
+    except:
+        # If Streamlit container doesn't appear, wait a bit more
+        page.wait_for_timeout(5000)
     
     # Debug: Check what's actually on the page
     page_content = page.content()
