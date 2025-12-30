@@ -65,37 +65,38 @@ class TestCoverageCalculation:
         engine = GraphEngine()
         engine.build_from_items(items)
         
-        # Try to calculate coverage
-        try:
-            if hasattr(engine, 'calculate_coverage'):
-                coverage = engine.calculate_coverage('SRS')
-                
-                # Coverage should be a number between 0 and 100
-                if isinstance(coverage, dict):
-                    assert 'percentage' in coverage or 'coverage' in coverage
-                elif isinstance(coverage, (int, float)):
-                    assert 0 <= coverage <= 100, "Coverage should be 0-100%"
-        except Exception as e:
-            pytest.skip(f"Coverage calculation not fully implemented: {e}")
+        # Calculate coverage for SRS items
+        coverage = engine.calculate_coverage('SRS')
+        
+        # Should return a dictionary with coverage percentage
+        assert isinstance(coverage, dict), "Coverage should return a dictionary"
+        assert 'coverage' in coverage, "Coverage should have 'coverage' percentage key"
+        assert isinstance(coverage['coverage'], (int, float)), "Coverage percentage should be a number"
+        assert 0 <= coverage['coverage'] <= 100, f"Coverage should be 0-100%, got {coverage['coverage']}"
     
     def test_coverage_reports_uncovered_items(self, test_core):
         """Verify coverage calculation reports uncovered requirements"""
-        # loader = ItemLoader(SPECS_DIR)
         items = test_core.loader.load_all()
         
-        engine = GraphEngine()
+        # Initialize engine with config so it can identify document types
+        engine = GraphEngine(config=test_core.config)
         engine.build_from_items(items)
         
-        # Coverage should be able to identify uncovered items
-        try:
-            if hasattr(engine, 'calculate_coverage'):
-                coverage = engine.calculate_coverage('SRS')
-                
-                # Should report uncovered items
-                if isinstance(coverage, dict):
-                    assert 'uncovered' in coverage or 'not_verified' in coverage or 'missing' in coverage
-        except Exception as e:
-            pytest.skip(f"Coverage reporting not fully implemented: {e}")
+        # Calculate coverage for SYS items (test config has SYS configured)
+        coverage = engine.calculate_coverage('SYS')
+        
+        # Should return a dictionary with coverage statistics
+        assert isinstance(coverage, dict), "Coverage should return a dictionary"
+        assert 'total' in coverage, "Coverage should have 'total' key"
+        assert 'covered' in coverage, "Coverage should have 'covered' key"
+        assert 'coverage' in coverage, "Coverage should have 'coverage' percentage key"
+        assert 'uncovered' in coverage, "Coverage should have 'uncovered' key"
+        
+        # Test data has 2 SYS items (SYS-001, SYS-002)
+        assert coverage['total'] == 2, f"Expected 2 SYS items, got {coverage['total']}"
+        
+        # Uncovered should be a list
+        assert isinstance(coverage['uncovered'], list), "Uncovered should be a list"
 
 
 if __name__ == "__main__":
