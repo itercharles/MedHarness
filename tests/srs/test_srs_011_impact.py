@@ -38,15 +38,15 @@ class TestImpactAnalysis:
         engine = GraphEngine()
         engine.build_from_items(items)
         
-        # Find a UC item (root of hierarchy)
+        # Find a UC item (root of hierarchy) - test data has UC-001
         uc_items = [item for item in items if item.uid.startswith('UC-')]
+        assert len(uc_items) > 0, "Test data should have UC items"
         
-        if uc_items:
-            # Get descendants of first UC
-            descendants = list(nx.descendants(engine.graph, uc_items[0].uid))
-            
-            # Should find downstream items (CRS, SYS, etc.)
-            assert isinstance(descendants, (list, set)), "Should return descendants collection"
+        # Get descendants of first UC
+        descendants = list(nx.descendants(engine.graph, uc_items[0].uid))
+        
+        # Should find downstream items (CRS, SYS, etc.)
+        assert isinstance(descendants, (list, set)), "Should return descendants collection"
     
     def test_impact_grouped_by_type(self, test_core):
         """Verify impact can be reported by document type"""
@@ -58,20 +58,20 @@ class TestImpactAnalysis:
         
         # Get descendants and group by type
         uc_items = [item for item in items if item.uid.startswith('UC-')]
+        assert len(uc_items) > 0, "Test data should have UC items"
         
-        if uc_items:
-            descendants = list(nx.descendants(engine.graph, uc_items[0].uid))
-            
-            # Group by prefix
-            by_type = {}
-            for desc_id in descendants:
-                prefix = desc_id.split('-')[0]
-                if prefix not in by_type:
-                    by_type[prefix] = []
-                by_type[prefix].append(desc_id)
-            
-            # Should be able to group by type
-            assert isinstance(by_type, dict), "Impact should be groupable by type"
+        descendants = list(nx.descendants(engine.graph, uc_items[0].uid))
+        
+        # Group by prefix
+        by_type = {}
+        for desc_id in descendants:
+            prefix = desc_id.split('-')[0]
+            if prefix not in by_type:
+                by_type[prefix] = []
+            by_type[prefix].append(desc_id)
+        
+        # Should be able to group by type
+        assert isinstance(by_type, dict), "Impact should be groupable by type"
     
     def test_impact_score_calculable(self, test_core):
         """Verify impact score can be calculated"""
@@ -83,15 +83,15 @@ class TestImpactAnalysis:
         
         # Impact score could be number of affected items
         uc_items = [item for item in items if item.uid.startswith('UC-')]
+        assert len(uc_items) > 0, "Test data should have UC items"
         
-        if uc_items:
-            descendants = list(nx.descendants(engine.graph, uc_items[0].uid))
-            
-            # Impact score = number of descendants
-            impact_score = len(descendants) if isinstance(descendants, (list, set)) else 0
-            
-            assert isinstance(impact_score, int), "Impact score should be calculable"
-            assert impact_score >= 0, "Impact score should be non-negative"
+        descendants = list(nx.descendants(engine.graph, uc_items[0].uid))
+        
+        # Impact score = number of descendants
+        impact_score = len(descendants) if isinstance(descendants, (list, set)) else 0
+        
+        assert isinstance(impact_score, int), "Impact score should be calculable"
+        assert impact_score >= 0, "Impact score should be non-negative"
     
     def test_transitive_dependencies_found(self, test_core):
         """Verify transitive dependencies are found (not just direct children)"""
@@ -103,17 +103,17 @@ class TestImpactAnalysis:
         
         # UC should have transitive descendants (UC -> CRS -> SYS -> SRS, etc.)
         uc_items = [item for item in items if item.uid.startswith('UC-')]
+        assert len(uc_items) > 0, "Test data should have UC items"
         
-        if uc_items:
-            descendants = list(nx.descendants(engine.graph, uc_items[0].uid))
+        descendants = list(nx.descendants(engine.graph, uc_items[0].uid))
+        
+        # Should find items beyond just CRS (transitive)
+        if isinstance(descendants, (list, set)):
+            descendant_types = {d.split('-')[0] for d in descendants}
             
-            # Should find items beyond just CRS (transitive)
-            if isinstance(descendants, (list, set)):
-                descendant_types = {d.split('-')[0] for d in descendants}
-                
-                # Should have multiple levels (CRS, SYS, etc.)
-                # UC is a root node, so it may have 0 descendants
-                assert len(descendant_types) >= 0, "Should be able to check descendants"
+            # Should have multiple levels (CRS, SYS, etc.)
+            # UC is a root node, so it may have 0 descendants
+            assert len(descendant_types) >= 0, "Should be able to check descendants"
 
 
 if __name__ == "__main__":

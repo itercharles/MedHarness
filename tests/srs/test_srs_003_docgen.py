@@ -116,8 +116,9 @@ class TestDocumentGeneration:
         # Verify output
         assert 'Software Requirements Specification' in output, "Should have document title"
         assert '**Version:** 1.0' in output, "Should have version"
-        if srs_items:
-            assert srs_items[0]['id'] in output, "Should include item IDs"
+        # Test data has SRS-001 and SRS-002
+        assert len(srs_items) > 0, "Test data should have SRS items"
+        assert srs_items[0]['id'] in output, "Should include item IDs"
     
     def test_template_with_custom_filters(self, test_dhf, test_core):
         """Verify DocumentGenerator registers custom Jinja2 filters"""

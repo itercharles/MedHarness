@@ -42,21 +42,20 @@ class TestCoverageCalculation:
     
     def test_coverage_finds_test_descendants(self, test_core):
         """Verify coverage finds test items linked to requirements"""
-        # loader = ItemLoader(SPECS_DIR)
         items = test_core.loader.load_all()
         
         engine = GraphEngine()
         engine.build_from_items(items)
         
-        # Find a requirement
+        # Find SRS requirements - test data has SRS-001 and SRS-002
         srs_items = [item for item in items if item.uid.startswith('SRS-')]
+        assert len(srs_items) > 0, "Test data should have SRS items"
         
-        if srs_items:
-            # Get descendants of first SRS item
-            descendants = list(nx.descendants(engine.graph, srs_items[0].uid))
-            
-            # Should be able to get descendants
-            assert isinstance(descendants, (list, set)), "Should return descendants"
+        # Get descendants of first SRS item
+        descendants = list(nx.descendants(engine.graph, srs_items[0].uid))
+        
+        # Should be able to get descendants (returns a list or set)
+        assert isinstance(descendants, (list, set)), "Should return descendants"
     
     def test_coverage_percentage_calculation(self, test_core):
         """Verify coverage is calculated as percentage"""
