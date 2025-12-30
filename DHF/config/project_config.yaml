@@ -963,10 +963,14 @@ document_specifications:
     template: requirements_specification.md.j2
     output: DHF/documents/specifications/System_Requirement_Specification.md
     doc_type_name: System Requirement
-  SDS:
+  SRS:
     template: requirements_specification.md.j2
-    output: DHF/documents/specifications/Software_Design_Specification.md
-    doc_type_name: Software Design Specification
+    output: DHF/documents/specifications/Software_Requirement_Specification.md
+    doc_type_name: Software Requirement Specification
+  SWDD:
+    template: requirements_specification.md.j2
+    output: DHF/documents/specifications/Software_Detailed_Design_Document.md
+    doc_type_name: Software Detailed Design Document
   ARCH:
     template: architecture_specification.md.j2
     output: DHF/documents/specifications/System_Architecture_Specification.md
