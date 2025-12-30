@@ -218,7 +218,9 @@ def get_test_dataset() -> List[Dict]:
             'id': 'UC-001',
             'title': 'User Need - Test Item',
             'content': 'User needs test functionality',
-            'status': 'approved'
+            'status': 'approved',
+            'approved_by': 'test_user',
+            'approved_date': '2025-01-01T00:00:00'
         },
         # Customer Requirements
         {
@@ -226,7 +228,9 @@ def get_test_dataset() -> List[Dict]:
             'title': 'Customer Requirement - Test Item',
             'content': 'Customer requires test feature',
             'status': 'approved',
-            'derives_from': ['UC-001']
+            'derives_from': ['UC-001'],
+            'approved_by': 'test_user',
+            'approved_date': '2025-01-01T00:00:00'
         },
         # System Requirements
         {
@@ -234,7 +238,9 @@ def get_test_dataset() -> List[Dict]:
             'title': 'System Requirement - Test Item',
             'content': 'System shall provide test capability',
             'status': 'approved',
-            'derives_from': ['CRS-001']
+            'derives_from': ['CRS-001'],
+            'approved_by': 'test_user',
+            'approved_date': '2025-01-01T00:00:00'
         },
         {
             'id': 'SYS-002',
@@ -250,14 +256,18 @@ def get_test_dataset() -> List[Dict]:
             'title': 'Item Persistence and Versioning',
             'content': 'Software shall persist items to YAML files with version control',
             'status': 'approved',
-            'derives_from': ['SYS-001']
+            'derives_from': ['SYS-001'],
+            'approved_by': 'test_user',
+            'approved_date': '2025-01-01T00:00:00'
         },
         {
             'id': 'SRS-002',
             'title': 'Graph-based Traceability',
             'content': 'Software shall provide graph-based traceability visualization',
             'status': 'approved',
-            'derives_from': ['SYS-001']
+            'derives_from': ['SYS-001'],
+            'approved_by': 'test_user',
+            'approved_date': '2025-01-01T00:00:00'
         },
         # System Architecture
         {
@@ -265,7 +275,9 @@ def get_test_dataset() -> List[Dict]:
             'title': 'System Architecture Component',
             'content': 'Architecture component for test system',
             'status': 'approved',
-            'implements': ['SYS-001']
+            'implements': ['SYS-001'],
+            'approved_by': 'test_user',
+            'approved_date': '2025-01-01T00:00:00'
         },
         # Change Requests
         {

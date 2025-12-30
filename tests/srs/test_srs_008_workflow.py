@@ -326,7 +326,7 @@ class TestCRUDWorkflows:
         updated_data = item.copy()
         updated_data['content'] = 'Modified content'
         
-        result = test_core.update_item('SYS-002', updated_data)
+        result = test_core.update_item('SYS-001', updated_data)
         
         # Verify status was reset to draft
         assert result['status'] == 'draft'
