@@ -302,15 +302,16 @@ class TestHyperlinkIntegration:
     
     def test_item_retrieval_by_id(self, core):
         """Verify items can be retrieved by ID for detail display."""
-        # Get a known item
+        # Get a known item - test data should have items
         all_items = core.get_all_items()
-        if all_items:
-            test_item_id = all_items[0]['id']
-            
-            retrieved = core.get_item(test_item_id)
-            
-            assert retrieved is not None, f"Should retrieve item {test_item_id}"
-            assert retrieved['id'] == test_item_id, "Retrieved item should match ID"
+        assert len(all_items) > 0, "Test data should have items"
+        
+        test_item_id = all_items[0]['id']
+        
+        retrieved = core.get_item(test_item_id)
+        
+        assert retrieved is not None, f"Should retrieve item {test_item_id}"
+        assert retrieved['id'] == test_item_id, "Retrieved item should match ID"
 
 
 if __name__ == "__main__":
