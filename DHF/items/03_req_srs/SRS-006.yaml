@@ -1,11 +1,19 @@
 id: SRS-006
-title: Configuration-Driven Workflow Engine
+title: Change Request Management
 content: |-
-  Software shall:
-  - Load lifecycle definitions from configuration files
-  - Validate state transitions against configured rules
-  - Execute validation criteria before allowing transitions
-  - Support extensible validation check types
+  Software shall manage change requests with lifecycle workflow and item tracking.
+  
+  Behavior:
+  - Create change requests with auto-generated IDs
+  - Track affected items in change request
+  - Enforce change request workflow states
+  - Prevent editing stable items without approved CR
+  
+  Acceptance Criteria:
+  - CR IDs are unique and sequential
+  - Affected items are correctly tracked
+  - Stable items cannot be edited without approved CR
+  - CR workflow transitions follow configured rules
 derives_from:
-- SYS-005
+- SYS-008
 status: approved

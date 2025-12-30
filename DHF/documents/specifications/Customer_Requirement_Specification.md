@@ -7,8 +7,8 @@
 | Field | Value |
 |-------|-------|
 | **Document ID** | CRS-SPEC |
-| **Version** | 1.172 |
-| **Generated** | 2025-12-27 |
+| **Version** | 1.194 |
+| **Generated** | 2025-12-28 |
 | **Status** | Draft |
 | **Project** | CompliantFlow Project |
 
@@ -24,13 +24,13 @@ This document provides a comprehensive list of all Customer Requirements, includ
 
 ### 1.2 Scope
 
-This specification covers all Customer Requirements defined in the CompliantFlow system as of 2025-12-27.
+This specification covers all Customer Requirements defined in the CompliantFlow system as of 2025-12-28.
 
 ---
 
 ## 2. Requirements
 
-### 1. CRS-001: IEC 62304 Compliance
+### 1. CRS-001: Requirement definition
 
 <div class="requirement-section">
 
@@ -38,7 +38,7 @@ This specification covers all Customer Requirements defined in the CompliantFlow
 
 #### Description
 
-The system shall support IEC 62304 medical device software lifecycle processes including requirements management, traceability, verification, and configuration management.
+The system shall allow users to define requirement items, and generate requirement documents in configurable formats to reduce manual effort and errors. The requirement hierachy and properties shall be customizable.
 
 
 
@@ -52,13 +52,13 @@ The system shall support IEC 62304 medical device software lifecycle processes i
 
 #### Description
 
-The system shall maintain complete traceability from user needs through requirements, design, implementation, and testing to demonstrate regulatory compliance.
+The system shall assess and show users the traceability between user needs, requirement, detailed design, architecture, implementation, and testing. The traceability shall be generated based on the user's configuration.
 
 
 
 </div>
 
-### 3. CRS-003: Complete Audit Trail
+### 3. CRS-003: Change Control by change request
 
 <div class="requirement-section">
 
@@ -66,7 +66,7 @@ The system shall maintain complete traceability from user needs through requirem
 
 #### Description
 
-The system shall provide complete, tamper-evident audit trail of all changes to DHF items including who made changes, when, and why.
+The system shall allow users to control and monitor the change of DHF items. It shall provide complete, tamper-evident audit trail of all changes to DHF items including who made changes, when, and why.
 
 
 
@@ -80,13 +80,13 @@ The system shall provide complete, tamper-evident audit trail of all changes to 
 
 #### Description
 
-The system shall automatically generate specification documents in formats suitable for regulatory submission to reduce manual effort and errors.
+The system shall allow users to generate specification documents in configurable formats to reduce manual effort and errors.
 
 
 
 </div>
 
-### 5. CRS-005: Usability
+### 5. CRS-005: Architecture definition
 
 <div class="requirement-section">
 
@@ -94,13 +94,13 @@ The system shall automatically generate specification documents in formats suita
 
 #### Description
 
-The system shall be easy to learn and use for engineers with minimal training.
+The system shall provide a view of architecture manage and define architecture items, and generate architecture documents in configurable formats to reduce manual effort and errors.
 
 
 
 </div>
 
-### 6. CRS-006: Configurable Workflows
+### 6. CRS-008: Automated Test Integration
 
 <div class="requirement-section">
 
@@ -108,13 +108,13 @@ The system shall be easy to learn and use for engineers with minimal training.
 
 #### Description
 
-The system shall allow customization of document types, workflows, and validation rules without code changes to adapt to different regulatory frameworks.
+The system show user the pass or fail of tests.
 
 
 
 </div>
 
-### 7. CRS-007: Portable DHF
+### 7. CRS-011: Regulatory Compliance Validation
 
 <div class="requirement-section">
 
@@ -122,77 +122,7 @@ The system shall allow customization of document types, workflows, and validatio
 
 #### Description
 
-The system shall store DHF in human-readable, version-controlled files that can be easily backed up, archived, and submitted to regulatory authorities.
-
-
-
-</div>
-
-### 8. CRS-008: Automated Test Integration
-
-<div class="requirement-section">
-
-**Status**: <span class="status-approved">APPROVED</span>  
-
-#### Description
-
-The system shall integrate with automated test frameworks to show real-time test results and verification status for requirements.
-
-
-
-</div>
-
-### 9. CRS-009: Impact Analysis
-
-<div class="requirement-section">
-
-**Status**: <span class="status-approved">APPROVED</span>  
-
-#### Description
-
-The system shall automatically identify all items affected by a proposed change to support change control decisions.
-
-
-
-</div>
-
-### 10. CRS-010: Test Verification Status in Traceability
-
-<div class="requirement-section">
-
-**Status**: <span class="status-approved">APPROVED</span>  
-
-#### Description
-
-The system shall display verification status (PASS/FAIL/PENDING) for test cases within traceability matrices.
-
-
-
-</div>
-
-### 11. CRS-011: Regulatory Compliance Validation
-
-<div class="requirement-section">
-
-**Status**: <span class="status-approved">APPROVED</span>  
-
-#### Description
-
-The system shall provide a compliance dashboard to validate DHF items against regulatory policy groups and display validation results with detailed evidence.
-
-
-
-</div>
-
-### 12. CRS-012: Configuration-Driven Page Generation
-
-<div class="requirement-section">
-
-**Status**: <span class="status-approved">APPROVED</span>  
-
-#### Description
-
-The system shall automatically generate user interface pages for document types based on configuration, eliminating the need for hardcoded page files.
+The system shall allow users to validate DHF items against regulatory policy groups and display validation results with detailed evidence.
 
 
 
@@ -207,21 +137,21 @@ The system shall automatically generate user interface pages for document types 
 
 | Metric | Count |
 |--------|-------|
-| **Total Requirements** | 12 |
-| **Approved** | 12 |
+| **Total Requirements** | 7 |
+| **Approved** | 7 |
 | **Draft** | 0 |
 | **Retired** | 0 |
 
 ### 3.2 Approval Status
 
-**Approval Rate**: 100.0% (12/12)
+**Approval Rate**: 100.0% (7/7)
 
 ---
 
 ## 4. Document Control
 
 **Document Owner**: Quality Assurance  
-**Last Updated**: 2025-12-27  
+**Last Updated**: 2025-12-28  
 **Next Review**: TBD
 
 ---

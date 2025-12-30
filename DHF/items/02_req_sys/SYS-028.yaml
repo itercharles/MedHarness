@@ -1,7 +1,0 @@
-id: SYS-028
-status: approved
-title: Dynamic Page Registration
-content: The system shall read doc_types from project configuration, filter for page_enabled=true,
-  and dynamically register Streamlit pages at application startup.
-satisfies:
-- CRS-012

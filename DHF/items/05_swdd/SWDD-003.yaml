@@ -1,24 +1,38 @@
 id: SWDD-003
-title: Item Serialization Process
+title: Graph Construction
 content: |-
-  **Purpose:** Serialize items to structured text files
+  Detailed design for building traceability graph from DHF items.
   
-  **Process:**
-  1. Determine save directory from item prefix
-  2. Create directory if needed
-  3. Serialize item data with validation
-  4. Convert to structured text format
-  5. Write to file with item ID as filename
-  6. Create version control commit
+  **Component Structure**:
+  - GraphBuilder: Construct NetworkX graph
+  - NodeFactory: Create graph nodes
+  - EdgeFactory: Create graph edges
   
-  **Key Decisions:**
-  - Use data model serialization for consistency
-  - Exclude internal fields from output
-  - Preserve field order for readability
-  - Atomic write operations
+  **Algorithm**:
+  1. Create empty NetworkX DiGraph
+  2. For each item: add node with attributes (ID, type, status, title)
+  3. For each item: parse link fields (derives_from, implements, verifies)
+  4. For each link: add directed edge
+  5. Return constructed graph
+  
+  **Key Interfaces**:
+  ```python
+  class GraphEngine:
+      def build_from_items(items: List[Item]) -> nx.DiGraph
+      def rebuild() -> None
+      def get_graph() -> nx.DiGraph
+  ```
+  
+  **Design Patterns**:
+  - Builder pattern for graph construction
+  - Singleton pattern for graph instance
+  
+  **Data Structures**:
+  - NetworkX DiGraph with node/edge attributes
+  - In-memory graph for fast queries
+  
+  **Complexity**: O(N + E) where N = nodes, E = edges
 implements:
 - SRS-002
-- SRS-005
-guided_by:
-- SWAD-003
+- SWAD-002
 status: approved

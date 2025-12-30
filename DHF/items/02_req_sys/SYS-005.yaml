@@ -1,7 +1,7 @@
 id: SYS-005
-content: The system shall parse governance documents (Regulations, Procedures) defined
-  in YAML.
-title: Governance Definitions
+title: Compliance Assessment
+content: The system shall able to assess the compliance of the DHF by the governance policies (Regulations, Procedures) from
+  configuration files.
 status: approved
 satisfies:
-- CRS-003
+- CRS-011

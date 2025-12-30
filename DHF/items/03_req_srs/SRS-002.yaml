@@ -1,11 +1,20 @@
 id: SRS-002
-title: Structured File Persistence
+title: Traceability Graph Construction
 content: |-
-  Software shall:
-  - Store each DHF item as a separate structured text file
-  - Use item ID as filename
-  - Organize files by document type in subdirectories
-  - Validate data before saving
+  Software shall build directed graph representing traceability relationships between items.
+  
+  Behavior:
+  - Create graph nodes for each DHF item
+  - Create graph edges from item link fields
+  - Support bidirectional traversal (upstream and downstream)
+  - Update graph when items are added, modified, or deleted
+  
+  Acceptance Criteria:
+  - Graph contains all items as nodes
+  - Edges correctly represent configured relationship types
+  - Can find all parent items (upstream traversal)
+  - Can find all child items (downstream traversal)
+  - Graph updates reflect item changes within 1 second
 derives_from:
-- SYS-001
+- SYS-003
 status: approved

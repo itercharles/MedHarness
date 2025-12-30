@@ -1,45 +1,27 @@
 id: SYSARCH-004
-title: Configuration-Driven Workflow Architecture
+title: Change Management Module
 content: |-
-  YAML-based configuration architecture for workflows:
+  Module for tracking and controlling changes to DHF items through change requests.
   
-  **Configuration Source:**
-  - project_config.yaml as single source of truth
-  - Pydantic models for schema validation
-  - Fail-fast on invalid configuration
+  **Responsibilities**:
+  - Create and manage change request lifecycle
+  - Link GitHub Pull Requests to change requests
+  - Track affected items in change requests
+  - Enforce change control policies (prevent editing stable items)
+  - Maintain complete audit trail of changes
   
-  **Lifecycle Configuration:**
-  - States: id, label, color, icon, is_stable, is_initial
-  - Transitions: from, to, label, validation_criteria
-  - Per-document-type lifecycle definitions
+  **Key Interfaces**:
+  - `ChangeRequestManager`: CR creation, update, approval
+  - `ImpactAnalyzer`: Identify items affected by changes
+  - `PRLinker`: Link GitHub PRs to CRs automatically
+  - `ChangeControlPolicy`: Enforce editing restrictions
   
-  **Workflow Engine:**
-  - Load lifecycle from configuration at startup
-  - Validate state transitions against rules
-  - Execute validation criteria before transitions
-  - Support approval workflows
-  
-  **Status Warning Logic:**
-  - Use is_stable flag to determine warnings
-  - Show ⚠️ for items not in stable states
-  - Configuration-driven (no hardcoded states)
-  
-  **Verification Column Detection:**
-  - Automatic detection based on field presence
-  - Configurable verification status display
-  - Support for automated and manual verification
-  
-  **Rationale:**
-  - Configuration-driven = no code changes for new workflows
-  - YAML = human-readable and version-controllable
-  - Pydantic = strong typing and validation
-  - Fail-fast = catch errors early
+  **Implementation Notes**:
+  - Integrates with GitHub API for PR information
+  - Automated detection of affected items from PR file changes
+  - Prevents editing of items in stable status without CR
+  - Git commits link to change request IDs
 design:
-- SYS-005
-- SYS-010
-- SYS-012
-- SYS-017
-- SYS-018
-- SYS-023
-- SYS-024
+- SYS-008
+- SYS-030
 status: approved

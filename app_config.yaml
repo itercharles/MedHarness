@@ -1,0 +1,17 @@
+# CompliantFlow Application Configuration
+
+# DHF Root Directory
+# Path to the Design History File directory
+# Can be absolute or relative to project root
+# Default: ./DHF
+dhf_root: ./DHF
+
+# Server Configuration (optional)
+# server:
+#   port: 8501
+#   headless: true
+
+# Logging Configuration (optional)
+# logging:
+#   level: INFO
+#   file: logs/app.log

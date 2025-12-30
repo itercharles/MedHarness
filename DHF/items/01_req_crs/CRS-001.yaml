@@ -1,12 +1,10 @@
 id: CRS-001
-title: IEC 62304 Compliance
-content: The system shall support IEC 62304 medical device software lifecycle processes
-  including requirements management, traceability, verification, and configuration
-  management.
+title: Requirement definition
+content: The system shall allow users to define requirement items, and generate requirement documents in configurable formats to reduce manual effort and errors.
+  The requirement hierachy and properties shall be customizable.
 rationale: Required for medical device regulatory approval
 stakeholder: Regulatory Affairs
 priority: Critical
 derives_from:
-- UC-002
-- UC-005
+- UC-001
 status: approved

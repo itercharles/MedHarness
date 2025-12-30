@@ -148,12 +148,100 @@ DHF/
 **WorkflowEngine:**
 - Manages item lifecycle states
 - Validates state transitions
-- Enforces approval criteria
+- Enforces approval workflows
 
 **ItemLoader/ItemSaver:**
-- Loads items from YAML files
-- Saves items with Git commits
-- Manages directory structure
+- YAML file I/O operations
+- Git commit automation
+- Schema validation
+
+### 4.3 Software Layered Architecture
+
+**Layer 1: Presentation (Streamlit UI)**
+- Universal page template
+- Dynamic form generation
+- Workflow transition UI
+- Visualization components
+
+**Layer 2: Business Logic**
+- CompliantFlowCore: Central orchestrator
+- GraphEngine: Traceability analysis
+- WorkflowEngine: State management
+- DocumentGenerator: Specification generation
+
+**Layer 3: Data Access**
+- ItemLoader: YAML file reading
+- ItemSaver: YAML file writing + Git commits
+- GitRepository: Version control operations
+
+**Layer 4: Storage**
+- File system (YAML files)
+- Git repository
+
+**Benefits:**
+- Clear separation of concerns
+- Independent testing of layers
+- Easy to modify UI without changing logic
+- Supports future database migration
+
+### 4.4 Design Patterns
+
+**Architectural Patterns:**
+- **Layered Architecture**: Clear separation between UI, logic, and data
+- **Repository Pattern**: ItemLoader/ItemSaver abstract file storage
+- **Strategy Pattern**: Workflow validation criteria, policy validation rules
+
+**Design Principles:**
+- **Configuration-Driven Design**: Document types, workflows, policies in YAML
+- **Fail-Fast Validation**: Configuration validated at startup
+- **Separation of Concerns**: UI independent of storage, logic independent of UI
+
+### 4.5 Data Flow
+
+**Item Creation Flow:**
+```
+User Input (Streamlit)
+  ↓
+CompliantFlowCore.create_item()
+  ↓
+WorkflowEngine.get_initial_state()
+  ↓
+ItemSaver.save(item)
+  ↓
+YAML File + Git Commit
+  ↓
+GraphEngine.rebuild()
+```
+
+**Traceability Analysis Flow:**
+```
+User Request (Streamlit)
+  ↓
+CompliantFlowCore.get_traceability()
+  ↓
+GraphEngine.build_from_items()
+  ↓
+NetworkX Graph Operations
+  ↓
+Traceability Results
+  ↓
+Streamlit Visualization
+```
+
+**Document Generation Flow:**
+```
+User Request (Streamlit)
+  ↓
+DocumentGenerator.generate_specification()
+  ↓
+ItemLoader.load_all()
+  ↓
+Jinja2 Template Rendering
+  ↓
+Markdown → HTML → PDF
+  ↓
+Generated Document
+```
 
 ---
 

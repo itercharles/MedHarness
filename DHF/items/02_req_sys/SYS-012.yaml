@@ -1,9 +1,0 @@
-id: SYS-012
-content: The system shall support configurable verification requirements before state
-  transitions. Required verification fields and criteria shall be defined in configuration
-  and enforced by the system.
-title: Defect Resolution Verification
-verification_status: PASS
-status: approved
-satisfies:
-- CRS-005

@@ -1,0 +1,330 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    types: [opened, edited, synchronize]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  phase1-srs:
+    name: Phase 1 - SRS Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest pytest-cov
+          if [ -f src/requirements.txt ]; then pip install -r src/requirements.txt; fi
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+      
+      - name: Run Unit Tests
+        run: |
+          export PYTHONPATH="${PYTHONPATH}:${PWD}/src"
+          pytest tests/ --ignore=tests/crs/ --ignore=tests/sys/ --junitxml=unit-test-results.xml --cov=src --cov-report=xml
+      
+      - name: Upload unit test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-results
+          path: unit-test-results.xml
+
+  # Phase 2: SYS Browser Tests (System Requirements)
+  phase2-sys:
+    name: Phase 2 - SYS Browser Tests
+    runs-on: ubuntu-latest
+    needs: phase1-srs
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest playwright pytest-playwright
+          if [ -f src/requirements.txt ]; then pip install -r src/requirements.txt; fi
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+      
+      - name: Install Playwright browsers
+        run: playwright install chromium --with-deps
+      
+      - name: Run SYS Browser Tests
+        run: |
+          export PYTHONPATH="${PYTHONPATH}:${PWD}/src"
+          pytest tests/sys/ -v -s --junitxml=sys-test-results.xml
+      
+      - name: Upload SYS test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sys-test-results
+          path: sys-test-results.xml
+
+
+  # Phase 3: CRS Browser Tests (Customer Requirements)
+  phase3-crs:
+    name: Phase 3 - CRS Browser Tests
+    runs-on: ubuntu-latest
+    needs: phase2-sys
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest playwright pytest-playwright
+          if [ -f src/requirements.txt ]; then pip install -r src/requirements.txt; fi
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+      
+      - name: Install Playwright browsers
+        run: playwright install chromium --with-deps
+      
+      - name: Run CRS Browser Tests
+        run: |
+          export PYTHONPATH="${PYTHONPATH}:${PWD}/src"
+          pytest tests/crs/ -v -s --junitxml=crs-test-results.xml
+      
+      - name: Upload CRS test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: crs-test-results
+          path: crs-test-results.xml
+      
+      - name: Upload Playwright traces
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-traces
+          path: test-results/
+
+  phase4-cr:
+    name: Phase 4 - Insert Impacted Items to CR
+    needs: [phase1-srs, phase2-sys, phase3-crs]
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Validate CR Reference
+        id: validate
+        run: |
+          PR_TITLE="${{ github.event.pull_request.title }}"
+          PR_BODY="${{ github.event.pull_request.body }}"
+          CR_PATTERN="CR-[0-9]+"
+          
+          if echo "$PR_TITLE $PR_BODY" | grep -qE "$CR_PATTERN"; then
+            CR_ID=$(echo "$PR_TITLE $PR_BODY" | grep -oE "$CR_PATTERN" | head -1)
+            echo "Found CR: $CR_ID"
+            echo "cr_id=$CR_ID" >> $GITHUB_OUTPUT
+          else
+            echo "::error::No CR reference found in PR title or description"
+            echo "::error::Please include CR-XXX in your PR title or description"
+            exit 1
+          fi
+      
+      - name: Validate CR Exists
+        run: |
+          CR_FILE="DHF/items/09_cr/${{ steps.validate.outputs.cr_id }}.yaml"
+          if [ ! -f "$CR_FILE" ]; then
+            echo "::error::CR ${{ steps.validate.outputs.cr_id }} does not exist"
+            exit 1
+          fi
+          echo "CR ${{ steps.validate.outputs.cr_id }} exists"
+      
+      - name: Check CR Status
+        run: |
+          # Lightweight check - only load config, not entire core
+          python3 << 'PYTHON_SCRIPT'
+          import yaml
+          
+          # Load CR
+          cr_id = "${{ steps.validate.outputs.cr_id }}"
+          cr_file = f"DHF/items/09_cr/{cr_id}.yaml"
+          
+          with open(cr_file) as f:
+              cr_data = yaml.safe_load(f)
+          
+          # Load only the config (lightweight)
+          with open("DHF/config/project_config.yaml") as f:
+              config = yaml.safe_load(f)
+          
+          # Find CR document type config
+          cr_config = None
+          for doc_type in config.get('doc_types', []):
+              if doc_type.get('code') == 'CR':
+                  cr_config = doc_type
+                  break
+          
+          if not cr_config:
+              print("::error::CR document type not found in config")
+              exit(1)
+          
+          # Check if current status is stable
+          status = cr_data.get('status', '')
+          lifecycle = cr_config.get('lifecycle', {})
+          states = lifecycle.get('states', [])
+          
+          # Find the state info
+          state_info = None
+          for s in states:
+              if s.get('id') == status:
+                  state_info = s
+                  break
+          
+          is_stable = state_info.get('is_stable', False) if state_info else False
+          
+          if is_stable:
+              print(f"::error::CR {cr_id} is in stable status '{status}'")
+              print(f"::error::Cannot modify code for CRs in stable status")
+              exit(1)
+          
+          print(f"✓ CR {cr_id} is in valid (non-stable) status: {status}")
+          PYTHON_SCRIPT
+
+      - name: Analyze Changed Items
+        id: analyze
+        run: |
+          # Get base branch for comparison
+          git fetch origin ${{ github.base_ref }}
+          BASE_SHA=$(git merge-base HEAD origin/${{ github.base_ref }})
+          
+          # Get list of changed files compared to base
+          CHANGED_FILES=$(git diff --name-only $BASE_SHA HEAD)
+          
+          AFFECTED_ITEMS=""
+          
+          # 1. Detect changed YAML items in DHF/items/ (exclude CR files)
+          YAML_FILES=$(echo "$CHANGED_FILES" | grep "^DHF/items/.*\.yaml$" | grep -v "^DHF/items/09_cr/" || true)
+          for file in $YAML_FILES; do
+            if [ -f "$file" ]; then
+              ITEM_ID=$(grep "^id:" "$file" | cut -d' ' -f2)
+              if [ -n "$ITEM_ID" ]; then
+                AFFECTED_ITEMS="$AFFECTED_ITEMS\n  - $ITEM_ID"
+              fi
+            fi
+          done
+          
+          # 2. Detect changed test files
+          TEST_FILES=$(echo "$CHANGED_FILES" | grep "^tests/.*\.py$" || true)
+          for file in $TEST_FILES; do
+            if [ -f "$file" ]; then
+              BASENAME=$(basename "$file" .py)
+              if [[ $BASENAME =~ ^test_([a-z]+)_([0-9]+)_ ]]; then
+                TYPE=$(echo "${BASH_REMATCH[1]}" | tr '[:lower:]' '[:upper:]')
+                NUMBER="${BASH_REMATCH[2]}"
+                TEST_ID="TC-${TYPE}-${NUMBER}"
+                
+                # Add test ID (automated tests are valid even without YAML files)
+                AFFECTED_ITEMS="$AFFECTED_ITEMS\n  - $TEST_ID"
+              fi
+            fi
+          done
+          
+          echo "affected_items<<EOF" >> $GITHUB_OUTPUT
+          echo -e "$AFFECTED_ITEMS" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+      
+      - name: Update CR with Affected Items and PR Info
+        run: |
+          CR_ID="${{ steps.validate.outputs.cr_id }}"
+          CR_FILE="DHF/items/09_cr/${CR_ID}.yaml"
+          
+          # Use Python to update CR YAML
+          python3 << 'PYTHON_SCRIPT'
+          import yaml
+          
+          cr_file = "DHF/items/09_cr/${{ steps.validate.outputs.cr_id }}.yaml"
+          
+          with open(cr_file, 'r') as f:
+              cr_data = yaml.safe_load(f)
+          
+          # Initialize fields if needed
+          if 'affected_items' not in cr_data:
+              cr_data['affected_items'] = []
+          if 'implementation_prs' not in cr_data:
+              cr_data['implementation_prs'] = []
+          
+          # Add new affected items from PR
+          affected_items_str = """${{ steps.analyze.outputs.affected_items }}"""
+          new_items = [item.strip().replace('- ', '') for item in affected_items_str.strip().split('\n') if item.strip()]
+          
+          for item in new_items:
+              if item and item not in cr_data['affected_items']:
+                  cr_data['affected_items'].append(item)
+          
+          # Add PR information
+          pr_number = ${{ github.event.pull_request.number }}
+          pr_url = "${{ github.event.pull_request.html_url }}"
+          pr_title = "${{ github.event.pull_request.title }}"
+          
+          # Check if this PR is already tracked
+          pr_exists = any(pr.get('pr_number') == pr_number for pr in cr_data['implementation_prs'])
+          
+          if not pr_exists:
+              pr_info = {
+                  'pr_number': pr_number,
+                  'pr_url': pr_url,
+                  'title': pr_title
+              }
+              cr_data['implementation_prs'].append(pr_info)
+              print(f"Added PR #{pr_number} to implementation_prs")
+          
+          # Write back
+          with open(cr_file, 'w') as f:
+              yaml.dump(cr_data, f, default_flow_style=False, sort_keys=False)
+          
+          print(f"Updated {cr_file}")
+          print(f"  Affected items: {len(new_items)} added")
+          print(f"  PR tracked: #{pr_number}")
+          PYTHON_SCRIPT
+      
+      - name: Commit CR Update to PR Branch
+        run: |
+          CR_FILE="DHF/items/09_cr/${{ steps.validate.outputs.cr_id }}.yaml"
+          
+          # Check if CR was actually modified
+          if git diff --quiet "$CR_FILE"; then
+            echo "No changes to CR file"
+            exit 0
+          fi
+          
+          # Configure git
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Commit and push to PR branch
+          git add "$CR_FILE"
+          git commit -m "Auto-update ${{ steps.validate.outputs.cr_id }} affected_items"
+          git push origin HEAD:${{ github.head_ref }}
+          
+          echo "✅ Updated CR with affected items and pushed to PR branch"

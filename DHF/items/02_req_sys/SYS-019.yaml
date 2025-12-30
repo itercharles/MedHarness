@@ -1,8 +1,0 @@
-id: SYS-019
-content: The system shall generate release documentation including traceability matrix,
-  test summary, and defect report.
-title: Release Documentation Generation
-verification_status: PASS
-status: approved
-satisfies:
-- CRS-006

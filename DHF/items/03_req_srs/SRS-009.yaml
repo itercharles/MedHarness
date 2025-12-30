@@ -1,11 +1,19 @@
 id: SRS-009
-title: Project Configuration Validation
+title: Template-Based Document Generation
 content: |-
-  Software shall:
-  - Define data models for project_config.yaml schema
-  - Validate configuration on application startup
-  - Fail fast with clear error messages for invalid config
-  - Support schema evolution with backward compatibility
+  Software shall generate specification documents from templates.
+  
+  Behavior:
+  - Load document templates from configured directory
+  - Gather item data for template context
+  - Render templates with item data
+  - Track document versions automatically
+  
+  Acceptance Criteria:
+  - Templates are loaded successfully
+  - Generated documents include all configured items
+  - Document version increments on regeneration
+  - Generation completes in < 10 seconds for 100 items
 derives_from:
-- SYS-008
+- SYS-021
 status: approved

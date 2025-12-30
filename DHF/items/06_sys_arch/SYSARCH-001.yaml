@@ -1,44 +1,25 @@
 id: SYSARCH-001
-content: 'System architecture decisions:
-
-
-  **Deployment Model:**
-
-  - Web-based Python application
-
-  - Browser-based user interface
-
-  - Local or server deployment
-
-  - No database server required
-
-
-  **Technology Choices:**
-
-  - Python 3.11+ runtime
-
-  - Streamlit web framework
-
-  - File-based data storage
-
-  - Git version control
-
-
-  **Rationale:**
-
-  - Simple deployment (no complex infrastructure)
-
-  - Familiar web interface
-
-  - Portable (entire DHF is a directory)
-
-  - Standards-compliant audit trail via Git'
+title: Item Management Module
+content: |-
+  Core module for managing DHF items (requirements, design, tests, change requests, etc.).
+  
+  **Responsibilities**:
+  - Load items from YAML files with schema validation
+  - Save items with Git commit tracking
+  - Support configurable item types from project configuration
+  - Maintain item history and audit trail
+  
+  **Key Interfaces**:
+  - `ItemLoader`: Load items from file system by ID, type, or all items
+  - `ItemSaver`: Save items with validation and Git commits
+  - `ItemValidator`: Validate item schema against configuration
+  
+  **Implementation Notes**:
+  - Uses YAML format for human-readable storage
+  - Git integration provides automatic version control
+  - Pydantic models for type-safe item validation
+  - File-based storage enables simple backup and portability
 design:
 - SYS-001
-- SYS-004
-- SYS-015
-- SYS-028
-- SYS-029
-title: Web-Based Application Architecture
-status: draft
-file_path: /Users/chenwenliang/code/CompliantFlow/DHF/items/06_sys_arch/SYSARCH-001.yaml
+- SYS-010
+status: approved

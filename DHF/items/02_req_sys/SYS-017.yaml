@@ -1,9 +1,0 @@
-id: SYS-017
-content: The system shall execute configurable verification checks before state transitions.
-  Verification rules and criteria shall be defined in configuration and enforced by
-  the system.
-title: Release Verification Checks
-verification_status: PASS
-status: approved
-satisfies:
-- CRS-006

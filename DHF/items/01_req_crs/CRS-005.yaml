@@ -1,9 +1,9 @@
 id: CRS-005
-title: Usability
-content: The system shall be easy to learn and use for engineers with minimal training.
-rationale: User adoption depends on ease of use
-stakeholder: Development Team
+title: Architecture definition
+content: The system shall provide a view of architecture manage and define architecture items, and generate architecture documents in configurable formats to reduce manual effort and errors.
+rationale: Manual documentation is time-consuming and error-prone
+stakeholder: Documentation Team
 priority: High
 derives_from:
-- UC-001
+- UC-003
 status: approved

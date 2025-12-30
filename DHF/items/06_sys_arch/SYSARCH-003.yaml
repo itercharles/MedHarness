@@ -1,38 +1,26 @@
 id: SYSARCH-003
-title: Traceability Graph Architecture
+title: Workflow Engine Module
 content: |-
-  Graph-based traceability architecture:
+  Module for managing item lifecycle states and transitions.
   
-  **Graph Technology:**
-  - NetworkX directed graph library
-  - Nodes represent DHF items
-  - Edges represent traceability relationships
+  **Responsibilities**:
+  - Load workflow configuration from YAML (states, transitions, criteria)
+  - Validate state transitions against configured rules
+  - Execute transition criteria checks (field validation, manual approval)
+  - Enforce approval workflows
+  - Support configurable lifecycles per item type
   
-  **Graph Structure:**
-  - Node attributes: item ID, type, title, status
-  - Edge attributes: relationship type (derives_from, implements, verifies)
-  - Bidirectional traversal support
+  **Key Interfaces**:
+  - `WorkflowEngine`: Manage state transitions and validation
+  - `TransitionValidator`: Check if transition is allowed
+  - `CriteriaExecutor`: Execute validation criteria
+  - `ApprovalManager`: Handle approval workflows
   
-  **Traceability Operations:**
-  - Build graph from all items at startup
-  - Find upstream items (parents)
-  - Find downstream items (children)
-  - Detect orphans (no incoming/outgoing edges)
-  - Calculate coverage (source to verification)
-  
-  **Visualization:**
-  - Interactive graph display
-  - Color-coded by status
-  - Shape-coded by type
-  - Clickable nodes for navigation
-  
-  **Rationale:**
-  - NetworkX provides mature graph algorithms
-  - In-memory graph for fast queries
-  - Supports complex traceability analysis
-  - Standard Python library (well-documented)
+  **Implementation Notes**:
+  - Configuration-driven (no hardcoded workflows)
+  - Supports multiple lifecycle models per document type
+  - Extensible criteria system (field checks, manual verification, linked item status)
+  - Fail-fast validation with clear error messages
 design:
-- SYS-002
-- SYS-003
-- SYS-013
+- SYS-010
 status: approved

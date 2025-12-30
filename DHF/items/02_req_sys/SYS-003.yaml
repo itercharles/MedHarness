@@ -1,7 +1,7 @@
 id: SYS-003
-content: The system shall provide a graphical visualization of the traceability graph,
-  including item status.
 title: Visual Traceability
+content: The system shall provide a view of traceability graph or table, 
+  including requirements, architecture, tests, and change requests.
 status: approved
 satisfies:
-- CRS-001
+- CRS-002

@@ -1,26 +1,40 @@
 id: SWDD-007
-title: check_and_show_item_detail Function
+title: Change Request Management
 content: |-
-  **Purpose:** Check for item query parameter and display item details
+  Detailed design for managing change request lifecycle.
   
-  **Algorithm:**
-  1. Check if "item" key exists in st.query_params
-  2. If present, extract item_id value
-  3. Call core.get_item(item_id) to fetch item data
-  4. If item not found, display error and return None
-  5. Create expander with title: "📄 {item_id} - {title}"
-  6. Display item properties in two columns:
-     - Column 1: ID, title, status
-     - Column 2: Type, reviewer, review_date
-  7. Display content section
-  8. Display relationships section with typed links
-  9. Add "Close Item Detail" button that clears query param
-  10. Return item_id
+  **Component Structure**:
+  - ChangeRequestManager: CR lifecycle management
+  - CRIDGenerator: Generate unique CR IDs
+  - CRValidator: Validate CR data
+  - CRPersister: Save CR to YAML
   
-  **Complexity:** O(1) for item lookup
-  **Module:** src/utils/ui_helpers.py
+  **Algorithm**:
+  1. Generate unique CR ID (sequential: CR-001, CR-002, ...)
+  2. Validate CR input data (title, description, affected items)
+  3. Create CR YAML file in DHF/items/09_cr/
+  4. Initialize CR with 'draft' status
+  5. Create Git commit
+  
+  **Key Interfaces**:
+  ```python
+  class ChangeRequestManager:
+      def create_cr(data: dict, author: str) -> CR
+      def update_cr(uid: str, data: dict) -> CR
+      def approve_cr(uid: str, approver: str) -> CR
+      def get_cr(uid: str) -> CR
+  ```
+  
+  **Design Patterns**:
+  - State pattern for CR lifecycle
+  - Factory pattern for CR creation
+  - Repository pattern for CR storage
+  
+  **CR Lifecycle States**:
+  - draft → review → approved → implemented → closed
+  
+  **Complexity**: O(1) per operation
 implements:
-  - SRS-014
-guided_by:
-  - SWAD-001
+- SRS-006
+- SWAD-004
 status: approved

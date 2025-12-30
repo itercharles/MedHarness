@@ -1,11 +1,21 @@
 id: SRS-011
-title: Change Impact Analysis
+title: Configurable Document Type Definitions
 content: |-
-  Software shall:
-  - Identify all downstream items affected by a change
-  - Use graph traversal to find descendants
-  - Report impact by document type
-  - Calculate impact score
+  Software shall load and validate document type definitions from configuration.
+  
+  Behavior:
+  - Load document types from project_config.yaml
+  - Validate document type schema (code, name, prefix, directory)
+  - Support dynamic field definitions per document type
+  - Load per-type workflow configurations
+  - Validate allowed parent relationships
+  
+  Acceptance Criteria:
+  - Invalid configuration fails at startup with clear error
+  - All document types have required fields (code, name, prefix)
+  - Field definitions are accessible via config API
+  - Workflow configurations are loaded per document type
+  - Parent relationship rules are enforced
 derives_from:
-- SYS-011
-status: approved
+- SYS-001
+status: draft
