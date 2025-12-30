@@ -79,8 +79,7 @@ def test_TC_SYS_010_003_workflow_state_transition(page: Page, streamlit_app):
     page.get_by_role("button", name="➕ New").click()
     page.wait_for_timeout(1000)
     
-    # Fill form to create SRS-999
-    page.fill("input[placeholder='SRS-XXX']", "SRS-999")
+    # Fill form (ID auto-generated)
     page.locator("label:has-text('Title')").locator("..").locator("input").fill("Test Workflow Item")
     page.locator("label:has-text('Content')").locator("..").locator("textarea").fill("Testing workflow transitions")
     

@@ -114,8 +114,10 @@ def test_TC_SYS_008_004_create_change_request(page: Page, streamlit_app):
     page.get_by_role("button", name="➕ New").click()
     page.wait_for_timeout(1000)
     
-    # Fill form to create CR-999
-    page.fill("input[placeholder='CR-XXX']", "CR-999")
+    # Verify auto-generated ID message is shown
+    expect(page.get_by_text("ID will be auto-generated")).to_be_visible()
+    
+    # Fill form (ID is auto-generated, no need to fill it)
     page.locator("label:has-text('Title')").locator("..").locator("input").fill("Test Change Request")
     page.locator("label:has-text('Description')").locator("..").locator("textarea").fill("Testing CR creation functionality")
     
@@ -157,8 +159,7 @@ def test_TC_SYS_008_005_edit_change_request(page: Page, streamlit_app):
     page.get_by_role("button", name="➕ New").click()
     page.wait_for_timeout(1000)
     
-    # Create CR-998
-    page.fill("input[placeholder='CR-XXX']", "CR-998")
+    # Create CR (ID auto-generated)
     page.locator("label:has-text('Title')").locator("..").locator("input").fill("Original Title")
     page.locator("label:has-text('Description')").locator("..").locator("textarea").fill("Original description")
     
