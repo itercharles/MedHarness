@@ -8,6 +8,7 @@ jinja2
 python-docx
 gitpython
 python-dateutil
+python-dotenv
 streamlit
 streamlit-agraph
 markdown
