@@ -3,10 +3,14 @@ CompliantFlow - Medical Device Design History File Management System
 Main Streamlit application entry point.
 """
 
-# Load environment variables from .env file FIRST
+# Load environment variables from .env file FIRST (if available)
 from pathlib import Path
-from dotenv import load_dotenv
-load_dotenv(Path(__file__).parent.parent / '.env')
+try:
+    from dotenv import load_dotenv
+    load_dotenv(Path(__file__).parent.parent / '.env')
+except ImportError:
+    pass  # dotenv not installed, skip loading .env file
+
 
 print("[APP] Loading app.py module...")
 
