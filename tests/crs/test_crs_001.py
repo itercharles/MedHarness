@@ -13,7 +13,7 @@ from playwright.sync_api import Page, expect
 
 
 @pytest.mark.browser
-def test_TC_CRS_001_001_create_requirement(page: Page, streamlit_app):
+def test_TC_CRS_001_001_create_requirement(page: Page, streamlit_app, test_dhf_root):
     """
     TC-CRS-001-001: Create New Requirement via UI
     

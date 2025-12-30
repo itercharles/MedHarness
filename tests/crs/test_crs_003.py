@@ -34,7 +34,7 @@ def test_TC_CRS_003_001_view_change_requests(page: Page, streamlit_app):
 
 
 @pytest.mark.browser
-def test_TC_CRS_003_002_create_change_request(page: Page, streamlit_app):
+def test_TC_CRS_003_002_create_change_request(page: Page, streamlit_app, test_dhf_root):
     """
     TC-CRS-003-002: Create Change Request
     

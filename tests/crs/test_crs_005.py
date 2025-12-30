@@ -12,7 +12,7 @@ from playwright.sync_api import Page, expect
 
 
 @pytest.mark.browser
-def test_TC_CRS_005_001_add_architecture_item(page: Page, streamlit_app):
+def test_TC_CRS_005_001_add_architecture_item(page: Page, streamlit_app, test_dhf_root):
     """
     TC-CRS-005-001: Add Architecture Item
     
@@ -42,7 +42,7 @@ def test_TC_CRS_005_001_add_architecture_item(page: Page, streamlit_app):
     page.wait_for_load_state("networkidle")
     
     # Verify created
-
+    from fixtures.browser_conftest import get_created_item_id
     created_id = get_created_item_id(test_dhf_root, 'SYSARCH-')
     page.fill("input[placeholder='Search by ID or title...']", created_id)
     page.wait_for_timeout(1000)
