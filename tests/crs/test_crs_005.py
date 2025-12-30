@@ -33,8 +33,7 @@ def test_TC_CRS_005_001_add_architecture_item(page: Page, streamlit_app):
     page.get_by_role("button", name="➕ New").click()
     page.wait_for_timeout(1000)
     
-    # Fill form
-    page.fill("input[placeholder='SYSARCH-XXX']", "SYSARCH-999")
+    # Fill form (ID auto-generated)
     page.locator("label:has-text('Title')").locator("..").locator("input").fill("Test Architecture")
     page.locator("label:has-text('Content')").locator("..").locator("textarea").fill("Test architecture component")
     
@@ -43,9 +42,11 @@ def test_TC_CRS_005_001_add_architecture_item(page: Page, streamlit_app):
     page.wait_for_load_state("networkidle")
     
     # Verify created
-    page.fill("input[placeholder='Search by ID or title...']", "SYSARCH-999")
+
+    created_id = get_created_item_id(test_dhf_root, 'SYSARCH-')
+    page.fill("input[placeholder='Search by ID or title...']", created_id)
     page.wait_for_timeout(1000)
-    expect(page.get_by_role("heading", name="SYSARCH-999")).to_be_visible()
+    expect(page.get_by_role("heading", name=created_id)).to_be_visible()
 
 
 @pytest.mark.browser

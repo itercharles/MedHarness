@@ -88,16 +88,14 @@ def test_TC_SYS_010_003_workflow_state_transition(page: Page, streamlit_app):
     page.wait_for_load_state("networkidle")
     page.wait_for_timeout(1000)
     
-    # Navigate to the created item
-    page.goto(f"{streamlit_app}/page_SRS?item=SRS-999")
-    page.wait_for_load_state("networkidle")
-    page.wait_for_timeout(1000)
+    # Get the auto-generated ID using shared helper function
+    from fixtures.browser_conftest import get_created_item_id
+    created_id = get_created_item_id(test_dhf_root, 'SRS-')
     
-    # Verify item was created
-    expect(page.get_by_role("heading", name="SRS-999")).to_be_visible()
+    # Verify we're viewing the created item
+    expect(page.get_by_role("heading", name=created_id)).to_be_visible()
     
     # Verify initial state is draft (new items start in draft)
     page_content = page.content()
-    # Item should show draft status or have approve button available
     assert "draft" in page_content.lower() or "approve" in page_content.lower() or "Draft" in page_content, \
         "New item should be in draft state or have approval workflow available"
