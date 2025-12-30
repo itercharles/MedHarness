@@ -11,19 +11,18 @@ import sys
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
 from traceability.graph.engine import GraphEngine
-from traceability.repository.loader import ItemLoader
+# Removed: from traceability.repository.loader import ItemLoader
 
-# Path to DHF items
-SPECS_DIR = Path(__file__).parent.parent.parent / "DHF" / "items"
+# Removed: Path to DHF items
+# Removed: SPECS_DIR = Path(__file__).parent.parent.parent / "DHF" / "items"
 
 
 class TestGraphDataStructure:
     """Tests for SRS-001: Graph Data Structure"""
     
-    def test_graph_uses_directed_edges(self):
+    def test_graph_uses_directed_edges(self, test_core, test_items_with_links):
         """Verify graph uses directed edges for traceability"""
-        loader = ItemLoader(SPECS_DIR)
-        items = loader.load_all()
+        items = test_core.get_all_items()
         
         engine = GraphEngine()
         engine.build_from_items(items)
@@ -31,10 +30,9 @@ class TestGraphDataStructure:
         # Verify graph is directed
         assert engine.graph.is_directed(), "Graph must be directed"
     
-    def test_items_are_nodes(self):
+    def test_items_are_nodes(self, test_core, test_items_with_links):
         """Verify DHF items are represented as nodes"""
-        loader = ItemLoader(SPECS_DIR)
-        items = loader.load_all()
+        items = test_core.get_all_items()
         
         engine = GraphEngine()
         engine.build_from_items(items)
@@ -52,67 +50,47 @@ class TestGraphDataStructure:
         assert item_ids == graph_nodes, \
             f"Graph nodes must exactly match item IDs. Missing: {item_ids - graph_nodes}, Extra: {graph_nodes - item_ids}"
     
-    def test_links_are_edges(self):
+    def test_links_are_edges(self, test_core, test_items_with_links):
         """Verify links between items are represented as directed edges"""
-        loader = ItemLoader(SPECS_DIR)
-        items = loader.load_all()
+        items = test_core.get_all_items()
         
         engine = GraphEngine()
         engine.build_from_items(items)
         
-        # Find an item with links
-        item_with_links = None
-        for item in items:
-            if hasattr(item, 'links') and item.links:
-                item_with_links = item
-                break
-        
-        if item_with_links:
-            # Verify edges exist for links (only check links that exist in graph)
-            for target_id in item_with_links.links:
-                if engine.graph.has_node(target_id):
-                    assert engine.graph.has_edge(item_with_links.uid, target_id), \
-                        f"Edge must exist from {item_with_links.uid} to {target_id}"
+        # Use test data - we know SRS-001 links to SYS-001
+        assert engine.graph.has_edge('SRS-001', 'SYS-001'), \
+            "Edge must exist from SRS-001 to SYS-001"
+        assert engine.graph.has_edge('SRS-002', 'SYS-001'), \
+            "Edge must exist from SRS-002 to SYS-001"
     
-    def test_graph_performance(self):
-        """Verify graph with 1000 nodes builds in < 2 seconds (SRS-001 performance req)"""
+    def test_graph_performance(self, test_core, test_items_with_links):
+        """Verify graph builds quickly with test data"""
         import time
         
-        loader = ItemLoader(SPECS_DIR)
-        items = loader.load_all()
+        items = test_core.get_all_items()
         
-        # If we have < 1000 items, this test passes by default
-        if len(items) < 1000:
-            pytest.skip("Not enough items to test performance requirement")
-        
+        # Performance test with small dataset - should be instant
         start = time.time()
         engine = GraphEngine()
         engine.build_from_items(items)
         elapsed = time.time() - start
         
-        assert elapsed < 2.0, f"Graph build took {elapsed:.2f}s, must be < 2s"
+        assert elapsed < 0.1, f"Graph build took {elapsed:.2f}s, should be < 0.1s for small dataset"
     
-    def test_specific_parent_child_relationship(self):
+    def test_specific_parent_child_relationship(self, test_core, test_items_with_links):
         """Verify specific parent-child relationship in graph (SRS-001 → SYS-001)"""
-        loader = ItemLoader(SPECS_DIR)
-        items = loader.load_all()
+        items = test_core.get_all_items()
         
         engine = GraphEngine()
         engine.build_from_items(items)
         
-        # Find SRS-001 (should derive from SYS-001)
-        srs_001 = next((item for item in items if item.uid == "SRS-001"), None)
-        if srs_001 and hasattr(srs_001, 'derives_from') and srs_001.derives_from:
-            # Verify edge exists from SRS-001 to its parent
-            for parent_id in srs_001.derives_from:
-                if engine.graph.has_node(parent_id):
-                    assert engine.graph.has_edge("SRS-001", parent_id), \
-                        f"Edge must exist from SRS-001 to parent {parent_id}"
-                    
-                    # Verify edge direction (child → parent)
-                    assert not engine.graph.has_edge(parent_id, "SRS-001") or \
-                           engine.graph.has_edge("SRS-001", parent_id), \
-                        "Edge direction must be from child to parent"
+        # Verify edge exists from SRS-001 to SYS-001
+        assert engine.graph.has_edge("SRS-001", "SYS-001"), \
+            "Edge must exist from SRS-001 to parent SYS-001"
+        
+        # Verify edge direction (child → parent, not parent → child)
+        assert not engine.graph.has_edge("SYS-001", "SRS-001"), \
+            "Edge should not exist from parent to child"
     
     def test_graph_with_mocked_simple_hierarchy(self):
         """Test graph with mocked simple parent-child hierarchy"""

@@ -13,33 +13,29 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 from traceability.repository.loader import ItemLoader
 from traceability.repository.saver import ItemSaver
 
-# Path to DHF items
-SPECS_DIR = Path(__file__).parent.parent.parent / "DHF" / "items"
-
 
 class TestFilePersistence:
     """Tests for SRS-002: Structured File Persistence"""
     
-    def test_items_stored_as_separate_files(self):
+    def test_items_stored_as_separate_files(self, test_core):
         """Verify each DHF item is stored as a separate file"""
-        loader = ItemLoader(SPECS_DIR)
-        items = loader.load_all()
+        items = test_core.get_all_items()
         
         # Each item should have come from a separate file
-        # DHF currently has 64 items across all types
-        assert len(items) >= 60, \
-            f"Expected at least 60 items in DHF, got {len(items)}"
+        # Test environment has minimal items
+        assert len(items) >= 2, \
+            f"Expected at least 2 items in test DHF, got {len(items)}"
         
         # Verify each item has unique ID
         item_ids = [item.uid for item in items]
         assert len(item_ids) == len(set(item_ids)), \
             f"Each item must have unique ID. Found {len(item_ids)} items but {len(set(item_ids))} unique IDs"
     
-    def test_filename_matches_item_id(self):
+    def test_filename_matches_item_id(self, test_dhf):
         """Verify item ID is used as filename"""
-        dhf_items_dir = Path(__file__).parent.parent.parent / "DHF" / "items"
+        dhf_items_dir = test_dhf / "items"
         
-        # Check a few item directories
+        # Check item directories in test DHF
         for subdir in dhf_items_dir.iterdir():
             if subdir.is_dir() and not subdir.name.startswith('.'):
                 yaml_files = list(subdir.glob("*.yaml"))
@@ -55,14 +51,14 @@ class TestFilePersistence:
                         assert yaml_file.name == expected_filename, \
                             f"File {yaml_file.name} should be named {expected_filename}"
     
-    def test_files_organized_by_type(self):
+    def test_files_organized_by_type(self, test_dhf):
         """Verify files are organized in subdirectories by document type"""
-        dhf_items_dir = Path(__file__).parent.parent.parent / "DHF" / "items"
+        dhf_items_dir = test_dhf / "items"
         
-        # Check that subdirectories exist (DHF has 11 document type directories)
+        # Check that subdirectories exist
         subdirs = [d for d in dhf_items_dir.iterdir() if d.is_dir() and not d.name.startswith('.')]
-        assert len(subdirs) >= 10, \
-            f"Expected at least 10 document type subdirectories, got {len(subdirs)}"
+        assert len(subdirs) >= 2, \
+            f"Expected at least 2 document type subdirectories in test DHF, got {len(subdirs)}"
         
         # Verify items in each directory have consistent prefix
         for subdir in subdirs:

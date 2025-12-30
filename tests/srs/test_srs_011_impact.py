@@ -1,19 +1,18 @@
 """
-Automated tests for SRS-011: Change Impact Analysis
-Verifies: Software shall identify downstream items affected by changes
+Automated tests for SRS-011: Impact Analysis
+Verifies: Software shall analyze impact of changes to items
 """
 
 import pytest
 from pathlib import Path
 import sys
-import networkx as nx
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
 from traceability.graph.engine import GraphEngine
 from traceability.repository.loader import ItemLoader
 
-SPECS_DIR = Path(__file__).parent.parent.parent / "DHF" / "items"
+# Tests use test_core fixture from conftest.py
 
 
 class TestImpactAnalysis:

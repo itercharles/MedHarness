@@ -1,19 +1,17 @@
 """
 Automated tests for SRS-005: Data Validation
-Verifies: Software shall validate data on load and save
+Verifies: Software shall validate item data against configured schemas
 """
 
 import pytest
 from pathlib import Path
-import yaml
 import sys
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
 from traceability.repository.loader import ItemLoader
-from traceability.models.item import Item
 
-SPECS_DIR = Path(__file__).parent.parent.parent / "DHF" / "items"
+# Tests use test_core fixture from conftest.py
 
 
 class TestDataValidation:
