@@ -61,7 +61,7 @@ def test_TC_SYS_010_002_view_cr_workflow(page: Page, streamlit_app):
 
 
 @pytest.mark.browser
-def test_TC_SYS_010_003_workflow_state_transition(page: Page, streamlit_app):
+def test_TC_SYS_010_003_workflow_state_transition(page: Page, streamlit_app, test_dhf_root):
     """
     TC-SYS-010-003: Test Workflow State Transition
     
