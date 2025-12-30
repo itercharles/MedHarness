@@ -176,19 +176,39 @@ class TestSWDD006_PageURLGeneration:
         from utils.ui_helpers import get_page_url_for_item
         
         url = get_page_url_for_item("SYS-001", core)
-        # Should generate URL like /3_SYS?item=SYS-001
-        assert "?item=SYS-001" in url, "Should include item query parameter"
-        assert url.startswith("/"), "Should start with /"
-        assert "_SYS" in url, "Should include SYS page identifier"
+        
+        # STRICT: Check exact URL format
+        expected_url = "/page_SYS?item=SYS-001"
+        assert url == expected_url, \
+            f"URL must be exactly '{expected_url}', got '{url}'"
+    
+    def test_url_generation_exact_format_for_all_types(self, core):
+        """Verify exact URL format for different document types."""
+        from utils.ui_helpers import get_page_url_for_item
+        
+        # Test exact format for each document type
+        test_cases = [
+            ("UC-001", "/page_UC?item=UC-001"),
+            ("CRS-001", "/page_CRS?item=CRS-001"),
+            ("SYS-001", "/page_SYS?item=SYS-001"),
+            ("SRS-001", "/page_SRS?item=SRS-001"),
+            ("SWDD-001", "/page_SWDD?item=SWDD-001"),
+        ]
+        
+        for item_id, expected_url in test_cases:
+            url = get_page_url_for_item(item_id, core)
+            assert url == expected_url, \
+                f"URL for {item_id} must be exactly '{expected_url}', got '{url}'"
     
     def test_url_generation_for_test_cases(self, core):
         """Verify URL generation handles test case IDs correctly."""
         from utils.ui_helpers import get_page_url_for_item
         
+        # Test cases should use TC-{TYPE} format
         url = get_page_url_for_item("TC-SYS-001", core)
-        # Should extract TC-SYS as the document type
-        assert "?item=TC-SYS-001" in url, "Should include full item ID"
-        # May or may not find page depending on config
+        expected_url = "/page_TC-SYS?item=TC-SYS-001"
+        assert url == expected_url, \
+            f"URL for TC-SYS-001 must be exactly '{expected_url}', got '{url}'"
     
     def test_url_generation_performance(self, core):
         """Verify URL generation completes in O(n) time."""

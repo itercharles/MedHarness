@@ -29,12 +29,13 @@ def get_page_url_for_item(item_id: str, core=None) -> str:
     if core:
         for doc_type in core.config.doc_types:
             if doc_type.prefix == doc_type_prefix or doc_type.code == doc_type_prefix:
-                page_num = getattr(doc_type, 'page_number', None)
-                if page_num and getattr(doc_type, 'page_enabled', False):
-                    return f"/{page_num}_{doc_type.code}?item={item_id}"
+                if getattr(doc_type, 'page_enabled', False):
+                    # Use page_CODE format that matches Streamlit's dynamic page routing
+                    return f"/page_{doc_type.code}?item={item_id}"
     
     # Fallback: just use query param (will stay on current page)
     return f"?item={item_id}"
+
 
 
 def make_item_columns_clickable(df: pd.DataFrame, core=None) -> tuple[pd.DataFrame, Dict]:
