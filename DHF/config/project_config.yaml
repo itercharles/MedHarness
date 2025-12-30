@@ -913,10 +913,11 @@ doc_types:
       criteria: []
 traceability_matrices:
 - name: Complete Requirements Chain
-  description: Full traceability from use cases to detailed design
+  description: Full traceability from use cases through all requirement levels to detailed design
   path:
   - UC
   - CRS
+  - SYS
   - SRS
   - SWDD
 - name: System Requirements to System Architecture
