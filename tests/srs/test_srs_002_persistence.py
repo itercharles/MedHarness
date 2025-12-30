@@ -92,6 +92,34 @@ class TestFilePersistence:
             assert item.uid, "Item id must not be empty"
             assert item.title, "Item title must not be empty"
     
+    def test_automatic_id_generation(self, test_core):
+        """Verify create_item() auto-generates unique IDs with correct format."""
+        # Create multiple items without providing IDs
+        created_ids = []
+        
+        for i in range(3):
+            item_data = {
+                'title': f'Test Item {i}',
+                'content': f'Testing ID generation {i}',
+                'type': 'SRS',
+                'status': 'draft'
+            }
+            created = test_core.create_item(item_data, author='test_user')
+            created_ids.append(created['id'])
+            
+            # Verify ID was generated
+            assert 'id' in created, "ID should be auto-generated"
+            assert created['id'].startswith('SRS-'), "ID should have correct prefix"
+            assert created['id'] != '', "ID should not be empty"
+        
+        # Verify all IDs are unique
+        assert len(created_ids) == len(set(created_ids)), "All generated IDs should be unique"
+        
+        # Verify ID format
+        from utils.id_generator import validate_id_format
+        for id in created_ids:
+            assert validate_id_format(id, 'SRS-'), f"ID {id} should have valid format"
+    
     def test_structured_text_format(self):
         """Verify files use structured text format (YAML)"""
         dhf_items_dir = Path(__file__).parent.parent.parent / "DHF" / "items"

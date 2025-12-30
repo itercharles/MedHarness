@@ -123,26 +123,45 @@ class CompliantFlowCore:
         item: Item = self.graph.graph.nodes[uid]['item']
         return item.model_dump(by_alias=True, exclude_none=True)
     
-    def create_item(
-        self,
-        data: Dict[str, Any],
-        author: Optional[str] = None
-    ) -> Dict[str, Any]:
+    def create_item(self, item_data: dict, author: str = "system", cr_id: Optional[str] = None) -> dict:
         """
         Create a new item.
         
         Args:
-            data: Item data
-            author: Author name for git commit
+            item_data: Item data dictionary (ID is optional - will be auto-generated if not provided)
+            author: Author of the change
+            cr_id: Optional CR ID for change control
             
         Returns:
-            Created item dictionary
+            Created item as dictionary
         """
+        # Auto-generate ID if not provided
+        if 'id' not in item_data or not item_data['id']:
+            from utils.id_generator import get_next_id
+            
+            # Determine prefix from item data or infer from type
+            prefix = None
+            if 'type' in item_data:
+                # Get prefix from document type
+                doc_type = self.config.get_doc_type(item_data['type'])
+                if doc_type:
+                    prefix = doc_type.prefix
+            
+            if not prefix:
+                raise ValueError("Cannot auto-generate ID: document type not specified")
+            
+            # Get existing IDs for this prefix
+            all_items = self.get_all_items()
+            existing_ids = [item['id'] for item in all_items if item['id'].startswith(prefix)]
+            
+            # Generate next ID
+            item_data['id'] = get_next_id(prefix, existing_ids)
+        
         # Validate and create item
-        item = Item.model_validate(data)
+        item = Item.model_validate(item_data)
         
         # Save to file
-        self.saver.save(item, author=author)
+        self.saver.save(item, author=author, cr_id=cr_id)
         
         # Refresh graph
         self.refresh()
