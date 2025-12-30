@@ -498,8 +498,7 @@ def render_new_item_form(
             # Validate required fields
             # Validate required fields dynamically
             missing_fields = []
-            if not form_data.get('id'):
-                missing_fields.append("ID")
+            # ID is auto-generated, so we don't require it in validation
                 
             for field in schema['fields']:
                 if field.get('required') and not form_data.get(field['name']):
@@ -514,9 +513,13 @@ def render_new_item_form(
             else:
                 # Create new item with all filled fields
                 new_item = {
-                    'id': form_data['id'],
+                    'type': doc_type_config['code'],  # Required for ID auto-generation
                     'status': workflow_engine.get_initial_state(),
                 }
+                
+                # Add ID if manually provided (though it shouldn't be for this flow)
+                if form_data.get('id'):
+                    new_item['id'] = form_data['id']
                 
                 # Add all other fields that have values
                 for key, value in form_data.items():
@@ -525,12 +528,12 @@ def render_new_item_form(
                 
                 # Save item using create_item (not update_item)
                 try:
-                    core.create_item(new_item)
-                    st.success(f"✅ Created {form_data['id']}")
+                    created_item = core.create_item(new_item)
+                    st.success(f"✅ Created {created_item['id']}")
                     
                     # Clear creation mode and select new item
                     st.session_state['creating_new'] = False
-                    st.session_state['selected_item_id'] = form_data['id']
+                    st.session_state['selected_item_id'] = created_item['id']
                     st.rerun()
                 except Exception as e:
                     st.error(f"Error creating item: {str(e)}")

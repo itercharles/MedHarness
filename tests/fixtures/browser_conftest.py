@@ -38,8 +38,8 @@ def get_created_item_id(test_dhf_root: str, doc_type_prefix: str) -> str:
     prefix_to_dir = {
         'SRS-': '03_req_srs',
         'SYS-': '02_req_sys',
-        'CR-': '09_cr',
-        'SYSARCH-': '05_arch_sysarch',
+        'CR-': '08_cr',
+        'SYSARCH-': '07_sysarch',
         'UC-': '01_req_uc',
         'CRS-': '00_req_crs',
     }
