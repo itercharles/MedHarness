@@ -65,7 +65,7 @@ doc_types:
     format: date
     label: Review Date
   - name: derives_from
-    format: item_multiselect
+    format: relationship
     target_types:
     - UC
     label: Derives From
@@ -215,8 +215,8 @@ doc_types:
   - name: risk_benefit
     format: long_text
     label: Risk Benefit
-  - name: mitigated_by
-    format: item_multiselect
+  - name: mitigates
+    format: relationship
     target_types:
     - RCM
     label: Mitigated By
@@ -226,9 +226,6 @@ doc_types:
   - name: review_date
     format: date
     label: Review Date
-  relations:
-  - target: RCM
-    label: mitigated_by
   icon: ⚠️
   page_enabled: true
   page_number: 12
@@ -271,12 +268,12 @@ doc_types:
     format: long_text
     label: Content
   - name: mitigates
-    format: item_multiselect
+    format: relationship
     target_types:
     - RISK
     label: Mitigates
   - name: implements
-    format: item_multiselect
+    format: relationship
     target_types:
     - SYS
     label: Implemented By
@@ -300,11 +297,6 @@ doc_types:
     - Implemented
     - Verified
     label: Implementation Status
-  relations:
-  - target: RISK
-    label: mitigates
-  - target: SYS
-    label: implements
   icon: 🛡️
   page_enabled: true
   page_number: 11
@@ -472,7 +464,7 @@ doc_types:
     format: long_text
     label: Content
   - name: derives_from
-    format: item_multiselect
+    format: relationship
     target_types:
     - SYS
     label: Derives From
@@ -485,9 +477,6 @@ doc_types:
     options:
     - draft
     - approved
-  relations:
-  - target: SYS
-    label: derives_from
   icon: 💻
   page_enabled: true
   page_number: 7
@@ -570,21 +559,16 @@ doc_types:
     format: long_text
     label: Content
   - name: implements
-    format: item_multiselect
+    format: relationship
     target_types:
     - SRS
     label: Implements
-
   - name: status
     format: select
     label: Status
     options:
     - draft
     - approved
-  relations:
-  - target: SRS
-    label: implements
-
   icon: 📋
   page_enabled: true
   page_number: 10
@@ -608,8 +592,6 @@ doc_types:
   - not_verified
   - verified
   - failed
-
-
 - code: CR
   name: Change Request
   prefix: CR-
@@ -645,7 +627,7 @@ doc_types:
     format: short_text
     label: Target Version
   - name: affected_items
-    format: item_multiselect
+    format: relationship
     label: Affected Items
   - name: implementation_prs
     format: long_text
@@ -913,7 +895,8 @@ doc_types:
       criteria: []
 traceability_matrices:
 - name: Complete Requirements Chain
-  description: Full traceability from use cases through all requirement levels to detailed design
+  description: Full traceability from use cases through all requirement levels to
+    detailed design
   path:
   - UC
   - CRS

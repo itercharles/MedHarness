@@ -66,7 +66,7 @@ def create_test_dhf() -> Path:
                     'id',
                     {'name': 'title', 'format': 'short_text', 'label': 'Title'},
                     {'name': 'content', 'format': 'long_text', 'label': 'Content'},
-                    {'name': 'derives_from', 'format': 'item_multiselect', 'target_types': ['UC'], 'label': 'Derives From'},
+                    {'name': 'derives_from', 'format': 'relationship', 'target_types': ['UC'], 'label': 'Derives From'},
                     {'name': 'status', 'format': 'select', 'label': 'Status', 'options': ['draft', 'approved']}
                 ],
                 'lifecycle': {
@@ -89,7 +89,7 @@ def create_test_dhf() -> Path:
                     {'name': 'title', 'format': 'short_text', 'label': 'Title'},
                     {'name': 'content', 'format': 'long_text', 'label': 'Content'},
                     {'name': 'category', 'format': 'short_text', 'label': 'Category'},
-                    {'name': 'derives_from', 'format': 'item_multiselect', 'target_types': ['CRS'], 'label': 'Derives From'},
+                    {'name': 'derives_from', 'format': 'relationship', 'target_types': ['CRS'], 'label': 'Derives From'},
                     {'name': 'status', 'format': 'select', 'label': 'Status', 'options': ['draft', 'under_review', 'approved']}
                 ],
                 'lifecycle': {
@@ -117,7 +117,7 @@ def create_test_dhf() -> Path:
                     'id',
                     {'name': 'title', 'format': 'short_text', 'label': 'Title'},
                     {'name': 'content', 'format': 'long_text', 'label': 'Content'},
-                    {'name': 'derives_from', 'format': 'item_multiselect', 'target_types': ['SYS'], 'label': 'Derives From'},
+                    {'name': 'derives_from', 'format': 'relationship', 'target_types': ['SYS'], 'label': 'Derives From'},
                     {'name': 'status', 'format': 'select', 'label': 'Status', 'options': ['draft', 'approved']}
                 ],
                 'lifecycle': {
@@ -139,7 +139,7 @@ def create_test_dhf() -> Path:
                     'id',
                     {'name': 'title', 'format': 'short_text', 'label': 'Title'},
                     {'name': 'content', 'format': 'long_text', 'label': 'Content'},
-                    {'name': 'implements', 'format': 'item_multiselect', 'target_types': ['SYS'], 'label': 'Implements'},
+                    {'name': 'implements', 'format': 'relationship', 'target_types': ['SYS'], 'label': 'Implements'},
                     {'name': 'status', 'format': 'select', 'label': 'Status', 'options': ['draft', 'approved']}
                 ],
                 'lifecycle': {
@@ -162,7 +162,7 @@ def create_test_dhf() -> Path:
                     {'name': 'title', 'format': 'short_text', 'label': 'Title'},
                     {'name': 'description', 'format': 'long_text', 'label': 'Description'},
                     {'name': 'justification', 'format': 'long_text', 'label': 'Justification'},
-                    {'name': 'affected_items', 'format': 'item_multiselect', 'label': 'Affected Items'},
+                    {'name': 'affected_items', 'format': 'relationship', 'label': 'Affected Items'},
                     {'name': 'status', 'format': 'select', 'label': 'Status', 'options': ['submitted', 'approved', 'rejected']}
                 ],
                 'lifecycle': {

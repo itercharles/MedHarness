@@ -23,6 +23,7 @@ class PropertyFormat(str, Enum):
     ITEM_REFERENCE = "item_reference"
     ITEM_MULTISELECT = "item_multiselect"
     FILE_UPLOAD = "file_upload"
+    RELATIONSHIP = "relationship"  # New format for relationships
 
 
 class PropertyConfig(BaseModel):
@@ -44,13 +45,15 @@ class PropertyConfig(BaseModel):
     target_types: Optional[List[str]] = Field(None, description="Target document types for item references")
     allowed_extensions: Optional[List[str]] = Field(None, description="Allowed file extensions for file upload")
     
+    # New relationship format fields
+    relationship_type: Optional[str] = Field(None, description="Reference to relationship type in global registry")
+    
     @property
     def display_label(self) -> str:
         """Get display label (use custom or generate from name)."""
         if self.label:
             return self.label
         return self.name.replace('_', ' ').title()
-
 
 
 class RelationConfig(BaseModel):

@@ -86,19 +86,27 @@ class CompliantFlowCore:
         if not doc_type_config:
             return []
         
-        # Get relationship fields from relations section
-        relations = doc_type_config.relations if hasattr(doc_type_config, 'relations') else []
-        
-        for relation in relations:
-            if isinstance(relation, dict):
-                field_name = relation.get('label')
-                if field_name and field_name in item:
-                    value = item[field_name]
-                    if isinstance(value, list):
-                        all_links.extend([v for v in value if v])  # Filter empty
-                    elif value:
-                        all_links.append(value)
-        
+        # Get all relationship fields from properties
+        properties = doc_type_config.properties if hasattr(doc_type_config, 'properties') else []
+        for prop in properties:
+            if isinstance(prop, dict):
+                prop_format = prop.get('format')
+                field_name = prop.get('name')
+            elif hasattr(prop, 'format'):
+                prop_format = prop.format
+                field_name = prop.name
+            else:
+                continue
+            
+            # Check if it's a relationship field
+            is_relationship = prop_format == 'relationship'
+            
+            if is_relationship and field_name in item:
+                value = item[field_name]
+                if isinstance(value, list):
+                    all_links.extend([v for v in value if v])
+                elif value:
+                    all_links.append(value)
         
         return all_links
     
