@@ -8,3 +8,12 @@ justification: The ID shall not be edit as it cause problems for the reference
 under_review_by: charles
 under_review_date: '2025-12-30'
 timestamp: '2025-12-30T16:59:35.286281'
+affected_items:
+- SRS-001
+- TC-SRS-002
+- TC-SYS-008
+- TC-SYS-010
+implementation_prs:
+- pr_number: 8
+  pr_url: https://github.com/itercharles/CompliantFlow/pull/8
+  title: "feat: Implement automatic ID generation for items, updating core logi\u2026"
