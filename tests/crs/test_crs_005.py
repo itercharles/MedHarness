@@ -44,8 +44,12 @@ def test_TC_CRS_005_001_add_architecture_item(page: Page, streamlit_app, test_dh
     # Verify created
     from fixtures.browser_conftest import get_created_item_id
     created_id = get_created_item_id(test_dhf_root, 'SYSARCH-')
-    page.fill("input[placeholder='Search by ID or title...']", created_id)
+    
+    # Navigate to the created item
+    page.goto(f"{streamlit_app}/page_SYSARCH?item={created_id}")
+    page.wait_for_load_state("networkidle")
     page.wait_for_timeout(1000)
+    
     expect(page.get_by_role("heading", name=created_id)).to_be_visible()
 
 

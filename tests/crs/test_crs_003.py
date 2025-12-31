@@ -62,6 +62,10 @@ def test_TC_CRS_003_002_create_change_request(page: Page, streamlit_app, test_dh
     # Verify CR was created
     from fixtures.browser_conftest import get_created_item_id
     created_id = get_created_item_id(test_dhf_root, 'CR-')
-    page.fill("input[placeholder='Search by ID or title...']", created_id)
+    
+    # Navigate to the created CR
+    page.goto(f"{streamlit_app}/page_CR?item={created_id}")
+    page.wait_for_load_state("networkidle")
     page.wait_for_timeout(1000)
+    
     expect(page.get_by_role("heading", name=created_id)).to_be_visible()

@@ -48,6 +48,11 @@ def test_TC_CRS_001_001_create_requirement(page: Page, streamlit_app, test_dhf_r
     from fixtures.browser_conftest import get_created_item_id
     created_id = get_created_item_id(test_dhf_root, 'SRS-')
     
+    # Navigate to the created item
+    page.goto(f"{streamlit_app}/page_SRS?item={created_id}")
+    page.wait_for_load_state("networkidle")
+    page.wait_for_timeout(1000)
+    
     # Verify we can navigate to the created item
     expect(page.get_by_role("heading", name=created_id)).to_be_visible(timeout=5000)
 
