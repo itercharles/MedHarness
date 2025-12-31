@@ -512,7 +512,7 @@ doc_types:
   - not_verified
   - verified
   - failed
-- code: SYS_ARCH
+- code: SYSARCH
   name: System Architecture
   prefix: SYSARCH-
   directory: 06_sys_arch
@@ -971,7 +971,7 @@ document_specifications:
     template: requirements_specification.md.j2
     output: DHF/documents/specifications/Software_Detailed_Design_Document.md
     doc_type_name: Software Detailed Design Document
-  ARCH:
+  SYSARCH:
     template: architecture_specification.md.j2
     output: DHF/documents/specifications/System_Architecture_Specification.md
     doc_type_name: System Architecture Specification

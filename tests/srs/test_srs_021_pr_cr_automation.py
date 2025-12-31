@@ -79,14 +79,16 @@ class TestSRS021_PRCRValidation:
         @links: SRS-021
         @test_id: TC-SRS-021-001
         """
-        dhf_root = Path(__file__).parent.parent.parent / "DHF"
-        cr_dir = dhf_root / "items" / "09_cr"
+        from tests.fixtures.test_data import create_test_dhf, populate_test_dhf
         
-        # Test existing CR
-        existing_crs = list(cr_dir.glob("CR-*.yaml"))
-        assert len(existing_crs) > 0, "At least one CR should exist for testing"
+        # Create test DHF with populated data (includes CR-001)
+        test_dhf_root = create_test_dhf()
+        populate_test_dhf(test_dhf_root)
         
-        test_cr = existing_crs[0]
+        cr_dir = test_dhf_root / "items" / "08_cr"
+        
+        # Test existing CR (CR-001 is created by populate_test_dhf)
+        test_cr = cr_dir / "CR-001.yaml"
         assert test_cr.exists(), "Existing CR file should be found"
         
         # Test non-existent CR
@@ -202,14 +204,21 @@ class TestSRS022_AffectedItemsDetection:
             
             assert test_id == expected_id
     
-    def test_TC_SRS_022_002_test_file_with_corresponding_yaml(self):
+    def test_TC_SRS_022_002_test_file_with_corresponding_yaml(self, tmp_path):
         """
         TC-SRS-022-002: Verify only test files with YAML items are tracked
         
         @links: SRS-022
         @test_id: TC-SRS-022-002
         """
-        dhf_root = Path(__file__).parent.parent.parent / "DHF"
+        # Create test DHF structure
+        test_dhf = tmp_path / "test_dhf"
+        tc_dir = test_dhf / "items" / "05_tc_sys"
+        tc_dir.mkdir(parents=True)
+        
+        # Create a test case YAML file
+        test_yaml = tc_dir / "TC-SYS-001.yaml"
+        test_yaml.write_text("id: TC-SYS-001\ntitle: Test Case\n")
         
         # Simulate test file change
         test_file = "test_sys_001_core.py"
@@ -222,9 +231,9 @@ class TestSRS022_AffectedItemsDetection:
             
             # Check if corresponding YAML exists
             possible_dirs = [
-                dhf_root / "items" / "05_tc_sys",
-                dhf_root / "items" / "06_tc_crs",
-                dhf_root / "items" / "07_tc_sds"
+                test_dhf / "items" / "05_tc_sys",
+                test_dhf / "items" / "06_tc_crs",
+                test_dhf / "items" / "07_tc_sds"
             ]
             
             yaml_exists = False
@@ -235,8 +244,8 @@ class TestSRS022_AffectedItemsDetection:
                         yaml_exists = True
                         break
             
-            # This test validates the logic, actual file may or may not exist
-            assert isinstance(yaml_exists, bool)
+            # This test validates the logic - we created TC-SYS-001.yaml so it should exist
+            assert yaml_exists is True
 
 
 class TestSRS023_PRTracking:

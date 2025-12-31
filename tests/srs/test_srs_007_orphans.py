@@ -11,17 +11,24 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
 from traceability.graph.engine import GraphEngine
 from traceability.repository.loader import ItemLoader
+from tests.fixtures.test_data import create_test_dhf, populate_test_dhf
 
-# Path to DHF items
-SPECS_DIR = Path(__file__).parent.parent.parent / "DHF/items"
+
+@pytest.fixture
+def test_dhf_with_data():
+    """Create test DHF with populated data for orphan detection tests"""
+    test_dhf_root = create_test_dhf()
+    populate_test_dhf(test_dhf_root)
+    return test_dhf_root
 
 
 class TestOrphanDetection:
     """Tests for SRS-007: Graph-Based Orphan Detection"""
     
-    def test_orphan_detection_uses_graph(self):
+    def test_orphan_detection_uses_graph(self, test_dhf_with_data):
         """Verify orphan detection uses graph structure"""
-        loader = ItemLoader(SPECS_DIR)
+        specs_dir = test_dhf_with_data / "items"
+        loader = ItemLoader(specs_dir)
         items = loader.load_all()
         
         engine = GraphEngine()
@@ -33,9 +40,10 @@ class TestOrphanDetection:
         # Should return a list
         assert isinstance(orphans, list), "Orphan detection must return list"
     
-    def test_orphans_have_no_incoming_edges(self):
+    def test_orphans_have_no_incoming_edges(self, test_dhf_with_data):
         """Verify orphans are items with no incoming edges"""
-        loader = ItemLoader(SPECS_DIR)
+        specs_dir = test_dhf_with_data / "items"
+        loader = ItemLoader(specs_dir)
         items = loader.load_all()
         
         engine = GraphEngine()
@@ -51,9 +59,10 @@ class TestOrphanDetection:
             # Orphans should have in_degree of 0
             assert in_degree == 0, f"{orphan_id} is marked as orphan but has in_degree {in_degree}"
     
-    def test_root_types_excluded_from_orphan_check(self):
+    def test_root_types_excluded_from_orphan_check(self, test_dhf_with_data):
         """Verify root types (UC, CRS) are excluded from orphan check"""
-        loader = ItemLoader(SPECS_DIR)
+        specs_dir = test_dhf_with_data / "items"
+        loader = ItemLoader(specs_dir)
         items = loader.load_all()
         
         engine = GraphEngine()
@@ -68,9 +77,10 @@ class TestOrphanDetection:
             assert not orphan_id.startswith('UC-'), "UC items should not be marked as orphans"
             assert not orphan_id.startswith('CRS-'), "CRS items should not be marked as orphans"
     
-    def test_orphans_grouped_by_type(self):
+    def test_orphans_grouped_by_type(self, test_dhf_with_data):
         """Verify orphans can be grouped by document type"""
-        loader = ItemLoader(SPECS_DIR)
+        specs_dir = test_dhf_with_data / "items"
+        loader = ItemLoader(specs_dir)
         items = loader.load_all()
         
         engine = GraphEngine()
