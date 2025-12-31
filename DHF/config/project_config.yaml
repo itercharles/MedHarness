@@ -975,6 +975,14 @@ document_specifications:
     template: architecture_specification.md.j2
     output: DHF/documents/specifications/System_Architecture_Specification.md
     doc_type_name: System Architecture Specification
+  RISK:
+    template: risk_specification.md.j2
+    output: DHF/documents/specifications/Risk_Analysis_Specification.md
+    doc_type_name: Risk Analysis
+  RCM:
+    template: rcm_specification.md.j2
+    output: DHF/documents/specifications/Risk_Control_Measures_Specification.md
+    doc_type_name: Risk Control Measures
   TC-CRS:
     template: test_specification.md.j2
     output: DHF/documents/specifications/Customer_Requirement_Test_Specification.md
