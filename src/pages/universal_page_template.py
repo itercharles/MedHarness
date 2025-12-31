@@ -472,7 +472,7 @@ def render_new_item_form(
             with col2:
                 time_val = st.time_input(f"{label} (Time)", key=f"new_{field_name}_time")
             form_data[field_name] = f"{date_val} {time_val}"
-        elif field_type in ['item_reference', 'item_multiselect']:
+        elif field_type in ['item_reference', 'item_multiselect', 'relationship']:
             options = field.get('options', [])
             if field_type == 'item_reference':
                 form_data[field_name] = st.selectbox(label, options, help=help_text, key=f"new_{field_name}")
@@ -904,7 +904,7 @@ def render_item_edit_form(
             default_idx = options.index(current_value) if current_value in options else 0
             form_data[field_name] = st.selectbox(label, options, index=default_idx, help=help_text,
                                                  key=f"edit_{field_name}_{item['id']}")
-        elif field_type == 'multiselect' or field_type == 'item_multiselect':
+        elif field_type == 'multiselect' or field_type in ['item_multiselect', 'relationship']:
             options = field.get('options', [])
             # Ensure "default" is a list
             default = current_value if isinstance(current_value, list) else ([current_value] if current_value else [])
@@ -952,7 +952,7 @@ def render_item_edit_form(
             with col2:
                 time_val = st.time_input(f"{label} (Time)", key=f"edit_{field_name}_time_{item['id']}")
             form_data[field_name] = f"{date_val} {time_val}"
-        elif field_type in ['item_reference', 'item_multiselect']:
+        elif field_type in ['item_reference', 'item_multiselect', 'relationship']:
             options = field.get('options', [])
             if field_type == 'item_reference':
                 default_idx = options.index(current_value) if current_value in options else 0
