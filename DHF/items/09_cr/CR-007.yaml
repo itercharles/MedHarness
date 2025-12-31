@@ -1,0 +1,13 @@
+id: CR-007
+title: 'Defect: the specification generation in system architecture page doesn''t
+  work'
+type: CR
+status: under_review
+description: 'The error pop up when trying to generating the specification document
+  in the system architecture page. '
+justification: defect
+priority: High
+file_path: /Users/chenwenliang/code/CompliantFlow/DHF/items/09_cr/CR-007.yaml
+under_review_by: charles chen
+under_review_date: '2025-12-31'
+timestamp: '2025-12-31T09:35:18.048611'
