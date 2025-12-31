@@ -623,15 +623,17 @@ doc_types:
   - name: assigned_to
     format: short_text
     label: Assigned To
-  - name: target_version
-    format: short_text
-    label: Target Version
   - name: affected_items
     format: relationship
     label: Affected Items
   - name: implementation_prs
     format: long_text
     label: Implementation PRs (JSON List)
+  - name: target_release
+    format: relationship
+    target_types:
+    - RELEASE
+    label: Target Release
   icon: 📝
   page_enabled: true
   page_number: 9
