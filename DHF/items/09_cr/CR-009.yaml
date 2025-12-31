@@ -47,6 +47,14 @@ content: |-
   - Backward compatible: support both old and new approaches during transition
   - Update configs to use new relationship-based criteria
   - Remove legacy `links` support after migration complete
-status: draft
+status: implemented
 priority: Medium
 category: Technical Debt
+implementation_notes: |-
+  Implemented for workflow_engine.py and compliant_flow_core.py.
+  Document_generator.py refactoring deferred as it only affects reporting.
+  
+  Changes:
+  - workflow_engine.py: Added relationship_field parameter support with backward compatibility
+  - compliant_flow_core.py: Added _aggregate_relationship_fields helper function
+  - All lifecycle tests pass (6/6)

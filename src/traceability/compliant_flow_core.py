@@ -68,6 +68,40 @@ class CompliantFlowCore:
         items = self.loader.load_all()
         self.graph.build_from_items(items)
     
+    def _aggregate_relationship_fields(self, item: Dict[str, Any], doc_type_code: str) -> List[str]:
+        """
+        Aggregate all relationship field values from an item.
+        
+        Args:
+            item: Item dictionary
+            doc_type_code: Document type code (e.g., 'SRS', 'TC-SRS')
+            
+        Returns:
+            List of all linked item IDs from all relationship fields
+        """
+        all_links = []
+        
+        # Get document type config
+        doc_type_config = self.config.get_doc_type(doc_type_code)
+        if not doc_type_config:
+            return []
+        
+        # Get relationship fields from relations section
+        relations = doc_type_config.relations if hasattr(doc_type_config, 'relations') else []
+        
+        for relation in relations:
+            if isinstance(relation, dict):
+                field_name = relation.get('label')
+                if field_name and field_name in item:
+                    value = item[field_name]
+                    if isinstance(value, list):
+                        all_links.extend([v for v in value if v])  # Filter empty
+                    elif value:
+                        all_links.append(value)
+        
+        
+        return all_links
+    
     def get_all_items(self) -> List[Dict[str, Any]]:
         """
         Get all items as dictionaries, including automated tests from code.
@@ -98,8 +132,9 @@ class CompliantFlowCore:
                 existing_ids = {item['id'] for item in items}
                 for test in automated_tests:
                     if test['id'] not in existing_ids:
-                        # Add all_linked_uids for automated tests (empty list since they're scanned)
-                        test['all_linked_uids'] = test.get('links', [])
+                        # Aggregate all relationship fields for automated tests
+                        test_type_code = test['id'].split('-')[0]  # e.g., 'TC' from 'TC-SRS-001'
+                        test['all_linked_uids'] = self._aggregate_relationship_fields(test, test_type_code)
                         items.append(test)
         except Exception as e:
             # Silently fail if scanner not available or tests dir missing

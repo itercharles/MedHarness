@@ -432,7 +432,7 @@ doc_types:
         name: Parent CRS approved
         description: All linked customer requirements must be approved
         check_type: linked_items_approved
-        linked_type: CRS
+        relationship_field: derives_from
         required_status: approved
         required: true
       - id: review_complete

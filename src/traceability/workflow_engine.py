@@ -149,8 +149,15 @@ class DynamicWorkflowEngine:
             return False, f"{field} is not set"
         
         elif check_type == 'linked_items_approved':
-            linked_type = criterion['linked_type']
+            # Use specific relationship field
+            relationship_field = criterion.get('relationship_field')
             required_status = criterion.get('required_status')
+            
+            if not relationship_field:
+                raise ValueError(
+                    f"Criterion '{criterion.get('id')}' with check_type 'linked_items_approved' "
+                    "must specify 'relationship_field' parameter"
+                )
             
             if not required_status:
                 raise ValueError(
@@ -158,20 +165,20 @@ class DynamicWorkflowEngine:
                     "must specify 'required_status' field"
                 )
             
-            links = item.get('links', [])
+            # Get linked items from the specified relationship field
+            linked_ids = item.get(relationship_field, [])
+            if not isinstance(linked_ids, list):
+                linked_ids = [linked_ids] if linked_ids else []
             
-            if not links:
-                return False, f"No linked {linked_type} items found"
+            # Filter out empty strings
+            linked_ids = [lid for lid in linked_ids if lid]
             
-            # Filter links to only the specified type
-            type_links = [link for link in links if link.startswith(linked_type)]
-            
-            if not type_links:
-                return False, f"No linked {linked_type} items found"
+            if not linked_ids:
+                return False, f"No items in '{relationship_field}' relationship"
             
             # Check each linked item has the required status
             not_matching = []
-            for link_id in type_links:
+            for link_id in linked_ids:
                 linked_item = self.core.get_item(link_id)
                 if not linked_item:
                     not_matching.append(f"{link_id} (not found)")
@@ -180,9 +187,9 @@ class DynamicWorkflowEngine:
                     not_matching.append(f"{link_id} ({status})")
             
             if not_matching:
-                return False, f"Linked {linked_type} not in '{required_status}' status: {', '.join(not_matching)}"
+                return False, f"Items in '{relationship_field}' not in '{required_status}' status: {', '.join(not_matching)}"
             
-            return True, f"All {len(type_links)} linked {linked_type} items are '{required_status}'"
+            return True, f"All {len(linked_ids)} items in '{relationship_field}' are '{required_status}'"
         
         elif check_type == 'manual':
             criterion_id = criterion['id']
