@@ -13,6 +13,56 @@ import time
 import os
 import requests
 from pathlib import Path
+import yaml
+
+
+def get_created_item_id(test_dhf_root: str, doc_type_prefix: str) -> str:
+    """
+    Get the ID of the most recently created item for a given document type.
+    
+    Args:
+        test_dhf_root: Path to test DHF root directory
+        doc_type_prefix: Document type prefix (e.g., 'SRS-', 'CR-', 'SYSARCH-')
+    
+    Returns:
+        The ID of the newest item
+        
+    Raises:
+        AssertionError: If no items found for the given prefix
+    
+    Example:
+        >>> created_id = get_created_item_id(test_dhf_root, 'SRS-')
+        >>> assert created_id.startswith('SRS-')
+    """
+    # Map prefix to directory
+    prefix_to_dir = {
+        'SRS-': '03_req_srs',
+        'SYS-': '02_req_sys',
+        'CR-': '08_cr',
+        'SYSARCH-': '07_sysarch',
+        'UC-': '01_req_uc',
+        'CRS-': '00_req_crs',
+    }
+    
+    dir_name = prefix_to_dir.get(doc_type_prefix)
+    assert dir_name, f"Unknown document type prefix: {doc_type_prefix}"
+    
+    items_dir = Path(test_dhf_root) / "items" / dir_name
+    
+    # Find all files matching the prefix
+    pattern = f"{doc_type_prefix.rstrip('-')}-*.yaml"
+    item_files = list(items_dir.glob(pattern))
+    assert len(item_files) > 0, f"Should have created at least one {doc_type_prefix} file"
+    
+    # Get the newest file
+    newest_file = max(item_files, key=lambda p: p.stat().st_mtime)
+    
+    # Read the ID from the file
+    with open(newest_file) as f:
+        item_data = yaml.safe_load(f)
+        return item_data['id']
+
+
 from playwright.sync_api import sync_playwright
 
 # Add project root to path for imports

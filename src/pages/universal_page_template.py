@@ -395,11 +395,11 @@ def render_new_item_form(
     """Render form for creating new item."""
     st.subheader(f"➕ New {doc_type_config['name']}")
     
-    # Form fields
+    # Initialize form data
     form_data = {}
     
-    # ID (always required for new items)
-    form_data['id'] = st.text_input("ID *", placeholder=f"{doc_type_config['prefix']}XXX", key="new_id")
+    # Display info that ID will be auto-generated
+    st.info("ℹ️ **ID will be auto-generated** when you create this item")
     
     # Get form schema from backend (without item_id for create mode)
     doc_type_code = doc_type_config.get('code')
@@ -498,8 +498,7 @@ def render_new_item_form(
             # Validate required fields
             # Validate required fields dynamically
             missing_fields = []
-            if not form_data.get('id'):
-                missing_fields.append("ID")
+            # ID is auto-generated, so we don't require it in validation
                 
             for field in schema['fields']:
                 if field.get('required') and not form_data.get(field['name']):
@@ -514,9 +513,13 @@ def render_new_item_form(
             else:
                 # Create new item with all filled fields
                 new_item = {
-                    'id': form_data['id'],
+                    'type': doc_type_config['code'],  # Required for ID auto-generation
                     'status': workflow_engine.get_initial_state(),
                 }
+                
+                # Add ID if manually provided (though it shouldn't be for this flow)
+                if form_data.get('id'):
+                    new_item['id'] = form_data['id']
                 
                 # Add all other fields that have values
                 for key, value in form_data.items():
@@ -525,12 +528,12 @@ def render_new_item_form(
                 
                 # Save item using create_item (not update_item)
                 try:
-                    core.create_item(new_item)
-                    st.success(f"✅ Created {form_data['id']}")
+                    created_item = core.create_item(new_item)
+                    st.success(f"✅ Created {created_item['id']}")
                     
                     # Clear creation mode and select new item
                     st.session_state['creating_new'] = False
-                    st.session_state['selected_item_id'] = form_data['id']
+                    st.session_state['selected_item_id'] = created_item['id']
                     st.rerun()
                 except Exception as e:
                     st.error(f"Error creating item: {str(e)}")
@@ -756,10 +759,14 @@ def render_item_view(
             # String or other simple types
             if len(str(value)) > 100:
                 st.markdown(f"**{field_name}:**")
-                st.text_area(field_name, value, height=100, disabled=True, key=f"field_{prop}_{item['id']}", label_visibility="collapsed")
+                st.text_area(field_name, value, height=100, disabled=True, key=f"field_{prop_name}_{item['id']}", label_visibility="collapsed")
             else:
                 st.markdown(f"**{field_name}:** `{value}`")
     
+    # Display ID as read-only (non-editable)
+    st.markdown(f"**ID:** `{item['id']}`")
+    st.caption("⚠️ ID cannot be changed after creation")
+
     # Links section (shown separately for better formatting)
     if item.get('links'):
         st.markdown("**Linked Items:**")
@@ -876,9 +883,19 @@ def render_item_edit_form(
     # Form fields - dynamically
     form_data = {}
     
-    # Render fields based on schema
+    # Display ID as read-only (non-editable)
+    st.markdown(f"**ID:** `{item['id']}`")
+    st.caption("⚠️ ID cannot be changed after creation")
+    st.divider()
+    
+    # Render fields based on schema (skip ID field)
     for field in schema['fields']:
         field_name = field['name']
+        
+        # Skip ID field - already displayed as read-only above
+        if field_name == 'id':
+            continue
+        
         label = field['label'] + (' *' if field.get('required') else '')
         current_value = field.get('current_value', '')
         field_type = field.get('type', 'text')

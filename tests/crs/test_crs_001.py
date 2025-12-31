@@ -7,12 +7,13 @@ Uses query parameters for item selection (avoiding canvas interaction).
 @links: CRS-001
 """
 
+import re
 import pytest
 from playwright.sync_api import Page, expect
 
 
 @pytest.mark.browser
-def test_TC_CRS_001_001_create_requirement(page: Page, streamlit_app):
+def test_TC_CRS_001_001_create_requirement(page: Page, streamlit_app, test_dhf_root):
     """
     TC-CRS-001-001: Create New Requirement via UI
     
@@ -35,8 +36,7 @@ def test_TC_CRS_001_001_create_requirement(page: Page, streamlit_app):
     page.get_by_role("button", name="➕ New").click()
     page.wait_for_timeout(1000)  # Wait for form to appear
     
-    # Fill form - note: ID field has placeholder "SRS-XXX"
-    page.fill("input[placeholder='SRS-XXX']", "SRS-999")
+    # Fill form (ID auto-generated)
     page.locator("label:has-text('Title')").locator("..").locator("input").fill("Test Requirement")
     page.locator("label:has-text('Content')").locator("..").locator("textarea").fill("This is a test requirement created via browser test")
     
@@ -44,13 +44,17 @@ def test_TC_CRS_001_001_create_requirement(page: Page, streamlit_app):
     page.get_by_role("button", name="✅ Create").click()
     page.wait_for_load_state("networkidle")
     
-    # Verify item appears in table (search for it)
-    page.fill("input[placeholder='Search by ID or title...']", "SRS-999")
+    # Get the auto-generated ID using shared helper function
+    from fixtures.browser_conftest import get_created_item_id
+    created_id = get_created_item_id(test_dhf_root, 'SRS-')
+    
+    # Navigate to the created item
+    page.goto(f"{streamlit_app}/page_SRS?item={created_id}")
+    page.wait_for_load_state("networkidle")
     page.wait_for_timeout(1000)
     
-    # Verify item was created - check the details view heading
-    # (table cells may be hidden/scrolled, but heading is always visible)
-    expect(page.get_by_role("heading", name="SRS-999")).to_be_visible(timeout=10000)
+    # Verify we can navigate to the created item
+    expect(page.get_by_role("heading", name=created_id)).to_be_visible(timeout=5000)
 
 
 @pytest.mark.browser

@@ -34,7 +34,7 @@ def test_TC_CRS_003_001_view_change_requests(page: Page, streamlit_app):
 
 
 @pytest.mark.browser
-def test_TC_CRS_003_002_create_change_request(page: Page, streamlit_app):
+def test_TC_CRS_003_002_create_change_request(page: Page, streamlit_app, test_dhf_root):
     """
     TC-CRS-003-002: Create Change Request
     
@@ -51,8 +51,7 @@ def test_TC_CRS_003_002_create_change_request(page: Page, streamlit_app):
     page.get_by_role("button", name="➕ New").click()
     page.wait_for_timeout(1000)
     
-    # Fill form
-    page.fill("input[placeholder='CR-XXX']", "CR-999")
+    # Fill form (ID auto-generated)
     page.locator("label:has-text('Title')").locator("..").locator("input").fill("Test Change Request")
     page.locator("label:has-text('Description')").locator("..").locator("textarea").fill("Test change request for browser testing")
     
@@ -61,6 +60,12 @@ def test_TC_CRS_003_002_create_change_request(page: Page, streamlit_app):
     page.wait_for_load_state("networkidle")
     
     # Verify CR was created
-    page.fill("input[placeholder='Search by ID or title...']", "CR-999")
+    from fixtures.browser_conftest import get_created_item_id
+    created_id = get_created_item_id(test_dhf_root, 'CR-')
+    
+    # Navigate to the created CR
+    page.goto(f"{streamlit_app}/page_CR?item={created_id}")
+    page.wait_for_load_state("networkidle")
     page.wait_for_timeout(1000)
-    expect(page.get_by_role("heading", name="CR-999")).to_be_visible()
+    
+    expect(page.get_by_role("heading", name=created_id)).to_be_visible()

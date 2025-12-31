@@ -96,7 +96,7 @@ def test_TC_SYS_008_003_view_affected_items(page: Page, streamlit_app):
 
 
 @pytest.mark.browser
-def test_TC_SYS_008_004_create_change_request(page: Page, streamlit_app):
+def test_TC_SYS_008_004_create_change_request(page: Page, streamlit_app, test_dhf_root):
     """
     TC-SYS-008-004: Create Change Request
     
@@ -114,8 +114,10 @@ def test_TC_SYS_008_004_create_change_request(page: Page, streamlit_app):
     page.get_by_role("button", name="➕ New").click()
     page.wait_for_timeout(1000)
     
-    # Fill form to create CR-999
-    page.fill("input[placeholder='CR-XXX']", "CR-999")
+    # Verify auto-generated ID message is shown
+    expect(page.get_by_text("ID will be auto-generated")).to_be_visible()
+    
+    # Fill form (ID is auto-generated, no need to fill it)
     page.locator("label:has-text('Title')").locator("..").locator("input").fill("Test Change Request")
     page.locator("label:has-text('Description')").locator("..").locator("textarea").fill("Testing CR creation functionality")
     
@@ -124,22 +126,26 @@ def test_TC_SYS_008_004_create_change_request(page: Page, streamlit_app):
     page.wait_for_load_state("networkidle")
     page.wait_for_timeout(1000)
     
+    # Get the auto-generated ID
+    from fixtures.browser_conftest import get_created_item_id
+    created_id = get_created_item_id(test_dhf_root, 'CR-')
+    
     # Navigate to the created CR
-    page.goto(f"{streamlit_app}/page_CR?item=CR-999")
+    page.goto(f"{streamlit_app}/page_CR?item={created_id}")
     page.wait_for_load_state("networkidle")
     page.wait_for_timeout(1000)
     
     # Verify CR was created
-    expect(page.get_by_role("heading", name="CR-999")).to_be_visible()
+    expect(page.get_by_role("heading", name=created_id)).to_be_visible()
     
     # Verify CR content is displayed
     page_content = page.content()
-    assert "Test Change Request" in page_content, "Should display CR-999 title"
-    assert "Testing CR creation" in page_content, "Should display CR-999 description"
+    assert "Test Change Request" in page_content, f"Should display {created_id} title"
+    assert "Testing CR creation" in page_content, f"Should display {created_id} description"
 
 
 @pytest.mark.browser
-def test_TC_SYS_008_005_edit_change_request(page: Page, streamlit_app):
+def test_TC_SYS_008_005_edit_change_request(page: Page, streamlit_app, test_dhf_root):
     """
     TC-SYS-008-005: Edit Change Request
     
@@ -157,8 +163,7 @@ def test_TC_SYS_008_005_edit_change_request(page: Page, streamlit_app):
     page.get_by_role("button", name="➕ New").click()
     page.wait_for_timeout(1000)
     
-    # Create CR-998
-    page.fill("input[placeholder='CR-XXX']", "CR-998")
+    # Create CR (ID auto-generated)
     page.locator("label:has-text('Title')").locator("..").locator("input").fill("Original Title")
     page.locator("label:has-text('Description')").locator("..").locator("textarea").fill("Original description")
     
@@ -167,12 +172,16 @@ def test_TC_SYS_008_005_edit_change_request(page: Page, streamlit_app):
     page.wait_for_load_state("networkidle")
     page.wait_for_timeout(1000)
     
+    # Get the auto-generated ID
+    from fixtures.browser_conftest import get_created_item_id
+    created_id = get_created_item_id(test_dhf_root, 'CR-')
+    
     # Navigate to the created CR
-    page.goto(f"{streamlit_app}/page_CR?item=CR-998")
+    page.goto(f"{streamlit_app}/page_CR?item={created_id}")
     page.wait_for_load_state("networkidle")
     page.wait_for_timeout(1000)
     
     # Verify CR was created with original content
-    expect(page.get_by_role("heading", name="CR-998")).to_be_visible()
+    expect(page.get_by_role("heading", name=created_id)).to_be_visible()
     page_content = page.content()
     assert "Original Title" in page_content, "Should display original title"
