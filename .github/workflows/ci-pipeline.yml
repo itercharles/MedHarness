@@ -139,7 +139,13 @@ jobs:
         id: validate
         run: |
           PR_TITLE="${{ github.event.pull_request.title }}"
-          PR_BODY="${{ github.event.pull_request.body }}"
+          
+          # Use heredoc to safely capture PR body (may contain YAML, special chars, etc.)
+          PR_BODY=$(cat <<'EOF'
+          ${{ github.event.pull_request.body }}
+          EOF
+          )
+          
           CR_PATTERN="CR-[0-9]+"
           
           if echo "$PR_TITLE $PR_BODY" | grep -qE "$CR_PATTERN"; then
