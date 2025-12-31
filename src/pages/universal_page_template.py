@@ -313,22 +313,18 @@ def render_table_section(
     if not filtered_items:
         st.info(f"No {doc_type_config['name'].lower()} found matching filters")
     else:
-        # Create clickable table
+        # Create simple table with ID, Title, Status only
         df_data = []
         for item in filtered_items:
-            # Format links as comma-separated string
-            links_str = ', '.join(item.get('links', [])) if item.get('links') else ''
-            
             df_data.append({
                 'ID': item['id'],
                 'Title': item.get('title', 'N/A'),
-                'Status': item.get('status', workflow_engine.get_initial_state()),
-                'Links': links_str
+                'Status': item.get('status', workflow_engine.get_initial_state())
             })
         
         df = pd.DataFrame(df_data)
         
-        # Configure clickable item ID columns
+        # Configure clickable item ID columns (for ID column and all relationship columns)
         df, column_config = make_item_columns_clickable(df, core)
         
         # Use dataframe with on_click selection (no checkboxes)
