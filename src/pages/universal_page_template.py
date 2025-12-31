@@ -759,23 +759,7 @@ def render_item_view(
             else:
                 st.markdown(f"**{field_name}:** `{value}`")
 
-    # Links section (shown separately for better formatting)
-    if item.get('links'):
-        st.markdown("**Linked Items:**")
-        for link_id in item['links']:
-            linked_item = core.get_item(link_id)
-            if linked_item:
-                item_title = linked_item.get('title', 'N/A')
-                item_status = linked_item.get('status', 'unknown')
-                # Import URL helper if not already imported (it should be at top level but doing it here to be safe given context)
-                from utils.ui_helpers import get_page_url_for_item
-                
-                # Create clickable link consistent with other fields
-                item_url = get_page_url_for_item(link_id, core)
-                st.markdown(f"  - [{link_id}]({item_url}): {item_title} _({item_status})_")
-            else:
-                st.markdown(f"  - {link_id} _(not found)_")
-    
+
     # Workflow transition buttons
     st.markdown("---")
     st.markdown("### Workflow Actions")
