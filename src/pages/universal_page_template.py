@@ -758,10 +758,6 @@ def render_item_view(
                 st.text_area(field_name, value, height=100, disabled=True, key=f"field_{prop_name}_{item['id']}", label_visibility="collapsed")
             else:
                 st.markdown(f"**{field_name}:** `{value}`")
-    
-    # Display ID as read-only (non-editable)
-    st.markdown(f"**ID:** `{item['id']}`")
-    st.caption("⚠️ ID cannot be changed after creation")
 
     # Links section (shown separately for better formatting)
     if item.get('links'):
@@ -879,9 +875,6 @@ def render_item_edit_form(
     # Form fields - dynamically
     form_data = {}
     
-    # Display ID as read-only (non-editable)
-    st.markdown(f"**ID:** `{item['id']}`")
-    st.caption("⚠️ ID cannot be changed after creation")
     st.divider()
     
     # Render fields based on schema (skip ID field)
