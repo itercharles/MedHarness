@@ -6,7 +6,6 @@ from pathlib import Path
 from typing import Dict, Any
 from datetime import datetime
 from traceability.compliant_flow_core import CompliantFlowCore
-from traceability.workflow_engine import DynamicWorkflowEngine
 from pages.ui_components import (
     render_manual_verification,
     render_status_badge
@@ -59,21 +58,18 @@ def render_item_management_page(
     if item_from_query:
         st.session_state['selected_item_id'] = item_from_query
     
-    # Initialize workflow engine
-    workflow_engine = DynamicWorkflowEngine(doc_type_config, core)
-    
     # === METRICS (below title) ===
     render_metrics(doc_type_config, core, prefix)
     
     st.markdown("---")
     
     # === TABLE SECTION (top) ===
-    render_table_section(doc_type_config, core, workflow_engine, prefix)
+    render_table_section(doc_type_config, core, prefix)
     
     st.markdown("---")
     
     # === DETAIL PANEL (bottom) ===
-    render_detail_panel(doc_type_config, core, workflow_engine)
+    render_detail_panel(doc_type_config, core)
 
 
 def render_metrics(
@@ -86,12 +82,13 @@ def render_metrics(
     doc_type_code = doc_type_config.get('code')
     metrics = core.get_doc_type_metrics(doc_type_code)
     
-    # Get lifecycle states from config
-    lifecycle = doc_type_config.get('lifecycle', {})
-    states = lifecycle.get('states', [])
+    # Get lifecycle states from global lifecycle
+    if not core.config.global_lifecycle:
+        # No lifecycle configured, just show total
+        st.metric("Total", metrics['total'])
+        return
     
-    if not states:
-        raise ValueError(f"No lifecycle states defined for {doc_type_config.get('name', 'document type')}")
+    states = core.config.global_lifecycle.states
     
     # Show up to 4 state metrics
     num_cols = min(len(states) + 1, 5)  # +1 for Total
@@ -102,8 +99,8 @@ def render_metrics(
     
     # Show metrics for each state (up to 4)
     for idx, state in enumerate(states[:4]):
-        state_id = state['id']
-        state_label = state.get('label', state_id.capitalize())
+        state_id = state.id
+        state_label = state.label
         count = metrics['by_status'].get(state_id, 0)
         with cols[idx + 1]:
             st.metric(state_label, count)
@@ -113,7 +110,6 @@ def render_metrics(
 def render_table_section(
     doc_type_config: Dict[str, Any],
     core: CompliantFlowCore,
-    workflow_engine: DynamicWorkflowEngine,
     prefix: str
 ) -> None:
     """Render table section with New button and filters."""
@@ -277,10 +273,17 @@ def render_table_section(
         except Exception as e:
             st.error(f"Error loading preview: {str(e)}")
     
-    # Filters
+    # Filters - get states used in this doc type's transitions
     lifecycle = doc_type_config.get('lifecycle', {})
-    states = lifecycle.get('states', [])
-    state_ids = [s['id'] for s in states]
+    transitions = lifecycle.get('transitions', [])
+    
+    # Collect all unique state IDs from transitions
+    state_ids = set()
+    for transition in transitions:
+        # Add to_state from each transition
+        if 'to_state' in transition:
+            state_ids.add(transition['to_state'])
+    state_ids = sorted(list(state_ids))
     
     col1, col2 = st.columns(2)
     with col1:
@@ -300,7 +303,7 @@ def render_table_section(
         # Use exact prefix match (don't strip hyphen)
         if not item['id'].startswith(prefix):
             continue
-        item_status = item.get('status', workflow_engine.get_initial_state())
+        item_status = item.get('status', core.get_initial_state(doc_type_config["code"]))
         if item_status not in status_filter:
             continue
         if search:
@@ -319,7 +322,7 @@ def render_table_section(
             df_data.append({
                 'ID': item['id'],
                 'Title': item.get('title', 'N/A'),
-                'Status': item.get('status', workflow_engine.get_initial_state())
+                'Status': item.get('status', core.get_initial_state(doc_type_config["code"]))
             })
         
         df = pd.DataFrame(df_data)
@@ -350,22 +353,21 @@ def render_table_section(
 
 def render_detail_panel(
     doc_type_config: Dict[str, Any],
-    core: CompliantFlowCore,
-    workflow_engine: DynamicWorkflowEngine
+    core: CompliantFlowCore
 ) -> None:
     """Render detail panel for selected item or new item creation."""
     # Check if creating new
     if st.session_state.get('creating_new'):
-        render_new_item_form(doc_type_config, core, workflow_engine)
+        render_new_item_form(doc_type_config, core)
         return
     
     # Check if transitioning
-    if st.session_state.get('transition_item') and st.session_state.get('transition_config'):
+    if st.session_state.get('transition_item') and st.session_state.get('transition_to_state'):
         item_id = st.session_state['transition_item']
-        transition = st.session_state['transition_config']
+        to_state = st.session_state['transition_to_state']
         item = core.get_item(item_id)
         if item:
-            render_transition_workflow(item, transition, doc_type_config, core, workflow_engine)
+            render_transition_workflow(item, to_state, doc_type_config, core)
             return
     
     # Check if item selected
@@ -380,13 +382,12 @@ def render_detail_panel(
         st.error(f"Item {selected_item_id} not found")
         return
     
-    render_item_details(item, doc_type_config, core, workflow_engine)
+    render_item_details(item, doc_type_config, core)
 
 
 def render_new_item_form(
     doc_type_config: Dict[str, Any],
-    core: CompliantFlowCore,
-    workflow_engine: DynamicWorkflowEngine
+    core: CompliantFlowCore
 ) -> None:
     """Render form for creating new item."""
     st.subheader(f"➕ New {doc_type_config['name']}")
@@ -510,7 +511,7 @@ def render_new_item_form(
                 # Create new item with all filled fields
                 new_item = {
                     'type': doc_type_config['code'],  # Required for ID auto-generation
-                    'status': workflow_engine.get_initial_state(),
+                    # Note: status is auto-set by backend based on lifecycle config
                 }
                 
                 # Add ID if manually provided (though it shouldn't be for this flow)
@@ -544,8 +545,7 @@ def render_new_item_form(
 def render_item_details(
     item: Dict[str, Any],
     doc_type_config: Dict[str, Any],
-    core: CompliantFlowCore,
-    workflow_engine: DynamicWorkflowEngine
+    core: CompliantFlowCore
 ) -> None:
     """Render detailed view of selected item with workflow actions."""
     
@@ -553,16 +553,16 @@ def render_item_details(
     is_editing = st.session_state.get('editing_item_id') == item['id']
     
     if is_editing:
-        render_item_edit_form(item, doc_type_config, core, workflow_engine)
+        render_item_edit_form(item, doc_type_config, core)
     else:
-        render_item_view(item, doc_type_config, core, workflow_engine)
+        render_item_view(item, doc_type_config, core)
 
 
 def render_item_view(
     item: Dict[str, Any],
     doc_type_config: Dict[str, Any],
     core: CompliantFlowCore,
-    workflow_engine: DynamicWorkflowEngine
+    
 ) -> None:
     """Render read-only view of item details."""
     # CR Confirmation Dialog
@@ -629,8 +629,8 @@ def render_item_view(
             )
     
     # Status and metadata in columns
-    current_state = item.get('status', workflow_engine.get_initial_state())
-    state_info = workflow_engine.get_state_info(current_state)
+    current_state = item.get('status', core.get_initial_state(doc_type_config["code"]))
+    state_info = core.get_state_info(current_state)
     
     col1, col2 = st.columns(2)
     with col1:
@@ -764,20 +764,21 @@ def render_item_view(
     st.markdown("---")
     st.markdown("### Workflow Actions")
     
-    available_transitions = workflow_engine.get_available_transitions(current_state)
+    # Use new lifecycle methods from core
+    available_transitions = core.get_available_transitions(item)
     
     if available_transitions:
         cols = st.columns(len(available_transitions))
         for idx, transition in enumerate(available_transitions):
             with cols[idx]:
                 if st.button(
-                    transition['label'],
-                    key=f"transition_{item['id']}_{transition['to']}",
+                    transition.get('action_label', transition.get('label', 'Transition')),
+                    key=f"transition_{item['id']}_{transition.get('to_state', transition.get('to'))}",
                     use_container_width=True,
                     type="primary" if idx == 0 else "secondary"
                 ):
                     st.session_state['transition_item'] = item['id']
-                    st.session_state['transition_config'] = transition
+                    st.session_state['transition_to_state'] = transition.get('to_state', transition.get('to'))
                     st.rerun()
     else:
         st.info(f"No transitions available from {state_info['label']} state")
@@ -844,7 +845,7 @@ def render_item_edit_form(
     item: Dict[str, Any],
     doc_type_config: Dict[str, Any],
     core: CompliantFlowCore,
-    workflow_engine: DynamicWorkflowEngine
+    
 ) -> None:
     """Render editable form for item."""
     st.subheader(f"✏️ Edit {item['id']}")
@@ -1016,8 +1017,8 @@ def render_item_edit_form(
             st.rerun()
     
     # Workflow actions
-    current_state = item.get('status', workflow_engine.get_initial_state())
-    available_transitions = workflow_engine.get_available_transitions(current_state)
+    current_state = item.get('status', core.get_initial_state(doc_type_config["code"]))
+    available_transitions = core.get_available_transitions(item)
     
     if available_transitions:
         st.markdown("**Available Actions:**")
@@ -1050,88 +1051,101 @@ def render_item_edit_form(
 
 def render_transition_workflow(
     item: Dict[str, Any],
-    transition: Dict[str, Any],
+    to_state: str,
     doc_type_config: Dict[str, Any],
-    core: CompliantFlowCore,
-    workflow_engine: DynamicWorkflowEngine
-) -> None:
+    core: CompliantFlowCore
+):
     """Render workflow transition with criteria checking."""
-    st.markdown(f"### {transition['label']}")
     
-    # Check criteria
-    can_transition, criteria_results = workflow_engine.check_transition_criteria(item, transition)
+    # Get available transitions
+    available_transitions = core.get_available_transitions(item)
+    
+    transition = None
+    for t in available_transitions:
+        if t['to_state'] == to_state:
+            transition = t
+            break
+    
+    if not transition:
+        st.error(f"Transition to {to_state} not available")
+        if st.button("← Back"):
+            del st.session_state['transition_item']
+            del st.session_state['transition_to_state']
+            st.rerun()
+        return
+    
+    st.markdown(f"### {transition['action_label']}")
     
     # Show criteria
-    st.markdown("**Criteria:**")
-    for criterion in criteria_results:
-        if criterion['passed']:
-            st.success(f"✅ {criterion['name']}")
-        else:
-            if criterion['check_type'] == 'manual':
-                # Manual verification UI
-                with st.expander(f"⚠️ {criterion['name']} - Verification Required", expanded=True):
-                    verifier = st.text_input("Verified by *", key=f"ver_{criterion['id']}")
-                    notes = st.text_area("Notes", key=f"notes_{criterion['id']}", height=100)
-                    if st.button("✅ Verify", key=f"btn_ver_{criterion['id']}"):
-                        if verifier:
-                            if 'manual_verifications' not in item:
-                                item['manual_verifications'] = {}
-                            item['manual_verifications'][criterion['id']] = {
-                                'verified_by': verifier,
-                                'verified_date': datetime.now().isoformat(),
-                                'notes': notes
-                            }
-                            core.update_item(item['id'], item)
-                            st.toast(f"✅ Verified by {verifier}")
-                            st.rerun()
+    criteria = transition.get('criteria', [])
+    if criteria:
+        st.markdown("**Criteria:**")
+        for criterion in criteria:
+            criterion_id = criterion.get('id')
+            criterion_name = criterion.get('name')
+            check_type = criterion.get('check_type')
+            is_blocking = criterion_id in transition.get('blocking_criteria', [])
+            
+            if is_blocking:
+                if check_type == 'manual':
+                    with st.expander(f"⚠️ {criterion_name} - Verification Required", expanded=True):
+                        verifier = st.text_input("Verified by *", key=f"ver_{criterion_id}")
+                        notes = st.text_area("Notes", key=f"notes_{criterion_id}", height=100)
+                        if st.button("✅ Verify", key=f"btn_ver_{criterion_id}"):
+                            if verifier:
+                                if 'manual_verifications' not in item:
+                                    item['manual_verifications'] = {}
+                                item['manual_verifications'][criterion_id] = {
+                                    'verified_by': verifier,
+                                    'verified_date': datetime.now().isoformat(),
+                                    'notes': notes
+                                }
+                                core.update_item(item['id'], item)
+                                st.toast(f"✅ Verified by {verifier}")
+                                st.rerun()
+                else:
+                    field = criterion.get('field', 'unknown')
+                    st.error(f"❌ {criterion_name}: {field} is required")
             else:
-                st.error(f"❌ {criterion['name']}: {criterion['message']}")
+                st.success(f"✅ {criterion_name}")
     
     # Transition form
+    can_transition = transition['can_transition']
+    
     if can_transition:
         st.markdown("---")
-        
-        # Collect metadata for transition
-        # Use pattern: {to_state}_by and {to_state}_date
-        to_state = transition['to']
-        by_field = f"{to_state}_by"
-        date_field = f"{to_state}_date"
-        
-        # Show input for who performed the transition
         performed_by = st.text_input(
-            f"{transition['label']} by *",
+            f"{transition['action_label']} by *",
             key=f"transition_by_{item['id']}_{to_state}"
         )
         
         col1, col2 = st.columns(2)
         with col1:
-            if st.button(f"✅ {transition['label']}", type="primary", use_container_width=True, key="confirm_transition"):
+            if st.button(f"✅ {transition['action_label']}", type="primary", use_container_width=True, key="confirm_transition"):
                 if not performed_by:
                     st.warning("Please enter your name")
                 else:
-                    # Build metadata with generic pattern
-                    metadata = {
-                        by_field: performed_by,
-                        date_field: datetime.now().date().isoformat(),  # Use date() for date fields
-                        'timestamp': datetime.now().isoformat()
-                    }
-                    updated_item = workflow_engine.perform_transition(item, transition, metadata)
-                    core.update_item(item['id'], updated_item)
-                    st.success(f"✅ {item['id']} transitioned to {transition['to']}")
-                    del st.session_state['transition_item']
-                    del st.session_state['transition_config']
-                    st.rerun()
+                    try:
+                        core.execute_transition(item['id'], to_state, performed_by=performed_by)
+                        st.success(f"✅ {item['id']} transitioned to {to_state}")
+                        del st.session_state['transition_item']
+                        del st.session_state['transition_to_state']
+                        st.rerun()
+                    except ValueError as e:
+                        st.error(f"Transition failed: {str(e)}")
         with col2:
             if st.button("Cancel", use_container_width=True, key="cancel_transition"):
                 del st.session_state['transition_item']
-                del st.session_state['transition_config']
+                del st.session_state['transition_to_state']
                 st.rerun()
     else:
         st.warning("⚠️ All required criteria must be met")
         if st.button("Cancel", key="cancel_criteria"):
             del st.session_state['transition_item']
-            del st.session_state['transition_config']
+            del st.session_state['transition_to_state']
             st.rerun()
+
+
 
 
 def render_transition_dialog(
@@ -1139,12 +1153,12 @@ def render_transition_dialog(
     transition: Dict[str, Any],
     doc_type_config: Dict[str, Any],
     core: CompliantFlowCore,
-    workflow_engine: DynamicWorkflowEngine
+    
 ) -> None:
     """Legacy function - redirects to render_transition_workflow."""
     item = core.get_item(item_id)
     if item:
-        render_transition_workflow(item, transition, doc_type_config, core, workflow_engine)
+        render_transition_workflow(item, transition, doc_type_config, core)
 
 
 def render_manual_verification_inline(
@@ -1195,7 +1209,7 @@ def render_items_table(
     items: list,
     doc_type_config: Dict[str, Any],
     core: CompliantFlowCore,
-    workflow_engine: DynamicWorkflowEngine
+    
 ) -> None:
     """Render items as table."""
     if not items:
@@ -1208,7 +1222,7 @@ def render_items_table(
         df_data.append({
             'ID': item['id'],
             'Title': item.get('title', 'N/A'),
-            'Status': item.get('status', workflow_engine.get_initial_state()),
+            'Status': item.get('status', core.get_initial_state(doc_type_config["code"])),
             'Verified': item.get('verification_status', 'not_verified'),
             'Links': len(item.get('links', []))
         })
@@ -1219,18 +1233,17 @@ def render_items_table(
     # Action buttons for each item
     st.markdown("**Actions:**")
     for item in items:
-        render_item_actions(item, doc_type_config, core, workflow_engine)
+        render_item_actions(item, doc_type_config, core)
 
 
 def render_item_actions(
     item: Dict[str, Any],
     doc_type_config: Dict[str, Any],
     core: CompliantFlowCore,
-    workflow_engine: DynamicWorkflowEngine
+    
 ) -> None:
     """Render action buttons for an item."""
-    current_state = item.get('status', workflow_engine.get_initial_state())
-    available_transitions = workflow_engine.get_available_transitions(current_state)
+    available_transitions = core.get_available_transitions(item)
     
     # Calculate number of columns needed
     num_cols = 3 + len(available_transitions)
@@ -1266,7 +1279,7 @@ def render_items_cards(
     items: list,
     doc_type_config: Dict[str, Any],
     core: CompliantFlowCore,
-    workflow_engine: DynamicWorkflowEngine
+    
 ) -> None:
     """Render items as cards."""
     if not items:
@@ -1276,8 +1289,8 @@ def render_items_cards(
     for item in items:
         with st.expander(f"▼ {item['id']} - {item.get('title', 'N/A')}", expanded=False):
             # Status
-            current_state = item.get('status', workflow_engine.get_initial_state())
-            state_info = workflow_engine.get_state_info(current_state)
+            current_state = item.get('status', core.get_initial_state(doc_type_config["code"]))
+            state_info = core.get_state_info(current_state)
             st.markdown(f"{state_info['icon']} **Status:** {state_info['label']}")
             
             # Content
@@ -1288,7 +1301,7 @@ def render_items_cards(
                 st.markdown(f"**Links:** {', '.join(item['links'])}")
             
             # Actions
-            render_item_actions(item, doc_type_config, core, workflow_engine)
+            render_item_actions(item, doc_type_config, core)
 
 
 def render_reports_tab(

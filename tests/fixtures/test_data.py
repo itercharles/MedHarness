@@ -31,7 +31,15 @@ def create_test_dhf() -> Path:
     test_config_dir.mkdir(parents=True)
     
     # Create minimal project_config.yaml for testing with lifecycle
+    # Global lifecycle states
     test_config = {
+        'global_lifecycle': {
+            'states': [
+                {'id': 'draft', 'label': 'Draft', 'action_label': 'Create', 'icon': '📝', 'color': 'warning'},
+                {'id': 'under_review', 'label': 'Under Review', 'action_label': 'Submit for Review', 'icon': '👀', 'color': 'info'},
+                {'id': 'approved', 'label': 'Approved', 'action_label': 'Approve', 'icon': '✅', 'color': 'success', 'is_stable': True}
+            ]
+        },
         'doc_types': [
             {
                 'code': 'UC',
@@ -48,9 +56,9 @@ def create_test_dhf() -> Path:
                     {'name': 'status', 'format': 'select', 'label': 'Status', 'options': ['draft', 'approved']}
                 ],
                 'lifecycle': {
-                    'states': [
-                        {'id': 'draft', 'label': 'Draft', 'is_initial': True, 'icon': '📝', 'color': 'warning'},
-                        {'id': 'approved', 'label': 'Approved', 'is_stable': True, 'icon': '✅', 'color': 'success'}
+                    'transitions': [
+                        {'from_states': [None], 'to_state': 'draft'},
+                        {'from_states': ['draft'], 'to_state': 'approved'}
                     ]
                 }
             },
@@ -70,9 +78,9 @@ def create_test_dhf() -> Path:
                     {'name': 'status', 'format': 'select', 'label': 'Status', 'options': ['draft', 'approved']}
                 ],
                 'lifecycle': {
-                    'states': [
-                        {'id': 'draft', 'label': 'Draft', 'is_initial': True, 'icon': '📝', 'color': 'warning'},
-                        {'id': 'approved', 'label': 'Approved', 'is_stable': True, 'icon': '✅', 'color': 'success'}
+                    'transitions': [
+                        {'from_states': [None], 'to_state': 'draft'},
+                        {'from_states': ['draft'], 'to_state': 'approved'}
                     ]
                 }
             },
@@ -93,15 +101,11 @@ def create_test_dhf() -> Path:
                     {'name': 'status', 'format': 'select', 'label': 'Status', 'options': ['draft', 'under_review', 'approved']}
                 ],
                 'lifecycle': {
-                    'states': [
-                        {'id': 'draft', 'label': 'Draft', 'is_initial': True, 'icon': '📝', 'color': 'warning'},
-                        {'id': 'under_review', 'label': 'Under Review', 'icon': '👀', 'color': 'info'},
-                        {'id': 'approved', 'label': 'Approved', 'is_stable': True, 'icon': '✅', 'color': 'success'}
-                    ],
                     'transitions': [
-                        {'from': 'draft', 'to': 'under_review', 'label': 'Submit for Review'},
-                        {'from': 'under_review', 'to': 'approved', 'label': 'Approve'},
-                        {'from': 'under_review', 'to': 'draft', 'label': 'Reject'}
+                        {'from_states': [None], 'to_state': 'draft'},
+                        {'from_states': ['draft'], 'to_state': 'under_review'},
+                        {'from_states': ['under_review'], 'to_state': 'approved'},
+                        {'from_states': ['under_review'], 'to_state': 'draft'}
                     ]
                 }
             },
@@ -121,9 +125,9 @@ def create_test_dhf() -> Path:
                     {'name': 'status', 'format': 'select', 'label': 'Status', 'options': ['draft', 'approved']}
                 ],
                 'lifecycle': {
-                    'states': [
-                        {'id': 'draft', 'label': 'Draft', 'is_initial': True, 'icon': '📝', 'color': 'warning'},
-                        {'id': 'approved', 'label': 'Approved', 'is_stable': True, 'icon': '✅', 'color': 'success'}
+                    'transitions': [
+                        {'from_states': [None], 'to_state': 'draft'},
+                        {'from_states': ['draft'], 'to_state': 'approved'}
                     ]
                 }
             },
@@ -143,9 +147,9 @@ def create_test_dhf() -> Path:
                     {'name': 'status', 'format': 'select', 'label': 'Status', 'options': ['draft', 'approved']}
                 ],
                 'lifecycle': {
-                    'states': [
-                        {'id': 'draft', 'label': 'Draft', 'is_initial': True, 'icon': '📝', 'color': 'warning'},
-                        {'id': 'approved', 'label': 'Approved', 'is_stable': True, 'icon': '✅', 'color': 'success'}
+                    'transitions': [
+                        {'from_states': [None], 'to_state': 'draft'},
+                        {'from_states': ['draft'], 'to_state': 'approved'}
                     ]
                 }
             },
@@ -166,10 +170,10 @@ def create_test_dhf() -> Path:
                     {'name': 'status', 'format': 'select', 'label': 'Status', 'options': ['submitted', 'approved', 'rejected']}
                 ],
                 'lifecycle': {
-                    'states': [
-                        {'id': 'submitted', 'label': 'Submitted', 'is_initial': True, 'icon': '📝', 'color': 'warning'},
-                        {'id': 'approved', 'label': 'Approved', 'is_stable': True, 'icon': '✅', 'color': 'success'},
-                        {'id': 'rejected', 'label': 'Rejected', 'is_stable': True, 'icon': '❌', 'color': 'danger'}
+                    'transitions': [
+                        {'from_states': [None], 'to_state': 'draft'},
+                        {'from_states': ['draft'], 'to_state': 'approved'},
+                        {'from_states': ['draft'], 'to_state': 'rejected'}
                     ]
                 }
             }
@@ -285,7 +289,7 @@ def get_test_dataset() -> List[Dict]:
             'title': 'Test Change Request',
             'description': 'Change request for testing purposes',
             'justification': 'Testing CR workflow',
-            'status': 'submitted',
+            'status': 'draft',
             'affected_items': ['SRS-001']
         },
     ]
@@ -304,6 +308,7 @@ def populate_test_dhf(test_dhf_root: Path):
         CompliantFlowCore instance with populated data
     """
     from src.traceability.compliant_flow_core import CompliantFlowCore
+    from src.traceability.models.item import Item
     
     print(f"\n[DATA] Populating test DHF with test data...")
     
@@ -316,11 +321,37 @@ def populate_test_dhf(test_dhf_root: Path):
     # Create all test items
     for item_data in test_items:
         try:
-            core.create_item(item_data)
+            # Capture target fields BEFORE create_item modifies item_data
+            target_status = item_data.get('status')
+            approved_by = item_data.get('approved_by')
+            
+            # Create item (will be set to draft/initial in item_data and returned)
+            created = core.create_item(item_data)
+            
+            # If intended status was different from created status (draft), explicit update via saver
+            if target_status and target_status != created.get('status'):
+                # Restore the metadata that might have been lost or we want to force
+                # We use the created ID but the ORIGINAL intended status and metadata
+                item_data['id'] = created['id']
+                item_data['status'] = target_status
+                if approved_by:
+                    item_data['approved_by'] = approved_by
+                if item_data.get('approved_date'):
+                     item_data['approved_date'] = item_data.get('approved_date')
+
+                # Force save to bypass workflow state checks for test setup
+                item = Item.model_validate(item_data)
+                core.saver.save(item, author=item_data.get('approved_by', 'system'))
+                
             print(f"  [OK] Created {item_data['id']}")
         except Exception as e:
             print(f"  [WARN] Failed to create {item_data['id']}: {e}")
-    
+            import traceback
+            traceback.print_exc()
+
     print(f"[OK] Test DHF populated with {len(test_items)} items")
+    
+    # Refresh to ensure graph consistency
+    core.refresh()
     
     return core

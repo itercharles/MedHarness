@@ -200,6 +200,11 @@ class CompliantFlowCore:
             # Generate next ID
             item_data['id'] = get_next_id(prefix, existing_ids)
         
+        # Set initial status (backend responsibility)
+        doc_type_code = item_data['id'].split('-')[0]
+        initial_state = self.get_initial_state(doc_type_code)
+        item_data['status'] = initial_state
+        
         # Validate and create item
         item = Item.model_validate(item_data)
         
@@ -243,16 +248,18 @@ class CompliantFlowCore:
         # If so, reset to draft and clear approval metadata (core business logic)
         doc_type_config = self.config.get_doc_type_by_prefix(existing.prefix)
         if doc_type_config and doc_type_config.lifecycle:
-            from traceability.workflow_engine import DynamicWorkflowEngine
-            workflow = DynamicWorkflowEngine(doc_type_config.model_dump(), self)
+            # Only set initial status if status is not already provided in the update data
+            if 'status' not in data:
+                initial_status = self.get_initial_state(doc_type_config.code)
+                updated_data['status'] = initial_status
             
             # Check if old status was stable
             old_status = existing.status if hasattr(existing, 'status') else None
             if old_status:
-                old_state_info = workflow.get_state_info(old_status)
+                old_state_info = self.get_state_info(old_status)
                 if old_state_info.get('is_stable', False):
                     # Item was stable - reset to initial state and clear approval fields
-                    initial_state = workflow.get_initial_state()
+                    initial_state = self.get_initial_state(doc_type_config.code)
                     updated_data['status'] = initial_state
                     
                     # Clear approval-related fields
@@ -307,15 +314,13 @@ class CompliantFlowCore:
             # No workflow - can edit
             return True, "✏️ Edit", None, None
         
-        from traceability.workflow_engine import DynamicWorkflowEngine
-        workflow = DynamicWorkflowEngine(doc_type_config.model_dump(), self)
         
         current_status = item.get('status')
         if not current_status:
             # No status - can edit
             return True, "✏️ Edit", None, None
         
-        state_info = workflow.get_state_info(current_status)
+        state_info = self.get_state_info(current_status)
         is_stable = state_info.get('is_stable', False)
         
         if not is_stable:
@@ -711,5 +716,13 @@ class CompliantFlowCore:
             filtered = [i for i in filtered if i['id'] != exclude_item_id]
         
         return [i['id'] for i in filtered]
-
-
+    
+    # Import lifecycle management methods
+    from .lifecycle_methods import (
+        get_available_transitions,
+        get_state_info,
+        _validate_criteria,
+        execute_transition,
+        is_item_editable,
+        get_initial_state
+    )

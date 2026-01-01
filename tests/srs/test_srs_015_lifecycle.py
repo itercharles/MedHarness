@@ -12,7 +12,6 @@ import sys
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
 from traceability.compliant_flow_core import CompliantFlowCore
-from traceability.workflow_engine import DynamicWorkflowEngine
 
 
 class TestSRS015_ItemLifecycleManagement:
@@ -36,7 +35,7 @@ class TestSRS015_ItemLifecycleManagement:
         assert 'status' in item or 'status' not in item, "Item may have status"
     
     def test_workflow_engine_initialization(self, core):
-        """Verify workflow engine loads lifecycle from configuration."""
+        """Verify lifecycle methods are available in core."""
         # Get a doc type with lifecycle
         doc_type = None
         for dt in core.config.doc_types:
@@ -46,18 +45,12 @@ class TestSRS015_ItemLifecycleManagement:
         
         assert doc_type is not None, "Should have doc type with lifecycle"
         
-        # Create workflow engine
-        doc_type_config = {
-            'code': doc_type.code,
-            'lifecycle': doc_type.lifecycle
-        }
-        engine = DynamicWorkflowEngine(doc_type_config, core)
-        
-        assert engine is not None, "Workflow engine should initialize"
-        assert hasattr(engine, 'get_initial_state'), "Should have get_initial_state method"
+        # Verify core has lifecycle methods
+        assert hasattr(core, 'get_initial_state'), "Should have get_initial_state method"
+        assert hasattr(core, 'get_available_transitions'), "Should have get_available_transitions method"
     
     def test_state_transition_validation(self, core):
-        """Verify workflow engine validates state transitions."""
+        """Verify core validates state transitions."""
         # Get a doc type with lifecycle
         doc_type = None
         for dt in core.config.doc_types:
@@ -68,18 +61,13 @@ class TestSRS015_ItemLifecycleManagement:
         if doc_type is None:
             pytest.skip("No doc types with lifecycle found")
         
-        doc_type_config = {
-            'code': doc_type.code,
-            'lifecycle': doc_type.lifecycle
-        }
-        engine = DynamicWorkflowEngine(doc_type_config, core)
-        
         # Get initial state
-        initial_state = engine.get_initial_state()
+        initial_state = core.get_initial_state(doc_type.code)
         assert initial_state is not None, "Should have initial state"
         
-        # Get available transitions
-        transitions = engine.get_available_transitions(initial_state)
+        # Get available transitions for a test item
+        test_item = {'id': f'{doc_type.code}-001', 'status': initial_state}
+        transitions = core.get_available_transitions(test_item)
         assert isinstance(transitions, list), "Should return list of transitions"
     
     def test_item_filtering(self, core):

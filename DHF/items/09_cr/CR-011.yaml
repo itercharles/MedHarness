@@ -1,0 +1,29 @@
+id: CR-011
+title: refactor the status management of object
+type: CR
+status: submitted
+description: "Current status definition is too complex and should be simplified. \n\
+  \nThere should be a collection of all the lifecycle status and action in the configuration\
+  \ - \naction: create -> status: draft\naction: submit for review -> status: in review\
+  \ \naction: approve -> status: approved \naction: start implementation -> status:\
+  \ implementing \naction: complete -> status: completed\naction: start verification\
+  \ -> status: verified\naction: start validation -> status validated\naction: acceptance\
+  \ assessment -> status accept\naction: retire -> status: retired\naction: close\
+  \ -> status: closed\n\nThen, for each object, the property can be configured:\n\
+  name: lifecycle_status\ncurrent_status: none\nsupport_actions:\n- create\ncurrent_status:\
+  \ draft\nsupport_actions:\n- approve\n- retire\ncurrent_status: approved\nsupport_actions:\n\
+  - retire\n\nAnd, every action shall recorded as atom data, including who and when\
+  \ this change is performed. This is not necessary to be configured, it's a forced\
+  \ policy."
+justification: unify the status management.
+priority: High
+file_path: /Users/chenwenliang/code/CompliantFlow/DHF/items/09_cr/CR-011.yaml
+affected_items:
+- SYS-TRANS-001
+- TC-SRS-006
+- TC-SRS-008
+- TC-SRS-015
+implementation_prs:
+- pr_number: 12
+  pr_url: https://github.com/itercharles/CompliantFlow/pull/12
+  title: Feature/cr 011 unified lifecycle
