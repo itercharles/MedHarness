@@ -41,7 +41,7 @@ def get_available_transitions(self, item: Dict[str, Any]) -> List[Dict[str, Any]
             to_state = transition['to_state']
             
             # Get state info from global lifecycle
-            state_info = self._get_state_info(to_state)
+            state_info = self.get_state_info(to_state)
             
             # Validate criteria
             can_transition, blocking = self._validate_criteria(
@@ -62,8 +62,8 @@ def get_available_transitions(self, item: Dict[str, Any]) -> List[Dict[str, Any]
     return available
 
 
-def _get_state_info(self, state_id: str) -> Dict[str, Any]:
-    """Get state information from global lifecycle."""
+def get_state_info(self, state_id: str) -> Dict[str, Any]:
+    """Get information about a specific state from global lifecycle."""
     if not self.config.global_lifecycle:
         return {'action_label': state_id.title()}
     
@@ -167,7 +167,7 @@ def execute_transition(
         )
     
     # Get state info
-    state_info = self._get_state_info(to_state)
+    state_info = self.get_state_info(to_state)
     
     # Update status
     item['status'] = to_state
@@ -192,7 +192,7 @@ def is_item_editable(self, item: Dict[str, Any]) -> bool:
     if not status:
         return True
     
-    state_info = self._get_state_info(status)
+    state_info = self.get_state_info(status)
     return not state_info.get('is_stable', False)
 
 
