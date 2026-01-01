@@ -188,13 +188,7 @@ class TestChangeRequestWorkflow:
         }
         test_core.create_item(cr_data)
         
-        # Modify stable item (first make it approved)
-        item = test_core.get_item('SYS-001')
-        item['status'] = 'approved'
-        item['approved_by'] = 'test_user'
-        test_core.update_item('SYS-001', item)
-        
-        # Now get it again to verify it's approved
+        # SYS-001 is already approved in test data
         item = test_core.get_item('SYS-001')
         assert item['status'] == 'approved'
         
@@ -309,13 +303,7 @@ class TestCRUDWorkflows:
         
         @links: SRS-008
         """
-        # First make SYS-001 approved
-        item = test_core.get_item('SYS-001')
-        item['status'] = 'approved'
-        item['approved_by'] = 'test_user'
-        test_core.update_item('SYS-001', item)
-        
-        # Now get it again to verify it's approved
+        # SYS-001 is already approved in test data
         item = test_core.get_item('SYS-001')
         assert item['status'] == 'approved'
         assert 'approved_by' in item
