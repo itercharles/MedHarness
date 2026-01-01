@@ -70,7 +70,6 @@ class LifecycleAction(BaseModel):
     """Global lifecycle action definition."""
     id: str = Field(..., description="Unique action identifier (e.g., 'approve', 'submit_for_review')")
     label: str = Field(..., description="Human-readable label for the action")
-    from_state: Union[str, List[str], None] = Field(None, description="Source state(s) - null for initial creation")
     to_state: str = Field(..., description="Target state after action")
     criteria: Optional[List[dict]] = Field(None, description="Validation criteria for this action")
 
