@@ -125,12 +125,7 @@ doc_types:
   - name: source
     format: short_text
     label: Source
-  - name: reviewer
-    format: short_text
-    label: Reviewer
-  - name: review_date
-    format: date
-    label: Review Date
+
   - name: derives_from
     format: relationship
     target_types:
@@ -150,13 +145,7 @@ doc_types:
     - Low
     default: Medium
     label: Priority
-  - name: status
-    format: select
-    options:
-    - draft
-    - approved
-    - retired
-    label: Status
+
   icon: 🎯
   page_enabled: true
   page_number: 5
@@ -277,12 +266,7 @@ doc_types:
     target_types:
     - RCM
     label: Mitigated By
-  - name: reviewer
-    format: short_text
-    label: Reviewer
-  - name: review_date
-    format: date
-    label: Review Date
+
   icon: ⚠️
   page_enabled: true
   page_number: 12
@@ -325,12 +309,7 @@ doc_types:
     target_types:
     - SYS
     label: Implemented By
-  - name: status
-    format: select
-    label: Status
-    options:
-    - draft
-    - approved
+
   - name: control_type
     format: select
     options:
@@ -419,9 +398,8 @@ doc_types:
     target_types:
     - CRS
     help: Alternative relationship to customer requirements
-  - reviewer
-  - review_date
-  - status
+
+
   relations:
   - target: CRS
     label: satisfies
@@ -502,12 +480,7 @@ doc_types:
   - name: performance
     format: long_text
     label: Performance
-  - name: status
-    format: select
-    label: Status
-    options:
-    - draft
-    - approved
+
   icon: 💻
   page_enabled: true
   page_number: 7
@@ -542,12 +515,7 @@ doc_types:
     target_types:
     - SYS
     label: Designs Requirements
-  - name: status
-    format: select
-    label: Status
-    options:
-    - draft
-    - approved
+
   relations:
   - target: SYS
     label: design
@@ -580,12 +548,7 @@ doc_types:
     target_types:
     - SRS
     label: Implements
-  - name: status
-    format: select
-    label: Status
-    options:
-    - draft
-    - approved
+
   icon: 📋
   page_enabled: true
   page_number: 10
@@ -800,8 +763,7 @@ doc_types:
   - risk_rating
   - safety_class
   - verification_method
-  - reviewer
-  - review_date
+
   icon: 📦
   page_enabled: true
   page_number: 11
