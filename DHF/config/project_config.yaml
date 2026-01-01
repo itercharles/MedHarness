@@ -2,6 +2,103 @@ change_control:
   enabled: true
   change_request_type: CR
   affected_items_field: affected_items
+
+global_lifecycle:
+  states:
+    - id: draft
+      label: Draft
+      icon: 📝
+      color: warning
+      is_initial: true
+    - id: in_review
+      label: In Review
+      icon: 🔍
+      color: info
+    - id: approved
+      label: Approved
+      icon: ✅
+      color: success
+    - id: implementing
+      label: Implementing
+      icon: 🔧
+      color: warning
+    - id: completed
+      label: Completed
+      icon: 🎯
+      color: success
+    - id: verified
+      label: Verified
+      icon: ✓
+      color: success
+    - id: validated
+      label: Validated
+      icon: ✓✓
+      color: success
+    - id: accepted
+      label: Accepted
+      icon: 👍
+      color: success
+    - id: retired
+      label: Retired
+      icon: 📦
+      color: secondary
+      is_stable: true
+    - id: closed
+      label: Closed
+      icon: 🚫
+      color: secondary
+      is_stable: true
+  
+  actions:
+    - id: create
+      label: Create
+      from_state: null
+      to_state: draft
+    - id: submit_for_review
+      label: Submit for Review
+      from_state: draft
+      to_state: in_review
+    - id: approve
+      label: Approve
+      from_state: in_review
+      to_state: approved
+    - id: start_implementation
+      label: Start Implementation
+      from_state: approved
+      to_state: implementing
+    - id: complete
+      label: Complete
+      from_state: implementing
+      to_state: completed
+    - id: verify
+      label: Verify
+      from_state: completed
+      to_state: verified
+    - id: validate
+      label: Validate
+      from_state: verified
+      to_state: validated
+    - id: accept
+      label: Accept
+      from_state: validated
+      to_state: accepted
+    - id: retire
+      label: Retire
+      from_state:
+        - approved
+        - completed
+        - verified
+        - validated
+        - accepted
+      to_state: retired
+    - id: close
+      label: Close
+      from_state:
+        - draft
+        - in_review
+        - retired
+      to_state: closed
+
 doc_types:
 - code: UC
   name: Use Case
