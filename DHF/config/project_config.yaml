@@ -76,7 +76,6 @@ doc_types:
   page_enabled: true
   page_number: 4
   lifecycle:
-    initial_state: draft  # Optional: specify initial state for this doc type
     # Define transitions as: from {states} -> to {state} with criteria
     transitions:
       - from_states: [null]  # Initial creation
