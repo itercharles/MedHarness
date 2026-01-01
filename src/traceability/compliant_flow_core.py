@@ -248,9 +248,10 @@ class CompliantFlowCore:
         # If so, reset to draft and clear approval metadata (core business logic)
         doc_type_config = self.config.get_doc_type_by_prefix(existing.prefix)
         if doc_type_config and doc_type_config.lifecycle:
-            
-            # Check if old status was stable
-            old_state = self.get_state_info(existing.status)
+            # Only set initial status if status is not already provided in the update data
+            if 'status' not in data:
+                initial_status = self.get_initial_state(doc_type_config.code)
+                updated_data['status'] = initial_status
             
             # Check if old status was stable
             old_status = existing.status if hasattr(existing, 'status') else None
