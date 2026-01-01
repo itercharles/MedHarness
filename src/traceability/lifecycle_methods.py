@@ -169,20 +169,7 @@ def execute_transition(
     # Get state info
     state_info = self._get_state_info(to_state)
     
-    # Record audit trail
-    if 'status_history' not in item:
-        item['status_history'] = []
-    
-    item['status_history'].append({
-        'timestamp': datetime.now().isoformat(),
-        'from_status': item.get('status'),
-        'to_status': to_state,
-        'action': state_info.get('action_label', to_state),
-        'performed_by': performed_by or 'system'
-    })
-    
     # Update status
-    old_status = item.get('status')
     item['status'] = to_state
     
     # Save item
