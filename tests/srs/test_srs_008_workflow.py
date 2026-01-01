@@ -25,7 +25,6 @@ class TestWorkflowTransitions:
         
         # Get workflow engine
         doc_config = test_core.config.get_doc_type('SYS')
-        # Use core methods directly
         
         # Verify transition is available
         transitions = workflow.get_available_transitions('draft')
@@ -60,7 +59,6 @@ class TestWorkflowTransitions:
         
         # Get workflow
         doc_config = test_core.config.get_doc_type('SYS')
-        # Use core methods directly
         
         # Verify can approve
         transitions = workflow.get_available_transitions('under_review')
@@ -111,7 +109,6 @@ class TestWorkflowTransitions:
         """
         
         doc_config = test_core.config.get_doc_type('SYS')
-        # Use core methods directly
         
         # Get available transitions from draft
         transitions = workflow.get_available_transitions('draft')
@@ -131,7 +128,6 @@ class TestWorkflowTransitions:
         """
         
         doc_config = test_core.config.get_doc_type('SYS')
-        # Use core methods directly
         
         # Get state info
         approved_state = workflow.get_state_info('approved')
