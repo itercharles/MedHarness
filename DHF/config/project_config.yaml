@@ -72,12 +72,6 @@ doc_types:
   - name: content
     format: long_text
     label: Content
-  - name: status
-    format: select
-    label: Status
-    options:
-    - draft
-    - approved
   icon: 👤
   page_enabled: true
   page_number: 4
