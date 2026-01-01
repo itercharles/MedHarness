@@ -82,9 +82,26 @@ doc_types:
       - current_state: null  # Initial creation
         allowed_next_states: [draft]
       - current_state: draft
-        allowed_next_states: [in_review, closed]
+        allowed_next_states: 
+          - state: in_review
+            criteria:  # Validation criteria for this specific transition
+              - id: content_complete
+                name: Content is complete
+                check_type: field_not_empty
+                field: content
+                required: true
+          - state: closed
+            # No criteria - can close anytime from draft
       - current_state: in_review
-        allowed_next_states: [approved, draft, closed]
+        allowed_next_states:
+          - state: approved
+            criteria:
+              - id: review_complete
+                name: Review completed
+                check_type: manual
+                required: true
+          - state: draft  # Send back for revision
+          - state: closed
       - current_state: approved
         allowed_next_states: [retired]
       - current_state: retired
