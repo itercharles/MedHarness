@@ -2,63 +2,61 @@ change_control:
   enabled: true
   change_request_type: CR
   affected_items_field: affected_items
-
 global_lifecycle:
   states:
-    - id: draft
-      label: Draft
-      action_label: Create  # Action to reach this state
-      icon: 📝
-      color: warning
-      is_initial: true
-    - id: in_review
-      label: In Review
-      action_label: Submit for Review
-      icon: 🔍
-      color: info
-    - id: approved
-      label: Approved
-      action_label: Approve
-      icon: ✅
-      color: success
-    - id: implementing
-      label: Implementing
-      action_label: Start Implementation
-      icon: 🔧
-      color: warning
-    - id: completed
-      label: Completed
-      action_label: Complete
-      icon: 🎯
-      color: success
-    - id: verified
-      label: Verified
-      action_label: Verify
-      icon: ✓
-      color: success
-    - id: validated
-      label: Validated
-      action_label: Validate
-      icon: ✓✓
-      color: success
-    - id: accepted
-      label: Accepted
-      action_label: Accept
-      icon: 👍
-      color: success
-    - id: retired
-      label: Retired
-      action_label: Retire
-      icon: 📦
-      color: secondary
-      is_stable: true
-    - id: closed
-      label: Closed
-      action_label: Close
-      icon: 🚫
-      color: secondary
-      is_stable: true
-
+  - id: draft
+    label: Draft
+    action_label: Create
+    icon: 📝
+    color: warning
+    is_initial: true
+  - id: in_review
+    label: In Review
+    action_label: Submit for Review
+    icon: 🔍
+    color: info
+  - id: approved
+    label: Approved
+    action_label: Approve
+    icon: ✅
+    color: success
+  - id: implementing
+    label: Implementing
+    action_label: Start Implementation
+    icon: 🔧
+    color: warning
+  - id: completed
+    label: Completed
+    action_label: Complete
+    icon: 🎯
+    color: success
+  - id: verified
+    label: Verified
+    action_label: Verify
+    icon: ✓
+    color: success
+  - id: validated
+    label: Validated
+    action_label: Validate
+    icon: ✓✓
+    color: success
+  - id: accepted
+    label: Accepted
+    action_label: Accept
+    icon: 👍
+    color: success
+  - id: retired
+    label: Retired
+    action_label: Retire
+    icon: 📦
+    color: secondary
+    is_stable: true
+  - id: closed
+    label: Closed
+    action_label: Close
+    icon: 🚫
+    color: secondary
+    is_stable: true
 doc_types:
 - code: UC
   name: Use Case
@@ -76,37 +74,39 @@ doc_types:
   page_enabled: true
   page_number: 4
   lifecycle:
-    # Define transitions as: from {states} -> to {state} with criteria
     transitions:
-      - from_states: [null]  # Initial creation
-        to_state: draft
-      
-      - from_states: [draft]
-        to_state: in_review
-        criteria:
-          - id: content_complete
-            name: Content is complete
-            check_type: field_not_empty
-            field: content
-            required: true
-      
-      - from_states: [draft, in_review, approved, retired]
-        to_state: closed
-        # No criteria - can close from any of these states
-      
-      - from_states: [in_review]
-        to_state: approved
-        criteria:
-          - id: review_complete
-            name: Review completed
-            check_type: manual
-            required: true
-      
-      - from_states: [in_review]
-        to_state: draft  # Send back for revision
-      
-      - from_states: [approved]
-        to_state: retired
+    - from_states:
+      - null
+      to_state: draft
+    - from_states:
+      - draft
+      to_state: in_review
+      criteria:
+      - id: content_complete
+        name: Content is complete
+        check_type: field_not_empty
+        field: content
+        required: true
+    - from_states:
+      - draft
+      - in_review
+      - approved
+      - retired
+      to_state: closed
+    - from_states:
+      - in_review
+      to_state: approved
+      criteria:
+      - id: review_complete
+        name: Review completed
+        check_type: manual
+        required: true
+    - from_states:
+      - in_review
+      to_state: draft
+    - from_states:
+      - approved
+      to_state: retired
 - code: CRS
   name: Customer Requirement
   prefix: CRS-
@@ -161,25 +161,13 @@ doc_types:
   page_enabled: true
   page_number: 5
   lifecycle:
-    states:
-    - id: draft
-      label: Draft
-      color: warning
-      icon: 📝
-      is_initial: true
-    - id: approved
-      label: Approved
-      color: success
-      icon: ✅
-      is_stable: true
-    - id: retired
-      label: Retired
-      color: info
-      icon: 🔒
     transitions:
-    - from: draft
-      to: approved
-      label: Approve
+    - from_states:
+      - null
+      to_state: draft
+    - from_states:
+      - draft
+      to_state: approved
       criteria:
       - id: content_complete
         name: Content documented
@@ -198,9 +186,10 @@ doc_types:
         description: Requirement has been reviewed by qualified person
         check_type: manual
         required: true
-    - from: approved
-      to: retired
-      label: Retire
+      label: Approve
+    - from_states:
+      - approved
+      to_state: retired
       criteria:
       - id: retirement_reason
         name: Retirement reason documented
@@ -213,6 +202,7 @@ doc_types:
         description: Impact of retirement on linked items assessed
         check_type: manual
         required: true
+      label: Retire
   has_verification: true
   verification_states:
   - not_verified
@@ -297,30 +287,21 @@ doc_types:
   page_enabled: true
   page_number: 12
   lifecycle:
-    states:
-    - id: draft
-      label: Draft
-      color: warning
-      icon: 📝
-      is_initial: true
-    - id: under_review
-      label: Under Review
-      color: info
-      icon: 🔍
-    - id: approved
-      label: Approved
-      color: success
-      icon: ✅
-      is_stable: true
     transitions:
-    - from: draft
-      to: under_review
+    - from_states:
+      - null
+      to_state: draft
+    - from_states:
+      - draft
+      to_state: under_review
       label: Submit for Review
-    - from: under_review
-      to: approved
+    - from_states:
+      - under_review
+      to_state: approved
       label: Approve
-    - from: under_review
-      to: draft
+    - from_states:
+      - under_review
+      to_state: draft
       label: Request Changes
 - code: RCM
   name: Risk Control Measure
@@ -368,20 +349,13 @@ doc_types:
   page_enabled: true
   page_number: 11
   lifecycle:
-    states:
-    - id: draft
-      label: Draft
-      color: warning
-      icon: 📝
-      is_initial: true
-    - id: approved
-      label: Approved
-      color: success
-      icon: ✅
-      is_stable: true
     transitions:
-    - from: draft
-      to: approved
+    - from_states:
+      - null
+      to_state: draft
+    - from_states:
+      - draft
+      to_state: approved
       label: Approve
 - code: SYS
   name: System Requirement
@@ -457,25 +431,13 @@ doc_types:
   page_enabled: true
   page_number: 6
   lifecycle:
-    states:
-    - id: draft
-      label: Draft
-      color: warning
-      icon: 📝
-      is_initial: true
-    - id: approved
-      label: Approved
-      color: success
-      icon: ✅
-      is_stable: true
-    - id: retired
-      label: Retired
-      color: info
-      icon: 🔒
     transitions:
-    - from: draft
-      to: approved
-      label: Approve
+    - from_states:
+      - null
+      to_state: draft
+    - from_states:
+      - draft
+      to_state: approved
       criteria:
       - id: content_complete
         name: Content documented
@@ -498,9 +460,10 @@ doc_types:
         name: Review completed
         check_type: manual
         required: true
-    - from: approved
-      to: retired
-      label: Retire
+      label: Approve
+    - from_states:
+      - approved
+      to_state: retired
       criteria:
       - id: retirement_reason
         name: Retirement reason
@@ -511,6 +474,7 @@ doc_types:
         name: Impact assessed
         check_type: manual
         required: true
+      label: Retire
   has_verification: true
   verification_states:
   - not_verified
@@ -548,20 +512,13 @@ doc_types:
   page_enabled: true
   page_number: 7
   lifecycle:
-    states:
-    - id: draft
-      label: Draft
-      color: warning
-      icon: 📝
-      is_initial: true
-    - id: approved
-      label: Approved
-      color: success
-      icon: ✅
-      is_stable: true
     transitions:
-    - from: draft
-      to: approved
+    - from_states:
+      - null
+      to_state: draft
+    - from_states:
+      - draft
+      to_state: approved
       label: Approve
   has_verification: true
   verification_states:
@@ -598,20 +555,13 @@ doc_types:
   page_enabled: true
   page_number: 8
   lifecycle:
-    states:
-    - id: draft
-      label: Draft
-      color: warning
-      icon: 📝
-      is_initial: true
-    - id: approved
-      label: Approved
-      color: success
-      icon: ✅
-      is_stable: true
     transitions:
-    - from: draft
-      to: approved
+    - from_states:
+      - null
+      to_state: draft
+    - from_states:
+      - draft
+      to_state: approved
       label: Approve
 - code: SWDD
   name: Software Detailed Design
@@ -640,20 +590,13 @@ doc_types:
   page_enabled: true
   page_number: 10
   lifecycle:
-    states:
-    - id: draft
-      label: Draft
-      color: warning
-      icon: 📝
-      is_initial: true
-    - id: approved
-      label: Approved
-      color: success
-      icon: ✅
-      is_stable: true
     transitions:
-    - from: draft
-      to: approved
+    - from_states:
+      - null
+      to_state: draft
+    - from_states:
+      - draft
+      to_state: approved
       label: Approve
   verification_states:
   - not_verified
@@ -705,43 +648,13 @@ doc_types:
   page_enabled: true
   page_number: 9
   lifecycle:
-    states:
-    - id: submitted
-      label: Submitted
-      color: info
-      icon: 📥
-      is_initial: true
-    - id: under_review
-      label: Under Review
-      color: warning
-      icon: 🔍
-    - id: approved
-      label: Approved
-      color: success
-      icon: ✅
-    - id: rejected
-      label: Rejected
-      color: error
-      icon: ❌
-      is_stable: true
-    - id: in_progress
-      label: In Progress
-      color: warning
-      icon: 🔧
-    - id: completed
-      label: Completed
-      color: success
-      icon: 🎯
-      is_stable: true
-    - id: cancelled
-      label: Cancelled
-      color: secondary
-      icon: 🚫
-      is_stable: true
     transitions:
-    - from: submitted
-      to: under_review
-      label: Start Review
+    - from_states:
+      - null
+      to_state: submitted
+    - from_states:
+      - submitted
+      to_state: under_review
       criteria:
       - id: description_complete
         name: Description complete
@@ -753,9 +666,10 @@ doc_types:
         check_type: field_not_empty
         field: justification
         required: true
-    - from: under_review
-      to: approved
-      label: Approve
+      label: Start Review
+    - from_states:
+      - under_review
+      to_state: approved
       criteria:
       - id: impact_assessed
         name: Impact assessed
@@ -766,26 +680,29 @@ doc_types:
         name: Review completed
         check_type: manual
         required: true
-    - from: under_review
-      to: rejected
-      label: Reject
+      label: Approve
+    - from_states:
+      - under_review
+      to_state: rejected
       criteria:
       - id: rejection_reason
         name: Rejection reason documented
         check_type: manual
         required: true
-    - from: approved
-      to: in_progress
-      label: Start Implementation
+      label: Reject
+    - from_states:
+      - approved
+      to_state: in_progress
       criteria:
       - id: assigned
         name: Assigned to developer
         check_type: field_not_empty
         field: assigned_to
         required: true
-    - from: in_progress
-      to: completed
-      label: Complete
+      label: Start Implementation
+    - from_states:
+      - in_progress
+      to_state: completed
       criteria:
       - id: implementation_done
         name: Implementation completed
@@ -795,11 +712,14 @@ doc_types:
         name: Testing completed
         check_type: manual
         required: true
-    - from: submitted
-      to: cancelled
+      label: Complete
+    - from_states:
+      - submitted
+      to_state: cancelled
       label: Cancel
-    - from: under_review
-      to: cancelled
+    - from_states:
+      - under_review
+      to_state: cancelled
       label: Cancel
 - code: RELEASE
   name: Release
@@ -820,29 +740,13 @@ doc_types:
   page_enabled: true
   page_number: 4
   lifecycle:
-    states:
-    - id: planning
-      label: Planning
-      color: info
-      icon: �
-      is_initial: true
-    - id: developing
-      label: Developing
-      color: warning
-      icon: 🔧
-    - id: testing
-      label: Testing
-      color: warning
-      icon: 🧪
-    - id: released
-      label: Released
-      color: success
-      icon: 🚀
-      is_stable: true
     transitions:
-    - from: planning
-      to: developing
-      label: Start Development
+    - from_states:
+      - null
+      to_state: planning
+    - from_states:
+      - planning
+      to_state: developing
       criteria:
       - id: version_set
         name: Version defined
@@ -854,17 +758,19 @@ doc_types:
         check_type: field_not_empty
         field: included_items
         required: true
-    - from: developing
-      to: testing
-      label: Start Testing
+      label: Start Development
+    - from_states:
+      - developing
+      to_state: testing
       criteria:
       - id: development_complete
         name: Development completed
         check_type: manual
         required: true
-    - from: testing
-      to: released
-      label: Release
+      label: Start Testing
+    - from_states:
+      - testing
+      to_state: released
       criteria:
       - id: testing_complete
         name: Testing completed
@@ -875,6 +781,7 @@ doc_types:
         check_type: field_not_empty
         field: verification_status
         required: true
+      label: Release
 - code: SOUP
   name: Software of Unknown Provenance
   prefix: SOUP-
@@ -899,29 +806,13 @@ doc_types:
   page_enabled: true
   page_number: 11
   lifecycle:
-    states:
-    - id: draft
-      label: Draft
-      color: warning
-      icon: 📝
-      is_initial: true
-    - id: under_review
-      label: Under Review
-      color: info
-      icon: 🔍
-    - id: approved
-      label: Approved
-      color: success
-      icon: ✅
-      is_stable: true
-    - id: rejected
-      label: Rejected
-      color: error
-      icon: ❌
     transitions:
-    - from: draft
-      to: under_review
-      label: Submit for Review
+    - from_states:
+      - null
+      to_state: draft
+    - from_states:
+      - draft
+      to_state: under_review
       criteria:
       - id: purpose_set
         name: Purpose documented
@@ -940,28 +831,32 @@ doc_types:
         description: SOUP must be linked to at least one system requirement
         check_type: has_links
         required: true
-    - from: under_review
-      to: approved
-      label: Approve
+      label: Submit for Review
+    - from_states:
+      - under_review
+      to_state: approved
       criteria:
       - id: verification_done
         name: Verification completed
         description: SOUP verification evidence documented
         check_type: manual
         required: true
-    - from: under_review
-      to: rejected
-      label: Reject
+      label: Approve
+    - from_states:
+      - under_review
+      to_state: rejected
       criteria:
       - id: rejection_reason
         name: Rejection reason
         description: Reason for rejecting SOUP must be documented
         check_type: manual
         required: true
-    - from: rejected
-      to: draft
-      label: Revise
+      label: Reject
+    - from_states:
+      - rejected
+      to_state: draft
       criteria: []
+      label: Revise
 traceability_matrices:
 - name: Complete Requirements Chain
   description: Full traceability from use cases through all requirement levels to
