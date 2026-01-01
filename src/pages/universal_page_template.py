@@ -1051,88 +1051,101 @@ def render_item_edit_form(
 
 def render_transition_workflow(
     item: Dict[str, Any],
-    transition: Dict[str, Any],
+    to_state: str,
     doc_type_config: Dict[str, Any],
-    core: CompliantFlowCore,
-    workflow_engine: DynamicWorkflowEngine
-) -> None:
+    core: CompliantFlowCore
+):
     """Render workflow transition with criteria checking."""
-    st.markdown(f"### {transition['label']}")
     
-    # Check criteria
-    can_transition, criteria_results = workflow_engine.check_transition_criteria(item, transition)
+    # Get available transitions
+    available_transitions = core.get_available_transitions(item)
+    
+    transition = None
+    for t in available_transitions:
+        if t['to_state'] == to_state:
+            transition = t
+            break
+    
+    if not transition:
+        st.error(f"Transition to {to_state} not available")
+        if st.button("← Back"):
+            del st.session_state['transition_item']
+            del st.session_state['transition_to_state']
+            st.rerun()
+        return
+    
+    st.markdown(f"### {transition['action_label']}")
     
     # Show criteria
-    st.markdown("**Criteria:**")
-    for criterion in criteria_results:
-        if criterion['passed']:
-            st.success(f"✅ {criterion['name']}")
-        else:
-            if criterion['check_type'] == 'manual':
-                # Manual verification UI
-                with st.expander(f"⚠️ {criterion['name']} - Verification Required", expanded=True):
-                    verifier = st.text_input("Verified by *", key=f"ver_{criterion['id']}")
-                    notes = st.text_area("Notes", key=f"notes_{criterion['id']}", height=100)
-                    if st.button("✅ Verify", key=f"btn_ver_{criterion['id']}"):
-                        if verifier:
-                            if 'manual_verifications' not in item:
-                                item['manual_verifications'] = {}
-                            item['manual_verifications'][criterion['id']] = {
-                                'verified_by': verifier,
-                                'verified_date': datetime.now().isoformat(),
-                                'notes': notes
-                            }
-                            core.update_item(item['id'], item)
-                            st.toast(f"✅ Verified by {verifier}")
-                            st.rerun()
+    criteria = transition.get('criteria', [])
+    if criteria:
+        st.markdown("**Criteria:**")
+        for criterion in criteria:
+            criterion_id = criterion.get('id')
+            criterion_name = criterion.get('name')
+            check_type = criterion.get('check_type')
+            is_blocking = criterion_id in transition.get('blocking_criteria', [])
+            
+            if is_blocking:
+                if check_type == 'manual':
+                    with st.expander(f"⚠️ {criterion_name} - Verification Required", expanded=True):
+                        verifier = st.text_input("Verified by *", key=f"ver_{criterion_id}")
+                        notes = st.text_area("Notes", key=f"notes_{criterion_id}", height=100)
+                        if st.button("✅ Verify", key=f"btn_ver_{criterion_id}"):
+                            if verifier:
+                                if 'manual_verifications' not in item:
+                                    item['manual_verifications'] = {}
+                                item['manual_verifications'][criterion_id] = {
+                                    'verified_by': verifier,
+                                    'verified_date': datetime.now().isoformat(),
+                                    'notes': notes
+                                }
+                                core.update_item(item['id'], item)
+                                st.toast(f"✅ Verified by {verifier}")
+                                st.rerun()
+                else:
+                    field = criterion.get('field', 'unknown')
+                    st.error(f"❌ {criterion_name}: {field} is required")
             else:
-                st.error(f"❌ {criterion['name']}: {criterion['message']}")
+                st.success(f"✅ {criterion_name}")
     
     # Transition form
+    can_transition = transition['can_transition']
+    
     if can_transition:
         st.markdown("---")
-        
-        # Collect metadata for transition
-        # Use pattern: {to_state}_by and {to_state}_date
-        to_state = transition['to']
-        by_field = f"{to_state}_by"
-        date_field = f"{to_state}_date"
-        
-        # Show input for who performed the transition
         performed_by = st.text_input(
-            f"{transition['label']} by *",
+            f"{transition['action_label']} by *",
             key=f"transition_by_{item['id']}_{to_state}"
         )
         
         col1, col2 = st.columns(2)
         with col1:
-            if st.button(f"✅ {transition['label']}", type="primary", use_container_width=True, key="confirm_transition"):
+            if st.button(f"✅ {transition['action_label']}", type="primary", use_container_width=True, key="confirm_transition"):
                 if not performed_by:
                     st.warning("Please enter your name")
                 else:
-                    # Build metadata with generic pattern
-                    metadata = {
-                        by_field: performed_by,
-                        date_field: datetime.now().date().isoformat(),  # Use date() for date fields
-                        'timestamp': datetime.now().isoformat()
-                    }
-                    updated_item = workflow_engine.perform_transition(item, transition, metadata)
-                    core.update_item(item['id'], updated_item)
-                    st.success(f"✅ {item['id']} transitioned to {transition['to']}")
-                    del st.session_state['transition_item']
-                    del st.session_state['transition_config']
-                    st.rerun()
+                    try:
+                        core.execute_transition(item['id'], to_state, performed_by=performed_by)
+                        st.success(f"✅ {item['id']} transitioned to {to_state}")
+                        del st.session_state['transition_item']
+                        del st.session_state['transition_to_state']
+                        st.rerun()
+                    except ValueError as e:
+                        st.error(f"Transition failed: {str(e)}")
         with col2:
             if st.button("Cancel", use_container_width=True, key="cancel_transition"):
                 del st.session_state['transition_item']
-                del st.session_state['transition_config']
+                del st.session_state['transition_to_state']
                 st.rerun()
     else:
         st.warning("⚠️ All required criteria must be met")
         if st.button("Cancel", key="cancel_criteria"):
             del st.session_state['transition_item']
-            del st.session_state['transition_config']
+            del st.session_state['transition_to_state']
             st.rerun()
+
+
 
 
 def render_transition_dialog(
