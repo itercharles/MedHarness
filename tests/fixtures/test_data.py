@@ -31,7 +31,15 @@ def create_test_dhf() -> Path:
     test_config_dir.mkdir(parents=True)
     
     # Create minimal project_config.yaml for testing with lifecycle
+    # Global lifecycle states
     test_config = {
+        'global_lifecycle': {
+            'states': [
+                {'id': 'draft', 'label': 'Draft', 'action_label': 'Create', 'icon': '📝', 'color': 'warning'},
+                {'id': 'under_review', 'label': 'Under Review', 'action_label': 'Submit for Review', 'icon': '👀', 'color': 'info'},
+                {'id': 'approved', 'label': 'Approved', 'action_label': 'Approve', 'icon': '✅', 'color': 'success', 'is_stable': True}
+            ]
+        },
         'doc_types': [
             {
                 'code': 'UC',
@@ -48,9 +56,9 @@ def create_test_dhf() -> Path:
                     {'name': 'status', 'format': 'select', 'label': 'Status', 'options': ['draft', 'approved']}
                 ],
                 'lifecycle': {
-                    'states': [
-                        {'id': 'draft', 'label': 'Draft', 'is_initial': True, 'icon': '📝', 'color': 'warning'},
-                        {'id': 'approved', 'label': 'Approved', 'is_stable': True, 'icon': '✅', 'color': 'success'}
+                    'transitions': [
+                        {'from_states': [None], 'to_state': 'draft'},
+                        {'from_states': ['draft'], 'to_state': 'approved'}
                     ]
                 }
             },
@@ -70,9 +78,9 @@ def create_test_dhf() -> Path:
                     {'name': 'status', 'format': 'select', 'label': 'Status', 'options': ['draft', 'approved']}
                 ],
                 'lifecycle': {
-                    'states': [
-                        {'id': 'draft', 'label': 'Draft', 'is_initial': True, 'icon': '📝', 'color': 'warning'},
-                        {'id': 'approved', 'label': 'Approved', 'is_stable': True, 'icon': '✅', 'color': 'success'}
+                    'transitions': [
+                        {'from_states': [None], 'to_state': 'draft'},
+                        {'from_states': ['draft'], 'to_state': 'approved'}
                     ]
                 }
             },
@@ -93,11 +101,10 @@ def create_test_dhf() -> Path:
                     {'name': 'status', 'format': 'select', 'label': 'Status', 'options': ['draft', 'under_review', 'approved']}
                 ],
                 'lifecycle': {
-                    'states': [
-                        {'id': 'draft', 'label': 'Draft', 'is_initial': True, 'icon': '📝', 'color': 'warning'},
-                        {'id': 'under_review', 'label': 'Under Review', 'icon': '👀', 'color': 'info'},
-                        {'id': 'approved', 'label': 'Approved', 'is_stable': True, 'icon': '✅', 'color': 'success'}
-                    ],
+                    'transitions': [
+                        {'from_states': [None], 'to_state': 'draft'},
+                        {'from_states': ['draft'], 'to_state': 'under_review'},
+                        {'from_states': ['under_review'], 'to_state': 'approved'},
                     'transitions': [
                         {'from': 'draft', 'to': 'under_review', 'label': 'Submit for Review'},
                         {'from': 'under_review', 'to': 'approved', 'label': 'Approve'},
@@ -121,9 +128,9 @@ def create_test_dhf() -> Path:
                     {'name': 'status', 'format': 'select', 'label': 'Status', 'options': ['draft', 'approved']}
                 ],
                 'lifecycle': {
-                    'states': [
-                        {'id': 'draft', 'label': 'Draft', 'is_initial': True, 'icon': '📝', 'color': 'warning'},
-                        {'id': 'approved', 'label': 'Approved', 'is_stable': True, 'icon': '✅', 'color': 'success'}
+                    'transitions': [
+                        {'from_states': [None], 'to_state': 'draft'},
+                        {'from_states': ['draft'], 'to_state': 'approved'}
                     ]
                 }
             },
@@ -143,9 +150,9 @@ def create_test_dhf() -> Path:
                     {'name': 'status', 'format': 'select', 'label': 'Status', 'options': ['draft', 'approved']}
                 ],
                 'lifecycle': {
-                    'states': [
-                        {'id': 'draft', 'label': 'Draft', 'is_initial': True, 'icon': '📝', 'color': 'warning'},
-                        {'id': 'approved', 'label': 'Approved', 'is_stable': True, 'icon': '✅', 'color': 'success'}
+                    'transitions': [
+                        {'from_states': [None], 'to_state': 'draft'},
+                        {'from_states': ['draft'], 'to_state': 'approved'}
                     ]
                 }
             },
