@@ -278,11 +278,17 @@ def render_table_section(
         except Exception as e:
             st.error(f"Error loading preview: {str(e)}")
     
-    # Filters - get states from global lifecycle
-    if core.config.global_lifecycle:
-        state_ids = [s.id for s in core.config.global_lifecycle.states]
-    else:
-        state_ids = []
+    # Filters - get states used in this doc type's transitions
+    lifecycle = doc_type_config.get('lifecycle', {})
+    transitions = lifecycle.get('transitions', [])
+    
+    # Collect all unique state IDs from transitions
+    state_ids = set()
+    for transition in transitions:
+        # Add to_state from each transition
+        if 'to_state' in transition:
+            state_ids.add(transition['to_state'])
+    state_ids = sorted(list(state_ids))
     
     col1, col2 = st.columns(2)
     with col1:
