@@ -258,7 +258,7 @@ class CompliantFlowCore:
                 old_state_info = self.get_state_info(old_status)
                 if old_state_info.get('is_stable', False):
                     # Item was stable - reset to initial state and clear approval fields
-                    initial_state = workflow.get_initial_state()
+                    initial_state = self.get_initial_state(doc_type_config.code)
                     updated_data['status'] = initial_state
                     
                     # Clear approval-related fields
