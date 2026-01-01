@@ -278,10 +278,11 @@ def render_table_section(
         except Exception as e:
             st.error(f"Error loading preview: {str(e)}")
     
-    # Filters
-    lifecycle = doc_type_config.get('lifecycle', {})
-    states = lifecycle.get('states', [])
-    state_ids = [s['id'] for s in states]
+    # Filters - get states from global lifecycle
+    if core.config.global_lifecycle:
+        state_ids = [s.id for s in core.config.global_lifecycle.states]
+    else:
+        state_ids = []
     
     col1, col2 = st.columns(2)
     with col1:
