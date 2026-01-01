@@ -360,12 +360,12 @@ def render_detail_panel(
         return
     
     # Check if transitioning
-    if st.session_state.get('transition_item') and st.session_state.get('transition_config'):
+    if st.session_state.get('transition_item') and st.session_state.get('transition_to_state'):
         item_id = st.session_state['transition_item']
-        transition = st.session_state['transition_config']
+        to_state = st.session_state['transition_to_state']
         item = core.get_item(item_id)
         if item:
-            render_transition_workflow(item, transition, doc_type_config, core, workflow_engine)
+            render_transition_workflow(item, to_state, doc_type_config, core)
             return
     
     # Check if item selected
@@ -764,20 +764,21 @@ def render_item_view(
     st.markdown("---")
     st.markdown("### Workflow Actions")
     
-    available_transitions = workflow_engine.get_available_transitions(current_state)
+    # Use new lifecycle methods from core
+    available_transitions = core.get_available_transitions(item)
     
     if available_transitions:
         cols = st.columns(len(available_transitions))
         for idx, transition in enumerate(available_transitions):
             with cols[idx]:
                 if st.button(
-                    transition['label'],
-                    key=f"transition_{item['id']}_{transition['to']}",
+                    transition.get('action_label', transition.get('label', 'Transition')),
+                    key=f"transition_{item['id']}_{transition.get('to_state', transition.get('to'))}",
                     use_container_width=True,
                     type="primary" if idx == 0 else "secondary"
                 ):
                     st.session_state['transition_item'] = item['id']
-                    st.session_state['transition_config'] = transition
+                    st.session_state['transition_to_state'] = transition.get('to_state', transition.get('to'))
                     st.rerun()
     else:
         st.info(f"No transitions available from {state_info['label']} state")
