@@ -248,12 +248,14 @@ class CompliantFlowCore:
         # If so, reset to draft and clear approval metadata (core business logic)
         doc_type_config = self.config.get_doc_type_by_prefix(existing.prefix)
         if doc_type_config and doc_type_config.lifecycle:
-            workflow = DynamicWorkflowEngine(doc_type_config.model_dump(), self)
+            
+            # Check if old status was stable
+            old_state = self.get_state_info(existing.status)
             
             # Check if old status was stable
             old_status = existing.status if hasattr(existing, 'status') else None
             if old_status:
-                old_state_info = workflow.get_state_info(old_status)
+                old_state_info = self.get_state_info(old_status)
                 if old_state_info.get('is_stable', False):
                     # Item was stable - reset to initial state and clear approval fields
                     initial_state = workflow.get_initial_state()
