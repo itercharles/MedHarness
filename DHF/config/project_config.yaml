@@ -7,79 +7,57 @@ global_lifecycle:
   states:
     - id: draft
       label: Draft
+      action_label: Create  # Action to reach this state
       icon: 📝
       color: warning
       is_initial: true
     - id: in_review
       label: In Review
+      action_label: Submit for Review
       icon: 🔍
       color: info
     - id: approved
       label: Approved
+      action_label: Approve
       icon: ✅
       color: success
     - id: implementing
       label: Implementing
+      action_label: Start Implementation
       icon: 🔧
       color: warning
     - id: completed
       label: Completed
+      action_label: Complete
       icon: 🎯
       color: success
     - id: verified
       label: Verified
+      action_label: Verify
       icon: ✓
       color: success
     - id: validated
       label: Validated
+      action_label: Validate
       icon: ✓✓
       color: success
     - id: accepted
       label: Accepted
+      action_label: Accept
       icon: 👍
       color: success
     - id: retired
       label: Retired
+      action_label: Retire
       icon: 📦
       color: secondary
       is_stable: true
     - id: closed
       label: Closed
+      action_label: Close
       icon: 🚫
       color: secondary
       is_stable: true
-  
-  actions:
-    - id: create
-      label: Create
-      to_state: draft
-    - id: submit_for_review
-      label: Submit for Review
-      to_state: in_review
-    - id: approve
-      label: Approve
-      to_state: approved
-    - id: start_implementation
-      label: Start Implementation
-      to_state: implementing
-    - id: complete
-      label: Complete
-      to_state: completed
-    - id: verify
-      label: Verify
-      to_state: verified
-    - id: validate
-      label: Validate
-      to_state: validated
-    - id: accept
-      label: Accept
-      to_state: accepted
-    - id: retire
-      label: Retire
-      to_state: retired
-    - id: close
-      label: Close
-      to_state: closed
 
 doc_types:
 - code: UC
@@ -104,21 +82,19 @@ doc_types:
   page_enabled: true
   page_number: 4
   lifecycle:
-    states:
-    - id: draft
-      label: Draft
-      color: warning
-      icon: 📝
-      is_initial: true
-    - id: approved
-      label: Approved
-      color: success
-      icon: ✅
-      is_stable: true
+    # Per-doc-type: define current_state and which states can be transitioned to
+    # The action is implicitly defined by the target state's action_label
     transitions:
-    - from: draft
-      to: approved
-      label: Approve
+      - current_state: null  # Initial creation
+        allowed_next_states: [draft]
+      - current_state: draft
+        allowed_next_states: [in_review, closed]
+      - current_state: in_review
+        allowed_next_states: [approved, draft, closed]
+      - current_state: approved
+        allowed_next_states: [retired]
+      - current_state: retired
+        allowed_next_states: [closed]
 - code: CRS
   name: Customer Requirement
   prefix: CRS-

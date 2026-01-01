@@ -57,27 +57,19 @@ class PropertyConfig(BaseModel):
 
 
 class LifecycleState(BaseModel):
-    """Global lifecycle state definition."""
+    """Global lifecycle state definition with action information."""
     id: str = Field(..., description="Unique state identifier (e.g., 'draft', 'approved')")
     label: str = Field(..., description="Human-readable label")
+    action_label: Optional[str] = Field(None, description="Label for action to reach this state (e.g., 'Approve' for approved state)")
     icon: Optional[str] = Field(None, description="Emoji icon for the state")
     color: Optional[str] = Field(None, description="Color for UI display (e.g., 'success', 'warning')")
     is_initial: bool = Field(False, description="Whether this is an initial state for new items")
     is_stable: bool = Field(False, description="Whether items in this state are stable/locked")
 
 
-class LifecycleAction(BaseModel):
-    """Global lifecycle action definition."""
-    id: str = Field(..., description="Unique action identifier (e.g., 'approve', 'submit_for_review')")
-    label: str = Field(..., description="Human-readable label for the action")
-    to_state: str = Field(..., description="Target state after action")
-    criteria: Optional[List[dict]] = Field(None, description="Validation criteria for this action")
-
-
 class GlobalLifecycle(BaseModel):
-    """Global lifecycle configuration with all states and actions."""
-    states: List[LifecycleState] = Field(default_factory=list, description="All available lifecycle states")
-    actions: List[LifecycleAction] = Field(default_factory=list, description="All available lifecycle actions")
+    """Global lifecycle configuration with all states."""
+    states: List[LifecycleState] = Field(default_factory=list, description="All available lifecycle states with action info")
 
 
 class RelationConfig(BaseModel):
