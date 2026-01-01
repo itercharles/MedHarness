@@ -88,34 +88,8 @@ def get_shape_by_type(item_id: str) -> str:
 
 def should_show_warning(item: dict, core) -> bool:
     """Check if item should show warning icon based on lifecycle state."""
-    item_status = item.get('status', 'draft')
-    item_id = item['id']
-    
-    # Get doc type for this item
-    doc_type_code = get_doc_type_code(item_id)
-    doc_type_config = core.config.get_doc_type(doc_type_code)
-    
-    if not doc_type_config:
-        raise ValueError(f"Document type configuration not found for: {doc_type_code}")
-    
-    if not doc_type_config.lifecycle:
-        raise ValueError(f"Lifecycle configuration missing for document type: {doc_type_code}")
-    
-    # Get lifecycle states
-    lifecycle = doc_type_config.lifecycle
-    states = lifecycle.get('states', [])
-    
-    if not states:
-        raise ValueError(f"No states defined in lifecycle for document type: {doc_type_code}")
-    
-    # Find stable states (states with is_stable: true)
-    stable_states = [s.get('id') for s in states if s.get('is_stable', False)]
-    
-    if not stable_states:
-        raise ValueError(f"No stable states configured for document type: {doc_type_code}. Add 'is_stable: true' to appropriate states.")
-    
-    # Show warning if not in a stable state
-    return item_status not in stable_states
+    # Use core.is_item_editable() which checks global lifecycle
+    return core.is_item_editable(item)
 
 def build_matrix_table(all_items: List[dict], path: List[str], core) -> pd.DataFrame:
     """Build traceability table for a specific matrix configuration."""
