@@ -18,3 +18,12 @@ description: "Current status definition is too complex and should be simplified.
 justification: unify the status management.
 priority: High
 file_path: /Users/chenwenliang/code/CompliantFlow/DHF/items/09_cr/CR-011.yaml
+affected_items:
+- SYS-TRANS-001
+- TC-SRS-006
+- TC-SRS-008
+- TC-SRS-015
+implementation_prs:
+- pr_number: 12
+  pr_url: https://github.com/itercharles/CompliantFlow/pull/12
+  title: Feature/cr 011 unified lifecycle
