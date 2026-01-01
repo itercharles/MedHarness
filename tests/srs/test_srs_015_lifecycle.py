@@ -12,7 +12,6 @@ import sys
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
 from traceability.compliant_flow_core import CompliantFlowCore
-from traceability.workflow_engine import DynamicWorkflowEngine
 
 
 class TestSRS015_ItemLifecycleManagement:
