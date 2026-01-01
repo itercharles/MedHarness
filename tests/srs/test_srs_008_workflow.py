@@ -23,12 +23,10 @@ class TestWorkflowTransitions:
         @links: SRS-008
         """
         
-        # Get workflow engine
-        doc_config = test_core.config.get_doc_type('SYS')
-        
-        # Verify transition is available
-        transitions = workflow.get_available_transitions('draft')
-        transition_targets = [t['to'] for t in transitions]
+        # Verify transition is available using core
+        test_item = {'id': 'SYS-002', 'status': 'draft'}
+        transitions = test_core.get_available_transitions(test_item)
+        transition_targets = [t.get('to_state') for t in transitions]
         assert 'under_review' in transition_targets, \
             f"Expected 'under_review' in available transitions, got {transition_targets}"
         
@@ -57,12 +55,10 @@ class TestWorkflowTransitions:
         }
         test_core.create_item(item_data)
         
-        # Get workflow
-        doc_config = test_core.config.get_doc_type('SYS')
-        
-        # Verify can approve
-        transitions = workflow.get_available_transitions('under_review')
-        transition_targets = [t['to'] for t in transitions]
+        # Verify can approve using core
+        test_item = {'id': 'SYS-APPROVE-TEST', 'status': 'under_review'}
+        transitions = test_core.get_available_transitions(test_item)
+        transition_targets = [t.get('to_state') for t in transitions]
         assert 'approved' in transition_targets, \
             f"Expected 'approved' in available transitions from under_review, got {transition_targets}"
         
@@ -108,11 +104,10 @@ class TestWorkflowTransitions:
         @links: SRS-008
         """
         
-        doc_config = test_core.config.get_doc_type('SYS')
-        
-        # Get available transitions from draft
-        transitions = workflow.get_available_transitions('draft')
-        transition_targets = [t['to'] for t in transitions]
+        # Get available transitions from draft using core
+        test_item = {'id': 'SYS-001', 'status': 'draft'}
+        transitions = test_core.get_available_transitions(test_item)
+        transition_targets = [t.get('to_state') for t in transitions]
         
         # Should be able to go to under_review
         assert 'under_review' in transition_targets
@@ -127,11 +122,9 @@ class TestWorkflowTransitions:
         @links: SRS-008
         """
         
-        doc_config = test_core.config.get_doc_type('SYS')
-        
-        # Get state info
-        approved_state = workflow.get_state_info('approved')
-        draft_state = workflow.get_state_info('draft')
+        # Get state info using core
+        approved_state = test_core.get_state_info('approved')
+        draft_state = test_core.get_state_info('draft')
         
         # Approved should be stable
         assert approved_state.get('is_stable', False) is True
