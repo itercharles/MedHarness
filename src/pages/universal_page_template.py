@@ -510,7 +510,7 @@ def render_new_item_form(
                 # Create new item with all filled fields
                 new_item = {
                     'type': doc_type_config['code'],  # Required for ID auto-generation
-                    'status': workflow_engine.get_initial_state(),
+                    # Note: status is auto-set by backend based on lifecycle config
                 }
                 
                 # Add ID if manually provided (though it shouldn't be for this flow)
