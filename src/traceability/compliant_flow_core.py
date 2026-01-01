@@ -720,9 +720,9 @@ class CompliantFlowCore:
     # Import lifecycle management methods
     from .lifecycle_methods import (
         get_available_transitions,
+        get_state_info,
+        _validate_criteria,
         execute_transition,
         is_item_editable,
-        get_initial_state,
-        _get_state_info,
-        _validate_criteria
+        get_initial_state
     )
