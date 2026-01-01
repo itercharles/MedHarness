@@ -105,10 +105,7 @@ def create_test_dhf() -> Path:
                         {'from_states': [None], 'to_state': 'draft'},
                         {'from_states': ['draft'], 'to_state': 'under_review'},
                         {'from_states': ['under_review'], 'to_state': 'approved'},
-                    'transitions': [
-                        {'from': 'draft', 'to': 'under_review', 'label': 'Submit for Review'},
-                        {'from': 'under_review', 'to': 'approved', 'label': 'Approve'},
-                        {'from': 'under_review', 'to': 'draft', 'label': 'Reject'}
+                        {'from_states': ['under_review'], 'to_state': 'draft'}
                     ]
                 }
             },
