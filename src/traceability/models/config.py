@@ -56,6 +56,31 @@ class PropertyConfig(BaseModel):
         return self.name.replace('_', ' ').title()
 
 
+class LifecycleState(BaseModel):
+    """Global lifecycle state definition."""
+    id: str = Field(..., description="Unique state identifier (e.g., 'draft', 'approved')")
+    label: str = Field(..., description="Human-readable label")
+    icon: Optional[str] = Field(None, description="Emoji icon for the state")
+    color: Optional[str] = Field(None, description="Color for UI display (e.g., 'success', 'warning')")
+    is_initial: bool = Field(False, description="Whether this is an initial state for new items")
+    is_stable: bool = Field(False, description="Whether items in this state are stable/locked")
+
+
+class LifecycleAction(BaseModel):
+    """Global lifecycle action definition."""
+    id: str = Field(..., description="Unique action identifier (e.g., 'approve', 'submit_for_review')")
+    label: str = Field(..., description="Human-readable label for the action")
+    from_state: Union[str, List[str], None] = Field(None, description="Source state(s) - null for initial creation")
+    to_state: str = Field(..., description="Target state after action")
+    criteria: Optional[List[dict]] = Field(None, description="Validation criteria for this action")
+
+
+class GlobalLifecycle(BaseModel):
+    """Global lifecycle configuration with all states and actions."""
+    states: List[LifecycleState] = Field(default_factory=list, description="All available lifecycle states")
+    actions: List[LifecycleAction] = Field(default_factory=list, description="All available lifecycle actions")
+
+
 class RelationConfig(BaseModel):
     """Configuration for a relationship."""
     target: str = Field(..., description="Target Document Type Code")
@@ -97,6 +122,7 @@ class ProjectConfig(BaseModel):
     """Project configuration."""
     
     change_control: Optional[dict] = Field(default_factory=dict, description="Change control configuration")
+    global_lifecycle: Optional[GlobalLifecycle] = Field(None, description="Global lifecycle configuration")
     doc_types: List[DocTypeConfig] = Field(..., description="Document type configurations")
     traceability_matrices: List['TraceabilityMatrix'] = Field(default_factory=list, description="Traceability matrix configurations")
     test_integration: dict = Field(default_factory=dict, description="Test integration configuration")
