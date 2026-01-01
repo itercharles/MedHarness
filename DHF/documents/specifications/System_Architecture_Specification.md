@@ -53,9 +53,9 @@ CompliantFlow follows a layered architecture pattern with clear separation of co
    - Workflow transition UI
 
 2. **Business Logic Layer**
-   - CompliantFlowCore: Central orchestrator
-   - DynamicWorkflowEngine: State machine execution
+   - CompliantFlowCore: Central orchestrator and lifecycle manager
    - GraphEngine: Traceability analysis
+   - LifecycleMethods: State transition logic
 
 3. **Data Access Layer**
    - ItemLoader: YAML file reading
@@ -80,9 +80,9 @@ CompliantFlow follows a layered architecture pattern with clear separation of co
 └──────┬──────────┬──────────┬────────────┘
        │          │          │
   ┌────▼───┐  ┌──▼────┐  ┌──▼─────┐
-  │Workflow│  │ Graph │  │ Item   │
-  │Engine  │  │Engine │  │Manager │
-  └────────┘  └───────┘  └────┬───┘
+  │Lifecycle │  │ Graph │  │ Item   │
+  │Methods   │  │Engine │  │Manager │
+  └──────────┘  └───────┘  └────┬───┘
                                │
                   ┌────────────▼──────────┐
                   │  ItemLoader/Saver     │
@@ -139,7 +139,7 @@ Layered architecture chosen for:
 
 **Internal Interfaces**:
 - CompliantFlowCore API (get_item, create_item, update_item, transition_item)
-- WorkflowEngine API (validate_transition, execute_transition)
+- LifecycleMethods API (get_state_info, get_available_transitions, validate_transition)
 - GraphEngine API (build_graph, find_orphans, calculate_coverage)
 
 
@@ -334,7 +334,7 @@ Adding a new document type requires only:
 
 No Python code changes needed!
 
-### 2. Dynamic Workflow Engine
+### 2. Integrated Lifecycle Management
 Workflows are executed by interpreting configuration:
 ```yaml
 lifecycle:
@@ -348,7 +348,7 @@ lifecycle:
         - {check_type: "field_not_empty", field: "content"}
 ```
 
-The `DynamicWorkflowEngine` reads this and enforces rules automatically.
+The `CompliantFlowCore` delegates to `LifecycleMethods` to enforce these rules automatically.
 
 ### 3. Universal UI Template
 Single page template (`universal_page_template.py`) renders all document types:
@@ -368,7 +368,7 @@ Extensible validation system:
 
 CompliantFlow implements the **Interpreter Pattern**:
 - Configuration is the "language"
-- Workflow engine is the "interpreter"
+- CompliantFlowCore is the "interpreter"
 - Runtime behavior determined by configuration
 
 ## Configuration Schema

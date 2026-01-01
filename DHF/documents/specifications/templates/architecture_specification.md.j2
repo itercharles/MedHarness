@@ -116,8 +116,8 @@ DHF/
 │         ┌───────────────────────────────┼─────────────┐      │
 │         │                               │             │      │
 │  ┌──────▼────────┐  ┌──────────────────▼──┐  ┌───────▼────┐│
-│  │ GraphEngine   │  │ DocumentGenerator   │  │ Workflow   ││
-│  └──────┬────────┘  └──────────┬──────────┘  │ Engine     ││
+│  │ GraphEngine   │  │ DocumentGenerator   │  │ Lifecycle  ││
+│  └──────┬────────┘  └──────────┬──────────┘  │ Methods    ││
 │         │                      │              └───────┬────┘│
 │         │                      │                      │      │
 │  ┌──────▼──────────────────────▼──────────────────────▼────┐│
@@ -145,7 +145,7 @@ DHF/
 - Generates markdown specifications
 - Converts to PDF using WeasyPrint
 
-**WorkflowEngine:**
+**LifecycleMethods:**
 - Manages item lifecycle states
 - Validates state transitions
 - Enforces approval workflows
@@ -166,7 +166,7 @@ DHF/
 **Layer 2: Business Logic**
 - CompliantFlowCore: Central orchestrator
 - GraphEngine: Traceability analysis
-- WorkflowEngine: State management
+- LifecycleMethods: State management
 - DocumentGenerator: Specification generation
 
 **Layer 3: Data Access**
@@ -204,7 +204,7 @@ User Input (Streamlit)
   ↓
 CompliantFlowCore.create_item()
   ↓
-WorkflowEngine.get_initial_state()
+LifecycleMethods.get_initial_state()
   ↓
 ItemSaver.save(item)
   ↓
