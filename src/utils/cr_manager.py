@@ -79,7 +79,6 @@ def get_non_stable_cr(core) -> Optional[Dict]:
     if not cr_config:
         return None
     
-    from traceability.workflow_engine import DynamicWorkflowEngine
     workflow = DynamicWorkflowEngine(cr_config.model_dump(), core)
     
     for cr in all_crs:
@@ -145,7 +144,6 @@ def add_item_to_cr(cr_id: str, item_id: str, core) -> bool:
     if not cr_config:
         return False
     
-    from traceability.workflow_engine import DynamicWorkflowEngine
     workflow = DynamicWorkflowEngine(cr_config.model_dump(), core)
     state_info = workflow.get_state_info(cr.get('status', ''))
     
@@ -183,7 +181,6 @@ def is_cr_stable(cr: Dict, core) -> bool:
     if not cr_config:
         return True
     
-    from traceability.workflow_engine import DynamicWorkflowEngine
     workflow = DynamicWorkflowEngine(cr_config.model_dump(), core)
     state_info = workflow.get_state_info(cr.get('status', ''))
     
