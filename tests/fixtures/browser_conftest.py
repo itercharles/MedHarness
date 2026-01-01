@@ -161,6 +161,10 @@ def streamlit_app(test_dhf_root, populate_test_dhf_fixture):
     stdout_path = stdout_file.name
     stdout_file.close()
     
+    # Set environment variable to force app to use test DHF
+    env = os.environ.copy()
+    env["COMPLIANTFLOW_DHF_ROOT"] = str(test_dhf_root)
+    
     app_path = str(project_root / "src" / "app.py")
     cmd = [
         streamlit_cmd,
@@ -177,7 +181,8 @@ def streamlit_app(test_dhf_root, populate_test_dhf_fixture):
         cmd,
         stdout=open(stdout_path, 'w'),
         stderr=open(stderr_path, 'w'),
-        cwd=str(project_root)
+        cwd=str(project_root),
+        env=env
     )
     
     # Wait for Streamlit HTTP server to start
@@ -236,14 +241,14 @@ def streamlit_app(test_dhf_root, populate_test_dhf_fixture):
             with open(stdout_path, 'r') as f:
                 stdout_output = f.read()
                 if stdout_output:
-                    print(f"[STDOUT] Last 500 chars:\n{stdout_output[-500:]}")
+                    print(f"[STDOUT] Last 2000 chars:\n{stdout_output[-2000:]}")
         except:
             pass
         try:
             with open(stderr_path, 'r') as f:
                 stderr_output = f.read()
                 if stderr_output:
-                    print(f"[STDERR] Last 500 chars:\n{stderr_output[-500:]}")
+                    print(f"[STDERR] Last 2000 chars:\n{stderr_output[-2000:]}")
         except:
             pass
     

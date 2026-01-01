@@ -54,6 +54,7 @@ def test_TC_CRS_001_001_create_requirement(page: Page, streamlit_app, test_dhf_r
     page.wait_for_timeout(1000)
     
     # Verify we can navigate to the created item
+    # Verify we can navigate to the created item
     expect(page.get_by_role("heading", name=created_id)).to_be_visible(timeout=5000)
 
 

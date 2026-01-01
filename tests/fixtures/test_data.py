@@ -289,7 +289,7 @@ def get_test_dataset() -> List[Dict]:
             'title': 'Test Change Request',
             'description': 'Change request for testing purposes',
             'justification': 'Testing CR workflow',
-            'status': 'submitted',
+            'status': 'draft',
             'affected_items': ['SRS-001']
         },
     ]
@@ -308,6 +308,7 @@ def populate_test_dhf(test_dhf_root: Path):
         CompliantFlowCore instance with populated data
     """
     from src.traceability.compliant_flow_core import CompliantFlowCore
+    from src.traceability.models.item import Item
     
     print(f"\n[DATA] Populating test DHF with test data...")
     
@@ -320,11 +321,37 @@ def populate_test_dhf(test_dhf_root: Path):
     # Create all test items
     for item_data in test_items:
         try:
-            core.create_item(item_data)
+            # Capture target fields BEFORE create_item modifies item_data
+            target_status = item_data.get('status')
+            approved_by = item_data.get('approved_by')
+            
+            # Create item (will be set to draft/initial in item_data and returned)
+            created = core.create_item(item_data)
+            
+            # If intended status was different from created status (draft), explicit update via saver
+            if target_status and target_status != created.get('status'):
+                # Restore the metadata that might have been lost or we want to force
+                # We use the created ID but the ORIGINAL intended status and metadata
+                item_data['id'] = created['id']
+                item_data['status'] = target_status
+                if approved_by:
+                    item_data['approved_by'] = approved_by
+                if item_data.get('approved_date'):
+                     item_data['approved_date'] = item_data.get('approved_date')
+
+                # Force save to bypass workflow state checks for test setup
+                item = Item.model_validate(item_data)
+                core.saver.save(item, author=item_data.get('approved_by', 'system'))
+                
             print(f"  [OK] Created {item_data['id']}")
         except Exception as e:
             print(f"  [WARN] Failed to create {item_data['id']}: {e}")
-    
+            import traceback
+            traceback.print_exc()
+
     print(f"[OK] Test DHF populated with {len(test_items)} items")
+    
+    # Refresh to ensure graph consistency
+    core.refresh()
     
     return core

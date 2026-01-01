@@ -64,20 +64,20 @@ def get_available_transitions(self, item: Dict[str, Any]) -> List[Dict[str, Any]
 
 def get_state_info(self, state_id: str) -> Dict[str, Any]:
     """Get information about a specific state from global lifecycle."""
-    if not self.config.global_lifecycle:
-        return {'action_label': state_id.title()}
+    if self.config.global_lifecycle:
+        for state in self.config.global_lifecycle.states:
+            if state.id == state_id:
+                return {
+                    'id': state.id,
+                    'label': state.label,
+                    'action_label': state.action_label or state.label,
+                    'icon': state.icon,
+                    'color': state.color,
+                    'is_stable': state.is_stable
+                }
     
-    for state in self.config.global_lifecycle.states:
-        if state.id == state_id:
-            return {
-                'label': state.label,
-                'action_label': state.action_label or state.label,
-                'icon': state.icon,
-                'color': state.color,
-                'is_stable': state.is_stable
-            }
-    
-    return {'action_label': state_id.title()}
+    # Valid state not found
+    raise ValueError(f"State '{state_id}' not found in global lifecycle configuration.")
 
 
 def _validate_criteria(

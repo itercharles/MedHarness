@@ -24,59 +24,33 @@ import pandas as pd
 from utils.ui_helpers import check_and_show_item_detail
 
 
-def get_dhf_root(config_file: str = None) -> Path:
+def get_dhf_root() -> Path:
     """
     Get DHF root directory from configuration.
     
-    Args:
-        config_file: Path to app_config.yaml (optional)
-        
     Returns:
         Path to DHF directory
     """
+    # Check for environment variable override (used by tests)
+    import os
+    env_dhf = os.environ.get("COMPLIANTFLOW_DHF_ROOT")
+    if env_dhf:
+        print(f"[APP] Using DHF from environment: {env_dhf}")
+        return Path(env_dhf)
+
     # Default to production DHF
-    default_dhf = Path(__file__).resolve().parent.parent / "DHF"
-    
-    # If no config file specified, use default location
-    if config_file is None:
-        config_file = Path(__file__).resolve().parent.parent / "app_config.yaml"
-    else:
-        config_file = Path(config_file)
-    
-    # If config file doesn't exist, use default
-    if not config_file.exists():
-        return default_dhf
-    
-    # Read config file
-    try:
-        with open(config_file, 'r') as f:
-            config_data = yaml.safe_load(f) or {}
-        
-        if 'dhf_root' in config_data:
-            dhf_path = config_data['dhf_root']
-            # Resolve relative paths from project root
-            if not Path(dhf_path).is_absolute():
-                project_root = Path(__file__).resolve().parent.parent
-                return project_root / dhf_path
-            return Path(dhf_path)
-    except Exception as e:
-        st.warning(f"Failed to load config file {config_file}: {e}. Using default DHF.")
-    
-    return default_dhf
+    return Path(__file__).resolve().parent.parent / "DHF"
 
 
 # Initialize Core
 @st.cache_resource
-def get_core(_config_file: str = None):
+def get_core():
     """
-    Initialize CompliantFlowCore with DHF from configuration.
+    Initialize CompliantFlowCore.
     
-    Args:
-        _config_file: Path to app_config.yaml (optional, prefixed with _ for st.cache)
-    
-    Note: dhf_root is read from config and used as implicit cache key
+    Note: DHF root is resolved dynamically.
     """
-    dhf_root = get_dhf_root(_config_file)
+    dhf_root = get_dhf_root()
     return CompliantFlowCore(dhf_root)
 
 
@@ -161,7 +135,7 @@ st.set_page_config(
 # === CORE INITIALIZATION ===
 try:
     # Get config file path (use default location)
-    st.session_state.core = get_core(None) # None will use default app_config.yaml location
+    st.session_state.core = get_core()
 except Exception as e:
     st.error(f"Failed to initialize CompliantFlow Core: {e}")
     st.stop()

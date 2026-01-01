@@ -553,9 +553,9 @@ def render_item_details(
     is_editing = st.session_state.get('editing_item_id') == item['id']
     
     if is_editing:
-        render_item_edit_form(item, doc_type_config, core, workflow_engine)
+        render_item_edit_form(item, doc_type_config, core)
     else:
-        render_item_view(item, doc_type_config, core, workflow_engine)
+        render_item_view(item, doc_type_config, core)
 
 
 def render_item_view(
@@ -1018,7 +1018,7 @@ def render_item_edit_form(
     
     # Workflow actions
     current_state = item.get('status', core.get_initial_state(doc_type_config["code"]))
-    available_transitions = workflow_engine.get_available_transitions(current_state)
+    available_transitions = core.get_available_transitions(item)
     
     if available_transitions:
         st.markdown("**Available Actions:**")
@@ -1158,7 +1158,7 @@ def render_transition_dialog(
     """Legacy function - redirects to render_transition_workflow."""
     item = core.get_item(item_id)
     if item:
-        render_transition_workflow(item, transition, doc_type_config, core, workflow_engine)
+        render_transition_workflow(item, transition, doc_type_config, core)
 
 
 def render_manual_verification_inline(
@@ -1233,7 +1233,7 @@ def render_items_table(
     # Action buttons for each item
     st.markdown("**Actions:**")
     for item in items:
-        render_item_actions(item, doc_type_config, core, workflow_engine)
+        render_item_actions(item, doc_type_config, core)
 
 
 def render_item_actions(
@@ -1243,8 +1243,7 @@ def render_item_actions(
     
 ) -> None:
     """Render action buttons for an item."""
-    current_state = item.get('status', core.get_initial_state(doc_type_config["code"]))
-    available_transitions = workflow_engine.get_available_transitions(current_state)
+    available_transitions = core.get_available_transitions(item)
     
     # Calculate number of columns needed
     num_cols = 3 + len(available_transitions)
@@ -1302,7 +1301,7 @@ def render_items_cards(
                 st.markdown(f"**Links:** {', '.join(item['links'])}")
             
             # Actions
-            render_item_actions(item, doc_type_config, core, workflow_engine)
+            render_item_actions(item, doc_type_config, core)
 
 
 def render_reports_tab(
