@@ -76,36 +76,37 @@ doc_types:
   page_enabled: true
   page_number: 4
   lifecycle:
-    # Per-doc-type: define current_state and which states can be transitioned to
-    # The action is implicitly defined by the target state's action_label
+    # Define transitions as: from {states} -> to {state} with criteria
     transitions:
-      - current_state: null  # Initial creation
-        allowed_next_states: [draft]
-      - current_state: draft
-        allowed_next_states: 
-          - state: in_review
-            criteria:  # Validation criteria for this specific transition
-              - id: content_complete
-                name: Content is complete
-                check_type: field_not_empty
-                field: content
-                required: true
-          - state: closed
-            # No criteria - can close anytime from draft
-      - current_state: in_review
-        allowed_next_states:
-          - state: approved
-            criteria:
-              - id: review_complete
-                name: Review completed
-                check_type: manual
-                required: true
-          - state: draft  # Send back for revision
-          - state: closed
-      - current_state: approved
-        allowed_next_states: [retired]
-      - current_state: retired
-        allowed_next_states: [closed]
+      - from_states: [null]  # Initial creation
+        to_state: draft
+      
+      - from_states: [draft]
+        to_state: in_review
+        criteria:
+          - id: content_complete
+            name: Content is complete
+            check_type: field_not_empty
+            field: content
+            required: true
+      
+      - from_states: [draft, in_review, approved, retired]
+        to_state: closed
+        # No criteria - can close from any of these states
+      
+      - from_states: [in_review]
+        to_state: approved
+        criteria:
+          - id: review_complete
+            name: Review completed
+            check_type: manual
+            required: true
+      
+      - from_states: [in_review]
+        to_state: draft  # Send back for revision
+      
+      - from_states: [approved]
+        to_state: retired
 - code: CRS
   name: Customer Requirement
   prefix: CRS-
