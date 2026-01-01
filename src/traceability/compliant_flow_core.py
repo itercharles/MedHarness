@@ -311,14 +311,13 @@ class CompliantFlowCore:
             # No workflow - can edit
             return True, "✏️ Edit", None, None
         
-        workflow = DynamicWorkflowEngine(doc_type_config.model_dump(), self)
         
         current_status = item.get('status')
         if not current_status:
             # No status - can edit
             return True, "✏️ Edit", None, None
         
-        state_info = workflow.get_state_info(current_status)
+        state_info = self.get_state_info(current_status)
         is_stable = state_info.get('is_stable', False)
         
         if not is_stable:
