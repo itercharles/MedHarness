@@ -711,5 +711,13 @@ class CompliantFlowCore:
             filtered = [i for i in filtered if i['id'] != exclude_item_id]
         
         return [i['id'] for i in filtered]
-
-
+    
+    # Import lifecycle management methods
+    from .lifecycle_methods import (
+        get_available_transitions,
+        execute_transition,
+        is_item_editable,
+        get_initial_state,
+        _get_state_info,
+        _validate_criteria
+    )
