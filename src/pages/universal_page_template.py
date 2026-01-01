@@ -86,12 +86,13 @@ def render_metrics(
     doc_type_code = doc_type_config.get('code')
     metrics = core.get_doc_type_metrics(doc_type_code)
     
-    # Get lifecycle states from config
-    lifecycle = doc_type_config.get('lifecycle', {})
-    states = lifecycle.get('states', [])
+    # Get lifecycle states from global lifecycle
+    if not core.config.global_lifecycle:
+        # No lifecycle configured, just show total
+        st.metric("Total", metrics['total'])
+        return
     
-    if not states:
-        raise ValueError(f"No lifecycle states defined for {doc_type_config.get('name', 'document type')}")
+    states = core.config.global_lifecycle.states
     
     # Show up to 4 state metrics
     num_cols = min(len(states) + 1, 5)  # +1 for Total
@@ -102,8 +103,8 @@ def render_metrics(
     
     # Show metrics for each state (up to 4)
     for idx, state in enumerate(states[:4]):
-        state_id = state['id']
-        state_label = state.get('label', state_id.capitalize())
+        state_id = state.id
+        state_label = state.label
         count = metrics['by_status'].get(state_id, 0)
         with cols[idx + 1]:
             st.metric(state_label, count)
