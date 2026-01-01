@@ -203,8 +203,7 @@ class CompliantFlowCore:
         # Set initial status (backend responsibility)
         doc_type_code = item_data['id'].split('-')[0]
         initial_state = self.get_initial_state(doc_type_code)
-        if initial_state:
-            item_data['status'] = initial_state
+        item_data['status'] = initial_state
         
         # Validate and create item
         item = Item.model_validate(item_data)
