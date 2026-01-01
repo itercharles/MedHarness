@@ -170,10 +170,10 @@ def create_test_dhf() -> Path:
                     {'name': 'status', 'format': 'select', 'label': 'Status', 'options': ['submitted', 'approved', 'rejected']}
                 ],
                 'lifecycle': {
-                    'states': [
-                        {'id': 'submitted', 'label': 'Submitted', 'is_initial': True, 'icon': '📝', 'color': 'warning'},
-                        {'id': 'approved', 'label': 'Approved', 'is_stable': True, 'icon': '✅', 'color': 'success'},
-                        {'id': 'rejected', 'label': 'Rejected', 'is_stable': True, 'icon': '❌', 'color': 'danger'}
+                    'transitions': [
+                        {'from_states': [None], 'to_state': 'draft'},
+                        {'from_states': ['draft'], 'to_state': 'approved'},
+                        {'from_states': ['draft'], 'to_state': 'rejected'}
                     ]
                 }
             }
