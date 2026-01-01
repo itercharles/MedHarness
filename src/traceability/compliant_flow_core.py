@@ -200,13 +200,6 @@ class CompliantFlowCore:
             # Generate next ID
             item_data['id'] = get_next_id(prefix, existing_ids)
         
-        # Set initial status if not provided
-        if 'status' not in item_data or not item_data['status']:
-            doc_type_code = item_data['id'].split('-')[0]
-            initial_state = self.get_initial_state(doc_type_code)
-            if initial_state:
-                item_data['status'] = initial_state
-        
         # Validate and create item
         item = Item.model_validate(item_data)
         
