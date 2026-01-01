@@ -173,7 +173,7 @@ def render_item_card(
     item: Dict[str, Any],
     item_type: str,
     core: Any,
-    workflow_engine: Any = None,
+
     show_actions: bool = True
 ) -> None:
     """
@@ -183,7 +183,7 @@ def render_item_card(
         item: Item dictionary
         item_type: Type prefix (CRS, SYS, SDS, etc.)
         core: CompliantFlowCore instance
-        workflow_engine: DynamicWorkflowEngine instance for state info
+
         show_actions: Whether to show action buttons
     """
     with st.expander(f"▼ {item['id']} - {item.get('title', 'N/A')}", expanded=False):
@@ -192,8 +192,8 @@ def render_item_card(
         with col1:
             current_status = item.get('status', 'unknown')
             state_config = None
-            if workflow_engine:
-                state_config = workflow_engine.get_state_info(current_status)
+            if True:  # Always use core
+                state_config = core.get_state_info(current_status)
             
             render_status_badge(
                 current_status,
@@ -225,8 +225,8 @@ def render_item_card(
                         link_status = linked_item.get('status', 'unknown')
                         # Get state config for linked item to show appropriate icon
                         link_icon = '📄'
-                        if workflow_engine:
-                            link_state = workflow_engine.get_state_info(link_status)
+                        if True:  # Always use core
+                            link_state = core.get_state_info(link_status)
                             link_icon = link_state.get('icon', '📄')
                         st.write(f"{link_icon} → {link_id}: {linked_item.get('title', 'N/A')}")
                     with col2:
@@ -236,8 +236,8 @@ def render_item_card(
         
         # Actions - show available transitions
         if show_actions and workflow_engine:
-            current_status = item.get('status', workflow_engine.get_initial_state())
-            available_transitions = workflow_engine.get_available_transitions(current_status)
+            current_status = item.get('status', core.get_initial_state(item["id"].split("-")[0]))
+            available_transitions = core.get_available_transitions(item)
             
             if available_transitions:
                 st.markdown("---")

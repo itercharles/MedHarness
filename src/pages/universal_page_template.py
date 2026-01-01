@@ -6,7 +6,6 @@ from pathlib import Path
 from typing import Dict, Any
 from datetime import datetime
 from traceability.compliant_flow_core import CompliantFlowCore
-from traceability.workflow_engine import DynamicWorkflowEngine
 from pages.ui_components import (
     render_manual_verification,
     render_status_badge
@@ -59,21 +58,18 @@ def render_item_management_page(
     if item_from_query:
         st.session_state['selected_item_id'] = item_from_query
     
-    # Initialize workflow engine
-    workflow_engine = DynamicWorkflowEngine(doc_type_config, core)
-    
     # === METRICS (below title) ===
     render_metrics(doc_type_config, core, prefix)
     
     st.markdown("---")
     
     # === TABLE SECTION (top) ===
-    render_table_section(doc_type_config, core, workflow_engine, prefix)
+    render_table_section(doc_type_config, core, prefix)
     
     st.markdown("---")
     
     # === DETAIL PANEL (bottom) ===
-    render_detail_panel(doc_type_config, core, workflow_engine)
+    render_detail_panel(doc_type_config, core)
 
 
 def render_metrics(
@@ -114,7 +110,6 @@ def render_metrics(
 def render_table_section(
     doc_type_config: Dict[str, Any],
     core: CompliantFlowCore,
-    workflow_engine: DynamicWorkflowEngine,
     prefix: str
 ) -> None:
     """Render table section with New button and filters."""
@@ -308,7 +303,7 @@ def render_table_section(
         # Use exact prefix match (don't strip hyphen)
         if not item['id'].startswith(prefix):
             continue
-        item_status = item.get('status', workflow_engine.get_initial_state())
+        item_status = item.get('status', core.get_initial_state(doc_type_config["code"]))
         if item_status not in status_filter:
             continue
         if search:
@@ -327,7 +322,7 @@ def render_table_section(
             df_data.append({
                 'ID': item['id'],
                 'Title': item.get('title', 'N/A'),
-                'Status': item.get('status', workflow_engine.get_initial_state())
+                'Status': item.get('status', core.get_initial_state(doc_type_config["code"]))
             })
         
         df = pd.DataFrame(df_data)
@@ -358,13 +353,12 @@ def render_table_section(
 
 def render_detail_panel(
     doc_type_config: Dict[str, Any],
-    core: CompliantFlowCore,
-    workflow_engine: DynamicWorkflowEngine
+    core: CompliantFlowCore
 ) -> None:
     """Render detail panel for selected item or new item creation."""
     # Check if creating new
     if st.session_state.get('creating_new'):
-        render_new_item_form(doc_type_config, core, workflow_engine)
+        render_new_item_form(doc_type_config, core)
         return
     
     # Check if transitioning
@@ -388,13 +382,12 @@ def render_detail_panel(
         st.error(f"Item {selected_item_id} not found")
         return
     
-    render_item_details(item, doc_type_config, core, workflow_engine)
+    render_item_details(item, doc_type_config, core)
 
 
 def render_new_item_form(
     doc_type_config: Dict[str, Any],
-    core: CompliantFlowCore,
-    workflow_engine: DynamicWorkflowEngine
+    core: CompliantFlowCore
 ) -> None:
     """Render form for creating new item."""
     st.subheader(f"➕ New {doc_type_config['name']}")
@@ -552,8 +545,7 @@ def render_new_item_form(
 def render_item_details(
     item: Dict[str, Any],
     doc_type_config: Dict[str, Any],
-    core: CompliantFlowCore,
-    workflow_engine: DynamicWorkflowEngine
+    core: CompliantFlowCore
 ) -> None:
     """Render detailed view of selected item with workflow actions."""
     
@@ -637,8 +629,8 @@ def render_item_view(
             )
     
     # Status and metadata in columns
-    current_state = item.get('status', workflow_engine.get_initial_state())
-    state_info = workflow_engine.get_state_info(current_state)
+    current_state = item.get('status', core.get_initial_state(doc_type_config["code"]))
+    state_info = core.get_state_info(current_state)
     
     col1, col2 = st.columns(2)
     with col1:
@@ -1025,7 +1017,7 @@ def render_item_edit_form(
             st.rerun()
     
     # Workflow actions
-    current_state = item.get('status', workflow_engine.get_initial_state())
+    current_state = item.get('status', core.get_initial_state(doc_type_config["code"]))
     available_transitions = workflow_engine.get_available_transitions(current_state)
     
     if available_transitions:
@@ -1230,7 +1222,7 @@ def render_items_table(
         df_data.append({
             'ID': item['id'],
             'Title': item.get('title', 'N/A'),
-            'Status': item.get('status', workflow_engine.get_initial_state()),
+            'Status': item.get('status', core.get_initial_state(doc_type_config["code"])),
             'Verified': item.get('verification_status', 'not_verified'),
             'Links': len(item.get('links', []))
         })
@@ -1251,7 +1243,7 @@ def render_item_actions(
     workflow_engine: DynamicWorkflowEngine
 ) -> None:
     """Render action buttons for an item."""
-    current_state = item.get('status', workflow_engine.get_initial_state())
+    current_state = item.get('status', core.get_initial_state(doc_type_config["code"]))
     available_transitions = workflow_engine.get_available_transitions(current_state)
     
     # Calculate number of columns needed
@@ -1298,8 +1290,8 @@ def render_items_cards(
     for item in items:
         with st.expander(f"▼ {item['id']} - {item.get('title', 'N/A')}", expanded=False):
             # Status
-            current_state = item.get('status', workflow_engine.get_initial_state())
-            state_info = workflow_engine.get_state_info(current_state)
+            current_state = item.get('status', core.get_initial_state(doc_type_config["code"]))
+            state_info = core.get_state_info(current_state)
             st.markdown(f"{state_info['icon']} **Status:** {state_info['label']}")
             
             # Content
