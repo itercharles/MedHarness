@@ -562,7 +562,7 @@ def render_item_view(
     item: Dict[str, Any],
     doc_type_config: Dict[str, Any],
     core: CompliantFlowCore,
-    workflow_engine: DynamicWorkflowEngine
+    
 ) -> None:
     """Render read-only view of item details."""
     # CR Confirmation Dialog
@@ -845,7 +845,7 @@ def render_item_edit_form(
     item: Dict[str, Any],
     doc_type_config: Dict[str, Any],
     core: CompliantFlowCore,
-    workflow_engine: DynamicWorkflowEngine
+    
 ) -> None:
     """Render editable form for item."""
     st.subheader(f"✏️ Edit {item['id']}")
@@ -1153,7 +1153,7 @@ def render_transition_dialog(
     transition: Dict[str, Any],
     doc_type_config: Dict[str, Any],
     core: CompliantFlowCore,
-    workflow_engine: DynamicWorkflowEngine
+    
 ) -> None:
     """Legacy function - redirects to render_transition_workflow."""
     item = core.get_item(item_id)
@@ -1209,7 +1209,7 @@ def render_items_table(
     items: list,
     doc_type_config: Dict[str, Any],
     core: CompliantFlowCore,
-    workflow_engine: DynamicWorkflowEngine
+    
 ) -> None:
     """Render items as table."""
     if not items:
@@ -1240,7 +1240,7 @@ def render_item_actions(
     item: Dict[str, Any],
     doc_type_config: Dict[str, Any],
     core: CompliantFlowCore,
-    workflow_engine: DynamicWorkflowEngine
+    
 ) -> None:
     """Render action buttons for an item."""
     current_state = item.get('status', core.get_initial_state(doc_type_config["code"]))
@@ -1280,7 +1280,7 @@ def render_items_cards(
     items: list,
     doc_type_config: Dict[str, Any],
     core: CompliantFlowCore,
-    workflow_engine: DynamicWorkflowEngine
+    
 ) -> None:
     """Render items as cards."""
     if not items:
