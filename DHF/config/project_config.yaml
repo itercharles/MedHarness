@@ -832,7 +832,7 @@ traceability_matrices:
   description: System requirements and their architectural designs
   path:
   - SYS
-  - SYS_ARCH
+  - SYSARCH
 - name: Risk to Control Measures
   description: Risks to risk control measures
   path:
