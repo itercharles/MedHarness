@@ -1,110 +1,671 @@
 id: IEC_62304
 title: Medical device software - Software life cycle processes
 type: regulation
-version: "1.1"
+version: "1.1 2015-06"
 policies:
+  # 4.1 Quality Management System
+  - id: "4.1.a"
+    section: "4.1"
+    text: "The MANUFACTURER of MEDICAL DEVICE SOFTWARE shall demonstrate the ability to provide MEDICAL DEVICE SOFTWARE that consistently meets customer requirements and applicable regulatory requirements."
+    status: "approved"
+
+  # 4.2 Risk Management
+  - id: "4.2.a"
+    section: "4.2"
+    text: "The MANUFACTURER shall apply a RISK MANAGEMENT PROCESS complying with ISO 14971."
+    status: "approved"
+
+  # 4.3 Software Safety Classification
+  - id: "4.3.a"
+    section: "4.3"
+    text: "The MANUFACTURER shall assign to each SOFTWARE SYSTEM a software safety class (A, B, or C) according to the RISK of HARM to the patient, operator, or other people resulting from a HAZARDOUS SITUATION to which the SOFTWARE SYSTEM can contribute in a worst-case scenario."
+    status: "approved"
+
+  - id: "4.3.c"
+    section: "4.3"
+    text: "The MANUFACTURER shall document the software safety class assigned to each SOFTWARE SYSTEM in the RISK MANAGEMENT FILE."
+    status: "approved"
+
+  - id: "4.3.d"
+    section: "4.3"
+    text: "When a SOFTWARE SYSTEM is decomposed into SOFTWARE ITEMS, such SOFTWARE ITEMS shall inherit the software safety classification unless the MANUFACTURER documents a rationale for classification into a different software safety class."
+    status: "approved"
+
+  - id: "4.3.g"
+    section: "4.3"
+    text: "For each SOFTWARE SYSTEM, until a software safety class is assigned, Class C requirements shall apply."
+    status: "approved"
+
+  - id: "4.3.e"
+    section: "4.3"
+    text: "The MANUFACTURER shall document the software safety class of each SOFTWARE ITEM if that class is different from the class of the SOFTWARE ITEM from which it was created by decomposition."
+    status: "approved"
+
+  - id: "4.3.f"
+    section: "4.3"
+    text: "For compliance with this standard, when applying this standard to a group of SOFTWARE ITEMS, the MANUFACTURER shall use the PROCESSES and TASKS which are required by the classification of the highest-classified SOFTWARE ITEM in the group unless the MANUFACTURER documents in the RISK MANAGEMENT FILE a rationale for using a lower classification."
+    status: "approved"
+
+  # 4.4 Legacy Software
+  - id: "4.4.1.a"
+    section: "4.4.1"
+    text: "As an alternative to applying Clauses 5 through 9 of this standard, compliance of LEGACY SOFTWARE may be demonstrated as indicated in 4.4.2 to 4.4.5."
+    status: "approved"
+
+  - id: "4.4.2.a"
+    section: "4.4.2"
+    text: "The MANUFACTURER shall assess any feedback, including post-production information, on LEGACY SOFTWARE regarding incidents and/or near incidents, both from inside its own organization and/or from users."
+    status: "approved"
+
+  - id: "4.4.2.b"
+    section: "4.4.2"
+    text: "The MANUFACTURER shall perform RISK MANAGEMENT ACTIVITIES associated with continued use of the LEGACY SOFTWARE, considering integration in overall architecture, validity of RISK CONTROL measures, identification of HAZARDOUS SITUATIONS, potential causes, and definition of RISK CONTROL measures."
+    status: "approved"
+
+  - id: "4.4.3.a"
+    section: "4.4.3"
+    text: "Based on the software safety class of the LEGACY SOFTWARE, the MANUFACTURER shall perform a gap analysis of available DELIVERABLES against those required according to 5.2, 5.3, 5.7, and Clause 7, assess continuing validity, evaluate potential RISK reduction, and determine DELIVERABLES to be created."
+    status: "approved"
+
+  - id: "4.4.4.a"
+    section: "4.4.4"
+    text: "The MANUFACTURER shall establish and execute a plan to generate the identified DELIVERABLES, address problem resolution PROCESS, and perform changes to LEGACY SOFTWARE in accordance with Clause 6."
+    status: "approved"
+
+  - id: "4.4.5.a"
+    section: "4.4.5"
+    text: "The MANUFACTURER shall document the VERSION of the LEGACY SOFTWARE together with a rationale for the continued use of the LEGACY SOFTWARE based on the outputs of 4.4."
+    status: "approved"
+
   # 5.1.1 Software Development Plan
   - id: "5.1.1.a"
     section: "5.1.1"
-    text: "The manufacturer shall establish a software development plan."
+    text: "The MANUFACTURER shall establish a software development plan for conducting the ACTIVITIES of the software development PROCESS appropriate to the scope, magnitude, and software safety classifications of the SOFTWARE SYSTEM to be developed."
     status: "approved"
     automation:
       check: "file_existence"
       params:
         path: "documents/plans/development_plan.md"
 
-  # 5.2.1 Software Requirements Analysis
+  # 5.1.2 Keep Software Development Plan Updated
+  - id: "5.1.2.a"
+    section: "5.1.2"
+    text: "The MANUFACTURER shall update the plan as development proceeds as appropriate."
+    status: "approved"
+
+  # 5.1.3 Software Development Plan Reference to System Design
+  - id: "5.1.3.a"
+    section: "5.1.3"
+    text: "As inputs for software development, SYSTEM requirements shall be referenced in the software development plan by the MANUFACTURER."
+    status: "approved"
+
+  - id: "5.1.3.b"
+    section: "5.1.3"
+    text: "In the software development plan, the MANUFACTURER shall include or reference procedures for coordinating the software development with the system development necessary to satisfy 4.1 (such as system integration, verification, and validation)."
+    status: "approved"
+
+  # 5.1.4 Software Development Standards, Methods and Tools Planning
+  - id: "5.1.4.a"
+    section: "5.1.4"
+    text: "The MANUFACTURER shall include or reference in the software development plan for development of SOFTWARE ITEMS of class C: standards, methods, and tools."
+    status: "approved"
+
+  # 5.1.5 Software Integration and Integration Testing Planning
+  - id: "5.1.5.a"
+    section: "5.1.5"
+    text: "The MANUFACTURER shall include or reference in the software development plan, a plan to integrate the SOFTWARE ITEMS (including SOUP) and perform testing during integration."
+    status: "approved"
+
+  # 5.1.6 Software Verification Planning
+  - id: "5.1.6.a"
+    section: "5.1.6"
+    text: "The MANUFACTURER shall include or reference in the software development plan VERIFICATION information including DELIVERABLES requiring VERIFICATION, required VERIFICATION TASKS, milestones, and acceptance criteria."
+    status: "approved"
+
+  # 5.1.7 Software Risk Management Planning
+  - id: "5.1.7.a"
+    section: "5.1.7"
+    text: "The MANUFACTURER shall include or reference in the software development plan, a plan to conduct the ACTIVITIES and TASKS of the software RISK MANAGEMENT PROCESS, including the management of RISKS relating to SOUP."
+    status: "approved"
+
+  # 5.1.8 Documentation Planning
+  - id: "5.1.8.a"
+    section: "5.1.8"
+    text: "The MANUFACTURER shall include or reference in the software development plan information about the documents to be produced during the software development life cycle, including title/name, purpose, and procedures for development, review, approval and modification."
+    status: "approved"
+
+  # 5.1.9 Software Configuration Management Planning
+  - id: "5.1.9.a"
+    section: "5.1.9"
+    text: "The MANUFACTURER shall include or reference software configuration management information in the software development plan, including classes of items to be controlled, ACTIVITIES and TASKS, responsible organizations, relationships, timing for configuration control, and when to use problem resolution PROCESS."
+    status: "approved"
+
+  # 5.1.10 Supporting Items to be Controlled
+  - id: "5.1.10.a"
+    section: "5.1.10"
+    text: "The items to be controlled shall include tools, items or settings, used to develop the MEDICAL DEVICE SOFTWARE, which could impact the MEDICAL DEVICE SOFTWARE."
+    status: "approved"
+
+  # 5.1.11 Software Configuration Item Control Before Verification
+  - id: "5.1.11.a"
+    section: "5.1.11"
+    text: "The MANUFACTURER shall plan to place CONFIGURATION ITEMS under configuration management control before they are VERIFIED."
+    status: "approved"
+
+  # 5.1.12 Identification and Avoidance of Common Software Defects
+  - id: "5.1.12.a"
+    section: "5.1.12"
+    text: "The MANUFACTURER shall include or reference in the software development plan a procedure for identifying categories of defects that may be introduced based on the selected programming technology and documenting evidence that demonstrates that these defects do not contribute to unacceptable RISK."
+    status: "approved"
+
+  # 5.2.1 Define and Document Software Requirements
   - id: "5.2.1.a"
     section: "5.2.1"
-    text: "The manufacturer shall define and document software requirements."
+    text: "For each SOFTWARE SYSTEM of the MEDICAL DEVICE, the MANUFACTURER shall define and document SOFTWARE SYSTEM requirements from the SYSTEM level requirements."
     status: "approved"
     automation:
       check: "item_existence"
       params:
-        type_code: "CRS"
+        type_code: "SRS"
 
-  # 5.2.2 Software system requirements
+  # 5.2.2 Software Requirements Content
   - id: "5.2.2.a"
     section: "5.2.2"
-    text: "Existing software requirements shall be contained in the system requirements."
+    text: "The MANUFACTURER shall include in the software requirements: functional and capability requirements, SOFTWARE SYSTEM inputs and outputs, interfaces, security requirements, data definitions, and regulatory requirements."
     status: "approved"
-    automation:
-      check: "item_existence"
-      params:
-        type_code: "SYS"
 
-  # 5.3.1 Software Architecture
+  # 5.2.3 Include Risk Control Measures
+  - id: "5.2.3.a"
+    section: "5.2.3"
+    text: "The MANUFACTURER shall include RISK CONTROL measures implemented in software in the requirements as appropriate to the MEDICAL DEVICE SOFTWARE."
+    status: "approved"
+
+  # 5.2.4 Re-evaluate Medical Device Risk Analysis
+  - id: "5.2.4.a"
+    section: "5.2.4"
+    text: "The MANUFACTURER shall re-EVALUATE the MEDICAL DEVICE RISK ANALYSIS when software requirements are established and update it as appropriate."
+    status: "approved"
+
+  # 5.2.5 Update Requirements
+  - id: "5.2.5.a"
+    section: "5.2.5"
+    text: "The MANUFACTURER shall ensure that existing requirements, including SYSTEM requirements, are re-EVALUATED and updated as appropriate as a result of the software requirements analysis ACTIVITY."
+    status: "approved"
+
+  # 5.2.6 Verify Software Requirements
+  - id: "5.2.6.a"
+    section: "5.2.6"
+    text: "The MANUFACTURER shall verify and document that the software requirements implement SYSTEM requirements, do not contradict one another, avoid ambiguity, permit establishment of test criteria, can be uniquely identified, and are traceable to SYSTEM requirements."
+    status: "approved"
+
+  # 5.3.1 Transform Requirements into Architecture
   - id: "5.3.1.a"
     section: "5.3.1"
-    text: "Transform software requirements into an architecture."
+    text: "The MANUFACTURER shall transform the requirements for the MEDICAL DEVICE SOFTWARE into a documented ARCHITECTURE that describes the software's structure and identifies the SOFTWARE ITEMS."
     status: "approved"
     automation:
       check: "file_existence"
       params:
         path: "documents/System_Architecture_Specification.md"
 
-  # 5.3.6 Software Architecture Traceability
+  # 5.3.2 Develop Architecture for Interfaces
+  - id: "5.3.2.a"
+    section: "5.3.2"
+    text: "The MANUFACTURER shall develop and document an ARCHITECTURE for the interfaces between the SOFTWARE ITEMS and external components, and between the SOFTWARE ITEMS."
+    status: "approved"
+
+  # 5.3.3 Specify SOUP Requirements
+  - id: "5.3.3.a"
+    section: "5.3.3"
+    text: "If a SOFTWARE ITEM is identified as SOUP, the MANUFACTURER shall specify functional and performance requirements for the SOUP item that are necessary for its intended use."
+    status: "approved"
+
+  # 5.3.4 Specify System Hardware and Software Required by SOUP
+  - id: "5.3.4.a"
+    section: "5.3.4"
+    text: "If a SOFTWARE ITEM is identified as SOUP, the MANUFACTURER shall specify the SYSTEM hardware and software necessary to support the proper operation of the SOUP item."
+    status: "approved"
+
+  # 5.3.5 Identify Segregation for Risk Control
+  - id: "5.3.5.a"
+    section: "5.3.5"
+    text: "The MANUFACTURER shall identify any segregation between SOFTWARE ITEMS that is necessary for RISK CONTROL, and state how to ensure that such segregation is effective."
+    status: "approved"
+
+  # 5.3.6 Verify Software Architecture
   - id: "5.3.6.a"
     section: "5.3.6"
-    text: "The MANUFACTURER shall document a TRACEABILITY of the SOFTWARE ARCHITECTURE to the SOFTWARE REQUIREMENTS."
+    text: "The MANUFACTURER shall verify and document that the ARCHITECTURE implements SYSTEM and software requirements including those relating to RISK CONTROL, supports interfaces, and supports proper operation of SOUP items."
     status: "approved"
     automation:
        check: "trace_coverage"
        params:
-         source_type: "SYS" # Requirements
-         target_type: "SWAD" # Architecture
+         source_type: "SYS"
+         target_type: "SWAD"
          min_coverage: 1.0
 
-  # 5.4.1 Software Detailed Design
+  # 5.4.1 Subdivide Software into Units
   - id: "5.4.1.a"
     section: "5.4.1"
-    text: "Subdivide the software into software units."
+    text: "The MANUFACTURER shall subdivide the software until it is represented by SOFTWARE UNITS."
     status: "approved"
     automation:
        check: "item_existence"
        params:
          type_code: "SWDD"
   
-  # 5.4.2 Detailed Design Traceability
+  # 5.4.2 Develop Detailed Design
   - id: "5.4.2.a"
     section: "5.4.2"
-    text: "Develop a detailed design for each software unit and trace to architecture/requirements."
+    text: "The MANUFACTURER shall document a design with enough detail to allow correct implementation of each SOFTWARE UNIT."
+    status: "approved"
+
+  # 5.4.3 Develop Detailed Design for Interfaces
+  - id: "5.4.3.a"
+    section: "5.4.3"
+    text: "The MANUFACTURER shall document a design for any interfaces between the SOFTWARE UNIT and external components (hardware or software), as well as any interfaces between SOFTWARE UNITS, detailed enough to implement each SOFTWARE UNIT and its interfaces correctly."
+    status: "approved"
+
+  # 5.4.4 Verify Detailed Design
+  - id: "5.4.4.a"
+    section: "5.4.4"
+    text: "The MANUFACTURER shall verify and document that the software detailed design implements the software ARCHITECTURE and is free from contradiction with the software ARCHITECTURE."
     status: "approved"
     automation:
       check: "trace_coverage"
       params:
-        source_type: "SWDD" # Design
-        target_type: "SWAD" # Architecture
+        source_type: "SWDD"
+        target_type: "SWAD"
         min_coverage: 1.0
 
-  # 5.5.1 Software Unit Implementation
+  # 5.5.1 Implement Each Software Unit
   - id: "5.5.1.a"
     section: "5.5.1"
-    text: "Implement each software unit."
+    text: "The MANUFACTURER shall implement each SOFTWARE UNIT."
     status: "approved"
-    automation:
-      check: "item_existence" 
-      params:
-        type_code: "SWDD" 
 
-  # 5.6.1 Software Integration and Integration Testing
+  # 5.5.2 Establish Unit Verification Process
+  - id: "5.5.2.a"
+    section: "5.5.2"
+    text: "The MANUFACTURER shall establish strategies, methods and procedures for verifying the SOFTWARE UNITS. Where VERIFICATION is done by testing, the test procedures shall be EVALUATED for adequacy."
+    status: "approved"
+
+  # 5.5.3 Software Unit Acceptance Criteria
+  - id: "5.5.3.a"
+    section: "5.5.3"
+    text: "The MANUFACTURER shall establish acceptance criteria for SOFTWARE UNITS prior to integration into larger SOFTWARE ITEMS as appropriate, and ensure that SOFTWARE UNITS meet acceptance criteria."
+    status: "approved"
+
+  # 5.5.4 Additional Software Unit Acceptance Criteria
+  - id: "5.5.4.a"
+    section: "5.5.4"
+    text: "When present in the design, the MANUFACTURER shall include additional acceptance criteria as appropriate for: proper event sequence, data and control flow, planned resource allocation, fault handling, initialization of variables, self-diagnostics, memory management and overflows, and boundary conditions."
+    status: "approved"
+
+  # 5.5.5 Software Unit Verification
+  - id: "5.5.5.a"
+    section: "5.5.5"
+    text: "The MANUFACTURER shall perform the SOFTWARE UNIT VERIFICATION and document the results."
+    status: "approved"
+
+  # 5.6.1 Integrate Software Units
   - id: "5.6.1.a"
     section: "5.6.1"
-    text: "Integrate software units and test integration."
+    text: "The MANUFACTURER shall integrate the SOFTWARE UNITS in accordance with the integration plan."
+    status: "approved"
+
+  # 5.6.2 Verify Software Integration
+  - id: "5.6.2.a"
+    section: "5.6.2"
+    text: "The MANUFACTURER shall verify that the SOFTWARE UNITS have been integrated into SOFTWARE ITEMS and/or the SOFTWARE SYSTEM in accordance with the integration plan and retain records of the evidence of such verification."
+    status: "approved"
+
+  # 5.6.3 Software Integration Testing
+  - id: "5.6.3.a"
+    section: "5.6.3"
+    text: "The MANUFACTURER shall test the integrated SOFTWARE ITEMS in accordance with the integration plan and document the results."
     status: "approved"
     automation:
       check: "item_existence"
       params:
         type_code: "TC-SYS"
 
-  # 5.7.1 Software System Testing
+  # 5.6.4 Software Integration Testing Content
+  - id: "5.6.4.a"
+    section: "5.6.4"
+    text: "For software integration testing, the MANUFACTURER shall address whether the integrated SOFTWARE ITEM performs as intended."
+    status: "approved"
+
+  # 5.6.5 Evaluate Software Integration Test Procedures
+  - id: "5.6.5.a"
+    section: "5.6.5"
+    text: "The MANUFACTURER shall EVALUATE the integration test procedures for adequacy."
+    status: "approved"
+
+  # 5.6.6 Conduct Regression Tests
+  - id: "5.6.6.a"
+    section: "5.6.6"
+    text: "When software items are integrated, the MANUFACTURER shall conduct REGRESSION TESTING appropriate to demonstrate that defects have not been introduced into previously integrated software."
+    status: "approved"
+
+  # 5.6.7 Integration Test Record Contents
+  - id: "5.6.7.a"
+    section: "5.6.7"
+    text: "The MANUFACTURER shall document the test result (pass/fail and a list of ANOMALIES), retain sufficient records to permit the test to be repeated, and identify the tester."
+    status: "approved"
+
+  # 5.6.8 Use Software Problem Resolution Process
+  - id: "5.6.8.a"
+    section: "5.6.8"
+    text: "The MANUFACTURER shall enter ANOMALIES found during software integration and integration testing into a software problem resolution PROCESS."
+    status: "approved"
+
+  # 5.7.1 Establish Tests for Software Requirements
   - id: "5.7.1.a"
     section: "5.7.1"
-    text: "Establish tests for software system requirements."
+    text: "The MANUFACTURER shall establish and perform a set of tests for conducting SOFTWARE SYSTEM testing, such that all software requirements are covered."
     status: "approved"
     automation:
       check: "trace_coverage"
       params:
-        source_type: "SYS" # Requirements
-        target_type: "TC-SYS" # Tests
+        source_type: "SYS"
+        target_type: "TC-SYS"
         min_coverage: 1.0
+
+  # 5.7.2 Use Software Problem Resolution Process
+  - id: "5.7.2.a"
+    section: "5.7.2"
+    text: "The MANUFACTURER shall enter ANOMALIES found during software system testing into a software problem resolution PROCESS."
+    status: "approved"
+
+  # 5.7.3 Retest After Changes
+  - id: "5.7.3.a"
+    section: "5.7.3"
+    text: "When changes are made during SOFTWARE SYSTEM testing, the MANUFACTURER shall repeat tests, perform modified tests or additional tests to verify effectiveness, demonstrate no unintended side effects, and perform relevant RISK MANAGEMENT ACTIVITIES."
+    status: "approved"
+
+  # 5.7.4 Evaluate Software System Testing
+  - id: "5.7.4.a"
+    section: "5.7.4"
+    text: "The MANUFACTURER shall EVALUATE the appropriateness of VERIFICATION strategies and test procedures, and verify that all software requirements have been tested, TRACEABILITY is recorded, and test results meet pass/fail criteria."
+    status: "approved"
+
+  # 5.7.5 Software System Test Record Contents
+  - id: "5.7.5.a"
+    section: "5.7.5"
+    text: "The MANUFACTURER shall document test case procedures, test result, software version tested, hardware/software test configurations, test tools, date tested, and identity of person responsible for executing and recording test results."
+    status: "approved"
+
+  # 5.8.1 Ensure Verification is Complete
+  - id: "5.8.1.a"
+    section: "5.8.1"
+    text: "The MANUFACTURER shall ensure that all software VERIFICATION ACTIVITIES have been completed and the results have been EVALUATED before the software is released."
+    status: "approved"
+
+  # 5.8.2 Document Known Residual Anomalies
+  - id: "5.8.2.a"
+    section: "5.8.2"
+    text: "The MANUFACTURER shall document all known residual ANOMALIES."
+    status: "approved"
+
+  # 5.8.3 Evaluate Known Residual Anomalies
+  - id: "5.8.3.a"
+    section: "5.8.3"
+    text: "The MANUFACTURER shall ensure that all known residual ANOMALIES have been EVALUATED to ensure that they do not contribute to an unacceptable RISK."
+    status: "approved"
+
+  # 5.8.4 Document Released Versions
+  - id: "5.8.4.a"
+    section: "5.8.4"
+    text: "The MANUFACTURER shall document the VERSION of the MEDICAL DEVICE SOFTWARE that is being released."
+    status: "approved"
+
+  # 5.8.5 Document How Released Software Was Created
+  - id: "5.8.5.a"
+    section: "5.8.5"
+    text: "The MANUFACTURER shall document the procedure and environment used to create the released software."
+    status: "approved"
+
+  # 5.8.6 Ensure Activities and Tasks are Complete
+  - id: "5.8.6.a"
+    section: "5.8.6"
+    text: "The MANUFACTURER shall ensure that all software development plan (or maintenance plan) ACTIVITIES and TASKS are complete along with the associated documentation."
+    status: "approved"
+
+  # 5.8.7 Archive Software
+  - id: "5.8.7.a"
+    section: "5.8.7"
+    text: "The MANUFACTURER shall archive the MEDICAL DEVICE SOFTWARE, CONFIGURATION ITEMS, and documentation for at least the lifetime of the MEDICAL DEVICE SOFTWARE or a time specified by regulatory requirements."
+    status: "approved"
+
+  # 5.8.8 Assure Reliable Delivery of Released Software
+  - id: "5.8.8.a"
+    section: "5.8.8"
+    text: "The MANUFACTURER shall establish procedures to ensure that the released MEDICAL DEVICE SOFTWARE can be reliably delivered to the point of use without corruption or unauthorised change, addressing replication, media labelling, packaging, protection, storage, and delivery."
+    status: "approved"
+
+  # 6.1 Establish Software Maintenance Plan
+  - id: "6.1.a"
+    section: "6.1"
+    text: "The MANUFACTURER shall establish a software maintenance plan for conducting the ACTIVITIES and TASKS of the maintenance PROCESS, including procedures for receiving, documenting, evaluating, resolving and tracking feedback."
+    status: "approved"
+
+  # 6.2.1.1 Monitor Feedback
+  - id: "6.2.1.1.a"
+    section: "6.2.1.1"
+    text: "The MANUFACTURER shall monitor feedback on MEDICAL DEVICE SOFTWARE released for intended Use."
+    status: "approved"
+
+  # 6.2.1.2 Document and Evaluate Feedback
+  - id: "6.2.1.2.a"
+    section: "6.2.1.2"
+    text: "Feedback shall be documented and EVALUATED to determine whether a problem exists in a released MEDICAL DEVICE SOFTWARE. Any such problem shall be recorded as a PROBLEM REPORT."
+    status: "approved"
+
+  # 6.2.1.3 Evaluate Problem Report's Effects on Safety
+  - id: "6.2.1.3.a"
+    section: "6.2.1.3"
+    text: "Each PROBLEM REPORT shall be EVALUATED to determine how it affects the SAFETY of MEDICAL DEVICE SOFTWARE released for intended use and whether a change to that software is needed to address the problem."
+    status: "approved"
+
+  # 6.2.2 Use Software Problem Resolution Process
+  - id: "6.2.2.a"
+    section: "6.2.2"
+    text: "The MANUFACTURER shall use the software problem resolution PROCESS to address PROBLEM REPORTS."
+    status: "approved"
+
+  # 6.2.3 Analyse Change Requests
+  - id: "6.2.3.a"
+    section: "6.2.3"
+    text: "In addition to the analysis required by Clause 9, the MANUFACTURER shall analyse each CHANGE REQUEST for its effect on the organization, MEDICAL DEVICE SOFTWARE released for intended use, and SYSTEMS with which it interfaces."
+    status: "approved"
+
+  # 6.2.4 Change Request Approval
+  - id: "6.2.4.a"
+    section: "6.2.4"
+    text: "The MANUFACTURER shall EVALUATE and approve CHANGE REQUESTS which modify released MEDICAL DEVICE SOFTWARE."
+    status: "approved"
+
+  # 6.2.5 Communicate to Users and Regulators
+  - id: "6.2.5.a"
+    section: "6.2.5"
+    text: "The MANUFACTURER shall identify approved CHANGE REQUESTS that affect released MEDICAL DEVICE SOFTWARE and inform users and regulators about any problem and consequences of continued use, and the nature of available changes and how to obtain and install them."
+    status: "approved"
+
+  # 6.3.1 Use Established Process to Implement Modification
+  - id: "6.3.1.a"
+    section: "6.3.1"
+    text: "The MANUFACTURER shall identify and perform any Clause 5 ACTIVITIES that need to be repeated as a result of the modification."
+    status: "approved"
+
+  # 6.3.2 Re-release Modified Software System
+  - id: "6.3.2.a"
+    section: "6.3.2"
+    text: "The MANUFACTURER shall release modifications according to 5.8."
+    status: "approved"
+
+  # 7.1.1 Identify Software Items Contributing to Hazards
+  - id: "7.1.1.a"
+    section: "7.1.1"
+    text: "The MANUFACTURER shall identify SOFTWARE ITEMS that could contribute to a hazardous situation identified in the MEDICAL DEVICE RISK ANALYSIS ACTIVITY of ISO 14971."
+    status: "approved"
+
+  # 7.1.2 Identify Potential Causes
+  - id: "7.1.2.a"
+    section: "7.1.2"
+    text: "The MANUFACTURER shall identify potential causes of the SOFTWARE ITEM contributing to a hazardous situation, including incorrect specification, software defects, SOUP failures, hardware failures, and reasonably foreseeable misuse."
+    status: "approved"
+
+  # 7.1.3 Evaluate Published SOUP Anomaly Lists
+  - id: "7.1.3.a"
+    section: "7.1.3"
+    text: "If failure or unexpected results from SOUP is a potential cause of the SOFTWARE ITEM contributing to a hazardous situation, the MANUFACTURER shall EVALUATE any ANOMALY list published by the supplier of the SOUP item relevant to the VERSION used to determine if any known ANOMALIES result in a hazardous situation."
+    status: "approved"
+
+  # 7.1.4 Document Potential Causes
+  - id: "7.1.4.a"
+    section: "7.1.4"
+    text: "The MANUFACTURER shall document in the RISK MANAGEMENT FILE potential causes of the SOFTWARE ITEM contributing to a hazardous situation."
+    status: "approved"
+
+  # 7.2.1 Define Risk Control Measures
+  - id: "7.2.1.a"
+    section: "7.2.1"
+    text: "For each case where a SOFTWARE ITEM could contribute to a HAZARDOUS SITUATION, the MANUFACTURER shall define and document RISK CONTROL measures in accordance with ISO 14971."
+    status: "approved"
+
+  # 7.2.2 Risk Control Measures Implemented in Software
+  - id: "7.2.2.a"
+    section: "7.2.2"
+    text: "If a RISK CONTROL measure is implemented as part of SOFTWARE ITEM functions, the MANUFACTURER shall include it in software requirements, assign appropriate software safety class, and develop in accordance with Clause 5."
+    status: "approved"
+
+  # 7.3.1 Verify Risk Control Measures
+  - id: "7.3.1.a"
+    section: "7.3.1"
+    text: "The implementation of each RISK CONTROL measure shall be VERIFIED, and this VERIFICATION shall be documented."
+    status: "approved"
+
+  # 7.3.3 Document Traceability
+  - id: "7.3.3.a"
+    section: "7.3.3"
+    text: "The MANUFACTURER shall document TRACEABILITY of software HAZARDS from the hazardous situation to the SOFTWARE ITEM, from the SOFTWARE ITEM to the specific software cause, from the software cause to the RISK CONTROL measure, and from the RISK CONTROL measure to the VERIFICATION of the RISK CONTROL measure."
+    status: "approved"
+
+  # 7.4.1 Analyze Changes with Respect to Safety
+  - id: "7.4.1.a"
+    section: "7.4.1"
+    text: "The MANUFACTURER shall analyse changes to the MEDICAL DEVICE SOFTWARE (including SOUP) to determine whether additional potential causes or RISK CONTROL measures are required."
+    status: "approved"
+
+  # 7.4.2 Analyze Impact of Software Changes on Existing Risk Control Measures
+  - id: "7.4.2.a"
+    section: "7.4.2"
+    text: "The MANUFACTURER shall analyse changes to the software, including changes to SOUP, to determine whether the software modification could interfere with existing RISK CONTROL measures."
+    status: "approved"
+
+  # 7.4.3 Perform Risk Management Activities Based on Analyses
+  - id: "7.4.3.a"
+    section: "7.4.3"
+    text: "The MANUFACTURER shall perform relevant RISK MANAGEMENT ACTIVITIES defined in 7.1, 7.2 and 7.3 based on these analyses."
+    status: "approved"
+
+  # 8.1.1 Establish Configuration Identification
+  - id: "8.1.1.a"
+    section: "8.1.1"
+    text: "The MANUFACTURER shall establish a scheme for the unique identification of CONFIGURATION ITEMS and their VERSIONS to be controlled."
+    status: "approved"
+
+  # 8.1.2 Identify SOUP
+  - id: "8.1.2.a"
+    section: "8.1.2"
+    text: "For each SOUP CONFIGURATION ITEM being used, the MANUFACTURER shall document the title, the MANUFACTURER, and the unique SOUP designator."
+    status: "approved"
+    automation:
+      check: "item_existence"
+      params:
+        type_code: "SOUP"
+
+  # 8.1.3 Identify System Configuration Documentation
+  - id: "8.1.3.a"
+    section: "8.1.3"
+    text: "The MANUFACTURER shall document the set of CONFIGURATION ITEMS and their VERSIONS that comprise the SOFTWARE SYSTEM configuration."
+    status: "approved"
+
+  # 8.2.1 Approve Change Requests
+  - id: "8.2.1.a"
+    section: "8.2.1"
+    text: "The MANUFACTURER shall change CONFIGURATION ITEMS only in response to an approved CHANGE REQUEST."
+    status: "approved"
+
+  # 8.2.2 Implement Changes
+  - id: "8.2.2.a"
+    section: "8.2.2"
+    text: "The MANUFACTURER shall implement the change as specified in the CHANGE REQUEST, identify and perform any ACTIVITY that needs to be repeated as a result of the change, including changes to the software safety classification of SOFTWARE SYSTEMS and SOFTWARE ITEMS."
+    status: "approved"
+
+  # 8.2.3 Verify Changes
+  - id: "8.2.3.a"
+    section: "8.2.3"
+    text: "The MANUFACTURER shall verify the change, including repeating any VERIFICATION that has been invalidated by the change."
+    status: "approved"
+
+  # 8.2.4 Provide Means for Traceability of Change
+  - id: "8.2.4.a"
+    section: "8.2.4"
+    text: "The MANUFACTURER shall maintain records of the relationships and dependencies between CHANGE REQUEST, relevant PROBLEM REPORT, and approval of the CHANGE REQUEST."
+    status: "approved"
+
+  # 8.3 Configuration Status Accounting
+  - id: "8.3.a"
+    section: "8.3"
+    text: "The MANUFACTURER shall retain retrievable records of the history of controlled CONFIGURATION ITEMS including SYSTEM configuration."
+    status: "approved"
+
+  # 9.1 Prepare Problem Reports
+  - id: "9.1.a"
+    section: "9.1"
+    text: "The MANUFACTURER shall prepare a PROBLEM REPORT for each problem detected in the MEDICAL DEVICE SOFTWARE, including a statement of criticality."
+    status: "approved"
+
+  # 9.2 Investigate the Problem
+  - id: "9.2.a"
+    section: "9.2"
+    text: "The MANUFACTURER shall investigate the problem, identify causes if possible, EVALUATE the problem's relevance to SAFETY using software RISK MANAGEMENT PROCESS, document the outcome, and create CHANGE REQUEST(S) or document rationale for no action."
+    status: "approved"
+
+  # 9.3 Advise Relevant Parties
+  - id: "9.3.a"
+    section: "9.3"
+    text: "The MANUFACTURER shall advise relevant parties of the existence of the problem, as appropriate."
+    status: "approved"
+
+  # 9.4 Use Change Control Process
+  - id: "9.4.a"
+    section: "9.4"
+    text: "The MANUFACTURER shall approve and implement all CHANGE REQUESTS, observing the requirements of the change control PROCESS."
+    status: "approved"
+
+  # 9.5 Maintain Records
+  - id: "9.5.a"
+    section: "9.5"
+    text: "The MANUFACTURER shall maintain records of PROBLEM REPORTS and their resolution including their VERIFICATION, and update the RISK MANAGEMENT FILE as appropriate."
+    status: "approved"
+
+  # 9.6 Analyze Problems for Trends
+  - id: "9.6.a"
+    section: "9.6"
+    text: "The MANUFACTURER shall perform analysis to detect trends in PROBLEM REPORTS."
+    status: "approved"
+
+  # 9.7 Verify Software Problem Resolution
+  - id: "9.7.a"
+    section: "9.7"
+    text: "The MANUFACTURER shall verify resolutions to determine whether the problem has been resolved, adverse trends reversed, CHANGE REQUESTS implemented, and no additional problems introduced."
+    status: "approved"
+
+  # 9.8 Test Documentation Contents
+  - id: "9.8.a"
+    section: "9.8"
+    text: "When testing, retesting or REGRESSION TESTING SOFTWARE ITEMS and SYSTEMS following a change, the MANUFACTURER shall include in the test documentation: test results, ANOMALIES found, VERSION of software tested, relevant hardware/software test configurations, relevant test tools, date tested, and identification of the tester."
+    status: "approved"
