@@ -90,7 +90,7 @@ class AutomatedTestScanner:
             'test_type': 'automated',
             'title': metadata.get('title', ''),
             'content': metadata.get('content', ''),
-            'links': metadata.get('links', []),
+            'verifies': metadata.get('links', []),  # Map @links to verifies for traceability
             'status': 'approved',  # Automated tests are approved when merged to main
             'prerequisites': metadata.get('prerequisites', ''),
             'steps': metadata.get('steps', []),

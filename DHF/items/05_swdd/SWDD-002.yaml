@@ -32,6 +32,5 @@ content: |-
   
   **Complexity**: O(1) per item
 implements:
-- SRS-001
-- SWAD-001
+- SRS-002
 status: approved

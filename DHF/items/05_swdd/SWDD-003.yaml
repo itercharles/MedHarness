@@ -33,6 +33,5 @@ content: |-
   
   **Complexity**: O(N + E) where N = nodes, E = edges
 implements:
-- SRS-002
-- SWAD-002
+- SRS-003
 status: approved

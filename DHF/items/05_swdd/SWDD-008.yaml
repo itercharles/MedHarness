@@ -45,5 +45,4 @@ content: |-
   **Complexity**: O(F) where F = files in PR
 implements:
 - SRS-007
-- SWAD-004
 status: approved

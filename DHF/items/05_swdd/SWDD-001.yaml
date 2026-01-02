@@ -34,5 +34,4 @@ content: |-
   **Complexity**: O(N) where N = number of files
 implements:
 - SRS-001
-- SWAD-001
 status: approved

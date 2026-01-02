@@ -34,5 +34,4 @@ content: |-
   **Complexity**: O(N) where N = nodes of specified type
 implements:
 - SRS-003
-- SWAD-002
 status: approved

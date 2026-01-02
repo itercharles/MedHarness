@@ -42,5 +42,4 @@ content: |-
   **Complexity**: O(R × I) where R = rules, I = items per rule
 implements:
 - SRS-005
-- SWAD-003
 status: approved

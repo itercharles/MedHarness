@@ -35,6 +35,5 @@ content: |-
   
   **Complexity**: O(1) per operation
 implements:
-- SRS-006
-- SWAD-004
+- SRS-007
 status: approved
