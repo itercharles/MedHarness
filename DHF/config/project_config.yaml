@@ -40,14 +40,12 @@ global_lifecycle:
     action_label: Validate
     icon: ✓✓
     color: success
-
   - id: released
     label: Released
     action_label: Release
     icon: 🚀
     color: success
     is_stable: true
-
   - id: cancelled
     label: Cancelled
     action_label: Cancel
@@ -134,7 +132,6 @@ doc_types:
   - name: source
     format: short_text
     label: Source
-
   - name: derives_from
     format: relationship
     target_types:
@@ -154,7 +151,6 @@ doc_types:
     - Low
     default: Medium
     label: Priority
-
   icon: 🎯
   page_enabled: true
   page_number: 5
@@ -406,8 +402,6 @@ doc_types:
     target_types:
     - CRS
     help: Alternative relationship to customer requirements
-
-
   relations:
   - target: CRS
     label: satisfies
@@ -523,7 +517,6 @@ doc_types:
     target_types:
     - SYS
     label: Designs Requirements
-
   relations:
   - target: SYS
     label: design
@@ -556,7 +549,6 @@ doc_types:
     target_types:
     - SRS
     label: Implements
-
   icon: 📋
   page_enabled: true
   page_number: 10
@@ -771,7 +763,6 @@ doc_types:
   - risk_rating
   - safety_class
   - verification_method
-
   icon: 📦
   page_enabled: true
   page_number: 11
