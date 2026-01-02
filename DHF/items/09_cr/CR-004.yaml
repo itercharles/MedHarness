@@ -1,6 +1,6 @@
 id: CR-004
 title: Improve the format customization of frontend style
-status: submitted
+status: draft
 affected_items:
 - TC-SRS-014
 - TC-SRS-016

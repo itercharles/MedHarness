@@ -40,11 +40,20 @@ global_lifecycle:
     action_label: Validate
     icon: ✓✓
     color: success
-  - id: accepted
-    label: Accepted
-    action_label: Accept
-    icon: 👍
+
+  - id: released
+    label: Released
+    action_label: Release
+    icon: 🚀
     color: success
+    is_stable: true
+
+  - id: cancelled
+    label: Cancelled
+    action_label: Cancel
+    icon: 🚫
+    color: secondary
+    is_stable: true
   - id: retired
     label: Retired
     action_label: Retire
@@ -266,7 +275,6 @@ doc_types:
     target_types:
     - RCM
     label: Mitigated By
-
   icon: ⚠️
   page_enabled: true
   page_number: 12
@@ -277,14 +285,14 @@ doc_types:
       to_state: draft
     - from_states:
       - draft
-      to_state: under_review
+      to_state: in_review
       label: Submit for Review
     - from_states:
-      - under_review
+      - in_review
       to_state: approved
       label: Approve
     - from_states:
-      - under_review
+      - in_review
       to_state: draft
       label: Request Changes
 - code: RCM
@@ -614,10 +622,10 @@ doc_types:
     transitions:
     - from_states:
       - null
-      to_state: submitted
+      to_state: draft
     - from_states:
-      - submitted
-      to_state: under_review
+      - draft
+      to_state: in_review
       criteria:
       - id: description_complete
         name: Description complete
@@ -629,9 +637,9 @@ doc_types:
         check_type: field_not_empty
         field: justification
         required: true
-      label: Start Review
+      label: Submit for Review
     - from_states:
-      - under_review
+      - in_review
       to_state: approved
       criteria:
       - id: impact_assessed
@@ -645,8 +653,8 @@ doc_types:
         required: true
       label: Approve
     - from_states:
-      - under_review
-      to_state: rejected
+      - in_review
+      to_state: cancelled
       criteria:
       - id: rejection_reason
         name: Rejection reason documented
@@ -655,7 +663,7 @@ doc_types:
       label: Reject
     - from_states:
       - approved
-      to_state: in_progress
+      to_state: implementing
       criteria:
       - id: assigned
         name: Assigned to developer
@@ -664,7 +672,7 @@ doc_types:
         required: true
       label: Start Implementation
     - from_states:
-      - in_progress
+      - implementing
       to_state: completed
       criteria:
       - id: implementation_done
@@ -677,11 +685,11 @@ doc_types:
         required: true
       label: Complete
     - from_states:
-      - submitted
+      - draft
       to_state: cancelled
       label: Cancel
     - from_states:
-      - under_review
+      - in_review
       to_state: cancelled
       label: Cancel
 - code: RELEASE
@@ -706,10 +714,10 @@ doc_types:
     transitions:
     - from_states:
       - null
-      to_state: planning
+      to_state: draft
     - from_states:
-      - planning
-      to_state: developing
+      - draft
+      to_state: implementing
       criteria:
       - id: version_set
         name: Version defined
@@ -723,24 +731,24 @@ doc_types:
         required: true
       label: Start Development
     - from_states:
-      - developing
-      to_state: testing
+      - implementing
+      to_state: verified
       criteria:
       - id: development_complete
         name: Development completed
         check_type: manual
         required: true
-      label: Start Testing
+      label: Verify
     - from_states:
-      - testing
+      - verified
       to_state: released
       criteria:
-      - id: testing_complete
-        name: Testing completed
+      - id: verification_complete
+        name: Verification completed
         check_type: manual
         required: true
-      - id: verification_done
-        name: Verification completed
+      - id: verification_status_set
+        name: Verification status recorded
         check_type: field_not_empty
         field: verification_status
         required: true
@@ -774,7 +782,7 @@ doc_types:
       to_state: draft
     - from_states:
       - draft
-      to_state: under_review
+      to_state: in_review
       criteria:
       - id: purpose_set
         name: Purpose documented
@@ -795,7 +803,7 @@ doc_types:
         required: true
       label: Submit for Review
     - from_states:
-      - under_review
+      - in_review
       to_state: approved
       criteria:
       - id: verification_done
