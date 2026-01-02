@@ -37,6 +37,7 @@ class Item(BaseModel):
     informs: Optional[List[str]] = Field(default=None, description="Items this informs")
     design: Optional[List[str]] = Field(default=None, description="Items this designs/addresses")
     mitigated_by: Optional[List[str]] = Field(default=None, description="Items that mitigate this")
+    mitigates: Optional[List[str]] = Field(default=None, description="Items this mitigates")
     satisfies: Optional[List[str]] = Field(default=None, description="Items this satisfies")
     verifies: Optional[List[str]] = Field(default=None, description="Items this verifies")
     validates: Optional[List[str]] = Field(default=None, description="Items this validates")
@@ -64,7 +65,7 @@ class Item(BaseModel):
             'guided_by': self.guided_by or [],
             'informs': self.informs or [],
             'design': self.design or [],
-            'mitigated_by': self.mitigated_by or [],
+            'mitigates': self.mitigates or [],
             'satisfies': self.satisfies or [],
             'verifies': self.verifies or [],
             'validates': self.validates or []

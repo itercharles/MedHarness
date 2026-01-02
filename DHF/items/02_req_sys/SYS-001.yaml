@@ -10,3 +10,5 @@ manual_verifications:
     notes: ''
 satisfies:
 - CRS-001
+implements:
+- RCM-001
