@@ -2,12 +2,13 @@
 Automated tests for SRS-level PR-CR automation requirements
 
 Tests verify:
-- SRS-021: Automated PR-CR Linking and Traceability
+- SRS-006: Change Request Management (PR-CR automation)
   - PR-CR Validation
-  - Automatic Affected Items Detection  
   - PR Tracking in Change Requests
+- SRS-007: Change Impact Tracking
+  - Automatic Affected Items Detection  
 
-@links: SRS-021
+@links: SRS-006, SRS-007
 """
 
 import pytest
@@ -28,7 +29,7 @@ class TestSRS021_PRCRValidation:
         """
         TC-SRS-021-001: Verify PR without CR reference is rejected
         
-        @links: SRS-021
+        @links: SRS-006
         @test_id: TC-SRS-021-001
         """
         # Test PR titles without CR reference
@@ -50,7 +51,7 @@ class TestSRS021_PRCRValidation:
         """
         TC-SRS-021-001: Verify PR with valid CR reference is accepted
         
-        @links: SRS-021
+        @links: SRS-006
         @test_id: TC-SRS-021-001
         """
         # Test PR titles with valid CR reference
@@ -76,7 +77,7 @@ class TestSRS021_PRCRValidation:
         """
         TC-SRS-021-001: Verify CR file existence is validated
         
-        @links: SRS-021
+        @links: SRS-006
         @test_id: TC-SRS-021-001
         """
         from tests.fixtures.test_data import create_test_dhf, populate_test_dhf
@@ -99,7 +100,7 @@ class TestSRS021_PRCRValidation:
         """
         TC-SRS-021-001: Verify CR in stable status is rejected
         
-        @links: SRS-021
+        @links: SRS-006
         @test_id: TC-SRS-021-001
         """
         # Test stable status validation logic
@@ -127,7 +128,7 @@ class TestSRS022_AffectedItemsDetection:
         """
         TC-SRS-022-001: Verify YAML item detection
         
-        @links: SRS-022
+        @links: SRS-007
         @test_id: TC-SRS-022-001
         """
         # Simulate changed files
@@ -157,7 +158,7 @@ class TestSRS022_AffectedItemsDetection:
         """
         TC-SRS-022-001: Verify no duplicate items in affected_items
         
-        @links: SRS-022
+        @links: SRS-007
         @test_id: TC-SRS-022-001
         """
         # Simulate multiple changes to same file
@@ -183,7 +184,7 @@ class TestSRS022_AffectedItemsDetection:
         """
         TC-SRS-022-002: Verify test file detection and mapping
         
-        @links: SRS-022
+        @links: SRS-007
         @test_id: TC-SRS-022-002
         """
         # Test file name to test case ID mapping
@@ -208,7 +209,7 @@ class TestSRS022_AffectedItemsDetection:
         """
         TC-SRS-022-002: Verify only test files with YAML items are tracked
         
-        @links: SRS-022
+        @links: SRS-007
         @test_id: TC-SRS-022-002
         """
         # Create test DHF structure
@@ -259,7 +260,7 @@ class TestSRS023_PRTracking:
         """
         TC-SRS-023-001: Verify PR is tracked when created
         
-        @links: SRS-023
+        @links: SRS-006
         @test_id: TC-SRS-023-001
         """
         # Simulate PR creation
@@ -289,7 +290,7 @@ class TestSRS023_PRTracking:
         """
         TC-SRS-023-001: Verify PR tracked immediately (not after merge)
         
-        @links: SRS-023
+        @links: SRS-006
         @test_id: TC-SRS-023-001
         """
         # Simulate CR with implementation_prs
@@ -316,7 +317,7 @@ class TestSRS023_PRTracking:
         """
         TC-SRS-023-002: Verify PR status updated when merged
         
-        @links: SRS-023
+        @links: SRS-006
         @test_id: TC-SRS-023-002
         """
         # Simulate CR with open PR
@@ -349,7 +350,7 @@ class TestSRS023_PRTracking:
         """
         TC-SRS-023-002: Verify no duplicate PR entries created
         
-        @links: SRS-023
+        @links: SRS-006
         @test_id: TC-SRS-023-002
         """
         # Simulate CR with existing PR
@@ -374,7 +375,7 @@ class TestSRS023_PRTracking:
         """
         TC-SRS-023-002: Verify [skip ci] flag in post-merge commit
         
-        @links: SRS-023
+        @links: SRS-006
         @test_id: TC-SRS-023-002
         """
         # Simulate commit message for post-merge update
@@ -390,7 +391,7 @@ class TestSRS023_PRTracking:
         """
         TC-SRS-023: Verify CR YAML can be updated with PR tracking
         
-        @links: SRS-023
+        @links: SRS-006
         """
         # Create temporary CR file
         with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as f:

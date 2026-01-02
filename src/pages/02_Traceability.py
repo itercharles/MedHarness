@@ -91,7 +91,8 @@ def should_show_warning(item: dict, core) -> bool:
     # Use core.is_item_editable() which checks global lifecycle
     return core.is_item_editable(item)
 
-def build_matrix_table(all_items: List[dict], path: List[str], core) -> pd.DataFrame:
+@st.cache_data(show_spinner="Building traceability matrix...")
+def build_matrix_table(all_items: List[dict], path: List[str], _core) -> pd.DataFrame:
     """Build traceability table for a specific matrix configuration."""
     chains = []
     
@@ -101,7 +102,7 @@ def build_matrix_table(all_items: List[dict], path: List[str], core) -> pd.DataF
     
     for start_item in start_items:
         # Recursively build chains through the path
-        _build_chains_recursive(all_items, path, 0, {path[0]: start_item}, chains, core)
+        _build_chains_recursive(all_items, path, 0, {path[0]: start_item}, chains, _core)
     
     # Add orphan rows for items at each level that aren't in any chain
     # Track which items are already in chains
@@ -128,7 +129,7 @@ def build_matrix_table(all_items: List[dict], path: List[str], core) -> pd.DataF
                 
                 # Add this orphan item
                 item_id = item['id']
-                if should_show_warning(item, core):
+                if should_show_warning(item, _core):
                     item_id = f"{item_id} ⚠️"
                 chain_row[level] = item_id
                 if level != path[-1]:
@@ -144,7 +145,7 @@ def build_matrix_table(all_items: List[dict], path: List[str], core) -> pd.DataF
     
     return pd.DataFrame(chains)
 
-def _build_chains_recursive(all_items: List[dict], path: List[str], level: int, current_chain: dict, chains: List[dict], core):
+def _build_chains_recursive(all_items: List[dict], path: List[str], level: int, current_chain: dict, chains: List[dict], _core):
     """Recursively build traceability chains, creating multiple rows for multiple matches."""
     if level >= len(path) - 1:
         # Reached end of path, finalize chain
@@ -152,7 +153,7 @@ def _build_chains_recursive(all_items: List[dict], path: List[str], level: int, 
         for doc_type, item in current_chain.items():
             # Add ID with warning icon if not in final state
             item_id = item['id']
-            if should_show_warning(item, core):
+            if should_show_warning(item, _core):
                 item_id = f"{item_id} ⚠️"
             
             chain_row[doc_type] = item_id
@@ -205,14 +206,14 @@ def _build_chains_recursive(all_items: List[dict], path: List[str], level: int, 
         for next_item in next_items:
             new_chain = current_chain.copy()
             new_chain[next_type] = next_item
-            _build_chains_recursive(all_items, path, level + 1, new_chain, chains, core)
+            _build_chains_recursive(all_items, path, level + 1, new_chain, chains, _core)
     else:
         # No match found, create incomplete chain
         chain_row = {}
         for doc_type, item in current_chain.items():
             # Add ID with warning icon if not in final state
             item_id = item['id']
-            if should_show_warning(item, core):
+            if should_show_warning(item, _core):
                 item_id = f"{item_id} ⚠️"
             
             chain_row[doc_type] = item_id

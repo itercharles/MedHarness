@@ -31,8 +31,6 @@ class GitHubActionsProvider:
             load_dotenv(env_path, override=True)
         
         self.config = config
-        # Always use GitHub mode
-        self.mode = 'github'
         self._cache = {}
         self._cache_timestamp = None
     
@@ -76,27 +74,13 @@ class GitHubActionsProvider:
         self._load_from_github_api()
         self._cache_timestamp = datetime.now()
     
-    def _load_from_local_file(self):
-        """Load results from local JUnit XML file."""
-        local_config = self.config.get('local', {})
-        results_file = local_config.get('results_file', 'test-results/latest.xml')
-        
-        # Resolve path relative to DHF directory
-        file_path = Path(__file__).parent.parent.parent / 'DHF' / results_file
-        
-        if not file_path.exists():
-            print(f"Warning: Test results file not found: {file_path}")
-            self._cache = {}
-            return
-        
-        self._parse_junit_xml(file_path)
     
     def _load_from_github_api(self):
         """Load results from GitHub Actions API."""
         # Get configuration directly (no nesting)
         repo = self.config.get('repository')
-        workflow_name = self.config.get('workflow_name', 'Test Suite')
-        artifact_name = self.config.get('artifact_name', 'test-results')
+        artifact_names = self.config.get('artifact_names', [])
+        
         token_env = self.config.get('token_env', 'GITHUB_TOKEN')
         
         if not repo:
@@ -149,45 +133,58 @@ class GitHubActionsProvider:
             
             artifacts = response.json().get('artifacts', [])
             
-            # Find test-results artifact
-            test_artifact = None
-            for artifact in artifacts:
-                if artifact['name'] == artifact_name:
-                    test_artifact = artifact
-                    break
+            # Initialize cache
+            self._cache = {}
             
-            if not test_artifact:
-                print(f"WARNING: Artifact '{artifact_name}' not found in run {run_id}")
-                self._cache = {}
-                return
-            
-            print(f"[INFO] Downloading artifact: {artifact_name}")
-            
-            # Download and parse artifact
-            download_url = test_artifact['archive_download_url']
-            response = requests.get(download_url, headers=headers, timeout=30)
-            response.raise_for_status()
-            
-            # Save to temporary file and extract
-            import tempfile
-            import zipfile
-            import io
-            
-            with tempfile.TemporaryDirectory() as tmpdir:
-                # Extract zip
-                zip_data = io.BytesIO(response.content)
-                with zipfile.ZipFile(zip_data) as zf:
-                    zf.extractall(tmpdir)
+            # Download and parse each artifact
+            artifacts_found = 0
+            for artifact_name in artifact_names:
+                # Find artifact by name
+                test_artifact = None
+                for artifact in artifacts:
+                    if artifact['name'] == artifact_name:
+                        test_artifact = artifact
+                        break
                 
-                # Find XML file
-                xml_files = list(Path(tmpdir).glob('*.xml'))
-                if xml_files:
-                    print(f"[INFO] Parsing test results from {xml_files[0].name}")
-                    self._parse_junit_xml(xml_files[0])
-                    print(f"[INFO] Loaded {len(self._cache)} test results from GitHub")
-                else:
-                    print("WARNING: No XML file found in artifact")
-                    self._cache = {}
+                if not test_artifact:
+                    print(f"WARNING: Artifact '{artifact_name}' not found in run {run_id}")
+                    continue
+                
+                artifacts_found += 1
+                print(f"[INFO] Downloading artifact: {artifact_name}")
+                
+                # Download and parse artifact
+                download_url = test_artifact['archive_download_url']
+                response = requests.get(download_url, headers=headers, timeout=30)
+                response.raise_for_status()
+                
+                # Save to temporary file and extract
+                import tempfile
+                import zipfile
+                import io
+                
+                with tempfile.TemporaryDirectory() as tmpdir:
+                    # Extract zip
+                    zip_data = io.BytesIO(response.content)
+                    with zipfile.ZipFile(zip_data) as zf:
+                        zf.extractall(tmpdir)
+                    
+                    # Find XML file
+                    xml_files = list(Path(tmpdir).glob('*.xml'))
+                    if xml_files:
+                        print(f"[INFO] Parsing test results from {xml_files[0].name}")
+                        # Parse and merge into existing cache
+                        self._parse_junit_xml(xml_files[0])
+                    else:
+                        print(f"WARNING: No XML file found in artifact {artifact_name}")
+            
+            if artifacts_found > 0:
+                print(f"[INFO] Loaded {len(self._cache)} test results from {artifacts_found} artifacts")
+            else:
+                available_names = [a['name'] for a in artifacts]
+                print(f"ERROR: None of the configured artifacts found in run {run_id}")
+                print(f"Available artifacts: {available_names}")
+                self._cache = {}
         
         except requests.exceptions.RequestException as e:
             print(f"ERROR: GitHub API request failed: {e}")
@@ -208,7 +205,9 @@ class GitHubActionsProvider:
             tree = ET.parse(file_path)
             root = tree.getroot()
             
-            self._cache = {}
+            # Don't reset cache - merge results instead
+            if not self._cache:
+                self._cache = {}
             
             # Parse test cases
             for testcase in root.iter('testcase'):
@@ -245,7 +244,7 @@ class GitHubActionsProvider:
         
         except Exception as e:
             print(f"Error parsing JUnit XML: {e}")
-            self._cache = {}
+            # Don't clear cache on error - keep existing results
     
     def _extract_test_id(self, name: str, classname: str) -> Optional[str]:
         """Extract test ID from test name or classname.

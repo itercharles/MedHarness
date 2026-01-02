@@ -21,7 +21,6 @@ class VerificationStatusProvider:
         self.config = config
         self.test_integration_config = config.get('test_integration', {})
         
-
         # Lazy load providers to avoid import errors if dependencies missing
         self._github_provider = None
         self._manual_provider = None

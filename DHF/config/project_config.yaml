@@ -335,6 +335,51 @@ doc_types:
       - draft
       to_state: approved
       label: Approve
+- code: TC-CRS
+  name: Customer Validation Test
+  prefix: TC-CRS-
+  properties:
+  - id
+  - name: title
+    format: short_text
+    label: Title
+  - name: verifies
+    format: relationship
+    target_types:
+    - CRS
+    label: Verifies
+  icon: 🧪
+  page_enabled: false
+- code: TC-SYS
+  name: System Verification Test
+  prefix: TC-SYS-
+  properties:
+  - id
+  - name: title
+    format: short_text
+    label: Title
+  - name: verifies
+    format: relationship
+    target_types:
+    - SYS
+    label: Verifies
+  icon: 🧪
+  page_enabled: false
+- code: TC-SRS
+  name: Software Requirements Verification Test
+  prefix: TC-SRS-
+  properties:
+  - id
+  - name: title
+    format: short_text
+    label: Title
+  - name: verifies
+    format: relationship
+    target_types:
+    - SRS
+    label: Verifies
+  icon: 🧪
+  page_enabled: false
 - code: SYS
   name: System Requirement
   prefix: SYS-
@@ -905,7 +950,10 @@ test_integration:
   automated:
     repository: itercharles/CompliantFlow
     workflow_name: Test Suite
-    artifact_name: test-results
+    artifact_names:
+    - unit-test-results
+    - sys-test-results
+    - crs-test-results
     token_env: GITHUB_TOKEN
   manual:
     audit_log: test-results/manual_tests.log

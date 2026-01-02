@@ -81,6 +81,17 @@ class CompliantFlowCore:
         """
         all_links = []
         
+        # Special handling for test cases (TC-*) which don't have doc_type config
+        if doc_type_code.startswith('TC'):
+            # Test cases use 'verifies' field to link to requirements
+            if 'verifies' in item:
+                value = item['verifies']
+                if isinstance(value, list):
+                    all_links.extend([v for v in value if v])
+                elif value:
+                    all_links.append(value)
+            return all_links
+        
         # Get document type config
         doc_type_config = self.config.get_doc_type(doc_type_code)
         if not doc_type_config:
@@ -145,8 +156,10 @@ class CompliantFlowCore:
                         test['all_linked_uids'] = self._aggregate_relationship_fields(test, test_type_code)
                         items.append(test)
         except Exception as e:
-            # Silently fail if scanner not available or tests dir missing
-            print(f"Note: Could not scan automated tests: {e}")
+            # Print error details for debugging
+            import traceback
+            print(f"Warning: Could not scan automated tests: {e}")
+            traceback.print_exc()
         
         return items
     

@@ -29,7 +29,7 @@ class AutomatedTestScanner:
         """
         test_cases = []
         
-        for test_file in self.tests_dir.glob("test_*.py"):
+        for test_file in self.tests_dir.rglob("test_*.py"):  # Use rglob for recursive search
             test_cases.extend(self._scan_file(test_file))
         
         return test_cases
