@@ -12,5 +12,3 @@ risk_acceptability: acceptable
 risk_benefit: Risk mitigated by RCM-001 (Orphan Detection). Residual risk is low and
   acceptable.
 status: approved
-mitigated_by:
-- RCM-001

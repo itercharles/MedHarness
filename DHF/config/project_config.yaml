@@ -266,11 +266,6 @@ doc_types:
   - name: risk_benefit
     format: long_text
     label: Risk Benefit
-  - name: mitigates
-    format: relationship
-    target_types:
-    - RCM
-    label: Mitigated By
   icon: ⚠️
   page_enabled: true
   page_number: 12
