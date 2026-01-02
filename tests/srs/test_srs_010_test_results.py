@@ -196,7 +196,7 @@ def test_TC_PROVIDER_005_automated_test_discovery():
         assert 'test_type' in tc, "Test case should have test_type"
         assert tc['test_type'] == 'automated', "Should be automated test"
         assert 'title' in tc, "Test case should have title"
-        assert 'links' in tc, "Test case should have links"
+        assert 'verifies' in tc, "Test case should have verifies field"
         assert tc.get('status') == 'approved', "Automated tests should be approved"
 """Test the AutomatedTestScanner functionality."""
 
@@ -257,4 +257,4 @@ def test_scanner_finds_test_files():
         assert 'test_type' in tc
         assert tc['test_type'] == 'automated'
         assert 'title' in tc
-        assert 'links' in tc
+        assert 'verifies' in tc
