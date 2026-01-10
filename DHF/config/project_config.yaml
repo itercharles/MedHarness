@@ -931,6 +931,10 @@ document_specifications:
     template: rcm_specification.md.j2
     output: DHF/documents/specifications/Risk_Control_Measures_Specification.md
     doc_type_name: Risk Control Measures
+  CR:
+    template: change_request_specification.md.j2
+    output: DHF/documents/specifications/Change_Request_Specification.md
+    doc_type_name: Change Request
   TC-CRS:
     template: test_specification.md.j2
     output: DHF/documents/specifications/Customer_Requirement_Test_Specification.md
