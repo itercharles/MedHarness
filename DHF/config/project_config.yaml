@@ -727,6 +727,7 @@ doc_types:
 - code: RELEASE
   name: Release
   prefix: REL-
+  directory: 10_release
   properties:
   - id
   - name: title
@@ -767,7 +768,7 @@ doc_types:
         name: Items planned
         check_type: field_not_empty
         field: included_items
-        required: true
+        required: false
       label: Approve
     - from_states:
       - approved
