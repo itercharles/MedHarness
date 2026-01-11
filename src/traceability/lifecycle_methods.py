@@ -41,7 +41,12 @@ def get_available_transitions(self, item: Dict[str, Any]) -> List[Dict[str, Any]
             to_state = transition['to_state']
             
             # Get state info from global lifecycle
-            state_info = self.get_state_info(to_state)
+            try:
+                state_info = self.get_state_info(to_state)
+            except ValueError as e:
+                # State not found in global lifecycle - skip this transition
+                print(f"Warning: {e}")
+                continue
             
             # Validate criteria
             can_transition, blocking = self._validate_criteria(

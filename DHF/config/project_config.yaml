@@ -724,7 +724,7 @@ doc_types:
       - in_review
       to_state: cancelled
       label: Cancel
-- code: RELEASE
+- code: REL
   name: Release
   prefix: REL-
   directory: 10_release
