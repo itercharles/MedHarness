@@ -732,29 +732,17 @@ doc_types:
   - name: title
     format: short_text
     label: Title
-  - name: content
-    format: long_text
-    label: Content
   - name: version
     format: short_text
     label: Version
-  - name: release_date
-    format: short_text
-    label: Release Date
+  - name: content
+    format: long_text
+    label: Content
   - name: included_items
     format: item_multiselect
     target_types:
     - CR
     label: Included Items
-  - name: verification_status
-    format: short_text
-    label: Verification Status
-  - name: verified_by
-    format: short_text
-    label: Verified By
-  - name: verified_date
-    format: short_text
-    label: Verified Date
   - name: release_notes
     format: long_text
     label: Release Notes
@@ -768,7 +756,7 @@ doc_types:
       to_state: draft
     - from_states:
       - draft
-      to_state: implementing
+      to_state: approved
       criteria:
       - id: version_set
         name: Version defined
@@ -780,28 +768,14 @@ doc_types:
         check_type: field_not_empty
         field: included_items
         required: true
-      label: Start Development
+      label: Approve
     - from_states:
-      - implementing
-      to_state: verified
-      criteria:
-      - id: development_complete
-        name: Development completed
-        check_type: manual
-        required: true
-      label: Verify
-    - from_states:
-      - verified
+      - approved
       to_state: released
       criteria:
       - id: verification_complete
         name: Verification completed
         check_type: manual
-        required: true
-      - id: verification_status_set
-        name: Verification status recorded
-        check_type: field_not_empty
-        field: verification_status
         required: true
       label: Release
 - code: SOUP

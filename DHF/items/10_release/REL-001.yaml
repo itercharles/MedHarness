@@ -1,13 +1,11 @@
-id: REL-1.0.0
+id: REL-001
 title: Release 1.0.0 - Initial Release
 content: Initial release with core traceability features including graph visualization,
   requirements parsing, and dependency tracking.
 version: 1.0.0
-release_date: '2024-12-15'
-included_items: CR-001, CR-002
-verification_status: PASS
-verified_by: QA Manager
-verified_date: '2024-12-14'
+included_items:
+- CR-001
+- CR-002
 release_notes: '# Release 1.0.0 - Initial Release
 
 
