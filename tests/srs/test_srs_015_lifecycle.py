@@ -40,8 +40,8 @@ class TestSRS015_ItemLifecycleManagement:
         assert doc_type is not None, "Should have doc type with lifecycle"
         
         # Verify core has lifecycle methods
-        assert hasattr(core, 'get_initial_state'), "Should have get_initial_state method"
-        assert hasattr(core, 'get_available_transitions'), "Should have get_available_transitions method"
+        assert hasattr(test_core, 'get_initial_state'), "Should have get_initial_state method"
+        assert hasattr(test_core, 'get_available_transitions'), "Should have get_available_transitions method"
     
     def test_state_transition_validation(self, test_core):
         """Verify core validates state transitions."""
