@@ -37,7 +37,8 @@ def create_test_dhf() -> Path:
             'states': [
                 {'id': 'draft', 'label': 'Draft', 'action_label': 'Create', 'icon': '📝', 'color': 'warning'},
                 {'id': 'under_review', 'label': 'Under Review', 'action_label': 'Submit for Review', 'icon': '👀', 'color': 'info'},
-                {'id': 'approved', 'label': 'Approved', 'action_label': 'Approve', 'icon': '✅', 'color': 'success', 'is_stable': True}
+                {'id': 'approved', 'label': 'Approved', 'action_label': 'Approve', 'icon': '✅', 'color': 'success', 'is_stable': True},
+                {'id': 'retired', 'label': 'Retired', 'action_label': 'Retire', 'icon': '🗄️', 'color': 'secondary', 'is_stable': True}
             ]
         },
         'doc_types': [
@@ -176,6 +177,91 @@ def create_test_dhf() -> Path:
                         {'from_states': ['draft'], 'to_state': 'rejected'}
                     ]
                 }
+            },
+            {
+                'code': 'SWDD',
+                'name': 'Software Detailed Design',
+                'prefix': 'SWDD-',
+                'directory': '05_swdd',
+                'icon': '🔧',
+                'page_enabled': True,
+                'page_number': 10,
+                'properties': [
+                    'id',
+                    {'name': 'title', 'format': 'short_text', 'label': 'Title'},
+                    {'name': 'content', 'format': 'long_text', 'label': 'Content'},
+                    {'name': 'implements', 'format': 'relationship', 'target_types': ['SRS'], 'label': 'Implements'},
+                    {'name': 'guided_by', 'format': 'relationship', 'target_types': ['SYSARCH'], 'label': 'Guided By'},
+                ],
+                'lifecycle': {
+                    'transitions': [
+                        {'from_states': [None], 'to_state': 'draft'},
+                        {'from_states': ['draft'], 'to_state': 'approved'}
+                    ]
+                }
+            },
+            {
+                'code': 'TC-SRS',
+                'name': 'Test Case - SRS',
+                'prefix': 'TC-SRS-',
+                'directory': '11_tc',
+                'icon': '🧪',
+                'page_enabled': True,
+                'page_number': 11,
+                'properties': [
+                    'id',
+                    {'name': 'title', 'format': 'short_text', 'label': 'Title'},
+                    {'name': 'test_type', 'format': 'select', 'options': ['automated', 'manual'], 'label': 'Test Type'},
+                    {'name': 'verifies', 'format': 'relationship', 'target_types': ['SRS'], 'label': 'Verifies'},
+                ],
+                'lifecycle': {
+                    'transitions': [
+                        {'from_states': [None], 'to_state': 'draft'},
+                        {'from_states': ['draft'], 'to_state': 'approved'}
+                    ]
+                }
+            },
+            {
+                'code': 'TC-SYS',
+                'name': 'Test Case - SYS',
+                'prefix': 'TC-SYS-',
+                'directory': '11_tc',
+                'icon': '🧪',
+                'page_enabled': True,
+                'page_number': 12,
+                'properties': [
+                    'id',
+                    {'name': 'title', 'format': 'short_text', 'label': 'Title'},
+                    {'name': 'test_type', 'format': 'select', 'options': ['automated', 'manual'], 'label': 'Test Type'},
+                    {'name': 'verifies', 'format': 'relationship', 'target_types': ['SYS'], 'label': 'Verifies'},
+                ],
+                'lifecycle': {
+                    'transitions': [
+                        {'from_states': [None], 'to_state': 'draft'},
+                        {'from_states': ['draft'], 'to_state': 'approved'}
+                    ]
+                }
+            },
+            {
+                'code': 'TC-CRS',
+                'name': 'Test Case - CRS',
+                'prefix': 'TC-CRS-',
+                'directory': '11_tc',
+                'icon': '🧪',
+                'page_enabled': True,
+                'page_number': 13,
+                'properties': [
+                    'id',
+                    {'name': 'title', 'format': 'short_text', 'label': 'Title'},
+                    {'name': 'test_type', 'format': 'select', 'options': ['automated', 'manual'], 'label': 'Test Type'},
+                    {'name': 'verifies', 'format': 'relationship', 'target_types': ['CRS'], 'label': 'Verifies'},
+                ],
+                'lifecycle': {
+                    'transitions': [
+                        {'from_states': [None], 'to_state': 'draft'},
+                        {'from_states': ['draft'], 'to_state': 'approved'}
+                    ]
+                }
             }
         ]
     }
@@ -291,6 +377,36 @@ def get_test_dataset() -> List[Dict]:
             'justification': 'Testing CR workflow',
             'status': 'draft',
             'affected_items': ['SRS-001']
+        },
+        # Software Detailed Design
+        {
+            'id': 'SWDD-001',
+            'title': 'Item Loader Design',
+            'content': 'Detailed design for loading items from YAML files',
+            'status': 'approved',
+            'implements': ['SRS-001'],
+            'guided_by': ['SYSARCH-001'],
+            'approved_by': 'test_user',
+            'approved_date': '2025-01-01T00:00:00'
+        },
+        # Test Cases
+        {
+            'id': 'TC-SRS-001',
+            'title': 'Test Item Persistence',
+            'test_type': 'automated',
+            'status': 'approved',
+            'verifies': ['SRS-001'],
+            'approved_by': 'test_user',
+            'approved_date': '2025-01-01T00:00:00'
+        },
+        {
+            'id': 'TC-SYS-001',
+            'title': 'Test System Capability',
+            'test_type': 'manual',
+            'status': 'approved',
+            'verifies': ['SYS-001'],
+            'approved_by': 'test_user',
+            'approved_date': '2025-01-01T00:00:00'
         },
     ]
 
