@@ -1,37 +1,65 @@
 id: SWDD-001
-title: Item Loading from YAML
+title: Item Loading from YAML with Strict Schema Validation
 content: |-
-  Detailed design for loading DHF items from YAML files with schema validation.
+  Detailed design for loading DHF items from YAML files with strict schema validation 
+  against project_config.yaml.
   
   **Component Structure**:
-  - ItemLoader: Main loading class
+  - ItemLoader: Main loading class with schema validation
   - YAMLParser: Parse YAML files
-  - SchemaValidator: Validate against Pydantic models
+  - SchemaValidator: Validate against project config schema
+  - ValidationError: Custom exception for schema violations
   
-  **Algorithm**:
-  1. Scan configured directories for YAML files
-  2. For each file: parse YAML content
-  3. Validate against item type schema
-  4. Collect valid items into list
-  5. Log and skip invalid files
+  **Validation Algorithm**:
+  1. Load project_config.yaml to get document type schemas
+  2. For each YAML file:
+     a. Parse YAML content
+     b. Extract doc type from item ID (e.g., 'SYS' from 'SYS-001')
+     c. Validate doc type exists in project config
+     d. Check for unknown fields (not in config)
+     e. Validate required fields are present and non-empty
+     f. Validate select field values against allowed options
+     g. Validate multiselect fields are lists with valid options
+     h. Create Item instance if all validations pass
+  3. Raise ValidationError with clear message if validation fails
   
   **Key Interfaces**:
   ```python
   class ItemLoader:
+      def __init__(specs_dir: Path, project_config: ProjectConfig)
       def load_all() -> List[Item]
-      def load_by_id(uid: str) -> Optional[Item]
-      def load_by_type(doc_type: str) -> List[Item]
+      def load_file(file_path: Path) -> Optional[Item]
+      def validate_against_schema(data: Dict, file_path: Path) -> None
+      def _validate_field_value(value: Any, field_config: Dict, file_path: Path) -> None
+  
+  class ValidationError(Exception):
+      """Raised when item validation fails against project config schema"""
   ```
+  
+  **Validation Rules**:
+  - Doc type must exist in project_config.yaml
+  - No unknown fields allowed (strict schema enforcement)
+  - Required fields must be present and non-empty
+  - Select fields must have values from allowed options
+  - Multiselect fields must be lists
+  - Relationship fields must be lists or strings
+  
+  **Error Handling**:
+  - Raise ValidationError for schema violations (fail fast)
+  - Provide detailed error messages with:
+    - File name
+    - Field name causing error
+    - Specific validation issue
+    - Allowed values (for select fields)
+  - Skip files with YAML parsing errors (log warning)
   
   **Design Patterns**:
   - Repository pattern for data access
   - Factory pattern for item creation
+  - Validator pattern for schema enforcement
   
-  **Error Handling**:
-  - Skip malformed YAML files with logging
-  - Don't fail entire load on single file error
-  
-  **Complexity**: O(N) where N = number of files
+  **Complexity**: O(N*F) where N = number of files, F = fields per file
 implements:
 - SRS-001
 status: approved
+
