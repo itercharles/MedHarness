@@ -1,0 +1,12 @@
+id: DEF-001
+title: Sample Defect - Login Button Not Responsive
+description: The login button on the main page does not respond when clicked. Users are unable to log in to the system.
+steps_to_reproduce: |-
+  1. Navigate to the login page
+  2. Enter valid credentials
+  3. Click the "Login" button
+  4. Observe that nothing happens
+severity: High
+priority: High
+reported_by: QA Team
+status: draft

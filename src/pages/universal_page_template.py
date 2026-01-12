@@ -1027,8 +1027,8 @@ def render_item_edit_form(
             with cols[idx]:
                 button_type = transition.get('button_type', 'secondary')
                 if st.button(
-                    transition['label'],
-                    key=f"action_{item['id']}_{transition['to']}",
+                    transition.get('action_label', 'Transition'),
+                    key=f"action_{item['id']}_{transition['to_state']}",
                     type=button_type,
                     use_container_width=True
                 ):
