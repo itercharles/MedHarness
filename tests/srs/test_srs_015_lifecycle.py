@@ -17,16 +17,10 @@ from traceability.compliant_flow_core import CompliantFlowCore
 class TestSRS015_ItemLifecycleManagement:
     """Tests for SRS-015: Item Lifecycle Management."""
     
-    @pytest.fixture
-    def core(self):
-        """Initialize CompliantFlowCore."""
-        dhf_root = Path(__file__).parent.parent.parent / "DHF"
-        return CompliantFlowCore(dhf_root)
-    
-    def test_item_creation_and_retrieval(self, core):
+    def test_item_creation_and_retrieval(self, test_core):
         """Verify software can manage items (CRUD operations)."""
         # Get all items
-        items = core.get_all_items()
+        items = test_test_core.get_all_items()
         assert len(items) > 0, "Should have items"
         
         # Verify item structure
@@ -34,11 +28,11 @@ class TestSRS015_ItemLifecycleManagement:
         assert 'id' in item, "Item should have ID"
         assert 'status' in item or 'status' not in item, "Item may have status"
     
-    def test_workflow_engine_initialization(self, core):
-        """Verify lifecycle methods are available in core."""
+    def test_workflow_engine_initialization(self, test_core):
+        """Verify lifecycle methods are available in test_core."""
         # Get a doc type with lifecycle
         doc_type = None
-        for dt in core.config.doc_types:
+        for dt in test_core.config.doc_types:
             if hasattr(dt, 'lifecycle') and dt.lifecycle:
                 doc_type = dt
                 break
@@ -49,11 +43,11 @@ class TestSRS015_ItemLifecycleManagement:
         assert hasattr(core, 'get_initial_state'), "Should have get_initial_state method"
         assert hasattr(core, 'get_available_transitions'), "Should have get_available_transitions method"
     
-    def test_state_transition_validation(self, core):
+    def test_state_transition_validation(self, test_core):
         """Verify core validates state transitions."""
         # Get a doc type with lifecycle
         doc_type = None
-        for dt in core.config.doc_types:
+        for dt in test_core.config.doc_types:
             if hasattr(dt, 'lifecycle') and dt.lifecycle:
                 doc_type = dt
                 break
@@ -62,17 +56,17 @@ class TestSRS015_ItemLifecycleManagement:
             pytest.skip("No doc types with lifecycle found")
         
         # Get initial state
-        initial_state = core.get_initial_state(doc_type.code)
+        initial_state = test_core.get_initial_state(doc_type.code)
         assert initial_state is not None, "Should have initial state"
         
         # Get available transitions for a test item
         test_item = {'id': f'{doc_type.code}-001', 'status': initial_state}
-        transitions = core.get_available_transitions(test_item)
+        transitions = test_core.get_available_transitions(test_item)
         assert isinstance(transitions, list), "Should return list of transitions"
     
-    def test_item_filtering(self, core):
+    def test_item_filtering(self, test_core):
         """Verify software supports item filtering."""
-        all_items = core.get_all_items()
+        all_items = test_core.get_all_items()
         
         # Filter by item type (prefix)
         sys_items = [item for item in all_items if item['id'].startswith('SYS-')]
@@ -82,9 +76,9 @@ class TestSRS015_ItemLifecycleManagement:
         items_with_status = [item for item in all_items if 'status' in item]
         assert len(items_with_status) >= 0, "Should be able to filter by status"
     
-    def test_item_search(self, core):
+    def test_item_search(self, test_core):
         """Verify software supports item search."""
-        all_items = core.get_all_items()
+        all_items = test_core.get_all_items()
         
         # Search by ID
         search_term = "SYS"
@@ -97,11 +91,11 @@ class TestSRS015_ItemLifecycleManagement:
                            if 'title' in item and item['title']]
         assert len(items_with_title) > 0, "Items should have titles for search"
     
-    def test_change_history_tracking(self, core):
+    def test_change_history_tracking(self, test_core):
         """Verify software can track item changes."""
         # This is infrastructure - actual history would be in git
         # Verify items have fields that support history tracking
-        all_items = core.get_all_items()
+        all_items = test_core.get_all_items()
         
         # Items should have identifiable fields for tracking
         for item in all_items[:5]:  # Check first 5

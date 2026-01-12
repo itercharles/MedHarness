@@ -15,28 +15,21 @@ from traceability.compliant_flow_core import CompliantFlowCore
 class TestSRS006_WorkflowMethods:
     """Tests for SRS-006: Workflow methods provided by CompliantFlowCore."""
     
-    @pytest.fixture
-    def core(self):
-        """Initialize CompliantFlowCore with production config (read-only for tests)."""
-        # We use the actual DHF root to test against real configuration logic
-        dhf_root = Path(__file__).parent.parent.parent / "DHF"
-        return CompliantFlowCore(dhf_root, auto_commit=False)
-
-    def test_get_initial_state(self, core):
+    def test_get_initial_state(self, test_core):
         """Verify get_initial_state returns valid initial states for document types."""
         # Test for a known type like 'SYS'
-        initial_state = core.get_initial_state('SYS')
+        initial_state = test_test_core.get_initial_state('SYS')
         assert initial_state == 'draft', "SYS items should start in 'draft' state"
         
         # Test for another known type
-        initial_state_crs = core.get_initial_state('CRS')
+        initial_state_crs = test_core.get_initial_state('CRS')
         assert initial_state_crs == 'draft', "CRS items should start in 'draft' state"
 
-    def test_get_available_transitions(self, core):
+    def test_get_available_transitions(self, test_core):
         """Verify get_available_transitions returns correct next states."""
         # Case 1: Draft item
         draft_item = {'id': 'SYS-TEST-001', 'status': 'draft'}
-        transitions = core.get_available_transitions(draft_item)
+        transitions = test_core.get_available_transitions(draft_item)
         target_states = [t.get('to_state') for t in transitions]
         
         # Should be able to go to 'approved' (defined in SYS lifecycle directly from draft)
@@ -44,26 +37,26 @@ class TestSRS006_WorkflowMethods:
         
         # Case 2: Approved item (Stable) moving to Retired
         approved_item = {'id': 'SYS-TEST-002', 'status': 'approved'}
-        transitions = core.get_available_transitions(approved_item)
+        transitions = test_core.get_available_transitions(approved_item)
         target_states = [t.get('to_state') for t in transitions]
         
         assert 'retired' in target_states, "Approved items should be able to move to 'retired'"
 
-    def test_is_stable_state(self, core):
+    def test_is_stable_state(self, test_core):
         """Verify get_state_info correctly identifies stable states."""
         # Retired/Closed should be stable based on project_config.yaml
-        retired_info = core.get_state_info('retired')
+        retired_info = test_core.get_state_info('retired')
         assert retired_info.get('is_stable') is True, "'retired' state should be stable"
         
         # Draft/Approved should not be stable (in current config approved is not stable)
-        draft_info = core.get_state_info('draft')
+        draft_info = test_core.get_state_info('draft')
         assert draft_info.get('is_stable') is False, "'draft' state should not be stable"
         
-        approved_info = core.get_state_info('approved')
+        approved_info = test_core.get_state_info('approved')
         # Note: In provided project_config.yaml, approved is NOT marked stable. Only retired/closed are.
         assert approved_info.get('is_stable', False) is False, "'approved' state is not stable in current config"
 
-    def test_perform_transition(self, core):
+    def test_perform_transition(self, test_core):
         """Verify performing a valid state transition updates status."""
         # Create a new SYS item (Draft)
         item_data = {
@@ -73,7 +66,7 @@ class TestSRS006_WorkflowMethods:
             'category': 'Functional'
         }
         # Note: create_item automatically sets initial status (draft for SYS)
-        created = core.create_item(item_data)
+        created = test_core.create_item(item_data)
         assert created['status'] == 'draft', "New SYS item should be draft"
         
         # Perform transition: Draft -> Approved
@@ -88,27 +81,27 @@ class TestSRS006_WorkflowMethods:
             'approved_date': '2025-01-01'
         }
         
-        updated = core.update_item('SYS-TRANS-001', update_data)
+        updated = test_core.update_item('SYS-TRANS-001', update_data)
         
         assert updated is not None, "Update should succeed"
         assert updated['status'] == 'approved', "Status should be updated to approved"
         assert updated['approved_by'] == 'tester', "Should update additional fields"
 
-    def test_transitions_respect_global_config(self, core):
-        """Verify that transitions respect the global configuration loaded by core."""
+    def test_transitions_respect_global_config(self, test_core):
+        """Verify that transitions respect the global configuration loaded by test_core."""
         # Just ensure that we are not getting empty transitions for valid states
         item = {'id': 'SYS-001', 'status': 'draft'}
-        transitions = core.get_available_transitions(item)
+        transitions = test_core.get_available_transitions(item)
         assert len(transitions) > 0, "Should find transitions from draft for initialized core"
 
-    def test_invalid_state_handling(self, core):
+    def test_invalid_state_handling(self, test_core):
         """Verify behavior when querying invalid states."""
         # Item with unknown status
         item = {'id': 'SYS-001', 'status': 'unknown_state'}
-        transitions = core.get_available_transitions(item)
+        transitions = test_core.get_available_transitions(item)
         # Should return empty list or defaults, but not crash
         assert isinstance(transitions, list)
         
         # Info for unknown state
         with pytest.raises(ValueError, match="not found"):
-            core.get_state_info('non_existent_state')
+            test_core.get_state_info('non_existent_state')

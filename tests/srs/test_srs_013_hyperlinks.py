@@ -19,13 +19,9 @@ from traceability.compliant_flow_core import CompliantFlowCore
 class TestSRS013_LinkColumnForItemIDs:
     """Tests for SRS-013: Item Hyperlink Navigation - LinkColumn functionality."""
     
-    @pytest.fixture
-    def core(self):
-        """Initialize CompliantFlowCore."""
-        dhf_root = Path(__file__).parent.parent.parent / "DHF"
-        return CompliantFlowCore(dhf_root)
     
-    def test_make_item_columns_clickable_detects_id_columns(self, core):
+    
+    def test_make_item_columns_clickable_detects_id_columns(self, test_core):
         """Verify function detects and configures item ID columns."""
         # Create test dataframe with item IDs
         df = pd.DataFrame({
@@ -48,7 +44,7 @@ class TestSRS013_LinkColumnForItemIDs:
         # Check that IDs were transformed to URLs
         assert '?item=UC-001' in df_transformed['UC'].iloc[0], "Should transform ID to URL"
     
-    def test_make_item_columns_clickable_handles_empty_dataframe(self, core):
+    def test_make_item_columns_clickable_handles_empty_dataframe(self, test_core):
         """Verify function handles empty dataframes gracefully."""
         df = pd.DataFrame()
         
@@ -58,7 +54,7 @@ class TestSRS013_LinkColumnForItemIDs:
         assert len(config) == 0, "Should return empty config for empty dataframe"
         assert df_transformed.empty, "Should return empty dataframe"
     
-    def test_make_item_columns_clickable_handles_non_id_columns(self, core):
+    def test_make_item_columns_clickable_handles_non_id_columns(self, test_core):
         """Verify function doesn't detect non-ID columns as item IDs."""
         df = pd.DataFrame({
             'Name': ['Test 1', 'Test 2'],
@@ -74,18 +70,14 @@ class TestSRS013_LinkColumnForItemIDs:
 class TestSRS013_ItemDetailExpanderComponent:
     """Tests for SRS-013: Item Hyperlink Navigation - Item detail display."""
     
-    @pytest.fixture
-    def core(self):
-        """Initialize CompliantFlowCore."""
-        dhf_root = Path(__file__).parent.parent.parent / "DHF"
-        return CompliantFlowCore(dhf_root)
     
-    def test_item_detail_function_exists(self, core):
+    
+    def test_item_detail_function_exists(self, test_core):
         """Verify check_and_show_item_detail function exists and is callable."""
         assert callable(check_and_show_item_detail), \
             "check_and_show_item_detail should be callable"
     
-    def test_item_detail_returns_none_when_no_query_param(self, core):
+    def test_item_detail_returns_none_when_no_query_param(self, test_core):
         """Verify function returns None when no item query parameter present."""
         # Note: This test would need Streamlit context to fully test
         # For now, we verify the function exists and has correct signature
@@ -97,13 +89,9 @@ class TestSRS013_ItemDetailExpanderComponent:
 class TestSRS013_AutomaticItemIDColumnDetection:
     """Tests for SRS-013: Item Hyperlink Navigation - Automatic ID detection."""
     
-    @pytest.fixture
-    def core(self):
-        """Initialize CompliantFlowCore."""
-        dhf_root = Path(__file__).parent.parent.parent / "DHF"
-        return CompliantFlowCore(dhf_root)
     
-    def test_detection_with_various_prefixes(self, core):
+    
+    def test_detection_with_various_prefixes(self, test_core):
         """Verify detection works with various item ID prefixes."""
         # Note: This test now verifies that only configured doc_type codes are detected
         # UC_ID, SRS_ID, etc. won't match because the actual codes are UC, SRS, etc.
@@ -121,13 +109,13 @@ class TestSRS013_AutomaticItemIDColumnDetection:
         assert 'SRS' in config
         assert 'SWDD' in config
     
-    def test_detection_performance_is_linear(self, core):
+    def test_detection_performance_is_linear(self, test_core):
         """Verify column detection completes in O(n) time."""
         import time
         
         # Create dataframe with many columns using valid doc_type codes
         # Use actual configured codes
-        valid_codes = [dt.code for dt in core.config.doc_types]
+        valid_codes = [dt.code for dt in test_core.config.doc_types]
         n_cols = min(len(valid_codes), 20)  # Use up to 20 configured codes
         data = {valid_codes[i]: [f'{valid_codes[i]}-001', f'{valid_codes[i]}-002'] for i in range(n_cols)}
         df = pd.DataFrame(data)
@@ -140,7 +128,7 @@ class TestSRS013_AutomaticItemIDColumnDetection:
         assert elapsed < 0.1, f"Detection took {elapsed}s, should be < 0.1s"
         assert len(config) == n_cols, f"Should detect all {n_cols} item ID columns"
     
-    def test_detection_with_mixed_content(self, core):
+    def test_detection_with_mixed_content(self, test_core):
         """Verify detection works when columns have mixed content."""
         df = pd.DataFrame({
             'SYS': ['SYS-001', 'SYS-002', 'SYS-003'],  # Valid doc_type code
@@ -158,20 +146,16 @@ class TestSRS013_AutomaticItemIDColumnDetection:
 class TestSWDD006_PageURLGeneration:
     """Tests for SWDD-006: UI Helper Functions - get_page_url_for_item."""
     
-    @pytest.fixture
-    def core(self):
-        """Initialize CompliantFlowCore."""
-        dhf_root = Path(__file__).parent.parent.parent / "DHF"
-        return CompliantFlowCore(dhf_root)
+    
     
     def test_url_generation_without_core(self):
-        """Verify URL generation falls back to query param without core."""
+        """Verify URL generation falls back to query param without test_core."""
         from utils.ui_helpers import get_page_url_for_item
         
         url = get_page_url_for_item("SYS-001")
         assert url == "?item=SYS-001", "Should fallback to query param only"
     
-    def test_url_generation_with_core(self, core):
+    def test_url_generation_with_core(self, test_core):
         """Verify URL generation with core creates page-specific URLs."""
         from utils.ui_helpers import get_page_url_for_item
         
@@ -182,7 +166,7 @@ class TestSWDD006_PageURLGeneration:
         assert url == expected_url, \
             f"URL must be exactly '{expected_url}', got '{url}'"
     
-    def test_url_generation_exact_format_for_all_types(self, core):
+    def test_url_generation_exact_format_for_all_types(self, test_core):
         """Verify exact URL format for different document types."""
         from utils.ui_helpers import get_page_url_for_item
         
@@ -200,7 +184,7 @@ class TestSWDD006_PageURLGeneration:
             assert url == expected_url, \
                 f"URL for {item_id} must be exactly '{expected_url}', got '{url}'"
     
-    def test_url_generation_for_test_cases(self, core):
+    def test_url_generation_for_test_cases(self, test_core):
         """Verify URL generation handles test case IDs correctly."""
         from utils.ui_helpers import get_page_url_for_item
         
@@ -217,7 +201,7 @@ class TestSWDD006_PageURLGeneration:
             assert url == "/page_TC-SYS?item=TC-SYS-001", \
                 f"If page enabled, URL must be '/page_TC-SYS?item=TC-SYS-001', got '{url}'"
     
-    def test_url_generation_performance(self, core):
+    def test_url_generation_performance(self, test_core):
         """Verify URL generation completes in O(n) time."""
         from utils.ui_helpers import get_page_url_for_item
         import time
@@ -282,15 +266,11 @@ class TestSWDD008_UniversalPageTemplateIntegration:
 class TestHyperlinkIntegration:
     """Integration tests for hyperlink feature."""
     
-    @pytest.fixture
-    def core(self):
-        """Initialize CompliantFlowCore."""
-        dhf_root = Path(__file__).parent.parent.parent / "DHF"
-        return CompliantFlowCore(dhf_root)
     
-    def test_all_items_can_be_retrieved(self, core):
+    
+    def test_all_items_can_be_retrieved(self, test_core):
         """Verify all items can be retrieved for hyperlink navigation."""
-        all_items = core.get_all_items()
+        all_items = test_core.get_all_items()
         
         assert len(all_items) > 0, "Should have items to link to"
         
@@ -300,15 +280,15 @@ class TestHyperlinkIntegration:
             assert 'content' in item or 'title' in item, \
                 f"Item {item['id']} should have content or title"
     
-    def test_item_retrieval_by_id(self, core):
+    def test_item_retrieval_by_id(self, test_core):
         """Verify items can be retrieved by ID for detail display."""
         # Get a known item - test data should have items
-        all_items = core.get_all_items()
+        all_items = test_core.get_all_items()
         assert len(all_items) > 0, "Test data should have items"
         
         test_item_id = all_items[0]['id']
         
-        retrieved = core.get_item(test_item_id)
+        retrieved = test_core.get_item(test_item_id)
         
         assert retrieved is not None, f"Should retrieve item {test_item_id}"
         assert retrieved['id'] == test_item_id, "Retrieved item should match ID"

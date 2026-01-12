@@ -122,7 +122,7 @@ class TestFilePersistence:
     
     def test_structured_text_format(self):
         """Verify files use structured text format (YAML)"""
-        dhf_items_dir = Path(__file__).parent.parent.parent / "DHF" / "items"
+        # Use test_dhf fixture instead
         
         yaml_files = list(dhf_items_dir.rglob("*.yaml"))
         assert len(yaml_files) >= 60, \

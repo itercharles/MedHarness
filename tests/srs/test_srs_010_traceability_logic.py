@@ -21,13 +21,9 @@ from traceability.compliant_flow_core import CompliantFlowCore
 class TestAggregateRelationshipFieldsLogic:
     """Test the _aggregate_relationship_fields method logic"""
     
-    @pytest.fixture
-    def core(self):
-        """Create a minimal CompliantFlowCore instance"""
-        dhf_root = Path(__file__).parent.parent.parent / 'DHF'
-        return CompliantFlowCore(dhf_root)
     
-    def test_TC_SRS_010_015_tc_prefix_triggers_special_handling(self, core):
+    
+    def test_TC_SRS_010_015_tc_prefix_triggers_special_handling(self, test_core):
         """
         TC-SRS-010-015: Verify TC- prefix triggers special handling
         
@@ -43,12 +39,12 @@ class TestAggregateRelationshipFieldsLogic:
         }
         
         # Call with TC- prefix
-        result = core._aggregate_relationship_fields(test_item, 'TC-TEST')
+        result = test_core._aggregate_relationship_fields(test_item, 'TC-TEST')
         
         # Should return verifies field values
         assert set(result) == {'REQ-001', 'REQ-002'}
     
-    def test_TC_SRS_010_016_verifies_field_extracted_for_tc_items(self, core):
+    def test_TC_SRS_010_016_verifies_field_extracted_for_tc_items(self, test_core):
         """
         TC-SRS-010-016: Verify verifies field is extracted for TC-* items
         
@@ -62,7 +58,7 @@ class TestAggregateRelationshipFieldsLogic:
             'id': 'TC-SRS-001',
             'verifies': ['SRS-001', 'SRS-002']
         }
-        result = core._aggregate_relationship_fields(item_with_list, 'TC-SRS')
+        result = test_core._aggregate_relationship_fields(item_with_list, 'TC-SRS')
         assert result == ['SRS-001', 'SRS-002']
         
         # Test with single string
@@ -70,7 +66,7 @@ class TestAggregateRelationshipFieldsLogic:
             'id': 'TC-SRS-002',
             'verifies': 'SRS-003'
         }
-        result = core._aggregate_relationship_fields(item_with_string, 'TC-SRS')
+        result = test_core._aggregate_relationship_fields(item_with_string, 'TC-SRS')
         assert result == ['SRS-003']
         
         # Test with empty
@@ -78,10 +74,10 @@ class TestAggregateRelationshipFieldsLogic:
             'id': 'TC-SRS-003',
             'verifies': []
         }
-        result = core._aggregate_relationship_fields(item_empty, 'TC-SRS')
+        result = test_core._aggregate_relationship_fields(item_empty, 'TC-SRS')
         assert result == []
     
-    def test_TC_SRS_010_018_empty_verifies_returns_empty_list(self, core):
+    def test_TC_SRS_010_018_empty_verifies_returns_empty_list(self, test_core):
         """
         TC-SRS-010-018: Verify empty verifies field returns empty list
         
@@ -93,10 +89,10 @@ class TestAggregateRelationshipFieldsLogic:
             # No verifies field
         }
         
-        result = core._aggregate_relationship_fields(item, 'TC-SRS')
+        result = test_core._aggregate_relationship_fields(item, 'TC-SRS')
         assert result == []
     
-    def test_TC_SRS_010_019_filters_out_none_values(self, core):
+    def test_TC_SRS_010_019_filters_out_none_values(self, test_core):
         """
         TC-SRS-010-019: Verify None values are filtered out
         
@@ -108,7 +104,7 @@ class TestAggregateRelationshipFieldsLogic:
             'verifies': ['SRS-001', None, 'SRS-002', '']
         }
         
-        result = core._aggregate_relationship_fields(item, 'TC-SRS')
+        result = test_core._aggregate_relationship_fields(item, 'TC-SRS')
         
         # Should filter out None and empty strings
         assert None not in result
@@ -201,7 +197,7 @@ class TestDocTypeConfiguration:
         dhf_root = Path(__file__).parent.parent.parent / 'DHF'
         return CompliantFlowCore(dhf_root)
     
-    def test_TC_SRS_010_022_tc_srs_doc_type_exists(self, core):
+    def test_TC_SRS_010_022_tc_srs_doc_type_exists(self, test_core):
         """
         TC-SRS-010-022: Verify TC-SRS document type is configured
         
@@ -211,30 +207,30 @@ class TestDocTypeConfiguration:
         Tests that TC-SRS document type exists in config
         This is what allows get_doc_type_code to work correctly
         """
-        doc_types = {dt.code for dt in core.config.doc_types}
+        doc_types = {dt.code for dt in test_core.config.doc_types}
         assert 'TC-SRS' in doc_types
     
-    def test_TC_SRS_010_023_tc_crs_doc_type_exists(self, core):
+    def test_TC_SRS_010_023_tc_crs_doc_type_exists(self, test_core):
         """
         TC-SRS-010-023: Verify TC-CRS document type is configured
         
         @links: SRS-010
         @test_id: TC-SRS-010-023
         """
-        doc_types = {dt.code for dt in core.config.doc_types}
+        doc_types = {dt.code for dt in test_core.config.doc_types}
         assert 'TC-CRS' in doc_types
     
-    def test_TC_SRS_010_024_tc_sys_doc_type_exists(self, core):
+    def test_TC_SRS_010_024_tc_sys_doc_type_exists(self, test_core):
         """
         TC-SRS-010-024: Verify TC-SYS document type is configured
         
         @links: SRS-010
         @test_id: TC-SRS-010-024
         """
-        doc_types = {dt.code for dt in core.config.doc_types}
+        doc_types = {dt.code for dt in test_core.config.doc_types}
         assert 'TC-SYS' in doc_types
     
-    def test_TC_SRS_010_025_tc_doc_types_have_verifies_property(self, core):
+    def test_TC_SRS_010_025_tc_doc_types_have_verifies_property(self, test_core):
         """
         TC-SRS-010-025: Verify TC-* doc types have verifies property
         
@@ -244,7 +240,7 @@ class TestDocTypeConfiguration:
         Tests that the document type configuration includes verifies relationship
         """
         for code in ['TC-SRS', 'TC-CRS', 'TC-SYS']:
-            doc_type = next((dt for dt in core.config.doc_types if dt.code == code), None)
+            doc_type = next((dt for dt in test_core.config.doc_types if dt.code == code), None)
             assert doc_type is not None, f"{code} document type should exist"
             
             # Check if verifies property exists
@@ -273,7 +269,7 @@ class TestRegressionPrevention:
         dhf_root = Path(__file__).parent.parent.parent / 'DHF'
         return CompliantFlowCore(dhf_root)
     
-    def test_TC_SRS_010_026_removing_tc_special_handling_breaks(self, core):
+    def test_TC_SRS_010_026_removing_tc_special_handling_breaks(self, test_core):
         """
         TC-SRS-010-026: Verify removing TC- special handling would break
         
@@ -284,7 +280,7 @@ class TestRegressionPrevention:
         the test will fail
         """
         # Get a TC item
-        all_items = core.get_all_items()
+        all_items = test_core.get_all_items()
         tc_items = [i for i in all_items if i['id'].startswith('TC-')]
         
         assert len(tc_items) > 0, "Need TC items for this test"
@@ -292,7 +288,7 @@ class TestRegressionPrevention:
         tc = tc_items[0]
         
         # The special handling should work
-        result = core._aggregate_relationship_fields(tc, 'TC-SRS')
+        result = test_core._aggregate_relationship_fields(tc, 'TC-SRS')
         
         # If special handling is removed, this would return empty
         assert len(result) > 0, \
