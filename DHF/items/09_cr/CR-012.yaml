@@ -1,0 +1,60 @@
+id: CR-012
+title: Implement Strict Schema Validation for YAML Item Files
+description: |-
+  Implement comprehensive schema validation to ensure all YAML item files strictly conform 
+  to the schema defined in project_config.yaml. This addresses SRS-001 requirements for 
+  validating item schema before persistence and rejecting invalid items with clear error messages.
+  
+  Current State:
+  - Items are validated using Pydantic models, but this allows any extra fields
+  - No validation against project_config.yaml schema
+  - Invalid fields are silently accepted
+  - No enforcement of required fields from config
+  - No validation of select/multiselect options
+  
+  Proposed Solution:
+  - Add strict schema validation in ItemLoader
+  - Validate doc type exists in project config
+  - Reject unknown fields not defined in config
+  - Enforce required fields
+  - Validate select field options
+  - Validate multiselect field types and options
+  - Provide clear, actionable error messages
+  - Create standalone validation command
+justification: |-
+  - Ensures data integrity across all DHF items
+  - Prevents schema drift and invalid data
+  - Provides clear feedback to users when items are invalid
+  - Supports regulatory compliance by enforcing schema
+  - Implements SRS-001 line 13: "Validate item schema before persistence"
+  - Implements SRS-001 line 19: "Invalid items are rejected with clear error messages"
+impact_assessment: |-
+  **Code Changes:**
+  - New: src/traceability/exceptions.py (ValidationError class)
+  - Modified: src/traceability/repository/loader.py (add validation logic)
+  - Modified: src/traceability/compliant_flow_core.py (pass config to loader)
+  - New: src/validate_items.py (validation command)
+  - New: tests/srs/test_srs_001_schema_validation.py (test suite)
+  
+  **Data Changes:**
+  - Fixed CR-001, CR-002, CR-003, CR-009: Removed invalid 'content' field
+  - Fixed CR-001: Changed 'target_version' to 'target_release'
+  - Fixed CR-006: Need to remove invalid fields (under_review_by, timestamp)
+  - Fixed CR-010: Need to restore from git (broken by script)
+  
+  **Testing:**
+  - 5 automated tests created and passing
+  - Tests cover: unknown fields, missing required fields, unknown doc types, valid items, error messages
+  
+  **Risk Assessment:** Medium
+  - Breaking change: Will reject previously accepted invalid files
+  - Mitigation: Run validation command before deployment
+  - Mitigation: Fix all validation errors before merging
+  - Benefit: Prevents future invalid data from entering system
+requested_by: System Quality
+assigned_to: ''
+target_release: ''
+status: draft
+affected_items:
+- SRS-001
+implementation_prs: []
