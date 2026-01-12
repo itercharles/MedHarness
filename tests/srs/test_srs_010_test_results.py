@@ -131,7 +131,7 @@ def test_TC_PROVIDER_003_status_mapping():
             f"Status {input_status} should map to valid status"
 
 
-def test_TC_PROVIDER_004_manual_test_reading():
+def test_TC_PROVIDER_004_manual_test_reading(test_core):
     """TC-PROVIDER-004: Verify Manual Test Status from YAML
     
     @links: SRS-010

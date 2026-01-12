@@ -31,7 +31,7 @@ class TestSRS013_LinkColumnForItemIDs:
             'Status': ['approved', 'draft', 'approved']
         })
         
-        df_transformed, config = make_item_columns_clickable(df, core)
+        df_transformed, config = make_item_columns_clickable(df, test_core)
         
         # Should detect UC and CRS columns as item IDs
         assert 'UC' in config, "UC column should be detected as item ID"
@@ -48,7 +48,7 @@ class TestSRS013_LinkColumnForItemIDs:
         """Verify function handles empty dataframes gracefully."""
         df = pd.DataFrame()
         
-        df_transformed, config = make_item_columns_clickable(df, core)
+        df_transformed, config = make_item_columns_clickable(df, test_core)
         
         assert isinstance(config, dict), "Should return dict even for empty dataframe"
         assert len(config) == 0, "Should return empty config for empty dataframe"
@@ -62,7 +62,7 @@ class TestSRS013_LinkColumnForItemIDs:
             'Flag': [True, False]
         })
         
-        df_transformed, config = make_item_columns_clickable(df, core)
+        df_transformed, config = make_item_columns_clickable(df, test_core)
         
         assert len(config) == 0, "Should not detect any item ID columns"
 
@@ -102,7 +102,7 @@ class TestSRS013_AutomaticItemIDColumnDetection:
             'TC-SYS': ['TC-SYS-001', 'TC-SYS-002']
         })
         
-        df_transformed, config = make_item_columns_clickable(df, core)
+        df_transformed, config = make_item_columns_clickable(df, test_core)
         
         # Columns matching configured doc_type codes should be detected
         assert 'UC' in config
@@ -121,7 +121,7 @@ class TestSRS013_AutomaticItemIDColumnDetection:
         df = pd.DataFrame(data)
         
         start = time.time()
-        df_transformed, config = make_item_columns_clickable(df, core)
+        df_transformed, config = make_item_columns_clickable(df, test_core)
         elapsed = time.time() - start
         
         # Should complete quickly (< 100ms for 100 columns)
@@ -136,7 +136,7 @@ class TestSRS013_AutomaticItemIDColumnDetection:
             'Version': ['1.0', '2.0', '3.0']  # Has dots, not hyphens
         })
         
-        df_transformed, config = make_item_columns_clickable(df, core)
+        df_transformed, config = make_item_columns_clickable(df, test_core)
         
         # Only SYS column should be detected (matches configured doc_type)
         assert len(config) == 1, "Should detect only SYS column"
@@ -159,7 +159,7 @@ class TestSWDD006_PageURLGeneration:
         """Verify URL generation with core creates page-specific URLs."""
         from utils.ui_helpers import get_page_url_for_item
         
-        url = get_page_url_for_item("SYS-001", core)
+        url = get_page_url_for_item("SYS-001", test_core)
         
         # STRICT: Check exact URL format
         expected_url = "/page_SYS?item=SYS-001"
@@ -180,7 +180,7 @@ class TestSWDD006_PageURLGeneration:
         ]
         
         for item_id, expected_url in test_cases:
-            url = get_page_url_for_item(item_id, core)
+            url = get_page_url_for_item(item_id, test_core)
             assert url == expected_url, \
                 f"URL for {item_id} must be exactly '{expected_url}', got '{url}'"
     
@@ -189,7 +189,7 @@ class TestSWDD006_PageURLGeneration:
         from utils.ui_helpers import get_page_url_for_item
         
         # Test cases should use TC-{TYPE} format
-        url = get_page_url_for_item("TC-SYS-001", core)
+        url = get_page_url_for_item("TC-SYS-001", test_core)
         
         # Test cases may or may not have dedicated pages depending on config
         # Valid formats: /page_TC-SYS?item=TC-SYS-001 OR ?item=TC-SYS-001
@@ -211,7 +211,7 @@ class TestSWDD006_PageURLGeneration:
         
         start = time.time()
         for item_id in items:
-            get_page_url_for_item(item_id, core)
+            get_page_url_for_item(item_id, test_core)
         elapsed = time.time() - start
         
         # Should complete quickly (< 100ms for 100 items)

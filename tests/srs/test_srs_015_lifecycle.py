@@ -20,7 +20,7 @@ class TestSRS015_ItemLifecycleManagement:
     def test_item_creation_and_retrieval(self, test_core):
         """Verify software can manage items (CRUD operations)."""
         # Get all items
-        items = test_test_core.get_all_items()
+        items = test_core.get_all_items()
         assert len(items) > 0, "Should have items"
         
         # Verify item structure

@@ -18,7 +18,7 @@ class TestSRS006_WorkflowMethods:
     def test_get_initial_state(self, test_core):
         """Verify get_initial_state returns valid initial states for document types."""
         # Test for a known type like 'SYS'
-        initial_state = test_test_core.get_initial_state('SYS')
+        initial_state = test_core.get_initial_state('SYS')
         assert initial_state == 'draft', "SYS items should start in 'draft' state"
         
         # Test for another known type

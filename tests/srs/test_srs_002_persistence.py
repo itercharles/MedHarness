@@ -124,7 +124,7 @@ class TestFilePersistence:
         """Verify files use structured text format (YAML)"""
         # Use test_dhf fixture instead
         
-        yaml_files = list(dhf_items_dir.rglob("*.yaml"))
+        # Use test_dhf fixture - yaml_files = list(test_dhf.rglob("*.yaml"))
         assert len(yaml_files) >= 60, \
             f"Expected at least 60 YAML files in DHF, got {len(yaml_files)}"
         
