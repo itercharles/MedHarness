@@ -1,6 +1,4 @@
 id: CR-001
-content: Add functionality to approve multiple requirements at once instead of one
-  at a time, improving efficiency when processing large batches.
 title: Add bulk approval feature for requirements
 description: 'Currently, requirements must be approved one at a time, which is inefficient
   when
@@ -60,7 +58,7 @@ impact_assessment: '**UI Changes:**
 priority: Medium
 requested_by: Quality Team
 assigned_to: ''
-target_version: 1.3.0
+target_release: 1.3.0
 status: approved
 manual_verifications:
   review_complete:
@@ -69,7 +67,6 @@ manual_verifications:
     notes: ''
 approved_by: charles
 approved_date: '2025-12-20T10:44:59.289459'
-file_path: /Users/chenwenliang/code/CompliantFlow/DHF/items/09_cr/CR-001.yaml
 affected_items:
 - SYS-001
 - SYSARCH-001

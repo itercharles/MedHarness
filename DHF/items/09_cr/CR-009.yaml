@@ -1,6 +1,5 @@
 id: CR-009
 title: Refactor Legacy Links System to Use Relationship Fields
-content: |-
   Replace legacy `links` field usage with typed relationship fields throughout the codebase.
   
   ## Background

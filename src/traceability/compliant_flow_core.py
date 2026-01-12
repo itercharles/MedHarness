@@ -45,6 +45,8 @@ class CompliantFlowCore:
         
         # Load config and build graph
         self._load_config()
+        # Pass config to loader for validation (after config is loaded)
+        self.loader.project_config = self.config
         self.refresh()
     
     def _load_config(self):

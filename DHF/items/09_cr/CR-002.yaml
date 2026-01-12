@@ -1,5 +1,4 @@
 id: CR-002
-content: Add functionality to automatically generate traceability reports on a scheduled
   basis, reducing manual effort and supporting continuous compliance monitoring.
 title: Implement automated traceability report generation
 description: 'Add functionality to automatically generate traceability reports on
@@ -58,5 +57,5 @@ impact_assessment: '**New Components:**
 priority: Low
 requested_by: Compliance Team
 assigned_to: ''
-target_version: 1.4.0
+target_release: 1.4.0
 status: draft
