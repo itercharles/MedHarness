@@ -389,25 +389,6 @@ def get_test_dataset() -> List[Dict]:
             'approved_by': 'test_user',
             'approved_date': '2025-01-01T00:00:00'
         },
-        # Test Cases
-        {
-            'id': 'TC-SRS-001',
-            'title': 'Test Item Persistence',
-            'test_type': 'automated',
-            'status': 'approved',
-            'verifies': ['SRS-001'],
-            'approved_by': 'test_user',
-            'approved_date': '2025-01-01T00:00:00'
-        },
-        {
-            'id': 'TC-SYS-001',
-            'title': 'Test System Capability',
-            'test_type': 'manual',
-            'status': 'approved',
-            'verifies': ['SYS-001'],
-            'approved_by': 'test_user',
-            'approved_date': '2025-01-01T00:00:00'
-        },
     ]
 
 
