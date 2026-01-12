@@ -104,15 +104,9 @@ class TestTypedRelationshipsInDHF:
     @links: SRS-002
     """
     
-    @pytest.fixture
-    def core(self):
-        """Initialize CompliantFlowCore."""
-        dhf_root = Path(__file__).parent.parent.parent / "DHF"
-        return CompliantFlowCore(dhf_root)
-    
-    def test_crs_has_derives_from_links(self, core):
+    def test_crs_has_derives_from_links(self, test_core):
         """Verify CRS items have derives_from relationships to UC."""
-        crs_items = [item for item in core.get_all_items() 
+        crs_items = [item for item in test_core.get_all_items() 
                      if item['id'].startswith('CRS-')]
         
         assert len(crs_items) > 0, "Should have CRS items"
@@ -128,9 +122,9 @@ class TestTypedRelationshipsInDHF:
             assert isinstance(crs_001['derives_from'], list)
             assert len(crs_001['derives_from']) > 0
     
-    def test_srs_has_derives_from_links(self, core):
+    def test_srs_has_derives_from_links(self, test_core):
         """Verify SRS items have derives_from relationships to SYS."""
-        srs_items = [item for item in core.get_all_items() 
+        srs_items = [item for item in test_core.get_all_items() 
                      if item['id'].startswith('SRS-')]
         
         assert len(srs_items) > 0, "Should have SRS items"
@@ -139,9 +133,9 @@ class TestTypedRelationshipsInDHF:
         has_derives_from = any('derives_from' in item for item in srs_items)
         assert has_derives_from, "At least one SRS should have derives_from"
     
-    def test_swdd_has_implements_and_guided_by(self, core):
+    def test_swdd_has_implements_and_guided_by(self, test_core):
         """Verify SWDD items have implements and guided_by relationships."""
-        swdd_items = [item for item in core.get_all_items() 
+        swdd_items = [item for item in test_core.get_all_items() 
                       if item['id'].startswith('SWDD-')]
         
         assert len(swdd_items) > 0, "Should have SWDD items"
@@ -150,9 +144,9 @@ class TestTypedRelationshipsInDHF:
         has_implements = any('implements' in item for item in swdd_items)
         assert has_implements, "At least one SWDD should have implements"
     
-    def test_all_items_have_all_linked_uids(self, core):
+    def test_all_items_have_all_linked_uids(self, test_core):
         """Verify all items have all_linked_uids property in dict."""
-        all_items = core.get_all_items()
+        all_items = test_core.get_all_items()
         
         for item in all_items:
             assert 'all_linked_uids' in item, \
@@ -160,9 +154,9 @@ class TestTypedRelationshipsInDHF:
             assert isinstance(item['all_linked_uids'], list), \
                 f"Item {item['id']} all_linked_uids should be a list"
     
-    def test_traceability_chain_completeness(self, core):
+    def test_traceability_chain_completeness(self, test_core):
         """Verify complete traceability chain UC → CRS → SYS → SRS → SWDD."""
-        all_items = core.get_all_items()
+        all_items = test_core.get_all_items()
         
         # Get items by type
         uc_items = [i for i in all_items if i['id'].startswith('UC-')]
