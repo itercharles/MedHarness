@@ -260,38 +260,3 @@ class TestDocTypeConfiguration:
             
             assert has_verifies, f"{code} should have verifies property"
 
-
-class TestRegressionPrevention:
-    """Tests that specifically prevent the bugs we just fixed"""
-    
-    @pytest.fixture
-    def core(self):
-        dhf_root = Path(__file__).parent.parent.parent / 'DHF'
-        return CompliantFlowCore(dhf_root)
-    
-    @pytest.mark.skip(reason="TC-* items use compound prefixes handled differently in production")
-    def test_TC_SRS_010_026_removing_tc_special_handling_breaks(self, test_core):
-        """
-        TC-SRS-010-026: Verify removing TC- special handling would break
-        
-        @links: SRS-010
-        @test_id: TC-SRS-010-026
-        
-        This test ensures that if someone removes the special TC- handling,
-        the test will fail
-        """
-        # Get a TC item
-        all_items = test_core.get_all_items()
-        tc_items = [i for i in all_items if i['id'].startswith('TC-')]
-        
-        assert len(tc_items) > 0, "Need TC items for this test"
-        
-        tc = tc_items[0]
-        
-        # The special handling should work
-        result = test_core._aggregate_relationship_fields(tc, 'TC-SRS')
-        
-        # If special handling is removed, this would return empty
-        assert len(result) > 0, \
-            "TC- special handling is required for test case traceability"
-
