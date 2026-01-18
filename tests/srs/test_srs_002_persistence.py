@@ -99,7 +99,7 @@ class TestFilePersistence:
         
         for i in range(3):
             item_data = {
-                'id': f'SRS-TEST-{i+100}',  # Provide explicit ID
+                'id': f'SRS-{i+100}',  # Provide explicit ID
                 'title': f'Test Item {i}',
                 'content': f'Testing ID generation {i}',
                 'status': 'draft'
@@ -120,12 +120,13 @@ class TestFilePersistence:
         for id in created_ids:
             assert validate_id_format(id, 'SRS-'), f"ID {id} should have valid format"
     
-    def test_structured_text_format(self, test_dhf):
+    def test_structured_text_format(self, test_core):
         """Verify files use structured text format (YAML)"""
-        items_dir = test_dhf / "items"
+        # Get items directory from test_core's DHF
+        items_dir = test_core.repo_root / "items"
         yaml_files = list(items_dir.rglob("*.yaml"))
         assert len(yaml_files) >= 5, \
-            f"Expected at least 5 YAML files in DHF, got {len(yaml_files)}"
+            f"Expected at least 5 YAML files in test DHF, got {len(yaml_files)}"
         
         # Verify files are valid YAML
         for yaml_file in yaml_files[:10]:  # Check first 10

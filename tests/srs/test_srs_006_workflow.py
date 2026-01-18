@@ -32,8 +32,8 @@ class TestSRS006_WorkflowMethods:
         transitions = test_core.get_available_transitions(draft_item)
         target_states = [t.get('to_state') for t in transitions]
         
-        # Should be able to go to 'approved' (defined in SYS lifecycle directly from draft)
-        assert 'approved' in target_states, f"Draft SYS items should be able to move to 'approved', got {target_states}"
+        # Should be able to go to 'under_review' (defined in SYS lifecycle from draft)
+        assert 'under_review' in target_states, f"Draft SYS items should be able to move to 'under_review', got {target_states}"
         
         # Case 2: Under review item moving to Approved
         under_review_item = {'id': 'SYS-TEST-002', 'status': 'under_review'}
