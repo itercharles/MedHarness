@@ -35,12 +35,12 @@ class TestSRS006_WorkflowMethods:
         # Should be able to go to 'approved' (defined in SYS lifecycle directly from draft)
         assert 'approved' in target_states, f"Draft SYS items should be able to move to 'approved', got {target_states}"
         
-        # Case 2: Approved item (Stable) moving to Retired
-        approved_item = {'id': 'SYS-TEST-002', 'status': 'approved'}
-        transitions = test_core.get_available_transitions(approved_item)
+        # Case 2: Under review item moving to Approved
+        under_review_item = {'id': 'SYS-TEST-002', 'status': 'under_review'}
+        transitions = test_core.get_available_transitions(under_review_item)
         target_states = [t.get('to_state') for t in transitions]
         
-        assert 'retired' in target_states, "Approved items should be able to move to 'retired'"
+        assert 'approved' in target_states, "Under review items should be able to move to 'approved'"
 
     def test_is_stable_state(self, test_core):
         """Verify get_state_info correctly identifies stable states."""
@@ -53,8 +53,8 @@ class TestSRS006_WorkflowMethods:
         assert draft_info.get('is_stable') is False, "'draft' state should not be stable"
         
         approved_info = test_core.get_state_info('approved')
-        # Note: In provided project_config.yaml, approved is NOT marked stable. Only retired/closed are.
-        assert approved_info.get('is_stable', False) is False, "'approved' state is not stable in current config"
+        # Note: In test fixture, approved IS marked stable
+        assert approved_info.get('is_stable', False) is True, "'approved' state is stable in test fixture"
 
     def test_perform_transition(self, test_core):
         """Verify performing a valid state transition updates status."""
