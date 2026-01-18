@@ -263,6 +263,18 @@ def create_test_dhf() -> Path:
                     ]
                 }
             }
+        ],
+        'traceability_matrices': [
+            {
+                'name': 'Requirements Traceability',
+                'description': 'Trace from UC through CRS, SYS to SRS',
+                'path': ['UC', 'CRS', 'SYS', 'SRS']
+            },
+            {
+                'name': 'System to Design',
+                'description': 'Trace from SYS through SYSARCH to SWDD',
+                'path': ['SYS', 'SYSARCH', 'SWDD']
+            }
         ]
     }
     
@@ -448,7 +460,41 @@ def populate_test_dhf(test_dhf_root: Path):
 
     print(f"[OK] Test DHF populated with {len(test_items)} items")
     
+    # Create governance directory and sample policy file for Compliance tests
+    governance_dir = test_dhf_root / "governance"
+    governance_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Create minimal IEC 62304 governance file
+    iec_62304_policy = {
+        'title': 'IEC 62304 Medical Device Software',
+        'version': '1.0',
+        'policies': [
+            {
+                'id': 'IEC-62304-5.1.1',
+                'text': 'Software development planning shall be documented',
+                'status': 'approved'
+            },
+            {
+                'id': 'IEC-62304-5.2.1',
+                'text': 'Software requirements shall be documented',
+                'status': 'approved'
+            },
+            {
+                'id': 'IEC-62304-5.5.1',
+                'text': 'Software integration testing shall be performed',
+                'status': 'approved'
+            }
+        ]
+    }
+    
+    governance_file = governance_dir / "IEC_62304.yaml"
+    with open(governance_file, 'w') as f:
+        yaml.dump(iec_62304_policy, f, default_flow_style=False)
+    
+    print(f"[OK] Created governance file: {governance_file.name}")
+    
     # Refresh to ensure graph consistency
     core.refresh()
     
     return core
+
