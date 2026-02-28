@@ -102,7 +102,7 @@ def test_TC_SYS_010_003_perform_state_transition(test_dhf_root):
 
     # Get the item
     item = core.get_item("SRS-998")
-    assert item.status == "draft"
+    assert item["status"] == "draft"
 
     # Try to transition to approved
     # (Note: Actual transition method depends on implementation)
@@ -111,14 +111,14 @@ def test_TC_SYS_010_003_perform_state_transition(test_dhf_root):
         core.transition_item("SRS-998", "approved")
         core.refresh()
         updated_item = core.get_item("SRS-998")
-        assert updated_item.status == "approved", "Item should transition to approved"
+        assert updated_item["status"] == "approved", "Item should transition to approved"
     else:
         # Manual status update
-        item.status = "approved"
+        item["status"] = "approved"
         core.save_item(item)
         core.refresh()
         updated_item = core.get_item("SRS-998")
-        assert updated_item.status == "approved"
+        assert updated_item["status"] == "approved"
 
 
 def test_TC_SYS_010_004_transition_validation(test_dhf_root):
@@ -143,9 +143,9 @@ def test_TC_SYS_010_004_transition_validation(test_dhf_root):
     assert isinstance(transitions, list), "Should return valid transitions"
 
     # If item is in stable state, transitions may be limited
-    if item.status == "approved":
+    if item["status"] == "approved":
         # Check if state info indicates it's stable
-        state_info = core.get_state_info(item.status)
+        state_info = core.get_state_info(item["status"])
         if state_info and state_info.get('is_stable'):
             # Stable states typically have fewer outgoing transitions
             assert True, "Stable state recognized"
@@ -168,7 +168,7 @@ def test_TC_SYS_010_005_cr_workflow(test_dhf_root):
 
     # Verify CR has status
     assert hasattr(cr, 'status')
-    assert cr.status in ["draft", "open", "in_progress", "resolved", "approved", "closed"]
+    assert cr["status"] in ["draft", "open", "in_progress", "resolved", "approved", "closed"]
 
     # Get available transitions for CR
     transitions = core.get_available_transitions(cr)
@@ -205,7 +205,7 @@ def test_TC_SYS_010_006_state_history_tracking(test_dhf_root):
 
     # Change status
     item = core.get_item("SRS-997")
-    item.status = "approved"
+    item["status"] = "approved"
     core.save_item(item)
 
     # Git history should track the change

@@ -39,7 +39,7 @@ def test_TC_SYS_008_001_list_change_requests(test_dhf_root):
     assert len(cr_items) > 0, "Should have change requests"
 
     # Verify CR-001 exists
-    cr_ids = [item.id for item in cr_items]
+    cr_ids = [item["id"] for item in cr_items]
     assert "CR-001" in cr_ids, "Should have CR-001 in test data"
 
 
@@ -61,9 +61,9 @@ def test_TC_SYS_008_002_view_change_request_details(test_dhf_root):
     # Verify CR details
     assert cr is not None
     assert cr.id == "CR-001"
-    assert cr.title == "Test Change Request"
-    assert "Change request for testing purposes" in cr.description
-    assert cr.status == "approved"
+    assert cr["title"] == "Test Change Request"
+    assert "Change request for testing purposes" in cr["description"]
+    assert cr["status"] == "approved"
 
 
 def test_TC_SYS_008_003_view_affected_items(test_dhf_root):
@@ -83,14 +83,14 @@ def test_TC_SYS_008_003_view_affected_items(test_dhf_root):
 
     # Verify affected_items field exists and has data
     assert hasattr(cr, 'affected_items'), "CR should have affected_items field"
-    assert cr.affected_items is not None, "CR should have affected items"
-    assert len(cr.affected_items) > 0, "CR should affect at least one item"
+    assert cr.get("affected_items") is not None, "CR should have affected items"
+    assert len(cr.get("affected_items")) > 0, "CR should affect at least one item"
 
     # Verify SRS-001 is in affected items
-    assert "SRS-001" in cr.affected_items, "CR-001 should affect SRS-001"
+    assert "SRS-001" in cr.get("affected_items"), "CR-001 should affect SRS-001"
 
     # Verify affected items actually exist
-    for affected_id in cr.affected_items:
+    for affected_id in cr.get("affected_items"):
         affected_item = core.get_item(affected_id)
         assert affected_item is not None, f"Affected item {affected_id} should exist"
 
@@ -126,8 +126,8 @@ def test_TC_SYS_008_004_create_change_request(test_dhf_root):
     created_cr = core.get_item("CR-999")
 
     assert created_cr is not None, "CR-999 should be created"
-    assert created_cr.title == "API Test Change Request"
-    assert created_cr.status == "draft"
+    assert created_cr["title"] == "API Test Change Request"
+    assert created_cr["status"] == "draft"
 
 
 def test_TC_SYS_008_005_edit_change_request(test_dhf_root):
@@ -144,18 +144,18 @@ def test_TC_SYS_008_005_edit_change_request(test_dhf_root):
 
     # Get existing CR
     cr = core.get_item("CR-001")
-    original_title = cr.title
+    original_title = cr["title"]
 
     # Modify CR
-    cr.title = "Modified Test Change Request"
+    cr["title"] = "Modified Test Change Request"
     core.save_item(cr)
 
     # Refresh and verify changes
     core.refresh()
     modified_cr = core.get_item("CR-001")
 
-    assert modified_cr.title == "Modified Test Change Request"
-    assert modified_cr.title != original_title
+    assert modified_cr["title"] == "Modified Test Change Request"
+    assert modified_cr["title"] != original_title
 
 
 def test_TC_SYS_008_006_cr_impact_analysis(test_dhf_root):
@@ -175,7 +175,7 @@ def test_TC_SYS_008_006_cr_impact_analysis(test_dhf_root):
 
     # For each affected item, find all downstream items
     total_impact = set()
-    for affected_id in cr.affected_items:
+    for affected_id in cr.get("affected_items"):
         # Find descendants (downstream impact)
         descendants = core.graph.find_descendants(affected_id)
         total_impact.update(d.id for d in descendants)

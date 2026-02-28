@@ -35,7 +35,7 @@ def test_TC_SYS_003_001_traceability_matrix_data(test_dhf_root):
     all_items = core.get_all_items()
 
     # Verify we have items of different types for traceability
-    item_types = set(item.doc_type for item in all_items.values())
+    item_types = set(item["id"].split("-")[0] for item in all_items)
 
     assert "UC" in item_types, "Should have Use Case items"
     assert "CRS" in item_types, "Should have Customer Requirement items"
@@ -43,10 +43,11 @@ def test_TC_SYS_003_001_traceability_matrix_data(test_dhf_root):
     assert "SRS" in item_types, "Should have Software Requirement items"
 
     # Verify specific test items exist
-    assert "UC-001" in all_items
-    assert "CRS-001" in all_items
-    assert "SYS-001" in all_items
-    assert "SRS-001" in all_items
+    item_ids = [item["id"] for item in all_items]
+    assert "UC-001" in item_ids
+    assert "CRS-001" in item_ids
+    assert "SYS-001" in item_ids
+    assert "SRS-001" in item_ids
 
 
 def test_TC_SYS_003_002_traceability_graph(test_dhf_root):
@@ -92,13 +93,13 @@ def test_TC_SYS_003_003_traceability_relationships(test_dhf_root):
 
     # SRS-001 should derive from SYS items
     assert hasattr(srs_item, 'derives_from')
-    assert srs_item.derives_from is not None
-    assert len(srs_item.derives_from) > 0
+    assert srs_item.get("derives_from") is not None
+    assert len(srs_item.get("derives_from")) > 0
 
     # Get SYS-001 and verify it derives from CRS
     sys_item = core.get_item("SYS-001")
     assert hasattr(sys_item, 'derives_from')
-    assert sys_item.derives_from is not None
+    assert sys_item.get("derives_from") is not None
 
 
 def test_TC_SYS_003_004_downstream_traceability(test_dhf_root):
@@ -125,7 +126,7 @@ def test_TC_SYS_003_004_downstream_traceability(test_dhf_root):
 
     # Check that we can trace down the hierarchy
     srs_item = core.get_item("SRS-001")
-    if srs_item.derives_from and "SYS-001" in srs_item.derives_from:
+    if srs_item.get("derives_from") and "SYS-001" in srs_item.get("derives_from"):
         assert "SRS-001" in descendant_ids, "SRS-001 should be descendant of SYS-001"
 
 
@@ -153,7 +154,7 @@ def test_TC_SYS_003_005_upstream_traceability(test_dhf_root):
 
     # Should be able to trace back to SYS items
     srs_item = core.get_item("SRS-001")
-    if srs_item.derives_from:
+    if srs_item.get("derives_from"):
         # At least one parent should be in ancestors
-        assert any(parent_id in ancestor_ids for parent_id in srs_item.derives_from), \
+        assert any(parent_id in ancestor_ids for parent_id in srs_item.get("derives_from")), \
             "Direct parents should be in ancestors"

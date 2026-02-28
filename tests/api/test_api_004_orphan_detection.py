@@ -99,7 +99,7 @@ def test_TC_SYS_004_003_create_orphan_and_detect(test_dhf_root):
 
     # The new SRS-999 should be detected as an orphan
     if "SRS" in orphans:
-        orphan_ids = [item.id for item in orphans["SRS"]]
+        orphan_ids = [item["id"] for item in orphans["SRS"]]
         assert "SRS-999" in orphan_ids, "SRS-999 should be detected as orphan"
 
 
