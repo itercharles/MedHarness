@@ -92,14 +92,14 @@ def test_TC_SYS_003_003_traceability_relationships(test_dhf_root):
     srs_item = core.get_item("SRS-001")
 
     # SRS-001 should derive from SYS items
-    assert hasattr(srs_item, 'derives_from')
-    assert srs_item.get("derives_from") is not None
-    assert len(srs_item.get("derives_from")) > 0
+    assert "derives_from" in srs_item
+    assert srs_item["derives_from"] is not None
+    assert len(srs_item["derives_from"]) > 0
 
     # Get SYS-001 and verify it derives from CRS
     sys_item = core.get_item("SYS-001")
-    assert hasattr(sys_item, 'derives_from')
-    assert sys_item.get("derives_from") is not None
+    assert "derives_from" in sys_item
+    assert sys_item["derives_from"] is not None
 
 
 def test_TC_SYS_003_004_downstream_traceability(test_dhf_root):
@@ -115,19 +115,16 @@ def test_TC_SYS_003_004_downstream_traceability(test_dhf_root):
     core = CompliantFlowCore(test_dhf_root)
     graph = core.graph
 
-    # Find descendants of SYS-001 (should include SRS items)
-    descendants = graph.find_descendants("SYS-001")
+    # Get downstream items from SYS-001 (returns set of UIDs)
+    downstream_uids = graph.get_downstream("SYS-001")
 
-    # Should have some descendants
-    assert len(descendants) > 0, "SYS-001 should have downstream items"
-
-    # Descendants should include derived SRS items
-    descendant_ids = [d.id for d in descendants]
+    # Should have some downstream items
+    assert len(downstream_uids) > 0, "SYS-001 should have downstream items"
 
     # Check that we can trace down the hierarchy
     srs_item = core.get_item("SRS-001")
-    if srs_item.get("derives_from") and "SYS-001" in srs_item.get("derives_from"):
-        assert "SRS-001" in descendant_ids, "SRS-001 should be descendant of SYS-001"
+    if srs_item.get("derives_from") and "SYS-001" in srs_item["derives_from"]:
+        assert "SRS-001" in downstream_uids, "SRS-001 should be downstream of SYS-001"
 
 
 def test_TC_SYS_003_005_upstream_traceability(test_dhf_root):
@@ -143,18 +140,15 @@ def test_TC_SYS_003_005_upstream_traceability(test_dhf_root):
     core = CompliantFlowCore(test_dhf_root)
     graph = core.graph
 
-    # Find ancestors of SRS-001 (should include SYS, CRS, UC)
-    ancestors = graph.find_ancestors("SRS-001")
+    # Get upstream items from SRS-001 (returns set of UIDs)
+    upstream_uids = graph.get_upstream("SRS-001")
 
-    # Should have some ancestors
-    assert len(ancestors) > 0, "SRS-001 should have upstream items"
-
-    # Get ancestor IDs
-    ancestor_ids = [a.id for a in ancestors]
+    # Should have some upstream items
+    assert len(upstream_uids) > 0, "SRS-001 should have upstream items"
 
     # Should be able to trace back to SYS items
     srs_item = core.get_item("SRS-001")
     if srs_item.get("derives_from"):
-        # At least one parent should be in ancestors
-        assert any(parent_id in ancestor_ids for parent_id in srs_item.get("derives_from")), \
-            "Direct parents should be in ancestors"
+        # At least one parent should be in upstream
+        assert any(parent_id in upstream_uids for parent_id in srs_item["derives_from"]), \
+            "Direct parents should be in upstream"
