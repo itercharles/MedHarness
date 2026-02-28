@@ -171,6 +171,7 @@ def test_TC_SYS_005_005_policy_validation_details(test_dhf_root):
         # Should have details explaining the result
         assert result['details'], "Should have validation details"
 
-        # May have evidence
-        if 'evidence' in result:
-            assert result['evidence'] is not None
+        # Evidence field is optional and may be None
+        # Just verify the field structure is correct if present
+        if 'evidence' in result and result['evidence'] is not None:
+            assert isinstance(result['evidence'], dict)

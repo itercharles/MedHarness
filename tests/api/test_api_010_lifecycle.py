@@ -96,11 +96,12 @@ def test_TC_SYS_010_003_perform_state_transition(test_dhf_root):
         "status": "draft"
     }
 
+    # Use Item model and saver
     new_item = Item(**new_item_data)
-    core.save_item(new_item)
+    core.saver.save(new_item, author="test_user")
     core.refresh()
 
-    # Get the item
+    # Get the item (returns dict)
     item = core.get_item("SRS-998")
     assert item["status"] == "draft"
 
@@ -113,9 +114,10 @@ def test_TC_SYS_010_003_perform_state_transition(test_dhf_root):
         updated_item = core.get_item("SRS-998")
         assert updated_item["status"] == "approved", "Item should transition to approved"
     else:
-        # Manual status update
+        # Manual status update using saver
         item["status"] = "approved"
-        core.save_item(item)
+        updated_item_obj = Item(**item)
+        core.saver.save(updated_item_obj, author="test_user")
         core.refresh()
         updated_item = core.get_item("SRS-998")
         assert updated_item["status"] == "approved"
@@ -163,11 +165,11 @@ def test_TC_SYS_010_005_cr_workflow(test_dhf_root):
     # Initialize core with test DHF
     core = CompliantFlowCore(test_dhf_root)
 
-    # Get CR-001
+    # Get CR-001 (returns dict)
     cr = core.get_item("CR-001")
 
     # Verify CR has status
-    assert hasattr(cr, 'status')
+    assert "status" in cr
     assert cr["status"] in ["draft", "open", "in_progress", "resolved", "approved", "closed"]
 
     # Get available transitions for CR
@@ -199,14 +201,16 @@ def test_TC_SYS_010_006_state_history_tracking(test_dhf_root):
         "status": "draft"
     }
 
+    # Use Item model and saver
     new_item = Item(**new_item_data)
-    core.save_item(new_item)
+    core.saver.save(new_item, author="test_user")
     core.refresh()
 
     # Change status
-    item = core.get_item("SRS-997")
+    item = core.get_item("SRS-997")  # Returns dict
     item["status"] = "approved"
-    core.save_item(item)
+    updated_item = Item(**item)
+    core.saver.save(updated_item, author="test_user")
 
     # Git history should track the change
     # This is verified by the underlying Git repository
