@@ -7,7 +7,7 @@ import streamlit as st
 def create_doc_page_function(doc_type, core):
     """Create a page function for a specific document type."""
     def page_func():
-        from pages.universal_page_template import render_item_management_page
+        from debug_view.universal_page_template import render_item_management_page
         
         config_dict = {
             'code': doc_type.code,

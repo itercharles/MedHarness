@@ -242,7 +242,7 @@ class TestSWDD008_UniversalPageTemplateIntegration:
         import importlib.util
         spec = importlib.util.spec_from_file_location(
             "universal_page_template",
-            Path(__file__).parent.parent.parent / "src" / "pages" / "universal_page_template.py"
+            Path(__file__).parent.parent.parent / "src" / "debug_view" / "universal_page_template.py"
         )
         module = importlib.util.module_from_spec(spec)
         
@@ -255,7 +255,7 @@ class TestSWDD008_UniversalPageTemplateIntegration:
     
     def test_universal_page_has_hyperlink_functions(self):
         """Verify universal page template has access to hyperlink functions."""
-        from pages.universal_page_template import render_table_section
+        from debug_view.universal_page_template import render_table_section
         import inspect
         
         # Get the source code of the table rendering function
@@ -267,7 +267,7 @@ class TestSWDD008_UniversalPageTemplateIntegration:
     
     def test_column_config_applied_to_dataframe(self):
         """Verify column config is passed to st.dataframe."""
-        from pages.universal_page_template import render_table_section
+        from debug_view.universal_page_template import render_table_section
         import inspect
         
         source = inspect.getsource(render_table_section)
