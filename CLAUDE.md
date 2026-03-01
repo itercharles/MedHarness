@@ -10,9 +10,7 @@ CompliantFlow is a Docs-as-Code ALM platform for medical devices. It manages Des
 
 ### Run the application
 ```bash
-cd src
-source venv/bin/activate
-streamlit run app.py
+streamlit run src/app.py
 ```
 
 ### Run tests
@@ -27,13 +25,7 @@ PYTHONPATH=$(pwd) src/venv/bin/pytest tests/sys/test_sys_001_object_management.p
 PYTHONPATH=$(pwd) src/venv/bin/pytest tests/srs/ -v
 ```
 
-**Important**: Run from the repo root; `PYTHONPATH=$(pwd)` must point to the repo root (not `src/`). Tests use `sys.path.insert(0, ...)` to find `src/traceability/`.
-
-### Validate items against schema
-```bash
-cd src && source venv/bin/activate
-python validate_items.py ../DHF
-```
+**Important**: Run from the repo root; `PYTHONPATH=$(pwd)` must point to the repo root (not `src/`).
 
 ## Architecture
 
@@ -75,7 +67,7 @@ Key public methods:
 `ProjectConfig` and `DocTypeConfig` Pydantic models are in `src/traceability/models/config.py`.
 
 ### Schema Validation
-`loader.py` validates each YAML against its doc type's `properties` list. Allowed fields per item = `_SYSTEM_FIELDS` (saver-written metadata: `id`, `doc_type`, `status`, `history`, etc., plus `reviewer`/`review_date` as core Item model fields) + fields declared in `properties` + lifecycle-derived fields (auto-computed from the doc type's `lifecycle` config: `{to_state}_by`/`{to_state}_date` for each transition, `manual_verifications` when manual criteria exist, `verification_status` when `has_verification: true`). Use `src/validate_items.py DHF` to check the real DHF.
+`loader.py` validates each YAML against its doc type's `properties` list. Allowed fields per item = `_SYSTEM_FIELDS` (saver-written metadata: `id`, `doc_type`, `status`, `history`, etc., plus `reviewer`/`review_date` as core Item model fields) + fields declared in `properties` + lifecycle-derived fields (auto-computed from the doc type's `lifecycle` config: `{to_state}_by`/`{to_state}_date` for each transition, `manual_verifications` when manual criteria exist, `verification_status` when `has_verification: true`).
 
 ### Lifecycle / Transitions
 - **`src/traceability/lifecycle_methods.py`** — `execute_transition()` only writes `status`. Audit fields (`approved_by`, `approved_date`, `reviewer`, `review_date`) are written by the UI layer before calling the transition.
@@ -89,8 +81,8 @@ Key public methods:
 
 ## Testing Conventions
 
-- All new tests go in `tests/api/` as API tests (no browser/Selenium).
-- Use the `test_dhf_root` fixture from `tests/api/conftest.py` — it creates a fresh isolated DHF for each test.
+- All new tests go in `tests/sys/` as API-based tests (no browser/Playwright).
+- Use the `test_dhf_root` fixture from `tests/sys/conftest.py` — it creates a fresh isolated DHF for each test.
 - Test DHF config and items are defined in `tests/fixtures/test_data.py`.
 - Test IDs follow `TC-SYS-NNN-NNN` pattern. Add `@test_id:` and `@links:` docstring tags.
 - Prefer `pytest.raises(ValidationError)` and similar assertions; avoid asserting exact error strings beyond key terms.
