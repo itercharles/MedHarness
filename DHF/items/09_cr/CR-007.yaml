@@ -8,8 +8,8 @@ description: 'The error pop up when trying to generating the specification docum
 justification: defect
 priority: High
 file_path: /Users/chenwenliang/code/CompliantFlow/DHF/items/09_cr/CR-007.yaml
-in_review_by: charles chen
-in_review_date: '2025-12-31'
+review_by: charles chen
+review_date: '2025-12-31'
 timestamp: '2025-12-31T09:35:18.048611'
 affected_items:
 - TC-SRS-007

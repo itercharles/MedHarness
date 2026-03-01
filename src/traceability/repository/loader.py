@@ -173,7 +173,7 @@ class ItemLoader:
 
         Covers:
           - {state}_by / {state}_date for every transition target state
-          - reviewer / review_date as conventional aliases for the in_review state
+          - review_by / review_date for the in_review state (reviewer kept as alias)
           - manual_verifications when any criterion uses check_type: manual
           - verification_status when the doc type has has_verification: true
           - field names referenced by field_not_empty criteria (e.g. retired_reason)
@@ -184,12 +184,14 @@ class ItemLoader:
             for transition in lifecycle.get('transitions', []) or []:
                 to_state = transition.get('to_state')
                 if to_state:
-                    fields.add(f'{to_state}_by')
-                    fields.add(f'{to_state}_date')
-                    # Conventional review-tracking aliases used by the UI layer
                     if to_state == 'in_review':
-                        fields.add('reviewer')
+                        # Use canonical review_by / review_date names for the review state
+                        fields.add('review_by')
                         fields.add('review_date')
+                        fields.add('reviewer')  # legacy alias kept for compatibility
+                    else:
+                        fields.add(f'{to_state}_by')
+                        fields.add(f'{to_state}_date')
 
                 for criterion in transition.get('criteria', []) or []:
                     check_type = criterion.get('check_type')

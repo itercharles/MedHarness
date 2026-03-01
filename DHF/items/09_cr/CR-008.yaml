@@ -7,6 +7,6 @@ description: 'I want to display the link items and the relationship with other o
 justification: usability
 priority: High
 file_path: /Users/chenwenliang/code/CompliantFlow/DHF/items/09_cr/CR-008.yaml
-in_review_by: charles
-in_review_date: '2025-12-31'
+review_by: charles
+review_date: '2025-12-31'
 timestamp: '2025-12-31T13:24:25.916393'
