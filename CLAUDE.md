@@ -99,13 +99,16 @@ Key public methods:
 - A state with `is_stable: true` locks the item — `is_item_editable()` returns `False`.
 
 ### CLI Layer
-**`src/compliantflow/cli.py`** exposes `CompliantFlowCore` as a `click` CLI. Both the Streamlit UI and the CLI call the same core — no duplication of business logic. CI/CD uses the CLI instead of inline Python scripts.
+**`src/cli/cli.py`** exposes `CompliantFlowCore` as a `click` CLI. Sits alongside `debug_view/` as an interface layer, separate from the core package. Both entry points work:
+- `python -m cli` — primary entry point
+- `python -m compliantflow` — preserved for backward compatibility (delegates to `cli`)
 
-### Pages
-- **`src/pages/universal_page_template.py`** — renders the CRUD page for any doc type; called by dynamically generated pages.
-- **`src/pages/02_Traceability.py`** — traceability matrix and graph views.
-- **`src/pages/03_Compliance.py`** — compliance policy assessment.
-- **`src/pages/page_generator.py`** — generates Streamlit page files from `project_config.yaml`.
+### DebugView (internal Streamlit pages)
+`src/debug_view/` contains Streamlit pages for internal development and debugging — **not a production UI**. Loaded explicitly via `st.Page(absolute_path)` in `app.py`.
+- **`universal_page_template.py`** — renders the CRUD page for any doc type
+- **`02_Traceability.py`** — traceability matrix and graph views
+- **`03_Compliance.py`** — compliance policy assessment
+- **`page_generator.py`** — generates page functions from `project_config.yaml`
 
 ## Testing Conventions
 
