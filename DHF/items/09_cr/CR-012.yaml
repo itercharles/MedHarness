@@ -73,3 +73,6 @@ implementation_prs:
 - pr_number: 28
   pr_url: https://github.com/itercharles/CompliantFlow/pull/28
   title: 'CR-012: External test result integration via CLI (SYS-033)'
+- pr_number: 29
+  pr_url: https://github.com/itercharles/CompliantFlow/pull/29
+  title: 'CR-012: Wire test import into CI pipeline (Phase 3.5)'
