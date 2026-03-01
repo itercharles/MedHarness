@@ -44,6 +44,8 @@ affected_items:
 - TC-SYS-021
 - TC-SYS-031
 - TC-SRS-012
+- SYS-033
+- TC-SYS-033
 file_path: /home/runner/work/CompliantFlow/CompliantFlow/DHF/items/09_cr/CR-012.yaml
 implementation_prs:
 - pr_number: 19
@@ -68,3 +70,6 @@ implementation_prs:
 - pr_number: 26
   pr_url: https://github.com/itercharles/CompliantFlow/pull/26
   title: 'CR-012: Remove get_item_neighbors in favour of get_item_chain'
+- pr_number: 28
+  pr_url: https://github.com/itercharles/CompliantFlow/pull/28
+  title: 'CR-012: External test result integration via CLI (SYS-033)'
