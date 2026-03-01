@@ -150,12 +150,13 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          if git diff --quiet DHF/test-results/; then
+          git add DHF/test-results/results.yaml DHF/test-results/audit.log 2>/dev/null || true
+
+          if git diff --cached --quiet; then
             echo "No test result changes to commit"
             exit 0
           fi
 
-          git add DHF/test-results/results.yaml DHF/test-results/audit.log
           git commit -m "CI: Import test results from run ${{ github.run_id }}"
           git push origin HEAD:${{ github.head_ref || github.ref_name }}
           echo "✅ Test results imported and committed to DHF"
