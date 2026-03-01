@@ -106,9 +106,63 @@ jobs:
           name: crs-test-results
           path: crs-test-results.xml
 
+  phase-import-results:
+    name: Phase 3.5 - Import Test Results to DHF
+    runs-on: ubuntu-latest
+    needs: [phase1-srs, phase2-sys, phase3-crs]
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Download test result artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: test-artifacts
+
+      - name: Import test results to DHF
+        run: |
+          export PYTHONPATH="${PWD}/src"
+          for xml in test-artifacts/*/*.xml; do
+            echo "Importing $xml"
+            python -m compliantflow --dhf DHF test import "$xml" \
+              --format junit \
+              --tester "GitHub Actions" \
+              --run-id "${{ github.run_id }}" \
+              --run-url "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+              --commit "${{ github.sha }}" || echo "Warning: import failed for $xml"
+          done
+
+      - name: Commit test results to DHF
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          if git diff --quiet DHF/test-results/; then
+            echo "No test result changes to commit"
+            exit 0
+          fi
+
+          git add DHF/test-results/results.yaml DHF/test-results/audit.log
+          git commit -m "CI: Import test results from run ${{ github.run_id }}"
+          git push origin HEAD:${{ github.head_ref || github.ref_name }}
+          echo "✅ Test results imported and committed to DHF"
+
   phase4-cr:
     name: Phase 4 - Insert Impacted Items to CR
-    needs: [phase1-srs, phase2-sys, phase3-crs]
+    needs: [phase-import-results]
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
