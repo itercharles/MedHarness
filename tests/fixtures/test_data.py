@@ -376,7 +376,7 @@ def populate_test_dhf(test_dhf_root: Path):
         CompliantFlowCore instance with populated data
     """
     from compliantflow.core import CompliantFlowCore
-    from src.traceability.models.item import Item
+    from traceability.models.item import Item
 
     print(f"\n[DATA] Populating test DHF with test data...")
 

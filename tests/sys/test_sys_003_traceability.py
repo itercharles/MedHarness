@@ -332,3 +332,188 @@ def test_get_doc_type_code(test_dhf_root):
     assert core.get_doc_type_code("SYS-002") == "SYS"
     assert core.get_doc_type_code("CRS-001") == "CRS"
     assert core.get_doc_type_code("UNKNOWN-999") == "OTHER"
+
+
+# ---------------------------------------------------------------------------
+# build_traceability_matrix
+# ---------------------------------------------------------------------------
+
+def test_build_traceability_matrix_structure(test_dhf_root):
+    """
+    TC-SYS-003-015: build_traceability_matrix returns columns + rows (API)
+
+    @links: SYS-003
+    @test_id: TC-SYS-003-015
+
+    Verify the return dict has 'columns' and 'rows' keys, and each row
+    contains exactly the requested doc-type keys plus meta keys.
+    """
+    core = CompliantFlowCore(test_dhf_root)
+    result = core.build_traceability_matrix(["CRS", "SYS", "SRS"])
+
+    assert "columns" in result
+    assert "rows" in result
+    assert result["columns"] == ["CRS", "SYS", "SRS"]
+
+    meta_keys = {"is_orphan", "orphan_type", "is_complete"}
+    for row in result["rows"]:
+        assert set(row.keys()) == {"CRS", "SYS", "SRS"} | meta_keys
+        # cell values are item IDs (str) or None — never dicts
+        for dt in ["CRS", "SYS", "SRS"]:
+            assert row[dt] is None or isinstance(row[dt], str)
+
+
+def test_build_traceability_matrix_linked_items(test_dhf_root):
+    """
+    TC-SYS-003-016: build_traceability_matrix rows contain correct IDs (API)
+
+    @links: SYS-003
+    @test_id: TC-SYS-003-016
+
+    CRS-001 → SYS-001 → SRS-001 and SRS-002 must appear as complete rows.
+    """
+    core = CompliantFlowCore(test_dhf_root)
+    result = core.build_traceability_matrix(["CRS", "SYS", "SRS"])
+
+    complete_rows = [r for r in result["rows"] if r["is_complete"]]
+    assert len(complete_rows) >= 1
+
+    # Both SRS items that derive from SYS-001 should produce complete rows
+    srs_ids_in_complete = {r["SRS"] for r in complete_rows}
+    assert "SRS-001" in srs_ids_in_complete
+    assert "SRS-002" in srs_ids_in_complete
+
+
+def test_build_traceability_matrix_orphans_included(test_dhf_root):
+    """
+    TC-SYS-003-017: build_traceability_matrix includes orphan rows (API)
+
+    @links: SYS-003
+    @test_id: TC-SYS-003-017
+
+    SYS-002 derives from CRS-001 but has no SRS children — it must appear
+    as an orphan row (is_complete=False) with SRS=None.
+    """
+    core = CompliantFlowCore(test_dhf_root)
+    result = core.build_traceability_matrix(["CRS", "SYS", "SRS"])
+
+    sys2_rows = [r for r in result["rows"] if r["SYS"] == "SYS-002"]
+    assert sys2_rows, "SYS-002 must appear in the matrix"
+    assert all(r["SRS"] is None for r in sys2_rows)
+    assert all(not r["is_complete"] for r in sys2_rows)
+
+
+def test_build_traceability_matrix_custom_path(test_dhf_root):
+    """
+    TC-SYS-003-018: build_traceability_matrix accepts any doc-type subset (API)
+
+    @links: SYS-003
+    @test_id: TC-SYS-003-018
+    """
+    core = CompliantFlowCore(test_dhf_root)
+    # Two-column matrix
+    result = core.build_traceability_matrix(["SYS", "SRS"])
+    assert result["columns"] == ["SYS", "SRS"]
+    assert len(result["rows"]) > 0
+
+
+# ---------------------------------------------------------------------------
+# get_item_chain
+# ---------------------------------------------------------------------------
+
+def test_get_item_chain_unknown_item(test_dhf_root):
+    """
+    TC-SYS-003-019: get_item_chain returns None for unknown item (API)
+
+    @links: SYS-003
+    @test_id: TC-SYS-003-019
+    """
+    core = CompliantFlowCore(test_dhf_root)
+    assert core.get_item_chain("DOES-NOT-EXIST") is None
+
+
+def test_get_item_chain_structure(test_dhf_root):
+    """
+    TC-SYS-003-020: get_item_chain returns root + nodes dict (API)
+
+    @links: SYS-003
+    @test_id: TC-SYS-003-020
+
+    Verify the top-level shape and that each node has the expected keys.
+    """
+    core = CompliantFlowCore(test_dhf_root)
+    result = core.get_item_chain("SYS-001")
+
+    assert result is not None
+    assert result["root"] == "SYS-001"
+    assert "nodes" in result
+    assert isinstance(result["nodes"], dict)
+
+    node_keys = {"id", "title", "status", "doc_type", "upstream", "downstream"}
+    for node in result["nodes"].values():
+        assert node_keys <= set(node.keys())
+        assert isinstance(node["upstream"], list)
+        assert isinstance(node["downstream"], list)
+
+
+def test_get_item_chain_transitive_coverage(test_dhf_root):
+    """
+    TC-SYS-003-021: get_item_chain includes all transitively connected items (API)
+
+    @links: SYS-003
+    @test_id: TC-SYS-003-021
+
+    Starting from SYS-001:
+      upstream:   CRS-001 → UC-001
+      downstream: SRS-001, SRS-002, SYSARCH-001
+    All must appear in nodes.
+    """
+    core = CompliantFlowCore(test_dhf_root)
+    result = core.get_item_chain("SYS-001")
+    node_ids = set(result["nodes"].keys())
+
+    assert "SYS-001"    in node_ids
+    assert "CRS-001"    in node_ids  # direct upstream
+    assert "UC-001"     in node_ids  # transitive upstream
+    assert "SRS-001"    in node_ids  # direct downstream
+    assert "SRS-002"    in node_ids  # direct downstream
+    assert "SYSARCH-001" in node_ids  # downstream (implements SYS-001)
+
+
+def test_get_item_chain_direct_neighbours_only(test_dhf_root):
+    """
+    TC-SYS-003-022: get_item_chain upstream/downstream lists are direct only (API)
+
+    @links: SYS-003
+    @test_id: TC-SYS-003-022
+
+    SYS-001's upstream must be [CRS-001] (direct parent), NOT UC-001
+    (which is the grandparent — reachable via nodes dict, not listed directly).
+    """
+    core = CompliantFlowCore(test_dhf_root)
+    result = core.get_item_chain("SYS-001")
+    sys_node = result["nodes"]["SYS-001"]
+
+    assert "CRS-001" in sys_node["upstream"]
+    assert "UC-001"  not in sys_node["upstream"]   # transitive, not direct
+
+    assert "SRS-001"    in sys_node["downstream"]
+    assert "SRS-002"    in sys_node["downstream"]
+    assert "SYSARCH-001" in sys_node["downstream"]
+
+
+def test_get_item_chain_leaf_item(test_dhf_root):
+    """
+    TC-SYS-003-023: get_item_chain works for a leaf item with no downstream (API)
+
+    @links: SYS-003
+    @test_id: TC-SYS-003-023
+    """
+    core = CompliantFlowCore(test_dhf_root)
+    result = core.get_item_chain("UC-001")
+
+    assert result is not None
+    assert result["root"] == "UC-001"
+    uc_node = result["nodes"]["UC-001"]
+    assert uc_node["upstream"] == []        # UC has no parents
+    assert len(uc_node["downstream"]) > 0   # CRS-001 derives from UC-001
