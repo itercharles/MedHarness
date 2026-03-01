@@ -74,47 +74,37 @@ jobs:
           path: sys-test-results.xml
 
 
-  # Phase 3: CRS Browser Tests (Customer Requirements)
+  # Phase 3: CRS API Tests (Customer Requirements)
   phase3-crs:
-    name: Phase 3 - CRS Browser Tests
+    name: Phase 3 - CRS API Tests
     runs-on: ubuntu-latest
     needs: phase2-sys
     steps:
       - name: Check out code
         uses: actions/checkout@v3
-      
+
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
-      
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pytest playwright pytest-playwright
+          pip install pytest
           pip install -r requirements.txt
-      
-      - name: Install Playwright browsers
-        run: playwright install chromium --with-deps
-      
-      - name: Run CRS Browser Tests
+
+      - name: Run CRS API Tests
         run: |
           export PYTHONPATH="${PYTHONPATH}:${PWD}/src"
           pytest tests/crs/ -v -s --junitxml=crs-test-results.xml
-      
+
       - name: Upload CRS test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: crs-test-results
           path: crs-test-results.xml
-      
-      - name: Upload Playwright traces
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-traces
-          path: test-results/
 
   phase4-cr:
     name: Phase 4 - Insert Impacted Items to CR
@@ -143,17 +133,15 @@ jobs:
         id: validate
         env:
           PR_TITLE: ${{ github.event.pull_request.title }}
-          PR_BODY: ${{ github.event.pull_request.body }}
         run: |
-          CR_PATTERN="CR-[0-9]+"
-          
-          if echo "$PR_TITLE $PR_BODY" | grep -qE "$CR_PATTERN"; then
-            CR_ID=$(echo "$PR_TITLE $PR_BODY" | grep -oE "$CR_PATTERN" | head -1)
+          # PR title MUST start with CR-NNN (e.g. "CR-012: add CLI layer")
+          if echo "$PR_TITLE" | grep -qE "^CR-[0-9]+"; then
+            CR_ID=$(echo "$PR_TITLE" | grep -oE "^CR-[0-9]+" | head -1)
             echo "Found CR: $CR_ID"
             echo "cr_id=$CR_ID" >> $GITHUB_OUTPUT
           else
-            echo "::error::No CR reference found in PR title or description"
-            echo "::error::Please include CR-XXX in your PR title or description"
+            echo "::error::PR title must start with CR-NNN (e.g. 'CR-012: description')"
+            echo "::error::Current title: $PR_TITLE"
             exit 1
           fi
       

@@ -32,19 +32,23 @@ def test_TC_CRS_008_001_view_requirement_with_verification_data(core):
         "SRS-001 should have upstream links (derives_from SYS-001)"
 
 
-def test_TC_CRS_008_002_check_compliance_report(core):
+def test_TC_CRS_008_002_approved_items_have_full_traceability(core):
     """
-    TC-CRS-008-002: Generate Compliance Report via API
+    TC-CRS-008-002: Approved SRS items form a complete upstream traceability chain
 
     @test_id: TC-CRS-008-002
     @links: CRS-008
 
-    check_compliance('IEC_62304') returns a structured compliance report
-    including policy evaluation results.
+    Test Integration requires that approved software requirements are
+    traceable all the way back to system requirements.  Every approved
+    SRS item must have at least one upstream SYS item.
     """
-    report = core.check_compliance("IEC_62304")
+    approved_srs = core.get_items_filtered("SRS", ["approved"], "")
+    assert len(approved_srs) > 0, "Expected at least one approved SRS item in the fixture"
 
-    assert report is not None, "Expected a compliance report for IEC_62304"
-    assert isinstance(report, dict), "Expected compliance report as dict"
-    # Report should contain policy evaluation data
-    assert len(report) > 0, "Expected non-empty compliance report"
+    for srs_item in approved_srs:
+        neighbors = core.get_item_neighbors(srs_item["id"])
+        upstream = neighbors.get("upstream", [])
+        sys_parents = [uid for uid in upstream if uid.startswith("SYS-")]
+        assert len(sys_parents) > 0, \
+            f"Approved {srs_item['id']} must trace to a SYS item; upstream: {upstream}"
