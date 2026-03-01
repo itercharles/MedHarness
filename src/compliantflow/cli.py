@@ -24,7 +24,7 @@ def _make_core(dhf_path: Path):
     src_dir = Path(__file__).parent.parent
     if str(src_dir) not in sys.path:
         sys.path.insert(0, str(src_dir))
-    from traceability.compliant_flow_core import CompliantFlowCore
+    from compliantflow.core import CompliantFlowCore
     return CompliantFlowCore(dhf_path, auto_commit=False)
 
 

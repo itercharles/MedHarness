@@ -13,7 +13,7 @@ import pandas as pd
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
 from utils.ui_helpers import make_item_columns_clickable, check_and_show_item_detail
-from traceability.compliant_flow_core import CompliantFlowCore
+from compliantflow.core import CompliantFlowCore
 
 
 class TestSRS013_LinkColumnForItemIDs:

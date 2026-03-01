@@ -1,7 +1,7 @@
 """Dynamic page generator for document types."""
 
 from pathlib import Path
-from traceability.compliant_flow_core import CompliantFlowCore
+from compliantflow.core import CompliantFlowCore
 import streamlit as st
 
 def create_doc_page_function(doc_type, core):

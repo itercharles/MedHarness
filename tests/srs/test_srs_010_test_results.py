@@ -146,7 +146,7 @@ def test_TC_PROVIDER_004_manual_test_reading():
     Expected Result:
       Manual tests should have verification_status, verified_by, verified_date
     """
-    from traceability.compliant_flow_core import CompliantFlowCore
+    from compliantflow.core import CompliantFlowCore
     
     dhf_root = Path(__file__).parent.parent.parent / "DHF"
     core = CompliantFlowCore(dhf_root)
