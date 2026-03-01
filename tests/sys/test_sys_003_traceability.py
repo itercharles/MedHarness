@@ -154,47 +154,6 @@ def test_TC_SYS_003_005_upstream_traceability(test_dhf_root):
             "Direct parents should be in upstream"
 
 
-def test_get_item_neighbors_returns_upstream_and_downstream(test_dhf_root):
-    """
-    TC-SYS-003-006: get_item_neighbors API (API)
-
-    @links: SYS-003
-    @test_id: TC-SYS-003-006
-
-    Verify core.get_item_neighbors() returns correct upstream/downstream lists.
-    """
-    core = CompliantFlowCore(test_dhf_root)
-
-    neighbors = core.get_item_neighbors("SYS-001")
-
-    assert "upstream" in neighbors
-    assert "downstream" in neighbors
-    assert isinstance(neighbors["upstream"], list)
-    assert isinstance(neighbors["downstream"], list)
-
-    # SYS-001 derives_from CRS-001 → CRS-001 should be upstream
-    assert "CRS-001" in neighbors["upstream"], "CRS-001 should be upstream of SYS-001"
-    # SRS-001 derives_from SYS-001 → SRS-001 should be downstream
-    assert "SRS-001" in neighbors["downstream"], "SRS-001 should be downstream of SYS-001"
-
-
-def test_get_item_neighbors_unknown_item(test_dhf_root):
-    """
-    TC-SYS-003-007: get_item_neighbors with unknown item (API)
-
-    @links: SYS-003
-    @test_id: TC-SYS-003-007
-
-    Verify get_item_neighbors returns empty lists for unknown items.
-    """
-    core = CompliantFlowCore(test_dhf_root)
-
-    neighbors = core.get_item_neighbors("NONEXISTENT-999")
-
-    assert neighbors["upstream"] == []
-    assert neighbors["downstream"] == []
-
-
 def test_build_traceability_chains_structure(test_dhf_root):
     """
     TC-SYS-003-008: build_traceability_chains API (API)

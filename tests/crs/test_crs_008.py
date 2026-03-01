@@ -27,8 +27,8 @@ def test_TC_CRS_008_001_view_requirement_with_verification_data(core):
     assert item.get("status") == "approved"
 
     # Traceability is the verification mechanism — check upstream links exist
-    neighbors = core.get_item_neighbors("SRS-001")
-    assert len(neighbors.get("upstream", [])) > 0, \
+    chain = core.get_item_chain("SRS-001")
+    assert len(chain["nodes"]["SRS-001"]["upstream"]) > 0, \
         "SRS-001 should have upstream links (derives_from SYS-001)"
 
 
@@ -47,8 +47,8 @@ def test_TC_CRS_008_002_approved_items_have_full_traceability(core):
     assert len(approved_srs) > 0, "Expected at least one approved SRS item in the fixture"
 
     for srs_item in approved_srs:
-        neighbors = core.get_item_neighbors(srs_item["id"])
-        upstream = neighbors.get("upstream", [])
+        chain = core.get_item_chain(srs_item["id"])
+        upstream = chain["nodes"][srs_item["id"]]["upstream"]
         sys_parents = [uid for uid in upstream if uid.startswith("SYS-")]
         assert len(sys_parents) > 0, \
             f"Approved {srs_item['id']} must trace to a SYS item; upstream: {upstream}"

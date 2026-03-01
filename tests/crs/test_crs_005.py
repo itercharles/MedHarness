@@ -54,10 +54,7 @@ def test_TC_CRS_005_002_view_architecture_item(core):
     assert item["id"] == "SYSARCH-001"
 
     # Architecture item must implement a SYS requirement
-    implements = item.get("implements") or []
-    if not implements:
-        neighbors = core.get_item_neighbors("SYSARCH-001")
-        implements = neighbors.get("upstream", [])
+    implements = item.get("implements") or item.get("all_linked_uids") or []
 
     assert len(implements) > 0, \
         "SYSARCH-001 must implement at least one SYS requirement"

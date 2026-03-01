@@ -54,10 +54,6 @@ def test_TC_CRS_001_002_view_requirement_details(core):
 
     # The derives_from field must be populated — requirement is traceable
     derives_from = item.get("derives_from") or item.get("all_linked_uids") or []
-    # Fall back to checking neighbors when the field is not directly in the dict
-    if not derives_from:
-        neighbors = core.get_item_neighbors("SRS-001")
-        derives_from = neighbors.get("upstream", [])
 
     assert len(derives_from) > 0, \
         "SRS-001 must have a parent requirement (derives_from) for traceability"

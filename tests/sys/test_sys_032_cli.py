@@ -226,35 +226,3 @@ def test_TC_SYS_032_010_cr_update_tracks_pr(runner, test_dhf_root, dhf_str):
     prs = cr.get("implementation_prs", [])
     assert any(p.get("pr_number") == 99 for p in prs)
 
-
-# ---------------------------------------------------------------------------
-# traceability neighbors
-# ---------------------------------------------------------------------------
-
-def test_TC_SYS_032_011_traceability_neighbors_returns_json(runner, dhf_str):
-    """
-    TC-SYS-032-011: traceability neighbors outputs JSON with upstream/downstream.
-
-    @test_id: TC-SYS-032-011
-    @links: SYS-032
-    """
-    result = runner.invoke(main, ["--dhf", dhf_str, "traceability", "neighbors", "SRS-001"])
-    assert result.exit_code == 0, result.output
-    # Find the JSON line (stdout may include a Git warning line)
-    json_line = next(l for l in result.output.splitlines() if l.strip().startswith("{"))
-    parsed = json.loads(json_line)
-    assert "upstream" in parsed
-    assert "downstream" in parsed
-    assert isinstance(parsed["upstream"], list)
-    assert isinstance(parsed["downstream"], list)
-
-
-def test_TC_SYS_032_012_traceability_neighbors_not_found_exits_1(runner, dhf_str):
-    """
-    TC-SYS-032-012: traceability neighbors exits 1 for unknown item.
-
-    @test_id: TC-SYS-032-012
-    @links: SYS-032
-    """
-    result = runner.invoke(main, ["--dhf", dhf_str, "traceability", "neighbors", "UNKNOWN-999"])
-    assert result.exit_code == 1

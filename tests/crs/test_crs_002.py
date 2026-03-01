@@ -64,13 +64,14 @@ def test_TC_CRS_002_003_navigate_parent_links(core):
     @test_id: TC-CRS-002-003
     @links: CRS-002
 
-    get_item_neighbors() for SRS-001 returns SYS-001 in the upstream list,
+    get_item_chain() for SRS-001 includes SYS-001 as a direct upstream neighbour,
     reflecting the derives_from relationship defined in the test fixture.
     """
-    neighbors = core.get_item_neighbors("SRS-001")
+    chain = core.get_item_chain("SRS-001")
+    node = chain["nodes"]["SRS-001"]
 
-    assert "upstream" in neighbors, "Expected 'upstream' key in neighbors"
-    assert "downstream" in neighbors, "Expected 'downstream' key in neighbors"
-    assert isinstance(neighbors["upstream"], list)
-    assert "SYS-001" in neighbors["upstream"], \
-        f"Expected SYS-001 in upstream of SRS-001, got: {neighbors['upstream']}"
+    assert "upstream" in node, "Expected 'upstream' key in chain node"
+    assert "downstream" in node, "Expected 'downstream' key in chain node"
+    assert isinstance(node["upstream"], list)
+    assert "SYS-001" in node["upstream"], \
+        f"Expected SYS-001 in upstream of SRS-001, got: {node['upstream']}"

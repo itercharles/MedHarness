@@ -7,29 +7,6 @@ from traceability.graph.analysis import generate_traceability_matrix
 
 class _TraceabilityMixin:
 
-    def get_item_neighbors(self, item_id: str) -> Dict[str, List[str]]:
-        """
-        Return the upstream and downstream neighbors of an item in the traceability graph.
-
-        Args:
-            item_id: The item UID to trace from.
-
-        Returns:
-            Dictionary with keys:
-              "upstream"   – IDs of items that item_id derives from (business parents).
-              "downstream" – IDs of items that derive from item_id (business children).
-            Returns empty lists when the item is not in the graph.
-        """
-        import networkx as nx
-
-        G = self.graph.graph
-        if item_id not in G:
-            return {"upstream": [], "downstream": []}
-
-        upstream = list(nx.descendants(G, item_id))
-        downstream = list(nx.ancestors(G, item_id))
-        return {"upstream": upstream, "downstream": downstream}
-
     def get_doc_type_code(self, item_id: str) -> str:
         """Return the document type code for *item_id* based on configured prefixes."""
         if self.config:

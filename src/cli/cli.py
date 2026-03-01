@@ -246,20 +246,6 @@ def traceability() -> None:
     """Commands for traceability analysis."""
 
 
-@traceability.command("neighbors")
-@click.argument("item_id")
-@click.pass_context
-def traceability_neighbors(ctx: click.Context, item_id: str) -> None:
-    """Show upstream and downstream neighbors of an item. Outputs JSON."""
-    dhf_path: Path = ctx.obj["dhf"]
-    core = _make_core(dhf_path)
-    if core.get_item(item_id) is None:
-        click.echo(f"ERROR: Item '{item_id}' not found.", err=True)
-        sys.exit(1)
-    neighbors = core.get_item_neighbors(item_id)
-    click.echo(json.dumps(neighbors, default=str))
-
-
 @traceability.command("matrix")
 @click.argument("doc_types", nargs=-1, required=True, metavar="DOC_TYPE...")
 @click.pass_context
