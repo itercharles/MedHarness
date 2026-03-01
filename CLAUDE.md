@@ -17,14 +17,14 @@ streamlit run app.py
 
 ### Run tests
 ```bash
-# API tests (fast, recommended — ~3 seconds for all 59 tests)
-PYTHONPATH=$(pwd) venv/bin/pytest tests/api/ -v
+# SYS tests (fast, recommended — ~3 seconds for all 59 tests)
+PYTHONPATH=$(pwd) src/venv/bin/pytest tests/sys/ -v
 
 # Single test
-PYTHONPATH=$(pwd) venv/bin/pytest tests/api/test_api_001_object_management.py::test_name -v
+PYTHONPATH=$(pwd) src/venv/bin/pytest tests/sys/test_sys_001_object_management.py::test_name -v
 
-# All tests except browser tests
-PYTHONPATH=$(pwd) venv/bin/pytest tests/ -m "not browser" -v
+# All unit tests (srs)
+PYTHONPATH=$(pwd) src/venv/bin/pytest tests/srs/ -v
 ```
 
 **Important**: Run from the repo root; `PYTHONPATH=$(pwd)` must point to the repo root (not `src/`). Tests use `sys.path.insert(0, ...)` to find `src/traceability/`.
