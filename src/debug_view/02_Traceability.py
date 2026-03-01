@@ -191,14 +191,14 @@ def build_horizontal_view(core, start_item_id: str):
     edges = []
 
     # Graph traversal is handled by the backend
-    neighbors = core.get_item_neighbors(start_item_id)
-    if not neighbors["upstream"] and not neighbors["downstream"]:
+    chain = core.get_item_chain(start_item_id)
+    if chain is None or len(chain["nodes"]) <= 1:
         return nodes, edges
 
     all_items = core.get_all_items()
     item_map = {item['id']: item for item in all_items}
 
-    trace_nodes = set(neighbors["upstream"]) | set(neighbors["downstream"]) | {start_item_id}
+    trace_nodes = set(chain["nodes"].keys())
 
     # Build nodes (visual formatting stays in frontend)
     for node_id in trace_nodes:
