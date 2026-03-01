@@ -10,7 +10,6 @@ from compliantflow.core import CompliantFlowCore
 from traceability.models.item import VerificationStatus
 from traceability.document_generator import DocumentGenerator
 from streamlit_agraph import agraph, Node, Edge, Config
-from test_results import VerificationStatusProvider
 from utils.ui_helpers import check_and_show_item_detail, make_item_columns_clickable
 
 # Page Configuration
@@ -26,17 +25,8 @@ def get_core():
     dhf_root = Path(__file__).resolve().parent.parent.parent / "DHF"
     return CompliantFlowCore(dhf_root)
 
-# Initialize Test Results Provider
-@st.cache_resource
-def get_test_provider():
-    core = get_core()
-    # Convert Pydantic model to dict
-    config_dict = core.config.model_dump() if core.config else {}
-    return VerificationStatusProvider(config_dict)
-
 try:
     core = get_core()
-    test_provider = get_test_provider()
 except Exception as e:
     st.error(f"Failed to initialize: {e}")
     st.stop()
@@ -134,14 +124,7 @@ def build_matrix_table(path: List[str], _core) -> pd.DataFrame:
             # Verification status for test-case leaf nodes
             last_item = chain.get(path[-1])
             if last_item and last_item["id"].startswith(("TC-", "tc-")):
-                try:
-                    status_info = test_provider.get_verification_status(last_item)
-                    verify_status = status_info.get("status", "PENDING")
-                    source = status_info.get("source", "manual")
-                    prefix = "🤖" if source == "automated" else "👤"
-                    row["Verify"] = f"{prefix} {verify_status}"
-                except Exception:
-                    row["Verify"] = last_item.get("verification_status", "PENDING")
+                row["Verify"] = last_item.get("testing_status", "PENDING")
             elif path[-1].startswith("TC-") and chain.get(path[-1]) is None:
                 row["Verify"] = "-"
 

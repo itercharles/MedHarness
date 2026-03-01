@@ -14,7 +14,6 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent / 'src'))
 sys.path.insert(0, str(Path(__file__).parent.parent / 'utils'))
 
 from case_scanner import AutomatedTestScanner
-from test_results import VerificationStatusProvider
 import xml.etree.ElementTree as ET
 
 
