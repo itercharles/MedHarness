@@ -43,6 +43,7 @@ affected_items:
 - TC-SYS-010
 - TC-SYS-021
 - TC-SYS-031
+- TC-SRS-012
 file_path: /home/runner/work/CompliantFlow/CompliantFlow/DHF/items/09_cr/CR-012.yaml
 implementation_prs:
 - pr_number: 19
@@ -54,3 +55,6 @@ implementation_prs:
 - pr_number: 22
   pr_url: https://github.com/itercharles/CompliantFlow/pull/22
   title: 'CR-012: refactor: Move CompliantFlowCore to compliantflow/ package'
+- pr_number: 23
+  pr_url: https://github.com/itercharles/CompliantFlow/pull/23
+  title: 'CR-012: refactor: Move CLI to src/cli/, rename pages/ to debug_view/'
