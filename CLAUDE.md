@@ -25,9 +25,11 @@ PYTHONPATH=src python -m compliantflow item get SYS-001
 PYTHONPATH=src python -m compliantflow cr check-status CR-012
 PYTHONPATH=src python -m compliantflow cr update CR-012 --item SYS-001 --pr-number 42
 PYTHONPATH=src python -m compliantflow traceability neighbors SYS-001
+PYTHONPATH=src python -m compliantflow traceability matrix CRS SYS SRS
+PYTHONPATH=src python -m compliantflow traceability chain SYS-001
 ```
 
-CLI package is at `src/compliantflow/`. Uses `click` (already installed via streamlit).
+CLI package is at `src/cli/cli.py`. Uses `click` (already installed via streamlit).
 stdout = machine-readable JSON; stderr = human-readable messages.
 
 ### Run tests
@@ -68,6 +70,8 @@ Key public methods:
 - `check_compliance(group_id)` → compliance results with `policy_text` included
 - `get_available_transitions(item)`, `execute_transition(item_id, to_state, performed_by)`
 - `get_cr_for_item(item_id)`, `get_non_stable_cr()`, `add_item_to_cr(cr_id, item_id)`
+- `build_traceability_matrix(doc_types)` → `{columns: [...], rows: [{DOC_TYPE: id|null, is_orphan, orphan_type, is_complete}]}`
+- `get_item_chain(item_id)` → `{root: id, nodes: {id: {id, title, status, doc_type, upstream: [...], downstream: [...]}}}`
 
 **`get_all_items()` returns dicts, not `Item` objects.** Access fields with `item['id']`, `item.get('status')`, etc. The dict includes a computed `all_linked_uids` list for graph traversal — use this, not `item.get('links')` (which doesn't exist).
 
