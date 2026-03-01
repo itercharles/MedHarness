@@ -245,7 +245,7 @@ doc_types:
     - S4
     - S5
     label: Severity (Pre-Mitigation)
-  - name: probability
+  - name: probability_pre
     format: select
     options:
     - P1

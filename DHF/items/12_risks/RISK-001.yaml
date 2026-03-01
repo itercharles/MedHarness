@@ -5,7 +5,7 @@ hazard: Users may define links to non-existent items.
 cause: Manual editing errors or file deletions.
 effect: Incomplete traceability matrix and compliance gaps.
 severity_pre: S3
-probability: P4
+probability_pre: P4
 severity_post: S1
 probability_post: P2
 risk_acceptability: Acceptable
