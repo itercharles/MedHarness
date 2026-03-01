@@ -1061,8 +1061,6 @@ document_specifications:
 test_integration:
   result_store:
     path: test-results/results.yaml
-    audit_log: test-results/audit.log
   manual:
-    audit_log: test-results/audit.log
     require_verified_by: true
     require_verification_date: true

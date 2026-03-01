@@ -1,8 +1,8 @@
 """Test results mixin for CompliantFlowCore.
 
-Exposes test case registration and execution result import as first-class
-core operations.  All persistence is delegated to ResultStore; requirement
-item verification_status fields are updated automatically on import.
+Exposes test execution result import as a first-class core operation.
+All persistence is delegated to ResultStore; requirement item
+verification_status fields are updated automatically on import.
 """
 
 from __future__ import annotations
@@ -19,35 +19,6 @@ class _TestResultsMixin:
     # Public API
     # ------------------------------------------------------------------
 
-    def register_test_cases(self, definitions: List[Dict]) -> Dict:
-        """Register test case definitions (spec-time / review metadata).
-
-        Each definition dict may contain:
-            id, title, links, reviewer, review_date, review_status
-
-        Returns a summary dict: {registered: N, errors: [...]}.
-        """
-        registered = 0
-        errors: List[str] = []
-        for defn in definitions:
-            tc_id = defn.get("id")
-            if not tc_id:
-                errors.append(f"Missing 'id' in definition: {defn}")
-                continue
-            try:
-                self.result_store.register(
-                    tc_id=tc_id,
-                    title=defn.get("title", ""),
-                    links=defn.get("links") or [],
-                    reviewer=defn.get("reviewer", ""),
-                    review_status=defn.get("review_status", "pending"),
-                    review_date=defn.get("review_date"),
-                )
-                registered += 1
-            except Exception as exc:
-                errors.append(f"{tc_id}: {exc}")
-        return {"registered": registered, "errors": errors}
-
     def import_test_results(
         self,
         results: "List[ExecutionResult]",
@@ -59,7 +30,7 @@ class _TestResultsMixin:
         """Persist execution results and update linked requirement items.
 
         For each result:
-        1. Writes to ResultStore.
+        1. Writes to ResultStore (including any review fields from XML properties).
         2. Collects linked requirement item IDs from the stored record.
         3. Aggregates verification_status for every touched requirement item:
            - all linked TCs PASS  → ``verified``
@@ -86,6 +57,9 @@ class _TestResultsMixin:
                 notes=result.error_message or "",
                 links=result.links or None,
                 title=result.title or "",
+                reviewer=result.reviewer or "",
+                review_date=result.review_date or "",
+                review_status=result.review_status or "",
             )
             imported += 1
             record = self.result_store.get(result.id)

@@ -12,7 +12,6 @@ class ManualTestProvider:
     """Retrieve and update test verification status from the ResultStore.
 
     Configuration keys (under ``test_integration.manual``):
-        audit_log: relative path to audit log (default: test-results/audit.log)
         require_verified_by: bool (kept for compatibility, not enforced here)
         require_verification_date: bool (kept for compatibility)
     """
@@ -71,22 +70,6 @@ class ManualTestProvider:
             tester=verified_by,
             notes=notes or "",
         )
-
-    def get_audit_trail(self, test_id: str) -> list:
-        """Return audit log lines mentioning test_id."""
-        audit_path = (
-            self._dhf_path / self.config.get("audit_log", "test-results/audit.log")
-            if self._dhf_path
-            else None
-        )
-        if not audit_path or not audit_path.exists():
-            return []
-        entries = []
-        with open(audit_path, "r") as f:
-            for line in f:
-                if test_id in line:
-                    entries.append(line.strip())
-        return entries
 
     def refresh_cache(self):
         """No-op: ResultStore reads from disk on every call."""

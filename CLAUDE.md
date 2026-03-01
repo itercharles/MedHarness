@@ -29,7 +29,6 @@ PYTHONPATH=src python -m compliantflow cr update CR-012 --item SYS-001 --pr-numb
 PYTHONPATH=src python -m compliantflow traceability matrix CRS SYS SRS
 PYTHONPATH=src python -m compliantflow traceability chain SYS-001
 # Test result integration (external CI → DHF)
-PYTHONPATH=src python -m compliantflow test register --from-file test_cases.yaml
 PYTHONPATH=src python -m compliantflow test import results.xml --format junit --tester "GitHub Actions" --run-id 123 --run-url https://github.com/org/repo/actions/runs/123 --commit abc123
 PYTHONPATH=src python -m compliantflow test status TC-SYS-001
 PYTHONPATH=src python -m compliantflow test list --status PASS
@@ -118,26 +117,24 @@ They live exclusively in `DHF/test-results/results.yaml` managed by
 **`src/test_results/result_store.py`** (`ResultStore`). TC type is inferred from which
 requirements the TC links to, not from a separate doc type category.
 
-Two separate write operations:
-1. **Register** (spec-time): `test register` — stores definition metadata per TC:
-   `title`, `links` (requirement IDs this TC verifies), `reviewer`, `review_date`, `review_status`
-2. **Import** (CI-time): `test import` — parses JUnit XML and stores execution metadata:
-   `testing_status` (PASS/FAIL/SKIP), `tester`, `testing_date`, `run_id`, `run_url`, `commit_sha`
-
-After import, `_update_requirement_verification()` aggregates all stored TC results for each
-touched requirement item and writes its `verification_status` (verified/failed/not_verified).
+**Import** (CI-time): `test import` — parses JUnit XML and stores per-TC execution and
+optional review metadata. Automatically updates `verification_status` on linked requirement
+items (verified/failed/not_verified).
 
 JUnit XML convention:
 ```xml
 <testcase name="TC-001_my_test">
   <properties>
-    <property name="compliantflow.id"    value="TC-001"/>
-    <property name="compliantflow.links" value="CRS-001,SYS-002"/>
+    <property name="compliantflow.id"           value="TC-001"/>
+    <property name="compliantflow.links"        value="CRS-001,SYS-002"/>
+    <property name="compliantflow.reviewer"     value="Alice"/>
+    <property name="compliantflow.review_date"  value="2026-01-15"/>
+    <property name="compliantflow.review_status" value="approved"/>
   </properties>
 </testcase>
 ```
 
-`DHF/test-results/audit.log` records every write for regulatory traceability.
+All results stored in `DHF/test-results/results.yaml`. Git history serves as audit trail.
 
 `AutomatedTestScanner` and `GitHubActionsProvider` are in `tests/utils/`
 (test infrastructure only — not called from production code).
