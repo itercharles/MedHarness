@@ -324,7 +324,6 @@ doc_types:
     target_types:
     - SYS
     label: Implemented By
-
   - name: control_type
     format: select
     options:
@@ -351,147 +350,6 @@ doc_types:
       - draft
       to_state: approved
       label: Approve
-- code: TC-CRS
-  name: Customer Validation Test
-  prefix: TC-CRS-
-  properties:
-  - id
-  - name: title
-    format: short_text
-    label: Title
-  - name: verifies
-    format: relationship
-    target_types:
-    - CRS
-    label: Verifies
-  - name: reviewer
-    format: short_text
-    label: Reviewer
-  - name: review_date
-    format: date
-    label: Review Date
-  - name: review_status
-    format: select
-    options: [pending, approved, rejected]
-    label: Review Status
-  - name: tester
-    format: short_text
-    label: Tester
-  - name: testing_date
-    format: date
-    label: Testing Date
-  - name: testing_status
-    format: select
-    options: [PASS, FAIL, SKIP]
-    label: Testing Status
-  - name: run_id
-    format: short_text
-    label: Run ID
-  - name: run_url
-    format: short_text
-    label: Run URL
-  - name: commit_sha
-    format: short_text
-    label: Commit SHA
-  - name: testing_notes
-    format: long_text
-    label: Testing Notes
-  icon: 🧪
-  page_enabled: false
-- code: TC-SYS
-  name: System Verification Test
-  prefix: TC-SYS-
-  properties:
-  - id
-  - name: title
-    format: short_text
-    label: Title
-  - name: verifies
-    format: relationship
-    target_types:
-    - SYS
-    label: Verifies
-  - name: reviewer
-    format: short_text
-    label: Reviewer
-  - name: review_date
-    format: date
-    label: Review Date
-  - name: review_status
-    format: select
-    options: [pending, approved, rejected]
-    label: Review Status
-  - name: tester
-    format: short_text
-    label: Tester
-  - name: testing_date
-    format: date
-    label: Testing Date
-  - name: testing_status
-    format: select
-    options: [PASS, FAIL, SKIP]
-    label: Testing Status
-  - name: run_id
-    format: short_text
-    label: Run ID
-  - name: run_url
-    format: short_text
-    label: Run URL
-  - name: commit_sha
-    format: short_text
-    label: Commit SHA
-  - name: testing_notes
-    format: long_text
-    label: Testing Notes
-  icon: 🧪
-  page_enabled: false
-- code: TC-SRS
-  name: Software Requirements Verification Test
-  prefix: TC-SRS-
-  properties:
-  - id
-  - name: title
-    format: short_text
-    label: Title
-  - name: verifies
-    format: relationship
-    target_types:
-    - SRS
-    label: Verifies
-  - name: reviewer
-    format: short_text
-    label: Reviewer
-  - name: review_date
-    format: date
-    label: Review Date
-  - name: review_status
-    format: select
-    options: [pending, approved, rejected]
-    label: Review Status
-  - name: tester
-    format: short_text
-    label: Tester
-  - name: testing_date
-    format: date
-    label: Testing Date
-  - name: testing_status
-    format: select
-    options: [PASS, FAIL, SKIP]
-    label: Testing Status
-  - name: run_id
-    format: short_text
-    label: Run ID
-  - name: run_url
-    format: short_text
-    label: Run URL
-  - name: commit_sha
-    format: short_text
-    label: Commit SHA
-  - name: testing_notes
-    format: long_text
-    label: Testing Notes
-  icon: 🧪
-  page_enabled: false
 - code: SYS
   name: System Requirement
   prefix: SYS-
@@ -636,7 +494,6 @@ doc_types:
   - name: performance
     format: long_text
     label: Performance
-
   icon: 💻
   page_enabled: true
   page_number: 7
@@ -1164,21 +1021,6 @@ traceability_matrices:
   path:
   - RCM
   - SYS
-- name: Customer Validation
-  description: Customer requirements to validation tests
-  path:
-  - CRS
-  - TC-CRS
-- name: System Verification
-  description: System requirements to system tests
-  path:
-  - SYS
-  - TC-SYS
-- name: Software Requirements Verification
-  description: Software requirements to software tests
-  path:
-  - SRS
-  - TC-SRS
 document_specifications:
   UC:
     template: requirements_specification.md.j2
@@ -1216,21 +1058,6 @@ document_specifications:
     template: change_request_specification.md.j2
     output: DHF/documents/specifications/Change_Request_Specification.md
     doc_type_name: Change Request
-  TC-CRS:
-    template: test_specification.md.j2
-    output: DHF/documents/specifications/Customer_Requirement_Test_Specification.md
-    doc_type_name: Customer Validation Test
-    test_type: validation
-  TC-SYS:
-    template: test_specification.md.j2
-    output: DHF/documents/specifications/System_Requirement_Test_Specification.md
-    doc_type_name: System Test
-    test_type: verification
-  TC-SDS:
-    template: test_specification.md.j2
-    output: DHF/documents/specifications/Software_Design_Test_Specification.md
-    doc_type_name: Design Test
-    test_type: verification
 test_integration:
   result_store:
     path: test-results/results.yaml

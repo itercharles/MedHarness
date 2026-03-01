@@ -41,7 +41,7 @@ stdout = machine-readable JSON; stderr = human-readable messages.
 ### Run tests
 ```bash
 # SYS tests (fast, recommended — ~5 seconds for all 87 tests)
-PYTHONPATH=$(pwd) src/venv/bin/pytest tests/sys/ -v
+PYTHONPATH=src src/venv/bin/pytest tests/sys/ -v
 
 # Single test
 PYTHONPATH=$(pwd) src/venv/bin/pytest tests/sys/test_sys_001_object_management.py::test_name -v
@@ -50,7 +50,7 @@ PYTHONPATH=$(pwd) src/venv/bin/pytest tests/sys/test_sys_001_object_management.p
 PYTHONPATH=$(pwd) src/venv/bin/pytest tests/srs/ -v
 ```
 
-**Important**: Run from the repo root; `PYTHONPATH=$(pwd)` must point to the repo root (not `src/`).
+**Important**: Run from the repo root. Use `PYTHONPATH=src` for SYS/CRS tests; CI uses `PYTHONPATH="${PWD}/src"` for SRS tests.
 
 ## Architecture
 
@@ -113,8 +113,10 @@ Key public methods:
 - A state with `is_stable: true` locks the item — `is_item_editable()` returns `False`.
 
 ### External Test Result Integration
-TC items have **no YAML files**. They live exclusively in `DHF/test-results/results.yaml`
-managed by **`src/test_results/result_store.py`** (`ResultStore`).
+TC items have **no YAML files** and **no doc type definition** in `project_config.yaml`.
+They live exclusively in `DHF/test-results/results.yaml` managed by
+**`src/test_results/result_store.py`** (`ResultStore`). TC type is inferred from which
+requirements the TC links to, not from a separate doc type category.
 
 Two separate write operations:
 1. **Register** (spec-time): `test register` — stores definition metadata per TC:
@@ -125,20 +127,20 @@ Two separate write operations:
 After import, `_update_requirement_verification()` aggregates all stored TC results for each
 touched requirement item and writes its `verification_status` (verified/failed/not_verified).
 
-JUnit XML convention for non-Python tests:
+JUnit XML convention:
 ```xml
-<testcase name="TC-CRS-001_my_test">
+<testcase name="TC-001_my_test">
   <properties>
-    <property name="compliantflow.id"    value="TC-CRS-001"/>
-    <property name="compliantflow.links" value="CRS-001,CRS-002"/>
+    <property name="compliantflow.id"    value="TC-001"/>
+    <property name="compliantflow.links" value="CRS-001,SYS-002"/>
   </properties>
 </testcase>
 ```
 
 `DHF/test-results/audit.log` records every write for regulatory traceability.
 
-`AutomatedTestScanner` and `GitHubActionsProvider` have been moved to `tests/utils/`
-(CI/test infrastructure only — not production code).
+`AutomatedTestScanner` and `GitHubActionsProvider` are in `tests/utils/`
+(test infrastructure only — not called from production code).
 
 ### CLI Layer
 **`src/cli/cli.py`** exposes `CompliantFlowCore` as a `click` CLI. Sits alongside `debug_view/` as an interface layer, separate from the core package. Both entry points work:

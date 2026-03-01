@@ -136,7 +136,6 @@ class ResultStore:
             item = dict(rec)
             item.setdefault("title", "")
             item.setdefault("status", "approved")
-            item.setdefault("doc_type", item["id"].rsplit("-", 1)[0] if "-" in item["id"] else "TC")
             links = item.get("links") or []
             item["verifies"] = links
             item["all_linked_uids"] = links
