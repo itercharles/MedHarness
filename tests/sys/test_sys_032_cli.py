@@ -17,7 +17,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
 from click.testing import CliRunner
-from compliantflow.cli import main
+from cli.cli import main
 
 
 @pytest.fixture

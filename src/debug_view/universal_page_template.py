@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Dict, Any
 from datetime import datetime
 from compliantflow.core import CompliantFlowCore
-from pages.ui_components import (
+from debug_view.ui_components import (
     render_manual_verification,
     render_status_badge
 )

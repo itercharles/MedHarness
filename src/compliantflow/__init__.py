@@ -1,1 +1,1 @@
-"""CompliantFlow CLI package."""
+"""CompliantFlow product package — core facade and mixins."""

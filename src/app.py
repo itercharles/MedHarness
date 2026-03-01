@@ -17,7 +17,7 @@ print("[APP] Loading app.py module...")
 import streamlit as st
 import yaml
 from compliantflow.core import CompliantFlowCore
-from pages.page_generator import generate_doc_type_pages
+from debug_view.page_generator import generate_doc_type_pages
 
 print("[APP] Imports completed successfully")
 import pandas as pd
@@ -161,8 +161,8 @@ for page_number, name, icon, page_func, code in doc_type_pages:
 
 # Add static pages with absolute paths
 src_dir = Path(__file__).parent
-traceability_path = (src_dir / "pages" / "02_Traceability.py").resolve()
-compliance_path = (src_dir / "pages" / "03_Compliance.py").resolve()
+traceability_path = (src_dir / "debug_view" / "02_Traceability.py").resolve()
+compliance_path = (src_dir / "debug_view" / "03_Compliance.py").resolve()
 
 if traceability_path.exists():
     all_pages.append(st.Page(str(traceability_path), title="Traceability", icon="🔗"))
