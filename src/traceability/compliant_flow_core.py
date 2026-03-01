@@ -163,6 +163,45 @@ class CompliantFlowCore:
         
         return items
     
+    def get_items_filtered(
+        self,
+        doc_type_code: str,
+        status_filter: Optional[List[str]] = None,
+        search: str = "",
+    ) -> List[Dict[str, Any]]:
+        """
+        Return items for a document type, optionally filtered by status and search text.
+
+        Args:
+            doc_type_code: Document type code (e.g. 'SRS').
+            status_filter: List of status values to include. None means all statuses.
+            search: Case-insensitive substring matched against item id and title.
+
+        Returns:
+            Filtered list of item dictionaries.
+        """
+        doc_type_config = self.config.get_doc_type(doc_type_code) if self.config else None
+        prefix = doc_type_config.prefix if doc_type_config else f"{doc_type_code}-"
+        initial_state = self.get_initial_state(doc_type_code) if doc_type_config else None
+
+        all_items = self.get_all_items()
+        result = []
+        search_lower = search.lower() if search else ""
+
+        for item in all_items:
+            if not item["id"].startswith(prefix):
+                continue
+            if status_filter is not None:
+                item_status = item.get("status") or initial_state
+                if item_status not in status_filter:
+                    continue
+            if search_lower:
+                if search_lower not in item["id"].lower() and search_lower not in item.get("title", "").lower():
+                    continue
+            result.append(item)
+
+        return result
+
     def get_item(self, uid: str) -> Optional[Dict[str, Any]]:
         """
         Get a specific item by UID.
@@ -178,7 +217,36 @@ class CompliantFlowCore:
         
         item: Item = self.graph.graph.nodes[uid]['item']
         return item.model_dump(by_alias=True, exclude_none=True)
-    
+
+    def get_item_neighbors(self, item_id: str) -> Dict[str, List[str]]:
+        """
+        Return the upstream and downstream neighbors of an item in the traceability graph.
+
+        Uses the already-built NetworkX graph, so no graph reconstruction is needed.
+
+        Args:
+            item_id: The item UID to trace from.
+
+        Returns:
+            Dictionary with keys:
+              "upstream"   – IDs of items that item_id derives from (business parents).
+                             In the graph these are descendants because edges go child→parent.
+              "downstream" – IDs of items that derive from item_id (business children).
+                             In the graph these are ancestors because edges go child→parent.
+            Returns empty lists when the item is not in the graph.
+        """
+        import networkx as nx
+
+        G = self.graph.graph
+        if item_id not in G:
+            return {"upstream": [], "downstream": []}
+
+        # Graph edges go child→parent (e.g. SYS-001→CRS-001 for derives_from).
+        # Therefore: business-upstream = graph-descendants; business-downstream = graph-ancestors.
+        upstream = list(nx.descendants(G, item_id))
+        downstream = list(nx.ancestors(G, item_id))
+        return {"upstream": upstream, "downstream": downstream}
+
     def create_item(self, item_data: dict, author: str = "system", cr_id: Optional[str] = None) -> dict:
         """
         Create a new item.
@@ -690,6 +758,105 @@ class CompliantFlowCore:
     
 
     
+    def build_traceability_chains(self, path: List[str]) -> List[Dict[str, Any]]:
+        """
+        Build traceability chains for a multi-level path of document type codes.
+
+        Each chain is a dict mapping doc-type code → item dict (or None when the
+        slot is empty).  Two extra keys indicate chain completeness:
+
+        * ``"is_orphan"``    – True when the item has no connections in the chain
+        * ``"orphan_level"`` – the doc-type code of the orphaned item (only set when
+                               is_orphan is True)
+
+        This replaces the recursive ``build_matrix_table`` / ``_build_chains_recursive``
+        logic that previously lived in the Streamlit page.
+
+        Args:
+            path: Ordered list of doc-type codes, e.g. ['CRS', 'SYS', 'SRS'].
+
+        Returns:
+            List of chain dicts (no UI formatting; no icon strings).
+        """
+        all_items = self.get_all_items()
+        chains: List[Dict[str, Any]] = []
+
+        if not path:
+            return chains
+
+        # Resolve doc-type code → prefix using config
+        prefix_map: Dict[str, str] = {}
+        if self.config:
+            for dt in self.config.doc_types:
+                prefix_map[dt.code] = dt.prefix
+
+        def get_code(item_id: str) -> str:
+            for code, prefix in prefix_map.items():
+                if item_id.startswith(prefix):
+                    return code
+            return "OTHER"
+
+        def _recurse(level: int, current_chain: Dict[str, Any]) -> None:
+            if level >= len(path) - 1:
+                chain_row: Dict[str, Any] = {}
+                for code in path:
+                    chain_row[code] = current_chain.get(code)
+                chain_row["is_orphan"] = False
+                chain_row["orphan_level"] = None
+                chain_row["is_complete"] = len(current_chain) == len(path)
+                chains.append(chain_row)
+                return
+
+            current_code = path[level]
+            next_code = path[level + 1]
+            current_item = current_chain[current_code]
+
+            next_items = [
+                i for i in all_items
+                if get_code(i["id"]) == next_code
+                and current_item["id"] in i.get("all_linked_uids", [])
+            ]
+
+            if next_items:
+                for next_item in next_items:
+                    new_chain = current_chain.copy()
+                    new_chain[next_code] = next_item
+                    _recurse(level + 1, new_chain)
+            else:
+                chain_row = {}
+                for code in path:
+                    chain_row[code] = current_chain.get(code)
+                chain_row["is_orphan"] = False
+                chain_row["orphan_level"] = None
+                chain_row["is_complete"] = False
+                chains.append(chain_row)
+
+        # Build chains starting from the first level
+        start_code = path[0]
+        start_items = [i for i in all_items if get_code(i["id"]) == start_code]
+        for start_item in start_items:
+            _recurse(0, {start_code: start_item})
+
+        # Detect orphans: items at each level not appearing in any chain
+        items_in_chains: Dict[str, set] = {code: set() for code in path}
+        for chain in chains:
+            for code in path:
+                if chain.get(code) is not None:
+                    items_in_chains[code].add(chain[code]["id"])
+
+        for level_idx, code in enumerate(path):
+            level_items = [i for i in all_items if get_code(i["id"]) == code]
+            for item in level_items:
+                if item["id"] not in items_in_chains[code]:
+                    chain_row = {c: None for c in path}
+                    chain_row[code] = item
+                    chain_row["is_orphan"] = True
+                    chain_row["orphan_level"] = code
+                    chain_row["is_complete"] = False
+                    chains.append(chain_row)
+
+        return chains
+
     def _format_to_ui_type(self, format):
         """Convert PropertyFormat to UI type string."""
         from .models.config import PropertyFormat

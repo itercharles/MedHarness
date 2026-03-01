@@ -107,11 +107,14 @@ def test_TC_SYS_005_003_run_compliance_check(test_dhf_root):
     results = report['results']
     assert len(results) > 0, "Should have policy check results"
 
-    # Each result should have required fields
+    # Each result should have required fields (including policy_text from backend)
     for result in results:
         assert 'policy_id' in result
         assert 'passed' in result
         assert 'details' in result
+        assert 'policy_text' in result, "Result should include policy_text from backend"
+        assert isinstance(result['policy_text'], str)
+        assert len(result['policy_text']) > 0, "policy_text should not be empty"
 
 
 def test_TC_SYS_005_004_compliance_score_calculation(test_dhf_root):

@@ -297,20 +297,7 @@ def render_table_section(
         search = st.text_input("Search", placeholder="Search by ID or title...", key="search_filter")
     
     # Get and filter items
-    all_items = core.get_all_items()
-    filtered_items = []
-    for item in all_items:
-        # Use exact prefix match (don't strip hyphen)
-        if not item['id'].startswith(prefix):
-            continue
-        item_status = item.get('status', core.get_initial_state(doc_type_config["code"]))
-        if item_status not in status_filter:
-            continue
-        if search:
-            search_lower = search.lower()
-            if search_lower not in item['id'].lower() and search_lower not in item.get('title', '').lower():
-                continue
-        filtered_items.append(item)
+    filtered_items = core.get_items_filtered(doc_type_config["code"], status_filter, search)
     
     # Display table
     if not filtered_items:

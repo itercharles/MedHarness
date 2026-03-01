@@ -10,7 +10,6 @@ from traceability.compliant_flow_core import CompliantFlowCore
 from traceability.models.item import VerificationStatus
 from traceability.document_generator import DocumentGenerator
 from streamlit_agraph import agraph, Node, Edge, Config
-import networkx as nx
 from test_results import VerificationStatusProvider
 from utils.ui_helpers import check_and_show_item_detail, make_item_columns_clickable
 
@@ -92,144 +91,65 @@ def should_show_warning(item: dict, core) -> bool:
     return core.is_item_editable(item)
 
 @st.cache_data(show_spinner="Building traceability matrix...")
-def build_matrix_table(all_items: List[dict], path: List[str], _core) -> pd.DataFrame:
-    """Build traceability table for a specific matrix configuration."""
-    chains = []
-    
-    # Start with first level items
-    start_type = path[0]
-    start_items = [i for i in all_items if get_doc_type_code(i['id']) == start_type]
-    
-    for start_item in start_items:
-        # Recursively build chains through the path
-        _build_chains_recursive(all_items, path, 0, {path[0]: start_item}, chains, _core)
-    
-    # Add orphan rows for items at each level that aren't in any chain
-    # Track which items are already in chains
-    items_in_chains = {level: set() for level in path}
-    for chain in chains:
-        for level in path:
-            if level in chain and chain[level] != '-':
-                # Extract ID without warning icon
-                item_id = chain[level].replace(' ⚠️', '')
-                items_in_chains[level].add(item_id)
-    
-    # For each level, find orphan items and add them
-    for level_idx, level in enumerate(path):
-        level_items = [i for i in all_items if get_doc_type_code(i['id']) == level]
-        
-        for item in level_items:
-            if item['id'] not in items_in_chains[level]:
-                # This is an orphan item - create a row for it
-                chain_row = {}
-                
-                # Add dashes for all previous levels
-                for i in range(level_idx):
-                    chain_row[path[i]] = '-'
-                
-                # Add this orphan item
-                item_id = item['id']
+def build_matrix_table(path: List[str], _core) -> pd.DataFrame:
+    """Build traceability table for a specific matrix configuration.
+
+    Chain building and orphan detection are delegated to the backend.
+    This function only handles UI formatting (warning icons, verification
+    status labels, display strings).
+    """
+    raw_chains = _core.build_traceability_chains(path)
+    rows = []
+
+    for chain in raw_chains:
+        row: Dict[str, Any] = {}
+
+        if chain["is_orphan"]:
+            orphan_code = chain["orphan_level"]
+            item = chain[orphan_code]
+            item_id = item["id"]
+            if should_show_warning(item, _core):
+                item_id = f"{item_id} ⚠️"
+            for code in path:
+                if code == orphan_code:
+                    row[code] = item_id
+                    if code != path[-1]:
+                        row[f"{code} Title"] = item.get("title", "N/A")[:50]
+                else:
+                    row[code] = "-"
+            row["Status"] = f"⚠️ Orphan {orphan_code}"
+        else:
+            for code in path:
+                item = chain.get(code)
+                if item is None:
+                    row[code] = "-"
+                    continue
+                item_id = item["id"]
                 if should_show_warning(item, _core):
                     item_id = f"{item_id} ⚠️"
-                chain_row[level] = item_id
-                if level != path[-1]:
-                    chain_row[f"{level} Title"] = item.get('title', 'N/A')[:50]
-                
-                # Add dashes for all following levels
-                for i in range(level_idx + 1, len(path)):
-                    chain_row[path[i]] = '-'
-                
-                # Mark as orphan
-                chain_row['Status'] = f'⚠️ Orphan {level}'
-                chains.append(chain_row)
-    
-    return pd.DataFrame(chains)
+                row[code] = item_id
+                if code != path[-1]:
+                    row[f"{code} Title"] = item.get("title", "N/A")[:50]
 
-def _build_chains_recursive(all_items: List[dict], path: List[str], level: int, current_chain: dict, chains: List[dict], _core):
-    """Recursively build traceability chains, creating multiple rows for multiple matches."""
-    if level >= len(path) - 1:
-        # Reached end of path, finalize chain
-        chain_row = {}
-        for doc_type, item in current_chain.items():
-            # Add ID with warning icon if not in final state
-            item_id = item['id']
-            if should_show_warning(item, _core):
-                item_id = f"{item_id} ⚠️"
-            
-            chain_row[doc_type] = item_id
-            
-            # Add title for non-last levels
-            if doc_type != path[-1]:
-                chain_row[f"{doc_type} Title"] = item.get('title', 'N/A')[:50]
-        
-        # Add verification status if this is the last level and it's a test case
-        last_item = current_chain[path[-1]]
-        if level == len(path) - 1 and last_item['id'].startswith(('TC-', 'tc-')):
-            # Get dynamic verification status from provider
-            try:
-                status_info = test_provider.get_verification_status(last_item)
-                verify_status = status_info.get('status', 'PENDING')
-                
-                # Add source indicator
-                source = status_info.get('source', 'manual')
-                if source == 'automated':
-                    verify_status = f"🤖 {verify_status}"
-                else:
-                    verify_status = f"👤 {verify_status}"
-                
-                chain_row['Verify'] = verify_status
-            except Exception as e:
-                # Fallback to YAML field if provider fails
-                chain_row['Verify'] = last_item.get('verification_status', 'PENDING')
+            # Verification status for test-case leaf nodes
+            last_item = chain.get(path[-1])
+            if last_item and last_item["id"].startswith(("TC-", "tc-")):
+                try:
+                    status_info = test_provider.get_verification_status(last_item)
+                    verify_status = status_info.get("status", "PENDING")
+                    source = status_info.get("source", "manual")
+                    prefix = "🤖" if source == "automated" else "👤"
+                    row["Verify"] = f"{prefix} {verify_status}"
+                except Exception:
+                    row["Verify"] = last_item.get("verification_status", "PENDING")
+            elif path[-1].startswith("TC-") and chain.get(path[-1]) is None:
+                row["Verify"] = "-"
 
-        
-        # Add status
-        complete = len(current_chain) == len(path)
-        chain_row['Status'] = '✅ Complete' if complete else '⚠️ Incomplete'
-        chains.append(chain_row)
-        return
-    
-    # Find next level items
-    current_type = path[level]
-    next_type = path[level + 1]
-    current_item = current_chain[current_type]
-    
-    # Find all items of next_type that link to current_item
-    # Works for all relationship types (derives_from, implements, design, etc.)
-    # because all_linked_uids includes all typed relationships
-    next_items = [item for item in all_items 
-                 if get_doc_type_code(item['id']) == next_type 
-                 and current_item['id'] in item.get('all_linked_uids', [])]
-    
-    if next_items:
-        # Create a chain for each match (multiple rows)
-        for next_item in next_items:
-            new_chain = current_chain.copy()
-            new_chain[next_type] = next_item
-            _build_chains_recursive(all_items, path, level + 1, new_chain, chains, _core)
-    else:
-        # No match found, create incomplete chain
-        chain_row = {}
-        for doc_type, item in current_chain.items():
-            # Add ID with warning icon if not in final state
-            item_id = item['id']
-            if should_show_warning(item, _core):
-                item_id = f"{item_id} ⚠️"
-            
-            chain_row[doc_type] = item_id
-            if doc_type != path[-1]:
-                chain_row[f"{doc_type} Title"] = item.get('title', 'N/A')[:50]
-        
-        # Add missing levels as '-'
-        for i in range(level + 1, len(path)):
-            chain_row[path[i]] = '-'
-        
-        # Check if we should add verification column (based on path)
-        if path[-1].startswith('TC-'):
-            chain_row['Verify'] = '-'
-        
-        chain_row['Status'] = '⚠️ Incomplete'
-        chains.append(chain_row)
+            row["Status"] = "✅ Complete" if chain["is_complete"] else "⚠️ Incomplete"
+
+        rows.append(row)
+
+    return pd.DataFrame(rows)
 
 def build_vertical_view(core, focus_type: str, show_upstream: bool, show_downstream: bool):
     """Build vertical view focusing on one document type."""
@@ -294,63 +214,42 @@ def build_horizontal_view(core, start_item_id: str):
     """Build horizontal view tracing one item's path."""
     nodes = []
     edges = []
-    
-    all_items = core.get_all_items()
-    
-    # Build NetworkX graph for path finding
-    G = nx.DiGraph()
-    item_map = {item['id']: item for item in all_items}
-    
-    for item in all_items:
-        G.add_node(item['id'])
-        for link in item.get('links', []):
-            G.add_edge(item['id'], link)
-    
-    if start_item_id not in G:
+
+    # Graph traversal is handled by the backend
+    neighbors = core.get_item_neighbors(start_item_id)
+    if not neighbors["upstream"] and not neighbors["downstream"]:
         return nodes, edges
-    
-    # Find all reachable nodes (downstream)
-    downstream = nx.descendants(G, start_item_id)
-    downstream.add(start_item_id)
-    
-    # Find all nodes that can reach start (upstream)
-    upstream = nx.ancestors(G, start_item_id)
-    
-    # Combine all nodes in trace path
-    trace_nodes = downstream | upstream
-    
-    # Build nodes
+
+    all_items = core.get_all_items()
+    item_map = {item['id']: item for item in all_items}
+
+    trace_nodes = set(neighbors["upstream"]) | set(neighbors["downstream"]) | {start_item_id}
+
+    # Build nodes (visual formatting stays in frontend)
     for node_id in trace_nodes:
         if node_id not in item_map:
             continue
-        
         item = item_map[node_id]
         is_start = node_id == start_item_id
-        
         nodes.append(Node(
             id=item['id'],
             label=item['id'],
             title=item.get('title', item['id']),
-            color="#FFD700" if is_start else get_color_by_status(item),  # Gold for start
+            color="#FFD700" if is_start else get_color_by_status(item),
             shape=get_shape_by_type(item['id']),
             size=40 if is_start else 25,
             borderWidth=4 if is_start else 1
         ))
-    
+
     # Build edges
     for node_id in trace_nodes:
         if node_id not in item_map:
             continue
-        
         item = item_map[node_id]
         for link in item.get('links', []):
             if link in trace_nodes:
-                edges.append(Edge(
-                    source=item['id'],
-                    target=link,
-                    color='#999999'
-                ))
-    
+                edges.append(Edge(source=item['id'], target=link, color='#999999'))
+
     return nodes, edges
 
 # Main Content based on view mode
@@ -380,9 +279,8 @@ if view_mode == "Matrix Table":
         st.write(f"**Description**: {matrix_config.description}")
         st.write(f"**Trace Path**: {' → '.join(matrix_config.path)}")
         
-        # Build table
-        all_items = core.get_all_items()
-        df = build_matrix_table(all_items, matrix_config.path, core)
+        # Build table (chain logic now delegated to backend)
+        df = build_matrix_table(matrix_config.path, core)
         
         if df.empty:
             st.warning(f"No items found for trace path: {' → '.join(matrix_config.path)}")
