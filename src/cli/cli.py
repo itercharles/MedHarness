@@ -341,3 +341,184 @@ def traceability_chain(ctx: click.Context, item_id: str) -> None:
         sys.exit(1)
     click.echo(json.dumps(result, default=str))
     click.echo(f"({len(result['nodes'])} node(s) in chain)", err=True)
+
+
+# ---------------------------------------------------------------------------
+# test group
+# ---------------------------------------------------------------------------
+
+@main.group()
+def test() -> None:
+    """Commands for external test result integration."""
+
+
+@test.command("register")
+@click.argument("tc_id", required=False, default=None)
+@click.option("--title", default="", help="Test case title.")
+@click.option("--links", multiple=True, metavar="ITEM_ID", help="Requirement item this TC verifies (repeat for multiple).")
+@click.option("--reviewer", default="", help="Reviewer name.")
+@click.option("--review-status", default="pending", show_default=True,
+              type=click.Choice(["approved", "rejected", "pending"]),
+              help="Design review status.")
+@click.option("--review-date", default=None, help="Review date (ISO format).")
+@click.option("--from-file", default=None, metavar="FILE",
+              help="Path to a YAML file containing a list of test case definitions.")
+@click.pass_context
+def test_register(
+    ctx: click.Context,
+    tc_id: str,
+    title: str,
+    links: tuple,
+    reviewer: str,
+    review_status: str,
+    review_date: str,
+    from_file: str,
+) -> None:
+    """Register test case definition(s) (spec-time / design-review metadata).
+
+    Either supply a single TC_ID with options, or use --from-file to bulk-import
+    a YAML list of definitions.
+
+    \b
+    Bulk YAML format:
+      - id: TC-SYS-001
+        title: "Object creation validation"
+        links: [SYS-001]
+        reviewer: Alice
+        review_date: "2026-01-15"
+        review_status: approved
+    """
+    dhf_path: Path = ctx.obj["dhf"]
+    core = _make_core(dhf_path)
+
+    if from_file:
+        import yaml as _yaml
+        with open(from_file) as f:
+            definitions = _yaml.safe_load(f) or []
+        summary = core.register_test_cases(definitions)
+        click.echo(json.dumps(summary, default=str))
+        if summary["errors"]:
+            for err in summary["errors"]:
+                click.echo(f"  ERROR: {err}", err=True)
+            sys.exit(1)
+        click.echo(
+            f"✓ Registered {summary['registered']} test case(s).", err=True
+        )
+        return
+
+    if not tc_id:
+        click.echo("ERROR: Provide TC_ID or --from-file.", err=True)
+        sys.exit(1)
+
+    summary = core.register_test_cases([{
+        "id": tc_id,
+        "title": title,
+        "links": list(links),
+        "reviewer": reviewer,
+        "review_status": review_status,
+        "review_date": review_date,
+    }])
+    click.echo(json.dumps(summary, default=str))
+    if summary["errors"]:
+        click.echo(f"ERROR: {summary['errors'][0]}", err=True)
+        sys.exit(1)
+    click.echo(f"✓ Registered {tc_id}.", err=True)
+
+
+@test.command("import")
+@click.argument("file")
+@click.option("--format", "fmt", default="junit", show_default=True,
+              type=click.Choice(["junit"]), help="Input format.")
+@click.option("--tester", required=True, help="Name of tester / CI system.")
+@click.option("--run-id", default="", help="CI run identifier.")
+@click.option("--run-url", default="", help="URL to CI run for traceability.")
+@click.option("--commit", "commit_sha", default="", metavar="SHA",
+              help="Git commit SHA that was tested.")
+@click.pass_context
+def test_import(
+    ctx: click.Context,
+    file: str,
+    fmt: str,
+    tester: str,
+    run_id: str,
+    run_url: str,
+    commit_sha: str,
+) -> None:
+    """Import test execution results from a JUnit XML file.
+
+    Persists each result to the ResultStore and updates the verification_status
+    of linked requirement items (SYS/SRS/CRS).
+
+    Outputs a JSON summary to stdout.
+    Exits 1 if any test FAILED.
+
+    \b
+    Example:
+      compliantflow test import results.xml \\
+        --format junit \\
+        --tester "GitHub Actions" \\
+        --run-id "7890123" \\
+        --run-url "https://github.com/org/repo/actions/runs/7890123" \\
+        --commit "abc123"
+    """
+    from test_results.junit_parser import parse_junit_xml
+    dhf_path: Path = ctx.obj["dhf"]
+    core = _make_core(dhf_path)
+
+    results = parse_junit_xml(Path(file))
+    summary = core.import_test_results(
+        results,
+        tester=tester,
+        run_id=run_id,
+        run_url=run_url,
+        commit_sha=commit_sha,
+    )
+    click.echo(json.dumps(summary, default=str))
+    click.echo(
+        f"✓ Imported {summary['imported']} result(s), "
+        f"skipped {summary['skipped']}, "
+        f"updated {len(summary['items_updated'])} item(s).",
+        err=True,
+    )
+    if summary["failed_tcs"]:
+        click.echo(
+            f"✗ {len(summary['failed_tcs'])} TC(s) FAILED: "
+            + ", ".join(summary["failed_tcs"][:10])
+            + ("…" if len(summary["failed_tcs"]) > 10 else ""),
+            err=True,
+        )
+        sys.exit(1)
+
+
+@test.command("status")
+@click.argument("tc_id")
+@click.pass_context
+def test_status(ctx: click.Context, tc_id: str) -> None:
+    """Show the stored record for a single test case.
+
+    Outputs JSON to stdout. Exits 1 if the TC has not been registered or run.
+    """
+    dhf_path: Path = ctx.obj["dhf"]
+    core = _make_core(dhf_path)
+    record = core.get_test_result(tc_id)
+    if record is None:
+        click.echo(f"ERROR: No record found for '{tc_id}'.", err=True)
+        sys.exit(1)
+    click.echo(json.dumps(record, default=str))
+
+
+@test.command("list")
+@click.option("--status", "status_filter", default=None, metavar="STATUS",
+              help="Filter by testing_status (PASS, FAIL, SKIP).")
+@click.pass_context
+def test_list(ctx: click.Context, status_filter: str) -> None:
+    """List all stored test results, one JSON object per line.
+
+    Optionally filter by testing_status (PASS, FAIL, SKIP).
+    """
+    dhf_path: Path = ctx.obj["dhf"]
+    core = _make_core(dhf_path)
+    records = core.get_all_test_results(status_filter)
+    for tc_id, record in records.items():
+        click.echo(json.dumps(record, default=str))
+    click.echo(f"({len(records)} record(s))", err=True)

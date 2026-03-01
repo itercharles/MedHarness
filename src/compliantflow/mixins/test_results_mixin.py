@@ -1,0 +1,158 @@
+"""Test results mixin for CompliantFlowCore.
+
+Exposes test case registration and execution result import as first-class
+core operations.  All persistence is delegated to ResultStore; requirement
+item verification_status fields are updated automatically on import.
+"""
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Dict, List, Optional
+
+if TYPE_CHECKING:
+    from test_results.junit_parser import ExecutionResult
+
+
+class _TestResultsMixin:
+
+    # ------------------------------------------------------------------
+    # Public API
+    # ------------------------------------------------------------------
+
+    def register_test_cases(self, definitions: List[Dict]) -> Dict:
+        """Register test case definitions (spec-time / review metadata).
+
+        Each definition dict may contain:
+            id, title, links, reviewer, review_date, review_status
+
+        Returns a summary dict: {registered: N, errors: [...]}.
+        """
+        registered = 0
+        errors: List[str] = []
+        for defn in definitions:
+            tc_id = defn.get("id")
+            if not tc_id:
+                errors.append(f"Missing 'id' in definition: {defn}")
+                continue
+            try:
+                self.result_store.register(
+                    tc_id=tc_id,
+                    title=defn.get("title", ""),
+                    links=defn.get("links") or [],
+                    reviewer=defn.get("reviewer", ""),
+                    review_status=defn.get("review_status", "pending"),
+                    review_date=defn.get("review_date"),
+                )
+                registered += 1
+            except Exception as exc:
+                errors.append(f"{tc_id}: {exc}")
+        return {"registered": registered, "errors": errors}
+
+    def import_test_results(
+        self,
+        results: "List[ExecutionResult]",
+        tester: str,
+        run_id: str = "",
+        run_url: str = "",
+        commit_sha: str = "",
+    ) -> Dict:
+        """Persist execution results and update linked requirement items.
+
+        For each result:
+        1. Writes to ResultStore.
+        2. Collects linked requirement item IDs from the stored record.
+        3. Aggregates verification_status for every touched requirement item:
+           - all linked TCs PASS  → ``verified``
+           - any linked TC  FAIL  → ``failed``
+           - otherwise            → ``not_verified``
+
+        Returns summary: {imported, skipped, items_updated, failed_tcs}.
+        """
+        imported = 0
+        skipped = 0
+        touched_items: set = set()
+
+        for result in results:
+            if result.testing_status == "SKIP":
+                skipped += 1
+                continue
+            self.result_store.record_execution(
+                tc_id=result.id,
+                testing_status=result.testing_status,
+                tester=tester,
+                run_id=run_id,
+                run_url=run_url,
+                commit_sha=commit_sha,
+                notes=result.error_message or "",
+                links=result.links or None,
+                title=result.title or "",
+            )
+            imported += 1
+            record = self.result_store.get(result.id)
+            for item_id in (record or {}).get("links") or []:
+                touched_items.add(item_id)
+
+        items_updated = self._update_requirement_verification(touched_items)
+
+        all_results = self.result_store.get_all()
+        failed_tcs = [
+            tc_id
+            for tc_id, rec in all_results.items()
+            if rec.get("testing_status") == "FAIL"
+        ]
+        return {
+            "imported": imported,
+            "skipped": skipped,
+            "items_updated": items_updated,
+            "failed_tcs": failed_tcs,
+        }
+
+    def get_test_result(self, tc_id: str) -> Optional[Dict]:
+        """Return the stored record for a TC, or None if not found."""
+        return self.result_store.get(tc_id)
+
+    def get_all_test_results(self, status_filter: Optional[str] = None) -> Dict:
+        """Return all stored test results, optionally filtered by testing_status."""
+        return self.result_store.get_all(status_filter)
+
+    # ------------------------------------------------------------------
+    # Internal
+    # ------------------------------------------------------------------
+
+    def _update_requirement_verification(self, item_ids: set) -> List[str]:
+        """Recompute and persist verification_status for each touched item."""
+        updated: List[str] = []
+        all_results = self.result_store.get_all()
+
+        for item_id in item_ids:
+            item = self.get_item(item_id)
+            if item is None:
+                continue
+
+            # Check if this doc type supports verification tracking
+            doc_type_code = item_id.split("-")[0]
+            doc_type_cfg = self.config.get_doc_type(doc_type_code) if self.config else None
+            if not doc_type_cfg or not getattr(doc_type_cfg, "has_verification", False):
+                continue
+
+            # Find all TCs that link to this item
+            linked_tc_results = [
+                rec
+                for rec in all_results.values()
+                if item_id in (rec.get("links") or [])
+                and rec.get("testing_status") in ("PASS", "FAIL")
+            ]
+
+            if not linked_tc_results:
+                new_status = "not_verified"
+            elif any(r["testing_status"] == "FAIL" for r in linked_tc_results):
+                new_status = "failed"
+            else:
+                new_status = "verified"
+
+            current_status = item.get("verification_status")
+            if current_status != new_status:
+                self.update_item(item_id, {**item, "verification_status": new_status})
+                updated.append(item_id)
+
+        return updated

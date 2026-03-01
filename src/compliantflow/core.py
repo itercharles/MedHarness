@@ -22,6 +22,7 @@ from compliantflow.mixins.traceability import _TraceabilityMixin
 from compliantflow.mixins.change_request import _ChangeRequestMixin
 from compliantflow.mixins.schema_form import _SchemaFormMixin
 from compliantflow.mixins.compliance import _ComplianceMixin
+from compliantflow.mixins.test_results_mixin import _TestResultsMixin
 
 
 class CompliantFlowCore(
@@ -31,6 +32,7 @@ class CompliantFlowCore(
     _ChangeRequestMixin,
     _SchemaFormMixin,
     _ComplianceMixin,
+    _TestResultsMixin,
 ):
     """
     Core CompliantFlow library.
@@ -59,6 +61,19 @@ class CompliantFlowCore(
 
         self._load_config()
         self.refresh()
+        self._init_result_store()
+
+    def _init_result_store(self):
+        """Initialize the external test result store."""
+        from test_results.result_store import ResultStore
+        raw_config: dict = {}
+        try:
+            with open(self.config_path, "r") as f:
+                raw_config = yaml.safe_load(f) or {}
+        except Exception:
+            pass
+        result_store_cfg = raw_config.get("test_integration", {}).get("result_store", {})
+        self.result_store = ResultStore(self.repo_root, result_store_cfg)
 
     def _load_config(self):
         """Load project configuration."""
@@ -86,49 +101,3 @@ class CompliantFlowCore(
         if not self.config:
             return None
         return self.config.model_dump()
-
-    def _aggregate_relationship_fields(self, item: Dict[str, Any], doc_type_code: str) -> List[str]:
-        """
-        Aggregate all relationship field values from an item.
-
-        Args:
-            item: Item dictionary
-            doc_type_code: Document type code (e.g., 'SRS', 'TC-SRS')
-
-        Returns:
-            List of all linked item IDs from all relationship fields
-        """
-        all_links = []
-
-        if doc_type_code.startswith('TC'):
-            if 'verifies' in item:
-                value = item['verifies']
-                if isinstance(value, list):
-                    all_links.extend([v for v in value if v])
-                elif value:
-                    all_links.append(value)
-            return all_links
-
-        doc_type_config = self.config.get_doc_type(doc_type_code)
-        if not doc_type_config:
-            return []
-
-        properties = doc_type_config.properties if hasattr(doc_type_config, 'properties') else []
-        for prop in properties:
-            if isinstance(prop, dict):
-                prop_format = prop.get('format')
-                field_name = prop.get('name')
-            elif hasattr(prop, 'format'):
-                prop_format = prop.format
-                field_name = prop.name
-            else:
-                continue
-
-            if prop_format == 'relationship' and field_name in item:
-                value = item[field_name]
-                if isinstance(value, list):
-                    all_links.extend([v for v in value if v])
-                elif value:
-                    all_links.append(value)
-
-        return all_links

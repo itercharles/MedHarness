@@ -21,24 +21,14 @@ class _ItemCRUDMixin:
             item_dict['all_linked_uids'] = item.all_linked_uids
             items.append(item_dict)
 
+        # Append TC items from the external ResultStore (no YAML files for TCs).
         try:
-            from test_results.test_case_scanner import AutomatedTestScanner
-
-            tests_dir = self.repo_root.parent / "tests"
-            if tests_dir.exists():
-                scanner = AutomatedTestScanner(tests_dir)
-                automated_tests = scanner.scan_all_tests()
-
-                existing_ids = {item['id'] for item in items}
-                for test in automated_tests:
-                    if test['id'] not in existing_ids:
-                        test_type_code = test['id'].split('-')[0]
-                        test['all_linked_uids'] = self._aggregate_relationship_fields(test, test_type_code)
-                        items.append(test)
+            existing_ids = {item['id'] for item in items}
+            for tc_item in self.result_store.as_tc_items():
+                if tc_item['id'] not in existing_ids:
+                    items.append(tc_item)
         except Exception as e:
-            import traceback
-            print(f"Warning: Could not scan automated tests: {e}")
-            traceback.print_exc()
+            print(f"Warning: Could not load test results: {e}")
 
         return items
 
