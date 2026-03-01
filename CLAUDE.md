@@ -19,7 +19,9 @@ streamlit run src/app.py
 PYTHONPATH=src python -m compliantflow --help
 
 # Common commands
-PYTHONPATH=src python -m compliantflow validate
+PYTHONPATH=src python -m compliantflow validate schema
+PYTHONPATH=src python -m compliantflow validate traceability
+PYTHONPATH=src python -m compliantflow validate compliance IEC_62304
 PYTHONPATH=src python -m compliantflow item list --type SYS --status approved
 PYTHONPATH=src python -m compliantflow item get SYS-001
 PYTHONPATH=src python -m compliantflow cr check-status CR-012

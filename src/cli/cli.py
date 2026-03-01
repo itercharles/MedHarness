@@ -50,21 +50,20 @@ def main(ctx: click.Context, dhf: str | None) -> None:
 # validate
 # ---------------------------------------------------------------------------
 
-@main.command()
+@main.group()
+def validate() -> None:
+    """Commands for DHF validation."""
+
+
+@validate.command("schema")
 @click.pass_context
-def validate(ctx: click.Context) -> None:
-    """Validate all DHF items against the project schema.
+def validate_schema(ctx: click.Context) -> None:
+    """Validate all DHF items against their doc-type schema.
 
-    Checks:
-      1. Schema validation — every YAML conforms to its doc-type definition.
-      2. Graph validation — reports isolated items (no traceability links).
-
-    Exits with code 1 if schema errors are found.
+    Exits 1 if any YAML contains unknown or invalid fields.
     """
     dhf_path: Path = ctx.obj["dhf"]
-    click.echo(f"Validating DHF at: {dhf_path}", err=True)
-
-    # Schema validation happens during loading; catch hard errors here.
+    click.echo(f"Validating schema at: {dhf_path}", err=True)
     from traceability.exceptions import ValidationError as CFValidationError
     try:
         core = _make_core(dhf_path)
@@ -72,24 +71,67 @@ def validate(ctx: click.Context) -> None:
         click.echo(f"SCHEMA ERROR: {e}", err=True)
         click.echo("✗ Schema validation failed.", err=True)
         sys.exit(1)
+    item_count = len(core.get_all_items())
+    click.echo(f"✓ All {item_count} items passed schema validation.", err=True)
 
-    items = core.get_all_items()
-    item_count = len(items)
 
-    # Graph-level validation (orphans, isolated nodes) — informational only.
-    graph_result = core.validate()
-    if not graph_result.get("valid", True):
-        for issue in graph_result.get("issues", []):
+@validate.command("traceability")
+@click.pass_context
+def validate_traceability(ctx: click.Context) -> None:
+    """Check that no items are orphaned (every item has at least one traceability link).
+
+    Exits 1 if any orphaned items are found.
+    """
+    dhf_path: Path = ctx.obj["dhf"]
+    core = _make_core(dhf_path)
+    result = core.validate()
+    if not result.get("valid", True):
+        for issue in result.get("issues", []):
             issue_type = issue.get("type", "issue")
             affected = issue.get("items", [])
             click.echo(
-                f"WARNING: {len(affected)} isolated item(s) [{issue_type}]: "
+                f"ORPHAN [{issue_type}]: {len(affected)} item(s): "
                 + ", ".join(affected[:5])
                 + ("…" if len(affected) > 5 else ""),
                 err=True,
             )
+        sys.exit(1)
+    item_count = len(core.get_all_items())
+    click.echo(f"✓ All {item_count} items have traceability links.", err=True)
 
-    click.echo(f"✓ All {item_count} items passed schema validation.", err=True)
+
+@validate.command("compliance")
+@click.argument("group_id")
+@click.pass_context
+def validate_compliance(ctx: click.Context, group_id: str) -> None:
+    """Check compliance against a governance policy group.
+
+    GROUP_ID is the filename stem under DHF/governance/ (e.g. IEC_62304).
+    Outputs the full JSON report to stdout.
+    Exits 1 if any policy fails.
+    """
+    dhf_path: Path = ctx.obj["dhf"]
+    core = _make_core(dhf_path)
+    report = core.check_compliance(group_id)
+    if report is None:
+        click.echo(f"ERROR: Policy group '{group_id}' not found.", err=True)
+        sys.exit(1)
+    failed = [r for r in report["results"] if not r["passed"]]
+    for r in failed:
+        click.echo(f"  ✗ [{r['policy_id']}] {r['policy_text']}: {r['details']}", err=True)
+    click.echo(json.dumps(report, default=str))
+    if failed:
+        click.echo(
+            f"✗ {len(failed)}/{report['total_policies']} policies failed "
+            f"(score: {report['score']:.0f}%).",
+            err=True,
+        )
+        sys.exit(1)
+    click.echo(
+        f"✓ {report['passed_policies']}/{report['total_policies']} policies passed "
+        f"(score: {report['score']:.0f}%).",
+        err=True,
+    )
 
 
 # ---------------------------------------------------------------------------

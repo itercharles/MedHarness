@@ -37,12 +37,12 @@ def dhf_str(test_dhf_root):
 
 def test_TC_SYS_032_001_validate_passes(runner, dhf_str):
     """
-    TC-SYS-032-001: validate exits 0 when all items are schema-valid.
+    TC-SYS-032-001: validate schema exits 0 when all items are schema-valid.
 
     @test_id: TC-SYS-032-001
     @links: SYS-032
     """
-    result = runner.invoke(main, ["--dhf", dhf_str, "validate"])
+    result = runner.invoke(main, ["--dhf", dhf_str, "validate", "schema"])
     assert result.exit_code == 0, result.output + (result.exception and str(result.exception) or "")
     assert "passed schema validation" in result.output
 
@@ -225,4 +225,49 @@ def test_TC_SYS_032_010_cr_update_tracks_pr(runner, test_dhf_root, dhf_str):
     cr = core.get_item("CR-001")
     prs = cr.get("implementation_prs", [])
     assert any(p.get("pr_number") == 99 for p in prs)
+
+
+# ---------------------------------------------------------------------------
+# validate traceability / compliance
+# ---------------------------------------------------------------------------
+
+def test_TC_SYS_032_013_validate_traceability_reports_orphans(runner, dhf_str):
+    """
+    TC-SYS-032-013: validate traceability exits 1 and reports isolated items.
+
+    CR-001 in the test fixture has no graph edges, so the command must exit 1
+    and include an ORPHAN line identifying the isolated item.
+
+    @test_id: TC-SYS-032-013
+    @links: SYS-032
+    """
+    result = runner.invoke(main, ["--dhf", dhf_str, "validate", "traceability"])
+    assert result.exit_code == 1
+    assert "ORPHAN" in result.output
+
+
+def test_TC_SYS_032_014_validate_compliance_passes(runner, dhf_str):
+    """
+    TC-SYS-032-014: validate compliance IEC_62304 exits 0 and outputs a JSON report.
+
+    @test_id: TC-SYS-032-014
+    @links: SYS-032
+    """
+    result = runner.invoke(main, ["--dhf", dhf_str, "validate", "compliance", "IEC_62304"])
+    assert result.exit_code == 0, result.output + (result.exception and str(result.exception) or "")
+    json_line = next(l for l in result.output.splitlines() if l.strip().startswith("{"))
+    parsed = json.loads(json_line)
+    assert "score" in parsed
+    assert "results" in parsed
+
+
+def test_TC_SYS_032_015_validate_compliance_not_found_exits_1(runner, dhf_str):
+    """
+    TC-SYS-032-015: validate compliance with unknown group_id exits 1.
+
+    @test_id: TC-SYS-032-015
+    @links: SYS-032
+    """
+    result = runner.invoke(main, ["--dhf", dhf_str, "validate", "compliance", "NONEXISTENT"])
+    assert result.exit_code == 1
 
