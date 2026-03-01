@@ -1,6 +1,6 @@
 """Traceability mixin — graph/traceability operations."""
 
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 from traceability.graph.analysis import generate_traceability_matrix
 
@@ -190,6 +190,111 @@ class _TraceabilityMixin:
             source_doc.prefix,
             target_doc.prefix,
         )
+
+    def build_traceability_matrix(self, doc_types: List[str]) -> Dict[str, Any]:
+        """
+        Return a traceability matrix for an ordered list of document type codes.
+
+        Each row represents one chain slot.  Orphaned items (not connected in
+        the path) are included as rows where only their own column is filled.
+
+        Args:
+            doc_types: Ordered list of doc-type codes, e.g. ['CRS', 'SYS', 'TC-SYS'].
+                       The order determines which items are considered "connected":
+                       each level must link to the next.
+
+        Returns:
+            {
+                "columns": ["CRS", "SYS", "TC-SYS"],
+                "rows": [
+                    {
+                        "CRS": "CRS-001",      # item ID, or None when slot is empty
+                        "SYS": "SYS-001",
+                        "TC-SYS": "TC-SYS-001",
+                        "is_orphan": False,    # True when only one column is filled
+                        "orphan_type": None,   # doc-type code of the orphaned item
+                        "is_complete": True    # True when every column is filled
+                    },
+                    ...
+                ]
+            }
+        """
+        chains = self.build_traceability_chains(doc_types)
+        rows = []
+        for chain in chains:
+            row: Dict[str, Any] = {
+                dt: (chain[dt]["id"] if chain.get(dt) is not None else None)
+                for dt in doc_types
+            }
+            row["is_orphan"] = chain["is_orphan"]
+            row["orphan_type"] = chain["orphan_level"]
+            row["is_complete"] = chain["is_complete"]
+            rows.append(row)
+        return {"columns": list(doc_types), "rows": rows}
+
+    def get_item_chain(self, item_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Return the full connected subgraph for a single item.
+
+        Traverses all traceability links in both directions (upstream and
+        downstream) transitively from *item_id*, then returns every reachable
+        item together with its direct neighbours.
+
+        Args:
+            item_id: The item UID to start from.
+
+        Returns:
+            None if the item does not exist in the graph, otherwise:
+            {
+                "root": "SYS-001",
+                "nodes": {
+                    "SYS-001": {
+                        "id":         "SYS-001",
+                        "title":      "System shall...",
+                        "status":     "approved",
+                        "doc_type":   "SYS",
+                        "upstream":   ["CRS-001"],        # direct parents only
+                        "downstream": ["SRS-001", "SRS-002"]  # direct children only
+                    },
+                    "CRS-001": { ... },
+                    "SRS-001": { ... },
+                    "SRS-002": { ... }
+                }
+            }
+
+        Notes:
+            - ``upstream`` / ``downstream`` contain **direct** neighbours only;
+              the full transitive closure is represented by the ``nodes`` dict.
+            - Graph edges go child→parent, so ``G.successors`` = upstream parents
+              and ``G.predecessors`` = downstream children.
+        """
+        import networkx as nx
+
+        G = self.graph.graph
+        if item_id not in G:
+            return None
+
+        # Collect every node reachable from item_id in either direction.
+        connected: set = {item_id}
+        connected.update(nx.descendants(G, item_id))  # business upstream (graph descendants)
+        connected.update(nx.ancestors(G, item_id))    # business downstream (graph ancestors)
+
+        nodes: Dict[str, Any] = {}
+        for node_id in connected:
+            item = self.get_item(node_id)
+            if not item:
+                continue
+            nodes[node_id] = {
+                "id":         node_id,
+                "title":      item.get("title", ""),
+                "status":     item.get("status"),
+                "doc_type":   self.get_doc_type_code(node_id),
+                # Direct neighbours only (edges: child→parent).
+                "upstream":   [n for n in G.successors(node_id)   if n in connected],
+                "downstream": [n for n in G.predecessors(node_id) if n in connected],
+            }
+
+        return {"root": item_id, "nodes": nodes}
 
     def get_graph_stats(self) -> Dict[str, Any]:
         """Get graph statistics."""
