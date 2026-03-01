@@ -24,7 +24,6 @@ PYTHONPATH=src python -m compliantflow item list --type SYS --status approved
 PYTHONPATH=src python -m compliantflow item get SYS-001
 PYTHONPATH=src python -m compliantflow cr check-status CR-012
 PYTHONPATH=src python -m compliantflow cr update CR-012 --item SYS-001 --pr-number 42
-PYTHONPATH=src python -m compliantflow traceability neighbors SYS-001
 PYTHONPATH=src python -m compliantflow traceability matrix CRS SYS SRS
 PYTHONPATH=src python -m compliantflow traceability chain SYS-001
 ```
@@ -54,7 +53,7 @@ PYTHONPATH=$(pwd) src/venv/bin/pytest tests/srs/ -v
 The class is composed of six mixins under `src/compliantflow/mixins/`:
 - `lifecycle.py` — delegates to `traceability/lifecycle_methods.py`
 - `item_crud.py` — `get_all_items`, `get_items_filtered`, `get_item`, `create/update/delete_item`
-- `traceability.py` — `get_item_neighbors`, `get_vertical_view_items`, `build_traceability_chains`, etc.
+- `traceability.py` — `get_vertical_view_items`, `build_traceability_chains`, `build_traceability_matrix`, `get_item_chain`
 - `change_request.py` — `get_cr_for_item`, `get_non_stable_cr`, `add_item_to_cr`, `can_edit_item`
 - `schema_form.py` — `get_form_schema`, `get_relationship_options`, `get_doc_type_metrics`
 - `compliance.py` — `get_policy_group`, `check_compliance`
@@ -64,7 +63,6 @@ Key public methods:
 - `get_items_filtered(doc_type_code, status_filter, search)` → filtered subset
 - `get_item(uid)` → `Optional[Dict]`
 - `create_item(data)`, `update_item(uid, data)`, `delete_item(uid)`
-- `get_item_neighbors(item_id)` → `{"upstream": [...], "downstream": [...]}`
 - `get_vertical_view_items(focus_type, show_upstream, show_downstream)`
 - `build_traceability_chains(path)` → chain list for matrix rendering
 - `check_compliance(group_id)` → compliance results with `policy_text` included
