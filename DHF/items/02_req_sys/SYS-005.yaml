@@ -1,5 +1,6 @@
 id: SYS-005
 title: Compliance Assessment
+category: Functional
 content: The system shall able to assess the compliance of the DHF by the governance policies (Regulations, Procedures) from
   configuration files.
 status: approved

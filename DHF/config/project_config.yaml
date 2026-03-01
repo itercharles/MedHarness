@@ -161,6 +161,7 @@ doc_types:
   - name: priority
     format: select
     options:
+    - Critical
     - High
     - Medium
     - Low
@@ -425,6 +426,8 @@ doc_types:
     - Usability
     - Reliability
     - Maintainability
+    - Change Control
+    - Document Management
     default: Functional
     help: Select the requirement category
   - name: verification_method
@@ -657,6 +660,15 @@ doc_types:
   - name: implementation_prs
     format: long_text
     label: Implementation PRs (JSON List)
+  - name: target_version
+    format: short_text
+    label: Target Version
+  - name: category
+    format: short_text
+    label: Category
+  - name: implementation_notes
+    format: long_text
+    label: Implementation Notes
   - name: target_release
     format: relationship
     target_types:

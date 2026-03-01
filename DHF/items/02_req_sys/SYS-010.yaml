@@ -3,6 +3,7 @@ content: The system shall support configurable lifecycle workflows for objects (
   state transitions and validation rules defined in configuration. 
   The system shall enforce the custom transition rules.
 title: Object Workflow Management
+category: Functional
 status: approved
 satisfies:
 - CRS-001

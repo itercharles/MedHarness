@@ -5,8 +5,8 @@ priority: High
 file_path: /Users/chenwenliang/code/CompliantFlow/DHF/items/09_cr/CR-006.yaml
 description: The objects' ID shall be generated automatically and not editable
 justification: The ID shall not be edit as it cause problems for the reference
-under_review_by: charles
-under_review_date: '2025-12-30'
+in_review_by: charles
+in_review_date: '2025-12-30'
 timestamp: '2025-12-30T16:59:35.286281'
 affected_items:
 - SRS-001
