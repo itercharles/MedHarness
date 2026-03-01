@@ -8,7 +8,12 @@ and mapping test statuses.
 
 import pytest
 from pathlib import Path
-from test_results.test_case_scanner import AutomatedTestScanner
+import sys
+
+sys.path.insert(0, str(Path(__file__).parent.parent.parent / 'src'))
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+from utils.case_scanner import AutomatedTestScanner
 from test_results import VerificationStatusProvider
 import xml.etree.ElementTree as ET
 
@@ -28,7 +33,7 @@ def test_TC_PROVIDER_001_junit_xml_parsing():
     Expected Result:
       JUnit XML should be parsed correctly with PASS/FAIL/SKIP statuses
     """
-    from test_results.github_provider import GitHubActionsProvider
+    from utils.github_provider import GitHubActionsProvider
     from pathlib import Path
     import tempfile
     
@@ -202,7 +207,7 @@ def test_TC_PROVIDER_005_automated_test_discovery():
 
 import pytest
 from pathlib import Path
-from test_results.test_case_scanner import AutomatedTestScanner
+from utils.case_scanner import AutomatedTestScanner
 
 
 def test_scanner_extracts_test_id():

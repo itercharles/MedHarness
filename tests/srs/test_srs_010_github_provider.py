@@ -19,10 +19,11 @@ from unittest.mock import Mock, patch, MagicMock
 import io
 import zipfile
 
-# Add src to path for imports
+# Add src and tests/ to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / 'src'))
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from test_results.github_provider import GitHubActionsProvider
+from utils.github_provider import GitHubActionsProvider
 
 
 class TestMultiArtifactSupport:
