@@ -155,37 +155,16 @@ def build_vertical_view(core, focus_type: str, show_upstream: bool, show_downstr
     """Build vertical view focusing on one document type."""
     nodes = []
     edges = []
-    
-    all_items = core.get_all_items()
-    
-    # Get focus items
-    focus_items = [i for i in all_items if get_doc_type_code(i['id']) == focus_type]
-    
-    if not focus_items:
+
+    # Graph traversal is handled by the backend
+    items_to_show = core.get_vertical_view_items(focus_type, show_upstream, show_downstream)
+
+    if not items_to_show:
         return nodes, edges
-    
-    # Track all items to include
-    items_to_show = {item['id']: item for item in focus_items}
-    
-    # Add upstream items (items that link TO focus items)
-    if show_upstream:
-        for item in all_items:
-            for link in item.get('links', []):
-                if link in items_to_show:
-                    items_to_show[item['id']] = item
-    
-    # Add downstream items (items that focus items link TO)
-    if show_downstream:
-        for focus_item in focus_items:
-            for link in focus_item.get('links', []):
-                linked_item = next((i for i in all_items if i['id'] == link), None)
-                if linked_item:
-                    items_to_show[link] = linked_item
-    
-    # Build nodes
+
+    # Build nodes (visual formatting stays in frontend)
     for item_id, item in items_to_show.items():
         is_focus = get_doc_type_code(item_id) == focus_type
-        
         nodes.append(Node(
             id=item['id'],
             label=item['id'],
@@ -196,18 +175,14 @@ def build_vertical_view(core, focus_type: str, show_upstream: bool, show_downstr
             borderWidth=3 if is_focus else 1,
             borderWidthSelected=5 if is_focus else 3
         ))
-    
+
     # Build edges
-    item_ids = set(items_to_show.keys())
+    item_ids = set(items_to_show)
     for item in items_to_show.values():
-        for link in item.get('links', []):
+        for link in item.get('all_linked_uids') or []:
             if link in item_ids:
-                edges.append(Edge(
-                    source=item['id'],
-                    target=link,
-                    color='#999999'
-                ))
-    
+                edges.append(Edge(source=item['id'], target=link, color='#999999'))
+
     return nodes, edges
 
 def build_horizontal_view(core, start_item_id: str):
@@ -246,7 +221,7 @@ def build_horizontal_view(core, start_item_id: str):
         if node_id not in item_map:
             continue
         item = item_map[node_id]
-        for link in item.get('links', []):
+        for link in item.get('all_linked_uids') or []:
             if link in trace_nodes:
                 edges.append(Edge(source=item['id'], target=link, color='#999999'))
 

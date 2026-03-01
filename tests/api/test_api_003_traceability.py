@@ -242,3 +242,93 @@ def test_build_traceability_chains_complete_chain(test_dhf_root):
         for code in ["CRS", "SYS", "SRS"]:
             assert chain[code] is not None, f"Complete chain must have item at '{code}'"
             assert "id" in chain[code]
+
+
+def test_get_vertical_view_items_focus_only(test_dhf_root):
+    """
+    TC-SYS-003-010: get_vertical_view_items returns focus items (API)
+
+    @links: SYS-003
+    @test_id: TC-SYS-003-010
+
+    Verify get_vertical_view_items includes the focus type items when both
+    show_upstream and show_downstream are False.
+    """
+    core = CompliantFlowCore(test_dhf_root)
+
+    result = core.get_vertical_view_items("SYS", show_upstream=False, show_downstream=False)
+
+    assert len(result) > 0, "Should return at least the focus items"
+    for item_id in result:
+        assert core.get_doc_type_code(item_id) == "SYS", "All returned items should be SYS type"
+
+
+def test_get_vertical_view_items_with_upstream(test_dhf_root):
+    """
+    TC-SYS-003-011: get_vertical_view_items includes upstream items (API)
+
+    @links: SYS-003
+    @test_id: TC-SYS-003-011
+
+    Verify get_vertical_view_items includes items that link TO the focus type
+    when show_upstream=True.
+    """
+    core = CompliantFlowCore(test_dhf_root)
+
+    focus_only = core.get_vertical_view_items("SYS", show_upstream=False, show_downstream=False)
+    with_upstream = core.get_vertical_view_items("SYS", show_upstream=True, show_downstream=False)
+
+    # Upstream should add more items (SRS items link to SYS)
+    assert len(with_upstream) >= len(focus_only), "Upstream view should have at least as many items"
+    # SRS-001 derives from SYS-001, so it links to SYS → should appear as upstream
+    assert "SRS-001" in with_upstream, "SRS-001 should appear as upstream of SYS focus"
+
+
+def test_get_vertical_view_items_with_downstream(test_dhf_root):
+    """
+    TC-SYS-003-012: get_vertical_view_items includes downstream items (API)
+
+    @links: SYS-003
+    @test_id: TC-SYS-003-012
+
+    Verify get_vertical_view_items includes items that the focus items link TO
+    when show_downstream=True.
+    """
+    core = CompliantFlowCore(test_dhf_root)
+
+    focus_only = core.get_vertical_view_items("SYS", show_upstream=False, show_downstream=False)
+    with_downstream = core.get_vertical_view_items("SYS", show_upstream=False, show_downstream=True)
+
+    # Downstream should add more items (SYS items link to CRS)
+    assert len(with_downstream) >= len(focus_only), "Downstream view should have at least as many items"
+    # SYS-001 derives from CRS-001, so CRS-001 is downstream
+    assert "CRS-001" in with_downstream, "CRS-001 should appear as downstream of SYS focus"
+
+
+def test_get_vertical_view_items_unknown_type(test_dhf_root):
+    """
+    TC-SYS-003-013: get_vertical_view_items returns empty for unknown type (API)
+
+    @links: SYS-003
+    @test_id: TC-SYS-003-013
+    """
+    core = CompliantFlowCore(test_dhf_root)
+
+    result = core.get_vertical_view_items("NONEXISTENT")
+
+    assert result == {}, "Should return empty dict for unknown focus type"
+
+
+def test_get_doc_type_code(test_dhf_root):
+    """
+    TC-SYS-003-014: get_doc_type_code resolves item ID to doc type (API)
+
+    @links: SYS-003
+    @test_id: TC-SYS-003-014
+    """
+    core = CompliantFlowCore(test_dhf_root)
+
+    assert core.get_doc_type_code("SRS-001") == "SRS"
+    assert core.get_doc_type_code("SYS-002") == "SYS"
+    assert core.get_doc_type_code("CRS-001") == "CRS"
+    assert core.get_doc_type_code("UNKNOWN-999") == "OTHER"
