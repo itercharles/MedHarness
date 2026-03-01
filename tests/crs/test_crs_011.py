@@ -7,23 +7,29 @@ Verifies regulatory compliance checking through the CompliantFlowCore API.
 """
 
 
-def test_TC_CRS_011_001_load_policy_group(core):
+def test_TC_CRS_011_001_policy_group_contains_required_sections(core):
     """
-    TC-CRS-011-001: Load Regulatory Policy Group via API
+    TC-CRS-011-001: IEC 62304 Policy Group Contains Expected Section IDs
 
     @test_id: TC-CRS-011-001
     @links: CRS-011
 
-    get_policy_group('IEC_62304') loads the policy group from the
-    governance directory and returns its structure.
+    Regulatory Compliance Validation requires that the IEC 62304 policy
+    group contains the specific section IDs mandated by the standard.
+    The test fixture defines sections 5.1.1, 5.1.3, 5.3.1, 5.5.2, 6.2.1.
     """
     group = core.get_policy_group("IEC_62304")
 
     assert group is not None, "Expected IEC_62304 policy group to be loadable"
-    assert isinstance(group, dict)
-    assert group.get("id") == "IEC_62304"
-    assert "policies" in group or "title" in group, \
-        f"Expected policy group structure, got: {list(group.keys())}"
+
+    policies = group.get("policies", [])
+    assert len(policies) > 0, "IEC_62304 policy group must contain policies"
+
+    policy_ids = {p.get("id") or p.get("section") for p in policies}
+    required_sections = {"5.1.1", "5.3.1", "6.2.1"}
+    missing = required_sections - policy_ids
+    assert not missing, \
+        f"IEC_62304 policy group missing required sections: {missing}"
 
 
 def test_TC_CRS_011_002_run_compliance_check(core):

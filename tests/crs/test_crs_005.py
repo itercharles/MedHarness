@@ -39,20 +39,30 @@ def test_TC_CRS_005_001_create_architecture_item(core):
 
 def test_TC_CRS_005_002_view_architecture_item(core):
     """
-    TC-CRS-005-002: View Architecture Item Details via API
+    TC-CRS-005-002: Architecture Item has SYS implementation link via API
 
     @test_id: TC-CRS-005-002
     @links: CRS-005
 
-    get_item('SYSARCH-001') returns the architecture item with all
-    expected fields populated.
+    Architecture Definition requires that each architecture item
+    explicitly implements one or more system requirements.
+    SYSARCH-001 must have an 'implements' link pointing to a SYS item.
     """
     item = core.get_item("SYSARCH-001")
 
     assert item is not None
     assert item["id"] == "SYSARCH-001"
-    assert "title" in item
-    assert "System Architecture Component" in item.get("title", "")
+
+    # Architecture item must implement a SYS requirement
+    implements = item.get("implements") or []
+    if not implements:
+        neighbors = core.get_item_neighbors("SYSARCH-001")
+        implements = neighbors.get("upstream", [])
+
+    assert len(implements) > 0, \
+        "SYSARCH-001 must implement at least one SYS requirement"
+    assert any("SYS-" in uid for uid in implements), \
+        f"SYSARCH-001 should implement a SYS item; got: {implements}"
 
 
 def test_TC_CRS_005_003_architecture_item_approved_status(core):

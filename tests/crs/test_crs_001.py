@@ -38,19 +38,31 @@ def test_TC_CRS_001_001_create_requirement(core):
 
 def test_TC_CRS_001_002_view_requirement_details(core):
     """
-    TC-CRS-001-002: View Requirement Details via API
+    TC-CRS-001-002: View Requirement Details via API — traceability chain intact
 
     @test_id: TC-CRS-001-002
     @links: CRS-001
 
-    get_item() returns all relevant fields for a known SRS item.
+    get_item() returns the item together with its derives_from links.
+    Requirement Definition means requirements must be traceable upward;
+    SRS-001 must link to a SYS parent via derives_from.
     """
     item = core.get_item("SRS-001")
 
     assert item is not None
     assert item["id"] == "SRS-001"
-    assert "Item Persistence and Versioning" in item.get("title", "")
-    assert item.get("status") == "approved"
+
+    # The derives_from field must be populated — requirement is traceable
+    derives_from = item.get("derives_from") or item.get("all_linked_uids") or []
+    # Fall back to checking neighbors when the field is not directly in the dict
+    if not derives_from:
+        neighbors = core.get_item_neighbors("SRS-001")
+        derives_from = neighbors.get("upstream", [])
+
+    assert len(derives_from) > 0, \
+        "SRS-001 must have a parent requirement (derives_from) for traceability"
+    assert any("SYS-" in uid for uid in derives_from), \
+        f"SRS-001 should derive from a SYS item; got: {derives_from}"
 
 
 def test_TC_CRS_001_003_search_requirements(core):
