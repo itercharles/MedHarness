@@ -364,6 +364,38 @@ doc_types:
     target_types:
     - CRS
     label: Verifies
+  - name: reviewer
+    format: short_text
+    label: Reviewer
+  - name: review_date
+    format: date
+    label: Review Date
+  - name: review_status
+    format: select
+    options: [pending, approved, rejected]
+    label: Review Status
+  - name: tester
+    format: short_text
+    label: Tester
+  - name: testing_date
+    format: date
+    label: Testing Date
+  - name: testing_status
+    format: select
+    options: [PASS, FAIL, SKIP]
+    label: Testing Status
+  - name: run_id
+    format: short_text
+    label: Run ID
+  - name: run_url
+    format: short_text
+    label: Run URL
+  - name: commit_sha
+    format: short_text
+    label: Commit SHA
+  - name: testing_notes
+    format: long_text
+    label: Testing Notes
   icon: 🧪
   page_enabled: false
 - code: TC-SYS
@@ -379,6 +411,38 @@ doc_types:
     target_types:
     - SYS
     label: Verifies
+  - name: reviewer
+    format: short_text
+    label: Reviewer
+  - name: review_date
+    format: date
+    label: Review Date
+  - name: review_status
+    format: select
+    options: [pending, approved, rejected]
+    label: Review Status
+  - name: tester
+    format: short_text
+    label: Tester
+  - name: testing_date
+    format: date
+    label: Testing Date
+  - name: testing_status
+    format: select
+    options: [PASS, FAIL, SKIP]
+    label: Testing Status
+  - name: run_id
+    format: short_text
+    label: Run ID
+  - name: run_url
+    format: short_text
+    label: Run URL
+  - name: commit_sha
+    format: short_text
+    label: Commit SHA
+  - name: testing_notes
+    format: long_text
+    label: Testing Notes
   icon: 🧪
   page_enabled: false
 - code: TC-SRS
@@ -394,6 +458,38 @@ doc_types:
     target_types:
     - SRS
     label: Verifies
+  - name: reviewer
+    format: short_text
+    label: Reviewer
+  - name: review_date
+    format: date
+    label: Review Date
+  - name: review_status
+    format: select
+    options: [pending, approved, rejected]
+    label: Review Status
+  - name: tester
+    format: short_text
+    label: Tester
+  - name: testing_date
+    format: date
+    label: Testing Date
+  - name: testing_status
+    format: select
+    options: [PASS, FAIL, SKIP]
+    label: Testing Status
+  - name: run_id
+    format: short_text
+    label: Run ID
+  - name: run_url
+    format: short_text
+    label: Run URL
+  - name: commit_sha
+    format: short_text
+    label: Commit SHA
+  - name: testing_notes
+    format: long_text
+    label: Testing Notes
   icon: 🧪
   page_enabled: false
 - code: SYS
@@ -1136,15 +1232,10 @@ document_specifications:
     doc_type_name: Design Test
     test_type: verification
 test_integration:
-  automated:
-    repository: itercharles/CompliantFlow
-    workflow_name: Test Suite
-    artifact_names:
-    - unit-test-results
-    - sys-test-results
-    - crs-test-results
-    token_env: GITHUB_TOKEN
+  result_store:
+    path: test-results/results.yaml
+    audit_log: test-results/audit.log
   manual:
-    audit_log: test-results/manual_tests.log
+    audit_log: test-results/audit.log
     require_verified_by: true
     require_verification_date: true

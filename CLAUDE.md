@@ -28,6 +28,11 @@ PYTHONPATH=src python -m compliantflow cr check-status CR-012
 PYTHONPATH=src python -m compliantflow cr update CR-012 --item SYS-001 --pr-number 42
 PYTHONPATH=src python -m compliantflow traceability matrix CRS SYS SRS
 PYTHONPATH=src python -m compliantflow traceability chain SYS-001
+# Test result integration (external CI → DHF)
+PYTHONPATH=src python -m compliantflow test register --from-file test_cases.yaml
+PYTHONPATH=src python -m compliantflow test import results.xml --format junit --tester "GitHub Actions" --run-id 123 --run-url https://github.com/org/repo/actions/runs/123 --commit abc123
+PYTHONPATH=src python -m compliantflow test status TC-SYS-001
+PYTHONPATH=src python -m compliantflow test list --status PASS
 ```
 
 CLI package is at `src/cli/cli.py`. Uses `click` (already installed via streamlit).
@@ -35,7 +40,7 @@ stdout = machine-readable JSON; stderr = human-readable messages.
 
 ### Run tests
 ```bash
-# SYS tests (fast, recommended — ~3 seconds for all 59 tests)
+# SYS tests (fast, recommended — ~5 seconds for all 87 tests)
 PYTHONPATH=$(pwd) src/venv/bin/pytest tests/sys/ -v
 
 # Single test
@@ -52,16 +57,17 @@ PYTHONPATH=$(pwd) src/venv/bin/pytest tests/srs/ -v
 ### Core Facade: `CompliantFlowCore`
 **`src/compliantflow/core.py`** is the single entry point for all business logic. Pages and tests interact only through this class. Import as `from compliantflow.core import CompliantFlowCore`.
 
-The class is composed of six mixins under `src/compliantflow/mixins/`:
+The class is composed of seven mixins under `src/compliantflow/mixins/`:
 - `lifecycle.py` — delegates to `traceability/lifecycle_methods.py`
 - `item_crud.py` — `get_all_items`, `get_items_filtered`, `get_item`, `create/update/delete_item`
 - `traceability.py` — `get_vertical_view_items`, `build_traceability_chains`, `build_traceability_matrix`, `get_item_chain`
 - `change_request.py` — `get_cr_for_item`, `get_non_stable_cr`, `add_item_to_cr`, `can_edit_item`
 - `schema_form.py` — `get_form_schema`, `get_relationship_options`, `get_doc_type_metrics`
 - `compliance.py` — `get_policy_group`, `check_compliance`
+- `test_results_mixin.py` — `register_test_cases`, `import_test_results`, `get_test_result`, `get_all_test_results`
 
 Key public methods:
-- `get_all_items()` → `List[Dict]` — returns YAML items + auto-scanned tests from `tests/`
+- `get_all_items()` → `List[Dict]` — returns YAML items + TC items from ResultStore
 - `get_items_filtered(doc_type_code, status_filter, search)` → filtered subset
 - `get_item(uid)` → `Optional[Dict]`
 - `create_item(data)`, `update_item(uid, data)`, `delete_item(uid)`
@@ -72,6 +78,10 @@ Key public methods:
 - `get_cr_for_item(item_id)`, `get_non_stable_cr()`, `add_item_to_cr(cr_id, item_id)`
 - `build_traceability_matrix(doc_types)` → `{columns: [...], rows: [{DOC_TYPE: id|null, is_orphan, orphan_type, is_complete}]}`
 - `get_item_chain(item_id)` → `{root: id, nodes: {id: {id, title, status, doc_type, upstream: [...], downstream: [...]}}}`
+- `register_test_cases(definitions)` → `{registered: N, errors: [...]}`
+- `import_test_results(results, tester, run_id, run_url, commit_sha)` → `{imported, skipped, items_updated, failed_tcs}`
+- `get_test_result(tc_id)` → `Optional[Dict]`
+- `get_all_test_results(status_filter)` → `Dict[tc_id, record]`
 
 **`get_all_items()` returns dicts, not `Item` objects.** Access fields with `item['id']`, `item.get('status')`, etc. The dict includes a computed `all_linked_uids` list for graph traversal — use this, not `item.get('links')` (which doesn't exist).
 
@@ -85,7 +95,7 @@ Key public methods:
 - `nx.descendants(G, item_id)` = business-**upstream** (parents, grandparents)
 - `nx.ancestors(G, item_id)` = business-**downstream** (children, grandchildren)
 
-`CompliantFlowCore.get_item_neighbors()` returns correctly-named `upstream`/`downstream` keys.
+`get_item_chain(item_id)` traverses the full connected subgraph and returns correctly-named `upstream`/`downstream` keys per node.
 
 ### Config-Driven Document Types
 **`DHF/config/project_config.yaml`** is the single source of truth. It defines:
@@ -101,6 +111,34 @@ Key public methods:
 ### Lifecycle / Transitions
 - **`src/traceability/lifecycle_methods.py`** — `execute_transition()` only writes `status`. Audit fields (`approved_by`, `approved_date`, `reviewer`, `review_date`) are written by the UI layer before calling the transition.
 - A state with `is_stable: true` locks the item — `is_item_editable()` returns `False`.
+
+### External Test Result Integration
+TC items have **no YAML files**. They live exclusively in `DHF/test-results/results.yaml`
+managed by **`src/test_results/result_store.py`** (`ResultStore`).
+
+Two separate write operations:
+1. **Register** (spec-time): `test register` — stores definition metadata per TC:
+   `title`, `links` (requirement IDs this TC verifies), `reviewer`, `review_date`, `review_status`
+2. **Import** (CI-time): `test import` — parses JUnit XML and stores execution metadata:
+   `testing_status` (PASS/FAIL/SKIP), `tester`, `testing_date`, `run_id`, `run_url`, `commit_sha`
+
+After import, `_update_requirement_verification()` aggregates all stored TC results for each
+touched requirement item and writes its `verification_status` (verified/failed/not_verified).
+
+JUnit XML convention for non-Python tests:
+```xml
+<testcase name="TC-CRS-001_my_test">
+  <properties>
+    <property name="compliantflow.id"    value="TC-CRS-001"/>
+    <property name="compliantflow.links" value="CRS-001,CRS-002"/>
+  </properties>
+</testcase>
+```
+
+`DHF/test-results/audit.log` records every write for regulatory traceability.
+
+`AutomatedTestScanner` and `GitHubActionsProvider` have been moved to `tests/utils/`
+(CI/test infrastructure only — not production code).
 
 ### CLI Layer
 **`src/cli/cli.py`** exposes `CompliantFlowCore` as a `click` CLI. Sits alongside `debug_view/` as an interface layer, separate from the core package. Both entry points work:

@@ -1,0 +1,27 @@
+id: SYS-033
+title: External Test Result Integration via CLI
+content: |-
+  The system shall provide CLI commands that allow CI/CD pipelines to push
+  test execution results and test case design-review metadata into the DHF,
+  independent of the test framework or programming language used.
+
+  Required commands:
+  - test register: Register test case definitions (title, links to requirements,
+    reviewer, review date, review status) from a YAML file or single TC argument.
+  - test import: Parse a JUnit XML file produced by any test framework and persist
+    per-TC execution results (tester, testing date, testing status, run ID, run URL,
+    commit SHA, notes).  Automatically updates verification_status on linked
+    requirement items (verified / failed / not_verified).
+  - test status: Retrieve the stored record for a single TC as JSON.
+  - test list: List all stored TC records, optionally filtered by testing_status.
+
+  Results are persisted in DHF/test-results/results.yaml.
+  Every write appends a line to DHF/test-results/audit.log for regulatory traceability.
+category: Functional
+verification_method:
+- Test
+critical_safety: false
+status: approved
+satisfies:
+- CRS-012
+- CRS-008

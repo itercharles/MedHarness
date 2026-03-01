@@ -47,8 +47,9 @@ class Item(BaseModel):
     reviewer: Optional[str] = Field(None, description="Reviewer name")
     review_date: Optional[date] = Field(None, description="Review date")
     
-    # Verification
-    verification_status: Optional[VerificationStatus] = Field(None, description="Verification status")
+    # Verification — accepts both TC-level (PASS/FAIL/PENDING) and
+    # requirement-level (verified/failed/not_verified) status strings.
+    verification_status: Optional[str] = Field(None, description="Verification status")
     
     # History tracking
     history: Optional[List[Dict[str, Any]]] = Field(default_factory=list, description="Change history")

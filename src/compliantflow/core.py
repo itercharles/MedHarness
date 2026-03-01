@@ -22,6 +22,7 @@ from compliantflow.mixins.traceability import _TraceabilityMixin
 from compliantflow.mixins.change_request import _ChangeRequestMixin
 from compliantflow.mixins.schema_form import _SchemaFormMixin
 from compliantflow.mixins.compliance import _ComplianceMixin
+from compliantflow.mixins.test_results_mixin import _TestResultsMixin
 
 
 class CompliantFlowCore(
@@ -31,6 +32,7 @@ class CompliantFlowCore(
     _ChangeRequestMixin,
     _SchemaFormMixin,
     _ComplianceMixin,
+    _TestResultsMixin,
 ):
     """
     Core CompliantFlow library.
@@ -59,6 +61,19 @@ class CompliantFlowCore(
 
         self._load_config()
         self.refresh()
+        self._init_result_store()
+
+    def _init_result_store(self):
+        """Initialize the external test result store."""
+        from test_results.result_store import ResultStore
+        raw_config: dict = {}
+        try:
+            with open(self.config_path, "r") as f:
+                raw_config = yaml.safe_load(f) or {}
+        except Exception:
+            pass
+        result_store_cfg = raw_config.get("test_integration", {}).get("result_store", {})
+        self.result_store = ResultStore(self.repo_root, result_store_cfg)
 
     def _load_config(self):
         """Load project configuration."""
