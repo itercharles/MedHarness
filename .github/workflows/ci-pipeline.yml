@@ -158,53 +158,8 @@ jobs:
       
       - name: Check CR Status
         run: |
-          # Lightweight check - only load config, not entire core
-          python3 << 'PYTHON_SCRIPT'
-          import yaml
-          
-          # Load CR
-          cr_id = "${{ steps.validate.outputs.cr_id }}"
-          cr_file = f"DHF/items/09_cr/{cr_id}.yaml"
-          
-          with open(cr_file) as f:
-              cr_data = yaml.safe_load(f)
-          
-          # Load only the config (lightweight)
-          with open("DHF/config/project_config.yaml") as f:
-              config = yaml.safe_load(f)
-          
-          # Find CR document type config
-          cr_config = None
-          for doc_type in config.get('doc_types', []):
-              if doc_type.get('code') == 'CR':
-                  cr_config = doc_type
-                  break
-          
-          if not cr_config:
-              print("::error::CR document type not found in config")
-              exit(1)
-          
-          # Check if current status is stable
-          status = cr_data.get('status', '')
-          lifecycle = cr_config.get('lifecycle', {})
-          states = lifecycle.get('states', [])
-          
-          # Find the state info
-          state_info = None
-          for s in states:
-              if s.get('id') == status:
-                  state_info = s
-                  break
-          
-          is_stable = state_info.get('is_stable', False) if state_info else False
-          
-          if is_stable:
-              print(f"::error::CR {cr_id} is in stable status '{status}'")
-              print(f"::error::Cannot modify code for CRs in stable status")
-              exit(1)
-          
-          print(f"✓ CR {cr_id} is in valid (non-stable) status: {status}")
-          PYTHON_SCRIPT
+          export PYTHONPATH="${PWD}/src"
+          python -m compliantflow --dhf DHF cr check-status ${{ steps.validate.outputs.cr_id }}
 
       - name: Analyze Changed Items
         id: analyze
@@ -251,57 +206,21 @@ jobs:
       
       - name: Update CR with Affected Items and PR Info
         run: |
-          CR_ID="${{ steps.validate.outputs.cr_id }}"
-          CR_FILE="DHF/items/09_cr/${CR_ID}.yaml"
-          
-          # Use Python to update CR YAML
-          python3 << 'PYTHON_SCRIPT'
-          import yaml
-          
-          cr_file = "DHF/items/09_cr/${{ steps.validate.outputs.cr_id }}.yaml"
-          
-          with open(cr_file, 'r') as f:
-              cr_data = yaml.safe_load(f)
-          
-          # Initialize fields if needed
-          if 'affected_items' not in cr_data:
-              cr_data['affected_items'] = []
-          if 'implementation_prs' not in cr_data:
-              cr_data['implementation_prs'] = []
-          
-          # Add new affected items from PR
-          affected_items_str = """${{ steps.analyze.outputs.affected_items }}"""
-          new_items = [item.strip().replace('- ', '') for item in affected_items_str.strip().split('\n') if item.strip()]
-          
-          for item in new_items:
-              if item and item not in cr_data['affected_items']:
-                  cr_data['affected_items'].append(item)
-          
-          # Add PR information
-          pr_number = ${{ github.event.pull_request.number }}
-          pr_url = "${{ github.event.pull_request.html_url }}"
-          pr_title = "${{ github.event.pull_request.title }}"
-          
-          # Check if this PR is already tracked
-          pr_exists = any(pr.get('pr_number') == pr_number for pr in cr_data['implementation_prs'])
-          
-          if not pr_exists:
-              pr_info = {
-                  'pr_number': pr_number,
-                  'pr_url': pr_url,
-                  'title': pr_title
-              }
-              cr_data['implementation_prs'].append(pr_info)
-              print(f"Added PR #{pr_number} to implementation_prs")
-          
-          # Write back
-          with open(cr_file, 'w') as f:
-              yaml.dump(cr_data, f, default_flow_style=False, sort_keys=False)
-          
-          print(f"Updated {cr_file}")
-          print(f"  Affected items: {len(new_items)} added")
-          print(f"  PR tracked: #{pr_number}")
-          PYTHON_SCRIPT
+          # Build --item flags from affected items detected in previous step
+          ITEM_FLAGS=""
+          while IFS= read -r item; do
+            item=$(echo "$item" | sed 's/^[[:space:]]*-[[:space:]]*//' | tr -d '[:space:]')
+            if [ -n "$item" ]; then
+              ITEM_FLAGS="$ITEM_FLAGS --item $item"
+            fi
+          done <<< "${{ steps.analyze.outputs.affected_items }}"
+
+          export PYTHONPATH="${PWD}/src"
+          python -m compliantflow --dhf DHF cr update ${{ steps.validate.outputs.cr_id }} \
+            $ITEM_FLAGS \
+            --pr-number ${{ github.event.pull_request.number }} \
+            --pr-url "${{ github.event.pull_request.html_url }}" \
+            --pr-title "${{ github.event.pull_request.title }}"
       
       - name: Commit CR Update to PR Branch
         run: |

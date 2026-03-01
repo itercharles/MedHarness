@@ -1,0 +1,21 @@
+id: SYS-032
+title: Command-Line Interface
+content: |-
+  The system shall provide a command-line interface (CLI) accessible via
+  `python -m compliantflow` that exposes core DHF operations for use in
+  CI/CD pipelines and scripted environments.
+
+  Required commands:
+  - validate: Validate all DHF items against the project schema; exit non-zero on error
+  - item list: List items filtered by type, status, or search text; output JSON
+  - item get: Retrieve a single item by ID; output JSON
+  - cr check-status: Verify a Change Request is in a non-stable state; exit non-zero if stable
+  - cr update: Add affected items and PR metadata to a Change Request
+  - traceability neighbors: Return upstream and downstream neighbors of an item
+category: Functional
+verification_method:
+- Test
+critical_safety: false
+status: approved
+satisfies:
+- CRS-012

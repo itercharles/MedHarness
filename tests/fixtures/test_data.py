@@ -172,7 +172,7 @@ def create_test_dhf() -> Path:
                     {'name': 'description', 'format': 'long_text', 'label': 'Description'},
                     {'name': 'justification', 'format': 'long_text', 'label': 'Justification'},
                     {'name': 'affected_items', 'format': 'relationship', 'label': 'Affected Items'},
-
+                    {'name': 'implementation_prs', 'format': 'relationship', 'label': 'Implementation PRs'},
                 ],
                 'lifecycle': {
                     'transitions': [
