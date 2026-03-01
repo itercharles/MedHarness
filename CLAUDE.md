@@ -39,7 +39,7 @@ stdout = machine-readable JSON; stderr = human-readable messages.
 
 ### Run tests
 ```bash
-# SYS tests (fast, recommended — ~5 seconds for all 87 tests)
+# SYS tests (fast, recommended)
 PYTHONPATH=src src/venv/bin/pytest tests/sys/ -v
 
 # Single test
@@ -63,7 +63,7 @@ The class is composed of seven mixins under `src/compliantflow/mixins/`:
 - `change_request.py` — `get_cr_for_item`, `get_non_stable_cr`, `add_item_to_cr`, `can_edit_item`
 - `schema_form.py` — `get_form_schema`, `get_relationship_options`, `get_doc_type_metrics`
 - `compliance.py` — `get_policy_group`, `check_compliance`
-- `test_results_mixin.py` — `register_test_cases`, `import_test_results`, `get_test_result`, `get_all_test_results`
+- `test_results_mixin.py` — `import_test_results`, `get_test_result`, `get_all_test_results`
 
 Key public methods:
 - `get_all_items()` → `List[Dict]` — returns YAML items + TC items from ResultStore
@@ -77,7 +77,6 @@ Key public methods:
 - `get_cr_for_item(item_id)`, `get_non_stable_cr()`, `add_item_to_cr(cr_id, item_id)`
 - `build_traceability_matrix(doc_types)` → `{columns: [...], rows: [{DOC_TYPE: id|null, is_orphan, orphan_type, is_complete}]}`
 - `get_item_chain(item_id)` → `{root: id, nodes: {id: {id, title, status, doc_type, upstream: [...], downstream: [...]}}}`
-- `register_test_cases(definitions)` → `{registered: N, errors: [...]}`
 - `import_test_results(results, tester, run_id, run_url, commit_sha)` → `{imported, skipped, items_updated, failed_tcs}`
 - `get_test_result(tc_id)` → `Optional[Dict]`
 - `get_all_test_results(status_filter)` → `Dict[tc_id, record]`
@@ -117,24 +116,36 @@ They live exclusively in `DHF/test-results/results.yaml` managed by
 **`src/test_results/result_store.py`** (`ResultStore`). TC type is inferred from which
 requirements the TC links to, not from a separate doc type category.
 
-**Import** (CI-time): `test import` — parses JUnit XML and stores per-TC execution and
-optional review metadata. Automatically updates `verification_status` on linked requirement
-items (verified/failed/not_verified).
+**`test import`** parses a JUnit XML file and persists per-TC execution results plus
+optional review metadata. After import, `verification_status` is recomputed on all
+linked requirement items (verified / failed / not_verified).
 
-JUnit XML convention:
-```xml
-<testcase name="TC-001_my_test">
-  <properties>
-    <property name="compliantflow.id"           value="TC-001"/>
-    <property name="compliantflow.links"        value="CRS-001,SYS-002"/>
-    <property name="compliantflow.reviewer"     value="Alice"/>
-    <property name="compliantflow.review_date"  value="2026-01-15"/>
-    <property name="compliantflow.review_status" value="approved"/>
-  </properties>
-</testcase>
+**Metadata comes from test docstrings** — `tests/conftest.py` has an autouse fixture
+that reads `@test_id`, `@links`, `@reviewer`, `@review_status`, `@review_date` tags and
+injects them as `compliantflow.*` properties into the JUnit XML output automatically.
+No manual `record_property` calls needed in individual tests.
+
+Docstring format:
+```python
+def test_TC_SYS_001_001_my_test(test_dhf_root):
+    """
+    TC-SYS-001-001: My test title
+
+    @test_id: TC-SYS-001-001
+    @links: SYS-001
+    @reviewer: Alice
+    @review_status: approved
+    @review_date: 2026-01-15
+    """
 ```
 
-All results stored in `DHF/test-results/results.yaml`. Git history serves as audit trail.
+Generated JUnit XML `<properties>`:
+```
+compliantflow.id, compliantflow.title, compliantflow.links,
+compliantflow.reviewer, compliantflow.review_date, compliantflow.review_status
+```
+
+All results stored in `DHF/test-results/results.yaml`. Git history is the audit trail.
 
 `AutomatedTestScanner` and `GitHubActionsProvider` are in `tests/utils/`
 (test infrastructure only — not called from production code).
@@ -156,7 +167,9 @@ All results stored in `DHF/test-results/results.yaml`. Git history serves as aud
 - All new tests go in `tests/sys/` as API-based tests (no browser/Playwright).
 - Use the `test_dhf_root` fixture from `tests/sys/conftest.py` — it creates a fresh isolated DHF for each test.
 - Test DHF config and items are defined in `tests/fixtures/test_data.py`.
-- Test IDs follow `TC-SYS-NNN-NNN` pattern. Add `@test_id:` and `@links:` docstring tags.
+- Test IDs follow `TC-SYS-NNN-NNN` pattern. Always include `@test_id:` and `@links:` docstring tags; add `@reviewer:`, `@review_status:`, `@review_date:` when the test has been design-reviewed.
+- The autouse fixture in `tests/conftest.py` automatically injects all docstring tags as `compliantflow.*` properties into JUnit XML — no manual `record_property` calls needed.
+- `pytest.ini` sets `junit_family = xunit1` to enable per-testcase `<properties>`.
 - Prefer `pytest.raises(ValidationError)` and similar assertions; avoid asserting exact error strings beyond key terms.
 
 ## PR Workflow
