@@ -247,6 +247,55 @@ class CompliantFlowCore:
         downstream = list(nx.ancestors(G, item_id))
         return {"upstream": upstream, "downstream": downstream}
 
+    def get_doc_type_code(self, item_id: str) -> str:
+        """Return the document type code for *item_id* based on configured prefixes."""
+        if self.config:
+            for doc_type in self.config.doc_types:
+                if item_id.startswith(doc_type.prefix):
+                    return doc_type.code
+        return "OTHER"
+
+    def get_vertical_view_items(
+        self,
+        focus_type: str,
+        show_upstream: bool = True,
+        show_downstream: bool = True,
+    ) -> Dict[str, Dict]:
+        """
+        Return all items to display in the vertical traceability view.
+
+        Args:
+            focus_type:      Document type code to focus on (e.g. "SYS").
+            show_upstream:   Include items whose links point TO the focus items.
+            show_downstream: Include items that the focus items link TO.
+
+        Returns:
+            Dict mapping item_id → item_dict for every item that should appear
+            in the view.  Focus items are always included.
+        """
+        all_items = self.get_all_items()
+        focus_items = [i for i in all_items if self.get_doc_type_code(i["id"]) == focus_type]
+
+        if not focus_items:
+            return {}
+
+        items_to_show: Dict[str, Dict] = {item["id"]: item for item in focus_items}
+
+        if show_upstream:
+            focus_ids = set(items_to_show)
+            for item in all_items:
+                if any(link in focus_ids for link in (item.get("all_linked_uids") or [])):
+                    items_to_show[item["id"]] = item
+
+        if show_downstream:
+            item_map = {i["id"]: i for i in all_items}
+            for focus_item in focus_items:
+                for link in focus_item.get("all_linked_uids") or []:
+                    if link in item_map:
+                        items_to_show[link] = item_map[link]
+
+        return items_to_show
+
     def create_item(self, item_data: dict, author: str = "system", cr_id: Optional[str] = None) -> dict:
         """
         Create a new item.
