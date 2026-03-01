@@ -258,3 +258,58 @@ def traceability_neighbors(ctx: click.Context, item_id: str) -> None:
         sys.exit(1)
     neighbors = core.get_item_neighbors(item_id)
     click.echo(json.dumps(neighbors, default=str))
+
+
+@traceability.command("matrix")
+@click.argument("doc_types", nargs=-1, required=True, metavar="DOC_TYPE...")
+@click.pass_context
+def traceability_matrix(ctx: click.Context, doc_types: tuple) -> None:
+    """Build a traceability matrix for an ordered list of doc types.
+
+    DOC_TYPE arguments must be ordered along the traceability chain
+    (e.g. CRS SYS SRS).  Orphaned items are included with null slots.
+
+    Outputs one JSON object per row to stdout.
+
+    \b
+    Examples:
+      python -m cli traceability matrix CRS SYS SRS
+      python -m cli traceability matrix RISK RCM SYS TC-SYS
+    """
+    dhf_path: Path = ctx.obj["dhf"]
+    core = _make_core(dhf_path)
+    result = core.build_traceability_matrix(list(doc_types))
+    click.echo(json.dumps({"columns": result["columns"]}, default=str), err=True)
+    for row in result["rows"]:
+        click.echo(json.dumps(row, default=str))
+    total = len(result["rows"])
+    complete = sum(1 for r in result["rows"] if r["is_complete"])
+    orphans = sum(1 for r in result["rows"] if r["is_orphan"])
+    click.echo(
+        f"({total} row(s): {complete} complete, {orphans} orphan(s))", err=True
+    )
+
+
+@traceability.command("chain")
+@click.argument("item_id")
+@click.pass_context
+def traceability_chain(ctx: click.Context, item_id: str) -> None:
+    """Show the full connected traceability chain for a single item.
+
+    Traverses all upstream and downstream links transitively and outputs
+    a JSON object with 'root' and 'nodes'.  Each node lists only its
+    direct neighbours; the complete reachable set is the nodes dict.
+
+    \b
+    Examples:
+      python -m cli traceability chain SYS-001
+      python -m cli traceability chain CRS-003
+    """
+    dhf_path: Path = ctx.obj["dhf"]
+    core = _make_core(dhf_path)
+    result = core.get_item_chain(item_id)
+    if result is None:
+        click.echo(f"ERROR: Item '{item_id}' not found.", err=True)
+        sys.exit(1)
+    click.echo(json.dumps(result, default=str))
+    click.echo(f"({len(result['nodes'])} node(s) in chain)", err=True)
