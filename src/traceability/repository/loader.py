@@ -8,16 +8,19 @@ from ..exceptions import ValidationError
 
 
 # Fields that are always valid regardless of doc-type config.
+# These are written by the saver, lifecycle engine, or used internally by
+# the loader — NOT user-defined business fields.
+# All business fields (title, content, derives_from, satisfies, …) must be
+# declared explicitly in the doc type's 'properties' in project_config.yaml.
 _SYSTEM_FIELDS = {
-    # Core identity / lifecycle fields always written by the saver
-    'id', 'doc_type', 'type', 'status', 'file_path', 'active', 'history',
-    'title', 'reviewer', 'review_date',
-    'verification_status', 'approved_by', 'approved_date',
-    'retired_by', 'retired_date', 'manual_verifications',
-    # Universal relationship field names used across doc types
-    'derives_from', 'implements', 'guided_by', 'informs',
-    'design', 'mitigated_by', 'mitigates', 'satisfies',
-    'verifies', 'validates',
+    # Written by the saver
+    'id', 'doc_type', 'type', 'status', 'history', 'active', 'file_path',
+    # Written by lifecycle / approval workflow transitions
+    'approved_by', 'approved_date',
+    'retired_by', 'retired_date', 'retired_reason',
+    'reviewer', 'review_date',
+    # Written by the verification / test-results system
+    'verification_status', 'manual_verifications',
 }
 
 
