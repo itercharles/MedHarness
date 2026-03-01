@@ -9,7 +9,6 @@ the ResultStore CLI, and that linked requirement items are updated.
 
 import json
 import sys
-import textwrap
 from pathlib import Path
 
 import pytest
@@ -146,11 +145,8 @@ def test_TC_SYS_033_002_pass_import_marks_item_verified(test_dhf_root):
     _enable_verification(test_dhf_root)
     core = CompliantFlowCore(test_dhf_root, auto_commit=False)
 
-    # Register TC definition
-    core.register_test_cases([{"id": "TC-SYS-001", "title": "Object creation", "links": ["SYS-001"]}])
-
-    # Import PASS result
-    results = [ExecutionResult(id="TC-SYS-001", testing_status="PASS", name="test_TC_SYS_001", links=[])]
+    results = [ExecutionResult(id="TC-SYS-001", testing_status="PASS", name="test_TC_SYS_001",
+                               links=["SYS-001"])]
     summary = core.import_test_results(results, tester="CI")
 
     assert summary["imported"] == 1
@@ -175,9 +171,8 @@ def test_TC_SYS_033_003_fail_import_marks_item_failed(test_dhf_root):
     _enable_verification(test_dhf_root)
     core = CompliantFlowCore(test_dhf_root, auto_commit=False)
 
-    core.register_test_cases([{"id": "TC-SYS-999", "title": "Failing test", "links": ["SYS-001"]}])
     results = [ExecutionResult(id="TC-SYS-999", testing_status="FAIL", name="test_TC_SYS_999",
-                               links=[], error_message="AssertionError")]
+                               links=["SYS-001"], error_message="AssertionError")]
     summary = core.import_test_results(results, tester="CI")
 
     assert summary["imported"] == 1
@@ -211,75 +206,52 @@ def test_TC_SYS_033_004_non_tc_tests_skipped(test_dhf_root):
 
 
 # ---------------------------------------------------------------------------
-# TC-SYS-033-005: register_test_cases persists definition fields
+# TC-SYS-033-005: Review fields from JUnit XML properties are persisted
 # ---------------------------------------------------------------------------
 
-def test_TC_SYS_033_005_register_persists_definition(test_dhf_root):
+def test_TC_SYS_033_005_review_fields_via_import(test_dhf_root):
     """
-    TC-SYS-033-005: register_test_cases stores reviewer/review_date/review_status.
+    TC-SYS-033-005: import persists reviewer/review_date/review_status
+    from compliantflow.* XML properties.
 
     @test_id: TC-SYS-033-005
     @links: SYS-033
     """
-    core = CompliantFlowCore(test_dhf_root, auto_commit=False)
-    summary = core.register_test_cases([{
-        "id": "TC-SYS-042",
-        "title": "Design review test",
-        "links": ["SYS-001"],
-        "reviewer": "Alice",
-        "review_date": "2026-01-15",
-        "review_status": "approved",
-    }])
-    assert summary["registered"] == 1
-    assert summary["errors"] == []
+    xml_path = _make_junit_xml(test_dhf_root, [
+        {
+            "name": "test_TC_SYS_001_obj",
+            "props": {
+                "compliantflow.links": "SYS-001",
+                "compliantflow.reviewer": "Alice",
+                "compliantflow.review_date": "2026-01-15",
+                "compliantflow.review_status": "approved",
+            },
+        },
+    ])
 
-    record = core.get_test_result("TC-SYS-042")
+    core = CompliantFlowCore(test_dhf_root, auto_commit=False)
+    results = parse_junit_xml(xml_path)
+    core.import_test_results(results, tester="CI")
+
+    record = core.get_test_result("TC-SYS-001")
     assert record is not None
     assert record["reviewer"] == "Alice"
+    assert record["review_date"] == "2026-01-15"
     assert record["review_status"] == "approved"
     assert record["links"] == ["SYS-001"]
+    assert record["testing_status"] == "PASS"
 
 
 # ---------------------------------------------------------------------------
-# TC-SYS-033-006: CLI test register --from-file exits 0
+# TC-SYS-033-006: CLI test import exits 0, JSON summary has provenance
 # ---------------------------------------------------------------------------
 
-def test_TC_SYS_033_006_cli_register_from_file(runner, test_dhf_root, dhf_str, tmp_path):
+def test_TC_SYS_033_006_cli_test_import(runner, test_dhf_root, dhf_str):
     """
-    TC-SYS-033-006: `test register --from-file` exits 0 and writes records.
-
-    @test_id: TC-SYS-033-006
-    @links: SYS-033
-    """
-    tc_file = tmp_path / "test_cases.yaml"
-    tc_file.write_text(textwrap.dedent("""\
-        - id: TC-SYS-010
-          title: Register via CLI
-          links: [SYS-001]
-          reviewer: Bob
-          review_status: approved
-    """))
-
-    result = runner.invoke(main, ["--dhf", dhf_str, "test", "register",
-                                  "--from-file", str(tc_file)])
-    assert result.exit_code == 0, result.output + str(result.exception or "")
-
-    core = CompliantFlowCore(test_dhf_root, auto_commit=False)
-    record = core.get_test_result("TC-SYS-010")
-    assert record is not None
-    assert record["reviewer"] == "Bob"
-
-
-# ---------------------------------------------------------------------------
-# TC-SYS-033-007: CLI test import exits 0, JSON summary has provenance
-# ---------------------------------------------------------------------------
-
-def test_TC_SYS_033_007_cli_test_import(runner, test_dhf_root, dhf_str):
-    """
-    TC-SYS-033-007: `test import` exits 0 and stdout contains JSON summary
+    TC-SYS-033-006: `test import` exits 0 and stdout contains JSON summary
     with run_id in the stored records.
 
-    @test_id: TC-SYS-033-007
+    @test_id: TC-SYS-033-006
     @links: SYS-033
     """
     xml_path = _make_junit_xml(test_dhf_root, [
@@ -309,14 +281,14 @@ def test_TC_SYS_033_007_cli_test_import(runner, test_dhf_root, dhf_str):
 
 
 # ---------------------------------------------------------------------------
-# TC-SYS-033-008: CLI test list --status PASS filters correctly
+# TC-SYS-033-007: CLI test list --status PASS filters correctly
 # ---------------------------------------------------------------------------
 
-def test_TC_SYS_033_008_cli_test_list_filter(runner, test_dhf_root, dhf_str):
+def test_TC_SYS_033_007_cli_test_list_filter(runner, test_dhf_root, dhf_str):
     """
-    TC-SYS-033-008: `test list --status PASS` returns only PASS records.
+    TC-SYS-033-007: `test list --status PASS` returns only PASS records.
 
-    @test_id: TC-SYS-033-008
+    @test_id: TC-SYS-033-007
     @links: SYS-033
     """
     xml_path = _make_junit_xml(test_dhf_root, [

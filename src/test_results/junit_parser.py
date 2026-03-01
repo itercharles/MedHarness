@@ -36,6 +36,9 @@ class ExecutionResult:
     name: str             # Raw test name from XML
     links: List[str] = field(default_factory=list)  # from compliantflow.links property
     title: str = ""       # from compliantflow.title property (optional)
+    reviewer: str = ""    # from compliantflow.reviewer property (optional)
+    review_date: str = ""  # from compliantflow.review_date property (optional)
+    review_status: str = ""  # from compliantflow.review_status property (optional)
     error_message: Optional[str] = None
     duration: float = 0.0
 
@@ -62,6 +65,9 @@ def parse_junit_xml(path: Path) -> List[ExecutionResult]:
         links_raw = props.get("compliantflow.links", "")
         links = [lnk.strip() for lnk in links_raw.split(",") if lnk.strip()] if links_raw else []
         title = props.get("compliantflow.title", "")
+        reviewer = props.get("compliantflow.reviewer", "")
+        review_date = props.get("compliantflow.review_date", "")
+        review_status = props.get("compliantflow.review_status", "")
 
         # Determine status
         if testcase.find("failure") is not None:
@@ -86,6 +92,9 @@ def parse_junit_xml(path: Path) -> List[ExecutionResult]:
                 name=name,
                 links=links,
                 title=title,
+                reviewer=reviewer,
+                review_date=review_date,
+                review_status=review_status,
                 error_message=error_message,
                 duration=duration,
             )

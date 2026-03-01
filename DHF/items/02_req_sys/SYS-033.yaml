@@ -6,17 +6,15 @@ content: |-
   independent of the test framework or programming language used.
 
   Required commands:
-  - test register: Register test case definitions (title, links to requirements,
-    reviewer, review date, review status) from a YAML file or single TC argument.
   - test import: Parse a JUnit XML file produced by any test framework and persist
     per-TC execution results (tester, testing date, testing status, run ID, run URL,
-    commit SHA, notes).  Automatically updates verification_status on linked
+    commit SHA, notes) and optional review metadata (reviewer, review date, review status)
+    from JUnit XML properties.  Automatically updates verification_status on linked
     requirement items (verified / failed / not_verified).
   - test status: Retrieve the stored record for a single TC as JSON.
   - test list: List all stored TC records, optionally filtered by testing_status.
 
   Results are persisted in DHF/test-results/results.yaml.
-  Every write appends a line to DHF/test-results/audit.log for regulatory traceability.
 category: Functional
 verification_method:
 - Test
