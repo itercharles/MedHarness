@@ -1,6 +1,7 @@
 id: SYS-001
 content: The system shall support configurable object, such as requirement, design item, change request, etc. to maintain a complete history.
 title: Objects management and tracking
+category: Functional
 verification_status: PASS
 status: approved
 manual_verifications:

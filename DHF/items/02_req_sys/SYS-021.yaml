@@ -6,7 +6,8 @@ title: Document Generation and Export
 reviewer: System Architect
 review_date: '2024-12-15'
 category: Document Management
-verification_method: Test
+verification_method:
+- Test
 critical_safety: false
 status: approved
 satisfies:

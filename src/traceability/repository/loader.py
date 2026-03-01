@@ -8,19 +8,14 @@ from ..exceptions import ValidationError
 
 
 # Fields that are always valid regardless of doc-type config.
-# These are written by the saver, lifecycle engine, or used internally by
-# the loader — NOT user-defined business fields.
-# All business fields (title, content, derives_from, satisfies, …) must be
-# declared explicitly in the doc type's 'properties' in project_config.yaml.
+# These are written exclusively by the saver — NOT user-defined business fields.
+# All other allowed fields (lifecycle tracking, verification, etc.) are derived
+# dynamically from the doc type's lifecycle config in _build_lifecycle_fields().
 _SYSTEM_FIELDS = {
     # Written by the saver
-    'id', 'doc_type', 'type', 'status', 'history', 'active', 'file_path',
-    # Written by lifecycle / approval workflow transitions
-    'approved_by', 'approved_date',
-    'retired_by', 'retired_date', 'retired_reason',
+    'id', 'doc_type', 'type', 'status', 'history', 'active', 'file_path', 'timestamp',
+    # Explicit fields on the Item model — available for any doc type
     'reviewer', 'review_date',
-    # Written by the verification / test-results system
-    'verification_status', 'manual_verifications',
 }
 
 
@@ -133,6 +128,7 @@ class ItemLoader:
 
         # Build allowed / required field sets from the property definitions
         allowed_fields = set(_SYSTEM_FIELDS)
+        allowed_fields |= self._build_lifecycle_fields(doc_type)
         required_fields: set = set()
         field_configs: Dict[str, Dict] = {}
 
@@ -169,6 +165,45 @@ class ItemLoader:
         for field_name, field_cfg in field_configs.items():
             if field_name in data and data[field_name] is not None:
                 self._validate_field_value(data[field_name], field_cfg, file_path)
+
+    def _build_lifecycle_fields(self, doc_type) -> set:
+        """
+        Derive the set of fields that the lifecycle engine and UI may write for
+        this doc type, based on its lifecycle config in project_config.yaml.
+
+        Covers:
+          - {state}_by / {state}_date for every transition target state
+          - reviewer / review_date as conventional aliases for the in_review state
+          - manual_verifications when any criterion uses check_type: manual
+          - verification_status when the doc type has has_verification: true
+          - field names referenced by field_not_empty criteria (e.g. retired_reason)
+        """
+        fields: set = set()
+        lifecycle = doc_type.lifecycle
+        if lifecycle:
+            for transition in lifecycle.get('transitions', []) or []:
+                to_state = transition.get('to_state')
+                if to_state:
+                    fields.add(f'{to_state}_by')
+                    fields.add(f'{to_state}_date')
+                    # Conventional review-tracking aliases used by the UI layer
+                    if to_state == 'in_review':
+                        fields.add('reviewer')
+                        fields.add('review_date')
+
+                for criterion in transition.get('criteria', []) or []:
+                    check_type = criterion.get('check_type')
+                    if check_type == 'manual':
+                        fields.add('manual_verifications')
+                    elif check_type == 'field_not_empty':
+                        field_name = criterion.get('field')
+                        if field_name:
+                            fields.add(field_name)
+
+        if doc_type.has_verification:
+            fields.add('verification_status')
+
+        return fields
 
     def _validate_field_value(
         self, value: Any, field_config: Dict[str, Any], file_path: Path

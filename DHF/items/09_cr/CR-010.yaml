@@ -1,41 +1,6 @@
 id: CR-010
 title: Centralize Relationship Configuration
-content: "Refactor configuration to define relationships in a single central location,\n\
-  eliminating duplication between properties and relations sections.\n\n## Current\
-  \ Problem\n\nRelationships are defined in two places:\n1. In `properties` section\
-  \ with field details\n2. In `relations` section with target type\n\nThis creates\
-  \ duplication and maintenance burden.\n\n## Proposed Solution\n\n### 1. Global Relationship\
-  \ Registry\nDefine all relationships once at project level:\n\n```yaml\nrelationship_types:\n\
-  \  derives_from:\n    label: \"Derives From\"\n    description: \"Parent requirement\
-  \ this derives from\"\n    reverse_label: \"Derived By\"\n  implements:\n    label:\
-  \ \"Implements\"\n    description: \"Requirements this implements\"\n    reverse_label:\
-  \ \"Implemented By\"\n  target_release:\n    label: \"Target Release\"\n    description:\
-  \ \"Release this targets\"\n    reverse_label: \"Includes Items\"\n  mitigates:\n\
-  \    label: \"Mitigates\"\n    description: \"Risks this mitigates\"\n    reverse_label:\
-  \ \"Mitigated By\"\n```\n\n### 2. Simplified Property Definition\nReference relationships\
-  \ by name:\n\n```yaml\nproperties:\n  - name: target_release\n    format: relationship\n\
-  \    relationship_type: target_release\n    target_types:\n      - RELEASE\n   \
-  \ cardinality: many  # or 'one'\n```\n\n### 3. Remove Relations Section\nThe `relations`\
-  \ section becomes redundant - relationship info comes from:\n- Global relationship\
-  \ registry (metadata)\n- Property definition (target types, cardinality)\n\n## Benefits\n\
-  \n1. **Single Source of Truth**: Relationship metadata defined once\n2. **Less Duplication**:\
-  \ No need to repeat in properties and relations\n3. **Better Validation**: Can validate\
-  \ relationship_type references exist\n4. **Clearer Intent**: `format: relationship`\
-  \ is explicit\n5. **Reverse Lookups**: Built-in with reverse_label\n6. **Easier\
-  \ Maintenance**: Change relationship name in one place\n\n## Implementation Plan\n\
-  \n### Phase 1: Schema & Parser\n- Add `relationship_types` to project config schema\n\
-  - Update config parser to validate relationship references\n- Add backward compatibility\
-  \ for old format\n\n### Phase 2: Core Library\n- Update `_aggregate_relationship_fields()`\
-  \ to use new format\n- Update relationship traversal logic\n- Add reverse lookup\
-  \ helpers\n\n### Phase 3: UI\n- Update form rendering to use relationship metadata\n\
-  - Update detail view to show reverse relationships\n- Update table rendering if\
-  \ needed\n\n### Phase 4: Migration\n- Migrate existing doc types to new format\n\
-  - Update all YAML item files if needed\n- Remove deprecated `relations` sections\n\
-  \n### Phase 5: Testing\n- Update all tests for new format\n- Verify backward compatibility\n\
-  - Test reverse lookups\n\n## Migration Strategy\n\nSupport both formats during transition:\n\
-  - Old format: `relations` section (deprecated)\n- New format: `relationship_types`\
-  \ + `format: relationship`\n- Gradually migrate doc types\n- Remove old format support\
-  \ after migration complete"
+
 status: implemented
 priority: Medium
 category: Technical Improvement

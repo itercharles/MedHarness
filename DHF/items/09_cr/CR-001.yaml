@@ -1,6 +1,5 @@
 id: CR-001
-content: Add functionality to approve multiple requirements at once instead of one
-  at a time, improving efficiency when processing large batches.
+
 title: Add bulk approval feature for requirements
 description: 'Currently, requirements must be approved one at a time, which is inefficient
   when

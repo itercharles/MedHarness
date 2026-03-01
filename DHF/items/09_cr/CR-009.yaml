@@ -1,52 +1,6 @@
 id: CR-009
 title: Refactor Legacy Links System to Use Relationship Fields
-content: |-
-  Replace legacy `links` field usage with typed relationship fields throughout the codebase.
-  
-  ## Background
-  The system has evolved from using a generic `links` list to using typed relationship fields 
-  (e.g., `derives_from`, `implements`, `mitigates`). However, several legacy systems still 
-  reference the old `links` field.
-  
-  ## Affected Components
-  
-  ### 1. Workflow Engine (workflow_engine.py)
-  - `linked_items_approved` check type uses `item.get('links', [])`
-  - Should use specific relationship fields based on criterion configuration
-  
-  ### 2. Automated Test Scanner (compliant_flow_core.py)
-  - Sets `all_linked_uids` from `test.get('links', [])`
-  - Should aggregate from all relationship fields
-  
-  ### 3. Document Generator (document_generator.py)
-  - Traceability matrix generation uses `item.get('links', [])`
-  - Should use relationship fields to build chains
-  - Affects 6 locations: lines 244, 260, 283, 289, 312, 316
-  
-  ## Proposed Changes
-  
-  1. **Update workflow_engine.py**:
-     - Modify `linked_items_approved` to accept a `relationship_field` parameter
-     - Use the specified relationship field instead of generic `links`
-  
-  2. **Update compliant_flow_core.py**:
-     - Create helper to aggregate all relationship fields into `all_linked_uids`
-     - Use relationship metadata from document type config
-  
-  3. **Refactor document_generator.py**:
-     - Update traceability matrix to use relationship fields
-     - Use `derives_from`, `implements`, etc. instead of `links`
-  
-  ## Benefits
-  - Consistent use of typed relationships throughout codebase
-  - Better traceability with explicit relationship types
-  - Removes technical debt
-  - Enables future relationship-based features
-  
-  ## Migration Strategy
-  - Backward compatible: support both old and new approaches during transition
-  - Update configs to use new relationship-based criteria
-  - Remove legacy `links` support after migration complete
+
 status: implemented
 priority: Medium
 category: Technical Debt
