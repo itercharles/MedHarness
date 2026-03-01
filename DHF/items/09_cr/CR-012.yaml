@@ -29,6 +29,20 @@ affected_items:
 - SYSARCH-009
 - SWDD-013
 - TC-SYS-032
+- TC-SRS-002
+- TC-SRS-006
+- TC-SRS-010
+- TC-SRS-013
+- TC-SRS-015
+- TC-SYS-001
+- TC-SYS-002
+- TC-SYS-003
+- TC-SYS-004
+- TC-SYS-005
+- TC-SYS-008
+- TC-SYS-010
+- TC-SYS-021
+- TC-SYS-031
 file_path: /home/runner/work/CompliantFlow/CompliantFlow/DHF/items/09_cr/CR-012.yaml
 implementation_prs:
 - pr_number: 19
@@ -37,3 +51,6 @@ implementation_prs:
 - pr_number: 21
   pr_url: https://github.com/itercharles/CompliantFlow/pull/21
   title: 'CR-012: Improve CI policy, remove stale browser deps, deduplicate CRS tests'
+- pr_number: 22
+  pr_url: https://github.com/itercharles/CompliantFlow/pull/22
+  title: 'CR-012: refactor: Move CompliantFlowCore to compliantflow/ package'
