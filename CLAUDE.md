@@ -47,7 +47,15 @@ PYTHONPATH=$(pwd) src/venv/bin/pytest tests/srs/ -v
 ## Architecture
 
 ### Core Facade: `CompliantFlowCore`
-**`src/traceability/compliant_flow_core.py`** is the single entry point for all business logic. Pages and tests interact only through this class.
+**`src/compliantflow/core.py`** is the single entry point for all business logic. Pages and tests interact only through this class. Import as `from compliantflow.core import CompliantFlowCore`.
+
+The class is composed of six mixins under `src/compliantflow/mixins/`:
+- `lifecycle.py` — delegates to `traceability/lifecycle_methods.py`
+- `item_crud.py` — `get_all_items`, `get_items_filtered`, `get_item`, `create/update/delete_item`
+- `traceability.py` — `get_item_neighbors`, `get_vertical_view_items`, `build_traceability_chains`, etc.
+- `change_request.py` — `get_cr_for_item`, `get_non_stable_cr`, `add_item_to_cr`, `can_edit_item`
+- `schema_form.py` — `get_form_schema`, `get_relationship_options`, `get_doc_type_metrics`
+- `compliance.py` — `get_policy_group`, `check_compliance`
 
 Key public methods:
 - `get_all_items()` → `List[Dict]` — returns YAML items + auto-scanned tests from `tests/`
