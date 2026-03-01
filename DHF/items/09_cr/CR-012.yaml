@@ -34,3 +34,6 @@ implementation_prs:
 - pr_number: 19
   pr_url: https://github.com/itercharles/CompliantFlow/pull/19
   title: 'feat: Add CLI layer for CI/CD integration (CR-012)'
+- pr_number: 21
+  pr_url: https://github.com/itercharles/CompliantFlow/pull/21
+  title: 'CR-012: Improve CI policy, remove stale browser deps, deduplicate CRS tests'
