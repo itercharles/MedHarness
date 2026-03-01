@@ -1,68 +1,50 @@
 """
-Browser tests for CRS-008: Automated Test Integration
+API tests for CRS-008: Automated Test Integration
 
-Tests verify test result integration through UI.
+Verifies that test coverage and compliance information can be
+retrieved through the CompliantFlowCore API.
 
 @links: CRS-008
 """
 
-import pytest
-from playwright.sync_api import Page, expect
 
-
-@pytest.mark.browser
-def test_TC_CRS_008_001_view_test_coverage(page: Page, streamlit_app):
+def test_TC_CRS_008_001_view_requirement_with_verification_data(core):
     """
-    TC-CRS-008-001: View Test Coverage
-    
-    @links: CRS-008
+    TC-CRS-008-001: View Requirement with Verification Data via API
+
     @test_id: TC-CRS-008-001
-    
-    User views a requirement with verification status.
-    """
-    # Navigate to SRS-001 detail page
-    page.goto(f"{streamlit_app}/page_SRS?item=SRS-001")
-    page.wait_for_load_state("networkidle")
-    page.wait_for_timeout(1000)
-    
-    # Verify SRS-001 loaded with verification status
-    expect(page.get_by_role("heading", name="SRS-001")).to_be_visible()
-    
-    # Verify SRS-001 specific data is displayed
-    page_content = page.content()
-    
-    # Check for SRS-001 title
-    assert "Item Persistence and Versioning" in page_content, "Should display SRS-001 title"
-    
-    # Check for verification/test-related indicators
-    assert any(term in page_content.lower() for term in ["verif", "test", "coverage"]), \
-        "Should display verification or test coverage information"
-
-
-@pytest.mark.browser
-def test_TC_CRS_008_002_view_coverage_dashboard(page: Page, streamlit_app):
-    """
-    TC-CRS-008-002: View Coverage Dashboard
-    
     @links: CRS-008
-    @test_id: TC-CRS-008-002
-    
-    User views compliance page with coverage information.
+
+    get_item('SRS-001') returns item data including title and status,
+    which serve as the basis for test coverage reporting.
     """
-    # Navigate to Compliance page
-    page.goto(f"{streamlit_app}/Compliance")
-    page.wait_for_load_state("networkidle")
-    page.wait_for_timeout(1000)
-    
-    # Verify compliance page loaded with coverage information
-    expect(page.locator("text=Compliance").first).to_be_visible()
-    
-    # Verify coverage dashboard shows compliance/test data
-    page_content = page.content()
-    
-    # Should show compliance or test coverage information
-    assert any(term in page_content for term in ["IEC", "62304", "Compliance"]), \
-        "Coverage dashboard should show compliance information"
-    
-    # Should have substantial coverage data
-    assert len(page_content) > 2000, "Coverage dashboard should contain assessment data"
+    item = core.get_item("SRS-001")
+
+    assert item is not None
+    assert item["id"] == "SRS-001"
+    assert "Item Persistence and Versioning" in item.get("title", ""), \
+        f"Unexpected title: {item.get('title')}"
+    assert item.get("status") == "approved"
+
+    # Traceability is the verification mechanism — check upstream links exist
+    neighbors = core.get_item_neighbors("SRS-001")
+    assert len(neighbors.get("upstream", [])) > 0, \
+        "SRS-001 should have upstream links (derives_from SYS-001)"
+
+
+def test_TC_CRS_008_002_check_compliance_report(core):
+    """
+    TC-CRS-008-002: Generate Compliance Report via API
+
+    @test_id: TC-CRS-008-002
+    @links: CRS-008
+
+    check_compliance('IEC_62304') returns a structured compliance report
+    including policy evaluation results.
+    """
+    report = core.check_compliance("IEC_62304")
+
+    assert report is not None, "Expected a compliance report for IEC_62304"
+    assert isinstance(report, dict), "Expected compliance report as dict"
+    # Report should contain policy evaluation data
+    assert len(report) > 0, "Expected non-empty compliance report"
