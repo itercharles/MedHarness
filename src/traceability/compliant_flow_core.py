@@ -363,6 +363,68 @@ class CompliantFlowCore:
         
         return item.model_dump(by_alias=True, exclude_none=True)
     
+    # ------------------------------------------------------------------
+    # Change Request helpers
+    # ------------------------------------------------------------------
+
+    def get_cr_for_item(self, item_id: str) -> Optional[Dict]:
+        """Return the first CR that lists *item_id* in its affected_items, or None."""
+        from utils.cr_manager import is_change_control_enabled, get_cr_doc_type, get_affected_items_field
+        if not is_change_control_enabled(self):
+            return None
+        cr_type = get_cr_doc_type(self)
+        affected_field = get_affected_items_field(self)
+        for item in self.get_all_items():
+            if not item["id"].startswith(f"{cr_type}-"):
+                continue
+            if item_id in (item.get(affected_field) or []):
+                return item
+        return None
+
+    def get_non_stable_cr(self) -> Optional[Dict]:
+        """Return the first CR that is not in a stable workflow state, or None."""
+        from utils.cr_manager import is_change_control_enabled, get_cr_doc_type
+        if not is_change_control_enabled(self):
+            return None
+        cr_type = get_cr_doc_type(self)
+        for item in self.get_all_items():
+            if not item["id"].startswith(f"{cr_type}-"):
+                continue
+            state_info = self.get_state_info(item.get("status", ""))
+            if not state_info.get("is_stable", False):
+                return item
+        return None
+
+    def is_cr_stable(self, cr: Dict) -> bool:
+        """Return True if *cr* is in a stable workflow state (or is missing)."""
+        if not cr:
+            return True
+        state_info = self.get_state_info(cr.get("status", ""))
+        return state_info.get("is_stable", False)
+
+    def add_item_to_cr(self, cr_id: str, item_id: str) -> bool:
+        """
+        Add *item_id* to the affected_items list of *cr_id*.
+
+        Returns True on success, False if the CR does not exist, is stable,
+        or change control is disabled.
+        """
+        from utils.cr_manager import is_change_control_enabled, get_affected_items_field
+        if not is_change_control_enabled(self):
+            return False
+        cr = self.get_item(cr_id)
+        if not cr:
+            return False
+        if self.is_cr_stable(cr):
+            return False
+        affected_field = get_affected_items_field(self)
+        affected = list(cr.get(affected_field) or [])
+        if item_id not in affected:
+            affected.append(item_id)
+            cr[affected_field] = affected
+            self.update_item(cr_id, cr)
+        return True
+
     def can_edit_item(self, uid: str) -> tuple[bool, str, Optional[str], Optional[Dict]]:
         """
         Check if an item can be edited based on its status and CR requirements.
@@ -377,48 +439,41 @@ class CompliantFlowCore:
             - cr_id: Active CR ID if applicable, None otherwise
             - available_cr: Available CR dict if item needs to be added, None otherwise
         """
-        from utils.cr_manager import (
-            is_change_control_enabled,
-            get_cr_for_item,
-            get_non_stable_cr,
-            is_cr_stable,
-            get_cr_doc_type
-        )
-        
+        from utils.cr_manager import is_change_control_enabled
+
         item = self.get_item(uid)
         if not item:
             return False, "Item not found", None, None
-        
+
         # Check if item has a stable status
         doc_type_config = self.config.get_doc_type_by_prefix(item['id'].split('-')[0] + '-')
         if not doc_type_config or not doc_type_config.lifecycle:
             # No workflow - can edit
             return True, "✏️ Edit", None, None
-        
-        
+
         current_status = item.get('status')
         if not current_status:
             # No status - can edit
             return True, "✏️ Edit", None, None
-        
+
         state_info = self.get_state_info(current_status)
         is_stable = state_info.get('is_stable', False)
-        
+
         if not is_stable:
             # Not stable - can edit normally
             return True, "✏️ Edit", None, None
-        
+
         # Item is stable - check change control
         if not is_change_control_enabled(self):
             # Change control not enabled - locked
             return False, "🔒 Locked", None, None
-        
+
         # Change control enabled - check for CR
-        existing_cr = get_cr_for_item(uid, self)
-        
+        existing_cr = self.get_cr_for_item(uid)
+
         if existing_cr:
             # Item is linked to a CR - check if CR is stable
-            if is_cr_stable(existing_cr, self):
+            if self.is_cr_stable(existing_cr):
                 # CR is stable - can't edit
                 return False, "🔒 Locked", None, None
             else:
@@ -426,7 +481,7 @@ class CompliantFlowCore:
                 return True, f"✏️ Edit ({existing_cr['id']})", existing_cr['id'], None
         else:
             # No CR - check if there's an available CR to add to
-            available_cr = get_non_stable_cr(self)
+            available_cr = self.get_non_stable_cr()
             if available_cr:
                 # Return info about available CR so UI can show "Add to CR" button
                 return False, f"📝 Add to {available_cr['id']}", None, available_cr

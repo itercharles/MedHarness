@@ -33,6 +33,11 @@ def create_test_dhf() -> Path:
     # Create minimal project_config.yaml for testing with lifecycle
     # Global lifecycle states
     test_config = {
+        'change_control': {
+            'enabled': True,
+            'change_request_type': 'CR',
+            'affected_items_field': 'affected_items',
+        },
         'global_lifecycle': {
             'states': [
                 {'id': 'draft', 'label': 'Draft', 'action_label': 'Create', 'icon': '📝', 'color': 'warning'},
