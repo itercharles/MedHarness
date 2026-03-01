@@ -58,3 +58,7 @@ implementation_prs:
 - pr_number: 23
   pr_url: https://github.com/itercharles/CompliantFlow/pull/23
   title: 'CR-012: refactor: Move CLI to src/cli/, rename pages/ to debug_view/'
+- pr_number: 24
+  pr_url: https://github.com/itercharles/CompliantFlow/pull/24
+  title: 'CR-012: feat: Add build_traceability_matrix and get_item_chain to domain
+    API'
