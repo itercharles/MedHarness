@@ -564,8 +564,7 @@ def render_item_view(
         col1, col2 = st.columns(2)
         with col1:
             if st.button("✅ Confirm", type="primary", use_container_width=True, key="confirm_add_cr"):
-                from utils.cr_manager import add_item_to_cr
-                if add_item_to_cr(confirm_data['cr_id'], confirm_data['item_id'], core):
+                if core.add_item_to_cr(confirm_data['cr_id'], confirm_data['item_id']):
                     st.success(f"✅ Added {confirm_data['item_id']} to {confirm_data['cr_id']}")
                     st.session_state['editing_item_id'] = confirm_data['item_id']
                     st.session_state['active_cr_id'] = confirm_data['cr_id']
@@ -630,9 +629,9 @@ def render_item_view(
     
     # Show CR info if change control is enabled and item is stable
     if state_info.get('is_stable', False):
-        from utils.cr_manager import is_change_control_enabled, get_cr_for_item, get_cr_doc_type
+        from utils.cr_manager import is_change_control_enabled, get_cr_doc_type
         if is_change_control_enabled(core):
-            linked_cr = get_cr_for_item(item['id'], core)
+            linked_cr = core.get_cr_for_item(item['id'])
             if linked_cr:
                 cr_type = get_cr_doc_type(core)
                 cr_status = linked_cr.get('status', '')

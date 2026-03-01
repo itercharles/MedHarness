@@ -187,3 +187,89 @@ def test_TC_SYS_008_006_cr_impact_analysis(test_dhf_root):
     # Should have some impact
     # (The actual count depends on test data structure)
     assert isinstance(total_impact, set), "Impact should be calculable"
+
+
+def test_get_cr_for_item_finds_linked_cr(test_dhf_root):
+    """
+    TC-SYS-008-007: get_cr_for_item returns CR containing the item (API)
+
+    @links: SYS-008
+    @test_id: TC-SYS-008-007
+
+    Verify core.get_cr_for_item() returns the CR that lists the given item
+    in its affected_items field.
+    """
+    core = CompliantFlowCore(test_dhf_root)
+
+    # SRS-001 is in CR-001's affected_items (test data)
+    cr = core.get_cr_for_item("SRS-001")
+
+    assert cr is not None, "Should find a CR for SRS-001"
+    assert cr["id"] == "CR-001"
+    assert "SRS-001" in cr["affected_items"]
+
+
+def test_get_cr_for_item_returns_none_for_unlinked_item(test_dhf_root):
+    """
+    TC-SYS-008-008: get_cr_for_item returns None for items not in any CR (API)
+
+    @links: SYS-008
+    @test_id: TC-SYS-008-008
+
+    Verify core.get_cr_for_item() returns None when no CR references the item.
+    """
+    core = CompliantFlowCore(test_dhf_root)
+
+    cr = core.get_cr_for_item("UC-001")  # UC-001 is not in any CR
+
+    assert cr is None, "Should return None for UC-001 which is not in any CR"
+
+
+def test_get_non_stable_cr_finds_draft_cr(test_dhf_root):
+    """
+    TC-SYS-008-009: get_non_stable_cr returns an open CR (API)
+
+    @links: SYS-008
+    @test_id: TC-SYS-008-009
+
+    Verify core.get_non_stable_cr() returns a CR that is not in a stable state.
+    """
+    core = CompliantFlowCore(test_dhf_root)
+
+    cr = core.get_non_stable_cr()
+
+    # CR-001 is draft (non-stable) in test data
+    assert cr is not None, "Should find a non-stable CR"
+    assert cr["id"] == "CR-001"
+    state_info = core.get_state_info(cr.get("status", ""))
+    assert not state_info.get("is_stable", False), "Returned CR should not be stable"
+
+
+def test_add_item_to_cr_adds_and_deduplicates(test_dhf_root):
+    """
+    TC-SYS-008-010: add_item_to_cr adds item and deduplicates (API)
+
+    @links: SYS-008
+    @test_id: TC-SYS-008-010
+
+    Verify core.add_item_to_cr() adds a new item to the CR's affected_items
+    and is idempotent (no duplicates on repeated calls).
+    """
+    core = CompliantFlowCore(test_dhf_root)
+
+    # SRS-002 is not yet in CR-001
+    cr_before = core.get_item("CR-001")
+    assert "SRS-002" not in (cr_before.get("affected_items") or [])
+
+    result = core.add_item_to_cr("CR-001", "SRS-002")
+    assert result is True, "add_item_to_cr should return True on success"
+
+    core.refresh()
+    cr_after = core.get_item("CR-001")
+    assert "SRS-002" in cr_after["affected_items"]
+
+    # Calling again should be idempotent
+    core.add_item_to_cr("CR-001", "SRS-002")
+    core.refresh()
+    cr_again = core.get_item("CR-001")
+    assert cr_again["affected_items"].count("SRS-002") == 1, "No duplicates allowed"
