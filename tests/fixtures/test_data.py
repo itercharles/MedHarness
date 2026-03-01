@@ -201,9 +201,13 @@ def create_test_dhf() -> Path:
     
     # Create documents directory structure
     (test_dir / "documents" / "specifications" / "templates").mkdir(parents=True)
-    
+
+    # Create governance directory for compliance policies
+    governance_dir = test_dir / "governance"
+    governance_dir.mkdir(parents=True)
+
     print(f"[OK] Created directory structure for {len(doc_type_dirs)} document types")
-    
+
     return test_dir
 
 
@@ -295,22 +299,84 @@ def get_test_dataset() -> List[Dict]:
     ]
 
 
+def populate_governance(test_dhf_root: Path):
+    """
+    Create governance directory with IEC 62304 test policies.
+
+    Args:
+        test_dhf_root: Path to the test DHF directory
+    """
+    governance_dir = test_dhf_root / "governance"
+    governance_dir.mkdir(parents=True, exist_ok=True)
+
+    # Create IEC 62304 policy group with minimal test policies
+    # Must match PolicyGroup and Policy model schemas
+    iec_62304_policy = {
+        'id': 'IEC_62304',  # Required: ID of the policy group
+        'title': 'IEC 62304 Medical Device Software',  # Required
+        'type': 'standard',  # Optional: regulation, procedure, or standard
+        'version': '2015',  # Optional
+        'policies': [  # Required: List of Policy objects
+            {
+                'id': '5.1.1',  # Required: Unique ID
+                'section': '5.1.1',  # Required: Section reference
+                'text': 'All software requirements shall be traceable to system requirements',  # Required
+                'status': 'approved'  # Literal: approved, draft, or rejected
+            },
+            {
+                'id': '5.1.3',
+                'section': '5.1.3',
+                'text': 'All software requirements shall have verification criteria',
+                'status': 'approved'
+            },
+            {
+                'id': '5.3.1',
+                'section': '5.3.1',
+                'text': 'Software architecture shall be documented',
+                'status': 'approved'
+            },
+            {
+                'id': '5.5.2',
+                'section': '5.5.2',
+                'text': 'All software units shall be tested',
+                'status': 'approved'
+            },
+            {
+                'id': '6.2.1',
+                'section': '6.2.1',
+                'text': 'Change requests shall track affected items',
+                'status': 'approved'
+            }
+        ]
+    }
+
+    # Write IEC_62304.yaml
+    iec_file = governance_dir / "IEC_62304.yaml"
+    with open(iec_file, 'w') as f:
+        yaml.dump(iec_62304_policy, f, default_flow_style=False, sort_keys=False)
+
+    print(f"[OK] Created governance policies: IEC_62304.yaml with {len(iec_62304_policy['policies'])} policies")
+
+
 def populate_test_dhf(test_dhf_root: Path):
     """
     Populate test DHF with minimal dataset.
-    
+
     Creates test items programmatically through CompliantFlowCore API.
-    
+
     Args:
         test_dhf_root: Path to the test DHF directory
-        
+
     Returns:
         CompliantFlowCore instance with populated data
     """
     from src.traceability.compliant_flow_core import CompliantFlowCore
     from src.traceability.models.item import Item
-    
+
     print(f"\n[DATA] Populating test DHF with test data...")
+
+    # Populate governance policies first
+    populate_governance(test_dhf_root)
     
     # Initialize core with test DHF (no auto-commit for tests)
     core = CompliantFlowCore(test_dhf_root, auto_commit=False)

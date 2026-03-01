@@ -73,3 +73,13 @@ file_path: /Users/chenwenliang/code/CompliantFlow/DHF/items/09_cr/CR-001.yaml
 affected_items:
 - SYS-001
 - SYSARCH-001
+- TC-API-001
+- TC-API-003
+- TC-API-004
+- TC-API-005
+- TC-API-008
+- TC-API-010
+implementation_prs:
+- pr_number: 14
+  pr_url: https://github.com/itercharles/CompliantFlow/pull/14
+  title: Feature/api based testing
