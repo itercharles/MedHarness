@@ -11,9 +11,9 @@ from pathlib import Path
 import sys
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / 'src'))
-sys.path.insert(0, str(Path(__file__).parent.parent))
+sys.path.insert(0, str(Path(__file__).parent.parent / 'utils'))
 
-from utils.case_scanner import AutomatedTestScanner
+from case_scanner import AutomatedTestScanner
 from test_results import VerificationStatusProvider
 import xml.etree.ElementTree as ET
 
@@ -33,7 +33,7 @@ def test_TC_PROVIDER_001_junit_xml_parsing():
     Expected Result:
       JUnit XML should be parsed correctly with PASS/FAIL/SKIP statuses
     """
-    from utils.github_provider import GitHubActionsProvider
+    from github_provider import GitHubActionsProvider
     from pathlib import Path
     import tempfile
     
@@ -207,7 +207,7 @@ def test_TC_PROVIDER_005_automated_test_discovery():
 
 import pytest
 from pathlib import Path
-from utils.case_scanner import AutomatedTestScanner
+from case_scanner import AutomatedTestScanner
 
 
 def test_scanner_extracts_test_id():

@@ -12,8 +12,9 @@ from pathlib import Path
 import sys
 from unittest.mock import Mock, patch
 
-# Add src to path for imports
+# Add src and tests/utils to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / 'src'))
+sys.path.insert(0, str(Path(__file__).parent.parent / 'utils'))
 
 from compliantflow.core import CompliantFlowCore
 
@@ -129,7 +130,7 @@ class TestTestCaseScannerIntegration:
         Tests that the test scanner correctly maps @links annotations
         to the verifies field (not links field)
         """
-        from test_results.test_case_scanner import AutomatedTestScanner
+        from case_scanner import AutomatedTestScanner
         
         scanner = AutomatedTestScanner(Path(__file__).parent.parent.parent)
         
@@ -164,7 +165,7 @@ def test_TC_SRS_001_example():
         @links: SRS-010
         @test_id: TC-SRS-010-021
         """
-        from test_results.test_case_scanner import AutomatedTestScanner
+        from case_scanner import AutomatedTestScanner
         
         scanner = AutomatedTestScanner(Path(__file__).parent.parent.parent)
         
@@ -283,14 +284,9 @@ class TestRegressionPrevention:
         This test ensures that if someone removes the special TC- handling,
         the test will fail
         """
-        # Get a TC item
-        all_items = core.get_all_items()
-        tc_items = [i for i in all_items if i['id'].startswith('TC-')]
-        
-        assert len(tc_items) > 0, "Need TC items for this test"
-        
-        tc = tc_items[0]
-        
+        # Construct a TC item directly (TC items come from ResultStore, not YAML scanning)
+        tc = {'id': 'TC-SYS-001', 'title': 'Test', 'verifies': ['SYS-001'], 'all_linked_uids': ['SYS-001']}
+
         # The special handling should work
         result = core._aggregate_relationship_fields(tc, 'TC-SRS')
         
