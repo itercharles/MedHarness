@@ -29,6 +29,7 @@ class PolicyResult(BaseModel):
     policy_id: str
     passed: bool
     details: str
+    policy_text: str = ""
     evidence: Optional[Dict[str, Any]] = None
 
 class ComplianceReport(BaseModel):

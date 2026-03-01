@@ -152,3 +152,93 @@ def test_TC_SYS_003_005_upstream_traceability(test_dhf_root):
         # At least one parent should be in upstream
         assert any(parent_id in upstream_uids for parent_id in srs_item["derives_from"]), \
             "Direct parents should be in upstream"
+
+
+def test_get_item_neighbors_returns_upstream_and_downstream(test_dhf_root):
+    """
+    TC-SYS-003-006: get_item_neighbors API (API)
+
+    @links: SYS-003
+    @test_id: TC-SYS-003-006
+
+    Verify core.get_item_neighbors() returns correct upstream/downstream lists.
+    """
+    core = CompliantFlowCore(test_dhf_root)
+
+    neighbors = core.get_item_neighbors("SYS-001")
+
+    assert "upstream" in neighbors
+    assert "downstream" in neighbors
+    assert isinstance(neighbors["upstream"], list)
+    assert isinstance(neighbors["downstream"], list)
+
+    # SYS-001 derives_from CRS-001 → CRS-001 should be upstream
+    assert "CRS-001" in neighbors["upstream"], "CRS-001 should be upstream of SYS-001"
+    # SRS-001 derives_from SYS-001 → SRS-001 should be downstream
+    assert "SRS-001" in neighbors["downstream"], "SRS-001 should be downstream of SYS-001"
+
+
+def test_get_item_neighbors_unknown_item(test_dhf_root):
+    """
+    TC-SYS-003-007: get_item_neighbors with unknown item (API)
+
+    @links: SYS-003
+    @test_id: TC-SYS-003-007
+
+    Verify get_item_neighbors returns empty lists for unknown items.
+    """
+    core = CompliantFlowCore(test_dhf_root)
+
+    neighbors = core.get_item_neighbors("NONEXISTENT-999")
+
+    assert neighbors["upstream"] == []
+    assert neighbors["downstream"] == []
+
+
+def test_build_traceability_chains_structure(test_dhf_root):
+    """
+    TC-SYS-003-008: build_traceability_chains API (API)
+
+    @links: SYS-003
+    @test_id: TC-SYS-003-008
+
+    Verify core.build_traceability_chains() returns structured chain data.
+    """
+    core = CompliantFlowCore(test_dhf_root)
+
+    chains = core.build_traceability_chains(["CRS", "SYS", "SRS"])
+
+    assert isinstance(chains, list)
+    assert len(chains) > 0, "Should produce at least one chain"
+
+    for chain in chains:
+        assert "is_orphan" in chain
+        assert "is_complete" in chain
+        assert isinstance(chain["is_orphan"], bool)
+        assert isinstance(chain["is_complete"], bool)
+        # Each path level should be a key
+        for code in ["CRS", "SYS", "SRS"]:
+            assert code in chain, f"Chain should have key '{code}'"
+
+
+def test_build_traceability_chains_complete_chain(test_dhf_root):
+    """
+    TC-SYS-003-009: build_traceability_chains complete chain (API)
+
+    @links: SYS-003
+    @test_id: TC-SYS-003-009
+
+    Verify a complete chain exists when all links are present.
+    """
+    core = CompliantFlowCore(test_dhf_root)
+
+    chains = core.build_traceability_chains(["CRS", "SYS", "SRS"])
+
+    complete_chains = [c for c in chains if c["is_complete"]]
+    assert len(complete_chains) > 0, "Should have at least one complete chain"
+
+    # A complete chain should have non-None items at every level
+    for chain in complete_chains:
+        for code in ["CRS", "SYS", "SRS"]:
+            assert chain[code] is not None, f"Complete chain must have item at '{code}'"
+            assert "id" in chain[code]

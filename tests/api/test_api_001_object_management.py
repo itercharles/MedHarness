@@ -160,3 +160,71 @@ def test_TC_SYS_001_005_search_objects(test_dhf_root):
     assert len(persistence_items) > 0, "Should find items with 'persist' in content"
     assert any(item["id"] == "SRS-001" for item in persistence_items), \
         "Should find SRS-001 which mentions persistence"
+
+
+def test_get_items_filtered_by_type(test_dhf_root):
+    """
+    TC-SYS-001-006: get_items_filtered by doc type (API)
+
+    @links: SYS-001
+    @test_id: TC-SYS-001-006
+
+    Verify core.get_items_filtered() returns only items of the requested type.
+    """
+    core = CompliantFlowCore(test_dhf_root)
+
+    srs_items = core.get_items_filtered("SRS")
+
+    assert len(srs_items) > 0, "Should return SRS items"
+    for item in srs_items:
+        assert item["id"].startswith("SRS-"), "All returned items must be SRS type"
+
+
+def test_get_items_filtered_by_status(test_dhf_root):
+    """
+    TC-SYS-001-007: get_items_filtered with status filter (API)
+
+    @links: SYS-001
+    @test_id: TC-SYS-001-007
+
+    Verify get_items_filtered respects the status_filter parameter.
+    """
+    core = CompliantFlowCore(test_dhf_root)
+
+    approved = core.get_items_filtered("SRS", status_filter=["approved"])
+    draft = core.get_items_filtered("SRS", status_filter=["draft"])
+
+    for item in approved:
+        assert item.get("status") == "approved"
+    for item in draft:
+        assert item.get("status") == "draft"
+
+    # Together they should cover all SRS items
+    all_srs = core.get_items_filtered("SRS")
+    assert len(approved) + len(draft) == len(all_srs)
+
+
+def test_get_items_filtered_by_search(test_dhf_root):
+    """
+    TC-SYS-001-008: get_items_filtered with search text (API)
+
+    @links: SYS-001
+    @test_id: TC-SYS-001-008
+
+    Verify get_items_filtered filters by search text against id and title.
+    """
+    core = CompliantFlowCore(test_dhf_root)
+
+    # Search by title keyword
+    results = core.get_items_filtered("SRS", search="Persistence")
+
+    assert len(results) > 0, "Should find SRS items matching 'Persistence'"
+    assert all(
+        "persistence" in item.get("title", "").lower() or
+        "persistence" in item["id"].lower()
+        for item in results
+    )
+
+    # Search with no match
+    no_results = core.get_items_filtered("SRS", search="xyznotfound999")
+    assert len(no_results) == 0, "Should return empty list for unmatched search"

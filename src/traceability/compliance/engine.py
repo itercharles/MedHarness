@@ -41,42 +41,47 @@ class PolicyEngine:
                 # If status is "rejected", it's a fail.
                 passed = policy.status == 'approved'
                 result = PolicyResult(
-                    policy_id=policy.id, 
-                    passed=passed, 
-                    details=f"Manual Policy (Status: {policy.status})"
+                    policy_id=policy.id,
+                    passed=passed,
+                    details=f"Manual Policy (Status: {policy.status})",
+                    policy_text=policy.text,
                 )
             else:
                 if policy.status != 'approved':
-                     result = PolicyResult(
-                        policy_id=policy.id, 
-                        passed=False, 
-                        details=f"Policy not approved (Status: {policy.status})"
+                    result = PolicyResult(
+                        policy_id=policy.id,
+                        passed=False,
+                        details=f"Policy not approved (Status: {policy.status})",
+                        policy_text=policy.text,
                     )
                 else:
                     check_name = policy.automation.check
                     params = policy.automation.params
-                    
+
                     check_func = self.checks.get(check_name)
                     if check_func:
                         try:
                             passed, details, evidence = check_func(**params)
                             result = PolicyResult(
-                                policy_id=policy.id, 
-                                passed=passed, 
-                                details=details, 
-                                evidence=evidence
+                                policy_id=policy.id,
+                                passed=passed,
+                                details=details,
+                                evidence=evidence,
+                                policy_text=policy.text,
                             )
                         except Exception as e:
                             result = PolicyResult(
-                                policy_id=policy.id, 
-                                passed=False, 
-                                details=f"Check Exception: {str(e)}"
+                                policy_id=policy.id,
+                                passed=False,
+                                details=f"Check Exception: {str(e)}",
+                                policy_text=policy.text,
                             )
                     else:
                         result = PolicyResult(
-                            policy_id=policy.id, 
-                            passed=False, 
-                            details=f"Unknown check function: {check_name}"
+                            policy_id=policy.id,
+                            passed=False,
+                            details=f"Unknown check function: {check_name}",
+                            policy_text=policy.text,
                         )
             
             if result.passed:

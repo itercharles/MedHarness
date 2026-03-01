@@ -128,40 +128,22 @@ if st.session_state.get('run_compliance'):
         st.markdown("### Policy Validation Results")
         
         results_df = pd.DataFrame(report['results'])
-        
+
         # Add status icon
-        def get_status_icon(passed):
-            return "✅" if passed else "❌"
-        
-        results_df['Icon'] = results_df['passed'].apply(get_status_icon)
-        
-        # Merge with policy definitions to get full text
-        if not policy_df.empty:
-            policy_lookup = policy_df.rename(columns={'id': 'policy_id', 'text': 'Policy'})
-            merged_df = pd.merge(
-                results_df,
-                policy_lookup[['policy_id', 'Policy']],
-                on='policy_id',
-                how='left'
-            )
-            
-            st.dataframe(
-                merged_df[['Icon', 'policy_id', 'Policy', 'details']],
-                use_container_width=True,
-                column_config={
-                    "Icon": st.column_config.TextColumn("", width="small"),
-                    "policy_id": st.column_config.TextColumn("Policy ID", width="small"),
-                    "Policy": st.column_config.TextColumn("Description", width="large"),
-                    "details": st.column_config.TextColumn("Validation Details", width="medium")
-                },
-                hide_index=True
-            )
-        else:
-            st.dataframe(
-                results_df[['Icon', 'policy_id', 'details']],
-                use_container_width=True,
-                hide_index=True
-            )
+        results_df['Icon'] = results_df['passed'].apply(lambda p: "✅" if p else "❌")
+
+        # policy_text is now included in each result by the backend
+        st.dataframe(
+            results_df[['Icon', 'policy_id', 'policy_text', 'details']],
+            use_container_width=True,
+            column_config={
+                "Icon": st.column_config.TextColumn("", width="small"),
+                "policy_id": st.column_config.TextColumn("Policy ID", width="small"),
+                "policy_text": st.column_config.TextColumn("Description", width="large"),
+                "details": st.column_config.TextColumn("Validation Details", width="medium"),
+            },
+            hide_index=True,
+        )
         
         # Detailed Evidence
         st.markdown("### Detailed Evidence")
