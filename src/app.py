@@ -16,7 +16,7 @@ print("[APP] Loading app.py module...")
 
 import streamlit as st
 import yaml
-from traceability.compliant_flow_core import CompliantFlowCore
+from compliantflow.core import CompliantFlowCore
 from pages.page_generator import generate_doc_type_pages
 
 print("[APP] Imports completed successfully")

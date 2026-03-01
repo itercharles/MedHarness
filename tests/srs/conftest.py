@@ -9,7 +9,7 @@ sys.path.insert(0, str(project_root))
 
 # Import shared test data creation
 from tests.fixtures.test_data import create_test_dhf, populate_test_dhf
-from src.traceability.compliant_flow_core import CompliantFlowCore
+from compliantflow.core import CompliantFlowCore
 
 
 @pytest.fixture

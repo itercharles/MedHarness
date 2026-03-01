@@ -15,7 +15,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
-from traceability.compliant_flow_core import CompliantFlowCore
+from compliantflow.core import CompliantFlowCore
 
 
 def test_TC_SYS_031_001_compliance_references_standards(test_dhf_root):

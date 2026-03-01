@@ -5,7 +5,7 @@ import pandas as pd
 from pathlib import Path
 from typing import Dict, Any
 from datetime import datetime
-from traceability.compliant_flow_core import CompliantFlowCore
+from compliantflow.core import CompliantFlowCore
 from pages.ui_components import (
     render_manual_verification,
     render_status_badge

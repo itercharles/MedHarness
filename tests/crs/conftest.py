@@ -34,5 +34,5 @@ def core(test_dhf_root):
     """Return a CompliantFlowCore instance backed by the test DHF."""
     import sys
     sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
-    from traceability.compliant_flow_core import CompliantFlowCore
+    from compliantflow.core import CompliantFlowCore
     return CompliantFlowCore(test_dhf_root, auto_commit=False)

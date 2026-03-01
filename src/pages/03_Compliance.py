@@ -3,7 +3,7 @@
 import streamlit as st
 import pandas as pd
 from pathlib import Path
-from traceability.compliant_flow_core import CompliantFlowCore
+from compliantflow.core import CompliantFlowCore
 
 # Page Configuration
 st.set_page_config(

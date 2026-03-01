@@ -16,7 +16,7 @@ from pathlib import Path
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
-from traceability.compliant_flow_core import CompliantFlowCore
+from compliantflow.core import CompliantFlowCore
 
 
 def test_TC_SYS_005_001_load_policy_groups(test_dhf_root):

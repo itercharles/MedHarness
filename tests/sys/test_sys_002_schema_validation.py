@@ -16,7 +16,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
 from traceability.repository.loader import ItemLoader
 from traceability.exceptions import ValidationError
-from traceability.compliant_flow_core import CompliantFlowCore
+from compliantflow.core import CompliantFlowCore
 
 
 # ---------------------------------------------------------------------------

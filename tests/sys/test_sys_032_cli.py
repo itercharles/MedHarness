@@ -194,7 +194,7 @@ def test_TC_SYS_032_009_cr_update_adds_items(runner, test_dhf_root, dhf_str):
     )
     assert result.exit_code == 0, result.output
 
-    from traceability.compliant_flow_core import CompliantFlowCore
+    from compliantflow.core import CompliantFlowCore
     core = CompliantFlowCore(test_dhf_root)
     cr = core.get_item("CR-001")
     affected = cr.get("affected_items", [])
@@ -220,7 +220,7 @@ def test_TC_SYS_032_010_cr_update_tracks_pr(runner, test_dhf_root, dhf_str):
     )
     assert result.exit_code == 0, result.output
 
-    from traceability.compliant_flow_core import CompliantFlowCore
+    from compliantflow.core import CompliantFlowCore
     core = CompliantFlowCore(test_dhf_root)
     cr = core.get_item("CR-001")
     prs = cr.get("implementation_prs", [])
