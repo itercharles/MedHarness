@@ -79,3 +79,7 @@ implementation_prs:
 - pr_number: 30
   pr_url: https://github.com/itercharles/CompliantFlow/pull/30
   title: 'CR-012: fix: Detect new results.yaml when committing CI test imports'
+- pr_number: 31
+  pr_url: https://github.com/itercharles/CompliantFlow/pull/31
+  title: 'CR-012: Simplify test result integration - remove register command and audit
+    log'
