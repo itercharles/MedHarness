@@ -1,0 +1,36 @@
+id: CR-012
+title: Add CLI layer for CI/CD integration
+type: CR
+status: implementing
+description: 'Add a command-line interface (CLI) package `src/compliantflow/` so that
+  CI/CD
+
+  pipelines and external tools can invoke CompliantFlowCore operations without
+
+  starting the Streamlit web UI.
+
+
+  This replaces the fragile inline Python scripts in Phase 4 of the CI pipeline
+
+  with proper CLI commands that reuse the existing business logic layer.'
+justification: 'The current CI Phase 4 bypasses CompliantFlowCore by directly reading
+  and writing
+
+  YAML files. This duplicates logic, is hard to test, and breaks when the data model
+
+  changes. A proper CLI layer ensures CI/CD uses the same validated code path as the
+  UI.'
+priority: High
+affected_items:
+- CRS-012
+- UC-006
+- SYS-032
+- SRS-012
+- SYSARCH-009
+- SWDD-013
+- TC-SYS-032
+file_path: /home/runner/work/CompliantFlow/CompliantFlow/DHF/items/09_cr/CR-012.yaml
+implementation_prs:
+- pr_number: 19
+  pr_url: https://github.com/itercharles/CompliantFlow/pull/19
+  title: 'feat: Add CLI layer for CI/CD integration (CR-012)'

@@ -1,0 +1,25 @@
+id: SRS-012
+title: CLI Command Implementation
+content: |-
+  Software shall implement the `compliantflow` CLI package under `src/compliantflow/`
+  using the `click` library (already a transitive dependency via streamlit).
+
+  Entry point: `python -m compliantflow [--dhf PATH]`
+  Default DHF path: directory named `DHF` adjacent to the `src/` folder.
+
+  Commands and behavior:
+  - `validate`: calls `core.validate()`; prints summary; exits 1 if errors found
+  - `item list [--type CODE] [--status STATUS] [--search TEXT]`: calls
+    `core.get_items_filtered()`; outputs newline-delimited JSON records
+  - `item get <ID>`: calls `core.get_item(uid)`; outputs JSON; exits 1 if not found
+  - `cr check-status <CR_ID>`: loads CR via `core.get_item()`; calls `core.is_cr_stable()`;
+    exits 0 if non-stable, exits 1 with error message if stable or not found
+  - `cr update <CR_ID> [--item ID]... [--pr-number N] [--pr-url URL] [--pr-title TITLE]`:
+    calls `core.add_item_to_cr()` for each --item; appends PR info via `core.update_item()`
+  - `traceability neighbors <ID>`: calls `core.get_item_neighbors()`; outputs JSON
+
+  All commands write human-readable messages to stderr and machine-readable data to stdout,
+  enabling clean pipeline integration (stdout can be piped; stderr shown to operator).
+derives_from:
+- SYS-032
+status: approved

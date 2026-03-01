@@ -13,6 +13,23 @@ CompliantFlow is a Docs-as-Code ALM platform for medical devices. It manages Des
 streamlit run src/app.py
 ```
 
+### CLI (CI/CD integration)
+```bash
+# Entry point: python -m compliantflow [--dhf PATH]
+PYTHONPATH=src python -m compliantflow --help
+
+# Common commands
+PYTHONPATH=src python -m compliantflow validate
+PYTHONPATH=src python -m compliantflow item list --type SYS --status approved
+PYTHONPATH=src python -m compliantflow item get SYS-001
+PYTHONPATH=src python -m compliantflow cr check-status CR-012
+PYTHONPATH=src python -m compliantflow cr update CR-012 --item SYS-001 --pr-number 42
+PYTHONPATH=src python -m compliantflow traceability neighbors SYS-001
+```
+
+CLI package is at `src/compliantflow/`. Uses `click` (already installed via streamlit).
+stdout = machine-readable JSON; stderr = human-readable messages.
+
 ### Run tests
 ```bash
 # SYS tests (fast, recommended — ~3 seconds for all 59 tests)
@@ -72,6 +89,9 @@ Key public methods:
 ### Lifecycle / Transitions
 - **`src/traceability/lifecycle_methods.py`** — `execute_transition()` only writes `status`. Audit fields (`approved_by`, `approved_date`, `reviewer`, `review_date`) are written by the UI layer before calling the transition.
 - A state with `is_stable: true` locks the item — `is_item_editable()` returns `False`.
+
+### CLI Layer
+**`src/compliantflow/cli.py`** exposes `CompliantFlowCore` as a `click` CLI. Both the Streamlit UI and the CLI call the same core — no duplication of business logic. CI/CD uses the CLI instead of inline Python scripts.
 
 ### Pages
 - **`src/pages/universal_page_template.py`** — renders the CRUD page for any doc type; called by dynamically generated pages.

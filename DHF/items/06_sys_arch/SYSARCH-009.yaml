@@ -1,0 +1,27 @@
+id: SYSARCH-009
+title: CLI Module
+content: |-
+  Command-line interface module providing headless access to CompliantFlowCore
+  for CI/CD pipelines and scripted environments.
+
+  **Responsibilities**:
+  - Expose core DHF operations as CLI commands
+  - Parse command-line arguments and route to CompliantFlowCore methods
+  - Output machine-readable JSON to stdout for pipeline consumption
+  - Output human-readable diagnostics to stderr
+  - Return meaningful exit codes (0 = success, 1 = error/validation failure)
+
+  **Key Interfaces**:
+  - `CompliantFlowCore`: Single entry point for all business logic (shared with Web UI)
+  - `click`: Command-line argument parsing and help generation
+  - `python -m compliantflow`: Module entry point
+
+  **Implementation Notes**:
+  - Package location: `src/compliantflow/` (separate from `src/traceability/`)
+  - Uses `click` library (already installed as transitive dependency of streamlit)
+  - Stateless: each invocation creates a fresh CompliantFlowCore instance
+  - No shared state with the Streamlit UI; both call the same core independently
+  - stdout/stderr separation enables clean pipeline integration
+design:
+- SYS-032
+status: approved

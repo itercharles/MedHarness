@@ -1,0 +1,45 @@
+id: SWDD-013
+title: CLI Implementation
+content: |-
+  Detailed design of the `compliantflow` CLI package.
+
+  **Package structure**:
+  ```
+  src/compliantflow/
+    __init__.py       # package marker
+    __main__.py       # entry: from .cli import main; main()
+    cli.py            # all click commands
+  ```
+
+  **Click command hierarchy**:
+  ```
+  main (group, --dhf option)
+    validate
+    item (group)
+      list (--type, --status, --search)
+      get <ITEM_ID>
+    cr (group)
+      check-status <CR_ID>
+      update <CR_ID> (--item repeatable, --pr-number, --pr-url, --pr-title)
+    traceability (group)
+      neighbors <ITEM_ID>
+  ```
+
+  **DHF path resolution** (in order):
+  1. `--dhf` CLI option if provided
+  2. `COMPLIANTFLOW_DHF` environment variable
+  3. Default: `<repo_root>/DHF` where repo_root = parent of `src/`
+
+  **Exit code contract**:
+  - 0: success
+  - 1: business error (item not found, CR stable, validation failed)
+  - 2: click usage error (wrong arguments)
+
+  **Core instantiation**:
+  ```python
+  core = CompliantFlowCore(repo_root=dhf_path.parent)
+  ```
+  One instance per CLI invocation; `auto_commit=False` (CI manages git).
+implements:
+- SRS-012
+status: approved
