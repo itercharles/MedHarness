@@ -7,7 +7,7 @@
 | Field | Value |
 |-------|-------|
 | **Document ID** | SYS-SPEC |
-| **Version** | 1.72 |
+| **Version** | 1.74 |
 | **Generated** | 2026-03-02 |
 | **Status** | Draft |
 | **Project** | CompliantFlow Project |
@@ -32,7 +32,7 @@ This specification covers all System Requirements defined in the CompliantFlow s
 
 ### 1. SYS-001: Objects management and tracking
 
-<div class="requirement-section">
+<div class="requirement-section" markdown="1">
 
 **Status**: <span class="status-approved">APPROVED</span>  
 **Category**: Functional  
@@ -49,7 +49,7 @@ The system shall support configurable object, such as requirement, design item, 
 
 ### 2. SYS-003: Visual Traceability
 
-<div class="requirement-section">
+<div class="requirement-section" markdown="1">
 
 **Status**: <span class="status-approved">APPROVED</span>  
 **Category**: Functional  
@@ -63,7 +63,7 @@ The system shall provide a view of traceability graph or table, including requir
 
 ### 3. SYS-004: Orphan Reporting
 
-<div class="requirement-section">
+<div class="requirement-section" markdown="1">
 
 **Status**: <span class="status-approved">APPROVED</span>  
 **Category**: Functional  
@@ -77,7 +77,7 @@ The system shall display a list of orphan items.
 
 ### 4. SYS-005: Compliance Assessment
 
-<div class="requirement-section">
+<div class="requirement-section" markdown="1">
 
 **Status**: <span class="status-approved">APPROVED</span>  
 **Category**: Functional  
@@ -91,7 +91,7 @@ The system shall able to assess the compliance of the DHF by the governance poli
 
 ### 5. SYS-008: Change Management System
 
-<div class="requirement-section">
+<div class="requirement-section" markdown="1">
 
 **Status**: <span class="status-approved">APPROVED</span>  
 **Reviewer**: Technical Lead  **Review Date**: 2025-12-13  **Category**: Change Control  **Verification Method**: ['Inspection', 'Test']  
@@ -105,7 +105,7 @@ The system shall provide a change management module that enables tracking, evalu
 
 ### 6. SYS-010: Object Workflow Management
 
-<div class="requirement-section">
+<div class="requirement-section" markdown="1">
 
 **Status**: <span class="status-approved">APPROVED</span>  
 **Category**: Functional  
@@ -119,7 +119,7 @@ The system shall support configurable lifecycle workflows for objects (such as r
 
 ### 7. SYS-021: Document Generation and Export
 
-<div class="requirement-section">
+<div class="requirement-section" markdown="1">
 
 **Status**: <span class="status-approved">APPROVED</span>  
 **Reviewer**: System Architect  **Review Date**: 2024-12-15  **Category**: Document Management  **Verification Method**: ['Test']  
@@ -133,7 +133,7 @@ The system shall provide document generation capabilities to export CompliantFlo
 
 ### 8. SYS-030: Automated Change Request Workflow
 
-<div class="requirement-section">
+<div class="requirement-section" markdown="1">
 
 **Status**: <span class="status-approved">APPROVED</span>  
 **Category**: Functional  **Verification Method**: ['Test']  
@@ -147,7 +147,7 @@ The system shall provide automated workflows to link Pull Requests and changed o
 
 ### 9. SYS-031: Test result retrive and display
 
-<div class="requirement-section">
+<div class="requirement-section" markdown="1">
 
 **Status**: <span class="status-approved">APPROVED</span>  
 **Category**: Functional  **Verification Method**: ['Test']  
@@ -161,7 +161,7 @@ The system shall retrive the test result from pipeline and display it in the sys
 
 ### 10. SYS-032: Command-Line Interface
 
-<div class="requirement-section">
+<div class="requirement-section" markdown="1">
 
 **Status**: <span class="status-approved">APPROVED</span>  
 **Category**: Functional  **Verification Method**: ['Test']  
@@ -185,7 +185,7 @@ Required commands:
 
 ### 11. SYS-033: External Test Result Integration via CLI
 
-<div class="requirement-section">
+<div class="requirement-section" markdown="1">
 
 **Status**: <span class="status-approved">APPROVED</span>  
 **Category**: Functional  **Verification Method**: ['Test']  
@@ -212,7 +212,7 @@ Results are persisted in DHF/test-results/results.yaml.
 
 ### 12. SYS-TRANS-001: Transition Test
 
-<div class="requirement-section">
+<div class="requirement-section" markdown="1">
 
 **Status**: <span class="status-approved">APPROVED</span>  
 **Category**: Functional  
@@ -226,7 +226,7 @@ Testing transitions
 
 ### 13. SYSARCH-001: Item Management Module
 
-<div class="requirement-section">
+<div class="requirement-section" markdown="1">
 
 **Status**: <span class="status-approved">APPROVED</span>  
 
@@ -257,7 +257,7 @@ Core module for managing DHF items (requirements, design, tests, change requests
 
 ### 14. SYSARCH-002: Traceability Analysis Module
 
-<div class="requirement-section">
+<div class="requirement-section" markdown="1">
 
 **Status**: <span class="status-approved">APPROVED</span>  
 
@@ -290,7 +290,7 @@ Module for building and analyzing traceability relationships between DHF items.
 
 ### 15. SYSARCH-003: Lifecycle Management Module
 
-<div class="requirement-section">
+<div class="requirement-section" markdown="1">
 
 **Status**: <span class="status-approved">APPROVED</span>  
 
@@ -323,7 +323,7 @@ Module for managing item lifecycle states and transitions via CompliantFlowCore.
 
 ### 16. SYSARCH-004: Change Management Module
 
-<div class="requirement-section">
+<div class="requirement-section" markdown="1">
 
 **Status**: <span class="status-approved">APPROVED</span>  
 
@@ -356,7 +356,7 @@ Module for tracking and controlling changes to DHF items through change requests
 
 ### 17. SYSARCH-005: Compliance Validation Module
 
-<div class="requirement-section">
+<div class="requirement-section" markdown="1">
 
 **Status**: <span class="status-approved">APPROVED</span>  
 
@@ -389,7 +389,7 @@ Module for validating DHF against regulatory policies and standards.
 
 ### 18. SYSARCH-006: Document Generation Module
 
-<div class="requirement-section">
+<div class="requirement-section" markdown="1">
 
 **Status**: <span class="status-approved">APPROVED</span>  
 
@@ -422,7 +422,7 @@ Module for generating regulatory specification documents from templates.
 
 ### 19. SYSARCH-007: Test Integration Module
 
-<div class="requirement-section">
+<div class="requirement-section" markdown="1">
 
 **Status**: <span class="status-approved">APPROVED</span>  
 
@@ -463,7 +463,7 @@ into the DHF, and linking each result to the requirement items it verifies.
 
 ### 20. SYSARCH-008: Web UI Module
 
-<div class="requirement-section">
+<div class="requirement-section" markdown="1">
 
 **Status**: <span class="status-approved">APPROVED</span>  
 
@@ -496,7 +496,7 @@ Streamlit-based web user interface for DHF management.
 
 ### 21. SYSARCH-009: CLI Module
 
-<div class="requirement-section">
+<div class="requirement-section" markdown="1">
 
 **Status**: <span class="status-approved">APPROVED</span>  
 

@@ -332,9 +332,10 @@ class DocumentGenerator:
             Path to generated PDF file
         """
         # Convert markdown to HTML
+        # md_in_html allows markdown inside HTML blocks that carry markdown="1"
         html_content = markdown.markdown(
             markdown_content,
-            extensions=['tables', 'fenced_code', 'toc']
+            extensions=['tables', 'fenced_code', 'toc', 'md_in_html']
         )
         
         # Load CSS

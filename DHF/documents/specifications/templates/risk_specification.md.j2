@@ -33,7 +33,7 @@ This specification covers all risks identified in the CompliantFlow system as of
 {% for item in items %}
 ### {{ loop.index }}. {{ item.id }}: {{ item.title }}
 
-<div class="risk-section">
+<div class="risk-section" markdown="1">
 
 **Status**: <span class="status-{{ item.status }}">{{ item.status | upper }}</span>  
 {% if item.reviewer %}**Reviewer**: {{ item.reviewer }}  {% endif %}

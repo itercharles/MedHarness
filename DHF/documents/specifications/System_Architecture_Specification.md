@@ -7,7 +7,7 @@
 | Field | Value |
 |-------|-------|
 | **Document ID** | SYSARCH-SPEC |
-| **Version** | 1.3 |
+| **Version** | 1.6 |
 | **Generated** | 2026-03-02 |
 | **Status** | Draft |
 | **Project** | CompliantFlow Project |
@@ -249,7 +249,7 @@ Generated Document
 
 ### 1. SYSARCH-001: Item Management Module
 
-<div class="architecture-section">
+<div class="architecture-section" markdown="1">
 
 **Status**: <span class="status-approved">APPROVED</span>  
 
@@ -283,7 +283,7 @@ Core module for managing DHF items (requirements, design, tests, change requests
 
 ### 2. SYSARCH-002: Traceability Analysis Module
 
-<div class="architecture-section">
+<div class="architecture-section" markdown="1">
 
 **Status**: <span class="status-approved">APPROVED</span>  
 
@@ -319,7 +319,7 @@ Module for building and analyzing traceability relationships between DHF items.
 
 ### 3. SYSARCH-003: Lifecycle Management Module
 
-<div class="architecture-section">
+<div class="architecture-section" markdown="1">
 
 **Status**: <span class="status-approved">APPROVED</span>  
 
@@ -355,7 +355,7 @@ Module for managing item lifecycle states and transitions via CompliantFlowCore.
 
 ### 4. SYSARCH-004: Change Management Module
 
-<div class="architecture-section">
+<div class="architecture-section" markdown="1">
 
 **Status**: <span class="status-approved">APPROVED</span>  
 
@@ -391,7 +391,7 @@ Module for tracking and controlling changes to DHF items through change requests
 
 ### 5. SYSARCH-005: Compliance Validation Module
 
-<div class="architecture-section">
+<div class="architecture-section" markdown="1">
 
 **Status**: <span class="status-approved">APPROVED</span>  
 
@@ -427,7 +427,7 @@ Module for validating DHF against regulatory policies and standards.
 
 ### 6. SYSARCH-006: Document Generation Module
 
-<div class="architecture-section">
+<div class="architecture-section" markdown="1">
 
 **Status**: <span class="status-approved">APPROVED</span>  
 
@@ -463,7 +463,7 @@ Module for generating regulatory specification documents from templates.
 
 ### 7. SYSARCH-007: Test Integration Module
 
-<div class="architecture-section">
+<div class="architecture-section" markdown="1">
 
 **Status**: <span class="status-approved">APPROVED</span>  
 
@@ -507,7 +507,7 @@ into the DHF, and linking each result to the requirement items it verifies.
 
 ### 8. SYSARCH-008: Web UI Module
 
-<div class="architecture-section">
+<div class="architecture-section" markdown="1">
 
 **Status**: <span class="status-approved">APPROVED</span>  
 
@@ -543,7 +543,7 @@ Streamlit-based web user interface for DHF management.
 
 ### 9. SYSARCH-009: CLI Module
 
-<div class="architecture-section">
+<div class="architecture-section" markdown="1">
 
 **Status**: <span class="status-approved">APPROVED</span>  
 
