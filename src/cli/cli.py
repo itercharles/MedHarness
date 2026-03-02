@@ -449,3 +449,41 @@ def test_list(ctx: click.Context, status_filter: str) -> None:
     for tc_id, record in records.items():
         click.echo(json.dumps(record, default=str))
     click.echo(f"({len(records)} record(s))", err=True)
+
+
+# ---------------------------------------------------------------------------
+# doc group
+# ---------------------------------------------------------------------------
+
+@main.group()
+def doc() -> None:
+    """Commands for document generation."""
+
+
+@doc.command("list")
+@click.pass_context
+def doc_list(ctx: click.Context) -> None:
+    """List available document type codes."""
+    core = _make_core(ctx.obj["dhf"])
+    click.echo(json.dumps({"doc_types": core.get_available_doc_types()}))
+
+
+@doc.command("generate")
+@click.argument("doc_type")
+@click.pass_context
+def doc_generate(ctx: click.Context, doc_type: str) -> None:
+    """Generate specification document(s).
+
+    DOC_TYPE is a configured code (e.g. SYS, SYSARCH) or ALL.
+    """
+    core = _make_core(ctx.obj["dhf"])
+    codes = core.get_available_doc_types() if doc_type.upper() == "ALL" else [doc_type]
+    for code in codes:
+        try:
+            result = core.generate_spec(code)
+            click.echo(json.dumps(result))
+            click.echo(f"✓ {code} → {result['output_path']}", err=True)
+        except Exception as e:
+            click.echo(f"✗ {code}: {e}", err=True)
+            if len(codes) == 1:
+                raise SystemExit(1)

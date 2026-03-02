@@ -7,8 +7,8 @@
 | Field | Value |
 |-------|-------|
 | **Document ID** | CRS-SPEC |
-| **Version** | 1.194 |
-| **Generated** | 2025-12-28 |
+| **Version** | 1.195 |
+| **Generated** | 2026-03-02 |
 | **Status** | Draft |
 | **Project** | CompliantFlow Project |
 
@@ -24,7 +24,7 @@ This document provides a comprehensive list of all Customer Requirements, includ
 
 ### 1.2 Scope
 
-This specification covers all Customer Requirements defined in the CompliantFlow system as of 2025-12-28.
+This specification covers all Customer Requirements defined in the CompliantFlow system as of 2026-03-02.
 
 ---
 
@@ -128,6 +128,20 @@ The system shall allow users to validate DHF items against regulatory policy gro
 
 </div>
 
+### 8. CRS-012: CI/CD Pipeline Integration
+
+<div class="requirement-section">
+
+**Status**: <span class="status-approved">APPROVED</span>  
+
+#### Description
+
+The system shall provide a command-line interface (CLI) that enables integration with CI/CD pipelines and external tooling, allowing automation of compliance tracking, item validation, and change request management without requiring the Streamlit UI.
+
+
+
+</div>
+
 
 ---
 
@@ -137,21 +151,21 @@ The system shall allow users to validate DHF items against regulatory policy gro
 
 | Metric | Count |
 |--------|-------|
-| **Total Requirements** | 7 |
-| **Approved** | 7 |
+| **Total Requirements** | 8 |
+| **Approved** | 8 |
 | **Draft** | 0 |
 | **Retired** | 0 |
 
 ### 3.2 Approval Status
 
-**Approval Rate**: 100.0% (7/7)
+**Approval Rate**: 100.0% (8/8)
 
 ---
 
 ## 4. Document Control
 
 **Document Owner**: Quality Assurance  
-**Last Updated**: 2025-12-28  
+**Last Updated**: 2026-03-02  
 **Next Review**: TBD
 
 ---

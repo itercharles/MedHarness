@@ -23,6 +23,7 @@ from compliantflow.mixins.change_request import _ChangeRequestMixin
 from compliantflow.mixins.schema_form import _SchemaFormMixin
 from compliantflow.mixins.compliance import _ComplianceMixin
 from compliantflow.mixins.test_results_mixin import _TestResultsMixin
+from compliantflow.mixins.document_generation_mixin import _DocumentGenerationMixin
 
 
 class CompliantFlowCore(
@@ -33,6 +34,7 @@ class CompliantFlowCore(
     _SchemaFormMixin,
     _ComplianceMixin,
     _TestResultsMixin,
+    _DocumentGenerationMixin,
 ):
     """
     Core CompliantFlow library.
