@@ -8,13 +8,11 @@ content: |-
 
   Preconditions:
   - Change control is enabled in project_config.yaml
-  - At least one approved DHF item requires modification
 
   Primary Flow:
-  1. Engineer identifies a need for change (new requirement, defect, regulatory update)
+  1. Engineer identifies a need for change for DHF, software code or tests.
   2. Engineer creates a new CR item: records title, description, justification, and priority
   3. System assigns a CR ID (e.g. CR-013) and sets status to `draft`
-  4. Engineer identifies all affected DHF items and adds them to the CR's `affected_items` list
   5. Engineer submits the CR for review (transitions to `in_review`)
   6. Reviewer assesses impact on safety, schedule, and linked items; records `impact_assessment`
   7. Reviewer approves the CR (transitions to `approved`)

@@ -8,16 +8,10 @@ content: |-
 
   Preconditions:
   - DHF items of the relevant type are in place and approved
-  - A Jinja2 template is configured for the target document type in project_config.yaml
 
   Primary Flow:
-  1. Engineer selects the target document type (e.g. SYS, SRS, SYSARCH, RISK)
-  2. Engineer triggers document generation via the UI or CLI (`compliantflow doc generate SYS`)
-  3. System loads all items of the selected type, sorts by ID, and renders the Jinja2 template
-  4. System writes the rendered markdown to the configured output path and increments the version
-  5. Engineer reviews the generated markdown document for completeness and accuracy
-  6. Engineer exports a PDF copy for submission (`compliantflow doc export SYS`)
-  7. System regenerates the markdown (to ensure freshness), converts it to HTML, and renders a PDF
+  1. Engineer generate and export the target document type (e.g. SYS, SRS, SYSARCH, RISK)
+  2. Engineer reviews the generated document for completeness and accuracy, then archives it in the DHF repository.
 
   Alternative Flows:
   - A. Regenerate all documents at once: engineer runs `compliantflow doc generate ALL`

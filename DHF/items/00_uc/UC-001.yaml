@@ -7,7 +7,6 @@ content: |-
   Actor: Regulatory Engineer / QA Engineer
 
   Preconditions:
-  - User has access to the CompliantFlow web interface or CLI
   - The DHF repository is initialised and project_config.yaml is configured
 
   Primary Flow:
