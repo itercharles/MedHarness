@@ -47,6 +47,8 @@ affected_items:
 - SYS-033
 - TC-SYS-033
 - SRS-010
+- SWDD-012
+- SYSARCH-007
 file_path: /home/runner/work/CompliantFlow/CompliantFlow/DHF/items/09_cr/CR-012.yaml
 implementation_prs:
 - pr_number: 19
