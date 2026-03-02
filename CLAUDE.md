@@ -22,6 +22,11 @@ PYTHONPATH=src python -m compliantflow --help
 PYTHONPATH=src python -m compliantflow validate schema
 PYTHONPATH=src python -m compliantflow validate traceability
 PYTHONPATH=src python -m compliantflow validate compliance IEC_62304
+PYTHONPATH=src python -m compliantflow item create --type SYS --data '{"title": "My req", "category": "Functional", "verification_method": ["Test"]}'
+PYTHONPATH=src python -m compliantflow item update SYS-001 --data '{"title": "Updated title"}'
+PYTHONPATH=src python -m compliantflow item delete SYS-001
+PYTHONPATH=src python -m compliantflow item transitions SYS-001
+PYTHONPATH=src python -m compliantflow item transition SYS-001 approved --by "Alice"
 PYTHONPATH=src python -m compliantflow item list --type SYS --status approved
 PYTHONPATH=src python -m compliantflow item get SYS-001
 PYTHONPATH=src python -m compliantflow cr check-status CR-012
@@ -36,6 +41,8 @@ PYTHONPATH=src python -m compliantflow test list --status PASS
 PYTHONPATH=src python -m compliantflow doc list
 PYTHONPATH=src python -m compliantflow doc generate SYS
 PYTHONPATH=src python -m compliantflow doc generate ALL
+PYTHONPATH=src python -m compliantflow doc export SYS            # regenerate md then export PDF
+PYTHONPATH=src python -m compliantflow doc export ALL
 ```
 
 CLI package is at `src/cli/cli.py`. Uses `click` (already installed via streamlit).
@@ -43,17 +50,15 @@ stdout = machine-readable JSON; stderr = human-readable messages.
 
 ### Run tests
 ```bash
-# SYS tests (fast, recommended)
-PYTHONPATH=src src/venv/bin/pytest tests/sys/ -v
+# Full suite — MUST run all three before merging
+PYTHONPATH=src src/venv/bin/pytest tests/sys/ tests/crs/ -q
+PYTHONPATH=src src/venv/bin/pytest tests/srs/ -q
 
 # Single test
-PYTHONPATH=$(pwd) src/venv/bin/pytest tests/sys/test_sys_001_object_management.py::test_name -v
-
-# All unit tests (srs)
-PYTHONPATH=$(pwd) src/venv/bin/pytest tests/srs/ -v
+PYTHONPATH=src src/venv/bin/pytest tests/sys/test_sys_001_object_management.py::test_name -v
 ```
 
-**Important**: Run from the repo root. Use `PYTHONPATH=src` for SYS/CRS tests; CI uses `PYTHONPATH="${PWD}/src"` for SRS tests.
+**Important**: Run from the repo root. Use `PYTHONPATH=src` for all test suites. **Before any merge, all three test suites (sys, crs, srs) must pass.**
 
 ## Architecture
 

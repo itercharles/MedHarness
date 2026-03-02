@@ -143,6 +143,121 @@ def item() -> None:
     """Commands for querying DHF items."""
 
 
+@item.command("create")
+@click.option("--type", "doc_type", required=True, metavar="CODE", help="Doc type code (e.g. SYS, SRS).")
+@click.option("--data", required=True, metavar="JSON", help="Item fields as JSON object.")
+@click.option("--author", default="cli", show_default=True, help="Author name for git commit.")
+@click.option("--cr", "cr_id", default=None, metavar="CR_ID", help="Change Request ID.")
+@click.pass_context
+def item_create(ctx: click.Context, doc_type: str, data: str, author: str, cr_id: str | None) -> None:
+    """Create a new DHF item. Outputs the created item as JSON.
+
+    \b
+    Example:
+      compliantflow item create --type SYS --data '{"title": "My requirement"}'
+    """
+    import json as _json
+    dhf_path: Path = ctx.obj["dhf"]
+    try:
+        item_data = _json.loads(data)
+    except _json.JSONDecodeError as e:
+        click.echo(f"ERROR: --data is not valid JSON: {e}", err=True)
+        sys.exit(1)
+    item_data["type"] = doc_type
+    core = _make_core(dhf_path)
+    from traceability.exceptions import ValidationError as CFValidationError
+    try:
+        result = core.create_item(item_data, author=author, cr_id=cr_id)
+    except (CFValidationError, ValueError) as e:
+        click.echo(f"ERROR: {e}", err=True)
+        sys.exit(1)
+    click.echo(json.dumps(result, default=str))
+    click.echo(f"✓ Created {result['id']}.", err=True)
+
+
+@item.command("update")
+@click.argument("item_id")
+@click.option("--data", required=True, metavar="JSON", help="Fields to update as JSON (merged into existing item).")
+@click.option("--author", default="cli", show_default=True, help="Author name for git commit.")
+@click.option("--cr", "cr_id", default=None, metavar="CR_ID", help="Change Request ID.")
+@click.pass_context
+def item_update(ctx: click.Context, item_id: str, data: str, author: str, cr_id: str | None) -> None:
+    """Update fields of an existing DHF item. Merges JSON into the existing item.
+
+    \b
+    Example:
+      compliantflow item update SYS-001 --data '{"title": "Updated title"}'
+    """
+    import json as _json
+    dhf_path: Path = ctx.obj["dhf"]
+    try:
+        update_data = _json.loads(data)
+    except _json.JSONDecodeError as e:
+        click.echo(f"ERROR: --data is not valid JSON: {e}", err=True)
+        sys.exit(1)
+    core = _make_core(dhf_path)
+    result = core.update_item(item_id, update_data, author=author, cr_id=cr_id)
+    if result is None:
+        click.echo(f"ERROR: Item '{item_id}' not found.", err=True)
+        sys.exit(1)
+    click.echo(json.dumps(result, default=str))
+    click.echo(f"✓ Updated {item_id}.", err=True)
+
+
+@item.command("delete")
+@click.argument("item_id")
+@click.option("--author", default="cli", show_default=True, help="Author name for git commit.")
+@click.pass_context
+def item_delete(ctx: click.Context, item_id: str, author: str) -> None:
+    """Delete a DHF item. Exits 1 if item not found."""
+    dhf_path: Path = ctx.obj["dhf"]
+    core = _make_core(dhf_path)
+    success = core.delete_item(item_id, author=author)
+    if not success:
+        click.echo(f"ERROR: Item '{item_id}' not found or could not be deleted.", err=True)
+        sys.exit(1)
+    click.echo(json.dumps({"deleted": item_id}))
+    click.echo(f"✓ Deleted {item_id}.", err=True)
+
+
+@item.command("transitions")
+@click.argument("item_id")
+@click.pass_context
+def item_transitions(ctx: click.Context, item_id: str) -> None:
+    """List available lifecycle transitions for an item. Outputs JSON."""
+    dhf_path: Path = ctx.obj["dhf"]
+    core = _make_core(dhf_path)
+    item = core.get_item(item_id)
+    if item is None:
+        click.echo(f"ERROR: Item '{item_id}' not found.", err=True)
+        sys.exit(1)
+    transitions = core.get_available_transitions(item)
+    click.echo(json.dumps({"item_id": item_id, "current_status": item.get("status"), "transitions": transitions}, default=str))
+
+
+@item.command("transition")
+@click.argument("item_id")
+@click.argument("to_state")
+@click.option("--by", "performed_by", default="cli", show_default=True, help="User performing the transition.")
+@click.pass_context
+def item_transition(ctx: click.Context, item_id: str, to_state: str, performed_by: str) -> None:
+    """Execute a lifecycle state transition for an item.
+
+    \b
+    Example:
+      compliantflow item transition SYS-001 approved --by "Alice"
+    """
+    dhf_path: Path = ctx.obj["dhf"]
+    core = _make_core(dhf_path)
+    try:
+        result = core.execute_transition(item_id, to_state, performed_by=performed_by)
+    except ValueError as e:
+        click.echo(f"ERROR: {e}", err=True)
+        sys.exit(1)
+    click.echo(json.dumps(result, default=str))
+    click.echo(f"✓ {item_id}: {result.get('status')}.", err=True)
+
+
 @item.command("list")
 @click.option("--type", "doc_type", default=None, metavar="CODE", help="Filter by doc type code (e.g. SYS, SRS).")
 @click.option("--status", default=None, metavar="STATUS", help="Filter by status (e.g. approved, draft).")
@@ -466,6 +581,35 @@ def doc_list(ctx: click.Context) -> None:
     """List available document type codes."""
     core = _make_core(ctx.obj["dhf"])
     click.echo(json.dumps({"doc_types": core.get_available_doc_types()}))
+
+
+@doc.command("export")
+@click.argument("doc_type")
+@click.option("--format", "fmt", default="pdf", show_default=True,
+              type=click.Choice(["pdf"]), help="Output format.")
+@click.pass_context
+def doc_export(ctx: click.Context, doc_type: str, fmt: str) -> None:
+    """Regenerate spec and export to PDF.
+
+    First regenerates the markdown (same as doc generate), then converts to PDF.
+    DOC_TYPE is a configured code (e.g. SYS) or ALL.
+
+    \b
+    Example:
+      compliantflow doc export SYS
+      compliantflow doc export ALL
+    """
+    core = _make_core(ctx.obj["dhf"])
+    codes = core.get_available_doc_types() if doc_type.upper() == "ALL" else [doc_type]
+    for code in codes:
+        try:
+            result = core.export_pdf(code)
+            click.echo(json.dumps(result))
+            click.echo(f"✓ {code} → {result['pdf_path']}", err=True)
+        except Exception as e:
+            click.echo(f"✗ {code}: {e}", err=True)
+            if len(codes) == 1:
+                raise SystemExit(1)
 
 
 @doc.command("generate")
