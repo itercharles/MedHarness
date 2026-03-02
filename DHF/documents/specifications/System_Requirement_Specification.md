@@ -7,8 +7,8 @@
 | Field | Value |
 |-------|-------|
 | **Document ID** | SYS-SPEC |
-| **Version** | 1.69 |
-| **Generated** | 2025-12-28 |
+| **Version** | 1.70 |
+| **Generated** | 2026-03-02 |
 | **Status** | Draft |
 | **Project** | CompliantFlow Project |
 
@@ -24,7 +24,7 @@ This document provides a comprehensive list of all System Requirements, includin
 
 ### 1.2 Scope
 
-This specification covers all System Requirements defined in the CompliantFlow system as of 2025-12-28.
+This specification covers all System Requirements defined in the CompliantFlow system as of 2026-03-02.
 
 ---
 
@@ -35,7 +35,7 @@ This specification covers all System Requirements defined in the CompliantFlow s
 <div class="requirement-section">
 
 **Status**: <span class="status-approved">APPROVED</span>  
-
+**Category**: Functional  
 #### Description
 
 The system shall support configurable object, such as requirement, design item, change request, etc. to maintain a complete history.
@@ -43,7 +43,7 @@ The system shall support configurable object, such as requirement, design item, 
 
 #### Verification Status
 
-**Status**: VerificationStatus.PASS
+**Status**: PASS
 
 </div>
 
@@ -52,7 +52,7 @@ The system shall support configurable object, such as requirement, design item, 
 <div class="requirement-section">
 
 **Status**: <span class="status-approved">APPROVED</span>  
-
+**Category**: Functional  
 #### Description
 
 The system shall provide a view of traceability graph or table, including requirements, architecture, tests, and change requests.
@@ -66,7 +66,7 @@ The system shall provide a view of traceability graph or table, including requir
 <div class="requirement-section">
 
 **Status**: <span class="status-approved">APPROVED</span>  
-
+**Category**: Functional  
 #### Description
 
 The system shall display a list of orphan items.
@@ -80,7 +80,7 @@ The system shall display a list of orphan items.
 <div class="requirement-section">
 
 **Status**: <span class="status-approved">APPROVED</span>  
-
+**Category**: Functional  
 #### Description
 
 The system shall able to assess the compliance of the DHF by the governance policies (Regulations, Procedures) from configuration files.
@@ -94,7 +94,7 @@ The system shall able to assess the compliance of the DHF by the governance poli
 <div class="requirement-section">
 
 **Status**: <span class="status-approved">APPROVED</span>  
-**Reviewer**: Technical Lead  **Review Date**: 2025-12-13  **Category**: Change Control  **Verification Method**: Inspection and Testing  
+**Reviewer**: Technical Lead  **Review Date**: 2025-12-13  **Category**: Change Control  **Verification Method**: ['Inspection', 'Test']  
 #### Description
 
 The system shall provide a change management module that enables tracking, evaluation, and approval of changes.
@@ -108,7 +108,7 @@ The system shall provide a change management module that enables tracking, evalu
 <div class="requirement-section">
 
 **Status**: <span class="status-approved">APPROVED</span>  
-
+**Category**: Functional  
 #### Description
 
 The system shall support configurable lifecycle workflows for objects (such as requirements, design items, change requests), with state transitions and validation rules defined in configuration. The system shall enforce the custom transition rules.
@@ -122,7 +122,7 @@ The system shall support configurable lifecycle workflows for objects (such as r
 <div class="requirement-section">
 
 **Status**: <span class="status-approved">APPROVED</span>  
-**Reviewer**: System Architect  **Review Date**: 2024-12-15  **Category**: Document Management  **Verification Method**: Test  
+**Reviewer**: System Architect  **Review Date**: 2024-12-15  **Category**: Document Management  **Verification Method**: ['Test']  
 #### Description
 
 The system shall provide document generation capabilities to export CompliantFlow data as regulatory-ready PDF documents. Generate requirements specification PDFs for requirements, design, change requests, etc.
@@ -136,7 +136,7 @@ The system shall provide document generation capabilities to export CompliantFlo
 <div class="requirement-section">
 
 **Status**: <span class="status-approved">APPROVED</span>  
-**Category**: functional  **Verification Method**: Test  
+**Category**: Functional  **Verification Method**: ['Test']  
 #### Description
 
 The system shall provide automated workflows to link Pull Requests and changed objects to Change Requests, ensuring complete traceability and regulatory compliance.
@@ -150,7 +150,7 @@ The system shall provide automated workflows to link Pull Requests and changed o
 <div class="requirement-section">
 
 **Status**: <span class="status-approved">APPROVED</span>  
-**Category**: functional  **Verification Method**: Test  
+**Category**: Functional  **Verification Method**: ['Test']  
 #### Description
 
 The system shall retrive the test result from pipeline and display it in the system.
@@ -159,7 +159,72 @@ The system shall retrive the test result from pipeline and display it in the sys
 
 </div>
 
-### 10. SYSARCH-001: Item Management Module
+### 10. SYS-032: Command-Line Interface
+
+<div class="requirement-section">
+
+**Status**: <span class="status-approved">APPROVED</span>  
+**Category**: Functional  **Verification Method**: ['Test']  
+#### Description
+
+The system shall provide a command-line interface (CLI) accessible via
+`python -m compliantflow` that exposes core DHF operations for use in
+CI/CD pipelines and scripted environments.
+
+Required commands:
+- validate: Validate all DHF items against the project schema; exit non-zero on error
+- item list: List items filtered by type, status, or search text; output JSON
+- item get: Retrieve a single item by ID; output JSON
+- cr check-status: Verify a Change Request is in a non-stable state; exit non-zero if stable
+- cr update: Add affected items and PR metadata to a Change Request
+- traceability neighbors: Return upstream and downstream neighbors of an item
+
+
+
+</div>
+
+### 11. SYS-033: External Test Result Integration via CLI
+
+<div class="requirement-section">
+
+**Status**: <span class="status-approved">APPROVED</span>  
+**Category**: Functional  **Verification Method**: ['Test']  
+#### Description
+
+The system shall provide CLI commands that allow CI/CD pipelines to push
+test execution results and test case design-review metadata into the DHF,
+independent of the test framework or programming language used.
+
+Required commands:
+- test import: Parse a JUnit XML file produced by any test framework and persist
+  per-TC execution results (tester, testing date, testing status, run ID, run URL,
+  commit SHA, notes) and optional review metadata (reviewer, review date, review status)
+  from JUnit XML properties.  Automatically updates verification_status on linked
+  requirement items (verified / failed / not_verified).
+- test status: Retrieve the stored record for a single TC as JSON.
+- test list: List all stored TC records, optionally filtered by testing_status.
+
+Results are persisted in DHF/test-results/results.yaml.
+
+
+
+</div>
+
+### 12. SYS-TRANS-001: Transition Test
+
+<div class="requirement-section">
+
+**Status**: <span class="status-approved">APPROVED</span>  
+**Category**: Functional  
+#### Description
+
+Testing transitions
+
+
+
+</div>
+
+### 13. SYSARCH-001: Item Management Module
 
 <div class="requirement-section">
 
@@ -190,7 +255,7 @@ Core module for managing DHF items (requirements, design, tests, change requests
 
 </div>
 
-### 11. SYSARCH-002: Traceability Analysis Module
+### 14. SYSARCH-002: Traceability Analysis Module
 
 <div class="requirement-section">
 
@@ -223,7 +288,7 @@ Module for building and analyzing traceability relationships between DHF items.
 
 </div>
 
-### 12. SYSARCH-003: Lifecycle Management Module
+### 15. SYSARCH-003: Lifecycle Management Module
 
 <div class="requirement-section">
 
@@ -256,7 +321,7 @@ Module for managing item lifecycle states and transitions via CompliantFlowCore.
 
 </div>
 
-### 13. SYSARCH-004: Change Management Module
+### 16. SYSARCH-004: Change Management Module
 
 <div class="requirement-section">
 
@@ -289,7 +354,7 @@ Module for tracking and controlling changes to DHF items through change requests
 
 </div>
 
-### 14. SYSARCH-005: Compliance Validation Module
+### 17. SYSARCH-005: Compliance Validation Module
 
 <div class="requirement-section">
 
@@ -322,7 +387,7 @@ Module for validating DHF against regulatory policies and standards.
 
 </div>
 
-### 15. SYSARCH-006: Document Generation Module
+### 18. SYSARCH-006: Document Generation Module
 
 <div class="requirement-section">
 
@@ -355,7 +420,7 @@ Module for generating regulatory specification documents from templates.
 
 </div>
 
-### 16. SYSARCH-007: Test Integration Module
+### 19. SYSARCH-007: Test Integration Module
 
 <div class="requirement-section">
 
@@ -363,32 +428,40 @@ Module for generating regulatory specification documents from templates.
 
 #### Description
 
-Module for retrieving and displaying test results from CI/CD pipeline.
+Module for importing and persisting test results from any CI/CD pipeline
+into the DHF, and linking each result to the requirement items it verifies.
+
+**Framework-agnostic boundary**:
+- `src/` consumes only JUnit XML — no coupling to any specific test framework
+- `tests/` contains the pytest-specific adapter (conftest.py + docstring_parser.py)
+- Any framework that produces JUnit XML with `compliantflow.*` properties is compatible
 
 **Responsibilities**:
-- Fetch test results from GitHub Actions workflows
-- Parse test result artifacts (JUnit XML, pytest reports)
-- Display pass/fail status in UI
-- Link test results to requirement items
-- Track test execution history
+- Parse JUnit XML produced by any test framework
+- Extract TC IDs from `compliantflow.id` property or test name regex
+- Extract review metadata from `compliantflow.reviewer`, `.review_date`, `.review_status`
+- Persist results to `DHF/test-results/results.yaml`
+- Recompute `verification_status` on linked requirement items after import
 
 **Key Interfaces**:
-- `TestResultFetcher`: Retrieve results from GitHub API
-- `TestResultParser`: Parse various test result formats
-- `TestStatusDisplay`: Show results in UI with details
-- `TestLinkManager`: Link tests to requirements
+- `parse_junit_xml(path)` — parse JUnit XML into `ExecutionResult` list
+- `ResultStore.record_execution(...)` — upsert one TC record in results.yaml
+- `_TestResultsMixin.import_test_results(...)` — orchestrate import and
+  verification_status update on linked items
+- CLI: `compliantflow test import <file> --format junit`
 
 **Implementation Notes**:
-- Integrates with GitHub Actions API
-- Supports multiple test result formats
-- Caches test results for performance
-- Provides drill-down to test execution logs
+- TC ID extracted from `compliantflow.id` property, or by regex from test name
+- Git history of `results.yaml` serves as the audit trail
+- For pytest projects: `tests/conftest.py` autouse fixture injects
+  `compliantflow.*` properties from docstring `@`-tags automatically
+- `tests/utils/docstring_parser.py` provides shared helpers for tag extraction
 
 
 
 </div>
 
-### 17. SYSARCH-008: Web UI Module
+### 20. SYSARCH-008: Web UI Module
 
 <div class="requirement-section">
 
@@ -421,6 +494,40 @@ Streamlit-based web user interface for DHF management.
 
 </div>
 
+### 21. SYSARCH-009: CLI Module
+
+<div class="requirement-section">
+
+**Status**: <span class="status-approved">APPROVED</span>  
+
+#### Description
+
+Command-line interface module providing headless access to CompliantFlowCore
+for CI/CD pipelines and scripted environments.
+
+**Responsibilities**:
+- Expose core DHF operations as CLI commands
+- Parse command-line arguments and route to CompliantFlowCore methods
+- Output machine-readable JSON to stdout for pipeline consumption
+- Output human-readable diagnostics to stderr
+- Return meaningful exit codes (0 = success, 1 = error/validation failure)
+
+**Key Interfaces**:
+- `CompliantFlowCore`: Single entry point for all business logic (shared with Web UI)
+- `click`: Command-line argument parsing and help generation
+- `python -m compliantflow`: Module entry point
+
+**Implementation Notes**:
+- Package location: `src/compliantflow/` (separate from `src/traceability/`)
+- Uses `click` library (already installed as transitive dependency of streamlit)
+- Stateless: each invocation creates a fresh CompliantFlowCore instance
+- No shared state with the Streamlit UI; both call the same core independently
+- stdout/stderr separation enables clean pipeline integration
+
+
+
+</div>
+
 
 ---
 
@@ -430,21 +537,21 @@ Streamlit-based web user interface for DHF management.
 
 | Metric | Count |
 |--------|-------|
-| **Total Requirements** | 17 |
-| **Approved** | 17 |
+| **Total Requirements** | 21 |
+| **Approved** | 21 |
 | **Draft** | 0 |
 | **Retired** | 0 |
 
 ### 3.2 Approval Status
 
-**Approval Rate**: 100.0% (17/17)
+**Approval Rate**: 100.0% (21/21)
 
 ---
 
 ## 4. Document Control
 
 **Document Owner**: Quality Assurance  
-**Last Updated**: 2025-12-28  
+**Last Updated**: 2026-03-02  
 **Next Review**: TBD
 
 ---

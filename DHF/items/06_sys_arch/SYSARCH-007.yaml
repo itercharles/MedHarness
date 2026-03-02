@@ -1,26 +1,34 @@
 id: SYSARCH-007
 title: Test Integration Module
 content: |-
-  Module for retrieving and displaying test results from CI/CD pipeline.
-  
+  Module for importing and persisting test results from any CI/CD pipeline
+  into the DHF, and linking each result to the requirement items it verifies.
+
+  **Framework-agnostic boundary**:
+  - `src/` consumes only JUnit XML — no coupling to any specific test framework
+  - `tests/` contains the pytest-specific adapter (conftest.py + docstring_parser.py)
+  - Any framework that produces JUnit XML with `compliantflow.*` properties is compatible
+
   **Responsibilities**:
-  - Fetch test results from GitHub Actions workflows
-  - Parse test result artifacts (JUnit XML, pytest reports)
-  - Display pass/fail status in UI
-  - Link test results to requirement items
-  - Track test execution history
-  
+  - Parse JUnit XML produced by any test framework
+  - Extract TC IDs from `compliantflow.id` property or test name regex
+  - Extract review metadata from `compliantflow.reviewer`, `.review_date`, `.review_status`
+  - Persist results to `DHF/test-results/results.yaml`
+  - Recompute `verification_status` on linked requirement items after import
+
   **Key Interfaces**:
-  - `TestResultFetcher`: Retrieve results from GitHub API
-  - `TestResultParser`: Parse various test result formats
-  - `TestStatusDisplay`: Show results in UI with details
-  - `TestLinkManager`: Link tests to requirements
-  
+  - `parse_junit_xml(path)` — parse JUnit XML into `ExecutionResult` list
+  - `ResultStore.record_execution(...)` — upsert one TC record in results.yaml
+  - `_TestResultsMixin.import_test_results(...)` — orchestrate import and
+    verification_status update on linked items
+  - CLI: `compliantflow test import <file> --format junit`
+
   **Implementation Notes**:
-  - Integrates with GitHub Actions API
-  - Supports multiple test result formats
-  - Caches test results for performance
-  - Provides drill-down to test execution logs
+  - TC ID extracted from `compliantflow.id` property, or by regex from test name
+  - Git history of `results.yaml` serves as the audit trail
+  - For pytest projects: `tests/conftest.py` autouse fixture injects
+    `compliantflow.*` properties from docstring `@`-tags automatically
+  - `tests/utils/docstring_parser.py` provides shared helpers for tag extraction
 design:
 - SYS-031
 status: approved

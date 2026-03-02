@@ -46,6 +46,9 @@ affected_items:
 - TC-SRS-012
 - SYS-033
 - TC-SYS-033
+- SRS-010
+- SWDD-012
+- SYSARCH-007
 file_path: /home/runner/work/CompliantFlow/CompliantFlow/DHF/items/09_cr/CR-012.yaml
 implementation_prs:
 - pr_number: 19
@@ -83,3 +86,7 @@ implementation_prs:
   pr_url: https://github.com/itercharles/CompliantFlow/pull/31
   title: 'CR-012: Simplify test result integration - remove register command and audit
     log'
+- pr_number: 32
+  pr_url: https://github.com/itercharles/CompliantFlow/pull/32
+  title: 'CR-012: Refresh SRS-010 - remove scanner/provider, align tests with new
+    import mechanism'

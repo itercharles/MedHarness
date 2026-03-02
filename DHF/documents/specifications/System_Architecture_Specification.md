@@ -6,469 +6,248 @@
 
 | Field | Value |
 |-------|-------|
-| **Document ID** | ARCH-SPEC |
-| **Version** | 1.0 |
-| **Generated** | 2025-12-21 |
+| **Document ID** | SYSARCH-SPEC |
+| **Version** | 1.1 |
+| **Generated** | 2026-03-02 |
 | **Status** | Draft |
 | **Project** | CompliantFlow Project |
 
 ---
 
-## 1. Introduction
+## 1. System Overview
 
-This document specifies the system architecture for CompliantFlow Project. This specification is part of the Design History File (DHF) and provides comprehensive documentation of architectural decisions, design rationale, and technical implementation details.
+CompliantFlow is a **web-based Design History File (DHF) management system** for medical device software development compliant with IEC 62304 and ISO 13485.
 
-### 1.1 Purpose
-
-This document provides detailed architecture specifications including:
-- System architecture and component design
-- Data models and storage architecture
-- Technology stack and implementation choices
-- Design rationale and alternatives considered
-- Interface definitions and integration points
-
-### 1.2 Scope
-
-This specification covers all architecture components defined in the CompliantFlow system as of 2025-12-21.
+**System Purpose:** Enable development teams to manage requirements, traceability, testing, and regulatory documentation through a structured, auditable workflow.
 
 ---
 
-## 2. Architecture Components
+## 2. System Architecture
 
-### 1. ARCH-001: CompliantFlow System Architecture
+### 2.1 Architecture Decision
 
-<div class="architecture-section">
+**System Type:** Pure Software System
+- Web-based Python application for DHF management
+- Single software subsystem architecture
 
-**Status**: <span class="status-draft">DRAFT</span>  
-**Component**: System  **Architecture Type**: system  
-#### Overview
+### 2.2 Technology Stack
 
-## Overview
-CompliantFlow follows a layered architecture pattern with clear separation of concerns.
+**Core Technologies:**
+- **Python 3.11+** - Application runtime
+- **Streamlit** - Web framework and UI
+- **NetworkX** - Graph analysis
+- **Pydantic** - Data validation
+- **Jinja2** - Template rendering
+- **WeasyPrint** - PDF generation
+- **YAML** - Data format
+- **Git** - Version control
 
-## Layers
-1. **Presentation Layer**: Streamlit UI
-   - Universal page template
-   - Dynamic form generation
-   - Workflow transition UI
+**Deployment:**
+- Web browser (Chrome, Firefox, Safari)
+- Python virtual environment
+- File system for data storage
 
-2. **Business Logic Layer**
-   - CompliantFlowCore: Central orchestrator and lifecycle manager
-   - GraphEngine: Traceability analysis
-   - LifecycleMethods: State transition logic
+---
 
-3. **Data Access Layer**
-   - ItemLoader: YAML file reading
-   - ItemSaver: YAML file writing with validation
-   - GitRepository: Version control integration
+## 3. Data Management Architecture
 
-4. **Storage Layer**
-   - YAML files for item storage
-   - Git for version control and audit trail
-   - File-based configuration
+### 3.1 Storage Strategy
 
-## Component Diagram
-```
-┌─────────────────────────────────────────┐
-│         Streamlit UI Pages              │
-│  (Universal Template + Page Generator)  │
-└──────────────┬──────────────────────────┘
-               │
-┌──────────────▼──────────────────────────┐
-│       CompliantFlowCore                 │
-│  (Orchestration + API)                  │
-└──────┬──────────┬──────────┬────────────┘
-       │          │          │
-  ┌────▼───┐  ┌──▼────┐  ┌──▼─────┐
-  │Lifecycle │  │ Graph │  │ Item   │
-  │Methods   │  │Engine │  │Manager │
-  └──────────┘  └───────┘  └────┬───┘
-                               │
-                  ┌────────────▼──────────┐
-                  │  ItemLoader/Saver     │
-                  │  + GitRepository      │
-                  └────────────┬──────────┘
-                               │
-                  ┌────────────▼──────────┐
-                  │  YAML Files + Git     │
-                  └───────────────────────┘
-```
+**File-based with Git version control**
 
-#### Design Rationale
+### 3.2 Data Structure
 
-Layered architecture chosen for:
-- **Separation of Concerns**: Each layer has a single responsibility
-- **Testability**: Layers can be tested independently
-- **Maintainability**: Changes isolated to specific layers
-- **IEC 62304 Compliance**: Clear software architecture documentation
-- **Flexibility**: Easy to swap implementations (e.g., different storage backends)
-
-
-#### Alternatives Considered
-
-**Microservices Architecture**
-- Rejected: Too complex for single-user desktop application
-- Overhead of inter-service communication not justified
-
-**Monolithic Architecture**
-- Rejected: Poor maintainability and testability
-- Difficult to extend with new document types
-
-**Plugin Architecture**
-- Considered but deferred: Current config-driven approach provides sufficient flexibility
-- May revisit for future extensibility needs
-
-
-#### Technology Stack
-
-- **Python 3.11+**: Core language
-- **Streamlit**: Web UI framework
-- **Pydantic v2**: Data validation and serialization
-- **PyYAML**: Configuration and data persistence
-- **NetworkX**: Graph analysis for traceability
-- **GitPython**: Version control integration
-- **Jinja2**: Template rendering for document generation
-
-
-#### Interfaces
-
-**External Interfaces**:
-- File system (YAML read/write)
-- Git repository (version control)
-- Web browser (Streamlit UI)
-
-**Internal Interfaces**:
-- CompliantFlowCore API (get_item, create_item, update_item, transition_item)
-- LifecycleMethods API (get_state_info, get_available_transitions, validate_transition)
-- GraphEngine API (build_graph, find_orphans, calculate_coverage)
-
-
-#### Related Requirements
-
-- SYS-001
-- SYS-002
-- SYS-003
-
-</div>
-
-### 2. ARCH-002: Data Model and Storage Architecture
-
-<div class="architecture-section">
-
-**Status**: <span class="status-review">REVIEW</span>  
-**Component**: Data  **Architecture Type**: data  
-#### Overview
-
-## Data Model
-
-### Item Model
-All traceability items follow a common base structure:
-```python
-class Item(BaseModel):
-    uid: str                    # Unique identifier (alias: id)
-    text: str                   # Main content (alias: content)
-    title: Optional[str]        # Human-readable title
-    status: str                 # Current lifecycle state
-    links: List[str]            # Links to other items
-    verification_status: Optional[VerificationStatus]
-    manual_verifications: Optional[Dict]
-    # ... additional properties per doc type
-```
-
-### Configuration Model
-```python
-class DocTypeConfig(BaseModel):
-    code: str                   # Document type code (e.g., "SYS")
-    name: str                   # Display name
-    prefix: str                 # ID prefix (e.g., "SYS-")
-    directory: Optional[str]    # Storage directory
-    properties: List[str]       # Allowed fields
-    lifecycle: LifecycleConfig  # Workflow definition
-    relations: List[Relation]   # Traceability relations
-```
-
-## Storage Architecture
-
-### Directory Structure
 ```
 DHF/
+├── items/                    # All DHF items
+│   ├── 01_req_crs/          # Customer requirements
+│   ├── 02_req_sys/          # System requirements
+│   ├── 03_req_srs/          # Software requirements
+│   ├── 04_req_sds/          # Design specifications
+│   ├── 05_test_crs/         # Customer tests
+│   ├── 06_test_sys/         # System tests
+│   ├── 07_risk/             # Risk items
+│   └── 08_defect/           # Defect items
 ├── config/
-│   └── project_config.yaml    # Master configuration
-├── items/
-│   ├── 01_req_crs/           # Customer Requirements
-│   ├── 02_req_sys/           # System Requirements
-│   ├── 04_req_sds/           # Design Specifications
-│   ├── 05_tc_sys/            # System Tests
-│   ├── 06_tc_crs/            # Validation Tests
-│   ├── 07_tc_sds/            # Design Tests
-│   ├── 08_defect/            # Defects
-│   ├── 09_cr/                # Change Requests
-│   ├── 10_release/           # Releases
-│   ├── 11_soup/              # SOUP Items
-│   └── 12_arch/              # Architecture Specs
-└── governance/
-    └── IEC_62304.yaml        # Compliance policies
+│   ├── project_config.yaml  # Document types, lifecycles
+│   └── IEC_62304.yaml       # Compliance mapping
+└── documents/
+    ├── specifications/       # Generated documents
+    └── procedures/          # Manual procedures
 ```
 
-### File Format
-- **Format**: YAML (human-readable, Git-friendly)
-- **Naming**: `{ID}.yaml` (e.g., `SYS-001.yaml`)
-- **Validation**: Pydantic models ensure data integrity
-- **Serialization**: `mode='json'` for proper enum handling
+### 3.3 Design Rationale: File-Based vs Database
 
-## Version Control Integration
+**Why File-Based (YAML + Git)?**
 
-### Git-Based Audit Trail
-- Every item change creates a Git commit
-- Commit message includes: action, item ID, author
-- Complete history available via `git log`
-- Tamper-evident audit trail
+✅ **Traceability:** Each item = one file with unique ID  
+✅ **Version Control:** Git provides complete audit trail (IEC 62304 §5.1.9)  
+✅ **Human Readable:** YAML is text-based and easy to review  
+✅ **Portability:** Entire DHF is a directory  
+✅ **Simplicity:** No database server required  
+✅ **Regulatory Compliance:** Supports IEC 62304 §5.1.4, §5.1.9, 21 CFR Part 11
 
-### Benefits
-- **Immutable History**: Cannot alter past changes
-- **Branching**: Support for parallel development
-- **Rollback**: Easy to revert to previous versions
-- **Compliance**: Meets IEC 62304 audit requirements
+**When Database Would Be Better:**
+- Thousands of items (current: ~100s)
+- Complex queries across items
+- Multiple users editing simultaneously
 
-#### Design Rationale
+**CompliantFlow's Scale:** 100-500 requirements, 2-10 users, simple parent-child links
 
-File-based storage with Git version control chosen for:
+---
 
-**Human-Readable Format**
-- YAML is easy to read and edit manually
-- No special tools required for inspection
-- Facilitates code review and collaboration
+## 4. Component Architecture
 
-**Git-Friendly**
-- Text-based format works well with Git
-- Meaningful diffs for changes
-- Merge conflict resolution possible
+### 4.1 System Architecture Diagram
 
-**No Database Dependency**
-- Simpler deployment (no DB setup)
-- Easier backup (just copy directory)
-- Better for small to medium datasets
-
-**Regulatory Compliance**
-- Git provides required audit trail
-- File-based storage is transparent
-- Easy to archive for regulatory submission
-
-
-#### Alternatives Considered
-
-**SQL Database (SQLite/PostgreSQL)**
-- Rejected: Adds complexity and deployment overhead
-- File-based approach sufficient for expected data volume
-- Git history provides better audit trail than DB triggers
-
-**NoSQL Database (MongoDB)**
-- Rejected: Overkill for structured, validated data
-- YAML + Pydantic provides similar schema flexibility
-
-**JSON Files**
-- Considered: Similar to YAML but less human-readable
-- YAML chosen for better readability and comments support
-
-
-#### Technology Stack
-
-- **PyYAML**: YAML parsing and serialization
-- **Pydantic v2**: Data validation and type safety
-- **GitPython**: Git operations automation
-- **Pathlib**: File system operations
-
-
-#### Interfaces
-
-**ItemLoader Interface**:
-- `load_item(uid: str) -> Item`
-- `load_all_items() -> List[Item]`
-- `load_items_by_prefix(prefix: str) -> List[Item]`
-
-**ItemSaver Interface**:
-- `save(item: Item, author: str) -> Path`
-- `_get_directory_for_prefix(prefix: str) -> Path`
-- `_build_prefix_map() -> Dict[str, str]`
-
-**GitRepository Interface**:
-- `commit_item_change(uid: str, file_path: Path, action: str, author: str)`
-- `get_file_history(file_path: Path) -> List[Dict]`
-
-
-#### Related Requirements
-
-- SYS-003
-- SYS-004
-
-</div>
-
-### 3. ARCH-003: Configuration-Driven Architecture
-
-<div class="architecture-section">
-
-**Status**: <span class="status-draft">DRAFT</span>  
-**Component**: Configuration  **Architecture Type**: software  
-#### Overview
-
-## Overview
-CompliantFlow uses a configuration-driven architecture where all document types, workflows, and UI behavior are defined in `project_config.yaml` rather than hardcoded in the application.
-
-## Core Principle: Single Source of Truth
-
-The `project_config.yaml` file serves as the single source of truth for:
-- Document type definitions
-- Workflow lifecycles and transitions
-- Validation criteria
-- UI configuration (icons, page numbers)
-- Traceability relationships
-- Field definitions and properties
-
-## Benefits
-
-### 1. Zero Code Changes for New Types
-Adding a new document type requires only:
-1. Add configuration to `project_config.yaml`
-2. Create directory for items
-3. Optionally generate page file
-
-No Python code changes needed!
-
-### 2. Integrated Lifecycle Management
-Workflows are executed by interpreting configuration:
-```yaml
-lifecycle:
-  states:
-    - {id: draft, label: "Draft", is_initial: true}
-    - {id: approved, label: "Approved"}
-  transitions:
-    - from: draft
-      to: approved
-      criteria:
-        - {check_type: "field_not_empty", field: "content"}
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    CompliantFlow System                      │
+├─────────────────────────────────────────────────────────────┤
+│                                                               │
+│  ┌──────────────────┐         ┌──────────────────┐          │
+│  │  User (Browser)  │◄────────┤  Streamlit UI    │          │
+│  └──────────────────┘         └────────┬─────────┘          │
+│                                         │                     │
+│                              ┌──────────▼──────────┐         │
+│                              │  CompliantFlowCore  │         │
+│                              └──────────┬──────────┘         │
+│                                         │                     │
+│         ┌───────────────────────────────┼─────────────┐      │
+│         │                               │             │      │
+│  ┌──────▼────────┐  ┌──────────────────▼──┐  ┌───────▼────┐│
+│  │ GraphEngine   │  │ DocumentGenerator   │  │ Lifecycle  ││
+│  └──────┬────────┘  └──────────┬──────────┘  │ Methods    ││
+│         │                      │              └───────┬────┘│
+│         │                      │                      │      │
+│  ┌──────▼──────────────────────▼──────────────────────▼────┐│
+│  │              ItemLoader / ItemSaver                      ││
+│  │              (YAML + Git)                                ││
+│  └──────────────────────────────────────────────────────────┘│
+│                                                               │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-The `CompliantFlowCore` delegates to `LifecycleMethods` to enforce these rules automatically.
+### 4.2 Component Descriptions
 
-### 3. Universal UI Template
-Single page template (`universal_page_template.py`) renders all document types:
-- Reads doc type configuration
-- Generates forms dynamically
-- Shows workflow transitions based on current state
-- Displays metrics from lifecycle states
+**CompliantFlowCore:**
+- Central orchestrator
+- Manages item lifecycle
+- Coordinates graph, documents, workflow
 
-### 4. Validation Criteria Framework
-Extensible validation system:
-- `field_not_empty`: Check field has value
-- `linked_items_approved`: Check linked items status
-- `manual`: Require manual verification
-- Easy to add new check types
+**GraphEngine:**
+- Builds traceability graph using NetworkX
+- Analyzes dependencies
+- Detects orphans and coverage gaps
 
-## Architecture Pattern: Interpreter
+**DocumentGenerator:**
+- Renders Jinja2 templates
+- Generates markdown specifications
+- Converts to PDF using WeasyPrint
 
-CompliantFlow implements the **Interpreter Pattern**:
-- Configuration is the "language"
-- CompliantFlowCore is the "interpreter"
-- Runtime behavior determined by configuration
+**LifecycleMethods:**
+- Manages item lifecycle states
+- Validates state transitions
+- Enforces approval workflows
 
-## Configuration Schema
+**ItemLoader/ItemSaver:**
+- YAML file I/O operations
+- Git commit automation
+- Schema validation
 
-```yaml
-doc_types:
-  - code: TYPE_CODE
-    name: "Display Name"
-    prefix: "PREFIX-"
-    directory: "folder_name"
-    properties: [list of allowed fields]
-    
-    relations:
-      - target: OTHER_TYPE
-        type: relationship_type
-        label: display_label
-    
-    icon: "🔧"
-    page_enabled: true
-    page_number: 5
-    
-    lifecycle:
-      states: [...]
-      transitions: [...]
+### 4.3 Software Layered Architecture
+
+**Layer 1: Presentation (Streamlit UI)**
+- Universal page template
+- Dynamic form generation
+- Workflow transition UI
+- Visualization components
+
+**Layer 2: Business Logic**
+- CompliantFlowCore: Central orchestrator
+- GraphEngine: Traceability analysis
+- LifecycleMethods: State management
+- DocumentGenerator: Specification generation
+
+**Layer 3: Data Access**
+- ItemLoader: YAML file reading
+- ItemSaver: YAML file writing + Git commits
+- GitRepository: Version control operations
+
+**Layer 4: Storage**
+- File system (YAML files)
+- Git repository
+
+**Benefits:**
+- Clear separation of concerns
+- Independent testing of layers
+- Easy to modify UI without changing logic
+- Supports future database migration
+
+### 4.4 Design Patterns
+
+**Architectural Patterns:**
+- **Layered Architecture**: Clear separation between UI, logic, and data
+- **Repository Pattern**: ItemLoader/ItemSaver abstract file storage
+- **Strategy Pattern**: Workflow validation criteria, policy validation rules
+
+**Design Principles:**
+- **Configuration-Driven Design**: Document types, workflows, policies in YAML
+- **Fail-Fast Validation**: Configuration validated at startup
+- **Separation of Concerns**: UI independent of storage, logic independent of UI
+
+### 4.5 Data Flow
+
+**Item Creation Flow:**
+```
+User Input (Streamlit)
+  ↓
+CompliantFlowCore.create_item()
+  ↓
+LifecycleMethods.get_initial_state()
+  ↓
+ItemSaver.save(item)
+  ↓
+YAML File + Git Commit
+  ↓
+GraphEngine.rebuild()
 ```
 
-#### Design Rationale
+**Traceability Analysis Flow:**
+```
+User Request (Streamlit)
+  ↓
+CompliantFlowCore.get_traceability()
+  ↓
+GraphEngine.build_from_items()
+  ↓
+NetworkX Graph Operations
+  ↓
+Traceability Results
+  ↓
+Streamlit Visualization
+```
 
-Configuration-driven architecture chosen for:
+**Document Generation Flow:**
+```
+User Request (Streamlit)
+  ↓
+DocumentGenerator.generate_specification()
+  ↓
+ItemLoader.load_all()
+  ↓
+Jinja2 Template Rendering
+  ↓
+Markdown → HTML → PDF
+  ↓
+Generated Document
+```
 
-**Flexibility**
-- Easy to adapt to different regulatory frameworks
-- Customize workflows per organization
-- No code changes for common modifications
+---
 
-**Maintainability**
-- Single file to understand system behavior
-- Changes are declarative, not imperative
-- Reduced code complexity
+## 5. Architecture Items
 
-**Compliance**
-- Configuration is version-controlled
-- Changes to workflows are auditable
-- Clear documentation of system behavior
-
-**Extensibility**
-- New document types without code changes
-- New validation criteria via configuration
-- Custom fields per document type
-
-
-#### Alternatives Considered
-
-**Hardcoded Document Types**
-- Rejected: Requires code changes for each new type
-- Not flexible enough for different use cases
-- Difficult to maintain as types grow
-
-**Database-Driven Configuration**
-- Rejected: Adds complexity
-- YAML file is simpler and version-controlled
-- No need for migration scripts
-
-**Plugin Architecture**
-- Considered: More complex than needed
-- Configuration approach provides sufficient flexibility
-- Could be added later if needed
-
-
-#### Technology Stack
-
-- **PyYAML**: Configuration parsing
-- **Pydantic**: Configuration validation
-- **Python dataclasses**: Configuration models
-
-
-#### Interfaces
-
-**ProjectConfig Interface**:
-- `get_doc_type(code: str) -> DocTypeConfig`
-- `get_doc_type_by_prefix(prefix: str) -> DocTypeConfig`
-
-**DocTypeConfig Interface**:
-- `code: str`
-- `name: str`
-- `prefix: str`
-- `directory: Optional[str]`
-- `properties: List[str]`
-- `lifecycle: LifecycleConfig`
-- `relations: List[Relation]`
-
-
-#### Related Requirements
-
-- SYS-001
-- SYS-005
-
-</div>
-
-### 4. ARCH-004: Fail-Fast Configuration Validation Strategy
+### 1. SYSARCH-001: Item Management Module
 
 <div class="architecture-section">
 
@@ -476,19 +255,33 @@ Configuration-driven architecture chosen for:
 
 #### Overview
 
-The system employs fail-fast validation for lifecycle and stable state configuration, throwing explicit errors rather than using fallback defaults.
+Core module for managing DHF items (requirements, design, tests, change requests, etc.).
+
+**Responsibilities**:
+- Load items from YAML files with schema validation
+- Save items with Git commit tracking
+- Support configurable item types from project configuration
+- Maintain item history and audit trail
+
+**Key Interfaces**:
+- `ItemLoader`: Load items from file system by ID, type, or all items
+- `ItemSaver`: Save items with validation and Git commits
+- `ItemValidator`: Validate item schema against configuration
+
+**Implementation Notes**:
+- Uses YAML format for human-readable storage
+- Git integration provides automatic version control
+- Pydantic models for type-safe item validation
+- File-based storage enables simple backup and portability
 
 
 
 
 
-#### Related Requirements
-
-- SYS-023
 
 </div>
 
-### 5. ARCH-005: Configuration-Driven UI Architecture
+### 2. SYSARCH-002: Traceability Analysis Module
 
 <div class="architecture-section">
 
@@ -496,336 +289,407 @@ The system employs fail-fast validation for lifecycle and stable state configura
 
 #### Overview
 
-The system employs a configuration-driven architecture where UI pages are generated dynamically from YAML configuration rather than hardcoded files. This reduces code duplication, improves maintainability, and enables runtime customization without code changes.
+Module for building and analyzing traceability relationships between DHF items.
+
+**Responsibilities**:
+- Build directed graph from item links
+- Find upstream/downstream dependencies
+- Detect orphan items (no incoming or outgoing links)
+- Calculate coverage metrics (requirements to tests)
+- Support configurable traceability paths from configuration
+
+**Key Interfaces**:
+- `GraphBuilder`: Construct traceability graph from all items
+- `TraceabilityAnalyzer`: Analyze relationships and dependencies
+- `OrphanDetector`: Find items without required links
+- `CoverageCalculator`: Compute verification coverage
+
+**Implementation Notes**:
+- Uses NetworkX library for graph operations
+- In-memory graph for fast queries
+- Supports bidirectional traversal
+- Configurable relationship types (derives_from, implements, verifies)
 
 
 
 
 
-#### Related Requirements
-
-- SYS-028
 
 </div>
 
-### 6. ARCH-006: Test Automation and CI/CD Architecture
+### 3. SYSARCH-003: Lifecycle Management Module
 
 <div class="architecture-section">
 
 **Status**: <span class="status-approved">APPROVED</span>  
-**Component**: Testing  **Architecture Type**: system  
+
 #### Overview
 
-## Overview
+Module for managing item lifecycle states and transitions via CompliantFlowCore.
 
-CompliantFlow implements a hybrid test verification system that combines automated pytest tests with manual test case management. The system integrates with GitHub Actions for continuous testing and provides real-time test status updates in the UI.
+**Responsibilities**:
+- Load lifecycle configuration from project config
+- Validate state transitions against strict rules
+- Execute transition criteria checks (field validation, manual approval)
+- Enforce approval workflows
+- Support configurable lifecycles per item type
 
-## Architecture Components
+**Key Interfaces**:
+- `CompliantFlowCore`: Main entry point for lifecycle operations
+- `LifecycleMethods`: Internal logic for state validation
+- `TransitionValidator`: Check if transition is allowed
+- `CriteriaExecutor`: Execute validation criteria
 
-### 1. Test Execution Layer
-
-**Automated Tests (pytest)**
-- 58 automated tests covering core functionality
-- Test files organized by feature area:
-  - `test_core.py` - Core functionality (3 tests)
-  - `test_configuration.py` - Configuration management (5 tests)
-  - `test_compliance.py` - Compliance engine (3 tests)
-  - `test_compliance_features.py` - Compliance features (4 tests)
-  - `test_page_generation.py` - Dynamic page generation (3 tests)
-  - `test_traceability.py` - Traceability features (5 tests)
-  - `test_results_provider.py` - Test results integration (5 tests)
-  - `test_scanner.py` - Test scanner (3 tests)
-  - `test_change_management.py` - Change management (2 tests)
-  - `test_crs_requirements.py` - CRS requirements (7 tests)
-  - `test_sys_requirements.py` - SYS requirements (12 tests)
-  - `test_sds_requirements.py` - SDS requirements (6 tests)
-
-**Manual Tests (YAML)**
-- Stored as YAML files in DHF/items/05_tc_sys, 06_tc_crs, 07_tc_sds
-- Include test_type field to distinguish from automated tests
-- Support manual verification status tracking
-
-### 2. CI/CD Integration (GitHub Actions)
-
-**Workflow Configuration**
-```yaml
-# .github/workflows/test.yml
-- Run pytest with coverage
-- Generate JUnit XML results
-- Upload test-results artifact
-- Generate coverage report
-```
-
-**Test Results Provider**
-```python
-class GitHubActionsProvider:
-    def get_test_results() -> Dict[str, TestResult]:
-        # Fetch test-results artifact from GitHub API
-        # Parse JUnit XML
-        # Map test IDs to results
-        # Return test status dictionary
-```
-
-### 3. Test Results Integration
-
-**Data Flow**
-```
-GitHub Actions → Artifact Upload → GitHub API → 
-GitHubActionsProvider → TestResultsProvider → UI Display
-```
-
-**Configuration**
-```yaml
-test_integration:
-  provider: github
-  github:
-    owner: itercharles
-    repo: CompliantFlow
-    workflow_name: test.yml
-    artifact_name: test-results
-```
-
-### 4. UI Integration
-
-**Test Status Display**
-- Universal page template shows test verification status
-- Color-coded badges (PASS/FAIL/PENDING)
-- Real-time updates from GitHub Actions
-- Manual test status tracking
-
-**Test Case Pages**
-- TC-SYS (System Tests) - Page 9
-- TC-CRS (Validation Tests) - Page 10
-- TC-SDS (Design Tests) - Page 11
-
-## Test Automation Strategy
-
-### Automated vs Manual Tests
-
-**Automated (pytest):**
-- Unit tests for core functionality
-- Integration tests for workflows
-- API/backend tests
-- Configuration validation
-- Fast feedback (< 5 seconds)
-
-**Manual:**
-- UI/UX validation
-- End-to-end user workflows
-- Regulatory compliance verification
-- Exploratory testing
-
-### Test ID Mapping
-
-Tests include `@test_id` decorator in docstring:
-```python
-def test_TC_SYS_004_governance_parsing():
-    \"\"\"
-    @test_id: TC-SYS-004
-    @links: SYS-005
-    \"\"\"
-```
-
-Scanner extracts test IDs and maps to YAML test cases.
-
-## Technology Stack
-
-**Testing Framework:**
-- pytest - Test execution
-- pytest-cov - Coverage reporting
-
-**CI/CD:**
-- GitHub Actions - Workflow automation
-- JUnit XML - Test result format
-
-**Integration:**
-- GitPython - Git operations
-- requests - GitHub API client
-- xml.etree.ElementTree - XML parsing
-
-**Dependencies:**
-- pydantic>=2.0 - Data validation
-- python-dotenv - Environment variables
-
-## Security Considerations
-
-**GitHub Token:**
-- Stored in .env file (not committed)
-- Required for GitHub API access
-- Read-only permissions sufficient
-
-**Token Handling:**
-```python
-# Reload .env to bypass Streamlit caching
-load_dotenv(override=True)
-token = os.getenv("GITHUB_TOKEN")
-```
-
-## Performance Characteristics
-
-**Test Execution:**
-- Local: 58 tests in ~4.5 seconds
-- CI: 58 tests in ~20 seconds (includes setup)
-
-**API Calls:**
-- Cached in Streamlit session
-- Rate limit: 60 requests/hour (unauthenticated)
-- Rate limit: 5000 requests/hour (authenticated)
-
-## Regulatory Compliance
-
-**IEC 62304 Requirements:**
-- §5.5.2: Software unit verification
-- §5.6.2: Software integration testing
-- §5.7.2: Software system testing
-
-**Audit Trail:**
-- All test results stored in GitHub Actions artifacts
-- Test execution history available via GitHub API
-- Coverage reports for traceability
-
-## Future Enhancements
-
-1. **UI Testing:** Add Selenium/Playwright tests
-2. **Performance Testing:** Add load/stress tests
-3. **Security Scanning:** Integrate SAST/DAST tools
-4. **Test Coverage:** Increase to >90%
-5. **Parallel Execution:** Speed up CI with parallel jobs
-
-#### Design Rationale
-
-**GitHub Actions Integration**
-- Chosen for seamless CI/CD integration
-- No additional infrastructure required
-- Free for public repositories
-- Built-in artifact storage
-
-**Hybrid Approach**
-- Automated tests for fast feedback
-- Manual tests for regulatory compliance
-- Best of both worlds
-
-**pytest Framework**
-- Industry standard for Python testing
-- Rich plugin ecosystem
-- Excellent reporting capabilities
-- Easy to learn and maintain
+**Implementation Notes**:
+- Configuration-driven (no hardcoded workflows)
+- Supports multiple lifecycle models per document type
+- Extensible criteria system (field checks, manual verification, linked item status)
+- Strict validation with clear error messages (Fail-Fast)
 
 
-#### Alternatives Considered
-
-**Jenkins/CircleCI**
-- Rejected: More complex setup
-- GitHub Actions sufficient for current needs
-
-**Local File Storage for Results**
-- Rejected: Not suitable for distributed teams
-- GitHub artifacts provide better persistence
-
-**unittest Framework**
-- Rejected: pytest more feature-rich
-- Better fixture management
-- More readable test code
 
 
-#### Technology Stack
-
-- pytest - Test framework
-- pytest-cov - Coverage reporting
-- GitHub Actions - CI/CD platform
-- JUnit XML - Test result format
-- requests - HTTP client for GitHub API
 
 
-#### Interfaces
+</div>
 
-**TestResultsProvider Interface:**
-- `get_test_results() -> Dict[str, TestResult]`
-- `get_test_status(test_id: str) -> str`
+### 4. SYSARCH-004: Change Management Module
 
-**GitHubActionsProvider Interface:**
-- `fetch_latest_test_results() -> Dict`
-- `parse_junit_xml(xml_content: str) -> Dict`
-- `map_test_ids(results: Dict) -> Dict`
+<div class="architecture-section">
 
-**TestScanner Interface:**
-- `scan_test_files() -> List[TestInfo]`
-- `extract_test_id(func) -> Optional[str]`
-- `parse_docstring(docstring: str) -> Dict`
+**Status**: <span class="status-approved">APPROVED</span>  
+
+#### Overview
+
+Module for tracking and controlling changes to DHF items through change requests.
+
+**Responsibilities**:
+- Create and manage change request lifecycle
+- Link GitHub Pull Requests to change requests
+- Track affected items in change requests
+- Enforce change control policies (prevent editing stable items)
+- Maintain complete audit trail of changes
+
+**Key Interfaces**:
+- `ChangeRequestManager`: CR creation, update, approval
+- `ImpactAnalyzer`: Identify items affected by changes
+- `PRLinker`: Link GitHub PRs to CRs automatically
+- `ChangeControlPolicy`: Enforce editing restrictions
+
+**Implementation Notes**:
+- Integrates with GitHub API for PR information
+- Automated detection of affected items from PR file changes
+- Prevents editing of items in stable status without CR
+- Git commits link to change request IDs
 
 
-#### Related Requirements
 
-- SYS-020
-- SYS-021
-- SYS-022
+
+
+
+</div>
+
+### 5. SYSARCH-005: Compliance Validation Module
+
+<div class="architecture-section">
+
+**Status**: <span class="status-approved">APPROVED</span>  
+
+#### Overview
+
+Module for validating DHF against regulatory policies and standards.
+
+**Responsibilities**:
+- Load policy definitions from configuration files
+- Execute validation rules against DHF items
+- Calculate compliance scores per policy group
+- Display validation results with detailed evidence
+- Support custom policy definitions
+
+**Key Interfaces**:
+- `PolicyEngine`: Load and execute validation rules
+- `ComplianceScorer`: Calculate compliance percentages
+- `EvidenceCollector`: Gather validation evidence and details
+- `PolicyValidator`: Validate policy configuration
+
+**Implementation Notes**:
+- Policy-based architecture for flexibility
+- Supports multiple policy groups (IEC 62304, FDA 21 CFR 820, etc.)
+- Extensible validation rule types (coverage, orphan, status checks)
+- Clear pass/fail results with actionable recommendations
+
+
+
+
+
+
+</div>
+
+### 6. SYSARCH-006: Document Generation Module
+
+<div class="architecture-section">
+
+**Status**: <span class="status-approved">APPROVED</span>  
+
+#### Overview
+
+Module for generating regulatory specification documents from templates.
+
+**Responsibilities**:
+- Render Jinja2 templates with item data
+- Generate specification documents (requirements, architecture, tests)
+- Export documents to PDF format
+- Track document versions and generation history
+- Support configurable document templates
+
+**Key Interfaces**:
+- `TemplateRenderer`: Render Jinja2 templates with context data
+- `PDFExporter`: Convert markdown to PDF using WeasyPrint
+- `DocumentVersioner`: Track and increment document versions
+- `TemplateManager`: Load and validate templates
+
+**Implementation Notes**:
+- Uses Jinja2 for flexible templating
+- WeasyPrint for professional PDF generation
+- Automatic version incrementing from existing documents
+- Templates stored in version control for auditability
+
+
+
+
+
+
+</div>
+
+### 7. SYSARCH-007: Test Integration Module
+
+<div class="architecture-section">
+
+**Status**: <span class="status-approved">APPROVED</span>  
+
+#### Overview
+
+Module for importing and persisting test results from any CI/CD pipeline
+into the DHF, and linking each result to the requirement items it verifies.
+
+**Framework-agnostic boundary**:
+- `src/` consumes only JUnit XML — no coupling to any specific test framework
+- `tests/` contains the pytest-specific adapter (conftest.py + docstring_parser.py)
+- Any framework that produces JUnit XML with `compliantflow.*` properties is compatible
+
+**Responsibilities**:
+- Parse JUnit XML produced by any test framework
+- Extract TC IDs from `compliantflow.id` property or test name regex
+- Extract review metadata from `compliantflow.reviewer`, `.review_date`, `.review_status`
+- Persist results to `DHF/test-results/results.yaml`
+- Recompute `verification_status` on linked requirement items after import
+
+**Key Interfaces**:
+- `parse_junit_xml(path)` — parse JUnit XML into `ExecutionResult` list
+- `ResultStore.record_execution(...)` — upsert one TC record in results.yaml
+- `_TestResultsMixin.import_test_results(...)` — orchestrate import and
+  verification_status update on linked items
+- CLI: `compliantflow test import <file> --format junit`
+
+**Implementation Notes**:
+- TC ID extracted from `compliantflow.id` property, or by regex from test name
+- Git history of `results.yaml` serves as the audit trail
+- For pytest projects: `tests/conftest.py` autouse fixture injects
+  `compliantflow.*` properties from docstring `@`-tags automatically
+- `tests/utils/docstring_parser.py` provides shared helpers for tag extraction
+
+
+
+
+
+
+</div>
+
+### 8. SYSARCH-008: Web UI Module
+
+<div class="architecture-section">
+
+**Status**: <span class="status-approved">APPROVED</span>  
+
+#### Overview
+
+Streamlit-based web user interface for DHF management.
+
+**Responsibilities**:
+- Render item management pages dynamically from configuration
+- Display traceability visualizations (graphs, matrices)
+- Show compliance dashboards and validation results
+- Provide document preview and export
+- Support navigation, search, and filtering
+
+**Key Interfaces**:
+- `PageGenerator`: Dynamic page creation from configuration
+- `UIComponents`: Reusable UI elements (tables, forms, badges)
+- `NavigationManager`: Handle routing and query parameters
+- `VisualizationRenderer`: Display graphs and charts
+
+**Implementation Notes**:
+- Built with Streamlit framework
+- Configuration-driven page generation
+- Responsive layout with browser compatibility
+- Real-time updates via Streamlit's reactive model
+
+
+
+
+
+
+</div>
+
+### 9. SYSARCH-009: CLI Module
+
+<div class="architecture-section">
+
+**Status**: <span class="status-approved">APPROVED</span>  
+
+#### Overview
+
+Command-line interface module providing headless access to CompliantFlowCore
+for CI/CD pipelines and scripted environments.
+
+**Responsibilities**:
+- Expose core DHF operations as CLI commands
+- Parse command-line arguments and route to CompliantFlowCore methods
+- Output machine-readable JSON to stdout for pipeline consumption
+- Output human-readable diagnostics to stderr
+- Return meaningful exit codes (0 = success, 1 = error/validation failure)
+
+**Key Interfaces**:
+- `CompliantFlowCore`: Single entry point for all business logic (shared with Web UI)
+- `click`: Command-line argument parsing and help generation
+- `python -m compliantflow`: Module entry point
+
+**Implementation Notes**:
+- Package location: `src/compliantflow/` (separate from `src/traceability/`)
+- Uses `click` library (already installed as transitive dependency of streamlit)
+- Stateless: each invocation creates a fresh CompliantFlowCore instance
+- No shared state with the Streamlit UI; both call the same core independently
+- stdout/stderr separation enables clean pipeline integration
+
+
+
+
+
 
 </div>
 
 
 ---
 
-## 3. Summary
+## 6. Data Interfaces
 
-### 3.1 Architecture Statistics
+### 6.1 ItemLoader
 
-| Metric | Count |
-|--------|-------|
-| **Total Architecture Components** | 6 |
-| **System Architecture** | 2 |
-| **Data Architecture** | 1 |
-| **UI Architecture** | 0 |
-| **Integration Architecture** | 0 |
+```python
+class ItemLoader:
+    def load_all() -> List[Item]
+    def load_by_uid(uid: str) -> Optional[Item]
+    def load_by_prefix(prefix: str) -> List[Item]
+```
 
-### 3.2 Component Status
+### 6.2 ItemSaver
 
-| Status | Count |
-|--------|-------|
-| **Draft** | 2 |
-| **Review** | 1 |
-| **Approved** | 3 |
+```python
+class ItemSaver:
+    def save(item: Item, author: str) -> Path
+    def delete(uid: str, author: str) -> bool
+```
 
-### 3.3 Technology Overview
+### 6.3 GitRepository
 
-This architecture specification documents the following key technologies:
-- **CompliantFlow System Architecture**: See ARCH-001 for details
-- **Data Model and Storage Architecture**: See ARCH-002 for details
-- **Configuration-Driven Architecture**: See ARCH-003 for details
-- **Test Automation and CI/CD Architecture**: See ARCH-006 for details
+```python
+class GitRepository:
+    def commit(message: str, files: List[Path]) -> str
+    def get_history(file_path: Path) -> List[Commit]
+```
 
 ---
 
-## 4. Compliance and Traceability
+## 7. Technology Decisions
 
-### 4.1 Requirements Traceability
+### 7.1 Why Python/Streamlit?
+- Rapid development with quick UI prototyping
+- Rich Python ecosystem for data processing
+- Clear audit trail for medical device compliance
+
+### 7.2 Why YAML Files?
+- Human-readable for review and audit
+- Git-friendly text format
+- Supports IEC 62304 §5.1.4 (software item identification)
+
+### 7.3 Why Git?
+- IEC 62304 §5.1.9 (configuration management)
+- Complete version history
+- Industry standard for collaboration
+
+---
+
+## 8. Compliance Mapping
+
+### 8.1 IEC 62304 Requirements
+
+| IEC 62304 Section | CompliantFlow Implementation |
+|-------------------|------------------------------|
+| §5.1.4 Software Item Identification | YAML files with unique IDs |
+| §5.1.9 Configuration Management | Git version control |
+| §5.2 Software Requirements | SRS items in `DHF/items/03_req_srs/` |
+| §5.3 Software Architecture | SWAD items |
+| §5.4 Software Detailed Design | SWDD items |
+| §9.7 Problem Resolution | Defect tracking system |
+
+### 8.2 Requirements Traceability
 
 This architecture specification satisfies the following system requirements:
 
-- SYS-001
-- SYS-002
-- SYS-003
-- SYS-004
-- SYS-005
-- SYS-020
-- SYS-021
-- SYS-022
-- SYS-023
-- SYS-028
-
-### 4.2 IEC 62304 Compliance
-
-This architecture documentation supports IEC 62304 compliance by providing:
-- Clear system architecture definition (§5.3.1)
-- Software item identification (§5.3.2)
-- Interface specifications (§5.3.3)
-- Design rationale and alternatives (§5.3.6)
+*No requirement links defined*
 
 ---
 
-## 5. Document Control
+## 9. Summary
+
+### 9.1 Architecture Statistics
+
+| Metric | Count |
+|--------|-------|
+| **Total Architecture Components** | 9 |
+| **System Architecture** | 0 |
+| **Data Architecture** | 0 |
+| **UI Architecture** | 0 |
+| **Integration Architecture** | 0 |
+
+### 9.2 Component Status
+
+| Status | Count |
+|--------|-------|
+| **Draft** | 0 |
+| **Review** | 0 |
+| **Approved** | 9 |
+
+---
+
+## 10. Future Considerations
+
+### 10.1 Database Migration
+
+To enable database migration, would need to:
+1. Create abstract `ItemRepository` interface
+2. Refactor `ItemLoader` + `ItemSaver` into `FileBasedRepository`
+3. Create `DatabaseRepository` implementation
+4. Update `CompliantFlowCore` to accept abstract repository
+
+This is documented in the gap analysis but not currently implemented.
+
+---
+
+## 11. Document Control
 
 **Document Owner**: System Architecture Team  
-**Last Updated**: 2025-12-21  
+**Last Updated**: 2026-03-02  
 **Next Review**: TBD
 
 ---

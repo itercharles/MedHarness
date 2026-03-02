@@ -11,47 +11,12 @@ For every test that has a recognisable docstring, the following
   compliantflow.review_status – from @review_status tag (optional)
 """
 
-import re
+import sys
+from pathlib import Path
 import pytest
 
-_TAG_RE = re.compile(r'@([\w]+):\s*(.+)')
-_TC_ID_RE = re.compile(r'(?:^|[^A-Za-z])(TC)[_-]([A-Z]+)[_-](\d+)(?:[_-](\d+))?', re.IGNORECASE)
-
-
-def _parse_docstring(doc: str) -> dict:
-    """Extract compliantflow metadata from a test docstring."""
-    meta = {}
-    lines = doc.strip().splitlines()
-
-    # Title: first non-empty line, strip leading TC-ID prefix if present
-    for line in lines:
-        stripped = line.strip()
-        if stripped:
-            # "TC-SYS-001-001: My title" → "My title"
-            m = re.match(r'^TC[-_][A-Z][-_\w]+:\s*(.+)', stripped, re.IGNORECASE)
-            meta['title'] = m.group(1).strip() if m else stripped
-            break
-
-    # @tag: value
-    for line in lines:
-        m = _TAG_RE.search(line.strip())
-        if m:
-            meta[m.group(1).lower()] = m.group(2).strip()
-
-    return meta
-
-
-def _extract_tc_id_from_name(name: str) -> str | None:
-    """Derive normalised TC-XXX-NNN id from a test function name."""
-    m = _TC_ID_RE.search(name)
-    if not m:
-        return None
-    doc_type = m.group(2).upper()
-    number = m.group(3).zfill(3)
-    sub = m.group(4)
-    if sub:
-        return f"TC-{doc_type}-{number}-{sub.zfill(3)}"
-    return f"TC-{doc_type}-{number}"
+sys.path.insert(0, str(Path(__file__).parent / "utils"))
+from docstring_parser import parse_docstring, extract_tc_id_from_name
 
 
 @pytest.fixture(autouse=True)
@@ -61,10 +26,10 @@ def _inject_compliantflow_metadata(request, record_property):
     if not doc.strip():
         return
 
-    meta = _parse_docstring(doc)
+    meta = parse_docstring(doc)
 
     # TC ID: prefer explicit @test_id, fall back to function name
-    tc_id = meta.get('test_id') or _extract_tc_id_from_name(request.node.name)
+    tc_id = meta.get('test_id') or extract_tc_id_from_name(request.node.name)
     if tc_id:
         record_property("compliantflow.id", tc_id)
 

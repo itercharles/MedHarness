@@ -111,19 +111,59 @@ Key public methods:
 - A state with `is_stable: true` locks the item — `is_item_editable()` returns `False`.
 
 ### External Test Result Integration
-TC items have **no YAML files** and **no doc type definition** in `project_config.yaml`.
-They live exclusively in `DHF/test-results/results.yaml` managed by
-**`src/test_results/result_store.py`** (`ResultStore`). TC type is inferred from which
-requirements the TC links to, not from a separate doc type category.
 
-**`test import`** parses a JUnit XML file and persists per-TC execution results plus
-optional review metadata. After import, `verification_status` is recomputed on all
-linked requirement items (verified / failed / not_verified).
+#### Architecture: framework-agnostic boundary
 
-**Metadata comes from test docstrings** — `tests/conftest.py` has an autouse fixture
-that reads `@test_id`, `@links`, `@reviewer`, `@review_status`, `@review_date` tags and
-injects them as `compliantflow.*` properties into the JUnit XML output automatically.
-No manual `record_property` calls needed in individual tests.
+The system is deliberately split into two layers with a clean boundary:
+
+```
+tests/          ← framework-specific adapter (owned by the test project)
+    conftest.py         pytest autouse fixture: reads docstring @-tags,
+    utils/              calls record_property() → JUnit XML <properties>
+        docstring_parser.py   shared helpers for tag extraction
+
+────────────────── boundary: JUnit XML file ──────────────────
+
+src/            ← framework-agnostic core (owned by CompliantFlow)
+    test_results/
+        junit_parser.py       reads compliantflow.* <property> elements
+        result_store.py       persists to DHF/test-results/results.yaml
+```
+
+`src/` has no knowledge of pytest, docstrings, or any specific test framework.
+It only consumes JUnit XML, which is a de-facto standard produced by virtually
+every test framework (pytest, Jest, JUnit, Go testsum, RSpec, Mocha, …).
+
+A team using a different framework provides their own adapter in their `tests/`
+directory — a custom reporter, annotation processor, or wrapper — that writes
+the same `compliantflow.*` properties into their JUnit XML output.
+
+#### JUnit XML contract
+
+The only interface between test code and CompliantFlow is the JUnit XML file:
+
+```xml
+<testcase name="test_TC_SYS_001_001_my_test">
+  <properties>
+    <property name="compliantflow.id"            value="TC-SYS-001-001"/>
+    <property name="compliantflow.title"         value="My test title"/>
+    <property name="compliantflow.links"         value="SYS-001, SYS-002"/>
+    <property name="compliantflow.reviewer"      value="Alice"/>
+    <property name="compliantflow.review_status" value="approved"/>
+    <property name="compliantflow.review_date"   value="2026-01-15"/>
+  </properties>
+</testcase>
+```
+
+`compliantflow.id` falls back to regex extraction from the test name
+(`test_TC_SYS_001_001_*` → `TC-SYS-001-001`) if the property is absent.
+All other properties are optional. Tests with no recognisable TC ID are skipped.
+
+#### pytest adapter (this project)
+
+`tests/conftest.py` provides the pytest-specific adapter via an autouse fixture.
+It reads `@`-tags from test docstrings and calls `record_property()` automatically
+— no manual calls needed in individual tests.
 
 Docstring format:
 ```python
@@ -131,24 +171,25 @@ def test_TC_SYS_001_001_my_test(test_dhf_root):
     """
     TC-SYS-001-001: My test title
 
-    @test_id: TC-SYS-001-001
-    @links: SYS-001
-    @reviewer: Alice
-    @review_status: approved
-    @review_date: 2026-01-15
+    @test_id: TC-SYS-001-001   # optional if inferrable from function name
+    @links: SYS-001             # required for traceability
+    @reviewer: Alice            # optional; design-review metadata
+    @review_status: approved    # optional
+    @review_date: 2026-01-15    # optional
     """
 ```
 
-Generated JUnit XML `<properties>`:
-```
-compliantflow.id, compliantflow.title, compliantflow.links,
-compliantflow.reviewer, compliantflow.review_date, compliantflow.review_status
-```
+Tag extraction helpers live in `tests/utils/docstring_parser.py`.
 
-All results stored in `DHF/test-results/results.yaml`. Git history is the audit trail.
+#### Storage
 
-`AutomatedTestScanner` and `GitHubActionsProvider` are in `tests/utils/`
-(test infrastructure only — not called from production code).
+TC items have **no YAML files** and **no doc type definition** in `project_config.yaml`.
+They live exclusively in `DHF/test-results/results.yaml` managed by `ResultStore`.
+TC type is inferred from which requirements the TC links to.
+
+After `test import`, `verification_status` is recomputed for each linked requirement
+item: `verified` (all TCs PASS), `failed` (any TC FAIL), `not_verified` (no results).
+Git history serves as the audit trail.
 
 ### CLI Layer
 **`src/cli/cli.py`** exposes `CompliantFlowCore` as a `click` CLI. Sits alongside `debug_view/` as an interface layer, separate from the core package. Both entry points work:
@@ -168,7 +209,7 @@ All results stored in `DHF/test-results/results.yaml`. Git history is the audit 
 - Use the `test_dhf_root` fixture from `tests/sys/conftest.py` — it creates a fresh isolated DHF for each test.
 - Test DHF config and items are defined in `tests/fixtures/test_data.py`.
 - Test IDs follow `TC-SYS-NNN-NNN` pattern. Always include `@test_id:` and `@links:` docstring tags; add `@reviewer:`, `@review_status:`, `@review_date:` when the test has been design-reviewed.
-- The autouse fixture in `tests/conftest.py` automatically injects all docstring tags as `compliantflow.*` properties into JUnit XML — no manual `record_property` calls needed.
+- The autouse fixture in `tests/conftest.py` (the pytest adapter) automatically injects all docstring tags as `compliantflow.*` properties into JUnit XML — no manual `record_property` calls needed. Tag extraction logic lives in `tests/utils/docstring_parser.py`.
 - `pytest.ini` sets `junit_family = xunit1` to enable per-testcase `<properties>`.
 - Prefer `pytest.raises(ValidationError)` and similar assertions; avoid asserting exact error strings beyond key terms.
 
