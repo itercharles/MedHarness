@@ -54,6 +54,8 @@ affected_items:
 - UC-003
 - UC-004
 - UC-005
+- SYS-TRANS-001
+- REL-003
 implementation_prs:
 - pr_number: 19
   pr_url: https://github.com/itercharles/CompliantFlow/pull/19
@@ -97,3 +99,6 @@ implementation_prs:
 - pr_number: 36
   pr_url: https://github.com/itercharles/CompliantFlow/pull/36
   title: 'CR-012: Fix PDF export - render markdown inside HTML div blocks'
+- pr_number: 37
+  pr_url: https://github.com/itercharles/CompliantFlow/pull/37
+  title: 'CR-012: Add UC workflows and fix file_path leaking into YAML'
