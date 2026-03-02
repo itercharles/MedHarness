@@ -363,26 +363,28 @@ Module for generating regulatory specification documents from templates.
 
 #### Description
 
-Module for retrieving and displaying test results from CI/CD pipeline.
+Module for importing and persisting test results from any CI/CD pipeline
+into the DHF, and linking each result to the requirement items it verifies.
 
 **Responsibilities**:
-- Fetch test results from GitHub Actions workflows
-- Parse test result artifacts (JUnit XML, pytest reports)
-- Display pass/fail status in UI
-- Link test results to requirement items
-- Track test execution history
+- Parse JUnit XML produced by any test framework
+- Extract TC IDs, statuses, and compliantflow.* metadata properties
+- Persist results to DHF/test-results/results.yaml
+- Recompute verification_status on linked requirement items after import
 
 **Key Interfaces**:
-- `TestResultFetcher`: Retrieve results from GitHub API
-- `TestResultParser`: Parse various test result formats
-- `TestStatusDisplay`: Show results in UI with details
-- `TestLinkManager`: Link tests to requirements
+- `parse_junit_xml(path)` — parse JUnit XML into ExecutionResult list
+- `ResultStore.record_execution(...)` — upsert one TC record
+- `_TestResultsMixin.import_test_results(...)` — orchestrate import and
+  verification_status update
+- CLI: `compliantflow test import <file> --format junit`
 
 **Implementation Notes**:
-- Integrates with GitHub Actions API
-- Supports multiple test result formats
-- Caches test results for performance
-- Provides drill-down to test execution logs
+- Framework-agnostic: only requires JUnit XML as input
+- TC ID extracted from compliantflow.id property, or by regex from test name
+- For pytest projects: tests/conftest.py autouse fixture injects
+  compliantflow.* properties from docstring @-tags automatically
+- Git history serves as the audit trail for results.yaml
 
 
 

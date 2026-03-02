@@ -524,79 +524,70 @@ CompliantFlow implements a hybrid test verification system that combines automat
 
 ### 1. Test Execution Layer
 
-**Automated Tests (pytest)**
-- 58 automated tests covering core functionality
-- Test files organized by feature area:
-  - `test_core.py` - Core functionality (3 tests)
-  - `test_configuration.py` - Configuration management (5 tests)
-  - `test_compliance.py` - Compliance engine (3 tests)
-  - `test_compliance_features.py` - Compliance features (4 tests)
-  - `test_page_generation.py` - Dynamic page generation (3 tests)
-  - `test_traceability.py` - Traceability features (5 tests)
-  - `test_results_provider.py` - Test results integration (5 tests)
-  - `test_scanner.py` - Test scanner (3 tests)
-  - `test_change_management.py` - Change management (2 tests)
-  - `test_crs_requirements.py` - CRS requirements (7 tests)
-  - `test_sys_requirements.py` - SYS requirements (12 tests)
-  - `test_sds_requirements.py` - SDS requirements (6 tests)
+**Automated Tests**
+- Tests organised under `tests/sys/` (SYS API tests), `tests/srs/` (SRS unit tests),
+  `tests/crs/` (CRS scenario tests)
+- Framework: pytest; any framework that produces JUnit XML is supported
+- Test function names follow the convention `test_TC_SYS_001_001_*` to embed TC IDs
 
-**Manual Tests (YAML)**
-- Stored as YAML files in DHF/items/05_tc_sys, 06_tc_crs, 07_tc_sds
-- Include test_type field to distinguish from automated tests
-- Support manual verification status tracking
+**Metadata embedding**
+- Each test embeds traceability metadata in its docstring using `@`-tags:
+  `@links`, `@reviewer`, `@review_status`, `@review_date`
+- A pytest autouse fixture (`tests/conftest.py`) reads the tags and injects
+  `compliantflow.*` properties into the JUnit XML output automatically
+- Helper functions in `tests/utils/docstring_parser.py` are shared between
+  the fixture and the SRS-010 unit tests
 
 ### 2. CI/CD Integration (GitHub Actions)
 
 **Workflow Configuration**
-```yaml
-# .github/workflows/test.yml
-- Run pytest with coverage
-- Generate JUnit XML results
-- Upload test-results artifact
-- Generate coverage report
 ```
-
-**Test Results Provider**
-```python
-class GitHubActionsProvider:
-    def get_test_results() -> Dict[str, TestResult]:
-        # Fetch test-results artifact from GitHub API
-        # Parse JUnit XML
-        # Map test IDs to results
-        # Return test status dictionary
+Phase 1  pytest tests/srs/   --junitxml=srs-results.xml
+Phase 2  pytest tests/sys/   --junitxml=sys-results.xml
+Phase 3  pytest tests/crs/   --junitxml=crs-results.xml
+Phase 3.5  compliantflow test import *.xml --format junit \
+             --tester "GitHub Actions" --run-id $RUN_ID \
+             --commit $SHA
+         git add DHF/test-results/results.yaml && git commit
+Phase 4  compliantflow cr update CR-NNN --item ...   (PR only)
 ```
 
 ### 3. Test Results Integration
 
-**Data Flow**
+**Framework-agnostic boundary**
+
 ```
-GitHub Actions → Artifact Upload → GitHub API → 
-GitHubActionsProvider → TestResultsProvider → UI Display
+tests/  (framework-specific adapter)
+  conftest.py               pytest autouse fixture:
+  utils/docstring_parser.py   reads @-tags → record_property()
+                                             ↓
+                              JUnit XML  <compliantflow.*>
+────────────────────────────── boundary ──────────────────
+src/  (framework-agnostic core)
+  test_results/junit_parser.py   parse compliantflow.* properties
+  test_results/result_store.py   persist to results.yaml
 ```
 
-**Configuration**
-```yaml
-test_integration:
-  provider: github
-  github:
-    owner: itercharles
-    repo: CompliantFlow
-    workflow_name: test.yml
-    artifact_name: test-results
+The core (`src/`) only consumes JUnit XML. Any test framework that can
+write `compliantflow.*` `<property>` elements — or whose test names follow
+the `TC-SYS-NNN` naming convention — is compatible without code changes.
+
+**Data Flow**
 ```
+Test execution → JUnit XML → compliantflow test import → results.yaml
+                                                        → verification_status
+                                                          updated on linked items
+```
+
+**Storage**: `DHF/test-results/results.yaml` — one record per TC ID.
+Git history is the audit trail.
 
 ### 4. UI Integration
 
 **Test Status Display**
-- Universal page template shows test verification status
-- Color-coded badges (PASS/FAIL/PENDING)
-- Real-time updates from GitHub Actions
-- Manual test status tracking
-
-**Test Case Pages**
-- TC-SYS (System Tests) - Page 9
-- TC-CRS (Validation Tests) - Page 10
-- TC-SDS (Design Tests) - Page 11
+- Traceability matrix shows `testing_status` from ResultStore per TC
+- Color-coded badges (PASS / FAIL / SKIP / PENDING)
+- Linked requirement items show computed `verification_status`
 
 ## Test Automation Strategy
 
@@ -617,16 +608,23 @@ test_integration:
 
 ### Test ID Mapping
 
-Tests include `@test_id` decorator in docstring:
+TC IDs are embedded in test function names and/or docstrings:
 ```python
-def test_TC_SYS_004_governance_parsing():
-    \"\"\"
-    @test_id: TC-SYS-004
-    @links: SYS-005
-    \"\"\"
+def test_TC_SYS_001_001_object_creation(test_dhf_root):
+    """
+    TC-SYS-001-001: Object creation validation
+
+    @test_id: TC-SYS-001-001   # optional; inferred from function name if absent
+    @links: SYS-001
+    @reviewer: Alice
+    @review_status: approved
+    @review_date: 2026-01-15
+    """
 ```
 
-Scanner extracts test IDs and maps to YAML test cases.
+The pytest autouse fixture extracts all tags and injects them into
+JUnit XML `<properties>`. `compliantflow test import` then reads the
+XML and persists the data into `DHF/test-results/results.yaml`.
 
 ## Technology Stack
 
@@ -640,8 +638,7 @@ Scanner extracts test IDs and maps to YAML test cases.
 
 **Integration:**
 - GitPython - Git operations
-- requests - GitHub API client
-- xml.etree.ElementTree - XML parsing
+- xml.etree.ElementTree - JUnit XML parsing
 
 **Dependencies:**
 - pydantic>=2.0 - Data validation
@@ -649,28 +646,16 @@ Scanner extracts test IDs and maps to YAML test cases.
 
 ## Security Considerations
 
-**GitHub Token:**
-- Stored in .env file (not committed)
-- Required for GitHub API access
-- Read-only permissions sufficient
-
-**Token Handling:**
-```python
-# Reload .env to bypass Streamlit caching
-load_dotenv(override=True)
-token = os.getenv("GITHUB_TOKEN")
-```
+**GitHub Actions token** (`secrets.GITHUB_TOKEN`):
+- Used only to push commits back to the branch (Phase 3.5 and Phase 4)
+- Minimum required permission: `contents: write`, `pull-requests: write`
+- No GitHub API calls are made for test result fetching
 
 ## Performance Characteristics
 
 **Test Execution:**
-- Local: 58 tests in ~4.5 seconds
-- CI: 58 tests in ~20 seconds (includes setup)
-
-**API Calls:**
-- Cached in Streamlit session
-- Rate limit: 60 requests/hour (unauthenticated)
-- Rate limit: 5000 requests/hour (authenticated)
+- Local: ~238 tests in ~13 seconds
+- CI: phases run sequentially, total ~5 minutes including setup
 
 ## Regulatory Compliance
 
@@ -739,19 +724,19 @@ token = os.getenv("GITHUB_TOKEN")
 
 #### Interfaces
 
-**TestResultsProvider Interface:**
-- `get_test_results() -> Dict[str, TestResult]`
-- `get_test_status(test_id: str) -> str`
+**`parse_junit_xml(path) -> List[ExecutionResult]`** (`src/test_results/junit_parser.py`)
+- Extracts TC ID from `compliantflow.id` property or test name regex
+- Maps `<failure>` / `<skipped>` / pass to PASS / FAIL / SKIP
+- Reads `compliantflow.links`, `.title`, `.reviewer`, `.review_date`, `.review_status`
 
-**GitHubActionsProvider Interface:**
-- `fetch_latest_test_results() -> Dict`
-- `parse_junit_xml(xml_content: str) -> Dict`
-- `map_test_ids(results: Dict) -> Dict`
+**`ResultStore`** (`src/test_results/result_store.py`)
+- `record_execution(tc_id, testing_status, ...)` — upserts one record
+- `get(tc_id)`, `get_all(status_filter)`, `as_tc_items()` — reads
 
-**TestScanner Interface:**
-- `scan_test_files() -> List[TestInfo]`
-- `extract_test_id(func) -> Optional[str]`
-- `parse_docstring(docstring: str) -> Dict`
+**`_TestResultsMixin`** (`src/compliantflow/mixins/test_results_mixin.py`)
+- `import_test_results(results, tester, run_id, run_url, commit_sha)` — persists
+  all results and recomputes `verification_status` on linked requirement items
+- `get_test_result(tc_id)`, `get_all_test_results(status_filter)` — queries
 
 
 #### Related Requirements
