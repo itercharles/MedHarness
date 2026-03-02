@@ -32,6 +32,10 @@ PYTHONPATH=src python -m compliantflow traceability chain SYS-001
 PYTHONPATH=src python -m compliantflow test import results.xml --format junit --tester "GitHub Actions" --run-id 123 --run-url https://github.com/org/repo/actions/runs/123 --commit abc123
 PYTHONPATH=src python -m compliantflow test status TC-SYS-001
 PYTHONPATH=src python -m compliantflow test list --status PASS
+# Document generation
+PYTHONPATH=src python -m compliantflow doc list
+PYTHONPATH=src python -m compliantflow doc generate SYS
+PYTHONPATH=src python -m compliantflow doc generate ALL
 ```
 
 CLI package is at `src/cli/cli.py`. Uses `click` (already installed via streamlit).
@@ -64,6 +68,7 @@ The class is composed of seven mixins under `src/compliantflow/mixins/`:
 - `schema_form.py` — `get_form_schema`, `get_relationship_options`, `get_doc_type_metrics`
 - `compliance.py` — `get_policy_group`, `check_compliance`
 - `test_results_mixin.py` — `import_test_results`, `get_test_result`, `get_all_test_results`
+- `document_generation_mixin.py` — `get_available_doc_types`, `generate_spec`
 
 Key public methods:
 - `get_all_items()` → `List[Dict]` — returns YAML items + TC items from ResultStore
@@ -78,6 +83,8 @@ Key public methods:
 - `build_traceability_matrix(doc_types)` → `{columns: [...], rows: [{DOC_TYPE: id|null, is_orphan, orphan_type, is_complete}]}`
 - `get_item_chain(item_id)` → `{root: id, nodes: {id: {id, title, status, doc_type, upstream: [...], downstream: [...]}}}`
 - `import_test_results(results, tester, run_id, run_url, commit_sha)` → `{imported, skipped, items_updated, failed_tcs}`
+- `get_available_doc_types()` → `List[str]` — doc type codes with a `document_specifications` entry
+- `generate_spec(doc_type_code)` → `{doc_type, output_path, version}` — writes markdown to DHF/documents/specifications/
 - `get_test_result(tc_id)` → `Optional[Dict]`
 - `get_all_test_results(status_filter)` → `Dict[tc_id, record]`
 

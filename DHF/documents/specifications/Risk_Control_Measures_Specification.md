@@ -7,8 +7,8 @@
 | Field | Value |
 |-------|-------|
 | **Document ID** | RCM-SPEC |
-| **Version** | 1.0 |
-| **Generated** | 2025-12-31 |
+| **Version** | 1.1 |
+| **Generated** | 2026-03-02 |
 | **Status** | Draft |
 | **Project** | CompliantFlow Project |
 
@@ -24,7 +24,7 @@ This document provides a comprehensive list of all risk control measures, their 
 
 ### 1.2 Scope
 
-This specification covers all risk control measures defined in the CompliantFlow system as of 2025-12-31.
+This specification covers all risk control measures defined in the CompliantFlow system as of 2026-03-02.
 
 ---
 
@@ -89,7 +89,7 @@ The system shall automatically detect and report items with missing or invalid l
 ## 4. Document Control
 
 **Document Owner**: Risk Management  
-**Last Updated**: 2025-12-31  
+**Last Updated**: 2026-03-02  
 **Next Review**: TBD
 
 ---

@@ -7,7 +7,7 @@
 | Field | Value |
 |-------|-------|
 | **Document ID** | SWDD-SPEC |
-| **Version** | 1.0 |
+| **Version** | 1.1 |
 | **Generated** | 2026-03-02 |
 | **Status** | Draft |
 | **Project** | CompliantFlow Project |

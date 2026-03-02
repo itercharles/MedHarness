@@ -7,7 +7,7 @@
 | Field | Value |
 |-------|-------|
 | **Document ID** | SYSARCH-SPEC |
-| **Version** | 1.1 |
+| **Version** | 1.3 |
 | **Generated** | 2026-03-02 |
 | **Status** | Draft |
 | **Project** | CompliantFlow Project |

@@ -7,8 +7,8 @@
 | Field | Value |
 |-------|-------|
 | **Document ID** | UC-SPEC |
-| **Version** | 1.0 |
-| **Generated** | 2025-12-27 |
+| **Version** | 1.1 |
+| **Generated** | 2026-03-02 |
 | **Status** | Draft |
 | **Project** | CompliantFlow Project |
 
@@ -24,13 +24,13 @@ This document provides a comprehensive list of all Use Cases, including their cu
 
 ### 1.2 Scope
 
-This specification covers all Use Cases defined in the CompliantFlow system as of 2025-12-27.
+This specification covers all Use Cases defined in the CompliantFlow system as of 2026-03-02.
 
 ---
 
 ## 2. Requirements
 
-### 1. UC-001: Manage Requirements
+### 1. UC-001: Manage design history files (DHF)
 
 <div class="requirement-section">
 
@@ -38,8 +38,7 @@ This specification covers all Use Cases defined in the CompliantFlow system as o
 
 #### Description
 
-**Actor:** Requirements Engineer
-**Goal:** Create, update, and maintain requirements with proper review and approval
+Define and manage design history files (DHF)
 
 
 
@@ -53,8 +52,7 @@ This specification covers all Use Cases defined in the CompliantFlow system as o
 
 #### Description
 
-**Actor:** Quality Engineer
-**Goal:** Ensure complete traceability and identify gaps
+Assess traceability and identify gaps
 
 
 
@@ -68,8 +66,7 @@ This specification covers all Use Cases defined in the CompliantFlow system as o
 
 #### Description
 
-**Actor:** Documentation Specialist
-**Goal:** Produce regulatory submission documents
+Produce regulatory submission documents
 
 
 
@@ -83,8 +80,7 @@ This specification covers all Use Cases defined in the CompliantFlow system as o
 
 #### Description
 
-**Actor:** Change Control Board Member
-**Goal:** Assess impact of proposed changes and make approval decisions
+Manage change requests and perform impact analysis.
 
 
 
@@ -98,8 +94,30 @@ This specification covers all Use Cases defined in the CompliantFlow system as o
 
 #### Description
 
-**Actor:** Regulatory Affairs Specialist
-**Goal:** Validate DHF against regulatory requirements
+Analyze DHF against regulatory requirements
+
+
+
+</div>
+
+### 6. UC-006: CLI Automation by DevOps Engineer
+
+<div class="requirement-section">
+
+**Status**: <span class="status-approved">APPROVED</span>  
+
+#### Description
+
+A DevOps engineer integrates CompliantFlow into a CI/CD pipeline using the CLI.
+
+Primary Flow:
+1. CI pipeline checks out code with DHF items
+2. Engineer runs `python -m compliantflow validate` to validate all items against schema
+3. On pull request, CI runs `python -m compliantflow cr check-status CR-XXX` to verify the CR is open
+4. CI detects changed files and runs `python -m compliantflow cr update CR-XXX --item SYS-001 --pr-number 42` to auto-populate the CR
+5. Engineer runs `python -m compliantflow item list --type SYS` to audit requirements from a script
+
+The engineer does not start a web server; all operations are command-line only.
 
 
 
@@ -114,21 +132,21 @@ This specification covers all Use Cases defined in the CompliantFlow system as o
 
 | Metric | Count |
 |--------|-------|
-| **Total Requirements** | 5 |
-| **Approved** | 5 |
+| **Total Requirements** | 6 |
+| **Approved** | 6 |
 | **Draft** | 0 |
 | **Retired** | 0 |
 
 ### 3.2 Approval Status
 
-**Approval Rate**: 100.0% (5/5)
+**Approval Rate**: 100.0% (6/6)
 
 ---
 
 ## 4. Document Control
 
 **Document Owner**: Quality Assurance  
-**Last Updated**: 2025-12-27  
+**Last Updated**: 2026-03-02  
 **Next Review**: TBD
 
 ---
