@@ -1,4 +1,35 @@
 id: UC-004
 title: Manage Change Requests
-content: Manage change requests and perform impact analysis.
+content: |-
+  A Regulatory Engineer or Project Manager raises and manages change requests (CRs)
+  to control modifications to approved DHF items in compliance with ISO 13485 §7.3.7.
+
+  Actor: Regulatory Engineer / Project Manager / DevOps Engineer
+
+  Preconditions:
+  - Change control is enabled in project_config.yaml
+  - At least one approved DHF item requires modification
+
+  Primary Flow:
+  1. Engineer identifies a need for change (new requirement, defect, regulatory update)
+  2. Engineer creates a new CR item: records title, description, justification, and priority
+  3. System assigns a CR ID (e.g. CR-013) and sets status to `draft`
+  4. Engineer identifies all affected DHF items and adds them to the CR's `affected_items` list
+  5. Engineer submits the CR for review (transitions to `in_review`)
+  6. Reviewer assesses impact on safety, schedule, and linked items; records `impact_assessment`
+  7. Reviewer approves the CR (transitions to `approved`)
+  8. Engineer starts implementation (transitions to `implementing`); makes changes to affected items
+  9. CI pipeline automatically records implementation PRs against the CR via
+     `compliantflow cr update CR-013 --item SYS-001 --pr-number 42`
+  10. On completion, engineer transitions CR to `completed`; linked items are re-approved as needed
+
+  Alternative Flows:
+  - A. CR rejected: reviewer transitions CR to `cancelled` with documented reason
+  - B. Impact too large: CR is split into multiple smaller CRs before approval
+  - C. Emergency change: CR approved with expedited review; post-hoc documentation completed
+
+  Postconditions:
+  - All changes to DHF items are traceable to an approved CR
+  - Implementation PRs are recorded in the CR for audit trail
+  - Affected items are re-reviewed and re-approved after change
 status: approved

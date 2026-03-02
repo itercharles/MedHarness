@@ -6,7 +6,6 @@ description: 'I want to display the link items and the relationship with other o
   for now the table display "link" without real content. It has been decided to remove the link column'
 justification: usability
 priority: High
-file_path: /Users/chenwenliang/code/CompliantFlow/DHF/items/09_cr/CR-008.yaml
 review_by: charles
 review_date: '2025-12-31'
 timestamp: '2025-12-31T13:24:25.916393'

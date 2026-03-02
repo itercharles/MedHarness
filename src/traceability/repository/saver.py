@@ -77,7 +77,10 @@ class ItemSaver:
         # since we're using aliases (id, content)
         data.pop('uid', None)
         data.pop('text', None)
-        
+
+        # Remove runtime-only fields that must never be persisted to YAML
+        data.pop('file_path', None)
+
         # Remove fields with default values to keep YAML files clean
         # These are Item model defaults that shouldn't be in the files
         if data.get('active') == True:
