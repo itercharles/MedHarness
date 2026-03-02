@@ -1,4 +1,32 @@
 id: UC-001
 title: Manage design history files (DHF)
-content: Define and manage design history files (DHF)
+content: |-
+  A Regulatory Engineer or QA Engineer manages DHF items through their full lifecycle
+  using CompliantFlow to ensure IEC 62304 and ISO 13485 compliance.
+
+  Actor: Regulatory Engineer / QA Engineer
+
+  Preconditions:
+  - User has access to the CompliantFlow web interface or CLI
+  - The DHF repository is initialised and project_config.yaml is configured
+
+  Primary Flow:
+  1. Engineer opens the relevant document type page (e.g. CRS, SYS, SRS)
+  2. Engineer creates a new item: enters title, content, and traceability links to parent items
+  3. System assigns a unique ID, sets status to `draft`, and commits the YAML file to Git
+  4. Engineer reviews content and ensures all required fields and links are complete
+  5. Engineer submits the item for review (transitions to `in_review`)
+  6. Reviewer validates the item against acceptance criteria (field completeness, link validity)
+  7. Reviewer approves the item (transitions to `approved`)
+  8. Approved item becomes part of the auditable DHF record; Git history provides the audit trail
+
+  Alternative Flows:
+  - A. Reviewer requests changes: item transitions back to `draft`; engineer reworks and resubmits
+  - B. Item becomes obsolete: engineer transitions it to `retired` with a documented reason
+  - C. Bulk operations via CLI: engineer uses `compliantflow item list/get/update` for automation
+
+  Postconditions:
+  - Item is in a defined lifecycle state with a complete audit trail in Git
+  - Traceability links to parent and child items are maintained
+  - Compliance with IEC 62304 §5.1.4 (item identification) and §5.1.9 (configuration management) is satisfied
 status: approved

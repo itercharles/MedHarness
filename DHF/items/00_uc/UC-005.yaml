@@ -1,4 +1,32 @@
 id: UC-005
 title: Check Compliance Policies
-content: Analyze DHF against regulatory requirements
+content: |-
+  A Regulatory Engineer evaluates the DHF against a defined compliance policy group
+  (e.g. IEC 62304) to identify non-conformances before a regulatory submission or audit.
+
+  Actor: Regulatory Engineer / QA Engineer
+
+  Preconditions:
+  - A compliance policy file (e.g. IEC_62304.yaml) is present in DHF/config/
+  - DHF items are populated and in a reviewable state
+
+  Primary Flow:
+  1. Engineer opens the Compliance view or runs `compliantflow validate compliance IEC_62304`
+  2. System loads the policy group and evaluates each policy rule against the current DHF state
+  3. For each policy, system checks the applicable items (e.g. all SYS items must be approved)
+  4. System reports each policy as PASS, FAIL, or WARNING with the relevant item IDs and
+     the full policy text for traceability
+  5. Engineer reviews failures and warnings; creates CRs or defects to address each finding
+  6. Engineer re-runs compliance check after remediation to confirm all policies pass
+
+  Alternative Flows:
+  - A. CI gate: CI pipeline runs compliance check on every PR; fails the build if any
+    required policy is violated, preventing non-compliant code from merging
+  - B. Partial check: engineer validates a single policy group (e.g. only software
+    requirements policies) by selecting a specific group ID
+
+  Postconditions:
+  - Compliance status for each policy is recorded and reviewable
+  - All failures are linked to remediation actions (CRs or defects)
+  - IEC 62304 §4 (general requirements) and §5 (software development process) coverage is confirmed
 status: approved

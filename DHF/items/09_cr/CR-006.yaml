@@ -2,7 +2,6 @@ id: CR-006
 title: The objects' ID shall be generated automatically and not editable
 status: in_review
 priority: High
-file_path: /Users/chenwenliang/code/CompliantFlow/DHF/items/09_cr/CR-006.yaml
 description: The objects' ID shall be generated automatically and not editable
 justification: The ID shall not be edit as it cause problems for the reference
 review_by: charles

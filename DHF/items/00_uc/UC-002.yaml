@@ -1,4 +1,31 @@
 id: UC-002
 title: Verify Traceability
-content: Assess traceability and identify gaps
+content: |-
+  A Regulatory Engineer assesses traceability coverage across the full requirement
+  hierarchy and identifies gaps before a design review or regulatory submission.
+
+  Actor: Regulatory Engineer / QA Engineer
+
+  Preconditions:
+  - DHF contains items of at least two linked document types (e.g. CRS and SYS)
+  - Items have traceability links defined (satisfies / derives_from / implements)
+
+  Primary Flow:
+  1. Engineer opens the Traceability view in CompliantFlow
+  2. Engineer selects a traceability path (e.g. UC → CRS → SYS → SRS → SWDD)
+  3. System builds a traceability matrix showing all items across the selected path
+  4. Engineer reviews the matrix: covered links are shown, gaps are highlighted
+  5. Engineer identifies orphaned items (items with no upstream or downstream link)
+  6. Engineer drills into a specific item chain to inspect the full upstream/downstream graph
+  7. Engineer documents any gaps as defects or new requirements for remediation
+
+  Alternative Flows:
+  - A. CLI audit in CI: engineer runs `compliantflow traceability matrix CRS SYS SRS` to
+    output a machine-readable matrix and fail the pipeline if coverage drops below threshold
+  - B. Chain inspection: engineer runs `compliantflow traceability chain SYS-001` to see
+    the complete linked graph for a single item
+
+  Postconditions:
+  - All traceability gaps are identified and logged
+  - IEC 62304 §5.1.1 (software development plan traceability) requirements can be verified
 status: approved

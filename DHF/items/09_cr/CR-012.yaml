@@ -49,7 +49,11 @@ affected_items:
 - SRS-010
 - SWDD-012
 - SYSARCH-007
-file_path: /home/runner/work/CompliantFlow/CompliantFlow/DHF/items/09_cr/CR-012.yaml
+- UC-001
+- UC-002
+- UC-003
+- UC-004
+- UC-005
 implementation_prs:
 - pr_number: 19
   pr_url: https://github.com/itercharles/CompliantFlow/pull/19
