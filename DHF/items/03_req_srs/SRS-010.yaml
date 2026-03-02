@@ -1,19 +1,33 @@
 id: SRS-010
 title: Test Result Integration
 content: |-
-  Software shall retrieve and display test results from CI/CD pipeline.
-  
-  Behavior:
-  - Fetch test results from CI/CD system
-  - Parse test result data
-  - Display pass/fail status per test
-  - Link test results to requirement items
-  
+  Software shall retrieve and persist test results from the CI/CD pipeline
+  into the DHF, linking each result to the requirement items it verifies.
+
+  Mechanism:
+  - Test functions embed metadata in their docstrings using @-tags:
+      @test_id: TC-SYS-001-001      (optional; inferred from function name if absent)
+      @links: SYS-001, SYS-002      (requirement items this TC verifies)
+      @reviewer: Alice               (optional; design-review metadata)
+      @review_status: approved       (optional)
+      @review_date: 2026-01-15       (optional)
+  - A pytest autouse fixture (tests/conftest.py) reads these tags and injects
+    them as compliantflow.* <property> elements into the JUnit XML output.
+  - The CLI command `compliantflow test import <file> --format junit` parses
+    the JUnit XML, extracts TC IDs, statuses, and compliantflow.* properties,
+    and persists one record per TC in DHF/test-results/results.yaml.
+  - After import, verification_status is recomputed for each linked requirement
+    item: verified (all TCs PASS), failed (any TC FAIL), not_verified (no results).
+
+  TC ID extraction (priority order):
+  1. compliantflow.id property in JUnit XML
+  2. Regex on test name: test_TC_SYS_001_001_* -> TC-SYS-001-001
+
   Acceptance Criteria:
-  - Test results are fetched within 5 seconds
-  - Pass/fail status is correctly parsed
-  - Test results are linked to correct requirement IDs
-  - Results update when new tests are run
+  - All compliantflow.* properties are extracted and stored correctly
+  - PASS / FAIL / SKIP statuses are correctly parsed
+  - Tests with no recognisable TC ID are silently skipped
+  - Linked requirement items have their verification_status updated after import
 derives_from:
 - SYS-031
 status: approved
