@@ -90,3 +90,6 @@ implementation_prs:
   pr_url: https://github.com/itercharles/CompliantFlow/pull/32
   title: 'CR-012: Refresh SRS-010 - remove scanner/provider, align tests with new
     import mechanism'
+- pr_number: 36
+  pr_url: https://github.com/itercharles/CompliantFlow/pull/36
+  title: 'CR-012: Fix PDF export - render markdown inside HTML div blocks'

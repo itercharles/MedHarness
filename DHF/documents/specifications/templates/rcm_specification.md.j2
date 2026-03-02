@@ -33,7 +33,7 @@ This specification covers all risk control measures defined in the CompliantFlow
 {% for item in items %}
 ### {{ loop.index }}. {{ item.id }}: {{ item.title }}
 
-<div class="rcm-section">
+<div class="rcm-section" markdown="1">
 
 **Status**: <span class="status-{{ item.status }}">{{ item.status | upper }}</span>  
 {% if item.control_type %}**Control Type**: {{ item.control_type }}  {% endif %}

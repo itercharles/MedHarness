@@ -250,7 +250,7 @@ Generated Document
 {% for item in items %}
 ### {{ loop.index }}. {{ item.id }}: {{ item.title }}
 
-<div class="architecture-section">
+<div class="architecture-section" markdown="1">
 
 **Status**: <span class="status-{{ item.status }}">{{ item.status | upper }}</span>  
 {% if item.component %}**Component**: {{ item.component }}  {% endif %}
