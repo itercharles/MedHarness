@@ -35,3 +35,20 @@ class _DocumentGenerationMixin:
             "output_path": str(output_path),
             "version": version,
         }
+
+    def export_pdf(self, doc_type_code: str) -> dict:
+        """Regenerate the markdown spec then export to PDF.
+
+        Always regenerates the markdown first to ensure the PDF reflects the
+        latest DHF state.  Returns {"doc_type", "md_path", "pdf_path", "version"}.
+        Raises ValueError if doc_type_code is not configured.
+        """
+        spec_result = self.generate_spec(doc_type_code)
+        gen = self._get_doc_generator()
+        pdf_path = gen.export_static_doc_to_pdf(doc_type_code)
+        return {
+            "doc_type": doc_type_code,
+            "md_path": spec_result["output_path"],
+            "pdf_path": str(pdf_path),
+            "version": spec_result["version"],
+        }
