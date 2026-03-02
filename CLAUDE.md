@@ -43,17 +43,15 @@ stdout = machine-readable JSON; stderr = human-readable messages.
 
 ### Run tests
 ```bash
-# SYS tests (fast, recommended)
-PYTHONPATH=src src/venv/bin/pytest tests/sys/ -v
+# Full suite — MUST run all three before merging
+PYTHONPATH=src src/venv/bin/pytest tests/sys/ tests/crs/ -q
+PYTHONPATH=src src/venv/bin/pytest tests/srs/ -q
 
 # Single test
-PYTHONPATH=$(pwd) src/venv/bin/pytest tests/sys/test_sys_001_object_management.py::test_name -v
-
-# All unit tests (srs)
-PYTHONPATH=$(pwd) src/venv/bin/pytest tests/srs/ -v
+PYTHONPATH=src src/venv/bin/pytest tests/sys/test_sys_001_object_management.py::test_name -v
 ```
 
-**Important**: Run from the repo root. Use `PYTHONPATH=src` for SYS/CRS tests; CI uses `PYTHONPATH="${PWD}/src"` for SRS tests.
+**Important**: Run from the repo root. Use `PYTHONPATH=src` for all test suites. **Before any merge, all three test suites (sys, crs, srs) must pass.**
 
 ## Architecture
 
