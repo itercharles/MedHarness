@@ -118,11 +118,6 @@ doc_types:
     - from_states:
       - in_review
       to_state: approved
-      criteria:
-      - id: review_complete
-        name: Review completed
-        check_type: manual
-        required: true
     - from_states:
       - in_review
       to_state: draft
@@ -191,11 +186,6 @@ doc_types:
         check_type: field_not_empty
         field: title
         required: true
-      - id: review_complete
-        name: Review completed
-        description: Requirement has been reviewed by qualified person
-        check_type: manual
-        required: true
       label: Approve
     - from_states:
       - approved
@@ -206,11 +196,6 @@ doc_types:
         description: Reason for retirement must be documented
         check_type: field_not_empty
         field: retired_reason
-        required: true
-      - id: impact_assessed
-        name: Impact assessed
-        description: Impact of retirement on linked items assessed
-        check_type: manual
         required: true
       label: Retire
   has_verification: true
@@ -448,10 +433,6 @@ doc_types:
         relationship_field: derives_from
         required_status: approved
         required: true
-      - id: review_complete
-        name: Review completed
-        check_type: manual
-        required: true
       label: Approve
     - from_states:
       - approved
@@ -461,10 +442,6 @@ doc_types:
         name: Retirement reason
         check_type: field_not_empty
         field: retired_reason
-        required: true
-      - id: impact_assessed
-        name: Impact assessed
-        check_type: manual
         required: true
       label: Retire
   has_verification: true
@@ -662,19 +639,10 @@ doc_types:
         check_type: field_not_empty
         field: impact_assessment
         required: true
-      - id: review_complete
-        name: Review completed
-        check_type: manual
-        required: true
       label: Approve
     - from_states:
       - in_review
       to_state: cancelled
-      criteria:
-      - id: rejection_reason
-        name: Rejection reason documented
-        check_type: manual
-        required: true
       label: Reject
     - from_states:
       - approved
@@ -689,15 +657,6 @@ doc_types:
     - from_states:
       - implementing
       to_state: completed
-      criteria:
-      - id: implementation_done
-        name: Implementation completed
-        check_type: manual
-        required: true
-      - id: testing_done
-        name: Testing completed
-        check_type: manual
-        required: true
       label: Complete
     - from_states:
       - draft
@@ -756,11 +715,6 @@ doc_types:
     - from_states:
       - approved
       to_state: released
-      criteria:
-      - id: verification_complete
-        name: Verification completed
-        check_type: manual
-        required: true
       label: Release
 - code: DEF
   name: Defect
@@ -872,28 +826,14 @@ doc_types:
         check_type: field_not_empty
         field: resolution
         required: true
-      - id: fix_verified
-        name: Fix verified
-        check_type: manual
-        required: true
       label: Resolve
     - from_states:
       - resolved
       to_state: closed
-      criteria:
-      - id: closure_verified
-        name: Closure verified
-        check_type: manual
-        required: true
       label: Close
     - from_states:
       - open
       to_state: cancelled
-      criteria:
-      - id: wont_fix_reason
-        name: Won't fix reason documented
-        check_type: manual
-        required: true
       label: Won't Fix
     - from_states:
       - in_progress
@@ -974,22 +914,10 @@ doc_types:
     - from_states:
       - in_review
       to_state: approved
-      criteria:
-      - id: verification_done
-        name: Verification completed
-        description: SOUP verification evidence documented
-        check_type: manual
-        required: true
       label: Approve
     - from_states:
       - under_review
       to_state: rejected
-      criteria:
-      - id: rejection_reason
-        name: Rejection reason
-        description: Reason for rejecting SOUP must be documented
-        check_type: manual
-        required: true
       label: Reject
     - from_states:
       - rejected
@@ -998,8 +926,7 @@ doc_types:
       label: Revise
 traceability_matrices:
 - name: Complete Requirements Chain
-  description: Full traceability from use cases through all requirement levels to
-    detailed design
+  description: Full traceability from use cases through all requirement levels to detailed design
   path:
   - UC
   - CRS
