@@ -46,5 +46,5 @@ content: |-
   
   **Complexity**: O(C) where C = number of criteria
 implements:
-- SRS-009
+- SRS-008
 status: approved

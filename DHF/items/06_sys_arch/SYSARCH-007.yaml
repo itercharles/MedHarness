@@ -31,4 +31,5 @@ content: |-
   - `tests/utils/docstring_parser.py` provides shared helpers for tag extraction
 design:
 - SYS-031
+- SYS-033
 status: approved

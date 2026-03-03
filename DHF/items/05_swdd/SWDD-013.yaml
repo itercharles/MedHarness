@@ -5,24 +5,41 @@ content: |-
 
   **Package structure**:
   ```
+  src/cli/
+    cli.py            # all click commands (primary entry point)
   src/compliantflow/
-    __init__.py       # package marker
-    __main__.py       # entry: from .cli import main; main()
-    cli.py            # all click commands
+    __main__.py       # backward-compat: delegates to cli.main
   ```
 
   **Click command hierarchy**:
   ```
   main (group, --dhf option)
-    validate
+    validate (group)
+      schema
+      traceability
+      compliance <GROUP>
     item (group)
       list (--type, --status, --search)
       get <ITEM_ID>
+      create --type CODE --data JSON [--author NAME] [--cr CR_ID]
+      update <ITEM_ID> --data JSON [--author NAME]
+      delete <ITEM_ID> [--author NAME]
+      transitions <ITEM_ID>
+      transition <ITEM_ID> <TO_STATE> [--by NAME]
     cr (group)
       check-status <CR_ID>
       update <CR_ID> (--item repeatable, --pr-number, --pr-url, --pr-title)
     traceability (group)
-      neighbors <ITEM_ID>
+      matrix <TYPE> [TYPE...]
+      chain <ITEM_ID>
+    test (group)
+      import <FILE> --format junit [--tester NAME] [--run-id ID] [--run-url URL] [--commit SHA]
+      status <TC_ID>
+      list [--status STATUS]
+    doc (group)
+      list
+      generate <CODE|ALL>
+      export <CODE|ALL>
   ```
 
   **DHF path resolution** (in order):
@@ -37,9 +54,9 @@ content: |-
 
   **Core instantiation**:
   ```python
-  core = CompliantFlowCore(repo_root=dhf_path.parent)
+  core = CompliantFlowCore(dhf_root=dhf_path)
   ```
-  One instance per CLI invocation; `auto_commit=False` (CI manages git).
+  One instance per CLI invocation; stdout = machine-readable JSON, stderr = human-readable messages.
 implements:
 - SRS-012
 status: approved

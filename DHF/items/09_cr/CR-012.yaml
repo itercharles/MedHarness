@@ -54,7 +54,6 @@ affected_items:
 - UC-003
 - UC-004
 - UC-005
-- SYS-TRANS-001
 - REL-003
 - CRS-001
 - CRS-005
@@ -65,6 +64,13 @@ affected_items:
 - SYS-010
 - SYS-031
 - SRS-013
+- SWDD-002
+- SWDD-003
+- SWDD-005
+- SWDD-007
+- SWDD-009
+- SWDD-014
+- SWDD-015
 implementation_prs:
 - pr_number: 19
   pr_url: https://github.com/itercharles/CompliantFlow/pull/19
@@ -117,3 +123,6 @@ implementation_prs:
 - pr_number: 39
   pr_url: https://github.com/itercharles/CompliantFlow/pull/39
   title: 'CR-012: Align SYS/SRS with CRS - fix links, content and gaps'
+- pr_number: 40
+  pr_url: https://github.com/itercharles/CompliantFlow/pull/40
+  title: 'CR-012: Align SYSARCH and SWDD with SYS/SRS hierarchy'
