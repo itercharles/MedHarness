@@ -55,7 +55,7 @@ def test_TC_SYS_031_002_item_verification_status(test_dhf_root):
     assert item["id"] == "SRS-001"
     assert "title" in item, "Item should have a title"
     assert "Item Persistence and Versioning" in item["title"]
-    assert item.get("status") == "approved", "SRS-001 should have approved status"
+    # SRS items have no explicit status (GitOps model — approved on main by definition)
     assert "content" in item, "Item should have content"
     assert "persist" in item["content"].lower() or "dhf" in item["content"].lower(), \
         "Content should describe persistence"

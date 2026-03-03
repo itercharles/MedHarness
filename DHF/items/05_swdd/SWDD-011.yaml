@@ -38,4 +38,3 @@ content: |-
   **Complexity**: O(M) where M = markdown content length
 implements:
 - SRS-009
-status: approved

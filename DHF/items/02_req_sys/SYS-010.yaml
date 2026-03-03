@@ -1,10 +1,16 @@
 id: SYS-010
-content: The system shall support configurable lifecycle workflows for objects (such as requirements, design items, change requests), with
-  state transitions and validation rules defined in configuration. 
-  The system shall enforce the custom transition rules.
+content: |-
+  The system shall support two complementary approval models:
+
+  1. **GitOps Approval Model** (UC, CRS, SYS, SRS, SWDD, SYSARCH, SOUP, RISK, RCM): approval
+     state is derived from the Git branch — main branch = approved, feature branch = draft/in-review,
+     deleted from repo = retired. No explicit status field is stored on these items.
+
+  2. **Configurable Lifecycle Workflows** (CR, REL, DEF): explicit state transitions and validation
+     rules defined in configuration. The system shall enforce the configured transition rules,
+     including field validation and linked-item status checks.
 title: Object Workflow Management
 category: Functional
-status: approved
 satisfies:
 - CRS-001
 - CRS-003

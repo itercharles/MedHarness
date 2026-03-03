@@ -7,8 +7,8 @@
 | Field | Value |
 |-------|-------|
 | **Document ID** | RISK-SPEC |
-| **Version** | 1.0 |
-| **Generated** | 2026-03-02 |
+| **Version** | 1.1 |
+| **Generated** | 2026-03-03 |
 | **Status** | Draft |
 | **Project** | CompliantFlow Project |
 
@@ -24,7 +24,7 @@ This document provides a comprehensive list of all identified risks, their sever
 
 ### 1.2 Scope
 
-This specification covers all risks identified in the CompliantFlow system as of 2026-03-02.
+This specification covers all risks identified in the CompliantFlow system as of 2026-03-03.
 
 ---
 
@@ -32,9 +32,9 @@ This specification covers all risks identified in the CompliantFlow system as of
 
 ### 1. RISK-001: Broken References
 
-<div class="risk-section">
+<div class="risk-section" markdown="1">
 
-**Status**: <span class="status-approved">APPROVED</span>  
+**Status**: <span class="status-"></span>  
 
 #### Hazard
 
@@ -82,7 +82,7 @@ Risk mitigated by RCM-001 (Orphan Detection). Residual risk is low and acceptabl
 | Metric | Count |
 |--------|-------|
 | **Total Risks** | 1 |
-| **Approved** | 1 |
+| **Approved** | 0 |
 | **Under Review** | 0 |
 | **Draft** | 0 |
 
@@ -99,7 +99,7 @@ Risk mitigated by RCM-001 (Orphan Detection). Residual risk is low and acceptabl
 ## 4. Document Control
 
 **Document Owner**: Risk Management  
-**Last Updated**: 2026-03-02  
+**Last Updated**: 2026-03-03  
 **Next Review**: TBD
 
 ---

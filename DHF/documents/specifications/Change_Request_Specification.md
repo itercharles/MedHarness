@@ -1,7 +1,7 @@
 # Change Request Specification
 
 **Document Version:** 1.0  
-**Generated:** 2026-03-02  
+**Generated:** 2026-03-03  
 **Project:** CompliantFlow Project
 
 ---
@@ -13,7 +13,7 @@
 | Document ID | CR-SPEC |
 | Version | 1.0 |
 | Status | DRAFT |
-| Last Updated | 2026-03-02 |
+| Last Updated | 2026-03-03 |
 | Total Change Requests | 20 |
 
 ---
@@ -29,14 +29,14 @@ This document provides a comprehensive specification of all Change Requests (CRs
 ### By Status
 
 - **DRAFT**: 4 change request(s)
-- **IN_REVIEW**: 3 change request(s)
-- **APPROVED**: 10 change request(s)
+- **IN_REVIEW**: 4 change request(s)
+- **APPROVED**: 2 change request(s)
 - **IMPLEMENTING**: 1 change request(s)
 
 ### By Priority
 
-- **High**: 10 change request(s)
-- **Medium**: 4 change request(s)
+- **High**: 9 change request(s)
+- **Medium**: 3 change request(s)
 - **Low**: 1 change request(s)
 
 ---
@@ -242,7 +242,6 @@ Manual tracking is error-prone and does not scale. Automated enforcement ensures
 - RCM-001
 - CRS-010
 - CRS-011
-- CRS-012
 - SYS-001
 - SYS-002
 - SYS-003
@@ -286,7 +285,6 @@ Manual tracking is error-prone and does not scale. Automated enforcement ensures
 - CRS-002
 - CRS-003
 - CRS-004
-- CRS-005
 - CRS-008
 - SYS-031
 - SRS-001
@@ -647,7 +645,6 @@ Impact assessment pending.
 
 #### Affected Items
 
-- SYS-TRANS-001
 - TC-SRS-006
 - TC-SRS-008
 - TC-SRS-015
@@ -693,7 +690,6 @@ Impact assessment pending.
 
 #### Affected Items
 
-- CRS-012
 - UC-006
 - SYS-032
 - SRS-012
@@ -720,10 +716,32 @@ Impact assessment pending.
 - SRS-010
 - SWDD-012
 - SYSARCH-007
+- UC-001
+- UC-002
+- UC-003
+- UC-004
+- UC-005
+- REL-003
+- CRS-001
+- CRS-008
+- CRS-013
+- SYS-001
+- SYS-010
+- SYS-031
+- SRS-013
+- SWDD-002
+- SWDD-003
+- SWDD-005
+- SWDD-007
+- SWDD-009
+- SWDD-014
+- SWDD-015
+- SOUP-PYDANTIC-2.0.0
+- SOUP-STREAMLIT-1.28.0
 
 #### Implementation Pull Requests
 
-[{'pr_number': 19, 'pr_url': 'https://github.com/itercharles/CompliantFlow/pull/19', 'title': 'feat: Add CLI layer for CI/CD integration (CR-012)'}, {'pr_number': 21, 'pr_url': 'https://github.com/itercharles/CompliantFlow/pull/21', 'title': 'CR-012: Improve CI policy, remove stale browser deps, deduplicate CRS tests'}, {'pr_number': 22, 'pr_url': 'https://github.com/itercharles/CompliantFlow/pull/22', 'title': 'CR-012: refactor: Move CompliantFlowCore to compliantflow/ package'}, {'pr_number': 23, 'pr_url': 'https://github.com/itercharles/CompliantFlow/pull/23', 'title': 'CR-012: refactor: Move CLI to src/cli/, rename pages/ to debug_view/'}, {'pr_number': 24, 'pr_url': 'https://github.com/itercharles/CompliantFlow/pull/24', 'title': 'CR-012: feat: Add build_traceability_matrix and get_item_chain to domain API'}, {'pr_number': 25, 'pr_url': 'https://github.com/itercharles/CompliantFlow/pull/25', 'title': 'CR-012: feat: Add traceability matrix and chain CLI commands'}, {'pr_number': 26, 'pr_url': 'https://github.com/itercharles/CompliantFlow/pull/26', 'title': 'CR-012: Remove get_item_neighbors in favour of get_item_chain'}, {'pr_number': 28, 'pr_url': 'https://github.com/itercharles/CompliantFlow/pull/28', 'title': 'CR-012: External test result integration via CLI (SYS-033)'}, {'pr_number': 29, 'pr_url': 'https://github.com/itercharles/CompliantFlow/pull/29', 'title': 'CR-012: Wire test import into CI pipeline (Phase 3.5)'}, {'pr_number': 30, 'pr_url': 'https://github.com/itercharles/CompliantFlow/pull/30', 'title': 'CR-012: fix: Detect new results.yaml when committing CI test imports'}, {'pr_number': 31, 'pr_url': 'https://github.com/itercharles/CompliantFlow/pull/31', 'title': 'CR-012: Simplify test result integration - remove register command and audit log'}, {'pr_number': 32, 'pr_url': 'https://github.com/itercharles/CompliantFlow/pull/32', 'title': 'CR-012: Refresh SRS-010 - remove scanner/provider, align tests with new import mechanism'}]
+[{'pr_number': 19, 'pr_url': 'https://github.com/itercharles/CompliantFlow/pull/19', 'title': 'feat: Add CLI layer for CI/CD integration (CR-012)'}, {'pr_number': 21, 'pr_url': 'https://github.com/itercharles/CompliantFlow/pull/21', 'title': 'CR-012: Improve CI policy, remove stale browser deps, deduplicate CRS tests'}, {'pr_number': 22, 'pr_url': 'https://github.com/itercharles/CompliantFlow/pull/22', 'title': 'CR-012: refactor: Move CompliantFlowCore to compliantflow/ package'}, {'pr_number': 23, 'pr_url': 'https://github.com/itercharles/CompliantFlow/pull/23', 'title': 'CR-012: refactor: Move CLI to src/cli/, rename pages/ to debug_view/'}, {'pr_number': 24, 'pr_url': 'https://github.com/itercharles/CompliantFlow/pull/24', 'title': 'CR-012: feat: Add build_traceability_matrix and get_item_chain to domain API'}, {'pr_number': 25, 'pr_url': 'https://github.com/itercharles/CompliantFlow/pull/25', 'title': 'CR-012: feat: Add traceability matrix and chain CLI commands'}, {'pr_number': 26, 'pr_url': 'https://github.com/itercharles/CompliantFlow/pull/26', 'title': 'CR-012: Remove get_item_neighbors in favour of get_item_chain'}, {'pr_number': 28, 'pr_url': 'https://github.com/itercharles/CompliantFlow/pull/28', 'title': 'CR-012: External test result integration via CLI (SYS-033)'}, {'pr_number': 29, 'pr_url': 'https://github.com/itercharles/CompliantFlow/pull/29', 'title': 'CR-012: Wire test import into CI pipeline (Phase 3.5)'}, {'pr_number': 30, 'pr_url': 'https://github.com/itercharles/CompliantFlow/pull/30', 'title': 'CR-012: fix: Detect new results.yaml when committing CI test imports'}, {'pr_number': 31, 'pr_url': 'https://github.com/itercharles/CompliantFlow/pull/31', 'title': 'CR-012: Simplify test result integration - remove register command and audit log'}, {'pr_number': 32, 'pr_url': 'https://github.com/itercharles/CompliantFlow/pull/32', 'title': 'CR-012: Refresh SRS-010 - remove scanner/provider, align tests with new import mechanism'}, {'pr_number': 36, 'pr_url': 'https://github.com/itercharles/CompliantFlow/pull/36', 'title': 'CR-012: Fix PDF export - render markdown inside HTML div blocks'}, {'pr_number': 37, 'pr_url': 'https://github.com/itercharles/CompliantFlow/pull/37', 'title': 'CR-012: Add UC workflows and fix file_path leaking into YAML'}, {'pr_number': 38, 'pr_url': 'https://github.com/itercharles/CompliantFlow/pull/38', 'title': 'CR-012: Fix CRS completeness - align with UCs, add missing items'}, {'pr_number': 39, 'pr_url': 'https://github.com/itercharles/CompliantFlow/pull/39', 'title': 'CR-012: Align SYS/SRS with CRS - fix links, content and gaps'}, {'pr_number': 40, 'pr_url': 'https://github.com/itercharles/CompliantFlow/pull/40', 'title': 'CR-012: Align SYSARCH and SWDD with SYS/SRS hierarchy'}, {'pr_number': 43, 'pr_url': 'https://github.com/itercharles/CompliantFlow/pull/43', 'title': 'CR-012: Fix CI - phase 3.5 import-results only on pull_request'}, {'pr_number': 44, 'pr_url': 'https://github.com/itercharles/CompliantFlow/pull/44', 'title': 'CR-012: Remove manual_verifications from project config and YAML items'}, {'pr_number': 45, 'pr_url': 'https://github.com/itercharles/CompliantFlow/pull/45', 'title': 'CR-012: Remove dead manual_verifications code'}]
 
 
 #### Traceability
@@ -734,9 +752,39 @@ Impact assessment pending.
 ---
 
 
-### CRS-001: Requirement definition
+### CR-SRS006-TEST: Transition Test CR
 
-**Status:** APPROVED  
+**Status:** IN_REVIEW  
+**Priority:** Not Set  
+**Requested By:** Not Specified  
+**Assigned To:** Unassigned
+
+#### Description
+
+Testing transitions
+
+#### Justification
+
+Test
+
+#### Impact Assessment
+
+Impact assessment pending.
+
+
+
+
+#### Traceability
+
+
+
+
+---
+
+
+### CRS-001: DHF Item Definition and Management
+
+**Status:** UNKNOWN  
 **Priority:** Critical  
 **Requested By:** Not Specified  
 **Assigned To:** Unassigned
@@ -768,7 +816,7 @@ Impact assessment pending.
 
 ### CRS-002: Complete Traceability
 
-**Status:** APPROVED  
+**Status:** UNKNOWN  
 **Priority:** Critical  
 **Requested By:** Not Specified  
 **Assigned To:** Unassigned
@@ -800,7 +848,7 @@ Impact assessment pending.
 
 ### CRS-003: Change Control by change request
 
-**Status:** APPROVED  
+**Status:** UNKNOWN  
 **Priority:** Critical  
 **Requested By:** Not Specified  
 **Assigned To:** Unassigned
@@ -832,7 +880,7 @@ Impact assessment pending.
 
 ### CRS-004: Automated Documentation
 
-**Status:** APPROVED  
+**Status:** UNKNOWN  
 **Priority:** High  
 **Requested By:** Not Specified  
 **Assigned To:** Unassigned
@@ -862,42 +910,10 @@ Impact assessment pending.
 ---
 
 
-### CRS-005: Architecture definition
+### CRS-008: CI/CD Integration and Automated Test Result Import
 
-**Status:** APPROVED  
+**Status:** UNKNOWN  
 **Priority:** High  
-**Requested By:** Not Specified  
-**Assigned To:** Unassigned
-
-#### Description
-
-No description provided.
-
-#### Justification
-
-No justification provided.
-
-#### Impact Assessment
-
-Impact assessment pending.
-
-
-
-
-#### Traceability
-
-
-
-**All Related Items:**
-- UC-003
-
----
-
-
-### CRS-008: Automated Test Integration
-
-**Status:** APPROVED  
-**Priority:** Medium  
 **Requested By:** Not Specified  
 **Assigned To:** Unassigned
 
@@ -922,13 +938,14 @@ Impact assessment pending.
 
 **All Related Items:**
 - UC-002
+- UC-006
 
 ---
 
 
 ### CRS-011: Regulatory Compliance Validation
 
-**Status:** APPROVED  
+**Status:** UNKNOWN  
 **Priority:** High  
 **Requested By:** Not Specified  
 **Assigned To:** Unassigned
@@ -958,10 +975,10 @@ Impact assessment pending.
 ---
 
 
-### CRS-012: CI/CD Pipeline Integration
+### CRS-013: Item Lifecycle Workflow Management
 
-**Status:** APPROVED  
-**Priority:** High  
+**Status:** UNKNOWN  
+**Priority:** Critical  
 **Requested By:** Not Specified  
 **Assigned To:** Unassigned
 
@@ -985,7 +1002,7 @@ Impact assessment pending.
 
 
 **All Related Items:**
-- UC-006
+- UC-001
 
 ---
 

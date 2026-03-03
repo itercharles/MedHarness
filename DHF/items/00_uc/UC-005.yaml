@@ -29,4 +29,3 @@ content: |-
   - Compliance status for each policy is recorded and reviewable
   - All failures are linked to remediation actions (CRs or defects)
   - IEC 62304 §4 (general requirements) and §5 (software development process) coverage is confirmed
-status: approved

@@ -62,18 +62,23 @@ def test_TC_CRS_005_002_view_architecture_item(core):
         f"SYSARCH-001 should implement a SYS item; got: {implements}"
 
 
-def test_TC_CRS_005_003_architecture_item_approved_status(core):
+def test_TC_CRS_005_003_architecture_item_exists_with_content(core):
     """
-    TC-CRS-005-003: Architecture Item Has Approved Status via API
+    TC-CRS-005-003: Architecture Item Exists with Content via API
 
     @test_id: TC-CRS-005-003
     @links: CRS-005
 
-    The SYSARCH-001 fixture item has status 'approved', representing
-    a lifecycle-approved architecture decision.
+    SYSARCH-001 exists with a title and content. Architecture items use the
+    GitOps approval model — no explicit status field; presence on main branch
+    indicates approval.
     """
     item = core.get_item("SYSARCH-001")
 
     assert item is not None
-    assert item.get("status") == "approved", \
-        f"Expected SYSARCH-001 to be 'approved', got '{item.get('status')}'"
+    assert item["id"] == "SYSARCH-001"
+    assert item.get("title"), "Architecture item should have a title"
+    assert item.get("content"), "Architecture item should have content"
+    # No status field — GitOps model
+    assert "status" not in item, \
+        "SYSARCH items should not carry an explicit status field"

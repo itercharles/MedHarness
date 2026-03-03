@@ -109,18 +109,30 @@ Key public methods:
 
 ### Config-Driven Document Types
 **`DHF/config/project_config.yaml`** is the single source of truth. It defines:
-- `doc_types[]`: each with `code`, `prefix`, `directory`, `properties[]`, `lifecycle`, `has_verification`
+- `doc_types[]`: each with `code`, `prefix`, `directory`, `properties[]`, `lifecycle` (optional), `has_verification`
 - `global_lifecycle.states[]`: all workflow states with `is_stable` flag
 - `traceability_matrices[]`: ordered `path[]` of doc type codes for chain views
 
 `ProjectConfig` and `DocTypeConfig` Pydantic models are in `src/traceability/models/config.py`.
 
+### GitOps Approval Model (requirement items)
+**UC, CRS, SYS, SRS, SWDD, SYSARCH, SOUP, RISK, RCM** have **no `lifecycle` block** and **no `status` field**. Approval is implicit from Git:
+- `main` branch = approved (merged via PR review)
+- feature branch = draft / under review
+- deleted from repo = retired
+
+`get_initial_state()` returns `None` for these types; `get_available_transitions()` returns `[]`.
+
+### Explicit Lifecycle (CR, REL, DEF only)
+**CR, REL, DEF** retain explicit `lifecycle.transitions` in their doc type config with full state-machine workflows and criteria.
+
 ### Schema Validation
-`loader.py` validates each YAML against its doc type's `properties` list. Allowed fields per item = `_SYSTEM_FIELDS` (saver-written metadata: `id`, `doc_type`, `status`, `history`, etc., plus `reviewer`/`review_date` as core Item model fields) + fields declared in `properties` + lifecycle-derived fields (auto-computed from the doc type's `lifecycle` config: `{to_state}_by`/`{to_state}_date` for each transition, `manual_verifications` when manual criteria exist, `verification_status` when `has_verification: true`).
+`loader.py` validates each YAML against its doc type's `properties` list. Allowed fields per item = `_SYSTEM_FIELDS` (saver-written metadata: `id`, `doc_type`, `status`, `history`, etc., plus `reviewer`/`review_date` as core Item model fields) + fields declared in `properties` + lifecycle-derived fields (auto-computed from the doc type's `lifecycle` config when present: `{to_state}_by`/`{to_state}_date` for each transition, `manual_verifications` when manual criteria exist, `verification_status` when `has_verification: true`).
 
 ### Lifecycle / Transitions
 - **`src/traceability/lifecycle_methods.py`** — `execute_transition()` only writes `status`. Audit fields (`approved_by`, `approved_date`, `reviewer`, `review_date`) are written by the UI layer before calling the transition.
 - A state with `is_stable: true` locks the item — `is_item_editable()` returns `False`.
+- Lifecycle engine is a no-op for items whose doc type has no `lifecycle` config (requirement items).
 
 ### External Test Result Integration
 

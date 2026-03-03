@@ -1,0 +1,19 @@
+id: SWDD-016
+title: GitOps-Based Item Approval Model
+content: |-
+  Requirement items (UC, CRS, SYS, SRS, SWDD, SYSARCH, SOUP, RISK, RCM) have no
+  explicit lifecycle or status field. Approval state is derived entirely from the
+  Git branch:
+
+  - main branch  → item is approved (merged via PR review)
+  - feature branch → item is draft / under review
+  - deleted from repo → item is retired (no YAML file = does not exist)
+
+  Only CR, REL, and DEF retain explicit lifecycle workflows because they require
+  actionable state transitions beyond the binary approved/not-approved signal that
+  Git provides.
+
+  This eliminates redundant status: approved fields, prevents stale approval
+  metadata, and makes Git PR review the single source of truth for approval evidence.
+implements:
+- SRS-001

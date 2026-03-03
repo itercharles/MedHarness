@@ -20,6 +20,3 @@ content: |-
   - Concurrent access does not corrupt data
 derives_from:
 - SYS-001
-status: approved
-approved_by: test_user
-approved_date: '2025-01-01T00:00:00'

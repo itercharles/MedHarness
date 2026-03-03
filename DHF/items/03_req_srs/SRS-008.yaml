@@ -16,4 +16,3 @@ content: |-
   - Workflow configuration errors are detected at startup
 derives_from:
 - SYS-010
-status: approved

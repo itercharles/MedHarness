@@ -4,7 +4,6 @@ content: The system shall support configurable object, such as requirement, desi
 title: Objects management and tracking
 category: Functional
 verification_status: PASS
-status: approved
 satisfies:
 - CRS-001
 implements:

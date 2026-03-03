@@ -22,27 +22,10 @@ def test_dhf():
 def test_core(test_dhf):
     """Initialize CompliantFlowCore with test DHF and populate with test data."""
     # Populate test DHF with standard test dataset
-    # Includes: UC-001, CRS-001, SYS-001 (approved), SYS-002 (draft), 
-    #           SRS-001, SRS-002, SYSARCH-001, CR-001
+    # Includes: UC-001, CRS-001, SYS-001, SYS-002, SRS-001, SRS-002, SYSARCH-001, CR-001
+    # Requirement items (UC/CRS/SYS/SRS/SYSARCH) have no status (GitOps model)
+    # CR-001 has status: draft (explicit lifecycle)
     core = populate_test_dhf(test_dhf)
     return core
 
 
-@pytest.fixture
-def draft_sys_item(test_core):
-    """
-    Get the draft SYS-002 item from test dataset.
-    
-    Note: SYS-002 is already created by populate_test_dhf as a draft item
-    """
-    return test_core.get_item('SYS-002')
-
-
-@pytest.fixture
-def approved_sys_item(test_core):
-    """
-    Get the approved SYS-001 item from test dataset.
-    
-    Note: SYS-001 is already created by populate_test_dhf as an approved item
-    """
-    return test_core.get_item('SYS-001')

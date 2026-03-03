@@ -45,4 +45,3 @@ content: |-
   **Complexity**: O(N) where N = items to include
 implements:
 - SRS-009
-status: approved

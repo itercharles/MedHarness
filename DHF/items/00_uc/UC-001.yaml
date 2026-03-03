@@ -28,4 +28,3 @@ content: |-
   - Item is in a defined lifecycle state with a complete audit trail in Git
   - Traceability links to parent and child items are maintained
   - Compliance with IEC 62304 §5.1.4 (item identification) and §5.1.9 (configuration management) is satisfied
-status: approved

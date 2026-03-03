@@ -7,8 +7,8 @@
 | Field | Value |
 |-------|-------|
 | **Document ID** | SWDD-SPEC |
-| **Version** | 1.1 |
-| **Generated** | 2026-03-02 |
+| **Version** | 1.2 |
+| **Generated** | 2026-03-03 |
 | **Status** | Draft |
 | **Project** | CompliantFlow Project |
 
@@ -24,7 +24,7 @@ This document provides a comprehensive list of all Software Detailed Design Docu
 
 ### 1.2 Scope
 
-This specification covers all Software Detailed Design Documents defined in the CompliantFlow system as of 2026-03-02.
+This specification covers all Software Detailed Design Documents defined in the CompliantFlow system as of 2026-03-03.
 
 ---
 
@@ -32,9 +32,9 @@ This specification covers all Software Detailed Design Documents defined in the 
 
 ### 1. SWDD-001: Item Loading from YAML
 
-<div class="requirement-section">
+<div class="requirement-section" markdown="1">
 
-**Status**: <span class="status-approved">APPROVED</span>  
+**Status**: <span class="status-"></span>  
 
 #### Description
 
@@ -76,9 +76,9 @@ class ItemLoader:
 
 ### 2. SWDD-002: Item Persistence with Git
 
-<div class="requirement-section">
+<div class="requirement-section" markdown="1">
 
-**Status**: <span class="status-approved">APPROVED</span>  
+**Status**: <span class="status-"></span>  
 
 #### Description
 
@@ -119,9 +119,9 @@ class ItemSaver:
 
 ### 3. SWDD-003: Graph Construction
 
-<div class="requirement-section">
+<div class="requirement-section" markdown="1">
 
-**Status**: <span class="status-approved">APPROVED</span>  
+**Status**: <span class="status-"></span>  
 
 #### Description
 
@@ -163,9 +163,9 @@ class GraphEngine:
 
 ### 4. SWDD-004: Orphan Detection
 
-<div class="requirement-section">
+<div class="requirement-section" markdown="1">
 
-**Status**: <span class="status-approved">APPROVED</span>  
+**Status**: <span class="status-"></span>  
 
 #### Description
 
@@ -207,9 +207,9 @@ class GraphEngine:
 
 ### 5. SWDD-005: Coverage Calculation
 
-<div class="requirement-section">
+<div class="requirement-section" markdown="1">
 
-**Status**: <span class="status-approved">APPROVED</span>  
+**Status**: <span class="status-"></span>  
 
 #### Description
 
@@ -252,9 +252,9 @@ class CoverageAnalyzer:
 
 ### 6. SWDD-006: Policy Validation Execution
 
-<div class="requirement-section">
+<div class="requirement-section" markdown="1">
 
-**Status**: <span class="status-approved">APPROVED</span>  
+**Status**: <span class="status-"></span>  
 
 #### Description
 
@@ -304,9 +304,9 @@ class ValidationRule(ABC):
 
 ### 7. SWDD-007: Change Request Management
 
-<div class="requirement-section">
+<div class="requirement-section" markdown="1">
 
-**Status**: <span class="status-approved">APPROVED</span>  
+**Status**: <span class="status-"></span>  
 
 #### Description
 
@@ -350,9 +350,9 @@ class ChangeRequestManager:
 
 ### 8. SWDD-008: PR-CR Linking and Impact Tracking
 
-<div class="requirement-section">
+<div class="requirement-section" markdown="1">
 
-**Status**: <span class="status-approved">APPROVED</span>  
+**Status**: <span class="status-"></span>  
 
 #### Description
 
@@ -403,15 +403,20 @@ class ImpactAnalyzer:
 
 </div>
 
-### 9. SWDD-009: State Transition Validation
+### 9. SWDD-009: State Transition Validation (CR/REL/DEF only)
 
-<div class="requirement-section">
+<div class="requirement-section" markdown="1">
 
-**Status**: <span class="status-approved">APPROVED</span>  
+**Status**: <span class="status-"></span>  
 
 #### Description
 
 Detailed design for validating item lifecycle state transitions.
+
+**Scope**: State transition validation applies ONLY to CR, REL, and DEF. Requirement
+items (UC, CRS, SYS, SRS, SWDD, SYSARCH, SOUP, RISK, RCM) use the GitOps approval
+model and have no lifecycle or status field. See SWDD-016 for the complementary
+GitOps approval design for requirement items.
 
 **Component Structure**:
 - WorkflowEngine: Main workflow orchestrator
@@ -462,9 +467,9 @@ class CriteriaExecutor:
 
 ### 10. SWDD-010: Template Rendering
 
-<div class="requirement-section">
+<div class="requirement-section" markdown="1">
 
-**Status**: <span class="status-approved">APPROVED</span>  
+**Status**: <span class="status-"></span>  
 
 #### Description
 
@@ -517,9 +522,9 @@ class TemplateRenderer:
 
 ### 11. SWDD-011: PDF Export
 
-<div class="requirement-section">
+<div class="requirement-section" markdown="1">
 
-**Status**: <span class="status-approved">APPROVED</span>  
+**Status**: <span class="status-"></span>  
 
 #### Description
 
@@ -565,9 +570,9 @@ class PDFExporter:
 
 ### 12. SWDD-012: Test Result Parsing and Import
 
-<div class="requirement-section">
+<div class="requirement-section" markdown="1">
 
-**Status**: <span class="status-approved">APPROVED</span>  
+**Status**: <span class="status-"></span>  
 
 #### Description
 
@@ -632,9 +637,9 @@ class ResultStore:
 
 ### 13. SWDD-013: CLI Implementation
 
-<div class="requirement-section">
+<div class="requirement-section" markdown="1">
 
-**Status**: <span class="status-approved">APPROVED</span>  
+**Status**: <span class="status-"></span>  
 
 #### Description
 
@@ -642,24 +647,41 @@ Detailed design of the `compliantflow` CLI package.
 
 **Package structure**:
 ```
+src/cli/
+  cli.py            # all click commands (primary entry point)
 src/compliantflow/
-  __init__.py       # package marker
-  __main__.py       # entry: from .cli import main; main()
-  cli.py            # all click commands
+  __main__.py       # backward-compat: delegates to cli.main
 ```
 
 **Click command hierarchy**:
 ```
 main (group, --dhf option)
-  validate
+  validate (group)
+    schema
+    traceability
+    compliance <GROUP>
   item (group)
     list (--type, --status, --search)
     get <ITEM_ID>
+    create --type CODE --data JSON [--author NAME] [--cr CR_ID]
+    update <ITEM_ID> --data JSON [--author NAME]
+    delete <ITEM_ID> [--author NAME]
+    transitions <ITEM_ID>
+    transition <ITEM_ID> <TO_STATE> [--by NAME]
   cr (group)
     check-status <CR_ID>
     update <CR_ID> (--item repeatable, --pr-number, --pr-url, --pr-title)
   traceability (group)
-    neighbors <ITEM_ID>
+    matrix <TYPE> [TYPE...]
+    chain <ITEM_ID>
+  test (group)
+    import <FILE> --format junit [--tester NAME] [--run-id ID] [--run-url URL] [--commit SHA]
+    status <TC_ID>
+    list [--status STATUS]
+  doc (group)
+    list
+    generate <CODE|ALL>
+    export <CODE|ALL>
 ```
 
 **DHF path resolution** (in order):
@@ -674,9 +696,140 @@ main (group, --dhf option)
 
 **Core instantiation**:
 ```python
-core = CompliantFlowCore(repo_root=dhf_path.parent)
+core = CompliantFlowCore(dhf_root=dhf_path)
 ```
-One instance per CLI invocation; `auto_commit=False` (CI manages git).
+One instance per CLI invocation; stdout = machine-readable JSON, stderr = human-readable messages.
+
+
+
+</div>
+
+### 14. SWDD-014: Config-Driven Document Type Schema
+
+<div class="requirement-section" markdown="1">
+
+**Status**: <span class="status-"></span>  
+
+#### Description
+
+Detailed design for loading and validating document type definitions from
+project_config.yaml at startup.
+
+**Component Structure**:
+- ProjectConfig: Top-level Pydantic model for project_config.yaml
+- DocTypeConfig: Per-doc-type schema (code, prefix, directory, properties, lifecycle)
+- ItemLoader: Validates each loaded YAML against its DocTypeConfig properties
+
+**Algorithm**:
+1. Load project_config.yaml using PyYAML
+2. Parse into ProjectConfig Pydantic model (strict validation)
+3. Build allowed-field set per doc type:
+   a. _SYSTEM_FIELDS (id, doc_type, status, history, ...)
+   b. Declared properties from DocTypeConfig.properties
+   c. Lifecycle-derived fields (e.g. approved_by/date per transition)
+   d. has_verification: true → add verification_status field
+4. On item load: validate YAML keys against allowed-field set; raise ValidationError on unknowns
+5. Expose config via CompliantFlowCore for form schema, CLI doc list, etc.
+
+**Key Interfaces**:
+```python
+class ProjectConfig(BaseModel):
+    doc_types: List[DocTypeConfig]
+    global_lifecycle: GlobalLifecycleConfig
+    traceability_matrices: List[TraceabilityMatrixConfig]
+    document_specifications: Dict[str, DocumentSpecConfig]
+
+class DocTypeConfig(BaseModel):
+    code: str
+    prefix: str
+    directory: str
+    properties: List[PropertyConfig]
+    lifecycle: Optional[str]
+    has_verification: bool = False
+```
+
+**Error Handling**:
+- Missing required config fields raise ValidationError at startup
+- Unknown item fields raise ValidationError during YAML load
+- Clear messages include doc type code and field name
+
+**Complexity**: O(D × P) where D = doc types, P = properties per type
+
+
+
+</div>
+
+### 15. SWDD-015: Verification Status Computation and Display
+
+<div class="requirement-section" markdown="1">
+
+**Status**: <span class="status-"></span>  
+
+#### Description
+
+Detailed design for computing and persisting verification_status on requirement
+items, and exposing it in traceability views.
+
+**Component Structure**:
+- ResultStore: reads TC records from DHF/test-results/results.yaml
+- _TestResultsMixin.import_test_results: triggers recomputation after import
+- _TraceabilityMixin.build_traceability_matrix: includes verification_status column
+- ItemLoader: loads persisted verification_status from item YAML
+
+**Computation Algorithm** (runs after every test import):
+1. For each requirement item with has_verification: true
+2. Collect all TC records whose links[] includes this item's ID
+3. Aggregate statuses:
+   - All TCs PASS → verification_status = "verified"
+   - Any TC FAIL  → verification_status = "failed"
+   - No TC records → verification_status = "not_verified"
+4. Persist computed value back onto the item YAML via ItemSaver
+5. Git commit includes both results.yaml and updated item YAML(s)
+
+**Display in Traceability Matrix**:
+- verification_status is a column in build_traceability_matrix output
+- Value is read from item dict (persisted field), not recomputed at display time
+- CLI: `compliantflow traceability matrix SYS SRS` includes the field per row
+
+**Key Interfaces**:
+```python
+# In _TestResultsMixin
+def _recompute_verification_status(item_ids: List[str]) -> Dict[str, str]:
+    """Returns {item_id: status} for each linked requirement item."""
+
+# In ResultStore
+def get_results_for_item(item_id: str) -> List[TCRecord]:
+    """Returns all TC records whose links include item_id."""
+```
+
+**Complexity**: O(T × L) where T = TC records, L = average links per TC
+
+
+
+</div>
+
+### 16. SWDD-016: GitOps-Based Item Approval Model
+
+<div class="requirement-section" markdown="1">
+
+**Status**: <span class="status-"></span>  
+
+#### Description
+
+Requirement items (UC, CRS, SYS, SRS, SWDD, SYSARCH, SOUP, RISK, RCM) have no
+explicit lifecycle or status field. Approval state is derived entirely from the
+Git branch:
+
+- main branch  → item is approved (merged via PR review)
+- feature branch → item is draft / under review
+- deleted from repo → item is retired (no YAML file = does not exist)
+
+Only CR, REL, and DEF retain explicit lifecycle workflows because they require
+actionable state transitions beyond the binary approved/not-approved signal that
+Git provides.
+
+This eliminates redundant status: approved fields, prevents stale approval
+metadata, and makes Git PR review the single source of truth for approval evidence.
 
 
 
@@ -691,21 +844,21 @@ One instance per CLI invocation; `auto_commit=False` (CI manages git).
 
 | Metric | Count |
 |--------|-------|
-| **Total Requirements** | 13 |
-| **Approved** | 13 |
+| **Total Requirements** | 16 |
+| **Approved** | 0 |
 | **Draft** | 0 |
 | **Retired** | 0 |
 
 ### 3.2 Approval Status
 
-**Approval Rate**: 100.0% (13/13)
+**Approval Rate**: 0.0% (0/16)
 
 ---
 
 ## 4. Document Control
 
 **Document Owner**: Quality Assurance  
-**Last Updated**: 2026-03-02  
+**Last Updated**: 2026-03-03  
 **Next Review**: TBD
 
 ---

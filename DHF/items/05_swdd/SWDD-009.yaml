@@ -1,7 +1,12 @@
 id: SWDD-009
-title: State Transition Validation
+title: State Transition Validation (CR/REL/DEF only)
 content: |-
   Detailed design for validating item lifecycle state transitions.
+
+  **Scope**: State transition validation applies ONLY to CR, REL, and DEF. Requirement
+  items (UC, CRS, SYS, SRS, SWDD, SYSARCH, SOUP, RISK, RCM) use the GitOps approval
+  model and have no lifecycle or status field. See SWDD-016 for the complementary
+  GitOps approval design for requirement items.
   
   **Component Structure**:
   - WorkflowEngine: Main workflow orchestrator
@@ -47,4 +52,3 @@ content: |-
   **Complexity**: O(C) where C = number of criteria
 implements:
 - SRS-008
-status: approved

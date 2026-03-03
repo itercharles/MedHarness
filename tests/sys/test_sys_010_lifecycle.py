@@ -4,6 +4,10 @@ API tests for SYS-010: Lifecycle Workflows
 Verifies: The system shall support lifecycle state transitions
 with configurable workflows.
 
+Only CR, REL, and DEF retain explicit lifecycle. Requirement items
+(UC, CRS, SYS, SRS, SWDD, SYSARCH, SOUP, RISK, RCM) use the
+GitOps approval model — no status field, no transitions.
+
 @links: SYS-010
 
 This replaces browser-based tests with direct API testing.
@@ -29,128 +33,99 @@ def test_TC_SYS_010_001_view_lifecycle_states(test_dhf_root):
 
     Verify system provides access to lifecycle state definitions.
     """
-    # Initialize core with test DHF
     core = CompliantFlowCore(test_dhf_root)
 
-    # Get global lifecycle configuration
     lifecycle = core.config.global_lifecycle
 
-    # Should have lifecycle states defined
     assert lifecycle is not None
     assert hasattr(lifecycle, 'states')
     assert len(lifecycle.states) > 0, "Should have lifecycle states defined"
 
-    # Verify common states exist
     state_ids = [state.id for state in lifecycle.states]
     assert "draft" in state_ids, "Should have draft state"
     assert "approved" in state_ids, "Should have approved state"
 
 
-def test_TC_SYS_010_002_view_available_transitions(test_dhf_root):
+def test_TC_SYS_010_002_view_available_transitions_cr(test_dhf_root):
     """
-    TC-SYS-010-002: View Available Transitions (API)
+    TC-SYS-010-002: View Available Transitions for CR (API)
 
     @links: SYS-010
     @test_id: TC-SYS-010-002
 
-    Verify system can determine available state transitions.
+    Verify system can determine available state transitions for CR items.
     """
-    # Initialize core with test DHF
     core = CompliantFlowCore(test_dhf_root)
 
-    # Get an item in draft state
-    srs_item = core.get_item("SRS-001")
+    cr_item = core.get_item("CR-001")
+    assert cr_item is not None
+    assert cr_item.get('status') == 'draft'
 
-    # Get available transitions for this item
-    transitions = core.get_available_transitions(srs_item)
+    transitions = core.get_available_transitions(cr_item)
 
-    # Should have available transitions
     assert isinstance(transitions, list), "Transitions should be a list"
+    assert len(transitions) > 0, "CR in draft should have available transitions"
 
-    # Verify transition structure
-    if len(transitions) > 0:
-        transition = transitions[0]
-        assert 'from_states' in transition or 'to_state' in transition, \
-            "Transition should have state information"
+    transition = transitions[0]
+    assert 'from_states' in transition or 'to_state' in transition, \
+        "Transition should have state information"
 
 
-def test_TC_SYS_010_003_perform_state_transition(test_dhf_root):
+def test_TC_SYS_010_003_perform_cr_state_transition(test_dhf_root):
     """
-    TC-SYS-010-003: Perform State Transition (API)
+    TC-SYS-010-003: Perform CR State Transition (API)
 
     @links: SYS-010
     @test_id: TC-SYS-010-003
 
-    Verify system can execute state transitions.
+    Verify system can execute state transitions on CR items.
     """
-    # Initialize core with test DHF
     core = CompliantFlowCore(test_dhf_root)
 
-    # Create a new item in draft state
-    new_item_data = {
-        "id": "SRS-998",
-        "doc_type": "SRS",
-        "title": "Lifecycle Test Item",
-        "content": "Testing workflow transitions",
-        "derives_from": ["SYS-001"],
-        "status": "draft"
+    new_cr_data = {
+        "id": "CR-998",
+        "title": "Lifecycle Test CR",
+        "description": "Testing workflow transitions",
+        "justification": "Test",
+        "status": "draft",
     }
 
-    # Use Item model and saver
-    new_item = Item(**new_item_data)
-    core.saver.save(new_item, author="test_user")
+    new_cr = Item(**new_cr_data)
+    core.saver.save(new_cr, author="test_user")
     core.refresh()
 
-    # Get the item (returns dict)
-    item = core.get_item("SRS-998")
-    assert item["status"] == "draft"
+    cr = core.get_item("CR-998")
+    assert cr["status"] == "draft"
 
-    # Try to transition to approved
-    # (Note: Actual transition method depends on implementation)
-    # If there's a transition_to method:
-    if hasattr(core, 'transition_item'):
-        core.transition_item("SRS-998", "approved")
-        core.refresh()
-        updated_item = core.get_item("SRS-998")
-        assert updated_item["status"] == "approved", "Item should transition to approved"
-    else:
-        # Manual status update using saver
-        item["status"] = "approved"
-        updated_item_obj = Item(**item)
-        core.saver.save(updated_item_obj, author="test_user")
-        core.refresh()
-        updated_item = core.get_item("SRS-998")
-        assert updated_item["status"] == "approved"
+    cr["status"] = "in_review"
+    updated_cr = Item(**cr)
+    core.saver.save(updated_cr, author="test_user")
+    core.refresh()
+
+    updated = core.get_item("CR-998")
+    assert updated["status"] == "in_review", "CR should transition to in_review"
 
 
-def test_TC_SYS_010_004_transition_validation(test_dhf_root):
+def test_TC_SYS_010_004_requirement_items_have_no_transitions(test_dhf_root):
     """
-    TC-SYS-010-004: Transition Validation (API)
+    TC-SYS-010-004: Requirement Items Have No Lifecycle Transitions (API)
 
     @links: SYS-010
     @test_id: TC-SYS-010-004
 
-    Verify system validates state transitions.
+    Verify requirement items return no available transitions (GitOps model).
     """
-    # Initialize core with test DHF
     core = CompliantFlowCore(test_dhf_root)
 
-    # Get SRS-001 (which is in approved state)
-    item = core.get_item("SRS-001")
+    for item_id in ["SRS-001", "SYS-001", "CRS-001", "SYSARCH-001"]:
+        item = core.get_item(item_id)
+        assert item is not None, f"{item_id} should exist"
+        assert 'status' not in item, \
+            f"{item_id} should not have a status field (GitOps model)"
 
-    # Get available transitions
-    transitions = core.get_available_transitions(item)
-
-    # Verify transitions are valid for current state
-    assert isinstance(transitions, list), "Should return valid transitions"
-
-    # If item is in stable state, transitions may be limited
-    if item["status"] == "approved":
-        # Check if state info indicates it's stable
-        state_info = core.get_state_info(item["status"])
-        if state_info and state_info.get('is_stable'):
-            # Stable states typically have fewer outgoing transitions
-            assert True, "Stable state recognized"
+        transitions = core.get_available_transitions(item)
+        assert transitions == [], \
+            f"{item_id} should have no transitions, got {transitions}"
 
 
 def test_TC_SYS_010_005_cr_workflow(test_dhf_root):
@@ -162,56 +137,46 @@ def test_TC_SYS_010_005_cr_workflow(test_dhf_root):
 
     Verify CR-specific workflow states.
     """
-    # Initialize core with test DHF
     core = CompliantFlowCore(test_dhf_root)
 
-    # Get CR-001 (returns dict)
     cr = core.get_item("CR-001")
 
-    # Verify CR has status
     assert "status" in cr
-    assert cr["status"] in ["draft", "open", "in_progress", "resolved", "approved", "closed"]
+    assert cr["status"] in ["draft", "in_review", "approved", "implementing", "completed", "cancelled"]
 
-    # Get available transitions for CR
     transitions = core.get_available_transitions(cr)
 
-    # Should have workflow transitions defined
     assert isinstance(transitions, list)
+    assert len(transitions) > 0, "CR should have workflow transitions"
 
 
 def test_TC_SYS_010_006_state_history_tracking(test_dhf_root):
     """
-    TC-SYS-010-006: State History Tracking (API)
+    TC-SYS-010-006: State History Tracking via Git (API)
 
     @links: SYS-010
     @test_id: TC-SYS-010-006
 
-    Verify system tracks state change history.
+    Verify system tracks state change history via Git.
     """
-    # Initialize core with test DHF
     core = CompliantFlowCore(test_dhf_root)
 
-    # Create new item
-    new_item_data = {
-        "id": "SRS-997",
-        "doc_type": "SRS",
-        "title": "History Test Item",
-        "content": "Testing state history",
-        "derives_from": ["SYS-001"],
-        "status": "draft"
+    new_cr_data = {
+        "id": "CR-997",
+        "title": "History Test CR",
+        "description": "Testing state history",
+        "justification": "Test",
+        "status": "draft",
     }
 
-    # Use Item model and saver
-    new_item = Item(**new_item_data)
-    core.saver.save(new_item, author="test_user")
+    new_cr = Item(**new_cr_data)
+    core.saver.save(new_cr, author="test_user")
     core.refresh()
 
-    # Change status
-    item = core.get_item("SRS-997")  # Returns dict
-    item["status"] = "approved"
-    updated_item = Item(**item)
-    core.saver.save(updated_item, author="test_user")
+    cr = core.get_item("CR-997")
+    cr["status"] = "in_review"
+    updated_cr = Item(**cr)
+    core.saver.save(updated_cr, author="test_user")
 
-    # Git history should track the change
-    # This is verified by the underlying Git repository
+    # Git history tracks the change
     assert True, "State changes tracked in Git history"

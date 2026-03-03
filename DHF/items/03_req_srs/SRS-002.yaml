@@ -17,4 +17,3 @@ content: |-
   - Graph updates reflect item changes within 1 second
 derives_from:
 - SYS-003
-status: approved

@@ -9,6 +9,5 @@ category: Document Management
 verification_method:
 - Test
 critical_safety: false
-status: approved
 satisfies:
 - CRS-004

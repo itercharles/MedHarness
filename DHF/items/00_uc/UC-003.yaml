@@ -23,4 +23,3 @@ content: |-
   - Specification document is written to `DHF/documents/specifications/`
   - Document version is incremented and the generation date is recorded
   - PDF is available for offline review and regulatory submission
-status: approved

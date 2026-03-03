@@ -59,4 +59,3 @@ content: |-
   One instance per CLI invocation; stdout = machine-readable JSON, stderr = human-readable messages.
 implements:
 - SRS-012
-status: approved

@@ -1,6 +1,8 @@
 """
 Automated tests for SRS-006: Configuration-Driven Workflow Engine
 Verifies: Software shall provide lifecycle management via CompliantFlowCore methods.
+
+Only CR, REL, and DEF retain explicit lifecycle in production config.
 """
 import pytest
 from pathlib import Path
@@ -14,101 +16,83 @@ from compliantflow.core import CompliantFlowCore
 
 class TestSRS006_WorkflowMethods:
     """Tests for SRS-006: Workflow methods provided by CompliantFlowCore."""
-    
+
     @pytest.fixture
     def core(self):
         """Initialize CompliantFlowCore with production config (read-only for tests)."""
-        # We use the actual DHF root to test against real configuration logic
         dhf_root = Path(__file__).parent.parent.parent / "DHF"
         return CompliantFlowCore(dhf_root, auto_commit=False)
 
-    def test_get_initial_state(self, core):
-        """Verify get_initial_state returns valid initial states for document types."""
-        # Test for a known type like 'SYS'
-        initial_state = core.get_initial_state('SYS')
-        assert initial_state == 'draft', "SYS items should start in 'draft' state"
-        
-        # Test for another known type
-        initial_state_crs = core.get_initial_state('CRS')
-        assert initial_state_crs == 'draft', "CRS items should start in 'draft' state"
+    def test_get_initial_state_for_cr(self, core):
+        """CR items should start in 'draft' state."""
+        initial_state = core.get_initial_state('CR')
+        assert initial_state == 'draft', "CR items should start in 'draft' state"
 
-    def test_get_available_transitions(self, core):
-        """Verify get_available_transitions returns correct next states."""
-        # Case 1: Draft item
-        draft_item = {'id': 'SYS-TEST-001', 'status': 'draft'}
-        transitions = core.get_available_transitions(draft_item)
+    def test_get_initial_state_returns_none_for_requirement_types(self, core):
+        """Requirement types (SYS, SRS, CRS) have no lifecycle — initial state is None."""
+        assert core.get_initial_state('SYS') is None, \
+            "SYS has no lifecycle; initial state should be None"
+        assert core.get_initial_state('SRS') is None, \
+            "SRS has no lifecycle; initial state should be None"
+        assert core.get_initial_state('CRS') is None, \
+            "CRS has no lifecycle; initial state should be None"
+
+    def test_get_available_transitions_for_cr(self, core):
+        """CR in draft state should offer transitions."""
+        draft_cr = {'id': 'CR-TEST', 'status': 'draft'}
+        transitions = core.get_available_transitions(draft_cr)
         target_states = [t.get('to_state') for t in transitions]
-        
-        # Should be able to go to 'approved' (defined in SYS lifecycle directly from draft)
-        assert 'approved' in target_states, f"Draft SYS items should be able to move to 'approved', got {target_states}"
-        
-        # Case 2: Approved item (Stable) moving to Retired
-        approved_item = {'id': 'SYS-TEST-002', 'status': 'approved'}
-        transitions = core.get_available_transitions(approved_item)
-        target_states = [t.get('to_state') for t in transitions]
-        
-        assert 'retired' in target_states, "Approved items should be able to move to 'retired'"
+        assert len(transitions) > 0, "CR in draft should have available transitions"
+        assert 'in_review' in target_states or 'approved' in target_states, \
+            f"Expected workflow transition from draft for CR; got {target_states}"
+
+    def test_get_available_transitions_empty_for_requirement_items(self, core):
+        """Requirement items have no lifecycle — no transitions available."""
+        sys_item = {'id': 'SYS-001'}
+        transitions = core.get_available_transitions(sys_item)
+        assert transitions == [], \
+            f"SYS items should have no transitions; got {transitions}"
 
     def test_is_stable_state(self, core):
-        """Verify get_state_info correctly identifies stable states."""
-        # Retired/Closed should be stable based on project_config.yaml
+        """get_state_info correctly identifies stable states."""
         retired_info = core.get_state_info('retired')
         assert retired_info.get('is_stable') is True, "'retired' state should be stable"
-        
-        # Draft/Approved should not be stable (in current config approved is not stable)
+
         draft_info = core.get_state_info('draft')
         assert draft_info.get('is_stable') is False, "'draft' state should not be stable"
-        
-        approved_info = core.get_state_info('approved')
-        # Note: In provided project_config.yaml, approved is NOT marked stable. Only retired/closed are.
-        assert approved_info.get('is_stable', False) is False, "'approved' state is not stable in current config"
 
-    def test_perform_transition(self, core):
-        """Verify performing a valid state transition updates status."""
-        # Create a new SYS item (Draft)
-        item_data = {
-            'id': 'SYS-TRANS-001',
-            'title': 'Transition Test',
-            'content': 'Testing transitions',
-            'category': 'Functional'
+    def test_perform_cr_transition(self, test_core):
+        """Performing a valid state transition on CR updates status.
+
+        Uses the isolated test DHF fixture to avoid writing to the production DHF.
+        """
+        cr_data = {
+            'id': 'CR-SRS006-TEST',
+            'title': 'Transition Test CR',
+            'description': 'Testing transitions',
+            'justification': 'Test',
         }
-        # Note: create_item automatically sets initial status (draft for SYS)
-        created = core.create_item(item_data)
-        assert created['status'] == 'draft', "New SYS item should be draft"
-        
-        # Perform transition: Draft -> Approved
-        # Based on config, this requires content & title (provided) + criteria
-        # Note: Criteria validation logic is inside update_item or should be handled by caller
-        # For this test, we assume core allows the update if valid
-        
-        # Update status to 'approved'
-        update_data = {
-            'status': 'approved',
-            'approved_by': 'tester',
-            'approved_date': '2025-01-01'
-        }
-        
-        updated = core.update_item('SYS-TRANS-001', update_data)
-        
+        created = test_core.create_item(cr_data)
+        assert created['status'] == 'draft', "New CR item should be draft"
+
+        # Update status to 'in_review'
+        update_data = {'status': 'in_review'}
+        updated = test_core.update_item('CR-SRS006-TEST', update_data)
+
         assert updated is not None, "Update should succeed"
-        assert updated['status'] == 'approved', "Status should be updated to approved"
-        assert updated['approved_by'] == 'tester', "Should update additional fields"
+        assert updated['status'] == 'in_review', "Status should be updated to in_review"
 
     def test_transitions_respect_global_config(self, core):
-        """Verify that transitions respect the global configuration loaded by core."""
-        # Just ensure that we are not getting empty transitions for valid states
-        item = {'id': 'SYS-001', 'status': 'draft'}
-        transitions = core.get_available_transitions(item)
-        assert len(transitions) > 0, "Should find transitions from draft for initialized core"
+        """Transitions respect the global configuration loaded by core."""
+        cr_item = {'id': 'CR-001', 'status': 'draft'}
+        transitions = core.get_available_transitions(cr_item)
+        assert len(transitions) > 0, "Should find transitions from draft for CR"
 
     def test_invalid_state_handling(self, core):
-        """Verify behavior when querying invalid states."""
-        # Item with unknown status
-        item = {'id': 'SYS-001', 'status': 'unknown_state'}
+        """Behavior when querying invalid states."""
+        item = {'id': 'CR-001', 'status': 'unknown_state'}
         transitions = core.get_available_transitions(item)
-        # Should return empty list or defaults, but not crash
         assert isinstance(transitions, list)
-        
-        # Info for unknown state
+
         with pytest.raises(ValueError, match="not found"):
             core.get_state_info('non_existent_state')

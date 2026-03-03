@@ -16,4 +16,3 @@ content: |-
   - Generation completes in < 10 seconds for 100 items
 derives_from:
 - SYS-021
-status: approved

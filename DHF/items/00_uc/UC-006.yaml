@@ -11,4 +11,3 @@ content: |-
   5. Engineer runs `python -m compliantflow item list --type SYS` to audit requirements from a script
 
   The engineer does not start a web server; all operations are command-line only.
-status: approved

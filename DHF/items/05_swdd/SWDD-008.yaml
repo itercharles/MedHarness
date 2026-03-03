@@ -45,4 +45,3 @@ content: |-
   **Complexity**: O(F) where F = files in PR
 implements:
 - SRS-007
-status: approved

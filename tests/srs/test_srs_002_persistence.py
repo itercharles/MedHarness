@@ -102,15 +102,17 @@ class TestFilePersistence:
                 'title': f'Test Item {i}',
                 'content': f'Testing ID generation {i}',
                 'type': 'SRS',
-                'status': 'draft'
             }
             created = test_core.create_item(item_data, author='test_user')
             created_ids.append(created['id'])
-            
+
             # Verify ID was generated
             assert 'id' in created, "ID should be auto-generated"
             assert created['id'].startswith('SRS-'), "ID should have correct prefix"
             assert created['id'] != '', "ID should not be empty"
+            # SRS is a requirement type — no status under GitOps model
+            assert 'status' not in created, \
+                "SRS items should not have a status field (GitOps model)"
         
         # Verify all IDs are unique
         assert len(created_ids) == len(set(created_ids)), "All generated IDs should be unique"
