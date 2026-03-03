@@ -107,3 +107,6 @@ implementation_prs:
 - pr_number: 37
   pr_url: https://github.com/itercharles/CompliantFlow/pull/37
   title: 'CR-012: Add UC workflows and fix file_path leaking into YAML'
+- pr_number: 38
+  pr_url: https://github.com/itercharles/CompliantFlow/pull/38
+  title: 'CR-012: Fix CRS completeness - align with UCs, add missing items'
