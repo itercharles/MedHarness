@@ -131,3 +131,6 @@ implementation_prs:
 - pr_number: 44
   pr_url: https://github.com/itercharles/CompliantFlow/pull/44
   title: 'CR-012: Remove manual_verifications from project config and YAML items'
+- pr_number: 45
+  pr_url: https://github.com/itercharles/CompliantFlow/pull/45
+  title: 'CR-012: Remove dead manual_verifications code'

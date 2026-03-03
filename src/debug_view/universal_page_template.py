@@ -641,8 +641,8 @@ def render_item_view(
     properties = doc_type_config.get('properties', [])
     
     # Fields to skip (system/internal fields)
-    skip_fields = {'id', 'status', 'approved_by', 'approved_date', 'retired_by', 
-                   'retired_date', 'manual_verifications', 'history', 'links',
+    skip_fields = {'id', 'status', 'approved_by', 'approved_date', 'retired_by',
+                   'retired_date', 'history', 'links',
                    'active', 'reviewer', 'review_date', 'verified_by', 'verified_date'}
     
     # Display all configured fields
@@ -1073,25 +1073,8 @@ def render_transition_workflow(
             is_blocking = criterion_id in transition.get('blocking_criteria', [])
             
             if is_blocking:
-                if check_type == 'manual':
-                    with st.expander(f"⚠️ {criterion_name} - Verification Required", expanded=True):
-                        verifier = st.text_input("Verified by *", key=f"ver_{criterion_id}")
-                        notes = st.text_area("Notes", key=f"notes_{criterion_id}", height=100)
-                        if st.button("✅ Verify", key=f"btn_ver_{criterion_id}"):
-                            if verifier:
-                                if 'manual_verifications' not in item:
-                                    item['manual_verifications'] = {}
-                                item['manual_verifications'][criterion_id] = {
-                                    'verified_by': verifier,
-                                    'verified_date': datetime.now().isoformat(),
-                                    'notes': notes
-                                }
-                                core.update_item(item['id'], item)
-                                st.toast(f"✅ Verified by {verifier}")
-                                st.rerun()
-                else:
-                    field = criterion.get('field', 'unknown')
-                    st.error(f"❌ {criterion_name}: {field} is required")
+                field = criterion.get('field', 'unknown')
+                st.error(f"❌ {criterion_name}: {field} is required")
             else:
                 st.success(f"✅ {criterion_name}")
     
@@ -1172,17 +1155,7 @@ def render_manual_verification_inline(
         
         if st.button("✅ Verify", key=f"verify_{item_id}_{criterion_id}"):
             if verifier:
-                # Save verification
                 item = core.get_item(item_id)
-                if 'manual_verifications' not in item:
-                    item['manual_verifications'] = {}
-                
-                item['manual_verifications'][criterion_id] = {
-                    'verified_by': verifier,
-                    'verified_date': datetime.now().isoformat(),
-                    'notes': notes
-                }
-                
                 core.update_item(item_id, item)
                 st.toast(f"✅ Verified by {verifier}", icon="✅")
                 st.rerun()

@@ -117,14 +117,6 @@ def render_criteria_checklist(
         
         if criterion['passed']:
             st.success(f"✅ {criterion['name']}: {criterion['message']}")
-        elif check_type == 'manual':
-            # Use the reusable manual verification component
-            render_manual_verification(
-                criterion,
-                item_id,
-                current_verifications,
-                on_verify
-            )
         elif severity == 'warning':
             st.warning(f"⚠️ {criterion['name']}: {criterion['message']}")
         else:

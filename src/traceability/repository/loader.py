@@ -174,7 +174,6 @@ class ItemLoader:
         Covers:
           - {state}_by / {state}_date for every transition target state
           - review_by / review_date for the in_review state (reviewer kept as alias)
-          - manual_verifications when any criterion uses check_type: manual
           - verification_status when the doc type has has_verification: true
           - field names referenced by field_not_empty criteria (e.g. retired_reason)
         """
@@ -195,9 +194,7 @@ class ItemLoader:
 
                 for criterion in transition.get('criteria', []) or []:
                     check_type = criterion.get('check_type')
-                    if check_type == 'manual':
-                        fields.add('manual_verifications')
-                    elif check_type == 'field_not_empty':
+                    if check_type == 'field_not_empty':
                         field_name = criterion.get('field')
                         if field_name:
                             fields.add(field_name)

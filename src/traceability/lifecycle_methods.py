@@ -109,13 +109,6 @@ def _validate_criteria(
             if not item.get(field):
                 blocking.append(criterion['id'])
         
-        elif check_type == 'manual':
-            # Manual checks need to be verified separately
-            # Check if verification exists in item
-            verifications = item.get('manual_verifications', {})
-            if criterion['id'] not in verifications:
-                blocking.append(criterion['id'])
-        
         elif check_type == 'relationship_field':
             field = criterion.get('field')
             if not item.get(field) or len(item.get(field, [])) == 0:

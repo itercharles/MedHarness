@@ -165,8 +165,7 @@ class _ItemCRUDMixin:
                     updated_data['status'] = initial_state
 
                     approval_fields = ['approved_by', 'approved_date', 'reviewer', 'review_date',
-                                       'verified_by', 'verified_date', 'released_by', 'released_date',
-                                       'manual_verifications']
+                                       'verified_by', 'verified_date', 'released_by', 'released_date']
                     for field in approval_fields:
                         if field in updated_data:
                             del updated_data[field]

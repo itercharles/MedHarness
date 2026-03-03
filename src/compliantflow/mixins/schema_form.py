@@ -27,7 +27,7 @@ class _SchemaFormMixin:
 
         skip_fields = {'id', 'file_path', 'status', 'active', 'reviewer', 'review_date',
                        'verified_by', 'verified_date', 'approved_by', 'approved_date',
-                       'released_by', 'released_date', 'manual_verifications', 'timestamp'}
+                       'released_by', 'released_date', 'timestamp'}
 
         fields = []
 
