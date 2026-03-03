@@ -56,6 +56,11 @@ affected_items:
 - UC-005
 - SYS-TRANS-001
 - REL-003
+- CRS-001
+- CRS-005
+- CRS-008
+- CRS-013
+- CRS-014
 implementation_prs:
 - pr_number: 19
   pr_url: https://github.com/itercharles/CompliantFlow/pull/19
@@ -102,3 +107,6 @@ implementation_prs:
 - pr_number: 37
   pr_url: https://github.com/itercharles/CompliantFlow/pull/37
   title: 'CR-012: Add UC workflows and fix file_path leaking into YAML'
+- pr_number: 38
+  pr_url: https://github.com/itercharles/CompliantFlow/pull/38
+  title: 'CR-012: Fix CRS completeness - align with UCs, add missing items'

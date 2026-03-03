@@ -1,0 +1,15 @@
+id: CRS-013
+title: Item Lifecycle Workflow Management
+content: The system shall enforce a configurable lifecycle workflow for each DHF item
+  type, defining allowed states, permitted transitions, and acceptance criteria that
+  must be satisfied before a transition can be executed. The workflow shall prevent
+  edits to items in stable (locked) states and shall record who performed each
+  transition and when, creating an auditable approval history.
+rationale: IEC 62304 §5.1.9 and ISO 13485 §4.2.4 require controlled document lifecycles
+  with evidence of review and approval; a configurable workflow enforces this without
+  hardcoding rules into application code
+stakeholder: Regulatory Affairs
+priority: Critical
+derives_from:
+- UC-001
+status: approved

@@ -1,9 +1,14 @@
 id: CRS-008
-title: Automated Test Integration
-content: The system show user the pass or fail of tests.
-rationale: 
+title: Automated Test Result Integration
+content: The system shall import automated test results from CI/CD pipelines via
+  standard JUnit XML reports and display the pass/fail status of each test case linked
+  to its traced requirements. The system shall automatically update the verification
+  status of linked requirements (verified / failed / not_verified) based on the
+  imported results, providing an up-to-date coverage view without manual data entry.
+rationale: Manual recording of test results is error-prone and does not scale; automated
+  import ensures the DHF always reflects the actual CI test outcomes required by IEC 62304 §5.7
 stakeholder: Test Engineering
-priority: Medium
+priority: High
 derives_from:
 - UC-002
 status: approved
