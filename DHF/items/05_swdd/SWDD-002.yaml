@@ -32,5 +32,5 @@ content: |-
   
   **Complexity**: O(1) per item
 implements:
-- SRS-002
+- SRS-001
 status: approved

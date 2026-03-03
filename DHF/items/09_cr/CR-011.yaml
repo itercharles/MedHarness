@@ -18,7 +18,6 @@ description: "Current status definition is too complex and should be simplified.
 justification: unify the status management.
 priority: High
 affected_items:
-- SYS-TRANS-001
 - TC-SRS-006
 - TC-SRS-008
 - TC-SRS-015

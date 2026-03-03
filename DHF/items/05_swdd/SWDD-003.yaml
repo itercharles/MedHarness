@@ -33,5 +33,5 @@ content: |-
   
   **Complexity**: O(N + E) where N = nodes, E = edges
 implements:
-- SRS-003
+- SRS-002
 status: approved

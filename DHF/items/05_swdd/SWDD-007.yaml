@@ -35,5 +35,5 @@ content: |-
   
   **Complexity**: O(1) per operation
 implements:
-- SRS-007
+- SRS-006
 status: approved
