@@ -125,3 +125,6 @@ implementation_prs:
 - pr_number: 40
   pr_url: https://github.com/itercharles/CompliantFlow/pull/40
   title: 'CR-012: Align SYSARCH and SWDD with SYS/SRS hierarchy'
+- pr_number: 43
+  pr_url: https://github.com/itercharles/CompliantFlow/pull/43
+  title: 'CR-012: Fix CI - phase 3.5 import-results only on pull_request'
