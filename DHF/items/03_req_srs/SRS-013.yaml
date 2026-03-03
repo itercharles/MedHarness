@@ -1,0 +1,23 @@
+id: SRS-013
+title: Verification Status Display in Traceability View
+content: |-
+  Software shall compute and display the verification status of each requirement
+  item in the traceability matrix and item detail views.
+
+  Behavior:
+  - For each requirement item, aggregate all linked TC records from results.yaml
+  - Compute verification_status: verified (all linked TCs PASS), failed (any TC FAIL),
+    not_verified (no linked TC records exist)
+  - Persist computed verification_status back onto the requirement item
+  - Display verification_status alongside each item in traceability matrix columns
+  - Display individual TC pass/fail records in the item detail view
+
+  Acceptance Criteria:
+  - verification_status is recomputed after every test import
+  - Items with no linked TCs show not_verified
+  - Items with all PASS TCs show verified
+  - Items with any FAIL TC show failed
+  - Status is visible in the traceability matrix without opening the item detail
+derives_from:
+- SYS-031
+status: approved

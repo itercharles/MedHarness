@@ -8,18 +8,29 @@ content: |-
   Default DHF path: directory named `DHF` adjacent to the `src/` folder.
 
   Commands and behavior:
-  - `validate`: calls `core.validate()`; prints summary; exits 1 if errors found
+  - `validate schema / traceability / compliance <GROUP>`: calls `core.validate_schema()`,
+    `core.validate_traceability()`, `core.check_compliance()`; exits 1 on errors
   - `item list [--type CODE] [--status STATUS] [--search TEXT]`: calls
     `core.get_items_filtered()`; outputs newline-delimited JSON records
   - `item get <ID>`: calls `core.get_item(uid)`; outputs JSON; exits 1 if not found
-  - `cr check-status <CR_ID>`: loads CR via `core.get_item()`; calls `core.is_cr_stable()`;
-    exits 0 if non-stable, exits 1 with error message if stable or not found
-  - `cr update <CR_ID> [--item ID]... [--pr-number N] [--pr-url URL] [--pr-title TITLE]`:
-    calls `core.add_item_to_cr()` for each --item; appends PR info via `core.update_item()`
-  - `traceability neighbors <ID>`: calls `core.get_item_neighbors()`; outputs JSON
+  - `item create --type CODE --data JSON [--author NAME] [--cr CR_ID]`: calls
+    `core.create_item()`; outputs created item JSON
+  - `item update <ID> --data JSON [--author NAME]`: calls `core.update_item()`
+  - `item delete <ID> [--author NAME]`: calls `core.delete_item()`
+  - `item transitions <ID>`: calls `core.get_available_transitions()`; outputs JSON list
+  - `item transition <ID> <TO_STATE> [--by NAME]`: calls `core.execute_transition()`
+  - `cr check-status <CR_ID>`: exits 0 if CR is non-stable, 1 if stable or not found
+  - `cr update <CR_ID> [--item ID]... [--pr-number N] [--pr-url URL] [--pr-title TITLE]`
+  - `traceability matrix <TYPE> [TYPE...]`: calls `core.build_traceability_matrix()`
+  - `traceability chain <ID>`: calls `core.get_item_chain()`; outputs full graph JSON
+  - `test import <FILE> --format junit [--tester NAME] [--run-id ID] [--commit SHA]`
+  - `test status <TC_ID>`: outputs stored TC record as JSON
+  - `test list [--status STATUS]`: lists all stored TC records
+  - `doc list`: outputs configured doc type codes as JSON
+  - `doc generate <CODE|ALL>`: calls `core.generate_spec()`; writes markdown file
+  - `doc export <CODE|ALL>`: regenerates markdown then exports PDF
 
-  All commands write human-readable messages to stderr and machine-readable data to stdout,
-  enabling clean pipeline integration (stdout can be piped; stderr shown to operator).
+  All commands write human-readable messages to stderr and machine-readable data to stdout.
 derives_from:
 - SYS-032
 status: approved

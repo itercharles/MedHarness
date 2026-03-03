@@ -7,7 +7,7 @@
 | Field | Value |
 |-------|-------|
 | **Document ID** | CRS-SPEC |
-| **Version** | 1.196 |
+| **Version** | 1.197 |
 | **Generated** | 2026-03-03 |
 | **Status** | Draft |
 | **Project** | CompliantFlow Project |

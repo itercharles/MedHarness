@@ -29,5 +29,5 @@ content: |-
   - Tests with no recognisable TC ID are silently skipped
   - Linked requirement items have their verification_status updated after import
 derives_from:
-- SYS-031
+- SYS-033
 status: approved
