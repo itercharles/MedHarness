@@ -1,9 +1,11 @@
 id: CRS-005
-title: Architecture definition
-content: The system shall provide a view of architecture manage and define architecture items, and generate architecture documents in configurable formats to reduce manual effort and errors.
-rationale: Manual documentation is time-consuming and error-prone
-stakeholder: Documentation Team
+title: Architecture Item Management
+content: The system shall allow users to create and manage system architecture items
+  (e.g. components, interfaces, technology decisions) and link them to system requirements
+  to record design decisions in the DHF.
+rationale: IEC 62304 §5.3 requires software architecture to be documented and traceable to requirements
+stakeholder: System Architect
 priority: High
 derives_from:
-- UC-003
+- UC-001
 status: approved

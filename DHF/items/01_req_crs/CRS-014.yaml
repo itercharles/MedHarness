@@ -1,0 +1,16 @@
+id: CRS-014
+title: Extended DHF Item Type Management
+content: |-
+  The system shall support management of all DHF item types required by IEC 62304
+  and ISO 14971, including Risk Analysis items (RISK), Risk Control Measures (RCM),
+  Software of Unknown Provenance (SOUP), Defects (DEF), and Releases (REL). Each
+  item type shall have its own configurable schema, lifecycle, and traceability links
+  to other item types.
+rationale: A complete DHF for medical device software requires more than requirements
+  alone; risks, control measures, SOUP, defects, and releases are all mandated artefacts
+  under IEC 62304 and ISO 14971 that must be managed and traceable within the same system
+stakeholder: Regulatory Affairs
+priority: High
+derives_from:
+- UC-001
+status: approved
