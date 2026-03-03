@@ -19,4 +19,4 @@ verification_method:
 critical_safety: false
 status: approved
 satisfies:
-- CRS-012
+- CRS-008

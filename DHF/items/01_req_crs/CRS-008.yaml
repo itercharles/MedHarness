@@ -1,14 +1,23 @@
 id: CRS-008
-title: Automated Test Result Integration
-content: The system shall import automated test results from CI/CD pipelines via
-  standard JUnit XML reports and display the pass/fail status of each test case linked
-  to its traced requirements. The system shall automatically update the verification
-  status of linked requirements (verified / failed / not_verified) based on the
-  imported results, providing an up-to-date coverage view without manual data entry.
-rationale: Manual recording of test results is error-prone and does not scale; automated
-  import ensures the DHF always reflects the actual CI test outcomes required by IEC 62304 §5.7
-stakeholder: Test Engineering
+title: CI/CD Integration and Automated Test Result Import
+content: |-
+  The system shall provide a command-line interface (CLI) that enables headless
+  integration with CI/CD pipelines (GitHub Actions, GitLab CI, Jenkins, etc.)
+  without requiring the web UI, exposing all DHF operations including validation,
+  item management, change request tracking, traceability queries, and document
+  generation.
+
+  The system shall additionally import automated test results from CI/CD pipelines
+  via standard JUnit XML reports, link each result to its traced requirements, and
+  automatically update the verification status (verified / failed / not_verified)
+  of linked requirements based on the imported results.
+rationale: Customers must embed compliance tracking into existing DevOps workflows
+  without launching a web server. Manual recording of test results is error-prone
+  and does not scale; automated CLI import ensures the DHF always reflects actual
+  CI test outcomes as required by IEC 62304 §5.7.
+stakeholder: DevOps Engineer / Test Engineering
 priority: High
 derives_from:
 - UC-002
+- UC-006
 status: approved

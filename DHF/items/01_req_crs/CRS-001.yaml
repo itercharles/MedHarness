@@ -1,14 +1,17 @@
 id: CRS-001
 title: DHF Item Definition and Management
 content: The system shall allow users to create, edit, and manage all DHF item types
-  (customer requirements, system requirements, software requirements, detailed design,
-  system architecture, risks, change requests, and releases) through a configurable
-  item schema. Item types, properties, allowed values, and parent relationships shall
-  be defined in a central configuration file without code changes. Architecture items
-  (components, interfaces, technology decisions) shall be linkable to system requirements
-  to record design decisions in the DHF.
-rationale: Required for medical device regulatory approval (IEC 62304 §5.3 requires
-  software architecture to be documented and traceable to requirements)
+  required by IEC 62304 and ISO 14971 — including customer requirements, system
+  requirements, software requirements, detailed design, system architecture,
+  risk analysis items (RISK), risk control measures (RCM), software of unknown
+  provenance (SOUP), defects (DEF), change requests (CR), and releases (REL) —
+  through a configurable item schema. Item types, properties, allowed values,
+  lifecycle states, and parent relationships shall be defined in a central
+  configuration file without code changes.
+rationale: A complete DHF for medical device software requires all artefact types
+  mandated by IEC 62304 and ISO 14971 to be managed and mutually traceable within
+  a single system. IEC 62304 §5.3 additionally requires software architecture to
+  be documented and traceable to requirements.
 stakeholder: Regulatory Affairs
 priority: Critical
 derives_from:
