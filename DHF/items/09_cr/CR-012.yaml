@@ -64,6 +64,7 @@ affected_items:
 - SYS-001
 - SYS-010
 - SYS-031
+- SRS-013
 implementation_prs:
 - pr_number: 19
   pr_url: https://github.com/itercharles/CompliantFlow/pull/19
@@ -113,3 +114,6 @@ implementation_prs:
 - pr_number: 38
   pr_url: https://github.com/itercharles/CompliantFlow/pull/38
   title: 'CR-012: Fix CRS completeness - align with UCs, add missing items'
+- pr_number: 39
+  pr_url: https://github.com/itercharles/CompliantFlow/pull/39
+  title: 'CR-012: Align SYS/SRS with CRS - fix links, content and gaps'
