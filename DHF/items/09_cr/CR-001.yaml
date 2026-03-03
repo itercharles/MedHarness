@@ -1,8 +1,6 @@
 id: CR-001
-
 title: Add bulk approval feature for requirements
-description: 'Currently, requirements must be approved one at a time, which is inefficient
-  when
+description: 'Currently, requirements must be approved one at a time, which is inefficient when
 
   processing large batches of requirements. This change request proposes adding a
 
@@ -61,11 +59,6 @@ requested_by: Quality Team
 assigned_to: ''
 target_version: 1.3.0
 status: approved
-manual_verifications:
-  review_complete:
-    verified_by: charles
-    verified_date: '2025-12-20T10:44:50.886141'
-    notes: ''
 approved_by: charles
 approved_date: '2025-12-20T10:44:59.289459'
 affected_items:

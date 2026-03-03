@@ -68,6 +68,8 @@ affected_items:
 - SWDD-009
 - SWDD-014
 - SWDD-015
+- SOUP-PYDANTIC-2.0.0
+- SOUP-STREAMLIT-1.28.0
 implementation_prs:
 - pr_number: 19
   pr_url: https://github.com/itercharles/CompliantFlow/pull/19
@@ -126,3 +128,6 @@ implementation_prs:
 - pr_number: 43
   pr_url: https://github.com/itercharles/CompliantFlow/pull/43
   title: 'CR-012: Fix CI - phase 3.5 import-results only on pull_request'
+- pr_number: 44
+  pr_url: https://github.com/itercharles/CompliantFlow/pull/44
+  title: 'CR-012: Remove manual_verifications from project config and YAML items'
