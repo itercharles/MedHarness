@@ -7,8 +7,8 @@
 | Field | Value |
 |-------|-------|
 | **Document ID** | SYSARCH-SPEC |
-| **Version** | 1.6 |
-| **Generated** | 2026-03-02 |
+| **Version** | 1.8 |
+| **Generated** | 2026-03-03 |
 | **Status** | Draft |
 | **Project** | CompliantFlow Project |
 
@@ -251,7 +251,7 @@ Generated Document
 
 <div class="architecture-section" markdown="1">
 
-**Status**: <span class="status-approved">APPROVED</span>  
+**Status**: <span class="status-"></span>  
 
 #### Overview
 
@@ -285,7 +285,7 @@ Core module for managing DHF items (requirements, design, tests, change requests
 
 <div class="architecture-section" markdown="1">
 
-**Status**: <span class="status-approved">APPROVED</span>  
+**Status**: <span class="status-"></span>  
 
 #### Overview
 
@@ -321,18 +321,22 @@ Module for building and analyzing traceability relationships between DHF items.
 
 <div class="architecture-section" markdown="1">
 
-**Status**: <span class="status-approved">APPROVED</span>  
+**Status**: <span class="status-"></span>  
 
 #### Overview
 
 Module for managing item lifecycle states and transitions via CompliantFlowCore.
 
+**Scope**: Explicit lifecycle applies ONLY to CR, REL, and DEF. Requirement items
+(UC, CRS, SYS, SRS, SWDD, SYSARCH, SOUP, RISK, RCM) use the GitOps approval model
+— no status field, no transitions. See SWDD-016 for the GitOps approval design.
+
 **Responsibilities**:
 - Load lifecycle configuration from project config
-- Validate state transitions against strict rules
+- Validate state transitions against strict rules (CR/REL/DEF only)
 - Execute transition criteria checks (field validation, manual approval)
-- Enforce approval workflows
-- Support configurable lifecycles per item type
+- Enforce approval workflows for CR/REL/DEF
+- Support configurable lifecycles per document type
 
 **Key Interfaces**:
 - `CompliantFlowCore`: Main entry point for lifecycle operations
@@ -342,7 +346,8 @@ Module for managing item lifecycle states and transitions via CompliantFlowCore.
 
 **Implementation Notes**:
 - Configuration-driven (no hardcoded workflows)
-- Supports multiple lifecycle models per document type
+- Requirement items have no lifecycle config entry → get_initial_state() returns None,
+  get_available_transitions() returns []
 - Extensible criteria system (field checks, manual verification, linked item status)
 - Strict validation with clear error messages (Fail-Fast)
 
@@ -357,7 +362,7 @@ Module for managing item lifecycle states and transitions via CompliantFlowCore.
 
 <div class="architecture-section" markdown="1">
 
-**Status**: <span class="status-approved">APPROVED</span>  
+**Status**: <span class="status-"></span>  
 
 #### Overview
 
@@ -393,7 +398,7 @@ Module for tracking and controlling changes to DHF items through change requests
 
 <div class="architecture-section" markdown="1">
 
-**Status**: <span class="status-approved">APPROVED</span>  
+**Status**: <span class="status-"></span>  
 
 #### Overview
 
@@ -429,7 +434,7 @@ Module for validating DHF against regulatory policies and standards.
 
 <div class="architecture-section" markdown="1">
 
-**Status**: <span class="status-approved">APPROVED</span>  
+**Status**: <span class="status-"></span>  
 
 #### Overview
 
@@ -465,7 +470,7 @@ Module for generating regulatory specification documents from templates.
 
 <div class="architecture-section" markdown="1">
 
-**Status**: <span class="status-approved">APPROVED</span>  
+**Status**: <span class="status-"></span>  
 
 #### Overview
 
@@ -509,7 +514,7 @@ into the DHF, and linking each result to the requirement items it verifies.
 
 <div class="architecture-section" markdown="1">
 
-**Status**: <span class="status-approved">APPROVED</span>  
+**Status**: <span class="status-"></span>  
 
 #### Overview
 
@@ -545,7 +550,7 @@ Streamlit-based web user interface for DHF management.
 
 <div class="architecture-section" markdown="1">
 
-**Status**: <span class="status-approved">APPROVED</span>  
+**Status**: <span class="status-"></span>  
 
 #### Overview
 
@@ -570,6 +575,51 @@ for CI/CD pipelines and scripted environments.
 - Stateless: each invocation creates a fresh CompliantFlowCore instance
 - No shared state with the Streamlit UI; both call the same core independently
 - stdout/stderr separation enables clean pipeline integration
+
+
+
+
+
+
+</div>
+
+### 10. SYSARCH-010: GitOps-Based Approval Architecture
+
+<div class="architecture-section" markdown="1">
+
+**Status**: <span class="status-"></span>  
+
+#### Overview
+
+Architectural decision: requirement items use Git as the sole approval mechanism
+rather than an explicit lifecycle state machine.
+
+**Decision**:
+UC, CRS, SYS, SRS, SWDD, SYSARCH, SOUP, RISK, and RCM items carry NO status field
+and have NO lifecycle transitions. Only CR, REL, and DEF retain explicit lifecycle
+workflows.
+
+**Approval Model**:
+- main branch  → item is approved (PR merge = approval evidence)
+- feature branch → item is draft / under review
+- deleted from repo → item is retired
+
+**Rationale**:
+- Eliminates redundant status: approved fields on 65 YAML files
+- Prevents stale approval metadata when items are edited on branches
+- Git PR review (with required reviewers and CI checks) already serves as the
+  approval gate — duplicating that as a YAML field adds noise, not value
+- Simplifies the data model: requirement items are just content files, not workflow objects
+- CR, REL, DEF need explicit states because they have multi-step processes
+  (e.g., CR: draft→in_review→approved→implementing→completed) that go beyond
+  the binary approved/not-approved signal Git provides
+
+**Implementation**:
+- `project_config.yaml`: no `lifecycle` block on requirement doc types
+- `create_item()`: does not set status when `get_initial_state()` returns None
+- `get_available_transitions()`: returns [] for items with no lifecycle config
+- Schema validation: status field is still in _SYSTEM_FIELDS (allowed but not set)
+- Design detail: see SWDD-016 (GitOps approval model)
 
 
 
@@ -656,7 +706,7 @@ This architecture specification satisfies the following system requirements:
 
 | Metric | Count |
 |--------|-------|
-| **Total Architecture Components** | 9 |
+| **Total Architecture Components** | 10 |
 | **System Architecture** | 0 |
 | **Data Architecture** | 0 |
 | **UI Architecture** | 0 |
@@ -668,7 +718,7 @@ This architecture specification satisfies the following system requirements:
 |--------|-------|
 | **Draft** | 0 |
 | **Review** | 0 |
-| **Approved** | 9 |
+| **Approved** | 0 |
 
 ---
 
@@ -689,7 +739,7 @@ This is documented in the gap analysis but not currently implemented.
 ## 11. Document Control
 
 **Document Owner**: System Architecture Team  
-**Last Updated**: 2026-03-02  
+**Last Updated**: 2026-03-03  
 **Next Review**: TBD
 
 ---

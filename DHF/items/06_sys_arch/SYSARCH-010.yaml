@@ -1,0 +1,34 @@
+id: SYSARCH-010
+title: GitOps-Based Approval Architecture
+content: |-
+  Architectural decision: requirement items use Git as the sole approval mechanism
+  rather than an explicit lifecycle state machine.
+
+  **Decision**:
+  UC, CRS, SYS, SRS, SWDD, SYSARCH, SOUP, RISK, and RCM items carry NO status field
+  and have NO lifecycle transitions. Only CR, REL, and DEF retain explicit lifecycle
+  workflows.
+
+  **Approval Model**:
+  - main branch  → item is approved (PR merge = approval evidence)
+  - feature branch → item is draft / under review
+  - deleted from repo → item is retired
+
+  **Rationale**:
+  - Eliminates redundant status: approved fields on 65 YAML files
+  - Prevents stale approval metadata when items are edited on branches
+  - Git PR review (with required reviewers and CI checks) already serves as the
+    approval gate — duplicating that as a YAML field adds noise, not value
+  - Simplifies the data model: requirement items are just content files, not workflow objects
+  - CR, REL, DEF need explicit states because they have multi-step processes
+    (e.g., CR: draft→in_review→approved→implementing→completed) that go beyond
+    the binary approved/not-approved signal Git provides
+
+  **Implementation**:
+  - `project_config.yaml`: no `lifecycle` block on requirement doc types
+  - `create_item()`: does not set status when `get_initial_state()` returns None
+  - `get_available_transitions()`: returns [] for items with no lifecycle config
+  - Schema validation: status field is still in _SYSTEM_FIELDS (allowed but not set)
+  - Design detail: see SWDD-016 (GitOps approval model)
+design:
+- SYS-010

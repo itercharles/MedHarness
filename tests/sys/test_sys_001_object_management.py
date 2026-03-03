@@ -40,7 +40,7 @@ def test_TC_SYS_001_001_view_requirement_object(test_dhf_root):
     assert item["id"] == "SRS-001"
     assert item["title"] == "Item Persistence and Versioning"
     assert "Software shall persist items to YAML files" in item["content"]
-    assert item["status"] == "approved"
+    # SRS items have no status (GitOps model — approved on main branch by definition)
 
     # Verify it's in the items collection
     all_items = core.get_all_items()
@@ -72,8 +72,8 @@ def test_TC_SYS_001_002_view_change_request_object(test_dhf_root):
     assert item["id"] == "CR-001"
     assert item["title"] == "Test Change Request"
     assert "Change request for testing purposes" in item["description"]
-    # CR starts in draft status
-    assert item["status"] in ["draft", "approved"]
+    # CR has explicit lifecycle
+    assert item["status"] in ["draft", "in_review", "approved", "implementing", "completed", "cancelled"]
 
     # Verify affected items relationship
     assert "affected_items" in item
@@ -182,26 +182,30 @@ def test_get_items_filtered_by_type(test_dhf_root):
 
 def test_get_items_filtered_by_status(test_dhf_root):
     """
-    TC-SYS-001-007: get_items_filtered with status filter (API)
+    TC-SYS-001-007: get_items_filtered with status filter uses CR (explicit lifecycle)
 
     @links: SYS-001
     @test_id: TC-SYS-001-007
 
     Verify get_items_filtered respects the status_filter parameter.
+    Status filtering is only meaningful for CR/REL/DEF (explicit lifecycle).
+    Requirement items (SYS, SRS, etc.) have no status field.
     """
     core = CompliantFlowCore(test_dhf_root)
 
-    approved = core.get_items_filtered("SRS", status_filter=["approved"])
-    draft = core.get_items_filtered("SRS", status_filter=["draft"])
+    # CR has explicit lifecycle — status filter works
+    draft_crs = core.get_items_filtered("CR", status_filter=["draft"])
+    approved_crs = core.get_items_filtered("CR", status_filter=["approved"])
 
-    for item in approved:
-        assert item.get("status") == "approved"
-    for item in draft:
+    for item in draft_crs:
         assert item.get("status") == "draft"
+    for item in approved_crs:
+        assert item.get("status") == "approved"
 
-    # Together they should cover all SRS items
-    all_srs = core.get_items_filtered("SRS")
-    assert len(approved) + len(draft) == len(all_srs)
+    # Requirement items have no status — status filter returns empty
+    srs_with_status_filter = core.get_items_filtered("SRS", status_filter=["approved"])
+    assert srs_with_status_filter == [], \
+        "SRS items have no status; status filter should return empty list"
 
 
 def test_get_items_filtered_by_search(test_dhf_root):

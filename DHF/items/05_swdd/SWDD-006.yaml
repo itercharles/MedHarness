@@ -42,4 +42,3 @@ content: |-
   **Complexity**: O(R × I) where R = rules, I = items per rule
 implements:
 - SRS-005
-status: approved

@@ -18,4 +18,3 @@ content: |-
   - CR is updated with PR number, URL, and affected items
 derives_from:
 - SYS-030
-status: approved

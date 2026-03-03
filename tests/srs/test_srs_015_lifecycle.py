@@ -25,14 +25,22 @@ class TestSRS015_ItemLifecycleManagement:
     
     def test_item_creation_and_retrieval(self, core):
         """Verify software can manage items (CRUD operations)."""
-        # Get all items
         items = core.get_all_items()
         assert len(items) > 0, "Should have items"
-        
-        # Verify item structure
-        item = items[0]
-        assert 'id' in item, "Item should have ID"
-        assert 'status' in item or 'status' not in item, "Item may have status"
+
+        # Requirement items must NOT carry a status field (GitOps model)
+        sys_items = [i for i in items if i['id'].startswith('SYS-')]
+        assert len(sys_items) > 0, "Should have SYS items"
+        for item in sys_items:
+            assert 'status' not in item, \
+                f"{item['id']} is a requirement item and must not have a status field"
+
+        # CR items MUST carry a status field (explicit lifecycle)
+        cr_items = [i for i in items if i['id'].startswith('CR-')]
+        assert len(cr_items) > 0, "Should have CR items"
+        for item in cr_items:
+            assert 'status' in item, \
+                f"{item['id']} is a CR and must have a status field"
     
     def test_workflow_engine_initialization(self, core):
         """Verify lifecycle methods are available in core."""

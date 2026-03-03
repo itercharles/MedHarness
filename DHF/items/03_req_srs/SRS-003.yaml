@@ -16,4 +16,3 @@ content: |-
   - Detection updates when items are linked/unlinked
 derives_from:
 - SYS-004
-status: approved

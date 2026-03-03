@@ -7,8 +7,8 @@
 | Field | Value |
 |-------|-------|
 | **Document ID** | UC-SPEC |
-| **Version** | 1.3 |
-| **Generated** | 2026-03-02 |
+| **Version** | 1.4 |
+| **Generated** | 2026-03-03 |
 | **Status** | Draft |
 | **Project** | CompliantFlow Project |
 
@@ -24,7 +24,7 @@ This document provides a comprehensive list of all Use Cases, including their cu
 
 ### 1.2 Scope
 
-This specification covers all Use Cases defined in the CompliantFlow system as of 2026-03-02.
+This specification covers all Use Cases defined in the CompliantFlow system as of 2026-03-03.
 
 ---
 
@@ -34,7 +34,7 @@ This specification covers all Use Cases defined in the CompliantFlow system as o
 
 <div class="requirement-section" markdown="1">
 
-**Status**: <span class="status-approved">APPROVED</span>  
+**Status**: <span class="status-"></span>  
 
 #### Description
 
@@ -44,7 +44,6 @@ using CompliantFlow to ensure IEC 62304 and ISO 13485 compliance.
 Actor: Regulatory Engineer / QA Engineer
 
 Preconditions:
-- User has access to the CompliantFlow web interface or CLI
 - The DHF repository is initialised and project_config.yaml is configured
 
 Primary Flow:
@@ -75,7 +74,7 @@ Postconditions:
 
 <div class="requirement-section" markdown="1">
 
-**Status**: <span class="status-approved">APPROVED</span>  
+**Status**: <span class="status-"></span>  
 
 #### Description
 
@@ -115,7 +114,7 @@ Postconditions:
 
 <div class="requirement-section" markdown="1">
 
-**Status**: <span class="status-approved">APPROVED</span>  
+**Status**: <span class="status-"></span>  
 
 #### Description
 
@@ -126,16 +125,10 @@ Actor: Regulatory Engineer / QA Engineer
 
 Preconditions:
 - DHF items of the relevant type are in place and approved
-- A Jinja2 template is configured for the target document type in project_config.yaml
 
 Primary Flow:
-1. Engineer selects the target document type (e.g. SYS, SRS, SYSARCH, RISK)
-2. Engineer triggers document generation via the UI or CLI (`compliantflow doc generate SYS`)
-3. System loads all items of the selected type, sorts by ID, and renders the Jinja2 template
-4. System writes the rendered markdown to the configured output path and increments the version
-5. Engineer reviews the generated markdown document for completeness and accuracy
-6. Engineer exports a PDF copy for submission (`compliantflow doc export SYS`)
-7. System regenerates the markdown (to ensure freshness), converts it to HTML, and renders a PDF
+1. Engineer generate and export the target document type (e.g. SYS, SRS, SYSARCH, RISK)
+2. Engineer reviews the generated document for completeness and accuracy, then archives it in the DHF repository.
 
 Alternative Flows:
 - A. Regenerate all documents at once: engineer runs `compliantflow doc generate ALL`
@@ -156,7 +149,7 @@ Postconditions:
 
 <div class="requirement-section" markdown="1">
 
-**Status**: <span class="status-approved">APPROVED</span>  
+**Status**: <span class="status-"></span>  
 
 #### Description
 
@@ -167,13 +160,11 @@ Actor: Regulatory Engineer / Project Manager / DevOps Engineer
 
 Preconditions:
 - Change control is enabled in project_config.yaml
-- At least one approved DHF item requires modification
 
 Primary Flow:
-1. Engineer identifies a need for change (new requirement, defect, regulatory update)
+1. Engineer identifies a need for change for DHF, software code or tests.
 2. Engineer creates a new CR item: records title, description, justification, and priority
 3. System assigns a CR ID (e.g. CR-013) and sets status to `draft`
-4. Engineer identifies all affected DHF items and adds them to the CR's `affected_items` list
 5. Engineer submits the CR for review (transitions to `in_review`)
 6. Reviewer assesses impact on safety, schedule, and linked items; records `impact_assessment`
 7. Reviewer approves the CR (transitions to `approved`)
@@ -200,7 +191,7 @@ Postconditions:
 
 <div class="requirement-section" markdown="1">
 
-**Status**: <span class="status-approved">APPROVED</span>  
+**Status**: <span class="status-"></span>  
 
 #### Description
 
@@ -241,7 +232,7 @@ Postconditions:
 
 <div class="requirement-section" markdown="1">
 
-**Status**: <span class="status-approved">APPROVED</span>  
+**Status**: <span class="status-"></span>  
 
 #### Description
 
@@ -270,20 +261,20 @@ The engineer does not start a web server; all operations are command-line only.
 | Metric | Count |
 |--------|-------|
 | **Total Requirements** | 6 |
-| **Approved** | 6 |
+| **Approved** | 0 |
 | **Draft** | 0 |
 | **Retired** | 0 |
 
 ### 3.2 Approval Status
 
-**Approval Rate**: 100.0% (6/6)
+**Approval Rate**: 0.0% (0/6)
 
 ---
 
 ## 4. Document Control
 
 **Document Owner**: Quality Assurance  
-**Last Updated**: 2026-03-02  
+**Last Updated**: 2026-03-03  
 **Next Review**: TBD
 
 ---

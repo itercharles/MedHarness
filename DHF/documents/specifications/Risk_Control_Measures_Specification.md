@@ -7,8 +7,8 @@
 | Field | Value |
 |-------|-------|
 | **Document ID** | RCM-SPEC |
-| **Version** | 1.1 |
-| **Generated** | 2026-03-02 |
+| **Version** | 1.2 |
+| **Generated** | 2026-03-03 |
 | **Status** | Draft |
 | **Project** | CompliantFlow Project |
 
@@ -24,7 +24,7 @@ This document provides a comprehensive list of all risk control measures, their 
 
 ### 1.2 Scope
 
-This specification covers all risk control measures defined in the CompliantFlow system as of 2026-03-02.
+This specification covers all risk control measures defined in the CompliantFlow system as of 2026-03-03.
 
 ---
 
@@ -32,9 +32,9 @@ This specification covers all risk control measures defined in the CompliantFlow
 
 ### 1. RCM-001: Orphan Detection
 
-<div class="rcm-section">
+<div class="rcm-section" markdown="1">
 
-**Status**: <span class="status-draft">DRAFT</span>  
+**Status**: <span class="status-"></span>  
 
 #### Description
 
@@ -51,7 +51,7 @@ The system shall automatically detect and report items with missing or invalid l
 |-----------|-------|
 | **Control Type** |  |
 | **Implementation Status** |  |
-| **Status** | draft |
+| **Status** |  |
 
 </div>
 
@@ -66,7 +66,7 @@ The system shall automatically detect and report items with missing or invalid l
 |--------|-------|
 | **Total RCMs** | 1 |
 | **Approved** | 0 |
-| **Draft** | 1 |
+| **Draft** | 0 |
 
 ### 3.2 Control Type Distribution
 
@@ -89,7 +89,7 @@ The system shall automatically detect and report items with missing or invalid l
 ## 4. Document Control
 
 **Document Owner**: Risk Management  
-**Last Updated**: 2026-03-02  
+**Last Updated**: 2026-03-03  
 **Next Review**: TBD
 
 ---

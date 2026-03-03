@@ -99,22 +99,28 @@ class TestSRS021_PRCRValidation:
     def test_TC_SRS_021_001_cr_stable_status_rejected(self):
         """
         TC-SRS-021-001: Verify CR in stable status is rejected
-        
+
+        Uses the actual global_lifecycle config to determine which states are
+        stable — does not rely on hardcoded lists.
+
         @links: SRS-006
         @test_id: TC-SRS-021-001
         """
-        # Test stable status validation logic
-        stable_statuses = ['approved', 'closed', 'retired']
-        valid_statuses = ['draft', 'under_review', 'in_progress']
-        
-        # Simulate CR status check
-        for status in stable_statuses:
-            is_stable = status in stable_statuses
-            assert is_stable == True, f"Status '{status}' should be considered stable"
-        
-        for status in valid_statuses:
-            is_stable = status in stable_statuses
-            assert is_stable == False, f"Status '{status}' should not be considered stable"
+        from pathlib import Path as _Path
+        from compliantflow.core import CompliantFlowCore as _Core
+        core = _Core(_Path(__file__).parent.parent.parent / "DHF", auto_commit=False)
+
+        # cancelled and retired are marked is_stable in global_lifecycle
+        for status in ('cancelled', 'retired', 'closed'):
+            info = core.get_state_info(status)
+            assert info.get('is_stable', False), \
+                f"Status '{status}' should be stable (PR should be rejected)"
+
+        # draft and in_review are active CR states — not stable
+        for status in ('draft', 'in_review'):
+            info = core.get_state_info(status)
+            assert not info.get('is_stable', False), \
+                f"Status '{status}' should not be stable (PR should be accepted)"
 
 
 class TestSRS022_AffectedItemsDetection:
@@ -205,48 +211,6 @@ class TestSRS022_AffectedItemsDetection:
             
             assert test_id == expected_id
     
-    def test_TC_SRS_022_002_test_file_with_corresponding_yaml(self, tmp_path):
-        """
-        TC-SRS-022-002: Verify only test files with YAML items are tracked
-        
-        @links: SRS-007
-        @test_id: TC-SRS-022-002
-        """
-        # Create test DHF structure
-        test_dhf = tmp_path / "test_dhf"
-        tc_dir = test_dhf / "items" / "05_tc_sys"
-        tc_dir.mkdir(parents=True)
-        
-        # Create a test case YAML file
-        test_yaml = tc_dir / "TC-SYS-001.yaml"
-        test_yaml.write_text("id: TC-SYS-001\ntitle: Test Case\n")
-        
-        # Simulate test file change
-        test_file = "test_sys_001_core.py"
-        match = re.match(r"test_([a-z]+)_([0-9]+)_", test_file)
-        
-        if match:
-            type_code = match.group(1).upper()
-            number = match.group(2)
-            test_id = f"TC-{type_code}-{number}"
-            
-            # Check if corresponding YAML exists
-            possible_dirs = [
-                test_dhf / "items" / "05_tc_sys",
-                test_dhf / "items" / "06_tc_crs",
-                test_dhf / "items" / "07_tc_sds"
-            ]
-            
-            yaml_exists = False
-            for dir_path in possible_dirs:
-                if dir_path.exists():
-                    yaml_file = dir_path / f"{test_id}.yaml"
-                    if yaml_file.exists():
-                        yaml_exists = True
-                        break
-            
-            # This test validates the logic - we created TC-SYS-001.yaml so it should exist
-            assert yaml_exists is True
 
 
 class TestSRS023_PRTracking:

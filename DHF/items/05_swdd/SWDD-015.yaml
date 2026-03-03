@@ -39,4 +39,3 @@ content: |-
   **Complexity**: O(T × L) where T = TC records, L = average links per TC
 implements:
 - SRS-013
-status: approved

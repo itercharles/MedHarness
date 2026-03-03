@@ -45,4 +45,3 @@ content: |-
   **Complexity**: O(D × P) where D = doc types, P = properties per type
 implements:
 - SRS-011
-status: approved

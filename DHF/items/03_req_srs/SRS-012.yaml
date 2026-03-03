@@ -33,4 +33,3 @@ content: |-
   All commands write human-readable messages to stderr and machine-readable data to stdout.
 derives_from:
 - SYS-032
-status: approved

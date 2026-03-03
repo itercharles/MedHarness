@@ -16,4 +16,3 @@ content: |-
   - CR workflow transitions follow configured rules
 derives_from:
 - SYS-008
-status: approved

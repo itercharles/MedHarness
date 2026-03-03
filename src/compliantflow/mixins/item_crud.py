@@ -61,7 +61,7 @@ class _ItemCRUDMixin:
             if not item["id"].startswith(prefix):
                 continue
             if status_filter is not None:
-                item_status = item.get("status") or initial_state
+                item_status = item.get("status")
                 if item_status not in status_filter:
                     continue
             if search_lower:
@@ -117,7 +117,8 @@ class _ItemCRUDMixin:
 
         doc_type_code = item_data['id'].split('-')[0]
         initial_state = self.get_initial_state(doc_type_code)
-        item_data['status'] = initial_state
+        if initial_state:
+            item_data['status'] = initial_state
 
         item = Item.model_validate(item_data)
         self.saver.save(item, author=author, cr_id=cr_id)

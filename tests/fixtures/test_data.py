@@ -30,8 +30,8 @@ def create_test_dhf() -> Path:
     test_config_dir = test_dir / "config"
     test_config_dir.mkdir(parents=True)
     
-    # Create minimal project_config.yaml for testing with lifecycle
-    # Global lifecycle states
+    # Create minimal project_config.yaml for testing
+    # Only CR keeps explicit lifecycle; requirement types use GitOps model
     test_config = {
         'change_control': {
             'enabled': True,
@@ -58,14 +58,7 @@ def create_test_dhf() -> Path:
                     'id',
                     {'name': 'title', 'format': 'short_text', 'label': 'Title'},
                     {'name': 'content', 'format': 'long_text', 'label': 'Content'},
-
                 ],
-                'lifecycle': {
-                    'transitions': [
-                        {'from_states': [None], 'to_state': 'draft'},
-                        {'from_states': ['draft'], 'to_state': 'approved'}
-                    ]
-                }
             },
             {
                 'code': 'CRS',
@@ -80,14 +73,7 @@ def create_test_dhf() -> Path:
                     {'name': 'title', 'format': 'short_text', 'label': 'Title'},
                     {'name': 'content', 'format': 'long_text', 'label': 'Content'},
                     {'name': 'derives_from', 'format': 'relationship', 'target_types': ['UC'], 'label': 'Derives From'},
-
                 ],
-                'lifecycle': {
-                    'transitions': [
-                        {'from_states': [None], 'to_state': 'draft'},
-                        {'from_states': ['draft'], 'to_state': 'approved'}
-                    ]
-                }
             },
             {
                 'code': 'SYS',
@@ -103,16 +89,7 @@ def create_test_dhf() -> Path:
                     {'name': 'content', 'format': 'long_text', 'label': 'Content'},
                     {'name': 'category', 'format': 'short_text', 'label': 'Category'},
                     {'name': 'derives_from', 'format': 'relationship', 'target_types': ['CRS'], 'label': 'Derives From'},
-
                 ],
-                'lifecycle': {
-                    'transitions': [
-                        {'from_states': [None], 'to_state': 'draft'},
-                        {'from_states': ['draft'], 'to_state': 'under_review'},
-                        {'from_states': ['under_review'], 'to_state': 'approved'},
-                        {'from_states': ['under_review'], 'to_state': 'draft'}
-                    ]
-                }
             },
             {
                 'code': 'SRS',
@@ -127,14 +104,7 @@ def create_test_dhf() -> Path:
                     {'name': 'title', 'format': 'short_text', 'label': 'Title'},
                     {'name': 'content', 'format': 'long_text', 'label': 'Content'},
                     {'name': 'derives_from', 'format': 'relationship', 'target_types': ['SYS'], 'label': 'Derives From'},
-
                 ],
-                'lifecycle': {
-                    'transitions': [
-                        {'from_states': [None], 'to_state': 'draft'},
-                        {'from_states': ['draft'], 'to_state': 'approved'}
-                    ]
-                }
             },
             {
                 'code': 'SYSARCH',
@@ -149,14 +119,7 @@ def create_test_dhf() -> Path:
                     {'name': 'title', 'format': 'short_text', 'label': 'Title'},
                     {'name': 'content', 'format': 'long_text', 'label': 'Content'},
                     {'name': 'implements', 'format': 'relationship', 'target_types': ['SYS'], 'label': 'Implements'},
-
                 ],
-                'lifecycle': {
-                    'transitions': [
-                        {'from_states': [None], 'to_state': 'draft'},
-                        {'from_states': ['draft'], 'to_state': 'approved'}
-                    ]
-                }
             },
             {
                 'code': 'CR',
@@ -189,7 +152,7 @@ def create_test_dhf() -> Path:
     with open(config_file, 'w') as f:
         yaml.dump(test_config, f, default_flow_style=False, sort_keys=False)
     
-    print(f"[OK] Created minimal test config with {len(test_config['doc_types'])} document types (with lifecycle)")
+    print(f"[OK] Created minimal test config with {len(test_config['doc_types'])} document types")
     
     # Create directory structure for all document types
     doc_type_dirs = [
@@ -226,80 +189,61 @@ def get_test_dataset() -> List[Dict]:
         List of item dictionaries ready for CompliantFlowCore.create_item()
     """
     return [
-        # User Needs
+        # User Needs (no status — GitOps model)
         {
             'id': 'UC-001',
             'title': 'User Need - Test Item',
             'content': 'User needs test functionality',
-            'status': 'approved',
-            'approved_by': 'test_user',
-            'approved_date': '2025-01-01T00:00:00'
         },
-        # Customer Requirements
+        # Customer Requirements (no status — GitOps model)
         {
             'id': 'CRS-001',
             'title': 'Customer Requirement - Test Item',
             'content': 'Customer requires test feature',
-            'status': 'approved',
             'derives_from': ['UC-001'],
-            'approved_by': 'test_user',
-            'approved_date': '2025-01-01T00:00:00'
         },
-        # System Requirements
+        # System Requirements (no status — GitOps model)
         {
             'id': 'SYS-001',
             'title': 'System Requirement - Test Item',
             'content': 'System shall provide test capability',
-            'status': 'approved',
             'derives_from': ['CRS-001'],
-            'approved_by': 'test_user',
-            'approved_date': '2025-01-01T00:00:00'
         },
         {
             'id': 'SYS-002',
             'title': 'Draft System Requirement',
             'content': 'System shall perform function X',
             'category': 'Functional',
-            'status': 'draft',
-            'derives_from': ['CRS-001']
+            'derives_from': ['CRS-001'],
         },
-        # Software Requirements
+        # Software Requirements (no status — GitOps model)
         {
             'id': 'SRS-001',
             'title': 'Item Persistence and Versioning',
             'content': 'Software shall persist items to YAML files with version control',
-            'status': 'approved',
             'derives_from': ['SYS-001'],
-            'approved_by': 'test_user',
-            'approved_date': '2025-01-01T00:00:00'
         },
         {
             'id': 'SRS-002',
             'title': 'Graph-based Traceability',
             'content': 'Software shall provide graph-based traceability visualization',
-            'status': 'approved',
             'derives_from': ['SYS-001'],
-            'approved_by': 'test_user',
-            'approved_date': '2025-01-01T00:00:00'
         },
-        # System Architecture
+        # System Architecture (no status — GitOps model)
         {
             'id': 'SYSARCH-001',
             'title': 'System Architecture Component',
             'content': 'Architecture component for test system',
-            'status': 'approved',
             'implements': ['SYS-001'],
-            'approved_by': 'test_user',
-            'approved_date': '2025-01-01T00:00:00'
         },
-        # Change Requests
+        # Change Requests (explicit lifecycle: draft → approved)
         {
             'id': 'CR-001',
             'title': 'Test Change Request',
             'description': 'Change request for testing purposes',
             'justification': 'Testing CR workflow',
             'status': 'draft',
-            'affected_items': ['SRS-001']
+            'affected_items': ['SRS-001'],
         },
     ]
 
@@ -376,44 +320,22 @@ def populate_test_dhf(test_dhf_root: Path):
         CompliantFlowCore instance with populated data
     """
     from compliantflow.core import CompliantFlowCore
-    from traceability.models.item import Item
 
     print(f"\n[DATA] Populating test DHF with test data...")
 
     # Populate governance policies first
     populate_governance(test_dhf_root)
-    
+
     # Initialize core with test DHF (no auto-commit for tests)
     core = CompliantFlowCore(test_dhf_root, auto_commit=False)
-    
+
     # Get test dataset
     test_items = get_test_dataset()
-    
+
     # Create all test items
     for item_data in test_items:
         try:
-            # Capture target fields BEFORE create_item modifies item_data
-            target_status = item_data.get('status')
-            approved_by = item_data.get('approved_by')
-            
-            # Create item (will be set to draft/initial in item_data and returned)
-            created = core.create_item(item_data)
-            
-            # If intended status was different from created status (draft), explicit update via saver
-            if target_status and target_status != created.get('status'):
-                # Restore the metadata that might have been lost or we want to force
-                # We use the created ID but the ORIGINAL intended status and metadata
-                item_data['id'] = created['id']
-                item_data['status'] = target_status
-                if approved_by:
-                    item_data['approved_by'] = approved_by
-                if item_data.get('approved_date'):
-                     item_data['approved_date'] = item_data.get('approved_date')
-
-                # Force save to bypass workflow state checks for test setup
-                item = Item.model_validate(item_data)
-                core.saver.save(item, author=item_data.get('approved_by', 'system'))
-                
+            core.create_item(item_data)
             print(f"  [OK] Created {item_data['id']}")
         except Exception as e:
             print(f"  [WARN] Failed to create {item_data['id']}: {e}")
@@ -421,8 +343,8 @@ def populate_test_dhf(test_dhf_root: Path):
             traceback.print_exc()
 
     print(f"[OK] Test DHF populated with {len(test_items)} items")
-    
+
     # Refresh to ensure graph consistency
     core.refresh()
-    
+
     return core

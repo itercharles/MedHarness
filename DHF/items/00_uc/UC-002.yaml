@@ -28,4 +28,3 @@ content: |-
   Postconditions:
   - All traceability gaps are identified and logged
   - IEC 62304 §5.1.1 (software development plan traceability) requirements can be verified
-status: approved

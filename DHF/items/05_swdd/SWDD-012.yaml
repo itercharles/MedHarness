@@ -57,4 +57,3 @@ content: |-
   **Complexity**: O(T) where T = number of test cases in XML
 implements:
 - SRS-010
-status: approved

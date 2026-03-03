@@ -30,4 +30,3 @@ content: |-
   - All changes to DHF items are traceable to an approved CR
   - Implementation PRs are recorded in the CR for audit trail
   - Affected items are re-reviewed and re-approved after change
-status: approved

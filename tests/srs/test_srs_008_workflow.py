@@ -4,6 +4,9 @@ Tests for SRS-008: Configurable Workflow Engine
 Verifies that the software enforces configurable lifecycle workflows for items,
 validates state transitions, and executes transition criteria.
 
+Only CR, REL, and DEF retain explicit lifecycle; requirement items use the
+GitOps approval model (no status field).
+
 @links: SRS-008
 """
 import pytest
@@ -11,308 +14,242 @@ from pathlib import Path
 
 
 class TestWorkflowTransitions:
-    """Test workflow state transitions.
-    
+    """Test workflow state transitions using CR (which retains explicit lifecycle).
+
     @links: SRS-008
     """
-    
-    def test_submit_requirement_for_review(self, test_core, draft_sys_item):
+
+    def test_cr_draft_to_approved_transition_available(self, test_core):
         """
-        User transitions requirement from draft to under_review.
-        
+        CR item in draft state has 'approved' as an available transition.
+
         @links: SRS-008
         """
-        
-        # Verify transition is available using core
-        test_item = {'id': 'SYS-002', 'status': 'draft'}
-        transitions = test_core.get_available_transitions(test_item)
-        transition_targets = [t.get('to_state') for t in transitions]
-        assert 'under_review' in transition_targets, \
-            f"Expected 'under_review' in available transitions, got {transition_targets}"
-        
-        # Perform transition using draft item (SYS-002)
-        item = test_core.get_item('SYS-002')
-        item['status'] = 'under_review'
-        
-        result = test_core.update_item('SYS-002', item)
-        
-        # Verify new status
-        assert result['status'] == 'under_review'
-    
-    def test_approve_requirement(self, test_core):
-        """
-        User approves a requirement under review.
-        
-        @links: SRS-008
-        """
-        
-        # Create item under review
-        item_data = {
-            'id': 'SYS-APPROVE-TEST',
-            'title': 'Test Requirement',
-            'content': 'Test content',
-            'status': 'under_review'
-        }
-        test_core.create_item(item_data)
-        
-        # Verify can approve using core
-        test_item = {'id': 'SYS-APPROVE-TEST', 'status': 'under_review'}
-        transitions = test_core.get_available_transitions(test_item)
+        cr = test_core.get_item('CR-001')
+        assert cr is not None
+        assert cr.get('status') == 'draft'
+
+        transitions = test_core.get_available_transitions(cr)
         transition_targets = [t.get('to_state') for t in transitions]
         assert 'approved' in transition_targets, \
-            f"Expected 'approved' in available transitions from under_review, got {transition_targets}"
-        
-        # Approve
-        item = test_core.get_item('SYS-APPROVE-TEST')
-        item['status'] = 'approved'
-        item['approved_by'] = 'test_user'
-        
-        result = test_core.update_item('SYS-APPROVE-TEST', item)
-        
-        # Verify approval
+            f"Expected 'approved' in available transitions from draft, got {transition_targets}"
+
+    def test_approve_cr(self, test_core):
+        """
+        User approves a CR.
+
+        @links: SRS-008
+        """
+        cr_data = {
+            'id': 'CR-098',
+            'title': 'Test Change Request',
+            'description': 'Test CR workflow',
+            'justification': 'Testing',
+        }
+        test_core.create_item(cr_data)
+
+        cr = test_core.get_item('CR-098')
+        cr['status'] = 'approved'
+        cr['approved_by'] = 'test_user'
+
+        result = test_core.update_item('CR-098', cr)
+
         assert result['status'] == 'approved'
         assert result['approved_by'] == 'test_user'
-    
-    def test_reject_requirement(self, test_core):
+
+    def test_stable_state_detection(self, test_core):
         """
-        User rejects a requirement, sending it back to draft.
-        
+        Workflow correctly identifies stable states from global lifecycle config.
+
         @links: SRS-008
         """
-        # Create item under review
-        item_data = {
-            'id': 'SYS-REJECT-TEST',
-            'title': 'Test Requirement',
-            'content': 'Test content',
-            'status': 'under_review'
-        }
-        test_core.create_item(item_data)
-        
-        # Reject (transition to draft)
-        item = test_core.get_item('SYS-REJECT-TEST')
-        item['status'] = 'draft'
-        
-        result = test_core.update_item('SYS-REJECT-TEST', item)
-        
-        # Verify back to draft
-        assert result['status'] == 'draft'
-    
-    def test_prevent_invalid_transitions(self, test_core, draft_sys_item):
-        """
-        Workflow should only allow valid state transitions.
-        
-        @links: SRS-008
-        """
-        
-        # Get available transitions from draft using core
-        test_item = {'id': 'SYS-001', 'status': 'draft'}
-        transitions = test_core.get_available_transitions(test_item)
-        transition_targets = [t.get('to_state') for t in transitions]
-        
-        # Should be able to go to under_review
-        assert 'under_review' in transition_targets
-        
-        # Should NOT be able to jump directly to approved from draft
-        assert 'approved' not in transition_targets
-    
-    def test_stable_state_detection(self, test_core, approved_sys_item):
-        """
-        Workflow should correctly identify stable states.
-        
-        @links: SRS-008
-        """
-        
-        # Get state info using core
         approved_state = test_core.get_state_info('approved')
         draft_state = test_core.get_state_info('draft')
-        
-        # Approved should be stable
+
+        # Approved is marked stable in the test fixture config
         assert approved_state.get('is_stable', False) is True
-        
-        # Draft should not be stable
+
+        # Draft is not stable
         assert draft_state.get('is_stable', False) is False
+
+    def test_requirement_items_have_no_lifecycle(self, test_core):
+        """
+        Requirement items (SYS, SRS, etc.) have no lifecycle and no status.
+
+        @links: SRS-008
+        """
+        sys_item = test_core.get_item('SYS-001')
+        assert sys_item is not None
+        assert 'status' not in sys_item, \
+            "SYS items should not have a status field (GitOps model)"
+
+        srs_item = test_core.get_item('SRS-001')
+        assert srs_item is not None
+        assert 'status' not in srs_item, \
+            "SRS items should not have a status field (GitOps model)"
+
+        # No transitions available for requirement items
+        transitions = test_core.get_available_transitions(sys_item)
+        assert transitions == [], \
+            f"SYS items should have no transitions, got {transitions}"
 
 
 class TestChangeRequestWorkflow:
     """Test Change Request workflow scenarios.
-    
+
     @links: SRS-008
     """
-    
+
     def test_create_and_approve_cr(self, test_core):
         """
-        Complete CR workflow: create -> review -> approve.
-        
+        Complete CR workflow: create -> approve.
+
         @links: SRS-008
         """
-        # 1. Create CR (status will be auto-initialized)
+        # 1. Create CR (status auto-initialized to draft)
         cr_data = {
-            'id': 'CR-WORKFLOW-001',
+            'id': 'CR-097',
             'title': 'Test Change Request',
             'description': 'Test CR workflow',
-            'justification': 'Testing'
+            'justification': 'Testing',
         }
-        
+
         created = test_core.create_item(cr_data)
-        # Status should be auto-initialized to draft
         assert 'status' in created
-        
-        # 2. Move to under review
-        cr = test_core.get_item('CR-WORKFLOW-001')
-        cr['status'] = 'under_review'
-        updated = test_core.update_item('CR-WORKFLOW-001', cr)
-        assert updated['status'] == 'under_review'
-        
-        # 3. Approve
-        cr = test_core.get_item('CR-WORKFLOW-001')
+        assert created['status'] == 'draft'
+
+        # 2. Approve
+        cr = test_core.get_item('CR-097')
         cr['status'] = 'approved'
         cr['approved_by'] = 'test_user'
-        final = test_core.update_item('CR-WORKFLOW-001', cr)
-        
+        final = test_core.update_item('CR-097', cr)
+
         assert final['status'] == 'approved'
         assert final['approved_by'] == 'test_user'
-    
-    def test_modify_stable_item_via_cr(self, test_core, approved_sys_item):
+
+    def test_modify_stable_cr_resets_status(self, test_core):
         """
-        User modifies an approved (stable) requirement via Change Request.
-        The item should reset to draft status.
-        
+        Modifying an approved (stable) CR resets status to draft.
+
         @links: SRS-008
         """
-        # Create CR
+        # Create and approve a CR (use simple numeric ID for correct prefix matching)
         cr_data = {
-            'id': 'CR-MODIFY-001',
-            'title': 'Modify SYS-002',
-            'description': 'Update approved requirement',
-            'affected_items': ['SYS-001']
+            'id': 'CR-099',
+            'title': 'Stable CR',
+            'description': 'Will be approved then modified',
+            'justification': 'Testing stable-state reset',
         }
         test_core.create_item(cr_data)
-        
-        # SYS-001 is already approved in test data
-        item = test_core.get_item('SYS-001')
-        assert item['status'] == 'approved'
-        
-        item['content'] = 'Modified via CR'
-        
-        # Update with CR reference
-        result = test_core.update_item('SYS-001', item, cr_id='CR-MODIFY-001')
-        
-        # Verify status reset
+
+        cr = test_core.get_item('CR-099')
+        cr['status'] = 'approved'
+        cr['approved_by'] = 'test_user'
+        approved = test_core.update_item('CR-099', cr)
+        assert approved['status'] == 'approved'
+
+        # Now modify — status should reset to draft
+        cr = test_core.get_item('CR-099')
+        cr['description'] = 'Modified via test'
+        result = test_core.update_item('CR-099', cr)
+
         assert result['status'] == 'draft'
         assert 'approved_by' not in result
 
 
 class TestCRUDWorkflows:
     """Test CRUD (Create, Read, Update, Delete) workflows.
-    
+
     @links: SRS-008
     """
-    
+
     def test_create_sys_requirement(self, test_core):
         """
-        User creates a new SYS requirement.
-        
+        User creates a new SYS requirement (no status field).
+
         @links: SRS-008
         """
         form_data = {
             'id': 'SYS-100',
             'title': 'New System Requirement',
             'content': 'The system shall validate user input',
-            'category': 'Functional'
+            'category': 'Functional',
         }
-        
+
         created = test_core.create_item(form_data)
-        
+
         assert created is not None
         assert created['id'] == 'SYS-100'
         assert created['title'] == 'New System Requirement'
-        
+        # SYS has no lifecycle — no status field
+        assert 'status' not in created
+
         # Verify item was persisted
         retrieved = test_core.get_item('SYS-100')
         assert retrieved is not None
         assert retrieved['id'] == 'SYS-100'
-    
+
     def test_create_change_request(self, test_core):
         """
-        User creates a new Change Request.
-        
+        User creates a new Change Request (gets draft status automatically).
+
         @links: SRS-008
         """
         cr_data = {
-            'id': 'CR-001',
+            'id': 'CR-096',
             'title': 'Update system requirements',
             'description': 'Need to add new validation rules',
-            'justification': 'Customer requirement change'
+            'justification': 'Customer requirement change',
         }
-        
+
         created = test_core.create_item(cr_data)
-        
+
         assert created is not None
-        assert created['id'] == 'CR-001'
-        
+        assert created['id'] == 'CR-096'
+        assert created['status'] == 'draft'
+
         # Verify CR can be retrieved
-        retrieved = test_core.get_item('CR-001')
+        retrieved = test_core.get_item('CR-096')
         assert retrieved is not None
-    
-    def test_create_with_relationship(self, test_core, draft_sys_item):
+
+    def test_create_with_relationship(self, test_core):
         """
         User creates SRS requirement linked to parent SYS requirement.
-        
+
         @links: SRS-008
         """
         srs_data = {
-            'id': 'SRS-001',
+            'id': 'SRS-CRUD-001',
             'title': 'Software Requirement',
             'content': 'Software shall implement validation',
-            'derives_from': ['SYS-001']
+            'derives_from': ['SYS-001'],
         }
-        
+
         created = test_core.create_item(srs_data)
-        
+
         assert created is not None
         assert 'SYS-001' in created.get('derives_from', [])
-        
+
         # Verify relationship exists in graph
-        assert test_core.graph.graph.has_edge('SRS-001', 'SYS-001')
-    
-    def test_edit_draft_requirement(self, test_core, draft_sys_item):
+        assert test_core.graph.graph.has_edge('SRS-CRUD-001', 'SYS-001')
+
+    def test_edit_requirement(self, test_core):
         """
-        User edits a draft requirement.
-        
+        User edits a requirement. No status involved.
+
         @links: SRS-008
         """
         item = test_core.get_item('SYS-001')
-        
+
         updated_data = item.copy()
         updated_data['content'] = 'Updated: The system shall perform enhanced function X'
         updated_data['category'] = 'Performance'
-        
+
         result = test_core.update_item('SYS-001', updated_data)
-        
+
         assert result is not None
         assert result['content'] == 'Updated: The system shall perform enhanced function X'
-        
+
         # Verify changes persisted
         retrieved = test_core.get_item('SYS-001')
         assert retrieved['content'] == 'Updated: The system shall perform enhanced function X'
-    
-    def test_edit_approved_requirement_resets_status(self, test_core, approved_sys_item):
-        """
-        User edits an approved (stable) requirement.
-        Status should reset to draft.
-        
-        @links: SRS-008
-        """
-        # SYS-001 is already approved in test data
-        item = test_core.get_item('SYS-001')
-        assert item['status'] == 'approved'
-        assert 'approved_by' in item
-        
-        updated_data = item.copy()
-        updated_data['content'] = 'Modified content'
-        
-        result = test_core.update_item('SYS-001', updated_data)
-        
-        # Verify status was reset to draft
-        assert result['status'] == 'draft'
-        assert 'approved_by' not in result

@@ -30,4 +30,3 @@ content: |-
   - Linked requirement items have their verification_status updated after import
 derives_from:
 - SYS-033
-status: approved

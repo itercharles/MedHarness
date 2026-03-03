@@ -7,7 +7,7 @@
 | Field | Value |
 |-------|-------|
 | **Document ID** | SRS-SPEC |
-| **Version** | 1.1 |
+| **Version** | 1.2 |
 | **Generated** | 2026-03-03 |
 | **Status** | Draft |
 | **Project** | CompliantFlow Project |
@@ -34,7 +34,7 @@ This specification covers all Software Requirement Specifications defined in the
 
 <div class="requirement-section" markdown="1">
 
-**Status**: <span class="status-approved">APPROVED</span>  
+**Status**: <span class="status-"></span>  
 
 #### Description
 
@@ -64,7 +64,7 @@ Acceptance Criteria:
 
 <div class="requirement-section" markdown="1">
 
-**Status**: <span class="status-approved">APPROVED</span>  
+**Status**: <span class="status-"></span>  
 
 #### Description
 
@@ -91,7 +91,7 @@ Acceptance Criteria:
 
 <div class="requirement-section" markdown="1">
 
-**Status**: <span class="status-approved">APPROVED</span>  
+**Status**: <span class="status-"></span>  
 
 #### Description
 
@@ -117,7 +117,7 @@ Acceptance Criteria:
 
 <div class="requirement-section" markdown="1">
 
-**Status**: <span class="status-approved">APPROVED</span>  
+**Status**: <span class="status-"></span>  
 
 #### Description
 
@@ -143,7 +143,7 @@ Acceptance Criteria:
 
 <div class="requirement-section" markdown="1">
 
-**Status**: <span class="status-approved">APPROVED</span>  
+**Status**: <span class="status-"></span>  
 
 #### Description
 
@@ -176,7 +176,7 @@ Acceptance Criteria:
 
 <div class="requirement-section" markdown="1">
 
-**Status**: <span class="status-approved">APPROVED</span>  
+**Status**: <span class="status-"></span>  
 
 #### Description
 
@@ -202,7 +202,7 @@ Acceptance Criteria:
 
 <div class="requirement-section" markdown="1">
 
-**Status**: <span class="status-approved">APPROVED</span>  
+**Status**: <span class="status-"></span>  
 
 #### Description
 
@@ -230,7 +230,7 @@ Acceptance Criteria:
 
 <div class="requirement-section" markdown="1">
 
-**Status**: <span class="status-approved">APPROVED</span>  
+**Status**: <span class="status-"></span>  
 
 #### Description
 
@@ -256,7 +256,7 @@ Acceptance Criteria:
 
 <div class="requirement-section" markdown="1">
 
-**Status**: <span class="status-approved">APPROVED</span>  
+**Status**: <span class="status-"></span>  
 
 #### Description
 
@@ -282,7 +282,7 @@ Acceptance Criteria:
 
 <div class="requirement-section" markdown="1">
 
-**Status**: <span class="status-approved">APPROVED</span>  
+**Status**: <span class="status-"></span>  
 
 #### Description
 
@@ -322,7 +322,7 @@ Acceptance Criteria:
 
 <div class="requirement-section" markdown="1">
 
-**Status**: <span class="status-draft">DRAFT</span>  
+**Status**: <span class="status-"></span>  
 
 #### Description
 
@@ -350,7 +350,7 @@ Acceptance Criteria:
 
 <div class="requirement-section" markdown="1">
 
-**Status**: <span class="status-approved">APPROVED</span>  
+**Status**: <span class="status-"></span>  
 
 #### Description
 
@@ -393,7 +393,7 @@ All commands write human-readable messages to stderr and machine-readable data t
 
 <div class="requirement-section" markdown="1">
 
-**Status**: <span class="status-approved">APPROVED</span>  
+**Status**: <span class="status-"></span>  
 
 #### Description
 
@@ -429,13 +429,13 @@ Acceptance Criteria:
 | Metric | Count |
 |--------|-------|
 | **Total Requirements** | 13 |
-| **Approved** | 12 |
-| **Draft** | 1 |
+| **Approved** | 0 |
+| **Draft** | 0 |
 | **Retired** | 0 |
 
 ### 3.2 Approval Status
 
-**Approval Rate**: 92.3% (12/13)
+**Approval Rate**: 0.0% (0/13)
 
 ---
 

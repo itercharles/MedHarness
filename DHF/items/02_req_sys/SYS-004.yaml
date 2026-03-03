@@ -2,6 +2,5 @@ id: SYS-004
 title: Orphan Reporting
 category: Functional
 content: The system shall display a list of orphan items.
-status: approved
 satisfies:
 - CRS-002

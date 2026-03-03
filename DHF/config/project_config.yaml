@@ -95,35 +95,6 @@ doc_types:
   icon: 👤
   page_enabled: true
   page_number: 4
-  lifecycle:
-    transitions:
-    - from_states:
-      - null
-      to_state: draft
-    - from_states:
-      - draft
-      to_state: in_review
-      criteria:
-      - id: content_complete
-        name: Content is complete
-        check_type: field_not_empty
-        field: content
-        required: true
-    - from_states:
-      - draft
-      - in_review
-      - approved
-      - retired
-      to_state: closed
-    - from_states:
-      - in_review
-      to_state: approved
-    - from_states:
-      - in_review
-      to_state: draft
-    - from_states:
-      - approved
-      to_state: retired
 - code: CRS
   name: Customer Requirement
   prefix: CRS-
@@ -165,39 +136,6 @@ doc_types:
   icon: 🎯
   page_enabled: true
   page_number: 5
-  lifecycle:
-    transitions:
-    - from_states:
-      - null
-      to_state: draft
-    - from_states:
-      - draft
-      to_state: approved
-      criteria:
-      - id: content_complete
-        name: Content documented
-        description: Requirement content must be fully documented
-        check_type: field_not_empty
-        field: content
-        required: true
-      - id: title_defined
-        name: Title defined
-        description: Requirement must have a descriptive title
-        check_type: field_not_empty
-        field: title
-        required: true
-      label: Approve
-    - from_states:
-      - approved
-      to_state: retired
-      criteria:
-      - id: retirement_reason
-        name: Retirement reason documented
-        description: Reason for retirement must be documented
-        check_type: field_not_empty
-        field: retired_reason
-        required: true
-      label: Retire
   has_verification: true
   verification_states:
   - not_verified
@@ -270,23 +208,6 @@ doc_types:
   icon: ⚠️
   page_enabled: true
   page_number: 12
-  lifecycle:
-    transitions:
-    - from_states:
-      - null
-      to_state: draft
-    - from_states:
-      - draft
-      to_state: in_review
-      label: Submit for Review
-    - from_states:
-      - in_review
-      to_state: approved
-      label: Approve
-    - from_states:
-      - in_review
-      to_state: draft
-      label: Request Changes
 - code: RCM
   name: Risk Control Measure
   prefix: RCM-
@@ -326,15 +247,6 @@ doc_types:
   icon: 🛡️
   page_enabled: true
   page_number: 11
-  lifecycle:
-    transitions:
-    - from_states:
-      - null
-      to_state: draft
-    - from_states:
-      - draft
-      to_state: approved
-      label: Approve
 - code: SYS
   name: System Requirement
   prefix: SYS-
@@ -407,43 +319,6 @@ doc_types:
   icon: ⚙️
   page_enabled: true
   page_number: 6
-  lifecycle:
-    transitions:
-    - from_states:
-      - null
-      to_state: draft
-    - from_states:
-      - draft
-      to_state: approved
-      criteria:
-      - id: content_complete
-        name: Content documented
-        check_type: field_not_empty
-        field: content
-        required: true
-      - id: title_defined
-        name: Title defined
-        check_type: field_not_empty
-        field: title
-        required: true
-      - id: parent_crs_approved
-        name: Parent CRS approved
-        description: All linked customer requirements must be approved
-        check_type: linked_items_approved
-        relationship_field: derives_from
-        required_status: approved
-        required: true
-      label: Approve
-    - from_states:
-      - approved
-      to_state: retired
-      criteria:
-      - id: retirement_reason
-        name: Retirement reason
-        check_type: field_not_empty
-        field: retired_reason
-        required: true
-      label: Retire
   has_verification: true
   verification_states:
   - not_verified
@@ -474,15 +349,6 @@ doc_types:
   icon: 💻
   page_enabled: true
   page_number: 7
-  lifecycle:
-    transitions:
-    - from_states:
-      - null
-      to_state: draft
-    - from_states:
-      - draft
-      to_state: approved
-      label: Approve
   has_verification: true
   verification_states:
   - not_verified
@@ -511,15 +377,6 @@ doc_types:
   icon: 🏗️
   page_enabled: true
   page_number: 8
-  lifecycle:
-    transitions:
-    - from_states:
-      - null
-      to_state: draft
-    - from_states:
-      - draft
-      to_state: approved
-      label: Approve
 - code: SWDD
   name: Software Detailed Design
   prefix: SWDD-
@@ -540,15 +397,6 @@ doc_types:
   icon: 📋
   page_enabled: true
   page_number: 10
-  lifecycle:
-    transitions:
-    - from_states:
-      - null
-      to_state: draft
-    - from_states:
-      - draft
-      to_state: approved
-      label: Approve
   verification_states:
   - not_verified
   - verified
@@ -884,46 +732,6 @@ doc_types:
   icon: 📦
   page_enabled: true
   page_number: 11
-  lifecycle:
-    transitions:
-    - from_states:
-      - null
-      to_state: draft
-    - from_states:
-      - draft
-      to_state: in_review
-      criteria:
-      - id: purpose_set
-        name: Purpose documented
-        description: SOUP usage purpose must be documented per IEC 62304 5.3.4
-        check_type: field_not_empty
-        field: purpose
-        required: true
-      - id: safety_class_set
-        name: Safety class assigned
-        description: Safety classification (A/B/C) must be assigned
-        check_type: field_not_empty
-        field: safety_class
-        required: true
-      - id: linked_to_req
-        name: Linked to SYS requirement
-        description: SOUP must be linked to at least one system requirement
-        check_type: has_links
-        required: true
-      label: Submit for Review
-    - from_states:
-      - in_review
-      to_state: approved
-      label: Approve
-    - from_states:
-      - under_review
-      to_state: rejected
-      label: Reject
-    - from_states:
-      - rejected
-      to_state: draft
-      criteria: []
-      label: Revise
 traceability_matrices:
 - name: Complete Requirements Chain
   description: Full traceability from use cases through all requirement levels to detailed design

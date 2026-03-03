@@ -294,7 +294,8 @@ def test_TC_SYS_032_016_item_create_returns_created_item(runner, dhf_str):
     parsed = json.loads(json_line)
     assert parsed["id"].startswith("SYS-")
     assert parsed["title"] == "CLI created requirement"
-    assert parsed["status"] == "draft"
+    # SYS items use GitOps model — no status field
+    assert "status" not in parsed
 
 
 def test_TC_SYS_032_017_item_create_invalid_json_exits_1(runner, dhf_str):
@@ -419,46 +420,55 @@ def test_TC_SYS_032_023_item_transitions_returns_list(runner, dhf_str):
     """
     TC-SYS-032-023: item transitions outputs JSON with current_status and transitions list.
 
-    SYS-002 is in draft; the fixture lifecycle allows draft → under_review.
+    CR-001 is in draft; the fixture lifecycle allows draft → approved.
+    SYS items have no lifecycle (GitOps model) — transitions are empty.
 
     @test_id: TC-SYS-032-023
     @links: SYS-032
     """
-    result = runner.invoke(main, ["--dhf", dhf_str, "item", "transitions", "SYS-002"])
+    # CR has explicit lifecycle
+    result = runner.invoke(main, ["--dhf", dhf_str, "item", "transitions", "CR-001"])
     assert result.exit_code == 0, result.output
     json_line = next(l for l in result.output.splitlines() if l.strip().startswith("{"))
     parsed = json.loads(json_line)
-    assert parsed["item_id"] == "SYS-002"
+    assert parsed["item_id"] == "CR-001"
     assert parsed["current_status"] == "draft"
     assert isinstance(parsed["transitions"], list)
-    to_states = [t["to_state"] for t in parsed["transitions"]]
-    assert "under_review" in to_states
+    assert len(parsed["transitions"]) > 0, "CR in draft should have transitions"
+
+    # SYS items have no lifecycle — empty transitions
+    sys_result = runner.invoke(main, ["--dhf", dhf_str, "item", "transitions", "SYS-002"])
+    assert sys_result.exit_code == 0, sys_result.output
+    sys_json = next(l for l in sys_result.output.splitlines() if l.strip().startswith("{"))
+    sys_parsed = json.loads(sys_json)
+    assert sys_parsed["item_id"] == "SYS-002"
+    assert sys_parsed["current_status"] is None
+    assert sys_parsed["transitions"] == []
 
 
 def test_TC_SYS_032_024_item_transition_executes_state_change(runner, test_dhf_root, dhf_str):
     """
-    TC-SYS-032-024: item transition changes the item's status and outputs updated item JSON.
+    TC-SYS-032-024: item transition changes a CR's status and outputs updated item JSON.
 
-    SYS-002 (draft) → under_review; the fixture lifecycle allows this transition
-    with no blocking criteria.
+    CR-001 (draft) → approved; the fixture lifecycle allows this transition.
 
     @test_id: TC-SYS-032-024
     @links: SYS-032
     """
     result = runner.invoke(
         main,
-        ["--dhf", dhf_str, "item", "transition", "SYS-002", "under_review", "--by", "tester"],
+        ["--dhf", dhf_str, "item", "transition", "CR-001", "approved", "--by", "tester"],
     )
     assert result.exit_code == 0, result.output + str(result.exception or "")
     json_line = next(l for l in result.output.splitlines() if l.strip().startswith("{"))
     parsed = json.loads(json_line)
-    assert parsed["status"] == "under_review"
+    assert parsed["status"] == "approved"
 
     # Verify persisted to DHF
     from compliantflow.core import CompliantFlowCore
     core = CompliantFlowCore(test_dhf_root)
-    item = core.get_item("SYS-002")
-    assert item["status"] == "under_review"
+    item = core.get_item("CR-001")
+    assert item["status"] == "approved"
 
 
 # ---------------------------------------------------------------------------

@@ -35,4 +35,3 @@ content: |-
   **Complexity**: O(N × D) where N = source items, D = graph depth
 implements:
 - SRS-004
-status: approved

@@ -24,4 +24,3 @@ content: |-
   - stdout/stderr separation enables clean pipeline integration
 design:
 - SYS-032
-status: approved

@@ -8,15 +8,16 @@ retrieved through the CompliantFlowCore API.
 """
 
 
-def test_TC_CRS_008_001_view_requirement_with_verification_data(core):
+def test_TC_CRS_008_001_view_requirement_with_traceability(core):
     """
-    TC-CRS-008-001: View Requirement with Verification Data via API
+    TC-CRS-008-001: View Requirement with Traceability Data via API
 
     @test_id: TC-CRS-008-001
     @links: CRS-008
 
-    get_item('SRS-001') returns item data including title and status,
+    get_item('SRS-001') returns item data including title and upstream links,
     which serve as the basis for test coverage reporting.
+    SRS items use the GitOps approval model — no explicit status field.
     """
     item = core.get_item("SRS-001")
 
@@ -24,7 +25,9 @@ def test_TC_CRS_008_001_view_requirement_with_verification_data(core):
     assert item["id"] == "SRS-001"
     assert "Item Persistence and Versioning" in item.get("title", ""), \
         f"Unexpected title: {item.get('title')}"
-    assert item.get("status") == "approved"
+    # GitOps model: no status field on requirement items
+    assert "status" not in item, \
+        "SRS items should not have an explicit status field"
 
     # Traceability is the verification mechanism — check upstream links exist
     chain = core.get_item_chain("SRS-001")
@@ -32,23 +35,23 @@ def test_TC_CRS_008_001_view_requirement_with_verification_data(core):
         "SRS-001 should have upstream links (derives_from SYS-001)"
 
 
-def test_TC_CRS_008_002_approved_items_have_full_traceability(core):
+def test_TC_CRS_008_002_srs_items_have_upstream_traceability(core):
     """
-    TC-CRS-008-002: Approved SRS items form a complete upstream traceability chain
+    TC-CRS-008-002: SRS items form a complete upstream traceability chain
 
     @test_id: TC-CRS-008-002
     @links: CRS-008
 
-    Test Integration requires that approved software requirements are
-    traceable all the way back to system requirements.  Every approved
-    SRS item must have at least one upstream SYS item.
+    Test Integration requires that software requirements are traceable all the
+    way back to system requirements. Every SRS item must have at least one
+    upstream SYS item.
     """
-    approved_srs = core.get_items_filtered("SRS", ["approved"], "")
-    assert len(approved_srs) > 0, "Expected at least one approved SRS item in the fixture"
+    all_srs = core.get_items_filtered("SRS")
+    assert len(all_srs) > 0, "Expected at least one SRS item in the fixture"
 
-    for srs_item in approved_srs:
+    for srs_item in all_srs:
         chain = core.get_item_chain(srs_item["id"])
         upstream = chain["nodes"][srs_item["id"]]["upstream"]
         sys_parents = [uid for uid in upstream if uid.startswith("SYS-")]
         assert len(sys_parents) > 0, \
-            f"Approved {srs_item['id']} must trace to a SYS item; upstream: {upstream}"
+            f"{srs_item['id']} must trace to a SYS item; upstream: {upstream}"

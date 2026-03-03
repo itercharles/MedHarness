@@ -9,6 +9,5 @@ verification_method:
 - Inspection
 - Test
 critical_safety: true
-status: approved
 satisfies:
 - CRS-003

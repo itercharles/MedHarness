@@ -18,4 +18,3 @@ content: |-
   - Parent relationship rules are enforced
 derives_from:
 - SYS-001
-status: draft

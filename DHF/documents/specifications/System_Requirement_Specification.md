@@ -7,7 +7,7 @@
 | Field | Value |
 |-------|-------|
 | **Document ID** | SYS-SPEC |
-| **Version** | 1.79 |
+| **Version** | 1.95 |
 | **Generated** | 2026-03-03 |
 | **Status** | Draft |
 | **Project** | CompliantFlow Project |
@@ -34,7 +34,7 @@ This specification covers all System Requirements defined in the CompliantFlow s
 
 <div class="requirement-section" markdown="1">
 
-**Status**: <span class="status-approved">APPROVED</span>  
+**Status**: <span class="status-"></span>  
 **Category**: Functional  
 #### Description
 
@@ -51,7 +51,7 @@ The system shall support configurable object, such as requirement, design item, 
 
 <div class="requirement-section" markdown="1">
 
-**Status**: <span class="status-approved">APPROVED</span>  
+**Status**: <span class="status-"></span>  
 **Category**: Functional  
 #### Description
 
@@ -65,7 +65,7 @@ The system shall provide a view of traceability graph or table, including requir
 
 <div class="requirement-section" markdown="1">
 
-**Status**: <span class="status-approved">APPROVED</span>  
+**Status**: <span class="status-"></span>  
 **Category**: Functional  
 #### Description
 
@@ -79,7 +79,7 @@ The system shall display a list of orphan items.
 
 <div class="requirement-section" markdown="1">
 
-**Status**: <span class="status-approved">APPROVED</span>  
+**Status**: <span class="status-"></span>  
 **Category**: Functional  
 #### Description
 
@@ -93,7 +93,7 @@ The system shall able to assess the compliance of the DHF by the governance poli
 
 <div class="requirement-section" markdown="1">
 
-**Status**: <span class="status-approved">APPROVED</span>  
+**Status**: <span class="status-"></span>  
 **Reviewer**: Technical Lead  **Review Date**: 2025-12-13  **Category**: Change Control  **Verification Method**: ['Inspection', 'Test']  
 #### Description
 
@@ -107,11 +107,19 @@ The system shall provide a change management module that enables tracking, evalu
 
 <div class="requirement-section" markdown="1">
 
-**Status**: <span class="status-approved">APPROVED</span>  
+**Status**: <span class="status-"></span>  
 **Category**: Functional  
 #### Description
 
-The system shall support configurable lifecycle workflows for objects (such as requirements, design items, change requests), with state transitions and validation rules defined in configuration. The system shall enforce the custom transition rules.
+The system shall support two complementary approval models:
+
+1. **GitOps Approval Model** (UC, CRS, SYS, SRS, SWDD, SYSARCH, SOUP, RISK, RCM): approval
+   state is derived from the Git branch — main branch = approved, feature branch = draft/in-review,
+   deleted from repo = retired. No explicit status field is stored on these items.
+
+2. **Configurable Lifecycle Workflows** (CR, REL, DEF): explicit state transitions and validation
+   rules defined in configuration. The system shall enforce the configured transition rules,
+   including field validation and linked-item status checks.
 
 
 
@@ -121,7 +129,7 @@ The system shall support configurable lifecycle workflows for objects (such as r
 
 <div class="requirement-section" markdown="1">
 
-**Status**: <span class="status-approved">APPROVED</span>  
+**Status**: <span class="status-"></span>  
 **Reviewer**: System Architect  **Review Date**: 2024-12-15  **Category**: Document Management  **Verification Method**: ['Test']  
 #### Description
 
@@ -135,7 +143,7 @@ The system shall provide document generation capabilities to export CompliantFlo
 
 <div class="requirement-section" markdown="1">
 
-**Status**: <span class="status-approved">APPROVED</span>  
+**Status**: <span class="status-"></span>  
 **Category**: Functional  **Verification Method**: ['Test']  
 #### Description
 
@@ -149,7 +157,7 @@ The system shall provide automated workflows to link Pull Requests and changed o
 
 <div class="requirement-section" markdown="1">
 
-**Status**: <span class="status-approved">APPROVED</span>  
+**Status**: <span class="status-"></span>  
 **Category**: Functional  **Verification Method**: ['Test']  
 #### Description
 
@@ -163,7 +171,7 @@ The system shall display the verification status (verified / failed / not_verifi
 
 <div class="requirement-section" markdown="1">
 
-**Status**: <span class="status-approved">APPROVED</span>  
+**Status**: <span class="status-"></span>  
 **Category**: Functional  **Verification Method**: ['Test']  
 #### Description
 
@@ -188,7 +196,7 @@ Required command groups:
 
 <div class="requirement-section" markdown="1">
 
-**Status**: <span class="status-approved">APPROVED</span>  
+**Status**: <span class="status-"></span>  
 **Category**: Functional  **Verification Method**: ['Test']  
 #### Description
 
@@ -211,25 +219,11 @@ Results are persisted in DHF/test-results/results.yaml.
 
 </div>
 
-### 12. SYS-TRANS-001: Transition Test
+### 12. SYSARCH-001: Item Management Module
 
 <div class="requirement-section" markdown="1">
 
-**Status**: <span class="status-approved">APPROVED</span>  
-**Category**: Functional  
-#### Description
-
-Testing transitions
-
-
-
-</div>
-
-### 13. SYSARCH-001: Item Management Module
-
-<div class="requirement-section" markdown="1">
-
-**Status**: <span class="status-approved">APPROVED</span>  
+**Status**: <span class="status-"></span>  
 
 #### Description
 
@@ -256,11 +250,11 @@ Core module for managing DHF items (requirements, design, tests, change requests
 
 </div>
 
-### 14. SYSARCH-002: Traceability Analysis Module
+### 13. SYSARCH-002: Traceability Analysis Module
 
 <div class="requirement-section" markdown="1">
 
-**Status**: <span class="status-approved">APPROVED</span>  
+**Status**: <span class="status-"></span>  
 
 #### Description
 
@@ -289,22 +283,26 @@ Module for building and analyzing traceability relationships between DHF items.
 
 </div>
 
-### 15. SYSARCH-003: Lifecycle Management Module
+### 14. SYSARCH-003: Lifecycle Management Module
 
 <div class="requirement-section" markdown="1">
 
-**Status**: <span class="status-approved">APPROVED</span>  
+**Status**: <span class="status-"></span>  
 
 #### Description
 
 Module for managing item lifecycle states and transitions via CompliantFlowCore.
 
+**Scope**: Explicit lifecycle applies ONLY to CR, REL, and DEF. Requirement items
+(UC, CRS, SYS, SRS, SWDD, SYSARCH, SOUP, RISK, RCM) use the GitOps approval model
+— no status field, no transitions. See SWDD-016 for the GitOps approval design.
+
 **Responsibilities**:
 - Load lifecycle configuration from project config
-- Validate state transitions against strict rules
+- Validate state transitions against strict rules (CR/REL/DEF only)
 - Execute transition criteria checks (field validation, manual approval)
-- Enforce approval workflows
-- Support configurable lifecycles per item type
+- Enforce approval workflows for CR/REL/DEF
+- Support configurable lifecycles per document type
 
 **Key Interfaces**:
 - `CompliantFlowCore`: Main entry point for lifecycle operations
@@ -314,7 +312,8 @@ Module for managing item lifecycle states and transitions via CompliantFlowCore.
 
 **Implementation Notes**:
 - Configuration-driven (no hardcoded workflows)
-- Supports multiple lifecycle models per document type
+- Requirement items have no lifecycle config entry → get_initial_state() returns None,
+  get_available_transitions() returns []
 - Extensible criteria system (field checks, manual verification, linked item status)
 - Strict validation with clear error messages (Fail-Fast)
 
@@ -322,11 +321,11 @@ Module for managing item lifecycle states and transitions via CompliantFlowCore.
 
 </div>
 
-### 16. SYSARCH-004: Change Management Module
+### 15. SYSARCH-004: Change Management Module
 
 <div class="requirement-section" markdown="1">
 
-**Status**: <span class="status-approved">APPROVED</span>  
+**Status**: <span class="status-"></span>  
 
 #### Description
 
@@ -355,11 +354,11 @@ Module for tracking and controlling changes to DHF items through change requests
 
 </div>
 
-### 17. SYSARCH-005: Compliance Validation Module
+### 16. SYSARCH-005: Compliance Validation Module
 
 <div class="requirement-section" markdown="1">
 
-**Status**: <span class="status-approved">APPROVED</span>  
+**Status**: <span class="status-"></span>  
 
 #### Description
 
@@ -388,11 +387,11 @@ Module for validating DHF against regulatory policies and standards.
 
 </div>
 
-### 18. SYSARCH-006: Document Generation Module
+### 17. SYSARCH-006: Document Generation Module
 
 <div class="requirement-section" markdown="1">
 
-**Status**: <span class="status-approved">APPROVED</span>  
+**Status**: <span class="status-"></span>  
 
 #### Description
 
@@ -421,11 +420,11 @@ Module for generating regulatory specification documents from templates.
 
 </div>
 
-### 19. SYSARCH-007: Test Integration Module
+### 18. SYSARCH-007: Test Integration Module
 
 <div class="requirement-section" markdown="1">
 
-**Status**: <span class="status-approved">APPROVED</span>  
+**Status**: <span class="status-"></span>  
 
 #### Description
 
@@ -462,11 +461,11 @@ into the DHF, and linking each result to the requirement items it verifies.
 
 </div>
 
-### 20. SYSARCH-008: Web UI Module
+### 19. SYSARCH-008: Web UI Module
 
 <div class="requirement-section" markdown="1">
 
-**Status**: <span class="status-approved">APPROVED</span>  
+**Status**: <span class="status-"></span>  
 
 #### Description
 
@@ -495,11 +494,11 @@ Streamlit-based web user interface for DHF management.
 
 </div>
 
-### 21. SYSARCH-009: CLI Module
+### 20. SYSARCH-009: CLI Module
 
 <div class="requirement-section" markdown="1">
 
-**Status**: <span class="status-approved">APPROVED</span>  
+**Status**: <span class="status-"></span>  
 
 #### Description
 
@@ -529,6 +528,48 @@ for CI/CD pipelines and scripted environments.
 
 </div>
 
+### 21. SYSARCH-010: GitOps-Based Approval Architecture
+
+<div class="requirement-section" markdown="1">
+
+**Status**: <span class="status-"></span>  
+
+#### Description
+
+Architectural decision: requirement items use Git as the sole approval mechanism
+rather than an explicit lifecycle state machine.
+
+**Decision**:
+UC, CRS, SYS, SRS, SWDD, SYSARCH, SOUP, RISK, and RCM items carry NO status field
+and have NO lifecycle transitions. Only CR, REL, and DEF retain explicit lifecycle
+workflows.
+
+**Approval Model**:
+- main branch  → item is approved (PR merge = approval evidence)
+- feature branch → item is draft / under review
+- deleted from repo → item is retired
+
+**Rationale**:
+- Eliminates redundant status: approved fields on 65 YAML files
+- Prevents stale approval metadata when items are edited on branches
+- Git PR review (with required reviewers and CI checks) already serves as the
+  approval gate — duplicating that as a YAML field adds noise, not value
+- Simplifies the data model: requirement items are just content files, not workflow objects
+- CR, REL, DEF need explicit states because they have multi-step processes
+  (e.g., CR: draft→in_review→approved→implementing→completed) that go beyond
+  the binary approved/not-approved signal Git provides
+
+**Implementation**:
+- `project_config.yaml`: no `lifecycle` block on requirement doc types
+- `create_item()`: does not set status when `get_initial_state()` returns None
+- `get_available_transitions()`: returns [] for items with no lifecycle config
+- Schema validation: status field is still in _SYSTEM_FIELDS (allowed but not set)
+- Design detail: see SWDD-016 (GitOps approval model)
+
+
+
+</div>
+
 
 ---
 
@@ -539,13 +580,13 @@ for CI/CD pipelines and scripted environments.
 | Metric | Count |
 |--------|-------|
 | **Total Requirements** | 21 |
-| **Approved** | 21 |
+| **Approved** | 0 |
 | **Draft** | 0 |
 | **Retired** | 0 |
 
 ### 3.2 Approval Status
 
-**Approval Rate**: 100.0% (21/21)
+**Approval Rate**: 0.0% (0/21)
 
 ---
 
