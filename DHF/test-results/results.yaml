@@ -1,188 +1,188 @@
 TC-CRS-001-001:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-CRS-001-001
   links:
   - CRS-001
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:20:56.404504+00:00'
+  testing_date: '2026-03-03T17:25:57.026144+00:00'
   testing_status: PASS
   title: Create New Requirement via API
 TC-CRS-001-002:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-CRS-001-002
   links:
   - CRS-001
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:20:56.637561+00:00'
+  testing_date: '2026-03-03T17:25:57.229234+00:00'
   testing_status: PASS
   title: View Requirement Details via API — traceability chain intact
 TC-CRS-001-003:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-CRS-001-003
   links:
   - CRS-001
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:20:56.869884+00:00'
+  testing_date: '2026-03-03T17:25:57.431762+00:00'
   testing_status: PASS
   title: Search Requirements via API
 TC-CRS-002-001:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-CRS-002-001
   links:
   - CRS-002
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:20:57.103912+00:00'
+  testing_date: '2026-03-03T17:25:57.635182+00:00'
   testing_status: PASS
   title: View Traceability Matrix via API
 TC-CRS-002-002:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-CRS-002-002
   links:
   - CRS-002
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:20:57.358449+00:00'
+  testing_date: '2026-03-03T17:25:57.884970+00:00'
   testing_status: PASS
   title: View Traceability Graph Statistics via API
 TC-CRS-002-003:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-CRS-002-003
   links:
   - CRS-002
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:20:57.592268+00:00'
+  testing_date: '2026-03-03T17:25:58.087544+00:00'
   testing_status: PASS
   title: Navigate Parent Links via API
 TC-CRS-003-001:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-CRS-003-001
   links:
   - CRS-003
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:20:57.824992+00:00'
+  testing_date: '2026-03-03T17:25:58.288963+00:00'
   testing_status: PASS
   title: List Change Requests via API
 TC-CRS-003-002:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-CRS-003-002
   links:
   - CRS-003
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:20:58.058618+00:00'
+  testing_date: '2026-03-03T17:25:58.494762+00:00'
   testing_status: PASS
   title: Create Change Request via API
 TC-CRS-004-001:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-CRS-004-001
   links:
   - CRS-004
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:20:58.311769+00:00'
+  testing_date: '2026-03-03T17:25:58.727660+00:00'
   testing_status: PASS
   title: List SRS Items for Document Generation via API
 TC-CRS-004-002:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-CRS-004-002
   links:
   - CRS-004
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:20:58.543128+00:00'
+  testing_date: '2026-03-03T17:25:58.928826+00:00'
   testing_status: PASS
   title: Get Document Type Metrics via API
 TC-CRS-005-001:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-CRS-005-001
   links:
   - CRS-005
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:20:58.773549+00:00'
+  testing_date: '2026-03-03T17:25:59.130383+00:00'
   testing_status: PASS
   title: Create Architecture Item via API
 TC-CRS-005-002:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-CRS-005-002
   links:
   - CRS-005
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:20:59.008820+00:00'
+  testing_date: '2026-03-03T17:25:59.334834+00:00'
   testing_status: PASS
   title: Architecture Item has SYS implementation link via API
 TC-CRS-005-003:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-CRS-005-003
   links:
   - CRS-005
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:20:59.243910+00:00'
+  testing_date: '2026-03-03T17:25:59.535803+00:00'
   testing_status: PASS
   title: Architecture Item Has Approved Status via API
 TC-CRS-008-001:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-CRS-008-001
   links:
   - CRS-008
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:20:59.507599+00:00'
+  testing_date: '2026-03-03T17:25:59.770991+00:00'
   testing_status: PASS
   title: View Requirement with Verification Data via API
 TC-CRS-008-002:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-CRS-008-002
   links:
   - CRS-008
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:20:59.738872+00:00'
+  testing_date: '2026-03-03T17:25:59.972714+00:00'
   testing_status: PASS
   title: Approved SRS items form a complete upstream traceability chain
 TC-CRS-011-001:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-CRS-011-001
   links:
   - CRS-011
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:20:59.969926+00:00'
+  testing_date: '2026-03-03T17:26:00.176415+00:00'
   testing_status: PASS
   title: IEC 62304 Policy Group Contains Expected Section IDs
 TC-CRS-011-002:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-CRS-011-002
   links:
   - CRS-011
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:00.200900+00:00'
+  testing_date: '2026-03-03T17:26:00.378329+00:00'
   testing_status: PASS
   title: Run IEC 62304 Compliance Check via API
 TC-PROVIDER-001:
@@ -241,146 +241,146 @@ TC-PROVIDER-005:
   testing_status: PASS
   title: Verify Automated Test Discovery
 TC-SRS-001-VAL-001:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SRS-001-VAL-001
   links:
   - SRS-001
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:04.614294+00:00'
+  testing_date: '2026-03-03T17:26:04.769995+00:00'
   testing_status: PASS
   title: Valid items load successfully (API)
 TC-SRS-001-VAL-002:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SRS-001-VAL-002
   links:
   - SRS-001
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:04.846916+00:00'
+  testing_date: '2026-03-03T17:26:04.967772+00:00'
   testing_status: PASS
   title: Unknown field rejected with clear error (API)
 TC-SRS-001-VAL-003:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SRS-001-VAL-003
   links:
   - SRS-001
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:05.085808+00:00'
+  testing_date: '2026-03-03T17:26:05.168014+00:00'
   testing_status: PASS
   title: Missing 'id' field rejected (API)
 TC-SRS-001-VAL-004:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SRS-001-VAL-004
   links:
   - SRS-001
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:05.323383+00:00'
+  testing_date: '2026-03-03T17:26:05.368069+00:00'
   testing_status: PASS
   title: Unknown doc type rejected (API)
 TC-SRS-001-VAL-005:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SRS-001-VAL-005
   links:
   - SRS-001
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:05.562244+00:00'
+  testing_date: '2026-03-03T17:26:05.568434+00:00'
   testing_status: PASS
   title: No validation when config is absent (API)
 TC-SRS-001-VAL-007:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SRS-001-VAL-007
   links:
   - SRS-001
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:05.823449+00:00'
+  testing_date: '2026-03-03T17:26:05.793809+00:00'
   testing_status: PASS
   title: CompliantFlowCore enables validation automatically (API)
 TC-SRS-010-001:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SRS-010-001
   links:
   - SRS-010
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:29.655734+00:00'
+  testing_date: '2026-03-03T17:26:26.298852+00:00'
   testing_status: PASS
   title: _parse_docstring extracts title and all @-tags.
 TC-SRS-010-002:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SRS-010-002
   links:
   - SRS-010
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:29.889467+00:00'
+  testing_date: '2026-03-03T17:26:26.502405+00:00'
   testing_status: PASS
   title: _extract_tc_id_from_name handles various naming patterns.
 TC-SRS-010-003:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SRS-010-003
   links:
   - SRS-010
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:30.120769+00:00'
+  testing_date: '2026-03-03T17:26:26.704467+00:00'
   testing_status: PASS
   title: parse_junit_xml uses compliantflow.id property when present.
 TC-SRS-010-004:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SRS-010-004
   links:
   - SRS-010
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:30.354366+00:00'
+  testing_date: '2026-03-03T17:26:26.907393+00:00'
   testing_status: PASS
   title: parse_junit_xml falls back to regex extraction from name.
 TC-SRS-010-005:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SRS-010-005
   links:
   - SRS-010
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:30.612576+00:00'
+  testing_date: '2026-03-03T17:26:27.133049+00:00'
   testing_status: PASS
   title: parse_junit_xml extracts compliantflow.reviewer,
 TC-SRS-010-006:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SRS-010-006
   links:
   - SRS-010
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:30.847703+00:00'
+  testing_date: '2026-03-03T17:26:27.339138+00:00'
   testing_status: PASS
   title: ResultStore.record_execution stores execution and
 TC-SRS-010-007:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SRS-010-007
   links:
   - SRS-010
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:31.081228+00:00'
+  testing_date: '2026-03-03T17:26:27.539134+00:00'
   testing_status: PASS
   title: parse_junit_xml silently skips testcases with no
 TC-SRS-010-010:
@@ -461,1081 +461,1081 @@ TC-SRS-010-021:
   testing_status: PASS
   title: Verify multiple @links are supported
 TC-SRS-021-001:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SRS-021-001
   links:
   - SRS-006
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:32.037702+00:00'
+  testing_date: '2026-03-03T17:26:28.370837+00:00'
   testing_status: PASS
   title: Verify PR without CR reference is rejected
 TC-SRS-022-001:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SRS-022-001
   links:
   - SRS-007
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:32.503698+00:00'
+  testing_date: '2026-03-03T17:26:28.782445+00:00'
   testing_status: PASS
   title: Verify YAML item detection
 TC-SRS-022-002:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SRS-022-002
   links:
   - SRS-007
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:32.994244+00:00'
+  testing_date: '2026-03-03T17:26:29.210437+00:00'
   testing_status: PASS
   title: Verify test file detection and mapping
 TC-SRS-023:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SRS-023
   links:
   - SRS-006
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:34.423686+00:00'
+  testing_date: '2026-03-03T17:26:30.442797+00:00'
   testing_status: PASS
   title: Verify CR YAML can be updated with PR tracking
 TC-SRS-023-001:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SRS-023-001
   links:
   - SRS-006
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:33.466231+00:00'
+  testing_date: '2026-03-03T17:26:29.612231+00:00'
   testing_status: PASS
   title: Verify PR is tracked when created
 TC-SRS-023-002:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SRS-023-002
   links:
   - SRS-006
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:34.189548+00:00'
+  testing_date: '2026-03-03T17:26:30.239872+00:00'
   testing_status: PASS
   title: Verify PR status updated when merged
 TC-SYS-001-001:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-001-001
   links:
   - SYS-001
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:02.702552+00:00'
+  testing_date: '2026-03-03T17:26:02.697547+00:00'
   testing_status: PASS
   title: View Requirement Object (API)
 TC-SYS-001-002:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-001-002
   links:
   - SYS-001
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:02.936085+00:00'
+  testing_date: '2026-03-03T17:26:02.923940+00:00'
   testing_status: PASS
   title: View Change Request Object (API)
 TC-SYS-001-003:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-001-003
   links:
   - SYS-001
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:03.168437+00:00'
+  testing_date: '2026-03-03T17:26:03.165532+00:00'
   testing_status: PASS
   title: View Architecture Object (API)
 TC-SYS-001-004:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-001-004
   links:
   - SYS-001
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:03.405247+00:00'
+  testing_date: '2026-03-03T17:26:03.416012+00:00'
   testing_status: PASS
   title: Filter Objects by Type (API)
 TC-SYS-001-005:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-001-005
   links:
   - SYS-001
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:03.659175+00:00'
+  testing_date: '2026-03-03T17:26:03.781536+00:00'
   testing_status: PASS
   title: Search Objects (API)
 TC-SYS-001-006:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-001-006
   links:
   - SYS-001
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:03.893761+00:00'
+  testing_date: '2026-03-03T17:26:04.012329+00:00'
   testing_status: PASS
   title: get_items_filtered by doc type (API)
 TC-SYS-001-007:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-001-007
   links:
   - SYS-001
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:04.124150+00:00'
+  testing_date: '2026-03-03T17:26:04.263748+00:00'
   testing_status: PASS
   title: get_items_filtered with status filter (API)
 TC-SYS-001-008:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-001-008
   links:
   - SYS-001
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:04.355183+00:00'
+  testing_date: '2026-03-03T17:26:04.464694+00:00'
   testing_status: PASS
   title: get_items_filtered with search text (API)
 TC-SYS-003-001:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-003-001
   links:
   - SYS-003
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:06.059699+00:00'
+  testing_date: '2026-03-03T17:26:05.993521+00:00'
   testing_status: PASS
   title: Traceability Matrix Data (API)
 TC-SYS-003-002:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-003-002
   links:
   - SYS-003
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:06.294652+00:00'
+  testing_date: '2026-03-03T17:26:06.190755+00:00'
   testing_status: PASS
   title: Traceability Graph (API)
 TC-SYS-003-003:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-003-003
   links:
   - SYS-003
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:06.531882+00:00'
+  testing_date: '2026-03-03T17:26:06.391556+00:00'
   testing_status: PASS
   title: Traceability Relationships (API)
 TC-SYS-003-004:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-003-004
   links:
   - SYS-003
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:06.793162+00:00'
+  testing_date: '2026-03-03T17:26:06.615259+00:00'
   testing_status: PASS
   title: Downstream Traceability (API)
 TC-SYS-003-005:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-003-005
   links:
   - SYS-003
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:07.030740+00:00'
+  testing_date: '2026-03-03T17:26:06.815166+00:00'
   testing_status: PASS
   title: Upstream Traceability (API)
 TC-SYS-003-008:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-003-008
   links:
   - SYS-003
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:07.265562+00:00'
+  testing_date: '2026-03-03T17:26:07.015091+00:00'
   testing_status: PASS
   title: build_traceability_chains API (API)
 TC-SYS-003-009:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-003-009
   links:
   - SYS-003
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:07.504232+00:00'
+  testing_date: '2026-03-03T17:26:07.214692+00:00'
   testing_status: PASS
   title: build_traceability_chains complete chain (API)
 TC-SYS-003-010:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-003-010
   links:
   - SYS-003
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:07.765455+00:00'
+  testing_date: '2026-03-03T17:26:07.438571+00:00'
   testing_status: PASS
   title: get_vertical_view_items returns focus items (API)
 TC-SYS-003-011:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-003-011
   links:
   - SYS-003
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:08.001376+00:00'
+  testing_date: '2026-03-03T17:26:07.659430+00:00'
   testing_status: PASS
   title: get_vertical_view_items includes upstream items (API)
 TC-SYS-003-012:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-003-012
   links:
   - SYS-003
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:08.239231+00:00'
+  testing_date: '2026-03-03T17:26:07.864124+00:00'
   testing_status: PASS
   title: get_vertical_view_items includes downstream items (API)
 TC-SYS-003-013:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-003-013
   links:
   - SYS-003
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:08.476106+00:00'
+  testing_date: '2026-03-03T17:26:08.067857+00:00'
   testing_status: PASS
   title: get_vertical_view_items returns empty for unknown type (API)
 TC-SYS-003-014:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-003-014
   links:
   - SYS-003
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:08.713807+00:00'
+  testing_date: '2026-03-03T17:26:08.270369+00:00'
   testing_status: PASS
   title: get_doc_type_code resolves item ID to doc type (API)
 TC-SYS-003-015:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-003-015
   links:
   - SYS-003
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:08.969957+00:00'
+  testing_date: '2026-03-03T17:26:08.497665+00:00'
   testing_status: PASS
   title: build_traceability_matrix returns columns + rows (API)
 TC-SYS-003-016:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-003-016
   links:
   - SYS-003
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:09.228522+00:00'
+  testing_date: '2026-03-03T17:26:08.698128+00:00'
   testing_status: PASS
   title: build_traceability_matrix rows contain correct IDs (API)
 TC-SYS-003-017:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-003-017
   links:
   - SYS-003
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:09.485927+00:00'
+  testing_date: '2026-03-03T17:26:08.902234+00:00'
   testing_status: PASS
   title: build_traceability_matrix includes orphan rows (API)
 TC-SYS-003-018:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-003-018
   links:
   - SYS-003
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:09.719873+00:00'
+  testing_date: '2026-03-03T17:26:09.105850+00:00'
   testing_status: PASS
   title: build_traceability_matrix accepts any doc-type subset (API)
 TC-SYS-003-019:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-003-019
   links:
   - SYS-003
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:09.980044+00:00'
+  testing_date: '2026-03-03T17:26:09.336292+00:00'
   testing_status: PASS
   title: get_item_chain returns None for unknown item (API)
 TC-SYS-003-020:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-003-020
   links:
   - SYS-003
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:10.215480+00:00'
+  testing_date: '2026-03-03T17:26:09.537963+00:00'
   testing_status: PASS
   title: get_item_chain returns root + nodes dict (API)
 TC-SYS-003-021:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-003-021
   links:
   - SYS-003
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:10.454353+00:00'
+  testing_date: '2026-03-03T17:26:09.742243+00:00'
   testing_status: PASS
   title: get_item_chain includes all transitively connected items (API)
 TC-SYS-003-022:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-003-022
   links:
   - SYS-003
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:10.690251+00:00'
+  testing_date: '2026-03-03T17:26:09.944734+00:00'
   testing_status: PASS
   title: get_item_chain upstream/downstream lists are direct only (API)
 TC-SYS-003-023:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-003-023
   links:
   - SYS-003
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:10.949439+00:00'
+  testing_date: '2026-03-03T17:26:10.178142+00:00'
   testing_status: PASS
   title: get_item_chain works for a leaf item with no downstream (API)
 TC-SYS-004-001:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-004-001
   links:
   - SYS-004
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:11.185016+00:00'
+  testing_date: '2026-03-03T17:26:10.380253+00:00'
   testing_status: PASS
   title: Detect Orphan Items (API)
 TC-SYS-004-002:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-004-002
   links:
   - SYS-004
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:11.418944+00:00'
+  testing_date: '2026-03-03T17:26:10.582929+00:00'
   testing_status: PASS
   title: Orphan Exclusions (API)
 TC-SYS-004-003:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-004-003
   links:
   - SYS-004
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:11.653815+00:00'
+  testing_date: '2026-03-03T17:26:10.785108+00:00'
   testing_status: PASS
   title: Create Orphan and Detect (API)
 TC-SYS-004-004:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-004-004
   links:
   - SYS-004
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:11.889891+00:00'
+  testing_date: '2026-03-03T17:26:10.987906+00:00'
   testing_status: PASS
   title: Orphan Count (API)
 TC-SYS-005-001:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-005-001
   links:
   - SYS-005
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:12.149704+00:00'
+  testing_date: '2026-03-03T17:26:11.219683+00:00'
   testing_status: PASS
   title: Load Policy Groups (API)
 TC-SYS-005-002:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-005-002
   links:
   - SYS-005
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:12.385417+00:00'
+  testing_date: '2026-03-03T17:26:11.422702+00:00'
   testing_status: PASS
   title: View Policy Definitions (API)
 TC-SYS-005-003:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-005-003
   links:
   - SYS-005
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:12.620051+00:00'
+  testing_date: '2026-03-03T17:26:11.625127+00:00'
   testing_status: PASS
   title: Run Compliance Assessment (API)
 TC-SYS-005-004:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-005-004
   links:
   - SYS-005
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:12.861514+00:00'
+  testing_date: '2026-03-03T17:26:11.826299+00:00'
   testing_status: PASS
   title: Compliance Score Calculation (API)
 TC-SYS-005-005:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-005-005
   links:
   - SYS-005
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:13.121797+00:00'
+  testing_date: '2026-03-03T17:26:12.056815+00:00'
   testing_status: PASS
   title: Policy Validation Details (API)
 TC-SYS-008-001:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-008-001
   links:
   - SYS-008
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:13.356682+00:00'
+  testing_date: '2026-03-03T17:26:12.258887+00:00'
   testing_status: PASS
   title: List Change Requests (API)
 TC-SYS-008-002:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-008-002
   links:
   - SYS-008
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:13.591963+00:00'
+  testing_date: '2026-03-03T17:26:12.459487+00:00'
   testing_status: PASS
   title: View Change Request Details (API)
 TC-SYS-008-003:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-008-003
   links:
   - SYS-008
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:13.828356+00:00'
+  testing_date: '2026-03-03T17:26:12.661523+00:00'
   testing_status: PASS
   title: View Affected Items (API)
 TC-SYS-008-004:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-008-004
   links:
   - SYS-008
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:14.065335+00:00'
+  testing_date: '2026-03-03T17:26:12.863624+00:00'
   testing_status: PASS
   title: Create Change Request (API)
 TC-SYS-008-005:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-008-005
   links:
   - SYS-008
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:14.325558+00:00'
+  testing_date: '2026-03-03T17:26:13.097544+00:00'
   testing_status: PASS
   title: Edit Change Request (API)
 TC-SYS-008-006:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-008-006
   links:
   - SYS-008
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:14.560321+00:00'
+  testing_date: '2026-03-03T17:26:13.298994+00:00'
   testing_status: PASS
   title: CR Impact Analysis (API)
 TC-SYS-008-007:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-008-007
   links:
   - SYS-008
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:14.796910+00:00'
+  testing_date: '2026-03-03T17:26:13.500502+00:00'
   testing_status: PASS
   title: get_cr_for_item returns CR containing the item (API)
 TC-SYS-008-008:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-008-008
   links:
   - SYS-008
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:15.034517+00:00'
+  testing_date: '2026-03-03T17:26:13.700541+00:00'
   testing_status: PASS
   title: get_cr_for_item returns None for items not in any CR (API)
 TC-SYS-008-009:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-008-009
   links:
   - SYS-008
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:15.290260+00:00'
+  testing_date: '2026-03-03T17:26:13.925597+00:00'
   testing_status: PASS
   title: get_non_stable_cr returns an open CR (API)
 TC-SYS-008-010:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-008-010
   links:
   - SYS-008
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:15.522471+00:00'
+  testing_date: '2026-03-03T17:26:14.126129+00:00'
   testing_status: PASS
   title: add_item_to_cr adds item and deduplicates (API)
 TC-SYS-010-001:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-010-001
   links:
   - SYS-010
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:15.756663+00:00'
+  testing_date: '2026-03-03T17:26:14.329353+00:00'
   testing_status: PASS
   title: View Lifecycle States (API)
 TC-SYS-010-002:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-010-002
   links:
   - SYS-010
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:15.990198+00:00'
+  testing_date: '2026-03-03T17:26:14.530034+00:00'
   testing_status: PASS
   title: View Available Transitions (API)
 TC-SYS-010-003:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-010-003
   links:
   - SYS-010
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:16.248279+00:00'
+  testing_date: '2026-03-03T17:26:14.762168+00:00'
   testing_status: PASS
   title: Perform State Transition (API)
 TC-SYS-010-004:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-010-004
   links:
   - SYS-010
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:16.483231+00:00'
+  testing_date: '2026-03-03T17:26:14.965249+00:00'
   testing_status: PASS
   title: Transition Validation (API)
 TC-SYS-010-005:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-010-005
   links:
   - SYS-010
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:16.718238+00:00'
+  testing_date: '2026-03-03T17:26:15.170768+00:00'
   testing_status: PASS
   title: Change Request Workflow (API)
 TC-SYS-010-006:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-010-006
   links:
   - SYS-010
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:16.951620+00:00'
+  testing_date: '2026-03-03T17:26:15.374358+00:00'
   testing_status: PASS
   title: State History Tracking (API)
 TC-SYS-021-001:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-021-001
   links:
   - SYS-021
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:17.189396+00:00'
+  testing_date: '2026-03-03T17:26:15.578702+00:00'
   testing_status: PASS
   title: Retrieve Items for Document Export (API)
 TC-SYS-021-002:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-021-002
   links:
   - SYS-021
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:17.445845+00:00'
+  testing_date: '2026-03-03T17:26:15.807193+00:00'
   testing_status: PASS
   title: Multiple Items Form Document Structure (API)
 TC-SYS-021-003:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-021-003
   links:
   - SYS-021
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:17.701928+00:00'
+  testing_date: '2026-03-03T17:26:16.011355+00:00'
   testing_status: PASS
   title: Generate Document from Items (API)
 TC-SYS-031-001:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-031-001
   links:
   - SYS-031
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:17.937207+00:00'
+  testing_date: '2026-03-03T17:26:16.212362+00:00'
   testing_status: PASS
   title: Compliance Data References Regulatory Standards (API)
 TC-SYS-031-002:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-031-002
   links:
   - SYS-031
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:18.173903+00:00'
+  testing_date: '2026-03-03T17:26:16.415904+00:00'
   testing_status: PASS
   title: Item Verification Status (API)
 TC-SYS-031-003:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-031-003
   links:
   - SYS-031
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:18.433644+00:00'
+  testing_date: '2026-03-03T17:26:16.647046+00:00'
   testing_status: PASS
   title: Pipeline Test Results Storage (API)
 TC-SYS-032-001:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-032-001
   links:
   - SYS-032
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:18.672320+00:00'
+  testing_date: '2026-03-03T17:26:16.850899+00:00'
   testing_status: PASS
   title: validate schema exits 0 when all items are schema-valid.
 TC-SYS-032-002:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-032-002
   links:
   - SYS-032
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:18.908084+00:00'
+  testing_date: '2026-03-03T17:26:17.053437+00:00'
   testing_status: PASS
   title: item list outputs newline-delimited JSON records.
 TC-SYS-032-003:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-032-003
   links:
   - SYS-032
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:19.144191+00:00'
+  testing_date: '2026-03-03T17:26:17.257901+00:00'
   testing_status: PASS
   title: item list --type SYS returns only SYS items.
 TC-SYS-032-004:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-032-004
   links:
   - SYS-032
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:19.378484+00:00'
+  testing_date: '2026-03-03T17:26:17.459864+00:00'
   testing_status: PASS
   title: item get <ID> outputs a single JSON object.
 TC-SYS-032-005:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-032-005
   links:
   - SYS-032
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:19.641994+00:00'
+  testing_date: '2026-03-03T17:26:17.688254+00:00'
   testing_status: PASS
   title: item get with unknown ID exits 1.
 TC-SYS-032-006:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-032-006
   links:
   - SYS-032
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:19.876350+00:00'
+  testing_date: '2026-03-03T17:26:17.890037+00:00'
   testing_status: PASS
   title: cr check-status exits 0 for a non-stable CR.
 TC-SYS-032-007:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-032-007
   links:
   - SYS-032
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:20.113335+00:00'
+  testing_date: '2026-03-03T17:26:18.092523+00:00'
   testing_status: PASS
   title: cr check-status exits 1 when the CR is in a stable state.
 TC-SYS-032-008:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-032-008
   links:
   - SYS-032
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:20.348621+00:00'
+  testing_date: '2026-03-03T17:26:18.295857+00:00'
   testing_status: PASS
   title: cr check-status exits 1 when CR does not exist.
 TC-SYS-032-009:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-032-009
   links:
   - SYS-032
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:20.609419+00:00'
+  testing_date: '2026-03-03T17:26:18.526325+00:00'
   testing_status: PASS
   title: cr update --item adds the item to CR's affected_items.
 TC-SYS-032-010:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-032-010
   links:
   - SYS-032
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:20.845758+00:00'
+  testing_date: '2026-03-03T17:26:18.741111+00:00'
   testing_status: PASS
   title: cr update --pr-number records PR info on the CR.
 TC-SYS-032-013:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-032-013
   links:
   - SYS-032
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:21.083037+00:00'
+  testing_date: '2026-03-03T17:26:18.942603+00:00'
   testing_status: PASS
   title: validate traceability exits 1 and reports isolated items.
 TC-SYS-032-014:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-032-014
   links:
   - SYS-032
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:21.315628+00:00'
+  testing_date: '2026-03-03T17:26:19.143507+00:00'
   testing_status: PASS
   title: validate compliance IEC_62304 exits 0 and outputs a JSON report.
 TC-SYS-032-015:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-032-015
   links:
   - SYS-032
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:21.572967+00:00'
+  testing_date: '2026-03-03T17:26:19.371618+00:00'
   testing_status: PASS
   title: validate compliance with unknown group_id exits 1.
 TC-SYS-032-016:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-032-016
   links:
   - SYS-032
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:21.804132+00:00'
+  testing_date: '2026-03-03T17:26:19.572698+00:00'
   testing_status: PASS
   title: item create outputs the created item as JSON and exits 0.
 TC-SYS-032-017:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-032-017
   links:
   - SYS-032
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:22.035187+00:00'
+  testing_date: '2026-03-03T17:26:19.775436+00:00'
   testing_status: PASS
   title: item create with malformed JSON in --data exits 1.
 TC-SYS-032-018:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-032-018
   links:
   - SYS-032
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:22.271996+00:00'
+  testing_date: '2026-03-03T17:26:19.975554+00:00'
   testing_status: PASS
   title: item create with a field not in doc-type schema exits 1.
 TC-SYS-032-019:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-032-019
   links:
   - SYS-032
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:22.508574+00:00'
+  testing_date: '2026-03-03T17:26:20.178077+00:00'
   testing_status: PASS
   title: item update merges JSON fields into the existing item.
 TC-SYS-032-020:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-032-020
   links:
   - SYS-032
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:22.812347+00:00'
+  testing_date: '2026-03-03T17:26:20.407185+00:00'
   testing_status: PASS
   title: item update with a nonexistent ID exits 1.
 TC-SYS-032-021:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-032-021
   links:
   - SYS-032
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:23.168196+00:00'
+  testing_date: '2026-03-03T17:26:20.604355+00:00'
   testing_status: PASS
   title: 'item delete removes the item and outputs {"deleted": id}.'
 TC-SYS-032-022:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-032-022
   links:
   - SYS-032
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:23.413227+00:00'
+  testing_date: '2026-03-03T17:26:20.801103+00:00'
   testing_status: PASS
   title: item delete with a nonexistent ID exits 1.
 TC-SYS-032-023:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-032-023
   links:
   - SYS-032
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:23.648611+00:00'
+  testing_date: '2026-03-03T17:26:20.998712+00:00'
   testing_status: PASS
   title: item transitions outputs JSON with current_status and transitions list.
 TC-SYS-032-024:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-032-024
   links:
   - SYS-032
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:23.902835+00:00'
+  testing_date: '2026-03-03T17:26:21.220900+00:00'
   testing_status: PASS
   title: item transition changes the item's status and outputs updated item JSON.
 TC-SYS-032-025:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-032-025
   links:
   - SYS-032
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:24.137711+00:00'
+  testing_date: '2026-03-03T17:26:21.418213+00:00'
   testing_status: PASS
   title: doc list outputs JSON with a doc_types key.
 TC-SYS-032-026:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-032-026
   links:
   - SYS-032
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:24.371817+00:00'
+  testing_date: '2026-03-03T17:26:21.615514+00:00'
   testing_status: PASS
   title: doc generate writes a markdown file and outputs JSON with output_path.
 TC-SYS-032-027:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-032-027
   links:
   - SYS-032
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:24.606984+00:00'
+  testing_date: '2026-03-03T17:26:21.812595+00:00'
   testing_status: PASS
   title: doc export regenerates markdown then produces a PDF file.
 TC-SYS-033-001:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-033-001
   links:
   - SYS-033
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:24.842117+00:00'
+  testing_date: '2026-03-03T17:26:22.012757+00:00'
   testing_status: PASS
   title: parse_junit_xml extracts TC IDs and statuses correctly.
 TC-SYS-033-002:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-033-002
   links:
   - SYS-033
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:25.101365+00:00'
+  testing_date: '2026-03-03T17:26:22.238568+00:00'
   testing_status: PASS
   title: import_test_results with all-PASS results sets
 TC-SYS-033-003:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-033-003
   links:
   - SYS-033
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:25.334445+00:00'
+  testing_date: '2026-03-03T17:26:22.439253+00:00'
   testing_status: PASS
   title: import_test_results with a FAIL result sets
 TC-SYS-033-004:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-033-004
   links:
   - SYS-033
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:25.567459+00:00'
+  testing_date: '2026-03-03T17:26:22.641353+00:00'
   testing_status: PASS
   title: parse_junit_xml silently ignores testcases that have
 TC-SYS-033-005:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-033-005
   links:
   - SYS-033
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:25.808080+00:00'
+  testing_date: '2026-03-03T17:26:22.836949+00:00'
   testing_status: PASS
   title: import persists reviewer/review_date/review_status
 TC-SYS-033-006:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-033-006
   links:
   - SYS-033
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:26.068632+00:00'
+  testing_date: '2026-03-03T17:26:23.060057+00:00'
   testing_status: PASS
   title: '`test import` exits 0 and stdout contains JSON summary'
 TC-SYS-033-007:
-  commit_sha: 0bec7f3cdc969e777796eded03f0afb9c84fad10
+  commit_sha: 98d4afca1a222d47fc0cadd38f9baf00f03a16af
   id: TC-SYS-033-007
   links:
   - SYS-033
-  run_id: '22634529539'
-  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634529539
+  run_id: '22634728329'
+  run_url: https://github.com/itercharles/CompliantFlow/actions/runs/22634728329
   tester: GitHub Actions
-  testing_date: '2026-03-03T17:21:26.304307+00:00'
+  testing_date: '2026-03-03T17:26:23.259134+00:00'
   testing_status: PASS
   title: '`test list --status PASS` returns only PASS records.'
 TC-SYS-033-008:
