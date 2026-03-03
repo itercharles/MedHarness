@@ -22,7 +22,6 @@ justification: 'The current CI Phase 4 bypasses CompliantFlowCore by directly re
   UI.'
 priority: High
 affected_items:
-- CRS-012
 - UC-006
 - SYS-032
 - SRS-012
@@ -58,7 +57,6 @@ affected_items:
 - CRS-001
 - CRS-008
 - CRS-013
-- CRS-014
 - SYS-001
 - SYS-010
 - SYS-031
@@ -125,3 +123,6 @@ implementation_prs:
 - pr_number: 40
   pr_url: https://github.com/itercharles/CompliantFlow/pull/40
   title: 'CR-012: Align SYSARCH and SWDD with SYS/SRS hierarchy'
+- pr_number: 43
+  pr_url: https://github.com/itercharles/CompliantFlow/pull/43
+  title: 'CR-012: Fix CI - phase 3.5 import-results only on pull_request'

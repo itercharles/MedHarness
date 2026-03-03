@@ -110,6 +110,7 @@ jobs:
     name: Phase 3.5 - Import Test Results to DHF
     runs-on: ubuntu-latest
     needs: [phase1-srs, phase2-sys, phase3-crs]
+    if: github.event_name == 'pull_request'
     steps:
       - name: Check out code
         uses: actions/checkout@v3
