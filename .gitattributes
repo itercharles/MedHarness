@@ -1,0 +1,4 @@
+# Always keep the target branch (main) version of results.yaml during merges.
+# CI re-imports test results after every push to main, so PR-branch copies
+# are never authoritative and should never cause merge conflicts.
+DHF/test-results/results.yaml merge=ours
