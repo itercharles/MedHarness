@@ -61,6 +61,9 @@ affected_items:
 - CRS-008
 - CRS-013
 - CRS-014
+- SYS-001
+- SYS-010
+- SYS-031
 implementation_prs:
 - pr_number: 19
   pr_url: https://github.com/itercharles/CompliantFlow/pull/19

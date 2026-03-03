@@ -7,8 +7,8 @@
 | Field | Value |
 |-------|-------|
 | **Document ID** | SRS-SPEC |
-| **Version** | 1.0 |
-| **Generated** | 2026-03-02 |
+| **Version** | 1.1 |
+| **Generated** | 2026-03-03 |
 | **Status** | Draft |
 | **Project** | CompliantFlow Project |
 
@@ -24,7 +24,7 @@ This document provides a comprehensive list of all Software Requirement Specific
 
 ### 1.2 Scope
 
-This specification covers all Software Requirement Specifications defined in the CompliantFlow system as of 2026-03-02.
+This specification covers all Software Requirement Specifications defined in the CompliantFlow system as of 2026-03-03.
 
 ---
 
@@ -32,7 +32,7 @@ This specification covers all Software Requirement Specifications defined in the
 
 ### 1. SRS-001: Item Persistence and Versioning
 
-<div class="requirement-section">
+<div class="requirement-section" markdown="1">
 
 **Status**: <span class="status-approved">APPROVED</span>  
 
@@ -62,7 +62,7 @@ Acceptance Criteria:
 
 ### 2. SRS-002: Traceability Graph Construction
 
-<div class="requirement-section">
+<div class="requirement-section" markdown="1">
 
 **Status**: <span class="status-approved">APPROVED</span>  
 
@@ -89,7 +89,7 @@ Acceptance Criteria:
 
 ### 3. SRS-003: Orphan Item Detection
 
-<div class="requirement-section">
+<div class="requirement-section" markdown="1">
 
 **Status**: <span class="status-approved">APPROVED</span>  
 
@@ -115,7 +115,7 @@ Acceptance Criteria:
 
 ### 4. SRS-004: Coverage Metrics Calculation
 
-<div class="requirement-section">
+<div class="requirement-section" markdown="1">
 
 **Status**: <span class="status-approved">APPROVED</span>  
 
@@ -141,7 +141,7 @@ Acceptance Criteria:
 
 ### 5. SRS-005: Policy-Based Compliance Validation and Display
 
-<div class="requirement-section">
+<div class="requirement-section" markdown="1">
 
 **Status**: <span class="status-approved">APPROVED</span>  
 
@@ -174,7 +174,7 @@ Acceptance Criteria:
 
 ### 6. SRS-006: Change Request Management
 
-<div class="requirement-section">
+<div class="requirement-section" markdown="1">
 
 **Status**: <span class="status-approved">APPROVED</span>  
 
@@ -200,7 +200,7 @@ Acceptance Criteria:
 
 ### 7. SRS-007: Change Impact Tracking
 
-<div class="requirement-section">
+<div class="requirement-section" markdown="1">
 
 **Status**: <span class="status-approved">APPROVED</span>  
 
@@ -228,7 +228,7 @@ Acceptance Criteria:
 
 ### 8. SRS-008: Configurable Workflow Engine
 
-<div class="requirement-section">
+<div class="requirement-section" markdown="1">
 
 **Status**: <span class="status-approved">APPROVED</span>  
 
@@ -254,7 +254,7 @@ Acceptance Criteria:
 
 ### 9. SRS-009: Template-Based Document Generation
 
-<div class="requirement-section">
+<div class="requirement-section" markdown="1">
 
 **Status**: <span class="status-approved">APPROVED</span>  
 
@@ -280,7 +280,7 @@ Acceptance Criteria:
 
 ### 10. SRS-010: Test Result Integration
 
-<div class="requirement-section">
+<div class="requirement-section" markdown="1">
 
 **Status**: <span class="status-approved">APPROVED</span>  
 
@@ -320,7 +320,7 @@ Acceptance Criteria:
 
 ### 11. SRS-011: Configurable Document Type Definitions
 
-<div class="requirement-section">
+<div class="requirement-section" markdown="1">
 
 **Status**: <span class="status-draft">DRAFT</span>  
 
@@ -348,7 +348,7 @@ Acceptance Criteria:
 
 ### 12. SRS-012: CLI Command Implementation
 
-<div class="requirement-section">
+<div class="requirement-section" markdown="1">
 
 **Status**: <span class="status-approved">APPROVED</span>  
 
@@ -361,18 +361,59 @@ Entry point: `python -m compliantflow [--dhf PATH]`
 Default DHF path: directory named `DHF` adjacent to the `src/` folder.
 
 Commands and behavior:
-- `validate`: calls `core.validate()`; prints summary; exits 1 if errors found
+- `validate schema / traceability / compliance <GROUP>`: calls `core.validate_schema()`,
+  `core.validate_traceability()`, `core.check_compliance()`; exits 1 on errors
 - `item list [--type CODE] [--status STATUS] [--search TEXT]`: calls
   `core.get_items_filtered()`; outputs newline-delimited JSON records
 - `item get <ID>`: calls `core.get_item(uid)`; outputs JSON; exits 1 if not found
-- `cr check-status <CR_ID>`: loads CR via `core.get_item()`; calls `core.is_cr_stable()`;
-  exits 0 if non-stable, exits 1 with error message if stable or not found
-- `cr update <CR_ID> [--item ID]... [--pr-number N] [--pr-url URL] [--pr-title TITLE]`:
-  calls `core.add_item_to_cr()` for each --item; appends PR info via `core.update_item()`
-- `traceability neighbors <ID>`: calls `core.get_item_neighbors()`; outputs JSON
+- `item create --type CODE --data JSON [--author NAME] [--cr CR_ID]`: calls
+  `core.create_item()`; outputs created item JSON
+- `item update <ID> --data JSON [--author NAME]`: calls `core.update_item()`
+- `item delete <ID> [--author NAME]`: calls `core.delete_item()`
+- `item transitions <ID>`: calls `core.get_available_transitions()`; outputs JSON list
+- `item transition <ID> <TO_STATE> [--by NAME]`: calls `core.execute_transition()`
+- `cr check-status <CR_ID>`: exits 0 if CR is non-stable, 1 if stable or not found
+- `cr update <CR_ID> [--item ID]... [--pr-number N] [--pr-url URL] [--pr-title TITLE]`
+- `traceability matrix <TYPE> [TYPE...]`: calls `core.build_traceability_matrix()`
+- `traceability chain <ID>`: calls `core.get_item_chain()`; outputs full graph JSON
+- `test import <FILE> --format junit [--tester NAME] [--run-id ID] [--commit SHA]`
+- `test status <TC_ID>`: outputs stored TC record as JSON
+- `test list [--status STATUS]`: lists all stored TC records
+- `doc list`: outputs configured doc type codes as JSON
+- `doc generate <CODE|ALL>`: calls `core.generate_spec()`; writes markdown file
+- `doc export <CODE|ALL>`: regenerates markdown then exports PDF
 
-All commands write human-readable messages to stderr and machine-readable data to stdout,
-enabling clean pipeline integration (stdout can be piped; stderr shown to operator).
+All commands write human-readable messages to stderr and machine-readable data to stdout.
+
+
+
+</div>
+
+### 13. SRS-013: Verification Status Display in Traceability View
+
+<div class="requirement-section" markdown="1">
+
+**Status**: <span class="status-approved">APPROVED</span>  
+
+#### Description
+
+Software shall compute and display the verification status of each requirement
+item in the traceability matrix and item detail views.
+
+Behavior:
+- For each requirement item, aggregate all linked TC records from results.yaml
+- Compute verification_status: verified (all linked TCs PASS), failed (any TC FAIL),
+  not_verified (no linked TC records exist)
+- Persist computed verification_status back onto the requirement item
+- Display verification_status alongside each item in traceability matrix columns
+- Display individual TC pass/fail records in the item detail view
+
+Acceptance Criteria:
+- verification_status is recomputed after every test import
+- Items with no linked TCs show not_verified
+- Items with all PASS TCs show verified
+- Items with any FAIL TC show failed
+- Status is visible in the traceability matrix without opening the item detail
 
 
 
@@ -387,21 +428,21 @@ enabling clean pipeline integration (stdout can be piped; stderr shown to operat
 
 | Metric | Count |
 |--------|-------|
-| **Total Requirements** | 12 |
-| **Approved** | 11 |
+| **Total Requirements** | 13 |
+| **Approved** | 12 |
 | **Draft** | 1 |
 | **Retired** | 0 |
 
 ### 3.2 Approval Status
 
-**Approval Rate**: 91.7% (11/12)
+**Approval Rate**: 92.3% (12/13)
 
 ---
 
 ## 4. Document Control
 
 **Document Owner**: Quality Assurance  
-**Last Updated**: 2026-03-02  
+**Last Updated**: 2026-03-03  
 **Next Review**: TBD
 
 ---

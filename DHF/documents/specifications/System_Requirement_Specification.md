@@ -7,8 +7,8 @@
 | Field | Value |
 |-------|-------|
 | **Document ID** | SYS-SPEC |
-| **Version** | 1.76 |
-| **Generated** | 2026-03-02 |
+| **Version** | 1.79 |
+| **Generated** | 2026-03-03 |
 | **Status** | Draft |
 | **Project** | CompliantFlow Project |
 
@@ -24,7 +24,7 @@ This document provides a comprehensive list of all System Requirements, includin
 
 ### 1.2 Scope
 
-This specification covers all System Requirements defined in the CompliantFlow system as of 2026-03-02.
+This specification covers all System Requirements defined in the CompliantFlow system as of 2026-03-03.
 
 ---
 
@@ -145,7 +145,7 @@ The system shall provide automated workflows to link Pull Requests and changed o
 
 </div>
 
-### 9. SYS-031: Test result retrive and display
+### 9. SYS-031: Test Verification Status Display
 
 <div class="requirement-section" markdown="1">
 
@@ -153,7 +153,7 @@ The system shall provide automated workflows to link Pull Requests and changed o
 **Category**: Functional  **Verification Method**: ['Test']  
 #### Description
 
-The system shall retrive the test result from pipeline and display it in the system.
+The system shall display the verification status (verified / failed / not_verified) of each requirement item in traceability views, showing which requirements are covered by passing test cases and which have failures or no test results.
 
 
 
@@ -171,13 +171,14 @@ The system shall provide a command-line interface (CLI) accessible via
 `python -m compliantflow` that exposes core DHF operations for use in
 CI/CD pipelines and scripted environments.
 
-Required commands:
-- validate: Validate all DHF items against the project schema; exit non-zero on error
-- item list: List items filtered by type, status, or search text; output JSON
-- item get: Retrieve a single item by ID; output JSON
-- cr check-status: Verify a Change Request is in a non-stable state; exit non-zero if stable
-- cr update: Add affected items and PR metadata to a Change Request
-- traceability neighbors: Return upstream and downstream neighbors of an item
+Required command groups:
+- validate schema / traceability / compliance: Validate DHF items; exit non-zero on error
+- item list / get / create / update / delete: CRUD operations on DHF items; output JSON
+- item transitions / transition: List available transitions and execute a state transition
+- cr check-status / update: Verify CR state; add affected items and PR metadata
+- traceability matrix / chain: Output traceability matrix or full item chain as JSON
+- test import / status / list: Import JUnit XML results; query stored TC records
+- doc list / generate / export: List configured doc types; generate markdown; export PDF
 
 
 
@@ -551,7 +552,7 @@ for CI/CD pipelines and scripted environments.
 ## 4. Document Control
 
 **Document Owner**: Quality Assurance  
-**Last Updated**: 2026-03-02  
+**Last Updated**: 2026-03-03  
 **Next Review**: TBD
 
 ---
