@@ -8,10 +8,10 @@ description: 'Extract the DHF data layer into a standalone `src/dhf/` package an
   Key changes:
 
   - Split `DHF/config/project_config.yaml` into `global.yaml` + per-doc-type files
-    under `DHF/config/doc_types/`
+  under `DHF/config/doc_types/`
 
   - New `src/dhf/` package: models, repository, result_store, document_generation,
-    and standalone CLI (`python -m dhf`)
+  and standalone CLI (`python -m dhf`)
 
   - New `src/compliantflow/adapters/`: `DHFAdapter` Protocol + `LocalDHFAdapter`
 
@@ -19,13 +19,12 @@ description: 'Extract the DHF data layer into a standalone `src/dhf/` package an
 
   - CompliantFlow CLI trimmed to analysis-only; data CRUD moved to DHF CLI
 
-  - `src/cli/cli.py` moved into `src/compliantflow/cli.py` for symmetry with
-    `src/dhf/cli.py`'
-justification: 'CompliantFlow bundles data management (YAML CRUD, schema, doc
-  generation) and analysis (graph, traceability, compliance, lifecycle) in one
-  package. Separating them allows the DHF data layer to be used independently,
-  enables alternative backends via the adapter interface, and makes each package
-  easier to test and reason about in isolation.'
+  - `src/cli/cli.py` moved into `src/compliantflow/cli.py` for symmetry with `src/dhf/cli.py`'
+justification: CompliantFlow bundles data management (YAML CRUD, schema, doc generation)
+  and analysis (graph, traceability, compliance, lifecycle) in one package. Separating
+  them allows the DHF data layer to be used independently, enables alternative backends
+  via the adapter interface, and makes each package easier to test and reason about
+  in isolation.
 priority: High
 affected_items:
 - SYS-001
@@ -34,6 +33,20 @@ affected_items:
 - SYS-032
 - SRS-001
 - SRS-003
+- TC-SRS-001
+- TC-SRS-002
+- TC-SRS-003
+- TC-SRS-005
+- TC-SRS-007
+- TC-SRS-008
+- TC-SRS-010
+- TC-SRS-011
+- TC-SYS-002
+- TC-SYS-004
+- TC-SYS-008
+- TC-SYS-010
+- TC-SYS-032
+- TC-SYS-033
 implementation_prs:
 - pr_number: 47
   pr_url: https://github.com/itercharles/CompliantFlow/pull/47
