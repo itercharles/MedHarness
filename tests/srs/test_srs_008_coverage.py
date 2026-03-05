@@ -11,7 +11,7 @@ import networkx as nx
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
 from traceability.graph.engine import GraphEngine
-from traceability.repository.loader import ItemLoader
+from dhf.repository.loader import ItemLoader
 
 # Tests use test_core fixture from conftest.py
 

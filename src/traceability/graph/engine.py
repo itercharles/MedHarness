@@ -2,8 +2,8 @@
 
 import networkx as nx
 from typing import List, Set, Dict, Any, Optional, Tuple
-from ..models.item import Item
-from ..models.config import ProjectConfig
+from dhf.models.item import Item
+from dhf.models.config import ProjectConfig
 
 
 class GraphEngine:

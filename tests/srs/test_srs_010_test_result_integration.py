@@ -19,7 +19,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 sys.path.insert(0, str(Path(__file__).parent.parent / "utils"))
 
 from test_results.junit_parser import parse_junit_xml
-from test_results.result_store import ResultStore
+from dhf.result_store import ResultStore
 from docstring_parser import parse_docstring, extract_tc_id_from_name
 
 

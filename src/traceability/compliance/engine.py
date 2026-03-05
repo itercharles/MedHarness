@@ -3,7 +3,7 @@
 import yaml
 from pathlib import Path
 from typing import Dict, Any, Callable, Tuple, Optional
-from ..models.compliance import PolicyGroup, ComplianceReport, PolicyResult, Policy
+from dhf.models.compliance import PolicyGroup, ComplianceReport, PolicyResult, Policy
 
 class PolicyEngine:
     """Executes compliance policies against the project graph."""

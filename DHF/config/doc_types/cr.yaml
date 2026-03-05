@@ -1,0 +1,113 @@
+code: CR
+name: Change Request
+prefix: CR-
+directory: 09_cr
+properties:
+- id
+- name: title
+  format: short_text
+  label: Title
+- name: content
+  format: long_text
+  label: Content
+- name: description
+  format: long_text
+  label: Description
+- name: justification
+  format: long_text
+  label: Justification
+- name: impact_assessment
+  format: long_text
+  label: Impact Assessment
+- name: priority
+  format: select
+  options:
+  - High
+  - Medium
+  - Low
+  label: Priority
+- name: requested_by
+  format: short_text
+  label: Requested By
+- name: assigned_to
+  format: short_text
+  label: Assigned To
+- name: affected_items
+  format: relationship
+  label: Affected Items
+- name: implementation_prs
+  format: long_text
+  label: Implementation PRs (JSON List)
+- name: target_version
+  format: short_text
+  label: Target Version
+- name: category
+  format: short_text
+  label: Category
+- name: implementation_notes
+  format: long_text
+  label: Implementation Notes
+- name: target_release
+  format: relationship
+  target_types:
+  - RELEASE
+  label: Target Release
+icon: 📝
+page_enabled: true
+page_number: 9
+lifecycle:
+  transitions:
+  - from_states:
+    - null
+    to_state: draft
+  - from_states:
+    - draft
+    to_state: in_review
+    criteria:
+    - id: description_complete
+      name: Description complete
+      check_type: field_not_empty
+      field: description
+      required: true
+    - id: justification_provided
+      name: Justification provided
+      check_type: field_not_empty
+      field: justification
+      required: true
+    label: Submit for Review
+  - from_states:
+    - in_review
+    to_state: approved
+    criteria:
+    - id: impact_assessed
+      name: Impact assessed
+      check_type: field_not_empty
+      field: impact_assessment
+      required: true
+    label: Approve
+  - from_states:
+    - in_review
+    to_state: cancelled
+    label: Reject
+  - from_states:
+    - approved
+    to_state: implementing
+    criteria:
+    - id: assigned
+      name: Assigned to developer
+      check_type: field_not_empty
+      field: assigned_to
+      required: true
+    label: Start Implementation
+  - from_states:
+    - implementing
+    to_state: completed
+    label: Complete
+  - from_states:
+    - draft
+    to_state: cancelled
+    label: Cancel
+  - from_states:
+    - in_review
+    to_state: cancelled
+    label: Cancel

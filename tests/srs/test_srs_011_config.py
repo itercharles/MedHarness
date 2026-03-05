@@ -11,7 +11,7 @@ import tempfile
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
-from traceability.models.config import ProjectConfig
+from dhf.models.config import ProjectConfig
 from pydantic import ValidationError
 
 
@@ -149,7 +149,7 @@ class TestConfigValidation:
     
     def test_invalid_property_format_rejected(self):
         """Verify application rejects invalid property format"""
-        from traceability.models.config import PropertyConfig
+        from dhf.models.config import PropertyConfig
         
         # Should reject invalid format when creating PropertyConfig
         with pytest.raises(ValidationError):

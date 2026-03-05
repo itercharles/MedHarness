@@ -3,8 +3,8 @@
 from pathlib import Path
 import yaml
 from typing import Any, Dict, List, Optional
-from ..models.item import Item
-from ..exceptions import ValidationError
+from dhf.models.item import Item
+from dhf.exceptions import ValidationError
 
 
 # Fields that are always valid regardless of doc-type config.
@@ -169,13 +169,13 @@ class ItemLoader:
     def _build_lifecycle_fields(self, doc_type) -> set:
         """
         Derive the set of fields that the lifecycle engine and UI may write for
-        this doc type, based on its lifecycle config in project_config.yaml.
+        this doc type, based on its lifecycle config.
 
         Covers:
           - {state}_by / {state}_date for every transition target state
           - review_by / review_date for the in_review state (reviewer kept as alias)
           - verification_status when the doc type has has_verification: true
-          - field names referenced by field_not_empty criteria (e.g. retired_reason)
+          - field names referenced by field_not_empty criteria
         """
         fields: set = set()
         lifecycle = doc_type.lifecycle
@@ -184,10 +184,9 @@ class ItemLoader:
                 to_state = transition.get('to_state')
                 if to_state:
                     if to_state == 'in_review':
-                        # Use canonical review_by / review_date names for the review state
                         fields.add('review_by')
                         fields.add('review_date')
-                        fields.add('reviewer')  # legacy alias kept for compatibility
+                        fields.add('reviewer')  # legacy alias
                     else:
                         fields.add(f'{to_state}_by')
                         fields.add(f'{to_state}_date')

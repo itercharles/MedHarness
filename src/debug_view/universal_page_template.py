@@ -135,7 +135,7 @@ def render_table_section(
                 # Generate markdown and save to static file
                 try:
                     from pathlib import Path
-                    from traceability.document_generator import DocumentGenerator
+                    from dhf.document_generation import DocumentGenerator
                     
                     # Show progress
                     with st.spinner("Regenerating document..."):
@@ -189,7 +189,7 @@ def render_table_section(
             # Export static file to PDF - one-click download
             try:
                 from pathlib import Path
-                from traceability.document_generator import DocumentGenerator
+                from dhf.document_generation import DocumentGenerator
                 
                 template_dir = Path(core.repo_root).parent / "DHF" / "documents" / "specifications" / "templates"
                 generator = DocumentGenerator(core, template_dir)
