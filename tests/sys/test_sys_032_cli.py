@@ -17,7 +17,8 @@ import pytest
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
 from click.testing import CliRunner
-from cli.cli import main
+from compliantflow.cli import main
+from dhf.cli import main as dhf_main
 
 
 @pytest.fixture
@@ -42,7 +43,7 @@ def test_TC_SYS_032_001_validate_passes(runner, dhf_str):
     @test_id: TC-SYS-032-001
     @links: SYS-032
     """
-    result = runner.invoke(main, ["--dhf", dhf_str, "validate", "schema"])
+    result = runner.invoke(dhf_main, ["--dhf", dhf_str, "validate", "schema"])
     assert result.exit_code == 0, result.output + (result.exception and str(result.exception) or "")
     assert "passed schema validation" in result.output
 
@@ -58,7 +59,7 @@ def test_TC_SYS_032_002_item_list_returns_json(runner, dhf_str):
     @test_id: TC-SYS-032-002
     @links: SYS-032
     """
-    result = runner.invoke(main, ["--dhf", dhf_str, "item", "list"])
+    result = runner.invoke(dhf_main, ["--dhf", dhf_str, "item", "list"])
     assert result.exit_code == 0, result.output
     lines = [l for l in result.output.splitlines() if l.strip().startswith("{")]
     assert len(lines) > 0, "Expected at least one JSON line"
@@ -73,7 +74,7 @@ def test_TC_SYS_032_003_item_list_filter_by_type(runner, dhf_str):
     @test_id: TC-SYS-032-003
     @links: SYS-032
     """
-    result = runner.invoke(main, ["--dhf", dhf_str, "item", "list", "--type", "SYS"])
+    result = runner.invoke(dhf_main, ["--dhf", dhf_str, "item", "list", "--type", "SYS"])
     assert result.exit_code == 0, result.output
     lines = [l for l in result.output.splitlines() if l.strip().startswith("{")]
     assert len(lines) > 0
@@ -89,7 +90,7 @@ def test_TC_SYS_032_004_item_get_returns_json(runner, dhf_str):
     @test_id: TC-SYS-032-004
     @links: SYS-032
     """
-    result = runner.invoke(main, ["--dhf", dhf_str, "item", "get", "SRS-001"])
+    result = runner.invoke(dhf_main, ["--dhf", dhf_str, "item", "get", "SRS-001"])
     assert result.exit_code == 0, result.output
     # Find the JSON line (stdout may include a Git warning line)
     json_line = next(l for l in result.output.splitlines() if l.strip().startswith("{"))
@@ -104,7 +105,7 @@ def test_TC_SYS_032_005_item_get_not_found_exits_1(runner, dhf_str):
     @test_id: TC-SYS-032-005
     @links: SYS-032
     """
-    result = runner.invoke(main, ["--dhf", dhf_str, "item", "get", "SYS-NONEXISTENT"])
+    result = runner.invoke(dhf_main, ["--dhf", dhf_str, "item", "get", "SYS-NONEXISTENT"])
     assert result.exit_code == 1
 
 
@@ -139,7 +140,7 @@ def test_TC_SYS_032_007_cr_check_status_stable_cr_exits_1(runner, test_dhf_root,
     import yaml
 
     # Add global_lifecycle with a stable 'closed' state to the test config
-    config_path = test_dhf_root / "config" / "project_config.yaml"
+    config_path = test_dhf_root / "config" / "global.yaml"
     with open(config_path) as f:
         config = yaml.safe_load(f)
     config["global_lifecycle"] = {
@@ -284,7 +285,7 @@ def test_TC_SYS_032_016_item_create_returns_created_item(runner, dhf_str):
     @links: SYS-032
     """
     result = runner.invoke(
-        main,
+        dhf_main,
         ["--dhf", dhf_str, "item", "create",
          "--type", "SYS",
          "--data", '{"title": "CLI created requirement", "content": "Created via CLI"}'],
@@ -306,7 +307,7 @@ def test_TC_SYS_032_017_item_create_invalid_json_exits_1(runner, dhf_str):
     @links: SYS-032
     """
     result = runner.invoke(
-        main,
+        dhf_main,
         ["--dhf", dhf_str, "item", "create", "--type", "SYS", "--data", "{not valid json}"],
     )
     assert result.exit_code == 1
@@ -323,7 +324,7 @@ def test_TC_SYS_032_018_item_create_unknown_field_exits_1(runner, dhf_str):
     @links: SYS-032
     """
     result = runner.invoke(
-        main,
+        dhf_main,
         ["--dhf", dhf_str, "item", "create",
          "--type", "SYS",
          "--data", '{"title": "Bad item", "nonexistent_field": "value"}'],
@@ -342,7 +343,7 @@ def test_TC_SYS_032_019_item_update_merges_fields(runner, test_dhf_root, dhf_str
     @links: SYS-032
     """
     result = runner.invoke(
-        main,
+        dhf_main,
         ["--dhf", dhf_str, "item", "update", "SYS-002",
          "--data", '{"title": "Updated via CLI"}'],
     )
@@ -363,7 +364,7 @@ def test_TC_SYS_032_020_item_update_not_found_exits_1(runner, dhf_str):
     @links: SYS-032
     """
     result = runner.invoke(
-        main,
+        dhf_main,
         ["--dhf", dhf_str, "item", "update", "SYS-NONEXISTENT",
          "--data", '{"title": "ghost"}'],
     )
@@ -381,7 +382,7 @@ def test_TC_SYS_032_021_item_delete_removes_item(runner, test_dhf_root, dhf_str)
     """
     # Create the item to delete
     create_result = runner.invoke(
-        main,
+        dhf_main,
         ["--dhf", dhf_str, "item", "create",
          "--type", "SYS",
          "--data", '{"title": "To be deleted"}'],
@@ -391,13 +392,13 @@ def test_TC_SYS_032_021_item_delete_removes_item(runner, test_dhf_root, dhf_str)
     item_id = created["id"]
 
     # Delete it
-    result = runner.invoke(main, ["--dhf", dhf_str, "item", "delete", item_id])
+    result = runner.invoke(dhf_main, ["--dhf", dhf_str, "item", "delete", item_id])
     assert result.exit_code == 0, result.output
     parsed = json.loads(next(l for l in result.output.splitlines() if l.startswith("{")))
     assert parsed["deleted"] == item_id
 
     # Confirm it's gone
-    get_result = runner.invoke(main, ["--dhf", dhf_str, "item", "get", item_id])
+    get_result = runner.invoke(dhf_main, ["--dhf", dhf_str, "item", "get", item_id])
     assert get_result.exit_code == 1
 
 
@@ -408,7 +409,7 @@ def test_TC_SYS_032_022_item_delete_not_found_exits_1(runner, dhf_str):
     @test_id: TC-SYS-032-022
     @links: SYS-032
     """
-    result = runner.invoke(main, ["--dhf", dhf_str, "item", "delete", "SYS-NONEXISTENT"])
+    result = runner.invoke(dhf_main, ["--dhf", dhf_str, "item", "delete", "SYS-NONEXISTENT"])
     assert result.exit_code == 1
 
 
@@ -488,7 +489,7 @@ def test_TC_SYS_032_025_doc_list_returns_json(runner, dhf_str):
     @test_id: TC-SYS-032-025
     @links: SYS-032
     """
-    result = runner.invoke(main, ["--dhf", dhf_str, "doc", "list"])
+    result = runner.invoke(dhf_main, ["--dhf", dhf_str, "doc", "list"])
     assert result.exit_code == 0, result.output
     json_line = next(l for l in result.output.splitlines() if l.strip().startswith("{"))
     parsed = json.loads(json_line)
@@ -505,7 +506,7 @@ def test_TC_SYS_032_026_doc_generate_writes_markdown(runner, real_dhf_str, tmp_p
     @test_id: TC-SYS-032-026
     @links: SYS-032
     """
-    result = runner.invoke(main, ["--dhf", real_dhf_str, "doc", "generate", "SYS"])
+    result = runner.invoke(dhf_main, ["--dhf", real_dhf_str, "doc", "generate", "SYS"])
     assert result.exit_code == 0, result.output + str(result.exception or "")
     json_line = next(l for l in result.output.splitlines() if l.strip().startswith("{"))
     parsed = json.loads(json_line)
@@ -524,7 +525,7 @@ def test_TC_SYS_032_027_doc_export_writes_pdf(runner, real_dhf_str):
     @test_id: TC-SYS-032-027
     @links: SYS-032
     """
-    result = runner.invoke(main, ["--dhf", real_dhf_str, "doc", "export", "SYS"])
+    result = runner.invoke(dhf_main, ["--dhf", real_dhf_str, "doc", "export", "SYS"])
     assert result.exit_code == 0, result.output + str(result.exception or "")
     json_line = next(l for l in result.output.splitlines() if l.strip().startswith("{"))
     parsed = json.loads(json_line)

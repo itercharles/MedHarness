@@ -10,8 +10,8 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
-from traceability.repository.loader import ItemLoader
-from traceability.repository.saver import ItemSaver
+from dhf.repository.loader import ItemLoader
+from dhf.repository.saver import ItemSaver
 
 
 class TestFilePersistence:

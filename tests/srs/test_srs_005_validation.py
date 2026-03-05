@@ -9,8 +9,8 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
-from traceability.repository.loader import ItemLoader
-from traceability.models.item import Item
+from dhf.repository.loader import ItemLoader
+from dhf.models.item import Item
 
 # Tests use test_core fixture from conftest.py
 

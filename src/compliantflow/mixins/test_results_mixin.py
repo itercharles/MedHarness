@@ -1,7 +1,7 @@
 """Test results mixin for CompliantFlowCore.
 
 Exposes test execution result import as a first-class core operation.
-All persistence is delegated to ResultStore; requirement item
+All persistence is delegated to the DHFAdapter; requirement item
 verification_status fields are updated automatically on import.
 """
 
@@ -30,12 +30,9 @@ class _TestResultsMixin:
         """Persist execution results and update linked requirement items.
 
         For each result:
-        1. Writes to ResultStore (including any review fields from XML properties).
+        1. Writes to ResultStore via adapter.
         2. Collects linked requirement item IDs from the stored record.
-        3. Aggregates verification_status for every touched requirement item:
-           - all linked TCs PASS  → ``verified``
-           - any linked TC  FAIL  → ``failed``
-           - otherwise            → ``not_verified``
+        3. Aggregates verification_status for every touched requirement item.
 
         Returns summary: {imported, skipped, items_updated, failed_tcs}.
         """
@@ -47,7 +44,7 @@ class _TestResultsMixin:
             if result.testing_status == "SKIP":
                 skipped += 1
                 continue
-            self.result_store.record_execution(
+            self._adapter.record_test_result(
                 tc_id=result.id,
                 testing_status=result.testing_status,
                 tester=tester,
@@ -62,13 +59,16 @@ class _TestResultsMixin:
                 review_status=result.review_status or "",
             )
             imported += 1
-            record = self.result_store.get(result.id)
+            record = self._adapter.get_test_result(result.id)
             for item_id in (record or {}).get("links") or []:
                 touched_items.add(item_id)
 
+        # Refresh graph so new TC items are visible
+        self.refresh()
+
         items_updated = self._update_requirement_verification(touched_items)
 
-        all_results = self.result_store.get_all()
+        all_results = self._adapter.get_all_test_results()
         failed_tcs = [
             tc_id
             for tc_id, rec in all_results.items()
@@ -83,11 +83,11 @@ class _TestResultsMixin:
 
     def get_test_result(self, tc_id: str) -> Optional[Dict]:
         """Return the stored record for a TC, or None if not found."""
-        return self.result_store.get(tc_id)
+        return self._adapter.get_test_result(tc_id)
 
     def get_all_test_results(self, status_filter: Optional[str] = None) -> Dict:
         """Return all stored test results, optionally filtered by testing_status."""
-        return self.result_store.get_all(status_filter)
+        return self._adapter.get_all_test_results(status_filter)
 
     # ------------------------------------------------------------------
     # Internal
@@ -96,20 +96,18 @@ class _TestResultsMixin:
     def _update_requirement_verification(self, item_ids: set) -> List[str]:
         """Recompute and persist verification_status for each touched item."""
         updated: List[str] = []
-        all_results = self.result_store.get_all()
+        all_results = self._adapter.get_all_test_results()
 
         for item_id in item_ids:
             item = self.get_item(item_id)
             if item is None:
                 continue
 
-            # Check if this doc type supports verification tracking
             doc_type_code = item_id.split("-")[0]
             doc_type_cfg = self.config.get_doc_type(doc_type_code) if self.config else None
             if not doc_type_cfg or not getattr(doc_type_cfg, "has_verification", False):
                 continue
 
-            # Find all TCs that link to this item
             linked_tc_results = [
                 rec
                 for rec in all_results.values()

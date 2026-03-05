@@ -53,19 +53,16 @@ class ResultStore:
         record = self._load_all()
         entry = record.get(tc_id, {"id": tc_id})
         entry["id"] = tc_id
-        # Preserve definition fields; only update if new values provided
         if title and not entry.get("title"):
             entry["title"] = title
         if links and not entry.get("links"):
             entry["links"] = links
-        # Update review fields if provided
         if reviewer:
             entry["reviewer"] = reviewer
         if review_date:
             entry["review_date"] = review_date
         if review_status:
             entry["review_status"] = review_status
-        # Always overwrite execution fields
         entry["testing_status"] = testing_status
         entry["tester"] = tester
         entry["testing_date"] = testing_date or datetime.now(timezone.utc).isoformat()

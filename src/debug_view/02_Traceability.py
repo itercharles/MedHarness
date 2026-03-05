@@ -7,8 +7,8 @@ from pathlib import Path
 from typing import Dict, List, Set, Tuple
 from datetime import datetime
 from compliantflow.core import CompliantFlowCore
-from traceability.models.item import VerificationStatus
-from traceability.document_generator import DocumentGenerator
+from dhf.models.item import VerificationStatus
+from dhf.document_generation import DocumentGenerator
 from streamlit_agraph import agraph, Node, Edge, Config
 from utils.ui_helpers import check_and_show_item_detail, make_item_columns_clickable
 

@@ -17,7 +17,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
 from compliantflow.core import CompliantFlowCore
-from traceability.models.item import Item
+from dhf.models.item import Item
 
 
 def test_TC_SYS_008_001_list_change_requests(test_dhf_root):

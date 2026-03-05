@@ -9,7 +9,7 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
-from traceability.document_generator import DocumentGenerator
+from dhf.document_generation import DocumentGenerator
 from jinja2 import Environment, FileSystemLoader
 
 
@@ -33,7 +33,7 @@ class TestDocumentGeneration:
         (templates_dir / "test.j2").write_text("# {{ title }}")
         
         # Initialize DocumentGenerator
-        generator = DocumentGenerator(test_core, templates_dir)
+        generator = DocumentGenerator(test_core._adapter._loader, test_core.config, templates_dir)
         assert generator is not None, "DocumentGenerator should initialize"
         assert generator.template_dir.exists(), "Templates directory should exist"
         assert generator.jinja_env is not None, "Jinja2 environment should be initialized"
@@ -98,8 +98,8 @@ class TestDocumentGeneration:
         (templates_dir / "requirements_specification.md.j2").write_text(template_content)
         
         # Initialize generator
-        generator = DocumentGenerator(test_core, templates_dir)
-        
+        generator = DocumentGenerator(test_core._adapter._loader, test_core.config, templates_dir)
+
         # Get test items
         items = test_core.get_all_items()
         srs_items = [item for item in items if item['id'].startswith('SRS-')]
@@ -126,8 +126,8 @@ class TestDocumentGeneration:
         templates_dir.mkdir(parents=True, exist_ok=True)
         
         # Initialize generator
-        generator = DocumentGenerator(test_core, templates_dir)
-        
+        generator = DocumentGenerator(test_core._adapter._loader, test_core.config, templates_dir)
+
         # Verify custom filters are registered
         assert 'status_badge' in generator.jinja_env.filters, "Should have status_badge filter"
         assert 'format_date' in generator.jinja_env.filters, "Should have format_date filter"

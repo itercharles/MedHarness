@@ -1,8 +1,13 @@
 """Configuration models."""
 
+from __future__ import annotations
+
 from enum import Enum
+from pathlib import Path
 from pydantic import BaseModel, Field
 from typing import List, Optional, Union, Any
+
+import yaml
 
 
 class PropertyFormat(str, Enum):
@@ -23,7 +28,7 @@ class PropertyFormat(str, Enum):
     ITEM_REFERENCE = "item_reference"
     ITEM_MULTISELECT = "item_multiselect"
     FILE_UPLOAD = "file_upload"
-    RELATIONSHIP = "relationship"  # New format for relationships
+    RELATIONSHIP = "relationship"
 
 
 class PropertyConfig(BaseModel):
@@ -35,7 +40,7 @@ class PropertyConfig(BaseModel):
     default: Optional[Any] = Field(None, description="Default value")
     placeholder: Optional[str] = Field(None, description="Placeholder text for input fields")
     help: Optional[str] = Field(None, description="Help text displayed below the field")
-    
+
     # Format-specific options
     options: Optional[List[str]] = Field(None, description="Options for select/multiselect/radio")
     height: Optional[int] = Field(None, description="Height in pixels for text areas")
@@ -44,10 +49,10 @@ class PropertyConfig(BaseModel):
     step: Optional[float] = Field(None, description="Step size for slider")
     target_types: Optional[List[str]] = Field(None, description="Target document types for item references")
     allowed_extensions: Optional[List[str]] = Field(None, description="Allowed file extensions for file upload")
-    
+
     # New relationship format fields
     relationship_type: Optional[str] = Field(None, description="Reference to relationship type in global registry")
-    
+
     @property
     def display_label(self) -> str:
         """Get display label (use custom or generate from name)."""
@@ -60,37 +65,37 @@ class LifecycleState(BaseModel):
     """Global lifecycle state definition with action information."""
     id: str = Field(..., description="Unique state identifier (e.g., 'draft', 'approved')")
     label: str = Field(..., description="Human-readable label")
-    action_label: Optional[str] = Field(None, description="Label for action to reach this state (e.g., 'Approve' for approved state)")
+    action_label: Optional[str] = Field(None, description="Label for action to reach this state")
     icon: Optional[str] = Field(None, description="Emoji icon for the state")
-    color: Optional[str] = Field(None, description="Color for UI display (e.g., 'success', 'warning')")
+    color: Optional[str] = Field(None, description="Color for UI display")
     is_initial: bool = Field(False, description="Whether this is an initial state for new items")
     is_stable: bool = Field(False, description="Whether items in this state are stable/locked")
 
 
 class GlobalLifecycle(BaseModel):
     """Global lifecycle configuration with all states."""
-    states: List[LifecycleState] = Field(default_factory=list, description="All available lifecycle states with action info")
+    states: List[LifecycleState] = Field(default_factory=list, description="All available lifecycle states")
 
 
 class RelationConfig(BaseModel):
     """Configuration for a relationship."""
     target: str = Field(..., description="Target Document Type Code")
-    label: str = Field(..., description="Label for the relationship (e.g., 'verify')")
+    label: str = Field(..., description="Label for the relationship")
 
 
 class DocTypeConfig(BaseModel):
     """Configuration for a document type."""
-    
+
     code: str = Field(..., description="Document type code (e.g., 'SYS')")
     name: str = Field(..., description="Human-readable name")
     prefix: str = Field(..., description="ID prefix (e.g., 'SYS-')")
-    directory: Optional[str] = Field(None, description="Storage directory name (defaults to prefix without dash)")
+    directory: Optional[str] = Field(None, description="Storage directory name")
     allowed_parents: Optional[List[str]] = Field(None, description="Allowed parent document types")
     relations: Optional[List[RelationConfig]] = Field(None, description="Relationship configurations")
     type: Optional[str] = Field(None, description="Special type (e.g., 'test')")
     verifies: Optional[List[str]] = Field(None, description="Document types this verifies")
-    properties: Optional[List[Any]] = Field(None, description="Properties to display (string, dict, or PropertyConfig)")
-    
+    properties: Optional[List[Any]] = Field(None, description="Properties to display")
+
     # Universal framework fields
     icon: Optional[str] = Field(None, description="Icon for UI display")
     page_enabled: Optional[bool] = Field(None, description="Whether to generate a page for this type")
@@ -100,35 +105,49 @@ class DocTypeConfig(BaseModel):
     verification_states: Optional[List[str]] = Field(None, description="Verification states")
 
 
-
-
-
 class TraceabilityMatrix(BaseModel):
     """Configuration for a traceability matrix."""
     name: str = Field(..., description="Matrix name")
     description: str = Field(..., description="Matrix description")
     path: List[str] = Field(..., description="List of doc type codes in trace order")
 
+
 class ProjectConfig(BaseModel):
     """Project configuration."""
-    
+
     change_control: Optional[dict] = Field(default_factory=dict, description="Change control configuration")
     global_lifecycle: Optional[GlobalLifecycle] = Field(None, description="Global lifecycle configuration")
     doc_types: List[DocTypeConfig] = Field(..., description="Document type configurations")
-    traceability_matrices: List['TraceabilityMatrix'] = Field(default_factory=list, description="Traceability matrix configurations")
+    traceability_matrices: List[TraceabilityMatrix] = Field(default_factory=list, description="Traceability matrix configurations")
     test_integration: dict = Field(default_factory=dict, description="Test integration configuration")
-    
+    document_specifications: dict = Field(default_factory=dict, description="Document specification configurations")
+
+    @classmethod
+    def load(cls, config_dir: Path) -> "ProjectConfig":
+        """Load from split config directory (global.yaml + doc_types/*.yaml)."""
+        global_path = config_dir / "global.yaml"
+        if not global_path.exists():
+            raise FileNotFoundError(f"global.yaml not found at {global_path}")
+        global_data = yaml.safe_load(global_path.read_text()) or {}
+
+        doc_types = []
+        doc_types_dir = config_dir / "doc_types"
+        if doc_types_dir.exists():
+            for f in sorted(doc_types_dir.glob("*.yaml")):
+                doc_types.append(yaml.safe_load(f.read_text()))
+
+        return cls(**global_data, doc_types=doc_types)
+
     def get_doc_type(self, code: str) -> Optional[DocTypeConfig]:
         """Get document type configuration by code."""
         for dt in self.doc_types:
             if dt.code == code:
                 return dt
         return None
-    
+
     def get_doc_type_by_prefix(self, prefix: str) -> Optional[DocTypeConfig]:
         """Get document type configuration by prefix."""
         for dt in self.doc_types:
             if dt.prefix == prefix:
                 return dt
         return None
-

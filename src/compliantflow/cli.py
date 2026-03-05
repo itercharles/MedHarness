@@ -1,4 +1,8 @@
-"""CompliantFlow CLI — headless access to DHF operations for CI/CD pipelines."""
+"""CompliantFlow CLI — analysis and traceability operations for CI/CD pipelines.
+
+Data CRUD (item create/update/delete, validate schema, doc generate/export)
+is handled by the dhf CLI (python -m dhf).
+"""
 
 import json
 import os
@@ -15,7 +19,6 @@ def _resolve_dhf(dhf_option: str | None) -> Path:
     env = os.environ.get("COMPLIANTFLOW_DHF")
     if env:
         return Path(env)
-    # Default: DHF/ next to the src/ that contains this package
     return Path(__file__).parent.parent.parent / "DHF"
 
 
@@ -41,7 +44,7 @@ def _make_core(dhf_path: Path):
 )
 @click.pass_context
 def main(ctx: click.Context, dhf: str | None) -> None:
-    """CompliantFlow CLI — DHF operations for CI/CD pipelines."""
+    """CompliantFlow CLI — analysis and traceability for CI/CD pipelines."""
     ctx.ensure_object(dict)
     ctx.obj["dhf"] = _resolve_dhf(dhf)
 
@@ -53,26 +56,6 @@ def main(ctx: click.Context, dhf: str | None) -> None:
 @main.group()
 def validate() -> None:
     """Commands for DHF validation."""
-
-
-@validate.command("schema")
-@click.pass_context
-def validate_schema(ctx: click.Context) -> None:
-    """Validate all DHF items against their doc-type schema.
-
-    Exits 1 if any YAML contains unknown or invalid fields.
-    """
-    dhf_path: Path = ctx.obj["dhf"]
-    click.echo(f"Validating schema at: {dhf_path}", err=True)
-    from traceability.exceptions import ValidationError as CFValidationError
-    try:
-        core = _make_core(dhf_path)
-    except CFValidationError as e:
-        click.echo(f"SCHEMA ERROR: {e}", err=True)
-        click.echo("✗ Schema validation failed.", err=True)
-        sys.exit(1)
-    item_count = len(core.get_all_items())
-    click.echo(f"✓ All {item_count} items passed schema validation.", err=True)
 
 
 @validate.command("traceability")
@@ -135,89 +118,12 @@ def validate_compliance(ctx: click.Context, group_id: str) -> None:
 
 
 # ---------------------------------------------------------------------------
-# item group
+# item group (lifecycle only — CRUD is in dhf CLI)
 # ---------------------------------------------------------------------------
 
 @main.group()
 def item() -> None:
-    """Commands for querying DHF items."""
-
-
-@item.command("create")
-@click.option("--type", "doc_type", required=True, metavar="CODE", help="Doc type code (e.g. SYS, SRS).")
-@click.option("--data", required=True, metavar="JSON", help="Item fields as JSON object.")
-@click.option("--author", default="cli", show_default=True, help="Author name for git commit.")
-@click.option("--cr", "cr_id", default=None, metavar="CR_ID", help="Change Request ID.")
-@click.pass_context
-def item_create(ctx: click.Context, doc_type: str, data: str, author: str, cr_id: str | None) -> None:
-    """Create a new DHF item. Outputs the created item as JSON.
-
-    \b
-    Example:
-      compliantflow item create --type SYS --data '{"title": "My requirement"}'
-    """
-    import json as _json
-    dhf_path: Path = ctx.obj["dhf"]
-    try:
-        item_data = _json.loads(data)
-    except _json.JSONDecodeError as e:
-        click.echo(f"ERROR: --data is not valid JSON: {e}", err=True)
-        sys.exit(1)
-    item_data["type"] = doc_type
-    core = _make_core(dhf_path)
-    from traceability.exceptions import ValidationError as CFValidationError
-    try:
-        result = core.create_item(item_data, author=author, cr_id=cr_id)
-    except (CFValidationError, ValueError) as e:
-        click.echo(f"ERROR: {e}", err=True)
-        sys.exit(1)
-    click.echo(json.dumps(result, default=str))
-    click.echo(f"✓ Created {result['id']}.", err=True)
-
-
-@item.command("update")
-@click.argument("item_id")
-@click.option("--data", required=True, metavar="JSON", help="Fields to update as JSON (merged into existing item).")
-@click.option("--author", default="cli", show_default=True, help="Author name for git commit.")
-@click.option("--cr", "cr_id", default=None, metavar="CR_ID", help="Change Request ID.")
-@click.pass_context
-def item_update(ctx: click.Context, item_id: str, data: str, author: str, cr_id: str | None) -> None:
-    """Update fields of an existing DHF item. Merges JSON into the existing item.
-
-    \b
-    Example:
-      compliantflow item update SYS-001 --data '{"title": "Updated title"}'
-    """
-    import json as _json
-    dhf_path: Path = ctx.obj["dhf"]
-    try:
-        update_data = _json.loads(data)
-    except _json.JSONDecodeError as e:
-        click.echo(f"ERROR: --data is not valid JSON: {e}", err=True)
-        sys.exit(1)
-    core = _make_core(dhf_path)
-    result = core.update_item(item_id, update_data, author=author, cr_id=cr_id)
-    if result is None:
-        click.echo(f"ERROR: Item '{item_id}' not found.", err=True)
-        sys.exit(1)
-    click.echo(json.dumps(result, default=str))
-    click.echo(f"✓ Updated {item_id}.", err=True)
-
-
-@item.command("delete")
-@click.argument("item_id")
-@click.option("--author", default="cli", show_default=True, help="Author name for git commit.")
-@click.pass_context
-def item_delete(ctx: click.Context, item_id: str, author: str) -> None:
-    """Delete a DHF item. Exits 1 if item not found."""
-    dhf_path: Path = ctx.obj["dhf"]
-    core = _make_core(dhf_path)
-    success = core.delete_item(item_id, author=author)
-    if not success:
-        click.echo(f"ERROR: Item '{item_id}' not found or could not be deleted.", err=True)
-        sys.exit(1)
-    click.echo(json.dumps({"deleted": item_id}))
-    click.echo(f"✓ Deleted {item_id}.", err=True)
+    """Commands for item lifecycle transitions."""
 
 
 @item.command("transitions")
@@ -227,12 +133,12 @@ def item_transitions(ctx: click.Context, item_id: str) -> None:
     """List available lifecycle transitions for an item. Outputs JSON."""
     dhf_path: Path = ctx.obj["dhf"]
     core = _make_core(dhf_path)
-    item = core.get_item(item_id)
-    if item is None:
+    it = core.get_item(item_id)
+    if it is None:
         click.echo(f"ERROR: Item '{item_id}' not found.", err=True)
         sys.exit(1)
-    transitions = core.get_available_transitions(item)
-    click.echo(json.dumps({"item_id": item_id, "current_status": item.get("status"), "transitions": transitions}, default=str))
+    transitions = core.get_available_transitions(it)
+    click.echo(json.dumps({"item_id": item_id, "current_status": it.get("status"), "transitions": transitions}, default=str))
 
 
 @item.command("transition")
@@ -241,12 +147,7 @@ def item_transitions(ctx: click.Context, item_id: str) -> None:
 @click.option("--by", "performed_by", default="cli", show_default=True, help="User performing the transition.")
 @click.pass_context
 def item_transition(ctx: click.Context, item_id: str, to_state: str, performed_by: str) -> None:
-    """Execute a lifecycle state transition for an item.
-
-    \b
-    Example:
-      compliantflow item transition SYS-001 approved --by "Alice"
-    """
+    """Execute a lifecycle state transition for an item."""
     dhf_path: Path = ctx.obj["dhf"]
     core = _make_core(dhf_path)
     try:
@@ -256,45 +157,6 @@ def item_transition(ctx: click.Context, item_id: str, to_state: str, performed_b
         sys.exit(1)
     click.echo(json.dumps(result, default=str))
     click.echo(f"✓ {item_id}: {result.get('status')}.", err=True)
-
-
-@item.command("list")
-@click.option("--type", "doc_type", default=None, metavar="CODE", help="Filter by doc type code (e.g. SYS, SRS).")
-@click.option("--status", default=None, metavar="STATUS", help="Filter by status (e.g. approved, draft).")
-@click.option("--search", default="", metavar="TEXT", help="Search text filter.")
-@click.pass_context
-def item_list(ctx: click.Context, doc_type: str | None, status: str | None, search: str) -> None:
-    """List DHF items. Outputs one JSON object per line."""
-    dhf_path: Path = ctx.obj["dhf"]
-    core = _make_core(dhf_path)
-    status_filter = [status] if status else None
-    if doc_type:
-        items = core.get_items_filtered(doc_type, status_filter, search)
-    else:
-        # No type filter — return all items with optional status/search filter
-        items = core.get_all_items()
-        if status_filter:
-            items = [i for i in items if i.get("status") in status_filter]
-        if search:
-            s = search.lower()
-            items = [i for i in items if s in i["id"].lower() or s in i.get("title", "").lower()]
-    for it in items:
-        click.echo(json.dumps(it, default=str))
-    click.echo(f"({len(items)} item(s))", err=True)
-
-
-@item.command("get")
-@click.argument("item_id")
-@click.pass_context
-def item_get(ctx: click.Context, item_id: str) -> None:
-    """Get a single DHF item by ID. Outputs JSON."""
-    dhf_path: Path = ctx.obj["dhf"]
-    core = _make_core(dhf_path)
-    result = core.get_item(item_id)
-    if result is None:
-        click.echo(f"ERROR: Item '{item_id}' not found.", err=True)
-        sys.exit(1)
-    click.echo(json.dumps(result, default=str))
 
 
 # ---------------------------------------------------------------------------
@@ -360,7 +222,6 @@ def cr_update(
         click.echo(f"ERROR: CR '{cr_id}' is in a stable state. Cannot update.", err=True)
         sys.exit(1)
 
-    # Add affected items
     added = []
     for item_id in items:
         success = core.add_item_to_cr(cr_id, item_id)
@@ -370,9 +231,8 @@ def cr_update(
         else:
             click.echo(f"  ~ Skipped item: {item_id} (already present or error)", err=True)
 
-    # Add PR info if provided
     if pr_number is not None:
-        cr_item = core.get_item(cr_id)  # reload after item updates
+        cr_item = core.get_item(cr_id)
         prs = list(cr_item.get("implementation_prs") or [])
         if not any(p.get("pr_number") == pr_number for p in prs):
             prs.append({
@@ -409,15 +269,11 @@ def traceability() -> None:
 def traceability_matrix(ctx: click.Context, doc_types: tuple) -> None:
     """Build a traceability matrix for an ordered list of doc types.
 
-    DOC_TYPE arguments must be ordered along the traceability chain
-    (e.g. CRS SYS SRS).  Orphaned items are included with null slots.
-
     Outputs one JSON object per row to stdout.
 
     \b
     Examples:
       python -m cli traceability matrix CRS SYS SRS
-      python -m cli traceability matrix RISK RCM SYS TC-SYS
     """
     dhf_path: Path = ctx.obj["dhf"]
     core = _make_core(dhf_path)
@@ -437,17 +293,7 @@ def traceability_matrix(ctx: click.Context, doc_types: tuple) -> None:
 @click.argument("item_id")
 @click.pass_context
 def traceability_chain(ctx: click.Context, item_id: str) -> None:
-    """Show the full connected traceability chain for a single item.
-
-    Traverses all upstream and downstream links transitively and outputs
-    a JSON object with 'root' and 'nodes'.  Each node lists only its
-    direct neighbours; the complete reachable set is the nodes dict.
-
-    \b
-    Examples:
-      python -m cli traceability chain SYS-001
-      python -m cli traceability chain CRS-003
-    """
+    """Show the full connected traceability chain for a single item."""
     dhf_path: Path = ctx.obj["dhf"]
     core = _make_core(dhf_path)
     result = core.get_item_chain(item_id)
@@ -486,23 +332,7 @@ def test_import(
     run_url: str,
     commit_sha: str,
 ) -> None:
-    """Import test execution results from a JUnit XML file.
-
-    Persists each result to the ResultStore and updates the verification_status
-    of linked requirement items (SYS/SRS/CRS).
-
-    Outputs a JSON summary to stdout.
-    Exits 1 if any test FAILED.
-
-    \b
-    Example:
-      compliantflow test import results.xml \\
-        --format junit \\
-        --tester "GitHub Actions" \\
-        --run-id "7890123" \\
-        --run-url "https://github.com/org/repo/actions/runs/7890123" \\
-        --commit "abc123"
-    """
+    """Import test execution results from a JUnit XML file."""
     from test_results.junit_parser import parse_junit_xml
     dhf_path: Path = ctx.obj["dhf"]
     core = _make_core(dhf_path)
@@ -536,10 +366,7 @@ def test_import(
 @click.argument("tc_id")
 @click.pass_context
 def test_status(ctx: click.Context, tc_id: str) -> None:
-    """Show the stored record for a single test case.
-
-    Outputs JSON to stdout. Exits 1 if the TC has not been registered or run.
-    """
+    """Show the stored record for a single test case. Outputs JSON."""
     dhf_path: Path = ctx.obj["dhf"]
     core = _make_core(dhf_path)
     record = core.get_test_result(tc_id)
@@ -554,80 +381,10 @@ def test_status(ctx: click.Context, tc_id: str) -> None:
               help="Filter by testing_status (PASS, FAIL, SKIP).")
 @click.pass_context
 def test_list(ctx: click.Context, status_filter: str) -> None:
-    """List all stored test results, one JSON object per line.
-
-    Optionally filter by testing_status (PASS, FAIL, SKIP).
-    """
+    """List all stored test results, one JSON object per line."""
     dhf_path: Path = ctx.obj["dhf"]
     core = _make_core(dhf_path)
     records = core.get_all_test_results(status_filter)
     for tc_id, record in records.items():
         click.echo(json.dumps(record, default=str))
     click.echo(f"({len(records)} record(s))", err=True)
-
-
-# ---------------------------------------------------------------------------
-# doc group
-# ---------------------------------------------------------------------------
-
-@main.group()
-def doc() -> None:
-    """Commands for document generation."""
-
-
-@doc.command("list")
-@click.pass_context
-def doc_list(ctx: click.Context) -> None:
-    """List available document type codes."""
-    core = _make_core(ctx.obj["dhf"])
-    click.echo(json.dumps({"doc_types": core.get_available_doc_types()}))
-
-
-@doc.command("export")
-@click.argument("doc_type")
-@click.option("--format", "fmt", default="pdf", show_default=True,
-              type=click.Choice(["pdf"]), help="Output format.")
-@click.pass_context
-def doc_export(ctx: click.Context, doc_type: str, fmt: str) -> None:
-    """Regenerate spec and export to PDF.
-
-    First regenerates the markdown (same as doc generate), then converts to PDF.
-    DOC_TYPE is a configured code (e.g. SYS) or ALL.
-
-    \b
-    Example:
-      compliantflow doc export SYS
-      compliantflow doc export ALL
-    """
-    core = _make_core(ctx.obj["dhf"])
-    codes = core.get_available_doc_types() if doc_type.upper() == "ALL" else [doc_type]
-    for code in codes:
-        try:
-            result = core.export_pdf(code)
-            click.echo(json.dumps(result))
-            click.echo(f"✓ {code} → {result['pdf_path']}", err=True)
-        except Exception as e:
-            click.echo(f"✗ {code}: {e}", err=True)
-            if len(codes) == 1:
-                raise SystemExit(1)
-
-
-@doc.command("generate")
-@click.argument("doc_type")
-@click.pass_context
-def doc_generate(ctx: click.Context, doc_type: str) -> None:
-    """Generate specification document(s).
-
-    DOC_TYPE is a configured code (e.g. SYS, SYSARCH) or ALL.
-    """
-    core = _make_core(ctx.obj["dhf"])
-    codes = core.get_available_doc_types() if doc_type.upper() == "ALL" else [doc_type]
-    for code in codes:
-        try:
-            result = core.generate_spec(code)
-            click.echo(json.dumps(result))
-            click.echo(f"✓ {code} → {result['output_path']}", err=True)
-        except Exception as e:
-            click.echo(f"✗ {code}: {e}", err=True)
-            if len(codes) == 1:
-                raise SystemExit(1)

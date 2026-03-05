@@ -1,0 +1,45 @@
+code: SOUP
+name: Software of Unknown Provenance
+prefix: SOUP-
+directory: 11_soup
+properties:
+- id
+- name: title
+  format: short_text
+  label: Title
+- name: content
+  format: long_text
+  label: Content
+- name: name
+  format: short_text
+  label: Name
+- name: version
+  format: short_text
+  label: Version
+- name: manufacturer
+  format: short_text
+  label: Manufacturer
+- name: license
+  format: short_text
+  label: License
+- name: purpose
+  format: long_text
+  label: Purpose
+- name: homepage
+  format: short_text
+  label: Homepage
+- name: cve_count
+  format: short_text
+  label: CVE Count
+- name: risk_rating
+  format: short_text
+  label: Risk Rating
+- name: safety_class
+  format: short_text
+  label: Safety Class
+- name: verification_method
+  format: short_text
+  label: Verification Method
+icon: 📦
+page_enabled: true
+page_number: 11

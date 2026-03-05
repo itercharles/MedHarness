@@ -17,7 +17,7 @@ import yaml
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
 from click.testing import CliRunner
-from cli.cli import main
+from compliantflow.cli import main
 from compliantflow.core import CompliantFlowCore
 from test_results.junit_parser import parse_junit_xml, ExecutionResult
 
@@ -38,14 +38,12 @@ def dhf_str(test_dhf_root):
 
 def _enable_verification(test_dhf_root: Path) -> None:
     """Add has_verification:true to the SYS doc type in the test config."""
-    config_path = test_dhf_root / "config" / "project_config.yaml"
-    with open(config_path) as f:
+    # Split config: each doc type has its own file under config/doc_types/
+    sys_config_path = test_dhf_root / "config" / "doc_types" / "sys.yaml"
+    with open(sys_config_path) as f:
         cfg = yaml.safe_load(f)
-    for dt in cfg["doc_types"]:
-        if dt["code"] == "SYS":
-            dt["has_verification"] = True
-            break
-    with open(config_path, "w") as f:
+    cfg["has_verification"] = True
+    with open(sys_config_path, "w") as f:
         yaml.dump(cfg, f, default_flow_style=False, sort_keys=False)
 
 
