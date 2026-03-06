@@ -2,7 +2,7 @@
 
 from typing import List, Optional, Dict, Any
 
-from dhf.models.item import Item
+from utils.models.item import Item
 
 
 class _ItemCRUDMixin:

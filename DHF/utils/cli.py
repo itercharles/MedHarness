@@ -95,7 +95,7 @@ def item_create(ctx: click.Context, doc_type: str, data: str, author: str, cr_id
         sys.exit(1)
     item_data["type"] = doc_type
     adapter = _make_adapter(ctx.obj["dhf"])
-    from dhf.exceptions import ValidationError
+    from utils.exceptions import ValidationError
     try:
         result = adapter.create_item(item_data, author=author, cr_id=cr_id)
     except (ValidationError, ValueError) as e:
@@ -161,7 +161,7 @@ def validate_schema(ctx: click.Context) -> None:
     """
     dhf_path: Path = ctx.obj["dhf"]
     click.echo(f"Validating schema at: {dhf_path}", err=True)
-    from dhf.exceptions import ValidationError
+    from utils.exceptions import ValidationError
     try:
         adapter = _make_adapter(dhf_path)
         result = adapter.validate_schema()

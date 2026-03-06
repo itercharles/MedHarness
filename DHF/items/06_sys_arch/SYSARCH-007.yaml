@@ -5,7 +5,7 @@ content: |-
   into the DHF, and linking each result to the requirement items it verifies.
 
   **Framework-agnostic boundary**:
-  - `src/` consumes only JUnit XML — no coupling to any specific test framework
+  - `DHF/utils/` consumes only JUnit XML — no coupling to any specific test framework
   - `tests/` contains the pytest-specific adapter (conftest.py + docstring_parser.py)
   - Any framework that produces JUnit XML with `compliantflow.*` properties is compatible
 

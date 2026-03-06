@@ -10,7 +10,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
 from traceability.graph.engine import GraphEngine
-from dhf.repository.loader import ItemLoader
+from utils.repository.loader import ItemLoader
 from tests.fixtures.test_data import create_test_dhf, populate_test_dhf
 
 

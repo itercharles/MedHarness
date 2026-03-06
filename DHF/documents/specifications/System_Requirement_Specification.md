@@ -7,8 +7,8 @@
 | Field | Value |
 |-------|-------|
 | **Document ID** | SYS-SPEC |
-| **Version** | 1.101 |
-| **Generated** | 2026-03-05 |
+| **Version** | 1.105 |
+| **Generated** | 2026-03-06 |
 | **Status** | Draft |
 | **Project** | CompliantFlow Project |
 
@@ -24,7 +24,7 @@ This document provides a comprehensive list of all System Requirements, includin
 
 ### 1.2 Scope
 
-This specification covers all System Requirements defined in the CompliantFlow system as of 2026-03-05.
+This specification covers all System Requirements defined in the CompliantFlow system as of 2026-03-06.
 
 ---
 
@@ -502,27 +502,28 @@ Streamlit-based web user interface for DHF management.
 
 #### Description
 
-Command-line interface module providing headless access to CompliantFlowCore
-for CI/CD pipelines and scripted environments.
+Two CLI modules providing headless access to DHF operations for CI/CD pipelines,
+split by the DHF data layer extraction (CR-013).
 
-**Responsibilities**:
-- Expose core DHF operations as CLI commands
-- Parse command-line arguments and route to CompliantFlowCore methods
-- Output machine-readable JSON to stdout for pipeline consumption
-- Output human-readable diagnostics to stderr
-- Return meaningful exit codes (0 = success, 1 = error/validation failure)
+**compliantflow CLI** (`src/compliantflow/cli.py`, entry: `python -m compliantflow`):
+- Analysis and lifecycle operations: traceability validation, compliance checking,
+  item lifecycle transitions, CR management, test result import/query,
+  traceability matrix and chain views
+- Routes to `CompliantFlowCore` for all operations
+- No item CRUD (create/update/delete); those are in the dhf CLI
 
-**Key Interfaces**:
-- `CompliantFlowCore`: Single entry point for all business logic (shared with Web UI)
-- `click`: Command-line argument parsing and help generation
-- `python -m compliantflow`: Module entry point
+**dhf CLI** (`DHF/utils/cli.py`, entry: `python -m utils`):
+- Data-layer operations only: item CRUD, schema validation, config inspection,
+  document generation and PDF export
+- Routes to `LocalDHFAdapter` — no dependency on the compliantflow analysis package
+- Can be used standalone without CompliantFlowCore
 
-**Implementation Notes**:
-- Package location: `src/compliantflow/` (separate from `src/traceability/`)
-- Uses `click` library (already installed as transitive dependency of streamlit)
-- Stateless: each invocation creates a fresh CompliantFlowCore instance
-- No shared state with the Streamlit UI; both call the same core independently
-- stdout/stderr separation enables clean pipeline integration
+**Shared conventions**:
+- `click` library for argument parsing and help generation
+- DHF path: `--dhf` option → `COMPLIANTFLOW_DHF` env var → `<repo_root>/DHF` default
+- stdout = machine-readable JSON; stderr = human-readable diagnostics
+- Exit codes: 0 success, 1 business error, 2 usage error
+- Stateless: each invocation creates a fresh instance; no shared state with the Web UI
 
 
 
@@ -593,7 +594,7 @@ workflows.
 ## 4. Document Control
 
 **Document Owner**: Quality Assurance  
-**Last Updated**: 2026-03-05  
+**Last Updated**: 2026-03-06  
 **Next Review**: TBD
 
 ---

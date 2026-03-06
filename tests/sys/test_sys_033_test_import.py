@@ -19,7 +19,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 from click.testing import CliRunner
 from compliantflow.cli import main
 from compliantflow.core import CompliantFlowCore
-from test_results.junit_parser import parse_junit_xml, ExecutionResult
+from utils.junit_parser import parse_junit_xml, ExecutionResult
 
 
 @pytest.fixture

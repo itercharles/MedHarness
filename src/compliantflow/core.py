@@ -11,8 +11,8 @@ implementing the protocol can plug in.
 from pathlib import Path
 from typing import List, Optional, Dict, Any
 
-from dhf.models.config import ProjectConfig
-from dhf.models.item import Item
+from utils.models.config import ProjectConfig
+from utils.models.item import Item
 from traceability.graph.engine import GraphEngine
 
 from compliantflow.mixins.lifecycle import _LifecycleMixin

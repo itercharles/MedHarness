@@ -12,7 +12,7 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
-from utils.ui_helpers import make_item_columns_clickable, check_and_show_item_detail
+from helpers.ui_helpers import make_item_columns_clickable, check_and_show_item_detail
 from compliantflow.core import CompliantFlowCore
 
 
@@ -166,14 +166,14 @@ class TestSWDD006_PageURLGeneration:
     
     def test_url_generation_without_core(self):
         """Verify URL generation falls back to query param without core."""
-        from utils.ui_helpers import get_page_url_for_item
+        from helpers.ui_helpers import get_page_url_for_item
         
         url = get_page_url_for_item("SYS-001")
         assert url == "?item=SYS-001", "Should fallback to query param only"
     
     def test_url_generation_with_core(self, core):
         """Verify URL generation with core creates page-specific URLs."""
-        from utils.ui_helpers import get_page_url_for_item
+        from helpers.ui_helpers import get_page_url_for_item
         
         url = get_page_url_for_item("SYS-001", core)
         
@@ -184,7 +184,7 @@ class TestSWDD006_PageURLGeneration:
     
     def test_url_generation_exact_format_for_all_types(self, core):
         """Verify exact URL format for different document types."""
-        from utils.ui_helpers import get_page_url_for_item
+        from helpers.ui_helpers import get_page_url_for_item
         
         # Test exact format for each document type
         test_cases = [
@@ -202,7 +202,7 @@ class TestSWDD006_PageURLGeneration:
     
     def test_url_generation_for_test_cases(self, core):
         """Verify URL generation handles test case IDs correctly."""
-        from utils.ui_helpers import get_page_url_for_item
+        from helpers.ui_helpers import get_page_url_for_item
         
         # Test cases should use TC-{TYPE} format
         url = get_page_url_for_item("TC-SYS-001", core)
@@ -219,7 +219,7 @@ class TestSWDD006_PageURLGeneration:
     
     def test_url_generation_performance(self, core):
         """Verify URL generation completes in O(n) time."""
-        from utils.ui_helpers import get_page_url_for_item
+        from helpers.ui_helpers import get_page_url_for_item
         import time
         
         # Generate URLs for multiple items

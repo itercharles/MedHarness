@@ -14,51 +14,53 @@ streamlit run src/app.py
 ```
 
 ### CLI (CI/CD integration)
-```bash
-# Entry point: python -m compliantflow [--dhf PATH]
-PYTHONPATH=src python -m compliantflow --help
 
-# Common commands
-PYTHONPATH=src python -m compliantflow validate schema
-PYTHONPATH=src python -m compliantflow validate traceability
-PYTHONPATH=src python -m compliantflow validate compliance IEC_62304
-PYTHONPATH=src python -m compliantflow item create --type SYS --data '{"title": "My req", "category": "Functional", "verification_method": ["Test"]}'
-PYTHONPATH=src python -m compliantflow item update SYS-001 --data '{"title": "Updated title"}'
-PYTHONPATH=src python -m compliantflow item delete SYS-001
-PYTHONPATH=src python -m compliantflow item transitions SYS-001
-PYTHONPATH=src python -m compliantflow item transition SYS-001 approved --by "Alice"
-PYTHONPATH=src python -m compliantflow item list --type SYS --status approved
-PYTHONPATH=src python -m compliantflow item get SYS-001
-PYTHONPATH=src python -m compliantflow cr check-status CR-012
-PYTHONPATH=src python -m compliantflow cr update CR-012 --item SYS-001 --pr-number 42
-PYTHONPATH=src python -m compliantflow traceability matrix CRS SYS SRS
-PYTHONPATH=src python -m compliantflow traceability chain SYS-001
+Two separate CLIs after the DHF data layer split (CR-013):
+
+```bash
+# compliantflow CLI — analysis, lifecycle, traceability (src/compliantflow/cli.py)
+PYTHONPATH=src:DHF python -m compliantflow --help
+PYTHONPATH=src:DHF python -m compliantflow validate traceability
+PYTHONPATH=src:DHF python -m compliantflow validate compliance IEC_62304
+PYTHONPATH=src:DHF python -m compliantflow item transitions SYS-001
+PYTHONPATH=src:DHF python -m compliantflow item transition SYS-001 approved --by "Alice"
+PYTHONPATH=src:DHF python -m compliantflow cr check-status CR-012
+PYTHONPATH=src:DHF python -m compliantflow cr update CR-012 --item SYS-001 --pr-number 42
+PYTHONPATH=src:DHF python -m compliantflow traceability matrix CRS SYS SRS
+PYTHONPATH=src:DHF python -m compliantflow traceability chain SYS-001
 # Test result integration (external CI → DHF)
-PYTHONPATH=src python -m compliantflow test import results.xml --format junit --tester "GitHub Actions" --run-id 123 --run-url https://github.com/org/repo/actions/runs/123 --commit abc123
-PYTHONPATH=src python -m compliantflow test status TC-SYS-001
-PYTHONPATH=src python -m compliantflow test list --status PASS
-# Document generation
-PYTHONPATH=src python -m compliantflow doc list
-PYTHONPATH=src python -m compliantflow doc generate SYS
-PYTHONPATH=src python -m compliantflow doc generate ALL
-PYTHONPATH=src python -m compliantflow doc export SYS            # regenerate md then export PDF
-PYTHONPATH=src python -m compliantflow doc export ALL
+PYTHONPATH=src:DHF python -m compliantflow test import results.xml --format junit --tester "GitHub Actions" --run-id 123 --run-url https://github.com/org/repo/actions/runs/123 --commit abc123
+PYTHONPATH=src:DHF python -m compliantflow test status TC-SYS-001
+PYTHONPATH=src:DHF python -m compliantflow test list --status PASS
+
+# utils CLI (DHF data layer) — data CRUD, schema validation, doc generation (DHF/utils/cli.py)
+PYTHONPATH=src:DHF python -m utils --help
+PYTHONPATH=src:DHF python -m utils validate schema
+PYTHONPATH=src:DHF python -m utils item list --type SYS
+PYTHONPATH=src:DHF python -m utils item get SYS-001
+PYTHONPATH=src:DHF python -m utils item create --type SYS --data '{"title": "My req", "category": "Functional", "verification_method": ["Test"]}'
+PYTHONPATH=src:DHF python -m utils item update SYS-001 --data '{"title": "Updated title"}'
+PYTHONPATH=src:DHF python -m utils item delete SYS-001
+PYTHONPATH=src:DHF python -m utils doc list
+PYTHONPATH=src:DHF python -m utils doc generate SYS
+PYTHONPATH=src:DHF python -m utils doc generate ALL
+PYTHONPATH=src:DHF python -m utils doc export SYS            # regenerate md then export PDF
+PYTHONPATH=src:DHF python -m utils doc export ALL
 ```
 
-CLI package is at `src/cli/cli.py`. Uses `click` (already installed via streamlit).
 stdout = machine-readable JSON; stderr = human-readable messages.
 
 ### Run tests
 ```bash
 # Full suite — MUST run all three before merging
-PYTHONPATH=src src/venv/bin/pytest tests/sys/ tests/crs/ -q
-PYTHONPATH=src src/venv/bin/pytest tests/srs/ -q
+PYTHONPATH=src:DHF src/venv/bin/pytest tests/sys/ tests/crs/ -q
+PYTHONPATH=src:DHF src/venv/bin/pytest tests/srs/ -q
 
 # Single test
-PYTHONPATH=src src/venv/bin/pytest tests/sys/test_sys_001_object_management.py::test_name -v
+PYTHONPATH=src:DHF src/venv/bin/pytest tests/sys/test_sys_001_object_management.py::test_name -v
 ```
 
-**Important**: Run from the repo root. Use `PYTHONPATH=src` for all test suites. **Before any merge, all three test suites (sys, crs, srs) must pass.**
+**Important**: Run from the repo root. Use `PYTHONPATH=src:DHF` for all test suites. **Before any merge, all three test suites (sys, crs, srs) must pass.**
 
 ## Architecture
 
@@ -96,8 +98,9 @@ Key public methods:
 **`get_all_items()` returns dicts, not `Item` objects.** Access fields with `item['id']`, `item.get('status')`, etc. The dict includes a computed `all_linked_uids` list for graph traversal — use this, not `item.get('links')` (which doesn't exist).
 
 ### Data Layer
-- **`src/traceability/repository/loader.py`** — loads YAML, runs strict schema validation against doc-type properties from `project_config.yaml`. When `project_config` is provided to `ItemLoader`, unknown fields raise `ValidationError`.
-- **`src/traceability/repository/saver.py`** — writes YAML and commits to git.
+- **`DHF/utils/repository/loader.py`** — loads YAML, runs strict schema validation against doc-type properties. Unknown fields raise `ValidationError`.
+- **`DHF/utils/repository/saver.py`** — writes YAML and commits to git.
+- **`src/compliantflow/adapters/local.py`** — `LocalDHFAdapter` wraps the dhf package; `CompliantFlowCore` uses it via the `DHFAdapter` protocol (`src/compliantflow/adapters/protocol.py`).
 - Items are stored under `DHF/items/<directory>/`.
 
 ### Graph Engine
@@ -108,12 +111,11 @@ Key public methods:
 `get_item_chain(item_id)` traverses the full connected subgraph and returns correctly-named `upstream`/`downstream` keys per node.
 
 ### Config-Driven Document Types
-**`DHF/config/project_config.yaml`** is the single source of truth. It defines:
-- `doc_types[]`: each with `code`, `prefix`, `directory`, `properties[]`, `lifecycle` (optional), `has_verification`
-- `global_lifecycle.states[]`: all workflow states with `is_stable` flag
-- `traceability_matrices[]`: ordered `path[]` of doc type codes for chain views
+Config is split across two locations:
+- **`DHF/config/global.yaml`** — global lifecycle states (`is_stable` flag), traceability matrices, document specifications
+- **`DHF/config/doc_types/*.yaml`** — one file per doc type, each with `code`, `prefix`, `directory`, `properties[]`, `lifecycle` (optional), `has_verification`
 
-`ProjectConfig` and `DocTypeConfig` Pydantic models are in `src/traceability/models/config.py`.
+`ProjectConfig` and `DocTypeConfig` Pydantic models are in `DHF/utils/models/config.py`. `ProjectConfig.load(config_dir)` reads the split format.
 
 ### GitOps Approval Model (requirement items)
 **UC, CRS, SYS, SRS, SWDD, SYSARCH, SOUP, RISK, RCM** have **no `lifecycle` block** and **no `status` field**. Approval is implicit from Git:
@@ -216,9 +218,9 @@ item: `verified` (all TCs PASS), `failed` (any TC FAIL), `not_verified` (no resu
 Git history serves as the audit trail.
 
 ### CLI Layer
-**`src/cli/cli.py`** exposes `CompliantFlowCore` as a `click` CLI. Sits alongside `debug_view/` as an interface layer, separate from the core package. Both entry points work:
-- `python -m cli` — primary entry point
-- `python -m compliantflow` — preserved for backward compatibility (delegates to `cli`)
+Two CLI packages sit alongside `debug_view/` as interface layers, separate from the core packages:
+- **`src/compliantflow/cli.py`** — analysis CLI (`python -m compliantflow`): traceability, compliance, lifecycle transitions, CR management, test result import
+- **`DHF/utils/cli.py` — data CLI (`python -m utils`): item CRUD, schema validation, config inspection, doc generation/export
 
 ### DebugView (internal Streamlit pages)
 `src/debug_view/` contains Streamlit pages for internal development and debugging — **not a production UI**. Loaded explicitly via `st.Page(absolute_path)` in `app.py`.

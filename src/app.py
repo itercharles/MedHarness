@@ -21,7 +21,7 @@ from debug_view.page_generator import generate_doc_type_pages
 
 print("[APP] Imports completed successfully")
 import pandas as pd
-from utils.ui_helpers import check_and_show_item_detail
+from helpers.ui_helpers import check_and_show_item_detail
 
 
 def get_dhf_root() -> Path:

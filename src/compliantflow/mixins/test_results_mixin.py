@@ -10,7 +10,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Dict, List, Optional
 
 if TYPE_CHECKING:
-    from test_results.junit_parser import ExecutionResult
+    from utils.junit_parser import ExecutionResult
 
 
 class _TestResultsMixin:

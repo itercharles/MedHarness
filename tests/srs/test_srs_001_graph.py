@@ -11,7 +11,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
 from traceability.graph.engine import GraphEngine
-# Removed: from dhf.repository.loader import ItemLoader
+# Removed: from utils.repository.loader import ItemLoader
 
 # Removed: Path to DHF items
 # Removed: SPECS_DIR = Path(__file__).parent.parent.parent / "DHF" / "items"
@@ -94,7 +94,7 @@ class TestGraphDataStructure:
     
     def test_graph_with_mocked_simple_hierarchy(self):
         """Test graph with mocked simple parent-child hierarchy"""
-        from dhf.models.item import Item
+        from utils.models.item import Item
         
         # Mock items with specific hierarchy
         mock_items = [
@@ -123,7 +123,7 @@ class TestGraphDataStructure:
     
     def test_graph_with_circular_dependency_detection(self):
         """Test graph handles circular dependencies (edge case)"""
-        from dhf.models.item import Item
+        from utils.models.item import Item
         
         # Mock items with circular dependency
         mock_items = [
@@ -157,7 +157,7 @@ class TestGraphDataStructure:
     
     def test_graph_with_orphan_node(self):
         """Test graph with orphan node (no parent links)"""
-        from dhf.models.item import Item
+        from utils.models.item import Item
         
         # Mock items with orphan
         mock_items = [

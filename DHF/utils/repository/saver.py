@@ -3,8 +3,8 @@
 from pathlib import Path
 import yaml
 from typing import Optional, Dict, Any
-from dhf.models.item import Item
-from dhf.repository.git import GitRepository
+from utils.models.item import Item
+from utils.repository.git import GitRepository
 
 
 class ItemSaver:

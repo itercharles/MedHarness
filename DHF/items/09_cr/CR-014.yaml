@@ -1,0 +1,33 @@
+id: CR-014
+title: Move DHF data layer and test results into DHF/utils/
+type: CR
+status: draft
+description: 'Relocate the standalone data-layer package and test-result integration
+  into the DHF directory tree, co-locating code with the data it manages.
+
+  Key changes:
+
+  - `src/dhf/` → `DHF/utils/` (data-layer package now lives inside DHF)
+
+  - `src/test_results/junit_parser.py` → `DHF/utils/junit_parser.py` (dissolved
+  src/test_results/ package; junit_parser joins result_store.py in DHF/utils/)
+
+  - `src/utils/` → `src/helpers/` (renamed to avoid Python package name collision
+  with DHF/utils/)
+
+  - All `from dhf.` imports updated to `from utils.`; `from utils.*helpers*` imports
+  updated to `from helpers.`
+
+  - PYTHONPATH updated from `src` to `src:DHF` across CLAUDE.md, CI pipeline, and
+  test commands
+
+  - CLI entry point for data operations: `python -m utils` (was `python -m dhf`)
+
+  - Design files updated: SWDD-013, SWDD-012, SYSARCH-007, SYSARCH-009'
+justification: The DHF directory is the authoritative home for all design history
+  artefacts. Co-locating the data-layer tooling (utils/) with the data it manages
+  (items/, config/, test-results/) makes the DHF self-contained — it can be used
+  as a standalone repository without the analysis engine.
+priority: Medium
+affected_items:
+- SYS-032

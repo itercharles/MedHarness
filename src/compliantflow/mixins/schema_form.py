@@ -16,7 +16,7 @@ class _SchemaFormMixin:
         Returns:
             Dictionary with form field definitions
         """
-        from dhf.models.config import PropertyConfig, PropertyFormat
+        from utils.models.config import PropertyConfig, PropertyFormat
 
         doc_type_config = self.config.get_doc_type(doc_type_code)
         if not doc_type_config:
@@ -182,7 +182,7 @@ class _SchemaFormMixin:
 
     def _format_to_ui_type(self, format) -> str:
         """Convert PropertyFormat to UI type string."""
-        from dhf.models.config import PropertyFormat
+        from utils.models.config import PropertyFormat
 
         mapping = {
             PropertyFormat.SHORT_TEXT: 'text',

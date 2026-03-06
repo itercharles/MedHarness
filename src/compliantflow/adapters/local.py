@@ -6,14 +6,14 @@ import re
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from dhf.exceptions import ValidationError
-from dhf.models.config import ProjectConfig
-from dhf.models.item import Item
-from dhf.repository.git import GitRepository
-from dhf.repository.loader import ItemLoader
-from dhf.repository.saver import ItemSaver
-from dhf.result_store import ResultStore
-from utils.id_generator import get_next_id
+from utils.exceptions import ValidationError
+from utils.models.config import ProjectConfig
+from utils.models.item import Item
+from utils.repository.git import GitRepository
+from utils.repository.loader import ItemLoader
+from utils.repository.saver import ItemSaver
+from utils.result_store import ResultStore
+from helpers.id_generator import get_next_id
 
 
 class LocalDHFAdapter:
@@ -127,7 +127,7 @@ class LocalDHFAdapter:
         return list(self._doc_specs.keys())
 
     def generate_doc(self, doc_type_code: str) -> dict:
-        from dhf.document_generation import DocumentGenerator
+        from utils.document_generation import DocumentGenerator
         template_dir = self._dhf_root / "documents" / "specifications" / "templates"
         gen = DocumentGenerator(self._loader, self._config, template_dir)
         content, output_path = gen.generate_markdown_spec(doc_type_code, self._doc_specs, self._dhf_root)
@@ -139,7 +139,7 @@ class LocalDHFAdapter:
 
     def export_pdf(self, doc_type_code: str) -> dict:
         spec_result = self.generate_doc(doc_type_code)
-        from dhf.document_generation import DocumentGenerator
+        from utils.document_generation import DocumentGenerator
         template_dir = self._dhf_root / "documents" / "specifications" / "templates"
         gen = DocumentGenerator(self._loader, self._config, template_dir)
         pdf_path = gen.export_static_doc_to_pdf(doc_type_code, self._doc_specs, self._dhf_root)

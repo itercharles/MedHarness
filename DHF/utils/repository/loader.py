@@ -3,8 +3,8 @@
 from pathlib import Path
 import yaml
 from typing import Any, Dict, List, Optional
-from dhf.models.item import Item
-from dhf.exceptions import ValidationError
+from utils.models.item import Item
+from utils.exceptions import ValidationError
 
 
 # Fields that are always valid regardless of doc-type config.
