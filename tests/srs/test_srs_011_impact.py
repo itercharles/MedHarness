@@ -22,7 +22,7 @@ class TestImpactAnalysis:
     def test_graph_traversal_for_descendants(self, test_core):
         """Verify graph traversal can find descendants"""
         # loader = ItemLoader(SPECS_DIR)
-        items = test_core.loader.load_all()
+        items = test_core._adapter._loader.load_all()
         
         engine = GraphEngine()
         engine.build_from_items(items)
@@ -33,7 +33,7 @@ class TestImpactAnalysis:
     
     def test_impact_analysis_finds_all_downstream(self, test_core):
         """Verify impact analysis identifies all downstream items"""
-        items = test_core.loader.load_all()
+        items = test_core._adapter._loader.load_all()
         
         engine = GraphEngine()
         engine.build_from_items(items)
@@ -51,7 +51,7 @@ class TestImpactAnalysis:
     def test_impact_grouped_by_type(self, test_core):
         """Verify impact can be reported by document type"""
         # loader = ItemLoader(SPECS_DIR)
-        items = test_core.loader.load_all()
+        items = test_core._adapter._loader.load_all()
         
         engine = GraphEngine()
         engine.build_from_items(items)
@@ -76,7 +76,7 @@ class TestImpactAnalysis:
     def test_impact_score_calculable(self, test_core):
         """Verify impact score can be calculated"""
         # loader = ItemLoader(SPECS_DIR)
-        items = test_core.loader.load_all()
+        items = test_core._adapter._loader.load_all()
         
         engine = GraphEngine()
         engine.build_from_items(items)
@@ -96,7 +96,7 @@ class TestImpactAnalysis:
     def test_transitive_dependencies_found(self, test_core):
         """Verify transitive dependencies are found (not just direct children)"""
         # loader = ItemLoader(SPECS_DIR)
-        items = test_core.loader.load_all()
+        items = test_core._adapter._loader.load_all()
         
         engine = GraphEngine()
         engine.build_from_items(items)

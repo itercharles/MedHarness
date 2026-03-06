@@ -232,6 +232,45 @@ def doc_generate(ctx: click.Context, doc_type: str) -> None:
                 raise SystemExit(1)
 
 
+# ---------------------------------------------------------------------------
+# test group
+# ---------------------------------------------------------------------------
+
+@main.group()
+def test() -> None:
+    """Commands for reading test results stored in the DHF."""
+
+
+@test.command("status")
+@click.argument("tc_id")
+@click.pass_context
+def test_status(ctx: click.Context, tc_id: str) -> None:
+    """Show the stored record for a single test case. Outputs JSON."""
+    from utils.result_store import ResultStore
+    dhf_path: Path = ctx.obj["dhf"]
+    store = ResultStore(dhf_path)
+    record = store.get(tc_id)
+    if record is None:
+        click.echo(f"ERROR: No record found for '{tc_id}'.", err=True)
+        sys.exit(1)
+    click.echo(json.dumps(record, default=str))
+
+
+@test.command("list")
+@click.option("--status", "status_filter", default=None, metavar="STATUS",
+              help="Filter by testing_status (PASS, FAIL, SKIP).")
+@click.pass_context
+def test_list(ctx: click.Context, status_filter: str) -> None:
+    """List all stored test results, one JSON object per line."""
+    from utils.result_store import ResultStore
+    dhf_path: Path = ctx.obj["dhf"]
+    store = ResultStore(dhf_path)
+    records = store.get_all(status_filter)
+    for record in records.values():
+        click.echo(json.dumps(record, default=str))
+    click.echo(f"({len(records)} record(s))", err=True)
+
+
 @doc.command("export")
 @click.argument("doc_type")
 @click.pass_context

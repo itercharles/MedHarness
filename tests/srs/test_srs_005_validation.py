@@ -40,7 +40,7 @@ class TestDataValidation:
     def test_type_checking_on_load(self, test_core):
         """Verify type checking happens on load"""
         # loader = ItemLoader(SPECS_DIR)
-        items = test_core.loader.load_all()
+        items = test_core._adapter._loader.load_all()
         
         # All loaded items should be valid Item instances
         for item in items[:10]:  # Check first 10
@@ -65,7 +65,7 @@ class TestDataValidation:
     def test_all_items_validate_successfully(self, test_core):
         """Verify all existing items pass validation"""
         # loader = ItemLoader(SPECS_DIR)
-        items = test_core.loader.load_all()
+        items = test_core._adapter._loader.load_all()
         
         # All items should have loaded successfully (validation passed)
         assert len(items) > 0, "Should have loaded items"
@@ -89,7 +89,7 @@ class TestDataValidation:
             
             # Try to load - should handle gracefully
             # loader = ItemLoader(SPECS_DIR)
-            items = test_core.loader.load_all()
+            items = test_core._adapter._loader.load_all()
             
             # Should either skip invalid file or raise clear error
             assert True, "Invalid YAML handled"

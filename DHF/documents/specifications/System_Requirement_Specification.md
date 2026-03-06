@@ -7,7 +7,7 @@
 | Field | Value |
 |-------|-------|
 | **Document ID** | SYS-SPEC |
-| **Version** | 1.105 |
+| **Version** | 1.109 |
 | **Generated** | 2026-03-06 |
 | **Status** | Draft |
 | **Project** | CompliantFlow Project |
@@ -432,7 +432,7 @@ Module for importing and persisting test results from any CI/CD pipeline
 into the DHF, and linking each result to the requirement items it verifies.
 
 **Framework-agnostic boundary**:
-- `src/` consumes only JUnit XML — no coupling to any specific test framework
+- `DHF/utils/` consumes only JUnit XML — no coupling to any specific test framework
 - `tests/` contains the pytest-specific adapter (conftest.py + docstring_parser.py)
 - Any framework that produces JUnit XML with `compliantflow.*` properties is compatible
 

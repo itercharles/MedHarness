@@ -1,0 +1,45 @@
+id: CR-015
+title: Fix adapter abstraction — remove loader/saver leakage and add DHF test CLI
+type: CR
+status: draft
+description: "Two targeted fixes to the DHF/CompliantFlow boundary:\n\n1. Remove loader/saver\
+  \ shortcut properties from CompliantFlowCore.\n   These exposed LocalDHFAdapter\
+  \ internals (_loader, _saver) through the\n   core facade and would break silently\
+  \ for any non-local adapter.\n   Tests that needed raw loader/saver access now use\
+  \ core._adapter directly,\n   making the LocalDHFAdapter dependency explicit and\
+  \ honest.\n\n2. Add `test status` and `test list` commands to the DHF CLI (python\
+  \ -m utils).\n   Test results are DHF-owned data (DHF/test-results/results.yaml).\n\
+  \   Read operations belong in the DHF CLI alongside item/validate/doc.\n   `test\
+  \ import` stays in the CompliantFlow CLI because it orchestrates\n   JUnit XML parsing\
+  \ + ResultStore writes + verification_status updates\n   (which require the analysis\
+  \ graph engine)."
+justification: 'The loader/saver properties violated the DHFAdapter abstraction by
+  coupling
+
+  CompliantFlowCore to LocalDHFAdapter implementation details. Any alternative
+
+  adapter (cloud, database, API) would fail silently at runtime.
+
+
+  Moving test result reads to the DHF CLI correctly models ownership:
+
+  compliance data is core-system-owned (governance/ at repo root);
+
+  test results are DHF-owned (DHF/test-results/results.yaml).'
+priority: Medium
+affected_items:
+- SYS-032
+- SRS-001
+- TC-SRS-001
+- TC-SRS-002
+- TC-SRS-005
+- TC-SRS-008
+- TC-SRS-011
+- TC-SYS-002
+- TC-SYS-008
+- TC-SYS-010
+implementation_prs:
+- pr_number: 49
+  pr_url: https://github.com/itercharles/CompliantFlow/pull/49
+  title: 'CR-015: Fix adapter abstraction — remove loader/saver leakage and add DHF
+    test CLI'
