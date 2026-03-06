@@ -2,7 +2,7 @@
 
 from typing import List, Dict, Any, Optional
 
-from traceability.graph.analysis import generate_traceability_matrix
+from compliantflow.traceability.graph.analysis import generate_traceability_matrix
 
 
 class _TraceabilityMixin:

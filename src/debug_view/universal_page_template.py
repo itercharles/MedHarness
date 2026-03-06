@@ -10,7 +10,7 @@ from debug_view.ui_components import (
     render_manual_verification,
     render_status_badge
 )
-from helpers.ui_helpers import make_item_columns_clickable
+from compliantflow.helpers.ui_helpers import make_item_columns_clickable
 
 
 def render_item_management_page(
@@ -629,7 +629,7 @@ def render_item_view(
     
     # Show CR info if change control is enabled and item is stable
     if state_info.get('is_stable', False):
-        from helpers.cr_manager import is_change_control_enabled, get_cr_doc_type
+        from compliantflow.helpers.cr_manager import is_change_control_enabled, get_cr_doc_type
         if is_change_control_enabled(core):
             linked_cr = core.get_cr_for_item(item['id'])
             if linked_cr:
@@ -688,7 +688,7 @@ def render_item_view(
             
             if is_item_list:
                 # Import URL helper
-                from helpers.ui_helpers import get_page_url_for_item
+                from compliantflow.helpers.ui_helpers import get_page_url_for_item
                 
                 # Render as clickable links with item details
                 st.markdown(f"**{field_name}:**")
@@ -773,7 +773,7 @@ def render_item_view(
     st.markdown("---")
     
     if item.get('file_path'):
-        from helpers.git_history import get_full_commit_history
+        from compliantflow.helpers.git_history import get_full_commit_history
         from pathlib import Path
         
         with st.expander("📜 Change History", expanded=False):

@@ -7,7 +7,7 @@ class _ChangeRequestMixin:
 
     def get_cr_for_item(self, item_id: str) -> Optional[Dict]:
         """Return the first CR that lists *item_id* in its affected_items, or None."""
-        from helpers.cr_manager import is_change_control_enabled, get_cr_doc_type, get_affected_items_field
+        from compliantflow.helpers.cr_manager import is_change_control_enabled, get_cr_doc_type, get_affected_items_field
         if not is_change_control_enabled(self):
             return None
         cr_type = get_cr_doc_type(self)
@@ -21,7 +21,7 @@ class _ChangeRequestMixin:
 
     def get_non_stable_cr(self) -> Optional[Dict]:
         """Return the first CR that is not in a stable workflow state, or None."""
-        from helpers.cr_manager import is_change_control_enabled, get_cr_doc_type
+        from compliantflow.helpers.cr_manager import is_change_control_enabled, get_cr_doc_type
         if not is_change_control_enabled(self):
             return None
         cr_type = get_cr_doc_type(self)
@@ -47,7 +47,7 @@ class _ChangeRequestMixin:
         Returns True on success, False if the CR does not exist, is stable,
         or change control is disabled.
         """
-        from helpers.cr_manager import is_change_control_enabled, get_affected_items_field
+        from compliantflow.helpers.cr_manager import is_change_control_enabled, get_affected_items_field
         if not is_change_control_enabled(self):
             return False
         cr = self.get_item(cr_id)
@@ -73,7 +73,7 @@ class _ChangeRequestMixin:
         Returns:
             Tuple of (can_edit, button_label, cr_id, available_cr)
         """
-        from helpers.cr_manager import is_change_control_enabled
+        from compliantflow.helpers.cr_manager import is_change_control_enabled
 
         item = self.get_item(uid)
         if not item:

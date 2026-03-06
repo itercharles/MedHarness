@@ -1,0 +1,34 @@
+id: CR-016
+title: Consolidate src/ — move traceability/ and helpers/ into compliantflow/, app.py into debug_view/
+type: CR
+status: draft
+description: |-
+  Two structural changes to clean up the src/ layout:
+
+  1. Move src/traceability/ → src/compliantflow/traceability/
+     Move src/helpers/     → src/compliantflow/helpers/
+     Rationale: traceability/ and helpers/ are internal dependencies of the
+     compliantflow analysis engine. Exposing them as sibling top-level packages
+     in src/ allowed any code to import them directly, bypassing the intended
+     public API (CompliantFlowCore). Moving them inside compliantflow/ makes
+     the package boundary explicit.
+
+  2. Move src/app.py → src/debug_view/app.py
+     Rationale: app.py is the Streamlit entry point for the debug UI. It only
+     loads debug_view/ pages and has no purpose outside that context. Co-locating
+     it with the pages it orchestrates makes debug_view/ self-contained.
+     Run command updated to: streamlit run src/debug_view/app.py
+
+  All internal imports updated:
+  - from traceability.* → from compliantflow.traceability.*
+  - from helpers.*      → from compliantflow.helpers.*
+  - Path calculations in app.py adjusted for new directory depth
+justification: |-
+  src/ previously exposed three separate top-level packages (compliantflow,
+  traceability, helpers) when only compliantflow should be the public interface.
+  This CR makes compliantflow the single top-level package in src/, with
+  traceability and helpers as internal sub-packages, matching the intended
+  architecture described in the design.
+priority: Medium
+affected_items:
+- SYS-021

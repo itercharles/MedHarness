@@ -4,13 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What This Project Is
 
-CompliantFlow is a Docs-as-Code ALM platform for medical devices. It manages Design History File (DHF) items — requirements, risks, tests, change requests — stored as YAML files under `DHF/items/`. The Streamlit UI (`src/app.py`) provides a web interface over a Python backend.
+CompliantFlow is a Docs-as-Code ALM platform for medical devices. It manages Design History File (DHF) items — requirements, risks, tests, change requests — stored as YAML files under `DHF/items/`. The Streamlit UI (`src/debug_view/app.py`) provides a web interface over a Python backend.
 
 ## Commands
 
 ### Run the application
 ```bash
-streamlit run src/app.py
+streamlit run src/debug_view/app.py
 ```
 
 ### CLI (CI/CD integration)
@@ -223,7 +223,7 @@ Two CLI packages sit alongside `debug_view/` as interface layers, separate from 
 - **`DHF/utils/cli.py` — data CLI (`python -m utils`): item CRUD, schema validation, config inspection, doc generation/export
 
 ### DebugView (internal Streamlit pages)
-`src/debug_view/` contains Streamlit pages for internal development and debugging — **not a production UI**. Loaded explicitly via `st.Page(absolute_path)` in `app.py`.
+`src/debug_view/` contains Streamlit pages for internal development and debugging — **not a production UI**. Loaded explicitly via `st.Page(absolute_path)` in `src/debug_view/app.py`.
 - **`universal_page_template.py`** — renders the CRUD page for any doc type
 - **`02_Traceability.py`** — traceability matrix and graph views
 - **`03_Compliance.py`** — compliance policy assessment
