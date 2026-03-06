@@ -1,0 +1,39 @@
+id: CR-017
+title: Remove PR metadata from CR YAML — use GitOps-implicit linkage
+description: |-
+  Change Requests currently store pr_number, pr_url, and pr_title in an
+  implementation_prs list that CI writes automatically on every PR open/synchronize
+  event. This creates three problems:
+
+  1. Stale data: if a PR is closed without merging (abandoned, re-opened with a
+     new number, or retitled), the YAML retains incorrect information.
+  2. Sync friction: CI commits to feature branches (Phase 4) can race with
+     developer commits, trigger re-runs, and complicate rebase workflows.
+  3. Redundancy: PR title already starts with CR-NNN (enforced by CI), branch
+     naming follows feature/cr-NNN-*, and commit messages carry the prefix.
+     The PR is already discoverable by searching GitHub for the CR ID — storing
+     it again in YAML adds noise, not value.
+
+  The fix is to treat PR linkage as GitOps-implicit (same model as requirement-item
+  approval) and stop writing PR metadata into CR YAML files.
+justification: |-
+  The GitOps approval model (SYSARCH-010) established that Git itself is the
+  source of truth for approval evidence on requirement items. The same principle
+  applies here: Git history already records the PR-CR association via title
+  conventions and branch names. Writing it again into YAML duplicates data,
+  creates a stale-data hazard, and causes CI write conflicts.
+impact_assessment: |-
+  - CLI: remove --pr-number, --pr-url, --pr-title from `cr update` command
+  - CI Phase 4: remove those flags from the cr update call in ci-pipeline.yml
+  - CR doc type config: remove implementation_prs property
+  - Existing CR YAML files: implementation_prs fields remain (backwards compatible,
+    schema validation uses extra='ignore' for unknown fields); no migration needed
+  - SYSARCH-011 and SWDD-017 document the architectural rationale
+priority: Medium
+requested_by: Design Review
+category: Architecture
+affected_items:
+- SYSARCH-011
+- SWDD-017
+- SYS-032
+status: draft

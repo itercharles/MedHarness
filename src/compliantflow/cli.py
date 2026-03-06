@@ -198,19 +198,17 @@ def cr_check_status(ctx: click.Context, cr_id: str) -> None:
 @cr.command("update")
 @click.argument("cr_id")
 @click.option("--item", "items", multiple=True, metavar="ITEM_ID", help="Affected item ID (repeat for multiple).")
-@click.option("--pr-number", default=None, type=int, metavar="N", help="Pull request number.")
-@click.option("--pr-url", default=None, metavar="URL", help="Pull request URL.")
-@click.option("--pr-title", default=None, metavar="TITLE", help="Pull request title.")
 @click.pass_context
 def cr_update(
     ctx: click.Context,
     cr_id: str,
     items: tuple,
-    pr_number: int | None,
-    pr_url: str | None,
-    pr_title: str | None,
 ) -> None:
-    """Add affected items and/or PR metadata to a Change Request."""
+    """Add affected items to a Change Request.
+
+    PR linkage is captured implicitly by Git conventions (PR title starts with
+    CR-NNN, enforced by CI). PR metadata is not stored in CR YAML — see SYSARCH-011.
+    """
     dhf_path: Path = ctx.obj["dhf"]
     core = _make_core(dhf_path)
 
@@ -231,25 +229,8 @@ def cr_update(
         else:
             click.echo(f"  ~ Skipped item: {item_id} (already present or error)", err=True)
 
-    if pr_number is not None:
-        cr_item = core.get_item(cr_id)
-        prs = list(cr_item.get("implementation_prs") or [])
-        if not any(p.get("pr_number") == pr_number for p in prs):
-            prs.append({
-                "pr_number": pr_number,
-                "pr_url": pr_url or "",
-                "title": pr_title or "",
-            })
-            cr_item["implementation_prs"] = prs
-            core.update_item(cr_id, cr_item)
-            click.echo(f"  + Tracked PR #{pr_number}", err=True)
-        else:
-            click.echo(f"  ~ PR #{pr_number} already tracked", err=True)
-
     click.echo(
-        f"✓ CR '{cr_id}' updated: {len(added)} item(s) added"
-        + (f", PR #{pr_number} tracked" if pr_number else "")
-        + ".",
+        f"✓ CR '{cr_id}' updated: {len(added)} item(s) added.",
         err=True,
     )
 

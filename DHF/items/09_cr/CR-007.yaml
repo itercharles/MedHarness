@@ -14,7 +14,3 @@ affected_items:
 - TC-SRS-007
 - TC-SRS-011
 - TC-SRS-021
-implementation_prs:
-- pr_number: 9
-  pr_url: https://github.com/itercharles/CompliantFlow/pull/9
-  title: 'fix: update system architecture document type code and add CR-007.'

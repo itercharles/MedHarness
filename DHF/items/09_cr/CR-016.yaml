@@ -36,8 +36,3 @@ affected_items:
 - TC-SRS-012
 - TC-SRS-013
 - TC-SYS-032
-implementation_prs:
-- pr_number: 50
-  pr_url: https://github.com/itercharles/CompliantFlow/pull/50
-  title: 'CR-016: Consolidate src/ — move traceability/ and helpers/ into compliantflow/,
-    app.py into debug_view/'

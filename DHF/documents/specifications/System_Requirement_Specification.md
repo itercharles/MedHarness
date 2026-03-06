@@ -7,7 +7,7 @@
 | Field | Value |
 |-------|-------|
 | **Document ID** | SYS-SPEC |
-| **Version** | 1.113 |
+| **Version** | 1.115 |
 | **Generated** | 2026-03-06 |
 | **Status** | Draft |
 | **Project** | CompliantFlow Project |
@@ -183,7 +183,7 @@ Required command groups:
 - validate schema / traceability / compliance: Validate DHF items; exit non-zero on error
 - item list / get / create / update / delete: CRUD operations on DHF items; output JSON
 - item transitions / transition: List available transitions and execute a state transition
-- cr check-status / update: Verify CR state; add affected items and PR metadata
+- cr check-status / update: Verify CR state; add affected items to a CR
 - traceability matrix / chain: Output traceability matrix or full item chain as JSON
 - test import / status / list: Import JUnit XML results; query stored TC records
 - doc list / generate / export: List configured doc types; generate markdown; export PDF
@@ -571,6 +571,65 @@ workflows.
 
 </div>
 
+### 22. SYSARCH-011: PR-to-CR Linkage is GitOps-Implicit, Not YAML-Stored
+
+<div class="requirement-section" markdown="1">
+
+**Status**: <span class="status-"></span>  
+
+#### Description
+
+Architectural decision: the association between a Pull Request and a Change
+Request is captured implicitly by Git conventions, not by writing PR metadata
+into CR YAML files.
+
+**Decision**:
+CR items do NOT store pr_number, pr_url, or pr_title. The CI pipeline does NOT
+write these fields. The implementation_prs property is removed from the CR
+schema.
+
+**Linkage conventions (all enforced or auditable)**:
+- PR title MUST start with CR-NNN (enforced by CI Phase 4 validation step)
+- Branch name convention: feature/cr-NNN-<description>
+- Commit messages carry the CR-NNN prefix by convention
+
+Searching GitHub for "CR-017" returns all PRs, commits, and comments associated
+with that CR. No separate record in YAML is needed.
+
+**Rationale**:
+
+1. Eliminates stale-data hazard: a PR can be closed, re-opened with a new
+   number, or retitled. Any PR metadata stored in YAML at open/synchronize
+   time becomes incorrect. There is no reliable event to clean it up.
+
+2. Removes a CI write on feature branches: Phase 4 pushed a bot commit to the
+   feature branch on every PR open/synchronize event. This caused race
+   conditions with developer commits and re-triggered CI runs.
+
+3. Avoids redundancy: the PR title convention (CR-NNN:) already provides
+   machine-readable linkage in GitHub's own index. Writing it again to a YAML
+   file duplicates data without adding value.
+
+4. Consistent with SYSARCH-010 (GitOps approval model): that decision
+   established Git as the source of truth for approval evidence on requirement
+   items. The same principle applies to the PR-CR association — Git history
+   already carries the evidence.
+
+**What CI still writes automatically**:
+- `affected_items`: items whose YAML files changed in the PR diff. This IS
+  stable DHF data (which items are in scope for this CR) and is worth persisting.
+
+**Tradeoff accepted**:
+- PR numbers are not directly visible in the CR YAML. Engineers who need to
+  cross-reference must search GitHub. This is acceptable because GitHub search
+  on the CR-NNN prefix is fast and always accurate.
+
+**Design detail**: see SWDD-017.
+
+
+
+</div>
+
 
 ---
 
@@ -580,14 +639,14 @@ workflows.
 
 | Metric | Count |
 |--------|-------|
-| **Total Requirements** | 21 |
+| **Total Requirements** | 22 |
 | **Approved** | 0 |
 | **Draft** | 0 |
 | **Retired** | 0 |
 
 ### 3.2 Approval Status
 
-**Approval Rate**: 0.0% (0/21)
+**Approval Rate**: 0.0% (0/22)
 
 ---
 

@@ -258,9 +258,11 @@ jobs:
           echo -e "$AFFECTED_ITEMS" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
       
-      - name: Update CR with Affected Items and PR Info
+      - name: Update CR with Affected Items
         run: |
-          # Build --item flags from affected items detected in previous step
+          # Build --item flags from affected items detected in previous step.
+          # PR linkage is GitOps-implicit (PR title starts with CR-NNN, enforced above).
+          # PR metadata is NOT written to CR YAML — see SYSARCH-011 for rationale.
           ITEM_FLAGS=""
           while IFS= read -r item; do
             item=$(echo "$item" | sed 's/^[[:space:]]*-[[:space:]]*//' | tr -d '[:space:]')
@@ -271,10 +273,7 @@ jobs:
 
           export PYTHONPATH="${PWD}/src:${PWD}/DHF"
           python -m compliantflow --dhf DHF cr update ${{ steps.validate.outputs.cr_id }} \
-            $ITEM_FLAGS \
-            --pr-number ${{ github.event.pull_request.number }} \
-            --pr-url "${{ github.event.pull_request.html_url }}" \
-            --pr-title "${{ github.event.pull_request.title }}"
+            $ITEM_FLAGS
       
       - name: Commit CR Update to PR Branch
         run: |

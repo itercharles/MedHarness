@@ -35,9 +35,6 @@ properties:
 - name: affected_items
   format: relationship
   label: Affected Items
-- name: implementation_prs
-  format: long_text
-  label: Implementation PRs (JSON List)
 - name: target_version
   format: short_text
   label: Target Version

@@ -20,7 +20,6 @@ justification: 'The loader/saver properties violated the DHFAdapter abstraction 
 
   adapter (cloud, database, API) would fail silently at runtime.
 
-
   Moving test result reads to the DHF CLI correctly models ownership:
 
   compliance data is core-system-owned (governance/ at repo root);
@@ -38,8 +37,3 @@ affected_items:
 - TC-SYS-002
 - TC-SYS-008
 - TC-SYS-010
-implementation_prs:
-- pr_number: 49
-  pr_url: https://github.com/itercharles/CompliantFlow/pull/49
-  title: 'CR-015: Fix adapter abstraction — remove loader/saver leakage and add DHF
-    test CLI'
