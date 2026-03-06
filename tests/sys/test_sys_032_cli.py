@@ -18,7 +18,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
 from click.testing import CliRunner
 from compliantflow.cli import main
-from dhf.cli import main as dhf_main
+from utils.cli import main as dhf_main
 
 
 @pytest.fixture

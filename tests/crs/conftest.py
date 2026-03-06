@@ -25,8 +25,10 @@ def test_dhf_root():
 
     yield test_dir
 
-    if test_dir.exists():
-        shutil.rmtree(test_dir)
+    # Cleanup (remove project root, which contains DHF/ and governance/ siblings)
+    project_root = test_dir.parent
+    if project_root.exists():
+        shutil.rmtree(project_root)
 
 
 @pytest.fixture(scope="function")

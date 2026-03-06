@@ -1,61 +1,71 @@
 id: SWDD-013
 title: CLI Implementation
 content: |-
-  Detailed design of the `compliantflow` CLI package.
+  Detailed design of the two CLI packages introduced by the DHF data layer split (CR-013).
 
   **Package structure**:
   ```
-  src/cli/
-    cli.py            # all click commands (primary entry point)
   src/compliantflow/
-    __main__.py       # backward-compat: delegates to cli.main
+    cli.py         # analysis CLI (entry: python -m compliantflow)
+    __main__.py    # delegates to compliantflow.cli.main
+  DHF/utils/
+    cli.py         # data-layer CLI (entry: python -m utils)
+    __main__.py    # delegates to dhf.cli.main
   ```
 
-  **Click command hierarchy**:
+  **compliantflow CLI — analysis and lifecycle operations**:
   ```
-  main (group, --dhf option)
+  python -m compliantflow [--dhf PATH]
     validate (group)
-      schema
       traceability
       compliance <GROUP>
     item (group)
-      list (--type, --status, --search)
-      get <ITEM_ID>
-      create --type CODE --data JSON [--author NAME] [--cr CR_ID]
-      update <ITEM_ID> --data JSON [--author NAME]
-      delete <ITEM_ID> [--author NAME]
       transitions <ITEM_ID>
       transition <ITEM_ID> <TO_STATE> [--by NAME]
     cr (group)
       check-status <CR_ID>
-      update <CR_ID> (--item repeatable, --pr-number, --pr-url, --pr-title)
+      update <CR_ID> [--item ITEM_ID]... [--pr-number N] [--pr-url URL] [--pr-title TITLE]
     traceability (group)
       matrix <TYPE> [TYPE...]
       chain <ITEM_ID>
     test (group)
-      import <FILE> --format junit [--tester NAME] [--run-id ID] [--run-url URL] [--commit SHA]
+      import <FILE> --format junit --tester NAME [--run-id ID] [--run-url URL] [--commit SHA]
       status <TC_ID>
       list [--status STATUS]
+  ```
+  Core instantiation: `CompliantFlowCore(dhf_root=dhf_path, auto_commit=False)`.
+
+  **dhf CLI — data-layer operations (no compliantflow dependency)**:
+  ```
+  python -m utils [--dhf PATH]
+    item (group)
+      get <ITEM_ID>
+      list [--type CODE]
+      create --type CODE --data JSON [--author NAME] [--cr CR_ID]
+      update <ITEM_ID> --data JSON [--author NAME] [--cr CR_ID]
+      delete <ITEM_ID> [--author NAME]
+    validate (group)
+      schema
+    config (group)
+      doc-types
     doc (group)
       list
       generate <CODE|ALL>
       export <CODE|ALL>
   ```
+  Adapter instantiation: `LocalDHFAdapter(dhf_path, auto_commit=False)`.
 
-  **DHF path resolution** (in order):
+  **DHF path resolution** (identical in both CLIs, in order):
   1. `--dhf` CLI option if provided
   2. `COMPLIANTFLOW_DHF` environment variable
-  3. Default: `<repo_root>/DHF` where repo_root = parent of `src/`
+  3. Default: `<repo_root>/DHF` (parent of the `src/` directory)
 
-  **Exit code contract**:
+  **Exit code contract** (both CLIs):
   - 0: success
   - 1: business error (item not found, CR stable, validation failed)
   - 2: click usage error (wrong arguments)
 
-  **Core instantiation**:
-  ```python
-  core = CompliantFlowCore(dhf_root=dhf_path)
-  ```
-  One instance per CLI invocation; stdout = machine-readable JSON, stderr = human-readable messages.
+  stdout = machine-readable JSON; stderr = human-readable messages.
+  One adapter/core instance per CLI invocation; no shared state between invocations.
 implements:
 - SRS-012

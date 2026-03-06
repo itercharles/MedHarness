@@ -21,7 +21,9 @@ def create_test_dhf() -> Path:
     Returns:
         Path to the created test DHF directory
     """
-    test_dir = Path(tempfile.mkdtemp(prefix="test_dhf_"))
+    project_root = Path(tempfile.mkdtemp(prefix="test_project_"))
+    test_dir = project_root / "DHF"
+    test_dir.mkdir()
 
     print(f"\n[SETUP] Creating test DHF directory: {test_dir}")
 
@@ -187,7 +189,7 @@ def create_test_dhf() -> Path:
         (items_dir / doc_dir).mkdir(parents=True, exist_ok=True)
 
     (test_dir / "documents" / "specifications" / "templates").mkdir(parents=True)
-    (test_dir / "governance").mkdir(parents=True)
+    (test_dir.parent / "governance").mkdir(parents=True)
 
     print(f"[OK] Created directory structure for {len(doc_type_dirs)} document types")
 
@@ -262,7 +264,7 @@ def get_test_dataset() -> List[Dict]:
 
 def populate_governance(test_dhf_root: Path):
     """Create governance directory with IEC 62304 test policies."""
-    governance_dir = test_dhf_root / "governance"
+    governance_dir = test_dhf_root.parent / "governance"
     governance_dir.mkdir(parents=True, exist_ok=True)
 
     iec_62304_policy = {

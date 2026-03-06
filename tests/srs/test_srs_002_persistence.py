@@ -10,8 +10,8 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
-from dhf.repository.loader import ItemLoader
-from dhf.repository.saver import ItemSaver
+from utils.repository.loader import ItemLoader
+from utils.repository.saver import ItemSaver
 
 
 class TestFilePersistence:
@@ -118,7 +118,7 @@ class TestFilePersistence:
         assert len(created_ids) == len(set(created_ids)), "All generated IDs should be unique"
         
         # Verify ID format
-        from utils.id_generator import validate_id_format
+        from helpers.id_generator import validate_id_format
         for id in created_ids:
             assert validate_id_format(id, 'SRS-'), f"ID {id} should have valid format"
     

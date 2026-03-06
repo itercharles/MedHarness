@@ -89,7 +89,7 @@ def validate_traceability(ctx: click.Context) -> None:
 def validate_compliance(ctx: click.Context, group_id: str) -> None:
     """Check compliance against a governance policy group.
 
-    GROUP_ID is the filename stem under DHF/governance/ (e.g. IEC_62304).
+    GROUP_ID is the filename stem under governance/ at the repo root (e.g. IEC_62304).
     Outputs the full JSON report to stdout.
     Exits 1 if any policy fails.
     """
@@ -333,7 +333,7 @@ def test_import(
     commit_sha: str,
 ) -> None:
     """Import test execution results from a JUnit XML file."""
-    from test_results.junit_parser import parse_junit_xml
+    from utils.junit_parser import parse_junit_xml
     dhf_path: Path = ctx.obj["dhf"]
     core = _make_core(dhf_path)
 

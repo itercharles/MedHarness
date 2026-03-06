@@ -11,7 +11,7 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from dhf.models.item import Item
+from utils.models.item import Item
 from compliantflow.core import CompliantFlowCore
 
 

@@ -29,15 +29,15 @@ st.title("✅ Compliance Dashboard")
 st.markdown("### Regulatory Policy Validation and Compliance Checking")
 
 # Load available policy groups
-governance_dir = core.repo_root / "governance"
+governance_dir = core.repo_root.parent / "governance"
 if not governance_dir.exists():
-    st.warning("No governance directory found. Create `DHF/governance/` to add policy groups.")
+    st.warning("No governance directory found. Create `governance/` at the repo root to add policy groups.")
     st.stop()
 
 groups = [f.stem for f in governance_dir.glob("*.yaml")]
 
 if not groups:
-    st.info("No policy groups found in DHF/governance. Add YAML files to define compliance policies.")
+    st.info("No policy groups found in governance/. Add YAML files to define compliance policies.")
     st.stop()
 
 # Policy Group Selection

@@ -14,8 +14,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
-from dhf.repository.loader import ItemLoader
-from dhf.exceptions import ValidationError
+from utils.repository.loader import ItemLoader
+from utils.exceptions import ValidationError
 from compliantflow.core import CompliantFlowCore
 
 

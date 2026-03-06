@@ -7,10 +7,10 @@ from pathlib import Path
 from typing import Dict, List, Set, Tuple
 from datetime import datetime
 from compliantflow.core import CompliantFlowCore
-from dhf.models.item import VerificationStatus
-from dhf.document_generation import DocumentGenerator
+from utils.models.item import VerificationStatus
+from utils.document_generation import DocumentGenerator
 from streamlit_agraph import agraph, Node, Edge, Config
-from utils.ui_helpers import check_and_show_item_detail, make_item_columns_clickable
+from helpers.ui_helpers import check_and_show_item_detail, make_item_columns_clickable
 
 # Page Configuration
 st.set_page_config(

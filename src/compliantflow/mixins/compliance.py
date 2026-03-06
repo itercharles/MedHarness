@@ -18,7 +18,7 @@ class _ComplianceMixin:
         from traceability.compliance.engine import PolicyEngine
 
         engine = PolicyEngine(self)
-        path = self.repo_root / "governance" / f"{group_id}.yaml"
+        path = self.repo_root.parent / "governance" / f"{group_id}.yaml"
 
         group = engine.load_policy_group(path)
         if not group:
@@ -39,7 +39,7 @@ class _ComplianceMixin:
         from traceability.compliance.engine import PolicyEngine
 
         engine = PolicyEngine(self)
-        path = self.repo_root / "governance" / f"{group_id}.yaml"
+        path = self.repo_root.parent / "governance" / f"{group_id}.yaml"
 
         group = engine.load_policy_group(path)
         if not group:

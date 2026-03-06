@@ -32,7 +32,7 @@ def test_TC_SYS_005_001_load_policy_groups(test_dhf_root):
     core = CompliantFlowCore(test_dhf_root)
 
     # Get available policy groups
-    governance_dir = core.repo_root / "governance"
+    governance_dir = core.repo_root.parent / "governance"
 
     # Should have governance directory
     assert governance_dir.exists(), "Governance directory should exist"

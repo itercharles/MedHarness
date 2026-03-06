@@ -4,8 +4,8 @@ content: |-
   Detailed design for importing test results from any CI/CD pipeline via JUnit XML.
 
   **Component Structure**:
-  - `parse_junit_xml` (`src/test_results/junit_parser.py`): parse JUnit XML into ExecutionResult list
-  - `ResultStore` (`src/test_results/result_store.py`): persist one record per TC in results.yaml
+  - `parse_junit_xml` (`DHF/utils/junit_parser.py`): parse JUnit XML into ExecutionResult list
+  - `ResultStore` (`DHF/utils/result_store.py`): persist one record per TC in results.yaml
   - `_TestResultsMixin` (`src/compliantflow/mixins/test_results_mixin.py`): orchestrate import and
     recompute verification_status on linked requirement items
 
@@ -52,7 +52,7 @@ content: |-
   - Helper functions in `docstring_parser.py` are also used by SRS unit tests directly
 
   **Supported Input**:
-  - JUnit XML only (framework-agnostic boundary; `src/` has no pytest dependency)
+  - JUnit XML only (framework-agnostic boundary; `DHF/utils/` has no pytest dependency)
 
   **Complexity**: O(T) where T = number of test cases in XML
 implements:

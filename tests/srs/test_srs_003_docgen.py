@@ -9,7 +9,7 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
-from dhf.document_generation import DocumentGenerator
+from utils.document_generation import DocumentGenerator
 from jinja2 import Environment, FileSystemLoader
 
 
