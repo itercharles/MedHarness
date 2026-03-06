@@ -1,0 +1,31 @@
+id: CR-015
+title: Fix adapter abstraction — remove loader/saver leakage and add DHF test CLI
+type: CR
+status: draft
+description: |-
+  Two targeted fixes to the DHF/CompliantFlow boundary:
+
+  1. Remove loader/saver shortcut properties from CompliantFlowCore.
+     These exposed LocalDHFAdapter internals (_loader, _saver) through the
+     core facade and would break silently for any non-local adapter.
+     Tests that needed raw loader/saver access now use core._adapter directly,
+     making the LocalDHFAdapter dependency explicit and honest.
+
+  2. Add `test status` and `test list` commands to the DHF CLI (python -m utils).
+     Test results are DHF-owned data (DHF/test-results/results.yaml).
+     Read operations belong in the DHF CLI alongside item/validate/doc.
+     `test import` stays in the CompliantFlow CLI because it orchestrates
+     JUnit XML parsing + ResultStore writes + verification_status updates
+     (which require the analysis graph engine).
+justification: |-
+  The loader/saver properties violated the DHFAdapter abstraction by coupling
+  CompliantFlowCore to LocalDHFAdapter implementation details. Any alternative
+  adapter (cloud, database, API) would fail silently at runtime.
+
+  Moving test result reads to the DHF CLI correctly models ownership:
+  compliance data is core-system-owned (governance/ at repo root);
+  test results are DHF-owned (DHF/test-results/results.yaml).
+priority: Medium
+affected_items:
+- SYS-032
+- SRS-001
