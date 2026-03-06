@@ -30,7 +30,7 @@ class TestCoverageCalculation:
     def test_coverage_identifies_requirements(self, test_core):
         """Verify coverage calculation identifies all requirements"""
         # loader = ItemLoader(SPECS_DIR)
-        items = test_core.loader.load_all()
+        items = test_core._adapter._loader.load_all()
         
         engine = GraphEngine()
         engine.build_from_items(items)
@@ -42,7 +42,7 @@ class TestCoverageCalculation:
     
     def test_coverage_finds_test_descendants(self, test_core):
         """Verify coverage finds test items linked to requirements"""
-        items = test_core.loader.load_all()
+        items = test_core._adapter._loader.load_all()
         
         engine = GraphEngine()
         engine.build_from_items(items)
@@ -59,7 +59,7 @@ class TestCoverageCalculation:
     
     def test_coverage_percentage_calculation(self, test_core):
         """Verify coverage is calculated as percentage"""
-        items = test_core.loader.load_all()
+        items = test_core._adapter._loader.load_all()
         
         engine = GraphEngine()
         engine.build_from_items(items)
@@ -75,7 +75,7 @@ class TestCoverageCalculation:
     
     def test_coverage_reports_uncovered_items(self, test_core):
         """Verify coverage calculation reports uncovered requirements"""
-        items = test_core.loader.load_all()
+        items = test_core._adapter._loader.load_all()
         
         # Initialize engine with config so it can identify document types
         engine = GraphEngine(config=test_core.config)

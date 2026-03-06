@@ -19,7 +19,7 @@ class TestFilePersistence:
     
     def test_items_stored_as_separate_files(self, test_core):
         """Verify each DHF item is stored as a separate file"""
-        items = test_core.loader.load_all()
+        items = test_core._adapter._loader.load_all()
         
         # Each item should have come from a separate file
         # Test environment has minimal items
@@ -83,7 +83,7 @@ class TestFilePersistence:
     def test_data_validation_on_load(self, test_core):
         """Verify data is validated when loading"""
         # loader = ItemLoader(SPECS_DIR)
-        items = test_core.loader.load_all()
+        items = test_core._adapter._loader.load_all()
         
         # All loaded items should have required fields
         for item in items:

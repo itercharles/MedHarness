@@ -96,17 +96,6 @@ class CompliantFlowCore(
 
         self.graph.build_from_items(all_items)
 
-    # Convenience accessors for tests / code that needs the raw loader or saver
-    @property
-    def loader(self):
-        """Direct access to the underlying ItemLoader (via adapter)."""
-        return self._adapter._loader
-
-    @property
-    def saver(self):
-        """Direct access to the underlying ItemSaver (via adapter)."""
-        return self._adapter._saver
-
     def get_config(self) -> Optional[Dict[str, Any]]:
         """Get project configuration."""
         if not self.config:

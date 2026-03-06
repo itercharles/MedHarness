@@ -22,7 +22,7 @@ class TestGraphDataStructure:
     
     def test_graph_uses_directed_edges(self, test_core):
         """Verify graph uses directed edges for traceability"""
-        items = test_core.loader.load_all()
+        items = test_core._adapter._loader.load_all()
         
         engine = GraphEngine()
         engine.build_from_items(items)
@@ -32,7 +32,7 @@ class TestGraphDataStructure:
     
     def test_items_are_nodes(self, test_core):
         """Verify DHF items are represented as nodes"""
-        items = test_core.loader.load_all()
+        items = test_core._adapter._loader.load_all()
         
         engine = GraphEngine()
         engine.build_from_items(items)
@@ -52,7 +52,7 @@ class TestGraphDataStructure:
     
     def test_links_are_edges(self, test_core):
         """Verify links between items are represented as directed edges"""
-        items = test_core.loader.load_all()
+        items = test_core._adapter._loader.load_all()
         
         engine = GraphEngine()
         engine.build_from_items(items)
@@ -67,7 +67,7 @@ class TestGraphDataStructure:
         """Verify graph builds quickly with test data"""
         import time
         
-        items = test_core.loader.load_all()
+        items = test_core._adapter._loader.load_all()
         
         # Performance test with small dataset - should be instant
         start = time.time()
@@ -79,7 +79,7 @@ class TestGraphDataStructure:
     
     def test_specific_parent_child_relationship(self, test_core):
         """Verify specific parent-child relationship in graph (SRS-001 → SYS-001)"""
-        items = test_core.loader.load_all()
+        items = test_core._adapter._loader.load_all()
         
         engine = GraphEngine()
         engine.build_from_items(items)

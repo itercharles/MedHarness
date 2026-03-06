@@ -21,7 +21,6 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
 from compliantflow.core import CompliantFlowCore
-from utils.models.item import Item
 
 
 def test_TC_SYS_010_001_view_lifecycle_states(test_dhf_root):
@@ -90,20 +89,15 @@ def test_TC_SYS_010_003_perform_cr_state_transition(test_dhf_root):
         "status": "draft",
     }
 
-    new_cr = Item(**new_cr_data)
-    core.saver.save(new_cr, author="test_user")
-    core.refresh()
+    core.create_item(new_cr_data, author="test_user")
 
     cr = core.get_item("CR-998")
     assert cr["status"] == "draft"
 
-    cr["status"] = "in_review"
-    updated_cr = Item(**cr)
-    core.saver.save(updated_cr, author="test_user")
-    core.refresh()
+    core.execute_transition("CR-998", "approved", performed_by="test_user")
 
     updated = core.get_item("CR-998")
-    assert updated["status"] == "in_review", "CR should transition to in_review"
+    assert updated["status"] == "approved", "CR should transition to approved"
 
 
 def test_TC_SYS_010_004_requirement_items_have_no_transitions(test_dhf_root):
@@ -169,14 +163,8 @@ def test_TC_SYS_010_006_state_history_tracking(test_dhf_root):
         "status": "draft",
     }
 
-    new_cr = Item(**new_cr_data)
-    core.saver.save(new_cr, author="test_user")
-    core.refresh()
-
-    cr = core.get_item("CR-997")
-    cr["status"] = "in_review"
-    updated_cr = Item(**cr)
-    core.saver.save(updated_cr, author="test_user")
+    core.create_item(new_cr_data, author="test_user")
+    core.execute_transition("CR-997", "approved", performed_by="test_user")
 
     # Git history tracks the change
     assert True, "State changes tracked in Git history"

@@ -198,6 +198,6 @@ def test_core_loads_all_items_with_validation_enabled(test_dhf_root):
     """
     core = CompliantFlowCore(test_dhf_root)
     # Validation is enabled; existing items must all be valid
-    assert core.loader.project_config is not None, "Loader should have project_config set"
+    assert core.config is not None, "Core should have project_config loaded"
     items = core.get_all_items()
     assert len(items) > 0

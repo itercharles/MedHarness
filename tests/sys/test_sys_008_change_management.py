@@ -17,7 +17,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
 from compliantflow.core import CompliantFlowCore
-from utils.models.item import Item
+
 
 
 def test_TC_SYS_008_001_list_change_requests(test_dhf_root):
@@ -120,12 +120,12 @@ def test_TC_SYS_008_004_create_change_request(test_dhf_root):
         "status": "draft"
     }
 
-    # Use Item model and saver to save directly
-    new_cr = Item(**new_cr_data)
-    core.saver.save(new_cr, author="test_user")
 
-    # Refresh and verify it was created
-    core.refresh()
+
+    core.create_item(new_cr_data, author="test_user")
+
+
+
     created_cr = core.get_item("CR-999")
 
     assert created_cr is not None, "CR-999 should be created"
@@ -145,17 +145,11 @@ def test_TC_SYS_008_005_edit_change_request(test_dhf_root):
     # Initialize core with test DHF
     core = CompliantFlowCore(test_dhf_root)
 
-    # Get existing CR (returns dict)
-    cr = core.get_item("CR-001")
-    original_title = cr["title"]
+    original_cr = core.get_item("CR-001")
+    original_title = original_cr["title"]
 
-    # Modify CR - convert back to Item and save
-    cr["title"] = "Modified Test Change Request"
-    item = Item(**cr)
-    core.saver.save(item, author="test_user")
+    core.update_item("CR-001", {"title": "Modified Test Change Request"}, author="test_user")
 
-    # Refresh and verify changes
-    core.refresh()
     modified_cr = core.get_item("CR-001")
 
     assert modified_cr["title"] == "Modified Test Change Request"
@@ -264,12 +258,12 @@ def test_add_item_to_cr_adds_and_deduplicates(test_dhf_root):
     result = core.add_item_to_cr("CR-001", "SRS-002")
     assert result is True, "add_item_to_cr should return True on success"
 
-    core.refresh()
+
     cr_after = core.get_item("CR-001")
     assert "SRS-002" in cr_after["affected_items"]
 
     # Calling again should be idempotent
     core.add_item_to_cr("CR-001", "SRS-002")
-    core.refresh()
+
     cr_again = core.get_item("CR-001")
     assert cr_again["affected_items"].count("SRS-002") == 1, "No duplicates allowed"
