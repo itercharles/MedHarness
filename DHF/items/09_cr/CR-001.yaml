@@ -26,7 +26,6 @@ impact_assessment: '**UI Changes:**
 
   - Add confirmation dialog showing list of items to be approved
 
-
   **Backend Changes:**
 
   - Extend workflow engine to support batch operations
@@ -35,7 +34,6 @@ impact_assessment: '**UI Changes:**
 
   - Maintain complete audit trail
 
-
   **Testing:**
 
   - Add test cases for bulk approval functionality
@@ -43,7 +41,6 @@ impact_assessment: '**UI Changes:**
   - Verify individual approval records are created
 
   - Test with various batch sizes
-
 
   **Risk Assessment:** Low
 
@@ -70,7 +67,3 @@ affected_items:
 - TC-API-005
 - TC-API-008
 - TC-API-010
-implementation_prs:
-- pr_number: 14
-  pr_url: https://github.com/itercharles/CompliantFlow/pull/14
-  title: Feature/api based testing

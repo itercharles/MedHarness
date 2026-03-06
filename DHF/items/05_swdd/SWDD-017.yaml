@@ -1,0 +1,37 @@
+id: SWDD-017
+title: Remove PR Metadata from CR YAML and CI Pipeline
+content: |-
+  Implementation of SYSARCH-011: stop writing pr_number/pr_url/pr_title into
+  CR YAML files; rely on Git conventions for PR-to-CR linkage.
+
+  **Changes**:
+
+  1. `DHF/config/doc_types/CR.yaml`:
+     Remove the `implementation_prs` property entry. Existing CR files that
+     already contain implementation_prs data are unaffected — the schema loader
+     treats unknown properties as allowed on CR items (extra fields are preserved
+     on read/write cycles for backwards compatibility).
+
+  2. `src/compliantflow/cli.py` — `cr update` command:
+     Remove `--pr-number`, `--pr-url`, `--pr-title` options and the code block
+     that appends to `implementation_prs`. The command retains `--item` for
+     adding affected_items, which is still CI-written.
+
+  3. `.github/workflows/ci-pipeline.yml` — Phase 4:
+     Remove `--pr-number`, `--pr-url`, and `--pr-title` arguments from the
+     `python -m compliantflow cr update` call. The step now only writes
+     `affected_items` when they have changed.
+
+  **Migration**:
+  Existing CR YAML files had implementation_prs entries removed via a one-time
+  migration (Python script, applied at implementation time). The schema loader uses
+  strict field validation — unknown fields cause an error, so a clean migration was
+  required rather than silent backwards compatibility.
+
+  **CI write frequency reduction**:
+  Phase 4 only commits to the feature branch when `affected_items` actually
+  changed (the existing "No changes to CR file" guard). Removing the PR block
+  means the commit also no longer triggers on the first PR open (when items may
+  be unchanged but PR metadata was new). This reduces unnecessary bot commits.
+implements:
+- SRS-001

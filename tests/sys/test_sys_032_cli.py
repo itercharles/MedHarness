@@ -203,9 +203,12 @@ def test_TC_SYS_032_009_cr_update_adds_items(runner, test_dhf_root, dhf_str):
     assert "SRS-002" in affected
 
 
-def test_TC_SYS_032_010_cr_update_tracks_pr(runner, test_dhf_root, dhf_str):
+def test_TC_SYS_032_010_cr_update_no_pr_flags(runner, test_dhf_root, dhf_str):
     """
-    TC-SYS-032-010: cr update --pr-number records PR info on the CR.
+    TC-SYS-032-010: cr update does not accept --pr-number; PR linkage is GitOps-implicit.
+
+    Per SYSARCH-011, PR metadata is not stored in CR YAML. The cr update command
+    only accepts --item flags. Passing --pr-number must be rejected by click.
 
     @test_id: TC-SYS-032-010
     @links: SYS-032
@@ -215,17 +218,10 @@ def test_TC_SYS_032_010_cr_update_tracks_pr(runner, test_dhf_root, dhf_str):
         [
             "--dhf", dhf_str, "cr", "update", "CR-001",
             "--pr-number", "99",
-            "--pr-url", "https://github.com/test/repo/pull/99",
-            "--pr-title", "feat: add CLI layer",
         ],
     )
-    assert result.exit_code == 0, result.output
-
-    from compliantflow.core import CompliantFlowCore
-    core = CompliantFlowCore(test_dhf_root)
-    cr = core.get_item("CR-001")
-    prs = cr.get("implementation_prs", [])
-    assert any(p.get("pr_number") == 99 for p in prs)
+    # click should reject the unknown option
+    assert result.exit_code != 0
 
 
 # ---------------------------------------------------------------------------

@@ -25,7 +25,7 @@ PYTHONPATH=src:DHF python -m compliantflow validate compliance IEC_62304
 PYTHONPATH=src:DHF python -m compliantflow item transitions SYS-001
 PYTHONPATH=src:DHF python -m compliantflow item transition SYS-001 approved --by "Alice"
 PYTHONPATH=src:DHF python -m compliantflow cr check-status CR-012
-PYTHONPATH=src:DHF python -m compliantflow cr update CR-012 --item SYS-001 --pr-number 42
+PYTHONPATH=src:DHF python -m compliantflow cr update CR-012 --item SYS-001
 PYTHONPATH=src:DHF python -m compliantflow traceability matrix CRS SYS SRS
 PYTHONPATH=src:DHF python -m compliantflow traceability chain SYS-001
 # Test result integration (external CI → DHF)

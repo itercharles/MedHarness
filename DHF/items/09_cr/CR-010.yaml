@@ -6,7 +6,6 @@ priority: Medium
 category: Technical Improvement
 implementation_notes: 'Phase 1 complete - infrastructure ready and proven.
 
-
   Changes:
 
   - Added RelationshipType model to schema
@@ -21,9 +20,7 @@ implementation_notes: 'Phase 1 complete - infrastructure ready and proven.
 
   - Migrated CR doc type as proof of concept
 
-
   All tests pass (6/6).
-
 
   Next steps:
 
@@ -33,7 +30,3 @@ implementation_notes: 'Phase 1 complete - infrastructure ready and proven.
 
   - Update UI to use relationship metadata'
 affected_items: []
-implementation_prs:
-- pr_number: 11
-  pr_url: https://github.com/itercharles/CompliantFlow/pull/11
-  title: "feat: Introduce centralized relationship configuration with a new `re\u2026"

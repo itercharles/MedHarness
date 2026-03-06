@@ -9,7 +9,7 @@ content: |-
   - validate schema / traceability / compliance: Validate DHF items; exit non-zero on error
   - item list / get / create / update / delete: CRUD operations on DHF items; output JSON
   - item transitions / transition: List available transitions and execute a state transition
-  - cr check-status / update: Verify CR state; add affected items and PR metadata
+  - cr check-status / update: Verify CR state; add affected items to a CR
   - traceability matrix / chain: Output traceability matrix or full item chain as JSON
   - test import / status / list: Import JUnit XML results; query stored TC records
   - doc list / generate / export: List configured doc types; generate markdown; export PDF

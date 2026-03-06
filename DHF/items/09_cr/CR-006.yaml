@@ -12,7 +12,3 @@ affected_items:
 - TC-SRS-002
 - TC-SYS-008
 - TC-SYS-010
-implementation_prs:
-- pr_number: 8
-  pr_url: https://github.com/itercharles/CompliantFlow/pull/8
-  title: "feat: Implement automatic ID generation for items, updating core logi\u2026"

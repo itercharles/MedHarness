@@ -47,7 +47,3 @@ affected_items:
 - TC-SYS-010
 - TC-SYS-032
 - TC-SYS-033
-implementation_prs:
-- pr_number: 47
-  pr_url: https://github.com/itercharles/CompliantFlow/pull/47
-  title: 'CR-013: Split DHF data layer from CompliantFlow analysis engine'
