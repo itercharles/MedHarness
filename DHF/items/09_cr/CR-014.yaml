@@ -50,6 +50,7 @@ affected_items:
 - TC-SYS-010
 - TC-SYS-032
 - TC-SYS-033
+- TC-SYS-005
 implementation_prs:
 - pr_number: 48
   pr_url: https://github.com/itercharles/CompliantFlow/pull/48
