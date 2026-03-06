@@ -15,7 +15,7 @@ class _ComplianceMixin:
         Returns:
             PolicyGroup dictionary or None
         """
-        from traceability.compliance.engine import PolicyEngine
+        from compliantflow.traceability.compliance.engine import PolicyEngine
 
         engine = PolicyEngine(self)
         path = self.repo_root.parent / "governance" / f"{group_id}.yaml"
@@ -36,7 +36,7 @@ class _ComplianceMixin:
         Returns:
             Compliance report dictionary or None
         """
-        from traceability.compliance.engine import PolicyEngine
+        from compliantflow.traceability.compliance.engine import PolicyEngine
 
         engine = PolicyEngine(self)
         path = self.repo_root.parent / "governance" / f"{group_id}.yaml"

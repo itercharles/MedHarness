@@ -10,7 +10,7 @@ from compliantflow.core import CompliantFlowCore
 from utils.models.item import VerificationStatus
 from utils.document_generation import DocumentGenerator
 from streamlit_agraph import agraph, Node, Edge, Config
-from helpers.ui_helpers import check_and_show_item_detail, make_item_columns_clickable
+from compliantflow.helpers.ui_helpers import check_and_show_item_detail, make_item_columns_clickable
 
 # Page Configuration
 st.set_page_config(

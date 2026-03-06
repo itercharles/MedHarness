@@ -21,12 +21,12 @@ class TestStreamlitUI:
     
     def test_streamlit_app_file_exists(self):
         """Verify main Streamlit app file exists"""
-        app_file = Path(__file__).parent.parent.parent / "src" / "app.py"
+        app_file = Path(__file__).parent.parent.parent / "src" / "debug_view" / "app.py"
         assert app_file.exists(), "Main app.py file must exist"
     
     def test_app_imports_streamlit(self):
         """Verify app.py imports Streamlit"""
-        app_file = Path(__file__).parent.parent.parent / "src" / "app.py"
+        app_file = Path(__file__).parent.parent.parent / "src" / "debug_view" / "app.py"
         
         with open(app_file) as f:
             content = f.read()

@@ -13,7 +13,7 @@ from pathlib import Path
 
 import pytest
 
-# Ensure src/ is on the path so cli.py can import traceability.*
+# Ensure src/ is on the path so cli.py can import compliantflow.traceability.*
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
 from click.testing import CliRunner

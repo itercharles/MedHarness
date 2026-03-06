@@ -7,7 +7,7 @@ Main Streamlit application entry point.
 from pathlib import Path
 try:
     from dotenv import load_dotenv
-    load_dotenv(Path(__file__).parent.parent / '.env')
+    load_dotenv(Path(__file__).parent.parent.parent / '.env')
 except ImportError:
     pass  # dotenv not installed, skip loading .env file
 
@@ -21,7 +21,7 @@ from debug_view.page_generator import generate_doc_type_pages
 
 print("[APP] Imports completed successfully")
 import pandas as pd
-from helpers.ui_helpers import check_and_show_item_detail
+from compliantflow.helpers.ui_helpers import check_and_show_item_detail
 
 
 def get_dhf_root() -> Path:
@@ -39,7 +39,7 @@ def get_dhf_root() -> Path:
         return Path(env_dhf)
 
     # Default to production DHF
-    return Path(__file__).resolve().parent.parent / "DHF"
+    return Path(__file__).resolve().parent.parent.parent / "DHF"
 
 
 # Initialize Core
@@ -161,8 +161,8 @@ for page_number, name, icon, page_func, code in doc_type_pages:
 
 # Add static pages with absolute paths
 src_dir = Path(__file__).parent
-traceability_path = (src_dir / "debug_view" / "02_Traceability.py").resolve()
-compliance_path = (src_dir / "debug_view" / "03_Compliance.py").resolve()
+traceability_path = (src_dir / "02_Traceability.py").resolve()
+compliance_path = (src_dir / "03_Compliance.py").resolve()
 
 if traceability_path.exists():
     all_pages.append(st.Page(str(traceability_path), title="Traceability", icon="🔗"))

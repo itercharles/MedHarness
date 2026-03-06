@@ -13,7 +13,7 @@ from utils.repository.git import GitRepository
 from utils.repository.loader import ItemLoader
 from utils.repository.saver import ItemSaver
 from utils.result_store import ResultStore
-from helpers.id_generator import get_next_id
+from compliantflow.helpers.id_generator import get_next_id
 
 
 class LocalDHFAdapter:
