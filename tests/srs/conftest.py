@@ -29,3 +29,14 @@ def test_core(test_dhf):
     return core
 
 
+@pytest.fixture
+def loader(test_dhf, test_core):
+    """ItemLoader for direct DHF-layer testing.
+
+    SRS tests MAY import utils.* directly (they test the DHF layer).
+    This fixture provides ItemLoader without accessing private adapter internals.
+    """
+    from utils.repository.loader import ItemLoader
+    return ItemLoader(test_dhf / "items", project_config=test_core.config)
+
+

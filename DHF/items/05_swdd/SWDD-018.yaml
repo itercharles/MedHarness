@@ -1,0 +1,50 @@
+id: SWDD-018
+title: Component Boundary Implementation Rules
+content: |-
+  Implementation of SYSARCH-012: concrete rules and code changes that enforce
+  the three-component boundary.
+
+  **Rule table (enforced by TC-SYS-034-001):**
+
+  | Component | MAY import | MUST NOT import |
+  |---|---|---|
+  | `src/compliantflow/` (non-adapter) | `utils.models.*`, `utils.exceptions` | `utils.repository.*`, `utils.result_store`, `utils.junit_parser`, `utils.document_generation` |
+  | `src/compliantflow/adapters/local.py` | all of `utils.*` | — |
+  | `tests/sys/`, `tests/crs/` | `compliantflow.*`, `utils.exceptions` | `utils.*` (other than exceptions) |
+  | `tests/srs/` | `utils.*` directly | `test_core._adapter.*` (private) |
+
+  **Changes made:**
+
+  1. `DHF/utils/__init__.py` — explicit public API:
+     Re-exports `Item`, `ProjectConfig`, `DocTypeConfig`, `ValidationError`,
+     `ResultStore`, `parse_junit_xml`, `ExecutionResult`, `ItemLoader`.
+     `ItemSaver`, `GitRepository`, `DocumentGenerator` remain internal.
+
+  2. `src/compliantflow/adapters/protocol.py` — new method:
+     `import_results_from_file(xml_path, tester, run_id, run_url, commit_sha) -> List[dict]`
+     Parses JUnit XML and records results in one adapter call.
+
+  3. `src/compliantflow/adapters/local.py` — implement new method:
+     Calls `parse_junit_xml(xml_path)` internally, then `record_execution()` for each
+     result, returns list of result dicts.
+
+  4. `src/compliantflow/mixins/test_results_mixin.py` — new core method:
+     `import_test_results_from_file(xml_path, tester, run_id, run_url, commit_sha)`
+     Delegates to `self._adapter.import_results_from_file(...)`.
+
+  5. `src/compliantflow/cli.py` — remove direct `utils.junit_parser` import:
+     The `test import` command now calls `core.import_test_results_from_file(path, ...)`.
+
+  6. `tests/srs/*.py` (11 files) — replace private attribute access:
+     `test_core._adapter._loader.load_all()` → create `ItemLoader` directly from
+     `test_dhf_root` path. Config obtained via `ProjectConfig.load(...)`.
+
+  7. `tests/sys/test_sys_034_boundary.py` — CI boundary enforcement test.
+
+  **Why `ItemLoader` is in the DHF public API:**
+  SRS tests legitimately test the DHF data layer and need direct `ItemLoader` access.
+  Rather than hiding `ItemLoader` behind the adapter (which would make it impossible
+  to test the loader directly), we expose it as part of DHF's public API. Tests
+  construct their own `ItemLoader` instances rather than reaching into the adapter.
+implements:
+- SRS-001

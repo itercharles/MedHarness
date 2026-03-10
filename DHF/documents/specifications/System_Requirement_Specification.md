@@ -7,8 +7,8 @@
 | Field | Value |
 |-------|-------|
 | **Document ID** | SYS-SPEC |
-| **Version** | 1.115 |
-| **Generated** | 2026-03-06 |
+| **Version** | 1.117 |
+| **Generated** | 2026-03-10 |
 | **Status** | Draft |
 | **Project** | CompliantFlow Project |
 
@@ -24,7 +24,7 @@ This document provides a comprehensive list of all System Requirements, includin
 
 ### 1.2 Scope
 
-This specification covers all System Requirements defined in the CompliantFlow system as of 2026-03-06.
+This specification covers all System Requirements defined in the CompliantFlow system as of 2026-03-10.
 
 ---
 
@@ -219,7 +219,41 @@ Results are persisted in DHF/test-results/results.yaml.
 
 </div>
 
-### 12. SYSARCH-001: Item Management Module
+### 12. SYS-034: Component Boundary Isolation
+
+<div class="requirement-section" markdown="1">
+
+**Status**: <span class="status-"></span>  
+**Category**: Maintainability  **Verification Method**: ['Test']  
+#### Description
+
+The compliantflow analysis engine (src/compliantflow/) shall not directly import
+DHF I/O layer modules from outside the adapter boundary.
+
+Prohibited direct imports (for all files except src/compliantflow/adapters/local.py):
+- utils.repository (loader, saver, git)
+- utils.result_store
+- utils.junit_parser
+- utils.document_generation
+
+Permitted direct imports (shared data types, no I/O side effects):
+- utils.models.item
+- utils.models.config
+- utils.models.compliance
+- utils.exceptions
+
+All DHF I/O operations shall be routed through the DHFAdapter protocol
+(src/compliantflow/adapters/protocol.py).
+
+This requirement is verified by an automated import boundary test that scans
+all Python files in src/compliantflow/ (excluding adapters/) and fails on
+any prohibited import pattern.
+
+
+
+</div>
+
+### 13. SYSARCH-001: Item Management Module
 
 <div class="requirement-section" markdown="1">
 
@@ -250,7 +284,7 @@ Core module for managing DHF items (requirements, design, tests, change requests
 
 </div>
 
-### 13. SYSARCH-002: Traceability Analysis Module
+### 14. SYSARCH-002: Traceability Analysis Module
 
 <div class="requirement-section" markdown="1">
 
@@ -283,7 +317,7 @@ Module for building and analyzing traceability relationships between DHF items.
 
 </div>
 
-### 14. SYSARCH-003: Lifecycle Management Module
+### 15. SYSARCH-003: Lifecycle Management Module
 
 <div class="requirement-section" markdown="1">
 
@@ -321,7 +355,7 @@ Module for managing item lifecycle states and transitions via CompliantFlowCore.
 
 </div>
 
-### 15. SYSARCH-004: Change Management Module
+### 16. SYSARCH-004: Change Management Module
 
 <div class="requirement-section" markdown="1">
 
@@ -354,7 +388,7 @@ Module for tracking and controlling changes to DHF items through change requests
 
 </div>
 
-### 16. SYSARCH-005: Compliance Validation Module
+### 17. SYSARCH-005: Compliance Validation Module
 
 <div class="requirement-section" markdown="1">
 
@@ -387,7 +421,7 @@ Module for validating DHF against regulatory policies and standards.
 
 </div>
 
-### 17. SYSARCH-006: Document Generation Module
+### 18. SYSARCH-006: Document Generation Module
 
 <div class="requirement-section" markdown="1">
 
@@ -420,7 +454,7 @@ Module for generating regulatory specification documents from templates.
 
 </div>
 
-### 18. SYSARCH-007: Test Integration Module
+### 19. SYSARCH-007: Test Integration Module
 
 <div class="requirement-section" markdown="1">
 
@@ -461,7 +495,7 @@ into the DHF, and linking each result to the requirement items it verifies.
 
 </div>
 
-### 19. SYSARCH-008: Web UI Module
+### 20. SYSARCH-008: Web UI Module
 
 <div class="requirement-section" markdown="1">
 
@@ -494,7 +528,7 @@ Streamlit-based web user interface for DHF management.
 
 </div>
 
-### 20. SYSARCH-009: CLI Module
+### 21. SYSARCH-009: CLI Module
 
 <div class="requirement-section" markdown="1">
 
@@ -529,7 +563,7 @@ split by the DHF data layer extraction (CR-013).
 
 </div>
 
-### 21. SYSARCH-010: GitOps-Based Approval Architecture
+### 22. SYSARCH-010: GitOps-Based Approval Architecture
 
 <div class="requirement-section" markdown="1">
 
@@ -571,7 +605,7 @@ workflows.
 
 </div>
 
-### 22. SYSARCH-011: PR-to-CR Linkage is GitOps-Implicit, Not YAML-Stored
+### 23. SYSARCH-011: PR-to-CR Linkage is GitOps-Implicit, Not YAML-Stored
 
 <div class="requirement-section" markdown="1">
 
@@ -630,6 +664,63 @@ with that CR. No separate record in YAML is needed.
 
 </div>
 
+### 24. SYSARCH-012: Three-Component Architecture Boundary Model
+
+<div class="requirement-section" markdown="1">
+
+**Status**: <span class="status-"></span>  
+
+#### Description
+
+Architectural decision: the system is composed of three components with explicit
+allowed-import rules enforced by CI.
+
+**Components and their responsibilities:**
+
+1. **DHF (`DHF/utils/`)** — data layer
+   - Owns: YAML CRUD, schema validation, config models, ResultStore, JUnit parsing
+   - Public API: exported from `DHF/utils/__init__.py`
+   - Shared types: `Item`, `ProjectConfig`, `DocTypeConfig`, `ValidationError`,
+     `ResultStore`, `ItemLoader`, `parse_junit_xml`, `ExecutionResult`
+   - Internal (not for external use): `ItemSaver`, `GitRepository`, `DocumentGenerator`
+
+2. **compliantflow (`src/compliantflow/`)** — analysis engine
+   - Owns: traceability graph, compliance checks, lifecycle state machine, CLI
+   - MAY import: `utils.models.*` (shared data DTOs), `utils.exceptions.ValidationError`
+   - MUST NOT import: `utils.repository.*`, `utils.result_store`, `utils.junit_parser`,
+     `utils.document_generation` — these are I/O operations that MUST go through
+     the DHFAdapter protocol
+   - Exception: `src/compliantflow/adapters/local.py` MAY import all of `utils.*`
+     because it IS the adapter implementation
+
+3. **tests** — three suites with different scopes
+   - `tests/sys/`, `tests/crs/`: use ONLY the `CompliantFlowCore` public API
+   - `tests/srs/`: MAY import directly from `utils.*` (these tests ARE testing the
+     DHF layer); MUST NOT access private adapter attributes (`_adapter._loader`)
+
+**Adapter pattern:**
+`DHFAdapter` (Protocol in `adapters/protocol.py`) is the sole interface between
+compliantflow business logic and the DHF data layer for all I/O operations.
+`LocalDHFAdapter` (in `adapters/local.py`) is the concrete implementation for a
+local filesystem DHF. Alternative backends (remote API, in-memory test double)
+implement the same protocol.
+
+**Why shared models are allowed across the boundary:**
+`Item` and `ProjectConfig` are data transfer objects — pure data containers with
+no I/O side effects. Importing them directly is equivalent to sharing a schema
+definition. Prohibiting these imports would require wrapper types that duplicate
+the model structure without adding isolation value. This mirrors the established
+convention in the project (see SYSARCH-010: shared Git facts; SYSARCH-011:
+GitOps-implicit PR linkage).
+
+**Enforcement:**
+The boundary is verified by `TC-SYS-034-001` (import boundary test) which runs
+in CI on every PR. See SWDD-018 for implementation details.
+
+
+
+</div>
+
 
 ---
 
@@ -639,21 +730,21 @@ with that CR. No separate record in YAML is needed.
 
 | Metric | Count |
 |--------|-------|
-| **Total Requirements** | 22 |
+| **Total Requirements** | 24 |
 | **Approved** | 0 |
 | **Draft** | 0 |
 | **Retired** | 0 |
 
 ### 3.2 Approval Status
 
-**Approval Rate**: 0.0% (0/22)
+**Approval Rate**: 0.0% (0/24)
 
 ---
 
 ## 4. Document Control
 
 **Document Owner**: Quality Assurance  
-**Last Updated**: 2026-03-06  
+**Last Updated**: 2026-03-10  
 **Next Review**: TBD
 
 ---

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Dict, List, Optional, Protocol, runtime_checkable
 
 from utils.models.config import ProjectConfig
@@ -39,3 +40,11 @@ class DHFAdapter(Protocol):
         review_status: str = "",
     ) -> None: ...
     def get_test_result_items(self) -> List[dict]: ...
+    def import_results_from_file(
+        self,
+        xml_path: Path,
+        tester: str = "",
+        run_id: str = "",
+        run_url: str = "",
+        commit_sha: str = "",
+    ) -> dict: ...

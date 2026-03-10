@@ -17,9 +17,9 @@ from utils.repository.saver import ItemSaver
 class TestFilePersistence:
     """Tests for SRS-002: Structured File Persistence"""
     
-    def test_items_stored_as_separate_files(self, test_core):
+    def test_items_stored_as_separate_files(self, test_core, loader):
         """Verify each DHF item is stored as a separate file"""
-        items = test_core._adapter._loader.load_all()
+        items = loader.load_all()
         
         # Each item should have come from a separate file
         # Test environment has minimal items
@@ -80,10 +80,10 @@ class TestFilePersistence:
                             assert data['id'].startswith(prefix), \
                                 f"All items in {subdir.name} should have prefix {prefix}"
     
-    def test_data_validation_on_load(self, test_core):
+    def test_data_validation_on_load(self, test_core, loader):
         """Verify data is validated when loading"""
         # loader = ItemLoader(SPECS_DIR)
-        items = test_core._adapter._loader.load_all()
+        items = loader.load_all()
         
         # All loaded items should have required fields
         for item in items:

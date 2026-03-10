@@ -7,10 +7,7 @@ verification_status fields are updated automatically on import.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Dict, List, Optional
-
-if TYPE_CHECKING:
-    from utils.junit_parser import ExecutionResult
+from typing import Dict, List, Optional
 
 
 class _TestResultsMixin:
@@ -76,6 +73,49 @@ class _TestResultsMixin:
         ]
         return {
             "imported": imported,
+            "skipped": skipped,
+            "items_updated": items_updated,
+            "failed_tcs": failed_tcs,
+        }
+
+    def import_test_results_from_file(
+        self,
+        xml_path,
+        tester: str,
+        run_id: str = "",
+        run_url: str = "",
+        commit_sha: str = "",
+    ) -> Dict:
+        """Parse a JUnit XML file and import results, updating requirement verification.
+
+        Delegates XML parsing and recording to the adapter (DHF I/O layer), then
+        recomputes verification_status on all linked requirement items.
+
+        Returns same summary dict as import_test_results: {imported, skipped,
+        items_updated, failed_tcs}.
+        """
+        result = self._adapter.import_results_from_file(
+            xml_path, tester=tester, run_id=run_id, run_url=run_url, commit_sha=commit_sha
+        )
+        recorded = result["recorded"]
+        skipped = result["skipped"]
+
+        touched_items: set = set()
+        for rec in recorded:
+            for item_id in (rec.get("links") or []):
+                touched_items.add(item_id)
+
+        self.refresh()
+        items_updated = self._update_requirement_verification(touched_items)
+
+        all_results = self._adapter.get_all_test_results()
+        failed_tcs = [
+            tc_id
+            for tc_id, rec in all_results.items()
+            if rec.get("testing_status") == "FAIL"
+        ]
+        return {
+            "imported": len(recorded),
             "skipped": skipped,
             "items_updated": items_updated,
             "failed_tcs": failed_tcs,

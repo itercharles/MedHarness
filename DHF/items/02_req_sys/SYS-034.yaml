@@ -1,0 +1,30 @@
+id: SYS-034
+title: Component Boundary Isolation
+content: |-
+  The compliantflow analysis engine (src/compliantflow/) shall not directly import
+  DHF I/O layer modules from outside the adapter boundary.
+
+  Prohibited direct imports (for all files except src/compliantflow/adapters/local.py):
+  - utils.repository (loader, saver, git)
+  - utils.result_store
+  - utils.junit_parser
+  - utils.document_generation
+
+  Permitted direct imports (shared data types, no I/O side effects):
+  - utils.models.item
+  - utils.models.config
+  - utils.models.compliance
+  - utils.exceptions
+
+  All DHF I/O operations shall be routed through the DHFAdapter protocol
+  (src/compliantflow/adapters/protocol.py).
+
+  This requirement is verified by an automated import boundary test that scans
+  all Python files in src/compliantflow/ (excluding adapters/) and fails on
+  any prohibited import pattern.
+category: Maintainability
+verification_method:
+- Test
+critical_safety: false
+satisfies:
+- CRS-009

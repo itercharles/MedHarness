@@ -37,10 +37,10 @@ class TestDataValidation:
             # Expected - validation should prevent this
             assert True, "Required fields are enforced"
     
-    def test_type_checking_on_load(self, test_core):
+    def test_type_checking_on_load(self, test_core, loader):
         """Verify type checking happens on load"""
         # loader = ItemLoader(SPECS_DIR)
-        items = test_core._adapter._loader.load_all()
+        items = loader.load_all()
         
         # All loaded items should be valid Item instances
         for item in items[:10]:  # Check first 10
@@ -62,10 +62,10 @@ class TestDataValidation:
             error_msg = str(e)
             assert len(error_msg) > 0, "Error message should not be empty"
     
-    def test_all_items_validate_successfully(self, test_core):
+    def test_all_items_validate_successfully(self, test_core, loader):
         """Verify all existing items pass validation"""
         # loader = ItemLoader(SPECS_DIR)
-        items = test_core._adapter._loader.load_all()
+        items = loader.load_all()
         
         # All items should have loaded successfully (validation passed)
         assert len(items) > 0, "Should have loaded items"
@@ -75,7 +75,7 @@ class TestDataValidation:
             assert item.uid, "Item uid must not be empty"
             assert item.title, "Item title must not be empty"
     
-    def test_invalid_yaml_rejected(self, test_dhf, test_core):
+    def test_invalid_yaml_rejected(self, test_dhf, test_core, loader):
         """Verify invalid YAML files are rejected"""
         # Create a temporary invalid YAML file
         temp_dir = test_dhf / "items" / "00_uc"
@@ -89,7 +89,7 @@ class TestDataValidation:
             
             # Try to load - should handle gracefully
             # loader = ItemLoader(SPECS_DIR)
-            items = test_core._adapter._loader.load_all()
+            items = loader.load_all()
             
             # Should either skip invalid file or raise clear error
             assert True, "Invalid YAML handled"

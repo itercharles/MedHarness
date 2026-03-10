@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 from utils.exceptions import ValidationError
+from utils.junit_parser import parse_junit_xml
 from utils.models.config import ProjectConfig
 from utils.models.item import Item
 from utils.repository.git import GitRepository
@@ -192,3 +193,45 @@ class LocalDHFAdapter:
 
     def get_test_result_items(self) -> List[dict]:
         return self._result_store.as_tc_items()
+
+    def import_results_from_file(
+        self,
+        xml_path,
+        tester: str = "",
+        run_id: str = "",
+        run_url: str = "",
+        commit_sha: str = "",
+    ) -> dict:
+        """Parse a JUnit XML file and record each non-SKIP result in the result store.
+
+        Returns {"recorded": List[dict], "skipped": int} where each recorded dict
+        contains tc_id, testing_status, and links.
+        """
+        from pathlib import Path as _Path
+        results = parse_junit_xml(_Path(xml_path))
+        recorded = []
+        skipped = 0
+        for r in results:
+            if r.testing_status == "SKIP":
+                skipped += 1
+                continue
+            self._result_store.record_execution(
+                tc_id=r.id,
+                testing_status=r.testing_status,
+                tester=tester,
+                run_id=run_id,
+                run_url=run_url,
+                commit_sha=commit_sha,
+                notes=r.error_message or "",
+                links=r.links,
+                title=r.title,
+                reviewer=r.reviewer,
+                review_date=r.review_date,
+                review_status=r.review_status,
+            )
+            recorded.append({
+                "tc_id": r.id,
+                "testing_status": r.testing_status,
+                "links": r.links or [],
+            })
+        return {"recorded": recorded, "skipped": skipped}

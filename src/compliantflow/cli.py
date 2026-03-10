@@ -314,13 +314,11 @@ def test_import(
     commit_sha: str,
 ) -> None:
     """Import test execution results from a JUnit XML file."""
-    from utils.junit_parser import parse_junit_xml
     dhf_path: Path = ctx.obj["dhf"]
     core = _make_core(dhf_path)
 
-    results = parse_junit_xml(Path(file))
-    summary = core.import_test_results(
-        results,
+    summary = core.import_test_results_from_file(
+        Path(file),
         tester=tester,
         run_id=run_id,
         run_url=run_url,
