@@ -22,5 +22,4 @@ content: |-
   - Responsive layout with browser compatibility
   - Real-time updates via Streamlit's reactive model
 design:
-- SYS-001
 - SYS-003

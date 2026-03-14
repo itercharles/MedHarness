@@ -123,7 +123,7 @@ transitions.
 ---
 
 ## REQ-007: Template-Based Document Generation
-*Derived from SYS-021 (Document Generation and Export)*
+*DHF utils standalone requirement (SYS-021 removed from product DHF by CR-022)*
 
 Software shall generate specification documents from Jinja2 templates.
 

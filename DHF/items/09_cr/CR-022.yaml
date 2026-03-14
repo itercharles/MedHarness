@@ -1,0 +1,73 @@
+id: CR-022
+title: Remove DHF-utils and interface items from product DHF (second pass after CR-020)
+description: |-
+  CR-020 removed 32 DHF data-layer items from the product DHF. A second pass
+  removes remaining items that describe DHF utils or interface concerns rather
+  than CompliantFlow core product features (traceability, compliance, test results).
+
+  Removed categories:
+
+  1. Item CRUD (DHF utils): UC-001, CRS-001, SYS-001
+  2. Lifecycle/workflow config (DHF utils): CRS-013, SYS-010
+  3. Document generation (DHF utils): UC-003, CRS-004, SYS-021
+  4. Artifact fetcher / test pull (DHF utils): SYS-035, SYSARCH-013
+  5. CLI interface layer: SYS-032, SRS-012, SWDD-013, SYSARCH-009
+  6. Verification status display (UI layer): SYS-031, SRS-013, SWDD-015
+  7. Change request management (DHF workflow): UC-004, CRS-003, SYS-008,
+     SYS-030, SRS-006, SRS-007, SWDD-007, SWDD-008, SWDD-017,
+     SYSARCH-004, SYSARCH-011
+justification: |-
+  The product DHF documents what CompliantFlow delivers for users as an analysis
+  and compliance tool: traceability, compliance checking, and test result tracking.
+  Item CRUD, lifecycle workflows, document generation, change request management,
+  and CLI interface details are DHF data-layer or interface concerns, documented
+  in DHF/utils/docs/ or addressed by the underlying tools.
+impact_assessment: |-
+  Deleted from DHF/items/:
+    UC-001, UC-003, UC-004
+    CRS-001, CRS-003, CRS-004, CRS-013
+    SYS-001, SYS-008, SYS-010, SYS-021, SYS-030, SYS-031, SYS-032, SYS-035
+    SRS-006, SRS-007, SRS-012, SRS-013
+    SWDD-007, SWDD-008, SWDD-013, SWDD-015, SWDD-017
+    SYSARCH-004, SYSARCH-009, SYSARCH-011, SYSARCH-013
+  Updated:
+    test_sys_033_test_import.py: re-linked to CRS-008
+    test_sys_013_hyperlinks.py: removed stale SRS-013 reference
+  Deleted tests:
+    test_sys_001_object_management.py, test_sys_008_change_management.py
+    test_sys_010_lifecycle.py, test_sys_021_document_generation.py
+    test_sys_021_pr_cr_automation.py, test_sys_031_test_results.py
+    test_sys_032_cli.py, test_crs_001.py, test_crs_003.py
+priority: Medium
+requested_by: Architecture Review
+category: Refactoring
+affected_items:
+- UC-001
+- UC-003
+- UC-004
+- CRS-001
+- CRS-003
+- CRS-004
+- CRS-013
+- SYS-001
+- SYS-008
+- SYS-010
+- SYS-021
+- SYS-030
+- SYS-031
+- SYS-032
+- SYS-035
+- SRS-006
+- SRS-007
+- SRS-012
+- SRS-013
+- SWDD-007
+- SWDD-008
+- SWDD-013
+- SWDD-015
+- SWDD-017
+- SYSARCH-004
+- SYSARCH-009
+- SYSARCH-011
+- SYSARCH-013
+status: draft

@@ -1,5 +1,5 @@
 """
-Automated tests for hyperlink navigation feature (SRS-013).
+Automated tests for hyperlink navigation in the Streamlit UI.
 
 Tests verify that item ID hyperlinks work correctly in tables and that
 item detail display functions properly.
