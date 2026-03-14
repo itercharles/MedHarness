@@ -7,7 +7,7 @@
 | Field | Value |
 |-------|-------|
 | **Document ID** | SYS-SPEC |
-| **Version** | 1.135 |
+| **Version** | 1.139 |
 | **Generated** | 2026-03-14 |
 | **Status** | Draft |
 | **Project** | CompliantFlow Project |

@@ -1,5 +1,6 @@
 """Git integration for version control."""
 
+import sys
 from git import Repo, InvalidGitRepositoryError
 from pathlib import Path
 from typing import Optional
@@ -28,7 +29,7 @@ class GitRepository:
         try:
             self.repo = Repo(repo_path, search_parent_directories=True)
         except InvalidGitRepositoryError:
-            print(f"Warning: {repo_path} is not a Git repository")
+            print(f"Warning: {repo_path} is not a Git repository", file=sys.stderr)
 
     def is_available(self) -> bool:
         """Check if Git is available."""
@@ -50,7 +51,7 @@ class GitRepository:
             self.repo.index.add([str(relative_path)])
 
             if not self.repo.index.diff("HEAD"):
-                print(f"No changes to commit for {relative_path}")
+                print(f"No changes to commit for {relative_path}", file=sys.stderr)
                 return False
 
             commit_kwargs = {'message': message}
@@ -60,11 +61,11 @@ class GitRepository:
                 commit_kwargs['author'] = Actor(author_name, author_email)
 
             self.repo.index.commit(**commit_kwargs)
-            print(f"Committed: {message}")
+            print(f"Committed: {message}", file=sys.stderr)
             return True
 
         except Exception as e:
-            print(f"Git commit failed: {e}")
+            print(f"Git commit failed: {e}", file=sys.stderr)
             return False
 
     def commit_item_change(
@@ -116,5 +117,5 @@ class GitRepository:
             return history
 
         except Exception as e:
-            print(f"Failed to get file history: {e}")
+            print(f"Failed to get file history: {e}", file=sys.stderr)
             return []
