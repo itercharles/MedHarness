@@ -23,12 +23,11 @@ def _resolve_dhf(dhf_option: str | None) -> Path:
 
 
 def _make_core(dhf_path: Path):
-    """Instantiate CompliantFlowCore; adds src/ to sys.path if needed."""
-    src_dir = Path(__file__).parent.parent
-    if str(src_dir) not in sys.path:
-        sys.path.insert(0, str(src_dir))
+    """Instantiate CompliantFlowCore with a LocalDHFAdapter."""
+    from utils.local_adapter import LocalDHFAdapter
     from compliantflow.core import CompliantFlowCore
-    return CompliantFlowCore(dhf_path, auto_commit=False)
+    adapter = LocalDHFAdapter(dhf_path, auto_commit=False)
+    return CompliantFlowCore(adapter)
 
 
 # ---------------------------------------------------------------------------
@@ -329,6 +328,43 @@ def test_import(
         f"✓ Imported {summary['imported']} result(s), "
         f"skipped {summary['skipped']}, "
         f"updated {len(summary['items_updated'])} item(s).",
+        err=True,
+    )
+    if summary["failed_tcs"]:
+        click.echo(
+            f"✗ {len(summary['failed_tcs'])} TC(s) FAILED: "
+            + ", ".join(summary["failed_tcs"][:10])
+            + ("…" if len(summary["failed_tcs"]) > 10 else ""),
+            err=True,
+        )
+        sys.exit(1)
+
+
+@test.command("pull")
+@click.option("--run-id", default="", help="GitHub Actions run ID (default: latest for HEAD).")
+@click.option("--commit", "commit_sha", default="", metavar="SHA",
+              help="Find latest completed run for this commit SHA.")
+@click.pass_context
+def test_pull(ctx: click.Context, run_id: str, commit_sha: str) -> None:
+    """Fetch test results from GitHub Actions artifacts.
+
+    Requires GITHUB_TOKEN to be set in the environment.
+    Results are cached locally (DHF/test-results/results.yaml, git-ignored).
+    Verification status is computed in-memory — requirement YAML files are not modified.
+    """
+    dhf_path: Path = ctx.obj["dhf"]
+    core = _make_core(dhf_path)
+    try:
+        summary = core.pull_test_results(run_id=run_id, commit_sha=commit_sha)
+    except ValueError as exc:
+        click.echo(f"ERROR: {exc}", err=True)
+        sys.exit(1)
+
+    click.echo(json.dumps(summary, default=str))
+    click.echo(
+        f"✓ Pulled {summary['imported']} result(s), "
+        f"skipped {summary['skipped']} — "
+        f"run {summary['run_id']}",
         err=True,
     )
     if summary["failed_tcs"]:

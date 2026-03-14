@@ -4,8 +4,9 @@ This module is the single entry point for all business logic.
 It composes infrastructure layers via Mixin classes and exposes a unified API
 to the CLI and Streamlit UI.
 
-The core accepts a DHFAdapter (default: LocalDHFAdapter) so any backend
-implementing the protocol can plug in.
+The core accepts any DHFAdapter implementation — it has no knowledge of
+LocalDHFAdapter or any other concrete adapter. The caller (CLI, tests, etc.)
+is responsible for constructing and passing the adapter.
 """
 
 from pathlib import Path
@@ -42,39 +43,29 @@ class CompliantFlowCore(
     lifecycle management, and document generation.
     """
 
-    def __init__(
-        self,
-        dhf_root: Optional[Path] = None,
-        auto_commit: bool = False,
-        adapter=None,
-    ):
+    def __init__(self, adapter):
         """
         Initialize CompliantFlow core.
 
         Args:
-            dhf_root: Path to the DHF directory (used when adapter is None).
-            auto_commit: Whether to auto-commit changes (used when adapter is None).
-            adapter: Optional DHFAdapter instance. If provided, dhf_root is ignored.
+            adapter: A DHFAdapter instance. Use LocalDHFAdapter from
+                     utils.local_adapter (DHF layer) or any custom implementation.
         """
-        if adapter is None:
-            from compliantflow.adapters.local import LocalDHFAdapter
-            if dhf_root is None:
-                raise ValueError("Either dhf_root or adapter must be provided")
-            adapter = LocalDHFAdapter(Path(dhf_root), auto_commit=auto_commit)
-
         self._adapter = adapter
         self.config: ProjectConfig = adapter.get_project_config()
         self.graph = GraphEngine(config=self.config)
 
-        # Keep repo_root for compliance engine file existence checks
-        if dhf_root is not None:
-            self.repo_root = Path(dhf_root)
-        elif hasattr(adapter, '_dhf_root'):
+        # Keep repo_root for compliance engine file existence checks.
+        # Resolved from the adapter; falls back to CWD for custom adapters.
+        if hasattr(adapter, '_dhf_root'):
             self.repo_root = adapter._dhf_root
         else:
             self.repo_root = Path(".")
 
         self.refresh()
+        # Compute verification_status in-memory once on startup.
+        # DHF auto-fetches from GitHub if no local cache is present (transparent).
+        self._refresh_verification_status()
 
     def refresh(self):
         """Reload all items and rebuild graph."""

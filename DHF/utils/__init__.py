@@ -19,6 +19,8 @@ from utils.exceptions import ValidationError
 from utils.result_store import ResultStore
 from utils.junit_parser import parse_junit_xml, ExecutionResult
 from utils.repository.loader import ItemLoader
+from utils.artifact_fetcher import GitHubArtifactFetcher
+from utils.local_adapter import LocalDHFAdapter
 
 __all__ = [
     "Item",
@@ -29,4 +31,6 @@ __all__ = [
     "parse_junit_xml",
     "ExecutionResult",
     "ItemLoader",
+    "GitHubArtifactFetcher",
+    "LocalDHFAdapter",
 ]

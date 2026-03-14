@@ -16,6 +16,7 @@ from pathlib import Path
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
+from utils.local_adapter import LocalDHFAdapter
 from compliantflow.core import CompliantFlowCore
 
 
@@ -29,7 +30,7 @@ def test_TC_SYS_003_001_traceability_matrix_data(test_dhf_root):
     Verify system can generate traceability matrix data.
     """
     # Initialize core with test DHF
-    core = CompliantFlowCore(test_dhf_root)
+    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
 
     # Get all items
     all_items = core.get_all_items()
@@ -60,7 +61,7 @@ def test_TC_SYS_003_002_traceability_graph(test_dhf_root):
     Verify system can build a traceability graph.
     """
     # Initialize core with test DHF
-    core = CompliantFlowCore(test_dhf_root)
+    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
 
     # Access the graph engine
     graph = core.graph
@@ -86,7 +87,7 @@ def test_TC_SYS_003_003_traceability_relationships(test_dhf_root):
     Verify system correctly tracks relationships between items.
     """
     # Initialize core with test DHF
-    core = CompliantFlowCore(test_dhf_root)
+    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
 
     # Get SRS-001 and verify its relationships
     srs_item = core.get_item("SRS-001")
@@ -112,7 +113,7 @@ def test_TC_SYS_003_004_downstream_traceability(test_dhf_root):
     Verify system can trace downstream from requirements to tests.
     """
     # Initialize core with test DHF
-    core = CompliantFlowCore(test_dhf_root)
+    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
     graph = core.graph
 
     # Get downstream items from SYS-001 (returns set of UIDs)
@@ -137,7 +138,7 @@ def test_TC_SYS_003_005_upstream_traceability(test_dhf_root):
     Verify system can trace upstream from tests to requirements.
     """
     # Initialize core with test DHF
-    core = CompliantFlowCore(test_dhf_root)
+    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
     graph = core.graph
 
     # Get upstream items from SRS-001 (returns set of UIDs)
@@ -163,7 +164,7 @@ def test_build_traceability_chains_structure(test_dhf_root):
 
     Verify core.build_traceability_chains() returns structured chain data.
     """
-    core = CompliantFlowCore(test_dhf_root)
+    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
 
     chains = core.build_traceability_chains(["CRS", "SYS", "SRS"])
 
@@ -189,7 +190,7 @@ def test_build_traceability_chains_complete_chain(test_dhf_root):
 
     Verify a complete chain exists when all links are present.
     """
-    core = CompliantFlowCore(test_dhf_root)
+    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
 
     chains = core.build_traceability_chains(["CRS", "SYS", "SRS"])
 
@@ -213,7 +214,7 @@ def test_get_vertical_view_items_focus_only(test_dhf_root):
     Verify get_vertical_view_items includes the focus type items when both
     show_upstream and show_downstream are False.
     """
-    core = CompliantFlowCore(test_dhf_root)
+    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
 
     result = core.get_vertical_view_items("SYS", show_upstream=False, show_downstream=False)
 
@@ -232,7 +233,7 @@ def test_get_vertical_view_items_with_upstream(test_dhf_root):
     Verify get_vertical_view_items includes items that link TO the focus type
     when show_upstream=True.
     """
-    core = CompliantFlowCore(test_dhf_root)
+    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
 
     focus_only = core.get_vertical_view_items("SYS", show_upstream=False, show_downstream=False)
     with_upstream = core.get_vertical_view_items("SYS", show_upstream=True, show_downstream=False)
@@ -253,7 +254,7 @@ def test_get_vertical_view_items_with_downstream(test_dhf_root):
     Verify get_vertical_view_items includes items that the focus items link TO
     when show_downstream=True.
     """
-    core = CompliantFlowCore(test_dhf_root)
+    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
 
     focus_only = core.get_vertical_view_items("SYS", show_upstream=False, show_downstream=False)
     with_downstream = core.get_vertical_view_items("SYS", show_upstream=False, show_downstream=True)
@@ -271,7 +272,7 @@ def test_get_vertical_view_items_unknown_type(test_dhf_root):
     @links: SYS-003
     @test_id: TC-SYS-003-013
     """
-    core = CompliantFlowCore(test_dhf_root)
+    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
 
     result = core.get_vertical_view_items("NONEXISTENT")
 
@@ -285,7 +286,7 @@ def test_get_doc_type_code(test_dhf_root):
     @links: SYS-003
     @test_id: TC-SYS-003-014
     """
-    core = CompliantFlowCore(test_dhf_root)
+    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
 
     assert core.get_doc_type_code("SRS-001") == "SRS"
     assert core.get_doc_type_code("SYS-002") == "SYS"
@@ -307,7 +308,7 @@ def test_build_traceability_matrix_structure(test_dhf_root):
     Verify the return dict has 'columns' and 'rows' keys, and each row
     contains exactly the requested doc-type keys plus meta keys.
     """
-    core = CompliantFlowCore(test_dhf_root)
+    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
     result = core.build_traceability_matrix(["CRS", "SYS", "SRS"])
 
     assert "columns" in result
@@ -331,7 +332,7 @@ def test_build_traceability_matrix_linked_items(test_dhf_root):
 
     CRS-001 → SYS-001 → SRS-001 and SRS-002 must appear as complete rows.
     """
-    core = CompliantFlowCore(test_dhf_root)
+    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
     result = core.build_traceability_matrix(["CRS", "SYS", "SRS"])
 
     complete_rows = [r for r in result["rows"] if r["is_complete"]]
@@ -353,7 +354,7 @@ def test_build_traceability_matrix_orphans_included(test_dhf_root):
     SYS-002 derives from CRS-001 but has no SRS children — it must appear
     as an orphan row (is_complete=False) with SRS=None.
     """
-    core = CompliantFlowCore(test_dhf_root)
+    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
     result = core.build_traceability_matrix(["CRS", "SYS", "SRS"])
 
     sys2_rows = [r for r in result["rows"] if r["SYS"] == "SYS-002"]
@@ -369,7 +370,7 @@ def test_build_traceability_matrix_custom_path(test_dhf_root):
     @links: SYS-003
     @test_id: TC-SYS-003-018
     """
-    core = CompliantFlowCore(test_dhf_root)
+    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
     # Two-column matrix
     result = core.build_traceability_matrix(["SYS", "SRS"])
     assert result["columns"] == ["SYS", "SRS"]
@@ -387,7 +388,7 @@ def test_get_item_chain_unknown_item(test_dhf_root):
     @links: SYS-003
     @test_id: TC-SYS-003-019
     """
-    core = CompliantFlowCore(test_dhf_root)
+    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
     assert core.get_item_chain("DOES-NOT-EXIST") is None
 
 
@@ -400,7 +401,7 @@ def test_get_item_chain_structure(test_dhf_root):
 
     Verify the top-level shape and that each node has the expected keys.
     """
-    core = CompliantFlowCore(test_dhf_root)
+    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
     result = core.get_item_chain("SYS-001")
 
     assert result is not None
@@ -427,7 +428,7 @@ def test_get_item_chain_transitive_coverage(test_dhf_root):
       downstream: SRS-001, SRS-002, SYSARCH-001
     All must appear in nodes.
     """
-    core = CompliantFlowCore(test_dhf_root)
+    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
     result = core.get_item_chain("SYS-001")
     node_ids = set(result["nodes"].keys())
 
@@ -449,7 +450,7 @@ def test_get_item_chain_direct_neighbours_only(test_dhf_root):
     SYS-001's upstream must be [CRS-001] (direct parent), NOT UC-001
     (which is the grandparent — reachable via nodes dict, not listed directly).
     """
-    core = CompliantFlowCore(test_dhf_root)
+    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
     result = core.get_item_chain("SYS-001")
     sys_node = result["nodes"]["SYS-001"]
 
@@ -468,7 +469,7 @@ def test_get_item_chain_leaf_item(test_dhf_root):
     @links: SYS-003
     @test_id: TC-SYS-003-023
     """
-    core = CompliantFlowCore(test_dhf_root)
+    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
     result = core.get_item_chain("UC-001")
 
     assert result is not None

@@ -12,6 +12,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from utils.models.item import Item
+from utils.local_adapter import LocalDHFAdapter
 from compliantflow.core import CompliantFlowCore
 
 
@@ -108,7 +109,7 @@ class TestTypedRelationshipsInDHF:
     def core(self):
         """Initialize CompliantFlowCore."""
         dhf_root = Path(__file__).parent.parent.parent / "DHF"
-        return CompliantFlowCore(dhf_root)
+        return CompliantFlowCore(LocalDHFAdapter(dhf_root))
     
     def test_crs_has_derives_from_links(self, core):
         """Verify CRS items have derives_from relationships to UC."""

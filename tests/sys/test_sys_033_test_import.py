@@ -18,6 +18,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
 from click.testing import CliRunner
 from compliantflow.cli import main
+from utils.local_adapter import LocalDHFAdapter
 from compliantflow.core import CompliantFlowCore
 from utils.junit_parser import parse_junit_xml, ExecutionResult
 
@@ -141,7 +142,7 @@ def test_TC_SYS_033_002_pass_import_marks_item_verified(test_dhf_root):
     @links: SYS-033
     """
     _enable_verification(test_dhf_root)
-    core = CompliantFlowCore(test_dhf_root, auto_commit=False)
+    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
 
     results = [ExecutionResult(id="TC-SYS-001", testing_status="PASS", name="test_TC_SYS_001",
                                links=["SYS-001"])]
@@ -167,7 +168,7 @@ def test_TC_SYS_033_003_fail_import_marks_item_failed(test_dhf_root):
     @links: SYS-033
     """
     _enable_verification(test_dhf_root)
-    core = CompliantFlowCore(test_dhf_root, auto_commit=False)
+    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
 
     results = [ExecutionResult(id="TC-SYS-999", testing_status="FAIL", name="test_TC_SYS_999",
                                links=["SYS-001"], error_message="AssertionError")]
@@ -227,7 +228,7 @@ def test_TC_SYS_033_005_review_fields_via_import(test_dhf_root):
         },
     ])
 
-    core = CompliantFlowCore(test_dhf_root, auto_commit=False)
+    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
     results = parse_junit_xml(xml_path)
     core.import_test_results(results, tester="CI")
 
@@ -271,7 +272,7 @@ def test_TC_SYS_033_006_cli_test_import(runner, test_dhf_root, dhf_str):
     assert "imported" in summary
     assert summary["imported"] >= 1
 
-    core = CompliantFlowCore(test_dhf_root, auto_commit=False)
+    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
     record = core.get_test_result("TC-SYS-001")
     assert record is not None
     assert record.get("run_id") == "7890123"

@@ -11,6 +11,7 @@ import sys
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
+from utils.local_adapter import LocalDHFAdapter
 from compliantflow.core import CompliantFlowCore
 
 
@@ -21,7 +22,7 @@ class TestSRS006_WorkflowMethods:
     def core(self):
         """Initialize CompliantFlowCore with production config (read-only for tests)."""
         dhf_root = Path(__file__).parent.parent.parent / "DHF"
-        return CompliantFlowCore(dhf_root, auto_commit=False)
+        return CompliantFlowCore(LocalDHFAdapter(dhf_root))
 
     def test_get_initial_state_for_cr(self, core):
         """CR items should start in 'draft' state."""

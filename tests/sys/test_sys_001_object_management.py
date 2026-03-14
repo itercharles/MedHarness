@@ -17,6 +17,7 @@ from pathlib import Path
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
+from utils.local_adapter import LocalDHFAdapter
 from compliantflow.core import CompliantFlowCore
 
 
@@ -30,7 +31,7 @@ def test_TC_SYS_001_001_view_requirement_object(test_dhf_root):
     Verify system can load and retrieve requirement objects with complete information.
     """
     # Initialize core with test DHF
-    core = CompliantFlowCore(test_dhf_root)
+    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
 
     # Get requirement object
     item = core.get_item("SRS-001")
@@ -62,7 +63,7 @@ def test_TC_SYS_001_002_view_change_request_object(test_dhf_root):
     Verify system can load and retrieve change request objects.
     """
     # Initialize core with test DHF
-    core = CompliantFlowCore(test_dhf_root)
+    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
 
     # Get change request object
     item = core.get_item("CR-001")
@@ -91,7 +92,7 @@ def test_TC_SYS_001_003_view_architecture_object(test_dhf_root):
     Verify system can load and retrieve architecture/design objects.
     """
     # Initialize core with test DHF
-    core = CompliantFlowCore(test_dhf_root)
+    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
 
     # Get architecture object
     item = core.get_item("SYSARCH-001")
@@ -116,7 +117,7 @@ def test_TC_SYS_001_004_filter_objects_by_type(test_dhf_root):
     Verify system can filter objects by document type.
     """
     # Initialize core with test DHF
-    core = CompliantFlowCore(test_dhf_root)
+    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
 
     # Get all items and filter by type (using ID prefix)
     all_items = core.get_all_items()
@@ -146,7 +147,7 @@ def test_TC_SYS_001_005_search_objects(test_dhf_root):
     Verify system can search objects by content.
     """
     # Initialize core with test DHF
-    core = CompliantFlowCore(test_dhf_root)
+    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
 
     # Search for objects containing specific text
     all_items = core.get_all_items()
@@ -171,7 +172,7 @@ def test_get_items_filtered_by_type(test_dhf_root):
 
     Verify core.get_items_filtered() returns only items of the requested type.
     """
-    core = CompliantFlowCore(test_dhf_root)
+    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
 
     srs_items = core.get_items_filtered("SRS")
 
@@ -191,7 +192,7 @@ def test_get_items_filtered_by_status(test_dhf_root):
     Status filtering is only meaningful for CR/REL/DEF (explicit lifecycle).
     Requirement items (SYS, SRS, etc.) have no status field.
     """
-    core = CompliantFlowCore(test_dhf_root)
+    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
 
     # CR has explicit lifecycle — status filter works
     draft_crs = core.get_items_filtered("CR", status_filter=["draft"])
@@ -217,7 +218,7 @@ def test_get_items_filtered_by_search(test_dhf_root):
 
     Verify get_items_filtered filters by search text against id and title.
     """
-    core = CompliantFlowCore(test_dhf_root)
+    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
 
     # Search by title keyword
     results = core.get_items_filtered("SRS", search="Persistence")

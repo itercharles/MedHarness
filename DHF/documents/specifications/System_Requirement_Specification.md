@@ -7,8 +7,8 @@
 | Field | Value |
 |-------|-------|
 | **Document ID** | SYS-SPEC |
-| **Version** | 1.117 |
-| **Generated** | 2026-03-10 |
+| **Version** | 1.129 |
+| **Generated** | 2026-03-14 |
 | **Status** | Draft |
 | **Project** | CompliantFlow Project |
 
@@ -24,7 +24,7 @@ This document provides a comprehensive list of all System Requirements, includin
 
 ### 1.2 Scope
 
-This specification covers all System Requirements defined in the CompliantFlow system as of 2026-03-10.
+This specification covers all System Requirements defined in the CompliantFlow system as of 2026-03-14.
 
 ---
 
@@ -253,7 +253,32 @@ any prohibited import pattern.
 
 </div>
 
-### 13. SYSARCH-001: Item Management Module
+### 13. SYS-035: On-Demand Test Result Retrieval from CI Artifacts
+
+<div class="requirement-section" markdown="1">
+
+**Status**: <span class="status-"></span>  
+**Category**: Maintainability  **Verification Method**: ['Test', 'Inspection']  
+#### Description
+
+The system shall provide a mechanism to retrieve test execution results from
+GitHub Actions artifacts on demand, without requiring the CI pipeline to commit
+data to the repository.
+
+Acceptance criteria:
+1. A CLI command 'test pull' shall fetch JUnit XML artifacts for a specified run
+   (or the latest run for the current HEAD commit) from the GitHub Actions API.
+2. The command shall require GITHUB_TOKEN to be set in the environment.
+3. After 'test pull', verification_status for linked requirement items shall be
+   computable from the fetched results within the current session.
+4. The CI pipeline shall not commit any data to the repository during test runs.
+5. The local result cache (results.yaml) shall not be tracked in git.
+
+
+
+</div>
+
+### 14. SYSARCH-001: Item Management Module
 
 <div class="requirement-section" markdown="1">
 
@@ -284,7 +309,7 @@ Core module for managing DHF items (requirements, design, tests, change requests
 
 </div>
 
-### 14. SYSARCH-002: Traceability Analysis Module
+### 15. SYSARCH-002: Traceability Analysis Module
 
 <div class="requirement-section" markdown="1">
 
@@ -317,7 +342,7 @@ Module for building and analyzing traceability relationships between DHF items.
 
 </div>
 
-### 15. SYSARCH-003: Lifecycle Management Module
+### 16. SYSARCH-003: Lifecycle Management Module
 
 <div class="requirement-section" markdown="1">
 
@@ -355,7 +380,7 @@ Module for managing item lifecycle states and transitions via CompliantFlowCore.
 
 </div>
 
-### 16. SYSARCH-004: Change Management Module
+### 17. SYSARCH-004: Change Management Module
 
 <div class="requirement-section" markdown="1">
 
@@ -388,7 +413,7 @@ Module for tracking and controlling changes to DHF items through change requests
 
 </div>
 
-### 17. SYSARCH-005: Compliance Validation Module
+### 18. SYSARCH-005: Compliance Validation Module
 
 <div class="requirement-section" markdown="1">
 
@@ -421,7 +446,7 @@ Module for validating DHF against regulatory policies and standards.
 
 </div>
 
-### 18. SYSARCH-006: Document Generation Module
+### 19. SYSARCH-006: Document Generation Module
 
 <div class="requirement-section" markdown="1">
 
@@ -454,7 +479,7 @@ Module for generating regulatory specification documents from templates.
 
 </div>
 
-### 19. SYSARCH-007: Test Integration Module
+### 20. SYSARCH-007: Test Integration Module
 
 <div class="requirement-section" markdown="1">
 
@@ -495,7 +520,7 @@ into the DHF, and linking each result to the requirement items it verifies.
 
 </div>
 
-### 20. SYSARCH-008: Web UI Module
+### 21. SYSARCH-008: Web UI Module
 
 <div class="requirement-section" markdown="1">
 
@@ -528,7 +553,7 @@ Streamlit-based web user interface for DHF management.
 
 </div>
 
-### 21. SYSARCH-009: CLI Module
+### 22. SYSARCH-009: CLI Module
 
 <div class="requirement-section" markdown="1">
 
@@ -563,7 +588,7 @@ split by the DHF data layer extraction (CR-013).
 
 </div>
 
-### 22. SYSARCH-010: GitOps-Based Approval Architecture
+### 23. SYSARCH-010: GitOps-Based Approval Architecture
 
 <div class="requirement-section" markdown="1">
 
@@ -605,7 +630,7 @@ workflows.
 
 </div>
 
-### 23. SYSARCH-011: PR-to-CR Linkage is GitOps-Implicit, Not YAML-Stored
+### 24. SYSARCH-011: PR-to-CR Linkage is GitOps-Implicit, Not YAML-Stored
 
 <div class="requirement-section" markdown="1">
 
@@ -664,7 +689,7 @@ with that CR. No separate record in YAML is needed.
 
 </div>
 
-### 24. SYSARCH-012: Three-Component Architecture Boundary Model
+### 25. SYSARCH-012: Three-Component Architecture Boundary Model
 
 <div class="requirement-section" markdown="1">
 
@@ -721,6 +746,68 @@ in CI on every PR. See SWDD-018 for implementation details.
 
 </div>
 
+### 26. SYSARCH-013: GitHub Actions Artifacts as Test Result Source of Truth
+
+<div class="requirement-section" markdown="1">
+
+**Status**: <span class="status-"></span>  
+
+#### Description
+
+Architectural decision: GitHub Actions artifacts are the sole authoritative store
+for test execution results. The DHF layer does not maintain a committed replica.
+
+## Rationale
+
+Storing a committed copy of test results (results.yaml) in the git repository
+creates a tight coupling between the CI pipeline and the repository state:
+- CI must have write access to the branch it is testing.
+- Concurrent runs can produce conflicting commits.
+- The copy is a derivative of the artifacts with no independent value.
+
+## New Data Flow
+
+```
+CI (push or PR trigger)
+  ├─ Phase 1: tests/srs/  → unit-test-results.xml (artifact, retained 90 days)
+  ├─ Phase 2: tests/sys/  → sys-test-results.xml  (artifact)
+  └─ Phase 3: tests/crs/  → crs-test-results.xml  (artifact)
+  [no further CI steps that write to the repo]
+
+On-demand access
+  └─ compliantflow test pull [--run-id RUN_ID]
+      └─ GitHubArtifactFetcher (DHF/utils/artifact_fetcher.py)
+          ├─ GET /repos/{repo}/actions/runs/{id}/artifacts
+          ├─ Download artifact ZIPs, extract XML
+          └─ parse_junit_xml() → ExecutionResult list → local ResultStore cache
+```
+
+## Layer Responsibilities
+
+| Layer | Responsibility |
+|---|---|
+| GitHub Actions | Execute tests, upload JUnit XML artifacts |
+| DHF/utils/artifact_fetcher.py | GitHub API auth, run lookup, artifact download |
+| DHF/utils/result_store.py | Local cache (git-ignored results.yaml) |
+| LocalDHFAdapter | Bridges DHF fetcher to DHFAdapter protocol |
+| CompliantFlowCore | Calls adapter.pull_results_from_artifacts(); knows nothing of GitHub |
+| CLI (test pull) | User-facing trigger; exits 1 if any TC FAILed |
+
+## Verification Status
+
+After 'test pull', verification_status on requirement items is computed in-memory
+and injected into the graph. Requirement YAML files are NOT modified — the GitHub
+Actions run URL + commit SHA in each result record serve as the regulatory audit trail.
+
+## Audit Retention
+
+Default GitHub artifact retention is 90 days. Adjust via repository Settings →
+Actions → Artifact and log retention for longer-term compliance requirements.
+
+
+
+</div>
+
 
 ---
 
@@ -730,21 +817,21 @@ in CI on every PR. See SWDD-018 for implementation details.
 
 | Metric | Count |
 |--------|-------|
-| **Total Requirements** | 24 |
+| **Total Requirements** | 26 |
 | **Approved** | 0 |
 | **Draft** | 0 |
 | **Retired** | 0 |
 
 ### 3.2 Approval Status
 
-**Approval Rate**: 0.0% (0/24)
+**Approval Rate**: 0.0% (0/26)
 
 ---
 
 ## 4. Document Control
 
 **Document Owner**: Quality Assurance  
-**Last Updated**: 2026-03-10  
+**Last Updated**: 2026-03-14  
 **Next Review**: TBD
 
 ---

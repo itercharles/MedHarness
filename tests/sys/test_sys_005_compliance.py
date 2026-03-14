@@ -16,6 +16,7 @@ from pathlib import Path
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
+from utils.local_adapter import LocalDHFAdapter
 from compliantflow.core import CompliantFlowCore
 
 
@@ -29,7 +30,7 @@ def test_TC_SYS_005_001_load_policy_groups(test_dhf_root):
     Verify system can load compliance policy groups.
     """
     # Initialize core with test DHF
-    core = CompliantFlowCore(test_dhf_root)
+    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
 
     # Get available policy groups
     governance_dir = core.repo_root.parent / "governance"
@@ -59,7 +60,7 @@ def test_TC_SYS_005_002_view_policies(test_dhf_root):
     Verify system can retrieve policy definitions.
     """
     # Initialize core with test DHF
-    core = CompliantFlowCore(test_dhf_root)
+    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
 
     # Load policy group
     policy_group = core.get_policy_group("IEC_62304")
@@ -89,7 +90,7 @@ def test_TC_SYS_005_003_run_compliance_check(test_dhf_root):
     Verify system can run compliance checks and produce results.
     """
     # Initialize core with test DHF
-    core = CompliantFlowCore(test_dhf_root)
+    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
 
     # Run compliance check
     report = core.check_compliance("IEC_62304")
@@ -127,7 +128,7 @@ def test_TC_SYS_005_004_compliance_score_calculation(test_dhf_root):
     Verify compliance score is calculated correctly.
     """
     # Initialize core with test DHF
-    core = CompliantFlowCore(test_dhf_root)
+    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
 
     # Run compliance check
     report = core.check_compliance("IEC_62304")
@@ -156,7 +157,7 @@ def test_TC_SYS_005_005_policy_validation_details(test_dhf_root):
     Verify compliance check provides detailed validation information.
     """
     # Initialize core with test DHF
-    core = CompliantFlowCore(test_dhf_root)
+    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
 
     # Run compliance check
     report = core.check_compliance("IEC_62304")

@@ -321,13 +321,15 @@ def populate_test_dhf(test_dhf_root: Path):
     Returns:
         CompliantFlowCore instance with populated data
     """
+    from utils.local_adapter import LocalDHFAdapter
     from compliantflow.core import CompliantFlowCore
 
     print(f"\n[DATA] Populating test DHF with test data...")
 
     populate_governance(test_dhf_root)
 
-    core = CompliantFlowCore(test_dhf_root, auto_commit=False)
+    adapter = LocalDHFAdapter(test_dhf_root, auto_commit=False)
+    core = CompliantFlowCore(adapter)
 
     test_items = get_test_dataset()
 

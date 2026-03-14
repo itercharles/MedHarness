@@ -48,3 +48,8 @@ class DHFAdapter(Protocol):
         run_url: str = "",
         commit_sha: str = "",
     ) -> dict: ...
+    def pull_results_from_artifacts(
+        self,
+        run_id: str = "",
+        commit_sha: str = "",
+    ) -> dict: ...

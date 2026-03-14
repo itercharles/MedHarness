@@ -195,8 +195,9 @@ def test_TC_SYS_032_009_cr_update_adds_items(runner, test_dhf_root, dhf_str):
     )
     assert result.exit_code == 0, result.output
 
+    from utils.local_adapter import LocalDHFAdapter
     from compliantflow.core import CompliantFlowCore
-    core = CompliantFlowCore(test_dhf_root)
+    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
     cr = core.get_item("CR-001")
     affected = cr.get("affected_items", [])
     assert "SYS-001" in affected
@@ -462,8 +463,9 @@ def test_TC_SYS_032_024_item_transition_executes_state_change(runner, test_dhf_r
     assert parsed["status"] == "approved"
 
     # Verify persisted to DHF
+    from utils.local_adapter import LocalDHFAdapter
     from compliantflow.core import CompliantFlowCore
-    core = CompliantFlowCore(test_dhf_root)
+    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
     item = core.get_item("CR-001")
     assert item["status"] == "approved"
 

@@ -11,6 +11,7 @@ import sys
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
+from utils.local_adapter import LocalDHFAdapter
 from compliantflow.core import CompliantFlowCore
 
 
@@ -21,7 +22,7 @@ class TestSRS015_ItemLifecycleManagement:
     def core(self):
         """Initialize CompliantFlowCore."""
         dhf_root = Path(__file__).parent.parent.parent / "DHF"
-        return CompliantFlowCore(dhf_root)
+        return CompliantFlowCore(LocalDHFAdapter(dhf_root))
     
     def test_item_creation_and_retrieval(self, core):
         """Verify software can manage items (CRUD operations)."""

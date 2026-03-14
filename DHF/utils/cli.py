@@ -20,10 +20,7 @@ def _resolve_dhf(dhf_option: str | None) -> Path:
 
 def _make_adapter(dhf_path: Path):
     """Instantiate LocalDHFAdapter."""
-    src_dir = Path(__file__).parent.parent
-    if str(src_dir) not in sys.path:
-        sys.path.insert(0, str(src_dir))
-    from compliantflow.adapters.local import LocalDHFAdapter
+    from utils.local_adapter import LocalDHFAdapter
     return LocalDHFAdapter(dhf_path, auto_commit=False)
 
 

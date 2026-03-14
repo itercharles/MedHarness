@@ -20,6 +20,7 @@ from pathlib import Path
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
+from utils.local_adapter import LocalDHFAdapter
 from compliantflow.core import CompliantFlowCore
 
 
@@ -32,7 +33,7 @@ def test_TC_SYS_010_001_view_lifecycle_states(test_dhf_root):
 
     Verify system provides access to lifecycle state definitions.
     """
-    core = CompliantFlowCore(test_dhf_root)
+    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
 
     lifecycle = core.config.global_lifecycle
 
@@ -54,7 +55,7 @@ def test_TC_SYS_010_002_view_available_transitions_cr(test_dhf_root):
 
     Verify system can determine available state transitions for CR items.
     """
-    core = CompliantFlowCore(test_dhf_root)
+    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
 
     cr_item = core.get_item("CR-001")
     assert cr_item is not None
@@ -79,7 +80,7 @@ def test_TC_SYS_010_003_perform_cr_state_transition(test_dhf_root):
 
     Verify system can execute state transitions on CR items.
     """
-    core = CompliantFlowCore(test_dhf_root)
+    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
 
     new_cr_data = {
         "id": "CR-998",
@@ -109,7 +110,7 @@ def test_TC_SYS_010_004_requirement_items_have_no_transitions(test_dhf_root):
 
     Verify requirement items return no available transitions (GitOps model).
     """
-    core = CompliantFlowCore(test_dhf_root)
+    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
 
     for item_id in ["SRS-001", "SYS-001", "CRS-001", "SYSARCH-001"]:
         item = core.get_item(item_id)
@@ -131,7 +132,7 @@ def test_TC_SYS_010_005_cr_workflow(test_dhf_root):
 
     Verify CR-specific workflow states.
     """
-    core = CompliantFlowCore(test_dhf_root)
+    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
 
     cr = core.get_item("CR-001")
 
@@ -153,7 +154,7 @@ def test_TC_SYS_010_006_state_history_tracking(test_dhf_root):
 
     Verify system tracks state change history via Git.
     """
-    core = CompliantFlowCore(test_dhf_root)
+    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
 
     new_cr_data = {
         "id": "CR-997",
