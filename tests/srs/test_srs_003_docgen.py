@@ -24,7 +24,7 @@ class TestDocumentGeneration:
         except ImportError:
             pytest.fail("Jinja2 template engine not available")
     
-    def test_document_generator_initialization(self, test_dhf, test_core):
+    def test_document_generator_initialization(self, test_dhf, test_core, loader):
         """Verify DocumentGenerator can be initialized with test DHF"""
         templates_dir = test_dhf / "documents" / "specifications" / "templates"
         templates_dir.mkdir(parents=True, exist_ok=True)
@@ -33,7 +33,7 @@ class TestDocumentGeneration:
         (templates_dir / "test.j2").write_text("# {{ title }}")
         
         # Initialize DocumentGenerator
-        generator = DocumentGenerator(test_core._adapter._loader, test_core.config, templates_dir)
+        generator = DocumentGenerator(loader, test_core.config, templates_dir)
         assert generator is not None, "DocumentGenerator should initialize"
         assert generator.template_dir.exists(), "Templates directory should exist"
         assert generator.jinja_env is not None, "Jinja2 environment should be initialized"
@@ -72,7 +72,7 @@ class TestDocumentGeneration:
         assert 'approved' in output, "Generated document should contain status"
         assert 'This is a test requirement' in output, "Generated document should contain content"
     
-    def test_generate_markdown_spec(self, test_dhf, test_core):
+    def test_generate_markdown_spec(self, test_dhf, test_core, loader):
         """Verify DocumentGenerator can generate markdown specifications"""
         templates_dir = test_dhf / "documents" / "specifications" / "templates"
         templates_dir.mkdir(parents=True, exist_ok=True)
@@ -98,7 +98,7 @@ class TestDocumentGeneration:
         (templates_dir / "requirements_specification.md.j2").write_text(template_content)
         
         # Initialize generator
-        generator = DocumentGenerator(test_core._adapter._loader, test_core.config, templates_dir)
+        generator = DocumentGenerator(loader, test_core.config, templates_dir)
 
         # Get test items
         items = test_core.get_all_items()
@@ -120,13 +120,13 @@ class TestDocumentGeneration:
         assert len(srs_items) > 0, "Test data should have SRS items"
         assert srs_items[0]['id'] in output, "Should include item IDs"
     
-    def test_template_with_custom_filters(self, test_dhf, test_core):
+    def test_template_with_custom_filters(self, test_dhf, test_core, loader):
         """Verify DocumentGenerator registers custom Jinja2 filters"""
         templates_dir = test_dhf / "documents" / "specifications" / "templates"
         templates_dir.mkdir(parents=True, exist_ok=True)
         
         # Initialize generator
-        generator = DocumentGenerator(test_core._adapter._loader, test_core.config, templates_dir)
+        generator = DocumentGenerator(loader, test_core.config, templates_dir)
 
         # Verify custom filters are registered
         assert 'status_badge' in generator.jinja_env.filters, "Should have status_badge filter"

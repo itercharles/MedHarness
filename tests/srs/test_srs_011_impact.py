@@ -19,10 +19,10 @@ from utils.repository.loader import ItemLoader
 class TestImpactAnalysis:
     """Tests for SRS-011: Change Impact Analysis"""
     
-    def test_graph_traversal_for_descendants(self, test_core):
+    def test_graph_traversal_for_descendants(self, test_core, loader):
         """Verify graph traversal can find descendants"""
         # loader = ItemLoader(SPECS_DIR)
-        items = test_core._adapter._loader.load_all()
+        items = loader.load_all()
         
         engine = GraphEngine()
         engine.build_from_items(items)
@@ -31,9 +31,9 @@ class TestImpactAnalysis:
         assert hasattr(engine, 'get_descendants') or hasattr(engine, 'get_downstream'), \
             "GraphEngine should have descendant traversal method"
     
-    def test_impact_analysis_finds_all_downstream(self, test_core):
+    def test_impact_analysis_finds_all_downstream(self, test_core, loader):
         """Verify impact analysis identifies all downstream items"""
-        items = test_core._adapter._loader.load_all()
+        items = loader.load_all()
         
         engine = GraphEngine()
         engine.build_from_items(items)
@@ -48,10 +48,10 @@ class TestImpactAnalysis:
         # Should find downstream items (CRS, SYS, etc.)
         assert isinstance(descendants, (list, set)), "Should return descendants collection"
     
-    def test_impact_grouped_by_type(self, test_core):
+    def test_impact_grouped_by_type(self, test_core, loader):
         """Verify impact can be reported by document type"""
         # loader = ItemLoader(SPECS_DIR)
-        items = test_core._adapter._loader.load_all()
+        items = loader.load_all()
         
         engine = GraphEngine()
         engine.build_from_items(items)
@@ -73,10 +73,10 @@ class TestImpactAnalysis:
         # Should be able to group by type
         assert isinstance(by_type, dict), "Impact should be groupable by type"
     
-    def test_impact_score_calculable(self, test_core):
+    def test_impact_score_calculable(self, test_core, loader):
         """Verify impact score can be calculated"""
         # loader = ItemLoader(SPECS_DIR)
-        items = test_core._adapter._loader.load_all()
+        items = loader.load_all()
         
         engine = GraphEngine()
         engine.build_from_items(items)
@@ -93,10 +93,10 @@ class TestImpactAnalysis:
         assert isinstance(impact_score, int), "Impact score should be calculable"
         assert impact_score >= 0, "Impact score should be non-negative"
     
-    def test_transitive_dependencies_found(self, test_core):
+    def test_transitive_dependencies_found(self, test_core, loader):
         """Verify transitive dependencies are found (not just direct children)"""
         # loader = ItemLoader(SPECS_DIR)
-        items = test_core._adapter._loader.load_all()
+        items = loader.load_all()
         
         engine = GraphEngine()
         engine.build_from_items(items)
