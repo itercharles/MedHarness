@@ -16,6 +16,7 @@ from pathlib import Path
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
+from utils.local_adapter import LocalDHFAdapter
 from compliantflow.core import CompliantFlowCore
 
 
@@ -30,7 +31,7 @@ def test_TC_SYS_008_001_list_change_requests(test_dhf_root):
     Verify system can list all change requests.
     """
     # Initialize core with test DHF
-    core = CompliantFlowCore(test_dhf_root)
+    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
 
     # Get all CR items (filter from all items)
     all_items = core.get_all_items()
@@ -54,7 +55,7 @@ def test_TC_SYS_008_002_view_change_request_details(test_dhf_root):
     Verify system can retrieve detailed CR information.
     """
     # Initialize core with test DHF
-    core = CompliantFlowCore(test_dhf_root)
+    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
 
     # Get CR-001 (returns dict)
     cr = core.get_item("CR-001")
@@ -78,7 +79,7 @@ def test_TC_SYS_008_003_view_affected_items(test_dhf_root):
     Verify system tracks affected items for CRs.
     """
     # Initialize core with test DHF
-    core = CompliantFlowCore(test_dhf_root)
+    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
 
     # Get CR-001 (returns dict)
     cr = core.get_item("CR-001")
@@ -107,7 +108,7 @@ def test_TC_SYS_008_004_create_change_request(test_dhf_root):
     Verify system can create new change requests.
     """
     # Initialize core with test DHF
-    core = CompliantFlowCore(test_dhf_root)
+    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
 
     # Create new CR using Item model and saver
     new_cr_data = {
@@ -143,7 +144,7 @@ def test_TC_SYS_008_005_edit_change_request(test_dhf_root):
     Verify system can edit existing change requests.
     """
     # Initialize core with test DHF
-    core = CompliantFlowCore(test_dhf_root)
+    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
 
     original_cr = core.get_item("CR-001")
     original_title = original_cr["title"]
@@ -166,7 +167,7 @@ def test_TC_SYS_008_006_cr_impact_analysis(test_dhf_root):
     Verify system can analyze impact of change requests.
     """
     # Initialize core with test DHF
-    core = CompliantFlowCore(test_dhf_root)
+    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
 
     # Get CR-001 (returns dict)
     cr = core.get_item("CR-001")
@@ -193,7 +194,7 @@ def test_get_cr_for_item_finds_linked_cr(test_dhf_root):
     Verify core.get_cr_for_item() returns the CR that lists the given item
     in its affected_items field.
     """
-    core = CompliantFlowCore(test_dhf_root)
+    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
 
     # SRS-001 is in CR-001's affected_items (test data)
     cr = core.get_cr_for_item("SRS-001")
@@ -212,7 +213,7 @@ def test_get_cr_for_item_returns_none_for_unlinked_item(test_dhf_root):
 
     Verify core.get_cr_for_item() returns None when no CR references the item.
     """
-    core = CompliantFlowCore(test_dhf_root)
+    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
 
     cr = core.get_cr_for_item("UC-001")  # UC-001 is not in any CR
 
@@ -228,7 +229,7 @@ def test_get_non_stable_cr_finds_draft_cr(test_dhf_root):
 
     Verify core.get_non_stable_cr() returns a CR that is not in a stable state.
     """
-    core = CompliantFlowCore(test_dhf_root)
+    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
 
     cr = core.get_non_stable_cr()
 
@@ -249,7 +250,7 @@ def test_add_item_to_cr_adds_and_deduplicates(test_dhf_root):
     Verify core.add_item_to_cr() adds a new item to the CR's affected_items
     and is idempotent (no duplicates on repeated calls).
     """
-    core = CompliantFlowCore(test_dhf_root)
+    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
 
     # SRS-002 is not yet in CR-001
     cr_before = core.get_item("CR-001")

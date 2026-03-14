@@ -16,6 +16,7 @@ from pathlib import Path
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
+from utils.local_adapter import LocalDHFAdapter
 from compliantflow.core import CompliantFlowCore
 from utils.models.item import Item
 
@@ -30,7 +31,7 @@ def test_TC_SYS_004_001_detect_orphans(test_dhf_root):
     Verify system can detect orphan items.
     """
     # Initialize core with test DHF
-    core = CompliantFlowCore(test_dhf_root)
+    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
 
     # Find orphans (returns list of orphan dicts)
     orphans = core.graph.find_orphans()
@@ -56,7 +57,7 @@ def test_TC_SYS_004_002_orphan_exclusions(test_dhf_root):
     Verify root types are excluded from orphan detection.
     """
     # Initialize core with test DHF
-    core = CompliantFlowCore(test_dhf_root)
+    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
 
     # Find orphans (list of orphan dicts)
     orphans = core.graph.find_orphans()
@@ -76,7 +77,7 @@ def test_TC_SYS_004_003_create_orphan_and_detect(test_dhf_root):
     Verify system can create items and detect orphans if configured.
     """
     # Initialize core with test DHF
-    core = CompliantFlowCore(test_dhf_root)
+    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
 
     # Create a new SRS item without derives_from
     new_item_data = {
@@ -115,7 +116,7 @@ def test_TC_SYS_004_004_orphan_count(test_dhf_root):
     Verify system can count total orphan items.
     """
     # Initialize core with test DHF
-    core = CompliantFlowCore(test_dhf_root)
+    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
 
     # Find orphans (returns list)
     orphans = core.graph.find_orphans()

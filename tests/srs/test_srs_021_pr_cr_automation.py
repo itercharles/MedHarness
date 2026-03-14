@@ -107,8 +107,10 @@ class TestSRS021_PRCRValidation:
         @test_id: TC-SRS-021-001
         """
         from pathlib import Path as _Path
+        from utils.local_adapter import LocalDHFAdapter
         from compliantflow.core import CompliantFlowCore as _Core
-        core = _Core(_Path(__file__).parent.parent.parent / "DHF", auto_commit=False)
+        _dhf = _Path(__file__).parent.parent.parent / "DHF"
+        core = _Core(LocalDHFAdapter(_dhf))
 
         # cancelled and retired are marked is_stable in global_lifecycle
         for status in ('cancelled', 'retired', 'closed'):

@@ -23,12 +23,11 @@ def _resolve_dhf(dhf_option: str | None) -> Path:
 
 
 def _make_core(dhf_path: Path):
-    """Instantiate CompliantFlowCore; adds src/ to sys.path if needed."""
-    src_dir = Path(__file__).parent.parent
-    if str(src_dir) not in sys.path:
-        sys.path.insert(0, str(src_dir))
+    """Instantiate CompliantFlowCore with a LocalDHFAdapter."""
+    from utils.local_adapter import LocalDHFAdapter
     from compliantflow.core import CompliantFlowCore
-    return CompliantFlowCore(dhf_path, auto_commit=False)
+    adapter = LocalDHFAdapter(dhf_path, auto_commit=False)
+    return CompliantFlowCore(adapter)
 
 
 # ---------------------------------------------------------------------------

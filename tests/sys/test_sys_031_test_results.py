@@ -15,6 +15,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
+from utils.local_adapter import LocalDHFAdapter
 from compliantflow.core import CompliantFlowCore
 
 
@@ -27,7 +28,7 @@ def test_TC_SYS_031_001_compliance_references_standards(test_dhf_root):
 
     Verify system loads regulatory standards (IEC 62304) for test result display.
     """
-    core = CompliantFlowCore(test_dhf_root)
+    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
 
     policy_group = core.get_policy_group("IEC_62304")
 
@@ -47,7 +48,7 @@ def test_TC_SYS_031_002_item_verification_status(test_dhf_root):
 
     Verify system exposes requirement items with their verification status.
     """
-    core = CompliantFlowCore(test_dhf_root)
+    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
 
     item = core.get_item("SRS-001")
 

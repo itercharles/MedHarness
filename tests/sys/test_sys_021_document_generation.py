@@ -15,6 +15,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
+from utils.local_adapter import LocalDHFAdapter
 from compliantflow.core import CompliantFlowCore
 
 
@@ -27,7 +28,7 @@ def test_TC_SYS_021_001_retrieve_items_for_export(test_dhf_root):
 
     Verify system exposes SRS items with required fields for document generation.
     """
-    core = CompliantFlowCore(test_dhf_root)
+    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
 
     all_items = core.get_all_items()
     srs_items = [i for i in all_items if i["id"].startswith("SRS-")]
@@ -48,7 +49,7 @@ def test_TC_SYS_021_002_multiple_items_form_document_structure(test_dhf_root):
 
     Verify system provides enough items to form a structured document.
     """
-    core = CompliantFlowCore(test_dhf_root)
+    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
 
     all_items = core.get_all_items()
     srs_items = [i for i in all_items if i["id"].startswith("SRS-")]
@@ -66,7 +67,7 @@ def test_TC_SYS_021_003_generate_document_from_items(test_dhf_root):
 
     Verify system items contain sufficient data to produce a regulatory-ready document.
     """
-    core = CompliantFlowCore(test_dhf_root)
+    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
 
     all_items = core.get_all_items()
     srs_items = [i for i in all_items if i["id"].startswith("SRS-")]

@@ -9,6 +9,7 @@ sys.path.insert(0, str(project_root))
 
 # Import shared test data creation
 from tests.fixtures.test_data import create_test_dhf, populate_test_dhf
+from utils.local_adapter import LocalDHFAdapter
 from compliantflow.core import CompliantFlowCore
 
 

@@ -13,6 +13,7 @@ import pandas as pd
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
 from compliantflow.helpers.ui_helpers import make_item_columns_clickable, check_and_show_item_detail
+from utils.local_adapter import LocalDHFAdapter
 from compliantflow.core import CompliantFlowCore
 
 
@@ -23,7 +24,7 @@ class TestSRS013_LinkColumnForItemIDs:
     def core(self):
         """Initialize CompliantFlowCore."""
         dhf_root = Path(__file__).parent.parent.parent / "DHF"
-        return CompliantFlowCore(dhf_root)
+        return CompliantFlowCore(LocalDHFAdapter(dhf_root))
     
     def test_make_item_columns_clickable_detects_id_columns(self, core):
         """Verify function detects and configures item ID columns."""
@@ -78,7 +79,7 @@ class TestSRS013_ItemDetailExpanderComponent:
     def core(self):
         """Initialize CompliantFlowCore."""
         dhf_root = Path(__file__).parent.parent.parent / "DHF"
-        return CompliantFlowCore(dhf_root)
+        return CompliantFlowCore(LocalDHFAdapter(dhf_root))
     
     def test_item_detail_function_exists(self, core):
         """Verify check_and_show_item_detail function exists and is callable."""
@@ -101,7 +102,7 @@ class TestSRS013_AutomaticItemIDColumnDetection:
     def core(self):
         """Initialize CompliantFlowCore."""
         dhf_root = Path(__file__).parent.parent.parent / "DHF"
-        return CompliantFlowCore(dhf_root)
+        return CompliantFlowCore(LocalDHFAdapter(dhf_root))
     
     def test_detection_with_various_prefixes(self, core):
         """Verify detection works with various item ID prefixes."""
@@ -162,7 +163,7 @@ class TestSWDD006_PageURLGeneration:
     def core(self):
         """Initialize CompliantFlowCore."""
         dhf_root = Path(__file__).parent.parent.parent / "DHF"
-        return CompliantFlowCore(dhf_root)
+        return CompliantFlowCore(LocalDHFAdapter(dhf_root))
     
     def test_url_generation_without_core(self):
         """Verify URL generation falls back to query param without core."""
@@ -286,7 +287,7 @@ class TestHyperlinkIntegration:
     def core(self):
         """Initialize CompliantFlowCore."""
         dhf_root = Path(__file__).parent.parent.parent / "DHF"
-        return CompliantFlowCore(dhf_root)
+        return CompliantFlowCore(LocalDHFAdapter(dhf_root))
     
     def test_all_items_can_be_retrieved(self, core):
         """Verify all items can be retrieved for hyperlink navigation."""

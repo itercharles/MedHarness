@@ -16,6 +16,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
 from utils.repository.loader import ItemLoader
 from utils.exceptions import ValidationError
+from utils.local_adapter import LocalDHFAdapter
 from compliantflow.core import CompliantFlowCore
 
 
@@ -43,7 +44,7 @@ def test_valid_item_loads_without_error(test_dhf_root):
 
     Confirm that all items in the test DHF pass schema validation.
     """
-    core = CompliantFlowCore(test_dhf_root)
+    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
     items = core.get_all_items()
     assert len(items) > 0, "Test DHF should contain items"
 
@@ -58,7 +59,7 @@ def test_unknown_field_raises_validation_error(test_dhf_root):
     An item YAML with a field not declared in the doc-type config must raise
     ValidationError naming both the field and the file.
     """
-    core = CompliantFlowCore(test_dhf_root)
+    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
     tmp = test_dhf_root / "items" / "02_req_sys" / "SYS-INVALID-FIELD.yaml"
     _write_yaml(tmp, {
         "id": "SYS-INVALID-FIELD",
@@ -83,7 +84,7 @@ def test_missing_id_raises_validation_error(test_dhf_root):
     @links: SRS-001
     @test_id: TC-SRS-001-VAL-003
     """
-    core = CompliantFlowCore(test_dhf_root)
+    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
     tmp = test_dhf_root / "items" / "02_req_sys" / "SYS-NO-ID.yaml"
     _write_yaml(tmp, {
         "title": "Item without id",
@@ -105,7 +106,7 @@ def test_unknown_doc_type_raises_validation_error(test_dhf_root):
     @links: SRS-001
     @test_id: TC-SRS-001-VAL-004
     """
-    core = CompliantFlowCore(test_dhf_root)
+    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
     tmp = test_dhf_root / "items" / "02_req_sys" / "BOGUS-001.yaml"
     _write_yaml(tmp, {
         "id": "BOGUS-001",
@@ -154,7 +155,7 @@ def test_select_field_invalid_value_rejected(test_dhf_root):
 
     A field with format='select' must reject values not in the options list.
     """
-    core = CompliantFlowCore(test_dhf_root)
+    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
 
     # Find a doc type that has a select field
     select_field = None
@@ -196,7 +197,7 @@ def test_core_loads_all_items_with_validation_enabled(test_dhf_root):
     After config is loaded, CompliantFlowCore passes it to the loader so
     schema validation is active without any extra caller setup.
     """
-    core = CompliantFlowCore(test_dhf_root)
+    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
     # Validation is enabled; existing items must all be valid
     assert core.config is not None, "Core should have project_config loaded"
     items = core.get_all_items()

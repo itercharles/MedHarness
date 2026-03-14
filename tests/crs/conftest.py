@@ -34,7 +34,7 @@ def test_dhf_root():
 @pytest.fixture(scope="function")
 def core(test_dhf_root):
     """Return a CompliantFlowCore instance backed by the test DHF."""
-    import sys
-    sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
+    from utils.local_adapter import LocalDHFAdapter
     from compliantflow.core import CompliantFlowCore
-    return CompliantFlowCore(test_dhf_root, auto_commit=False)
+    adapter = LocalDHFAdapter(test_dhf_root, auto_commit=False)
+    return CompliantFlowCore(adapter)
