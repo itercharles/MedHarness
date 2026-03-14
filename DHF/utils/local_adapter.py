@@ -6,6 +6,7 @@ import re
 from pathlib import Path
 from typing import Dict, List, Optional
 
+from utils.artifact_fetcher import GitHubArtifactFetcher
 from utils.exceptions import ValidationError
 from utils.junit_parser import parse_junit_xml
 from utils.models.config import ProjectConfig
@@ -14,7 +15,7 @@ from utils.repository.git import GitRepository
 from utils.repository.loader import ItemLoader
 from utils.repository.saver import ItemSaver
 from utils.result_store import ResultStore
-from compliantflow.helpers.id_generator import get_next_id
+from utils.id_generator import get_next_id
 
 
 class LocalDHFAdapter:
@@ -33,6 +34,9 @@ class LocalDHFAdapter:
 
         # document_specifications lives in global config
         self._doc_specs = self._config.document_specifications
+
+        # Lazy-fetch flag: set True once GitHub auto-fetch has been attempted this session
+        self._results_fetched = False
 
     # ------------------------------------------------------------------
     # ProjectConfig
@@ -155,10 +159,58 @@ class LocalDHFAdapter:
     # Test results
     # ------------------------------------------------------------------
 
+    def _ensure_results_loaded(self) -> None:
+        """Auto-fetch from GitHub if local cache is absent and GITHUB_TOKEN is set.
+
+        Called lazily by every read method so CompliantFlow never needs to know
+        whether results come from a local file or the GitHub API — the DHF layer
+        decides transparently.
+
+        Only one attempt per adapter instance: if the fetch fails (no token,
+        no matching run, network error) results remain empty for the session.
+        Explicit ``pull_results_from_artifacts()`` resets the flag for a retry.
+        """
+        if self._results_fetched:
+            return
+        self._results_fetched = True
+
+        # Local cache present — nothing to do
+        if self._result_store._results_path.exists():
+            return
+
+        # No cache: try GitHub if a token is available
+        import os
+        if not os.environ.get("GITHUB_TOKEN"):
+            return  # No token, degrade gracefully
+
+        try:
+            fetcher = GitHubArtifactFetcher.from_environment(self._dhf_root)
+            fetch_result = fetcher.fetch()
+            for r in fetch_result["results"]:
+                if r.testing_status == "SKIP":
+                    continue
+                self._result_store.record_execution(
+                    tc_id=r.id,
+                    testing_status=r.testing_status,
+                    tester="GitHub Actions",
+                    run_id=fetch_result["run_id"],
+                    run_url=fetch_result["run_url"],
+                    notes=r.error_message or "",
+                    links=r.links,
+                    title=r.title,
+                    reviewer=r.reviewer,
+                    review_date=r.review_date,
+                    review_status=r.review_status,
+                )
+        except Exception:
+            pass  # Degrade gracefully — caller sees empty results
+
     def get_test_result(self, tc_id: str) -> Optional[dict]:
+        self._ensure_results_loaded()
         return self._result_store.get(tc_id)
 
     def get_all_test_results(self, status_filter: Optional[str] = None) -> Dict[str, dict]:
+        self._ensure_results_loaded()
         return self._result_store.get_all(status_filter)
 
     def record_test_result(
@@ -192,6 +244,7 @@ class LocalDHFAdapter:
         )
 
     def get_test_result_items(self) -> List[dict]:
+        self._ensure_results_loaded()
         return self._result_store.as_tc_items()
 
     def import_results_from_file(
@@ -235,3 +288,63 @@ class LocalDHFAdapter:
                 "links": r.links or [],
             })
         return {"recorded": recorded, "skipped": skipped}
+
+    def pull_results_from_artifacts(
+        self,
+        run_id: str = "",
+        commit_sha: str = "",
+    ) -> dict:
+        """Fetch test results from GitHub Actions artifacts and cache locally.
+
+        Delegates all GitHub API details to GitHubArtifactFetcher (DHF layer).
+        Non-SKIP results are written to the local ResultStore cache (git-ignored).
+
+        Returns::
+
+            {
+                "recorded": List[{"tc_id", "testing_status", "links"}],
+                "skipped":  int,
+                "run_id":   str,
+                "run_url":  str,
+            }
+        """
+        # Force-refresh: reset flag so _ensure_results_loaded won't skip next time
+        self._results_fetched = True
+
+        fetcher = GitHubArtifactFetcher.from_environment(self._dhf_root)
+        fetch_result = fetcher.fetch(run_id=run_id, commit_sha=commit_sha)
+
+        actual_run_id = fetch_result["run_id"]
+        run_url = fetch_result["run_url"]
+        results = fetch_result["results"]
+
+        recorded = []
+        skipped = 0
+        for r in results:
+            if r.testing_status == "SKIP":
+                skipped += 1
+                continue
+            self._result_store.record_execution(
+                tc_id=r.id,
+                testing_status=r.testing_status,
+                tester="GitHub Actions",
+                run_id=actual_run_id,
+                run_url=run_url,
+                notes=r.error_message or "",
+                links=r.links,
+                title=r.title,
+                reviewer=r.reviewer,
+                review_date=r.review_date,
+                review_status=r.review_status,
+            )
+            recorded.append({
+                "tc_id": r.id,
+                "testing_status": r.testing_status,
+                "links": r.links or [],
+            })
+        return {
+            "recorded": recorded,
+            "skipped": skipped,
+            "run_id": actual_run_id,
+            "run_url": run_url,
+        }

@@ -7,8 +7,7 @@ on:
     types: [opened, synchronize]
 
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
 
 jobs:
   phase1-srs:
@@ -29,12 +28,12 @@ jobs:
           python -m pip install --upgrade pip
           pip install pytest pytest-cov
           pip install -r requirements.txt
-      
+
       - name: Run Unit Tests
         run: |
           export PYTHONPATH="${PYTHONPATH}:${PWD}/src:${PWD}/DHF"
           pytest tests/ --ignore=tests/crs/ --ignore=tests/sys/ --junitxml=unit-test-results.xml --cov=src --cov-report=xml
-      
+
       - name: Upload unit test results
         if: always()
         uses: actions/upload-artifact@v4
@@ -109,62 +108,11 @@ jobs:
           name: crs-test-results
           path: crs-test-results.xml
 
-  phase-import-results:
-    name: Phase 3.5 - Import Test Results to DHF
-    runs-on: ubuntu-latest
-    needs: [phase1-srs, phase2-sys, phase3-crs]
-    if: github.event_name == 'pull_request'
-    steps:
-      - name: Check out code
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.head_ref || github.ref_name }}
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-          cache: 'pip'
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-
-      - name: Download test result artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: test-artifacts
-
-      - name: Import test results to DHF
-        run: |
-          export PYTHONPATH="${PWD}/src:${PWD}/DHF"
-          for xml in test-artifacts/*/*.xml; do
-            echo "Importing $xml"
-            python -m compliantflow --dhf DHF test import "$xml" \
-              --format junit \
-              --tester "GitHub Actions" \
-              --run-id "${{ github.run_id }}" \
-              --run-url "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
-              --commit "${{ github.sha }}" || echo "Warning: import failed for $xml"
-          done
-
-      - name: Commit test results to DHF
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-          git add DHF/test-results/results.yaml 2>/dev/null || true
-
-          if git diff --cached --quiet; then
-            echo "No test result changes to commit"
-            exit 0
-          fi
-
-          git commit -m "CI: Import test results from run ${{ github.run_id }}"
-          git push origin HEAD:${{ github.head_ref || github.ref_name }}
-          echo "✅ Test results imported and committed to DHF"
+  # Phase 3.5 (Import test results) removed — CR-019.
+  # Test results remain in GitHub Actions artifacts (source of truth).
+  # Use: python -m compliantflow --dhf DHF test pull [--run-id RUN_ID]
+  # to fetch results from artifacts into local cache on demand.
+  # See SYSARCH-013 for the architecture rationale.
 
   # Phase 4 (CR auto-update) removed — CR affected_items and PR linkage
   # will be managed by a dedicated workflow in a future iteration.

@@ -121,6 +121,46 @@ class _TestResultsMixin:
             "failed_tcs": failed_tcs,
         }
 
+    def pull_test_results(self, run_id: str = "", commit_sha: str = "") -> Dict:
+        """Fetch test results from GitHub Actions artifacts.
+
+        Delegates to the DHF adapter which uses GitHubArtifactFetcher internally.
+        Results are cached locally (git-ignored). Verification status is computed
+        in-memory and injected into graph nodes — requirement YAML files are NOT
+        modified.
+
+        Returns summary: {imported, skipped, run_id, run_url, failed_tcs}.
+        """
+        result = self._adapter.pull_results_from_artifacts(
+            run_id=run_id, commit_sha=commit_sha
+        )
+        recorded = result["recorded"]
+        skipped = result["skipped"]
+
+        touched_items: set = set()
+        for rec in recorded:
+            for item_id in (rec.get("links") or []):
+                touched_items.add(item_id)
+
+        # Reload graph so new TC items appear
+        self.refresh()
+        # Compute verification_status in-memory — no YAML writes
+        self._inject_verification_status(touched_items)
+
+        all_results = self._adapter.get_all_test_results()
+        failed_tcs = [
+            tc_id
+            for tc_id, rec in all_results.items()
+            if rec.get("testing_status") == "FAIL"
+        ]
+        return {
+            "imported": len(recorded),
+            "skipped": skipped,
+            "run_id": result.get("run_id", ""),
+            "run_url": result.get("run_url", ""),
+            "failed_tcs": failed_tcs,
+        }
+
     def get_test_result(self, tc_id: str) -> Optional[Dict]:
         """Return the stored record for a TC, or None if not found."""
         return self._adapter.get_test_result(tc_id)
@@ -168,3 +208,58 @@ class _TestResultsMixin:
                 updated.append(item_id)
 
         return updated
+
+    def _refresh_verification_status(self) -> None:
+        """Recompute verification_status in-memory for ALL verifiable graph nodes.
+
+        Called automatically by core.refresh() so verification_status is always
+        current after any graph rebuild — no explicit 'test pull' needed.
+        Skips silently when no test results are available.
+        """
+        all_results = self._adapter.get_all_test_results()
+        if not all_results:
+            return
+
+        verifiable_ids = {
+            node_id
+            for node_id in self.graph.graph.nodes
+            if self.config and (
+                cfg := self.config.get_doc_type(node_id.split("-")[0])
+            ) and getattr(cfg, "has_verification", False)
+        }
+        self._inject_verification_status(verifiable_ids)
+
+    def _inject_verification_status(self, item_ids: set) -> None:
+        """Compute verification_status and update graph nodes in-memory only.
+
+        Unlike _update_requirement_verification, this does NOT call update_item()
+        and does NOT write to YAML. Used by pull_test_results() so that fetched
+        results are reflected in the current session without dirtying the working tree.
+        """
+        all_results = self._adapter.get_all_test_results()
+
+        for item_id in item_ids:
+            if not self.graph.graph.has_node(item_id):
+                continue
+
+            doc_type_code = item_id.split("-")[0]
+            doc_type_cfg = self.config.get_doc_type(doc_type_code) if self.config else None
+            if not doc_type_cfg or not getattr(doc_type_cfg, "has_verification", False):
+                continue
+
+            linked_tc_results = [
+                rec
+                for rec in all_results.values()
+                if item_id in (rec.get("links") or [])
+                and rec.get("testing_status") in ("PASS", "FAIL")
+            ]
+
+            if not linked_tc_results:
+                new_status = "not_verified"
+            elif any(r["testing_status"] == "FAIL" for r in linked_tc_results):
+                new_status = "failed"
+            else:
+                new_status = "verified"
+
+            # Update in-memory graph node — Item allows assignment (validate_assignment=True)
+            self.graph.graph.nodes[item_id]["item"].verification_status = new_status

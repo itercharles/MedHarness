@@ -35,3 +35,7 @@ ENV/
 # Streamlit
 .streamlit/
 .env
+
+# Test results local cache (source of truth is GitHub Actions artifacts)
+# Use: python -m compliantflow --dhf DHF test pull
+DHF/test-results/results.yaml

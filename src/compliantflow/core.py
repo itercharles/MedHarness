@@ -57,7 +57,7 @@ class CompliantFlowCore(
             adapter: Optional DHFAdapter instance. If provided, dhf_root is ignored.
         """
         if adapter is None:
-            from compliantflow.adapters.local import LocalDHFAdapter
+            from utils.local_adapter import LocalDHFAdapter
             if dhf_root is None:
                 raise ValueError("Either dhf_root or adapter must be provided")
             adapter = LocalDHFAdapter(Path(dhf_root), auto_commit=auto_commit)
@@ -75,6 +75,9 @@ class CompliantFlowCore(
             self.repo_root = Path(".")
 
         self.refresh()
+        # Compute verification_status in-memory once on startup.
+        # DHF auto-fetches from GitHub if no local cache is present (transparent).
+        self._refresh_verification_status()
 
     def refresh(self):
         """Reload all items and rebuild graph."""
