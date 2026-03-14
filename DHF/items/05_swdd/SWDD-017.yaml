@@ -33,5 +33,3 @@ content: |-
   changed (the existing "No changes to CR file" guard). Removing the PR block
   means the commit also no longer triggers on the first PR open (when items may
   be unchanged but PR metadata was new). This reduces unnecessary bot commits.
-implements:
-- SRS-001

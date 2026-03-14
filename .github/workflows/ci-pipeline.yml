@@ -10,8 +10,8 @@ permissions:
   contents: read
 
 jobs:
-  phase1-srs:
-    name: Phase 1 - SRS Tests
+  phase1-dhf-utils:
+    name: Phase 1 - DHF Utility Tests
     runs-on: ubuntu-latest
     steps:
       - name: Check out code
@@ -29,10 +29,10 @@ jobs:
           pip install pytest pytest-cov
           pip install -r requirements.txt
 
-      - name: Run Unit Tests
+      - name: Run DHF Utility Tests
         run: |
           export PYTHONPATH="${PYTHONPATH}:${PWD}/src:${PWD}/DHF"
-          pytest tests/ --ignore=tests/crs/ --ignore=tests/sys/ --junitxml=unit-test-results.xml --cov=src --cov-report=xml
+          pytest DHF/utils/tests/ --junitxml=unit-test-results.xml --cov=src --cov-report=xml
 
       - name: Upload unit test results
         if: always()
@@ -45,7 +45,7 @@ jobs:
   phase2-sys:
     name: Phase 2 - SYS API Tests
     runs-on: ubuntu-latest
-    needs: phase1-srs
+    needs: phase1-dhf-utils
     steps:
       - name: Check out code
         uses: actions/checkout@v4

@@ -17,7 +17,7 @@ Prohibited imports (except utils.local_adapter lazy import in core.py):
 
 LocalDHFAdapter now lives in DHF/utils/local_adapter.py (CR-019 boundary move).
 
-@links: SYS-034
+Boundary rules documented in DHF/utils/docs/design.md (DESIGN-013).
 """
 
 import ast

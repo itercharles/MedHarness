@@ -52,15 +52,17 @@ stdout = machine-readable JSON; stderr = human-readable messages.
 
 ### Run tests
 ```bash
-# Full suite — MUST run all three before merging
+# Product tests — MUST run all before merging
 PYTHONPATH=src:DHF .venv/bin/pytest tests/sys/ tests/crs/ -q
-PYTHONPATH=src:DHF .venv/bin/pytest tests/srs/ -q
+
+# DHF utility tests (independent; test the DHF data layer)
+PYTHONPATH=src:DHF .venv/bin/pytest DHF/utils/tests/ -q
 
 # Single test
 PYTHONPATH=src:DHF .venv/bin/pytest tests/sys/test_sys_001_object_management.py::test_name -v
 ```
 
-**Important**: Run from the repo root. Use `PYTHONPATH=src:DHF` for all test suites. **Before any merge, all three test suites (sys, crs, srs) must pass.**
+**Important**: Run from the repo root. Use `PYTHONPATH=src:DHF` for all test suites. **Before any merge, all product test suites (sys, crs) must pass.**
 
 ## Architecture
 
