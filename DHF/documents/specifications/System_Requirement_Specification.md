@@ -7,7 +7,7 @@
 | Field | Value |
 |-------|-------|
 | **Document ID** | SYS-SPEC |
-| **Version** | 1.139 |
+| **Version** | 1.141 |
 | **Generated** | 2026-03-14 |
 | **Status** | Draft |
 | **Project** | CompliantFlow Project |
@@ -125,21 +125,7 @@ The system shall support two complementary approval models:
 
 </div>
 
-### 7. SYS-021: Document Generation and Export
-
-<div class="requirement-section" markdown="1">
-
-**Status**: <span class="status-"></span>  
-**Reviewer**: System Architect  **Review Date**: 2024-12-15  **Category**: Document Management  **Verification Method**: ['Test']  
-#### Description
-
-The system shall provide document generation capabilities to export CompliantFlow data as regulatory-ready PDF documents. Generate requirements specification PDFs for requirements, design, change requests, etc.
-
-
-
-</div>
-
-### 8. SYS-030: Automated Change Request Workflow
+### 7. SYS-030: Automated Change Request Workflow
 
 <div class="requirement-section" markdown="1">
 
@@ -153,7 +139,7 @@ The system shall provide automated workflows to link Pull Requests and changed o
 
 </div>
 
-### 9. SYS-031: Test Verification Status Display
+### 8. SYS-031: Test Verification Status Display
 
 <div class="requirement-section" markdown="1">
 
@@ -167,7 +153,7 @@ The system shall display the verification status (verified / failed / not_verifi
 
 </div>
 
-### 10. SYS-032: Command-Line Interface
+### 9. SYS-032: Command-Line Interface
 
 <div class="requirement-section" markdown="1">
 
@@ -192,7 +178,7 @@ Required command groups:
 
 </div>
 
-### 11. SYS-035: On-Demand Test Result Retrieval from CI Artifacts
+### 10. SYS-035: On-Demand Test Result Retrieval from CI Artifacts
 
 <div class="requirement-section" markdown="1">
 
@@ -217,7 +203,7 @@ Acceptance criteria:
 
 </div>
 
-### 12. SYSARCH-004: Change Management Module
+### 11. SYSARCH-004: Change Management Module
 
 <div class="requirement-section" markdown="1">
 
@@ -250,7 +236,7 @@ Module for tracking and controlling changes to DHF items through change requests
 
 </div>
 
-### 13. SYSARCH-008: Web UI Module
+### 12. SYSARCH-008: Web UI Module
 
 <div class="requirement-section" markdown="1">
 
@@ -283,7 +269,7 @@ Streamlit-based web user interface for DHF management.
 
 </div>
 
-### 14. SYSARCH-009: CLI Module
+### 13. SYSARCH-009: CLI Module
 
 <div class="requirement-section" markdown="1">
 
@@ -291,34 +277,34 @@ Streamlit-based web user interface for DHF management.
 
 #### Description
 
-Two CLI modules providing headless access to DHF operations for CI/CD pipelines,
-split by the DHF data layer extraction (CR-013).
+The `compliantflow` CLI (`src/compliantflow/cli.py`, entry: `python -m compliantflow`)
+provides headless access to CompliantFlow analysis and lifecycle operations for
+CI/CD pipelines.
 
-**compliantflow CLI** (`src/compliantflow/cli.py`, entry: `python -m compliantflow`):
-- Analysis and lifecycle operations: traceability validation, compliance checking,
-  item lifecycle transitions, CR management, test result import/query,
-  traceability matrix and chain views
-- Routes to `CompliantFlowCore` for all operations
-- No item CRUD (create/update/delete); those are in the dhf CLI
+**Responsibilities**:
+- Traceability validation and compliance checking
+- Item lifecycle transitions (not item CRUD)
+- Change request status and update
+- Traceability matrix and chain views
+- Test result import from JUnit XML and on-demand pull from GitHub Actions artifacts
+- Test result query (status, list)
+- Routes all operations through `CompliantFlowCore`
 
-**dhf CLI** (`DHF/utils/cli.py`, entry: `python -m utils`):
-- Data-layer operations only: item CRUD, schema validation, config inspection,
-  document generation and PDF export
-- Routes to `LocalDHFAdapter` — no dependency on the compliantflow analysis package
-- Can be used standalone without CompliantFlowCore
-
-**Shared conventions**:
-- `click` library for argument parsing and help generation
+**Conventions**:
+- `click` library for argument parsing
 - DHF path: `--dhf` option → `COMPLIANTFLOW_DHF` env var → `<repo_root>/DHF` default
 - stdout = machine-readable JSON; stderr = human-readable diagnostics
 - Exit codes: 0 success, 1 business error, 2 usage error
-- Stateless: each invocation creates a fresh instance; no shared state with the Web UI
+- Stateless: each invocation creates a fresh `CompliantFlowCore` instance
+
+The data-layer CLI (`python -m utils`) is a separate DHF utils concern — its
+architecture is documented in DHF/utils/docs/.
 
 
 
 </div>
 
-### 15. SYSARCH-011: PR-to-CR Linkage is GitOps-Implicit, Not YAML-Stored
+### 14. SYSARCH-011: PR-to-CR Linkage is GitOps-Implicit, Not YAML-Stored
 
 <div class="requirement-section" markdown="1">
 
@@ -377,7 +363,7 @@ with that CR. No separate record in YAML is needed.
 
 </div>
 
-### 16. SYSARCH-013: GitHub Actions Artifacts as Test Result Source of Truth
+### 15. SYSARCH-013: GitHub Actions Artifacts as Test Result Source of Truth
 
 <div class="requirement-section" markdown="1">
 
@@ -448,14 +434,14 @@ Actions → Artifact and log retention for longer-term compliance requirements.
 
 | Metric | Count |
 |--------|-------|
-| **Total Requirements** | 16 |
+| **Total Requirements** | 15 |
 | **Approved** | 0 |
 | **Draft** | 0 |
 | **Retired** | 0 |
 
 ### 3.2 Approval Status
 
-**Approval Rate**: 0.0% (0/16)
+**Approval Rate**: 0.0% (0/15)
 
 ---
 
