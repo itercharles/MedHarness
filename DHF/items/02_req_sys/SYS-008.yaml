@@ -1,0 +1,24 @@
+id: SYS-008
+title: Component Boundary Isolation
+category: Maintainability
+content: |-
+  The compliantflow analysis engine shall not directly import DHF I/O layer modules.
+  All DHF data access shall go through the DHFAdapter interface.
+
+  Prohibited direct imports in compliantflow/:
+  - utils.repository.* (ItemLoader, ItemSaver, GitRepository)
+  - utils.result_store (ResultStore)
+  - utils.junit_parser (parse_junit_xml)
+  - utils.document_generation (DocumentGenerator)
+
+  The DHF adapter implementation (DHF/utils/local_adapter.py) may import
+  compliantflow.domain.* (shared vocabulary) but must not import
+  compliantflow analysis-layer modules (traceability, core, cli).
+
+  This boundary ensures the analysis engine can be used with any DHF backend
+  by swapping the adapter implementation without changing core logic.
+verification_method:
+- Inspection
+- Test
+satisfies:
+- CRS-008

@@ -1,0 +1,23 @@
+id: SYS-007
+title: Automated Test Result Import
+category: Functional
+content: |-
+  The system shall import automated test results from standard JUnit XML reports
+  via the DHF data layer, link each result to its corresponding traced requirements,
+  and automatically update the verification status of linked requirements.
+
+  Verification status shall be computed as:
+  - verified: all linked test cases pass
+  - failed: at least one linked test case fails
+  - not_verified: no test results are linked
+
+  The import shall be idempotent: re-importing the same results shall overwrite
+  the previous record for each test case, not create duplicates.
+
+  Test results shall be linked to requirements via a TC ID embedded in the
+  JUnit XML (as a custom property or extracted from the test name), and shall
+  not require any specific test framework.
+verification_method:
+- Test
+satisfies:
+- CRS-008

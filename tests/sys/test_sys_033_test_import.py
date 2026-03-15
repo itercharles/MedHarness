@@ -1,10 +1,10 @@
 """
-Tests for CRS-008: CI/CD Integration and Automated Test Result Import
+Tests for SYS-007: Automated Test Result Import
 
 Verifies that external test results can be imported via JUnit XML and
 the ResultStore CLI, and that linked requirement items are updated.
 
-@links: CRS-008
+@links: SYS-007
 """
 
 import json
@@ -92,7 +92,7 @@ def test_TC_SYS_033_001_parse_junit_xml(test_dhf_root):
     plus PASS/FAIL/SKIP status detection.
 
     @test_id: TC-SYS-033-001
-    @links: CRS-008
+    @links: SYS-007
     """
     xml_path = _make_junit_xml(test_dhf_root, [
         {
@@ -139,7 +139,7 @@ def test_TC_SYS_033_002_pass_import_marks_item_verified(test_dhf_root):
     the linked SYS item's verification_status to 'verified'.
 
     @test_id: TC-SYS-033-002
-    @links: CRS-008
+    @links: SYS-007
     """
     _enable_verification(test_dhf_root)
     adapter = LocalDHFAdapter(test_dhf_root)
@@ -163,7 +163,7 @@ def test_TC_SYS_033_003_fail_import_marks_item_failed(test_dhf_root):
     the linked SYS item's verification_status to 'failed'.
 
     @test_id: TC-SYS-033-003
-    @links: CRS-008
+    @links: SYS-007
     """
     _enable_verification(test_dhf_root)
     adapter = LocalDHFAdapter(test_dhf_root)
@@ -189,7 +189,7 @@ def test_TC_SYS_033_004_non_tc_tests_skipped(test_dhf_root):
     no recognisable TC ID in name or properties.
 
     @test_id: TC-SYS-033-004
-    @links: CRS-008
+    @links: SYS-007
     """
     xml_path = _make_junit_xml(test_dhf_root, [
         {"name": "test_without_any_tc_marker"},
@@ -211,7 +211,7 @@ def test_TC_SYS_033_005_review_fields_via_import(test_dhf_root):
     from compliantflow.* XML properties.
 
     @test_id: TC-SYS-033-005
-    @links: CRS-008
+    @links: SYS-007
     """
     xml_path = _make_junit_xml(test_dhf_root, [
         {
@@ -255,7 +255,7 @@ def test_TC_SYS_033_006_cli_test_import(runner, test_dhf_root, dhf_str):
     with run_id in the stored records.
 
     @test_id: TC-SYS-033-006
-    @links: CRS-008
+    @links: SYS-007
     """
     xml_path = _make_junit_xml(test_dhf_root, [
         {"name": "test_TC_SYS_001_obj"},
@@ -291,7 +291,7 @@ def test_TC_SYS_033_007_cli_test_list_filter(runner, test_dhf_root, dhf_str):
     TC-SYS-033-007: `test list --status PASS` returns only PASS records.
 
     @test_id: TC-SYS-033-007
-    @links: CRS-008
+    @links: SYS-007
     """
     xml_path = _make_junit_xml(test_dhf_root, [
         {"name": "test_TC_SYS_001_pass"},

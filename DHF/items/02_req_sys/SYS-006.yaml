@@ -1,0 +1,25 @@
+id: SYS-006
+title: CLI for CI/CD Integration
+category: Functional
+content: |-
+  The system shall provide two command-line interfaces enabling headless integration
+  with CI/CD pipelines without requiring a web server.
+
+  Analysis CLI (python -m compliantflow) — read-only operations:
+  - Traceability validation and matrix generation across configurable doc-type paths
+  - Compliance assessment against governance policy groups (e.g. IEC_62304)
+  - Change request status queries
+
+  Data CLI (python -m utils) — data mutation operations:
+  - DHF item CRUD and schema validation
+  - Lifecycle transitions for CR/REL/DEF items
+  - Document generation and export
+  - Test result reads
+
+  All CLI commands shall write machine-readable JSON to stdout and
+  human-readable messages to stderr, enabling scripted parsing in CI pipelines.
+verification_method:
+- Test
+- Inspection
+satisfies:
+- CRS-008
