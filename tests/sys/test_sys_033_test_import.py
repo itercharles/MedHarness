@@ -17,10 +17,10 @@ import yaml
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
 from click.testing import CliRunner
-from compliantflow.cli import main
+from utils.cli import main
 from utils.local_adapter import LocalDHFAdapter
 from compliantflow.core import CompliantFlowCore
-from utils.junit_parser import parse_junit_xml, ExecutionResult
+from utils.junit_parser import parse_junit_xml
 
 
 @pytest.fixture
@@ -135,21 +135,19 @@ def test_TC_SYS_033_001_parse_junit_xml(test_dhf_root):
 
 def test_TC_SYS_033_002_pass_import_marks_item_verified(test_dhf_root):
     """
-    TC-SYS-033-002: import_test_results with all-PASS results sets
+    TC-SYS-033-002: recording a PASS result and refreshing sets
     the linked SYS item's verification_status to 'verified'.
 
     @test_id: TC-SYS-033-002
     @links: CRS-008
     """
     _enable_verification(test_dhf_root)
-    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
+    adapter = LocalDHFAdapter(test_dhf_root)
+    core = CompliantFlowCore(adapter)
 
-    results = [ExecutionResult(id="TC-SYS-001", testing_status="PASS", name="test_TC_SYS_001",
-                               links=["SYS-001"])]
-    summary = core.import_test_results(results, tester="CI")
-
-    assert summary["imported"] == 1
-    assert "SYS-001" in summary["items_updated"]
+    adapter.record_test_result(tc_id="TC-SYS-001", testing_status="PASS", tester="CI",
+                               links=["SYS-001"])
+    core.refresh()
 
     sys_item = core.get_item("SYS-001")
     assert sys_item["verification_status"] == "verified"
@@ -161,25 +159,24 @@ def test_TC_SYS_033_002_pass_import_marks_item_verified(test_dhf_root):
 
 def test_TC_SYS_033_003_fail_import_marks_item_failed(test_dhf_root):
     """
-    TC-SYS-033-003: import_test_results with a FAIL result sets
+    TC-SYS-033-003: recording a FAIL result and refreshing sets
     the linked SYS item's verification_status to 'failed'.
 
     @test_id: TC-SYS-033-003
     @links: CRS-008
     """
     _enable_verification(test_dhf_root)
-    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
+    adapter = LocalDHFAdapter(test_dhf_root)
+    core = CompliantFlowCore(adapter)
 
-    results = [ExecutionResult(id="TC-SYS-999", testing_status="FAIL", name="test_TC_SYS_999",
-                               links=["SYS-001"], error_message="AssertionError")]
-    summary = core.import_test_results(results, tester="CI")
-
-    assert summary["imported"] == 1
-    assert "SYS-001" in summary["items_updated"]
+    adapter.record_test_result(tc_id="TC-SYS-999", testing_status="FAIL", tester="CI",
+                               links=["SYS-001"], notes="AssertionError")
+    core.refresh()
 
     sys_item = core.get_item("SYS-001")
     assert sys_item["verification_status"] == "failed"
-    assert "TC-SYS-999" in summary["failed_tcs"]
+    all_results = adapter.get_all_test_results()
+    assert all_results["TC-SYS-999"]["testing_status"] == "FAIL"
 
 
 # ---------------------------------------------------------------------------
@@ -228,11 +225,18 @@ def test_TC_SYS_033_005_review_fields_via_import(test_dhf_root):
         },
     ])
 
-    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
+    adapter = LocalDHFAdapter(test_dhf_root)
+    core = CompliantFlowCore(adapter)
     results = parse_junit_xml(xml_path)
-    core.import_test_results(results, tester="CI")
+    for r in results:
+        adapter.record_test_result(
+            tc_id=r.id, testing_status=r.testing_status, tester="CI",
+            links=r.links or [], reviewer=r.reviewer or "",
+            review_date=r.review_date or "", review_status=r.review_status or "",
+        )
+    core.refresh()
 
-    record = core.get_test_result("TC-SYS-001")
+    record = adapter.get_test_result("TC-SYS-001")
     assert record is not None
     assert record["reviewer"] == "Alice"
     assert record["review_date"] == "2026-01-15"
@@ -272,8 +276,7 @@ def test_TC_SYS_033_006_cli_test_import(runner, test_dhf_root, dhf_str):
     assert "imported" in summary
     assert summary["imported"] >= 1
 
-    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
-    record = core.get_test_result("TC-SYS-001")
+    record = LocalDHFAdapter(test_dhf_root).get_test_result("TC-SYS-001")
     assert record is not None
     assert record.get("run_id") == "7890123"
     assert record.get("commit_sha") == "abc123def"
