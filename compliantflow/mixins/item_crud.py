@@ -2,8 +2,6 @@
 
 from typing import List, Optional, Dict, Any
 
-from utils.models.item import Item
-
 
 class _ItemCRUDMixin:
 
@@ -16,23 +14,21 @@ class _ItemCRUDMixin:
         """
         items = []
         for node_id in self.graph.graph.nodes:
-            item: Item = self.graph.graph.nodes[node_id]['item']
-            item_dict = item.model_dump(by_alias=True, exclude_none=True)
-            item_dict['all_linked_uids'] = item.all_linked_uids
-            items.append(item_dict)
+            item: dict = self.graph.graph.nodes[node_id]['item']
+            items.append(dict(item))
         return items
 
     def get_items_filtered(
         self,
-        doc_type_code: str,
+        type_name: str,
         status_filter: Optional[List[str]] = None,
         search: str = "",
     ) -> List[Dict[str, Any]]:
         """
-        Return items for a document type, optionally filtered by status and search text.
+        Return items for a type, optionally filtered by status and search text.
         """
-        doc_type_config = self.config.get_doc_type(doc_type_code) if self.config else None
-        prefix = doc_type_config.prefix if doc_type_config else f"{doc_type_code}-"
+        item_type = self.config.get_type(type_name) if self.config else None
+        prefix = item_type.id_prefix if item_type else f"{type_name}-"
 
         all_items = self.get_all_items()
         result = []
@@ -56,9 +52,8 @@ class _ItemCRUDMixin:
         """Get a specific item by UID."""
         if not self.graph.graph.has_node(uid):
             return None
-
-        item: Item = self.graph.graph.nodes[uid]['item']
-        return item.model_dump(by_alias=True, exclude_none=True)
+        item: dict = self.graph.graph.nodes[uid]['item']
+        return dict(item)
 
     def create_item(self, item_data: dict, author: str = "system", cr_id: Optional[str] = None) -> dict:
         """Create a new item."""
@@ -78,21 +73,21 @@ class _ItemCRUDMixin:
         if not existing:
             return None
 
-        doc_type_config = self.config.get_doc_type_by_prefix(existing.get('id', '').split('-')[0] + '-') if self.config else None
-        if doc_type_config and doc_type_config.lifecycle:
+        prefix = existing.get('id', '').split('-')[0] + '-'
+        item_type = self.config.get_type_by_prefix(prefix) if self.config else None
+        if item_type and item_type.lifecycle:
             if 'status' not in data:
-                initial_status = self.get_initial_state(doc_type_config.code)
+                initial_status = self.get_initial_state(item_type.name)
                 data = {**data, 'status': initial_status}
 
             old_status = existing.get('status')
             if old_status:
                 old_state_info = self.get_state_info(old_status)
                 if old_state_info.get('is_stable', False):
-                    initial_state = self.get_initial_state(doc_type_config.code)
+                    initial_state = self.get_initial_state(item_type.name)
                     data = {**data, 'status': initial_state}
                     approval_fields = ['approved_by', 'approved_date', 'reviewer', 'review_date',
                                        'verified_by', 'verified_date', 'released_by', 'released_date']
-                    # Remove from incoming data and explicitly null them to clear existing values
                     data = {k: v for k, v in data.items() if k not in approval_fields}
                     for field in approval_fields:
                         data[field] = None

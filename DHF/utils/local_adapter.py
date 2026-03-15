@@ -42,18 +42,55 @@ class LocalDHFAdapter:
     # ProjectConfig
     # ------------------------------------------------------------------
 
-    def get_project_config(self) -> ProjectConfig:
-        return self._config
+    def get_project_config(self):
+        from compliantflow.domain.schema import (
+            ProjectSchema, ItemTypeSchema, GlobalLifecycle, LifecycleStateInfo
+        )
+        item_types = []
+        for dt in self._config.doc_types:
+            item_types.append(ItemTypeSchema(
+                name=dt.type_name or dt.code,
+                id_prefix=dt.prefix,
+                parent_types=dt.parent_types or [],
+                lifecycle=dt.lifecycle,
+                has_verification=bool(dt.has_verification),
+            ))
+        global_lc = None
+        if self._config.global_lifecycle:
+            states = [
+                LifecycleStateInfo(
+                    id=s.id,
+                    label=s.label,
+                    is_stable=s.is_stable,
+                    action_label=s.action_label,
+                    icon=s.icon,
+                    color=s.color,
+                )
+                for s in self._config.global_lifecycle.states
+            ]
+            global_lc = GlobalLifecycle(states=states)
+        return ProjectSchema(item_types=item_types, global_lifecycle=global_lc)
 
     # ------------------------------------------------------------------
     # Items
     # ------------------------------------------------------------------
 
+    def _enrich_item_dict(self, item) -> dict:
+        """Add compliantflow domain fields (type, all_linked_uids) to an item dict."""
+        d = item.model_dump(by_alias=True, exclude_none=True)
+        d['all_linked_uids'] = item.all_linked_uids
+        dt = self._config.get_doc_type_by_prefix(item.uid.split('-')[0] + '-')
+        if dt:
+            d['type'] = dt.type_name or dt.code
+        else:
+            d['type'] = item.uid.split('-')[0]
+        return d
+
     def get_item(self, uid: str) -> Optional[dict]:
         item = self._loader.load_by_uid(uid)
         if item is None:
             return None
-        return item.model_dump(by_alias=True, exclude_none=True)
+        return self._enrich_item_dict(item)
 
     def list_items(self, doc_type: Optional[str] = None) -> List[dict]:
         items = self._loader.load_all()
@@ -64,7 +101,7 @@ class LocalDHFAdapter:
                 prefix = dt_cfg.prefix if dt_cfg else f"{doc_type}-"
                 if not item.uid.startswith(prefix):
                     continue
-            result.append(item.model_dump(by_alias=True, exclude_none=True))
+            result.append(self._enrich_item_dict(item))
         return result
 
     def create_item(self, data: dict, author: str = "system", cr_id: Optional[str] = None) -> dict:
@@ -96,7 +133,7 @@ class LocalDHFAdapter:
 
         item = Item.model_validate(data)
         self._saver.save(item, author=author, cr_id=cr_id)
-        return item.model_dump(by_alias=True, exclude_none=True)
+        return self._enrich_item_dict(item)
 
     def update_item(self, uid: str, data: dict, author: Optional[str] = None, cr_id: Optional[str] = None) -> Optional[dict]:
         existing = self._loader.load_by_uid(uid)
@@ -110,7 +147,7 @@ class LocalDHFAdapter:
         updated_data = {k: v for k, v in updated_data.items() if v is not None}
         item = Item.model_validate(updated_data)
         self._saver.save(item, author=author, cr_id=cr_id)
-        return item.model_dump(by_alias=True, exclude_none=True)
+        return self._enrich_item_dict(item)
 
     def delete_item(self, uid: str, author: Optional[str] = None) -> bool:
         return self._saver.delete(uid, author=author)
@@ -245,7 +282,10 @@ class LocalDHFAdapter:
 
     def get_test_result_items(self) -> List[dict]:
         self._ensure_results_loaded()
-        return self._result_store.as_tc_items()
+        items = self._result_store.as_tc_items()
+        for item in items:
+            item.setdefault('type', 'test_case')
+        return items
 
     def import_results_from_file(
         self,

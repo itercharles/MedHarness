@@ -7,13 +7,18 @@ from compliantflow.traceability.graph.analysis import generate_traceability_matr
 
 class _TraceabilityMixin:
 
-    def get_doc_type_code(self, item_id: str) -> str:
-        """Return the document type code for *item_id* based on configured prefixes."""
+    def get_item_type_name(self, item_id: str) -> str:
+        """Return the domain type name for *item_id* based on configured prefixes."""
         if self.config:
-            for doc_type in self.config.doc_types:
-                if item_id.startswith(doc_type.prefix):
-                    return doc_type.code
+            prefix = item_id.split('-')[0] + '-'
+            item_type = self.config.get_type_by_prefix(prefix)
+            if item_type:
+                return item_type.name
         return "OTHER"
+
+    # Keep old name as alias for backward compatibility with external callers
+    def get_doc_type_code(self, item_id: str) -> str:
+        return self.get_item_type_name(item_id)
 
     def get_vertical_view_items(
         self,
@@ -34,7 +39,7 @@ class _TraceabilityMixin:
             in the view.  Focus items are always included.
         """
         all_items = self.get_all_items()
-        focus_items = [i for i in all_items if self.get_doc_type_code(i["id"]) == focus_type]
+        focus_items = [i for i in all_items if self.get_item_type_name(i["id"]) == focus_type]
 
         if not focus_items:
             return {}
@@ -74,13 +79,13 @@ class _TraceabilityMixin:
 
         prefix_map: Dict[str, str] = {}
         if self.config:
-            for dt in self.config.doc_types:
-                prefix_map[dt.code] = dt.prefix
+            for it in self.config.item_types:
+                prefix_map[it.name] = it.id_prefix
 
         def get_code(item_id: str) -> str:
-            for code, prefix in prefix_map.items():
+            for name, prefix in prefix_map.items():
                 if item_id.startswith(prefix):
-                    return code
+                    return name
             return "OTHER"
 
         def _recurse(level: int, current_chain: Dict[str, Any]) -> None:
@@ -156,16 +161,16 @@ class _TraceabilityMixin:
         if not self.config:
             return []
 
-        source_doc = self.config.get_doc_type(source_type)
-        target_doc = self.config.get_doc_type(target_type)
+        source_type_cfg = self.config.get_type(source_type)
+        target_type_cfg = self.config.get_type(target_type)
 
-        if not source_doc or not target_doc:
+        if not source_type_cfg or not target_type_cfg:
             return []
 
         return generate_traceability_matrix(
             self.graph,
-            source_doc.prefix,
-            target_doc.prefix,
+            source_type_cfg.id_prefix,
+            target_type_cfg.id_prefix,
         )
 
     def build_traceability_matrix(self, doc_types: List[str]) -> Dict[str, Any]:
@@ -265,7 +270,7 @@ class _TraceabilityMixin:
                 "id":         node_id,
                 "title":      item.get("title", ""),
                 "status":     item.get("status"),
-                "doc_type":   self.get_doc_type_code(node_id),
+                "type":       self.get_item_type_name(node_id),
                 # Direct neighbours only (edges: child→parent).
                 "upstream":   [n for n in G.successors(node_id)   if n in connected],
                 "downstream": [n for n in G.predecessors(node_id) if n in connected],

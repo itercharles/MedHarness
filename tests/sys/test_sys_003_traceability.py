@@ -409,7 +409,7 @@ def test_get_item_chain_structure(test_dhf_root):
     assert "nodes" in result
     assert isinstance(result["nodes"], dict)
 
-    node_keys = {"id", "title", "status", "doc_type", "upstream", "downstream"}
+    node_keys = {"id", "title", "status", "type", "upstream", "downstream"}
     for node in result["nodes"].values():
         assert node_keys <= set(node.keys())
         assert isinstance(node["upstream"], list)

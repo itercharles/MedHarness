@@ -3,7 +3,7 @@
 import yaml
 from pathlib import Path
 from typing import Dict, Any, Callable, Tuple, Optional
-from utils.models.compliance import PolicyGroup, ComplianceReport, PolicyResult, Policy
+from compliantflow.domain.compliance import PolicyGroup, ComplianceReport, PolicyResult, Policy
 
 class PolicyEngine:
     """Executes compliance policies against the project graph."""
@@ -100,28 +100,25 @@ class PolicyEngine:
 
     # --- Check Implementations ---
 
-    def _check_item_existence(self, type_code: str) -> Tuple[bool, str, Optional[Dict]]:
+    def _check_item_existence(self, type_name: str) -> Tuple[bool, str, Optional[Dict]]:
         """Check if any items of the given type exist."""
-        stats = self.core.graph.get_stats() # Assumes we can access graph or items
-        # Alternatively, iterate nodes
-        
         if not self.core.config:
              return False, "Config not loaded", None
-             
-        doc_type = self.core.config.get_doc_type(type_code)
-        if not doc_type:
-            return False, f"Document type {type_code} not defined in project config", None
-            
-        prefix = doc_type.prefix
+
+        item_type = self.core.config.get_type(type_name)
+        if not item_type:
+            return False, f"Item type '{type_name}' not defined in project schema", None
+
+        prefix = item_type.id_prefix
         count = 0
         for node in self.core.graph.graph.nodes:
             if node.startswith(prefix):
                 count += 1
                 
         if count > 0:
-            return True, f"Found {count} items of type {type_code}", {"count": count}
+            return True, f"Found {count} items of type '{type_name}'", {"count": count}
         else:
-            return False, f"No items found of type {type_code}", {"count": 0}
+            return False, f"No items found of type '{type_name}'", {"count": 0}
 
     def _check_file_existence(self, path: str) -> Tuple[bool, str, Optional[Dict]]:
         """Check if a file exists relative to repo root."""
@@ -133,21 +130,17 @@ class PolicyEngine:
 
     def _check_trace_coverage(self, source_type: str, target_type: str, min_coverage: float = 1.0) -> Tuple[bool, str, Optional[Dict]]:
         """Check if source items trace to target items with sufficient coverage."""
-        # Calculate coverage using GraphEngine logic
-        # But GraphEngine.calculate_coverage() is slightly different (generic uncovered).
-        # We need specific Source -> Target coverage.
-        
         if not self.core.config:
              return False, "Config not loaded", None
 
-        s_doc = self.core.config.get_doc_type(source_type)
-        t_doc = self.core.config.get_doc_type(target_type)
-        
-        if not s_doc or not t_doc:
+        s_type = self.core.config.get_type(source_type)
+        t_type = self.core.config.get_type(target_type)
+
+        if not s_type or not t_type:
              return False, f"Invalid types: {source_type} -> {target_type}", None
-             
-        s_prefix = s_doc.prefix
-        t_prefix = t_doc.prefix
+
+        s_prefix = s_type.id_prefix
+        t_prefix = t_type.id_prefix
         
         source_items = [n for n in self.core.graph.graph.nodes if n.startswith(s_prefix)]
         total = len(source_items)
@@ -210,49 +203,39 @@ class PolicyEngine:
         
         return passed, details, evidence
 
-    def _check_attribute_presence(self, type_code: Any, attribute: str) -> Tuple[bool, str, Optional[Dict]]:
+    def _check_attribute_presence(self, type_name: Any, attribute: str) -> Tuple[bool, str, Optional[Dict]]:
         """Check if all items of given type(s) have a specific attribute."""
         if not self.core.config:
              return False, "Config not loaded", None
 
-        # type_code can be a string or list of strings
-        if isinstance(type_code, str):
-            type_codes = [type_code]
+        # type_name can be a string or list of strings
+        if isinstance(type_name, str):
+            type_names = [type_name]
         else:
-            type_codes = type_code
-            
+            type_names = type_name
+
         total_items = 0
         missing_items = []
-        
-        for code in type_codes:
-            doc_type = self.core.config.get_doc_type(code)
-            if not doc_type:
+
+        for name in type_names:
+            item_type = self.core.config.get_type(name)
+            if not item_type:
                 continue
-                
-            prefix = doc_type.prefix
+
+            prefix = item_type.id_prefix
             
             # Find all nodes with this prefix
             nodes = [n for n in self.core.graph.graph.nodes if n.startswith(prefix)]
             for uid in nodes:
                 total_items += 1
-                item = self.core.graph.graph.nodes[uid].get('item')
-                # Check item data (extra fields are in item.data usually, or just attributes of Item?)
-                # Item model has fixed fields and __extra__? 
-                # Pydantic v2: model_extra or just getattr
-                
-                has_attr = False
-                if hasattr(item, attribute):
-                     if getattr(item, attribute): # Check truthiness? Or just presence? Usually non-empty.
-                         has_attr = True
-                elif item and item.model_extra and attribute in item.model_extra:
-                     if item.model_extra[attribute]:
-                         has_attr = True
+                item = self.core.graph.graph.nodes[uid].get('item') or {}
+                has_attr = bool(item.get(attribute))
                          
                 if not has_attr:
                     missing_items.append(uid)
                     
         if total_items == 0:
-             return True, f"No items found for types {type_codes}", {"total": 0}
+             return True, f"No items found for types {type_names}", {"total": 0}
              
         passed = len(missing_items) == 0
         details = f"{total_items - len(missing_items)}/{total_items} items have attribute '{attribute}'."

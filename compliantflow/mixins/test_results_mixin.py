@@ -183,9 +183,9 @@ class _TestResultsMixin:
             if item is None:
                 continue
 
-            doc_type_code = item_id.split("-")[0]
-            doc_type_cfg = self.config.get_doc_type(doc_type_code) if self.config else None
-            if not doc_type_cfg or not getattr(doc_type_cfg, "has_verification", False):
+            prefix = item_id.split("-")[0] + "-"
+            doc_type_cfg = self.config.get_type_by_prefix(prefix) if self.config else None
+            if not doc_type_cfg or not doc_type_cfg.has_verification:
                 continue
 
             linked_tc_results = [
@@ -224,8 +224,8 @@ class _TestResultsMixin:
             node_id
             for node_id in self.graph.graph.nodes
             if self.config and (
-                cfg := self.config.get_doc_type(node_id.split("-")[0])
-            ) and getattr(cfg, "has_verification", False)
+                cfg := self.config.get_type_by_prefix(node_id.split("-")[0] + "-")
+            ) and cfg.has_verification
         }
         self._inject_verification_status(verifiable_ids)
 
@@ -242,9 +242,9 @@ class _TestResultsMixin:
             if not self.graph.graph.has_node(item_id):
                 continue
 
-            doc_type_code = item_id.split("-")[0]
-            doc_type_cfg = self.config.get_doc_type(doc_type_code) if self.config else None
-            if not doc_type_cfg or not getattr(doc_type_cfg, "has_verification", False):
+            prefix = item_id.split("-")[0] + "-"
+            doc_type_cfg = self.config.get_type_by_prefix(prefix) if self.config else None
+            if not doc_type_cfg or not doc_type_cfg.has_verification:
                 continue
 
             linked_tc_results = [
@@ -261,5 +261,5 @@ class _TestResultsMixin:
             else:
                 new_status = "verified"
 
-            # Update in-memory graph node — Item allows assignment (validate_assignment=True)
-            self.graph.graph.nodes[item_id]["item"].verification_status = new_status
+            # Update in-memory graph node (plain dict)
+            self.graph.graph.nodes[item_id]["item"]["verification_status"] = new_status

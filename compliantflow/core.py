@@ -12,8 +12,7 @@ is responsible for constructing and passing the adapter.
 from pathlib import Path
 from typing import List, Optional, Dict, Any
 
-from utils.models.config import ProjectConfig
-from utils.models.item import Item
+from compliantflow.domain.schema import ProjectSchema
 from compliantflow.traceability.graph.engine import GraphEngine
 
 from compliantflow.mixins.lifecycle import _LifecycleMixin
@@ -50,7 +49,7 @@ class CompliantFlowCore(
                      utils.local_adapter (DHF layer) or any custom implementation.
         """
         self._adapter = adapter
-        self.config: ProjectConfig = adapter.get_project_config()
+        self.config: ProjectSchema = adapter.get_project_config()
         self.graph = GraphEngine(config=self.config)
 
         # Keep repo_root for compliance engine file existence checks.
@@ -69,21 +68,7 @@ class CompliantFlowCore(
         """Reload all items and rebuild graph."""
         raw_items = self._adapter.list_items()
         tc_items = self._adapter.get_test_result_items()
-
-        all_items = []
-        for d in raw_items:
-            try:
-                all_items.append(Item.model_validate(d))
-            except Exception as e:
-                print(f"Warning: could not parse item {d.get('id')}: {e}")
-
-        for d in tc_items:
-            try:
-                all_items.append(Item.model_validate(d))
-            except Exception as e:
-                print(f"Warning: could not parse TC item {d.get('id')}: {e}")
-
-        self.graph.build_from_items(all_items)
+        self.graph.build_from_items(raw_items + tc_items)
 
     def get_config(self) -> Optional[Dict[str, Any]]:
         """Get project configuration."""

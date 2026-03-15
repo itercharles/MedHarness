@@ -1,11 +1,17 @@
-"""Compliance models."""
+"""Compliance domain models.
+
+These belong to compliantflow — governance policies and compliance reports
+are a core compliantflow concern, not a DHF data-layer concern.
+
+Moved from DHF/utils/models/compliance.py.
+"""
 
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any, Literal
 
 
 class PolicyAutomation(BaseModel):
-    """Configuration for automated checks."""
+    """Configuration for automated policy checks."""
     check: str = Field(..., description="Name of the check function to run")
     params: Dict[str, Any] = Field(default_factory=dict, description="Parameters for the check")
 
