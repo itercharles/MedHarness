@@ -17,6 +17,7 @@ class PolicyEngine:
             'document_content': self._check_document_content,
             'trace_coverage': self._check_trace_coverage,
             'attribute_presence': self._check_attribute_presence,
+            'attribute_value': self._check_attribute_value,
             'all_tests_passing': self._check_all_tests_passing,
             'verification_complete': self._check_verification_complete,
         }
@@ -238,6 +239,44 @@ class PolicyEngine:
             "total": total_items,
             "missing": len(missing_items),
             "missing_items": missing_items,
+        }
+        return passed, details, evidence
+
+    def _check_attribute_value(
+        self,
+        type_code: Any,
+        attribute: str,
+        expected_value: Any,
+    ) -> Tuple[bool, str, Optional[Dict]]:
+        """Check that all items of the given type have a specific attribute value."""
+        type_codes = [type_code] if isinstance(type_code, str) else type_code
+
+        total_items = 0
+        non_matching = []
+
+        for code in type_codes:
+            for uid in self._nodes_for_type(code):
+                total_items += 1
+                item = self.core.graph.graph.nodes[uid].get('item') or {}
+                if item.get(attribute) != expected_value:
+                    non_matching.append({
+                        "uid": uid,
+                        "actual": item.get(attribute),
+                    })
+
+        if total_items == 0:
+            return True, f"No items found for type(s) {type_codes}", {"total": 0}
+
+        passed = len(non_matching) == 0
+        matching = total_items - len(non_matching)
+        details = (
+            f"{matching}/{total_items} '{type_code}' items "
+            f"have {attribute} == '{expected_value}'"
+        )
+        evidence = {
+            "total": total_items,
+            "matching": matching,
+            "non_matching": non_matching,
         }
         return passed, details, evidence
 

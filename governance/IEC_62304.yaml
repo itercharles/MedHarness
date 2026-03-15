@@ -303,6 +303,11 @@ policies:
     section: "5.3.4"
     text: "If a SOFTWARE ITEM is identified as SOUP, the MANUFACTURER shall specify the SYSTEM hardware and software necessary to support the proper operation of the SOUP item."
     status: "approved"
+    automation:
+      check: "attribute_presence"
+      params:
+        type_code: "SOUP"
+        attribute: "content"
 
   # 5.3.5 Identify Segregation for Risk Control
   - id: "5.3.5.a"
@@ -440,18 +445,34 @@ policies:
     section: "5.6.4"
     text: "For software integration testing, the MANUFACTURER shall address whether the integrated SOFTWARE ITEM performs as intended."
     status: "approved"
+    automation:
+      check: "trace_coverage"
+      params:
+        source_type: "SYS"
+        target_type: "TC-SYS"
+        min_coverage: 1.0
 
   # 5.6.5 Evaluate Software Integration Test Procedures
   - id: "5.6.5.a"
     section: "5.6.5"
     text: "The MANUFACTURER shall EVALUATE the integration test procedures for adequacy."
     status: "approved"
+    automation:
+      check: "document_content"
+      params:
+        doc_id: "integration_plan"
+        keywords: ["evaluation", "adequacy"]
 
   # 5.6.6 Conduct Regression Tests
   - id: "5.6.6.a"
     section: "5.6.6"
     text: "When software items are integrated, the MANUFACTURER shall conduct REGRESSION TESTING appropriate to demonstrate that defects have not been introduced into previously integrated software."
     status: "approved"
+    automation:
+      check: "document_content"
+      params:
+        doc_id: "integration_plan"
+        keywords: ["regression"]
 
   # 5.6.7 Integration Test Record Contents
   - id: "5.6.7.a"
@@ -767,18 +788,32 @@ policies:
     section: "7.4.1"
     text: "The MANUFACTURER shall analyse changes to the MEDICAL DEVICE SOFTWARE (including SOUP) to determine whether additional potential causes or RISK CONTROL measures are required."
     status: "approved"
+    automation:
+      check: "attribute_presence"
+      params:
+        type_code: "CR"
+        attribute: "affected_items"
 
   # 7.4.2 Analyze Impact of Software Changes on Existing Risk Control Measures
   - id: "7.4.2.a"
     section: "7.4.2"
     text: "The MANUFACTURER shall analyse changes to the software, including changes to SOUP, to determine whether the software modification could interfere with existing RISK CONTROL measures."
     status: "approved"
+    automation:
+      check: "attribute_presence"
+      params:
+        type_code: "CR"
+        attribute: "affected_items"
 
   # 7.4.3 Perform Risk Management Activities Based on Analyses
   - id: "7.4.3.a"
     section: "7.4.3"
     text: "The MANUFACTURER shall perform relevant RISK MANAGEMENT ACTIVITIES defined in 7.1, 7.2 and 7.3 based on these analyses."
     status: "approved"
+    automation:
+      check: "item_existence"
+      params:
+        type_code: "RISK"
 
   # 8.1.1 Establish Configuration Identification
   - id: "8.1.1.a"
@@ -823,12 +858,21 @@ policies:
     section: "8.2.2"
     text: "The MANUFACTURER shall implement the change as specified in the CHANGE REQUEST, identify and perform any ACTIVITY that needs to be repeated as a result of the change, including changes to the software safety classification of SOFTWARE SYSTEMS and SOFTWARE ITEMS."
     status: "approved"
+    automation:
+      check: "attribute_presence"
+      params:
+        type_code: "CR"
+        attribute: "affected_items"
 
   # 8.2.3 Verify Changes
   - id: "8.2.3.a"
     section: "8.2.3"
     text: "The MANUFACTURER shall verify the change, including repeating any VERIFICATION that has been invalidated by the change."
     status: "approved"
+    automation:
+      check: "all_tests_passing"
+      params:
+        type_code: "SYS"
 
   # 8.2.4 Provide Means for Traceability of Change
   - id: "8.2.4.a"
@@ -846,6 +890,11 @@ policies:
     section: "8.3"
     text: "The MANUFACTURER shall retain retrievable records of the history of controlled CONFIGURATION ITEMS including SYSTEM configuration."
     status: "approved"
+    automation:
+      check: "document_content"
+      params:
+        doc_id: "configuration_management_plan"
+        keywords: ["history", "version"]
 
   # 9.1 Prepare Problem Reports
   - id: "9.1.a"
@@ -899,6 +948,10 @@ policies:
     section: "9.6"
     text: "The MANUFACTURER shall perform analysis to detect trends in PROBLEM REPORTS."
     status: "approved"
+    automation:
+      check: "item_existence"
+      params:
+        type_code: "CR"
 
   # 9.7 Verify Software Problem Resolution
   - id: "9.7.a"
