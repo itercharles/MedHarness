@@ -18,7 +18,6 @@ from compliantflow.traceability.graph.engine import GraphEngine
 from compliantflow.mixins.lifecycle import _LifecycleMixin
 from compliantflow.mixins.item_crud import _ItemCRUDMixin
 from compliantflow.mixins.traceability import _TraceabilityMixin
-from compliantflow.mixins.change_request import _ChangeRequestMixin
 from compliantflow.mixins.schema_form import _SchemaFormMixin
 from compliantflow.mixins.compliance import _ComplianceMixin
 from compliantflow.mixins.test_results_mixin import _TestResultsMixin
@@ -28,7 +27,6 @@ class CompliantFlowCore(
     _LifecycleMixin,
     _ItemCRUDMixin,
     _TraceabilityMixin,
-    _ChangeRequestMixin,
     _SchemaFormMixin,
     _ComplianceMixin,
     _TestResultsMixin,
