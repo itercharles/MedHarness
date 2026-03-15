@@ -23,5 +23,13 @@ Test results are recorded in `DHF/test-results/results.yaml`.
 - Test framework: pytest
 - Test result storage: DHF ResultStore
 
+## Test Procedure Evaluation
+Test procedures are evaluated for adequacy before execution. Evaluation criteria include:
+- Coverage of all SYS requirements
+- Test case independence and repeatability
+- Pass/fail criteria are unambiguous
+
 ## Regression Testing
 All tests are re-run on every pull request. CI enforces a green build before merge.
+Regression test results are stored in `DHF/test-results/results.yaml` and provide
+evidence that previously passing tests have not been broken by changes.

@@ -24,6 +24,11 @@ Changes are implemented via pull requests, reviewed, and merged to `main`.
 Each item is uniquely identified by its prefixed ID (e.g., SYS-001, SRS-002).
 Software versions are identified by Git commit SHA and semantic version tags.
 
+## Configuration Status Accounting
+The history of all controlled configuration items is retained via Git commit log.
+Each item version is uniquely identified by a Git commit SHA. The full change
+history is retrievable via `git log` and `git blame`.
+
 ## Problem Resolution
 Anomalies are recorded as CR items and tracked through the lifecycle workflow.
 
