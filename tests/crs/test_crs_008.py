@@ -46,7 +46,7 @@ def test_TC_CRS_008_002_srs_items_have_upstream_traceability(core):
     way back to system requirements. Every SRS item must have at least one
     upstream SYS item.
     """
-    all_srs = core.get_items_filtered("SRS")
+    all_srs = [i for i in core.get_all_items() if i["id"].startswith("SRS-")]
     assert len(all_srs) > 0, "Expected at least one SRS item in the fixture"
 
     for srs_item in all_srs:

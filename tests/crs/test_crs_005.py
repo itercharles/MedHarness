@@ -8,35 +8,6 @@ CompliantFlowCore API.
 """
 
 
-def test_TC_CRS_005_001_create_architecture_item(core):
-    """
-    TC-CRS-005-001: Create Architecture Item via API
-
-    @test_id: TC-CRS-005-001
-    @links: CRS-005
-
-    create_item() with type 'SYSARCH' persists a new architecture
-    item and returns an assigned ID with the correct prefix.
-    """
-    item_data = {
-        "type": "SYSARCH",
-        "title": "Test Architecture Component",
-        "content": "Architecture component created via API test",
-    }
-    created = core.create_item(item_data)
-
-    assert created is not None
-    assert "id" in created
-    assert created["id"].startswith("SYSARCH-"), \
-        f"Expected SYSARCH- prefix, got {created['id']}"
-    assert created.get("title") == "Test Architecture Component"
-
-    # Verify it can be retrieved
-    fetched = core.get_item(created["id"])
-    assert fetched is not None
-    assert fetched["id"] == created["id"]
-
-
 def test_TC_CRS_005_002_view_architecture_item(core):
     """
     TC-CRS-005-002: Architecture Item has SYS implementation link via API

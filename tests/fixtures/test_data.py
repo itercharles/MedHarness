@@ -317,20 +317,17 @@ def populate_test_dhf(test_dhf_root: Path):
         CompliantFlowCore instance with populated data
     """
     from utils.local_adapter import LocalDHFAdapter
-    from compliantflow.core import CompliantFlowCore
 
     print(f"\n[DATA] Populating test DHF with test data...")
 
     populate_governance(test_dhf_root)
 
     adapter = LocalDHFAdapter(test_dhf_root, auto_commit=False)
-    core = CompliantFlowCore(adapter)
 
     test_items = get_test_dataset()
-
     for item_data in test_items:
         try:
-            core.create_item(item_data)
+            adapter.create_item(item_data)
             print(f"  [OK] Created {item_data['id']}")
         except Exception as e:
             print(f"  [WARN] Failed to create {item_data['id']}: {e}")
@@ -338,7 +335,3 @@ def populate_test_dhf(test_dhf_root: Path):
             traceback.print_exc()
 
     print(f"[OK] Test DHF populated with {len(test_items)} items")
-
-    core.refresh()
-
-    return core

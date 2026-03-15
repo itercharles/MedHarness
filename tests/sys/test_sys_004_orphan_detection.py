@@ -76,31 +76,21 @@ def test_TC_SYS_004_003_create_orphan_and_detect(test_dhf_root):
 
     Verify system can create items and detect orphans if configured.
     """
-    # Initialize core with test DHF
-    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
+    adapter = LocalDHFAdapter(test_dhf_root)
+    core = CompliantFlowCore(adapter)
 
-    # Create a new SRS item without derives_from
+    # Create a new SRS item without derives_from via adapter (no parent links = orphan)
     new_item_data = {
-        "type": "SRS",  # Required for ID generation
+        "type": "SRS",
         "title": "Orphan Test Item",
         "content": "This item has no parent links",
-        "status": "draft",
-        # Intentionally no derives_from field
     }
-
-    # Create the item (ID will be auto-generated as SRS-003)
-    created_item = core.create_item(new_item_data)
+    created_item = adapter.create_item(new_item_data)
     new_item_id = created_item["id"]
-
-    # Verify item was created
-    assert created_item is not None
-    assert "id" in created_item
     assert created_item["id"].startswith("SRS-")
 
-    # Refresh core to reload items and rebuild graph
     core.refresh()
 
-    # Verify item can be retrieved
     retrieved_item = core.get_item(new_item_id)
     assert retrieved_item is not None
     assert retrieved_item["title"] == "Orphan Test Item"

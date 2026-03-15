@@ -1,7 +1,7 @@
-"""CompliantFlow CLI — analysis and traceability operations for CI/CD pipelines.
+"""CompliantFlow CLI — read-only analysis and traceability for CI/CD pipelines.
 
-Data CRUD (item create/update/delete, validate schema, doc generate/export)
-is handled by the dhf CLI (python -m dhf).
+Data management (item CRUD, lifecycle transitions, schema validation,
+doc generation) is handled by the utils CLI (python -m utils).
 """
 
 import json
@@ -114,48 +114,6 @@ def validate_compliance(ctx: click.Context, group_id: str) -> None:
         f"(score: {report['score']:.0f}%).",
         err=True,
     )
-
-
-# ---------------------------------------------------------------------------
-# item group (lifecycle only — CRUD is in dhf CLI)
-# ---------------------------------------------------------------------------
-
-@main.group()
-def item() -> None:
-    """Commands for item lifecycle transitions."""
-
-
-@item.command("transitions")
-@click.argument("item_id")
-@click.pass_context
-def item_transitions(ctx: click.Context, item_id: str) -> None:
-    """List available lifecycle transitions for an item. Outputs JSON."""
-    dhf_path: Path = ctx.obj["dhf"]
-    core = _make_core(dhf_path)
-    it = core.get_item(item_id)
-    if it is None:
-        click.echo(f"ERROR: Item '{item_id}' not found.", err=True)
-        sys.exit(1)
-    transitions = core.get_available_transitions(it)
-    click.echo(json.dumps({"item_id": item_id, "current_status": it.get("status"), "transitions": transitions}, default=str))
-
-
-@item.command("transition")
-@click.argument("item_id")
-@click.argument("to_state")
-@click.option("--by", "performed_by", default="cli", show_default=True, help="User performing the transition.")
-@click.pass_context
-def item_transition(ctx: click.Context, item_id: str, to_state: str, performed_by: str) -> None:
-    """Execute a lifecycle state transition for an item."""
-    dhf_path: Path = ctx.obj["dhf"]
-    core = _make_core(dhf_path)
-    try:
-        result = core.execute_transition(item_id, to_state, performed_by=performed_by)
-    except ValueError as e:
-        click.echo(f"ERROR: {e}", err=True)
-        sys.exit(1)
-    click.echo(json.dumps(result, default=str))
-    click.echo(f"✓ {item_id}: {result.get('status')}.", err=True)
 
 
 # ---------------------------------------------------------------------------
