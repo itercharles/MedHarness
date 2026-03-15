@@ -1,5 +1,6 @@
 
 pydantic>=2.0
+click
 networkx
 pyyaml
 python-frontmatter
@@ -8,7 +9,5 @@ python-docx
 gitpython
 python-dateutil
 python-dotenv
-streamlit
-streamlit-agraph
 markdown
 weasyprint

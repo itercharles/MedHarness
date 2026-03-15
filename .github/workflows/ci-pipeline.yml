@@ -31,8 +31,8 @@ jobs:
 
       - name: Run DHF Utility Tests
         run: |
-          export PYTHONPATH="${PYTHONPATH}:${PWD}/src:${PWD}/DHF"
-          pytest DHF/utils/tests/ --junitxml=unit-test-results.xml --cov=src --cov-report=xml
+          export PYTHONPATH="${PYTHONPATH}:${PWD}:${PWD}/DHF"
+          pytest DHF/utils/tests/ --junitxml=unit-test-results.xml --cov=compliantflow --cov-report=xml
 
       - name: Upload unit test results
         if: always()
@@ -64,7 +64,7 @@ jobs:
 
       - name: Run SYS Tests
         run: |
-          export PYTHONPATH="${PYTHONPATH}:${PWD}/src:${PWD}/DHF"
+          export PYTHONPATH="${PYTHONPATH}:${PWD}:${PWD}/DHF"
           pytest tests/sys/ -v -s --junitxml=sys-test-results.xml
 
       - name: Upload SYS test results
@@ -98,7 +98,7 @@ jobs:
 
       - name: Run CRS API Tests
         run: |
-          export PYTHONPATH="${PYTHONPATH}:${PWD}/src:${PWD}/DHF"
+          export PYTHONPATH="${PYTHONPATH}:${PWD}:${PWD}/DHF"
           pytest tests/crs/ -v -s --junitxml=crs-test-results.xml
 
       - name: Upload CRS test results
