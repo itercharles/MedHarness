@@ -14,6 +14,7 @@ class PolicyEngine:
         self.checks: Dict[str, Callable] = {
             'item_existence': self._check_item_existence,
             'file_existence': self._check_file_existence,
+            'document_content': self._check_document_content,
             'trace_coverage': self._check_trace_coverage,
             'attribute_presence': self._check_attribute_presence,
             'all_tests_passing': self._check_all_tests_passing,
@@ -131,6 +132,35 @@ class PolicyEngine:
         if full_path.exists():
             return True, f"File exists: {path}", {"path": str(full_path)}
         return False, f"File missing: {path}", {"path": str(full_path)}
+
+    def _check_document_content(
+        self,
+        doc_id: str,
+        keywords: list,
+    ) -> Tuple[bool, str, Optional[Dict]]:
+        """Check that a DHF document exists and contains all specified keywords.
+
+        Args:
+            doc_id:   Logical document ID (filename stem, e.g. 'development_plan').
+            keywords: List of strings that must all appear in the document (case-insensitive).
+        """
+        content = self.core._adapter.get_document(doc_id)
+        if content is None:
+            return False, f"Document not found: '{doc_id}'", {"doc_id": doc_id}
+
+        content_lower = content.lower()
+        missing = [kw for kw in keywords if kw.lower() not in content_lower]
+        if missing:
+            return (
+                False,
+                f"Document '{doc_id}' missing keywords: {missing}",
+                {"doc_id": doc_id, "missing_keywords": missing, "found_keywords": [kw for kw in keywords if kw.lower() in content_lower]},
+            )
+        return (
+            True,
+            f"Document '{doc_id}' contains all required keywords",
+            {"doc_id": doc_id, "keywords": keywords},
+        )
 
     def _check_trace_coverage(
         self,

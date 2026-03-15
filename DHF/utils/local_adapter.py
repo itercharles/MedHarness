@@ -437,3 +437,40 @@ class LocalDHFAdapter:
             "run_id": actual_run_id,
             "run_url": run_url,
         }
+
+    # ------------------------------------------------------------------
+    # Document access
+    # ------------------------------------------------------------------
+
+    def get_document(self, doc_id: str) -> Optional[str]:
+        """Return the text content of a DHF document by its logical ID (filename stem).
+
+        Searches recursively under documents/ for a file whose stem matches doc_id.
+        For example, get_document("development_plan") finds
+        documents/plans/development_plan.md.
+
+        Args:
+            doc_id: Logical document identifier — the filename without extension
+                    (e.g. 'development_plan', 'verification_plan', 'release_notes').
+
+        Returns:
+            File text content, or None if no matching document is found.
+        """
+        docs_dir = self._dhf_root / "documents"
+        if not docs_dir.exists():
+            return None
+        for candidate in docs_dir.rglob("*"):
+            if candidate.is_file() and candidate.stem == doc_id:
+                return candidate.read_text(encoding="utf-8")
+        return None
+
+    def list_documents(self) -> List[str]:
+        """Return logical document IDs (filename stems) for all files under documents/."""
+        docs_dir = self._dhf_root / "documents"
+        if not docs_dir.exists():
+            return []
+        return [
+            p.stem
+            for p in docs_dir.rglob("*")
+            if p.is_file() and not p.name.startswith(".")
+        ]

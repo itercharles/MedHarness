@@ -131,9 +131,10 @@ policies:
     text: "The MANUFACTURER shall include or reference in the software development plan for development of SOFTWARE ITEMS of class C: standards, methods, and tools."
     status: "approved"
     automation:
-      check: "file_existence"
+      check: "document_content"
       params:
-        path: "documents/plans/development_plan.md"
+        doc_id: "development_plan"
+        keywords: ["standards", "methods", "tools"]
 
   # 5.1.5 Software Integration and Integration Testing Planning
   - id: "5.1.5.a"
@@ -141,9 +142,10 @@ policies:
     text: "The MANUFACTURER shall include or reference in the software development plan, a plan to integrate the SOFTWARE ITEMS (including SOUP) and perform testing during integration."
     status: "approved"
     automation:
-      check: "file_existence"
+      check: "document_content"
       params:
-        path: "documents/plans/integration_plan.md"
+        doc_id: "integration_plan"
+        keywords: ["integration", "testing"]
 
   # 5.1.6 Software Verification Planning
   - id: "5.1.6.a"
@@ -151,9 +153,10 @@ policies:
     text: "The MANUFACTURER shall include or reference in the software development plan VERIFICATION information including DELIVERABLES requiring VERIFICATION, required VERIFICATION TASKS, milestones, and acceptance criteria."
     status: "approved"
     automation:
-      check: "file_existence"
+      check: "document_content"
       params:
-        path: "documents/plans/verification_plan.md"
+        doc_id: "verification_plan"
+        keywords: ["verification", "acceptance criteria"]
 
   # 5.1.7 Software Risk Management Planning
   - id: "5.1.7.a"
@@ -181,9 +184,10 @@ policies:
     text: "The MANUFACTURER shall include or reference software configuration management information in the software development plan, including classes of items to be controlled, ACTIVITIES and TASKS, responsible organizations, relationships, timing for configuration control, and when to use problem resolution PROCESS."
     status: "approved"
     automation:
-      check: "file_existence"
+      check: "document_content"
       params:
-        path: "documents/plans/configuration_management_plan.md"
+        doc_id: "configuration_management_plan"
+        keywords: ["configuration items", "version control", "change control"]
 
   # 5.1.10 Supporting Items to be Controlled
   - id: "5.1.10.a"
@@ -203,9 +207,10 @@ policies:
     text: "The MANUFACTURER shall include or reference in the software development plan a procedure for identifying categories of defects that may be introduced based on the selected programming technology and documenting evidence that demonstrates that these defects do not contribute to unacceptable RISK."
     status: "approved"
     automation:
-      check: "file_existence"
+      check: "document_content"
       params:
-        path: "documents/plans/development_plan.md"
+        doc_id: "development_plan"
+        keywords: ["defect", "risk"]
 
   # 5.2.1 Define and Document Software Requirements
   - id: "5.2.1.a"
@@ -582,9 +587,10 @@ policies:
     text: "The MANUFACTURER shall establish a software maintenance plan for conducting the ACTIVITIES and TASKS of the maintenance PROCESS, including procedures for receiving, documenting, evaluating, resolving and tracking feedback."
     status: "approved"
     automation:
-      check: "file_existence"
+      check: "document_content"
       params:
-        path: "documents/plans/maintenance_plan.md"
+        doc_id: "maintenance_plan"
+        keywords: ["feedback", "problem", "change"]
 
   # 6.2.1.1 Monitor Feedback
   - id: "6.2.1.1.a"
@@ -796,9 +802,10 @@ policies:
     text: "The MANUFACTURER shall document the set of CONFIGURATION ITEMS and their VERSIONS that comprise the SOFTWARE SYSTEM configuration."
     status: "approved"
     automation:
-      check: "file_existence"
+      check: "document_content"
       params:
-        path: "documents/system_configuration.md"
+        doc_id: "system_configuration"
+        keywords: ["configuration items", "version"]
 
   # 8.2.1 Approve Change Requests
   - id: "8.2.1.a"
