@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import List, Optional, Dict, Any
 
 from compliantflow.domain.schema import ProjectSchema
-from compliantflow.traceability.graph.engine import GraphEngine
+from compliantflow.graph import GraphEngine
 
 from compliantflow.mixins.lifecycle import _LifecycleMixin
 from compliantflow.mixins.item_crud import _ItemCRUDMixin
