@@ -254,7 +254,8 @@ class CompliantFlowCore:
     def get_policy_group(self, group_id: str, governance_dir: Path) -> Optional[Dict[str, Any]]:
         """Load a policy group without running checks."""
         from compliantflow.policy import PolicyEngine
-        engine = PolicyEngine(self)
+        root_dir = getattr(self._adapter, '_dhf_root', None)
+        engine = PolicyEngine(self, root_dir=root_dir)
         path = Path(governance_dir) / f"{group_id}.yaml"
         group = engine.load_policy_group(path)
         return group.model_dump() if group else None
@@ -262,7 +263,8 @@ class CompliantFlowCore:
     def check_compliance(self, group_id: str, governance_dir: Path) -> Optional[Dict[str, Any]]:
         """Check compliance against a policy group and return the report."""
         from compliantflow.policy import PolicyEngine
-        engine = PolicyEngine(self)
+        root_dir = getattr(self._adapter, '_dhf_root', None)
+        engine = PolicyEngine(self, root_dir=root_dir)
         path = Path(governance_dir) / f"{group_id}.yaml"
         group = engine.load_policy_group(path)
         if not group:

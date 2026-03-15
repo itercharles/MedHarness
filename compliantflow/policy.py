@@ -8,8 +8,9 @@ from compliantflow.domain.compliance import PolicyGroup, ComplianceReport, Polic
 class PolicyEngine:
     """Executes compliance policies against the project graph."""
 
-    def __init__(self, core_api):
+    def __init__(self, core_api, root_dir: Optional[Path] = None):
         self.core = core_api
+        self.root_dir = root_dir
         self.checks: Dict[str, Callable] = {
             'item_existence': self._check_item_existence,
             'file_existence': self._check_file_existence,
@@ -123,8 +124,10 @@ class PolicyEngine:
         return False, f"No items found of type '{type_code}'", {"count": 0}
 
     def _check_file_existence(self, path: str) -> Tuple[bool, str, Optional[Dict]]:
-        """Check if a file exists relative to repo root."""
-        full_path = self.core.repo_root / path
+        """Check if a file exists relative to root_dir (DHF root)."""
+        if self.root_dir is None:
+            return False, "root_dir not set; cannot check file existence", {}
+        full_path = self.root_dir / path
         if full_path.exists():
             return True, f"File exists: {path}", {"path": str(full_path)}
         return False, f"File missing: {path}", {"path": str(full_path)}
