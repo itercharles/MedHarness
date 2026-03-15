@@ -19,7 +19,7 @@ def _resolve_dhf(dhf_option: str | None) -> Path:
     env = os.environ.get("COMPLIANTFLOW_DHF")
     if env:
         return Path(env)
-    return Path(__file__).parent.parent.parent / "DHF"
+    return Path(__file__).parent.parent / "DHF"
 
 
 def _make_core(dhf_path: Path):
