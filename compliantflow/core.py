@@ -31,11 +31,6 @@ class CompliantFlowCore:
         self.config: ProjectSchema = adapter.get_project_config()
         self.graph = GraphEngine(config=self.config)
 
-        if hasattr(adapter, '_dhf_root'):
-            self.repo_root = adapter._dhf_root
-        else:
-            self.repo_root = Path(".")
-
         self.refresh()
 
     def refresh(self):
@@ -256,19 +251,19 @@ class CompliantFlowCore:
     # Compliance
     # ------------------------------------------------------------------
 
-    def get_policy_group(self, group_id: str) -> Optional[Dict[str, Any]]:
+    def get_policy_group(self, group_id: str, governance_dir: Path) -> Optional[Dict[str, Any]]:
         """Load a policy group without running checks."""
         from compliantflow.policy import PolicyEngine
         engine = PolicyEngine(self)
-        path = self.repo_root.parent / "governance" / f"{group_id}.yaml"
+        path = Path(governance_dir) / f"{group_id}.yaml"
         group = engine.load_policy_group(path)
         return group.model_dump() if group else None
 
-    def check_compliance(self, group_id: str) -> Optional[Dict[str, Any]]:
+    def check_compliance(self, group_id: str, governance_dir: Path) -> Optional[Dict[str, Any]]:
         """Check compliance against a policy group and return the report."""
         from compliantflow.policy import PolicyEngine
         engine = PolicyEngine(self)
-        path = self.repo_root.parent / "governance" / f"{group_id}.yaml"
+        path = Path(governance_dir) / f"{group_id}.yaml"
         group = engine.load_policy_group(path)
         if not group:
             return None

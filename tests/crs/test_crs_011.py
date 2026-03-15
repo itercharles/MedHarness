@@ -7,7 +7,7 @@ Verifies regulatory compliance checking through the CompliantFlowCore API.
 """
 
 
-def test_TC_CRS_011_001_policy_group_contains_required_sections(core):
+def test_TC_CRS_011_001_policy_group_contains_required_sections(core, governance_dir):
     """
     TC-CRS-011-001: IEC 62304 Policy Group Contains Expected Section IDs
 
@@ -18,7 +18,7 @@ def test_TC_CRS_011_001_policy_group_contains_required_sections(core):
     group contains the specific section IDs mandated by the standard.
     The test fixture defines sections 5.1.1, 5.1.3, 5.3.1, 5.5.2, 6.2.1.
     """
-    group = core.get_policy_group("IEC_62304")
+    group = core.get_policy_group("IEC_62304", governance_dir)
 
     assert group is not None, "Expected IEC_62304 policy group to be loadable"
 
@@ -32,7 +32,7 @@ def test_TC_CRS_011_001_policy_group_contains_required_sections(core):
         f"IEC_62304 policy group missing required sections: {missing}"
 
 
-def test_TC_CRS_011_002_run_compliance_check(core):
+def test_TC_CRS_011_002_run_compliance_check(core, governance_dir):
     """
     TC-CRS-011-002: Run IEC 62304 Compliance Check via API
 
@@ -42,16 +42,13 @@ def test_TC_CRS_011_002_run_compliance_check(core):
     check_compliance('IEC_62304') evaluates each policy against the
     current DHF items and returns a structured report.
     """
-    report = core.check_compliance("IEC_62304")
+    report = core.check_compliance("IEC_62304", governance_dir)
 
     assert report is not None, "Expected compliance check to return a report"
     assert isinstance(report, dict), "Expected report as dict"
 
-    # The report should contain results for individual policies
-    # (structure: depends on PolicyEngine output)
     assert len(report) > 0, "Expected non-empty compliance report"
 
-    # The test fixture includes IEC 62304 policies; report should reference them
     report_str = str(report)
     assert any(term in report_str for term in ["5.1", "5.3", "policy", "IEC", "result", "status"]), \
         f"Report should reference IEC 62304 policy data: {report_str[:200]}"

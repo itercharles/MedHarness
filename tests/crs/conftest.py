@@ -32,6 +32,12 @@ def test_dhf_root():
 
 
 @pytest.fixture(scope="function")
+def governance_dir(test_dhf_root):
+    """Return the governance directory for the test DHF."""
+    return test_dhf_root.parent / "governance"
+
+
+@pytest.fixture(scope="function")
 def core(test_dhf_root):
     """Return a CompliantFlowCore instance backed by the test DHF."""
     from utils.local_adapter import LocalDHFAdapter

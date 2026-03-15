@@ -84,17 +84,24 @@ def validate_traceability(ctx: click.Context) -> None:
 
 @validate.command("compliance")
 @click.argument("group_id")
+@click.option(
+    "--governance-dir",
+    default=None,
+    metavar="PATH",
+    help="Path to governance directory containing policy YAML files. Defaults to ./governance.",
+)
 @click.pass_context
-def validate_compliance(ctx: click.Context, group_id: str) -> None:
+def validate_compliance(ctx: click.Context, group_id: str, governance_dir: str | None) -> None:
     """Check compliance against a governance policy group.
 
-    GROUP_ID is the filename stem under governance/ at the repo root (e.g. IEC_62304).
+    GROUP_ID is the filename stem of a policy YAML file (e.g. IEC_62304).
     Outputs the full JSON report to stdout.
     Exits 1 if any policy fails.
     """
     dhf_path: Path = ctx.obj["dhf"]
+    gov_dir = Path(governance_dir) if governance_dir else Path("governance")
     core = _make_core(dhf_path)
-    report = core.check_compliance(group_id)
+    report = core.check_compliance(group_id, governance_dir=gov_dir)
     if report is None:
         click.echo(f"ERROR: Policy group '{group_id}' not found.", err=True)
         sys.exit(1)
