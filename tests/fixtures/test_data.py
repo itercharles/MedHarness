@@ -34,11 +34,6 @@ def create_test_dhf() -> Path:
 
     # --- global.yaml ---
     global_config = {
-        'change_control': {
-            'enabled': True,
-            'change_request_type': 'CR',
-            'affected_items_field': 'affected_items',
-        },
         'global_lifecycle': {
             'states': [
                 {'id': 'draft', 'label': 'Draft', 'action_label': 'Create', 'icon': '📝', 'color': 'warning'},

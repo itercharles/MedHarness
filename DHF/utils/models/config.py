@@ -117,7 +117,6 @@ class TraceabilityMatrix(BaseModel):
 class ProjectConfig(BaseModel):
     """Project configuration."""
 
-    change_control: Optional[dict] = Field(default_factory=dict, description="Change control configuration")
     global_lifecycle: Optional[GlobalLifecycle] = Field(None, description="Global lifecycle configuration")
     doc_types: List[DocTypeConfig] = Field(..., description="Document type configurations")
     traceability_matrices: List[TraceabilityMatrix] = Field(default_factory=list, description="Traceability matrix configurations")
