@@ -1,20 +1,20 @@
 """
-Tests for SYS-034: Component Boundary Isolation
+Tests for SYS-008: Component Boundary Isolation
 
-Verifies that the compliantflow analysis engine (src/compliantflow/) does not
+Verifies that the compliantflow analysis engine (compliantflow/) does not
 directly import DHF I/O layer modules outside the adapter boundary.
 
-Prohibited imports in src/compliantflow/ (use adapter instead):
+Prohibited imports in compliantflow/ (use adapter instead):
   utils.repository.*   — ItemLoader, ItemSaver, GitRepository
   utils.result_store   — ResultStore
   utils.junit_parser   — parse_junit_xml, ExecutionResult
   utils.document_generation — DocumentGenerator
 
-LocalDHFAdapter lives in DHF/utils/local_adapter.py (CR-019 boundary move).
+LocalDHFAdapter lives in DHF/utils/local_adapter.py.
 It may import compliantflow.domain.* (shared vocabulary) but not
-compliantflow analysis-layer modules (traceability, mixins, core, cli).
+compliantflow analysis-layer modules (traceability, core, cli).
 
-Boundary rules documented in DHF/utils/docs/design.md (DESIGN-013).
+@links: SYS-008
 """
 
 import ast
@@ -23,10 +23,7 @@ from pathlib import Path
 
 import pytest
 
-# Ensure src/ is on the path
-sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
-
-_COMPLIANTFLOW_SRC = Path(__file__).parent.parent.parent / "src" / "compliantflow"
+_COMPLIANTFLOW_SRC = Path(__file__).parent.parent.parent / "compliantflow"
 _DHF_UTILS = Path(__file__).parent.parent.parent / "DHF" / "utils"
 _DHF_LOCAL_ADAPTER = _DHF_UTILS / "local_adapter.py"
 
@@ -68,12 +65,11 @@ class TestComponentBoundary:
 
     def test_TC_SYS_034_001_no_prohibited_imports_outside_adapter(self):
         """
-        TC-SYS-034-001: No file in src/compliantflow/ imports prohibited DHF I/O
-        modules. LocalDHFAdapter has been moved to DHF/utils/local_adapter.py, so
-        src/compliantflow/ no longer contains any adapter implementation.
+        TC-SYS-034-001: No file in compliantflow/ imports prohibited DHF I/O
+        modules. All DHF data access goes through the DHFAdapter interface.
 
         @test_id: TC-SYS-034-001
-        @links: SYS-034
+        @links: SYS-008
         """
         violations = []
 
@@ -96,18 +92,15 @@ class TestComponentBoundary:
 
     def test_TC_SYS_034_002_dhf_local_adapter_uses_utils(self):
         """
-        TC-SYS-034-002: DHF/utils/local_adapter.py (the adapter implementation)
-        imports only utils.* modules (DHF layer) and compliantflow.domain.* (shared
-        vocabulary). It must NOT import compliantflow analysis-layer modules.
-        LocalDHFAdapter was moved from src/compliantflow/adapters/local.py to
-        DHF/utils/local_adapter.py as part of CR-019 boundary cleanup.
+        TC-SYS-034-002: DHF/utils/local_adapter.py imports only utils.* modules
+        and compliantflow.domain.* (shared vocabulary). It must NOT import
+        compliantflow analysis-layer modules (traceability, core, cli).
 
         compliantflow.domain.* is the shared domain vocabulary (pure data models)
         that the adapter uses to produce ProjectSchema for CompliantFlowCore.
-        Analysis-layer modules (traceability, mixins, core) remain prohibited.
 
         @test_id: TC-SYS-034-002
-        @links: SYS-034
+        @links: SYS-008
         """
         assert _DHF_LOCAL_ADAPTER.exists(), (
             f"LocalDHFAdapter not found at {_DHF_LOCAL_ADAPTER} — "
@@ -139,16 +132,16 @@ class TestComponentBoundary:
             f"Found prohibited: {prohibited_cf_imports}"
         )
 
-    def test_TC_SYS_034_003_no_local_adapter_in_src(self):
+    def test_TC_SYS_034_003_no_local_adapter_in_compliantflow(self):
         """
-        TC-SYS-034-003: src/compliantflow/adapters/local.py does NOT exist —
+        TC-SYS-034-003: compliantflow/adapters/local.py does NOT exist —
         the LocalDHFAdapter implementation lives only in DHF/utils/local_adapter.py.
 
         @test_id: TC-SYS-034-003
-        @links: SYS-034
+        @links: SYS-008
         """
         old_location = _COMPLIANTFLOW_SRC / "adapters" / "local.py"
         assert not old_location.exists(), (
-            f"LocalDHFAdapter implementation found at old location {old_location}. "
-            "It should only exist at DHF/utils/local_adapter.py (CR-019 boundary move)."
+            f"LocalDHFAdapter implementation found at {old_location}. "
+            "It should only exist at DHF/utils/local_adapter.py."
         )
