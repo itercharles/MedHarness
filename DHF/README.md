@@ -22,10 +22,14 @@ DHF/
 ├── test-results/
 │   └── results.yaml        # Automated test result records (TC items)
 ├── documents/
-│   └── specifications/     # Generated specification documents (Markdown)
+│   ├── plans/              # Planning documents (development_plan.md, integration_plan.md, …)
+│   ├── specifications/     # Generated specification documents (Markdown)
+│   └── …                   # release_notes.md, system_configuration.md, etc.
 └── utils/                  # DHF data-layer Python package (importable as `utils`)
     ├── models/             # Pydantic models: Item, ProjectConfig, DocTypeConfig
     ├── repository/         # ItemLoader, ItemSaver, GitRepository
+    ├── lifecycle.py        # Standalone lifecycle engine (transitions)
+    ├── local_adapter.py    # LocalDHFAdapter — implements DHFAdapter protocol
     ├── result_store.py     # Test result persistence (results.yaml)
     ├── junit_parser.py     # JUnit XML → ExecutionResult (framework-agnostic)
     ├── document_generation.py  # Markdown specification generation
@@ -91,26 +95,30 @@ The `utils` package exposes a data-management CLI for item CRUD, schema validati
 
 ```bash
 # From the repo root
-PYTHONPATH=src:DHF python -m utils --help
+PYTHONPATH=.:DHF python -m utils --help
 
 # Item operations
-PYTHONPATH=src:DHF python -m utils item list --type SYS
-PYTHONPATH=src:DHF python -m utils item get SYS-001
-PYTHONPATH=src:DHF python -m utils item create --type SYS --data '{"title": "My req"}'
-PYTHONPATH=src:DHF python -m utils item update SYS-001 --data '{"title": "Updated"}'
-PYTHONPATH=src:DHF python -m utils item delete SYS-001
+PYTHONPATH=.:DHF python -m utils item list --type SYS
+PYTHONPATH=.:DHF python -m utils item get SYS-001
+PYTHONPATH=.:DHF python -m utils item create --type SYS --data '{"title": "My req"}'
+PYTHONPATH=.:DHF python -m utils item update SYS-001 --data '{"title": "Updated"}'
+PYTHONPATH=.:DHF python -m utils item delete SYS-001
+
+# Lifecycle transitions (CR, REL, DEF only)
+PYTHONPATH=.:DHF python -m utils item transitions CR-001
+PYTHONPATH=.:DHF python -m utils item transition CR-001 approved --by "Alice"
 
 # Schema validation
-PYTHONPATH=src:DHF python -m utils validate schema
+PYTHONPATH=.:DHF python -m utils validate schema
 
 # Document generation
-PYTHONPATH=src:DHF python -m utils doc generate ALL
-PYTHONPATH=src:DHF python -m utils doc generate SYS
+PYTHONPATH=.:DHF python -m utils doc generate ALL
+PYTHONPATH=.:DHF python -m utils doc generate SYS
 
-# Test result reads (write path is via the analysis engine)
-PYTHONPATH=src:DHF python -m utils test list
-PYTHONPATH=src:DHF python -m utils test list --status FAIL
-PYTHONPATH=src:DHF python -m utils test status TC-SYS-001-001
+# Test result reads (write path is via the analysis engine's test import command)
+PYTHONPATH=.:DHF python -m utils test list
+PYTHONPATH=.:DHF python -m utils test list --status FAIL
+PYTHONPATH=.:DHF python -m utils test status TC-SYS-001-001
 ```
 
 ## What Lives Outside DHF

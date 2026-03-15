@@ -184,7 +184,15 @@ def create_test_dhf() -> Path:
         (items_dir / doc_dir).mkdir(parents=True, exist_ok=True)
 
     (test_dir / "documents" / "specifications" / "templates").mkdir(parents=True)
+    (test_dir / "documents" / "plans").mkdir(parents=True)
     (test_dir.parent / "governance").mkdir(parents=True)
+
+    # Create a test document for document_content checks
+    test_plan = test_dir / "documents" / "plans" / "test_plan.md"
+    test_plan.write_text(
+        "# Test Plan\n\nThis document describes testing and verification procedures.\n",
+        encoding="utf-8",
+    )
 
     print(f"[OK] Created directory structure for {len(doc_type_dirs)} document types")
 
@@ -297,7 +305,34 @@ def populate_governance(test_dhf_root: Path):
                 'section': '6.2.1',
                 'text': 'Change requests shall track affected items',
                 'status': 'approved'
-            }
+            },
+            {
+                'id': 'TEST.doc_content',
+                'section': 'TEST',
+                'text': 'A test plan document shall describe testing procedures',
+                'status': 'approved',
+                'automation': {
+                    'check': 'document_content',
+                    'params': {
+                        'doc_id': 'test_plan',
+                        'keywords': ['testing', 'verification'],
+                    }
+                }
+            },
+            {
+                'id': 'TEST.attr_value',
+                'section': 'TEST',
+                'text': 'SRS items shall derive from SYS',
+                'status': 'approved',
+                'automation': {
+                    'check': 'attribute_value',
+                    'params': {
+                        'type_code': 'SRS',
+                        'attribute': 'title',
+                        'expected_value': 'Item Persistence and Versioning',
+                    }
+                }
+            },
         ]
     }
 

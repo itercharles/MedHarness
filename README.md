@@ -10,30 +10,25 @@ CompliantFlow/
 │   ├── items/                  # Requirement items (YAML, one file per item)
 │   ├── config/                 # Project config (global.yaml + doc_types/)
 │   ├── test-results/           # Automated test results (results.yaml)
-│   ├── documents/              # Generated specification documents
+│   ├── documents/              # DHF documents (plans/, specifications/, …)
 │   └── utils/                  # DHF data-layer package (importable as `utils`)
 │       ├── models/             # Pydantic models (Item, ProjectConfig, …)
 │       ├── repository/         # ItemLoader, ItemSaver, GitRepository
+│       ├── lifecycle.py        # Standalone lifecycle engine
 │       ├── result_store.py     # Test result persistence
 │       ├── junit_parser.py     # JUnit XML import (framework-agnostic)
 │       └── cli.py              # DHF CLI entry point (python -m utils)
 ├── governance/                 # Compliance policy groups (IEC_62304.yaml, …)
-├── src/                        # Python analysis engine
-│   ├── compliantflow/          # Core analysis package
-│   │   ├── core.py             # CompliantFlowCore facade
-│   │   ├── cli.py              # Analysis CLI (python -m compliantflow)
-│   │   ├── adapters/           # DHFAdapter protocol + LocalDHFAdapter
-│   │   ├── mixins/             # Traceability, compliance, lifecycle, …
-│   │   ├── traceability/       # Graph engine, lifecycle, compliance engine
-│   │   └── helpers/            # UI helper utilities
-│   └── debug_view/             # Streamlit debug UI (not production)
-│       ├── app.py              # Streamlit entry point
-│       ├── page_generator.py   # Dynamic page generation from config
-│       └── universal_page_template.py
+├── compliantflow/              # Read-only analysis engine package
+│   ├── core.py                 # CompliantFlowCore facade (read-only)
+│   ├── cli.py                  # Analysis CLI (python -m compliantflow)
+│   ├── policy.py               # PolicyEngine (compliance checks)
+│   ├── adapters/               # DHFAdapter protocol + LocalDHFAdapter
+│   └── traceability/           # Graph engine
 ├── tests/                      # Test suites
 │   ├── sys/                    # SYS-level API tests
 │   ├── crs/                    # CRS-level scenario tests
-│   └── srs/                    # SRS-level unit tests
+│   └── fixtures/               # Shared test data and DHF setup
 ├── requirements.txt
 └── .venv/                      # Virtual environment (gitignored)
 ```
@@ -47,38 +42,33 @@ python3 -m venv .venv
 
 ## Running
 
-### Debug UI (Streamlit)
+### Analysis CLI (read-only)
 ```bash
-PYTHONPATH=src:DHF streamlit run src/debug_view/app.py
-```
-
-### Analysis CLI
-```bash
-# Traceability, compliance, lifecycle, change requests, test import
-PYTHONPATH=src:DHF python -m compliantflow --help
-PYTHONPATH=src:DHF python -m compliantflow validate traceability
-PYTHONPATH=src:DHF python -m compliantflow validate compliance IEC_62304
-PYTHONPATH=src:DHF python -m compliantflow traceability matrix CRS SYS SRS
-PYTHONPATH=src:DHF python -m compliantflow test import results.xml --format junit --tester "CI"
+# Traceability, compliance checks, CR status, test result import
+PYTHONPATH=.:DHF python -m compliantflow --help
+PYTHONPATH=.:DHF python -m compliantflow validate traceability
+PYTHONPATH=.:DHF python -m compliantflow validate compliance IEC_62304
+PYTHONPATH=.:DHF python -m compliantflow traceability matrix CRS SYS SRS
+PYTHONPATH=.:DHF python -m compliantflow test import results.xml --format junit --tester "CI"
 ```
 
 ### DHF Data CLI
 ```bash
-# Item CRUD, schema validation, document generation, test result reads
-PYTHONPATH=src:DHF python -m utils --help
-PYTHONPATH=src:DHF python -m utils item list --type SYS
-PYTHONPATH=src:DHF python -m utils item create --type SYS --data '{"title": "My req"}'
-PYTHONPATH=src:DHF python -m utils validate schema
-PYTHONPATH=src:DHF python -m utils doc generate ALL
-PYTHONPATH=src:DHF python -m utils test list --status FAIL
+# Item CRUD, lifecycle transitions, schema validation, document generation
+PYTHONPATH=.:DHF python -m utils --help
+PYTHONPATH=.:DHF python -m utils item list --type SYS
+PYTHONPATH=.:DHF python -m utils item create --type SYS --data '{"title": "My req"}'
+PYTHONPATH=.:DHF python -m utils item transitions CR-001
+PYTHONPATH=.:DHF python -m utils item transition CR-001 approved --by "Alice"
+PYTHONPATH=.:DHF python -m utils validate schema
+PYTHONPATH=.:DHF python -m utils doc generate ALL
 ```
 
 ## Testing
 
 ```bash
-# All three suites must pass before merging
-PYTHONPATH=src:DHF .venv/bin/pytest tests/sys/ tests/crs/ -q
-PYTHONPATH=src:DHF .venv/bin/pytest tests/srs/ -q
+# All suites must pass before merging
+PYTHONPATH=.:DHF .venv/bin/pytest tests/sys/ tests/crs/ -q
 ```
 
 ## Architecture
@@ -87,11 +77,16 @@ CompliantFlow is split into two independent layers:
 
 | Layer | Package | Purpose |
 |---|---|---|
-| DHF data layer | `DHF/utils/` | YAML CRUD, schema, doc generation, test result storage |
-| Analysis engine | `src/compliantflow/` | Graph, traceability, compliance, lifecycle |
+| DHF data layer | `DHF/utils/` | YAML CRUD, lifecycle, schema, doc generation, test result storage |
+| Analysis engine | `compliantflow/` | Read-only: graph, traceability, compliance reporting |
 
-The analysis engine connects to the data layer via the `DHFAdapter` protocol (`src/compliantflow/adapters/protocol.py`). The default implementation is `LocalDHFAdapter` which wraps `DHF/utils/`. Alternative backends (cloud, database) can plug in by implementing the same protocol.
+The analysis engine connects to the data layer via the `DHFAdapter` protocol (`compliantflow/adapters/protocol.py`). The default implementation is `LocalDHFAdapter` which wraps `DHF/utils/`. Alternative backends (cloud, database) can plug in by implementing the same protocol.
+
+**CompliantFlowCore is read-only.** All data mutations (create/update/delete items, lifecycle transitions) go through the DHFAdapter directly or via `python -m utils`.
 
 **GitOps approval model**: Requirement items (UC, CRS, SYS, SRS, SWDD, SYSARCH, RISK, RCM) have no `status` field. Approval is implicit from Git: `main` branch = approved, feature branch = draft.
 
-**Compliance**: Policy groups live in `governance/` at the repository root. The analysis engine reads them directly — governance is a core-system concern, not DHF data.
+**Compliance**: Policy groups live in `governance/` at the repository root. Pass `governance_dir` explicitly when running checks:
+```python
+core.check_compliance("IEC_62304", Path("governance"))
+```
