@@ -101,6 +101,10 @@ policies:
     section: "5.1.2"
     text: "The MANUFACTURER shall update the plan as development proceeds as appropriate."
     status: "approved"
+    automation:
+      check: "file_existence"
+      params:
+        path: "documents/plans/development_plan.md"
 
   # 5.1.3 Software Development Plan Reference to System Design
   - id: "5.1.3.a"
@@ -116,24 +120,40 @@ policies:
     section: "5.1.3"
     text: "In the software development plan, the MANUFACTURER shall include or reference procedures for coordinating the software development with the system development necessary to satisfy 4.1 (such as system integration, verification, and validation)."
     status: "approved"
+    automation:
+      check: "file_existence"
+      params:
+        path: "documents/plans/development_plan.md"
 
   # 5.1.4 Software Development Standards, Methods and Tools Planning
   - id: "5.1.4.a"
     section: "5.1.4"
     text: "The MANUFACTURER shall include or reference in the software development plan for development of SOFTWARE ITEMS of class C: standards, methods, and tools."
     status: "approved"
+    automation:
+      check: "file_existence"
+      params:
+        path: "documents/plans/development_plan.md"
 
   # 5.1.5 Software Integration and Integration Testing Planning
   - id: "5.1.5.a"
     section: "5.1.5"
     text: "The MANUFACTURER shall include or reference in the software development plan, a plan to integrate the SOFTWARE ITEMS (including SOUP) and perform testing during integration."
     status: "approved"
+    automation:
+      check: "file_existence"
+      params:
+        path: "documents/plans/integration_plan.md"
 
   # 5.1.6 Software Verification Planning
   - id: "5.1.6.a"
     section: "5.1.6"
     text: "The MANUFACTURER shall include or reference in the software development plan VERIFICATION information including DELIVERABLES requiring VERIFICATION, required VERIFICATION TASKS, milestones, and acceptance criteria."
     status: "approved"
+    automation:
+      check: "file_existence"
+      params:
+        path: "documents/plans/verification_plan.md"
 
   # 5.1.7 Software Risk Management Planning
   - id: "5.1.7.a"
@@ -150,12 +170,20 @@ policies:
     section: "5.1.8"
     text: "The MANUFACTURER shall include or reference in the software development plan information about the documents to be produced during the software development life cycle, including title/name, purpose, and procedures for development, review, approval and modification."
     status: "approved"
+    automation:
+      check: "file_existence"
+      params:
+        path: "documents/plans/development_plan.md"
 
   # 5.1.9 Software Configuration Management Planning
   - id: "5.1.9.a"
     section: "5.1.9"
     text: "The MANUFACTURER shall include or reference software configuration management information in the software development plan, including classes of items to be controlled, ACTIVITIES and TASKS, responsible organizations, relationships, timing for configuration control, and when to use problem resolution PROCESS."
     status: "approved"
+    automation:
+      check: "file_existence"
+      params:
+        path: "documents/plans/configuration_management_plan.md"
 
   # 5.1.10 Supporting Items to be Controlled
   - id: "5.1.10.a"
@@ -174,6 +202,10 @@ policies:
     section: "5.1.12"
     text: "The MANUFACTURER shall include or reference in the software development plan a procedure for identifying categories of defects that may be introduced based on the selected programming technology and documenting evidence that demonstrates that these defects do not contribute to unacceptable RISK."
     status: "approved"
+    automation:
+      check: "file_existence"
+      params:
+        path: "documents/plans/development_plan.md"
 
   # 5.2.1 Define and Document Software Requirements
   - id: "5.2.1.a"
@@ -300,12 +332,22 @@ policies:
     section: "5.4.2"
     text: "The MANUFACTURER shall document a design with enough detail to allow correct implementation of each SOFTWARE UNIT."
     status: "approved"
+    automation:
+      check: "attribute_presence"
+      params:
+        type_code: "SWDD"
+        attribute: "content"
 
   # 5.4.3 Develop Detailed Design for Interfaces
   - id: "5.4.3.a"
     section: "5.4.3"
     text: "The MANUFACTURER shall document a design for any interfaces between the SOFTWARE UNIT and external components (hardware or software), as well as any interfaces between SOFTWARE UNITS, detailed enough to implement each SOFTWARE UNIT and its interfaces correctly."
     status: "approved"
+    automation:
+      check: "attribute_presence"
+      params:
+        type_code: "SWDD"
+        attribute: "content"
 
   # 5.4.4 Verify Detailed Design
   - id: "5.4.4.a"
@@ -340,6 +382,11 @@ policies:
     section: "5.5.3"
     text: "The MANUFACTURER shall establish acceptance criteria for SOFTWARE UNITS prior to integration into larger SOFTWARE ITEMS as appropriate, and ensure that SOFTWARE UNITS meet acceptance criteria."
     status: "approved"
+    automation:
+      check: "attribute_presence"
+      params:
+        type_code: "SWDD"
+        attribute: "content"
 
   # 5.5.4 Additional Software Unit Acceptance Criteria
   - id: "5.5.4.a"
@@ -496,12 +543,20 @@ policies:
     section: "5.8.4"
     text: "The MANUFACTURER shall document the VERSION of the MEDICAL DEVICE SOFTWARE that is being released."
     status: "approved"
+    automation:
+      check: "file_existence"
+      params:
+        path: "documents/release_notes.md"
 
   # 5.8.5 Document How Released Software Was Created
   - id: "5.8.5.a"
     section: "5.8.5"
     text: "The MANUFACTURER shall document the procedure and environment used to create the released software."
     status: "approved"
+    automation:
+      check: "file_existence"
+      params:
+        path: "documents/plans/development_plan.md"
 
   # 5.8.6 Ensure Activities and Tasks are Complete
   - id: "5.8.6.a"
@@ -526,6 +581,10 @@ policies:
     section: "6.1"
     text: "The MANUFACTURER shall establish a software maintenance plan for conducting the ACTIVITIES and TASKS of the maintenance PROCESS, including procedures for receiving, documenting, evaluating, resolving and tracking feedback."
     status: "approved"
+    automation:
+      check: "file_existence"
+      params:
+        path: "documents/plans/maintenance_plan.md"
 
   # 6.2.1.1 Monitor Feedback
   - id: "6.2.1.1.a"
@@ -736,12 +795,21 @@ policies:
     section: "8.1.3"
     text: "The MANUFACTURER shall document the set of CONFIGURATION ITEMS and their VERSIONS that comprise the SOFTWARE SYSTEM configuration."
     status: "approved"
+    automation:
+      check: "file_existence"
+      params:
+        path: "documents/system_configuration.md"
 
   # 8.2.1 Approve Change Requests
   - id: "8.2.1.a"
     section: "8.2.1"
     text: "The MANUFACTURER shall change CONFIGURATION ITEMS only in response to an approved CHANGE REQUEST."
     status: "approved"
+    automation:
+      check: "attribute_presence"
+      params:
+        type_code: "CR"
+        attribute: "status"
 
   # 8.2.2 Implement Changes
   - id: "8.2.2.a"
