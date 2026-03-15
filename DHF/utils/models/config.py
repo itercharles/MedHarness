@@ -87,6 +87,8 @@ class DocTypeConfig(BaseModel):
     """Configuration for a document type."""
 
     code: str = Field(..., description="Document type code (e.g., 'SYS')")
+    type_name: Optional[str] = Field(None, description="compliantflow domain name (e.g., 'system_requirement'); falls back to code if absent")
+    parent_types: Optional[List[str]] = Field(None, description="compliantflow domain parent type names for traceability hierarchy")
     name: str = Field(..., description="Human-readable name")
     prefix: str = Field(..., description="ID prefix (e.g., 'SYS-')")
     directory: Optional[str] = Field(None, description="Storage directory name")

@@ -186,8 +186,7 @@ def config() -> None:
 def config_doc_types(ctx: click.Context) -> None:
     """List all configured doc types. Outputs JSON."""
     adapter = _make_adapter(ctx.obj["dhf"])
-    cfg = adapter.get_project_config()
-    result = [{"code": dt.code, "name": dt.name, "prefix": dt.prefix} for dt in cfg.doc_types]
+    result = [{"code": dt.code, "name": dt.name, "prefix": dt.prefix} for dt in adapter._config.doc_types]
     click.echo(json.dumps(result, default=str))
 
 

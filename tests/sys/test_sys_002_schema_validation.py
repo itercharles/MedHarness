@@ -59,7 +59,7 @@ def test_unknown_field_raises_validation_error(test_dhf_root):
     An item YAML with a field not declared in the doc-type config must raise
     ValidationError naming both the field and the file.
     """
-    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
+    adapter = LocalDHFAdapter(test_dhf_root)
     tmp = test_dhf_root / "items" / "02_req_sys" / "SYS-INVALID-FIELD.yaml"
     _write_yaml(tmp, {
         "id": "SYS-INVALID-FIELD",
@@ -70,7 +70,7 @@ def test_unknown_field_raises_validation_error(test_dhf_root):
     })
 
     with pytest.raises(ValidationError) as exc:
-        loader = ItemLoader(test_dhf_root / "items", project_config=core.config)
+        loader = ItemLoader(test_dhf_root / "items", project_config=adapter._config)
         loader.load_file(tmp)
 
     assert "unknown_field_xyz" in str(exc.value).lower()
@@ -84,7 +84,7 @@ def test_missing_id_raises_validation_error(test_dhf_root):
     @links: SRS-001
     @test_id: TC-SRS-001-VAL-003
     """
-    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
+    adapter = LocalDHFAdapter(test_dhf_root)
     tmp = test_dhf_root / "items" / "02_req_sys" / "SYS-NO-ID.yaml"
     _write_yaml(tmp, {
         "title": "Item without id",
@@ -93,7 +93,7 @@ def test_missing_id_raises_validation_error(test_dhf_root):
     })
 
     with pytest.raises(ValidationError) as exc:
-        loader = ItemLoader(test_dhf_root / "items", project_config=core.config)
+        loader = ItemLoader(test_dhf_root / "items", project_config=adapter._config)
         loader.load_file(tmp)
 
     assert "id" in str(exc.value).lower()
@@ -106,7 +106,7 @@ def test_unknown_doc_type_raises_validation_error(test_dhf_root):
     @links: SRS-001
     @test_id: TC-SRS-001-VAL-004
     """
-    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
+    adapter = LocalDHFAdapter(test_dhf_root)
     tmp = test_dhf_root / "items" / "02_req_sys" / "BOGUS-001.yaml"
     _write_yaml(tmp, {
         "id": "BOGUS-001",
@@ -115,7 +115,7 @@ def test_unknown_doc_type_raises_validation_error(test_dhf_root):
     })
 
     with pytest.raises(ValidationError) as exc:
-        loader = ItemLoader(test_dhf_root / "items", project_config=core.config)
+        loader = ItemLoader(test_dhf_root / "items", project_config=adapter._config)
         loader.load_file(tmp)
 
     assert "BOGUS" in str(exc.value)
@@ -155,12 +155,13 @@ def test_select_field_invalid_value_rejected(test_dhf_root):
 
     A field with format='select' must reject values not in the options list.
     """
-    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
+    adapter = LocalDHFAdapter(test_dhf_root)
+    dhf_config = adapter._config
 
     # Find a doc type that has a select field
     select_field = None
     target_doc_type = None
-    for dt in core.config.doc_types:
+    for dt in dhf_config.doc_types:
         for prop in dt.properties:
             if isinstance(prop, dict) and prop.get("format") == "select" and prop.get("options"):
                 select_field = prop
@@ -181,7 +182,7 @@ def test_select_field_invalid_value_rejected(test_dhf_root):
     })
 
     with pytest.raises(ValidationError) as exc:
-        loader = ItemLoader(test_dhf_root / "items", project_config=core.config)
+        loader = ItemLoader(test_dhf_root / "items", project_config=dhf_config)
         loader.load_file(tmp)
 
     assert "DEFINITELY_NOT_A_VALID_OPTION_XYZ" in str(exc.value)

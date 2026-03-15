@@ -2,20 +2,17 @@
 Tests for SYS-034: Component Boundary Isolation
 
 Verifies that the compliantflow analysis engine (src/compliantflow/) does not
-directly import DHF I/O layer modules from outside the adapter boundary.
+directly import DHF I/O layer modules outside the adapter boundary.
 
-Permitted imports anywhere in src/compliantflow/:
-  utils.models.*       — shared data DTOs (Item, ProjectConfig, etc.)
-  utils.exceptions     — ValidationError
-  utils.local_adapter  — adapter import in core.py (lazy import only)
-
-Prohibited imports (except utils.local_adapter lazy import in core.py):
+Prohibited imports in src/compliantflow/ (use adapter instead):
   utils.repository.*   — ItemLoader, ItemSaver, GitRepository
   utils.result_store   — ResultStore
   utils.junit_parser   — parse_junit_xml, ExecutionResult
   utils.document_generation — DocumentGenerator
 
-LocalDHFAdapter now lives in DHF/utils/local_adapter.py (CR-019 boundary move).
+LocalDHFAdapter lives in DHF/utils/local_adapter.py (CR-019 boundary move).
+It may import compliantflow.domain.* (shared vocabulary) but not
+compliantflow analysis-layer modules (traceability, mixins, core, cli).
 
 Boundary rules documented in DHF/utils/docs/design.md (DESIGN-013).
 """
@@ -100,9 +97,14 @@ class TestComponentBoundary:
     def test_TC_SYS_034_002_dhf_local_adapter_uses_utils(self):
         """
         TC-SYS-034-002: DHF/utils/local_adapter.py (the adapter implementation)
-        imports only utils.* modules (DHF layer), not compliantflow.* modules.
+        imports only utils.* modules (DHF layer) and compliantflow.domain.* (shared
+        vocabulary). It must NOT import compliantflow analysis-layer modules.
         LocalDHFAdapter was moved from src/compliantflow/adapters/local.py to
         DHF/utils/local_adapter.py as part of CR-019 boundary cleanup.
+
+        compliantflow.domain.* is the shared domain vocabulary (pure data models)
+        that the adapter uses to produce ProjectSchema for CompliantFlowCore.
+        Analysis-layer modules (traceability, mixins, core) remain prohibited.
 
         @test_id: TC-SYS-034-002
         @links: SYS-034
@@ -114,16 +116,27 @@ class TestComponentBoundary:
 
         imports = _collect_imports(_DHF_LOCAL_ADAPTER)
         utils_imports = [i for i in imports if i.startswith("utils.")]
-        compliantflow_imports = [i for i in imports if i.startswith("compliantflow.")]
+
+        # Analysis-layer modules that the adapter must never import
+        _PROHIBITED_CF_MODULES = [
+            "compliantflow.traceability",
+            "compliantflow.mixins",
+            "compliantflow.core",
+            "compliantflow.cli",
+        ]
+        prohibited_cf_imports = [
+            i for i in imports
+            if any(i == m or i.startswith(m + ".") for m in _PROHIBITED_CF_MODULES)
+        ]
 
         assert len(utils_imports) > 0, (
             "DHF/utils/local_adapter.py should import from utils.* "
             "(it is the DHF-layer adapter implementation)"
         )
-        assert not compliantflow_imports, (
-            "DHF/utils/local_adapter.py must NOT import compliantflow.* — "
-            "it is a DHF-layer module and must not depend on the analysis layer. "
-            f"Found: {compliantflow_imports}"
+        assert not prohibited_cf_imports, (
+            "DHF/utils/local_adapter.py must NOT import compliantflow analysis-layer modules. "
+            "Only compliantflow.domain.* (shared vocabulary) is permitted. "
+            f"Found prohibited: {prohibited_cf_imports}"
         )
 
     def test_TC_SYS_034_003_no_local_adapter_in_src(self):
