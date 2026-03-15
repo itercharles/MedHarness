@@ -147,3 +147,74 @@ def test_TC_SYS_005_005_policy_validation_details(test_dhf_root, governance_dir)
 
         if 'evidence' in result and result['evidence'] is not None:
             assert isinstance(result['evidence'], dict)
+
+
+def test_TC_SYS_005_006_adapter_document_access(test_dhf_root):
+    """
+    TC-SYS-005-006: Adapter document access API
+
+    @links: SYS-005
+    @test_id: TC-SYS-005-006
+
+    Verify get_document() and list_documents() on LocalDHFAdapter.
+    """
+    from utils.local_adapter import LocalDHFAdapter
+    adapter = LocalDHFAdapter(test_dhf_root)
+
+    docs = adapter.list_documents()
+    assert isinstance(docs, list)
+    assert "test_plan" in docs, "test_plan document should be listed"
+
+    content = adapter.get_document("test_plan")
+    assert content is not None, "Should retrieve test_plan document"
+    assert "testing" in content.lower()
+    assert "verification" in content.lower()
+
+    missing = adapter.get_document("nonexistent_document_xyz")
+    assert missing is None, "Should return None for missing document"
+
+
+def test_TC_SYS_005_007_document_content_check(test_dhf_root, governance_dir):
+    """
+    TC-SYS-005-007: document_content policy check
+
+    @links: SYS-005
+    @test_id: TC-SYS-005-007
+
+    Verify document_content automation check passes when keywords are present.
+    """
+    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
+    report = core.check_compliance("IEC_62304", governance_dir)
+
+    doc_results = [r for r in report['results'] if r['policy_id'] == 'TEST.doc_content']
+    assert len(doc_results) == 1, "Should have TEST.doc_content policy result"
+
+    result = doc_results[0]
+    assert result['passed'] is True, f"document_content check should pass: {result['details']}"
+    assert 'evidence' in result and result['evidence'] is not None
+    assert 'keywords' in result['evidence']
+
+
+def test_TC_SYS_005_008_attribute_value_check(test_dhf_root, governance_dir):
+    """
+    TC-SYS-005-008: attribute_value policy check
+
+    @links: SYS-005
+    @test_id: TC-SYS-005-008
+
+    Verify attribute_value automation check returns structured evidence.
+    """
+    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
+    report = core.check_compliance("IEC_62304", governance_dir)
+
+    attr_results = [r for r in report['results'] if r['policy_id'] == 'TEST.attr_value']
+    assert len(attr_results) == 1, "Should have TEST.attr_value policy result"
+
+    result = attr_results[0]
+    assert isinstance(result['passed'], bool)
+    assert result['details'], "Should have details string"
+    assert 'evidence' in result and result['evidence'] is not None
+    evidence = result['evidence']
+    assert 'total' in evidence
+    assert 'matching' in evidence
+    assert 'non_matching' in evidence

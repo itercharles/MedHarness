@@ -1,25 +1,33 @@
 id: SYSARCH-008
-title: Web UI Module
+title: Analysis Engine Module
 content: |-
-  Streamlit-based web user interface for DHF management.
-  
+  Read-only analysis engine that provides traceability, compliance, and graph
+  queries over the DHF. Exposed as a Python library (`CompliantFlowCore`) and
+  a CLI (`python -m compliantflow`).
+
   **Responsibilities**:
-  - Render item management pages dynamically from configuration
-  - Display traceability visualizations (graphs, matrices)
-  - Show compliance dashboards and validation results
-  - Provide document preview and export
-  - Support navigation, search, and filtering
-  
-  **Key Interfaces**:
-  - `PageGenerator`: Dynamic page creation from configuration
-  - `UIComponents`: Reusable UI elements (tables, forms, badges)
-  - `NavigationManager`: Handle routing and query parameters
-  - `VisualizationRenderer`: Display graphs and charts
-  
+  - Build a directed graph of all DHF items and their links
+  - Provide traceability chains and matrices across doc-type paths
+  - Detect orphaned items (no upstream or downstream links)
+  - Run automated compliance checks against governance policy groups
+  - Surface test result coverage and verification status per requirement
+
+  **Key Components**:
+  - `CompliantFlowCore` (`compliantflow/core.py`): single façade; all analysis
+    methods are defined here; accepts any `DHFAdapter` implementation
+  - `GraphEngine` (`compliantflow/traceability/graph/engine.py`): builds a
+    NetworkX DiGraph (edges go child→parent); `nx.descendants` = upstream
+  - `PolicyEngine` (`compliantflow/policy.py`): 8 automated check types
+    (item_existence, file_existence, document_content, trace_coverage,
+    attribute_presence, attribute_value, all_tests_passing, verification_complete)
+  - `compliantflow/cli.py`: Click CLI for CI/CD integration
+
   **Implementation Notes**:
-  - Built with Streamlit framework
-  - Configuration-driven page generation
-  - Responsive layout with browser compatibility
-  - Real-time updates via Streamlit's reactive model
+  - All mutations (create/update/delete items, lifecycle transitions) go through
+    the DHFAdapter layer directly; CompliantFlowCore is strictly read-only
+  - Governance policy groups (`governance/`) are decoupled from DHF data;
+    `governance_dir` is passed explicitly to compliance methods
 design:
 - SYS-003
+- SYS-004
+- SYS-005

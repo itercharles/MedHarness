@@ -13,12 +13,11 @@ CompliantFlow is a Docs-as-Code ALM platform for medical devices. It manages Des
 Two separate CLIs:
 
 ```bash
-# compliantflow CLI — analysis, lifecycle, traceability (compliantflow/cli.py)
+# compliantflow CLI — read-only analysis (compliantflow/cli.py)
 PYTHONPATH=.:DHF python -m compliantflow --help
 PYTHONPATH=.:DHF python -m compliantflow validate traceability
 PYTHONPATH=.:DHF python -m compliantflow validate compliance IEC_62304
-PYTHONPATH=.:DHF python -m compliantflow item transitions SYS-001
-PYTHONPATH=.:DHF python -m compliantflow item transition SYS-001 approved --by "Alice"
+PYTHONPATH=.:DHF python -m compliantflow validate compliance IEC_62304 --governance-dir governance
 PYTHONPATH=.:DHF python -m compliantflow cr check-status CR-012
 PYTHONPATH=.:DHF python -m compliantflow cr update CR-012 --item SYS-001
 PYTHONPATH=.:DHF python -m compliantflow traceability matrix CRS SYS SRS
@@ -28,7 +27,7 @@ PYTHONPATH=.:DHF python -m compliantflow test import results.xml --format junit 
 PYTHONPATH=.:DHF python -m compliantflow test status TC-SYS-001
 PYTHONPATH=.:DHF python -m compliantflow test list --status PASS
 
-# utils CLI (DHF data layer) — data CRUD, schema validation, doc generation (DHF/utils/cli.py)
+# utils CLI (DHF data layer) — data CRUD, lifecycle, schema validation, doc generation (DHF/utils/cli.py)
 PYTHONPATH=.:DHF python -m utils --help
 PYTHONPATH=.:DHF python -m utils validate schema
 PYTHONPATH=.:DHF python -m utils item list --type SYS
@@ -36,6 +35,8 @@ PYTHONPATH=.:DHF python -m utils item get SYS-001
 PYTHONPATH=.:DHF python -m utils item create --type SYS --data '{"title": "My req", "category": "Functional", "verification_method": ["Test"]}'
 PYTHONPATH=.:DHF python -m utils item update SYS-001 --data '{"title": "Updated title"}'
 PYTHONPATH=.:DHF python -m utils item delete SYS-001
+PYTHONPATH=.:DHF python -m utils item transitions CR-012     # list available lifecycle transitions
+PYTHONPATH=.:DHF python -m utils item transition CR-012 approved --by "Alice"  # execute transition
 PYTHONPATH=.:DHF python -m utils doc list
 PYTHONPATH=.:DHF python -m utils doc generate SYS
 PYTHONPATH=.:DHF python -m utils doc generate ALL
@@ -64,27 +65,19 @@ PYTHONPATH=.:DHF .venv/bin/pytest tests/sys/test_sys_002_schema_validation.py::t
 ### Core Facade: `CompliantFlowCore`
 **`compliantflow/core.py`** is the single entry point for all business logic. Tests interact only through this class. Import as `from compliantflow.core import CompliantFlowCore`.
 
-The class is composed of seven mixins under `compliantflow/mixins/`:
-- `lifecycle.py` — delegates to `traceability/lifecycle_methods.py`
-- `item_crud.py` — `get_all_items`, `get_items_filtered`, `get_item`, `create/update/delete_item`
-- `traceability.py` — `get_vertical_view_items`, `build_traceability_chains`, `build_traceability_matrix`, `get_item_chain`
-- `change_request.py` — `get_cr_for_item`, `get_non_stable_cr`, `add_item_to_cr`, `can_edit_item`
-- `schema_form.py` — `get_form_schema`, `get_relationship_options`, `get_doc_type_metrics`
-- `compliance.py` — `get_policy_group`, `check_compliance`
-- `test_results_mixin.py` — `import_test_results`, `get_test_result`, `get_all_test_results`
+**CompliantFlowCore is a read-only analysis facade.** All data mutations (create/update/delete items, execute lifecycle transitions) go through the DHFAdapter (and the `utils` CLI) directly. There are no mixins — all methods are defined directly in `core.py`.
 
 Key public methods:
+- `refresh()` — reload all items, rebuild graph, recompute verification status
+- `get_config()` → `Optional[Dict]`
 - `get_all_items()` → `List[Dict]` — returns YAML items + TC items from ResultStore
-- `get_items_filtered(doc_type_code, status_filter, search)` → filtered subset
 - `get_item(uid)` → `Optional[Dict]`
-- `create_item(data)`, `update_item(uid, data)`, `delete_item(uid)`
-- `get_vertical_view_items(focus_type, show_upstream, show_downstream)`
 - `build_traceability_chains(path)` → chain list for matrix rendering
-- `check_compliance(group_id)` → compliance results with `policy_text` included
-- `get_available_transitions(item)`, `execute_transition(item_id, to_state, performed_by)`
-- `get_cr_for_item(item_id)`, `get_non_stable_cr()`, `add_item_to_cr(cr_id, item_id)`
 - `build_traceability_matrix(doc_types)` → `{columns: [...], rows: [{DOC_TYPE: id|null, is_orphan, orphan_type, is_complete}]}`
-- `get_item_chain(item_id)` → `{root: id, nodes: {id: {id, title, status, doc_type, upstream: [...], downstream: [...]}}}`
+- `get_item_chain(item_id)` → `{root: id, nodes: {id: {id, title, status, type, upstream: [...], downstream: [...]}}}`
+- `validate()` → graph validation result
+- `get_policy_group(group_id, governance_dir)` → policy group dict (no checks run)
+- `check_compliance(group_id, governance_dir)` → `{score, total_policies, passed_policies, results[{policy_id, passed, details, evidence, policy_text}]}`
 - `import_test_results(results, tester, run_id, run_url, commit_sha)` → `{imported, skipped, items_updated, failed_tcs}`
 - `get_test_result(tc_id)` → `Optional[Dict]`
 - `get_all_test_results(status_filter)` → `Dict[tc_id, record]`
@@ -96,6 +89,8 @@ Key public methods:
 - **`DHF/utils/repository/saver.py`** — writes YAML and commits to git.
 - **`DHF/utils/local_adapter.py`** — `LocalDHFAdapter` wraps the utils package; `CompliantFlowCore` uses it via the `DHFAdapter` protocol (`compliantflow/adapters/protocol.py`).
 - Items are stored under `DHF/items/<directory>/`.
+- Documents are stored under `DHF/documents/` (any subdirectory). Access via logical ID (filename stem): `adapter.get_document("development_plan")` finds `documents/plans/development_plan.md`. `adapter.list_documents()` returns all stems.
+- **`DHF/utils/lifecycle.py`** — standalone lifecycle engine (`get_available_transitions`, `execute_transition`). Used by `utils` CLI; CompliantFlowCore does **not** expose lifecycle mutation methods.
 
 ### Graph Engine
 **`compliantflow/traceability/graph/engine.py`** builds a NetworkX `DiGraph`. **Edge direction is child→parent** (e.g., SRS-001 → SYS-001 for a `derives_from` link). This means:
@@ -126,9 +121,28 @@ Config is split across two locations:
 `loader.py` validates each YAML against its doc type's `properties` list. Allowed fields per item = `_SYSTEM_FIELDS` (saver-written metadata: `id`, `doc_type`, `status`, `history`, etc., plus `reviewer`/`review_date` as core Item model fields) + fields declared in `properties` + lifecycle-derived fields (auto-computed from the doc type's `lifecycle` config when present: `{to_state}_by`/`{to_state}_date` for each transition, `manual_verifications` when manual criteria exist, `verification_status` when `has_verification: true`).
 
 ### Lifecycle / Transitions
-- **`compliantflow/traceability/lifecycle_methods.py`** — `execute_transition()` only writes `status`. Audit fields (`approved_by`, `approved_date`, `reviewer`, `review_date`) are written by the caller before invoking the transition.
-- A state with `is_stable: true` locks the item — `is_item_editable()` returns `False`.
+- **`DHF/utils/lifecycle.py`** — standalone lifecycle engine: `get_available_transitions(item_id)`, `execute_transition(item_id, to_state, performed_by)`. Called from the `utils` CLI (`python -m utils item transitions <id>`, `python -m utils item transition <id> <state> --by <name>`).
+- A state with `is_stable: true` locks the item.
 - Lifecycle engine is a no-op for items whose doc type has no `lifecycle` config (requirement items).
+
+### Compliance / PolicyEngine
+**`compliantflow/policy.py`** — `PolicyEngine` executes automated policy checks against the graph. Instantiated internally by `core.check_compliance()`.
+
+Eight built-in check types (`policy.automation.check` field in governance YAML):
+| Check | Parameters | What it verifies |
+|---|---|---|
+| `item_existence` | `type_code` | Items of that type exist |
+| `file_existence` | `path` | File exists relative to DHF root |
+| `document_content` | `doc_id`, `keywords` | Document contains all keywords (case-insensitive) |
+| `trace_coverage` | `source_type`, `target_type`, `min_coverage` | Source items link to target items |
+| `attribute_presence` | `type_code`, `attribute` | All items have that attribute set |
+| `attribute_value` | `type_code`, `attribute`, `expected_value` | All items have attribute == expected_value |
+| `all_tests_passing` | `type_code` | All TC items linked to type items have PASS status |
+| `verification_complete` | `type_code` | All items have `verification_status == 'verified'` |
+
+Governance YAML lives under `governance/` (separate from DHF). Pass `governance_dir` explicitly: `core.check_compliance("IEC_62304", Path("governance"))`.
+
+`IEC_62304.yaml` has 75/106 policies automated; 31 manual (QMS, procedural, organizational).
 
 ### External Test Result Integration
 
@@ -208,8 +222,8 @@ item: `verified` (all TCs PASS), `failed` (any TC FAIL), `not_verified` (no resu
 Git history serves as the audit trail.
 
 ### CLI Layer
-- **`compliantflow/cli.py`** — analysis CLI (`python -m compliantflow`): traceability, compliance, lifecycle transitions, CR management, test result import
-- **`DHF/utils/cli.py`** — data CLI (`python -m utils`): item CRUD, schema validation, config inspection, doc generation/export
+- **`compliantflow/cli.py`** — **read-only** analysis CLI (`python -m compliantflow`): traceability, compliance checks, CR status, test result import. No item mutations.
+- **`DHF/utils/cli.py`** — data CLI (`python -m utils`): item CRUD, schema validation, lifecycle transitions, doc generation/export
 
 ## Testing Conventions
 
