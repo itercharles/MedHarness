@@ -110,8 +110,11 @@ jobs:
 
   # Phase 4: Traceability Check
   # Import test results from phases 2 & 3, then verify:
-  #   1. All SYS items are covered by at least one passing TC (verified)
-  #   2. No TC items have broken links (links to non-existent requirements)
+  #   1. All UC items are covered by at least one CRS
+  #   2. All CRS items are covered by at least one SYS
+  #   3. All SYS items are covered by at least one SYSARCH
+  #   4. All SYS items have passing TC coverage (verified)
+  #   5. No TC items have broken links (links to non-existent requirements)
   phase4-traceability:
     name: Phase 4 - Traceability Check
     runs-on: ubuntu-latest
@@ -163,16 +166,53 @@ jobs:
           core = CompliantFlowCore(LocalDHFAdapter(Path("DHF")))
           all_items = {i["id"]: i for i in core.get_all_items()}
           tc_items = [i for i in all_items.values() if i["id"].startswith("TC-")]
+          G = core.graph.graph
 
           errors = []
 
-          # 1. Broken TC links
+          def get_prefix(type_code):
+              if core.config:
+                  t = core.config.get_type(type_code)
+                  if t:
+                      return t.id_prefix
+              return f"{type_code}-"
+
+          def check_downstream_coverage(parent_type, child_type):
+              """Every parent item must have at least one child item linking to it.
+              In the graph (child→parent edges), children are predecessors of the parent.
+              """
+              parent_prefix = get_prefix(parent_type)
+              child_prefix = get_prefix(child_type)
+              uncovered = []
+              for node in G.nodes:
+                  if node.startswith(parent_prefix):
+                      children = [n for n in G.predecessors(node) if n.startswith(child_prefix)]
+                      if not children:
+                          uncovered.append(node)
+              return uncovered
+
+          # 1. All UC covered by CRS
+          uncovered = check_downstream_coverage("UC", "CRS")
+          for uid in uncovered:
+              errors.append(f"UC item {uid} has no CRS coverage")
+
+          # 2. All CRS covered by SYS
+          uncovered = check_downstream_coverage("CRS", "SYS")
+          for uid in uncovered:
+              errors.append(f"CRS item {uid} has no SYS coverage")
+
+          # 3. All SYS covered by SYSARCH
+          uncovered = check_downstream_coverage("SYS", "SYSARCH")
+          for uid in uncovered:
+              errors.append(f"SYS item {uid} has no SYSARCH coverage")
+
+          # 4. Broken TC links
           for tc in tc_items:
               for link in (tc.get("links") or []):
                   if link not in all_items:
                       errors.append(f"TC {tc['id']} links to missing item: {link}")
 
-          # 2. SYS items without test coverage
+          # 5. SYS items without test coverage
           not_verified = [
               i["id"] for i in all_items.values()
               if i["id"].startswith("SYS-")
@@ -188,6 +228,7 @@ jobs:
               sys.exit(1)
 
           sys_items = [i for i in all_items.values() if i["id"].startswith("SYS-")]
+          print(f"OK: UC→CRS→SYS→SYSARCH coverage complete")
           print(f"OK: {len(tc_items)} TC items, 0 broken links")
           print(f"OK: All {len(sys_items)} SYS items verified")
           EOF
