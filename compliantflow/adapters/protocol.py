@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Dict, List, Optional, Protocol, runtime_checkable
 
 from compliantflow.domain.schema import ProjectSchema
@@ -21,32 +20,4 @@ class DHFAdapter(Protocol):
     def get_project_config(self) -> ProjectSchema: ...
     def get_test_result(self, tc_id: str) -> Optional[dict]: ...
     def get_all_test_results(self, status_filter: Optional[str] = None) -> Dict[str, dict]: ...
-    def record_test_result(
-        self,
-        tc_id: str,
-        testing_status: str,
-        tester: str = "",
-        run_id: str = "",
-        run_url: str = "",
-        commit_sha: str = "",
-        notes: str = "",
-        links: Optional[List[str]] = None,
-        title: str = "",
-        reviewer: str = "",
-        review_date: str = "",
-        review_status: str = "",
-    ) -> None: ...
     def get_test_result_items(self) -> List[dict]: ...
-    def import_results_from_file(
-        self,
-        xml_path: Path,
-        tester: str = "",
-        run_id: str = "",
-        run_url: str = "",
-        commit_sha: str = "",
-    ) -> dict: ...
-    def pull_results_from_artifacts(
-        self,
-        run_id: str = "",
-        commit_sha: str = "",
-    ) -> dict: ...

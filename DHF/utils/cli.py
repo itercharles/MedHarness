@@ -234,7 +234,71 @@ def doc_generate(ctx: click.Context, doc_type: str) -> None:
 
 @main.group()
 def test() -> None:
-    """Commands for reading test results stored in the DHF."""
+    """Commands for managing test results stored in the DHF."""
+
+
+@test.command("import")
+@click.argument("file")
+@click.option("--format", "fmt", default="junit", show_default=True,
+              type=click.Choice(["junit"]), help="Input format.")
+@click.option("--tester", required=True, help="Name of tester / CI system.")
+@click.option("--run-id", default="", help="CI run identifier.")
+@click.option("--run-url", default="", help="URL to CI run for traceability.")
+@click.option("--commit", "commit_sha", default="", metavar="SHA",
+              help="Git commit SHA that was tested.")
+@click.pass_context
+def test_import(
+    ctx: click.Context,
+    file: str,
+    fmt: str,
+    tester: str,
+    run_id: str,
+    run_url: str,
+    commit_sha: str,
+) -> None:
+    """Import test execution results from a JUnit XML file."""
+    dhf_path: Path = ctx.obj["dhf"]
+    adapter = _make_adapter(dhf_path)
+    result = adapter.import_results_from_file(
+        Path(file), tester=tester, run_id=run_id, run_url=run_url, commit_sha=commit_sha
+    )
+    summary = {"imported": len(result["recorded"]), "skipped": result["skipped"]}
+    click.echo(json.dumps(summary, default=str))
+    click.echo(
+        f"✓ Imported {summary['imported']} result(s), skipped {summary['skipped']}.",
+        err=True,
+    )
+
+
+@test.command("pull")
+@click.option("--run-id", default="", help="GitHub Actions run ID (default: latest for HEAD).")
+@click.option("--commit", "commit_sha", default="", metavar="SHA",
+              help="Find latest completed run for this commit SHA.")
+@click.pass_context
+def test_pull(ctx: click.Context, run_id: str, commit_sha: str) -> None:
+    """Fetch test results from GitHub Actions artifacts.
+
+    Requires GITHUB_TOKEN to be set in the environment.
+    Results are cached locally (DHF/test-results/results.yaml, git-ignored).
+    """
+    dhf_path: Path = ctx.obj["dhf"]
+    adapter = _make_adapter(dhf_path)
+    try:
+        result = adapter.pull_results_from_artifacts(run_id=run_id, commit_sha=commit_sha)
+    except ValueError as exc:
+        click.echo(f"ERROR: {exc}", err=True)
+        sys.exit(1)
+    summary = {
+        "imported": len(result["recorded"]),
+        "skipped": result["skipped"],
+        "run_id": result.get("run_id", ""),
+        "run_url": result.get("run_url", ""),
+    }
+    click.echo(json.dumps(summary, default=str))
+    click.echo(
+        f"✓ Pulled {summary['imported']} result(s), skipped {summary['skipped']} — run {summary['run_id']}",
+        err=True,
+    )
 
 
 @test.command("status")
