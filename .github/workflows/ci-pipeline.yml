@@ -108,12 +108,86 @@ jobs:
           name: crs-test-results
           path: crs-test-results.xml
 
-  # Phase 3.5 (Import test results) removed — CR-019.
-  # Test results remain in GitHub Actions artifacts (source of truth).
-  # Use: python -m compliantflow --dhf DHF test pull [--run-id RUN_ID]
-  # to fetch results from artifacts into local cache on demand.
-  # See SYSARCH-013 for the architecture rationale.
+  # Phase 4: Traceability Check
+  # Import test results from phases 2 & 3, then verify:
+  #   1. All SYS items are covered by at least one passing TC (verified)
+  #   2. No TC items have broken links (links to non-existent requirements)
+  phase4-traceability:
+    name: Phase 4 - Traceability Check
+    runs-on: ubuntu-latest
+    needs: [phase2-sys, phase3-crs]
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
 
-  # Phase 4 (CR auto-update) removed — CR affected_items and PR linkage
-  # will be managed by a dedicated workflow in a future iteration.
-  # See SYSARCH-011 for the GitOps-implicit PR linkage design rationale.
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Download SYS test results
+        uses: actions/download-artifact@v4
+        with:
+          name: sys-test-results
+
+      - name: Download CRS test results
+        uses: actions/download-artifact@v4
+        with:
+          name: crs-test-results
+
+      - name: Import test results into DHF
+        run: |
+          export PYTHONPATH="${PYTHONPATH}:${PWD}:${PWD}/DHF"
+          python -m utils --dhf DHF test import sys-test-results.xml \
+            --format junit --tester "GitHub Actions" \
+            --run-id "${{ github.run_id }}" --commit "${{ github.sha }}"
+          python -m utils --dhf DHF test import crs-test-results.xml \
+            --format junit --tester "GitHub Actions" \
+            --run-id "${{ github.run_id }}" --commit "${{ github.sha }}"
+
+      - name: Check traceability and test coverage
+        run: |
+          export PYTHONPATH="${PYTHONPATH}:${PWD}:${PWD}/DHF"
+          python - <<'EOF'
+          import sys
+          from pathlib import Path
+          from utils.local_adapter import LocalDHFAdapter
+          from compliantflow.core import CompliantFlowCore
+
+          core = CompliantFlowCore(LocalDHFAdapter(Path("DHF")))
+          all_items = {i["id"]: i for i in core.get_all_items()}
+          tc_items = [i for i in all_items.values() if i["id"].startswith("TC-")]
+
+          errors = []
+
+          # 1. Broken TC links
+          for tc in tc_items:
+              for link in (tc.get("links") or []):
+                  if link not in all_items:
+                      errors.append(f"TC {tc['id']} links to missing item: {link}")
+
+          # 2. SYS items without test coverage
+          not_verified = [
+              i["id"] for i in all_items.values()
+              if i["id"].startswith("SYS-")
+              and i.get("verification_status", "not_verified") == "not_verified"
+          ]
+          for sid in not_verified:
+              errors.append(f"SYS item {sid} has no test coverage (not_verified)")
+
+          if errors:
+              print("TRACEABILITY CHECK FAILED:")
+              for e in errors:
+                  print(f"  - {e}")
+              sys.exit(1)
+
+          sys_items = [i for i in all_items.values() if i["id"].startswith("SYS-")]
+          print(f"OK: {len(tc_items)} TC items, 0 broken links")
+          print(f"OK: All {len(sys_items)} SYS items verified")
+          EOF
