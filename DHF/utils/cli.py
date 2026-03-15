@@ -140,6 +140,41 @@ def item_delete(ctx: click.Context, item_id: str, author: str) -> None:
     click.echo(f"✓ Deleted {item_id}.", err=True)
 
 
+@item.command("transitions")
+@click.argument("item_id")
+@click.pass_context
+def item_transitions(ctx: click.Context, item_id: str) -> None:
+    """List available lifecycle transitions for an item. Outputs JSON."""
+    adapter = _make_adapter(ctx.obj["dhf"])
+    it = adapter.get_item(item_id)
+    if it is None:
+        click.echo(f"ERROR: Item '{item_id}' not found.", err=True)
+        sys.exit(1)
+    transitions = adapter.get_available_transitions(item_id)
+    click.echo(json.dumps({
+        "item_id": item_id,
+        "current_status": it.get("status"),
+        "transitions": transitions,
+    }, default=str))
+
+
+@item.command("transition")
+@click.argument("item_id")
+@click.argument("to_state")
+@click.option("--by", "performed_by", default="cli", show_default=True, help="User performing the transition.")
+@click.pass_context
+def item_transition(ctx: click.Context, item_id: str, to_state: str, performed_by: str) -> None:
+    """Execute a lifecycle state transition for an item."""
+    adapter = _make_adapter(ctx.obj["dhf"])
+    try:
+        result = adapter.execute_transition(item_id, to_state, performed_by=performed_by)
+    except ValueError as e:
+        click.echo(f"ERROR: {e}", err=True)
+        sys.exit(1)
+    click.echo(json.dumps(result, default=str))
+    click.echo(f"✓ {item_id}: {result.get('status')}.", err=True)
+
+
 # ---------------------------------------------------------------------------
 # validate group
 # ---------------------------------------------------------------------------

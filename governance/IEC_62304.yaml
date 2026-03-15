@@ -197,6 +197,12 @@ policies:
     section: "5.2.6"
     text: "The MANUFACTURER shall verify and document that the software requirements implement SYSTEM requirements, do not contradict one another, avoid ambiguity, permit establishment of test criteria, can be uniquely identified, and are traceable to SYSTEM requirements."
     status: "approved"
+    automation:
+      check: "trace_coverage"
+      params:
+        source_type: "SRS"
+        target_type: "SYS"
+        min_coverage: 1.0
 
   # 5.3.1 Transform Requirements into Architecture
   - id: "5.3.1.a"
@@ -238,11 +244,11 @@ policies:
     text: "The MANUFACTURER shall verify and document that the ARCHITECTURE implements SYSTEM and software requirements including those relating to RISK CONTROL, supports interfaces, and supports proper operation of SOUP items."
     status: "approved"
     automation:
-       check: "trace_coverage"
-       params:
-         source_type: "SYS"
-         target_type: "SWAD"
-         min_coverage: 1.0
+      check: "trace_coverage"
+      params:
+        source_type: "SYS"
+        target_type: "SYSARCH"
+        min_coverage: 1.0
 
   # 5.4.1 Subdivide Software into Units
   - id: "5.4.1.a"
@@ -275,7 +281,7 @@ policies:
       check: "trace_coverage"
       params:
         source_type: "SWDD"
-        target_type: "SWAD"
+        target_type: "SYSARCH"
         min_coverage: 1.0
 
   # 5.5.1 Implement Each Software Unit
@@ -307,6 +313,10 @@ policies:
     section: "5.5.5"
     text: "The MANUFACTURER shall perform the SOFTWARE UNIT VERIFICATION and document the results."
     status: "approved"
+    automation:
+      check: "all_tests_passing"
+      params:
+        type_code: "SWDD"
 
   # 5.6.1 Integrate Software Units
   - id: "5.6.1.a"
@@ -389,6 +399,10 @@ policies:
     section: "5.7.4"
     text: "The MANUFACTURER shall EVALUATE the appropriateness of VERIFICATION strategies and test procedures, and verify that all software requirements have been tested, TRACEABILITY is recorded, and test results meet pass/fail criteria."
     status: "approved"
+    automation:
+      check: "all_tests_passing"
+      params:
+        type_code: "SYS"
 
   # 5.7.5 Software System Test Record Contents
   - id: "5.7.5.a"
@@ -401,6 +415,10 @@ policies:
     section: "5.8.1"
     text: "The MANUFACTURER shall ensure that all software VERIFICATION ACTIVITIES have been completed and the results have been EVALUATED before the software is released."
     status: "approved"
+    automation:
+      check: "verification_complete"
+      params:
+        type_code: "SYS"
 
   # 5.8.2 Document Known Residual Anomalies
   - id: "5.8.2.a"
@@ -509,6 +527,10 @@ policies:
     section: "7.1.1"
     text: "The MANUFACTURER shall identify SOFTWARE ITEMS that could contribute to a hazardous situation identified in the MEDICAL DEVICE RISK ANALYSIS ACTIVITY of ISO 14971."
     status: "approved"
+    automation:
+      check: "item_existence"
+      params:
+        type_code: "RISK"
 
   # 7.1.2 Identify Potential Causes
   - id: "7.1.2.a"
@@ -545,6 +567,12 @@ policies:
     section: "7.3.1"
     text: "The implementation of each RISK CONTROL measure shall be VERIFIED, and this VERIFICATION shall be documented."
     status: "approved"
+    automation:
+      check: "trace_coverage"
+      params:
+        source_type: "RISK"
+        target_type: "RCM"
+        min_coverage: 1.0
 
   # 7.3.3 Document Traceability
   - id: "7.3.3.a"

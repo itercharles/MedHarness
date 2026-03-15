@@ -136,18 +136,67 @@ class LocalDHFAdapter:
         return self._enrich_item_dict(item)
 
     def update_item(self, uid: str, data: dict, author: Optional[str] = None, cr_id: Optional[str] = None) -> Optional[dict]:
+        from utils.lifecycle import get_initial_state, is_stable
+
         existing = self._loader.load_by_uid(uid)
         if not existing:
             return None
+
+        # If the item has a lifecycle and is currently in a stable state,
+        # reset it to the initial state and clear approval fields.
+        doc_type_code = uid.split("-")[0]
+        dt = self._config.get_doc_type_by_prefix(doc_type_code + "-")
+        if dt and dt.lifecycle:
+            if "status" not in data:
+                initial = get_initial_state(self._config, doc_type_code)
+                if initial:
+                    data = {**data, "status": initial}
+            old_status = existing.model_dump().get("status")
+            if old_status and is_stable(self._config, old_status):
+                initial = get_initial_state(self._config, doc_type_code)
+                approval_fields = [
+                    "approved_by", "approved_date", "reviewer", "review_date",
+                    "verified_by", "verified_date", "released_by", "released_date",
+                ]
+                data = {k: v for k, v in data.items() if k not in approval_fields}
+                data = {**data, "status": initial}
+                for field in approval_fields:
+                    data[field] = None
+
         updated_data = existing.model_dump(exclude_unset=True)
         # Strip computed/non-model keys that should not be persisted
-        data = {k: v for k, v in data.items() if k != 'all_linked_uids'}
+        data = {k: v for k, v in data.items() if k != "all_linked_uids"}
         updated_data.update(data)
         # Remove keys explicitly set to None (signal to clear the field)
         updated_data = {k: v for k, v in updated_data.items() if v is not None}
         item = Item.model_validate(updated_data)
         self._saver.save(item, author=author, cr_id=cr_id)
         return self._enrich_item_dict(item)
+
+    def get_available_transitions(self, item_id: str) -> List[Dict]:
+        """Return available lifecycle transitions for an item."""
+        from utils.lifecycle import get_available_transitions
+        item = self.get_item(item_id)
+        if item is None:
+            return []
+        return get_available_transitions(self._config, item)
+
+    def execute_transition(
+        self,
+        item_id: str,
+        to_state: str,
+        performed_by: Optional[str] = None,
+    ) -> Dict:
+        """Execute a lifecycle state transition for an item."""
+        from utils.lifecycle import execute_transition
+        return execute_transition(
+            config=self._config,
+            get_item_fn=self.get_item,
+            update_item_fn=lambda uid, data: self.update_item(uid, data, author=performed_by),
+            item_id=item_id,
+            to_state=to_state,
+            performed_by=performed_by,
+        )
 
     def delete_item(self, uid: str, author: Optional[str] = None) -> bool:
         return self._saver.delete(uid, author=author)
