@@ -1,6 +1,6 @@
-"""Lifecycle mixin — delegates to traceability/lifecycle_methods.py."""
+"""Lifecycle mixin — delegates to lifecycle.py."""
 
-from compliantflow.traceability.lifecycle_methods import (
+from compliantflow.lifecycle import (
     get_available_transitions,
     get_state_info,
     _validate_criteria,
