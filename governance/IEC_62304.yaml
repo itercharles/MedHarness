@@ -14,6 +14,10 @@ policies:
     section: "4.2"
     text: "The MANUFACTURER shall apply a RISK MANAGEMENT PROCESS complying with ISO 14971."
     status: "approved"
+    automation:
+      check: "item_existence"
+      params:
+        type_code: "RISK"
 
   # 4.3 Software Safety Classification
   - id: "4.3.a"
@@ -25,6 +29,11 @@ policies:
     section: "4.3"
     text: "The MANUFACTURER shall document the software safety class assigned to each SOFTWARE SYSTEM in the RISK MANAGEMENT FILE."
     status: "approved"
+    automation:
+      check: "attribute_presence"
+      params:
+        type_code: "RISK"
+        attribute: "content"
 
   - id: "4.3.d"
     section: "4.3"
@@ -98,6 +107,10 @@ policies:
     section: "5.1.3"
     text: "As inputs for software development, SYSTEM requirements shall be referenced in the software development plan by the MANUFACTURER."
     status: "approved"
+    automation:
+      check: "item_existence"
+      params:
+        type_code: "SYS"
 
   - id: "5.1.3.b"
     section: "5.1.3"
@@ -127,6 +140,10 @@ policies:
     section: "5.1.7"
     text: "The MANUFACTURER shall include or reference in the software development plan, a plan to conduct the ACTIVITIES and TASKS of the software RISK MANAGEMENT PROCESS, including the management of RISKS relating to SOUP."
     status: "approved"
+    automation:
+      check: "item_existence"
+      params:
+        type_code: "RISK"
 
   # 5.1.8 Documentation Planning
   - id: "5.1.8.a"
@@ -173,6 +190,11 @@ policies:
     section: "5.2.2"
     text: "The MANUFACTURER shall include in the software requirements: functional and capability requirements, SOFTWARE SYSTEM inputs and outputs, interfaces, security requirements, data definitions, and regulatory requirements."
     status: "approved"
+    automation:
+      check: "attribute_presence"
+      params:
+        type_code: "SRS"
+        attribute: "content"
 
   # 5.2.3 Include Risk Control Measures
   - id: "5.2.3.a"
@@ -185,6 +207,10 @@ policies:
     section: "5.2.4"
     text: "The MANUFACTURER shall re-EVALUATE the MEDICAL DEVICE RISK ANALYSIS when software requirements are established and update it as appropriate."
     status: "approved"
+    automation:
+      check: "item_existence"
+      params:
+        type_code: "RISK"
 
   # 5.2.5 Update Requirements
   - id: "5.2.5.a"
@@ -219,12 +245,21 @@ policies:
     section: "5.3.2"
     text: "The MANUFACTURER shall develop and document an ARCHITECTURE for the interfaces between the SOFTWARE ITEMS and external components, and between the SOFTWARE ITEMS."
     status: "approved"
+    automation:
+      check: "item_existence"
+      params:
+        type_code: "SYSARCH"
 
   # 5.3.3 Specify SOUP Requirements
   - id: "5.3.3.a"
     section: "5.3.3"
     text: "If a SOFTWARE ITEM is identified as SOUP, the MANUFACTURER shall specify functional and performance requirements for the SOUP item that are necessary for its intended use."
     status: "approved"
+    automation:
+      check: "attribute_presence"
+      params:
+        type_code: "SOUP"
+        attribute: "content"
 
   # 5.3.4 Specify System Hardware and Software Required by SOUP
   - id: "5.3.4.a"
@@ -295,6 +330,10 @@ policies:
     section: "5.5.2"
     text: "The MANUFACTURER shall establish strategies, methods and procedures for verifying the SOFTWARE UNITS. Where VERIFICATION is done by testing, the test procedures shall be EVALUATED for adequacy."
     status: "approved"
+    automation:
+      check: "item_existence"
+      params:
+        type_code: "TC-SYS"
 
   # 5.5.3 Software Unit Acceptance Criteria
   - id: "5.5.3.a"
@@ -329,6 +368,10 @@ policies:
     section: "5.6.2"
     text: "The MANUFACTURER shall verify that the SOFTWARE UNITS have been integrated into SOFTWARE ITEMS and/or the SOFTWARE SYSTEM in accordance with the integration plan and retain records of the evidence of such verification."
     status: "approved"
+    automation:
+      check: "all_tests_passing"
+      params:
+        type_code: "SYS"
 
   # 5.6.3 Software Integration Testing
   - id: "5.6.3.a"
@@ -363,12 +406,20 @@ policies:
     section: "5.6.7"
     text: "The MANUFACTURER shall document the test result (pass/fail and a list of ANOMALIES), retain sufficient records to permit the test to be repeated, and identify the tester."
     status: "approved"
+    automation:
+      check: "item_existence"
+      params:
+        type_code: "TC-SYS"
 
   # 5.6.8 Use Software Problem Resolution Process
   - id: "5.6.8.a"
     section: "5.6.8"
     text: "The MANUFACTURER shall enter ANOMALIES found during software integration and integration testing into a software problem resolution PROCESS."
     status: "approved"
+    automation:
+      check: "item_existence"
+      params:
+        type_code: "CR"
 
   # 5.7.1 Establish Tests for Software Requirements
   - id: "5.7.1.a"
@@ -387,6 +438,10 @@ policies:
     section: "5.7.2"
     text: "The MANUFACTURER shall enter ANOMALIES found during software system testing into a software problem resolution PROCESS."
     status: "approved"
+    automation:
+      check: "item_existence"
+      params:
+        type_code: "CR"
 
   # 5.7.3 Retest After Changes
   - id: "5.7.3.a"
@@ -409,6 +464,10 @@ policies:
     section: "5.7.5"
     text: "The MANUFACTURER shall document test case procedures, test result, software version tested, hardware/software test configurations, test tools, date tested, and identity of person responsible for executing and recording test results."
     status: "approved"
+    automation:
+      check: "item_existence"
+      params:
+        type_code: "TC-SYS"
 
   # 5.8.1 Ensure Verification is Complete
   - id: "5.8.1.a"
@@ -473,36 +532,63 @@ policies:
     section: "6.2.1.1"
     text: "The MANUFACTURER shall monitor feedback on MEDICAL DEVICE SOFTWARE released for intended Use."
     status: "approved"
+    automation:
+      check: "item_existence"
+      params:
+        type_code: "CR"
 
   # 6.2.1.2 Document and Evaluate Feedback
   - id: "6.2.1.2.a"
     section: "6.2.1.2"
     text: "Feedback shall be documented and EVALUATED to determine whether a problem exists in a released MEDICAL DEVICE SOFTWARE. Any such problem shall be recorded as a PROBLEM REPORT."
     status: "approved"
+    automation:
+      check: "item_existence"
+      params:
+        type_code: "CR"
 
   # 6.2.1.3 Evaluate Problem Report's Effects on Safety
   - id: "6.2.1.3.a"
     section: "6.2.1.3"
     text: "Each PROBLEM REPORT shall be EVALUATED to determine how it affects the SAFETY of MEDICAL DEVICE SOFTWARE released for intended use and whether a change to that software is needed to address the problem."
     status: "approved"
+    automation:
+      check: "attribute_presence"
+      params:
+        type_code: "CR"
+        attribute: "affected_items"
 
   # 6.2.2 Use Software Problem Resolution Process
   - id: "6.2.2.a"
     section: "6.2.2"
     text: "The MANUFACTURER shall use the software problem resolution PROCESS to address PROBLEM REPORTS."
     status: "approved"
+    automation:
+      check: "item_existence"
+      params:
+        type_code: "CR"
 
   # 6.2.3 Analyse Change Requests
   - id: "6.2.3.a"
     section: "6.2.3"
     text: "In addition to the analysis required by Clause 9, the MANUFACTURER shall analyse each CHANGE REQUEST for its effect on the organization, MEDICAL DEVICE SOFTWARE released for intended use, and SYSTEMS with which it interfaces."
     status: "approved"
+    automation:
+      check: "attribute_presence"
+      params:
+        type_code: "CR"
+        attribute: "affected_items"
 
   # 6.2.4 Change Request Approval
   - id: "6.2.4.a"
     section: "6.2.4"
     text: "The MANUFACTURER shall EVALUATE and approve CHANGE REQUESTS which modify released MEDICAL DEVICE SOFTWARE."
     status: "approved"
+    automation:
+      check: "attribute_presence"
+      params:
+        type_code: "CR"
+        attribute: "status"
 
   # 6.2.5 Communicate to Users and Regulators
   - id: "6.2.5.a"
@@ -537,30 +623,55 @@ policies:
     section: "7.1.2"
     text: "The MANUFACTURER shall identify potential causes of the SOFTWARE ITEM contributing to a hazardous situation, including incorrect specification, software defects, SOUP failures, hardware failures, and reasonably foreseeable misuse."
     status: "approved"
+    automation:
+      check: "attribute_presence"
+      params:
+        type_code: "RISK"
+        attribute: "content"
 
   # 7.1.3 Evaluate Published SOUP Anomaly Lists
   - id: "7.1.3.a"
     section: "7.1.3"
     text: "If failure or unexpected results from SOUP is a potential cause of the SOFTWARE ITEM contributing to a hazardous situation, the MANUFACTURER shall EVALUATE any ANOMALY list published by the supplier of the SOUP item relevant to the VERSION used to determine if any known ANOMALIES result in a hazardous situation."
     status: "approved"
+    automation:
+      check: "attribute_presence"
+      params:
+        type_code: "SOUP"
+        attribute: "content"
 
   # 7.1.4 Document Potential Causes
   - id: "7.1.4.a"
     section: "7.1.4"
     text: "The MANUFACTURER shall document in the RISK MANAGEMENT FILE potential causes of the SOFTWARE ITEM contributing to a hazardous situation."
     status: "approved"
+    automation:
+      check: "attribute_presence"
+      params:
+        type_code: "RISK"
+        attribute: "content"
 
   # 7.2.1 Define Risk Control Measures
   - id: "7.2.1.a"
     section: "7.2.1"
     text: "For each case where a SOFTWARE ITEM could contribute to a HAZARDOUS SITUATION, the MANUFACTURER shall define and document RISK CONTROL measures in accordance with ISO 14971."
     status: "approved"
+    automation:
+      check: "item_existence"
+      params:
+        type_code: "RCM"
 
   # 7.2.2 Risk Control Measures Implemented in Software
   - id: "7.2.2.a"
     section: "7.2.2"
     text: "If a RISK CONTROL measure is implemented as part of SOFTWARE ITEM functions, the MANUFACTURER shall include it in software requirements, assign appropriate software safety class, and develop in accordance with Clause 5."
     status: "approved"
+    automation:
+      check: "trace_coverage"
+      params:
+        source_type: "RCM"
+        target_type: "SRS"
+        min_coverage: 1.0
 
   # 7.3.1 Verify Risk Control Measures
   - id: "7.3.1.a"
@@ -579,6 +690,12 @@ policies:
     section: "7.3.3"
     text: "The MANUFACTURER shall document TRACEABILITY of software HAZARDS from the hazardous situation to the SOFTWARE ITEM, from the SOFTWARE ITEM to the specific software cause, from the software cause to the RISK CONTROL measure, and from the RISK CONTROL measure to the VERIFICATION of the RISK CONTROL measure."
     status: "approved"
+    automation:
+      check: "trace_coverage"
+      params:
+        source_type: "RISK"
+        target_type: "RCM"
+        min_coverage: 1.0
 
   # 7.4.1 Analyze Changes with Respect to Safety
   - id: "7.4.1.a"
@@ -643,6 +760,11 @@ policies:
     section: "8.2.4"
     text: "The MANUFACTURER shall maintain records of the relationships and dependencies between CHANGE REQUEST, relevant PROBLEM REPORT, and approval of the CHANGE REQUEST."
     status: "approved"
+    automation:
+      check: "attribute_presence"
+      params:
+        type_code: "CR"
+        attribute: "affected_items"
 
   # 8.3 Configuration Status Accounting
   - id: "8.3.a"
@@ -655,12 +777,21 @@ policies:
     section: "9.1"
     text: "The MANUFACTURER shall prepare a PROBLEM REPORT for each problem detected in the MEDICAL DEVICE SOFTWARE, including a statement of criticality."
     status: "approved"
+    automation:
+      check: "item_existence"
+      params:
+        type_code: "CR"
 
   # 9.2 Investigate the Problem
   - id: "9.2.a"
     section: "9.2"
     text: "The MANUFACTURER shall investigate the problem, identify causes if possible, EVALUATE the problem's relevance to SAFETY using software RISK MANAGEMENT PROCESS, document the outcome, and create CHANGE REQUEST(S) or document rationale for no action."
     status: "approved"
+    automation:
+      check: "attribute_presence"
+      params:
+        type_code: "CR"
+        attribute: "affected_items"
 
   # 9.3 Advise Relevant Parties
   - id: "9.3.a"
@@ -673,12 +804,20 @@ policies:
     section: "9.4"
     text: "The MANUFACTURER shall approve and implement all CHANGE REQUESTS, observing the requirements of the change control PROCESS."
     status: "approved"
+    automation:
+      check: "item_existence"
+      params:
+        type_code: "CR"
 
   # 9.5 Maintain Records
   - id: "9.5.a"
     section: "9.5"
     text: "The MANUFACTURER shall maintain records of PROBLEM REPORTS and their resolution including their VERIFICATION, and update the RISK MANAGEMENT FILE as appropriate."
     status: "approved"
+    automation:
+      check: "item_existence"
+      params:
+        type_code: "CR"
 
   # 9.6 Analyze Problems for Trends
   - id: "9.6.a"
@@ -691,9 +830,17 @@ policies:
     section: "9.7"
     text: "The MANUFACTURER shall verify resolutions to determine whether the problem has been resolved, adverse trends reversed, CHANGE REQUESTS implemented, and no additional problems introduced."
     status: "approved"
+    automation:
+      check: "all_tests_passing"
+      params:
+        type_code: "SYS"
 
   # 9.8 Test Documentation Contents
   - id: "9.8.a"
     section: "9.8"
     text: "When testing, retesting or REGRESSION TESTING SOFTWARE ITEMS and SYSTEMS following a change, the MANUFACTURER shall include in the test documentation: test results, ANOMALIES found, VERSION of software tested, relevant hardware/software test configurations, relevant test tools, date tested, and identification of the tester."
     status: "approved"
+    automation:
+      check: "item_existence"
+      params:
+        type_code: "TC-SYS"
