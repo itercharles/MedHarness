@@ -19,6 +19,8 @@ import tempfile
 import zipfile
 from pathlib import Path
 from typing import List
+import urllib.error
+import urllib.request
 from urllib.request import Request, urlopen
 
 from utils.junit_parser import ExecutionResult, parse_junit_xml
@@ -149,8 +151,33 @@ class GitHubArtifactFetcher:
             return json.loads(resp.read())
 
     def _api_get_raw(self, url: str) -> bytes:
+        """Download raw bytes from a GitHub API URL that redirects to storage.
+
+        GitHub artifact downloads redirect to Azure Blob Storage (or similar)
+        using a pre-signed URL.  Python's default urllib handler forwards the
+        Authorization header to the redirect target, which causes the storage
+        service to return 401 (conflicting auth).  We handle the redirect
+        manually so the auth header is only sent to api.github.com.
+        """
+        # Step 1: authenticated request to GitHub API — get the redirect URL.
+        class _NoRedirect(urllib.request.HTTPRedirectHandler):
+            def redirect_request(self, req, fp, code, msg, headers, newurl):  # type: ignore[override]
+                return None  # do not follow; raise HTTPError instead
+
+        no_follow = urllib.request.build_opener(_NoRedirect())
         req = Request(url, headers=self._auth_headers())
-        with urlopen(req) as resp:
+        try:
+            with no_follow.open(req) as resp:
+                return resp.read()
+        except urllib.error.HTTPError as exc:
+            if exc.code not in (301, 302, 303, 307, 308):
+                raise
+            redirect_url = exc.headers.get("Location")
+            if not redirect_url:
+                raise ValueError(f"Redirect from {url} had no Location header") from exc
+
+        # Step 2: unauthenticated download from the pre-signed storage URL.
+        with urlopen(redirect_url) as resp:
             return resp.read()
 
     def _auth_headers(self) -> dict:
