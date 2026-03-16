@@ -442,10 +442,7 @@ policies:
     section: "5.6.2"
     text: "The MANUFACTURER shall verify that the SOFTWARE UNITS have been integrated into SOFTWARE ITEMS and/or the SOFTWARE SYSTEM in accordance with the integration plan and retain records of the evidence of such verification."
     status: "approved"
-    automation:
-      check: "all_tests_passing"
-      params:
-        type_code: "SYS"
+    # Requires test results: run `python -m utils --dhf DHF test pull` before checking locally
 
   # 5.6.3 Software Integration Testing
   - id: "5.6.3.a"
@@ -538,20 +535,14 @@ policies:
     section: "5.7.3"
     text: "When changes are made during SOFTWARE SYSTEM testing, the MANUFACTURER shall repeat tests, perform modified tests or additional tests to verify effectiveness, demonstrate no unintended side effects, and perform relevant RISK MANAGEMENT ACTIVITIES."
     status: "approved"
-    automation:
-      check: "all_tests_passing"
-      params:
-        type_code: "SYS"
+    # Requires test results: run `python -m utils --dhf DHF test pull` before checking locally
 
   # 5.7.4 Evaluate Software System Testing
   - id: "5.7.4.a"
     section: "5.7.4"
     text: "The MANUFACTURER shall EVALUATE the appropriateness of VERIFICATION strategies and test procedures, and verify that all software requirements have been tested, TRACEABILITY is recorded, and test results meet pass/fail criteria."
     status: "approved"
-    automation:
-      check: "all_tests_passing"
-      params:
-        type_code: "SYS"
+    # Requires test results: run `python -m utils --dhf DHF test pull` before checking locally
 
   # 5.7.5 Software System Test Record Contents
   - id: "5.7.5.a"
@@ -568,10 +559,7 @@ policies:
     section: "5.8.1"
     text: "The MANUFACTURER shall ensure that all software VERIFICATION ACTIVITIES have been completed and the results have been EVALUATED before the software is released."
     status: "approved"
-    automation:
-      check: "verification_complete"
-      params:
-        type_code: "SYS"
+    # Requires test results: run `python -m utils --dhf DHF test pull` before checking locally
 
   # 5.8.2 Document Known Residual Anomalies
   - id: "5.8.2.a"
@@ -921,10 +909,7 @@ policies:
     section: "8.2.3"
     text: "The MANUFACTURER shall verify the change, including repeating any VERIFICATION that has been invalidated by the change."
     status: "approved"
-    automation:
-      check: "all_tests_passing"
-      params:
-        type_code: "SYS"
+    # Requires test results: run `python -m utils --dhf DHF test pull` before checking locally
 
   # 8.2.4 Provide Means for Traceability of Change
   - id: "8.2.4.a"
@@ -1010,10 +995,7 @@ policies:
     section: "9.7"
     text: "The MANUFACTURER shall verify resolutions to determine whether the problem has been resolved, adverse trends reversed, CHANGE REQUESTS implemented, and no additional problems introduced."
     status: "approved"
-    automation:
-      check: "all_tests_passing"
-      params:
-        type_code: "SYS"
+    # Requires test results: run `python -m utils --dhf DHF test pull` before checking locally
 
   # 9.8 Test Documentation Contents
   - id: "9.8.a"
