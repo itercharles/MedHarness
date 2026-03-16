@@ -291,8 +291,9 @@ class LocalDHFAdapter:
                     review_date=r.review_date,
                     review_status=r.review_status,
                 )
-        except Exception:
-            pass  # Degrade gracefully — caller sees empty results
+        except Exception as e:
+            import sys
+            print(f"[DHF] auto-fetch failed: {type(e).__name__}: {e}", file=sys.stderr)
 
     def get_test_result(self, tc_id: str) -> Optional[dict]:
         self._ensure_results_loaded()
