@@ -270,14 +270,11 @@ class LocalDHFAdapter:
             return  # No token, degrade gracefully
 
         try:
-            import sys
             fetcher = GitHubArtifactFetcher.from_environment(self._dhf_root)
             # In CI, GITHUB_RUN_ID is the current run (may still be in progress,
             # so we can't rely on status=completed filter — pass run_id directly).
             run_id = os.environ.get("GITHUB_RUN_ID", "")
-            print(f"[DHF] fetching artifacts for run_id={run_id!r}", file=sys.stderr)
             fetch_result = fetcher.fetch(run_id=run_id)
-            loaded = 0
             for r in fetch_result["results"]:
                 if r.testing_status == "SKIP":
                     continue
@@ -294,11 +291,8 @@ class LocalDHFAdapter:
                     review_date=r.review_date,
                     review_status=r.review_status,
                 )
-                loaded += 1
-            print(f"[DHF] loaded {loaded} test result(s)", file=sys.stderr)
-        except Exception as e:
-            import sys
-            print(f"[DHF] auto-fetch failed: {type(e).__name__}: {e}", file=sys.stderr)
+        except Exception:
+            pass  # Degrade gracefully — caller sees empty results
 
     def get_test_result(self, tc_id: str) -> Optional[dict]:
         self._ensure_results_loaded()
