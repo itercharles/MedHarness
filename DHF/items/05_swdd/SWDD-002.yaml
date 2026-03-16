@@ -1,0 +1,10 @@
+id: SWDD-002
+title: PolicyEngine
+content: |-
+  PolicyEngine (compliantflow/policy.py) executes automated compliance checks.
+  It is instantiated with a CompliantFlowCore reference and an optional root_dir
+  for file-based checks. Policy groups are loaded from governance YAML via
+  load_policy_group(). check_compliance() iterates all policies: automated checks
+  dispatch to type-specific methods; manual policies pass if status == 'approved'.
+implements:
+- SRS-002

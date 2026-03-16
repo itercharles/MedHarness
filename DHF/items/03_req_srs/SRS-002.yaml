@@ -1,0 +1,10 @@
+id: SRS-002
+title: Compliance Policy Engine
+content: |-
+  The software shall execute automated compliance checks against policy groups loaded
+  from governance YAML files. Supported check types: item_existence, file_existence,
+  document_content, trace_coverage, attribute_presence, attribute_value,
+  all_tests_passing, verification_complete. Results shall include policy_id, passed
+  flag, details string, and evidence dict.
+derives_from:
+- SYS-005

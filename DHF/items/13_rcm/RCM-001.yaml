@@ -5,3 +5,5 @@ content: The system shall automatically detect and report items with missing or 
   links.
 mitigates:
 - RISK-001
+implements:
+- SYS-004

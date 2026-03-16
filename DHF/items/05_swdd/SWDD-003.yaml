@@ -1,0 +1,11 @@
+id: SWDD-003
+title: CLI Layer and DHF Adapter
+content: |-
+  compliantflow/cli.py implements the read-only CLI using Click. DHF/utils/cli.py
+  implements the data mutation CLI. LocalDHFAdapter (DHF/utils/local_adapter.py)
+  wraps the utils repository package and implements the DHFAdapter protocol
+  (compliantflow/adapters/protocol.py). The boundary is enforced: compliantflow/
+  must not import utils.repository.*, utils.result_store, utils.junit_parser, or
+  utils.document_generation.
+implements:
+- SRS-003
