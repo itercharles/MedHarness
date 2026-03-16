@@ -143,6 +143,8 @@ jobs:
           python -m compliantflow --dhf DHF validate traceability || true
 
       - name: Run IEC 62304 compliance check
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           export PYTHONPATH="${PYTHONPATH}:${PWD}:${PWD}/DHF"
           python -m compliantflow --dhf DHF validate compliance IEC_62304 \
