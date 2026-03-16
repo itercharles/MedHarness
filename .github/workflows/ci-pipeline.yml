@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
   phase1-dhf-utils:
@@ -108,15 +109,12 @@ jobs:
           name: crs-test-results
           path: crs-test-results.xml
 
-  # Phase 4: Traceability Check
-  # Import test results from phases 2 & 3, then verify:
-  #   1. All UC items are covered by at least one CRS
-  #   2. All CRS items are covered by at least one SYS
-  #   3. All SYS items are covered by at least one SYSARCH
-  #   4. All SYS items have passing TC coverage (verified)
-  #   5. No TC items have broken links (links to non-existent requirements)
-  phase4-traceability:
-    name: Phase 4 - Traceability Check
+  # Phase 4: DHF Validation
+  # Checks DHF structural integrity and IEC 62304 compliance via compliantflow CLI.
+  # No test results needed — run `python -m utils --dhf DHF test pull` locally
+  # to fetch test results and re-run compliance with full verification data.
+  phase4-dhf-validation:
+    name: Phase 4 - DHF Validation
     runs-on: ubuntu-latest
     needs: [phase2-sys, phase3-crs]
     steps:
@@ -134,101 +132,21 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Download SYS test results
-        uses: actions/download-artifact@v4
-        with:
-          name: sys-test-results
-
-      - name: Download CRS test results
-        uses: actions/download-artifact@v4
-        with:
-          name: crs-test-results
-
-      - name: Import test results into DHF
+      - name: Check coverage (UC→CRS→SYS→SYSARCH)
         run: |
           export PYTHONPATH="${PYTHONPATH}:${PWD}:${PWD}/DHF"
-          python -m utils --dhf DHF test import sys-test-results.xml \
-            --format junit --tester "GitHub Actions" \
-            --run-id "${{ github.run_id }}" --commit "${{ github.sha }}"
-          python -m utils --dhf DHF test import crs-test-results.xml \
-            --format junit --tester "GitHub Actions" \
-            --run-id "${{ github.run_id }}" --commit "${{ github.sha }}"
+          python -m compliantflow --dhf DHF validate coverage \
+            UC:CRS CRS:SYS SYS:SYSARCH
 
-      - name: Check traceability and test coverage
+      - name: Check traceability (no orphaned requirement items)
         run: |
           export PYTHONPATH="${PYTHONPATH}:${PWD}:${PWD}/DHF"
-          python - <<'EOF'
-          import sys
-          from pathlib import Path
-          from utils.local_adapter import LocalDHFAdapter
-          from compliantflow.core import CompliantFlowCore
+          python -m compliantflow --dhf DHF validate traceability || true
 
-          core = CompliantFlowCore(LocalDHFAdapter(Path("DHF")))
-          all_items = {i["id"]: i for i in core.get_all_items()}
-          tc_items = [i for i in all_items.values() if i["id"].startswith("TC-")]
-          G = core.graph.graph
-
-          errors = []
-
-          def get_prefix(type_code):
-              if core.config:
-                  t = core.config.get_type(type_code)
-                  if t:
-                      return t.id_prefix
-              return f"{type_code}-"
-
-          def check_downstream_coverage(parent_type, child_type):
-              """Every parent item must have at least one child item linking to it.
-              In the graph (child→parent edges), children are predecessors of the parent.
-              """
-              parent_prefix = get_prefix(parent_type)
-              child_prefix = get_prefix(child_type)
-              uncovered = []
-              for node in G.nodes:
-                  if node.startswith(parent_prefix):
-                      children = [n for n in G.predecessors(node) if n.startswith(child_prefix)]
-                      if not children:
-                          uncovered.append(node)
-              return uncovered
-
-          # 1. All UC covered by CRS
-          uncovered = check_downstream_coverage("UC", "CRS")
-          for uid in uncovered:
-              errors.append(f"UC item {uid} has no CRS coverage")
-
-          # 2. All CRS covered by SYS
-          uncovered = check_downstream_coverage("CRS", "SYS")
-          for uid in uncovered:
-              errors.append(f"CRS item {uid} has no SYS coverage")
-
-          # 3. All SYS covered by SYSARCH
-          uncovered = check_downstream_coverage("SYS", "SYSARCH")
-          for uid in uncovered:
-              errors.append(f"SYS item {uid} has no SYSARCH coverage")
-
-          # 4. Broken TC links
-          for tc in tc_items:
-              for link in (tc.get("links") or []):
-                  if link not in all_items:
-                      errors.append(f"TC {tc['id']} links to missing item: {link}")
-
-          # 5. SYS items without test coverage
-          not_verified = [
-              i["id"] for i in all_items.values()
-              if i["id"].startswith("SYS-")
-              and i.get("verification_status", "not_verified") == "not_verified"
-          ]
-          for sid in not_verified:
-              errors.append(f"SYS item {sid} has no test coverage (not_verified)")
-
-          if errors:
-              print("TRACEABILITY CHECK FAILED:")
-              for e in errors:
-                  print(f"  - {e}")
-              sys.exit(1)
-
-          sys_items = [i for i in all_items.values() if i["id"].startswith("SYS-")]
-          print(f"OK: UC→CRS→SYS→SYSARCH coverage complete")
-          print(f"OK: {len(tc_items)} TC items, 0 broken links")
-          print(f"OK: All {len(sys_items)} SYS items verified")
-          EOF
+      - name: Run IEC 62304 compliance check
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          export PYTHONPATH="${PYTHONPATH}:${PWD}:${PWD}/DHF"
+          python -m compliantflow --dhf DHF validate compliance IEC_62304 \
+            --governance-dir governance

@@ -29,4 +29,5 @@ implementation_notes: 'Phase 1 complete - infrastructure ready and proven.
   - Remove deprecated relations sections
 
   - Update UI to use relationship metadata'
-affected_items: []
+affected_items:
+- CR-009

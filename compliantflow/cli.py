@@ -82,6 +82,54 @@ def validate_traceability(ctx: click.Context) -> None:
     click.echo(f"✓ All {item_count} items have traceability links.", err=True)
 
 
+@validate.command("coverage")
+@click.argument("pairs", nargs=-1, required=True, metavar="PARENT:CHILD...")
+@click.pass_context
+def validate_coverage(ctx: click.Context, pairs: tuple) -> None:
+    """Check that every item at each level is covered by the next level.
+
+    PAIRS are PARENT:CHILD type-code pairs, e.g.:
+
+    \b
+      python -m compliantflow validate coverage UC:CRS CRS:SYS SYS:SYSARCH
+
+    Outputs a JSON report to stdout.
+    Exits 1 if any item is uncovered.
+    """
+    dhf_path: Path = ctx.obj["dhf"]
+    core = _make_core(dhf_path)
+
+    parsed = []
+    for pair in pairs:
+        if ":" not in pair:
+            click.echo(f"ERROR: invalid pair '{pair}', expected PARENT:CHILD format.", err=True)
+            sys.exit(2)
+        parent, child = pair.split(":", 1)
+        parsed.append((parent.strip(), child.strip()))
+
+    report = core.check_coverage(parsed)
+    click.echo(json.dumps(report, default=str))
+
+    for r in report["results"]:
+        if r["passed"]:
+            click.echo(
+                f"  ✓ {r['parent_type']}→{r['child_type']}: "
+                f"{r['covered']}/{r['total']} covered",
+                err=True,
+            )
+        else:
+            click.echo(
+                f"  ✗ {r['parent_type']}→{r['child_type']}: "
+                f"{len(r['uncovered'])} uncovered: {r['uncovered']}",
+                err=True,
+            )
+
+    if not report["passed"]:
+        click.echo("✗ Coverage check failed.", err=True)
+        sys.exit(1)
+    click.echo("✓ All coverage checks passed.", err=True)
+
+
 @validate.command("compliance")
 @click.argument("group_id")
 @click.option(

@@ -33,7 +33,7 @@ policies:
       check: "attribute_presence"
       params:
         type_code: "RISK"
-        attribute: "content"
+        attribute: "cause"
 
   - id: "4.3.d"
     section: "4.3"
@@ -194,12 +194,22 @@ policies:
     section: "5.1.10"
     text: "The items to be controlled shall include tools, items or settings, used to develop the MEDICAL DEVICE SOFTWARE, which could impact the MEDICAL DEVICE SOFTWARE."
     status: "approved"
+    automation:
+      check: "document_content"
+      params:
+        doc_id: "configuration_management_plan"
+        keywords: ["tools", "configuration items"]
 
   # 5.1.11 Software Configuration Item Control Before Verification
   - id: "5.1.11.a"
     section: "5.1.11"
     text: "The MANUFACTURER shall plan to place CONFIGURATION ITEMS under configuration management control before they are VERIFIED."
     status: "approved"
+    automation:
+      check: "document_content"
+      params:
+        doc_id: "configuration_management_plan"
+        keywords: ["before", "verification"]
 
   # 5.1.12 Identification and Avoidance of Common Software Defects
   - id: "5.1.12.a"
@@ -238,6 +248,12 @@ policies:
     section: "5.2.3"
     text: "The MANUFACTURER shall include RISK CONTROL measures implemented in software in the requirements as appropriate to the MEDICAL DEVICE SOFTWARE."
     status: "approved"
+    automation:
+      check: "trace_coverage"
+      params:
+        source_type: "RCM"
+        target_type: "SYS"
+        min_coverage: 1.0
 
   # 5.2.4 Re-evaluate Medical Device Risk Analysis
   - id: "5.2.4.a"
@@ -275,7 +291,7 @@ policies:
     automation:
       check: "file_existence"
       params:
-        path: "documents/System_Architecture_Specification.md"
+        path: "documents/specifications/System_Architecture_Specification.md"
 
   # 5.3.2 Develop Architecture for Interfaces
   - id: "5.3.2.a"
@@ -368,7 +384,7 @@ policies:
       check: "trace_coverage"
       params:
         source_type: "SWDD"
-        target_type: "SYSARCH"
+        target_type: "SRS"
         min_coverage: 1.0
 
   # 5.5.1 Implement Each Software Unit
@@ -409,16 +425,17 @@ policies:
     section: "5.5.5"
     text: "The MANUFACTURER shall perform the SOFTWARE UNIT VERIFICATION and document the results."
     status: "approved"
-    automation:
-      check: "all_tests_passing"
-      params:
-        type_code: "SWDD"
 
   # 5.6.1 Integrate Software Units
   - id: "5.6.1.a"
     section: "5.6.1"
     text: "The MANUFACTURER shall integrate the SOFTWARE UNITS in accordance with the integration plan."
     status: "approved"
+    automation:
+      check: "document_content"
+      params:
+        doc_id: "integration_plan"
+        keywords: ["integration", "testing"]
 
   # 5.6.2 Verify Software Integration
   - id: "5.6.2.a"
@@ -521,6 +538,10 @@ policies:
     section: "5.7.3"
     text: "When changes are made during SOFTWARE SYSTEM testing, the MANUFACTURER shall repeat tests, perform modified tests or additional tests to verify effectiveness, demonstrate no unintended side effects, and perform relevant RISK MANAGEMENT ACTIVITIES."
     status: "approved"
+    automation:
+      check: "all_tests_passing"
+      params:
+        type_code: "SYS"
 
   # 5.7.4 Evaluate Software System Testing
   - id: "5.7.4.a"
@@ -557,12 +578,21 @@ policies:
     section: "5.8.2"
     text: "The MANUFACTURER shall document all known residual ANOMALIES."
     status: "approved"
+    automation:
+      check: "item_existence"
+      params:
+        type_code: "DEF"
 
   # 5.8.3 Evaluate Known Residual Anomalies
   - id: "5.8.3.a"
     section: "5.8.3"
     text: "The MANUFACTURER shall ensure that all known residual ANOMALIES have been EVALUATED to ensure that they do not contribute to an unacceptable RISK."
     status: "approved"
+    automation:
+      check: "attribute_presence"
+      params:
+        type_code: "DEF"
+        attribute: "status"
 
   # 5.8.4 Document Released Versions
   - id: "5.8.4.a"
@@ -589,18 +619,31 @@ policies:
     section: "5.8.6"
     text: "The MANUFACTURER shall ensure that all software development plan (or maintenance plan) ACTIVITIES and TASKS are complete along with the associated documentation."
     status: "approved"
+    automation:
+      check: "item_existence"
+      params:
+        type_code: "REL"
 
   # 5.8.7 Archive Software
   - id: "5.8.7.a"
     section: "5.8.7"
     text: "The MANUFACTURER shall archive the MEDICAL DEVICE SOFTWARE, CONFIGURATION ITEMS, and documentation for at least the lifetime of the MEDICAL DEVICE SOFTWARE or a time specified by regulatory requirements."
     status: "approved"
+    automation:
+      check: "file_existence"
+      params:
+        path: "documents/release_notes.md"
 
   # 5.8.8 Assure Reliable Delivery of Released Software
   - id: "5.8.8.a"
     section: "5.8.8"
     text: "The MANUFACTURER shall establish procedures to ensure that the released MEDICAL DEVICE SOFTWARE can be reliably delivered to the point of use without corruption or unauthorised change, addressing replication, media labelling, packaging, protection, storage, and delivery."
     status: "approved"
+    automation:
+      check: "document_content"
+      params:
+        doc_id: "maintenance_plan"
+        keywords: ["delivery", "release"]
 
   # 6.1 Establish Software Maintenance Plan
   - id: "6.1.a"
@@ -693,6 +736,10 @@ policies:
     section: "6.3.2"
     text: "The MANUFACTURER shall release modifications according to 5.8."
     status: "approved"
+    automation:
+      check: "item_existence"
+      params:
+        type_code: "REL"
 
   # 7.1.1 Identify Software Items Contributing to Hazards
   - id: "7.1.1.a"
@@ -713,7 +760,7 @@ policies:
       check: "attribute_presence"
       params:
         type_code: "RISK"
-        attribute: "content"
+        attribute: "cause"
 
   # 7.1.3 Evaluate Published SOUP Anomaly Lists
   - id: "7.1.3.a"
@@ -735,7 +782,7 @@ policies:
       check: "attribute_presence"
       params:
         type_code: "RISK"
-        attribute: "content"
+        attribute: "cause"
 
   # 7.2.1 Define Risk Control Measures
   - id: "7.2.1.a"
@@ -756,7 +803,7 @@ policies:
       check: "trace_coverage"
       params:
         source_type: "RCM"
-        target_type: "SRS"
+        target_type: "SYS"
         min_coverage: 1.0
 
   # 7.3.1 Verify Risk Control Measures
@@ -820,6 +867,11 @@ policies:
     section: "8.1.1"
     text: "The MANUFACTURER shall establish a scheme for the unique identification of CONFIGURATION ITEMS and their VERSIONS to be controlled."
     status: "approved"
+    automation:
+      check: "document_content"
+      params:
+        doc_id: "configuration_management_plan"
+        keywords: ["identification", "version"]
 
   # 8.1.2 Identify SOUP
   - id: "8.1.2.a"

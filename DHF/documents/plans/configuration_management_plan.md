@@ -8,6 +8,8 @@ IEC 62304 §5.1.9 and §8.
 The following classes of items are under configuration control:
 - DHF items (requirements, risks, architecture, design) — stored as YAML under `DHF/items/`
 - Source code — managed in this Git repository
+- Development tools — pinned in `requirements.txt` (Python dependencies, pytest, linters)
+- CI/CD tools — defined in `.github/workflows/` (GitHub Actions pipeline configuration)
 - Test results — stored in `DHF/test-results/results.yaml`
 - Document specifications — stored under `DHF/documents/`
 - Governance policies — stored under `governance/`

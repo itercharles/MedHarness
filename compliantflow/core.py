@@ -247,6 +247,53 @@ class CompliantFlowCore:
     def validate(self) -> Dict[str, Any]:
         return self.graph.validate()
 
+    def check_coverage(self, pairs: List[tuple]) -> Dict[str, Any]:
+        """Check that every item at the parent level is covered by at least one child.
+
+        Args:
+            pairs: List of (parent_type, child_type) tuples, e.g.
+                   [("UC", "CRS"), ("CRS", "SYS"), ("SYS", "SYSARCH")]
+
+        Returns:
+            {"passed": bool, "results": [{"parent_type", "child_type", "passed",
+             "total", "covered", "uncovered"}, ...]}
+
+        Note: graph edges go child→parent, so children are G.predecessors(parent).
+        """
+        G = self.graph.graph
+        results = []
+
+        for parent_type, child_type in pairs:
+            parent_prefix = self._get_prefix(parent_type)
+            child_prefix = self._get_prefix(child_type)
+
+            parent_nodes = [n for n in G.nodes if n.startswith(parent_prefix)]
+            uncovered = [
+                n for n in parent_nodes
+                if not any(p.startswith(child_prefix) for p in G.predecessors(n))
+            ]
+            results.append({
+                "parent_type": parent_type,
+                "child_type": child_type,
+                "passed": len(uncovered) == 0,
+                "total": len(parent_nodes),
+                "covered": len(parent_nodes) - len(uncovered),
+                "uncovered": uncovered,
+            })
+
+        return {
+            "passed": all(r["passed"] for r in results),
+            "results": results,
+        }
+
+    def _get_prefix(self, type_code: str) -> str:
+        """Return the ID prefix for a type code."""
+        if self.config:
+            t = self.config.get_type(type_code)
+            if t:
+                return t.id_prefix
+        return f"{type_code}-"
+
     # ------------------------------------------------------------------
     # Compliance
     # ------------------------------------------------------------------
