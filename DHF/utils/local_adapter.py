@@ -271,7 +271,10 @@ class LocalDHFAdapter:
 
         try:
             fetcher = GitHubArtifactFetcher.from_environment(self._dhf_root)
-            fetch_result = fetcher.fetch()
+            # In CI, GITHUB_RUN_ID is the current run (may still be in progress,
+            # so we can't rely on status=completed filter — pass run_id directly).
+            run_id = os.environ.get("GITHUB_RUN_ID", "")
+            fetch_result = fetcher.fetch(run_id=run_id)
             for r in fetch_result["results"]:
                 if r.testing_status == "SKIP":
                     continue
