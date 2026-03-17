@@ -33,7 +33,17 @@ This document outlines the development plan for the CompliantFlow ALM platform.
   - User Acceptance.
   - Release packaging.
 
-## 3. Development Standards, Methods and Tools
+## 3. Coordination with System Development
+
+CompliantFlow is a software-only medical device; there is no separate hardware system development activity. The software development process therefore constitutes the full system development process. Coordination between software and system-level activities is achieved as follows:
+
+- **System requirements (SYS items)** are defined and baselined in the DHF before software design begins. Software architecture and detailed design derive from these system requirements via traceable links.
+- **System integration** is performed by integrating software units through the CI pipeline (Phase 2 and 3 test suites). Integration results are recorded as GitHub Actions artifacts and fetched by the DHF.
+- **System verification** is performed by executing the full SYS API test suite against the integrated system. Each SYS item has at least one TC-SYS test case that verifies the requirement is met.
+- **System validation** (User Acceptance) is performed in Phase 4 Transition to confirm the released software meets user needs (USN items).
+- Any change to system requirements triggers a review of affected software items and associated test cases via the Change Request (CR) process.
+
+## 4. Development Standards, Methods and Tools
 
 The following standards, methods, and tools are applied throughout development:
 

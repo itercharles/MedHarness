@@ -9,6 +9,7 @@ from compliantflow.domain.compliance import PolicyGroup, ComplianceReport, Polic
 
 _GEMINI_MODEL = "gemini-2.5-flash"
 _SEMANTIC_MAX_CHARS = 12_000  # truncate very long documents before sending to LLM
+_GEMINI_CONFIG = {"temperature": 0}  # deterministic output for reproducible CI results
 
 class PolicyEngine:
     """Executes compliance policies against the project graph."""
@@ -181,7 +182,10 @@ class PolicyEngine:
             try:
                 from google import genai
                 client = genai.Client(api_key=api_key)
-                response = client.models.generate_content(model=_GEMINI_MODEL, contents=prompt)
+                response = client.models.generate_content(
+                    model=_GEMINI_MODEL, contents=prompt,
+                    config=_GEMINI_CONFIG,
+                )
                 text = response.text.strip()
                 if text.startswith("```"):
                     text = text.split("```")[1].lstrip("json").strip()
@@ -457,7 +461,10 @@ class PolicyEngine:
         try:
             from google import genai
             client = genai.Client(api_key=api_key)
-            response = client.models.generate_content(model=_GEMINI_MODEL, contents=prompt)
+            response = client.models.generate_content(
+                    model=_GEMINI_MODEL, contents=prompt,
+                    config=_GEMINI_CONFIG,
+                )
             text = response.text.strip()
             # Strip markdown code fences if the model adds them
             if text.startswith("```"):
