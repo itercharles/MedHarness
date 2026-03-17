@@ -1,9 +1,14 @@
 """Compliance Policy Engine."""
 
+import json
+import os
 import yaml
 from pathlib import Path
 from typing import Dict, Any, Callable, Tuple, Optional
 from compliantflow.domain.compliance import PolicyGroup, ComplianceReport, PolicyResult, Policy
+
+_GEMINI_MODEL = "gemini-2.5-flash"
+_SEMANTIC_MAX_CHARS = 12_000  # truncate very long documents before sending to LLM
 
 class PolicyEngine:
     """Executes compliance policies against the project graph."""
@@ -15,6 +20,7 @@ class PolicyEngine:
             'item_existence': self._check_item_existence,
             'file_existence': self._check_file_existence,
             'document_content': self._check_document_content,
+            'document_semantic': self._check_document_semantic,
             'trace_coverage': self._check_trace_coverage,
             'attribute_presence': self._check_attribute_presence,
             'attribute_value': self._check_attribute_value,
@@ -35,7 +41,15 @@ class PolicyEngine:
             return None
 
     def check_compliance(self, group: PolicyGroup) -> ComplianceReport:
-        """Run all automated checks for a policy group."""
+        """Run all automated checks for a policy group.
+
+        ``document_semantic`` checks are batched by document: all policies
+        that evaluate the same doc_id are sent to the LLM in a single request,
+        each receiving its own pass/fail and rationale.
+        """
+        # Pre-compute all document_semantic results (one LLM call per document)
+        semantic_results = self._run_semantic_batch(group.policies)
+
         results = []
         passed_count = 0
 
@@ -56,10 +70,20 @@ class PolicyEngine:
                         details=f"Policy not approved (status: {policy.status})",
                         policy_text=policy.text,
                     )
+                elif policy.automation.check == 'document_semantic':
+                    passed, details, evidence = semantic_results.get(
+                        policy.id, (False, "Semantic batch did not return a result", {})
+                    )
+                    result = PolicyResult(
+                        policy_id=policy.id,
+                        passed=passed,
+                        details=details,
+                        evidence=evidence,
+                        policy_text=policy.text,
+                    )
                 else:
                     check_name = policy.automation.check
                     params = policy.automation.params
-
                     check_func = self.checks.get(check_name)
                     if check_func:
                         try:
@@ -99,6 +123,81 @@ class PolicyEngine:
             results=results,
             score=round(score, 2)
         )
+
+    def _run_semantic_batch(self, policies) -> Dict[str, Tuple[bool, str, Optional[Dict]]]:
+        """Batch all document_semantic checks: one LLM call per unique doc_id.
+
+        Returns a dict mapping policy_id → (passed, details, evidence).
+        """
+        # Group by doc_id
+        from collections import defaultdict
+        groups: Dict[str, list] = defaultdict(list)  # doc_id → [(policy_id, requirement)]
+        for policy in policies:
+            if policy.automation and policy.automation.check == 'document_semantic':
+                if policy.status == 'approved':
+                    groups[policy.automation.params['doc_id']].append(
+                        (policy.id, policy.automation.params['requirement'])
+                    )
+
+        if not groups:
+            return {}
+
+        api_key = os.environ.get("GEMINI_API_KEY")
+        if not api_key:
+            return {
+                pid: (False, "GEMINI_API_KEY not set; cannot run semantic check", {"doc_id": doc_id})
+                for doc_id, items in groups.items()
+                for pid, _ in items
+            }
+
+        out: Dict[str, Tuple[bool, str, Optional[Dict]]] = {}
+
+        for doc_id, items in groups.items():
+            content = self.core._adapter.get_document(doc_id)
+            if content is None:
+                for pid, _ in items:
+                    out[pid] = (False, f"Document not found: '{doc_id}'", {"doc_id": doc_id})
+                continue
+
+            truncated = len(content) > _SEMANTIC_MAX_CHARS
+            content_for_llm = content[:_SEMANTIC_MAX_CHARS] + ("\n[... truncated ...]" if truncated else "")
+
+            requirements_block = "\n".join(
+                f'[{pid}] {req}' for pid, req in items
+            )
+
+            prompt = (
+                "You are a medical device software compliance auditor evaluating documentation "
+                "against IEC 62304.\n\n"
+                f"DOCUMENT ({doc_id}):\n{content_for_llm}\n\n"
+                "Evaluate whether the document satisfies EACH of the following requirements. "
+                "Assess intent and substance, not just keyword presence.\n\n"
+                f"REQUIREMENTS:\n{requirements_block}\n\n"
+                "Respond with ONLY a valid JSON array — no markdown, no text outside the JSON. "
+                "One object per requirement, in the same order:\n"
+                '[{"policy_id": "<id>", "passed": true or false, "rationale": "one or two sentences"}, ...]'
+            )
+
+            try:
+                from google import genai
+                client = genai.Client(api_key=api_key)
+                response = client.models.generate_content(model=_GEMINI_MODEL, contents=prompt)
+                text = response.text.strip()
+                if text.startswith("```"):
+                    text = text.split("```")[1].lstrip("json").strip()
+                items_result = json.loads(text)
+                for entry in items_result:
+                    pid = entry.get("policy_id", "")
+                    passed = bool(entry.get("passed", False))
+                    rationale = str(entry.get("rationale", ""))
+                    details = f"{'PASS' if passed else 'FAIL'} (semantic) — {rationale}"
+                    evidence = {"doc_id": doc_id, "rationale": rationale, "truncated": truncated}
+                    out[pid] = (passed, details, evidence)
+            except Exception as e:
+                for pid, _ in items:
+                    out[pid] = (False, f"Semantic check error: {e}", {"doc_id": doc_id})
+
+        return out
 
     # --- Helpers ---
 
@@ -319,6 +418,58 @@ class PolicyEngine:
             "results": linked_tcs,
         }
         return passed, details, evidence
+
+    def _check_document_semantic(
+        self,
+        doc_id: str,
+        requirement: str,
+    ) -> Tuple[bool, str, Optional[Dict]]:
+        """Use an LLM (Gemini) to evaluate whether a document satisfies a natural-language requirement.
+
+        Args:
+            doc_id:      Logical document ID (filename stem, e.g. 'development_plan').
+            requirement: Plain-English description of what the document must contain/demonstrate.
+
+        Requires the ``GEMINI_API_KEY`` environment variable.
+        """
+        api_key = os.environ.get("GEMINI_API_KEY")
+        if not api_key:
+            return False, "GEMINI_API_KEY not set; cannot run semantic check", {"doc_id": doc_id}
+
+        content = self.core._adapter.get_document(doc_id)
+        if content is None:
+            return False, f"Document not found: '{doc_id}'", {"doc_id": doc_id}
+
+        truncated = len(content) > _SEMANTIC_MAX_CHARS
+        content_for_llm = content[:_SEMANTIC_MAX_CHARS] + ("\n[... truncated ...]" if truncated else "")
+
+        prompt = (
+            "You are a medical device software compliance auditor evaluating documentation "
+            "against IEC 62304.\n\n"
+            f"REQUIREMENT:\n{requirement}\n\n"
+            f"DOCUMENT ({doc_id}):\n{content_for_llm}\n\n"
+            "Does the document satisfy the requirement above? "
+            "Evaluate intent and substance, not just keyword presence.\n\n"
+            'Respond with ONLY valid JSON — no markdown, no explanation outside the JSON:\n'
+            '{"passed": true or false, "rationale": "one or two sentences"}'
+        )
+
+        try:
+            from google import genai
+            client = genai.Client(api_key=api_key)
+            response = client.models.generate_content(model=_GEMINI_MODEL, contents=prompt)
+            text = response.text.strip()
+            # Strip markdown code fences if the model adds them
+            if text.startswith("```"):
+                text = text.split("```")[1].lstrip("json").strip()
+            result = json.loads(text)
+            passed = bool(result.get("passed", False))
+            rationale = str(result.get("rationale", ""))
+            details = f"{'PASS' if passed else 'FAIL'} (semantic) — {rationale}"
+            evidence = {"doc_id": doc_id, "requirement": requirement, "rationale": rationale, "truncated": truncated}
+            return passed, details, evidence
+        except Exception as e:
+            return False, f"Semantic check error: {e}", {"doc_id": doc_id}
 
     def _check_verification_complete(self, type_code: str) -> Tuple[bool, str, Optional[Dict]]:
         """Check that all items of type_code have verification_status == 'verified'."""

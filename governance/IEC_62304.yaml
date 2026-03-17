@@ -121,9 +121,10 @@ policies:
     text: "In the software development plan, the MANUFACTURER shall include or reference procedures for coordinating the software development with the system development necessary to satisfy 4.1 (such as system integration, verification, and validation)."
     status: "approved"
     automation:
-      check: "file_existence"
+      check: "document_semantic"
       params:
-        path: "documents/plans/development_plan.md"
+        doc_id: "development_plan"
+        requirement: "The document must describe or reference procedures for coordinating software development with system development, covering system integration, verification, and/or validation activities."
 
   # 5.1.4 Software Development Standards, Methods and Tools Planning
   - id: "5.1.4.a"
@@ -131,10 +132,10 @@ policies:
     text: "The MANUFACTURER shall include or reference in the software development plan for development of SOFTWARE ITEMS of class C: standards, methods, and tools."
     status: "approved"
     automation:
-      check: "document_content"
+      check: "document_semantic"
       params:
         doc_id: "development_plan"
-        keywords: ["standards", "methods", "tools"]
+        requirement: "The document must reference specific development standards (e.g. IEC 62304), development methods (e.g. design reviews, code reviews, testing methodology), and tools (e.g. programming languages, frameworks, version control) used for Class C software development."
 
   # 5.1.5 Software Integration and Integration Testing Planning
   - id: "5.1.5.a"
@@ -153,10 +154,10 @@ policies:
     text: "The MANUFACTURER shall include or reference in the software development plan VERIFICATION information including DELIVERABLES requiring VERIFICATION, required VERIFICATION TASKS, milestones, and acceptance criteria."
     status: "approved"
     automation:
-      check: "document_content"
+      check: "document_semantic"
       params:
         doc_id: "verification_plan"
-        keywords: ["verification", "acceptance criteria"]
+        requirement: "The document must identify: (1) which deliverables require verification, (2) the verification tasks or activities to be performed, (3) milestones or schedule, and (4) acceptance criteria for verification."
 
   # 5.1.7 Software Risk Management Planning
   - id: "5.1.7.a"
@@ -174,9 +175,10 @@ policies:
     text: "The MANUFACTURER shall include or reference in the software development plan information about the documents to be produced during the software development life cycle, including title/name, purpose, and procedures for development, review, approval and modification."
     status: "approved"
     automation:
-      check: "file_existence"
+      check: "document_semantic"
       params:
-        path: "documents/plans/development_plan.md"
+        doc_id: "development_plan"
+        requirement: "The document must list or reference the documents to be produced during the software development lifecycle, including their title/name, purpose, and the procedures for how they are developed, reviewed, approved, and modified."
 
   # 5.1.9 Software Configuration Management Planning
   - id: "5.1.9.a"
@@ -206,10 +208,10 @@ policies:
     text: "The MANUFACTURER shall plan to place CONFIGURATION ITEMS under configuration management control before they are VERIFIED."
     status: "approved"
     automation:
-      check: "document_content"
+      check: "document_semantic"
       params:
         doc_id: "configuration_management_plan"
-        keywords: ["before", "verification"]
+        requirement: "The document must state that configuration items are placed under configuration management control prior to (before) their verification, or that CM control is a prerequisite to verification activities."
 
   # 5.1.12 Identification and Avoidance of Common Software Defects
   - id: "5.1.12.a"
@@ -217,10 +219,10 @@ policies:
     text: "The MANUFACTURER shall include or reference in the software development plan a procedure for identifying categories of defects that may be introduced based on the selected programming technology and documenting evidence that demonstrates that these defects do not contribute to unacceptable RISK."
     status: "approved"
     automation:
-      check: "document_content"
+      check: "document_semantic"
       params:
         doc_id: "development_plan"
-        keywords: ["defect", "risk"]
+        requirement: "The document must describe a procedure for identifying categories of defects introduced by the chosen programming technology (e.g. Python, specific frameworks) and explain how evidence is gathered to demonstrate these defects do not contribute to unacceptable risk."
 
   # 5.2.1 Define and Document Software Requirements
   - id: "5.2.1.a"
@@ -610,9 +612,10 @@ policies:
     text: "The MANUFACTURER shall document the procedure and environment used to create the released software."
     status: "approved"
     automation:
-      check: "file_existence"
+      check: "document_semantic"
       params:
-        path: "documents/plans/development_plan.md"
+        doc_id: "development_plan"
+        requirement: "The document must describe: (1) the build or release procedure steps used to create the released software, and (2) the build environment including relevant details such as operating system, runtime versions (e.g. Python version), and key tool versions."
 
   # 5.8.6 Ensure Activities and Tasks are Complete
   - id: "5.8.6.a"

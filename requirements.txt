@@ -9,5 +9,6 @@ python-docx
 gitpython
 python-dateutil
 python-dotenv
+google-genai
 markdown
 weasyprint
