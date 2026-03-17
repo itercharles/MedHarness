@@ -219,3 +219,80 @@ def traceability_chain(ctx: click.Context, item_id: str) -> None:
         sys.exit(1)
     click.echo(json.dumps(result, default=str))
     click.echo(f"({len(result['nodes'])} node(s) in chain)", err=True)
+
+
+# ---------------------------------------------------------------------------
+# report group
+# ---------------------------------------------------------------------------
+
+@main.group()
+def report() -> None:
+    """Commands for generating PDF evidence reports."""
+
+
+@report.command("traceability")
+@click.argument("doc_types", nargs=-1, required=True, metavar="DOC_TYPE...")
+@click.option("--output", "-o", default="traceability_report.pdf", show_default=True,
+              help="Output PDF file path.")
+@click.pass_context
+def report_traceability(ctx: click.Context, doc_types: tuple, output: str) -> None:
+    """Generate a traceability matrix PDF.
+
+    \b
+    Example:
+      python -m compliantflow report traceability UC CRS SYS SYSARCH \\
+        --output traceability_report.pdf
+    """
+    from compliantflow.report_generator import generate_traceability_pdf
+    dhf_path: Path = ctx.obj["dhf"]
+    core = _make_core(dhf_path)
+    matrix = core.build_traceability_matrix(list(doc_types))
+    out = Path(output)
+    generate_traceability_pdf(matrix, out)
+    click.echo(f"✓ Traceability report written to {out} "
+               f"({len(matrix['rows'])} rows)", err=True)
+
+
+@report.command("compliance")
+@click.argument("group_id")
+@click.option("--governance-dir", default=None, metavar="PATH",
+              help="Path to governance directory. Defaults to ./governance.")
+@click.option("--output", "-o", default="compliance_report.pdf", show_default=True,
+              help="Output PDF file path.")
+@click.pass_context
+def report_compliance(ctx: click.Context, group_id: str,
+                      governance_dir: str | None, output: str) -> None:
+    """Generate a compliance evidence PDF with pass/fail and rationale per policy.
+
+    \b
+    Example:
+      python -m compliantflow report compliance IEC_62304 \\
+        --governance-dir governance --output compliance_report.pdf
+    """
+    from compliantflow.report_generator import generate_compliance_pdf
+    dhf_path: Path = ctx.obj["dhf"]
+    gov_dir = Path(governance_dir) if governance_dir else Path("governance")
+    core = _make_core(dhf_path)
+    result = core.check_compliance(group_id, governance_dir=gov_dir)
+    if result is None:
+        click.echo(f"ERROR: Policy group '{group_id}' not found.", err=True)
+        sys.exit(1)
+    out = Path(output)
+    generate_compliance_pdf(result, out)
+    failed = result["total_policies"] - result["passed_policies"]
+    for r in result["results"]:
+        if not r["passed"]:
+            click.echo(f"  ✗ [{r['policy_id']}] {r['policy_text']}: {r['details']}", err=True)
+    click.echo(json.dumps(result, default=str))
+    if failed:
+        click.echo(
+            f"✗ {failed}/{result['total_policies']} policies failed "
+            f"(score: {result['score']:.0f}%) — report: {out}",
+            err=True,
+        )
+        sys.exit(1)
+    click.echo(
+        f"✓ {result['passed_policies']}/{result['total_policies']} policies passed "
+        f"(score: {result['score']:.0f}%) — report: {out}",
+        err=True,
+    )

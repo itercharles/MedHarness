@@ -109,10 +109,9 @@ jobs:
           name: crs-test-results
           path: crs-test-results.xml
 
-  # Phase 4: DHF Validation
-  # Checks DHF structural integrity and IEC 62304 compliance via compliantflow CLI.
-  # No test results needed — run `python -m utils --dhf DHF test pull` locally
-  # to fetch test results and re-run compliance with full verification data.
+  # Phase 4: DHF Validation + Evidence Reports
+  # Validates DHF integrity and IEC 62304 compliance, then generates PDF
+  # evidence reports in the same job (single Gemini API call).
   phase4-dhf-validation:
     name: Phase 4 - DHF Validation
     runs-on: ubuntu-latest
@@ -143,11 +142,24 @@ jobs:
           export PYTHONPATH="${PYTHONPATH}:${PWD}:${PWD}/DHF"
           python -m compliantflow --dhf DHF validate traceability || true
 
-      - name: Run IEC 62304 compliance check
+      - name: Run IEC 62304 compliance check and generate evidence reports
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
           export PYTHONPATH="${PYTHONPATH}:${PWD}:${PWD}/DHF"
-          python -m compliantflow --dhf DHF validate compliance IEC_62304 \
-            --governance-dir governance
+          python -m compliantflow --dhf DHF report traceability \
+            UC CRS SYS SYSARCH \
+            --output traceability_report.pdf
+          python -m compliantflow --dhf DHF report compliance IEC_62304 \
+            --governance-dir governance \
+            --output compliance_report.pdf
+
+      - name: Upload evidence reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: compliance-evidence
+          path: |
+            traceability_report.pdf
+            compliance_report.pdf
