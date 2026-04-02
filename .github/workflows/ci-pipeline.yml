@@ -130,30 +130,33 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Generate CR-PR evidence reports
+      - name: Generate CR-PR evidence report
         run: |
           export PYTHONPATH="${PYTHONPATH}:${PWD}:${PWD}/DHF"
           mkdir -p cr-reports
-          # Generate a report for each approved CR in the DHF
+          # Generate a single merged report covering all CRs (any status)
           python -c "
-          import json, sys, os
+          import json, sys, os, subprocess
           sys.path.insert(0, '.')
           sys.path.insert(0, 'DHF')
           from utils.local_adapter import LocalDHFAdapter
           adapter = LocalDHFAdapter('DHF', auto_commit=False)
-          crs = [i for i in adapter.list_items('CR') if i.get('status') == 'approved']
+          crs = adapter.list_items('CR')
+          merged = {}
           for cr in crs:
               cr_id = cr['id']
-              import subprocess
               args = ['python', '-m', 'compliantflow', '--dhf', 'DHF',
                       'cr', 'generate-report', cr_id]
               result = subprocess.run(args, capture_output=True, text=True,
                                       env={**os.environ, 'PYTHONPATH': '.:DHF'})
-              report_path = f'cr-reports/{cr_id}.json'
-              with open(report_path, 'w') as f:
-                  f.write(result.stdout)
-              print(f'Generated {report_path}', file=sys.stderr)
-          print(f'Generated {len(crs)} CR report(s)', file=sys.stderr)
+              try:
+                  merged[cr_id] = json.loads(result.stdout)
+              except json.JSONDecodeError:
+                  merged[cr_id] = {'cr_id': cr_id, 'error': 'parse_failed'}
+              print(f'Processed {cr_id}', file=sys.stderr)
+          with open('cr-reports/cr_pr_linkage.json', 'w') as f:
+              json.dump(merged, f, indent=2)
+          print(f'Generated merged report with {len(crs)} CR(s)', file=sys.stderr)
           "
 
       - name: Upload CR-PR evidence reports
@@ -189,6 +192,32 @@ jobs:
         with:
           name: cr-pr-reports
           path: cr-reports/
+
+      - name: Download SYS test results
+        uses: actions/download-artifact@v4
+        with:
+          name: sys-test-results
+          path: test-results/
+
+      - name: Download CRS test results
+        uses: actions/download-artifact@v4
+        with:
+          name: crs-test-results
+          path: test-results/
+
+      - name: Import test results into DHF
+        run: |
+          export PYTHONPATH="${PYTHONPATH}:${PWD}:${PWD}/DHF"
+          RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          for xml in test-results/*.xml; do
+            echo "Importing $xml" >&2
+            python -m compliantflow --dhf DHF test import "$xml" \
+              --format junit \
+              --tester "GitHub Actions" \
+              --run-id "${{ github.run_id }}" \
+              --run-url "$RUN_URL" \
+              --commit "${{ github.sha }}" || true
+          done
 
       - name: Check coverage (UC→CRS→SYS→SYSARCH)
         run: |
