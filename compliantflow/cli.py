@@ -285,6 +285,30 @@ def report_traceability(ctx: click.Context, doc_types: tuple, output: str) -> No
     dhf_path: Path = ctx.obj["dhf"]
     core = _make_core(dhf_path)
     matrix = core.build_traceability_matrix(list(doc_types))
+
+    # Enrich each row with verification_status from the items it contains
+    columns: list[str] = matrix["columns"]
+    for row in matrix["rows"]:
+        statuses = []
+        for col in columns:
+            item_id = row.get(col)
+            if item_id:
+                item = core.get_item(item_id)
+                vs = item.get("verification_status") if item else None
+                if vs:
+                    statuses.append(vs)
+        # Summarise: any failure → failed; all verified → verified; else not_verified
+        if "failed" in statuses:
+            row["verification_status"] = "failed"
+        elif statuses and all(s == "verified" for s in statuses):
+            row["verification_status"] = "verified"
+        elif statuses:
+            row["verification_status"] = "not_verified"
+        # else leave absent (no items with verification in this row)
+
+    # Attach test results summary
+    matrix["test_results"] = core.get_all_test_results()
+
     out = Path(output)
     generate_traceability_pdf(matrix, out)
     click.echo(f"✓ Traceability report written to {out} "
