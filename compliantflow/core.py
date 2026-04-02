@@ -35,6 +35,7 @@ class CompliantFlowCore:
         self._llm_backend = llm_backend
         self.config: ProjectSchema = adapter.get_project_config()
         self.graph = GraphEngine(config=self.config)
+        self._policy_engine_cache: dict = {}
 
         self.refresh()
 
@@ -303,11 +304,20 @@ class CompliantFlowCore:
     # Compliance
     # ------------------------------------------------------------------
 
+    def _get_policy_engine(self, group_id: str, governance_dir: Path):
+        """Return a cached PolicyEngine for the given group_id and governance_dir."""
+        from compliantflow.policy import PolicyEngine
+        cache_key = (group_id, str(governance_dir))
+        if cache_key not in self._policy_engine_cache:
+            root_dir = getattr(self._adapter, '_dhf_root', None)
+            self._policy_engine_cache[cache_key] = PolicyEngine(
+                self, root_dir=root_dir, llm_backend=self._llm_backend
+            )
+        return self._policy_engine_cache[cache_key]
+
     def get_policy_group(self, group_id: str, governance_dir: Path) -> Optional[Dict[str, Any]]:
         """Load a policy group without running checks."""
-        from compliantflow.policy import PolicyEngine
-        root_dir = getattr(self._adapter, '_dhf_root', None)
-        engine = PolicyEngine(self, root_dir=root_dir, llm_backend=self._llm_backend)
+        engine = self._get_policy_engine(group_id, governance_dir)
         path = Path(governance_dir) / f"{group_id}.yaml"
         group = engine.load_policy_group(path)
         return group.model_dump() if group else None
@@ -327,10 +337,8 @@ class CompliantFlowCore:
         """
         import os
         from datetime import datetime, timezone
-        from compliantflow.policy import PolicyEngine
 
-        root_dir = getattr(self._adapter, '_dhf_root', None)
-        engine = PolicyEngine(self, root_dir=root_dir, llm_backend=self._llm_backend)
+        engine = self._get_policy_engine(group_id, governance_dir)
         path = Path(governance_dir) / f"{group_id}.yaml"
         group = engine.load_policy_group(path)
         if not group:

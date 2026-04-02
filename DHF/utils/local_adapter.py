@@ -40,6 +40,10 @@ class LocalDHFAdapter:
         # Lazy-fetch flag: set True once GitHub auto-fetch has been attempted this session
         self._results_fetched = False
 
+        # Document index: stem → Path, built once at init to avoid per-call rglob scans
+        self._doc_index: dict[str, Path] = {}
+        self._rebuild_doc_index()
+
     # ------------------------------------------------------------------
     # ProjectConfig
     # ------------------------------------------------------------------
@@ -243,6 +247,7 @@ class LocalDHFAdapter:
         m = re.search(r'\|\s*\*\*Version\*\*\s*\|\s*([\d.]+)\s*\|', content)
         if m:
             version = m.group(1)
+        self._rebuild_doc_index()
         return {"doc_type": doc_type_code, "output_path": str(output_path), "version": version}
 
     def export_pdf(self, doc_type_code: str) -> dict:
@@ -462,10 +467,20 @@ class LocalDHFAdapter:
     # Document access
     # ------------------------------------------------------------------
 
+    def _rebuild_doc_index(self) -> None:
+        """Scan documents/ once and populate self._doc_index (stem → Path)."""
+        self._doc_index = {}
+        docs_dir = self._dhf_root / "documents"
+        if not docs_dir.exists():
+            return
+        for candidate in docs_dir.rglob("*"):
+            if candidate.is_file() and not candidate.name.startswith("."):
+                self._doc_index[candidate.stem] = candidate
+
     def get_document(self, doc_id: str) -> Optional[str]:
         """Return the text content of a DHF document by its logical ID (filename stem).
 
-        Searches recursively under documents/ for a file whose stem matches doc_id.
+        Looks up doc_id in the pre-built index (no rglob per call).
         For example, get_document("development_plan") finds
         documents/plans/development_plan.md.
 
@@ -476,24 +491,14 @@ class LocalDHFAdapter:
         Returns:
             File text content, or None if no matching document is found.
         """
-        docs_dir = self._dhf_root / "documents"
-        if not docs_dir.exists():
+        path = self._doc_index.get(doc_id)
+        if path is None or not path.is_file():
             return None
-        for candidate in docs_dir.rglob("*"):
-            if candidate.is_file() and candidate.stem == doc_id:
-                return candidate.read_text(encoding="utf-8")
-        return None
+        return path.read_text(encoding="utf-8")
 
     def list_documents(self) -> List[str]:
         """Return logical document IDs (filename stems) for all files under documents/."""
-        docs_dir = self._dhf_root / "documents"
-        if not docs_dir.exists():
-            return []
-        return [
-            p.stem
-            for p in docs_dir.rglob("*")
-            if p.is_file() and not p.name.startswith(".")
-        ]
+        return list(self._doc_index.keys())
 
     # ------------------------------------------------------------------
     # Compliance run persistence
