@@ -425,27 +425,35 @@ def cr_generate_report(ctx: click.Context, cr_id: str, since: str | None) -> Non
     # Scan git log for commits mentioning this CR ID
     git_args = [
         "git", "-C", str(dhf_path.parent),
-        "log", "--oneline", "--all",
+        "log", "--all", "--format=%H %s",
         f"--grep={cr_id}",
     ]
     if since:
         git_args += [f"--after={since}"]
 
     commits = []
+    pr_numbers: list[str] = []
     try:
+        import re  # noqa: PLC0415
         proc = subprocess.run(git_args, capture_output=True, text=True, timeout=30)
         for line in proc.stdout.splitlines():
             line = line.strip()
-            if line:
-                parts = line.split(" ", 1)
-                commits.append({
-                    "sha": parts[0],
-                    "message": parts[1] if len(parts) > 1 else "",
-                })
+            if not line:
+                continue
+            parts = line.split(" ", 1)
+            sha = parts[0]
+            message = parts[1] if len(parts) > 1 else ""
+            commits.append({"sha": sha, "message": message})
+            # Extract PR numbers from GitHub squash-merge format: "Title (#123)"
+            for match in re.finditer(r'\(#(\d+)\)', message):
+                pr_num = match.group(1)
+                if pr_num not in pr_numbers:
+                    pr_numbers.append(pr_num)
     except Exception as exc:
         click.echo(f"WARNING: git log scan failed: {exc}", err=True)
 
     cr_data["commits"] = commits
+    cr_data["implementation_prs"] = pr_numbers
     click.echo(json.dumps(cr_data, default=str))
     click.echo(
         f"({len(commits)} commit(s) referencing {cr_id} found in git log)", err=True
