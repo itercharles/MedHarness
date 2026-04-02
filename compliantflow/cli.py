@@ -349,11 +349,14 @@ def cr() -> None:
 @click.argument("cr_id")
 @click.pass_context
 def cr_check_status(ctx: click.Context, cr_id: str) -> None:
-    """Check the status of a Change Request and whether it has linked git commits.
+    """Check that a Change Request exists and is in an authorized state.
 
     CR_ID is the identifier of the change request (e.g. CR-012).
     Outputs a JSON object to stdout.
-    Exits 0 if the CR is approved and has linked commits; exits 1 otherwise.
+    Exits 0 if the CR exists and is approved or implementing; exits 1 otherwise.
+
+    Note: linked commits/PRs are evidence recorded AFTER the work is merged.
+    This gate only verifies the CR is authorized — not that evidence exists yet.
     """
     dhf_path: Path = ctx.obj["dhf"]
     core = _make_core(dhf_path)
@@ -364,30 +367,25 @@ def cr_check_status(ctx: click.Context, cr_id: str) -> None:
         sys.exit(1)
 
     status = item.get("status", "")
-    implementation_prs = item.get("implementation_prs") or []
-    approved = status == "approved"
-    has_prs = len(implementation_prs) > 0
+    valid_statuses = {"approved", "implementing"}
+    valid = status in valid_statuses
 
     result = {
         "cr_id": cr_id,
         "found": True,
         "status": status,
-        "approved": approved,
-        "implementation_prs": implementation_prs,
-        "has_linked_commits": has_prs,
-        "valid": approved and has_prs,
+        "valid": valid,
     }
     click.echo(json.dumps(result, default=str))
 
-    if result["valid"]:
-        click.echo(f"✓ CR '{cr_id}' is approved with {len(implementation_prs)} linked PR(s).", err=True)
+    if valid:
+        click.echo(f"✓ CR '{cr_id}' is authorized (status: {status}).", err=True)
     else:
-        reasons = []
-        if not approved:
-            reasons.append(f"status is '{status}' (expected 'approved')")
-        if not has_prs:
-            reasons.append("no implementation_prs linked")
-        click.echo(f"✗ CR '{cr_id}' invalid: {'; '.join(reasons)}.", err=True)
+        click.echo(
+            f"✗ CR '{cr_id}' is not authorized: status is '{status}' "
+            f"(expected one of: {', '.join(sorted(valid_statuses))}).",
+            err=True,
+        )
         sys.exit(1)
 
 

@@ -51,7 +51,7 @@ def test_TC_SYS_007_001_cr_check_status_approved(runner, dhf_str):
     data = json.loads(json_lines[0])
     assert data["cr_id"] == "CR-002"
     assert data["found"] is True
-    assert data["approved"] is True
+    assert data["status"] == "approved"
     assert data["valid"] is True
     assert result.exit_code == 0, f"Expected exit 0 but got {result.exit_code}: {result.output}"
 
@@ -69,7 +69,7 @@ def test_TC_SYS_007_002_cr_check_status_draft_fails(runner, dhf_str):
     assert len(json_lines) >= 1, f"No JSON output: {result.output}"
     data = json.loads(json_lines[0])
     assert data["cr_id"] == "CR-001"
-    assert data["approved"] is False
+    assert data["status"] == "draft"
     assert data["valid"] is False
     assert result.exit_code == 1
 
