@@ -26,19 +26,20 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Extract CR IDs from PR title and body
+      - name: Extract CR IDs from PR title
         id: extract-cr
         env:
           PR_TITLE: ${{ github.event.pull_request.title }}
-          PR_BODY: ${{ github.event.pull_request.body }}
         run: |
-          # Extract all CR-NNN references from the PR title and body
-          CR_IDS=$(echo "$PR_TITLE $PR_BODY" | grep -oE 'CR-[0-9]+' | sort -u | tr '\n' ' ' || true)
+          # Extract CR-NNN references from the PR title only
+          # (body may mention CR IDs as examples or references, not as implementing CRs)
+          CR_IDS=$(echo "$PR_TITLE" | grep -oE 'CR-[0-9]+' | sort -u | tr '\n' ' ' || true)
           echo "cr_ids=$CR_IDS" >> "$GITHUB_OUTPUT"
           if [ -z "$CR_IDS" ]; then
-            echo "No CR IDs found in PR title/body — skipping CR validation." >&2
+            echo "✗ No CR ID found in PR title. Include a CR reference e.g. 'feat(CR-012): description'" >&2
+            exit 1
           else
-            echo "Found CR IDs: $CR_IDS" >&2
+            echo "Found CR IDs in title: $CR_IDS" >&2
           fi
 
       - name: Check CR status for each referenced CR
