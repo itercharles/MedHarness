@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 from utils.artifact_fetcher import GitHubArtifactFetcher
+from utils.compliance_store import ComplianceStore
 from utils.exceptions import ValidationError
 from utils.junit_parser import parse_junit_xml
 from utils.models.config import ProjectConfig
@@ -31,6 +32,7 @@ class LocalDHFAdapter:
 
         result_store_cfg = self._config.test_integration.get("result_store", {})
         self._result_store = ResultStore(self._dhf_root, result_store_cfg)
+        self._compliance_store = ComplianceStore(self._dhf_root)
 
         # document_specifications lives in global config
         self._doc_specs = self._config.document_specifications
@@ -477,3 +479,47 @@ class LocalDHFAdapter:
             for p in docs_dir.rglob("*")
             if p.is_file() and not p.name.startswith(".")
         ]
+
+    # ------------------------------------------------------------------
+    # Compliance run persistence
+    # ------------------------------------------------------------------
+
+    def record_compliance_run(
+        self,
+        group_id: str,
+        report_dict: dict,
+        commit_sha: str = "",
+        trigger: str = "manual",
+    ) -> None:
+        """Append a compliance run to the persistent store.
+
+        Args:
+            group_id:    Standard/policy-group ID (e.g. 'IEC_62304').
+            report_dict: The dict returned by ``core.check_compliance()``.
+            commit_sha:  Git commit SHA at time of check.
+            trigger:     What triggered the run ('manual', 'ci', etc.).
+        """
+        self._compliance_store.append_run(
+            standard_id=group_id,
+            run_id=report_dict.get("run_id") or "",
+            score=report_dict.get("score", 0.0),
+            total_policies=report_dict.get("total_policies", 0),
+            passed_policies=report_dict.get("passed_policies", 0),
+            results=report_dict.get("results", []),
+            commit_sha=commit_sha,
+            trigger=trigger,
+            timestamp=report_dict.get("timestamp"),
+        )
+
+    def get_compliance_runs(
+        self,
+        group_id: str,
+        since_date: Optional[str] = None,
+    ) -> List[Dict]:
+        """Return compliance run history for a standard.
+
+        Args:
+            group_id:   Standard/policy-group ID.
+            since_date: ISO 8601 date string; only return runs at or after this date.
+        """
+        return self._compliance_store.get_runs(group_id, since_date=since_date)

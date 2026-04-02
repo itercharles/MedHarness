@@ -6,6 +6,7 @@ are a core compliantflow concern, not a DHF data-layer concern.
 Moved from DHF/utils/models/compliance.py.
 """
 
+from datetime import datetime
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any, Literal
 
@@ -23,6 +24,8 @@ class Policy(BaseModel):
     text: str = Field(..., description="Normative text of the requirement")
     status: Literal['approved', 'draft', 'rejected'] = Field(default='draft', description="Approval status")
     automation: Optional[PolicyAutomation] = Field(None, description="Automation configuration")
+    manual: bool = Field(default=False, description="Display hint: policy requires human evidence (no pass/fail logic change)")
+    evidence_guidance: Optional[str] = Field(None, description="Guidance text shown in manual policy result details")
 
 
 class PolicyGroup(BaseModel):
@@ -50,3 +53,7 @@ class ComplianceReport(BaseModel):
     passed_policies: int
     results: List[PolicyResult]
     score: float = Field(..., description="Percentage score (0-100)")
+    run_id: Optional[str] = Field(None, description="CI run ID (e.g. GitHub Actions run ID)")
+    timestamp: Optional[datetime] = Field(None, description="When the check was performed")
+    commit_sha: Optional[str] = Field(None, description="Git commit SHA at time of check")
+    governance_version: Optional[str] = Field(None, description="Version of the governance document used")

@@ -138,8 +138,18 @@ def validate_coverage(ctx: click.Context, pairs: tuple) -> None:
     metavar="PATH",
     help="Path to governance directory containing policy YAML files. Defaults to ./governance.",
 )
+@click.option(
+    "--persist/--no-persist",
+    default=False,
+    help="Persist the compliance run to the DHF compliance-runs store.",
+)
 @click.pass_context
-def validate_compliance(ctx: click.Context, group_id: str, governance_dir: str | None) -> None:
+def validate_compliance(
+    ctx: click.Context,
+    group_id: str,
+    governance_dir: str | None,
+    persist: bool,
+) -> None:
     """Check compliance against a governance policy group.
 
     GROUP_ID is the filename stem of a policy YAML file (e.g. IEC_62304).
@@ -149,7 +159,7 @@ def validate_compliance(ctx: click.Context, group_id: str, governance_dir: str |
     dhf_path: Path = ctx.obj["dhf"]
     gov_dir = Path(governance_dir) if governance_dir else Path("governance")
     core = _make_core(dhf_path)
-    report = core.check_compliance(group_id, governance_dir=gov_dir)
+    report = core.check_compliance(group_id, governance_dir=gov_dir, persist=persist)
     if report is None:
         click.echo(f"ERROR: Policy group '{group_id}' not found.", err=True)
         sys.exit(1)
@@ -169,6 +179,34 @@ def validate_compliance(ctx: click.Context, group_id: str, governance_dir: str |
         f"(score: {report['score']:.0f}%).",
         err=True,
     )
+
+
+@validate.group("compliance-history")
+def validate_compliance_history() -> None:
+    """Compliance run history commands."""
+
+
+@validate_compliance_history.command("list")
+@click.argument("group_id")
+@click.option("--since", default=None, metavar="DATE",
+              help="Filter to runs at or after this ISO 8601 date (e.g. 2026-01-01).")
+@click.pass_context
+def validate_compliance_history_list(
+    ctx: click.Context,
+    group_id: str,
+    since: str | None,
+) -> None:
+    """List persisted compliance runs for GROUP_ID.
+
+    Outputs each run as a JSON object on stdout (NDJSON).
+    """
+    from utils.local_adapter import LocalDHFAdapter
+    dhf_path: Path = ctx.obj["dhf"]
+    adapter = LocalDHFAdapter(dhf_path, auto_commit=False)
+    runs = adapter.get_compliance_runs(group_id, since_date=since)
+    for run in runs:
+        click.echo(json.dumps(run, default=str))
+    click.echo(f"({len(runs)} run(s) for '{group_id}')", err=True)
 
 
 # ---------------------------------------------------------------------------
@@ -296,3 +334,225 @@ def report_compliance(ctx: click.Context, group_id: str,
         f"(score: {result['score']:.0f}%) — report: {out}",
         err=True,
     )
+
+
+# ---------------------------------------------------------------------------
+# cr group
+# ---------------------------------------------------------------------------
+
+@main.group()
+def cr() -> None:
+    """Commands for Change Request git-evidence management."""
+
+
+@cr.command("check-status")
+@click.argument("cr_id")
+@click.pass_context
+def cr_check_status(ctx: click.Context, cr_id: str) -> None:
+    """Check the status of a Change Request and whether it has linked git commits.
+
+    CR_ID is the identifier of the change request (e.g. CR-012).
+    Outputs a JSON object to stdout.
+    Exits 0 if the CR is approved and has linked commits; exits 1 otherwise.
+    """
+    dhf_path: Path = ctx.obj["dhf"]
+    core = _make_core(dhf_path)
+    item = core.get_item(cr_id)
+    if item is None:
+        click.echo(json.dumps({"cr_id": cr_id, "found": False, "error": f"CR '{cr_id}' not found"}))
+        click.echo(f"ERROR: CR '{cr_id}' not found.", err=True)
+        sys.exit(1)
+
+    status = item.get("status", "")
+    implementation_prs = item.get("implementation_prs") or []
+    approved = status == "approved"
+    has_prs = len(implementation_prs) > 0
+
+    result = {
+        "cr_id": cr_id,
+        "found": True,
+        "status": status,
+        "approved": approved,
+        "implementation_prs": implementation_prs,
+        "has_linked_commits": has_prs,
+        "valid": approved and has_prs,
+    }
+    click.echo(json.dumps(result, default=str))
+
+    if result["valid"]:
+        click.echo(f"✓ CR '{cr_id}' is approved with {len(implementation_prs)} linked PR(s).", err=True)
+    else:
+        reasons = []
+        if not approved:
+            reasons.append(f"status is '{status}' (expected 'approved')")
+        if not has_prs:
+            reasons.append("no implementation_prs linked")
+        click.echo(f"✗ CR '{cr_id}' invalid: {'; '.join(reasons)}.", err=True)
+        sys.exit(1)
+
+
+@cr.command("generate-report")
+@click.argument("cr_id")
+@click.option("--since", default=None, metavar="DATE",
+              help="Only include commits after this date (ISO 8601).")
+@click.pass_context
+def cr_generate_report(ctx: click.Context, cr_id: str, since: str | None) -> None:
+    """Scan git log to generate a CR-PR evidence report.
+
+    Outputs a JSON object to stdout with the CR details and associated commits
+    extracted from git log messages mentioning CR_ID.
+
+    The resulting JSON can be written to a file and consumed by the
+    ``cr_git_evidence`` policy check via COMPLIANTFLOW_CR_REPORT_PATH.
+    """
+    import subprocess  # noqa: PLC0415
+    dhf_path: Path = ctx.obj["dhf"]
+    core = _make_core(dhf_path)
+    item = core.get_item(cr_id)
+
+    cr_data: dict = {}
+    if item:
+        cr_data = {
+            "cr_id": cr_id,
+            "title": item.get("title", ""),
+            "status": item.get("status", ""),
+            "affected_items": item.get("affected_items") or [],
+            "implementation_prs": item.get("implementation_prs") or [],
+        }
+    else:
+        cr_data = {"cr_id": cr_id, "found": False}
+
+    # Scan git log for commits mentioning this CR ID
+    git_args = [
+        "git", "-C", str(dhf_path.parent),
+        "log", "--oneline", "--all",
+        f"--grep={cr_id}",
+    ]
+    if since:
+        git_args += [f"--after={since}"]
+
+    commits = []
+    try:
+        proc = subprocess.run(git_args, capture_output=True, text=True, timeout=30)
+        for line in proc.stdout.splitlines():
+            line = line.strip()
+            if line:
+                parts = line.split(" ", 1)
+                commits.append({
+                    "sha": parts[0],
+                    "message": parts[1] if len(parts) > 1 else "",
+                })
+    except Exception as exc:
+        click.echo(f"WARNING: git log scan failed: {exc}", err=True)
+
+    cr_data["commits"] = commits
+    click.echo(json.dumps(cr_data, default=str))
+    click.echo(
+        f"({len(commits)} commit(s) referencing {cr_id} found in git log)", err=True
+    )
+
+
+# ---------------------------------------------------------------------------
+# test group
+# ---------------------------------------------------------------------------
+
+@main.group()
+def test() -> None:
+    """Commands for test result integration."""
+
+
+@test.command("import")
+@click.argument("path", type=click.Path(exists=True))
+@click.option("--format", "fmt", default="junit", show_default=True,
+              type=click.Choice(["junit"], case_sensitive=False),
+              help="Test result format.")
+@click.option("--tester", default="", help="Name of the tester or CI agent.")
+@click.option("--run-id", default="", help="CI run ID.")
+@click.option("--run-url", default="", help="URL to the CI run.")
+@click.option("--commit", default="", help="Git commit SHA.")
+@click.pass_context
+def test_import(
+    ctx: click.Context,
+    path: str,
+    fmt: str,
+    tester: str,
+    run_id: str,
+    run_url: str,
+    commit: str,
+) -> None:
+    """Import test results from a JUnit XML file.
+
+    PATH is the path to the test result file.
+    Outputs a JSON summary to stdout.
+    """
+    from utils.local_adapter import LocalDHFAdapter
+    dhf_path: Path = ctx.obj["dhf"]
+    adapter = LocalDHFAdapter(dhf_path, auto_commit=False)
+    result = adapter.import_results_from_file(
+        xml_path=Path(path),
+        tester=tester,
+        run_id=run_id,
+        run_url=run_url,
+        commit_sha=commit,
+    )
+    # Re-shape to match the summary format used by core.import_test_results
+    recorded = result.get("recorded", [])
+    skipped = result.get("skipped", 0)
+    items_updated = list({uid for r in recorded for uid in r.get("links", [])})
+    failed_tcs = [r["tc_id"] for r in recorded if r.get("testing_status") == "FAIL"]
+    summary = {
+        "imported": len(recorded),
+        "skipped": skipped,
+        "items_updated": items_updated,
+        "failed_tcs": failed_tcs,
+    }
+    click.echo(json.dumps(summary, default=str))
+    click.echo(
+        f"✓ Imported {summary['imported']} result(s), "
+        f"skipped {summary['skipped']}, "
+        f"updated {len(summary['items_updated'])} item(s).",
+        err=True,
+    )
+    if summary["failed_tcs"]:
+        click.echo(f"  ✗ Failing TCs: {summary['failed_tcs']}", err=True)
+
+
+@test.command("status")
+@click.argument("tc_id")
+@click.pass_context
+def test_status(ctx: click.Context, tc_id: str) -> None:
+    """Show the latest test result for a TC.
+
+    TC_ID is the test case identifier (e.g. TC-SYS-001-001).
+    Outputs a JSON object to stdout.
+    Exits 1 if the TC is not found.
+    """
+    dhf_path: Path = ctx.obj["dhf"]
+    core = _make_core(dhf_path)
+    result = core.get_test_result(tc_id)
+    if result is None:
+        click.echo(json.dumps({"tc_id": tc_id, "found": False}))
+        click.echo(f"ERROR: TC '{tc_id}' not found.", err=True)
+        sys.exit(1)
+    click.echo(json.dumps(result, default=str))
+    status = result.get("testing_status", "UNKNOWN")
+    click.echo(f"  {tc_id}: {status}", err=True)
+
+
+@test.command("list")
+@click.option("--status", "status_filter", default=None,
+              type=click.Choice(["PASS", "FAIL", "SKIP"], case_sensitive=False),
+              help="Filter by testing status.")
+@click.pass_context
+def test_list(ctx: click.Context, status_filter: str | None) -> None:
+    """List all imported test results.
+
+    Outputs one JSON object per result to stdout (NDJSON).
+    """
+    dhf_path: Path = ctx.obj["dhf"]
+    core = _make_core(dhf_path)
+    sf = status_filter.upper() if status_filter else None
+    results = core.get_all_test_results(status_filter=sf)
+    for rec in results.values():
+        click.echo(json.dumps(rec, default=str))
+    click.echo(f"({len(results)} result(s))", err=True)

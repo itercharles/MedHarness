@@ -262,6 +262,16 @@ def get_test_dataset() -> List[Dict]:
             'status': 'draft',
             'affected_items': ['SRS-001'],
         },
+        # Approved CR with implementation PRs — used by cr_git_evidence and CR CLI tests
+        {
+            'id': 'CR-002',
+            'title': 'Approved Change Request with PR',
+            'description': 'Change request that has been approved and has linked PRs',
+            'justification': 'Demonstrates CR-git-evidence policy check',
+            'status': 'approved',
+            'affected_items': ['SYS-001'],
+            'implementation_prs': ['https://github.com/org/repo/pull/42'],
+        },
     ]
 
 
@@ -368,5 +378,13 @@ def populate_test_dhf(test_dhf_root: Path):
             print(f"  [WARN] Failed to create {item_data['id']}: {e}")
             import traceback
             traceback.print_exc()
+
+    # Transition CR-002 to 'approved' so CR CLI tests and cr_git_evidence checks
+    # can test the approved-CR happy path.
+    try:
+        adapter.execute_transition("CR-002", "approved", performed_by="test-setup")
+        print("  [OK] Transitioned CR-002 → approved")
+    except Exception as e:
+        print(f"  [WARN] Could not approve CR-002: {e}")
 
     print(f"[OK] Test DHF populated with {len(test_items)} items")
