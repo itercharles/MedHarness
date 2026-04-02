@@ -117,6 +117,16 @@ class LocalDHFAdapter:
             all_items = self._loader.load_all()
             existing_ids = [i.uid for i in all_items if i.uid.startswith(dt_cfg.prefix)]
             data['id'] = get_next_id(dt_cfg.prefix, existing_ids)
+        else:
+            # Validate the caller-supplied ID matches the doc-type prefix pattern
+            from utils.id_generator import validate_id_format
+            doc_type_code = data['id'].split('-')[0]
+            dt_cfg = self._config.get_doc_type(doc_type_code)
+            if dt_cfg and not validate_id_format(data['id'], dt_cfg.prefix):
+                raise ValidationError(
+                    f"Invalid ID format '{data['id']}' for doc type '{doc_type_code}'. "
+                    f"Expected format: {dt_cfg.prefix}<number>"
+                )
 
         doc_type_code = data['id'].split('-')[0]
         dt_cfg = self._config.get_doc_type(doc_type_code)
@@ -143,6 +153,11 @@ class LocalDHFAdapter:
         existing = self._loader.load_by_uid(uid)
         if not existing:
             return None
+
+        # Guard: ID is immutable — reject any attempt to change it
+        incoming_id = data.get('id')
+        if incoming_id is not None and incoming_id != existing.uid:
+            raise ValidationError("Item ID is immutable and cannot be changed")
 
         # If the item has a lifecycle and is currently in a stable state,
         # reset it to the initial state and clear approval fields.

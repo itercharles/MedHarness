@@ -21,13 +21,18 @@ class CompliantFlowCore:
     (and the utils CLI) directly.
     """
 
-    def __init__(self, adapter):
+    def __init__(self, adapter, llm_backend=None):
         """
         Args:
-            adapter: A DHFAdapter instance (e.g. LocalDHFAdapter from
-                     utils.local_adapter, or any custom implementation).
+            adapter:     A DHFAdapter instance (e.g. LocalDHFAdapter from
+                         utils.local_adapter, or any custom implementation).
+            llm_backend: Optional :class:`~compliantflow.backends.llm.LLMBackend`
+                         instance.  When None, :func:`get_default_backend` is
+                         called at engine init time to resolve the backend from
+                         environment variables.
         """
         self._adapter = adapter
+        self._llm_backend = llm_backend
         self.config: ProjectSchema = adapter.get_project_config()
         self.graph = GraphEngine(config=self.config)
 
@@ -302,7 +307,7 @@ class CompliantFlowCore:
         """Load a policy group without running checks."""
         from compliantflow.policy import PolicyEngine
         root_dir = getattr(self._adapter, '_dhf_root', None)
-        engine = PolicyEngine(self, root_dir=root_dir)
+        engine = PolicyEngine(self, root_dir=root_dir, llm_backend=self._llm_backend)
         path = Path(governance_dir) / f"{group_id}.yaml"
         group = engine.load_policy_group(path)
         return group.model_dump() if group else None
@@ -325,7 +330,7 @@ class CompliantFlowCore:
         from compliantflow.policy import PolicyEngine
 
         root_dir = getattr(self._adapter, '_dhf_root', None)
-        engine = PolicyEngine(self, root_dir=root_dir)
+        engine = PolicyEngine(self, root_dir=root_dir, llm_backend=self._llm_backend)
         path = Path(governance_dir) / f"{group_id}.yaml"
         group = engine.load_policy_group(path)
         if not group:

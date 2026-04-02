@@ -6,17 +6,18 @@ import yaml
 from pathlib import Path
 from typing import Dict, Any, Callable, Tuple, Optional
 from compliantflow.domain.compliance import PolicyGroup, ComplianceReport, PolicyResult, Policy
+from compliantflow.backends.llm import LLMBackend, get_default_backend
 
-_GEMINI_MODEL = "gemini-2.5-flash"
 _SEMANTIC_MAX_CHARS = 12_000  # truncate very long documents before sending to LLM
-_GEMINI_CONFIG = {"temperature": 0}  # deterministic output for reproducible CI results
+
 
 class PolicyEngine:
     """Executes compliance policies against the project graph."""
 
-    def __init__(self, core_api, root_dir: Optional[Path] = None):
+    def __init__(self, core_api, root_dir: Optional[Path] = None, llm_backend: Optional[LLMBackend] = None):
         self.core = core_api
         self.root_dir = root_dir
+        self._llm: Optional[LLMBackend] = llm_backend if llm_backend is not None else get_default_backend()
         self.checks: Dict[str, Callable] = {
             'item_existence': self._check_item_existence,
             'file_existence': self._check_file_existence,
@@ -147,10 +148,9 @@ class PolicyEngine:
         if not groups:
             return {}
 
-        api_key = os.environ.get("GEMINI_API_KEY")
-        if not api_key:
+        if self._llm is None:
             return {
-                pid: (False, "GEMINI_API_KEY not set; cannot run semantic check", {"doc_id": doc_id})
+                pid: (False, "No LLM backend configured", {"doc_id": doc_id})
                 for doc_id, items in groups.items()
                 for pid, _ in items
             }
@@ -184,13 +184,7 @@ class PolicyEngine:
             )
 
             try:
-                from google import genai
-                client = genai.Client(api_key=api_key)
-                response = client.models.generate_content(
-                    model=_GEMINI_MODEL, contents=prompt,
-                    config=_GEMINI_CONFIG,
-                )
-                text = response.text.strip()
+                text = self._llm.generate(prompt)
                 if text.startswith("```"):
                     text = text.split("```")[1].lstrip("json").strip()
                 items_result = json.loads(text)
@@ -432,17 +426,18 @@ class PolicyEngine:
         doc_id: str,
         requirement: str,
     ) -> Tuple[bool, str, Optional[Dict]]:
-        """Use an LLM (Gemini) to evaluate whether a document satisfies a natural-language requirement.
+        """Use an LLM to evaluate whether a document satisfies a natural-language requirement.
+
+        Delegates to the configured LLM backend (see :attr:`_llm`).  When called
+        directly (outside the batch path) it issues a single-policy batch so the
+        prompt format stays consistent.
 
         Args:
             doc_id:      Logical document ID (filename stem, e.g. 'development_plan').
             requirement: Plain-English description of what the document must contain/demonstrate.
-
-        Requires the ``GEMINI_API_KEY`` environment variable.
         """
-        api_key = os.environ.get("GEMINI_API_KEY")
-        if not api_key:
-            return False, "GEMINI_API_KEY not set; cannot run semantic check", {"doc_id": doc_id}
+        if self._llm is None:
+            return False, "No LLM backend configured", {"doc_id": doc_id}
 
         content = self.core._adapter.get_document(doc_id)
         if content is None:
@@ -463,13 +458,7 @@ class PolicyEngine:
         )
 
         try:
-            from google import genai
-            client = genai.Client(api_key=api_key)
-            response = client.models.generate_content(
-                    model=_GEMINI_MODEL, contents=prompt,
-                    config=_GEMINI_CONFIG,
-                )
-            text = response.text.strip()
+            text = self._llm.generate(prompt)
             # Strip markdown code fences if the model adds them
             if text.startswith("```"):
                 text = text.split("```")[1].lstrip("json").strip()
