@@ -1,0 +1,59 @@
+name: PR CR Validation
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  cr-validation:
+    name: Validate Change Request linkage
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Extract CR IDs from PR title and body
+        id: extract-cr
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          # Extract all CR-NNN references from the PR title and body
+          CR_IDS=$(echo "$PR_TITLE $PR_BODY" | grep -oE 'CR-[0-9]+' | sort -u | tr '\n' ' ' || true)
+          echo "cr_ids=$CR_IDS" >> "$GITHUB_OUTPUT"
+          if [ -z "$CR_IDS" ]; then
+            echo "No CR IDs found in PR title/body — skipping CR validation." >&2
+          else
+            echo "Found CR IDs: $CR_IDS" >&2
+          fi
+
+      - name: Check CR status for each referenced CR
+        if: steps.extract-cr.outputs.cr_ids != ''
+        env:
+          CR_IDS: ${{ steps.extract-cr.outputs.cr_ids }}
+        run: |
+          export PYTHONPATH="${PYTHONPATH}:${PWD}:${PWD}/DHF"
+          FAILED=0
+          for CR_ID in $CR_IDS; do
+            echo "--- Checking $CR_ID ---" >&2
+            python -m compliantflow --dhf DHF cr check-status "$CR_ID" || FAILED=1
+          done
+          if [ "$FAILED" -eq 1 ]; then
+            echo "✗ One or more CR validations failed." >&2
+            exit 1
+          fi
+          echo "✓ All referenced CRs are valid." >&2

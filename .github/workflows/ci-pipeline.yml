@@ -109,11 +109,10 @@ jobs:
           name: crs-test-results
           path: crs-test-results.xml
 
-  # Phase 4: DHF Validation + Evidence Reports
-  # Validates DHF integrity and IEC 62304 compliance, then generates PDF
-  # evidence reports in the same job (single Gemini API call).
-  phase4-dhf-validation:
-    name: Phase 4 - DHF Validation
+  # Phase 3.5: CR-PR Report Generation
+  # Generates a CR evidence report before Phase 4 validation.
+  phase3-5-cr-report:
+    name: Phase 3.5 - CR-PR Evidence Report
     runs-on: ubuntu-latest
     needs: [phase2-sys, phase3-crs]
     steps:
@@ -131,6 +130,66 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Generate CR-PR evidence reports
+        run: |
+          export PYTHONPATH="${PYTHONPATH}:${PWD}:${PWD}/DHF"
+          mkdir -p cr-reports
+          # Generate a report for each approved CR in the DHF
+          python -c "
+          import json, sys, os
+          sys.path.insert(0, '.')
+          sys.path.insert(0, 'DHF')
+          from utils.local_adapter import LocalDHFAdapter
+          adapter = LocalDHFAdapter('DHF', auto_commit=False)
+          crs = [i for i in adapter.list_items('CR') if i.get('status') == 'approved']
+          for cr in crs:
+              cr_id = cr['id']
+              import subprocess
+              args = ['python', '-m', 'compliantflow', '--dhf', 'DHF',
+                      'cr', 'generate-report', cr_id]
+              result = subprocess.run(args, capture_output=True, text=True,
+                                      env={**os.environ, 'PYTHONPATH': '.:DHF'})
+              report_path = f'cr-reports/{cr_id}.json'
+              with open(report_path, 'w') as f:
+                  f.write(result.stdout)
+              print(f'Generated {report_path}', file=sys.stderr)
+          print(f'Generated {len(crs)} CR report(s)', file=sys.stderr)
+          "
+
+      - name: Upload CR-PR evidence reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: cr-pr-reports
+          path: cr-reports/
+
+  # Phase 4: DHF Validation + Evidence Reports
+  # Validates DHF integrity and IEC 62304/IEC 82304-1 compliance, then generates PDF
+  # evidence reports in the same job (single Gemini API call).
+  phase4-dhf-validation:
+    name: Phase 4 - DHF Validation
+    runs-on: ubuntu-latest
+    needs: [phase2-sys, phase3-crs, phase3-5-cr-report]
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Download CR-PR evidence reports
+        uses: actions/download-artifact@v4
+        with:
+          name: cr-pr-reports
+          path: cr-reports/
+
       - name: Check coverage (UC→CRS→SYS→SYSARCH)
         run: |
           export PYTHONPATH="${PYTHONPATH}:${PWD}:${PWD}/DHF"
@@ -142,7 +201,27 @@ jobs:
           export PYTHONPATH="${PYTHONPATH}:${PWD}:${PWD}/DHF"
           python -m compliantflow --dhf DHF validate traceability || true
 
-      - name: Run IEC 62304 compliance check and generate evidence reports
+      - name: Run IEC 62304 compliance check (with persistence)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          export PYTHONPATH="${PYTHONPATH}:${PWD}:${PWD}/DHF"
+          python -m compliantflow --dhf DHF validate compliance IEC_62304 \
+            --governance-dir governance \
+            --persist
+
+      - name: Run IEC 82304-1 compliance check (with persistence)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          export PYTHONPATH="${PYTHONPATH}:${PWD}:${PWD}/DHF"
+          python -m compliantflow --dhf DHF validate compliance IEC_82304_1 \
+            --governance-dir governance \
+            --persist || true
+
+      - name: Generate evidence reports
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}

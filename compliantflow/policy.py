@@ -27,6 +27,7 @@ class PolicyEngine:
             'attribute_value': self._check_attribute_value,
             'all_tests_passing': self._check_all_tests_passing,
             'verification_complete': self._check_verification_complete,
+            'cr_git_evidence': self._check_cr_git_evidence,
         }
 
     def load_policy_group(self, path: Path) -> Optional[PolicyGroup]:
@@ -57,10 +58,13 @@ class PolicyEngine:
         for policy in group.policies:
             if not policy.automation:
                 passed = policy.status == 'approved'
+                details = f"Manual policy (status: {policy.status})"
+                if policy.evidence_guidance:
+                    details += f" — {policy.evidence_guidance}"
                 result = PolicyResult(
                     policy_id=policy.id,
                     passed=passed,
-                    details=f"Manual policy (status: {policy.status})",
+                    details=details,
                     policy_text=policy.text,
                 )
             else:
@@ -477,6 +481,51 @@ class PolicyEngine:
             return passed, details, evidence
         except Exception as e:
             return False, f"Semantic check error: {e}", {"doc_id": doc_id}
+
+    def _check_cr_git_evidence(
+        self,
+        report_path: Optional[str] = None,
+    ) -> Tuple[bool, str, Optional[Dict]]:
+        """Check that a CR-PR report JSON file contains at least one linked commit.
+
+        The report JSON is read from:
+          1. ``report_path`` parameter (if provided)
+          2. ``COMPLIANTFLOW_CR_REPORT_PATH`` environment variable
+          3. Falls back to FAIL if neither is set.
+
+        The JSON is expected to have a ``commits`` list (non-empty = pass).
+
+        Args:
+            report_path: Optional explicit path to the CR report JSON artifact.
+        """
+        path_str = report_path or os.environ.get("COMPLIANTFLOW_CR_REPORT_PATH")
+        if not path_str:
+            return (
+                False,
+                "CR report path not set (no report_path param or COMPLIANTFLOW_CR_REPORT_PATH env var)",
+                {},
+            )
+        try:
+            with open(path_str, "r", encoding="utf-8") as f:
+                data = json.load(f)
+        except FileNotFoundError:
+            return False, f"CR report file not found: {path_str}", {"path": path_str}
+        except json.JSONDecodeError as exc:
+            return False, f"CR report JSON parse error: {exc}", {"path": path_str}
+
+        commits = data.get("commits", [])
+        cr_id = data.get("cr_id", "")
+        if commits:
+            return (
+                True,
+                f"CR {cr_id!r} has {len(commits)} linked commit(s)",
+                {"cr_id": cr_id, "commit_count": len(commits), "commits": commits},
+            )
+        return (
+            False,
+            f"CR {cr_id!r} has no linked commits in report",
+            {"cr_id": cr_id, "commit_count": 0, "path": path_str},
+        )
 
     def _check_verification_complete(self, type_code: str) -> Tuple[bool, str, Optional[Dict]]:
         """Check that all items of type_code have verification_status == 'verified'."""

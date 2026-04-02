@@ -307,13 +307,125 @@ class CompliantFlowCore:
         group = engine.load_policy_group(path)
         return group.model_dump() if group else None
 
-    def check_compliance(self, group_id: str, governance_dir: Path) -> Optional[Dict[str, Any]]:
-        """Check compliance against a policy group and return the report."""
+    def check_compliance(
+        self,
+        group_id: str,
+        governance_dir: Path,
+        persist: bool = False,
+    ) -> Optional[Dict[str, Any]]:
+        """Check compliance against a policy group and return the report.
+
+        Args:
+            group_id:       Policy group filename stem (e.g. 'IEC_62304').
+            governance_dir: Directory containing governance YAML files.
+            persist:        If True, append the run to the compliance store via the adapter.
+        """
+        import os
+        from datetime import datetime, timezone
         from compliantflow.policy import PolicyEngine
+
         root_dir = getattr(self._adapter, '_dhf_root', None)
         engine = PolicyEngine(self, root_dir=root_dir)
         path = Path(governance_dir) / f"{group_id}.yaml"
         group = engine.load_policy_group(path)
         if not group:
             return None
-        return engine.check_compliance(group).model_dump()
+        report = engine.check_compliance(group)
+        report_dict = report.model_dump()
+
+        # Populate run metadata
+        report_dict["run_id"] = os.environ.get("GITHUB_RUN_ID", "")
+        report_dict["timestamp"] = datetime.now(timezone.utc).isoformat()
+        report_dict["commit_sha"] = os.environ.get("GITHUB_SHA", "")
+        report_dict["governance_version"] = group.version
+
+        if persist and hasattr(self._adapter, "record_compliance_run"):
+            self._adapter.record_compliance_run(
+                group_id=group_id,
+                report_dict=report_dict,
+                commit_sha=report_dict["commit_sha"],
+                trigger=os.environ.get("GITHUB_EVENT_NAME", "manual"),
+            )
+
+        return report_dict
+
+    # ------------------------------------------------------------------
+    # Test result delegation
+    # ------------------------------------------------------------------
+
+    def import_test_results(
+        self,
+        results,
+        tester: str = "",
+        run_id: str = "",
+        run_url: str = "",
+        commit_sha: str = "",
+    ) -> Dict[str, Any]:
+        """Import test results from parsed JUnit records.
+
+        Delegates to the adapter and refreshes the graph so verification
+        status is updated immediately.
+
+        Args:
+            results:    List of parsed test result objects (from junit_parser).
+            tester:     Name of the agent/person who ran the tests.
+            run_id:     CI run ID string.
+            run_url:    URL to the CI run.
+            commit_sha: Git commit SHA.
+
+        Returns:
+            dict with keys: imported, skipped, items_updated, failed_tcs.
+        """
+        imported = []
+        skipped = 0
+        failed_tcs = []
+
+        for r in results:
+            if r.testing_status == "SKIP":
+                skipped += 1
+                continue
+            self._adapter.record_test_result(
+                tc_id=r.id,
+                testing_status=r.testing_status,
+                tester=tester,
+                run_id=run_id,
+                run_url=run_url,
+                commit_sha=commit_sha,
+                notes=getattr(r, "error_message", "") or "",
+                links=getattr(r, "links", None),
+                title=getattr(r, "title", ""),
+                reviewer=getattr(r, "reviewer", ""),
+                review_date=getattr(r, "review_date", ""),
+                review_status=getattr(r, "review_status", ""),
+            )
+            imported.append(r.id)
+            if r.testing_status == "FAIL":
+                failed_tcs.append(r.id)
+
+        self.refresh()
+
+        items_updated = []
+        for tc_id in imported:
+            result_rec = self._adapter.get_test_result(tc_id)
+            if result_rec:
+                for linked_id in result_rec.get("links") or []:
+                    if linked_id not in items_updated:
+                        items_updated.append(linked_id)
+
+        return {
+            "imported": len(imported),
+            "skipped": skipped,
+            "items_updated": items_updated,
+            "failed_tcs": failed_tcs,
+        }
+
+    def get_test_result(self, tc_id: str) -> Optional[Dict[str, Any]]:
+        """Return the stored test result for a TC, or None."""
+        return self._adapter.get_test_result(tc_id)
+
+    def get_all_test_results(
+        self,
+        status_filter: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Return all stored test results, optionally filtered by status."""
+        return self._adapter.get_all_test_results(status_filter)
