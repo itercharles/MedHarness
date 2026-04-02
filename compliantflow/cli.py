@@ -349,11 +349,14 @@ def cr() -> None:
 @click.argument("cr_id")
 @click.pass_context
 def cr_check_status(ctx: click.Context, cr_id: str) -> None:
-    """Check the status of a Change Request and whether it has linked git commits.
+    """Check that a Change Request exists and is in an authorized state.
 
     CR_ID is the identifier of the change request (e.g. CR-012).
     Outputs a JSON object to stdout.
-    Exits 0 if the CR is approved and has linked commits; exits 1 otherwise.
+    Exits 0 if the CR exists and is approved or implementing; exits 1 otherwise.
+
+    Note: linked commits/PRs are evidence recorded AFTER the work is merged.
+    This gate only verifies the CR is authorized — not that evidence exists yet.
     """
     dhf_path: Path = ctx.obj["dhf"]
     core = _make_core(dhf_path)
@@ -364,30 +367,25 @@ def cr_check_status(ctx: click.Context, cr_id: str) -> None:
         sys.exit(1)
 
     status = item.get("status", "")
-    implementation_prs = item.get("implementation_prs") or []
-    approved = status == "approved"
-    has_prs = len(implementation_prs) > 0
+    valid_statuses = {"approved", "implementing"}
+    valid = status in valid_statuses
 
     result = {
         "cr_id": cr_id,
         "found": True,
         "status": status,
-        "approved": approved,
-        "implementation_prs": implementation_prs,
-        "has_linked_commits": has_prs,
-        "valid": approved and has_prs,
+        "valid": valid,
     }
     click.echo(json.dumps(result, default=str))
 
-    if result["valid"]:
-        click.echo(f"✓ CR '{cr_id}' is approved with {len(implementation_prs)} linked PR(s).", err=True)
+    if valid:
+        click.echo(f"✓ CR '{cr_id}' is authorized (status: {status}).", err=True)
     else:
-        reasons = []
-        if not approved:
-            reasons.append(f"status is '{status}' (expected 'approved')")
-        if not has_prs:
-            reasons.append("no implementation_prs linked")
-        click.echo(f"✗ CR '{cr_id}' invalid: {'; '.join(reasons)}.", err=True)
+        click.echo(
+            f"✗ CR '{cr_id}' is not authorized: status is '{status}' "
+            f"(expected one of: {', '.join(sorted(valid_statuses))}).",
+            err=True,
+        )
         sys.exit(1)
 
 
@@ -425,27 +423,35 @@ def cr_generate_report(ctx: click.Context, cr_id: str, since: str | None) -> Non
     # Scan git log for commits mentioning this CR ID
     git_args = [
         "git", "-C", str(dhf_path.parent),
-        "log", "--oneline", "--all",
+        "log", "--all", "--format=%H %s",
         f"--grep={cr_id}",
     ]
     if since:
         git_args += [f"--after={since}"]
 
     commits = []
+    pr_numbers: list[str] = []
     try:
+        import re  # noqa: PLC0415
         proc = subprocess.run(git_args, capture_output=True, text=True, timeout=30)
         for line in proc.stdout.splitlines():
             line = line.strip()
-            if line:
-                parts = line.split(" ", 1)
-                commits.append({
-                    "sha": parts[0],
-                    "message": parts[1] if len(parts) > 1 else "",
-                })
+            if not line:
+                continue
+            parts = line.split(" ", 1)
+            sha = parts[0]
+            message = parts[1] if len(parts) > 1 else ""
+            commits.append({"sha": sha, "message": message})
+            # Extract PR numbers from GitHub squash-merge format: "Title (#123)"
+            for match in re.finditer(r'\(#(\d+)\)', message):
+                pr_num = match.group(1)
+                if pr_num not in pr_numbers:
+                    pr_numbers.append(pr_num)
     except Exception as exc:
         click.echo(f"WARNING: git log scan failed: {exc}", err=True)
 
     cr_data["commits"] = commits
+    cr_data["implementation_prs"] = pr_numbers
     click.echo(json.dumps(cr_data, default=str))
     click.echo(
         f"({len(commits)} commit(s) referencing {cr_id} found in git log)", err=True
