@@ -1,14 +1,18 @@
 id: CR-006
 title: The objects' ID shall be generated automatically and not editable
-status: in_review
+review_date: '2025-12-30'
+status: approved
 priority: High
 description: The objects' ID shall be generated automatically and not editable
 justification: The ID shall not be edit as it cause problems for the reference
 review_by: charles
-review_date: '2025-12-30'
 timestamp: '2025-12-30T16:59:35.286281'
 affected_items:
 - SRS-001
 - TC-SRS-002
 - TC-SYS-008
 - TC-SYS-010
+impact_assessment: Remove caller-supplied ID path in create_item. No schema or YAML
+  format changes. Existing items unaffected. Tests updated to use ItemSaver directly
+  for fixture data with stable IDs.
+type: CR
