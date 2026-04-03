@@ -1,0 +1,18 @@
+id: SWDD-005
+implements:
+- SYS-011
+title: PDF Report Generator
+content: 'compliantflow/report_generator.py renders traceability and compliance data
+  to PDF via WeasyPrint.
+
+
+  generate_traceability_pdf(matrix, output_path) renders a full traceability matrix
+  including per-row traceability status, test verification status, and a test results
+  detail section. generate_compliance_pdf(report, output_path) renders a compliance
+  summary with per-policy pass/fail rows.
+
+
+  Both functions render HTML internally using _CSS styles and convert to PDF via weasyprint.HTML.write_pdf().
+  Output path parent directories are created automatically. Reports are written to
+  a caller-specified path and do not modify the DHF.'
+type: SWDD

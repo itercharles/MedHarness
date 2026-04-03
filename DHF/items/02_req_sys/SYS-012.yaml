@@ -1,0 +1,32 @@
+id: SYS-012
+satisfies:
+- CRS-011
+title: Compliance Run Persistence
+category: Functional
+content: 'The system shall persist compliance check run results to the DHF when requested,
+  creating an append-only audit trail of all compliance assessments.
+
+
+  Each persisted run record shall include:
+
+  - standard_id: the governance standard evaluated
+
+  - score: percentage of policies passed
+
+  - passed_policies and total_policies counts
+
+  - timestamp: UTC datetime of the run
+
+  - run_id: CI run identifier (e.g. GitHub Actions run ID)
+
+  - commit_sha: git commit at time of run
+
+  - governance_version: version of the governance file used
+
+
+  Runs shall be appended to DHF/compliance-runs/<standard_id>.yaml and shall never
+  overwrite prior records. The persist behaviour shall be opt-in (flag-controlled)
+  to allow compliance checks to be run without writing to the DHF.'
+verification_method:
+- Test
+type: SYS

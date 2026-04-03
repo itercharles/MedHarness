@@ -1,23 +1,34 @@
 id: SYS-007
+satisfies:
+- CRS-008
 title: Automated Test Result Import
 category: Functional
-content: |-
-  The system shall import automated test results from standard JUnit XML reports
+content: 'The system shall import automated test results from standard JUnit XML reports
   via the DHF data layer, link each result to its corresponding traced requirements,
   and automatically update the verification status of linked requirements.
 
+
   Verification status shall be computed as:
+
   - verified: all linked test cases pass
+
   - failed: at least one linked test case fails
+
   - not_verified: no test results are linked
 
-  The import shall be idempotent: re-importing the same results shall overwrite
-  the previous record for each test case, not create duplicates.
 
-  Test results shall be linked to requirements via a TC ID embedded in the
-  JUnit XML (as a custom property or extracted from the test name), and shall
-  not require any specific test framework.
+  The import shall be append-mode: each import prepends a new result record for the
+  TC ID, preserving full run history. The most recent result determines the current
+  verification status.
+
+
+  Test results shall be linked to requirements via a TC ID embedded in the JUnit XML
+  as a compliantflow.id property element, or extracted by regex from the test function
+  name (test_TC_NNN_NNN_*). Tests with no recognisable TC ID are skipped.
+
+
+  The system shall also support fetching JUnit XML artifacts from GitHub Actions runs
+  via the GitHub API (GITHUB_TOKEN), enabling CI-integrated import without manual
+  file download.'
 verification_method:
 - Test
-satisfies:
-- CRS-008

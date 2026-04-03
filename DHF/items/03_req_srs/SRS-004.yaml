@@ -1,0 +1,22 @@
+id: SRS-004
+derives_from:
+- SYS-007
+title: Test Result Import and History
+content: 'The software shall parse JUnit XML files to extract test case results, mapping
+  each test case to a TC ID via compliantflow.* property elements or regex extraction
+  from the test function name.
+
+
+  The software shall store results in append-mode: each import prepends a new record
+  to the TC history list, never overwriting prior results. get_latest(tc_id) returns
+  the most recent record; get_history(tc_id) returns all records newest-first.
+
+
+  The software shall support transparent migration of legacy flat-format result stores
+  (tc_id: record) to the append-mode format (tc_id: [record, ...]) on first read.
+
+
+  The software shall support fetching JUnit XML artifacts from GitHub Actions via
+  GITHUB_TOKEN, enabling automated import in CI pipelines without manual artifact
+  download.'
+type: SRS

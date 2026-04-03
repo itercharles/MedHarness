@@ -1,0 +1,18 @@
+id: SWDD-004
+implements:
+- SRS-002
+title: LLM Backend Abstraction
+content: 'compliantflow/backends/llm.py defines LLMBackend as a runtime-checkable
+  Protocol with a single method generate(prompt: str) -> str.
+
+
+  GeminiBackend wraps google.genai and is selected when GEMINI_API_KEY is set. OllamaBackend
+  sends HTTP requests to COMPLIANTFLOW_OLLAMA_URL using model COMPLIANTFLOW_OLLAMA_MODEL
+  (default: llama3).
+
+
+  get_default_backend() returns GeminiBackend if GEMINI_API_KEY is set, OllamaBackend
+  if COMPLIANTFLOW_OLLAMA_URL is set, otherwise None. PolicyEngine accepts the backend
+  as an optional constructor argument; CompliantFlowCore passes get_default_backend()
+  automatically.'
+type: SWDD

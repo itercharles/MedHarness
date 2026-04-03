@@ -1,0 +1,15 @@
+id: SRS-005
+derives_from:
+- SYS-012
+title: Compliance Run Persistence and History
+content: 'The software shall persist compliance check results to an append-only store
+  at DHF/compliance-runs/<standard_id>.yaml when persist=True is passed to check_compliance().
+
+
+  Each record shall capture: standard_id, score, passed_policies, total_policies,
+  timestamp (UTC), run_id, commit_sha, governance_version.
+
+
+  The software shall provide get_compliance_runs(standard_id) to retrieve the full
+  run history and get_latest_run(standard_id) to retrieve the most recent run.'
+type: SRS
