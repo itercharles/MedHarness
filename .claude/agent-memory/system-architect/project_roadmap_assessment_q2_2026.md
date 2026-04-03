@@ -1,35 +1,32 @@
 ---
 name: Roadmap Architecture Assessment Q2 2026
-description: Assessment of CompliantFlow architecture against v1.3.0/v2.0/v2.x roadmap, conducted 2026-04-02
+description: Assessment of CompliantFlow architecture against v1.3.0/v2.0/v2.x roadmap, conducted 2026-04-02; updated 2026-04-03
 type: project
 ---
 
-Assessment conducted 2026-04-02 covering v1.3.0 (Q2 2026), v2.0.0 (Q3 2026), v2.x (Q4 2026+).
+Assessment conducted 2026-04-02. All v1.3.0 structural changes are now complete (2026-04-03).
 
-**Why:** Proactive assessment to identify structural debt before it compounds. Key findings saved here to inform future design work.
+**How to apply:** Reference this before significant feature design work for v2.0.0+.
 
-**How to apply:** Reference this before any significant feature design work to avoid re-litigating already-assessed questions.
+## v1.3.0 structural changes — ALL DONE
 
-## Critical findings
+1. ✅ LLM backend extracted: `compliantflow/backends/llm.py` — `LLMBackend` Protocol, `GeminiBackend`, `OllamaBackend`, `get_default_backend()`
+2. ✅ `ComplianceReport` has `run_id`, `timestamp`, `commit_sha`, `governance_version` with Optional defaults
+3. ✅ `DHFAdapter` protocol has `record_compliance_run` and `get_compliance_runs`
+4. ✅ `ResultStore` is append-mode; `{tc_id: [record, ...]}` with transparent migration
+5. ✅ `cr_git_evidence` check type added to PolicyEngine dispatch table
+6. ✅ ID write-protection at adapter layer: `create_item` auto-generates, `update_item` raises on id change
+7. ✅ `PolicyEngine` cached per (group_id, governance_dir) on `CompliantFlowCore`
+8. ✅ Document index built at adapter init (O(1) lookup vs. rglob scan)
 
-1. LLM backend is hard-wired to Gemini (`google.genai` import in policy.py `_run_semantic_batch`). Must extract an LLM backend abstraction in v1.3.0 or the Ollama fallback becomes a messy conditional.
+## v2.0.0 architectural considerations (Q3 2026)
 
-2. ComplianceReport model (`domain/compliance.py`) lacks `run_id`, `timestamp`, `commit_sha`, `governance_version`. Must add these for persistence. Safe Pydantic extension with defaults.
+- **Release gate**: `check_release_readiness(rel_id)` method on `CompliantFlowCore` — read-only, belongs in compliantflow CLI. Evaluates REL item's criteria against current DHF state.
+- **Defect hook**: DEF lifecycle integration with CI. When a DEF is open/unresolved, a compliance check should fail. Likely a new `defect_open` check type in PolicyEngine.
+- **ISO 14971**: New governance YAML. Risk management process checks. Will need `risk_mitigation_complete` check type or reuse `trace_coverage` (RISK→RCM coverage).
+- **Multi-DHF**: `CompliantFlowCore` currently takes a single adapter. Future: accept list of adapters or a router. Do NOT change the constructor now — wait for a real use case.
 
-3. DHFAdapter protocol lacks compliance run persistence methods (`save_compliance_run`, `list_compliance_runs`). Must add to protocol for multi-DHF support — otherwise persistence will be hardcoded to local filesystem.
+## Structural debt to watch
 
-4. ResultStore (`result_store.py`) stores only the latest result per TC. No run-level history. For DHF-as-record compliance runs, need either a separate RunStore or extend ResultStore with an append log.
-
-5. The `cr_git_evidence` check type for PR-to-CR CI gate can be added to PolicyEngine dispatch table with zero structural changes.
-
-6. Multi-DHF support will require `CompliantFlowCore` to accept a list of adapters or a router — the current single-adapter constructor is a future refactor point but does NOT need to change in v1.3.0.
-
-7. The web UI backend gap: DHFAdapter protocol includes `create_item`, `update_item`, `delete_item` — mutations are already in the protocol. The read-only/mutation CLI split is a CLI convention, not a protocol constraint. A web UI can use the full adapter directly.
-
-## Structural changes recommended for v1.3.0
-
-- Extract LLM backend interface from policy.py (LLMBackend protocol with `generate(prompt) -> str`)
-- Add persistence fields to ComplianceReport (run_id, timestamp, commit_sha, governance_version) with Optional defaults
-- Add `save_compliance_run` / `list_compliance_runs` to DHFAdapter protocol
-- Add `cr_git_evidence` check type to PolicyEngine
-- Enforce ID write-protection at validation layer in loader.py
+- `LocalDHFAdapter._doc_index` is built once at init. If documents are added/removed without re-initializing the adapter, the index goes stale. Acceptable for CLI use (short-lived process); may need a `refresh_doc_index()` for long-lived server use.
+- `ComplianceStore` and `ResultStore` both do their own YAML append logic. Could be unified into a generic `AppendStore` if a third store type is needed.

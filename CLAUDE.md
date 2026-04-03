@@ -19,9 +19,15 @@ PYTHONPATH=.:DHF python -m compliantflow validate traceability
 PYTHONPATH=.:DHF python -m compliantflow validate compliance IEC_62304
 PYTHONPATH=.:DHF python -m compliantflow validate compliance IEC_62304 --governance-dir governance
 PYTHONPATH=.:DHF python -m compliantflow cr check-status CR-012
-PYTHONPATH=.:DHF python -m compliantflow cr update CR-012 --item SYS-001
+PYTHONPATH=.:DHF python -m compliantflow cr generate-report CR-012
 PYTHONPATH=.:DHF python -m compliantflow traceability matrix CRS SYS SRS
 PYTHONPATH=.:DHF python -m compliantflow traceability chain SYS-001
+PYTHONPATH=.:DHF python -m compliantflow validate coverage UC:CRS CRS:SYS SYS:SYSARCH
+PYTHONPATH=.:DHF python -m compliantflow validate traceability
+PYTHONPATH=.:DHF python -m compliantflow validate compliance IEC_62304 --governance-dir governance
+PYTHONPATH=.:DHF python -m compliantflow validate compliance IEC_62304 --governance-dir governance --persist
+PYTHONPATH=.:DHF python -m compliantflow report traceability UC CRS SYS SYSARCH --output traceability_report.pdf
+PYTHONPATH=.:DHF python -m compliantflow report compliance IEC_62304 --governance-dir governance --output compliance_report.pdf
 # Test result integration (external CI → DHF)
 PYTHONPATH=.:DHF python -m compliantflow test import results.xml --format junit --tester "GitHub Actions" --run-id 123 --run-url https://github.com/org/repo/actions/runs/123 --commit abc123
 PYTHONPATH=.:DHF python -m compliantflow test status TC-SYS-001
@@ -32,7 +38,8 @@ PYTHONPATH=.:DHF python -m utils --help
 PYTHONPATH=.:DHF python -m utils validate schema
 PYTHONPATH=.:DHF python -m utils item list --type SYS
 PYTHONPATH=.:DHF python -m utils item get SYS-001
-PYTHONPATH=.:DHF python -m utils item create --type SYS --data '{"title": "My req", "category": "Functional", "verification_method": ["Test"]}'
+PYTHONPATH=.:DHF python -m utils item create --type SYS --data '{"title": "My req", "category": "Functional"}'
+# Note: item IDs are always auto-generated; any "id" field in --data is ignored (CR-006)
 PYTHONPATH=.:DHF python -m utils item update SYS-001 --data '{"title": "Updated title"}'
 PYTHONPATH=.:DHF python -m utils item delete SYS-001
 PYTHONPATH=.:DHF python -m utils item transitions CR-012     # list available lifecycle transitions
@@ -42,6 +49,11 @@ PYTHONPATH=.:DHF python -m utils doc generate SYS
 PYTHONPATH=.:DHF python -m utils doc generate ALL
 PYTHONPATH=.:DHF python -m utils doc export SYS            # regenerate md then export PDF
 PYTHONPATH=.:DHF python -m utils doc export ALL
+# Test result management (stored in DHF/test-results/)
+PYTHONPATH=.:DHF python -m utils test import results.xml --tester pytest --run-id 123
+PYTHONPATH=.:DHF python -m utils test status TC-SYS-001
+PYTHONPATH=.:DHF python -m utils test list --status PASS
+PYTHONPATH=.:DHF python -m utils test pull --run-id 123    # fetch JUnit XML from GitHub Actions artifact
 ```
 
 stdout = machine-readable JSON; stderr = human-readable messages.
@@ -128,17 +140,19 @@ Config is split across two locations:
 ### Compliance / PolicyEngine
 **`compliantflow/policy.py`** — `PolicyEngine` executes automated policy checks against the graph. Instantiated internally by `core.check_compliance()`.
 
-Eight built-in check types (`policy.automation.check` field in governance YAML):
+Ten built-in check types (`policy.automation.check` field in governance YAML):
 | Check | Parameters | What it verifies |
 |---|---|---|
 | `item_existence` | `type_code` | Items of that type exist |
 | `file_existence` | `path` | File exists relative to DHF root |
 | `document_content` | `doc_id`, `keywords` | Document contains all keywords (case-insensitive) |
+| `document_semantic` | `doc_id`, `requirement` | Gemini LLM checks document satisfies a requirement |
 | `trace_coverage` | `source_type`, `target_type`, `min_coverage` | Source items link to target items |
 | `attribute_presence` | `type_code`, `attribute` | All items have that attribute set |
 | `attribute_value` | `type_code`, `attribute`, `expected_value` | All items have attribute == expected_value |
 | `all_tests_passing` | `type_code` | All TC items linked to type items have PASS status |
 | `verification_complete` | `type_code` | All items have `verification_status == 'verified'` |
+| `cr_git_evidence` | *(reads `COMPLIANTFLOW_CR_REPORT_PATH` env var or `report_path` param)* | CR-PR report JSON has at least one commit |
 
 Governance YAML lives under `governance/` (separate from DHF). Pass `governance_dir` explicitly: `core.check_compliance("IEC_62304", Path("governance"))`.
 
@@ -216,6 +230,8 @@ Tag extraction helpers live in `tests/utils/docstring_parser.py`.
 TC items have **no YAML files** and **no doc type definition** in `project_config.yaml`.
 They live exclusively in `DHF/test-results/results.yaml` managed by `ResultStore`.
 TC type is inferred from which requirements the TC links to.
+
+`ResultStore` is **append-mode**: each `record_execution()` call prepends a new record so full run history is preserved. `get_latest(tc_id)` returns the most recent result; `get_history(tc_id)` returns all records newest-first.
 
 After `test import`, `verification_status` is recomputed for each linked requirement
 item: `verified` (all TCs PASS), `failed` (any TC FAIL), `not_verified` (no results).
