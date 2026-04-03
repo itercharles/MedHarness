@@ -111,26 +111,17 @@ class LocalDHFAdapter:
         return result
 
     def create_item(self, data: dict, author: str = "system", cr_id: Optional[str] = None) -> dict:
-        if 'id' not in data or not data['id']:
-            doc_type_code = data.get('type')
-            if not doc_type_code:
-                raise ValueError("Cannot auto-generate ID: document type not specified")
-            dt_cfg = self._config.get_doc_type(doc_type_code)
-            if not dt_cfg:
-                raise ValueError(f"Unknown doc type: {doc_type_code}")
-            all_items = self._loader.load_all()
-            existing_ids = [i.uid for i in all_items if i.uid.startswith(dt_cfg.prefix)]
-            data['id'] = get_next_id(dt_cfg.prefix, existing_ids)
-        else:
-            # Validate the caller-supplied ID matches the doc-type prefix pattern
-            from utils.id_generator import validate_id_format
-            doc_type_code = data['id'].split('-')[0]
-            dt_cfg = self._config.get_doc_type(doc_type_code)
-            if dt_cfg and not validate_id_format(data['id'], dt_cfg.prefix):
-                raise ValidationError(
-                    f"Invalid ID format '{data['id']}' for doc type '{doc_type_code}'. "
-                    f"Expected format: {dt_cfg.prefix}<number>"
-                )
+        # CR-006: ID is always auto-generated; any caller-supplied id is ignored
+        data = {k: v for k, v in data.items() if k != 'id'}
+        doc_type_code = data.get('type')
+        if not doc_type_code:
+            raise ValueError("Cannot auto-generate ID: document type not specified")
+        dt_cfg = self._config.get_doc_type(doc_type_code)
+        if not dt_cfg:
+            raise ValueError(f"Unknown doc type: {doc_type_code}")
+        all_items = self._loader.load_all()
+        existing_ids = [i.uid for i in all_items if i.uid.startswith(dt_cfg.prefix)]
+        data['id'] = get_next_id(dt_cfg.prefix, existing_ids)
 
         doc_type_code = data['id'].split('-')[0]
         dt_cfg = self._config.get_doc_type(doc_type_code)

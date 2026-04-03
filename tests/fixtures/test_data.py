@@ -356,23 +356,29 @@ def populate_test_dhf(test_dhf_root: Path):
     """
     Populate test DHF with minimal dataset.
 
-    Creates test items programmatically through CompliantFlowCore API.
+    Uses ItemSaver directly so that hardcoded IDs in test fixtures are preserved.
+    IDs must remain stable because test items cross-reference each other by ID.
 
     Returns:
-        CompliantFlowCore instance with populated data
+        None
     """
+    from utils.models.config import ProjectConfig
+    from utils.models.item import Item
+    from utils.repository.saver import ItemSaver
     from utils.local_adapter import LocalDHFAdapter
 
     print(f"\n[DATA] Populating test DHF with test data...")
 
     populate_governance(test_dhf_root)
 
-    adapter = LocalDHFAdapter(test_dhf_root, auto_commit=False)
+    config = ProjectConfig.load(test_dhf_root / "config")
+    saver = ItemSaver(test_dhf_root / "items", git_repo=None, project_config=config)
 
     test_items = get_test_dataset()
     for item_data in test_items:
         try:
-            adapter.create_item(item_data)
+            item = Item.model_validate(item_data)
+            saver.save(item)
             print(f"  [OK] Created {item_data['id']}")
         except Exception as e:
             print(f"  [WARN] Failed to create {item_data['id']}: {e}")
@@ -381,6 +387,7 @@ def populate_test_dhf(test_dhf_root: Path):
 
     # Transition CR-002 to 'approved' so CR CLI tests and cr_git_evidence checks
     # can test the approved-CR happy path.
+    adapter = LocalDHFAdapter(test_dhf_root, auto_commit=False)
     try:
         adapter.execute_transition("CR-002", "approved", performed_by="test-setup")
         print("  [OK] Transitioned CR-002 → approved")
