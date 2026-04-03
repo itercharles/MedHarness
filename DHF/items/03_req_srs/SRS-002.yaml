@@ -1,10 +1,35 @@
 id: SRS-002
-title: Compliance Policy Engine
-content: |-
-  The software shall execute automated compliance checks against policy groups loaded
-  from governance YAML files. Supported check types: item_existence, file_existence,
-  document_content, trace_coverage, attribute_presence, attribute_value,
-  all_tests_passing, verification_complete. Results shall include policy_id, passed
-  flag, details string, and evidence dict.
 derives_from:
 - SYS-005
+title: Compliance Policy Engine
+content: 'The software shall execute automated compliance checks against policy groups
+  loaded from governance YAML files.
+
+
+  Supported check types (10 total):
+
+  - item_existence: items of a given doc type exist
+
+  - file_existence: a file exists at a given path relative to DHF root
+
+  - document_content: a DHF document contains specified keywords
+
+  - document_semantic: an LLM evaluates document content against a natural-language
+  requirement
+
+  - trace_coverage: source items have a minimum coverage of links to target items
+
+  - attribute_presence: all items of a type have a specified attribute set
+
+  - attribute_value: all items of a type have an attribute equal to an expected value
+
+  - all_tests_passing: all TC items linked to a doc type have PASS status
+
+  - verification_complete: all items of a type have verification_status == verified
+
+  - cr_git_evidence: a CR-PR evidence report JSON contains at least one commit
+
+
+  Results shall include policy_id, passed flag, details string, and evidence dict.
+  Manual policies (no automation block) shall be surfaced with evidence_guidance text
+  from the governance YAML.'

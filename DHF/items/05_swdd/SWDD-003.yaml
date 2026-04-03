@@ -1,11 +1,26 @@
 id: SWDD-003
-title: CLI Layer and DHF Adapter
-content: |-
-  compliantflow/cli.py implements the read-only CLI using Click. DHF/utils/cli.py
-  implements the data mutation CLI. LocalDHFAdapter (DHF/utils/local_adapter.py)
-  wraps the utils repository package and implements the DHFAdapter protocol
-  (compliantflow/adapters/protocol.py). The boundary is enforced: compliantflow/
-  must not import utils.repository.*, utils.result_store, utils.junit_parser, or
-  utils.document_generation.
 implements:
 - SRS-003
+- SRS-004
+- SRS-005
+title: CLI Layer and DHF Adapter
+content: 'compliantflow/cli.py implements the read-only CLI using Click with the following
+  command groups: validate (traceability, coverage, compliance), traceability (matrix,
+  chain), report (traceability PDF, compliance PDF), cr (check-status, generate-report),
+  test (import, status, list).
+
+
+  DHF/utils/cli.py implements the data mutation CLI with command groups: item (CRUD,
+  transitions), doc (generate, export), validate (schema), test (import, status, list,
+  pull), config (doc-types).
+
+
+  LocalDHFAdapter (DHF/utils/local_adapter.py) wraps the utils repository package
+  and implements the DHFAdapter protocol. It maintains a document index (_doc_index)
+  built at init for O(1) get_document() lookups. It wires ResultStore (append-mode
+  test result history) and ComplianceStore (append-mode compliance run history) from
+  DHF config at init.
+
+
+  The component boundary is enforced: compliantflow/ must not import utils.repository.*,
+  utils.result_store, utils.junit_parser, or utils.document_generation.'

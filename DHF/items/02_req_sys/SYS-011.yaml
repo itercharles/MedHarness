@@ -1,0 +1,32 @@
+id: SYS-011
+satisfies:
+- CRS-011
+title: PDF Evidence Report Generation
+category: Functional
+content: 'The system shall generate PDF evidence reports for both traceability and
+  compliance results, suitable for regulatory submission.
+
+
+  Traceability report shall include:
+
+  - Summary statistics (complete/orphan/verified counts, test pass/fail totals)
+
+  - Full traceability matrix across specified doc-type columns with per-row traceability
+  and test status
+
+  - Test results detail section listing all TC IDs, titles, statuses, and linked items
+
+
+  Compliance report shall include:
+
+  - Score, pass/fail counts, and source standard
+
+  - Per-policy result table with policy ID, text, pass/fail status, and rationale/details
+
+
+  Reports shall be generated from in-memory data and written to a caller-specified
+  output path without modifying the DHF.'
+verification_method:
+- Test
+- Inspection
+type: SYS

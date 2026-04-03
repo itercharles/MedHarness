@@ -1,32 +1,4 @@
 id: SYSARCH-008
-title: Analysis Engine Module
-content: |-
-  Read-only analysis engine that provides traceability, compliance, and graph
-  queries over the DHF. Exposed as a Python library (`CompliantFlowCore`) and
-  a CLI (`python -m compliantflow`).
-
-  **Responsibilities**:
-  - Build a directed graph of all DHF items and their links
-  - Provide traceability chains and matrices across doc-type paths
-  - Detect orphaned items (no upstream or downstream links)
-  - Run automated compliance checks against governance policy groups
-  - Surface test result coverage and verification status per requirement
-
-  **Key Components**:
-  - `CompliantFlowCore` (`compliantflow/core.py`): single façade; all analysis
-    methods are defined here; accepts any `DHFAdapter` implementation
-  - `GraphEngine` (`compliantflow/traceability/graph/engine.py`): builds a
-    NetworkX DiGraph (edges go child→parent); `nx.descendants` = upstream
-  - `PolicyEngine` (`compliantflow/policy.py`): 8 automated check types
-    (item_existence, file_existence, document_content, trace_coverage,
-    attribute_presence, attribute_value, all_tests_passing, verification_complete)
-  - `compliantflow/cli.py`: Click CLI for CI/CD integration
-
-  **Implementation Notes**:
-  - All mutations (create/update/delete items, lifecycle transitions) go through
-    the DHFAdapter layer directly; CompliantFlowCore is strictly read-only
-  - Governance policy groups (`governance/`) are decoupled from DHF data;
-    `governance_dir` is passed explicitly to compliance methods
 design:
 - SYS-003
 - SYS-004
@@ -34,3 +6,59 @@ design:
 - SYS-006
 - SYS-007
 - SYS-008
+- SYS-009
+- SYS-010
+- SYS-011
+- SYS-012
+title: Analysis Engine Module
+content: 'Read-only analysis engine that provides traceability, compliance, and graph
+  queries over the DHF. Exposed as a Python library (CompliantFlowCore) and a CLI
+  (python -m compliantflow).
+
+
+  **Responsibilities**:
+
+  - Build a directed graph of all DHF items and their links
+
+  - Provide traceability chains and matrices across doc-type paths
+
+  - Detect orphaned items (no upstream or downstream links)
+
+  - Run automated compliance checks against governance policy groups
+
+  - Surface test result coverage and verification status per requirement
+
+  - Generate PDF evidence reports for traceability and compliance
+
+  - Persist compliance run history to the DHF audit trail
+
+
+  **Key Components**:
+
+  - CompliantFlowCore (compliantflow/core.py): single facade; all analysis methods
+  defined here; accepts any DHFAdapter implementation; caches PolicyEngine instances
+  per governance group
+
+  - GraphEngine (compliantflow/graph.py): builds a NetworkX DiGraph (edges go child
+  to parent); nx.descendants = business-upstream
+
+  - PolicyEngine (compliantflow/policy.py): 10 automated check types: item_existence,
+  file_existence, document_content, document_semantic, trace_coverage, attribute_presence,
+  attribute_value, all_tests_passing, verification_complete, cr_git_evidence
+
+  - LLMBackend (compliantflow/backends/llm.py): Protocol with GeminiBackend (Google
+  Gemini API) and OllamaBackend (local Ollama) implementations; selected at runtime
+  via environment variables
+
+  - ReportGenerator (compliantflow/report_generator.py): renders HTML to PDF via WeasyPrint
+
+  - compliantflow/cli.py: Click CLI for CI/CD integration
+
+
+  **Implementation Notes**:
+
+  - All mutations go through the DHFAdapter layer; CompliantFlowCore is strictly read-only
+
+  - Governance policy groups (governance/) are decoupled from DHF data
+
+  - Semantic checks degrade gracefully when no LLM backend is configured'

@@ -1,10 +1,22 @@
 id: SWDD-002
-title: PolicyEngine
-content: |-
-  PolicyEngine (compliantflow/policy.py) executes automated compliance checks.
-  It is instantiated with a CompliantFlowCore reference and an optional root_dir
-  for file-based checks. Policy groups are loaded from governance YAML via
-  load_policy_group(). check_compliance() iterates all policies: automated checks
-  dispatch to type-specific methods; manual policies pass if status == 'approved'.
 implements:
 - SRS-002
+title: PolicyEngine
+content: 'PolicyEngine (compliantflow/policy.py) executes automated compliance checks.
+  It is instantiated with a CompliantFlowCore reference, an optional root_dir for
+  file-based checks, and an optional LLMBackend for semantic checks.
+
+
+  Policy groups are loaded from governance YAML via load_policy_group(). check_compliance()
+  iterates all policies: automated checks dispatch via a dict-based self.checks table
+  keyed by check name string; manual policies (no automation block) pass if status
+  == approved and surface evidence_guidance to the caller.
+
+
+  PolicyEngine instances are cached on CompliantFlowCore per (group_id, governance_dir)
+  to avoid re-parsing governance YAML on repeated calls.
+
+
+  Semantic checks (_run_semantic_batch) call the LLMBackend.generate() method in batches.
+  If no LLMBackend is configured, semantic checks are marked failed with an explanatory
+  message.'

@@ -105,7 +105,7 @@ Key public methods:
 - **`DHF/utils/lifecycle.py`** — standalone lifecycle engine (`get_available_transitions`, `execute_transition`). Used by `utils` CLI; CompliantFlowCore does **not** expose lifecycle mutation methods.
 
 ### Graph Engine
-**`compliantflow/traceability/graph/engine.py`** builds a NetworkX `DiGraph`. **Edge direction is child→parent** (e.g., SRS-001 → SYS-001 for a `derives_from` link). This means:
+**`compliantflow/graph.py`** builds a NetworkX `DiGraph`. **Edge direction is child→parent** (e.g., SRS-001 → SYS-001 for a `derives_from` link). This means:
 - `nx.descendants(G, item_id)` = business-**upstream** (parents, grandparents)
 - `nx.ancestors(G, item_id)` = business-**downstream** (children, grandchildren)
 
