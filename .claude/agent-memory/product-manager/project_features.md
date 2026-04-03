@@ -4,17 +4,18 @@ description: What is built and tested vs. what is planned or in progress
 type: project
 ---
 
-## Built and functional (as of 2026-04-02)
+## Built and functional (as of 2026-04-03)
 
 **Data layer (DHF/utils/)**
-- Item CRUD: create/read/update/delete YAML items with auto-generated IDs
+- Item CRUD: create/read/update/delete YAML items with auto-generated IDs (CR-006: IDs always auto-generated, caller-supplied IDs silently ignored)
 - Git-backed persistence with atomic writes and commit history
 - Schema validation: strict field validation per doc type at load time
 - Lifecycle engine: state machine for CR, REL, DEF items with transition criteria
 - Document generation: Jinja2 templates → Markdown → PDF via WeasyPrint
-- Test result storage: `ResultStore` persists JUnit-parsed results to `results.yaml`
-- GitHub Actions artifact fetcher: `test pull` command fetches CI artifacts via GitHub API
+- Test result storage: `ResultStore` persists JUnit-parsed results to `DHF/test-results/results.yaml` (append-mode, full run history)
+- GitHub Actions artifact fetcher: `utils test pull` command fetches CI artifacts via GitHub API
 - JUnit XML parser: framework-agnostic boundary layer between tests and CompliantFlow
+- Compliance run persistence: append-mode store under `DHF/compliance-runs/<standard_id>.yaml`
 
 **Analysis engine (compliantflow/)**
 - Traceability graph: NetworkX DiGraph with child→parent edge direction
@@ -22,32 +23,40 @@ type: project
 - `get_item_chain()`: full connected subgraph for a single item
 - `validate()`: orphan detection
 - `check_coverage()`: per-pair coverage reporting
-- Compliance engine: 8 automated check types (item_existence, file_existence, document_content, document_semantic via Gemini, trace_coverage, attribute_presence, attribute_value, all_tests_passing, verification_complete)
-- PDF reports: traceability matrix PDF and compliance evidence PDF (WeasyPrint)
+- Compliance engine: 10 automated check types (item_existence, file_existence, document_content, document_semantic via LLM, trace_coverage, attribute_presence, attribute_value, all_tests_passing, verification_complete, cr_git_evidence)
+- LLM backend abstraction: `LLMBackend` protocol with `GeminiBackend` and `OllamaBackend` implementations; `get_default_backend()` picks based on env vars
+- PolicyEngine instance cached per (group_id, governance_dir) on CompliantFlowCore
+- PDF reports: traceability matrix PDF (with test results section) and compliance evidence PDF
 - Verification status: computed from linked TC results (verified / failed / not_verified)
+- Compliance run persistence: `check_compliance(..., persist=True)` appends run to DHF
 
 **CLI surface**
-- `python -m compliantflow`: validate traceability, validate coverage, validate compliance, traceability matrix, traceability chain, report traceability (PDF), report compliance (PDF)
-- `python -m utils`: item CRUD, lifecycle transitions, schema validation, config doc-types, doc generate, doc export (PDF), test import, test pull, test status, test list
+- `python -m compliantflow`: validate traceability/coverage/compliance, traceability matrix/chain, report traceability/compliance PDF, cr check-status/generate-report, test import/status/list
+- `python -m utils`: item CRUD, lifecycle transitions, schema validation, config doc-types, doc generate/export PDF, test import/status/list/pull
+
+**CI/CD**
+- Single CI pipeline (ci-pipeline.yml) with 5 phases:
+  - Phase 0: CR validation gate (PR only) — validates CR ID in title, checks CR is approved/implementing
+  - Phase 1: DHF utility tests
+  - Phase 2: SYS API tests
+  - Phase 3: CRS API tests
+  - Phase 3.5: Generate merged CR-PR evidence report for all CRs
+  - Phase 4: DHF validation, import test results, IEC 62304 + IEC 82304-1 compliance, PDF reports
 
 **Governance**
 - IEC 62304 policy file: 106 policies, 75 automated, 31 manual
-- IEC 82304-1 policy file: partial
+- IEC 82304-1 policy file: 31 policies (20 automated, 11 manual with evidence_guidance)
 
 **Doc types configured:** UC, CRS, SYS, SRS, SWDD, SYSARCH, CR, REL, DEF, RISK, RCM, SOUP
 
-**Test coverage:** sys/ (API tests for core engine), crs/ (scenario tests for CRS-002, CRS-008, CRS-011), DHF/utils/tests/ (data layer unit/CLI tests)
+**Test coverage:** 98 tests (65 product sys/crs + 33 DHF utils), 2 skipped (weasyprint PDF)
 
-## Notable gaps / weaknesses identified
+## Notable gaps / weaknesses
 
-- No web UI — all interaction is CLI. This significantly narrows usability for non-technical QA/RA users.
-- No multi-tenant or multi-project support — single DHF directory per deployment
+- No GUI — all interaction is CLI; limits QA/RA personas (intentional for current ICP)
+- No multi-tenant or multi-project support
 - No authentication or access control
-- No real-time collaboration or locking
-- Semantic compliance checks (Gemini) require GEMINI_API_KEY — no fallback/alternative for air-gapped environments
-- IEC 82304-1 governance file is partial / incomplete
-- REL-002 (v1.1.0) has no included items — release process is underused
-- CR-006 (auto ID generation, in_review) points to a UX gap where IDs are currently editable
-- DEF-001 is a sample/placeholder defect — defect tracking is set up but barely populated
-- Only 3 UCs, 3 CRS, 6 SYS requirements tracked — DHF is sparse relative to a real product DHF
-- Test suite uses Chinese-language README, suggesting the team may be distributed/international
+- Semantic compliance checks require GEMINI_API_KEY or OLLAMA running; air-gapped deployments need Ollama set up
+- ISO 14971 governance file not yet written (v2.0.0 target)
+- Release gate (REL items) not enforced by CLI (v2.0.0 target)
+- Defect hook in CI not implemented (v2.0.0 target)
