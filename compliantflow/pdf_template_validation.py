@@ -8,7 +8,7 @@ structured findings suitable for CI or manual review workflows.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Mapping
 
 
 @dataclass(frozen=True)
@@ -89,7 +89,7 @@ def validate_submission_payload(
     Returns:
         ValidationResult with pass/fail and structured issues.
     """
-    template_registry = templates or DEFAULT_TEMPLATES
+    template_registry = DEFAULT_TEMPLATES if templates is None else templates
     issues: List[ValidationIssue] = []
 
     template = template_registry.get(template_id)
@@ -143,6 +143,15 @@ def validate_submission_payload(
 
     if report_kind == "compliance" and isinstance(payload.get("results"), list):
         for idx, row in enumerate(payload["results"]):
+            if not isinstance(row, Mapping):
+                issues.append(
+                    ValidationIssue(
+                        code="invalid_result_row",
+                        message="Compliance result row must be an object",
+                        path=f"results[{idx}]",
+                    )
+                )
+                continue
             if "policy_id" not in row:
                 issues.append(
                     ValidationIssue(

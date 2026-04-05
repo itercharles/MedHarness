@@ -71,3 +71,40 @@ def test_compliance_result_row_requires_policy_id_and_passed():
     paths = {i.path for i in result.issues}
     assert "results[0].policy_id" in paths
     assert "results[0].passed" in paths
+
+
+def test_explicit_empty_template_registry_is_respected():
+    payload = {
+        "columns": ["CRS", "SYS", "SRS"],
+        "rows": [{"CRS": "CRS-001", "SYS": "SYS-001", "SRS": "SRS-001"}],
+    }
+
+    result = validate_submission_payload(
+        payload,
+        template_id="fda_510k_traceability",
+        report_kind="traceability",
+        templates={},
+    )
+
+    assert result.passed is False
+    assert [issue.code for issue in result.issues] == ["template_not_found"]
+
+
+def test_compliance_result_row_reports_scalar_entries_without_crashing():
+    payload = {
+        "source_id": "ISO_14971",
+        "results": [1],
+        "total_policies": 1,
+        "passed_policies": 0,
+        "score": 0.0,
+    }
+
+    result = validate_submission_payload(
+        payload,
+        template_id="fda_510k_compliance",
+        report_kind="compliance",
+    )
+
+    assert result.passed is False
+    assert any(issue.code == "invalid_result_row" for issue in result.issues)
+    assert any(issue.path == "results[0]" for issue in result.issues)
