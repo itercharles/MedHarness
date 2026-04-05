@@ -16,16 +16,13 @@ Two separate CLIs:
 # compliantflow CLI — read-only analysis (compliantflow/cli.py)
 PYTHONPATH=.:DHF python -m compliantflow --help
 PYTHONPATH=.:DHF python -m compliantflow validate traceability
-PYTHONPATH=.:DHF python -m compliantflow validate compliance IEC_62304
-PYTHONPATH=.:DHF python -m compliantflow validate compliance IEC_62304 --governance-dir governance
-PYTHONPATH=.:DHF python -m compliantflow cr check-status CR-012
-PYTHONPATH=.:DHF python -m compliantflow cr generate-report CR-012
-PYTHONPATH=.:DHF python -m compliantflow traceability matrix CRS SYS SRS
-PYTHONPATH=.:DHF python -m compliantflow traceability chain SYS-001
 PYTHONPATH=.:DHF python -m compliantflow validate coverage UC:CRS CRS:SYS SYS:SYSARCH
-PYTHONPATH=.:DHF python -m compliantflow validate traceability
 PYTHONPATH=.:DHF python -m compliantflow validate compliance IEC_62304 --governance-dir governance
 PYTHONPATH=.:DHF python -m compliantflow validate compliance IEC_62304 --governance-dir governance --persist
+PYTHONPATH=.:DHF python -m compliantflow traceability matrix CRS SYS SRS
+PYTHONPATH=.:DHF python -m compliantflow traceability chain SYS-001
+PYTHONPATH=.:DHF python -m compliantflow cr check-status CR-012
+PYTHONPATH=.:DHF python -m compliantflow cr generate-report CR-012
 PYTHONPATH=.:DHF python -m compliantflow report traceability UC CRS SYS SYSARCH --output traceability_report.pdf
 PYTHONPATH=.:DHF python -m compliantflow report compliance IEC_62304 --governance-dir governance --output compliance_report.pdf
 # Test result integration (external CI → DHF)
@@ -39,8 +36,10 @@ PYTHONPATH=.:DHF python -m utils validate schema
 PYTHONPATH=.:DHF python -m utils item list --type SYS
 PYTHONPATH=.:DHF python -m utils item get SYS-001
 PYTHONPATH=.:DHF python -m utils item create --type SYS --data '{"title": "My req", "category": "Functional"}'
-# Note: item IDs are always auto-generated; any "id" field in --data is ignored (CR-006)
+# Note: item IDs are always auto-generated; any "id" field in --data is ignored
 PYTHONPATH=.:DHF python -m utils item update SYS-001 --data '{"title": "Updated title"}'
+# WARNING: update resets lifecycle status to initial state (draft) for CR/REL/DEF items.
+# To preserve status, run update BEFORE lifecycle transitions, or re-run transitions after.
 PYTHONPATH=.:DHF python -m utils item delete SYS-001
 PYTHONPATH=.:DHF python -m utils item transitions CR-012     # list available lifecycle transitions
 PYTHONPATH=.:DHF python -m utils item transition CR-012 approved --by "Alice"  # execute transition
@@ -156,7 +155,10 @@ Ten built-in check types (`policy.automation.check` field in governance YAML):
 
 Governance YAML lives under `governance/` (separate from DHF). Pass `governance_dir` explicitly: `core.check_compliance("IEC_62304", Path("governance"))`.
 
-`IEC_62304.yaml` has 75/106 policies automated; 31 manual (QMS, procedural, organizational).
+Three standards are currently defined:
+- `IEC_62304.yaml` — 75/106 policies automated; 31 manual (QMS, procedural, organizational)
+- `IEC_82304_1.yaml` — health software product safety
+- `ISO_14971.yaml` — risk management; policies 7.2.a and 7.6.b check RCM `implementation_status` and `verification_status` independently
 
 ### External Test Result Integration
 
@@ -253,5 +255,17 @@ Git history serves as the audit trail.
 
 ## PR Workflow
 
-- Merge PRs with: `gh pr merge N --squash --delete-branch`
-- Branch naming: `feature/`, `fix/`, `refactor/`
+- The `gh` CLI is **not available**. Use `git push` to push branches and the GitHub MCP tools (`mcp__github__*`) for all GitHub interactions (creating PRs, merging, checking CI status).
+- Merge PRs with squash: `mcp__github__merge_pull_request` with `merge_method: squash`.
+- Delete the branch manually after merge (the GitHub MCP server has no delete-branch tool; use the GitHub UI or `git push origin --delete <branch>`).
+- Branch naming: `feature/`, `fix/`, `refactor/` for human work; `claude/` prefix for Claude Code sessions.
+
+### CR implementation workflow
+When implementing a CR, follow this order:
+1. Transition CR: `draft → in_review → approved → implementing` (before writing code)
+2. Write code, run tests, commit and push
+3. Create PR referencing the CR in the title (e.g. `feat(CR-033): ...`)
+4. Wait for CI to pass, then merge
+5. Transition CR: `implementing → completed` (after merge, not before)
+
+`cr check-status` (Phase 0 CI gate) accepts CRs in `approved`, `implementing`, or `completed` state.
