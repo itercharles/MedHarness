@@ -232,10 +232,11 @@ policies:
     text: "Risk control measures shall be implemented."
     status: "approved"
     automation:
-      check: "attribute_presence"
+      check: "attribute_value"
       params:
         type_code: "RCM"
         attribute: "implementation_status"
+        expected_value: "Implemented"
 
   - id: "7.2.b"
     section: "7.2"
@@ -325,7 +326,7 @@ policies:
       check: "attribute_value"
       params:
         type_code: "RCM"
-        attribute: "implementation_status"
+        attribute: "verification_status"
         expected_value: "Verified"
 
   # -----------------------------------------------------------------------

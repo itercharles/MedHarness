@@ -32,8 +32,13 @@ properties:
   options:
   - Planned
   - Implemented
-  - Verified
   label: Implementation Status
+- name: verification_status
+  format: select
+  options:
+  - Not Verified
+  - Verified
+  label: Verification Status
 icon: 🛡️
 page_enabled: true
 page_number: 11

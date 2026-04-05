@@ -15,4 +15,11 @@ affected_items:
 - SYS-005
 - SYS-012
 type: CR
-status: draft
+status: completed
+impact_assessment: 'Schema-only change to DHF/config/doc_types/rcm.yaml: removes Verified
+  from implementation_status options and adds a new verification_status field. Existing
+  RCM items without implementation_status set require no migration. Any RCM with implementation_status=Verified
+  must be updated to implementation_status=Implemented + verification_status=Verified
+  (none exist currently). ISO_14971.yaml policies 7.2.a and 7.6.b updated to use attribute_value
+  checks on the two separate fields. No runtime code changes required.'
+assigned_to: charles
