@@ -100,7 +100,7 @@ def test_TC_SYS_007_004_cr_generate_report_structure(runner, dhf_str):
     commits keys.
 
     @test_id: TC-SYS-007-004
-    @links: SYS-006
+    @links: SYS-006, SYS-010
     """
     result = runner.invoke(cf_main, ["--dhf", dhf_str, "cr", "generate-report", "CR-002"])
     assert result.exit_code == 0, f"Unexpected exit code: {result.output}"
@@ -122,7 +122,7 @@ def test_TC_SYS_007_005_cr_git_evidence_pass(test_dhf_root):
     contains at least one commit.
 
     @test_id: TC-SYS-007-005
-    @links: SYS-006
+    @links: SYS-006, SYS-010
     """
     from compliantflow.core import CompliantFlowCore
     from utils.local_adapter import LocalDHFAdapter
@@ -157,7 +157,7 @@ def test_TC_SYS_007_006_cr_git_evidence_no_commits_fails(test_dhf_root):
     has an empty commits list.
 
     @test_id: TC-SYS-007-006
-    @links: SYS-006
+    @links: SYS-006, SYS-010
     """
     from compliantflow.core import CompliantFlowCore
     from utils.local_adapter import LocalDHFAdapter
@@ -188,7 +188,7 @@ def test_TC_SYS_007_007_cr_git_evidence_env_var(test_dhf_root, monkeypatch):
     when no report_path param is provided.
 
     @test_id: TC-SYS-007-007
-    @links: SYS-006
+    @links: SYS-006, SYS-010
     """
     from compliantflow.core import CompliantFlowCore
     from utils.local_adapter import LocalDHFAdapter
@@ -224,7 +224,7 @@ def test_TC_SYS_007_008_cr_git_evidence_no_path_fails(test_dhf_root, monkeypatch
     param nor env var is set.
 
     @test_id: TC-SYS-007-008
-    @links: SYS-006
+    @links: SYS-006, SYS-010
     """
     from compliantflow.core import CompliantFlowCore
     from utils.local_adapter import LocalDHFAdapter
@@ -381,7 +381,7 @@ def test_TC_SYS_007_013_validate_compliance_persist(runner, dhf_str, test_dhf_ro
     to DHF/compliance-runs/<group_id>.yaml.
 
     @test_id: TC-SYS-007-013
-    @links: SYS-006
+    @links: SYS-006, SYS-012
     """
     gov_dir = str(test_dhf_root.parent / "governance")
     result = runner.invoke(cf_main, [

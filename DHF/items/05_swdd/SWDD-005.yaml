@@ -1,6 +1,6 @@
 id: SWDD-005
 implements:
-- SYS-011
+- SRS-006
 title: PDF Report Generator
 content: 'compliantflow/report_generator.py renders traceability and compliance data
   to PDF via WeasyPrint.

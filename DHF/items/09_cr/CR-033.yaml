@@ -1,0 +1,18 @@
+id: CR-033
+title: Split RCM implementation_status into two fields
+description: 'Split the single implementation_status field on RCM items into two separate
+  fields: implementation_status (Planned/Implemented) and verification_status (Not
+  Verified/Verified). This is required so that ISO 14971 policies 7.2.a (controls
+  implemented) and 7.6.b (controls verified) can both be checked simultaneously via
+  attribute_value without conflict. Include a migration script for existing RCM items.'
+justification: ISO 14971 §7.2 and §7.6 are sequential checks on the same control measure
+  — implementation and subsequent verification of effectiveness. A single status field
+  cannot represent both states simultaneously, causing policy 7.2.a to fail for any
+  RCM that has progressed to Verified. This is a schema blocker for full ISO 14971
+  automation.
+priority: High
+affected_items:
+- SYS-005
+- SYS-012
+type: CR
+status: draft

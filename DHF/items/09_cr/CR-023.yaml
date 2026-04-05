@@ -10,8 +10,14 @@ justification: ISO 14971 is required for all medical device submissions alongsid
   Full IEC 62304 + IEC 82304-1 + ISO 14971 coverage is a genuine market differentiator
   with no competitor match.
 priority: High
+impact_assessment: Adding `governance/ISO_14971.yaml` extends the compliance catalog
+  without changing runtime behavior, schemas, or existing item relationships. The
+  change is limited to governance content and enables ISO 14971 policy evaluation
+  to run through the existing compliance engine and CLI/reporting paths.
+approved_by: Quality Assurance
+approved_date: '2026-04-05'
 affected_items:
 - SYS-005
 - CRS-011
 type: CR
-status: draft
+status: approved
