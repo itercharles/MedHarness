@@ -18,6 +18,8 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
 from utils.local_adapter import LocalDHFAdapter
 from compliantflow.core import CompliantFlowCore
+from compliantflow.backends.llm import GeminiBackend, OllamaBackend, get_default_backend
+from compliantflow.policy import PolicyEngine
 
 
 def test_TC_SYS_005_001_load_policy_groups(test_dhf_root, governance_dir):
@@ -218,3 +220,53 @@ def test_TC_SYS_005_008_attribute_value_check(test_dhf_root, governance_dir):
     assert 'total' in evidence
     assert 'matching' in evidence
     assert 'non_matching' in evidence
+
+
+def test_TC_SYS_005_009_default_backend_prefers_gemini(monkeypatch):
+    """
+    TC-SYS-005-009: get_default_backend prefers Gemini when GEMINI_API_KEY is set.
+
+    @links: SYS-009
+    @test_id: TC-SYS-005-009
+    """
+    monkeypatch.setenv("GEMINI_API_KEY", "test-key")
+    monkeypatch.setenv("COMPLIANTFLOW_OLLAMA_URL", "http://localhost:11434")
+
+    backend = get_default_backend()
+
+    assert isinstance(backend, GeminiBackend)
+
+
+def test_TC_SYS_005_010_default_backend_uses_ollama_when_gemini_absent(monkeypatch):
+    """
+    TC-SYS-005-010: get_default_backend selects Ollama when only Ollama is configured.
+
+    @links: SYS-009
+    @test_id: TC-SYS-005-010
+    """
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    monkeypatch.setenv("COMPLIANTFLOW_OLLAMA_URL", "http://localhost:11434")
+
+    backend = get_default_backend()
+
+    assert isinstance(backend, OllamaBackend)
+
+
+def test_TC_SYS_005_011_semantic_check_reports_missing_backend(test_dhf_root):
+    """
+    TC-SYS-005-011: semantic policy checks fail with a clear explanation when no LLM backend is configured.
+
+    @links: SYS-009
+    @test_id: TC-SYS-005-011
+    """
+    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
+    engine = PolicyEngine(core, root_dir=test_dhf_root, llm_backend=None)
+
+    passed, details, evidence = engine._check_document_semantic(
+        doc_id="test_plan",
+        requirement="Describe the verification milestones.",
+    )
+
+    assert passed is False
+    assert details == "No LLM backend configured"
+    assert evidence == {"doc_id": "test_plan"}
