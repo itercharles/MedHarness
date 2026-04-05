@@ -108,6 +108,7 @@ def validate_submission_payload(
     _validate_required_keys(payload, template.required_keys, issues)
 
     if template.report_kind == "compliance":
+        _validate_compliance_summary_fields(payload, issues)
         _validate_compliance_results(payload.get("results"), template.required_result_fields, issues)
 
     return ValidationResult(
@@ -191,6 +192,60 @@ def _validate_compliance_results(
                         path=f"results[{idx}].{field}",
                     )
                 )
+
+        if "passed" in row and not isinstance(row["passed"], bool):
+            issues.append(
+                ValidationIssue(
+                    code="invalid_passed_type",
+                    message="Compliance result field 'passed' must be a boolean",
+                    path=f"results[{idx}].passed",
+                )
+            )
+
+
+def _validate_compliance_summary_fields(
+    payload: Mapping[str, Any],
+    issues: list[ValidationIssue],
+) -> None:
+    _require_type(payload, "score", (int, float), "invalid_score_type", "score must be numeric", issues)
+    _require_type(
+        payload,
+        "total_policies",
+        int,
+        "invalid_total_policies_type",
+        "total_policies must be an integer",
+        issues,
+    )
+    _require_type(
+        payload,
+        "passed_policies",
+        int,
+        "invalid_passed_policies_type",
+        "passed_policies must be an integer",
+        issues,
+    )
+
+
+def _require_type(
+    payload: Mapping[str, Any],
+    key: str,
+    expected_type: type[Any] | tuple[type[Any], ...],
+    code: str,
+    message: str,
+    issues: list[ValidationIssue],
+) -> None:
+    if key not in payload or _is_empty(payload[key]):
+        return
+
+    value = payload[key]
+    if not isinstance(value, expected_type) or isinstance(value, bool):
+        issues.append(
+            ValidationIssue(
+                code=code,
+                message=message,
+                path=key,
+            )
+        )
 
 
 def _is_empty(value: Any) -> bool:

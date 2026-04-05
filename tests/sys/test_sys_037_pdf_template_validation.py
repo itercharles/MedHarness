@@ -150,3 +150,56 @@ def test_TC_SYS_037_006_compliance_payload_fails_when_results_is_not_a_list() ->
 
     assert result.is_valid is False
     assert any(issue.code == "invalid_results_type" for issue in result.issues)
+
+
+def test_TC_SYS_037_007_compliance_payload_rejects_string_summary_fields() -> None:
+    """
+    TC-SYS-037-007: Compliance profile requires numeric summary fields to use numeric types.
+
+    @test_id: TC-SYS-037-007
+    @links: SYS-011
+    """
+    payload = {
+        "source_id": "IEC_62304",
+        "score": "95.0",
+        "total_policies": "2",
+        "passed_policies": "1",
+        "results": [{"policy_id": "IEC-001", "passed": True}],
+    }
+
+    result = validate_submission_payload(
+        payload,
+        report_kind="compliance",
+        template_key="fda_510k_compliance",
+    )
+
+    assert result.is_valid is False
+    codes = {issue.code for issue in result.issues}
+    assert "invalid_score_type" in codes
+    assert "invalid_total_policies_type" in codes
+    assert "invalid_passed_policies_type" in codes
+
+
+def test_TC_SYS_037_008_compliance_payload_rejects_non_boolean_passed_flags() -> None:
+    """
+    TC-SYS-037-008: Compliance profile requires each passed field to be a real boolean.
+
+    @test_id: TC-SYS-037-008
+    @links: SYS-011
+    """
+    payload = {
+        "source_id": "IEC_62304",
+        "score": 95.0,
+        "total_policies": 2,
+        "passed_policies": 1,
+        "results": [{"policy_id": "IEC-001", "passed": "false"}],
+    }
+
+    result = validate_submission_payload(
+        payload,
+        report_kind="compliance",
+        template_key="fda_510k_compliance",
+    )
+
+    assert result.is_valid is False
+    assert any(issue.code == "invalid_passed_type" for issue in result.issues)
