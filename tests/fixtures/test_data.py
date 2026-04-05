@@ -138,6 +138,47 @@ def create_test_dhf() -> Path:
             ],
         },
         {
+            'code': 'RISK',
+            'name': 'Risk Analysis',
+            'prefix': 'RISK-',
+            'directory': '09_risk',
+            'icon': '⚠️',
+            'page_enabled': True,
+            'page_number': 12,
+            'properties': [
+                'id',
+                {'name': 'title', 'format': 'short_text', 'label': 'Title'},
+                {'name': 'hazard', 'format': 'long_text', 'label': 'Hazard'},
+                {'name': 'cause', 'format': 'long_text', 'label': 'Cause'},
+                {'name': 'effect', 'format': 'long_text', 'label': 'Effect'},
+                {'name': 'severity_pre', 'format': 'select', 'options': ['S1', 'S2', 'S3', 'S4', 'S5'], 'label': 'Severity (pre)'},
+                {'name': 'probability_pre', 'format': 'select', 'options': ['P1', 'P2', 'P3', 'P4', 'P5'], 'label': 'Probability (pre)'},
+                {'name': 'severity_post', 'format': 'select', 'options': ['S1', 'S2', 'S3', 'S4', 'S5'], 'label': 'Severity (post)'},
+                {'name': 'probability_post', 'format': 'select', 'options': ['P1', 'P2', 'P3', 'P4', 'P5'], 'label': 'Probability (post)'},
+                {'name': 'risk_acceptability', 'format': 'select', 'options': ['Acceptable', 'ALARP', 'Unacceptable'], 'label': 'Risk Acceptability'},
+                {'name': 'risk_benefit', 'format': 'long_text', 'label': 'Risk Benefit'},
+            ],
+        },
+        {
+            'code': 'RCM',
+            'name': 'Risk Control Measure',
+            'prefix': 'RCM-',
+            'directory': '10_rcm',
+            'icon': '🛡️',
+            'page_enabled': True,
+            'page_number': 11,
+            'properties': [
+                'id',
+                {'name': 'title', 'format': 'short_text', 'label': 'Title'},
+                {'name': 'content', 'format': 'long_text', 'label': 'Content'},
+                {'name': 'mitigates', 'format': 'relationship', 'target_types': ['RISK'], 'label': 'Mitigates'},
+                {'name': 'implements', 'format': 'relationship', 'target_types': ['SYS'], 'label': 'Implemented By'},
+                {'name': 'control_type', 'format': 'select', 'options': ['Inherently Safe Design', 'Protective Measure', 'Information for Safety'], 'label': 'Control Type'},
+                {'name': 'implementation_status', 'format': 'select', 'options': ['Planned', 'Implemented'], 'label': 'Implementation Status'},
+                {'name': 'verification_status', 'format': 'select', 'options': ['Not Verified', 'Verified'], 'label': 'Verification Status'},
+            ],
+        },
+        {
             'code': 'CR',
             'name': 'Change Request',
             'prefix': 'CR-',
@@ -350,6 +391,48 @@ def populate_governance(test_dhf_root: Path):
         yaml.dump(iec_62304_policy, f, default_flow_style=False, sort_keys=False)
 
     print(f"[OK] Created governance policies: IEC_62304.yaml with {len(iec_62304_policy['policies'])} policies")
+
+    iso_14971_policy = {
+        'id': 'ISO_14971',
+        'title': 'ISO 14971 Risk Management',
+        'type': 'standard',
+        'version': '2019',
+        'policies': [
+            {
+                'id': '7.2.a',
+                'section': '7.2',
+                'text': 'Risk control measures shall be implemented.',
+                'status': 'approved',
+                'automation': {
+                    'check': 'attribute_value',
+                    'params': {
+                        'type_code': 'RCM',
+                        'attribute': 'implementation_status',
+                        'expected_value': 'Implemented',
+                    },
+                },
+            },
+            {
+                'id': '7.6.b',
+                'section': '7.6',
+                'text': 'Risk control measures shall be verified as effective.',
+                'status': 'approved',
+                'automation': {
+                    'check': 'attribute_value',
+                    'params': {
+                        'type_code': 'RCM',
+                        'attribute': 'verification_status',
+                        'expected_value': 'Verified',
+                    },
+                },
+            },
+        ],
+    }
+
+    with open(governance_dir / "ISO_14971.yaml", 'w') as f:
+        yaml.dump(iso_14971_policy, f, default_flow_style=False, sort_keys=False)
+
+    print(f"[OK] Created governance policies: ISO_14971.yaml with {len(iso_14971_policy['policies'])} policies")
 
 
 def populate_test_dhf(test_dhf_root: Path):
