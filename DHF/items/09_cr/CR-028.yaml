@@ -1,0 +1,17 @@
+id: CR-028
+title: GitLab CI and Jenkins Artifact Integration
+description: Extend the test pull command and CI artifact fetcher to support GitLab
+  CI pipelines (via GitLab API and GITLAB_TOKEN) and Jenkins (via Jenkins API and
+  JENKINS_TOKEN). Each integration shall fetch JUnit XML artifacts by job name and
+  run ID, matching the existing GitHub Actions interface.
+justification: GitHub Actions is dominant in SaMD startups but a significant portion
+  of medtech companies (especially established device manufacturers and defence-adjacent
+  teams) run GitLab CI or Jenkins. Limiting artifact integration to GitHub Actions
+  blocks these customers from using the automated test import workflow, which is a
+  core value proposition of the platform.
+priority: Medium
+affected_items:
+- SYS-007
+- CRS-008
+type: CR
+status: draft

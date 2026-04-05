@@ -1,0 +1,20 @@
+id: CR-030
+title: Read-Only Compliance Status Web Dashboard
+description: 'Implement a lightweight read-only web dashboard that displays the current
+  compliance status, traceability matrix, and test result summary for a DHF. The dashboard
+  shall be a single-page application served locally (not cloud-hosted), reading directly
+  from the DHF via the existing DHFAdapter, with no write operations. Target personas:
+  QA and Regulatory Affairs engineers who are not CLI-comfortable.'
+justification: 'The CLI-only interface is a barrier for QA/RA personas who need to
+  review compliance status, traceability coverage, and test results but do not work
+  in a terminal. A read-only dashboard extends the product to a second persona within
+  the same team without compromising the CLI-first architecture. This is a deliberate
+  demotion from the original plan: read-only first, full UI later in v3.0.0.'
+priority: Medium
+affected_items:
+- UC-002
+- UC-005
+- CRS-002
+- CRS-011
+type: CR
+status: draft

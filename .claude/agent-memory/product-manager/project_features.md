@@ -4,7 +4,7 @@ description: What is built and tested vs. what is planned or in progress
 type: project
 ---
 
-## Built and functional (as of 2026-04-03)
+## Built and functional (as of 2026-04-02, v1.3.0)
 
 **Data layer (DHF/utils/)**
 - Item CRUD: create/read/update/delete YAML items with auto-generated IDs (CR-006: IDs always auto-generated, caller-supplied IDs silently ignored)
@@ -51,12 +51,27 @@ type: project
 
 **Test coverage:** 98 tests (65 product sys/crs + 33 DHF utils), 2 skipped (weasyprint PDF)
 
-## Notable gaps / weaknesses
+## Notable gaps / weaknesses (commercial perspective, April 2026)
 
-- No GUI — all interaction is CLI; limits QA/RA personas (intentional for current ICP)
-- No multi-tenant or multi-project support
-- No authentication or access control
-- Semantic compliance checks require GEMINI_API_KEY or OLLAMA running; air-gapped deployments need Ollama set up
-- ISO 14971 governance file not yet written (v2.0.0 target)
-- Release gate (REL items) not enforced by CLI (v2.0.0 target)
-- Defect hook in CI not implemented (v2.0.0 target)
+| Gap | Severity | Target Version |
+|---|---|---|
+| ISO 14971 governance file absent | High / Critical | v2.0.0 (CR-023) |
+| Release gate (REL items) not enforced by CLI | High | v2.0.0 (CR-024) |
+| Defect hook in CI not implemented (DEF lifecycle) | High | v2.0.0 (CR-025) |
+| GitHub-only artifact integration (no GitLab, Jenkins) | Medium | v2.0.0 (CR-028) |
+| No RDM migration tooling | Medium | v2.0.0 (CR-026) |
+| No FDA 21 CFR Part 11 brief | Medium | v2.0.0 (CR-027) |
+| Air-gapped semantic checks require Ollama ops burden | Medium | v2.1.0 (CR-031) |
+| No multi-project / multi-DHF support | Medium | v2.1.0 (CR-029) |
+| No authentication or access control | Medium | v3.0.0 |
+| PDF output not validated against submission templates | Medium | v2.1.0 (CR-032) |
+| No Web UI (intentional for current ICP) | Low-Medium | v2.1.0 read-only (CR-030), v3.0.0 full |
+| CR-001 (bulk approval) approved but not implemented | Low | v2.1.0 |
+
+## Compliance standard coverage
+
+| Standard | Status | Automated checks |
+|---|---|---|
+| IEC 62304 | Complete | 75 of 106 |
+| IEC 82304-1 | Complete (partial) | 20 of 31 |
+| ISO 14971 | Not started | 0 — targeted v2.0.0 |
