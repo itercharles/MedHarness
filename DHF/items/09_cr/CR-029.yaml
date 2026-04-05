@@ -1,0 +1,18 @@
+id: CR-029
+title: Multi-DHF and Multi-Project Support
+description: Enable CompliantFlowCore to operate across multiple DHF directories within
+  a single analysis session, supporting portfolio companies managing multiple medical
+  device products in one repository or across sibling repositories. The implementation
+  shall extend the DHFAdapter protocol to support a router or list of adapters, with
+  cross-project traceability queries scoped appropriately.
+justification: Portfolio medical device companies (e.g. a company with two Class II
+  products) currently need separate CompliantFlow deployments per product. Multi-DHF
+  support is a prerequisite for enterprise pricing and for sales to larger organisations
+  that cannot justify per-product licensing. It also unblocks the RBAC milestone in
+  v3.0.0.
+priority: High
+affected_items:
+- SYS-008
+- CRS-002
+type: CR
+status: draft

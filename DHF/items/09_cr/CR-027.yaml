@@ -1,0 +1,18 @@
+id: CR-027
+title: FDA 21 CFR Part 11 Technical Brief
+description: 'Author a technical brief (document, not code) explaining how CompliantFlow
+  satisfies or addresses FDA 21 CFR Part 11 electronic records and electronic signature
+  requirements. The brief shall cover: Git commit authorship as audit trail, branch
+  protection as access control equivalent, GPG signing as signature mechanism, and
+  known gaps with recommended mitigations for strict Part 11 environments.'
+justification: US-market SaMD companies under FDA jurisdiction require Part 11 compliance
+  for electronic records. Git author attribution satisfies many Part 11 requirements
+  but auditors unfamiliar with GitOps workflows will raise objections. A written technical
+  brief reviewed by a regulatory consultant eliminates this objection at scale and
+  is the single highest-leverage document CompliantFlow can produce for US market
+  credibility. Cost is one regulatory consultant engagement.
+priority: High
+affected_items:
+- CRS-011
+type: CR
+status: draft

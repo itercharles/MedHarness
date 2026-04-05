@@ -1,0 +1,16 @@
+id: CR-024
+title: Release Gate Enforcement via CLI
+description: Implement a compliantflow validate release command that evaluates whether
+  a REL item meets all release criteria before permitting a release to proceed. The
+  gate shall check that all linked SYS requirements are verified, all linked CRs are
+  completed, no open DEF items are linked, and compliance scores meet configured thresholds.
+justification: IEC 62304 §5.8 requires documented release procedures with objective
+  evidence of readiness. Currently REL items exist in the DHF but are never enforced
+  by the CLI — a release can proceed regardless of open defects or unverified requirements.
+  This is a compliance gap that will be flagged in any serious audit.
+priority: High
+affected_items:
+- SYS-006
+- CRS-008
+type: CR
+status: draft
