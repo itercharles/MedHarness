@@ -15,3 +15,9 @@ affected_items:
 - SYS-009
 type: CR
 status: planned
+implementation_notes: 'Deferred indefinitely. OllamaBackend is fully implemented
+  and functional today via COMPLIANTFLOW_OLLAMA_URL and COMPLIANTFLOW_OLLAMA_MODEL
+  env vars. No customer has specifically requested a docker-compose deployment package.
+  The CR as scoped (validated docker-compose, model recommendation, validation script)
+  is ops/DevOps work that diverges from CompliantFlow''s core value. Revisit only
+  if a specific air-gapped customer engagement requires it.'
