@@ -8,7 +8,8 @@ justification: Agent guidance was duplicated across CLAUDE.md and AGENTS.md, cau
   drift and maintenance overhead. A single source of truth in docs/ ensures all agent
   harnesses read the same environment and workflow instructions.
 priority: Low
-affected_items: []
+affected_items:
+- SYS-006
 type: CR
 status: completed
 impact_assessment: Documentation-only change. No DHF schema, policy, or runtime code
