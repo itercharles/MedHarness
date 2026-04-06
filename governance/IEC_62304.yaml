@@ -585,6 +585,28 @@ policies:
       params:
         type_code: "DEF"
 
+  # 5.8.2.b No Critical open defects (CR-025)
+  - id: "5.8.2.b"
+    section: "5.8.2"
+    text: "No ANOMALY with Critical severity shall remain in an open or in-progress state at the time of release."
+    status: "approved"
+    automation:
+      check: "no_open_defects"
+      params:
+        severity_threshold:
+          - Critical
+
+  # 5.8.2.c No High open defects (CR-025)
+  - id: "5.8.2.c"
+    section: "5.8.2"
+    text: "No ANOMALY with High severity shall remain in an open or in-progress state at the time of release."
+    status: "approved"
+    automation:
+      check: "no_open_defects"
+      params:
+        severity_threshold:
+          - High
+
   # 5.8.3 Evaluate Known Residual Anomalies
   - id: "5.8.3.a"
     section: "5.8.3"

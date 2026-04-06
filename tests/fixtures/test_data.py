@@ -366,6 +366,21 @@ def get_test_dataset() -> List[Dict]:
             'affected_items': ['SYS-001'],
             'implementation_prs': ['https://github.com/org/repo/pull/42'],
         },
+        # Defects — closed/resolved ones should not block; draft ones are ignored
+        {
+            'id': 'DEF-001',
+            'title': 'Closed High Defect',
+            'description': 'A high-severity defect that has been resolved and closed.',
+            'severity': 'High',
+            'status': 'closed',
+        },
+        {
+            'id': 'DEF-002',
+            'title': 'Closed Low Defect',
+            'description': 'A low-severity defect that has been closed.',
+            'severity': 'Low',
+            'status': 'closed',
+        },
     ]
 
 
@@ -434,6 +449,18 @@ def populate_governance(test_dhf_root: Path):
                         'type_code': 'SRS',
                         'attribute': 'title',
                         'expected_value': 'Item Persistence and Versioning',
+                    }
+                }
+            },
+            {
+                'id': 'TEST.no_open_defects',
+                'section': 'TEST',
+                'text': 'No Critical or High severity defects shall be open at release.',
+                'status': 'approved',
+                'automation': {
+                    'check': 'no_open_defects',
+                    'params': {
+                        'severity_threshold': ['Critical', 'High'],
                     }
                 }
             },

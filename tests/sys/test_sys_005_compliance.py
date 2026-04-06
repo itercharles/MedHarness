@@ -270,3 +270,64 @@ def test_TC_SYS_005_011_semantic_check_reports_missing_backend(test_dhf_root):
     assert passed is False
     assert details == "No LLM backend configured"
     assert evidence == {"doc_id": "test_plan"}
+
+
+def test_TC_SYS_005_012_no_open_defects_passes_when_none_blocking(test_dhf_root, governance_dir):
+    """
+    TC-SYS-005-012: no_open_defects passes when no Critical/High defects are open.
+
+    @links: SYS-005
+    @test_id: TC-SYS-005-012
+
+    The test DHF contains DEF-001 (closed/High) and DEF-002 (closed/Low).
+    Neither is in an open/in_progress state, so the check must pass.
+    """
+    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
+    engine = PolicyEngine(core, root_dir=test_dhf_root)
+
+    passed, details, evidence = engine._check_no_open_defects(
+        severity_threshold=['Critical', 'High'],
+    )
+
+    assert passed is True
+    assert evidence['blocking_defects'] == []
+    assert 'Critical' in evidence['severity_threshold']
+    assert 'High' in evidence['severity_threshold']
+
+
+def test_TC_SYS_005_013_no_open_defects_fails_when_blocking_defect_exists(test_dhf_root):
+    """
+    TC-SYS-005-013: no_open_defects fails when a Critical/High defect is open.
+
+    @links: SYS-005
+    @test_id: TC-SYS-005-013
+
+    Directly inject a Critical open defect into the graph and verify the check
+    surfaces it with structured evidence including the defect UID.
+    """
+    import yaml as _yaml
+
+    # Write a Critical open defect into the isolated test DHF
+    def_dir = test_dhf_root / "items" / "14_def"
+    def_dir.mkdir(parents=True, exist_ok=True)
+    blocking_def = {
+        'id': 'DEF-TEST',
+        'title': 'Critical Open Defect',
+        'description': 'A critical defect in open state.',
+        'severity': 'Critical',
+        'status': 'open',
+    }
+    with open(def_dir / "DEF-TEST.yaml", 'w') as f:
+        _yaml.dump(blocking_def, f)
+
+    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
+    engine = PolicyEngine(core, root_dir=test_dhf_root)
+
+    passed, details, evidence = engine._check_no_open_defects(
+        severity_threshold=['Critical', 'High'],
+    )
+
+    assert passed is False
+    blocking_ids = [b['uid'] for b in evidence['blocking_defects']]
+    assert 'DEF-TEST' in blocking_ids
+    assert 'DEF-TEST' in details

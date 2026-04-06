@@ -13,5 +13,11 @@ affected_items:
 - SYS-005
 - SYS-006
 - CRS-008
+impact_assessment: Adds a new no_open_defects policy check type to compliantflow/policy.py
+  and two IEC 62304 §5.8 governance policies. No schema changes to existing DHF item
+  types. DEF items with open/in_progress status and Critical or High severity will
+  cause compliance checks to fail. Existing DEF-001 (draft) is unaffected by the severity
+  threshold. CI enforcement is implicit through Phase 4 DHF Validation.
+assigned_to: charles
 type: CR
-status: draft
+status: completed
