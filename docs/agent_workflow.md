@@ -71,7 +71,9 @@ feat(<CR-ID>): update compliance workflow
 5. Let the existing CI phases enforce the merge path. Monitor the PR until all
    checks pass and it is merged — do not hand off and move on.
 6. Always merge with squash: one commit per PR on main.
-7. After merge, transition the CR to `completed`.
+7. After all checks pass, check for review comments on the PR and address them
+   before merging.
+8. After merge, transition the CR to `completed`.
 
 `cr check-status` (Phase 0 CI gate) accepts CRs in `approved`, `implementing`,
 or `completed` state.
