@@ -15,4 +15,11 @@ priority: High
 affected_items:
 - CRS-011
 type: CR
-status: draft
+status: completed
+impact_assessment: Adding DHF/documents/technical_briefs/fda_21_cfr_part_11_brief.md
+  — a documentation-only change with no impact on code, schemas, or item relationships.
+  Enables sales and pre-market submission reviewers to understand how CompliantFlow's
+  GitOps architecture satisfies FDA 21 CFR Part 11 electronic records requirements.
+assigned_to: Claude
+approved_by: Quality Assurance
+approved_date: '2026-04-06'
