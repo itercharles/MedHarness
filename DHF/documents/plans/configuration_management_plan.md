@@ -31,6 +31,16 @@ The history of all controlled configuration items is retained via Git commit log
 Each item version is uniquely identified by a Git commit SHA. The full change
 history is retrievable via `git log` and `git blame`.
 
+## Change Request Lifecycle
+CR items have two states:
+
+- **planned** — the change has been identified and documented; implementation may be in progress
+- **completed** — the change has been implemented and merged to `main`
+
+Approval is implicit in the GitOps model: a pull request merge to `main` constitutes
+the approval event, recorded by Git commit metadata (author, timestamp, reviewer identity
+in the GitHub audit log). No separate approval status field is required.
+
 ## Problem Resolution
 Anomalies are recorded as CR items and tracked through the lifecycle workflow.
 

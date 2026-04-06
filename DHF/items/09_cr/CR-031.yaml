@@ -14,4 +14,4 @@ priority: Medium
 affected_items:
 - SYS-009
 type: CR
-status: draft
+status: planned

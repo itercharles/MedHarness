@@ -1,7 +1,7 @@
 id: CR-012
 title: Add CLI layer for CI/CD integration
 type: CR
-status: implementing
+status: completed
 description: 'Add a command-line interface (CLI) package `src/compliantflow/` so that
   CI/CD
 

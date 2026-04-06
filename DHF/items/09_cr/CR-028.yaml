@@ -23,7 +23,5 @@ impact_assessment: 'Adds GitLabArtifactFetcher and JenkinsArtifactFetcher classe
   changes, no compliance policy changes. Risk: low — new code paths; existing GitHub
   path is unchanged.'
 assigned_to: Claude
-approved_by: Quality Assurance
-approved_date: '2026-04-06'
 type: CR
 status: completed

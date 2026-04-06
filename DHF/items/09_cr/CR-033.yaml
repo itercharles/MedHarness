@@ -15,7 +15,7 @@ affected_items:
 - SYS-005
 - SYS-012
 type: CR
-status: completed
+status: planned
 impact_assessment: 'Schema-only change to DHF/config/doc_types/rcm.yaml: removes Verified
   from implementation_status options and adds a new verification_status field. Existing
   RCM items without implementation_status set require no migration. Any RCM with implementation_status=Verified

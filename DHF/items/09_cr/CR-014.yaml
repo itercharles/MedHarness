@@ -1,7 +1,7 @@
 id: CR-014
 title: Move DHF data layer and test results into DHF/utils/
 type: CR
-status: draft
+status: completed
 description: 'Relocate the standalone data-layer package and test-result integration
   into the DHF directory tree, co-locating code with the data it manages.
 

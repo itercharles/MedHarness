@@ -2,7 +2,7 @@ id: CR-016
 title: Consolidate src/ — move traceability/ and helpers/ into compliantflow/, app.py
   into debug_view/
 type: CR
-status: draft
+status: completed
 description: "Two structural changes to clean up the src/ layout:\n\n1. Move src/traceability/\
   \ → src/compliantflow/traceability/\n   Move src/helpers/     → src/compliantflow/helpers/\n\
   \   Rationale: traceability/ and helpers/ are internal dependencies of the\n   compliantflow\

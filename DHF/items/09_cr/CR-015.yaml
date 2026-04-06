@@ -1,7 +1,7 @@
 id: CR-015
 title: Fix adapter abstraction — remove loader/saver leakage and add DHF test CLI
 type: CR
-status: draft
+status: completed
 description: "Two targeted fixes to the DHF/CompliantFlow boundary:\n\n1. Remove loader/saver\
   \ shortcut properties from CompliantFlowCore.\n   These exposed LocalDHFAdapter\
   \ internals (_loader, _saver) through the\n   core facade and would break silently\

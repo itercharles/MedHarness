@@ -11,7 +11,7 @@ priority: Low
 affected_items:
 - SYS-006
 type: CR
-status: completed
+status: planned
 impact_assessment: Documentation-only change. No DHF schema, policy, or runtime code
   affected. CLAUDE.md and AGENTS.md retain their harness-specific sections; shared
   content moves to docs/agent_environment.md and docs/agent_workflow.md.

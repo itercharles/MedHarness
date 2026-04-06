@@ -1,7 +1,7 @@
 id: CR-011
 title: refactor the status management of object
 type: CR
-status: cancelled
+status: completed
 description: "Current status definition is too complex and should be simplified. \n\
   \nThere should be a collection of all the lifecycle status and action in the configuration\
   \ - \naction: create -> status: draft\naction: submit for review -> status: in review\

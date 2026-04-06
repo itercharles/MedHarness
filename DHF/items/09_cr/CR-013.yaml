@@ -1,7 +1,7 @@
 id: CR-013
 title: Split DHF data layer from CompliantFlow analysis engine
 type: CR
-status: draft
+status: completed
 description: 'Extract the DHF data layer into a standalone `src/dhf/` package and
   introduce a `DHFAdapter` interface so any backend can plug into CompliantFlow.
 

@@ -28,7 +28,7 @@ This document provides a comprehensive specification of all Change Requests (CRs
 
 ### By Status
 
-{% for status in ['draft', 'in_review', 'approved', 'implementing', 'completed', 'cancelled'] %}
+{% for status in ['planned', 'completed'] %}
 {% set status_items = items|selectattr('status', 'equalto', status)|list %}
 {% if status_items|length > 0 %}
 - **{{ status|upper }}**: {{ status_items|length }} change request(s)

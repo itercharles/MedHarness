@@ -1,33 +1,17 @@
 id: CR-010
 title: Centralize Relationship Configuration
-
-status: implemented
+description: Centralize relationship type configuration into a global registry in
+  ProjectConfig, replacing per-doc-type relationship definitions with shared RelationshipType
+  models and validation.
+justification: Relationship types were duplicated across doc type configs. Centralizing
+  them reduces inconsistency and enables relationship metadata to be used programmatically
+  across the compliance engine.
+impact_assessment: Added RelationshipType model to schema, relationship_types global
+  registry to ProjectConfig, validation for relationship_type references, and migrated
+  CR doc type as proof of concept. All tests pass.
 priority: Medium
-category: Technical Improvement
-implementation_notes: 'Phase 1 complete - infrastructure ready and proven.
-
-  Changes:
-
-  - Added RelationshipType model to schema
-
-  - Added relationship_types global registry to ProjectConfig
-
-  - Added validation for relationship_type references
-
-  - Updated _aggregate_relationship_fields() for backward compatibility
-
-  - Added 6 common relationships to global registry
-
-  - Migrated CR doc type as proof of concept
-
-  All tests pass (6/6).
-
-  Next steps:
-
-  - Migrate remaining doc types (SRS, SYS, CRS, etc.)
-
-  - Remove deprecated relations sections
-
-  - Update UI to use relationship metadata'
 affected_items:
 - CR-009
+assigned_to: Claude
+type: CR
+status: completed

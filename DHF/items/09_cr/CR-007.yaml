@@ -2,12 +2,11 @@ id: CR-007
 title: 'Defect: the specification generation in system architecture page doesn''t
   work'
 type: CR
-status: in_review
+status: completed
 description: 'The error pop up when trying to generating the specification document
   in the system architecture page. '
 justification: defect
 priority: High
-review_by: charles chen
 review_date: '2025-12-31'
 timestamp: '2025-12-31T09:35:18.048611'
 affected_items:

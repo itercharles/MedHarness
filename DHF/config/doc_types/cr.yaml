@@ -56,55 +56,8 @@ lifecycle:
   transitions:
   - from_states:
     - null
-    to_state: draft
+    to_state: planned
   - from_states:
-    - draft
-    to_state: in_review
-    criteria:
-    - id: description_complete
-      name: Description complete
-      check_type: field_not_empty
-      field: description
-      required: true
-    - id: justification_provided
-      name: Justification provided
-      check_type: field_not_empty
-      field: justification
-      required: true
-    label: Submit for Review
-  - from_states:
-    - in_review
-    to_state: approved
-    criteria:
-    - id: impact_assessed
-      name: Impact assessed
-      check_type: field_not_empty
-      field: impact_assessment
-      required: true
-    label: Approve
-  - from_states:
-    - in_review
-    to_state: cancelled
-    label: Reject
-  - from_states:
-    - approved
-    to_state: implementing
-    criteria:
-    - id: assigned
-      name: Assigned to developer
-      check_type: field_not_empty
-      field: assigned_to
-      required: true
-    label: Start Implementation
-  - from_states:
-    - implementing
+    - planned
     to_state: completed
     label: Complete
-  - from_states:
-    - draft
-    to_state: cancelled
-    label: Cancel
-  - from_states:
-    - in_review
-    to_state: cancelled
-    label: Cancel
