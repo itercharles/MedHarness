@@ -10,6 +10,14 @@ type: project
 
 **Why:** Separates read-only analysis (compliantflow core) from data mutations (DHF utils layer). Alternative backends can plug in without changing the engine.
 
+## MultiDHFAdapter (CR-029, v2.1.0)
+
+`compliantflow/adapters/multi.py` — `MultiDHFAdapter` implements `DHFAdapter` and routes across a `dict[slug, adapter]`. `CompliantFlowCore` is unchanged (still single-adapter). The CLI gains `--project slug:path` (repeatable) to activate multi-project mode; `--dhf` single-project mode is fully backward compatible.
+
+**ID namespacing:** All item IDs and intra-project link fields (`all_linked_uids`, `satisfies`, `derives_from`, `affected_items`) are prefixed `slug::id` so the graph engine can resolve edges across projects without collision. Mutations route by parsing the slug prefix; un-namespaced UIDs go to the primary adapter (first entry).
+
+**Design constraints:** compliance runs and `get_project_config()` delegate to the primary adapter only. Do NOT add cross-project graph merging without an explicit CR — projects are partitioned by default.
+
 ## Two-CLI Split
 
 - `python -m compliantflow` (compliantflow/cli.py) — read-only analysis, traceability, compliance checks, CR check-status/generate-report, test import/status/list, PDF reports
