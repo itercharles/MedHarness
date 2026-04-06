@@ -22,6 +22,10 @@ Use this sequence for normal work:
 2. Modify
    - Keep changes in the layer that owns the behavior.
    - Avoid duplicating repository knowledge in new docs or scripts.
+   - If a design document changes, update the corresponding DHF items (requirements,
+     architecture, SWDD) to keep traceability intact.
+   - If a test changes, update the linked DHF test records and verify `@links:` tags
+     still point to the correct items.
 3. Validate locally
    - Run the smallest relevant command or test first.
    - Then run the governing suite for that layer.
@@ -110,6 +114,10 @@ When adding new agent support in this repository:
 - prefer existing docs over new parallel docs
 - put new shared agent guidance in `docs/agent_environment.md` or `docs/agent_workflow.md`
 - keep `AGENTS.md` and `CLAUDE.md` as thin entrypoints unless content is model-specific
+- when the working workflow changes (new CI phase, new validation sequence, branch
+  conventions, PR/CR process), update `docs/agent_workflow.md`
+- when the project environment or directory structure changes (new layer, new tooling,
+  new command surface, new invariant), update `docs/agent_environment.md`
 - prefer task-local context over loading the full compliance corpus
 - when changing compliance behavior, prefer relevant real governance inputs over synthetic fixtures
 - prefer CI alignment over custom local gates
