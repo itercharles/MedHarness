@@ -151,24 +151,59 @@ are independent; sequentially when the output of one informs the next.
 1. Consult `product-manager` — validate scope, roadmap fit, priority.
 2. Consult `system-architect` — identify affected layer(s), validate design.
    (Steps 1 and 2 can run in parallel if scope is already clear.)
-3. Implement using `software-developer` patterns and conventions.
+3. **Write a plan spec** — see below.
+4. Implement using `software-developer` patterns and conventions.
 
 **Bug fix / defect**
 
 1. Consult `software-developer` — affected patterns, conventions.
 2. Consult `system-architect` only if the fix crosses architectural boundaries.
    Skip `product-manager` unless the defect has customer-facing scope impact.
+3. **Write a plan spec** for any fix that touches more than one file or layer.
+4. Implement.
 
 **Architectural decision** (new protocol method, new layer, new abstraction)
 
 1. Consult `system-architect` and `product-manager` in parallel — feasibility
    and roadmap alignment.
-2. Synthesize both outputs before designing the solution.
+2. **Write a plan spec** — architectural decisions especially warrant written
+   design rationale before any code is touched.
+3. Implement.
 
 **Roadmap / planning**
 
 1. Consult `product-manager` — primary source for prioritization and strategy.
 2. Consult `system-architect` for feasibility constraints on specific items.
+
+### Plan Spec
+
+A plan spec is a short written document produced **after** consulting agents and
+**before** writing any code. Its purpose is to make the implementation decision
+explicit and reviewable, catch design problems before they appear in code, and
+give the user a natural checkpoint to redirect.
+
+**When to write one:**
+- Any new feature CR (always).
+- Any fix or refactor touching more than one file or crossing a layer boundary.
+- Skip for single-file, isolated changes where the approach is unambiguous.
+
+**What it must contain:**
+
+1. **Scope** — one sentence stating what the CR/task adds or changes, and what
+   is explicitly out of scope.
+2. **Affected files** — a concrete list of files to create or modify, grouped
+   by layer. No vague "and related files" — be exhaustive.
+3. **Design decisions** — the non-obvious choices made and why (e.g. "router
+   lives in the adapter layer, not Core, because CompliantFlowCore must stay
+   single-adapter").
+4. **Test approach** — which test file(s), what the key cases are (happy path,
+   error paths, edge cases).
+5. **Scope constraints** — anything the PM or architect said NOT to do, stated
+   explicitly so they are not accidentally implemented.
+
+**Format:** Write it inline in the session as a clearly delimited block before
+starting implementation. Do not save it to disk unless the user asks. It is a
+thinking-aloud checkpoint, not a stored artefact.
 
 ### Memory Update Protocol
 
