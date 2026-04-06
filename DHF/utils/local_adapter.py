@@ -6,7 +6,7 @@ import re
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from utils.artifact_fetcher import GitHubArtifactFetcher
+from utils.artifact_fetcher import GitHubArtifactFetcher, GitLabArtifactFetcher, JenkinsArtifactFetcher
 from utils.compliance_store import ComplianceStore
 from utils.exceptions import ValidationError
 from utils.junit_parser import parse_junit_xml
@@ -398,10 +398,12 @@ class LocalDHFAdapter:
         self,
         run_id: str = "",
         commit_sha: str = "",
+        provider: str = "github",
     ) -> dict:
-        """Fetch test results from GitHub Actions artifacts and cache locally.
+        """Fetch test results from CI artifacts and cache locally.
 
-        Delegates all GitHub API details to GitHubArtifactFetcher (DHF layer).
+        Delegates all CI API details to the appropriate fetcher class based on
+        ``provider`` (``"github"``, ``"gitlab"``, or ``"jenkins"``).
         Non-SKIP results are written to the local ResultStore cache (git-ignored).
 
         Returns::
@@ -416,7 +418,13 @@ class LocalDHFAdapter:
         # Force-refresh: reset flag so _ensure_results_loaded won't skip next time
         self._results_fetched = True
 
-        fetcher = GitHubArtifactFetcher.from_environment(self._dhf_root)
+        if provider == "gitlab":
+            fetcher = GitLabArtifactFetcher.from_environment(self._dhf_root)
+        elif provider == "jenkins":
+            fetcher = JenkinsArtifactFetcher.from_environment(self._dhf_root)
+        else:
+            fetcher = GitHubArtifactFetcher.from_environment(self._dhf_root)
+
         fetch_result = fetcher.fetch(run_id=run_id, commit_sha=commit_sha)
 
         actual_run_id = fetch_result["run_id"]

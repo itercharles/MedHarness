@@ -1,12 +1,16 @@
-"""GitHub Actions artifact fetcher for DHF test result integration.
+"""CI artifact fetchers for DHF test result integration.
 
-Fetches JUnit XML artifacts from GitHub Actions runs and parses them
-into ExecutionResult objects using the existing junit_parser module.
+Fetches JUnit XML artifacts from GitHub Actions, GitLab CI, or Jenkins runs
+and parses them into ExecutionResult objects using the existing junit_parser
+module.
 
-All GitHub API details are encapsulated here; callers only see
-ExecutionResult lists. The fetcher is constructed via
-``GitHubArtifactFetcher.from_environment(dhf_path)`` which reads
-``GITHUB_TOKEN`` and auto-detects the repository from the git remote.
+Each fetcher exposes a ``fetch(run_id, commit_sha) -> dict`` interface and a
+``from_environment(dhf_path)`` constructor that reads credentials from env vars:
+
+- GitHub Actions: ``GITHUB_TOKEN``
+- GitLab CI:      ``GITLAB_TOKEN``, ``GITLAB_URL`` (default: https://gitlab.com),
+                  ``GITLAB_PROJECT_ID``
+- Jenkins:        ``JENKINS_TOKEN``, ``JENKINS_URL``, ``JENKINS_USER``
 """
 
 from __future__ import annotations
@@ -213,3 +217,293 @@ class GitHubArtifactFetcher:
             return result.stdout.strip()
         except Exception:
             return ""
+
+
+class GitLabArtifactFetcher:
+    """Fetch test results from GitLab CI job artifacts.
+
+    Reads ``GITLAB_TOKEN``, ``GITLAB_URL`` (default: https://gitlab.com),
+    and ``GITLAB_PROJECT_ID`` from the environment.
+
+    Usage::
+
+        fetcher = GitLabArtifactFetcher.from_environment(dhf_path)
+        result = fetcher.fetch(run_id="12345")
+        # result = {
+        #     "results": List[ExecutionResult],
+        #     "run_id":  "12345",
+        #     "run_url": "https://gitlab.com/<project>/-/pipelines/12345",
+        # }
+
+    ``run_id`` is a GitLab **pipeline** ID.  All jobs in the pipeline whose
+    artifacts contain ``*.xml`` files are downloaded and parsed.
+    """
+
+    def __init__(self, base_url: str, project_id: str, token: str, dhf_path: Path):
+        self._base_url = base_url.rstrip("/")
+        self._project_id = project_id
+        self._token = token
+        self._dhf_path = dhf_path
+
+    @classmethod
+    def from_environment(cls, dhf_path: Path) -> "GitLabArtifactFetcher":
+        token = os.environ.get("GITLAB_TOKEN", "")
+        base_url = os.environ.get("GITLAB_URL", "https://gitlab.com")
+        project_id = os.environ.get("GITLAB_PROJECT_ID", "")
+        if not project_id:
+            project_id = cls._detect_project_id(base_url, dhf_path)
+        return cls(base_url=base_url, project_id=project_id, token=token, dhf_path=dhf_path)
+
+    # ------------------------------------------------------------------
+    # Public
+    # ------------------------------------------------------------------
+
+    def fetch(self, run_id: str = "", commit_sha: str = "") -> dict:
+        """Fetch all test results for a pipeline or commit.
+
+        Args:
+            run_id: GitLab pipeline ID (takes priority).
+            commit_sha: Commit SHA to find the latest pipeline for.
+                If neither is provided, auto-detects HEAD SHA.
+
+        Returns:
+            ``{"results": List[ExecutionResult], "run_id": str, "run_url": str}``
+
+        Raises:
+            ValueError: If credentials are missing or no pipeline is found.
+        """
+        if not self._token:
+            raise ValueError(
+                "GITLAB_TOKEN environment variable is not set. "
+                "Export it before running 'test pull --provider gitlab'."
+            )
+        if not self._project_id:
+            raise ValueError(
+                "Could not detect GitLab project ID. "
+                "Set GITLAB_PROJECT_ID or ensure the git remote points to a GitLab instance."
+            )
+
+        if run_id:
+            pipeline_id = run_id
+        else:
+            sha = commit_sha or self._get_current_commit_sha()
+            if not sha:
+                raise ValueError(
+                    "No run_id or commit_sha provided and could not detect HEAD SHA."
+                )
+            pipeline_id = self._find_latest_pipeline_id(sha)
+
+        run_url = f"{self._base_url}/{self._project_id}/-/pipelines/{pipeline_id}"
+        results = self._fetch_by_pipeline_id(pipeline_id)
+        return {"results": results, "run_id": pipeline_id, "run_url": run_url}
+
+    # ------------------------------------------------------------------
+    # Internal
+    # ------------------------------------------------------------------
+
+    def _find_latest_pipeline_id(self, commit_sha: str) -> str:
+        data = self._api_get(
+            f"/api/v4/projects/{self._project_id}/pipelines"
+            f"?sha={commit_sha}&status=success&order_by=id&sort=desc&per_page=1"
+        )
+        if not data:
+            raise ValueError(
+                f"No successful GitLab pipeline found for commit {commit_sha[:8]}."
+            )
+        return str(data[0]["id"])
+
+    def _fetch_by_pipeline_id(self, pipeline_id: str) -> List[ExecutionResult]:
+        jobs = self._api_get(
+            f"/api/v4/projects/{self._project_id}/pipelines/{pipeline_id}/jobs"
+        )
+        results: List[ExecutionResult] = []
+        for job in jobs:
+            job_id = str(job["id"])
+            artifact_url = (
+                f"{self._base_url}/api/v4/projects/{self._project_id}"
+                f"/jobs/{job_id}/artifacts"
+            )
+            try:
+                raw = self._download_raw(artifact_url)
+            except Exception:
+                continue
+            results.extend(self._parse_zip(raw))
+        return results
+
+    def _parse_zip(self, raw: bytes) -> List[ExecutionResult]:
+        results: List[ExecutionResult] = []
+        with tempfile.TemporaryDirectory() as tmp:
+            zip_path = Path(tmp) / "artifact.zip"
+            zip_path.write_bytes(raw)
+            try:
+                with zipfile.ZipFile(zip_path) as zf:
+                    for name in zf.namelist():
+                        if name.endswith(".xml"):
+                            zf.extract(name, tmp)
+                            results.extend(parse_junit_xml(Path(tmp) / name))
+            except zipfile.BadZipFile:
+                pass
+        return results
+
+    def _api_get(self, path: str) -> object:
+        url = f"{self._base_url}{path}" if path.startswith("/") else path
+        req = Request(url, headers={"PRIVATE-TOKEN": self._token})
+        with urlopen(req) as resp:
+            return json.loads(resp.read())
+
+    def _download_raw(self, url: str) -> bytes:
+        req = Request(url, headers={"PRIVATE-TOKEN": self._token})
+        with urlopen(req) as resp:
+            return resp.read()
+
+    @staticmethod
+    def _detect_project_id(base_url: str, dhf_path: Path) -> str:
+        """Parse namespace/project from the git remote URL for this GitLab host."""
+        try:
+            result = subprocess.run(
+                ["git", "remote", "get-url", "origin"],
+                capture_output=True, text=True, cwd=dhf_path, timeout=5,
+            )
+            url = result.stdout.strip()
+            host = re.sub(r"^https?://", "", base_url).rstrip("/")
+            pattern = rf"{re.escape(host)}[:/]([^/]+/[^/]+?)(?:\.git)?$"
+            m = re.search(pattern, url)
+            if m:
+                return m.group(1)
+        except Exception:
+            pass
+        return os.environ.get("CI_PROJECT_ID", "")
+
+    def _get_current_commit_sha(self) -> str:
+        try:
+            result = subprocess.run(
+                ["git", "rev-parse", "HEAD"],
+                capture_output=True, text=True, cwd=self._dhf_path, timeout=5,
+            )
+            return result.stdout.strip()
+        except Exception:
+            return ""
+
+
+class JenkinsArtifactFetcher:
+    """Fetch test results from Jenkins build artifacts.
+
+    Reads ``JENKINS_URL``, ``JENKINS_USER``, ``JENKINS_TOKEN``, and
+    ``JENKINS_JOB_NAME`` from the environment.
+
+    Usage::
+
+        fetcher = JenkinsArtifactFetcher.from_environment(dhf_path)
+        result = fetcher.fetch(run_id="42")
+        # result = {
+        #     "results": List[ExecutionResult],
+        #     "run_id":  "42",
+        #     "run_url": "https://jenkins.example.com/job/<job>/42/",
+        # }
+
+    ``run_id`` is a Jenkins **build number**.  All XML files found in the
+    build's artifact tree are downloaded and parsed.
+    """
+
+    def __init__(self, jenkins_url: str, job_name: str, user: str, token: str, dhf_path: Path):
+        self._jenkins_url = jenkins_url.rstrip("/")
+        self._job_name = job_name
+        self._user = user
+        self._token = token
+        self._dhf_path = dhf_path
+
+    @classmethod
+    def from_environment(cls, dhf_path: Path) -> "JenkinsArtifactFetcher":
+        jenkins_url = os.environ.get("JENKINS_URL", "")
+        job_name = os.environ.get("JENKINS_JOB_NAME", "")
+        user = os.environ.get("JENKINS_USER", "")
+        token = os.environ.get("JENKINS_TOKEN", "")
+        return cls(jenkins_url=jenkins_url, job_name=job_name, user=user, token=token, dhf_path=dhf_path)
+
+    # ------------------------------------------------------------------
+    # Public
+    # ------------------------------------------------------------------
+
+    def fetch(self, run_id: str = "", commit_sha: str = "") -> dict:  # noqa: ARG002
+        """Fetch all test results for a Jenkins build.
+
+        Args:
+            run_id: Jenkins build number (required — Jenkins has no reliable
+                commit-to-build lookup without plugins).
+            commit_sha: Ignored for Jenkins; included for interface parity.
+
+        Returns:
+            ``{"results": List[ExecutionResult], "run_id": str, "run_url": str}``
+
+        Raises:
+            ValueError: If credentials or URL are missing, or run_id is empty.
+        """
+        if not self._jenkins_url:
+            raise ValueError(
+                "JENKINS_URL environment variable is not set. "
+                "Export it before running 'test pull --provider jenkins'."
+            )
+        if not self._token:
+            raise ValueError(
+                "JENKINS_TOKEN environment variable is not set. "
+                "Export it before running 'test pull --provider jenkins'."
+            )
+        if not self._job_name:
+            raise ValueError(
+                "JENKINS_JOB_NAME environment variable is not set."
+            )
+        if not run_id:
+            raise ValueError(
+                "Jenkins requires an explicit --run-id (build number). "
+                "Jenkins has no reliable commit-to-build lookup without plugins."
+            )
+
+        run_url = f"{self._jenkins_url}/job/{self._job_name}/{run_id}/"
+        results = self._fetch_build_artifacts(run_id)
+        return {"results": results, "run_id": run_id, "run_url": run_url}
+
+    # ------------------------------------------------------------------
+    # Internal
+    # ------------------------------------------------------------------
+
+    def _fetch_build_artifacts(self, build_number: str) -> List[ExecutionResult]:
+        """Download all XML artifacts from the build's artifact tree."""
+        artifact_list_url = (
+            f"{self._jenkins_url}/job/{self._job_name}/{build_number}"
+            f"/api/json?tree=artifacts[fileName,relativePath]"
+        )
+        data = self._api_get(artifact_list_url)
+        artifacts = data.get("artifacts", [])
+        results: List[ExecutionResult] = []
+        for artifact in artifacts:
+            if not artifact.get("fileName", "").endswith(".xml"):
+                continue
+            rel_path = artifact["relativePath"]
+            download_url = (
+                f"{self._jenkins_url}/job/{self._job_name}/{build_number}"
+                f"/artifact/{rel_path}"
+            )
+            try:
+                raw = self._download_raw(download_url)
+            except Exception:
+                continue
+            with tempfile.TemporaryDirectory() as tmp:
+                xml_path = Path(tmp) / artifact["fileName"]
+                xml_path.write_bytes(raw)
+                results.extend(parse_junit_xml(xml_path))
+        return results
+
+    def _api_get(self, url: str) -> dict:
+        req = Request(url, headers=self._auth_headers())
+        with urlopen(req) as resp:
+            return json.loads(resp.read())
+
+    def _download_raw(self, url: str) -> bytes:
+        req = Request(url, headers=self._auth_headers())
+        with urlopen(req) as resp:
+            return resp.read()
+
+    def _auth_headers(self) -> dict:
+        import base64
+        credentials = base64.b64encode(f"{self._user}:{self._token}".encode()).decode()
+        return {"Authorization": f"Basic {credentials}"}
