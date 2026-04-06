@@ -61,19 +61,21 @@ When work is tied to a change request:
 1. Transition the CR into an allowed implementation state before code work.
    - Sequence: `draft → in_review → approved → implementing`
 2. Make the code and document changes in the owning layer.
-3. Validate locally with the existing commands and test suites.
-4. Open a PR that includes the CR ID in the title, for example:
+3. If this PR fully implements the CR, transition the CR to `completed` and
+   include that YAML change in the PR commit. The CR status lands on main at
+   merge time alongside the code — do not defer it to after merge.
+4. Validate locally with the existing commands and test suites.
+5. Open a PR that includes the CR ID in the title, for example:
 
 ```bash
 feat(<CR-ID>): update compliance workflow
 ```
 
-5. Let the existing CI phases enforce the merge path. Monitor the PR until all
-   checks pass and it is merged — do not hand off and move on.
-6. Always merge with squash: one commit per PR on main.
-7. After all checks pass, check for review comments on the PR and address them
-   before merging.
-8. After merge, transition the CR to `completed`.
+6. While the PR is open, continuously monitor for review comments and address
+   them with follow-up commits before merging.
+7. Let the existing CI phases enforce the merge path. Monitor the PR until all
+   checks pass — do not hand off and move on.
+8. Always merge with squash: one commit per PR on main.
 
 `cr check-status` (Phase 0 CI gate) accepts CRs in `approved`, `implementing`,
 or `completed` state.
