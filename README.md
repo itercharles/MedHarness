@@ -58,8 +58,8 @@ PYTHONPATH=.:DHF python -m compliantflow test import results.xml --format junit 
 PYTHONPATH=.:DHF python -m utils --help
 PYTHONPATH=.:DHF python -m utils item list --type SYS
 PYTHONPATH=.:DHF python -m utils item create --type SYS --data '{"title": "My req"}'
-PYTHONPATH=.:DHF python -m utils item transitions CR-001
-PYTHONPATH=.:DHF python -m utils item transition CR-001 approved --by "Alice"
+PYTHONPATH=.:DHF python -m utils item transitions <CR-ID>
+PYTHONPATH=.:DHF python -m utils item transition <CR-ID> approved --by "Alice"
 PYTHONPATH=.:DHF python -m utils validate schema
 PYTHONPATH=.:DHF python -m utils doc generate ALL
 ```
@@ -70,6 +70,10 @@ PYTHONPATH=.:DHF python -m utils doc generate ALL
 # All suites must pass before merging
 PYTHONPATH=.:DHF .venv/bin/pytest tests/sys/ tests/crs/ -q
 ```
+
+For the shared LLM/agent operating model, see:
+- [`docs/agent_environment.md`](docs/agent_environment.md)
+- [`docs/agent_workflow.md`](docs/agent_workflow.md)
 
 ## Architecture
 
