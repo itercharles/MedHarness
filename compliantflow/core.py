@@ -272,7 +272,7 @@ class CompliantFlowCore:
 
         checks: List[Dict[str, Any]] = []
 
-        # 1. REL exists
+        # 1. REL exists and is a REL item
         rel = self.get_item(rel_id)
         if rel is None:
             return {
@@ -280,6 +280,14 @@ class CompliantFlowCore:
                 "rel_id": rel_id,
                 "checks": [{"name": "rel_exists", "passed": False,
                              "details": f"REL item '{rel_id}' not found."}],
+            }
+        if not rel_id.startswith("REL-"):
+            return {
+                "passed": False,
+                "rel_id": rel_id,
+                "checks": [{"name": "rel_exists", "passed": False,
+                             "details": f"'{rel_id}' is not a REL item. "
+                                        f"validate release only accepts REL-* identifiers."}],
             }
         checks.append({"name": "rel_exists", "passed": True,
                         "details": f"REL item '{rel_id}' found (status: {rel.get('status', 'unknown')})."})

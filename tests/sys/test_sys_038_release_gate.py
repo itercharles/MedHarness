@@ -167,3 +167,22 @@ def test_TC_SYS_038_005_release_gate_fails_for_nonexistent_rel(test_dhf_root):
     assert report['passed'] is False
     assert report['checks'][0]['name'] == 'rel_exists'
     assert report['checks'][0]['passed'] is False
+
+
+def test_TC_SYS_038_006_release_gate_rejects_non_rel_item_id(test_dhf_root):
+    """
+    TC-SYS-038-006: validate_release rejects a non-REL item ID with a clear error.
+
+    Passing a CR, SYS, or any non-REL ID must fail the rel_exists check so
+    the gate cannot be accidentally run against the wrong item type.
+
+    @test_id: TC-SYS-038-006
+    @links: SYS-006, CRS-008
+    """
+    core = _make_core(test_dhf_root)
+    report = core.validate_release('SYS-001')
+
+    assert report['passed'] is False
+    assert report['checks'][0]['name'] == 'rel_exists'
+    assert report['checks'][0]['passed'] is False
+    assert 'REL-*' in report['checks'][0]['details']
