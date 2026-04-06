@@ -27,8 +27,19 @@ content: 'The system shall import automated test results from standard JUnit XML
   name (test_TC_NNN_NNN_*). Tests with no recognisable TC ID are skipped.
 
 
-  The system shall also support fetching JUnit XML artifacts from GitHub Actions runs
-  via the GitHub API (GITHUB_TOKEN), enabling CI-integrated import without manual
-  file download.'
+  The system shall support fetching JUnit XML artifacts from the following CI
+  providers without manual file download:
+
+  - GitHub Actions: via the GitHub API using GITHUB_TOKEN, auto-detecting the
+    repository from the git remote.
+
+  - GitLab CI: via the GitLab API using GITLAB_TOKEN and GITLAB_PROJECT_ID,
+    supporting self-hosted instances via GITLAB_URL.
+
+  - Jenkins: via the Jenkins REST API using JENKINS_URL, JENKINS_USER,
+    JENKINS_TOKEN, and JENKINS_JOB_NAME, with an explicit build number.
+
+  The provider is selected at invocation time via the --provider flag
+  (github|gitlab|jenkins, default: github).'
 verification_method:
 - Test

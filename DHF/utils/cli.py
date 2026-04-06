@@ -306,20 +306,27 @@ def test_import(
 
 
 @test.command("pull")
-@click.option("--run-id", default="", help="GitHub Actions run ID (default: latest for HEAD).")
+@click.option("--run-id", default="", help="CI run ID / build number (default: latest for HEAD).")
 @click.option("--commit", "commit_sha", default="", metavar="SHA",
               help="Find latest completed run for this commit SHA.")
+@click.option("--provider", default="github",
+              type=click.Choice(["github", "gitlab", "jenkins"], case_sensitive=False),
+              help="CI provider to fetch artifacts from (default: github).")
 @click.pass_context
-def test_pull(ctx: click.Context, run_id: str, commit_sha: str) -> None:
-    """Fetch test results from GitHub Actions artifacts.
+def test_pull(ctx: click.Context, run_id: str, commit_sha: str, provider: str) -> None:
+    """Fetch test results from CI artifacts (GitHub Actions, GitLab CI, or Jenkins).
 
-    Requires GITHUB_TOKEN to be set in the environment.
+    GitHub:  requires GITHUB_TOKEN.
+    GitLab:  requires GITLAB_TOKEN, GITLAB_URL, GITLAB_PROJECT_ID.
+    Jenkins: requires JENKINS_URL, JENKINS_USER, JENKINS_TOKEN, JENKINS_JOB_NAME,
+             and an explicit --run-id (build number).
+
     Results are cached locally (DHF/test-results/results.yaml, git-ignored).
     """
     dhf_path: Path = ctx.obj["dhf"]
     adapter = _make_adapter(dhf_path)
     try:
-        result = adapter.pull_results_from_artifacts(run_id=run_id, commit_sha=commit_sha)
+        result = adapter.pull_results_from_artifacts(run_id=run_id, commit_sha=commit_sha, provider=provider)
     except ValueError as exc:
         click.echo(f"ERROR: {exc}", err=True)
         sys.exit(1)
