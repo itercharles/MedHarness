@@ -15,5 +15,10 @@ priority: High
 affected_items:
 - SYS-006
 - CRS-008
+impact_assessment: Adds compliantflow/migrate/rdm.py (RDMMigrator class) and a new
+  `migrate rdm` CLI command group. No changes to existing DHF schema, policy engine,
+  or CI pipeline. Migration is opt-in and writes only to DHF/items/. No new runtime
+  dependencies — RDM YAML is parsed directly with PyYAML.
+assigned_to: charles
 type: CR
-status: draft
+status: completed

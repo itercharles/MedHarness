@@ -622,3 +622,51 @@ def test_list(ctx: click.Context, status_filter: str | None) -> None:
     for rec in results.values():
         click.echo(json.dumps(rec, default=str))
     click.echo(f"({len(results)} result(s))", err=True)
+
+
+# ---------------------------------------------------------------------------
+# migrate group
+# ---------------------------------------------------------------------------
+
+@main.group()
+def migrate() -> None:
+    """Migrate external repository formats into a CompliantFlow DHF."""
+
+
+@migrate.command("rdm")
+@click.argument("source_dir", type=click.Path(exists=True, file_okay=False, path_type=Path))
+@click.option(
+    "--dry-run", is_flag=True, default=False,
+    help="Parse and map items without writing any files.",
+)
+@click.pass_context
+def migrate_rdm(ctx: click.Context, source_dir: Path, dry_run: bool) -> None:
+    """Migrate an Innolitics RDM repository into this DHF.
+
+    SOURCE_DIR is the root of the RDM repository to migrate.
+
+    Discovers all YAML requirement files under SOURCE_DIR, maps them to
+    CompliantFlow doc types, converts reST content to Markdown, writes items
+    into DHF/items/, and prints a JSON migration report to stdout.
+
+    Use --dry-run to preview the mapping without writing any files.
+    """
+    from compliantflow.migrate.rdm import RDMMigrator
+
+    dhf_path: Path = ctx.obj["dhf"]
+    dhf_items_dir = dhf_path / "items"
+
+    migrator = RDMMigrator(source_dir=source_dir)
+    report = migrator.migrate(dhf_items_dir=dhf_items_dir, dry_run=dry_run)
+
+    click.echo(json.dumps(report, indent=2, default=str))
+
+    n_created = len(report["created"])
+    n_skipped = len(report["skipped"])
+    n_review = len(report["needs_review"])
+    suffix = " (dry run)" if dry_run else ""
+    click.echo(
+        f"\n✓ Migration complete{suffix}: "
+        f"{n_created} created, {n_skipped} skipped, {n_review} need review",
+        err=True,
+    )
