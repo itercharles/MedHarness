@@ -22,12 +22,28 @@ def _resolve_dhf(dhf_option: str | None) -> Path:
     return Path(__file__).parent.parent / "DHF"
 
 
-def _make_core(dhf_path: Path):
-    """Instantiate CompliantFlowCore with a LocalDHFAdapter."""
+def _make_core(ctx: click.Context):
+    """Instantiate CompliantFlowCore from CLI context.
+
+    Single-project mode (default): uses ``ctx.obj["dhf"]`` path with a
+    ``LocalDHFAdapter``.
+
+    Multi-project mode: activated when ``--project slug:path`` flags are
+    present.  Builds a ``MultiDHFAdapter`` keyed by slug and passes it to
+    ``CompliantFlowCore`` unchanged.
+    """
     from utils.local_adapter import LocalDHFAdapter
     from compliantflow.core import CompliantFlowCore
-    adapter = LocalDHFAdapter(dhf_path, auto_commit=False)
-    return CompliantFlowCore(adapter)
+
+    projects: dict = ctx.obj.get("projects", {})
+    if projects:
+        from compliantflow.adapters.multi import MultiDHFAdapter
+        adapters = {slug: LocalDHFAdapter(path, auto_commit=False)
+                    for slug, path in projects.items()}
+        return CompliantFlowCore(MultiDHFAdapter(adapters))
+
+    dhf_path: Path = ctx.obj["dhf"]
+    return CompliantFlowCore(LocalDHFAdapter(dhf_path, auto_commit=False))
 
 
 # ---------------------------------------------------------------------------
@@ -41,10 +57,32 @@ def _make_core(dhf_path: Path):
     metavar="PATH",
     help="Path to the DHF directory. Overrides COMPLIANTFLOW_DHF env var.",
 )
+@click.option(
+    "--project",
+    "projects",
+    multiple=True,
+    metavar="SLUG:PATH",
+    help=(
+        "Add a project as slug:path. Repeat for multiple projects. "
+        "When provided, --dhf is ignored and a MultiDHFAdapter is used. "
+        "Example: --project device-a:/repo/a/DHF --project device-b:/repo/b/DHF"
+    ),
+)
 @click.pass_context
-def main(ctx: click.Context, dhf: str | None) -> None:
+def main(ctx: click.Context, dhf: str | None, projects: tuple) -> None:
     """CompliantFlow CLI — analysis and traceability for CI/CD pipelines."""
     ctx.ensure_object(dict)
+    if projects:
+        parsed: dict = {}
+        for entry in projects:
+            if ":" not in entry:
+                raise click.BadParameter(
+                    f"--project must be in slug:path format, got: {entry!r}",
+                    param_hint="--project",
+                )
+            slug, path = entry.split(":", 1)
+            parsed[slug.strip()] = Path(path.strip())
+        ctx.obj["projects"] = parsed
     ctx.obj["dhf"] = _resolve_dhf(dhf)
 
 
@@ -65,7 +103,7 @@ def validate_traceability(ctx: click.Context) -> None:
     Exits 1 if any orphaned items are found.
     """
     dhf_path: Path = ctx.obj["dhf"]
-    core = _make_core(dhf_path)
+    core = _make_core(ctx)
     result = core.validate()
     if not result.get("valid", True):
         for issue in result.get("issues", []):
@@ -97,7 +135,7 @@ def validate_coverage(ctx: click.Context, pairs: tuple) -> None:
     Exits 1 if any item is uncovered.
     """
     dhf_path: Path = ctx.obj["dhf"]
-    core = _make_core(dhf_path)
+    core = _make_core(ctx)
 
     parsed = []
     for pair in pairs:
@@ -158,7 +196,7 @@ def validate_compliance(
     """
     dhf_path: Path = ctx.obj["dhf"]
     gov_dir = Path(governance_dir) if governance_dir else Path("governance")
-    core = _make_core(dhf_path)
+    core = _make_core(ctx)
     report = core.check_compliance(group_id, governance_dir=gov_dir, persist=persist)
     if report is None:
         click.echo(f"ERROR: Policy group '{group_id}' not found.", err=True)
@@ -199,7 +237,7 @@ def validate_release(ctx: click.Context, rel_id: str) -> None:
     Exits 0 if all checks pass; exits 1 if any fail.
     """
     dhf_path: Path = ctx.obj["dhf"]
-    core = _make_core(dhf_path)
+    core = _make_core(ctx)
     report = core.validate_release(rel_id)
     click.echo(json.dumps(report, default=str))
     failed = [c for c in report["checks"] if not c["passed"]]
@@ -267,7 +305,7 @@ def traceability_matrix(ctx: click.Context, doc_types: tuple) -> None:
       python -m cli traceability matrix CRS SYS SRS
     """
     dhf_path: Path = ctx.obj["dhf"]
-    core = _make_core(dhf_path)
+    core = _make_core(ctx)
     result = core.build_traceability_matrix(list(doc_types))
     click.echo(json.dumps({"columns": result["columns"]}, default=str), err=True)
     for row in result["rows"]:
@@ -286,7 +324,7 @@ def traceability_matrix(ctx: click.Context, doc_types: tuple) -> None:
 def traceability_chain(ctx: click.Context, item_id: str) -> None:
     """Show the full connected traceability chain for a single item."""
     dhf_path: Path = ctx.obj["dhf"]
-    core = _make_core(dhf_path)
+    core = _make_core(ctx)
     result = core.get_item_chain(item_id)
     if result is None:
         click.echo(f"ERROR: Item '{item_id}' not found.", err=True)
@@ -319,7 +357,7 @@ def report_traceability(ctx: click.Context, doc_types: tuple, output: str) -> No
     """
     from compliantflow.report_generator import generate_traceability_pdf
     dhf_path: Path = ctx.obj["dhf"]
-    core = _make_core(dhf_path)
+    core = _make_core(ctx)
     matrix = core.build_traceability_matrix(list(doc_types))
 
     # Enrich each row with verification_status from the items it contains
@@ -370,7 +408,7 @@ def report_compliance(ctx: click.Context, group_id: str,
     from compliantflow.report_generator import generate_compliance_pdf
     dhf_path: Path = ctx.obj["dhf"]
     gov_dir = Path(governance_dir) if governance_dir else Path("governance")
-    core = _make_core(dhf_path)
+    core = _make_core(ctx)
     result = core.check_compliance(group_id, governance_dir=gov_dir)
     if result is None:
         click.echo(f"ERROR: Policy group '{group_id}' not found.", err=True)
@@ -419,7 +457,7 @@ def cr_check_status(ctx: click.Context, cr_id: str) -> None:
     This gate only verifies the CR is authorized — not that evidence exists yet.
     """
     dhf_path: Path = ctx.obj["dhf"]
-    core = _make_core(dhf_path)
+    core = _make_core(ctx)
     item = core.get_item(cr_id)
     if item is None:
         click.echo(json.dumps({"cr_id": cr_id, "found": False, "error": f"CR '{cr_id}' not found"}))
@@ -465,7 +503,7 @@ def cr_generate_report(ctx: click.Context, cr_id: str, since: str | None) -> Non
     """
     import subprocess  # noqa: PLC0415
     dhf_path: Path = ctx.obj["dhf"]
-    core = _make_core(dhf_path)
+    core = _make_core(ctx)
     item = core.get_item(cr_id)
 
     cr_data: dict = {}
@@ -594,7 +632,7 @@ def test_status(ctx: click.Context, tc_id: str) -> None:
     Exits 1 if the TC is not found.
     """
     dhf_path: Path = ctx.obj["dhf"]
-    core = _make_core(dhf_path)
+    core = _make_core(ctx)
     result = core.get_test_result(tc_id)
     if result is None:
         click.echo(json.dumps({"tc_id": tc_id, "found": False}))
@@ -616,7 +654,7 @@ def test_list(ctx: click.Context, status_filter: str | None) -> None:
     Outputs one JSON object per result to stdout (NDJSON).
     """
     dhf_path: Path = ctx.obj["dhf"]
-    core = _make_core(dhf_path)
+    core = _make_core(ctx)
     sf = status_filter.upper() if status_filter else None
     results = core.get_all_test_results(status_filter=sf)
     for rec in results.values():
