@@ -181,6 +181,42 @@ def validate_compliance(
     )
 
 
+@validate.command("release")
+@click.argument("rel_id")
+@click.pass_context
+def validate_release(ctx: click.Context, rel_id: str) -> None:
+    """Evaluate whether a REL item meets all release criteria.
+
+    REL_ID is the identifier of the release (e.g. REL-002).
+
+    Checks:
+      1. REL item exists.
+      2. All included CRs are completed.
+      3. No open DEF items exist (draft/open/in_progress).
+      4. All SYS requirements are verified.
+
+    Outputs a JSON report to stdout.
+    Exits 0 if all checks pass; exits 1 if any fail.
+    """
+    dhf_path: Path = ctx.obj["dhf"]
+    core = _make_core(dhf_path)
+    report = core.validate_release(rel_id)
+    click.echo(json.dumps(report, default=str))
+    failed = [c for c in report["checks"] if not c["passed"]]
+    if failed:
+        for c in failed:
+            click.echo(f"  ✗ [{c['name']}] {c['details']}", err=True)
+        click.echo(
+            f"✗ Release gate FAILED: {len(failed)}/{len(report['checks'])} check(s) did not pass.",
+            err=True,
+        )
+        sys.exit(1)
+    click.echo(
+        f"✓ Release gate PASSED: all {len(report['checks'])} checks passed for {rel_id}.",
+        err=True,
+    )
+
+
 @validate.group("compliance-history")
 def validate_compliance_history() -> None:
     """Compliance run history commands."""

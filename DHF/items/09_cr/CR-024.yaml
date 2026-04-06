@@ -13,4 +13,9 @@ affected_items:
 - SYS-006
 - CRS-008
 type: CR
-status: draft
+status: completed
+impact_assessment: 'Adds a new validate release subcommand to compliantflow/cli.py
+  and a validate_release() method to CompliantFlowCore. Checks: (1) all CRs in included_items
+  are completed, (2) no open DEF items exist in the DHF, (3) all SYS items have verification_status==verified.
+  Exits 0 if all checks pass, 1 if any fail. No schema or DHF data changes.'
+assigned_to: charles
