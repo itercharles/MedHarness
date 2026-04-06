@@ -29,6 +29,7 @@ class PolicyEngine:
             'all_tests_passing': self._check_all_tests_passing,
             'verification_complete': self._check_verification_complete,
             'cr_git_evidence': self._check_cr_git_evidence,
+            'no_open_defects': self._check_no_open_defects,
         }
 
     def load_policy_group(self, path: Path) -> Optional[PolicyGroup]:
@@ -515,6 +516,51 @@ class PolicyEngine:
             f"CR {cr_id!r} has no linked commits in report",
             {"cr_id": cr_id, "commit_count": 0, "path": path_str},
         )
+
+    def _check_no_open_defects(
+        self,
+        severity_threshold: list,
+        block_states: Optional[list] = None,
+    ) -> Tuple[bool, str, Optional[Dict]]:
+        """Check that no DEF items with the given severities are in a blocking state.
+
+        Args:
+            severity_threshold: List of severity values that are blocking, e.g.
+                ['Critical', 'High'].
+            block_states: DEF lifecycle states that constitute an open defect.
+                Defaults to ['open', 'in_progress'].
+        """
+        if block_states is None:
+            block_states = ['open', 'in_progress']
+
+        blocking = []
+        for uid in self._nodes_for_type('DEF'):
+            item = self.core.graph.graph.nodes[uid].get('item') or {}
+            if item.get('status') in block_states and item.get('severity') in severity_threshold:
+                blocking.append({
+                    'uid': uid,
+                    'severity': item.get('severity'),
+                    'status': item.get('status'),
+                    'title': item.get('title', ''),
+                })
+
+        passed = len(blocking) == 0
+        if passed:
+            details = (
+                f"No open defects with severity in {severity_threshold}"
+            )
+        else:
+            ids = ', '.join(b['uid'] for b in blocking)
+            details = (
+                f"{len(blocking)} open defect(s) with severity in "
+                f"{severity_threshold}: {ids}"
+            )
+        evidence = {
+            'severity_threshold': severity_threshold,
+            'block_states': block_states,
+            'blocking_defects': blocking,
+        }
+        return passed, details, evidence
 
     def _check_verification_complete(self, type_code: str) -> Tuple[bool, str, Optional[Dict]]:
         """Check that all items of type_code have verification_status == 'verified'."""
