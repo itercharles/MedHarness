@@ -56,39 +56,36 @@ verification step for compliance-related changes.
 
 ## PR And CR Workflow
 
+CR items have two states: `planned` (identified, not yet merged) and `completed`
+(merged to `main`). The PR merge itself is the approval event — no intermediate
+approval states are required.
+
 When work is tied to a change request:
 
-1. Transition the CR into an allowed implementation state before code work.
-   - Sequence: `draft → in_review → approved → implementing`
-   - Before the first transition, check blocking criteria and pre-populate all
-     required fields (`impact_assessment`, `assigned_to`, etc.) in the CR YAML.
-     Run `python -m utils item transitions <CR-ID>` to see what is required.
-     Filling fields after a failed transition wastes a round trip.
+1. Confirm the CR exists and is `planned`. If the CR does not exist yet, create
+   it with `python -m utils item create --type CR` before writing any code.
 2. If the CR involves new tests, read `tests/fixtures/test_data.py` and the
    relevant doc type configs before writing any test code. Confirm which fields
-   are allowed per schema — test fixture mismatches (missing fields, wrong
-   values) are the most common source of iteration in this repo.
+   are allowed per schema — test fixture mismatches are the most common source
+   of iteration in this repo.
 3. Make the code and document changes in the owning layer.
-3. If this PR fully implements the CR, transition the CR to `completed` and
-   include that YAML change in the PR commit. The CR status lands on main at
-   merge time alongside the code — do not defer it to after merge.
-4. Validate locally with the existing commands and test suites.
-5. Open a PR that includes the CR ID in the title, for example:
+4. Transition the CR to `completed` and include that YAML change in the same
+   commit as the implementation. The CR status lands on `main` at merge time —
+   do not defer it to after merge.
+5. Validate locally with the existing commands and test suites.
+6. Open a PR that includes the CR ID in the title, for example:
 
 ```bash
 feat(<CR-ID>): update compliance workflow
 ```
 
-6. **Immediately after opening the PR, begin monitoring.** Do not treat PR
+7. **Immediately after opening the PR, begin monitoring.** Do not treat PR
    creation as a handoff point. Stay in the session and:
    - Poll CI status until all checks pass or a failure requires action.
    - Check for review comments and address them with follow-up commits.
    - Do not move on to other work until the PR is merged or explicitly handed
      off by the user.
-7. Always merge with squash: one commit per PR on main.
-
-`cr check-status` (Phase 0 CI gate) accepts CRs in `approved`, `implementing`,
-or `completed` state.
+8. Always merge with squash: one commit per PR on main.
 
 The PR title requirement matters because Phase 0 extracts CR IDs from the PR
 title and fails immediately if none are present.
@@ -111,49 +108,83 @@ separate authentication.
 ## Specialized Agents
 
 Three sub-agents are available in `.claude/agent-memory/`. Each carries
-persistent memory about their domain. Consult them before making decisions in
-their area rather than re-deriving context from scratch.
+persistent memory about their domain. The main session acts as orchestrator —
+it consults agents, synthesizes their outputs, and makes decisions. Never
+delegate synthesis to a sub-agent.
 
-### product-manager
+### Agent Roles
 
-**When to use:** Deciding what to build, scoping a CR, evaluating whether a
-proposed change aligns with the roadmap, understanding customer persona
-trade-offs, or assessing competitive positioning.
+**product-manager** — scope, roadmap, and business context
 
-**Memory covers:** Product overview, released vs. in-progress feature inventory,
-active CRs, strategic prioritization rationale, competitive landscape (as of
-April 2026), full roadmap through v3.0.0.
+- When to use: scoping a CR, validating roadmap fit, understanding customer
+  trade-offs, evaluating competitive positioning.
+- Memory covers: product overview, feature inventory, active CRs, strategy,
+  competitive landscape, full roadmap through v3.0.0.
+- Skip for: implementation patterns, architectural decisions.
 
-**Do not use for:** How to implement something, which layer to change, or
-architectural trade-offs.
+**system-architect** — system design and layer boundaries
 
-### software-developer
+- When to use: deciding which layer owns a change (`compliantflow/` vs.
+  `DHF/utils/`), extending the `DHFAdapter` protocol, designing a new
+  subsystem, assessing architectural feasibility.
+- Memory covers: `DHFAdapter` protocol, two-CLI split rationale,
+  `PolicyEngine` dispatch, `ResultStore`, `ComplianceStore`, LLM abstraction,
+  graph edge conventions, CI pipeline structure, Q2 2026 roadmap assessment.
+- Skip for: product prioritization, line-level implementation details.
 
-**When to use:** Implementing a feature or fix — which patterns to follow, how
-to write test fixtures, which CLI to extend, how the CR lifecycle state machine
-works in code.
+**software-developer** — implementation patterns and conventions
 
-**Memory covers:** Core architecture patterns, read-only vs. mutation split,
-`PolicyEngine` check registration, `ResultStore` append semantics, graph edge
-direction, ID generation rules, test fixture conventions.
+- When to use: implementing a feature or fix — which patterns to follow, how
+  to write test fixtures, which CLI to extend.
+- Memory covers: read-only vs. mutation split, `PolicyEngine` check
+  registration, `ResultStore` semantics, graph edge direction, ID generation
+  rules, test fixture conventions.
+- Skip for: product strategy, architectural boundary decisions.
 
-**Do not use for:** Product strategy, roadmap decisions, or architectural
-trade-offs above the implementation layer.
+### Orchestration Patterns
 
-### system-architect
+Use the pattern that matches the task. Run agents in parallel when their inputs
+are independent; sequentially when the output of one informs the next.
 
-**When to use:** Designing a new subsystem, evaluating whether a change belongs
-in `compliantflow/` vs. `DHF/utils/`, deciding whether to extend the
-`DHFAdapter` protocol, or assessing roadmap feasibility from an architectural
-standpoint.
+**New feature / CR implementation**
 
-**Memory covers:** `DHFAdapter` protocol design, two-CLI split rationale,
-`PolicyEngine` dispatch, `ResultStore`, `ComplianceStore`, LLM abstraction,
-graph edge convention, CI pipeline structure, Q2 2026 roadmap architecture
-assessment.
+1. Consult `product-manager` — validate scope, roadmap fit, priority.
+2. Consult `system-architect` — identify affected layer(s), validate design.
+   (Steps 1 and 2 can run in parallel if scope is already clear.)
+3. Implement using `software-developer` patterns and conventions.
 
-**Do not use for:** Product prioritization, business strategy, or
-line-level implementation details.
+**Bug fix / defect**
+
+1. Consult `software-developer` — affected patterns, conventions.
+2. Consult `system-architect` only if the fix crosses architectural boundaries.
+   Skip `product-manager` unless the defect has customer-facing scope impact.
+
+**Architectural decision** (new protocol method, new layer, new abstraction)
+
+1. Consult `system-architect` and `product-manager` in parallel — feasibility
+   and roadmap alignment.
+2. Synthesize both outputs before designing the solution.
+
+**Roadmap / planning**
+
+1. Consult `product-manager` — primary source for prioritization and strategy.
+2. Consult `system-architect` for feasibility constraints on specific items.
+
+### Memory Update Protocol
+
+After completing significant work, update the affected agent's memory so future
+sessions start with accurate context. Use judgment — only update when the work
+reveals something non-obvious that the agent would otherwise re-derive wrongly.
+
+| What changed | Update |
+|---|---|
+| New CR completed or scope changed | `product-manager/project_crs.md` |
+| New feature shipped or roadmap shifted | `product-manager/project_features.md` or `project_strategy.md` |
+| Architectural decision made (new protocol method, layer boundary changed) | `system-architect/project_architecture_decisions.md` |
+| New coding pattern established or existing pattern corrected | `software-developer/project_compliantflow_context.md` |
+
+Do not update agent memory for routine implementation work that is already
+captured in code and commit history.
 
 ---
 
