@@ -16,3 +16,9 @@ affected_items:
 - CRS-011
 type: CR
 status: planned
+implementation_notes: 'Deferred indefinitely. 510(k) and CE marking submission formats
+  are highly customer- and product-specific; building configurable templates speculatively
+  risks producing the wrong thing. The CR also requires a regulatory consultant review
+  as an acceptance criterion, which makes it unresolvable without an active submission
+  engagement. Revisit when a customer is preparing an actual regulatory submission
+  using CompliantFlow — that engagement defines the correct scope.'
