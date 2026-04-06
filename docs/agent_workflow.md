@@ -79,11 +79,13 @@ When work is tied to a change request:
 feat(<CR-ID>): update compliance workflow
 ```
 
-6. While the PR is open, continuously monitor for review comments and address
-   them with follow-up commits before merging.
-7. Let the existing CI phases enforce the merge path. Monitor the PR until all
-   checks pass — do not hand off and move on.
-8. Always merge with squash: one commit per PR on main.
+6. **Immediately after opening the PR, begin monitoring.** Do not treat PR
+   creation as a handoff point. Stay in the session and:
+   - Poll CI status until all checks pass or a failure requires action.
+   - Check for review comments and address them with follow-up commits.
+   - Do not move on to other work until the PR is merged or explicitly handed
+     off by the user.
+7. Always merge with squash: one commit per PR on main.
 
 `cr check-status` (Phase 0 CI gate) accepts CRs in `approved`, `implementing`,
 or `completed` state.
