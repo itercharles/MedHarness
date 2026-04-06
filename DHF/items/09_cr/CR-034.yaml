@@ -1,0 +1,18 @@
+id: CR-034
+title: Consolidate agent guidance into shared docs/
+description: Move shared agent/harness guidance out of CLAUDE.md and AGENTS.md into
+  two new canonical files — docs/agent_environment.md and docs/agent_workflow.md.
+  Slim CLAUDE.md and AGENTS.md down to thin entrypoints that reference the shared
+  docs. Update README.md to reflect the new structure.
+justification: Agent guidance was duplicated across CLAUDE.md and AGENTS.md, causing
+  drift and maintenance overhead. A single source of truth in docs/ ensures all agent
+  harnesses read the same environment and workflow instructions.
+priority: Low
+affected_items:
+- SYS-006
+type: CR
+status: completed
+impact_assessment: Documentation-only change. No DHF schema, policy, or runtime code
+  affected. CLAUDE.md and AGENTS.md retain their harness-specific sections; shared
+  content moves to docs/agent_environment.md and docs/agent_workflow.md.
+assigned_to: charles
