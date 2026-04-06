@@ -179,6 +179,59 @@ def create_test_dhf() -> Path:
             ],
         },
         {
+            'code': 'REL',
+            'name': 'Release',
+            'prefix': 'REL-',
+            'directory': '10_rel',
+            'icon': '🚀',
+            'page_enabled': True,
+            'page_number': 4,
+            'properties': [
+                'id',
+                {'name': 'title', 'format': 'short_text', 'label': 'Title'},
+                {'name': 'version', 'format': 'short_text', 'label': 'Version'},
+                {'name': 'content', 'format': 'long_text', 'label': 'Content'},
+                {'name': 'included_items', 'format': 'item_multiselect', 'target_types': ['CR'], 'label': 'Included Items'},
+                {'name': 'release_notes', 'format': 'long_text', 'label': 'Release Notes'},
+            ],
+            'lifecycle': {
+                'transitions': [
+                    {'from_states': [None], 'to_state': 'draft'},
+                    {'from_states': ['draft'], 'to_state': 'approved',
+                     'criteria': [
+                         {'id': 'version_set', 'name': 'Version defined',
+                          'check_type': 'field_not_empty', 'field': 'version', 'required': True},
+                     ], 'label': 'Approve'},
+                    {'from_states': ['approved'], 'to_state': 'released', 'label': 'Release'},
+                ]
+            },
+        },
+        {
+            'code': 'DEF',
+            'name': 'Defect',
+            'prefix': 'DEF-',
+            'directory': '14_def',
+            'icon': '🐛',
+            'page_enabled': True,
+            'page_number': 13,
+            'properties': [
+                'id',
+                {'name': 'title', 'format': 'short_text', 'label': 'Title'},
+                {'name': 'description', 'format': 'long_text', 'label': 'Description'},
+                {'name': 'severity', 'format': 'select', 'options': ['Critical', 'High', 'Medium', 'Low'], 'label': 'Severity'},
+            ],
+            'lifecycle': {
+                'transitions': [
+                    {'from_states': [None], 'to_state': 'draft'},
+                    {'from_states': ['draft'], 'to_state': 'open', 'label': 'Submit'},
+                    {'from_states': ['open'], 'to_state': 'in_progress', 'label': 'Start Work'},
+                    {'from_states': ['in_progress'], 'to_state': 'resolved', 'label': 'Resolve'},
+                    {'from_states': ['resolved'], 'to_state': 'closed', 'label': 'Close'},
+                    {'from_states': ['open'], 'to_state': 'cancelled', 'label': "Won't Fix"},
+                ]
+            },
+        },
+        {
             'code': 'CR',
             'name': 'Change Request',
             'prefix': 'CR-',
@@ -215,7 +268,7 @@ def create_test_dhf() -> Path:
     doc_type_dirs = [
         "00_uc", "01_req_crs", "02_req_sys", "03_req_srs",
         "04_req_sds", "05_swdd", "06_swad", "07_sysarch",
-        "08_cr", "09_risk", "10_rcm", "11_tc",
+        "08_cr", "09_risk", "10_rcm", "10_rel", "11_tc", "14_def",
     ]
 
     items_dir = test_dir / "items"

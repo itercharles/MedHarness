@@ -253,6 +253,102 @@ class CompliantFlowCore:
     def validate(self) -> Dict[str, Any]:
         return self.graph.validate()
 
+    def validate_release(self, rel_id: str) -> Dict[str, Any]:
+        """Evaluate whether a REL item meets all release criteria.
+
+        Checks:
+          1. REL item exists.
+          2. All CRs in ``included_items`` are completed.
+          3. No open DEF items exist (status in draft/open/in_progress).
+          4. All SYS items have ``verification_status == 'verified'``.
+
+        Returns a dict with keys:
+          - ``passed`` (bool): True only when all checks pass.
+          - ``rel_id`` (str): the REL item ID checked.
+          - ``checks`` (list): per-check result dicts with
+            ``name``, ``passed``, ``details``, and optionally ``items``.
+        """
+        _OPEN_DEF_STATUSES = {"draft", "open", "in_progress"}
+
+        checks: List[Dict[str, Any]] = []
+
+        # 1. REL exists
+        rel = self.get_item(rel_id)
+        if rel is None:
+            return {
+                "passed": False,
+                "rel_id": rel_id,
+                "checks": [{"name": "rel_exists", "passed": False,
+                             "details": f"REL item '{rel_id}' not found."}],
+            }
+        checks.append({"name": "rel_exists", "passed": True,
+                        "details": f"REL item '{rel_id}' found (status: {rel.get('status', 'unknown')})."})
+
+        # 2. CRs in included_items are all completed
+        included_crs = rel.get("included_items") or []
+        open_crs = []
+        for cr_id in included_crs:
+            cr = self.get_item(cr_id)
+            if cr is None or cr.get("status") != "completed":
+                actual = cr.get("status", "not found") if cr else "not found"
+                open_crs.append({"id": cr_id, "status": actual})
+        cr_check: Dict[str, Any] = {
+            "name": "crs_completed",
+            "passed": len(open_crs) == 0,
+            "details": (
+                f"All {len(included_crs)} included CR(s) are completed."
+                if not open_crs
+                else f"{len(open_crs)}/{len(included_crs)} included CR(s) are not completed."
+            ),
+        }
+        if open_crs:
+            cr_check["items"] = open_crs
+        checks.append(cr_check)
+
+        # 3. No open DEF items
+        all_items = self.get_all_items()
+        open_defs = [
+            {"id": i["id"], "status": i.get("status", "unknown"),
+             "title": i.get("title", "")}
+            for i in all_items
+            if i["id"].startswith("DEF-") and i.get("status") in _OPEN_DEF_STATUSES
+        ]
+        def_check: Dict[str, Any] = {
+            "name": "no_open_defects",
+            "passed": len(open_defs) == 0,
+            "details": (
+                "No open defects found."
+                if not open_defs
+                else f"{len(open_defs)} open defect(s) must be resolved before release."
+            ),
+        }
+        if open_defs:
+            def_check["items"] = open_defs
+        checks.append(def_check)
+
+        # 4. All SYS items are verified
+        unverified_sys = [
+            {"id": i["id"], "verification_status": i.get("verification_status", "not_verified"),
+             "title": i.get("title", "")}
+            for i in all_items
+            if i["id"].startswith("SYS-") and i.get("verification_status") != "verified"
+        ]
+        sys_check: Dict[str, Any] = {
+            "name": "sys_requirements_verified",
+            "passed": len(unverified_sys) == 0,
+            "details": (
+                "All SYS requirements are verified."
+                if not unverified_sys
+                else f"{len(unverified_sys)} SYS requirement(s) are not verified."
+            ),
+        }
+        if unverified_sys:
+            sys_check["items"] = unverified_sys
+        checks.append(sys_check)
+
+        passed = all(c["passed"] for c in checks)
+        return {"passed": passed, "rel_id": rel_id, "checks": checks}
+
     def check_coverage(self, pairs: List[tuple]) -> Dict[str, Any]:
         """Check that every item at the parent level is covered by at least one child.
 
