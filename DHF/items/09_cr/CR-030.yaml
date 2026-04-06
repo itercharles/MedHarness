@@ -18,3 +18,14 @@ affected_items:
 - CRS-011
 type: CR
 status: planned
+implementation_notes: 'Closed without implementation. The CI pipeline (Phase 4) already
+  generates traceability_report.pdf and compliance_report.pdf and uploads them as
+  the compliance-evidence artifact on every run. These PDF artifacts satisfy the stated
+  QA/RA persona need — reviewing compliance status and traceability coverage without
+  CLI access — at zero additional implementation cost. A web dashboard would still
+  require someone to start a local server (CLI involvement), offers no improvement
+  over the PDFs for regulatory review purposes, and adds a Flask dependency and a
+  new server process to maintain. If a browser-accessible view becomes necessary in
+  future, the appropriate vehicle is the full write-capable Web UI planned for v3.0.0,
+  not a read-only intermediate step. Decision: defer to v3.0.0 or close permanently
+  once v3.0.0 ships.'
