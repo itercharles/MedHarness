@@ -95,18 +95,67 @@ title and fails immediately if none are present.
 
 ### GitHub tooling
 
-The `gh` CLI is **not available**. Use `git push` to push branches and the
-GitHub MCP tools (`mcp__github__*`) for all GitHub interactions (creating PRs,
-checking CI status, merging).
+Use the `gh` CLI for all GitHub interactions (creating PRs, checking CI status,
+merging). It is available and preferred over the GitHub MCP tools, which require
+separate authentication.
 
-- Merge PRs with squash: `mcp__github__merge_pull_request` with `merge_method: squash`.
-- Delete the branch manually after merge (the GitHub MCP server has no
-  delete-branch tool; use the GitHub UI or `git push origin --delete <branch>`).
+- Create PRs: `gh pr create --title "..." --base main --body "..."`
+- Check CI: `gh pr checks <number> --repo <owner>/<repo>`
+- Merge with squash: `gh pr merge <number> --squash --delete-branch`
 
 ### Branch naming
 
 - `feature/`, `fix/`, `refactor/` — human-initiated work
 - `claude/` — Claude Code sessions
+
+## Specialized Agents
+
+Three sub-agents are available in `.claude/agent-memory/`. Each carries
+persistent memory about their domain. Consult them before making decisions in
+their area rather than re-deriving context from scratch.
+
+### product-manager
+
+**When to use:** Deciding what to build, scoping a CR, evaluating whether a
+proposed change aligns with the roadmap, understanding customer persona
+trade-offs, or assessing competitive positioning.
+
+**Memory covers:** Product overview, released vs. in-progress feature inventory,
+active CRs, strategic prioritization rationale, competitive landscape (as of
+April 2026), full roadmap through v3.0.0.
+
+**Do not use for:** How to implement something, which layer to change, or
+architectural trade-offs.
+
+### software-developer
+
+**When to use:** Implementing a feature or fix — which patterns to follow, how
+to write test fixtures, which CLI to extend, how the CR lifecycle state machine
+works in code.
+
+**Memory covers:** Core architecture patterns, read-only vs. mutation split,
+`PolicyEngine` check registration, `ResultStore` append semantics, graph edge
+direction, ID generation rules, test fixture conventions.
+
+**Do not use for:** Product strategy, roadmap decisions, or architectural
+trade-offs above the implementation layer.
+
+### system-architect
+
+**When to use:** Designing a new subsystem, evaluating whether a change belongs
+in `compliantflow/` vs. `DHF/utils/`, deciding whether to extend the
+`DHFAdapter` protocol, or assessing roadmap feasibility from an architectural
+standpoint.
+
+**Memory covers:** `DHFAdapter` protocol design, two-CLI split rationale,
+`PolicyEngine` dispatch, `ResultStore`, `ComplianceStore`, LLM abstraction,
+graph edge convention, CI pipeline structure, Q2 2026 roadmap architecture
+assessment.
+
+**Do not use for:** Product prioritization, business strategy, or
+line-level implementation details.
+
+---
 
 ## CI Model
 
