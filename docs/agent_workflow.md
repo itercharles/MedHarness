@@ -60,7 +60,15 @@ When work is tied to a change request:
 
 1. Transition the CR into an allowed implementation state before code work.
    - Sequence: `draft → in_review → approved → implementing`
-2. Make the code and document changes in the owning layer.
+   - Before the first transition, check blocking criteria and pre-populate all
+     required fields (`impact_assessment`, `assigned_to`, etc.) in the CR YAML.
+     Run `python -m utils item transitions <CR-ID>` to see what is required.
+     Filling fields after a failed transition wastes a round trip.
+2. If the CR involves new tests, read `tests/fixtures/test_data.py` and the
+   relevant doc type configs before writing any test code. Confirm which fields
+   are allowed per schema — test fixture mismatches (missing fields, wrong
+   values) are the most common source of iteration in this repo.
+3. Make the code and document changes in the owning layer.
 3. If this PR fully implements the CR, transition the CR to `completed` and
    include that YAML change in the PR commit. The CR status lands on main at
    merge time alongside the code — do not defer it to after merge.
