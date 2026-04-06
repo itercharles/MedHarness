@@ -29,8 +29,13 @@ Use these repository surfaces according to what kind of truth you need:
    - compliance expectations and policy definitions
 4. [`/.github/workflows/ci-pipeline.yml`](../.github/workflows/ci-pipeline.yml)
    - enforced acceptance path and merge gates
-5. [`AGENTS.md`](../AGENTS.md) or [`CLAUDE.md`](../CLAUDE.md)
-   - agent-specific entry guidance
+5. Agent entrypoint for your harness:
+   - Claude Code → [`CLAUDE.md`](../CLAUDE.md)
+   - OpenAI Codex → [`AGENTS.md`](../AGENTS.md)
+   - Gemini CLI → [`GEMINI.md`](../GEMINI.md)
+   - GitHub Copilot → [`.github/copilot-instructions.md`](../.github/copilot-instructions.md)
+   - Cursor → [`.cursor/rules/agent.mdc`](../.cursor/rules/agent.mdc)
+   - Windsurf → [`.windsurfrules`](../.windsurfrules)
 
 Do not create a second command set, a second CI path, or a second architecture
 document unless the repository workflow actually changes.
