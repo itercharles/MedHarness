@@ -6,7 +6,9 @@ type: project
 
 **Product positioning:** Developer-first, CLI-native, Git-native ALM for medical device software teams. Competes on: open format (YAML), CI/CD integration, low cost, auditability. Does NOT currently compete on: GUI usability, cloud collaboration, enterprise access control.
 
-**Commercial context (updated 2026-04-02):** CompliantFlow is a commercial product sold/licensed to other medical device companies. The compliance check engine is the core commercial differentiator. Web UI is explicitly NOT a priority — it should not block or delay compliance engine work.
+**Commercial context (updated 2026-04-07):** CompliantFlow is a commercial product sold/licensed to other medical device companies. The compliance check engine is the core commercial differentiator. Web UI is explicitly NOT a priority — it should not block or delay compliance engine work.
+
+**Formal product strategy document:** `docs/product_strategy.md` — authoritative source for mission, strategic objectives, positioning, selling points, ICP, roadmap, and strategic constraints. PM-owned. Updated 2026-04-07. Read this before making any roadmap or prioritisation decisions.
 
 **Commercial value propositions (prioritized):**
 1. Automated compliance evidence generation against IEC 62304 / ISO 14971 — replaces manual audit prep that takes weeks
@@ -21,6 +23,7 @@ type: project
 3. Architecture extensibility (DHFAdapter protocol) is a deliberate design choice — do not violate it
 4. GitOps approval model is intentional — do not add explicit status fields to requirement items
 5. Web UI does NOT block core compliance work — it is a later milestone
+6. **FDA sees PDFs, not YAML.** The YAML-in-Git storage is an internal implementation detail. Regulatory submissions use the generated PDF evidence reports (traceability_report.pdf, compliance_report.pdf). Auditor/FDA unfamiliarity with YAML is not a real risk — they evaluate the PDF output, which is a conventional submission artifact. Do not raise "FDA won't accept YAML" as a commercial risk.
 
 **Strategic time constraint (updated 2026-04-02):**
 Ketryx ($55M raised) will move down-market within 18–24 months (est. Q4 2027). CompliantFlow must have 3–5 paying SaMD startup customer references with 510(k) or CE mark submissions before then.
@@ -108,14 +111,20 @@ Success metrics:
 
 ---
 
-**Strategic gaps (current):**
-- ISO 14971 governance file absent — top v2.0.0 priority
-- Release gate not enforced (REL items) — v2.0.0
-- Defect hook not in CI (DEF lifecycle) — v2.0.0
-- GitHub-only artifact integration — v2.0.0 expansion
-- Air-gapped semantic checks require Ollama ops burden — v2.1.0
-- No RDM migration tooling — v2.0.0
-- No FDA Part 11 brief — v2.0.0
-- No multi-project / multi-DHF support — v2.1.0
-- No authentication or access control — v3.0.0
-- Web UI — v2.1.0 read-only dashboard, v3.0.0 full
+**Strategic gaps (updated 2026-04-07):**
+All v2.0.0 gaps are resolved. Active gaps driving CR-035 to CR-049:
+- ISO 14971 policy coverage incomplete — CR-036
+- 31 IEC 62304 checks remain manual — CR-037
+- Compliance feedback is not actionable (PASS/FAIL only) — CR-035
+- No time-based drift detection between merges — CR-038
+- Field-level schema not exposed through ProjectSchema — CR-039 (architectural prerequisite)
+- No machine-readable context for AI coding agents — CR-040
+- No pre-commit draft item validation — CR-041
+- No single at-a-glance compliance status command — CR-042
+- Compliance reports are PDF-only, not machine-readable — CR-043
+- ISO 13485 (QMS) not covered — CR-044
+- SOUP vulnerabilities not monitored continuously — CR-045
+- RDM migration produces converted files but not validated compliance — CR-046
+- No 510(k) submission package assembly command — CR-047
+- No REST API layer (blocks Web UI, Jira, AI tool plugins) — CR-048
+- No AI coding agent compliance harness — CR-049
