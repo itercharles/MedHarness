@@ -12,19 +12,104 @@ features ship.
 
 ---
 
-## What Problem We Solve
+## Mission
 
-Medical device software teams must maintain a Design History File (DHF) throughout
-the product lifecycle and produce submission-ready compliance evidence before every
-regulatory review. Three problems make this consistently painful:
+**Make every change compliant. Zero compliance debt, continuously.**
+
+This is the primary objective — not efficiency, not audit savings. Those are
+consequences. The mission is a state: a medical device software codebase where
+every commit, every requirement change, every test result, and every architecture
+update is immediately verified against the applicable regulatory standards. No
+backlog of unverified changes. No compliance debt accumulating between audits.
+
+Everything else in this document follows from that mission.
+
+---
+
+## Strategic Objectives
+
+### Objective 1 — Zero compliance debt at every commit (primary)
+
+Traditional medical device development accumulates compliance debt continuously:
+requirements are written without traceability, tests run without being linked to
+DHF items, architecture changes land without policy checks. The debt is settled
+manually before each audit — weeks of rework, late in the cycle, at the worst
+possible time.
+
+CompliantFlow eliminates this model. Compliance is a CI gate, not an audit event.
+Every merge is verified against IEC 62304, ISO 14971, and IEC 82304-1. Traceability
+is computed automatically. Evidence is generated on every run. The debt cannot
+accumulate because the gate blocks non-compliant changes at the commit.
+
+**Consequence for the customer:** Audit prep collapses from 4–6 weeks to a review
+day. A 510(k) submission is not a crisis — it is a download of the latest CI
+artifacts.
+
+### Objective 2 — Be the compliance infrastructure for AI-assisted medtech development (co-equal)
+
+AI coding tools (Copilot, Cursor, Claude Code) are now generating requirements,
+tests, architecture descriptions, and DHF content at high speed. For normal
+software, this is a pure productivity gain. For medical device software, it creates
+a new problem: compliance verification has not kept pace with content generation
+speed.
+
+Without a compliance gate, AI coding tools make the DHF problem worse. AI
+generates requirements faster → more items to maintain traceability for. AI
+produces tests faster → more results to link. AI proposes architecture changes
+faster → more cross-layer impacts to verify. Every AI-generated change that is not
+immediately compliance-verified is debt — accumulating faster than before.
+
+CompliantFlow removes this ceiling. The CI gate runs on every commit regardless
+of whether it was authored by a human or an AI agent. Zero-debt compliance scales
+with however fast the team moves.
+
+| Scenario | Compliance debt | Audit prep |
+|---|---|---|
+| Traditional (no AI, no tool) | Accumulates every sprint | 4–6 weeks × 2 people |
+| AI coding only | Accumulates faster | Same or worse |
+| CompliantFlow only | Zero | 1 day |
+| **AI coding + CompliantFlow** | **Zero** | **1 day** |
+
+The efficiency gain is a consequence of eliminating debt, not a separate feature.
+The faster a team moves — whether human or AI-driven — the more valuable the gate
+becomes.
+
+### Objective 3 — Provide a compliance harness for AI coding in medtech (forward-looking)
+
+Beyond acting as a verification layer for AI-generated content, CompliantFlow is
+positioned to become the structured environment that makes compliant AI coding
+possible in medtech in the first place.
+
+AI coding agents require context to generate correct output: what schema a DHF item
+must follow, what lifecycle states are valid, which fields are required for
+traceability, what compliance policies apply. Without that structure, AI generates
+plausible-looking content that silently violates regulatory requirements.
+CompliantFlow's DHF schema, lifecycle definitions, policy rules, and agent
+entrypoints (CLAUDE.md, AGENTS.md) already provide exactly this context. The
+system is already a harness — this objective is to make that role explicit,
+supported, and marketed.
+
+The forward-looking direction: CompliantFlow ships with pre-configured AI coding
+agent context that enables any AI coding tool to generate IEC 62304-compliant
+requirements, risk items, test stubs, and change requests correctly, with the
+compliance gate confirming the output. This makes CompliantFlow the natural
+platform for medtech teams adopting AI-assisted development, not just a tool they
+run alongside it.
+
+This objective is directional — it informs roadmap decisions but does not drive
+near-term CRs.
+
+---
+
+## What Problem We Solve
 
 ### 1. DHF maintenance consumes engineering time without producing value
 
 Every requirement change, architecture update, or test result must be manually
 reflected in a traceability matrix, linked to test records, and reconciled with
 change control documentation. This happens every sprint. It requires diligence, not
-expertise — which means it occupies a significant fraction of a QA engineer's week
-and pulls senior engineers away from product work whenever a gap is found.
+expertise — occupying a significant fraction of a QA engineer's week and pulling
+senior engineers away from product work.
 
 **What we do:** DHF items are YAML files. Changes are commits. Traceability is a
 graph computed automatically. Engineers write the requirement; the tool handles the
@@ -33,73 +118,41 @@ bookkeeping. Effective recovery: ~0.5 FTE per 10–20 person team.
 ### 2. Pre-submission audit prep takes weeks and blocks shipping
 
 Before a 510(k) submission or notified body audit, someone assembles the evidence
-package — traceability matrix, test results, compliance coverage — manually from
-wherever it lives (Confluence, Jira, spreadsheets, test runner exports). This
-typically takes 4–6 weeks for two people and happens at the worst possible time:
-immediately before a submission deadline.
+package manually from wherever it lives (Confluence, Jira, spreadsheets, test runner
+exports). This typically takes 4–6 weeks for two people, immediately before a
+submission deadline.
 
 **What we do:** The CI pipeline generates a traceability PDF and a compliance PDF
-on every merge. By submission day, the evidence package already exists and reflects
-current product state. Prep time collapses from weeks to a review day. Cost
-savings: $25–40K per submission (2–3 person-months at blended rates).
+on every merge. By submission day, the evidence package already exists. Prep time
+collapses from weeks to a review day. Cost savings: $25–40K per submission.
 
-### 3. There is no enforcement mechanism — compliance gaps discovered at audit are catastrophic
+### 3. No enforcement — compliance gaps discovered at audit are catastrophic
 
-Without automated checks, non-compliant changes accumulate silently during
-development and surface at internal audits (expensive rework) or during FDA/notified
-body review (potentially fatal to the submission timeline). No existing tool blocks
-a merge that creates a traceability gap or drops a required compliance attribute.
+Without automated checks, non-compliant changes accumulate silently and surface at
+internal audits (expensive rework) or during FDA/notified body review (potentially
+fatal to the submission timeline).
 
 **What we do:** A four-phase CI gate enforces compliance on every merge — CR
-linkage, traceability coverage, lifecycle integrity, and IEC 62304 / ISO 14971 /
-IEC 82304-1 policy checks. Non-compliance is caught at the commit, not the audit.
-
----
-
-## The AI Coding Multiplier
-
-AI coding tools (Copilot, Cursor, Claude Code) are accelerating how fast engineers
-produce code, requirements, and documentation. For medical device software, this
-creates a new bottleneck: compliance verification has not kept pace with content
-generation speed.
-
-**Without CompliantFlow, AI coding makes the DHF problem worse.** AI generates
-requirements faster → more items to maintain traceability for. AI produces test
-code faster → more results to link to DHF items. AI proposes architecture changes
-faster → more cross-layer impacts to verify. Every AI-generated change that is not
-compliance-verified is a liability accumulating in the DHF.
-
-**With CompliantFlow, AI coding and compliance scale together.** AI generates the
-content; CompliantFlow verifies it. The CI gate runs on every commit regardless of
-whether it was authored by a human or an AI agent. The gap between "AI draft" and
-"submission-ready" collapses to a CI run.
-
-| Scenario | DHF overhead | Audit prep |
-|---|---|---|
-| Traditional (no AI, no tool) | 0.5–1.0 FTE manual | 4–6 weeks × 2 people |
-| AI coding tools only | Worse — more content, same manual burden | Same or worse |
-| CompliantFlow only | ~0.5 FTE saved | 1 day |
-| **AI coding + CompliantFlow** | **Near-zero** | **1 day** |
-
-This positions CompliantFlow as the compliance infrastructure that makes
-AI-assisted medical device development viable — not just a DHF tool.
+linkage, traceability coverage, lifecycle integrity, and policy checks across three
+standards. Non-compliance is caught at the commit, not the audit.
 
 ---
 
 ## Positioning
 
-**One sentence:** CompliantFlow is the CLI-native, Git-native compliance
-infrastructure for SaMD teams that turns AI-generated and human-generated DHF
-content into submission-ready evidence automatically, on every CI run.
+**One sentence:** CompliantFlow is the compliance infrastructure for medical device
+software teams that enforces zero compliance debt on every commit — and scales that
+guarantee to however fast the team moves, whether human or AI-driven.
 
 **What we compete on:**
-- Automated compliance evidence across three standards (IEC 62304, ISO 14971,
-  IEC 82304-1) — not a starting template, fully configured
-- CI/CD-native enforcement — compliance is a merge gate, not an audit event
+- Zero compliance debt at the commit — not batch remediation before audits
+- Automated evidence across three standards (IEC 62304, ISO 14971, IEC 82304-1) —
+  fully configured, not a starting template
+- CI/CD-native enforcement — compliance is a merge gate, not a periodic review
 - Open YAML format — no vendor lock-in, no per-seat pricing on data access
 - Git as the audit trail — every change is attributed, timestamped, and branchable
-- AI coding compatibility — the compliance gate works regardless of who authored
-  the content
+- First-class AI coding compatibility — the gate verifies AI-generated content at
+  the same zero-debt standard as human-authored content
 
 **What we do not compete on (deliberately):**
 - GUI usability (v3.0.0 scope)
@@ -110,33 +163,38 @@ content into submission-ready evidence automatically, on every CI run.
 
 ## Structured Selling Points
 
-**1. "Your traceability matrix is always current — automatically."**
-No more manually updating Excel after every sprint. Requirements, tests, and
-architecture stay linked by the tool. The matrix is generated on demand, not
-assembled by hand.
+**1. "Zero compliance debt — on every commit."**
+Every change is verified against IEC 62304, ISO 14971, and IEC 82304-1 in CI.
+Compliance gaps are caught at the merge, not discovered at the audit.
 
 **2. "Audit prep goes from 6 weeks to 1 day."**
 The evidence package is generated on every CI run. By submission day, it already
 exists. Your RA engineer reviews it; they do not compile it.
 
-**3. "Compliance gaps are caught at the commit, not the audit."**
-The CI gate enforces IEC 62304, ISO 14971, and IEC 82304-1 on every merge — the
-same way a failing unit test blocks a PR.
-
-**4. "One tool covers three standards."**
+**3. "One tool covers three standards."**
 IEC 62304 (75/106 checks automated), ISO 14971, IEC 82304-1 — fully configured.
 Most teams cobble this together from three separate tools or manual processes.
 
-**5. "The compliance layer for AI-generated medical device software."**
-AI tools now write requirements, tests, and architecture at speed. Without
-automated compliance verification, that content is a draft. CompliantFlow is the
-missing layer that makes AI-generated DHF content submission-ready.
+**4. "Your traceability matrix is always current — automatically."**
+Requirements, tests, and architecture stay linked by the tool. The matrix is
+generated on demand, not assembled by hand.
 
-**6. "No per-seat pricing. No lock-in. Your data stays in YAML."**
+**5. "AI coding doesn't create compliance debt. It creates compliant software."**
+If your team uses AI coding tools, CompliantFlow keeps every AI-generated commit
+at the same zero-debt standard as human-authored changes. The faster AI moves,
+the more valuable the gate becomes.
+
+**6. "The structured environment that makes AI coding viable for medtech."**
+AI agents need context to generate compliant content: schema, lifecycle rules,
+policy requirements. CompliantFlow provides that context. AI coding without
+CompliantFlow generates plausible-looking DHF content that silently violates
+regulatory requirements. With it, AI generates correctly.
+
+**7. "No per-seat pricing. No lock-in. Your data stays in YAML."**
 Engineers own the DHF. The format is readable without the tool. No vendor
 negotiation when the team scales.
 
-**7. "Designed for the RDM migration."**
+**8. "Designed for the RDM migration."**
 If you are on Innolitics RDM, the migration command converts your existing repo.
 You keep your Git history; you gain automated compliance checks.
 
@@ -152,6 +210,11 @@ influenced by the engineering lead or VP Engineering.
 **Secondary ICP:** Innolitics RDM users at any size. RDM is effectively
 unmaintained; these teams have committed to docs-as-code and are actively seeking
 a migration path.
+
+**Emerging ICP (Objective 3):** Medtech teams actively adopting AI coding tools
+who need a compliance harness to make AI-generated content submission-ready. This
+segment is growing rapidly and is underserved — no existing tool addresses the
+AI coding + medtech compliance intersection.
 
 **Personas (priority order):**
 
