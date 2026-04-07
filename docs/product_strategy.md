@@ -194,10 +194,6 @@ regulatory requirements. With it, AI generates correctly.
 Engineers own the DHF. The format is readable without the tool. No vendor
 negotiation when the team scales.
 
-**8. "Designed for the RDM migration."**
-If you are on Innolitics RDM, the migration command converts your existing repo.
-You keep your Git history; you gain automated compliance checks.
-
 ---
 
 ## Target Customer
@@ -248,6 +244,48 @@ market signal.
   Polarion, and Codebeamer. Pricing is on projects and capabilities, not users.
 - **Submission template validation (CR-032) requires a real submission engagement
   to scope.** Do not build speculatively.
+
+---
+
+## Roadmap
+
+CRs are the authoritative backlog — this section records the milestone grouping and rationale. Full CR descriptions live in `DHF/items/09_cr/`.
+
+### v2.1.0 — "Deepen & Enforce" (Q3 2026)
+
+Strengthen the zero-debt guarantee and make compliance feedback actionable for engineers and AI agents.
+
+| CR | Title | Priority |
+|---|---|---|
+| CR-035 | Actionable Compliance Feedback | High |
+| CR-036 | ISO 14971 Policy Completeness | High |
+| CR-037 | IEC 62304 Manual Check Reduction | High |
+| CR-038 | Compliance Drift Detection | High |
+
+### v2.2.0 — "AI Coding Infrastructure" (Q4 2026)
+
+Make CompliantFlow the structured environment AI coding tools operate within, not just a verifier that runs after them.
+
+| CR | Title | Priority |
+|---|---|---|
+| CR-039 | Field Schema Protocol Extension *(unblocks CR-040, CR-041)* | High |
+| CR-040 | AI Agent Context Package | High |
+| CR-041 | Draft Item Pre-Validation | High |
+| CR-042 | Compliance Status Summary Command | Medium |
+| CR-043 | Machine-Readable Compliance Report Export | High |
+| CR-044 | ISO 13485 Governance File | Medium |
+| CR-045 | SOUP Automated Vulnerability Check | Medium |
+| CR-046 | RDM Migration Completeness Validation | Medium |
+
+### v3.0.0 — "Enterprise Motion" (H1 2027)
+
+Sell to the QA Director, not just the engineering lead. Existing planned scope: RBAC, full Web UI, Jira/GitHub Issues sync, SOC 2 Type II, signed release artifacts + SBOM. New additions:
+
+| CR | Title | Priority |
+|---|---|---|
+| CR-047 | 510(k) Submission Evidence Package *(requires active submission engagement)* | High |
+| CR-048 | Compliance Posture REST API *(requires RBAC first)* | High |
+| CR-049 | Compliance-Aware PR Review Agent | High |
 
 ---
 

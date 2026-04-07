@@ -1,0 +1,26 @@
+id: CR-047
+title: 510(k) Submission Evidence Package
+description: 'Implement a compliantflow export submission command that assembles the
+  complete evidence package for a 510(k) or CE mark submission into a single dated
+  ZIP artifact: traceability report PDF, compliance report PDF for all configured
+  standards, SOUP list with vulnerability status, RISK and RCM summary, test result
+  summary, CR evidence report, and a cover document mapping each output to the relevant
+  regulatory section. The command validates completeness before assembly — it will
+  not produce a package if any CI gate check is failing. Target output structure is
+  aligned with FDA eSTAR submission format. Acceptance criterion: review and sign-off
+  by at least one regulatory consultant using the output from an active customer submission
+  engagement. This CR must not be opened until an active submission engagement is
+  confirmed.'
+justification: 'The 510(k) case study is identified in the product strategy as the
+  single highest-leverage GTM action. This CR is the product-side counterpart: it
+  makes the submission package assembly a single command rather than a manual compilation
+  exercise, and produces output that is structurally aligned with FDA submission expectations.
+  A regulatory consultant sign-off as acceptance criterion ensures the output meets
+  real submission standards rather than an internal interpretation.'
+priority: High
+target_version: v3.0.0
+affected_items:
+- UC-005
+- CRS-011
+type: CR
+status: planned

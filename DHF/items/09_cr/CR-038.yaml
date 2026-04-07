@@ -1,0 +1,22 @@
+id: CR-038
+title: Compliance Drift Detection
+description: 'Add a compliance drift detection mode that compares the current compliance
+  state against the most recent persisted compliance run and surfaces any regressions
+  — checks that previously passed and now fail. Drift sources include: test results
+  aging out (a TC that was PASS is now absent from the result store), SOUP items no
+  longer linked to a verification record, RCM items whose linked SYS requirements
+  have changed, and document content checks that fail after a document update. The
+  drift report is emitted as a structured diff (previously-passing checks that now
+  fail, with the specific evidence change that caused the regression) and fails the
+  CI step if any regression is detected.'
+justification: The CI gate enforces compliance at merge time but does not detect time-based
+  degradation between merges. A test result can age out, a SOUP dependency can acquire
+  a CVE, or a document can be updated without re-running semantic checks — all producing
+  compliance debt that accumulates silently. Zero debt continuously requires detecting
+  drift, not just enforcing at commit time.
+priority: High
+target_version: v2.1.0
+affected_items:
+- SYS-008
+type: CR
+status: planned

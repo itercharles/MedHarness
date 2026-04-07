@@ -1,0 +1,21 @@
+id: CR-035
+title: Actionable Compliance Feedback
+description: 'When a compliance check fails, enrich the output with structured remediation
+  guidance telling the engineer (or AI agent) exactly which DHF item to change, which
+  field to set, and what value is required. Currently PolicyResult.details is free-text.
+  Add an optional remediation dict to PolicyResult (backward-compatible) populated
+  by each check type using evidence data already computed — e.g. {action: set_attribute,
+  items: [SYS-003], field: cause, guidance: ...}. For document_semantic checks, extend
+  the LLM prompt to request a one-sentence corrective action alongside the rationale.
+  The enriched output is surfaced in the CLI and included in the JSON compliance report.'
+justification: A PASS/FAIL result without remediation guidance forces engineers and
+  AI coding agents to re-read the standard to determine what to fix. Actionable feedback
+  closes the loop immediately — the compliance gate tells you not just that you failed
+  but exactly what to do next. This is the minimum viable interface for AI coding
+  tools to self-correct DHF content after a gate failure.
+priority: High
+target_version: v2.1.0
+affected_items:
+- SYS-008
+type: CR
+status: planned

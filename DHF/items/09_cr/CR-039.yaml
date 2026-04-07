@@ -1,0 +1,21 @@
+id: CR-039
+title: Field Schema Protocol Extension
+description: 'Extend ItemTypeSchema (the ProjectSchema domain model) to carry field-level
+  constraints: required flag, allowed values (options), and field format type for
+  each property defined in DHF/config/doc_types/*.yaml. Propagate these constraints
+  through LocalDHFAdapter.get_project_config() into ProjectSchema so that read-only
+  compliantflow analysis tools can query what fields are valid for a given item type
+  without accessing the utils layer directly. Add a corresponding method to the DHFAdapter
+  protocol; update MultiDHFAdapter to delegate to the primary adapter. This is a prerequisite
+  for the AI Agent Context Package (CR-040) and Draft Item Pre-Validation (CR-041).'
+justification: The field-level schema currently lives only in the utils layer (ProjectConfig)
+  and is inaccessible to the compliantflow analysis layer. Three planned CRs (context
+  command, draft validation, status summary) independently require this data. A single
+  protocol extension unblocks all three cleanly and removes a structural inconsistency
+  where the analysis layer cannot fully describe the data model it operates on.
+priority: High
+target_version: v2.2.0
+affected_items:
+- SYS-021
+type: CR
+status: planned

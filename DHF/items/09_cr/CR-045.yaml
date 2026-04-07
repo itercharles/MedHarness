@@ -1,0 +1,22 @@
+id: CR-045
+title: SOUP Automated Vulnerability Check
+description: 'Add a CI compliance check that cross-references SOUP items in the DHF
+  against the OSV (Open Source Vulnerabilities) database for known CVEs at the declared
+  SOUP version. SOUP items with CVEs above a configurable severity threshold (default:
+  HIGH) fail the check unless a documented risk acceptance record exists in the DHF
+  linking the SOUP item to a RISK item covering the vulnerability. Implement as a
+  new policy.automation.check type (soup_vulnerability) usable in any governance YAML.
+  Add corresponding policies to IEC_62304.yaml under Clause 8.1.2 (SOUP evaluation).
+  The OSV API is public and requires no authentication.'
+justification: SOUP items are tracked in the DHF but their vulnerability status is
+  not monitored continuously. A SOUP dependency can acquire a critical CVE between
+  DHF reviews and accumulate as silent compliance debt — exactly the drift problem
+  the zero-debt mission targets. Automated OSV integration converts SOUP vulnerability
+  monitoring from a periodic manual activity into a CI gate check.
+priority: Medium
+target_version: v2.2.0
+affected_items:
+- SYS-005
+- CRS-011
+type: CR
+status: planned

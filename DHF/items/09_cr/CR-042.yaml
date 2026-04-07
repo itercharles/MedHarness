@@ -1,0 +1,22 @@
+id: CR-042
+title: Compliance Status Summary Command
+description: 'Implement a compliantflow status command that returns an at-a-glance
+  compliance posture summary without arguments: compliance score per configured standard
+  (read from persisted compliance run store by default, with --live flag to force
+  a fresh run), traceability coverage percentages for all configured matrix pairs,
+  count and severity of open defects, and release readiness for the current active
+  REL item if one exists. Output in structured JSON (--format json) or human-readable
+  text. Internally refactors the open-defect summary logic currently duplicated between
+  validate traceability and validate release into a shared CompliantFlowCore method.'
+justification: 'Currently assessing overall compliance posture requires running three
+  separate CLI commands and interpreting their outputs. A single status command gives
+  engineers, AI coding agents, and QA reviewers an immediate answer to the question:
+  is the DHF compliant right now? This is the entry-point command for any workflow
+  — human or AI — that needs to understand current state before taking action.'
+priority: Medium
+target_version: v2.2.0
+affected_items:
+- SYS-008
+- CRS-002
+type: CR
+status: planned
