@@ -1,0 +1,20 @@
+id: CR-050
+title: DHF Repository Split
+description: 'Split DHF/ out of the compliantflow tool repository into a separate
+  repository (e.g. compliantflow-dhf). The tool repo retains only the compliantflow/
+  package, governance/, and tests/. The DHF repo becomes the canonical example of
+  how a project uses CompliantFlow and serves as the tool''s own regulatory documentation.
+  Key work items: (1) package or vendor the LocalDHFAdapter and utils so tests/sys/
+  can import them without DHF/ in PYTHONPATH; (2) update CI to check out both repos
+  or move compliance CI into the DHF repo; (3) remove PYTHONPATH=.:DHF from the tool
+  repo environment contract; (4) update AGENTS.md and CLAUDE.md to reflect the new
+  structure.'
+justification: 'Having DHF/ inside the tool repo contradicts the tool''s own architecture:
+  CompliantFlow connects to a DHF via interface, so its own DHF should be external
+  like any customer''s. Splitting removes the PYTHONPATH hack, makes the tool repo
+  easier to understand, and demonstrates the interface abstraction in practice. It
+  also unblocks customers who want to use the reference DHF as a starting template
+  without forking the entire tool repo.'
+priority: Medium
+type: CR
+status: planned
