@@ -41,10 +41,39 @@ via `python -m utils item transition`. These are not GitOps-approved.
 
 CR items use two statuses: `planned` (not yet implemented) and `closed` (merged to `main`).
 
-- Confirm the CR is `planned` before writing any code. Create it with `python -m utils item create --type CR` if it does not exist.
-- If the CR involves new tests, read `tests/fixtures/test_data.py` and the relevant doc type configs first — field mismatches are the most common source of iteration.
-- Set the CR to `closed` in the same commit as the implementation.
-- If opening a PR, include the CR ID in the title — CI Phase 0 requires it.
+**1. Create the CR**
+Confirm the CR is `planned` before writing any code. Create it with
+`python -m utils item create --type CR` if it does not exist.
 
-Do not run compliance checks as a default validation step — they invoke an LLM and are only needed when changing compliance engine or governance files.
+**2. Plan and confirm**
+Analyze the request and produce a plan covering:
+- Technical design and implementation approach
+- DHF impact: which `UC`, `SYS`, `SRS`, `SWDD`, `SYSARCH`, `TC`, `RCM`, and other
+  items are affected, need updating, or need to be created
+- Test case changes required (new TCs, updated `@links` tags)
+- Any compliance implications
+
+Present the plan to the user and wait for explicit approval before writing any code.
+
+**3. Implement**
+After approval:
+- Make code changes in the owning layer
+- Update or create DHF items as identified in the plan
+- If the CR involves new tests, read `tests/fixtures/test_data.py` and the relevant
+  doc type configs first — field mismatches are the most common source of iteration
+- Update test cases and verify `@links` tags are correct
+- Run tests locally
+- Set the CR to `closed` in the same commit as the implementation
+
+**4. Open a PR**
+Branch from `main`. Include the CR ID in the PR title — CI Phase 0 requires it.
+
+**5. Monitor to merge**
+Stay active after opening the PR — do not treat it as a handoff:
+- Watch CI status and fix any failures
+- Address review comments with follow-up commits
+- Merge when all checks pass and the user approves
+
+Do not run compliance checks as a default validation step — they invoke an LLM and
+are only needed when changing compliance engine or governance files.
 
