@@ -1,9 +1,12 @@
 # AGENTS.md
 
-CompliantFlow is a Docs-as-Code ALM platform for medical device software. It manages
-Design History File (DHF) items — requirements, risks, tests, change requests — stored
-as YAML files under `DHF/items/`. The Python backend exposes a CLI for CI/CD integration
-and a library API for tests.
+CompliantFlow is a compliance checking tool for medical device software. It reads a
+project's Design History File (DHF) — requirements, risks, tests, change requests stored
+as YAML — and verifies compliance against IEC 62304, ISO 14971, and IEC 82304-1 in CI.
+
+This repository uses CompliantFlow on itself: `DHF/` is CompliantFlow's own design
+history file, serving as both the tool's regulatory documentation and a working example
+of how it operates.
 
 ## Sources Of Truth
 
