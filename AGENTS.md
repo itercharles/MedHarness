@@ -90,3 +90,13 @@ CR items use two statuses: `planned` (identified, not yet implemented) and `clos
    changes warrant review — include the CR ID in the PR title so Phase 0 CI can
    extract it.
 
+## CI Model
+
+Five phases defined in `.github/workflows/ci-pipeline.yml`:
+
+1. Phase 0: CR validation (PR title must contain a CR ID)
+2. Phase 1: DHF utility tests
+3. Phase 2: SYS API tests
+4. Phase 3: CRS API tests
+5. Phase 3.5+: evidence and reporting flows
+
