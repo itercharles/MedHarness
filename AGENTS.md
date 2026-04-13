@@ -51,16 +51,6 @@ traversal — use this, not `item.get('links')`, which does not exist.
 
 ---
 
-## Change Workflow
-
-1. **Orient** — confirm which layer is being changed: data, analysis, governance, or tests.
-2. **Modify** — keep changes in the layer that owns the behavior. If a design document
-   changes, update the corresponding DHF items. If a test changes, verify `@links:` tags
-   still point to the correct items.
-3. **Validate locally** — run the smallest relevant test first, then the governing suite
-   for that layer before merge.
-4. **Check merge gates** — use the CI phases in `ci-pipeline.yml` as the acceptance model.
-
 ## Validation
 
 | Change type | Validation |
