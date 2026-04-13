@@ -19,8 +19,6 @@ PYTHONPATH=.:DHF  # required for all commands
 
 ## Key Invariants
 
-These are non-obvious from reading the code and have caused errors before.
-
 **Two-CLI split.** `CompliantFlowCore` (`compliantflow/`) is read-only — analysis,
 traceability, compliance, reporting. DHF mutations (create, update, delete, lifecycle
 transitions) go through `python -m utils`. Do not add write operations to
@@ -36,10 +34,6 @@ status field change needed. Feature branches mean draft or in-review.
 
 **Explicit lifecycle.** `CR`, `REL`, and `DEF` use explicit lifecycle transitions
 via `python -m utils item transition`. These are not GitOps-approved.
-
-**`get_all_items()` returns dicts.** Access fields with `item['id']`,
-`item.get('status')`. The dict includes a computed `all_linked_uids` list for graph
-traversal — use this, not `item.get('links')`, which does not exist.
 
 ---
 
