@@ -37,18 +37,6 @@ via `python -m utils item transition`. These are not GitOps-approved.
 
 ---
 
-## Validation
-
-| Change type | Validation |
-|---|---|
-| Code-local | Nearest focused test |
-| Product behavior | Owning suite + `tests/sys/ tests/crs/` |
-| DHF data layer | `DHF/utils/tests/` |
-| Compliance engine or governance | `tests/sys/test_sys_005_compliance.py` |
-
-Do not run full compliance execution as a default step. It is a verification step for
-compliance-related changes only.
-
 ## CR Workflow
 
 CR items use two statuses: `planned` (identified, not yet implemented) and `closed`
@@ -65,6 +53,9 @@ CR items use two statuses: `planned` (identified, not yet implemented) and `clos
 5. Validate locally, then commit directly to `main` for solo work. Open a PR when
    changes warrant review — include the CR ID in the PR title so Phase 0 CI can
    extract it.
+
+Do not run compliance checks as a default validation step — they invoke an LLM and
+are only needed when changing compliance engine or governance files.
 
 ## CI Model
 
