@@ -10,19 +10,6 @@ This repository uses CompliantFlow on itself: `DHF/` is CompliantFlow's own desi
 history file, serving as both the tool's regulatory documentation and a working example
 of how it operates.
 
-## Sources Of Truth
-
-| Source | What it owns |
-|---|---|
-| `README.md` | Repository layout and setup |
-| `DHF/` | Project facts, config, documents, item state, verification evidence |
-| `governance/` | Compliance policy definitions |
-| `.github/workflows/ci-pipeline.yml` | Enforced acceptance path and merge gates |
-
-Agent entrypoints by harness: `CLAUDE.md` (Claude Code), `AGENTS.md` (Codex),
-`GEMINI.md` (Gemini CLI), `.github/copilot-instructions.md` (Copilot),
-`.cursor/rules/agent.mdc` (Cursor), `.windsurfrules` (Windsurf).
-
 ## Environment
 
 ```bash
