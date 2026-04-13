@@ -39,31 +39,12 @@ via `python -m utils item transition`. These are not GitOps-approved.
 
 ## CR Workflow
 
-CR items use two statuses: `planned` (identified, not yet implemented) and `closed`
-(implemented and merged to `main`).
+CR items use two statuses: `planned` (not yet implemented) and `closed` (merged to `main`).
 
-1. Confirm the CR exists and is `planned`. If not, create it with
-   `python -m utils item create --type CR` before writing any code.
-2. If the CR involves new tests, read `tests/fixtures/test_data.py` and the relevant
-   doc type configs first. Field mismatches in test fixtures are the most common source
-   of iteration in this repo.
-3. Make changes in the owning layer.
-4. Set the CR to `closed` and include that YAML change in the same commit as the
-   implementation.
-5. Validate locally, then commit directly to `main` for solo work. Open a PR when
-   changes warrant review — include the CR ID in the PR title so Phase 0 CI can
-   extract it.
+- Confirm the CR is `planned` before writing any code. Create it with `python -m utils item create --type CR` if it does not exist.
+- If the CR involves new tests, read `tests/fixtures/test_data.py` and the relevant doc type configs first — field mismatches are the most common source of iteration.
+- Set the CR to `closed` in the same commit as the implementation.
+- If opening a PR, include the CR ID in the title — CI Phase 0 requires it.
 
-Do not run compliance checks as a default validation step — they invoke an LLM and
-are only needed when changing compliance engine or governance files.
-
-## CI Model
-
-Five phases defined in `.github/workflows/ci-pipeline.yml`:
-
-1. Phase 0: CR validation (PR title must contain a CR ID)
-2. Phase 1: DHF utility tests
-3. Phase 2: SYS API tests
-4. Phase 3: CRS API tests
-5. Phase 3.5+: evidence and reporting flows
+Do not run compliance checks as a default validation step — they invoke an LLM and are only needed when changing compliance engine or governance files.
 
