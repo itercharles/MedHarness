@@ -44,6 +44,7 @@ class PolicyResult(BaseModel):
     details: str
     policy_text: str = ""
     evidence: Optional[Dict[str, Any]] = None
+    remediation: Optional[Dict[str, Any]] = None
 
 
 class ComplianceReport(BaseModel):

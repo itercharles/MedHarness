@@ -204,6 +204,17 @@ def validate_compliance(
     failed = [r for r in report["results"] if not r["passed"]]
     for r in failed:
         click.echo(f"  ✗ [{r['policy_id']}] {r['policy_text']}: {r['details']}", err=True)
+        rem = r.get("remediation")
+        if rem:
+            guidance = rem.get("guidance", "")
+            items = rem.get("items", [])
+            line = f"     → {guidance}"
+            if items:
+                preview = ", ".join(items[:5])
+                if len(items) > 5:
+                    preview += f" (+{len(items) - 5} more)"
+                line += f" [{preview}]"
+            click.echo(line, err=True)
     click.echo(json.dumps(report, default=str))
     if failed:
         click.echo(

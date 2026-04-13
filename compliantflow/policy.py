@@ -81,11 +81,15 @@ class PolicyEngine:
                     passed, details, evidence = semantic_results.get(
                         policy.id, (False, "Semantic batch did not return a result", {})
                     )
+                    remediation = self._build_remediation(
+                        'document_semantic', policy.automation.params, passed, evidence
+                    )
                     result = PolicyResult(
                         policy_id=policy.id,
                         passed=passed,
                         details=details,
                         evidence=evidence,
+                        remediation=remediation,
                         policy_text=policy.text,
                     )
                 else:
@@ -95,11 +99,13 @@ class PolicyEngine:
                     if check_func:
                         try:
                             passed, details, evidence = check_func(**params)
+                            remediation = self._build_remediation(check_name, params, passed, evidence)
                             result = PolicyResult(
                                 policy_id=policy.id,
                                 passed=passed,
                                 details=details,
                                 evidence=evidence,
+                                remediation=remediation,
                                 policy_text=policy.text,
                             )
                         except Exception as e:
@@ -181,7 +187,8 @@ class PolicyEngine:
                 f"REQUIREMENTS:\n{requirements_block}\n\n"
                 "Respond with ONLY a valid JSON array — no markdown, no text outside the JSON. "
                 "One object per requirement, in the same order:\n"
-                '[{"policy_id": "<id>", "passed": true or false, "rationale": "one or two sentences"}, ...]'
+                '[{"policy_id": "<id>", "passed": true or false, "rationale": "one or two sentences", '
+                '"corrective_action": "one sentence describing what the author must add or change, or null if passed"}, ...]'
             )
 
             try:
@@ -193,14 +200,128 @@ class PolicyEngine:
                     pid = entry.get("policy_id", "")
                     passed = bool(entry.get("passed", False))
                     rationale = str(entry.get("rationale", ""))
+                    corrective_action = entry.get("corrective_action") or None
                     details = f"{'PASS' if passed else 'FAIL'} (semantic) — {rationale}"
-                    evidence = {"doc_id": doc_id, "rationale": rationale, "truncated": truncated}
+                    evidence: Dict[str, Any] = {"doc_id": doc_id, "rationale": rationale, "truncated": truncated}
+                    if not passed and corrective_action:
+                        evidence["corrective_action"] = corrective_action
                     out[pid] = (passed, details, evidence)
             except Exception as e:
                 for pid, _ in items:
                     out[pid] = (False, f"Semantic check error: {e}", {"doc_id": doc_id})
 
         return out
+
+    # --- Remediation ---
+
+    def _build_remediation(
+        self,
+        check_name: str,
+        params: Dict[str, Any],
+        passed: bool,
+        evidence: Optional[Dict[str, Any]],
+    ) -> Optional[Dict[str, Any]]:
+        """Derive a structured remediation dict from already-computed evidence.
+
+        Returns None when the check passed or when no actionable guidance can be
+        constructed.  The caller attaches the return value to PolicyResult.remediation.
+        """
+        if passed or not evidence:
+            return None
+
+        if check_name == 'attribute_presence':
+            items = evidence.get('missing_items', [])
+            field = params.get('attribute', '')
+            if not items:
+                return None
+            return {
+                "action": "set_attribute",
+                "items": items,
+                "field": field,
+                "guidance": f"Set the '{field}' field on all listed items.",
+            }
+
+        if check_name == 'attribute_value':
+            non_matching = evidence.get('non_matching', [])
+            field = params.get('attribute', '')
+            value = params.get('expected_value', '')
+            items = [e['uid'] for e in non_matching]
+            if not items:
+                return None
+            return {
+                "action": "set_attribute",
+                "items": items,
+                "field": field,
+                "value": value,
+                "guidance": f"Set '{field}' to '{value}' on all listed items.",
+            }
+
+        if check_name == 'trace_coverage':
+            items = evidence.get('uncovered_items', [])
+            target_type = params.get('target_type', '')
+            if not items:
+                return None
+            return {
+                "action": "add_trace",
+                "items": items,
+                "target_type": target_type,
+                "guidance": f"Link each listed item to at least one '{target_type}' item.",
+            }
+
+        if check_name == 'document_content':
+            doc_id = evidence.get('doc_id', params.get('doc_id', ''))
+            missing = evidence.get('missing_keywords', [])
+            if not missing:
+                return None
+            return {
+                "action": "update_document",
+                "doc_id": doc_id,
+                "missing_keywords": missing,
+                "guidance": f"Add the missing keywords to document '{doc_id}'.",
+            }
+
+        if check_name == 'document_semantic':
+            doc_id = evidence.get('doc_id', params.get('doc_id', ''))
+            corrective_action = evidence.get('corrective_action')
+            guidance = corrective_action or f"Update document '{doc_id}' to satisfy the requirement."
+            return {
+                "action": "update_document",
+                "doc_id": doc_id,
+                "guidance": guidance,
+            }
+
+        if check_name == 'all_tests_passing':
+            items = evidence.get('failing', [])
+            if not items:
+                return None
+            return {
+                "action": "resolve_failing_tests",
+                "items": items,
+                "guidance": "Set testing_status to 'PASS' on all listed test cases once they pass.",
+            }
+
+        if check_name == 'verification_complete':
+            items = evidence.get('not_verified_items', [])
+            if not items:
+                return None
+            return {
+                "action": "set_verification_status",
+                "items": items,
+                "guidance": "Set verification_status to 'verified' on all listed items once verification is complete.",
+            }
+
+        if check_name == 'no_open_defects':
+            blocking = evidence.get('blocking_defects', [])
+            items = [b['uid'] for b in blocking]
+            if not items:
+                return None
+            return {
+                "action": "resolve_defects",
+                "items": items,
+                "guidance": "Resolve or downgrade the listed open defects before releasing.",
+            }
+
+        return None
 
     # --- Helpers ---
 
@@ -455,7 +576,8 @@ class PolicyEngine:
             "Does the document satisfy the requirement above? "
             "Evaluate intent and substance, not just keyword presence.\n\n"
             'Respond with ONLY valid JSON — no markdown, no explanation outside the JSON:\n'
-            '{"passed": true or false, "rationale": "one or two sentences"}'
+            '{"passed": true or false, "rationale": "one or two sentences", '
+            '"corrective_action": "one sentence describing what the author must add or change, or null if passed"}'
         )
 
         try:
@@ -466,8 +588,11 @@ class PolicyEngine:
             result = json.loads(text)
             passed = bool(result.get("passed", False))
             rationale = str(result.get("rationale", ""))
+            corrective_action = result.get("corrective_action") or None
             details = f"{'PASS' if passed else 'FAIL'} (semantic) — {rationale}"
-            evidence = {"doc_id": doc_id, "requirement": requirement, "rationale": rationale, "truncated": truncated}
+            evidence: Dict[str, Any] = {"doc_id": doc_id, "requirement": requirement, "rationale": rationale, "truncated": truncated}
+            if not passed and corrective_action:
+                evidence["corrective_action"] = corrective_action
             return passed, details, evidence
         except Exception as e:
             return False, f"Semantic check error: {e}", {"doc_id": doc_id}
