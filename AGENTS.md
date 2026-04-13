@@ -1,8 +1,10 @@
 # AGENTS.md
 
-CompliantFlow is a compliance checking tool for medical device software. It reads a
-project's Design History File (DHF) — requirements, risks, tests, change requests stored
-as YAML — and verifies compliance against IEC 62304, ISO 14971, and IEC 82304-1 in CI.
+CompliantFlow is a compliance checking tool for medical device software. It connects to
+a project's Design History File (DHF) through a defined interface (CLI or API) and
+verifies compliance against IEC 62304, ISO 14971, and IEC 82304-1 in CI. The interface
+abstraction means it can integrate with any DHF system, not just the reference
+implementation in this repo.
 
 This repository uses CompliantFlow on itself: `DHF/` is CompliantFlow's own design
 history file, serving as both the tool's regulatory documentation and a working example
