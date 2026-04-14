@@ -64,7 +64,6 @@ After approval:
   doc type configs first — field mismatches are the most common source of iteration
 - Update test cases and verify `@links` tags are correct
 - Run tests locally
-- Set the CR to `closed` in the same commit as the implementation
 
 **4. Open a PR**
 Branch from `main`. Include the CR ID in the PR title — CI Phase 0 requires it.
@@ -74,6 +73,13 @@ Stay active after opening the PR — do not treat it as a handoff:
 - Watch CI status and fix any failures
 - Address review comments with follow-up commits
 - Merge when all checks pass and the user approves
+
+**CR closure is automated.** After merge to `main`, the post-merge CI extracts CR IDs
+from the merge commit subject and dispatches the `cr-transition.yml` workflow in
+compliantflow-dhf, which transitions each CR to `closed` and commits the change back.
+Do not manually set CRs to `closed` — the automation handles it. If a CR needs to be
+closed after manual verification (outside of a code merge), trigger the workflow
+directly from the GitHub Actions UI in the compliantflow-dhf repo.
 
 Do not run compliance checks as a default validation step — they invoke an LLM and
 are only needed when changing compliance engine or governance files.
