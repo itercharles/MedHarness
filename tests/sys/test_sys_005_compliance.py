@@ -313,3 +313,31 @@ def test_TC_SYS_005_013_no_open_defects_fails_when_blocking_defect_exists(stub_a
     blocking_ids = [b['uid'] for b in evidence['blocking_defects']]
     assert 'DEF-TEST' in blocking_ids
     assert 'DEF-TEST' in details
+
+
+def test_TC_SYS_005_014_persist_compliance_run(stub_adapter, governance_dir):
+    """
+    TC-SYS-005-014: check_compliance_group with persist=True appends a run
+    record to the adapter's compliance run store.
+
+    @test_id: TC-SYS-005-014
+    @links: SYS-012
+
+    Verifies that passing persist=True to CompliantFlowCore.check_compliance_group
+    results in exactly one compliance run record being stored via record_compliance_run,
+    and that the record contains the expected fields (source_id, score,
+    passed_policies, total_policies, timestamp).
+    """
+    core = CompliantFlowCore(stub_adapter)
+    report = core.check_compliance("IEC_62304", governance_dir, persist=True)
+
+    assert report is not None
+    runs = stub_adapter.get_compliance_runs("IEC_62304")
+    assert len(runs) == 1, f"Expected 1 compliance run, got {len(runs)}"
+
+    run = runs[0]
+    assert run.get("source_id") == "IEC_62304"
+    assert "score" in run
+    assert "passed_policies" in run
+    assert "total_policies" in run
+    assert "timestamp" in run
