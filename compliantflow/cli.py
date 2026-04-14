@@ -26,13 +26,20 @@ def _make_core(ctx: click.Context):
     """Instantiate CompliantFlowCore from CLI context.
 
     Single-project mode (default): uses ``ctx.obj["dhf"]`` path with a
-    ``LocalDHFAdapter``.
+    ``LocalDHFAdapter`` (requires the DHF system to be installed alongside
+    this tool, e.g. by cloning compliantflow-dhf into the Python path).
 
     Multi-project mode: activated when ``--project slug:path`` flags are
     present.  Builds a ``MultiDHFAdapter`` keyed by slug and passes it to
     ``CompliantFlowCore`` unchanged.
     """
-    from utils.local_adapter import LocalDHFAdapter
+    try:
+        from utils.local_adapter import LocalDHFAdapter
+    except ImportError:
+        raise click.ClickException(
+            "LocalDHFAdapter not found. Add your DHF system (e.g. compliantflow-dhf) "
+            "to the Python path before running the CLI."
+        )
     from compliantflow.core import CompliantFlowCore
 
     projects: dict = ctx.obj.get("projects", {})

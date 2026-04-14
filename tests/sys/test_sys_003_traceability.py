@@ -5,22 +5,14 @@ Verifies: The system shall provide visual traceability between requirements,
 design items, and test cases.
 
 @links: SYS-003
-
-This replaces browser-based tests with direct API testing.
 """
 
 import pytest
-import sys
-from pathlib import Path
 
-# Add src to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
-
-from utils.local_adapter import LocalDHFAdapter
 from compliantflow.core import CompliantFlowCore
 
 
-def test_TC_SYS_003_001_traceability_matrix_data(test_dhf_root):
+def test_TC_SYS_003_001_traceability_matrix_data(stub_adapter):
     """
     TC-SYS-003-001: Traceability Matrix Data (API)
 
@@ -29,13 +21,10 @@ def test_TC_SYS_003_001_traceability_matrix_data(test_dhf_root):
 
     Verify system can generate traceability matrix data.
     """
-    # Initialize core with test DHF
-    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
+    core = CompliantFlowCore(stub_adapter)
 
-    # Get all items
     all_items = core.get_all_items()
 
-    # Verify we have items of different types for traceability
     item_types = set(item["id"].split("-")[0] for item in all_items)
 
     assert "UC" in item_types, "Should have Use Case items"
@@ -43,7 +32,6 @@ def test_TC_SYS_003_001_traceability_matrix_data(test_dhf_root):
     assert "SYS" in item_types, "Should have System Requirement items"
     assert "SRS" in item_types, "Should have Software Requirement items"
 
-    # Verify specific test items exist
     item_ids = [item["id"] for item in all_items]
     assert "UC-001" in item_ids
     assert "CRS-001" in item_ids
@@ -51,7 +39,7 @@ def test_TC_SYS_003_001_traceability_matrix_data(test_dhf_root):
     assert "SRS-001" in item_ids
 
 
-def test_TC_SYS_003_002_traceability_graph(test_dhf_root):
+def test_TC_SYS_003_002_traceability_graph(stub_adapter):
     """
     TC-SYS-003-002: Traceability Graph (API)
 
@@ -60,24 +48,20 @@ def test_TC_SYS_003_002_traceability_graph(test_dhf_root):
 
     Verify system can build a traceability graph.
     """
-    # Initialize core with test DHF
-    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
+    core = CompliantFlowCore(stub_adapter)
 
-    # Access the graph engine
     graph = core.graph
 
-    # Verify graph has nodes
     assert graph.graph.number_of_nodes() > 0, "Graph should have nodes"
     assert graph.graph.number_of_edges() > 0, "Graph should have edges (relationships)"
 
-    # Verify specific items are in graph
     assert graph.graph.has_node("UC-001")
     assert graph.graph.has_node("CRS-001")
     assert graph.graph.has_node("SYS-001")
     assert graph.graph.has_node("SRS-001")
 
 
-def test_TC_SYS_003_003_traceability_relationships(test_dhf_root):
+def test_TC_SYS_003_003_traceability_relationships(stub_adapter):
     """
     TC-SYS-003-003: Traceability Relationships (API)
 
@@ -86,24 +70,20 @@ def test_TC_SYS_003_003_traceability_relationships(test_dhf_root):
 
     Verify system correctly tracks relationships between items.
     """
-    # Initialize core with test DHF
-    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
+    core = CompliantFlowCore(stub_adapter)
 
-    # Get SRS-001 and verify its relationships
     srs_item = core.get_item("SRS-001")
 
-    # SRS-001 should derive from SYS items
     assert "derives_from" in srs_item
     assert srs_item["derives_from"] is not None
     assert len(srs_item["derives_from"]) > 0
 
-    # Get SYS-001 and verify it derives from CRS
     sys_item = core.get_item("SYS-001")
     assert "derives_from" in sys_item
     assert sys_item["derives_from"] is not None
 
 
-def test_TC_SYS_003_004_downstream_traceability(test_dhf_root):
+def test_TC_SYS_003_004_downstream_traceability(stub_adapter):
     """
     TC-SYS-003-004: Downstream Traceability (API)
 
@@ -112,23 +92,19 @@ def test_TC_SYS_003_004_downstream_traceability(test_dhf_root):
 
     Verify system can trace downstream from requirements to tests.
     """
-    # Initialize core with test DHF
-    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
+    core = CompliantFlowCore(stub_adapter)
     graph = core.graph
 
-    # Get downstream items from SYS-001 (returns set of UIDs)
     downstream_uids = graph.get_downstream("SYS-001")
 
-    # Should have some downstream items
     assert len(downstream_uids) > 0, "SYS-001 should have downstream items"
 
-    # Check that we can trace down the hierarchy
     srs_item = core.get_item("SRS-001")
     if srs_item.get("derives_from") and "SYS-001" in srs_item["derives_from"]:
         assert "SRS-001" in downstream_uids, "SRS-001 should be downstream of SYS-001"
 
 
-def test_TC_SYS_003_005_upstream_traceability(test_dhf_root):
+def test_TC_SYS_003_005_upstream_traceability(stub_adapter):
     """
     TC-SYS-003-005: Upstream Traceability (API)
 
@@ -137,25 +113,20 @@ def test_TC_SYS_003_005_upstream_traceability(test_dhf_root):
 
     Verify system can trace upstream from tests to requirements.
     """
-    # Initialize core with test DHF
-    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
+    core = CompliantFlowCore(stub_adapter)
     graph = core.graph
 
-    # Get upstream items from SRS-001 (returns set of UIDs)
     upstream_uids = graph.get_upstream("SRS-001")
 
-    # Should have some upstream items
     assert len(upstream_uids) > 0, "SRS-001 should have upstream items"
 
-    # Should be able to trace back to SYS items
     srs_item = core.get_item("SRS-001")
     if srs_item.get("derives_from"):
-        # At least one parent should be in upstream
         assert any(parent_id in upstream_uids for parent_id in srs_item["derives_from"]), \
             "Direct parents should be in upstream"
 
 
-def test_build_traceability_chains_structure(test_dhf_root):
+def test_build_traceability_chains_structure(stub_adapter):
     """
     TC-SYS-003-008: build_traceability_chains API (API)
 
@@ -164,7 +135,7 @@ def test_build_traceability_chains_structure(test_dhf_root):
 
     Verify core.build_traceability_chains() returns structured chain data.
     """
-    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
+    core = CompliantFlowCore(stub_adapter)
 
     chains = core.build_traceability_chains(["CRS", "SYS", "SRS"])
 
@@ -176,12 +147,11 @@ def test_build_traceability_chains_structure(test_dhf_root):
         assert "is_complete" in chain
         assert isinstance(chain["is_orphan"], bool)
         assert isinstance(chain["is_complete"], bool)
-        # Each path level should be a key
         for code in ["CRS", "SYS", "SRS"]:
             assert code in chain, f"Chain should have key '{code}'"
 
 
-def test_build_traceability_chains_complete_chain(test_dhf_root):
+def test_build_traceability_chains_complete_chain(stub_adapter):
     """
     TC-SYS-003-009: build_traceability_chains complete chain (API)
 
@@ -190,25 +160,20 @@ def test_build_traceability_chains_complete_chain(test_dhf_root):
 
     Verify a complete chain exists when all links are present.
     """
-    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
+    core = CompliantFlowCore(stub_adapter)
 
     chains = core.build_traceability_chains(["CRS", "SYS", "SRS"])
 
     complete_chains = [c for c in chains if c["is_complete"]]
     assert len(complete_chains) > 0, "Should have at least one complete chain"
 
-    # A complete chain should have non-None items at every level
     for chain in complete_chains:
         for code in ["CRS", "SYS", "SRS"]:
             assert chain[code] is not None, f"Complete chain must have item at '{code}'"
             assert "id" in chain[code]
 
 
-# ---------------------------------------------------------------------------
-# build_traceability_matrix
-# ---------------------------------------------------------------------------
-
-def test_build_traceability_matrix_structure(test_dhf_root):
+def test_build_traceability_matrix_structure(stub_adapter):
     """
     TC-SYS-003-015: build_traceability_matrix returns columns + rows (API)
 
@@ -218,7 +183,7 @@ def test_build_traceability_matrix_structure(test_dhf_root):
     Verify the return dict has 'columns' and 'rows' keys, and each row
     contains exactly the requested doc-type keys plus meta keys.
     """
-    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
+    core = CompliantFlowCore(stub_adapter)
     result = core.build_traceability_matrix(["CRS", "SYS", "SRS"])
 
     assert "columns" in result
@@ -228,12 +193,11 @@ def test_build_traceability_matrix_structure(test_dhf_root):
     meta_keys = {"is_orphan", "orphan_type", "is_complete"}
     for row in result["rows"]:
         assert set(row.keys()) == {"CRS", "SYS", "SRS"} | meta_keys
-        # cell values are item IDs (str) or None — never dicts
         for dt in ["CRS", "SYS", "SRS"]:
             assert row[dt] is None or isinstance(row[dt], str)
 
 
-def test_build_traceability_matrix_linked_items(test_dhf_root):
+def test_build_traceability_matrix_linked_items(stub_adapter):
     """
     TC-SYS-003-016: build_traceability_matrix rows contain correct IDs (API)
 
@@ -242,19 +206,18 @@ def test_build_traceability_matrix_linked_items(test_dhf_root):
 
     CRS-001 → SYS-001 → SRS-001 and SRS-002 must appear as complete rows.
     """
-    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
+    core = CompliantFlowCore(stub_adapter)
     result = core.build_traceability_matrix(["CRS", "SYS", "SRS"])
 
     complete_rows = [r for r in result["rows"] if r["is_complete"]]
     assert len(complete_rows) >= 1
 
-    # Both SRS items that derive from SYS-001 should produce complete rows
     srs_ids_in_complete = {r["SRS"] for r in complete_rows}
     assert "SRS-001" in srs_ids_in_complete
     assert "SRS-002" in srs_ids_in_complete
 
 
-def test_build_traceability_matrix_orphans_included(test_dhf_root):
+def test_build_traceability_matrix_orphans_included(stub_adapter):
     """
     TC-SYS-003-017: build_traceability_matrix includes orphan rows (API)
 
@@ -264,7 +227,7 @@ def test_build_traceability_matrix_orphans_included(test_dhf_root):
     SYS-002 derives from CRS-001 but has no SRS children — it must appear
     as an orphan row (is_complete=False) with SRS=None.
     """
-    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
+    core = CompliantFlowCore(stub_adapter)
     result = core.build_traceability_matrix(["CRS", "SYS", "SRS"])
 
     sys2_rows = [r for r in result["rows"] if r["SYS"] == "SYS-002"]
@@ -273,36 +236,31 @@ def test_build_traceability_matrix_orphans_included(test_dhf_root):
     assert all(not r["is_complete"] for r in sys2_rows)
 
 
-def test_build_traceability_matrix_custom_path(test_dhf_root):
+def test_build_traceability_matrix_custom_path(stub_adapter):
     """
     TC-SYS-003-018: build_traceability_matrix accepts any doc-type subset (API)
 
     @links: SYS-003
     @test_id: TC-SYS-003-018
     """
-    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
-    # Two-column matrix
+    core = CompliantFlowCore(stub_adapter)
     result = core.build_traceability_matrix(["SYS", "SRS"])
     assert result["columns"] == ["SYS", "SRS"]
     assert len(result["rows"]) > 0
 
 
-# ---------------------------------------------------------------------------
-# get_item_chain
-# ---------------------------------------------------------------------------
-
-def test_get_item_chain_unknown_item(test_dhf_root):
+def test_get_item_chain_unknown_item(stub_adapter):
     """
     TC-SYS-003-019: get_item_chain returns None for unknown item (API)
 
     @links: SYS-003
     @test_id: TC-SYS-003-019
     """
-    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
+    core = CompliantFlowCore(stub_adapter)
     assert core.get_item_chain("DOES-NOT-EXIST") is None
 
 
-def test_get_item_chain_structure(test_dhf_root):
+def test_get_item_chain_structure(stub_adapter):
     """
     TC-SYS-003-020: get_item_chain returns root + nodes dict (API)
 
@@ -311,7 +269,7 @@ def test_get_item_chain_structure(test_dhf_root):
 
     Verify the top-level shape and that each node has the expected keys.
     """
-    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
+    core = CompliantFlowCore(stub_adapter)
     result = core.get_item_chain("SYS-001")
 
     assert result is not None
@@ -326,7 +284,7 @@ def test_get_item_chain_structure(test_dhf_root):
         assert isinstance(node["downstream"], list)
 
 
-def test_get_item_chain_transitive_coverage(test_dhf_root):
+def test_get_item_chain_transitive_coverage(stub_adapter):
     """
     TC-SYS-003-021: get_item_chain includes all transitively connected items (API)
 
@@ -338,19 +296,19 @@ def test_get_item_chain_transitive_coverage(test_dhf_root):
       downstream: SRS-001, SRS-002, SYSARCH-001
     All must appear in nodes.
     """
-    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
+    core = CompliantFlowCore(stub_adapter)
     result = core.get_item_chain("SYS-001")
     node_ids = set(result["nodes"].keys())
 
     assert "SYS-001"    in node_ids
-    assert "CRS-001"    in node_ids  # direct upstream
-    assert "UC-001"     in node_ids  # transitive upstream
-    assert "SRS-001"    in node_ids  # direct downstream
-    assert "SRS-002"    in node_ids  # direct downstream
-    assert "SYSARCH-001" in node_ids  # downstream (implements SYS-001)
+    assert "CRS-001"    in node_ids
+    assert "UC-001"     in node_ids
+    assert "SRS-001"    in node_ids
+    assert "SRS-002"    in node_ids
+    assert "SYSARCH-001" in node_ids
 
 
-def test_get_item_chain_direct_neighbours_only(test_dhf_root):
+def test_get_item_chain_direct_neighbours_only(stub_adapter):
     """
     TC-SYS-003-022: get_item_chain upstream/downstream lists are direct only (API)
 
@@ -360,30 +318,30 @@ def test_get_item_chain_direct_neighbours_only(test_dhf_root):
     SYS-001's upstream must be [CRS-001] (direct parent), NOT UC-001
     (which is the grandparent — reachable via nodes dict, not listed directly).
     """
-    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
+    core = CompliantFlowCore(stub_adapter)
     result = core.get_item_chain("SYS-001")
     sys_node = result["nodes"]["SYS-001"]
 
     assert "CRS-001" in sys_node["upstream"]
-    assert "UC-001"  not in sys_node["upstream"]   # transitive, not direct
+    assert "UC-001"  not in sys_node["upstream"]
 
     assert "SRS-001"    in sys_node["downstream"]
     assert "SRS-002"    in sys_node["downstream"]
     assert "SYSARCH-001" in sys_node["downstream"]
 
 
-def test_get_item_chain_leaf_item(test_dhf_root):
+def test_get_item_chain_leaf_item(stub_adapter):
     """
     TC-SYS-003-023: get_item_chain works for a leaf item with no downstream (API)
 
     @links: SYS-003
     @test_id: TC-SYS-003-023
     """
-    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
+    core = CompliantFlowCore(stub_adapter)
     result = core.get_item_chain("UC-001")
 
     assert result is not None
     assert result["root"] == "UC-001"
     uc_node = result["nodes"]["UC-001"]
-    assert uc_node["upstream"] == []        # UC has no parents
-    assert len(uc_node["downstream"]) > 0   # CRS-001 derives from UC-001
+    assert uc_node["upstream"] == []
+    assert len(uc_node["downstream"]) > 0

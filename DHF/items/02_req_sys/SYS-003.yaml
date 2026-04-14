@@ -1,7 +1,0 @@
-id: SYS-003
-title: Visual Traceability
-category: Functional
-content: The system shall provide a view of traceability graph or table, 
-  including requirements, architecture, tests, and change requests.
-satisfies:
-- CRS-002

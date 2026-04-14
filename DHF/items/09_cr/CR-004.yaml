@@ -1,8 +1,0 @@
-id: CR-004
-title: Improve the format customization of frontend style
-status: completed
-affected_items:
-- TC-SRS-014
-- TC-SRS-016
-- TC-SYS-007
-- TC-SYS-024
