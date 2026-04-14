@@ -103,22 +103,25 @@ class TestComponentBoundary:
         @links: SYS-008
         """
         tool_root = _COMPLIANTFLOW_SRC.parent
-        # Scan for any file named local_adapter.py or containing LocalDHFAdapter
+        # Only scan tool-owned directories — excludes external repos that may be
+        # checked out alongside the tool in CI (e.g. compliantflow-dhf/).
+        _TOOL_DIRS = ["compliantflow", "tests"]
+        scan_paths = [tool_root / d for d in _TOOL_DIRS if (tool_root / d).is_dir()]
         found = []
-        for py_file in tool_root.rglob("*.py"):
-            parts = py_file.parts
-            # Skip hidden dirs, venv, and test files
-            if any(p.startswith(".") or p == ".venv" for p in parts):
-                continue
-            if py_file.name.startswith("test_"):
-                continue
-            try:
-                tree = ast.parse(py_file.read_text(encoding="utf-8"))
-                for node in ast.walk(tree):
-                    if isinstance(node, ast.ClassDef) and node.name == "LocalDHFAdapter":
-                        found.append(str(py_file.relative_to(tool_root)))
-            except (OSError, UnicodeDecodeError, SyntaxError):
-                pass
+        for scan_root in scan_paths:
+            for py_file in scan_root.rglob("*.py"):
+                parts = py_file.parts
+                if any(p.startswith(".") or p == ".venv" for p in parts):
+                    continue
+                if py_file.name.startswith("test_"):
+                    continue
+                try:
+                    tree = ast.parse(py_file.read_text(encoding="utf-8"))
+                    for node in ast.walk(tree):
+                        if isinstance(node, ast.ClassDef) and node.name == "LocalDHFAdapter":
+                            found.append(str(py_file.relative_to(tool_root)))
+                except (OSError, UnicodeDecodeError, SyntaxError):
+                    pass
 
         assert not found, (
             "LocalDHFAdapter implementation found in the tool repo. "
