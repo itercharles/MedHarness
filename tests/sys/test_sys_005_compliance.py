@@ -5,24 +5,16 @@ Verifies: The system shall support compliance assessment against regulatory
 policies and standards.
 
 @links: SYS-005
-
-This replaces browser-based tests with direct API testing.
 """
 
 import pytest
-import sys
-from pathlib import Path
 
-# Add src to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
-
-from utils.local_adapter import LocalDHFAdapter
 from compliantflow.core import CompliantFlowCore
 from compliantflow.backends.llm import GeminiBackend, OllamaBackend, get_default_backend
 from compliantflow.policy import PolicyEngine
 
 
-def test_TC_SYS_005_001_load_policy_groups(test_dhf_root, governance_dir):
+def test_TC_SYS_005_001_load_policy_groups(stub_adapter, governance_dir):
     """
     TC-SYS-005-001: Load Policy Groups (API)
 
@@ -31,7 +23,7 @@ def test_TC_SYS_005_001_load_policy_groups(test_dhf_root, governance_dir):
 
     Verify system can load compliance policy groups.
     """
-    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
+    core = CompliantFlowCore(stub_adapter)
 
     assert governance_dir.exists(), "Governance directory should exist"
 
@@ -45,7 +37,7 @@ def test_TC_SYS_005_001_load_policy_groups(test_dhf_root, governance_dir):
     assert 'policies' in policy_group
 
 
-def test_TC_SYS_005_002_view_policies(test_dhf_root, governance_dir):
+def test_TC_SYS_005_002_view_policies(stub_adapter, governance_dir):
     """
     TC-SYS-005-002: View Policy Definitions (API)
 
@@ -54,7 +46,7 @@ def test_TC_SYS_005_002_view_policies(test_dhf_root, governance_dir):
 
     Verify system can retrieve policy definitions.
     """
-    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
+    core = CompliantFlowCore(stub_adapter)
 
     policy_group = core.get_policy_group("IEC_62304", governance_dir)
 
@@ -71,7 +63,7 @@ def test_TC_SYS_005_002_view_policies(test_dhf_root, governance_dir):
         assert 'status' in policy, "Policy should have status"
 
 
-def test_TC_SYS_005_003_run_compliance_check(test_dhf_root, governance_dir):
+def test_TC_SYS_005_003_run_compliance_check(stub_adapter, governance_dir):
     """
     TC-SYS-005-003: Run Compliance Assessment (API)
 
@@ -80,7 +72,7 @@ def test_TC_SYS_005_003_run_compliance_check(test_dhf_root, governance_dir):
 
     Verify system can run compliance checks and produce results.
     """
-    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
+    core = CompliantFlowCore(stub_adapter)
 
     report = core.check_compliance("IEC_62304", governance_dir)
 
@@ -103,7 +95,7 @@ def test_TC_SYS_005_003_run_compliance_check(test_dhf_root, governance_dir):
         assert len(result['policy_text']) > 0, "policy_text should not be empty"
 
 
-def test_TC_SYS_005_004_compliance_score_calculation(test_dhf_root, governance_dir):
+def test_TC_SYS_005_004_compliance_score_calculation(stub_adapter, governance_dir):
     """
     TC-SYS-005-004: Compliance Score Calculation (API)
 
@@ -112,7 +104,7 @@ def test_TC_SYS_005_004_compliance_score_calculation(test_dhf_root, governance_d
 
     Verify compliance score is calculated correctly.
     """
-    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
+    core = CompliantFlowCore(stub_adapter)
 
     report = core.check_compliance("IEC_62304", governance_dir)
 
@@ -127,7 +119,7 @@ def test_TC_SYS_005_004_compliance_score_calculation(test_dhf_root, governance_d
         f"Score should be {expected_score:.1f}, got {actual_score:.1f}"
 
 
-def test_TC_SYS_005_005_policy_validation_details(test_dhf_root, governance_dir):
+def test_TC_SYS_005_005_policy_validation_details(stub_adapter, governance_dir):
     """
     TC-SYS-005-005: Policy Validation Details (API)
 
@@ -136,7 +128,7 @@ def test_TC_SYS_005_005_policy_validation_details(test_dhf_root, governance_dir)
 
     Verify compliance check provides detailed validation information.
     """
-    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
+    core = CompliantFlowCore(stub_adapter)
 
     report = core.check_compliance("IEC_62304", governance_dir)
 
@@ -151,32 +143,29 @@ def test_TC_SYS_005_005_policy_validation_details(test_dhf_root, governance_dir)
             assert isinstance(result['evidence'], dict)
 
 
-def test_TC_SYS_005_006_adapter_document_access(test_dhf_root):
+def test_TC_SYS_005_006_adapter_document_access(stub_adapter):
     """
     TC-SYS-005-006: Adapter document access API
 
     @links: SYS-005
     @test_id: TC-SYS-005-006
 
-    Verify get_document() and list_documents() on LocalDHFAdapter.
+    Verify get_document() and list_documents() on the stub adapter.
     """
-    from utils.local_adapter import LocalDHFAdapter
-    adapter = LocalDHFAdapter(test_dhf_root)
-
-    docs = adapter.list_documents()
+    docs = stub_adapter.list_documents()
     assert isinstance(docs, list)
     assert "test_plan" in docs, "test_plan document should be listed"
 
-    content = adapter.get_document("test_plan")
+    content = stub_adapter.get_document("test_plan")
     assert content is not None, "Should retrieve test_plan document"
     assert "testing" in content.lower()
     assert "verification" in content.lower()
 
-    missing = adapter.get_document("nonexistent_document_xyz")
+    missing = stub_adapter.get_document("nonexistent_document_xyz")
     assert missing is None, "Should return None for missing document"
 
 
-def test_TC_SYS_005_007_document_content_check(test_dhf_root, governance_dir):
+def test_TC_SYS_005_007_document_content_check(stub_adapter, governance_dir):
     """
     TC-SYS-005-007: document_content policy check
 
@@ -185,7 +174,7 @@ def test_TC_SYS_005_007_document_content_check(test_dhf_root, governance_dir):
 
     Verify document_content automation check passes when keywords are present.
     """
-    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
+    core = CompliantFlowCore(stub_adapter)
     report = core.check_compliance("IEC_62304", governance_dir)
 
     doc_results = [r for r in report['results'] if r['policy_id'] == 'TEST.doc_content']
@@ -197,7 +186,7 @@ def test_TC_SYS_005_007_document_content_check(test_dhf_root, governance_dir):
     assert 'keywords' in result['evidence']
 
 
-def test_TC_SYS_005_008_attribute_value_check(test_dhf_root, governance_dir):
+def test_TC_SYS_005_008_attribute_value_check(stub_adapter, governance_dir):
     """
     TC-SYS-005-008: attribute_value policy check
 
@@ -206,7 +195,7 @@ def test_TC_SYS_005_008_attribute_value_check(test_dhf_root, governance_dir):
 
     Verify attribute_value automation check returns structured evidence.
     """
-    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
+    core = CompliantFlowCore(stub_adapter)
     report = core.check_compliance("IEC_62304", governance_dir)
 
     attr_results = [r for r in report['results'] if r['policy_id'] == 'TEST.attr_value']
@@ -252,15 +241,15 @@ def test_TC_SYS_005_010_default_backend_uses_ollama_when_gemini_absent(monkeypat
     assert isinstance(backend, OllamaBackend)
 
 
-def test_TC_SYS_005_011_semantic_check_reports_missing_backend(test_dhf_root):
+def test_TC_SYS_005_011_semantic_check_reports_missing_backend(stub_adapter):
     """
     TC-SYS-005-011: semantic policy checks fail with a clear explanation when no LLM backend is configured.
 
     @links: SYS-009
     @test_id: TC-SYS-005-011
     """
-    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
-    engine = PolicyEngine(core, root_dir=test_dhf_root, llm_backend=None)
+    core = CompliantFlowCore(stub_adapter)
+    engine = PolicyEngine(core, llm_backend=None)
 
     passed, details, evidence = engine._check_document_semantic(
         doc_id="test_plan",
@@ -272,18 +261,18 @@ def test_TC_SYS_005_011_semantic_check_reports_missing_backend(test_dhf_root):
     assert evidence == {"doc_id": "test_plan"}
 
 
-def test_TC_SYS_005_012_no_open_defects_passes_when_none_blocking(test_dhf_root, governance_dir):
+def test_TC_SYS_005_012_no_open_defects_passes_when_none_blocking(stub_adapter, governance_dir):
     """
     TC-SYS-005-012: no_open_defects passes when no Critical/High defects are open.
 
     @links: SYS-005
     @test_id: TC-SYS-005-012
 
-    The test DHF contains DEF-001 (closed/High) and DEF-002 (closed/Low).
+    The test dataset contains DEF-001 (closed/High) and DEF-002 (closed/Low).
     Neither is in an open/in_progress state, so the check must pass.
     """
-    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
-    engine = PolicyEngine(core, root_dir=test_dhf_root)
+    core = CompliantFlowCore(stub_adapter)
+    engine = PolicyEngine(core)
 
     passed, details, evidence = engine._check_no_open_defects(
         severity_threshold=['Critical', 'High'],
@@ -295,33 +284,26 @@ def test_TC_SYS_005_012_no_open_defects_passes_when_none_blocking(test_dhf_root,
     assert 'High' in evidence['severity_threshold']
 
 
-def test_TC_SYS_005_013_no_open_defects_fails_when_blocking_defect_exists(test_dhf_root):
+def test_TC_SYS_005_013_no_open_defects_fails_when_blocking_defect_exists(stub_adapter):
     """
     TC-SYS-005-013: no_open_defects fails when a Critical/High defect is open.
 
     @links: SYS-005
     @test_id: TC-SYS-005-013
 
-    Directly inject a Critical open defect into the graph and verify the check
+    Inject a Critical open defect into the stub adapter and verify the check
     surfaces it with structured evidence including the defect UID.
     """
-    import yaml as _yaml
-
-    # Write a Critical open defect into the isolated test DHF
-    def_dir = test_dhf_root / "items" / "14_def"
-    def_dir.mkdir(parents=True, exist_ok=True)
-    blocking_def = {
+    stub_adapter.create_item({
         'id': 'DEF-TEST',
         'title': 'Critical Open Defect',
         'description': 'A critical defect in open state.',
         'severity': 'Critical',
         'status': 'open',
-    }
-    with open(def_dir / "DEF-TEST.yaml", 'w') as f:
-        _yaml.dump(blocking_def, f)
+    })
 
-    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
-    engine = PolicyEngine(core, root_dir=test_dhf_root)
+    core = CompliantFlowCore(stub_adapter)
+    engine = PolicyEngine(core)
 
     passed, details, evidence = engine._check_no_open_defects(
         severity_threshold=['Critical', 'High'],
@@ -331,3 +313,31 @@ def test_TC_SYS_005_013_no_open_defects_fails_when_blocking_defect_exists(test_d
     blocking_ids = [b['uid'] for b in evidence['blocking_defects']]
     assert 'DEF-TEST' in blocking_ids
     assert 'DEF-TEST' in details
+
+
+def test_TC_SYS_005_014_persist_compliance_run(stub_adapter, governance_dir):
+    """
+    TC-SYS-005-014: check_compliance_group with persist=True appends a run
+    record to the adapter's compliance run store.
+
+    @test_id: TC-SYS-005-014
+    @links: SYS-012
+
+    Verifies that passing persist=True to CompliantFlowCore.check_compliance_group
+    results in exactly one compliance run record being stored via record_compliance_run,
+    and that the record contains the expected fields (source_id, score,
+    passed_policies, total_policies, timestamp).
+    """
+    core = CompliantFlowCore(stub_adapter)
+    report = core.check_compliance("IEC_62304", governance_dir, persist=True)
+
+    assert report is not None
+    runs = stub_adapter.get_compliance_runs("IEC_62304")
+    assert len(runs) == 1, f"Expected 1 compliance run, got {len(runs)}"
+
+    run = runs[0]
+    assert run.get("source_id") == "IEC_62304"
+    assert "score" in run
+    assert "passed_policies" in run
+    assert "total_policies" in run
+    assert "timestamp" in run

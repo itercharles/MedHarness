@@ -90,46 +90,40 @@ class TestComponentBoundary:
             + "\n".join(f"  - {v}" for v in violations)
         )
 
-    def test_TC_SYS_034_002_dhf_local_adapter_uses_utils(self):
+    def test_TC_SYS_034_002_local_adapter_not_in_tool_repo(self):
         """
-        TC-SYS-034-002: DHF/utils/local_adapter.py imports only utils.* modules
-        and compliantflow.domain.* (shared vocabulary). It must NOT import
-        compliantflow analysis-layer modules (traceability, core, cli).
+        TC-SYS-034-002: LocalDHFAdapter does not exist anywhere in the
+        compliantflow tool repository. It lives in compliantflow-dhf (the
+        external DHF repository) as the DHF system's own API implementation.
 
-        compliantflow.domain.* is the shared domain vocabulary (pure data models)
-        that the adapter uses to produce ProjectSchema for CompliantFlowCore.
+        This enforces the interface abstraction: the tool depends only on
+        the DHFAdapter protocol, not any specific implementation.
 
         @test_id: TC-SYS-034-002
         @links: SYS-008
         """
-        assert _DHF_LOCAL_ADAPTER.exists(), (
-            f"LocalDHFAdapter not found at {_DHF_LOCAL_ADAPTER} — "
-            "was it moved back to src/compliantflow/adapters/?"
-        )
+        tool_root = _COMPLIANTFLOW_SRC.parent
+        # Scan for any file named local_adapter.py or containing LocalDHFAdapter
+        found = []
+        for py_file in tool_root.rglob("*.py"):
+            parts = py_file.parts
+            # Skip hidden dirs, venv, and test files
+            if any(p.startswith(".") or p == ".venv" for p in parts):
+                continue
+            if py_file.name.startswith("test_"):
+                continue
+            try:
+                tree = ast.parse(py_file.read_text(encoding="utf-8"))
+                for node in ast.walk(tree):
+                    if isinstance(node, ast.ClassDef) and node.name == "LocalDHFAdapter":
+                        found.append(str(py_file.relative_to(tool_root)))
+            except (OSError, UnicodeDecodeError, SyntaxError):
+                pass
 
-        imports = _collect_imports(_DHF_LOCAL_ADAPTER)
-        utils_imports = [i for i in imports if i.startswith("utils.")]
-
-        # Analysis-layer modules that the adapter must never import
-        _PROHIBITED_CF_MODULES = [
-            "compliantflow.traceability",
-            "compliantflow.mixins",
-            "compliantflow.core",
-            "compliantflow.cli",
-        ]
-        prohibited_cf_imports = [
-            i for i in imports
-            if any(i == m or i.startswith(m + ".") for m in _PROHIBITED_CF_MODULES)
-        ]
-
-        assert len(utils_imports) > 0, (
-            "DHF/utils/local_adapter.py should import from utils.* "
-            "(it is the DHF-layer adapter implementation)"
-        )
-        assert not prohibited_cf_imports, (
-            "DHF/utils/local_adapter.py must NOT import compliantflow analysis-layer modules. "
-            "Only compliantflow.domain.* (shared vocabulary) is permitted. "
-            f"Found prohibited: {prohibited_cf_imports}"
+        assert not found, (
+            "LocalDHFAdapter implementation found in the tool repo. "
+            "It should only exist in the compliantflow-dhf repository.\n"
+            + "\n".join(f"  - {f}" for f in found)
         )
 
     def test_TC_SYS_034_003_no_local_adapter_in_compliantflow(self):

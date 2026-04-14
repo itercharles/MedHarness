@@ -22,7 +22,31 @@
       "Bash(mv *)",
       "Bash(brew *)",
       "Bash(pip *)",
-      "Bash(.venv/bin/pip *)"
-    ]
+      "Bash(.venv/bin/pip *)",
+      "Bash(grep \"^id:\\\\|^title:\" DHF/items/03_req_srs/*.yaml)",
+      "Bash(grep -n \"^    \\\\]$\\\\|^    ]$\" tests/fixtures/test_data.py)",
+      "Bash(grep \"^id:\\\\|^title:\\\\|^prefix:\\\\|^directory:\\\\|^code:\" DHF/config/doc_types/*.yaml)",
+      "Bash(python3 -c \"import rdm\")",
+      "Bash(python3 -c ':*)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d, indent=2\\)\\)\")",
+      "Bash(grep -l \"lifecycle\" DHF/config/doc_types/*.yaml)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(d['id'], d['status']\\)\")",
+      "Bash(grep -h \"^id:\\\\|^status:\" /Users/charles/Code/CompliantFlow/DHF/items/09_cr/*.yaml)",
+      "Bash(sort -k1)",
+      "Bash(grep:*)",
+      "Bash(python3 -c \"import sys,json; items=[json.loads\\(l\\) for l in sys.stdin]; [print\\(i['id'], i['status'], i['title'][:60]\\) for i in sorted\\(items, key=lambda x: x['id']\\)]\")",
+      "Bash(xargs ls:*)",
+      "Bash(python3 -c \"import flask; print\\(flask.__version__\\)\")",
+      "Bash(python3 -c \"import fastapi; print\\(fastapi.__version__\\)\")",
+      "Bash(python3 -c \"import streamlit; print\\(streamlit.__version__\\)\")",
+      "Bash(python3 -c \"import jinja2; print\\(jinja2.__version__\\)\")",
+      "Bash(python3 -m compliantflow --help)",
+      "Bash(python3 -c \"import sys,json; items=[json.loads\\(l\\) for l in sys.stdin]; [print\\(i['id'], i.get\\('implementation_status','—'\\), i.get\\('verification_status','—'\\)\\) for i in items]\")",
+      "WebFetch(domain:github.com)",
+      "mcp__github__create_repository",
+      "Bash(cp -r /Users/charles/Code/CompliantFlow/DHF/. /tmp/compliantflow-dhf/DHF)",
+      "Bash(cp -r /Users/charles/Code/CompliantFlow/governance /tmp/compliantflow-dhf/governance)"
+    ],
+    "defaultMode": "auto"
   }
 }

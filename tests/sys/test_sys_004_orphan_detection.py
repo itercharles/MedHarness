@@ -5,23 +5,14 @@ Verifies: The system shall detect and report orphan items (items without
 required parent links).
 
 @links: SYS-004
-
-This replaces browser-based tests with direct API testing.
 """
 
 import pytest
-import sys
-from pathlib import Path
 
-# Add src to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
-
-from utils.local_adapter import LocalDHFAdapter
 from compliantflow.core import CompliantFlowCore
-from utils.models.item import Item
 
 
-def test_TC_SYS_004_001_detect_orphans(test_dhf_root):
+def test_TC_SYS_004_001_detect_orphans(stub_adapter):
     """
     TC-SYS-004-001: Detect Orphan Items (API)
 
@@ -30,16 +21,12 @@ def test_TC_SYS_004_001_detect_orphans(test_dhf_root):
 
     Verify system can detect orphan items.
     """
-    # Initialize core with test DHF
-    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
+    core = CompliantFlowCore(stub_adapter)
 
-    # Find orphans (returns list of orphan dicts)
     orphans = core.graph.find_orphans()
 
-    # Verify orphans structure
     assert isinstance(orphans, list), "Orphans should be a list"
 
-    # Each orphan should have required fields
     for orphan in orphans:
         assert isinstance(orphan, dict), "Each orphan should be a dict"
         assert "uid" in orphan, "Orphan should have uid"
@@ -47,7 +34,7 @@ def test_TC_SYS_004_001_detect_orphans(test_dhf_root):
         assert "issue" in orphan, "Orphan should have issue description"
 
 
-def test_TC_SYS_004_002_orphan_exclusions(test_dhf_root):
+def test_TC_SYS_004_002_orphan_exclusions(stub_adapter):
     """
     TC-SYS-004-002: Orphan Exclusions (API)
 
@@ -56,18 +43,15 @@ def test_TC_SYS_004_002_orphan_exclusions(test_dhf_root):
 
     Verify root types are excluded from orphan detection.
     """
-    # Initialize core with test DHF
-    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
+    core = CompliantFlowCore(stub_adapter)
 
-    # Find orphans (list of orphan dicts)
     orphans = core.graph.find_orphans()
 
-    # UC (Use Cases) are root items with no required parents, should not be flagged as orphans
     uc_orphans = [o for o in orphans if o["type"] == "UC"]
     assert len(uc_orphans) == 0, "Use Cases (UC) should not be orphaned"
 
 
-def test_TC_SYS_004_003_create_orphan_and_detect(test_dhf_root):
+def test_TC_SYS_004_003_create_orphan_and_detect(stub_adapter):
     """
     TC-SYS-004-003: Create Orphan and Detect (API)
 
@@ -76,16 +60,14 @@ def test_TC_SYS_004_003_create_orphan_and_detect(test_dhf_root):
 
     Verify system can create items and detect orphans if configured.
     """
-    adapter = LocalDHFAdapter(test_dhf_root)
-    core = CompliantFlowCore(adapter)
+    core = CompliantFlowCore(stub_adapter)
 
-    # Create a new SRS item without derives_from via adapter (no parent links = orphan)
     new_item_data = {
         "type": "SRS",
         "title": "Orphan Test Item",
         "content": "This item has no parent links",
     }
-    created_item = adapter.create_item(new_item_data)
+    created_item = stub_adapter.create_item(new_item_data)
     new_item_id = created_item["id"]
     assert created_item["id"].startswith("SRS-")
 
@@ -96,7 +78,7 @@ def test_TC_SYS_004_003_create_orphan_and_detect(test_dhf_root):
     assert retrieved_item["title"] == "Orphan Test Item"
 
 
-def test_TC_SYS_004_004_orphan_count(test_dhf_root):
+def test_TC_SYS_004_004_orphan_count(stub_adapter):
     """
     TC-SYS-004-004: Orphan Count (API)
 
@@ -105,18 +87,12 @@ def test_TC_SYS_004_004_orphan_count(test_dhf_root):
 
     Verify system can count total orphan items.
     """
-    # Initialize core with test DHF
-    core = CompliantFlowCore(LocalDHFAdapter(test_dhf_root))
+    core = CompliantFlowCore(stub_adapter)
 
-    # Find orphans (returns list)
     orphans = core.graph.find_orphans()
 
-    # Count total orphans
     total_orphans = len(orphans)
 
-    # Verify count is accessible
     assert total_orphans >= 0, "Should be able to count orphans"
 
-    # For a well-structured test DHF, we expect 0 orphans
-    # All test items have proper parent relationships
     assert total_orphans == 0, f"Test DHF should have no orphans, found {total_orphans}"

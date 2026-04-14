@@ -1,96 +1,79 @@
 # CompliantFlow
 
-CompliantFlow is a Docs-as-Code ALM (Application Lifecycle Management) platform for Medical Devices. It manages a Design History File (DHF) — requirements, risks, tests, change requests — stored as YAML files and tracked in Git.
+CompliantFlow is a compliance checking tool for medical device software. It connects to a project's Design History File (DHF) via the `DHFAdapter` interface and verifies compliance against IEC 62304, ISO 14971, and IEC 82304-1 in CI.
+
+CompliantFlow's own DHF lives in a separate repository: [compliantflow-dhf](https://github.com/itercharles/compliantflow-dhf). Clone it alongside this repo to run the CLI and compliance checks.
 
 ## Repository Layout
 
 ```
 CompliantFlow/
-├── DHF/                        # Design History File (the data)
-│   ├── items/                  # Requirement items (YAML, one file per item)
-│   ├── config/                 # Project config (global.yaml + doc_types/)
-│   ├── test-results/           # Automated test results (results.yaml)
-│   ├── documents/              # DHF documents (plans/, specifications/, …)
-│   └── utils/                  # DHF data-layer package (importable as `utils`)
-│       ├── models/             # Pydantic models (Item, ProjectConfig, …)
-│       ├── repository/         # ItemLoader, ItemSaver, GitRepository
-│       ├── lifecycle.py        # Standalone lifecycle engine
-│       ├── result_store.py     # Test result persistence
-│       ├── junit_parser.py     # JUnit XML import (framework-agnostic)
-│       └── cli.py              # DHF CLI entry point (python -m utils)
-├── governance/                 # Compliance policy groups (IEC_62304.yaml, …)
-├── compliantflow/              # Read-only analysis engine package
-│   ├── core.py                 # CompliantFlowCore facade (read-only)
+├── compliantflow/              # Read-only analysis engine
+│   ├── core.py                 # CompliantFlowCore facade
 │   ├── cli.py                  # Analysis CLI (python -m compliantflow)
 │   ├── policy.py               # PolicyEngine (compliance checks)
-│   ├── adapters/               # DHFAdapter protocol + LocalDHFAdapter
+│   ├── adapters/               # DHFAdapter protocol
 │   └── traceability/           # Graph engine
-├── tests/                      # Test suites
+├── tests/                      # Test suites (use StubDHFAdapter, no DHF needed)
 │   ├── sys/                    # SYS-level API tests
 │   ├── crs/                    # CRS-level scenario tests
-│   └── fixtures/               # Shared test data and DHF setup
+│   └── fixtures/               # Shared test data
 ├── requirements.txt
 └── .venv/                      # Virtual environment (gitignored)
 ```
+
+DHF data (`DHF/`) and governance policy files (`governance/`) live in [compliantflow-dhf](https://github.com/itercharles/compliantflow-dhf).
 
 ## Setup
 
 ```bash
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
+
+# Clone the DHF alongside this repo
+git clone https://github.com/itercharles/compliantflow-dhf
+export PYTHONPATH=.:compliantflow-dhf/DHF
 ```
 
 ## Running
 
 ### Analysis CLI (read-only)
 ```bash
-# Traceability, compliance checks, CR status, test result import
-PYTHONPATH=.:DHF python -m compliantflow --help
-PYTHONPATH=.:DHF python -m compliantflow validate traceability
-PYTHONPATH=.:DHF python -m compliantflow validate compliance IEC_62304
-PYTHONPATH=.:DHF python -m compliantflow traceability matrix CRS SYS SRS
-PYTHONPATH=.:DHF python -m compliantflow test import results.xml --format junit --tester "CI"
+python -m compliantflow --dhf compliantflow-dhf/DHF validate traceability
+python -m compliantflow --dhf compliantflow-dhf/DHF validate compliance IEC_62304 \
+  --governance-dir compliantflow-dhf/governance
+python -m compliantflow --dhf compliantflow-dhf/DHF traceability matrix CRS SYS SRS
+python -m compliantflow --dhf compliantflow-dhf/DHF cr check-status CR-001
 ```
 
-### DHF Data CLI
+### DHF Data CLI (run from compliantflow-dhf/)
 ```bash
-# Item CRUD, lifecycle transitions, schema validation, document generation
-PYTHONPATH=.:DHF python -m utils --help
+cd compliantflow-dhf
 PYTHONPATH=.:DHF python -m utils item list --type SYS
 PYTHONPATH=.:DHF python -m utils item create --type SYS --data '{"title": "My req"}'
-PYTHONPATH=.:DHF python -m utils item transitions <CR-ID>
 PYTHONPATH=.:DHF python -m utils item transition <CR-ID> approved --by "Alice"
 PYTHONPATH=.:DHF python -m utils validate schema
-PYTHONPATH=.:DHF python -m utils doc generate ALL
 ```
 
 ## Testing
 
-```bash
-# All suites must pass before merging
-PYTHONPATH=.:DHF .venv/bin/pytest tests/sys/ tests/crs/ -q
-```
+Tests use `StubDHFAdapter` (in-memory) and require no DHF checkout:
 
-For the shared LLM/agent operating model, see:
-- [`docs/agent_environment.md`](docs/agent_environment.md)
-- [`docs/agent_workflow.md`](docs/agent_workflow.md)
+```bash
+PYTHONPATH=. .venv/bin/pytest tests/sys/ tests/crs/ -q
+```
 
 ## Architecture
 
-CompliantFlow is split into two independent layers:
+CompliantFlow connects to any DHF via the `DHFAdapter` protocol (`compliantflow/adapters/protocol.py`). The tool has no knowledge of how the DHF stores data — it only depends on the interface.
 
-| Layer | Package | Purpose |
+| Layer | Location | Purpose |
 |---|---|---|
-| DHF data layer | `DHF/utils/` | YAML CRUD, lifecycle, schema, doc generation, test result storage |
-| Analysis engine | `compliantflow/` | Read-only: graph, traceability, compliance reporting |
+| Analysis engine | `compliantflow/` (this repo) | Read-only: traceability, compliance, reporting |
+| DHF data layer | `compliantflow-dhf/DHF/utils/` | YAML CRUD, lifecycle, schema, test result storage |
 
-The analysis engine connects to the data layer via the `DHFAdapter` protocol (`compliantflow/adapters/protocol.py`). The default implementation is `LocalDHFAdapter` which wraps `DHF/utils/`. Alternative backends (cloud, database) can plug in by implementing the same protocol.
+**CompliantFlowCore is read-only.** All data mutations go through `python -m utils` in the DHF repo.
 
-**CompliantFlowCore is read-only.** All data mutations (create/update/delete items, lifecycle transitions) go through the DHFAdapter directly or via `python -m utils`.
+**GitOps approval**: Requirement items (UC, CRS, SYS, SRS, SWDD, SYSARCH, RISK, RCM) are approved by landing on `main`. No explicit status field.
 
-**GitOps approval model**: Requirement items (UC, CRS, SYS, SRS, SWDD, SYSARCH, RISK, RCM) have no `status` field. Approval is implicit from Git: `main` branch = approved, feature branch = draft.
-
-**Compliance**: Policy groups live in `governance/` at the repository root. Pass `governance_dir` explicitly when running checks:
-```python
-core.check_compliance("IEC_62304", Path("governance"))
-```
+**Compliance**: Governance policy files live in `compliantflow-dhf/governance/`. Pass `--governance-dir` when running checks.

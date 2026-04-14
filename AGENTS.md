@@ -6,15 +6,16 @@ verifies compliance against IEC 62304, ISO 14971, and IEC 82304-1 in CI. The int
 abstraction means it can integrate with any DHF system, not just the reference
 implementation in this repo.
 
-This repository uses CompliantFlow on itself: `DHF/` is CompliantFlow's own design
-history file, serving as both the tool's regulatory documentation and a working example
-of how it operates.
+CompliantFlow's own design history file lives in a separate repository,
+[compliantflow-dhf](https://github.com/itercharles/compliantflow-dhf).
+Clone it alongside this repo and add its `DHF/` directory to `PYTHONPATH`
+to enable the CLI and compliance checks.
 
 ## Environment
 
 ```bash
-.venv/            # virtual environment
-PYTHONPATH=.:DHF  # required for all commands
+.venv/                           # virtual environment
+PYTHONPATH=.:compliantflow-dhf/DHF  # required for CLI commands and compliance checks
 ```
 
 ## Key Invariants

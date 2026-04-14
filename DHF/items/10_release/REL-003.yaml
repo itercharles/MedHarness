@@ -1,9 +1,0 @@
-id: REL-003
-title: Release 1.2.0
-content: Feature release with new capabilities
-version: 1.2.0
-included_items:
-- CR-001
-- CR-010
-release_notes: New features and enhancements
-status: released
