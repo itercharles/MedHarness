@@ -1,8 +1,24 @@
 name: CI Pipeline
 
+# Two-gate model:
+#
+# PR (design gate) — code may only merge when:
+#   - CR exists in DHF and is planned
+#   - DHF requirements/design docs are already updated
+#   - Tool tests pass
+#   - Compliance check passes against current DHF state (read-only)
+#
+# Post-merge (verification gate) — runs after merge to main:
+#   - Re-runs tests, imports results into DHF (committed back)
+#   - Runs compliance check with --persist (committed back)
+#   - Generates evidence reports
+#
+# Works for any DHF type (git repo or 3rd-party API via adapter).
+# DHF_REPO_TOKEN must have read access for PR jobs, write access for post-merge.
+
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main ]
   pull_request:
     types: [opened, synchronize]
 
@@ -11,6 +27,9 @@ permissions:
   actions: read
 
 jobs:
+
+  # ── PR PIPELINE (design gate) ─────────────────────────────────────────────
+
   phase0-cr-validation:
     name: Phase 0 - CR Validation
     runs-on: ubuntu-latest
@@ -67,14 +86,13 @@ jobs:
           fi
           echo "✓ All referenced CRs are valid." >&2
 
-  # Phase 1: DHF Utils Tests (runs in compliantflow-dhf)
   phase1-dhf-utils:
     name: Phase 1 - DHF Utils Tests
     runs-on: ubuntu-latest
     needs: phase0-cr-validation
-    if: always() && !failure() && !cancelled()
+    if: github.event_name == 'pull_request'
     steps:
-      - name: Check out tool repo (for requirements.txt)
+      - name: Check out tool repo
         uses: actions/checkout@v4
         with:
           path: compliantflow
@@ -110,12 +128,11 @@ jobs:
           name: dhf-utils-test-results
           path: dhf-utils-test-results.xml
 
-  # Phase 2: SYS API Tests (System Requirements)
   phase2-sys:
     name: Phase 2 - SYS API Tests
     runs-on: ubuntu-latest
-    needs: [phase0-cr-validation, phase1-dhf-utils]
-    if: always() && !failure() && !cancelled()
+    needs: phase1-dhf-utils
+    if: github.event_name == 'pull_request'
     steps:
       - name: Check out code
         uses: actions/checkout@v4
@@ -132,7 +149,7 @@ jobs:
           pip install pytest
           pip install -r requirements.txt
 
-      - name: Run SYS Tests
+      - name: Run SYS tests
         run: |
           export PYTHONPATH="${PYTHONPATH}:${PWD}"
           pytest tests/sys/ -v -s --junitxml=sys-test-results.xml
@@ -144,12 +161,11 @@ jobs:
           name: sys-test-results
           path: sys-test-results.xml
 
-
-  # Phase 3: CRS API Tests (Customer Requirements)
   phase3-crs:
     name: Phase 3 - CRS API Tests
     runs-on: ubuntu-latest
     needs: phase2-sys
+    if: github.event_name == 'pull_request'
     steps:
       - name: Check out code
         uses: actions/checkout@v4
@@ -166,7 +182,7 @@ jobs:
           pip install pytest
           pip install -r requirements.txt
 
-      - name: Run CRS API Tests
+      - name: Run CRS tests
         run: |
           export PYTHONPATH="${PYTHONPATH}:${PWD}"
           pytest tests/crs/ -v -s --junitxml=crs-test-results.xml
@@ -178,12 +194,11 @@ jobs:
           name: crs-test-results
           path: crs-test-results.xml
 
-  # Phase 3.5: CR-PR Report Generation
-  # Generates a CR evidence report before Phase 4 validation.
   phase3-5-cr-report:
     name: Phase 3.5 - CR-PR Evidence Report
     runs-on: ubuntu-latest
     needs: [phase2-sys, phase3-crs]
+    if: github.event_name == 'pull_request'
     steps:
       - name: Check out tool repo
         uses: actions/checkout@v4
@@ -240,11 +255,14 @@ jobs:
           name: cr-pr-reports
           path: cr-reports/
 
-  # Phase 4: DHF Validation + Evidence Reports
-  phase4-dhf-validation:
-    name: Phase 4 - DHF Validation
+  # Phase 4 (design gate): validates DHF is in the right state BEFORE code merges.
+  # Read-only — imports test results ephemerally to check coverage, but does not
+  # write back to DHF. No --persist. Writing happens post-merge.
+  phase4-design-gate:
+    name: Phase 4 - Compliance Design Gate
     runs-on: ubuntu-latest
     needs: [phase2-sys, phase3-crs, phase3-5-cr-report]
+    if: github.event_name == 'pull_request'
     steps:
       - name: Check out tool repo
         uses: actions/checkout@v4
@@ -267,12 +285,6 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Download CR-PR evidence reports
-        uses: actions/download-artifact@v4
-        with:
-          name: cr-pr-reports
-          path: cr-reports/
-
       - name: Download SYS test results
         uses: actions/download-artifact@v4
         with:
@@ -285,12 +297,11 @@ jobs:
           name: crs-test-results
           path: test-results/
 
-      - name: Import test results into DHF
+      - name: Import test results (ephemeral — validates coverage, not committed)
         run: |
           export PYTHONPATH="${PYTHONPATH}:${PWD}:${PWD}/compliantflow-dhf/DHF"
           RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           for xml in test-results/*.xml; do
-            echo "Importing $xml" >&2
             python -m compliantflow --dhf compliantflow-dhf/DHF test import "$xml" \
               --format junit \
               --tester "GitHub Actions" \
@@ -305,24 +316,21 @@ jobs:
           python -m compliantflow --dhf compliantflow-dhf/DHF validate coverage \
             UC:CRS CRS:SYS SYS:SYSARCH
 
-      - name: Check traceability (no orphaned requirement items)
+      - name: Check traceability
         run: |
           export PYTHONPATH="${PYTHONPATH}:${PWD}:${PWD}/compliantflow-dhf/DHF"
           python -m compliantflow --dhf compliantflow-dhf/DHF validate traceability || true
 
-      - name: Run IEC 62304 compliance check (with persistence)
+      - name: IEC 62304 compliance check (read-only — no persist)
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
           export PYTHONPATH="${PYTHONPATH}:${PWD}:${PWD}/compliantflow-dhf/DHF"
           python -m compliantflow --dhf compliantflow-dhf/DHF validate compliance IEC_62304 \
-            --governance-dir compliantflow-dhf/governance \
-            --persist
+            --governance-dir compliantflow-dhf/governance
 
-      - name: Run IEC 82304-1 compliance check (with persistence)
+      - name: IEC 82304-1 compliance check (read-only — no persist)
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
           export PYTHONPATH="${PYTHONPATH}:${PWD}:${PWD}/compliantflow-dhf/DHF"
@@ -330,9 +338,98 @@ jobs:
             --governance-dir compliantflow-dhf/governance \
             --persist || true
 
+  # ── POST-MERGE PIPELINE (verification gate) ───────────────────────────────
+  #
+  # Runs after merge to main. Re-runs tests, commits results and compliance
+  # run records back to the DHF. This is the permanent audit trail.
+  #
+  # Requires DHF_REPO_TOKEN to have write access to compliantflow-dhf.
+
+  post-merge-verification:
+    name: Post-Merge - Record Verification Evidence
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+    steps:
+      - name: Check out tool repo
+        uses: actions/checkout@v4
+
+      - name: Check out compliantflow-dhf (with write access)
+        uses: actions/checkout@v4
+        with:
+          repository: itercharles/compliantflow-dhf
+          token: ${{ secrets.DHF_REPO_TOKEN }}
+          path: compliantflow-dhf
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest
+          pip install -r requirements.txt
+
+      - name: Run SYS tests
+        run: |
+          export PYTHONPATH="${PYTHONPATH}:${PWD}"
+          pytest tests/sys/ -v --junitxml=sys-test-results.xml
+
+      - name: Run CRS tests
+        run: |
+          export PYTHONPATH="${PYTHONPATH}:${PWD}"
+          pytest tests/crs/ -v --junitxml=crs-test-results.xml
+
+      - name: Import test results into DHF
+        run: |
+          export PYTHONPATH="${PYTHONPATH}:${PWD}:${PWD}/compliantflow-dhf/DHF"
+          RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          for xml in sys-test-results.xml crs-test-results.xml; do
+            python -m compliantflow --dhf compliantflow-dhf/DHF test import "$xml" \
+              --format junit \
+              --tester "GitHub Actions" \
+              --run-id "${{ github.run_id }}" \
+              --run-url "$RUN_URL" \
+              --commit "${{ github.sha }}" || true
+          done
+
+      - name: Run IEC 62304 compliance check (persist to DHF)
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          export PYTHONPATH="${PYTHONPATH}:${PWD}:${PWD}/compliantflow-dhf/DHF"
+          python -m compliantflow --dhf compliantflow-dhf/DHF validate compliance IEC_62304 \
+            --governance-dir compliantflow-dhf/governance \
+            --persist
+
+      - name: Run IEC 82304-1 compliance check (persist to DHF)
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          export PYTHONPATH="${PYTHONPATH}:${PWD}:${PWD}/compliantflow-dhf/DHF"
+          python -m compliantflow --dhf compliantflow-dhf/DHF validate compliance IEC_82304_1 \
+            --governance-dir compliantflow-dhf/governance \
+            --persist || true
+
+      - name: Commit verification evidence back to DHF
+        run: |
+          cd compliantflow-dhf
+          git config user.name "GitHub Actions [bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add DHF/test-results/ DHF/compliance-runs/
+          if ! git diff --staged --quiet; then
+            git commit -m "ci: record verification evidence for ${GITHUB_SHA::7} [skip ci]"
+            git push
+          else
+            echo "No new verification evidence to commit." >&2
+          fi
+
       - name: Generate evidence reports
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
           export PYTHONPATH="${PYTHONPATH}:${PWD}:${PWD}/compliantflow-dhf/DHF"
