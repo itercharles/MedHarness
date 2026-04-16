@@ -400,6 +400,56 @@ def validate_release(ctx: click.Context, rel_id: str) -> None:
     )
 
 
+@validate.command("draft")
+@click.argument("file", type=click.Path(exists=True, dir_okay=False))
+@click.option("--type", "item_type", default=None, metavar="TYPE",
+              help="Item type code (e.g. SYS). Inferred from id prefix if omitted.")
+@click.option("--format", "fmt", default="json", show_default=True,
+              type=click.Choice(["json", "text"], case_sensitive=False),
+              help="Output format.")
+@click.pass_context
+def validate_draft(ctx: click.Context, file: str, item_type: str | None, fmt: str) -> None:
+    """Validate a draft DHF item YAML against the doc-type field schema.
+
+    Checks required fields and allowed values without requiring a full CI run.
+    Graph-dependent checks (traceability, verification) are out of scope.
+    Exits 0 on pass, 1 on validation failure.
+
+    \b
+    Example:
+      python -m compliantflow --dhf path/to/DHF validate draft my_item.yaml
+      python -m compliantflow --dhf path/to/DHF validate draft my_item.yaml --type SYS
+    """
+    import yaml as _yaml
+
+    with open(file, "r", encoding="utf-8") as f:
+        try:
+            item_data = _yaml.safe_load(f)
+        except Exception as exc:
+            raise click.ClickException(f"Failed to parse YAML: {exc}")
+
+    if not isinstance(item_data, dict):
+        raise click.ClickException("Item file must be a YAML mapping.")
+
+    core = _make_core(ctx)
+    result = core.validate_draft(item_data, type_name=item_type)
+
+    if fmt == "json":
+        click.echo(json.dumps(result, indent=2))
+    else:
+        valid = result["valid"]
+        icon = "✓" if valid else "✗"
+        item_type_str = result.get("type") or "unknown"
+        click.echo(f"{icon} {item_type_str}: {'valid' if valid else 'invalid'}")
+        for w in result.get("warnings", []):
+            click.echo(f"  ⚠  {w['field']}: {w['message']}")
+        for e in result.get("errors", []):
+            click.echo(f"  ✗  {e['field']}: {e['message']}")
+
+    if not result["valid"]:
+        sys.exit(1)
+
+
 @validate.group("compliance-history")
 def validate_compliance_history() -> None:
     """Compliance run history commands."""

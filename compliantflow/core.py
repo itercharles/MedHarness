@@ -547,6 +547,86 @@ class CompliantFlowCore:
             "compliance_policies": compliance_policies,
         }
 
+    def validate_draft(
+        self,
+        item_data: Dict[str, Any],
+        type_name: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Validate a proposed DHF item against the doc-type field schema.
+
+        Checks required fields and allowed values from the ProjectSchema
+        (populated via CR-039 FieldSchema).  Graph-dependent checks such as
+        trace_coverage and verification_complete are out of scope.
+
+        Args:
+            item_data:  The item dict to validate (e.g. parsed from a YAML file).
+            type_name:  Override the type resolution.  When ``None`` the type is
+                        inferred from the ``id`` prefix (e.g. ``"SYS-001"`` → ``"SYS"``).
+
+        Returns:
+            ``{"valid": bool, "type": str|None, "errors": [...], "warnings": [...]}``
+
+            Each error/warning is a dict with ``field`` and ``message`` keys.
+        """
+        errors: List[Dict[str, str]] = []
+        warnings: List[Dict[str, str]] = []
+
+        # Resolve item type
+        resolved_type: Optional[str] = type_name
+        item_type_schema = None
+
+        if resolved_type is None:
+            item_id = item_data.get("id", "")
+            if item_id and "-" in item_id:
+                prefix = item_id.split("-")[0] + "-"
+                item_type_schema = self.config.get_type_by_prefix(prefix) if self.config else None
+                if item_type_schema:
+                    resolved_type = item_type_schema.name
+        else:
+            item_type_schema = self.config.get_type(resolved_type) if self.config else None
+
+        if item_type_schema is None:
+            if resolved_type:
+                warnings.append({"field": "id", "message": f"Unknown type '{resolved_type}' — field constraints not checked"})
+            else:
+                warnings.append({"field": "id", "message": "Cannot determine item type — provide --type or an id field with a known prefix"})
+            return {"valid": True, "type": resolved_type, "errors": errors, "warnings": warnings}
+
+        # Validate against FieldSchema
+        for field in item_type_schema.fields:
+            value = item_data.get(field.name)
+
+            # Required check
+            if field.required and (value is None or value == "" or value == []):
+                errors.append({"field": field.name, "message": f"Required field '{field.name}' is missing or empty"})
+                continue
+
+            if value is None:
+                continue
+
+            # Allowed values check (select / multiselect / enum)
+            if field.options and field.format in ("select", "enum"):
+                if value not in field.options:
+                    errors.append({
+                        "field": field.name,
+                        "message": f"'{value}' is not a valid value for '{field.name}'. Allowed: {field.options}",
+                    })
+            elif field.options and field.format == "multiselect":
+                values = value if isinstance(value, list) else [value]
+                invalid = [v for v in values if v not in field.options]
+                if invalid:
+                    errors.append({
+                        "field": field.name,
+                        "message": f"Invalid value(s) for '{field.name}': {invalid}. Allowed: {field.options}",
+                    })
+
+        return {
+            "valid": len(errors) == 0,
+            "type": resolved_type,
+            "errors": errors,
+            "warnings": warnings,
+        }
+
     def get_open_defects(self) -> List[Dict[str, Any]]:
         """Return all DEF items with an open status (draft/open/in_progress)."""
         _OPEN_STATUSES = {"draft", "open", "in_progress"}
