@@ -878,8 +878,13 @@ def migrate() -> None:
     "--dry-run", is_flag=True, default=False,
     help="Parse and map items without writing any files.",
 )
+@click.option(
+    "--report-output", default=None, metavar="FILE",
+    help="Write a Markdown completeness report to FILE after migration.",
+)
 @click.pass_context
-def migrate_rdm(ctx: click.Context, source_dir: Path, dry_run: bool) -> None:
+def migrate_rdm(ctx: click.Context, source_dir: Path, dry_run: bool,
+                report_output: str | None) -> None:
     """Migrate an Innolitics RDM repository into this DHF.
 
     SOURCE_DIR is the root of the RDM repository to migrate.
@@ -888,24 +893,57 @@ def migrate_rdm(ctx: click.Context, source_dir: Path, dry_run: bool) -> None:
     CompliantFlow doc types, converts reST content to Markdown, writes items
     into DHF/items/, and prints a JSON migration report to stdout.
 
+    After writing items, runs post-migration field schema validation and
+    categorises results into clean / gaps / skipped.  Use --report-output to
+    save a Markdown completeness report.
+
     Use --dry-run to preview the mapping without writing any files.
+
+    \b
+    Example:
+      python -m compliantflow --dhf path/to/DHF migrate rdm /path/to/rdm-repo
+      python -m compliantflow --dhf path/to/DHF migrate rdm /path/to/rdm-repo --report-output migration_report.md
     """
-    from compliantflow.migrate.rdm import RDMMigrator
+    from compliantflow.migrate.rdm import RDMMigrator, generate_migration_markdown
 
     dhf_path: Path = ctx.obj["dhf"]
     dhf_items_dir = dhf_path / "items"
 
     migrator = RDMMigrator(source_dir=source_dir)
-    report = migrator.migrate(dhf_items_dir=dhf_items_dir, dry_run=dry_run)
+    migration_report = migrator.migrate(dhf_items_dir=dhf_items_dir, dry_run=dry_run)
 
-    click.echo(json.dumps(report, indent=2, default=str))
-
-    n_created = len(report["created"])
-    n_skipped = len(report["skipped"])
-    n_review = len(report["needs_review"])
+    n_created = len(migration_report["created"])
+    n_skipped = len(migration_report["skipped"])
+    n_review = len(migration_report["needs_review"])
     suffix = " (dry run)" if dry_run else ""
-    click.echo(
-        f"\n✓ Migration complete{suffix}: "
-        f"{n_created} created, {n_skipped} skipped, {n_review} need review",
-        err=True,
-    )
+
+    # Post-migration validation (skipped in dry-run mode)
+    if not dry_run:
+        core = _make_core(ctx)
+        completeness = core.validate_migration_report(migration_report)
+        click.echo(json.dumps(completeness, indent=2, default=str))
+
+        if report_output:
+            md = generate_migration_markdown(completeness)
+            Path(report_output).write_text(md, encoding="utf-8")
+            click.echo(f"✓ Markdown report written to {report_output}", err=True)
+
+        n_gaps = completeness["summary"]["gaps"]
+        click.echo(
+            f"\n✓ Migration complete{suffix}: "
+            f"{n_created} created ({completeness['summary']['clean']} clean, "
+            f"{n_gaps} gap(s)), {n_skipped} skipped",
+            err=True,
+        )
+        if n_gaps > 0 or n_skipped > 0:
+            click.echo(
+                "⚠  Review required before migration is considered complete.",
+                err=True,
+            )
+    else:
+        click.echo(json.dumps(migration_report, indent=2, default=str))
+        click.echo(
+            f"\n✓ Migration complete{suffix}: "
+            f"{n_created} created, {n_skipped} skipped, {n_review} need review",
+            err=True,
+        )
