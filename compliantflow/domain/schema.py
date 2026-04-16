@@ -5,8 +5,26 @@ prefixes as implementation details, or any DHF-specific metadata.
 The adapter is responsible for converting its native config into this schema.
 """
 
-from typing import List, Optional
+from typing import Any, List, Optional
 from pydantic import BaseModel
+
+
+class FieldSchema(BaseModel):
+    """Describes a single field on an item type.
+
+    Adapters populate this from the ``properties`` list in each
+    ``DHF/config/doc_types/*.yaml`` file so that the analysis layer
+    can describe and validate item fields without reaching into the
+    utils layer.
+    """
+
+    name: str
+    format: str = "short_text"
+    label: str = ""
+    required: bool = False
+    options: List[str] = []
+    default: Optional[Any] = None
+    target_types: List[str] = []
 
 
 class LifecycleStateInfo(BaseModel):
@@ -44,6 +62,7 @@ class ItemTypeSchema(BaseModel):
     parent_types: List[str] = []
     lifecycle: Optional[dict] = None
     has_verification: bool = False
+    fields: List[FieldSchema] = []
 
 
 class ProjectSchema(BaseModel):
@@ -65,3 +84,13 @@ class ProjectSchema(BaseModel):
             if t.id_prefix == prefix:
                 return t
         return None
+
+    def get_fields(self, type_name: str) -> List[FieldSchema]:
+        """Return the field definitions for the given item type name.
+
+        Returns an empty list if the type is not found or has no fields.
+        """
+        t = self.get_type(type_name)
+        if t is None:
+            return []
+        return t.fields
