@@ -627,6 +627,102 @@ class CompliantFlowCore:
             "warnings": warnings,
         }
 
+    def validate_migration_report(
+        self,
+        migration_report: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        """Validate a migration report against the DHF field schema.
+
+        Takes the report dict produced by :class:`~compliantflow.migrate.rdm.RDMMigrator`
+        and enriches it with per-item compliance validation results.  Uses
+        :meth:`validate_draft` (CR-041) for field schema checks.
+
+        Returns a structured completeness report with three categories:
+
+        ``clean``
+            Items that migrated without migration warnings and pass field
+            schema validation.
+
+        ``gaps``
+            Items that migrated but have migration warnings (``needs_review``)
+            or fail field validation.  Each entry includes remediation guidance.
+
+        ``skipped``
+            Items from ``migration_report["skipped"]`` that could not be
+            automatically migrated.
+
+        Args:
+            migration_report: The dict returned by ``RDMMigrator.migrate()``.
+        """
+        self.refresh()
+
+        # Build a lookup: cf_id → list of migration warnings
+        review_index: Dict[str, List[str]] = {}
+        for item in migration_report.get("needs_review", []):
+            cf_id = item.get("cf_id", "")
+            review_index.setdefault(cf_id, []).append(item.get("warning", ""))
+
+        clean: List[Dict[str, Any]] = []
+        gaps: List[Dict[str, Any]] = []
+
+        for entry in migration_report.get("created", []):
+            cf_id = entry.get("cf_id", "")
+            type_code = entry.get("type", "")
+            rdm_id = entry.get("rdm_id", "")
+
+            # Load item from DHF
+            item_data = self._adapter.get_item(cf_id)
+            if item_data is None:
+                gaps.append({
+                    "cf_id": cf_id,
+                    "rdm_id": rdm_id,
+                    "type": type_code,
+                    "migration_warnings": review_index.get(cf_id, []),
+                    "validation_errors": [{"field": "id", "message": "Item not found in DHF after migration"}],
+                    "remediation": ["Retry migration or create this item manually."],
+                })
+                continue
+
+            # Field schema validation
+            validation = self.validate_draft(item_data, type_name=type_code or None)
+            migration_warnings = review_index.get(cf_id, [])
+            has_issues = not validation["valid"] or bool(migration_warnings)
+
+            if has_issues:
+                remediation: List[str] = []
+                for err in validation["errors"]:
+                    remediation.append(f"Set field '{err['field']}': {err['message']}")
+                for w in migration_warnings:
+                    remediation.append(f"Review migration note: {w}")
+                gaps.append({
+                    "cf_id": cf_id,
+                    "rdm_id": rdm_id,
+                    "type": type_code,
+                    "migration_warnings": migration_warnings,
+                    "validation_errors": validation["errors"],
+                    "remediation": remediation,
+                })
+            else:
+                clean.append({
+                    "cf_id": cf_id,
+                    "rdm_id": rdm_id,
+                    "type": type_code,
+                    "title": item_data.get("title", ""),
+                })
+
+        return {
+            "summary": {
+                "total_created": len(migration_report.get("created", [])),
+                "clean": len(clean),
+                "gaps": len(gaps),
+                "skipped": len(migration_report.get("skipped", [])),
+            },
+            "clean": clean,
+            "gaps": gaps,
+            "skipped": migration_report.get("skipped", []),
+            "mapping": migration_report.get("mapping", {}),
+        }
+
     def get_open_defects(self) -> List[Dict[str, Any]]:
         """Return all DEF items with an open status (draft/open/in_progress)."""
         _OPEN_STATUSES = {"draft", "open", "in_progress"}
