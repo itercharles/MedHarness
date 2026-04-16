@@ -30,6 +30,7 @@ class PolicyEngine:
             'verification_complete': self._check_verification_complete,
             'cr_git_evidence': self._check_cr_git_evidence,
             'no_open_defects': self._check_no_open_defects,
+            'soup_vulnerability': self._check_soup_vulnerability,
         }
 
     def load_policy_group(self, path: Path) -> Optional[PolicyGroup]:
@@ -325,6 +326,22 @@ class PolicyEngine:
                 "action": "resolve_defects",
                 "items": items,
                 "guidance": "Resolve or downgrade the listed open defects before releasing.",
+            }
+
+        if check_name == 'soup_vulnerability':
+            flagged = evidence.get('flagged', [])
+            if not flagged:
+                return None
+            items = [f['uid'] for f in flagged]
+            threshold = params.get('severity_threshold', 'HIGH')
+            return {
+                "action": "accept_or_update_soup",
+                "items": items,
+                "guidance": (
+                    f"For each flagged SOUP item, either update to a patched version or create "
+                    f"a RISK item linked to the SOUP item documenting accepted vulnerability "
+                    f"risk (severity >= {threshold})."
+                ),
             }
 
         return None
@@ -692,6 +709,131 @@ class PolicyEngine:
             'blocking_defects': blocking,
         }
         return passed, details, evidence
+
+    def _check_soup_vulnerability(
+        self,
+        severity_threshold: str = "HIGH",
+    ) -> Tuple[bool, str, Optional[Dict]]:
+        """Check SOUP items against the OSV database for known CVEs.
+
+        For each SOUP item that has ``name`` and ``version`` fields, queries the
+        public OSV API (https://api.osv.dev/v1/query).  CVEs at or above
+        ``severity_threshold`` fail unless the SOUP item is linked to a RISK item
+        in the DHF graph, indicating documented risk acceptance.
+
+        Args:
+            severity_threshold: Minimum severity to flag: CRITICAL, HIGH, MEDIUM,
+                or LOW.  Default HIGH.
+        """
+        import json as _json
+        import urllib.request
+
+        _SEVERITY_ORDER: Dict[str, int] = {"CRITICAL": 4, "HIGH": 3, "MEDIUM": 2, "LOW": 1, "NONE": 0}
+        threshold_level = _SEVERITY_ORDER.get(severity_threshold.upper(), 3)
+
+        soup_nodes = self._nodes_for_type("SOUP")
+        if not soup_nodes:
+            return True, "No SOUP items to check", {"count": 0}
+
+        flagged = []
+        skipped = []
+        checked = []
+
+        for uid in soup_nodes:
+            item = self.core.graph.graph.nodes[uid].get("item") or {}
+            name = item.get("name") or ""
+            version = item.get("version") or ""
+            ecosystem = item.get("ecosystem") or ""
+
+            if not name or not version:
+                skipped.append({"uid": uid, "reason": "missing name or version field"})
+                continue
+
+            # Query OSV API
+            try:
+                payload = {"package": {"name": name}, "version": version}
+                if ecosystem:
+                    payload["package"]["ecosystem"] = ecosystem
+                encoded = _json.dumps(payload).encode()
+                req = urllib.request.Request(
+                    "https://api.osv.dev/v1/query",
+                    data=encoded,
+                    headers={"Content-Type": "application/json"},
+                    method="POST",
+                )
+                with urllib.request.urlopen(req, timeout=10) as resp:
+                    data = _json.loads(resp.read())
+                vulns = data.get("vulns", [])
+            except Exception as exc:
+                skipped.append({"uid": uid, "reason": f"OSV query error: {exc}"})
+                continue
+
+            # Filter by severity threshold
+            above_threshold = [v for v in vulns if self._vuln_severity_level(v, _SEVERITY_ORDER) >= threshold_level]
+
+            if not above_threshold:
+                checked.append({"uid": uid, "vulns_found": len(vulns), "above_threshold": 0})
+                continue
+
+            # Check for linked RISK item (documented risk acceptance)
+            linked = (
+                list(self.core.graph.graph.successors(uid)) +
+                list(self.core.graph.graph.predecessors(uid))
+            )
+            has_risk_link = any(n.startswith("RISK-") for n in linked)
+
+            if has_risk_link:
+                checked.append({
+                    "uid": uid,
+                    "vulns_found": len(vulns),
+                    "above_threshold": len(above_threshold),
+                    "risk_accepted": True,
+                })
+            else:
+                flagged.append({
+                    "uid": uid,
+                    "name": name,
+                    "version": version,
+                    "vuln_ids": [v.get("id", "") for v in above_threshold[:10]],
+                    "vuln_count": len(above_threshold),
+                })
+
+        passed = len(flagged) == 0
+        total_checked = len(checked) + len(flagged)
+
+        if passed:
+            details = (
+                f"No unaccepted SOUP vulnerabilities at or above {severity_threshold} "
+                f"({total_checked} item(s) checked)"
+            )
+        else:
+            ids = ", ".join(f["uid"] for f in flagged)
+            details = (
+                f"{len(flagged)} SOUP item(s) have unaccepted CVEs >= {severity_threshold}: {ids}"
+            )
+
+        evidence = {
+            "severity_threshold": severity_threshold,
+            "total_soup": len(soup_nodes),
+            "checked": checked,
+            "flagged": flagged,
+            "skipped": skipped,
+        }
+        return passed, details, evidence
+
+    @staticmethod
+    def _vuln_severity_level(vuln: dict, severity_order: Dict[str, int]) -> int:
+        """Return integer severity level from an OSV vulnerability dict."""
+        # OSV severity[] array (CVSS_V3 / CVSS_V2 type with score string)
+        for sev in vuln.get("severity", []):
+            rating = str(sev.get("score", "")).upper()
+            for key in severity_order:
+                if key in rating:
+                    return severity_order[key]
+        # database_specific.severity (used by OSV for many ecosystems)
+        db = vuln.get("database_specific", {})
+        severity = str(db.get("severity", "")).upper()
+        return severity_order.get(severity, 0)
 
     def _check_verification_complete(self, type_code: str) -> Tuple[bool, str, Optional[Dict]]:
         """Check that all items of type_code have verification_status == 'verified'."""
