@@ -22,6 +22,13 @@ def generate_compliance_pdf(report: Dict[str, Any], output_path: Path) -> None:
     _to_pdf(html, output_path)
 
 
+def generate_compliance_json(report: Dict[str, Any], output_path: Path) -> None:
+    """Write a compliance report as a versioned JSON file for programmatic consumption."""
+    import json
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(json.dumps(report, default=str, indent=2), encoding="utf-8")
+
+
 # ---------------------------------------------------------------------------
 # HTML builders
 # ---------------------------------------------------------------------------

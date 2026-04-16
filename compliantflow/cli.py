@@ -94,6 +94,89 @@ def main(ctx: click.Context, dhf: str | None, projects: tuple) -> None:
 
 
 # ---------------------------------------------------------------------------
+# status
+# ---------------------------------------------------------------------------
+
+@main.command("status")
+@click.option("--governance-dir", default=None, metavar="PATH",
+              help="Path to governance directory. Defaults to ./governance.")
+@click.option("--live", is_flag=True, default=False,
+              help="Run fresh compliance checks instead of reading from persisted run store.")
+@click.option("--format", "fmt", default="text", show_default=True,
+              type=click.Choice(["text", "json"], case_sensitive=False),
+              help="Output format.")
+@click.pass_context
+def status(ctx: click.Context, governance_dir: str | None, live: bool, fmt: str) -> None:
+    """Show at-a-glance compliance posture: scores, traceability, defects, release.
+
+    Reads compliance scores from the persisted run store by default.
+    Use --live to run fresh checks (invokes LLM for semantic policies).
+
+    \b
+    Example:
+      python -m compliantflow --dhf path/to/DHF status
+      python -m compliantflow --dhf path/to/DHF status --live --format json
+    """
+    gov_dir = Path(governance_dir) if governance_dir else Path("governance")
+    core = _make_core(ctx)
+    result = core.get_status(gov_dir, live=live)
+
+    if fmt == "json":
+        click.echo(json.dumps(result, default=str))
+        return
+
+    # Human-readable text output
+    click.echo("\n── Compliance ──────────────────────────────────")
+    compliance = result.get("compliance", [])
+    if not compliance:
+        click.echo("  No governance files found.")
+    for entry in compliance:
+        score = entry.get("score")
+        score_str = f"{score:.0f}%" if score is not None else "n/a"
+        passed = entry.get("passed_policies", "?")
+        total = entry.get("total_policies", "?")
+        source = entry.get("source", "")
+        ts = str(entry.get("last_run_at", ""))[:16].replace("T", " ")
+        status_icon = "✓" if score is not None and score == 100.0 else "✗"
+        click.echo(f"  {status_icon} {entry['standard']}: {score_str} ({passed}/{total}) [{source}] {ts}")
+
+    click.echo("\n── Traceability ─────────────────────────────────")
+    trace = result.get("traceability", [])
+    if not trace:
+        click.echo("  No traceability data.")
+    for t in trace:
+        icon = "✓" if t["coverage_pct"] == 100.0 else "✗"
+        click.echo(
+            f"  {icon} {t['parent_type']}→{t['child_type']}: "
+            f"{t['coverage_pct']}% ({t['covered']}/{t['total']})"
+        )
+
+    click.echo("\n── Open Defects ─────────────────────────────────")
+    defs = result.get("open_defects", {})
+    count = defs.get("count", 0)
+    if count == 0:
+        click.echo("  ✓ No open defects.")
+    else:
+        click.echo(f"  ✗ {count} open defect(s):")
+        for d in defs.get("items", [])[:5]:
+            click.echo(f"    - {d['id']} [{d['status']}] {d.get('title', '')}")
+        if count > 5:
+            click.echo(f"    … and {count - 5} more")
+
+    click.echo("\n── Release ──────────────────────────────────────")
+    rel = result.get("release")
+    if rel is None:
+        click.echo("  No REL item found.")
+    else:
+        icon = "✓" if rel.get("passed") else "✗"
+        click.echo(f"  {icon} {rel['rel_id']}: {'ready' if rel.get('passed') else 'not ready'}")
+        for c in rel.get("checks", []):
+            ci = "✓" if c["passed"] else "✗"
+            click.echo(f"    {ci} {c['name']}: {c['details']}")
+    click.echo("")
+
+
+# ---------------------------------------------------------------------------
 # validate
 # ---------------------------------------------------------------------------
 
@@ -411,28 +494,34 @@ def report_traceability(ctx: click.Context, doc_types: tuple, output: str) -> No
 @click.argument("group_id")
 @click.option("--governance-dir", default=None, metavar="PATH",
               help="Path to governance directory. Defaults to ./governance.")
-@click.option("--output", "-o", default="compliance_report.pdf", show_default=True,
-              help="Output PDF file path.")
+@click.option("--output", "-o", default=None, show_default=False,
+              help="Output file path. Defaults to compliance_report.pdf or compliance_report.json.")
+@click.option("--format", "fmt", default="pdf", show_default=True,
+              type=click.Choice(["pdf", "json"], case_sensitive=False),
+              help="Output format: pdf (default) or json for programmatic consumption.")
 @click.pass_context
 def report_compliance(ctx: click.Context, group_id: str,
-                      governance_dir: str | None, output: str) -> None:
-    """Generate a compliance evidence PDF with pass/fail and rationale per policy.
+                      governance_dir: str | None, output: str | None, fmt: str) -> None:
+    """Generate a compliance evidence report (PDF or JSON).
 
     \b
-    Example:
-      python -m compliantflow report compliance IEC_62304 \\
-        --governance-dir governance --output compliance_report.pdf
+    Examples:
+      python -m compliantflow report compliance IEC_62304 --governance-dir governance
+      python -m compliantflow report compliance IEC_62304 --format json --output report.json
     """
-    from compliantflow.report_generator import generate_compliance_pdf
-    dhf_path: Path = ctx.obj["dhf"]
+    from compliantflow.report_generator import generate_compliance_pdf, generate_compliance_json
     gov_dir = Path(governance_dir) if governance_dir else Path("governance")
     core = _make_core(ctx)
     result = core.check_compliance(group_id, governance_dir=gov_dir)
     if result is None:
         click.echo(f"ERROR: Policy group '{group_id}' not found.", err=True)
         sys.exit(1)
-    out = Path(output)
-    generate_compliance_pdf(result, out)
+    default_name = f"compliance_report.{'json' if fmt == 'json' else 'pdf'}"
+    out = Path(output) if output else Path(default_name)
+    if fmt == "json":
+        generate_compliance_json(result, out)
+    else:
+        generate_compliance_pdf(result, out)
     failed = result["total_policies"] - result["passed_policies"]
     for r in result["results"]:
         if not r["passed"]:

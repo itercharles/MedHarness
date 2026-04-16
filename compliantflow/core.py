@@ -268,8 +268,6 @@ class CompliantFlowCore:
           - ``checks`` (list): per-check result dicts with
             ``name``, ``passed``, ``details``, and optionally ``items``.
         """
-        _OPEN_DEF_STATUSES = {"draft", "open", "in_progress"}
-
         checks: List[Dict[str, Any]] = []
 
         # 1. REL exists and is a REL item
@@ -315,12 +313,7 @@ class CompliantFlowCore:
 
         # 3. No open DEF items
         all_items = self.get_all_items()
-        open_defs = [
-            {"id": i["id"], "status": i.get("status", "unknown"),
-             "title": i.get("title", "")}
-            for i in all_items
-            if i["id"].startswith("DEF-") and i.get("status") in _OPEN_DEF_STATUSES
-        ]
+        open_defs = self.get_open_defects()
         def_check: Dict[str, Any] = {
             "name": "no_open_defects",
             "passed": len(open_defs) == 0,
@@ -465,6 +458,113 @@ class CompliantFlowCore:
             )
 
         return report_dict
+
+    def get_open_defects(self) -> List[Dict[str, Any]]:
+        """Return all DEF items with an open status (draft/open/in_progress)."""
+        _OPEN_STATUSES = {"draft", "open", "in_progress"}
+        return [
+            {"id": i["id"], "status": i.get("status", "unknown"), "title": i.get("title", "")}
+            for i in self.get_all_items()
+            if i["id"].startswith("DEF-") and i.get("status") in _OPEN_STATUSES
+        ]
+
+    def get_status(
+        self,
+        governance_dir: Path,
+        live: bool = False,
+    ) -> Dict[str, Any]:
+        """Return an at-a-glance compliance posture summary.
+
+        Args:
+            governance_dir: Directory containing governance YAML files.
+            live:           If True, run fresh compliance checks instead of reading
+                            from the persisted compliance run store.
+
+        Returns a dict with:
+            - compliance: list of {standard, score, passed_policies, total_policies,
+                          last_run_at, source} per governance file found
+            - traceability: list of {parent_type, child_type, coverage_pct, covered, total}
+            - open_defects: {count, items}
+            - release: {rel_id, passed, checks} for the latest REL item, or None
+        """
+        gov_dir = Path(governance_dir)
+
+        # --- Compliance ---
+        compliance_summary = []
+        if gov_dir.is_dir():
+            for gov_file in sorted(gov_dir.glob("*.yaml")):
+                group_id = gov_file.stem
+                entry: Dict[str, Any] = {"standard": group_id}
+                if not live and hasattr(self._adapter, "get_compliance_runs"):
+                    runs = self._adapter.get_compliance_runs(group_id)
+                    if runs:
+                        last = max(runs, key=lambda r: r.get("timestamp", ""))
+                        entry.update({
+                            "score": last.get("score"),
+                            "passed_policies": last.get("passed_policies"),
+                            "total_policies": last.get("total_policies"),
+                            "last_run_at": last.get("timestamp"),
+                            "commit_sha": last.get("commit_sha", ""),
+                            "source": "persisted",
+                        })
+                        compliance_summary.append(entry)
+                        continue
+                # Live run (or no persisted run found)
+                report = self.check_compliance(group_id, gov_dir)
+                if report:
+                    entry.update({
+                        "score": report.get("score"),
+                        "passed_policies": report.get("passed_policies"),
+                        "total_policies": report.get("total_policies"),
+                        "last_run_at": report.get("timestamp"),
+                        "commit_sha": report.get("commit_sha", ""),
+                        "source": "live",
+                    })
+                    compliance_summary.append(entry)
+
+        # --- Traceability ---
+        DEFAULT_CHAIN = [("UC", "CRS"), ("CRS", "SYS"), ("SYS", "SRS"), ("SRS", "SWDD")]
+        G = self.graph.graph
+        traceability_summary = []
+        for parent_type, child_type in DEFAULT_CHAIN:
+            parent_prefix = self._get_prefix(parent_type)
+            child_prefix = self._get_prefix(child_type)
+            parents = [n for n in G.nodes if n.startswith(parent_prefix)]
+            if not parents:
+                continue
+            covered = [
+                n for n in parents
+                if any(p.startswith(child_prefix) for p in G.predecessors(n))
+            ]
+            pct = round(len(covered) / len(parents) * 100, 1) if parents else 100.0
+            traceability_summary.append({
+                "parent_type": parent_type,
+                "child_type": child_type,
+                "coverage_pct": pct,
+                "covered": len(covered),
+                "total": len(parents),
+            })
+
+        # --- Open defects ---
+        open_defs = self.get_open_defects()
+
+        # --- Release readiness ---
+        release_status = None
+        all_items = self.get_all_items()
+        rel_items = sorted(
+            [i for i in all_items if i["id"].startswith("REL-")],
+            key=lambda i: i["id"],
+        )
+        if rel_items:
+            latest_rel = rel_items[-1]
+            release_status = self.validate_release(latest_rel["id"])
+
+        return {
+            "compliance": compliance_summary,
+            "traceability": traceability_summary,
+            "open_defects": {"count": len(open_defs), "items": open_defs},
+            "release": release_status,
+        }
 
     # ------------------------------------------------------------------
     # Test result delegation
