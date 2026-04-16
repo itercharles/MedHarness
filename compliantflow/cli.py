@@ -411,28 +411,34 @@ def report_traceability(ctx: click.Context, doc_types: tuple, output: str) -> No
 @click.argument("group_id")
 @click.option("--governance-dir", default=None, metavar="PATH",
               help="Path to governance directory. Defaults to ./governance.")
-@click.option("--output", "-o", default="compliance_report.pdf", show_default=True,
-              help="Output PDF file path.")
+@click.option("--output", "-o", default=None, show_default=False,
+              help="Output file path. Defaults to compliance_report.pdf or compliance_report.json.")
+@click.option("--format", "fmt", default="pdf", show_default=True,
+              type=click.Choice(["pdf", "json"], case_sensitive=False),
+              help="Output format: pdf (default) or json for programmatic consumption.")
 @click.pass_context
 def report_compliance(ctx: click.Context, group_id: str,
-                      governance_dir: str | None, output: str) -> None:
-    """Generate a compliance evidence PDF with pass/fail and rationale per policy.
+                      governance_dir: str | None, output: str | None, fmt: str) -> None:
+    """Generate a compliance evidence report (PDF or JSON).
 
     \b
-    Example:
-      python -m compliantflow report compliance IEC_62304 \\
-        --governance-dir governance --output compliance_report.pdf
+    Examples:
+      python -m compliantflow report compliance IEC_62304 --governance-dir governance
+      python -m compliantflow report compliance IEC_62304 --format json --output report.json
     """
-    from compliantflow.report_generator import generate_compliance_pdf
-    dhf_path: Path = ctx.obj["dhf"]
+    from compliantflow.report_generator import generate_compliance_pdf, generate_compliance_json
     gov_dir = Path(governance_dir) if governance_dir else Path("governance")
     core = _make_core(ctx)
     result = core.check_compliance(group_id, governance_dir=gov_dir)
     if result is None:
         click.echo(f"ERROR: Policy group '{group_id}' not found.", err=True)
         sys.exit(1)
-    out = Path(output)
-    generate_compliance_pdf(result, out)
+    default_name = f"compliance_report.{'json' if fmt == 'json' else 'pdf'}"
+    out = Path(output) if output else Path(default_name)
+    if fmt == "json":
+        generate_compliance_json(result, out)
+    else:
+        generate_compliance_pdf(result, out)
     failed = result["total_policies"] - result["passed_policies"]
     for r in result["results"]:
         if not r["passed"]:

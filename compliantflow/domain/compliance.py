@@ -43,12 +43,14 @@ class PolicyResult(BaseModel):
     passed: bool
     details: str
     policy_text: str = ""
+    section: str = Field("", description="Clause/section reference (e.g. '5.1.1')")
     evidence: Optional[Dict[str, Any]] = None
     remediation: Optional[Dict[str, Any]] = None
 
 
 class ComplianceReport(BaseModel):
     """Full compliance report for a policy group."""
+    schema_version: str = Field("1.0", description="JSON schema version for programmatic consumers")
     source_id: str
     total_policies: int
     passed_policies: int

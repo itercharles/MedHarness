@@ -68,6 +68,7 @@ class PolicyEngine:
                     passed=passed,
                     details=details,
                     policy_text=policy.text,
+                    section=policy.section,
                 )
             else:
                 if policy.status != 'approved':
@@ -76,6 +77,7 @@ class PolicyEngine:
                         passed=False,
                         details=f"Policy not approved (status: {policy.status})",
                         policy_text=policy.text,
+                        section=policy.section,
                     )
                 elif policy.automation.check == 'document_semantic':
                     passed, details, evidence = semantic_results.get(
@@ -91,6 +93,7 @@ class PolicyEngine:
                         evidence=evidence,
                         remediation=remediation,
                         policy_text=policy.text,
+                        section=policy.section,
                     )
                 else:
                     check_name = policy.automation.check
@@ -107,6 +110,7 @@ class PolicyEngine:
                                 evidence=evidence,
                                 remediation=remediation,
                                 policy_text=policy.text,
+                                section=policy.section,
                             )
                         except Exception as e:
                             result = PolicyResult(
@@ -114,6 +118,7 @@ class PolicyEngine:
                                 passed=False,
                                 details=f"Check error: {str(e)}",
                                 policy_text=policy.text,
+                                section=policy.section,
                             )
                     else:
                         result = PolicyResult(
@@ -121,6 +126,7 @@ class PolicyEngine:
                             passed=False,
                             details=f"Unknown check: {check_name}",
                             policy_text=policy.text,
+                            section=policy.section,
                         )
 
             if result.passed:
