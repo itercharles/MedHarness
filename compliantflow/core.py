@@ -723,6 +723,157 @@ class CompliantFlowCore:
             "mapping": migration_report.get("mapping", {}),
         }
 
+    def review_pr(
+        self,
+        diff_text: str,
+        governance_dir: Optional[Path] = None,
+    ) -> Dict[str, Any]:
+        """Analyse a PR diff and produce a DHF compliance action checklist.
+
+        Parses the unified diff for changed DHF YAML items, traverses their
+        item chains, and calls the configured LLM backend to generate a
+        markdown checklist of required DHF actions.
+
+        This is a **suggestion layer** — the output has no pass/fail status
+        and does not gate the PR.  The CI gate remains the authoritative
+        compliance enforcer.
+
+        Args:
+            diff_text:      Unified diff text (e.g. from ``git diff`` or
+                            ``gh pr diff``).
+            governance_dir: Optional path to governance directory.  When
+                            provided, compliance policy context is added to
+                            the LLM prompt.
+
+        Returns:
+            ``{"checklist": str, "changed_items": [...], "chains_analyzed": [...],
+               "llm_available": bool}``
+
+            When no LLM backend is configured ``checklist`` is a static
+            Markdown summary of the affected item chains without AI analysis.
+        """
+        import re
+
+        # -- 1. Parse diff: find changed DHF item YAML files ------------------
+        changed_items: List[str] = []
+        for line in diff_text.splitlines():
+            # Match lines like: diff --git a/DHF/items/.../SYS-001.yaml b/...
+            # or: +++ b/DHF/items/.../SYS-001.yaml
+            m = re.search(r'[ab]/(?:DHF/)?items/[^/]+/([A-Z]+-\d+)\.yaml', line)
+            if m:
+                uid = m.group(1)
+                if uid not in changed_items:
+                    changed_items.append(uid)
+
+        # -- 2. Build item chains for all changed items -----------------------
+        chains_analyzed: List[str] = []
+        chain_summaries: List[str] = []
+
+        for uid in changed_items:
+            chain = self.get_item_chain(uid)
+            if chain is None:
+                # Item may be new (not yet in graph) — try loading directly
+                item = self._adapter.get_item(uid)
+                if item:
+                    chain_summaries.append(
+                        f"**{uid}** ({item.get('type', '?')}): {item.get('title', '')}\n"
+                        f"  — New item, no existing chain"
+                    )
+                    chains_analyzed.append(uid)
+                continue
+
+            chains_analyzed.append(uid)
+            nodes = chain.get("nodes", {})
+            root_item = nodes.get(uid, {})
+            summary_lines = [
+                f"**{uid}** ({root_item.get('type', '?')}): {root_item.get('title', '')}"
+            ]
+            upstream = root_item.get("upstream", [])
+            downstream = root_item.get("downstream", [])
+            if upstream:
+                up_strs = [f"{n} ({nodes[n].get('type','?')}: {nodes[n].get('title','')})"
+                           for n in upstream if n in nodes]
+                summary_lines.append(f"  ↑ Upstream: {', '.join(up_strs)}")
+            if downstream:
+                dn_strs = [f"{n} ({nodes[n].get('type','?')}: {nodes[n].get('title','')})"
+                           for n in downstream if n in nodes]
+                summary_lines.append(f"  ↓ Downstream: {', '.join(dn_strs)}")
+            chain_summaries.append("\n".join(summary_lines))
+
+        # Extract only the +/- lines from the diff for context
+        diff_lines = [ln for ln in diff_text.splitlines()
+                      if ln.startswith(('+', '-', '@@', 'diff')) and not ln.startswith(('+++', '---'))]
+        diff_excerpt = "\n".join(diff_lines[:120])  # cap at 120 lines to avoid token overflow
+
+        # -- 3. If no LLM, return a static chain summary ----------------------
+        if self._llm_backend is None:
+            if not chains_analyzed:
+                checklist = (
+                    "_No DHF items detected in diff. If you changed DHF YAML files, "
+                    "ensure they are under a `DHF/items/` directory._"
+                )
+            else:
+                checklist = (
+                    "## DHF Items Affected\n\n"
+                    + "\n\n".join(chain_summaries)
+                    + "\n\n> _LLM backend not configured — automated checklist unavailable. "
+                    "Review the affected chains manually._"
+                )
+            return {
+                "checklist": checklist,
+                "changed_items": changed_items,
+                "chains_analyzed": chains_analyzed,
+                "llm_available": False,
+            }
+
+        # -- 4. Build LLM prompt ----------------------------------------------
+        chains_block = "\n\n".join(chain_summaries) if chain_summaries else "(none detected)"
+
+        prompt = (
+            "You are a medical device software compliance reviewer for a project governed by "
+            "IEC 62304 and ISO 14971. You are reviewing a pull request that modifies items "
+            "in a Design History File (DHF).\n\n"
+            "The DHF uses a traceability hierarchy: UC (user needs) → CRS (customer requirements) "
+            "→ SYS (system requirements) → SRS (software requirements) → SWDD (software design). "
+            "Risk items (RISK/RCM) and test cases (TC) are linked into this chain. "
+            "Changing an item may require updating linked items to stay consistent.\n\n"
+            "CHANGED DHF ITEMS AND THEIR CHAINS:\n"
+            f"{chains_block}\n\n"
+            "DIFF EXCERPT (DHF YAML changes):\n"
+            f"```diff\n{diff_excerpt}\n```\n\n"
+            "Based on the changes above, produce a concise GitHub-flavored Markdown checklist "
+            "of DHF actions the PR author must complete to maintain compliance. Focus on:\n"
+            "- Downstream items that need updating to reflect the change\n"
+            "- Traceability links that may need adding or removing\n"
+            "- Test cases (TC items) that may need updating or creating\n"
+            "- Risk items (RISK/RCM) that may be impacted\n"
+            "- New DHF items that should be created\n\n"
+            "Rules:\n"
+            "- Output ONLY the Markdown checklist — no preamble, no explanation outside the list\n"
+            "- Each item starts with `- [ ]`\n"
+            "- Reference specific item IDs where possible\n"
+            "- If no DHF actions are required, output exactly: `- [ ] No DHF actions required for this change.`\n"
+            "- Do not duplicate actions already visible in the diff\n"
+        )
+
+        try:
+            checklist_raw = self._llm_backend.generate(prompt)
+            # Ensure it starts with a checklist item
+            if checklist_raw and not checklist_raw.strip().startswith("- ["):
+                checklist_raw = "- [ ] " + checklist_raw.strip()
+        except Exception as exc:
+            checklist_raw = (
+                f"_LLM backend error: {exc}. "
+                "Review the affected item chains manually._"
+            )
+
+        return {
+            "checklist": checklist_raw,
+            "changed_items": changed_items,
+            "chains_analyzed": chains_analyzed,
+            "llm_available": True,
+        }
+
     def get_open_defects(self) -> List[Dict[str, Any]]:
         """Return all DEF items with an open status (draft/open/in_progress)."""
         _OPEN_STATUSES = {"draft", "open", "in_progress"}

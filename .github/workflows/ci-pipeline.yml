@@ -428,6 +428,24 @@ jobs:
             echo "No new verification evidence to commit." >&2
           fi
 
+      - name: Close referenced CRs in DHF
+        env:
+          GH_TOKEN: ${{ secrets.DHF_REPO_TOKEN }}
+        run: |
+          # Extract CR IDs from the merge commit subject (matches PR title)
+          CR_IDS=$(git log -1 --format="%s" | grep -oE 'CR-[0-9]+' | sort -u | tr '\n' ' ')
+          if [ -z "$CR_IDS" ]; then
+            echo "No CR IDs found in commit message — skipping CR closure." >&2
+            exit 0
+          fi
+          echo "Closing CR(s): $CR_IDS" >&2
+          gh workflow run cr-transition.yml \
+            --repo itercharles/compliantflow-dhf \
+            --field cr_ids="$CR_IDS" \
+            --field to_state=closed \
+            --field triggered_by="GitHub Actions (CompliantFlow post-merge)" \
+            --field commit_sha="${GITHUB_SHA}"
+
       - name: Generate evidence reports
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
