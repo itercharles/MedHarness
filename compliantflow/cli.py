@@ -94,6 +94,50 @@ def main(ctx: click.Context, dhf: str | None, projects: tuple) -> None:
 
 
 # ---------------------------------------------------------------------------
+# context
+# ---------------------------------------------------------------------------
+
+@main.command("context")
+@click.option("--governance-dir", default=None, metavar="PATH",
+              help="Path to governance directory. Defaults to ./governance.")
+@click.option("--standard", default=None, metavar="ID",
+              help="Filter compliance policies to this standard (e.g. IEC_62304).")
+@click.option("--summary", is_flag=True, default=False,
+              help="Emit policy IDs and headings only — omit check details.")
+@click.option("--format", "fmt", default="json", show_default=True,
+              type=click.Choice(["json", "yaml"], case_sensitive=False),
+              help="Output format.")
+@click.pass_context
+def context(ctx: click.Context, governance_dir: str | None, standard: str | None,
+            summary: bool, fmt: str) -> None:
+    """Output DHF schema, lifecycle rules, and compliance policy summaries for AI agents.
+
+    Provides the full item type schema (fields, allowed values, ID prefixes),
+    global lifecycle states, and compliance policy summaries from governance
+    YAML files in a machine-readable format.  Run this before generating or
+    editing DHF content to avoid CI failures from invalid field values.
+
+    \b
+    Example:
+      python -m compliantflow --dhf path/to/DHF context
+      python -m compliantflow --dhf path/to/DHF context --standard IEC_62304 --summary
+      python -m compliantflow --dhf path/to/DHF context --format yaml
+    """
+    gov_dir = Path(governance_dir) if governance_dir else Path("governance")
+    core = _make_core(ctx)
+    result = core.get_context(gov_dir, standard=standard, summary=summary)
+
+    if fmt == "yaml":
+        try:
+            import yaml as _yaml
+            click.echo(_yaml.dump(result, default_flow_style=False, allow_unicode=True))
+        except ImportError:
+            raise click.ClickException("PyYAML is required for --format yaml. Install it with: pip install pyyaml")
+    else:
+        click.echo(json.dumps(result, indent=2))
+
+
+# ---------------------------------------------------------------------------
 # status
 # ---------------------------------------------------------------------------
 

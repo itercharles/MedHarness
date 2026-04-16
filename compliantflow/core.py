@@ -459,6 +459,94 @@ class CompliantFlowCore:
 
         return report_dict
 
+    def get_context(
+        self,
+        governance_dir: Path,
+        standard: Optional[str] = None,
+        summary: bool = False,
+    ) -> Dict[str, Any]:
+        """Return a machine-readable context package for AI agent consumption.
+
+        Assembles item type schema (fields, allowed values, ID prefixes),
+        global lifecycle states, and compliance policy summaries from governance
+        YAML files.  Designed as the pre-flight query an AI coding agent runs
+        before generating or editing DHF content.
+
+        Args:
+            governance_dir: Directory containing governance ``*.yaml`` files.
+            standard:       Filter compliance policies to this standard ID
+                            (e.g. ``"IEC_62304"``).  ``None`` returns all.
+            summary:        When True, policy entries contain only ``id``,
+                            ``section``, and ``text`` — omitting check details.
+        """
+        # -- Item types -------------------------------------------------------
+        item_types = []
+        if self.config:
+            for t in self.config.item_types:
+                entry: Dict[str, Any] = {
+                    "name": t.name,
+                    "id_prefix": t.id_prefix,
+                    "parent_types": t.parent_types,
+                    "has_verification": t.has_verification,
+                    "fields": [f.model_dump() for f in t.fields],
+                }
+                item_types.append(entry)
+
+        # -- Lifecycle states -------------------------------------------------
+        lifecycle: Dict[str, Any] = {"states": []}
+        if self.config and self.config.global_lifecycle:
+            lifecycle["states"] = [
+                {
+                    "id": s.id,
+                    "label": s.label,
+                    "is_stable": s.is_stable,
+                }
+                for s in self.config.global_lifecycle.states
+            ]
+
+        # -- Compliance policies ----------------------------------------------
+        gov_path = Path(governance_dir)
+        compliance_policies = []
+        yaml_files = sorted(gov_path.glob("*.yaml")) if gov_path.exists() else []
+
+        for yaml_file in yaml_files:
+            group_id = yaml_file.stem
+            if standard and group_id != standard:
+                continue
+            group = self._get_policy_engine(group_id, gov_path).load_policy_group(yaml_file)
+            if not group:
+                continue
+            policies = []
+            for p in group.policies:
+                if summary:
+                    policies.append({
+                        "id": p.id,
+                        "section": p.section,
+                        "text": p.text,
+                    })
+                else:
+                    entry_p: Dict[str, Any] = {
+                        "id": p.id,
+                        "section": p.section,
+                        "text": p.text,
+                        "status": p.status,
+                        "automated": p.automation is not None,
+                        "check_type": p.automation.check if p.automation else None,
+                        "manual": p.manual if hasattr(p, "manual") else (p.automation is None),
+                    }
+                    policies.append(entry_p)
+            compliance_policies.append({
+                "standard": group_id,
+                "title": group.title,
+                "policies": policies,
+            })
+
+        return {
+            "item_types": item_types,
+            "lifecycle": lifecycle,
+            "compliance_policies": compliance_policies,
+        }
+
     def get_open_defects(self) -> List[Dict[str, Any]]:
         """Return all DEF items with an open status (draft/open/in_progress)."""
         _OPEN_STATUSES = {"draft", "open", "in_progress"}
