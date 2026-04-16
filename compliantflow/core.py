@@ -459,6 +459,174 @@ class CompliantFlowCore:
 
         return report_dict
 
+    def get_context(
+        self,
+        governance_dir: Path,
+        standard: Optional[str] = None,
+        summary: bool = False,
+    ) -> Dict[str, Any]:
+        """Return a machine-readable context package for AI agent consumption.
+
+        Assembles item type schema (fields, allowed values, ID prefixes),
+        global lifecycle states, and compliance policy summaries from governance
+        YAML files.  Designed as the pre-flight query an AI coding agent runs
+        before generating or editing DHF content.
+
+        Args:
+            governance_dir: Directory containing governance ``*.yaml`` files.
+            standard:       Filter compliance policies to this standard ID
+                            (e.g. ``"IEC_62304"``).  ``None`` returns all.
+            summary:        When True, policy entries contain only ``id``,
+                            ``section``, and ``text`` — omitting check details.
+        """
+        # -- Item types -------------------------------------------------------
+        item_types = []
+        if self.config:
+            for t in self.config.item_types:
+                entry: Dict[str, Any] = {
+                    "name": t.name,
+                    "id_prefix": t.id_prefix,
+                    "parent_types": t.parent_types,
+                    "has_verification": t.has_verification,
+                    "fields": [f.model_dump() for f in t.fields],
+                }
+                item_types.append(entry)
+
+        # -- Lifecycle states -------------------------------------------------
+        lifecycle: Dict[str, Any] = {"states": []}
+        if self.config and self.config.global_lifecycle:
+            lifecycle["states"] = [
+                {
+                    "id": s.id,
+                    "label": s.label,
+                    "is_stable": s.is_stable,
+                }
+                for s in self.config.global_lifecycle.states
+            ]
+
+        # -- Compliance policies ----------------------------------------------
+        gov_path = Path(governance_dir)
+        compliance_policies = []
+        yaml_files = sorted(gov_path.glob("*.yaml")) if gov_path.exists() else []
+
+        for yaml_file in yaml_files:
+            group_id = yaml_file.stem
+            if standard and group_id != standard:
+                continue
+            group = self._get_policy_engine(group_id, gov_path).load_policy_group(yaml_file)
+            if not group:
+                continue
+            policies = []
+            for p in group.policies:
+                if summary:
+                    policies.append({
+                        "id": p.id,
+                        "section": p.section,
+                        "text": p.text,
+                    })
+                else:
+                    entry_p: Dict[str, Any] = {
+                        "id": p.id,
+                        "section": p.section,
+                        "text": p.text,
+                        "status": p.status,
+                        "automated": p.automation is not None,
+                        "check_type": p.automation.check if p.automation else None,
+                        "manual": p.manual if hasattr(p, "manual") else (p.automation is None),
+                    }
+                    policies.append(entry_p)
+            compliance_policies.append({
+                "standard": group_id,
+                "title": group.title,
+                "policies": policies,
+            })
+
+        return {
+            "item_types": item_types,
+            "lifecycle": lifecycle,
+            "compliance_policies": compliance_policies,
+        }
+
+    def validate_draft(
+        self,
+        item_data: Dict[str, Any],
+        type_name: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Validate a proposed DHF item against the doc-type field schema.
+
+        Checks required fields and allowed values from the ProjectSchema
+        (populated via CR-039 FieldSchema).  Graph-dependent checks such as
+        trace_coverage and verification_complete are out of scope.
+
+        Args:
+            item_data:  The item dict to validate (e.g. parsed from a YAML file).
+            type_name:  Override the type resolution.  When ``None`` the type is
+                        inferred from the ``id`` prefix (e.g. ``"SYS-001"`` → ``"SYS"``).
+
+        Returns:
+            ``{"valid": bool, "type": str|None, "errors": [...], "warnings": [...]}``
+
+            Each error/warning is a dict with ``field`` and ``message`` keys.
+        """
+        errors: List[Dict[str, str]] = []
+        warnings: List[Dict[str, str]] = []
+
+        # Resolve item type
+        resolved_type: Optional[str] = type_name
+        item_type_schema = None
+
+        if resolved_type is None:
+            item_id = item_data.get("id", "")
+            if item_id and "-" in item_id:
+                prefix = item_id.split("-")[0] + "-"
+                item_type_schema = self.config.get_type_by_prefix(prefix) if self.config else None
+                if item_type_schema:
+                    resolved_type = item_type_schema.name
+        else:
+            item_type_schema = self.config.get_type(resolved_type) if self.config else None
+
+        if item_type_schema is None:
+            if resolved_type:
+                warnings.append({"field": "id", "message": f"Unknown type '{resolved_type}' — field constraints not checked"})
+            else:
+                warnings.append({"field": "id", "message": "Cannot determine item type — provide --type or an id field with a known prefix"})
+            return {"valid": True, "type": resolved_type, "errors": errors, "warnings": warnings}
+
+        # Validate against FieldSchema
+        for field in item_type_schema.fields:
+            value = item_data.get(field.name)
+
+            # Required check
+            if field.required and (value is None or value == "" or value == []):
+                errors.append({"field": field.name, "message": f"Required field '{field.name}' is missing or empty"})
+                continue
+
+            if value is None:
+                continue
+
+            # Allowed values check (select / multiselect / enum)
+            if field.options and field.format in ("select", "enum"):
+                if value not in field.options:
+                    errors.append({
+                        "field": field.name,
+                        "message": f"'{value}' is not a valid value for '{field.name}'. Allowed: {field.options}",
+                    })
+            elif field.options and field.format == "multiselect":
+                values = value if isinstance(value, list) else [value]
+                invalid = [v for v in values if v not in field.options]
+                if invalid:
+                    errors.append({
+                        "field": field.name,
+                        "message": f"Invalid value(s) for '{field.name}': {invalid}. Allowed: {field.options}",
+                    })
+
+        return {
+            "valid": len(errors) == 0,
+            "type": resolved_type,
+            "errors": errors,
+            "warnings": warnings,
+        }
+
     def get_open_defects(self) -> List[Dict[str, Any]]:
         """Return all DEF items with an open status (draft/open/in_progress)."""
         _OPEN_STATUSES = {"draft", "open", "in_progress"}

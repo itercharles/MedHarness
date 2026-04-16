@@ -94,6 +94,50 @@ def main(ctx: click.Context, dhf: str | None, projects: tuple) -> None:
 
 
 # ---------------------------------------------------------------------------
+# context
+# ---------------------------------------------------------------------------
+
+@main.command("context")
+@click.option("--governance-dir", default=None, metavar="PATH",
+              help="Path to governance directory. Defaults to ./governance.")
+@click.option("--standard", default=None, metavar="ID",
+              help="Filter compliance policies to this standard (e.g. IEC_62304).")
+@click.option("--summary", is_flag=True, default=False,
+              help="Emit policy IDs and headings only — omit check details.")
+@click.option("--format", "fmt", default="json", show_default=True,
+              type=click.Choice(["json", "yaml"], case_sensitive=False),
+              help="Output format.")
+@click.pass_context
+def context(ctx: click.Context, governance_dir: str | None, standard: str | None,
+            summary: bool, fmt: str) -> None:
+    """Output DHF schema, lifecycle rules, and compliance policy summaries for AI agents.
+
+    Provides the full item type schema (fields, allowed values, ID prefixes),
+    global lifecycle states, and compliance policy summaries from governance
+    YAML files in a machine-readable format.  Run this before generating or
+    editing DHF content to avoid CI failures from invalid field values.
+
+    \b
+    Example:
+      python -m compliantflow --dhf path/to/DHF context
+      python -m compliantflow --dhf path/to/DHF context --standard IEC_62304 --summary
+      python -m compliantflow --dhf path/to/DHF context --format yaml
+    """
+    gov_dir = Path(governance_dir) if governance_dir else Path("governance")
+    core = _make_core(ctx)
+    result = core.get_context(gov_dir, standard=standard, summary=summary)
+
+    if fmt == "yaml":
+        try:
+            import yaml as _yaml
+            click.echo(_yaml.dump(result, default_flow_style=False, allow_unicode=True))
+        except ImportError:
+            raise click.ClickException("PyYAML is required for --format yaml. Install it with: pip install pyyaml")
+    else:
+        click.echo(json.dumps(result, indent=2))
+
+
+# ---------------------------------------------------------------------------
 # status
 # ---------------------------------------------------------------------------
 
@@ -354,6 +398,56 @@ def validate_release(ctx: click.Context, rel_id: str) -> None:
         f"✓ Release gate PASSED: all {len(report['checks'])} checks passed for {rel_id}.",
         err=True,
     )
+
+
+@validate.command("draft")
+@click.argument("file", type=click.Path(exists=True, dir_okay=False))
+@click.option("--type", "item_type", default=None, metavar="TYPE",
+              help="Item type code (e.g. SYS). Inferred from id prefix if omitted.")
+@click.option("--format", "fmt", default="json", show_default=True,
+              type=click.Choice(["json", "text"], case_sensitive=False),
+              help="Output format.")
+@click.pass_context
+def validate_draft(ctx: click.Context, file: str, item_type: str | None, fmt: str) -> None:
+    """Validate a draft DHF item YAML against the doc-type field schema.
+
+    Checks required fields and allowed values without requiring a full CI run.
+    Graph-dependent checks (traceability, verification) are out of scope.
+    Exits 0 on pass, 1 on validation failure.
+
+    \b
+    Example:
+      python -m compliantflow --dhf path/to/DHF validate draft my_item.yaml
+      python -m compliantflow --dhf path/to/DHF validate draft my_item.yaml --type SYS
+    """
+    import yaml as _yaml
+
+    with open(file, "r", encoding="utf-8") as f:
+        try:
+            item_data = _yaml.safe_load(f)
+        except Exception as exc:
+            raise click.ClickException(f"Failed to parse YAML: {exc}")
+
+    if not isinstance(item_data, dict):
+        raise click.ClickException("Item file must be a YAML mapping.")
+
+    core = _make_core(ctx)
+    result = core.validate_draft(item_data, type_name=item_type)
+
+    if fmt == "json":
+        click.echo(json.dumps(result, indent=2))
+    else:
+        valid = result["valid"]
+        icon = "✓" if valid else "✗"
+        item_type_str = result.get("type") or "unknown"
+        click.echo(f"{icon} {item_type_str}: {'valid' if valid else 'invalid'}")
+        for w in result.get("warnings", []):
+            click.echo(f"  ⚠  {w['field']}: {w['message']}")
+        for e in result.get("errors", []):
+            click.echo(f"  ✗  {e['field']}: {e['message']}")
+
+    if not result["valid"]:
+        sys.exit(1)
 
 
 @validate.group("compliance-history")
