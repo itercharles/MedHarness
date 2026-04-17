@@ -1028,3 +1028,66 @@ def migrate_rdm(ctx: click.Context, source_dir: Path, dry_run: bool,
             f"{n_created} created, {n_skipped} skipped, {n_review} need review",
             err=True,
         )
+
+
+# ---------------------------------------------------------------------------
+# export group
+# ---------------------------------------------------------------------------
+
+@main.group()
+def export() -> None:
+    """Assemble submission and export artifacts."""
+
+
+@export.command("submission")
+@click.option("--governance-dir", default=None, metavar="PATH",
+              help="Directory containing governance YAML files. Defaults to DHF/governance/.")
+@click.option("--output-dir", default=".", show_default=True, metavar="PATH",
+              help="Directory where the submission ZIP will be written.")
+@click.option("--force", is_flag=True, default=False,
+              help="Skip the compliance completeness gate and assemble anyway.")
+@click.pass_context
+def export_submission(
+    ctx: click.Context,
+    governance_dir: str | None,
+    output_dir: str,
+    force: bool,
+) -> None:
+    """Assemble a 510(k) submission evidence package.
+
+    Runs the compliance completeness gate across all configured standards,
+    then bundles the following artifacts into a dated ZIP:
+
+    \b
+      cover_document.pdf        — FDA eSTAR section mapping table
+      traceability_report.pdf   — full traceability matrix
+      compliance_{standard}.pdf — one per configured standard
+      soup_list.pdf             — SOUP items with vulnerability status
+      risk_rcm_summary.pdf      — RISK and RCM items
+      test_results_summary.pdf  — test result summary
+      cr_evidence.pdf           — closed CR history
+
+    The package will not be produced if any compliance gate check is failing,
+    unless --force is passed.
+    """
+    from compliantflow.submission import assemble_submission, SubmissionGateError
+
+    dhf_path: Path = ctx.obj["dhf"]
+    gov_dir = Path(governance_dir) if governance_dir else dhf_path / "governance"
+    out_dir = Path(output_dir)
+
+    if not gov_dir.is_dir():
+        raise click.ClickException(
+            f"Governance directory not found: {gov_dir}\n"
+            "Pass --governance-dir or set COMPLIANTFLOW_GOVERNANCE_DIR."
+        )
+
+    core = _make_core(ctx)
+
+    try:
+        zip_path = assemble_submission(core, gov_dir, out_dir, force=force)
+    except SubmissionGateError as exc:
+        raise click.ClickException(str(exc))
+
+    click.echo(f"✓ Submission package written to: {zip_path}", err=True)
+    click.echo(str(zip_path))
