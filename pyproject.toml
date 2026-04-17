@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "compliantflow"
+version = "2.0.0"
+description = "Compliance checking and DHF management for medical device software"
+requires-python = ">=3.11"
+dependencies = [
+    "pydantic>=2.0",
+    "click",
+    "networkx",
+    "pyyaml",
+    "python-frontmatter",
+    "jinja2",
+    "python-docx",
+    "gitpython",
+    "python-dateutil",
+    "python-dotenv",
+    "google-genai",
+    "markdown",
+    "weasyprint",
+]
+
+[project.scripts]
+compliantflow = "compliantflow.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["compliantflow*"]
+exclude = ["tests*"]
