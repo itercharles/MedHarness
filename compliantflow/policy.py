@@ -355,16 +355,31 @@ class PolicyEngine:
                 return item_type.id_prefix
         return f"{type_code}-"
 
-    def _nodes_for_type(self, type_code: str):
-        """Return all graph node IDs whose prefix matches type_code."""
+    def _nodes_for_type(self, type_code: str, filter: Optional[Dict] = None):
+        """Return all graph node IDs whose prefix matches type_code.
+
+        Args:
+            type_code: Item type prefix (e.g. 'CR', 'SYS').
+            filter:    Optional dict of attribute→value pairs. Only nodes whose
+                       item data matches ALL pairs are returned.
+                       Example: ``{"status": "closed"}``
+        """
         prefix = self._get_prefix(type_code)
-        return [n for n in self.core.graph.graph.nodes if n.startswith(prefix)]
+        nodes = [n for n in self.core.graph.graph.nodes if n.startswith(prefix)]
+        if not filter:
+            return nodes
+        result = []
+        for n in nodes:
+            item = self.core.graph.graph.nodes[n].get('item') or {}
+            if all(item.get(k) == v for k, v in filter.items()):
+                result.append(n)
+        return result
 
     # --- Check Implementations ---
 
-    def _check_item_existence(self, type_code: str) -> Tuple[bool, str, Optional[Dict]]:
+    def _check_item_existence(self, type_code: str, filter: Optional[Dict] = None) -> Tuple[bool, str, Optional[Dict]]:
         """Check if any items of the given type exist."""
-        nodes = self._nodes_for_type(type_code)
+        nodes = self._nodes_for_type(type_code, filter=filter)
         count = len(nodes)
         if count > 0:
             return True, f"Found {count} item(s) of type '{type_code}'", {"count": count}
@@ -458,6 +473,7 @@ class PolicyEngine:
         self,
         type_code: Any,
         attribute: str,
+        filter: Optional[Dict] = None,
     ) -> Tuple[bool, str, Optional[Dict]]:
         """Check if all items of given type(s) have a specific attribute set."""
         type_codes = [type_code] if isinstance(type_code, str) else type_code
@@ -466,7 +482,7 @@ class PolicyEngine:
         missing_items = []
 
         for code in type_codes:
-            for uid in self._nodes_for_type(code):
+            for uid in self._nodes_for_type(code, filter=filter):
                 total_items += 1
                 item = self.core.graph.graph.nodes[uid].get('item') or {}
                 if not item.get(attribute):
@@ -492,6 +508,7 @@ class PolicyEngine:
         type_code: Any,
         attribute: str,
         expected_value: Any,
+        filter: Optional[Dict] = None,
     ) -> Tuple[bool, str, Optional[Dict]]:
         """Check that all items of the given type have a specific attribute value."""
         type_codes = [type_code] if isinstance(type_code, str) else type_code
@@ -500,7 +517,7 @@ class PolicyEngine:
         non_matching = []
 
         for code in type_codes:
-            for uid in self._nodes_for_type(code):
+            for uid in self._nodes_for_type(code, filter=filter):
                 total_items += 1
                 item = self.core.graph.graph.nodes[uid].get('item') or {}
                 if item.get(attribute) != expected_value:
