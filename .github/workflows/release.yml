@@ -115,8 +115,8 @@ jobs:
       - name: Assemble delivery bundle
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
-          BUILD="${{ github.run_number }}"
-          BUNDLE_NAME="compliantflow-${VERSION}-build-${BUILD}"
+          SHA="${GITHUB_SHA:0:7}"
+          BUNDLE_NAME="compliantflow-${VERSION}-build-${SHA}"
           BUNDLE_DIR="/tmp/${BUNDLE_NAME}"
 
           mkdir -p "${BUNDLE_DIR}/build"

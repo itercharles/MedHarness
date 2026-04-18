@@ -18,8 +18,7 @@ jobs:
   review-dhf-changes:
     name: DHF Compliance Review (suggestion)
     runs-on: ubuntu-latest
-    # Only run if GEMINI_API_KEY is configured — gracefully skips otherwise
-    if: ${{ vars.GEMINI_API_KEY != '' || secrets.GEMINI_API_KEY != '' }}
+    if: ${{ secrets.GEMINI_API_KEY != '' }}
     steps:
       - name: Checkout CompliantFlow
         uses: actions/checkout@v4
