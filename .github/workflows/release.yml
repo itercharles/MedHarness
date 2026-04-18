@@ -97,12 +97,14 @@ jobs:
         run: |
           mkdir -p /tmp/documents/compliance
           export PYTHONPATH="${PWD}/dhf:${PWD}/dhf/DHF"
+          # Generate reports regardless of policy pass/fail — the PDF documents
+          # compliance state. The actual gate is enforced by the CI pipeline on PRs.
           compliantflow --dhf dhf/DHF report compliance IEC_62304 \
             --governance-dir dhf/governance \
-            --output /tmp/documents/compliance/IEC_62304_Compliance_Report.pdf
+            --output /tmp/documents/compliance/IEC_62304_Compliance_Report.pdf || true
           compliantflow --dhf dhf/DHF report compliance ISO_14971 \
             --governance-dir dhf/governance \
-            --output /tmp/documents/compliance/ISO_14971_Compliance_Report.pdf
+            --output /tmp/documents/compliance/ISO_14971_Compliance_Report.pdf || true
 
       - name: Generate traceability matrix
         run: |
