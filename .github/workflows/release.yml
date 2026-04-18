@@ -1,8 +1,8 @@
 name: Release
 
 # Triggered when a vX.Y.Z tag is pushed.
-# Builds the wheel on Ubuntu (canonical build environment per Development Plan §6.1)
-# and uploads it to the GitHub Release created for that tag.
+# Builds the wheel on Ubuntu (canonical build environment per Development Plan §6.1),
+# assembles the customer delivery bundle, and uploads it to the GitHub Release.
 
 on:
   push:
@@ -11,7 +11,7 @@ on:
 
 jobs:
   build-and-publish:
-    name: Build and upload wheel
+    name: Build and upload release bundle
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -31,7 +31,35 @@ jobs:
       - name: Build wheel
         run: python -m build --wheel
 
-      - name: Upload wheel to GitHub Release
+      - name: Assemble release bundle
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          BUILD="${{ github.run_number }}"
+          BUNDLE_NAME="compliantflow-${VERSION}-build-${BUILD}"
+          BUNDLE_DIR="/tmp/${BUNDLE_NAME}"
+
+          mkdir -p "${BUNDLE_DIR}"
+
+          # Wheel
+          cp dist/*.whl "${BUNDLE_DIR}/"
+
+          # Starter kit contents
+          cp GETTING_STARTED.md "${BUNDLE_DIR}/"
+          cp -r dhf-template "${BUNDLE_DIR}/"
+
+          # Remove any cached Python files from the template
+          find "${BUNDLE_DIR}" -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
+          find "${BUNDLE_DIR}" -name "*.pyc" -delete 2>/dev/null || true
+          find "${BUNDLE_DIR}" -name ".DS_Store" -delete 2>/dev/null || true
+
+          cd /tmp
+          zip -r "${BUNDLE_NAME}.zip" "${BUNDLE_NAME}/"
+          echo "BUNDLE_ZIP=/tmp/${BUNDLE_NAME}.zip" >> "$GITHUB_ENV"
+          echo "BUNDLE_NAME=${BUNDLE_NAME}" >> "$GITHUB_ENV"
+
+      - name: Upload release bundle to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/*.whl
+          files: |
+            ${{ env.BUNDLE_ZIP }}
+            dist/*.whl
