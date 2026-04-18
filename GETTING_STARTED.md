@@ -1,4 +1,4 @@
-# Getting Started with CompliantFlow v2.0.2
+# Getting Started with CompliantFlow v2.0.3
 
 CompliantFlow is a **CI compliance gate** for medical device software projects.
 It connects to your Design History File (DHF) and blocks merges that would
@@ -30,7 +30,7 @@ Add it to your repo secrets, then install in CI:
   env:
     GH_TOKEN: ${{ secrets.COMPLIANTFLOW_TOKEN }}
   run: |
-    gh release download v2.0.2 --repo itercharles/CompliantFlow \
+    gh release download v2.0.3 --repo itercharles/CompliantFlow \
       --pattern "compliantflow-*.zip" \
       --output compliantflow.zip
     unzip compliantflow.zip -d cf
@@ -43,7 +43,7 @@ To install locally for development:
 # One-time: authenticate with your token
 gh auth login
 
-gh release download v2.0.2 --repo itercharles/CompliantFlow \
+gh release download v2.0.3 --repo itercharles/CompliantFlow \
   --pattern "compliantflow-*.zip" \
   --output compliantflow.zip
 unzip compliantflow.zip -d cf
@@ -112,7 +112,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.COMPLIANTFLOW_TOKEN }}
         run: |
-          gh release download v2.0.2 --repo itercharles/CompliantFlow \
+          gh release download v2.0.3 --repo itercharles/CompliantFlow \
             --pattern "compliantflow-*.zip" \
             --output compliantflow.zip
           unzip compliantflow.zip -d cf
