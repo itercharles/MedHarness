@@ -1,4 +1,4 @@
-# Getting Started with CompliantFlow v2.0.0
+# Getting Started with CompliantFlow v2.0.2
 
 CompliantFlow is a **CI compliance gate** for medical device software projects.
 It connects to your Design History File (DHF) and blocks merges that would
@@ -22,10 +22,32 @@ This guide covers:
 
 ## Step 1 — Install CompliantFlow
 
-Download `compliantflow-2.0.0-py3-none-any.whl` from the GitHub Release and install it:
+You will receive a `COMPLIANTFLOW_TOKEN` (GitHub PAT with `contents: read` access).
+Add it to your repo secrets, then install in CI:
+
+```yaml
+- name: Install CompliantFlow
+  env:
+    GH_TOKEN: ${{ secrets.COMPLIANTFLOW_TOKEN }}
+  run: |
+    gh release download v2.0.2 --repo itercharles/CompliantFlow \
+      --pattern "compliantflow-*.zip" \
+      --output compliantflow.zip
+    unzip compliantflow.zip -d cf
+    pip install cf/*/build/compliantflow-*.whl
+```
+
+To install locally for development:
 
 ```bash
-pip install compliantflow-2.0.0-py3-none-any.whl
+# One-time: authenticate with your token
+gh auth login
+
+gh release download v2.0.2 --repo itercharles/CompliantFlow \
+  --pattern "compliantflow-*.zip" \
+  --output compliantflow.zip
+unzip compliantflow.zip -d cf
+pip install cf/*/build/compliantflow-*.whl
 ```
 
 Verify:
@@ -87,7 +109,14 @@ jobs:
           token: ${{ secrets.DHF_REPO_TOKEN }}
 
       - name: Install CompliantFlow
-        run: pip install compliantflow-2.0.0-py3-none-any.whl
+        env:
+          GH_TOKEN: ${{ secrets.COMPLIANTFLOW_TOKEN }}
+        run: |
+          gh release download v2.0.2 --repo itercharles/CompliantFlow \
+            --pattern "compliantflow-*.zip" \
+            --output compliantflow.zip
+          unzip compliantflow.zip -d cf
+          pip install cf/*/build/compliantflow-*.whl
 
       - name: Compliance gate
         run: |
@@ -98,8 +127,9 @@ jobs:
           compliantflow --dhf dhf/DHF validate coverage UC:CRS CRS:SYS SYS:SRS
 ```
 
-Add `DHF_REPO_TOKEN` to your product repo secrets:
-a GitHub Personal Access Token with `repo` scope that can read your DHF repository.
+Add these secrets to your product repo:
+- `COMPLIANTFLOW_TOKEN` — provided by your CompliantFlow account representative (read access to the CompliantFlow release repo)
+- `DHF_REPO_TOKEN` — a GitHub PAT with `repo` scope that can read your DHF repository
 
 The compliance gate **blocks merges** when:
 - Traceability links are broken or missing
