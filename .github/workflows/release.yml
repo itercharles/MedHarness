@@ -1,0 +1,37 @@
+name: Release
+
+# Triggered when a vX.Y.Z tag is pushed.
+# Builds the wheel on Ubuntu (canonical build environment per Development Plan §6.1)
+# and uploads it to the GitHub Release created for that tag.
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-and-publish:
+    name: Build and upload wheel
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install build tools
+        run: pip install build
+
+      - name: Build wheel
+        run: python -m build --wheel
+
+      - name: Upload wheel to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.whl
