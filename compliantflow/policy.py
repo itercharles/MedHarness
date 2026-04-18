@@ -163,11 +163,10 @@ class PolicyEngine:
             return {}
 
         if self._llm is None:
-            return {
-                pid: (False, "No LLM backend configured", {"doc_id": doc_id})
-                for doc_id, items in groups.items()
-                for pid, _ in items
-            }
+            raise RuntimeError(
+                "Semantic compliance checks require an LLM backend. "
+                "Set GEMINI_API_KEY or COMPLIANTFLOW_OLLAMA_URL to enable them."
+            )
 
         out: Dict[str, Tuple[bool, str, Optional[Dict]]] = {}
 
@@ -582,7 +581,10 @@ class PolicyEngine:
             requirement: Plain-English description of what the document must contain/demonstrate.
         """
         if self._llm is None:
-            return False, "No LLM backend configured", {"doc_id": doc_id}
+            raise RuntimeError(
+                "Semantic compliance checks require an LLM backend. "
+                "Set GEMINI_API_KEY or COMPLIANTFLOW_OLLAMA_URL to enable them."
+            )
 
         content = self.core._adapter.get_document(doc_id)
         if content is None:

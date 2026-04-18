@@ -251,14 +251,11 @@ def test_TC_SYS_005_011_semantic_check_reports_missing_backend(stub_adapter):
     core = CompliantFlowCore(stub_adapter)
     engine = PolicyEngine(core, llm_backend=None)
 
-    passed, details, evidence = engine._check_document_semantic(
-        doc_id="test_plan",
-        requirement="Describe the verification milestones.",
-    )
-
-    assert passed is False
-    assert details == "No LLM backend configured"
-    assert evidence == {"doc_id": "test_plan"}
+    with pytest.raises(RuntimeError, match="Semantic compliance checks require an LLM backend"):
+        engine._check_document_semantic(
+            doc_id="test_plan",
+            requirement="Describe the verification milestones.",
+        )
 
 
 def test_TC_SYS_005_012_no_open_defects_passes_when_none_blocking(stub_adapter, governance_dir):
