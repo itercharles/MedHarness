@@ -2,7 +2,11 @@ name: Release
 
 # Triggered when a vX.Y.Z tag is pushed.
 # Builds the wheel on Ubuntu (canonical build environment per Development Plan §6.1),
-# assembles the customer delivery bundle, and uploads it to the GitHub Release.
+# generates all DHF documents as PDFs, and assembles the delivery bundle.
+#
+# Required secrets:
+#   DHF_REPO_TOKEN  — GitHub PAT with repo scope to read compliantflow-dhf
+#   GEMINI_API_KEY  — Google Gemini API key for semantic compliance checks
 
 on:
   push:
@@ -20,10 +24,20 @@ jobs:
       - name: Check out source
         uses: actions/checkout@v4
 
+      - name: Check out DHF
+        uses: actions/checkout@v4
+        with:
+          repository: itercharles/compliantflow-dhf
+          path: dhf
+          token: ${{ secrets.DHF_REPO_TOKEN }}
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+
+      - name: Install system dependencies (WeasyPrint)
+        run: sudo apt-get install -y libpango-1.0-0 libharfbuzz0b libpangoft2-1.0-0
 
       - name: Install build tools
         run: pip install build
@@ -31,23 +45,90 @@ jobs:
       - name: Build wheel
         run: python -m build --wheel
 
-      - name: Assemble release bundle
+      - name: Install CompliantFlow and DHF utils dependencies
+        run: |
+          pip install dist/*.whl
+          pip install click jinja2 markdown pydantic PyYAML gitpython weasyprint
+
+      - name: Generate item-based specification PDFs
+        run: |
+          mkdir -p /tmp/documents/specifications
+          cd dhf
+          PYTHONPATH=.:DHF python -m utils doc export ALL 2>&1 | tee /tmp/doc_export.log
+          # Collect generated PDFs from /tmp
+          find /tmp -maxdepth 1 -name "*_Specification_*.pdf" -exec cp {} /tmp/documents/specifications/ \;
+
+      - name: Generate plan and test specification PDFs
+        run: |
+          mkdir -p /tmp/documents/plans
+          python - <<'EOF'
+          import markdown
+          from pathlib import Path
+          from weasyprint import HTML
+          from datetime import datetime
+
+          DHF_DOCS = Path("dhf/DHF/documents")
+          CSS = (DHF_DOCS / "specifications/templates/styles/default.css").read_text()
+
+          def to_pdf(md_path: Path, out_path: Path):
+              content = md_path.read_text()
+              html_content = markdown.markdown(content, extensions=['tables', 'fenced_code', 'toc'])
+              full_html = f"""<!DOCTYPE html>
+          <html><head><meta charset="utf-8"><style>{CSS}</style></head>
+          <body>{html_content}</body></html>"""
+              HTML(string=full_html).write_pdf(str(out_path))
+              print(f"✓ {md_path.name} → {out_path}")
+
+          # Plans
+          plan_dir = DHF_DOCS / "plans"
+          for md in sorted(plan_dir.glob("*.md")):
+              stem = md.stem.replace("_", " ").title().replace(" ", "_")
+              to_pdf(md, Path(f"/tmp/documents/plans/{stem}.pdf"))
+
+          # Static test specifications
+          spec_dir = DHF_DOCS / "specifications"
+          for md in sorted(spec_dir.glob("*Test*.md")):
+              to_pdf(md, Path(f"/tmp/documents/specifications/{md.stem}.pdf"))
+          EOF
+
+      - name: Generate compliance reports
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          mkdir -p /tmp/documents/compliance
+          export PYTHONPATH="${PWD}/dhf:${PWD}/dhf/DHF"
+          compliantflow --dhf dhf/DHF report compliance IEC_62304 \
+            --governance-dir dhf/governance \
+            --output /tmp/documents/compliance/IEC_62304_Compliance_Report.pdf
+          compliantflow --dhf dhf/DHF report compliance ISO_14971 \
+            --governance-dir dhf/governance \
+            --output /tmp/documents/compliance/ISO_14971_Compliance_Report.pdf
+
+      - name: Generate traceability matrix
+        run: |
+          export PYTHONPATH="${PWD}/dhf:${PWD}/dhf/DHF"
+          compliantflow --dhf dhf/DHF report traceability UC CRS SYS SRS SWDD \
+            --output /tmp/documents/compliance/Traceability_Matrix.pdf
+
+      - name: Assemble delivery bundle
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
           BUILD="${{ github.run_number }}"
           BUNDLE_NAME="compliantflow-${VERSION}-build-${BUILD}"
           BUNDLE_DIR="/tmp/${BUNDLE_NAME}"
 
-          mkdir -p "${BUNDLE_DIR}"
+          mkdir -p "${BUNDLE_DIR}/build"
+          mkdir -p "${BUNDLE_DIR}/documents"
 
-          # Wheel
-          cp dist/*.whl "${BUNDLE_DIR}/"
+          # Build package
+          cp dist/*.whl "${BUNDLE_DIR}/build/"
+          cp GETTING_STARTED.md "${BUNDLE_DIR}/build/"
+          cp -r dhf-template "${BUNDLE_DIR}/build/"
 
-          # Starter kit contents
-          cp GETTING_STARTED.md "${BUNDLE_DIR}/"
-          cp -r dhf-template "${BUNDLE_DIR}/"
+          # Documents
+          cp -r /tmp/documents/. "${BUNDLE_DIR}/documents/"
 
-          # Remove any cached Python files from the template
+          # Remove cached Python files
           find "${BUNDLE_DIR}" -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
           find "${BUNDLE_DIR}" -name "*.pyc" -delete 2>/dev/null || true
           find "${BUNDLE_DIR}" -name ".DS_Store" -delete 2>/dev/null || true
@@ -55,11 +136,8 @@ jobs:
           cd /tmp
           zip -r "${BUNDLE_NAME}.zip" "${BUNDLE_NAME}/"
           echo "BUNDLE_ZIP=/tmp/${BUNDLE_NAME}.zip" >> "$GITHUB_ENV"
-          echo "BUNDLE_NAME=${BUNDLE_NAME}" >> "$GITHUB_ENV"
 
-      - name: Upload release bundle to GitHub Release
+      - name: Upload delivery bundle to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: |
-            ${{ env.BUNDLE_ZIP }}
-            dist/*.whl
+          files: ${{ env.BUNDLE_ZIP }}
