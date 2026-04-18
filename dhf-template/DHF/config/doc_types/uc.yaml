@@ -1,0 +1,15 @@
+code: UC
+name: Use Case
+prefix: UC-
+directory: 00_uc
+properties:
+- id
+- name: title
+  format: short_text
+  label: Title
+- name: content
+  format: long_text
+  label: Content
+icon: 👤
+page_enabled: true
+page_number: 4

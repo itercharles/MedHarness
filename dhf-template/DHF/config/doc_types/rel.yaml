@@ -1,0 +1,50 @@
+code: REL
+name: Release
+prefix: REL-
+directory: 10_release
+properties:
+- id
+- name: title
+  format: short_text
+  label: Title
+- name: version
+  format: short_text
+  label: Version
+- name: content
+  format: long_text
+  label: Content
+- name: included_items
+  format: item_multiselect
+  target_types:
+  - CR
+  label: Included Items
+- name: release_notes
+  format: long_text
+  label: Release Notes
+icon: 🚀
+page_enabled: true
+page_number: 4
+lifecycle:
+  transitions:
+  - from_states:
+    - null
+    to_state: draft
+  - from_states:
+    - draft
+    to_state: approved
+    criteria:
+    - id: version_set
+      name: Version defined
+      check_type: field_not_empty
+      field: version
+      required: true
+    - id: items_planned
+      name: Items planned
+      check_type: field_not_empty
+      field: included_items
+      required: false
+    label: Approve
+  - from_states:
+    - approved
+    to_state: released
+    label: Release
