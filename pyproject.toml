@@ -30,3 +30,6 @@ compliantflow = "compliantflow.cli:main"
 where = ["."]
 include = ["compliantflow*"]
 exclude = ["tests*"]
+
+[tool.setuptools.package-data]
+compliantflow = ["data/**/*", "data/**/.gitkeep"]

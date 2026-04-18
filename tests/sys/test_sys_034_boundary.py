@@ -56,6 +56,10 @@ def _collect_imports(filepath: Path) -> list[str]:
 def _find_py_files(directory: Path) -> list[Path]:
     files = []
     for f in directory.rglob("*.py"):
+        # Exclude bundled data (dhf-template ships as package data; its
+        # utils/ imports are DHF-internal and not subject to this boundary rule)
+        if "data" + "/" in f.as_posix().replace(str(directory), ""):
+            continue
         files.append(f)
     return files
 
@@ -108,12 +112,16 @@ class TestComponentBoundary:
         _TOOL_DIRS = ["compliantflow", "tests"]
         scan_paths = [tool_root / d for d in _TOOL_DIRS if (tool_root / d).is_dir()]
         found = []
+        data_dir = _COMPLIANTFLOW_SRC / "data"
         for scan_root in scan_paths:
             for py_file in scan_root.rglob("*.py"):
                 parts = py_file.parts
                 if any(p.startswith(".") or p == ".venv" for p in parts):
                     continue
                 if py_file.name.startswith("test_"):
+                    continue
+                # Exclude bundled package data (dhf-template etc.)
+                if py_file.is_relative_to(data_dir):
                     continue
                 try:
                     tree = ast.parse(py_file.read_text(encoding="utf-8"))

@@ -4,45 +4,28 @@ CompliantFlow is a **CI compliance gate** for medical device software projects.
 It connects to your Design History File (DHF) and blocks merges that would
 violate IEC 62304, ISO 14971, or ISO 13485 — before they land in your main branch.
 
-This guide covers:
-
-1. Installing CompliantFlow in your CI pipeline
-2. Setting up a DHF repository for your project
-3. Running compliance checks locally during development
-
 ---
 
 ## Prerequisites
 
 - Python 3.11 or later
-- Git and a GitHub account
-- A product code repository (the repo CompliantFlow will gate)
+- [GitHub CLI](https://cli.github.com) (`gh`) installed and authenticated
+- A product code repository on GitHub
 
 ---
 
-## Step 1 — Install CompliantFlow
+## Step 1 — Install
 
-You will receive a `COMPLIANTFLOW_TOKEN` (GitHub PAT with `contents: read` access).
-Add it to your repo secrets, then install in CI:
-
-```yaml
-- name: Install CompliantFlow
-  env:
-    GH_TOKEN: ${{ secrets.COMPLIANTFLOW_TOKEN }}
-  run: |
-    gh release download v2.0.3 --repo itercharles/CompliantFlow \
-      --pattern "compliantflow-*.zip" \
-      --output compliantflow.zip
-    unzip compliantflow.zip -d cf
-    pip install cf/*/build/compliantflow-*.whl
-```
-
-To install locally for development:
+You will receive a `COMPLIANTFLOW_TOKEN` (GitHub PAT with `contents: read` access to
+the CompliantFlow release repository). Authenticate once:
 
 ```bash
-# One-time: authenticate with your token
 gh auth login
+```
 
+Then download and install:
+
+```bash
 gh release download v2.0.3 --repo itercharles/CompliantFlow \
   --pattern "compliantflow-*.zip" \
   --output compliantflow.zip
@@ -58,98 +41,103 @@ compliantflow --help
 
 ---
 
-## Step 2 — Create Your DHF Repository
+## Step 2 — Run `compliantflow init`
 
-The `dhf-template/` folder in this package is a ready-to-use Design History File.
-Copy it into a new **private** Git repository for your project.
+This single command sets up the full infrastructure for your project interactively:
 
 ```bash
-# Copy the template
-cp -r dhf-template/ my-project-dhf
-cd my-project-dhf
-
-git init
-git add .
-git commit -m "initial DHF from CompliantFlow template"
-
-# Push to GitHub (create the repo first at github.com — keep it private)
-git remote add origin https://github.com/YOUR_ORG/my-project-dhf
-git push -u origin main
+compliantflow init
 ```
 
-Edit `DHF/config/global.yaml` to set your project name:
+You will be prompted for:
 
-```yaml
-project_name: "My Medical Device Software"
+| Prompt | Example |
+|--------|---------|
+| GitHub org or username | `acme-medical` |
+| Product repository name | `insulin-pump` |
+| Project name (for documents) | `Insulin Pump Firmware` |
+| Create a DHF repository? | `Y` |
+| DHF repository name | `insulin-pump-dhf` |
+| Applicable standards | IEC 62304, ISO 14971 |
+| Enable AI compliance checks? | `Y` |
+| LLM provider | `gemini` |
+| Gemini API key | `****` |
+
+After you confirm, `init` will:
+
+1. Create a private DHF repository pre-configured with your project name and selected standards
+2. Open a pull request in your product repo adding `.github/workflows/compliance.yml`
+3. Set `GEMINI_API_KEY` (or `COMPLIANTFLOW_OLLAMA_URL`) in your product repo secrets
+
+**After `init` completes, two manual steps remain:**
+
+```
+1. Add COMPLIANTFLOW_TOKEN to your product repo secrets
+   (provided by your account representative)
+
+2. Create a fine-grained PAT with "Contents: Read" on your DHF repo,
+   add it as DHF_REPO_TOKEN to your product repo secrets
+
+3. Review and merge the compliance PR opened by init
 ```
 
 ---
 
-## Step 3 — Add the Compliance Gate to Your Product Repo
+## Step 3 — Merge the compliance PR
 
-This is the core use case. Add this workflow to your **product code** repository:
+The PR opened by `init` adds the compliance gate workflow. Once the two secrets
+above are in place, merge the PR. From that point on, every push and PR in your
+product repo is checked against:
 
-```yaml
-# .github/workflows/compliance.yml
-name: Compliance Gate
+- Traceability links (no orphaned requirements)
+- IEC 62304 / ISO 14971 policy compliance
+- Coverage between item types (UC → CRS → SYS → SRS)
 
-on: [push, pull_request]
-
-jobs:
-  compliance:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Check out DHF
-        uses: actions/checkout@v4
-        with:
-          repository: YOUR_ORG/my-project-dhf
-          path: dhf
-          token: ${{ secrets.DHF_REPO_TOKEN }}
-
-      - name: Install CompliantFlow
-        env:
-          GH_TOKEN: ${{ secrets.COMPLIANTFLOW_TOKEN }}
-        run: |
-          gh release download v2.0.3 --repo itercharles/CompliantFlow \
-            --pattern "compliantflow-*.zip" \
-            --output compliantflow.zip
-          unzip compliantflow.zip -d cf
-          pip install cf/*/build/compliantflow-*.whl
-
-      - name: Compliance gate
-        run: |
-          export PYTHONPATH="${PYTHONPATH}:${PWD}/dhf/DHF"
-          compliantflow --dhf dhf/DHF validate traceability
-          compliantflow --dhf dhf/DHF validate compliance IEC_62304 \
-            --governance-dir dhf/governance
-          compliantflow --dhf dhf/DHF validate coverage UC:CRS CRS:SYS SYS:SRS
-```
-
-Add these secrets to your product repo:
-- `COMPLIANTFLOW_TOKEN` — provided by your CompliantFlow account representative (read access to the CompliantFlow release repo)
-- `DHF_REPO_TOKEN` — a GitHub PAT with `repo` scope that can read your DHF repository
-
-The compliance gate **blocks merges** when:
-- Traceability links are broken or missing
-- IEC 62304 / ISO 14971 policies are violated
-- Coverage between item types falls below threshold
+The gate **blocks merges** on any failure.
 
 ---
 
-## Step 4 — Maintain Your DHF
+## Step 4 — Add a CI install step (for your product repo's CI)
 
-As you develop, maintain DHF items alongside your code.
-The DHF template includes a `utils` CLI for creating and updating items:
+If your product repo has other CI workflows that also need to call `compliantflow`,
+add this install step to them:
+
+```yaml
+- name: Install CompliantFlow
+  env:
+    GH_TOKEN: ${{ secrets.COMPLIANTFLOW_TOKEN }}
+  run: |
+    gh release download v2.0.3 --repo itercharles/CompliantFlow \
+      --pattern "compliantflow-*.zip" \
+      --output compliantflow.zip
+    unzip compliantflow.zip -d cf
+    pip install cf/*/build/compliantflow-*.whl
+```
+
+---
+
+## Step 5 — Maintain your DHF
+
+Open your DHF repository in Claude Code to create and update items with AI assistance:
 
 ```bash
-# From your DHF repo root
+gh repo clone YOUR_ORG/YOUR_PRODUCT-dhf
+cd YOUR_PRODUCT-dhf
+claude
+```
+
+The DHF includes `CLAUDE.md` and `AGENTS.md` so the AI agent understands DHF item
+types, lifecycle rules, and compliance requirements.
+
+To manage items manually:
+
+```bash
+# Install DHF utils dependencies (from the DHF repo root)
 pip install click jinja2 markdown pydantic PyYAML gitpython
 
-# Create a User Need
-PYTHONPATH=.:DHF python -m utils item create --type UC \
-  --data '{"title": "User needs compliance verification in CI"}'
+# Create a System Requirement
+PYTHONPATH=.:DHF python -m utils item create --type SYS \
+  --data '{"title": "System shall validate all inputs", "category": "Functional"}'
 
 # List all items
 PYTHONPATH=.:DHF python -m utils item list
@@ -158,16 +146,11 @@ PYTHONPATH=.:DHF python -m utils item list
 PYTHONPATH=.:DHF python -m utils validate schema
 ```
 
-Item types available: `UC`, `CRS`, `SYS`, `SRS`, `SWDD`, `SYSARCH`, `RISK`, `RCM`, `SOUP`, `CR`, `REL`, `DEF`, `TC`
-
-The DHF template also includes a CI workflow (`.github/workflows/ci.yml`) that validates
-your DHF structure on every push and PR to the DHF repository.
-
 ---
 
-## Step 5 — Local Compliance Checks (Development)
+## Step 6 — Run compliance checks locally
 
-Run compliance checks locally before pushing, to catch failures early:
+Before pushing, run checks locally to catch failures early:
 
 ```bash
 # Traceability
@@ -180,21 +163,6 @@ compliantflow --dhf DHF validate compliance IEC_62304 \
 # At-a-glance posture
 compliantflow --dhf DHF status --governance-dir governance
 ```
-
----
-
-## Step 6 — AI-Assisted DHF Maintenance
-
-The DHF template includes `CLAUDE.md` and `AGENTS.md` for Claude Code and compatible
-AI coding tools. Open your DHF repository in Claude Code:
-
-```bash
-cd my-project-dhf
-claude
-```
-
-The AI agent understands DHF item types, lifecycle rules, and compliance requirements,
-and can help you create and validate DHF items correctly.
 
 ---
 
@@ -218,6 +186,9 @@ is failing — fix all gate failures first, or use `--force` to override.
 
 ```
 compliantflow [--dhf PATH] COMMAND
+
+Setup:
+  init                            Interactive infrastructure onboarding
 
 Compliance:
   validate traceability           Check all items have upstream/downstream links
@@ -253,7 +224,7 @@ Migration:
 
 ## Governance Files
 
-The `governance/` directory contains compliance policy files:
+The `governance/` directory in your DHF contains compliance policy files:
 
 | File | Standard | Scope |
 |---|---|---|
@@ -262,7 +233,7 @@ The `governance/` directory contains compliance policy files:
 | `IEC_82304_1.yaml` | IEC 82304-1:2016 | Health software |
 | `ISO_13485.yaml` | ISO 13485:2016 | Quality management systems |
 
-Customise these files to match your project's applicable policies.
+`compliantflow init` includes only the standards you select.
 
 ---
 
