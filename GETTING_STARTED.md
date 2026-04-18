@@ -4,6 +4,32 @@ CompliantFlow is a **CI compliance gate** for medical device software projects.
 It connects to your Design History File (DHF) and blocks merges that would
 violate IEC 62304, ISO 14971, or ISO 13485 — before they land in your main branch.
 
+---
+
+## Quick Setup (recommended)
+
+The fastest way to set up the full infrastructure is the interactive `init` command.
+After installing (see Step 1), run:
+
+```bash
+compliantflow init
+```
+
+This single command will:
+- Create a private DHF repository pre-configured with your project name and selected standards
+- Open a pull request in your product repo adding the compliance CI gate
+- Configure LLM API secrets for AI-assisted compliance checks (optional)
+
+You will be prompted for each required piece of information. Nothing is committed or
+created until you confirm the summary.
+
+---
+
+## Manual Setup
+
+Use the steps below if you prefer to configure each component yourself, or if you
+need a non-standard layout.
+
 This guide covers:
 
 1. Installing CompliantFlow in your CI pipeline
@@ -15,7 +41,7 @@ This guide covers:
 ## Prerequisites
 
 - Python 3.11 or later
-- Git and a GitHub account
+- Git, a GitHub account, and the [GitHub CLI](https://cli.github.com) (`gh`)
 - A product code repository (the repo CompliantFlow will gate)
 
 ---
