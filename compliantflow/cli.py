@@ -94,6 +94,26 @@ def main(ctx: click.Context, dhf: str | None, projects: tuple) -> None:
 
 
 # ---------------------------------------------------------------------------
+# init
+# ---------------------------------------------------------------------------
+
+@main.command("init")
+def init_cmd() -> None:
+    """Interactive onboarding: set up the full CompliantFlow infrastructure.
+
+    Walks through collecting project details, then:
+    \b
+      1. Creates a private DHF repository from the built-in template (optional)
+      2. Opens a pull request in the product repo adding the compliance CI gate
+      3. Configures LLM API key secrets for AI-assisted checks (optional)
+
+    Requires the 'gh' CLI to be installed and authenticated.
+    """
+    from compliantflow.init_cmd import run_init
+    run_init()
+
+
+# ---------------------------------------------------------------------------
 # review-pr
 # ---------------------------------------------------------------------------
 

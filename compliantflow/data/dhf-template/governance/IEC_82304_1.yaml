@@ -1,0 +1,358 @@
+id: IEC_82304_1
+title: Health software - Part 1 General requirements for product safety
+type: standard
+version: "2016"
+policies:
+
+  # -----------------------------------------------------------------------
+  # Section 4.1 — Intended purpose
+  # -----------------------------------------------------------------------
+  - id: "4.1.a"
+    section: "4.1"
+    text: "The intended purpose of the health software shall be documented."
+    status: "approved"
+    manual: true
+    evidence_guidance: >
+      Provide a written intended purpose statement in the Design History File
+      (e.g. development_plan or intended_use document).
+
+  # -----------------------------------------------------------------------
+  # Section 4.2 — Use requirements
+  # -----------------------------------------------------------------------
+  - id: "4.2.a"
+    section: "4.2"
+    text: "Use requirements shall be documented."
+    status: "approved"
+    automation:
+      check: "item_existence"
+      params:
+        type_code: "CRS"
+
+  - id: "4.2.b"
+    section: "4.2"
+    text: "Use requirements shall derive from user needs (use cases)."
+    status: "approved"
+    automation:
+      check: "trace_coverage"
+      params:
+        source_type: "CRS"
+        target_type: "UC"
+        min_coverage: 1.0
+
+  # -----------------------------------------------------------------------
+  # Section 4.3 — System requirements
+  # -----------------------------------------------------------------------
+  - id: "4.3.a"
+    section: "4.3"
+    text: "System requirements shall be documented and trace to use requirements."
+    status: "approved"
+    automation:
+      check: "trace_coverage"
+      params:
+        source_type: "SYS"
+        target_type: "CRS"
+        min_coverage: 1.0
+
+  - id: "4.3.b"
+    section: "4.3"
+    text: "System requirements shall exist."
+    status: "approved"
+    automation:
+      check: "item_existence"
+      params:
+        type_code: "SYS"
+
+  # -----------------------------------------------------------------------
+  # Section 4.4 — System verification
+  # -----------------------------------------------------------------------
+  - id: "4.4.a"
+    section: "4.4"
+    text: "System verification shall be performed."
+    status: "approved"
+    automation:
+      check: "trace_coverage"
+      params:
+        source_type: "SYS"
+        target_type: "TC-SYS"
+        min_coverage: 1.0
+
+  - id: "4.4.b"
+    section: "4.4"
+    text: "All system-level test cases shall pass."
+    status: "approved"
+    automation:
+      check: "all_tests_passing"
+      params:
+        type_code: "SYS"
+
+  - id: "4.4.c"
+    section: "4.4"
+    text: "System requirements verification shall be complete."
+    status: "approved"
+    automation:
+      check: "verification_complete"
+      params:
+        type_code: "SYS"
+
+  # -----------------------------------------------------------------------
+  # Section 4.5 — System validation
+  # -----------------------------------------------------------------------
+  - id: "4.5.a"
+    section: "4.5"
+    text: "System validation shall be performed."
+    status: "approved"
+    automation:
+      check: "trace_coverage"
+      params:
+        source_type: "CRS"
+        target_type: "TC-CRS"
+        min_coverage: 1.0
+
+  # -----------------------------------------------------------------------
+  # Section 5.1 — Software development plan
+  # -----------------------------------------------------------------------
+  - id: "5.1.a"
+    section: "5.1"
+    text: "A software development plan shall be maintained."
+    status: "approved"
+    automation:
+      check: "file_existence"
+      params:
+        path: "documents/plans/development_plan.md"
+
+  - id: "5.1.b"
+    section: "5.1"
+    text: "The development plan shall describe the development lifecycle."
+    status: "approved"
+    manual: true
+    evidence_guidance: >
+      Review the development_plan document to confirm it describes
+      the software lifecycle model (e.g. iterative, agile, waterfall).
+
+  # -----------------------------------------------------------------------
+  # Section 5.2 — Software requirements
+  # -----------------------------------------------------------------------
+  - id: "5.2.a"
+    section: "5.2"
+    text: "Software requirements shall be documented."
+    status: "approved"
+    automation:
+      check: "item_existence"
+      params:
+        type_code: "SRS"
+
+  - id: "5.2.b"
+    section: "5.2"
+    text: "Software requirements shall trace to system requirements."
+    status: "approved"
+    automation:
+      check: "trace_coverage"
+      params:
+        source_type: "SRS"
+        target_type: "SYS"
+        min_coverage: 1.0
+
+  # -----------------------------------------------------------------------
+  # Section 5.3 — Software architecture
+  # -----------------------------------------------------------------------
+  - id: "5.3.a"
+    section: "5.3"
+    text: "Software architecture shall be documented."
+    status: "approved"
+    automation:
+      check: "item_existence"
+      params:
+        type_code: "SYSARCH"
+
+  - id: "5.3.b"
+    section: "5.3"
+    text: "Architecture items shall trace to system requirements."
+    status: "approved"
+    automation:
+      check: "trace_coverage"
+      params:
+        source_type: "SYSARCH"
+        target_type: "SYS"
+        min_coverage: 1.0
+
+  # -----------------------------------------------------------------------
+  # Section 5.4 — Software detailed design
+  # -----------------------------------------------------------------------
+  - id: "5.4.a"
+    section: "5.4"
+    text: "Detailed design documentation shall be maintained."
+    status: "approved"
+    manual: true
+    evidence_guidance: >
+      Confirm that SWDD items exist and are up-to-date in the DHF
+      or that the codebase is considered self-documenting per the
+      development plan.
+
+  # -----------------------------------------------------------------------
+  # Section 5.5 — Software unit implementation and verification
+  # -----------------------------------------------------------------------
+  - id: "5.5.a"
+    section: "5.5"
+    text: "All software unit tests shall pass."
+    status: "approved"
+    manual: true
+    evidence_guidance: >
+      Confirm that unit test results are available as CI artifacts
+      and all tests have a PASS status for the release commit.
+
+  # -----------------------------------------------------------------------
+  # Section 6.1 — Change management process
+  # -----------------------------------------------------------------------
+  - id: "6.1.a"
+    section: "6.1"
+    text: "Change requests shall be documented."
+    status: "approved"
+    automation:
+      check: "item_existence"
+      params:
+        type_code: "CR"
+
+  - id: "6.1.b"
+    section: "6.1"
+    text: "Change requests shall track affected items."
+    status: "approved"
+    automation:
+      check: "attribute_presence"
+      params:
+        type_code: "CR"
+        attribute: "affected_items"
+
+  - id: "6.1.c"
+    section: "6.1"
+    text: "Approved change requests shall be linked to implementation commits."
+    status: "approved"
+    automation:
+      check: "cr_git_evidence"
+      params: {}
+
+  # -----------------------------------------------------------------------
+  # Section 6.2 — Problem resolution process
+  # -----------------------------------------------------------------------
+  - id: "6.2.a"
+    section: "6.2"
+    text: "A problem resolution process shall be documented and followed."
+    status: "approved"
+    manual: true
+    evidence_guidance: >
+      Provide evidence that a defect/anomaly tracking procedure is in
+      place (e.g. DEF items or a linked issue tracker).
+
+  # -----------------------------------------------------------------------
+  # Section 7.1 — Configuration management
+  # -----------------------------------------------------------------------
+  - id: "7.1.a"
+    section: "7.1"
+    text: "A configuration management plan shall be maintained."
+    status: "approved"
+    manual: true
+    evidence_guidance: >
+      Confirm that the DHF and source code are managed under version
+      control (Git) per the CM plan referenced in the development plan.
+
+  - id: "7.1.b"
+    section: "7.1"
+    text: "All deliverable items shall be uniquely identified."
+    status: "approved"
+    manual: true
+    evidence_guidance: >
+      Verify that all DHF items carry a unique ID (prefix + sequence number)
+      and that the ID generation policy is documented.
+
+  # -----------------------------------------------------------------------
+  # Section 7.2 — Release
+  # -----------------------------------------------------------------------
+  - id: "7.2.a"
+    section: "7.2"
+    text: "A software release record shall be created for each release."
+    status: "approved"
+    automation:
+      check: "item_existence"
+      params:
+        type_code: "REL"
+
+  # -----------------------------------------------------------------------
+  # Section 8.1 — Risk management
+  # -----------------------------------------------------------------------
+  - id: "8.1.a"
+    section: "8.1"
+    text: "Risk items shall be documented."
+    status: "approved"
+    automation:
+      check: "item_existence"
+      params:
+        type_code: "RISK"
+
+  - id: "8.1.b"
+    section: "8.1"
+    text: "Risk control measures shall be documented."
+    status: "approved"
+    automation:
+      check: "item_existence"
+      params:
+        type_code: "RCM"
+
+  - id: "8.1.c"
+    section: "8.1"
+    text: "Risk control measures shall trace to risks."
+    status: "approved"
+    automation:
+      check: "trace_coverage"
+      params:
+        source_type: "RCM"
+        target_type: "RISK"
+        min_coverage: 1.0
+
+  # -----------------------------------------------------------------------
+  # Section 8.2 — Risk acceptance criteria
+  # -----------------------------------------------------------------------
+  - id: "8.2.a"
+    section: "8.2"
+    text: "Risk acceptance criteria shall be defined and documented."
+    status: "approved"
+    manual: true
+    evidence_guidance: >
+      Confirm that risk acceptance criteria (e.g. risk matrix thresholds)
+      are stated in the risk management plan or development plan.
+
+  # -----------------------------------------------------------------------
+  # Section 8.3 — Risk/benefit analysis
+  # -----------------------------------------------------------------------
+  - id: "8.3.a"
+    section: "8.3"
+    text: "The overall residual risk shall be evaluated against benefits."
+    status: "approved"
+    manual: true
+    evidence_guidance: >
+      Provide a residual risk summary signed off by responsible personnel
+      confirming the benefit-to-risk ratio is acceptable.
+
+  # -----------------------------------------------------------------------
+  # Section 8.4 — Post-market surveillance
+  # -----------------------------------------------------------------------
+  - id: "8.4.a"
+    section: "8.4"
+    text: "A post-market surveillance plan shall be maintained."
+    status: "approved"
+    manual: true
+    evidence_guidance: >
+      Reference the post-market surveillance SOP or plan document
+      and confirm it covers feedback collection, complaint handling,
+      and periodic safety reporting.
+
+  # -----------------------------------------------------------------------
+  # Section 8.5 — Incident reporting
+  # -----------------------------------------------------------------------
+  - id: "8.5.a"
+    section: "8.5"
+    text: "A process for reporting serious incidents to competent authorities shall exist."
+    status: "approved"
+    manual: true
+    evidence_guidance: >
+      Provide the incident-reporting procedure reference (SOP number/title)
+      and confirm it covers serious incident identification, escalation,
+      and regulatory notification timelines.

@@ -1,0 +1,129 @@
+# {{ doc_type_name }} Specification
+
+**Document Version:** {{ version }}  
+**Generated:** {{ generation_date }}  
+**Project:** {{ project_name }}
+
+---
+
+## Document Control
+
+| Field | Value |
+|-------|-------|
+| Document ID | {{ doc_type_code }}-SPEC |
+| Version | {{ version }} |
+| Status | {{ 'RELEASED' if all_released else 'DRAFT' }} |
+| Last Updated | {{ generation_date }} |
+| Total Change Requests | {{ items|length }} |
+
+---
+
+## Purpose
+
+This document provides a comprehensive specification of all Change Requests (CRs) in the system. Each CR tracks proposed changes to the product, including their justification, impact assessment, implementation status, and affected items.
+
+---
+
+## Change Request Summary
+
+### By Status
+
+{% for status in ['planned', 'completed'] %}
+{% set status_items = items|selectattr('status', 'equalto', status)|list %}
+{% if status_items|length > 0 %}
+- **{{ status|upper }}**: {{ status_items|length }} change request(s)
+{% endif %}
+{% endfor %}
+
+### By Priority
+
+{% for priority in ['High', 'Medium', 'Low'] %}
+{% set priority_items = items|selectattr('priority', 'equalto', priority)|list %}
+{% if priority_items|length > 0 %}
+- **{{ priority }}**: {{ priority_items|length }} change request(s)
+{% endif %}
+{% endfor %}
+
+---
+
+## Change Requests
+
+{% for item in items|sort(attribute='id') %}
+
+### {{ item.id }}: {{ item.title }}
+
+**Status:** {{ item.status|status_badge }}  
+**Priority:** {{ item.priority|default('Not Set') }}  
+**Requested By:** {{ item.requested_by|default('Not Specified') }}  
+**Assigned To:** {{ item.assigned_to|default('Unassigned') }}
+
+#### Description
+
+{{ item.description|default('No description provided.') }}
+
+#### Justification
+
+{{ item.justification|default('No justification provided.') }}
+
+#### Impact Assessment
+
+{{ item.impact_assessment|default('Impact assessment pending.') }}
+
+{% if item.affected_items %}
+#### Affected Items
+
+{% for affected_id in item.affected_items %}
+- {{ affected_id }}
+{% endfor %}
+{% endif %}
+
+{% if item.implementation_prs %}
+#### Implementation Pull Requests
+
+{{ item.implementation_prs }}
+{% endif %}
+
+{% if item.target_release %}
+#### Target Release
+
+{{ item.target_release }}
+{% endif %}
+
+#### Traceability
+
+{% if item.links_to and item.links_to|length > 0 %}
+**Links To:**
+{% for link in item.links_to %}
+- {{ link }}
+{% endfor %}
+{% endif %}
+
+{% if item.links_from and item.links_from|length > 0 %}
+**Referenced By:**
+{% for link in item.links_from %}
+- {{ link }}
+{% endfor %}
+{% endif %}
+
+{% if item.all_linked_uids and item.all_linked_uids|length > 0 %}
+**All Related Items:**
+{% for link in item.all_linked_uids %}
+- {{ link }}
+{% endfor %}
+{% endif %}
+
+---
+
+{% endfor %}
+
+## Approval
+
+| Role | Name | Signature | Date |
+|------|------|-----------|------|
+| Author | | | |
+| Reviewer | | | |
+| Approver | | | |
+
+---
+
+*End of {{ doc_type_name }} Specification*
