@@ -79,8 +79,8 @@ def _repo_exists(repo: str) -> bool:
 def _repo_is_empty(repo: str) -> bool:
     """Return True if the repo has no commits (freshly created)."""
     try:
-        _gh("api", f"repos/{repo}/git/refs", check=True)
-        return False
+        count = _gh("api", f"repos/{repo}/git/refs", "--jq", "length")
+        return count.strip() == "0"
     except click.ClickException:
         return True
 
