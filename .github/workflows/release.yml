@@ -112,34 +112,36 @@ jobs:
           compliantflow --dhf dhf/DHF report traceability UC CRS SYS SRS SWDD \
             --output /tmp/documents/compliance/Traceability_Matrix.pdf
 
-      - name: Assemble delivery bundle
+      - name: Assemble delivery bundles
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
           SHA="${GITHUB_SHA:0:7}"
-          BUNDLE_NAME="compliantflow-${VERSION}-build-${SHA}"
-          BUNDLE_DIR="/tmp/${BUNDLE_NAME}"
 
-          mkdir -p "${BUNDLE_DIR}/build"
-          mkdir -p "${BUNDLE_DIR}/documents"
-
-          # Build package
-          cp dist/*.whl "${BUNDLE_DIR}/build/"
-          cp GETTING_STARTED.md "${BUNDLE_DIR}/build/"
-          cp -r dhf-template "${BUNDLE_DIR}/build/"
-
-          # Documents
-          cp -r /tmp/documents/. "${BUNDLE_DIR}/documents/"
-
-          # Remove cached Python files
-          find "${BUNDLE_DIR}" -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
-          find "${BUNDLE_DIR}" -name "*.pyc" -delete 2>/dev/null || true
-          find "${BUNDLE_DIR}" -name ".DS_Store" -delete 2>/dev/null || true
-
+          # --- compliantflow-x.y.z-hash.zip: whl + dhf-template + GETTING_STARTED ---
+          CF_DIR="/tmp/cf-${VERSION}-${SHA}"
+          mkdir -p "${CF_DIR}"
+          cp dist/*.whl "${CF_DIR}/"
+          cp GETTING_STARTED.md "${CF_DIR}/"
+          cp -r dhf-template "${CF_DIR}/"
+          find "${CF_DIR}" -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
+          find "${CF_DIR}" -name "*.pyc" -delete 2>/dev/null || true
+          find "${CF_DIR}" -name ".DS_Store" -delete 2>/dev/null || true
           cd /tmp
-          zip -r "${BUNDLE_NAME}.zip" "${BUNDLE_NAME}/"
-          echo "BUNDLE_ZIP=/tmp/${BUNDLE_NAME}.zip" >> "$GITHUB_ENV"
+          zip -r "compliantflow-${VERSION}-${SHA}.zip" "cf-${VERSION}-${SHA}/"
+          echo "CF_ZIP=/tmp/compliantflow-${VERSION}-${SHA}.zip" >> "$GITHUB_ENV"
 
-      - name: Upload delivery bundle to GitHub Release
+          # --- DHF-x.y.z-hash.zip: compliance reports, specs, plans ---
+          DHF_DIR="/tmp/dhf-${VERSION}-${SHA}"
+          mkdir -p "${DHF_DIR}"
+          cp -r /tmp/documents/. "${DHF_DIR}/"
+          find "${DHF_DIR}" -name ".DS_Store" -delete 2>/dev/null || true
+          cd /tmp
+          zip -r "DHF-${VERSION}-${SHA}.zip" "dhf-${VERSION}-${SHA}/"
+          echo "DHF_ZIP=/tmp/DHF-${VERSION}-${SHA}.zip" >> "$GITHUB_ENV"
+
+      - name: Upload delivery bundles to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: ${{ env.BUNDLE_ZIP }}
+          files: |
+            ${{ env.CF_ZIP }}
+            ${{ env.DHF_ZIP }}

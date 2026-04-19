@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "compliantflow"
-version = "2.0.7"
+version = "2.0.8"
 description = "Compliance checking and DHF management for medical device software"
 requires-python = ">=3.11"
 dependencies = [

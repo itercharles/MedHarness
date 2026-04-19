@@ -58,6 +58,7 @@ def _make_core(ctx: click.Context):
 # ---------------------------------------------------------------------------
 
 @click.group()
+@click.version_option(package_name="compliantflow")
 @click.option(
     "--dhf",
     default=None,
