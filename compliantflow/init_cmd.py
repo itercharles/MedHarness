@@ -101,9 +101,7 @@ def _init_dhf_template(dhf_repo: str, project_name: str, standards: list[str]) -
     """Clone the new empty repo, populate with DHF template, and push."""
     with tempfile.TemporaryDirectory() as tmp:
         repo_dir = Path(tmp) / "repo"
-
-        # Clone (empty repo — no --depth needed)
-        _gh("repo", "clone", dhf_repo, str(repo_dir))
+        repo_dir.mkdir()
 
         # Copy template contents (excludes .github — added separately below)
         shutil.copytree(
@@ -140,9 +138,14 @@ def _init_dhf_template(dhf_repo: str, project_name: str, standards: list[str]) -
         _write_dhf_ci_workflow(gh_workflows / "ci.yml")
         _write_dhf_cr_transition_workflow(gh_workflows / "cr-transition.yml")
 
-        # git commit and push
+        # Get the push URL from gh (handles auth transparently)
+        remote_url = _gh("repo", "view", dhf_repo, "--json", "url", "--jq", ".url")
+
+        # git init, commit, and push — avoids cloning an empty repo (race condition)
+        subprocess.run(["git", "init", "-b", "main"], cwd=repo_dir, check=True, capture_output=True)
         subprocess.run(["git", "config", "user.email", "compliantflow-init@noreply"], cwd=repo_dir, check=True)
         subprocess.run(["git", "config", "user.name", "CompliantFlow Init"], cwd=repo_dir, check=True)
+        subprocess.run(["git", "remote", "add", "origin", remote_url], cwd=repo_dir, check=True)
         subprocess.run(["git", "add", "-A"], cwd=repo_dir, check=True)
         subprocess.run(
             ["git", "commit", "-m", f"feat: initialize DHF for {project_name}"],

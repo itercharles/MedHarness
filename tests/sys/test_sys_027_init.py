@@ -4,19 +4,27 @@ Covers the pure-Python logic of init_cmd.py:
 - compliance.yml generation for various standard/DHF/LLM combinations
 - DHF CI workflow template content
 - Standard label and governance file mappings
+- _init_dhf_template: file population, project name substitution, governance filtering
+- run_init validation guards: product repo existence and emptiness
 """
 
+import subprocess
+from pathlib import Path
+from unittest.mock import MagicMock, call, patch
+import tempfile
+
+import click
 import pytest
+
 from compliantflow.init_cmd import (
     GOVERNANCE_FILES,
     STANDARD_LABELS,
     TEMPLATE_DIR,
     _generate_compliance_yaml,
+    _init_dhf_template,
     _write_dhf_ci_workflow,
     _write_dhf_cr_transition_workflow,
 )
-import tempfile
-from pathlib import Path
 
 
 class TestInitCmd:
@@ -188,3 +196,105 @@ class TestInitCmd:
         """
         global_yaml = (TEMPLATE_DIR / "DHF" / "config" / "global.yaml").read_text()
         assert "project_name:" in global_yaml
+
+    def _run_init_dhf_template(self, tmp_path, *args, **kwargs):
+        """Helper: run _init_dhf_template with a persistent temp dir and mocked git/gh."""
+        mock_run = MagicMock(return_value=MagicMock(returncode=0))
+        mock_tmp = MagicMock()
+        mock_tmp.__enter__ = MagicMock(return_value=str(tmp_path))
+        mock_tmp.__exit__ = MagicMock(return_value=False)
+
+        with patch("compliantflow.init_cmd._gh", return_value="https://github.com/org/dhf"), \
+             patch("compliantflow.init_cmd.subprocess.run", mock_run), \
+             patch("compliantflow.init_cmd.tempfile.TemporaryDirectory", return_value=mock_tmp):
+            _init_dhf_template(*args, **kwargs)
+
+        return mock_run
+
+    def test_TC_SYS_027_013_init_dhf_template_substitutes_project_name(self, tmp_path):
+        """
+        TC-SYS-027-013: _init_dhf_template writes project_name into global.yaml.
+
+        @test_id: TC-SYS-027-013
+        @links: SYS-027
+        """
+        self._run_init_dhf_template(tmp_path, "org/dhf", "My Test Device", ["IEC_62304", "ISO_14971"])
+        global_yaml = (tmp_path / "repo" / "DHF" / "config" / "global.yaml").read_text()
+        assert 'project_name: "My Test Device"' in global_yaml
+
+    def test_TC_SYS_027_014_init_dhf_template_removes_unselected_governance(self, tmp_path):
+        """
+        TC-SYS-027-014: _init_dhf_template removes governance files for standards not selected.
+
+        @test_id: TC-SYS-027-014
+        @links: SYS-027
+        """
+        self._run_init_dhf_template(tmp_path, "org/dhf", "Device", ["IEC_62304"])
+        gov_dir = tmp_path / "repo" / "governance"
+        assert (gov_dir / "IEC_62304.yaml").exists()
+        assert not (gov_dir / "ISO_14971.yaml").exists()
+        assert not (gov_dir / "IEC_82304_1.yaml").exists()
+        assert not (gov_dir / "ISO_13485.yaml").exists()
+
+    def test_TC_SYS_027_015_init_dhf_template_writes_ci_workflows(self, tmp_path):
+        """
+        TC-SYS-027-015: _init_dhf_template creates .github/workflows/ci.yml and cr-transition.yml.
+
+        @test_id: TC-SYS-027-015
+        @links: SYS-027
+        """
+        self._run_init_dhf_template(tmp_path, "org/dhf", "Device", ["IEC_62304"])
+        repo_dir = tmp_path / "repo"
+        assert (repo_dir / ".github" / "workflows" / "ci.yml").exists()
+        assert (repo_dir / ".github" / "workflows" / "cr-transition.yml").exists()
+
+    def test_TC_SYS_027_016_init_dhf_template_uses_git_init_not_clone(self, tmp_path):
+        """
+        TC-SYS-027-016: _init_dhf_template uses git init+push, not gh repo clone,
+        avoiding the race condition on newly created repos.
+
+        @test_id: TC-SYS-027-016
+        @links: SYS-027
+        """
+        with patch("compliantflow.init_cmd._gh", return_value="https://github.com/org/dhf") as mock_gh, \
+             patch("compliantflow.init_cmd.subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=0)
+            _init_dhf_template("org/dhf", "Device", ["IEC_62304"])
+
+        git_commands = [c.args[0] for c in mock_run.call_args_list]
+        assert any(cmd[:2] == ["git", "init"] for cmd in git_commands)
+        gh_calls = [c.args for c in mock_gh.call_args_list]
+        assert not any(args[:2] == ("repo", "clone") for args in gh_calls)
+
+    def test_TC_SYS_027_017_run_init_rejects_missing_product_repo(self):
+        """
+        TC-SYS-027-017: run_init raises ClickException immediately if the product
+        repo does not exist on GitHub.
+
+        @test_id: TC-SYS-027-017
+        @links: SYS-027
+        """
+        inputs = iter(["itercharles", "nonexistent-repo"])
+        with patch("compliantflow.init_cmd._detect_gh_owner", return_value="itercharles"), \
+             patch("compliantflow.init_cmd._repo_exists", return_value=False), \
+             patch("click.prompt", side_effect=inputs):
+            from compliantflow.init_cmd import run_init
+            with pytest.raises(click.ClickException, match="not found"):
+                run_init()
+
+    def test_TC_SYS_027_018_run_init_rejects_empty_product_repo(self):
+        """
+        TC-SYS-027-018: run_init raises ClickException immediately if the product
+        repo exists but has no commits.
+
+        @test_id: TC-SYS-027-018
+        @links: SYS-027
+        """
+        inputs = iter(["itercharles", "empty-repo"])
+        with patch("compliantflow.init_cmd._detect_gh_owner", return_value="itercharles"), \
+             patch("compliantflow.init_cmd._repo_exists", return_value=True), \
+             patch("compliantflow.init_cmd._repo_is_empty", return_value=True), \
+             patch("click.prompt", side_effect=inputs):
+            from compliantflow.init_cmd import run_init
+            with pytest.raises(click.ClickException, match="empty"):
+                run_init()
