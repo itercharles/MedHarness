@@ -451,6 +451,11 @@ def run_init() -> None:
             f"Repository {product_repo} not found.\n"
             f"  Create it on GitHub first, then re-run: compliantflow init"
         )
+    if _repo_is_empty(product_repo):
+        raise click.ClickException(
+            f"Repository {product_repo} is empty (no commits).\n"
+            f"  Push at least one commit to it first, then re-run: compliantflow init"
+        )
     click.echo()
 
     # ── Project ─────────────────────────────────────────────
