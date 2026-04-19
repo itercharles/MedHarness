@@ -94,10 +94,7 @@ def _init_dhf_template(dhf_repo: str, project_name: str, standards: list[str]) -
         repo_dir = Path(tmp) / "repo"
 
         # Clone (empty repo — no --depth needed)
-        subprocess.run(
-            ["gh", "repo", "clone", dhf_repo, str(repo_dir)],
-            check=True, capture_output=True,
-        )
+        _gh("repo", "clone", dhf_repo, str(repo_dir))
 
         # Copy template contents (excludes .github — added separately below)
         shutil.copytree(
