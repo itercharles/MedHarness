@@ -524,8 +524,11 @@ def run_init() -> None:
 
     if setup_dhf:
         _step(f"Create DHF repository {dhf_repo}")
-        _create_dhf_repo(dhf_repo, project_name)  # type: ignore[arg-type]
-        click.secho(" ✓", fg="green")
+        if _repo_exists(dhf_repo):  # type: ignore[arg-type]
+            click.secho(" already exists, skipping", fg="yellow")
+        else:
+            _create_dhf_repo(dhf_repo, project_name)  # type: ignore[arg-type]
+            click.secho(" ✓", fg="green")
 
         _step("Initialise DHF template")
         _init_dhf_template(dhf_repo, project_name, selected_standards)  # type: ignore[arg-type]
