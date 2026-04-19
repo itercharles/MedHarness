@@ -446,6 +446,11 @@ def run_init() -> None:
     owner = click.prompt("  Org or username", default=default_owner or "")
     product_name = click.prompt("  Product repository name (no org prefix)")
     product_repo = f"{owner}/{product_name}"
+    if not _repo_exists(product_repo):
+        raise click.ClickException(
+            f"Repository {product_repo} not found.\n"
+            f"  Create it on GitHub first, then re-run: compliantflow init"
+        )
     click.echo()
 
     # ── Project ─────────────────────────────────────────────
