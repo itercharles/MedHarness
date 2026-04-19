@@ -76,6 +76,15 @@ def _repo_exists(repo: str) -> bool:
         return False
 
 
+def _repo_is_empty(repo: str) -> bool:
+    """Return True if the repo has no commits (freshly created)."""
+    try:
+        _gh("api", f"repos/{repo}/git/refs", check=True)
+        return False
+    except click.ClickException:
+        return True
+
+
 # ---------------------------------------------------------------------------
 # DHF repo setup
 # ---------------------------------------------------------------------------
@@ -525,7 +534,14 @@ def run_init() -> None:
     if setup_dhf:
         _step(f"Create DHF repository {dhf_repo}")
         if _repo_exists(dhf_repo):  # type: ignore[arg-type]
-            click.secho(" already exists, skipping", fg="yellow")
+            if not _repo_is_empty(dhf_repo):  # type: ignore[arg-type]
+                click.secho(" not empty", fg="red")
+                raise click.ClickException(
+                    f"{dhf_repo} already exists and is not empty.\n"
+                    f"  Delete it first:  gh repo delete {dhf_repo} --yes\n"
+                    f"  Then re-run:      compliantflow init"
+                )
+            click.secho(" already exists (empty), skipping creation", fg="yellow")
         else:
             _create_dhf_repo(dhf_repo, project_name)  # type: ignore[arg-type]
             click.secho(" ✓", fg="green")
