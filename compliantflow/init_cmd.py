@@ -1,18 +1,17 @@
 """compliantflow init — interactive onboarding command.
 
 Sets up the full CompliantFlow infrastructure for a new project:
-  1. Creates a private DHF repository from the built-in template (optional)
-  2. Opens a pull request in the product repo adding the compliance CI gate
-  3. Configures LLM secrets for AI-assisted checks (optional)
+  1. Optionally creates a private DHF repository on GitHub
+  2. Writes the DHF template to a local directory for review
+  3. Writes compliance.yml to the product repo directory for review
+  4. Optionally configures LLM secrets
+  5. Prints git commands to push both repos
 """
 
 from __future__ import annotations
 
-import base64
-import json
 import shutil
 import subprocess
-import tempfile
 from importlib.metadata import version as pkg_version
 from pathlib import Path
 from typing import Optional
@@ -97,61 +96,50 @@ def _create_dhf_repo(dhf_repo: str, project_name: str) -> None:
     )
 
 
-def _init_dhf_template(dhf_repo: str, project_name: str, standards: list[str]) -> None:
-    """Clone the new empty repo, populate with DHF template, and push."""
-    with tempfile.TemporaryDirectory() as tmp:
-        repo_dir = Path(tmp) / "repo"
-        repo_dir.mkdir()
+def _init_dhf_template(dhf_dir: Path, project_name: str, standards: list[str]) -> None:
+    """Populate dhf_dir with the DHF template. No git operations — caller reviews and pushes."""
+    dhf_dir.mkdir(parents=True, exist_ok=True)
 
-        # Copy template contents (excludes .github — added separately below)
-        shutil.copytree(
-            TEMPLATE_DIR,
-            repo_dir,
-            dirs_exist_ok=True,
-            ignore=shutil.ignore_patterns("__pycache__", "*.pyc", ".DS_Store"),
-        )
+    shutil.copytree(
+        TEMPLATE_DIR,
+        dhf_dir,
+        dirs_exist_ok=True,
+        ignore=shutil.ignore_patterns("__pycache__", "*.pyc", ".DS_Store"),
+    )
 
-        # Set project_name in global.yaml
-        global_yaml = repo_dir / "DHF" / "config" / "global.yaml"
-        content = global_yaml.read_text()
-        content = content.replace(
-            'project_name: "My Medical Device Software"',
-            f'project_name: "{project_name}"',
-        )
-        global_yaml.write_text(content)
+    # Set project_name in global.yaml
+    global_yaml = dhf_dir / "DHF" / "config" / "global.yaml"
+    content = global_yaml.read_text()
+    content = content.replace(
+        'project_name: "My Medical Device Software"',
+        f'project_name: "{project_name}"',
+    )
+    global_yaml.write_text(content)
 
-        # Remove governance files for unselected standards
-        gov_dir = repo_dir / "governance"
-        for std_id, filename in GOVERNANCE_FILES.items():
-            if std_id not in standards:
-                f = gov_dir / filename
-                if f.exists():
-                    f.unlink()
-        # Remove the 'Standard' directory placeholder if present
-        standard_dir = gov_dir / "Standard"
-        if standard_dir.exists():
-            shutil.rmtree(standard_dir)
+    # Remove governance files for unselected standards
+    gov_dir = dhf_dir / "governance"
+    for std_id, filename in GOVERNANCE_FILES.items():
+        if std_id not in standards:
+            f = gov_dir / filename
+            if f.exists():
+                f.unlink()
+    standard_dir = gov_dir / "Standard"
+    if standard_dir.exists():
+        shutil.rmtree(standard_dir)
 
-        # Write DHF repo CI workflows
-        gh_workflows = repo_dir / ".github" / "workflows"
-        gh_workflows.mkdir(parents=True, exist_ok=True)
-        _write_dhf_ci_workflow(gh_workflows / "ci.yml")
-        _write_dhf_cr_transition_workflow(gh_workflows / "cr-transition.yml")
+    # Write DHF repo CI workflows
+    gh_workflows = dhf_dir / ".github" / "workflows"
+    gh_workflows.mkdir(parents=True, exist_ok=True)
+    _write_dhf_ci_workflow(gh_workflows / "ci.yml")
+    _write_dhf_cr_transition_workflow(gh_workflows / "cr-transition.yml")
 
-        # Get the push URL from gh (handles auth transparently)
-        remote_url = _gh("repo", "view", dhf_repo, "--json", "url", "--jq", ".url")
 
-        # git init, commit, and push — avoids cloning an empty repo (race condition)
-        subprocess.run(["git", "init", "-b", "main"], cwd=repo_dir, check=True, capture_output=True)
-        subprocess.run(["git", "config", "user.email", "compliantflow-init@noreply"], cwd=repo_dir, check=True)
-        subprocess.run(["git", "config", "user.name", "CompliantFlow Init"], cwd=repo_dir, check=True)
-        subprocess.run(["git", "remote", "add", "origin", remote_url], cwd=repo_dir, check=True)
-        subprocess.run(["git", "add", "-A"], cwd=repo_dir, check=True)
-        subprocess.run(
-            ["git", "commit", "-m", f"feat: initialize DHF for {project_name}"],
-            cwd=repo_dir, check=True,
-        )
-        subprocess.run(["git", "push", "origin", "main"], cwd=repo_dir, check=True)
+def _write_compliance_yml(product_dir: Path, dhf_repo: Optional[str], standards: list[str], llm_provider: Optional[str]) -> Path:
+    """Write compliance.yml into product_dir. Returns the file path."""
+    dest = product_dir / ".github" / "workflows" / "compliance.yml"
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    dest.write_text(_generate_compliance_yaml(dhf_repo, standards, llm_provider))
+    return dest
 
 
 def _write_dhf_ci_workflow(path: Path) -> None:
@@ -337,94 +325,6 @@ jobs:
 
 
 # ---------------------------------------------------------------------------
-# Product repo PR
-# ---------------------------------------------------------------------------
-
-def _open_compliance_pr_v2(
-    product_repo: str,
-    dhf_repo: Optional[str],
-    standards: list[str],
-    llm_provider: Optional[str],
-) -> str:
-    """Create branch, add compliance.yml, open PR. Returns PR URL."""
-    workflow_content = _generate_compliance_yaml(dhf_repo, standards, llm_provider)
-    encoded = base64.b64encode(workflow_content.encode()).decode()
-
-    # Get default branch and its latest SHA
-    default_branch = _gh("api", f"repos/{product_repo}", "--jq", ".default_branch")
-    branch_sha = _gh(
-        "api", f"repos/{product_repo}/git/ref/heads/{default_branch}",
-        "--jq", ".object.sha",
-    )
-
-    branch_name = "compliantflow/setup"
-
-    # Create branch (ignore if already exists)
-    try:
-        _gh(
-            "api", f"repos/{product_repo}/git/refs",
-            "--method", "POST",
-            "--field", f"ref=refs/heads/{branch_name}",
-            "--field", f"sha={branch_sha}",
-        )
-    except click.ClickException:
-        pass
-
-    # Create or update file
-    file_path = ".github/workflows/compliance.yml"
-    payload: dict = {
-        "message": "feat(compliantflow): add compliance gate workflow",
-        "content": encoded,
-        "branch": branch_name,
-    }
-    try:
-        existing_sha = _gh(
-            "api", f"repos/{product_repo}/contents/{file_path}?ref={branch_name}",
-            "--jq", ".sha",
-        )
-        payload["sha"] = existing_sha
-    except click.ClickException:
-        pass
-
-    _gh(
-        "api", f"repos/{product_repo}/contents/{file_path}",
-        "--method", "PUT",
-        "--input", "-",
-        input=json.dumps(payload),
-    )
-
-    # Open PR
-    pr_body = (
-        "## CompliantFlow Compliance Gate\n\n"
-        "This PR adds the compliance CI gate.\n\n"
-        "**Required secrets after merging:**\n"
-        "- `COMPLIANTFLOW_TOKEN` — from your account representative\n"
-    )
-    if dhf_repo:
-        pr_body += f"- `DHF_REPO_TOKEN` — fine-grained PAT with `contents: read` on `{dhf_repo}`\n"
-    if llm_provider == "gemini":
-        pr_body += "- `GEMINI_API_KEY` — already configured via this setup\n"
-    elif llm_provider == "ollama":
-        pr_body += "- `COMPLIANTFLOW_OLLAMA_URL` — already configured via this setup\n"
-
-    try:
-        raw = _gh(
-            "api", f"repos/{product_repo}/pulls",
-            "--method", "POST",
-            "--input", "-",
-            input=json.dumps({
-                "title": "feat: add CompliantFlow compliance gate",
-                "head": branch_name,
-                "base": default_branch,
-                "body": pr_body,
-            }),
-        )
-        return json.loads(raw).get("html_url", f"https://github.com/{product_repo}/pulls")
-    except click.ClickException:
-        return f"https://github.com/{product_repo}/pulls"
-
-
-# ---------------------------------------------------------------------------
 # Secret management
 # ---------------------------------------------------------------------------
 
@@ -449,31 +349,30 @@ def run_init() -> None:
     owner = click.prompt("  Org or username", default=default_owner or "")
     product_name = click.prompt("  Product repository name (no org prefix)")
     product_repo = f"{owner}/{product_name}"
-    if not _repo_exists(product_repo):
-        raise click.ClickException(
-            f"Repository {product_repo} not found.\n"
-            f"  Create it on GitHub first, then re-run: compliantflow init"
-        )
-    if _repo_is_empty(product_repo):
-        raise click.ClickException(
-            f"Repository {product_repo} is empty (no commits).\n"
-            f"  Push at least one commit to it first, then re-run: compliantflow init"
-        )
+    click.echo()
+
+    # ── DHF ─────────────────────────────────────────────────
+    click.secho("DHF Repository", bold=True)
+    setup_dhf = click.confirm("  Set up a DHF repository?", default=True)
+    dhf_repo: Optional[str] = None
+    create_dhf_github: bool = False
+    dhf_dir: Optional[Path] = None
+    if setup_dhf:
+        dhf_name = click.prompt("  DHF repository name", default=f"{product_name}-dhf")
+        dhf_repo = f"{owner}/{dhf_name}"
+        create_dhf_github = click.confirm("  Create GitHub repository for DHF?", default=True)
+        dhf_dir = Path(click.prompt("  Local directory for DHF", default=f"./{dhf_name}"))
+    click.echo()
+
+    # ── Local paths ─────────────────────────────────────────
+    click.secho("Local Directories", bold=True)
+    product_dir = Path(click.prompt("  Product repo local directory", default=f"./{product_name}"))
     click.echo()
 
     # ── Project ─────────────────────────────────────────────
     click.secho("Project", bold=True)
     default_proj = product_name.replace("-", " ").replace("_", " ").title()
     project_name = click.prompt("  Project name (used in DHF documents)", default=default_proj)
-    click.echo()
-
-    # ── DHF ─────────────────────────────────────────────────
-    click.secho("DHF Repository", bold=True)
-    setup_dhf = click.confirm("  Create and initialise a DHF repository?", default=True)
-    dhf_repo: Optional[str] = None
-    if setup_dhf:
-        dhf_name = click.prompt("  DHF repository name", default=f"{product_name}-dhf")
-        dhf_repo = f"{owner}/{dhf_name}"
     click.echo()
 
     # ── Standards ───────────────────────────────────────────
@@ -513,14 +412,16 @@ def run_init() -> None:
     click.secho("Summary", bold=True)
     click.echo("━" * 45)
     if setup_dhf:
-        click.echo(f"  • Create private DHF repo: {dhf_repo}")
-        click.echo(f"  • Initialise DHF: \"{project_name}\"")
+        if create_dhf_github:
+            click.echo(f"  • Create GitHub repo: {dhf_repo}")
+        click.echo(f"  • Write DHF template to: {dhf_dir}")
+        click.echo(f"    Project: \"{project_name}\"")
         click.echo(f"    Standards: {', '.join(selected_standards)}")
-    click.echo(f"  • Open compliance PR in: {product_repo}")
+    click.echo(f"  • Write compliance.yml to: {product_dir}/.github/workflows/")
     if llm_provider == "gemini":
-        click.echo(f"  • Set GEMINI_API_KEY in {product_repo}")
+        click.echo(f"  • Configure GEMINI_API_KEY secret in {product_repo}")
     elif llm_provider == "ollama":
-        click.echo(f"  • Set COMPLIANTFLOW_OLLAMA_URL in {product_repo}")
+        click.echo(f"  • Configure COMPLIANTFLOW_OLLAMA_URL secret in {product_repo}")
     click.echo()
 
     if not click.confirm("Proceed?", default=True):
@@ -530,9 +431,11 @@ def run_init() -> None:
 
     # ── Execute ─────────────────────────────────────────────
     steps: list[str] = []
+    if setup_dhf and create_dhf_github:
+        steps.append(f"Create GitHub repo {dhf_repo}")
     if setup_dhf:
-        steps += ["Create DHF repository", "Initialise DHF template"]
-    steps.append(f"Open compliance PR in {product_repo}")
+        steps.append(f"Write DHF template to {dhf_dir}")
+    steps.append("Write compliance.yml")
     if llm_key or llm_url:
         steps.append("Configure repository secrets")
 
@@ -544,8 +447,8 @@ def run_init() -> None:
         n += 1
         click.echo(f"[{n}/{total}] {msg}...", nl=False)
 
-    if setup_dhf:
-        _step(f"Create DHF repository {dhf_repo}")
+    if setup_dhf and create_dhf_github:
+        _step(f"Create GitHub repo {dhf_repo}")
         if _repo_exists(dhf_repo):  # type: ignore[arg-type]
             if not _repo_is_empty(dhf_repo):  # type: ignore[arg-type]
                 click.secho(" not empty", fg="red")
@@ -554,18 +457,19 @@ def run_init() -> None:
                     f"  Delete it first:  gh repo delete {dhf_repo} --yes\n"
                     f"  Then re-run:      compliantflow init"
                 )
-            click.secho(" already exists (empty), skipping creation", fg="yellow")
+            click.secho(" already exists (empty), skipping", fg="yellow")
         else:
             _create_dhf_repo(dhf_repo, project_name)  # type: ignore[arg-type]
             click.secho(" ✓", fg="green")
 
-        _step("Initialise DHF template")
-        _init_dhf_template(dhf_repo, project_name, selected_standards)  # type: ignore[arg-type]
+    if setup_dhf:
+        _step(f"Write DHF template to {dhf_dir}")
+        _init_dhf_template(dhf_dir, project_name, selected_standards)  # type: ignore[arg-type]
         click.secho(" ✓", fg="green")
 
-    _step(f"Open compliance PR in {product_repo}")
-    pr_url = _open_compliance_pr_v2(product_repo, dhf_repo, selected_standards, llm_provider)
-    click.secho(f" ✓", fg="green")
+    _step("Write compliance.yml")
+    compliance_yml = _write_compliance_yml(product_dir, dhf_repo, selected_standards, llm_provider)
+    click.secho(" ✓", fg="green")
 
     if llm_key or llm_url:
         _step("Configure repository secrets")
@@ -578,20 +482,26 @@ def run_init() -> None:
     # ── Done ────────────────────────────────────────────────
     click.echo()
     click.echo("━" * 45)
-    click.secho("Setup complete!", bold=True, fg="green")
+    click.secho("Files written. Review and push:", bold=True, fg="green")
     click.echo()
-    click.secho("Next steps:", bold=True)
     n = 1
-    click.echo(f"  {n}. Add COMPLIANTFLOW_TOKEN to {product_repo} secrets")
-    click.echo("     (provided by your account representative)")
-    n += 1
     if setup_dhf:
-        click.echo(f"  {n}. Create a fine-grained PAT with 'Contents: Read' access to {dhf_repo}")
-        click.echo(f"     and add it as DHF_REPO_TOKEN to {product_repo} secrets")
+        click.secho(f"  {n}. Push DHF repository:", bold=True)
+        click.echo(f"       cd {dhf_dir}")
+        if create_dhf_github:
+            click.echo(f"       git init && git remote add origin $(gh repo view {dhf_repo} --json url --jq .url)")
+        click.echo(f"       git add -A && git commit -m \"feat: initialize DHF for {project_name}\"")
+        click.echo(f"       git push -u origin main")
         n += 1
-    click.echo(f"  {n}. Review and merge the compliance PR:")
-    click.echo(f"     {pr_url}")
+    click.secho(f"  {n}. Open a compliance PR:", bold=True)
+    click.echo(f"       cd {product_dir}")
+    click.echo(f"       git checkout -b compliantflow/setup")
+    click.echo(f"       git add .github/workflows/compliance.yml")
+    click.echo(f"       git commit -m \"feat: add CompliantFlow compliance gate\"")
+    click.echo(f"       git push -u origin compliantflow/setup")
+    click.echo(f"       gh pr create --title \"feat: add CompliantFlow compliance gate\" --repo {product_repo}")
     n += 1
+    click.secho(f"  {n}. Add secrets to {product_repo}:", bold=True)
+    click.echo(f"       COMPLIANTFLOW_TOKEN  — from your account representative")
     if setup_dhf:
-        click.echo(f"  {n}. Open your DHF in Claude Code:")
-        click.echo(f"     gh repo clone {dhf_repo} && cd {dhf_repo.split('/')[-1]} && claude")
+        click.echo(f"       DHF_REPO_TOKEN       — fine-grained PAT with contents:read on {dhf_repo}")
