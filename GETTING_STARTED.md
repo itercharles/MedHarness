@@ -30,7 +30,7 @@ gh release download v2.0.12 --repo itercharles/CompliantFlow \
   --pattern "compliantflow-*.zip" \
   --output compliantflow.zip
 unzip compliantflow.zip -d cf
-pip install cf/*/build/compliantflow-*.whl
+pip install cf/*/compliantflow-*.whl
 ```
 
 Verify:
@@ -111,7 +111,7 @@ add this install step to them:
       --pattern "compliantflow-*.zip" \
       --output compliantflow.zip
     unzip compliantflow.zip -d cf
-    pip install cf/*/build/compliantflow-*.whl
+    pip install cf/*/compliantflow-*.whl
 ```
 
 ---
