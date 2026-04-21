@@ -119,12 +119,13 @@ jobs:
           VERSION=$(basename "${WHL}" | sed 's/compliantflow-\([^-]*\)-.*/\1/')
           SHA="${GITHUB_SHA:0:7}"
 
-          # --- compliantflow-x.y.z-hash.zip: whl + dhf-template + GETTING_STARTED ---
+          # --- compliantflow-x.y.z-hash.zip: whl + GETTING_STARTED ---
+          # dhf-template is bundled inside the whl (compliantflow/data/dhf-template)
+          # and delivered to users via `compliantflow init`, not as a raw directory.
           CF_DIR="/tmp/cf-${VERSION}-${SHA}"
           mkdir -p "${CF_DIR}"
           cp dist/*.whl "${CF_DIR}/"
           cp GETTING_STARTED.md "${CF_DIR}/"
-          cp -r dhf-template "${CF_DIR}/"
           find "${CF_DIR}" -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
           find "${CF_DIR}" -name "*.pyc" -delete 2>/dev/null || true
           find "${CF_DIR}" -name ".DS_Store" -delete 2>/dev/null || true
