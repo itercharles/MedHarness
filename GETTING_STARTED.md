@@ -137,8 +137,9 @@ cd YOUR_PRODUCT-dhf
 claude
 ```
 
-The DHF includes `CLAUDE.md` and `AGENTS.md` so the AI agent understands DHF item
-types, lifecycle rules, and compliance requirements.
+The DHF includes an `AI-harness/` folder with context, checklists, and adapter files
+for Claude, Cursor, and GitHub Copilot — so the AI agent understands DHF item types,
+lifecycle rules, and compliance requirements out of the box.
 
 To manage items manually:
 
