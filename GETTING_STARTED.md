@@ -67,6 +67,7 @@ You will be prompted for:
 After you confirm, `init` writes:
 
 - **DHF template** → your specified DHF local directory, pre-configured with project name and selected standards
+- **`AI-harness/`** → your product repo local directory, with context, checklists, and adapters for Claude, Cursor, and GitHub Copilot
 - **`.github/workflows/compliance.yml`** → your product repo local directory
 
 `init` then prints the exact git commands to push both repos and open a PR.
@@ -87,8 +88,8 @@ git push -u origin main
 # 2. Open compliance PR in product repo
 cd ./insulin-pump
 git checkout -b compliantflow/setup
-git add .github/workflows/compliance.yml
-git commit -m "feat: add CompliantFlow compliance gate"
+git add AI-harness/ .github/workflows/compliance.yml
+git commit -m "feat: add CompliantFlow compliance gate and AI harness"
 git push -u origin compliantflow/setup
 ```
 

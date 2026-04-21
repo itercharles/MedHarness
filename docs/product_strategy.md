@@ -2,7 +2,7 @@
 
 **Owner:** Product Manager
 **Status:** Active
-**Last reviewed:** 2026-04-07
+**Last reviewed:** 2026-04-21
 
 This document records the durable strategic direction for CompliantFlow. It is the
 authoritative input to roadmap prioritisation. It is not a feature list — feature
@@ -14,13 +14,11 @@ features ship.
 
 ## Mission
 
-**Make every change compliant. Zero compliance debt, continuously.**
+**The AI-first development framework for medical device software. Zero compliance debt, continuously.**
 
-This is the primary objective — not efficiency, not audit savings. Those are
-consequences. The mission is a state: a medical device software codebase where
-every commit, every requirement change, every test result, and every architecture
-update is immediately verified against the applicable regulatory standards. No
-backlog of unverified changes. No compliance debt accumulating between audits.
+AI coding tools are generating code and documentation faster than compliance processes can verify it. CompliantFlow is the trust layer that closes this gap: it provides the structured environment AI agents need to generate compliant content, and enforces compliance on every commit through a CI gate that understands IEC 62304, ISO 14971, and ISO 13485 semantics — not just code quality.
+
+The mission is a state: a medical device software codebase where every commit — human or AI-generated — is immediately verified against applicable regulatory standards. No backlog of unverified changes. No compliance debt.
 
 Everything else in this document follows from that mission.
 
@@ -74,30 +72,27 @@ The efficiency gain is a consequence of eliminating debt, not a separate feature
 The faster a team moves — whether human or AI-driven — the more valuable the gate
 becomes.
 
-### Objective 3 — Provide a compliance harness for AI coding in medtech (forward-looking)
+### Objective 3 — Ship the AI coding infrastructure for medtech (co-equal)
 
-Beyond acting as a verification layer for AI-generated content, CompliantFlow is
-positioned to become the structured environment that makes compliant AI coding
-possible in medtech in the first place.
+CompliantFlow is not just a verifier that runs after AI tools. It is the structured
+environment that makes compliant AI coding possible in the first place.
 
 AI coding agents require context to generate correct output: what schema a DHF item
 must follow, what lifecycle states are valid, which fields are required for
 traceability, what compliance policies apply. Without that structure, AI generates
 plausible-looking content that silently violates regulatory requirements.
-CompliantFlow's DHF schema, lifecycle definitions, policy rules, and agent
-entrypoints (CLAUDE.md, AGENTS.md) already provide exactly this context. The
-system is already a harness — this objective is to make that role explicit,
-supported, and marketed.
 
-The forward-looking direction: CompliantFlow ships with pre-configured AI coding
-agent context that enables any AI coding tool to generate IEC 62304-compliant
-requirements, risk items, test stubs, and change requests correctly, with the
-compliance gate confirming the output. This makes CompliantFlow the natural
-platform for medtech teams adopting AI-assisted development, not just a tool they
-run alongside it.
+CompliantFlow ships this context as `AI-harness/` — pre-configured for every project
+via `compliantflow init`. Both the product repo and the DHF repo receive a harness
+with model-agnostic context, pre/post-task checklists, and adapters for Claude Code,
+Cursor, and GitHub Copilot. The CI gate then confirms the output is correct.
 
-This objective is directional — it informs roadmap decisions but does not drive
-near-term CRs.
+**Current state (shipped in v2.0.x):**
+- DHF repo AI harness: context.md, CLAUDE.md, AGENTS.md, GEMINI.md, checklists, adapters
+- Product repo AI harness: same structure, tailored to product-side concerns (when to update the DHF, compliance gate semantics, CR workflow)
+- `compliantflow init` delivers both harnesses in one command
+
+**Next:** Make the framework positioning explicit in marketing and onboarding materials.
 
 ---
 
@@ -140,9 +135,7 @@ standards. Non-compliance is caught at the commit, not the audit.
 
 ## Positioning
 
-**One sentence:** CompliantFlow is the compliance infrastructure for medical device
-software teams that enforces zero compliance debt on every commit — and scales that
-guarantee to however fast the team moves, whether human or AI-driven.
+**One sentence:** CompliantFlow is the AI-first development framework for medical device software — out-of-the-box infrastructure where AI coding agents generate compliant code and documentation, with a compliance gate that enforces zero debt on every commit.
 
 **What we compete on:**
 - Zero compliance debt at the commit — not batch remediation before audits
@@ -207,10 +200,7 @@ influenced by the engineering lead or VP Engineering.
 unmaintained; these teams have committed to docs-as-code and are actively seeking
 a migration path.
 
-**Emerging ICP (Objective 3):** Medtech teams actively adopting AI coding tools
-who need a compliance harness to make AI-generated content submission-ready. This
-segment is growing rapidly and is underserved — no existing tool addresses the
-AI coding + medtech compliance intersection.
+**Emerging ICP (now primary entry motion):** Technical co-founders and engineering leads at medtech startups adopting AI coding tools (Copilot, Cursor, Claude Code). They are building from scratch with AI-first practices and need compliance infrastructure that works with those tools, not against them. No existing tool addresses the AI coding + medtech compliance intersection. This segment is growing rapidly and acquisition cost is low — they are actively searching for this solution.
 
 **Personas (priority order):**
 
@@ -251,6 +241,16 @@ market signal.
 
 CRs are the authoritative backlog — this section records the milestone grouping and rationale. Full CR descriptions live in `DHF/items/09_cr/`.
 
+### Shipped (v2.0.x)
+
+| CR | Title |
+|---|---|
+| CR-054 | `compliantflow init` — interactive infrastructure onboarding |
+| CR-055 | Product repo AI harness |
+| — | DHF repo AI harness (AI-harness/ in dhf-template) |
+| CR-041 | Draft Item Pre-Validation (`validate draft`) |
+| CR-043 | Machine-Readable Compliance Report Export (`report compliance --format json`) |
+
 ### v2.1.0 — "Deepen & Enforce" (Q3 2026)
 
 Strengthen the zero-debt guarantee and make compliance feedback actionable for engineers and AI agents.
@@ -264,15 +264,13 @@ Strengthen the zero-debt guarantee and make compliance feedback actionable for e
 
 ### v2.2.0 — "AI Coding Infrastructure" (Q4 2026)
 
-Make CompliantFlow the structured environment AI coding tools operate within, not just a verifier that runs after them.
+Deepen the AI framework: machine-readable interfaces, richer agent context, and broader standard coverage.
 
 | CR | Title | Priority |
 |---|---|---|
-| CR-039 | Field Schema Protocol Extension *(unblocks CR-040, CR-041)* | High |
+| CR-039 | Field Schema Protocol Extension *(unblocks CR-040)* | High |
 | CR-040 | AI Agent Context Package | High |
-| CR-041 | Draft Item Pre-Validation | High |
 | CR-042 | Compliance Status Summary Command | Medium |
-| CR-043 | Machine-Readable Compliance Report Export | High |
 | CR-044 | ISO 13485 Governance File | Medium |
 | CR-045 | SOUP Automated Vulnerability Check | Medium |
 | CR-046 | RDM Migration Completeness Validation | Medium |
