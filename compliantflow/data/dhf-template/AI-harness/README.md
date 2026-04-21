@@ -7,6 +7,8 @@ Configuration files that help AI coding assistants work correctly in this DHF re
 ```
 AI-harness/
 ├── context.md          # Core DHF context — item types, invariants, commands (model-agnostic)
+├── CLAUDE.md           # Claude Code config — references context.md + checklist instructions
+├── AGENTS.md           # Generic agent config — references context.md
 ├── pre-checklist.md    # Read before starting any DHF change
 ├── post-checklist.md   # Verify before opening a PR
 └── adapters/           # Model-specific entry points that reference context.md
@@ -16,7 +18,9 @@ AI-harness/
 
 ## How it works
 
-`context.md` is the single source of truth. The root `CLAUDE.md` and `AGENTS.md` files reference it directly. Adapter files for other tools contain a condensed version with a pointer back to `context.md`.
+`context.md` is the single source of truth. All configuration lives in this folder.
+
+The root `CLAUDE.md` and `AGENTS.md` are minimal entry points required by tooling that looks for these files at the repo root — they simply delegate here.
 
 ## Adding a new AI tool
 
