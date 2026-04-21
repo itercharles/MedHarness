@@ -1,10 +1,10 @@
 [build-system]
-requires = ["setuptools>=68", "wheel"]
+requires = ["setuptools>=68", "wheel", "setuptools-scm"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "compliantflow"
-version = "2.0.12"
+dynamic = ["version"]
 description = "Compliance checking and DHF management for medical device software"
 requires-python = ">=3.11"
 dependencies = [
@@ -25,6 +25,9 @@ dependencies = [
 
 [project.scripts]
 compliantflow = "compliantflow.cli:main"
+
+[tool.setuptools_scm]
+fallback_version = "0.0.0"
 
 [tool.setuptools.packages.find]
 where = ["."]
