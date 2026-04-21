@@ -18,10 +18,12 @@ import pytest
 
 from compliantflow.init_cmd import (
     GOVERNANCE_FILES,
+    PRODUCT_TEMPLATE_DIR,
     STANDARD_LABELS,
     TEMPLATE_DIR,
     _generate_compliance_yaml,
     _init_dhf_template,
+    _init_product_template,
     _write_compliance_yml,
     _write_dhf_ci_workflow,
     _write_dhf_cr_transition_workflow,
@@ -283,3 +285,90 @@ class TestInitCmd:
         assert "_repo_exists" not in src
         assert "_create_dhf_repo" not in src
         assert "_set_secret" not in src
+
+    def test_TC_SYS_027_019_product_template_dir_exists(self):
+        """
+        TC-SYS-027-019: The bundled product-template directory exists in package data.
+
+        @test_id: TC-SYS-027-019
+        @links: SYS-027
+        """
+        assert PRODUCT_TEMPLATE_DIR.exists(), f"Product template directory not found: {PRODUCT_TEMPLATE_DIR}"
+        assert (PRODUCT_TEMPLATE_DIR / "AI-harness" / "context.md").exists()
+        assert (PRODUCT_TEMPLATE_DIR / "AI-harness" / "CLAUDE.md").exists()
+
+    def test_TC_SYS_027_020_init_product_template_creates_context(self, tmp_path):
+        """
+        TC-SYS-027-020: _init_product_template creates AI-harness/context.md in product_dir.
+
+        @test_id: TC-SYS-027-020
+        @links: SYS-027
+        """
+        product_dir = tmp_path / "my-product"
+        _init_product_template(product_dir, "My Device", "acme/my-device-dhf", ["IEC_62304"])
+        assert (product_dir / "AI-harness" / "context.md").exists()
+
+    def test_TC_SYS_027_021_init_product_template_substitutes_project_name(self, tmp_path):
+        """
+        TC-SYS-027-021: _init_product_template substitutes {{project_name}} in context.md.
+
+        @test_id: TC-SYS-027-021
+        @links: SYS-027
+        """
+        product_dir = tmp_path / "my-product"
+        _init_product_template(product_dir, "Insulin Pump Firmware", "acme/dhf", ["IEC_62304"])
+        content = (product_dir / "AI-harness" / "context.md").read_text()
+        assert "Insulin Pump Firmware" in content
+        assert "{{project_name}}" not in content
+
+    def test_TC_SYS_027_022_init_product_template_substitutes_dhf_repo(self, tmp_path):
+        """
+        TC-SYS-027-022: _init_product_template substitutes {{dhf_repo}} in context.md.
+
+        @test_id: TC-SYS-027-022
+        @links: SYS-027
+        """
+        product_dir = tmp_path / "my-product"
+        _init_product_template(product_dir, "Device", "acme/my-device-dhf", ["IEC_62304"])
+        content = (product_dir / "AI-harness" / "context.md").read_text()
+        assert "acme/my-device-dhf" in content
+        assert "{{dhf_repo}}" not in content
+
+    def test_TC_SYS_027_023_init_product_template_creates_adapter_files(self, tmp_path):
+        """
+        TC-SYS-027-023: _init_product_template creates adapters/.cursorrules and
+        adapters/copilot-instructions.md.
+
+        @test_id: TC-SYS-027-023
+        @links: SYS-027
+        """
+        product_dir = tmp_path / "my-product"
+        _init_product_template(product_dir, "Device", "acme/dhf", ["IEC_62304"])
+        assert (product_dir / "AI-harness" / "adapters" / ".cursorrules").exists()
+        assert (product_dir / "AI-harness" / "adapters" / "copilot-instructions.md").exists()
+
+    def test_TC_SYS_027_024_init_product_template_creates_agent_files(self, tmp_path):
+        """
+        TC-SYS-027-024: _init_product_template creates CLAUDE.md, AGENTS.md, GEMINI.md.
+
+        @test_id: TC-SYS-027-024
+        @links: SYS-027
+        """
+        product_dir = tmp_path / "my-product"
+        _init_product_template(product_dir, "Device", "acme/dhf", ["IEC_62304"])
+        assert (product_dir / "AI-harness" / "CLAUDE.md").exists()
+        assert (product_dir / "AI-harness" / "AGENTS.md").exists()
+        assert (product_dir / "AI-harness" / "GEMINI.md").exists()
+
+    def test_TC_SYS_027_025_init_product_template_no_dhf_fallback(self, tmp_path):
+        """
+        TC-SYS-027-025: _init_product_template uses fallback text when dhf_repo is None.
+
+        @test_id: TC-SYS-027-025
+        @links: SYS-027
+        """
+        product_dir = tmp_path / "my-product"
+        _init_product_template(product_dir, "Device", None, ["IEC_62304"])
+        content = (product_dir / "AI-harness" / "context.md").read_text()
+        assert "your-org/your-product-dhf" in content
+        assert "{{dhf_repo}}" not in content

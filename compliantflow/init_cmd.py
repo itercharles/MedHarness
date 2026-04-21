@@ -16,6 +16,7 @@ from typing import Optional
 import click
 
 TEMPLATE_DIR = Path(__file__).parent / "data" / "dhf-template"
+PRODUCT_TEMPLATE_DIR = Path(__file__).parent / "data" / "product-template"
 
 # Map standard IDs to governance filenames (all present in template)
 GOVERNANCE_FILES = {
@@ -73,6 +74,29 @@ def _init_dhf_template(dhf_dir: Path, project_name: str, standards: list[str]) -
     gh_workflows.mkdir(parents=True, exist_ok=True)
     _write_dhf_ci_workflow(gh_workflows / "ci.yml")
     _write_dhf_cr_transition_workflow(gh_workflows / "cr-transition.yml")
+
+
+def _init_product_template(
+    product_dir: Path,
+    project_name: str,
+    dhf_repo: Optional[str],
+    standards: list[str],
+) -> None:
+    """Write AI-harness to product_dir. No git operations — caller reviews and pushes."""
+    ai_harness_src = PRODUCT_TEMPLATE_DIR / "AI-harness"
+    ai_harness_dst = product_dir / "AI-harness"
+    shutil.copytree(ai_harness_src, ai_harness_dst, dirs_exist_ok=True)
+
+    dhf_repo_value = dhf_repo or "your-org/your-product-dhf"
+    standards_value = ", ".join(STANDARD_LABELS.get(s, s) for s in standards)
+
+    for path in ai_harness_dst.rglob("*"):
+        if path.is_file():
+            text = path.read_text()
+            text = text.replace("{{project_name}}", project_name)
+            text = text.replace("{{dhf_repo}}", dhf_repo_value)
+            text = text.replace("{{standards}}", standards_value)
+            path.write_text(text)
 
 
 def _write_compliance_yml(
@@ -340,6 +364,7 @@ def run_init() -> None:
     if setup_dhf:
         click.echo(f"  • Write DHF template to: {dhf_dir}")
         click.echo(f"    Project: \"{project_name}\"  Standards: {', '.join(selected_standards)}")
+    click.echo(f"  • Write AI-harness to: {product_dir}/")
     click.echo(f"  • Write compliance.yml to: {product_dir / '.github' / 'workflows'}/")
     click.echo()
 
@@ -352,6 +377,7 @@ def run_init() -> None:
     steps: list[str] = []
     if setup_dhf:
         steps.append(f"Write DHF template to {dhf_dir}")
+    steps.append("Write AI-harness to product repo")
     steps.append("Write compliance.yml")
     total = len(steps)
     n = 0
@@ -365,6 +391,10 @@ def run_init() -> None:
         _step(f"Write DHF template to {dhf_dir}")
         _init_dhf_template(dhf_dir, project_name, selected_standards)  # type: ignore[arg-type]
         click.secho(" ✓", fg="green")
+
+    _step("Write AI-harness to product repo")
+    _init_product_template(product_dir, project_name, dhf_repo, selected_standards)
+    click.secho(" ✓", fg="green")
 
     _step("Write compliance.yml")
     _write_compliance_yml(product_dir, dhf_repo, selected_standards, llm_provider)
