@@ -245,12 +245,14 @@ class TestInitCmd:
         @test_id: TC-SYS-027-016
         @links: SYS-027
         """
+        import inspect
+        src = inspect.getsource(_init_dhf_template)
+        assert "subprocess" not in src
+        assert "_gh(" not in src
+        # Verify it actually writes files without any external calls
         dhf_dir = tmp_path / "my-dhf"
-        with patch("compliantflow.init_cmd.subprocess.run") as mock_run, \
-             patch("compliantflow.init_cmd._gh") as mock_gh:
-            _init_dhf_template(dhf_dir, "Device", ["IEC_62304"])
-        mock_run.assert_not_called()
-        mock_gh.assert_not_called()
+        _init_dhf_template(dhf_dir, "Device", ["IEC_62304"])
+        assert dhf_dir.exists()
 
     def test_TC_SYS_027_017_write_compliance_yml_creates_file(self, tmp_path):
         """
@@ -266,22 +268,18 @@ class TestInitCmd:
         assert expected.exists()
         assert "validate compliance IEC_62304" in expected.read_text()
 
-    def test_TC_SYS_027_018_run_init_rejects_nonempty_dhf_repo(self):
+    def test_TC_SYS_027_018_run_init_no_github_calls(self):
         """
-        TC-SYS-027-018: run_init aborts with cleanup instructions if the DHF GitHub
-        repo already exists and is not empty.
+        TC-SYS-027-018: run_init makes no GitHub API or gh CLI calls — all execution
+        is local file writes only.
 
         @test_id: TC-SYS-027-018
         @links: SYS-027
         """
-        prompts = iter(["itercharles", "product", "product-dhf", "./product-dhf", "./product", "My Product"])
-        # setup_dhf, create_dhf_github, IEC_62304, ISO_14971, IEC_82304_1, ISO_13485, enable_llm, Proceed?
-        confirms = iter([True, True, True, False, False, False, False, True])
-        with patch("compliantflow.init_cmd._detect_gh_owner", return_value="itercharles"), \
-             patch("compliantflow.init_cmd._repo_exists", return_value=True), \
-             patch("compliantflow.init_cmd._repo_is_empty", return_value=False), \
-             patch("click.prompt", side_effect=prompts), \
-             patch("click.confirm", side_effect=confirms):
-            from compliantflow.init_cmd import run_init
-            with pytest.raises(click.ClickException, match="not empty"):
-                run_init()
+        import inspect
+        from compliantflow.init_cmd import run_init
+        src = inspect.getsource(run_init)
+        assert "_gh(" not in src
+        assert "_repo_exists" not in src
+        assert "_create_dhf_repo" not in src
+        assert "_set_secret" not in src

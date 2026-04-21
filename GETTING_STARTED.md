@@ -43,7 +43,7 @@ compliantflow --help
 
 ## Step 2 — Run `compliantflow init`
 
-This single command sets up the full infrastructure for your project interactively:
+This command writes all required files locally. No GitHub operations are performed — you review and push everything yourself.
 
 ```bash
 compliantflow init
@@ -55,39 +55,52 @@ You will be prompted for:
 |--------|---------|
 | GitHub org or username | `acme-medical` |
 | Product repository name | `insulin-pump` |
-| Project name (for documents) | `Insulin Pump Firmware` |
-| Create a DHF repository? | `Y` |
+| Set up a DHF repository? | `Y` |
 | DHF repository name | `insulin-pump-dhf` |
+| Local directory for DHF files | `./insulin-pump-dhf` |
+| Product repo local directory | `./insulin-pump` |
+| Project name (for documents) | `Insulin Pump Firmware` |
 | Applicable standards | IEC 62304, ISO 14971 |
 | Enable AI compliance checks? | `Y` |
 | LLM provider | `gemini` |
-| Gemini API key | `****` |
 
-After you confirm, `init` will:
+After you confirm, `init` writes:
 
-1. Create a private DHF repository pre-configured with your project name and selected standards
-2. Open a pull request in your product repo adding `.github/workflows/compliance.yml`
-3. Set `GEMINI_API_KEY` (or `COMPLIANTFLOW_OLLAMA_URL`) in your product repo secrets
+- **DHF template** → your specified DHF local directory, pre-configured with project name and selected standards
+- **`.github/workflows/compliance.yml`** → your product repo local directory
 
-**After `init` completes, two manual steps remain:**
-
-```
-1. Add COMPLIANTFLOW_TOKEN to your product repo secrets
-   (provided by your account representative)
-
-2. Create a fine-grained PAT with "Contents: Read" on your DHF repo,
-   add it as DHF_REPO_TOKEN to your product repo secrets
-
-3. Review and merge the compliance PR opened by init
-```
+`init` then prints the exact git commands to push both repos and open a PR.
 
 ---
 
-## Step 3 — Merge the compliance PR
+## Step 3 — Review, push, and open a PR
 
-The PR opened by `init` adds the compliance gate workflow. Once the two secrets
-above are in place, merge the PR. From that point on, every push and PR in your
-product repo is checked against:
+After `init` completes, follow the printed instructions:
+
+```bash
+# 1. Push DHF repo
+cd ./insulin-pump-dhf
+git init && git remote add origin https://github.com/acme-medical/insulin-pump-dhf
+git add -A && git commit -m "feat: initialize DHF"
+git push -u origin main
+
+# 2. Open compliance PR in product repo
+cd ./insulin-pump
+git checkout -b compliantflow/setup
+git add .github/workflows/compliance.yml
+git commit -m "feat: add CompliantFlow compliance gate"
+git push -u origin compliantflow/setup
+```
+
+Then open a pull request and add the required secrets to your product repo (Settings → Secrets → Actions):
+
+| Secret | Value |
+|--------|-------|
+| `COMPLIANTFLOW_TOKEN` | Provided by your account representative |
+| `DHF_REPO_TOKEN` | Fine-grained PAT with `Contents: Read` on your DHF repo |
+| `GEMINI_API_KEY` | Your Gemini API key (if selected) |
+
+Merge the PR. From that point on, every push and PR in your product repo is checked against:
 
 - Traceability links (no orphaned requirements)
 - IEC 62304 / ISO 14971 policy compliance
@@ -107,9 +120,7 @@ add this install step to them:
   env:
     GH_TOKEN: ${{ secrets.COMPLIANTFLOW_TOKEN }}
   run: |
-    gh release download v2.0.12 --repo itercharles/CompliantFlow \
-      --pattern "compliantflow-*.zip" \
-      --output compliantflow.zip
+    gh release download v2.0.17 --repo itercharles/CompliantFlow --pattern "compliantflow-*.zip" --output compliantflow.zip
     unzip compliantflow.zip -d cf
     pip install cf/*/compliantflow-*.whl
 ```
