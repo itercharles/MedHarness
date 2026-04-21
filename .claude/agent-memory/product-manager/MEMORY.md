@@ -6,3 +6,5 @@
 - [Strategic context & roadmap basis](project_strategy.md) — Key gaps, personas, and prioritization rationale
 - [Formal product strategy document](../../../../docs/product_strategy.md) — Authoritative positioning, selling points, ICP, strategic constraints; PM-owned; input to roadmap
 - [Competitive landscape](competitive_landscape.md) — Market categories, key competitors, differentiators, ICP, and positioning risks (April 2026)
+- [Key product decisions](project_key_decisions.md) — CR closure, Ketryx timeline, Web UI deferral, AI-framework repositioning (April 2026)
+- [AI-first framework strategy](project_ai_framework_strategy.md) — Repositioning analysis, three-layer model, critical gaps, CR-055 recommendation (April 2026)
