@@ -114,7 +114,9 @@ jobs:
 
       - name: Assemble delivery bundles
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
+          # Derive version from the built whl filename — single source of truth
+          WHL=$(ls dist/*.whl | head -1)
+          VERSION=$(basename "${WHL}" | sed 's/compliantflow-\([^-]*\)-.*/\1/')
           SHA="${GITHUB_SHA:0:7}"
 
           # --- compliantflow-x.y.z-hash.zip: whl + dhf-template + GETTING_STARTED ---
