@@ -254,7 +254,7 @@ jobs:
         with:
           python-version: '3.11'
       - name: Install dependencies
-        run: pip install click jinja2 markdown pydantic PyYAML
+        run: pip install click jinja2 markdown pydantic PyYAML gitpython
       - name: Validate DHF schema
         run: |
           export PYTHONPATH="${PYTHONPATH}:${PWD}:${PWD}/DHF"
