@@ -53,7 +53,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.PRODUCT_REPO_TOKEN }}
         run: |
-          gh repo clone itercharles/CompliantFlow "../CompliantFlow"
+          gh repo clone {{product_repo}} "../{{product_repo_name}}"
 
       - uses: actions/setup-node@v4
         if: steps.cr.outputs.skip != 'true' && secrets.ANTHROPIC_API_KEY != ''
