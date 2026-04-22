@@ -25,6 +25,7 @@ from compliantflow.init_cmd import (
     _init_dhf_template,
     _init_product_template,
     _write_compliance_yml,
+    _write_cr_complete_yml,
     _write_dhf_ci_workflow,
     _write_dhf_cr_transition_workflow,
 )
@@ -372,3 +373,47 @@ class TestInitCmd:
         content = (product_dir / "AI-harness" / "context.md").read_text()
         assert "your-org/your-product-dhf" in content
         assert "{{dhf_repo}}" not in content
+
+    def test_TC_SYS_027_026_init_dhf_template_substitutes_product_repo(self, tmp_path):
+        """
+        TC-SYS-027-026: _init_dhf_template substitutes {{product_repo}} in workflow files.
+
+        @test_id: TC-SYS-027-026
+        @links: SYS-027
+        """
+        dhf_dir = tmp_path / "my-dhf"
+        _init_dhf_template(
+            dhf_dir,
+            "Device",
+            ["IEC_62304"],
+            product_repo="acme/my-device",
+        )
+        content = (dhf_dir / ".github" / "workflows" / "cr-develop.yml").read_text()
+        assert "acme/my-device" in content
+        assert "{{product_repo}}" not in content
+
+    def test_TC_SYS_027_027_write_cr_complete_yml_creates_file(self, tmp_path):
+        """
+        TC-SYS-027-027: _write_cr_complete_yml creates .github/workflows/cr-complete.yml.
+
+        @test_id: TC-SYS-027-027
+        @links: SYS-027
+        """
+        product_dir = tmp_path / "my-product"
+        result = _write_cr_complete_yml(product_dir, "acme/my-device-dhf")
+        expected = product_dir / ".github" / "workflows" / "cr-complete.yml"
+        assert result == expected
+        assert expected.exists()
+
+    def test_TC_SYS_027_028_cr_complete_yml_contains_dhf_repo_reference(self, tmp_path):
+        """
+        TC-SYS-027-028: cr-complete.yml contains the DHF repo reference.
+
+        @test_id: TC-SYS-027-028
+        @links: SYS-027
+        """
+        product_dir = tmp_path / "my-product"
+        _write_cr_complete_yml(product_dir, "acme/my-device-dhf")
+        content = (product_dir / ".github" / "workflows" / "cr-complete.yml").read_text()
+        assert "repository: acme/my-device-dhf" in content
+        assert "python -m utils item transition" in content

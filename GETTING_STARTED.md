@@ -101,6 +101,13 @@ Then open a pull request and add the required secrets to your product repo (Sett
 | `DHF_REPO_TOKEN` | Fine-grained PAT with `Contents: Read` on your DHF repo |
 | `GEMINI_API_KEY` | Your Gemini API key (if selected) |
 
+If you set up a separate DHF repo, add these DHF repo secrets as well:
+
+| Secret | Value |
+|--------|-------|
+| `ANTHROPIC_API_KEY` | API key used by the DHF AI workflows (`cr-analyze`, `cr-spec-iterate`, `cr-develop`) |
+| `PRODUCT_REPO_TOKEN` | Fine-grained PAT with `Contents: Write` access to your product repo |
+
 Merge the PR. From that point on, every push and PR in your product repo is checked against:
 
 - Traceability links (no orphaned requirements)

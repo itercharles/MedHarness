@@ -1,0 +1,95 @@
+name: Analyze CR
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+    paths:
+      - 'DHF/items/CR-*.yaml'
+
+jobs:
+  analyze:
+    if: ${{ github.event.pull_request.merged == true }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Find new CR items from merged PR
+        id: crs
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          MERGE_SHA: ${{ github.event.pull_request.merge_commit_sha }}
+        run: |
+          FILES=$(git diff --name-status "$BASE_SHA" "$MERGE_SHA" | awk '$1 == "A" && $2 ~ /^DHF\/items\/CR-.*\.yaml$/ { print $2 }')
+          if [ -z "$FILES" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          printf '%s\n' "$FILES" > /tmp/cr_files.txt
+          CR_ID=$(basename "$(head -n 1 /tmp/cr_files.txt)" .yaml)
+          echo "cr_id=$CR_ID" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-python@v5
+        if: steps.crs.outputs.skip != 'true'
+        with:
+          python-version: '3.11'
+
+      - name: Install DHF utils dependencies
+        if: steps.crs.outputs.skip != 'true'
+        run: pip install click jinja2 markdown pydantic PyYAML gitpython
+
+      - name: Transition CR to analyzing
+        if: steps.crs.outputs.skip != 'true'
+        run: |
+          export PYTHONPATH="${PYTHONPATH}:${PWD}:${PWD}/DHF"
+          python -m utils item transition "${{ steps.crs.outputs.cr_id }}" analyzing --by "github-actions[bot]"
+
+      - uses: actions/setup-node@v4
+        if: steps.crs.outputs.skip != 'true'
+        with:
+          node-version: '20'
+
+      - name: Install Claude Code
+        if: steps.crs.outputs.skip != 'true'
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Generate CR spec
+        if: steps.crs.outputs.skip != 'true'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          PRODUCT_REPO_TOKEN: ${{ secrets.PRODUCT_REPO_TOKEN }}
+        run: |
+          claude -p --dangerously-skip-permissions \
+            "$(cat .github/prompts/cr-analyze.md)
+
+CR ID: ${{ steps.crs.outputs.cr_id }}"
+
+      - name: Commit spec branch
+        if: steps.crs.outputs.skip != 'true'
+        env:
+          CR_ID: ${{ steps.crs.outputs.cr_id }}
+        run: |
+          git checkout -b "spec/$CR_ID"
+          git config user.name "GitHub Actions [bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add "DHF/items/$CR_ID.yaml" "DHF/documents/specs/$CR_ID-Spec.md"
+          git commit -m "feat: analyze $CR_ID"
+          git push --set-upstream origin "spec/$CR_ID"
+
+      - name: Open spec PR
+        if: steps.crs.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CR_ID: ${{ steps.crs.outputs.cr_id }}
+        run: |
+          gh pr create \
+            --head "spec/$CR_ID" \
+            --base main \
+            --title "spec($CR_ID): AI analysis plan" \
+            --body "Automated spec generated for $CR_ID."
+

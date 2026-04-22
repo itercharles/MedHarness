@@ -56,8 +56,28 @@ lifecycle:
   transitions:
   - from_states:
     - null
-    to_state: planned
+    to_state: new
   - from_states:
-    - planned
-    to_state: closed
-    label: Close
+    - new
+    to_state: analyzing
+    label: Start Analysis
+  - from_states:
+    - new
+    to_state: rejected
+    label: Reject
+  - from_states:
+    - analyzing
+    to_state: developing
+    label: Approve Spec
+  - from_states:
+    - analyzing
+    to_state: rejected
+    label: Reject
+  - from_states:
+    - developing
+    to_state: completed
+    label: Complete
+  - from_states:
+    - developing
+    to_state: rejected
+    label: Reject

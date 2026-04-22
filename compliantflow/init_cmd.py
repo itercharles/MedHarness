@@ -2,7 +2,7 @@
 
 Sets up the full CompliantFlow infrastructure for a new project:
   1. Writes the DHF template to a local directory for review
-  2. Writes compliance.yml to the product repo directory for review
+  2. Writes product repo workflows to the product repo directory for review
   3. Prints git commands to push both repos and open a PR
 """
 
@@ -38,7 +38,26 @@ STANDARD_LABELS = {
 # Local file writers
 # ---------------------------------------------------------------------------
 
-def _init_dhf_template(dhf_dir: Path, project_name: str, standards: list[str]) -> None:
+def _replace_placeholders_in_tree(root: Path, replacements: dict[str, str]) -> None:
+    """Replace placeholder strings in text files under root, skipping binary assets."""
+    for path in root.rglob("*"):
+        if not path.is_file():
+            continue
+        try:
+            text = path.read_text()
+        except UnicodeDecodeError:
+            continue
+        for placeholder, value in replacements.items():
+            text = text.replace(placeholder, value)
+        path.write_text(text)
+
+
+def _init_dhf_template(
+    dhf_dir: Path,
+    project_name: str,
+    standards: list[str],
+    product_repo: Optional[str] = None,
+) -> None:
     """Populate dhf_dir with the DHF template. No git operations — caller reviews and pushes."""
     dhf_dir.mkdir(parents=True, exist_ok=True)
 
@@ -47,6 +66,17 @@ def _init_dhf_template(dhf_dir: Path, project_name: str, standards: list[str]) -
         dhf_dir,
         dirs_exist_ok=True,
         ignore=shutil.ignore_patterns("__pycache__", "*.pyc", ".DS_Store"),
+    )
+
+    _replace_placeholders_in_tree(
+        dhf_dir,
+        {
+            "{{project_name}}": project_name,
+            "{{product_repo}}": product_repo or "your-org/your-product",
+            "{{product_repo_name}}": (
+                product_repo.split("/", 1)[1] if product_repo and "/" in product_repo else "your-product"
+            ),
+        },
     )
 
     # Set project_name in global.yaml
@@ -90,13 +120,14 @@ def _init_product_template(
     dhf_repo_value = dhf_repo or "your-org/your-product-dhf"
     standards_value = ", ".join(STANDARD_LABELS.get(s, s) for s in standards)
 
-    for path in ai_harness_dst.rglob("*"):
-        if path.is_file():
-            text = path.read_text()
-            text = text.replace("{{project_name}}", project_name)
-            text = text.replace("{{dhf_repo}}", dhf_repo_value)
-            text = text.replace("{{standards}}", standards_value)
-            path.write_text(text)
+    _replace_placeholders_in_tree(
+        ai_harness_dst,
+        {
+            "{{project_name}}": project_name,
+            "{{dhf_repo}}": dhf_repo_value,
+            "{{standards}}": standards_value,
+        },
+    )
 
 
 def _write_compliance_yml(
@@ -109,6 +140,79 @@ def _write_compliance_yml(
     dest = product_dir / ".github" / "workflows" / "compliance.yml"
     dest.parent.mkdir(parents=True, exist_ok=True)
     dest.write_text(_generate_compliance_yaml(dhf_repo, standards, llm_provider))
+    return dest
+
+
+def _write_cr_complete_yml(product_dir: Path, dhf_repo: Optional[str]) -> Path:
+    """Write the CR completion workflow into the product repo."""
+    dhf_repo_value = dhf_repo or "your-org/your-product-dhf"
+    dest = product_dir / ".github" / "workflows" / "cr-complete.yml"
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    dest.write_text(f"""\
+name: Complete CR In DHF
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+jobs:
+  complete-cr:
+    if: ${{{{ github.event.pull_request.merged == true }}}}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Extract CR ID from PR title
+        id: cr
+        env:
+          PR_TITLE: ${{{{ github.event.pull_request.title }}}}
+        run: |
+          CR_ID=$(printf '%s\n' "$PR_TITLE" | grep -oE 'CR-[0-9]+' | head -n 1 || true)
+          if [ -z "$CR_ID" ]; then
+            echo "No CR ID found in PR title; skipping."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "cr_id=$CR_ID" >> "$GITHUB_OUTPUT"
+
+      - name: Check out DHF repo
+        if: steps.cr.outputs.skip != 'true'
+        uses: actions/checkout@v4
+        with:
+          repository: {dhf_repo_value}
+          token: ${{{{ secrets.DHF_REPO_TOKEN }}}}
+          path: dhf
+
+      - name: Set up Python
+        if: steps.cr.outputs.skip != 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install DHF utils dependencies
+        if: steps.cr.outputs.skip != 'true'
+        run: pip install click jinja2 markdown pydantic PyYAML gitpython
+
+      - name: Transition CR to completed
+        if: steps.cr.outputs.skip != 'true'
+        working-directory: dhf
+        run: |
+          export PYTHONPATH="${{PYTHONPATH}}:${{PWD}}:${{PWD}}/DHF"
+          python -m utils item transition "${{{{ steps.cr.outputs.cr_id }}}}" completed --by "github-actions[bot]"
+
+      - name: Commit and push DHF update
+        if: steps.cr.outputs.skip != 'true'
+        working-directory: dhf
+        run: |
+          git config user.name "GitHub Actions [bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add DHF/items/
+          if ! git diff --staged --quiet; then
+            git commit -m "chore: complete ${{{{ steps.cr.outputs.cr_id }}}} [skip ci]"
+            git push
+          fi
+""")
     return dest
 
 
@@ -172,8 +276,11 @@ on:
         required: true
         type: choice
         options:
-          - closed
-          - planned
+          - new
+          - analyzing
+          - developing
+          - completed
+          - rejected
       triggered_by:
         description: "Who triggered this transition"
         required: false
@@ -366,6 +473,7 @@ def run_init() -> None:
         click.echo(f"    Project: \"{project_name}\"  Standards: {', '.join(selected_standards)}")
     click.echo(f"  • Write AI-harness to: {product_dir}/")
     click.echo(f"  • Write compliance.yml to: {product_dir / '.github' / 'workflows'}/")
+    click.echo(f"  • Write cr-complete.yml to: {product_dir / '.github' / 'workflows'}/")
     click.echo()
 
     if not click.confirm("Proceed?", default=True):
@@ -379,6 +487,7 @@ def run_init() -> None:
         steps.append(f"Write DHF template to {dhf_dir}")
     steps.append("Write AI-harness to product repo")
     steps.append("Write compliance.yml")
+    steps.append("Write CR completion workflow")
     total = len(steps)
     n = 0
 
@@ -389,7 +498,12 @@ def run_init() -> None:
 
     if setup_dhf:
         _step(f"Write DHF template to {dhf_dir}")
-        _init_dhf_template(dhf_dir, project_name, selected_standards)  # type: ignore[arg-type]
+        _init_dhf_template(
+            dhf_dir,
+            project_name,
+            selected_standards,
+            product_repo=product_repo,
+        )  # type: ignore[arg-type]
         click.secho(" ✓", fg="green")
 
     _step("Write AI-harness to product repo")
@@ -398,6 +512,10 @@ def run_init() -> None:
 
     _step("Write compliance.yml")
     _write_compliance_yml(product_dir, dhf_repo, selected_standards, llm_provider)
+    click.secho(" ✓", fg="green")
+
+    _step("Write CR completion workflow")
+    _write_cr_complete_yml(product_dir, dhf_repo)
     click.secho(" ✓", fg="green")
 
     # ── Done ────────────────────────────────────────────────
@@ -416,8 +534,8 @@ def run_init() -> None:
     click.secho(f"  {n}. Open compliance PR:", bold=True)
     click.echo(f"       cd {product_dir}")
     click.echo(f"       git checkout -b compliantflow/setup")
-    click.echo(f"       git add .github/workflows/compliance.yml")
-    click.echo(f"       git commit -m \"feat: add CompliantFlow compliance gate\"")
+    click.echo(f"       git add AI-harness/ .github/workflows/compliance.yml .github/workflows/cr-complete.yml")
+    click.echo(f"       git commit -m \"feat: add CompliantFlow workflows and AI harness\"")
     click.echo(f"       git push -u origin compliantflow/setup")
     n += 1
     click.secho(f"  {n}. Add secrets to {product_repo} → Settings → Secrets:", bold=True)

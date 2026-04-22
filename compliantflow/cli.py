@@ -754,7 +754,7 @@ def cr_check_status(ctx: click.Context, cr_id: str) -> None:
 
     CR_ID is the identifier of the change request (e.g. CR-012).
     Outputs a JSON object to stdout.
-    Exits 0 if the CR exists and is approved, implementing, or completed; exits 1 otherwise.
+    Exits 0 if the CR exists and is in an in-progress state; exits 1 otherwise.
 
     Note: linked commits/PRs are evidence recorded AFTER the work is merged.
     This gate only verifies the CR is authorized — not that evidence exists yet.
@@ -768,7 +768,7 @@ def cr_check_status(ctx: click.Context, cr_id: str) -> None:
         sys.exit(1)
 
     status = item.get("status", "")
-    valid_statuses = {"planned", "approved", "implementing", "completed"}
+    valid_statuses = {"new", "analyzing", "developing"}
     valid = status in valid_statuses
 
     result = {
