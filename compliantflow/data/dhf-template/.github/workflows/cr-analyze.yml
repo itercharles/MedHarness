@@ -6,10 +6,16 @@ on:
     branches: [main]
     paths:
       - 'DHF/items/CR-*.yaml'
+  workflow_dispatch:
+    inputs:
+      cr_id:
+        description: 'CR ID to analyze (e.g. CR-056)'
+        required: true
+        type: string
 
 jobs:
   analyze:
-    if: ${{ github.event.pull_request.merged == true }}
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -24,7 +30,12 @@ jobs:
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           MERGE_SHA: ${{ github.event.pull_request.merge_commit_sha }}
+          MANUAL_CR_ID: ${{ inputs.cr_id }}
         run: |
+          if [ -n "$MANUAL_CR_ID" ]; then
+            echo "cr_id=$MANUAL_CR_ID" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           FILES=$(git diff --name-status "$BASE_SHA" "$MERGE_SHA" | awk '$1 == "A" && $2 ~ /^DHF\/items\/CR-.*\.yaml$/ { print $2 }')
           if [ -z "$FILES" ]; then
             echo "skip=true" >> "$GITHUB_OUTPUT"
@@ -50,13 +61,11 @@ jobs:
           python -m utils item transition "${{ steps.crs.outputs.cr_id }}" analyzing --by "github-actions[bot]"
 
       - uses: actions/setup-node@v4
-        if: steps.crs.outputs.skip != 'true'
-        with:
+        if: steps.crs.outputs.skip != 'true'        with:
           node-version: '20'
 
       - name: Install Claude Code
-        if: steps.crs.outputs.skip != 'true'
-        run: npm install -g @anthropic-ai/claude-code
+        if: steps.crs.outputs.skip != 'true'        run: npm install -g @anthropic-ai/claude-code
 
       - name: Generate CR spec
         if: steps.crs.outputs.skip != 'true'
