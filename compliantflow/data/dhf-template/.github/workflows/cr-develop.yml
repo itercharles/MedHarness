@@ -69,11 +69,10 @@ jobs:
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           PRODUCT_REPO_TOKEN: ${{ secrets.PRODUCT_REPO_TOKEN }}
+          CR_ID: ${{ steps.cr.outputs.cr_id }}
         run: |
-          claude -p --dangerously-skip-permissions \
-            "$(cat .github/prompts/cr-develop.md)
-
-CR ID: ${{ steps.cr.outputs.cr_id }}"
+          PROMPT=$(sed "s/{{cr_id}}/$CR_ID/g" .github/prompts/cr-develop.md)
+          claude -p --dangerously-skip-permissions "$PROMPT"
 
       - name: Push DHF implementation branch
         if: steps.cr.outputs.skip != 'true'

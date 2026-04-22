@@ -63,11 +63,10 @@ jobs:
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           PRODUCT_REPO_TOKEN: ${{ secrets.PRODUCT_REPO_TOKEN }}
+          CR_ID: ${{ steps.crs.outputs.cr_id }}
         run: |
-          claude -p --dangerously-skip-permissions \
-            "$(cat .github/prompts/cr-analyze.md)
-
-CR ID: ${{ steps.crs.outputs.cr_id }}"
+          PROMPT=$(sed "s/{{cr_id}}/$CR_ID/g" .github/prompts/cr-analyze.md)
+          claude -p --dangerously-skip-permissions "$PROMPT"
 
       - name: Commit spec branch
         if: steps.crs.outputs.skip != 'true'
