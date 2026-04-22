@@ -43,6 +43,56 @@ export PYTHONPATH=.:compliantflow-dhf/DHF
 
 ---
 
+## DHF Item Types
+
+All regulatory documentation lives in `compliantflow-dhf/DHF/items/`:
+
+| Type | Description | Approval |
+|------|-------------|----------|
+| `UC` | Use Case | GitOps (land on main) |
+| `CRS` | Customer Requirement | GitOps |
+| `SYS` | System Requirement | GitOps |
+| `SRS` | Software Requirement | GitOps |
+| `SWDD` | Software Detailed Design | GitOps |
+| `SYSARCH` | System Architecture | GitOps |
+| `RISK` | Risk item | GitOps |
+| `RCM` | Risk Control Measure | GitOps |
+| `SOUP` | Software of Unknown Provenance | GitOps |
+| `TC` | Test Case | GitOps |
+| `CR` | Change Request | Explicit transition (`planned` → `closed`) |
+| `REL` | Release | Explicit transition |
+| `DEF` | Defect | Explicit transition |
+
+**Traceability chain:** `UC → CRS → SYS → SRS → SWDD / TC`. Every item needs upstream and downstream links. Orphaned items block the CI gate.
+
+---
+
+## DHF Commands
+
+Run from `compliantflow-dhf/`:
+
+```bash
+cd compliantflow-dhf
+
+# Create a new item
+PYTHONPATH=.:DHF python -m utils item create --type SRS \
+  --data '{"title": "My requirement", "derives_from": ["SYS-001"]}'
+
+# Update an item field
+PYTHONPATH=.:DHF python -m utils item update SRS-001 --data '{"title": "Updated title"}'
+
+# List items by type
+PYTHONPATH=.:DHF python -m utils item list --type SYS
+
+# Validate schema
+PYTHONPATH=.:DHF python -m utils validate schema
+
+# Lifecycle transition (CR, REL, DEF only)
+PYTHONPATH=.:DHF python -m utils item transition CR-042 closed --by "your name"
+```
+
+---
+
 ## CR Workflow
 
 CR items use two statuses: `planned` (not yet implemented) and `closed` (merged to `main`).
