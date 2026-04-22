@@ -82,6 +82,60 @@ compliantflow --dhf "$DHF_DIR" status --governance-dir "$GOVERNANCE_DIR"
 
 ---
 
+## DHF Item Types
+
+All regulatory documentation lives in the DHF repo under `DHF/items/`. Item types:
+
+| Type | Description | Approval |
+|------|-------------|----------|
+| `UC` | Use Case | GitOps (land on main) |
+| `CRS` | Customer Requirement | GitOps |
+| `SYS` | System Requirement | GitOps |
+| `SRS` | Software Requirement | GitOps |
+| `SWDD` | Software Detailed Design | GitOps |
+| `SYSARCH` | System Architecture | GitOps |
+| `RISK` | Risk item | GitOps |
+| `RCM` | Risk Control Measure | GitOps |
+| `SOUP` | Software of Unknown Provenance | GitOps |
+| `TC` | Test Case | GitOps |
+| `CR` | Change Request | Explicit transition (`planned` → `closed`) |
+| `REL` | Release | Explicit transition |
+| `DEF` | Defect | Explicit transition |
+
+**GitOps approval:** items are approved by landing on `main`. A feature branch means draft or in-review — no explicit status field needed.
+
+**Traceability chain:** `UC → CRS → SYS → SRS → SWDD / TC`. Every item must have upstream and downstream links. Orphaned items block the CI gate.
+
+**Graph edge direction:** edges run child → parent (e.g. SRS `derives_from` SYS). This is the canonical direction.
+
+---
+
+## DHF Commands
+
+Run these from the DHF repo root (cloned alongside this repo at `../$(basename {{dhf_repo}})`):
+
+```bash
+cd ../$(basename {{dhf_repo}})
+
+# Create a new item
+PYTHONPATH=.:DHF python -m utils item create --type SRS \
+  --data '{"title": "My requirement", "derives_from": ["SYS-001"]}'
+
+# Update an item field
+PYTHONPATH=.:DHF python -m utils item update SRS-001 --data '{"title": "Updated title"}'
+
+# List items by type
+PYTHONPATH=.:DHF python -m utils item list --type SYS
+
+# Validate schema
+PYTHONPATH=.:DHF python -m utils validate schema
+
+# Lifecycle transition (CR, REL, DEF only)
+PYTHONPATH=.:DHF python -m utils item transition CR-042 closed --by "your name"
+```
+
+---
+
 ## User-Configurable Settings
 
 | Setting | Description |
