@@ -1,37 +1,27 @@
-## Change Request
+# Summary
 
-**CR ID**: CR-XXX
+Describe the change concisely. Include the CR ID: **CR-XXX**
 
-<!-- REQUIRED: Replace CR-XXX with actual CR ID -->
-<!-- Example: CR-001 -->
+## DHF Updates
 
-## Description
+- List exact compliantflow-dhf item files changed
+- Or state explicitly: `No DHF update required`
 
-<!-- Describe what this PR does -->
+## Automated Validation
 
-## Changes
+List the commands actually run:
 
-<!-- Automated detection will populate affected_items in the CR -->
+- `.venv/bin/python -m pytest tests/ -q`
 
-- [ ] Source code changes
-- [ ] Tests added/updated
-- [ ] Documentation updated
+## Manual Testing Required
 
-## Testing
+Describe the manual testing still required, with concrete steps.
 
-<!-- Describe how you tested these changes -->
+Example:
+1. `pip install dist/*.whl`
+2. `compliantflow init` in a temp directory
+3. Verify generated `.github/workflows/` files contain expected content
 
-## Checklist
+## Remaining Risk / Follow-up
 
-<!-- Automated checks (no manual action needed):
-- CR exists and is not in stable status ✓ (GitHub Actions)
-- Tests pass ✓ (GitHub Actions)
-- Affected items auto-detected ✓ (GitHub Actions)
--->
-
-- [ ] Documentation updated
-- [ ] Manual testing completed
-
----
-
-**Note**: Always use **squash merge** when merging this PR.
+List any residual risk, known gaps, or follow-up items.
