@@ -11,8 +11,9 @@ Review this checklist after implementation and before handoff.
 
 ## 2. Direction Review
 
-- Does the final implementation still align with the two-CLI split (`compliantflow/` read-only, DHF mutations via `python -m utils`)?
-- Does it still preserve the product/DHF repo separation?
+- Does the final implementation still align with [`docs/technical_strategy.md`](../docs/technical_strategy.md)?
+- Does it still preserve the two-CLI split and product/DHF repo separation?
+- Is it still consistent with [`docs/product_strategy.md`](../docs/product_strategy.md) and the current roadmap milestone?
 - If the implementation diverged from the original plan, is that divergence justified?
 
 ## 3. DHF Review

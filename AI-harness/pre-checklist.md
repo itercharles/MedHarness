@@ -15,24 +15,28 @@ Review this checklist before implementing any user request.
 
 Expected gate by class:
 
-- `docs/process`: doc consistency check, no DHF by default, no PR by default
-- `infra/devops`: validation + rollback thinking + observability expectations
-- `bugfix`: regression test expectation, CR required
-- `feature`: branch, PR, DHF assessment, automated validation, manual test plan, CR required
-- `architecture`: branch, PR, DHF assessment, validation plan, CR required
+| Class | Gate | DHF impact |
+|---|---|---|
+| `docs/process` | Doc consistency check | None expected — state explicitly if so |
+| `infra/devops` | Validation + rollback plan | `SOUP` if new dependency; otherwise none |
+| `bugfix` | Regression test, CR required | `TC` if test added/updated; `SRS`/`SYS` if documented behavior corrected; `RISK`/`RCM` if safety-relevant |
+| `feature` | Branch, PR, CR required | `UC`/`CRS` (user-facing); `SYS`/`SRS` (system/software behavior); `SWDD` (design detail); `TC` (tests); `RISK`/`RCM` (risk posture); `SOUP` (new library) |
+| `architecture` | Branch, PR, CR required | `SYSARCH` (always); `SYS`/`SRS` if requirements change; `SWDD`; `RISK`/`RCM` if risk posture changes; `SOUP` if new dependency |
 
 ## 2. Product Direction Check
 
-- Is the request consistent with the product mission stated in `AI-harness/context.md`?
-- Does it strengthen CompliantFlow's core value (compliance gate, DHF template, AI harness) or is it pulling in scope that doesn't fit?
+- Is the request consistent with [`docs/product_strategy.md`](../docs/product_strategy.md)?
+- Is it aligned with the current milestone in [`docs/product_roadmap.md`](../docs/product_roadmap.md)?
+- Does it strengthen CompliantFlow's core value (compliance gate, DHF template, AI harness) or is it pulling in scope that doesn't fit the current phase?
 - Should the request be narrowed because it conflicts with current focus?
 
 If the request conflicts with product direction, state the conflict before implementation.
 
 ## 3. Technical Direction Check
 
-- Is the request consistent with the two-CLI split (`compliantflow/` read-only; DHF mutations via `python -m utils`)?
-- Does it preserve the separation between the product repo and the DHF repo?
+- Is the request consistent with [`docs/technical_strategy.md`](../docs/technical_strategy.md)?
+- Does it preserve the two-CLI split (`compliantflow/` read-only; DHF mutations via `python -m utils`)?
+- Does it preserve the product/DHF repo separation?
 - Does it add infrastructure or abstractions that will be hard to validate or maintain?
 - Does it introduce assumptions about local paths, user environment, or external services?
 
@@ -40,11 +44,13 @@ If the request conflicts with technical direction, state the conflict before imp
 
 ## 4. DHF Impact Check
 
-- Will this request modify product behavior, requirements, architecture decisions, risk posture, or verification expectations?
-- If yes, which **specific DHF item types** are likely to change? (`UC`, `CRS`, `SYS`, `SRS`, `SWDD`, `SYSARCH`, `TC`, `RISK`, `RCM`, `SOUP`)
-- If no, record that this is tooling/docs-only and explain why DHF impact is not expected.
+Use the table in section 1 to determine expected DHF item types for the change class. Then confirm:
 
-Before implementation, list candidate DHF item files explicitly when DHF updates are expected.
+- Will this request modify product behavior, requirements, architecture decisions, risk posture, or verification expectations?
+- If yes, which **specific DHF item files** in `compliantflow-dhf/DHF/items/` are affected?
+- If no, state explicitly that this is tooling/docs-only and explain why DHF impact is not expected.
+
+List candidate DHF item files before writing any code.
 
 ## 5. Dependency Introduction Check
 
