@@ -417,3 +417,45 @@ class TestInitCmd:
         content = (product_dir / ".github" / "workflows" / "cr-complete.yml").read_text()
         assert "repository: acme/my-device-dhf" in content
         assert "python -m utils item transition" in content
+
+    def test_TC_SYS_027_029_init_product_template_creates_docs(self, tmp_path):
+        """
+        TC-SYS-027-029: _init_product_template creates docs/ scaffold with strategy files.
+
+        @test_id: TC-SYS-027-029
+        @links: SYS-027
+        """
+        product_dir = tmp_path / "my-product"
+        _init_product_template(product_dir, "My Device", "acme/my-device-dhf", ["IEC_62304"])
+        assert (product_dir / "docs" / "product_strategy.md").exists()
+        assert (product_dir / "docs" / "product_roadmap.md").exists()
+        assert (product_dir / "docs" / "technical_strategy.md").exists()
+        assert (product_dir / "docs" / "testing_strategy.md").exists()
+        assert (product_dir / "docs" / "adr" / "ADR-000-template.md").exists()
+
+    def test_TC_SYS_027_030_docs_scaffold_substitutes_project_name(self, tmp_path):
+        """
+        TC-SYS-027-030: Strategy docs scaffold substitutes {{project_name}} throughout.
+
+        @test_id: TC-SYS-027-030
+        @links: SYS-027
+        """
+        product_dir = tmp_path / "my-product"
+        _init_product_template(product_dir, "Cardiac Monitor", "acme/dhf", ["IEC_62304"])
+        for doc in ["product_strategy.md", "product_roadmap.md", "technical_strategy.md", "testing_strategy.md"]:
+            content = (product_dir / "docs" / doc).read_text()
+            assert "Cardiac Monitor" in content, f"{{{{project_name}}}} not substituted in {doc}"
+            assert "{{project_name}}" not in content, f"Unsubstituted placeholder in {doc}"
+
+    def test_TC_SYS_027_031_docs_scaffold_substitutes_dhf_repo(self, tmp_path):
+        """
+        TC-SYS-027-031: technical_strategy.md substitutes {{dhf_repo}} with actual DHF repo.
+
+        @test_id: TC-SYS-027-031
+        @links: SYS-027
+        """
+        product_dir = tmp_path / "my-product"
+        _init_product_template(product_dir, "Device", "acme/device-dhf", ["IEC_62304"])
+        content = (product_dir / "docs" / "technical_strategy.md").read_text()
+        assert "acme/device-dhf" in content
+        assert "{{dhf_repo}}" not in content

@@ -112,22 +112,24 @@ def _init_product_template(
     dhf_repo: Optional[str],
     standards: list[str],
 ) -> None:
-    """Write AI-harness to product_dir. No git operations — caller reviews and pushes."""
+    """Write AI-harness and docs/ scaffolding to product_dir. No git operations — caller reviews and pushes."""
+    dhf_repo_value = dhf_repo or "your-org/your-product-dhf"
+    standards_value = ", ".join(STANDARD_LABELS.get(s, s) for s in standards)
+    replacements = {
+        "{{project_name}}": project_name,
+        "{{dhf_repo}}": dhf_repo_value,
+        "{{standards}}": standards_value,
+    }
+
     ai_harness_src = PRODUCT_TEMPLATE_DIR / "AI-harness"
     ai_harness_dst = product_dir / "AI-harness"
     shutil.copytree(ai_harness_src, ai_harness_dst, dirs_exist_ok=True)
+    _replace_placeholders_in_tree(ai_harness_dst, replacements)
 
-    dhf_repo_value = dhf_repo or "your-org/your-product-dhf"
-    standards_value = ", ".join(STANDARD_LABELS.get(s, s) for s in standards)
-
-    _replace_placeholders_in_tree(
-        ai_harness_dst,
-        {
-            "{{project_name}}": project_name,
-            "{{dhf_repo}}": dhf_repo_value,
-            "{{standards}}": standards_value,
-        },
-    )
+    docs_src = PRODUCT_TEMPLATE_DIR / "docs"
+    docs_dst = product_dir / "docs"
+    shutil.copytree(docs_src, docs_dst, dirs_exist_ok=True)
+    _replace_placeholders_in_tree(docs_dst, replacements)
 
 
 def _write_compliance_yml(
@@ -546,3 +548,10 @@ def run_init() -> None:
         click.echo(f"       GEMINI_API_KEY       — your Gemini API key")
     elif llm_provider == "ollama":
         click.echo(f"       COMPLIANTFLOW_OLLAMA_URL — your Ollama base URL")
+    n += 1
+    click.secho(f"  {n}. Fill in your strategy documents:", bold=True)
+    click.echo(f"       {product_dir}/docs/product_strategy.md   — mission, objectives, target customer")
+    click.echo(f"       {product_dir}/docs/product_roadmap.md    — milestone grouping and exit criteria")
+    click.echo(f"       {product_dir}/docs/technical_strategy.md — architectural principles and guardrails")
+    click.echo(f"       {product_dir}/docs/testing_strategy.md   — test layers and DHF traceability conventions")
+    click.echo(f"       These are used by the AI agent for direction checks on every task.")
