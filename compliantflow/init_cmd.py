@@ -171,7 +171,7 @@ jobs:
         env:
           PR_TITLE: ${{{{ github.event.pull_request.title }}}}
         run: |
-          CR_ID=$(printf '%s\n' "$PR_TITLE" | grep -oE 'CR-[0-9]+' | head -n 1 || true)
+          CR_ID=$(echo "$PR_TITLE" | grep -oE 'CR-[0-9]+' | head -n 1 || true)
           if [ -z "$CR_ID" ]; then
             echo "No CR ID found in PR title; skipping."
             echo "skip=true" >> "$GITHUB_OUTPUT"
