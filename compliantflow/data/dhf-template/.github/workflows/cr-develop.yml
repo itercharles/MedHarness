@@ -53,16 +53,14 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.PRODUCT_REPO_TOKEN }}
         run: |
-          gh repo clone {{product_repo}} "../{{product_repo_name}}"
+          gh repo clone itercharles/CompliantFlow "../CompliantFlow"
 
       - uses: actions/setup-node@v4
-        if: steps.cr.outputs.skip != 'true'
-        with:
+        if: steps.cr.outputs.skip != 'true'        with:
           node-version: '20'
 
       - name: Install Claude Code
-        if: steps.cr.outputs.skip != 'true'
-        run: npm install -g @anthropic-ai/claude-code
+        if: steps.cr.outputs.skip != 'true'        run: npm install -g @anthropic-ai/claude-code
 
       - name: Implement approved spec
         if: steps.cr.outputs.skip != 'true'
@@ -136,6 +134,10 @@ EOF
           CR_ID: ${{ steps.cr.outputs.cr_id }}
         working-directory: ../CompliantFlow
         run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "PRODUCT_REPO_TOKEN not set — skipping product repo PR."
+            exit 0
+          fi
           git checkout -b "feat/$CR_ID"
           git config user.name "GitHub Actions [bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
