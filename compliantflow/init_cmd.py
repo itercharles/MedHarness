@@ -17,6 +17,7 @@ import click
 
 TEMPLATE_DIR = Path(__file__).parent / "data" / "dhf-template"
 PRODUCT_TEMPLATE_DIR = Path(__file__).parent / "data" / "product-template"
+HARNESS_DIR = Path(__file__).parent.parent / "AI-harness"
 
 # Map standard IDs to governance filenames (all present in template)
 GOVERNANCE_FILES = {
@@ -121,7 +122,7 @@ def _init_product_template(
         "{{standards}}": standards_value,
     }
 
-    ai_harness_src = PRODUCT_TEMPLATE_DIR / "AI-harness"
+    ai_harness_src = HARNESS_DIR
     ai_harness_dst = product_dir / "AI-harness"
     shutil.copytree(ai_harness_src, ai_harness_dst, dirs_exist_ok=True)
     _replace_placeholders_in_tree(ai_harness_dst, replacements)
