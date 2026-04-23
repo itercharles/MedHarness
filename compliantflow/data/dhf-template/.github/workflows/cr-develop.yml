@@ -56,11 +56,13 @@ jobs:
           gh repo clone {{product_repo}} "../{{product_repo_name}}"
 
       - uses: actions/setup-node@v4
-        if: steps.cr.outputs.skip != 'true'        with:
+        if: steps.cr.outputs.skip != 'true'
+        with:
           node-version: '20'
 
       - name: Install Claude Code
-        if: steps.cr.outputs.skip != 'true'        run: npm install -g @anthropic-ai/claude-code
+        if: steps.cr.outputs.skip != 'true'
+        run: npm install -g @anthropic-ai/claude-code
 
       - name: Implement approved spec
         if: steps.cr.outputs.skip != 'true'

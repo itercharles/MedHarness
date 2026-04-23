@@ -61,11 +61,13 @@ jobs:
           python -m utils item transition "${{ steps.crs.outputs.cr_id }}" analyzing --by "github-actions[bot]"
 
       - uses: actions/setup-node@v4
-        if: steps.crs.outputs.skip != 'true'        with:
+        if: steps.crs.outputs.skip != 'true'
+        with:
           node-version: '20'
 
       - name: Install Claude Code
-        if: steps.crs.outputs.skip != 'true'        run: npm install -g @anthropic-ai/claude-code
+        if: steps.crs.outputs.skip != 'true'
+        run: npm install -g @anthropic-ai/claude-code
 
       - name: Generate CR spec
         if: steps.crs.outputs.skip != 'true'
