@@ -53,7 +53,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.PRODUCT_REPO_TOKEN }}
         run: |
-          gh repo clone itercharles/CompliantFlow "../CompliantFlow"
+          gh repo clone {{product_repo}} "../{{product_repo_name}}"
 
       - uses: actions/setup-node@v4
         if: steps.cr.outputs.skip != 'true'        with:
@@ -89,7 +89,7 @@ status: draft
 EOF
 
             # Stub code change in product repo
-            STUB_CODE="../CompliantFlow/stub-${CR_ID}.md"
+            STUB_CODE="../{{product_repo_name}}/stub-${CR_ID}.md"
             cat > "$STUB_CODE" <<EOF
 # Stub implementation for $CR_ID
 
@@ -132,7 +132,7 @@ EOF
         env:
           GH_TOKEN: ${{ secrets.PRODUCT_REPO_TOKEN }}
           CR_ID: ${{ steps.cr.outputs.cr_id }}
-        working-directory: ../CompliantFlow
+        working-directory: ../{{product_repo_name}}
         run: |
           if [ -z "$GH_TOKEN" ]; then
             echo "PRODUCT_REPO_TOKEN not set — skipping product repo PR."
