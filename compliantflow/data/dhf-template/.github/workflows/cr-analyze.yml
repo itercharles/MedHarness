@@ -82,43 +82,9 @@ jobs:
             claude -p --dangerously-skip-permissions "$PROMPT"
           else
             echo "ANTHROPIC_API_KEY not set — writing stub spec for pipeline testing."
-            CR_TITLE=$(python3 -c "
-import yaml, sys
-with open('DHF/items/${CR_ID}.yaml') as f:
-    d = yaml.safe_load(f)
-print(d.get('title', 'No title'))
-")
-            cat > "$SPEC" <<EOF
-# ${CR_ID} Plan Spec (stub)
-
-> **Note:** This is a placeholder spec generated because \`ANTHROPIC_API_KEY\` is not
-> configured. Replace this content with a real spec before approving.
-
-## Change Request
-
-**ID:** ${CR_ID}
-**Title:** ${CR_TITLE}
-
-## Technical Approach
-
-_To be filled in._
-
-## DHF Items to Create or Update
-
-_To be filled in._
-
-## Product Code Changes
-
-_To be filled in._
-
-## Verification and Test Cases
-
-_To be filled in._
-
-## Compliance and Traceability
-
-_To be filled in._
-EOF
+            CR_TITLE=$(python3 -c "import yaml; d=yaml.safe_load(open('DHF/items/${CR_ID}.yaml')); print(d.get('title','No title'))")
+            printf '# %s Plan Spec (stub)\n\n> **Note:** Stub spec — no ANTHROPIC_API_KEY. Replace before approving.\n\n## Change Request\n\n**ID:** %s\n**Title:** %s\n\n## Technical Approach\n\n_To be filled in._\n\n## DHF Items to Create or Update\n\n_To be filled in._\n\n## Product Code Changes\n\n_To be filled in._\n\n## Verification and Test Cases\n\n_To be filled in._\n\n## Compliance and Traceability\n\n_To be filled in._\n' \
+              "$CR_ID" "$CR_ID" "$CR_TITLE" > "$SPEC"
           fi
 
       - name: Commit spec branch
