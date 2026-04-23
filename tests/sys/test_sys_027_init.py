@@ -18,6 +18,7 @@ import pytest
 
 from compliantflow.init_cmd import (
     GOVERNANCE_FILES,
+    HARNESS_DIR,
     PRODUCT_TEMPLATE_DIR,
     STANDARD_LABELS,
     TEMPLATE_DIR,
@@ -295,8 +296,9 @@ class TestInitCmd:
         @links: SYS-027
         """
         assert PRODUCT_TEMPLATE_DIR.exists(), f"Product template directory not found: {PRODUCT_TEMPLATE_DIR}"
-        assert (PRODUCT_TEMPLATE_DIR / "AI-harness" / "context.md").exists()
-        assert (PRODUCT_TEMPLATE_DIR / "AI-harness" / "CLAUDE.md").exists()
+        assert HARNESS_DIR.exists(), f"Root AI-harness not found: {HARNESS_DIR}"
+        assert (HARNESS_DIR / "context.md").exists()
+        assert (HARNESS_DIR / "CLAUDE.md").exists()
 
     def test_TC_SYS_027_020_init_product_template_creates_context(self, tmp_path):
         """
@@ -311,29 +313,30 @@ class TestInitCmd:
 
     def test_TC_SYS_027_021_init_product_template_substitutes_project_name(self, tmp_path):
         """
-        TC-SYS-027-021: _init_product_template substitutes {{project_name}} in context.md.
+        TC-SYS-027-021: _init_product_template copies context.md from root AI-harness.
+        Root harness has no placeholders — file is copied as-is.
 
         @test_id: TC-SYS-027-021
         @links: SYS-027
         """
         product_dir = tmp_path / "my-product"
         _init_product_template(product_dir, "Insulin Pump Firmware", "acme/dhf", ["IEC_62304"])
-        content = (product_dir / "AI-harness" / "context.md").read_text()
-        assert "Insulin Pump Firmware" in content
-        assert "{{project_name}}" not in content
+        assert (product_dir / "AI-harness" / "context.md").exists()
 
     def test_TC_SYS_027_022_init_product_template_substitutes_dhf_repo(self, tmp_path):
         """
-        TC-SYS-027-022: _init_product_template substitutes {{dhf_repo}} in context.md.
+        TC-SYS-027-022: _init_product_template copies docs/ with {{dhf_repo}} substituted.
+        Root AI-harness has no placeholders; substitution applies to docs/ scaffold.
 
         @test_id: TC-SYS-027-022
         @links: SYS-027
         """
         product_dir = tmp_path / "my-product"
         _init_product_template(product_dir, "Device", "acme/my-device-dhf", ["IEC_62304"])
-        content = (product_dir / "AI-harness" / "context.md").read_text()
-        assert "acme/my-device-dhf" in content
-        assert "{{dhf_repo}}" not in content
+        # docs/ scaffold (from product-template) has placeholders — verify substitution there
+        tech_strategy = (product_dir / "docs" / "technical_strategy.md").read_text()
+        assert "acme/my-device-dhf" in tech_strategy
+        assert "{{dhf_repo}}" not in tech_strategy
 
     def test_TC_SYS_027_023_init_product_template_creates_adapter_files(self, tmp_path):
         """
@@ -364,15 +367,16 @@ class TestInitCmd:
     def test_TC_SYS_027_025_init_product_template_no_dhf_fallback(self, tmp_path):
         """
         TC-SYS-027-025: _init_product_template uses fallback text when dhf_repo is None.
+        Fallback substitution applies to docs/ scaffold (not root harness, which has no placeholders).
 
         @test_id: TC-SYS-027-025
         @links: SYS-027
         """
         product_dir = tmp_path / "my-product"
         _init_product_template(product_dir, "Device", None, ["IEC_62304"])
-        content = (product_dir / "AI-harness" / "context.md").read_text()
-        assert "your-org/your-product-dhf" in content
-        assert "{{dhf_repo}}" not in content
+        tech_strategy = (product_dir / "docs" / "technical_strategy.md").read_text()
+        assert "your-org/your-product-dhf" in tech_strategy
+        assert "{{dhf_repo}}" not in tech_strategy
 
     def test_TC_SYS_027_026_init_dhf_template_substitutes_product_repo(self, tmp_path):
         """
