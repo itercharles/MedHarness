@@ -2,6 +2,27 @@ project_name: "My Medical Device Software"
 
 global_lifecycle:
   states:
+  - id: new
+    label: New
+    action_label: Submit
+    icon: 🆕
+    color: info
+  - id: analyzing
+    label: Analyzing
+    action_label: Start Analysis
+    icon: 🔍
+    color: info
+  - id: developing
+    label: Developing
+    action_label: Start Development
+    icon: 🔧
+    color: warning
+  - id: rejected
+    label: Rejected
+    action_label: Reject
+    icon: ❌
+    color: danger
+    is_stable: true
   - id: draft
     label: Draft
     action_label: Create
