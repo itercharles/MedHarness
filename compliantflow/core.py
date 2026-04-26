@@ -5,6 +5,7 @@ through this class. Accepts any DHFAdapter implementation.
 """
 
 import networkx as nx
+import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import List, Optional, Dict, Any
 
@@ -66,6 +67,52 @@ class CompliantFlowCore:
             ) and cfg.has_verification
         }
         self._inject_verification_status(verifiable_ids)
+
+    def inject_junit_results(self, junit_paths: List[Path]) -> None:
+        """Inject verification status from JUnit XML files without storing to DHF.
+
+        Reads ``compliantflow.links`` properties directly from each testcase.
+        TC IDs are not required. Results are held in-memory only.
+        """
+        # Build item_id → [statuses] from all provided JUnit files
+        item_statuses: Dict[str, List[str]] = {}
+        for path in junit_paths:
+            tree = ET.parse(path)
+            for testcase in tree.getroot().iter("testcase"):
+                if testcase.find("skipped") is not None:
+                    continue
+                status = "FAIL" if (
+                    testcase.find("failure") is not None
+                    or testcase.find("error") is not None
+                ) else "PASS"
+                props_el = testcase.find("properties")
+                if props_el is None:
+                    continue
+                for prop in props_el.findall("property"):
+                    if prop.get("name") == "compliantflow.links":
+                        for item_id in prop.get("value", "").split(","):
+                            item_id = item_id.strip()
+                            if item_id:
+                                item_statuses.setdefault(item_id, []).append(status)
+
+        verifiable_ids = {
+            node_id
+            for node_id in self.graph.graph.nodes
+            if self.config and (
+                cfg := self.config.get_type_by_prefix(node_id.split("-")[0] + "-")
+            ) and cfg.has_verification
+        }
+        for item_id in verifiable_ids:
+            if not self.graph.graph.has_node(item_id):
+                continue
+            statuses = item_statuses.get(item_id, [])
+            if not statuses:
+                vs = "not_verified"
+            elif "FAIL" in statuses:
+                vs = "failed"
+            else:
+                vs = "verified"
+            self.graph.graph.nodes[item_id]["item"]["verification_status"] = vs
 
     def _inject_verification_status(self, item_ids: set) -> None:
         all_results = self._adapter.get_all_test_results()

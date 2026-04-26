@@ -643,8 +643,11 @@ def report() -> None:
 @click.argument("doc_types", nargs=-1, required=True, metavar="DOC_TYPE...")
 @click.option("--output", "-o", default="traceability_report.pdf", show_default=True,
               help="Output PDF file path.")
+@click.option("--junit", "junit_paths", multiple=True, type=click.Path(exists=True),
+              help="JUnit XML file(s) for test status (in-memory only, not stored in DHF).")
 @click.pass_context
-def report_traceability(ctx: click.Context, doc_types: tuple, output: str) -> None:
+def report_traceability(ctx: click.Context, doc_types: tuple, output: str,
+                        junit_paths: tuple) -> None:
     """Generate a traceability matrix PDF.
 
     \b
@@ -655,6 +658,10 @@ def report_traceability(ctx: click.Context, doc_types: tuple, output: str) -> No
     from compliantflow.report_generator import generate_traceability_pdf
     dhf_path: Path = ctx.obj["dhf"]
     core = _make_core(ctx)
+
+    if junit_paths:
+        core.inject_junit_results([Path(p) for p in junit_paths])
+
     matrix = core.build_traceability_matrix(list(doc_types))
 
     # Enrich each row with verification_status from the items it contains
