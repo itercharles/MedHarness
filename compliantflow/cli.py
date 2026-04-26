@@ -664,25 +664,26 @@ def report_traceability(ctx: click.Context, doc_types: tuple, output: str,
 
     matrix = core.build_traceability_matrix(list(doc_types))
 
-    # Enrich each row with verification_status from the items it contains
+    # Enrich each row with verification_status.
+    # Use the last (most-derived) column that has has_verification=True,
+    # which is typically SRS. Higher-level items (CRS, SYS) may have their
+    # own verification paths and are excluded from row-level status.
     columns: list[str] = matrix["columns"]
     for row in matrix["rows"]:
-        statuses = []
-        for col in columns:
+        vs = None
+        for col in reversed(columns):
             item_id = row.get(col)
-            if item_id:
-                item = core.get_item(item_id)
-                vs = item.get("verification_status") if item else None
-                if vs:
-                    statuses.append(vs)
-        # Summarise: any failure → failed; all verified → verified; else not_verified
-        if "failed" in statuses:
-            row["verification_status"] = "failed"
-        elif statuses and all(s == "verified" for s in statuses):
-            row["verification_status"] = "verified"
-        elif statuses:
-            row["verification_status"] = "not_verified"
-        # else leave absent (no items with verification in this row)
+            if not item_id:
+                continue
+            prefix = item_id.split("-")[0] + "-"
+            cfg = core.config.get_type_by_prefix(prefix) if core.config else None
+            if not cfg or not cfg.has_verification:
+                continue
+            item = core.get_item(item_id)
+            vs = item.get("verification_status") if item else None
+            break  # use the most-derived verifiable item only
+        if vs:
+            row["verification_status"] = vs
 
     # Attach test results summary
     matrix["test_results"] = core.get_all_test_results()
