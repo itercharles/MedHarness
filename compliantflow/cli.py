@@ -664,10 +664,9 @@ def report_traceability(ctx: click.Context, doc_types: tuple, output: str,
 
     matrix = core.build_traceability_matrix(list(doc_types))
 
-    # Enrich each row with verification_status.
-    # Use the last (most-derived) column that has has_verification=True,
-    # which is typically SRS. Higher-level items (CRS, SYS) may have their
-    # own verification paths and are excluded from row-level status.
+    # Enrich each row with verification_status from the most-derived
+    # verifiable column (typically SRS). Higher-level items (CRS, SYS)
+    # carry their own verification_status set by inject_junit_results.
     columns: list[str] = matrix["columns"]
     for row in matrix["rows"]:
         vs = None
@@ -685,7 +684,38 @@ def report_traceability(ctx: click.Context, doc_types: tuple, output: str,
         if vs:
             row["verification_status"] = vs
 
-    # Attach test results summary
+    # Build per-level test coverage: {prefix → [{id, title, status, tests}]}
+    # Collect every verifiable item that has test_cases set (from JUnit injection).
+    coverage: dict[str, list[dict]] = {}
+    seen_ids: set[str] = set()
+    for col in columns:
+        for row in matrix["rows"]:
+            item_id = row.get(col)
+            if not item_id or item_id in seen_ids:
+                continue
+            seen_ids.add(item_id)
+            prefix = item_id.split("-")[0] + "-"
+            cfg = core.config.get_type_by_prefix(prefix) if core.config else None
+            if not cfg or not cfg.has_verification:
+                continue
+            item = core.get_item(item_id)
+            if not item:
+                continue
+            test_cases = item.get("test_cases") or []
+            coverage.setdefault(item_id.split("-")[0], []).append({
+                "id": item_id,
+                "title": item.get("title", ""),
+                "status": item.get("verification_status", "not_verified"),
+                "tests": test_cases,
+            })
+
+    # Sort each level by ID
+    for level in coverage:
+        coverage[level].sort(key=lambda x: x["id"])
+
+    matrix["coverage"] = coverage
+
+    # Attach test results summary (DHF-stored TCs, may be empty when using JUnit-only)
     matrix["test_results"] = core.get_all_test_results()
 
     out = Path(output)

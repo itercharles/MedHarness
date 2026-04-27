@@ -6,6 +6,11 @@ import datetime
 from pathlib import Path
 from typing import Dict, Any, List
 
+
+def escapeXml(s: str) -> str:
+    return (s.replace("&", "&amp;").replace("<", "&lt;")
+             .replace(">", "&gt;").replace('"', "&quot;").replace("'", "&#39;"))
+
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
@@ -55,10 +60,21 @@ _CSS = """
 _TIMESTAMP = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
 
 
+def _vs_badge(vs: str) -> str:
+    if vs == "verified":
+        return '<span class="pass">VERIFIED</span>'
+    if vs == "failed":
+        return '<span class="fail">FAILED</span>'
+    if vs == "not_verified":
+        return '<span class="warn">NOT VERIFIED</span>'
+    return '<span style="color:#999">—</span>'
+
+
 def _traceability_html(matrix: Dict[str, Any]) -> str:
     columns: List[str] = matrix["columns"]
     rows: List[Dict] = matrix["rows"]
     test_results: Dict[str, Any] = matrix.get("test_results") or {}
+    coverage: Dict[str, List[Dict]] = matrix.get("coverage") or {}
 
     total    = len(rows)
     complete = sum(1 for r in rows if r.get("is_complete"))
@@ -67,6 +83,13 @@ def _traceability_html(matrix: Dict[str, Any]) -> str:
     tc_total = len(test_results)
     tc_pass  = sum(1 for v in test_results.values() if v.get("status") == "PASS")
     tc_fail  = sum(1 for v in test_results.values() if v.get("status") == "FAIL")
+
+    # Count verified items across all coverage levels
+    cov_verified = sum(
+        1 for items in coverage.values() for item in items
+        if item.get("status") == "verified"
+    )
+    cov_total = sum(len(items) for items in coverage.values())
 
     col_headers = "".join(f"<th>{c}</th>" for c in columns)
     col_headers += "<th>Traceability</th><th>Test Status</th>"
@@ -84,21 +107,56 @@ def _traceability_html(matrix: Dict[str, Any]) -> str:
             trace_status = '<span class="pass">COMPLETE</span>'
 
         vs = r.get("verification_status")
-        if vs == "verified":
-            test_status = '<span class="pass">VERIFIED</span>'
-        elif vs == "failed":
-            test_status = '<span class="fail">FAILED</span>'
+        if vs == "failed":
             css = css or "incomplete"
-        elif vs == "not_verified":
-            test_status = '<span class="warn">NOT VERIFIED</span>'
-        else:
-            test_status = '<span style="color:#999">—</span>'
+        test_status = _vs_badge(vs or "")
 
         cells = "".join(f"<td>{r.get(c) or '—'}</td>" for c in columns)
         cells += f"<td>{trace_status}</td><td>{test_status}</td>"
         body_rows.append(f'<tr class="{css}">{cells}</tr>')
 
-    # Test results detail section
+    # Per-level test coverage sections
+    coverage_sections = ""
+    level_labels = {"SRS": "Software Requirements (SRS)", "SYS": "System Requirements (SYS)",
+                    "CRS": "Clinical Requirements (CRS)", "UC": "Use Cases (UC)"}
+    for level, items in coverage.items():
+        if not items:
+            continue
+        lv = sum(1 for i in items if i.get("status") == "verified")
+        lf = sum(1 for i in items if i.get("status") == "failed")
+        label = level_labels.get(level, level)
+        cov_rows = []
+        for item in items:
+            item_id  = item["id"]
+            title    = escapeXml(item.get("title", ""))
+            vs_badge = _vs_badge(item.get("status", ""))
+            tests    = item.get("tests") or []
+            if tests:
+                test_list = "<ul style='margin:0;padding-left:14px'>" + "".join(
+                    f"<li style='color:{'#1a7a3c' if t['status']=='PASS' else '#b91c1c'}'>"
+                    f"{escapeXml(t['name'])}</li>"
+                    for t in tests
+                ) + "</ul>"
+            else:
+                test_list = '<span style="color:#999">No tests</span>'
+            row_css = "" if item.get("status") == "verified" else "incomplete"
+            cov_rows.append(
+                f"<tr class='{row_css}'>"
+                f"<td style='white-space:nowrap;width:8%'>{item_id}</td>"
+                f"<td style='width:28%'>{title}</td>"
+                f"<td style='white-space:nowrap;width:10%'>{vs_badge}</td>"
+                f"<td>{test_list}</td></tr>"
+            )
+        coverage_sections += f"""
+<h2>{label} — Test Coverage ({lv} verified / {lf} failed / {len(items)} total)</h2>
+<table>
+  <thead><tr>
+    <th>ID</th><th>Requirement</th><th>Status</th><th>Tests</th>
+  </tr></thead>
+  <tbody>{''.join(cov_rows)}</tbody>
+</table>"""
+
+    # DHF-stored test results detail section (may be empty when using JUnit-only flow)
     tc_rows = []
     for tc_id, rec in sorted(test_results.items()):
         status = rec.get("status", "")
@@ -127,6 +185,11 @@ def _traceability_html(matrix: Dict[str, Any]) -> str:
   <tbody>{''.join(tc_rows)}</tbody>
 </table>"""
 
+    cov_summary = (
+        f'&nbsp;&nbsp; <b style="color:#1a7a3c">{cov_verified}/{cov_total}</b> req. verified'
+        if cov_total else ""
+    )
+
     return f"""<!DOCTYPE html><html><head><meta charset="utf-8">
 <style>{_CSS}</style></head><body>
 <h1>Traceability Report</h1>
@@ -134,14 +197,13 @@ def _traceability_html(matrix: Dict[str, Any]) -> str:
 <div class="summary">
   <b>{complete}/{total}</b> complete &nbsp;&nbsp;
   <b style="color:#b91c1c">{orphans}</b> orphan(s) &nbsp;&nbsp;
-  <b style="color:#1a7a3c">{verified}</b> verified &nbsp;&nbsp;
-  Tests: <b style="color:#1a7a3c">{tc_pass}</b> pass
-         <b style="color:#b91c1c"> / {tc_fail}</b> fail
-         of <b>{tc_total}</b>
+  <b style="color:#1a7a3c">{verified}</b> matrix rows verified
+  {cov_summary}
 </div>
 <h2>Traceability Matrix</h2>
 <table><thead><tr>{col_headers}</tr></thead>
 <tbody>{''.join(body_rows)}</tbody></table>
+{coverage_sections}
 {tc_section}
 </body></html>"""
 

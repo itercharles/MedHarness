@@ -74,8 +74,9 @@ class CompliantFlowCore:
         Reads ``compliantflow.links`` properties directly from each testcase.
         TC IDs are not required. Results are held in-memory only.
         """
-        # Build item_id → [statuses] from all provided JUnit files
+        # Build item_id → [(test_name, status)] from all provided JUnit files
         item_statuses: Dict[str, List[str]] = {}
+        item_tests: Dict[str, List[Dict[str, str]]] = {}
         for path in junit_paths:
             tree = ET.parse(path)
             for testcase in tree.getroot().iter("testcase"):
@@ -85,6 +86,10 @@ class CompliantFlowCore:
                     testcase.find("failure") is not None
                     or testcase.find("error") is not None
                 ) else "PASS"
+                # Build a human-readable label: "suite › test name"
+                tc_name = testcase.get("name", "")
+                tc_class = testcase.get("classname", "")
+                label = f"{tc_class} › {tc_name}" if tc_class else tc_name
                 props_el = testcase.find("properties")
                 if props_el is None:
                     continue
@@ -94,6 +99,9 @@ class CompliantFlowCore:
                             item_id = item_id.strip()
                             if item_id:
                                 item_statuses.setdefault(item_id, []).append(status)
+                                item_tests.setdefault(item_id, []).append(
+                                    {"name": label, "status": status}
+                                )
 
         verifiable_ids = {
             node_id
@@ -112,7 +120,9 @@ class CompliantFlowCore:
                 vs = "failed"
             else:
                 vs = "verified"
-            self.graph.graph.nodes[item_id]["item"]["verification_status"] = vs
+            node_item = self.graph.graph.nodes[item_id]["item"]
+            node_item["verification_status"] = vs
+            node_item["test_cases"] = item_tests.get(item_id, [])
 
     def _inject_verification_status(self, item_ids: set) -> None:
         all_results = self._adapter.get_all_test_results()
