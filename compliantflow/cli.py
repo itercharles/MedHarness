@@ -664,13 +664,12 @@ def report_traceability(ctx: click.Context, doc_types: tuple, output: str,
 
     matrix = core.build_traceability_matrix(list(doc_types))
 
-    # Enrich each row with verification_status from the most-derived
-    # verifiable column (typically SRS). Higher-level items (CRS, SYS)
-    # carry their own verification_status set by inject_junit_results.
+    # Enrich each row with per-level verification statuses.
+    # row["level_statuses"] = {col: status} for every verifiable column in the row.
     columns: list[str] = matrix["columns"]
     for row in matrix["rows"]:
-        vs = None
-        for col in reversed(columns):
+        level_statuses: dict[str, str] = {}
+        for col in columns:
             item_id = row.get(col)
             if not item_id:
                 continue
@@ -680,9 +679,14 @@ def report_traceability(ctx: click.Context, doc_types: tuple, output: str,
                 continue
             item = core.get_item(item_id)
             vs = item.get("verification_status") if item else None
-            break  # use the most-derived verifiable item only
-        if vs:
-            row["verification_status"] = vs
+            if vs:
+                level_statuses[col] = vs
+        row["level_statuses"] = level_statuses
+        # Keep a single verification_status for backward-compat (most-derived)
+        for col in reversed(columns):
+            if col in level_statuses:
+                row["verification_status"] = level_statuses[col]
+                break
 
     # Build per-level test coverage: {prefix → [{id, title, status, tests}]}
     # Collect every verifiable item that has test_cases set (from JUnit injection).

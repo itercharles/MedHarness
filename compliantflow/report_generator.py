@@ -92,7 +92,7 @@ def _traceability_html(matrix: Dict[str, Any]) -> str:
     cov_total = sum(len(items) for items in coverage.values())
 
     col_headers = "".join(f"<th>{c}</th>" for c in columns)
-    col_headers += "<th>Traceability</th><th>Test Status</th>"
+    col_headers += "<th>Traceability</th><th>Test Coverage</th>"
 
     body_rows = []
     for r in rows:
@@ -106,10 +106,27 @@ def _traceability_html(matrix: Dict[str, Any]) -> str:
             css = ""
             trace_status = '<span class="pass">COMPLETE</span>'
 
-        vs = r.get("verification_status")
-        if vs == "failed":
-            css = css or "incomplete"
-        test_status = _vs_badge(vs or "")
+        # Per-level badges: "SRS ✓  SYS ✓  CRS ✓"
+        level_statuses: Dict[str, str] = r.get("level_statuses") or {}
+        if level_statuses:
+            badge_parts = []
+            any_failed = False
+            for col, vs in level_statuses.items():
+                if vs == "verified":
+                    badge_parts.append(f'<span class="pass">{col} ✓</span>')
+                elif vs == "failed":
+                    badge_parts.append(f'<span class="fail">{col} ✗</span>')
+                    any_failed = True
+                else:
+                    badge_parts.append(f'<span class="warn">{col} ?</span>')
+            test_status = "&nbsp; ".join(badge_parts)
+            if any_failed:
+                css = css or "incomplete"
+        else:
+            vs = r.get("verification_status")
+            if vs == "failed":
+                css = css or "incomplete"
+            test_status = _vs_badge(vs or "")
 
         cells = "".join(f"<td>{r.get(c) or '—'}</td>" for c in columns)
         cells += f"<td>{trace_status}</td><td>{test_status}</td>"
