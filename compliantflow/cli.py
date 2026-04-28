@@ -1,7 +1,8 @@
-"""CompliantFlow CLI — read-only analysis and traceability for CI/CD pipelines.
+"""CompliantFlow CLI — analysis, traceability, and DHF automation facade.
 
-Data management (item CRUD, lifecycle transitions, schema validation,
-doc generation) is handled by the utils CLI (python -m utils).
+Local DHF providers may still be implemented by a DHF repository's utils layer;
+product repositories should call this CLI facade rather than depending on DHF
+storage paths or provider-specific commands.
 """
 
 import json
@@ -53,6 +54,39 @@ def _make_core(ctx: click.Context):
     return CompliantFlowCore(LocalDHFAdapter(dhf_path, auto_commit=False))
 
 
+def _make_adapter(ctx: click.Context):
+    """Instantiate the configured DHF adapter for facade operations."""
+    if ctx.obj.get("projects"):
+        raise click.ClickException("DHF facade commands do not support --project multi-repo mode.")
+    try:
+        from utils.local_adapter import LocalDHFAdapter
+    except ImportError:
+        raise click.ClickException(
+            "LocalDHFAdapter not found. Add your DHF system to PYTHONPATH before running the CLI."
+        )
+    return LocalDHFAdapter(ctx.obj["dhf"], auto_commit=False)
+
+
+def _parse_json_object(data: str) -> dict:
+    try:
+        parsed = json.loads(data)
+    except json.JSONDecodeError as exc:
+        raise click.BadParameter(f"expected JSON object: {exc}") from exc
+    if not isinstance(parsed, dict):
+        raise click.BadParameter("expected JSON object")
+    return parsed
+
+
+def _get_document_with_legacy_fallback(adapter, dhf_path: Path, doc_id: str) -> str | None:
+    content = adapter.get_document(doc_id)
+    if content is not None:
+        return content
+    legacy_path = dhf_path.parent / "docs" / "cr-specs" / f"{doc_id}.md"
+    if legacy_path.is_file():
+        return legacy_path.read_text(encoding="utf-8")
+    return None
+
+
 # ---------------------------------------------------------------------------
 # Root group
 # ---------------------------------------------------------------------------
@@ -92,6 +126,157 @@ def main(ctx: click.Context, dhf: str | None, projects: tuple) -> None:
             parsed[slug.strip()] = Path(path.strip())
         ctx.obj["projects"] = parsed
     ctx.obj["dhf"] = _resolve_dhf(dhf)
+
+
+# ---------------------------------------------------------------------------
+# DHF facade
+# ---------------------------------------------------------------------------
+
+@main.group("dhf")
+def dhf() -> None:
+    """DHF automation facade commands."""
+
+
+@dhf.group("item")
+def dhf_item() -> None:
+    """Read and mutate DHF items through the configured adapter."""
+
+
+@dhf_item.command("list")
+@click.option("--type", "doc_type", default=None, metavar="CODE",
+              help="Filter by document type code, e.g. CR or SRS.")
+@click.pass_context
+def dhf_item_list(ctx: click.Context, doc_type: str | None) -> None:
+    adapter = _make_adapter(ctx)
+    for item in adapter.list_items(doc_type):
+        click.echo(json.dumps(item, default=str))
+
+
+@dhf_item.command("get")
+@click.argument("item_id")
+@click.pass_context
+def dhf_item_get(ctx: click.Context, item_id: str) -> None:
+    adapter = _make_adapter(ctx)
+    item = adapter.get_item(item_id)
+    if item is None:
+        raise click.ClickException(f"Item '{item_id}' not found.")
+    click.echo(json.dumps(item, default=str))
+
+
+@dhf_item.command("create")
+@click.option("--type", "doc_type", required=True, metavar="CODE",
+              help="Document type code, e.g. CR or SRS.")
+@click.option("--data", required=True, metavar="JSON",
+              help="Item fields as a JSON object.")
+@click.option("--author", default="compliantflow", show_default=True)
+@click.option("--cr", "cr_id", default=None, metavar="CR_ID")
+@click.pass_context
+def dhf_item_create(
+    ctx: click.Context,
+    doc_type: str,
+    data: str,
+    author: str,
+    cr_id: str | None,
+) -> None:
+    adapter = _make_adapter(ctx)
+    payload = _parse_json_object(data)
+    payload["type"] = doc_type
+    try:
+        result = adapter.create_item(payload, author=author, cr_id=cr_id)
+    except TypeError:
+        result = adapter.create_item(payload, author=author)
+    click.echo(json.dumps(result, default=str))
+
+
+@dhf_item.command("update")
+@click.argument("item_id")
+@click.option("--data", required=True, metavar="JSON",
+              help="Fields to merge into the existing item.")
+@click.option("--author", default="compliantflow", show_default=True)
+@click.option("--cr", "cr_id", default=None, metavar="CR_ID")
+@click.pass_context
+def dhf_item_update(
+    ctx: click.Context,
+    item_id: str,
+    data: str,
+    author: str,
+    cr_id: str | None,
+) -> None:
+    adapter = _make_adapter(ctx)
+    payload = _parse_json_object(data)
+    try:
+        result = adapter.update_item(item_id, payload, author=author, cr_id=cr_id)
+    except TypeError:
+        result = adapter.update_item(item_id, payload, author=author)
+    if result is None:
+        raise click.ClickException(f"Item '{item_id}' not found.")
+    click.echo(json.dumps(result, default=str))
+
+
+@dhf_item.command("delete")
+@click.argument("item_id")
+@click.option("--author", default="compliantflow", show_default=True)
+@click.pass_context
+def dhf_item_delete(ctx: click.Context, item_id: str, author: str) -> None:
+    adapter = _make_adapter(ctx)
+    if not adapter.delete_item(item_id, author=author):
+        raise click.ClickException(f"Item '{item_id}' not found or could not be deleted.")
+    click.echo(json.dumps({"deleted": item_id}))
+
+
+@dhf_item.command("transition")
+@click.argument("item_id")
+@click.argument("to_state")
+@click.option("--by", "performed_by", default="compliantflow", show_default=True)
+@click.pass_context
+def dhf_item_transition(
+    ctx: click.Context,
+    item_id: str,
+    to_state: str,
+    performed_by: str,
+) -> None:
+    adapter = _make_adapter(ctx)
+    result = adapter.execute_transition(item_id, to_state, performed_by=performed_by)
+    click.echo(json.dumps(result, default=str))
+
+
+@dhf.group("context")
+def dhf_context() -> None:
+    """Generate implementation context packages for product automation."""
+
+
+@dhf_context.command("implementation")
+@click.option("--cr", "cr_id", required=True, metavar="CR_ID")
+@click.option("--out-dir", type=click.Path(file_okay=False, path_type=Path), required=True)
+@click.pass_context
+def dhf_context_implementation(ctx: click.Context, cr_id: str, out_dir: Path) -> None:
+    """Write the approved implementation context for a CR to OUT_DIR."""
+    adapter = _make_adapter(ctx)
+    dhf_path: Path = ctx.obj["dhf"]
+    cr = adapter.get_item(cr_id)
+    if cr is None:
+        raise click.ClickException(f"CR '{cr_id}' not found.")
+    spec = _get_document_with_legacy_fallback(adapter, dhf_path, f"{cr_id}-Spec") or ""
+
+    out_dir.mkdir(parents=True, exist_ok=True)
+    cr_path = out_dir / f"{cr_id}.json"
+    spec_path = out_dir / f"{cr_id}-Spec.md"
+    context_path = out_dir / "implementation-context.json"
+    cr_path.write_text(json.dumps(cr, indent=2, default=str) + "\n", encoding="utf-8")
+    spec_path.write_text(spec, encoding="utf-8")
+    context_path.write_text(
+        json.dumps(
+            {
+                "cr": str(cr_path),
+                "implementation_spec": str(spec_path),
+                "dhf_references": [cr_id, f"{cr_id}-Spec"],
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    click.echo(json.dumps({"cr": str(cr_path), "implementation_spec": str(spec_path), "context": str(context_path)}))
 
 
 # ---------------------------------------------------------------------------

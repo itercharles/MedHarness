@@ -163,6 +163,19 @@ class CompliantFlowCore:
             return None
         return dict(self.graph.graph.nodes[uid]['item'])
 
+    def get_implementation_context(self, cr_id: str) -> Dict[str, Any]:
+        """Return DHF-approved context for implementing a CR.
+
+        This is a consumption package for product repositories. It does not
+        perform impact analysis; DHF-owned analysis and audit evidence should
+        already be represented in the approved CR/spec artifacts.
+        """
+        return {
+            "cr": self._adapter.get_item(cr_id),
+            "implementation_spec": self._adapter.get_document(f"{cr_id}-Spec"),
+            "dhf_references": [cr_id, f"{cr_id}-Spec"],
+        }
+
     # ------------------------------------------------------------------
     # Traceability
     # ------------------------------------------------------------------

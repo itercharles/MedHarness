@@ -137,7 +137,11 @@ compliantflow --dhf "$DHF_DIR" status --governance-dir "$GOVERNANCE_DIR"
 
 ## Architecture
 
-**Two-CLI split.** `CompliantFlowCore` (`compliantflow/`) is read-only — analysis, traceability, compliance, reporting. DHF mutations go through `python -m utils` in compliantflow-dhf. Do not add write operations to `CompliantFlowCore`.
+**DHF automation facade.** `CompliantFlowCore` remains analysis-oriented —
+traceability, compliance, context, and reporting. The CompliantFlow CLI/SDK may
+expose DHF automation facade operations through a configured adapter/provider.
+Product repositories should call the facade for generic DHF item operations and
+implementation context packaging, not depend on DHF file paths.
 
 **Graph edge direction.** Edges in `compliantflow/graph.py` run child → parent. `descendants()` means business-upstream (toward requirements). `ancestors()` means business-downstream (toward tests). This is the opposite of the natural reading.
 

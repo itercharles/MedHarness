@@ -85,7 +85,7 @@ class StubDHFAdapter:
                 all_uids.update(val)
         return {**item, "all_linked_uids": sorted(all_uids)}
 
-    def create_item(self, data: dict, author: str = "system") -> dict:
+    def create_item(self, data: dict, author: str = "system", cr_id: Optional[str] = None) -> dict:
         if "id" in data:
             item_id = data["id"]
         elif "type" in data:
@@ -96,7 +96,13 @@ class StubDHFAdapter:
         self._items[item_id] = result
         return result
 
-    def update_item(self, uid: str, data: dict, author: Optional[str] = None) -> Optional[dict]:
+    def update_item(
+        self,
+        uid: str,
+        data: dict,
+        author: Optional[str] = None,
+        cr_id: Optional[str] = None,
+    ) -> Optional[dict]:
         if uid not in self._items:
             return None
         updated = {**self._items[uid], **data, "id": uid}
@@ -108,6 +114,21 @@ class StubDHFAdapter:
             del self._items[uid]
             return True
         return False
+
+    def execute_transition(
+        self,
+        item_id: str,
+        to_state: str,
+        performed_by: Optional[str] = None,
+    ) -> dict:
+        if item_id not in self._items:
+            raise ValueError(f"Item not found: {item_id}")
+        self._items[item_id] = {
+            **self._items[item_id],
+            "status": to_state,
+            f"{to_state}_by": performed_by,
+        }
+        return self._items[item_id]
 
     # ------------------------------------------------------------------
     # Schema / config
@@ -144,6 +165,13 @@ class StubDHFAdapter:
 
     def list_documents(self) -> List[str]:
         return list(self._documents.keys())
+
+    def get_implementation_context(self, cr_id: str) -> dict:
+        return {
+            "cr": self.get_item(cr_id),
+            "implementation_spec": self.get_document(f"{cr_id}-Spec"),
+            "dhf_references": [cr_id, f"{cr_id}-Spec"],
+        }
 
     # ------------------------------------------------------------------
     # Compliance runs
