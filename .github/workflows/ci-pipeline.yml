@@ -69,6 +69,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+          pip install -e compliantflow-dhf/
 
       - name: Check CR status for each referenced CR
         env:
@@ -148,6 +149,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install pytest
           pip install -r requirements.txt
+          pip install -e compliantflow-dhf/
 
       - name: Run SYS tests
         run: |
@@ -181,6 +183,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install pytest
           pip install -r requirements.txt
+          pip install -e compliantflow-dhf/
 
       - name: Run CRS tests
         run: |
@@ -220,6 +223,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+          pip install -e compliantflow-dhf/
 
       - name: Generate CR-PR evidence report
         run: |
@@ -291,6 +295,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+          pip install -e compliantflow-dhf/
 
       - name: Download SYS test results
         uses: actions/download-artifact@v4
@@ -380,6 +385,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install pytest
           pip install -r requirements.txt
+          pip install -e compliantflow-dhf/
 
       - name: Run SYS tests
         run: |
