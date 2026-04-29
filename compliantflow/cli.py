@@ -105,6 +105,82 @@ def _parse_coverage_pairs(pairs: tuple[str, ...]) -> list[tuple[str, str]]:
     return parsed
 
 
+def _collect_junit_paths(junit_files: tuple[Path, ...] = (),
+                         junit_dirs: tuple[Path, ...] = ()) -> list[Path]:
+    """Collect JUnit XML files from explicit files and directories."""
+    collected: list[Path] = []
+    seen: set[str] = set()
+
+    def _add(path: Path) -> None:
+        resolved = str(path.resolve())
+        if resolved in seen:
+            return
+        seen.add(resolved)
+        collected.append(path)
+
+    for junit_file in junit_files:
+        if not junit_file.exists():
+            raise click.ClickException(f"JUnit file '{junit_file}' not found.")
+        if not junit_file.is_file():
+            raise click.ClickException(f"JUnit path '{junit_file}' is not a file.")
+        _add(junit_file)
+
+    for junit_dir in junit_dirs:
+        if not junit_dir.exists():
+            continue
+        if not junit_dir.is_dir():
+            raise click.ClickException(f"JUnit path '{junit_dir}' is not a directory.")
+        for xml_path in sorted(junit_dir.rglob("*.xml")):
+            if xml_path.is_file():
+                _add(xml_path)
+
+    return collected
+
+
+def _run_acceptance_gate(core, junit_paths: list[Path], coverage_pairs: tuple[str, ...]) -> dict:
+    """Execute the CI acceptance gate using the provided JUnit evidence."""
+    if junit_paths:
+        core.inject_junit_results(junit_paths)
+
+    traceability = core.validate()
+    pairs = coverage_pairs or DEFAULT_ACCEPTANCE_COVERAGE_PAIRS
+    coverage = core.check_coverage(_parse_coverage_pairs(pairs))
+    passed = traceability.get("valid", True) and coverage.get("passed", True)
+    return {
+        "passed": passed,
+        "traceability": traceability,
+        "coverage": coverage,
+        "junit_files": [str(path) for path in junit_paths],
+    }
+
+
+def _print_acceptance_gate_result(result: dict) -> None:
+    click.echo(json.dumps(result, default=str))
+
+    traceability = result.get("traceability", {})
+    coverage = result.get("coverage", {})
+    if not traceability.get("valid", True):
+        for issue in traceability.get("issues", []):
+            affected = issue.get("items", [])
+            click.echo(
+                f"ORPHAN [{issue.get('type', 'issue')}]: {len(affected)} item(s): "
+                + ", ".join(affected[:5])
+                + ("..." if len(affected) > 5 else ""),
+                err=True,
+            )
+    for row in coverage.get("results", []):
+        symbol = "OK" if row.get("passed") else "FAIL"
+        click.echo(
+            f"{symbol} {row['parent_type']}->{row['child_type']}: "
+            f"{row['covered']}/{row['total']} covered",
+            err=True,
+        )
+    if not result.get("passed", False):
+        click.echo("FAIL DHF acceptance gate failed.", err=True)
+        sys.exit(1)
+    click.echo("OK DHF acceptance gate passed.", err=True)
+
+
 def _summarize_import_result(result: dict) -> dict:
     recorded = result.get("recorded", [])
     skipped = result.get("skipped", 0)
@@ -232,6 +308,37 @@ def _generate_specification_artifacts(adapter, out_dir: Path,
             "version": result.get("version"),
         })
     return generated
+
+
+def _run_artifact_generation(
+    adapter,
+    core,
+    dhf_path: Path,
+    out_dir: Path,
+    doc_types: tuple[str, ...],
+    traceability_types: tuple[str, ...],
+    junit_paths: list[Path],
+    skip_plans: bool,
+) -> dict:
+    selected_doc_types = doc_types or tuple(_available_doc_types(adapter))
+    selected_traceability = traceability_types or DEFAULT_TRACEABILITY_DOC_TYPES
+
+    out_dir.mkdir(parents=True, exist_ok=True)
+    specifications = _generate_specification_artifacts(adapter, out_dir, selected_doc_types)
+    plans = [] if skip_plans else _generate_plan_artifacts(dhf_path, out_dir)
+    traceability = _write_traceability_report(
+        core,
+        selected_traceability,
+        out_dir / "traceability" / "Requirements_Traceability_Report.pdf",
+        [str(path) for path in junit_paths],
+    )
+    return {
+        "out_dir": str(out_dir),
+        "specifications": specifications,
+        "plans": plans,
+        "traceability": traceability,
+        "junit_files": [str(path) for path in junit_paths],
+    }
 
 
 def _generate_plan_artifacts(dhf_path: Path, out_dir: Path) -> list[dict]:
@@ -479,8 +586,13 @@ def ci_gate() -> None:
     """Acceptance gate commands."""
 
 
+@ci.group("run")
+def ci_run() -> None:
+    """High-level CI orchestration commands for product repositories."""
+
+
 @ci_gate.command("acceptance")
-@click.option("--junit", "junit_paths", multiple=True, type=click.Path(exists=True),
+@click.option("--junit", "junit_paths", multiple=True, type=click.Path(exists=True, dir_okay=False),
               help="JUnit XML file(s) to include as in-memory verification evidence.")
 @click.option("--coverage-pair", "coverage_pairs", multiple=True, metavar="PARENT:CHILD",
               help="Coverage pair to check. Repeat for multiple pairs.")
@@ -489,42 +601,25 @@ def ci_gate_acceptance(ctx: click.Context, junit_paths: tuple,
                        coverage_pairs: tuple) -> None:
     """Run the DHF acceptance gate for CI pipelines."""
     core = _make_core(ctx)
-    if junit_paths:
-        core.inject_junit_results([Path(p) for p in junit_paths])
+    result = _run_acceptance_gate(core, [Path(p) for p in junit_paths], coverage_pairs)
+    _print_acceptance_gate_result(result)
 
-    traceability = core.validate()
-    pairs = coverage_pairs or DEFAULT_ACCEPTANCE_COVERAGE_PAIRS
-    coverage = core.check_coverage(_parse_coverage_pairs(pairs))
-    passed = traceability.get("valid", True) and coverage.get("passed", True)
 
-    result = {
-        "passed": passed,
-        "traceability": traceability,
-        "coverage": coverage,
-        "junit_files": [str(Path(p)) for p in junit_paths],
-    }
-    click.echo(json.dumps(result, default=str))
-
-    if not traceability.get("valid", True):
-        for issue in traceability.get("issues", []):
-            affected = issue.get("items", [])
-            click.echo(
-                f"ORPHAN [{issue.get('type', 'issue')}]: {len(affected)} item(s): "
-                + ", ".join(affected[:5])
-                + ("..." if len(affected) > 5 else ""),
-                err=True,
-            )
-    for row in coverage.get("results", []):
-        symbol = "OK" if row.get("passed") else "FAIL"
-        click.echo(
-            f"{symbol} {row['parent_type']}->{row['child_type']}: "
-            f"{row['covered']}/{row['total']} covered",
-            err=True,
-        )
-    if not passed:
-        click.echo("FAIL DHF acceptance gate failed.", err=True)
-        sys.exit(1)
-    click.echo("OK DHF acceptance gate passed.", err=True)
+@ci_run.command("acceptance")
+@click.option("--junit", "junit_files", multiple=True, type=click.Path(exists=True, dir_okay=False, path_type=Path),
+              help="JUnit XML file(s) to include in the acceptance gate.")
+@click.option("--junit-dir", "junit_dirs", multiple=True, type=click.Path(file_okay=False, path_type=Path),
+              help="Directory containing JUnit XML evidence. All *.xml files are included recursively.")
+@click.option("--coverage-pair", "coverage_pairs", multiple=True, metavar="PARENT:CHILD",
+              help="Coverage pair to check. Repeat for multiple pairs.")
+@click.pass_context
+def ci_run_acceptance(ctx: click.Context, junit_files: tuple[Path, ...],
+                      junit_dirs: tuple[Path, ...], coverage_pairs: tuple) -> None:
+    """Run the high-level CI acceptance gate for product workflows."""
+    core = _make_core(ctx)
+    junit_paths = _collect_junit_paths(junit_files, junit_dirs)
+    result = _run_acceptance_gate(core, junit_paths, coverage_pairs)
+    _print_acceptance_gate_result(result)
 
 
 @ci.group("evidence")
@@ -580,7 +675,7 @@ def ci_artifacts() -> None:
               help="Specification document type to export. Defaults to all configured types.")
 @click.option("--traceability-type", "traceability_types", multiple=True, metavar="CODE",
               help="Traceability matrix type. Defaults to UC CRS SYS SRS SWDD.")
-@click.option("--junit", "junit_paths", multiple=True, type=click.Path(exists=True),
+@click.option("--junit", "junit_paths", multiple=True, type=click.Path(exists=True, dir_okay=False),
               help="JUnit XML file(s) to include in the traceability report.")
 @click.option("--skip-plans", is_flag=True, default=False,
               help="Skip plan PDF generation.")
@@ -592,28 +687,61 @@ def ci_artifacts_generate(ctx: click.Context, out_dir: Path, doc_types: tuple,
     adapter = _make_adapter(ctx)
     core = _make_core(ctx)
     dhf_path: Path = ctx.obj["dhf"]
-    selected_doc_types = doc_types or tuple(_available_doc_types(adapter))
-    selected_traceability = traceability_types or DEFAULT_TRACEABILITY_DOC_TYPES
-
-    out_dir.mkdir(parents=True, exist_ok=True)
-    specifications = _generate_specification_artifacts(adapter, out_dir, selected_doc_types)
-    plans = [] if skip_plans else _generate_plan_artifacts(dhf_path, out_dir)
-    traceability = _write_traceability_report(
+    result = _run_artifact_generation(
+        adapter,
         core,
-        selected_traceability,
-        out_dir / "traceability" / "Requirements_Traceability_Report.pdf",
-        junit_paths,
+        dhf_path,
+        out_dir,
+        doc_types,
+        traceability_types,
+        [Path(p) for p in junit_paths],
+        skip_plans,
     )
-    result = {
-        "out_dir": str(out_dir),
-        "specifications": specifications,
-        "plans": plans,
-        "traceability": traceability,
-    }
     click.echo(json.dumps(result, default=str))
     click.echo(
-        f"OK Generated {len(specifications)} specification(s), {len(plans)} plan(s), "
-        f"traceability report at {traceability['path']}.",
+        f"OK Generated {len(result['specifications'])} specification(s), "
+        f"{len(result['plans'])} plan(s), "
+        f"traceability report at {result['traceability']['path']}.",
+        err=True,
+    )
+
+
+@ci_run.command("artifacts")
+@click.option("--out-dir", type=click.Path(file_okay=False, path_type=Path), required=True)
+@click.option("--doc-type", "doc_types", multiple=True, metavar="CODE",
+              help="Specification document type to export. Defaults to all configured types.")
+@click.option("--traceability-type", "traceability_types", multiple=True, metavar="CODE",
+              help="Traceability matrix type. Defaults to UC CRS SYS SRS SWDD.")
+@click.option("--junit", "junit_files", multiple=True, type=click.Path(exists=True, dir_okay=False, path_type=Path),
+              help="JUnit XML file(s) to include in the artifact traceability report.")
+@click.option("--junit-dir", "junit_dirs", multiple=True, type=click.Path(file_okay=False, path_type=Path),
+              help="Directory containing JUnit XML evidence. All *.xml files are included recursively.")
+@click.option("--skip-plans", is_flag=True, default=False,
+              help="Skip plan PDF generation.")
+@click.pass_context
+def ci_run_artifacts(ctx: click.Context, out_dir: Path, doc_types: tuple,
+                     traceability_types: tuple, junit_files: tuple[Path, ...],
+                     junit_dirs: tuple[Path, ...], skip_plans: bool) -> None:
+    """Generate CI-ready DHF artifacts for product workflows."""
+    adapter = _make_adapter(ctx)
+    core = _make_core(ctx)
+    dhf_path: Path = ctx.obj["dhf"]
+    junit_paths = _collect_junit_paths(junit_files, junit_dirs)
+    result = _run_artifact_generation(
+        adapter,
+        core,
+        dhf_path,
+        out_dir,
+        doc_types,
+        traceability_types,
+        junit_paths,
+        skip_plans,
+    )
+    click.echo(json.dumps(result, default=str))
+    click.echo(
+        f"OK Generated {len(result['specifications'])} specification(s), "
+        f"{len(result['plans'])} plan(s), "
+        f"traceability report at {result['traceability']['path']}.",
         err=True,
     )
 

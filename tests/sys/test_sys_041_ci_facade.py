@@ -180,3 +180,120 @@ def test_TC_SYS_041_004_ci_artifacts_generate_orchestrates_adapter_and_report_he
     assert Path(payload["specifications"][0]["path"]).exists()
     assert payload["plans"][0]["source"] == "plan.md"
     assert payload["traceability"]["rows"] == 3
+
+
+def test_TC_SYS_041_005_ci_run_acceptance_collects_recursive_junit_inputs(
+    monkeypatch,
+    tmp_path,
+):
+    """
+    TC-SYS-041-005: ci run acceptance collects junit files from files and directories.
+
+    @test_id: TC-SYS-041-005
+    @links: SYS-041
+    """
+    direct = tmp_path / "verification-junit.xml"
+    direct.write_text("<testsuite/>", encoding="utf-8")
+    junit_dir = tmp_path / "nested-results"
+    nested_dir = junit_dir / "deep"
+    nested_dir.mkdir(parents=True)
+    nested = nested_dir / "extra.xml"
+    nested.write_text("<testsuite/>", encoding="utf-8")
+    missing_dir = tmp_path / "missing-results"
+    core = FakeCore(
+        coverage={
+            "passed": True,
+            "results": [
+                {"parent_type": "UC", "child_type": "CRS", "covered": 1, "total": 1, "passed": True},
+            ],
+        }
+    )
+
+    result = _invoke(
+        monkeypatch,
+        [
+            "ci", "run", "acceptance",
+            "--junit", str(direct),
+            "--junit-dir", str(junit_dir),
+            "--junit-dir", str(missing_dir),
+        ],
+        core=core,
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.output.splitlines()[0])
+    assert payload["junit_files"] == [str(direct), str(nested)]
+    assert core.injected == [direct, nested]
+    assert payload["coverage"]["pairs"] == [
+        ["UC", "CRS"],
+        ["CRS", "SYS"],
+        ["SYS", "SRS"],
+        ["SRS", "SWDD"],
+    ]
+
+
+def test_TC_SYS_041_006_ci_run_artifacts_collects_junit_inputs_for_traceability(
+    monkeypatch,
+    tmp_path,
+):
+    """
+    TC-SYS-041-006: ci run artifacts passes collected junit files into traceability generation.
+
+    @test_id: TC-SYS-041-006
+    @links: SYS-041
+    """
+    out_dir = tmp_path / "artifacts"
+    direct = tmp_path / "verification-junit.xml"
+    direct.write_text("<testsuite/>", encoding="utf-8")
+    junit_dir = tmp_path / "junit-results"
+    nested_dir = junit_dir / "nested"
+    nested_dir.mkdir(parents=True)
+    nested = nested_dir / "system.xml"
+    nested.write_text("<testsuite/>", encoding="utf-8")
+    missing_dir = tmp_path / "missing-results"
+    pdf = tmp_path / "SYS.pdf"
+    pdf.write_bytes(b"%PDF-1.4\n")
+    traceability_capture = {}
+
+    class ArtifactAdapter:
+        def get_available_doc_types(self):
+            return ["SYS"]
+
+        def export_pdf(self, doc_type):
+            assert doc_type == "SYS"
+            return {"doc_type": doc_type, "pdf_path": str(pdf), "version": "1.0"}
+
+    monkeypatch.setattr("compliantflow.cli._make_adapter", lambda ctx: ArtifactAdapter())
+    monkeypatch.setattr("compliantflow.cli._make_core", lambda ctx: object())
+    monkeypatch.setattr(
+        "compliantflow.cli._generate_plan_artifacts",
+        lambda dhf_path, output_dir: [{"source": "plan.md", "path": str(output_dir / "plans" / "plan.pdf")}],
+    )
+    monkeypatch.setattr(
+        "compliantflow.cli._write_traceability_report",
+        lambda core, doc_types, output, junit_paths: traceability_capture.update({
+            "doc_types": list(doc_types),
+            "output": str(output),
+            "junit_paths": list(junit_paths),
+        }) or {"path": str(output), "rows": 3},
+    )
+
+    result = _invoke(
+        monkeypatch,
+        [
+            "ci", "run", "artifacts",
+            "--out-dir", str(out_dir),
+            "--junit", str(direct),
+            "--junit-dir", str(junit_dir),
+            "--junit-dir", str(missing_dir),
+            "--skip-plans",
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.output.splitlines()[0])
+    assert payload["junit_files"] == [str(direct), str(nested)]
+    assert traceability_capture["junit_paths"] == [str(direct), str(nested)]
+    assert traceability_capture["doc_types"] == ["UC", "CRS", "SYS", "SRS", "SWDD"]
+    assert payload["plans"] == []
+    assert Path(payload["specifications"][0]["path"]).exists()
