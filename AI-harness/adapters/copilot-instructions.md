@@ -9,8 +9,8 @@ PYTHONPATH=.:compliantflow-dhf/DHF is required for CLI and compliance checks.
 
 ## Key rules
 
-- CompliantFlowCore (compliantflow/) is read-only — no write operations
-- DHF mutations go through `python -m utils` in compliantflow-dhf, never direct file edits
+- CompliantFlowCore remains analysis-oriented; DHF automation goes through adapter/facade APIs
+- Product repos must not depend on DHF storage paths or direct file edits
 - Graph edges run child → parent; descendants() = upstream toward requirements
 - Requirement items (UC, CRS, SYS, SRS, SWDD, ...) are approved by landing on main
 - CR, REL, DEF use explicit lifecycle transitions

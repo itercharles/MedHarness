@@ -1,8 +1,12 @@
 # ADR-001: Two-CLI Split — compliantflow is Read-Only
 
-**Status:** Accepted
+**Status:** Superseded
 **Date:** 2026-01-01
 **Deciders:** Engineering Lead
+
+Superseded by adapter-mediated DHF automation facade: `CompliantFlowCore`
+remains analysis-oriented, while the user-facing CompliantFlow CLI/SDK may
+expose DHF automation operations through configured adapters/providers.
 
 ---
 

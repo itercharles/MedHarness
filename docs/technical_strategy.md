@@ -10,11 +10,17 @@ This document records the durable architectural direction and engineering princi
 
 ## Architectural Principles
 
-### 1. Two-CLI split: compliantflow is read-only
+### 1. Adapter-mediated DHF automation
 
-`compliantflow/` (the user-facing CLI) is strictly read-only — analysis, traceability, compliance reporting. DHF mutations (creating/updating items, lifecycle transitions) go through `python -m utils` in the DHF repository.
+`CompliantFlowCore` remains analysis-oriented — traceability, compliance, context, and reporting.
+The user-facing CompliantFlow CLI/SDK may expose DHF automation facade operations
+through a configured `DHFAdapter`, including item CRUD, lifecycle transitions, and
+implementation-context packaging.
 
-Do not add write operations to `CompliantFlowCore`. This enforces separation of concerns and ensures the compliance tool cannot corrupt the audit record it is evaluating.
+DHF mutations must go through adapter/provider implementations. Do not let product
+repositories depend on DHF storage paths or reimplement DHF layout rules. Product repos
+consume CompliantFlow/DHF-approved implementation context; DHF-owned analysis remains
+the source of audit evidence.
 
 ### 2. Open YAML, Git as audit trail
 
@@ -38,7 +44,9 @@ Cloud services (Gemini semantic checks) are opt-in via API key. Features that re
 
 DHF items (UC, CRS, SYS, SRS, SWDD, SYSARCH, RISK, RCM, SOUP, TC) are approved by landing on `main`. No explicit approval workflow, no status field, no workflow engine. The PR review process is the approval.
 
-Items with explicit lifecycle transitions (CR, REL, DEF) use `python -m utils item transition` — these are the only exceptions.
+Items with explicit lifecycle transitions (CR, REL, DEF) use adapter-mediated
+transition operations, exposed by the CompliantFlow DHF facade and implemented
+by the configured provider.
 
 ### 6. Traceability is a graph, not a matrix
 
@@ -56,7 +64,8 @@ Do not add a secondary traceability representation. The graph is the single sour
 | Compliance engine | `compliantflow/policy/` | Policy check evaluation, governance file loading |
 | Traceability | `compliantflow/graph.py` | DHF graph construction and traversal |
 | Reporting | `compliantflow/reporting/` | PDF/JSON output generation |
-| DHF utilities | `compliantflow-dhf/DHF/utils/` | Item CRUD, lifecycle transitions, schema validation |
+| DHF automation facade | `compliantflow/cli.py` + `DHFAdapter` | Generic item operations, lifecycle transitions, implementation context |
+| DHF utilities | `compliantflow-dhf/DHF/utils/` | Local YAML/Git provider, schema validation, document generation |
 | AI harness | `AI-harness/` | Agent context, checklists, model adapters |
 | Init command | `compliantflow/init_cmd.py` | Template delivery for both repos |
 
@@ -68,7 +77,7 @@ Changes should stay in the owning layer. Cross-layer changes require explicit ju
 
 Avoid:
 
-- Adding write operations to `compliantflow/` — all mutations belong in `python -m utils`
+- Bypassing the DHF adapter/facade with product-specific file path assumptions
 - Designing for hypothetical future requirements — three similar lines is better than a premature abstraction
 - Adding cloud service dependencies that are not explicitly opt-in with graceful degradation
 - Introducing compliance checks that invoke external LLMs in default CI runs — they break offline use and slow the gate

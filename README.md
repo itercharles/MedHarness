@@ -138,15 +138,33 @@ AI tools:
   context                         Generate agent context package
   review-pr                       Compliance-aware PR review checklist
 
+DHF automation facade:
+  dhf item list|get|create|update|delete
+  dhf item transition             Execute a lifecycle transition through adapter
+  dhf context implementation      Write an approved CR implementation package
+
 Migration:
   migrate rdm SOURCE_DIR          Migrate from Innolitics RDM
 ```
 
 ---
 
-## DHF Management
+## DHF Automation
 
-DHF mutations go through the `utils` CLI in your DHF repository:
+CompliantFlow exposes a generic DHF automation facade for product CI and agent
+workflows. The facade delegates to the configured DHF adapter/provider so product
+repositories do not need to know DHF storage paths.
+
+```bash
+compliantflow --dhf DHF dhf item list --type SYS
+compliantflow --dhf DHF dhf item create --type SRS \
+  --data '{"title": "My requirement", "derives_from": ["SYS-001"]}'
+compliantflow --dhf DHF dhf item transition CR-001 closed --by "Alice"
+compliantflow --dhf DHF dhf context implementation --cr CR-001 --out-dir /tmp/dhf-context
+```
+
+The DHF repository still owns the local YAML/Git provider and schema/document
+tooling. Direct DHF utils commands remain available for DHF maintainers:
 
 ```bash
 PYTHONPATH=.:DHF python -m utils item list --type SYS
@@ -155,8 +173,6 @@ PYTHONPATH=.:DHF python -m utils item create --type SRS \
 PYTHONPATH=.:DHF python -m utils item transition CR-001 closed --by "Alice"
 PYTHONPATH=.:DHF python -m utils validate schema
 ```
-
-**CompliantFlow is read-only.** It analyses the DHF but never modifies it.
 
 ---
 

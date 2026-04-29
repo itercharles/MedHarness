@@ -35,7 +35,7 @@ If the request conflicts with product direction, state the conflict before imple
 ## 3. Technical Direction Check
 
 - Is the request consistent with [`docs/technical_strategy.md`](../docs/technical_strategy.md)?
-- Does it preserve the two-CLI split (`compliantflow/` read-only; DHF mutations via `python -m utils`)?
+- Does it preserve the adapter boundary (product repos call CompliantFlow/DHF facade APIs, not DHF storage paths)?
 - Does it preserve the product/DHF repo separation?
 - Does it add infrastructure or abstractions that will be hard to validate or maintain?
 - Does it introduce assumptions about local paths, user environment, or external services?
