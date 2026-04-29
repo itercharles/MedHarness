@@ -341,6 +341,49 @@ def _run_artifact_generation(
     }
 
 
+def _resolve_dhf_repo_paths(ctx: click.Context, dhf_repo: Path | None) -> tuple[Path, Path]:
+    """Resolve a DHF repository root and DHF root directory for workflow commands."""
+    if dhf_repo is not None:
+        repo_root = dhf_repo.resolve()
+        dhf_root = repo_root / "DHF"
+        if repo_root.name == "DHF":
+            dhf_root = repo_root
+            repo_root = repo_root.parent
+        return repo_root, dhf_root
+
+    dhf_root = Path(ctx.obj["dhf"]).resolve()
+    return dhf_root.parent, dhf_root
+
+
+def _make_adapter_for_dhf_root(dhf_root: Path):
+    try:
+        from dhf_util.local_adapter import LocalDHFAdapter
+    except ImportError:
+        raise click.ClickException(
+            "LocalDHFAdapter not found. Add your DHF system to PYTHONPATH before running the CLI."
+        )
+    return LocalDHFAdapter(dhf_root, auto_commit=False)
+
+
+def _run_git(repo_root: Path, args: list[str]) -> str:
+    import subprocess  # noqa: PLC0415
+
+    proc = subprocess.run(
+        ["git", "-C", str(repo_root), *args],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if proc.returncode != 0:
+        message = (proc.stderr or proc.stdout).strip()
+        raise click.ClickException(message or f"git {' '.join(args)} failed")
+    return proc.stdout
+
+
+def _git_has_changes(repo_root: Path) -> bool:
+    return bool(_run_git(repo_root, ["status", "--porcelain"]).strip())
+
+
 def _generate_plan_artifacts(dhf_path: Path, out_dir: Path) -> list[dict]:
     plans_dir = dhf_path / "documents" / "plans"
     if not plans_dir.is_dir():
@@ -1370,6 +1413,137 @@ def report_compliance(ctx: click.Context, group_id: str,
 @main.group()
 def cr() -> None:
     """Commands for Change Request git-evidence management."""
+
+
+@cr.group("workflow")
+def cr_workflow() -> None:
+    """Reusable CR workflow orchestration commands."""
+
+
+@cr_workflow.command("complete")
+@click.option("--dhf-repo", type=click.Path(file_okay=False, path_type=Path),
+              help="DHF repository root. Defaults to the parent of --dhf.")
+@click.option("--cr", "cr_id", required=True, metavar="CR_ID",
+              help="Change Request ID to complete.")
+@click.option("--by", "performed_by", default="compliantflow", show_default=True,
+              help="Actor recorded on the CR lifecycle transition.")
+@click.option("--commit/--no-commit", "commit_changes", default=True, show_default=True,
+              help="Commit DHF repository changes when the transition modifies files.")
+@click.option("--push", is_flag=True, default=False,
+              help="Push committed DHF repository changes to the configured remote.")
+@click.option("--message", default=None, metavar="TEXT",
+              help="Commit message. Defaults to 'chore: complete CR-ID [skip ci]'.")
+@click.pass_context
+def cr_workflow_complete(
+    ctx: click.Context,
+    dhf_repo: Path | None,
+    cr_id: str,
+    performed_by: str,
+    commit_changes: bool,
+    push: bool,
+    message: str | None,
+) -> None:
+    """Complete a CR in a DHF repository after implementation merge."""
+    from dhf_util.change_requests import complete_change_request
+
+    repo_root, dhf_root = _resolve_dhf_repo_paths(ctx, dhf_repo)
+    adapter = _make_adapter_for_dhf_root(dhf_root)
+
+    try:
+        transition = complete_change_request(adapter, cr_id, performed_by=performed_by)
+    except ValueError as exc:
+        raise click.ClickException(str(exc)) from exc
+    changed = _git_has_changes(repo_root)
+    committed = False
+    pushed = False
+    commit_message = message or f"chore: complete {cr_id} [skip ci]"
+
+    if changed and commit_changes:
+        _run_git(repo_root, ["add", "-A"])
+        if _git_has_changes(repo_root):
+            _run_git(repo_root, ["commit", "-m", commit_message])
+            committed = True
+            if push:
+                _run_git(repo_root, ["push"])
+                pushed = True
+
+    result = {
+        "cr_id": cr_id,
+        "dhf_repo": str(repo_root),
+        "dhf_root": str(dhf_root),
+        "transition": transition,
+        "changed": changed,
+        "committed": committed,
+        "pushed": pushed,
+        "commit_message": commit_message if committed else None,
+    }
+    click.echo(json.dumps(result, default=str))
+
+
+@cr_workflow.command("intake-github-issue")
+@click.option("--dhf-repo", type=click.Path(file_okay=False, path_type=Path),
+              help="DHF repository root. Defaults to the parent of --dhf.")
+@click.option("--event", "event_path", required=True, type=click.Path(exists=True, dir_okay=False, path_type=Path),
+              help="GitHub issue event JSON path, usually GITHUB_EVENT_PATH.")
+@click.option("--comments", "comments_path", type=click.Path(exists=True, dir_okay=False, path_type=Path),
+              help="JSON file containing existing issue comments.")
+@click.option("--active-milestone", default=None,
+              help="Milestone required for CR intake. Defaults to current ISO week.")
+@click.option("--marker-name", default="compliantflow-cr", show_default=True,
+              help="HTML comment marker name used to detect prior CR intake.")
+@click.option("--branch-prefix", default="cr", show_default=True,
+              help="Branch prefix for the generated CR branch.")
+@click.option("--title-prefix", default="cr", show_default=True,
+              help="PR title prefix for the generated CR PR.")
+@click.option("--write", is_flag=True, default=False,
+              help="Create the CR item in the DHF. Without this, only compute the next CR ID.")
+@click.option("--output", type=click.Path(dir_okay=False, path_type=Path),
+              help="Optional JSON output path.")
+@click.pass_context
+def cr_workflow_intake_github_issue(
+    ctx: click.Context,
+    dhf_repo: Path | None,
+    event_path: Path,
+    comments_path: Path | None,
+    active_milestone: str | None,
+    marker_name: str,
+    branch_prefix: str,
+    title_prefix: str,
+    write: bool,
+    output: Path | None,
+) -> None:
+    """Prepare a CR from a GitHub issue event."""
+    from compliantflow.cr_intake import (
+        current_iso_week_milestone,
+        load_comments,
+        load_github_issue_event,
+        prepare_cr_from_issue,
+    )
+
+    _, dhf_root = _resolve_dhf_repo_paths(ctx, dhf_repo)
+    adapter = _make_adapter_for_dhf_root(dhf_root)
+    result = prepare_cr_from_issue(
+        load_github_issue_event(event_path),
+        active_milestone or current_iso_week_milestone(),
+        load_comments(comments_path),
+        write=write,
+        adapter=adapter,
+        marker_name=marker_name,
+        branch_prefix=branch_prefix,
+        title_prefix=title_prefix,
+    )
+    payload = {
+        "should_create": result.should_create,
+        "reason": result.reason,
+        "cr_id": result.cr_id,
+        "branch": result.branch,
+        "cr_path": result.cr_path,
+        "title": result.title,
+    }
+    text = json.dumps(payload, indent=2)
+    if output:
+        output.write_text(text + "\n", encoding="utf-8")
+    click.echo(text)
 
 
 @cr.command("check-status")

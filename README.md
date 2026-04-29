@@ -134,6 +134,8 @@ Reports:
 Change management:
   cr check-status CR-ID           Check CR implementation status
   cr generate-report CR-ID        Generate CR evidence report
+  cr workflow intake-github-issue Prepare a CR from a GitHub issue event
+  cr workflow complete            Complete a CR and optionally commit/push DHF updates
 
 Tests:
   test import PATH                Import JUnit XML results
