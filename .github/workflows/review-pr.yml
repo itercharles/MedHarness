@@ -50,7 +50,6 @@ jobs:
       - name: Run DHF PR review
         id: review
         env:
-          PYTHONPATH: ".:compliantflow-dhf/DHF"
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
           python -m compliantflow \

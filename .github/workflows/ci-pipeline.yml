@@ -74,7 +74,7 @@ jobs:
         env:
           CR_IDS: ${{ steps.extract-cr.outputs.cr_ids }}
         run: |
-          export PYTHONPATH="${PYTHONPATH}:${PWD}:${PWD}/compliantflow-dhf/DHF"
+          export PYTHONPATH="${PYTHONPATH}:${PWD}"
           FAILED=0
           for CR_ID in $CR_IDS; do
             echo "--- Checking $CR_ID ---" >&2
@@ -114,12 +114,12 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install pytest
+          pip install -e compliantflow-dhf/
           pip install -r compliantflow/requirements.txt
 
-      - name: Run DHF utils tests
+      - name: Run dhf_util tests
         run: |
-          export PYTHONPATH="${PYTHONPATH}:${PWD}/compliantflow-dhf:${PWD}/compliantflow-dhf/DHF"
-          pytest compliantflow-dhf/DHF/utils/tests/ -v --junitxml=dhf-utils-test-results.xml
+          pytest compliantflow-dhf/dhf_util/tests/ -v --junitxml=dhf-util-test-results.xml
 
       - name: Upload DHF utils test results
         if: always()
@@ -223,13 +223,12 @@ jobs:
 
       - name: Generate CR-PR evidence report
         run: |
-          export PYTHONPATH="${PYTHONPATH}:${PWD}:${PWD}/compliantflow-dhf/DHF"
+          export PYTHONPATH="${PYTHONPATH}:${PWD}"
           mkdir -p cr-reports
           python -c "
           import json, sys, os, subprocess
           sys.path.insert(0, '.')
-          sys.path.insert(0, 'compliantflow-dhf/DHF')
-          from utils.local_adapter import LocalDHFAdapter
+          from dhf_util.local_adapter import LocalDHFAdapter
           adapter = LocalDHFAdapter('compliantflow-dhf/DHF', auto_commit=False)
           crs = adapter.list_items('CR')
           merged = {}
@@ -242,7 +241,7 @@ jobs:
                       args,
                       capture_output=True,
                       text=True,
-                      env={**os.environ, 'PYTHONPATH': '.:compliantflow-dhf/DHF'},
+                      env=os.environ,
                       timeout=60,
                   )
                   try:
@@ -307,7 +306,7 @@ jobs:
 
       - name: Import test results (ephemeral — validates coverage, not committed)
         run: |
-          export PYTHONPATH="${PYTHONPATH}:${PWD}:${PWD}/compliantflow-dhf/DHF"
+          export PYTHONPATH="${PYTHONPATH}:${PWD}"
           RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           for xml in test-results/*.xml; do
             python -m compliantflow --dhf compliantflow-dhf/DHF test import "$xml" \
@@ -320,20 +319,20 @@ jobs:
 
       - name: Check coverage (UC→CRS→SYS→SYSARCH)
         run: |
-          export PYTHONPATH="${PYTHONPATH}:${PWD}:${PWD}/compliantflow-dhf/DHF"
+          export PYTHONPATH="${PYTHONPATH}:${PWD}"
           python -m compliantflow --dhf compliantflow-dhf/DHF validate coverage \
             UC:CRS CRS:SYS SYS:SYSARCH
 
       - name: Check traceability
         run: |
-          export PYTHONPATH="${PYTHONPATH}:${PWD}:${PWD}/compliantflow-dhf/DHF"
+          export PYTHONPATH="${PYTHONPATH}:${PWD}"
           python -m compliantflow --dhf compliantflow-dhf/DHF validate traceability || true
 
       - name: IEC 62304 compliance check (read-only — no persist)
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
-          export PYTHONPATH="${PYTHONPATH}:${PWD}:${PWD}/compliantflow-dhf/DHF"
+          export PYTHONPATH="${PYTHONPATH}:${PWD}"
           python -m compliantflow --dhf compliantflow-dhf/DHF validate compliance IEC_62304 \
             --governance-dir compliantflow-dhf/governance
 
@@ -341,7 +340,7 @@ jobs:
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
-          export PYTHONPATH="${PYTHONPATH}:${PWD}:${PWD}/compliantflow-dhf/DHF"
+          export PYTHONPATH="${PYTHONPATH}:${PWD}"
           python -m compliantflow --dhf compliantflow-dhf/DHF validate compliance IEC_82304_1 \
             --governance-dir compliantflow-dhf/governance \
             --persist || true
@@ -394,7 +393,7 @@ jobs:
 
       - name: Import test results into DHF
         run: |
-          export PYTHONPATH="${PYTHONPATH}:${PWD}:${PWD}/compliantflow-dhf/DHF"
+          export PYTHONPATH="${PYTHONPATH}:${PWD}"
           RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           for xml in sys-test-results.xml crs-test-results.xml; do
             python -m compliantflow --dhf compliantflow-dhf/DHF test import "$xml" \
@@ -409,7 +408,7 @@ jobs:
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
-          export PYTHONPATH="${PYTHONPATH}:${PWD}:${PWD}/compliantflow-dhf/DHF"
+          export PYTHONPATH="${PYTHONPATH}:${PWD}"
           python -m compliantflow --dhf compliantflow-dhf/DHF validate compliance IEC_62304 \
             --governance-dir compliantflow-dhf/governance \
             --persist
@@ -418,7 +417,7 @@ jobs:
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
-          export PYTHONPATH="${PYTHONPATH}:${PWD}:${PWD}/compliantflow-dhf/DHF"
+          export PYTHONPATH="${PYTHONPATH}:${PWD}"
           python -m compliantflow --dhf compliantflow-dhf/DHF validate compliance IEC_82304_1 \
             --governance-dir compliantflow-dhf/governance \
             --persist || true
@@ -458,7 +457,7 @@ jobs:
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
-          export PYTHONPATH="${PYTHONPATH}:${PWD}:${PWD}/compliantflow-dhf/DHF"
+          export PYTHONPATH="${PYTHONPATH}:${PWD}"
           python -m compliantflow --dhf compliantflow-dhf/DHF report traceability \
             UC CRS SYS SYSARCH \
             --output traceability_report.pdf

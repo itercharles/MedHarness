@@ -21,7 +21,7 @@ DHF items are approved by landing on `main`. No explicit `status` field, no appr
 
 The PR review process serves as the approval workflow: the PR is the review, the merge is the sign-off, and the Git commit is the timestamped audit record.
 
-Items with explicit multi-state lifecycles (CR, REL, DEF) are exceptions — these use `python -m utils item transition` because they have distinct states that need to be machine-readable (e.g. Phase 0 checks that a CR is `new/analyzing/developing` before allowing a PR).
+Items with explicit multi-state lifecycles (CR, REL, DEF) are exceptions — these use `python -m dhf_util item transition` because they have distinct states that need to be machine-readable (e.g. Phase 0 checks that a CR is `new/analyzing/developing` before allowing a PR).
 
 ## Consequences
 

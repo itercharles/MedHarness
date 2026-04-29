@@ -156,14 +156,14 @@ To manage items manually:
 pip install click jinja2 markdown pydantic PyYAML gitpython
 
 # Create a System Requirement
-PYTHONPATH=.:DHF python -m utils item create --type SYS \
+python -m dhf_util item create --type SYS \
   --data '{"title": "System shall validate all inputs", "category": "Functional"}'
 
 # List all items
-PYTHONPATH=.:DHF python -m utils item list
+python -m dhf_util item list
 
 # Validate DHF schema
-PYTHONPATH=.:DHF python -m utils validate schema
+python -m dhf_util validate schema
 ```
 
 ---

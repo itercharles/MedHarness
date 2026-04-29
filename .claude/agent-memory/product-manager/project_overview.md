@@ -9,7 +9,7 @@ CompliantFlow is a **Docs-as-Code ALM (Application Lifecycle Management) platfor
 **Why:** Medical device manufacturers (under IEC 62304 and ISO 14971) must maintain a complete, traceable, auditable DHF. Traditional tools are expensive, opaque, and lock data in proprietary formats. CompliantFlow treats the DHF as code: plain YAML in Git, CLI-driven, CI/CD-native.
 
 **Architecture (two-layer):**
-- `DHF/utils/` — Data layer: YAML CRUD, lifecycle state machine, schema validation, document generation, test result storage. CLI: `python -m utils`
+- `DHF/utils/` — Data layer: YAML CRUD, lifecycle state machine, schema validation, document generation, test result storage. CLI: `python -m dhf_util`
 - `compliantflow/` — Read-only analysis engine: traceability graph (NetworkX DiGraph), compliance policy engine, PDF report generation. CLI: `python -m compliantflow`
 - `DHFAdapter` protocol decouples the two layers; alternative backends (cloud, DB) can plug in without changing the engine.
 

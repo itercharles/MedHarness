@@ -32,7 +32,7 @@ type: project
 
 **CLI surface**
 - `python -m compliantflow`: validate traceability/coverage/compliance, traceability matrix/chain, report traceability/compliance PDF, cr check-status/generate-report, test import/status/list
-- `python -m utils`: item CRUD, lifecycle transitions, schema validation, config doc-types, doc generate/export PDF, test import/status/list/pull
+- `python -m dhf_util`: item CRUD, lifecycle transitions, schema validation, config doc-types, doc generate/export PDF, test import/status/list/pull
 
 **CI/CD**
 - Single CI pipeline (ci-pipeline.yml) with 5 phases:

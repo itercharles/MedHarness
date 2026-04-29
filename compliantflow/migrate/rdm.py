@@ -400,7 +400,7 @@ def generate_migration_markdown(completeness_report: Dict) -> str:
         lines += [
             "",
             "> These items require manual migration. Create the corresponding DHF items",
-            "> using `python -m utils item create` and link them to their parent items.",
+            "> using `python -m dhf_util item create` and link them to their parent items.",
         ]
     else:
         lines += ["*No skipped items.*"]

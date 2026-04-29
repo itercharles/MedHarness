@@ -166,7 +166,7 @@ class TestInitCmd:
             content = path.read_text()
         assert "schema-validation" in content
         assert "utils-tests" in content
-        assert "python -m utils validate schema" in content
+        assert "python -m dhf_util validate schema" in content
 
     def test_TC_SYS_027_010_cr_transition_workflow_content(self):
         """
@@ -180,7 +180,7 @@ class TestInitCmd:
             _write_dhf_cr_transition_workflow(path)
             content = path.read_text()
         assert "workflow_dispatch" in content
-        assert "python -m utils item transition" in content
+        assert "python -m dhf_util item transition" in content
         assert "cr_ids" in content
 
     def test_TC_SYS_027_011_standard_labels_cover_all_governance_files(self):
@@ -420,7 +420,7 @@ class TestInitCmd:
         _write_cr_complete_yml(product_dir, "acme/my-device-dhf")
         content = (product_dir / ".github" / "workflows" / "cr-complete.yml").read_text()
         assert "repository: acme/my-device-dhf" in content
-        assert "python -m utils item transition" in content
+        assert "python -m dhf_util item transition" in content
 
     def test_TC_SYS_027_029_init_product_template_creates_docs(self, tmp_path):
         """

@@ -18,6 +18,7 @@ dependencies = [
     "gitpython",
     "python-dateutil",
     "python-dotenv",
+    "dhf_util",
     "google-genai",
     "markdown",
     "weasyprint",
