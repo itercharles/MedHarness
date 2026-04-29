@@ -420,7 +420,9 @@ class TestInitCmd:
         _write_cr_complete_yml(product_dir, "acme/my-device-dhf")
         content = (product_dir / ".github" / "workflows" / "cr-complete.yml").read_text()
         assert "repository: acme/my-device-dhf" in content
-        assert "python -m dhf_util item transition" in content
+        assert "compliantflow cr workflow complete" in content
+        assert "--dhf-repo dhf" in content
+        assert "python -m dhf_util item transition" not in content
 
     def test_TC_SYS_027_029_init_product_template_creates_docs(self, tmp_path):
         """

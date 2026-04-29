@@ -193,28 +193,25 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install DHF utils dependencies
+      - name: Install DHF workflow dependencies
         if: steps.cr.outputs.skip != 'true'
-        run: pip install click jinja2 markdown pydantic PyYAML gitpython
-
-      - name: Transition CR to completed
-        if: steps.cr.outputs.skip != 'true'
-        working-directory: dhf
         run: |
-          export PYTHONPATH="${{PYTHONPATH}}:${{PWD}}:${{PWD}}/DHF"
-          python -m dhf_util item transition "${{{{ steps.cr.outputs.cr_id }}}}" completed --by "github-actions[bot]"
+          python -m pip install --upgrade pip
+          pip install -r dhf/requirements.txt
+          pip install -e dhf/ 2>/dev/null || true
 
-      - name: Commit and push DHF update
+      - name: Complete CR in DHF
         if: steps.cr.outputs.skip != 'true'
-        working-directory: dhf
         run: |
+          cd dhf
           git config user.name "GitHub Actions [bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add DHF/items/
-          if ! git diff --staged --quiet; then
-            git commit -m "chore: complete ${{{{ steps.cr.outputs.cr_id }}}} [skip ci]"
-            git push
-          fi
+          cd ..
+          compliantflow cr workflow complete \\
+            --dhf-repo dhf \\
+            --cr "${{{{ steps.cr.outputs.cr_id }}}}" \\
+            --by "github-actions[bot]" \\
+            --push
 """)
     return dest
 
