@@ -237,12 +237,20 @@ jobs:
               cr_id = cr['id']
               args = ['python', '-m', 'compliantflow', '--dhf', 'compliantflow-dhf/DHF',
                       'cr', 'generate-report', cr_id]
-              result = subprocess.run(args, capture_output=True, text=True,
-                                      env={**os.environ, 'PYTHONPATH': '.:compliantflow-dhf/DHF'})
               try:
-                  merged[cr_id] = json.loads(result.stdout)
-              except json.JSONDecodeError:
-                  merged[cr_id] = {'cr_id': cr_id, 'error': 'parse_failed'}
+                  result = subprocess.run(
+                      args,
+                      capture_output=True,
+                      text=True,
+                      env={**os.environ, 'PYTHONPATH': '.:compliantflow-dhf/DHF'},
+                      timeout=60,
+                  )
+                  try:
+                      merged[cr_id] = json.loads(result.stdout)
+                  except json.JSONDecodeError:
+                      merged[cr_id] = {'cr_id': cr_id, 'error': 'parse_failed'}
+              except subprocess.TimeoutExpired:
+                  merged[cr_id] = {'cr_id': cr_id, 'error': 'timeout'}
               print(f'Processed {cr_id}', file=sys.stderr)
           with open('cr-reports/cr_pr_linkage.json', 'w') as f:
               json.dump(merged, f, indent=2)
