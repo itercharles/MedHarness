@@ -131,7 +131,7 @@ jobs:
   phase2-sys:
     name: Phase 2 - SYS API Tests
     runs-on: ubuntu-latest
-    needs: phase1-dhf-utils
+    needs: phase0-cr-validation
     if: github.event_name == 'pull_request'
     steps:
       - name: Check out code
@@ -164,7 +164,7 @@ jobs:
   phase3-crs:
     name: Phase 3 - CRS API Tests
     runs-on: ubuntu-latest
-    needs: phase2-sys
+    needs: phase0-cr-validation
     if: github.event_name == 'pull_request'
     steps:
       - name: Check out code
@@ -197,7 +197,7 @@ jobs:
   phase3-5-cr-report:
     name: Phase 3.5 - CR-PR Evidence Report
     runs-on: ubuntu-latest
-    needs: [phase2-sys, phase3-crs]
+    needs: phase0-cr-validation
     if: github.event_name == 'pull_request'
     steps:
       - name: Check out tool repo
