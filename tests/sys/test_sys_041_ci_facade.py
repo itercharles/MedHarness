@@ -1,0 +1,182 @@
+"""
+Tests for SYS-041: CI gate, evidence, and artifact facade commands.
+
+Verifies that product CI can call CompliantFlow's stable ci namespace instead
+of depending directly on DHF utils commands or storage paths.
+
+@links: SYS-041
+"""
+
+import json
+from pathlib import Path
+
+from click.testing import CliRunner
+
+from compliantflow.cli import main
+
+
+class FakeCore:
+    def __init__(self, traceability=None, coverage=None):
+        self.traceability = traceability or {"valid": True, "issues": []}
+        self.coverage = coverage or {"passed": True, "results": []}
+        self.injected = []
+
+    def inject_junit_results(self, paths):
+        self.injected = paths
+
+    def validate(self):
+        return self.traceability
+
+    def check_coverage(self, pairs):
+        self.coverage["pairs"] = pairs
+        return self.coverage
+
+
+class FakeAdapter:
+    def __init__(self, results=None):
+        self.results = list(results or [])
+        self.imported = []
+
+    def import_results_from_file(self, **kwargs):
+        self.imported.append(kwargs)
+        return self.results.pop(0)
+
+
+def _invoke(monkeypatch, args, core=None, adapter=None):
+    if core is not None:
+        monkeypatch.setattr("compliantflow.cli._make_core", lambda ctx: core)
+    if adapter is not None:
+        monkeypatch.setattr("compliantflow.cli._make_adapter", lambda ctx: adapter)
+    return CliRunner().invoke(main, args)
+
+
+def test_TC_SYS_041_001_ci_gate_acceptance_passes_with_default_coverage(monkeypatch):
+    """
+    TC-SYS-041-001: ci gate acceptance evaluates traceability and default coverage.
+
+    @test_id: TC-SYS-041-001
+    @links: SYS-041
+    """
+    core = FakeCore(coverage={"passed": True, "results": [
+        {"parent_type": "UC", "child_type": "CRS", "covered": 1, "total": 1, "passed": True},
+    ]})
+
+    result = _invoke(monkeypatch, ["ci", "gate", "acceptance"], core=core)
+
+    assert result.exit_code == 0
+    payload = json.loads(result.output.splitlines()[0])
+    assert payload["passed"] is True
+    assert ["UC", "CRS"] in payload["coverage"]["pairs"]
+    assert ["SRS", "SWDD"] in payload["coverage"]["pairs"]
+
+
+def test_TC_SYS_041_002_ci_gate_acceptance_fails_on_traceability_issue(monkeypatch):
+    """
+    TC-SYS-041-002: ci gate acceptance exits nonzero when traceability fails.
+
+    @test_id: TC-SYS-041-002
+    @links: SYS-041
+    """
+    core = FakeCore(
+        traceability={"valid": False, "issues": [{"type": "orphan", "items": ["SYS-999"]}]},
+        coverage={"passed": True, "results": []},
+    )
+
+    result = _invoke(monkeypatch, ["ci", "gate", "acceptance"], core=core)
+
+    assert result.exit_code == 1
+    assert json.loads(result.output.splitlines()[0])["passed"] is False
+    assert "SYS-999" in result.output
+
+
+def test_TC_SYS_041_003_ci_evidence_import_aggregates_multiple_junit_files(
+    monkeypatch,
+    tmp_path,
+):
+    """
+    TC-SYS-041-003: ci evidence import aggregates adapter import summaries.
+
+    @test_id: TC-SYS-041-003
+    @links: SYS-041
+    """
+    first = tmp_path / "first.xml"
+    second = tmp_path / "second.xml"
+    first.write_text("<testsuite/>", encoding="utf-8")
+    second.write_text("<testsuite/>", encoding="utf-8")
+    adapter = FakeAdapter(results=[
+        {
+            "recorded": [
+                {"tc_id": "TC-SYS-001-001", "links": ["SYS-001"], "testing_status": "PASS"},
+            ],
+            "skipped": 0,
+        },
+        {
+            "recorded": [
+                {"tc_id": "TC-SYS-002-001", "links": ["SYS-001", "SYS-002"], "testing_status": "FAIL"},
+            ],
+            "skipped": 1,
+        },
+    ])
+
+    result = _invoke(
+        monkeypatch,
+        [
+            "ci", "evidence", "import",
+            str(first), str(second),
+            "--tester", "ci",
+            "--run-id", "123",
+        ],
+        adapter=adapter,
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.output.splitlines()[0])
+    assert payload["imported"] == 2
+    assert payload["skipped"] == 1
+    assert payload["items_updated"] == ["SYS-001", "SYS-002"]
+    assert payload["failed_tcs"] == ["TC-SYS-002-001"]
+    assert adapter.imported[0]["tester"] == "ci"
+    assert adapter.imported[0]["run_id"] == "123"
+
+
+def test_TC_SYS_041_004_ci_artifacts_generate_orchestrates_adapter_and_report_helpers(
+    monkeypatch,
+    tmp_path,
+):
+    """
+    TC-SYS-041-004: ci artifacts generate writes a structured artifact manifest.
+
+    @test_id: TC-SYS-041-004
+    @links: SYS-041
+    """
+    out_dir = tmp_path / "artifacts"
+    pdf = tmp_path / "SYS.pdf"
+    pdf.write_bytes(b"%PDF-1.4\n")
+
+    class ArtifactAdapter:
+        def get_available_doc_types(self):
+            return ["SYS"]
+
+        def export_pdf(self, doc_type):
+            assert doc_type == "SYS"
+            return {"doc_type": doc_type, "pdf_path": str(pdf), "version": "1.0"}
+
+    monkeypatch.setattr("compliantflow.cli._make_adapter", lambda ctx: ArtifactAdapter())
+    monkeypatch.setattr("compliantflow.cli._make_core", lambda ctx: object())
+    monkeypatch.setattr(
+        "compliantflow.cli._generate_plan_artifacts",
+        lambda dhf_path, output_dir: [{"source": "plan.md", "path": str(output_dir / "plans" / "plan.pdf")}],
+    )
+    monkeypatch.setattr(
+        "compliantflow.cli._write_traceability_report",
+        lambda core, doc_types, output, junit_paths: {"path": str(output), "rows": 3},
+    )
+
+    result = CliRunner().invoke(main, ["ci", "artifacts", "generate", "--out-dir", str(out_dir)])
+
+    assert result.exit_code == 0
+    payload = json.loads(result.output.splitlines()[0])
+    assert payload["specifications"][0]["doc_type"] == "SYS"
+    assert Path(payload["specifications"][0]["path"]).exists()
+    assert payload["plans"][0]["source"] == "plan.md"
+    assert payload["traceability"]["rows"] == 3
