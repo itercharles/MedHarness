@@ -216,6 +216,5 @@ See [AGENTS.md](AGENTS.md) for the development workflow, CR process, and archite
 ```bash
 python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 git clone https://github.com/itercharles/compliantflow-dhf
-export PYTHONPATH=.:compliantflow-dhf/DHF
 .venv/bin/pytest tests/ -q
 ```

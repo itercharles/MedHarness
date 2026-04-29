@@ -25,7 +25,7 @@ cd CompliantFlow
 git clone https://github.com/itercharles/compliantflow-dhf
 
 # Set PYTHONPATH so the CLI can find LocalDHFAdapter
-export PYTHONPATH=.:compliantflow-dhf/DHF
+export pip install dhf_util
 
 # Run compliance checks
 python -m compliantflow --dhf compliantflow-dhf/DHF validate compliance IEC_62304 \
@@ -34,13 +34,13 @@ python -m compliantflow --dhf compliantflow-dhf/DHF validate compliance IEC_6230
 
 ## DHF utilities
 
-The `DHF/utils/` package is the DHF system's own API (item CRUD, lifecycle transitions,
+The `dhf_util/` package is the DHF system's own API (item CRUD, lifecycle transitions,
 schema validation). It is not part of the CompliantFlow tool itself.
 
 ```bash
 # Create a new item
-PYTHONPATH=.:DHF python -m utils item create --type SRS --title "My requirement"
+python -m dhf_util --dhf DHF item create --type SRS --title "My requirement"
 
 # Run DHF utility tests
-PYTHONPATH=.:DHF pytest DHF/utils/tests/
+PYTHONPATH=.:DHF pytest dhf_util/tests/
 ```

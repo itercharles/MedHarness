@@ -44,7 +44,7 @@ _Describe the principle._
 
 {{project_name}} uses CompliantFlow for compliance enforcement. The DHF repository (`{{dhf_repo}}`) is the single source of truth for requirements, risks, and traceability.
 
-- **DHF mutations** go through `python -m utils` in the DHF repo — never through product code
+- **DHF mutations** go through `python -m dhf_util --dhf DHF` in the DHF repo — never through product code
 - **Compliance gate** runs on every PR via `compliance.yml`
 - **AI harness** in `AI-harness/` provides context for compliant AI-assisted development
 

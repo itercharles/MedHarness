@@ -57,8 +57,8 @@ jobs:
       - name: Transition CR to analyzing
         if: steps.crs.outputs.skip != 'true'
         run: |
-          export PYTHONPATH="${PYTHONPATH}:${PWD}:${PWD}/DHF"
-          python -m utils item transition "${{ steps.crs.outputs.cr_id }}" analyzing --by "github-actions[bot]"
+          
+          python -m dhf_util --dhf DHF item transition "${{ steps.crs.outputs.cr_id }}" analyzing --by "github-actions[bot]"
 
       - uses: actions/setup-node@v4
         if: steps.crs.outputs.skip != 'true'

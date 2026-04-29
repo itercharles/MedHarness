@@ -15,7 +15,7 @@ For local compliance checks, clone the DHF repo alongside this one:
 
 ```bash
 git clone https://github.com/itercharles/compliantflow-dhf
-export PYTHONPATH=.:compliantflow-dhf/DHF
+pip install dhf_util
 ```
 
 ---
@@ -152,7 +152,7 @@ implementation context packaging, not depend on DHF file paths.
 ```bash
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
-export PYTHONPATH=.:compliantflow-dhf/DHF
+pip install dhf_util
 .venv/bin/pytest tests/ -q
 ```
 

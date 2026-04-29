@@ -20,7 +20,7 @@ PYTHONPATH=.:compliantflow-dhf/DHF is required for CLI and compliance checks.
 ## Environment
 
 ```bash
-export PYTHONPATH=.:compliantflow-dhf/DHF
+pip install dhf_util
 .venv/bin/pytest tests/ -q
 ```
 
