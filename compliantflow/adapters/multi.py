@@ -6,7 +6,7 @@ to and route follow-up calls back to the correct adapter.
 
 Usage::
 
-    from utils.local_adapter import LocalDHFAdapter
+    from dhf_util.local_adapter import LocalDHFAdapter
     from compliantflow.adapters.multi import MultiDHFAdapter
     from compliantflow.core import CompliantFlowCore
 

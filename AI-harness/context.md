@@ -73,20 +73,20 @@ Run these from the DHF repo root (cloned alongside this repo at `compliantflow-d
 cd compliantflow-dhf
 
 # Create a new item
-PYTHONPATH=.:DHF python -m utils item create --type SRS \
+python -m dhf_util item create --type SRS \
   --data '{"title": "My requirement", "derives_from": ["SYS-001"]}'
 
 # Update an item field
-PYTHONPATH=.:DHF python -m utils item update SRS-001 --data '{"title": "Updated title"}'
+python -m dhf_util item update SRS-001 --data '{"title": "Updated title"}'
 
 # List items by type
-PYTHONPATH=.:DHF python -m utils item list --type SYS
+python -m dhf_util item list --type SYS
 
 # Validate schema
-PYTHONPATH=.:DHF python -m utils validate schema
+python -m dhf_util validate schema
 
 # Lifecycle transition (CR, REL, DEF only)
-PYTHONPATH=.:DHF python -m utils item transition CR-042 closed --by "your name"
+python -m dhf_util item transition CR-042 closed --by "your name"
 ```
 
 ---
@@ -99,7 +99,7 @@ CR items use two statuses: `planned` (not yet implemented) and `closed` (merged 
 
 ```bash
 cd compliantflow-dhf
-PYTHONPATH=.:DHF python -m utils item create --type CR
+python -m dhf_util item create --type CR
 # Note the CR ID (e.g. CR-042)
 ```
 
@@ -145,7 +145,7 @@ implementation context packaging, not depend on DHF file paths.
 
 **Graph edge direction.** Edges in `compliantflow/graph.py` run child → parent. `descendants()` means business-upstream (toward requirements). `ancestors()` means business-downstream (toward tests). This is the opposite of the natural reading.
 
-**Explicit lifecycle.** `CR`, `REL`, and `DEF` use explicit lifecycle transitions via `python -m utils item transition`. These are not GitOps-approved.
+**Explicit lifecycle.** `CR`, `REL`, and `DEF` use explicit lifecycle transitions via `python -m dhf_util item transition`. These are not GitOps-approved.
 
 **Environment:**
 

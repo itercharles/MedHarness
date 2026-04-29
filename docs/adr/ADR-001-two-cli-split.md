@@ -18,10 +18,10 @@ The DHF is also a regulated audit record — it must be trustworthy. A tool that
 
 ## Decision
 
-`compliantflow/` (the user-facing CLI package) is strictly read-only. All DHF mutations go through `python -m utils` in the `compliantflow-dhf` repository.
+`compliantflow/` (the user-facing CLI package) is strictly read-only. All DHF mutations go through `python -m dhf_util` in the `compliantflow-dhf` repository.
 
 - `compliantflow`: analysis, traceability, compliance checking, reporting
-- `python -m utils`: item CRUD, lifecycle transitions, schema validation
+- `python -m dhf_util`: item CRUD, lifecycle transitions, schema validation
 
 ## Consequences
 
@@ -36,4 +36,4 @@ The DHF is also a regulated audit record — it must be trustworthy. A tool that
 
 **Constraints this imposes:**
 - Never add `create`, `update`, `delete`, or `transition` commands to `compliantflow/`
-- When AI agents need to mutate the DHF, they must invoke `python -m utils`, not `compliantflow`
+- When AI agents need to mutate the DHF, they must invoke `python -m dhf_util`, not `compliantflow`

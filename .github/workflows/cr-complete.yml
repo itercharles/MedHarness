@@ -47,8 +47,7 @@ jobs:
         if: steps.cr.outputs.skip != 'true'
         working-directory: dhf
         run: |
-          export PYTHONPATH="${PYTHONPATH}:${PWD}:${PWD}/DHF"
-          python -m utils item transition "${{ steps.cr.outputs.cr_id }}" completed --by "github-actions[bot]"
+          python -m dhf_util item transition "${{ steps.cr.outputs.cr_id }}" completed --by "github-actions[bot]"
 
       - name: Commit and push DHF update
         if: steps.cr.outputs.skip != 'true'

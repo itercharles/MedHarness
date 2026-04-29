@@ -57,7 +57,6 @@ jobs:
         run: |
           mkdir -p /tmp/documents/specifications
           cd dhf
-          PYTHONPATH=.:DHF python -m utils doc export ALL 2>&1 | tee /tmp/doc_export.log
           # Collect generated PDFs from /tmp
           find /tmp -maxdepth 1 -name "*_Specification_*.pdf" -exec cp {} /tmp/documents/specifications/ \;
 
@@ -99,7 +98,6 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
           mkdir -p /tmp/documents/compliance
-          export PYTHONPATH="${PWD}/dhf:${PWD}/dhf/DHF"
           # Generate reports regardless of policy pass/fail — the PDF documents
           # compliance state. The actual gate is enforced by the CI pipeline on PRs.
           compliantflow --dhf dhf/DHF report compliance IEC_62304 \
@@ -111,7 +109,6 @@ jobs:
 
       - name: Generate traceability matrix
         run: |
-          export PYTHONPATH="${PWD}/dhf:${PWD}/dhf/DHF"
           compliantflow --dhf dhf/DHF report traceability UC CRS SYS SRS SWDD \
             --output /tmp/documents/compliance/Traceability_Matrix.pdf
 

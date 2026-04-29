@@ -21,7 +21,7 @@ type: project
 ## Two-CLI Split
 
 - `python -m compliantflow` (compliantflow/cli.py) — read-only analysis, traceability, compliance checks, CR check-status/generate-report, test import/status/list, PDF reports
-- `python -m utils` (DHF/utils/cli.py) — item CRUD, lifecycle transitions, doc generation, test import/status/list/pull
+- `python -m dhf_util` (DHF/utils/cli.py) — item CRUD, lifecycle transitions, doc generation, test import/status/list/pull
 
 Bulk approval is mutating → belongs in utils CLI. Release gate is read-only evaluation → belongs in compliantflow CLI.
 

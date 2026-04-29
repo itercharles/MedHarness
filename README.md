@@ -188,11 +188,11 @@ The DHF repository still owns the local YAML/Git provider and schema/document
 tooling. Direct DHF utils commands remain available for DHF maintainers:
 
 ```bash
-PYTHONPATH=.:DHF python -m utils item list --type SYS
-PYTHONPATH=.:DHF python -m utils item create --type SRS \
+python -m dhf_util item list --type SYS
+python -m dhf_util item create --type SRS \
   --data '{"title": "My requirement", "derives_from": ["SYS-001"]}'
-PYTHONPATH=.:DHF python -m utils item transition CR-001 closed --by "Alice"
-PYTHONPATH=.:DHF python -m utils validate schema
+python -m dhf_util item transition CR-001 closed --by "Alice"
+python -m dhf_util validate schema
 ```
 
 ---

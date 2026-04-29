@@ -111,5 +111,5 @@ Tests that cover new system behaviour also require the corresponding `SYS` and `
 
 # DHF utils tests (from DHF repo root)
 cd compliantflow-dhf
-PYTHONPATH=.:DHF python -m pytest DHF/utils/tests/ -q
+python -m pytest DHF/utils/tests/ -q
 ```

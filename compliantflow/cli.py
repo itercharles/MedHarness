@@ -36,7 +36,7 @@ def _make_core(ctx: click.Context):
     ``CompliantFlowCore`` unchanged.
     """
     try:
-        from utils.local_adapter import LocalDHFAdapter
+        from dhf_util.local_adapter import LocalDHFAdapter
     except ImportError:
         raise click.ClickException(
             "LocalDHFAdapter not found. Add your DHF system (e.g. compliantflow-dhf) "
@@ -60,7 +60,7 @@ def _make_adapter(ctx: click.Context):
     if ctx.obj.get("projects"):
         raise click.ClickException("DHF facade commands do not support --project multi-repo mode.")
     try:
-        from utils.local_adapter import LocalDHFAdapter
+        from dhf_util.local_adapter import LocalDHFAdapter
     except ImportError:
         raise click.ClickException(
             "LocalDHFAdapter not found. Add your DHF system to PYTHONPATH before running the CLI."
@@ -1221,7 +1221,7 @@ def validate_compliance_history_list(
 
     Outputs each run as a JSON object on stdout (NDJSON).
     """
-    from utils.local_adapter import LocalDHFAdapter
+    from dhf_util.local_adapter import LocalDHFAdapter
     dhf_path: Path = ctx.obj["dhf"]
     adapter = LocalDHFAdapter(dhf_path, auto_commit=False)
     runs = adapter.get_compliance_runs(group_id, since_date=since)

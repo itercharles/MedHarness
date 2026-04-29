@@ -92,8 +92,8 @@ def transform_context(text: str) -> str:
 
     # CR Workflow: create CR step
     text = text.replace(
-        'cd compliantflow-dhf\nPYTHONPATH=.:DHF python -m utils item create --type CR',
-        '# In the DHF repo\ncd ../$(basename {{dhf_repo}})\nPYTHONPATH=.:DHF python -m utils item create --type CR',
+        'cd compliantflow-dhf\nPYTHONPATH=.:DHF python -m dhf_util item create --type CR',
+        '# In the DHF repo\ncd ../$(basename {{dhf_repo}})\nPYTHONPATH=.:DHF python -m dhf_util item create --type CR',
     )
 
     # Compliance Gate: CI workflow filename

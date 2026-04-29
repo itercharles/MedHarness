@@ -202,7 +202,7 @@ jobs:
         working-directory: dhf
         run: |
           export PYTHONPATH="${{PYTHONPATH}}:${{PWD}}:${{PWD}}/DHF"
-          python -m utils item transition "${{{{ steps.cr.outputs.cr_id }}}}" completed --by "github-actions[bot]"
+          python -m dhf_util item transition "${{{{ steps.cr.outputs.cr_id }}}}" completed --by "github-actions[bot]"
 
       - name: Commit and push DHF update
         if: steps.cr.outputs.skip != 'true'
@@ -259,7 +259,7 @@ jobs:
       - name: Validate DHF schema
         run: |
           export PYTHONPATH="${PYTHONPATH}:${PWD}:${PWD}/DHF"
-          python -m utils validate schema
+          python -m dhf_util validate schema
 """)
 
 
@@ -311,7 +311,7 @@ jobs:
         run: |
           export PYTHONPATH="${PYTHONPATH}:${PWD}:${PWD}/DHF"
           for CR_ID in $CR_IDS; do
-            python -m utils item transition "$CR_ID" "$TO_STATE" --by "$TRIGGERED_BY"
+            python -m dhf_util item transition "$CR_ID" "$TO_STATE" --by "$TRIGGERED_BY"
           done
       - name: Commit status changes
         run: |
