@@ -115,8 +115,10 @@ Setup:
 
 Compliance:
   ci gate acceptance              Run the CI-facing DHF acceptance gate
+  ci run acceptance               High-level acceptance orchestration for product CI
   ci evidence import PATH...      Import CI JUnit evidence into the DHF
   ci artifacts generate           Generate CI-ready DHF PDF artifacts
+  ci run artifacts                High-level artifact orchestration for product CI
   validate traceability           Check all items have upstream/downstream links
   validate compliance STANDARD    Run policy checks (IEC_62304, ISO_14971, ...)
   validate coverage PARENT:CHILD  Check coverage between item types
@@ -171,8 +173,14 @@ CI pipelines should use the stable `ci` namespace for gate/evidence/artifact
 workflows:
 
 ```bash
+compliantflow --dhf DHF ci run acceptance \
+  --junit-dir test-results/srs \
+  --junit-dir test-results/sys
 compliantflow --dhf DHF ci gate acceptance --junit test-results.xml
 compliantflow --dhf DHF ci evidence import test-results.xml --run-id "$GITHUB_RUN_ID"
+compliantflow --dhf DHF ci run artifacts --out-dir artifacts/dhf \
+  --junit-dir test-results/srs \
+  --junit-dir test-results/sys
 compliantflow --dhf DHF ci artifacts generate --out-dir artifacts/dhf --junit test-results.xml
 ```
 
