@@ -7,6 +7,7 @@ storage paths or provider-specific commands.
 
 import json
 import os
+import shutil
 import sys
 from pathlib import Path
 
@@ -85,6 +86,191 @@ def _get_document_with_legacy_fallback(adapter, dhf_path: Path, doc_id: str) -> 
     if legacy_path.is_file():
         return legacy_path.read_text(encoding="utf-8")
     return None
+
+
+DEFAULT_ACCEPTANCE_COVERAGE_PAIRS = ("UC:CRS", "CRS:SYS", "SYS:SRS", "SRS:SWDD")
+DEFAULT_TRACEABILITY_DOC_TYPES = ("UC", "CRS", "SYS", "SRS", "SWDD")
+
+
+def _parse_coverage_pairs(pairs: tuple[str, ...]) -> list[tuple[str, str]]:
+    parsed = []
+    for pair in pairs:
+        if ":" not in pair:
+            raise click.BadParameter(
+                f"invalid pair '{pair}', expected PARENT:CHILD format.",
+                param_hint="--coverage-pair",
+            )
+        parent, child = pair.split(":", 1)
+        parsed.append((parent.strip(), child.strip()))
+    return parsed
+
+
+def _summarize_import_result(result: dict) -> dict:
+    recorded = result.get("recorded", [])
+    skipped = result.get("skipped", 0)
+    items_updated = sorted({uid for r in recorded for uid in r.get("links", [])})
+    failed_tcs = [r["tc_id"] for r in recorded if r.get("testing_status") == "FAIL"]
+    return {
+        "imported": len(recorded),
+        "skipped": skipped,
+        "items_updated": items_updated,
+        "failed_tcs": failed_tcs,
+    }
+
+
+def _import_results_file(adapter, path: Path, tester: str, run_id: str,
+                         run_url: str, commit: str) -> dict:
+    if not hasattr(adapter, "import_results_from_file"):
+        raise click.ClickException("Configured DHF adapter does not support test result import.")
+    result = adapter.import_results_from_file(
+        xml_path=path,
+        tester=tester,
+        run_id=run_id,
+        run_url=run_url,
+        commit_sha=commit,
+    )
+    summary = _summarize_import_result(result)
+    summary["path"] = str(path)
+    return summary
+
+
+def _build_traceability_report_payload(core, doc_types: tuple[str, ...],
+                                       junit_paths: tuple[str, ...] = ()) -> dict:
+    if junit_paths:
+        core.inject_junit_results([Path(p) for p in junit_paths])
+
+    matrix = core.build_traceability_matrix(list(doc_types))
+
+    columns: list[str] = matrix["columns"]
+    for row in matrix["rows"]:
+        level_statuses: dict[str, str] = {}
+        for col in columns:
+            item_id = row.get(col)
+            if not item_id:
+                continue
+            prefix = item_id.split("-")[0] + "-"
+            cfg = core.config.get_type_by_prefix(prefix) if core.config else None
+            if not cfg or not cfg.has_verification:
+                continue
+            item = core.get_item(item_id)
+            vs = item.get("verification_status") if item else None
+            if vs:
+                level_statuses[col] = vs
+        row["level_statuses"] = level_statuses
+        for col in reversed(columns):
+            if col in level_statuses:
+                row["verification_status"] = level_statuses[col]
+                break
+
+    coverage: dict[str, list[dict]] = {}
+    seen_ids: set[str] = set()
+    for col in columns:
+        for row in matrix["rows"]:
+            item_id = row.get(col)
+            if not item_id or item_id in seen_ids:
+                continue
+            seen_ids.add(item_id)
+            prefix = item_id.split("-")[0] + "-"
+            cfg = core.config.get_type_by_prefix(prefix) if core.config else None
+            if not cfg or not cfg.has_verification:
+                continue
+            item = core.get_item(item_id)
+            if not item:
+                continue
+            test_cases = item.get("test_cases") or []
+            coverage.setdefault(item_id.split("-")[0], []).append({
+                "id": item_id,
+                "title": item.get("title", ""),
+                "status": item.get("verification_status", "not_verified"),
+                "tests": test_cases,
+            })
+
+    for level in coverage:
+        coverage[level].sort(key=lambda x: x["id"])
+
+    matrix["coverage"] = coverage
+    matrix["test_results"] = core.get_all_test_results()
+    return matrix
+
+
+def _write_traceability_report(core, doc_types: tuple[str, ...], output: Path,
+                               junit_paths: tuple[str, ...] = ()) -> dict:
+    from compliantflow.report_generator import generate_traceability_pdf
+
+    matrix = _build_traceability_report_payload(core, doc_types, junit_paths)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    generate_traceability_pdf(matrix, output)
+    return {"path": str(output), "rows": len(matrix["rows"])}
+
+
+def _available_doc_types(adapter) -> list[str]:
+    if hasattr(adapter, "get_available_doc_types"):
+        return sorted(adapter.get_available_doc_types())
+    doc_specs = getattr(adapter, "_doc_specs", None)
+    if isinstance(doc_specs, dict):
+        return sorted(doc_specs.keys())
+    raise click.ClickException("Configured DHF adapter does not expose available document types.")
+
+
+def _generate_specification_artifacts(adapter, out_dir: Path,
+                                      doc_types: tuple[str, ...]) -> list[dict]:
+    if not hasattr(adapter, "export_pdf"):
+        raise click.ClickException("Configured DHF adapter does not support PDF export.")
+    spec_dir = out_dir / "specifications"
+    spec_dir.mkdir(parents=True, exist_ok=True)
+    generated = []
+    for doc_type in doc_types:
+        result = adapter.export_pdf(doc_type)
+        pdf_path = Path(result["pdf_path"])
+        destination = spec_dir / pdf_path.name
+        if pdf_path.resolve() != destination.resolve():
+            shutil.copy2(pdf_path, destination)
+        generated.append({
+            "doc_type": doc_type,
+            "path": str(destination),
+            "source": str(pdf_path),
+            "version": result.get("version"),
+        })
+    return generated
+
+
+def _generate_plan_artifacts(dhf_path: Path, out_dir: Path) -> list[dict]:
+    plans_dir = dhf_path / "documents" / "plans"
+    if not plans_dir.is_dir():
+        return []
+    try:
+        import markdown as _markdown
+        from weasyprint import HTML
+    except ImportError as exc:
+        raise click.ClickException(
+            "markdown and weasyprint are required to generate plan PDF artifacts."
+        ) from exc
+
+    css_candidates = [
+        dhf_path / "documents" / "specifications" / "templates" / "styles" / "default.css",
+        dhf_path / "documents" / "specs" / "styles" / "default.css",
+    ]
+    css = ""
+    for css_path in css_candidates:
+        if css_path.exists():
+            css = f"<style>{css_path.read_text(encoding='utf-8')}</style>"
+            break
+
+    output_dir = out_dir / "plans"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    generated = []
+    for plan in sorted(plans_dir.glob("*.md")):
+        html = _markdown.markdown(
+            plan.read_text(encoding="utf-8"),
+            extensions=["tables", "fenced_code", "toc"],
+        )
+        output = output_dir / f"{plan.stem}.pdf"
+        HTML(
+            string=f"<!doctype html><html><head>{css}</head><body>{html}</body></html>",
+            base_url=str(plan.parent),
+        ).write_pdf(str(output))
+        generated.append({"source": str(plan), "path": str(output)})
+    return generated
 
 
 # ---------------------------------------------------------------------------
@@ -277,6 +463,159 @@ def dhf_context_implementation(ctx: click.Context, cr_id: str, out_dir: Path) ->
         encoding="utf-8",
     )
     click.echo(json.dumps({"cr": str(cr_path), "implementation_spec": str(spec_path), "context": str(context_path)}))
+
+
+# ---------------------------------------------------------------------------
+# CI facade
+# ---------------------------------------------------------------------------
+
+@main.group("ci")
+def ci() -> None:
+    """CI-facing facade commands for DHF gates, evidence, and artifacts."""
+
+
+@ci.group("gate")
+def ci_gate() -> None:
+    """Acceptance gate commands."""
+
+
+@ci_gate.command("acceptance")
+@click.option("--junit", "junit_paths", multiple=True, type=click.Path(exists=True),
+              help="JUnit XML file(s) to include as in-memory verification evidence.")
+@click.option("--coverage-pair", "coverage_pairs", multiple=True, metavar="PARENT:CHILD",
+              help="Coverage pair to check. Repeat for multiple pairs.")
+@click.pass_context
+def ci_gate_acceptance(ctx: click.Context, junit_paths: tuple,
+                       coverage_pairs: tuple) -> None:
+    """Run the DHF acceptance gate for CI pipelines."""
+    core = _make_core(ctx)
+    if junit_paths:
+        core.inject_junit_results([Path(p) for p in junit_paths])
+
+    traceability = core.validate()
+    pairs = coverage_pairs or DEFAULT_ACCEPTANCE_COVERAGE_PAIRS
+    coverage = core.check_coverage(_parse_coverage_pairs(pairs))
+    passed = traceability.get("valid", True) and coverage.get("passed", True)
+
+    result = {
+        "passed": passed,
+        "traceability": traceability,
+        "coverage": coverage,
+        "junit_files": [str(Path(p)) for p in junit_paths],
+    }
+    click.echo(json.dumps(result, default=str))
+
+    if not traceability.get("valid", True):
+        for issue in traceability.get("issues", []):
+            affected = issue.get("items", [])
+            click.echo(
+                f"ORPHAN [{issue.get('type', 'issue')}]: {len(affected)} item(s): "
+                + ", ".join(affected[:5])
+                + ("..." if len(affected) > 5 else ""),
+                err=True,
+            )
+    for row in coverage.get("results", []):
+        symbol = "OK" if row.get("passed") else "FAIL"
+        click.echo(
+            f"{symbol} {row['parent_type']}->{row['child_type']}: "
+            f"{row['covered']}/{row['total']} covered",
+            err=True,
+        )
+    if not passed:
+        click.echo("FAIL DHF acceptance gate failed.", err=True)
+        sys.exit(1)
+    click.echo("OK DHF acceptance gate passed.", err=True)
+
+
+@ci.group("evidence")
+def ci_evidence() -> None:
+    """CI evidence ingestion commands."""
+
+
+@ci_evidence.command("import")
+@click.argument("paths", nargs=-1, required=True,
+                type=click.Path(exists=True, dir_okay=False, path_type=Path))
+@click.option("--format", "fmt", default="junit", show_default=True,
+              type=click.Choice(["junit"], case_sensitive=False),
+              help="Test result format.")
+@click.option("--tester", default="", help="Name of the tester or CI agent.")
+@click.option("--run-id", default="", help="CI run ID.")
+@click.option("--run-url", default="", help="URL to the CI run.")
+@click.option("--commit", default="", help="Git commit SHA.")
+@click.pass_context
+def ci_evidence_import(ctx: click.Context, paths: tuple[Path, ...], fmt: str,
+                       tester: str, run_id: str, run_url: str, commit: str) -> None:
+    """Import one or more test evidence files into the DHF."""
+    adapter = _make_adapter(ctx)
+    files = [
+        _import_results_file(adapter, path, tester, run_id, run_url, commit)
+        for path in paths
+    ]
+    summary = {
+        "format": fmt,
+        "files": files,
+        "imported": sum(f["imported"] for f in files),
+        "skipped": sum(f["skipped"] for f in files),
+        "items_updated": sorted({uid for f in files for uid in f["items_updated"]}),
+        "failed_tcs": [tc for f in files for tc in f["failed_tcs"]],
+    }
+    click.echo(json.dumps(summary, default=str))
+    click.echo(
+        f"OK Imported {summary['imported']} result(s), skipped {summary['skipped']}, "
+        f"updated {len(summary['items_updated'])} item(s).",
+        err=True,
+    )
+    if summary["failed_tcs"]:
+        click.echo(f"FAIL Failing TCs: {summary['failed_tcs']}", err=True)
+
+
+@ci.group("artifacts")
+def ci_artifacts() -> None:
+    """CI artifact generation commands."""
+
+
+@ci_artifacts.command("generate")
+@click.option("--out-dir", type=click.Path(file_okay=False, path_type=Path), required=True)
+@click.option("--doc-type", "doc_types", multiple=True, metavar="CODE",
+              help="Specification document type to export. Defaults to all configured types.")
+@click.option("--traceability-type", "traceability_types", multiple=True, metavar="CODE",
+              help="Traceability matrix type. Defaults to UC CRS SYS SRS SWDD.")
+@click.option("--junit", "junit_paths", multiple=True, type=click.Path(exists=True),
+              help="JUnit XML file(s) to include in the traceability report.")
+@click.option("--skip-plans", is_flag=True, default=False,
+              help="Skip plan PDF generation.")
+@click.pass_context
+def ci_artifacts_generate(ctx: click.Context, out_dir: Path, doc_types: tuple,
+                          traceability_types: tuple, junit_paths: tuple,
+                          skip_plans: bool) -> None:
+    """Generate CI-ready DHF PDF artifacts."""
+    adapter = _make_adapter(ctx)
+    core = _make_core(ctx)
+    dhf_path: Path = ctx.obj["dhf"]
+    selected_doc_types = doc_types or tuple(_available_doc_types(adapter))
+    selected_traceability = traceability_types or DEFAULT_TRACEABILITY_DOC_TYPES
+
+    out_dir.mkdir(parents=True, exist_ok=True)
+    specifications = _generate_specification_artifacts(adapter, out_dir, selected_doc_types)
+    plans = [] if skip_plans else _generate_plan_artifacts(dhf_path, out_dir)
+    traceability = _write_traceability_report(
+        core,
+        selected_traceability,
+        out_dir / "traceability" / "Requirements_Traceability_Report.pdf",
+        junit_paths,
+    )
+    result = {
+        "out_dir": str(out_dir),
+        "specifications": specifications,
+        "plans": plans,
+        "traceability": traceability,
+    }
+    click.echo(json.dumps(result, default=str))
+    click.echo(
+        f"OK Generated {len(specifications)} specification(s), {len(plans)} plan(s), "
+        f"traceability report at {traceability['path']}.",
+        err=True,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -558,13 +897,11 @@ def validate_coverage(ctx: click.Context, pairs: tuple) -> None:
     dhf_path: Path = ctx.obj["dhf"]
     core = _make_core(ctx)
 
-    parsed = []
-    for pair in pairs:
-        if ":" not in pair:
-            click.echo(f"ERROR: invalid pair '{pair}', expected PARENT:CHILD format.", err=True)
-            sys.exit(2)
-        parent, child = pair.split(":", 1)
-        parsed.append((parent.strip(), child.strip()))
+    try:
+        parsed = _parse_coverage_pairs(pairs)
+    except click.BadParameter as exc:
+        click.echo(f"ERROR: {exc.message}", err=True)
+        sys.exit(2)
 
     report = core.check_coverage(parsed)
     click.echo(json.dumps(report, default=str))
@@ -840,77 +1177,11 @@ def report_traceability(ctx: click.Context, doc_types: tuple, output: str,
       python -m compliantflow report traceability UC CRS SYS SYSARCH \\
         --output traceability_report.pdf
     """
-    from compliantflow.report_generator import generate_traceability_pdf
-    dhf_path: Path = ctx.obj["dhf"]
     core = _make_core(ctx)
-
-    if junit_paths:
-        core.inject_junit_results([Path(p) for p in junit_paths])
-
-    matrix = core.build_traceability_matrix(list(doc_types))
-
-    # Enrich each row with per-level verification statuses.
-    # row["level_statuses"] = {col: status} for every verifiable column in the row.
-    columns: list[str] = matrix["columns"]
-    for row in matrix["rows"]:
-        level_statuses: dict[str, str] = {}
-        for col in columns:
-            item_id = row.get(col)
-            if not item_id:
-                continue
-            prefix = item_id.split("-")[0] + "-"
-            cfg = core.config.get_type_by_prefix(prefix) if core.config else None
-            if not cfg or not cfg.has_verification:
-                continue
-            item = core.get_item(item_id)
-            vs = item.get("verification_status") if item else None
-            if vs:
-                level_statuses[col] = vs
-        row["level_statuses"] = level_statuses
-        # Keep a single verification_status for backward-compat (most-derived)
-        for col in reversed(columns):
-            if col in level_statuses:
-                row["verification_status"] = level_statuses[col]
-                break
-
-    # Build per-level test coverage: {prefix → [{id, title, status, tests}]}
-    # Collect every verifiable item that has test_cases set (from JUnit injection).
-    coverage: dict[str, list[dict]] = {}
-    seen_ids: set[str] = set()
-    for col in columns:
-        for row in matrix["rows"]:
-            item_id = row.get(col)
-            if not item_id or item_id in seen_ids:
-                continue
-            seen_ids.add(item_id)
-            prefix = item_id.split("-")[0] + "-"
-            cfg = core.config.get_type_by_prefix(prefix) if core.config else None
-            if not cfg or not cfg.has_verification:
-                continue
-            item = core.get_item(item_id)
-            if not item:
-                continue
-            test_cases = item.get("test_cases") or []
-            coverage.setdefault(item_id.split("-")[0], []).append({
-                "id": item_id,
-                "title": item.get("title", ""),
-                "status": item.get("verification_status", "not_verified"),
-                "tests": test_cases,
-            })
-
-    # Sort each level by ID
-    for level in coverage:
-        coverage[level].sort(key=lambda x: x["id"])
-
-    matrix["coverage"] = coverage
-
-    # Attach test results summary (DHF-stored TCs, may be empty when using JUnit-only)
-    matrix["test_results"] = core.get_all_test_results()
-
     out = Path(output)
-    generate_traceability_pdf(matrix, out)
+    report_result = _write_traceability_report(core, doc_types, out, junit_paths)
     click.echo(f"✓ Traceability report written to {out} "
-               f"({len(matrix['rows'])} rows)", err=True)
+               f"({report_result['rows']} rows)", err=True)
 
 
 @report.command("compliance")
@@ -1119,27 +1390,9 @@ def test_import(
     PATH is the path to the test result file.
     Outputs a JSON summary to stdout.
     """
-    from utils.local_adapter import LocalDHFAdapter
-    dhf_path: Path = ctx.obj["dhf"]
-    adapter = LocalDHFAdapter(dhf_path, auto_commit=False)
-    result = adapter.import_results_from_file(
-        xml_path=Path(path),
-        tester=tester,
-        run_id=run_id,
-        run_url=run_url,
-        commit_sha=commit,
-    )
-    # Re-shape to match the summary format used by core.import_test_results
-    recorded = result.get("recorded", [])
-    skipped = result.get("skipped", 0)
-    items_updated = list({uid for r in recorded for uid in r.get("links", [])})
-    failed_tcs = [r["tc_id"] for r in recorded if r.get("testing_status") == "FAIL"]
-    summary = {
-        "imported": len(recorded),
-        "skipped": skipped,
-        "items_updated": items_updated,
-        "failed_tcs": failed_tcs,
-    }
+    adapter = _make_adapter(ctx)
+    summary = _import_results_file(adapter, Path(path), tester, run_id, run_url, commit)
+    summary.pop("path", None)
     click.echo(json.dumps(summary, default=str))
     click.echo(
         f"✓ Imported {summary['imported']} result(s), "

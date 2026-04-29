@@ -97,6 +97,7 @@ The CI workflow runs four checks on every push and PR:
 
 ```bash
 # Run locally before pushing
+compliantflow --dhf DHF ci gate acceptance
 compliantflow --dhf DHF validate traceability
 compliantflow --dhf DHF validate compliance IEC_62304 --governance-dir governance
 compliantflow --dhf DHF status --governance-dir governance
@@ -113,6 +114,9 @@ Setup:
   init                            Interactive infrastructure onboarding
 
 Compliance:
+  ci gate acceptance              Run the CI-facing DHF acceptance gate
+  ci evidence import PATH...      Import CI JUnit evidence into the DHF
+  ci artifacts generate           Generate CI-ready DHF PDF artifacts
   validate traceability           Check all items have upstream/downstream links
   validate compliance STANDARD    Run policy checks (IEC_62304, ISO_14971, ...)
   validate coverage PARENT:CHILD  Check coverage between item types
@@ -161,6 +165,15 @@ compliantflow --dhf DHF dhf item create --type SRS \
   --data '{"title": "My requirement", "derives_from": ["SYS-001"]}'
 compliantflow --dhf DHF dhf item transition CR-001 closed --by "Alice"
 compliantflow --dhf DHF dhf context implementation --cr CR-001 --out-dir /tmp/dhf-context
+```
+
+CI pipelines should use the stable `ci` namespace for gate/evidence/artifact
+workflows:
+
+```bash
+compliantflow --dhf DHF ci gate acceptance --junit test-results.xml
+compliantflow --dhf DHF ci evidence import test-results.xml --run-id "$GITHUB_RUN_ID"
+compliantflow --dhf DHF ci artifacts generate --out-dir artifacts/dhf --junit test-results.xml
 ```
 
 The DHF repository still owns the local YAML/Git provider and schema/document
