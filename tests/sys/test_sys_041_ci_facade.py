@@ -16,10 +16,11 @@ from compliantflow.cli import main
 
 
 class FakeCore:
-    def __init__(self, traceability=None, coverage=None):
+    def __init__(self, traceability=None, coverage=None, adapter=None):
         self.traceability = traceability or {"valid": True, "issues": []}
         self.coverage = coverage or {"passed": True, "results": []}
         self.injected = []
+        self._adapter = adapter or FakeAdapter()
 
     def inject_junit_results(self, paths):
         self.injected = paths
@@ -44,6 +45,10 @@ class FakeAdapter:
 
     def get_available_doc_types(self):
         return list(self.doc_types)
+
+    def validate_traceability(self):
+        return {"passed": True, "required": {"passed": True, "failures": []},
+                "coverage": [], "deprecation_warnings": [], "summary": "PASS"}
 
     def generate_doc(self, doc_type_code):
         doc_dir = self._dhf_root / "specs" if hasattr(self, "_dhf_root") else Path("/tmp")
@@ -588,3 +593,205 @@ class TestEvidenceBundle:
 
         assert result.exit_code == 0, result.output
         assert not adapter.wrote, "bundle must not call DHF write methods"
+
+
+# ── ci dhf-validate tests ──────────────────────────────────────────────────
+
+
+class _FakeLocalDHFAdapter:
+    """Fake adapter for ci dhf-validate tests."""
+    def __init__(self, dhf_path, schema_valid=True, item_count=10,
+                 trace_passed=True, trace_failures=None, coverage_results=None):
+        self.dhf_path = dhf_path
+        self._schema_valid = schema_valid
+        self._item_count = item_count
+        self._trace_passed = trace_passed
+        self._trace_failures = trace_failures or []
+        self._coverage_results = coverage_results or []
+
+    def validate_schema(self):
+        return {"valid": self._schema_valid, "errors": [],
+                "item_count": self._item_count}
+
+    def validate_traceability(self):
+        return {
+            "passed": self._trace_passed and len(self._trace_failures) == 0,
+            "required": {"passed": len(self._trace_failures) == 0,
+                          "failures": self._trace_failures},
+            "coverage": self._coverage_results,
+            "deprecation_warnings": [],
+            "summary": "PASS" if self._trace_passed else "FAIL",
+        }
+
+
+def _mock_dhf_validate(monkeypatch, mock_adapter=None, mock_core=None):
+    """Patch the deps used by ci dhf-validate: LocalDHFAdapter and CompliantFlowCore."""
+    if mock_adapter is not None:
+        monkeypatch.setattr(
+            "dhf_util.local_adapter.LocalDHFAdapter",
+            lambda dhf_path, auto_commit=False: mock_adapter if not callable(mock_adapter) else mock_adapter(dhf_path),
+        )
+    # Always provide a stub core — ci dhf-validate always creates one.
+        class _StubCore:
+            def __init__(self, adapter=None, llm_backend=None): pass
+            def check_coverage(self, pairs): return {"passed": True, "results": []}
+            def check_compliance(self, group_id, governance_dir): return {"score": 100.0}
+    core = mock_core
+    if isinstance(core, type):
+        core = core()
+    if core is None:
+        core = _StubCore()
+    monkeypatch.setattr(
+        "compliantflow.core.CompliantFlowCore",
+        lambda adapter, llm_backend=None: core,
+    )
+
+
+def test_dhf_validate_schema_pass(monkeypatch, tmp_path):
+    _mock_dhf_validate(monkeypatch, mock_adapter=_FakeLocalDHFAdapter(str(tmp_path)))
+
+    result = CliRunner().invoke(main, [
+        "ci", "dhf-validate",
+        "--dhf", str(tmp_path),
+        "--run-schema",
+        "--no-run-traceability",
+    ])
+    assert result.exit_code == 0
+    assert "PASS [schema]" in result.output
+
+
+def test_dhf_validate_schema_fail(monkeypatch, tmp_path):
+    _mock_dhf_validate(monkeypatch,
+                       mock_adapter=lambda dhf: _FakeLocalDHFAdapter(dhf, schema_valid=False))
+
+    result = CliRunner().invoke(main, [
+        "ci", "dhf-validate",
+        "--dhf", str(tmp_path),
+        "--run-schema",
+        "--no-run-traceability",
+    ])
+    assert result.exit_code != 0
+    assert "FAIL [schema]" in result.output
+
+
+def test_dhf_validate_traceability_required_fail(monkeypatch, tmp_path):
+    _mock_dhf_validate(monkeypatch,
+                       mock_adapter=lambda dhf: _FakeLocalDHFAdapter(dhf,
+                           trace_passed=False,
+                           trace_failures=[{"id": "RCM-001", "issue": "RCM implements → SYS (count=0)"}],
+                           coverage_results=[
+                               {"parent_type": "UC", "child_type": "CRS", "passed": True,
+                                "total": 5, "covered": 5, "uncovered": []},
+                           ],
+                       ))
+
+    result = CliRunner().invoke(main, [
+        "ci", "dhf-validate",
+        "--dhf", str(tmp_path),
+        "--run-traceability",
+        "--no-run-schema",
+    ])
+    assert result.exit_code != 0
+    assert "FAIL [required]" in result.output
+
+
+def test_dhf_validate_coverage_fail_with_flag(monkeypatch, tmp_path):
+    _mock_dhf_validate(monkeypatch,
+                       mock_adapter=lambda dhf: _FakeLocalDHFAdapter(dhf,
+                           coverage_results=[
+                               {"parent_type": "CRS", "child_type": "SYS", "passed": False,
+                                "total": 10, "covered": 9, "uncovered": ["CRS-011"]},
+                           ],
+                       ))
+
+    result = CliRunner().invoke(main, [
+        "ci", "dhf-validate",
+        "--dhf", str(tmp_path),
+        "--run-traceability",
+        "--no-run-schema",
+        "--fail-on-uncovered",
+    ])
+    assert result.exit_code != 0
+    assert "FAIL [coverage]" in result.output
+
+
+def test_dhf_validate_coverage_pass_without_flag(monkeypatch, tmp_path):
+    _mock_dhf_validate(monkeypatch,
+                       mock_adapter=lambda dhf: _FakeLocalDHFAdapter(dhf,
+                           coverage_results=[
+                               {"parent_type": "CRS", "child_type": "SYS", "passed": False,
+                                "total": 10, "covered": 9, "uncovered": ["CRS-011"]},
+                           ],
+                       ))
+
+    result = CliRunner().invoke(main, [
+        "ci", "dhf-validate",
+        "--dhf", str(tmp_path),
+        "--run-traceability",
+        "--no-run-schema",
+    ])
+    assert result.exit_code == 0  # uncovered items don't fail without --fail-on-uncovered
+
+
+def test_dhf_validate_compliance_pass(monkeypatch, tmp_path):
+    class FakeCore:
+        def check_compliance(self, group_id, governance_dir):
+            return {"score": 100.0, "passed_policies": 5, "total_policies": 5}
+
+    _mock_dhf_validate(monkeypatch,
+                       mock_adapter=_FakeLocalDHFAdapter(str(tmp_path)),
+                       mock_core=FakeCore())
+
+    result = CliRunner().invoke(main, [
+        "ci", "dhf-validate",
+        "--dhf", str(tmp_path),
+        "--run-compliance",
+        "--compliance-standard", "IEC_62304",
+        "--no-run-schema",
+        "--no-run-traceability",
+    ])
+    assert result.exit_code == 0
+    assert "PASS [compliance]" in result.output
+
+
+def test_dhf_validate_compliance_fail(monkeypatch, tmp_path):
+    class FakeCore:
+        def check_compliance(self, group_id, governance_dir):
+            return {"score": 75.0, "passed_policies": 3, "total_policies": 4}
+
+    _mock_dhf_validate(monkeypatch,
+                       mock_adapter=_FakeLocalDHFAdapter(str(tmp_path)),
+                       mock_core=FakeCore())
+
+    result = CliRunner().invoke(main, [
+        "ci", "dhf-validate",
+        "--dhf", str(tmp_path),
+        "--run-compliance",
+        "--compliance-standard", "IEC_62304",
+        "--no-run-schema",
+        "--no-run-traceability",
+    ])
+    assert result.exit_code != 0
+    assert "FAIL [compliance]" in result.output
+    assert "3/4 (75.0%)" in result.output
+
+
+def test_dhf_validate_compliance_missing_group(monkeypatch, tmp_path):
+    class FakeCore:
+        def check_compliance(self, group_id, governance_dir):
+            return None
+
+    _mock_dhf_validate(monkeypatch,
+                       mock_adapter=_FakeLocalDHFAdapter(str(tmp_path)),
+                       mock_core=FakeCore())
+
+    result = CliRunner().invoke(main, [
+        "ci", "dhf-validate",
+        "--dhf", str(tmp_path),
+        "--run-compliance",
+        "--compliance-standard", "IEC_62304",
+        "--no-run-schema",
+        "--no-run-traceability",
+    ])
+    assert result.exit_code != 0
+    assert "FAIL [compliance]" in result.output

@@ -1218,11 +1218,22 @@ def ci_dhf_validate(
         for standard in compliance_standards:
             try:
                 gov = governance_dir.resolve() if governance_dir else Path("governance")
-                result = core.check_compliance(standard, str(gov))
-                click.echo(f"PASS [compliance] {standard}", err=True)
-            except Exception:
+                report = core.check_compliance(standard, str(gov))
+                if report is None:
+                    failed = True
+                    click.echo(f"FAIL [compliance] {standard}: policy group not found", err=True)
+                    continue
+                score = report.get("score", 0)
+                passed_pol = report.get("passed_policies", 0)
+                total_pol = report.get("total_policies", 0)
+                if score == 100.0:
+                    click.echo(f"PASS [compliance] {standard}: {passed_pol}/{total_pol} ({score}%)", err=True)
+                else:
+                    failed = True
+                    click.echo(f"FAIL [compliance] {standard}: {passed_pol}/{total_pol} ({score}%)", err=True)
+            except Exception as e:
                 failed = True
-                click.echo(f"FAIL [compliance] {standard}", err=True)
+                click.echo(f"FAIL [compliance] {standard}: {e}", err=True)
 
     if failed:
         raise click.ClickException("DHF validation failed.")
