@@ -1973,6 +1973,98 @@ def cr_workflow_intake_github_issue_ci(
     click.echo(text)
 
 
+@cr_workflow.command("complete-from-github-pr")
+@click.option("--dhf-repo", type=click.Path(file_okay=False, path_type=Path),
+              help="DHF repository root. Defaults to the parent of --dhf.")
+@click.option("--event", "event_path", type=click.Path(exists=True, dir_okay=False, path_type=Path),
+              default=None, help="GitHub pull request event JSON (GITHUB_EVENT_PATH).")
+@click.option("--pr-title", default=None, metavar="TITLE",
+              help="PR title to parse. Defaults to reading from --event.")
+@click.option("--by", "performed_by", default="compliantflow", show_default=True,
+              help="Actor recorded on the CR lifecycle transition.")
+@click.option("--push", is_flag=True, default=False,
+              help="Push committed DHF repository changes.")
+@click.option("--message", default=None, metavar="TEXT",
+              help="Commit message. Defaults to 'chore: complete CR-ID [skip ci]'.")
+@click.pass_context
+def cr_workflow_complete_from_github_pr(
+    ctx: click.Context,
+    dhf_repo: Path | None,
+    event_path: Path | None,
+    pr_title: str | None,
+    performed_by: str,
+    push: bool,
+    message: str | None,
+) -> None:
+    """Complete a CR from a merged GitHub PR event.
+
+    Parses the CR ID from the PR title (regex CR-\\d+), then delegates
+    to ``cr workflow complete``.  Exits 0 with a skip message when no
+    CR ID is found — the workflow should never block deployment.
+    """
+    import re as _re
+
+    title = pr_title or ""
+    if not title and event_path:
+        try:
+            event_data = json.loads(event_path.read_text(encoding="utf-8"))
+            title = event_data.get("pull_request", {}).get("title", "")
+        except (json.JSONDecodeError, OSError):
+            pass
+
+    cr_match = _re.search(r"CR-\d+", title) if title else None
+    if not cr_match:
+        payload = {"skip": True, "reason": "No CR ID found in PR title"}
+        click.echo(json.dumps(payload))
+        return
+
+    cr_id = cr_match.group(0)
+
+    repo_root, dhf_root = _resolve_dhf_repo_paths(ctx, dhf_repo)
+    adapter = _make_adapter_for_dhf_root(dhf_root)
+
+    # Configure git identity for commit
+    subprocess.run(
+        ["git", "-C", str(repo_root), "config", "user.name", "GitHub Actions [bot]"],
+        capture_output=True, check=False,
+    )
+    subprocess.run(
+        ["git", "-C", str(repo_root), "config", "user.email",
+         "github-actions[bot]@users.noreply.github.com"],
+        capture_output=True, check=False,
+    )
+
+    try:
+        from dhf_util.change_requests import complete_change_request
+        transition = complete_change_request(adapter, cr_id, performed_by=performed_by)
+    except ValueError as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    changed = _git_has_changes(repo_root)
+    commit_message = message or f"chore: complete {cr_id} [skip ci]"
+    committed = False
+    pushed = False
+
+    if changed:
+        _run_git(repo_root, ["add", "-A"])
+        if _git_has_changes(repo_root):
+            _run_git(repo_root, ["commit", "-m", commit_message])
+            committed = True
+            if push:
+                _run_git(repo_root, ["push"])
+                pushed = True
+
+    result = {
+        "cr_id": cr_id,
+        "pr_title": title,
+        "transition": transition,
+        "changed": changed,
+        "committed": committed,
+        "pushed": pushed,
+    }
+    click.echo(json.dumps(result, default=str))
+
+
 @cr.command("check-status")
 @click.argument("cr_id")
 @click.pass_context

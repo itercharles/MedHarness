@@ -151,3 +151,102 @@ def test_TC_SYS_043_003_cr_workflow_complete_fails_when_cr_missing(monkeypatch, 
 
     assert result.exit_code == 1
     assert "CR 'CR-999' not found" in result.output
+
+
+class TestCompleteFromGitHubPR:
+    """@links: SYS-041"""
+
+    def _make_event(self, tmp_path, title="feat(CR-050): add feature"):
+        import json as _json
+        p = tmp_path / "event.json"
+        p.write_text(_json.dumps({
+            "action": "closed",
+            "pull_request": {
+                "number": 99,
+                "title": title,
+                "merged": True,
+            },
+        }), encoding="utf-8")
+        return p
+
+    def test_parses_cr_id_and_completes(self, monkeypatch, tmp_path):
+        dhf_repo = tmp_path / "dhf"
+        (dhf_repo / "DHF").mkdir(parents=True)
+        adapter = FakeCompleteAdapter({"id": "CR-050", "status": "implementing"})
+        event_path = self._make_event(tmp_path, "feat(CR-050): add evidence bundle")
+        git_calls = []
+
+        monkeypatch.setattr("compliantflow.cli._make_adapter_for_dhf_root", lambda x: adapter)
+        monkeypatch.setattr("compliantflow.cli._run_git", lambda repo, args: git_calls.append(args))
+        monkeypatch.setattr("compliantflow.cli._git_has_changes", lambda repo: True)
+        monkeypatch.setattr("compliantflow.cli.subprocess.run", lambda *a, **kw: git_calls.append(kw.get("args", a)))
+
+        result = CliRunner().invoke(main, [
+            "--dhf", str(dhf_repo / "DHF"),
+            "cr", "workflow", "complete-from-github-pr",
+            "--dhf-repo", str(dhf_repo),
+            "--event", str(event_path),
+        ])
+
+        assert result.exit_code == 0, f"out={result.output!r} err={result.stderr!r}"
+        payload = json.loads(result.output.strip())
+        assert payload["cr_id"] == "CR-050"
+        assert payload["committed"] is True
+        assert adapter.item["status"] == "completed"
+
+    def test_skip_when_no_cr_in_title(self, monkeypatch, tmp_path):
+        dhf_repo = tmp_path / "dhf"
+        (dhf_repo / "DHF").mkdir(parents=True)
+        event_path = self._make_event(tmp_path, "chore: update docs")
+
+        monkeypatch.setattr("compliantflow.cli._make_adapter_for_dhf_root", lambda x: FakeCompleteAdapter())
+
+        result = CliRunner().invoke(main, [
+            "--dhf", str(dhf_repo / "DHF"),
+            "cr", "workflow", "complete-from-github-pr",
+            "--dhf-repo", str(dhf_repo),
+            "--event", str(event_path),
+        ])
+
+        assert result.exit_code == 0, result.output
+        payload = json.loads(result.output.strip())
+        assert payload["skip"] is True
+
+    def test_skip_when_no_event_and_no_title(self, monkeypatch, tmp_path):
+        dhf_repo = tmp_path / "dhf"
+        (dhf_repo / "DHF").mkdir(parents=True)
+
+        monkeypatch.setattr("compliantflow.cli._make_adapter_for_dhf_root", lambda x: FakeCompleteAdapter())
+
+        result = CliRunner().invoke(main, [
+            "--dhf", str(dhf_repo / "DHF"),
+            "cr", "workflow", "complete-from-github-pr",
+            "--dhf-repo", str(dhf_repo),
+        ])
+
+        assert result.exit_code == 0
+        payload = json.loads(result.output.strip())
+        assert payload["skip"] is True
+
+    def test_uses_pr_title_option_over_event(self, monkeypatch, tmp_path):
+        dhf_repo = tmp_path / "dhf"
+        (dhf_repo / "DHF").mkdir(parents=True)
+        adapter = FakeCompleteAdapter({"id": "CR-099", "status": "implementing"})
+        event_path = self._make_event(tmp_path, "ignore this")
+
+        monkeypatch.setattr("compliantflow.cli._make_adapter_for_dhf_root", lambda x: adapter)
+        monkeypatch.setattr("compliantflow.cli._run_git", lambda repo, args: None)
+        monkeypatch.setattr("compliantflow.cli._git_has_changes", lambda repo: False)
+        monkeypatch.setattr("compliantflow.cli.subprocess.run", lambda *a, **kw: None)
+
+        result = CliRunner().invoke(main, [
+            "--dhf", str(dhf_repo / "DHF"),
+            "cr", "workflow", "complete-from-github-pr",
+            "--dhf-repo", str(dhf_repo),
+            "--event", str(event_path),
+            "--pr-title", "feat(CR-099): the real PR",
+        ])
+
+        assert result.exit_code == 0
+        payload = json.loads(result.output.strip())
+        assert payload["cr_id"] == "CR-099"
