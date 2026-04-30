@@ -2428,6 +2428,12 @@ def cr_workflow_complete_from_github_pr(
         from dhf_util.change_requests import complete_change_request
         transition = complete_change_request(adapter, cr_id, performed_by=performed_by)
     except ValueError as exc:
+        # CR may already be in a terminal state — skip gracefully instead of failing
+        item = adapter.get_item(cr_id)
+        current_status = item.get("status", "unknown") if item else "unknown"
+        if current_status in ("completed", "cancelled"):
+            click.echo(f"SKIP: {cr_id} is already '{current_status}' — nothing to do.", err=True)
+            return
         raise click.ClickException(str(exc)) from exc
 
     changed = _git_has_changes(repo_root)
