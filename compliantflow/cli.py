@@ -909,6 +909,10 @@ def ci_evidence_record(
               help="Coverage pair to check. Repeat for multiple pairs.")
 @click.option("--traceability-type", "traceability_types", multiple=True, metavar="CODE",
               help="Traceability matrix type. Defaults to UC CRS SYS SRS SWDD.")
+@click.option("--compliance-standard", "compliance_standards", multiple=True, metavar="CODE",
+              help="Compliance standard to check. Repeat for multiple standards (e.g. IEC_62304).")
+@click.option("--governance-dir", type=click.Path(file_okay=False, path_type=Path),
+              help="Governance directory for compliance checks.")
 @click.option("--run-id", "run_id", default="", help="CI run identifier.")
 @click.option("--run-url", "run_url", default="", help="CI run URL for traceability.")
 @click.option("--commit", "commit_sha", default="", help="Git commit SHA.")
@@ -923,6 +927,8 @@ def ci_evidence_bundle(
     junit_dirs: tuple[Path, ...],
     coverage_pairs: tuple[str, ...],
     traceability_types: tuple[str, ...],
+    compliance_standards: tuple[str, ...],
+    governance_dir: Path | None,
     run_id: str,
     run_url: str,
     commit_sha: str,
@@ -989,6 +995,17 @@ def ci_evidence_bundle(
     summary_path = out_dir / "evidence-summary.json"
     summary_str = json.dumps(summary, indent=2, default=str)
     summary_path.write_text(summary_str + "\n", encoding="utf-8")
+
+    # ── Compliance reports ──
+    compliance_dir = out_dir / "compliance"
+    compliance_dir.mkdir(parents=True, exist_ok=True)
+    if compliance_standards and governance_dir:
+        for standard in compliance_standards:
+            output_pdf = compliance_dir / f"{standard}_Compliance_Report.pdf"
+            try:
+                core.report_compliance(standard, str(governance_dir), str(output_pdf))
+            except Exception:
+                click.echo(f"WARN: Compliance report for {standard} could not be generated.", err=True)
 
     # ── Manifest ──
     manifest_files: list[dict] = []

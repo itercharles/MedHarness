@@ -1,0 +1,122 @@
+name: DHF Evidence Producer
+
+# Reusable workflow: called by product repos (WebTPS) to produce
+# dhf-release-artifacts from raw test evidence.
+#
+# Consumes:
+#   - JUnit artifacts uploaded by product CI (download inside caller)
+#   - DHF repository checkout
+# Produces:
+#   - dhf-release-artifacts artifact
+
+on:
+  workflow_call:
+    inputs:
+      dhf-path:
+        required: true
+        type: string
+        description: "Path to checked-out DHF directory"
+      governance-dir:
+        required: true
+        type: string
+        description: "Path to governance directory"
+      coverage-pairs:
+        required: false
+        type: string
+        default: "UC:CRS CRS:SYS SYS:SRS SRS:SWDD SYS:SYSARCH"
+        description: "Space-separated PARENT:CHILD coverage pairs"
+      traceability-types:
+        required: false
+        type: string
+        default: "UC CRS SYS SRS SWDD"
+        description: "Space-separated traceability matrix type codes"
+      compliance-standards:
+        required: false
+        type: string
+        default: "IEC_62304 IEC_82304_1"
+        description: "Space-separated compliance standard codes"
+      junit-dirs:
+        required: true
+        type: string
+        description: "Space-separated paths to JUnit XML directories"
+      artifact-name:
+        required: false
+        type: string
+        default: "dhf-release-artifacts"
+        description: "Name for the uploaded artifact"
+      continue-on-gate-failure:
+        required: false
+        type: boolean
+        default: false
+        description: "Generate artifacts even if gate fails (debug only)"
+    secrets:
+      dhf-repo-token:
+        required: false
+        description: "PAT for private DHF repo access"
+
+jobs:
+  produce:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out CompliantFlow (for CLI + scripts)
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install system dependencies
+        run: sudo apt-get install -y libpango-1.0-0
+
+      - name: Install CompliantFlow and DHF utils
+        env:
+          DHF_REPO_TOKEN: ${{ secrets.dhf-repo-token }}
+        run: |
+          if [ -n "${DHF_REPO_TOKEN}" ]; then
+            git config --global url."https://x-access-token:${DHF_REPO_TOKEN}@github.com/".insteadOf "https://github.com/"
+          fi
+          pip install -e .
+          pip install "dhf_util @ git+https://github.com/itercharles/compliantflow-dhf.git"
+
+      - name: Generate DHF evidence bundle
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          set -e
+          COVERAGE_ARGS=""
+          for pair in ${{ inputs.coverage-pairs }}; do
+            COVERAGE_ARGS="$COVERAGE_ARGS --coverage-pair $pair"
+          done
+          TRACE_ARGS=""
+          for t in ${{ inputs.traceability-types }}; do
+            TRACE_ARGS="$TRACE_ARGS --traceability-type $t"
+          done
+          COMPLIANCE_ARGS=""
+          for s in ${{ inputs.compliance-standards }}; do
+            COMPLIANCE_ARGS="$COMPLIANCE_ARGS --compliance-standard $s"
+          done
+          JUNIT_ARGS=""
+          for d in ${{ inputs.junit-dirs }}; do
+            JUNIT_ARGS="$JUNIT_ARGS --junit-dir $d"
+          done
+          GOV_ARGS="--governance-dir ${{ inputs.governance-dir }}"
+          CONTINUE_FLAG="${{ inputs.continue-on-gate-failure == true && '--continue-on-gate-failure' || '' }}"
+
+          python -m compliantflow --dhf ${{ inputs.dhf-path }} ci evidence bundle \
+            --out-dir /tmp/release-artifacts \
+            --run-id "${{ github.run_id }}" \
+            --run-url "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            --commit "${{ github.sha }}" \
+            $JUNIT_ARGS \
+            $COVERAGE_ARGS \
+            $TRACE_ARGS \
+            $COMPLIANCE_ARGS \
+            $GOV_ARGS \
+            $CONTINUE_FLAG
+
+      - name: Upload DHF release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.artifact-name }}
+          path: /tmp/release-artifacts/
