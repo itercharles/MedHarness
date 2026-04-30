@@ -29,7 +29,7 @@ jobs:
         if: steps.cr.outputs.skip != 'true'
         uses: actions/checkout@v4
         with:
-          repository: itercharles/compliantflow-dhf
+          repository: compliantflow/compliantflow-dhf
           token: ${{ secrets.DHF_REPO_TOKEN }}
           path: dhf
 

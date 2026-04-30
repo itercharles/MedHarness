@@ -72,14 +72,14 @@ def transform_context(text: str) -> str:
         '| This repo | Product source code |',
     )
     text = text.replace(
-        '| [`compliantflow-dhf`](https://github.com/itercharles/compliantflow-dhf)'
+        '| [`compliantflow-dhf`](https://github.com/compliantflow/compliantflow-dhf)'
         ' | Design History File — requirements, risks, traceability, compliance records |',
         '| `{{dhf_repo}}` | Design History File — requirements, risks, traceability, compliance records |',
     )
 
     # Clone URL (Two-Repo Structure section)
     text = text.replace(
-        'git clone https://github.com/itercharles/compliantflow-dhf\nexport PYTHONPATH=.:compliantflow-dhf/DHF',
+        'git clone https://github.com/compliantflow/compliantflow-dhf\npip install dhf_util',
         'git clone https://github.com/{{dhf_repo}} ../$(basename {{dhf_repo}})',
     )
 
@@ -97,7 +97,7 @@ def transform_context(text: str) -> str:
     )
 
     # Compliance Gate: CI workflow filename
-    text = text.replace('`ci-pipeline.yml`', '`compliance.yml`')
+    text = text.replace('`ci-pipeline.yml`', '`engineering-control.yml`')
 
     # Compliance Gate: policy check standards
     text = text.replace(

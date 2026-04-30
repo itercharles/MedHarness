@@ -4,7 +4,7 @@
 # Content mirrors AI-harness/context.md — update both if the project context changes.
 
 CompliantFlow is a CLI compliance gate for medical device software (IEC 62304, ISO 14971).
-The DHF lives in a separate repo: itercharles/compliantflow-dhf.
+The DHF lives in a separate repo: compliantflow/compliantflow-dhf.
 PYTHONPATH=.:compliantflow-dhf/DHF is required for CLI and compliance checks.
 
 ## Key rules

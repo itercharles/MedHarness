@@ -69,14 +69,19 @@ def _init_dhf_template(
         ignore=shutil.ignore_patterns("__pycache__", "*.pyc", ".DS_Store"),
     )
 
+    dhf_repo_name = product_repo.split("/", 1)[1] + "-dhf" if product_repo and "/" in product_repo else "your-product-dhf"
+    github_org = product_repo.split("/", 1)[0] if product_repo and "/" in product_repo else "your-org"
     _replace_placeholders_in_tree(
         dhf_dir,
         {
             "{{project_name}}": project_name,
+            "{{standards}}": ", ".join(STANDARD_LABELS.get(s, s) for s in standards),
             "{{product_repo}}": product_repo or "your-org/your-product",
             "{{product_repo_name}}": (
                 product_repo.split("/", 1)[1] if product_repo and "/" in product_repo else "your-product"
             ),
+            "{{github_org}}": github_org,
+            "{{dhf_repo_name}}": dhf_repo_name,
         },
     )
 
@@ -133,16 +138,14 @@ def _init_product_template(
     _replace_placeholders_in_tree(docs_dst, replacements)
 
 
-def _write_compliance_yml(
+def _write_engineering_control_yml(
     product_dir: Path,
     dhf_repo: Optional[str],
-    standards: list[str],
-    llm_provider: Optional[str],
 ) -> Path:
-    """Write compliance.yml into product_dir. Returns the file path."""
-    dest = product_dir / ".github" / "workflows" / "compliance.yml"
+    """Write engineering-control.yml into product_dir. Returns the file path."""
+    dest = product_dir / ".github" / "workflows" / "engineering-control.yml"
     dest.parent.mkdir(parents=True, exist_ok=True)
-    dest.write_text(_generate_compliance_yaml(dhf_repo, standards, llm_provider))
+    dest.write_text(_generate_engineering_control_yaml(dhf_repo))
     return dest
 
 
@@ -327,7 +330,7 @@ jobs:
 
 
 # ---------------------------------------------------------------------------
-# Compliance workflow generation
+# Engineering control workflow generation
 # ---------------------------------------------------------------------------
 
 def _cf_version() -> str:
@@ -337,15 +340,11 @@ def _cf_version() -> str:
         return "latest"
 
 
-def _generate_compliance_yaml(
-    dhf_repo: Optional[str],
-    standards: list[str],
-    llm_provider: Optional[str],
-) -> str:
-    """Render the compliance.yml workflow content for the product repo.
+def _generate_engineering_control_yaml(dhf_repo: Optional[str]) -> str:
+    """Render the engineering-control.yml workflow content for the product repo.
 
-    Generates a staged CI pipeline matching the CompliantFlow model:
-      test jobs → test-coverage → dhf-validation → compliance-check → evidence-bundle
+    Generates a CI pipeline:
+      tests → test-coverage → (optionally) evidence-bundle on main
     """
     version = _cf_version()
 
@@ -364,29 +363,19 @@ def _generate_compliance_yaml(
 
 """
         dhf_path_arg = "--dhf dhf/DHF"
-        install_dhf = (
-            "          pip install -e dhf/\n"
-            "          pip install -e dhf/ -c dhf/constraints.txt || pip install -e dhf/\n"
-        )
-
-    standards_block = ""
-    for std in standards:
-        standards_block += f"            --standard {std} \\\n"
-
-    gov_flag = f"            --governance-dir {'dhf/' if dhf_repo else ''}governance \\"
-
-    llm_env = ""
-    if llm_provider == "gemini":
-        llm_env = "          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}\n"
-    elif llm_provider == "ollama":
-        llm_env = "          COMPLIANTFLOW_OLLAMA_URL: ${{ secrets.COMPLIANTFLOW_OLLAMA_URL }}\n"
-
-    env_block = f"        env:\n{llm_env}" if llm_env else ""
+        install_dhf = "          pip install -e dhf/\n"
 
     return f"""\
-name: Compliance CI
+name: Engineering Control CI
 
-on: [push, pull_request]
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    types: [opened, synchronize]
+
+permissions:
+  contents: read
 
 jobs:
   test-coverage:
@@ -410,7 +399,8 @@ jobs:
         run: |
           # Replace with your actual test runner command.
           # Must output JUnit XML to test-results/ for ci test-coverage.
-          pytest tests/ -v --junitxml=test-results/product-test-results.xml || true
+          mkdir -p test-results/
+          pytest tests/ -v --junitxml=test-results/product-test-results.xml
 
       - name: Upload test results
         if: always()
@@ -420,12 +410,11 @@ jobs:
           path: test-results/
 
 {checkout_dhf}      - name: Install CompliantFlow
-        env:
-          GH_TOKEN: ${{{{ secrets.COMPLIANTFLOW_TOKEN }}}}
         run: |
-          gh release download {version} --repo itercharles/CompliantFlow --pattern "compliantflow-*.zip" --output compliantflow.zip
-          unzip compliantflow.zip -d cf
-          pip install cf/*/compliantflow-*.whl
+          # Install from GitHub Releases (public repo — no token needed).
+          # Change the repo if you maintain a fork.
+          gh release download {version} --repo compliantflow/compliantflow --pattern "compliantflow-*.whl"
+          pip install compliantflow-*.whl
 {install_dhf}
       - name: Download test results
         if: always()
@@ -439,26 +428,34 @@ jobs:
           compliantflow {dhf_path_arg} ci test-coverage \\
             --junit-dir test-results
 
-  compliance-check:
-    name: Compliance Check Gate
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-{checkout_dhf}      - name: Install CompliantFlow
-        env:
-          GH_TOKEN: ${{{{ secrets.COMPLIANTFLOW_TOKEN }}}}
-        run: |
-          gh release download {version} --repo itercharles/CompliantFlow --pattern "compliantflow-*.zip" --output compliantflow.zip
-          unzip compliantflow.zip -d cf
-          pip install cf/*/compliantflow-*.whl
-{install_dhf}
-      - name: Run compliance check
-{env_block}        run: |
-          compliantflow ci compliance-check \\
-            {dhf_path_arg} \\
-{gov_flag}
-{standards_block.rstrip()}"""
+{('  evidence-bundle:\n'
+ '    name: Evidence Bundle\n'
+ '    runs-on: ubuntu-latest\n'
+ '    needs: [test-coverage]\n'
+ '    if: github.event_name == \'push\' && github.ref == \'refs/heads/main\' && !cancelled()\n'
+ '    steps:\n'
+ '      - uses: actions/checkout@v4\n'
+ f'{checkout_dhf}      - name: Install CompliantFlow\n'
+ '        run: |\n'
+ f'          gh release download {version} --repo compliantflow/compliantflow --pattern "compliantflow-*.whl"\n'
+ '          pip install compliantflow-*.whl\n'
+ f'{install_dhf}'
+ '      - name: Download test evidence\n'
+ '        uses: actions/download-artifact@v4\n'
+ '        with:\n'
+ '          path: test-results/\n'
+ '\n'
+ '      - name: Generate evidence bundle\n'
+ '        run: |\n'
+ f'          compliantflow {dhf_path_arg} ci evidence bundle \\\n'
+ '            --out-dir dhf-artifacts \\\n'
+ '            --junit-dir test-results\n'
+ '\n'
+ '      - name: Upload evidence bundle\n'
+ '        uses: actions/upload-artifact@v4\n'
+ '        with:\n'
+ '          name: dhf-artifacts\n'
+ '          path: dhf-artifacts/\n') if dhf_repo else ''}"""
 
 
 
@@ -473,7 +470,7 @@ def run_init() -> None:
     click.echo("━" * 45)
     click.echo()
 
-    # ── GitHub repo names (for compliance.yml content only) ──
+    # ── GitHub repo names (for CI workflow content only) ──
     click.secho("GitHub", bold=True)
     owner = click.prompt("  Org or username")
     product_name = click.prompt("  Product repository name (no org prefix)")
@@ -513,21 +510,6 @@ def run_init() -> None:
         raise click.ClickException("At least one standard must be selected.")
     click.echo()
 
-    # ── LLM ─────────────────────────────────────────────────
-    click.secho("AI Compliance Checks (optional)", bold=True)
-    llm_provider: Optional[str] = None
-    if click.confirm("  Enable AI-assisted PR review and semantic compliance checks?", default=True):
-        provider = click.prompt(
-            "  LLM provider",
-            type=click.Choice(["gemini", "ollama", "skip"]),
-            default="gemini",
-        )
-        if provider == "gemini":
-            llm_provider = "gemini"
-        elif provider == "ollama":
-            llm_provider = "ollama"
-    click.echo()
-
     # ── Summary ─────────────────────────────────────────────
     click.secho("Summary", bold=True)
     click.echo("━" * 45)
@@ -535,7 +517,7 @@ def run_init() -> None:
         click.echo(f"  • Write DHF template to: {dhf_dir}")
         click.echo(f"    Project: \"{project_name}\"  Standards: {', '.join(selected_standards)}")
     click.echo(f"  • Write AI-harness to: {product_dir}/")
-    click.echo(f"  • Write compliance.yml to: {product_dir / '.github' / 'workflows'}/")
+    click.echo(f"  • Write engineering-control.yml to: {product_dir / '.github' / 'workflows'}/")
     click.echo(f"  • Write cr-complete.yml to: {product_dir / '.github' / 'workflows'}/")
     click.echo()
 
@@ -549,7 +531,7 @@ def run_init() -> None:
     if setup_dhf:
         steps.append(f"Write DHF template to {dhf_dir}")
     steps.append("Write AI-harness to product repo")
-    steps.append("Write compliance.yml")
+    steps.append("Write engineering-control.yml")
     steps.append("Write CR completion workflow")
     total = len(steps)
     n = 0
@@ -573,8 +555,8 @@ def run_init() -> None:
     _init_product_template(product_dir, project_name, dhf_repo, selected_standards)
     click.secho(" ✓", fg="green")
 
-    _step("Write compliance.yml")
-    _write_compliance_yml(product_dir, dhf_repo, selected_standards, llm_provider)
+    _step("Write engineering-control.yml")
+    _write_engineering_control_yml(product_dir, dhf_repo)
     click.secho(" ✓", fg="green")
 
     _step("Write CR completion workflow")
@@ -594,21 +576,19 @@ def run_init() -> None:
         click.echo(f"       git add -A && git commit -m \"feat: initialize DHF for {project_name}\"")
         click.echo(f"       git push -u origin main")
         n += 1
-    click.secho(f"  {n}. Open compliance PR:", bold=True)
+    click.secho(f"  {n}. Open engineering control PR:", bold=True)
     click.echo(f"       cd {product_dir}")
     click.echo(f"       git checkout -b compliantflow/setup")
-    click.echo(f"       git add AI-harness/ .github/workflows/compliance.yml .github/workflows/cr-complete.yml")
-    click.echo(f"       git commit -m \"feat: add CompliantFlow workflows and AI harness\"")
+    workflow_file = ".github/workflows/engineering-control.yml"
+    click.echo(f"       git add AI-harness/ {workflow_file} .github/workflows/cr-complete.yml")
+    click.echo(f"       git commit -m \"feat: add CompliantFlow harness and AI context\"")
     click.echo(f"       git push -u origin compliantflow/setup")
     n += 1
     click.secho(f"  {n}. Add secrets to {product_repo} → Settings → Secrets:", bold=True)
-    click.echo(f"       COMPLIANTFLOW_TOKEN  — from your account representative")
     if setup_dhf:
-        click.echo(f"       DHF_REPO_TOKEN       — fine-grained PAT with contents:read on {dhf_repo}")
-    if llm_provider == "gemini":
-        click.echo(f"       GEMINI_API_KEY       — your Gemini API key")
-    elif llm_provider == "ollama":
-        click.echo(f"       COMPLIANTFLOW_OLLAMA_URL — your Ollama base URL")
+        click.echo(f"       DHF_REPO_TOKEN — fine-grained PAT with contents:read on {dhf_repo}")
+    else:
+        click.echo(f"       (no secrets required for the baseline OSS path)")
     n += 1
     click.secho(f"  {n}. Fill in your strategy documents:", bold=True)
     click.echo(f"       {product_dir}/docs/product_strategy.md   — mission, objectives, target customer")

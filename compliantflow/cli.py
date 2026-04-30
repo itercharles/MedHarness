@@ -2261,7 +2261,7 @@ def cr_workflow_intake_github_issue_ci(
     """Full CI intake pipeline: prepare CR + GitHub plumbing (branch, PR, comment).
 
     Wraps the intake-github-issue logic and adds git/PR/comment operations
-    that WebTPS or any product repo would otherwise script manually.
+    that any product repo would otherwise script manually.
     Requires 'gh' CLI and 'git' in PATH.
     """
     from compliantflow.cr_intake import (

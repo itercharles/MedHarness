@@ -1,240 +1,195 @@
 # CompliantFlow
 
-**The AI-first development framework for medical device software.**
+**An open-source design-controlled development harness for medical software.**
 
-One command sets up everything: a Design History File, a compliance CI gate, and an AI coding harness — pre-configured for IEC 62304, ISO 14971, and ISO 13485. AI agents generate code and documentation; CompliantFlow ensures every commit meets regulatory requirements before merge.
-
----
-
-## Why CompliantFlow
-
-| Scenario | Compliance debt | Audit prep |
-|---|---|---|
-| Traditional (no AI, no tool) | Accumulates every sprint | 4–6 weeks |
-| AI coding tools only | Accumulates faster | Same or worse |
-| CompliantFlow only | Zero | 1 day |
-| **AI coding + CompliantFlow** | **Zero** | **1 day** |
-
-Self-built CI/CD knows code quality. CompliantFlow knows IEC 62304 / ISO 14971 semantics — traceability chains, risk coverage, DHF integrity. It is the trust layer between AI-generated code and regulatory requirements.
+CompliantFlow provides the engineering infrastructure — DHF structure, design
+traceability, requirement→test coverage enforcement, evidence bundle generation,
+and AI agent context — that medical device teams need to build software under
+design control. It is a harness that connects design documentation to engineering
+work and keeps them in lock-step on every commit.
 
 ---
 
-## Three-Layer Framework
+## How It Works
+
+CompliantFlow uses a **multi-repo model**:
+
+| Repo | What it holds | Role |
+|------|---------------|------|
+| **CompliantFlow** (_this repo_) | The harness CLI, CI gate logic, scaffolding templates | Orchestration / harness |
+| **CompliantFlow-DHF** | The AI-native DHF substrate — item schemas, lifecycle rules, governance policies, traceability engine | DHF substrate |
+| **Your product repo** | Code, tests, CI workflows | Regulated software |
+| **Your DHF repo** | Requirements, risks, architecture, test evidence | Regulated data / structural gate |
 
 ```
-┌─────────────────────────────────────────────────────┐
-│  AI Layer — AI-harness/                             │
-│  Guides AI agents to generate compliant code and    │
-│  DHF documents. Claude, Cursor, Copilot supported.  │
-├─────────────────────────────────────────────────────┤
-│  Validation Layer — CompliantFlow CLI               │
-│  CI gate enforcing traceability, compliance policy, │
-│  and coverage on every PR. Exits 1 on failure.      │
-├─────────────────────────────────────────────────────┤
-│  Infrastructure Layer — compliantflow init          │
-│  One command sets up both repos with everything     │
-│  above pre-configured and ready to push.            │
-└─────────────────────────────────────────────────────┘
+  CompliantFlow (harness)
+       │
+       ├──► Your DHF repo ─── governed by CompliantFlow-DHF
+       │    (requirements, risks, traceability)
+       │
+       └──► Your product repo ─── engineering control CI
+            (code, tests, verification evidence)
 ```
+
+**CompliantFlow** is the orchestration layer. **CompliantFlow-DHF** is the
+AI-native DHF substrate (schema validation, lifecycle rules, governance policies,
+document generation). **Your repos** hold the regulated content — requirements
+and code — while the harness enforces the structure and traceability constraints.
+
+Requirement → test coverage is enforced in CI by `ci test-coverage` on the
+product repo. Design traceability (UC → CRS → SYS → SRS → SWDD / TC) is
+enforced in the DHF repo through structural validation. Evidence bundles are
+produced on every merge to `main`, not assembled manually before an audit.
+
+AI agents receive structured DHF context so they can generate requirements, tests,
+and design documents that respect traceability rules from the start.
 
 ---
 
-## Getting Started
+## The Regulated Chain
 
-### 1. Install
+CompliantFlow supports a design-controlled engineering workflow:
+
+1. **DHF structure and traceability** constrain engineering work — every item type
+   has required upstream/downstream links; orphaned items block CI.
+2. **AI assists** analysis, planning, implementation, and review — agents receive
+   DHF schema, lifecycle rules, and traceability context before they generate content.
+3. **Formal evidence** remains grounded in design, implementation, and
+   verification artifacts — the harness produces traceability reports and
+   evidence bundles from the same YAML/Git source of truth.
+
+Semantic compliance checking against specific standards (IEC 62304, ISO 14971,
+etc.) is a separate commercial capability and is not part of the open-source core.
+
+---
+
+## Quick Start
 
 ```bash
-gh release download --repo itercharles/CompliantFlow \
-  --pattern "compliantflow-*.zip" --output compliantflow.zip
-unzip compliantflow.zip -d cf
-pip install cf/*/compliantflow-*.whl
+git clone https://github.com/compliantflow/compliantflow
+cd CompliantFlow
+pip install -e .
 ```
 
-### 2. Run `compliantflow init`
+Then scaffold a new project:
 
 ```bash
 compliantflow init
 ```
 
-`init` prompts for your project details and writes locally — no GitHub operations. It creates:
-
-| What | Where |
-|---|---|
-| DHF template (items, governance, utils, CI) | Your DHF local directory |
-| AI harness (context, checklists, adapters) | Your product repo directory |
-| Compliance CI gate workflow | `product-repo/.github/workflows/compliance.yml` |
-
-### 3. Push and open a PR
-
-Follow the printed git commands. Add the required secrets (`COMPLIANTFLOW_TOKEN`, `DHF_REPO_TOKEN`) and merge. From that point, every PR is compliance-checked automatically.
+`init` asks about your org, product repo, and DHF repo, then writes scaffolding
+locally — no GitHub operations. Review, push, and open a PR. From that point
+every push runs the traceability and coverage gates automatically.
 
 Full walkthrough: [GETTING_STARTED.md](GETTING_STARTED.md)
 
 ---
 
-## AI Harness
+## Core Workflow
 
-Both repos ship with `AI-harness/` pre-configured for your project:
+After `init`, the daily workflow is:
 
-- **`context.md`** — model-agnostic project context (DHF structure, item types, when to update the DHF, compliance gate semantics)
-- **`CLAUDE.md` / `AGENTS.md` / `GEMINI.md`** — entry points for Claude Code, generic agents, Gemini CLI
-- **`pre-checklist.md` / `post-checklist.md`** — task workflow checklists
-- **`adapters/.cursorrules`** — copy to repo root for Cursor
-- **`adapters/copilot-instructions.md`** — copy to `.github/` for GitHub Copilot
+1. Open a PR with a CR ID in the title (e.g. `feat(CR-012): add dose calculation`)
+2. CI runs the **test-coverage** gate — verifies test evidence covers all requirements
+3. DHF repo enforces structural/design traceability
+4. On merge to `main`, CI produces an **evidence bundle** with traceability reports
+   as CI artifacts
+5. CR is auto-closed in the DHF
 
-Open either repo in your AI coding tool and it immediately understands the DHF structure, CR workflow, and compliance requirements.
-
----
-
-## Compliance Gate
-
-The CI workflow runs four checks on every push and PR:
-
-1. **CR linkage** — PR title must reference a planned Change Request
-2. **Traceability** — no orphaned items; every requirement has upstream and downstream links
-3. **Compliance policy** — IEC 62304, ISO 14971, ISO 13485 policy checks pass
-4. **Coverage** — UC → CRS → SYS → SRS chain is complete
+Run coverage checks locally before pushing:
 
 ```bash
-# Run locally before pushing
-compliantflow --dhf DHF ci gate acceptance
-compliantflow --dhf DHF validate traceability
-compliantflow --dhf DHF validate compliance IEC_62304 --governance-dir governance
-compliantflow --dhf DHF status --governance-dir governance
+compliantflow --dhf DHF ci test-coverage --junit-dir test-results
 ```
 
 ---
 
-## Command Reference
+## Stable CLI Surface
+
+These commands are the supported public interface. Backward compatibility is
+maintained across minor versions.
 
 ```
-compliantflow [--dhf PATH] COMMAND
+compliantflow init                              Scaffold DHF + product repo CI
 
-Setup:
-  init                            Interactive infrastructure onboarding
+compliantflow ci test-coverage                  Requirement → test coverage gate
+compliantflow ci evidence bundle                Produce CI evidence bundle
+compliantflow ci release consume-artifact       Download CI artifact from Actions run
+compliantflow ci release assemble               Assemble release bundles (wheel + DHF)
 
-Compliance:
-  ci gate acceptance              Run the CI-facing DHF acceptance gate
-  ci run acceptance               High-level acceptance orchestration for product CI
-  ci evidence import PATH...      Import CI JUnit evidence into the DHF
-  ci evidence bundle              Produce read-only CI evidence bundles
-  ci artifacts generate           Generate CI-ready DHF PDF artifacts
-  ci run artifacts                High-level artifact orchestration for product CI
-  validate traceability           Check all items have upstream/downstream links
-  validate compliance STANDARD    Run policy checks (IEC_62304, ISO_14971, ...)
-  validate coverage PARENT:CHILD  Check coverage between item types
-  validate release REL-ID         Evaluate release readiness
-  validate draft FILE             Validate a draft item before creating it
-  status                          At-a-glance compliance posture summary
-
-Reports:
-  report compliance STANDARD      Generate compliance report (PDF or JSON)
-  report traceability TYPES...    Build traceability matrix PDF
-  export submission               Assemble 510(k) submission evidence ZIP
-
-Change management:
-  cr check-status CR-ID           Check CR implementation status
-  cr generate-report CR-ID        Generate CR evidence report
-  cr workflow intake-github-issue Prepare a CR from a GitHub issue event
-  cr workflow intake-github-issue-ci
-                                  Prepare a CR and GitHub plumbing for CI intake
-  cr workflow complete            Complete a CR and optionally commit/push DHF updates
-  cr workflow complete-from-github-pr
-                                  Complete a CR from a merged GitHub PR event
-
-Tests:
-  test import PATH                Import JUnit XML results
-  test list                       List all test results
-  test status TC-ID               Check a single test case
-
-AI tools:
-  context                         Generate agent context package
-  review-pr                       Compliance-aware PR review checklist
-
-DHF automation facade:
-  dhf item list|get|create|update|delete
-  dhf item transition             Execute a lifecycle transition through adapter
-  dhf context implementation      Write an approved CR implementation package
-
-Migration:
-  migrate rdm SOURCE_DIR          Migrate from Innolitics RDM
+compliantflow review-pr                         DHF traceability PR review checklist
+compliantflow context                           DHF schema + traceability context for AI agents
+compliantflow cr workflow ...                   CR intake, completion, status
 ```
+
+### Not yet stable public API
+
+These commands are present but their interfaces may change:
+
+- `validate traceability`, `validate coverage` — kept as developer tools.
+- `export submission` — 510(k) submission assembly; depends on active FDA
+  submission engagement for scoping.
+- `dhf item ...` — DHF automation facade; adapter protocol is stable but
+  provider-specific behaviour varies.
+- `migrate rdm` — Innolitics RDM migration; target format matures with DHF schema.
+- `status` — design traceability posture summary; output format evolving.
+- `test import`, `test list`, `test status` — test result management.
+- `validate compliance`, `ci compliance-check` — available internally but not part
+  of the stable OSS surface; these will become commercial capabilities.
 
 ---
 
-## DHF Automation
+## Relationship to CompliantFlow-DHF
 
-CompliantFlow exposes a generic DHF automation facade for product CI and agent
-workflows. The facade delegates to the configured DHF adapter/provider so product
-repositories do not need to know DHF storage paths.
+CompliantFlow-DHF is a companion repository that provides the DHF substrate:
 
-```bash
-compliantflow --dhf DHF dhf item list --type SYS
-compliantflow --dhf DHF dhf item create --type SRS \
-  --data '{"title": "My requirement", "derives_from": ["SYS-001"]}'
-compliantflow --dhf DHF dhf item transition CR-001 closed --by "Alice"
-compliantflow --dhf DHF dhf context implementation --cr CR-001 --out-dir /tmp/dhf-context
-compliantflow --dhf DHF cr workflow intake-github-issue-ci \
-  --event "$GITHUB_EVENT_PATH" \
-  --dhf-repo dhf \
-  --write \
-  --create-branch \
-  --open-pr \
-  --comment-source-issue
-compliantflow --dhf DHF cr workflow complete-from-github-pr \
-  --event "$GITHUB_EVENT_PATH"
-```
+- Item type schemas (field definitions, lifecycle rules, required links)
+- The `dhf_util` Python package (item CRUD, schema validation, document generation)
+- AI-native DHF workflows (CR analysis, spec iteration, implementation)
+- Governance policy files for standards compliance (bundled with the DHF
+  substrate; enforcement is part of the commercial tier)
 
-CI pipelines should use the stable `ci` namespace for gate/evidence/artifact
-workflows:
-
-```bash
-compliantflow --dhf DHF ci run acceptance \
-  --junit-dir test-results/srs \
-  --junit-dir test-results/sys
-compliantflow --dhf DHF ci gate acceptance --junit test-results.xml
-compliantflow --dhf DHF ci evidence import test-results.xml --run-id "$GITHUB_RUN_ID"
-compliantflow --dhf DHF ci evidence bundle \
-  --out-dir artifacts/dhf \
-  --junit-dir test-results/srs \
-  --junit-dir test-results/sys
-compliantflow --dhf DHF ci run artifacts --out-dir artifacts/dhf \
-  --junit-dir test-results/srs \
-  --junit-dir test-results/sys
-compliantflow --dhf DHF ci artifacts generate --out-dir artifacts/dhf --junit test-results.xml
-```
-
-The DHF repository still owns the local YAML/Git provider and schema/document
-tooling. Direct DHF utils commands remain available for DHF maintainers:
-
-```bash
-python -m dhf_util item list --type SYS
-python -m dhf_util item create --type SRS \
-  --data '{"title": "My requirement", "derives_from": ["SYS-001"]}'
-python -m dhf_util item transition CR-001 closed --by "Alice"
-python -m dhf_util validate schema
-```
+CompliantFlow _orchestrates at the product level_ — CI gates, release assembly,
+scaffolding. CompliantFlow-DHF _owns the DHF data model_. The harness knows the
+structure; the substrate defines what valid content looks like.
 
 ---
 
-## 510(k) Submission Package
+## Open Source vs Future Commercial Direction
 
-```bash
-compliantflow --dhf DHF export submission \
-  --governance-dir governance \
-  --output-dir ./submission
-```
+CompliantFlow is open source (MIT). The harness, design traceability gates,
+scaffolding templates, and AI agent context infrastructure are free to use,
+modify, and redistribute.
 
-Produces `submission_YYYY-MM-DD.zip` with traceability report, compliance reports, SOUP list, risk summary, test results, and CR evidence — mapped to FDA eSTAR sections.
+A commercial tier (planned) may add:
+
+- Semantic compliance checking (IEC 62304, ISO 14971, IEC 82304-1 policy enforcement)
+- Team RBAC and collaboration features
+- Web UI for QA/RA workflows
+- Enterprise-grade release signing and SBOM
+- Hosted compliance evidence storage
+
+The open-source core will always include the full design traceability gate,
+scaffolding, and agent context infrastructure. The commercial layer adds
+standards-based compliance intelligence and enterprise workflow features.
+
+Current status: **active open-source development**.
 
 ---
 
-## For CompliantFlow Contributors
+## Contributing
 
-See [AGENTS.md](AGENTS.md) for the development workflow, CR process, and architecture.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, the CR workflow,
+and PR conventions.
 
 ```bash
-python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
-git clone https://github.com/itercharles/compliantflow-dhf
+python3 -m venv .venv
+.venv/bin/pip install -r requirements.txt
 .venv/bin/pytest tests/ -q
 ```
+
+---
+
+## License
+
+MIT — see [LICENSE](LICENSE).

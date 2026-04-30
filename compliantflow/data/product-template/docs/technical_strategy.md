@@ -45,8 +45,8 @@ _Describe the principle._
 {{project_name}} uses CompliantFlow for compliance enforcement. The DHF repository (`{{dhf_repo}}`) is the single source of truth for requirements, risks, and traceability.
 
 - **DHF mutations** go through `python -m dhf_util --dhf DHF` in the DHF repo — never through product code
-- **Compliance gate** runs on every PR via `compliance.yml`
-- **AI harness** in `AI-harness/` provides context for compliant AI-assisted development
+- **Engineering control gate** runs on every PR via `engineering-control.yml`
+- **AI harness** in `AI-harness/` provides context for design-controlled AI-assisted development
 
 ---
 
@@ -72,6 +72,6 @@ Avoid:
 
 <!-- Describe CI/CD goals, near-term priorities, and future milestones. -->
 
-The CI pipeline (`compliance.yml`) enforces compliance on every PR. Additional CI priorities:
+The CI pipeline (`engineering-control.yml`) enforces design traceability on every PR. Additional CI priorities:
 
 - TODO

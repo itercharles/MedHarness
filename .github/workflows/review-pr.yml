@@ -40,7 +40,7 @@ jobs:
         if: steps.config.outputs.enabled == 'true'
         uses: actions/checkout@v4
         with:
-          repository: itercharles/compliantflow-dhf
+          repository: compliantflow/compliantflow-dhf
           token: ${{ secrets.DHF_REPO_TOKEN }}
           path: compliantflow-dhf
 

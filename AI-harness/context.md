@@ -9,12 +9,12 @@ CompliantFlow is the AI-first development framework for medical device software.
 | Repo | Purpose |
 |------|---------|
 | This repo (`CompliantFlow`) | CLI source code, tests, CI |
-| [`compliantflow-dhf`](https://github.com/itercharles/compliantflow-dhf) | Design History File — requirements, risks, traceability, compliance records |
+| [`compliantflow-dhf`](https://github.com/compliantflow/compliantflow-dhf) | Design History File — requirements, risks, traceability, compliance records |
 
 For local compliance checks, clone the DHF repo alongside this one:
 
 ```bash
-git clone https://github.com/itercharles/compliantflow-dhf
+git clone https://github.com/compliantflow/compliantflow-dhf
 pip install dhf_util
 ```
 

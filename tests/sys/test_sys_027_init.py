@@ -1,7 +1,7 @@
 """Tests for compliantflow init command (CR-054 / SYS-027).
 
 Covers the pure-Python logic of init_cmd.py:
-- compliance.yml generation for various standard/DHF/LLM combinations
+- engineering-control.yml generation for various DHF configurations
 - DHF CI workflow template content
 - Standard label and governance file mappings
 - _init_dhf_template: file population, project name substitution, governance filtering
@@ -22,10 +22,10 @@ from compliantflow.init_cmd import (
     PRODUCT_TEMPLATE_DIR,
     STANDARD_LABELS,
     TEMPLATE_DIR,
-    _generate_compliance_yaml,
+    _generate_engineering_control_yaml,
     _init_dhf_template,
     _init_product_template,
-    _write_compliance_yml,
+    _write_engineering_control_yml,
     _write_cr_complete_yml,
     _write_dhf_ci_workflow,
     _write_dhf_cr_transition_workflow,
@@ -58,102 +58,78 @@ class TestInitCmd:
             f = gov_dir / filename
             assert f.exists(), f"Missing governance file for {std_id}: {f}"
 
-    def test_TC_SYS_027_003_compliance_yaml_with_dhf(self):
+    def test_TC_SYS_027_003_engineering_control_yaml_with_dhf(self):
         """
-        TC-SYS-027-003: Generated compliance.yml includes DHF checkout step when dhf_repo is provided.
+        TC-SYS-027-003: Generated engineering-control.yml includes DHF checkout step when dhf_repo is provided.
 
         @test_id: TC-SYS-027-003
         @links: SYS-027
         """
-        yaml = _generate_compliance_yaml(
-            dhf_repo="acme/my-dhf",
-            standards=["IEC_62304"],
-            llm_provider=None,
-        )
+        yaml = _generate_engineering_control_yaml(dhf_repo="acme/my-dhf")
         assert "repository: acme/my-dhf" in yaml
         assert "secrets.DHF_REPO_TOKEN" in yaml
         assert "--dhf dhf/DHF" in yaml
         assert "ci test-coverage" in yaml
-        assert "ci compliance-check" in yaml
-        assert "--standard IEC_62304" in yaml
 
-    def test_TC_SYS_027_004_compliance_yaml_without_dhf(self):
+    def test_TC_SYS_027_004_engineering_control_yaml_without_dhf(self):
         """
-        TC-SYS-027-004: Generated compliance.yml omits DHF checkout when dhf_repo is None.
+        TC-SYS-027-004: Generated engineering-control.yml omits DHF checkout when dhf_repo is None.
 
         @test_id: TC-SYS-027-004
         @links: SYS-027
         """
-        yaml = _generate_compliance_yaml(
-            dhf_repo=None,
-            standards=["IEC_62304", "ISO_14971"],
-            llm_provider=None,
-        )
+        yaml = _generate_engineering_control_yaml(dhf_repo=None)
         assert "DHF_REPO_TOKEN" not in yaml
         assert "--dhf DHF" in yaml
-        assert "ci compliance-check" in yaml
-        assert "--standard IEC_62304" in yaml
-        assert "--standard ISO_14971" in yaml
+        assert "ci test-coverage" in yaml
 
-    def test_TC_SYS_027_005_compliance_yaml_gemini_llm(self):
+    def test_TC_SYS_027_005_engineering_control_yaml_no_compliance_check(self):
         """
-        TC-SYS-027-005: Generated compliance.yml includes GEMINI_API_KEY env when provider is gemini.
+        TC-SYS-027-005: Generated engineering-control.yml does not include a compliance-check job.
 
         @test_id: TC-SYS-027-005
         @links: SYS-027
         """
-        yaml = _generate_compliance_yaml(
-            dhf_repo=None,
-            standards=["IEC_62304"],
-            llm_provider="gemini",
-        )
-        assert "GEMINI_API_KEY" in yaml
-        assert "secrets.GEMINI_API_KEY" in yaml
+        yaml = _generate_engineering_control_yaml(dhf_repo="org/dhf")
+        assert "compliance-check" not in yaml
+        assert "ci compliance-check" not in yaml
+        assert "--standard" not in yaml
+        assert "--governance-dir" not in yaml
 
-    def test_TC_SYS_027_006_compliance_yaml_ollama_llm(self):
+    def test_TC_SYS_027_006_engineering_control_yaml_has_test_coverage_gate(self):
         """
-        TC-SYS-027-006: Generated compliance.yml includes COMPLIANTFLOW_OLLAMA_URL env when provider is ollama.
+        TC-SYS-027-006: Generated engineering-control.yml has a test-coverage gate job.
 
         @test_id: TC-SYS-027-006
         @links: SYS-027
         """
-        yaml = _generate_compliance_yaml(
-            dhf_repo=None,
-            standards=["IEC_62304"],
-            llm_provider="ollama",
-        )
-        assert "COMPLIANTFLOW_OLLAMA_URL" in yaml
+        yaml = _generate_engineering_control_yaml(dhf_repo="org/dhf")
+        assert "test-coverage" in yaml
+        assert "name: Test Coverage Gate" in yaml
+        assert "ci test-coverage" in yaml
 
-    def test_TC_SYS_027_007_compliance_yaml_no_llm(self):
+    def test_TC_SYS_027_007_engineering_control_yaml_no_llm(self):
         """
-        TC-SYS-027-007: Generated compliance.yml has no env block when llm_provider is None.
+        TC-SYS-027-007: Generated engineering-control.yml has no LLM API key references.
 
         @test_id: TC-SYS-027-007
         @links: SYS-027
         """
-        yaml = _generate_compliance_yaml(
-            dhf_repo=None,
-            standards=["IEC_62304"],
-            llm_provider=None,
-        )
+        yaml = _generate_engineering_control_yaml(dhf_repo=None)
         assert "GEMINI_API_KEY" not in yaml
         assert "COMPLIANTFLOW_OLLAMA_URL" not in yaml
 
-    def test_TC_SYS_027_008_compliance_yaml_multiple_standards(self):
+    def test_TC_SYS_027_008_engineering_control_yaml_no_standards(self):
         """
-        TC-SYS-027-008: Generated compliance.yml includes a validate step for each selected standard.
+        TC-SYS-027-008: Generated engineering-control.yml has no standards flags or governance config.
 
         @test_id: TC-SYS-027-008
         @links: SYS-027
         """
-        standards = ["IEC_62304", "ISO_14971", "ISO_13485"]
-        yaml = _generate_compliance_yaml(
-            dhf_repo="org/dhf",
-            standards=standards,
-            llm_provider=None,
-        )
-        for std in standards:
-            assert f"--standard {std}" in yaml
+        yaml = _generate_engineering_control_yaml(dhf_repo="org/dhf")
+        assert "--standard" not in yaml
+        assert "--governance-dir" not in yaml
+        assert "GEMINI_API_KEY" not in yaml
 
     def test_TC_SYS_027_009_dhf_ci_workflow_content(self):
         """
@@ -260,24 +236,24 @@ class TestInitCmd:
         _init_dhf_template(dhf_dir, "Device", ["IEC_62304"])
         assert dhf_dir.exists()
 
-    def test_TC_SYS_027_017_write_compliance_yml_creates_file(self, tmp_path):
+    def test_TC_SYS_027_017_write_engineering_control_yml_creates_file(self, tmp_path):
         """
-        TC-SYS-027-017: _write_compliance_yml writes compliance.yml to the correct path.
+        TC-SYS-027-017: _write_engineering_control_yml writes engineering-control.yml to the correct path.
 
         @test_id: TC-SYS-027-017
         @links: SYS-027
         """
         product_dir = tmp_path / "my-product"
-        result = _write_compliance_yml(product_dir, "org/dhf", ["IEC_62304"], None)
-        expected = product_dir / ".github" / "workflows" / "compliance.yml"
+        result = _write_engineering_control_yml(product_dir, "org/dhf")
+        expected = product_dir / ".github" / "workflows" / "engineering-control.yml"
         assert result == expected
         assert expected.exists()
-        assert "ci compliance-check" in expected.read_text()
+        assert "ci test-coverage" in expected.read_text()
 
     def test_TC_SYS_027_018_run_init_no_github_calls(self):
         """
         TC-SYS-027-018: run_init makes no GitHub API or gh CLI calls — all execution
-        is local file writes only.
+        is local file writes only. Also verifies no LLM provider prompting remains.
 
         @test_id: TC-SYS-027-018
         @links: SYS-027
@@ -289,6 +265,8 @@ class TestInitCmd:
         assert "_repo_exists" not in src
         assert "_create_dhf_repo" not in src
         assert "_set_secret" not in src
+        assert "llm_provider" not in src
+        assert 'click.Choice(["gemini"' not in src
 
     def test_TC_SYS_027_019_product_template_dir_exists(self):
         """
@@ -467,3 +445,123 @@ class TestInitCmd:
         content = (product_dir / "docs" / "technical_strategy.md").read_text()
         assert "acme/device-dhf" in content
         assert "{{dhf_repo}}" not in content
+
+    def test_TC_SYS_027_032_engineering_control_yaml_has_required_phases(self):
+        """
+        TC-SYS-027-032: Generated engineering-control.yml contains the test-coverage job
+        with JUnit artifact contract.
+
+        @test_id: TC-SYS-027-032
+        @links: SYS-027
+        """
+        yaml = _generate_engineering_control_yaml(dhf_repo="org/dhf")
+        assert "test-coverage" in yaml
+        assert "name: Test Coverage Gate" in yaml
+        # JUnit artifact production
+        assert "junitxml=test-results/" in yaml
+        assert "mkdir -p test-results/" in yaml
+        assert "upload-artifact@v4" in yaml
+        # JUnit artifact consumption
+        assert "download-artifact@v4" in yaml
+        # Correct CLI commands
+        assert "ci test-coverage" in yaml
+        assert "--junit-dir test-results" in yaml
+        # Evidence bundle on main
+        assert "ci evidence bundle" in yaml
+        assert "evidence-bundle" in yaml
+
+    def test_TC_SYS_027_033_engineering_control_yaml_no_legacy_gate_commands(self):
+        """
+        TC-SYS-027-033: Generated engineering-control.yml does not contain
+        compliance-check or deprecated gate commands.
+
+        @test_id: TC-SYS-027-033
+        @links: SYS-027
+        """
+        yaml = _generate_engineering_control_yaml(dhf_repo="org/dhf")
+        assert "ci compliance-check" not in yaml
+        assert "compliance-check" not in yaml
+        assert "validate coverage" not in yaml
+        assert "validate traceability" not in yaml
+        assert "--standard" not in yaml
+
+    def test_TC_SYS_027_034_engineering_control_yaml_no_hardcoded_private_refs(self):
+        """
+        TC-SYS-027-034: Generated engineering-control.yml does not contain hardcoded
+        private repo references (itercharles, etc.).
+
+        @test_id: TC-SYS-027-034
+        @links: SYS-027
+        """
+        yaml = _generate_engineering_control_yaml(dhf_repo="org/dhf")
+        assert "itercharles" not in yaml
+
+    def test_TC_SYS_027_035_engineering_control_yaml_has_python_setup(self):
+        """
+        TC-SYS-027-035: Generated engineering-control.yml includes Python setup and pip
+        install steps for CompliantFlow.
+
+        @test_id: TC-SYS-027-035
+        @links: SYS-027
+        """
+        yaml = _generate_engineering_control_yaml(dhf_repo="org/dhf")
+        assert "setup-python@v5" in yaml
+        assert "python-version: '3.11'" in yaml
+        assert "pip install" in yaml
+
+    def test_TC_SYS_027_036_engineering_control_yaml_no_standards_or_llm(self):
+        """
+        TC-SYS-027-036: Generated engineering-control.yml has no standards flags
+        and no LLM API key references.
+
+        @test_id: TC-SYS-027-036
+        @links: SYS-027
+        """
+        yaml = _generate_engineering_control_yaml(dhf_repo=None)
+        assert "--standard" not in yaml
+        assert "GEMINI_API_KEY" not in yaml
+        assert "COMPLIANTFLOW_OLLAMA_URL" not in yaml
+
+    def test_TC_SYS_027_037_cr_complete_yml_no_legacy_commands(self):
+        """
+        TC-SYS-027-037: Generated cr-complete.yml uses only CompliantFlow facade
+        commands, not direct dhf_util item transition calls.
+
+        @test_id: TC-SYS-027-037
+        @links: SYS-027
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            product_dir = Path(tmp) / "my-product"
+            _write_cr_complete_yml(product_dir, "acme/my-device-dhf")
+            content = (product_dir / ".github" / "workflows" / "cr-complete.yml").read_text()
+            assert "compliantflow cr workflow complete-from-github-pr" in content
+            assert "python -m dhf_util item transition" not in content
+
+    def test_TC_SYS_027_038_dhf_template_readme_has_placeholders(self):
+        """
+        TC-SYS-027-038: The bundled dhf-template README uses placeholders,
+        not hardcoded repo-specific values.
+
+        @test_id: TC-SYS-027-038
+        @links: SYS-027
+        """
+        readme = (TEMPLATE_DIR / "README.md").read_text()
+        assert "{{project_name}}" in readme
+        assert "{{github_org}}" in readme
+        assert "{{dhf_repo_name}}" in readme
+        assert "itercharles" not in readme
+
+    def test_TC_SYS_027_039_init_dhf_template_substitutes_readme_placeholders(self, tmp_path):
+        """
+        TC-SYS-027-039: _init_dhf_template substitutes placeholders in the DHF README.
+
+        @test_id: TC-SYS-027-039
+        @links: SYS-027
+        """
+        dhf_dir = tmp_path / "my-dhf"
+        _init_dhf_template(dhf_dir, "My Device", ["IEC_62304"], product_repo="acme/my-device")
+        readme = (dhf_dir / "README.md").read_text()
+        assert "My Device" in readme
+        assert "acme" in readme
+        assert "itercharles" not in readme
+        assert "{{project_name}}" not in readme
