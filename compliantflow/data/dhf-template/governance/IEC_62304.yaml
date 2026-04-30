@@ -388,7 +388,7 @@ policies:
     automation:
       check: "file_existence"
       params:
-        path: "documents/specifications/System_Architecture_Specification.md"
+        path: "documents/specs/System_Architecture_Specification.md"
 
   # 5.3.2 Develop Architecture for Interfaces
   - id: "5.3.2.a"

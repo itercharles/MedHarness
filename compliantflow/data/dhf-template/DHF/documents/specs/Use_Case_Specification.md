@@ -137,7 +137,7 @@ Alternative Flows:
   committing the updated markdown so the repository always reflects the latest DHF state
 
 Postconditions:
-- Specification document is written to `DHF/documents/specifications/`
+- Specification document is written to `DHF/documents/specs/`
 - Document version is incremented and the generation date is recorded
 - PDF is available for offline review and regulatory submission
 
