@@ -304,31 +304,28 @@ def test_TC_SYS_041_007_ci_evidence_record_orchestrates_verification_evidence(
     tmp_path,
 ):
     """
-    TC-SYS-041-007: ci evidence record runs tests, imports results, persists compliance, and commits.
+    TC-SYS-041-007: ci evidence record runs tests and writes artifact-based evidence.
 
     @test_id: TC-SYS-041-007
     @links: SYS-041
     """
-    dhf_repo = tmp_path / "dhf-repo"
-    dhf_root = dhf_repo / "DHF"
+    dhf_root = tmp_path / "DHF"
     dhf_root.mkdir(parents=True)
     gov_dir = tmp_path / "governance"
     gov_dir.mkdir()
     junit_dir = tmp_path / "junit"
+    out_dir = tmp_path / "evidence"
     first_xml = junit_dir / "sys.xml"
     second_xml = junit_dir / "crs.xml"
-    git_calls = []
-    status_calls = {"count": 0}
 
-    monkeypatch.setattr("compliantflow.cli._make_adapter_for_dhf_root", lambda root: object())
     monkeypatch.setattr("compliantflow.cli._make_core", lambda ctx: object())
     monkeypatch.setattr(
         "compliantflow.cli._run_pytest_junit",
         lambda test_paths, out_dir: [first_xml, second_xml],
     )
     monkeypatch.setattr(
-        "compliantflow.cli._import_results_file",
-        lambda adapter, path, tester, run_id, run_url, commit: {
+        "compliantflow.cli._summarize_junit_file",
+        lambda path: {
             "path": str(path),
             "imported": 1,
             "skipped": 0,
@@ -337,7 +334,7 @@ def test_TC_SYS_041_007_ci_evidence_record_orchestrates_verification_evidence(
         },
     )
     monkeypatch.setattr(
-        "compliantflow.cli._persist_compliance_checks",
+        "compliantflow.cli._run_compliance_checks",
         lambda core, governance_dir, standards: [
             {
                 "standard": standard,
@@ -350,43 +347,28 @@ def test_TC_SYS_041_007_ci_evidence_record_orchestrates_verification_evidence(
         ],
     )
 
-    def fake_git_has_changes(repo_root):
-        status_calls["count"] += 1
-        return True
-
-    def fake_run_git(repo_root, args):
-        git_calls.append((repo_root, args))
-        return ""
-
-    monkeypatch.setattr("compliantflow.cli._git_has_changes", fake_git_has_changes)
-    monkeypatch.setattr("compliantflow.cli._run_git", fake_run_git)
-
     result = CliRunner().invoke(
         main,
         [
             "--dhf", str(dhf_root),
             "ci", "evidence", "record",
-            "--dhf-repo", str(dhf_repo),
             "--test-path", "tests/sys",
             "--test-path", "tests/crs",
             "--junit-dir", str(junit_dir),
+            "--out-dir", str(out_dir),
             "--governance-dir", str(gov_dir),
             "--standard", "IEC_62304",
             "--run-id", "123",
             "--run-url", "https://example.test/run/123",
             "--commit", "abcdef123456",
-            "--push",
         ],
     )
 
     assert result.exit_code == 0, result.output
     payload = json.loads(result.output.splitlines()[0])
     assert payload["imported"] == 2
-    assert payload["committed"] is True
-    assert payload["pushed"] is True
-    assert payload["commit_message"] == "ci: record verification evidence for abcdef1 [skip ci]"
-    assert (dhf_repo, ["config", "user.name", "GitHub Actions [bot]"]) in git_calls
-    assert (dhf_repo, ["config", "user.email", "github-actions[bot]@users.noreply.github.com"]) in git_calls
-    assert (dhf_repo, ["add", "DHF/test-results/", "DHF/compliance-runs/"]) in git_calls
-    assert (dhf_repo, ["commit", "-m", "ci: record verification evidence for abcdef1 [skip ci]"]) in git_calls
-    assert (dhf_repo, ["push"]) in git_calls
+    assert payload["run_id"] == "123"
+    assert payload["commit_sha"] == "abcdef123456"
+    summary = json.loads((out_dir / "evidence-summary.json").read_text(encoding="utf-8"))
+    assert summary["imported"] == 2
+    assert summary["failed_standards"] == []

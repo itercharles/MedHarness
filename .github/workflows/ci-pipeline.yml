@@ -416,15 +416,13 @@ jobs:
         run: |
           export PYTHONPATH="${PYTHONPATH}:${PWD}"
           python -m compliantflow --dhf compliantflow-dhf/DHF validate compliance IEC_82304_1 \
-            --governance-dir compliantflow-dhf/governance \
-            --persist || true
+            --governance-dir compliantflow-dhf/governance || true
 
   # ── POST-MERGE PIPELINE (verification gate) ───────────────────────────────
   #
-  # Runs after merge to main. Re-runs tests, commits results and compliance
-  # run records back to the DHF. This is the permanent audit trail.
-  #
-  # Requires DHF_REPO_TOKEN to have write access to compliantflow-dhf.
+  # Runs manually. Re-runs tests and generates audit evidence artifacts.
+  # Test results and compliance outputs are retained as GitHub artifacts, not
+  # committed back to the DHF.
 
   post-merge-verification:
     name: Post-Merge - Record Verification Evidence
@@ -436,7 +434,7 @@ jobs:
       - name: Check out tool repo
         uses: actions/checkout@v4
 
-      - name: Check out compliantflow-dhf (with write access)
+      - name: Check out compliantflow-dhf
         uses: actions/checkout@v4
         with:
           repository: itercharles/compliantflow-dhf
@@ -463,15 +461,23 @@ jobs:
           export PYTHONPATH="${PYTHONPATH}:${PWD}"
           RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           python -m compliantflow --dhf compliantflow-dhf/DHF ci evidence record \
-            --dhf-repo compliantflow-dhf \
             --test-path tests/sys \
             --test-path tests/crs \
             --junit-dir test-results \
+            --out-dir evidence \
             --governance-dir compliantflow-dhf/governance \
             --run-id "${{ github.run_id }}" \
             --run-url "$RUN_URL" \
-            --commit "${{ github.sha }}" \
-            --push
+            --commit "${{ github.sha }}"
+
+      - name: Upload verification evidence summary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: verification-evidence-summary
+          path: |
+            evidence/
+            test-results/
 
       - name: Close referenced CRs in DHF
         env:
