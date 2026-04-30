@@ -517,3 +517,59 @@ jobs:
           path: |
             traceability_report.pdf
             compliance_report.pdf
+
+      - name: Generate DHF document set (specs, plans, compliance, traceability)
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          export PYTHONPATH="${PYTHONPATH}:${PWD}"
+          mkdir -p release-artifacts/specs
+          mkdir -p release-artifacts/plans
+          mkdir -p release-artifacts/compliance
+
+          # Generate specification Markdown via doc generate ALL
+          python -m dhf_util --dhf compliantflow-dhf/DHF doc generate ALL
+          # Collect generated spec .md files
+          cp -r compliantflow-dhf/DHF/documents/specs/*.md release-artifacts/specs/ 2>/dev/null || true
+
+          # Generate spec PDFs from Markdown (using doc export or weasyprint)
+          python -c "
+          import markdown, sys
+          from pathlib import Path
+          sys.path.insert(0, 'compliantflow-dhf')
+          from weasyprint import HTML
+          css = (Path('compliantflow-dhf/DHF/documents/specs/styles/default.css').read_text()
+                 if Path('compliantflow-dhf/DHF/documents/specs/styles/default.css').exists()
+                 else 'body { font-family: sans-serif; }')
+          spec_dir = Path('compliantflow-dhf/DHF/documents/specs')
+          for md in sorted(spec_dir.glob('*.md')):
+              html_content = f'<!doctype html><html><head><style>{css}</style></head><body>{markdown.markdown(md.read_text(), extensions=[\"tables\", \"fenced_code\"])}</body></html>'
+              HTML(string=html_content).write_pdf(str(Path('release-artifacts/specs') / f'{md.stem}.pdf'))
+          "
+          # Generate plan PDFs
+          python -c "
+          import markdown
+          from pathlib import Path
+          from weasyprint import HTML
+          plan_dir = Path('compliantflow-dhf/DHF/documents/plans')
+          for md in sorted(plan_dir.glob('*.md')):
+              html_content = f'<!doctype html><html><body>{markdown.markdown(md.read_text(), extensions=[\"tables\", \"fenced_code\"])}</body></html>'
+              HTML(string=html_content).write_pdf(str(Path('release-artifacts/plans') / f'{md.stem}.pdf'))
+          " 2>/dev/null || true
+
+          # Generate compliance + traceability PDFs
+          python -m compliantflow --dhf compliantflow-dhf/DHF report traceability \
+            UC CRS SYS SRS SWDD \
+            --output release-artifacts/compliance/Traceability_Matrix.pdf
+          python -m compliantflow --dhf compliantflow-dhf/DHF report compliance IEC_62304 \
+            --governance-dir compliantflow-dhf/governance \
+            --output release-artifacts/compliance/IEC_62304_Compliance_Report.pdf || true
+          python -m compliantflow --dhf compliantflow-dhf/DHF report compliance ISO_14971 \
+            --governance-dir compliantflow-dhf/governance \
+            --output release-artifacts/compliance/ISO_14971_Compliance_Report.pdf || true
+
+      - name: Upload DHF release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dhf-release-artifacts
+          path: release-artifacts/

@@ -1,12 +1,14 @@
 name: Release
 
 # Triggered when a vX.Y.Z tag is pushed.
-# Builds the wheel on Ubuntu (canonical build environment per Development Plan §6.1),
-# generates all DHF documents as PDFs, and assembles the delivery bundle.
+# Builds the wheel, downloads CI-produced DHF artifacts, and assembles the
+# delivery bundle.  All DHF documents (specs, plans, compliance reports,
+# traceability) are produced by the post-merge-verification job in
+# ci-pipeline.yml and consumed as the dhf-release-artifacts artifact.
 #
 # Required secrets:
 #   DHF_REPO_TOKEN  — GitHub PAT with repo scope to read compliantflow-dhf
-#   GEMINI_API_KEY  — Google Gemini API key for semantic compliance checks
+#   GEMINI_API_KEY  — Google Gemini API key (for CI, not release; release is consumer-only)
 
 on:
   push:
@@ -19,25 +21,16 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      actions: read
 
     steps:
       - name: Check out source
         uses: actions/checkout@v4
 
-      - name: Check out DHF
-        uses: actions/checkout@v4
-        with:
-          repository: itercharles/compliantflow-dhf
-          path: dhf
-          token: ${{ secrets.DHF_REPO_TOKEN }}
-
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-
-      - name: Install system dependencies (WeasyPrint)
-        run: sudo apt-get install -y libpango-1.0-0 libharfbuzz0b libpangoft2-1.0-0
 
       - name: Install build tools
         run: pip install build
@@ -48,69 +41,33 @@ jobs:
       - name: Build wheel
         run: python -m build --wheel
 
-      - name: Install CompliantFlow and DHF utils dependencies
-        run: |
-          pip install dist/*.whl
-          pip install click jinja2 markdown pydantic PyYAML gitpython weasyprint
-
-      - name: Generate item-based specification PDFs
-        run: |
-          mkdir -p /tmp/documents/specs
-          cd dhf
-          # Collect generated PDFs from /tmp
-          find /tmp -maxdepth 1 -name "*_Specification_*.pdf" -exec cp {} /tmp/documents/specs/ \;
-
-      - name: Generate plan and test specification PDFs
-        run: |
-          mkdir -p /tmp/documents/plans
-          python - <<'EOF'
-          import markdown
-          from pathlib import Path
-          from weasyprint import HTML
-          from datetime import datetime
-
-          DHF_DOCS = Path("dhf/DHF/documents")
-          CSS = (DHF_DOCS / "specs/styles/default.css").read_text()
-
-          def to_pdf(md_path: Path, out_path: Path):
-              content = md_path.read_text()
-              html_content = markdown.markdown(content, extensions=['tables', 'fenced_code', 'toc'])
-              full_html = f"""<!DOCTYPE html>
-          <html><head><meta charset="utf-8"><style>{CSS}</style></head>
-          <body>{html_content}</body></html>"""
-              HTML(string=full_html).write_pdf(str(out_path))
-              print(f"✓ {md_path.name} → {out_path}")
-
-          # Plans
-          plan_dir = DHF_DOCS / "plans"
-          for md in sorted(plan_dir.glob("*.md")):
-              stem = md.stem.replace("_", " ").title().replace(" ", "_")
-              to_pdf(md, Path(f"/tmp/documents/plans/{stem}.pdf"))
-
-          # Static test specifications
-          spec_dir = DHF_DOCS / "specs"
-          for md in sorted(spec_dir.glob("*Test*.md")):
-              to_pdf(md, Path(f"/tmp/documents/specs/{md.stem}.pdf"))
-          EOF
-
-      - name: Generate compliance reports
+      - name: Find latest CI run for this commit
+        id: ci-run
         env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          mkdir -p /tmp/documents/compliance
-          # Generate reports regardless of policy pass/fail — the PDF documents
-          # compliance state. The actual gate is enforced by the CI pipeline on PRs.
-          compliantflow --dhf dhf/DHF report compliance IEC_62304 \
-            --governance-dir dhf/governance \
-            --output /tmp/documents/compliance/IEC_62304_Compliance_Report.pdf || true
-          compliantflow --dhf dhf/DHF report compliance ISO_14971 \
-            --governance-dir dhf/governance \
-            --output /tmp/documents/compliance/ISO_14971_Compliance_Report.pdf || true
+          COMMIT_SHA="${{ github.sha }}"
+          RUN_ID=$(gh run list \
+            --repo "${{ github.repository }}" \
+            --branch main \
+            --workflow ci-pipeline.yml \
+            --json databaseId,headSha,status,conclusion \
+            --jq 'map(select(.headSha == "'"${COMMIT_SHA}"'" and .status == "completed" and .conclusion == "success")) | sort_by(-.databaseId) | .[0].databaseId' \
+            2>/dev/null || echo "")
+          if [ -z "$RUN_ID" ] || [ "$RUN_ID" = "null" ]; then
+            echo "::error::No successful CI pipeline run found for commit ${COMMIT_SHA}. Run post-merge-verification first."
+            exit 1
+          fi
+          echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
+          echo "Found CI run: $RUN_ID" >&2
 
-      - name: Generate traceability matrix
-        run: |
-          compliantflow --dhf dhf/DHF report traceability UC CRS SYS SRS SWDD \
-            --output /tmp/documents/compliance/Traceability_Matrix.pdf
+      - name: Download DHF release artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dhf-release-artifacts
+          path: /tmp/release-artifacts
+          run-id: ${{ steps.ci-run.outputs.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Assemble delivery bundles
         run: |
@@ -120,8 +77,6 @@ jobs:
           SHA="${GITHUB_SHA:0:7}"
 
           # --- compliantflow-x.y.z-hash.zip: whl + GETTING_STARTED ---
-          # dhf-template is bundled inside the whl (compliantflow/data/dhf-template)
-          # and delivered to users via `compliantflow init`, not as a raw directory.
           CF_DIR="/tmp/cf-${VERSION}-${SHA}"
           mkdir -p "${CF_DIR}"
           cp dist/*.whl "${CF_DIR}/"
@@ -133,10 +88,10 @@ jobs:
           zip -r "compliantflow-${VERSION}-${SHA}.zip" "cf-${VERSION}-${SHA}/"
           echo "CF_ZIP=/tmp/compliantflow-${VERSION}-${SHA}.zip" >> "$GITHUB_ENV"
 
-          # --- DHF-x.y.z-hash.zip: compliance reports, specs, plans ---
+          # --- DHF-x.y.z-hash.zip: CI-produced specs, plans, compliance, traceability ---
           DHF_DIR="/tmp/dhf-${VERSION}-${SHA}"
           mkdir -p "${DHF_DIR}"
-          cp -r /tmp/documents/. "${DHF_DIR}/"
+          cp -r /tmp/release-artifacts/. "${DHF_DIR}/"
           find "${DHF_DIR}" -name ".DS_Store" -delete 2>/dev/null || true
           cd /tmp
           zip -r "DHF-${VERSION}-${SHA}.zip" "dhf-${VERSION}-${SHA}/"
