@@ -198,7 +198,6 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r dhf/requirements.txt
-          pip install -e dhf/ 2>/dev/null || true
 
       - name: Complete CR in DHF
         if: steps.cr.outputs.skip != 'true'
@@ -227,36 +226,37 @@ on:
     types: [opened, synchronize]
 
 jobs:
-  utils-tests:
-    name: DHF Utils Tests
+  dhf-util-tests:
+    name: dhf_util Tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Install dependencies
-        run: pip install pytest click jinja2 markdown pydantic PyYAML gitpython
-      - name: Run DHF utils tests
+      - name: Install dhf_util
         run: |
-          export PYTHONPATH="${PYTHONPATH}:${PWD}:${PWD}/DHF"
-          pytest DHF/utils/tests/ -v
+          python -m pip install --upgrade pip
+          pip install pytest
+          pip install -e .
+      - name: Run dhf_util tests
+        run: pytest dhf_util/tests/ -v
 
   schema-validation:
     name: Schema Validation
     runs-on: ubuntu-latest
-    needs: utils-tests
+    needs: dhf-util-tests
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Install dependencies
-        run: pip install click jinja2 markdown pydantic PyYAML gitpython
-      - name: Validate DHF schema
+      - name: Install dhf_util
         run: |
-          export PYTHONPATH="${PYTHONPATH}:${PWD}:${PWD}/DHF"
-          python -m dhf_util validate schema
+          python -m pip install --upgrade pip
+          pip install -e .
+      - name: Validate DHF schema
+        run: python -m dhf_util --dhf DHF validate schema
 """)
 
 
@@ -276,11 +276,12 @@ on:
         required: true
         type: choice
         options:
-          - new
-          - analyzing
-          - developing
+          - planned
+          - in_review
+          - designing
+          - implementing
           - completed
-          - rejected
+          - cancelled
       triggered_by:
         description: "Who triggered this transition"
         required: false
@@ -298,17 +299,18 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Install dependencies
-        run: pip install click jinja2 markdown pydantic PyYAML gitpython
+      - name: Install dhf_util
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
       - name: Transition CR(s)
         env:
           CR_IDS: ${{ inputs.cr_ids }}
           TO_STATE: ${{ inputs.to_state }}
           TRIGGERED_BY: ${{ inputs.triggered_by }}
         run: |
-          export PYTHONPATH="${PYTHONPATH}:${PWD}:${PWD}/DHF"
           for CR_ID in $CR_IDS; do
-            python -m dhf_util item transition "$CR_ID" "$TO_STATE" --by "$TRIGGERED_BY"
+            python -m dhf_util --dhf DHF item transition "$CR_ID" "$TO_STATE" --by "$TRIGGERED_BY"
           done
       - name: Commit status changes
         run: |
@@ -342,8 +344,8 @@ def _generate_compliance_yaml(
     version = _cf_version()
 
     checkout_dhf = ""
-    pythonpath = ""
     dhf_flag = "--dhf DHF"
+    install_dhf = ""
 
     if dhf_repo:
         checkout_dhf = f"""\
@@ -355,8 +357,8 @@ def _generate_compliance_yaml(
           token: ${{{{ secrets.DHF_REPO_TOKEN }}}}
 
 """
-        pythonpath = '          export PYTHONPATH="${PYTHONPATH}:${PWD}/dhf/DHF"\n'
         dhf_flag = "--dhf dhf/DHF"
+        install_dhf = "          pip install -e dhf/\n"
 
     compliance_checks = "\n".join(
         f"          compliantflow {dhf_flag} validate compliance {std} \\\n"
@@ -390,10 +392,10 @@ jobs:
           gh release download {version} --repo itercharles/CompliantFlow --pattern "compliantflow-*.zip" --output compliantflow.zip
           unzip compliantflow.zip -d cf
           pip install cf/*/compliantflow-*.whl
-
+{install_dhf}
       - name: Compliance gate
 {env_block}        run: |
-{pythonpath}          compliantflow {dhf_flag} validate traceability
+          compliantflow {dhf_flag} validate traceability
 {compliance_checks}
           compliantflow {dhf_flag} validate coverage UC:CRS CRS:SYS SYS:SRS
 """
