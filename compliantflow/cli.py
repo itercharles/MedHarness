@@ -1240,6 +1240,92 @@ def ci_dhf_validate(
 
 
 # ---------------------------------------------------------------------------
+# ci test-coverage — product-side requirement→test coverage gate
+# ---------------------------------------------------------------------------
+
+@ci.command("test-coverage")
+@click.option("--dhf", "dhf_path", type=click.Path(file_okay=False, path_type=Path), required=True,
+              help="Path to DHF directory.")
+@click.option("--junit-dir", "junit_dirs", multiple=True, type=click.Path(file_okay=False, path_type=Path),
+              help="Directory containing JUnit XML evidence. Repeat for multiple dirs.")
+@click.option("--junit", "junit_files", multiple=True, type=click.Path(exists=True, dir_okay=False, path_type=Path),
+              help="JUnit XML file(s) to include.")
+@click.option("--requirement-type", "req_types", multiple=True, metavar="CODE",
+              help="Requirement type to check (e.g. SRS, SYS, CRS). Repeat for multiple.")
+@click.pass_context
+def ci_test_coverage(
+    ctx: click.Context,
+    dhf_path: Path,
+    junit_dirs: tuple[Path, ...],
+    junit_files: tuple[Path, ...],
+    req_types: tuple[str, ...],
+) -> None:
+    """Check that every requirement has test coverage from JUnit evidence.
+
+    Scans JUnit XML files for @links tags, then verifies each requirement
+    of the given types has at least one linked test.  Exits 1 on coverage
+    gaps.
+
+    This is a product-side gate: it answers "do tests cover requirements?"
+    It does NOT check the DHF design chain (UC→CRS→SYS etc.) — that is
+    the responsibility of ``ci dhf-validate`` in the DHF repository.
+    """
+    from dhf_util.local_adapter import LocalDHFAdapter
+    from dhf_util.junit_parser import parse_junit_xml
+    from dhf_util.models.config import ProjectConfig
+
+    # ── Collect JUnit evidence ──
+    junit_paths = _collect_junit_paths(junit_files, junit_dirs)
+    if not junit_paths:
+        click.echo("WARN: No JUnit files found — skipping test-coverage check.", err=True)
+        return
+
+    # ── Parse test evidence into requirement-coverage map ──
+    covered_reqs: set[str] = set()
+    for jp in junit_paths:
+        for result in parse_junit_xml(jp):
+            if result.testing_status == "PASS" and result.links:
+                covered_reqs.update(result.links)
+
+    # ── Load DHF items ──
+    adapter = LocalDHFAdapter(dhf_path)
+    all_items = adapter.list_items()
+    by_id = {it["id"]: it for it in all_items}
+
+    # ── Check coverage per requirement type ──
+    failed = False
+    default_types = req_types if req_types else ("SRS", "SYS", "CRS")
+    for rt in default_types:
+        config = adapter._config
+        dt = config.get_doc_type(rt)
+        if not dt:
+            click.echo(f"WARN: Unknown requirement type '{rt}' — skipped.", err=True)
+            continue
+        prefix = dt.prefix
+        req_items = [it for it in all_items if it["id"].startswith(prefix)]
+        if not req_items:
+            continue
+        covered = 0
+        uncovered = []
+        for ri in req_items:
+            if ri["id"] in covered_reqs:
+                covered += 1
+            else:
+                uncovered.append(ri["id"])
+        total = len(req_items)
+        if covered < total:
+            failed = True
+            click.echo(f"FAIL [test-coverage] {rt}: {covered}/{total} covered", err=True)
+            for uid in uncovered:
+                click.echo(f"      ↳ uncovered: {uid}", err=True)
+        else:
+            click.echo(f"PASS [test-coverage] {rt}: {covered}/{total} covered", err=True)
+
+    if failed:
+        raise click.ClickException("Test coverage gaps found.")
+
+
+# ---------------------------------------------------------------------------
 # ci release — release artifact consumption and assembly
 # ---------------------------------------------------------------------------
 
