@@ -1162,8 +1162,10 @@ def ci_dhf_validate(
     Coverage pairs and compliance standards are passed as CLI flags.
     """
     from dhf_util.local_adapter import LocalDHFAdapter
+    from compliantflow.core import CompliantFlowCore
 
     adapter = LocalDHFAdapter(dhf_path)
+    core = CompliantFlowCore(adapter)
 
     failed = False
 
@@ -1199,7 +1201,6 @@ def ci_dhf_validate(
 
     # ── Coverage gate ──
     if coverage_pairs:
-        core = _make_core(ctx)
         pairs = [(p.split(":")[0], p.split(":")[1]) for p in coverage_pairs]
         cov_result = core.check_coverage(pairs)
         for row in cov_result.get("results", []):
@@ -1214,7 +1215,6 @@ def ci_dhf_validate(
 
     # ── Compliance ──
     if run_compliance and compliance_standards:
-        core = _make_core(ctx)
         for standard in compliance_standards:
             try:
                 gov = governance_dir.resolve() if governance_dir else Path("governance")
