@@ -1,29 +1,17 @@
 name: CI Pipeline
 
-# Staged CI model:
+# Layered CI model matching WebTPS/DHF pattern:
 #
-# PR flow:
-#   1. cr-validation         — PR title CR references
-#   2. tests-*               — product test suites (upload JUnit artifacts)
-#   3. test-coverage         — requirement→test coverage gate
-#   4. dhf-validation        — structural DHF gate (schema, traceability, design coverage)
-#   5. compliance-check      — compliance policy enforcement gate
-#
-# Main/post-merge flow:
-#   6. evidence-bundle       — evidence artifacts, DHF docs, reports
+#   1. TESTING          — product test suites in parallel, upload JUnit evidence
+#   2. ACCEPTANCE GATE  — test-coverage + structural validation + compliance
+#                         (runs in parallel, all need TESTING to complete)
+#   3. EVIDENCE (main)  — evidence bundle generation (needs ACCEPTANCE GATE)
 
 on:
   push:
     branches: [ main ]
   pull_request:
     types: [opened, synchronize]
-  workflow_dispatch:
-    inputs:
-      full_verification:
-        description: "Run evidence bundle generation"
-        required: false
-        default: false
-        type: boolean
 
 permissions:
   contents: read
@@ -31,122 +19,13 @@ permissions:
 
 jobs:
 
-  # ── Push smoke tests ─────────────────────────────────────────────────────
-
-  push-smoke:
-    name: Push Smoke Tests
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    steps:
-      - name: Check out tool repo
-        uses: actions/checkout@v4
-
-      - name: Check out compliantflow-dhf
-        uses: actions/checkout@v4
-        with:
-          repository: itercharles/compliantflow-dhf
-          token: ${{ secrets.DHF_REPO_TOKEN }}
-          path: compliantflow-dhf
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-          cache: 'pip'
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install \
-            pytest \
-            pydantic \
-            click \
-            networkx \
-            pyyaml \
-            python-frontmatter \
-            jinja2 \
-            gitpython \
-            python-dateutil \
-            python-dotenv \
-            markdown
-          pip install -e compliantflow-dhf/
-
-      - name: Run focused smoke tests
-        run: |
-          export PYTHONPATH="${PYTHONPATH}:${PWD}"
-          pytest \
-            tests/sys/test_sys_027_init.py \
-            tests/sys/test_sys_043_cr_workflow_complete.py \
-            tests/sys/test_sys_044_cr_intake_github_issue.py \
-            compliantflow-dhf/dhf_util/tests/test_change_requests.py \
-            -q
-
-  # ── PR: CR validation ────────────────────────────────────────────────────
-
-  cr-validation:
-    name: CR Validation
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
-    steps:
-      - name: Extract CR IDs from PR title
-        id: extract-cr
-        env:
-          PR_TITLE: ${{ github.event.pull_request.title }}
-        run: |
-          CR_IDS=$(echo "$PR_TITLE" | grep -oE 'CR-[0-9]+' | sort -u | tr '\n' ' ' || true)
-          echo "cr_ids=$CR_IDS" >> "$GITHUB_OUTPUT"
-          if [ -z "$CR_IDS" ]; then
-            echo "✗ No CR ID found in PR title. Include a CR reference e.g. 'feat(CR-012): description'" >&2
-            exit 1
-          else
-            echo "Found CR IDs in title: $CR_IDS" >&2
-          fi
-
-      - name: Check out tool repo
-        uses: actions/checkout@v4
-
-      - name: Check out compliantflow-dhf
-        uses: actions/checkout@v4
-        with:
-          repository: itercharles/compliantflow-dhf
-          token: ${{ secrets.DHF_REPO_TOKEN }}
-          path: compliantflow-dhf
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-          cache: 'pip'
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install -e compliantflow-dhf/
-
-      - name: Check CR status for each referenced CR
-        env:
-          CR_IDS: ${{ steps.extract-cr.outputs.cr_ids }}
-        run: |
-          export PYTHONPATH="${PYTHONPATH}:${PWD}"
-          FAILED=0
-          for CR_ID in $CR_IDS; do
-            echo "--- Checking $CR_ID ---" >&2
-            python -m compliantflow --dhf compliantflow-dhf/DHF cr check-status "$CR_ID" || FAILED=1
-          done
-          if [ "$FAILED" -eq 1 ]; then
-            echo "✗ One or more CR validations failed." >&2
-            exit 1
-          fi
-          echo "✓ All referenced CRs are valid." >&2
-
-  # ── Product test jobs ────────────────────────────────────────────────────
+  # ── TESTING ──────────────────────────────────────────────────────────────
+  # Product test suites. Each uploads JUnit evidence for the acceptance gate.
+  # All three run in parallel.
 
   tests-dhf-utils:
-    name: DHF Utils Tests
+    name: Test | DHF Utils
     runs-on: ubuntu-latest
-    needs: cr-validation
-    if: github.event_name == 'pull_request'
     steps:
       - name: Check out tool repo
         uses: actions/checkout@v4
@@ -185,10 +64,8 @@ jobs:
           path: dhf-utils-test-results.xml
 
   tests-sys:
-    name: SYS API Tests
+    name: Test | SYS API
     runs-on: ubuntu-latest
-    needs: cr-validation
-    if: github.event_name == 'pull_request'
     steps:
       - name: Check out code
         uses: actions/checkout@v4
@@ -226,10 +103,8 @@ jobs:
           path: sys-test-results.xml
 
   tests-crs:
-    name: CRS API Tests
+    name: Test | CRS API
     runs-on: ubuntu-latest
-    needs: cr-validation
-    if: github.event_name == 'pull_request'
     steps:
       - name: Check out code
         uses: actions/checkout@v4
@@ -266,13 +141,16 @@ jobs:
           name: crs-test-results
           path: crs-test-results.xml
 
-  # ── Requirement→test coverage gate ────────────────────────────────────────
+  # ── ACCEPTANCE GATE ──────────────────────────────────────────────────────
+  # Runs after all test suites complete.  Three gates in parallel:
+  #   test-coverage   — requirement→test coverage from JUnit evidence
+  #   dhf-validation  — structural DHF integrity (schema, traceability, design coverage)
+  #   compliance-check — policy enforcement per configured standards
 
   test-coverage:
-    name: Test Coverage Gate
+    name: Gate | Test Coverage (requirement → test)
     runs-on: ubuntu-latest
-    needs: [tests-sys, tests-crs]
-    if: github.event_name == 'pull_request'
+    needs: [tests-dhf-utils, tests-sys, tests-crs]
     steps:
       - name: Check out tool repo
         uses: actions/checkout@v4
@@ -296,7 +174,7 @@ jobs:
           pip install -r requirements.txt
           pip install -e compliantflow-dhf/
 
-      - name: Download test results
+      - name: Download test evidence
         uses: actions/download-artifact@v4
         with:
           path: test-results/
@@ -307,13 +185,10 @@ jobs:
           python -m compliantflow --dhf compliantflow-dhf/DHF ci test-coverage \
             --junit-dir test-results/
 
-  # ── Structural DHF validation gate ────────────────────────────────────────
-
   dhf-validation:
-    name: DHF Validation Gate
+    name: Gate | DHF Validation (design traceability)
     runs-on: ubuntu-latest
-    needs: [tests-sys, tests-crs]
-    if: github.event_name == 'pull_request'
+    needs: [tests-dhf-utils, tests-sys, tests-crs]
     steps:
       - name: Check out tool repo
         uses: actions/checkout@v4
@@ -350,13 +225,10 @@ jobs:
             --coverage-pair SRS:SWDD \
             --fail-on-uncovered
 
-  # ── Compliance policy enforcement gate ────────────────────────────────────
-
   compliance-check:
-    name: Compliance Check Gate
+    name: Gate | Compliance Check (standards)
     runs-on: ubuntu-latest
-    needs: [tests-sys, tests-crs]
-    if: github.event_name == 'pull_request'
+    needs: [tests-dhf-utils, tests-sys, tests-crs]
     steps:
       - name: Check out tool repo
         uses: actions/checkout@v4
@@ -391,14 +263,14 @@ jobs:
             --standard IEC_62304 \
             --standard IEC_82304_1
 
-  # ── Evidence bundle (main/post-merge only) ────────────────────────────────
+  # ── EVIDENCE (main only) ─────────────────────────────────────────────────
+  # Generates the DHF evidence bundle after the acceptance gate passes on main.
 
   evidence-bundle:
-    name: Evidence Bundle
+    name: Evidence | Bundle
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.full_verification)
-    permissions:
-      contents: read
+    needs: [test-coverage, dhf-validation, compliance-check]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && !cancelled()
     steps:
       - name: Check out tool repo
         uses: actions/checkout@v4
@@ -416,19 +288,21 @@ jobs:
           python-version: '3.11'
           cache: 'pip'
 
+      - name: Install system dependencies for PDF export
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libpango-1.0-0 libharfbuzz0b libpangoft2-1.0-0
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pytest
           pip install -r requirements.txt
           pip install -e compliantflow-dhf/
 
-      - name: Run test suites and collect JUnit evidence
-        run: |
-          export PYTHONPATH="${PYTHONPATH}:${PWD}"
-          mkdir -p test-results
-          pytest tests/sys/ -v -s --junitxml=test-results/sys-test-results.xml || true
-          pytest tests/crs/ -v -s --junitxml=test-results/crs-test-results.xml || true
+      - name: Download test evidence
+        uses: actions/download-artifact@v4
+        with:
+          path: test-results/
 
       - name: Generate evidence bundle
         env:
@@ -436,7 +310,7 @@ jobs:
         run: |
           export PYTHONPATH="${PYTHONPATH}:${PWD}"
           python -m compliantflow --dhf compliantflow-dhf/DHF ci evidence bundle \
-            --out-dir release-artifacts \
+            --out-dir dhf-artifacts \
             --junit-dir test-results \
             --coverage-pair UC:CRS \
             --coverage-pair CRS:SYS \
@@ -451,30 +325,11 @@ jobs:
             --compliance-standard IEC_82304_1 \
             --governance-dir compliantflow-dhf/governance \
             --run-id "${{ github.run_id }}" \
-            --run-url "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
-            --commit "${{ github.sha }}" \
-            --continue-on-gate-failure
+            --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            --commit "${{ github.sha }}"
 
       - name: Upload DHF release artifacts
         uses: actions/upload-artifact@v4
         with:
           name: dhf-release-artifacts
-          path: release-artifacts/
-
-      - name: Close referenced CRs in DHF
-        if: github.event_name == 'workflow_dispatch'
-        env:
-          GH_TOKEN: ${{ secrets.DHF_REPO_TOKEN }}
-        run: |
-          CR_IDS=$(git log -1 --format="%s" | grep -oE 'CR-[0-9]+' | sort -u | tr '\n' ' ')
-          if [ -z "$CR_IDS" ]; then
-            echo "No CR IDs found in commit message — skipping CR closure." >&2
-            exit 0
-          fi
-          echo "Closing CR(s): $CR_IDS" >&2
-          gh workflow run cr-transition.yml \
-            --repo itercharles/compliantflow-dhf \
-            --field cr_ids="$CR_IDS" \
-            --field to_state=closed \
-            --field triggered_by="GitHub Actions (CompliantFlow post-merge)" \
-            --field commit_sha="${GITHUB_SHA}"
+          path: dhf-artifacts/
