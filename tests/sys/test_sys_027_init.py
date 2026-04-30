@@ -165,8 +165,8 @@ class TestInitCmd:
             _write_dhf_ci_workflow(path)
             content = path.read_text()
         assert "schema-validation" in content
-        assert "utils-tests" in content
-        assert "python -m dhf_util validate schema" in content
+        assert "dhf-util-tests" in content
+        assert "python -m dhf_util --dhf DHF validate schema" in content
 
     def test_TC_SYS_027_010_cr_transition_workflow_content(self):
         """
@@ -180,7 +180,7 @@ class TestInitCmd:
             _write_dhf_cr_transition_workflow(path)
             content = path.read_text()
         assert "workflow_dispatch" in content
-        assert "python -m dhf_util item transition" in content
+        assert "python -m dhf_util --dhf DHF item transition" in content
         assert "cr_ids" in content
 
     def test_TC_SYS_027_011_standard_labels_cover_all_governance_files(self):

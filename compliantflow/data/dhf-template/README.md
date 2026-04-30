@@ -24,8 +24,8 @@ cd CompliantFlow
 # Clone this DHF alongside
 git clone https://github.com/itercharles/compliantflow-dhf
 
-# Set PYTHONPATH so the CLI can find LocalDHFAdapter
-export pip install dhf_util
+# Install from this repo
+pip install -e .
 
 # Run compliance checks
 python -m compliantflow --dhf compliantflow-dhf/DHF validate compliance IEC_62304 \
@@ -42,5 +42,5 @@ schema validation). It is not part of the CompliantFlow tool itself.
 python -m dhf_util --dhf DHF item create --type SRS --title "My requirement"
 
 # Run DHF utility tests
-PYTHONPATH=.:DHF pytest dhf_util/tests/
+pytest dhf_util/tests/ -v
 ```
