@@ -291,3 +291,129 @@ def test_TC_SYS_044_010_cli_intake_github_issue_writes_output(monkeypatch, tmp_p
     assert payload["cr_id"] == "CR-034"
     assert payload["branch"] == "cr/CR-034-from-issue-123-add-weekly-cr-intake"
     assert json.loads(result.output)["title"] == "cr(CR-034): Add weekly CR intake"
+
+
+class TestIntakeGitHubIssueCI:
+    """@links: SYS-044"""
+
+    def _create_event(self, tmp_path, milestone="2026-W18"):
+        import json as _json
+        event_path = tmp_path / "event.json"
+        event_path.write_text(_json.dumps({
+            "action": "milestoned",
+            "issue": {
+                "number": 42,
+                "title": "Test feature",
+                "body": "### User value / justification\n\nTest justification.\n\n",
+                "state": "open",
+                "html_url": "https://github.com/acme/web/issues/42",
+                "user": {"login": "dev"},
+                "milestone": {"title": milestone},
+            },
+        }), encoding="utf-8")
+        return event_path
+
+    def _make_stub_adapter(self):
+        class Stub:
+            def create_item(self, data, **kwargs):
+                return {"id": "CR-050", "type": "CR"}
+            def get_item(self, uid):
+                return {"id": uid, "status": "planned"}
+            def list_items(self, doc_type=None):
+                return []
+            def get_available_transitions(self, uid):
+                return []
+        return Stub()
+
+    def test_ci_intake_prepare_output(self, monkeypatch, tmp_path):
+        dhf_repo = tmp_path / "dhf"
+        dhf_repo.mkdir()
+        (dhf_repo / "DHF" / "config").mkdir(parents=True)
+        (dhf_repo / "DHF" / "config" / "global.yaml").write_text("global_lifecycle: {}\n")
+        (dhf_repo / "DHF" / "items" / "09_cr").mkdir(parents=True)
+        event_path = self._create_event(tmp_path)
+
+        monkeypatch.setattr("compliantflow.cli._make_adapter_for_dhf_root",
+                            lambda dhf_root: self._make_stub_adapter())
+        monkeypatch.setattr("compliantflow.cr_intake.current_iso_week_milestone",
+                            lambda: "2026-W18")
+
+    def test_ci_intake_prepare_output(self, monkeypatch, tmp_path):
+        dhf_repo = tmp_path / "dhf"
+        dhf_repo.mkdir()
+        (dhf_repo / "DHF" / "config").mkdir(parents=True)
+        (dhf_repo / "DHF" / "config" / "global.yaml").write_text("global_lifecycle: {}\n")
+        (dhf_repo / "DHF" / "items" / "09_cr").mkdir(parents=True)
+        event_path = self._create_event(tmp_path)
+
+        monkeypatch.setattr("compliantflow.cli._make_adapter_for_dhf_root",
+                            lambda dhf_root: self._make_stub_adapter())
+        monkeypatch.setattr("compliantflow.cr_intake.current_iso_week_milestone",
+                            lambda: "2026-W18")
+
+        result = CliRunner().invoke(main, [
+            "--dhf", str(dhf_repo / "DHF"),
+            "cr", "workflow", "intake-github-issue-ci",
+            "--dhf-repo", str(dhf_repo),
+            "--event", str(event_path),
+            "--marker-name", "test-cr",
+            "--write",
+        ])
+
+        assert result.exit_code == 0, f"exit={result.exit_code} out={result.output!r} err={result.stderr!r}"
+        payload = json.loads(result.output.strip())
+        assert payload.get("should_create") is True
+        assert payload.get("cr_id", "").startswith("CR-")
+
+    def test_ci_intake_admin_bypass_does_not_write(self, monkeypatch, tmp_path):
+        dhf_repo = tmp_path / "dhf"
+        dhf_repo.mkdir()
+        (dhf_repo / "DHF" / "config").mkdir(parents=True)
+        (dhf_repo / "DHF" / "config" / "global.yaml").write_text("global_lifecycle: {}\n")
+        event_path = self._create_event(tmp_path)
+
+        monkeypatch.setattr("compliantflow.cli._make_adapter_for_dhf_root",
+                            lambda dhf_root: self._make_stub_adapter())
+        monkeypatch.setattr("compliantflow.cr_intake.current_iso_week_milestone",
+                            lambda: "2026-W18")
+
+        result = CliRunner().invoke(main, [
+            "--dhf", str(dhf_repo / "DHF"),
+            "cr", "workflow", "intake-github-issue-ci",
+            "--dhf-repo", str(dhf_repo),
+            "--event", str(event_path),
+            "--marker-name", "test-cr",
+            "--write",
+        ])
+
+        assert result.exit_code == 0, f"exit={result.exit_code} out={result.output!r}"
+        payload = json.loads(result.output.strip())
+        assert payload.get("should_create") is True
+        assert payload.get("cr_id") == "CR-050"
+
+    def test_ci_intake_no_write_only_computes_cr_id(self, monkeypatch, tmp_path):
+        dhf_repo = tmp_path / "dhf"
+        dhf_repo.mkdir()
+        (dhf_repo / "DHF" / "config").mkdir(parents=True)
+        (dhf_repo / "DHF" / "config" / "global.yaml").write_text("global_lifecycle: {}\n")
+        (dhf_repo / "DHF" / "items" / "09_cr").mkdir(parents=True)
+        event_path = self._create_event(tmp_path)
+
+        monkeypatch.setattr("compliantflow.cli._make_adapter_for_dhf_root",
+                            lambda dhf_root: self._make_stub_adapter())
+        monkeypatch.setattr("compliantflow.cr_intake.current_iso_week_milestone",
+                            lambda: "2026-W18")
+
+        result = CliRunner().invoke(main, [
+            "--dhf", str(dhf_repo / "DHF"),
+            "cr", "workflow", "intake-github-issue-ci",
+            "--dhf-repo", str(dhf_repo),
+            "--event", str(event_path),
+            "--marker-name", "test-cr",
+        ])
+
+        assert result.exit_code == 0, f"exit={result.exit_code} out={result.output!r}"
+        payload = json.loads(result.output.strip())
+        assert payload.get("should_create") is True
+        files = list(dhf_repo.glob("DHF/items/09_cr/CR-*.yaml"))
+        assert len(files) == 0, "no CR file should be written without --write"
