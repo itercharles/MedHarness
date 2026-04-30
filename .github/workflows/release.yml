@@ -47,19 +47,31 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           COMMIT_SHA="${{ github.sha }}"
-          RUN_ID=$(gh run list \
+          # Find all successful CI pipeline runs for this commit, newest first
+          RUN_IDS=$(gh run list \
             --repo "${{ github.repository }}" \
             --branch main \
             --workflow ci-pipeline.yml \
+            --limit 20 \
             --json databaseId,headSha,status,conclusion \
-            --jq 'map(select(.headSha == "'"${COMMIT_SHA}"'" and .status == "completed" and .conclusion == "success")) | sort_by(-.databaseId) | .[0].databaseId' \
+            --jq "[.[] | select(.headSha == \"${COMMIT_SHA}\" and .status == \"completed\" and .conclusion == \"success\")] | sort_by(-.databaseId) | .[].databaseId" \
             2>/dev/null || echo "")
-          if [ -z "$RUN_ID" ] || [ "$RUN_ID" = "null" ]; then
+          if [ -z "$RUN_IDS" ]; then
             echo "::error::No successful CI pipeline run found for commit ${COMMIT_SHA}. Run post-merge-verification first."
             exit 1
           fi
-          echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
-          echo "Found CI run: $RUN_ID" >&2
+          # Find the first run that actually has dhf-release-artifacts
+          for run_id in $RUN_IDS; do
+            ARTIFACT_CHECK=$(gh api "repos/${{ github.repository }}/actions/runs/$run_id/artifacts" \
+              --jq '.artifacts[] | select(.name == "dhf-release-artifacts") | .name' 2>/dev/null || echo "")
+            if [ -n "$ARTIFACT_CHECK" ]; then
+              echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+              echo "Found CI run $run_id with dhf-release-artifacts" >&2
+              exit 0
+            fi
+          done
+          echo "::error::No CI run for commit ${COMMIT_SHA} contains dhf-release-artifacts. Run post-merge-verification with full_verification=true."
+          exit 1
 
       - name: Download DHF release artifacts
         uses: actions/download-artifact@v4
