@@ -8,6 +8,7 @@ storage paths or provider-specific commands.
 import json
 import os
 import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -210,6 +211,59 @@ def _import_results_file(adapter, path: Path, tester: str, run_id: str,
     return summary
 
 
+def _run_command(args: list[str], cwd: Path | None = None, check: bool = True) -> subprocess.CompletedProcess:
+    proc = subprocess.run(args, cwd=cwd, text=True, check=False)
+    if check and proc.returncode != 0:
+        raise click.ClickException(f"command failed ({proc.returncode}): {' '.join(args)}")
+    return proc
+
+
+def _run_git(repo_root: Path, args: list[str]) -> str:
+    proc = subprocess.run(
+        ["git", "-C", str(repo_root), *args],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if proc.returncode != 0:
+        message = (proc.stderr or proc.stdout).strip()
+        raise click.ClickException(message or f"git {' '.join(args)} failed")
+    return proc.stdout
+
+
+def _git_has_changes(repo_root: Path) -> bool:
+    return bool(_run_git(repo_root, ["status", "--porcelain"]).strip())
+
+
+def _run_pytest_junit(test_paths: tuple[str, ...], junit_dir: Path) -> list[Path]:
+    junit_dir.mkdir(parents=True, exist_ok=True)
+    generated: list[Path] = []
+    for raw_path in test_paths:
+        path = Path(raw_path)
+        name = path.name or path.as_posix().replace("/", "-")
+        xml_path = junit_dir / f"{name.replace('/', '-')}.xml"
+        _run_command(["pytest", raw_path, "-v", f"--junitxml={xml_path}"])
+        generated.append(xml_path)
+    return generated
+
+
+def _persist_compliance_checks(core, governance_dir: Path, standards: tuple[str, ...]) -> list[dict]:
+    reports = []
+    for standard in standards:
+        report = core.check_compliance(standard, governance_dir=governance_dir, persist=True)
+        if report is None:
+            raise click.ClickException(f"Policy group '{standard}' not found.")
+        failed = report["total_policies"] - report["passed_policies"]
+        reports.append({
+            "standard": standard,
+            "score": report["score"],
+            "passed_policies": report["passed_policies"],
+            "total_policies": report["total_policies"],
+            "failed_policies": failed,
+        })
+    return reports
+
+
 def _build_traceability_report_payload(core, doc_types: tuple[str, ...],
                                        junit_paths: tuple[str, ...] = ()) -> dict:
     if junit_paths:
@@ -363,25 +417,6 @@ def _make_adapter_for_dhf_root(dhf_root: Path):
             "LocalDHFAdapter not found. Add your DHF system to PYTHONPATH before running the CLI."
         )
     return LocalDHFAdapter(dhf_root, auto_commit=False)
-
-
-def _run_git(repo_root: Path, args: list[str]) -> str:
-    import subprocess  # noqa: PLC0415
-
-    proc = subprocess.run(
-        ["git", "-C", str(repo_root), *args],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    if proc.returncode != 0:
-        message = (proc.stderr or proc.stdout).strip()
-        raise click.ClickException(message or f"git {' '.join(args)} failed")
-    return proc.stdout
-
-
-def _git_has_changes(repo_root: Path) -> bool:
-    return bool(_run_git(repo_root, ["status", "--porcelain"]).strip())
 
 
 def _generate_plan_artifacts(dhf_path: Path, out_dir: Path) -> list[dict]:
@@ -705,6 +740,102 @@ def ci_evidence_import(ctx: click.Context, paths: tuple[Path, ...], fmt: str,
     )
     if summary["failed_tcs"]:
         click.echo(f"FAIL Failing TCs: {summary['failed_tcs']}", err=True)
+
+
+@ci_evidence.command("record")
+@click.option("--dhf-repo", type=click.Path(file_okay=False, path_type=Path),
+              help="DHF repository root. Defaults to the parent of --dhf.")
+@click.option("--test-path", "test_paths", multiple=True, default=("tests/sys", "tests/crs"),
+              help="Pytest path to run. Repeat for multiple paths.")
+@click.option("--junit-dir", type=click.Path(file_okay=False, path_type=Path), default=Path("test-results"),
+              show_default=True, help="Directory for generated JUnit XML files.")
+@click.option("--governance-dir", type=click.Path(file_okay=False, path_type=Path), required=True,
+              help="Governance directory containing policy YAML files.")
+@click.option("--standard", "standards", multiple=True, default=("IEC_62304", "IEC_82304_1"),
+              help="Compliance standard to persist. Repeat for multiple standards.")
+@click.option("--tester", default="GitHub Actions", show_default=True,
+              help="Tester recorded for imported test results.")
+@click.option("--run-id", default="", help="CI run ID.")
+@click.option("--run-url", default="", help="CI run URL.")
+@click.option("--commit", "commit_sha", default="", help="Git commit SHA.")
+@click.option("--commit-message", default=None,
+              help="Commit message. Defaults to 'ci: record verification evidence for SHA [skip ci]'.")
+@click.option("--git-user-name", default="GitHub Actions [bot]", show_default=True,
+              help="Git user.name used when committing DHF evidence.")
+@click.option("--git-user-email", default="github-actions[bot]@users.noreply.github.com", show_default=True,
+              help="Git user.email used when committing DHF evidence.")
+@click.option("--push/--no-push", default=False, show_default=True,
+              help="Push committed DHF evidence changes.")
+@click.option("--continue-on-compliance-failure", is_flag=True, default=False,
+              help="Record all evidence and exit 0 even if a compliance check fails.")
+@click.pass_context
+def ci_evidence_record(
+    ctx: click.Context,
+    dhf_repo: Path | None,
+    test_paths: tuple[str, ...],
+    junit_dir: Path,
+    governance_dir: Path,
+    standards: tuple[str, ...],
+    tester: str,
+    run_id: str,
+    run_url: str,
+    commit_sha: str,
+    commit_message: str | None,
+    git_user_name: str,
+    git_user_email: str,
+    push: bool,
+    continue_on_compliance_failure: bool,
+) -> None:
+    """Run tests, import JUnit evidence, persist compliance, and commit DHF changes."""
+    repo_root, dhf_root = _resolve_dhf_repo_paths(ctx, dhf_repo)
+    ctx.obj["dhf"] = dhf_root
+    adapter = _make_adapter_for_dhf_root(dhf_root)
+    core = _make_core(ctx)
+
+    junit_paths = _run_pytest_junit(test_paths, junit_dir)
+    files = [
+        _import_results_file(adapter, path, tester, run_id, run_url, commit_sha)
+        for path in junit_paths
+    ]
+
+    compliance = _persist_compliance_checks(core, governance_dir, standards)
+    failed_standards = [item["standard"] for item in compliance if item["failed_policies"]]
+
+    changed = _git_has_changes(repo_root)
+    committed = False
+    pushed = False
+    message = commit_message or f"ci: record verification evidence for {(commit_sha or 'manual')[:7]} [skip ci]"
+    if changed:
+        _run_git(repo_root, ["config", "user.name", git_user_name])
+        _run_git(repo_root, ["config", "user.email", git_user_email])
+        _run_git(repo_root, ["add", "DHF/test-results/", "DHF/compliance-runs/"])
+        if _git_has_changes(repo_root):
+            _run_git(repo_root, ["commit", "-m", message])
+            committed = True
+            if push:
+                _run_git(repo_root, ["push"])
+                pushed = True
+
+    summary = {
+        "dhf_repo": str(repo_root),
+        "dhf_root": str(dhf_root),
+        "test_paths": list(test_paths),
+        "junit_files": [str(path) for path in junit_paths],
+        "imported": sum(f["imported"] for f in files),
+        "skipped": sum(f["skipped"] for f in files),
+        "items_updated": sorted({uid for f in files for uid in f["items_updated"]}),
+        "failed_tcs": [tc for f in files for tc in f["failed_tcs"]],
+        "compliance": compliance,
+        "failed_standards": failed_standards,
+        "changed": changed,
+        "committed": committed,
+        "pushed": pushed,
+        "commit_message": message if committed else None,
+    }
+    click.echo(json.dumps(summary, default=str))
+
+    if failed_standards and not continue_on_compliance_failure:
+        raise click.ClickException(f"Compliance failed for: {', '.join(failed_standards)}")
 
 
 @ci.group("artifacts")

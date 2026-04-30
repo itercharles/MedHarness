@@ -456,59 +456,22 @@ jobs:
           pip install -r requirements.txt
           pip install -e compliantflow-dhf/
 
-      - name: Run SYS tests
-        run: |
-          export PYTHONPATH="${PYTHONPATH}:${PWD}"
-          pytest tests/sys/ -v --junitxml=sys-test-results.xml
-
-      - name: Run CRS tests
-        run: |
-          export PYTHONPATH="${PYTHONPATH}:${PWD}"
-          pytest tests/crs/ -v --junitxml=crs-test-results.xml
-
-      - name: Import test results into DHF
+      - name: Record verification evidence
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
           export PYTHONPATH="${PYTHONPATH}:${PWD}"
           RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          for xml in sys-test-results.xml crs-test-results.xml; do
-            python -m compliantflow --dhf compliantflow-dhf/DHF test import "$xml" \
-              --format junit \
-              --tester "GitHub Actions" \
-              --run-id "${{ github.run_id }}" \
-              --run-url "$RUN_URL" \
-              --commit "${{ github.sha }}" || true
-          done
-
-      - name: Run IEC 62304 compliance check (persist to DHF)
-        env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-        run: |
-          export PYTHONPATH="${PYTHONPATH}:${PWD}"
-          python -m compliantflow --dhf compliantflow-dhf/DHF validate compliance IEC_62304 \
+          python -m compliantflow --dhf compliantflow-dhf/DHF ci evidence record \
+            --dhf-repo compliantflow-dhf \
+            --test-path tests/sys \
+            --test-path tests/crs \
+            --junit-dir test-results \
             --governance-dir compliantflow-dhf/governance \
-            --persist
-
-      - name: Run IEC 82304-1 compliance check (persist to DHF)
-        env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-        run: |
-          export PYTHONPATH="${PYTHONPATH}:${PWD}"
-          python -m compliantflow --dhf compliantflow-dhf/DHF validate compliance IEC_82304_1 \
-            --governance-dir compliantflow-dhf/governance \
-            --persist || true
-
-      - name: Commit verification evidence back to DHF
-        run: |
-          cd compliantflow-dhf
-          git config user.name "GitHub Actions [bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add DHF/test-results/ DHF/compliance-runs/
-          if ! git diff --staged --quiet; then
-            git commit -m "ci: record verification evidence for ${GITHUB_SHA::7} [skip ci]"
-            git push
-          else
-            echo "No new verification evidence to commit." >&2
-          fi
+            --run-id "${{ github.run_id }}" \
+            --run-url "$RUN_URL" \
+            --commit "${{ github.sha }}" \
+            --push
 
       - name: Close referenced CRs in DHF
         env:
