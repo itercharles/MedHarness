@@ -438,7 +438,7 @@ def test_TC_SYS_041_007_ci_evidence_record_orchestrates_verification_evidence(
 
 # ── ci evidence bundle tests ────────────────────────────────────────────
 
-def _make_junit_xml(name: str, tests: list[dict]) -> Path:
+def _make_junit_xml_with_links(name: str, tests: list[dict]) -> Path:
     p = Path(f"/tmp/{name}")
     suites = "\n".join(
         f'  <testsuite name="{t["suite"]}" tests="{t["count"]}">\n'
@@ -463,7 +463,7 @@ class TestEvidenceBundle:
     def test_bundle_gate_pass_generates_manifest(self, monkeypatch, tmp_path):
         core = FakeCore(coverage={"passed": True, "results": []})
         adapter = FakeAdapter()
-        junit = _make_junit_xml("srs.xml", [
+        junit = _make_junit_xml_with_links("srs.xml", [
             {"suite": "srs", "count": 1, "cases": [
                 {"class": "TestFoo", "name": "test_pass @links:SRS-001", "status": "PASS"},
             ]},
@@ -547,7 +547,7 @@ class TestEvidenceBundle:
     def test_bundle_manifest_contains_sha256(self, monkeypatch, tmp_path):
         core = FakeCore(coverage={"passed": True, "results": []})
         adapter = FakeAdapter()
-        junit = _make_junit_xml("sys.xml", [
+        junit = _make_junit_xml_with_links("sys.xml", [
             {"suite": "sys", "count": 1, "cases": [
                 {"class": "TestBar", "name": "test_pass", "status": "PASS"},
             ]},
@@ -577,7 +577,7 @@ class TestEvidenceBundle:
                 return {"recorded": [], "skipped": 0}
 
         adapter = TrackingAdapter()
-        junit = _make_junit_xml("test.xml", [
+        junit = _make_junit_xml_with_links("test.xml", [
             {"suite": "t", "count": 1, "cases": [
                 {"class": "T", "name": "t1", "status": "PASS"},
             ]},
@@ -795,3 +795,178 @@ def test_dhf_validate_compliance_missing_group(monkeypatch, tmp_path):
     ])
     assert result.exit_code != 0
     assert "FAIL [compliance]" in result.output
+
+
+# ── ci test-coverage tests ────────────────────────────────────────────────
+
+
+class _FakeTestAdapter:
+    """Fake adapter for ci test-coverage — returns known items."""
+    def __init__(self, dhf_path, items=None):
+        self.dhf_path = dhf_path
+        self._items = items or []
+        self._config = _FakeTestConfig()
+
+    def list_items(self, doc_type=None):
+        if doc_type:
+            prefix = self._config.get_doc_type(doc_type).prefix
+            return [it for it in self._items if it["id"].startswith(prefix)]
+        return list(self._items)
+
+
+class _FakeTestConfig:
+    def __init__(self):
+        self.doc_types = []
+        for code, prefix in [("SRS", "SRS-"), ("SYS", "SYS-"), ("CRS", "CRS-")]:
+            dt = type("_DT", (), {})()
+            dt.code = code
+            dt.prefix = prefix
+            dt.name = code
+            self.doc_types.append(dt)
+
+    def get_doc_type(self, code):
+        for dt in self.doc_types:
+            if dt.code == code:
+                return dt
+        return None
+
+
+
+
+def _make_junit_xml_with_links(path_name, suites):
+    """Create JUnit XML with compliantflow.links properties.
+    Each suite: {"suite": "name", "count": N, "cases": [{"class": "C", "name": "t", "links": ["SRS-001"], "status": "PASS"}]}
+    """
+    lines = ['<?xml version="1.0" encoding="UTF-8"?>', '<testsuites>']
+    for s in suites:
+        lines.append(f'  <testsuite name="{s["suite"]}" tests="{s["count"]}">')
+        for tc in s.get("cases", []):
+            cls = tc.get("class", "TestClass")
+            name = tc.get("name", "test_case")
+            status = tc.get("status", "PASS")
+            links_list = tc.get("links", [])
+            lines.append(f'    <testcase classname="{cls}" name="{name}" time="0.01">')
+            if links_list:
+                links_val = ",".join(links_list)
+                lines.append(f'      <properties>')
+                lines.append(f'        <property name="compliantflow.links" value="{links_val}"/>')
+                lines.append(f'      </properties>')
+            if status == "FAIL":
+                lines.append(f'      <failure message="fail"/>')
+            elif status == "SKIP":
+                lines.append(f'      <skipped/>')
+            lines.append(f'    </testcase>')
+        lines.append(f'  </testsuite>')
+    lines.append('</testsuites>')
+    import tempfile
+    p = Path(tempfile.mktemp(suffix='.xml'))
+    p.write_text('\n'.join(lines), encoding='utf-8')
+    return p
+
+
+def test_test_coverage_all_covered(monkeypatch, tmp_path):
+    junit_path = _make_junit_xml_with_links("test.xml", [
+        {"suite": "srs", "count": 2, "cases": [
+            {"class": "T", "name": "test_a", "links": ["SRS-001"], "status": "PASS"},
+            {"class": "T", "name": "test_b", "links": ["SRS-002", "SYS-001"], "status": "PASS"},
+        ]},
+    ])
+    adapter = _FakeTestAdapter(str(tmp_path), items=[
+        {"id": "SRS-001"}, {"id": "SRS-002"}, {"id": "SYS-001"},
+    ])
+    monkeypatch.setattr("dhf_util.local_adapter.LocalDHFAdapter",
+                        lambda dhf, auto_commit=False: adapter)
+
+    result = CliRunner().invoke(main, [
+        "ci", "test-coverage",
+        "--dhf", str(tmp_path),
+        "--junit", junit_path,
+        "--requirement-type", "SRS",
+        "--requirement-type", "SYS",
+    ])
+    assert result.exit_code == 0, result.output
+    assert "PASS [test-coverage] SRS: 2/2 covered" in result.output
+    assert "PASS [test-coverage] SYS: 1/1 covered" in result.output
+
+
+def test_test_coverage_uncovered_fails(monkeypatch, tmp_path):
+    junit_path = _make_junit_xml_with_links("test.xml", [
+        {"suite": "srs", "count": 1, "cases": [
+            {"class": "T", "name": "test_a", "links": ["SRS-001"], "status": "PASS"},
+        ]},
+    ])
+    adapter = _FakeTestAdapter(str(tmp_path), items=[
+        {"id": "SRS-001"}, {"id": "SRS-002"},
+    ])
+    monkeypatch.setattr("dhf_util.local_adapter.LocalDHFAdapter",
+                        lambda dhf, auto_commit=False: adapter)
+
+    result = CliRunner().invoke(main, [
+        "ci", "test-coverage",
+        "--dhf", str(tmp_path),
+        "--junit", junit_path,
+        "--requirement-type", "SRS",
+    ])
+    assert result.exit_code != 0, result.output
+    assert "FAIL [test-coverage] SRS: 1/2 covered" in result.output
+    assert "SRS-002" in result.output
+
+
+def test_test_coverage_non_pass_does_not_count(monkeypatch, tmp_path):
+    junit_path = _make_junit_xml_with_links("test.xml", [
+        {"suite": "srs", "count": 2, "cases": [
+            {"class": "T", "name": "test_fail", "links": ["SRS-001"], "status": "FAIL"},
+            {"class": "T", "name": "test_skip", "links": ["SRS-001"], "status": "SKIP"},
+        ]},
+    ])
+    adapter = _FakeTestAdapter(str(tmp_path), items=[{"id": "SRS-001"}])
+    monkeypatch.setattr("dhf_util.local_adapter.LocalDHFAdapter",
+                        lambda dhf, auto_commit=False: adapter)
+
+    result = CliRunner().invoke(main, [
+        "ci", "test-coverage",
+        "--dhf", str(tmp_path),
+        "--junit", junit_path,
+        "--requirement-type", "SRS",
+    ])
+    assert result.exit_code != 0, result.output
+    assert "FAIL [test-coverage] SRS: 0/1 covered" in result.output
+
+
+def test_test_coverage_missing_junit_fails(monkeypatch, tmp_path):
+    adapter = _FakeTestAdapter(str(tmp_path))
+    monkeypatch.setattr("dhf_util.local_adapter.LocalDHFAdapter",
+                        lambda dhf, auto_commit=False: adapter)
+
+    result = CliRunner().invoke(main, [
+        "ci", "test-coverage",
+        "--dhf", str(tmp_path),
+        "--requirement-type", "SRS",
+    ])
+    assert result.exit_code != 0, result.output
+    assert "No JUnit files found" in result.output
+
+
+def test_test_coverage_defaults_to_srs_sys_crs(monkeypatch, tmp_path):
+    junit_path = _make_junit_xml_with_links("test.xml", [
+        {"suite": "s", "count": 3, "cases": [
+            {"class": "T", "name": "t1", "links": ["SRS-001"], "status": "PASS"},
+            {"class": "T", "name": "t2", "links": ["SYS-001"], "status": "PASS"},
+            {"class": "T", "name": "t3", "links": ["CRS-001"], "status": "PASS"},
+        ]},
+    ])
+    adapter = _FakeTestAdapter(str(tmp_path), items=[
+        {"id": "SRS-001"}, {"id": "SYS-001"}, {"id": "CRS-001"},
+    ])
+    monkeypatch.setattr("dhf_util.local_adapter.LocalDHFAdapter",
+                        lambda dhf, auto_commit=False: adapter)
+
+    result = CliRunner().invoke(main, [
+        "ci", "test-coverage",
+        "--dhf", str(tmp_path),
+        "--junit", junit_path,
+    ])
+    assert result.exit_code == 0, result.output
+    assert "PASS [test-coverage] SRS" in result.output
+    assert "PASS [test-coverage] SYS" in result.output
+    assert "PASS [test-coverage] CRS" in result.output

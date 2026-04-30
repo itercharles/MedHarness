@@ -1277,15 +1277,30 @@ def ci_test_coverage(
     # ── Collect JUnit evidence ──
     junit_paths = _collect_junit_paths(junit_files, junit_dirs)
     if not junit_paths:
-        click.echo("WARN: No JUnit files found — skipping test-coverage check.", err=True)
-        return
+        raise click.ClickException(
+            "No JUnit files found. Test-coverage gate requires at least one JUnit evidence source."
+        )
 
     # ── Parse test evidence into requirement-coverage map ──
+    import xml.etree.ElementTree as ET
     covered_reqs: set[str] = set()
     for jp in junit_paths:
-        for result in parse_junit_xml(jp):
-            if result.testing_status == "PASS" and result.links:
-                covered_reqs.update(result.links)
+        tree = ET.parse(jp)
+        for tc in tree.iter("testcase"):
+            # Only count PASS tests (skip if any failure, error, or skipped element)
+            failures = list(tc.iter("failure"))
+            errors = list(tc.iter("error"))
+            skipped = list(tc.iter("skipped"))
+            if failures or errors or skipped:
+                continue
+            # Check for compliantflow.links property
+            for props in tc.iter("properties"):
+                for prop in props.iter("property"):
+                    if prop.get("name") == "compliantflow.links":
+                        value = prop.get("value", "")
+                        if value:
+                            covered_reqs.update(v.strip() for v in value.split(",") if v.strip())
+                        break
 
     # ── Load DHF items ──
     adapter = LocalDHFAdapter(dhf_path)
