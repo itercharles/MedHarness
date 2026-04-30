@@ -1796,6 +1796,183 @@ def cr_workflow_intake_github_issue(
     click.echo(text)
 
 
+@cr_workflow.command("intake-github-issue-ci")
+@click.option("--dhf-repo", type=click.Path(file_okay=False, path_type=Path),
+              help="DHF repository root. Defaults to the parent of --dhf.")
+@click.option("--event", "event_path", required=True, type=click.Path(exists=True, dir_okay=False, path_type=Path),
+              help="GitHub issue event JSON path, usually GITHUB_EVENT_PATH.")
+@click.option("--reuse-comments", "reuse_event_path", type=click.Path(exists=True, dir_okay=False, path_type=Path),
+              help="Reuse comments path as issue event JSON (internal reuse). Deprecated, use --event.")
+@click.option("--active-milestone", default=None,
+              help="Milestone required for CR intake. Defaults to current ISO week.")
+@click.option("--marker-name", default="compliantflow-cr", show_default=True,
+              help="HTML comment marker name used to detect prior CR intake.")
+@click.option("--branch-prefix", default="cr", show_default=True,
+              help="Branch prefix for the generated CR branch.")
+@click.option("--title-prefix", default="cr", show_default=True,
+              help="PR title prefix for the generated CR PR.")
+@click.option("--write", is_flag=True, default=False,
+              help="Create the CR item in the DHF. Without this, only compute the next CR ID.")
+@click.option("--create-branch", is_flag=True, default=False,
+              help="Create and push a DHF branch for the CR.")
+@click.option("--open-pr", is_flag=True, default=False,
+              help="Open a DHF pull request for the CR branch.")
+@click.option("--source-repo", default=None, metavar="OWNER/REPO",
+              help="GitHub repository of the source issue (for PR and comment).")
+@click.option("--comment-source-issue", is_flag=True, default=False,
+              help="Post a comment on the source issue linking to the created CR.")
+@click.option("--issue-number", type=int, default=None,
+              help="Source issue number. Defaults to the event payload number.")
+@click.option("--github-token", default=None, metavar="TOKEN",
+              help="GitHub token for branch push and PR/comment operations.")
+@click.option("--milestone-title", default=None, metavar="TITLE",
+              help="Milestone title for the PR description. Defaults to event milestone.")
+@click.option("--output", type=click.Path(dir_okay=False, path_type=Path),
+              help="Optional JSON output path for GitHub Actions outputs.")
+@click.pass_context
+def cr_workflow_intake_github_issue_ci(
+    ctx: click.Context,
+    dhf_repo: Path | None,
+    event_path: Path,
+    reuse_event_path: Path | None,
+    active_milestone: str | None,
+    marker_name: str,
+    branch_prefix: str,
+    title_prefix: str,
+    write: bool,
+    create_branch: bool,
+    open_pr: bool,
+    source_repo: str | None,
+    comment_source_issue: bool,
+    issue_number: int | None,
+    github_token: str | None,
+    milestone_title: str | None,
+    output: Path | None,
+) -> None:
+    """Full CI intake pipeline: prepare CR + GitHub plumbing (branch, PR, comment).
+
+    Wraps the intake-github-issue logic and adds git/PR/comment operations
+    that WebTPS or any product repo would otherwise script manually.
+    Requires 'gh' CLI and 'git' in PATH.
+    """
+    import os
+
+    from compliantflow.cr_intake import (
+        current_iso_week_milestone,
+        load_comments,
+        load_github_issue_event,
+        prepare_cr_from_issue,
+    )
+
+    repo_root, dhf_root = _resolve_dhf_repo_paths(ctx, dhf_repo)
+    adapter = _make_adapter_for_dhf_root(dhf_root)
+    token = github_token or os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN") or ""
+    token_env = {"GITHUB_TOKEN": token, "GH_TOKEN": token, **os.environ}
+
+    # Resolve event data
+    event = load_github_issue_event(event_path)
+    if reuse_event_path:
+        event = load_github_issue_event(reuse_event_path)
+    issue_num = issue_number or event.number
+    src_repo = source_repo or os.environ.get("GITHUB_REPOSITORY", "")
+    milestone = milestone_title or event.milestone or ""
+
+    # Compute comments path from the same parent as event
+    comments_path = event_path.parent / "issue-comments.json" if issue_num else None
+
+    # Step 1: Prepare CR
+    result = prepare_cr_from_issue(
+        event,
+        active_milestone or current_iso_week_milestone(),
+        load_comments(comments_path),
+        write=write,
+        adapter=adapter,
+        marker_name=marker_name,
+        branch_prefix=branch_prefix,
+        title_prefix=title_prefix,
+    )
+
+    # Step 2: GitHub plumbing (branch, PR, comment)
+    branch_url = ""
+    pr_url = ""
+    if result.should_create and write:
+        branch = result.branch
+        if create_branch:
+            _run_git(repo_root, ["checkout", "-B", branch])
+            _run_git(repo_root, ["add", "-A"])
+            if _git_has_changes(repo_root):
+                _run_git(repo_root, ["commit", "-m", f"cr: create {result.cr_id} from issue"])
+                if token:
+                    _run_git(repo_root, ["push", "--force", "--set-upstream", "origin", branch])
+                else:
+                    _run_git(repo_root, ["push", "--force", "--set-upstream", "origin", branch])
+
+        if open_pr and src_repo:
+            try:
+                existing = subprocess.run(
+                    ["gh", "pr", "list", "--head", branch, "--json", "url",
+                     "--jq", ".[0].url"],
+                    cwd=repo_root, capture_output=True, text=True, env=token_env,
+                )
+                if existing.returncode == 0 and existing.stdout.strip():
+                    pr_url = existing.stdout.strip()
+                else:
+                    body = (
+                        f"Automated CR intake from {src_repo} issue:\n\n"
+                        f"- Source issue: {event.html_url}\n"
+                        f"- Target weekly milestone: {milestone}\n\n"
+                        f"This PR creates {result.cr_id}. Human approval is required."
+                    )
+                    proc = subprocess.run(
+                        ["gh", "pr", "create", "--head", branch, "--base", "main",
+                         "--title", result.title, "--body", body],
+                        cwd=repo_root, capture_output=True, text=True, env=token_env,
+                    )
+                    if proc.returncode == 0:
+                        pr_url = proc.stdout.strip()
+            except FileNotFoundError:
+                click.echo("WARNING: 'gh' CLI not found; skipping PR creation.", err=True)
+
+        if comment_source_issue and src_repo and issue_num and result.cr_id:
+            comment_body = (
+                f"CR created from this issue.\n\n"
+                f"CR: {result.cr_id}\n"
+                f"DHF PR: {pr_url}\n\n"
+                f"<!-- {marker_name}: {result.cr_id} -->\n"
+                f"<!-- {marker_name}-pr: {pr_url} -->"
+            )
+            try:
+                subprocess.run(
+                    ["gh", "issue", "comment", str(issue_num), "--body", comment_body,
+                     "--repo", src_repo],
+                    capture_output=True, text=True, env=token_env, check=False,
+                )
+            except FileNotFoundError:
+                click.echo("WARNING: 'gh' CLI not found; skipping issue comment.", err=True)
+
+    # Step 3: Output (GitHub Actions output format)
+    payload = {
+        "should_create": result.should_create,
+        "reason": result.reason,
+        "cr_id": result.cr_id,
+        "branch": result.branch,
+        "branch_url": branch_url,
+        "pr_url": pr_url,
+        "title": result.title,
+    }
+    text = json.dumps(payload, indent=2)
+    if output:
+        output.write_text(text + "\n", encoding="utf-8")
+        # Emit GitHub Actions outputs
+        with open(str(output), "a") as f_out:
+            for key, value in payload.items():
+                val = str(value) if value is not None else ""
+                if isinstance(value, bool):
+                    val = str(value).lower()
+                f_out.write(f"{key}={val}\n")
+    click.echo(text)
+
+
 @cr.command("check-status")
 @click.argument("cr_id")
 @click.pass_context
