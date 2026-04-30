@@ -242,8 +242,8 @@ jobs:
       - name: Run dhf_util tests
         run: pytest dhf_util/tests/ -v
 
-  dhf-structural-validation:
-    name: Structural DHF Validation
+  dhf-validation:
+    name: DHF Validation (schema + traceability)
     runs-on: ubuntu-latest
     needs: dhf-util-tests
     steps:

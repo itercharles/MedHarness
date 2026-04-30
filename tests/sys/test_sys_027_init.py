@@ -166,7 +166,7 @@ class TestInitCmd:
             path = Path(tmp) / "ci.yml"
             _write_dhf_ci_workflow(path)
             content = path.read_text()
-        assert "dhf-structural-validation" in content
+        assert "dhf-validation" in content
         assert "dhf-util-tests" in content
         assert "python -m dhf_util --dhf DHF validate schema" in content
 
