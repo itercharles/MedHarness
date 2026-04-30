@@ -1123,6 +1123,258 @@ def ci_run_artifacts(ctx: click.Context, out_dir: Path, doc_types: tuple,
 
 
 # ---------------------------------------------------------------------------
+# ci dhf-validate — single-command DHF validation gate
+# ---------------------------------------------------------------------------
+
+@ci.command("dhf-validate")
+@click.option("--dhf", "dhf_path", type=click.Path(file_okay=False, path_type=Path), required=True,
+              help="Path to DHF directory.")
+@click.option("--governance-dir", type=click.Path(file_okay=False, path_type=Path), default=Path("governance"),
+              help="Path to governance directory.")
+@click.option("--run-schema/--no-run-schema", default=True, show_default=True,
+              help="Run schema validation.")
+@click.option("--run-traceability/--no-run-traceability", default=True, show_default=True,
+              help="Run traceability validation.")
+@click.option("--run-compliance/--no-run-compliance", default=False, show_default=True,
+              help="Run compliance validation.")
+@click.option("--coverage-pair", "coverage_pairs", multiple=True, metavar="PARENT:CHILD",
+              help="Coverage pair to check. Repeat for multiple pairs.")
+@click.option("--compliance-standard", "compliance_standards", multiple=True, metavar="CODE",
+              help="Compliance standard to check. Repeat for multiple.")
+@click.option("--fail-on-uncovered", is_flag=True, default=False,
+              help="Exit 1 on uncovered traceability items.")
+@click.pass_context
+def ci_dhf_validate(
+    ctx: click.Context,
+    dhf_path: Path,
+    governance_dir: Path,
+    run_schema: bool,
+    run_traceability: bool,
+    run_compliance: bool,
+    coverage_pairs: tuple[str, ...],
+    compliance_standards: tuple[str, ...],
+    fail_on_uncovered: bool,
+) -> None:
+    """Single-command DHF validation gate for CI pipelines.
+
+    Replaces reusable-workflow YAML with an explicit Python command.
+    Each validation phase is independently toggleable.
+    Coverage pairs and compliance standards are passed as CLI flags.
+    """
+    from dhf_util.local_adapter import LocalDHFAdapter
+
+    adapter = LocalDHFAdapter(dhf_path)
+
+    failed = False
+
+    # ── Schema ──
+    if run_schema:
+        result = adapter.validate_schema()
+        if not result.get("valid", True):
+            failed = True
+            click.echo("FAIL [schema]: validation errors found", err=True)
+            for err in result.get("errors", []):
+                click.echo(f"  ✗ {err}", err=True)
+        else:
+            click.echo(f"PASS [schema]: {result.get('item_count', 0)} items valid", err=True)
+
+    # ── Traceability ──
+    if run_traceability:
+        trace_result = adapter.validate_traceability()
+        required = trace_result.get("required", {})
+        if not required.get("passed", True):
+            failed = True
+            for f in required.get("failures", []):
+                click.echo(f"FAIL [required] {f['id']}: {f['issue']}", err=True)
+        for c in trace_result.get("coverage", []):
+            status = "PASS" if c["passed"] else "FAIL"
+            if not c["passed"]:
+                failed = fail_on_uncovered
+            click.echo(
+                f"{status} [coverage] {c['parent_type']}→{c['child_type']}: "
+                f"{c['covered']}/{c['total']} covered",
+                err=True,
+            )
+        click.echo(trace_result.get("summary", ""), err=True)
+
+    # ── Coverage gate ──
+    if coverage_pairs:
+        core = _make_core(ctx)
+        pairs = [(p.split(":")[0], p.split(":")[1]) for p in coverage_pairs]
+        cov_result = core.check_coverage(pairs)
+        for row in cov_result.get("results", []):
+            status = "PASS" if row.get("passed") else "FAIL"
+            if not row.get("passed"):
+                failed = True
+            click.echo(
+                f"{status} [gate] {row['parent_type']}→{row['child_type']}: "
+                f"{row['covered']}/{row['total']} covered",
+                err=True,
+            )
+
+    # ── Compliance ──
+    if run_compliance and compliance_standards:
+        core = _make_core(ctx)
+        for standard in compliance_standards:
+            try:
+                gov = governance_dir.resolve() if governance_dir else Path("governance")
+                result = core.check_compliance(standard, str(gov))
+                click.echo(f"PASS [compliance] {standard}", err=True)
+            except Exception:
+                failed = True
+                click.echo(f"FAIL [compliance] {standard}", err=True)
+
+    if failed:
+        raise click.ClickException("DHF validation failed.")
+
+
+# ---------------------------------------------------------------------------
+# ci release — release artifact consumption and assembly
+# ---------------------------------------------------------------------------
+
+@ci.group("release")
+def ci_release() -> None:
+    """Release artifact consumption and assembly commands."""
+
+
+@ci_release.command("consume-artifact")
+@click.option("--repo", required=True, metavar="OWNER/REPO",
+              help="GitHub repository containing the CI pipeline.")
+@click.option("--commit-sha", required=True,
+              help="Git commit SHA to find the matching CI run.")
+@click.option("--workflow", "workflow_name", default="ci-pipeline.yml",
+              help="Workflow file name that produces the artifact.")
+@click.option("--artifact-name", default="dhf-release-artifacts", show_default=True,
+              help="Name of the artifact to download.")
+@click.option("--download-dir", type=click.Path(file_okay=False, path_type=Path), required=True,
+              help="Directory to download the artifact into.")
+@click.pass_context
+def ci_release_consume_artifact(
+    ctx: click.Context,
+    repo: str,
+    commit_sha: str,
+    workflow_name: str,
+    artifact_name: str,
+    download_dir: Path,
+) -> None:
+    """Download a CI-produced artifact for the given commit.
+
+    Finds the latest successful CI run for ``commit-sha`` that uploaded
+    ``artifact-name``, downloads it to ``download-dir``, and exits 0.
+    Fails if no matching run or artifact exists.
+    """
+    import json as _json
+    import os as _os
+    import subprocess as _subprocess
+
+    env = _os.environ.copy()
+
+    def _gh(*args: str) -> str:
+        result = _subprocess.run(
+            ["gh"] + list(args),
+            capture_output=True, text=True, env=env, timeout=30,
+        )
+        if result.returncode != 0:
+            raise click.ClickException(f"gh {' '.join(args)} failed: {result.stderr.strip()}")
+        return result.stdout.strip()
+
+    # 1. Find successful runs for this commit
+    runs_json = _gh(
+        "api", f"repos/{repo}/actions/workflows/{workflow_name}/runs",
+        "--jq", f'[.workflow_runs[] | select(.head_sha=="{commit_sha}" and .status=="completed" and .conclusion=="success")] | sort_by(-.id)',
+    )
+    runs = _json.loads(runs_json)
+    if not runs:
+        raise click.ClickException(
+            f"No successful {workflow_name} run found for commit {commit_sha}."
+        )
+
+    # 2. Find the first run that has the required artifact
+    for run in runs:
+        run_id = run["id"]
+        artifacts_json = _gh(
+            "api", f"repos/{repo}/actions/runs/{run_id}/artifacts",
+            "--jq", f'[.artifacts[] | select(.name=="{artifact_name}")]',
+        )
+        artifacts = _json.loads(artifacts_json)
+        if artifacts:
+            artifact_id = artifacts[0]["id"]
+            click.echo(f"Found {artifact_name} in run {run_id} (artifact {artifact_id})", err=True)
+
+            # 3. Download artifact
+            download_dir.mkdir(parents=True, exist_ok=True)
+            _gh(
+                "run", "download", str(run_id),
+                "--repo", repo,
+                "--name", artifact_name,
+                "--dir", str(download_dir),
+            )
+            click.echo(f"Downloaded {artifact_name} to {download_dir}", err=True)
+            return
+
+    raise click.ClickException(
+        f"No CI run for commit {commit_sha} contains artifact '{artifact_name}'."
+    )
+
+
+@ci_release.command("assemble")
+@click.option("--artifact-dir", type=click.Path(file_okay=False, path_type=Path), required=True,
+              help="Directory containing downloaded DHF release artifacts.")
+@click.option("--wheel", "wheel_paths", multiple=True, type=click.Path(exists=True, path_type=Path),
+              help="Wheel file(s) to include in the bundle.")
+@click.option("--getting-started", type=click.Path(exists=True, path_type=Path),
+              help="GETTING_STARTED.md to include in the bundle.")
+@click.option("--version", required=True,
+              help="Release version string (e.g., 2.0.42).")
+@click.option("--commit-sha", required=True,
+              help="Git commit SHA for naming.")
+@click.option("--out-dir", type=click.Path(file_okay=False, path_type=Path), required=True,
+              help="Output directory for assembled bundles.")
+@click.pass_context
+def ci_release_assemble(
+    ctx: click.Context,
+    artifact_dir: Path,
+    wheel_paths: tuple[Path, ...],
+    getting_started: Path | None,
+    version: str,
+    commit_sha: str,
+    out_dir: Path,
+) -> None:
+    """Assemble release bundles from downloaded artifacts.
+
+    Produces two zip files in ``out_dir``:
+    - ``compliantflow-{version}-{hash}.zip``: wheel + GETTING_STARTED
+    - ``DHF-{version}-{hash}.zip``: DHF evidence artifacts
+    """
+    import zipfile as _zipfile
+    import shutil as _shutil
+
+    short_sha = commit_sha[:7]
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    # ── CF bundle: wheel + GETTING_STARTED ──
+    cf_name = f"compliantflow-{version}-{short_sha}"
+    cf_zip = out_dir / f"{cf_name}.zip"
+    with _zipfile.ZipFile(cf_zip, "w", _zipfile.ZIP_DEFLATED) as zf:
+        for wp in wheel_paths:
+            zf.write(wp, wp.name)
+        if getting_started:
+            zf.write(getting_started, getting_started.name)
+    click.echo(f"CF_ZIP={cf_zip}", err=False)
+    click.echo(f"Created {cf_zip}", err=True)
+
+    # ── DHF bundle: evidence artifacts ──
+    dhf_name = f"DHF-{version}-{short_sha}"
+    dhf_zip = out_dir / f"{dhf_name}.zip"
+    with _zipfile.ZipFile(dhf_zip, "w", _zipfile.ZIP_DEFLATED) as zf:
+        for fpath in sorted(artifact_dir.rglob("*")):
+            if fpath.is_file() and not fpath.name.startswith("."):
+                zf.write(fpath, str(fpath.relative_to(artifact_dir)))
+    click.echo(f"DHF_ZIP={dhf_zip}", err=False)
+    click.echo(f"Created {dhf_zip}", err=True)
+
+
+# ---------------------------------------------------------------------------
 # init
 # ---------------------------------------------------------------------------
 
