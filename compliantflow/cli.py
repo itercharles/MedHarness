@@ -937,102 +937,30 @@ def ci_evidence_bundle(
     """Produce a read-only CI evidence bundle: gate result, DHF PDF artifacts, and manifest.
 
     Does NOT write to the DHF. Does NOT call ci evidence import. Does NOT persist
-    compliance runs. The bundle is a self-contained audit package that WebTPS or
-    any other product repository can upload as a CI artifact.
-
-    The bundle contains:
-    - acceptance gate result (pass/fail, traceability, coverage)
-    - DHF specification PDFs and traceability report
-    - plan PDFs
-    - evidence-summary.json
-    - evidence-manifest.json (with SHA256 checksums)
+    compliance runs. The bundle is a self-contained audit package that any
+    product repository can upload as a CI artifact.
     """
-    import hashlib
-    from datetime import datetime, timezone
+    from compliantflow.ci_apis import build_evidence_bundle
 
-    adapter = _make_adapter(ctx)
-    core = _make_core(ctx)
     dhf_path: Path = ctx.obj["dhf"]
-
-    # ── Collect JUnit evidence ──
     junit_paths = _collect_junit_paths(junit_files, junit_dirs)
 
-    # ── Acceptance gate ──
-    gate_result = _run_acceptance_gate(core, junit_paths, coverage_pairs)
-    gate_passed = gate_result.get("passed", False)
-
-    # ── DHF artifacts ──
-    out_dir.mkdir(parents=True, exist_ok=True)
-    doc_types = traceability_types if traceability_types else ()
-    artifacts_result = _run_artifact_generation(
-        adapter,
-        core,
-        dhf_path,
-        out_dir,
-        doc_types,
-        traceability_types,
-        junit_paths,
-        skip_plans=False,
+    result = build_evidence_bundle(
+        dhf_path=dhf_path,
+        out_dir=out_dir,
+        junit_paths=junit_paths,
+        coverage_pairs=coverage_pairs,
+        traceability_types=traceability_types,
+        compliance_standards=compliance_standards,
+        governance_dir=governance_dir,
+        run_id=run_id,
+        run_url=run_url,
+        commit_sha=commit_sha,
+        continue_on_gate_failure=continue_on_gate_failure,
     )
 
-    # ── Evidence summary ──
-    junit_summaries = [_summarize_junit_file(p) for p in junit_paths]
-    summary = {
-        "dhf_root": str(dhf_path),
-        "run_id": run_id,
-        "run_url": run_url,
-        "commit_sha": commit_sha,
-        "generated_at": datetime.now(timezone.utc).isoformat(),
-        "gate_passed": gate_passed,
-        "gate": gate_result,
-        "artifacts": artifacts_result,
-        "junit_sources": [
-            {"path": s["path"], "imported": s["imported"], "skipped": s["skipped"],
-             "failed_tcs": s["failed_tcs"]}
-            for s in junit_summaries
-        ],
-    }
-    summary_path = out_dir / "evidence-summary.json"
-    summary_str = json.dumps(summary, indent=2, default=str)
-    summary_path.write_text(summary_str + "\n", encoding="utf-8")
-
-    # ── Compliance reports ──
-    compliance_dir = out_dir / "compliance"
-    compliance_dir.mkdir(parents=True, exist_ok=True)
-    if compliance_standards and governance_dir:
-        for standard in compliance_standards:
-            output_pdf = compliance_dir / f"{standard}_Compliance_Report.pdf"
-            try:
-                core.report_compliance(standard, str(governance_dir), str(output_pdf))
-            except Exception:
-                click.echo(f"WARN: Compliance report for {standard} could not be generated.", err=True)
-
-    # ── Manifest ──
-    manifest_files: list[dict] = []
-    for candidate in sorted(out_dir.rglob("*")):
-        if not candidate.is_file() or candidate.name.startswith("."):
-            continue
-        sha = hashlib.sha256(candidate.read_bytes()).hexdigest()
-        manifest_files.append({
-            "path": str(candidate.relative_to(out_dir)),
-            "size": candidate.stat().st_size,
-            "sha256": sha,
-        })
-
-    manifest = {
-        "run_id": run_id,
-        "run_url": run_url,
-        "commit_sha": commit_sha,
-        "dhf_root": str(dhf_path),
-        "generated_at": datetime.now(timezone.utc).isoformat(),
-        "gate_passed": gate_passed,
-        "acceptance_result": "PASS" if gate_passed else "FAIL",
-        "files": manifest_files,
-    }
-    manifest_path = out_dir / "evidence-manifest.json"
-    manifest_path.write_text(json.dumps(manifest, indent=2, default=str) + "\n", encoding="utf-8")
-
-    # ── Reporting ──
+    gate_passed = result["gate_passed"]
+    manifest = result["manifest"]
     click.echo(json.dumps(manifest, default=str))
     click.echo(f"OK Bundle written to {out_dir} (gate {'PASS' if gate_passed else 'FAIL'}).", err=True)
 
@@ -1129,113 +1057,80 @@ def ci_run_artifacts(ctx: click.Context, out_dir: Path, doc_types: tuple,
 @ci.command("dhf-validate")
 @click.option("--dhf", "dhf_path", type=click.Path(file_okay=False, path_type=Path), required=True,
               help="Path to DHF directory.")
-@click.option("--governance-dir", type=click.Path(file_okay=False, path_type=Path), default=Path("governance"),
-              help="Path to governance directory.")
 @click.option("--run-schema/--no-run-schema", default=True, show_default=True,
               help="Run schema validation.")
 @click.option("--run-traceability/--no-run-traceability", default=True, show_default=True,
               help="Run traceability validation.")
-@click.option("--run-compliance/--no-run-compliance", default=False, show_default=True,
-              help="Run compliance validation.")
 @click.option("--coverage-pair", "coverage_pairs", multiple=True, metavar="PARENT:CHILD",
               help="Coverage pair to check. Repeat for multiple pairs.")
-@click.option("--compliance-standard", "compliance_standards", multiple=True, metavar="CODE",
-              help="Compliance standard to check. Repeat for multiple.")
 @click.option("--fail-on-uncovered", is_flag=True, default=False,
               help="Exit 1 on uncovered traceability items.")
 @click.pass_context
 def ci_dhf_validate(
     ctx: click.Context,
     dhf_path: Path,
-    governance_dir: Path,
     run_schema: bool,
     run_traceability: bool,
-    run_compliance: bool,
     coverage_pairs: tuple[str, ...],
-    compliance_standards: tuple[str, ...],
     fail_on_uncovered: bool,
 ) -> None:
-    """Single-command DHF validation gate for CI pipelines.
+    """Structural DHF validation gate for CI pipelines.
 
-    Replaces reusable-workflow YAML with an explicit Python command.
-    Each validation phase is independently toggleable.
-    Coverage pairs and compliance standards are passed as CLI flags.
+    Validates schema, required traceability, and design coverage — does NOT
+    run compliance policy checks.  Use ``ci compliance-check`` for policy
+    enforcement.
+
+    Each validation phase is independently toggleable. Coverage pairs are
+    passed as CLI flags.
     """
-    from dhf_util.local_adapter import LocalDHFAdapter
-    from compliantflow.core import CompliantFlowCore
+    from compliantflow.ci_apis import ci_structural_gate
 
-    adapter = LocalDHFAdapter(dhf_path)
-    core = CompliantFlowCore(adapter)
+    result = ci_structural_gate(
+        dhf_path=dhf_path,
+        run_schema=run_schema,
+        run_traceability=run_traceability,
+        coverage_pairs=coverage_pairs,
+        fail_on_uncovered=fail_on_uncovered,
+    )
 
-    failed = False
+    # ── Print results ──
+    r = result["results"]
 
-    # ── Schema ──
-    if run_schema:
-        result = adapter.validate_schema()
-        if not result.get("valid", True):
-            failed = True
-            click.echo("FAIL [schema]: validation errors found", err=True)
-            for err in result.get("errors", []):
-                click.echo(f"  ✗ {err}", err=True)
+    if "schema" in r:
+        s = r["schema"]
+        if s["passed"]:
+            click.echo(f"PASS [schema]: {s.get('item_count', 0)} items valid", err=True)
         else:
-            click.echo(f"PASS [schema]: {result.get('item_count', 0)} items valid", err=True)
+            click.echo("FAIL [schema]: validation errors found", err=True)
+            for err in s.get("errors", []):
+                click.echo(f"  ✗ {err}", err=True)
 
-    # ── Traceability ──
-    if run_traceability:
-        trace_result = adapter.validate_traceability()
-        required = trace_result.get("required", {})
-        if not required.get("passed", True):
-            failed = True
-            for f in required.get("failures", []):
+    if "traceability" in r:
+        t = r["traceability"]
+        req = t.get("required", {})
+        if not req.get("passed", True):
+            for f in req.get("failures", []):
                 click.echo(f"FAIL [required] {f['id']}: {f['issue']}", err=True)
-        for c in trace_result.get("coverage", []):
+        for c in t.get("coverage", []):
             status = "PASS" if c["passed"] else "FAIL"
-            if not c["passed"]:
-                failed = fail_on_uncovered
             click.echo(
                 f"{status} [coverage] {c['parent_type']}→{c['child_type']}: "
                 f"{c['covered']}/{c['total']} covered",
                 err=True,
             )
-        click.echo(trace_result.get("summary", ""), err=True)
+        click.echo(t.get("summary", ""), err=True)
 
-    # ── Coverage gate ──
-    if coverage_pairs:
-        pairs = [(p.split(":")[0], p.split(":")[1]) for p in coverage_pairs]
-        cov_result = core.check_coverage(pairs)
-        for row in cov_result.get("results", []):
+    if "coverage" in r:
+        cov = r["coverage"]
+        for row in cov.get("pairs", []):
             status = "PASS" if row.get("passed") else "FAIL"
-            if not row.get("passed"):
-                failed = True
             click.echo(
                 f"{status} [gate] {row['parent_type']}→{row['child_type']}: "
                 f"{row['covered']}/{row['total']} covered",
                 err=True,
             )
 
-    # ── Compliance ──
-    if run_compliance and compliance_standards:
-        for standard in compliance_standards:
-            try:
-                gov = governance_dir.resolve() if governance_dir else Path("governance")
-                report = core.check_compliance(standard, str(gov))
-                if report is None:
-                    failed = True
-                    click.echo(f"FAIL [compliance] {standard}: policy group not found", err=True)
-                    continue
-                score = report.get("score", 0)
-                passed_pol = report.get("passed_policies", 0)
-                total_pol = report.get("total_policies", 0)
-                if score == 100.0:
-                    click.echo(f"PASS [compliance] {standard}: {passed_pol}/{total_pol} ({score}%)", err=True)
-                else:
-                    failed = True
-                    click.echo(f"FAIL [compliance] {standard}: {passed_pol}/{total_pol} ({score}%)", err=True)
-            except Exception as e:
-                failed = True
-                click.echo(f"FAIL [compliance] {standard}: {e}", err=True)
-
-    if failed:
+    if not result["passed"]:
         raise click.ClickException("DHF validation failed.")
 
 
@@ -1270,71 +1165,95 @@ def ci_test_coverage(
     It does NOT check the DHF design chain (UC→CRS→SYS etc.) — that is
     the responsibility of ``ci dhf-validate`` in the DHF repository.
     """
-    from dhf_util.local_adapter import LocalDHFAdapter
+    from compliantflow.ci_apis import ci_test_coverage_gate
 
-    # ── Collect JUnit evidence ──
     junit_paths = _collect_junit_paths(junit_files, junit_dirs)
-    if not junit_paths:
-        raise click.ClickException(
-            "No JUnit files found. Test-coverage gate requires at least one JUnit evidence source."
-        )
+    result = ci_test_coverage_gate(
+        dhf_path=dhf_path,
+        junit_paths=junit_paths,
+        req_types=req_types,
+    )
 
-    # ── Parse test evidence into requirement-coverage map ──
-    import xml.etree.ElementTree as ET
-    covered_reqs: set[str] = set()
-    for jp in junit_paths:
-        tree = ET.parse(jp)
-        for tc in tree.iter("testcase"):
-            # Only count PASS tests (skip if any failure, error, or skipped element)
-            failures = list(tc.iter("failure"))
-            errors = list(tc.iter("error"))
-            skipped = list(tc.iter("skipped"))
-            if failures or errors or skipped:
-                continue
-            # Check for compliantflow.links property
-            for props in tc.iter("properties"):
-                for prop in props.iter("property"):
-                    if prop.get("name") == "compliantflow.links":
-                        value = prop.get("value", "")
-                        if value:
-                            covered_reqs.update(v.strip() for v in value.split(",") if v.strip())
-                        break
+    if result.get("error"):
+        raise click.ClickException(result["error"])
 
-    # ── Load DHF items ──
-    adapter = LocalDHFAdapter(dhf_path)
-    all_items = adapter.list_items()
-
-    # ── Check coverage per requirement type ──
-    failed = False
-    default_types = req_types if req_types else ("SRS", "SYS", "CRS")
-    for rt in default_types:
-        config = adapter._config
-        dt = config.get_doc_type(rt)
-        if not dt:
-            click.echo(f"WARN: Unknown requirement type '{rt}' — skipped.", err=True)
-            continue
-        prefix = dt.prefix
-        req_items = [it for it in all_items if it["id"].startswith(prefix)]
-        if not req_items:
-            continue
-        covered = 0
-        uncovered = []
-        for ri in req_items:
-            if ri["id"] in covered_reqs:
-                covered += 1
-            else:
-                uncovered.append(ri["id"])
-        total = len(req_items)
-        if covered < total:
-            failed = True
-            click.echo(f"FAIL [test-coverage] {rt}: {covered}/{total} covered", err=True)
-            for uid in uncovered:
-                click.echo(f"      ↳ uncovered: {uid}", err=True)
+    for row in result["results"]:
+        if "warning" in row:
+            click.echo(f"WARN: {row['warning']} '{row['type']}' — skipped.", err=True)
+        elif row["passed"]:
+            click.echo(f"PASS [test-coverage] {row['type']}: {row['covered']}/{row['total']} covered", err=True)
         else:
-            click.echo(f"PASS [test-coverage] {rt}: {covered}/{total} covered", err=True)
+            click.echo(f"FAIL [test-coverage] {row['type']}: {row['covered']}/{row['total']} covered", err=True)
+            for uid in row.get("uncovered", []):
+                click.echo(f"      ↳ uncovered: {uid}", err=True)
 
-    if failed:
+    if not result["passed"]:
         raise click.ClickException("Test coverage gaps found.")
+
+
+# ---------------------------------------------------------------------------
+# ci compliance-check — dedicated compliance policy enforcement gate
+# ---------------------------------------------------------------------------
+
+@ci.command("compliance-check")
+@click.option("--dhf", "dhf_path", type=click.Path(file_okay=False, path_type=Path), required=True,
+              help="Path to DHF directory.")
+@click.option("--governance-dir", type=click.Path(file_okay=False, path_type=Path), required=True,
+              help="Governance directory containing policy YAML files.")
+@click.option("--standard", "standards", multiple=True, required=True,
+              metavar="CODE",
+              help="Compliance standard to check. Repeat for multiple (e.g. IEC_62304).")
+@click.option("--continue-on-error", is_flag=True, default=False,
+              help="Continue after a standard failure and exit with the aggregate result.")
+@click.pass_context
+def ci_compliance_check(
+    ctx: click.Context,
+    dhf_path: Path,
+    governance_dir: Path,
+    standards: tuple[str, ...],
+    continue_on_error: bool,
+) -> None:
+    """Dedicated compliance policy enforcement gate for CI pipelines.
+
+    Runs compliance checks for each requested standard, prints one PASS/FAIL
+    line per standard, and exits non-zero if any standard is incomplete,
+    missing, or below 100 %.
+
+    This is a separate gate from ``ci dhf-validate`` which handles only
+    structural validation (schema, traceability, design coverage).
+    """
+    from compliantflow.ci_apis import ci_compliance_gate
+
+    result = ci_compliance_gate(
+        dhf_path=dhf_path,
+        governance_dir=governance_dir,
+        standards=standards,
+        continue_on_error=continue_on_error,
+    )
+
+    for report in result["results"]:
+        std = report["standard"]
+        if report.get("error"):
+            click.echo(
+                f"FAIL [compliance] {std}: {report['error']}", err=True,
+            )
+        elif report["failed"]:
+            click.echo(
+                f"FAIL [compliance] {std}: "
+                f"{report['passed_policies']}/{report['total_policies']} "
+                f"({report['score']}%)",
+                err=True,
+            )
+        else:
+            click.echo(
+                f"PASS [compliance] {std}: "
+                f"{report['passed_policies']}/{report['total_policies']} "
+                f"({report['score']}%)",
+                err=True,
+            )
+
+    if not result["passed"]:
+        raise click.ClickException("Compliance check failed.")
 
 
 # ---------------------------------------------------------------------------
