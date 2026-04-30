@@ -1271,8 +1271,6 @@ def ci_test_coverage(
     the responsibility of ``ci dhf-validate`` in the DHF repository.
     """
     from dhf_util.local_adapter import LocalDHFAdapter
-    from dhf_util.junit_parser import parse_junit_xml
-    from dhf_util.models.config import ProjectConfig
 
     # ── Collect JUnit evidence ──
     junit_paths = _collect_junit_paths(junit_files, junit_dirs)
@@ -1305,7 +1303,6 @@ def ci_test_coverage(
     # ── Load DHF items ──
     adapter = LocalDHFAdapter(dhf_path)
     all_items = adapter.list_items()
-    by_id = {it["id"]: it for it in all_items}
 
     # ── Check coverage per requirement type ──
     failed = False
