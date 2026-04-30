@@ -123,7 +123,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install --no-cache-dir -r requirements.txt
           pip install -e compliantflow-dhf/
 
       - name: Check CR status for each referenced CR
@@ -171,7 +171,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install pytest
           pip install -e compliantflow-dhf/
-          pip install -r compliantflow/requirements.txt
+          pip install --no-cache-dir -r compliantflow/requirements.txt
 
       - name: Run dhf_util tests
         run: |
@@ -210,7 +210,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install pytest
-          pip install -r requirements.txt
+          pip install --no-cache-dir -r requirements.txt
           pip install -e compliantflow-dhf/
 
       - name: Run SYS tests
@@ -251,7 +251,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install pytest
-          pip install -r requirements.txt
+          pip install --no-cache-dir -r requirements.txt
           pip install -e compliantflow-dhf/
 
       - name: Run CRS tests
@@ -291,7 +291,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install --no-cache-dir -r requirements.txt
           pip install -e compliantflow-dhf/
 
       - name: Generate CR-PR evidence report
@@ -363,7 +363,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install --no-cache-dir -r requirements.txt
           pip install -e compliantflow-dhf/
 
       - name: Download SYS test results
@@ -451,7 +451,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install pytest
-          pip install -r requirements.txt
+          pip install --no-cache-dir -r requirements.txt
           pip install -e compliantflow-dhf/
 
       - name: Record verification evidence
