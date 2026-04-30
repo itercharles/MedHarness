@@ -117,6 +117,7 @@ Compliance:
   ci gate acceptance              Run the CI-facing DHF acceptance gate
   ci run acceptance               High-level acceptance orchestration for product CI
   ci evidence import PATH...      Import CI JUnit evidence into the DHF
+  ci evidence bundle              Produce read-only CI evidence bundles
   ci artifacts generate           Generate CI-ready DHF PDF artifacts
   ci run artifacts                High-level artifact orchestration for product CI
   validate traceability           Check all items have upstream/downstream links
@@ -135,7 +136,11 @@ Change management:
   cr check-status CR-ID           Check CR implementation status
   cr generate-report CR-ID        Generate CR evidence report
   cr workflow intake-github-issue Prepare a CR from a GitHub issue event
+  cr workflow intake-github-issue-ci
+                                  Prepare a CR and GitHub plumbing for CI intake
   cr workflow complete            Complete a CR and optionally commit/push DHF updates
+  cr workflow complete-from-github-pr
+                                  Complete a CR from a merged GitHub PR event
 
 Tests:
   test import PATH                Import JUnit XML results
@@ -169,6 +174,15 @@ compliantflow --dhf DHF dhf item create --type SRS \
   --data '{"title": "My requirement", "derives_from": ["SYS-001"]}'
 compliantflow --dhf DHF dhf item transition CR-001 closed --by "Alice"
 compliantflow --dhf DHF dhf context implementation --cr CR-001 --out-dir /tmp/dhf-context
+compliantflow --dhf DHF cr workflow intake-github-issue-ci \
+  --event "$GITHUB_EVENT_PATH" \
+  --dhf-repo dhf \
+  --write \
+  --create-branch \
+  --open-pr \
+  --comment-source-issue
+compliantflow --dhf DHF cr workflow complete-from-github-pr \
+  --event "$GITHUB_EVENT_PATH"
 ```
 
 CI pipelines should use the stable `ci` namespace for gate/evidence/artifact
@@ -180,6 +194,10 @@ compliantflow --dhf DHF ci run acceptance \
   --junit-dir test-results/sys
 compliantflow --dhf DHF ci gate acceptance --junit test-results.xml
 compliantflow --dhf DHF ci evidence import test-results.xml --run-id "$GITHUB_RUN_ID"
+compliantflow --dhf DHF ci evidence bundle \
+  --out-dir artifacts/dhf \
+  --junit-dir test-results/srs \
+  --junit-dir test-results/sys
 compliantflow --dhf DHF ci run artifacts --out-dir artifacts/dhf \
   --junit-dir test-results/srs \
   --junit-dir test-results/sys

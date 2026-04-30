@@ -432,6 +432,57 @@ def _resolve_dhf_repo_paths(ctx: click.Context, dhf_repo: Path | None) -> tuple[
     return dhf_root.parent, dhf_root
 
 
+def _github_env(token: str | None = None) -> dict[str, str]:
+    """Return a subprocess env with GitHub token variables populated when available."""
+    env = os.environ.copy()
+    if token:
+        env["GH_TOKEN"] = token
+        env["GITHUB_TOKEN"] = token
+    return env
+
+
+def _load_issue_comments(
+    comments_path: Path | None,
+    *,
+    source_repo: str | None,
+    issue_number: int | None,
+    source_token: str | None,
+) -> list[dict]:
+    if comments_path is not None:
+        try:
+            comments = json.loads(comments_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as exc:
+            raise click.ClickException(f"invalid comments JSON at {comments_path}") from exc
+        if not isinstance(comments, list):
+            raise click.ClickException(f"expected a JSON array in {comments_path}")
+        return comments
+    if not source_repo or issue_number is None:
+        return []
+
+    command = [
+        "gh",
+        "api",
+        f"repos/{source_repo}/issues/{issue_number}/comments?per_page=100",
+    ]
+    proc = subprocess.run(
+        command,
+        capture_output=True,
+        text=True,
+        check=False,
+        env=_github_env(source_token),
+    )
+    if proc.returncode != 0:
+        message = (proc.stderr or proc.stdout).strip()
+        raise click.ClickException(message or f"failed to fetch comments for issue {issue_number}")
+    try:
+        comments = json.loads(proc.stdout or "[]")
+    except json.JSONDecodeError as exc:
+        raise click.ClickException("gh api returned invalid JSON for issue comments") from exc
+    if not isinstance(comments, list):
+        raise click.ClickException("gh api returned unexpected issue comments payload")
+    return comments
+
+
 def _make_adapter_for_dhf_root(dhf_root: Path):
     try:
         from dhf_util.local_adapter import LocalDHFAdapter
@@ -1801,8 +1852,8 @@ def cr_workflow_intake_github_issue(
               help="DHF repository root. Defaults to the parent of --dhf.")
 @click.option("--event", "event_path", required=True, type=click.Path(exists=True, dir_okay=False, path_type=Path),
               help="GitHub issue event JSON path, usually GITHUB_EVENT_PATH.")
-@click.option("--reuse-comments", "reuse_event_path", type=click.Path(exists=True, dir_okay=False, path_type=Path),
-              help="Reuse comments path as issue event JSON (internal reuse). Deprecated, use --event.")
+@click.option("--comments", "comments_path", type=click.Path(exists=True, dir_okay=False, path_type=Path),
+              help="JSON file containing existing issue comments. Defaults to fetching comments via gh api.")
 @click.option("--active-milestone", default=None,
               help="Milestone required for CR intake. Defaults to current ISO week.")
 @click.option("--marker-name", default="compliantflow-cr", show_default=True,
@@ -1828,13 +1879,15 @@ def cr_workflow_intake_github_issue(
 @click.option("--milestone-title", default=None, metavar="TITLE",
               help="Milestone title for the PR description. Defaults to event milestone.")
 @click.option("--output", type=click.Path(dir_okay=False, path_type=Path),
-              help="Optional JSON output path for GitHub Actions outputs.")
+              help="Optional JSON output path.")
+@click.option("--github-output", type=click.Path(dir_okay=False, path_type=Path),
+              help="Optional GitHub Actions output file path.")
 @click.pass_context
 def cr_workflow_intake_github_issue_ci(
     ctx: click.Context,
     dhf_repo: Path | None,
     event_path: Path,
-    reuse_event_path: Path | None,
+    comments_path: Path | None,
     active_milestone: str | None,
     marker_name: str,
     branch_prefix: str,
@@ -1848,6 +1901,7 @@ def cr_workflow_intake_github_issue_ci(
     github_token: str | None,
     milestone_title: str | None,
     output: Path | None,
+    github_output: Path | None,
 ) -> None:
     """Full CI intake pipeline: prepare CR + GitHub plumbing (branch, PR, comment).
 
@@ -1855,36 +1909,34 @@ def cr_workflow_intake_github_issue_ci(
     that WebTPS or any product repo would otherwise script manually.
     Requires 'gh' CLI and 'git' in PATH.
     """
-    import os
-
     from compliantflow.cr_intake import (
         current_iso_week_milestone,
-        load_comments,
         load_github_issue_event,
         prepare_cr_from_issue,
     )
 
     repo_root, dhf_root = _resolve_dhf_repo_paths(ctx, dhf_repo)
     adapter = _make_adapter_for_dhf_root(dhf_root)
-    token = github_token or os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN") or ""
-    token_env = {"GITHUB_TOKEN": token, "GH_TOKEN": token, **os.environ}
+    gh_token = github_token or os.environ.get("GH_TOKEN") or ""
+    source_token = os.environ.get("GITHUB_TOKEN") or gh_token
+    gh_env = _github_env(gh_token)
 
     # Resolve event data
     event = load_github_issue_event(event_path)
-    if reuse_event_path:
-        event = load_github_issue_event(reuse_event_path)
     issue_num = issue_number or event.number
     src_repo = source_repo or os.environ.get("GITHUB_REPOSITORY", "")
     milestone = milestone_title or event.milestone or ""
-
-    # Compute comments path from the same parent as event
-    comments_path = event_path.parent / "issue-comments.json" if issue_num else None
 
     # Step 1: Prepare CR
     result = prepare_cr_from_issue(
         event,
         active_milestone or current_iso_week_milestone(),
-        load_comments(comments_path),
+        _load_issue_comments(
+            comments_path,
+            source_repo=src_repo,
+            issue_number=issue_num,
+            source_token=source_token,
+        ),
         write=write,
         adapter=adapter,
         marker_name=marker_name,
@@ -1902,7 +1954,7 @@ def cr_workflow_intake_github_issue_ci(
             _run_git(repo_root, ["add", "-A"])
             if _git_has_changes(repo_root):
                 _run_git(repo_root, ["commit", "-m", f"cr: create {result.cr_id} from issue"])
-                if token:
+                if gh_token:
                     _run_git(repo_root, ["push", "--force", "--set-upstream", "origin", branch])
                 else:
                     _run_git(repo_root, ["push", "--force", "--set-upstream", "origin", branch])
@@ -1912,7 +1964,7 @@ def cr_workflow_intake_github_issue_ci(
                 existing = subprocess.run(
                     ["gh", "pr", "list", "--head", branch, "--json", "url",
                      "--jq", ".[0].url"],
-                    cwd=repo_root, capture_output=True, text=True, env=token_env,
+                    cwd=repo_root, capture_output=True, text=True, env=gh_env,
                 )
                 if existing.returncode == 0 and existing.stdout.strip():
                     pr_url = existing.stdout.strip()
@@ -1926,7 +1978,7 @@ def cr_workflow_intake_github_issue_ci(
                     proc = subprocess.run(
                         ["gh", "pr", "create", "--head", branch, "--base", "main",
                          "--title", result.title, "--body", body],
-                        cwd=repo_root, capture_output=True, text=True, env=token_env,
+                        cwd=repo_root, capture_output=True, text=True, env=gh_env,
                     )
                     if proc.returncode == 0:
                         pr_url = proc.stdout.strip()
@@ -1945,7 +1997,7 @@ def cr_workflow_intake_github_issue_ci(
                 subprocess.run(
                     ["gh", "issue", "comment", str(issue_num), "--body", comment_body,
                      "--repo", src_repo],
-                    capture_output=True, text=True, env=token_env, check=False,
+                    capture_output=True, text=True, env=_github_env(source_token), check=False,
                 )
             except FileNotFoundError:
                 click.echo("WARNING: 'gh' CLI not found; skipping issue comment.", err=True)
@@ -1963,14 +2015,106 @@ def cr_workflow_intake_github_issue_ci(
     text = json.dumps(payload, indent=2)
     if output:
         output.write_text(text + "\n", encoding="utf-8")
-        # Emit GitHub Actions outputs
-        with open(str(output), "a") as f_out:
+    if github_output:
+        with open(github_output, "a", encoding="utf-8") as f_out:
             for key, value in payload.items():
                 val = str(value) if value is not None else ""
                 if isinstance(value, bool):
                     val = str(value).lower()
                 f_out.write(f"{key}={val}\n")
     click.echo(text)
+
+
+@cr_workflow.command("complete-from-github-pr")
+@click.option("--dhf-repo", type=click.Path(file_okay=False, path_type=Path),
+              help="DHF repository root. Defaults to the parent of --dhf.")
+@click.option("--event", "event_path", type=click.Path(exists=True, dir_okay=False, path_type=Path),
+              default=None, help="GitHub pull request event JSON (GITHUB_EVENT_PATH).")
+@click.option("--pr-title", default=None, metavar="TITLE",
+              help="PR title to parse. Defaults to reading from --event.")
+@click.option("--by", "performed_by", default="compliantflow", show_default=True,
+              help="Actor recorded on the CR lifecycle transition.")
+@click.option("--push", is_flag=True, default=False,
+              help="Push committed DHF repository changes.")
+@click.option("--message", default=None, metavar="TEXT",
+              help="Commit message. Defaults to 'chore: complete CR-ID [skip ci]'.")
+@click.pass_context
+def cr_workflow_complete_from_github_pr(
+    ctx: click.Context,
+    dhf_repo: Path | None,
+    event_path: Path | None,
+    pr_title: str | None,
+    performed_by: str,
+    push: bool,
+    message: str | None,
+) -> None:
+    """Complete a CR from a merged GitHub PR event.
+
+    Parses the CR ID from the PR title (regex CR-\\d+), then delegates
+    to ``cr workflow complete``.  Exits 0 with a skip message when no
+    CR ID is found — the workflow should never block deployment.
+    """
+    import re as _re
+
+    title = pr_title or ""
+    if not title and event_path:
+        try:
+            event_data = json.loads(event_path.read_text(encoding="utf-8"))
+            title = event_data.get("pull_request", {}).get("title", "")
+        except (json.JSONDecodeError, OSError):
+            pass
+
+    cr_match = _re.search(r"CR-\d+", title) if title else None
+    if not cr_match:
+        payload = {"skip": True, "reason": "No CR ID found in PR title"}
+        click.echo(json.dumps(payload))
+        return
+
+    cr_id = cr_match.group(0)
+
+    repo_root, dhf_root = _resolve_dhf_repo_paths(ctx, dhf_repo)
+    adapter = _make_adapter_for_dhf_root(dhf_root)
+
+    # Configure git identity for commit
+    subprocess.run(
+        ["git", "-C", str(repo_root), "config", "user.name", "GitHub Actions [bot]"],
+        capture_output=True, check=False,
+    )
+    subprocess.run(
+        ["git", "-C", str(repo_root), "config", "user.email",
+         "github-actions[bot]@users.noreply.github.com"],
+        capture_output=True, check=False,
+    )
+
+    try:
+        from dhf_util.change_requests import complete_change_request
+        transition = complete_change_request(adapter, cr_id, performed_by=performed_by)
+    except ValueError as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    changed = _git_has_changes(repo_root)
+    commit_message = message or f"chore: complete {cr_id} [skip ci]"
+    committed = False
+    pushed = False
+
+    if changed:
+        _run_git(repo_root, ["add", "-A"])
+        if _git_has_changes(repo_root):
+            _run_git(repo_root, ["commit", "-m", commit_message])
+            committed = True
+            if push:
+                _run_git(repo_root, ["push"])
+                pushed = True
+
+    result = {
+        "cr_id": cr_id,
+        "pr_title": title,
+        "transition": transition,
+        "changed": changed,
+        "committed": committed,
+        "pushed": pushed,
+    }
+    click.echo(json.dumps(result, default=str))
 
 
 @cr.command("check-status")

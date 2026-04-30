@@ -73,21 +73,22 @@ class FakeAdapter:
         return c
 
 
-def _invoke(monkeypatch, args, core=None, adapter=None):
+def _invoke(monkeypatch, args, core=None, adapter=None, patch_artifacts=True):
     if core is not None:
         monkeypatch.setattr("compliantflow.cli._make_core", lambda ctx: core)
     if adapter is not None:
         monkeypatch.setattr("compliantflow.cli._make_adapter", lambda ctx: adapter)
-    # Make artifact generation a no-op for unit tests
-    stub_artifact = lambda *a, **kw: {"out_dir": str(a[3]) if len(a) > 3 else str(kw.get("out_dir", "")),
-                                      "specifications": [],
-                                      "plans": [],
-                                      "traceability": {"path": "/tmp/trace.pdf"},
-                                      "junit_files": [str(p) for p in (a[6] if len(a) > 6 else kw.get("junit_paths", []))]}
-    monkeypatch.setattr("compliantflow.cli._run_artifact_generation", stub_artifact)
-    monkeypatch.setattr("compliantflow.cli._generate_plan_artifacts", lambda *a, **kw: [])
-    monkeypatch.setattr("compliantflow.cli._generate_specification_artifacts",
-                        lambda *a, **kw: [{"code": "SYS", "output": "specs/SYS.pdf"}])
+    if patch_artifacts:
+        # Make artifact generation a no-op for unit tests.
+        stub_artifact = lambda *a, **kw: {"out_dir": str(a[3]) if len(a) > 3 else str(kw.get("out_dir", "")),
+                                          "specifications": [],
+                                          "plans": [],
+                                          "traceability": {"path": "/tmp/trace.pdf"},
+                                          "junit_files": [str(p) for p in (a[6] if len(a) > 6 else kw.get("junit_paths", []))]}
+        monkeypatch.setattr("compliantflow.cli._run_artifact_generation", stub_artifact)
+        monkeypatch.setattr("compliantflow.cli._generate_plan_artifacts", lambda *a, **kw: [])
+        monkeypatch.setattr("compliantflow.cli._generate_specification_artifacts",
+                            lambda *a, **kw: [{"doc_type": "SYS", "path": "specs/SYS.pdf"}])
     # Avoid dhf_util import in unit tests
     monkeypatch.setattr("compliantflow.cli._summarize_junit_file",
                         lambda p: {"path": str(p), "imported": 1, "skipped": 0,
@@ -310,10 +311,20 @@ def test_TC_SYS_041_006_ci_run_artifacts_collects_junit_inputs_for_traceability(
 
     monkeypatch.setattr("compliantflow.cli._make_adapter", lambda ctx: ArtifactAdapter())
     monkeypatch.setattr("compliantflow.cli._make_core", lambda ctx: object())
-    monkeypatch.setattr(
-        "compliantflow.cli._generate_plan_artifacts",
-        lambda dhf_path, output_dir: [{"source": "plan.md", "path": str(output_dir / "plans" / "plan.pdf")}],
-    )
+    def fake_generate_plan_artifacts(dhf_path, output_dir):
+        plan_path = output_dir / "plans" / "plan.pdf"
+        plan_path.parent.mkdir(parents=True, exist_ok=True)
+        plan_path.write_text("plan pdf", encoding="utf-8")
+        return [{"source": "plan.md", "path": str(plan_path)}]
+
+    def fake_generate_specification_artifacts(adapter, out_dir, doc_types):
+        spec_path = out_dir / "specifications" / "SYS.pdf"
+        spec_path.parent.mkdir(parents=True, exist_ok=True)
+        spec_path.write_text("spec pdf", encoding="utf-8")
+        return [{"doc_type": "SYS", "path": str(spec_path), "source": str(pdf), "version": "1.0"}]
+
+    monkeypatch.setattr("compliantflow.cli._generate_plan_artifacts", fake_generate_plan_artifacts)
+    monkeypatch.setattr("compliantflow.cli._generate_specification_artifacts", fake_generate_specification_artifacts)
     monkeypatch.setattr(
         "compliantflow.cli._write_traceability_report",
         lambda core, doc_types, output, junit_paths: traceability_capture.update({
@@ -333,6 +344,7 @@ def test_TC_SYS_041_006_ci_run_artifacts_collects_junit_inputs_for_traceability(
             "--junit-dir", str(missing_dir),
             "--skip-plans",
         ],
+        patch_artifacts=False,
     )
 
     assert result.exit_code == 0
