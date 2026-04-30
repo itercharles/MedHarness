@@ -55,10 +55,10 @@ jobs:
 
       - name: Generate item-based specification PDFs
         run: |
-          mkdir -p /tmp/documents/specifications
+          mkdir -p /tmp/documents/specs
           cd dhf
           # Collect generated PDFs from /tmp
-          find /tmp -maxdepth 1 -name "*_Specification_*.pdf" -exec cp {} /tmp/documents/specifications/ \;
+          find /tmp -maxdepth 1 -name "*_Specification_*.pdf" -exec cp {} /tmp/documents/specs/ \;
 
       - name: Generate plan and test specification PDFs
         run: |
@@ -70,7 +70,7 @@ jobs:
           from datetime import datetime
 
           DHF_DOCS = Path("dhf/DHF/documents")
-          CSS = (DHF_DOCS / "specifications/templates/styles/default.css").read_text()
+          CSS = (DHF_DOCS / "specs/styles/default.css").read_text()
 
           def to_pdf(md_path: Path, out_path: Path):
               content = md_path.read_text()
@@ -88,9 +88,9 @@ jobs:
               to_pdf(md, Path(f"/tmp/documents/plans/{stem}.pdf"))
 
           # Static test specifications
-          spec_dir = DHF_DOCS / "specifications"
+          spec_dir = DHF_DOCS / "specs"
           for md in sorted(spec_dir.glob("*Test*.md")):
-              to_pdf(md, Path(f"/tmp/documents/specifications/{md.stem}.pdf"))
+              to_pdf(md, Path(f"/tmp/documents/specs/{md.stem}.pdf"))
           EOF
 
       - name: Generate compliance reports
