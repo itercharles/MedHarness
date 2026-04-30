@@ -3,8 +3,7 @@ name: CI Pipeline
 # Layered CI model matching WebTPS/DHF pattern:
 #
 #   1. TESTING          — product test suites in parallel, upload JUnit evidence
-#   2. ACCEPTANCE GATE  — test-coverage + structural validation + compliance
-#                         (runs in parallel, all need TESTING to complete)
+#   2. ACCEPTANCE GATE  — test-coverage + compliance-check
 #   3. EVIDENCE (main)  — evidence bundle generation (needs ACCEPTANCE GATE)
 
 on:
@@ -21,47 +20,7 @@ jobs:
 
   # ── TESTING ──────────────────────────────────────────────────────────────
   # Product test suites. Each uploads JUnit evidence for the acceptance gate.
-  # All three run in parallel.
-
-  tests-dhf-utils:
-    name: Test | DHF Utils
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check out tool repo
-        uses: actions/checkout@v4
-        with:
-          path: compliantflow
-
-      - name: Check out compliantflow-dhf
-        uses: actions/checkout@v4
-        with:
-          repository: itercharles/compliantflow-dhf
-          token: ${{ secrets.DHF_REPO_TOKEN }}
-          path: compliantflow-dhf
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-          cache: 'pip'
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install pytest
-          pip install -e compliantflow-dhf/
-          pip install -r compliantflow/requirements.txt
-
-      - name: Run dhf_util tests
-        run: |
-          pytest compliantflow-dhf/dhf_util/tests/ -v --junitxml=dhf-util-test-results.xml
-
-      - name: Upload DHF utils test results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: dhf-utils-test-results
-          path: dhf-utils-test-results.xml
+  # Both run in parallel. dhf_util tests live in the DHF repo CI.
 
   tests-sys:
     name: Test | SYS API
@@ -142,15 +101,14 @@ jobs:
           path: crs-test-results.xml
 
   # ── ACCEPTANCE GATE ──────────────────────────────────────────────────────
-  # Runs after all test suites complete.  Three gates in parallel:
+  # Runs after all test suites complete.  Two gates in parallel:
   #   test-coverage   — requirement→test coverage from JUnit evidence
-  #   dhf-validation  — structural DHF integrity (schema, traceability, design coverage)
   #   compliance-check — policy enforcement per configured standards
 
   test-coverage:
     name: Gate | Test Coverage (requirement → test)
     runs-on: ubuntu-latest
-    needs: [tests-dhf-utils, tests-sys, tests-crs]
+    needs: [tests-sys, tests-crs]
     steps:
       - name: Check out tool repo
         uses: actions/checkout@v4
@@ -185,50 +143,10 @@ jobs:
           python -m compliantflow --dhf compliantflow-dhf/DHF ci test-coverage \
             --junit-dir test-results/
 
-  dhf-validation:
-    name: Gate | DHF Validation (design traceability)
-    runs-on: ubuntu-latest
-    needs: [tests-dhf-utils, tests-sys, tests-crs]
-    steps:
-      - name: Check out tool repo
-        uses: actions/checkout@v4
-
-      - name: Check out compliantflow-dhf
-        uses: actions/checkout@v4
-        with:
-          repository: itercharles/compliantflow-dhf
-          token: ${{ secrets.DHF_REPO_TOKEN }}
-          path: compliantflow-dhf
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-          cache: 'pip'
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install -e compliantflow-dhf/
-
-      - name: Run structural DHF validation
-        run: |
-          export PYTHONPATH="${PYTHONPATH}:${PWD}"
-          python -m compliantflow ci dhf-validate \
-            --dhf compliantflow-dhf/DHF \
-            --run-schema \
-            --run-traceability \
-            --coverage-pair UC:CRS \
-            --coverage-pair CRS:SYS \
-            --coverage-pair SYS:SRS \
-            --coverage-pair SRS:SWDD \
-            --fail-on-uncovered
-
   compliance-check:
     name: Gate | Compliance Check (standards)
     runs-on: ubuntu-latest
-    needs: [tests-dhf-utils, tests-sys, tests-crs]
+    needs: [tests-sys, tests-crs]
     steps:
       - name: Check out tool repo
         uses: actions/checkout@v4
