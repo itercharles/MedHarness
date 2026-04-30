@@ -73,8 +73,9 @@ class TestInitCmd:
         assert "repository: acme/my-dhf" in yaml
         assert "secrets.DHF_REPO_TOKEN" in yaml
         assert "--dhf dhf/DHF" in yaml
-        assert "validate traceability" in yaml
-        assert "validate compliance IEC_62304" in yaml
+        assert "ci test-coverage" in yaml
+        assert "ci compliance-check" in yaml
+        assert "--standard IEC_62304" in yaml
 
     def test_TC_SYS_027_004_compliance_yaml_without_dhf(self):
         """
@@ -90,8 +91,9 @@ class TestInitCmd:
         )
         assert "DHF_REPO_TOKEN" not in yaml
         assert "--dhf DHF" in yaml
-        assert "validate compliance IEC_62304" in yaml
-        assert "validate compliance ISO_14971" in yaml
+        assert "ci compliance-check" in yaml
+        assert "--standard IEC_62304" in yaml
+        assert "--standard ISO_14971" in yaml
 
     def test_TC_SYS_027_005_compliance_yaml_gemini_llm(self):
         """
@@ -151,7 +153,7 @@ class TestInitCmd:
             llm_provider=None,
         )
         for std in standards:
-            assert f"validate compliance {std}" in yaml
+            assert f"--standard {std}" in yaml
 
     def test_TC_SYS_027_009_dhf_ci_workflow_content(self):
         """
@@ -164,7 +166,7 @@ class TestInitCmd:
             path = Path(tmp) / "ci.yml"
             _write_dhf_ci_workflow(path)
             content = path.read_text()
-        assert "schema-validation" in content
+        assert "dhf-structural-validation" in content
         assert "dhf-util-tests" in content
         assert "python -m dhf_util --dhf DHF validate schema" in content
 
@@ -270,7 +272,7 @@ class TestInitCmd:
         expected = product_dir / ".github" / "workflows" / "compliance.yml"
         assert result == expected
         assert expected.exists()
-        assert "validate compliance IEC_62304" in expected.read_text()
+        assert "ci compliance-check" in expected.read_text()
 
     def test_TC_SYS_027_018_run_init_no_github_calls(self):
         """

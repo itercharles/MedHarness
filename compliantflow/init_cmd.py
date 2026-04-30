@@ -242,8 +242,8 @@ jobs:
       - name: Run dhf_util tests
         run: pytest dhf_util/tests/ -v
 
-  schema-validation:
-    name: Schema Validation
+  dhf-structural-validation:
+    name: Structural DHF Validation
     runs-on: ubuntu-latest
     needs: dhf-util-tests
     steps:
@@ -257,6 +257,8 @@ jobs:
           pip install -e .
       - name: Validate DHF schema
         run: python -m dhf_util --dhf DHF validate schema
+      - name: Validate DHF traceability
+        run: python -m dhf_util --dhf DHF validate traceability
 """)
 
 
@@ -340,11 +342,15 @@ def _generate_compliance_yaml(
     standards: list[str],
     llm_provider: Optional[str],
 ) -> str:
-    """Render the compliance.yml workflow content for the product repo."""
+    """Render the compliance.yml workflow content for the product repo.
+
+    Generates a staged CI pipeline matching the CompliantFlow model:
+      test jobs → test-coverage → dhf-validation → compliance-check → evidence-bundle
+    """
     version = _cf_version()
 
     checkout_dhf = ""
-    dhf_flag = "--dhf DHF"
+    dhf_path_arg = "--dhf DHF"
     install_dhf = ""
 
     if dhf_repo:
@@ -357,14 +363,17 @@ def _generate_compliance_yaml(
           token: ${{{{ secrets.DHF_REPO_TOKEN }}}}
 
 """
-        dhf_flag = "--dhf dhf/DHF"
-        install_dhf = "          pip install -e dhf/\n"
+        dhf_path_arg = "--dhf dhf/DHF"
+        install_dhf = (
+            "          pip install -e dhf/\n"
+            "          pip install -e dhf/ -c dhf/constraints.txt || pip install -e dhf/\n"
+        )
 
-    compliance_checks = "\n".join(
-        f"          compliantflow {dhf_flag} validate compliance {std} \\\n"
-        f"            --governance-dir {'dhf/' if dhf_repo else ''}governance"
-        for std in standards
-    )
+    standards_block = ""
+    for std in standards:
+        standards_block += f"            --standard {std} \\\n"
+
+    gov_flag = f"            --governance-dir {'dhf/' if dhf_repo else ''}governance \\"
 
     llm_env = ""
     if llm_provider == "gemini":
@@ -375,12 +384,63 @@ def _generate_compliance_yaml(
     env_block = f"        env:\n{llm_env}" if llm_env else ""
 
     return f"""\
-name: Compliance Gate
+name: Compliance CI
 
 on: [push, pull_request]
 
 jobs:
-  compliance:
+  test-coverage:
+    name: Test Coverage Gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest
+          # Add your project's own test dependencies here, e.g.:
+          # pip install -e .
+
+      - name: Run product tests
+        run: |
+          # Replace with your actual test runner command.
+          # Must output JUnit XML to test-results/ for ci test-coverage.
+          pytest tests/ -v --junitxml=test-results/product-test-results.xml || true
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: product-test-results
+          path: test-results/
+
+{checkout_dhf}      - name: Install CompliantFlow
+        env:
+          GH_TOKEN: ${{{{ secrets.COMPLIANTFLOW_TOKEN }}}}
+        run: |
+          gh release download {version} --repo itercharles/CompliantFlow --pattern "compliantflow-*.zip" --output compliantflow.zip
+          unzip compliantflow.zip -d cf
+          pip install cf/*/compliantflow-*.whl
+{install_dhf}
+      - name: Download test results
+        if: always()
+        uses: actions/download-artifact@v4
+        with:
+          name: product-test-results
+          path: test-results/
+
+      - name: Run test-coverage gate
+        run: |
+          compliantflow {dhf_path_arg} ci test-coverage \\
+            --junit-dir test-results
+
+  compliance-check:
+    name: Compliance Check Gate
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -393,12 +453,13 @@ jobs:
           unzip compliantflow.zip -d cf
           pip install cf/*/compliantflow-*.whl
 {install_dhf}
-      - name: Compliance gate
+      - name: Run compliance check
 {env_block}        run: |
-          compliantflow {dhf_flag} validate traceability
-{compliance_checks}
-          compliantflow {dhf_flag} validate coverage UC:CRS CRS:SYS SYS:SRS
-"""
+          compliantflow ci compliance-check \\
+            {dhf_path_arg} \\
+{gov_flag}
+{standards_block.rstrip()}"""
+
 
 
 # ---------------------------------------------------------------------------
