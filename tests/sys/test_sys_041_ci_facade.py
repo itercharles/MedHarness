@@ -36,10 +36,41 @@ class FakeAdapter:
     def __init__(self, results=None):
         self.results = list(results or [])
         self.imported = []
+        self.doc_types = ["SYS", "SRS"]
 
     def import_results_from_file(self, **kwargs):
         self.imported.append(kwargs)
         return self.results.pop(0)
+
+    def get_available_doc_types(self):
+        return list(self.doc_types)
+
+    def generate_doc(self, doc_type_code):
+        doc_dir = self._dhf_root / "specs" if hasattr(self, "_dhf_root") else Path("/tmp")
+        doc_dir.mkdir(parents=True, exist_ok=True)
+        out = doc_dir / f"{doc_type_code}.pdf"
+        out.write_text("fake pdf", encoding="utf-8")
+        return {"doc_type": doc_type_code, "output_path": str(out), "version": "1.0"}
+
+    @property
+    def _config(self):
+        class Cfg:
+            doc_types = []
+
+            def get_doc_type(self, code):
+                from unittest.mock import MagicMock
+                m = MagicMock()
+                m.code = code
+                m.prefix = f"{code}-"
+                m.has_verification = True
+                return m
+
+            def get_doc_type_by_prefix(self, pfx):
+                return self.get_doc_type(pfx.rstrip("-"))
+
+        c = Cfg()
+        c.doc_types = [c.get_doc_type(t) for t in self.doc_types]
+        return c
 
 
 def _invoke(monkeypatch, args, core=None, adapter=None):
@@ -47,6 +78,20 @@ def _invoke(monkeypatch, args, core=None, adapter=None):
         monkeypatch.setattr("compliantflow.cli._make_core", lambda ctx: core)
     if adapter is not None:
         monkeypatch.setattr("compliantflow.cli._make_adapter", lambda ctx: adapter)
+    # Make artifact generation a no-op for unit tests
+    stub_artifact = lambda *a, **kw: {"out_dir": str(a[3]) if len(a) > 3 else str(kw.get("out_dir", "")),
+                                      "specifications": [],
+                                      "plans": [],
+                                      "traceability": {"path": "/tmp/trace.pdf"},
+                                      "junit_files": [str(p) for p in (a[6] if len(a) > 6 else kw.get("junit_paths", []))]}
+    monkeypatch.setattr("compliantflow.cli._run_artifact_generation", stub_artifact)
+    monkeypatch.setattr("compliantflow.cli._generate_plan_artifacts", lambda *a, **kw: [])
+    monkeypatch.setattr("compliantflow.cli._generate_specification_artifacts",
+                        lambda *a, **kw: [{"code": "SYS", "output": "specs/SYS.pdf"}])
+    # Avoid dhf_util import in unit tests
+    monkeypatch.setattr("compliantflow.cli._summarize_junit_file",
+                        lambda p: {"path": str(p), "imported": 1, "skipped": 0,
+                                   "items_updated": [], "failed_tcs": []})
     return CliRunner().invoke(main, args)
 
 
@@ -372,3 +417,162 @@ def test_TC_SYS_041_007_ci_evidence_record_orchestrates_verification_evidence(
     summary = json.loads((out_dir / "evidence-summary.json").read_text(encoding="utf-8"))
     assert summary["imported"] == 2
     assert summary["failed_standards"] == []
+
+
+# ── ci evidence bundle tests ────────────────────────────────────────────
+
+def _make_junit_xml(name: str, tests: list[dict]) -> Path:
+    p = Path(f"/tmp/{name}")
+    suites = "\n".join(
+        f'  <testsuite name="{t["suite"]}" tests="{t["count"]}">\n'
+        + "\n".join(
+            f'    <testcase classname="{tc["class"]}" name="{tc["name"]}" time="0.01"'
+            + (">" if tc.get("status") == "PASS" else ">")
+            + (f'\n      <failure message="{tc.get("message", "")}"/>' if tc.get("status") == "FAIL" else "")
+            + "\n    </testcase>"
+            for tc in t["cases"]
+        )
+        + "\n  </testsuite>"
+        for t in tests
+    )
+    xml = f'<?xml version="1.0" encoding="UTF-8"?>\n<testsuites>\n{suites}\n</testsuites>\n'
+    p.write_text(xml, encoding="utf-8")
+    return p
+
+
+class TestEvidenceBundle:
+    """@links: SYS-041"""
+
+    def test_bundle_gate_pass_generates_manifest(self, monkeypatch, tmp_path):
+        core = FakeCore(coverage={"passed": True, "results": []})
+        adapter = FakeAdapter()
+        junit = _make_junit_xml("srs.xml", [
+            {"suite": "srs", "count": 1, "cases": [
+                {"class": "TestFoo", "name": "test_pass @links:SRS-001", "status": "PASS"},
+            ]},
+        ])
+        out = tmp_path / "evidence"
+
+        result = _invoke(monkeypatch, [
+            "--dhf", str(tmp_path),
+            "ci", "evidence", "bundle",
+            "--out-dir", str(out),
+            "--junit", str(junit),
+            "--run-id", "42",
+            "--run-url", "https://ci.test/42",
+            "--commit", "abc123",
+        ], core=core, adapter=adapter)
+
+        assert result.exit_code == 0, result.output
+        assert (out / "evidence-summary.json").exists()
+        manifest = json.loads((out / "evidence-manifest.json").read_text(encoding="utf-8"))
+        assert manifest["gate_passed"] is True
+        assert manifest["acceptance_result"] == "PASS"
+        assert manifest["run_id"] == "42"
+        assert manifest["commit_sha"] == "abc123"
+        assert len(manifest["files"]) >= 1  # at least evidence-summary
+
+    def test_bundle_gate_fail_exits_nonzero(self, monkeypatch, tmp_path):
+        core = FakeCore(
+            traceability={"valid": False, "issues": [{"type": "orphan", "items": ["SRS-099"]}]},
+            coverage={"passed": False, "results": [
+                {"parent_type": "UC", "child_type": "CRS", "covered": 0, "total": 5, "passed": False},
+            ]},
+        )
+        adapter = FakeAdapter()
+        out = tmp_path / "evidence"
+
+        result = _invoke(monkeypatch, [
+            "--dhf", str(tmp_path),
+            "ci", "evidence", "bundle",
+            "--out-dir", str(out),
+            "--coverage-pair", "UC:CRS",
+        ], core=core, adapter=adapter)
+
+        assert result.exit_code != 0
+
+    def test_bundle_continue_on_gate_failure_exits_zero(self, monkeypatch, tmp_path):
+        core = FakeCore(
+            traceability={"valid": False, "issues": [{"type": "orphan", "items": ["SRS-099"]}]},
+            coverage={"passed": False, "results": [
+                {"parent_type": "UC", "child_type": "CRS", "covered": 0, "total": 5, "passed": False},
+            ]},
+        )
+        adapter = FakeAdapter()
+        out = tmp_path / "evidence"
+
+        result = _invoke(monkeypatch, [
+            "--dhf", str(tmp_path),
+            "ci", "evidence", "bundle",
+            "--out-dir", str(out),
+            "--continue-on-gate-failure",
+            "--coverage-pair", "UC:CRS",
+        ], core=core, adapter=adapter)
+
+        assert result.exit_code == 0, result.output
+        manifest = json.loads((out / "evidence-manifest.json").read_text(encoding="utf-8"))
+        assert manifest["gate_passed"] is False
+
+    def test_bundle_missing_junit_dir_is_ignored(self, monkeypatch, tmp_path):
+        core = FakeCore(coverage={"passed": True, "results": []})
+        adapter = FakeAdapter()
+        out = tmp_path / "evidence"
+
+        result = _invoke(monkeypatch, [
+            "--dhf", str(tmp_path),
+            "ci", "evidence", "bundle",
+            "--out-dir", str(out),
+            "--junit-dir", str(tmp_path / "nonexistent"),
+        ], core=core, adapter=adapter)
+
+        assert result.exit_code == 0, result.output
+
+    def test_bundle_manifest_contains_sha256(self, monkeypatch, tmp_path):
+        core = FakeCore(coverage={"passed": True, "results": []})
+        adapter = FakeAdapter()
+        junit = _make_junit_xml("sys.xml", [
+            {"suite": "sys", "count": 1, "cases": [
+                {"class": "TestBar", "name": "test_pass", "status": "PASS"},
+            ]},
+        ])
+        out = tmp_path / "evidence"
+
+        result = _invoke(monkeypatch, [
+            "--dhf", str(tmp_path),
+            "ci", "evidence", "bundle",
+            "--out-dir", str(out),
+            "--junit", str(junit),
+        ], core=core, adapter=adapter)
+
+        assert result.exit_code == 0, result.output
+        manifest = json.loads((out / "evidence-manifest.json").read_text(encoding="utf-8"))
+        for f in manifest["files"]:
+            assert len(f["sha256"]) == 64
+            assert f["size"] > 0
+
+    def test_bundle_no_dhf_mutation_calls(self, monkeypatch, tmp_path):
+        core = FakeCore(coverage={"passed": True, "results": []})
+
+        class TrackingAdapter(FakeAdapter):
+            wrote = False
+            def import_results_from_file(self, **kwargs):
+                self.wrote = True
+                return {"recorded": [], "skipped": 0}
+
+        adapter = TrackingAdapter()
+        junit = _make_junit_xml("test.xml", [
+            {"suite": "t", "count": 1, "cases": [
+                {"class": "T", "name": "t1", "status": "PASS"},
+            ]},
+        ])
+        out = tmp_path / "evidence"
+
+        result = _invoke(monkeypatch, [
+            "--dhf", str(tmp_path),
+            "ci", "evidence", "bundle",
+            "--out-dir", str(out),
+            "--junit", str(junit),
+        ], core=core, adapter=adapter)
+
+        assert result.exit_code == 0, result.output
+        assert not adapter.wrote, "bundle must not call DHF write methods"

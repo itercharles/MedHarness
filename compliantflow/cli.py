@@ -831,6 +831,132 @@ def ci_evidence_record(
         raise click.ClickException(f"Compliance failed for: {', '.join(failed_standards)}")
 
 
+
+@ci_evidence.command("bundle")
+@click.option("--out-dir", type=click.Path(file_okay=False, path_type=Path), required=True,
+              help="Output directory for evidence artifacts.")
+@click.option("--junit", "junit_files", multiple=True, type=click.Path(exists=True, dir_okay=False, path_type=Path),
+              help="JUnit XML file(s) to include.")
+@click.option("--junit-dir", "junit_dirs", multiple=True, type=click.Path(file_okay=False, path_type=Path),
+              help="Directory containing JUnit XML files (*.xml discovered recursively).")
+@click.option("--coverage-pair", "coverage_pairs", multiple=True, metavar="PARENT:CHILD",
+              help="Coverage pair to check. Repeat for multiple pairs.")
+@click.option("--traceability-type", "traceability_types", multiple=True, metavar="CODE",
+              help="Traceability matrix type. Defaults to UC CRS SYS SRS SWDD.")
+@click.option("--run-id", "run_id", default="", help="CI run identifier.")
+@click.option("--run-url", "run_url", default="", help="CI run URL for traceability.")
+@click.option("--commit", "commit_sha", default="", help="Git commit SHA.")
+@click.option("--continue-on-gate-failure", is_flag=True, default=False,
+              help="Continue generating artifacts even if the acceptance gate fails. "
+                   "Use only for debugging; do not set as a CI default.")
+@click.pass_context
+def ci_evidence_bundle(
+    ctx: click.Context,
+    out_dir: Path,
+    junit_files: tuple[Path, ...],
+    junit_dirs: tuple[Path, ...],
+    coverage_pairs: tuple[str, ...],
+    traceability_types: tuple[str, ...],
+    run_id: str,
+    run_url: str,
+    commit_sha: str,
+    continue_on_gate_failure: bool,
+) -> None:
+    """Produce a read-only CI evidence bundle: gate result, DHF PDF artifacts, and manifest.
+
+    Does NOT write to the DHF. Does NOT call ci evidence import. Does NOT persist
+    compliance runs. The bundle is a self-contained audit package that WebTPS or
+    any other product repository can upload as a CI artifact.
+
+    The bundle contains:
+    - acceptance gate result (pass/fail, traceability, coverage)
+    - DHF specification PDFs and traceability report
+    - plan PDFs
+    - evidence-summary.json
+    - evidence-manifest.json (with SHA256 checksums)
+    """
+    import hashlib
+    from datetime import datetime, timezone
+
+    adapter = _make_adapter(ctx)
+    core = _make_core(ctx)
+    dhf_path: Path = ctx.obj["dhf"]
+
+    # ── Collect JUnit evidence ──
+    junit_paths = _collect_junit_paths(junit_files, junit_dirs)
+
+    # ── Acceptance gate ──
+    gate_result = _run_acceptance_gate(core, junit_paths, coverage_pairs)
+    gate_passed = gate_result.get("passed", False)
+
+    # ── DHF artifacts ──
+    out_dir.mkdir(parents=True, exist_ok=True)
+    doc_types = traceability_types if traceability_types else ()
+    artifacts_result = _run_artifact_generation(
+        adapter,
+        core,
+        dhf_path,
+        out_dir,
+        doc_types,
+        traceability_types,
+        junit_paths,
+        skip_plans=False,
+    )
+
+    # ── Evidence summary ──
+    junit_summaries = [_summarize_junit_file(p) for p in junit_paths]
+    summary = {
+        "dhf_root": str(dhf_path),
+        "run_id": run_id,
+        "run_url": run_url,
+        "commit_sha": commit_sha,
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "gate_passed": gate_passed,
+        "gate": gate_result,
+        "artifacts": artifacts_result,
+        "junit_sources": [
+            {"path": s["path"], "imported": s["imported"], "skipped": s["skipped"],
+             "failed_tcs": s["failed_tcs"]}
+            for s in junit_summaries
+        ],
+    }
+    summary_path = out_dir / "evidence-summary.json"
+    summary_str = json.dumps(summary, indent=2, default=str)
+    summary_path.write_text(summary_str + "\n", encoding="utf-8")
+
+    # ── Manifest ──
+    manifest_files: list[dict] = []
+    for candidate in sorted(out_dir.rglob("*")):
+        if not candidate.is_file() or candidate.name.startswith("."):
+            continue
+        sha = hashlib.sha256(candidate.read_bytes()).hexdigest()
+        manifest_files.append({
+            "path": str(candidate.relative_to(out_dir)),
+            "size": candidate.stat().st_size,
+            "sha256": sha,
+        })
+
+    manifest = {
+        "run_id": run_id,
+        "run_url": run_url,
+        "commit_sha": commit_sha,
+        "dhf_root": str(dhf_path),
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "gate_passed": gate_passed,
+        "acceptance_result": "PASS" if gate_passed else "FAIL",
+        "files": manifest_files,
+    }
+    manifest_path = out_dir / "evidence-manifest.json"
+    manifest_path.write_text(json.dumps(manifest, indent=2, default=str) + "\n", encoding="utf-8")
+
+    # ── Reporting ──
+    click.echo(json.dumps(manifest, default=str))
+    click.echo(f"OK Bundle written to {out_dir} (gate {'PASS' if gate_passed else 'FAIL'}).", err=True)
+
+    if not gate_passed and not continue_on_gate_failure:
+        raise click.ClickException("DHF acceptance gate failed.")
+
+
 @ci.group("artifacts")
 def ci_artifacts() -> None:
     """CI artifact generation commands."""
