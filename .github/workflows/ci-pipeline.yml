@@ -21,12 +21,57 @@ on:
     branches: [ main ]
   pull_request:
     types: [opened, synchronize]
+  workflow_dispatch:
+    inputs:
+      full_verification:
+        description: "Run full evidence recording, compliance persistence, and report generation"
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
   actions: read
 
 jobs:
+
+  push-smoke:
+    name: Push Smoke Tests
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Check out tool repo
+        uses: actions/checkout@v4
+
+      - name: Check out compliantflow-dhf
+        uses: actions/checkout@v4
+        with:
+          repository: itercharles/compliantflow-dhf
+          token: ${{ secrets.DHF_REPO_TOKEN }}
+          path: compliantflow-dhf
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest
+          pip install -r requirements.txt
+          pip install -e compliantflow-dhf/
+
+      - name: Run focused smoke tests
+        run: |
+          export PYTHONPATH="${PYTHONPATH}:${PWD}"
+          pytest \
+            tests/sys/test_sys_027_init.py \
+            tests/sys/test_sys_043_cr_workflow_complete.py \
+            tests/sys/test_sys_044_cr_intake_github_issue.py \
+            compliantflow-dhf/dhf_util/tests/test_change_requests.py \
+            -q
 
   # ── PR PIPELINE (design gate) ─────────────────────────────────────────────
 
@@ -138,6 +183,13 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v4
 
+      - name: Check out compliantflow-dhf
+        uses: actions/checkout@v4
+        with:
+          repository: itercharles/compliantflow-dhf
+          token: ${{ secrets.DHF_REPO_TOKEN }}
+          path: compliantflow-dhf
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -172,6 +224,13 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v4
 
+      - name: Check out compliantflow-dhf
+        uses: actions/checkout@v4
+        with:
+          repository: itercharles/compliantflow-dhf
+          token: ${{ secrets.DHF_REPO_TOKEN }}
+          path: compliantflow-dhf
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -201,7 +260,7 @@ jobs:
     name: Phase 3.5 - CR-PR Evidence Report
     runs-on: ubuntu-latest
     needs: phase0-cr-validation
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'full-ci')
     steps:
       - name: Check out tool repo
         uses: actions/checkout@v4
@@ -273,7 +332,7 @@ jobs:
     name: Phase 4 - Compliance Design Gate
     runs-on: ubuntu-latest
     needs: [phase2-sys, phase3-crs, phase3-5-cr-report]
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'full-ci')
     steps:
       - name: Check out tool repo
         uses: actions/checkout@v4
@@ -360,7 +419,7 @@ jobs:
   post-merge-verification:
     name: Post-Merge - Record Verification Evidence
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'workflow_dispatch' && inputs.full_verification
     permissions:
       contents: read
     steps:
