@@ -124,6 +124,32 @@ traceability_matrices:
   - RCM
   - SYS
 
+required_traceability:
+- source_type: SRS
+  direction: upstream
+  field: derives_from
+  target_type: SYS
+  min_count: 1
+- source_type: SWDD
+  direction: upstream
+  field: implements
+  target_type: SRS
+  min_count: 1
+- source_type: RCM
+  direction: upstream
+  field: mitigates
+  target_type: RISK
+  min_count: 1
+- source_type: RCM
+  direction: upstream
+  field: implements
+  target_type: SYS
+  min_count: 1
+- source_type: CRS
+  direction: downstream
+  target_type: SYS
+  min_count: 1
+
 document_specifications:
   UC:
     template: requirements_specification.md.j2

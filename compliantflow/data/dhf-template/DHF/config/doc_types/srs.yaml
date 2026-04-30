@@ -2,8 +2,6 @@ code: SRS
 name: Software Requirement
 prefix: SRS-
 directory: 03_req_srs
-allowed_parents:
-- SYS
 properties:
 - id
 - name: title

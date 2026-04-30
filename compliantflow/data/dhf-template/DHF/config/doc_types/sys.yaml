@@ -2,9 +2,6 @@ code: SYS
 name: System Requirement
 prefix: SYS-
 directory: 02_req_sys
-allowed_parents:
-- CRS
-- RCM
 properties:
 - id
 - name: title
