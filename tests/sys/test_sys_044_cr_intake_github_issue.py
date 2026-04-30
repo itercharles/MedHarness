@@ -332,19 +332,10 @@ class TestIntakeGitHubIssueCI:
         (dhf_repo / "DHF" / "config" / "global.yaml").write_text("global_lifecycle: {}\n")
         (dhf_repo / "DHF" / "items" / "09_cr").mkdir(parents=True)
         event_path = self._create_event(tmp_path)
-
-        monkeypatch.setattr("compliantflow.cli._make_adapter_for_dhf_root",
-                            lambda dhf_root: self._make_stub_adapter())
-        monkeypatch.setattr("compliantflow.cr_intake.current_iso_week_milestone",
-                            lambda: "2026-W18")
-
-    def test_ci_intake_prepare_output(self, monkeypatch, tmp_path):
-        dhf_repo = tmp_path / "dhf"
-        dhf_repo.mkdir()
-        (dhf_repo / "DHF" / "config").mkdir(parents=True)
-        (dhf_repo / "DHF" / "config" / "global.yaml").write_text("global_lifecycle: {}\n")
-        (dhf_repo / "DHF" / "items" / "09_cr").mkdir(parents=True)
-        event_path = self._create_event(tmp_path)
+        comments_path = tmp_path / "comments.json"
+        comments_path.write_text("[]\n", encoding="utf-8")
+        output_path = tmp_path / "intake.json"
+        github_output = tmp_path / "github-output.txt"
 
         monkeypatch.setattr("compliantflow.cli._make_adapter_for_dhf_root",
                             lambda dhf_root: self._make_stub_adapter())
@@ -356,14 +347,18 @@ class TestIntakeGitHubIssueCI:
             "cr", "workflow", "intake-github-issue-ci",
             "--dhf-repo", str(dhf_repo),
             "--event", str(event_path),
+            "--comments", str(comments_path),
             "--marker-name", "test-cr",
             "--write",
+            "--output", str(output_path),
+            "--github-output", str(github_output),
         ])
 
         assert result.exit_code == 0, f"exit={result.exit_code} out={result.output!r} err={result.stderr!r}"
-        payload = json.loads(result.output.strip())
+        payload = json.loads(output_path.read_text(encoding="utf-8"))
         assert payload.get("should_create") is True
         assert payload.get("cr_id", "").startswith("CR-")
+        assert "should_create=true" in github_output.read_text(encoding="utf-8")
 
     def test_ci_intake_admin_bypass_does_not_write(self, monkeypatch, tmp_path):
         dhf_repo = tmp_path / "dhf"
@@ -371,6 +366,8 @@ class TestIntakeGitHubIssueCI:
         (dhf_repo / "DHF" / "config").mkdir(parents=True)
         (dhf_repo / "DHF" / "config" / "global.yaml").write_text("global_lifecycle: {}\n")
         event_path = self._create_event(tmp_path)
+        comments_path = tmp_path / "comments.json"
+        comments_path.write_text("[]\n", encoding="utf-8")
 
         monkeypatch.setattr("compliantflow.cli._make_adapter_for_dhf_root",
                             lambda dhf_root: self._make_stub_adapter())
@@ -382,6 +379,7 @@ class TestIntakeGitHubIssueCI:
             "cr", "workflow", "intake-github-issue-ci",
             "--dhf-repo", str(dhf_repo),
             "--event", str(event_path),
+            "--comments", str(comments_path),
             "--marker-name", "test-cr",
             "--write",
         ])
@@ -398,6 +396,8 @@ class TestIntakeGitHubIssueCI:
         (dhf_repo / "DHF" / "config" / "global.yaml").write_text("global_lifecycle: {}\n")
         (dhf_repo / "DHF" / "items" / "09_cr").mkdir(parents=True)
         event_path = self._create_event(tmp_path)
+        comments_path = tmp_path / "comments.json"
+        comments_path.write_text("[]\n", encoding="utf-8")
 
         monkeypatch.setattr("compliantflow.cli._make_adapter_for_dhf_root",
                             lambda dhf_root: self._make_stub_adapter())
@@ -409,6 +409,7 @@ class TestIntakeGitHubIssueCI:
             "cr", "workflow", "intake-github-issue-ci",
             "--dhf-repo", str(dhf_repo),
             "--event", str(event_path),
+            "--comments", str(comments_path),
             "--marker-name", "test-cr",
         ])
 

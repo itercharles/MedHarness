@@ -206,9 +206,9 @@ jobs:
           git config user.name "GitHub Actions [bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           cd ..
-          compliantflow cr workflow complete \\
+          compliantflow cr workflow complete-from-github-pr \\
             --dhf-repo dhf \\
-            --cr "${{{{ steps.cr.outputs.cr_id }}}}" \\
+            --event "$GITHUB_EVENT_PATH" \\
             --by "github-actions[bot]" \\
             --push
 """)
