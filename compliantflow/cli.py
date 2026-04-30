@@ -144,12 +144,19 @@ def _run_acceptance_gate(core, junit_paths: list[Path], coverage_pairs: tuple[st
         core.inject_junit_results(junit_paths)
 
     traceability = core.validate()
+    adapter_result = core._adapter.validate_traceability()
+    required = adapter_result.get("required", {})
     pairs = coverage_pairs or DEFAULT_ACCEPTANCE_COVERAGE_PAIRS
     coverage = core.check_coverage(_parse_coverage_pairs(pairs))
-    passed = traceability.get("valid", True) and coverage.get("passed", True)
+    passed = (
+        traceability.get("valid", True)
+        and coverage.get("passed", True)
+        and required.get("passed", True)
+    )
     return {
         "passed": passed,
         "traceability": traceability,
+        "required": required,
         "coverage": coverage,
         "junit_files": [str(path) for path in junit_paths],
     }
@@ -160,6 +167,14 @@ def _print_acceptance_gate_result(result: dict) -> None:
 
     traceability = result.get("traceability", {})
     coverage = result.get("coverage", {})
+    required = result.get("required", {})
+
+    if not required.get("passed", True):
+        for f in required.get("failures", []):
+            click.echo(
+                f"FAIL [required] {f['id']}: {f['issue']}",
+                err=True,
+            )
     if not traceability.get("valid", True):
         for issue in traceability.get("issues", []):
             affected = issue.get("items", [])
@@ -1330,26 +1345,69 @@ def validate() -> None:
 @validate.command("traceability")
 @click.pass_context
 def validate_traceability(ctx: click.Context) -> None:
-    """Check that no items are orphaned (every item has at least one traceability link).
+    """Check required traceability, orphan detection, and graph integrity.
 
-    Exits 1 if any orphaned items are found.
+    Exits 1 if any required traceability failures or orphaned items are found.
     """
     dhf_path: Path = ctx.obj["dhf"]
     core = _make_core(ctx)
-    result = core.validate()
-    if not result.get("valid", True):
-        for issue in result.get("issues", []):
-            issue_type = issue.get("type", "issue")
-            affected = issue.get("items", [])
+
+    # Item-level: required traceability + deprecated allowed_parents (adapter)
+    adapter_result = core._adapter.validate_traceability()
+
+    # Graph-level: orphan/cycle (networkx)
+    graph_result = core.validate()
+
+    failed = False
+
+    # --- Required traceability failures (adapter) ---
+    required = adapter_result.get("required", {})
+    if not required.get("passed", True):
+        failed = True
+        for f in required.get("failures", []):
             click.echo(
-                f"ORPHAN [{issue_type}]: {len(affected)} item(s): "
-                + ", ".join(affected[:5])
-                + ("…" if len(affected) > 5 else ""),
+                f"FAIL [required] {f['id']}: {f['issue']}",
                 err=True,
             )
+
+    # --- Graph orphans (deprecated allowed_parents) ---
+    if not graph_result.get("valid", True):
+        for issue in graph_result.get("issues", []):
+            issue_type = issue.get("type", "issue")
+            affected = issue.get("items", [])
+            if issue_type == "orphans":
+                failed = True
+                for item in affected:
+                    click.echo(
+                        f"FAIL [deprecated orphan] {item['uid']}: {item['issue']}",
+                        err=True,
+                    )
+            elif issue_type == "cycles":
+                click.echo(
+                    f"WARN [cycles]: {issue['count']} cycle(s) detected",
+                    err=True,
+                )
+
+    # --- Deprecation warnings ---
+    for w in adapter_result.get("deprecation_warnings", []):
+        click.echo(f"WARN [deprecated] {w}", err=True)
+
+    # --- Coverage ---
+    for cr in adapter_result.get("coverage", []):
+        status = "PASS" if cr["passed"] else "FAIL"
+        click.echo(
+            f"{status} [coverage] {cr['parent_type']}→{cr['child_type']}: "
+            f"{cr['covered']}/{cr['total']} covered",
+            err=True,
+        )
+
+    # --- Summary ---
+    if failed:
+        click.echo(adapter_result.get("summary", ""), err=True)
         sys.exit(1)
+
     item_count = len(core.get_all_items())
-    click.echo(f"✓ All {item_count} items have traceability links.", err=True)
+    click.echo(f"✓ All {item_count} items pass traceability checks.", err=True)
 
 
 @validate.command("coverage")

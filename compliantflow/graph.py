@@ -186,10 +186,6 @@ class GraphEngine:
         except Exception:
             pass
 
-        isolated = list(nx.isolates(self.graph))
-        if isolated:
-            issues.append({"type": "isolated", "count": len(isolated), "items": isolated})
-
         return {"valid": len(issues) == 0, "issue_count": len(issues), "issues": issues}
 
 
@@ -253,12 +249,10 @@ def find_gaps(engine: GraphEngine) -> Dict[str, List[str]]:
     """
     gaps = {
         "orphans": [],
-        "isolated": []
     }
 
     orphans = engine.find_orphans()
     gaps["orphans"] = [o["uid"] for o in orphans]
-    gaps["isolated"] = list(nx.isolates(engine.graph))
 
     return gaps
 
