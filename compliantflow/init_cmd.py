@@ -248,6 +248,36 @@ def _generate_engineering_control_yaml(dhf_repo: Optional[str]) -> str:
         dhf_path_arg = "--dhf dhf/DHF"
         install_dhf = "          pip install -e dhf/\n"
 
+    evidence_block = (
+        '  evidence-bundle:\n'
+        '    name: Evidence Bundle\n'
+        '    runs-on: ubuntu-latest\n'
+        '    needs: [test-coverage]\n'
+        f'    if: github.event_name == {chr(39)}push{chr(39)} && github.ref == {chr(39)}refs/heads/main{chr(39)} && !cancelled()\n'
+        '    steps:\n'
+        '      - uses: actions/checkout@v4\n'
+        f'{checkout_dhf}{install_dhf}      - name: Install CompliantFlow\n'
+        '        run: |\n'
+        f'          gh release download {version} --repo compliantflow/compliantflow --pattern "compliantflow-*.whl"\n'
+        '          pip install compliantflow-*.whl\n'
+        '      - name: Download test evidence\n'
+        '        uses: actions/download-artifact@v4\n'
+        '        with:\n'
+        '          path: test-results/\n'
+        '\n'
+        '      - name: Generate evidence bundle\n'
+        '        run: |\n'
+        f'          compliantflow {dhf_path_arg} ci evidence bundle \\\n'
+        '            --out-dir dhf-artifacts \\\n'
+        '            --junit-dir test-results\n'
+        '\n'
+        '      - name: Upload evidence bundle\n'
+        '        uses: actions/upload-artifact@v4\n'
+        '        with:\n'
+        '          name: dhf-artifacts\n'
+        '          path: dhf-artifacts/\n'
+    ) if dhf_repo else ''
+
     return f"""\
 name: Engineering Control CI
 
@@ -310,33 +340,7 @@ jobs:
           compliantflow {dhf_path_arg} ci test-coverage \\
             --junit-dir test-results
 
-{('  evidence-bundle:\n'
- '    name: Evidence Bundle\n'
- '    runs-on: ubuntu-latest\n'
- '    needs: [test-coverage]\n'
- '    if: github.event_name == \'push\' && github.ref == \'refs/heads/main\' && !cancelled()\n'
- '    steps:\n'
- '      - uses: actions/checkout@v4\n'
- f'{checkout_dhf}{install_dhf}      - name: Install CompliantFlow\n'
- '        run: |\n'
- f'          gh release download {version} --repo compliantflow/compliantflow --pattern "compliantflow-*.whl"\n'
- '          pip install compliantflow-*.whl\n'
- '      - name: Download test evidence\n'
- '        uses: actions/download-artifact@v4\n'
- '        with:\n'
- '          path: test-results/\n'
- '\n'
- '      - name: Generate evidence bundle\n'
- '        run: |\n'
- f'          compliantflow {dhf_path_arg} ci evidence bundle \\\n'
- '            --out-dir dhf-artifacts \\\n'
- '            --junit-dir test-results\n'
- '\n'
- '      - name: Upload evidence bundle\n'
- '        uses: actions/upload-artifact@v4\n'
- '        with:\n'
- '          name: dhf-artifacts\n'
- '          path: dhf-artifacts/\n') if dhf_repo else ''}"""
+{evidence_block}"""
 
 
 # ---------------------------------------------------------------------------
