@@ -190,6 +190,44 @@ python3 -m venv .venv
 
 ---
 
+## Example: A Two-Repo Medical Device Project
+
+This is what a CompliantFlow-scaffolded project looks like in practice:
+
+**Your product repo** (e.g. `acme/insulin-pump`):
+```
+├── AI-harness/               # AI agent context (pre-configured)
+│   ├── context.md            # DHF structure, when to update DHF, gate semantics
+│   ├── CLAUDE.md             # Entry points for AI coding tools
+│   ├── pre-checklist.md
+│   └── ...
+├── docs/                     # Strategy scaffold (fill in)
+├── .github/workflows/
+│   ├── engineering-control.yml  # Tests → test-coverage gate → evidence bundle
+│   └── cr-complete.yml          # Auto-close CRs on PR merge
+└── src/                      # Your product code
+```
+
+**Your DHF repo** (e.g. `acme/insulin-pump-dhf`):
+```
+├── DHF/
+│   ├── items/                # UC, CRS, SYS, SRS, SWDD, RISK, RCM, CR items
+│   ├── config/               # Doc type schemas, global lifecycle
+│   │   ├── global.yaml       # required_traceability, document_specifications
+│   │   └── doc_types/        # SYS.yaml, SRS.yaml, CR.yaml, ...
+│   └── documents/
+│       └── specs/            # Jinja2 templates (*.md.j2)
+├── governance/               # Governance policy files (structural reference)
+└── .github/workflows/        # DHF structural CI
+```
+
+The product CI runs `ci test-coverage` on every push, checking that test evidence
+covers all requirements. The DHF CI runs structural validation, checking that all
+items have required traceability links. On merge to `main`, an evidence bundle is
+produced — ready for audit, no manual assembly needed.
+
+---
+
 ## License
 
 MIT — see [LICENSE](LICENSE).

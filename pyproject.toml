@@ -33,6 +33,17 @@ Homepage = "https://github.com/compliantflow/compliantflow"
 "Bug Tracker" = "https://github.com/compliantflow/compliantflow/issues"
 Documentation = "https://github.com/compliantflow/compliantflow#readme"
 
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Healthcare Industry",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Scientific/Engineering :: Medical Science Apps",
+    "Topic :: Software Development :: Quality Assurance",
+]
+
 [project.scripts]
 compliantflow = "compliantflow.cli:main"
 
