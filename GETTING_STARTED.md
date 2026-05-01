@@ -32,9 +32,15 @@ compliantflow --help
 
 ### Released package install
 
-Download the latest release from GitHub Releases:
+CompliantFlow depends on `dhf_util`. Install it first from CompliantFlow-DHF,
+then install CompliantFlow:
 
 ```bash
+# 1. Install dhf_util from the DHF substrate repo
+git clone https://github.com/compliantflow/compliantflow-dhf
+cd compliantflow-dhf && pip install -e . && cd ..
+
+# 2. Install CompliantFlow
 gh release download --repo compliantflow/compliantflow \
   --pattern "compliantflow-*.whl"
 pip install compliantflow-*.whl

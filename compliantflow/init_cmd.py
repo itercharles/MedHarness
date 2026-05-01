@@ -288,12 +288,12 @@ jobs:
           name: product-test-results
           path: test-results/
 
-{checkout_dhf}      - name: Install CompliantFlow
+{checkout_dhf}{install_dhf}      - name: Install CompliantFlow
         run: |
           # Install from GitHub Releases (public repo — no token needed).
           gh release download {version} --repo compliantflow/compliantflow --pattern "compliantflow-*.whl"
           pip install compliantflow-*.whl
-{install_dhf}
+
       - name: Download test results
         if: always()
         uses: actions/download-artifact@v4
@@ -313,11 +313,10 @@ jobs:
  '    if: github.event_name == \'push\' && github.ref == \'refs/heads/main\' && !cancelled()\n'
  '    steps:\n'
  '      - uses: actions/checkout@v4\n'
- f'{checkout_dhf}      - name: Install CompliantFlow\n'
+ f'{checkout_dhf}{install_dhf}      - name: Install CompliantFlow\n'
  '        run: |\n'
  f'          gh release download {version} --repo compliantflow/compliantflow --pattern "compliantflow-*.whl"\n'
  '          pip install compliantflow-*.whl\n'
- f'{install_dhf}'
  '      - name: Download test evidence\n'
  '        uses: actions/download-artifact@v4\n'
  '        with:\n'
