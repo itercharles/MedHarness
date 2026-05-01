@@ -1,1 +1,1 @@
-See [AI-harness/AGENTS.md](AI-harness/AGENTS.md).
+See [CLAUDE.md](CLAUDE.md).

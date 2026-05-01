@@ -13,15 +13,12 @@ The following is ready for external use and will maintain backward compatibility
 across minor versions:
 
 - **`compliantflow init`** — interactive project scaffolding (DHF template,
-  product CI workflows, AI harness)
+  product CI workflows)
 - **`ci test-coverage`** — requirement → test coverage gate (JUnit XML contract)
 - **`ci evidence bundle`** — CI evidence bundle production
 - **`ci release consume-artifact`** / **`ci release assemble`** — release
   assembly pipeline
-- **`review-pr`** — DHF traceability PR review checklist
-- **`context`** — AI agent DHF context generation
 - **`cr workflow`** — CR intake (GitHub Issues) and completion
-- AI harness files (`context.md`, checklists, model adapters)
 - DHF item types: UC, CRS, SYS, SRS, SWDD, SYSARCH, RISK, RCM, SOUP, TC, CR,
   REL, DEF
 

@@ -28,7 +28,7 @@ The regulated data stays in the DHF.
 │  ┌──────────────┐  ┌──────────────────────┐  │
 │  │ CI gates     │  │ init scaffolding     │  │
 │  │ test-coverage│  │ engineering-control  │  │
-│  │ evidence     │  │ AI-harness gen       │  │
+│  │ evidence     │  │ CLAUDE.md gen        │  │
 │  │ release      │  │ DHF workflow gen     │  │
 │  └──────┬───────┘  └──────────────────────┘  │
 │         │                                     │
@@ -74,19 +74,17 @@ have a different DHF storage backend.
 
 AI operates at three levels in the CompliantFlow architecture:
 
-### 1. Agent Context (open-source infrastructure)
+### 1. Agent Context (repo-local docs)
 
-`compliantflow init` writes `AI-harness/` into both repos. This includes:
+`compliantflow init` writes a minimal `CLAUDE.md` into product repos. Agents
+receive project structure and DHF boundaries from:
 
-- `context.md` — DHF structure, item types, when to update the DHF, traceability
-  and coverage gate semantics
-- Model entry points — `CLAUDE.md`, `AGENTS.md`, `GEMINI.md`
-- Pre/post-task checklists
-- IDE adapters (`.cursorrules`, `copilot-instructions.md`)
+- `README.md` — project identity and multi-repo model
+- `ARCHITECTURE.md` — regulated vs execution layer boundaries
+- `CLAUDE.md` — repo-local rules and pointers to canonical docs
+- Workflow prompts (`.github/prompts/`) — only where automation actively uses them
 
-This is **static context** — the AI agent reads it before generating code or
-DHF content. It ensures the agent knows the schema, lifecycle rules, and
-traceability requirements before it produces output.
+This replaces the previous AI-harness/ bundle with a skills-first, doc-native model.
 
 ### 2. DHF Workflows (open-source automation)
 
@@ -113,7 +111,7 @@ included in the open-source core.
 | Component | Status | License |
 |-----------|--------|---------|
 | `compliantflow init` scaffolding | Open source (MIT) | Free |
-| AI-harness templates | Open source (MIT) | Free |
+| CLAUDE.md generation | Open source (MIT) | Free |
 | `ci test-coverage` (requirement → test) | Open source (MIT) | Free |
 | `ci evidence bundle` (evidence production) | Open source (MIT) | Free |
 | Release assembly (`ci release assemble`) | Open source (MIT) | Free |

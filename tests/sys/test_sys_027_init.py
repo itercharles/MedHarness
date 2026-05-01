@@ -17,12 +17,10 @@ import click
 import pytest
 
 from compliantflow.init_cmd import (
-    HARNESS_DIR,
-    PRODUCT_TEMPLATE_DIR,
     TEMPLATE_DIR,
     _generate_engineering_control_yaml,
     _init_dhf_template,
-    _init_product_template,
+    _write_claude_md,
     _write_engineering_control_yml,
     _write_cr_complete_yml,
     _write_dhf_ci_workflow,
@@ -229,95 +227,65 @@ class TestInitCmd:
         assert "llm_provider" not in src
         assert 'click.Choice(["gemini"' not in src
 
-    def test_TC_SYS_027_019_product_template_dir_exists(self):
+    def test_TC_SYS_027_019_write_claude_md_creates_file(self, tmp_path):
         """
-        TC-SYS-027-019: The bundled product-template directory exists in package data.
+        TC-SYS-027-019: _write_claude_md creates CLAUDE.md in product_dir.
 
         @test_id: TC-SYS-027-019
         @links: SYS-027
         """
-        assert PRODUCT_TEMPLATE_DIR.exists(), f"Product template directory not found: {PRODUCT_TEMPLATE_DIR}"
-        assert HARNESS_DIR.exists(), f"Root AI-harness not found: {HARNESS_DIR}"
-        assert (HARNESS_DIR / "context.md").exists()
-        assert (HARNESS_DIR / "CLAUDE.md").exists()
+        product_dir = tmp_path / "my-product"
+        _write_claude_md(product_dir, "My Device", "acme/my-device-dhf")
+        assert (product_dir / "CLAUDE.md").exists()
 
-    def test_TC_SYS_027_020_init_product_template_creates_context(self, tmp_path):
+    def test_TC_SYS_027_020_write_claude_md_contains_project_name(self, tmp_path):
         """
-        TC-SYS-027-020: _init_product_template creates AI-harness/context.md in product_dir.
+        TC-SYS-027-020: CLAUDE.md includes the project name.
 
         @test_id: TC-SYS-027-020
         @links: SYS-027
         """
         product_dir = tmp_path / "my-product"
-        _init_product_template(product_dir, "My Device", "acme/my-device-dhf")
-        assert (product_dir / "AI-harness" / "context.md").exists()
+        _write_claude_md(product_dir, "Cardiac Monitor", "acme/dhf")
+        content = (product_dir / "CLAUDE.md").read_text()
+        assert "Cardiac Monitor" in content
 
-    def test_TC_SYS_027_021_init_product_template_substitutes_project_name(self, tmp_path):
+    def test_TC_SYS_027_021_write_claude_md_contains_dhf_repo(self, tmp_path):
         """
-        TC-SYS-027-021: _init_product_template copies context.md from root AI-harness.
-        Root harness has no placeholders — file is copied as-is.
+        TC-SYS-027-021: CLAUDE.md includes the DHF repo reference.
 
         @test_id: TC-SYS-027-021
         @links: SYS-027
         """
         product_dir = tmp_path / "my-product"
-        _init_product_template(product_dir, "Insulin Pump Firmware", "acme/dhf")
-        assert (product_dir / "AI-harness" / "context.md").exists()
+        _write_claude_md(product_dir, "Device", "acme/my-device-dhf")
+        content = (product_dir / "CLAUDE.md").read_text()
+        assert "acme/my-device-dhf" in content
 
-    def test_TC_SYS_027_022_init_product_template_substitutes_dhf_repo(self, tmp_path):
+    def test_TC_SYS_027_022_write_claude_md_fallback_when_no_dhf(self, tmp_path):
         """
-        TC-SYS-027-022: _init_product_template copies docs/ with {{dhf_repo}} substituted.
-        Root AI-harness has no placeholders; substitution applies to docs/ scaffold.
+        TC-SYS-027-022: CLAUDE.md uses fallback DHF repo when dhf_repo is None.
 
         @test_id: TC-SYS-027-022
         @links: SYS-027
         """
         product_dir = tmp_path / "my-product"
-        _init_product_template(product_dir, "Device", "acme/my-device-dhf")
-        # docs/ scaffold (from product-template) has placeholders — verify substitution there
-        tech_strategy = (product_dir / "docs" / "technical_strategy.md").read_text()
-        assert "acme/my-device-dhf" in tech_strategy
-        assert "{{dhf_repo}}" not in tech_strategy
+        _write_claude_md(product_dir, "Device", None)
+        content = (product_dir / "CLAUDE.md").read_text()
+        assert "your-org/your-product-dhf" in content
 
-    def test_TC_SYS_027_023_init_product_template_creates_adapter_files(self, tmp_path):
+    def test_TC_SYS_027_023_write_claude_md_mentions_cr_workflow(self, tmp_path):
         """
-        TC-SYS-027-023: _init_product_template creates adapters/.cursorrules and
-        adapters/copilot-instructions.md.
+        TC-SYS-027-023: CLAUDE.md references CR ID in PR title and testing conventions.
 
         @test_id: TC-SYS-027-023
         @links: SYS-027
         """
         product_dir = tmp_path / "my-product"
-        _init_product_template(product_dir, "Device", "acme/dhf")
-        assert (product_dir / "AI-harness" / "adapters" / ".cursorrules").exists()
-        assert (product_dir / "AI-harness" / "adapters" / "copilot-instructions.md").exists()
-
-    def test_TC_SYS_027_024_init_product_template_creates_agent_files(self, tmp_path):
-        """
-        TC-SYS-027-024: _init_product_template creates CLAUDE.md, AGENTS.md, GEMINI.md.
-
-        @test_id: TC-SYS-027-024
-        @links: SYS-027
-        """
-        product_dir = tmp_path / "my-product"
-        _init_product_template(product_dir, "Device", "acme/dhf")
-        assert (product_dir / "AI-harness" / "CLAUDE.md").exists()
-        assert (product_dir / "AI-harness" / "AGENTS.md").exists()
-        assert (product_dir / "AI-harness" / "GEMINI.md").exists()
-
-    def test_TC_SYS_027_025_init_product_template_no_dhf_fallback(self, tmp_path):
-        """
-        TC-SYS-027-025: _init_product_template uses fallback text when dhf_repo is None.
-        Fallback substitution applies to docs/ scaffold (not root harness, which has no placeholders).
-
-        @test_id: TC-SYS-027-025
-        @links: SYS-027
-        """
-        product_dir = tmp_path / "my-product"
-        _init_product_template(product_dir, "Device", None)
-        tech_strategy = (product_dir / "docs" / "technical_strategy.md").read_text()
-        assert "your-org/your-product-dhf" in tech_strategy
-        assert "{{dhf_repo}}" not in tech_strategy
+        _write_claude_md(product_dir, "Device", "acme/dhf")
+        content = (product_dir / "CLAUDE.md").read_text()
+        assert "CR ID" in content
+        assert "ci test-coverage" in content
 
     def test_TC_SYS_027_026_init_dhf_template_substitutes_product_repo(self, tmp_path):
         """
@@ -363,48 +331,6 @@ class TestInitCmd:
         assert "compliantflow cr workflow complete-from-github-pr" in content
         assert "--dhf-repo dhf" in content
         assert "python -m dhf_util item transition" not in content
-
-    def test_TC_SYS_027_029_init_product_template_creates_docs(self, tmp_path):
-        """
-        TC-SYS-027-029: _init_product_template creates docs/ scaffold with strategy files.
-
-        @test_id: TC-SYS-027-029
-        @links: SYS-027
-        """
-        product_dir = tmp_path / "my-product"
-        _init_product_template(product_dir, "My Device", "acme/my-device-dhf")
-        assert (product_dir / "docs" / "product_strategy.md").exists()
-        assert (product_dir / "docs" / "product_roadmap.md").exists()
-        assert (product_dir / "docs" / "technical_strategy.md").exists()
-        assert (product_dir / "docs" / "testing_strategy.md").exists()
-        assert (product_dir / "docs" / "adr" / "ADR-000-template.md").exists()
-
-    def test_TC_SYS_027_030_docs_scaffold_substitutes_project_name(self, tmp_path):
-        """
-        TC-SYS-027-030: Strategy docs scaffold substitutes {{project_name}} throughout.
-
-        @test_id: TC-SYS-027-030
-        @links: SYS-027
-        """
-        product_dir = tmp_path / "my-product"
-        _init_product_template(product_dir, "Cardiac Monitor", "acme/dhf")
-        for doc in ["product_strategy.md", "product_roadmap.md", "technical_strategy.md", "testing_strategy.md"]:
-            content = (product_dir / "docs" / doc).read_text()
-            assert "Cardiac Monitor" in content, f"{{{{project_name}}}} not substituted in {doc}"
-            assert "{{project_name}}" not in content, f"Unsubstituted placeholder in {doc}"
-
-    def test_TC_SYS_027_031_docs_scaffold_substitutes_dhf_repo(self, tmp_path):
-        """
-        TC-SYS-027-031: technical_strategy.md substitutes {{dhf_repo}} with actual DHF repo.
-
-        @test_id: TC-SYS-027-031
-        @links: SYS-027
-        """
-        product_dir = tmp_path / "my-product"
-        _init_product_template(product_dir, "Device", "acme/device-dhf")
-        content = (product_dir / "docs" / "technical_strategy.md").read_text()
-        assert "acme/device-dhf" in content
-        assert "{{dhf_repo}}" not in content
 
     def test_TC_SYS_027_032_engineering_control_yaml_has_required_phases(self):
         """

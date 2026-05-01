@@ -196,11 +196,7 @@ This is what a CompliantFlow-scaffolded project looks like in practice:
 
 **Your product repo** (e.g. `acme/insulin-pump`):
 ```
-├── AI-harness/               # AI agent context (pre-configured)
-│   ├── context.md            # DHF structure, when to update DHF, gate semantics
-│   ├── CLAUDE.md             # Entry points for AI coding tools
-│   ├── pre-checklist.md
-│   └── ...
+├── CLAUDE.md                 # Minimal agent entrypoint (generated)
 ├── docs/                     # Strategy scaffold (fill in)
 ├── .github/workflows/
 │   ├── engineering-control.yml  # Tests → test-coverage gate → evidence bundle

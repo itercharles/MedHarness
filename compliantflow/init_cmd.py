@@ -16,8 +16,6 @@ from typing import Optional
 import click
 
 TEMPLATE_DIR = Path(__file__).parent / "data" / "dhf-template"
-PRODUCT_TEMPLATE_DIR = Path(__file__).parent / "data" / "product-template"
-HARNESS_DIR = Path(__file__).parent.parent / "AI-harness"
 
 
 
@@ -85,27 +83,37 @@ def _init_dhf_template(
     _write_dhf_cr_transition_workflow(gh_workflows / "cr-transition.yml")
 
 
-def _init_product_template(
-    product_dir: Path,
-    project_name: str,
-    dhf_repo: Optional[str],
-) -> None:
-    """Write AI-harness and docs/ scaffolding to product_dir. No git operations — caller reviews and pushes."""
-    dhf_repo_value = dhf_repo or "your-org/your-product-dhf"
-    replacements = {
-        "{{project_name}}": project_name,
-        "{{dhf_repo}}": dhf_repo_value,
-    }
+def _write_claude_md(product_dir: Path, project_name: str, dhf_repo: Optional[str]) -> Path:
+    """Write a minimal CLAUDE.md entrypoint into product_dir."""
+    dhf_ref = dhf_repo or "your-org/your-product-dhf"
+    product_dir.mkdir(parents=True, exist_ok=True)
+    dest = product_dir / "CLAUDE.md"
+    dest.write_text(f"""# CLAUDE.md
 
-    ai_harness_src = HARNESS_DIR
-    ai_harness_dst = product_dir / "AI-harness"
-    shutil.copytree(ai_harness_src, ai_harness_dst, dirs_exist_ok=True)
-    _replace_placeholders_in_tree(ai_harness_dst, replacements)
+## Project
 
-    docs_src = PRODUCT_TEMPLATE_DIR / "docs"
-    docs_dst = product_dir / "docs"
-    shutil.copytree(docs_src, docs_dst, dirs_exist_ok=True)
-    _replace_placeholders_in_tree(docs_dst, replacements)
+{project_name} — medical device software developed under design control.
+
+## Repo Responsibility
+
+| Repo | Purpose |
+|------|---------|
+| This repo | Product source code, tests, CI |
+| `{dhf_ref}` | Design History File — requirements, risks, traceability |
+
+## Key Rules
+
+- PR title must include a CR ID (e.g. `feat(CR-012): description`)
+- DHF mutations go through `python -m dhf_util` in the DHF repo, never direct file edits
+- `ci test-coverage` enforces requirement→test coverage on every push
+- Evidence bundle is produced on merge to `main`
+- See `docs/technical_strategy.md` for architecture principles
+- See `docs/testing_strategy.md` for test conventions
+""")
+    return dest
+
+
+
 
 
 def _write_engineering_control_yml(
@@ -476,8 +484,8 @@ def run_init() -> None:
     click.echo("━" * 45)
     if setup_dhf:
         click.echo(f"  • Write DHF template to: {dhf_dir}")
-        click.echo(f"    Project: \"{project_name}\"  Standards: {', '.join(selected_standards)}")
-    click.echo(f"  • Write AI-harness to: {product_dir}/")
+        click.echo(f"    Project: \"{project_name}\"")
+    click.echo(f"  • Write CLAUDE.md to: {product_dir}/")
     click.echo(f"  • Write engineering-control.yml to: {product_dir / '.github' / 'workflows'}/")
     click.echo(f"  • Write cr-complete.yml to: {product_dir / '.github' / 'workflows'}/")
     click.echo()
@@ -491,7 +499,7 @@ def run_init() -> None:
     steps: list[str] = []
     if setup_dhf:
         steps.append(f"Write DHF template to {dhf_dir}")
-    steps.append("Write AI-harness to product repo")
+    steps.append("Write CLAUDE.md to product repo")
     steps.append("Write engineering-control.yml")
     steps.append("Write CR completion workflow")
     total = len(steps)
@@ -511,8 +519,8 @@ def run_init() -> None:
         )  # type: ignore[arg-type]
         click.secho(" ✓", fg="green")
 
-    _step("Write AI-harness to product repo")
-    _init_product_template(product_dir, project_name, dhf_repo)
+    _step("Write CLAUDE.md to product repo")
+    _write_claude_md(product_dir, project_name, dhf_repo)
     click.secho(" ✓", fg="green")
 
     _step("Write engineering-control.yml")
@@ -540,7 +548,7 @@ def run_init() -> None:
     click.echo(f"       cd {product_dir}")
     click.echo(f"       git checkout -b compliantflow/setup")
     workflow_file = ".github/workflows/engineering-control.yml"
-    click.echo(f"       git add AI-harness/ {workflow_file} .github/workflows/cr-complete.yml")
+    click.echo(f"       git add CLAUDE.md {workflow_file} .github/workflows/cr-complete.yml")
     click.echo(f"       git commit -m \"feat: add CompliantFlow harness and AI context\"")
     click.echo(f"       git push -u origin compliantflow/setup")
     n += 1

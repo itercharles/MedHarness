@@ -70,8 +70,8 @@ After you confirm, `init` writes:
 
 - **DHF template** → your specified DHF local directory, pre-configured with
   project name and selected standards
-- **`AI-harness/`** → your product repo local directory, with context,
-  checklists, and adapters for Claude, Cursor, and GitHub Copilot
+- **`CLAUDE.md`** → your product repo local directory, with minimal repo
+  guidance and links to canonical docs
 - **`.github/workflows/engineering-control.yml`** → your product repo local directory,
   with test-coverage CI gate
 
@@ -93,8 +93,8 @@ git push -u origin main
 # 2. Open engineering control PR in product repo
 cd ./insulin-pump
 git checkout -b compliantflow/setup
-git add AI-harness/ .github/workflows/engineering-control.yml .github/workflows/cr-complete.yml
-git commit -m "feat: add CompliantFlow harness and AI context"
+git add CLAUDE.md .github/workflows/engineering-control.yml .github/workflows/cr-complete.yml
+git commit -m "feat: add CompliantFlow harness and CI workflows"
 git push -u origin compliantflow/setup
 ```
 
@@ -132,8 +132,7 @@ cd YOUR_PRODUCT-dhf
 claude
 ```
 
-The DHF includes an `AI-harness/` folder with context, checklists, and adapter
-files for Claude, Cursor, and GitHub Copilot — so the AI agent understands DHF
+The DHF includes structured DHF config and item templates — so AI agents
 item types, lifecycle rules, and traceability requirements out of the box.
 
 To manage items manually:
