@@ -2,7 +2,7 @@
 
 > **Last updated:** 2026-04-30
 >
-> This note supplements the [product roadmap](docs/product_roadmap.md). The roadmap tracks
+> This note supplements the formal product documents in CompliantFlow-DHF.
 > CR-level feature planning; this file gives an at-a-glance status for external adopters.
 
 ---

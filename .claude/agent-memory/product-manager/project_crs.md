@@ -25,7 +25,7 @@ All CRs from CR-001 to CR-034 are resolved as of 2026-04-07:
 
 ## Active Backlog (CR-035 to CR-049)
 
-Derived from `docs/product_strategy.md` three objectives. Full descriptions in `DHF/items/09_cr/`.
+Derived from Customer Requirement Specification objectives. Full descriptions in `DHF/items/09_cr/`.
 
 ### v2.1.0 — "Deepen & Enforce" (Q3 2026)
 

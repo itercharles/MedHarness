@@ -5,8 +5,7 @@
 - [README.md](README.md) — what CompliantFlow is and how it works
 - [GETTING_STARTED.md](GETTING_STARTED.md) — install, init, and first CI run
 - [ARCHITECTURE.md](ARCHITECTURE.md) — regulated layer vs execution layer
-- [docs/technical_strategy.md](docs/technical_strategy.md) — architectural principles
-- [docs/product_strategy.md](docs/product_strategy.md) — mission and positioning
+- [PROJECT_STATUS.md](PROJECT_STATUS.md) — stable/evolving/out-of-scope
 
 ## Community
 
