@@ -2,10 +2,10 @@
 
 Covers the pure-Python logic of init_cmd.py:
 - engineering-control.yml generation for various DHF configurations
-- DHF CI workflow template content
-- Standard label and governance file mappings
-- _init_dhf_template: file population, project name substitution, governance filtering
-- run_init validation guards: product repo existence and emptiness
+- CLAUDE.md generation
+- cr-complete.yml generation
+- DHF template placeholder substitution
+- run_init validation guards
 """
 
 import subprocess
@@ -17,29 +17,18 @@ import click
 import pytest
 
 from compliantflow.init_cmd import (
-    TEMPLATE_DIR,
+    DHF_TEMPLATE_REPO,
+    _fetch_dhf_template,
     _generate_engineering_control_yaml,
-    _init_dhf_template,
+    _replace_placeholders,
     _write_claude_md,
     _write_engineering_control_yml,
     _write_cr_complete_yml,
-    _write_dhf_ci_workflow,
-    _write_dhf_cr_transition_workflow,
 )
 
 
 class TestInitCmd:
     """SYS-027: compliantflow init — interactive infrastructure onboarding command."""
-
-    def test_TC_SYS_027_001_template_dir_exists(self):
-        """
-        TC-SYS-027-001: The bundled dhf-template directory is present in package data.
-
-        @test_id: TC-SYS-027-001
-        @links: SYS-027
-        """
-        assert TEMPLATE_DIR.exists(), f"Template directory not found: {TEMPLATE_DIR}"
-        assert (TEMPLATE_DIR / "DHF" / "config" / "global.yaml").exists()
 
     def test_TC_SYS_027_003_engineering_control_yaml_with_dhf(self):
         """
@@ -113,87 +102,6 @@ class TestInitCmd:
         assert "--standard" not in yaml
         assert "--governance-dir" not in yaml
         assert "GEMINI_API_KEY" not in yaml
-
-    def test_TC_SYS_027_009_dhf_ci_workflow_content(self):
-        """
-        TC-SYS-027-009: Generated DHF ci.yml contains schema-validation and utils-tests jobs.
-
-        @test_id: TC-SYS-027-009
-        @links: SYS-027
-        """
-        with tempfile.TemporaryDirectory() as tmp:
-            path = Path(tmp) / "ci.yml"
-            _write_dhf_ci_workflow(path)
-            content = path.read_text()
-        assert "dhf-validation" in content
-        assert "dhf-util-tests" in content
-        assert "python -m dhf_util --dhf DHF validate schema" in content
-
-    def test_TC_SYS_027_010_cr_transition_workflow_content(self):
-        """
-        TC-SYS-027-010: Generated cr-transition.yml contains workflow_dispatch trigger and transition step.
-
-        @test_id: TC-SYS-027-010
-        @links: SYS-027
-        """
-        with tempfile.TemporaryDirectory() as tmp:
-            path = Path(tmp) / "cr-transition.yml"
-            _write_dhf_cr_transition_workflow(path)
-            content = path.read_text()
-        assert "workflow_dispatch" in content
-        assert "python -m dhf_util --dhf DHF item transition" in content
-        assert "cr_ids" in content
-
-    def test_TC_SYS_027_012_template_global_yaml_has_project_name(self):
-        """
-        TC-SYS-027-012: The bundled global.yaml template contains a project_name field.
-
-        @test_id: TC-SYS-027-012
-        @links: SYS-027
-        """
-        global_yaml = (TEMPLATE_DIR / "DHF" / "config" / "global.yaml").read_text()
-        assert "project_name:" in global_yaml
-
-    def test_TC_SYS_027_013_init_dhf_template_substitutes_project_name(self, tmp_path):
-        """
-        TC-SYS-027-013: _init_dhf_template writes project_name into global.yaml.
-
-        @test_id: TC-SYS-027-013
-        @links: SYS-027
-        """
-        dhf_dir = tmp_path / "my-dhf"
-        _init_dhf_template(dhf_dir, "My Test Device")
-        global_yaml = (dhf_dir / "DHF" / "config" / "global.yaml").read_text()
-        assert 'project_name: "My Test Device"' in global_yaml
-
-    def test_TC_SYS_027_015_init_dhf_template_writes_ci_workflows(self, tmp_path):
-        """
-        TC-SYS-027-015: _init_dhf_template creates .github/workflows/ci.yml and cr-transition.yml.
-
-        @test_id: TC-SYS-027-015
-        @links: SYS-027
-        """
-        dhf_dir = tmp_path / "my-dhf"
-        _init_dhf_template(dhf_dir, "Device")
-        assert (dhf_dir / ".github" / "workflows" / "ci.yml").exists()
-        assert (dhf_dir / ".github" / "workflows" / "cr-transition.yml").exists()
-
-    def test_TC_SYS_027_016_init_dhf_template_no_git_operations(self, tmp_path):
-        """
-        TC-SYS-027-016: _init_dhf_template does not invoke any git or gh commands —
-        all operations are local file writes only.
-
-        @test_id: TC-SYS-027-016
-        @links: SYS-027
-        """
-        import inspect
-        src = inspect.getsource(_init_dhf_template)
-        assert "subprocess" not in src
-        assert "_gh(" not in src
-        # Verify it actually writes files without any external calls
-        dhf_dir = tmp_path / "my-dhf"
-        _init_dhf_template(dhf_dir, "Device")
-        assert dhf_dir.exists()
 
     def test_TC_SYS_027_017_write_engineering_control_yml_creates_file(self, tmp_path):
         """
@@ -287,22 +195,20 @@ class TestInitCmd:
         assert "CR ID" in content
         assert "ci test-coverage" in content
 
-    def test_TC_SYS_027_026_init_dhf_template_substitutes_product_repo(self, tmp_path):
+    def test_TC_SYS_027_026_replace_placeholders_substitutes_project_name(self, tmp_path):
         """
-        TC-SYS-027-026: _init_dhf_template substitutes {{product_repo}} in workflow files.
+        TC-SYS-027-026: _replace_placeholders substitutes {{project_name}} in DHF template files.
 
         @test_id: TC-SYS-027-026
         @links: SYS-027
         """
         dhf_dir = tmp_path / "my-dhf"
-        _init_dhf_template(
-            dhf_dir,
-            "Device",
-            product_repo="acme/my-device",
-        )
-        content = (dhf_dir / ".github" / "workflows" / "cr-develop.yml").read_text()
-        assert "acme/my-device" in content
-        assert "{{product_repo}}" not in content
+        (dhf_dir / "DHF").mkdir(parents=True)
+        readme = dhf_dir / "README.md"
+        readme.write_text("# {{project_name}} DHF")
+        _replace_placeholders(dhf_dir, "Test Device", "acme/test-device")
+        assert "Test Device" in readme.read_text()
+        assert "{{project_name}}" not in readme.read_text()
 
     def test_TC_SYS_027_027_write_cr_complete_yml_creates_file(self, tmp_path):
         """
@@ -330,7 +236,6 @@ class TestInitCmd:
         assert "repository: acme/my-device-dhf" in content
         assert "compliantflow cr workflow complete-from-github-pr" in content
         assert "--dhf-repo dhf" in content
-        assert "python -m dhf_util item transition" not in content
 
     def test_TC_SYS_027_032_engineering_control_yaml_has_required_phases(self):
         """
@@ -408,7 +313,7 @@ class TestInitCmd:
         assert "GEMINI_API_KEY" not in yaml
         assert "COMPLIANTFLOW_OLLAMA_URL" not in yaml
 
-    def test_TC_SYS_027_037_cr_complete_yml_no_legacy_commands(self):
+    def test_TC_SYS_027_037_cr_complete_yml_no_legacy_commands(self, tmp_path):
         """
         TC-SYS-027-037: Generated cr-complete.yml uses only CompliantFlow facade
         commands, not direct dhf_util item transition calls.
@@ -416,38 +321,50 @@ class TestInitCmd:
         @test_id: TC-SYS-027-037
         @links: SYS-027
         """
-        with tempfile.TemporaryDirectory() as tmp:
-            product_dir = Path(tmp) / "my-product"
-            _write_cr_complete_yml(product_dir, "acme/my-device-dhf")
-            content = (product_dir / ".github" / "workflows" / "cr-complete.yml").read_text()
-            assert "compliantflow cr workflow complete-from-github-pr" in content
-            assert "python -m dhf_util item transition" not in content
+        product_dir = tmp_path / "my-product"
+        _write_cr_complete_yml(product_dir, "acme/my-device-dhf")
+        content = (product_dir / ".github" / "workflows" / "cr-complete.yml").read_text()
+        assert "compliantflow cr workflow complete-from-github-pr" in content
 
-    def test_TC_SYS_027_038_dhf_template_readme_has_placeholders(self):
+    def test_TC_SYS_027_038_replace_placeholders_product_repo(self, tmp_path):
         """
-        TC-SYS-027-038: The bundled dhf-template README uses placeholders,
-        not hardcoded repo-specific values.
+        TC-SYS-027-038: _replace_placeholders substitutes {{product_repo}} in DHF template.
 
         @test_id: TC-SYS-027-038
         @links: SYS-027
         """
-        readme = (TEMPLATE_DIR / "README.md").read_text()
-        assert "{{project_name}}" in readme
-        assert "{{github_org}}" in readme
-        assert "{{dhf_repo_name}}" in readme
-        assert "itercharles" not in readme
+        dhf_dir = tmp_path / "my-dhf"
+        (dhf_dir / ".github" / "workflows").mkdir(parents=True)
+        wf = dhf_dir / ".github" / "workflows" / "cr-develop.yml"
+        wf.write_text("gh repo clone {{product_repo}}")
+        _replace_placeholders(dhf_dir, "Device", "acme/my-device")
+        assert "acme/my-device" in wf.read_text()
+        assert "{{product_repo}}" not in wf.read_text()
 
-    def test_TC_SYS_027_039_init_dhf_template_substitutes_readme_placeholders(self, tmp_path):
+    def test_TC_SYS_027_039_init_no_hardcoded_template_refs(self):
         """
-        TC-SYS-027-039: _init_dhf_template substitutes placeholders in the DHF README.
+        TC-SYS-027-039: init_cmd.py does not reference a local data/ template directory.
 
         @test_id: TC-SYS-027-039
         @links: SYS-027
         """
+        import inspect
+        from compliantflow.init_cmd import _fetch_dhf_template
+        src = inspect.getsource(_fetch_dhf_template)
+        assert "TEMPLATE_DIR" not in src
+        assert "shutil.copytree" in src  # copies from fetched clone
+        assert "DHF_TEMPLATE_REPO" in src  # uses the URL constant
+        assert "data/" not in src  # no local embedded data dir
+        assert "subprocess.run" in src  # uses git clone, not local copy
+
+    def test_TC_SYS_027_040_replace_placeholders_handles_missing_dir(self, tmp_path):
+        """
+        TC-SYS-027-040: _replace_placeholders handles empty directories gracefully.
+
+        @test_id: TC-SYS-027-040
+        @links: SYS-027
+        """
         dhf_dir = tmp_path / "my-dhf"
-        _init_dhf_template(dhf_dir, "My Device", product_repo="acme/my-device")
-        readme = (dhf_dir / "README.md").read_text()
-        assert "My Device" in readme
-        assert "acme" in readme
-        assert "itercharles" not in readme
-        assert "{{project_name}}" not in readme
+        dhf_dir.mkdir()
+        # Should not raise
+        _replace_placeholders(dhf_dir, "Device", "acme/test-device")

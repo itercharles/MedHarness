@@ -1,87 +1,107 @@
 """compliantflow init — interactive onboarding command.
 
-Sets up the full CompliantFlow infrastructure for a new project:
-  1. Writes the DHF template to a local directory for review
-  2. Writes product repo workflows to the product repo directory for review
+Sets up CompliantFlow infrastructure for a new project:
+  1. Optionally fetches the DHF template from CompliantFlow-DHF
+  2. Writes product repo files (CLAUDE.md, engineering-control.yml, cr-complete.yml)
   3. Prints git commands to push both repos and open a PR
 """
 
 from __future__ import annotations
 
 import shutil
+import subprocess
+import tempfile
 from importlib.metadata import version as pkg_version
 from pathlib import Path
 from typing import Optional
 
 import click
 
-TEMPLATE_DIR = Path(__file__).parent / "data" / "dhf-template"
-
+DHF_TEMPLATE_REPO = "https://github.com/compliantflow/compliantflow-dhf"
+DEFAULT_TEMPLATE_REF = "main"
 
 
 # ---------------------------------------------------------------------------
-# Local file writers
+# DHF template — fetched from CompliantFlow-DHF at runtime
 # ---------------------------------------------------------------------------
 
-def _replace_placeholders_in_tree(root: Path, replacements: dict[str, str]) -> None:
-    """Replace placeholder strings in text files under root, skipping binary assets."""
-    for path in root.rglob("*"):
+def _fetch_dhf_template(dhf_dir: Path, ref: str) -> None:
+    """Clone the DHF template from CompliantFlow-DHF into dhf_dir.
+
+    The DHF repo contains DHF/ items, config, documents, and .github/ CI
+    workflows.  We clone shallow then remove non-template files (dhf_util,
+    tests, etc.) leaving only the DHF scaffolding and repo-level README.
+    """
+    dhf_dir.mkdir(parents=True, exist_ok=True)
+
+    with tempfile.TemporaryDirectory(prefix="cf-dhf-") as tmp:
+        repo_dir = Path(tmp) / "repo"
+        try:
+            subprocess.run(
+                ["git", "clone", "--depth", "1", "--branch", ref,
+                 DHF_TEMPLATE_REPO, str(repo_dir)],
+                check=True, capture_output=True, text=True,
+            )
+        except subprocess.CalledProcessError as e:
+            raise click.ClickException(
+                f"Failed to fetch DHF template from {DHF_TEMPLATE_REPO} "
+                f"(ref: {ref}).\n"
+                f"git error: {e.stderr.strip() if e.stderr else str(e)}"
+            ) from e
+
+        # Copy template content: DHF/, .github/, README.md (.gitignore)
+        for name in ["DHF", ".github", "README.md"]:
+            src = repo_dir / name
+            if not src.exists():
+                continue
+            dst = dhf_dir / name
+            if src.is_dir():
+                shutil.copytree(
+                    src, dst, dirs_exist_ok=True,
+                    ignore=shutil.ignore_patterns("__pycache__", "*.pyc", ".DS_Store"),
+                )
+            else:
+                shutil.copy2(src, dst)
+
+
+def _replace_placeholders(dhf_dir: Path, project_name: str, product_repo: Optional[str]) -> None:
+    """Substitute placeholders in the fetched DHF template."""
+    dhf_repo_name = (product_repo.split("/", 1)[1] + "-dhf"
+                     if product_repo and "/" in product_repo else "your-product-dhf")
+    github_org = (product_repo.split("/", 1)[0]
+                  if product_repo and "/" in product_repo else "your-org")
+
+    for path in dhf_dir.rglob("*"):
         if not path.is_file():
             continue
         try:
             text = path.read_text()
         except UnicodeDecodeError:
             continue
-        for placeholder, value in replacements.items():
-            text = text.replace(placeholder, value)
-        path.write_text(text)
-
-
-def _init_dhf_template(
-    dhf_dir: Path,
-    project_name: str,
-    product_repo: Optional[str] = None,
-) -> None:
-    """Populate dhf_dir with the DHF template. No git operations — caller reviews and pushes."""
-    dhf_dir.mkdir(parents=True, exist_ok=True)
-
-    shutil.copytree(
-        TEMPLATE_DIR,
-        dhf_dir,
-        dirs_exist_ok=True,
-        ignore=shutil.ignore_patterns("__pycache__", "*.pyc", ".DS_Store"),
-    )
-
-    dhf_repo_name = product_repo.split("/", 1)[1] + "-dhf" if product_repo and "/" in product_repo else "your-product-dhf"
-    github_org = product_repo.split("/", 1)[0] if product_repo and "/" in product_repo else "your-org"
-    _replace_placeholders_in_tree(
-        dhf_dir,
-        {
-            "{{project_name}}": project_name,
-            "{{product_repo}}": product_repo or "your-org/your-product",
-            "{{product_repo_name}}": (
-                product_repo.split("/", 1)[1] if product_repo and "/" in product_repo else "your-product"
-            ),
-            "{{github_org}}": github_org,
-            "{{dhf_repo_name}}": dhf_repo_name,
-        },
-    )
+        original = text
+        text = text.replace("{{project_name}}", project_name)
+        text = text.replace("{{product_repo}}", product_repo or "your-org/your-product")
+        text = text.replace("{{product_repo_name}}",
+                            product_repo.split("/", 1)[1] if product_repo and "/" in product_repo else "your-product")
+        text = text.replace("{{github_org}}", github_org)
+        text = text.replace("{{dhf_repo_name}}", dhf_repo_name)
+        if text != original:
+            path.write_text(text)
 
     # Set project_name in global.yaml
     global_yaml = dhf_dir / "DHF" / "config" / "global.yaml"
-    content = global_yaml.read_text()
-    content = content.replace(
-        'project_name: "My Medical Device Software"',
-        f'project_name: "{project_name}"',
-    )
-    global_yaml.write_text(content)
+    if global_yaml.exists():
+        content = global_yaml.read_text()
+        content = content.replace(
+            'project_name: "My Medical Device Software"',
+            f'project_name: "{project_name}"',
+        )
+        global_yaml.write_text(content)
 
-    # Write DHF repo CI workflows
-    gh_workflows = dhf_dir / ".github" / "workflows"
-    gh_workflows.mkdir(parents=True, exist_ok=True)
-    _write_dhf_ci_workflow(gh_workflows / "ci.yml")
-    _write_dhf_cr_transition_workflow(gh_workflows / "cr-transition.yml")
 
+# ---------------------------------------------------------------------------
+# Product repo file writers
+# ---------------------------------------------------------------------------
 
 def _write_claude_md(product_dir: Path, project_name: str, dhf_repo: Optional[str]) -> Path:
     """Write a minimal CLAUDE.md entrypoint into product_dir."""
@@ -104,23 +124,18 @@ def _write_claude_md(product_dir: Path, project_name: str, dhf_repo: Optional[st
 ## Key Rules
 
 - PR title must include a CR ID (e.g. `feat(CR-012): description`)
-- DHF mutations go through `python -m dhf_util` in the DHF repo, never direct file edits
+- DHF mutations go through `python -m dhf_util` in the DHF repo
 - `ci test-coverage` enforces requirement→test coverage on every push
 - Evidence bundle is produced on merge to `main`
 - See [README.md](README.md) for project overview
-- See [GETTING_STARTED.md](GETTING_STARTED.md) for development workflow
 """)
     return dest
-
-
-
 
 
 def _write_engineering_control_yml(
     product_dir: Path,
     dhf_repo: Optional[str],
 ) -> Path:
-    """Write engineering-control.yml into product_dir. Returns the file path."""
     dest = product_dir / ".github" / "workflows" / "engineering-control.yml"
     dest.parent.mkdir(parents=True, exist_ok=True)
     dest.write_text(_generate_engineering_control_yaml(dhf_repo))
@@ -128,7 +143,6 @@ def _write_engineering_control_yml(
 
 
 def _write_cr_complete_yml(product_dir: Path, dhf_repo: Optional[str]) -> Path:
-    """Write the CR completion workflow into the product repo."""
     dhf_repo_value = dhf_repo or "your-org/your-product-dhf"
     dest = product_dir / ".github" / "workflows" / "cr-complete.yml"
     dest.parent.mkdir(parents=True, exist_ok=True)
@@ -174,7 +188,7 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install DHF workflow dependencies
+      - name: Install DHF dependencies
         if: steps.cr.outputs.skip != 'true'
         run: |
           python -m pip install --upgrade pip
@@ -182,8 +196,7 @@ jobs:
 
       - name: Install CompliantFlow
         if: steps.cr.outputs.skip != 'true'
-        run: |
-          pip install compliantflow
+        run: pip install compliantflow
 
       - name: Complete CR in DHF
         if: steps.cr.outputs.skip != 'true'
@@ -201,117 +214,6 @@ jobs:
     return dest
 
 
-def _write_dhf_ci_workflow(path: Path) -> None:
-    path.write_text("""\
-name: DHF CI
-
-on:
-  push:
-    branches: [ main ]
-  pull_request:
-    types: [opened, synchronize]
-
-jobs:
-  dhf-util-tests:
-    name: dhf_util Tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      - name: Install dhf_util
-        run: |
-          python -m pip install --upgrade pip
-          pip install pytest
-          pip install -e .
-      - name: Run dhf_util tests
-        run: pytest dhf_util/tests/ -v
-
-  dhf-validation:
-    name: DHF Validation (schema + traceability)
-    runs-on: ubuntu-latest
-    needs: dhf-util-tests
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      - name: Install dhf_util
-        run: |
-          python -m pip install --upgrade pip
-          pip install -e .
-      - name: Validate DHF schema
-        run: python -m dhf_util --dhf DHF validate schema
-      - name: Validate DHF traceability
-        run: python -m dhf_util --dhf DHF validate traceability
-""")
-
-
-def _write_dhf_cr_transition_workflow(path: Path) -> None:
-    path.write_text("""\
-name: CR Lifecycle Transition
-
-on:
-  workflow_dispatch:
-    inputs:
-      cr_ids:
-        description: "Space-separated CR IDs to transition (e.g. 'CR-001 CR-002')"
-        required: true
-        type: string
-      to_state:
-        description: "Target lifecycle state"
-        required: true
-        type: choice
-        options:
-          - planned
-          - in_review
-          - designing
-          - implementing
-          - completed
-          - cancelled
-      triggered_by:
-        description: "Who triggered this transition"
-        required: false
-        default: "Manual"
-        type: string
-
-jobs:
-  transition:
-    name: Transition CR(s) to ${{ inputs.to_state }}
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      - name: Install dhf_util
-        run: |
-          python -m pip install --upgrade pip
-          pip install -e .
-      - name: Transition CR(s)
-        env:
-          CR_IDS: ${{ inputs.cr_ids }}
-          TO_STATE: ${{ inputs.to_state }}
-          TRIGGERED_BY: ${{ inputs.triggered_by }}
-        run: |
-          for CR_ID in $CR_IDS; do
-            python -m dhf_util --dhf DHF item transition "$CR_ID" "$TO_STATE" --by "$TRIGGERED_BY"
-          done
-      - name: Commit status changes
-        run: |
-          git config user.name "GitHub Actions [bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add DHF/items/
-          if ! git diff --staged --quiet; then
-            git commit -m "chore: transition ${{ inputs.cr_ids }} to ${{ inputs.to_state }} [skip ci]"
-            git push
-          fi
-""")
-
-
 # ---------------------------------------------------------------------------
 # Engineering control workflow generation
 # ---------------------------------------------------------------------------
@@ -324,13 +226,7 @@ def _cf_version() -> str:
 
 
 def _generate_engineering_control_yaml(dhf_repo: Optional[str]) -> str:
-    """Render the engineering-control.yml workflow content for the product repo.
-
-    Generates a CI pipeline:
-      tests → test-coverage → (optionally) evidence-bundle on main
-    """
     version = _cf_version()
-
     checkout_dhf = ""
     dhf_path_arg = "--dhf DHF"
     install_dhf = ""
@@ -395,7 +291,6 @@ jobs:
 {checkout_dhf}      - name: Install CompliantFlow
         run: |
           # Install from GitHub Releases (public repo — no token needed).
-          # Change the repo if you maintain a fork.
           gh release download {version} --repo compliantflow/compliantflow --pattern "compliantflow-*.whl"
           pip install compliantflow-*.whl
 {install_dhf}
@@ -441,19 +336,18 @@ jobs:
  '          path: dhf-artifacts/\n') if dhf_repo else ''}"""
 
 
-
 # ---------------------------------------------------------------------------
-# Main interactive entrypoint
+# Main entrypoint
 # ---------------------------------------------------------------------------
 
 def run_init() -> None:
-    """Interactive onboarding: set up the full CompliantFlow infrastructure."""
+    """Interactive onboarding: scaffold product repo, optionally fetch DHF template."""
     click.echo()
     click.secho("CompliantFlow Setup", bold=True)
     click.echo("━" * 45)
     click.echo()
 
-    # ── GitHub repo names (for CI workflow content only) ──
+    # ── GitHub repo names ──
     click.secho("GitHub", bold=True)
     owner = click.prompt("  Org or username")
     product_name = click.prompt("  Product repository name (no org prefix)")
@@ -462,13 +356,19 @@ def run_init() -> None:
 
     # ── DHF ─────────────────────────────────────────────────
     click.secho("DHF Repository", bold=True)
-    setup_dhf = click.confirm("  Set up a DHF repository?", default=True)
+    setup_dhf = click.confirm("  Set up a DHF repository? (fetches template from CompliantFlow-DHF)", default=True)
     dhf_repo: Optional[str] = None
     dhf_dir: Optional[Path] = None
+    dhf_template_ref: str = DEFAULT_TEMPLATE_REF
     if setup_dhf:
         dhf_name = click.prompt("  DHF repository name", default=f"{product_name}-dhf")
         dhf_repo = f"{owner}/{dhf_name}"
         dhf_dir = Path(click.prompt("  Local directory for DHF files", default=f"./{dhf_name}"))
+        dhf_template_ref = click.prompt(
+            "  DHF template version (branch or tag)",
+            default=DEFAULT_TEMPLATE_REF,
+            show_default=True,
+        )
     click.echo()
 
     # ── Local path for product repo ──────────────────────────
@@ -482,13 +382,12 @@ def run_init() -> None:
     project_name = click.prompt("  Project name (used in DHF documents)", default=default_proj)
     click.echo()
 
-    click.echo()
-
     # ── Summary ─────────────────────────────────────────────
     click.secho("Summary", bold=True)
     click.echo("━" * 45)
     if setup_dhf:
-        click.echo(f"  • Write DHF template to: {dhf_dir}")
+        click.echo(f"  • Fetch DHF template from CompliantFlow-DHF (ref: {dhf_template_ref})")
+        click.echo(f"  • Write to: {dhf_dir}")
         click.echo(f"    Project: \"{project_name}\"")
     click.echo(f"  • Write CLAUDE.md to: {product_dir}/")
     click.echo(f"  • Write engineering-control.yml to: {product_dir / '.github' / 'workflows'}/")
@@ -503,7 +402,7 @@ def run_init() -> None:
     # ── Execute ─────────────────────────────────────────────
     steps: list[str] = []
     if setup_dhf:
-        steps.append(f"Write DHF template to {dhf_dir}")
+        steps.append(f"Fetch DHF template to {dhf_dir}")
     steps.append("Write CLAUDE.md to product repo")
     steps.append("Write engineering-control.yml")
     steps.append("Write CR completion workflow")
@@ -516,12 +415,9 @@ def run_init() -> None:
         click.echo(f"[{n}/{total}] {msg}...", nl=False)
 
     if setup_dhf:
-        _step(f"Write DHF template to {dhf_dir}")
-        _init_dhf_template(
-            dhf_dir,
-            project_name,
-            product_repo=product_repo,
-        )  # type: ignore[arg-type]
+        _step(f"Fetch DHF template to {dhf_dir}")
+        _fetch_dhf_template(dhf_dir, dhf_template_ref)  # type: ignore[arg-type]
+        _replace_placeholders(dhf_dir, project_name, product_repo)  # type: ignore[arg-type]
         click.secho(" ✓", fg="green")
 
     _step("Write CLAUDE.md to product repo")
@@ -554,7 +450,7 @@ def run_init() -> None:
     click.echo(f"       git checkout -b compliantflow/setup")
     workflow_file = ".github/workflows/engineering-control.yml"
     click.echo(f"       git add CLAUDE.md {workflow_file} .github/workflows/cr-complete.yml")
-    click.echo(f"       git commit -m \"feat: add CompliantFlow harness and AI context\"")
+    click.echo(f"       git commit -m \"feat: add CompliantFlow harness and CI workflows\"")
     click.echo(f"       git push -u origin compliantflow/setup")
     n += 1
     click.secho(f"  {n}. Add secrets to {product_repo} → Settings → Secrets:", bold=True)

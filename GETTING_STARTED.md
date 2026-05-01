@@ -46,8 +46,9 @@ PyPI distribution is planned but not yet available.
 
 ## Step 2 — Run `compliantflow init`
 
-This command writes all required files locally. No GitHub operations are
-performed — you review and push everything yourself.
+This command generates scaffold files locally. For DHF setup, it fetches the
+template from CompliantFlow-DHF at runtime. No GitHub operations are performed
+beyond reading the public template — you review and push everything yourself.
 
 ```bash
 compliantflow init
@@ -62,18 +63,17 @@ You will be prompted for:
 | Set up a DHF repository? | `Y` |
 | DHF repository name | `insulin-pump-dhf` |
 | Local directory for DHF files | `./insulin-pump-dhf` |
+| DHF template version (branch or tag) | `main` |
 | Product repo local directory | `./insulin-pump` |
 | Project name (for documents) | `Insulin Pump Firmware` |
-| Applicable standards | IEC 62304, ISO 14971 |
 
-After you confirm, `init` writes:
+After you confirm, `init`:
 
-- **DHF template** → your specified DHF local directory, pre-configured with
-  project name and selected standards
-- **`CLAUDE.md`** → your product repo local directory, with minimal repo
-  guidance and links to canonical docs
-- **`.github/workflows/engineering-control.yml`** → your product repo local directory,
-  with test-coverage CI gate
+- **Product repo files** — writes `CLAUDE.md`, `engineering-control.yml`,
+  `cr-complete.yml` directly
+- **DHF template** — fetches from
+  `https://github.com/compliantflow/compliantflow-dhf` and applies project
+  name and repo URL substitutions
 
 `init` then prints the exact git commands to push both repos and open a PR.
 

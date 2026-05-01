@@ -54,6 +54,3 @@ license-files = ["LICENSE"]
 where = ["."]
 include = ["compliantflow*"]
 exclude = ["tests*"]
-
-[tool.setuptools.package-data]
-compliantflow = ["data/**/*", "data/**/.gitkeep"]

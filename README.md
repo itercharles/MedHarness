@@ -77,9 +77,9 @@ Then scaffold a new project:
 compliantflow init
 ```
 
-`init` asks about your org, product repo, and DHF repo, then writes scaffolding
-locally — no GitHub operations. Review, push, and open a PR. From that point
-every push runs the traceability and coverage gates automatically.
+`init` asks about your org, product repo, and DHF repo, then generates
+product-side files locally and fetches the DHF template from
+CompliantFlow-DHF at runtime. Review, push, and open a PR.
 
 Full walkthrough: [GETTING_STARTED.md](GETTING_STARTED.md)
 
@@ -197,14 +197,13 @@ This is what a CompliantFlow-scaffolded project looks like in practice:
 **Your product repo** (e.g. `acme/insulin-pump`):
 ```
 ├── CLAUDE.md                 # Minimal agent entrypoint (generated)
-├── docs/                     # Strategy scaffold (fill in)
 ├── .github/workflows/
 │   ├── engineering-control.yml  # Tests → test-coverage gate → evidence bundle
 │   └── cr-complete.yml          # Auto-close CRs on PR merge
 └── src/                      # Your product code
 ```
 
-**Your DHF repo** (e.g. `acme/insulin-pump-dhf`):
+**Your DHF repo** (e.g. `acme/insulin-pump-dhf`) — fetched from CompliantFlow-DHF:
 ```
 ├── DHF/
 │   ├── items/                # UC, CRS, SYS, SRS, SWDD, RISK, RCM, CR items

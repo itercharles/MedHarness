@@ -1,13 +1,8 @@
 name: Release
 
 # Triggered when a vX.Y.Z tag is pushed.
-# Builds the wheel, downloads CI-produced DHF artifacts, and assembles the
-# delivery bundle.  DHF documents (specs, plans, traceability) are produced
-# by the post-merge evidence-bundle job in ci-pipeline.yml and consumed
-# as the dhf-release-artifacts artifact.
-#
-# Required secrets:
-#   DHF_REPO_TOKEN  — GitHub PAT with repo scope to read compliantflow-dhf
+# Builds the wheel and publishes it to GitHub Releases.
+# CompliantFlow releases contain only the installable Python package.
 
 on:
   push:
@@ -16,11 +11,10 @@ on:
 
 jobs:
   build-and-publish:
-    name: Build and upload release bundle
+    name: Build and publish wheel
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      actions: read
 
     steps:
       - name: Check out source
@@ -37,39 +31,7 @@ jobs:
       - name: Build wheel
         run: python -m build --wheel
 
-      - name: Consume DHF release artifacts
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          WHL=$(ls dist/*.whl | head -1)
-          VERSION=$(basename "${WHL}" | sed 's/compliantflow-\([^-]*\)-.*/\1/')
-          python -m compliantflow ci release consume-artifact \
-            --repo "${{ github.repository }}" \
-            --commit-sha "${{ github.sha }}" \
-            --workflow ci-pipeline.yml \
-            --artifact-name dhf-release-artifacts \
-            --download-dir /tmp/release-artifacts
-          echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
-
-      - name: Assemble release bundles
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          WHL=$(ls dist/*.whl | head -1)
-          VERSION=$(basename "${WHL}" | sed 's/compliantflow-\([^-]*\)-.*/\1/')
-          python -m compliantflow ci release assemble \
-            --artifact-dir /tmp/release-artifacts \
-            --wheel dist/*.whl \
-            --getting-started GETTING_STARTED.md \
-            --version "$VERSION" \
-            --commit-sha "${{ github.sha }}" \
-            --out-dir /tmp/release-bundles
-          echo "CF_ZIP=$(ls /tmp/release-bundles/compliantflow-*.zip)" >> "$GITHUB_ENV"
-          echo "DHF_ZIP=$(ls /tmp/release-bundles/DHF-*.zip)" >> "$GITHUB_ENV"
-
-      - name: Upload delivery bundles to GitHub Release
+      - name: Upload wheel to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: |
-            ${{ env.CF_ZIP }}
-            ${{ env.DHF_ZIP }}
+          files: dist/*.whl
