@@ -127,6 +127,10 @@ def _write_claude_md(product_dir: Path, project_name: str, dhf_repo: Optional[st
 - DHF mutations go through `python -m dhf_util` in the DHF repo
 - `ci test-coverage` enforces requirement→test coverage on every push
 - Evidence bundle is produced on merge to `main`
+- Canonical product docs live in the DHF repo:
+  - `DHF/documents/specs/customer_requirement_specification.md`
+  - `DHF/documents/specs/architecture_design_specification.md`
+  - `DHF/documents/plans/development_plan.md`
 - See [README.md](README.md) for project overview
 """)
     return dest
@@ -460,4 +464,4 @@ def run_init() -> None:
     n += 1
     click.secho(f"  {n}. Fill in your documentation:", bold=True)
     click.echo(f"       See README.md and GETTING_STARTED.md for project guidance.")
-    click.echo(f"       Add your own docs/ as needed for architecture, testing, and strategy.")
+    click.echo(f"       Treat the DHF-side CRS, architecture spec, and development plan as the canonical formal docs.")

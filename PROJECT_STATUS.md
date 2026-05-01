@@ -1,59 +1,31 @@
 # Project Status
 
-> **Last updated:** 2026-04-30
+> **Last updated:** 2026-05-01
 >
-> This note supplements the formal product documents in CompliantFlow-DHF.
-> CR-level feature planning; this file gives an at-a-glance status for external adopters.
+> This file summarizes the current harness surface in `CompliantFlow`.
+> Formal product documents remain canonical in the DHF repo created from `CompliantFlow-DHF`.
 
 ---
 
-## What Is Stable Now
+## Stable Now
 
-The following is ready for external use and will maintain backward compatibility
-across minor versions:
+- `compliantflow init` for product-side scaffolding and DHF template fetch
+- `ci test-coverage` for requirement-to-test coverage checks from JUnit evidence
+- `ci evidence bundle` for runtime evidence bundle generation
+- `ci release consume-artifact` and `ci release assemble` for release pipeline support
+- `cr workflow` for CR-linked automation
 
-- **`compliantflow init`** — interactive project scaffolding (DHF template,
-  product CI workflows)
-- **`ci test-coverage`** — requirement → test coverage gate (JUnit XML contract)
-- **`ci evidence bundle`** — CI evidence bundle production
-- **`ci release consume-artifact`** / **`ci release assemble`** — release
-  assembly pipeline
-- **`cr workflow`** — CR intake (GitHub Issues) and completion
-- DHF item types: UC, CRS, SYS, SRS, SWDD, SYSARCH, RISK, RCM, SOUP, TC, CR,
-  REL, DEF
+## Evolving
 
----
+- agent context and repo-guidance generation
+- migration tooling
+- command output formats for status-style reporting
 
-## What Is Evolving
+## Out of Scope for This Repo
 
-These areas are under active development and may see interface changes:
+- canonical product strategy, architecture, and process documents
+- DHF item ownership and document template authority
+- product-specific code, tests, and release logic
 
-- **AI agent context package** — machine-readable context for AI coding
-  tools (CR-040)
-- **RDM migration** — Innolitics RDM → CompliantFlow DHF migration (CR-046)
-- **Command output formats** — `status` output format evolving
-
----
-
-## What Is Not in Scope Yet (OSS)
-
-These are acknowledged gaps — planned for future milestones, not accidentally
-missing:
-
-- **Standards compliance checking** — IEC 62304, ISO 14971 policy enforcement
-  is planned as a commercial capability
-- **Web UI** — CLI only for now. Web dashboard planned for commercial release.
-- **PyPI distribution** — GitHub Releases is the current distribution channel.
-- **GitLab CI / Bitbucket Pipelines** — GitHub Actions only. Community
-  contributions welcome.
-
----
-
-## Commercial vs Open Source
-
-The open-source core covers the full design-controlled engineering workflow:
-scaffolding, design traceability, requirement → test coverage, evidence
-bundles, and AI context. It is and will remain MIT-licensed.
-
-See [ARCHITECTURE.md](ARCHITECTURE.md) for the detailed boundary between OSS
-infrastructure and commercial intelligence.
+Those responsibilities live in the DHF repo and product repo, not in this
+harness repository.

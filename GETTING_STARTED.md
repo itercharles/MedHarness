@@ -1,8 +1,9 @@
 # Getting Started with CompliantFlow
 
-CompliantFlow is an open-source design-controlled development harness for
-medical device software. This guide walks through install, project scaffolding,
-and first CI run.
+CompliantFlow is the open-source harness layer for design-controlled software
+delivery. This guide covers installation, onboarding, and the first product-side
+CI run. Canonical product requirements, architecture, and development-process
+documents live in the DHF repo created from `CompliantFlow-DHF`.
 
 ---
 
@@ -10,13 +11,13 @@ and first CI run.
 
 - Python 3.11 or later
 - [GitHub CLI](https://cli.github.com) (`gh`) installed and authenticated
-- A product code repository on GitHub (can be empty)
+- a product code repository on GitHub
 
 ---
 
 ## Step 1 — Install
 
-### Local development install (recommended)
+### Local development install
 
 ```bash
 git clone https://github.com/compliantflow/compliantflow
@@ -32,29 +33,25 @@ compliantflow --help
 
 ### Released package install
 
-CompliantFlow depends on `dhf_util`. Install it first from CompliantFlow-DHF,
-then install CompliantFlow:
+CompliantFlow depends on `dhf_util`. Install the DHF substrate first, then the
+harness package:
 
 ```bash
-# 1. Install dhf_util from the DHF substrate repo
 git clone https://github.com/compliantflow/compliantflow-dhf
 cd compliantflow-dhf && pip install -e . && cd ..
 
-# 2. Install CompliantFlow
 gh release download --repo compliantflow/compliantflow \
   --pattern "compliantflow-*.whl"
 pip install compliantflow-*.whl
 ```
 
-PyPI distribution is planned but not yet available.
-
 ---
 
 ## Step 2 — Run `compliantflow init`
 
-This command generates scaffold files locally. For DHF setup, it fetches the
-template from CompliantFlow-DHF at runtime. No GitHub operations are performed
-beyond reading the public template — you review and push everything yourself.
+`init` writes scaffold files locally. It fetches the DHF template from
+`CompliantFlow-DHF` at runtime so the DHF repo starts from the current canonical
+structure and documents.
 
 ```bash
 compliantflow init
@@ -71,149 +68,73 @@ You will be prompted for:
 | Local directory for DHF files | `./insulin-pump-dhf` |
 | DHF template version (branch or tag) | `main` |
 | Product repo local directory | `./insulin-pump` |
-| Project name (for documents) | `Insulin Pump Firmware` |
+| Project name | `Insulin Pump Firmware` |
 
-After you confirm, `init`:
+After confirmation, `init`:
 
-- **Product repo files** — writes `CLAUDE.md`, `engineering-control.yml`,
-  `cr-complete.yml` directly
-- **DHF template** — fetches from
-  `https://github.com/compliantflow/compliantflow-dhf` and applies project
-  name and repo URL substitutions
-
-`init` then prints the exact git commands to push both repos and open a PR.
+- writes `CLAUDE.md`, `engineering-control.yml`, and `cr-complete.yml` into the product repo
+- fetches the DHF scaffold and controlled document set from `CompliantFlow-DHF`
+- applies project-name and repo-name substitutions in the fetched DHF content
 
 ---
 
-## Step 3 — Review, push, and open a PR
-
-After `init` completes, follow the printed instructions:
+## Step 3 — Review and Push
 
 ```bash
-# 1. Push DHF repo
 cd ./insulin-pump-dhf
 git init && git remote add origin https://github.com/acme-medical/insulin-pump-dhf
 git add -A && git commit -m "feat: initialize DHF"
 git push -u origin main
 
-# 2. Open engineering control PR in product repo
-cd ./insulin-pump
+cd ../insulin-pump
 git checkout -b compliantflow/setup
 git add CLAUDE.md .github/workflows/engineering-control.yml .github/workflows/cr-complete.yml
 git commit -m "feat: add CompliantFlow harness and CI workflows"
 git push -u origin compliantflow/setup
 ```
 
-Then open a pull request and add the required secrets (Settings → Secrets → Actions):
+Add secrets after opening the PR:
 
-**Product repo:**
-
-| Secret | Value |
-|--------|-------|
-| `DHF_REPO_TOKEN` | Fine-grained PAT with `Contents: Read` on your DHF repo |
-
-**DHF repo (if separate):**
-
-| Secret | Value |
-|--------|-------|
-| `ANTHROPIC_API_KEY` | API key for DHF AI workflows (`cr-analyze`, `cr-spec-iterate`, `cr-develop`) |
-| `PRODUCT_REPO_TOKEN` | Fine-grained PAT with `Contents: Write` access to your product repo |
-
-Merge the PR. From that point on, every push and PR in your product repo is
-checked against:
-
-- Test coverage (requirement → test traceability)
-- Design traceability links (no orphaned requirements in the DHF)
+| Repo | Secret | Value |
+|------|--------|-------|
+| Product repo | `DHF_REPO_TOKEN` | Fine-grained PAT with `Contents: Read` on the DHF repo |
+| DHF repo | `PRODUCT_REPO_TOKEN` | Fine-grained PAT with `Contents: Write` on the product repo if CR completion pushes back |
+| DHF repo | `ANTHROPIC_API_KEY` | Required only if DHF-side AI workflows are enabled |
 
 ---
 
-## Step 4 — Maintain your DHF
+## Step 4 — Use the DHF as the Canonical Source
 
-Open your DHF repository in Claude Code to create and update items with AI
-assistance:
+The DHF repo is where formal product documents live. The canonical documents are:
 
-```bash
-gh repo clone YOUR_ORG/YOUR_PRODUCT-dhf
-cd YOUR_PRODUCT-dhf
-claude
-```
+- `DHF/documents/specs/customer_requirement_specification.md`
+- `DHF/documents/specs/architecture_design_specification.md`
+- `DHF/documents/plans/development_plan.md`
 
-The DHF includes structured DHF config and item templates — so AI agents
-item types, lifecycle rules, and traceability requirements out of the box.
-
-To manage items manually:
-
-```bash
-# Install DHF utils dependencies (from the DHF repo root)
-pip install click jinja2 markdown pydantic PyYAML gitpython
-
-# Create a System Requirement
-python -m dhf_util --dhf DHF item create --type SYS \
-  --data '{"title": "System shall validate all inputs", "category": "Functional"}'
-
-# List all items
-python -m dhf_util --dhf DHF item list
-
-# Validate DHF schema
-python -m dhf_util --dhf DHF validate schema
-```
+When product direction, architecture boundaries, or development/testing process
+changes, update those DHF-side documents through the CR workflow instead of
+creating parallel strategy docs in the product repo.
 
 ---
 
-## Step 5 — Run traceability checks locally
+## Step 5 — Run Checks Locally
 
-Before pushing, run checks locally to catch failures early:
+Before pushing, run the relevant tests and coverage gate locally:
 
 ```bash
-# Requirement → test coverage gate
+pytest tests/ -q --junitxml=test-results/results.xml
 compliantflow --dhf DHF ci test-coverage --junit-dir test-results
-
-# Design traceability posture
-compliantflow --dhf DHF status
 ```
 
----
+If you are working in the DHF repo directly, also run:
 
-## Command Reference
-
-```
-compliantflow [--dhf PATH] COMMAND
-
-Setup:
-  init                            Interactive infrastructure onboarding
-
-CI gates (stable OSS):
-  ci test-coverage                Requirement → test coverage gate
-  ci evidence bundle              Produce CI evidence bundle
-  ci release consume-artifact     Download CI artifact (gh CLI)
-  ci release assemble             Assemble release bundles
-
-Traceability:
-  validate traceability           Check all items have upstream/downstream links
-  validate coverage PARENT:CHILD  Check coverage between item types (e.g. UC:CRS)
-  status                          At-a-glance design traceability posture
-
-Change management:
-  cr check-status CR-ID           Check CR implementation status
-  cr generate-report CR-ID        Generate CR evidence report
-
-Tests:
-  test import PATH                Import JUnit XML results into DHF
-  test list                       List all test results
-  test status TC-ID               Check a single test case
-
-AI tools:
-  context                         Generate agent context package
-  review-pr                       Traceability-aware PR review checklist
-
-Migration:
-  migrate rdm SOURCE_DIR          Migrate from Innolitics RDM
+```bash
+python -m dhf_util --dhf DHF validate traceability
 ```
 
 ---
 
 ## Support
 
-For questions or issues:
 - File a [GitHub Issue](https://github.com/compliantflow/compliantflow/issues)
-- See [SUPPORT.md](SUPPORT.md) for additional support channels
+- See [SUPPORT.md](SUPPORT.md)
