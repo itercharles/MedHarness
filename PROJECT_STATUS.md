@@ -32,9 +32,7 @@ These areas are under active development and may see interface changes:
   tools (CR-040)
 - **RDM migration** — Innolitics RDM → CompliantFlow DHF migration (CR-046)
 - **Command output formats** — `status` output format evolving
-- **Compliance policy checks** — `ci compliance-check` and standards enforcement
-  are being separated into a commercial tier; the command may remain available
-  internally but is no longer part of the stable OSS surface
+- **Compliance policy checks** — `ci compliance-check` and standards enforcement are being separated into a commercial tier (not part of stable OSS)
 
 ---
 

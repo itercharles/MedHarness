@@ -100,6 +100,31 @@ jobs:
           name: crs-test-results
           path: crs-test-results.xml
 
+  # ── OSS BUILD HYGIENE AUDIT ───────────────────────────────────────────────
+  # Runs source-tree, wheel-content, dependency, scaffold, docs, and release
+  # checks.  Fails the build if any commercial/compliance implementation leaks
+  # into the public OSS surface.
+
+  audit-oss-delivery:
+    name: Audit | OSS Build Hygiene
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install audit dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install build
+          sudo apt-get update && sudo apt-get install -y ripgrep
+
+      - name: Run OSS delivery audit
+        run: bash scripts/audit_oss_delivery.sh
+
   # ── ACCEPTANCE GATE ──────────────────────────────────────────────────────
   # Requirement → test coverage from JUnit evidence.
 
