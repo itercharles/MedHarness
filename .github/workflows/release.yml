@@ -2,13 +2,12 @@ name: Release
 
 # Triggered when a vX.Y.Z tag is pushed.
 # Builds the wheel, downloads CI-produced DHF artifacts, and assembles the
-# delivery bundle.  All DHF documents (specs, plans, compliance reports,
-# traceability) are produced by the post-merge-verification job in
-# ci-pipeline.yml and consumed as the dhf-release-artifacts artifact.
+# delivery bundle.  DHF documents (specs, plans, traceability) are produced
+# by the post-merge evidence-bundle job in ci-pipeline.yml and consumed
+# as the dhf-release-artifacts artifact.
 #
 # Required secrets:
 #   DHF_REPO_TOKEN  — GitHub PAT with repo scope to read compliantflow-dhf
-#   GEMINI_API_KEY  — Google Gemini API key (for CI, not release; release is consumer-only)
 
 on:
   push:

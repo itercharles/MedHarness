@@ -23,16 +23,6 @@ dependencies = [
     "markdown",
 ]
 
-[project.optional-dependencies]
-ai = ["google-genai"]
-docs = ["weasyprint"]
-full = ["compliantflow[ai,docs]"]
-
-[project.urls]
-Homepage = "https://github.com/compliantflow/compliantflow"
-"Bug Tracker" = "https://github.com/compliantflow/compliantflow/issues"
-Documentation = "https://github.com/compliantflow/compliantflow#readme"
-
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Healthcare Industry",
@@ -43,6 +33,16 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Medical Science Apps",
     "Topic :: Software Development :: Quality Assurance",
 ]
+
+[project.optional-dependencies]
+ai = ["google-genai"]
+docs = ["weasyprint"]
+full = ["compliantflow[ai,docs]"]
+
+[project.urls]
+Homepage = "https://github.com/compliantflow/compliantflow"
+"Bug Tracker" = "https://github.com/compliantflow/compliantflow/issues"
+Documentation = "https://github.com/compliantflow/compliantflow#readme"
 
 [project.scripts]
 compliantflow = "compliantflow.cli:main"
