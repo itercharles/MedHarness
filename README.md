@@ -115,7 +115,7 @@ compliantflow init                              Scaffold DHF + product repo CI
 compliantflow ci test-coverage                  Requirement → test coverage gate
 compliantflow ci evidence bundle                Produce CI evidence bundle
 compliantflow ci release consume-artifact       Download CI artifact from Actions run
-compliantflow ci release assemble               Assemble release bundles (wheel + DHF)
+compliantflow ci release assemble               Assemble release bundles
 
 compliantflow review-pr                         DHF traceability PR review checklist
 compliantflow context                           DHF schema + traceability context for AI agents

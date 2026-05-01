@@ -49,8 +49,8 @@ def _fetch_dhf_template(dhf_dir: Path, ref: str) -> None:
                 f"git error: {e.stderr.strip() if e.stderr else str(e)}"
             ) from e
 
-        # Copy template content: DHF/, .github/, README.md (.gitignore)
-        for name in ["DHF", ".github", "README.md"]:
+        # Copy template content: DHF/, .github/, dhf_util/, pyproject.toml, README.md
+        for name in ["DHF", ".github", "dhf_util", "pyproject.toml", "README.md"]:
             src = repo_dir / name
             if not src.exists():
                 continue
