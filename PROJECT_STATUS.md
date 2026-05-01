@@ -32,7 +32,6 @@ These areas are under active development and may see interface changes:
   tools (CR-040)
 - **RDM migration** — Innolitics RDM → CompliantFlow DHF migration (CR-046)
 - **Command output formats** — `status` output format evolving
-- **Compliance policy checks** — `ci compliance-check` and standards enforcement are being separated into a commercial tier (not part of stable OSS)
 
 ---
 
@@ -55,11 +54,6 @@ missing:
 The open-source core covers the full design-controlled engineering workflow:
 scaffolding, design traceability, requirement → test coverage, evidence
 bundles, and AI context. It is and will remain MIT-licensed.
-
-Standards-based semantic compliance checking (IEC 62304, ISO 14971, IEC 82304-1
-policy enforcement) is being separated into a commercial tier. The `ci compliance-check`
-command remains in the codebase for internal use but is no longer documented as
-a stable OSS surface feature.
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for the detailed boundary between OSS
 infrastructure and commercial intelligence.
