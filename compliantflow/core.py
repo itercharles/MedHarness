@@ -467,68 +467,6 @@ class CompliantFlowCore:
                 return t.id_prefix
         return f"{type_code}-"
 
-    # ------------------------------------------------------------------
-    # Compliance
-    # ------------------------------------------------------------------
-
-    def _get_policy_engine(self, group_id: str, governance_dir: Path):
-        """Return a cached PolicyEngine for the given group_id and governance_dir."""
-        from compliantflow.policy import PolicyEngine
-        cache_key = (group_id, str(governance_dir))
-        if cache_key not in self._policy_engine_cache:
-            root_dir = getattr(self._adapter, '_dhf_root', None)
-            self._policy_engine_cache[cache_key] = PolicyEngine(
-                self, root_dir=root_dir, llm_backend=self._llm_backend
-            )
-        return self._policy_engine_cache[cache_key]
-
-    def get_policy_group(self, group_id: str, governance_dir: Path) -> Optional[Dict[str, Any]]:
-        """Load a policy group without running checks."""
-        engine = self._get_policy_engine(group_id, governance_dir)
-        path = Path(governance_dir) / f"{group_id}.yaml"
-        group = engine.load_policy_group(path)
-        return group.model_dump() if group else None
-
-    def check_compliance(
-        self,
-        group_id: str,
-        governance_dir: Path,
-        persist: bool = False,
-    ) -> Optional[Dict[str, Any]]:
-        """Check compliance against a policy group and return the report.
-
-        Args:
-            group_id:       Policy group filename stem (e.g. 'IEC_62304').
-            governance_dir: Directory containing governance YAML files.
-            persist:        If True, append the run to the compliance store via the adapter.
-        """
-        import os
-        from datetime import datetime, timezone
-
-        engine = self._get_policy_engine(group_id, governance_dir)
-        path = Path(governance_dir) / f"{group_id}.yaml"
-        group = engine.load_policy_group(path)
-        if not group:
-            return None
-        report = engine.check_compliance(group)
-        report_dict = report.model_dump()
-
-        # Populate run metadata
-        report_dict["run_id"] = os.environ.get("GITHUB_RUN_ID", "")
-        report_dict["timestamp"] = datetime.now(timezone.utc).isoformat()
-        report_dict["commit_sha"] = os.environ.get("GITHUB_SHA", "")
-        report_dict["governance_version"] = group.version
-
-        if persist and hasattr(self._adapter, "record_compliance_run"):
-            self._adapter.record_compliance_run(
-                group_id=group_id,
-                report_dict=report_dict,
-                commit_sha=report_dict["commit_sha"],
-                trigger=os.environ.get("GITHUB_EVENT_NAME", "manual"),
-            )
-
-        return report_dict
-
     def get_context(
         self,
         governance_dir: Path,
@@ -574,47 +512,9 @@ class CompliantFlowCore:
                 for s in self.config.global_lifecycle.states
             ]
 
-        # -- Compliance policies ----------------------------------------------
-        gov_path = Path(governance_dir)
-        compliance_policies = []
-        yaml_files = sorted(gov_path.glob("*.yaml")) if gov_path.exists() else []
-
-        for yaml_file in yaml_files:
-            group_id = yaml_file.stem
-            if standard and group_id != standard:
-                continue
-            group = self._get_policy_engine(group_id, gov_path).load_policy_group(yaml_file)
-            if not group:
-                continue
-            policies = []
-            for p in group.policies:
-                if summary:
-                    policies.append({
-                        "id": p.id,
-                        "section": p.section,
-                        "text": p.text,
-                    })
-                else:
-                    entry_p: Dict[str, Any] = {
-                        "id": p.id,
-                        "section": p.section,
-                        "text": p.text,
-                        "status": p.status,
-                        "automated": p.automation is not None,
-                        "check_type": p.automation.check if p.automation else None,
-                        "manual": p.manual if hasattr(p, "manual") else (p.automation is None),
-                    }
-                    policies.append(entry_p)
-            compliance_policies.append({
-                "standard": group_id,
-                "title": group.title,
-                "policies": policies,
-            })
-
         return {
             "item_types": item_types,
             "lifecycle": lifecycle,
-            "compliance_policies": compliance_policies,
         }
 
     def validate_draft(
@@ -973,39 +873,7 @@ class CompliantFlowCore:
             - release: {rel_id, passed, checks} for the latest REL item, or None
         """
         gov_dir = Path(governance_dir)
-
-        # --- Compliance ---
-        compliance_summary = []
-        if gov_dir.is_dir():
-            for gov_file in sorted(gov_dir.glob("*.yaml")):
-                group_id = gov_file.stem
-                entry: Dict[str, Any] = {"standard": group_id}
-                if not live and hasattr(self._adapter, "get_compliance_runs"):
-                    runs = self._adapter.get_compliance_runs(group_id)
-                    if runs:
-                        last = max(runs, key=lambda r: r.get("timestamp", ""))
-                        entry.update({
-                            "score": last.get("score"),
-                            "passed_policies": last.get("passed_policies"),
-                            "total_policies": last.get("total_policies"),
-                            "last_run_at": last.get("timestamp"),
-                            "commit_sha": last.get("commit_sha", ""),
-                            "source": "persisted",
-                        })
-                        compliance_summary.append(entry)
-                        continue
-                # Live run (or no persisted run found)
-                report = self.check_compliance(group_id, gov_dir)
-                if report:
-                    entry.update({
-                        "score": report.get("score"),
-                        "passed_policies": report.get("passed_policies"),
-                        "total_policies": report.get("total_policies"),
-                        "last_run_at": report.get("timestamp"),
-                        "commit_sha": report.get("commit_sha", ""),
-                        "source": "live",
-                    })
-                    compliance_summary.append(entry)
+        compliance_summary: list = []
 
         # --- Traceability ---
         DEFAULT_CHAIN = [("UC", "CRS"), ("CRS", "SYS"), ("SYS", "SRS"), ("SRS", "SWDD")]

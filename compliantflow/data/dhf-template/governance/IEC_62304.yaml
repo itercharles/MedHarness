@@ -836,6 +836,8 @@ policies:
       check: "attribute_presence"
       params:
         type_code: "CR"
+        filter:
+          status: "closed"
         attribute: "affected_items"
 
   # 6.2.2 Use Software Problem Resolution Process
@@ -857,6 +859,8 @@ policies:
       check: "attribute_presence"
       params:
         type_code: "CR"
+        filter:
+          status: "closed"
         attribute: "affected_items"
 
   # 6.2.4 Change Request Approval
@@ -868,6 +872,8 @@ policies:
       check: "attribute_presence"
       params:
         type_code: "CR"
+        filter:
+          status: "closed"
         attribute: "status"
 
   # 6.2.5 Communicate to Users and Regulators
@@ -1010,6 +1016,8 @@ policies:
       check: "attribute_presence"
       params:
         type_code: "CR"
+        filter:
+          status: "closed"
         attribute: "affected_items"
 
   # 7.4.2 Analyze Impact of Software Changes on Existing Risk Control Measures
@@ -1021,6 +1029,8 @@ policies:
       check: "attribute_presence"
       params:
         type_code: "CR"
+        filter:
+          status: "closed"
         attribute: "affected_items"
 
   # 7.4.3 Perform Risk Management Activities Based on Analyses
@@ -1084,6 +1094,8 @@ policies:
       check: "attribute_presence"
       params:
         type_code: "CR"
+        filter:
+          status: "closed"
         attribute: "status"
 
   # 8.2.2 Implement Changes
@@ -1095,6 +1107,8 @@ policies:
       check: "attribute_presence"
       params:
         type_code: "CR"
+        filter:
+          status: "closed"
         attribute: "affected_items"
 
   # 8.2.3 Verify Changes
@@ -1116,6 +1130,8 @@ policies:
       check: "attribute_presence"
       params:
         type_code: "CR"
+        filter:
+          status: "closed"
         attribute: "affected_items"
 
   # 8.3 Configuration Status Accounting
@@ -1148,6 +1164,8 @@ policies:
       check: "attribute_presence"
       params:
         type_code: "CR"
+        filter:
+          status: "closed"
         attribute: "affected_items"
 
   # 9.3 Advise Relevant Parties

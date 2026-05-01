@@ -262,23 +262,6 @@ def _run_pytest_junit(test_paths: tuple[str, ...], junit_dir: Path) -> list[Path
     return generated
 
 
-def _run_compliance_checks(core, governance_dir: Path, standards: tuple[str, ...]) -> list[dict]:
-    reports = []
-    for standard in standards:
-        report = core.check_compliance(standard, governance_dir=governance_dir, persist=False)
-        if report is None:
-            raise click.ClickException(f"Policy group '{standard}' not found.")
-        failed = report["total_policies"] - report["passed_policies"]
-        reports.append({
-            "standard": standard,
-            "score": report["score"],
-            "passed_policies": report["passed_policies"],
-            "total_policies": report["total_policies"],
-            "failed_policies": failed,
-        })
-    return reports
-
-
 def _summarize_junit_file(path: Path) -> dict:
     from dhf_util.junit_parser import parse_junit_xml
 
@@ -831,73 +814,6 @@ def ci_evidence_import(ctx: click.Context, paths: tuple[Path, ...], fmt: str,
         click.echo(f"FAIL Failing TCs: {summary['failed_tcs']}", err=True)
 
 
-@ci_evidence.command("record")
-@click.option("--test-path", "test_paths", multiple=True, default=("tests/sys", "tests/crs"),
-              help="Pytest path to run. Repeat for multiple paths.")
-@click.option("--junit-dir", type=click.Path(file_okay=False, path_type=Path), default=Path("test-results"),
-              show_default=True, help="Directory for generated JUnit XML files.")
-@click.option("--out-dir", type=click.Path(file_okay=False, path_type=Path), default=Path("evidence"),
-              show_default=True, help="Directory for generated evidence summary artifacts.")
-@click.option("--governance-dir", type=click.Path(file_okay=False, path_type=Path), required=True,
-              help="Governance directory containing policy YAML files.")
-@click.option("--standard", "standards", multiple=True, default=("IEC_62304", "IEC_82304_1"),
-              help="Compliance standard to evaluate. Repeat for multiple standards.")
-@click.option("--tester", default="GitHub Actions", show_default=True,
-              help="Tester recorded in the evidence summary.")
-@click.option("--run-id", default="", help="CI run ID.")
-@click.option("--run-url", default="", help="CI run URL.")
-@click.option("--commit", "commit_sha", default="", help="Git commit SHA.")
-@click.option("--continue-on-compliance-failure", is_flag=True, default=False,
-              help="Generate evidence artifacts and exit 0 even if a compliance check fails.")
-@click.pass_context
-def ci_evidence_record(
-    ctx: click.Context,
-    test_paths: tuple[str, ...],
-    junit_dir: Path,
-    out_dir: Path,
-    governance_dir: Path,
-    standards: tuple[str, ...],
-    tester: str,
-    run_id: str,
-    run_url: str,
-    commit_sha: str,
-    continue_on_compliance_failure: bool,
-) -> None:
-    """Run tests and write CI evidence summaries without mutating the DHF."""
-    core = _make_core(ctx)
-
-    junit_paths = _run_pytest_junit(test_paths, junit_dir)
-    files = [_summarize_junit_file(path) for path in junit_paths]
-
-    compliance = _run_compliance_checks(core, governance_dir, standards)
-    failed_standards = [item["standard"] for item in compliance if item["failed_policies"]]
-
-    summary = {
-        "dhf_root": str(ctx.obj["dhf"]),
-        "tester": tester,
-        "run_id": run_id,
-        "run_url": run_url,
-        "commit_sha": commit_sha,
-        "test_paths": list(test_paths),
-        "junit_files": [str(path) for path in junit_paths],
-        "imported": sum(f["imported"] for f in files),
-        "skipped": sum(f["skipped"] for f in files),
-        "items_updated": sorted({uid for f in files for uid in f["items_updated"]}),
-        "failed_tcs": [tc for f in files for tc in f["failed_tcs"]],
-        "compliance": compliance,
-        "failed_standards": failed_standards,
-    }
-    out_dir.mkdir(parents=True, exist_ok=True)
-    summary_path = out_dir / "evidence-summary.json"
-    summary_path.write_text(json.dumps(summary, indent=2, default=str) + "\n", encoding="utf-8")
-    click.echo(json.dumps(summary, default=str))
-    click.echo(f"OK Evidence summary written to {summary_path}.", err=True)
-
-    if failed_standards and not continue_on_compliance_failure:
-        raise click.ClickException(f"Compliance failed for: {', '.join(failed_standards)}")
-
-
-
 @ci_evidence.command("bundle")
 @click.option("--out-dir", type=click.Path(file_okay=False, path_type=Path), required=True,
               help="Output directory for evidence artifacts.")
@@ -909,10 +825,6 @@ def ci_evidence_record(
               help="Coverage pair to check. Repeat for multiple pairs.")
 @click.option("--traceability-type", "traceability_types", multiple=True, metavar="CODE",
               help="Traceability matrix type. Defaults to UC CRS SYS SRS SWDD.")
-@click.option("--compliance-standard", "compliance_standards", multiple=True, metavar="CODE",
-              help="Compliance standard to check. Repeat for multiple standards (e.g. IEC_62304).")
-@click.option("--governance-dir", type=click.Path(file_okay=False, path_type=Path),
-              help="Governance directory for compliance checks.")
 @click.option("--run-id", "run_id", default="", help="CI run identifier.")
 @click.option("--run-url", "run_url", default="", help="CI run URL for traceability.")
 @click.option("--commit", "commit_sha", default="", help="Git commit SHA.")
@@ -927,8 +839,6 @@ def ci_evidence_bundle(
     junit_dirs: tuple[Path, ...],
     coverage_pairs: tuple[str, ...],
     traceability_types: tuple[str, ...],
-    compliance_standards: tuple[str, ...],
-    governance_dir: Path | None,
     run_id: str,
     run_url: str,
     commit_sha: str,
@@ -1192,71 +1102,6 @@ def ci_test_coverage(
 
 
 # ---------------------------------------------------------------------------
-# ci compliance-check — dedicated compliance policy enforcement gate
-# ---------------------------------------------------------------------------
-
-@ci.command("compliance-check")
-@click.option("--dhf", "dhf_path", type=click.Path(file_okay=False, path_type=Path), required=True,
-              help="Path to DHF directory.")
-@click.option("--governance-dir", type=click.Path(file_okay=False, path_type=Path), required=True,
-              help="Governance directory containing policy YAML files.")
-@click.option("--standard", "standards", multiple=True, required=True,
-              metavar="CODE",
-              help="Compliance standard to check. Repeat for multiple (e.g. IEC_62304).")
-@click.option("--continue-on-error", is_flag=True, default=False,
-              help="Continue after a standard failure and exit with the aggregate result.")
-@click.pass_context
-def ci_compliance_check(
-    ctx: click.Context,
-    dhf_path: Path,
-    governance_dir: Path,
-    standards: tuple[str, ...],
-    continue_on_error: bool,
-) -> None:
-    """Dedicated compliance policy enforcement gate for CI pipelines.
-
-    Runs compliance checks for each requested standard, prints one PASS/FAIL
-    line per standard, and exits non-zero if any standard is incomplete,
-    missing, or below 100 %.
-
-    This is a separate gate from ``ci dhf-validate`` which handles only
-    structural validation (schema, traceability, design coverage).
-    """
-    from compliantflow.ci_apis import ci_compliance_gate
-
-    result = ci_compliance_gate(
-        dhf_path=dhf_path,
-        governance_dir=governance_dir,
-        standards=standards,
-        continue_on_error=continue_on_error,
-    )
-
-    for report in result["results"]:
-        std = report["standard"]
-        if report.get("error"):
-            click.echo(
-                f"FAIL [compliance] {std}: {report['error']}", err=True,
-            )
-        elif report["failed"]:
-            click.echo(
-                f"FAIL [compliance] {std}: "
-                f"{report['passed_policies']}/{report['total_policies']} "
-                f"({report['score']}%)",
-                err=True,
-            )
-        else:
-            click.echo(
-                f"PASS [compliance] {std}: "
-                f"{report['passed_policies']}/{report['total_policies']} "
-                f"({report['score']}%)",
-                err=True,
-            )
-
-    if not result["passed"]:
-        raise click.ClickException("Compliance check failed.")
-
-
-# ---------------------------------------------------------------------------
 # ci release — release artifact consumption and assembly
 # ---------------------------------------------------------------------------
 
@@ -1426,209 +1271,14 @@ def init_cmd() -> None:
 # review-pr
 # ---------------------------------------------------------------------------
 
-@main.command("review-pr")
-@click.option("--diff", "diff_file", default=None, metavar="FILE",
-              help="Path to a unified diff file. Use '-' to read from stdin.")
-@click.option("--pr", "pr_number", default=None, metavar="NUMBER",
-              help="GitHub PR number. Fetches diff via 'gh pr diff'.")
-@click.option("--governance-dir", default=None, metavar="PATH",
-              help="Path to governance directory. Defaults to ./governance.")
-@click.option("--post-comment", is_flag=True, default=False,
-              help="Post the checklist as a GitHub PR comment (requires --pr and gh CLI).")
-@click.pass_context
-def review_pr(ctx: click.Context, diff_file: str | None, pr_number: str | None,
-              governance_dir: str | None, post_comment: bool) -> None:
-    """Analyse a PR diff and produce a DHF compliance action checklist.
-
-    Suggestion layer only — no pass/fail exit code. The CI gate remains
-    the authoritative compliance enforcer.
-
-    \b
-    Example:
-      git diff main...HEAD | python -m compliantflow --dhf path/to/DHF review-pr --diff -
-      python -m compliantflow --dhf path/to/DHF review-pr --pr 42
-      python -m compliantflow --dhf path/to/DHF review-pr --pr 42 --post-comment
-    """
-    import subprocess
-
-    if diff_file is None and pr_number is None:
-        raise click.UsageError("Provide either --diff <file> or --pr <number>.")
-
-    # Read diff
-    if pr_number:
-        try:
-            result = subprocess.run(
-                ["gh", "pr", "diff", str(pr_number)],
-                capture_output=True, text=True, check=True,
-            )
-            diff_text = result.stdout
-        except subprocess.CalledProcessError as exc:
-            raise click.ClickException(f"gh pr diff failed: {exc.stderr.strip()}")
-        except FileNotFoundError:
-            raise click.ClickException("'gh' CLI not found. Install the GitHub CLI to use --pr.")
-    elif diff_file == "-":
-        diff_text = sys.stdin.read()
-    else:
-        diff_text = Path(diff_file).read_text(encoding="utf-8")
-
-    gov_dir = Path(governance_dir) if governance_dir else Path("governance")
-    core = _make_core(ctx)
-    result = core.review_pr(diff_text, governance_dir=gov_dir)
-
-    checklist = result["checklist"]
-    changed = result["changed_items"]
-    analyzed = result["chains_analyzed"]
-
-    # Build full comment body
-    header = (
-        f"## CompliantFlow DHF Review\n\n"
-        f"**Changed DHF items detected:** {', '.join(changed) if changed else 'none'}\n"
-        f"**Chains analysed:** {', '.join(analyzed) if analyzed else 'none'}\n\n"
-        f"### Required DHF Actions\n\n"
-        f"{checklist}\n\n"
-        f"---\n"
-        f"_Generated by CompliantFlow · Suggestion layer — not a compliance gate_"
-    )
-
-    click.echo(header)
-
-    if post_comment and pr_number:
-        try:
-            subprocess.run(
-                ["gh", "pr", "comment", str(pr_number), "--body", header],
-                check=True,
-            )
-            click.echo(f"✓ Comment posted to PR #{pr_number}", err=True)
-        except subprocess.CalledProcessError as exc:
-            raise click.ClickException(f"gh pr comment failed: {exc.stderr.strip()}")
-
 
 # ---------------------------------------------------------------------------
 # context
 # ---------------------------------------------------------------------------
 
-@main.command("context")
-@click.option("--governance-dir", default=None, metavar="PATH",
-              help="Path to governance directory. Defaults to ./governance.")
-@click.option("--standard", default=None, metavar="ID",
-              help="Filter compliance policies to this standard (e.g. IEC_62304).")
-@click.option("--summary", is_flag=True, default=False,
-              help="Emit policy IDs and headings only — omit check details.")
-@click.option("--format", "fmt", default="json", show_default=True,
-              type=click.Choice(["json", "yaml"], case_sensitive=False),
-              help="Output format.")
-@click.pass_context
-def context(ctx: click.Context, governance_dir: str | None, standard: str | None,
-            summary: bool, fmt: str) -> None:
-    """Output DHF schema, lifecycle rules, and compliance policy summaries for AI agents.
-
-    Provides the full item type schema (fields, allowed values, ID prefixes),
-    global lifecycle states, and compliance policy summaries from governance
-    YAML files in a machine-readable format.  Run this before generating or
-    editing DHF content to avoid CI failures from invalid field values.
-
-    \b
-    Example:
-      python -m compliantflow --dhf path/to/DHF context
-      python -m compliantflow --dhf path/to/DHF context --standard IEC_62304 --summary
-      python -m compliantflow --dhf path/to/DHF context --format yaml
-    """
-    gov_dir = Path(governance_dir) if governance_dir else Path("governance")
-    core = _make_core(ctx)
-    result = core.get_context(gov_dir, standard=standard, summary=summary)
-
-    if fmt == "yaml":
-        try:
-            import yaml as _yaml
-            click.echo(_yaml.dump(result, default_flow_style=False, allow_unicode=True))
-        except ImportError:
-            raise click.ClickException("PyYAML is required for --format yaml. Install it with: pip install pyyaml")
-    else:
-        click.echo(json.dumps(result, indent=2))
-
-
 # ---------------------------------------------------------------------------
 # status
 # ---------------------------------------------------------------------------
-
-@main.command("status")
-@click.option("--governance-dir", default=None, metavar="PATH",
-              help="Path to governance directory. Defaults to ./governance.")
-@click.option("--live", is_flag=True, default=False,
-              help="Run fresh compliance checks instead of reading from persisted run store.")
-@click.option("--format", "fmt", default="text", show_default=True,
-              type=click.Choice(["text", "json"], case_sensitive=False),
-              help="Output format.")
-@click.pass_context
-def status(ctx: click.Context, governance_dir: str | None, live: bool, fmt: str) -> None:
-    """Show at-a-glance compliance posture: scores, traceability, defects, release.
-
-    Reads compliance scores from the persisted run store by default.
-    Use --live to run fresh checks (invokes LLM for semantic policies).
-
-    \b
-    Example:
-      python -m compliantflow --dhf path/to/DHF status
-      python -m compliantflow --dhf path/to/DHF status --live --format json
-    """
-    gov_dir = Path(governance_dir) if governance_dir else Path("governance")
-    core = _make_core(ctx)
-    result = core.get_status(gov_dir, live=live)
-
-    if fmt == "json":
-        click.echo(json.dumps(result, default=str))
-        return
-
-    # Human-readable text output
-    click.echo("\n── Compliance ──────────────────────────────────")
-    compliance = result.get("compliance", [])
-    if not compliance:
-        click.echo("  No governance files found.")
-    for entry in compliance:
-        score = entry.get("score")
-        score_str = f"{score:.0f}%" if score is not None else "n/a"
-        passed = entry.get("passed_policies", "?")
-        total = entry.get("total_policies", "?")
-        source = entry.get("source", "")
-        ts = str(entry.get("last_run_at", ""))[:16].replace("T", " ")
-        status_icon = "✓" if score is not None and score == 100.0 else "✗"
-        click.echo(f"  {status_icon} {entry['standard']}: {score_str} ({passed}/{total}) [{source}] {ts}")
-
-    click.echo("\n── Traceability ─────────────────────────────────")
-    trace = result.get("traceability", [])
-    if not trace:
-        click.echo("  No traceability data.")
-    for t in trace:
-        icon = "✓" if t["coverage_pct"] == 100.0 else "✗"
-        click.echo(
-            f"  {icon} {t['parent_type']}→{t['child_type']}: "
-            f"{t['coverage_pct']}% ({t['covered']}/{t['total']})"
-        )
-
-    click.echo("\n── Open Defects ─────────────────────────────────")
-    defs = result.get("open_defects", {})
-    count = defs.get("count", 0)
-    if count == 0:
-        click.echo("  ✓ No open defects.")
-    else:
-        click.echo(f"  ✗ {count} open defect(s):")
-        for d in defs.get("items", [])[:5]:
-            click.echo(f"    - {d['id']} [{d['status']}] {d.get('title', '')}")
-        if count > 5:
-            click.echo(f"    … and {count - 5} more")
-
-    click.echo("\n── Release ──────────────────────────────────────")
-    rel = result.get("release")
-    if rel is None:
-        click.echo("  No REL item found.")
-    else:
-        icon = "✓" if rel.get("passed") else "✗"
-        click.echo(f"  {icon} {rel['rel_id']}: {'ready' if rel.get('passed') else 'not ready'}")
-        for c in rel.get("checks", []):
-            ci = "✓" if c["passed"] else "✗"
-            click.echo(f"    {ci} {c['name']}: {c['details']}")
-    click.echo("")
-
 
 # ---------------------------------------------------------------------------
 # validate
@@ -1753,68 +1403,6 @@ def validate_coverage(ctx: click.Context, pairs: tuple) -> None:
     click.echo("✓ All coverage checks passed.", err=True)
 
 
-@validate.command("compliance")
-@click.argument("group_id")
-@click.option(
-    "--governance-dir",
-    default=None,
-    metavar="PATH",
-    help="Path to governance directory containing policy YAML files. Defaults to ./governance.",
-)
-@click.option(
-    "--persist/--no-persist",
-    default=False,
-    help="Persist the compliance run to the DHF compliance-runs store.",
-)
-@click.pass_context
-def validate_compliance(
-    ctx: click.Context,
-    group_id: str,
-    governance_dir: str | None,
-    persist: bool,
-) -> None:
-    """Check compliance against a governance policy group.
-
-    GROUP_ID is the filename stem of a policy YAML file (e.g. IEC_62304).
-    Outputs the full JSON report to stdout.
-    Exits 1 if any policy fails.
-    """
-    dhf_path: Path = ctx.obj["dhf"]
-    gov_dir = Path(governance_dir) if governance_dir else Path("governance")
-    core = _make_core(ctx)
-    report = core.check_compliance(group_id, governance_dir=gov_dir, persist=persist)
-    if report is None:
-        click.echo(f"ERROR: Policy group '{group_id}' not found.", err=True)
-        sys.exit(1)
-    failed = [r for r in report["results"] if not r["passed"]]
-    for r in failed:
-        click.echo(f"  ✗ [{r['policy_id']}] {r['policy_text']}: {r['details']}", err=True)
-        rem = r.get("remediation")
-        if rem:
-            guidance = rem.get("guidance", "")
-            items = rem.get("items", [])
-            line = f"     → {guidance}"
-            if items:
-                preview = ", ".join(items[:5])
-                if len(items) > 5:
-                    preview += f" (+{len(items) - 5} more)"
-                line += f" [{preview}]"
-            click.echo(line, err=True)
-    click.echo(json.dumps(report, default=str))
-    if failed:
-        click.echo(
-            f"✗ {len(failed)}/{report['total_policies']} policies failed "
-            f"(score: {report['score']:.0f}%).",
-            err=True,
-        )
-        sys.exit(1)
-    click.echo(
-        f"✓ {report['passed_policies']}/{report['total_policies']} policies passed "
-        f"(score: {report['score']:.0f}%).",
-        err=True,
-    )
-
-
 @validate.command("release")
 @click.argument("rel_id")
 @click.pass_context
@@ -1901,34 +1489,6 @@ def validate_draft(ctx: click.Context, file: str, item_type: str | None, fmt: st
         sys.exit(1)
 
 
-@validate.group("compliance-history")
-def validate_compliance_history() -> None:
-    """Compliance run history commands."""
-
-
-@validate_compliance_history.command("list")
-@click.argument("group_id")
-@click.option("--since", default=None, metavar="DATE",
-              help="Filter to runs at or after this ISO 8601 date (e.g. 2026-01-01).")
-@click.pass_context
-def validate_compliance_history_list(
-    ctx: click.Context,
-    group_id: str,
-    since: str | None,
-) -> None:
-    """List persisted compliance runs for GROUP_ID.
-
-    Outputs each run as a JSON object on stdout (NDJSON).
-    """
-    from dhf_util.local_adapter import LocalDHFAdapter
-    dhf_path: Path = ctx.obj["dhf"]
-    adapter = LocalDHFAdapter(dhf_path, auto_commit=False)
-    runs = adapter.get_compliance_runs(group_id, since_date=since)
-    for run in runs:
-        click.echo(json.dumps(run, default=str))
-    click.echo(f"({len(runs)} run(s) for '{group_id}')", err=True)
-
-
 # ---------------------------------------------------------------------------
 # traceability group
 # ---------------------------------------------------------------------------
@@ -2009,57 +1569,6 @@ def report_traceability(ctx: click.Context, doc_types: tuple, output: str,
     report_result = _write_traceability_report(core, doc_types, out, junit_paths)
     click.echo(f"✓ Traceability report written to {out} "
                f"({report_result['rows']} rows)", err=True)
-
-
-@report.command("compliance")
-@click.argument("group_id")
-@click.option("--governance-dir", default=None, metavar="PATH",
-              help="Path to governance directory. Defaults to ./governance.")
-@click.option("--output", "-o", default=None, show_default=False,
-              help="Output file path. Defaults to compliance_report.pdf or compliance_report.json.")
-@click.option("--format", "fmt", default="pdf", show_default=True,
-              type=click.Choice(["pdf", "json"], case_sensitive=False),
-              help="Output format: pdf (default) or json for programmatic consumption.")
-@click.pass_context
-def report_compliance(ctx: click.Context, group_id: str,
-                      governance_dir: str | None, output: str | None, fmt: str) -> None:
-    """Generate a compliance evidence report (PDF or JSON).
-
-    \b
-    Examples:
-      python -m compliantflow report compliance IEC_62304 --governance-dir governance
-      python -m compliantflow report compliance IEC_62304 --format json --output report.json
-    """
-    from compliantflow.report_generator import generate_compliance_pdf, generate_compliance_json
-    gov_dir = Path(governance_dir) if governance_dir else Path("governance")
-    core = _make_core(ctx)
-    result = core.check_compliance(group_id, governance_dir=gov_dir)
-    if result is None:
-        click.echo(f"ERROR: Policy group '{group_id}' not found.", err=True)
-        sys.exit(1)
-    default_name = f"compliance_report.{'json' if fmt == 'json' else 'pdf'}"
-    out = Path(output) if output else Path(default_name)
-    if fmt == "json":
-        generate_compliance_json(result, out)
-    else:
-        generate_compliance_pdf(result, out)
-    failed = result["total_policies"] - result["passed_policies"]
-    for r in result["results"]:
-        if not r["passed"]:
-            click.echo(f"  ✗ [{r['policy_id']}] {r['policy_text']}: {r['details']}", err=True)
-    click.echo(json.dumps(result, default=str))
-    if failed:
-        click.echo(
-            f"✗ {failed}/{result['total_policies']} policies failed "
-            f"(score: {result['score']:.0f}%) — report: {out}",
-            err=True,
-        )
-        sys.exit(1)
-    click.echo(
-        f"✓ {result['passed_policies']}/{result['total_policies']} policies passed "
-        f"(score: {result['score']:.0f}%) — report: {out}",
-        err=True,
-    )
 
 
 # ---------------------------------------------------------------------------
@@ -2773,56 +2282,3 @@ def migrate_rdm(ctx: click.Context, source_dir: Path, dry_run: bool,
 def export() -> None:
     """Assemble submission and export artifacts."""
 
-
-@export.command("submission")
-@click.option("--governance-dir", default=None, metavar="PATH",
-              help="Directory containing governance YAML files. Defaults to DHF/governance/.")
-@click.option("--output-dir", default=".", show_default=True, metavar="PATH",
-              help="Directory where the submission ZIP will be written.")
-@click.option("--force", is_flag=True, default=False,
-              help="Skip the compliance completeness gate and assemble anyway.")
-@click.pass_context
-def export_submission(
-    ctx: click.Context,
-    governance_dir: str | None,
-    output_dir: str,
-    force: bool,
-) -> None:
-    """Assemble a 510(k) submission evidence package.
-
-    Runs the compliance completeness gate across all configured standards,
-    then bundles the following artifacts into a dated ZIP:
-
-    \b
-      cover_document.pdf        — FDA eSTAR section mapping table
-      traceability_report.pdf   — full traceability matrix
-      compliance_{standard}.pdf — one per configured standard
-      soup_list.pdf             — SOUP items with vulnerability status
-      risk_rcm_summary.pdf      — RISK and RCM items
-      test_results_summary.pdf  — test result summary
-      cr_evidence.pdf           — closed CR history
-
-    The package will not be produced if any compliance gate check is failing,
-    unless --force is passed.
-    """
-    from compliantflow.submission import assemble_submission, SubmissionGateError
-
-    dhf_path: Path = ctx.obj["dhf"]
-    gov_dir = Path(governance_dir) if governance_dir else dhf_path / "governance"
-    out_dir = Path(output_dir)
-
-    if not gov_dir.is_dir():
-        raise click.ClickException(
-            f"Governance directory not found: {gov_dir}\n"
-            "Pass --governance-dir or set COMPLIANTFLOW_GOVERNANCE_DIR."
-        )
-
-    core = _make_core(ctx)
-
-    try:
-        zip_path = assemble_submission(core, gov_dir, out_dir, force=force)
-    except SubmissionGateError as exc:
-        raise click.ClickException(str(exc))
-
-    click.echo(f"✓ Submission package written to: {zip_path}", err=True)
-    click.echo(str(zip_path))
