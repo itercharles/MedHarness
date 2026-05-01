@@ -19,20 +19,6 @@ TEMPLATE_DIR = Path(__file__).parent / "data" / "dhf-template"
 PRODUCT_TEMPLATE_DIR = Path(__file__).parent / "data" / "product-template"
 HARNESS_DIR = Path(__file__).parent.parent / "AI-harness"
 
-# Map standard IDs to governance filenames (all present in template)
-GOVERNANCE_FILES = {
-    "IEC_62304": "IEC_62304.yaml",
-    "ISO_14971": "ISO_14971.yaml",
-    "IEC_82304_1": "IEC_82304_1.yaml",
-    "ISO_13485": "ISO_13485.yaml",
-}
-
-STANDARD_LABELS = {
-    "IEC_62304": "IEC 62304  — Medical device software lifecycle",
-    "ISO_14971": "ISO 14971  — Risk management",
-    "IEC_82304_1": "IEC 82304-1 — Health software",
-    "ISO_13485": "ISO 13485  — Quality management system",
-}
 
 
 # ---------------------------------------------------------------------------
@@ -56,7 +42,6 @@ def _replace_placeholders_in_tree(root: Path, replacements: dict[str, str]) -> N
 def _init_dhf_template(
     dhf_dir: Path,
     project_name: str,
-    standards: list[str],
     product_repo: Optional[str] = None,
 ) -> None:
     """Populate dhf_dir with the DHF template. No git operations — caller reviews and pushes."""
@@ -75,7 +60,6 @@ def _init_dhf_template(
         dhf_dir,
         {
             "{{project_name}}": project_name,
-            "{{standards}}": ", ".join(STANDARD_LABELS.get(s, s) for s in standards),
             "{{product_repo}}": product_repo or "your-org/your-product",
             "{{product_repo_name}}": (
                 product_repo.split("/", 1)[1] if product_repo and "/" in product_repo else "your-product"
@@ -94,17 +78,6 @@ def _init_dhf_template(
     )
     global_yaml.write_text(content)
 
-    # Remove governance files for unselected standards
-    gov_dir = dhf_dir / "governance"
-    for std_id, filename in GOVERNANCE_FILES.items():
-        if std_id not in standards:
-            f = gov_dir / filename
-            if f.exists():
-                f.unlink()
-    standard_dir = gov_dir / "Standard"
-    if standard_dir.exists():
-        shutil.rmtree(standard_dir)
-
     # Write DHF repo CI workflows
     gh_workflows = dhf_dir / ".github" / "workflows"
     gh_workflows.mkdir(parents=True, exist_ok=True)
@@ -116,15 +89,12 @@ def _init_product_template(
     product_dir: Path,
     project_name: str,
     dhf_repo: Optional[str],
-    standards: list[str],
 ) -> None:
     """Write AI-harness and docs/ scaffolding to product_dir. No git operations — caller reviews and pushes."""
     dhf_repo_value = dhf_repo or "your-org/your-product-dhf"
-    standards_value = ", ".join(STANDARD_LABELS.get(s, s) for s in standards)
     replacements = {
         "{{project_name}}": project_name,
         "{{dhf_repo}}": dhf_repo_value,
-        "{{standards}}": standards_value,
     }
 
     ai_harness_src = HARNESS_DIR
@@ -499,15 +469,6 @@ def run_init() -> None:
     project_name = click.prompt("  Project name (used in DHF documents)", default=default_proj)
     click.echo()
 
-    # ── Standards ───────────────────────────────────────────
-    click.secho("Compliance Standards", bold=True)
-    selected_standards: list[str] = []
-    for std_id, label in STANDARD_LABELS.items():
-        default_on = std_id in ("IEC_62304", "ISO_14971")
-        if click.confirm(f"  {label}?", default=default_on):
-            selected_standards.append(std_id)
-    if not selected_standards:
-        raise click.ClickException("At least one standard must be selected.")
     click.echo()
 
     # ── Summary ─────────────────────────────────────────────
@@ -546,13 +507,12 @@ def run_init() -> None:
         _init_dhf_template(
             dhf_dir,
             project_name,
-            selected_standards,
             product_repo=product_repo,
         )  # type: ignore[arg-type]
         click.secho(" ✓", fg="green")
 
     _step("Write AI-harness to product repo")
-    _init_product_template(product_dir, project_name, dhf_repo, selected_standards)
+    _init_product_template(product_dir, project_name, dhf_repo)
     click.secho(" ✓", fg="green")
 
     _step("Write engineering-control.yml")

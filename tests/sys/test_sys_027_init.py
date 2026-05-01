@@ -17,10 +17,8 @@ import click
 import pytest
 
 from compliantflow.init_cmd import (
-    GOVERNANCE_FILES,
     HARNESS_DIR,
     PRODUCT_TEMPLATE_DIR,
-    STANDARD_LABELS,
     TEMPLATE_DIR,
     _generate_engineering_control_yaml,
     _init_dhf_template,
@@ -44,19 +42,6 @@ class TestInitCmd:
         """
         assert TEMPLATE_DIR.exists(), f"Template directory not found: {TEMPLATE_DIR}"
         assert (TEMPLATE_DIR / "DHF" / "config" / "global.yaml").exists()
-        assert (TEMPLATE_DIR / "governance").exists()
-
-    def test_TC_SYS_027_002_governance_files_complete(self):
-        """
-        TC-SYS-027-002: All four governance standard files exist in the template.
-
-        @test_id: TC-SYS-027-002
-        @links: SYS-027
-        """
-        gov_dir = TEMPLATE_DIR / "governance"
-        for std_id, filename in GOVERNANCE_FILES.items():
-            f = gov_dir / filename
-            assert f.exists(), f"Missing governance file for {std_id}: {f}"
 
     def test_TC_SYS_027_003_engineering_control_yaml_with_dhf(self):
         """
@@ -161,15 +146,6 @@ class TestInitCmd:
         assert "python -m dhf_util --dhf DHF item transition" in content
         assert "cr_ids" in content
 
-    def test_TC_SYS_027_011_standard_labels_cover_all_governance_files(self):
-        """
-        TC-SYS-027-011: STANDARD_LABELS and GOVERNANCE_FILES have matching key sets.
-
-        @test_id: TC-SYS-027-011
-        @links: SYS-027
-        """
-        assert set(STANDARD_LABELS.keys()) == set(GOVERNANCE_FILES.keys())
-
     def test_TC_SYS_027_012_template_global_yaml_has_project_name(self):
         """
         TC-SYS-027-012: The bundled global.yaml template contains a project_name field.
@@ -188,24 +164,9 @@ class TestInitCmd:
         @links: SYS-027
         """
         dhf_dir = tmp_path / "my-dhf"
-        _init_dhf_template(dhf_dir, "My Test Device", ["IEC_62304", "ISO_14971"])
+        _init_dhf_template(dhf_dir, "My Test Device")
         global_yaml = (dhf_dir / "DHF" / "config" / "global.yaml").read_text()
         assert 'project_name: "My Test Device"' in global_yaml
-
-    def test_TC_SYS_027_014_init_dhf_template_removes_unselected_governance(self, tmp_path):
-        """
-        TC-SYS-027-014: _init_dhf_template removes governance files for standards not selected.
-
-        @test_id: TC-SYS-027-014
-        @links: SYS-027
-        """
-        dhf_dir = tmp_path / "my-dhf"
-        _init_dhf_template(dhf_dir, "Device", ["IEC_62304"])
-        gov_dir = dhf_dir / "governance"
-        assert (gov_dir / "IEC_62304.yaml").exists()
-        assert not (gov_dir / "ISO_14971.yaml").exists()
-        assert not (gov_dir / "IEC_82304_1.yaml").exists()
-        assert not (gov_dir / "ISO_13485.yaml").exists()
 
     def test_TC_SYS_027_015_init_dhf_template_writes_ci_workflows(self, tmp_path):
         """
@@ -215,7 +176,7 @@ class TestInitCmd:
         @links: SYS-027
         """
         dhf_dir = tmp_path / "my-dhf"
-        _init_dhf_template(dhf_dir, "Device", ["IEC_62304"])
+        _init_dhf_template(dhf_dir, "Device")
         assert (dhf_dir / ".github" / "workflows" / "ci.yml").exists()
         assert (dhf_dir / ".github" / "workflows" / "cr-transition.yml").exists()
 
@@ -233,7 +194,7 @@ class TestInitCmd:
         assert "_gh(" not in src
         # Verify it actually writes files without any external calls
         dhf_dir = tmp_path / "my-dhf"
-        _init_dhf_template(dhf_dir, "Device", ["IEC_62304"])
+        _init_dhf_template(dhf_dir, "Device")
         assert dhf_dir.exists()
 
     def test_TC_SYS_027_017_write_engineering_control_yml_creates_file(self, tmp_path):
@@ -288,7 +249,7 @@ class TestInitCmd:
         @links: SYS-027
         """
         product_dir = tmp_path / "my-product"
-        _init_product_template(product_dir, "My Device", "acme/my-device-dhf", ["IEC_62304"])
+        _init_product_template(product_dir, "My Device", "acme/my-device-dhf")
         assert (product_dir / "AI-harness" / "context.md").exists()
 
     def test_TC_SYS_027_021_init_product_template_substitutes_project_name(self, tmp_path):
@@ -300,7 +261,7 @@ class TestInitCmd:
         @links: SYS-027
         """
         product_dir = tmp_path / "my-product"
-        _init_product_template(product_dir, "Insulin Pump Firmware", "acme/dhf", ["IEC_62304"])
+        _init_product_template(product_dir, "Insulin Pump Firmware", "acme/dhf")
         assert (product_dir / "AI-harness" / "context.md").exists()
 
     def test_TC_SYS_027_022_init_product_template_substitutes_dhf_repo(self, tmp_path):
@@ -312,7 +273,7 @@ class TestInitCmd:
         @links: SYS-027
         """
         product_dir = tmp_path / "my-product"
-        _init_product_template(product_dir, "Device", "acme/my-device-dhf", ["IEC_62304"])
+        _init_product_template(product_dir, "Device", "acme/my-device-dhf")
         # docs/ scaffold (from product-template) has placeholders — verify substitution there
         tech_strategy = (product_dir / "docs" / "technical_strategy.md").read_text()
         assert "acme/my-device-dhf" in tech_strategy
@@ -327,7 +288,7 @@ class TestInitCmd:
         @links: SYS-027
         """
         product_dir = tmp_path / "my-product"
-        _init_product_template(product_dir, "Device", "acme/dhf", ["IEC_62304"])
+        _init_product_template(product_dir, "Device", "acme/dhf")
         assert (product_dir / "AI-harness" / "adapters" / ".cursorrules").exists()
         assert (product_dir / "AI-harness" / "adapters" / "copilot-instructions.md").exists()
 
@@ -339,7 +300,7 @@ class TestInitCmd:
         @links: SYS-027
         """
         product_dir = tmp_path / "my-product"
-        _init_product_template(product_dir, "Device", "acme/dhf", ["IEC_62304"])
+        _init_product_template(product_dir, "Device", "acme/dhf")
         assert (product_dir / "AI-harness" / "CLAUDE.md").exists()
         assert (product_dir / "AI-harness" / "AGENTS.md").exists()
         assert (product_dir / "AI-harness" / "GEMINI.md").exists()
@@ -353,7 +314,7 @@ class TestInitCmd:
         @links: SYS-027
         """
         product_dir = tmp_path / "my-product"
-        _init_product_template(product_dir, "Device", None, ["IEC_62304"])
+        _init_product_template(product_dir, "Device", None)
         tech_strategy = (product_dir / "docs" / "technical_strategy.md").read_text()
         assert "your-org/your-product-dhf" in tech_strategy
         assert "{{dhf_repo}}" not in tech_strategy
@@ -369,7 +330,6 @@ class TestInitCmd:
         _init_dhf_template(
             dhf_dir,
             "Device",
-            ["IEC_62304"],
             product_repo="acme/my-device",
         )
         content = (dhf_dir / ".github" / "workflows" / "cr-develop.yml").read_text()
@@ -412,7 +372,7 @@ class TestInitCmd:
         @links: SYS-027
         """
         product_dir = tmp_path / "my-product"
-        _init_product_template(product_dir, "My Device", "acme/my-device-dhf", ["IEC_62304"])
+        _init_product_template(product_dir, "My Device", "acme/my-device-dhf")
         assert (product_dir / "docs" / "product_strategy.md").exists()
         assert (product_dir / "docs" / "product_roadmap.md").exists()
         assert (product_dir / "docs" / "technical_strategy.md").exists()
@@ -427,7 +387,7 @@ class TestInitCmd:
         @links: SYS-027
         """
         product_dir = tmp_path / "my-product"
-        _init_product_template(product_dir, "Cardiac Monitor", "acme/dhf", ["IEC_62304"])
+        _init_product_template(product_dir, "Cardiac Monitor", "acme/dhf")
         for doc in ["product_strategy.md", "product_roadmap.md", "technical_strategy.md", "testing_strategy.md"]:
             content = (product_dir / "docs" / doc).read_text()
             assert "Cardiac Monitor" in content, f"{{{{project_name}}}} not substituted in {doc}"
@@ -441,7 +401,7 @@ class TestInitCmd:
         @links: SYS-027
         """
         product_dir = tmp_path / "my-product"
-        _init_product_template(product_dir, "Device", "acme/device-dhf", ["IEC_62304"])
+        _init_product_template(product_dir, "Device", "acme/device-dhf")
         content = (product_dir / "docs" / "technical_strategy.md").read_text()
         assert "acme/device-dhf" in content
         assert "{{dhf_repo}}" not in content
@@ -559,7 +519,7 @@ class TestInitCmd:
         @links: SYS-027
         """
         dhf_dir = tmp_path / "my-dhf"
-        _init_dhf_template(dhf_dir, "My Device", ["IEC_62304"], product_repo="acme/my-device")
+        _init_dhf_template(dhf_dir, "My Device", product_repo="acme/my-device")
         readme = (dhf_dir / "README.md").read_text()
         assert "My Device" in readme
         assert "acme" in readme
