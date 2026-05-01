@@ -107,8 +107,8 @@ def _write_claude_md(product_dir: Path, project_name: str, dhf_repo: Optional[st
 - DHF mutations go through `python -m dhf_util` in the DHF repo, never direct file edits
 - `ci test-coverage` enforces requirement→test coverage on every push
 - Evidence bundle is produced on merge to `main`
-- See `docs/technical_strategy.md` for architecture principles
-- See `docs/testing_strategy.md` for test conventions
+- See [README.md](README.md) for project overview
+- See [GETTING_STARTED.md](GETTING_STARTED.md) for development workflow
 """)
     return dest
 
@@ -178,7 +178,12 @@ jobs:
         if: steps.cr.outputs.skip != 'true'
         run: |
           python -m pip install --upgrade pip
-          pip install -r dhf/requirements.txt
+          pip install -e dhf/
+
+      - name: Install CompliantFlow
+        if: steps.cr.outputs.skip != 'true'
+        run: |
+          pip install compliantflow
 
       - name: Complete CR in DHF
         if: steps.cr.outputs.skip != 'true'
@@ -558,9 +563,6 @@ def run_init() -> None:
     else:
         click.echo(f"       (no secrets required for the baseline OSS path)")
     n += 1
-    click.secho(f"  {n}. Fill in your strategy documents:", bold=True)
-    click.echo(f"       {product_dir}/docs/product_strategy.md   — mission, objectives, target customer")
-    click.echo(f"       {product_dir}/docs/product_roadmap.md    — milestone grouping and exit criteria")
-    click.echo(f"       {product_dir}/docs/technical_strategy.md — architectural principles and guardrails")
-    click.echo(f"       {product_dir}/docs/testing_strategy.md   — test layers and DHF traceability conventions")
-    click.echo(f"       These are used by the AI agent for direction checks on every task.")
+    click.secho(f"  {n}. Fill in your documentation:", bold=True)
+    click.echo(f"       See README.md and GETTING_STARTED.md for project guidance.")
+    click.echo(f"       Add your own docs/ as needed for architecture, testing, and strategy.")
