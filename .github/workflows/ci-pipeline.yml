@@ -6,6 +6,9 @@ name: CI Pipeline
 #   2. COMPATIBILITY    — scaffold, example smoke, CLI, template checks
 #   3. AUDIT            — OSS build hygiene
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 on:
   push:
     branches: [ main ]
