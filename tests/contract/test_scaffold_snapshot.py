@@ -31,7 +31,7 @@ class TestScaffoldStructure:
 
     CORE_FILES = [
         "DHF/config/global.yaml",
-        "README.md",
+        "DHF/README.md",
     ]
 
     REQUIRED_TEMPLATES = [
@@ -56,7 +56,7 @@ class TestScaffoldStructure:
         with tempfile.TemporaryDirectory() as tmp:
             dhf_dir = Path(tmp) / "test-dhf"
             _scaffold_dhf(dhf_dir)
-            _replace_placeholders(dhf_dir, "Test Project", "acme/test-product")
+            _replace_placeholders(dhf_dir, "Test Project")
             yield dhf_dir
 
     def test_core_directories_exist(self, scaffolded):
@@ -105,7 +105,7 @@ class TestScaffoldStructure:
         Placeholders are substituted in scaffolded content.
 
         """
-        readme = (scaffolded / "README.md").read_text()
+        readme = (scaffolded / "DHF" / "README.md").read_text()
         assert "Test Project" in readme
         assert "{{project_name}}" not in readme
 
@@ -150,9 +150,9 @@ class TestScaffoldStructure:
         wfs = list(wf_dir.glob("*.yml"))
         assert len(wfs) > 0, f"No workflow files found in {wf_dir}"
 
-    def test_ai_harness_context_copied(self, scaffolded):
-        """AI-harness/context.md is scaffolded."""
-        assert (scaffolded / "AI-harness" / "context.md").exists()
+    def test_ai_harness_not_scaffolded(self, scaffolded):
+        """AI-harness/ is not scaffolded — CLAUDE.md covers the same purpose."""
+        assert not (scaffolded / "AI-harness").exists()
 
     def test_test_results_dir_has_gitkeep(self, scaffolded):
         """

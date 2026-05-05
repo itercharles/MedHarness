@@ -24,7 +24,7 @@ def dhf():
     with tempfile.TemporaryDirectory() as tmp:
         dhf_dir = Path(tmp) / "starter-dhf"
         _scaffold_dhf(dhf_dir)
-        _replace_placeholders(dhf_dir, "Test Project", "acme/test-product")
+        _replace_placeholders(dhf_dir, "Test Project")
         yield dhf_dir
 
 
@@ -128,7 +128,7 @@ class TestScaffoldGuidance:
     """Verify 'replace me' guidance in scaffolded output."""
 
     def test_readme_has_replace_guidance(self, dhf):
-        readme = (dhf / "README.md").read_text()
+        readme = (dhf / "DHF" / "README.md").read_text()
         assert "starter sample content" in readme.lower() or "replace" in readme.lower()
 
     def test_development_plan_has_starter_note(self, dhf):

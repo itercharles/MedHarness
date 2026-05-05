@@ -14,5 +14,5 @@ def scaffolded_dhf():
     with tempfile.TemporaryDirectory() as tmp:
         dhf_dir = Path(tmp) / "starter-dhf"
         _scaffold_dhf(dhf_dir)
-        _replace_placeholders(dhf_dir, "Test Project", "acme/test-product")
+        _replace_placeholders(dhf_dir, "Test Project")
         yield dhf_dir

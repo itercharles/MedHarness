@@ -152,7 +152,7 @@ jobs:
           with tempfile.TemporaryDirectory() as tmp:
               dhf_dir = Path(tmp) / 'starter-dhf'
               _scaffold_dhf(dhf_dir)
-              _replace_placeholders(dhf_dir, 'Test Project', 'acme/test-product')
+              _replace_placeholders(dhf_dir, 'Test Project')
               dhf = str(dhf_dir / 'DHF')
               subprocess.run([sys.executable, '-m', 'medharness', '--dhf', dhf, 'dhf', 'validate', 'schema'], check=True)
               subprocess.run([sys.executable, '-m', 'medharness', '--dhf', dhf, 'dhf', 'item', 'list', '--type', 'CRS'], check=True)

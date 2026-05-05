@@ -32,17 +32,9 @@ jobs:
             echo "GEMINI_API_KEY is not configured; skipping review."
           fi
 
-      - name: Checkout MedHarness
+      - name: Checkout repo
         if: steps.config.outputs.enabled == 'true'
         uses: actions/checkout@v4
-
-      - name: Checkout DHF repository
-        if: steps.config.outputs.enabled == 'true'
-        uses: actions/checkout@v4
-        with:
-          repository: {{github_org}}/{{dhf_repo_name}}
-          token: ${{ secrets.DHF_REPO_TOKEN }}
-          path: medharness-dhf
 
       - name: Set up Python
         if: steps.config.outputs.enabled == 'true'
@@ -70,7 +62,7 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
           python -m medharness \
-            --dhf medharness-dhf/DHF \
+            --dhf DHF \
             review-pr \
             --diff pr.diff \
             > review_output.md 2>&1 || true
@@ -81,7 +73,6 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Delete previous bot review comments to avoid spam
           gh pr comment "${{ inputs.pr_number }}" \
             --body "$(cat review_output.md)" \
             --edit-last 2>/dev/null || \
