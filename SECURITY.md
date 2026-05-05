@@ -10,7 +10,8 @@
 
 Please **do not** open a public GitHub issue for security vulnerabilities.
 
-Email: itercharles@163.com
+Open a [GitHub Security Advisory](https://github.com/itercharles/MedHarness/security/advisories/new)
+(confidential — not visible to the public until disclosed).
 
 Include: affected version, description, reproduction steps, potential impact.
 
