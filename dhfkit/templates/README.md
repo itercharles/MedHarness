@@ -20,30 +20,53 @@ This is the DHF (Design History File) for {{project_name}}, scaffolded by
 ## Directory Layout
 
 ```
-DHF/
-├── items/                  # One YAML file per requirement/risk/CR item
-│   ├── 00_uc/              # Use Cases (UC-NNN.yaml)
-│   ├── 01_crs/             # Customer Requirements (CRS-NNN.yaml)
-│   ├── 02_sys/             # System Requirements (SYS-NNN.yaml)
-│   ├── 03_srs/             # Software Requirements (SRS-NNN.yaml)
-│   ├── 04_swdd/            # Detailed Design (SWDD-NNN.yaml)
-│   ├── 05_sysarch/         # System Architecture (SYSARCH-NNN.yaml)
-│   ├── 06_cr/              # Change Requests (CR-NNN.yaml)
-│   ├── 07_rel/             # Releases (REL-NNN.yaml)
-│   ├── 08_soup/            # SOUP items (SOUP-NNN.yaml)
-│   ├── 09_risk/            # Risk items (RISK-NNN.yaml)
-│   ├── 10_rcm/             # Risk Control Measures (RCM-NNN.yaml)
-│   └── 11_def/             # Defects (DEF-NNN.yaml)
-├── config/                 # Project configuration
-│   ├── global.yaml         # Global settings (project name, lifecycle states)
-│   └── doc_types/          # One YAML per document type (SYS.yaml, CR.yaml, …)
-├── test-results/
-│   └── results.yaml        # Automated test result records (TC items)
-├── documents/
-│   ├── plans/              # Planning documents (development_plan.md, integration_plan.md, …)
-│   ├── specifications/     # Generated specification documents (Markdown)
-│   └── …                   # release_notes.md, system_configuration.md, etc.
+├── DHF/
+│   ├── items/                # One YAML file per requirement/risk/CR item
+│   │   ├── 00_uc/            # Use Cases (UC-NNN.yaml)
+│   │   ├── 01_crs/           # Customer Requirements (CRS-NNN.yaml)
+│   │   ├── 02_sys/           # System Requirements (SYS-NNN.yaml)
+│   │   ├── 03_srs/           # Software Requirements (SRS-NNN.yaml)
+│   │   ├── 04_swdd/          # Detailed Design (SWDD-NNN.yaml)
+│   │   ├── 05_sysarch/       # System Architecture (SYSARCH-NNN.yaml)
+│   │   ├── 06_cr/            # Change Requests (CR-NNN.yaml)
+│   │   ├── 07_rel/           # Releases (REL-NNN.yaml)
+│   │   ├── 08_soup/          # SOUP items (SOUP-NNN.yaml)
+│   │   ├── 09_risk/          # Risk items (RISK-NNN.yaml)
+│   │   ├── 10_rcm/           # Risk Control Measures (RCM-NNN.yaml)
+│   │   └── 11_def/           # Defects (DEF-NNN.yaml)
+│   ├── config/               # Project configuration
+│   │   ├── global.yaml       # Global settings (project name, lifecycle states)
+│   │   └── doc_types/        # One YAML per document type (SYS.yaml, CR.yaml, …)
+│   ├── test-results/
+│   │   └── results.yaml      # Automated test result records (TC items)
+│   └── documents/
+│       ├── plans/            # Planning documents (development_plan.md, integration_plan.md, …)
+│       └── specs/            # Generated specification documents (Markdown) + Jinja2 templates (.j2)
+├── AI-harness/
+│   └── context.md            # Shared context for AI agents (project overview, scope, constraints)
+├── .github/
+│   ├── prompts/              # AI agent prompts used by CR workflows (cr-analyze, cr-develop)
+│   └── workflows/            # DHF-side CI: schema validation, CR automation
+└── README.md
 ```
+
+### AI-harness/context.md
+
+This is the shared memory file for AI agents. The `cr-analyze` and `cr-develop` workflows
+read it before running Claude. Keep it updated after significant architecture changes,
+scope decisions, or regulatory classification updates.
+
+The file includes:
+
+- Product overview and regulatory class
+- Architecture decisions that constrain implementation
+- Scope boundaries (in/out of scope)
+- Known platform or integration constraints
+- Active CR list (maintained by workflows)
+
+CI agents (`cr-analyze`, `cr-develop`) include `AI-harness/context.md` as one of their
+primary inputs alongside the CR spec and DHF item list.
+
 
 > **Note:** `dhfkit` is distributed as part of the MedHarness package.
 > Install it with `pip install medharness`.
