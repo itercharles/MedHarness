@@ -57,21 +57,21 @@ jobs:
       - name: Transition CR to analyzing
         if: steps.crs.outputs.skip != 'true'
         run: |
-          medharness dhf item transition "${{ steps.crs.outputs.cr_id }}" analyzing --by "github-actions[bot]"
+          medharness --dhf DHF dhf item transition "${{ steps.crs.outputs.cr_id }}" analyzing --by "github-actions[bot]"
 
-      - name: Fetch product test results artifact
+      - name: Fetch latest test results artifact
         if: steps.crs.outputs.skip != 'true'
         env:
-          GH_TOKEN: ${{ secrets.PRODUCT_REPO_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         continue-on-error: true
         run: |
           mkdir -p /tmp/test-artifacts
           cd /tmp/test-artifacts
-          RUN_ID=$(gh run list --repo {{product_repo}} --workflow engineering-control.yml --status success --limit 1 --json databaseId --jq '.[0].databaseId' 2>/dev/null || echo "")
+          RUN_ID=$(gh run list --repo ${{ github.repository }} --workflow engineering-control.yml --status success --limit 1 --json databaseId --jq '.[0].databaseId' 2>/dev/null || echo "")
           if [ -n "$RUN_ID" ]; then
-            gh run download "$RUN_ID" --repo {{product_repo}} --name product-test-results --dir /tmp/test-artifacts 2>/dev/null || echo "No product-test-results artifact found (first CR before any tests run)"
+            gh run download "$RUN_ID" --repo ${{ github.repository }} --name test-results --dir /tmp/test-artifacts 2>/dev/null || echo "No test-results artifact found yet."
           else
-            echo "No successful CI runs found in {{product_repo}} — skipping test coverage."
+            echo "No successful CI runs found — skipping test coverage."
           fi
 
       - name: Pre-compute DHF context
@@ -79,11 +79,7 @@ jobs:
         env:
           CR_ID: ${{ steps.crs.outputs.cr_id }}
         run: |
-          JUNIT_ARGS=""
-          if [ -n "$(ls -A /tmp/test-artifacts 2>/dev/null)" ]; then
-            JUNIT_ARGS="--junit-dir /tmp/test-artifacts"
-          fi
-          DHF_CONTEXT=$(medharness dhf context for-stage analyze --cr "$CR_ID" 2>/dev/null || echo '{}')
+          DHF_CONTEXT=$(medharness --dhf DHF dhf context for-stage analyze --cr "$CR_ID" 2>/dev/null || echo '{}')
           echo "DHF_CONTEXT=$DHF_CONTEXT" >> "$GITHUB_ENV"
 
       - uses: actions/setup-node@v4
@@ -99,7 +95,6 @@ jobs:
         if: steps.crs.outputs.skip != 'true'
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          PRODUCT_REPO_TOKEN: ${{ secrets.PRODUCT_REPO_TOKEN }}
           CR_ID: ${{ steps.crs.outputs.cr_id }}
         run: |
           SPEC="DHF/documents/specs/${CR_ID}-Spec.md"
@@ -149,7 +144,7 @@ jobs:
           if [ -f "$SPEC" ]; then
             DIR_FIT=$(grep -oP 'direction_fit:\s*"\K[^"]+' "$SPEC" 2>/dev/null || echo "unknown")
             AFFECTED=$(grep -oP '^\s*-\s+\K[A-Z]+-\d+' "$SPEC" 2>/dev/null | head -5 | tr '\n' ', ' | sed 's/, $//')
-            gh pr edit --repo {{github_org}}/{{dhf_repo_name}} \
+            gh pr edit \
               --body "$(cat <<'EOF'
 ## Approval Checklist
 
@@ -161,6 +156,6 @@ jobs:
 > Merging this PR = explicit approval of the above. The spec will proceed to implementation (cr-develop.yml).
 EOF
 )"
-            gh pr edit --repo {{github_org}}/{{dhf_repo_name}} \
-              --body "$(gh pr view --repo {{github_org}}/{{dhf_repo_name}} --json body --jq '.body' | sed "s/DIR_FIT_HERE/${DIR_FIT}/" | sed "s/AFFECTED_HERE/${AFFECTED:-none}/")"
+            gh pr edit \
+              --body "$(gh pr view --json body --jq '.body' | sed "s/DIR_FIT_HERE/${DIR_FIT}/" | sed "s/AFFECTED_HERE/${AFFECTED:-none}/")"
           fi
