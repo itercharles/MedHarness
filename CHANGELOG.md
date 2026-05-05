@@ -9,6 +9,39 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ---
 
+## [0.2.0] — 2026-05-05
+
+### Breaking Changes
+
+- `medharness init` now scaffolds into the **current directory** (single-repo layout); the
+  separate DHF repo is gone — DHF lives at `DHF/` alongside product source code
+- `medharness init` is now **zero-prompt** — no questions about org, repo name, or project name;
+  everything is derived from the current directory name
+- `_replace_placeholders` no longer accepts a `product_repo` argument
+- Generated `cr-complete.yml` uses `GITHUB_TOKEN` only — `DHF_REPO_TOKEN` is no longer required
+
+### Features
+
+- `engineering-control.yml` now has four explicit CI phases: CR validation, DHF schema +
+  traceability validation, test coverage gate, evidence bundle (post-merge)
+- Test step is language-agnostic with commented examples for pytest, Jest, Maven, and Go;
+  only contract is JUnit XML output to `test-results/`
+- `.gitignore` is scaffolded automatically
+
+### Changes
+
+- `cr-analyze.yml` and `cr-develop.yml` updated for single-repo: use `github.repository`
+  and `GITHUB_TOKEN` instead of cross-repo `PRODUCT_REPO_TOKEN`
+- DHF README placed at `DHF/README.md` instead of the repo root
+- `AI-harness/context.md` removed from scaffold — `CLAUDE.md` covers the same purpose
+
+### Fixes
+
+- `engineering-control.yml` install step now uses `pip install medharness` (was broken
+  `gh release download` with unfilled `{github_org}/{dhf_repo_name}` placeholders)
+
+---
+
 ## [0.1.0] — 2026-05-03
 
 ### Breaking Changes
