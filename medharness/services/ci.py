@@ -16,6 +16,8 @@ from medharness._helpers import (
     DEFAULT_ACCEPTANCE_COVERAGE_PAIRS,
     DEFAULT_TRACEABILITY_DOC_TYPES,
     _parse_coverage_pairs,
+    _run_acceptance_gate,
+    _run_artifact_generation,
 )
 from dhfkit.junit_parser import JUNIT_LINKS
 
