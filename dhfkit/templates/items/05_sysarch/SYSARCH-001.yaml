@@ -1,0 +1,7 @@
+id: SYSARCH-001
+title: "Starter Architecture Item — Replace with your own"
+content: |-
+  Example architecture item. Replace this with real architecture
+  decisions for your product.
+design:
+  - SYS-001

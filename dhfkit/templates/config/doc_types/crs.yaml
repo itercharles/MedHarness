@@ -1,0 +1,46 @@
+code: CRS
+name: Customer Requirement
+prefix: CRS-
+directory: 01_crs
+properties:
+- id
+- name: title
+  format: short_text
+  label: Title
+- name: content
+  format: long_text
+  label: Content
+- name: user_group
+  format: short_text
+  label: User Group
+- name: source
+  format: short_text
+  label: Source
+- name: derives_from
+  format: relationship
+  target_types:
+  - UC
+  label: Derives From
+- name: rationale
+  format: long_text
+  label: Rationale
+- name: stakeholder
+  format: short_text
+  label: Stakeholder
+- name: priority
+  format: select
+  options:
+  - Critical
+  - High
+  - Medium
+  - Low
+  default: Medium
+  label: Priority
+icon: 🎯
+page_enabled: true
+page_number: 5
+has_verification: true
+verification_states:
+- not_verified
+- verified
+- failed

@@ -1,0 +1,123 @@
+code: DEF
+name: Defect
+prefix: DEF-
+directory: 11_def
+properties:
+- id
+- name: title
+  format: short_text
+  label: Title
+- name: description
+  format: long_text
+  label: Description
+- name: steps_to_reproduce
+  format: long_text
+  label: Steps to Reproduce
+- name: severity
+  format: select
+  options:
+  - Critical
+  - High
+  - Medium
+  - Low
+  label: Severity
+- name: priority
+  format: select
+  options:
+  - High
+  - Medium
+  - Low
+  label: Priority
+- name: reported_by
+  format: short_text
+  label: Reported By
+- name: assigned_to
+  format: short_text
+  label: Assigned To
+- name: violated_requirements
+  format: item_multiselect
+  target_types:
+  - CRS
+  - SYS
+  - SRS
+  - SWDD
+  label: Violated Requirements
+- name: affected_items
+  format: relationship
+  label: Affected Items
+- name: root_cause
+  format: long_text
+  label: Root Cause Analysis
+- name: resolution
+  format: long_text
+  label: Resolution
+- name: found_in_release
+  format: relationship
+  target_types:
+  - REL
+  label: Found in Release
+- name: fixed_in_release
+  format: relationship
+  target_types:
+  - REL
+  label: Fixed in Release
+icon: 🐛
+page_enabled: true
+page_number: 13
+lifecycle:
+  transitions:
+  - from_states:
+    - null
+    to_state: draft
+  - from_states:
+    - draft
+    to_state: open
+    criteria:
+    - id: description_complete
+      name: Description complete
+      check_type: field_not_empty
+      field: description
+      required: true
+    - id: steps_provided
+      name: Steps to reproduce provided
+      check_type: field_not_empty
+      field: steps_to_reproduce
+      required: true
+    - id: severity_set
+      name: Severity set
+      check_type: field_not_empty
+      field: severity
+      required: true
+    label: Submit
+  - from_states:
+    - open
+    to_state: in_progress
+    criteria:
+    - id: assigned
+      name: Assigned to developer
+      check_type: field_not_empty
+      field: assigned_to
+      required: true
+    label: Start Work
+  - from_states:
+    - in_progress
+    to_state: resolved
+    criteria:
+    - id: resolution_provided
+      name: Resolution documented
+      check_type: field_not_empty
+      field: resolution
+      required: true
+    label: Resolve
+  - from_states:
+    - resolved
+    to_state: closed
+    label: Close
+  - from_states:
+    - open
+    to_state: cancelled
+    label: Won't Fix
+  - from_states:
+    - in_progress
+    to_state: open
+    label: Reopen

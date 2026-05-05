@@ -1,0 +1,197 @@
+name: CI Pipeline
+
+# MedHarness's own CI — layer-based gates:
+#
+#   1. TESTING          — unit, integration, contract, dhfkit (parallel)
+#   2. COMPATIBILITY    — scaffold, example smoke, CLI, template checks
+#   3. AUDIT            — OSS build hygiene
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    types: [opened, synchronize]
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+
+  # ── LAYER-BASED TESTING ──────────────────────────────────────────────────
+
+  tests-unit:
+    name: Test | Unit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest
+          pip install -e .
+      - name: Run unit tests
+        run: |
+          export PYTHONPATH="${PYTHONPATH}:${PWD}"
+          pytest tests/unit/ -v
+
+  tests-integration:
+    name: Test | Integration
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest
+          pip install -e .
+      - name: Run integration tests
+        run: |
+          export PYTHONPATH="${PYTHONPATH}:${PWD}"
+          pytest tests/integration/ -v
+
+  tests-contract:
+    name: Test | Contract
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest
+          pip install -e .
+      - name: Run contract tests
+        run: |
+          export PYTHONPATH="${PYTHONPATH}:${PWD}"
+          pytest tests/contract/ -v
+
+  tests-dhf-util:
+    name: Test | dhfkit Engine
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest
+          pip install -e .
+      - name: Run dhfkit tests
+        run: |
+          export PYTHONPATH="${PYTHONPATH}:${PWD}"
+          pytest dhfkit/tests/ -v --ignore=dhfkit/tests/test_cli_doc_export.py
+
+  # ── COMPATIBILITY CHECKS ─────────────────────────────────────────────────
+
+  check-scaffold:
+    name: Check | Scaffold
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+      - name: Verify scaffold generates expected structure
+        run: |
+          export PYTHONPATH="${PYTHONPATH}:${PWD}"
+          python -c "
+          from medharness.workflows.init import _scaffold_dhf
+          from pathlib import Path
+          import tempfile
+          with tempfile.TemporaryDirectory() as tmp:
+              dhf_dir = Path(tmp) / 'test-dhf'
+              _scaffold_dhf(dhf_dir)
+              assert (dhf_dir / 'DHF' / 'config' / 'global.yaml').exists()
+              assert (dhf_dir / 'DHF' / 'documents' / 'specs').exists()
+              assert (dhf_dir / 'DHF' / 'items').exists()
+              assert (dhf_dir / '.github' / 'workflows').exists()
+              print('OK: scaffold structure valid')
+          "
+
+  check-starter:
+    name: Check | Starter DHF
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+      - name: Scaffold starter DHF and run core workflow
+        run: |
+          export PYTHONPATH="${PYTHONPATH}:${PWD}"
+          python -c "
+          from medharness.workflows.init import _scaffold_dhf, _replace_placeholders
+          from pathlib import Path
+          import tempfile, subprocess, sys
+          with tempfile.TemporaryDirectory() as tmp:
+              dhf_dir = Path(tmp) / 'starter-dhf'
+              _scaffold_dhf(dhf_dir)
+              _replace_placeholders(dhf_dir, 'Test Project', 'acme/test-product')
+              dhf = str(dhf_dir / 'DHF')
+              subprocess.run([sys.executable, '-m', 'medharness', '--dhf', dhf, 'dhf', 'validate', 'schema'], check=True)
+              subprocess.run([sys.executable, '-m', 'medharness', '--dhf', dhf, 'dhf', 'item', 'list', '--type', 'CRS'], check=True)
+              subprocess.run([sys.executable, '-m', 'medharness', '--dhf', dhf, 'dhf', 'item', 'list', '--type', 'SYS'], check=True)
+              for dt in 'UC CRS SYS SRS SWDD SYSARCH RISK RCM CR'.split():
+                  subprocess.run([sys.executable, '-m', 'medharness', '--dhf', dhf, 'dhf', 'doc', 'generate', dt], check=True)
+              print('OK: starter DHF workflow valid')
+          "
+
+  check-cli-entrypoints:
+    name: Check | CLI Entrypoints
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+      - name: Verify CLI entrypoints
+        run: |
+          export PYTHONPATH="${PYTHONPATH}:${PWD}"
+          python -m medharness --help > /dev/null
+          python -m medharness dhf --help > /dev/null
+          echo 'OK: both CLI entrypoints available'
+
+  # ── OSS BUILD HYGIENE AUDIT ───────────────────────────────────────────────
+
+  audit-oss-delivery:
+    name: Audit | OSS Build Hygiene
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install audit dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install build
+          sudo apt-get update && sudo apt-get install -y ripgrep
+      - name: Run OSS delivery audit
+        run: bash scripts/audit_oss_delivery.sh

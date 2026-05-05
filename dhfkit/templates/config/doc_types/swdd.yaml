@@ -1,0 +1,32 @@
+code: SWDD
+name: Software Detailed Design
+prefix: SWDD-
+directory: 04_swdd
+properties:
+- id
+- name: title
+  format: short_text
+  label: Title
+- name: content
+  format: long_text
+  label: Content
+- name: implements
+  format: relationship
+  target_types:
+  - SRS
+  label: Implements
+- name: verification_status
+  format: enum
+  values:
+  - not_verified
+  - verified
+  - failed
+  label: Verification Status
+  default: not_verified
+icon: 📋
+page_enabled: true
+page_number: 10
+verification_states:
+- not_verified
+- verified
+- failed

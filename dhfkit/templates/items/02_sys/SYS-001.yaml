@@ -1,0 +1,11 @@
+id: SYS-001
+title: "Starter System Requirement — Replace with your own"
+content: |-
+  Example system requirement. Replace this with a real requirement
+  for your product. This sample demonstrates the SYS format and links
+  to CRS-001 and RCM-001 to show multi-source traceability.
+category: Functional
+satisfies:
+  - CRS-001
+verification_method:
+  - Test

@@ -1,0 +1,172 @@
+# Customer Requirement Specification
+
+---
+
+**Document Metadata**
+
+| Field | Value |
+|-------|-------|
+| **Document ID** | {{ doc_type_code }}-SPEC |
+| **Version** | {{ version }} |
+| **Generated** | {{ generation_date }} |
+| **Status** | {{ status }} |
+| **Project** | {{ project_name }} |
+
+---
+
+## 1. Purpose
+
+This Customer Requirement Specification (CRS) defines the product-level customer
+requirements and the operating context for {{ project_name }}. It serves as the
+formal customer-facing requirements document within the Design History File
+(DHF) while also recording the stable product direction that shapes those
+requirements.
+
+{{ project_name }} is developed as an AI-native, design-controlled medical
+software delivery system built from a single tooling-first repository:
+
+- `medharness` is the orchestration CLI, CI gate logic, and scaffolding system
+- `dhfkit` is the reusable DHF engine for items, traceability, lifecycle,
+  and document generation — bundled in the same repository
+
+The product goal is to constrain implementation by design and traceability so
+that engineering work, AI-assisted workflows, and formal DHF records stay aligned
+throughout the software lifecycle.
+
+## 2. Intended Users and Environment
+
+### 2.1 Intended Users
+
+The primary users are software teams building medical device software under
+design control, including:
+
+- software engineers implementing regulated product behavior
+- systems and software architects defining traceable designs
+- quality and regulatory contributors reviewing DHF structure and evidence
+- AI-assisted development agents operating under explicit project constraints
+
+### 2.2 Intended Environment
+
+The product is intended for repository-centric development environments that use:
+
+- Git-based source control and pull-request review
+- a product repository for source code, tests, and product CI
+- a DHF repository for controlled requirements, design, risk, and traceability artifacts
+- Python-based command-line tooling for scaffolding, validation, and evidence handling
+- CI infrastructure that can execute tests, store JUnit XML, and publish build artifacts
+
+The product is not positioned as a standalone compliance portal or document
+management suite. It assumes that teams work in code, documents, Git history,
+and CI systems.
+
+## 3. Product Context
+
+{{ project_name }} operates in a single tooling repository that generates
+separate product and DHF repositories. Product code and test execution remain
+in the product repository, while design-controlled DHF content remains in the
+DHF repository. The orchestration and engine layers cooperate at runtime:
+
+- the DHF repository defines the allowed structure, item schemas, and document templates
+- the harness reads DHF structure to drive product-side coverage and evidence workflows
+- AI guidance is derived from controlled documents, repo guidance files, and workflow prompts
+- formal DHF documents are generated from controlled templates and item data in the DHF repository
+
+This structure allows engineering workflows to move quickly without collapsing
+design control into ad hoc narrative notes or disconnected spreadsheets.
+
+## 4. Roadmap
+
+### 4.1 Phase 1: Core Tooling
+
+Establish the single-repo tooling baseline:
+
+- DHF repo scaffolding from bundled templates via `medharness init`
+- product CI scaffolding in `medharness`
+- controlled DHF item model, document templates, and `dhfkit` operations
+- requirement-to-test coverage and structural traceability workflows
+
+### 4.2 Phase 2: Enhanced Workflows
+
+Improve the quality of AI-assisted change execution by expanding:
+
+- CR-driven planning and development flows
+- document-grounded agent guidance
+- design-aware review and verification support
+- richer evidence capture from normal engineering workflows
+
+### 4.3 Phase 3: Hardened Adoption
+
+Focus on stability and adoption across real product programs through:
+
+- more robust onboarding and migration paths
+- broader verification workflow support
+- improved operational documentation and audit readiness outputs
+- continued refinement of the orchestration/engine layer boundaries
+
+## 5. Customer Requirements
+
+{% for item in items %}
+### {{ loop.index }}. {{ item.id }}: {{ item.title }}
+
+<div class="requirement-section" markdown="1">
+
+**Status**: <span class="status-{{ item.status }}">{{ item.status | upper }}</span>  
+{% if item.reviewer %}**Reviewer**: {{ item.reviewer }}  {% endif %}
+{% if item.review_date %}**Review Date**: {{ item.review_date | format_date }}  {% endif %}
+{% if item.category %}**Category**: {{ item.category }}  {% endif %}
+{% if item.verification_method %}**Verification Method**: {{ item.verification_method }}  {% endif %}
+
+#### Description
+
+{{ item.content }}
+
+{% if item.links %}
+#### Linked Items
+
+{% for link in item.links %}
+- {{ link }}
+{% endfor %}
+{% endif %}
+
+{% if item.verification_status %}
+#### Verification Status
+
+**Status**: {{ item.verification_status }}
+{% endif %}
+
+</div>
+
+{% endfor %}
+
+---
+
+## 6. Summary
+
+### 6.1 Statistics
+
+| Metric | Count |
+|--------|-------|
+| **Total Requirements** | {{ items | length }} |
+| **Approved** | {{ items | selectattr('status', 'equalto', 'approved') | list | length }} |
+| **Draft** | {{ items | selectattr('status', 'equalto', 'draft') | list | length }} |
+| **Retired** | {{ items | selectattr('status', 'equalto', 'retired') | list | length }} |
+
+### 6.2 Approval Status
+
+{% set approved_count = items | selectattr('status', 'equalto', 'approved') | list | length %}
+{% set total_count = items | length %}
+{% if total_count > 0 %}
+**Approval Rate**: {{ (approved_count / total_count * 100) | round(1) }}% ({{ approved_count }}/{{ total_count }})
+{% endif %}
+
+---
+
+## 7. Document Control
+
+**Document Owner**: Quality Assurance  
+**Last Updated**: {{ generation_date }}  
+**Next Review**: TBD
+
+---
+
+*This document was automatically generated by `dhfkit` from controlled DHF content.*

@@ -1,0 +1,9 @@
+id: RCM-001
+title: "Starter Risk Control Measure — Replace with your own"
+content: |-
+  Example risk control. Replace this with real controls for your product.
+  This sample demonstrates the RCM format and links to RISK-001 and SYS-001.
+mitigates:
+  - RISK-001
+implements:
+  - SYS-001

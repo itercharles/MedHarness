@@ -1,0 +1,77 @@
+code: SYS
+name: System Requirement
+prefix: SYS-
+directory: 02_sys
+allowed_parents:
+- CRS
+- RCM
+properties:
+- id
+- name: title
+  format: short_text
+  label: Title
+- name: content
+  format: long_text
+  label: Requirement Description
+  required: true
+  height: 200
+  placeholder: Describe the system requirement in detail...
+  help: Provide a clear, testable requirement statement per IEC 62304
+- name: category
+  format: select
+  label: Category
+  required: true
+  options:
+  - Functional
+  - Performance
+  - Security
+  - Usability
+  - Reliability
+  - Maintainability
+  - Change Control
+  - Document Management
+  default: Functional
+  help: Select the requirement category
+- name: verification_method
+  format: multiselect
+  label: Verification Methods
+  options:
+  - Test
+  - Inspection
+  - Analysis
+  - Demonstration
+  help: Select applicable verification methods per IEC 62304 5.7
+- name: critical_safety
+  format: checkbox
+  label: Critical Safety
+- name: satisfies
+  format: item_multiselect
+  label: Satisfies (Customer Requirements)
+  target_types:
+  - CRS
+  help: Link to parent customer requirements
+- name: implements
+  format: item_multiselect
+  label: Implements (Risk Control Measures)
+  target_types:
+  - RCM
+  help: Link to risk control measures this requirement implements
+- name: derives_from
+  format: item_multiselect
+  label: Derives From
+  target_types:
+  - CRS
+  help: Alternative relationship to customer requirements
+relations:
+- target: CRS
+  label: satisfies
+- target: RCM
+  label: implements
+icon: ⚙️
+page_enabled: true
+page_number: 6
+has_verification: true
+verification_states:
+- not_verified
+- verified
+- failed

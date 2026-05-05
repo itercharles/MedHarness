@@ -1,0 +1,179 @@
+# Architecture Design Specification
+
+---
+
+**Document Metadata**
+
+| Field | Value |
+|-------|-------|
+| **Document ID** | {{ doc_type_code }}-SPEC |
+| **Version** | {{ version }} |
+| **Generated** | {{ generation_date }} |
+| **Status** | {{ status }} |
+| **Project** | {{ project_name }} |
+
+---
+
+## 1. Purpose
+
+This Architecture Design Specification defines the durable architectural model
+for {{ project_name }} and records the formal design items that implement that
+model. The architecture bundles two complementary layers — an orchestration
+layer and a reusable engine layer — in a single tooling repository so that
+engineering execution and design-controlled structure stay connected without
+becoming the same system.
+
+## 2. Architectural Context
+
+{{ project_name }} is delivered from a single tooling-first repository:
+
+- `medharness` is the orchestration CLI, CI gate logic, and scaffolding system
+- `dhfkit` is the reusable DHF engine for items, traceability, lifecycle, and document generation
+- product repositories hold executable code, tests, and product CI workflows
+- DHF repositories (generated from bundled templates) hold controlled requirements, architecture, risk, change, and evidence structure
+
+The architecture exists to keep these responsibilities explicit. Product code
+changes are driven by controlled design inputs, and DHF changes remain visible,
+versioned, and auditable as first-class repository content.
+
+## 3. Repository Boundaries and Responsibilities
+
+### 3.1 Orchestration Layer (`medharness`)
+
+`medharness` owns product-side orchestration concerns:
+
+- onboarding and repository scaffolding through `medharness init`
+- requirement-to-test coverage evaluation from JUnit evidence
+- runtime evidence bundle generation from CI artifacts and repository state
+- product-facing workflow conventions, including CR-aware CI and agent entrypoints
+
+### 3.2 Engine Layer (`dhfkit`)
+
+`dhfkit` owns DHF-side structural and design-control concerns:
+
+- DHF document templates and controlled plan/spec documents
+- item schemas, lifecycle rules, and required traceability paths
+- item CRUD, validation, graph operations, and document generation
+- repository content that scaffolds DHF-side workflows and agent guidance
+
+### 3.3 Product Repo vs DHF Repo
+
+The product repository is optimized for implementation and verification
+execution. The DHF repository is optimized for controlled design records.
+Neither repository is a projection of the other; they cooperate through shared
+identifiers, explicit traceability links, CI contracts, and generated evidence.
+
+## 4. Runtime Delivery Model
+
+DHF repositories are scaffolded from bundled templates rather than fetched from
+a separate source repo:
+
+1. `medharness init` copies template assets from `medharness/templates/`.
+2. The scaffolded DHF repository becomes the controlled starting point for a product program.
+3. Product CI installs `medharness` (which includes `dhfkit`) and uses the commands against the DHF repository selected for that product.
+4. Generated specification documents and evidence outputs are produced from the live DHF and CI artifacts at runtime.
+
+This model keeps the tooling self-contained and allows the bundled templates to
+evolve as the canonical source of structure and document templates within a
+single repository.
+
+## 5. Agent Guidance Model
+
+AI-assisted workflows are grounded in documents and prompts rather than a
+bundled harness payload. Guidance comes from:
+
+- DHF-side formal documents such as the CRS, architecture specification, and development plan
+- repo-local guidance files such as `CLAUDE.md`
+- workflow prompts and automation-specific instructions stored with the relevant repository
+- controlled item schemas and traceability requirements loaded through `dhfkit`
+
+This model makes AI behavior easier to audit because the instructions that shape
+agent work live in versioned repository content.
+
+## 6. Durable Architectural Principles
+
+The architecture follows these durable principles:
+
+- design control is repository-native and traceability-first
+- design records are constrained structurally before they are interpreted semantically
+- product code and DHF content remain separated but explicitly linked
+- runtime outputs such as generated specifications and evidence bundles derive from controlled source content
+- the tooling ships as a single repository with clear layer boundaries between orchestration and engine
+
+## 7. Major Components
+
+### 7.1 Orchestration Layer
+
+The orchestration layer contains:
+
+- CLI commands that orchestrate scaffolding, coverage gating, evidence generation, and CR flows
+- CI workflow templates written into product repositories
+- adapter-facing logic that reads DHF structure without owning DHF content
+
+### 7.2 Engine Layer
+
+The engine layer contains:
+
+- YAML-based DHF item storage and configuration
+- `dhfkit` services for validation, lifecycle, graph traversal, and document generation
+- controlled templates and plans that define the formal DHF document set
+
+### 7.3 Verification and Evidence Interfaces
+
+The boundary between implementation and formal evidence is carried by:
+
+- JUnit XML with requirement linkage metadata
+- CR identifiers shared across PRs, workflow automation, and DHF records
+- generated evidence bundles assembled from runtime artifacts rather than prepacked release assets
+
+## 8. Architecture Items
+
+{% for item in items %}
+### {{ loop.index }}. {{ item.id }}: {{ item.title }}
+
+<div class="architecture-section" markdown="1">
+
+**Status**: <span class="status-{{ item.status }}">{{ item.status | upper }}</span>  
+{% if item.component %}**Component**: {{ item.component }}  {% endif %}
+{% if item.architecture_type %}**Architecture Type**: {{ item.architecture_type }}  {% endif %}
+
+#### Overview
+
+{{ item.content }}
+
+{% if item.links %}
+#### Linked Items
+
+{% for link in item.links %}
+- {{ link }}
+{% endfor %}
+{% endif %}
+
+</div>
+
+{% endfor %}
+
+---
+
+## 9. Summary
+
+### 9.1 Statistics
+
+| Metric | Count |
+|--------|-------|
+| **Total Architecture Items** | {{ items | length }} |
+| **Approved** | {{ items | selectattr('status', 'equalto', 'approved') | list | length }} |
+| **Draft** | {{ items | selectattr('status', 'equalto', 'draft') | list | length }} |
+| **Retired** | {{ items | selectattr('status', 'equalto', 'retired') | list | length }} |
+
+---
+
+## 10. Document Control
+
+**Document Owner**: Engineering Lead  
+**Last Updated**: {{ generation_date }}  
+**Next Review**: TBD
+
+---
+
+*This document was automatically generated by `dhfkit` from controlled DHF content.*

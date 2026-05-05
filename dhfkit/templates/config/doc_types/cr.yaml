@@ -1,0 +1,83 @@
+code: CR
+name: Change Request
+prefix: CR-
+directory: 06_cr
+properties:
+- id
+- name: title
+  format: short_text
+  label: Title
+- name: content
+  format: long_text
+  label: Content
+- name: description
+  format: long_text
+  label: Description
+- name: justification
+  format: long_text
+  label: Justification
+- name: impact_assessment
+  format: long_text
+  label: Impact Assessment
+- name: priority
+  format: select
+  options:
+  - High
+  - Medium
+  - Low
+  label: Priority
+- name: requested_by
+  format: short_text
+  label: Requested By
+- name: assigned_to
+  format: short_text
+  label: Assigned To
+- name: affected_items
+  format: relationship
+  label: Affected Items
+- name: target_version
+  format: short_text
+  label: Target Version
+- name: category
+  format: short_text
+  label: Category
+- name: implementation_notes
+  format: long_text
+  label: Implementation Notes
+- name: target_release
+  format: relationship
+  target_types:
+  - RELEASE
+  label: Target Release
+icon: 📝
+page_enabled: true
+page_number: 9
+lifecycle:
+  transitions:
+  - from_states:
+    - null
+    to_state: new
+  - from_states:
+    - new
+    to_state: analyzing
+    label: Start Analysis
+  - from_states:
+    - new
+    to_state: rejected
+    label: Reject
+  - from_states:
+    - analyzing
+    to_state: developing
+    label: Approve Spec
+  - from_states:
+    - analyzing
+    to_state: rejected
+    label: Reject
+  - from_states:
+    - developing
+    to_state: completed
+    label: Complete
+  - from_states:
+    - developing
+    to_state: rejected
+    label: Reject

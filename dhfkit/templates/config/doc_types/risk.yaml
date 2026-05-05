@@ -1,0 +1,67 @@
+code: RISK
+name: Risk Analysis
+prefix: RISK-
+directory: 09_risk
+properties:
+- id
+- name: title
+  format: short_text
+  label: Title
+- name: hazard
+  format: long_text
+  label: Hazard
+- name: cause
+  format: long_text
+  label: Cause
+- name: effect
+  format: long_text
+  label: Effect
+- name: severity_pre
+  format: select
+  options:
+  - S1
+  - S2
+  - S3
+  - S4
+  - S5
+  label: Severity (Pre-Mitigation)
+- name: probability_pre
+  format: select
+  options:
+  - P1
+  - P2
+  - P3
+  - P4
+  - P5
+  label: Probability (Pre-Mitigation)
+- name: severity_post
+  format: select
+  options:
+  - S1
+  - S2
+  - S3
+  - S4
+  - S5
+  label: Severity (Post-Mitigation)
+- name: probability_post
+  format: select
+  options:
+  - P1
+  - P2
+  - P3
+  - P4
+  - P5
+  label: Probability (Post-Mitigation)
+- name: risk_acceptability
+  format: select
+  options:
+  - Acceptable
+  - ALARP
+  - Unacceptable
+  label: Risk Acceptability
+- name: risk_benefit
+  format: long_text
+  label: Risk Benefit
+icon: ⚠️
+page_enabled: true
+page_number: 12

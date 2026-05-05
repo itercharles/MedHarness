@@ -1,0 +1,9 @@
+id: CRS-001
+title: "Starter Customer Requirement — Replace with your own"
+content: |-
+  Example customer requirement. Replace this with a real requirement
+  for your product.
+derives_from:
+  - UC-001
+user_group: Engineering
+priority: Low

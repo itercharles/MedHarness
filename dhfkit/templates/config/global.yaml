@@ -1,0 +1,168 @@
+project_name: "My Medical Device Software"
+
+global_lifecycle:
+  states:
+  - id: new
+    label: New
+    action_label: Submit
+    icon: "\U0001F195"
+    color: info
+  - id: analyzing
+    label: Analyzing
+    action_label: Start Analysis
+    icon: "\U0001F50D"
+    color: info
+  - id: developing
+    label: Developing
+    action_label: Start Development
+    icon: "\U0001F527"
+    color: warning
+  - id: rejected
+    label: Rejected
+    action_label: Reject
+    icon: "\u274C"
+    color: danger
+    is_stable: true
+  - id: draft
+    label: Draft
+    action_label: Create
+    icon: "\U0001F4DD"
+    color: warning
+    is_initial: true
+  - id: in_review
+    label: In Review
+    action_label: Submit for Review
+    icon: "\U0001F50D"
+    color: info
+  - id: open
+    label: Open
+    action_label: Submit
+    icon: "\U0001F4C2"
+    color: info
+  - id: in_progress
+    label: In Progress
+    action_label: Start Work
+    icon: "\U0001F527"
+    color: warning
+  - id: resolved
+    label: Resolved
+    action_label: Resolve
+    icon: "\u2705"
+    color: success
+  - id: approved
+    label: Approved
+    action_label: Approve
+    icon: "\u2705"
+    color: success
+  - id: implementing
+    label: Implementing
+    action_label: Start Implementation
+    icon: "\U0001F527"
+    color: warning
+  - id: completed
+    label: Completed
+    action_label: Complete
+    icon: "\U0001F3AF"
+    color: success
+  - id: verified
+    label: Verified
+    action_label: Verify
+    icon: "\u2713"
+    color: success
+  - id: validated
+    label: Validated
+    action_label: Validate
+    icon: "\u2713\u2713"
+    color: success
+  - id: released
+    label: Released
+    action_label: Release
+    icon: "\U0001F680"
+    color: success
+    is_stable: true
+  - id: cancelled
+    label: Cancelled
+    action_label: Cancel
+    icon: "\U0001F6AB"
+    color: secondary
+    is_stable: true
+  - id: retired
+    label: Retired
+    action_label: Retire
+    icon: "\U0001F4E6"
+    color: secondary
+    is_stable: true
+  - id: closed
+    label: Closed
+    action_label: Close
+    icon: "\U0001F6AB"
+    color: secondary
+    is_stable: true
+traceability_matrices:
+- name: Complete Requirements Chain
+  description: Full traceability from use cases through all requirement levels to
+    detailed design
+  path:
+  - UC
+  - CRS
+  - SYS
+  - SRS
+  - SWDD
+- name: System Requirements to System Architecture
+  description: System requirements and their architectural designs
+  path:
+  - SYS
+  - SYSARCH
+- name: Risk to Control Measures
+  description: Risks to risk control measures
+  path:
+  - RISK
+  - RCM
+- name: Risk Control to System
+  description: Risk control measures to system requirements
+  path:
+  - RCM
+  - SYS
+document_specifications:
+  UC:
+    template: requirements_specification.md.j2
+    output: DHF/documents/specs/use_case_specification.md
+    doc_type_name: Use Case
+  CRS:
+    template: customer_requirement_specification.md.j2
+    output: DHF/documents/specs/customer_requirement_specification.md
+    doc_type_name: Customer Requirement
+  SYS:
+    template: requirements_specification.md.j2
+    output: DHF/documents/specs/system_requirement_specification.md
+    doc_type_name: System Requirement
+  SRS:
+    template: requirements_specification.md.j2
+    output: DHF/documents/specs/software_requirement_specification.md
+    doc_type_name: Software Requirement Specification
+  SWDD:
+    template: requirements_specification.md.j2
+    output: DHF/documents/specs/software_detailed_design_document.md
+    doc_type_name: Software Detailed Design Document
+  SYSARCH:
+    template: architecture_design_specification.md.j2
+    output: DHF/documents/specs/architecture_design_specification.md
+    doc_type_name: System Architecture Specification
+  RISK:
+    template: risk_specification.md.j2
+    output: DHF/documents/specs/risk_analysis_specification.md
+    doc_type_name: Risk Analysis
+  RCM:
+    template: rcm_specification.md.j2
+    output: DHF/documents/specs/risk_control_measures_specification.md
+    doc_type_name: Risk Control Measures
+  CR:
+    template: change_request_specification.md.j2
+    output: DHF/documents/specs/change_request_specification.md
+    doc_type_name: Change Request
+test_integration:
+  result_store:
+    path: test-results/results.yaml
+  manual:
+    require_verified_by: true
+    require_verification_date: true

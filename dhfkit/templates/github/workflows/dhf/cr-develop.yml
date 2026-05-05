@@ -1,0 +1,190 @@
+name: Develop CR
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+    paths:
+      - 'DHF/documents/specs/CR-*-Spec.md'
+
+jobs:
+  develop:
+    if: ${{ github.event.pull_request.merged == true }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Extract CR ID from merged spec
+        id: cr
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          MERGE_SHA: ${{ github.event.pull_request.merge_commit_sha }}
+        run: |
+          SPEC_FILE=$(git diff --name-only "$BASE_SHA" "$MERGE_SHA" | grep -E '^DHF/documents/specs/CR-.*-Spec\.md$' | head -n 1 || true)
+          if [ -z "$SPEC_FILE" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          CR_ID=$(basename "$SPEC_FILE" -Spec.md)
+          echo "cr_id=$CR_ID" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-python@v5
+        if: steps.cr.outputs.skip != 'true'
+        with:
+          python-version: '3.11'
+
+      - name: Install dhfkit
+        if: steps.cr.outputs.skip != 'true'
+        run: pip install medharness=={{medharness_version}} || pip install git+https://github.com/{{medharness_repo}}@main
+
+      - name: Validate spec front-matter
+        id: validate
+        if: steps.cr.outputs.skip != 'true'
+        run: |
+          SPEC="DHF/documents/specs/${{ steps.cr.outputs.cr_id }}-Spec.md"
+          if [ ! -f "$SPEC" ]; then
+            echo "SPEC not found: $SPEC — aborting."
+            exit 1
+          fi
+          DIR_FIT=$(python3 -c "
+          import yaml, sys
+          try:
+              with open('$SPEC') as f:
+                  content = f.read()
+              if content.startswith('---'):
+                  _, front, _ = content.split('---', 2)
+                  fm = yaml.safe_load(front)
+                  if isinstance(fm, dict):
+                      print(fm.get('direction_fit', 'in-scope'))
+              else:
+                  print('missing-frontmatter')
+          except Exception as e:
+              print(f'parse-error: {e}')
+          " 2>/dev/null || echo "parse-error")
+          echo "direction_fit=$DIR_FIT" >> "$GITHUB_OUTPUT"
+          if [ "$DIR_FIT" = "out-of-scope" ]; then
+            echo "reject=true" >> "$GITHUB_OUTPUT"
+            echo "reject_reason=out-of-scope" >> "$GITHUB_OUTPUT"
+          elif [ "$DIR_FIT" = "missing-frontmatter" ] || [ "$DIR_FIT" = "parse-error" ]; then
+            echo "✗ Spec front-matter missing or malformed (direction_fit=$DIR_FIT)." >&2
+            echo "  Re-run the cr-analyze workflow to regenerate the spec." >&2
+            exit 1
+          else
+            echo "reject=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Reject CR (out-of-scope / invalid spec)
+        if: steps.validate.outputs.reject == 'true'
+        env:
+          CR_ID: ${{ steps.cr.outputs.cr_id }}
+        run: |
+          medharness dhf item transition "$CR_ID" rejected --by "github-actions[bot]"
+          git config user.name "GitHub Actions [bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add "DHF/items/$CR_ID.yaml"
+          git commit -m "chore: reject $CR_ID — direction_fit out-of-scope [skip ci]"
+          git push
+          echo "✓ $CR_ID transitioned to rejected and committed." >&2
+
+      - name: Transition CR to developing
+        if: steps.cr.outputs.skip != 'true' && steps.validate.outputs.reject != 'true'
+        run: |
+          medharness dhf item transition "${{ steps.cr.outputs.cr_id }}" developing --by "github-actions[bot]"
+
+      - name: Clone product repository
+        if: steps.cr.outputs.skip != 'true' && steps.validate.outputs.reject != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.PRODUCT_REPO_TOKEN }}
+        run: |
+          gh repo clone {{product_repo}} "../{{product_repo_name}}"
+
+      - uses: actions/setup-node@v4
+        if: steps.cr.outputs.skip != 'true' && steps.validate.outputs.reject != 'true'
+        with:
+          node-version: '20'
+
+      - name: Install Claude Code
+        if: steps.cr.outputs.skip != 'true' && steps.validate.outputs.reject != 'true'
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Implement approved spec
+        if: steps.cr.outputs.skip != 'true'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          PRODUCT_REPO_TOKEN: ${{ secrets.PRODUCT_REPO_TOKEN }}
+          CR_ID: ${{ steps.cr.outputs.cr_id }}
+        run: |
+          if [ -n "$ANTHROPIC_API_KEY" ]; then
+            PROMPT=$(sed "s/{{cr_id}}/$CR_ID/g" .github/prompts/cr-develop.md)
+            claude -p --dangerously-skip-permissions "$PROMPT"
+          else
+            echo "ANTHROPIC_API_KEY not set — writing stub implementation for pipeline testing."
+
+            # Stub DHF item: a placeholder SRS linked to the CR
+            medharness dhf item create --type SRS \
+              --data "{\"title\": \"[STUB] Placeholder SRS for $CR_ID\", \"derives_from\": [], \"content\": \"Stub SRS generated by dry-run. Replace before merging.\"}"
+
+            # Stub code change in product repo
+            STUB_CODE="../{{product_repo_name}}/stub-${CR_ID}.md"
+            printf '# Stub implementation for %s\n\n> **Note:** Generated by pipeline dry-run (no ANTHROPIC_API_KEY). Delete before merging.\n\nSee spec: DHF/documents/specs/%s-Spec.md\n' \
+              "$CR_ID" "$CR_ID" > "$STUB_CODE"
+          fi
+
+      - name: Push DHF implementation branch
+        if: steps.cr.outputs.skip != 'true'
+        env:
+          CR_ID: ${{ steps.cr.outputs.cr_id }}
+        run: |
+          git checkout -b "develop/$CR_ID"
+          git config user.name "GitHub Actions [bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add DHF/items/
+          if [ -d DHF/documents/specs ]; then
+            git add DHF/documents/specs/
+          fi
+          git commit -m "feat: implement $CR_ID"
+          git push --set-upstream origin "develop/$CR_ID"
+
+      - name: Open DHF items PR
+        if: steps.cr.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CR_ID: ${{ steps.cr.outputs.cr_id }}
+        run: |
+          gh pr create \
+            --head "develop/$CR_ID" \
+            --base main \
+            --title "dhf($CR_ID): implementation updates" \
+            --body "Automated DHF implementation updates for $CR_ID."
+
+      - name: Push product repo branch and PR
+        if: steps.cr.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.PRODUCT_REPO_TOKEN }}
+          CR_ID: ${{ steps.cr.outputs.cr_id }}
+        working-directory: ../{{product_repo_name}}
+        run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "PRODUCT_REPO_TOKEN not set — skipping product repo PR."
+            exit 0
+          fi
+          git checkout -b "feat/$CR_ID"
+          git config user.name "GitHub Actions [bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if ! git diff --staged --quiet; then
+            git commit -m "feat: implement $CR_ID"
+            git push --set-upstream origin "feat/$CR_ID"
+            gh pr create \
+              --head "feat/$CR_ID" \
+              --base main \
+              --title "feat($CR_ID): implement approved spec" \
+              --body "Automated product implementation for $CR_ID."
+          else
+            echo "No product repo changes to commit."
+          fi

@@ -1,0 +1,23 @@
+code: SYSARCH
+name: System Architecture
+prefix: SYSARCH-
+directory: 05_sysarch
+properties:
+- id
+- name: title
+  format: short_text
+  label: Title
+- name: content
+  format: long_text
+  label: Content
+- name: design
+  format: item_multiselect
+  target_types:
+  - SYS
+  label: Designs Requirements
+relations:
+- target: SYS
+  label: design
+icon: 🏗️
+page_enabled: true
+page_number: 8

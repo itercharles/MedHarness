@@ -1,0 +1,17 @@
+---
+description: CompliantFlow repository guidance for Cursor
+globs:
+alwaysApply: true
+---
+
+This file is the Cursor-specific entrypoint for this repository.
+
+Shared repository guidance lives in [`AGENTS.md`](../../AGENTS.md). Read that first.
+
+## Cursor-Specific Notes
+
+There are currently no Cursor-specific workflow overrides beyond the shared guide above.
+
+When updating agent guidance:
+- put shared content in [`AGENTS.md`](../../AGENTS.md)
+- add content here only if it is genuinely Cursor-specific

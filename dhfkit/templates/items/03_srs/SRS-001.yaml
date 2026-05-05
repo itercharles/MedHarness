@@ -1,0 +1,7 @@
+id: SRS-001
+title: "Starter Software Requirement — Replace with your own"
+content: |-
+  Example software requirement. Replace this with a real requirement
+  for your product.
+derives_from:
+  - SYS-001

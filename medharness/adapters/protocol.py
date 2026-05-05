@@ -1,0 +1,86 @@
+"""DHFAdapter Protocol — defines the interface between MedHarness and any DHF backend."""
+
+from __future__ import annotations
+
+from typing import Any, Dict, List, Optional, Protocol, runtime_checkable
+
+
+@runtime_checkable
+class DHFAdapter(Protocol):
+    """Protocol that any DHF backend must implement to plug into MedHarness."""
+
+    # -- Item CRUD ---------------------------------------------------------
+
+    def get_item(self, uid: str) -> Optional[dict]: ...
+    def list_items(self, doc_type: Optional[str] = None) -> List[dict]: ...
+    def create_item(
+        self, data: dict, author: str = "system", cr_id: Optional[str] = None,
+    ) -> dict: ...
+    def update_item(
+        self, uid: str, data: dict, author: Optional[str] = None, cr_id: Optional[str] = None,
+    ) -> Optional[dict]: ...
+    def delete_item(self, uid: str, author: Optional[str] = None) -> bool: ...
+
+    # -- Lifecycle ---------------------------------------------------------
+
+    def execute_transition(
+        self, item_id: str, to_state: str, performed_by: Optional[str] = None,
+    ) -> dict: ...
+    def get_available_transitions(self, item_id: str) -> List[Dict]: ...
+
+    # -- Validation --------------------------------------------------------
+
+    def validate_schema(self) -> dict: ...
+    def validate_traceability(self) -> dict: ...
+
+    # -- Item type metadata (replaces get_project_config) ------------------
+
+    def get_item_type(self, prefix: str) -> Optional[dict]:
+        """Return metadata for the item type with the given ID prefix.
+
+        Returns a dict with keys: name, prefix, parent_types, has_verification,
+        lifecycle, fields.  None if unknown.
+        """
+        ...
+
+    def list_item_types(self) -> List[dict]:
+        """Return list of all item type metadata dicts."""
+        ...
+
+    def get_lifecycle_states(self) -> List[dict]:
+        """Return global lifecycle states as list of {id, label, is_stable, ...}."""
+        ...
+
+    # -- Test results ------------------------------------------------------
+
+    def get_test_result(self, tc_id: str) -> Optional[dict]: ...
+    def get_all_test_results(self, status_filter: Optional[str] = None) -> Dict[str, dict]: ...
+    def get_test_result_items(self) -> List[dict]: ...
+    def import_results_from_file(self, xml_path, tester: str = "", run_id: str = "",
+                                  run_url: str = "", commit_sha: str = "") -> dict: ...
+    def record_test_result(self, tc_id: str, testing_status: str, tester: str = "",
+                            run_id: str = "", run_url: str = "", commit_sha: str = "",
+                            notes: str = "", links: Optional[List[str]] = None,
+                            title: str = "", reviewer: str = "", review_date: str = "",
+                            review_status: str = "") -> None: ...
+    def pull_results_from_artifacts(self, run_id: str = "", commit_sha: str = "",
+                                     provider: str = "github") -> dict: ...
+
+    # -- Documents ---------------------------------------------------------
+
+    def get_document(self, doc_id: str) -> Optional[str]: ...
+    def list_documents(self) -> List[str]: ...
+
+    # -- CR context --------------------------------------------------------
+
+    def get_implementation_context(self, cr_id: str) -> dict: ...
+
+    # -- Compliance run history (optional extension point) -----------------
+
+    def record_compliance_run(self, group_id: str, report_dict: dict,
+                               commit_sha: str = "", trigger: str = "manual") -> None: ...
+    def get_compliance_runs(self, group_id: str,
+                             since_date: Optional[str] = None) -> List[Dict]: ...
+    def get_available_doc_types(self) -> List[str]: ...
+    def generate_doc(self, doc_type_code: str) -> dict: ...
+    def export_pdf(self, doc_type_code: str) -> dict: ...

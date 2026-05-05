@@ -1,0 +1,44 @@
+code: RCM
+name: Risk Control Measure
+prefix: RCM-
+directory: 10_rcm
+properties:
+- id
+- name: title
+  format: short_text
+  label: Title
+- name: content
+  format: long_text
+  label: Content
+- name: mitigates
+  format: relationship
+  target_types:
+  - RISK
+  label: Mitigates
+- name: implements
+  format: relationship
+  target_types:
+  - SYS
+  label: Implemented By
+- name: control_type
+  format: select
+  options:
+  - Inherently Safe Design
+  - Protective Measure
+  - Information for Safety
+  label: Control Type
+- name: implementation_status
+  format: select
+  options:
+  - Planned
+  - Implemented
+  label: Implementation Status
+- name: verification_status
+  format: select
+  options:
+  - Not Verified
+  - Verified
+  label: Verification Status
+icon: 🛡️
+page_enabled: true
+page_number: 11

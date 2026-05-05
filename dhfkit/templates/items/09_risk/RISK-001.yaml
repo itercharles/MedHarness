@@ -1,0 +1,10 @@
+id: RISK-001
+title: "Starter Risk Item — Replace with your own"
+hazard: "Example hazard — replace with real hazard analysis"
+cause: "Example cause"
+effect: "Example effect"
+severity_pre: S1
+probability_pre: P1
+severity_post: S1
+probability_post: P1
+risk_acceptability: Acceptable

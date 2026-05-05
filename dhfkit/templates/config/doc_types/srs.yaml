@@ -1,0 +1,30 @@
+code: SRS
+name: Software Requirement
+prefix: SRS-
+directory: 03_srs
+allowed_parents:
+- SYS
+properties:
+- id
+- name: title
+  format: short_text
+  label: Title
+- name: content
+  format: long_text
+  label: Content
+- name: derives_from
+  format: relationship
+  target_types:
+  - SYS
+  label: Derives From
+- name: performance
+  format: long_text
+  label: Performance
+icon: 💻
+page_enabled: true
+page_number: 7
+has_verification: true
+verification_states:
+- not_verified
+- verified
+- failed

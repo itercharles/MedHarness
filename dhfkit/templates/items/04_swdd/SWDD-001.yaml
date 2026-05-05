@@ -1,0 +1,7 @@
+id: SWDD-001
+title: "Starter Design Item — Replace with your own"
+content: |-
+  Example design item. Replace this with real design details
+  for your product.
+implements:
+  - SRS-001
