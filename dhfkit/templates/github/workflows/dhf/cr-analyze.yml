@@ -83,7 +83,7 @@ jobs:
           if [ -n "$(ls -A /tmp/test-artifacts 2>/dev/null)" ]; then
             JUNIT_ARGS="--junit-dir /tmp/test-artifacts"
           fi
-          DHF_CONTEXT=$(medharness dhf context overview --cr "$CR_ID" $JUNIT_ARGS 2>/dev/null || echo '{}')
+          DHF_CONTEXT=$(medharness dhf context for-stage analyze --cr "$CR_ID" 2>/dev/null || echo '{}')
           echo "DHF_CONTEXT=$DHF_CONTEXT" >> "$GITHUB_ENV"
 
       - uses: actions/setup-node@v4

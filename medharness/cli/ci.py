@@ -13,12 +13,16 @@ Calls services/ci.py and _helpers directly. No commands/ci.py intermediate layer
 """
 
 import json
+import re
 from pathlib import Path
 import click
 import medharness._helpers as _h
 from medharness.services.ci import ci_structural_gate, ci_test_coverage_gate
 from medharness.services.github_event import parse_github_event
 from medharness.services.github_session import get_session, put_session
+from medharness.services.spec_validation import validate_spec
+
+_ITEM_ID_RE = re.compile(r"^([A-Z]+-\d+)")
 
 
 def register(main):
@@ -155,6 +159,7 @@ def register(main):
                                      coverage_pairs=coverage_pairs,
                                      fail_on_uncovered=fail_on_uncovered)
         r = result["results"]
+        dhf_arg = f"--dhf {dhf_path}"
         if "schema" in r:
             s = r["schema"]
             if s["passed"]:
@@ -163,16 +168,29 @@ def register(main):
                 click.echo("FAIL [schema]: validation errors found", err=True)
                 for err in s.get("errors", []):
                     click.echo(f"  ✗ {err}", err=True)
+                    m = _ITEM_ID_RE.match(str(err))
+                    if m:
+                        iid = m.group(1)
+                        click.echo(f"    Fix: medharness {dhf_arg} dhf item update {iid}"
+                                   f" --data '{{\"<field>\": \"<value>\"}}'", err=True)
         if "traceability" in r:
             t = r["traceability"]
             req = t.get("required", {})
             if not req.get("passed", True):
                 for f in req.get("failures", []):
                     click.echo(f"FAIL [required] {f['id']}: {f['issue']}", err=True)
+                    click.echo(f"    Fix: add 'dhf_links: [<parent-id>]' to"
+                               f" {f['id']}.yaml, or:", err=True)
+                    click.echo(f"         medharness {dhf_arg} dhf item update {f['id']}"
+                               f" --data '{{\"dhf_links\": [\"<parent-id>\"]}}'", err=True)
             for c in t.get("coverage", []):
                 click.echo(f"{'PASS' if c['passed'] else 'FAIL'} [coverage] "
                            f"{c['parent_type']}→{c['child_type']}: "
                            f"{c['covered']}/{c['total']} covered", err=True)
+                if not c["passed"]:
+                    click.echo(f"    Fix: medharness {dhf_arg} dhf item list"
+                               f" --type {c['child_type']} to find uncovered items,"
+                               f" then add dhf_links to their YAML.", err=True)
             if t.get("summary"):
                 click.echo(t["summary"], err=True)
         if "coverage" in r:
@@ -202,6 +220,7 @@ def register(main):
         result = ci_test_coverage_gate(dhf_path=dhf_path, junit_paths=junit_paths, req_types=req_types)
         if result.get("error"):
             raise click.ClickException(result["error"])
+        dhf_arg = f"--dhf {dhf_path}"
         for row in result["results"]:
             if "warning" in row:
                 click.echo(f"WARN: {row['warning']} '{row['type']}' — skipped.", err=True)
@@ -211,8 +230,41 @@ def register(main):
                 click.echo(f"FAIL [test-coverage] {row['type']}: {row['covered']}/{row['total']} covered", err=True)
                 for uid in row.get("uncovered", []):
                     click.echo(f"      ↳ uncovered: {uid}", err=True)
+                    click.echo(f"        Fix: add 'dhf_links: [{uid}]' to a test case, or:", err=True)
+                    click.echo(f"             medharness {dhf_arg} dhf item create --type TC"
+                               f" --data '{{\"title\": \"Test {uid}\", \"dhf_links\": [\"{uid}\"]}}'", err=True)
         if not result["passed"]:
             raise click.ClickException("Test coverage gaps found.")
+
+    # ── Spec validation ──
+
+    @ci.command("validate-spec")
+    @click.option("--cr", "cr_id", required=True, metavar="CR_ID")
+    @click.option("--spec", "spec_path", default=None, type=click.Path(path_type=Path),
+                  metavar="PATH", help="Path to spec file (default: DHF/documents/specs/<cr_id>-Spec.md)")
+    @click.option("--dhf", "dhf_path", default=None, type=click.Path(file_okay=False, path_type=Path),
+                  metavar="PATH", help="DHF directory for item existence checks.")
+    def ci_validate_spec(cr_id: str, spec_path: Path | None, dhf_path: Path | None) -> None:
+        """Validate spec YAML front-matter produced by cr-analyze.
+
+        Checks cr_id, direction_fit, affected_items (existence in DHF),
+        and test_plan structure. Exits non-zero if any check fails.
+        """
+        if spec_path is None:
+            if dhf_path:
+                spec_path = dhf_path / "documents" / "specs" / f"{cr_id}-Spec.md"
+            else:
+                raise click.UsageError("Provide --spec <path> or --dhf <path> to locate the spec.")
+
+        errors = validate_spec(spec_path, cr_id, dhf_path)
+        if not errors:
+            click.echo(f"PASS [validate-spec] {cr_id}: front-matter valid.", err=True)
+            return
+
+        for e in errors:
+            click.echo(f"FAIL [validate-spec] {cr_id} ({e['field']}): {e['issue']}", err=True)
+            click.echo(f"    Fix: {e['fix']}", err=True)
+        raise click.ClickException(f"Spec validation failed for {cr_id} ({len(errors)} error(s)).")
 
     # ── GitHub event context ──
 

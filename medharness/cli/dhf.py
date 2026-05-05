@@ -9,6 +9,7 @@ import click
 import medharness._helpers as _h
 import dhfkit.api as _api
 from medharness.services.git import commit_dhf_item
+from medharness.services.spec_validation import parse_spec_frontmatter
 
 
 def register(main):
@@ -233,6 +234,95 @@ def register(main):
             "implementation_spec": str(spec_path),
             "context": str(context_path),
         }))
+
+    @dhf_context.command("for-stage")
+    @click.argument("stage", type=click.Choice(["analyze", "design", "develop"]))
+    @click.option("--cr", "cr_id", required=True, metavar="CR_ID")
+    @click.option("--spec", "spec_path", default=None, type=click.Path(path_type=Path),
+                  metavar="PATH", help="Path to spec file (auto-detected if omitted).")
+    @click.pass_context
+    def dhf_context_for_stage(ctx: click.Context, stage: str, cr_id: str,
+                               spec_path: Path | None) -> None:
+        """Output scoped DHF context for a specific workflow stage.
+
+        Returns only the information relevant to the current stage:
+          analyze — CR item, all items summarized, traceability gaps, test coverage
+          design  — CR item, approved spec plan, affected items only
+          develop — CR item, spec plan, affected items, full spec text
+        """
+        adapter = _h._make_adapter(ctx)
+        dhf_path: Path = ctx.obj["dhf"]
+
+        cr = adapter.get_item(cr_id)
+        cr_summary = ({"id": cr_id, "title": cr.get("title", ""), "status": cr.get("status", "")}
+                      if cr else {"id": cr_id, "found": False})
+
+        # Locate spec
+        if spec_path is None:
+            spec_path = dhf_path / "documents" / "specs" / f"{cr_id}-Spec.md"
+        fm = parse_spec_frontmatter(spec_path)
+
+        if stage == "analyze":
+            items = adapter.list_items()
+            trace = adapter.validate_traceability()
+            orphans = trace.get("orphans", [])
+            coverage = trace.get("coverage", [])
+            gaps = [c for c in coverage if c.get("covered", 0) < c.get("total", 0)]
+            result: dict = {
+                "stage": "analyze",
+                "cr": cr_summary,
+                "item_count": len(items),
+                "items": [
+                    {"id": it["id"], "type": it.get("type", ""), "title": it.get("title", ""),
+                     "status": it.get("status", ""), "tracelinks": it.get("all_linked_uids", [])}
+                    for it in sorted(items, key=lambda x: x["id"])
+                ],
+                "traceability_gaps": {
+                    "orphan_count": len(orphans),
+                    "orphans": [o.get("id") for o in orphans[:20]],
+                    "uncovered_pairs": [
+                        {"parent": g["parent_type"], "child": g["child_type"],
+                         "covered": g["covered"], "total": g["total"]}
+                        for g in gaps
+                    ],
+                },
+            }
+
+        elif stage == "design":
+            affected_ids: list[str] = fm.get("affected_items", []) if fm else []
+            affected_items = [
+                adapter.get_item(uid) for uid in affected_ids
+            ]
+            result = {
+                "stage": "design",
+                "cr": cr_summary,
+                "spec_plan": fm,
+                "affected_items": [
+                    {"id": it["id"], "type": it.get("type", ""), "title": it.get("title", ""),
+                     "status": it.get("status", ""), "tracelinks": it.get("all_linked_uids", [])}
+                    for it in affected_items if it is not None
+                ],
+            }
+
+        else:  # develop
+            affected_ids = fm.get("affected_items", []) if fm else []
+            affected_items = [adapter.get_item(uid) for uid in affected_ids]
+            spec_text = adapter.get_document(f"{cr_id}-Spec") or ""
+            if not spec_text and spec_path.exists():
+                spec_text = spec_path.read_text(encoding="utf-8")
+            result = {
+                "stage": "develop",
+                "cr": cr_summary,
+                "spec_plan": fm,
+                "spec_text": spec_text,
+                "affected_items": [
+                    {"id": it["id"], "type": it.get("type", ""), "title": it.get("title", ""),
+                     "status": it.get("status", ""), "tracelinks": it.get("all_linked_uids", [])}
+                    for it in affected_items if it is not None
+                ],
+            }
+
+        click.echo(json.dumps(result, default=str))
 
     @dhf_context.command("overview")
     @click.option("--cr", "cr_id", default=None, metavar="CR_ID")
