@@ -4,6 +4,9 @@ name: Release
 # Builds the wheel and publishes it to GitHub Releases and PyPI.
 # MedHarness releases contain only the installable Python package.
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 on:
   push:
     tags:
