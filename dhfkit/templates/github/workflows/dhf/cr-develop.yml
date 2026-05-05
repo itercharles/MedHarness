@@ -86,7 +86,7 @@ jobs:
           medharness --dhf DHF dhf item transition "$CR_ID" rejected --by "github-actions[bot]"
           git config user.name "GitHub Actions [bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add "DHF/items/$CR_ID.yaml"
+          git add "DHF/items/06_cr/$CR_ID.yaml"
           git commit -m "chore: reject $CR_ID — direction_fit out-of-scope [skip ci]"
           git push
           echo "✓ $CR_ID transitioned to rejected and committed." >&2

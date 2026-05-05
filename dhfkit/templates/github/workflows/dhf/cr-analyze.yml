@@ -5,7 +5,7 @@ on:
     types: [closed]
     branches: [main]
     paths:
-      - 'DHF/items/CR-*.yaml'
+      - 'DHF/items/06_cr/CR-*.yaml'
   workflow_dispatch:
     inputs:
       cr_id:
@@ -36,7 +36,7 @@ jobs:
             echo "cr_id=$MANUAL_CR_ID" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          FILES=$(git diff --name-status "$BASE_SHA" "$MERGE_SHA" | awk '$1 == "A" && $2 ~ /^DHF\/items\/CR-.*\.yaml$/ { print $2 }')
+          FILES=$(git diff --name-status "$BASE_SHA" "$MERGE_SHA" | awk '$1 == "A" && $2 ~ /^DHF\/items\/06_cr\/CR-.*\.yaml$/ { print $2 }')
           if [ -z "$FILES" ]; then
             echo "skip=true" >> "$GITHUB_OUTPUT"
             exit 0
@@ -103,7 +103,7 @@ jobs:
             claude -p --dangerously-skip-permissions "$PROMPT"
           else
             echo "ANTHROPIC_API_KEY not set — writing stub spec for pipeline testing."
-            CR_TITLE=$(python3 -c "import yaml; d=yaml.safe_load(open('DHF/items/${CR_ID}.yaml')); print(d.get('title','No title'))")
+            CR_TITLE=$(python3 -c "import yaml; d=yaml.safe_load(open('DHF/items/06_cr/${CR_ID}.yaml')); print(d.get('title','No title'))")
             printf '# %s Plan Spec (stub)\n\n> **Note:** Stub spec — no ANTHROPIC_API_KEY. Replace before approving.\n\n## Change Request\n\n**ID:** %s\n**Title:** %s\n\n## Technical Approach\n\n_To be filled in._\n\n## DHF Items to Create or Update\n\n_To be filled in._\n\n## Product Code Changes\n\n_To be filled in._\n\n## Verification and Test Cases\n\n_To be filled in._\n\n## Compliance and Traceability\n\n_To be filled in._\n' \
               "$CR_ID" "$CR_ID" "$CR_TITLE" > "$SPEC"
           fi
@@ -116,7 +116,7 @@ jobs:
           git checkout -b "spec/$CR_ID"
           git config user.name "GitHub Actions [bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add "DHF/items/$CR_ID.yaml" "DHF/documents/specs/$CR_ID-Spec.md"
+          git add "DHF/items/06_cr/$CR_ID.yaml" "DHF/documents/specs/$CR_ID-Spec.md"
           git commit -m "feat: analyze $CR_ID"
           git push --set-upstream origin "spec/$CR_ID"
 
