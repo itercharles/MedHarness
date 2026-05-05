@@ -48,20 +48,20 @@ pytest dhfkit/tests/ tests/
 
 ## Quick Start
 
-`medharness init` interactively scaffolds two repos:
+`medharness init` is zero-prompt — it scaffolds a single-repo project in the
+current directory. The project name is derived from the directory name.
 
 ```bash
+mkdir my-medical-device && cd my-medical-device
+python -m venv .venv && source .venv/bin/activate
+pip install medharness
 medharness init
 ```
-
-You'll be asked for:
-- GitHub org/username and product repo name
-- Whether to scaffold a DHF repo (recommended: yes)
 
 After `init` completes, here's what exists on disk:
 
 ```
-my-product-dhf/                      # DHF repo (scaffolded)
+my-medical-device/                  # single repo — DHF + source together
 ├── DHF/
 │   ├── config/
 │   │   ├── global.yaml             # project name, lifecycle states
@@ -73,61 +73,57 @@ my-product-dhf/                      # DHF repo (scaffolded)
 │   │   ├── 06_cr/                  # Change Requests (CR-NNN.yaml)
 │   │   └── ...                     # Use Cases, SOUP, Risk, Defects, etc.
 │   ├── test-results/
-│   │   └── results.yaml            # automated test result records
 │   ├── documents/
 │   │   ├── specs/                  # Jinja2 spec templates (.j2)
-│   │   └── plans/                  # development_plan.md, integration_plan.md
-│   └── AI-harness/                 # agent context files
-├── .github/workflows/              # CR analysis, design, CI validation
-└── README.md
-
-my-product/                         # Product repo (minimal files written)
+│   │   └── plans/                  # development_plan.md, verification_plan.md, …
+│   └── README.md
+├── .github/
+│   ├── workflows/
+│   │   ├── engineering-control.yml # main CI: CR validation + coverage gate + evidence
+│   │   ├── cr-analyze.yml          # CR analysis from issues
+│   │   ├── cr-develop.yml          # CR development with AI
+│   │   ├── cr-spec-iterate.yml     # iterate on spec with review feedback
+│   │   ├── cr-transition.yml       # transition CR state in DHF
+│   │   ├── cr-complete.yml         # auto-close CR on PR merge
+│   │   └── review-pr.yml           # AI-assisted PR review
+│   └── prompts/                    # AI prompt templates
+├── .claude/skills/                 # Claude Code skills
+├── tests/                          # product test suite
 ├── CLAUDE.md                       # agent entrypoint
-├── .github/workflows/
-│   ├── engineering-control.yml     # main CI: test + coverage gate + evidence
-│   ├── cr-complete.yml             # auto-close CR on PR merge
-│   └── review-pr.yml               # AI-assisted PR review
-└── .claude/skills/                  # Claude Code skills (traceability-check, …)
+├── .gitignore
+└── README.md                       # project README
 ```
 
 The scaffolded items are **starter samples** — replace them with your project's
 real requirements, architecture, and plans before using this for a regulated product.
 
-**Push both repos to GitHub and open a PR:**
+**Initialize git and push:**
 
 ```bash
-# 1. Push the DHF repo
-cd my-product-dhf
-git init && git remote add origin https://github.com/my-org/my-product-dhf
-git add -A && git commit -m "feat: initialize DHF"
+git init && git add -A
+git commit -m "feat: initialize My Medical Device with MedHarness"
+git remote add origin https://github.com/<org>/my-medical-device
 git push -u origin main
-
-# 2. Open an engineering control PR in the product repo
-cd ../my-product
-git checkout -b medharness/setup
-git add -A && git commit -m "feat: add MedHarness harness and CI workflows"
-git push -u origin medharness/setup
-# → open PR, add DHF_REPO_TOKEN secret, merge
 ```
 
 ---
 
 ## How a Change Request flows
 
-Every non-trivial change starts as a **Change Request (CR)** in the DHF repo.
-CRs move through five AI-assisted stages:
+Every non-trivial change starts as a **Change Request (CR)** in the DHF.
+CRs move through AI-assisted stages:
 
 ```
-Issue → cr-analyze → cr-design → cr-develop → cr-complete
+Issue → cr-analyze → cr-spec-iterate → cr-develop → cr-transition → cr-complete
 ```
 
 | Stage | Trigger | What MedHarness does |
 |-------|---------|---------------------|
-| **cr-analyze** | Issue labeled `CR` | Pre-computes DHF context, runs Claude to write a technical spec, commits the spec to `docs/cr-specs/` |
-| **cr-design** | Spec merged | Reads the approved spec, creates/updates DHF items (SYS, SRS, SWDD, …), validates schema |
-| **cr-develop** | Design merged | Clones the DHF, injects `$DHF_CONTEXT`, runs Claude to implement code in the product repo, opens a PR |
-| **iterate** | Reviewer comments | Resumes the Claude session with review feedback, pushes revisions |
-| **cr-complete** | PR merged | Transitions the CR to `complete` in the DHF, generates closing evidence |
+| **cr-analyze** | Issue labeled `CR` | Pre-computes DHF context, runs Claude to write a technical spec, commits the spec to `DHF/documents/cr-specs/` |
+| **cr-spec-iterate** | Review feedback on spec | Resumes Claude session with feedback, updates spec, pushes revisions |
+| **cr-develop** | Spec approved | Injects `$DHF_CONTEXT`, runs Claude to implement code, opens a PR |
+| **cr-transition** | PR events | Transitions the CR to `in_review`/`approved` in the DHF |
+| **cr-complete** | PR merged | Transitions the CR to `complete`, generates closing evidence |
 
 At each stage MedHarness:
 
@@ -136,8 +132,8 @@ At each stage MedHarness:
 3. **Captures decisions back** — `medharness dhf item transition --commit --push`
 4. **Stores session IDs** — `medharness ci claude-session put/get` for iterative review loops
 
-The workflow YAML files for each stage live in the DHF repo under `.github/workflows/dhf/`
-and are scaffolded by `medharness init`.
+The workflow YAML files for each stage are scaffolded by `medharness init` into
+`.github/workflows/`.
 
 ---
 
@@ -194,9 +190,9 @@ Reference implementations are available in the [WebTPS](https://github.com/iterc
 ### Running the gate locally
 
 ```bash
-# From product repo root, with DHF checked out at ../dhf-repo/
+# From project root
 pytest tests/ -q --junitxml=test-results/results.xml
-medharness --dhf ../dhf-repo/DHF ci test-coverage --junit-dir test-results
+medharness --dhf DHF ci test-coverage --junit-dir test-results
 ```
 
 Expect output like:
@@ -216,10 +212,10 @@ The command exits non-zero when gaps exist, blocking CI.
 ### Scaffold
 
 ```bash
-medharness init                     # interactive project setup
+medharness init                     # zero-prompt single-repo project setup
 ```
 
-### DHF operations (run from DHF repo or with `--dhf`)
+### DHF operations (run with `--dhf DHF`)
 
 ```bash
 medharness --dhf DHF dhf item list --type SYS
@@ -238,13 +234,12 @@ medharness --dhf DHF dhf test list
 medharness --dhf DHF dhf config doc-types
 ```
 
-### CI gates (run from product repo)
+### CI gates
 
 ```bash
 medharness ci dhf-validate --dhf DHF
 medharness ci test-coverage --dhf DHF --junit-dir test-results
-medharness ci evidence bundle --dhf DHF --out-dir dhf-artifacts
-medharness ci artifacts generate --dhf DHF --out-dir .
+medharness ci evidence bundle --dhf DHF --out-dir artifacts
 ```
 
 ### CR workflow commands
@@ -270,7 +265,7 @@ Use `DHFClient` for high-level operations (recommended for product repo automati
 ```python
 from medharness.client import DHFClient
 
-client = DHFClient(Path("../my-project-DHF/DHF"))
+client = DHFClient(Path("DHF"))
 
 cr   = client.get_item("CR-034")
 spec = client.get_cr_context("CR-034")   # {"cr": {...}, "spec": "..."}
@@ -294,8 +289,9 @@ items  = adapter.list_items("SRS")
 |-----------|---------|
 | `medharness/` | CLI harness, CI gates, CR workflows, `init` scaffolding |
 | `dhfkit/` | DHF engine: items, lifecycle, traceability, document generation |
-| `dhfkit/templates/` | Starter DHF scaffold — config, specs, plans, 12 sample items |
-| `docs/` | Architecture, ADRs, compatibility contracts, roadmap |
+| `dhfkit/templates/` | Starter DHF scaffold — config, specs, plans, sample items, CI workflows |
+| `tests/` | MedHarness and dhfkit test suites |
+| `docs/` | Architecture, ADRs, compatibility contracts |
 
 `dhfkit` has no dependency on `medharness` — the engine can be used standalone.
 
