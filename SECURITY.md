@@ -10,7 +10,7 @@
 
 Please **do not** open a public GitHub issue for security vulnerabilities.
 
-Email: security@medharness.dev
+Email: itercharles@163.com
 
 Include: affected version, description, reproduction steps, potential impact.
 
