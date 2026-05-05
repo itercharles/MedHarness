@@ -12,6 +12,7 @@ FDA-regulated software projects. It combines two things:
 2. **`dhfkit`** — a standalone DHF engine for managing items, enforcing traceability
    (UC → CRS → SRS → SWDD → TC), validating schema, and generating specification documents.
 
+[![PyPI](https://img.shields.io/pypi/v/medharness)](https://pypi.org/project/medharness/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://python.org)
 
@@ -25,17 +26,25 @@ FDA-regulated software projects. It combines two things:
 ## Install
 
 ```bash
-# From source (not yet on PyPI):
-git clone https://github.com/itercharles/MedHarness
-cd MedHarness
-pip install -e .
+pip install medharness[full]
 ```
+
+`[full]` includes the `ai` (Gemini-based AI review) and `docs` (PDF export) extras.
+Omit for a minimal install — the DHF engine (`dhfkit`) is always included.
 
 Verify:
 
 ```bash
 medharness --help
 dhfkit --help
+```
+
+**From source (development):**
+
+```bash
+git clone https://github.com/itercharles/MedHarness
+cd MedHarness
+pip install -e ".[dev]"
 ```
 
 ---
