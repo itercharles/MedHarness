@@ -20,6 +20,14 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List, Optional
 
+# Stable JUnit XML property namespace — downstream reporters should use these
+JUNIT_ID = "medharness.id"
+JUNIT_LINKS = "medharness.links"
+JUNIT_TITLE = "medharness.title"
+JUNIT_REVIEWER = "medharness.reviewer"
+JUNIT_REVIEW_DATE = "medharness.review_date"
+JUNIT_REVIEW_STATUS = "medharness.review_status"
+
 # Matches: TC_SYS_001, TC-SYS-001, tc_sys_001, TC-CRS-009-001, TC-SRS-032-005
 _TC_ID_RE = re.compile(
     r"(?:^|[^A-Za-z])(TC)[_-]([A-Z]+)[_-](\d+)(?:[_-](\d+))?",
@@ -58,16 +66,16 @@ def parse_junit_xml(path: Path) -> List[ExecutionResult]:
 
         # Extract custom properties
         props = _parse_properties(testcase)
-        tc_id = props.get("medharness.id") or _extract_tc_id(name)
+        tc_id = props.get(JUNIT_ID) or _extract_tc_id(name)
         if not tc_id:
             continue
 
-        links_raw = props.get("medharness.links", "")
+        links_raw = props.get(JUNIT_LINKS, "")
         links = [lnk.strip() for lnk in links_raw.split(",") if lnk.strip()] if links_raw else []
-        title = props.get("medharness.title", "")
-        reviewer = props.get("medharness.reviewer", "")
-        review_date = props.get("medharness.review_date", "")
-        review_status = props.get("medharness.review_status", "")
+        title = props.get(JUNIT_TITLE, "")
+        reviewer = props.get(JUNIT_REVIEWER, "")
+        review_date = props.get(JUNIT_REVIEW_DATE, "")
+        review_status = props.get(JUNIT_REVIEW_STATUS, "")
 
         # Determine status
         if testcase.find("failure") is not None:

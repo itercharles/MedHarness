@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import List, Optional, Dict, Any
 
 from medharness.graph import GraphEngine
+from dhfkit.junit_parser import JUNIT_LINKS
 
 
 class MedHarnessCore:
@@ -59,7 +60,7 @@ class MedHarnessCore:
     def inject_junit_results(self, junit_paths: List[Path]) -> None:
         """Inject verification status from JUnit XML files without storing to DHF.
 
-        Reads ``medharness.links`` properties directly from each testcase.
+        Reads ``JUNIT_LINKS`` properties directly from each testcase.
         TC IDs are not required. Results are held in-memory only.
         """
         # Build item_id → [(test_name, status)] from all provided JUnit files
@@ -82,7 +83,7 @@ class MedHarnessCore:
                 if props_el is None:
                     continue
                 for prop in props_el.findall("property"):
-                    if prop.get("name") == "medharness.links":
+                    if prop.get("name") == JUNIT_LINKS:
                         for item_id in prop.get("value", "").split(","):
                             item_id = item_id.strip()
                             if item_id:

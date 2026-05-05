@@ -16,14 +16,8 @@ from medharness._helpers import (
     DEFAULT_ACCEPTANCE_COVERAGE_PAIRS,
     DEFAULT_TRACEABILITY_DOC_TYPES,
     _parse_coverage_pairs,
-    _collect_junit_paths,
-    _run_acceptance_gate,
-    _available_doc_types,
-    _generate_specification_artifacts,
-    _generate_plan_artifacts,
-    _build_traceability_report_payload,
-    _run_artifact_generation,
 )
+from dhfkit.junit_parser import JUNIT_LINKS
 
 
 # ---------------------------------------------------------------------------
@@ -138,7 +132,7 @@ def ci_test_coverage_gate(
                 continue
             for props in tc.iter("properties"):
                 for prop in props.iter("property"):
-                    if prop.get("name") == "medharness.links":
+                    if prop.get("name") == JUNIT_LINKS:
                         value = prop.get("value", "")
                         if value:
                             covered_reqs.update(
