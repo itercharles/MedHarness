@@ -9,6 +9,16 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ---
 
+## [0.2.1] — 2026-05-06
+
+### Fixes
+
+- `medharness cr workflow intake-github-issue-ci --open-pr` now passes `--repo`
+  explicitly to `gh` PR commands and fails with the actual CLI error when PR
+  lookup or creation fails, instead of silently returning an empty `pr_url`
+
+---
+
 ## [0.2.0] — 2026-05-05
 
 ### Breaking Changes
