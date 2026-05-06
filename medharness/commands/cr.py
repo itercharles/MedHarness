@@ -124,10 +124,18 @@ def workflow_intake_github_issue_ci(
         if open_pr and src_repo:
             try:
                 existing = subprocess.run(
-                    ["gh", "pr", "list", "--head", branch, "--json", "url", "--jq", ".[0].url"],
+                    [
+                        "gh", "pr", "list", "--repo", src_repo,
+                        "--head", branch, "--json", "url", "--jq", ".[0].url",
+                    ],
                     cwd=repo_root, capture_output=True, text=True, env=gh_env,
                 )
-                if existing.returncode == 0 and existing.stdout.strip():
+                if existing.returncode != 0:
+                    message = (existing.stderr or existing.stdout).strip()
+                    raise click.ClickException(
+                        message or f"failed to list PRs for branch {branch}"
+                    )
+                if existing.stdout.strip():
                     pr_url = existing.stdout.strip()
                 else:
                     body = (
@@ -137,14 +145,21 @@ def workflow_intake_github_issue_ci(
                         f"This PR creates {result.cr_id}. Human approval is required."
                     )
                     proc = subprocess.run(
-                        ["gh", "pr", "create", "--head", branch, "--base", "main",
-                         "--title", result.title, "--body", body],
+                        [
+                            "gh", "pr", "create", "--repo", src_repo,
+                            "--head", branch, "--base", "main",
+                            "--title", result.title, "--body", body,
+                        ],
                         cwd=repo_root, capture_output=True, text=True, env=gh_env,
                     )
-                    if proc.returncode == 0:
-                        pr_url = proc.stdout.strip()
+                    if proc.returncode != 0:
+                        message = (proc.stderr or proc.stdout).strip()
+                        raise click.ClickException(
+                            message or f"failed to create PR for branch {branch}"
+                        )
+                    pr_url = proc.stdout.strip()
             except FileNotFoundError:
-                pass  # gh CLI not available — skip PR creation
+                raise click.ClickException("gh CLI not available — cannot open PR")
 
         if comment_source_issue and src_repo and issue_num and result.cr_id:
             comment_body = (
@@ -243,4 +258,3 @@ def check_status(ctx: click.Context, cr_id: str) -> dict:
         "cr_id": cr_id, "found": True,
         "status": status, "valid": status in valid_statuses,
     }
-

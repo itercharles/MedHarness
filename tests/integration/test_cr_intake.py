@@ -6,13 +6,16 @@ Tests for GitHub issue-to-CR intake workflow.
 from __future__ import annotations
 
 import json
+import subprocess
 from datetime import date
 from pathlib import Path
 from typing import Any
 
+import click
 from click.testing import CliRunner
 
 from medharness.cli import main
+from medharness.commands.cr import workflow_intake_github_issue_ci
 from medharness.workflows.cr_intake import (
     IssueContext,
     build_cr_data,
@@ -402,3 +405,121 @@ class TestIntakeGitHubIssueCI:
         assert payload.get("should_create") is True
         files = list(dhf_repo.glob("DHF/items/06_cr/CR-*.yaml"))
         assert len(files) == 0, "no CR file should be written without --write"
+
+    def test_ci_intake_populates_pr_url_when_gh_create_succeeds(self, monkeypatch, tmp_path):
+        dhf_repo = tmp_path / "dhf"
+        dhf_repo.mkdir()
+        (dhf_repo / "DHF").mkdir(parents=True)
+        event_path = self._create_event(tmp_path)
+
+        monkeypatch.setattr("medharness._helpers._make_adapter_for_dhf_root",
+                            lambda dhf_root: self._make_stub_adapter())
+        monkeypatch.setattr("medharness._helpers._resolve_dhf_repo_paths",
+                            lambda ctx, dhf_repo: (dhf_repo, dhf_repo / "DHF"))
+        monkeypatch.setattr("medharness._helpers._load_issue_comments",
+                            lambda *args, **kwargs: [])
+        monkeypatch.setattr("medharness.commands.cr.current_iso_week_milestone",
+                            lambda: "2026-W18")
+        monkeypatch.setattr("medharness.commands.cr._h._run_git",
+                            lambda repo_root, args: "")
+        monkeypatch.setattr("medharness.commands.cr._h._git_has_changes",
+                            lambda repo_root: False)
+
+        calls: list[list[str]] = []
+
+        def fake_run(args, **kwargs):
+            calls.append(args)
+            if args[:4] == ["gh", "pr", "list", "--repo"]:
+                return subprocess.CompletedProcess(args, 0, stdout="", stderr="")
+            if args[:4] == ["gh", "pr", "create", "--repo"]:
+                return subprocess.CompletedProcess(
+                    args, 0, stdout="https://github.com/acme/web/pull/99\n", stderr=""
+                )
+            if args[:3] == ["gh", "issue", "comment"]:
+                return subprocess.CompletedProcess(args, 0, stdout="", stderr="")
+            raise AssertionError(f"unexpected subprocess call: {args}")
+
+        monkeypatch.setattr("medharness.commands.cr.subprocess.run", fake_run)
+
+        ctx = click.Context(main)
+        ctx.obj = {"dhf": dhf_repo / "DHF"}
+        with ctx:
+            payload = workflow_intake_github_issue_ci(
+                ctx,
+                dhf_repo,
+                event_path,
+                None,
+                "2026-W18",
+                "test-cr",
+                "cr",
+                "cr",
+                True,
+                False,
+                True,
+                "acme/web",
+                True,
+                None,
+                "token",
+                None,
+            )
+
+        assert payload["pr_url"] == "https://github.com/acme/web/pull/99"
+        assert ["gh", "pr", "list", "--repo", "acme/web"] == calls[0][:5]
+        assert ["gh", "pr", "create", "--repo", "acme/web"] == calls[1][:5]
+
+    def test_ci_intake_raises_when_gh_create_fails(self, monkeypatch, tmp_path):
+        dhf_repo = tmp_path / "dhf"
+        dhf_repo.mkdir()
+        (dhf_repo / "DHF").mkdir(parents=True)
+        event_path = self._create_event(tmp_path)
+
+        monkeypatch.setattr("medharness._helpers._make_adapter_for_dhf_root",
+                            lambda dhf_root: self._make_stub_adapter())
+        monkeypatch.setattr("medharness._helpers._resolve_dhf_repo_paths",
+                            lambda ctx, dhf_repo: (dhf_repo, dhf_repo / "DHF"))
+        monkeypatch.setattr("medharness._helpers._load_issue_comments",
+                            lambda *args, **kwargs: [])
+        monkeypatch.setattr("medharness.commands.cr.current_iso_week_milestone",
+                            lambda: "2026-W18")
+        monkeypatch.setattr("medharness.commands.cr._h._run_git",
+                            lambda repo_root, args: "")
+        monkeypatch.setattr("medharness.commands.cr._h._git_has_changes",
+                            lambda repo_root: False)
+
+        def fake_run(args, **kwargs):
+            if args[:4] == ["gh", "pr", "list", "--repo"]:
+                return subprocess.CompletedProcess(args, 0, stdout="", stderr="")
+            if args[:4] == ["gh", "pr", "create", "--repo"]:
+                return subprocess.CompletedProcess(
+                    args, 1, stdout="", stderr="GraphQL: not permitted"
+                )
+            raise AssertionError(f"unexpected subprocess call: {args}")
+
+        monkeypatch.setattr("medharness.commands.cr.subprocess.run", fake_run)
+
+        ctx = click.Context(main)
+        ctx.obj = {"dhf": dhf_repo / "DHF"}
+        with ctx:
+            try:
+                workflow_intake_github_issue_ci(
+                    ctx,
+                    dhf_repo,
+                    event_path,
+                    None,
+                    "2026-W18",
+                    "test-cr",
+                    "cr",
+                    "cr",
+                    True,
+                    False,
+                    True,
+                    "acme/web",
+                    False,
+                    None,
+                    "token",
+                    None,
+                )
+            except click.ClickException as exc:
+                assert "GraphQL: not permitted" in str(exc)
+            else:
+                raise AssertionError("expected ClickException when gh pr create fails")
