@@ -39,12 +39,13 @@ CR ID: {{cr_id}}
    `DHF/documents/specs/` or `DHF/documents/plans/` (direct file writes are
    permitted for documents, not for DHF items).
 
-5. After all items are written, validate traceability:
+5. After all items are written, validate schema and traceability:
 
+       python -m medharness --dhf DHF dhf validate schema
        python -m medharness --dhf DHF dhf validate traceability
 
-   If the output reports orphan items or uncovered coverage pairs introduced
-   by your changes, fix them and re-validate. Repeat until clean.
+   If either reports errors introduced by your changes, fix them and
+   re-validate. Repeat until both pass.
 
 6. Do not modify files outside `DHF/`.
 7. Do not edit the CR item YAML or any CR lifecycle/status fields.
