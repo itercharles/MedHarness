@@ -36,7 +36,7 @@ coverage remains accurate.
 
 ## Design Updates
 
-When the approved spec requires product item changes:
+When the approved spec requires product item changes. Prefer no change > update > create.
 - Update or create `UC` items for new or changed user workflows.
 - Update or create `CRS` items for user-facing needs and stakeholder value.
 - Keep CRS linked to UC through `derives_from`.

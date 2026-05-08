@@ -38,7 +38,7 @@ changes that do not alter system boundaries or data flow.
 
 ## Design Updates
 
-When the approved spec requires architecture changes:
+When the approved spec requires architecture changes. Prefer no change > update > create.
 - Update or create `SYSARCH` items under `DHF/items/06_sys_arch/`.
 - Link SYSARCH items to affected `SYS` requirements through `design`.
 - Update architecture specification source content only when architecture

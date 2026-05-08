@@ -38,7 +38,7 @@ clinical workflow, safety control, or data integrity behavior changes.
 
 ## Design Updates
 
-When the approved spec requires risk changes:
+When the approved spec requires risk changes. Prefer no change > update > create.
 - Update or create `RISK` items under `DHF/items/12_risks/`.
 - Update or create `RCM` items under `DHF/items/13_rcm/`.
 - Link `RCM.mitigates` to `RISK` items.
