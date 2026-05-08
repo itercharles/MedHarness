@@ -28,8 +28,7 @@ for the versioning policy.
   - `DHF/items/` (with subdirectories per doc type)
   - `DHF/test-results/`
   - `.github/workflows/`
-- Writes product repo files: `CLAUDE.md`, `.github/workflows/engineering-control.yml`, `.github/workflows/cr-complete.yml`, `.github/workflows/review-pr.yml`, `.claude/skills/pre-analyze/`, `.claude/skills/cr-implement/`, `.claude/skills/traceability-check/`
-- Writes DHF repo files: `AI-harness/context.md`
+- Writes product repo files: `CLAUDE.md`, `.github/workflows/engineering-control.yml`, `.github/workflows/cr-complete.yml`, `.github/workflows/review-pr.yml`
 - Substitutes: `{{project_name}}`, `{{product_repo}}`, `{{product_repo_name}}`, `{{github_org}}`, `{{dhf_repo_name}}`, `{{compliantflow_version}}`, `{{compliantflow_repo}}`, `{{primary_test_tool}}`
 
 ### Output Format

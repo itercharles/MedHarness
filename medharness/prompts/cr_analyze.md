@@ -23,19 +23,23 @@ Read these files:
 
    This prints one JSON object per line. Each object has `"id"`, `"type"`,
    `"title"`. Only reference `id` values from this output in `affected_items`.
-   If a needed item does not yet exist, write `affected_items: []` and describe
-   the gap in the DHF Impact section — the design phase will create it.
 
 3. Apply the DHF impact skills (provided below) to determine which DHF areas
    are affected. For each area state: `Required`, `Not required`, or
    `Follow-up needed` with a one-sentence justification.
 
-4. Produce the spec at `docs/cr-specs/{{cr_id}}-Spec.md`.
+4. For each required item type (SYS, SRS, SWDD, RISK, etc.), enumerate the
+   existing items of that type and identify:
+   - Which existing items are touched or need updating
+   - What new items need to be created, with their proposed title and content
+
+   Document this in the DHF Impact section of the spec so the design phase
+   can act on it directly. Do not create or modify any DHF items — analysis only.
+
+5. Produce the spec at `docs/cr-specs/{{cr_id}}-Spec.md`.
    Keep it short. Do not enumerate hundreds of speculative risks or test cases.
 
-5. Do not modify any file other than `docs/cr-specs/{{cr_id}}-Spec.md`.
-
-6. Do not edit `DHF/items/09_cr/{{cr_id}}.yaml` or any CR lifecycle fields.
+6. Do not modify any file other than `docs/cr-specs/{{cr_id}}-Spec.md`.
 
 ## Spec Format
 

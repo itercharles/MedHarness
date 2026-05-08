@@ -22,7 +22,6 @@ from medharness.workflows.init import (
     _write_engineering_control_yml,
     _write_cr_complete_yml,
     _write_gitignore,
-    _write_skills,
 )
 
 
@@ -251,24 +250,10 @@ class TestInitCmd:
             assert (tmp_path / "DHF" / "items" / d).is_dir(), f"Missing items/{d}"
 
     def test_scaffold_creates_ai_workflows(self, tmp_path):
-        """_scaffold_dhf creates the CR AI workflow files but not ai-harness context."""
+        """_scaffold_dhf creates the CR AI workflow files."""
         _scaffold_dhf(tmp_path)
         for wf in ("cr-analyze.yml", "cr-develop.yml", "cr-transition.yml"):
             assert (tmp_path / ".github" / "workflows" / wf).exists(), f"Missing {wf}"
-        assert not (tmp_path / "AI-harness").exists()
-
-    # ── skills ───────────────────────────────────────────────────────────────
-
-    def test_write_skills_creates_files(self, tmp_path):
-        """_write_skills creates .claude/skills/ with substituted placeholders."""
-        written = _write_skills(tmp_path, "Test Device")
-        assert len(written) >= 3
-        for skill in ["pre-analyze", "cr-implement", "traceability-check"]:
-            skill_md = tmp_path / ".claude" / "skills" / skill / "SKILL.md"
-            assert skill_md.exists(), f"Missing {skill}"
-            content = skill_md.read_text()
-            assert "Test Device" in content
-            assert "{{project_name}}" not in content
 
     # ── run_init guards ──────────────────────────────────────────────────────
 

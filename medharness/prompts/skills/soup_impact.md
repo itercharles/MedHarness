@@ -38,7 +38,7 @@ the same approved way.
 
 ## Design Updates
 
-When the approved spec requires SOUP changes:
+When the approved spec requires SOUP changes. Prefer no change > update > create.
 - Update or create `SOUP` items under `DHF/items/11_soup/`.
 - Record name, version, manufacturer, license, purpose, homepage, risk rating,
   safety class, and verification method when known.

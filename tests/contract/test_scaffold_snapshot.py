@@ -150,10 +150,6 @@ class TestScaffoldStructure:
         wfs = list(wf_dir.glob("*.yml"))
         assert len(wfs) > 0, f"No workflow files found in {wf_dir}"
 
-    def test_ai_harness_not_scaffolded(self, scaffolded):
-        """AI-harness/ is not scaffolded — CLAUDE.md covers the same purpose."""
-        assert not (scaffolded / "AI-harness").exists()
-
     def test_test_results_dir_has_gitkeep(self, scaffolded):
         """
         test-results/ has a .gitkeep file.

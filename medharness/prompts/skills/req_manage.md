@@ -1,9 +1,20 @@
 # Requirements Management
 
 Use this guidance during CR analysis and CR design to evaluate requirement
-coverage and traceability. During analysis, decide whether CRS, SYS, or SRS
-items need updates — do not create or edit items. During design, create or update
-requirement and SWDD items with correct traceability.
+coverage and traceability. During analysis, identify which CRS, SYS, SRS, and
+SWDD items need to be created or updated, and document them in the spec.
+During design, create or update those items with correct traceability.
+
+## Change Preference
+
+**For every item type, always prefer: no change > update > create.**
+
+Before touching any item, ask:
+1. Does an existing item already cover this need? → make no change, just reference it.
+2. Can an existing item be extended or clarified to cover this need? → update it.
+3. Only if neither applies → create a new item.
+
+This minimises DHF churn and keeps the item count stable.
 
 ## Requirement Hierarchy
 
@@ -131,6 +142,6 @@ IDs are assigned by medharness on creation.
 1. **Check existing coverage** — run `python -m medharness --dhf DHF dhf item list --type <TYPE>` for each relevant type
 2. **Check for conflicts and duplicates** — read existing items before writing anything
 3. **List gaps** — identify missing UC, CRS, SYS, or SRS items
-4. **Create items top-down via CLI** — UC first, then CRS, then SYS, then SRS; apply quality rules
+4. **Apply change preference top-down** — UC first, then CRS, then SYS, then SRS; for each: no change > update > create; apply quality rules
 5. **Validate schema** — run `python -m medharness --dhf DHF dhf validate schema`
 6. **Validate traceability** — run `python -m medharness --dhf DHF dhf validate traceability`; fix orphans or uncovered pairs, repeat until clean

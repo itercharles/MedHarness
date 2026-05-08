@@ -41,7 +41,7 @@ confirmation only when automation cannot reliably assert the result.
 
 ## Design Updates
 
-When the approved spec requires test design changes:
+When the approved spec requires test design changes. Prefer no change > update > create.
 - Define which implementation tests must be added or updated and their expected
   `@links` annotations.
 - Use Test-SRS for SRS-level unit/component behavior, Test-SYS for integrated
