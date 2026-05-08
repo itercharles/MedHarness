@@ -75,6 +75,7 @@ exclude = ["tests*", "dhfkit.tests*"]
 
 [tool.setuptools.package-data]
 "dhfkit" = ["templates/**/*"]
+"medharness" = ["prompts/**/*"]
 
 [tool.setuptools.exclude-package-data]
 "dhfkit" = ["tests", "tests/*", "tests/**/*"]

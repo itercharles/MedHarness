@@ -318,3 +318,75 @@ def register(main):
         """Retrieve the last stored Claude session ID from PR comments."""
         session_id = get_session(pr_number, token=token)
         click.echo(session_id)
+
+    # ── CR generation ──
+
+    @ci.command("analyze-cr")
+    @click.option("--cr", "cr_id", required=True, metavar="CR_ID")
+    @click.option("--pr", "pr_number", default=None, type=int, metavar="N",
+                  help="PR number — revision mode: revise spec based on review comments")
+    @click.pass_context
+    def ci_analyze_cr(ctx: click.Context, cr_id: str, pr_number: int | None) -> None:
+        """Generate or revise a CR spec using Claude.
+
+        Assembles prompt (with embedded DHF impact skills), invokes claude -p,
+        validates the spec front-matter, and self-corrects if validation fails.
+
+        Model is read from ANTHROPIC_MODEL env var.
+        Pass --pr N to revise an existing spec based on PR review comments.
+        """
+        from medharness.services.cr_generation import generate_spec  # noqa: PLC0415
+        dhf: Path = ctx.obj["dhf"]
+        result = generate_spec(cr_id, dhf, pr_number=pr_number)
+        click.echo(json.dumps(result))
+        click.echo(
+            f"OK Spec {'revised' if pr_number else 'generated'} for {cr_id} "
+            f"({result['corrections']} correction(s), validation: {result['validation']}).",
+            err=True,
+        )
+
+    @ci.command("design-cr")
+    @click.option("--cr", "cr_id", required=True, metavar="CR_ID")
+    @click.option("--pr", "pr_number", default=None, type=int, metavar="N",
+                  help="PR number — revision mode: revise design based on review comments")
+    @click.pass_context
+    def ci_design_cr(ctx: click.Context, cr_id: str, pr_number: int | None) -> None:
+        """Generate or revise DHF design items for a CR using Claude.
+
+        Assembles prompt (with embedded DHF impact skills), invokes claude -p
+        to create/update DHF items via the medharness CLI.
+
+        Model is read from ANTHROPIC_MODEL env var.
+        Pass --pr N to revise existing design based on PR review comments.
+        """
+        from medharness.services.cr_generation import generate_design  # noqa: PLC0415
+        dhf: Path = ctx.obj["dhf"]
+        result = generate_design(cr_id, dhf, pr_number=pr_number)
+        click.echo(json.dumps(result))
+        click.echo(
+            f"OK Design {'revised' if pr_number else 'generated'} for {cr_id}.",
+            err=True,
+        )
+
+    @ci.command("develop-cr")
+    @click.option("--cr", "cr_id", required=True, metavar="CR_ID")
+    @click.option("--pr", "pr_number", default=None, type=int, metavar="N",
+                  help="PR number — revision mode: revise implementation based on review comments")
+    @click.pass_context
+    def ci_develop_cr(ctx: click.Context, cr_id: str, pr_number: int | None) -> None:
+        """Generate or revise implementation code for a CR using Claude.
+
+        Reads the approved spec and CR item, then invokes claude -p to implement
+        the required code changes following CLAUDE.md conventions.
+
+        Model is read from ANTHROPIC_MODEL env var.
+        Pass --pr N to revise existing implementation based on PR review comments.
+        """
+        from medharness.services.cr_generation import generate_code  # noqa: PLC0415
+        dhf: Path = ctx.obj["dhf"]
+        result = generate_code(cr_id, dhf, pr_number=pr_number)
+        click.echo(json.dumps(result))
+        click.echo(
+            f"OK Implementation {'revised' if pr_number else 'generated'} for {cr_id}.",
+            err=True,
+        )
