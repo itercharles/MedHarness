@@ -1,8 +1,7 @@
 # CR Analysis Task
 
 You are working in the DHF repository for WebTPS. Your task is to produce
-a concise technical implementation spec for the CR listed below, and to
-create or update the DHF requirement items (SYS, SRS, SWDD) it introduces.
+a concise technical implementation spec for the CR listed below.
 
 CR ID: {{cr_id}}
 
@@ -18,47 +17,29 @@ Read these files:
 
 1. Read the CR item and repository context files listed above.
 
-2. Enumerate existing DHF items before writing anything:
+2. Before writing `affected_items`, enumerate all valid DHF item IDs:
 
        python -m medharness --dhf DHF dhf item list
 
    This prints one JSON object per line. Each object has `"id"`, `"type"`,
-   `"title"`. Check for existing items that may already cover the CR's
-   requirements — update rather than duplicate.
+   `"title"`. Only reference `id` values from this output in `affected_items`.
 
 3. Apply the DHF impact skills (provided below) to determine which DHF areas
    are affected. For each area state: `Required`, `Not required`, or
    `Follow-up needed` with a one-sentence justification.
 
-4. Create or update DHF requirement items via the medharness CLI — do NOT
-   write YAML files directly. Work top-down: SYS → SRS → SWDD.
+4. For each required item type (SYS, SRS, SWDD, RISK, etc.), enumerate the
+   existing items of that type and identify:
+   - Which existing items are touched or need updating
+   - What new items need to be created, with their proposed title and content
 
-   Only create items when the CR introduces requirements not already covered
-   by existing items. Follow the traceability rules in the Requirements
-   Management skill below.
+   Document this in the DHF Impact section of the spec so the design phase
+   can act on it directly. Do not create or modify any DHF items — analysis only.
 
-   ```bash
-   # Create
-   python -m medharness --dhf DHF dhf item create \
-     --type <TYPE> --data '<JSON>' --author "github-actions[bot]" --cr "{{cr_id}}"
-
-   # Update
-   python -m medharness --dhf DHF dhf item update <ITEM_ID> \
-     --data '<JSON>' --author "github-actions[bot]" --cr "{{cr_id}}"
-   ```
-
-   IDs are assigned by medharness on creation — capture them for use in
-   `affected_items` and as link targets for lower-level items.
-
-5. Validate schema and traceability; fix any errors and re-validate.
-
-       python -m medharness --dhf DHF dhf validate schema
-       python -m medharness --dhf DHF dhf validate traceability
-
-6. Produce the spec at `docs/cr-specs/{{cr_id}}-Spec.md`.
+5. Produce the spec at `docs/cr-specs/{{cr_id}}-Spec.md`.
    Keep it short. Do not enumerate hundreds of speculative risks or test cases.
-   In `affected_items`, list all DHF item IDs you created or updated in step 4,
-   plus any pre-existing items you determined are touched by this CR.
+
+6. Do not modify any file other than `docs/cr-specs/{{cr_id}}-Spec.md`.
 
 7. Do not edit `DHF/items/09_cr/{{cr_id}}.yaml` or any CR lifecycle fields.
 
@@ -70,7 +51,7 @@ The spec MUST begin with this YAML front-matter (machine-read by CI):
 ---
 cr_id: "{{cr_id}}"
 direction_fit: in-scope        # one of: in-scope | scope-expansion | out-of-scope
-affected_items:                # DHF item IDs created or touched by this CR; [] if none
+affected_items:                # existing DHF item IDs this CR touches; [] if none
   - SYS-001
 test_plan:
   auto_covered:                # items covered by existing automated tests

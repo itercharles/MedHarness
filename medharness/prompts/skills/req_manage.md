@@ -1,9 +1,10 @@
 # Requirements Management
 
 Use this guidance during CR analysis and CR design to evaluate requirement
-coverage and traceability. During analysis, create or update SYS, SRS, and SWDD
-items (top-down) as part of spec generation. During design, review and refine
-those items and handle any remaining traceability gaps.
+coverage and traceability. During analysis, identify which CRS, SYS, SRS, and
+SWDD items need to be created or updated, and document them in the spec — do not
+create or edit items. During design, create or update those items with correct
+traceability.
 
 ## Requirement Hierarchy
 
