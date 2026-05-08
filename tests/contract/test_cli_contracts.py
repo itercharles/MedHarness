@@ -153,6 +153,63 @@ class TestInitCommand:
         assert r.returncode == 0, r.stderr
 
 
+class TestCRGenerationCommands:
+    """Contract tests for medharness ci analyze-cr / design-cr / develop-cr."""
+
+    def test_analyze_cr_help(self):
+        """medharness ci analyze-cr --help exits 0."""
+        r = _run("medharness", "ci", "analyze-cr", "--help")
+        assert r.returncode == 0, r.stderr
+
+    def test_design_cr_help(self):
+        """medharness ci design-cr --help exits 0."""
+        r = _run("medharness", "ci", "design-cr", "--help")
+        assert r.returncode == 0, r.stderr
+
+    def test_develop_cr_help(self):
+        """medharness ci develop-cr --help exits 0."""
+        r = _run("medharness", "ci", "develop-cr", "--help")
+        assert r.returncode == 0, r.stderr
+
+    def test_analyze_cr_requires_cr_flag(self):
+        """medharness ci analyze-cr without --cr exits non-zero with usage error."""
+        r = _run("medharness", "ci", "analyze-cr")
+        assert r.returncode != 0
+        assert "cr" in r.stderr.lower() or "cr" in r.stdout.lower()
+
+    def test_design_cr_requires_cr_flag(self):
+        """medharness ci design-cr without --cr exits non-zero with usage error."""
+        r = _run("medharness", "ci", "design-cr")
+        assert r.returncode != 0
+
+    def test_develop_cr_requires_cr_flag(self):
+        """medharness ci develop-cr without --cr exits non-zero with usage error."""
+        r = _run("medharness", "ci", "develop-cr")
+        assert r.returncode != 0
+
+    def test_analyze_cr_accepts_pr_flag(self):
+        """medharness ci analyze-cr --help shows --pr option."""
+        r = _run("medharness", "ci", "analyze-cr", "--help")
+        assert "--pr" in r.stdout
+
+    def test_design_cr_accepts_pr_flag(self):
+        """medharness ci design-cr --help shows --pr option."""
+        r = _run("medharness", "ci", "design-cr", "--help")
+        assert "--pr" in r.stdout
+
+    def test_develop_cr_accepts_pr_flag(self):
+        """medharness ci develop-cr --help shows --pr option."""
+        r = _run("medharness", "ci", "develop-cr", "--help")
+        assert "--pr" in r.stdout
+
+    def test_commands_appear_in_ci_group_help(self):
+        """All three commands are listed in medharness ci --help."""
+        r = _run("medharness", "ci", "--help")
+        assert r.returncode == 0, r.stderr
+        for cmd in ["analyze-cr", "design-cr", "develop-cr"]:
+            assert cmd in r.stdout, f"Command {cmd!r} missing from ci --help"
+
+
 class TestCLIEntrypoints:
     """Verify medharness is available via python -m."""
 

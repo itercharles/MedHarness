@@ -1,0 +1,395 @@
+"""Unit tests for medharness.services.cr_generation."""
+
+import json
+import os
+import subprocess
+from pathlib import Path
+from unittest.mock import MagicMock, call, patch
+
+import pytest
+
+from medharness.services.cr_generation import (
+    _append_skills,
+    _assemble_analyze_prompt,
+    _assemble_design_prompt,
+    _assemble_develop_prompt,
+    _get_pr_feedback,
+    _load_prompt,
+    _load_skill,
+    _run_claude,
+    generate_code,
+    generate_design,
+    generate_spec,
+)
+
+
+# ── Prompt loading ────────────────────────────────────────────────────────────
+
+class TestLoadPrompt:
+    def test_load_cr_analyze(self):
+        text = _load_prompt("cr_analyze.md")
+        assert "{{cr_id}}" in text
+        assert "affected_items" in text
+
+    def test_load_cr_design(self):
+        text = _load_prompt("cr_design.md")
+        assert "{{cr_id}}" in text
+        assert "medharness" in text
+
+    def test_load_cr_develop(self):
+        text = _load_prompt("cr_develop.md")
+        assert "{{cr_id}}" in text
+
+    def test_missing_prompt_raises(self):
+        import importlib.resources
+        with pytest.raises(FileNotFoundError):
+            ref = importlib.resources.files("medharness.prompts").joinpath("nonexistent.md")
+            ref.read_text(encoding="utf-8")
+
+
+class TestLoadSkill:
+    @pytest.mark.parametrize("name", [
+        "product_impact.md",
+        "req_manage.md",
+        "architecture_impact.md",
+        "risk_impact.md",
+        "soup_impact.md",
+        "test_impact.md",
+    ])
+    def test_all_skills_loadable(self, name):
+        text = _load_skill(name)
+        assert len(text) > 100, f"{name} looks empty"
+
+    def test_req_manage_has_quality_rules(self):
+        text = _load_skill("req_manage.md")
+        assert "No conflict" in text
+        assert "Atomicity" in text
+        assert "Verifiability" in text
+
+    def test_req_manage_has_cli_syntax(self):
+        text = _load_skill("req_manage.md")
+        assert "dhf item create" in text
+        assert "--cr" in text
+
+    def test_architecture_impact_has_output_template(self):
+        text = _load_skill("architecture_impact.md")
+        assert "SYSARCH" in text
+        assert "Required" in text
+
+    def test_risk_impact_mentions_iso_14971(self):
+        text = _load_skill("risk_impact.md")
+        assert "RISK" in text
+        assert "RCM" in text
+
+
+class TestAppendSkills:
+    def test_appends_separator(self):
+        result = _append_skills("base prompt")
+        assert "---" in result
+
+    def test_all_six_skill_sections_present(self):
+        result = _append_skills("base")
+        for title in ["Product Impact", "Requirements Management", "Architecture Impact",
+                      "Risk Impact", "SOUP Impact", "Test Impact"]:
+            assert title in result, f"Missing skill section: {title}"
+
+    def test_base_prompt_preserved(self):
+        result = _append_skills("UNIQUE_BASE_CONTENT")
+        assert "UNIQUE_BASE_CONTENT" in result
+
+
+# ── Prompt assembly ───────────────────────────────────────────────────────────
+
+class TestAssemblePrompts:
+    def test_analyze_substitutes_cr_id(self):
+        prompt = _assemble_analyze_prompt("CR-042")
+        assert "CR-042" in prompt
+        assert "{{cr_id}}" not in prompt
+
+    def test_analyze_includes_skills(self):
+        prompt = _assemble_analyze_prompt("CR-001")
+        assert "Product Impact" in prompt
+        assert "Risk Impact" in prompt
+
+    def test_analyze_includes_dhf_item_list_command(self):
+        prompt = _assemble_analyze_prompt("CR-001")
+        assert "dhf item list" in prompt
+
+    def test_design_substitutes_cr_id(self):
+        prompt = _assemble_design_prompt("CR-007")
+        assert "CR-007" in prompt
+        assert "{{cr_id}}" not in prompt
+
+    def test_design_includes_traceability_validation(self):
+        prompt = _assemble_design_prompt("CR-007")
+        assert "validate traceability" in prompt
+
+    def test_design_includes_cli_create_syntax(self):
+        prompt = _assemble_design_prompt("CR-007")
+        assert "dhf item create" in prompt
+        assert "dhf item update" in prompt
+
+    def test_develop_substitutes_cr_id(self):
+        prompt = _assemble_develop_prompt("CR-099")
+        assert "CR-099" in prompt
+        assert "{{cr_id}}" not in prompt
+
+    def test_develop_does_not_include_dhf_skills(self):
+        # develop prompt is for code; it should not include all 6 DHF impact skills
+        prompt = _assemble_develop_prompt("CR-099")
+        assert "Risk Impact" not in prompt
+        assert "SOUP Impact" not in prompt
+
+
+# ── PR feedback ───────────────────────────────────────────────────────────────
+
+class TestGetPrFeedback:
+    def test_returns_unavailable_when_no_env(self, monkeypatch):
+        monkeypatch.delenv("GH_TOKEN", raising=False)
+        monkeypatch.delenv("GITHUB_TOKEN", raising=False)
+        monkeypatch.delenv("GITHUB_REPOSITORY", raising=False)
+        result = _get_pr_feedback(42)
+        assert "unavailable" in result
+
+    def test_uses_github_token_fallback(self, monkeypatch):
+        monkeypatch.delenv("GH_TOKEN", raising=False)
+        monkeypatch.setenv("GITHUB_TOKEN", "tok")
+        monkeypatch.setenv("GITHUB_REPOSITORY", "owner/repo")
+        with patch("urllib.request.urlopen") as mock_open:
+            mock_resp = MagicMock()
+            mock_resp.__enter__ = lambda s: s
+            mock_resp.__exit__ = MagicMock(return_value=False)
+            mock_resp.read.return_value = b"[]"
+            mock_open.return_value = mock_resp
+            result = _get_pr_feedback(1)
+        data = json.loads(result)
+        assert "comments" in data
+        assert "reviews" in data
+
+    def test_http_error_returns_error_payload(self, monkeypatch):
+        monkeypatch.setenv("GH_TOKEN", "tok")
+        monkeypatch.setenv("GITHUB_REPOSITORY", "owner/repo")
+        import urllib.error
+        with patch("urllib.request.urlopen", side_effect=urllib.error.HTTPError(
+            url="", code=404, msg="Not Found", hdrs=None, fp=None
+        )):
+            result = _get_pr_feedback(99)
+        data = json.loads(result)
+        assert any("error" in str(v) for v in data.values())
+
+
+# ── Claude invocation ─────────────────────────────────────────────────────────
+
+class TestRunClaude:
+    def test_passes_prompt_to_claude(self):
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=0, stdout="done", stderr="")
+            rc, output = _run_claude("my prompt")
+        assert rc == 0
+        args = mock_run.call_args[0][0]
+        assert "claude" in args
+        assert "my prompt" in args
+        assert "--dangerously-skip-permissions" in args
+
+    def test_includes_model_flag_when_env_set(self, monkeypatch):
+        monkeypatch.setenv("ANTHROPIC_MODEL", "claude-opus-4-7")
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
+            _run_claude("prompt")
+        args = mock_run.call_args[0][0]
+        assert "--model" in args
+        assert "claude-opus-4-7" in args
+
+    def test_omits_model_flag_when_env_unset(self, monkeypatch):
+        monkeypatch.delenv("ANTHROPIC_MODEL", raising=False)
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
+            _run_claude("prompt")
+        args = mock_run.call_args[0][0]
+        assert "--model" not in args
+
+    def test_combines_stdout_and_stderr(self):
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=1, stdout="out", stderr="err")
+            rc, output = _run_claude("x")
+        assert rc == 1
+        assert "out" in output
+        assert "err" in output
+
+
+# ── generate_spec ─────────────────────────────────────────────────────────────
+
+class TestGenerateSpec:
+    def _dhf(self, tmp_path: Path) -> Path:
+        dhf = tmp_path / "DHF"
+        dhf.mkdir()
+        return dhf
+
+    def test_returns_dict_with_required_keys(self, tmp_path):
+        dhf = self._dhf(tmp_path)
+        spec_path = tmp_path / "docs" / "cr-specs" / "CR-001-Spec.md"
+        spec_path.parent.mkdir(parents=True)
+        spec_path.write_text(
+            '---\ncr_id: "CR-001"\ndirection_fit: "in-scope"\n'
+            'affected_items: []\ntest_plan:\n  auto_covered: []\n'
+            '  needs_new_tc: []\n  must_be_manual: []\n---\n',
+            encoding="utf-8",
+        )
+        with patch("medharness.services.cr_generation._run_claude") as mock_claude:
+            mock_claude.return_value = (0, "done")
+            result = generate_spec("CR-001", dhf)
+        assert result["cr_id"] == "CR-001"
+        assert "spec_path" in result
+        assert "status" in result
+        assert "corrections" in result
+        assert "validation" in result
+
+    def test_calls_run_claude_once_when_spec_valid(self, tmp_path):
+        dhf = self._dhf(tmp_path)
+        spec_path = tmp_path / "docs" / "cr-specs" / "CR-002-Spec.md"
+        spec_path.parent.mkdir(parents=True)
+        spec_path.write_text(
+            '---\ncr_id: "CR-002"\ndirection_fit: "in-scope"\n'
+            'affected_items: []\ntest_plan:\n  auto_covered: []\n'
+            '  needs_new_tc: []\n  must_be_manual: []\n---\n',
+            encoding="utf-8",
+        )
+        with patch("medharness.services.cr_generation._run_claude") as mock_claude:
+            mock_claude.return_value = (0, "done")
+            result = generate_spec("CR-002", dhf)
+        assert mock_claude.call_count == 1
+        assert result["corrections"] == 0
+        assert result["validation"] == "passed"
+
+    def test_self_corrects_when_spec_invalid(self, tmp_path):
+        dhf = self._dhf(tmp_path)
+        spec_path = tmp_path / "docs" / "cr-specs" / "CR-003-Spec.md"
+        spec_path.parent.mkdir(parents=True)
+        # Write a spec with missing direction_fit to trigger validation error
+        spec_path.write_text(
+            '---\ncr_id: "CR-003"\naffected_items: []\n'
+            'test_plan:\n  auto_covered: []\n  needs_new_tc: []\n  must_be_manual: []\n---\n',
+            encoding="utf-8",
+        )
+        with patch("medharness.services.cr_generation._run_claude") as mock_claude:
+            mock_claude.return_value = (0, "done")
+            result = generate_spec("CR-003", dhf)
+        assert mock_claude.call_count == 2
+        assert result["corrections"] == 1
+        assert result["validation"] == "corrected"
+
+    def test_creates_spec_dir(self, tmp_path):
+        dhf = self._dhf(tmp_path)
+        with patch("medharness.services.cr_generation._run_claude") as mock_claude:
+            mock_claude.return_value = (0, "")
+            generate_spec("CR-004", dhf)
+        assert (tmp_path / "docs" / "cr-specs").is_dir()
+
+    def test_revision_mode_uses_pr_feedback(self, tmp_path):
+        dhf = self._dhf(tmp_path)
+        spec_path = tmp_path / "docs" / "cr-specs" / "CR-005-Spec.md"
+        spec_path.parent.mkdir(parents=True)
+        spec_path.write_text(
+            '---\ncr_id: "CR-005"\ndirection_fit: "in-scope"\n'
+            'affected_items: []\ntest_plan:\n  auto_covered: []\n'
+            '  needs_new_tc: []\n  must_be_manual: []\n---\n',
+            encoding="utf-8",
+        )
+        with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
+             patch("medharness.services.cr_generation._get_pr_feedback") as mock_fb:
+            mock_claude.return_value = (0, "")
+            mock_fb.return_value = '{"comments": [], "reviews": []}'
+            generate_spec("CR-005", dhf, pr_number=99)
+        mock_fb.assert_called_once_with(99)
+        prompt_used = mock_claude.call_args[0][0]
+        assert "review feedback" in prompt_used.lower()
+
+
+# ── generate_design ───────────────────────────────────────────────────────────
+
+class TestGenerateDesign:
+    def test_returns_dict_with_required_keys(self, tmp_path):
+        dhf = tmp_path / "DHF"
+        dhf.mkdir()
+        with patch("medharness.services.cr_generation._run_claude") as mock_claude:
+            mock_claude.return_value = (0, "")
+            result = generate_design("CR-010", dhf)
+        assert result["cr_id"] == "CR-010"
+        assert result["status"] == "ok"
+        assert "items_created" in result
+        assert "items_updated" in result
+        assert "validation" in result
+
+    def test_calls_run_claude(self, tmp_path):
+        dhf = tmp_path / "DHF"
+        dhf.mkdir()
+        with patch("medharness.services.cr_generation._run_claude") as mock_claude:
+            mock_claude.return_value = (0, "")
+            generate_design("CR-011", dhf)
+        mock_claude.assert_called_once()
+
+    def test_design_prompt_passed_to_claude(self, tmp_path):
+        dhf = tmp_path / "DHF"
+        dhf.mkdir()
+        with patch("medharness.services.cr_generation._run_claude") as mock_claude:
+            mock_claude.return_value = (0, "")
+            generate_design("CR-012", dhf)
+        prompt = mock_claude.call_args[0][0]
+        assert "CR-012" in prompt
+        assert "dhf item create" in prompt
+
+    def test_revision_mode_uses_pr_feedback(self, tmp_path):
+        dhf = tmp_path / "DHF"
+        dhf.mkdir()
+        with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
+             patch("medharness.services.cr_generation._get_pr_feedback") as mock_fb:
+            mock_claude.return_value = (0, "")
+            mock_fb.return_value = '{"comments": [], "reviews": []}'
+            generate_design("CR-013", dhf, pr_number=42)
+        mock_fb.assert_called_once_with(42)
+        prompt = mock_claude.call_args[0][0]
+        assert "review feedback" in prompt.lower()
+
+
+# ── generate_code ─────────────────────────────────────────────────────────────
+
+class TestGenerateCode:
+    def test_returns_dict_with_required_keys(self, tmp_path):
+        dhf = tmp_path / "DHF"
+        dhf.mkdir()
+        with patch("medharness.services.cr_generation._run_claude") as mock_claude:
+            mock_claude.return_value = (0, "")
+            result = generate_code("CR-020", dhf)
+        assert result["cr_id"] == "CR-020"
+        assert result["status"] == "ok"
+        assert "files_written" in result
+
+    def test_calls_run_claude(self, tmp_path):
+        dhf = tmp_path / "DHF"
+        dhf.mkdir()
+        with patch("medharness.services.cr_generation._run_claude") as mock_claude:
+            mock_claude.return_value = (0, "")
+            generate_code("CR-021", dhf)
+        mock_claude.assert_called_once()
+
+    def test_develop_prompt_passed_to_claude(self, tmp_path):
+        dhf = tmp_path / "DHF"
+        dhf.mkdir()
+        with patch("medharness.services.cr_generation._run_claude") as mock_claude:
+            mock_claude.return_value = (0, "")
+            generate_code("CR-022", dhf)
+        prompt = mock_claude.call_args[0][0]
+        assert "CR-022" in prompt
+        assert "CLAUDE.md" in prompt
+
+    def test_revision_mode_uses_pr_feedback(self, tmp_path):
+        dhf = tmp_path / "DHF"
+        dhf.mkdir()
+        with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
+             patch("medharness.services.cr_generation._get_pr_feedback") as mock_fb:
+            mock_claude.return_value = (0, "")
+            mock_fb.return_value = '{"comments": [], "reviews": []}'
+            generate_code("CR-023", dhf, pr_number=7)
+        mock_fb.assert_called_once_with(7)
+        prompt = mock_claude.call_args[0][0]
+        assert "review feedback" in prompt.lower()
