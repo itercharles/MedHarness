@@ -1,5 +1,7 @@
 """CR lifecycle AI generation — assemble prompt, run claude, self-correct."""
 
+from __future__ import annotations
+
 import importlib.resources
 import json
 import os
@@ -7,6 +9,7 @@ import subprocess
 import urllib.error
 import urllib.request
 from pathlib import Path
+from typing import Optional
 
 
 # ── Prompt assembly ──────────────────────────────────────────────────────────
