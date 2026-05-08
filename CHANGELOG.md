@@ -9,6 +9,51 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ---
 
+## [0.3.2] — 2026-05-08
+
+### Features
+
+- `ci design-cr` now runs a second LLM pass after DHF item generation to review the output
+  against the approved spec. The review is written to
+  `docs/cr-specs/<CR_ID>-Design-Review.md` and committed alongside the design artifacts.
+- `ci develop-cr` now runs a second LLM pass after code generation to review the
+  implementation against the approved spec. The review is written to
+  `docs/cr-specs/<CR_ID>-Code-Review.md` and committed with the implementation.
+- Both reviews check completeness, traceability, test annotations, and coding conventions.
+  They are non-blocking — the stage advances regardless of the verdict.
+
+---
+
+## [0.3.1] — 2026-05-07
+
+### Changes
+
+- `cr_analyze.md`: removed redundant step; analyze phase now identifies DHF items that will
+  need creation but does not create them (creation is design phase only)
+- `req_manage.md`: removed "do not edit" restriction (skill is also used in design phase);
+  added explicit "no change > update > create" preference
+- All impact skills (`product_impact.md`, `architecture_impact.md`, `risk_impact.md`,
+  `soup_impact.md`, `test_impact.md`): added "no change > update > create" preference
+  to Design Updates sections
+- Removed `AI-harness` template directory and `.claude/skills` scaffolding from `medharness init`
+
+---
+
+## [0.3.0] — 2026-05-06
+
+### Features
+
+- CI CR lifecycle commands: `ci analyze-cr`, `ci design-cr`, `ci develop-cr` for LLM-driven
+  spec generation, DHF design, and code implementation
+- Single-repo CR lifecycle: analyze → design → code phases driven by GitHub Actions
+- `ci validate-spec` validates spec YAML front-matter (cr_id, direction_fit, affected_items,
+  test_plan) with self-correction loop on failure
+- `ci dhf-validate` structural gate: schema + traceability checks for CI pipelines
+- `ci test-coverage` requirement-to-test coverage gate using JUnit XML evidence
+- `ci evidence bundle` and `ci evidence import` for DHF artifact bundling
+
+---
+
 ## [0.2.1] — 2026-05-06
 
 ### Fixes

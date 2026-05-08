@@ -52,6 +52,14 @@ def _assemble_develop_prompt(cr_id: str) -> str:
     return _load_prompt("cr_develop.md").replace("{{cr_id}}", cr_id)
 
 
+def _assemble_review_design_prompt(cr_id: str) -> str:
+    return _load_prompt("cr_review_design.md").replace("{{cr_id}}", cr_id)
+
+
+def _assemble_review_code_prompt(cr_id: str) -> str:
+    return _load_prompt("cr_review_code.md").replace("{{cr_id}}", cr_id)
+
+
 # ── GitHub PR feedback ────────────────────────────────────────────────────────
 
 def _get_pr_feedback(pr_number: int) -> str:
@@ -158,6 +166,7 @@ def generate_design(cr_id: str, dhf_path: Path, pr_number: int | None = None) ->
         prompt = _assemble_design_prompt(cr_id)
 
     _run_claude(prompt)
+    _run_claude(_assemble_review_design_prompt(cr_id))
 
     return {
         "cr_id": cr_id,
@@ -181,6 +190,7 @@ def generate_code(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> d
         prompt = _assemble_develop_prompt(cr_id)
 
     _run_claude(prompt)
+    _run_claude(_assemble_review_code_prompt(cr_id))
 
     return {
         "cr_id": cr_id,
