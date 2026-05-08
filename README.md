@@ -87,7 +87,6 @@ my-medical-device/                  # single repo — DHF + source together
 │   │   ├── cr-complete.yml         # auto-close CR on PR merge
 │   │   └── review-pr.yml           # AI-assisted PR review
 │   └── prompts/                    # AI prompt templates
-├── .claude/skills/                 # Claude Code skills
 ├── tests/                          # product test suite
 ├── CLAUDE.md                       # agent entrypoint
 ├── .gitignore

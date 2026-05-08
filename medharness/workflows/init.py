@@ -196,28 +196,6 @@ def _write_review_pr_yml(project_dir: Path) -> Path:
     return dest
 
 
-def _write_skills(project_dir: Path, project_name: str) -> list[Path]:
-    """Copy Claude Code skill templates into the project."""
-    skills_src = _TEMPLATES_DIR / "product" / ".claude" / "skills"
-    if not skills_src.exists():
-        return []
-    skills_dst = project_dir / ".claude" / "skills"
-    skills_dst.mkdir(parents=True, exist_ok=True)
-    written = []
-    for skill_dir in skills_src.iterdir():
-        if not skill_dir.is_dir():
-            continue
-        dst_skill = skills_dst / skill_dir.name
-        shutil.copytree(skill_dir, dst_skill, dirs_exist_ok=True)
-        skill_md = dst_skill / "SKILL.md"
-        if skill_md.exists():
-            text = skill_md.read_text()
-            text = text.replace("{{project_name}}", project_name)
-            text = text.replace("{{product_repo}}", "")
-            skill_md.write_text(text)
-        written.append(dst_skill)
-    return written
-
 
 # ---------------------------------------------------------------------------
 # Engineering control workflow generation
@@ -445,10 +423,6 @@ def run_init() -> None:
 
     _step("Write review-pr.yml")
     _write_review_pr_yml(project_dir)
-    click.secho(" ✓", fg="green")
-
-    _step("Write Claude Code skills")
-    _write_skills(project_dir, project_name)
     click.secho(" ✓", fg="green")
 
     _step("Write .gitignore")
