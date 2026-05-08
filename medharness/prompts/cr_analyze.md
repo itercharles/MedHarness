@@ -41,8 +41,6 @@ Read these files:
 
 6. Do not modify any file other than `docs/cr-specs/{{cr_id}}-Spec.md`.
 
-7. Do not edit `DHF/items/09_cr/{{cr_id}}.yaml` or any CR lifecycle fields.
-
 ## Spec Format
 
 The spec MUST begin with this YAML front-matter (machine-read by CI):
