@@ -111,26 +111,22 @@ git push -u origin main
 ## How a Change Request flows
 
 Every non-trivial change starts as a **Change Request (CR)** in the DHF.
-CRs move through AI-assisted stages:
+CRs move through AI-assisted stages, each gated by human approval:
 
 ```
-Issue → cr-analyze → cr-spec-iterate → cr-develop → cr-transition → cr-complete
+Issue → CR review → analyze-cr → design-cr → develop-cr → cr-complete
 ```
 
 | Stage | Trigger | What MedHarness does |
 |-------|---------|---------------------|
-| **cr-analyze** | Issue labeled `CR` | Pre-computes DHF context, runs Claude to write a technical spec, commits the spec to `DHF/documents/cr-specs/` |
-| **cr-spec-iterate** | Review feedback on spec | Resumes Claude session with feedback, updates spec, pushes revisions |
-| **cr-develop** | Spec approved | Injects `$DHF_CONTEXT`, runs Claude to implement code, opens a PR |
-| **cr-transition** | PR events | Transitions the CR to `in_review`/`approved` in the DHF |
-| **cr-complete** | PR merged | Transitions the CR to `complete`, generates closing evidence |
+| **CR intake** | Issue milestoned | Creates CR item in DHF, opens draft PR (`cr workflow intake-github-issue-ci`) |
+| **analyze-cr** | CR PR approved | Runs Claude to write a spec, self-corrects against schema, commits to `docs/cr-specs/` (`ci analyze-cr`) |
+| **design-cr** | Spec PR approved | Runs Claude to create/update DHF items, validates schema + traceability (`ci design-cr`) |
+| **develop-cr** | Design PR approved | Runs Claude to implement code, opens implementation PR (`ci develop-cr`) |
+| **cr-complete** | PR merged | Transitions CR to `completed` in the DHF (`cr workflow complete-from-github-pr`) |
 
-At each stage MedHarness:
-
-1. **Pre-computes context** — `medharness dhf context for-stage <stage>` returns focused JSON
-2. **Injects into agent environment** — `$DHF_CONTEXT` is available to Claude
-3. **Captures decisions back** — `medharness dhf item transition --commit --push`
-4. **Stores session IDs** — `medharness ci claude-session put/get` for iterative review loops
+When a PR receives review feedback, re-run the same command with `--pr N` to
+revise the existing output based on reviewer comments.
 
 The workflow YAML files for each stage are scaffolded by `medharness init` into
 `.github/workflows/`.
@@ -240,6 +236,33 @@ medharness --dhf DHF dhf config doc-types
 medharness ci dhf-validate --dhf DHF
 medharness ci test-coverage --dhf DHF --junit-dir test-results
 medharness ci evidence bundle --dhf DHF --out-dir artifacts
+```
+
+### CR generation commands
+
+Encapsulate the full AI loop for each CR stage: prompt assembly (with embedded
+DHF impact skills) → `claude -p` invocation → validate → self-correct.
+
+```bash
+# Initial generation
+medharness --dhf DHF ci analyze-cr --cr CR-034   # write docs/cr-specs/CR-034-Spec.md
+medharness --dhf DHF ci design-cr  --cr CR-034   # create/update DHF items
+medharness --dhf DHF ci develop-cr --cr CR-034   # implement code
+
+# Revision based on PR review feedback
+medharness --dhf DHF ci analyze-cr --cr CR-034 --pr 42
+medharness --dhf DHF ci design-cr  --cr CR-034 --pr 42
+medharness --dhf DHF ci develop-cr --cr CR-034 --pr 42
+```
+
+`ANTHROPIC_MODEL` env var selects the Claude model. `GH_TOKEN` is required when
+`--pr` is used (fetches review comments from the GitHub API).
+
+Each command outputs JSON to stdout:
+
+```json
+{ "cr_id": "CR-034", "spec_path": "docs/cr-specs/CR-034-Spec.md",
+  "status": "ok", "corrections": 0, "validation": "passed" }
 ```
 
 ### CR workflow commands
