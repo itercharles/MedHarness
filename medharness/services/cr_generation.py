@@ -1,7 +1,5 @@
 """CR lifecycle AI generation — assemble prompt, run claude, self-correct."""
 
-from __future__ import annotations
-
 import importlib.resources
 import json
 import os
@@ -9,7 +7,6 @@ import subprocess
 import urllib.error
 import urllib.request
 from pathlib import Path
-from typing import Optional
 
 
 # ── Prompt assembly ──────────────────────────────────────────────────────────
@@ -92,7 +89,10 @@ def _run_claude(prompt: str) -> tuple[int, str]:
     cmd = ["claude", "-p", "--dangerously-skip-permissions", prompt]
     if model:
         cmd = ["claude", "-p", "--dangerously-skip-permissions", "--model", model, prompt]
-    result = subprocess.run(cmd, capture_output=True, text=True)  # noqa: S603
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True)  # noqa: S603
+    except FileNotFoundError:
+        return 1, "claude CLI not found — install @anthropic-ai/claude-code"
     combined = result.stdout
     if result.stderr:
         combined += "\n" + result.stderr
@@ -162,9 +162,9 @@ def generate_design(cr_id: str, dhf_path: Path, pr_number: int | None = None) ->
     return {
         "cr_id": cr_id,
         "status": "ok",
-        "items_created": [],
-        "items_updated": [],
-        "validation": "passed",
+        "items_created": None,
+        "items_updated": None,
+        "validation": "not_checked",
     }
 
 
