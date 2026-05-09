@@ -111,3 +111,33 @@ def test_format_matrix_markdown_renders_summary_and_matrix():
     assert "## Coverage by Level" in md
     assert "TC-001" in md
     assert "**Passed:** 1" in md
+
+
+def test_format_matrix_markdown_handles_dict_tests():
+    """Coverage `tests` may be dicts (from inject_junit_results), not strings.
+
+    Regression: 0.3.3 raised TypeError: sequence item 0: expected str instance,
+    dict found when joining the test list, because MedHarnessCore stores each
+    test as {"name", "status"}.
+    """
+    matrix = {
+        "columns": ["SRS"],
+        "rows": [{"SRS": "SRS-010", "verification_status": "verified"}],
+        "coverage": {
+            "SRS": [
+                {
+                    "id": "SRS-010",
+                    "title": "Boot path",
+                    "status": "verified",
+                    "tests": [
+                        {"name": "Boot › cold start", "status": "PASS"},
+                        {"name": "Boot › warm start", "status": "FAIL"},
+                    ],
+                },
+            ],
+        },
+        "test_results": {},
+    }
+    md = _helpers._format_traceability_matrix_markdown(matrix)
+    assert "Boot › cold start [PASS]" in md
+    assert "Boot › warm start [FAIL]" in md
