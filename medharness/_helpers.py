@@ -288,10 +288,158 @@ def _build_traceability_report_payload(core, doc_types: tuple[str, ...],
 def _write_traceability_report(core, doc_types: tuple[str, ...], output: Path,
                                 junit_paths: tuple[str, ...] = ()) -> dict:
     matrix = _build_traceability_report_payload(core, doc_types, junit_paths)
+    output.parent.mkdir(parents=True, exist_ok=True)
+
     json_output = output.with_suffix(".json")
-    json_output.parent.mkdir(parents=True, exist_ok=True)
     json_output.write_text(json.dumps(matrix, indent=2))
-    return {"path": str(json_output), "rows": len(matrix["rows"])}
+
+    result: dict = {
+        "path": str(json_output),
+        "json_path": str(json_output),
+        "rows": len(matrix["rows"]),
+    }
+
+    if output.suffix.lower() == ".pdf":
+        try:
+            pdf_path = _render_traceability_matrix_pdf(matrix, output)
+        except _MissingPDFDeps as exc:
+            result["pdf_skipped"] = str(exc)
+        else:
+            result["path"] = str(pdf_path)
+            result["pdf_path"] = str(pdf_path)
+
+    return result
+
+
+class _MissingPDFDeps(RuntimeError):
+    """Raised when WeasyPrint or markdown extras are not installed."""
+
+
+def _render_traceability_matrix_pdf(matrix: dict, output: Path) -> Path:
+    """Render the traceability matrix payload as a Markdown -> HTML -> PDF document."""
+    try:
+        import markdown as _markdown
+        from weasyprint import HTML
+    except ImportError as exc:
+        raise _MissingPDFDeps(str(exc)) from exc
+
+    md = _format_traceability_matrix_markdown(matrix)
+    html_body = _markdown.markdown(md, extensions=["tables", "fenced_code", "toc"])
+
+    css_path = (
+        Path(__file__).resolve().parent.parent
+        / "dhfkit" / "templates" / "specs" / "styles" / "default.css"
+    )
+    css = css_path.read_text(encoding="utf-8") if css_path.exists() else ""
+
+    full_html = (
+        "<!doctype html><html><head><meta charset='utf-8'>"
+        f"<style>{css}</style></head><body>{html_body}</body></html>"
+    )
+
+    output.parent.mkdir(parents=True, exist_ok=True)
+    HTML(string=full_html).write_pdf(str(output))
+    return output
+
+
+def _format_traceability_matrix_markdown(matrix: dict) -> str:
+    """Render matrix payload as a Markdown traceability matrix document."""
+    from datetime import datetime as _dt
+
+    columns: list[str] = matrix.get("columns") or []
+    rows: list[dict] = matrix.get("rows") or []
+    coverage: dict[str, list[dict]] = matrix.get("coverage") or {}
+    test_results: dict = matrix.get("test_results") or {}
+
+    def _esc(value) -> str:
+        return str(value).replace("|", r"\|") if value is not None else "—"
+
+    lines: list[str] = []
+    lines.append("# Requirements Traceability Matrix")
+    lines.append("")
+    lines.append(f"**Generated:** {_dt.now().isoformat(timespec='seconds')}")
+    lines.append("")
+    lines.append(
+        "**Trace Path:** " + (" → ".join(columns) if columns else "—")
+    )
+    lines.append("")
+
+    total_rows = len(rows)
+    complete_rows = sum(
+        1 for row in rows if columns and all(row.get(c) for c in columns)
+    )
+    pct = round((complete_rows / total_rows) * 100, 1) if total_rows else 0.0
+    lines.append("## Summary")
+    lines.append("")
+    lines.append(f"- **Total chains:** {total_rows}")
+    lines.append(f"- **Complete chains:** {complete_rows} ({pct}%)")
+    lines.append(f"- **Incomplete chains:** {total_rows - complete_rows}")
+    lines.append("")
+
+    lines.append("## Matrix")
+    lines.append("")
+    if columns and rows:
+        lines.append("| # | " + " | ".join(columns) + " | Status |")
+        lines.append("|---|" + "|".join(["---"] * len(columns)) + "|---|")
+        for idx, row in enumerate(rows, 1):
+            cells = [_esc(row.get(col)) for col in columns]
+            status = (
+                row.get("verification_status")
+                or (row.get("level_statuses") or {}).get(columns[-1], "")
+                or "—"
+            )
+            lines.append(
+                f"| {idx} | " + " | ".join(cells) + f" | {_esc(status)} |"
+            )
+    else:
+        lines.append("_No traceability data available._")
+    lines.append("")
+
+    if coverage:
+        lines.append("## Coverage by Level")
+        lines.append("")
+        for level in sorted(coverage.keys()):
+            items = coverage[level]
+            verified = sum(1 for it in items if it.get("status") == "verified")
+            pct_l = round((verified / len(items)) * 100, 1) if items else 0.0
+            lines.append(f"### {level}")
+            lines.append("")
+            lines.append(f"- **Total:** {len(items)}")
+            lines.append(f"- **Verified:** {verified} ({pct_l}%)")
+            lines.append("")
+            lines.append("| ID | Title | Status | Tests |")
+            lines.append("|---|---|---|---|")
+            for it in items:
+                tests = ", ".join(it.get("tests") or []) or "—"
+                lines.append(
+                    f"| {_esc(it.get('id'))} | {_esc(it.get('title') or '')} "
+                    f"| {_esc(it.get('status', 'not_verified'))} | {_esc(tests)} |"
+                )
+            lines.append("")
+
+    if test_results:
+        passed = sum(1 for r in test_results.values() if r.get("testing_status") == "PASS")
+        failed = sum(1 for r in test_results.values() if r.get("testing_status") == "FAIL")
+        skipped = sum(1 for r in test_results.values() if r.get("testing_status") == "SKIP")
+        lines.append("## Test Results")
+        lines.append("")
+        lines.append(f"- **Total:** {len(test_results)}")
+        lines.append(f"- **Passed:** {passed}")
+        lines.append(f"- **Failed:** {failed}")
+        lines.append(f"- **Skipped:** {skipped}")
+        lines.append("")
+
+    lines.append("## Compliance References")
+    lines.append("")
+    lines.append("- IEC 62304 §5.1.1 (Requirements Specification)")
+    lines.append("- IEC 62304 §5.1.3 (Requirements Traceability)")
+    lines.append("- IEC 62304 §5.5–5.6 (Verification)")
+    lines.append("- IEC 62304 §5.7 (System Testing)")
+    lines.append("")
+    lines.append("---")
+    lines.append("")
+    lines.append("*Generated by MedHarness*")
+    return "\n".join(lines)
 
 
 

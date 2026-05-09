@@ -120,10 +120,12 @@ def register(main):
     def ci_artifacts_generate(ctx: click.Context, out_dir: Path, doc_types: tuple,
                               traceability_types: tuple, junit_files: tuple[Path, ...],
                               junit_dirs: tuple[Path, ...], skip_plans: bool) -> None:
-        """Generate CI-ready DHF artifacts: Markdown specs + JSON traceability report.
+        """Generate CI-ready DHF artifacts: specs + traceability report.
 
-        Outputs specification documents (Markdown), plan documents, and a
-        machine-readable traceability report (JSON). No PDF generation.
+        Outputs specification documents, plan documents, and a traceability
+        report. The traceability report is written as JSON (machine-readable,
+        consumed by compliance gates) and — when WeasyPrint is installed —
+        also as a PDF matrix document at the same basename.
 
         """
         adapter = _h._make_adapter(ctx)

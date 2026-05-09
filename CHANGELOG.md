@@ -9,6 +9,25 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ---
 
+## [0.3.3] — 2026-05-09
+
+### Features
+
+- `ci artifacts generate` now emits a PDF traceability matrix
+  (`Requirements_Traceability_Report.pdf`) alongside the existing JSON report
+  when WeasyPrint is installed (`pip install medharness[docs]`). The PDF
+  renders the full UC → CRS → SYS → SRS → SWDD chain with per-level coverage
+  statistics, per-item verification status, and a JUnit-derived test result
+  summary. JSON output is unchanged so compliance gates continue to work.
+
+### Fixes
+
+- `_write_traceability_report` previously discarded the caller-supplied
+  `.pdf` extension and wrote JSON only. The path is now honored: a `.pdf`
+  output produces a PDF (with JSON written next to it as `.json`).
+
+---
+
 ## [0.3.2] — 2026-05-08
 
 ### Features
