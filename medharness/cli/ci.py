@@ -366,7 +366,9 @@ def register(main):
         result = generate_design(cr_id, dhf, pr_number=pr_number)
         click.echo(json.dumps(result))
         click.echo(
-            f"OK Design {'revised' if pr_number else 'generated'} for {cr_id}.",
+            f"OK Design {'revised' if pr_number else 'generated'} for {cr_id} "
+            f"({result.get('corrections', 0)} correction(s), "
+            f"validation: {result.get('validation', 'unknown')}).",
             err=True,
         )
 
@@ -389,6 +391,8 @@ def register(main):
         result = generate_code(cr_id, dhf, pr_number=pr_number)
         click.echo(json.dumps(result))
         click.echo(
-            f"OK Implementation {'revised' if pr_number else 'generated'} for {cr_id}.",
+            f"OK Implementation {'revised' if pr_number else 'generated'} for {cr_id} "
+            f"({result.get('corrections', 0)} correction(s), "
+            f"validation: {result.get('validation', 'unknown')}).",
             err=True,
         )

@@ -337,6 +337,10 @@ class TestGenerateDesign:
         assert mock_claude.call_count == 2
         assert result["corrections"] == 0
         assert result["validation"] == "passed"
+        # Review prompt is augmented with the "already passed" note so the
+        # reviewer does not re-derive what the harness already proved.
+        review_prompt = mock_claude.call_args_list[1][0][0]
+        assert "already passed" in review_prompt.lower()
 
     def test_fix_pass_triggered_when_validation_fails(self, tmp_path):
         dhf = tmp_path / "DHF"
@@ -428,6 +432,8 @@ class TestGenerateCode:
         assert mock_claude.call_count == 2
         assert result["corrections"] == 0
         assert result["validation"] == "passed"
+        review_prompt = mock_claude.call_args_list[1][0][0]
+        assert "already passed" in review_prompt.lower()
 
     def test_fix_pass_triggered_when_validation_fails(self, tmp_path):
         dhf = tmp_path / "DHF"

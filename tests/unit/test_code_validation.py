@@ -126,18 +126,34 @@ class TestValidateCode:
         errors = validate_code("CR-050", dhf, nonexistent)
         assert errors == []
 
-    def test_git_unavailable_yields_missing_annotation_errors(self, repo):
+    def test_git_unavailable_yields_single_environment_error(self, repo):
         dhf, spec = repo
-        _write_spec(spec, ["SRS-001"])
+        _write_spec(spec, ["SRS-001", "SRS-002"])
         with patch("subprocess.run", side_effect=FileNotFoundError):
             errors = validate_code("CR-050", dhf, spec)
-        # When git is unavailable we cannot prove the annotation was added,
-        # so the validator conservatively flags it.
-        assert errors and "SRS-001" in errors[0]["issue"]
+        # An env failure must not be fabricated as per-item annotation errors;
+        # the LLM cannot fix a missing `git fetch`.
+        assert len(errors) == 1
+        assert errors[0]["field"] == "environment"
+        assert "git diff" in errors[0]["issue"]
+        assert "git fetch" in errors[0]["fix"]
 
-    def test_git_nonzero_exit_yields_errors(self, repo):
+    def test_git_nonzero_exit_yields_single_environment_error(self, repo):
         dhf, spec = repo
-        _write_spec(spec, ["SRS-001"])
+        _write_spec(spec, ["SRS-001", "SRS-002"])
         with patch("subprocess.run", return_value=_diff("", returncode=128)):
             errors = validate_code("CR-050", dhf, spec)
-        assert errors and "SRS-001" in errors[0]["issue"]
+        assert len(errors) == 1
+        assert errors[0]["field"] == "environment"
+
+    def test_legitimate_empty_diff_still_flags_missing_annotations(self, repo):
+        # git ran successfully but reported zero changes — the spec said new
+        # tests were needed, so flagging the gap is correct (this is distinct
+        # from an env failure).
+        dhf, spec = repo
+        _write_spec(spec, ["SRS-001"])
+        with patch("subprocess.run", return_value=_diff("", returncode=0)):
+            errors = validate_code("CR-050", dhf, spec)
+        assert len(errors) == 1
+        assert errors[0]["field"] == "test_plan.needs_new_tc"
+        assert "SRS-001" in errors[0]["issue"]

@@ -31,7 +31,16 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
   proved.
 - `generate_design` and `generate_code` now return `corrections` and
   `validation` fields (matching `generate_spec`); `validation` is one of
-  `"passed"` or `"residual_errors"`.
+  `"passed"` or `"residual_errors"` (replacing the prior placeholder
+  `"not_checked"` value — consumers that string-matched the old value
+  will see the new domain).
+- `ci design-cr` and `ci develop-cr` stderr summaries now include the
+  correction count and validation outcome, matching `ci analyze-cr`.
+- `validate_code` now distinguishes git-environment failures (missing
+  binary, unfetched ref, non-zero exit) from a legitimately-empty diff:
+  the former emits one `field: "environment"` error so the fix-only LLM
+  prompt does not waste a call asking for tests the model cannot add;
+  the latter still flags missing `needs_new_tc` annotations.
 
 ### New modules
 

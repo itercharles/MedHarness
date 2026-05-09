@@ -45,6 +45,23 @@ def validate_code(
 
     repo_root = dhf_path.resolve().parent
     diff_text = _git_diff(repo_root, since_ref, "apps/", "packages/")
+    if diff_text is None:
+        # Environment failure (git missing, ref unfetched, etc.) — emit one
+        # actionable error rather than fabricating per-item annotation errors
+        # the model has no way to fix.
+        return [{
+            "field": "environment",
+            "issue": (
+                f"Could not compute `git diff {since_ref}` from {repo_root}; "
+                f"the test-annotation check could not run."
+            ),
+            "fix": (
+                f"Ensure `git` is installed and `{since_ref}` is fetched in "
+                f"the working tree (e.g. `git fetch origin main`). Re-run "
+                f"`ci develop-cr` once the diff is available."
+            ),
+        }]
+
     added = "\n".join(
         line[1:]
         for line in diff_text.splitlines()
@@ -69,8 +86,15 @@ def validate_code(
     return errors
 
 
-def _git_diff(repo_root: Path, since_ref: str, *paths: str) -> str:
-    """Return git diff output, or empty string if git is unavailable / ref missing."""
+def _git_diff(repo_root: Path, since_ref: str, *paths: str) -> str | None:
+    """Return git diff output.
+
+    Returns:
+        ``""`` for a legitimate empty diff (git ran, no changes since ``since_ref``).
+        ``None`` for an environment failure (git missing, ref unfetched, etc.) —
+        callers should treat this as un-checkable rather than as "no changes".
+        Otherwise the diff text.
+    """
     try:
         result = subprocess.run(
             ["git", "diff", since_ref, "--", *paths],
@@ -80,9 +104,9 @@ def _git_diff(repo_root: Path, since_ref: str, *paths: str) -> str:
             check=False,
         )
     except FileNotFoundError:
-        return ""
+        return None
     if result.returncode != 0:
-        return ""
+        return None
     return result.stdout or ""
 
 
