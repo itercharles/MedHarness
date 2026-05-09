@@ -153,8 +153,47 @@ def generate_spec(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> d
     }
 
 
+def _format_error_lines(errors: list[dict]) -> str:
+    return "\n".join(
+        f"- {e.get('field', '?')}: {e.get('issue', '')} (fix: {e.get('fix', '')})"
+        for e in errors
+    )
+
+
+def _augment_review_prompt(base: str, errors: list[dict]) -> str:
+    """Attach a 'Deterministic Checks' note to a soft-review prompt.
+
+    When deterministic checks pass we tell the reviewer not to re-derive them;
+    when residual issues remain we surface them so the review captures the gap.
+    """
+    if not errors:
+        return base + (
+            "\n\n## Deterministic Checks (already passed)\n\n"
+            "Schema, traceability, and the presence of all spec `affected_items` "
+            "(or required `@links:` test annotations) have been verified "
+            "mechanically. Do not re-derive them — focus on judgment questions "
+            "that a script cannot answer."
+        )
+    residual = "\n".join(f"- {e.get('field', '?')}: {e.get('issue', '')}" for e in errors)
+    return base + (
+        "\n\n## Deterministic Checks (residual issues)\n\n"
+        f"The following deterministic-check failures remain after one fix attempt:\n"
+        f"{residual}\n\nNote these in the review output."
+    )
+
+
 def generate_design(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> dict:
-    """Generate or revise DHF design items for a CR."""
+    """Generate or revise DHF design items for a CR.
+
+    Pipeline: design pass → deterministic validation → fix-only pass on
+    errors → trimmed soft-review pass. Mechanical checks (schema,
+    traceability, presence of spec `affected_items`) live in
+    :mod:`medharness.services.design_validation`; the soft review focuses
+    on intent, completeness, and clarity.
+    """
+    repo_root = dhf_path.resolve().parent
+    spec_path = repo_root / "docs" / "cr-specs" / f"{cr_id}-Spec.md"
+
     if pr_number:
         feedback = _get_pr_feedback(pr_number)
         prompt = (
@@ -166,19 +205,45 @@ def generate_design(cr_id: str, dhf_path: Path, pr_number: int | None = None) ->
         prompt = _assemble_design_prompt(cr_id)
 
     _run_claude(prompt)
-    _run_claude(_assemble_review_design_prompt(cr_id))
+
+    from medharness.services.design_validation import validate_design  # noqa: PLC0415
+    errors = validate_design(cr_id, dhf_path, spec_path)
+    corrections = 0
+    if errors:
+        corrections += 1
+        fix_prompt = (
+            f"The DHF design for {cr_id} failed deterministic validation:\n"
+            f"{_format_error_lines(errors)}\n\n"
+            f"Fix only the items needed to clear these errors via the medharness "
+            f"CLI (`dhf item create` / `dhf item update`). Do not introduce other "
+            f"changes."
+        )
+        _run_claude(fix_prompt)
+        errors = validate_design(cr_id, dhf_path, spec_path)
+
+    review_prompt = _augment_review_prompt(_assemble_review_design_prompt(cr_id), errors)
+    _run_claude(review_prompt)
 
     return {
         "cr_id": cr_id,
         "status": "ok",
         "items_created": None,
         "items_updated": None,
-        "validation": "not_checked",
+        "corrections": corrections,
+        "validation": "passed" if not errors else "residual_errors",
     }
 
 
 def generate_code(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> dict:
-    """Generate or revise implementation code for a CR."""
+    """Generate or revise implementation code for a CR.
+
+    Pipeline: develop pass → deterministic validation (test annotations vs.
+    spec `test_plan.needs_new_tc`) → fix-only pass on errors → trimmed
+    soft-review pass.
+    """
+    repo_root = dhf_path.resolve().parent
+    spec_path = repo_root / "docs" / "cr-specs" / f"{cr_id}-Spec.md"
+
     if pr_number:
         feedback = _get_pr_feedback(pr_number)
         prompt = (
@@ -190,10 +255,28 @@ def generate_code(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> d
         prompt = _assemble_develop_prompt(cr_id)
 
     _run_claude(prompt)
-    _run_claude(_assemble_review_code_prompt(cr_id))
+
+    from medharness.services.code_validation import validate_code  # noqa: PLC0415
+    errors = validate_code(cr_id, dhf_path, spec_path)
+    corrections = 0
+    if errors:
+        corrections += 1
+        fix_prompt = (
+            f"The implementation for {cr_id} is missing required test annotations:\n"
+            f"{_format_error_lines(errors)}\n\n"
+            f"Add only the missing colocated tests with `@links:` annotations. "
+            f"Do not introduce other changes."
+        )
+        _run_claude(fix_prompt)
+        errors = validate_code(cr_id, dhf_path, spec_path)
+
+    review_prompt = _augment_review_prompt(_assemble_review_code_prompt(cr_id), errors)
+    _run_claude(review_prompt)
 
     return {
         "cr_id": cr_id,
         "status": "ok",
         "files_written": [],
+        "corrections": corrections,
+        "validation": "passed" if not errors else "residual_errors",
     }

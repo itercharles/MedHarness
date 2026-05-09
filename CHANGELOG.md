@@ -9,6 +9,39 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ---
 
+## [0.3.5] — 2026-05-10
+
+### Changes
+
+- `ci design-cr` and `ci develop-cr` now run **deterministic structural
+  checks before** the LLM review pass, matching the pattern already used
+  by `ci analyze-cr`:
+  - **design**: schema validation, required-traceability rules, orphans,
+    coverage gaps, and presence of every spec `affected_items` ID — all
+    via `dhfkit.api`. On failure, a fix-only LLM prompt with structured
+    error lines runs once before the soft review.
+  - **develop**: presence of `@links:<ID>` annotations in the diff for
+    every item in the spec's `test_plan.needs_new_tc`. On failure, a
+    fix-only LLM prompt asks for the missing colocated tests.
+- The soft-review prompts (`cr_review_design.md`, `cr_review_code.md`)
+  are trimmed to judgment questions only — schema, traceability, and
+  test-annotation presence are no longer re-asked of the model. The
+  prompts are augmented at runtime with a "Deterministic Checks" section
+  that tells the reviewer not to re-derive what the harness already
+  proved.
+- `generate_design` and `generate_code` now return `corrections` and
+  `validation` fields (matching `generate_spec`); `validation` is one of
+  `"passed"` or `"residual_errors"`.
+
+### New modules
+
+- `medharness.services.design_validation` — `validate_design(cr_id,
+  dhf_path, spec_path) -> list[dict]`
+- `medharness.services.code_validation` — `validate_code(cr_id,
+  dhf_path, spec_path, since_ref="origin/main") -> list[dict]`
+
+---
+
 ## [0.3.4] — 2026-05-09
 
 ### Fixes
