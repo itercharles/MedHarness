@@ -417,7 +417,20 @@ def _format_traceability_matrix_markdown(matrix: dict) -> str:
             lines.append("| ID | Title | Status | Tests |")
             lines.append("|---|---|---|---|")
             for it in items:
-                tests = ", ".join(it.get("tests") or []) or "—"
+                # MedHarnessCore.inject_junit_results stores each test as a
+                # dict {"name", "status"}; legacy callers may pass plain
+                # strings. Handle both.
+                test_labels = []
+                for t in it.get("tests") or []:
+                    if isinstance(t, dict):
+                        name = t.get("name") or t.get("id") or ""
+                        status = t.get("status") or ""
+                        test_labels.append(
+                            f"{name} [{status}]" if (name and status) else (name or status)
+                        )
+                    else:
+                        test_labels.append(str(t))
+                tests = ", ".join(label for label in test_labels if label) or "—"
                 lines.append(
                     f"| {_esc(it.get('id'))} | {_esc(it.get('title') or '')} "
                     f"| {_esc(it.get('status', 'not_verified'))} | {_esc(tests)} |"

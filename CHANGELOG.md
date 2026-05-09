@@ -9,6 +9,19 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ---
 
+## [0.3.4] — 2026-05-09
+
+### Fixes
+
+- `ci artifacts generate` raised `TypeError: sequence item 0: expected str
+  instance, dict found` when the JUnit feed populated requirement coverage
+  with test entries — `MedHarnessCore.inject_junit_results` stores each test
+  as `{"name", "status"}`, but the 0.3.3 PDF formatter joined them as
+  strings. The formatter now renders dicts as `"<name> [<status>]"` and
+  still accepts plain strings.
+
+---
+
 ## [0.3.3] — 2026-05-09
 
 ### Features
