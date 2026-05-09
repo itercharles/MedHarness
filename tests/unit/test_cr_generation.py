@@ -326,7 +326,9 @@ class TestGenerateDesign:
         with patch("medharness.services.cr_generation._run_claude") as mock_claude:
             mock_claude.return_value = (0, "")
             generate_design("CR-011", dhf)
-        mock_claude.assert_called_once()
+        # generate_design calls _run_claude twice: once for design generation,
+        # then a second pass to review the output against the spec (v0.3.2).
+        assert mock_claude.call_count == 2
 
     def test_design_prompt_passed_to_claude(self, tmp_path):
         dhf = tmp_path / "DHF"
@@ -334,7 +336,8 @@ class TestGenerateDesign:
         with patch("medharness.services.cr_generation._run_claude") as mock_claude:
             mock_claude.return_value = (0, "")
             generate_design("CR-012", dhf)
-        prompt = mock_claude.call_args[0][0]
+        # First call is the design-generation prompt (review pass is the second).
+        prompt = mock_claude.call_args_list[0][0][0]
         assert "CR-012" in prompt
         assert "dhf item create" in prompt
 
@@ -347,7 +350,7 @@ class TestGenerateDesign:
             mock_fb.return_value = '{"comments": [], "reviews": []}'
             generate_design("CR-013", dhf, pr_number=42)
         mock_fb.assert_called_once_with(42)
-        prompt = mock_claude.call_args[0][0]
+        prompt = mock_claude.call_args_list[0][0][0]
         assert "review feedback" in prompt.lower()
 
 
@@ -370,7 +373,9 @@ class TestGenerateCode:
         with patch("medharness.services.cr_generation._run_claude") as mock_claude:
             mock_claude.return_value = (0, "")
             generate_code("CR-021", dhf)
-        mock_claude.assert_called_once()
+        # generate_code calls _run_claude twice: once for code generation,
+        # then a second pass to review the output against the spec (v0.3.2).
+        assert mock_claude.call_count == 2
 
     def test_develop_prompt_passed_to_claude(self, tmp_path):
         dhf = tmp_path / "DHF"
@@ -378,7 +383,8 @@ class TestGenerateCode:
         with patch("medharness.services.cr_generation._run_claude") as mock_claude:
             mock_claude.return_value = (0, "")
             generate_code("CR-022", dhf)
-        prompt = mock_claude.call_args[0][0]
+        # First call is the develop prompt (review pass is the second).
+        prompt = mock_claude.call_args_list[0][0][0]
         assert "CR-022" in prompt
         assert "CLAUDE.md" in prompt
 
@@ -391,5 +397,5 @@ class TestGenerateCode:
             mock_fb.return_value = '{"comments": [], "reviews": []}'
             generate_code("CR-023", dhf, pr_number=7)
         mock_fb.assert_called_once_with(7)
-        prompt = mock_claude.call_args[0][0]
+        prompt = mock_claude.call_args_list[0][0][0]
         assert "review feedback" in prompt.lower()
