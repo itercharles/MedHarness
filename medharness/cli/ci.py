@@ -25,6 +25,36 @@ from medharness.services.spec_validation import validate_spec
 _ITEM_ID_RE = re.compile(r"^([A-Z]+-\d+)")
 
 
+def _format_summary(stage_label: str, verb: str, cr_id: str, result: dict) -> str:
+    """Compose the human-readable stderr summary for CI generate-* commands.
+
+    Surfaces correction count, validation outcome, residual error count,
+    elapsed time, and changed-item / changed-file counts when present.
+    """
+    details = [
+        f"{result.get('corrections', 0)} correction(s)",
+        f"validation: {result.get('validation', 'unknown')}",
+    ]
+    err_count = len(result.get("errors") or [])
+    if err_count:
+        details.append(f"residual errors: {err_count}")
+    elapsed_ms = result.get("elapsed_ms")
+    if elapsed_ms is not None:
+        details.append(f"{elapsed_ms} ms")
+
+    for label, bucket in (
+        ("DHF", result.get("items_changed") or {}),
+        ("files", result.get("files_changed") or {}),
+    ):
+        created = len(bucket.get("created") or [])
+        updated = len(bucket.get("updated") or [])
+        deleted = len(bucket.get("deleted") or [])
+        if created or updated or deleted:
+            details.append(f"{label}: +{created} ~{updated} -{deleted}")
+
+    return f"OK {stage_label} {verb} for {cr_id} ({', '.join(details)})."
+
+
 def register(main):
 
     @main.group("ci")
@@ -341,11 +371,7 @@ def register(main):
         dhf: Path = ctx.obj["dhf"]
         result = generate_spec(cr_id, dhf, pr_number=pr_number)
         click.echo(json.dumps(result))
-        click.echo(
-            f"OK Spec {'revised' if pr_number else 'generated'} for {cr_id} "
-            f"({result['corrections']} correction(s), validation: {result['validation']}).",
-            err=True,
-        )
+        click.echo(_format_summary("Spec", "revised" if pr_number else "generated", cr_id, result), err=True)
 
     @ci.command("design-cr")
     @click.option("--cr", "cr_id", required=True, metavar="CR_ID")
@@ -365,12 +391,7 @@ def register(main):
         dhf: Path = ctx.obj["dhf"]
         result = generate_design(cr_id, dhf, pr_number=pr_number)
         click.echo(json.dumps(result))
-        click.echo(
-            f"OK Design {'revised' if pr_number else 'generated'} for {cr_id} "
-            f"({result.get('corrections', 0)} correction(s), "
-            f"validation: {result.get('validation', 'unknown')}).",
-            err=True,
-        )
+        click.echo(_format_summary("Design", "revised" if pr_number else "generated", cr_id, result), err=True)
 
     @ci.command("develop-cr")
     @click.option("--cr", "cr_id", required=True, metavar="CR_ID")
@@ -390,9 +411,4 @@ def register(main):
         dhf: Path = ctx.obj["dhf"]
         result = generate_code(cr_id, dhf, pr_number=pr_number)
         click.echo(json.dumps(result))
-        click.echo(
-            f"OK Implementation {'revised' if pr_number else 'generated'} for {cr_id} "
-            f"({result.get('corrections', 0)} correction(s), "
-            f"validation: {result.get('validation', 'unknown')}).",
-            err=True,
-        )
+        click.echo(_format_summary("Implementation", "revised" if pr_number else "generated", cr_id, result), err=True)

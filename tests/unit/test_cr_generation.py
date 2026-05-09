@@ -239,10 +239,11 @@ class TestGenerateSpec:
             mock_claude.return_value = (0, "done")
             result = generate_spec("CR-001", dhf)
         assert result["cr_id"] == "CR-001"
-        assert "spec_path" in result
-        assert "status" in result
-        assert "corrections" in result
-        assert "validation" in result
+        assert result["stage"] == "spec"
+        assert result["status"] == "ok"
+        assert result["errors"] == []
+        for key in ("spec_path", "corrections", "validation", "started_at", "elapsed_ms"):
+            assert key in result, f"missing key: {key}"
 
     def test_calls_run_claude_once_when_spec_valid(self, tmp_path):
         dhf = self._dhf(tmp_path)
@@ -319,11 +320,12 @@ class TestGenerateDesign:
             mock_claude.return_value = (0, "")
             result = generate_design("CR-010", dhf)
         assert result["cr_id"] == "CR-010"
+        assert result["stage"] == "design"
         assert result["status"] == "ok"
-        assert "items_created" in result
-        assert "items_updated" in result
-        assert "validation" in result
-        assert "corrections" in result
+        assert result["errors"] == []
+        for key in ("corrections", "validation", "items_changed", "started_at", "elapsed_ms"):
+            assert key in result, f"missing key: {key}"
+        assert set(result["items_changed"]) == {"created", "updated", "deleted"}
 
     def test_happy_path_runs_design_then_review(self, tmp_path):
         dhf = tmp_path / "DHF"
@@ -372,9 +374,34 @@ class TestGenerateDesign:
         assert mock_claude.call_count == 3
         assert result["corrections"] == 1
         assert result["validation"] == "residual_errors"
+        # Residual errors are surfaced in the response payload — clients can
+        # render or post them without re-running the validator.
+        assert result["status"] == "completed_with_errors"
+        assert result["errors"] == errors
         # The soft-review prompt should surface the residual issue.
         review_prompt = mock_claude.call_args_list[2][0][0]
         assert "residual issues" in review_prompt.lower()
+
+    def test_items_changed_populated_from_git(self, tmp_path):
+        dhf = tmp_path / "DHF"
+        dhf.mkdir()
+        diff_output = (
+            "A\tDHF/items/01_sys/SYS-001.yaml\n"
+            "M\tDHF/items/02_srs/SRS-002.yaml\n"
+            "D\tDHF/items/02_srs/SRS-099.yaml\n"
+        )
+        with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
+             patch("medharness.services.design_validation.validate_design",
+                   return_value=[]), \
+             patch("subprocess.run",
+                   return_value=MagicMock(stdout=diff_output, returncode=0)):
+            mock_claude.return_value = (0, "")
+            result = generate_design("CR-016", dhf)
+        assert result["items_changed"] == {
+            "created": ["SYS-001"],
+            "updated": ["SRS-002"],
+            "deleted": ["SRS-099"],
+        }
 
     def test_design_prompt_passed_to_claude(self, tmp_path):
         dhf = tmp_path / "DHF"
@@ -417,9 +444,12 @@ class TestGenerateCode:
             mock_claude.return_value = (0, "")
             result = generate_code("CR-020", dhf)
         assert result["cr_id"] == "CR-020"
+        assert result["stage"] == "develop"
         assert result["status"] == "ok"
-        assert "files_written" in result
-        assert "corrections" in result
+        assert result["errors"] == []
+        for key in ("corrections", "validation", "files_changed", "started_at", "elapsed_ms"):
+            assert key in result, f"missing key: {key}"
+        assert set(result["files_changed"]) == {"created", "updated", "deleted"}
 
     def test_happy_path_runs_develop_then_review(self, tmp_path):
         dhf = tmp_path / "DHF"
@@ -454,6 +484,29 @@ class TestGenerateCode:
         assert "test annotations" in fix_prompt
         assert result["corrections"] == 1
         assert result["validation"] == "passed"
+        assert result["status"] == "ok"
+        assert result["errors"] == []
+
+    def test_files_changed_populated_from_git(self, tmp_path):
+        dhf = tmp_path / "DHF"
+        dhf.mkdir()
+        diff_output = (
+            "A\tapps/client/src/foo.ts\n"
+            "M\tapps/client/src/bar.tsx\n"
+            "D\tpackages/shared-types/src/old.ts\n"
+        )
+        with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
+             patch("medharness.services.code_validation.validate_code",
+                   return_value=[]), \
+             patch("subprocess.run",
+                   return_value=MagicMock(stdout=diff_output, returncode=0)):
+            mock_claude.return_value = (0, "")
+            result = generate_code("CR-025", dhf)
+        assert result["files_changed"] == {
+            "created": ["apps/client/src/foo.ts"],
+            "updated": ["apps/client/src/bar.tsx"],
+            "deleted": ["packages/shared-types/src/old.ts"],
+        }
 
     def test_develop_prompt_passed_to_claude(self, tmp_path):
         dhf = tmp_path / "DHF"

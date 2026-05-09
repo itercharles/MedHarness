@@ -4,8 +4,10 @@ import importlib.resources
 import json
 import os
 import subprocess
+import time
 import urllib.error
 import urllib.request
+from datetime import datetime, timezone
 from pathlib import Path
 
 
@@ -109,8 +111,56 @@ def _run_claude(prompt: str) -> tuple[int, str]:
 
 # ── Public API ────────────────────────────────────────────────────────────────
 
+def _now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+
+def _build_response(
+    *,
+    cr_id: str,
+    stage: str,
+    started_at: str,
+    started_perf: float,
+    corrections: int,
+    errors: list[dict],
+    extra: dict | None = None,
+) -> dict:
+    """Compose the standard generate-* response payload.
+
+    Shape (all keys always present):
+        cr_id, stage, status, corrections, validation, errors,
+        started_at, elapsed_ms, plus any caller-supplied ``extra``.
+
+    ``status`` is ``"ok"`` when no residual errors remain, else
+    ``"completed_with_errors"``. ``validation`` is the finer-grained label
+    used historically (``"passed"`` / ``"corrected"`` for spec,
+    ``"passed"`` / ``"residual_errors"`` for design/develop).
+    """
+    elapsed_ms = int((time.perf_counter() - started_perf) * 1000)
+    if stage == "spec":
+        validation = "passed" if corrections == 0 else "corrected"
+    else:
+        validation = "passed" if not errors else "residual_errors"
+    response = {
+        "cr_id": cr_id,
+        "stage": stage,
+        "status": "ok" if not errors else "completed_with_errors",
+        "corrections": corrections,
+        "validation": validation,
+        "errors": list(errors),
+        "started_at": started_at,
+        "elapsed_ms": elapsed_ms,
+    }
+    if extra:
+        response.update(extra)
+    return response
+
+
 def generate_spec(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> dict:
     """Generate or revise the CR spec. Writes docs/cr-specs/<cr_id>-Spec.md."""
+    started_at = _now_iso()
+    started_perf = time.perf_counter()
+
     repo_root = dhf_path.resolve().parent
     spec_path = repo_root / "docs" / "cr-specs" / f"{cr_id}-Spec.md"
 
@@ -129,28 +179,30 @@ def generate_spec(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> d
     _run_claude(prompt)
 
     corrections = 0
+    errors: list[dict] = []
     if spec_path.exists():
         from medharness.services.spec_validation import validate_spec  # noqa: PLC0415
         errors = validate_spec(spec_path, cr_id, dhf_path)
         if errors:
             corrections += 1
-            error_lines = "\n".join(
-                f"- {e['field']}: {e['issue']} (fix: {e['fix']})" for e in errors
-            )
             fix_prompt = (
-                f"The spec at {spec_path} failed validation.\n{error_lines}\n\n"
+                f"The spec at {spec_path} failed validation.\n"
+                f"{_format_error_lines(errors)}\n\n"
                 f"Fix only the front-matter fields that caused errors. "
                 f"Do not change the markdown content."
             )
             _run_claude(fix_prompt)
+            errors = validate_spec(spec_path, cr_id, dhf_path)
 
-    return {
-        "cr_id": cr_id,
-        "spec_path": str(spec_path),
-        "status": "ok",
-        "corrections": corrections,
-        "validation": "passed" if corrections == 0 else "corrected",
-    }
+    return _build_response(
+        cr_id=cr_id,
+        stage="spec",
+        started_at=started_at,
+        started_perf=started_perf,
+        corrections=corrections,
+        errors=errors,
+        extra={"spec_path": str(spec_path)},
+    )
 
 
 def _format_error_lines(errors: list[dict]) -> str:
@@ -191,6 +243,9 @@ def generate_design(cr_id: str, dhf_path: Path, pr_number: int | None = None) ->
     :mod:`medharness.services.design_validation`; the soft review focuses
     on intent, completeness, and clarity.
     """
+    started_at = _now_iso()
+    started_perf = time.perf_counter()
+
     repo_root = dhf_path.resolve().parent
     spec_path = repo_root / "docs" / "cr-specs" / f"{cr_id}-Spec.md"
 
@@ -224,14 +279,18 @@ def generate_design(cr_id: str, dhf_path: Path, pr_number: int | None = None) ->
     review_prompt = _augment_review_prompt(_assemble_review_design_prompt(cr_id), errors)
     _run_claude(review_prompt)
 
-    return {
-        "cr_id": cr_id,
-        "status": "ok",
-        "items_created": None,
-        "items_updated": None,
-        "corrections": corrections,
-        "validation": "passed" if not errors else "residual_errors",
-    }
+    from medharness.services.git import collect_dhf_item_changes  # noqa: PLC0415
+    items_changed = collect_dhf_item_changes(repo_root, "origin/main")
+
+    return _build_response(
+        cr_id=cr_id,
+        stage="design",
+        started_at=started_at,
+        started_perf=started_perf,
+        corrections=corrections,
+        errors=errors,
+        extra={"items_changed": items_changed},
+    )
 
 
 def generate_code(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> dict:
@@ -241,6 +300,9 @@ def generate_code(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> d
     spec `test_plan.needs_new_tc`) → fix-only pass on errors → trimmed
     soft-review pass.
     """
+    started_at = _now_iso()
+    started_perf = time.perf_counter()
+
     repo_root = dhf_path.resolve().parent
     spec_path = repo_root / "docs" / "cr-specs" / f"{cr_id}-Spec.md"
 
@@ -273,10 +335,15 @@ def generate_code(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> d
     review_prompt = _augment_review_prompt(_assemble_review_code_prompt(cr_id), errors)
     _run_claude(review_prompt)
 
-    return {
-        "cr_id": cr_id,
-        "status": "ok",
-        "files_written": [],
-        "corrections": corrections,
-        "validation": "passed" if not errors else "residual_errors",
-    }
+    from medharness.services.git import collect_path_changes  # noqa: PLC0415
+    files_changed = collect_path_changes(repo_root, "origin/main", "apps/", "packages/")
+
+    return _build_response(
+        cr_id=cr_id,
+        stage="develop",
+        started_at=started_at,
+        started_perf=started_perf,
+        corrections=corrections,
+        errors=errors,
+        extra={"files_changed": files_changed},
+    )

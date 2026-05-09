@@ -42,6 +42,39 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
   prompt does not waste a call asking for tests the model cannot add;
   the latter still flags missing `needs_new_tc` annotations.
 
+### Enhanced response payload (`generate_spec` / `generate_design` / `generate_code`)
+
+The dict returned by all three functions (and echoed as JSON by the
+matching `ci analyze-cr` / `design-cr` / `develop-cr` commands) now
+carries a uniform, richer shape so clients can render outcomes without
+re-running validators or shelling out to git. New / changed keys:
+
+- `stage` — one of `"spec"` / `"design"` / `"develop"`.
+- `status` — `"ok"` when no residual errors remain, `"completed_with_errors"`
+  otherwise (previously hard-coded `"ok"`).
+- `errors` — list of structured `{field, issue, fix}` dicts surfacing the
+  residual deterministic-check failures. Empty when validation passed.
+- `items_changed` (design) / `files_changed` (develop) — `{created, updated,
+  deleted}` lists derived from `git diff --name-status origin/main`. Item
+  IDs are extracted from the YAML stem (`SYS-001` etc.).
+- `started_at` (ISO 8601 UTC) and `elapsed_ms` (wall time).
+
+Removed (placeholder fields that always returned `null` / `[]`):
+`items_created`, `items_updated`, `files_written`. Use `items_changed.*`
+or `files_changed.*` instead.
+
+The `ci design-cr` / `ci develop-cr` / `ci analyze-cr` stderr summaries
+now surface correction count, validation outcome, residual error count,
+elapsed time, and changed-DHF / changed-files counts via a single shared
+formatter.
+
+### New helpers (`medharness.services.git`)
+
+- `collect_path_changes(repo_root, since_ref, *paths)` —
+  `{created, updated, deleted}` of file paths.
+- `collect_dhf_item_changes(repo_root, since_ref)` — same shape but with
+  DHF item IDs extracted from `DHF/items/.../<ID>.yaml`.
+
 ### New modules
 
 - `medharness.services.design_validation` — `validate_design(cr_id,
