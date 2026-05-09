@@ -4,6 +4,7 @@ import os
 import shutil
 import subprocess
 import sys
+from datetime import datetime
 from pathlib import Path
 import click
 
@@ -285,6 +286,10 @@ def _build_traceability_report_payload(core, doc_types: tuple[str, ...],
     return matrix
 
 
+class _MissingPDFDeps(RuntimeError):
+    """Raised when WeasyPrint or its native libraries are not available."""
+
+
 def _write_traceability_report(core, doc_types: tuple[str, ...], output: Path,
                                 junit_paths: tuple[str, ...] = ()) -> dict:
     matrix = _build_traceability_report_payload(core, doc_types, junit_paths)
@@ -311,16 +316,18 @@ def _write_traceability_report(core, doc_types: tuple[str, ...], output: Path,
     return result
 
 
-class _MissingPDFDeps(RuntimeError):
-    """Raised when WeasyPrint or markdown extras are not installed."""
-
-
 def _render_traceability_matrix_pdf(matrix: dict, output: Path) -> Path:
-    """Render the traceability matrix payload as a Markdown -> HTML -> PDF document."""
+    """Render the traceability matrix payload as a Markdown -> HTML -> PDF document.
+
+    WeasyPrint imports its Pango / Cairo / GObject native libraries at import
+    time. Missing or mis-versioned native libs surface as ``OSError`` from
+    ``cffi.dlopen``, not ``ImportError`` — both are caught so the caller can
+    degrade to JSON-only with a ``pdf_skipped`` reason.
+    """
     try:
         import markdown as _markdown
         from weasyprint import HTML
-    except ImportError as exc:
+    except (ImportError, OSError) as exc:
         raise _MissingPDFDeps(str(exc)) from exc
 
     md = _format_traceability_matrix_markdown(matrix)
@@ -338,26 +345,26 @@ def _render_traceability_matrix_pdf(matrix: dict, output: Path) -> Path:
     )
 
     output.parent.mkdir(parents=True, exist_ok=True)
-    HTML(string=full_html).write_pdf(str(output))
+    HTML(string=full_html, base_url=str(output.parent)).write_pdf(str(output))
     return output
 
 
 def _format_traceability_matrix_markdown(matrix: dict) -> str:
     """Render matrix payload as a Markdown traceability matrix document."""
-    from datetime import datetime as _dt
-
     columns: list[str] = matrix.get("columns") or []
     rows: list[dict] = matrix.get("rows") or []
     coverage: dict[str, list[dict]] = matrix.get("coverage") or {}
     test_results: dict = matrix.get("test_results") or {}
 
     def _esc(value) -> str:
-        return str(value).replace("|", r"\|") if value is not None else "—"
+        if value is None or value == "":
+            return "—"
+        return str(value).replace("\n", " ").replace("|", r"\|")
 
     lines: list[str] = []
     lines.append("# Requirements Traceability Matrix")
     lines.append("")
-    lines.append(f"**Generated:** {_dt.now().isoformat(timespec='seconds')}")
+    lines.append(f"**Generated:** {datetime.now().isoformat(timespec='seconds')}")
     lines.append("")
     lines.append(
         "**Trace Path:** " + (" → ".join(columns) if columns else "—")
