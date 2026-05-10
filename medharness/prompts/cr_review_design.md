@@ -1,28 +1,38 @@
-# CR Design Review
+# CR Design Review (Soft)
 
 You are reviewing DHF design output that was just generated for CR {{cr_id}}.
+
+Schema, traceability, and presence of every `affected_items` ID have already
+been verified mechanically by the harness before this review runs. Your job
+is the things a script cannot judge: intent, completeness, and clarity.
 
 ## Inputs
 
 - CR item: `DHF/items/09_cr/{{cr_id}}.yaml`
 - Approved spec: `docs/cr-specs/{{cr_id}}-Spec.md`
-- DHF changes since main: run `git diff origin/main -- DHF/` to see what was created or modified
+- DHF changes since main: run `git diff origin/main -- DHF/`
 
 ## Review Steps
 
-1. Read the CR item and the spec to understand what was required.
+1. Read the CR item and spec to understand what was required.
 
-2. Run `git diff origin/main -- DHF/` to see which items were created or updated.
+2. Run `git diff origin/main -- DHF/` to see what was created or modified.
 
-3. For each item listed in `affected_items` in the spec front-matter, verify:
-   - Was the item created or updated?
-   - Is the title and description accurate and complete?
-   - Are `dhf_links` correct (traceability: UC → CRS → SYS → SRS → SWDD)?
-   - Are all required fields present?
+3. For each new or updated item, judge:
+   - **Title and description** — does it accurately and specifically describe
+     the change? Templated or generic copy is a flaw worth noting.
+   - **Intent** — does the item capture what the spec actually asked for, or
+     only the literal `affected_items` list? Note any items the spec narrative
+     implied but did not name.
+   - **Completeness** — are required content fields filled with substance,
+     not placeholders?
 
-4. Check for missing items: anything the spec required that was not created.
+4. Note any items the spec required that appear missing.
 
-5. Check for incorrect traceability: items linked to the wrong parents or missing links.
+Do not re-verify schema, traceability links, or presence of `affected_items`
+IDs — those are checked deterministically. If you spot a mechanical issue
+that the deterministic check should have caught, flag it as a harness bug,
+not as a design issue.
 
 ## Output
 

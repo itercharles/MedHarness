@@ -1,9 +1,75 @@
-"""Git helpers for CI workflows — commit and push DHF item changes."""
+"""Git helpers for CI workflows — commit, push, and inspect DHF / repo changes."""
 
 from __future__ import annotations
 
 import subprocess
 from pathlib import Path
+
+
+def collect_path_changes(
+    repo_root: Path,
+    since_ref: str,
+    *paths: str,
+) -> dict[str, list[str]]:
+    """Return ``{created, updated, deleted}`` lists of file paths changed since ``since_ref``.
+
+    Paths are returned exactly as git reports them (relative to ``repo_root``).
+    On environment failure (git missing, ref unfetched, non-zero exit) all
+    three lists are empty; callers that need to distinguish "no changes" from
+    "could not check" should run the diff themselves.
+    """
+    empty: dict[str, list[str]] = {"created": [], "updated": [], "deleted": []}
+    try:
+        result = subprocess.run(
+            ["git", "diff", "--name-status", since_ref, "--", *paths],
+            capture_output=True,
+            text=True,
+            cwd=str(repo_root),
+            check=False,
+        )
+    except FileNotFoundError:
+        return empty
+    if result.returncode != 0:
+        return empty
+
+    created: list[str] = []
+    updated: list[str] = []
+    deleted: list[str] = []
+    for line in (result.stdout or "").splitlines():
+        if not line:
+            continue
+        # Lines: "A\tpath", "M\tpath", "D\tpath", "R100\told\tnew" (rename).
+        parts = line.split("\t")
+        if len(parts) < 2:
+            continue
+        status_code = parts[0]
+        if status_code.startswith("A"):
+            created.append(parts[1])
+        elif status_code.startswith("M"):
+            updated.append(parts[1])
+        elif status_code.startswith("D"):
+            deleted.append(parts[1])
+        elif status_code.startswith("R") and len(parts) >= 3:
+            # Rename — count as an update on the new path.
+            updated.append(parts[2])
+    return {"created": created, "updated": updated, "deleted": deleted}
+
+
+def collect_dhf_item_changes(repo_root: Path, since_ref: str) -> dict[str, list[str]]:
+    """Return ``{created, updated, deleted}`` lists of DHF item IDs changed since ``since_ref``.
+
+    Item IDs are extracted as the file stem (e.g. ``DHF/items/01_sys/SYS-001.yaml``
+    becomes ``"SYS-001"``). Non-YAML files under ``DHF/items/`` are skipped.
+    """
+    raw = collect_path_changes(repo_root, since_ref, "DHF/items/")
+    out: dict[str, list[str]] = {"created": [], "updated": [], "deleted": []}
+    for bucket in out:
+        for path in raw[bucket]:
+            p = Path(path)
+            if p.suffix.lower() != ".yaml":
+                continue
+            out[bucket].append(p.stem)
+    return out
 
 
 def commit_dhf_item(

@@ -9,6 +9,81 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ---
 
+## [0.3.5] — 2026-05-10
+
+### Changes
+
+- `ci design-cr` and `ci develop-cr` now run **deterministic structural
+  checks before** the LLM review pass, matching the pattern already used
+  by `ci analyze-cr`:
+  - **design**: schema validation, required-traceability rules, orphans,
+    coverage gaps, and presence of every spec `affected_items` ID — all
+    via `dhfkit.api`. On failure, a fix-only LLM prompt with structured
+    error lines runs once before the soft review.
+  - **develop**: presence of `@links:<ID>` annotations in the diff for
+    every item in the spec's `test_plan.needs_new_tc`. On failure, a
+    fix-only LLM prompt asks for the missing colocated tests.
+- The soft-review prompts (`cr_review_design.md`, `cr_review_code.md`)
+  are trimmed to judgment questions only — schema, traceability, and
+  test-annotation presence are no longer re-asked of the model. The
+  prompts are augmented at runtime with a "Deterministic Checks" section
+  that tells the reviewer not to re-derive what the harness already
+  proved.
+- `generate_design` and `generate_code` now return `corrections` and
+  `validation` fields (matching `generate_spec`); `validation` is one of
+  `"passed"` or `"residual_errors"` (replacing the prior placeholder
+  `"not_checked"` value — consumers that string-matched the old value
+  will see the new domain).
+- `ci design-cr` and `ci develop-cr` stderr summaries now include the
+  correction count and validation outcome, matching `ci analyze-cr`.
+- `validate_code` now distinguishes git-environment failures (missing
+  binary, unfetched ref, non-zero exit) from a legitimately-empty diff:
+  the former emits one `field: "environment"` error so the fix-only LLM
+  prompt does not waste a call asking for tests the model cannot add;
+  the latter still flags missing `needs_new_tc` annotations.
+
+### Enhanced response payload (`generate_spec` / `generate_design` / `generate_code`)
+
+The dict returned by all three functions (and echoed as JSON by the
+matching `ci analyze-cr` / `design-cr` / `develop-cr` commands) now
+carries a uniform, richer shape so clients can render outcomes without
+re-running validators or shelling out to git. New / changed keys:
+
+- `stage` — one of `"spec"` / `"design"` / `"develop"`.
+- `status` — `"ok"` when no residual errors remain, `"completed_with_errors"`
+  otherwise (previously hard-coded `"ok"`).
+- `errors` — list of structured `{field, issue, fix}` dicts surfacing the
+  residual deterministic-check failures. Empty when validation passed.
+- `items_changed` (design) / `files_changed` (develop) — `{created, updated,
+  deleted}` lists derived from `git diff --name-status origin/main`. Item
+  IDs are extracted from the YAML stem (`SYS-001` etc.).
+- `started_at` (ISO 8601 UTC) and `elapsed_ms` (wall time).
+
+Removed (placeholder fields that always returned `null` / `[]`):
+`items_created`, `items_updated`, `files_written`. Use `items_changed.*`
+or `files_changed.*` instead.
+
+The `ci design-cr` / `ci develop-cr` / `ci analyze-cr` stderr summaries
+now surface correction count, validation outcome, residual error count,
+elapsed time, and changed-DHF / changed-files counts via a single shared
+formatter.
+
+### New helpers (`medharness.services.git`)
+
+- `collect_path_changes(repo_root, since_ref, *paths)` —
+  `{created, updated, deleted}` of file paths.
+- `collect_dhf_item_changes(repo_root, since_ref)` — same shape but with
+  DHF item IDs extracted from `DHF/items/.../<ID>.yaml`.
+
+### New modules
+
+- `medharness.services.design_validation` — `validate_design(cr_id,
+  dhf_path, spec_path) -> list[dict]`
+- `medharness.services.code_validation` — `validate_code(cr_id,
+  dhf_path, spec_path, since_ref="origin/main") -> list[dict]`
+
+---
+
 ## [0.3.4] — 2026-05-09
 
 ### Fixes

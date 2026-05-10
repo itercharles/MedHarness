@@ -239,10 +239,11 @@ class TestGenerateSpec:
             mock_claude.return_value = (0, "done")
             result = generate_spec("CR-001", dhf)
         assert result["cr_id"] == "CR-001"
-        assert "spec_path" in result
-        assert "status" in result
-        assert "corrections" in result
-        assert "validation" in result
+        assert result["stage"] == "spec"
+        assert result["status"] == "ok"
+        assert result["errors"] == []
+        for key in ("spec_path", "corrections", "validation", "started_at", "elapsed_ms"):
+            assert key in result, f"missing key: {key}"
 
     def test_calls_run_claude_once_when_spec_valid(self, tmp_path):
         dhf = self._dhf(tmp_path)
@@ -308,35 +309,108 @@ class TestGenerateSpec:
 # ── generate_design ───────────────────────────────────────────────────────────
 
 class TestGenerateDesign:
+    """Pipeline: design pass → deterministic check → fix-only on errors → soft review."""
+
     def test_returns_dict_with_required_keys(self, tmp_path):
         dhf = tmp_path / "DHF"
         dhf.mkdir()
-        with patch("medharness.services.cr_generation._run_claude") as mock_claude:
+        with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
+             patch("medharness.services.design_validation.validate_design",
+                   return_value=[]):
             mock_claude.return_value = (0, "")
             result = generate_design("CR-010", dhf)
         assert result["cr_id"] == "CR-010"
+        assert result["stage"] == "design"
         assert result["status"] == "ok"
-        assert "items_created" in result
-        assert "items_updated" in result
-        assert "validation" in result
+        assert result["errors"] == []
+        for key in ("corrections", "validation", "items_changed", "started_at", "elapsed_ms"):
+            assert key in result, f"missing key: {key}"
+        assert set(result["items_changed"]) == {"created", "updated", "deleted"}
 
-    def test_calls_run_claude(self, tmp_path):
+    def test_happy_path_runs_design_then_review(self, tmp_path):
         dhf = tmp_path / "DHF"
         dhf.mkdir()
-        with patch("medharness.services.cr_generation._run_claude") as mock_claude:
+        with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
+             patch("medharness.services.design_validation.validate_design",
+                   return_value=[]):
             mock_claude.return_value = (0, "")
-            generate_design("CR-011", dhf)
-        # generate_design calls _run_claude twice: once for design generation,
-        # then a second pass to review the output against the spec (v0.3.2).
+            result = generate_design("CR-011", dhf)
+        # Two calls: design generation + soft review (no fix call when checks pass).
         assert mock_claude.call_count == 2
+        assert result["corrections"] == 0
+        assert result["validation"] == "passed"
+        # Review prompt is augmented with the "already passed" note so the
+        # reviewer does not re-derive what the harness already proved.
+        review_prompt = mock_claude.call_args_list[1][0][0]
+        assert "already passed" in review_prompt.lower()
+
+    def test_fix_pass_triggered_when_validation_fails(self, tmp_path):
+        dhf = tmp_path / "DHF"
+        dhf.mkdir()
+        first_errors = [{"field": "schema", "issue": "x", "fix": "y"}]
+        with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
+             patch("medharness.services.design_validation.validate_design",
+                   side_effect=[first_errors, []]):
+            mock_claude.return_value = (0, "")
+            result = generate_design("CR-014", dhf)
+        # Three calls: design + fix + review.
+        assert mock_claude.call_count == 3
+        # Fix prompt is the second call and references the error.
+        fix_prompt = mock_claude.call_args_list[1][0][0]
+        assert "schema" in fix_prompt
+        assert "deterministic validation" in fix_prompt
+        assert result["corrections"] == 1
+        assert result["validation"] == "passed"
+
+    def test_residual_errors_recorded_when_fix_does_not_clear(self, tmp_path):
+        dhf = tmp_path / "DHF"
+        dhf.mkdir()
+        errors = [{"field": "schema", "issue": "x", "fix": "y"}]
+        with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
+             patch("medharness.services.design_validation.validate_design",
+                   side_effect=[errors, errors]):
+            mock_claude.return_value = (0, "")
+            result = generate_design("CR-015", dhf)
+        assert mock_claude.call_count == 3
+        assert result["corrections"] == 1
+        assert result["validation"] == "residual_errors"
+        # Residual errors are surfaced in the response payload — clients can
+        # render or post them without re-running the validator.
+        assert result["status"] == "completed_with_errors"
+        assert result["errors"] == errors
+        # The soft-review prompt should surface the residual issue.
+        review_prompt = mock_claude.call_args_list[2][0][0]
+        assert "residual issues" in review_prompt.lower()
+
+    def test_items_changed_populated_from_git(self, tmp_path):
+        dhf = tmp_path / "DHF"
+        dhf.mkdir()
+        diff_output = (
+            "A\tDHF/items/01_sys/SYS-001.yaml\n"
+            "M\tDHF/items/02_srs/SRS-002.yaml\n"
+            "D\tDHF/items/02_srs/SRS-099.yaml\n"
+        )
+        with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
+             patch("medharness.services.design_validation.validate_design",
+                   return_value=[]), \
+             patch("subprocess.run",
+                   return_value=MagicMock(stdout=diff_output, returncode=0)):
+            mock_claude.return_value = (0, "")
+            result = generate_design("CR-016", dhf)
+        assert result["items_changed"] == {
+            "created": ["SYS-001"],
+            "updated": ["SRS-002"],
+            "deleted": ["SRS-099"],
+        }
 
     def test_design_prompt_passed_to_claude(self, tmp_path):
         dhf = tmp_path / "DHF"
         dhf.mkdir()
-        with patch("medharness.services.cr_generation._run_claude") as mock_claude:
+        with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
+             patch("medharness.services.design_validation.validate_design",
+                   return_value=[]):
             mock_claude.return_value = (0, "")
             generate_design("CR-012", dhf)
-        # First call is the design-generation prompt (review pass is the second).
         prompt = mock_claude.call_args_list[0][0][0]
         assert "CR-012" in prompt
         assert "dhf item create" in prompt
@@ -345,7 +419,9 @@ class TestGenerateDesign:
         dhf = tmp_path / "DHF"
         dhf.mkdir()
         with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
-             patch("medharness.services.cr_generation._get_pr_feedback") as mock_fb:
+             patch("medharness.services.cr_generation._get_pr_feedback") as mock_fb, \
+             patch("medharness.services.design_validation.validate_design",
+                   return_value=[]):
             mock_claude.return_value = (0, "")
             mock_fb.return_value = '{"comments": [], "reviews": []}'
             generate_design("CR-013", dhf, pr_number=42)
@@ -357,33 +433,89 @@ class TestGenerateDesign:
 # ── generate_code ─────────────────────────────────────────────────────────────
 
 class TestGenerateCode:
+    """Pipeline: develop pass → deterministic check → fix-only on errors → soft review."""
+
     def test_returns_dict_with_required_keys(self, tmp_path):
         dhf = tmp_path / "DHF"
         dhf.mkdir()
-        with patch("medharness.services.cr_generation._run_claude") as mock_claude:
+        with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
+             patch("medharness.services.code_validation.validate_code",
+                   return_value=[]):
             mock_claude.return_value = (0, "")
             result = generate_code("CR-020", dhf)
         assert result["cr_id"] == "CR-020"
+        assert result["stage"] == "develop"
         assert result["status"] == "ok"
-        assert "files_written" in result
+        assert result["errors"] == []
+        for key in ("corrections", "validation", "files_changed", "started_at", "elapsed_ms"):
+            assert key in result, f"missing key: {key}"
+        assert set(result["files_changed"]) == {"created", "updated", "deleted"}
 
-    def test_calls_run_claude(self, tmp_path):
+    def test_happy_path_runs_develop_then_review(self, tmp_path):
         dhf = tmp_path / "DHF"
         dhf.mkdir()
-        with patch("medharness.services.cr_generation._run_claude") as mock_claude:
+        with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
+             patch("medharness.services.code_validation.validate_code",
+                   return_value=[]):
             mock_claude.return_value = (0, "")
-            generate_code("CR-021", dhf)
-        # generate_code calls _run_claude twice: once for code generation,
-        # then a second pass to review the output against the spec (v0.3.2).
+            result = generate_code("CR-021", dhf)
         assert mock_claude.call_count == 2
+        assert result["corrections"] == 0
+        assert result["validation"] == "passed"
+        review_prompt = mock_claude.call_args_list[1][0][0]
+        assert "already passed" in review_prompt.lower()
+
+    def test_fix_pass_triggered_when_validation_fails(self, tmp_path):
+        dhf = tmp_path / "DHF"
+        dhf.mkdir()
+        first_errors = [{
+            "field": "test_plan.needs_new_tc",
+            "issue": "No newly added `@links:SRS-001` annotation found.",
+            "fix": "Add a colocated test with @links:SRS-001",
+        }]
+        with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
+             patch("medharness.services.code_validation.validate_code",
+                   side_effect=[first_errors, []]):
+            mock_claude.return_value = (0, "")
+            result = generate_code("CR-024", dhf)
+        assert mock_claude.call_count == 3
+        fix_prompt = mock_claude.call_args_list[1][0][0]
+        assert "@links:SRS-001" in fix_prompt
+        assert "test annotations" in fix_prompt
+        assert result["corrections"] == 1
+        assert result["validation"] == "passed"
+        assert result["status"] == "ok"
+        assert result["errors"] == []
+
+    def test_files_changed_populated_from_git(self, tmp_path):
+        dhf = tmp_path / "DHF"
+        dhf.mkdir()
+        diff_output = (
+            "A\tapps/client/src/foo.ts\n"
+            "M\tapps/client/src/bar.tsx\n"
+            "D\tpackages/shared-types/src/old.ts\n"
+        )
+        with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
+             patch("medharness.services.code_validation.validate_code",
+                   return_value=[]), \
+             patch("subprocess.run",
+                   return_value=MagicMock(stdout=diff_output, returncode=0)):
+            mock_claude.return_value = (0, "")
+            result = generate_code("CR-025", dhf)
+        assert result["files_changed"] == {
+            "created": ["apps/client/src/foo.ts"],
+            "updated": ["apps/client/src/bar.tsx"],
+            "deleted": ["packages/shared-types/src/old.ts"],
+        }
 
     def test_develop_prompt_passed_to_claude(self, tmp_path):
         dhf = tmp_path / "DHF"
         dhf.mkdir()
-        with patch("medharness.services.cr_generation._run_claude") as mock_claude:
+        with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
+             patch("medharness.services.code_validation.validate_code",
+                   return_value=[]):
             mock_claude.return_value = (0, "")
             generate_code("CR-022", dhf)
-        # First call is the develop prompt (review pass is the second).
         prompt = mock_claude.call_args_list[0][0][0]
         assert "CR-022" in prompt
         assert "CLAUDE.md" in prompt
@@ -392,7 +524,9 @@ class TestGenerateCode:
         dhf = tmp_path / "DHF"
         dhf.mkdir()
         with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
-             patch("medharness.services.cr_generation._get_pr_feedback") as mock_fb:
+             patch("medharness.services.cr_generation._get_pr_feedback") as mock_fb, \
+             patch("medharness.services.code_validation.validate_code",
+                   return_value=[]):
             mock_claude.return_value = (0, "")
             mock_fb.return_value = '{"comments": [], "reviews": []}'
             generate_code("CR-023", dhf, pr_number=7)

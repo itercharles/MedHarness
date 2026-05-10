@@ -1,11 +1,16 @@
-# CR Code Review
+# CR Code Review (Soft)
 
 You are reviewing implementation code that was just generated for CR {{cr_id}}.
+
+Test annotations for items in the spec's `test_plan.needs_new_tc` have already
+been verified mechanically by the harness before this review runs. Your job is
+the things a script cannot judge: completeness against the spec narrative,
+test depth, and code quality.
 
 ## Inputs
 
 - Approved spec: `docs/cr-specs/{{cr_id}}-Spec.md`
-- Code changes since main: run `git diff origin/main -- apps/ packages/` to see what was changed
+- Code changes since main: run `git diff origin/main -- apps/ packages/`
 
 ## Review Steps
 
@@ -13,15 +18,22 @@ You are reviewing implementation code that was just generated for CR {{cr_id}}.
 
 2. Run `git diff origin/main -- apps/ packages/` to see the implementation.
 
-3. Check each of the following:
-   - **Completeness**: does the code implement everything the spec describes?
-   - **Tests**: are there colocated tests (`*.test.ts(x)`) for every functional change?
-   - **Annotations**: do tests that cover DHF requirements have `@links:SRS-xxx` or
-     `@links:SYS-xxx` annotations?
-   - **Types**: TypeScript strict mode respected? No `any` types?
-   - **Styling**: Tailwind only, no inline styles?
-   - **Scope**: no unrelated refactoring or speculative additions beyond the spec?
-   - **Shared types**: new types defined in `packages/shared-types` before use in apps?
+3. Judge:
+   - **Completeness** — does the code implement the full spec, including
+     anything described in the narrative beyond the explicit checklist?
+   - **Test depth** — beyond the annotated tests, does coverage match the
+     surface area of the change? Are edge cases addressed, not just the
+     happy path?
+   - **Scope** — any unrelated refactoring, dead code, or speculative
+     additions outside what the spec describes?
+   - **Conventions** — TypeScript strict (no `any`), Tailwind only (no
+     inline styles), shared types defined in `packages/shared-types`
+     before use in apps.
+
+Do not re-verify the presence of `@links:` annotations for items in
+`test_plan.needs_new_tc` — those are checked deterministically. If you
+spot a mechanical issue that the deterministic check should have caught,
+flag it as a harness bug, not as a code issue.
 
 ## Output
 
