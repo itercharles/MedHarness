@@ -13,6 +13,7 @@ from medharness.services.cr_generation import (
     _assemble_analyze_prompt,
     _assemble_design_prompt,
     _assemble_develop_prompt,
+    _assemble_review_spec_prompt,
     _get_pr_feedback,
     _load_prompt,
     _load_skill,
@@ -140,6 +141,20 @@ class TestAssemblePrompts:
         assert "Risk Impact" not in prompt
         assert "SOUP Impact" not in prompt
 
+    def test_review_spec_substitutes_cr_id(self):
+        prompt = _assemble_review_spec_prompt("CR-042")
+        assert "CR-042" in prompt
+        assert "{{cr_id}}" not in prompt
+
+    def test_review_spec_focuses_on_soft_judgment(self):
+        prompt = _assemble_review_spec_prompt("CR-001")
+        assert "actionab" in prompt.lower()
+        assert "placeholder" in prompt.lower() or "tbd" in prompt.lower() or "todo" in prompt.lower()
+
+    def test_review_spec_instructs_not_to_re_verify_schema(self):
+        prompt = _assemble_review_spec_prompt("CR-001")
+        assert "deterministic" in prompt.lower() or "mechanically" in prompt.lower()
+
 
 # ── PR feedback ───────────────────────────────────────────────────────────────
 
@@ -245,7 +260,7 @@ class TestGenerateSpec:
         for key in ("spec_path", "corrections", "validation", "started_at", "elapsed_ms"):
             assert key in result, f"missing key: {key}"
 
-    def test_calls_run_claude_once_when_spec_valid(self, tmp_path):
+    def test_calls_run_claude_twice_when_spec_valid(self, tmp_path):
         dhf = self._dhf(tmp_path)
         spec_path = tmp_path / "docs" / "cr-specs" / "CR-002-Spec.md"
         spec_path.parent.mkdir(parents=True)
@@ -258,9 +273,13 @@ class TestGenerateSpec:
         with patch("medharness.services.cr_generation._run_claude") as mock_claude:
             mock_claude.return_value = (0, "done")
             result = generate_spec("CR-002", dhf)
-        assert mock_claude.call_count == 1
+        # Two calls: spec generation + soft review (no fix needed when checks pass).
+        assert mock_claude.call_count == 2
         assert result["corrections"] == 0
         assert result["validation"] == "passed"
+        # Review prompt is augmented with the "already passed" note.
+        review_prompt = mock_claude.call_args_list[1][0][0]
+        assert "already passed" in review_prompt.lower()
 
     def test_self_corrects_when_spec_invalid(self, tmp_path):
         dhf = self._dhf(tmp_path)
@@ -275,7 +294,8 @@ class TestGenerateSpec:
         with patch("medharness.services.cr_generation._run_claude") as mock_claude:
             mock_claude.return_value = (0, "done")
             result = generate_spec("CR-003", dhf)
-        assert mock_claude.call_count == 2
+        # Three calls: spec generation + fix pass + soft review.
+        assert mock_claude.call_count == 3
         assert result["corrections"] == 1
         assert result["validation"] == "corrected"
 
@@ -302,8 +322,9 @@ class TestGenerateSpec:
             mock_fb.return_value = '{"comments": [], "reviews": []}'
             generate_spec("CR-005", dhf, pr_number=99)
         mock_fb.assert_called_once_with(99)
-        prompt_used = mock_claude.call_args[0][0]
-        assert "review feedback" in prompt_used.lower()
+        # First call is the revision prompt; last call is the soft review — check the first.
+        gen_prompt = mock_claude.call_args_list[0][0][0]
+        assert "review feedback" in gen_prompt.lower()
 
 
 # ── generate_design ───────────────────────────────────────────────────────────
