@@ -54,6 +54,10 @@ def _assemble_develop_prompt(cr_id: str) -> str:
     return _load_prompt("cr_develop.md").replace("{{cr_id}}", cr_id)
 
 
+def _assemble_review_spec_prompt(cr_id: str) -> str:
+    return _load_prompt("cr_review_spec.md").replace("{{cr_id}}", cr_id)
+
+
 def _assemble_review_design_prompt(cr_id: str) -> str:
     return _load_prompt("cr_review_design.md").replace("{{cr_id}}", cr_id)
 
@@ -193,6 +197,9 @@ def generate_spec(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> d
             )
             _run_claude(fix_prompt)
             errors = validate_spec(spec_path, cr_id, dhf_path)
+
+    review_prompt = _augment_review_prompt(_assemble_review_spec_prompt(cr_id), errors)
+    _run_claude(review_prompt)
 
     return _build_response(
         cr_id=cr_id,
