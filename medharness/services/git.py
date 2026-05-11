@@ -87,7 +87,8 @@ def validate_atomic_branch(
 
     This is a deterministic branch-level contract for single-repo product
     setups: implementation branches should carry product code changes, DHF item
-    changes when the approved spec expects them, and the spec file itself.
+    changes when the approved spec expects them, and a readable approved spec
+    file for the CR. The spec file may already be present on ``since_ref``.
     """
     resolved_spec = spec_path or (repo_root / "docs" / "cr-specs" / f"{cr_id}-Spec.md")
     spec_changed = collect_path_changes(repo_root, since_ref, str(resolved_spec.relative_to(repo_root)))
@@ -99,15 +100,14 @@ def validate_atomic_branch(
     proposed = fm.get("proposed_new_items") if isinstance(fm.get("proposed_new_items"), list) else []
 
     errors: list[dict] = []
-    spec_change_count = sum(len(spec_changed[b]) for b in ("created", "updated", "deleted"))
     code_change_count = sum(len(code_changes[b]) for b in ("created", "updated", "deleted"))
     dhf_change_count = sum(len(dhf_item_changes[b]) for b in ("created", "updated", "deleted"))
 
-    if spec_change_count == 0:
+    if not resolved_spec.exists():
         errors.append({
-            "field": "spec_branch",
-            "issue": f"No spec change for {resolved_spec.relative_to(repo_root)} since {since_ref}.",
-            "fix": "Ensure the implementation branch includes the approved spec or regenerate it on-branch.",
+            "field": "spec_path",
+            "issue": f"Missing approved spec at {resolved_spec.relative_to(repo_root)}.",
+            "fix": "Merge or generate the approved spec for this CR before validating the implementation branch.",
         })
 
     if code_change_count == 0:

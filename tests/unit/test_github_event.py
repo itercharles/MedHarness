@@ -124,6 +124,45 @@ def test_pull_request_review_not_changes_requested(tmp_path, monkeypatch):
     assert result.mode == "skip"
 
 
+def test_issue_comment_on_pull_request_extracts_cr_and_labels(tmp_path, monkeypatch):
+    monkeypatch.setenv("GITHUB_EVENT_NAME", "issue_comment")
+    event_path = tmp_path / "event.json"
+    _write_event(event_path, {
+        "issue": {
+            "number": 21,
+            "title": "CR-034 Spec review",
+            "pull_request": {"url": "https://api.github.com/repos/acme/repo/pulls/21"},
+            "labels": [{"name": "cr:stage/spec"}],
+        },
+        "comment": {"body": "/approve"},
+    })
+
+    result = parse_github_event(event_path)
+
+    assert result.cr_id == "CR-034"
+    assert result.pr_number == 21
+    assert result.mode == "skip"
+    assert result.labels == ("cr:stage/spec",)
+
+
+def test_issue_comment_on_issue_is_skipped(tmp_path, monkeypatch):
+    monkeypatch.setenv("GITHUB_EVENT_NAME", "issue_comment")
+    event_path = tmp_path / "event.json"
+    _write_event(event_path, {
+        "issue": {
+            "number": 22,
+            "title": "CR-035 question",
+        },
+        "comment": {"body": "/approve"},
+    })
+
+    result = parse_github_event(event_path)
+
+    assert result.cr_id is None
+    assert result.mode == "skip"
+    assert "not on a pull request" in result.reason
+
+
 def test_repository_dispatch(tmp_path, monkeypatch):
     monkeypatch.setenv("GITHUB_EVENT_NAME", "repository_dispatch")
     event_path = tmp_path / "event.json"
@@ -283,3 +322,23 @@ def test_plan_pr_action_handles_merged_stage():
 
     assert plan.stage == "spec"
     assert plan.action == "advance-to-design"
+
+
+def test_plan_issue_comment_uses_stage_label_config():
+    context = GitHubEventContext(
+        cr_id="CR-034",
+        mode="skip",
+        pr_number=21,
+        event_name="issue_comment",
+        labels=("cr:stage/spec",),
+    )
+
+    plan = plan_github_event(
+        context,
+        stage_label_prefix="cr:stage/",
+        dispatch_actions={"spec": "record-approval"},
+        default_action="noop",
+    )
+
+    assert plan.stage == "spec"
+    assert plan.action == "record-approval"

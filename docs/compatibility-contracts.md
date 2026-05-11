@@ -101,7 +101,33 @@ for the versioning policy.
   - `dhf_item_changes`
   - `code_changes`
   - `errors`
+- Requires the approved spec file to exist for the CR, but does not require
+  that the implementation branch modify that spec file relative to `since_ref`
 - Uses exit code `0` when `passed` is true, non-zero otherwise
+
+#### `medharness ci github-event`
+
+- Accepts GitHub event payloads from:
+  - `workflow_dispatch`
+  - `pull_request`
+  - `pull_request_review`
+  - `issue_comment`
+  - `repository_dispatch`
+- Writes JSON to stdout with these keys:
+  - `cr_id`
+  - `mode`
+  - `pr_number`
+  - `reason`
+  - `event_name`
+  - `branch_ref`
+  - `review_state`
+  - `merged`
+  - `labels`
+  - `dispatch_stage`
+  - `stage`
+  - `action`
+- Uses caller-supplied mappings to decide `stage` and `action`; MedHarness
+  parses event context but does not hardcode repo lifecycle policy
 
 ### Output Format
 

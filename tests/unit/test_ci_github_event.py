@@ -80,3 +80,40 @@ def test_github_event_writes_outputs_file(monkeypatch, tmp_path: Path):
     assert "mode=new" in outputs
     assert "stage=design" in outputs
     assert "action=gen-code" in outputs
+
+
+def test_github_event_issue_comment_infers_stage_from_pr_labels(monkeypatch, tmp_path: Path):
+    monkeypatch.setenv("GITHUB_EVENT_NAME", "issue_comment")
+    event_path = tmp_path / "event.json"
+    _write_event(event_path, {
+        "issue": {
+            "number": 18,
+            "title": "CR-210 Review",
+            "pull_request": {"url": "https://api.github.com/repos/acme/repo/pulls/18"},
+            "labels": [{"name": "cr:stage/spec"}],
+        },
+        "comment": {"body": "/approve"},
+    })
+
+    runner = CliRunner()
+    result = runner.invoke(
+        main,
+        [
+            "ci",
+            "github-event",
+            "--event",
+            str(event_path),
+            "--stage-label-prefix",
+            "cr:stage/",
+            "--dispatch-action",
+            "spec=record-approval",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    assert payload["cr_id"] == "CR-210"
+    assert payload["pr_number"] == 18
+    assert payload["event_name"] == "issue_comment"
+    assert payload["stage"] == "spec"
+    assert payload["action"] == "record-approval"

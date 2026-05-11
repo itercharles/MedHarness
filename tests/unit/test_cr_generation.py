@@ -31,6 +31,7 @@ class TestLoadPrompt:
         text = _load_prompt("cr_analyze.md")
         assert "{{cr_id}}" in text
         assert "affected_items" in text
+        assert "manual_verification_candidates" in text
 
     def test_load_cr_design(self):
         text = _load_prompt("cr_design.md")

@@ -71,14 +71,21 @@ def parse_github_event(
 
     event_name = os.environ.get("GITHUB_EVENT_NAME", "")
     if head_ref is None:
-        head_ref = (event.get("pull_request", {}) or {}).get("head", {}).get("ref", "")
+        head_ref = (
+            (event.get("pull_request", {}) or {}).get("head", {}).get("ref", "")
+            or (event.get("issue", {}) or {}).get("pull_request", {}).get("head", {}).get("ref", "")
+        )
     if merged is None:
         merged = bool((event.get("pull_request", {}) or {}).get("merged", False))
     if merge_commit_sha is None:
         merge_commit_sha = str((event.get("pull_request", {}) or {}).get("merge_commit_sha", "") or "")
+    raw_labels = (
+        ((event.get("pull_request", {}) or {}).get("labels", []) or [])
+        or ((event.get("issue", {}) or {}).get("labels", []) or [])
+    )
     labels = tuple(
         lab.get("name", "")
-        for lab in ((event.get("pull_request", {}) or {}).get("labels", []) or [])
+        for lab in raw_labels
         if isinstance(lab, dict) and lab.get("name")
     )
     review_state = str((event.get("review", {}) or {}).get("state", "") or "")
@@ -208,6 +215,33 @@ def parse_github_event(
             labels=labels,
         )
 
+    # -- issue_comment ------------------------------------------------------
+    if event_name == "issue_comment":
+        issue = event.get("issue", {}) or {}
+        if not issue.get("pull_request"):
+            return GitHubEventContext(
+                cr_id=None,
+                mode="skip",
+                reason="Issue comment is not on a pull request",
+                event_name=event_name,
+                branch_ref=head_ref or "",
+                merged=bool(merged),
+                labels=labels,
+            )
+        cr_id = _extract_cr(str(issue.get("title", "") or ""))
+        if not cr_id:
+            cr_id = _extract_cr(str((event.get("comment", {}) or {}).get("body", "") or ""))
+        return GitHubEventContext(
+            cr_id=cr_id,
+            mode="skip",
+            pr_number=issue.get("number"),
+            reason="" if cr_id else "No CR ID in pull request comment context",
+            event_name=event_name,
+            branch_ref=head_ref or "",
+            merged=bool(merged),
+            labels=labels,
+        )
+
     # -- repository_dispatch ------------------------------------------------
     if event_name == "repository_dispatch":
         cr_id = (event.get("client_payload", {}) or {}).get("cr_id", "")
@@ -318,6 +352,9 @@ def plan_github_event(
         action = pr_actions.get(state_key, action)
         if stage:
             action = pr_actions.get(f"{state_key}:{stage}", action)
+    elif context.event_name == "issue_comment":
+        if stage:
+            action = dispatch_actions.get(stage, action)
     elif context.event_name == "repository_dispatch":
         if stage:
             action = dispatch_actions.get(stage, action)
