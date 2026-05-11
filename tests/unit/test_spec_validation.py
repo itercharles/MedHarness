@@ -230,6 +230,26 @@ def test_validate_test_plan_missing_keys(tmp_path):
     assert "test_plan.must_be_manual" in missing_keys
 
 
+def test_validate_test_plan_key_must_be_list(tmp_path):
+    content = _VALID_FM.replace(
+        "test_plan:\n  auto_covered:\n    - TC-SYS-001-001\n  needs_new_tc: []\n  must_be_manual: []",
+        'test_plan:\n  auto_covered: "TC-SYS-001-001"\n  needs_new_tc: []\n  must_be_manual: []',
+    )
+    path = _write_spec(tmp_path, content)
+    errors = validate_spec(path, "CR-001")
+    assert any(e["field"] == "test_plan.auto_covered" for e in errors)
+
+
+def test_validate_test_plan_manual_entries_must_be_list(tmp_path):
+    content = _VALID_FM.replace(
+        "test_plan:\n  auto_covered:\n    - TC-SYS-001-001\n  needs_new_tc: []\n  must_be_manual: []",
+        'test_plan:\n  auto_covered: []\n  needs_new_tc: []\n  must_be_manual: "manual check"',
+    )
+    path = _write_spec(tmp_path, content)
+    errors = validate_spec(path, "CR-001")
+    assert any(e["field"] == "test_plan.must_be_manual" for e in errors)
+
+
 def test_validate_all_errors_have_fix(tmp_path):
     path = _write_spec(tmp_path, "---\ncr_id: wrong\n---\n")
     errors = validate_spec(path, "CR-001")

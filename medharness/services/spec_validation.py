@@ -196,6 +196,12 @@ def validate_spec(
                     "issue": f"test_plan.{key} is missing.",
                     "fix": f"Add {key}: [] under test_plan.",
                 })
+            elif not isinstance(tp.get(key), list):
+                errors.append({
+                    "field": f"test_plan.{key}",
+                    "issue": f"test_plan.{key} must be a YAML list.",
+                    "fix": f"Format as {key}: [] under test_plan.",
+                })
 
     return errors
 
