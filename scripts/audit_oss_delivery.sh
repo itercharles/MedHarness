@@ -68,7 +68,7 @@ echo "=== 2. WHEEL-CONTENT AUDIT ==="
 die_if_missing python3
 
 WHEEL_DIR="${WHEEL_DIR:-dist}"
-rm -rf "$WHEEL_DIR"
+rm -rf "$WHEEL_DIR" build
 python3 -m build --wheel 2>/dev/null || { fail "wheel build failed"; }
 WHEEL=$(ls "$WHEEL_DIR"/*.whl 2>/dev/null | head -1)
 
@@ -88,7 +88,8 @@ banned = [n for n in names if
     'domain/compliance.py' in n or
     '/data/' in n or
     'dhf-template' in n or
-    'governance' in n
+    'governance' in n or
+    'templates/github/workflows/' in n
 ]
 if banned:
     print('FAIL: banned files in wheel:')
@@ -116,6 +117,20 @@ else:
 if not has_templates:
     print('WARN: templates/ missing from wheel (init may fail on installed package)')
 " && pass "wheel contains both packages" || fail "wheel missing packages"
+
+# Workflow templates are no longer part of the release payload.
+python3 -c "
+import zipfile, sys
+with zipfile.ZipFile('$WHEEL') as z:
+    names = z.namelist()
+workflow_templates = [n for n in names if 'templates/github/workflows/' in n]
+if workflow_templates:
+    print('FAIL: workflow templates present in wheel:')
+    for name in workflow_templates:
+        print(f'  {name}')
+    sys.exit(1)
+print('OK: no workflow templates bundled in wheel')
+" && pass "wheel excludes workflow templates" || fail "wheel still bundles workflow templates"
 
 # ---------------------------------------------------------------------------
 echo "=== 3. DEPENDENCY-CONTRACT AUDIT ==="

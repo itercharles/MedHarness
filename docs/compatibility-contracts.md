@@ -27,8 +27,7 @@ for the versioning policy.
   - `DHF/documents/plans/` (with plan documents)
   - `DHF/items/` (with subdirectories per doc type)
   - `DHF/test-results/`
-  - `.github/workflows/`
-- Writes product repo files: `CLAUDE.md`, `.github/workflows/engineering-control.yml`, `.github/workflows/cr-complete.yml`, `.github/workflows/review-pr.yml`
+- Writes product repo files: `CLAUDE.md`, `.gitignore`
 - Substitutes: `{{project_name}}`, `{{product_repo}}`, `{{product_repo_name}}`, `{{github_org}}`, `{{dhf_repo_name}}`, `{{compliantflow_version}}`, `{{compliantflow_repo}}`, `{{primary_test_tool}}`
 
 ### Output Format
@@ -144,4 +143,4 @@ testing (unit, integration, contract) instead.
 - Undocumented helper functions and classes
 - Exact wording of starter sample items in templates/items/ (item count and structure are stable, content is not)
 - Test utility code in `tests/`
-- CI workflow internals (as long as gate semantics are preserved)
+- Sample automation wiring around the CLI

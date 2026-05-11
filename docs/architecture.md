@@ -19,7 +19,7 @@ MedHarness ships two Python packages from a single repository:
 - CLI surface and user-facing onboarding (`medharness init`)
 - CI gate commands (`ci test-coverage`, `ci dhf-validate`, `ci evidence bundle`)
 - CR workflow orchestration (`cr workflow`, `cr check-status`, `cr intake`)
-- Product repo file generation (CLAUDE.md, engineering-control.yml, cr-complete.yml, review-pr.yml)
+- Product repo file generation (`CLAUDE.md`, `.gitignore`)
 - DHF repo scaffolding from bundled templates
 - Adapter protocol for pluggable DHF backends
 
@@ -54,10 +54,7 @@ dhfkit/templates/
 │   └── styles/                # PDF CSS stylesheet
 ├── plans/                     # Plan document templates
 ├── github/
-│   ├── prompts/               # LLM prompt templates for CR workflows
-│   └── workflows/
-│       ├── dhf/               # DHF repo CI workflows (copied to DHF repo)
-│       └── product/           # Product repo workflows (written to product repo)
+│   └── prompts/               # Optional prompt templates for repo-local automation
 └── README.md                  # DHF repo starter README
 ```
 
@@ -75,7 +72,7 @@ dhfkit/templates/
 │   ├── items/                    # One subdir per doc type (ready for YAML items)
 │   └── test-results/             # .gitkeep (ready for JUnit evidence)
 ├── .github/
-│   └── workflows/                # DHF-side CI from templates/github/workflows/dhf/
+│   └── prompts/                  # Optional prompt files; automation is client-owned
 └── README.md
 ```
 
@@ -111,7 +108,7 @@ The generated DHF repo does not contain `dhfkit/` or `medharness/` source code. 
 | Aspect | Product repo | DHF repo |
 |--------|-------------|----------|
 | Contains | Source code, tests, build config | Requirements, architecture, risk, traceability |
-| CI | Build, test, evidence gates | Structural validation, CR checks |
+| CI | Client-owned | Client-owned |
 | Updated | Per feature/bugfix | Per CR-driven change |
 | Archival | With product retirement | Must be preserved for regulatory audit |
 
