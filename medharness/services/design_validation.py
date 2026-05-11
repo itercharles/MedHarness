@@ -8,6 +8,7 @@ Checks:
 - Schema validity of all DHF items
 - Required traceability rules, orphans, coverage gaps
 - Every item listed in the spec's `affected_items` exists in the DHF
+- Every item listed in the spec's `proposed_new_items` exists in the DHF
 """
 
 from __future__ import annotations
@@ -122,20 +123,22 @@ def validate_design(
     # --- Affected items present -------------------------------------------------
     fm = read_spec_json(spec_path) or parse_spec_frontmatter(spec_path)
     if fm:
+        try:
+            listed_items = _api.list_items(dhf_path)
+            existing_ids = {it["id"] for it in listed_items}
+        except Exception as exc:  # noqa: BLE001
+            errors.append({
+                "field": "affected_items",
+                "issue": f"Could not enumerate DHF items to verify spec expectations: {exc}",
+                "fix": "Run `medharness --dhf DHF dhf item list` locally to debug.",
+            })
+            listed_items = []
+            existing_ids = set()
+
         affected = fm.get("affected_items")
         if isinstance(affected, list) and affected:
-            try:
-                existing = {it["id"] for it in _api.list_items(dhf_path)}
-            except Exception as exc:  # noqa: BLE001
-                errors.append({
-                    "field": "affected_items",
-                    "issue": f"Could not enumerate DHF items to verify affected_items: {exc}",
-                    "fix": "Run `medharness --dhf DHF dhf item list` locally to debug.",
-                })
-                existing = set()
-
             for uid in affected:
-                if uid not in existing:
+                if uid not in existing_ids:
                     errors.append({
                         "field": "affected_items",
                         "issue": (
@@ -146,6 +149,36 @@ def validate_design(
                             f"Either create '{uid}' via `dhf item create`, or "
                             f"remove it from the spec affected_items if it is no "
                             f"longer in scope."
+                        ),
+                    })
+
+        proposed = fm.get("proposed_new_items")
+        if isinstance(proposed, list) and proposed:
+            by_type_title = {
+                (
+                    str(item.get("type", "") or ""),
+                    str(item.get("title", "") or "").strip(),
+                )
+                for item in listed_items
+            }
+            for idx, item in enumerate(proposed):
+                if not isinstance(item, dict):
+                    continue
+                item_type = str(item.get("type", "") or "")
+                title = str(item.get("title", "") or "").strip()
+                if not item_type or not title:
+                    continue
+                if (item_type, title) not in by_type_title:
+                    errors.append({
+                        "field": f"proposed_new_items[{idx}]",
+                        "issue": (
+                            f"Spec proposes a new {item_type} item titled '{title}', "
+                            "but the design output does not contain it."
+                        ),
+                        "fix": (
+                            f"Create a new {item_type} item with title '{title}', or "
+                            "remove/update the proposed_new_items entry in the spec if "
+                            "the plan changed."
                         ),
                     })
 

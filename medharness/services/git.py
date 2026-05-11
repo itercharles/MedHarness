@@ -5,6 +5,8 @@ from __future__ import annotations
 import subprocess
 from pathlib import Path
 
+from medharness.services.spec_validation import parse_spec_frontmatter, read_spec_json
+
 
 def collect_path_changes(
     repo_root: Path,
@@ -70,6 +72,70 @@ def collect_dhf_item_changes(repo_root: Path, since_ref: str) -> dict[str, list[
                 continue
             out[bucket].append(p.stem)
     return out
+
+
+def validate_atomic_branch(
+    repo_root: Path,
+    dhf_path: Path,
+    cr_id: str,
+    *,
+    since_ref: str = "origin/main",
+    code_paths: tuple[str, ...] = ("apps/", "packages/"),
+    spec_path: Path | None = None,
+) -> dict:
+    """Validate that a branch carries the coupled change set a CR expects.
+
+    This is a deterministic branch-level contract for single-repo product
+    setups: implementation branches should carry product code changes, DHF item
+    changes when the approved spec expects them, and the spec file itself.
+    """
+    resolved_spec = spec_path or (repo_root / "docs" / "cr-specs" / f"{cr_id}-Spec.md")
+    spec_changed = collect_path_changes(repo_root, since_ref, str(resolved_spec.relative_to(repo_root)))
+    dhf_item_changes = collect_dhf_item_changes(repo_root, since_ref)
+    code_changes = collect_path_changes(repo_root, since_ref, *code_paths)
+
+    fm = read_spec_json(resolved_spec) or parse_spec_frontmatter(resolved_spec) or {}
+    affected = fm.get("affected_items") if isinstance(fm.get("affected_items"), list) else []
+    proposed = fm.get("proposed_new_items") if isinstance(fm.get("proposed_new_items"), list) else []
+
+    errors: list[dict] = []
+    spec_change_count = sum(len(spec_changed[b]) for b in ("created", "updated", "deleted"))
+    code_change_count = sum(len(code_changes[b]) for b in ("created", "updated", "deleted"))
+    dhf_change_count = sum(len(dhf_item_changes[b]) for b in ("created", "updated", "deleted"))
+
+    if spec_change_count == 0:
+        errors.append({
+            "field": "spec_branch",
+            "issue": f"No spec change for {resolved_spec.relative_to(repo_root)} since {since_ref}.",
+            "fix": "Ensure the implementation branch includes the approved spec or regenerate it on-branch.",
+        })
+
+    if code_change_count == 0:
+        errors.append({
+            "field": "code_branch",
+            "issue": f"No product code changes found under {', '.join(code_paths)} since {since_ref}.",
+            "fix": "Add the implementation changes on the same branch before opening a PR.",
+        })
+
+    if affected or proposed:
+        if dhf_change_count == 0:
+            errors.append({
+                "field": "dhf_branch",
+                "issue": "The spec expects DHF item impact, but no DHF item YAML changes were found on the branch.",
+                "fix": "Include the required DHF item create/update changes on the same branch as the implementation.",
+            })
+
+    return {
+        "cr_id": cr_id,
+        "since_ref": since_ref,
+        "passed": not errors,
+        "spec_path": str(resolved_spec),
+        "expected_dhf_changes": bool(affected or proposed),
+        "spec_changes": spec_changed,
+        "dhf_item_changes": dhf_item_changes,
+        "code_changes": code_changes,
+        "errors": errors,
+    }
 
 
 def commit_dhf_item(

@@ -168,6 +168,20 @@ Priority areas:
   traceability in one working branch
 - moving validation earlier so issues are caught before a PR is opened
 
+Observed WebTPS intervention points that inform this phase:
+
+- cross-repo touchpoint discovery still requires human judgment on complex CRs:
+  deciding which frontend, backend, and DHF surfaces actually belong in scope
+- new DHF item creation is not just a file-write problem:
+  the human still decides whether a change needs a new requirement, design, or
+  risk item versus an update to an existing one
+- implementation branches need an explicit coupled-change contract:
+  spec, DHF item YAML, code, and traceability annotations must move together or
+  reviewers lose confidence in what the branch actually proves
+- deterministic preflight checks need to run before PR creation:
+  missing DHF updates or missing `@links` annotations are cheaper to catch
+  before review starts than after a branch is already under review
+
 This phase maps most directly to:
 
 - better support for complex changes

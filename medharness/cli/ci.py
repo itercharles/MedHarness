@@ -390,6 +390,44 @@ def register(main):
             click.echo(f"    Fix: {error['fix']}", err=True)
         raise click.exceptions.Exit(1)
 
+    @ci.command("validate-branch")
+    @click.option("--cr", "cr_id", required=True, metavar="CR_ID")
+    @click.option("--spec", "spec_path", default=None, type=click.Path(path_type=Path),
+                  metavar="PATH", help="Path to spec file (default: docs/cr-specs/<cr_id>-Spec.md)")
+    @click.option("--since-ref", default="origin/main", metavar="REF")
+    @click.option("--code-path", "code_paths", multiple=True, metavar="PATH",
+                  help="Product-code paths that must carry implementation changes.")
+    @click.pass_context
+    def ci_validate_branch(
+        ctx: click.Context,
+        cr_id: str,
+        spec_path: Path | None,
+        since_ref: str,
+        code_paths: tuple[str, ...],
+    ) -> None:
+        """Validate that a single branch carries the expected coupled CR changes."""
+        from medharness.services.git import validate_atomic_branch  # noqa: PLC0415
+
+        dhf_path: Path = ctx.obj["dhf"]
+        repo_root = dhf_path.resolve().parent
+        resolved_spec = _validation_spec_path(dhf_path, cr_id, spec_path)
+        payload = validate_atomic_branch(
+            repo_root,
+            dhf_path,
+            cr_id,
+            since_ref=since_ref,
+            code_paths=code_paths or ("apps/", "packages/"),
+            spec_path=resolved_spec,
+        )
+        click.echo(json.dumps(payload))
+        if payload["passed"]:
+            click.echo(f"PASS [validate-branch] {cr_id}: branch carries coupled spec, code, and DHF changes.", err=True)
+            return
+        for error in payload["errors"]:
+            click.echo(f"FAIL [validate-branch] {cr_id} ({error['field']}): {error['issue']}", err=True)
+            click.echo(f"    Fix: {error['fix']}", err=True)
+        raise click.exceptions.Exit(1)
+
     # ── GitHub event context ──
 
     @ci.command("github-event")

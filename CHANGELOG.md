@@ -62,6 +62,10 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
   steps, so client automation can catch schema, traceability, affected-item,
   and test-annotation issues before opening a PR.
 
+- New `ci validate-branch` command checks that a single branch carries the
+  expected coupled CR change set: the approved spec, product code changes, and
+  DHF item YAML changes when the spec says DHF impact is expected.
+
 ---
 
 ## [0.3.5] — 2026-05-10

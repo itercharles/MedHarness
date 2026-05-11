@@ -67,6 +67,20 @@ for the versioning policy.
   - `errors`
 - Uses exit code `0` when `passed` is true, non-zero otherwise
 
+#### `medharness ci validate-branch`
+
+- Writes JSON to stdout with these keys:
+  - `cr_id`
+  - `since_ref`
+  - `passed`
+  - `spec_path`
+  - `expected_dhf_changes`
+  - `spec_changes`
+  - `dhf_item_changes`
+  - `code_changes`
+  - `errors`
+- Uses exit code `0` when `passed` is true, non-zero otherwise
+
 ### Output Format
 
 - Automation commands (`item get`, `item list`, `item create`, `doc list`,

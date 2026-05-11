@@ -121,6 +121,7 @@ medharness --dhf DHF ci design-cr --cr CR-034
 medharness --dhf DHF ci develop-cr --cr CR-034
 medharness --dhf DHF ci validate-design --cr CR-034
 medharness --dhf DHF ci validate-code --cr CR-034
+medharness --dhf DHF ci validate-branch --cr CR-034
 medharness ci cr-status --cr CR-034 --stage spec --pr 18
 medharness --dhf DHF ci evidence bundle --out-dir artifacts --junit-dir test-results
 medharness ci github-event --event "$GITHUB_EVENT_PATH"
@@ -161,6 +162,7 @@ the same preflight validators directly:
 ```bash
 medharness --dhf DHF ci validate-design --cr CR-034
 medharness --dhf DHF ci validate-code --cr CR-034 --since-ref origin/main
+medharness --dhf DHF ci validate-branch --cr CR-034 --since-ref origin/main
 ```
 
 ---

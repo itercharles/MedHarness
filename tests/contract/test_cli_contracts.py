@@ -181,6 +181,11 @@ class TestCRGenerationCommands:
         r = _run("medharness", "ci", "validate-code", "--help")
         assert r.returncode == 0, r.stderr
 
+    def test_validate_branch_help(self):
+        """medharness ci validate-branch --help exits 0."""
+        r = _run("medharness", "ci", "validate-branch", "--help")
+        assert r.returncode == 0, r.stderr
+
     def test_analyze_cr_requires_cr_flag(self):
         """medharness ci analyze-cr without --cr exits non-zero with usage error."""
         r = _run("medharness", "ci", "analyze-cr")
@@ -207,6 +212,11 @@ class TestCRGenerationCommands:
         r = _run("medharness", "ci", "validate-code")
         assert r.returncode != 0
 
+    def test_validate_branch_requires_cr_flag(self):
+        """medharness ci validate-branch without --cr exits non-zero."""
+        r = _run("medharness", "ci", "validate-branch")
+        assert r.returncode != 0
+
     def test_analyze_cr_accepts_pr_flag(self):
         """medharness ci analyze-cr --help shows --pr option."""
         r = _run("medharness", "ci", "analyze-cr", "--help")
@@ -227,11 +237,16 @@ class TestCRGenerationCommands:
         r = _run("medharness", "ci", "validate-code", "--help")
         assert "--since-ref" in r.stdout
 
+    def test_validate_branch_accepts_code_path_flag(self):
+        """medharness ci validate-branch --help shows --code-path option."""
+        r = _run("medharness", "ci", "validate-branch", "--help")
+        assert "--code-path" in r.stdout
+
     def test_commands_appear_in_ci_group_help(self):
         """Generation and preflight commands are listed in medharness ci --help."""
         r = _run("medharness", "ci", "--help")
         assert r.returncode == 0, r.stderr
-        for cmd in ["analyze-cr", "design-cr", "develop-cr", "validate-design", "validate-code"]:
+        for cmd in ["analyze-cr", "design-cr", "develop-cr", "validate-design", "validate-code", "validate-branch"]:
             assert cmd in r.stdout, f"Command {cmd!r} missing from ci --help"
 
 
