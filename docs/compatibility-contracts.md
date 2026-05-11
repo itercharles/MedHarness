@@ -46,6 +46,27 @@ for the versioning policy.
   - `not_applicable`
 - Uses stderr only for human-readable summaries
 
+#### `medharness ci validate-design`
+
+- Writes JSON to stdout with these keys:
+  - `cr_id`
+  - `stage`
+  - `passed`
+  - `spec_path`
+  - `errors`
+- Uses exit code `0` when `passed` is true, non-zero otherwise
+
+#### `medharness ci validate-code`
+
+- Writes JSON to stdout with these keys:
+  - `cr_id`
+  - `stage`
+  - `passed`
+  - `spec_path`
+  - `since_ref`
+  - `errors`
+- Uses exit code `0` when `passed` is true, non-zero otherwise
+
 ### Output Format
 
 - Automation commands (`item get`, `item list`, `item create`, `doc list`,

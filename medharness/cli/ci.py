@@ -83,6 +83,12 @@ def _format_summary(stage_label: str, verb: str, cr_id: str, result: dict) -> st
     return f"OK {stage_label} {verb} for {cr_id} ({', '.join(details)})."
 
 
+def _validation_spec_path(dhf_path: Path, cr_id: str, spec_path: Path | None) -> Path:
+    if spec_path is not None:
+        return spec_path
+    return dhf_path.resolve().parent / "docs" / "cr-specs" / f"{cr_id}-Spec.md"
+
+
 def register(main):
 
     @main.group("ci")
@@ -325,6 +331,64 @@ def register(main):
             click.echo(f"FAIL [validate-spec] {cr_id} ({e['field']}): {e['issue']}", err=True)
             click.echo(f"    Fix: {e['fix']}", err=True)
         raise click.ClickException(f"Spec validation failed for {cr_id} ({len(errors)} error(s)).")
+
+    @ci.command("validate-design")
+    @click.option("--cr", "cr_id", required=True, metavar="CR_ID")
+    @click.option("--spec", "spec_path", default=None, type=click.Path(path_type=Path),
+                  metavar="PATH", help="Path to spec file (default: docs/cr-specs/<cr_id>-Spec.md)")
+    @click.pass_context
+    def ci_validate_design(ctx: click.Context, cr_id: str, spec_path: Path | None) -> None:
+        """Run deterministic design validation without invoking the AI loop."""
+        from medharness.services.design_validation import validate_design  # noqa: PLC0415
+
+        dhf_path: Path = ctx.obj["dhf"]
+        resolved_spec = _validation_spec_path(dhf_path, cr_id, spec_path)
+        errors = validate_design(cr_id, dhf_path, resolved_spec)
+        payload = {
+            "cr_id": cr_id,
+            "stage": "design",
+            "passed": not errors,
+            "spec_path": str(resolved_spec),
+            "errors": errors,
+        }
+        click.echo(json.dumps(payload))
+        if not errors:
+            click.echo(f"PASS [validate-design] {cr_id}: deterministic checks passed.", err=True)
+            return
+        for error in errors:
+            click.echo(f"FAIL [validate-design] {cr_id} ({error['field']}): {error['issue']}", err=True)
+            click.echo(f"    Fix: {error['fix']}", err=True)
+        raise click.exceptions.Exit(1)
+
+    @ci.command("validate-code")
+    @click.option("--cr", "cr_id", required=True, metavar="CR_ID")
+    @click.option("--spec", "spec_path", default=None, type=click.Path(path_type=Path),
+                  metavar="PATH", help="Path to spec file (default: docs/cr-specs/<cr_id>-Spec.md)")
+    @click.option("--since-ref", default="origin/main", metavar="REF")
+    @click.pass_context
+    def ci_validate_code(ctx: click.Context, cr_id: str, spec_path: Path | None, since_ref: str) -> None:
+        """Run deterministic implementation validation without invoking the AI loop."""
+        from medharness.services.code_validation import validate_code  # noqa: PLC0415
+
+        dhf_path: Path = ctx.obj["dhf"]
+        resolved_spec = _validation_spec_path(dhf_path, cr_id, spec_path)
+        errors = validate_code(cr_id, dhf_path, resolved_spec, since_ref=since_ref)
+        payload = {
+            "cr_id": cr_id,
+            "stage": "develop",
+            "passed": not errors,
+            "spec_path": str(resolved_spec),
+            "since_ref": since_ref,
+            "errors": errors,
+        }
+        click.echo(json.dumps(payload))
+        if not errors:
+            click.echo(f"PASS [validate-code] {cr_id}: deterministic checks passed.", err=True)
+            return
+        for error in errors:
+            click.echo(f"FAIL [validate-code] {cr_id} ({error['field']}): {error['issue']}", err=True)
+            click.echo(f"    Fix: {error['fix']}", err=True)
+        raise click.exceptions.Exit(1)
 
     # ── GitHub event context ──
 

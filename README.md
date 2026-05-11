@@ -119,6 +119,8 @@ medharness ci test-coverage --dhf DHF --junit-dir test-results
 medharness --dhf DHF ci analyze-cr --cr CR-034
 medharness --dhf DHF ci design-cr --cr CR-034
 medharness --dhf DHF ci develop-cr --cr CR-034
+medharness --dhf DHF ci validate-design --cr CR-034
+medharness --dhf DHF ci validate-code --cr CR-034
 medharness ci cr-status --cr CR-034 --stage spec --pr 18
 medharness --dhf DHF ci evidence bundle --out-dir artifacts --junit-dir test-results
 medharness ci github-event --event "$GITHUB_EVENT_PATH"
@@ -151,6 +153,14 @@ workflow YAML:
 
 ```bash
 medharness ci cr-status --cr CR-034 --branch spec/CR-034 --pr 18
+```
+
+To catch deterministic issues before a PR is opened, client automation can run
+the same preflight validators directly:
+
+```bash
+medharness --dhf DHF ci validate-design --cr CR-034
+medharness --dhf DHF ci validate-code --cr CR-034 --since-ref origin/main
 ```
 
 ---

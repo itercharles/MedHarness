@@ -149,3 +149,53 @@ class TestDevelopCrJsonContract:
         assert payload["stage"] == "develop"
         for legacy in ("items_created", "items_updated", "files_written"):
             assert legacy not in payload, f"removed key reappeared: {legacy}"
+
+
+class TestValidateDesignJsonContract:
+    def test_json_payload_has_documented_keys(self, dhf):
+        runner = CliRunner()
+        with patch("medharness.services.design_validation.validate_design", return_value=[]):
+            r = runner.invoke(main, ["--dhf", str(dhf), "ci", "validate-design", "--cr", "CR-300"])
+        assert r.exit_code == 0, (r.output, r.stderr)
+        payload = _split_stdout_json(r.stdout)
+        for key in ("cr_id", "stage", "passed", "spec_path", "errors"):
+            assert key in payload, f"missing {key}"
+        assert payload["stage"] == "design"
+        assert payload["passed"] is True
+
+    def test_errors_propagate_and_exit_non_zero(self, dhf):
+        residual = [{"field": "schema", "issue": "x", "fix": "y"}]
+        runner = CliRunner()
+        with patch("medharness.services.design_validation.validate_design", return_value=residual):
+            r = runner.invoke(main, ["--dhf", str(dhf), "ci", "validate-design", "--cr", "CR-301"])
+        assert r.exit_code == 1
+        payload = _split_stdout_json(r.stdout)
+        assert payload["passed"] is False
+        assert payload["errors"] == residual
+
+
+class TestValidateCodeJsonContract:
+    def test_json_payload_has_documented_keys(self, dhf):
+        runner = CliRunner()
+        with patch("medharness.services.code_validation.validate_code", return_value=[]):
+            r = runner.invoke(main, ["--dhf", str(dhf), "ci", "validate-code", "--cr", "CR-400"])
+        assert r.exit_code == 0, (r.output, r.stderr)
+        payload = _split_stdout_json(r.stdout)
+        for key in ("cr_id", "stage", "passed", "spec_path", "since_ref", "errors"):
+            assert key in payload, f"missing {key}"
+        assert payload["stage"] == "develop"
+        assert payload["passed"] is True
+        assert payload["since_ref"] == "origin/main"
+
+    def test_errors_propagate_and_exit_non_zero(self, dhf):
+        residual = [{"field": "test_plan.needs_new_tc", "issue": "x", "fix": "y"}]
+        runner = CliRunner()
+        with patch("medharness.services.code_validation.validate_code", return_value=residual):
+            r = runner.invoke(main, [
+                "--dhf", str(dhf), "ci", "validate-code", "--cr", "CR-401", "--since-ref", "origin/feature-base",
+            ])
+        assert r.exit_code == 1
+        payload = _split_stdout_json(r.stdout)
+        assert payload["passed"] is False
+        assert payload["since_ref"] == "origin/feature-base"
+        assert payload["errors"] == residual

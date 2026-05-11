@@ -154,7 +154,7 @@ class TestInitCommand:
 
 
 class TestCRGenerationCommands:
-    """Contract tests for medharness ci analyze-cr / design-cr / develop-cr."""
+    """Contract tests for medharness CR generation and preflight CI commands."""
 
     def test_analyze_cr_help(self):
         """medharness ci analyze-cr --help exits 0."""
@@ -169,6 +169,16 @@ class TestCRGenerationCommands:
     def test_develop_cr_help(self):
         """medharness ci develop-cr --help exits 0."""
         r = _run("medharness", "ci", "develop-cr", "--help")
+        assert r.returncode == 0, r.stderr
+
+    def test_validate_design_help(self):
+        """medharness ci validate-design --help exits 0."""
+        r = _run("medharness", "ci", "validate-design", "--help")
+        assert r.returncode == 0, r.stderr
+
+    def test_validate_code_help(self):
+        """medharness ci validate-code --help exits 0."""
+        r = _run("medharness", "ci", "validate-code", "--help")
         assert r.returncode == 0, r.stderr
 
     def test_analyze_cr_requires_cr_flag(self):
@@ -187,6 +197,16 @@ class TestCRGenerationCommands:
         r = _run("medharness", "ci", "develop-cr")
         assert r.returncode != 0
 
+    def test_validate_design_requires_cr_flag(self):
+        """medharness ci validate-design without --cr exits non-zero."""
+        r = _run("medharness", "ci", "validate-design")
+        assert r.returncode != 0
+
+    def test_validate_code_requires_cr_flag(self):
+        """medharness ci validate-code without --cr exits non-zero."""
+        r = _run("medharness", "ci", "validate-code")
+        assert r.returncode != 0
+
     def test_analyze_cr_accepts_pr_flag(self):
         """medharness ci analyze-cr --help shows --pr option."""
         r = _run("medharness", "ci", "analyze-cr", "--help")
@@ -202,11 +222,16 @@ class TestCRGenerationCommands:
         r = _run("medharness", "ci", "develop-cr", "--help")
         assert "--pr" in r.stdout
 
+    def test_validate_code_accepts_since_ref_flag(self):
+        """medharness ci validate-code --help shows --since-ref option."""
+        r = _run("medharness", "ci", "validate-code", "--help")
+        assert "--since-ref" in r.stdout
+
     def test_commands_appear_in_ci_group_help(self):
-        """All three commands are listed in medharness ci --help."""
+        """Generation and preflight commands are listed in medharness ci --help."""
         r = _run("medharness", "ci", "--help")
         assert r.returncode == 0, r.stderr
-        for cmd in ["analyze-cr", "design-cr", "develop-cr"]:
+        for cmd in ["analyze-cr", "design-cr", "develop-cr", "validate-design", "validate-code"]:
             assert cmd in r.stdout, f"Command {cmd!r} missing from ci --help"
 
 

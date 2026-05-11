@@ -57,6 +57,11 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
   approved for its current stage without re-implementing MedHarness label and
   branch conventions.
 
+- New `ci validate-design` and `ci validate-code` commands expose the existing
+  deterministic design and implementation checks as standalone CLI preflight
+  steps, so client automation can catch schema, traceability, affected-item,
+  and test-annotation issues before opening a PR.
+
 ---
 
 ## [0.3.5] — 2026-05-10
