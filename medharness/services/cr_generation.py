@@ -182,10 +182,14 @@ def generate_spec(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> d
     spec_path.parent.mkdir(parents=True, exist_ok=True)
     _run_claude(prompt)
 
+    analysis: dict | None = None
     corrections = 0
     errors: list[dict] = []
     if spec_path.exists():
-        from medharness.services.spec_validation import validate_spec  # noqa: PLC0415
+        from medharness.services.spec_validation import (  # noqa: PLC0415
+            extract_structured_analysis,
+            validate_spec,
+        )
         errors = validate_spec(spec_path, cr_id, dhf_path)
         if errors:
             corrections += 1
@@ -197,6 +201,7 @@ def generate_spec(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> d
             )
             _run_claude(fix_prompt)
             errors = validate_spec(spec_path, cr_id, dhf_path)
+        analysis = extract_structured_analysis(spec_path)
 
     review_prompt = _augment_review_prompt(_assemble_review_spec_prompt(cr_id), errors)
     _run_claude(review_prompt)
@@ -208,7 +213,10 @@ def generate_spec(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> d
         started_perf=started_perf,
         corrections=corrections,
         errors=errors,
-        extra={"spec_path": str(spec_path)},
+        extra={
+            "spec_path": str(spec_path),
+            "analysis": analysis,
+        },
     )
 
 

@@ -37,7 +37,7 @@ COMMON_KEYS = {
     "started_at",
     "elapsed_ms",
 }
-SPEC_EXTRA_KEYS = {"spec_path"}
+SPEC_EXTRA_KEYS = {"spec_path", "analysis"}
 DESIGN_EXTRA_KEYS = {"items_changed"}
 DEVELOP_EXTRA_KEYS = {"files_changed"}
 
@@ -77,7 +77,8 @@ class TestGenerateSpecContract:
         spec_path.parent.mkdir(parents=True, exist_ok=True)
         spec_path.write_text(
             f'---\ncr_id: "{cr_id}"\ndirection_fit: "in-scope"\n'
-            'affected_items: []\ntest_plan:\n  auto_covered: []\n'
+            'affected_items: []\nproposed_new_items: []\n'
+            'design_impact_summary: "No design impact."\ntest_plan:\n  auto_covered: []\n'
             '  needs_new_tc: []\n  must_be_manual: []\n---\n',
             encoding="utf-8",
         )
@@ -100,6 +101,7 @@ class TestGenerateSpecContract:
         assert isinstance(result["elapsed_ms"], int)
         assert isinstance(result["started_at"], str)
         assert isinstance(result["spec_path"], str)
+        assert isinstance(result["analysis"], dict)
 
     def test_value_domains(self, dhf):
         self._spec(dhf)
@@ -109,6 +111,13 @@ class TestGenerateSpecContract:
         assert result["stage"] == "spec"
         assert result["status"] in STATUS_VALUES
         assert result["validation"] in VALIDATION_VALUES_SPEC
+        assert set(result["analysis"]) == {
+            "direction_fit",
+            "affected_items",
+            "proposed_new_items",
+            "design_impact_summary",
+            "test_plan",
+        }
 
 
 # ── generate_design ──────────────────────────────────────────────────────────

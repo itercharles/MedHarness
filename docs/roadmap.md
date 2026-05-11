@@ -71,7 +71,7 @@ The infrastructure layer is complete and open-sourced.
 | AI implementation context — `dhf context` | ✅ |
 | Scaffold CI workflows — cr-analyze, cr-develop, cr-transition | ✅ |
 | Claude Code skills — pre-analyze, cr-implement, traceability-check | ✅ |
-| Structured AI analysis — YAML front-matter in spec | ✅ |
+| Structured AI analysis — validated front-matter + JSON `analysis` output from `ci analyze-cr` | ✅ |
 | Computed test plan — JUnit coverage injected into `$DHF_CONTEXT` | ✅ |
 | Structured approval gate — checklist in spec PR + reject on out-of-scope | ✅ |
 
@@ -79,7 +79,7 @@ The infrastructure layer is complete and open-sourced.
 
 | Capability | Gap |
 |-----------|-----|
-| AI design analysis | YAML front-matter works; `cr-analyze.md` prompt enriched; "what needs manual testing" heuristic not yet automated |
+| AI design analysis | Structured output now includes direction fit, affected items, proposed new items, and design impact summary; "what needs manual testing" heuristic not yet automated |
 | Test plan generation | `compute_item_coverage` parses JUnit `@links`; manual-testing flag criteria not yet computed |
 | Structured plan approval | Checklist editable via `gh pr edit`; no machine-readable approve/reject gate beyond merge |
 
@@ -89,16 +89,6 @@ The infrastructure layer is complete and open-sourced.
 
 ### Milestone 1: Structured AI Analysis Loop
 *Goal: the AI analysis step produces structured, reviewable output — not just a Markdown comment.*
-
-**CR-A — Structured `cr-analyze` output**
-
-Replace the free-form Markdown analysis with a structured JSON result containing:
-- `direction_fit`: does this issue align with the product's CRS/UC items?
-- `affected_items`: list of DHF items (SRS, SWDD, RISK) that need updating
-- `proposed_new_items`: DHF items that should be created
-- `design_impact_summary`: human-readable impact statement
-
-The structured output feeds downstream steps (test plan, implementation) rather than requiring a human to re-read and re-interpret.
 
 **CR-B — Test plan generation**
 

@@ -246,7 +246,8 @@ class TestGenerateSpec:
         spec_path.parent.mkdir(parents=True)
         spec_path.write_text(
             '---\ncr_id: "CR-001"\ndirection_fit: "in-scope"\n'
-            'affected_items: []\ntest_plan:\n  auto_covered: []\n'
+            'affected_items: []\nproposed_new_items: []\n'
+            'design_impact_summary: "No design impact."\ntest_plan:\n  auto_covered: []\n'
             '  needs_new_tc: []\n  must_be_manual: []\n---\n',
             encoding="utf-8",
         )
@@ -257,8 +258,10 @@ class TestGenerateSpec:
         assert result["stage"] == "spec"
         assert result["status"] == "ok"
         assert result["errors"] == []
-        for key in ("spec_path", "corrections", "validation", "started_at", "elapsed_ms"):
+        for key in ("spec_path", "analysis", "corrections", "validation", "started_at", "elapsed_ms"):
             assert key in result, f"missing key: {key}"
+        assert result["analysis"]["direction_fit"] == "in-scope"
+        assert result["analysis"]["proposed_new_items"] == []
 
     def test_calls_run_claude_twice_when_spec_valid(self, tmp_path):
         dhf = self._dhf(tmp_path)
@@ -266,7 +269,8 @@ class TestGenerateSpec:
         spec_path.parent.mkdir(parents=True)
         spec_path.write_text(
             '---\ncr_id: "CR-002"\ndirection_fit: "in-scope"\n'
-            'affected_items: []\ntest_plan:\n  auto_covered: []\n'
+            'affected_items: []\nproposed_new_items: []\n'
+            'design_impact_summary: "No design impact."\ntest_plan:\n  auto_covered: []\n'
             '  needs_new_tc: []\n  must_be_manual: []\n---\n',
             encoding="utf-8",
         )
@@ -287,7 +291,8 @@ class TestGenerateSpec:
         spec_path.parent.mkdir(parents=True)
         # Write a spec with missing direction_fit to trigger validation error
         spec_path.write_text(
-            '---\ncr_id: "CR-003"\naffected_items: []\n'
+            '---\ncr_id: "CR-003"\naffected_items: []\nproposed_new_items: []\n'
+            'design_impact_summary: "No design impact."\n'
             'test_plan:\n  auto_covered: []\n  needs_new_tc: []\n  must_be_manual: []\n---\n',
             encoding="utf-8",
         )
@@ -312,7 +317,8 @@ class TestGenerateSpec:
         spec_path.parent.mkdir(parents=True)
         spec_path.write_text(
             '---\ncr_id: "CR-005"\ndirection_fit: "in-scope"\n'
-            'affected_items: []\ntest_plan:\n  auto_covered: []\n'
+            'affected_items: []\nproposed_new_items: []\n'
+            'design_impact_summary: "No design impact."\ntest_plan:\n  auto_covered: []\n'
             '  needs_new_tc: []\n  must_be_manual: []\n---\n',
             encoding="utf-8",
         )

@@ -2,7 +2,11 @@
 
 import pytest
 from pathlib import Path
-from medharness.services.spec_validation import parse_spec_frontmatter, validate_spec
+from medharness.services.spec_validation import (
+    extract_structured_analysis,
+    parse_spec_frontmatter,
+    validate_spec,
+)
 
 
 _VALID_FM = """\
@@ -12,6 +16,7 @@ direction_fit: "in-scope"
 affected_items:
   - SYS-001
 proposed_new_items: []
+design_impact_summary: "Update persistence requirements and tests."
 test_plan:
   auto_covered:
     - TC-SYS-001-001
@@ -104,6 +109,32 @@ def test_validate_missing_test_plan(tmp_path):
     assert any("test_plan" in e["field"] for e in errors)
 
 
+def test_validate_missing_proposed_new_items(tmp_path):
+    content = _VALID_FM.replace("proposed_new_items: []\n", "")
+    path = _write_spec(tmp_path, content)
+    errors = validate_spec(path, "CR-001")
+    assert any(e["field"] == "proposed_new_items" for e in errors)
+
+
+def test_validate_invalid_proposed_new_item_entry(tmp_path):
+    content = _VALID_FM.replace(
+        "proposed_new_items: []",
+        "proposed_new_items:\n  - type: UNKNOWN\n    title: \"\"",
+    )
+    path = _write_spec(tmp_path, content)
+    errors = validate_spec(path, "CR-001")
+    fields = {e["field"] for e in errors}
+    assert "proposed_new_items[0].type" in fields
+    assert "proposed_new_items[0].title" in fields
+
+
+def test_validate_missing_design_impact_summary(tmp_path):
+    content = _VALID_FM.replace('design_impact_summary: "Update persistence requirements and tests."\n', "")
+    path = _write_spec(tmp_path, content)
+    errors = validate_spec(path, "CR-001")
+    assert any(e["field"] == "design_impact_summary" for e in errors)
+
+
 def test_validate_test_plan_missing_keys(tmp_path):
     content = _VALID_FM.replace(
         "test_plan:\n  auto_covered:\n    - TC-SYS-001-001\n  needs_new_tc: []\n  must_be_manual: []",
@@ -121,3 +152,14 @@ def test_validate_all_errors_have_fix(tmp_path):
     errors = validate_spec(path, "CR-001")
     for e in errors:
         assert "fix" in e and e["fix"], f"Error missing fix: {e}"
+
+
+def test_extract_structured_analysis(tmp_path):
+    path = _write_spec(tmp_path, _VALID_FM)
+    analysis = extract_structured_analysis(path)
+    assert analysis is not None
+    assert analysis["direction_fit"] == "in-scope"
+    assert analysis["affected_items"] == ["SYS-001"]
+    assert analysis["proposed_new_items"] == []
+    assert analysis["design_impact_summary"] == "Update persistence requirements and tests."
+    assert analysis["test_plan"]["auto_covered"] == ["TC-SYS-001-001"]
