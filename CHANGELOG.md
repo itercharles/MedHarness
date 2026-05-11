@@ -48,6 +48,13 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 - `medharness init` no longer generates `.github/workflows/*`. It still
   scaffolds DHF content and `.github/prompts/` for repo-local automation.
 
+  Migration:
+  - existing repos that previously copied bundled workflow templates should
+    delete or replace those stale `.github/workflows/*` files explicitly
+  - new or existing repos should move automation logic to thin repo-local
+    wrappers around the CLI (`ci github-event`, `ci validate-design`,
+    `ci validate-code`, `ci validate-branch`, `ci cr-status`)
+
 - `ci github-event` now supports configurable event-to-stage and
   event-to-action mapping via CLI flags so client repos can layer their own
   automation without hardcoded MedHarness workflow assumptions.

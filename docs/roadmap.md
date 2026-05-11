@@ -136,60 +136,26 @@ Why this matters:
 ## Near-Term Priorities
 
 If the project stays aligned with its current DHF-focused direction, the
-highest-value near-term work breaks down into a few concrete phases.
+highest-value remaining near-term work breaks down into the following phases.
 
-### Phase 1: Complete the Analysis Loop
+### Recently Completed
 
-The immediate goal is to make CR analysis output reliably machine-readable and
-easier for downstream stages to consume.
+The following areas are now implemented and are no longer the primary roadmap
+focus:
 
-Priority areas:
+- structured CR analysis output, including companion machine-readable spec
+  artifacts and stronger `test_plan` contracts
+- explicit machine-readable approval and stage-status CLI surfaces
+- deterministic preflight validation for design, code, and coupled
+  implementation branches
+- stronger spec-to-design coupling, including validation that proposed DHF
+  items are actually materialized
 
-- companion structured artifacts alongside Markdown specs
-- automated test-plan generation, including clearer criteria for what must
-  remain manual
-- explicit machine-readable approval signals for stage advancement
-
-This phase maps most directly to:
-
-- more structured CR outputs
-- stronger approval and review gates
-
-### Phase 2: Closed-Loop Implementation for Complex CRs
-
-Once the analysis loop is stronger, the next step is handling larger,
-cross-cutting changes more reliably.
-
-Priority areas:
-
-- documenting real human intervention points on non-trivial WebTPS CRs so the
-  next automation layer is based on observed gaps, not assumptions
-- tighter coupling of implementation changes, DHF item updates, and
-  traceability in one working branch
-- moving validation earlier so issues are caught before a PR is opened
-
-Observed WebTPS intervention points that inform this phase:
-
-- cross-repo touchpoint discovery still requires human judgment on complex CRs:
-  deciding which frontend, backend, and DHF surfaces actually belong in scope
-- new DHF item creation is not just a file-write problem:
-  the human still decides whether a change needs a new requirement, design, or
-  risk item versus an update to an existing one
-- implementation branches need an explicit coupled-change contract:
-  spec, DHF item YAML, code, and traceability annotations must move together or
-  reviewers lose confidence in what the branch actually proves
-- deterministic preflight checks need to run before PR creation:
-  missing DHF updates or missing `@links` annotations are cheaper to catch
-  before review starts than after a branch is already under review
-
-This phase maps most directly to:
-
-- better support for complex changes
+These completed slices correspond to the earlier Phase 1 and Phase 2 work.
 
 ### Phase 3: Risk Management as a First-Class Workflow
 
-After the core CR loop is stronger, the next major gap is deeper risk
-integration.
+With the core CR loop stronger, the next major gap is deeper risk integration.
 
 Priority areas:
 
@@ -204,7 +170,7 @@ This phase maps most directly to:
 
 ### Phase 4: Adoption and Ecosystem
 
-Longer term, the project becomes more useful when teams can adopt pieces of it
+After the core workflow is stronger, the project becomes more useful when teams can adopt pieces of it
 incrementally and connect it to their existing stack.
 
 Priority areas:

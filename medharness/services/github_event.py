@@ -193,10 +193,14 @@ def parse_github_event(
                 review_state=review_state,
                 labels=labels,
             )
+        # Approved / commented reviews intentionally remain mode="skip" here.
+        # The planner layer is responsible for mapping review_state to a
+        # caller-defined action, so clients can choose whether "approved"
+        # advances a stage, records status, or does nothing.
         return GitHubEventContext(
             cr_id=cr_id,
             mode="skip",
-            reason="Review not changes_requested",
+            reason="Review not changes_requested; planner may still map review_state",
             pr_number=pr_info.get("number"),
             event_name=event_name,
             branch_ref=head_ref or "",

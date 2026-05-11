@@ -30,6 +30,28 @@ for the versioning policy.
 - Writes product repo files: `CLAUDE.md`, `.gitignore`
 - Substitutes: `{{project_name}}`, `{{product_repo}}`, `{{product_repo_name}}`, `{{github_org}}`, `{{dhf_repo_name}}`, `{{compliantflow_version}}`, `{{compliantflow_repo}}`, `{{primary_test_tool}}`
 
+#### `medharness ci analyze-cr`
+
+- Writes JSON to stdout with these keys:
+  - `cr_id`
+  - `stage`
+  - `status`
+  - `corrections`
+  - `validation`
+  - `errors`
+  - `started_at`
+  - `elapsed_ms`
+  - `spec_path`
+  - `spec_json_path`
+  - `analysis`
+- `analysis` contains these keys:
+  - `direction_fit`
+  - `affected_items`
+  - `proposed_new_items`
+  - `design_impact_summary`
+  - `test_plan`
+- Uses stderr only for human-readable summaries
+
 #### `medharness ci cr-status`
 
 - Writes JSON to stdout with these keys:

@@ -82,7 +82,7 @@ def _gh(args: list[str], *, token: str = "") -> tuple[int, str]:
             ["gh", *args], capture_output=True, text=True, env=env, timeout=30,
         )
         return result.returncode, result.stdout.strip()
-    except Exception as exc:  # noqa: BLE001
+    except (subprocess.SubprocessError, OSError) as exc:
         return 1, str(exc)
 
 
