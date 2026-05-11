@@ -11,27 +11,46 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [0.3.6] — 2026-05-11
 
-### Added
+### Changes
 
-- **Machine-readable approval gate** (`ci approve-gate`, `ci parse-approval`):
-  - `medharness ci parse-approval --comment <text>` — parses a PR comment
-    body for `/approve` or `/reject <reason>` commands; outputs JSON
-    `{"action": "approve"|"reject"|null, "reason": "..."}`.
-  - `medharness ci approve-gate --cr CR-NNN --stage spec|design|develop --pr N`
-    — checks whether the stage approval label is present on the PR; exits 0
-    if approved, 1 otherwise; outputs JSON with `approved`, `label`, and
-    `cr_id`.
-  - New service `medharness.services.pr_approval` with:
-    - `parse_approval_command(comment_body)` → `ApprovalCommand | None`
-    - `label_for_stage(stage)` → one of `cr-spec-approved`, `cr-design-approved`, `cr-code-approved`
-    - `stage_for_branch(branch_ref)` — infers stage from branch prefix
-    - `add_approval_label`, `post_comment`, `close_pr`, `check_approved` — thin `gh` CLI wrappers
-  - Label scheme: `cr-spec-approved` / `cr-design-approved` / `cr-code-approved` —
-    added by the workflow when an authorized user types `/approve`; checked
-    by `ci approve-gate` before advancing to the next lifecycle stage.
-  - New template workflow `dhf/cr-approve.yml` — triggered on `issue_comment`
-    events; processes `/approve` (adds label, posts confirmation) and
-    `/reject <reason>` (closes PR, transitions DHF CR to `rejected`).
+- `ci analyze-cr` now emits a companion `CR-NNN-Spec.json` alongside the
+  Markdown spec. The JSON contains every machine-readable front-matter field
+  and is read by downstream validators in preference to re-parsing Markdown.
+  The `ci analyze-cr` stdout payload gains `spec_json_path` (absolute path
+  to the JSON file, or `null` if Claude wrote no spec file).
+
+- Two new required front-matter fields are added to CR specs:
+  - `proposed_new_items` — list of `{type, title}` dicts describing DHF items
+    the design stage should create. `[]` is valid when no new items are needed.
+  - `design_impact_summary` — a non-empty string (1–2 sentences) summarising
+    the overall design impact. Required so the summary is machine-readable
+    rather than buried in Markdown prose.
+
+  Existing specs that lack these fields will fail `validate_spec` and trigger
+  the self-correction loop, prompting Claude to add them.
+
+- `ci design-cr` injects the full `CR-NNN-Spec.json` content as a structured
+  block at the top of the design prompt (non-revision mode only). Claude no
+  longer needs to re-parse the Markdown spec to identify affected or proposed
+  items — the structured data is explicit in the prompt.
+
+- `validate_spec`, `write_spec_json`, and `read_spec_json` are now public
+  symbols in `medharness.services.spec_validation`.
+- `ci analyze-cr` now also emits a structured `analysis` object in stdout,
+  with `direction_fit`, `affected_items`, `proposed_new_items`,
+  `design_impact_summary`, and `test_plan`, so clients do not need to
+  re-parse the spec file for the most common CR-analysis fields.
+
+- Bundled GitHub workflow templates were removed from the shipped scaffold.
+  MedHarness now treats the CLI and Python services as the stable product
+  surface, while repository automation is left to client repos.
+
+- `medharness init` no longer generates `.github/workflows/*`. It still
+  scaffolds DHF content and `.github/prompts/` for repo-local automation.
+
+- `ci github-event` now supports configurable event-to-stage and
+  event-to-action mapping via CLI flags so client repos can layer their own
+  automation without hardcoded MedHarness workflow assumptions.
 
 ---
 

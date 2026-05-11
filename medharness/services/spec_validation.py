@@ -11,6 +11,7 @@ Reads the YAML front-matter produced by cr-analyze and validates:
 
 from __future__ import annotations
 
+import json
 import re
 from pathlib import Path
 
@@ -197,3 +198,24 @@ def validate_spec(
                 })
 
     return errors
+
+
+def write_spec_json(spec_path: Path, frontmatter_dict: dict) -> Path:
+    """Write a JSON companion alongside the Markdown spec. Returns the .json path."""
+    json_path = spec_path.with_suffix(".json")
+    json_path.write_text(
+        json.dumps(frontmatter_dict, indent=2, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    return json_path
+
+
+def read_spec_json(spec_path: Path) -> dict | None:
+    """Read the JSON companion for a spec. Returns None if absent or unreadable."""
+    json_path = spec_path.with_suffix(".json")
+    if not json_path.exists():
+        return None
+    try:
+        return json.loads(json_path.read_text(encoding="utf-8"))
+    except Exception:
+        return None

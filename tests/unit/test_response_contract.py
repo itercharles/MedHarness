@@ -37,7 +37,7 @@ COMMON_KEYS = {
     "started_at",
     "elapsed_ms",
 }
-SPEC_EXTRA_KEYS = {"spec_path", "analysis"}
+SPEC_EXTRA_KEYS = {"spec_path", "analysis", "spec_json_path"}
 DESIGN_EXTRA_KEYS = {"items_changed"}
 DEVELOP_EXTRA_KEYS = {"files_changed"}
 
@@ -78,7 +78,8 @@ class TestGenerateSpecContract:
         spec_path.write_text(
             f'---\ncr_id: "{cr_id}"\ndirection_fit: "in-scope"\n'
             'affected_items: []\nproposed_new_items: []\n'
-            'design_impact_summary: "No design impact."\ntest_plan:\n  auto_covered: []\n'
+            'design_impact_summary: "Test summary."\n'
+            'test_plan:\n  auto_covered: []\n'
             '  needs_new_tc: []\n  must_be_manual: []\n---\n',
             encoding="utf-8",
         )
@@ -102,6 +103,7 @@ class TestGenerateSpecContract:
         assert isinstance(result["started_at"], str)
         assert isinstance(result["spec_path"], str)
         assert isinstance(result["analysis"], dict)
+        assert isinstance(result["spec_json_path"], str)
 
     def test_value_domains(self, dhf):
         self._spec(dhf)

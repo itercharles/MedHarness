@@ -7,23 +7,23 @@
 
 ## Packages
 
-CompliantFlow ships two Python packages from a single repository:
+MedHarness ships two Python packages from a single repository:
 
 | Package | CLI | Role |
 |---------|-----|------|
-| `compliantflow` | `compliantflow` | Orchestration, scaffolding, CI gates, CR workflows, DHF operations |
-| `dhf_util` | `dhf` | DHF engine: item CRUD, lifecycle, traceability, document generation; standalone use without `compliantflow` |
+| `medharness` | `medharness` | Orchestration, scaffolding, CI gates, CR workflows, DHF operations |
+| `dhfkit` | `dhfkit` / `dhf` | DHF engine: item CRUD, lifecycle, traceability, document generation; standalone use without `medharness` |
 
-### `compliantflow` owns
+### `medharness` owns
 
-- CLI surface and user-facing onboarding (`compliantflow init`)
+- CLI surface and user-facing onboarding (`medharness init`)
 - CI gate commands (`ci test-coverage`, `ci dhf-validate`, `ci evidence bundle`)
 - CR workflow orchestration (`cr workflow`, `cr check-status`, `cr intake`)
-- Product repo file generation (CLAUDE.md, engineering-control.yml, cr-complete.yml, review-pr.yml)
+- Product repo file generation (`CLAUDE.md`, `.gitignore`)
 - DHF repo scaffolding from bundled templates
 - Adapter protocol for pluggable DHF backends
 
-### `dhf_util` owns
+### `dhfkit` owns
 
 - Item CRUD and lifecycle state machine
 - Project config loading and doc-type schema rendering
@@ -35,29 +35,26 @@ CompliantFlow ships two Python packages from a single repository:
 
 ### Boundary rules
 
-- `compliantflow` may import from `dhf_util`
-- `dhf_util` MUST NOT import from `compliantflow`
-- `dhf_util` can be used standalone without `compliantflow`
+- `medharness` may import from `dhfkit`
+- `dhfkit` MUST NOT import from `medharness`
+- `dhfkit` can be used standalone without `medharness`
 
 ---
 
 ## Scaffold Model
 
-`compliantflow init` copies assets from `dhf_util/templates/` (bundled with the package) to create a self-contained DHF repository.
+`medharness init` copies assets from `dhfkit/templates/` (bundled with the package) to create a self-contained DHF repository.
 
 ### Template source
 
 ```
-dhf_util/templates/
+dhfkit/templates/
 ├── config/                    # Doc type definitions (global.yaml + doc_types/*.yaml)
 ├── specs/                     # Jinja2 templates for document generation (*.md.j2)
 │   └── styles/                # PDF CSS stylesheet
 ├── plans/                     # Plan document templates
 ├── github/
-│   ├── prompts/               # LLM prompt templates for CR workflows
-│   └── workflows/
-│       ├── dhf/               # DHF repo CI workflows (copied to DHF repo)
-│       └── product/           # Product repo workflows (written to product repo)
+│   └── prompts/               # Optional prompt templates for repo-local automation
 └── README.md                  # DHF repo starter README
 ```
 
@@ -75,11 +72,11 @@ dhf_util/templates/
 │   ├── items/                    # One subdir per doc type (ready for YAML items)
 │   └── test-results/             # .gitkeep (ready for JUnit evidence)
 ├── .github/
-│   └── workflows/                # DHF-side CI from templates/github/workflows/dhf/
+│   └── prompts/                  # Optional prompt files; automation is client-owned
 └── README.md
 ```
 
-The generated DHF repo does not contain `dhf_util/` or `compliantflow/` source code. Users install CompliantFlow separately and run `compliantflow dhf` against the generated DHF directory.
+The generated DHF repo does not contain `dhfkit/` or `medharness/` source code. Users install MedHarness separately and run `medharness --dhf DHF ...` against the generated DHF directory.
 
 ### Placeholder substitution
 
@@ -90,8 +87,8 @@ The generated DHF repo does not contain `dhf_util/` or `compliantflow/` source c
 | `{{product_repo_name}}` | `insulin-pump` |
 | `{{github_org}}` | `acme-medical` |
 | `{{dhf_repo_name}}` | `insulin-pump-dhf` |
-| `{{compliantflow_version}}` | `0.1.0` |
-| `{{compliantflow_repo}}` | `itercharles/CompliantFlow` |
+| `{{compliantflow_version}}` | `0.3.5` |
+| `{{compliantflow_repo}}` | `itercharles/MedHarness` |
 | `{{primary_test_tool}}` | `pytest` |
 
 ---
@@ -100,10 +97,10 @@ The generated DHF repo does not contain `dhf_util/` or `compliantflow/` source c
 
 | Event | Action |
 |-------|--------|
-| New project | `compliantflow init` creates the DHF repo |
+| New project | `medharness init` creates the DHF repo |
 | Feature or bugfix | Open a CR, run the CR workflow, merge to main |
-| New CompliantFlow release | Re-scaffold into a new directory, apply diff selectively — never overwrite existing DHF content |
-| Regenerate documents | `compliantflow --dhf DHF dhf doc generate ALL` — run after item changes or template updates |
+| New MedHarness release | Re-scaffold into a new directory, apply diff selectively — never overwrite existing DHF content |
+| Regenerate documents | `medharness --dhf DHF dhf doc generate ALL` — run after item changes or template updates |
 | Product retirement | Archive the DHF repo in Git with an archival date in the README; preserve for regulatory audit |
 
 ### Product repo vs DHF repo
@@ -111,7 +108,7 @@ The generated DHF repo does not contain `dhf_util/` or `compliantflow/` source c
 | Aspect | Product repo | DHF repo |
 |--------|-------------|----------|
 | Contains | Source code, tests, build config | Requirements, architecture, risk, traceability |
-| CI | Build, test, evidence gates | Structural validation, CR checks |
+| CI | Client-owned | Client-owned |
 | Updated | Per feature/bugfix | Per CR-driven change |
 | Archival | With product retirement | Must be preserved for regulatory audit |
 
@@ -124,6 +121,6 @@ The generated DHF repo does not contain `dhf_util/` or `compliantflow/` source c
 | Unit | `tests/unit/` | Pure logic: parsers, config, lifecycle, traceability |
 | Integration | `tests/integration/` | Package integration: init, DHF facade, CR workflows |
 | Contract | `tests/contract/` | Public contracts: CLI, scaffold structure, example smoke |
-| Engine | `dhf_util/tests/` | dhf_util-specific: CRUD, validation, document generation |
+| Engine | `dhfkit/tests/` | dhfkit-specific: CRUD, validation, document generation |
 
 This repo does not use `@links`/`@test_id` metadata or `ci test-coverage` for its own governance. Those features are available to scaffolded user DHF repos.

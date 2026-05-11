@@ -51,10 +51,10 @@ cr_id: "{{cr_id}}"
 direction_fit: in-scope        # one of: in-scope | scope-expansion | out-of-scope
 affected_items:                # existing DHF item IDs this CR touches; [] if none
   - SYS-001
-proposed_new_items:            # new DHF items needed in design; [] if none
+proposed_new_items:            # DHF items to create in the design stage; [] if none
   - type: SRS
     title: "Example new requirement title"
-design_impact_summary: "One-sentence summary of the DHF and code impact."
+design_impact_summary: "..."   # 1-2 sentences summarizing overall design impact
 test_plan:
   auto_covered:                # items covered by existing automated tests
     - SRS-001

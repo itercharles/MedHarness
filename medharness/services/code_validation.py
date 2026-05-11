@@ -12,7 +12,7 @@ import re
 import subprocess
 from pathlib import Path
 
-from medharness.services.spec_validation import parse_spec_frontmatter
+from medharness.services.spec_validation import parse_spec_frontmatter, read_spec_json
 
 
 def validate_code(
@@ -34,7 +34,7 @@ def validate_code(
     """
     errors: list[dict] = []
 
-    fm = parse_spec_frontmatter(spec_path)
+    fm = read_spec_json(spec_path) or parse_spec_frontmatter(spec_path)
     if not fm:
         return errors  # cannot validate without spec front-matter
 

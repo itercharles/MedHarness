@@ -18,11 +18,39 @@ from pathlib import Path
 import click
 import medharness._helpers as _h
 from medharness.services.ci import ci_structural_gate, ci_test_coverage_gate
-from medharness.services.github_event import parse_github_event
+from medharness.services.github_event import parse_github_event, plan_github_event
 from medharness.services.github_session import get_session, put_session
 from medharness.services.spec_validation import validate_spec
 
 _ITEM_ID_RE = re.compile(r"^([A-Z]+-\d+)")
+
+
+def _parse_key_value_pairs(
+    values: tuple[str, ...],
+    *,
+    option_name: str,
+    separator: str = "=",
+) -> dict[str, str]:
+    result: dict[str, str] = {}
+    for value in values:
+        if separator not in value:
+            raise click.UsageError(
+                f"Invalid {option_name} value '{value}'. Expected KEY{separator}VALUE."
+            )
+        key, mapped = value.split(separator, 1)
+        key = key.strip()
+        mapped = mapped.strip()
+        if not key or not mapped:
+            raise click.UsageError(
+                f"Invalid {option_name} value '{value}'. Expected KEY{separator}VALUE."
+            )
+        result[key] = mapped
+    return result
+
+
+def _parse_branch_stage_pairs(values: tuple[str, ...]) -> tuple[tuple[str, str], ...]:
+    parsed = _parse_key_value_pairs(values, option_name="--branch-stage")
+    return tuple(parsed.items())
 
 
 def _format_summary(stage_label: str, verb: str, cr_id: str, result: dict) -> str:
@@ -303,29 +331,72 @@ def register(main):
     @ci.command("github-event")
     @click.option("--event", "event_path", default=None, type=click.Path(exists=True, dir_okay=False, path_type=Path))
     @click.option("--manual-cr", default="", metavar="CR_ID")
+    @click.option("--manual-stage", default="", metavar="STAGE")
+    @click.option("--branch-stage", "branch_stage_values", multiple=True, metavar="PREFIX=STAGE",
+                  help="Infer stage from branch prefix; may be passed multiple times.")
+    @click.option("--stage-label-prefix", default="", metavar="PREFIX",
+                  help="Infer stage from PR labels matching <prefix><stage>.")
+    @click.option("--dispatch-action", "dispatch_action_values", multiple=True, metavar="STAGE=ACTION",
+                  help="Map workflow_dispatch stage inputs to caller-defined actions.")
+    @click.option("--review-action", "review_action_values", multiple=True, metavar="STATE[:STAGE]=ACTION",
+                  help="Map review state or state+stage pairs to caller-defined actions.")
+    @click.option("--pr-action", "pr_action_values", multiple=True, metavar="STATE[:STAGE]=ACTION",
+                  help="Map pull_request states (merged/closed) and optional stages to caller-defined actions.")
+    @click.option("--default-action", default="", metavar="ACTION",
+                  help="Fallback action when no explicit mapping matches.")
     @click.option("--github-output", "github_output_path", default=None, type=click.Path(dir_okay=False, path_type=Path))
     @click.pass_context
     def ci_github_event(ctx: click.Context, event_path: Path | None, manual_cr: str,
+                        manual_stage: str,
+                        branch_stage_values: tuple[str, ...],
+                        stage_label_prefix: str,
+                        dispatch_action_values: tuple[str, ...],
+                        review_action_values: tuple[str, ...],
+                        pr_action_values: tuple[str, ...],
+                        default_action: str,
                         github_output_path: Path | None) -> None:
         """Parse GitHub event payload and output CR context for CI workflow steps.
 
-        Writes cr_id, mode, and pr_number to --github-output (if provided)
-        in $GITHUB_OUTPUT format. Also prints JSON to stdout.
+        The base parser returns CR context. Optional stage/action mappings let a
+        client repo keep lifecycle policy in Python while still choosing its
+        own branch conventions, label scheme, and action names.
         """
         result = parse_github_event(event_path, manual_cr_id=manual_cr)
+        branch_stage_pairs = _parse_branch_stage_pairs(branch_stage_values)
+        dispatch_actions = _parse_key_value_pairs(dispatch_action_values, option_name="--dispatch-action")
+        review_actions = _parse_key_value_pairs(review_action_values, option_name="--review-action")
+        pr_actions = _parse_key_value_pairs(pr_action_values, option_name="--pr-action")
+        plan = plan_github_event(
+            result,
+            branch_stage_pairs=branch_stage_pairs,
+            stage_label_prefix=stage_label_prefix,
+            dispatch_actions=dispatch_actions,
+            review_actions=review_actions,
+            pr_actions=pr_actions,
+            default_action=default_action,
+            manual_stage=manual_stage,
+        )
         payload = {
             "cr_id": result.cr_id,
             "mode": result.mode,
             "pr_number": result.pr_number,
             "reason": result.reason,
+            "event_name": result.event_name,
+            "branch_ref": result.branch_ref,
+            "review_state": result.review_state,
+            "merged": result.merged,
+            "labels": list(result.labels),
+            "dispatch_stage": result.dispatch_stage,
+            "stage": plan.stage,
+            "action": plan.action,
         }
         click.echo(json.dumps(payload, default=str))
 
         if github_output_path:
             with open(github_output_path, "a", encoding="utf-8") as f:
-                for key in ("cr_id", "mode", "pr_number"):
+                for key in ("cr_id", "mode", "pr_number", "stage", "action", "event_name", "branch_ref"):
                     val = payload.get(key)
-                    if val is not None:
+                    if val is not None and val != "":
                         f.write(f"{key}={val}\n")
 
     # ── Claude session ──

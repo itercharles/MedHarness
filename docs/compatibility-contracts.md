@@ -15,11 +15,11 @@ for the versioning policy.
 
 - Tests are organized by layer: `tests/unit/`, `tests/integration/`, `tests/contract/`
 - Tests do not carry DHF requirement-linked metadata (`@links`, `@test_id`)
-- CI enforces unit, integration, contract, and dhf_util test suites
+- CI enforces unit, integration, contract, and dhfkit test suites
 
 ### CLI Command Contracts
 
-#### `compliantflow init`
+#### `medharness init`
 
 - Generates the following core directories:
   - `DHF/config/` (with global.yaml and doc_types/)
@@ -27,8 +27,7 @@ for the versioning policy.
   - `DHF/documents/plans/` (with plan documents)
   - `DHF/items/` (with subdirectories per doc type)
   - `DHF/test-results/`
-  - `.github/workflows/`
-- Writes product repo files: `CLAUDE.md`, `.github/workflows/engineering-control.yml`, `.github/workflows/cr-complete.yml`, `.github/workflows/review-pr.yml`
+- Writes product repo files: `CLAUDE.md`, `.gitignore`
 - Substitutes: `{{project_name}}`, `{{product_repo}}`, `{{product_repo_name}}`, `{{github_org}}`, `{{dhf_repo_name}}`, `{{compliantflow_version}}`, `{{compliantflow_repo}}`, `{{primary_test_tool}}`
 
 ### Output Format
@@ -73,7 +72,7 @@ Optional fields:
 
 ### Template Variables
 
-These variables are substituted by `compliantflow init`:
+These variables are substituted by `medharness init`:
 
 | Variable | Example value |
 |----------|--------------|
@@ -82,33 +81,33 @@ These variables are substituted by `compliantflow init`:
 | `{{product_repo_name}}` | `insulin-pump` |
 | `{{github_org}}` | `acme-medical` |
 | `{{dhf_repo_name}}` | `insulin-pump-dhf` |
-| `{{compliantflow_version}}` | `0.1.0` |
-| `{{compliantflow_repo}}` | `itercharles/CompliantFlow` |
+| `{{compliantflow_version}}` | `0.3.5` |
+| `{{compliantflow_repo}}` | `itercharles/MedHarness` |
 | `{{primary_test_tool}}` | `pytest` |
 
 ### Template File Locations
 
-- Templates are in `dhf_util/templates/specs/*.j2`
-- CSS is in `dhf_util/templates/specs/styles/default.css`
-- Plan templates are in `dhf_util/templates/plans/*.md`
+- Templates are in `dhfkit/templates/specs/*.j2`
+- CSS is in `dhfkit/templates/specs/styles/default.css`
+- Plan templates are in `dhfkit/templates/plans/*.md`
 
 ---
 
 ## 4. Import API Contracts
 
-Stable `dhf_util` imports:
+Stable `dhfkit` imports:
 
 ```python
-from dhf_util.models.item import Item
-from dhf_util.models.config import ProjectConfig
-from dhf_util.local_adapter import LocalDHFAdapter
-from dhf_util.lifecycle import get_available_transitions, execute_transition
-from dhf_util.traceability import check_traceability
-from dhf_util.document_generation import DocumentGenerator
-from dhf_util.change_requests import prepare_change_request, complete_change_request
-from dhf_util.exceptions import ValidationError
-from dhf_util.junit_parser import parse_junit_xml
-from dhf_util.id_generator import get_next_id
+from dhfkit.models.item import Item
+from dhfkit.models.config import ProjectConfig
+from dhfkit.local_adapter import LocalDHFAdapter
+from dhfkit.lifecycle import get_available_transitions, execute_transition
+from dhfkit.traceability import check_traceability
+from dhfkit.document_generation import DocumentGenerator
+from dhfkit.change_requests import prepare_change_request, complete_change_request
+from dhfkit.exceptions import ValidationError
+from dhfkit.junit_parser import parse_junit_xml
+from dhfkit.id_generator import get_next_id
 ```
 
 ---
@@ -124,8 +123,8 @@ Tests in user repos may emit JUnit XML with:
 ```xml
 <testcase name="test_TC_SYS_027_001_...">
   <properties>
-    <property name="compliantflow.id" value="TC-SYS-027-001"/>
-    <property name="compliantflow.links" value="SYS-027"/>
+    <property name="medharness.id" value="TC-SYS-027-001"/>
+    <property name="medharness.links" value="SYS-027"/>
   </properties>
 </testcase>
 ```
@@ -140,8 +139,8 @@ testing (unit, integration, contract) instead.
 
 ## 6. Non-Contracts (may change without MAJOR bump)
 
-- Internal module layout within `compliantflow/` and `dhf_util/`
+- Internal module layout within `medharness/` and `dhfkit/`
 - Undocumented helper functions and classes
 - Exact wording of starter sample items in templates/items/ (item count and structure are stable, content is not)
 - Test utility code in `tests/`
-- CI workflow internals (as long as gate semantics are preserved)
+- Sample automation wiring around the CLI

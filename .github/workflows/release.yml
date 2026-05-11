@@ -34,6 +34,7 @@ jobs:
 
       - name: Build sdist and wheel
         run: |
+          rm -rf build dist
           python -m build --wheel
           python -m build --sdist
 

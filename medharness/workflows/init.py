@@ -27,11 +27,7 @@ _TEMPLATES_DIR = Path(__file__).resolve().parent.parent.parent / "dhfkit" / "tem
 # ---------------------------------------------------------------------------
 
 def _scaffold_dhf(project_dir: Path) -> None:
-    """Create DHF structure inside project_dir from bundled templates.
-
-    ci.yml is intentionally omitted — its checks are merged into
-    engineering-control.yml for the single-repo layout.
-    """
+    """Create DHF structure inside project_dir from bundled templates."""
     project_dir.mkdir(parents=True, exist_ok=True)
 
     def _cp(rel_src: str, rel_dst: str) -> None:
@@ -60,10 +56,6 @@ def _scaffold_dhf(project_dir: Path) -> None:
 
     # GitHub AI prompts
     _cp("github/prompts", ".github/prompts")
-
-    # DHF AI workflows — ci.yml omitted (merged into engineering-control.yml)
-    for wf in ("cr-analyze.yml", "cr-approve.yml", "cr-develop.yml", "cr-spec-iterate.yml", "cr-transition.yml"):
-        _cp(f"github/workflows/dhf/{wf}", f".github/workflows/{wf}")
 
     # Empty test-results dir
     results_dir = project_dir / "DHF" / "test-results"
@@ -129,7 +121,7 @@ def _write_claude_md(project_dir: Path, project_name: str) -> Path:
 | `DHF/` | Design History File — requirements, risks, traceability |
 | `src/` | Product source code |
 | `tests/` | Product test suite |
-| `.github/workflows/` | CI: design gate, test coverage, evidence bundle |
+| `.github/` | Optional repo-local automation and prompts |
 
 ## Key Rules
 
@@ -173,196 +165,6 @@ def _write_tests_stub(project_dir: Path) -> Path:
     return tests_dir
 
 
-def _write_engineering_control_yml(project_dir: Path) -> Path:
-    dest = project_dir / ".github" / "workflows" / "engineering-control.yml"
-    dest.parent.mkdir(parents=True, exist_ok=True)
-    dest.write_text(_generate_engineering_control_yaml())
-    return dest
-
-
-def _write_cr_complete_yml(project_dir: Path) -> Path:
-    dest = project_dir / ".github" / "workflows" / "cr-complete.yml"
-    dest.parent.mkdir(parents=True, exist_ok=True)
-    template = _TEMPLATES_DIR / "github" / "workflows" / "product" / "cr-complete.yml"
-    dest.write_text(template.read_text(encoding="utf-8"))
-    return dest
-
-
-def _write_review_pr_yml(project_dir: Path) -> Path:
-    dest = project_dir / ".github" / "workflows" / "review-pr.yml"
-    dest.parent.mkdir(parents=True, exist_ok=True)
-    template = _TEMPLATES_DIR / "github" / "workflows" / "product" / "review-pr.yml"
-    dest.write_text(template.read_text(encoding="utf-8"))
-    return dest
-
-
-
-# ---------------------------------------------------------------------------
-# Engineering control workflow generation
-# ---------------------------------------------------------------------------
-
-def _generate_engineering_control_yaml() -> str:
-    """Generate the single-repo engineering-control.yml.
-
-    Phases:
-      cr-validation  — PR gate: verify CR exists in DHF
-      dhf-validation — PR gate: schema + traceability coverage
-      test-coverage  — PR gate: run tests, check requirement→TC coverage
-      evidence-bundle — post-merge: produce signed evidence artifact
-    """
-    return """\
-name: Engineering Control CI
-
-on:
-  push:
-    branches: [ main ]
-  pull_request:
-    types: [opened, synchronize]
-
-permissions:
-  contents: read
-
-jobs:
-
-  cr-validation:
-    name: CR Validation
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Extract CR IDs from PR title
-        id: extract-cr
-        env:
-          PR_TITLE: ${{ github.event.pull_request.title }}
-        run: |
-          CR_IDS=$(echo "$PR_TITLE" | grep -oE 'CR-[0-9]+' | sort -u | tr '\\n' ' ' || true)
-          echo "cr_ids=$CR_IDS" >> "$GITHUB_OUTPUT"
-          if [ -z "$CR_IDS" ]; then
-            echo "✗ No CR ID in PR title. Format: feat(CR-012): description" >&2
-            exit 1
-          fi
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-          cache: 'pip'
-
-      - name: Install MedHarness
-        run: pip install medharness
-
-      - name: Check CR status
-        env:
-          CR_IDS: ${{ steps.extract-cr.outputs.cr_ids }}
-        run: |
-          FAILED=0
-          for CR_ID in $CR_IDS; do
-            medharness --dhf DHF dhf item get "$CR_ID" > /dev/null || { echo "✗ $CR_ID not found in DHF" >&2; FAILED=1; }
-          done
-          [ "$FAILED" -eq 0 ] || exit 1
-
-  dhf-validation:
-    name: DHF Validation
-    runs-on: ubuntu-latest
-    needs: cr-validation
-    if: always() && (needs.cr-validation.result == 'success' || needs.cr-validation.result == 'skipped')
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-          cache: 'pip'
-
-      - name: Install MedHarness
-        run: pip install medharness
-
-      - name: Validate DHF schema and traceability
-        run: |
-          medharness ci dhf-validate \\
-            --dhf DHF \\
-            --run-schema \\
-            --run-traceability \\
-            --coverage-pair UC:CRS \\
-            --coverage-pair CRS:SYS \\
-            --coverage-pair SYS:SRS \\
-            --coverage-pair SRS:SWDD \\
-            --fail-on-uncovered
-
-  test-coverage:
-    name: Test Coverage Gate
-    runs-on: ubuntu-latest
-    needs: dhf-validation
-    if: always() && needs.dhf-validation.result != 'failure'
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-          cache: 'pip'
-
-      - name: Install MedHarness
-        run: pip install medharness
-
-      - name: Run tests
-        run: |
-          mkdir -p test-results/
-          # Replace with your test runner. Must output JUnit XML to test-results/.
-          # pytest:  pytest tests/ -v --junitxml=test-results/results.xml
-          # Jest:    jest --reporters=jest-junit  (JEST_JUNIT_OUTPUT_DIR=test-results)
-          # Maven:   mvn test -Dsurefire.reportsDirectory=test-results/
-          # Go:      go test ./... | go-junit-report > test-results/results.xml
-          echo "No tests configured yet — add your test command above."
-
-      - name: Upload test results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-results
-          path: test-results/
-
-      - name: Check test coverage gate
-        run: |
-          medharness ci test-coverage \\
-            --dhf DHF \\
-            --junit-dir test-results
-
-  evidence-bundle:
-    name: Evidence Bundle
-    runs-on: ubuntu-latest
-    needs: [test-coverage]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && !cancelled()
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Install MedHarness
-        run: pip install medharness
-
-      - name: Download test results
-        uses: actions/download-artifact@v4
-        with:
-          name: test-results
-          path: test-results/
-
-      - name: Generate evidence bundle
-        run: |
-          medharness --dhf DHF ci evidence bundle \\
-            --out-dir artifacts \\
-            --junit-dir test-results
-
-      - name: Upload evidence bundle
-        uses: actions/upload-artifact@v4
-        with:
-          name: dhf-evidence-bundle
-          path: artifacts/
-"""
-
-
 # ---------------------------------------------------------------------------
 # Main entrypoint
 # ---------------------------------------------------------------------------
@@ -390,10 +192,6 @@ def run_init() -> None:
     steps = [
         "Scaffold DHF structure",
         "Write CLAUDE.md",
-        "Write engineering-control.yml",
-        "Write cr-complete.yml",
-        "Write review-pr.yml",
-        "Write Claude Code skills",
         "Write .gitignore",
     ]
     total = len(steps)
@@ -413,18 +211,6 @@ def run_init() -> None:
     _write_claude_md(project_dir, project_name)
     click.secho(" ✓", fg="green")
 
-    _step("Write engineering-control.yml")
-    _write_engineering_control_yml(project_dir)
-    click.secho(" ✓", fg="green")
-
-    _step("Write cr-complete.yml")
-    _write_cr_complete_yml(project_dir)
-    click.secho(" ✓", fg="green")
-
-    _step("Write review-pr.yml")
-    _write_review_pr_yml(project_dir)
-    click.secho(" ✓", fg="green")
-
     _step("Write .gitignore")
     _write_gitignore(project_dir)
     click.secho(" ✓", fg="green")
@@ -441,8 +227,10 @@ def run_init() -> None:
     click.echo(f"       git remote add origin https://github.com/<org>/{raw_name}")
     click.echo(f"       git push -u origin main")
     click.echo()
-    click.secho("  3. Optional secrets (Settings → Secrets):", bold=True)
-    click.echo(f"       ANTHROPIC_API_KEY — enables AI CR analysis and development workflows")
+    click.secho("  3. Wire your automation around the CLI:", bold=True)
+    click.echo("       medharness ci dhf-validate --dhf DHF")
+    click.echo("       medharness ci test-coverage --dhf DHF --junit-dir test-results")
+    click.echo("       medharness --dhf DHF ci evidence bundle --out-dir artifacts --junit-dir test-results")
     click.echo()
     click.secho("  4. Replace sample DHF content:", bold=True)
     click.echo(f"       Edit DHF/items/ with your real requirements, risks, and CRs.")
