@@ -119,6 +119,7 @@ medharness ci test-coverage --dhf DHF --junit-dir test-results
 medharness --dhf DHF ci analyze-cr --cr CR-034
 medharness --dhf DHF ci design-cr --cr CR-034
 medharness --dhf DHF ci develop-cr --cr CR-034
+medharness ci cr-status --cr CR-034 --stage spec --pr 18
 medharness --dhf DHF ci evidence bundle --out-dir artifacts --junit-dir test-results
 medharness ci github-event --event "$GITHUB_EVENT_PATH"
 ```
@@ -143,6 +144,14 @@ Issue → CR review → analyze-cr → design-cr → develop-cr → cr-complete
 
 When a PR receives review feedback, re-run the same command with `--pr N` to
 revise the existing output based on reviewer comments.
+
+To let external automation decide whether a CR stage is ready to advance,
+use the CLI's machine-readable status surface rather than embedding policy in
+workflow YAML:
+
+```bash
+medharness ci cr-status --cr CR-034 --branch spec/CR-034 --pr 18
+```
 
 ---
 

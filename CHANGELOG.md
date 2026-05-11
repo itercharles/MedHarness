@@ -52,6 +52,11 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
   event-to-action mapping via CLI flags so client repos can layer their own
   automation without hardcoded MedHarness workflow assumptions.
 
+- New `ci cr-status` command reports machine-readable CR stage and approval
+  status in one JSON payload, so client automation can query whether a PR is
+  approved for its current stage without re-implementing MedHarness label and
+  branch conventions.
+
 ---
 
 ## [0.3.5] — 2026-05-10

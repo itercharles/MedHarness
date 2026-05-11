@@ -300,3 +300,51 @@ class TestCiApproveGate:
             r = runner.invoke(main, ["ci", "approve-gate", "--cr", "CR-001", "--stage", "spec", "--pr", "42"])
         assert "FAIL" in r.output
         assert "cr-spec-approved" in r.output
+
+
+class TestCiCrStatus:
+    def test_explicit_stage_and_pr_reports_approved(self):
+        runner = CliRunner()
+        with patch("medharness.services.pr_approval.check_approved", return_value=True):
+            r = runner.invoke(main, ["ci", "cr-status", "--cr", "CR-001", "--stage", "spec", "--pr", "42"])
+        assert r.exit_code == 0, r.output
+        payload = _first_json_line(r.output)
+        assert payload["stage"] == "spec"
+        assert payload["approval_label"] == "cr-spec-approved"
+        assert payload["approval_state"] == "approved"
+        assert payload["approved"] is True
+
+    def test_explicit_stage_and_pr_reports_pending(self):
+        runner = CliRunner()
+        with patch("medharness.services.pr_approval.check_approved", return_value=False):
+            r = runner.invoke(main, ["ci", "cr-status", "--cr", "CR-001", "--stage", "spec", "--pr", "42"])
+        assert r.exit_code == 0, r.output
+        payload = _first_json_line(r.output)
+        assert payload["approval_state"] == "pending"
+        assert payload["approved"] is False
+
+    def test_branch_ref_infers_stage(self):
+        runner = CliRunner()
+        with patch("medharness.services.pr_approval.check_approved", return_value=True):
+            r = runner.invoke(main, ["ci", "cr-status", "--cr", "CR-100", "--branch", "feat/CR-100", "--pr", "10"])
+        assert r.exit_code == 0, r.output
+        payload = _first_json_line(r.output)
+        assert payload["stage"] == "develop"
+        assert payload["approval_label"] == "cr-code-approved"
+
+    def test_without_pr_reports_not_applicable(self):
+        runner = CliRunner()
+        r = runner.invoke(main, ["ci", "cr-status", "--cr", "CR-042", "--stage", "design"])
+        assert r.exit_code == 0, r.output
+        payload = _first_json_line(r.output)
+        assert payload["approval_state"] == "not_applicable"
+        assert payload["approved"] is None
+
+    def test_unknown_branch_leaves_stage_blank(self):
+        runner = CliRunner()
+        r = runner.invoke(main, ["ci", "cr-status", "--cr", "CR-055", "--branch", "hotfix/CR-055"])
+        assert r.exit_code == 0, r.output
+        payload = _first_json_line(r.output)
+        assert payload["stage"] == ""
+        assert payload["approval_label"] is None
+        assert payload["approval_state"] == "not_applicable"

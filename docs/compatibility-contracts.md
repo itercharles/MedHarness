@@ -30,6 +30,22 @@ for the versioning policy.
 - Writes product repo files: `CLAUDE.md`, `.gitignore`
 - Substitutes: `{{project_name}}`, `{{product_repo}}`, `{{product_repo_name}}`, `{{github_org}}`, `{{dhf_repo_name}}`, `{{compliantflow_version}}`, `{{compliantflow_repo}}`, `{{primary_test_tool}}`
 
+#### `medharness ci cr-status`
+
+- Writes JSON to stdout with these keys:
+  - `cr_id`
+  - `pr_number`
+  - `branch_ref`
+  - `stage`
+  - `approval_label`
+  - `approval_state`
+  - `approved`
+- `approval_state` is one of:
+  - `approved`
+  - `pending`
+  - `not_applicable`
+- Uses stderr only for human-readable summaries
+
 ### Output Format
 
 - Automation commands (`item get`, `item list`, `item create`, `doc list`,

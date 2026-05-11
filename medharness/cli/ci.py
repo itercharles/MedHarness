@@ -451,6 +451,53 @@ def register(main):
             click.echo(f"FAIL [{stage}-approve] {cr_id}: label '{label}' missing on PR #{pr_number}.", err=True)
             raise click.exceptions.Exit(1)
 
+    @ci.command("cr-status")
+    @click.option("--cr", "cr_id", required=True, metavar="CR_ID")
+    @click.option("--pr", "pr_number", default=None, type=int, metavar="N")
+    @click.option("--stage", default="", type=click.Choice(["", "spec", "design", "develop"]))
+    @click.option("--branch", "branch_ref", default="", metavar="REF")
+    @click.option("--token", default="", metavar="TOKEN")
+    def ci_cr_status(cr_id: str, pr_number: int | None, stage: str, branch_ref: str, token: str) -> None:
+        """Report machine-readable CR stage and approval status.
+
+        The stage may be supplied directly or inferred from a branch ref using
+        the built-in stage prefixes. Approval is only checked when both a PR
+        number and a known stage are available.
+        """
+        from medharness.services.pr_approval import (  # noqa: PLC0415
+            check_approved,
+            label_for_stage,
+            stage_for_branch,
+        )
+
+        resolved_stage = stage or (stage_for_branch(branch_ref) or "")
+        label = label_for_stage(resolved_stage) if resolved_stage else None
+        approved: bool | None = None
+        approval_state = "not_applicable"
+        if pr_number is not None and resolved_stage and label:
+            approved = check_approved(pr_number, resolved_stage, token=token)
+            approval_state = "approved" if approved else "pending"
+
+        payload = {
+            "cr_id": cr_id,
+            "pr_number": pr_number,
+            "branch_ref": branch_ref,
+            "stage": resolved_stage,
+            "approval_label": label,
+            "approval_state": approval_state,
+            "approved": approved,
+        }
+        click.echo(json.dumps(payload))
+
+        details = [f"approval: {approval_state}"]
+        if resolved_stage:
+            details.append(f"stage={resolved_stage}")
+        if label:
+            details.append(f"label={label}")
+        if pr_number is not None:
+            details.append(f"pr=#{pr_number}")
+        click.echo(f"OK CR status for {cr_id} ({', '.join(details)}).", err=True)
+
     @ci.command("parse-approval")
     @click.option("--comment", "comment_body", required=True, metavar="TEXT")
     def ci_parse_approval(comment_body: str) -> None:

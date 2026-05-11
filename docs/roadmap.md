@@ -35,6 +35,7 @@ Based on the current repository, MedHarness already provides:
 - traceability validation and requirement coverage checks
 - CI commands for DHF validation, test coverage, and evidence bundling
 - AI-assisted CR analysis, design, and development stages
+- machine-readable CR stage and approval status via the CLI
 - a scaffolded single-repo workflow for software teams managing DHF artifacts alongside code
 
 These are the capabilities the public roadmap should build on.
