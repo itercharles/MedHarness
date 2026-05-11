@@ -351,6 +351,50 @@ def register(main):
         session_id = get_session(pr_number, token=token)
         click.echo(session_id)
 
+    # ── Approval gate ──
+
+    @ci.command("approve-gate")
+    @click.option("--cr", "cr_id", required=True, metavar="CR_ID")
+    @click.option("--stage", required=True, type=click.Choice(["spec", "design", "develop"]))
+    @click.option("--pr", "pr_number", required=True, type=int, metavar="N")
+    @click.option("--token", default="", metavar="TOKEN")
+    def ci_approve_gate(cr_id: str, stage: str, pr_number: int, token: str) -> None:
+        """Check whether a CR stage has been explicitly approved via PR label.
+
+        Exits 0 if the stage label is present on the PR, non-zero otherwise.
+        """
+        from medharness.services.pr_approval import check_approved, label_for_stage  # noqa: PLC0415
+        approved = check_approved(pr_number, stage, token=token)
+        label = label_for_stage(stage)
+        payload = {
+            "cr_id": cr_id,
+            "stage": stage,
+            "pr_number": pr_number,
+            "approved": approved,
+            "label": label,
+        }
+        click.echo(json.dumps(payload))
+        if approved:
+            click.echo(f"PASS [{stage}-approve] {cr_id}: label '{label}' found on PR #{pr_number}.", err=True)
+        else:
+            click.echo(f"FAIL [{stage}-approve] {cr_id}: label '{label}' missing on PR #{pr_number}.", err=True)
+            raise click.exceptions.Exit(1)
+
+    @ci.command("parse-approval")
+    @click.option("--comment", "comment_body", required=True, metavar="TEXT")
+    def ci_parse_approval(comment_body: str) -> None:
+        """Parse a PR comment body for /approve or /reject commands.
+
+        Outputs JSON with action and reason. Useful in CI workflow steps
+        that receive the comment body from the GitHub event payload.
+        """
+        from medharness.services.pr_approval import parse_approval_command  # noqa: PLC0415
+        cmd = parse_approval_command(comment_body)
+        if cmd is None:
+            click.echo(json.dumps({"action": None, "reason": ""}))
+        else:
+            click.echo(json.dumps({"action": cmd.action, "reason": cmd.reason}))
+
     # ── CR generation ──
 
     @ci.command("analyze-cr")

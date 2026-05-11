@@ -62,7 +62,7 @@ def _scaffold_dhf(project_dir: Path) -> None:
     _cp("github/prompts", ".github/prompts")
 
     # DHF AI workflows — ci.yml omitted (merged into engineering-control.yml)
-    for wf in ("cr-analyze.yml", "cr-develop.yml", "cr-spec-iterate.yml", "cr-transition.yml"):
+    for wf in ("cr-analyze.yml", "cr-approve.yml", "cr-develop.yml", "cr-spec-iterate.yml", "cr-transition.yml"):
         _cp(f"github/workflows/dhf/{wf}", f".github/workflows/{wf}")
 
     # Empty test-results dir

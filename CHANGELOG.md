@@ -9,6 +9,32 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ---
 
+## [0.3.6] — 2026-05-11
+
+### Added
+
+- **Machine-readable approval gate** (`ci approve-gate`, `ci parse-approval`):
+  - `medharness ci parse-approval --comment <text>` — parses a PR comment
+    body for `/approve` or `/reject <reason>` commands; outputs JSON
+    `{"action": "approve"|"reject"|null, "reason": "..."}`.
+  - `medharness ci approve-gate --cr CR-NNN --stage spec|design|develop --pr N`
+    — checks whether the stage approval label is present on the PR; exits 0
+    if approved, 1 otherwise; outputs JSON with `approved`, `label`, and
+    `cr_id`.
+  - New service `medharness.services.pr_approval` with:
+    - `parse_approval_command(comment_body)` → `ApprovalCommand | None`
+    - `label_for_stage(stage)` → one of `cr-spec-approved`, `cr-design-approved`, `cr-code-approved`
+    - `stage_for_branch(branch_ref)` — infers stage from branch prefix
+    - `add_approval_label`, `post_comment`, `close_pr`, `check_approved` — thin `gh` CLI wrappers
+  - Label scheme: `cr-spec-approved` / `cr-design-approved` / `cr-code-approved` —
+    added by the workflow when an authorized user types `/approve`; checked
+    by `ci approve-gate` before advancing to the next lifecycle stage.
+  - New template workflow `dhf/cr-approve.yml` — triggered on `issue_comment`
+    events; processes `/approve` (adds label, posts confirmation) and
+    `/reject <reason>` (closes PR, transitions DHF CR to `rejected`).
+
+---
+
 ## [0.3.5] — 2026-05-10
 
 ### Changes

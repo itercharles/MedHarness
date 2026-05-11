@@ -252,7 +252,7 @@ class TestInitCmd:
     def test_scaffold_creates_ai_workflows(self, tmp_path):
         """_scaffold_dhf creates the CR AI workflow files."""
         _scaffold_dhf(tmp_path)
-        for wf in ("cr-analyze.yml", "cr-develop.yml", "cr-transition.yml"):
+        for wf in ("cr-analyze.yml", "cr-approve.yml", "cr-develop.yml", "cr-transition.yml"):
             assert (tmp_path / ".github" / "workflows" / wf).exists(), f"Missing {wf}"
 
     # ── run_init guards ──────────────────────────────────────────────────────

@@ -45,6 +45,9 @@ jobs:
       - name: Validate spec front-matter
         id: validate
         if: steps.cr.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           SPEC="DHF/documents/specs/${{ steps.cr.outputs.cr_id }}-Spec.md"
           if [ ! -f "$SPEC" ]; then
@@ -76,6 +79,13 @@ jobs:
             exit 1
           else
             echo "reject=false" >> "$GITHUB_OUTPUT"
+          fi
+          APPROVED=$(gh pr view "$PR_NUMBER" --json labels --jq '[.labels[].name] | contains(["cr-spec-approved"])' 2>/dev/null || echo "false")
+          echo "approved=$APPROVED" >> "$GITHUB_OUTPUT"
+          if [ "$APPROVED" != "true" ]; then
+            echo "✗ Spec PR missing required approval label: cr-spec-approved." >&2
+            echo "  An authorized reviewer must comment /approve before this merge can advance the CR lifecycle." >&2
+            exit 1
           fi
 
       - name: Reject CR (out-of-scope / invalid spec)
