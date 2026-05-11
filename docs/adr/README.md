@@ -1,6 +1,6 @@
 # Architecture Decision Records
 
-Decision history for CompliantFlow.
+Decision history for MedHarness.
 
 Uses [ADR_TEMPLATE.md](ADR_TEMPLATE.md).
 

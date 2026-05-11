@@ -11,8 +11,8 @@ stable public contracts and which were internal implementation details.
 ## Decision
 
 Establish explicit public contracts:
-- Stable CLI commands for `compliantflow` (including `dhf item|validate|doc|test|config`)
-- Stable `dhf_util` import API
+- Stable CLI commands for `medharness` (including `dhf item|validate|doc|test|config`)
+- Stable `dhfkit` import API
 - Stable scaffold output structure and template variables
 - Automation commands write JSON to stdout, interactive commands use stderr
 
