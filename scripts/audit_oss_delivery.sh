@@ -15,6 +15,15 @@ die_if_missing() {
   done
 }
 
+PYTHON_BIN="${PYTHON_BIN:-}"
+if [ -z "$PYTHON_BIN" ]; then
+  if [ -x ".venv/bin/python" ]; then
+    PYTHON_BIN=".venv/bin/python"
+  else
+    PYTHON_BIN="$(command -v python)"
+  fi
+fi
+
 # ---------------------------------------------------------------------------
 echo "=== 1. SOURCE-TREE DENYLIST ==="
 
@@ -65,11 +74,17 @@ done
 # ---------------------------------------------------------------------------
 echo "=== 2. WHEEL-CONTENT AUDIT ==="
 
-die_if_missing python3
+die_if_missing "$PYTHON_BIN"
 
 WHEEL_DIR="${WHEEL_DIR:-dist}"
 rm -rf "$WHEEL_DIR" build
-python3 -m build --wheel 2>/dev/null || { fail "wheel build failed"; }
+if "$PYTHON_BIN" -m build --version >/dev/null 2>&1; then
+  "$PYTHON_BIN" -m build --wheel 2>/dev/null || { fail "wheel build failed"; }
+else
+  "$PYTHON_BIN" -m pip wheel . -w "$WHEEL_DIR" --no-deps --no-build-isolation >/dev/null 2>&1 || {
+    fail "wheel build failed"
+  }
+fi
 WHEEL=$(ls "$WHEEL_DIR"/*.whl 2>/dev/null | head -1)
 
 if [ -z "$WHEEL" ]; then
@@ -77,7 +92,7 @@ if [ -z "$WHEEL" ]; then
 else
   pass "wheel built: $WHEEL"
 
-  python3 -c "
+  "$PYTHON_BIN" -c "
 import zipfile, sys
 with zipfile.ZipFile('$WHEEL') as z:
     names = z.namelist()
@@ -101,7 +116,7 @@ else:
 fi
 
 # Both packages must be present in wheel
-python3 -c "
+"$PYTHON_BIN" -c "
 import zipfile, sys
 with zipfile.ZipFile('$WHEEL') as z:
     names = z.namelist()
@@ -119,7 +134,7 @@ if not has_templates:
 " && pass "wheel contains both packages" || fail "wheel missing packages"
 
 # Workflow templates are no longer part of the release payload.
-python3 -c "
+"$PYTHON_BIN" -c "
 import zipfile, sys
 with zipfile.ZipFile('$WHEEL') as z:
     names = z.namelist()

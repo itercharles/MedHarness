@@ -126,7 +126,7 @@ jobs:
               assert (dhf_dir / 'DHF' / 'config' / 'global.yaml').exists()
               assert (dhf_dir / 'DHF' / 'documents' / 'specs').exists()
               assert (dhf_dir / 'DHF' / 'items').exists()
-              assert (dhf_dir / '.github' / 'workflows').exists()
+              assert (dhf_dir / '.github' / 'prompts').exists()
               print('OK: scaffold structure valid')
           "
 
