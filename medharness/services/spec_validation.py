@@ -9,6 +9,7 @@ Reads the YAML front-matter produced by cr-analyze and validates:
 
 from __future__ import annotations
 
+import json
 import re
 from pathlib import Path
 
@@ -128,4 +129,71 @@ def validate_spec(
                     "fix": f"Add {key}: [] under test_plan.",
                 })
 
+    # proposed_new_items
+    pni = fm.get("proposed_new_items")
+    if pni is None:
+        errors.append({
+            "field": "proposed_new_items",
+            "issue": "proposed_new_items is missing.",
+            "fix": "Add proposed_new_items: [] (or list dicts with type/title for new DHF items).",
+        })
+    elif not isinstance(pni, list):
+        errors.append({
+            "field": "proposed_new_items",
+            "issue": "proposed_new_items must be a YAML list.",
+            "fix": "Format as a YAML sequence: proposed_new_items:\n  - type: SRS\n    title: '...'",
+        })
+    else:
+        for i, item in enumerate(pni):
+            if not isinstance(item, dict):
+                errors.append({
+                    "field": f"proposed_new_items[{i}]",
+                    "issue": f"proposed_new_items[{i}] must be a mapping with type and title.",
+                    "fix": f"Change entry {i} to: {{type: SRS, title: 'The system shall...'}}",
+                })
+            else:
+                for key in ("type", "title"):
+                    if key not in item:
+                        errors.append({
+                            "field": f"proposed_new_items[{i}].{key}",
+                            "issue": f"proposed_new_items[{i}] is missing '{key}'.",
+                            "fix": f"Add '{key}:' to the entry at index {i}.",
+                        })
+
+    # design_impact_summary
+    dis = fm.get("design_impact_summary")
+    if dis is None or dis == "":
+        errors.append({
+            "field": "design_impact_summary",
+            "issue": "design_impact_summary is missing or empty.",
+            "fix": "Add design_impact_summary: '1-2 sentence summary of the design impact.'",
+        })
+    elif not isinstance(dis, str):
+        errors.append({
+            "field": "design_impact_summary",
+            "issue": "design_impact_summary must be a string.",
+            "fix": "Set design_impact_summary to a quoted string value.",
+        })
+
     return errors
+
+
+def write_spec_json(spec_path: Path, frontmatter_dict: dict) -> Path:
+    """Write a JSON companion alongside the Markdown spec. Returns the .json path."""
+    json_path = spec_path.with_suffix(".json")
+    json_path.write_text(
+        json.dumps(frontmatter_dict, indent=2, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    return json_path
+
+
+def read_spec_json(spec_path: Path) -> dict | None:
+    """Read the JSON companion for a spec. Returns None if absent or unreadable."""
+    json_path = spec_path.with_suffix(".json")
+    if not json_path.exists():
+        return None
+    try:
+        return json.loads(json_path.read_text(encoding="utf-8"))
+    except Exception:
+        return None

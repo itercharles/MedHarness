@@ -260,8 +260,11 @@ medharness --dhf DHF ci develop-cr --cr CR-034 --pr 42
 Each command outputs JSON to stdout:
 
 ```json
-{ "cr_id": "CR-034", "spec_path": "docs/cr-specs/CR-034-Spec.md",
-  "status": "ok", "corrections": 0, "validation": "passed" }
+{ "cr_id": "CR-034", "stage": "spec", "status": "ok",
+  "corrections": 0, "validation": "passed", "errors": [],
+  "spec_path": "docs/cr-specs/CR-034-Spec.md",
+  "spec_json_path": "docs/cr-specs/CR-034-Spec.json",
+  "started_at": "2026-05-11T14:23:45+00:00", "elapsed_ms": 28500 }
 ```
 
 ### CR workflow commands

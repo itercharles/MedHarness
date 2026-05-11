@@ -240,16 +240,19 @@ class TestGenerateSpec:
         dhf.mkdir()
         return dhf
 
+    def _valid_spec_content(self, cr_id: str) -> str:
+        return (
+            f'---\ncr_id: "{cr_id}"\ndirection_fit: "in-scope"\n'
+            'affected_items: []\nproposed_new_items: []\n'
+            'design_impact_summary: "Test summary."\n'
+            'test_plan:\n  auto_covered: []\n  needs_new_tc: []\n  must_be_manual: []\n---\n'
+        )
+
     def test_returns_dict_with_required_keys(self, tmp_path):
         dhf = self._dhf(tmp_path)
         spec_path = tmp_path / "docs" / "cr-specs" / "CR-001-Spec.md"
         spec_path.parent.mkdir(parents=True)
-        spec_path.write_text(
-            '---\ncr_id: "CR-001"\ndirection_fit: "in-scope"\n'
-            'affected_items: []\ntest_plan:\n  auto_covered: []\n'
-            '  needs_new_tc: []\n  must_be_manual: []\n---\n',
-            encoding="utf-8",
-        )
+        spec_path.write_text(self._valid_spec_content("CR-001"), encoding="utf-8")
         with patch("medharness.services.cr_generation._run_claude") as mock_claude:
             mock_claude.return_value = (0, "done")
             result = generate_spec("CR-001", dhf)
@@ -264,12 +267,7 @@ class TestGenerateSpec:
         dhf = self._dhf(tmp_path)
         spec_path = tmp_path / "docs" / "cr-specs" / "CR-002-Spec.md"
         spec_path.parent.mkdir(parents=True)
-        spec_path.write_text(
-            '---\ncr_id: "CR-002"\ndirection_fit: "in-scope"\n'
-            'affected_items: []\ntest_plan:\n  auto_covered: []\n'
-            '  needs_new_tc: []\n  must_be_manual: []\n---\n',
-            encoding="utf-8",
-        )
+        spec_path.write_text(self._valid_spec_content("CR-002"), encoding="utf-8")
         with patch("medharness.services.cr_generation._run_claude") as mock_claude:
             mock_claude.return_value = (0, "done")
             result = generate_spec("CR-002", dhf)
@@ -310,12 +308,7 @@ class TestGenerateSpec:
         dhf = self._dhf(tmp_path)
         spec_path = tmp_path / "docs" / "cr-specs" / "CR-005-Spec.md"
         spec_path.parent.mkdir(parents=True)
-        spec_path.write_text(
-            '---\ncr_id: "CR-005"\ndirection_fit: "in-scope"\n'
-            'affected_items: []\ntest_plan:\n  auto_covered: []\n'
-            '  needs_new_tc: []\n  must_be_manual: []\n---\n',
-            encoding="utf-8",
-        )
+        spec_path.write_text(self._valid_spec_content("CR-005"), encoding="utf-8")
         with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
              patch("medharness.services.cr_generation._get_pr_feedback") as mock_fb:
             mock_claude.return_value = (0, "")
@@ -325,6 +318,57 @@ class TestGenerateSpec:
         # First call is the revision prompt; last call is the soft review — check the first.
         gen_prompt = mock_claude.call_args_list[0][0][0]
         assert "review feedback" in gen_prompt.lower()
+
+    def test_writes_json_companion_on_success(self, tmp_path):
+        dhf = self._dhf(tmp_path)
+        spec_path = tmp_path / "docs" / "cr-specs" / "CR-010-Spec.md"
+        spec_path.parent.mkdir(parents=True)
+        spec_path.write_text(self._valid_spec_content("CR-010"), encoding="utf-8")
+        with patch("medharness.services.cr_generation._run_claude") as mock_claude:
+            mock_claude.return_value = (0, "done")
+            generate_spec("CR-010", dhf)
+        json_path = spec_path.with_suffix(".json")
+        assert json_path.exists()
+        import json as _json
+        data = _json.loads(json_path.read_text(encoding="utf-8"))
+        assert data["cr_id"] == "CR-010"
+
+    def test_writes_json_companion_even_with_residual_errors(self, tmp_path):
+        dhf = self._dhf(tmp_path)
+        spec_path = tmp_path / "docs" / "cr-specs" / "CR-011-Spec.md"
+        spec_path.parent.mkdir(parents=True)
+        # Missing direction_fit — will fail validation; fix pass won't help since
+        # mock_claude returns (0, "done") without actually writing anything new.
+        spec_path.write_text(
+            '---\ncr_id: "CR-011"\naffected_items: []\n'
+            'test_plan:\n  auto_covered: []\n  needs_new_tc: []\n  must_be_manual: []\n---\n',
+            encoding="utf-8",
+        )
+        with patch("medharness.services.cr_generation._run_claude") as mock_claude:
+            mock_claude.return_value = (0, "done")
+            generate_spec("CR-011", dhf)
+        # JSON is written from whatever front-matter was parsed (missing fields are absent).
+        json_path = spec_path.with_suffix(".json")
+        assert json_path.exists()
+
+    def test_response_includes_spec_json_path(self, tmp_path):
+        dhf = self._dhf(tmp_path)
+        spec_path = tmp_path / "docs" / "cr-specs" / "CR-012-Spec.md"
+        spec_path.parent.mkdir(parents=True)
+        spec_path.write_text(self._valid_spec_content("CR-012"), encoding="utf-8")
+        with patch("medharness.services.cr_generation._run_claude") as mock_claude:
+            mock_claude.return_value = (0, "done")
+            result = generate_spec("CR-012", dhf)
+        assert result["spec_json_path"] is not None
+        assert result["spec_json_path"].endswith(".json")
+
+    def test_spec_json_path_is_none_when_no_spec_file(self, tmp_path):
+        dhf = self._dhf(tmp_path)
+        # Claude writes nothing — spec file never gets created.
+        with patch("medharness.services.cr_generation._run_claude") as mock_claude:
+            mock_claude.return_value = (0, "")
+            result = generate_spec("CR-013", dhf)
+        assert result["spec_json_path"] is None
 
 
 # ── generate_design ───────────────────────────────────────────────────────────
@@ -449,6 +493,44 @@ class TestGenerateDesign:
         mock_fb.assert_called_once_with(42)
         prompt = mock_claude.call_args_list[0][0][0]
         assert "review feedback" in prompt.lower()
+
+    def test_design_prompt_includes_spec_json_when_json_exists(self, tmp_path):
+        dhf = tmp_path / "DHF"
+        dhf.mkdir()
+        # Write a JSON companion alongside a (non-existent) spec .md
+        spec_json = tmp_path / "docs" / "cr-specs" / "CR-099-Spec.json"
+        spec_json.parent.mkdir(parents=True)
+        import json as _json
+        spec_json.write_text(
+            _json.dumps({
+                "cr_id": "CR-099",
+                "direction_fit": "in-scope",
+                "affected_items": ["SYS-001"],
+                "proposed_new_items": [],
+                "design_impact_summary": "Injection test.",
+                "test_plan": {"auto_covered": [], "needs_new_tc": [], "must_be_manual": []},
+            }),
+            encoding="utf-8",
+        )
+        with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
+             patch("medharness.services.design_validation.validate_design",
+                   return_value=[]):
+            mock_claude.return_value = (0, "")
+            generate_design("CR-099", dhf)
+        prompt = mock_claude.call_args_list[0][0][0]
+        assert "Pre-computed Spec Summary" in prompt
+        assert "direction_fit" in prompt
+
+    def test_design_prompt_omits_injection_when_json_missing(self, tmp_path):
+        dhf = tmp_path / "DHF"
+        dhf.mkdir()
+        with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
+             patch("medharness.services.design_validation.validate_design",
+                   return_value=[]):
+            mock_claude.return_value = (0, "")
+            generate_design("CR-098", dhf)
+        prompt = mock_claude.call_args_list[0][0][0]
+        assert "Pre-computed Spec Summary" not in prompt
 
 
 # ── generate_code ─────────────────────────────────────────────────────────────
