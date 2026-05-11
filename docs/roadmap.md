@@ -135,13 +135,85 @@ Why this matters:
 
 ## Near-Term Priorities
 
-If the project stays aligned with its current DHF-focused direction, the highest-value public priorities are likely:
+If the project stays aligned with its current DHF-focused direction, the
+highest-value near-term work breaks down into a few concrete phases.
 
-1. clearer DHF item and traceability workflows across CR stages
-2. stronger approval and review gates for AI-assisted changes
-3. better support for complex software changes that touch code, DHF artifacts, and evidence together
-4. stronger linkage between requirements, risks, verification, and generated evidence
-5. easier adoption for software teams using Git- and CI-based development
+### Phase 1: Complete the Analysis Loop
+
+The immediate goal is to make CR analysis output reliably machine-readable and
+easier for downstream stages to consume.
+
+Priority areas:
+
+- companion structured artifacts alongside Markdown specs
+- automated test-plan generation, including clearer criteria for what must
+  remain manual
+- explicit machine-readable approval signals for stage advancement
+
+This phase maps most directly to:
+
+- more structured CR outputs
+- stronger approval and review gates
+
+### Phase 2: Closed-Loop Implementation for Complex CRs
+
+Once the analysis loop is stronger, the next step is handling larger,
+cross-cutting changes more reliably.
+
+Priority areas:
+
+- documenting real human intervention points on non-trivial WebTPS CRs so the
+  next automation layer is based on observed gaps, not assumptions
+- tighter coupling of implementation changes, DHF item updates, and
+  traceability in one working branch
+- moving validation earlier so issues are caught before a PR is opened
+
+This phase maps most directly to:
+
+- better support for complex changes
+
+### Phase 3: Risk Management as a First-Class Workflow
+
+After the core CR loop is stronger, the next major gap is deeper risk
+integration.
+
+Priority areas:
+
+- identifying which risk items are affected during CR analysis
+- adding stronger CI checks for risk-to-requirement and risk-to-verification
+  coverage
+- validating the approach against real WebTPS risk management needs
+
+This phase maps most directly to:
+
+- stronger risk and verification flows
+
+### Phase 4: Adoption and Ecosystem
+
+Longer term, the project becomes more useful when teams can adopt pieces of it
+incrementally and connect it to their existing stack.
+
+Priority areas:
+
+- reducing friction around test-result integration for common software stacks
+- improving `dhfkit` as a more polished standalone dependency
+- supporting bridge patterns where MedHarness coexists with incumbent eQMS or
+  ALM systems
+
+This phase maps most directly to:
+
+- better adoption paths
+
+## Benchmark
+
+The clearest benchmark for whether the positioning is real is this:
+
+- from a GitHub issue to a compliant merged PR with a full DHF trail in under
+  30 minutes
+- for a non-trivial change
+- reliably
+- on WebTPS
+- observable in one automation run
 
 ## What the Project Should Likely Avoid
 
