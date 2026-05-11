@@ -44,6 +44,7 @@ affected_items:
 proposed_new_items:
   - type: SRS
     title: "Brief title of new item"
+design_impact_summary: "..."   # 1-2 sentences summarizing overall design impact
 test_plan:
   auto_covered:
     - TC-SYS-012-001

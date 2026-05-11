@@ -198,6 +198,17 @@ def generate_spec(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> d
             _run_claude(fix_prompt)
             errors = validate_spec(spec_path, cr_id, dhf_path)
 
+    # Write JSON companion regardless of residual errors.
+    spec_json_path: str | None = None
+    if spec_path.exists():
+        from medharness.services.spec_validation import (  # noqa: PLC0415
+            parse_spec_frontmatter,
+            write_spec_json,
+        )
+        fm = parse_spec_frontmatter(spec_path)
+        if fm is not None:
+            spec_json_path = str(write_spec_json(spec_path, fm))
+
     review_prompt = _augment_review_prompt(_assemble_review_spec_prompt(cr_id), errors)
     _run_claude(review_prompt)
 
@@ -208,7 +219,7 @@ def generate_spec(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> d
         started_perf=started_perf,
         corrections=corrections,
         errors=errors,
-        extra={"spec_path": str(spec_path)},
+        extra={"spec_path": str(spec_path), "spec_json_path": spec_json_path},
     )
 
 
@@ -265,6 +276,15 @@ def generate_design(cr_id: str, dhf_path: Path, pr_number: int | None = None) ->
         )
     else:
         prompt = _assemble_design_prompt(cr_id)
+        from medharness.services.spec_validation import read_spec_json  # noqa: PLC0415
+        spec_json = read_spec_json(spec_path)
+        if spec_json:
+            prompt = prompt + (
+                f"\n\n## Pre-computed Spec Summary (from {cr_id}-Spec.json)\n"
+                "The following structured data was extracted from the approved spec. "
+                "Use it directly — do not re-read or re-interpret the Markdown spec.\n"
+                f"```json\n{json.dumps(spec_json, indent=2)}\n```\n"
+            )
 
     _run_claude(prompt)
 

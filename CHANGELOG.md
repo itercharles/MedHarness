@@ -9,6 +9,36 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ---
 
+## [0.3.6] — 2026-05-11
+
+### Changes
+
+- `ci analyze-cr` now emits a companion `CR-NNN-Spec.json` alongside the
+  Markdown spec. The JSON contains every machine-readable front-matter field
+  and is read by downstream validators in preference to re-parsing Markdown.
+  The `ci analyze-cr` stdout payload gains `spec_json_path` (absolute path
+  to the JSON file, or `null` if Claude wrote no spec file).
+
+- Two new required front-matter fields are added to CR specs:
+  - `proposed_new_items` — list of `{type, title}` dicts describing DHF items
+    the design stage should create. `[]` is valid when no new items are needed.
+  - `design_impact_summary` — a non-empty string (1–2 sentences) summarising
+    the overall design impact. Required so the summary is machine-readable
+    rather than buried in Markdown prose.
+
+  Existing specs that lack these fields will fail `validate_spec` and trigger
+  the self-correction loop, prompting Claude to add them.
+
+- `ci design-cr` injects the full `CR-NNN-Spec.json` content as a structured
+  block at the top of the design prompt (non-revision mode only). Claude no
+  longer needs to re-parse the Markdown spec to identify affected or proposed
+  items — the structured data is explicit in the prompt.
+
+- `validate_spec`, `write_spec_json`, and `read_spec_json` are now public
+  symbols in `medharness.services.spec_validation`.
+
+---
+
 ## [0.3.5] — 2026-05-10
 
 ### Changes

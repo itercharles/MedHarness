@@ -5,22 +5,22 @@
 
 ## Context
 
-CompliantFlow previously operated as two repos (`CompliantFlow` + `CompliantFlow-DHF`).
-`compliantflow init` cloned `CompliantFlow-DHF` at runtime. The separate repo
+MedHarness previously operated as two repos (`CompliantFlow` + `CompliantFlow-DHF`).
+`medharness init` previously cloned `CompliantFlow-DHF` at runtime. The separate repo
 added complexity for contributors and made scaffolding depend on an external
 Git remote.
 
 ## Decision
 
-Merge `CompliantFlow-DHF` into `CompliantFlow`:
-- `dhf_util/` bundled in the same wheel alongside `compliantflow/`
-- `compliantflow init` scaffolds from bundled `dhf_util/templates/`
-- No separate `dhf_util` pip package; install via `pip install compliantflow`
+Merge the former DHF companion repo into the main MedHarness repository:
+- `dhfkit/` is bundled in the same wheel alongside `medharness/`
+- `medharness init` scaffolds from bundled `dhfkit/templates/`
+- the DHF engine ships with `pip install medharness`
 
 ## Consequences
 
 - Single checkout for contributors; both CLIs available after `pip install -e .`
 - `init` has no network dependency; always uses bundled templates
-- User DHF repos no longer contain `dhf_util/`, `pyproject.toml`, or engine source
-- `pip install dhf_util` no longer works; install `compliantflow` instead
-- `from dhf_util import ...` import paths unchanged
+- User DHF repos no longer contain `dhfkit/`, `pyproject.toml`, or engine source
+- the DHF engine is installed through `medharness`
+- `from dhfkit import ...` import paths remain stable

@@ -1,8 +1,15 @@
 """Tests for medharness.services.spec_validation."""
 
+import json
+
 import pytest
 from pathlib import Path
-from medharness.services.spec_validation import parse_spec_frontmatter, validate_spec
+from medharness.services.spec_validation import (
+    parse_spec_frontmatter,
+    read_spec_json,
+    validate_spec,
+    write_spec_json,
+)
 
 
 _VALID_FM = """\
@@ -12,6 +19,7 @@ direction_fit: "in-scope"
 affected_items:
   - SYS-001
 proposed_new_items: []
+design_impact_summary: "This CR updates the focal-point algorithm and adds a new SRS item."
 test_plan:
   auto_covered:
     - TC-SYS-001-001
@@ -121,3 +129,157 @@ def test_validate_all_errors_have_fix(tmp_path):
     errors = validate_spec(path, "CR-001")
     for e in errors:
         assert "fix" in e and e["fix"], f"Error missing fix: {e}"
+
+
+# ── proposed_new_items ───────────────────────────────────────────────────────
+
+def test_validate_missing_proposed_new_items(tmp_path):
+    content = _VALID_FM.replace("proposed_new_items: []\n", "")
+    path = _write_spec(tmp_path, content)
+    errors = validate_spec(path, "CR-001")
+    assert any(e["field"] == "proposed_new_items" for e in errors)
+
+
+def test_validate_proposed_new_items_not_a_list(tmp_path):
+    content = _VALID_FM.replace("proposed_new_items: []", "proposed_new_items: not-a-list")
+    path = _write_spec(tmp_path, content)
+    errors = validate_spec(path, "CR-001")
+    assert any(e["field"] == "proposed_new_items" for e in errors)
+
+
+def test_validate_proposed_new_items_entry_missing_type(tmp_path):
+    content = _VALID_FM.replace(
+        "proposed_new_items: []",
+        "proposed_new_items:\n  - title: 'The system shall...'",
+    )
+    path = _write_spec(tmp_path, content)
+    errors = validate_spec(path, "CR-001")
+    assert any(e["field"] == "proposed_new_items[0].type" for e in errors)
+
+
+def test_validate_proposed_new_items_entry_missing_title(tmp_path):
+    content = _VALID_FM.replace(
+        "proposed_new_items: []",
+        "proposed_new_items:\n  - type: SRS",
+    )
+    path = _write_spec(tmp_path, content)
+    errors = validate_spec(path, "CR-001")
+    assert any(e["field"] == "proposed_new_items[0].title" for e in errors)
+
+
+def test_validate_proposed_new_items_entry_not_a_dict(tmp_path):
+    content = _VALID_FM.replace(
+        "proposed_new_items: []",
+        "proposed_new_items:\n  - just a string",
+    )
+    path = _write_spec(tmp_path, content)
+    errors = validate_spec(path, "CR-001")
+    assert any(e["field"] == "proposed_new_items[0]" for e in errors)
+
+
+def test_validate_proposed_new_items_valid_entry_passes(tmp_path):
+    content = _VALID_FM.replace(
+        "proposed_new_items: []",
+        "proposed_new_items:\n  - type: SRS\n    title: 'The system shall display...'",
+    )
+    path = _write_spec(tmp_path, content)
+    errors = validate_spec(path, "CR-001")
+    assert not any("proposed_new_items" in e["field"] for e in errors)
+
+
+# ── design_impact_summary ────────────────────────────────────────────────────
+
+def test_validate_missing_design_impact_summary(tmp_path):
+    content = _VALID_FM.replace(
+        'design_impact_summary: "This CR updates the focal-point algorithm and adds a new SRS item."\n',
+        "",
+    )
+    path = _write_spec(tmp_path, content)
+    errors = validate_spec(path, "CR-001")
+    assert any(e["field"] == "design_impact_summary" for e in errors)
+
+
+def test_validate_empty_design_impact_summary(tmp_path):
+    content = _VALID_FM.replace(
+        'design_impact_summary: "This CR updates the focal-point algorithm and adds a new SRS item."',
+        'design_impact_summary: ""',
+    )
+    path = _write_spec(tmp_path, content)
+    errors = validate_spec(path, "CR-001")
+    assert any(e["field"] == "design_impact_summary" for e in errors)
+
+
+def test_validate_design_impact_summary_not_string(tmp_path):
+    content = _VALID_FM.replace(
+        'design_impact_summary: "This CR updates the focal-point algorithm and adds a new SRS item."',
+        "design_impact_summary: 42",
+    )
+    path = _write_spec(tmp_path, content)
+    errors = validate_spec(path, "CR-001")
+    assert any(e["field"] == "design_impact_summary" for e in errors)
+
+
+# ── write_spec_json / read_spec_json ─────────────────────────────────────────
+
+def _valid_fm_dict() -> dict:
+    return {
+        "cr_id": "CR-001",
+        "direction_fit": "in-scope",
+        "affected_items": ["SYS-001"],
+        "proposed_new_items": [],
+        "design_impact_summary": "Test summary.",
+        "test_plan": {"auto_covered": [], "needs_new_tc": [], "must_be_manual": []},
+    }
+
+
+def test_write_spec_json_creates_file(tmp_path):
+    spec_path = tmp_path / "CR-001-Spec.md"
+    spec_path.write_text("", encoding="utf-8")
+    write_spec_json(spec_path, _valid_fm_dict())
+    assert (tmp_path / "CR-001-Spec.json").exists()
+
+
+def test_write_spec_json_returns_correct_path(tmp_path):
+    spec_path = tmp_path / "CR-001-Spec.md"
+    spec_path.write_text("", encoding="utf-8")
+    result = write_spec_json(spec_path, _valid_fm_dict())
+    assert result == tmp_path / "CR-001-Spec.json"
+
+
+def test_write_spec_json_writes_all_frontmatter_keys(tmp_path):
+    spec_path = tmp_path / "CR-001-Spec.md"
+    spec_path.write_text("", encoding="utf-8")
+    fm = _valid_fm_dict()
+    write_spec_json(spec_path, fm)
+    written = json.loads((tmp_path / "CR-001-Spec.json").read_text(encoding="utf-8"))
+    assert written == fm
+
+
+def test_read_spec_json_returns_none_when_missing(tmp_path):
+    spec_path = tmp_path / "CR-001-Spec.md"
+    assert read_spec_json(spec_path) is None
+
+
+def test_read_spec_json_returns_dict_when_present(tmp_path):
+    spec_path = tmp_path / "CR-001-Spec.md"
+    spec_path.write_text("", encoding="utf-8")
+    fm = _valid_fm_dict()
+    write_spec_json(spec_path, fm)
+    result = read_spec_json(spec_path)
+    assert result == fm
+
+
+def test_read_spec_json_returns_none_on_invalid_json(tmp_path):
+    spec_path = tmp_path / "CR-001-Spec.md"
+    (tmp_path / "CR-001-Spec.json").write_text("not valid json {{{{", encoding="utf-8")
+    assert read_spec_json(spec_path) is None
+
+
+def test_write_then_read_roundtrip(tmp_path):
+    spec_path = tmp_path / "CR-042-Spec.md"
+    spec_path.write_text("", encoding="utf-8")
+    fm = _valid_fm_dict()
+    fm["cr_id"] = "CR-042"
+    write_spec_json(spec_path, fm)
+    result = read_spec_json(spec_path)
+    assert result == fm

@@ -37,7 +37,7 @@ COMMON_KEYS = {
     "started_at",
     "elapsed_ms",
 }
-SPEC_EXTRA_KEYS = {"spec_path"}
+SPEC_EXTRA_KEYS = {"spec_path", "spec_json_path"}
 DESIGN_EXTRA_KEYS = {"items_changed"}
 DEVELOP_EXTRA_KEYS = {"files_changed"}
 
@@ -77,7 +77,9 @@ class TestGenerateSpecContract:
         spec_path.parent.mkdir(parents=True, exist_ok=True)
         spec_path.write_text(
             f'---\ncr_id: "{cr_id}"\ndirection_fit: "in-scope"\n'
-            'affected_items: []\ntest_plan:\n  auto_covered: []\n'
+            'affected_items: []\nproposed_new_items: []\n'
+            'design_impact_summary: "Test summary."\n'
+            'test_plan:\n  auto_covered: []\n'
             '  needs_new_tc: []\n  must_be_manual: []\n---\n',
             encoding="utf-8",
         )

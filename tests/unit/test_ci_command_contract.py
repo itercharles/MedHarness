@@ -53,7 +53,9 @@ class TestAnalyzeCrJsonContract:
         spec_path.parent.mkdir(parents=True, exist_ok=True)
         spec_path.write_text(
             '---\ncr_id: "CR-001"\ndirection_fit: "in-scope"\n'
-            'affected_items: []\ntest_plan:\n  auto_covered: []\n'
+            'affected_items: []\nproposed_new_items: []\n'
+            'design_impact_summary: "Test summary."\n'
+            'test_plan:\n  auto_covered: []\n'
             '  needs_new_tc: []\n  must_be_manual: []\n---\n',
             encoding="utf-8",
         )
@@ -65,7 +67,7 @@ class TestAnalyzeCrJsonContract:
         payload = _split_stdout_json(r.stdout)
         for key in (
             "cr_id", "stage", "status", "corrections", "validation", "errors",
-            "started_at", "elapsed_ms", "spec_path",
+            "started_at", "elapsed_ms", "spec_path", "spec_json_path",
         ):
             assert key in payload, f"missing {key}; got {sorted(payload)}"
         assert payload["stage"] == "spec"
@@ -75,7 +77,9 @@ class TestAnalyzeCrJsonContract:
         spec_path.parent.mkdir(parents=True, exist_ok=True)
         spec_path.write_text(
             '---\ncr_id: "CR-002"\ndirection_fit: "in-scope"\n'
-            'affected_items: []\ntest_plan:\n  auto_covered: []\n'
+            'affected_items: []\nproposed_new_items: []\n'
+            'design_impact_summary: "Test summary."\n'
+            'test_plan:\n  auto_covered: []\n'
             '  needs_new_tc: []\n  must_be_manual: []\n---\n',
             encoding="utf-8",
         )

@@ -1,138 +1,176 @@
 # Roadmap
 
-## Vision
+## Purpose
 
-Medical device software development is being transformed by AI coding tools. Engineers can now generate implementation code in minutes. But regulatory compliance — the Design History File, traceability, test evidence, design impact analysis — is still maintained by hand.
+This document is the canonical public roadmap for MedHarness.
 
-**CompliantFlow's goal:** make the DHF self-maintaining. Every code change should automatically propagate into the DHF, with humans confirming rather than authoring.
+It describes the project's likely direction and near-term priorities. It is not a delivery commitment. Priorities may change based on contributor capacity, user feedback, and what is learned from real-world use.
 
----
+## Scope
 
-## The Problem We're Solving
+Current framing:
 
-AI coding tools (Claude Code, Cursor, Copilot) dramatically accelerate implementation. But they create a compliance debt: the faster you ship, the further behind your DHF falls. Teams end up in one of two failure modes:
+**MedHarness is Git-native DHF and design-control tooling for medical-device software teams.**
 
-- **Compliance theater** — DHF is maintained separately from code, diverges over time, fails audits
-- **AI paralysis** — teams avoid AI tools because they can't keep the DHF in sync
+This roadmap assumes that MedHarness remains focused on:
 
-Neither is acceptable for a team trying to build a safe, auditable medical device.
+- DHF and design-control execution for software teams
+- traceability, validation, and evidence flows
+- Git- and CI-centered engineering workflows
+- AI-assisted changes with explicit review and approval points
 
----
+This roadmap does not assume that MedHarness becomes:
 
-## The Solution: AI-Native Design Control
+- a full eQMS
+- a company-wide quality operating system
+- a full replacement for broad enterprise ALM platforms
 
-CompliantFlow treats the DHF as a first-class engineering artifact, co-located with code in git, maintained by the same CI/CD pipeline that builds and tests the product.
+That scope keeps the roadmap specific and credible.
 
-The core loop looks like this:
+## Current Strengths
 
-```
-1. Engineer opens an issue
-2. Engineer triages: is this worth doing? (go/no-go)
-3. AI analyzes the issue against the current DHF:
-      - Does this fit the product's commercial and technical direction?
-      - Which existing design items are affected?
-      - What is the proposed implementation approach (based on code analysis)?
-      - What tests are already covered? What requires new or manual tests?
-4. Engineer reviews and approves the plan
-5. AI implements: code changes + DHF updates in a single PR
-6. CI validates traceability and test coverage
-7. On merge: DHF is updated, evidence is generated automatically
-```
+Based on the current repository, MedHarness already provides:
 
-The engineer's job shifts from **authoring compliance documentation** to **reviewing and approving AI-generated plans**.
+- DHF item creation, update, validation, and document generation
+- traceability validation and requirement coverage checks
+- CI commands for DHF validation, test coverage, and evidence bundling
+- AI-assisted CR analysis, design, and development stages
+- a scaffolded single-repo workflow for software teams managing DHF artifacts alongside code
 
----
+These are the capabilities the public roadmap should build on.
 
-## Reference Implementation: WebTPS
+## Public Roadmap Principles
 
-[WebTPS](https://github.com/itercharles/WebTPS) is a medical device web application being developed using CompliantFlow as its compliance infrastructure. It serves as the primary reference implementation and the main driver of CompliantFlow's feature development.
+Future roadmap updates should follow a few simple rules:
 
-Every CompliantFlow feature is validated against the WebTPS workflow before release.
+- describe themes, not promises
+- separate current capabilities from proposed ones
+- avoid exact delivery dates unless the work is already committed
+- prefer `planned`, `proposed`, or `under consideration` over certainty language
+- keep the roadmap aligned with the project's DHF-focused scope
 
----
+## Roadmap Themes
 
-## Current State: v0.1.0
+### 1. More Structured CR Outputs
 
-The infrastructure layer is complete and open-sourced.
+One likely next step is to make CR-stage outputs easier for both humans and automation to consume.
 
-### What works today
+Examples:
 
-| Capability | Status |
-|-----------|--------|
-| `compliantflow init` — scaffold a DHF repo and product repo | ✅ |
-| DHF item CRUD — create, update, transition, list | ✅ |
-| Traceability validation — required links, orphan detection, coverage | ✅ |
-| CI gate — `ci test-coverage` against JUnit evidence | ✅ |
-| CI gate — `ci dhf-validate` structural checks | ✅ |
-| Evidence bundle — specs, plans, traceability JSON, manifest | ✅ |
-| Document generation — Jinja2 → Markdown → PDF (WeasyPrint) | ✅ |
-| Issue → CR intake — `cr intake-github-issue` | ✅ |
-| CR lifecycle — develop → review → completed transitions | ✅ |
-| AI implementation context — `dhf context` | ✅ |
-| Scaffold CI workflows — cr-analyze, cr-develop, cr-transition | ✅ |
-| Claude Code skills — pre-analyze, cr-implement, traceability-check | ✅ |
-| Structured AI analysis — YAML front-matter in spec | ✅ |
-| Computed test plan — JUnit coverage injected into `$DHF_CONTEXT` | ✅ |
-| Structured approval gate — checklist in spec PR + reject on out-of-scope | ✅ |
+- structured machine-readable artifacts alongside Markdown specs
+- more consistent output contracts between analyze, design, and develop stages
+- clearer handoff data between workflow stages
 
-### What's partial
+Why this matters:
 
-| Capability | Gap |
-|-----------|-----|
-| AI design analysis | YAML front-matter works; `cr-analyze.md` prompt enriched; "what needs manual testing" heuristic not yet automated |
-| Test plan generation | `compute_item_coverage` parses JUnit `@links`; manual-testing flag criteria not yet computed |
-| Structured plan approval | Checklist editable via `gh pr edit`; no machine-readable approve/reject gate beyond merge |
+- reduces ambiguity between stages
+- improves automation reliability
+- makes the workflow easier to integrate with other tools
 
----
+### 2. Stronger Approval and Review Gates
 
-## Roadmap
+Another likely area of work is making approval points more explicit and easier to audit.
 
-### Milestone 1: Structured AI Analysis Loop
-*Goal: the AI analysis step produces structured, reviewable output — not just a Markdown comment.*
+Examples:
 
-**CR-A — Structured `cr-analyze` output**
+- clearer machine-readable approval signals
+- better status reporting around staged CR progress
+- stronger enforcement of review checkpoints before downstream automation runs
 
-Replace the free-form Markdown analysis with a structured JSON result containing:
-- `direction_fit`: does this issue align with the product's CRS/UC items?
-- `affected_items`: list of DHF items (SRS, SWDD, RISK) that need updating
-- `proposed_new_items`: DHF items that should be created
-- `design_impact_summary`: human-readable impact statement
+Why this matters:
 
-The structured output feeds downstream steps (test plan, implementation) rather than requiring a human to re-read and re-interpret.
+- improves trust in AI-assisted workflows
+- makes design-control behavior easier to demonstrate
+- aligns better with regulated review expectations
 
-**CR-B — Test plan generation**
+### 3. Better Support for Complex Changes
 
-Given a CR and its affected items, compute:
-- Which existing test cases (via `@links`) already cover the affected requirements
-- Which requirements have no test coverage (need new TCs)
-- Which test scenarios require manual testing (flag criteria: UI interaction, hardware interface, safety-critical path)
+The current workflow is well suited to straightforward changes. A natural next direction is improved handling of larger, multi-file, cross-cutting changes.
 
-Output: a test plan checklist attached to the PR, distinguishing auto-covered vs manual-required items.
+Examples:
 
-**CR-C — Structured approval gate**
+- better structured inputs for implementation stages
+- improved pre-validation before generated changes are proposed
+- more reliable linkage between code changes, DHF items, and evidence
 
-Replace the "read the PR comment and decide" step with a structured checklist that an engineer explicitly approves:
-- [ ] Direction fit confirmed
-- [ ] Affected DHF items reviewed
-- [ ] Test plan accepted
-- [ ] Implementation approach approved
+Why this matters:
 
-Approval triggers the implementation step. Rejection closes the CR with a reason.
+- expands the practical usefulness of the project
+- reduces manual cleanup in more complex workflows
+- makes the end-to-end story stronger for real software teams
 
----
+### 4. Stronger Risk and Verification Flows
 
-### Milestone 2: Closed-Loop Implementation
-*Goal: approved plan → AI implements code and DHF in one atomic operation.*
+MedHarness already includes traceability and coverage concepts. A likely next step is deeper support for risk-aware workflows.
 
-- AI generates code changes and DHF item updates in the same branch
-- DHF items (new SRS, updated SWDD, new test cases) are created automatically
-- Traceability links are wired without manual YAML editing
-- CI validates the result before the PR is opened for human review
+Examples:
 
----
+- better linkage between risk items, requirements, and tests
+- clearer handling for automated versus manual verification evidence
+- stronger reporting around verification completeness
 
-## Contributing
+Why this matters:
 
-If you are building medical device software and want to influence this roadmap, the best way is to open an issue describing your workflow. The more concrete the use case, the more directly it shapes development priorities.
+- improves DHF usefulness
+- strengthens the regulated software story
+- helps teams keep evidence closer to the actual engineering workflow
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for how to get involved.
+### 5. Better Adoption Paths
+
+Open-source adoption improves when the project is easy to try incrementally.
+
+Examples:
+
+- better standalone `dhfkit` guidance
+- improved quickstarts and example projects
+- cleaner bridges to external systems when teams need them
+- reusable tooling for common software stacks
+
+Why this matters:
+
+- lowers trial friction
+- helps teams adopt MedHarness without major process disruption
+- supports both small teams and more mature organizations
+
+## Near-Term Priorities
+
+If the project stays aligned with its current DHF-focused direction, the highest-value public priorities are likely:
+
+1. clearer DHF item and traceability workflows across CR stages
+2. stronger approval and review gates for AI-assisted changes
+3. better support for complex software changes that touch code, DHF artifacts, and evidence together
+4. stronger linkage between requirements, risks, verification, and generated evidence
+5. easier adoption for software teams using Git- and CI-based development
+
+## What the Project Should Likely Avoid
+
+To keep the roadmap clear and credible, MedHarness should avoid framing itself publicly as:
+
+- a full QMS roadmap
+- a broad enterprise ALM replacement roadmap
+- a promise of fully autonomous regulated software development
+
+Those directions are broader than the current project scope and would make the public story less precise.
+
+## Contributor Guidance
+
+Contributors proposing new features should ask:
+
+- Does this strengthen DHF and design-control execution for software teams?
+- Does this improve traceability, validation, or evidence flow?
+- Does this make the Git and CI workflow more usable or more trustworthy?
+- Does this stay within the project's public scope?
+
+If the answer is yes, the proposal is likely aligned.
+
+## Bottom Line
+
+The most useful public roadmap for MedHarness is a focused one:
+
+- improve DHF and traceability workflows inside normal development practice
+- make approval and evidence gates clearer for AI-assisted changes
+- support more realistic software changes across code, documents, and tests
+- improve risk and verification linkage
+- make adoption easier without turning the project into a full QMS
+
+That keeps the roadmap credible, contributor-friendly, and consistent with the project's open-source positioning.
