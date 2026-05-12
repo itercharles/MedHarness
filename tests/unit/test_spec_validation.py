@@ -533,7 +533,6 @@ def test_extract_structured_analysis(tmp_path):
 
 def test_extract_structured_analysis_maps_legacy_direction_fit(tmp_path):
     content = _VALID_FM.replace("disposition: approve\npipeline_route: standard\n", 'direction_fit: "in-scope"\n')
-    content = content.replace('decline_rationale: ""\n', "")
     path = _write_spec(tmp_path, content)
     analysis = extract_structured_analysis(path)
     assert analysis is not None
