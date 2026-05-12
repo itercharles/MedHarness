@@ -35,6 +35,7 @@ Based on the current repository, MedHarness already provides:
 - traceability validation and requirement coverage checks
 - CI commands for DHF validation, test coverage, and evidence bundling
 - AI-assisted CR analysis, design, and development stages
+- machine-readable CR stage and approval status via the CLI
 - a scaffolded single-repo workflow for software teams managing DHF artifacts alongside code
 
 These are the capabilities the public roadmap should build on.
@@ -134,13 +135,65 @@ Why this matters:
 
 ## Near-Term Priorities
 
-If the project stays aligned with its current DHF-focused direction, the highest-value public priorities are likely:
+If the project stays aligned with its current DHF-focused direction, the
+highest-value remaining near-term work breaks down into the following phases.
 
-1. clearer DHF item and traceability workflows across CR stages
-2. stronger approval and review gates for AI-assisted changes
-3. better support for complex software changes that touch code, DHF artifacts, and evidence together
-4. stronger linkage between requirements, risks, verification, and generated evidence
-5. easier adoption for software teams using Git- and CI-based development
+### Recently Completed
+
+The following areas are now implemented and are no longer the primary roadmap
+focus:
+
+- structured CR analysis output, including companion machine-readable spec
+  artifacts and stronger `test_plan` contracts
+- explicit machine-readable approval and stage-status CLI surfaces
+- deterministic preflight validation for design, code, and coupled
+  implementation branches
+- stronger spec-to-design coupling, including validation that proposed DHF
+  items are actually materialized
+
+These completed slices correspond to the earlier Phase 1 and Phase 2 work.
+
+### Phase 3: Risk Management as a First-Class Workflow
+
+With the core CR loop stronger, the next major gap is deeper risk integration.
+
+Priority areas:
+
+- identifying which risk items are affected during CR analysis
+- adding stronger CI checks for risk-to-requirement and risk-to-verification
+  coverage
+- validating the approach against real WebTPS risk management needs
+
+This phase maps most directly to:
+
+- stronger risk and verification flows
+
+### Phase 4: Adoption and Ecosystem
+
+After the core workflow is stronger, the project becomes more useful when teams can adopt pieces of it
+incrementally and connect it to their existing stack.
+
+Priority areas:
+
+- reducing friction around test-result integration for common software stacks
+- improving `dhfkit` as a more polished standalone dependency
+- supporting bridge patterns where MedHarness coexists with incumbent eQMS or
+  ALM systems
+
+This phase maps most directly to:
+
+- better adoption paths
+
+## Benchmark
+
+The clearest benchmark for whether the positioning is real is this:
+
+- from a GitHub issue to a compliant merged PR with a full DHF trail in under
+  30 minutes
+- for a non-trivial change
+- reliably
+- on WebTPS
+- observable in one automation run
 
 ## What the Project Should Likely Avoid
 

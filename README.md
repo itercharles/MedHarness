@@ -78,15 +78,7 @@ my-medical-device/                  # single repo — DHF + source together
 │   │   └── plans/                  # development_plan.md, verification_plan.md, …
 │   └── README.md
 ├── .github/
-│   ├── workflows/
-│   │   ├── engineering-control.yml # main CI: CR validation + coverage gate + evidence
-│   │   ├── cr-analyze.yml          # CR analysis from issues
-│   │   ├── cr-develop.yml          # CR development with AI
-│   │   ├── cr-spec-iterate.yml     # iterate on spec with review feedback
-│   │   ├── cr-transition.yml       # transition CR state in DHF
-│   │   ├── cr-complete.yml         # auto-close CR on PR merge
-│   │   └── review-pr.yml           # AI-assisted PR review
-│   └── prompts/                    # AI prompt templates
+│   └── prompts/                    # optional prompt files for repo-local automation
 ├── tests/                          # product test suite
 ├── CLAUDE.md                       # agent entrypoint
 ├── .gitignore
@@ -107,10 +99,39 @@ git push -u origin main
 
 ---
 
+## Automation Model
+
+MedHarness no longer ships prescribed GitHub workflow files as part of the
+product surface. The stable interface is the CLI.
+
+Use the CLI directly from whichever automation layer you prefer:
+- GitHub Actions
+- GitLab CI
+- Jenkins
+- local scripts
+- internal orchestration systems
+
+Typical entrypoints are:
+
+```bash
+medharness ci dhf-validate --dhf DHF
+medharness ci test-coverage --dhf DHF --junit-dir test-results
+medharness --dhf DHF ci analyze-cr --cr CR-034
+medharness --dhf DHF ci design-cr --cr CR-034
+medharness --dhf DHF ci develop-cr --cr CR-034
+medharness --dhf DHF ci validate-design --cr CR-034
+medharness --dhf DHF ci validate-code --cr CR-034
+medharness --dhf DHF ci validate-branch --cr CR-034
+medharness ci cr-status --cr CR-034 --stage spec --pr 18
+medharness --dhf DHF ci evidence bundle --out-dir artifacts --junit-dir test-results
+medharness ci github-event --event "$GITHUB_EVENT_PATH"
+```
+
 ## How a Change Request flows
 
 Every non-trivial change starts as a **Change Request (CR)** in the DHF.
-CRs move through AI-assisted stages, each gated by human approval:
+CRs move through AI-assisted stages, each gated by human approval. How those
+stages are wired into automation is up to the client repo:
 
 ```
 Issue → CR review → analyze-cr → design-cr → develop-cr → cr-complete
@@ -127,8 +148,27 @@ Issue → CR review → analyze-cr → design-cr → develop-cr → cr-complete
 When a PR receives review feedback, re-run the same command with `--pr N` to
 revise the existing output based on reviewer comments.
 
-The workflow YAML files for each stage are scaffolded by `medharness init` into
-`.github/workflows/`.
+To let external automation decide whether a CR stage is ready to advance,
+use the CLI's machine-readable status surface rather than embedding policy in
+workflow YAML:
+
+```bash
+medharness ci cr-status --cr CR-034 --branch spec/CR-034 --pr 18
+```
+
+To catch deterministic issues before a PR is opened, client automation can run
+the same preflight validators directly:
+
+```bash
+medharness --dhf DHF ci validate-design --cr CR-034
+medharness --dhf DHF ci validate-code --cr CR-034 --since-ref origin/main
+medharness --dhf DHF ci validate-branch --cr CR-034 --since-ref origin/main
+```
+
+`validate-branch` requires the approved spec file to exist for the CR, but it
+does not require a fresh diff to that spec on the implementation branch. That
+matches the normal flow where a `feat/CR-*` branch is cut after the spec has
+already been merged.
 
 ---
 
@@ -314,7 +354,7 @@ items  = adapter.list_items("SRS")
 |-----------|---------|
 | `medharness/` | CLI harness, CI gates, CR workflows, `init` scaffolding |
 | `dhfkit/` | DHF engine: items, lifecycle, traceability, document generation |
-| `dhfkit/templates/` | Starter DHF scaffold — config, specs, plans, sample items, CI workflows |
+| `dhfkit/templates/` | Starter DHF scaffold — config, specs, plans, sample items |
 | `tests/` | MedHarness and dhfkit test suites |
 | `docs/` | Architecture, ADRs, compatibility contracts |
 

@@ -67,7 +67,7 @@ class TestAnalyzeCrJsonContract:
         payload = _split_stdout_json(r.stdout)
         for key in (
             "cr_id", "stage", "status", "corrections", "validation", "errors",
-            "started_at", "elapsed_ms", "spec_path", "spec_json_path",
+            "started_at", "elapsed_ms", "spec_path", "analysis", "spec_json_path",
         ):
             assert key in payload, f"missing {key}; got {sorted(payload)}"
         assert payload["stage"] == "spec"
@@ -149,3 +149,99 @@ class TestDevelopCrJsonContract:
         assert payload["stage"] == "develop"
         for legacy in ("items_created", "items_updated", "files_written"):
             assert legacy not in payload, f"removed key reappeared: {legacy}"
+
+
+class TestValidateDesignJsonContract:
+    def test_json_payload_has_documented_keys(self, dhf):
+        runner = CliRunner()
+        with patch("medharness.services.design_validation.validate_design", return_value=[]):
+            r = runner.invoke(main, ["--dhf", str(dhf), "ci", "validate-design", "--cr", "CR-300"])
+        assert r.exit_code == 0, (r.output, r.stderr)
+        payload = _split_stdout_json(r.stdout)
+        for key in ("cr_id", "stage", "passed", "spec_path", "errors"):
+            assert key in payload, f"missing {key}"
+        assert payload["stage"] == "design"
+        assert payload["passed"] is True
+
+    def test_errors_propagate_and_exit_non_zero(self, dhf):
+        residual = [{"field": "schema", "issue": "x", "fix": "y"}]
+        runner = CliRunner()
+        with patch("medharness.services.design_validation.validate_design", return_value=residual):
+            r = runner.invoke(main, ["--dhf", str(dhf), "ci", "validate-design", "--cr", "CR-301"])
+        assert r.exit_code == 1
+        payload = _split_stdout_json(r.stdout)
+        assert payload["passed"] is False
+        assert payload["errors"] == residual
+
+
+class TestValidateCodeJsonContract:
+    def test_json_payload_has_documented_keys(self, dhf):
+        runner = CliRunner()
+        with patch("medharness.services.code_validation.validate_code", return_value=[]):
+            r = runner.invoke(main, ["--dhf", str(dhf), "ci", "validate-code", "--cr", "CR-400"])
+        assert r.exit_code == 0, (r.output, r.stderr)
+        payload = _split_stdout_json(r.stdout)
+        for key in ("cr_id", "stage", "passed", "spec_path", "since_ref", "errors"):
+            assert key in payload, f"missing {key}"
+        assert payload["stage"] == "develop"
+        assert payload["passed"] is True
+        assert payload["since_ref"] == "origin/main"
+
+    def test_errors_propagate_and_exit_non_zero(self, dhf):
+        residual = [{"field": "test_plan.needs_new_tc", "issue": "x", "fix": "y"}]
+        runner = CliRunner()
+        with patch("medharness.services.code_validation.validate_code", return_value=residual):
+            r = runner.invoke(main, [
+                "--dhf", str(dhf), "ci", "validate-code", "--cr", "CR-401", "--since-ref", "origin/feature-base",
+            ])
+        assert r.exit_code == 1
+        payload = _split_stdout_json(r.stdout)
+        assert payload["passed"] is False
+        assert payload["since_ref"] == "origin/feature-base"
+        assert payload["errors"] == residual
+
+
+class TestValidateBranchJsonContract:
+    def test_json_payload_has_documented_keys(self, dhf):
+        runner = CliRunner()
+        branch_result = {
+            "cr_id": "CR-500",
+            "since_ref": "origin/main",
+            "passed": True,
+            "spec_path": str(dhf.parent / "docs" / "cr-specs" / "CR-500-Spec.md"),
+            "expected_dhf_changes": True,
+            "spec_changes": {"created": [], "updated": ["docs/cr-specs/CR-500-Spec.md"], "deleted": []},
+            "dhf_item_changes": {"created": ["SRS-010"], "updated": [], "deleted": []},
+            "code_changes": {"created": ["apps/client/src/feature.ts"], "updated": [], "deleted": []},
+            "errors": [],
+        }
+        with patch("medharness.services.git.validate_atomic_branch", return_value=branch_result):
+            r = runner.invoke(main, ["--dhf", str(dhf), "ci", "validate-branch", "--cr", "CR-500"])
+        assert r.exit_code == 0, (r.output, r.stderr)
+        payload = _split_stdout_json(r.stdout)
+        for key in (
+            "cr_id", "since_ref", "passed", "spec_path", "expected_dhf_changes",
+            "spec_changes", "dhf_item_changes", "code_changes", "errors",
+        ):
+            assert key in payload, f"missing {key}"
+        assert payload["passed"] is True
+
+    def test_errors_propagate_and_exit_non_zero(self, dhf):
+        branch_result = {
+            "cr_id": "CR-501",
+            "since_ref": "origin/main",
+            "passed": False,
+            "spec_path": str(dhf.parent / "docs" / "cr-specs" / "CR-501-Spec.md"),
+            "expected_dhf_changes": True,
+            "spec_changes": {"created": [], "updated": [], "deleted": []},
+            "dhf_item_changes": {"created": [], "updated": [], "deleted": []},
+            "code_changes": {"created": [], "updated": [], "deleted": []},
+            "errors": [{"field": "code_branch", "issue": "x", "fix": "y"}],
+        }
+        runner = CliRunner()
+        with patch("medharness.services.git.validate_atomic_branch", return_value=branch_result):
+            r = runner.invoke(main, ["--dhf", str(dhf), "ci", "validate-branch", "--cr", "CR-501"])
+        assert r.exit_code == 1
+        payload = _split_stdout_json(r.stdout)
+        assert payload["passed"] is False
+        assert payload["errors"] == [{"field": "code_branch", "issue": "x", "fix": "y"}]

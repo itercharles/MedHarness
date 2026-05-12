@@ -27,9 +27,107 @@ for the versioning policy.
   - `DHF/documents/plans/` (with plan documents)
   - `DHF/items/` (with subdirectories per doc type)
   - `DHF/test-results/`
-  - `.github/workflows/`
-- Writes product repo files: `CLAUDE.md`, `.github/workflows/engineering-control.yml`, `.github/workflows/cr-complete.yml`, `.github/workflows/review-pr.yml`
+- Writes product repo files: `CLAUDE.md`, `.gitignore`
 - Substitutes: `{{project_name}}`, `{{product_repo}}`, `{{product_repo_name}}`, `{{github_org}}`, `{{dhf_repo_name}}`, `{{compliantflow_version}}`, `{{compliantflow_repo}}`, `{{primary_test_tool}}`
+
+#### `medharness ci analyze-cr`
+
+- Writes JSON to stdout with these keys:
+  - `cr_id`
+  - `stage`
+  - `status`
+  - `corrections`
+  - `validation`
+  - `errors`
+  - `started_at`
+  - `elapsed_ms`
+  - `spec_path`
+  - `spec_json_path`
+  - `analysis`
+- `analysis` contains these keys:
+  - `direction_fit`
+  - `affected_items`
+  - `proposed_new_items`
+  - `design_impact_summary`
+  - `test_plan`
+- Uses stderr only for human-readable summaries
+
+#### `medharness ci cr-status`
+
+- Writes JSON to stdout with these keys:
+  - `cr_id`
+  - `pr_number`
+  - `branch_ref`
+  - `stage`
+  - `approval_label`
+  - `approval_state`
+  - `approved`
+- `approval_state` is one of:
+  - `approved`
+  - `pending`
+  - `not_applicable`
+- Uses stderr only for human-readable summaries
+
+#### `medharness ci validate-design`
+
+- Writes JSON to stdout with these keys:
+  - `cr_id`
+  - `stage`
+  - `passed`
+  - `spec_path`
+  - `errors`
+- Uses exit code `0` when `passed` is true, non-zero otherwise
+
+#### `medharness ci validate-code`
+
+- Writes JSON to stdout with these keys:
+  - `cr_id`
+  - `stage`
+  - `passed`
+  - `spec_path`
+  - `since_ref`
+  - `errors`
+- Uses exit code `0` when `passed` is true, non-zero otherwise
+
+#### `medharness ci validate-branch`
+
+- Writes JSON to stdout with these keys:
+  - `cr_id`
+  - `since_ref`
+  - `passed`
+  - `spec_path`
+  - `expected_dhf_changes`
+  - `spec_changes`
+  - `dhf_item_changes`
+  - `code_changes`
+  - `errors`
+- Requires the approved spec file to exist for the CR, but does not require
+  that the implementation branch modify that spec file relative to `since_ref`
+- Uses exit code `0` when `passed` is true, non-zero otherwise
+
+#### `medharness ci github-event`
+
+- Accepts GitHub event payloads from:
+  - `workflow_dispatch`
+  - `pull_request`
+  - `pull_request_review`
+  - `issue_comment`
+  - `repository_dispatch`
+- Writes JSON to stdout with these keys:
+  - `cr_id`
+  - `mode`
+  - `pr_number`
+  - `reason`
+  - `event_name`
+  - `branch_ref`
+  - `review_state`
+  - `merged`
+  - `labels`
+  - `dispatch_stage`
+  - `stage`
+  - `action`
+- Uses caller-supplied mappings to decide `stage` and `action`; MedHarness
+  parses event context but does not hardcode repo lifecycle policy
 
 ### Output Format
 
@@ -144,4 +242,4 @@ testing (unit, integration, contract) instead.
 - Undocumented helper functions and classes
 - Exact wording of starter sample items in templates/items/ (item count and structure are stable, content is not)
 - Test utility code in `tests/`
-- CI workflow internals (as long as gate semantics are preserved)
+- Sample automation wiring around the CLI

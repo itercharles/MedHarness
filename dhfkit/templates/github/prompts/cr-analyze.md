@@ -25,8 +25,10 @@ Determine:
 4. **Test plan**: Read `$DHF_CONTEXT.test_coverage.coverage_by_item` for `auto_covered`
    (item IDs already have linked passing TCs). Read
    `$DHF_CONTEXT.test_coverage.uncovered_requirements` for `needs_new_tc`
-   (items with no TC coverage). Flag any safety-critical paths that
-   `must_be_manual`. Do not guess — use the computed coverage data.
+   (items with no TC coverage). Read
+   `$DHF_CONTEXT.test_coverage.manual_verification_candidates` for structured
+   `must_be_manual` candidates and cite the reported reasons. Do not guess —
+   use the computed coverage data.
 
 ## Phase 3 — Write spec
 

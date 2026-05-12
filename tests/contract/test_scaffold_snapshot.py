@@ -26,7 +26,7 @@ class TestScaffoldStructure:
         "DHF/items",
         "DHF/test-results",
         ".github",
-        ".github/workflows",
+        ".github/prompts",
     ]
 
     CORE_FILES = [
@@ -141,14 +141,14 @@ class TestScaffoldStructure:
         assert not (scaffolded / "pyproject.toml").exists(), "pyproject.toml should not be in generated repo"
         assert not (scaffolded / "medharness").exists(), "medharness/ should not be in generated repo"
 
-    def test_github_workflows_copied(self, scaffolded):
+    def test_github_prompts_copied(self, scaffolded):
         """
-        GitHub Actions workflows are copied to .github/workflows/.
+        Prompt files are copied to .github/prompts/.
 
         """
-        wf_dir = scaffolded / ".github" / "workflows"
-        wfs = list(wf_dir.glob("*.yml"))
-        assert len(wfs) > 0, f"No workflow files found in {wf_dir}"
+        prompt_dir = scaffolded / ".github" / "prompts"
+        prompts = list(prompt_dir.glob("*.md"))
+        assert len(prompts) > 0, f"No prompt files found in {prompt_dir}"
 
     def test_test_results_dir_has_gitkeep(self, scaffolded):
         """

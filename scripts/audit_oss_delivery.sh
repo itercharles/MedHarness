@@ -15,6 +15,15 @@ die_if_missing() {
   done
 }
 
+PYTHON_BIN="${PYTHON_BIN:-}"
+if [ -z "$PYTHON_BIN" ]; then
+  if [ -x ".venv/bin/python" ]; then
+    PYTHON_BIN=".venv/bin/python"
+  else
+    PYTHON_BIN="$(command -v python)"
+  fi
+fi
+
 # ---------------------------------------------------------------------------
 echo "=== 1. SOURCE-TREE DENYLIST ==="
 
@@ -65,11 +74,17 @@ done
 # ---------------------------------------------------------------------------
 echo "=== 2. WHEEL-CONTENT AUDIT ==="
 
-die_if_missing python3
+die_if_missing "$PYTHON_BIN"
 
 WHEEL_DIR="${WHEEL_DIR:-dist}"
-rm -rf "$WHEEL_DIR"
-python3 -m build --wheel 2>/dev/null || { fail "wheel build failed"; }
+rm -rf "$WHEEL_DIR" build
+if "$PYTHON_BIN" -m build --version >/dev/null 2>&1; then
+  "$PYTHON_BIN" -m build --wheel 2>/dev/null || { fail "wheel build failed"; }
+else
+  "$PYTHON_BIN" -m pip wheel . -w "$WHEEL_DIR" --no-deps --no-build-isolation >/dev/null 2>&1 || {
+    fail "wheel build failed"
+  }
+fi
 WHEEL=$(ls "$WHEEL_DIR"/*.whl 2>/dev/null | head -1)
 
 if [ -z "$WHEEL" ]; then
@@ -77,7 +92,7 @@ if [ -z "$WHEEL" ]; then
 else
   pass "wheel built: $WHEEL"
 
-  python3 -c "
+  "$PYTHON_BIN" -c "
 import zipfile, sys
 with zipfile.ZipFile('$WHEEL') as z:
     names = z.namelist()
@@ -88,7 +103,8 @@ banned = [n for n in names if
     'domain/compliance.py' in n or
     '/data/' in n or
     'dhf-template' in n or
-    'governance' in n
+    'governance' in n or
+    'templates/github/workflows/' in n
 ]
 if banned:
     print('FAIL: banned files in wheel:')
@@ -100,7 +116,7 @@ else:
 fi
 
 # Both packages must be present in wheel
-python3 -c "
+"$PYTHON_BIN" -c "
 import zipfile, sys
 with zipfile.ZipFile('$WHEEL') as z:
     names = z.namelist()
@@ -116,6 +132,20 @@ else:
 if not has_templates:
     print('WARN: templates/ missing from wheel (init may fail on installed package)')
 " && pass "wheel contains both packages" || fail "wheel missing packages"
+
+# Workflow templates are no longer part of the release payload.
+"$PYTHON_BIN" -c "
+import zipfile, sys
+with zipfile.ZipFile('$WHEEL') as z:
+    names = z.namelist()
+workflow_templates = [n for n in names if 'templates/github/workflows/' in n]
+if workflow_templates:
+    print('FAIL: workflow templates present in wheel:')
+    for name in workflow_templates:
+        print(f'  {name}')
+    sys.exit(1)
+print('OK: no workflow templates bundled in wheel')
+" && pass "wheel excludes workflow templates" || fail "wheel still bundles workflow templates"
 
 # ---------------------------------------------------------------------------
 echo "=== 3. DEPENDENCY-CONTRACT AUDIT ==="

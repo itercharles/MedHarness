@@ -36,10 +36,16 @@ Read these files:
    Document this in the DHF Impact section of the spec so the design phase
    can act on it directly. Do not create or modify any DHF items — analysis only.
 
-5. Produce the spec at `docs/cr-specs/{{cr_id}}-Spec.md`.
+5. If the runtime provides `$DHF_CONTEXT.test_coverage.manual_verification_candidates`,
+   use those item IDs as the starting point for `test_plan.must_be_manual`
+   instead of guessing. Keep `auto_covered`, `needs_new_tc`, and
+   `must_be_manual` aligned with the machine-readable coverage hints when they
+   are present.
+
+6. Produce the spec at `docs/cr-specs/{{cr_id}}-Spec.md`.
    Keep it short. Do not enumerate hundreds of speculative risks or test cases.
 
-6. Do not modify any file other than `docs/cr-specs/{{cr_id}}-Spec.md`.
+7. Do not modify any file other than `docs/cr-specs/{{cr_id}}-Spec.md`.
 
 ## Spec Format
 
@@ -53,7 +59,7 @@ affected_items:                # existing DHF item IDs this CR touches; [] if no
   - SYS-001
 proposed_new_items:            # DHF items to create in the design stage; [] if none
   - type: SRS
-    title: "The system shall..."
+    title: "Example new requirement title"
 design_impact_summary: "..."   # 1-2 sentences summarizing overall design impact
 test_plan:
   auto_covered:                # items covered by existing automated tests

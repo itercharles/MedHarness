@@ -37,7 +37,7 @@ COMMON_KEYS = {
     "started_at",
     "elapsed_ms",
 }
-SPEC_EXTRA_KEYS = {"spec_path", "spec_json_path"}
+SPEC_EXTRA_KEYS = {"spec_path", "analysis", "spec_json_path"}
 DESIGN_EXTRA_KEYS = {"items_changed"}
 DEVELOP_EXTRA_KEYS = {"files_changed"}
 
@@ -102,6 +102,8 @@ class TestGenerateSpecContract:
         assert isinstance(result["elapsed_ms"], int)
         assert isinstance(result["started_at"], str)
         assert isinstance(result["spec_path"], str)
+        assert isinstance(result["analysis"], dict)
+        assert isinstance(result["spec_json_path"], str)
 
     def test_value_domains(self, dhf):
         self._spec(dhf)
@@ -111,6 +113,13 @@ class TestGenerateSpecContract:
         assert result["stage"] == "spec"
         assert result["status"] in STATUS_VALUES
         assert result["validation"] in VALIDATION_VALUES_SPEC
+        assert set(result["analysis"]) == {
+            "direction_fit",
+            "affected_items",
+            "proposed_new_items",
+            "design_impact_summary",
+            "test_plan",
+        }
 
 
 # ── generate_design ──────────────────────────────────────────────────────────

@@ -1,10 +1,12 @@
 """Tests for medharness.services.spec_validation."""
 
 import json
+from pathlib import Path
 
 import pytest
-from pathlib import Path
+
 from medharness.services.spec_validation import (
+    extract_structured_analysis,
     parse_spec_frontmatter,
     read_spec_json,
     validate_spec,
@@ -19,7 +21,7 @@ direction_fit: "in-scope"
 affected_items:
   - SYS-001
 proposed_new_items: []
-design_impact_summary: "This CR updates the focal-point algorithm and adds a new SRS item."
+design_impact_summary: "Update persistence requirements and tests."
 test_plan:
   auto_covered:
     - TC-SYS-001-001
@@ -37,6 +39,17 @@ def _write_spec(tmp_path: Path, content: str) -> Path:
     p = tmp_path / "CR-001-Spec.md"
     p.write_text(content, encoding="utf-8")
     return p
+
+
+def _valid_fm_dict() -> dict:
+    return {
+        "cr_id": "CR-001",
+        "direction_fit": "in-scope",
+        "affected_items": ["SYS-001"],
+        "proposed_new_items": [],
+        "design_impact_summary": "Test summary.",
+        "test_plan": {"auto_covered": [], "needs_new_tc": [], "must_be_manual": []},
+    }
 
 
 def test_parse_valid_frontmatter(tmp_path):
@@ -95,7 +108,7 @@ def test_validate_invalid_direction_fit(tmp_path):
 
 
 def test_validate_missing_direction_fit(tmp_path):
-    content = _VALID_FM.replace("direction_fit: \"in-scope\"\n", "")
+    content = _VALID_FM.replace('direction_fit: "in-scope"\n', "")
     path = _write_spec(tmp_path, content)
     errors = validate_spec(path, "CR-001")
     assert any(e["field"] == "direction_fit" for e in errors)
@@ -112,27 +125,6 @@ def test_validate_missing_test_plan(tmp_path):
     assert any("test_plan" in e["field"] for e in errors)
 
 
-def test_validate_test_plan_missing_keys(tmp_path):
-    content = _VALID_FM.replace(
-        "test_plan:\n  auto_covered:\n    - TC-SYS-001-001\n  needs_new_tc: []\n  must_be_manual: []",
-        "test_plan:\n  auto_covered: []"
-    )
-    path = _write_spec(tmp_path, content)
-    errors = validate_spec(path, "CR-001")
-    missing_keys = {e["field"] for e in errors}
-    assert "test_plan.needs_new_tc" in missing_keys
-    assert "test_plan.must_be_manual" in missing_keys
-
-
-def test_validate_all_errors_have_fix(tmp_path):
-    path = _write_spec(tmp_path, "---\ncr_id: wrong\n---\n")
-    errors = validate_spec(path, "CR-001")
-    for e in errors:
-        assert "fix" in e and e["fix"], f"Error missing fix: {e}"
-
-
-# ── proposed_new_items ───────────────────────────────────────────────────────
-
 def test_validate_missing_proposed_new_items(tmp_path):
     content = _VALID_FM.replace("proposed_new_items: []\n", "")
     path = _write_spec(tmp_path, content)
@@ -145,6 +137,18 @@ def test_validate_proposed_new_items_not_a_list(tmp_path):
     path = _write_spec(tmp_path, content)
     errors = validate_spec(path, "CR-001")
     assert any(e["field"] == "proposed_new_items" for e in errors)
+
+
+def test_validate_invalid_proposed_new_item_entry(tmp_path):
+    content = _VALID_FM.replace(
+        "proposed_new_items: []",
+        'proposed_new_items:\n  - type: UNKNOWN\n    title: ""',
+    )
+    path = _write_spec(tmp_path, content)
+    errors = validate_spec(path, "CR-001")
+    fields = {e["field"] for e in errors}
+    assert "proposed_new_items[0].type" in fields
+    assert "proposed_new_items[0].title" in fields
 
 
 def test_validate_proposed_new_items_entry_missing_type(tmp_path):
@@ -187,13 +191,8 @@ def test_validate_proposed_new_items_valid_entry_passes(tmp_path):
     assert not any("proposed_new_items" in e["field"] for e in errors)
 
 
-# ── design_impact_summary ────────────────────────────────────────────────────
-
 def test_validate_missing_design_impact_summary(tmp_path):
-    content = _VALID_FM.replace(
-        'design_impact_summary: "This CR updates the focal-point algorithm and adds a new SRS item."\n',
-        "",
-    )
+    content = _VALID_FM.replace('design_impact_summary: "Update persistence requirements and tests."\n', "")
     path = _write_spec(tmp_path, content)
     errors = validate_spec(path, "CR-001")
     assert any(e["field"] == "design_impact_summary" for e in errors)
@@ -201,7 +200,7 @@ def test_validate_missing_design_impact_summary(tmp_path):
 
 def test_validate_empty_design_impact_summary(tmp_path):
     content = _VALID_FM.replace(
-        'design_impact_summary: "This CR updates the focal-point algorithm and adds a new SRS item."',
+        'design_impact_summary: "Update persistence requirements and tests."',
         'design_impact_summary: ""',
     )
     path = _write_spec(tmp_path, content)
@@ -211,7 +210,7 @@ def test_validate_empty_design_impact_summary(tmp_path):
 
 def test_validate_design_impact_summary_not_string(tmp_path):
     content = _VALID_FM.replace(
-        'design_impact_summary: "This CR updates the focal-point algorithm and adds a new SRS item."',
+        'design_impact_summary: "Update persistence requirements and tests."',
         "design_impact_summary: 42",
     )
     path = _write_spec(tmp_path, content)
@@ -219,17 +218,54 @@ def test_validate_design_impact_summary_not_string(tmp_path):
     assert any(e["field"] == "design_impact_summary" for e in errors)
 
 
-# ── write_spec_json / read_spec_json ─────────────────────────────────────────
+def test_validate_test_plan_missing_keys(tmp_path):
+    content = _VALID_FM.replace(
+        "test_plan:\n  auto_covered:\n    - TC-SYS-001-001\n  needs_new_tc: []\n  must_be_manual: []",
+        "test_plan:\n  auto_covered: []",
+    )
+    path = _write_spec(tmp_path, content)
+    errors = validate_spec(path, "CR-001")
+    missing_keys = {e["field"] for e in errors}
+    assert "test_plan.needs_new_tc" in missing_keys
+    assert "test_plan.must_be_manual" in missing_keys
 
-def _valid_fm_dict() -> dict:
-    return {
-        "cr_id": "CR-001",
-        "direction_fit": "in-scope",
-        "affected_items": ["SYS-001"],
-        "proposed_new_items": [],
-        "design_impact_summary": "Test summary.",
-        "test_plan": {"auto_covered": [], "needs_new_tc": [], "must_be_manual": []},
-    }
+
+def test_validate_test_plan_key_must_be_list(tmp_path):
+    content = _VALID_FM.replace(
+        "test_plan:\n  auto_covered:\n    - TC-SYS-001-001\n  needs_new_tc: []\n  must_be_manual: []",
+        'test_plan:\n  auto_covered: "TC-SYS-001-001"\n  needs_new_tc: []\n  must_be_manual: []',
+    )
+    path = _write_spec(tmp_path, content)
+    errors = validate_spec(path, "CR-001")
+    assert any(e["field"] == "test_plan.auto_covered" for e in errors)
+
+
+def test_validate_test_plan_manual_entries_must_be_list(tmp_path):
+    content = _VALID_FM.replace(
+        "test_plan:\n  auto_covered:\n    - TC-SYS-001-001\n  needs_new_tc: []\n  must_be_manual: []",
+        'test_plan:\n  auto_covered: []\n  needs_new_tc: []\n  must_be_manual: "manual check"',
+    )
+    path = _write_spec(tmp_path, content)
+    errors = validate_spec(path, "CR-001")
+    assert any(e["field"] == "test_plan.must_be_manual" for e in errors)
+
+
+def test_validate_all_errors_have_fix(tmp_path):
+    path = _write_spec(tmp_path, "---\ncr_id: wrong\n---\n")
+    errors = validate_spec(path, "CR-001")
+    for error in errors:
+        assert "fix" in error and error["fix"], f"Error missing fix: {error}"
+
+
+def test_extract_structured_analysis(tmp_path):
+    path = _write_spec(tmp_path, _VALID_FM)
+    analysis = extract_structured_analysis(path)
+    assert analysis is not None
+    assert analysis["direction_fit"] == "in-scope"
+    assert analysis["affected_items"] == ["SYS-001"]
+    assert analysis["proposed_new_items"] == []
+    assert analysis["design_impact_summary"] == "Update persistence requirements and tests."
+    assert analysis["test_plan"]["auto_covered"] == ["TC-SYS-001-001"]
 
 
 def test_write_spec_json_creates_file(tmp_path):

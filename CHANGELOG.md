@@ -36,6 +36,42 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 - `validate_spec`, `write_spec_json`, and `read_spec_json` are now public
   symbols in `medharness.services.spec_validation`.
+- `ci analyze-cr` now also emits a structured `analysis` object in stdout,
+  with `direction_fit`, `affected_items`, `proposed_new_items`,
+  `design_impact_summary`, and `test_plan`, so clients do not need to
+  re-parse the spec file for the most common CR-analysis fields.
+
+- Bundled GitHub workflow templates were removed from the shipped scaffold.
+  MedHarness now treats the CLI and Python services as the stable product
+  surface, while repository automation is left to client repos.
+
+- `medharness init` no longer generates `.github/workflows/*`. It still
+  scaffolds DHF content and `.github/prompts/` for repo-local automation.
+
+  Migration:
+  - existing repos that previously copied bundled workflow templates should
+    delete or replace those stale `.github/workflows/*` files explicitly
+  - new or existing repos should move automation logic to thin repo-local
+    wrappers around the CLI (`ci github-event`, `ci validate-design`,
+    `ci validate-code`, `ci validate-branch`, `ci cr-status`)
+
+- `ci github-event` now supports configurable event-to-stage and
+  event-to-action mapping via CLI flags so client repos can layer their own
+  automation without hardcoded MedHarness workflow assumptions.
+
+- New `ci cr-status` command reports machine-readable CR stage and approval
+  status in one JSON payload, so client automation can query whether a PR is
+  approved for its current stage without re-implementing MedHarness label and
+  branch conventions.
+
+- New `ci validate-design` and `ci validate-code` commands expose the existing
+  deterministic design and implementation checks as standalone CLI preflight
+  steps, so client automation can catch schema, traceability, affected-item,
+  and test-annotation issues before opening a PR.
+
+- New `ci validate-branch` command checks that a single branch carries the
+  expected coupled CR change set: the approved spec, product code changes, and
+  DHF item YAML changes when the spec says DHF impact is expected.
 
 ---
 

@@ -18,11 +18,39 @@ from pathlib import Path
 import click
 import medharness._helpers as _h
 from medharness.services.ci import ci_structural_gate, ci_test_coverage_gate
-from medharness.services.github_event import parse_github_event
+from medharness.services.github_event import parse_github_event, plan_github_event
 from medharness.services.github_session import get_session, put_session
 from medharness.services.spec_validation import validate_spec
 
 _ITEM_ID_RE = re.compile(r"^([A-Z]+-\d+)")
+
+
+def _parse_key_value_pairs(
+    values: tuple[str, ...],
+    *,
+    option_name: str,
+    separator: str = "=",
+) -> dict[str, str]:
+    result: dict[str, str] = {}
+    for value in values:
+        if separator not in value:
+            raise click.UsageError(
+                f"Invalid {option_name} value '{value}'. Expected KEY{separator}VALUE."
+            )
+        key, mapped = value.split(separator, 1)
+        key = key.strip()
+        mapped = mapped.strip()
+        if not key or not mapped:
+            raise click.UsageError(
+                f"Invalid {option_name} value '{value}'. Expected KEY{separator}VALUE."
+            )
+        result[key] = mapped
+    return result
+
+
+def _parse_branch_stage_pairs(values: tuple[str, ...]) -> tuple[tuple[str, str], ...]:
+    parsed = _parse_key_value_pairs(values, option_name="--branch-stage")
+    return tuple(parsed.items())
 
 
 def _format_summary(stage_label: str, verb: str, cr_id: str, result: dict) -> str:
@@ -53,6 +81,12 @@ def _format_summary(stage_label: str, verb: str, cr_id: str, result: dict) -> st
             details.append(f"{label}: +{created} ~{updated} -{deleted}")
 
     return f"OK {stage_label} {verb} for {cr_id} ({', '.join(details)})."
+
+
+def _validation_spec_path(dhf_path: Path, cr_id: str, spec_path: Path | None) -> Path:
+    if spec_path is not None:
+        return spec_path
+    return dhf_path.resolve().parent / "docs" / "cr-specs" / f"{cr_id}-Spec.md"
 
 
 def register(main):
@@ -298,34 +332,173 @@ def register(main):
             click.echo(f"    Fix: {e['fix']}", err=True)
         raise click.ClickException(f"Spec validation failed for {cr_id} ({len(errors)} error(s)).")
 
+    @ci.command("validate-design")
+    @click.option("--cr", "cr_id", required=True, metavar="CR_ID")
+    @click.option("--spec", "spec_path", default=None, type=click.Path(path_type=Path),
+                  metavar="PATH", help="Path to spec file (default: docs/cr-specs/<cr_id>-Spec.md)")
+    @click.pass_context
+    def ci_validate_design(ctx: click.Context, cr_id: str, spec_path: Path | None) -> None:
+        """Run deterministic design validation without invoking the AI loop."""
+        from medharness.services.design_validation import validate_design  # noqa: PLC0415
+
+        dhf_path: Path = ctx.obj["dhf"]
+        resolved_spec = _validation_spec_path(dhf_path, cr_id, spec_path)
+        errors = validate_design(cr_id, dhf_path, resolved_spec)
+        payload = {
+            "cr_id": cr_id,
+            "stage": "design",
+            "passed": not errors,
+            "spec_path": str(resolved_spec),
+            "errors": errors,
+        }
+        click.echo(json.dumps(payload))
+        if not errors:
+            click.echo(f"PASS [validate-design] {cr_id}: deterministic checks passed.", err=True)
+            return
+        for error in errors:
+            click.echo(f"FAIL [validate-design] {cr_id} ({error['field']}): {error['issue']}", err=True)
+            click.echo(f"    Fix: {error['fix']}", err=True)
+        raise click.exceptions.Exit(1)
+
+    @ci.command("validate-code")
+    @click.option("--cr", "cr_id", required=True, metavar="CR_ID")
+    @click.option("--spec", "spec_path", default=None, type=click.Path(path_type=Path),
+                  metavar="PATH", help="Path to spec file (default: docs/cr-specs/<cr_id>-Spec.md)")
+    @click.option("--since-ref", default="origin/main", metavar="REF")
+    @click.pass_context
+    def ci_validate_code(ctx: click.Context, cr_id: str, spec_path: Path | None, since_ref: str) -> None:
+        """Run deterministic implementation validation without invoking the AI loop."""
+        from medharness.services.code_validation import validate_code  # noqa: PLC0415
+
+        dhf_path: Path = ctx.obj["dhf"]
+        resolved_spec = _validation_spec_path(dhf_path, cr_id, spec_path)
+        errors = validate_code(cr_id, dhf_path, resolved_spec, since_ref=since_ref)
+        payload = {
+            "cr_id": cr_id,
+            "stage": "develop",
+            "passed": not errors,
+            "spec_path": str(resolved_spec),
+            "since_ref": since_ref,
+            "errors": errors,
+        }
+        click.echo(json.dumps(payload))
+        if not errors:
+            click.echo(f"PASS [validate-code] {cr_id}: deterministic checks passed.", err=True)
+            return
+        for error in errors:
+            click.echo(f"FAIL [validate-code] {cr_id} ({error['field']}): {error['issue']}", err=True)
+            click.echo(f"    Fix: {error['fix']}", err=True)
+        raise click.exceptions.Exit(1)
+
+    @ci.command("validate-branch")
+    @click.option("--cr", "cr_id", required=True, metavar="CR_ID")
+    @click.option("--spec", "spec_path", default=None, type=click.Path(path_type=Path),
+                  metavar="PATH", help="Path to spec file (default: docs/cr-specs/<cr_id>-Spec.md)")
+    @click.option("--since-ref", default="origin/main", metavar="REF")
+    @click.option("--code-path", "code_paths", multiple=True, metavar="PATH",
+                  help="Product-code paths that must carry implementation changes.")
+    @click.pass_context
+    def ci_validate_branch(
+        ctx: click.Context,
+        cr_id: str,
+        spec_path: Path | None,
+        since_ref: str,
+        code_paths: tuple[str, ...],
+    ) -> None:
+        """Validate that a single branch carries the expected coupled CR changes."""
+        from medharness.services.git import validate_atomic_branch  # noqa: PLC0415
+
+        dhf_path: Path = ctx.obj["dhf"]
+        repo_root = dhf_path.resolve().parent
+        resolved_spec = _validation_spec_path(dhf_path, cr_id, spec_path)
+        payload = validate_atomic_branch(
+            repo_root,
+            dhf_path,
+            cr_id,
+            since_ref=since_ref,
+            code_paths=code_paths or ("apps/", "packages/"),
+            spec_path=resolved_spec,
+        )
+        click.echo(json.dumps(payload))
+        if payload["passed"]:
+            click.echo(f"PASS [validate-branch] {cr_id}: branch carries coupled spec, code, and DHF changes.", err=True)
+            return
+        for error in payload["errors"]:
+            click.echo(f"FAIL [validate-branch] {cr_id} ({error['field']}): {error['issue']}", err=True)
+            click.echo(f"    Fix: {error['fix']}", err=True)
+        raise click.exceptions.Exit(1)
+
     # ── GitHub event context ──
 
     @ci.command("github-event")
     @click.option("--event", "event_path", default=None, type=click.Path(exists=True, dir_okay=False, path_type=Path))
     @click.option("--manual-cr", default="", metavar="CR_ID")
+    @click.option("--manual-stage", default="", metavar="STAGE")
+    @click.option("--branch-stage", "branch_stage_values", multiple=True, metavar="PREFIX=STAGE",
+                  help="Infer stage from branch prefix; may be passed multiple times.")
+    @click.option("--stage-label-prefix", default="", metavar="PREFIX",
+                  help="Infer stage from PR labels matching <prefix><stage>.")
+    @click.option("--dispatch-action", "dispatch_action_values", multiple=True, metavar="STAGE=ACTION",
+                  help="Map workflow_dispatch stage inputs to caller-defined actions.")
+    @click.option("--review-action", "review_action_values", multiple=True, metavar="STATE[:STAGE]=ACTION",
+                  help="Map review state or state+stage pairs to caller-defined actions.")
+    @click.option("--pr-action", "pr_action_values", multiple=True, metavar="STATE[:STAGE]=ACTION",
+                  help="Map pull_request states (merged/closed) and optional stages to caller-defined actions.")
+    @click.option("--default-action", default="", metavar="ACTION",
+                  help="Fallback action when no explicit mapping matches.")
     @click.option("--github-output", "github_output_path", default=None, type=click.Path(dir_okay=False, path_type=Path))
     @click.pass_context
     def ci_github_event(ctx: click.Context, event_path: Path | None, manual_cr: str,
+                        manual_stage: str,
+                        branch_stage_values: tuple[str, ...],
+                        stage_label_prefix: str,
+                        dispatch_action_values: tuple[str, ...],
+                        review_action_values: tuple[str, ...],
+                        pr_action_values: tuple[str, ...],
+                        default_action: str,
                         github_output_path: Path | None) -> None:
         """Parse GitHub event payload and output CR context for CI workflow steps.
 
-        Writes cr_id, mode, and pr_number to --github-output (if provided)
-        in $GITHUB_OUTPUT format. Also prints JSON to stdout.
+        The base parser returns CR context. Optional stage/action mappings let a
+        client repo keep lifecycle policy in Python while still choosing its
+        own branch conventions, label scheme, and action names.
         """
         result = parse_github_event(event_path, manual_cr_id=manual_cr)
+        branch_stage_pairs = _parse_branch_stage_pairs(branch_stage_values)
+        dispatch_actions = _parse_key_value_pairs(dispatch_action_values, option_name="--dispatch-action")
+        review_actions = _parse_key_value_pairs(review_action_values, option_name="--review-action")
+        pr_actions = _parse_key_value_pairs(pr_action_values, option_name="--pr-action")
+        plan = plan_github_event(
+            result,
+            branch_stage_pairs=branch_stage_pairs,
+            stage_label_prefix=stage_label_prefix,
+            dispatch_actions=dispatch_actions,
+            review_actions=review_actions,
+            pr_actions=pr_actions,
+            default_action=default_action,
+            manual_stage=manual_stage,
+        )
         payload = {
             "cr_id": result.cr_id,
             "mode": result.mode,
             "pr_number": result.pr_number,
             "reason": result.reason,
+            "event_name": result.event_name,
+            "branch_ref": result.branch_ref,
+            "review_state": result.review_state,
+            "merged": result.merged,
+            "labels": list(result.labels),
+            "dispatch_stage": result.dispatch_stage,
+            "stage": plan.stage,
+            "action": plan.action,
         }
         click.echo(json.dumps(payload, default=str))
 
         if github_output_path:
             with open(github_output_path, "a", encoding="utf-8") as f:
-                for key in ("cr_id", "mode", "pr_number"):
+                for key in ("cr_id", "mode", "pr_number", "stage", "action", "event_name", "branch_ref"):
                     val = payload.get(key)
-                    if val is not None:
+                    if val is not None and val != "":
                         f.write(f"{key}={val}\n")
 
     # ── Claude session ──
@@ -350,6 +523,97 @@ def register(main):
         """Retrieve the last stored Claude session ID from PR comments."""
         session_id = get_session(pr_number, token=token)
         click.echo(session_id)
+
+    # ── Approval gate ──
+
+    @ci.command("approve-gate")
+    @click.option("--cr", "cr_id", required=True, metavar="CR_ID")
+    @click.option("--stage", required=True, type=click.Choice(["spec", "design", "develop"]))
+    @click.option("--pr", "pr_number", required=True, type=int, metavar="N")
+    @click.option("--token", default="", metavar="TOKEN")
+    def ci_approve_gate(cr_id: str, stage: str, pr_number: int, token: str) -> None:
+        """Check whether a CR stage has been explicitly approved via PR label.
+
+        Exits 0 if the stage label is present on the PR, non-zero otherwise.
+        """
+        from medharness.services.pr_approval import check_approved, label_for_stage  # noqa: PLC0415
+        approved = check_approved(pr_number, stage, token=token)
+        label = label_for_stage(stage)
+        payload = {
+            "cr_id": cr_id,
+            "stage": stage,
+            "pr_number": pr_number,
+            "approved": approved,
+            "label": label,
+        }
+        click.echo(json.dumps(payload))
+        if approved:
+            click.echo(f"PASS [{stage}-approve] {cr_id}: label '{label}' found on PR #{pr_number}.", err=True)
+        else:
+            click.echo(f"FAIL [{stage}-approve] {cr_id}: label '{label}' missing on PR #{pr_number}.", err=True)
+            raise click.exceptions.Exit(1)
+
+    @ci.command("cr-status")
+    @click.option("--cr", "cr_id", required=True, metavar="CR_ID")
+    @click.option("--pr", "pr_number", default=None, type=int, metavar="N")
+    @click.option("--stage", default="", type=click.Choice(["", "spec", "design", "develop"]))
+    @click.option("--branch", "branch_ref", default="", metavar="REF")
+    @click.option("--token", default="", metavar="TOKEN")
+    def ci_cr_status(cr_id: str, pr_number: int | None, stage: str, branch_ref: str, token: str) -> None:
+        """Report machine-readable CR stage and approval status.
+
+        The stage may be supplied directly or inferred from a branch ref using
+        the built-in stage prefixes. Approval is only checked when both a PR
+        number and a known stage are available.
+        """
+        from medharness.services.pr_approval import (  # noqa: PLC0415
+            check_approved,
+            label_for_stage,
+            stage_for_branch,
+        )
+
+        resolved_stage = stage or (stage_for_branch(branch_ref) or "")
+        label = label_for_stage(resolved_stage) if resolved_stage else None
+        approved: bool | None = None
+        approval_state = "not_applicable"
+        if pr_number is not None and resolved_stage and label:
+            approved = check_approved(pr_number, resolved_stage, token=token)
+            approval_state = "approved" if approved else "pending"
+
+        payload = {
+            "cr_id": cr_id,
+            "pr_number": pr_number,
+            "branch_ref": branch_ref,
+            "stage": resolved_stage,
+            "approval_label": label,
+            "approval_state": approval_state,
+            "approved": approved,
+        }
+        click.echo(json.dumps(payload))
+
+        details = [f"approval: {approval_state}"]
+        if resolved_stage:
+            details.append(f"stage={resolved_stage}")
+        if label:
+            details.append(f"label={label}")
+        if pr_number is not None:
+            details.append(f"pr=#{pr_number}")
+        click.echo(f"OK CR status for {cr_id} ({', '.join(details)}).", err=True)
+
+    @ci.command("parse-approval")
+    @click.option("--comment", "comment_body", required=True, metavar="TEXT")
+    def ci_parse_approval(comment_body: str) -> None:
+        """Parse a PR comment body for /approve or /reject commands.
+
+        Outputs JSON with action and reason. Useful in CI workflow steps
+        that receive the comment body from the GitHub event payload.
+        """
+        from medharness.services.pr_approval import parse_approval_command  # noqa: PLC0415
+        cmd = parse_approval_command(comment_body)
+        if cmd is None:
+            click.echo(json.dumps({"action": None, "reason": ""}))
+        else:
+            click.echo(json.dumps({"action": cmd.action, "reason": cmd.reason}))
 
     # ── CR generation ──
 

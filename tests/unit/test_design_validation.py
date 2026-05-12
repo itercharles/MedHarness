@@ -10,14 +10,24 @@ import pytest
 from medharness.services.design_validation import validate_design
 
 
-def _write_spec(path: Path, affected: list[str]) -> None:
+def _write_spec(path: Path, affected: list[str], proposed_new_items: list[dict] | None = None) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     affected_yaml = "\n".join(f"  - {uid}" for uid in affected) if affected else " []"
+    proposed = proposed_new_items or []
+    if proposed:
+        proposed_yaml = "\n".join(
+            f"  - type: {item['type']}\n    title: \"{item['title']}\""
+            for item in proposed
+        )
+        proposed_block = f"proposed_new_items:\n{proposed_yaml}\n"
+    else:
+        proposed_block = "proposed_new_items: []\n"
     body = (
         "---\n"
         'cr_id: "CR-001"\n'
         'direction_fit: "in-scope"\n'
         f"affected_items:{(' ' + affected_yaml.lstrip()) if not affected else chr(10) + affected_yaml}\n"
+        f"{proposed_block}"
         "test_plan:\n"
         "  auto_covered: []\n"
         "  needs_new_tc: []\n"
@@ -165,3 +175,27 @@ class TestValidateDesignAffectedItems:
              patch("dhfkit.api.list_items", return_value=[]):
             errors = validate_design("CR-001", dhf, spec)
         assert all(e["field"] != "affected_items" for e in errors)
+
+
+class TestValidateDesignProposedNewItems:
+    def test_missing_proposed_new_item_produces_error(self, repo):
+        dhf, spec = repo
+        _write_spec(spec, [], proposed_new_items=[{"type": "SRS", "title": "New workflow requirement"}])
+        with patch("dhfkit.api.validate_schema", return_value={"valid": True, "errors": []}), \
+             patch("dhfkit.api.validate_traceability", return_value={"passed": True}), \
+             patch("dhfkit.api.list_items", return_value=[{"id": "SYS-001", "type": "SYS", "title": "Existing"}]):
+            errors = validate_design("CR-001", dhf, spec)
+        proposed = [e for e in errors if e["field"] == "proposed_new_items[0]"]
+        assert len(proposed) == 1
+        assert "New workflow requirement" in proposed[0]["issue"]
+
+    def test_existing_proposed_new_item_passes(self, repo):
+        dhf, spec = repo
+        _write_spec(spec, [], proposed_new_items=[{"type": "SRS", "title": "New workflow requirement"}])
+        with patch("dhfkit.api.validate_schema", return_value={"valid": True, "errors": []}), \
+             patch("dhfkit.api.validate_traceability", return_value={"passed": True}), \
+             patch("dhfkit.api.list_items", return_value=[
+                 {"id": "SRS-010", "type": "SRS", "title": "New workflow requirement"},
+             ]):
+            errors = validate_design("CR-001", dhf, spec)
+        assert all(not e["field"].startswith("proposed_new_items") for e in errors)

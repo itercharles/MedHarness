@@ -296,10 +296,16 @@ def compute_item_coverage(
     junit_paths: list[Path],
     adapter=None,
 ) -> dict:
-    """Parse JUnit XML files and return coverage_by_item + uncovered_requirements.
+    """Parse JUnit XML files and return coverage plus manual-verification hints.
 
     Returns:
-        {"computed": True, "coverage_by_item": dict, "uncovered_requirements": dict}
+        {
+          "computed": True,
+          "coverage_by_item": dict,
+          "uncovered_requirements": dict,
+          "manual_verification_candidates": dict,
+          "manual_verification_criteria": dict,
+        }
     """
     from dhfkit.junit_parser import parse_junit_xml
 
@@ -315,10 +321,31 @@ def compute_item_coverage(
 
     uncovered: dict[str, list[str]] = {}
     item_type_map: dict[str, str] = {}
+    manual_candidates: dict[str, dict[str, list[str] | str]] = {}
     if adapter is not None:
         try:
             all_items = adapter.list_items()
             item_type_map = {it["id"]: it.get("type", "") for it in all_items}
+            for item in all_items:
+                reasons: list[str] = []
+                if item.get("critical_safety") is True:
+                    reasons.append("critical_safety")
+
+                verification_method = item.get("verification_method")
+                if isinstance(verification_method, list):
+                    for method in verification_method:
+                        if method in {"Inspection", "Demonstration"}:
+                            reasons.append(f"verification_method:{method}")
+
+                category = item.get("category")
+                if category == "Usability":
+                    reasons.append("category:Usability")
+
+                if reasons:
+                    manual_candidates[item["id"]] = {
+                        "type": item.get("type", ""),
+                        "reasons": reasons,
+                    }
         except Exception:
             pass
 
@@ -334,5 +361,10 @@ def compute_item_coverage(
         "computed": len(junit_paths) > 0,
         "coverage_by_item": coverage_by_item,
         "uncovered_requirements": {k: v for k, v in uncovered.items() if v},
+        "manual_verification_candidates": manual_candidates,
+        "manual_verification_criteria": {
+            "critical_safety": True,
+            "verification_methods": ["Inspection", "Demonstration"],
+            "categories": ["Usability"],
+        },
     }
-
