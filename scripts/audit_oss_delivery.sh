@@ -15,6 +15,46 @@ die_if_missing() {
   done
 }
 
+tree_has_pattern() {
+  local pattern="$1"
+  shift
+  local paths=("$@")
+  if command -v rg >/dev/null 2>&1; then
+    rg -q --include='*.py' --include='*.yml' --include='*.yaml' "$pattern" "${paths[@]}" 2>/dev/null
+    return $?
+  fi
+  find "${paths[@]}" -type f \( -name '*.py' -o -name '*.yml' -o -name '*.yaml' \) -print0 2>/dev/null \
+    | xargs -0 grep -E -q "$pattern" 2>/dev/null
+}
+
+file_has_pattern() {
+  local pattern="$1"
+  local path="$2"
+  if command -v rg >/dev/null 2>&1; then
+    rg -q "$pattern" "$path" 2>/dev/null
+    return $?
+  fi
+  grep -E -q "$pattern" "$path" 2>/dev/null
+}
+
+file_matching_lines() {
+  local pattern="$1"
+  local path="$2"
+  if command -v rg >/dev/null 2>&1; then
+    rg -n "$pattern" "$path" 2>/dev/null || true
+    return 0
+  fi
+  grep -E -n "$pattern" "$path" 2>/dev/null || true
+}
+
+count_matching_lines() {
+  local pattern="$1"
+  if command -v rg >/dev/null 2>&1; then
+    rg -c "$pattern" 2>/dev/null || true
+    return 0
+  fi
+  grep -E -c "$pattern" 2>/dev/null || true
+}
 PYTHON_BIN="${PYTHON_BIN:-}"
 if [ -z "$PYTHON_BIN" ]; then
   if [ -x ".venv/bin/python" ]; then
@@ -27,7 +67,7 @@ fi
 # ---------------------------------------------------------------------------
 echo "=== 1. SOURCE-TREE DENYLIST ==="
 
-die_if_missing find rg
+die_if_missing find grep
 
 BANNED_FILES=(
   "medharness/policy.py"
@@ -64,7 +104,7 @@ BANNED_STRINGS=(
   "medharness.medharness-dhf"
 )
 for s in "${BANNED_STRINGS[@]}"; do
-  if rg -q --include='*.py' --include='*.yml' --include='*.yaml' "$s" medharness/ 2>/dev/null; then
+  if tree_has_pattern "$s" medharness/; then
     fail "banned string in source: '$s'"
   else
     pass "banned string absent from source: '$s'"
@@ -158,7 +198,7 @@ else
 fi
 
 # Init no longer does git clone or pip install -e dhf/
-if rg -q "pip install -e dhf/" medharness/workflows/init.py 2>/dev/null; then
+if file_has_pattern "pip install -e dhf/" medharness/workflows/init.py; then
   fail "init still references pip install -e dhf/ (no longer needed)"
 else
   pass "init does not reference separate dhfkit install"
@@ -177,7 +217,7 @@ else
 fi
 
 # Getting started is now part of README.md
-if rg -q 'pip install' README.md 2>/dev/null; then
+if file_has_pattern 'pip install' README.md; then
   pass "README includes pip install instructions"
 else
   fail "README missing pip install instructions"
@@ -187,28 +227,28 @@ fi
 echo "=== 4. SCAFFOLD-CONTRACT AUDIT ==="
 
 # init must scaffold from local bundled templates, not remote fetch
-if rg -q "_scaffold_dhf|scaffolds from" medharness/workflows/init.py 2>/dev/null; then
+if file_has_pattern "_scaffold_dhf|scaffolds from" medharness/workflows/init.py; then
   pass "init scaffolds DHF from local templates"
 else
   fail "init missing local scaffold logic"
 fi
 
 # init must NOT reference git clone or remote fetch
-if rg -q "git clone|DHF_TEMPLATE_REPO|_fetch_dhf_template" medharness/workflows/init.py 2>/dev/null; then
+if file_has_pattern "git clone|DHF_TEMPLATE_REPO|_fetch_dhf_template" medharness/workflows/init.py; then
   fail "init still references remote DHF fetch"
 else
   pass "init has no remote DHF fetch logic"
 fi
 
 # Generated workflows: no compliance-check
-if rg -q 'ci compliance-check' medharness/workflows/init.py 2>/dev/null; then
+if file_has_pattern 'ci compliance-check' medharness/workflows/init.py; then
   fail "generated workflow references ci compliance-check"
 else
   pass "generated workflows: no compliance-check references"
 fi
 
 # CLAUDE.md template points to existing docs
-if rg -q 'README.md' medharness/workflows/init.py 2>/dev/null; then
+if file_has_pattern 'README.md' medharness/workflows/init.py; then
   pass "CLAUDE.md template references README.md"
 fi
 
@@ -221,9 +261,9 @@ DOC_TARGETS=("README.md")
 # "commercial" are allowed.  Only fail if presented as stable/OSS commands.
 for doc in "${DOC_TARGETS[@]}"; do
   for s in "ci compliance-check" "validate compliance" "report compliance"; do
-    matches=$(rg -n "$s" "$doc" 2>/dev/null || true)
+    matches=$(file_matching_lines "$s" "$doc")
     if [ -n "$matches" ]; then
-      boundary=$(echo "$matches" | rg -c "Commercial|commercial|not part|available internally|future tier" || true)
+      boundary=$(echo "$matches" | count_matching_lines "Commercial|commercial|not part|available internally|future tier")
       total=$(echo "$matches" | wc -l | tr -d ' ')
       if [ "${boundary:-0}" -lt "${total:-1}" ]; then
         fail "$doc: presents '$s' as OSS command"
@@ -233,14 +273,14 @@ for doc in "${DOC_TARGETS[@]}"; do
 done
 
 # No references to separate medharness-dhf clone
-if rg -q "medharness-dhf|MedHarness-DHF" README.md 2>/dev/null; then
+if file_has_pattern "medharness-dhf|MedHarness-DHF" README.md; then
   fail "README references separate MedHarness-DHF repo"
 else
   pass "README does not reference separate MedHarness-DHF repo"
 fi
 
 # WebTPS must not be primary framing
-if head -30 README.md | rg -q "WebTPS" 2>/dev/null; then
+if head -30 README.md | count_matching_lines "WebTPS" | grep -qv '^0$'; then
   fail "README top-level mentions WebTPS"
 else
   pass "WebTPS not in README top-level framing"
@@ -260,14 +300,14 @@ RELEASE_BANNED=(
 )
 
 for s in "${RELEASE_BANNED[@]}"; do
-  if rg -q "$s" "$RELEASE_YML" 2>/dev/null; then
+  if file_has_pattern "$s" "$RELEASE_YML"; then
     fail "release.yml contains banned pattern: '$s'"
   fi
 done
 
 # Release must build + publish wheel only
-if rg -q "build --wheel" "$RELEASE_YML" 2>/dev/null && \
-   rg -q "action-gh-release" "$RELEASE_YML" 2>/dev/null; then
+if file_has_pattern "build --wheel" "$RELEASE_YML" && \
+   file_has_pattern "action-gh-release" "$RELEASE_YML"; then
   pass "release.yml builds wheel and publishes via gh-release"
 else
   fail "release.yml missing build + publish steps"
@@ -278,21 +318,21 @@ echo "=== 7. CI-PIPELINE AUDIT ==="
 
 CI_YML=".github/workflows/ci-pipeline.yml"
 if [ -f "$CI_YML" ]; then
-  if rg -q "ci compliance-check" "$CI_YML" 2>/dev/null; then
+  if file_has_pattern "ci compliance-check" "$CI_YML"; then
     fail "ci-pipeline.yml references ci compliance-check"
   else
     pass "ci-pipeline.yml free of compliance-check"
   fi
 
   # No separate DHF repo checkout — uses bundled dhfkit + example project
-  if rg -q "medharness-dhf|MedHarness-DHF" "$CI_YML" 2>/dev/null; then
+  if file_has_pattern "medharness-dhf|MedHarness-DHF" "$CI_YML"; then
     fail "ci-pipeline.yml references separate MedHarness-DHF repo"
   else
     pass "ci-pipeline.yml uses bundled dhfkit (no separate clone)"
   fi
 
   # Has dhfkit test job
-  if rg -q "tests-dhf-util|dhfkit/tests" "$CI_YML" 2>/dev/null; then
+  if file_has_pattern "tests-dhf-util|dhfkit/tests" "$CI_YML"; then
     pass "ci-pipeline.yml includes dhfkit tests"
   else
     fail "ci-pipeline.yml missing dhfkit test job"
