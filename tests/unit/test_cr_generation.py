@@ -375,6 +375,13 @@ class TestGenerateSpec:
             result = generate_spec("CR-013", dhf)
         assert result["spec_json_path"] is None
 
+    def test_analysis_is_none_when_no_spec_file(self, tmp_path):
+        dhf = self._dhf(tmp_path)
+        with patch("medharness.services.cr_generation._run_claude") as mock_claude:
+            mock_claude.return_value = (0, "")
+            result = generate_spec("CR-014", dhf)
+        assert result["analysis"] is None
+
 
 # ── generate_design ───────────────────────────────────────────────────────────
 

@@ -416,7 +416,7 @@ def register(main):
             dhf_path,
             cr_id,
             since_ref=since_ref,
-            code_paths=code_paths or ("apps/", "packages/"),
+            code_paths=code_paths,
             spec_path=resolved_spec,
         )
         click.echo(json.dumps(payload))

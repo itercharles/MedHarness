@@ -293,6 +293,10 @@ def compute_item_coverage(
 ) -> dict:
     """Parse JUnit XML files and return coverage plus manual-verification hints.
 
+    An item becomes a manual-verification candidate when any of these DHF item
+    fields are set: ``critical_safety == True``, ``verification_method`` contains
+    ``"Inspection"`` or ``"Demonstration"``, or ``category == "Usability"``.
+
     Returns:
         {
           "computed": True,
