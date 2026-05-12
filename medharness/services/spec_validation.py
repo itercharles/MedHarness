@@ -19,6 +19,7 @@ _VALID_DIRECTION_FIT = {"in-scope", "scope-expansion", "out-of-scope"}
 _FM_RE = re.compile(r"^---\n(.*?)\n---", re.DOTALL)
 _VALID_NEW_ITEM_TYPES = {"CRS", "SYS", "SRS", "SYSARCH", "SWDD", "RISK", "RCM", "SOUP", "REL", "DEF", "UC"}
 _VALID_VERIFICATION_METHODS = {"Test", "Inspection", "Analysis", "Demonstration"}
+_VERIFICATION_METHOD_ITEM_TYPES = {"SYS", "SOUP"}
 
 
 def parse_spec_frontmatter(spec_path: Path) -> dict | None:
@@ -186,6 +187,18 @@ def validate_spec(
                         "field": f"proposed_new_items[{idx}].verification_method",
                         "issue": f"Unknown verification_method '{verification_method}'.",
                         "fix": f"Use one of: {', '.join(sorted(_VALID_VERIFICATION_METHODS))}",
+                    })
+                elif isinstance(item_type, str) and item_type not in _VERIFICATION_METHOD_ITEM_TYPES:
+                    errors.append({
+                        "field": f"proposed_new_items[{idx}].verification_method",
+                        "issue": (
+                            f"verification_method is not supported for proposed_new_items "
+                            f"type '{item_type}'."
+                        ),
+                        "fix": (
+                            "Only use verification_method on item types whose schema supports it "
+                            f"({', '.join(sorted(_VERIFICATION_METHOD_ITEM_TYPES))})."
+                        ),
                     })
 
     design_impact_summary = fm.get("design_impact_summary")
