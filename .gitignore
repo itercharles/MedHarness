@@ -51,3 +51,4 @@ examples/DHF/
 .claude/agent-memory/
 .claude/agents/
 .claude/settings.local.json
+.venv

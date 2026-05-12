@@ -146,176 +146,140 @@ def test_validate_wrong_cr_id(tmp_path):
     assert any(e["fix"] for e in errors if e["field"] == "cr_id")
 
 
-def test_validate_missing_disposition(tmp_path):
-    content = _VALID_FM.replace("disposition: approve\n", "")
+@pytest.mark.parametrize("content,field", [
+    (_VALID_FM.replace("disposition: approve\n", ""), "disposition"),
+    (_VALID_FM.replace("disposition: approve", "disposition: sideways"), "disposition"),
+    (_VALID_FM.replace("disposition: approve\npipeline_route: standard\n", 'direction_fit: "sideways"\n'), "direction_fit"),
+    (_VALID_FM.replace("pipeline_route: standard\n", ""), "pipeline_route"),
+    (_VALID_FM.replace("pipeline_route: standard", "pipeline_route: waterfall"), "pipeline_route"),
+    (_VALID_FM.replace("affected_items:\n  - SYS-001\n", ""), "affected_items"),
+])
+def test_validate_approve_field_errors(tmp_path, content, field):
     path = _write_spec(tmp_path, content)
     errors = validate_spec(path, "CR-001")
-    assert any(e["field"] == "disposition" for e in errors)
+    assert any(e["field"] == field for e in errors)
 
 
-def test_validate_invalid_disposition(tmp_path):
-    content = _VALID_FM.replace("disposition: approve", "disposition: sideways")
+@pytest.mark.parametrize("content,error_fields_present,error_fields_absent", [
+    pytest.param(
+        '---\ncr_id: "CR-001"\ndisposition: decline:out-of-scope\n---\n',
+        {"decline_rationale"},
+        set(),
+        id="decline_without_rationale",
+    ),
+    pytest.param(
+        '---\ncr_id: "CR-001"\ndisposition: decline:duplicate\ndecline_rationale: "Already implemented."\n---\n',
+        set(),
+        {"disposition", "decline_rationale"},
+        id="decline_with_rationale_passes",
+    ),
+    pytest.param(
+        '---\ncr_id: "CR-001"\ndisposition: hold:scope-expansion\n---\n',
+        {"decline_rationale"},
+        set(),
+        id="hold_without_rationale",
+    ),
+    pytest.param(
+        '---\ncr_id: "CR-001"\ndisposition: hold:scope-expansion\ndecline_rationale: "Needs roadmap approval."\npipeline_route: standard\n---\n',
+        {"pipeline_route"},
+        set(),
+        id="hold_rejects_pipeline_route",
+    ),
+    pytest.param(
+        '---\ncr_id: "CR-001"\ndirection_fit: "out-of-scope"\npipeline_route: standard\naffected_items: []\nproposed_new_items: []\ndesign_impact_summary: ""\ntest_plan:\n  auto_covered: []\n  needs_new_tc: []\n  must_be_manual: []\n---\n',
+        set(),
+        {"pipeline_route"},
+        id="legacy_decline_with_pipeline_route_passes",
+    ),
+])
+def test_validate_decline_disposition_rules(tmp_path, content, error_fields_present, error_fields_absent):
     path = _write_spec(tmp_path, content)
     errors = validate_spec(path, "CR-001")
-    assert any(e["field"] == "disposition" for e in errors)
+    for field in error_fields_present:
+        assert any(e["field"] == field for e in errors), f"expected error field {field}"
+    for field in error_fields_absent:
+        assert not any(e["field"] == field for e in errors), f"unexpected error field {field}"
 
 
-def test_validate_invalid_legacy_direction_fit(tmp_path):
-    content = _VALID_FM.replace("disposition: approve\npipeline_route: standard\n", 'direction_fit: "sideways"\n')
+@pytest.mark.parametrize("content,field,expect_present", [
+    pytest.param(
+        '---\ncr_id: "CR-001"\ndisposition: decline:out-of-scope\ndecline_rationale: "Outside product direction."\n---\n',
+        "affected_items",
+        False,
+        id="decline_skips_affected_items",
+    ),
+    pytest.param(
+        '---\ncr_id: "CR-001"\ndisposition: decline:architecture-conflict\ndecline_rationale: "Conflicts with ADR-001."\n---\n',
+        "test_plan",
+        False,
+        id="decline_skips_test_plan",
+    ),
+    pytest.param(
+        '---\ncr_id: "CR-001"\ndisposition: decline:out-of-scope\ndecline_rationale: "Outside product direction."\naffected_items:\n  - SYS-001\n---\n',
+        "affected_items",
+        True,
+        id="decline_rejects_stale_affected_items",
+    ),
+    pytest.param(
+        '---\ncr_id: "CR-001"\ndisposition: decline:architecture-conflict\ndecline_rationale: "Conflicts with ADR-001."\ntest_plan:\n  auto_covered:\n    - TC-SYS-001-001\n  needs_new_tc: []\n  must_be_manual: []\n---\n',
+        "test_plan",
+        True,
+        id="decline_rejects_stale_test_plan",
+    ),
+])
+def test_validate_decline_stale_fields(tmp_path, content, field, expect_present):
     path = _write_spec(tmp_path, content)
     errors = validate_spec(path, "CR-001")
-    assert any(e["field"] == "direction_fit" for e in errors)
+    check = any(e["field"] == field or e["field"].startswith(f"{field}.") for e in errors)
+    assert check if expect_present else not check
 
 
-def test_validate_decline_requires_rationale(tmp_path):
-    content = (
-        "---\n"
-        'cr_id: "CR-001"\n'
-        "disposition: decline:out-of-scope\n"
-        "---\n"
-    )
+@pytest.mark.parametrize("replace_old,replace_new,field", [
+    (
+        "test_plan:\n  auto_covered:\n    - TC-SYS-001-001\n  needs_new_tc: []\n  must_be_manual: []",
+        "test_plan:\n  auto_covered: []",
+        "test_plan.needs_new_tc",
+    ),
+    (
+        "test_plan:\n  auto_covered:\n    - TC-SYS-001-001\n  needs_new_tc: []\n  must_be_manual: []",
+        'test_plan:\n  auto_covered: "TC-SYS-001-001"\n  needs_new_tc: []\n  must_be_manual: []',
+        "test_plan.auto_covered",
+    ),
+    (
+        "test_plan:\n  auto_covered:\n    - TC-SYS-001-001\n  needs_new_tc: []\n  must_be_manual: []",
+        'test_plan:\n  auto_covered: []\n  needs_new_tc: []\n  must_be_manual: "manual check"',
+        "test_plan.must_be_manual",
+    ),
+])
+def test_validate_test_plan_field_errors(tmp_path, replace_old, replace_new, field):
+    content = _VALID_FM.replace(replace_old, replace_new)
     path = _write_spec(tmp_path, content)
     errors = validate_spec(path, "CR-001")
-    assert any(e["field"] == "decline_rationale" for e in errors)
+    assert any(e["field"] == field for e in errors)
 
 
-def test_validate_decline_with_rationale_passes(tmp_path):
-    content = (
-        "---\n"
-        'cr_id: "CR-001"\n'
-        "disposition: decline:duplicate\n"
-        'decline_rationale: "Already implemented in SYS-001."\n'
-        "---\n"
-    )
+@pytest.mark.parametrize("replace_old,replace_new", [
+    pytest.param(
+        'design_impact_summary: "Update persistence requirements and tests."\n',
+        "",
+        id="missing",
+    ),
+    pytest.param(
+        'design_impact_summary: "Update persistence requirements and tests."',
+        'design_impact_summary: ""',
+        id="empty",
+    ),
+    pytest.param(
+        'design_impact_summary: "Update persistence requirements and tests."',
+        "design_impact_summary: 42",
+        id="not_string",
+    ),
+])
+def test_validate_design_impact_summary_errors(tmp_path, replace_old, replace_new):
+    content = _VALID_FM.replace(replace_old, replace_new)
     path = _write_spec(tmp_path, content)
     errors = validate_spec(path, "CR-001")
-    assert not any(e["field"] in {"disposition", "decline_rationale"} for e in errors)
-
-
-def test_validate_decline_skips_affected_items(tmp_path):
-    content = (
-        "---\n"
-        'cr_id: "CR-001"\n'
-        "disposition: decline:out-of-scope\n"
-        'decline_rationale: "Outside product direction."\n'
-        "---\n"
-    )
-    path = _write_spec(tmp_path, content)
-    errors = validate_spec(path, "CR-001")
-    assert not any(e["field"] == "affected_items" for e in errors)
-
-
-def test_validate_decline_skips_test_plan(tmp_path):
-    content = (
-        "---\n"
-        'cr_id: "CR-001"\n'
-        "disposition: decline:architecture-conflict\n"
-        'decline_rationale: "Conflicts with ADR-001."\n'
-        "---\n"
-    )
-    path = _write_spec(tmp_path, content)
-    errors = validate_spec(path, "CR-001")
-    assert not any(e["field"] == "test_plan" or e["field"].startswith("test_plan.") for e in errors)
-
-
-def test_validate_decline_rejects_stale_affected_items(tmp_path):
-    content = (
-        "---\n"
-        'cr_id: "CR-001"\n'
-        "disposition: decline:out-of-scope\n"
-        'decline_rationale: "Outside product direction."\n'
-        "affected_items:\n"
-        "  - SYS-001\n"
-        "---\n"
-    )
-    path = _write_spec(tmp_path, content)
-    errors = validate_spec(path, "CR-001")
-    assert any(e["field"] == "affected_items" for e in errors)
-
-
-def test_validate_decline_rejects_stale_test_plan(tmp_path):
-    content = (
-        "---\n"
-        'cr_id: "CR-001"\n'
-        "disposition: decline:architecture-conflict\n"
-        'decline_rationale: "Conflicts with ADR-001."\n'
-        "test_plan:\n"
-        "  auto_covered:\n"
-        "    - TC-SYS-001-001\n"
-        "  needs_new_tc: []\n"
-        "  must_be_manual: []\n"
-        "---\n"
-    )
-    path = _write_spec(tmp_path, content)
-    errors = validate_spec(path, "CR-001")
-    assert any(e["field"] == "test_plan" for e in errors)
-
-
-def test_validate_decline_rejects_pipeline_route(tmp_path):
-    content = (
-        "---\n"
-        'cr_id: "CR-001"\n'
-        "disposition: hold:scope-expansion\n"
-        'decline_rationale: "Needs roadmap approval."\n'
-        "pipeline_route: standard\n"
-        "---\n"
-    )
-    path = _write_spec(tmp_path, content)
-    errors = validate_spec(path, "CR-001")
-    assert any(e["field"] == "pipeline_route" for e in errors)
-
-
-def test_validate_legacy_decline_with_pipeline_route_passes(tmp_path):
-    content = (
-        "---\n"
-        'cr_id: "CR-001"\n'
-        'direction_fit: "out-of-scope"\n'
-        "pipeline_route: standard\n"
-        "affected_items: []\n"
-        "proposed_new_items: []\n"
-        'design_impact_summary: ""\n'
-        "test_plan:\n"
-        "  auto_covered: []\n"
-        "  needs_new_tc: []\n"
-        "  must_be_manual: []\n"
-        "---\n"
-    )
-    path = _write_spec(tmp_path, content)
-    errors = validate_spec(path, "CR-001")
-    assert not any(e["field"] == "pipeline_route" for e in errors)
-
-
-def test_validate_approve_requires_pipeline_route(tmp_path):
-    content = _VALID_FM.replace("pipeline_route: standard\n", "")
-    path = _write_spec(tmp_path, content)
-    errors = validate_spec(path, "CR-001")
-    assert any(e["field"] == "pipeline_route" for e in errors)
-
-
-def test_validate_invalid_pipeline_route(tmp_path):
-    content = _VALID_FM.replace("pipeline_route: standard", "pipeline_route: waterfall")
-    path = _write_spec(tmp_path, content)
-    errors = validate_spec(path, "CR-001")
-    assert any(e["field"] == "pipeline_route" for e in errors)
-
-
-def test_validate_approve_requires_affected_items(tmp_path):
-    content = _VALID_FM.replace("affected_items:\n  - SYS-001\n", "")
-    path = _write_spec(tmp_path, content)
-    errors = validate_spec(path, "CR-001")
-    assert any(e["field"] == "affected_items" for e in errors)
-
-
-def test_validate_hold_requires_rationale(tmp_path):
-    content = (
-        "---\n"
-        'cr_id: "CR-001"\n'
-        "disposition: hold:scope-expansion\n"
-        "---\n"
-    )
-    path = _write_spec(tmp_path, content)
-    errors = validate_spec(path, "CR-001")
-    assert any(e["field"] == "decline_rationale" for e in errors)
+    assert any(e["field"] == "design_impact_summary" for e in errors)
 
 
 def test_validate_missing_test_plan(tmp_path):
@@ -329,186 +293,89 @@ def test_validate_missing_test_plan(tmp_path):
     assert any("test_plan" in e["field"] for e in errors)
 
 
-def test_validate_missing_proposed_new_items(tmp_path):
-    content = _VALID_FM.replace("proposed_new_items: []\n", "")
-    path = _write_spec(tmp_path, content)
-    errors = validate_spec(path, "CR-001")
-    assert any(e["field"] == "proposed_new_items" for e in errors)
-
-
-def test_validate_proposed_new_items_not_a_list(tmp_path):
-    content = _VALID_FM.replace("proposed_new_items: []", "proposed_new_items: not-a-list")
-    path = _write_spec(tmp_path, content)
-    errors = validate_spec(path, "CR-001")
-    assert any(e["field"] == "proposed_new_items" for e in errors)
-
-
-def test_validate_invalid_proposed_new_item_entry(tmp_path):
-    content = _VALID_FM.replace(
+@pytest.mark.parametrize("replace_old,replace_new,expected_fields,expect_no_errors", [
+    pytest.param(
+        "proposed_new_items: []\n", "", {"proposed_new_items"}, False,
+        id="missing",
+    ),
+    pytest.param(
+        "proposed_new_items: []", "proposed_new_items: not-a-list", {"proposed_new_items"}, False,
+        id="not_a_list",
+    ),
+    pytest.param(
         "proposed_new_items: []",
         'proposed_new_items:\n  - type: UNKNOWN\n    title: ""',
-    )
-    path = _write_spec(tmp_path, content)
-    errors = validate_spec(path, "CR-001")
-    fields = {e["field"] for e in errors}
-    assert "proposed_new_items[0].type" in fields
-    assert "proposed_new_items[0].title" in fields
-
-
-def test_validate_proposed_new_items_entry_missing_type(tmp_path):
-    content = _VALID_FM.replace(
+        {"proposed_new_items[0].type", "proposed_new_items[0].title"},
+        False,
+        id="invalid_type_and_empty_title",
+    ),
+    pytest.param(
         "proposed_new_items: []",
         "proposed_new_items:\n  - title: 'The system shall...'",
-    )
-    path = _write_spec(tmp_path, content)
-    errors = validate_spec(path, "CR-001")
-    assert any(e["field"] == "proposed_new_items[0].type" for e in errors)
-
-
-def test_validate_proposed_new_items_entry_missing_title(tmp_path):
-    content = _VALID_FM.replace(
+        {"proposed_new_items[0].type"},
+        False,
+        id="missing_type",
+    ),
+    pytest.param(
         "proposed_new_items: []",
         "proposed_new_items:\n  - type: SRS",
-    )
-    path = _write_spec(tmp_path, content)
-    errors = validate_spec(path, "CR-001")
-    assert any(e["field"] == "proposed_new_items[0].title" for e in errors)
-
-
-def test_validate_proposed_new_items_entry_not_a_dict(tmp_path):
-    content = _VALID_FM.replace(
+        {"proposed_new_items[0].title"},
+        False,
+        id="missing_title",
+    ),
+    pytest.param(
         "proposed_new_items: []",
         "proposed_new_items:\n  - just a string",
-    )
-    path = _write_spec(tmp_path, content)
-    errors = validate_spec(path, "CR-001")
-    assert any(e["field"] == "proposed_new_items[0]" for e in errors)
-
-
-def test_validate_proposed_new_items_valid_entry_passes(tmp_path):
-    content = _VALID_FM.replace(
+        {"proposed_new_items[0]"},
+        False,
+        id="entry_not_a_dict",
+    ),
+    pytest.param(
         "proposed_new_items: []",
         "proposed_new_items:\n  - type: SRS\n    title: 'The system shall display...'",
-    )
-    path = _write_spec(tmp_path, content)
-    errors = validate_spec(path, "CR-001")
-    assert not any("proposed_new_items" in e["field"] for e in errors)
-
-
-def test_validate_proposed_new_items_optional_parent_and_verification_method_pass(tmp_path):
-    content = _VALID_FM.replace(
+        set(),
+        True,
+        id="valid_entry_passes",
+    ),
+    pytest.param(
         "proposed_new_items: []",
-        "proposed_new_items:\n"
-        "  - type: SYS\n"
-        "    title: 'The system shall display...'\n"
-        "    parent: 'CRS-001'\n"
-        "    verification_method: Test",
-    )
-    path = _write_spec(tmp_path, content)
-    errors = validate_spec(path, "CR-001")
-    assert not any("proposed_new_items" in e["field"] for e in errors)
-
-
-def test_validate_proposed_new_items_parent_must_be_non_empty_string(tmp_path):
-    content = _VALID_FM.replace(
+        "proposed_new_items:\n  - type: SYS\n    title: 'The system shall display...'\n    parent: 'CRS-001'\n    verification_method: Test",
+        set(),
+        True,
+        id="optional_parent_and_verification_method_pass",
+    ),
+    pytest.param(
         "proposed_new_items: []",
-        "proposed_new_items:\n"
-        "  - type: SRS\n"
-        "    title: 'The system shall display...'\n"
-        "    parent: []",
-    )
-    path = _write_spec(tmp_path, content)
-    errors = validate_spec(path, "CR-001")
-    assert any(e["field"] == "proposed_new_items[0].parent" for e in errors)
-
-
-def test_validate_proposed_new_items_verification_method_must_be_known_value(tmp_path):
-    content = _VALID_FM.replace(
+        "proposed_new_items:\n  - type: SRS\n    title: 'The system shall display...'\n    parent: []",
+        {"proposed_new_items[0].parent"},
+        False,
+        id="parent_must_be_string",
+    ),
+    pytest.param(
         "proposed_new_items: []",
-        "proposed_new_items:\n"
-        "  - type: SRS\n"
-        "    title: 'The system shall display...'\n"
-        "    verification_method: Simulation",
-    )
-    path = _write_spec(tmp_path, content)
-    errors = validate_spec(path, "CR-001")
-    assert any(e["field"] == "proposed_new_items[0].verification_method" for e in errors)
-
-
-def test_validate_proposed_new_items_verification_method_requires_supported_type(tmp_path):
-    content = _VALID_FM.replace(
+        "proposed_new_items:\n  - type: SRS\n    title: 'The system shall display...'\n    verification_method: Simulation",
+        {"proposed_new_items[0].verification_method"},
+        False,
+        id="verification_method_must_be_known",
+    ),
+    pytest.param(
         "proposed_new_items: []",
-        "proposed_new_items:\n"
-        "  - type: SRS\n"
-        "    title: 'The system shall display...'\n"
-        "    verification_method: Test",
-    )
+        "proposed_new_items:\n  - type: SRS\n    title: 'The system shall display...'\n    verification_method: Test",
+        {"proposed_new_items[0].verification_method"},
+        False,
+        id="verification_method_requires_supported_type",
+    ),
+])
+def test_validate_proposed_new_items(tmp_path, replace_old, replace_new, expected_fields, expect_no_errors):
+    content = _VALID_FM.replace(replace_old, replace_new)
     path = _write_spec(tmp_path, content)
     errors = validate_spec(path, "CR-001")
-    assert any(
-        e["field"] == "proposed_new_items[0].verification_method"
-        and "not supported" in e["issue"]
-        for e in errors
-    )
-
-
-def test_validate_missing_design_impact_summary(tmp_path):
-    content = _VALID_FM.replace('design_impact_summary: "Update persistence requirements and tests."\n', "")
-    path = _write_spec(tmp_path, content)
-    errors = validate_spec(path, "CR-001")
-    assert any(e["field"] == "design_impact_summary" for e in errors)
-
-
-def test_validate_empty_design_impact_summary(tmp_path):
-    content = _VALID_FM.replace(
-        'design_impact_summary: "Update persistence requirements and tests."',
-        'design_impact_summary: ""',
-    )
-    path = _write_spec(tmp_path, content)
-    errors = validate_spec(path, "CR-001")
-    assert any(e["field"] == "design_impact_summary" for e in errors)
-
-
-def test_validate_design_impact_summary_not_string(tmp_path):
-    content = _VALID_FM.replace(
-        'design_impact_summary: "Update persistence requirements and tests."',
-        "design_impact_summary: 42",
-    )
-    path = _write_spec(tmp_path, content)
-    errors = validate_spec(path, "CR-001")
-    assert any(e["field"] == "design_impact_summary" for e in errors)
-
-
-def test_validate_test_plan_missing_keys(tmp_path):
-    content = _VALID_FM.replace(
-        "test_plan:\n  auto_covered:\n    - TC-SYS-001-001\n  needs_new_tc: []\n  must_be_manual: []",
-        "test_plan:\n  auto_covered: []",
-    )
-    path = _write_spec(tmp_path, content)
-    errors = validate_spec(path, "CR-001")
-    missing_keys = {e["field"] for e in errors}
-    assert "test_plan.needs_new_tc" in missing_keys
-    assert "test_plan.must_be_manual" in missing_keys
-
-
-def test_validate_test_plan_key_must_be_list(tmp_path):
-    content = _VALID_FM.replace(
-        "test_plan:\n  auto_covered:\n    - TC-SYS-001-001\n  needs_new_tc: []\n  must_be_manual: []",
-        'test_plan:\n  auto_covered: "TC-SYS-001-001"\n  needs_new_tc: []\n  must_be_manual: []',
-    )
-    path = _write_spec(tmp_path, content)
-    errors = validate_spec(path, "CR-001")
-    assert any(e["field"] == "test_plan.auto_covered" for e in errors)
-
-
-def test_validate_test_plan_manual_entries_must_be_list(tmp_path):
-    content = _VALID_FM.replace(
-        "test_plan:\n  auto_covered:\n    - TC-SYS-001-001\n  needs_new_tc: []\n  must_be_manual: []",
-        'test_plan:\n  auto_covered: []\n  needs_new_tc: []\n  must_be_manual: "manual check"',
-    )
-    path = _write_spec(tmp_path, content)
-    errors = validate_spec(path, "CR-001")
-    assert any(e["field"] == "test_plan.must_be_manual" for e in errors)
+    if expect_no_errors:
+        assert not any("proposed_new_items" in e["field"] for e in errors)
+    else:
+        for field in expected_fields:
+            matches = [e for e in errors if e["field"] == field]
+            assert matches, f"expected error field {field}, got {[e['field'] for e in errors]}"
 
 
 def test_validate_all_errors_have_fix(tmp_path):

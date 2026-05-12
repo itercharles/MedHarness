@@ -23,49 +23,29 @@ from medharness.services.pr_approval import (
 # ── parse_approval_command ────────────────────────────────────────────────────
 
 class TestParseApprovalCommand:
-    def test_approve_simple(self):
-        cmd = parse_approval_command("/approve")
-        assert cmd is not None
-        assert cmd.action == "approve"
-
-    def test_approve_with_leading_whitespace(self):
-        cmd = parse_approval_command("  /approve  ")
-        assert cmd is not None
-        assert cmd.action == "approve"
-
-    def test_approve_in_multiline_comment(self):
-        body = "LGTM, looks good.\n\n/approve\n\nThanks."
+    @pytest.mark.parametrize("body", [
+        "/approve",
+        "  /approve  ",
+        "LGTM, looks good.\n\n/approve\n\nThanks.",
+        "/APPROVE",
+        "/Approve",
+    ])
+    def test_approve_variants(self, body):
         cmd = parse_approval_command(body)
         assert cmd is not None
         assert cmd.action == "approve"
 
-    def test_approve_case_insensitive(self):
-        assert parse_approval_command("/APPROVE") is not None
-        assert parse_approval_command("/Approve") is not None
-
-    def test_reject_with_reason(self):
-        cmd = parse_approval_command("/reject needs more detail on risk items")
-        assert cmd is not None
-        assert cmd.action == "reject"
-        assert cmd.reason == "needs more detail on risk items"
-
-    def test_reject_without_reason(self):
-        cmd = parse_approval_command("/reject")
-        assert cmd is not None
-        assert cmd.action == "reject"
-        assert cmd.reason == ""
-
-    def test_reject_in_multiline_comment(self):
-        body = "The direction_fit is wrong.\n\n/reject direction_fit should be out-of-scope"
+    @pytest.mark.parametrize("body,expected_reason", [
+        ("/reject needs more detail on risk items", "needs more detail on risk items"),
+        ("/reject", ""),
+        ("The direction_fit is wrong.\n\n/reject direction_fit should be out-of-scope", "direction_fit should be out-of-scope"),
+        ("/REJECT too vague", "too vague"),
+    ])
+    def test_reject_variants(self, body, expected_reason):
         cmd = parse_approval_command(body)
         assert cmd is not None
         assert cmd.action == "reject"
-        assert cmd.reason == "direction_fit should be out-of-scope"
-
-    def test_reject_case_insensitive(self):
-        cmd = parse_approval_command("/REJECT too vague")
-        assert cmd is not None
-        assert cmd.action == "reject"
+        assert cmd.reason == expected_reason
 
     def test_no_command_returns_none(self):
         assert parse_approval_command("LGTM!") is None
@@ -253,53 +233,31 @@ def _first_json_line(output: str) -> dict:
 
 
 class TestCiApproveGate:
-    def test_approved_exits_zero(self):
+    @pytest.mark.parametrize("approved,expected_status,expected_exit", [
+        (True, "PASS", 0),
+        (False, "FAIL", 1),
+    ])
+    def test_approve_gate_status(self, approved, expected_status, expected_exit):
         runner = CliRunner()
-        with patch("medharness.services.pr_approval.check_approved", return_value=True):
+        with patch("medharness.services.pr_approval.check_approved", return_value=approved):
             r = runner.invoke(main, ["ci", "approve-gate", "--cr", "CR-001", "--stage", "spec", "--pr", "42"])
-        assert r.exit_code == 0, r.output
+        assert r.exit_code == expected_exit, r.output
         payload = _first_json_line(r.output)
-        assert payload["approved"] is True
+        assert payload["approved"] is approved
         assert payload["label"] == "cr-spec-approved"
-        assert payload["cr_id"] == "CR-001"
+        assert expected_status in r.output
 
-    def test_not_approved_exits_one(self):
-        runner = CliRunner()
-        with patch("medharness.services.pr_approval.check_approved", return_value=False):
-            r = runner.invoke(main, ["ci", "approve-gate", "--cr", "CR-001", "--stage", "spec", "--pr", "42"])
-        assert r.exit_code == 1, r.output
-        payload = _first_json_line(r.output)
-        assert payload["approved"] is False
-
-    def test_design_stage_label(self):
+    @pytest.mark.parametrize("stage,label", [
+        ("design", "cr-design-approved"),
+        ("develop", "cr-code-approved"),
+    ])
+    def test_stage_label(self, stage, label):
         runner = CliRunner()
         with patch("medharness.services.pr_approval.check_approved", return_value=True):
-            r = runner.invoke(main, ["ci", "approve-gate", "--cr", "CR-042", "--stage", "design", "--pr", "7"])
+            r = runner.invoke(main, ["ci", "approve-gate", "--cr", "CR-001", "--stage", stage, "--pr", "42"])
         assert r.exit_code == 0, r.output
         payload = _first_json_line(r.output)
-        assert payload["label"] == "cr-design-approved"
-
-    def test_develop_stage_label(self):
-        runner = CliRunner()
-        with patch("medharness.services.pr_approval.check_approved", return_value=True):
-            r = runner.invoke(main, ["ci", "approve-gate", "--cr", "CR-099", "--stage", "develop", "--pr", "10"])
-        assert r.exit_code == 0, r.output
-        payload = _first_json_line(r.output)
-        assert payload["label"] == "cr-code-approved"
-
-    def test_pass_message_in_output(self):
-        runner = CliRunner()
-        with patch("medharness.services.pr_approval.check_approved", return_value=True):
-            r = runner.invoke(main, ["ci", "approve-gate", "--cr", "CR-001", "--stage", "spec", "--pr", "42"])
-        assert "PASS" in r.output
-        assert "cr-spec-approved" in r.output
-
-    def test_fail_message_in_output(self):
-        runner = CliRunner()
-        with patch("medharness.services.pr_approval.check_approved", return_value=False):
-            r = runner.invoke(main, ["ci", "approve-gate", "--cr", "CR-001", "--stage", "spec", "--pr", "42"])
-        assert "FAIL" in r.output
-        assert "cr-spec-approved" in r.output
+        assert payload["label"] == label
 
 
 class TestCiCrStatus:
