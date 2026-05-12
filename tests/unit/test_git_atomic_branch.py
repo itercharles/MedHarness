@@ -91,7 +91,8 @@ def test_validate_atomic_branch_fails_without_code_changes(tmp_path: Path):
             {"created": [], "updated": ["docs/cr-specs/CR-001-Spec.md"], "deleted": []},
             {"created": [], "updated": [], "deleted": []},
         ]
-        result = validate_atomic_branch(repo_root, dhf, "CR-001")
+        # code_paths must be explicit — the default () skips the code-change check
+        result = validate_atomic_branch(repo_root, dhf, "CR-001", code_paths=("src/",))
 
     assert result["passed"] is False
     assert any(e["field"] == "code_branch" for e in result["errors"])

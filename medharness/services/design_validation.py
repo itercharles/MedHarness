@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from medharness.services.spec_validation import parse_spec_frontmatter, read_spec_json
+from medharness.services.spec_validation import parse_spec_frontmatter
 
 
 def validate_design(
@@ -121,7 +121,7 @@ def validate_design(
                 })
 
     # --- Affected items present -------------------------------------------------
-    fm = read_spec_json(spec_path) or parse_spec_frontmatter(spec_path)
+    fm = parse_spec_frontmatter(spec_path)
     if fm:
         try:
             listed_items = _api.list_items(dhf_path)

@@ -5,7 +5,7 @@ from __future__ import annotations
 import subprocess
 from pathlib import Path
 
-from medharness.services.spec_validation import parse_spec_frontmatter, read_spec_json
+from medharness.services.spec_validation import parse_spec_frontmatter
 
 
 def collect_path_changes(
@@ -80,22 +80,29 @@ def validate_atomic_branch(
     cr_id: str,
     *,
     since_ref: str = "origin/main",
-    code_paths: tuple[str, ...] = ("apps/", "packages/"),
+    code_paths: tuple[str, ...] = (),
     spec_path: Path | None = None,
 ) -> dict:
     """Validate that a branch carries the coupled change set a CR expects.
 
     This is a deterministic branch-level contract for single-repo product
-    setups: implementation branches should carry product code changes, DHF item
-    changes when the approved spec expects them, and a readable approved spec
-    file for the CR. The spec file may already be present on ``since_ref``.
+    setups: implementation branches should carry DHF item changes when the
+    approved spec expects them, and a readable approved spec file for the CR.
+    The spec file may already be present on ``since_ref``.
+
+    When ``code_paths`` is non-empty the validator also asserts that at least
+    one file under those paths changed. Pass project-specific paths via
+    ``--code-path`` on the CLI (e.g. ``src/``, ``lib/``); omitting the option
+    skips the code-change check entirely.
     """
     resolved_spec = spec_path or (repo_root / "docs" / "cr-specs" / f"{cr_id}-Spec.md")
     spec_changed = collect_path_changes(repo_root, since_ref, str(resolved_spec.relative_to(repo_root)))
     dhf_item_changes = collect_dhf_item_changes(repo_root, since_ref)
-    code_changes = collect_path_changes(repo_root, since_ref, *code_paths)
+    code_changes = collect_path_changes(repo_root, since_ref, *code_paths) if code_paths else {
+        "created": [], "updated": [], "deleted": [],
+    }
 
-    fm = read_spec_json(resolved_spec) or parse_spec_frontmatter(resolved_spec) or {}
+    fm = parse_spec_frontmatter(resolved_spec) or {}
     affected = fm.get("affected_items") if isinstance(fm.get("affected_items"), list) else []
     proposed = fm.get("proposed_new_items") if isinstance(fm.get("proposed_new_items"), list) else []
 
@@ -110,7 +117,7 @@ def validate_atomic_branch(
             "fix": "Merge or generate the approved spec for this CR before validating the implementation branch.",
         })
 
-    if code_change_count == 0:
+    if code_paths and code_change_count == 0:
         errors.append({
             "field": "code_branch",
             "issue": f"No product code changes found under {', '.join(code_paths)} since {since_ref}.",
