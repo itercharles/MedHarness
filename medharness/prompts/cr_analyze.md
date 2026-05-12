@@ -96,7 +96,7 @@ The spec MUST begin with this YAML front-matter (machine-read by CI):
 cr_id: "{{cr_id}}"
 disposition: approve           # see disposition guide above
 pipeline_route: standard       # standard|dhf-only|doc-only|test-only — only when disposition: approve
-decline_rationale: ""          # required when disposition is not approve; leave "" when approve
+decline_rationale: ""          # required when disposition is not approve; omit when approve
 affected_items: []             # existing DHF item IDs this CR touches — only when approved
 proposed_new_items: []         # DHF items to create — only when approved
 design_impact_summary: "..."   # 1-2 sentences — only when approved

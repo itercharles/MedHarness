@@ -76,7 +76,7 @@ class TestGenerateSpecContract:
         spec_path = dhf.parent / "docs" / "cr-specs" / f"{cr_id}-Spec.md"
         spec_path.parent.mkdir(parents=True, exist_ok=True)
         spec_path.write_text(
-            f'---\ncr_id: "{cr_id}"\ndisposition: approve\npipeline_route: standard\ndecline_rationale: ""\n'
+            f'---\ncr_id: "{cr_id}"\ndisposition: approve\npipeline_route: standard\n'
             'affected_items: []\nproposed_new_items: []\n'
             'design_impact_summary: "Test summary."\n'
             'test_plan:\n  auto_covered: []\n'

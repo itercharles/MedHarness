@@ -21,7 +21,6 @@ disposition: approve
 pipeline_route: standard
 affected_items:
   - SYS-001
-decline_rationale: ""
 proposed_new_items: []
 design_impact_summary: "Update persistence requirements and tests."
 test_plan:
@@ -48,7 +47,6 @@ def _valid_fm_dict() -> dict:
         "cr_id": "CR-001",
         "disposition": "approve",
         "pipeline_route": "standard",
-        "decline_rationale": "",
         "affected_items": ["SYS-001"],
         "proposed_new_items": [],
         "design_impact_summary": "Test summary.",
@@ -83,10 +81,48 @@ def test_validate_valid_spec(tmp_path):
 
 def test_validate_legacy_direction_fit_spec_passes(tmp_path):
     content = _VALID_FM.replace("disposition: approve\npipeline_route: standard\n", 'direction_fit: "in-scope"\n')
-    content = content.replace('decline_rationale: ""\n', "")
     path = _write_spec(tmp_path, content)
     errors = validate_spec(path, "CR-001")
     assert errors == []
+
+
+def test_validate_legacy_out_of_scope_with_empty_affected_items_passes(tmp_path):
+    content = (
+        "---\n"
+        'cr_id: "CR-001"\n'
+        'direction_fit: "out-of-scope"\n'
+        "affected_items: []\n"
+        "proposed_new_items: []\n"
+        'design_impact_summary: ""\n'
+        "test_plan:\n"
+        "  auto_covered: []\n"
+        "  needs_new_tc: []\n"
+        "  must_be_manual: []\n"
+        "---\n"
+    )
+    path = _write_spec(tmp_path, content)
+    errors = validate_spec(path, "CR-001")
+    assert not any(e["field"] == "affected_items" for e in errors)
+
+
+def test_validate_legacy_out_of_scope_with_non_empty_affected_items_passes(tmp_path):
+    content = (
+        "---\n"
+        'cr_id: "CR-001"\n'
+        'direction_fit: "out-of-scope"\n'
+        "affected_items:\n"
+        "  - SYS-001\n"
+        "proposed_new_items: []\n"
+        'design_impact_summary: ""\n'
+        "test_plan:\n"
+        "  auto_covered: []\n"
+        "  needs_new_tc: []\n"
+        "  must_be_manual: []\n"
+        "---\n"
+    )
+    path = _write_spec(tmp_path, content)
+    errors = validate_spec(path, "CR-001")
+    assert not any(e["field"] == "affected_items" for e in errors)
 
 
 def test_validate_missing_file(tmp_path):
@@ -126,7 +162,6 @@ def test_validate_invalid_disposition(tmp_path):
 
 def test_validate_invalid_legacy_direction_fit(tmp_path):
     content = _VALID_FM.replace("disposition: approve\npipeline_route: standard\n", 'direction_fit: "sideways"\n')
-    content = content.replace('decline_rationale: ""\n', "")
     path = _write_spec(tmp_path, content)
     errors = validate_spec(path, "CR-001")
     assert any(e["field"] == "direction_fit" for e in errors)
@@ -228,6 +263,26 @@ def test_validate_decline_rejects_pipeline_route(tmp_path):
     path = _write_spec(tmp_path, content)
     errors = validate_spec(path, "CR-001")
     assert any(e["field"] == "pipeline_route" for e in errors)
+
+
+def test_validate_legacy_decline_with_pipeline_route_passes(tmp_path):
+    content = (
+        "---\n"
+        'cr_id: "CR-001"\n'
+        'direction_fit: "out-of-scope"\n'
+        "pipeline_route: standard\n"
+        "affected_items: []\n"
+        "proposed_new_items: []\n"
+        'design_impact_summary: ""\n'
+        "test_plan:\n"
+        "  auto_covered: []\n"
+        "  needs_new_tc: []\n"
+        "  must_be_manual: []\n"
+        "---\n"
+    )
+    path = _write_spec(tmp_path, content)
+    errors = validate_spec(path, "CR-001")
+    assert not any(e["field"] == "pipeline_route" for e in errors)
 
 
 def test_validate_approve_requires_pipeline_route(tmp_path):
@@ -469,7 +524,7 @@ def test_extract_structured_analysis(tmp_path):
     assert analysis is not None
     assert analysis["disposition"] == "approve"
     assert analysis["pipeline_route"] == "standard"
-    assert analysis["decline_rationale"] == ""
+    assert analysis["decline_rationale"] is None
     assert analysis["affected_items"] == ["SYS-001"]
     assert analysis["proposed_new_items"] == []
     assert analysis["design_impact_summary"] == "Update persistence requirements and tests."

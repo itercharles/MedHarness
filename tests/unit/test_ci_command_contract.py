@@ -52,7 +52,7 @@ class TestAnalyzeCrJsonContract:
         spec_path = dhf.parent / "docs" / "cr-specs" / "CR-001-Spec.md"
         spec_path.parent.mkdir(parents=True, exist_ok=True)
         spec_path.write_text(
-            '---\ncr_id: "CR-001"\ndisposition: approve\npipeline_route: standard\ndecline_rationale: ""\n'
+            '---\ncr_id: "CR-001"\ndisposition: approve\npipeline_route: standard\n'
             'affected_items: []\nproposed_new_items: []\n'
             'design_impact_summary: "Test summary."\n'
             'test_plan:\n  auto_covered: []\n'
@@ -76,7 +76,7 @@ class TestAnalyzeCrJsonContract:
         spec_path = dhf.parent / "docs" / "cr-specs" / "CR-002-Spec.md"
         spec_path.parent.mkdir(parents=True, exist_ok=True)
         spec_path.write_text(
-            '---\ncr_id: "CR-002"\ndisposition: approve\npipeline_route: standard\ndecline_rationale: ""\n'
+            '---\ncr_id: "CR-002"\ndisposition: approve\npipeline_route: standard\n'
             'affected_items: []\nproposed_new_items: []\n'
             'design_impact_summary: "Test summary."\n'
             'test_plan:\n  auto_covered: []\n'

@@ -57,6 +57,7 @@ def _is_empty_approval_field(value: object) -> bool:
     if isinstance(value, list):
         return len(value) == 0
     if isinstance(value, dict):
+        # A dict with all-empty values, such as an empty-list test_plan, is neutral.
         return all(_is_empty_approval_field(v) for v in value.values())
     return False
 
@@ -154,9 +155,9 @@ def validate_spec(
     effective_disp = _effective_disposition(fm)
     is_approved = effective_disp == "approve"
 
-    if effective_disp and not is_approved:
+    if disp and not is_approved:
         rat = fm.get("decline_rationale")
-        if disp and (not rat or not isinstance(rat, str)):
+        if not rat or not isinstance(rat, str):
             errors.append({
                 "field": "decline_rationale",
                 "issue": "decline_rationale is required when disposition is not approve.",

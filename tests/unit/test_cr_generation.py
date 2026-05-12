@@ -246,7 +246,7 @@ class TestGenerateSpec:
 
     def _valid_spec_content(self, cr_id: str) -> str:
         return (
-            f'---\ncr_id: "{cr_id}"\ndisposition: approve\npipeline_route: standard\ndecline_rationale: ""\n'
+            f'---\ncr_id: "{cr_id}"\ndisposition: approve\npipeline_route: standard\n'
             'affected_items: []\nproposed_new_items: []\n'
             'design_impact_summary: "Test summary."\n'
             'test_plan:\n  auto_covered: []\n  needs_new_tc: []\n  must_be_manual: []\n---\n'
@@ -549,7 +549,6 @@ class TestGenerateDesign:
                 "cr_id": "CR-099",
                 "disposition": "approve",
                 "pipeline_route": "standard",
-                "decline_rationale": "",
                 "affected_items": ["SYS-001"],
                 "proposed_new_items": [{
                     "type": "SRS",
