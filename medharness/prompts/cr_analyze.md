@@ -32,6 +32,12 @@ Read these files:
    existing items of that type and identify:
    - Which existing items are touched or need updating
    - What new items need to be created, with their proposed title and content
+   - When you can determine the direct DHF parent for a proposed new item,
+     include it as `parent` (for example `SYS-001` for a new `SRS` item)
+   - When the CR makes the verification approach clear, include
+     `verification_method` as one of `Test`, `Inspection`, `Analysis`, or
+     `Demonstration`, but only for proposed item types whose schema supports
+     that field today (`SYS` and `SOUP`)
 
    Document this in the DHF Impact section of the spec so the design phase
    can act on it directly. Do not create or modify any DHF items — analysis only.
@@ -58,8 +64,10 @@ direction_fit: in-scope        # one of: in-scope | scope-expansion | out-of-sco
 affected_items:                # existing DHF item IDs this CR touches; [] if none
   - SYS-001
 proposed_new_items:            # DHF items to create in the design stage; [] if none
-  - type: SRS
+  - type: SYS
     title: "Example new requirement title"
+    parent: "CRS-001"         # optional direct parent DHF item ID
+    verification_method: Test  # optional, only for SYS/SOUP today
 design_impact_summary: "..."   # 1-2 sentences summarizing overall design impact
 test_plan:
   auto_covered:                # items covered by existing automated tests

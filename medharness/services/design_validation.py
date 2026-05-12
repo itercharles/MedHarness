@@ -154,6 +154,13 @@ def validate_design(
 
         proposed = fm.get("proposed_new_items")
         if isinstance(proposed, list) and proposed:
+            by_type_title_to_item = {
+                (
+                    str(item.get("type", "") or ""),
+                    str(item.get("title", "") or "").strip(),
+                ): item
+                for item in listed_items
+            }
             by_type_title = {
                 (
                     str(item.get("type", "") or ""),
@@ -179,6 +186,30 @@ def validate_design(
                             f"Create a new {item_type} item with title '{title}', or "
                             "remove/update the proposed_new_items entry in the spec if "
                             "the plan changed."
+                        ),
+                    })
+                    continue
+
+                parent = str(item.get("parent", "") or "").strip()
+                if not parent:
+                    continue
+                created_item = by_type_title_to_item.get((item_type, title)) or {}
+                # all_linked_uids is populated by dhfkit.api.list_items() — it contains
+                # every item ID reachable via any link field on the item. If this key is
+                # absent (older dhfkit or item type that omits it), linked_ids is empty
+                # and the parent check fires as a false positive. Keep in sync with dhfkit.
+                linked_ids = set(created_item.get("all_linked_uids") or [])
+                if parent not in linked_ids:
+                    errors.append({
+                        "field": f"proposed_new_items[{idx}].parent",
+                        "issue": (
+                            f"Spec proposes '{title}' ({item_type}) with parent '{parent}', "
+                            "but the created DHF item is not linked to that parent."
+                        ),
+                        "fix": (
+                            f"Update the created {item_type} item titled '{title}' so it links "
+                            f"to '{parent}', or remove/update the spec parent field if the "
+                            "relationship changed."
                         ),
                     })
 

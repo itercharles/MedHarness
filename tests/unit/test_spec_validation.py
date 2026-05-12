@@ -191,6 +191,63 @@ def test_validate_proposed_new_items_valid_entry_passes(tmp_path):
     assert not any("proposed_new_items" in e["field"] for e in errors)
 
 
+def test_validate_proposed_new_items_optional_parent_and_verification_method_pass(tmp_path):
+    content = _VALID_FM.replace(
+        "proposed_new_items: []",
+        "proposed_new_items:\n"
+        "  - type: SYS\n"
+        "    title: 'The system shall display...'\n"
+        "    parent: 'CRS-001'\n"
+        "    verification_method: Test",
+    )
+    path = _write_spec(tmp_path, content)
+    errors = validate_spec(path, "CR-001")
+    assert not any("proposed_new_items" in e["field"] for e in errors)
+
+
+def test_validate_proposed_new_items_parent_must_be_non_empty_string(tmp_path):
+    content = _VALID_FM.replace(
+        "proposed_new_items: []",
+        "proposed_new_items:\n"
+        "  - type: SRS\n"
+        "    title: 'The system shall display...'\n"
+        "    parent: []",
+    )
+    path = _write_spec(tmp_path, content)
+    errors = validate_spec(path, "CR-001")
+    assert any(e["field"] == "proposed_new_items[0].parent" for e in errors)
+
+
+def test_validate_proposed_new_items_verification_method_must_be_known_value(tmp_path):
+    content = _VALID_FM.replace(
+        "proposed_new_items: []",
+        "proposed_new_items:\n"
+        "  - type: SRS\n"
+        "    title: 'The system shall display...'\n"
+        "    verification_method: Simulation",
+    )
+    path = _write_spec(tmp_path, content)
+    errors = validate_spec(path, "CR-001")
+    assert any(e["field"] == "proposed_new_items[0].verification_method" for e in errors)
+
+
+def test_validate_proposed_new_items_verification_method_requires_supported_type(tmp_path):
+    content = _VALID_FM.replace(
+        "proposed_new_items: []",
+        "proposed_new_items:\n"
+        "  - type: SRS\n"
+        "    title: 'The system shall display...'\n"
+        "    verification_method: Test",
+    )
+    path = _write_spec(tmp_path, content)
+    errors = validate_spec(path, "CR-001")
+    assert any(
+        e["field"] == "proposed_new_items[0].verification_method"
+        and "not supported" in e["issue"]
+        for e in errors
+    )
+
+
 def test_validate_missing_design_impact_summary(tmp_path):
     content = _VALID_FM.replace('design_impact_summary: "Update persistence requirements and tests."\n', "")
     path = _write_spec(tmp_path, content)
