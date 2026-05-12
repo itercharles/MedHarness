@@ -19,6 +19,7 @@ _VALID_DIRECTION_FIT = {"in-scope", "scope-expansion", "out-of-scope"}
 _FM_RE = re.compile(r"^---\n(.*?)\n---", re.DOTALL)
 _VALID_NEW_ITEM_TYPES = {"CRS", "SYS", "SRS", "SYSARCH", "SWDD", "RISK", "RCM", "SOUP", "REL", "DEF", "UC"}
 _VALID_VERIFICATION_METHODS = {"Test", "Inspection", "Analysis", "Demonstration"}
+# Update this set when dhfkit adds verification_method support to additional item types.
 _VERIFICATION_METHOD_ITEM_TYPES = {"SYS", "SOUP"}
 
 

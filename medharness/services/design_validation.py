@@ -194,6 +194,10 @@ def validate_design(
                 if not parent:
                     continue
                 created_item = by_type_title_to_item.get((item_type, title)) or {}
+                # all_linked_uids is populated by dhfkit.api.list_items() — it contains
+                # every item ID reachable via any link field on the item. If this key is
+                # absent (older dhfkit or item type that omits it), linked_ids is empty
+                # and the parent check fires as a false positive. Keep in sync with dhfkit.
                 linked_ids = set(created_item.get("all_linked_uids") or [])
                 if parent not in linked_ids:
                     errors.append({

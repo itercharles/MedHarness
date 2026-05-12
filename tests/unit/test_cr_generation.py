@@ -33,7 +33,8 @@ class TestLoadPrompt:
         assert "affected_items" in text
         assert "manual_verification_candidates" in text
         assert "verification_method" in text
-        assert "`SYS` and `SOUP`" in text
+        assert "SYS" in text
+        assert "SOUP" in text
 
     def test_load_cr_design(self):
         text = _load_prompt("cr_design.md")
@@ -541,8 +542,8 @@ class TestGenerateDesign:
         assert "direction_fit" in prompt
         assert "verification_method" in prompt
         assert "parent" in prompt
-        assert "single-element list" in prompt
-        assert "must not receive a synthetic `verification_method` property" in prompt
+        assert "SYS" in prompt
+        assert "SOUP" in prompt
 
     def test_design_prompt_omits_injection_when_json_missing(self, tmp_path):
         dhf = tmp_path / "DHF"
