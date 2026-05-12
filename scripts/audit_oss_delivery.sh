@@ -55,7 +55,6 @@ count_matching_lines() {
   fi
   grep -E -c "$pattern" 2>/dev/null || true
 }
-
 PYTHON_BIN="${PYTHON_BIN:-}"
 if [ -z "$PYTHON_BIN" ]; then
   if [ -x ".venv/bin/python" ]; then
