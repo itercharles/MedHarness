@@ -32,6 +32,7 @@ class TestLoadPrompt:
         assert "{{cr_id}}" in text
         assert "affected_items" in text
         assert "manual_verification_candidates" in text
+        assert "verification_method" in text
 
     def test_load_cr_design(self):
         text = _load_prompt("cr_design.md")
@@ -518,7 +519,12 @@ class TestGenerateDesign:
                 "cr_id": "CR-099",
                 "direction_fit": "in-scope",
                 "affected_items": ["SYS-001"],
-                "proposed_new_items": [],
+                "proposed_new_items": [{
+                    "type": "SRS",
+                    "title": "New workflow requirement",
+                    "parent": "SYS-001",
+                    "verification_method": "Test",
+                }],
                 "design_impact_summary": "Injection test.",
                 "test_plan": {"auto_covered": [], "needs_new_tc": [], "must_be_manual": []},
             }),
@@ -532,6 +538,8 @@ class TestGenerateDesign:
         prompt = mock_claude.call_args_list[0][0][0]
         assert "Pre-computed Spec Summary" in prompt
         assert "direction_fit" in prompt
+        assert "verification_method" in prompt
+        assert "parent" in prompt
 
     def test_design_prompt_omits_injection_when_json_missing(self, tmp_path):
         dhf = tmp_path / "DHF"

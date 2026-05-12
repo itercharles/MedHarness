@@ -292,6 +292,9 @@ def generate_design(cr_id: str, dhf_path: Path, pr_number: int | None = None) ->
                 f"\n\n## Pre-computed Spec Summary (from {cr_id}-Spec.json)\n"
                 "The following structured data was extracted from the approved spec. "
                 "Use it directly — do not re-read or re-interpret the Markdown spec.\n"
+                "For each proposed_new_items entry, preserve any explicit `parent` "
+                "and `verification_method` values when creating the DHF item so the "
+                "design output matches the approved spec metadata.\n"
                 f"```json\n{json.dumps(spec_json, indent=2)}\n```\n"
             )
 

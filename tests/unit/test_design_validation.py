@@ -16,7 +16,17 @@ def _write_spec(path: Path, affected: list[str], proposed_new_items: list[dict] 
     proposed = proposed_new_items or []
     if proposed:
         proposed_yaml = "\n".join(
-            f"  - type: {item['type']}\n    title: \"{item['title']}\""
+            "".join(
+                [
+                    f"  - type: {item['type']}\n",
+                    f"    title: \"{item['title']}\"",
+                    f"\n    parent: \"{item['parent']}\"" if item.get("parent") else "",
+                    (
+                        f"\n    verification_method: {item['verification_method']}"
+                        if item.get("verification_method") else ""
+                    ),
+                ]
+            )
             for item in proposed
         )
         proposed_block = f"proposed_new_items:\n{proposed_yaml}\n"
@@ -199,3 +209,40 @@ class TestValidateDesignProposedNewItems:
              ]):
             errors = validate_design("CR-001", dhf, spec)
         assert all(not e["field"].startswith("proposed_new_items") for e in errors)
+
+    def test_proposed_new_item_parent_link_is_required_when_declared(self, repo):
+        dhf, spec = repo
+        _write_spec(spec, [], proposed_new_items=[{
+            "type": "SRS",
+            "title": "New workflow requirement",
+            "parent": "SYS-001",
+        }])
+        with patch("dhfkit.api.validate_schema", return_value={"valid": True, "errors": []}), \
+             patch("dhfkit.api.validate_traceability", return_value={"passed": True}), \
+             patch("dhfkit.api.list_items", return_value=[
+                 {"id": "SRS-010", "type": "SRS", "title": "New workflow requirement", "all_linked_uids": []},
+             ]):
+            errors = validate_design("CR-001", dhf, spec)
+        parent_errors = [e for e in errors if e["field"] == "proposed_new_items[0].parent"]
+        assert len(parent_errors) == 1
+        assert "SYS-001" in parent_errors[0]["issue"]
+
+    def test_proposed_new_item_parent_link_passes_when_present(self, repo):
+        dhf, spec = repo
+        _write_spec(spec, [], proposed_new_items=[{
+            "type": "SRS",
+            "title": "New workflow requirement",
+            "parent": "SYS-001",
+        }])
+        with patch("dhfkit.api.validate_schema", return_value={"valid": True, "errors": []}), \
+             patch("dhfkit.api.validate_traceability", return_value={"passed": True}), \
+             patch("dhfkit.api.list_items", return_value=[
+                 {
+                     "id": "SRS-010",
+                     "type": "SRS",
+                     "title": "New workflow requirement",
+                     "all_linked_uids": ["SYS-001"],
+                 },
+             ]):
+            errors = validate_design("CR-001", dhf, spec)
+        assert all(e["field"] != "proposed_new_items[0].parent" for e in errors)

@@ -18,6 +18,7 @@ from pathlib import Path
 _VALID_DIRECTION_FIT = {"in-scope", "scope-expansion", "out-of-scope"}
 _FM_RE = re.compile(r"^---\n(.*?)\n---", re.DOTALL)
 _VALID_NEW_ITEM_TYPES = {"CRS", "SYS", "SRS", "SYSARCH", "SWDD", "RISK", "RCM", "SOUP", "REL", "DEF", "UC"}
+_VALID_VERIFICATION_METHODS = {"Test", "Inspection", "Analysis", "Demonstration"}
 
 
 def parse_spec_frontmatter(spec_path: Path) -> dict | None:
@@ -165,6 +166,27 @@ def validate_spec(
                     "issue": "proposed_new_items entry is missing a title.",
                     "fix": "Add a concise title describing the proposed new DHF item.",
                 })
+            parent = item.get("parent")
+            if parent is not None and (not isinstance(parent, str) or not parent.strip()):
+                errors.append({
+                    "field": f"proposed_new_items[{idx}].parent",
+                    "issue": "proposed_new_items parent must be a non-empty string when provided.",
+                    "fix": "Set parent to an existing DHF item ID such as SYS-001, or omit it.",
+                })
+            verification_method = item.get("verification_method")
+            if verification_method is not None:
+                if not isinstance(verification_method, str) or not verification_method.strip():
+                    errors.append({
+                        "field": f"proposed_new_items[{idx}].verification_method",
+                        "issue": "proposed_new_items verification_method must be a non-empty string when provided.",
+                        "fix": "Use one of: Test, Inspection, Analysis, Demonstration, or omit the field.",
+                    })
+                elif verification_method not in _VALID_VERIFICATION_METHODS:
+                    errors.append({
+                        "field": f"proposed_new_items[{idx}].verification_method",
+                        "issue": f"Unknown verification_method '{verification_method}'.",
+                        "fix": f"Use one of: {', '.join(sorted(_VALID_VERIFICATION_METHODS))}",
+                    })
 
     design_impact_summary = fm.get("design_impact_summary")
     if not isinstance(design_impact_summary, str) or not design_impact_summary.strip():
