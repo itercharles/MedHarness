@@ -246,7 +246,7 @@ class TestGenerateSpec:
 
     def _valid_spec_content(self, cr_id: str) -> str:
         return (
-            f'---\ncr_id: "{cr_id}"\ndirection_fit: "in-scope"\n'
+            f'---\ncr_id: "{cr_id}"\ndisposition: approve\npipeline_route: standard\ndecline_rationale: ""\n'
             'affected_items: []\nproposed_new_items: []\n'
             'design_impact_summary: "Test summary."\n'
             'test_plan:\n  auto_covered: []\n  needs_new_tc: []\n  must_be_manual: []\n---\n'
@@ -266,9 +266,37 @@ class TestGenerateSpec:
         assert result["errors"] == []
         for key in ("spec_path", "analysis", "spec_json_path", "corrections", "validation", "started_at", "elapsed_ms"):
             assert key in result, f"missing key: {key}"
-        assert result["analysis"]["direction_fit"] == "in-scope"
+        assert result["analysis"]["disposition"] == "approve"
+        assert result["analysis"]["pipeline_route"] == "standard"
         assert result["analysis"]["proposed_new_items"] == []
         assert result["spec_json_path"] == str(spec_path.with_suffix(".json"))
+
+    def test_analysis_includes_disposition(self, tmp_path):
+        dhf = self._dhf(tmp_path)
+        spec_path = tmp_path / "docs" / "cr-specs" / "CR-001-Spec.md"
+        spec_path.parent.mkdir(parents=True)
+        spec_path.write_text(self._valid_spec_content("CR-001"), encoding="utf-8")
+        with patch("medharness.services.cr_generation._run_claude", return_value=(0, "done")):
+            result = generate_spec("CR-001", dhf)
+        assert result["analysis"]["disposition"] == "approve"
+
+    def test_analysis_includes_pipeline_route(self, tmp_path):
+        dhf = self._dhf(tmp_path)
+        spec_path = tmp_path / "docs" / "cr-specs" / "CR-001-Spec.md"
+        spec_path.parent.mkdir(parents=True)
+        spec_path.write_text(self._valid_spec_content("CR-001"), encoding="utf-8")
+        with patch("medharness.services.cr_generation._run_claude", return_value=(0, "done")):
+            result = generate_spec("CR-001", dhf)
+        assert result["analysis"]["pipeline_route"] == "standard"
+
+    def test_analysis_has_no_direction_fit_key(self, tmp_path):
+        dhf = self._dhf(tmp_path)
+        spec_path = tmp_path / "docs" / "cr-specs" / "CR-001-Spec.md"
+        spec_path.parent.mkdir(parents=True)
+        spec_path.write_text(self._valid_spec_content("CR-001"), encoding="utf-8")
+        with patch("medharness.services.cr_generation._run_claude", return_value=(0, "done")):
+            result = generate_spec("CR-001", dhf)
+        assert "direction_fit" not in result["analysis"]
 
     def test_calls_run_claude_twice_when_spec_valid(self, tmp_path):
         dhf = self._dhf(tmp_path)
@@ -290,7 +318,7 @@ class TestGenerateSpec:
         dhf = self._dhf(tmp_path)
         spec_path = tmp_path / "docs" / "cr-specs" / "CR-003-Spec.md"
         spec_path.parent.mkdir(parents=True)
-        # Write a spec with missing direction_fit to trigger validation error
+        # Write a spec with missing disposition to trigger validation error
         spec_path.write_text(
             '---\ncr_id: "CR-003"\naffected_items: []\nproposed_new_items: []\n'
             'design_impact_summary: "No design impact."\n'
@@ -345,7 +373,7 @@ class TestGenerateSpec:
         dhf = self._dhf(tmp_path)
         spec_path = tmp_path / "docs" / "cr-specs" / "CR-011-Spec.md"
         spec_path.parent.mkdir(parents=True)
-        # Missing direction_fit — will fail validation; fix pass won't help since
+        # Missing disposition — will fail validation; fix pass won't help since
         # mock_claude returns (0, "done") without actually writing anything new.
         spec_path.write_text(
             '---\ncr_id: "CR-011"\naffected_items: []\n'
@@ -519,7 +547,9 @@ class TestGenerateDesign:
         spec_json.write_text(
             _json.dumps({
                 "cr_id": "CR-099",
-                "direction_fit": "in-scope",
+                "disposition": "approve",
+                "pipeline_route": "standard",
+                "decline_rationale": "",
                 "affected_items": ["SYS-001"],
                 "proposed_new_items": [{
                     "type": "SRS",
@@ -539,7 +569,8 @@ class TestGenerateDesign:
             generate_design("CR-099", dhf)
         prompt = mock_claude.call_args_list[0][0][0]
         assert "Pre-computed Spec Summary" in prompt
-        assert "direction_fit" in prompt
+        assert "disposition" in prompt
+        assert "pipeline_route" in prompt
         assert "verification_method" in prompt
         assert "parent" in prompt
         assert "SYS" in prompt

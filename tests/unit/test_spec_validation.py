@@ -17,9 +17,11 @@ from medharness.services.spec_validation import (
 _VALID_FM = """\
 ---
 cr_id: "CR-001"
-direction_fit: "in-scope"
+disposition: approve
+pipeline_route: standard
 affected_items:
   - SYS-001
+decline_rationale: ""
 proposed_new_items: []
 design_impact_summary: "Update persistence requirements and tests."
 test_plan:
@@ -44,7 +46,9 @@ def _write_spec(tmp_path: Path, content: str) -> Path:
 def _valid_fm_dict() -> dict:
     return {
         "cr_id": "CR-001",
-        "direction_fit": "in-scope",
+        "disposition": "approve",
+        "pipeline_route": "standard",
+        "decline_rationale": "",
         "affected_items": ["SYS-001"],
         "proposed_new_items": [],
         "design_impact_summary": "Test summary.",
@@ -57,7 +61,7 @@ def test_parse_valid_frontmatter(tmp_path):
     fm = parse_spec_frontmatter(path)
     assert fm is not None
     assert fm["cr_id"] == "CR-001"
-    assert fm["direction_fit"] == "in-scope"
+    assert fm["disposition"] == "approve"
     assert "SYS-001" in fm["affected_items"]
 
 
@@ -73,6 +77,14 @@ def test_parse_missing_file(tmp_path):
 
 def test_validate_valid_spec(tmp_path):
     path = _write_spec(tmp_path, _VALID_FM)
+    errors = validate_spec(path, "CR-001")
+    assert errors == []
+
+
+def test_validate_legacy_direction_fit_spec_passes(tmp_path):
+    content = _VALID_FM.replace("disposition: approve\npipeline_route: standard\n", 'direction_fit: "in-scope"\n')
+    content = content.replace('decline_rationale: ""\n', "")
+    path = _write_spec(tmp_path, content)
     errors = validate_spec(path, "CR-001")
     assert errors == []
 
@@ -98,20 +110,157 @@ def test_validate_wrong_cr_id(tmp_path):
     assert any(e["fix"] for e in errors if e["field"] == "cr_id")
 
 
-def test_validate_invalid_direction_fit(tmp_path):
-    content = _VALID_FM.replace('direction_fit: "in-scope"', 'direction_fit: "unknown"')
+def test_validate_missing_disposition(tmp_path):
+    content = _VALID_FM.replace("disposition: approve\n", "")
+    path = _write_spec(tmp_path, content)
+    errors = validate_spec(path, "CR-001")
+    assert any(e["field"] == "disposition" for e in errors)
+
+
+def test_validate_invalid_disposition(tmp_path):
+    content = _VALID_FM.replace("disposition: approve", "disposition: sideways")
+    path = _write_spec(tmp_path, content)
+    errors = validate_spec(path, "CR-001")
+    assert any(e["field"] == "disposition" for e in errors)
+
+
+def test_validate_invalid_legacy_direction_fit(tmp_path):
+    content = _VALID_FM.replace("disposition: approve\npipeline_route: standard\n", 'direction_fit: "sideways"\n')
+    content = content.replace('decline_rationale: ""\n', "")
     path = _write_spec(tmp_path, content)
     errors = validate_spec(path, "CR-001")
     assert any(e["field"] == "direction_fit" for e in errors)
-    fix = next(e["fix"] for e in errors if e["field"] == "direction_fit")
-    assert "in-scope" in fix
 
 
-def test_validate_missing_direction_fit(tmp_path):
-    content = _VALID_FM.replace('direction_fit: "in-scope"\n', "")
+def test_validate_decline_requires_rationale(tmp_path):
+    content = (
+        "---\n"
+        'cr_id: "CR-001"\n'
+        "disposition: decline:out-of-scope\n"
+        "---\n"
+    )
     path = _write_spec(tmp_path, content)
     errors = validate_spec(path, "CR-001")
-    assert any(e["field"] == "direction_fit" for e in errors)
+    assert any(e["field"] == "decline_rationale" for e in errors)
+
+
+def test_validate_decline_with_rationale_passes(tmp_path):
+    content = (
+        "---\n"
+        'cr_id: "CR-001"\n'
+        "disposition: decline:duplicate\n"
+        'decline_rationale: "Already implemented in SYS-001."\n'
+        "---\n"
+    )
+    path = _write_spec(tmp_path, content)
+    errors = validate_spec(path, "CR-001")
+    assert not any(e["field"] in {"disposition", "decline_rationale"} for e in errors)
+
+
+def test_validate_decline_skips_affected_items(tmp_path):
+    content = (
+        "---\n"
+        'cr_id: "CR-001"\n'
+        "disposition: decline:out-of-scope\n"
+        'decline_rationale: "Outside product direction."\n'
+        "---\n"
+    )
+    path = _write_spec(tmp_path, content)
+    errors = validate_spec(path, "CR-001")
+    assert not any(e["field"] == "affected_items" for e in errors)
+
+
+def test_validate_decline_skips_test_plan(tmp_path):
+    content = (
+        "---\n"
+        'cr_id: "CR-001"\n'
+        "disposition: decline:architecture-conflict\n"
+        'decline_rationale: "Conflicts with ADR-001."\n'
+        "---\n"
+    )
+    path = _write_spec(tmp_path, content)
+    errors = validate_spec(path, "CR-001")
+    assert not any(e["field"] == "test_plan" or e["field"].startswith("test_plan.") for e in errors)
+
+
+def test_validate_decline_rejects_stale_affected_items(tmp_path):
+    content = (
+        "---\n"
+        'cr_id: "CR-001"\n'
+        "disposition: decline:out-of-scope\n"
+        'decline_rationale: "Outside product direction."\n'
+        "affected_items:\n"
+        "  - SYS-001\n"
+        "---\n"
+    )
+    path = _write_spec(tmp_path, content)
+    errors = validate_spec(path, "CR-001")
+    assert any(e["field"] == "affected_items" for e in errors)
+
+
+def test_validate_decline_rejects_stale_test_plan(tmp_path):
+    content = (
+        "---\n"
+        'cr_id: "CR-001"\n'
+        "disposition: decline:architecture-conflict\n"
+        'decline_rationale: "Conflicts with ADR-001."\n'
+        "test_plan:\n"
+        "  auto_covered:\n"
+        "    - TC-SYS-001-001\n"
+        "  needs_new_tc: []\n"
+        "  must_be_manual: []\n"
+        "---\n"
+    )
+    path = _write_spec(tmp_path, content)
+    errors = validate_spec(path, "CR-001")
+    assert any(e["field"] == "test_plan" for e in errors)
+
+
+def test_validate_decline_rejects_pipeline_route(tmp_path):
+    content = (
+        "---\n"
+        'cr_id: "CR-001"\n'
+        "disposition: hold:scope-expansion\n"
+        'decline_rationale: "Needs roadmap approval."\n'
+        "pipeline_route: standard\n"
+        "---\n"
+    )
+    path = _write_spec(tmp_path, content)
+    errors = validate_spec(path, "CR-001")
+    assert any(e["field"] == "pipeline_route" for e in errors)
+
+
+def test_validate_approve_requires_pipeline_route(tmp_path):
+    content = _VALID_FM.replace("pipeline_route: standard\n", "")
+    path = _write_spec(tmp_path, content)
+    errors = validate_spec(path, "CR-001")
+    assert any(e["field"] == "pipeline_route" for e in errors)
+
+
+def test_validate_invalid_pipeline_route(tmp_path):
+    content = _VALID_FM.replace("pipeline_route: standard", "pipeline_route: waterfall")
+    path = _write_spec(tmp_path, content)
+    errors = validate_spec(path, "CR-001")
+    assert any(e["field"] == "pipeline_route" for e in errors)
+
+
+def test_validate_approve_requires_affected_items(tmp_path):
+    content = _VALID_FM.replace("affected_items:\n  - SYS-001\n", "")
+    path = _write_spec(tmp_path, content)
+    errors = validate_spec(path, "CR-001")
+    assert any(e["field"] == "affected_items" for e in errors)
+
+
+def test_validate_hold_requires_rationale(tmp_path):
+    content = (
+        "---\n"
+        'cr_id: "CR-001"\n'
+        "disposition: hold:scope-expansion\n"
+        "---\n"
+    )
+    path = _write_spec(tmp_path, content)
+    errors = validate_spec(path, "CR-001")
+    assert any(e["field"] == "decline_rationale" for e in errors)
 
 
 def test_validate_missing_test_plan(tmp_path):
@@ -318,11 +467,51 @@ def test_extract_structured_analysis(tmp_path):
     path = _write_spec(tmp_path, _VALID_FM)
     analysis = extract_structured_analysis(path)
     assert analysis is not None
-    assert analysis["direction_fit"] == "in-scope"
+    assert analysis["disposition"] == "approve"
+    assert analysis["pipeline_route"] == "standard"
+    assert analysis["decline_rationale"] == ""
     assert analysis["affected_items"] == ["SYS-001"]
     assert analysis["proposed_new_items"] == []
     assert analysis["design_impact_summary"] == "Update persistence requirements and tests."
     assert analysis["test_plan"]["auto_covered"] == ["TC-SYS-001-001"]
+
+
+def test_extract_structured_analysis_maps_legacy_direction_fit(tmp_path):
+    content = _VALID_FM.replace("disposition: approve\npipeline_route: standard\n", 'direction_fit: "in-scope"\n')
+    content = content.replace('decline_rationale: ""\n', "")
+    path = _write_spec(tmp_path, content)
+    analysis = extract_structured_analysis(path)
+    assert analysis is not None
+    assert analysis["disposition"] == "approve"
+    assert analysis["pipeline_route"] == "standard"
+
+
+def test_extract_structured_analysis_clears_decline_metadata(tmp_path):
+    content = (
+        "---\n"
+        'cr_id: "CR-001"\n'
+        "disposition: decline:duplicate\n"
+        'decline_rationale: "Already implemented."\n'
+        "affected_items:\n"
+        "  - SYS-001\n"
+        "proposed_new_items:\n"
+        "  - type: SRS\n"
+        '    title: "Legacy item"\n'
+        'design_impact_summary: "Old approval summary."\n'
+        "test_plan:\n"
+        "  auto_covered:\n"
+        "    - TC-SYS-001-001\n"
+        "  needs_new_tc: []\n"
+        "  must_be_manual: []\n"
+        "---\n"
+    )
+    path = _write_spec(tmp_path, content)
+    analysis = extract_structured_analysis(path)
+    assert analysis is not None
+    assert analysis["affected_items"] == []
+    assert analysis["proposed_new_items"] == []
+    assert analysis["design_impact_summary"] is None
+    assert analysis["test_plan"] is None
 
 
 def test_write_spec_json_creates_file(tmp_path):

@@ -20,7 +20,6 @@ Includes `dhfkit`, the DHF/document/traceability engine.
 
 ## Key Rules
 
-- PR title must include a CR ID
 - Product-formal docs are canonical in generated DHF repos, not here
 - `ci test-coverage` enforces requirement-to-test coverage
 - `ci evidence bundle` produces runtime evidence on merge to `main`

@@ -1,6 +1,6 @@
 # Summary
 
-Describe the change concisely. Include the CR ID: **CR-XXX**
+Describe the change concisely.
 
 ## DHF Updates
 

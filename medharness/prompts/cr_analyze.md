@@ -53,6 +53,40 @@ Read these files:
 
 7. Do not modify any file other than `docs/cr-specs/{{cr_id}}-Spec.md`.
 
+## Triage: Classify the CR before writing the spec
+
+Before populating the spec, determine the disposition by checking in order:
+
+1. **duplicate** — search the DHF (`dhf item list`) and codebase. If the
+   requested capability already exists, set `disposition: decline:duplicate` and
+   reference the existing item ID or file path in `decline_rationale`.
+
+2. **out-of-scope** — does the CR conflict with or fall outside the product
+   direction? Set `disposition: decline:out-of-scope`. Explain what would need
+   to change for it to be in scope.
+
+3. **architecture-conflict** — does the CR require a design that violates a
+   documented ADR or architectural constraint? Set `disposition:
+   decline:architecture-conflict` and reference the constraint.
+
+4. **too-large** — does the CR span multiple independent subsystems or require
+   changes across more than ~3 DHF item types? Set `disposition:
+   decline:too-large` and suggest 2-3 smaller CRs in `decline_rationale`.
+
+5. **scope-expansion** — is the CR valid but beyond the current roadmap scope?
+   Set `disposition: hold:scope-expansion`. Explain what stakeholder approval
+   is needed.
+
+6. **approve** — the CR is in scope and appropriately sized. Determine
+   `pipeline_route`:
+   - `doc-only`: only documentation or comment changes, no code or DHF items
+   - `dhf-only`: DHF item updates only, no product code changes
+   - `test-only`: test additions only, no new requirements or DHF items
+   - `standard`: code + DHF item changes (the default)
+
+For `decline:*` and `hold:*`, only populate `cr_id`, `disposition`, and
+`decline_rationale`. Leave all other fields at their defaults.
+
 ## Spec Format
 
 The spec MUST begin with this YAML front-matter (machine-read by CI):
@@ -60,29 +94,18 @@ The spec MUST begin with this YAML front-matter (machine-read by CI):
 ```
 ---
 cr_id: "{{cr_id}}"
-direction_fit: in-scope        # one of: in-scope | scope-expansion | out-of-scope
-affected_items:                # existing DHF item IDs this CR touches; [] if none
-  - SYS-001
-proposed_new_items:            # DHF items to create in the design stage; [] if none
-  - type: SYS
-    title: "Example new requirement title"
-    parent: "CRS-001"         # optional direct parent DHF item ID
-    verification_method: Test  # optional, only for SYS/SOUP today
-design_impact_summary: "..."   # 1-2 sentences summarizing overall design impact
-test_plan:
-  auto_covered:                # items covered by existing automated tests
-    - SRS-001
-  needs_new_tc:                # items requiring new test cases
-    - SRS-002
-  must_be_manual:              # items only verifiable manually
-    []
+disposition: approve           # see disposition guide above
+pipeline_route: standard       # standard|dhf-only|doc-only|test-only — only when disposition: approve
+decline_rationale: ""          # required when disposition is not approve; leave "" when approve
+affected_items: []             # existing DHF item IDs this CR touches — only when approved
+proposed_new_items: []         # DHF items to create — only when approved
+design_impact_summary: "..."   # 1-2 sentences — only when approved
+test_plan:                     # only when approved
+  auto_covered: []
+  needs_new_tc: []
+  must_be_manual: []
 ---
 ```
-
-`direction_fit`:
-- `in-scope` — fits current roadmap without extending scope
-- `scope-expansion` — adds capability beyond current roadmap
-- `out-of-scope` — conflicts with or is outside product strategy
 
 Markdown sections after the front-matter:
 1. Summary
