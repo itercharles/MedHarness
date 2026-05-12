@@ -76,7 +76,7 @@ class TestGenerateSpecContract:
         spec_path = dhf.parent / "docs" / "cr-specs" / f"{cr_id}-Spec.md"
         spec_path.parent.mkdir(parents=True, exist_ok=True)
         spec_path.write_text(
-            f'---\ncr_id: "{cr_id}"\ndirection_fit: "in-scope"\n'
+            f'---\ncr_id: "{cr_id}"\ndisposition: approve\npipeline_route: standard\n'
             'affected_items: []\nproposed_new_items: []\n'
             'design_impact_summary: "Test summary."\n'
             'test_plan:\n  auto_covered: []\n'
@@ -114,7 +114,9 @@ class TestGenerateSpecContract:
         assert result["status"] in STATUS_VALUES
         assert result["validation"] in VALIDATION_VALUES_SPEC
         assert set(result["analysis"]) == {
-            "direction_fit",
+            "disposition",
+            "pipeline_route",
+            "decline_rationale",
             "affected_items",
             "proposed_new_items",
             "design_impact_summary",
