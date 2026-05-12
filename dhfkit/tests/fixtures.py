@@ -213,63 +213,57 @@ def get_test_dataset() -> List[Dict]:
     Get minimal test dataset for DHF utility tests.
 
     Returns complete traceability chain and supporting items.
+
+    NOTE: dhfkit fixtures are intentionally self-contained — they do
+    not import from the top-level tests/ tree so that pytest dhfkit/tests
+    runs standalone without a cross-test-suite dependency.
     """
     return [
-        # User Needs (no status — GitOps model)
+        {"id": "UC-001", "title": "User Need - Test Item", "content": "User needs test functionality"},
         {
-            'id': 'UC-001',
-            'title': 'User Need - Test Item',
-            'content': 'User needs test functionality',
-        },
-        # Customer Requirements (no status — GitOps model)
-        {
-            'id': 'CRS-001',
-            'title': 'Customer Requirement - Test Item',
-            'content': 'Customer requires test feature',
-            'derives_from': ['UC-001'],
-        },
-        # System Requirements (no status — GitOps model)
-        {
-            'id': 'SYS-001',
-            'title': 'System Requirement - Test Item',
-            'content': 'System shall provide test capability',
-            'derives_from': ['CRS-001'],
+            "id": "CRS-001",
+            "title": "Customer Requirement - Test Item",
+            "content": "Customer requires test feature",
+            "derives_from": ["UC-001"],
         },
         {
-            'id': 'SYS-002',
-            'title': 'Draft System Requirement',
-            'content': 'System shall perform function X',
-            'category': 'Functional',
-            'derives_from': ['CRS-001'],
-        },
-        # Software Requirements (no status — GitOps model)
-        {
-            'id': 'SRS-001',
-            'title': 'Item Persistence and Versioning',
-            'content': 'Software shall persist items to YAML files with version control',
-            'derives_from': ['SYS-001'],
+            "id": "SYS-001",
+            "title": "System Requirement - Test Item",
+            "content": "System shall provide test capability",
+            "derives_from": ["CRS-001"],
         },
         {
-            'id': 'SRS-002',
-            'title': 'Graph-based Traceability',
-            'content': 'Software shall provide graph-based traceability visualization',
-            'derives_from': ['SYS-001'],
+            "id": "SYS-002",
+            "title": "Draft System Requirement",
+            "content": "System shall perform function X",
+            "category": "Functional",
+            "derives_from": ["CRS-001"],
         },
-        # System Architecture (no status — GitOps model)
         {
-            'id': 'SYSARCH-001',
-            'title': 'System Architecture Component',
-            'content': 'Architecture component for test system',
-            'implements': ['SYS-001'],
+            "id": "SRS-001",
+            "title": "Item Persistence and Versioning",
+            "content": "Software shall persist items to YAML files with version control",
+            "derives_from": ["SYS-001"],
         },
-        # Change Requests (explicit lifecycle: draft → approved)
         {
-            'id': 'CR-001',
-            'title': 'Test Change Request',
-            'description': 'Change request for testing purposes',
-            'justification': 'Testing CR workflow',
-            'status': 'draft',
-            'affected_items': ['SRS-001'],
+            "id": "SRS-002",
+            "title": "Graph-based Traceability",
+            "content": "Software shall provide graph-based traceability visualization",
+            "derives_from": ["SYS-001"],
+        },
+        {
+            "id": "SYSARCH-001",
+            "title": "System Architecture Component",
+            "content": "Architecture component for test system",
+            "implements": ["SYS-001"],
+        },
+        {
+            "id": "CR-001",
+            "title": "Test Change Request",
+            "description": "Change request for testing purposes",
+            "justification": "Testing CR workflow",
+            "status": "draft",
+            "affected_items": ["SRS-001"],
         },
     ]
 def populate_test_dhf_direct(test_dhf_root: Path) -> Path:

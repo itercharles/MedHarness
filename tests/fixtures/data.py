@@ -15,64 +15,12 @@ def get_test_dataset() -> List[Dict]:
 
     Returns complete traceability chain and supporting items.
     """
-    return [
-        # User Needs (no status — GitOps model)
-        {
-            'id': 'UC-001',
-            'title': 'User Need - Test Item',
-            'content': 'User needs test functionality',
-        },
-        # Customer Requirements (no status — GitOps model)
-        {
-            'id': 'CRS-001',
-            'title': 'Customer Requirement - Test Item',
-            'content': 'Customer requires test feature',
-            'derives_from': ['UC-001'],
-        },
-        # System Requirements (no status — GitOps model)
-        {
-            'id': 'SYS-001',
-            'title': 'System Requirement - Test Item',
-            'content': 'System shall provide test capability',
-            'derives_from': ['CRS-001'],
-        },
-        {
-            'id': 'SYS-002',
-            'title': 'Draft System Requirement',
-            'content': 'System shall perform function X',
-            'category': 'Functional',
-            'derives_from': ['CRS-001'],
-        },
-        # Software Requirements (no status — GitOps model)
-        {
-            'id': 'SRS-001',
-            'title': 'Item Persistence and Versioning',
-            'content': 'Software shall persist items to YAML files with version control',
-            'derives_from': ['SYS-001'],
-        },
-        {
-            'id': 'SRS-002',
-            'title': 'Graph-based Traceability',
-            'content': 'Software shall provide graph-based traceability visualization',
-            'derives_from': ['SYS-001'],
-        },
-        # System Architecture (no status — GitOps model)
-        {
-            'id': 'SYSARCH-001',
-            'title': 'System Architecture Component',
-            'content': 'Architecture component for test system',
-            'implements': ['SYS-001'],
-        },
-        # Change Requests (explicit lifecycle: draft → approved)
-        {
-            'id': 'CR-001',
-            'title': 'Test Change Request',
-            'description': 'Change request for testing purposes',
-            'justification': 'Testing CR workflow',
-            'status': 'draft',
-            'affected_items': ['SRS-001'],
-        },
-        # Approved CR with implementation PRs — used by cr_git_evidence and CR CLI tests
+    from tests.fixtures.shared_test_data import get_common_test_dataset
+
+    items = get_common_test_dataset()
+
+    # Extended items only needed by medharness API tests
+    items.extend([
         {
             'id': 'CR-002',
             'title': 'Approved Change Request with PR',
@@ -82,7 +30,6 @@ def get_test_dataset() -> List[Dict]:
             'affected_items': ['SYS-001'],
             'implementation_prs': ['https://github.com/org/repo/pull/42'],
         },
-        # Defects — closed/resolved ones should not block; draft ones are ignored
         {
             'id': 'DEF-001',
             'title': 'Closed High Defect',
@@ -97,7 +44,9 @@ def get_test_dataset() -> List[Dict]:
             'severity': 'Low',
             'status': 'closed',
         },
-    ]
+    ])
+
+    return items
 
 
 def build_test_adapter():
