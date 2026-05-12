@@ -396,7 +396,8 @@ def register(main):
                   metavar="PATH", help="Path to spec file (default: docs/cr-specs/<cr_id>-Spec.md)")
     @click.option("--since-ref", default="origin/main", metavar="REF")
     @click.option("--code-path", "code_paths", multiple=True, metavar="PATH",
-                  help="Product-code paths that must carry implementation changes.")
+                  help="Opt into code-change enforcement: path(s) under which at least one file must be modified. "
+                       "Omitting this option skips the code-change check entirely.")
     @click.pass_context
     def ci_validate_branch(
         ctx: click.Context,
@@ -421,7 +422,14 @@ def register(main):
         )
         click.echo(json.dumps(payload))
         if payload["passed"]:
-            click.echo(f"PASS [validate-branch] {cr_id}: branch carries coupled spec, code, and DHF changes.", err=True)
+            if code_paths:
+                click.echo(f"PASS [validate-branch] {cr_id}: branch carries coupled spec, code, and DHF changes.", err=True)
+            else:
+                click.echo(
+                    f"PASS [validate-branch] {cr_id}: branch carries spec and DHF changes "
+                    f"(pass --code-path to also enforce code changes).",
+                    err=True,
+                )
             return
         for error in payload["errors"]:
             click.echo(f"FAIL [validate-branch] {cr_id} ({error['field']}): {error['issue']}", err=True)

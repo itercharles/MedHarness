@@ -121,7 +121,7 @@ medharness --dhf DHF ci design-cr --cr CR-034
 medharness --dhf DHF ci develop-cr --cr CR-034
 medharness --dhf DHF ci validate-design --cr CR-034
 medharness --dhf DHF ci validate-code --cr CR-034
-medharness --dhf DHF ci validate-branch --cr CR-034
+medharness --dhf DHF ci validate-branch --cr CR-034 --code-path src/
 medharness ci cr-status --cr CR-034 --stage spec --pr 18
 medharness --dhf DHF ci evidence bundle --out-dir artifacts --junit-dir test-results
 medharness ci github-event --event "$GITHUB_EVENT_PATH"
@@ -162,13 +162,14 @@ the same preflight validators directly:
 ```bash
 medharness --dhf DHF ci validate-design --cr CR-034
 medharness --dhf DHF ci validate-code --cr CR-034 --since-ref origin/main
-medharness --dhf DHF ci validate-branch --cr CR-034 --since-ref origin/main
+medharness --dhf DHF ci validate-branch --cr CR-034 --since-ref origin/main --code-path src/
 ```
 
-`validate-branch` requires the approved spec file to exist for the CR, but it
-does not require a fresh diff to that spec on the implementation branch. That
-matches the normal flow where a `feat/CR-*` branch is cut after the spec has
-already been merged.
+`validate-branch` always checks that the approved spec file exists and that DHF
+item changes are present when the spec expects them. Pass `--code-path <dir>`
+(may be repeated) to also require implementation code changes under those paths.
+Omitting `--code-path` skips the code-change check — use this when a CR touches
+only documentation or DHF items with no product-code impact.
 
 ---
 
