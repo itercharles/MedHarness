@@ -9,6 +9,55 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ---
 
+## [0.3.7] — 2026-05-12
+
+### Changes
+
+- **CR triage routing** — `ci analyze-cr` now classifies CRs before writing a
+  full spec, replacing the blunt `direction_fit` field with three dedicated
+  front-matter fields:
+
+  - `disposition` — required on every spec. Values: `approve`,
+    `decline:out-of-scope`, `decline:duplicate`, `decline:architecture-conflict`,
+    `decline:too-large`, `hold:scope-expansion`.
+  - `pipeline_route` — required when `disposition: approve`. Values:
+    `standard` (analyze → design → develop), `dhf-only` (no code),
+    `doc-only` (no design/develop), `test-only` (no new DHF items).
+  - `decline_rationale` — required string when disposition is not `approve`.
+    Provides an auditable reason for the decline or hold (IEC 62304 evidence).
+
+  For declined/held CRs only `cr_id`, `disposition`, and `decline_rationale`
+  are populated; all other spec fields are skipped and not validated.
+
+  `direction_fit` is removed. Existing specs with `direction_fit` are migrated
+  transparently by `validate_spec` (legacy values map to the nearest
+  `disposition`), so no manual spec updates are required. Specs that contain
+  neither field fail validation and trigger the self-correction loop.
+
+- **Enriched `proposed_new_items`** — each entry in the `proposed_new_items`
+  front-matter list now supports optional `parent` and `verification_method`
+  fields:
+
+  - `parent` — ID of the existing DHF item this new item traces to (e.g.
+    `SYS-012`). Validated by `validate_spec` against live DHF item IDs.
+  - `verification_method` — `Inspection` or `Demonstration`; only valid for
+    item types that carry a verification method in the dhfkit schema (`SYS`,
+    `SOUP`). `validate_spec` rejects the field for other types.
+
+  The `ci design-cr` prompt now receives this richer structured data so Claude
+  can wire parent links and verification methods at item-creation time.
+
+- **`validate-branch` code-change check is now opt-in** — `--code-path` must
+  be passed explicitly to require that implementation files were modified. When
+  omitted, the command checks only that the spec file and DHF item changes are
+  present. This removes a WebTPS-specific default (`apps/`, `packages/`) that
+  was incorrect for all other project layouts.
+
+  Migration: update CI invocations that relied on the implicit default to pass
+  `--code-path <dir>` explicitly, or drop the check for doc/DHF-only CRs.
+
+---
+
 ## [0.3.6] — 2026-05-11
 
 ### Changes
