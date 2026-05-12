@@ -25,4 +25,17 @@ Includes `dhfkit`, the DHF/document/traceability engine.
 - `ci test-coverage` enforces requirement-to-test coverage
 - `ci evidence bundle` produces runtime evidence on merge to `main`
 - `dhfkit` has no dependency on `medharness` — the engine can be used standalone
-- Run `pytest dhfkit/tests/ tests/` to test both packages
+- Do not add comments to self-explanatory code. Only comment when the WHY is
+  non-obvious: a hidden constraint, a workaround, an external API contract, or
+  behavior that would surprise a reader unfamiliar with the context.
+
+## Test Environment
+
+The repo has a `.venv` at the root. `pytest.ini` sets `pythonpath = .` so no
+`PYTHONPATH` prefix is needed.
+
+```bash
+.venv/bin/pytest dhfkit/tests/ tests/ -q --ignore=dhfkit/tests/test_cli_doc_export.py
+```
+
+`test_cli_doc_export.py` requires `libgobject` (WeasyPrint native lib) — skip it locally.
