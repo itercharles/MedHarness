@@ -3,6 +3,8 @@
 Calls dhfkit.api and _helpers directly. No commands/dhf.py intermediate layer.
 """
 
+from __future__ import annotations
+
 import json
 from pathlib import Path
 import click
@@ -371,5 +373,4 @@ def register(main):
             result["test_coverage"] = {"computed": False}
 
         click.echo(json.dumps(result, default=str))
-
 

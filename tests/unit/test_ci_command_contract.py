@@ -47,6 +47,10 @@ def _split_stdout_json(stdout: str) -> dict:
     raise AssertionError(f"no JSON line in stdout:\n{stdout}")
 
 
+# Click's test runner mixes stderr into ``Result.output`` by default, so the
+# CI summary assertions intentionally check ``r.output`` rather than ``r.stderr``.
+
+
 class TestAnalyzeCrJsonContract:
     def test_json_payload_has_documented_keys(self, dhf):
         spec_path = dhf.parent / "docs" / "cr-specs" / "CR-001-Spec.md"
@@ -66,8 +70,8 @@ class TestAnalyzeCrJsonContract:
         assert r.exit_code == 0, (r.output, r.stderr)
         payload = _split_stdout_json(r.stdout)
         for key in (
-            "cr_id", "stage", "status", "corrections", "validation", "errors",
-            "started_at", "elapsed_ms", "spec_path", "analysis", "spec_json_path",
+            "cr_id", "stage", "outcome", "summary", "timing", "inputs",
+            "progress", "steps", "artifacts", "diagnostics", "warnings", "errors",
         ):
             assert key in payload, f"missing {key}; got {sorted(payload)}"
         assert payload["stage"] == "spec"
@@ -88,9 +92,27 @@ class TestAnalyzeCrJsonContract:
                    return_value=(0, "")):
             r = runner.invoke(main, ["--dhf", str(dhf), "ci", "analyze-cr", "--cr", "CR-002"])
         assert r.exit_code == 0
-        assert "OK Spec generated for CR-002" in r.stderr
-        assert "validation:" in r.stderr
-        assert "correction(s)" in r.stderr
+        assert "OK Spec generated for CR-002" in r.output
+        assert "outcome:" in r.output
+
+    def test_tool_error_exits_non_zero_and_uses_error_summary(self, dhf):
+        spec_path = dhf.parent / "docs" / "cr-specs" / "CR-003-Spec.md"
+        spec_path.parent.mkdir(parents=True, exist_ok=True)
+        spec_path.write_text(
+            '---\ncr_id: "CR-003"\ndisposition: approve\npipeline_route: standard\n'
+            'affected_items: []\nproposed_new_items: []\n'
+            'design_impact_summary: "Test summary."\n'
+            'test_plan:\n  auto_covered: []\n'
+            '  needs_new_tc: []\n  must_be_manual: []\n---\n',
+            encoding="utf-8",
+        )
+        runner = CliRunner()
+        with patch("medharness.services.cr_generation._run_claude", return_value=(1, "claude failed")):
+            r = runner.invoke(main, ["--dhf", str(dhf), "ci", "analyze-cr", "--cr", "CR-003"])
+        assert r.exit_code == 1
+        payload = _split_stdout_json(r.stdout)
+        assert payload["outcome"] == "tool_error"
+        assert "ERROR Spec generated for CR-003" in r.output
 
 
 class TestDesignCrJsonContract:
@@ -105,13 +127,13 @@ class TestDesignCrJsonContract:
         assert r.exit_code == 0, (r.output, r.stderr)
         payload = _split_stdout_json(r.stdout)
         for key in (
-            "cr_id", "stage", "status", "corrections", "validation", "errors",
-            "started_at", "elapsed_ms", "items_changed",
+            "cr_id", "stage", "outcome", "summary", "timing", "inputs",
+            "progress", "steps", "artifacts", "diagnostics", "warnings", "errors",
         ):
             assert key in payload, f"missing {key}"
         assert payload["stage"] == "design"
         # Removed legacy fields must not reappear.
-        for legacy in ("items_created", "items_updated", "files_written"):
+        for legacy in ("items_created", "items_updated", "files_written", "status", "corrections", "validation"):
             assert legacy not in payload, f"removed key reappeared: {legacy}"
 
     def test_residual_errors_propagate_to_stderr(self, dhf):
@@ -125,9 +147,9 @@ class TestDesignCrJsonContract:
             r = runner.invoke(main, ["--dhf", str(dhf), "ci", "design-cr", "--cr", "CR-101"])
         assert r.exit_code == 0
         payload = _split_stdout_json(r.stdout)
-        assert payload["status"] == "completed_with_errors"
-        assert payload["errors"] == residual
-        assert "residual errors: 1" in r.stderr
+        assert payload["outcome"] == "completed_with_errors"
+        assert payload["errors"][0]["field"] == "schema"
+        assert "errors: 1" in r.output
 
 
 class TestDevelopCrJsonContract:
@@ -142,12 +164,12 @@ class TestDevelopCrJsonContract:
         assert r.exit_code == 0, (r.output, r.stderr)
         payload = _split_stdout_json(r.stdout)
         for key in (
-            "cr_id", "stage", "status", "corrections", "validation", "errors",
-            "started_at", "elapsed_ms", "files_changed",
+            "cr_id", "stage", "outcome", "summary", "timing", "inputs",
+            "progress", "steps", "artifacts", "diagnostics", "warnings", "errors",
         ):
             assert key in payload, f"missing {key}"
         assert payload["stage"] == "develop"
-        for legacy in ("items_created", "items_updated", "files_written"):
+        for legacy in ("items_created", "items_updated", "files_written", "status", "corrections", "validation"):
             assert legacy not in payload, f"removed key reappeared: {legacy}"
 
 

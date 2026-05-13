@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """CR workflow command handlers — returns data, no CLI output.
 
 ClickException is used only for unrecoverable operational errors (missing CR,
@@ -23,12 +25,21 @@ def _generate_initial_spec(cr_id: str, dhf_root: Path) -> dict:
     from medharness.services.cr_generation import generate_spec  # noqa: PLC0415
 
     result = generate_spec(cr_id, dhf_root)
+    outcome = result.get("outcome")
+    spec_status = "error" if outcome == "tool_error" else (
+        "completed_with_errors" if outcome == "completed_with_errors" else "ok"
+    )
+    spec_validation = None
+    if outcome == "ok":
+        spec_validation = "passed"
+    elif outcome in {"corrected", "completed_with_errors"}:
+        spec_validation = "corrected"
     return {
         "spec_generated": True,
-        "spec_status": result.get("status"),
-        "spec_validation": result.get("validation"),
-        "spec_path": result.get("spec_path"),
-        "spec_json_path": result.get("spec_json_path"),
+        "spec_status": spec_status,
+        "spec_validation": spec_validation,
+        "spec_path": (result.get("artifacts") or {}).get("spec_path"),
+        "spec_json_path": (result.get("artifacts") or {}).get("spec_json_path"),
         "spec_error": None,
     }
 

@@ -170,7 +170,9 @@ class TestGetPrFeedback:
         monkeypatch.delenv("GITHUB_TOKEN", raising=False)
         monkeypatch.delenv("GITHUB_REPOSITORY", raising=False)
         result = _get_pr_feedback(42)
-        assert "unavailable" in result
+        assert "unavailable" in result["prompt_text"]
+        assert result["diagnostics"]["comments_status"] == "skipped"
+        assert result["warnings"][0]["code"] == "github_feedback_env_missing"
 
     def test_uses_github_token_fallback(self, monkeypatch):
         monkeypatch.delenv("GH_TOKEN", raising=False)
@@ -183,9 +185,10 @@ class TestGetPrFeedback:
             mock_resp.read.return_value = b"[]"
             mock_open.return_value = mock_resp
             result = _get_pr_feedback(1)
-        data = json.loads(result)
+        data = json.loads(result["prompt_text"])
         assert "comments" in data
         assert "reviews" in data
+        assert result["warnings"] == []
 
     def test_http_error_returns_error_payload(self, monkeypatch):
         monkeypatch.setenv("GH_TOKEN", "tok")
@@ -195,8 +198,30 @@ class TestGetPrFeedback:
             url="", code=404, msg="Not Found", hdrs=None, fp=None
         )):
             result = _get_pr_feedback(99)
-        data = json.loads(result)
-        assert any("error" in str(v) for v in data.values())
+        assert result["diagnostics"]["comments_status"] == "http_error"
+        assert any(w["code"] == "github_comments_http_error" for w in result["warnings"])
+
+    def test_url_error_returns_error_payload(self, monkeypatch):
+        monkeypatch.setenv("GH_TOKEN", "tok")
+        monkeypatch.setenv("GITHUB_REPOSITORY", "owner/repo")
+        import urllib.error
+        with patch("urllib.request.urlopen", side_effect=urllib.error.URLError("offline")):
+            result = _get_pr_feedback(99)
+        assert result["diagnostics"]["comments_status"] == "transport_error"
+        assert any("offline" in w["message"] for w in result["warnings"])
+
+    def test_invalid_json_returns_error_payload(self, monkeypatch):
+        monkeypatch.setenv("GH_TOKEN", "tok")
+        monkeypatch.setenv("GITHUB_REPOSITORY", "owner/repo")
+        with patch("urllib.request.urlopen") as mock_open:
+            mock_resp = MagicMock()
+            mock_resp.__enter__ = lambda s: s
+            mock_resp.__exit__ = MagicMock(return_value=False)
+            mock_resp.read.return_value = b"{not-json"
+            mock_open.return_value = mock_resp
+            result = _get_pr_feedback(1)
+        assert result["diagnostics"]["comments_status"] == "decode_error"
+        assert any("decoded" in w["message"] for w in result["warnings"])
 
 
 # ── Claude invocation ─────────────────────────────────────────────────────────
@@ -264,14 +289,14 @@ class TestGenerateSpec:
             result = generate_spec("CR-001", dhf)
         assert result["cr_id"] == "CR-001"
         assert result["stage"] == "spec"
-        assert result["status"] == "ok"
+        assert result["outcome"] == "ok"
         assert result["errors"] == []
-        for key in ("spec_path", "analysis", "spec_json_path", "corrections", "validation", "started_at", "elapsed_ms"):
+        for key in ("summary", "timing", "inputs", "progress", "steps", "artifacts", "diagnostics", "warnings"):
             assert key in result, f"missing key: {key}"
-        assert result["analysis"]["disposition"] == "approve"
-        assert result["analysis"]["pipeline_route"] == "standard"
-        assert result["analysis"]["proposed_new_items"] == []
-        assert result["spec_json_path"] == str(spec_path.with_suffix(".json"))
+        assert result["artifacts"]["analysis"]["disposition"] == "approve"
+        assert result["artifacts"]["analysis"]["pipeline_route"] == "standard"
+        assert result["artifacts"]["analysis"]["proposed_new_items"] == []
+        assert result["artifacts"]["spec_json_path"] == str(spec_path.with_suffix(".json"))
 
     def test_analysis_includes_disposition(self, tmp_path):
         dhf = self._dhf(tmp_path)
@@ -280,7 +305,7 @@ class TestGenerateSpec:
         spec_path.write_text(self._valid_spec_content("CR-001"), encoding="utf-8")
         with patch("medharness.services.cr_generation._run_claude", return_value=(0, "done")):
             result = generate_spec("CR-001", dhf)
-        assert result["analysis"]["disposition"] == "approve"
+        assert result["artifacts"]["analysis"]["disposition"] == "approve"
 
     def test_analysis_includes_pipeline_route(self, tmp_path):
         dhf = self._dhf(tmp_path)
@@ -289,7 +314,7 @@ class TestGenerateSpec:
         spec_path.write_text(self._valid_spec_content("CR-001"), encoding="utf-8")
         with patch("medharness.services.cr_generation._run_claude", return_value=(0, "done")):
             result = generate_spec("CR-001", dhf)
-        assert result["analysis"]["pipeline_route"] == "standard"
+        assert result["artifacts"]["analysis"]["pipeline_route"] == "standard"
 
     def test_analysis_has_no_direction_fit_key(self, tmp_path):
         dhf = self._dhf(tmp_path)
@@ -298,7 +323,7 @@ class TestGenerateSpec:
         spec_path.write_text(self._valid_spec_content("CR-001"), encoding="utf-8")
         with patch("medharness.services.cr_generation._run_claude", return_value=(0, "done")):
             result = generate_spec("CR-001", dhf)
-        assert "direction_fit" not in result["analysis"]
+        assert "direction_fit" not in result["artifacts"]["analysis"]
 
     def test_calls_run_claude_twice_when_spec_valid(self, tmp_path):
         dhf = self._dhf(tmp_path)
@@ -310,8 +335,8 @@ class TestGenerateSpec:
             result = generate_spec("CR-002", dhf)
         # Two calls: spec generation + soft review (no fix needed when checks pass).
         assert mock_claude.call_count == 2
-        assert result["corrections"] == 0
-        assert result["validation"] == "passed"
+        assert result["outcome"] == "ok"
+        assert result["diagnostics"]["fix_attempted"] is False
         # Review prompt is augmented with the "already passed" note.
         review_prompt = mock_claude.call_args_list[1][0][0]
         assert "already passed" in review_prompt.lower()
@@ -332,8 +357,8 @@ class TestGenerateSpec:
             result = generate_spec("CR-003", dhf)
         # Three calls: spec generation + fix pass + soft review.
         assert mock_claude.call_count == 3
-        assert result["corrections"] == 1
-        assert result["validation"] == "corrected"
+        assert result["outcome"] == "completed_with_errors"
+        assert result["diagnostics"]["fix_attempted"] is True
 
     def test_creates_spec_dir(self, tmp_path):
         dhf = self._dhf(tmp_path)
@@ -350,7 +375,11 @@ class TestGenerateSpec:
         with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
              patch("medharness.services.cr_generation._get_pr_feedback") as mock_fb:
             mock_claude.return_value = (0, "")
-            mock_fb.return_value = '{"comments": [], "reviews": []}'
+            mock_fb.return_value = {
+                "prompt_text": '{"comments": [], "reviews": []}',
+                "diagnostics": {"attempted": True, "comments_status": "ok", "reviews_status": "ok"},
+                "warnings": [],
+            }
             generate_spec("CR-005", dhf, pr_number=99)
         mock_fb.assert_called_once_with(99)
         # First call is the revision prompt; last call is the soft review — check the first.
@@ -397,8 +426,8 @@ class TestGenerateSpec:
         with patch("medharness.services.cr_generation._run_claude") as mock_claude:
             mock_claude.return_value = (0, "done")
             result = generate_spec("CR-012", dhf)
-        assert result["spec_json_path"] is not None
-        assert result["spec_json_path"].endswith(".json")
+        assert result["artifacts"]["spec_json_path"] is not None
+        assert result["artifacts"]["spec_json_path"].endswith(".json")
 
     def test_spec_json_path_is_none_when_no_spec_file(self, tmp_path):
         dhf = self._dhf(tmp_path)
@@ -406,14 +435,14 @@ class TestGenerateSpec:
         with patch("medharness.services.cr_generation._run_claude") as mock_claude:
             mock_claude.return_value = (0, "")
             result = generate_spec("CR-013", dhf)
-        assert result["spec_json_path"] is None
+        assert result["artifacts"]["spec_json_path"] is None
 
     def test_analysis_is_none_when_no_spec_file(self, tmp_path):
         dhf = self._dhf(tmp_path)
         with patch("medharness.services.cr_generation._run_claude") as mock_claude:
             mock_claude.return_value = (0, "")
             result = generate_spec("CR-014", dhf)
-        assert result["analysis"] is None
+        assert result["artifacts"]["analysis"] is None
 
 
 # ── generate_design ───────────────────────────────────────────────────────────
@@ -431,11 +460,11 @@ class TestGenerateDesign:
             result = generate_design("CR-010", dhf)
         assert result["cr_id"] == "CR-010"
         assert result["stage"] == "design"
-        assert result["status"] == "ok"
+        assert result["outcome"] == "ok"
         assert result["errors"] == []
-        for key in ("corrections", "validation", "items_changed", "started_at", "elapsed_ms"):
+        for key in ("summary", "timing", "inputs", "progress", "steps", "artifacts", "diagnostics", "warnings"):
             assert key in result, f"missing key: {key}"
-        assert set(result["items_changed"]) == {"created", "updated", "deleted"}
+        assert set(result["artifacts"]["items_changed"]) == {"created", "updated", "deleted"}
 
     def test_happy_path_runs_design_then_review(self, tmp_path):
         dhf = tmp_path / "DHF"
@@ -447,8 +476,8 @@ class TestGenerateDesign:
             result = generate_design("CR-011", dhf)
         # Two calls: design generation + soft review (no fix call when checks pass).
         assert mock_claude.call_count == 2
-        assert result["corrections"] == 0
-        assert result["validation"] == "passed"
+        assert result["outcome"] == "ok"
+        assert result["diagnostics"]["fix_attempted"] is False
         # Review prompt is augmented with the "already passed" note so the
         # reviewer does not re-derive what the harness already proved.
         review_prompt = mock_claude.call_args_list[1][0][0]
@@ -469,8 +498,8 @@ class TestGenerateDesign:
         fix_prompt = mock_claude.call_args_list[1][0][0]
         assert "schema" in fix_prompt
         assert "deterministic validation" in fix_prompt
-        assert result["corrections"] == 1
-        assert result["validation"] == "passed"
+        assert result["outcome"] == "corrected"
+        assert result["diagnostics"]["fix_attempted"] is True
 
     def test_residual_errors_recorded_when_fix_does_not_clear(self, tmp_path):
         dhf = tmp_path / "DHF"
@@ -482,12 +511,12 @@ class TestGenerateDesign:
             mock_claude.return_value = (0, "")
             result = generate_design("CR-015", dhf)
         assert mock_claude.call_count == 3
-        assert result["corrections"] == 1
-        assert result["validation"] == "residual_errors"
+        assert result["outcome"] == "completed_with_errors"
         # Residual errors are surfaced in the response payload — clients can
         # render or post them without re-running the validator.
-        assert result["status"] == "completed_with_errors"
-        assert result["errors"] == errors
+        assert result["errors"][0]["field"] == "schema"
+        assert result["errors"][0]["issue"] == "x"
+        assert result["errors"][0]["code"] == "schema"
         # The soft-review prompt should surface the residual issue.
         review_prompt = mock_claude.call_args_list[2][0][0]
         assert "residual issues" in review_prompt.lower()
@@ -507,7 +536,7 @@ class TestGenerateDesign:
                    return_value=MagicMock(stdout=diff_output, returncode=0)):
             mock_claude.return_value = (0, "")
             result = generate_design("CR-016", dhf)
-        assert result["items_changed"] == {
+        assert result["artifacts"]["items_changed"] == {
             "created": ["SYS-001"],
             "updated": ["SRS-002"],
             "deleted": ["SRS-099"],
@@ -533,7 +562,11 @@ class TestGenerateDesign:
              patch("medharness.services.design_validation.validate_design",
                    return_value=[]):
             mock_claude.return_value = (0, "")
-            mock_fb.return_value = '{"comments": [], "reviews": []}'
+            mock_fb.return_value = {
+                "prompt_text": '{"comments": [], "reviews": []}',
+                "diagnostics": {"attempted": True, "comments_status": "ok", "reviews_status": "ok"},
+                "warnings": [],
+            }
             generate_design("CR-013", dhf, pr_number=42)
         mock_fb.assert_called_once_with(42)
         prompt = mock_claude.call_args_list[0][0][0]
@@ -673,11 +706,11 @@ class TestGenerateCode:
             result = generate_code("CR-020", dhf)
         assert result["cr_id"] == "CR-020"
         assert result["stage"] == "develop"
-        assert result["status"] == "ok"
+        assert result["outcome"] == "ok"
         assert result["errors"] == []
-        for key in ("corrections", "validation", "files_changed", "started_at", "elapsed_ms"):
+        for key in ("summary", "timing", "inputs", "progress", "steps", "artifacts", "diagnostics", "warnings"):
             assert key in result, f"missing key: {key}"
-        assert set(result["files_changed"]) == {"created", "updated", "deleted"}
+        assert set(result["artifacts"]["files_changed"]) == {"created", "updated", "deleted"}
 
     def test_happy_path_runs_develop_then_review(self, tmp_path):
         dhf = tmp_path / "DHF"
@@ -688,8 +721,7 @@ class TestGenerateCode:
             mock_claude.return_value = (0, "")
             result = generate_code("CR-021", dhf)
         assert mock_claude.call_count == 2
-        assert result["corrections"] == 0
-        assert result["validation"] == "passed"
+        assert result["outcome"] == "ok"
         review_prompt = mock_claude.call_args_list[1][0][0]
         assert "already passed" in review_prompt.lower()
 
@@ -710,9 +742,7 @@ class TestGenerateCode:
         fix_prompt = mock_claude.call_args_list[1][0][0]
         assert "@links:SRS-001" in fix_prompt
         assert "test annotations" in fix_prompt
-        assert result["corrections"] == 1
-        assert result["validation"] == "passed"
-        assert result["status"] == "ok"
+        assert result["outcome"] == "corrected"
         assert result["errors"] == []
 
     def test_files_changed_populated_from_git(self, tmp_path):
@@ -730,7 +760,7 @@ class TestGenerateCode:
                    return_value=MagicMock(stdout=diff_output, returncode=0)):
             mock_claude.return_value = (0, "")
             result = generate_code("CR-025", dhf)
-        assert result["files_changed"] == {
+        assert result["artifacts"]["files_changed"] == {
             "created": ["apps/client/src/foo.ts"],
             "updated": ["apps/client/src/bar.tsx"],
             "deleted": ["packages/shared-types/src/old.ts"],
@@ -756,7 +786,11 @@ class TestGenerateCode:
              patch("medharness.services.code_validation.validate_code",
                    return_value=[]):
             mock_claude.return_value = (0, "")
-            mock_fb.return_value = '{"comments": [], "reviews": []}'
+            mock_fb.return_value = {
+                "prompt_text": '{"comments": [], "reviews": []}',
+                "diagnostics": {"attempted": True, "comments_status": "ok", "reviews_status": "ok"},
+                "warnings": [],
+            }
             generate_code("CR-023", dhf, pr_number=7)
         mock_fb.assert_called_once_with(7)
         prompt = mock_claude.call_args_list[0][0][0]
