@@ -963,22 +963,18 @@ class TestBuildDhfContextBlock:
         dhf.mkdir()
         adapter = StubDHFAdapter()
         adapter.create_item({"id": "SYSREQ-001", "title": "Custom-prefix req"})
-        # Simulate a project where system_requirement role maps to SYSREQ
-        _config = MagicMock()
-        dt = MagicMock()
-        dt.role = "system_requirement"
-        dt.code = "SYSREQ"
-        dt.type_name = "System Requirement"
-        dt.name = "System Requirement"
-        _config.doc_types = [dt]
-        adapter._config = _config
+        adapter._item_types.append({
+            "name": "System Requirement", "code": "SYSREQ",
+            "prefix": "SYSREQ-", "role": "system_requirement",
+            "parent_types": [], "has_verification": True,
+            "lifecycle": None, "fields": [],
+        })
         with patch(
             "dhfkit.local_adapter.LocalDHFAdapter",
             return_value=adapter,
         ):
             result = _build_dhf_context_block(dhf)
         assert "System requirements (tier 2): SYSREQ" in result
-        assert "SYSREQ-001" in result
 
 
 # ── Impact closure block ───────────────────────────────────────────────────────

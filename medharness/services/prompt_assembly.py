@@ -92,13 +92,14 @@ def _build_dhf_context_block(dhf_path: Path) -> str:
     by_role: dict[str, list[str]] = {}
     role_codes: dict[str, list[str]] = {}
     try:
-        for dt in adapter._config.doc_types:
-            if dt.role:
-                entry = f"{dt.code} ({dt.type_name or dt.name})"
-                by_role.setdefault(dt.role, []).append(entry)
-                role_codes.setdefault(dt.role, []).append(dt.code)
+        for dt in adapter.list_item_types():
+            if dt.get("role"):
+                role = dt["role"]
+                entry = f"{dt['code']} ({dt['name']})"
+                by_role.setdefault(role, []).append(entry)
+                role_codes.setdefault(role, []).append(dt["code"])
     except Exception:
-        pass  # Type Registry is best-effort; degrade if _config is unavailable
+        pass  # Type Registry is best-effort; degrade if adapter is unavailable
     if by_role:
         lines.append(
             "### Type Registry\n"
