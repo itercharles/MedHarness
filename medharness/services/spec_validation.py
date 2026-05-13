@@ -301,6 +301,26 @@ def validate_spec(
                             ),
                         })
 
+        if route == "doc-only":
+            if affected:
+                errors.append({
+                    "field": "affected_items",
+                    "issue": "doc-only CRs must not list affected DHF items.",
+                    "fix": "Clear affected_items to [] or change pipeline_route to standard/dhf-only/test-only.",
+                })
+            if proposed:
+                errors.append({
+                    "field": "proposed_new_items",
+                    "issue": "doc-only CRs must not propose new DHF items.",
+                    "fix": "Clear proposed_new_items to [] or change pipeline_route to standard/dhf-only/test-only.",
+                })
+        elif route == "test-only" and proposed:
+            errors.append({
+                "field": "proposed_new_items",
+                "issue": "test-only CRs must not propose new DHF items.",
+                "fix": "Clear proposed_new_items to [] or change pipeline_route to standard.",
+            })
+
         design_impact_summary = fm.get("design_impact_summary")
         if not isinstance(design_impact_summary, str) or not design_impact_summary.strip():
             errors.append({

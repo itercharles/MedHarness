@@ -14,6 +14,8 @@ from pathlib import Path
 
 from medharness.services.spec_validation import parse_spec_frontmatter
 
+_ITEM_ID_RE = re.compile(r"^[A-Z]+-\d+$")
+
 
 def validate_code(
     cr_id: str,
@@ -69,7 +71,10 @@ def validate_code(
     )
 
     for uid in needs_new_tc:
-        if not _annotation_present(added, str(uid)):
+        uid = str(uid)
+        if not _requires_annotation(uid):
+            continue
+        if not _annotation_present(added, uid):
             errors.append({
                 "field": "test_plan.needs_new_tc",
                 "issue": (
@@ -78,8 +83,7 @@ def validate_code(
                 ),
                 "fix": (
                     f"Add a colocated `*.test.ts(x)` test that exercises {uid} "
-                    f"and includes `@links:{uid}` in its describe/it title or a "
-                    f"leading comment."
+                    f"and includes a leading comment such as `// @links:{uid}`."
                 ),
             })
 
@@ -111,10 +115,21 @@ def _git_diff(repo_root: Path, since_ref: str, *paths: str) -> str | None:
 
 
 _ANNOTATION_PATTERN_CACHE: dict[str, re.Pattern[str]] = {}
+_COMMENT_PREFIX_RE = re.compile(r"^\s*(//|/\*+|\*|#)")
+
+
+def _requires_annotation(uid: str) -> bool:
+    """Return True when ``uid`` is a traceable DHF item ID.
+
+    Free-form prose entries in ``needs_new_tc`` remain valid analysis output,
+    but deterministic ``@links:`` enforcement only applies to actual DHF item
+    IDs.
+    """
+    return _ITEM_ID_RE.fullmatch(uid) is not None
 
 
 def _annotation_present(text: str, uid: str) -> bool:
-    """Return True if `@links:` followed (anywhere on the same line) by ``uid``.
+    """Return True if a comment line contains ``@links:`` with ``uid``.
 
     Matches both single-id (``@links:SRS-001``) and grouped
     (``@links:SRS-001,SRS-002``) annotations.
@@ -123,4 +138,9 @@ def _annotation_present(text: str, uid: str) -> bool:
     if pat is None:
         pat = re.compile(rf"@links:[^\n]*\b{re.escape(uid)}\b")
         _ANNOTATION_PATTERN_CACHE[uid] = pat
-    return pat.search(text) is not None
+    for line in text.splitlines():
+        if not _COMMENT_PREFIX_RE.match(line):
+            continue
+        if pat.search(line):
+            return True
+    return False

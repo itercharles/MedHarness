@@ -70,6 +70,8 @@ for the versioning policy.
 
 #### `medharness ci validate-design`
 
+- Uses the global `medharness --dhf PATH` flag; the subcommand itself does not
+  expose a local `--dhf` option
 - Writes JSON to stdout with these keys:
   - `cr_id`
   - `stage`
@@ -80,6 +82,8 @@ for the versioning policy.
 
 #### `medharness ci validate-code`
 
+- Uses the global `medharness --dhf PATH` flag; the subcommand itself does not
+  expose a local `--dhf` option
 - Writes JSON to stdout with these keys:
   - `cr_id`
   - `stage`
@@ -88,9 +92,14 @@ for the versioning policy.
   - `since_ref`
   - `errors`
 - Uses exit code `0` when `passed` is true, non-zero otherwise
+- Deterministic `@links:` enforcement only applies to `test_plan.needs_new_tc`
+  entries that are actual DHF item IDs. Those annotations must appear in added
+  comment lines, not inside test titles or other string literals.
 
 #### `medharness ci validate-branch`
 
+- Uses the global `medharness --dhf PATH` flag; the subcommand itself does not
+  expose a local `--dhf` option
 - Writes JSON to stdout with these keys:
   - `cr_id`
   - `since_ref`
@@ -104,6 +113,12 @@ for the versioning policy.
 - Requires the approved spec file to exist for the CR, but does not require
   that the implementation branch modify that spec file relative to `since_ref`
 - Uses exit code `0` when `passed` is true, non-zero otherwise
+
+#### `medharness ci validate-spec`
+
+- Exposes a local `--dhf PATH` option for item-existence checks when the spec
+  path alone is not enough to locate the DHF
+- Writes human-readable validation output to stderr only
 
 #### `medharness ci github-event`
 

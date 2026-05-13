@@ -9,6 +9,7 @@ import pytest
 
 from medharness.services.code_validation import (
     _annotation_present,
+    _requires_annotation,
     validate_code,
 )
 
@@ -61,6 +62,18 @@ class TestAnnotationPresent:
         text = "// @links:SRS-0011 covers SRS-0011 only"
         assert not _annotation_present(text, "SRS-001")
 
+    def test_only_comment_lines_count(self):
+        text = "it('@links:SRS-001 in title', () => {})"
+        assert not _annotation_present(text, "SRS-001")
+
+
+class TestRequiresAnnotation:
+    def test_item_ids_require_annotations(self):
+        assert _requires_annotation("SRS-001")
+
+    def test_prose_entries_do_not_require_annotations(self):
+        assert not _requires_annotation("Update Toolbar.test.tsx to remove old CTA assertion")
+
 
 class TestValidateCode:
     def test_passes_when_annotation_in_diff(self, repo):
@@ -108,6 +121,13 @@ class TestValidateCode:
             "+/** @links:SRS-001,SRS-002 */\n"
         )
         with patch("subprocess.run", return_value=_diff(diff)):
+            errors = validate_code("CR-050", dhf, spec)
+        assert errors == []
+
+    def test_prose_needs_new_tc_entries_are_not_enforced_deterministically(self, repo):
+        dhf, spec = repo
+        _write_spec(spec, ["Update Toolbar.test.tsx to remove old CTA assertion"])
+        with patch("subprocess.run", return_value=_diff("")):
             errors = validate_code("CR-050", dhf, spec)
         assert errors == []
 

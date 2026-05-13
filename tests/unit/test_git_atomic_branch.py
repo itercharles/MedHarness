@@ -132,3 +132,28 @@ def test_validate_atomic_branch_fails_without_dhf_changes_when_spec_expects_them
 
     assert result["passed"] is False
     assert any(e["field"] == "dhf_branch" for e in result["errors"])
+
+
+def test_validate_atomic_branch_accepts_relative_spec_path(tmp_path: Path):
+    repo_root = tmp_path
+    dhf = repo_root / "DHF"
+    dhf.mkdir()
+    spec = repo_root / "docs" / "cr-specs" / "CR-001-Spec.md"
+    _write_spec(spec, affected=["SYS-001"])
+
+    with patch("medharness.services.git.collect_path_changes") as mock_paths, \
+         patch("medharness.services.git.collect_dhf_item_changes") as mock_items:
+        mock_paths.side_effect = [
+            {"created": [], "updated": [], "deleted": []},
+            {"created": ["apps/client/src/feature.ts"], "updated": [], "deleted": []},
+        ]
+        mock_items.return_value = {"created": [], "updated": ["SYS-001"], "deleted": []}
+        result = validate_atomic_branch(
+            repo_root,
+            dhf,
+            "CR-001",
+            spec_path=Path("docs/cr-specs/CR-001-Spec.md"),
+        )
+
+    assert result["passed"] is True
+    assert result["errors"] == []
