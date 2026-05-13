@@ -62,6 +62,9 @@ class TestLoadSkill:
         "risk_impact.md",
         "soup_impact.md",
         "test_impact.md",
+        "regulatory_impact.md",
+        "security_impact.md",
+        "usability_impact.md",
     ])
     def test_all_skills_loadable(self, name):
         text = _load_skill(name)
@@ -94,10 +97,11 @@ class TestAppendSkills:
         result = _append_skills("base prompt")
         assert "---" in result
 
-    def test_all_six_skill_sections_present(self):
+    def test_all_nine_skill_sections_present(self):
         result = _append_skills("base")
         for title in ["Product Impact", "Requirements Management", "Architecture Impact",
-                      "Risk Impact", "SOUP Impact", "Test Impact"]:
+                      "Risk Impact", "SOUP Impact", "Test Impact",
+                      "Regulatory Impact", "Security Impact", "Usability / HFE Impact"]:
             assert title in result, f"Missing skill section: {title}"
 
     def test_base_prompt_preserved(self):

@@ -372,7 +372,7 @@ def generate_spec(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> d
             "prepare_prompt",
             {"prompt_kind": "spec_generation", "used_pr_feedback": False},
         )
-        prompt = _assemble_analyze_prompt(cr_id)
+        prompt = _assemble_analyze_prompt(cr_id, dhf_path)
         steps.append(_finish_step(prompt_step, prompt_perf, "ok"))
 
     spec_path.parent.mkdir(parents=True, exist_ok=True)
@@ -578,7 +578,7 @@ def generate_design(cr_id: str, dhf_path: Path, pr_number: int | None = None) ->
             "prepare_prompt",
             {"prompt_kind": "design_generation", "used_pr_feedback": False},
         )
-        prompt = _assemble_design_prompt_with_spec_json(cr_id, spec_path)
+        prompt = _assemble_design_prompt_with_spec_json(cr_id, spec_path, dhf_path)
         steps.append(
             _finish_step(
                 prompt_step,
@@ -742,6 +742,15 @@ def generate_code(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> d
             {"prompt_kind": "develop_generation", "used_pr_feedback": False},
         )
         prompt = _assemble_develop_prompt(cr_id)
+        diff = git.compute_diff(repo_root, "origin/main", "apps/", "packages/")
+        if diff:
+            prompt += (
+                "\n\n## Existing Implementation (since origin/main)\n\n"
+                "The following changes have already been made on this branch. "
+                "Implement only what is still missing according to the spec "
+                "— do not rewrite existing work.\n\n"
+                f"```diff\n{diff}\n```\n"
+            )
         steps.append(_finish_step(prompt_step, prompt_perf, "ok"))
 
     rc, _ = _run_claude_step(

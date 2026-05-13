@@ -8,6 +8,34 @@ from pathlib import Path
 from medharness.services.spec_validation import parse_spec_frontmatter
 
 
+def compute_diff(
+    repo_root: Path,
+    since_ref: str,
+    *paths: str,
+) -> str | None:
+    """Return git diff output.
+
+    Returns:
+        ``""`` for a legitimate empty diff (git ran, no changes since ``since_ref``).
+        ``None`` for an environment failure (git missing, ref unfetched, etc.) —
+        callers should treat this as un-checkable rather than as "no changes".
+        Otherwise the diff text.
+    """
+    try:
+        result = subprocess.run(
+            ["git", "diff", since_ref, "--", *paths],
+            capture_output=True,
+            text=True,
+            cwd=str(repo_root),
+            check=False,
+        )
+    except FileNotFoundError:
+        return None
+    if result.returncode != 0:
+        return None
+    return result.stdout or ""
+
+
 def _resolve_repo_path(repo_root: Path, path: Path) -> Path:
     """Return an absolute path for either an absolute or repo-relative input path."""
     return path if path.is_absolute() else (repo_root / path)

@@ -26,6 +26,9 @@ _SKILL_FILES = [
     ("risk_impact.md", "Risk Impact"),
     ("soup_impact.md", "SOUP Impact"),
     ("test_impact.md", "Test Impact"),
+    ("regulatory_impact.md", "Regulatory Impact"),
+    ("security_impact.md", "Security Impact"),
+    ("usability_impact.md", "Usability / HFE Impact"),
 ]
 
 
@@ -36,8 +39,55 @@ def _append_skills(prompt: str) -> str:
     return "".join(parts)
 
 
-def _assemble_analyze_prompt(cr_id: str) -> str:
+def _build_dhf_context_block(dhf_path: Path) -> str:
+    from dhfkit.local_adapter import LocalDHFAdapter
+
+    from medharness.core import MedHarnessCore
+
+    try:
+        adapter = LocalDHFAdapter(dhf_path)
+        core = MedHarnessCore(adapter)
+    except Exception:
+        return ""
+
+    lines = ["## Pre-computed DHF Context\n"]
+
+    counts = core.graph.node_counts()
+    if counts:
+        type_summary = "  ".join(
+            f"{prefix.rstrip('-')}: {count}"
+            for prefix, count in sorted(counts.items())
+        )
+        lines.append(f"### Item Type Summary\n\n{type_summary}\n")
+
+    items = adapter.list_items()
+    if items:
+        lines.append("### All DHF Items\n")
+        for item in items:
+            item_id = item.get("id", "")
+            title = item.get("title", "")
+            lines.append(f"- {item_id} — {title}\n")
+
+    cov = core.graph.calculate_coverage("SYS", "TC")
+    uncovered = cov.get("uncovered", [])
+    if uncovered:
+        lines.append(
+            "### $DHF_CONTEXT.test_coverage.manual_verification_candidates\n"
+        )
+        lines.append(
+            ", ".join(uncovered)
+            + "  (no linked TC items — likely manual verification)\n"
+        )
+
+    return "".join(lines)
+
+
+def _assemble_analyze_prompt(cr_id: str, dhf_path: Path | None = None) -> str:
     prompt = _load_prompt("cr_analyze.md").replace("{{cr_id}}", cr_id)
+    if dhf_path is not None:
+        block = _build_dhf_context_block(dhf_path)
+        if block:
+            prompt += "\n\n" + block
     return _append_skills(prompt)
 
 
@@ -62,12 +112,14 @@ def _assemble_review_code_prompt(cr_id: str) -> str:
     return _load_prompt("cr_review_code.md").replace("{{cr_id}}", cr_id)
 
 
-def _assemble_design_prompt_with_spec_json(cr_id: str, spec_path: Path) -> str:
+def _assemble_design_prompt_with_spec_json(
+    cr_id: str, spec_path: Path, dhf_path: Path | None = None
+) -> str:
     prompt = _assemble_design_prompt(cr_id)
     spec_json = read_spec_json(spec_path)
     if not spec_json:
         return prompt
-    return prompt + (
+    prompt += (
         f"\n\n## Pre-computed Spec Summary (from {cr_id}-Spec.json)\n"
         "The following structured data was extracted from the approved spec. "
         "Use it directly — do not re-read or re-interpret the Markdown spec.\n"
@@ -81,3 +133,46 @@ def _assemble_design_prompt_with_spec_json(cr_id: str, spec_path: Path) -> str:
         "not receive a synthetic `verification_method` property.\n"
         f"```json\n{json.dumps(spec_json, indent=2)}\n```\n"
     )
+    if dhf_path is not None:
+        closure = _build_impact_closure_block(dhf_path, spec_json)
+        if closure:
+            prompt += closure
+    return prompt
+
+
+def _build_impact_closure_block(dhf_path: Path, spec_json: dict) -> str:
+    from dhfkit.local_adapter import LocalDHFAdapter
+
+    from medharness.core import MedHarnessCore
+
+    affected = spec_json.get("affected_items")
+    if not isinstance(affected, list) or not affected:
+        return ""
+
+    try:
+        adapter = LocalDHFAdapter(dhf_path)
+        core = MedHarnessCore(adapter)
+    except Exception:
+        return ""
+
+    lines = ["## Pre-computed Impact Closure\n"]
+    lines.append(
+        "For each affected item the upstream (requirements hierarchy) and "
+        "downstream (linked tests, risks, etc.) nodes are listed so you can "
+        "verify completeness without traversing the graph yourself.\n"
+    )
+
+    for uid in affected:
+        uid = str(uid)
+        chain = core.graph.get_item_chain(uid)
+        if chain is None:
+            lines.append(f"### {uid}\n\nNot found in DHF graph.\n")
+            continue
+        upstream = chain.get("upstream", [])
+        downstream = chain.get("downstream", [])
+        lines.append(f"### {uid}\n")
+        us = ", ".join(sorted(upstream)) if upstream else "none"
+        ds = ", ".join(sorted(downstream)) if downstream else "none"
+        lines.append(f"Upstream: {us}\nDownstream: {ds}\n\n")
+
+    return "".join(lines)
