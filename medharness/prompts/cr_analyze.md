@@ -46,7 +46,10 @@ Read these files:
    use those item IDs as the starting point for `test_plan.must_be_manual`
    instead of guessing. Keep `auto_covered`, `needs_new_tc`, and
    `must_be_manual` aligned with the machine-readable coverage hints when they
-   are present.
+   are present. Prefer real DHF item IDs in `needs_new_tc` when a specific
+   requirement or risk needs new automated coverage. Use prose only when no
+   DHF item ID applies; deterministic `@links:` enforcement only applies to
+   ID entries.
 
 6. Produce the spec at `docs/cr-specs/{{cr_id}}-Spec.md`.
    Keep it short. Do not enumerate hundreds of speculative risks or test cases.
@@ -82,7 +85,9 @@ Before populating the spec, determine the disposition by checking in order:
    - `doc-only`: only documentation or comment changes, no code or DHF items
    - `dhf-only`: DHF item updates only, no product code changes
    - `test-only`: test additions only, no new requirements or DHF items
-   - `standard`: code + DHF item changes (the default)
+   - `standard`: product code changes are required (with or without DHF item
+     updates). If no DHF items need to change, keep `affected_items` and
+     `proposed_new_items` empty instead of inventing DHF impact.
 
 For `decline:*` and `hold:*`, only populate `cr_id`, `disposition`, and
 `decline_rationale`. Leave all other fields at their defaults.

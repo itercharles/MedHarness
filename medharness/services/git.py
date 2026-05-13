@@ -8,6 +8,11 @@ from pathlib import Path
 from medharness.services.spec_validation import parse_spec_frontmatter
 
 
+def _resolve_repo_path(repo_root: Path, path: Path) -> Path:
+    """Return an absolute path for either an absolute or repo-relative input path."""
+    return path if path.is_absolute() else (repo_root / path)
+
+
 def collect_path_changes(
     repo_root: Path,
     since_ref: str,
@@ -95,9 +100,27 @@ def validate_atomic_branch(
     ``--code-path`` on the CLI (e.g. ``src/``, ``lib/``); omitting the option
     skips the code-change check entirely.
     """
-    resolved_spec = spec_path or (repo_root / "docs" / "cr-specs" / f"{cr_id}-Spec.md")
-    spec_changed = collect_path_changes(repo_root, since_ref, str(resolved_spec.relative_to(repo_root)))
+    errors: list[dict] = []
+    resolved_spec = _resolve_repo_path(
+        repo_root,
+        spec_path or (repo_root / "docs" / "cr-specs" / f"{cr_id}-Spec.md"),
+    ).resolve()
     dhf_item_changes = collect_dhf_item_changes(repo_root, since_ref)
+    spec_changed = {"created": [], "updated": [], "deleted": []}
+
+    try:
+        spec_rel = str(resolved_spec.relative_to(repo_root))
+    except ValueError:
+        errors.append({
+            "field": "spec_path",
+            "issue": f"Spec path {resolved_spec} is outside the repository root {repo_root}.",
+            "fix": "Pass --spec as a repo-relative path or an absolute path inside the product repository.",
+        })
+        spec_rel = None
+
+    if spec_rel is not None:
+        spec_changed = collect_path_changes(repo_root, since_ref, spec_rel)
+
     code_changes = collect_path_changes(repo_root, since_ref, *code_paths) if code_paths else {
         "created": [], "updated": [], "deleted": [],
     }
@@ -106,14 +129,13 @@ def validate_atomic_branch(
     affected = fm.get("affected_items") if isinstance(fm.get("affected_items"), list) else []
     proposed = fm.get("proposed_new_items") if isinstance(fm.get("proposed_new_items"), list) else []
 
-    errors: list[dict] = []
     code_change_count = sum(len(code_changes[b]) for b in ("created", "updated", "deleted"))
     dhf_change_count = sum(len(dhf_item_changes[b]) for b in ("created", "updated", "deleted"))
 
     if not resolved_spec.exists():
         errors.append({
             "field": "spec_path",
-            "issue": f"Missing approved spec at {resolved_spec.relative_to(repo_root)}.",
+            "issue": f"Missing approved spec at {spec_rel or resolved_spec}.",
             "fix": "Merge or generate the approved spec for this CR before validating the implementation branch.",
         })
 

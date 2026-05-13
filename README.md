@@ -171,6 +171,11 @@ item changes are present when the spec expects them. Pass `--code-path <dir>`
 Omitting `--code-path` skips the code-change check — use this when a CR touches
 only documentation or DHF items with no product-code impact.
 
+When a CR requires product code changes but no DHF item updates, keep
+`pipeline_route: standard` and leave `affected_items` / `proposed_new_items`
+empty. Downstream automation may use that combination as a code-only signal to
+skip DHF design generation while still continuing to implementation.
+
 ---
 
 ## Test Coverage Gate

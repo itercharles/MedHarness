@@ -9,6 +9,26 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ---
 
+## [Unreleased]
+
+### Changes
+
+- **CI contract hardening for CR validation**
+  - `validate-branch` now normalizes relative `--spec` paths against the repo
+    root instead of assuming an already-absolute path.
+  - `validate-code` now enforces `@links:` only for `test_plan.needs_new_tc`
+    entries that are actual DHF item IDs, and only when the annotation appears
+    on an added comment line. Free-form prose entries remain valid analysis
+    output but are no longer forced through brittle exact-text annotation
+    matching.
+  - `validate-spec` now rejects `doc-only` specs that still list DHF impact and
+    rejects `test-only` specs that propose new DHF items.
+  - The CR analysis prompt now tells the model to keep `standard` when product
+    code changes are needed but no DHF item updates are required, and to prefer
+    real item IDs in `needs_new_tc` whenever possible.
+  - Contract and unit tests now lock the help-surface for `--dhf`, the
+    comment-only annotation rule, and the relative-spec-path behavior.
+
 ## [0.3.7] — 2026-05-12
 
 ### Changes

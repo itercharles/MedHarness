@@ -2,10 +2,10 @@
 
 You are reviewing implementation code that was just generated for CR {{cr_id}}.
 
-Test annotations for items in the spec's `test_plan.needs_new_tc` have already
-been verified mechanically by the harness before this review runs. Your job is
-the things a script cannot judge: completeness against the spec narrative,
-test depth, and code quality.
+Test annotations for item-ID entries in the spec's `test_plan.needs_new_tc`
+have already been verified mechanically by the harness before this review runs.
+Your job is the things a script cannot judge: completeness against the spec
+narrative, test depth, and code quality.
 
 ## Inputs
 
@@ -30,7 +30,7 @@ test depth, and code quality.
      inline styles), shared types defined in `packages/shared-types`
      before use in apps.
 
-Do not re-verify the presence of `@links:` annotations for items in
+Do not re-verify the presence of `@links:` annotations for item-ID entries in
 `test_plan.needs_new_tc` — those are checked deterministically. If you
 spot a mechanical issue that the deterministic check should have caught,
 flag it as a harness bug, not as a code issue.

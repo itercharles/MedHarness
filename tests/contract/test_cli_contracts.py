@@ -175,16 +175,25 @@ class TestCRGenerationCommands:
         """medharness ci validate-design --help exits 0."""
         r = _run("medharness", "ci", "validate-design", "--help")
         assert r.returncode == 0, r.stderr
+        assert "--dhf" not in r.stdout
 
     def test_validate_code_help(self):
         """medharness ci validate-code --help exits 0."""
         r = _run("medharness", "ci", "validate-code", "--help")
         assert r.returncode == 0, r.stderr
+        assert "--dhf" not in r.stdout
 
     def test_validate_branch_help(self):
         """medharness ci validate-branch --help exits 0."""
         r = _run("medharness", "ci", "validate-branch", "--help")
         assert r.returncode == 0, r.stderr
+        assert "--dhf" not in r.stdout
+
+    def test_validate_spec_help_shows_local_dhf(self):
+        """medharness ci validate-spec --help shows local --dhf."""
+        r = _run("medharness", "ci", "validate-spec", "--help")
+        assert r.returncode == 0, r.stderr
+        assert "--dhf" in r.stdout
 
     def test_analyze_cr_requires_cr_flag(self):
         """medharness ci analyze-cr without --cr exits non-zero with usage error."""
