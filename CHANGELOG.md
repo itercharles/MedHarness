@@ -13,6 +13,29 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ### Changes
 
+- None yet.
+
+## [0.4.0] — 2026-05-13
+
+### Changes
+
+- **Breaking CR generation response contract redesign**
+  - `ci analyze-cr`, `ci design-cr`, and `ci develop-cr` no longer emit the
+    legacy `status` / `validation` / `corrections` / top-level artifact fields.
+    They now return a client-facing contract built around `outcome`,
+    `summary`, `timing`, `inputs`, `progress`, `steps`, `artifacts`,
+    `diagnostics`, `warnings`, and `errors`.
+  - `tool_error` is now a first-class outcome for hard generation failures,
+    and the CI CLI exits non-zero for those runs instead of printing a false
+    success summary.
+  - Workflow intake adapters preserve legacy `spec_status` /
+    `spec_validation` semantics so existing intake automation can continue to
+    branch on those fields while the generation JSON itself moves to the new
+    contract.
+  - Migration: any client parsing `ci analyze-cr` / `design-cr` /
+    `develop-cr` JSON must switch to the new top-level fields and read
+    generated paths, change buckets, and analysis data from `artifacts`.
+
 - **CI contract hardening for CR validation**
   - `validate-branch` now normalizes relative `--spec` paths against the repo
     root instead of assuming an already-absolute path.
