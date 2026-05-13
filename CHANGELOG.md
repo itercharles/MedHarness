@@ -28,6 +28,15 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
     real item IDs in `needs_new_tc` whenever possible.
   - Contract and unit tests now lock the help-surface for `--dhf`, the
     comment-only annotation rule, and the relative-spec-path behavior.
+- **Design-phase CR impact recording**
+  - `generate_design` now writes successful DHF impact back onto the CR item
+    automatically: `affected_items` is updated from the validated design delta,
+    and `implementation_notes` gains a managed "Design Impact Snapshot" section
+    that records spec-declared new items plus actual created/updated/deleted
+    DHF item IDs.
+  - Generated Change Request specification documents now render
+    `implementation_notes`, so the recorded design impact is visible in CR
+    output without re-parsing CI logs.
 
 ## [0.3.7] — 2026-05-12
 

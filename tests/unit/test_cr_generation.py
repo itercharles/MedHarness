@@ -14,9 +14,11 @@ from medharness.services.cr_generation import (
     _assemble_design_prompt,
     _assemble_develop_prompt,
     _assemble_review_spec_prompt,
+    _build_design_impact_notes,
     _get_pr_feedback,
     _load_prompt,
     _load_skill,
+    _replace_managed_block,
     _run_claude,
     generate_code,
     generate_design,
@@ -585,6 +587,75 @@ class TestGenerateDesign:
             generate_design("CR-098", dhf)
         prompt = mock_claude.call_args_list[0][0][0]
         assert "Pre-computed Spec Summary" not in prompt
+
+    def test_successful_design_records_impact_on_cr(self, tmp_path):
+        dhf = tmp_path / "DHF"
+        dhf.mkdir()
+        diff_output = (
+            "A\tDHF/items/01_sys/SYS-009.yaml\n"
+            "M\tDHF/items/02_srs/SRS-010.yaml\n"
+        )
+        spec_json = {
+            "affected_items": ["SYS-001"],
+            "proposed_new_items": [{"type": "SRS", "title": "New workflow requirement", "parent": "SYS-001"}],
+        }
+        mock_adapter = MagicMock()
+        mock_adapter.get_item.return_value = {"id": "CR-017", "implementation_notes": "Manual note"}
+        with patch("medharness.services.cr_generation._run_claude", return_value=(0, "")), \
+             patch("medharness.services.design_validation.validate_design", return_value=[]), \
+             patch("subprocess.run", return_value=MagicMock(stdout=diff_output, returncode=0)), \
+             patch("medharness.services.cr_generation.read_spec_json", return_value=spec_json), \
+             patch("medharness.services.cr_generation.LocalDHFAdapter", return_value=mock_adapter):
+            generate_design("CR-017", dhf)
+        mock_adapter.update_item.assert_called_once()
+        args, kwargs = mock_adapter.update_item.call_args
+        assert args[0] == "CR-017"
+        assert args[1]["affected_items"] == ["SRS-010", "SYS-001", "SYS-009"]
+        assert "Design Impact Snapshot" in args[1]["implementation_notes"]
+        assert "Manual note" in args[1]["implementation_notes"]
+        assert "DHF items created: SYS-009" in args[1]["implementation_notes"]
+        assert "DHF items updated: SRS-010" in args[1]["implementation_notes"]
+        assert kwargs == {"author": "medharness", "cr_id": "CR-017"}
+
+    def test_residual_design_errors_do_not_record_impact_on_cr(self, tmp_path):
+        dhf = tmp_path / "DHF"
+        dhf.mkdir()
+        errors = [{"field": "schema", "issue": "x", "fix": "y"}]
+        mock_adapter = MagicMock()
+        with patch("medharness.services.cr_generation._run_claude", return_value=(0, "")), \
+             patch("medharness.services.design_validation.validate_design", side_effect=[errors, errors]), \
+             patch("subprocess.run", return_value=MagicMock(stdout="", returncode=0)), \
+             patch("medharness.services.cr_generation.LocalDHFAdapter", return_value=mock_adapter):
+            generate_design("CR-018", dhf)
+        mock_adapter.update_item.assert_not_called()
+
+
+class TestDesignImpactSnapshotHelpers:
+    def test_build_design_impact_notes_includes_spec_and_actual_items(self):
+        notes = _build_design_impact_notes(
+            {
+                "affected_items": ["SYS-001"],
+                "proposed_new_items": [{"type": "SRS", "title": "New requirement", "parent": "SYS-001"}],
+            },
+            {"created": ["SRS-005"], "updated": ["SYS-001"], "deleted": []},
+        )
+        assert "Spec affected items: SYS-001" in notes
+        assert "SRS: New requirement (parent: SYS-001)" in notes
+        assert "DHF items created: SRS-005" in notes
+        assert "DHF items deleted: none" in notes
+
+    def test_replace_managed_block_replaces_existing_snapshot(self):
+        original = (
+            "Manual intro\n\n"
+            "<!-- medharness:design-impact:start -->\nOld block\n"
+            "<!-- medharness:design-impact:end -->\n\n"
+            "Manual outro"
+        )
+        updated = _replace_managed_block(original, "<!-- medharness:design-impact:start -->\nNew block\n<!-- medharness:design-impact:end -->")
+        assert "Old block" not in updated
+        assert "New block" in updated
+        assert "Manual intro" in updated
+        assert "Manual outro" in updated
 
 
 # ── generate_code ─────────────────────────────────────────────────────────────

@@ -77,6 +77,12 @@ This document provides a comprehensive specification of all Change Requests (CRs
 {% endfor %}
 {% endif %}
 
+{% if item.implementation_notes %}
+#### Implementation Notes
+
+{{ item.implementation_notes }}
+{% endif %}
+
 {% if item.implementation_prs %}
 #### Implementation Pull Requests
 
