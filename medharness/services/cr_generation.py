@@ -37,19 +37,6 @@ from medharness.services.spec_validation import (
 )
 
 __all__ = [
-    "_append_skills",
-    "_assemble_analyze_prompt",
-    "_assemble_design_prompt",
-    "_assemble_develop_prompt",
-    "_assemble_review_code_prompt",
-    "_assemble_review_design_prompt",
-    "_assemble_review_spec_prompt",
-    "_build_design_impact_notes",
-    "_get_pr_feedback",
-    "_load_prompt",
-    "_load_skill",
-    "_replace_managed_block",
-    "_run_claude",
     "generate_code",
     "generate_design",
     "generate_spec",

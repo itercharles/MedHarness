@@ -1,7 +1,10 @@
+from __future__ import annotations
+
 """Prompt loading and assembly helpers for CR generation flows."""
 
 import importlib.resources
 import json
+from pathlib import Path
 
 from medharness.services.spec_validation import read_spec_json
 
@@ -59,7 +62,7 @@ def _assemble_review_code_prompt(cr_id: str) -> str:
     return _load_prompt("cr_review_code.md").replace("{{cr_id}}", cr_id)
 
 
-def _assemble_design_prompt_with_spec_json(cr_id: str, spec_path) -> str:
+def _assemble_design_prompt_with_spec_json(cr_id: str, spec_path: Path) -> str:
     prompt = _assemble_design_prompt(cr_id)
     spec_json = read_spec_json(spec_path)
     if not spec_json:

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """Helpers for recording design impact back onto the CR item."""
 
 from pathlib import Path
