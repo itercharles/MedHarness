@@ -64,7 +64,7 @@ def _get_pr_feedback(pr_number: int) -> str:
                 return json.loads(resp.read())
         except urllib.error.HTTPError as exc:
             return [{"error": f"HTTP {exc.code}: {exc.reason}"}]
-        except Exception as exc:  # noqa: BLE001
+        except (urllib.error.URLError, OSError, json.JSONDecodeError) as exc:
             return [{"error": str(exc)}]
 
     base = f"https://api.github.com/repos/{repo}/pulls/{pr_number}"
