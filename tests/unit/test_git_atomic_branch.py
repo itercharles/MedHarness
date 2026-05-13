@@ -143,6 +143,7 @@ def test_validate_atomic_branch_accepts_relative_spec_path(tmp_path: Path):
 
     with patch("medharness.services.git.collect_path_changes") as mock_paths, \
          patch("medharness.services.git.collect_dhf_item_changes") as mock_items:
+        # Expected call order: spec path diff first, then opt-in code path diff.
         mock_paths.side_effect = [
             {"created": [], "updated": [], "deleted": []},
             {"created": ["apps/client/src/feature.ts"], "updated": [], "deleted": []},

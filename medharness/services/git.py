@@ -9,7 +9,7 @@ from medharness.services.spec_validation import parse_spec_frontmatter
 
 
 def _resolve_repo_path(repo_root: Path, path: Path) -> Path:
-    """Return an absolute path, resolving repo-relative inputs against ``repo_root``."""
+    """Return an absolute path for either an absolute or repo-relative input path."""
     return path if path.is_absolute() else (repo_root / path)
 
 
@@ -100,6 +100,7 @@ def validate_atomic_branch(
     ``--code-path`` on the CLI (e.g. ``src/``, ``lib/``); omitting the option
     skips the code-change check entirely.
     """
+    errors: list[dict] = []
     resolved_spec = _resolve_repo_path(
         repo_root,
         spec_path or (repo_root / "docs" / "cr-specs" / f"{cr_id}-Spec.md"),
@@ -128,7 +129,6 @@ def validate_atomic_branch(
     affected = fm.get("affected_items") if isinstance(fm.get("affected_items"), list) else []
     proposed = fm.get("proposed_new_items") if isinstance(fm.get("proposed_new_items"), list) else []
 
-    errors: list[dict] = []
     code_change_count = sum(len(code_changes[b]) for b in ("created", "updated", "deleted"))
     dhf_change_count = sum(len(dhf_item_changes[b]) for b in ("created", "updated", "deleted"))
 

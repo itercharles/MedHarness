@@ -129,10 +129,11 @@ def _requires_annotation(uid: str) -> bool:
 
 
 def _annotation_present(text: str, uid: str) -> bool:
-    """Return True if a comment line contains ``@links:`` with ``uid``.
+    """Return True if a stripped added-diff line comment contains ``@links:`` with ``uid``.
 
     Matches both single-id (``@links:SRS-001``) and grouped
-    (``@links:SRS-001,SRS-002``) annotations.
+    (``@links:SRS-001,SRS-002``) annotations. ``text`` is expected to contain
+    added diff lines after the leading ``+`` prefixes have been stripped.
     """
     pat = _ANNOTATION_PATTERN_CACHE.get(uid)
     if pat is None:

@@ -294,13 +294,20 @@ def test_validate_missing_test_plan(tmp_path):
 
 
 def test_doc_only_route_rejects_dhf_impact(tmp_path):
-    content = _VALID_FM.replace("pipeline_route: standard", "pipeline_route: doc-only").replace(
-        "affected_items:\n  - SYS-001\n",
-        "affected_items:\n  - SYS-001\n",
-    )
+    content = _VALID_FM.replace("pipeline_route: standard", "pipeline_route: doc-only")
     path = _write_spec(tmp_path, content)
     errors = validate_spec(path, "CR-001")
     assert any(e["field"] == "affected_items" for e in errors)
+
+
+def test_doc_only_route_rejects_proposed_new_items(tmp_path):
+    content = _VALID_FM.replace("pipeline_route: standard", "pipeline_route: doc-only").replace(
+        "proposed_new_items: []",
+        "proposed_new_items:\n  - type: SRS\n    title: 'New requirement'",
+    )
+    path = _write_spec(tmp_path, content)
+    errors = validate_spec(path, "CR-001")
+    assert any(e["field"] == "proposed_new_items" for e in errors)
 
 
 def test_test_only_route_rejects_proposed_new_items(tmp_path):

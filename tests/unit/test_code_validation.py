@@ -46,6 +46,10 @@ def _diff(stdout: str, returncode: int = 0) -> MagicMock:
 
 
 class TestAnnotationPresent:
+    def test_matches_stripped_added_diff_comment_line(self):
+        text = "// @links:SRS-001 — covers requirement"
+        assert _annotation_present(text, "SRS-001")
+
     def test_single_id_match(self):
         text = "// @links:SRS-001 — covers requirement"
         assert _annotation_present(text, "SRS-001")
@@ -83,6 +87,17 @@ class TestValidateCode:
             "+++ b/apps/client/src/foo.test.ts\n"
             "+// @links:SRS-001 — covers focal-point reslicing\n"
             "+it('reslices', () => { expect(true).toBe(true); });\n"
+        )
+        with patch("subprocess.run", return_value=_diff(diff)):
+            errors = validate_code("CR-050", dhf, spec)
+        assert errors == []
+
+    def test_raw_git_diff_plus_prefix_is_stripped_before_annotation_check(self, repo):
+        dhf, spec = repo
+        _write_spec(spec, ["SRS-001"])
+        diff = (
+            "+++ b/apps/client/src/foo.test.ts\n"
+            "+// @links:SRS-001\n"
         )
         with patch("subprocess.run", return_value=_diff(diff)):
             errors = validate_code("CR-050", dhf, spec)
