@@ -47,6 +47,10 @@ def _split_stdout_json(stdout: str) -> dict:
     raise AssertionError(f"no JSON line in stdout:\n{stdout}")
 
 
+# Click's test runner mixes stderr into ``Result.output`` by default, so the
+# CI summary assertions intentionally check ``r.output`` rather than ``r.stderr``.
+
+
 class TestAnalyzeCrJsonContract:
     def test_json_payload_has_documented_keys(self, dhf):
         spec_path = dhf.parent / "docs" / "cr-specs" / "CR-001-Spec.md"

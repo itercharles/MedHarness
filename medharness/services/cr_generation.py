@@ -290,14 +290,10 @@ def _build_response(
     diagnostics: dict,
     warnings: list[dict],
     errors: list[dict],
+    critical_step_failed: bool,
 ) -> dict:
     normalized_errors = _normalize_errors(errors)
     fix_attempted = bool(diagnostics.get("fix_attempted"))
-    critical_step_failed = any(
-        step.get("outcome") == "failed"
-        and step.get("name") in {"run_initial_generation", "run_fix_generation"}
-        for step in steps
-    )
     outcome = _determine_outcome(
         errors=normalized_errors,
         fix_attempted=fix_attempted,
@@ -337,6 +333,7 @@ def generate_spec(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> d
     spec_path = repo_root / "docs" / "cr-specs" / f"{cr_id}-Spec.md"
     steps: list[dict] = []
     warnings: list[dict] = []
+    critical_step_failed = False
     diagnostics = {
         "anthropic_model": os.environ.get("ANTHROPIC_MODEL") or None,
         "github_feedback": {"attempted": False},
@@ -379,13 +376,14 @@ def generate_spec(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> d
         steps.append(_finish_step(prompt_step, prompt_perf, "ok"))
 
     spec_path.parent.mkdir(parents=True, exist_ok=True)
-    _run_claude_step(
+    rc, _ = _run_claude_step(
         name="run_initial_generation",
         prompt=prompt,
         steps=steps,
         warnings=warnings,
         critical=True,
     )
+    critical_step_failed = critical_step_failed or rc != 0
 
     analysis: dict | None = None
     errors: list[dict] = []
@@ -410,13 +408,14 @@ def generate_spec(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> d
                 f"Fix only the front-matter fields that caused errors. "
                 f"Do not change the markdown content."
             )
-            _run_claude_step(
+            rc, _ = _run_claude_step(
                 name="run_fix_generation",
                 prompt=fix_prompt,
                 steps=steps,
                 warnings=warnings,
                 critical=True,
             )
+            critical_step_failed = critical_step_failed or rc != 0
             validate_fix_step, validate_fix_perf = _begin_step("validate_after_fix", {"validator": "spec_validation"})
             errors = validate_spec(spec_path, cr_id, dhf_path)
             diagnostics["final_error_count"] = len(errors)
@@ -485,6 +484,7 @@ def generate_spec(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> d
         diagnostics=diagnostics,
         warnings=warnings,
         errors=errors,
+        critical_step_failed=critical_step_failed,
     )
 
 
@@ -533,6 +533,7 @@ def generate_design(cr_id: str, dhf_path: Path, pr_number: int | None = None) ->
     spec_path = repo_root / "docs" / "cr-specs" / f"{cr_id}-Spec.md"
     steps: list[dict] = []
     warnings: list[dict] = []
+    critical_step_failed = False
     diagnostics = {
         "anthropic_model": os.environ.get("ANTHROPIC_MODEL") or None,
         "github_feedback": {"attempted": False},
@@ -587,13 +588,14 @@ def generate_design(cr_id: str, dhf_path: Path, pr_number: int | None = None) ->
             )
         )
 
-    _run_claude_step(
+    rc, _ = _run_claude_step(
         name="run_initial_generation",
         prompt=prompt,
         steps=steps,
         warnings=warnings,
         critical=True,
     )
+    critical_step_failed = critical_step_failed or rc != 0
 
     validate_step, validate_perf = _begin_step("validate_initial", {"validator": "design_validation"})
     errors = design_validation.validate_design(cr_id, dhf_path, spec_path)
@@ -616,13 +618,14 @@ def generate_design(cr_id: str, dhf_path: Path, pr_number: int | None = None) ->
             f"CLI (`dhf item create` / `dhf item update`). Do not introduce other "
             f"changes."
         )
-        _run_claude_step(
+        rc, _ = _run_claude_step(
             name="run_fix_generation",
             prompt=fix_prompt,
             steps=steps,
             warnings=warnings,
             critical=True,
         )
+        critical_step_failed = critical_step_failed or rc != 0
         validate_fix_step, validate_fix_perf = _begin_step("validate_after_fix", {"validator": "design_validation"})
         errors = design_validation.validate_design(cr_id, dhf_path, spec_path)
         diagnostics["final_error_count"] = len(errors)
@@ -675,6 +678,7 @@ def generate_design(cr_id: str, dhf_path: Path, pr_number: int | None = None) ->
         diagnostics=diagnostics,
         warnings=warnings,
         errors=errors,
+        critical_step_failed=critical_step_failed,
     )
 
 
@@ -692,6 +696,7 @@ def generate_code(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> d
     spec_path = repo_root / "docs" / "cr-specs" / f"{cr_id}-Spec.md"
     steps: list[dict] = []
     warnings: list[dict] = []
+    critical_step_failed = False
     diagnostics = {
         "anthropic_model": os.environ.get("ANTHROPIC_MODEL") or None,
         "github_feedback": {"attempted": False},
@@ -739,13 +744,14 @@ def generate_code(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> d
         prompt = _assemble_develop_prompt(cr_id)
         steps.append(_finish_step(prompt_step, prompt_perf, "ok"))
 
-    _run_claude_step(
+    rc, _ = _run_claude_step(
         name="run_initial_generation",
         prompt=prompt,
         steps=steps,
         warnings=warnings,
         critical=True,
     )
+    critical_step_failed = critical_step_failed or rc != 0
 
     validate_step, validate_perf = _begin_step("validate_initial", {"validator": "code_validation"})
     errors = code_validation.validate_code(cr_id, dhf_path, spec_path)
@@ -767,13 +773,14 @@ def generate_code(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> d
             f"Add only the missing colocated tests with `@links:` annotations. "
             f"Do not introduce other changes."
         )
-        _run_claude_step(
+        rc, _ = _run_claude_step(
             name="run_fix_generation",
             prompt=fix_prompt,
             steps=steps,
             warnings=warnings,
             critical=True,
         )
+        critical_step_failed = critical_step_failed or rc != 0
         validate_fix_step, validate_fix_perf = _begin_step("validate_after_fix", {"validator": "code_validation"})
         errors = code_validation.validate_code(cr_id, dhf_path, spec_path)
         diagnostics["final_error_count"] = len(errors)
@@ -813,4 +820,5 @@ def generate_code(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> d
         diagnostics=diagnostics,
         warnings=warnings,
         errors=errors,
+        critical_step_failed=critical_step_failed,
     )
