@@ -86,7 +86,13 @@ def _format_summary(stage_label: str, verb: str, cr_id: str, result: dict) -> st
         if created or updated or deleted:
             details.append(f"{label}: +{created} ~{updated} -{deleted}")
 
-    return f"OK {stage_label} {verb} for {cr_id} ({', '.join(details)})."
+    prefix = "ERROR" if result.get("outcome") == "tool_error" else "OK"
+    return f"{prefix} {stage_label} {verb} for {cr_id} ({', '.join(details)})."
+
+
+def _raise_for_tool_error(result: dict) -> None:
+    if result.get("outcome") == "tool_error":
+        raise click.exceptions.Exit(1)
 
 
 def _validation_spec_path(dhf_path: Path, cr_id: str, spec_path: Path | None) -> Path:
@@ -650,6 +656,7 @@ def register(main):
         result = generate_spec(cr_id, dhf, pr_number=pr_number)
         click.echo(json.dumps(result))
         click.echo(_format_summary("Spec", "revised" if pr_number else "generated", cr_id, result), err=True)
+        _raise_for_tool_error(result)
 
     @ci.command("design-cr")
     @click.option("--cr", "cr_id", required=True, metavar="CR_ID")
@@ -670,6 +677,7 @@ def register(main):
         result = generate_design(cr_id, dhf, pr_number=pr_number)
         click.echo(json.dumps(result))
         click.echo(_format_summary("Design", "revised" if pr_number else "generated", cr_id, result), err=True)
+        _raise_for_tool_error(result)
 
     @ci.command("develop-cr")
     @click.option("--cr", "cr_id", required=True, metavar="CR_ID")
@@ -690,3 +698,4 @@ def register(main):
         result = generate_code(cr_id, dhf, pr_number=pr_number)
         click.echo(json.dumps(result))
         click.echo(_format_summary("Implementation", "revised" if pr_number else "generated", cr_id, result), err=True)
+        _raise_for_tool_error(result)

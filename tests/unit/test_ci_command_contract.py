@@ -91,6 +91,25 @@ class TestAnalyzeCrJsonContract:
         assert "OK Spec generated for CR-002" in r.output
         assert "outcome:" in r.output
 
+    def test_tool_error_exits_non_zero_and_uses_error_summary(self, dhf):
+        spec_path = dhf.parent / "docs" / "cr-specs" / "CR-003-Spec.md"
+        spec_path.parent.mkdir(parents=True, exist_ok=True)
+        spec_path.write_text(
+            '---\ncr_id: "CR-003"\ndisposition: approve\npipeline_route: standard\n'
+            'affected_items: []\nproposed_new_items: []\n'
+            'design_impact_summary: "Test summary."\n'
+            'test_plan:\n  auto_covered: []\n'
+            '  needs_new_tc: []\n  must_be_manual: []\n---\n',
+            encoding="utf-8",
+        )
+        runner = CliRunner()
+        with patch("medharness.services.cr_generation._run_claude", return_value=(1, "claude failed")):
+            r = runner.invoke(main, ["--dhf", str(dhf), "ci", "analyze-cr", "--cr", "CR-003"])
+        assert r.exit_code == 1
+        payload = _split_stdout_json(r.stdout)
+        assert payload["outcome"] == "tool_error"
+        assert "ERROR Spec generated for CR-003" in r.output
+
 
 class TestDesignCrJsonContract:
     def test_json_payload_has_documented_keys(self, dhf):
