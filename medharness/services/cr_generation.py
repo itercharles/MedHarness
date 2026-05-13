@@ -1,6 +1,7 @@
-"""CR lifecycle AI generation — assemble prompt, run claude, self-correct."""
+"""CR lifecycle AI generation orchestration."""
 
-import importlib.resources
+from __future__ import annotations
+
 import json
 import os
 import subprocess
@@ -10,64 +11,49 @@ import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
-from dhfkit.local_adapter import LocalDHFAdapter
+from medharness.services import code_validation, design_validation, git
+from medharness.services.cr_impact import (
+    _build_design_impact_notes,
+    _record_design_impact_in_cr,
+    _replace_managed_block,
+)
+from medharness.services.prompt_assembly import (
+    _append_skills,
+    _assemble_analyze_prompt,
+    _assemble_design_prompt,
+    _assemble_design_prompt_with_spec_json,
+    _assemble_develop_prompt,
+    _assemble_review_code_prompt,
+    _assemble_review_design_prompt,
+    _assemble_review_spec_prompt,
+    _load_prompt,
+    _load_skill,
+)
+from medharness.services.spec_validation import (
+    extract_structured_analysis,
+    parse_spec_frontmatter,
+    validate_spec,
+    write_spec_json,
+)
 
-from medharness.services.spec_validation import read_spec_json
-
-
-# ── Prompt assembly ──────────────────────────────────────────────────────────
-
-def _load_prompt(name: str) -> str:
-    ref = importlib.resources.files("medharness.prompts").joinpath(name)
-    return ref.read_text(encoding="utf-8")
-
-
-def _load_skill(name: str) -> str:
-    ref = importlib.resources.files("medharness.prompts.skills").joinpath(name)
-    return ref.read_text(encoding="utf-8")
-
-
-_SKILL_FILES = [
-    ("product_impact.md", "Product Impact"),
-    ("req_manage.md", "Requirements Management"),
-    ("architecture_impact.md", "Architecture Impact"),
-    ("risk_impact.md", "Risk Impact"),
-    ("soup_impact.md", "SOUP Impact"),
-    ("test_impact.md", "Test Impact"),
+__all__ = [
+    "_append_skills",
+    "_assemble_analyze_prompt",
+    "_assemble_design_prompt",
+    "_assemble_develop_prompt",
+    "_assemble_review_code_prompt",
+    "_assemble_review_design_prompt",
+    "_assemble_review_spec_prompt",
+    "_build_design_impact_notes",
+    "_get_pr_feedback",
+    "_load_prompt",
+    "_load_skill",
+    "_replace_managed_block",
+    "_run_claude",
+    "generate_code",
+    "generate_design",
+    "generate_spec",
 ]
-
-
-def _append_skills(prompt: str) -> str:
-    parts = [prompt, "\n\n---\n"]
-    for fname, title in _SKILL_FILES:
-        parts.append(f"\n### {title}\n\n{_load_skill(fname)}\n")
-    return "".join(parts)
-
-
-def _assemble_analyze_prompt(cr_id: str) -> str:
-    prompt = _load_prompt("cr_analyze.md").replace("{{cr_id}}", cr_id)
-    return _append_skills(prompt)
-
-
-def _assemble_design_prompt(cr_id: str) -> str:
-    prompt = _load_prompt("cr_design.md").replace("{{cr_id}}", cr_id)
-    return _append_skills(prompt)
-
-
-def _assemble_develop_prompt(cr_id: str) -> str:
-    return _load_prompt("cr_develop.md").replace("{{cr_id}}", cr_id)
-
-
-def _assemble_review_spec_prompt(cr_id: str) -> str:
-    return _load_prompt("cr_review_spec.md").replace("{{cr_id}}", cr_id)
-
-
-def _assemble_review_design_prompt(cr_id: str) -> str:
-    return _load_prompt("cr_review_design.md").replace("{{cr_id}}", cr_id)
-
-
-def _assemble_review_code_prompt(cr_id: str) -> str:
-    return _load_prompt("cr_review_code.md").replace("{{cr_id}}", cr_id)
 
 
 # ── GitHub PR feedback ────────────────────────────────────────────────────────
@@ -117,97 +103,8 @@ def _run_claude(prompt: str) -> tuple[int, str]:
     return result.returncode, combined
 
 
-# ── Public API ────────────────────────────────────────────────────────────────
-
 def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
-
-
-_DESIGN_IMPACT_START = "<!-- medharness:design-impact:start -->"
-_DESIGN_IMPACT_END = "<!-- medharness:design-impact:end -->"
-
-
-def _normalize_proposed_item(entry: object) -> str:
-    if not isinstance(entry, dict):
-        return str(entry)
-    item_type = str(entry.get("type") or "").strip()
-    title = str(entry.get("title") or "").strip()
-    parent = str(entry.get("parent") or "").strip()
-    details = f"{item_type}: {title}".strip(": ")
-    if parent:
-        details = f"{details} (parent: {parent})"
-    return details
-
-
-def _format_item_list(items: list[str]) -> str:
-    return ", ".join(items) if items else "none"
-
-
-def _replace_managed_block(existing: str, block: str) -> str:
-    start = existing.find(_DESIGN_IMPACT_START)
-    end = existing.find(_DESIGN_IMPACT_END)
-    if start != -1 and end != -1 and end > start:
-        end += len(_DESIGN_IMPACT_END)
-        replacement = block.strip()
-        prefix = existing[:start].rstrip()
-        suffix = existing[end:].lstrip()
-        parts = [part for part in (prefix, replacement, suffix) if part]
-        return "\n\n".join(parts).strip()
-    if not existing.strip():
-        return block.strip()
-    return f"{existing.rstrip()}\n\n{block.strip()}"
-
-
-def _build_design_impact_notes(spec_json: dict, items_changed: dict[str, list[str]]) -> str:
-    proposed = spec_json.get("proposed_new_items")
-    proposed_lines = (
-        "\n".join(f"- {_normalize_proposed_item(entry)}" for entry in proposed)
-        if isinstance(proposed, list) and proposed
-        else "- none"
-    )
-    lines = [
-        _DESIGN_IMPACT_START,
-        "## Design Impact Snapshot",
-        "",
-        f"- Spec affected items: {_format_item_list(list(spec_json.get('affected_items', []) or []))}",
-        "- Spec proposed new items:",
-        proposed_lines,
-        f"- DHF items created: {_format_item_list(items_changed.get('created', []))}",
-        f"- DHF items updated: {_format_item_list(items_changed.get('updated', []))}",
-        f"- DHF items deleted: {_format_item_list(items_changed.get('deleted', []))}",
-        _DESIGN_IMPACT_END,
-    ]
-    return "\n".join(lines)
-
-
-def _record_design_impact_in_cr(
-    cr_id: str,
-    dhf_path: Path,
-    spec_path: Path,
-    items_changed: dict[str, list[str]],
-) -> None:
-    spec_json = read_spec_json(spec_path) or {}
-    try:
-        adapter = LocalDHFAdapter(dhf_path)
-    except FileNotFoundError:
-        return
-    existing = adapter.get_item(cr_id)
-    if existing is None:
-        return
-
-    affected_ids = list(spec_json.get("affected_items", []) or [])
-    touched_ids = []
-    for bucket in ("created", "updated", "deleted"):
-        touched_ids.extend(items_changed.get(bucket, []) or [])
-    recorded_affected = sorted(set(affected_ids) | set(touched_ids))
-
-    existing_notes = str(existing.get("implementation_notes") or "")
-    design_notes = _build_design_impact_notes(spec_json, items_changed)
-    payload = {
-        "affected_items": recorded_affected,
-        "implementation_notes": _replace_managed_block(existing_notes, design_notes),
-    }
-    adapter.update_item(cr_id, payload, author="medharness", cr_id=cr_id)
 
 
 def _build_response(
@@ -277,10 +174,6 @@ def generate_spec(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> d
     corrections = 0
     errors: list[dict] = []
     if spec_path.exists():
-        from medharness.services.spec_validation import (  # noqa: PLC0415
-            extract_structured_analysis,
-            validate_spec,
-        )
         errors = validate_spec(spec_path, cr_id, dhf_path)
         if errors:
             corrections += 1
@@ -297,10 +190,6 @@ def generate_spec(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> d
     # Write JSON companion regardless of residual errors.
     spec_json_path: str | None = None
     if spec_path.exists():
-        from medharness.services.spec_validation import (  # noqa: PLC0415
-            parse_spec_frontmatter,
-            write_spec_json,
-        )
         fm = parse_spec_frontmatter(spec_path)
         if fm is not None:
             spec_json_path = str(write_spec_json(spec_path, fm))
@@ -375,28 +264,11 @@ def generate_design(cr_id: str, dhf_path: Path, pr_number: int | None = None) ->
             f"Review feedback:\n{feedback}"
         )
     else:
-        prompt = _assemble_design_prompt(cr_id)
-        spec_json = read_spec_json(spec_path)
-        if spec_json:
-            prompt = prompt + (
-                f"\n\n## Pre-computed Spec Summary (from {cr_id}-Spec.json)\n"
-                "The following structured data was extracted from the approved spec. "
-                "Use it directly — do not re-read or re-interpret the Markdown spec.\n"
-                "For each proposed_new_items entry, preserve any explicit `parent` "
-                "value when creating the DHF item so the design output matches the "
-                "approved spec metadata.\n"
-                "If a proposed_new_items entry includes `verification_method`, map that "
-                "analysis metadata into the target item's actual schema instead of copying "
-                "it verbatim: `SYS` uses `verification_method` as a single-element list, "
-                "`SOUP` uses it as a scalar string, and item types without that field must "
-                "not receive a synthetic `verification_method` property.\n"
-                f"```json\n{json.dumps(spec_json, indent=2)}\n```\n"
-            )
+        prompt = _assemble_design_prompt_with_spec_json(cr_id, spec_path)
 
     _run_claude(prompt)
 
-    from medharness.services.design_validation import validate_design  # noqa: PLC0415
-    errors = validate_design(cr_id, dhf_path, spec_path)
+    errors = design_validation.validate_design(cr_id, dhf_path, spec_path)
     corrections = 0
     if errors:
         corrections += 1
@@ -408,13 +280,12 @@ def generate_design(cr_id: str, dhf_path: Path, pr_number: int | None = None) ->
             f"changes."
         )
         _run_claude(fix_prompt)
-        errors = validate_design(cr_id, dhf_path, spec_path)
+        errors = design_validation.validate_design(cr_id, dhf_path, spec_path)
 
     review_prompt = _augment_review_prompt(_assemble_review_design_prompt(cr_id), errors)
     _run_claude(review_prompt)
 
-    from medharness.services.git import collect_dhf_item_changes  # noqa: PLC0415
-    items_changed = collect_dhf_item_changes(repo_root, "origin/main")
+    items_changed = git.collect_dhf_item_changes(repo_root, "origin/main")
     if not errors:
         _record_design_impact_in_cr(cr_id, dhf_path, spec_path, items_changed)
 
@@ -454,8 +325,7 @@ def generate_code(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> d
 
     _run_claude(prompt)
 
-    from medharness.services.code_validation import validate_code  # noqa: PLC0415
-    errors = validate_code(cr_id, dhf_path, spec_path)
+    errors = code_validation.validate_code(cr_id, dhf_path, spec_path)
     corrections = 0
     if errors:
         corrections += 1
@@ -466,13 +336,12 @@ def generate_code(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> d
             f"Do not introduce other changes."
         )
         _run_claude(fix_prompt)
-        errors = validate_code(cr_id, dhf_path, spec_path)
+        errors = code_validation.validate_code(cr_id, dhf_path, spec_path)
 
     review_prompt = _augment_review_prompt(_assemble_review_code_prompt(cr_id), errors)
     _run_claude(review_prompt)
 
-    from medharness.services.git import collect_path_changes  # noqa: PLC0415
-    files_changed = collect_path_changes(repo_root, "origin/main", "apps/", "packages/")
+    files_changed = git.collect_path_changes(repo_root, "origin/main", "apps/", "packages/")
 
     return _build_response(
         cr_id=cr_id,

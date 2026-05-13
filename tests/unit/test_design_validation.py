@@ -7,6 +7,8 @@ from unittest.mock import patch
 
 import pytest
 
+from dhfkit.exceptions import ValidationError
+
 from medharness.services.design_validation import validate_design
 
 
@@ -79,7 +81,7 @@ class TestValidateDesignSchema:
     def test_schema_exception_produces_error(self, repo):
         dhf, spec = repo
         _write_spec(spec, [])
-        with patch("dhfkit.api.validate_schema", side_effect=RuntimeError("boom")), \
+        with patch("dhfkit.api.validate_schema", side_effect=ValidationError("boom")), \
              patch("dhfkit.api.validate_traceability", return_value={"passed": True}), \
              patch("dhfkit.api.list_items", return_value=[]):
             errors = validate_design("CR-001", dhf, spec)

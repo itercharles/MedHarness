@@ -15,6 +15,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from dhfkit.exceptions import ValidationError
+
 from medharness.services.spec_validation import parse_spec_frontmatter
 
 
@@ -38,8 +40,8 @@ def validate_design(
     errors: list[dict] = []
 
     try:
-        import dhfkit.api as _api  # noqa: PLC0415
-    except Exception as exc:  # noqa: BLE001
+        import dhfkit.api as _api
+    except ImportError as exc:
         return [{
             "field": "environment",
             "issue": f"Could not import dhfkit.api: {exc}",
@@ -49,7 +51,7 @@ def validate_design(
     # --- Schema -----------------------------------------------------------------
     try:
         schema_result = _api.validate_schema(dhf_path)
-    except Exception as exc:  # noqa: BLE001
+    except (FileNotFoundError, ValidationError, ValueError) as exc:
         errors.append({
             "field": "schema",
             "issue": f"Schema validation raised: {exc}",
@@ -71,7 +73,7 @@ def validate_design(
     # --- Traceability -----------------------------------------------------------
     try:
         trace_result = _api.validate_traceability(dhf_path)
-    except Exception as exc:  # noqa: BLE001
+    except (FileNotFoundError, ValidationError, ValueError) as exc:
         errors.append({
             "field": "traceability",
             "issue": f"Traceability validation raised: {exc}",
@@ -126,7 +128,7 @@ def validate_design(
         try:
             listed_items = _api.list_items(dhf_path)
             existing_ids = {it["id"] for it in listed_items}
-        except Exception as exc:  # noqa: BLE001
+        except (FileNotFoundError, ValidationError, ValueError) as exc:
             errors.append({
                 "field": "affected_items",
                 "issue": f"Could not enumerate DHF items to verify spec expectations: {exc}",
