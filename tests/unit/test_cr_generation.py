@@ -26,6 +26,7 @@ from medharness.services.cr_generation import (
 )
 
 from medharness.services.prompt_assembly import (
+    MAX_DIFF_CHARS,
     _build_dhf_context_block,
     _build_impact_closure_block,
 )
@@ -88,13 +89,13 @@ class TestLoadSkill:
 
     def test_architecture_impact_has_output_template(self):
         text = _load_skill("architecture_impact.md")
-        assert "SYSARCH" in text
+        assert "architecture" in text.lower()
         assert "Required" in text
 
-    def test_risk_impact_mentions_iso_14971(self):
+    def test_risk_impact_has_output_template(self):
         text = _load_skill("risk_impact.md")
-        assert "RISK" in text
-        assert "RCM" in text
+        assert "risk" in text.lower()
+        assert "Required" in text
 
 
 class TestAppendSkills:
@@ -847,6 +848,22 @@ class TestGenerateCode:
         prompt = mock_claude.call_args_list[0][0][0]
         assert "Existing Implementation" not in prompt
 
+    def test_diff_truncated_when_too_large(self, tmp_path):
+        dhf = tmp_path / "DHF"
+        dhf.mkdir()
+        large_diff = "+" + "x" * (MAX_DIFF_CHARS + 1000)
+        with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
+             patch("medharness.services.code_validation.validate_code",
+                    return_value=[]), \
+             patch("medharness.services.git.compute_diff",
+                    return_value=large_diff):
+            mock_claude.return_value = (0, "")
+            generate_code("CR-029", dhf)
+        prompt = mock_claude.call_args_list[0][0][0]
+        assert "Existing Implementation" in prompt
+        assert "truncated" in prompt
+        assert large_diff not in prompt  # full diff not present
+
 
 # ── DHF context block ──────────────────────────────────────────────────────────
 
@@ -938,6 +955,26 @@ class TestBuildDhfContextBlock:
         ):
             result = _build_dhf_context_block(dhf)
         assert "manual_verification_candidates" not in result
+
+    def test_coverage_uses_system_requirement_role_code(self, tmp_path):
+        from tests.fixtures.stub_adapter import StubDHFAdapter
+
+        dhf = tmp_path / "DHF"
+        dhf.mkdir()
+        adapter = StubDHFAdapter()
+        adapter.create_item({"id": "SYSREQ-001", "title": "Custom-prefix req"})
+        adapter._item_types.append({
+            "name": "System Requirement", "code": "SYSREQ",
+            "prefix": "SYSREQ-", "role": "system_requirement",
+            "parent_types": [], "has_verification": True,
+            "lifecycle": None, "fields": [],
+        })
+        with patch(
+            "dhfkit.local_adapter.LocalDHFAdapter",
+            return_value=adapter,
+        ):
+            result = _build_dhf_context_block(dhf)
+        assert "System requirements (tier 2): SYSREQ" in result
 
 
 # ── Impact closure block ───────────────────────────────────────────────────────

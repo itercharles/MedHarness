@@ -19,6 +19,7 @@ from medharness.services.cr_impact import (
     _replace_managed_block,
 )
 from medharness.services.prompt_assembly import (
+    MAX_DIFF_CHARS,
     _append_skills,
     _assemble_analyze_prompt,
     _assemble_design_prompt,
@@ -42,6 +43,17 @@ __all__ = [
     "generate_design",
     "generate_spec",
 ]
+
+# Default source paths scanned by develop-cr for diff injection and artifact
+# collection. Override via the MEDHARNESS_CODE_PATHS environment variable
+# (comma-separated, e.g. "src/,lib/") or by assigning a tuple before calling
+# generate_code(). Projects using different layouts should set this once in
+# their CI configuration or product repo entry point.
+_DEFAULT_CODE_PATHS: tuple[str, ...] = tuple(
+    p.strip()
+    for p in os.environ.get("MEDHARNESS_CODE_PATHS", "apps/,packages/").split(",")
+    if p.strip()
+)
 
 
 # ── GitHub PR feedback ────────────────────────────────────────────────────────
@@ -742,15 +754,22 @@ def generate_code(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> d
             {"prompt_kind": "develop_generation", "used_pr_feedback": False},
         )
         prompt = _assemble_develop_prompt(cr_id)
-        diff = git.compute_diff(repo_root, "origin/main", "apps/", "packages/")
+        diff = git.compute_diff(repo_root, "origin/main", *_DEFAULT_CODE_PATHS)
         if diff:
+            truncated = len(diff) > MAX_DIFF_CHARS
+            diff_body = diff[:MAX_DIFF_CHARS]
             prompt += (
                 "\n\n## Existing Implementation (since origin/main)\n\n"
                 "The following changes have already been made on this branch. "
                 "Implement only what is still missing according to the spec "
                 "— do not rewrite existing work.\n\n"
-                f"```diff\n{diff}\n```\n"
+                f"```diff\n{diff_body}\n```\n"
             )
+            if truncated:
+                prompt += (
+                    f"_(diff truncated at {MAX_DIFF_CHARS} chars — "
+                    "remaining changes not shown)_\n"
+                )
         steps.append(_finish_step(prompt_step, prompt_perf, "ok", {"diff_injected": bool(diff)}))
 
     rc, _ = _run_claude_step(
@@ -812,7 +831,7 @@ def generate_code(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> d
     )
 
     artifact_step, artifact_perf = _begin_step("collect_artifacts", {"kind": "files_changed"})
-    files_changed = git.collect_path_changes(repo_root, "origin/main", "apps/", "packages/")
+    files_changed = git.collect_path_changes(repo_root, "origin/main", *_DEFAULT_CODE_PATHS)
     steps.append(_finish_step(artifact_step, artifact_perf, "ok", {"files_changed": files_changed}))
 
     return _build_response(

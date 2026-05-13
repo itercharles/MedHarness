@@ -1,4 +1,5 @@
 code: SRS
+role: software_requirement
 name: Software Requirement
 prefix: SRS-
 directory: 03_srs

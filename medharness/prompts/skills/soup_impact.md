@@ -9,7 +9,7 @@ Read:
 - `DHF/items/09_cr/<CR_ID>.yaml`
 - `DHF/documents/plans/configuration_management_plan.md`
 - `DHF/documents/plans/maintenance_plan.md`
-- `DHF/items/11_soup/`
+- SOUP items (see Type Registry — `soup` role)
 - Product dependency manifests if relevant
 
 ## Analysis
@@ -20,7 +20,7 @@ Check whether the CR:
 - Changes the safety purpose or operating context of an existing SOUP item.
 - Requires SOUP version, license, manufacturer, CVE, risk rating, or verification
   method updates.
-- Requires affected SRS items to reference SOUP usage.
+- Requires affected software requirement items to reference SOUP usage.
 
 ## Output
 
@@ -29,7 +29,7 @@ Return a concise SOUP impact entry:
 ```markdown
 SOUP / Dependencies: Required | Not required | Follow-up needed
 Justification: <one sentence>
-Impacted items: <SOUP IDs or "None">
+Impacted items: <SOUP item IDs or "None">
 Recommended action: <none, update SOUP, create SOUP, or inspect manifests during implementation>
 ```
 
@@ -39,10 +39,10 @@ the same approved way.
 ## Design Updates
 
 When the approved spec requires SOUP changes. Prefer no change > update > create.
-- Update or create `SOUP` items under `DHF/items/11_soup/`.
+- Update or create **SOUP items** (see Type Registry — `soup` role).
 - Record name, version, manufacturer, license, purpose, homepage, risk rating,
   safety class, and verification method when known.
 - If dependency details are not available during design, mark the item or spec
   as follow-up for implementation rather than inventing values.
-- Ensure affected SRS items reference SOUP usage if the repository schema supports
-  that relationship.
+- Ensure affected software requirement items (tier-3) reference SOUP usage if
+  the repository schema supports that relationship.

@@ -1,4 +1,5 @@
 code: CR
+role: change_request
 name: Change Request
 prefix: CR-
 directory: 06_cr

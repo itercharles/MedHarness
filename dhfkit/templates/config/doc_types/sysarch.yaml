@@ -1,4 +1,5 @@
 code: SYSARCH
+role: architecture
 name: System Architecture
 prefix: SYSARCH-
 directory: 05_sysarch
