@@ -12,6 +12,8 @@ Calls services/ci.py and _helpers directly. No commands/ci.py intermediate layer
     the product repo
 """
 
+from __future__ import annotations
+
 import json
 import re
 from pathlib import Path
@@ -56,23 +58,27 @@ def _parse_branch_stage_pairs(values: tuple[str, ...]) -> tuple[tuple[str, str],
 def _format_summary(stage_label: str, verb: str, cr_id: str, result: dict) -> str:
     """Compose the human-readable stderr summary for CI generate-* commands.
 
-    Surfaces correction count, validation outcome, residual error count,
+    Surfaces client-facing outcome, fix attempts, residual error count,
     elapsed time, and changed-item / changed-file counts when present.
     """
+    diagnostics = result.get("diagnostics") or {}
+    artifacts = result.get("artifacts") or {}
+    timing = result.get("timing") or {}
     details = [
-        f"{result.get('corrections', 0)} correction(s)",
-        f"validation: {result.get('validation', 'unknown')}",
+        f"outcome: {result.get('outcome', 'unknown')}",
     ]
+    if diagnostics.get("fix_attempted"):
+        details.append("fix attempted")
     err_count = len(result.get("errors") or [])
     if err_count:
-        details.append(f"residual errors: {err_count}")
-    elapsed_ms = result.get("elapsed_ms")
+        details.append(f"errors: {err_count}")
+    elapsed_ms = timing.get("elapsed_ms")
     if elapsed_ms is not None:
         details.append(f"{elapsed_ms} ms")
 
     for label, bucket in (
-        ("DHF", result.get("items_changed") or {}),
-        ("files", result.get("files_changed") or {}),
+        ("DHF", artifacts.get("items_changed") or {}),
+        ("files", artifacts.get("files_changed") or {}),
     ):
         created = len(bucket.get("created") or [])
         updated = len(bucket.get("updated") or [])

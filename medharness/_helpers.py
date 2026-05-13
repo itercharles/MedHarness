@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """Shared CLI helpers."""
 import json
 import os

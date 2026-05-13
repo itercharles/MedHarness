@@ -35,22 +35,50 @@ for the versioning policy.
 - Writes JSON to stdout with these keys:
   - `cr_id`
   - `stage`
-  - `status`
-  - `corrections`
-  - `validation`
+  - `outcome`
+  - `summary`
+  - `timing`
+  - `inputs`
+  - `progress`
+  - `steps`
+  - `artifacts`
+  - `diagnostics`
+  - `warnings`
   - `errors`
-  - `started_at`
-  - `elapsed_ms`
+- `artifacts` includes:
   - `spec_path`
   - `spec_json_path`
   - `analysis`
-- `analysis` contains these keys:
+- `artifacts.analysis` contains these keys:
   - `direction_fit`
   - `affected_items`
   - `proposed_new_items`
   - `design_impact_summary`
   - `test_plan`
+- `steps[*]` includes:
+  - `name`
+  - `started_at`
+  - `outcome`
+  - `elapsed_ms`
+  - `details`
+- `outcome` is one of:
+  - `ok`
+  - `corrected`
+  - `completed_with_errors`
+  - `tool_error`
 - Uses stderr only for human-readable summaries
+
+#### `medharness ci design-cr` / `medharness ci develop-cr`
+
+- Write the same top-level JSON keys as `ci analyze-cr`
+- `artifacts.items_changed` is present for `design-cr`
+- `artifacts.files_changed` is present for `develop-cr`
+- `diagnostics` exposes at minimum:
+  - `anthropic_model`
+  - `github_feedback`
+  - `fix_attempted`
+  - `initial_error_count`
+  - `final_error_count`
 
 #### `medharness ci cr-status`
 

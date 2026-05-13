@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 import time
 import urllib.error
@@ -48,8 +49,27 @@ __all__ = [
 def _get_pr_feedback(pr_number: int) -> str:
     token = os.environ.get("GH_TOKEN", "") or os.environ.get("GITHUB_TOKEN", "")
     repo = os.environ.get("GITHUB_REPOSITORY", "")
+    diagnostics = {
+        "attempted": True,
+        "pr_number": pr_number,
+        "repo_env_present": bool(repo),
+        "token_env_present": bool(token),
+    }
     if not repo or not token:
-        return "(PR feedback unavailable — GH_TOKEN and GITHUB_REPOSITORY not set)"
+        return {
+            "prompt_text": "(PR feedback unavailable — GH_TOKEN and GITHUB_REPOSITORY not set)",
+            "diagnostics": {
+                **diagnostics,
+                "comments_status": "skipped",
+                "reviews_status": "skipped",
+            },
+            "warnings": [
+                _warning(
+                    "github_feedback_env_missing",
+                    "PR feedback unavailable because GH_TOKEN/GITHUB_TOKEN or GITHUB_REPOSITORY is missing.",
+                ),
+            ],
+        }
 
     headers = {
         "Authorization": f"token {token}",
@@ -57,20 +77,60 @@ def _get_pr_feedback(pr_number: int) -> str:
         "User-Agent": "medharness",
     }
 
-    def _fetch(url: str) -> list:
+    def _fetch(kind: str, url: str) -> dict[str, object]:
         req = urllib.request.Request(url, headers=headers)
         try:
             with urllib.request.urlopen(req, timeout=30) as resp:
-                return json.loads(resp.read())
+                return {"status": "ok", "data": json.loads(resp.read()), "error": None}
         except urllib.error.HTTPError as exc:
-            return [{"error": f"HTTP {exc.code}: {exc.reason}"}]
-        except (urllib.error.URLError, OSError, json.JSONDecodeError) as exc:
-            return [{"error": str(exc)}]
+            message = f"HTTP {exc.code}: {exc.reason}"
+            return {
+                "status": "http_error",
+                "data": [{"error": message}],
+                "error": message,
+                "warning": _warning(f"github_{kind}_http_error", f"GitHub {kind} fetch failed: {message}."),
+            }
+        except (urllib.error.URLError, OSError) as exc:
+            message = str(exc)
+            return {
+                "status": "transport_error",
+                "data": [{"error": message}],
+                "error": message,
+                "warning": _warning(f"github_{kind}_transport_error", f"GitHub {kind} fetch failed: {message}."),
+            }
+        except json.JSONDecodeError as exc:
+            message = str(exc)
+            return {
+                "status": "decode_error",
+                "data": [{"error": message}],
+                "error": message,
+                "warning": _warning(f"github_{kind}_decode_error", f"GitHub {kind} response could not be decoded: {message}."),
+            }
 
     base = f"https://api.github.com/repos/{repo}/pulls/{pr_number}"
-    comments = _fetch(f"{base}/comments")
-    reviews = _fetch(f"{base}/reviews")
-    return json.dumps({"comments": comments, "reviews": reviews}, indent=2)
+    comments = _fetch("comments", f"{base}/comments")
+    reviews = _fetch("reviews", f"{base}/reviews")
+    warnings = [
+        warning
+        for warning in (comments.get("warning"), reviews.get("warning"))
+        if isinstance(warning, dict)
+    ]
+    return {
+        "prompt_text": json.dumps(
+            {"comments": comments["data"], "reviews": reviews["data"]},
+            indent=2,
+        ),
+        "diagnostics": {
+            **diagnostics,
+            "comments_status": comments["status"],
+            "comments_error": comments["error"],
+            "reviews_status": reviews["status"],
+            "reviews_error": reviews["error"],
+            "comments_count": len(comments["data"]) if isinstance(comments["data"], list) else 0,
+            "reviews_count": len(reviews["data"]) if isinstance(reviews["data"], list) else 0,
+        },
+        "warnings": warnings,
+    }
 
 
 # ── Claude invocation ─────────────────────────────────────────────────────────
@@ -94,45 +154,178 @@ def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
+def _warning(code: str, message: str, details: dict | None = None) -> dict:
+    warning = {"code": code, "message": message}
+    if details:
+        warning["details"] = details
+    return warning
+
+
+def _error_code(field: str) -> str:
+    normalized = re.sub(r"[^a-zA-Z0-9]+", "_", field).strip("_").lower()
+    return normalized or "validation_error"
+
+
+def _normalize_errors(errors: list[dict]) -> list[dict]:
+    normalized: list[dict] = []
+    for error in errors:
+        item = dict(error)
+        item.setdefault("code", _error_code(str(item.get("field", ""))))
+        normalized.append(item)
+    return normalized
+
+
+def _begin_step(name: str, details: dict | None = None) -> tuple[dict, float]:
+    return {
+        "name": name,
+        "started_at": _now_iso(),
+        "details": dict(details or {}),
+    }, time.perf_counter()
+
+
+def _finish_step(step: dict, started_perf: float, outcome: str, details: dict | None = None) -> dict:
+    merged = dict(step.get("details") or {})
+    if details:
+        merged.update(details)
+    step["outcome"] = outcome
+    step["elapsed_ms"] = int((time.perf_counter() - started_perf) * 1000)
+    step["details"] = merged
+    return step
+
+
+def _truncate(text: str, limit: int = 300) -> str:
+    stripped = text.strip()
+    if len(stripped) <= limit:
+        return stripped
+    return stripped[:limit].rstrip() + "..."
+
+
+def _run_claude_step(
+    *,
+    name: str,
+    prompt: str,
+    steps: list[dict],
+    warnings: list[dict],
+    critical: bool,
+) -> tuple[int, str]:
+    step, step_perf = _begin_step(name, {"tool": "claude"})
+    rc, output = _run_claude(prompt)
+    cli_found = "claude CLI not found" not in output
+    outcome = "ok" if rc == 0 else ("failed" if critical else "warning")
+    details = {"exit_code": rc, "cli_found": cli_found}
+    if output.strip():
+        details["output_excerpt"] = _truncate(output)
+    steps.append(_finish_step(step, step_perf, outcome, details))
+    if rc != 0:
+        warnings.append(
+            _warning(
+                "claude_cli_missing" if not cli_found else "claude_step_failed",
+                f"Claude step `{name}` exited with code {rc}.",
+                {"step": name, "exit_code": rc},
+            )
+        )
+    return rc, output
+
+
+def _final_progress(steps: list[dict]) -> dict:
+    return {
+        "current_step": None,
+        "completed_steps": len(steps),
+        "total_steps": len(steps),
+    }
+
+
+def _determine_outcome(
+    *,
+    errors: list[dict],
+    fix_attempted: bool,
+    critical_step_failed: bool,
+) -> str:
+    if critical_step_failed:
+        return "tool_error"
+    if errors:
+        return "completed_with_errors"
+    if fix_attempted:
+        return "corrected"
+    return "ok"
+
+
+def _build_summary(
+    *,
+    stage: str,
+    outcome: str,
+    errors: list[dict],
+    fix_attempted: bool,
+    warnings: list[dict],
+) -> str:
+    stage_label = {
+        "spec": "Spec",
+        "design": "Design generation",
+        "develop": "Implementation generation",
+    }.get(stage, stage.capitalize())
+    if outcome == "tool_error":
+        if warnings:
+            return f"{stage_label} hit a tool or environment error: {warnings[0]['message']}"
+        return f"{stage_label} hit a tool or environment error."
+    if outcome == "completed_with_errors":
+        suffix = " after one fix attempt" if fix_attempted else ""
+        return (
+            f"{stage_label} completed, but deterministic validation still found "
+            f"{len(errors)} error(s){suffix}."
+        )
+    if outcome == "corrected":
+        return f"{stage_label} completed after one successful fix pass."
+    return f"{stage_label} completed successfully."
+
+
 def _build_response(
     *,
     cr_id: str,
     stage: str,
     started_at: str,
     started_perf: float,
-    corrections: int,
+    inputs: dict,
+    steps: list[dict],
+    artifacts: dict,
+    diagnostics: dict,
+    warnings: list[dict],
     errors: list[dict],
-    extra: dict | None = None,
 ) -> dict:
-    """Compose the standard generate-* response payload.
-
-    Shape (all keys always present):
-        cr_id, stage, status, corrections, validation, errors,
-        started_at, elapsed_ms, plus any caller-supplied ``extra``.
-
-    ``status`` is ``"ok"`` when no residual errors remain, else
-    ``"completed_with_errors"``. ``validation`` is the finer-grained label
-    used historically (``"passed"`` / ``"corrected"`` for spec,
-    ``"passed"`` / ``"residual_errors"`` for design/develop).
-    """
-    elapsed_ms = int((time.perf_counter() - started_perf) * 1000)
-    if stage == "spec":
-        validation = "passed" if corrections == 0 else "corrected"
-    else:
-        validation = "passed" if not errors else "residual_errors"
-    response = {
+    normalized_errors = _normalize_errors(errors)
+    fix_attempted = bool(diagnostics.get("fix_attempted"))
+    critical_step_failed = any(
+        step.get("outcome") == "failed"
+        and step.get("name") in {"run_initial_generation", "run_fix_generation"}
+        for step in steps
+    )
+    outcome = _determine_outcome(
+        errors=normalized_errors,
+        fix_attempted=fix_attempted,
+        critical_step_failed=critical_step_failed,
+    )
+    return {
         "cr_id": cr_id,
         "stage": stage,
-        "status": "ok" if not errors else "completed_with_errors",
-        "corrections": corrections,
-        "validation": validation,
-        "errors": list(errors),
-        "started_at": started_at,
-        "elapsed_ms": elapsed_ms,
+        "outcome": outcome,
+        "summary": _build_summary(
+            stage=stage,
+            outcome=outcome,
+            errors=normalized_errors,
+            fix_attempted=fix_attempted,
+            warnings=warnings,
+        ),
+        "timing": {
+            "started_at": started_at,
+            "elapsed_ms": int((time.perf_counter() - started_perf) * 1000),
+        },
+        "inputs": inputs,
+        "progress": _final_progress(steps),
+        "steps": steps,
+        "artifacts": artifacts,
+        "diagnostics": diagnostics,
+        "warnings": warnings,
+        "errors": normalized_errors,
     }
-    if extra:
-        response.update(extra)
-    return response
 
 
 def generate_spec(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> dict:
@@ -142,60 +335,156 @@ def generate_spec(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> d
 
     repo_root = dhf_path.resolve().parent
     spec_path = repo_root / "docs" / "cr-specs" / f"{cr_id}-Spec.md"
+    steps: list[dict] = []
+    warnings: list[dict] = []
+    diagnostics = {
+        "anthropic_model": os.environ.get("ANTHROPIC_MODEL") or None,
+        "github_feedback": {"attempted": False},
+        "fix_attempted": False,
+        "initial_error_count": 0,
+        "final_error_count": 0,
+    }
+    inputs = {
+        "dhf_path": str(dhf_path),
+        "repo_root": str(repo_root),
+        "spec_path": str(spec_path),
+        "pr_number": pr_number,
+        "revision_mode": pr_number is not None,
+    }
 
     if pr_number:
+        feedback_step, feedback_perf = _begin_step("fetch_pr_feedback")
         feedback = _get_pr_feedback(pr_number)
+        diagnostics["github_feedback"] = feedback["diagnostics"]
+        warnings.extend(feedback["warnings"])
+        feedback_outcome = "warning" if feedback["warnings"] else "ok"
+        steps.append(_finish_step(feedback_step, feedback_perf, feedback_outcome, feedback["diagnostics"]))
+        prompt_step, prompt_perf = _begin_step(
+            "prepare_prompt",
+            {"prompt_kind": "spec_revision", "used_pr_feedback": True},
+        )
         prompt = (
             f"Read {spec_path} (the current spec on this branch), "
             f"then revise it based on the following pull request review feedback. "
             f"Update docs/cr-specs/ only if changes are warranted.\n\n"
-            f"Review feedback:\n{feedback}"
+            f"Review feedback:\n{feedback['prompt_text']}"
         )
+        steps.append(_finish_step(prompt_step, prompt_perf, "ok"))
     else:
+        prompt_step, prompt_perf = _begin_step(
+            "prepare_prompt",
+            {"prompt_kind": "spec_generation", "used_pr_feedback": False},
+        )
         prompt = _assemble_analyze_prompt(cr_id)
+        steps.append(_finish_step(prompt_step, prompt_perf, "ok"))
 
     spec_path.parent.mkdir(parents=True, exist_ok=True)
-    _run_claude(prompt)
+    _run_claude_step(
+        name="run_initial_generation",
+        prompt=prompt,
+        steps=steps,
+        warnings=warnings,
+        critical=True,
+    )
 
     analysis: dict | None = None
-    corrections = 0
     errors: list[dict] = []
     if spec_path.exists():
+        validate_step, validate_perf = _begin_step("validate_initial", {"validator": "spec_validation"})
         errors = validate_spec(spec_path, cr_id, dhf_path)
+        diagnostics["initial_error_count"] = len(errors)
+        diagnostics["final_error_count"] = len(errors)
+        steps.append(
+            _finish_step(
+                validate_step,
+                validate_perf,
+                "failed" if errors else "ok",
+                {"error_count": len(errors)},
+            )
+        )
         if errors:
-            corrections += 1
+            diagnostics["fix_attempted"] = True
             fix_prompt = (
                 f"The spec at {spec_path} failed validation.\n"
                 f"{_format_error_lines(errors)}\n\n"
                 f"Fix only the front-matter fields that caused errors. "
                 f"Do not change the markdown content."
             )
-            _run_claude(fix_prompt)
+            _run_claude_step(
+                name="run_fix_generation",
+                prompt=fix_prompt,
+                steps=steps,
+                warnings=warnings,
+                critical=True,
+            )
+            validate_fix_step, validate_fix_perf = _begin_step("validate_after_fix", {"validator": "spec_validation"})
             errors = validate_spec(spec_path, cr_id, dhf_path)
+            diagnostics["final_error_count"] = len(errors)
+            steps.append(
+                _finish_step(
+                    validate_fix_step,
+                    validate_fix_perf,
+                    "failed" if errors else "ok",
+                    {"error_count": len(errors)},
+                )
+            )
         analysis = extract_structured_analysis(spec_path)
+    else:
+        warnings.append(
+            _warning(
+                "spec_file_missing",
+                f"Expected generated spec file was not found at {spec_path}.",
+            )
+        )
+        missing_step, missing_perf = _begin_step("validate_initial", {"validator": "spec_validation"})
+        steps.append(
+            _finish_step(
+                missing_step,
+                missing_perf,
+                "warning",
+                {"skipped": True, "reason": "spec_file_missing"},
+            )
+        )
 
-    # Write JSON companion regardless of residual errors.
     spec_json_path: str | None = None
+    write_json_step, write_json_perf = _begin_step("write_spec_json")
     if spec_path.exists():
         fm = parse_spec_frontmatter(spec_path)
         if fm is not None:
             spec_json_path = str(write_spec_json(spec_path, fm))
+    steps.append(
+        _finish_step(
+            write_json_step,
+            write_json_perf,
+            "ok" if spec_json_path else "warning",
+            {"spec_json_path": spec_json_path},
+        )
+    )
 
     review_prompt = _augment_review_prompt(_assemble_review_spec_prompt(cr_id), errors)
-    _run_claude(review_prompt)
+    _run_claude_step(
+        name="run_review",
+        prompt=review_prompt,
+        steps=steps,
+        warnings=warnings,
+        critical=False,
+    )
 
     return _build_response(
         cr_id=cr_id,
         stage="spec",
         started_at=started_at,
         started_perf=started_perf,
-        corrections=corrections,
-        errors=errors,
-        extra={
+        inputs=inputs,
+        steps=steps,
+        artifacts={
             "spec_path": str(spec_path),
-            "analysis": analysis,
             "spec_json_path": spec_json_path,
+            "analysis": analysis,
         },
+        diagnostics=diagnostics,
+        warnings=warnings,
+        errors=errors,
     )
 
 
@@ -242,23 +531,84 @@ def generate_design(cr_id: str, dhf_path: Path, pr_number: int | None = None) ->
 
     repo_root = dhf_path.resolve().parent
     spec_path = repo_root / "docs" / "cr-specs" / f"{cr_id}-Spec.md"
+    steps: list[dict] = []
+    warnings: list[dict] = []
+    diagnostics = {
+        "anthropic_model": os.environ.get("ANTHROPIC_MODEL") or None,
+        "github_feedback": {"attempted": False},
+        "fix_attempted": False,
+        "initial_error_count": 0,
+        "final_error_count": 0,
+    }
+    inputs = {
+        "dhf_path": str(dhf_path),
+        "repo_root": str(repo_root),
+        "spec_path": str(spec_path),
+        "pr_number": pr_number,
+        "revision_mode": pr_number is not None,
+        "since_ref": "origin/main",
+    }
 
     if pr_number:
+        feedback_step, feedback_perf = _begin_step("fetch_pr_feedback")
         feedback = _get_pr_feedback(pr_number)
+        diagnostics["github_feedback"] = feedback["diagnostics"]
+        warnings.extend(feedback["warnings"])
+        steps.append(
+            _finish_step(
+                feedback_step,
+                feedback_perf,
+                "warning" if feedback["warnings"] else "ok",
+                feedback["diagnostics"],
+            )
+        )
+        prompt_step, prompt_perf = _begin_step(
+            "prepare_prompt",
+            {"prompt_kind": "design_revision", "used_pr_feedback": True},
+        )
         prompt = (
             f"Read the DHF design items in DHF/ related to {cr_id}, "
             f"then revise them based on the following pull request review feedback.\n\n"
-            f"Review feedback:\n{feedback}"
+            f"Review feedback:\n{feedback['prompt_text']}"
         )
+        steps.append(_finish_step(prompt_step, prompt_perf, "ok"))
     else:
+        prompt_step, prompt_perf = _begin_step(
+            "prepare_prompt",
+            {"prompt_kind": "design_generation", "used_pr_feedback": False},
+        )
         prompt = _assemble_design_prompt_with_spec_json(cr_id, spec_path)
+        steps.append(
+            _finish_step(
+                prompt_step,
+                prompt_perf,
+                "ok",
+                {"used_spec_json": spec_path.with_suffix(".json").exists()},
+            )
+        )
 
-    _run_claude(prompt)
+    _run_claude_step(
+        name="run_initial_generation",
+        prompt=prompt,
+        steps=steps,
+        warnings=warnings,
+        critical=True,
+    )
 
+    validate_step, validate_perf = _begin_step("validate_initial", {"validator": "design_validation"})
     errors = design_validation.validate_design(cr_id, dhf_path, spec_path)
-    corrections = 0
+    diagnostics["initial_error_count"] = len(errors)
+    diagnostics["final_error_count"] = len(errors)
+    steps.append(
+        _finish_step(
+            validate_step,
+            validate_perf,
+            "failed" if errors else "ok",
+            {"error_count": len(errors)},
+        )
+    )
     if errors:
-        corrections += 1
+        diagnostics["fix_attempted"] = True
         fix_prompt = (
             f"The DHF design for {cr_id} failed deterministic validation:\n"
             f"{_format_error_lines(errors)}\n\n"
@@ -266,24 +616,65 @@ def generate_design(cr_id: str, dhf_path: Path, pr_number: int | None = None) ->
             f"CLI (`dhf item create` / `dhf item update`). Do not introduce other "
             f"changes."
         )
-        _run_claude(fix_prompt)
+        _run_claude_step(
+            name="run_fix_generation",
+            prompt=fix_prompt,
+            steps=steps,
+            warnings=warnings,
+            critical=True,
+        )
+        validate_fix_step, validate_fix_perf = _begin_step("validate_after_fix", {"validator": "design_validation"})
         errors = design_validation.validate_design(cr_id, dhf_path, spec_path)
+        diagnostics["final_error_count"] = len(errors)
+        steps.append(
+            _finish_step(
+                validate_fix_step,
+                validate_fix_perf,
+                "failed" if errors else "ok",
+                {"error_count": len(errors)},
+            )
+        )
 
     review_prompt = _augment_review_prompt(_assemble_review_design_prompt(cr_id), errors)
-    _run_claude(review_prompt)
+    _run_claude_step(
+        name="run_review",
+        prompt=review_prompt,
+        steps=steps,
+        warnings=warnings,
+        critical=False,
+    )
 
+    artifact_step, artifact_perf = _begin_step("collect_artifacts", {"kind": "dhf_items_changed"})
     items_changed = git.collect_dhf_item_changes(repo_root, "origin/main")
+    steps.append(_finish_step(artifact_step, artifact_perf, "ok", {"items_changed": items_changed}))
+    design_impact = {"recorded": False, "reason": "skipped_due_to_validation_errors"}
     if not errors:
-        _record_design_impact_in_cr(cr_id, dhf_path, spec_path, items_changed)
+        impact_step, impact_perf = _begin_step("record_design_impact")
+        design_impact = _record_design_impact_in_cr(cr_id, dhf_path, spec_path, items_changed)
+        steps.append(
+            _finish_step(
+                impact_step,
+                impact_perf,
+                "ok" if design_impact.get("recorded") else "warning",
+                design_impact,
+            )
+        )
 
     return _build_response(
         cr_id=cr_id,
         stage="design",
         started_at=started_at,
         started_perf=started_perf,
-        corrections=corrections,
+        inputs=inputs,
+        steps=steps,
+        artifacts={
+            "spec_path": str(spec_path),
+            "items_changed": items_changed,
+            "design_impact": design_impact,
+        },
+        diagnostics=diagnostics,
+        warnings=warnings,
         errors=errors,
-        extra={"items_changed": items_changed},
     )
 
 
@@ -299,43 +690,127 @@ def generate_code(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> d
 
     repo_root = dhf_path.resolve().parent
     spec_path = repo_root / "docs" / "cr-specs" / f"{cr_id}-Spec.md"
+    steps: list[dict] = []
+    warnings: list[dict] = []
+    diagnostics = {
+        "anthropic_model": os.environ.get("ANTHROPIC_MODEL") or None,
+        "github_feedback": {"attempted": False},
+        "fix_attempted": False,
+        "initial_error_count": 0,
+        "final_error_count": 0,
+    }
+    inputs = {
+        "dhf_path": str(dhf_path),
+        "repo_root": str(repo_root),
+        "spec_path": str(spec_path),
+        "pr_number": pr_number,
+        "revision_mode": pr_number is not None,
+        "since_ref": "origin/main",
+    }
 
     if pr_number:
+        feedback_step, feedback_perf = _begin_step("fetch_pr_feedback")
         feedback = _get_pr_feedback(pr_number)
+        diagnostics["github_feedback"] = feedback["diagnostics"]
+        warnings.extend(feedback["warnings"])
+        steps.append(
+            _finish_step(
+                feedback_step,
+                feedback_perf,
+                "warning" if feedback["warnings"] else "ok",
+                feedback["diagnostics"],
+            )
+        )
+        prompt_step, prompt_perf = _begin_step(
+            "prepare_prompt",
+            {"prompt_kind": "develop_revision", "used_pr_feedback": True},
+        )
         prompt = (
             f"Read the implementation on this branch related to {cr_id}, "
             f"then revise it based on the following pull request review feedback.\n\n"
-            f"Review feedback:\n{feedback}"
+            f"Review feedback:\n{feedback['prompt_text']}"
         )
+        steps.append(_finish_step(prompt_step, prompt_perf, "ok"))
     else:
+        prompt_step, prompt_perf = _begin_step(
+            "prepare_prompt",
+            {"prompt_kind": "develop_generation", "used_pr_feedback": False},
+        )
         prompt = _assemble_develop_prompt(cr_id)
+        steps.append(_finish_step(prompt_step, prompt_perf, "ok"))
 
-    _run_claude(prompt)
+    _run_claude_step(
+        name="run_initial_generation",
+        prompt=prompt,
+        steps=steps,
+        warnings=warnings,
+        critical=True,
+    )
 
+    validate_step, validate_perf = _begin_step("validate_initial", {"validator": "code_validation"})
     errors = code_validation.validate_code(cr_id, dhf_path, spec_path)
-    corrections = 0
+    diagnostics["initial_error_count"] = len(errors)
+    diagnostics["final_error_count"] = len(errors)
+    steps.append(
+        _finish_step(
+            validate_step,
+            validate_perf,
+            "failed" if errors else "ok",
+            {"error_count": len(errors)},
+        )
+    )
     if errors:
-        corrections += 1
+        diagnostics["fix_attempted"] = True
         fix_prompt = (
             f"The implementation for {cr_id} is missing required test annotations:\n"
             f"{_format_error_lines(errors)}\n\n"
             f"Add only the missing colocated tests with `@links:` annotations. "
             f"Do not introduce other changes."
         )
-        _run_claude(fix_prompt)
+        _run_claude_step(
+            name="run_fix_generation",
+            prompt=fix_prompt,
+            steps=steps,
+            warnings=warnings,
+            critical=True,
+        )
+        validate_fix_step, validate_fix_perf = _begin_step("validate_after_fix", {"validator": "code_validation"})
         errors = code_validation.validate_code(cr_id, dhf_path, spec_path)
+        diagnostics["final_error_count"] = len(errors)
+        steps.append(
+            _finish_step(
+                validate_fix_step,
+                validate_fix_perf,
+                "failed" if errors else "ok",
+                {"error_count": len(errors)},
+            )
+        )
 
     review_prompt = _augment_review_prompt(_assemble_review_code_prompt(cr_id), errors)
-    _run_claude(review_prompt)
+    _run_claude_step(
+        name="run_review",
+        prompt=review_prompt,
+        steps=steps,
+        warnings=warnings,
+        critical=False,
+    )
 
+    artifact_step, artifact_perf = _begin_step("collect_artifacts", {"kind": "files_changed"})
     files_changed = git.collect_path_changes(repo_root, "origin/main", "apps/", "packages/")
+    steps.append(_finish_step(artifact_step, artifact_perf, "ok", {"files_changed": files_changed}))
 
     return _build_response(
         cr_id=cr_id,
         stage="develop",
         started_at=started_at,
         started_perf=started_perf,
-        corrections=corrections,
+        inputs=inputs,
+        steps=steps,
+        artifacts={
+            "spec_path": str(spec_path),
+            "files_changed": files_changed,
+        },
+        diagnostics=diagnostics,
+        warnings=warnings,
         errors=errors,
-        extra={"files_changed": files_changed},
     )

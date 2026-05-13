@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """CR workflow command handlers — returns data, no CLI output.
 
 ClickException is used only for unrecoverable operational errors (missing CR,
@@ -25,10 +27,10 @@ def _generate_initial_spec(cr_id: str, dhf_root: Path) -> dict:
     result = generate_spec(cr_id, dhf_root)
     return {
         "spec_generated": True,
-        "spec_status": result.get("status"),
-        "spec_validation": result.get("validation"),
-        "spec_path": result.get("spec_path"),
-        "spec_json_path": result.get("spec_json_path"),
+        "spec_status": result.get("outcome"),
+        "spec_validation": result.get("outcome"),
+        "spec_path": (result.get("artifacts") or {}).get("spec_path"),
+        "spec_json_path": (result.get("artifacts") or {}).get("spec_json_path"),
         "spec_error": None,
     }
 

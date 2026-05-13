@@ -30,28 +30,30 @@ from medharness.services.cr_generation import (
 COMMON_KEYS = {
     "cr_id",
     "stage",
-    "status",
-    "corrections",
-    "validation",
+    "outcome",
+    "summary",
+    "timing",
+    "inputs",
+    "progress",
+    "steps",
+    "artifacts",
+    "diagnostics",
+    "warnings",
     "errors",
-    "started_at",
-    "elapsed_ms",
 }
-SPEC_EXTRA_KEYS = {"spec_path", "analysis", "spec_json_path"}
-DESIGN_EXTRA_KEYS = {"items_changed"}
-DEVELOP_EXTRA_KEYS = {"files_changed"}
 
 # Removed in v0.3.5 — kept here as an explicit regression list. These keys
 # always returned null / [] in earlier versions and were dropped because no
 # consumer could derive value from them. If a future change re-introduces
 # any of them, this test will surface the decision for review.
-REMOVED_LEGACY_KEYS = {"items_created", "items_updated", "files_written"}
+REMOVED_LEGACY_KEYS = {
+    "items_created", "items_updated", "files_written",
+    "status", "corrections", "validation", "started_at", "elapsed_ms",
+    "spec_path", "analysis", "spec_json_path", "items_changed", "files_changed",
+}
 
-# Allowed values — string-match consumers should be checked against these.
 STAGE_VALUES = {"spec", "design", "develop"}
-STATUS_VALUES = {"ok", "completed_with_errors"}
-VALIDATION_VALUES_SPEC = {"passed", "corrected"}
-VALIDATION_VALUES_DESIGN_DEVELOP = {"passed", "residual_errors"}
+OUTCOME_VALUES = {"ok", "corrected", "completed_with_errors", "tool_error"}
 
 
 def _change_bucket_keys() -> set[str]:
@@ -90,20 +92,19 @@ class TestGenerateSpecContract:
         with patch("medharness.services.cr_generation._run_claude",
                    return_value=(0, "")):
             result = generate_spec("CR-001", dhf)
-        assert COMMON_KEYS | SPEC_EXTRA_KEYS <= result.keys(), (
-            f"missing keys: {(COMMON_KEYS | SPEC_EXTRA_KEYS) - result.keys()}"
+        assert COMMON_KEYS <= result.keys(), (
+            f"missing keys: {COMMON_KEYS - result.keys()}"
         )
         assert REMOVED_LEGACY_KEYS.isdisjoint(result.keys()), (
             f"legacy key leaked back: {REMOVED_LEGACY_KEYS & result.keys()}"
         )
-        # Schema typing
         assert isinstance(result["errors"], list)
-        assert isinstance(result["corrections"], int)
-        assert isinstance(result["elapsed_ms"], int)
-        assert isinstance(result["started_at"], str)
-        assert isinstance(result["spec_path"], str)
-        assert isinstance(result["analysis"], dict)
-        assert isinstance(result["spec_json_path"], str)
+        assert isinstance(result["warnings"], list)
+        assert isinstance(result["timing"]["elapsed_ms"], int)
+        assert isinstance(result["timing"]["started_at"], str)
+        assert isinstance(result["artifacts"]["spec_path"], str)
+        assert isinstance(result["artifacts"]["analysis"], dict)
+        assert isinstance(result["artifacts"]["spec_json_path"], str)
 
     def test_value_domains(self, dhf):
         self._spec(dhf)
@@ -111,9 +112,8 @@ class TestGenerateSpecContract:
                    return_value=(0, "")):
             result = generate_spec("CR-001", dhf)
         assert result["stage"] == "spec"
-        assert result["status"] in STATUS_VALUES
-        assert result["validation"] in VALIDATION_VALUES_SPEC
-        assert set(result["analysis"]) == {
+        assert result["outcome"] in OUTCOME_VALUES
+        assert set(result["artifacts"]["analysis"]) == {
             "disposition",
             "pipeline_route",
             "decline_rationale",
@@ -134,8 +134,8 @@ class TestGenerateDesignContract:
                    return_value=[]), \
              patch("subprocess.run", return_value=_empty_diff()):
             result = generate_design("CR-100", dhf)
-        assert COMMON_KEYS | DESIGN_EXTRA_KEYS <= result.keys(), (
-            f"missing keys: {(COMMON_KEYS | DESIGN_EXTRA_KEYS) - result.keys()}"
+        assert COMMON_KEYS <= result.keys(), (
+            f"missing keys: {COMMON_KEYS - result.keys()}"
         )
         assert REMOVED_LEGACY_KEYS.isdisjoint(result.keys()), (
             f"legacy key leaked back: {REMOVED_LEGACY_KEYS & result.keys()}"
@@ -149,8 +149,7 @@ class TestGenerateDesignContract:
              patch("subprocess.run", return_value=_empty_diff()):
             result = generate_design("CR-100", dhf)
         assert result["stage"] == "design"
-        assert result["status"] in STATUS_VALUES
-        assert result["validation"] in VALIDATION_VALUES_DESIGN_DEVELOP
+        assert result["outcome"] in OUTCOME_VALUES
 
     def test_items_changed_shape(self, dhf):
         with patch("medharness.services.cr_generation._run_claude",
@@ -159,7 +158,7 @@ class TestGenerateDesignContract:
                    return_value=[]), \
              patch("subprocess.run", return_value=_empty_diff()):
             result = generate_design("CR-100", dhf)
-        items = result["items_changed"]
+        items = result["artifacts"]["items_changed"]
         assert set(items.keys()) == _change_bucket_keys()
         for bucket in items.values():
             assert isinstance(bucket, list)
@@ -172,9 +171,9 @@ class TestGenerateDesignContract:
                    side_effect=[residual, residual]), \
              patch("subprocess.run", return_value=_empty_diff()):
             result = generate_design("CR-100", dhf)
-        assert result["status"] == "completed_with_errors"
-        assert result["validation"] == "residual_errors"
-        assert result["errors"] == residual
+        assert result["outcome"] == "completed_with_errors"
+        assert result["errors"][0]["field"] == "schema"
+        assert result["errors"][0]["code"] == "schema"
 
 
 # ── generate_code ────────────────────────────────────────────────────────────
@@ -187,8 +186,8 @@ class TestGenerateCodeContract:
                    return_value=[]), \
              patch("subprocess.run", return_value=_empty_diff()):
             result = generate_code("CR-200", dhf)
-        assert COMMON_KEYS | DEVELOP_EXTRA_KEYS <= result.keys(), (
-            f"missing keys: {(COMMON_KEYS | DEVELOP_EXTRA_KEYS) - result.keys()}"
+        assert COMMON_KEYS <= result.keys(), (
+            f"missing keys: {COMMON_KEYS - result.keys()}"
         )
         assert REMOVED_LEGACY_KEYS.isdisjoint(result.keys()), (
             f"legacy key leaked back: {REMOVED_LEGACY_KEYS & result.keys()}"
@@ -202,8 +201,7 @@ class TestGenerateCodeContract:
              patch("subprocess.run", return_value=_empty_diff()):
             result = generate_code("CR-200", dhf)
         assert result["stage"] == "develop"
-        assert result["status"] in STATUS_VALUES
-        assert result["validation"] in VALIDATION_VALUES_DESIGN_DEVELOP
+        assert result["outcome"] in OUTCOME_VALUES
 
     def test_files_changed_shape(self, dhf):
         with patch("medharness.services.cr_generation._run_claude",
@@ -212,7 +210,7 @@ class TestGenerateCodeContract:
                    return_value=[]), \
              patch("subprocess.run", return_value=_empty_diff()):
             result = generate_code("CR-200", dhf)
-        files = result["files_changed"]
+        files = result["artifacts"]["files_changed"]
         assert set(files.keys()) == _change_bucket_keys()
         for bucket in files.values():
             assert isinstance(bucket, list)

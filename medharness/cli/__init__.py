@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """MedHarness CLI — main entrypoint and group registration."""
 
 import click

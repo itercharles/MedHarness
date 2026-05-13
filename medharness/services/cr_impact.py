@@ -70,16 +70,16 @@ def _record_design_impact_in_cr(
     dhf_path: Path,
     spec_path: Path,
     items_changed: dict[str, list[str]],
-) -> None:
+) -> dict[str, object]:
     spec_json = read_spec_json(spec_path) or {}
     try:
         adapter = LocalDHFAdapter(dhf_path)
     except FileNotFoundError:
-        return
+        return {"recorded": False, "reason": "dhf_not_found"}
 
     existing = adapter.get_item(cr_id)
     if existing is None:
-        return
+        return {"recorded": False, "reason": "cr_item_not_found"}
 
     affected_ids = list(spec_json.get("affected_items", []) or [])
     touched_ids: list[str] = []
@@ -94,3 +94,8 @@ def _record_design_impact_in_cr(
         "implementation_notes": _replace_managed_block(existing_notes, design_notes),
     }
     adapter.update_item(cr_id, payload, author="medharness", cr_id=cr_id)
+    return {
+        "recorded": True,
+        "reason": "updated",
+        "affected_items": recorded_affected,
+    }
