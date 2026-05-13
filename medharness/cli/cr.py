@@ -45,17 +45,19 @@ def register(main):
     @click.option("--branch-prefix", default="cr", show_default=True)
     @click.option("--title-prefix", default="cr", show_default=True)
     @click.option("--write", is_flag=True, default=False)
+    @click.option("--generate-spec/--no-generate-spec", "generate_spec_draft", default=True, show_default=True)
     @click.option("--output", type=click.Path(dir_okay=False, path_type=Path))
     @click.pass_context
     def cr_workflow_intake_github_issue(ctx: click.Context, dhf_repo: Path | None,
                                          event_path: Path, comments_path: Path | None,
                                          active_milestone: str | None, marker_name: str,
                                          branch_prefix: str, title_prefix: str,
-                                         write: bool, output: Path | None) -> None:
+                                         write: bool, generate_spec_draft: bool,
+                                         output: Path | None) -> None:
         """Prepare a CR from a GitHub issue event."""
         payload = workflow_intake_github_issue(
             ctx, dhf_repo, event_path, comments_path, active_milestone,
-            marker_name, branch_prefix, title_prefix, write,
+            marker_name, branch_prefix, title_prefix, write, generate_spec_draft,
         )
         text = json.dumps(payload, indent=2)
         if output:
@@ -73,6 +75,7 @@ def register(main):
     @click.option("--write", is_flag=True, default=False)
     @click.option("--create-branch", is_flag=True, default=False)
     @click.option("--open-pr", is_flag=True, default=False)
+    @click.option("--generate-spec/--no-generate-spec", "generate_spec_draft", default=True, show_default=True)
     @click.option("--source-repo", default=None, metavar="OWNER/REPO")
     @click.option("--comment-source-issue", is_flag=True, default=False)
     @click.option("--issue-number", type=int, default=None)
@@ -86,6 +89,7 @@ def register(main):
                                             active_milestone: str | None, marker_name: str,
                                             branch_prefix: str, title_prefix: str,
                                             write: bool, create_branch: bool, open_pr: bool,
+                                            generate_spec_draft: bool,
                                             source_repo: str | None, comment_source_issue: bool,
                                             issue_number: int | None, github_token: str | None,
                                             milestone_title: str | None, output: Path | None,
@@ -94,7 +98,7 @@ def register(main):
         payload = workflow_intake_github_issue_ci(
             ctx, dhf_repo, event_path, comments_path, active_milestone,
             marker_name, branch_prefix, title_prefix, write, create_branch,
-            open_pr, source_repo, comment_source_issue, issue_number,
+            open_pr, generate_spec_draft, source_repo, comment_source_issue, issue_number,
             github_token, milestone_title,
         )
         text = json.dumps(payload, indent=2)
@@ -154,4 +158,3 @@ def register(main):
             else:
                 click.echo(f"✗ CR '{cr_id}' is not authorized: status is '{result['status']}'.", err=True)
             sys.exit(1)
-

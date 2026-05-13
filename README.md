@@ -134,13 +134,13 @@ CRs move through AI-assisted stages, each gated by human approval. How those
 stages are wired into automation is up to the client repo:
 
 ```
-Issue → CR review → analyze-cr → design-cr → develop-cr → cr-complete
+Issue → CR + spec draft → spec review → design-cr → develop-cr → cr-complete
 ```
 
 | Stage | Trigger | What MedHarness does |
 |-------|---------|---------------------|
-| **CR intake** | Issue milestoned | Creates CR item in DHF, opens draft PR (`cr workflow intake-github-issue-ci`) |
-| **analyze-cr** | CR PR approved | Runs Claude to write a spec, self-corrects against schema, commits to `docs/cr-specs/` (`ci analyze-cr`) |
+| **CR intake** | Issue milestoned | Creates CR item in DHF and, by default, generates the initial spec draft before opening the draft PR (`cr workflow intake-github-issue-ci`) |
+| **analyze-cr** | Spec PR feedback or manual rerun | Runs Claude to write or revise a spec, self-corrects against schema, commits to `docs/cr-specs/` (`ci analyze-cr`) |
 | **design-cr** | Spec PR approved | Runs Claude to create/update DHF items, validates schema + traceability (`ci design-cr`) |
 | **develop-cr** | Design PR approved | Runs Claude to implement code, opens implementation PR (`ci develop-cr`) |
 | **cr-complete** | PR merged | Transitions CR to `completed` in the DHF (`cr workflow complete-from-github-pr`) |

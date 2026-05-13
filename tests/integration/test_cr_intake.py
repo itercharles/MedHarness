@@ -251,6 +251,17 @@ def test_cli_intake_github_issue_writes_output(monkeypatch, tmp_path):
     adapter = FakeIntakeAdapter()
 
     monkeypatch.setattr("medharness._helpers._make_adapter_for_dhf_root", lambda dhf_root: adapter)
+    monkeypatch.setattr(
+        "medharness.commands.cr._generate_initial_spec",
+        lambda cr_id, dhf_root: {
+            "spec_generated": True,
+            "spec_status": "ok",
+            "spec_validation": "passed",
+            "spec_path": str(dhf_repo / "docs" / "cr-specs" / f"{cr_id}-Spec.md"),
+            "spec_json_path": str(dhf_repo / "docs" / "cr-specs" / f"{cr_id}-Spec.json"),
+            "spec": {"cr_id": cr_id, "stage": "spec"},
+        },
+    )
 
     result = CliRunner().invoke(
         main,
@@ -272,6 +283,7 @@ def test_cli_intake_github_issue_writes_output(monkeypatch, tmp_path):
     assert payload["should_create"] is True
     assert payload["cr_id"] == "CR-034"
     assert payload["branch"] == "cr/CR-034-from-issue-123-add-weekly-cr-intake"
+    assert payload["spec_generated"] is True
     assert json.loads(result.output)["title"] == "cr(CR-034): Add weekly CR intake"
 
 
@@ -320,6 +332,17 @@ class TestIntakeGitHubIssueCI:
 
         monkeypatch.setattr("medharness._helpers._make_adapter_for_dhf_root",
                             lambda dhf_root: self._make_stub_adapter())
+        monkeypatch.setattr(
+            "medharness.commands.cr._generate_initial_spec",
+            lambda cr_id, dhf_root: {
+                "spec_generated": True,
+                "spec_status": "ok",
+                "spec_validation": "passed",
+                "spec_path": str(dhf_repo / "docs" / "cr-specs" / f"{cr_id}-Spec.md"),
+                "spec_json_path": str(dhf_repo / "docs" / "cr-specs" / f"{cr_id}-Spec.json"),
+                "spec": {"cr_id": cr_id, "stage": "spec"},
+            },
+        )
         monkeypatch.setattr("medharness.workflows.cr_intake.current_iso_week_milestone",
                             lambda: "2026-W18")
         monkeypatch.setattr("medharness.commands.cr.current_iso_week_milestone",
@@ -341,7 +364,9 @@ class TestIntakeGitHubIssueCI:
         payload = json.loads(output_path.read_text(encoding="utf-8"))
         assert payload.get("should_create") is True
         assert payload.get("cr_id", "").startswith("CR-")
+        assert payload.get("spec_generated") is True
         assert "should_create=true" in github_output.read_text(encoding="utf-8")
+        assert "spec_generated=true" in github_output.read_text(encoding="utf-8")
 
     def test_ci_intake_admin_bypass_does_not_write(self, monkeypatch, tmp_path):
         dhf_repo = tmp_path / "dhf"
@@ -354,6 +379,17 @@ class TestIntakeGitHubIssueCI:
 
         monkeypatch.setattr("medharness._helpers._make_adapter_for_dhf_root",
                             lambda dhf_root: self._make_stub_adapter())
+        monkeypatch.setattr(
+            "medharness.commands.cr._generate_initial_spec",
+            lambda cr_id, dhf_root: {
+                "spec_generated": True,
+                "spec_status": "ok",
+                "spec_validation": "passed",
+                "spec_path": str(dhf_repo / "docs" / "cr-specs" / f"{cr_id}-Spec.md"),
+                "spec_json_path": str(dhf_repo / "docs" / "cr-specs" / f"{cr_id}-Spec.json"),
+                "spec": {"cr_id": cr_id, "stage": "spec"},
+            },
+        )
         monkeypatch.setattr("medharness.workflows.cr_intake.current_iso_week_milestone",
                             lambda: "2026-W18")
         monkeypatch.setattr("medharness.commands.cr.current_iso_week_milestone",
@@ -373,6 +409,7 @@ class TestIntakeGitHubIssueCI:
         payload = json.loads(result.output.strip())
         assert payload.get("should_create") is True
         assert payload.get("cr_id") == "CR-050"
+        assert payload.get("spec_generated") is True
 
     def test_ci_intake_no_write_only_computes_cr_id(self, monkeypatch, tmp_path):
         dhf_repo = tmp_path / "dhf"
@@ -386,6 +423,18 @@ class TestIntakeGitHubIssueCI:
 
         monkeypatch.setattr("medharness._helpers._make_adapter_for_dhf_root",
                             lambda dhf_root: self._make_stub_adapter())
+        called: list[str] = []
+        monkeypatch.setattr(
+            "medharness.commands.cr._generate_initial_spec",
+            lambda cr_id, dhf_root: called.append(cr_id) or {
+                "spec_generated": True,
+                "spec_status": "ok",
+                "spec_validation": "passed",
+                "spec_path": str(dhf_repo / "docs" / "cr-specs" / f"{cr_id}-Spec.md"),
+                "spec_json_path": str(dhf_repo / "docs" / "cr-specs" / f"{cr_id}-Spec.json"),
+                "spec": {"cr_id": cr_id, "stage": "spec"},
+            },
+        )
         monkeypatch.setattr("medharness.workflows.cr_intake.current_iso_week_milestone",
                             lambda: "2026-W18")
         monkeypatch.setattr("medharness.commands.cr.current_iso_week_milestone",
@@ -403,8 +452,47 @@ class TestIntakeGitHubIssueCI:
         assert result.exit_code == 0, f"exit={result.exit_code} out={result.output!r}"
         payload = json.loads(result.output.strip())
         assert payload.get("should_create") is True
+        assert payload.get("spec_generated") is False
+        assert called == []
         files = list(dhf_repo.glob("DHF/items/06_cr/CR-*.yaml"))
         assert len(files) == 0, "no CR file should be written without --write"
+
+    def test_ci_intake_can_disable_initial_spec_generation(self, monkeypatch, tmp_path):
+        dhf_repo = tmp_path / "dhf"
+        dhf_repo.mkdir()
+        (dhf_repo / "DHF" / "config").mkdir(parents=True)
+        (dhf_repo / "DHF" / "config" / "global.yaml").write_text("global_lifecycle: {}\n")
+        event_path = self._create_event(tmp_path)
+        comments_path = tmp_path / "comments.json"
+        comments_path.write_text("[]\n", encoding="utf-8")
+        called: list[str] = []
+
+        monkeypatch.setattr("medharness._helpers._make_adapter_for_dhf_root",
+                            lambda dhf_root: self._make_stub_adapter())
+        monkeypatch.setattr(
+            "medharness.commands.cr._generate_initial_spec",
+            lambda cr_id, dhf_root: called.append(cr_id) or {},
+        )
+        monkeypatch.setattr("medharness.workflows.cr_intake.current_iso_week_milestone",
+                            lambda: "2026-W18")
+        monkeypatch.setattr("medharness.commands.cr.current_iso_week_milestone",
+                            lambda: "2026-W18")
+
+        result = CliRunner().invoke(main, [
+            "--dhf", str(dhf_repo / "DHF"),
+            "cr", "workflow", "intake-github-issue-ci",
+            "--dhf-repo", str(dhf_repo),
+            "--event", str(event_path),
+            "--comments", str(comments_path),
+            "--marker-name", "test-cr",
+            "--write",
+            "--no-generate-spec",
+        ])
+
+        assert result.exit_code == 0, f"exit={result.exit_code} out={result.output!r}"
+        payload = json.loads(result.output.strip())
+        assert payload.get("spec_generated") is False
+        assert called == []
 
     def test_ci_intake_populates_pr_url_when_gh_create_succeeds(self, monkeypatch, tmp_path):
         dhf_repo = tmp_path / "dhf"
@@ -414,6 +502,17 @@ class TestIntakeGitHubIssueCI:
 
         monkeypatch.setattr("medharness._helpers._make_adapter_for_dhf_root",
                             lambda dhf_root: self._make_stub_adapter())
+        monkeypatch.setattr(
+            "medharness.commands.cr._generate_initial_spec",
+            lambda cr_id, dhf_root: {
+                "spec_generated": True,
+                "spec_status": "ok",
+                "spec_validation": "passed",
+                "spec_path": str(dhf_repo / "docs" / "cr-specs" / f"{cr_id}-Spec.md"),
+                "spec_json_path": str(dhf_repo / "docs" / "cr-specs" / f"{cr_id}-Spec.json"),
+                "spec": {"cr_id": cr_id, "stage": "spec"},
+            },
+        )
         monkeypatch.setattr("medharness._helpers._resolve_dhf_repo_paths",
                             lambda ctx, dhf_repo: (dhf_repo, dhf_repo / "DHF"))
         monkeypatch.setattr("medharness._helpers._load_issue_comments",
@@ -453,12 +552,13 @@ class TestIntakeGitHubIssueCI:
                 "test-cr",
                 "cr",
                 "cr",
-                True,
-                False,
-                True,
-                "acme/web",
-                True,
-                None,
+                    True,
+                    False,
+                    True,
+                    True,
+                    "acme/web",
+                    True,
+                    None,
                 "token",
                 None,
             )
@@ -475,6 +575,17 @@ class TestIntakeGitHubIssueCI:
 
         monkeypatch.setattr("medharness._helpers._make_adapter_for_dhf_root",
                             lambda dhf_root: self._make_stub_adapter())
+        monkeypatch.setattr(
+            "medharness.commands.cr._generate_initial_spec",
+            lambda cr_id, dhf_root: {
+                "spec_generated": True,
+                "spec_status": "ok",
+                "spec_validation": "passed",
+                "spec_path": str(dhf_repo / "docs" / "cr-specs" / f"{cr_id}-Spec.md"),
+                "spec_json_path": str(dhf_repo / "docs" / "cr-specs" / f"{cr_id}-Spec.json"),
+                "spec": {"cr_id": cr_id, "stage": "spec"},
+            },
+        )
         monkeypatch.setattr("medharness._helpers._resolve_dhf_repo_paths",
                             lambda ctx, dhf_repo: (dhf_repo, dhf_repo / "DHF"))
         monkeypatch.setattr("medharness._helpers._load_issue_comments",
@@ -512,6 +623,7 @@ class TestIntakeGitHubIssueCI:
                     "cr",
                     True,
                     False,
+                    True,
                     True,
                     "acme/web",
                     False,
