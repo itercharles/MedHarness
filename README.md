@@ -22,35 +22,6 @@ MedHarness makes that work AI-assisted without making it ungoverned. It gives Cl
 
 Every non-trivial change flows through a **Change Request (CR)** in the DHF. MedHarness runs Claude at each stage, validates the output deterministically, and opens a PR for your review before anything moves forward.
 
-```mermaid
-flowchart LR
-    A([CR created]) --> B
-
-    subgraph S1 ["① Spec"]
-        direction TB
-        B["Claude drafts\nspec"] --> C{"you\nreview PR"}
-        C -->|revise| B
-    end
-
-    C -->|approve ✓| D
-
-    subgraph S2 ["② Design"]
-        direction TB
-        D["Claude updates\nDHF items"] --> E{"you\nreview PR"}
-        E -->|revise| D
-    end
-
-    E -->|approve ✓| F
-
-    subgraph S3 ["③ Code"]
-        direction TB
-        F["Claude implements\ncode + tests"] --> G{"you\nreview PR"}
-        G -->|revise| F
-    end
-
-    G -->|merge ✓| H([CR closed · evidence committed])
-```
-
 At each stage, MedHarness pre-computes DHF context — item lists, traceability graph, coverage gaps — and injects it into Claude's prompt so the agent reasons about your actual DHF rather than guessing. After Claude runs, a deterministic validator checks schema, traceability links, and test annotations, and self-corrects if it can. Only then does a PR open for your review.
 
 ---
