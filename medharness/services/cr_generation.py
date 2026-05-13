@@ -751,7 +751,7 @@ def generate_code(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> d
                 "— do not rewrite existing work.\n\n"
                 f"```diff\n{diff}\n```\n"
             )
-        steps.append(_finish_step(prompt_step, prompt_perf, "ok"))
+        steps.append(_finish_step(prompt_step, prompt_perf, "ok", {"diff_injected": bool(diff)}))
 
     rc, _ = _run_claude_step(
         name="run_initial_generation",

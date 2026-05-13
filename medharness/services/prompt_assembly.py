@@ -8,6 +8,8 @@ from pathlib import Path
 
 from medharness.services.spec_validation import read_spec_json
 
+MAX_ITEMS = 200
+
 
 def _load_prompt(name: str) -> str:
     ref = importlib.resources.files("medharness.prompts").joinpath(name)
@@ -39,11 +41,21 @@ def _append_skills(prompt: str) -> str:
     return "".join(parts)
 
 
+# ---------------------------------------------------------------------------
+# Pre-computed DHF context for the analyze prompt
+# ---------------------------------------------------------------------------
+
+
 def _build_dhf_context_block(dhf_path: Path) -> str:
+    # Inline imports avoid coupling prompt_assembly to dhfkit/medharness core
+    # at import-time. These modules are only needed when a real DHF path is
+    # provided at runtime.
     from dhfkit.local_adapter import LocalDHFAdapter
 
     from medharness.core import MedHarnessCore
 
+    # Silent degradation: prompt assembly is a best-effort enrichment. If the
+    # DHF cannot be loaded the caller still gets the base prompt + skills.
     try:
         adapter = LocalDHFAdapter(dhf_path)
         core = MedHarnessCore(adapter)
@@ -61,14 +73,30 @@ def _build_dhf_context_block(dhf_path: Path) -> str:
         lines.append(f"### Item Type Summary\n\n{type_summary}\n")
 
     items = adapter.list_items()
+    cap = MAX_ITEMS
     if items:
         lines.append("### All DHF Items\n")
-        for item in items:
+        for item in items[:cap]:
             item_id = item.get("id", "")
             title = item.get("title", "")
             lines.append(f"- {item_id} — {title}\n")
+        if len(items) > cap:
+            lines.append(
+                f"\n_(truncated — showing {cap} of {len(items)} items)_\n"
+            )
 
-    cov = core.graph.calculate_coverage("SYS", "TC")
+    lines.append("\n")
+
+    # TC is the test-case ID prefix used throughout dhfkit (junit_parser.py
+    # generates TC-DOCTYPE-NNN IDs). This prefix is a project convention, not
+    # a configurable DHF setting. Projects that rename their test prefix can
+    # override it by defining a TC doc type in their DHF config.
+    tc_prefix = "TC"
+    tc_type = adapter.get_item_type(f"{tc_prefix}-")
+    if tc_type is not None and tc_type.get("prefix"):
+        tc_prefix = tc_type["prefix"].rstrip("-")
+
+    cov = core.graph.calculate_coverage("SYS", tc_prefix)
     uncovered = cov.get("uncovered", [])
     if uncovered:
         lines.append(
@@ -141,6 +169,9 @@ def _assemble_design_prompt_with_spec_json(
 
 
 def _build_impact_closure_block(dhf_path: Path, spec_json: dict) -> str:
+    # Inline imports avoid coupling prompt_assembly to dhfkit/medharness core
+    # at import-time. These modules are only needed when a real DHF path is
+    # provided at runtime.
     from dhfkit.local_adapter import LocalDHFAdapter
 
     from medharness.core import MedHarnessCore
@@ -149,6 +180,8 @@ def _build_impact_closure_block(dhf_path: Path, spec_json: dict) -> str:
     if not isinstance(affected, list) or not affected:
         return ""
 
+    # Silent degradation: if the DHF cannot be loaded the design prompt still
+    # gets the spec JSON; it just won't receive pre-computed impact closure.
     try:
         adapter = LocalDHFAdapter(dhf_path)
         core = MedHarnessCore(adapter)
