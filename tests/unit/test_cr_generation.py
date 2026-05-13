@@ -604,8 +604,8 @@ class TestGenerateDesign:
         with patch("medharness.services.cr_generation._run_claude", return_value=(0, "")), \
              patch("medharness.services.design_validation.validate_design", return_value=[]), \
              patch("subprocess.run", return_value=MagicMock(stdout=diff_output, returncode=0)), \
-             patch("medharness.services.cr_generation.read_spec_json", return_value=spec_json), \
-             patch("medharness.services.cr_generation.LocalDHFAdapter", return_value=mock_adapter):
+             patch("medharness.services.cr_impact.read_spec_json", return_value=spec_json), \
+             patch("medharness.services.cr_impact.LocalDHFAdapter", return_value=mock_adapter):
             generate_design("CR-017", dhf)
         mock_adapter.update_item.assert_called_once()
         args, kwargs = mock_adapter.update_item.call_args
@@ -625,7 +625,7 @@ class TestGenerateDesign:
         with patch("medharness.services.cr_generation._run_claude", return_value=(0, "")), \
              patch("medharness.services.design_validation.validate_design", side_effect=[errors, errors]), \
              patch("subprocess.run", return_value=MagicMock(stdout="", returncode=0)), \
-             patch("medharness.services.cr_generation.LocalDHFAdapter", return_value=mock_adapter):
+             patch("medharness.services.cr_impact.LocalDHFAdapter", return_value=mock_adapter):
             generate_design("CR-018", dhf)
         mock_adapter.update_item.assert_not_called()
 

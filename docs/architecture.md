@@ -1,7 +1,7 @@
 # Architecture
 
 > **Stability:** Stable
-> **Last reviewed:** 2026-05-03
+> **Last reviewed:** 2026-05-13
 
 ---
 
@@ -124,3 +124,16 @@ The generated DHF repo does not contain `dhfkit/` or `medharness/` source code. 
 | Engine | `dhfkit/tests/` | dhfkit-specific: CRUD, validation, document generation |
 
 This repo does not use `@links`/`@test_id` metadata or `ci test-coverage` for its own governance. Those features are available to scaffolded user DHF repos.
+
+---
+
+## CR Generation Service Topology
+
+The CR-generation path in `medharness.services` is intentionally split by responsibility:
+
+- `cr_generation.py` owns stage orchestration, Claude invocation, PR-feedback retrieval, and stable `generate_spec` / `generate_design` / `generate_code` entry points
+- `prompt_assembly.py` owns prompt-template loading plus prompt composition, including design-prompt injection from the precomputed spec JSON companion
+- `cr_impact.py` owns design-impact snapshot formatting and write-back onto the CR item after successful design validation
+- `design_validation.py` owns deterministic post-design checks and only catches expected environment and DHF-validation failures
+
+This split is internal structure, not a public import contract. The public behavior remains the CLI and JSON response contracts documented elsewhere.
