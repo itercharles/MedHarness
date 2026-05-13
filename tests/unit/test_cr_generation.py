@@ -25,6 +25,11 @@ from medharness.services.cr_generation import (
     generate_spec,
 )
 
+from medharness.services.prompt_assembly import (
+    _build_dhf_context_block,
+    _build_impact_closure_block,
+)
+
 
 # ── Prompt loading ────────────────────────────────────────────────────────────
 
@@ -62,6 +67,9 @@ class TestLoadSkill:
         "risk_impact.md",
         "soup_impact.md",
         "test_impact.md",
+        "regulatory_impact.md",
+        "security_impact.md",
+        "usability_impact.md",
     ])
     def test_all_skills_loadable(self, name):
         text = _load_skill(name)
@@ -94,10 +102,11 @@ class TestAppendSkills:
         result = _append_skills("base prompt")
         assert "---" in result
 
-    def test_all_six_skill_sections_present(self):
+    def test_all_nine_skill_sections_present(self):
         result = _append_skills("base")
         for title in ["Product Impact", "Requirements Management", "Architecture Impact",
-                      "Risk Impact", "SOUP Impact", "Test Impact"]:
+                      "Risk Impact", "SOUP Impact", "Test Impact",
+                      "Regulatory Impact", "Security Impact", "Usability / HFE Impact"]:
             assert title in result, f"Missing skill section: {title}"
 
     def test_base_prompt_preserved(self):
@@ -784,7 +793,7 @@ class TestGenerateCode:
         with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
              patch("medharness.services.cr_generation._get_pr_feedback") as mock_fb, \
              patch("medharness.services.code_validation.validate_code",
-                   return_value=[]):
+                    return_value=[]):
             mock_claude.return_value = (0, "")
             mock_fb.return_value = {
                 "prompt_text": '{"comments": [], "reviews": []}',
@@ -795,3 +804,224 @@ class TestGenerateCode:
         mock_fb.assert_called_once_with(7)
         prompt = mock_claude.call_args_list[0][0][0]
         assert "review feedback" in prompt.lower()
+
+    def test_diff_injected_when_changes_exist(self, tmp_path):
+        dhf = tmp_path / "DHF"
+        dhf.mkdir()
+        diff_output = "+console.log('new code')\n"
+        with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
+             patch("medharness.services.code_validation.validate_code",
+                    return_value=[]), \
+             patch("medharness.services.git.compute_diff",
+                    return_value=diff_output):
+            mock_claude.return_value = (0, "")
+            generate_code("CR-026", dhf)
+        prompt = mock_claude.call_args_list[0][0][0]
+        assert "Existing Implementation" in prompt
+        assert "do not rewrite existing work" in prompt
+        assert diff_output in prompt
+
+    def test_diff_not_injected_when_no_changes(self, tmp_path):
+        dhf = tmp_path / "DHF"
+        dhf.mkdir()
+        with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
+             patch("medharness.services.code_validation.validate_code",
+                    return_value=[]), \
+             patch("medharness.services.git.compute_diff",
+                    return_value=""):
+            mock_claude.return_value = (0, "")
+            generate_code("CR-027", dhf)
+        prompt = mock_claude.call_args_list[0][0][0]
+        assert "Existing Implementation" not in prompt
+
+    def test_diff_not_injected_on_git_failure(self, tmp_path):
+        dhf = tmp_path / "DHF"
+        dhf.mkdir()
+        with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
+             patch("medharness.services.code_validation.validate_code",
+                    return_value=[]), \
+             patch("medharness.services.git.compute_diff",
+                    return_value=None):
+            mock_claude.return_value = (0, "")
+            generate_code("CR-028", dhf)
+        prompt = mock_claude.call_args_list[0][0][0]
+        assert "Existing Implementation" not in prompt
+
+
+# ── DHF context block ──────────────────────────────────────────────────────────
+
+class TestBuildDhfContextBlock:
+    def test_returns_empty_on_adapter_failure(self, tmp_path):
+        dhf = tmp_path / "nonexistent"
+        result = _build_dhf_context_block(dhf)
+        assert result == ""
+
+    def test_includes_item_type_summary(self, tmp_path):
+        from tests.fixtures.stub_adapter import StubDHFAdapter
+
+        dhf = tmp_path / "DHF"
+        dhf.mkdir()
+        adapter = StubDHFAdapter()
+        adapter.create_item({"id": "SYS-001", "title": "System req"})
+        adapter.create_item({"id": "SRS-001", "title": "Software req"})
+        with patch(
+            "dhfkit.local_adapter.LocalDHFAdapter",
+            return_value=adapter,
+        ):
+            result = _build_dhf_context_block(dhf)
+        assert "Pre-computed DHF Context" in result
+        assert "SYS:" in result or "SYS-" in result
+        assert "SRS:" in result or "SRS-" in result
+
+    def test_includes_all_dhf_items(self, tmp_path):
+        from tests.fixtures.stub_adapter import StubDHFAdapter
+
+        dhf = tmp_path / "DHF"
+        dhf.mkdir()
+        adapter = StubDHFAdapter()
+        adapter.create_item({"id": "SYS-001", "title": "System requirement 1"})
+        with patch(
+            "dhfkit.local_adapter.LocalDHFAdapter",
+            return_value=adapter,
+        ):
+            result = _build_dhf_context_block(dhf)
+        assert "All DHF Items" in result
+        assert "SYS-001 — System requirement 1" in result
+
+    def test_caps_items_at_max(self, tmp_path):
+        from tests.fixtures.stub_adapter import StubDHFAdapter
+
+        dhf = tmp_path / "DHF"
+        dhf.mkdir()
+        adapter = StubDHFAdapter()
+        for i in range(250):
+            adapter.create_item({"id": f"SYS-{i+1:03d}", "title": f"Req {i}"})
+        with patch(
+            "dhfkit.local_adapter.LocalDHFAdapter",
+            return_value=adapter,
+        ):
+            result = _build_dhf_context_block(dhf)
+        assert "truncated" in result.lower()
+        assert "200 of 250" in result
+        # SYS-001 through SYS-200 should appear; SYS-250 should not.
+        assert "SYS-001 —" in result
+        assert "SYS-200 —" in result
+        assert "SYS-250 —" not in result
+
+    def test_includes_coverage_gaps_when_uncovered(self, tmp_path):
+        from tests.fixtures.stub_adapter import StubDHFAdapter
+
+        dhf = tmp_path / "DHF"
+        dhf.mkdir()
+        adapter = StubDHFAdapter()
+        adapter.create_item({"id": "SYS-001", "title": "Uncovered req"})
+        with patch(
+            "dhfkit.local_adapter.LocalDHFAdapter",
+            return_value=adapter,
+        ):
+            result = _build_dhf_context_block(dhf)
+        assert "manual_verification_candidates" in result
+        assert "SYS-001" in result
+
+    def test_no_coverage_warning_when_all_covered(self, tmp_path):
+        from tests.fixtures.stub_adapter import StubDHFAdapter
+
+        dhf = tmp_path / "DHF"
+        dhf.mkdir()
+        adapter = StubDHFAdapter()
+        adapter.create_item({"id": "SYS-001", "title": "Covered req"})
+        adapter.create_item({"id": "TC-SYS-001", "title": "Test case",
+                             "verifies": ["SYS-001"]})
+        with patch(
+            "dhfkit.local_adapter.LocalDHFAdapter",
+            return_value=adapter,
+        ):
+            result = _build_dhf_context_block(dhf)
+        assert "manual_verification_candidates" not in result
+
+
+# ── Impact closure block ───────────────────────────────────────────────────────
+
+class TestBuildImpactClosureBlock:
+    def test_returns_empty_on_empty_affected_items(self, tmp_path):
+        dhf = tmp_path / "DHF"
+        dhf.mkdir()
+        result = _build_impact_closure_block(dhf, {"affected_items": []})
+        assert result == ""
+
+    def test_returns_empty_when_affected_not_list(self, tmp_path):
+        dhf = tmp_path / "DHF"
+        dhf.mkdir()
+        result = _build_impact_closure_block(dhf, {})
+        assert result == ""
+
+    def test_returns_empty_on_adapter_failure(self, tmp_path):
+        dhf = tmp_path / "nonexistent"
+        result = _build_impact_closure_block(
+            dhf, {"affected_items": ["SYS-001"]}
+        )
+        assert result == ""
+
+    def test_includes_upstream_and_downstream(self, tmp_path):
+        from tests.fixtures.stub_adapter import StubDHFAdapter
+
+        dhf = tmp_path / "DHF"
+        dhf.mkdir()
+        adapter = StubDHFAdapter()
+        adapter.create_item({"id": "SYS-001", "title": "System req",
+                             "derives_from": ["CRS-001"]})
+        adapter.create_item({"id": "CRS-001", "title": "User need"})
+        adapter.create_item({"id": "SRS-001", "title": "Software req",
+                             "implements": ["SYS-001"]})
+        adapter.create_item({"id": "RISK-001", "title": "Risk item",
+                             "satisfies": ["SYS-001"]})
+        with patch(
+            "dhfkit.local_adapter.LocalDHFAdapter",
+            return_value=adapter,
+        ):
+            result = _build_impact_closure_block(
+                dhf, {"affected_items": ["SYS-001"]}
+            )
+        assert "Pre-computed Impact Closure" in result
+        assert "### SYS-001" in result
+        assert "CRS-001" in result
+        assert "SRS-001" in result
+
+    def test_reports_not_found_for_missing_item(self, tmp_path):
+        from tests.fixtures.stub_adapter import StubDHFAdapter
+
+        dhf = tmp_path / "DHF"
+        dhf.mkdir()
+        adapter = StubDHFAdapter()
+        with patch(
+            "dhfkit.local_adapter.LocalDHFAdapter",
+            return_value=adapter,
+        ):
+            result = _build_impact_closure_block(
+                dhf, {"affected_items": ["SYS-999"]}
+            )
+        assert "Not found in DHF graph" in result
+
+
+# ── Analyze prompt with DHF context ────────────────────────────────────────────
+
+class TestAssembleAnalyzePromptWithContext:
+    def test_includes_context_when_dhf_path_provided(self, tmp_path):
+        from tests.fixtures.stub_adapter import StubDHFAdapter
+
+        dhf = tmp_path / "DHF"
+        dhf.mkdir()
+        adapter = StubDHFAdapter()
+        adapter.create_item({"id": "SYS-001", "title": "Test req"})
+        with patch(
+            "dhfkit.local_adapter.LocalDHFAdapter",
+            return_value=adapter,
+        ):
+            prompt = _assemble_analyze_prompt("CR-050", dhf)
+        assert "Pre-computed DHF Context" in prompt
+        assert "CR-050" in prompt
+
+    def test_omits_context_when_no_dhf_path(self):
+        prompt = _assemble_analyze_prompt("CR-051")
+        assert "Pre-computed DHF Context" not in prompt
+        assert "CR-051" in prompt

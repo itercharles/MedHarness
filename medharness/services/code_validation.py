@@ -9,9 +9,9 @@ validator stays project-agnostic and focuses on what only the spec can tell us.
 from __future__ import annotations
 
 import re
-import subprocess
 from pathlib import Path
 
+from medharness.services.git import compute_diff
 from medharness.services.spec_validation import parse_spec_frontmatter
 
 _ITEM_ID_RE = re.compile(r"^[A-Z]+-\d+$")
@@ -46,7 +46,7 @@ def validate_code(
         return errors
 
     repo_root = dhf_path.resolve().parent
-    diff_text = _git_diff(repo_root, since_ref, "apps/", "packages/")
+    diff_text = compute_diff(repo_root, since_ref, "apps/", "packages/")
     if diff_text is None:
         # Environment failure (git missing, ref unfetched, etc.) — emit one
         # actionable error rather than fabricating per-item annotation errors
@@ -88,30 +88,6 @@ def validate_code(
             })
 
     return errors
-
-
-def _git_diff(repo_root: Path, since_ref: str, *paths: str) -> str | None:
-    """Return git diff output.
-
-    Returns:
-        ``""`` for a legitimate empty diff (git ran, no changes since ``since_ref``).
-        ``None`` for an environment failure (git missing, ref unfetched, etc.) —
-        callers should treat this as un-checkable rather than as "no changes".
-        Otherwise the diff text.
-    """
-    try:
-        result = subprocess.run(
-            ["git", "diff", since_ref, "--", *paths],
-            capture_output=True,
-            text=True,
-            cwd=str(repo_root),
-            check=False,
-        )
-    except FileNotFoundError:
-        return None
-    if result.returncode != 0:
-        return None
-    return result.stdout or ""
 
 
 _ANNOTATION_PATTERN_CACHE: dict[str, re.Pattern[str]] = {}
