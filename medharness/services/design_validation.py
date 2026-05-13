@@ -15,6 +15,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import yaml
+
 from dhfkit.exceptions import ValidationError
 
 from medharness.services.spec_validation import parse_spec_frontmatter
@@ -51,7 +53,7 @@ def validate_design(
     # --- Schema -----------------------------------------------------------------
     try:
         schema_result = _api.validate_schema(dhf_path)
-    except (FileNotFoundError, ValidationError, ValueError) as exc:
+    except (FileNotFoundError, ValidationError, ValueError, yaml.YAMLError) as exc:
         errors.append({
             "field": "schema",
             "issue": f"Schema validation raised: {exc}",
@@ -73,7 +75,7 @@ def validate_design(
     # --- Traceability -----------------------------------------------------------
     try:
         trace_result = _api.validate_traceability(dhf_path)
-    except (FileNotFoundError, ValidationError, ValueError) as exc:
+    except (FileNotFoundError, ValidationError, ValueError, yaml.YAMLError) as exc:
         errors.append({
             "field": "traceability",
             "issue": f"Traceability validation raised: {exc}",
@@ -128,7 +130,7 @@ def validate_design(
         try:
             listed_items = _api.list_items(dhf_path)
             existing_ids = {it["id"] for it in listed_items}
-        except (FileNotFoundError, ValidationError, ValueError) as exc:
+        except (FileNotFoundError, ValidationError, ValueError, yaml.YAMLError) as exc:
             errors.append({
                 "field": "affected_items",
                 "issue": f"Could not enumerate DHF items to verify spec expectations: {exc}",
