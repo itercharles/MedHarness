@@ -139,7 +139,7 @@ Issue → CR + spec draft → spec review → design-cr → develop-cr → cr-co
 
 | Stage | Trigger | What MedHarness does |
 |-------|---------|---------------------|
-| **CR intake** | Issue milestoned | Creates CR item in DHF and, by default, generates the initial spec draft before opening the draft PR (`cr workflow intake-github-issue-ci`) |
+| **CR intake** | Issue milestoned | Creates CR item in DHF and, by default, generates the initial spec draft before opening the draft PR (`cr workflow intake-github-issue-ci`). Pass `--no-generate-spec` to keep the older lower-cost behavior. |
 | **analyze-cr** | Spec PR feedback or manual rerun | Runs Claude to write or revise a spec, self-corrects against schema, commits to `docs/cr-specs/` (`ci analyze-cr`) |
 | **design-cr** | Spec PR approved | Runs Claude to create/update DHF items, validates schema + traceability (`ci design-cr`) |
 | **develop-cr** | Design PR approved | Runs Claude to implement code, opens implementation PR (`ci develop-cr`) |

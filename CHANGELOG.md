@@ -41,10 +41,13 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
   - `cr workflow intake-github-issue` and `intake-github-issue-ci` now
     generate the initial spec draft by default whenever they create a new CR
     with `--write`.
+  - This adds one Claude/spec-generation pass to default intake behavior.
+    Use `--no-generate-spec` to opt out when a client repo wants the older,
+    cheaper CR-only intake path.
   - Intake JSON now includes `spec_generated`, `spec_status`,
-    `spec_validation`, `spec_path`, and `spec_json_path`, so client repos can
-    treat spec review as the first real approval gate without re-running
-    `ci analyze-cr`.
+    `spec_validation`, `spec_path`, `spec_json_path`, and `spec_error`, so
+    client repos can treat spec review as the first real approval gate without
+    re-running `ci analyze-cr`.
 
 ## [0.3.7] — 2026-05-12
 

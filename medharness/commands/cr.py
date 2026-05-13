@@ -10,12 +10,6 @@ import subprocess
 import re as _re
 from pathlib import Path
 
-import json
-import os
-import subprocess
-import re as _re
-from pathlib import Path
-
 import click
 import medharness._helpers as _h
 from medharness.workflows.cr_intake import (
@@ -35,8 +29,33 @@ def _generate_initial_spec(cr_id: str, dhf_root: Path) -> dict:
         "spec_validation": result.get("validation"),
         "spec_path": result.get("spec_path"),
         "spec_json_path": result.get("spec_json_path"),
-        "spec": result,
+        "spec_error": None,
     }
+
+
+def _empty_spec_payload() -> dict:
+    return {
+        "spec_generated": False,
+        "spec_status": None,
+        "spec_validation": None,
+        "spec_path": None,
+        "spec_json_path": None,
+        "spec_error": None,
+    }
+
+
+def _safe_generate_initial_spec(cr_id: str, dhf_root: Path) -> dict:
+    try:
+        return _generate_initial_spec(cr_id, dhf_root)
+    except Exception as exc:  # noqa: BLE001
+        return {
+            "spec_generated": False,
+            "spec_status": "error",
+            "spec_validation": None,
+            "spec_path": None,
+            "spec_json_path": None,
+            "spec_error": str(exc),
+        }
 
 
 def workflow_complete(
@@ -93,14 +112,10 @@ def workflow_intake_github_issue(
         "should_create": result.should_create, "reason": result.reason,
         "cr_id": result.cr_id, "branch": result.branch,
         "cr_path": result.cr_path, "title": result.title,
-        "spec_generated": False,
-        "spec_status": None,
-        "spec_validation": None,
-        "spec_path": None,
-        "spec_json_path": None,
+        **_empty_spec_payload(),
     }
     if write and generate_spec_draft and result.should_create and result.cr_id:
-        payload.update(_generate_initial_spec(result.cr_id, dhf_root))
+        payload.update(_safe_generate_initial_spec(result.cr_id, dhf_root))
     return payload
 
 
@@ -134,16 +149,10 @@ def workflow_intake_github_issue_ci(
 
     branch_url = ""
     pr_url = ""
-    spec_payload = {
-        "spec_generated": False,
-        "spec_status": None,
-        "spec_validation": None,
-        "spec_path": None,
-        "spec_json_path": None,
-    }
+    spec_payload = _empty_spec_payload()
     if result.should_create and write:
         if result.cr_id and generate_spec_draft:
-            spec_payload = _generate_initial_spec(result.cr_id, dhf_root)
+            spec_payload = _safe_generate_initial_spec(result.cr_id, dhf_root)
         branch = result.branch
         if create_branch:
             _h._run_git(repo_root, ["checkout", "-B", branch])
