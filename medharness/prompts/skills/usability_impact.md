@@ -10,8 +10,8 @@ Read:
 - `DHF/items/09_cr/<CR_ID>.yaml`
 - `DHF/documents/plans/development_plan.md`
 - `DHF/documents/plans/usability_engineering_plan.md` (if present)
-- `DHF/items/12_risks/`
-- Related UC, CRS, and SYS items identified during impact analysis
+- Risk items and use case / customer requirement items identified during impact
+  analysis (see Type Registry for type codes)
 
 ## Analysis
 
@@ -39,7 +39,7 @@ Return a concise usability impact entry:
 ```markdown
 Usability / HFE: Required | Not required | Follow-up needed
 Justification: <one sentence>
-Impacted items: <UC/RISK IDs or "None">
+Impacted items: <use case / risk item IDs or "None">
 Recommended action: <none, flag for formative eval, schedule summative test,
   update HFE file, or consult usability during design>
 ```
@@ -51,8 +51,10 @@ interaction flow, use `Not required` when no new use error hazard is introduced.
 ## Design Updates
 
 When the approved spec requires usability changes. Prefer no change > update > create.
-- Update or create `UC` items for changed or new user workflows.
-- Update `RISK` items when use-related hazards are introduced or changed.
+- Update or create **use case items** for changed or new user workflows (see
+  Type Registry — `use_case` role).
+- Update **risk items** when use-related hazards are introduced or changed (see
+  Type Registry — `risk` role).
 - Do not create standalone HFE DHF items unless the project config defines
   a usability document type.
 - Flag items that require usability review before approval so the reviewer

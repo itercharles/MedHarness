@@ -88,13 +88,13 @@ class TestLoadSkill:
 
     def test_architecture_impact_has_output_template(self):
         text = _load_skill("architecture_impact.md")
-        assert "SYSARCH" in text
+        assert "architecture" in text.lower()
         assert "Required" in text
 
-    def test_risk_impact_mentions_iso_14971(self):
+    def test_risk_impact_has_output_template(self):
         text = _load_skill("risk_impact.md")
-        assert "RISK" in text
-        assert "RCM" in text
+        assert "risk" in text.lower()
+        assert "Required" in text
 
 
 class TestAppendSkills:

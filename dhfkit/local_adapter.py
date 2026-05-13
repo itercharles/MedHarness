@@ -68,6 +68,7 @@ class LocalDHFAdapter:
             "name": dt.type_name or dt.code,
             "code": dt.code,
             "prefix": dt.prefix,
+            "role": dt.role,
             "parent_types": dt.parent_types or [],
             "has_verification": bool(dt.has_verification),
             "lifecycle": dt.lifecycle,

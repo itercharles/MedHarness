@@ -1,4 +1,5 @@
 code: SOUP
+role: soup
 name: Software of Unknown Provenance
 prefix: SOUP-
 directory: 08_soup

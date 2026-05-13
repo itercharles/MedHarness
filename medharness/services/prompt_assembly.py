@@ -46,6 +46,22 @@ def _append_skills(prompt: str) -> str:
 # ---------------------------------------------------------------------------
 
 
+_ROLE_LABELS: dict[str, str] = {
+    "use_case": "Use cases",
+    "customer_requirement": "Customer / user needs (tier 1)",
+    "system_requirement": "System requirements (tier 2)",
+    "software_requirement": "Software / subsystem requirements (tier 3)",
+    "design_detail": "Design detail (tier 4)",
+    "architecture": "Architecture",
+    "risk": "Risk analysis",
+    "risk_control": "Risk controls",
+    "soup": "SOUP",
+    "change_request": "Change requests",
+    "defect": "Defects",
+    "release": "Releases",
+}
+
+
 def _build_dhf_context_block(dhf_path: Path) -> str:
     # Inline imports avoid coupling prompt_assembly to dhfkit/medharness core
     # at import-time. These modules are only needed when a real DHF path is
@@ -71,6 +87,25 @@ def _build_dhf_context_block(dhf_path: Path) -> str:
             for prefix, count in sorted(counts.items())
         )
         lines.append(f"### Item Type Summary\n\n{type_summary}\n")
+
+    by_role: dict[str, list[str]] = {}
+    try:
+        for dt in adapter._config.doc_types:
+            if dt.role:
+                entry = f"{dt.code} ({dt.type_name or dt.name})"
+                by_role.setdefault(dt.role, []).append(entry)
+    except Exception:
+        pass  # Type Registry is best-effort; degrade if _config is unavailable
+    if by_role:
+        lines.append(
+            "### Type Registry\n"
+            "(Maps abstract DHF roles to this project's type codes."
+            " Skills reference these roles — resolve to codes here.)\n\n"
+        )
+        for role, label in _ROLE_LABELS.items():
+            if role in by_role:
+                lines.append(f"{label}: {', '.join(by_role[role])}\n")
+        lines.append("\n")
 
     items = adapter.list_items()
     cap = MAX_ITEMS

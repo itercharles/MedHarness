@@ -10,9 +10,8 @@ Read:
 - `DHF/items/09_cr/<CR_ID>.yaml`
 - `DHF/documents/plans/development_plan.md`
 - `DHF/documents/plans/risk_management_plan.md`
-- `DHF/items/12_risks/`
-- `DHF/items/11_soup/`
-- Relevant SYS/SRS items when applicable
+- Risk items and SOUP items (see Type Registry — `risk` and `soup` roles)
+- Relevant system and software requirement items when applicable
 
 ## Analysis
 
@@ -37,21 +36,21 @@ Return a concise security impact entry:
 ```markdown
 Security: Required | Not required | Follow-up needed
 Justification: <one sentence>
-Impacted items: <RISK/SOUP/SYS IDs or "None">
-Recommended action: <none, update threat model, update SBOM, create RISK,
+Impacted items: <risk / SOUP / system requirement item IDs or "None">
+Recommended action: <none, update threat model, update SBOM, create risk item,
   or consult security during design>
 ```
 
 For purely visual, localization, or documentation changes that do not alter
-data flows, authentication, or dependency security posture, use
-`Not required`.
+data flows, authentication, or dependency security posture, use `Not required`.
 
 ## Design Updates
 
 When the approved spec requires security changes. Prefer no change > update > create.
-- Update or create `RISK` items for security-related hazards.
-- Update `SOUP` items when third-party dependencies change with security
-  implications.
+- Update or create **risk items** for security-related hazards (see Type Registry
+  — `risk` role).
+- Update **SOUP items** when third-party dependencies change with security
+  implications (see Type Registry — `soup` role).
 - Do not create standalone security DHF items unless the project config
   defines a security document type.
 - Flag items that require security review before approval so the reviewer

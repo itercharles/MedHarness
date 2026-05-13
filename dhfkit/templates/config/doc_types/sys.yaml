@@ -1,4 +1,5 @@
 code: SYS
+role: system_requirement
 name: System Requirement
 prefix: SYS-
 directory: 02_sys

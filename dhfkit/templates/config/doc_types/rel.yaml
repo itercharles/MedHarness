@@ -1,4 +1,5 @@
 code: REL
+role: release
 name: Release
 prefix: REL-
 directory: 07_rel

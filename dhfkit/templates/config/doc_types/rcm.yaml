@@ -1,4 +1,5 @@
 code: RCM
+role: risk_control
 name: Risk Control Measure
 prefix: RCM-
 directory: 10_rcm

@@ -1,4 +1,5 @@
 code: CRS
+role: customer_requirement
 name: Customer Requirement
 prefix: CRS-
 directory: 01_crs

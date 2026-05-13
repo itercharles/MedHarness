@@ -105,6 +105,7 @@ class DocTypeConfig(BaseModel):
     lifecycle: Optional[dict] = Field(None, description="Lifecycle configuration with states and transitions")
     has_verification: Optional[bool] = Field(None, description="Whether this type supports verification tracking")
     verification_states: Optional[List[str]] = Field(None, description="Verification states")
+    role: Optional[str] = Field(None, description="Semantic role for AI context (e.g., 'system_requirement', 'risk')")
 
 
 class TraceabilityMatrix(BaseModel):

@@ -10,7 +10,8 @@ Read:
 - `DHF/items/09_cr/<CR_ID>.yaml`
 - `DHF/documents/plans/development_plan.md`
 - `DHF/documents/plans/regulatory_strategy_plan.md` (if present)
-- Related SYS, RISK, and SOUP items identified during impact analysis
+- Related system requirements, risk items, and SOUP items identified during
+  impact analysis (see Type Registry for type codes)
 
 ## Analysis
 

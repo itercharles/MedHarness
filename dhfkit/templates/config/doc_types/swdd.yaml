@@ -1,4 +1,5 @@
 code: SWDD
+role: design_detail
 name: Software Detailed Design
 prefix: SWDD-
 directory: 04_swdd

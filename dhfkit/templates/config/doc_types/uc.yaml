@@ -1,4 +1,5 @@
 code: UC
+role: use_case
 name: Use Case
 prefix: UC-
 directory: 00_uc
