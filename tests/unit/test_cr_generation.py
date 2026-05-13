@@ -223,6 +223,28 @@ class TestGetPrFeedback:
         assert result["diagnostics"]["comments_status"] == "decode_error"
         assert any("decoded" in w["message"] for w in result["warnings"])
 
+    def test_url_error_returns_error_payload(self, monkeypatch):
+        monkeypatch.setenv("GH_TOKEN", "tok")
+        monkeypatch.setenv("GITHUB_REPOSITORY", "owner/repo")
+        import urllib.error
+        with patch("urllib.request.urlopen", side_effect=urllib.error.URLError("offline")):
+            result = _get_pr_feedback(99)
+        data = json.loads(result)
+        assert any("offline" in str(v) for v in data.values())
+
+    def test_invalid_json_returns_error_payload(self, monkeypatch):
+        monkeypatch.setenv("GH_TOKEN", "tok")
+        monkeypatch.setenv("GITHUB_REPOSITORY", "owner/repo")
+        with patch("urllib.request.urlopen") as mock_open:
+            mock_resp = MagicMock()
+            mock_resp.__enter__ = lambda s: s
+            mock_resp.__exit__ = MagicMock(return_value=False)
+            mock_resp.read.return_value = b"{not-json"
+            mock_open.return_value = mock_resp
+            result = _get_pr_feedback(1)
+        data = json.loads(result)
+        assert any("error" in str(v) for v in data.values())
+
 
 # ── Claude invocation ─────────────────────────────────────────────────────────
 
