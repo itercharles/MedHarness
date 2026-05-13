@@ -9,6 +9,7 @@ from pathlib import Path
 from medharness.services.spec_validation import read_spec_json
 
 MAX_ITEMS = 200
+MAX_DIFF_CHARS = 40_000
 
 
 def _load_prompt(name: str) -> str:
@@ -89,11 +90,13 @@ def _build_dhf_context_block(dhf_path: Path) -> str:
         lines.append(f"### Item Type Summary\n\n{type_summary}\n")
 
     by_role: dict[str, list[str]] = {}
+    role_codes: dict[str, list[str]] = {}
     try:
         for dt in adapter._config.doc_types:
             if dt.role:
                 entry = f"{dt.code} ({dt.type_name or dt.name})"
                 by_role.setdefault(dt.role, []).append(entry)
+                role_codes.setdefault(dt.role, []).append(dt.code)
     except Exception:
         pass  # Type Registry is best-effort; degrade if _config is unavailable
     if by_role:
@@ -131,7 +134,8 @@ def _build_dhf_context_block(dhf_path: Path) -> str:
     if tc_type is not None and tc_type.get("prefix"):
         tc_prefix = tc_type["prefix"].rstrip("-")
 
-    cov = core.graph.calculate_coverage("SYS", tc_prefix)
+    sys_prefix = role_codes.get("system_requirement", ["SYS"])[0]
+    cov = core.graph.calculate_coverage(sys_prefix, tc_prefix)
     uncovered = cov.get("uncovered", [])
     if uncovered:
         lines.append(
