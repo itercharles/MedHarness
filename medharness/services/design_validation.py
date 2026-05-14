@@ -180,7 +180,9 @@ def validate_design(
                     ),
                 })
                 continue
-            if _item_type_from_id(str(uid)) in _VERIFIABLE_TYPES and not _item_has_verification_criteria(by_id.get(uid)):
+            item_type = _item_type_from_id(str(uid))
+            has_verification_criteria = _item_has_verification_criteria(by_id.get(uid))
+            if item_type in _VERIFIABLE_TYPES and not has_verification_criteria:
                 errors.append({
                     "field": f"affected_items[{idx}].verification_criteria",
                     "issue": (

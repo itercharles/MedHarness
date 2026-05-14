@@ -733,6 +733,8 @@ class TestGenerateDhf:
         dhf = tmp_path / "DHF"
         dhf.mkdir()
         with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
+             patch("medharness.services.cr_generation.git.collect_dhf_item_changes",
+                   return_value={"created": [], "updated": [], "deleted": []}), \
              patch("medharness.services.design_validation.validate_generate_dhf", return_value=[]):
             mock_claude.return_value = (0, "")
             result = generate_dhf("CR-050", dhf)
@@ -747,6 +749,8 @@ class TestGenerateDhf:
         dhf = tmp_path / "DHF"
         dhf.mkdir()
         with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
+             patch("medharness.services.cr_generation.git.collect_dhf_item_changes",
+                   return_value={"created": [], "updated": [], "deleted": []}), \
              patch("medharness.services.design_validation.validate_generate_dhf", return_value=[]):
             mock_claude.return_value = (0, "")
             result = generate_dhf("CR-051", dhf)
@@ -758,6 +762,8 @@ class TestGenerateDhf:
         dhf.mkdir()
         first_errors = [{"field": "schema", "issue": "x", "fix": "y"}]
         with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
+             patch("medharness.services.cr_generation.git.collect_dhf_item_changes",
+                   return_value={"created": [], "updated": [], "deleted": []}), \
              patch("medharness.services.design_validation.validate_generate_dhf",
                    side_effect=[first_errors, []]):
             mock_claude.return_value = (0, "")
@@ -773,6 +779,8 @@ class TestGenerateDhf:
         dhf.mkdir()
         errors = [{"field": "schema", "issue": "x", "fix": "y"}]
         with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
+             patch("medharness.services.cr_generation.git.collect_dhf_item_changes",
+                   return_value={"created": [], "updated": [], "deleted": []}), \
              patch("medharness.services.design_validation.validate_generate_dhf",
                    side_effect=[errors, errors]):
             mock_claude.return_value = (0, "")
@@ -783,6 +791,8 @@ class TestGenerateDhf:
         dhf = tmp_path / "DHF"
         dhf.mkdir()
         with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
+             patch("medharness.services.cr_generation.git.collect_dhf_item_changes",
+                   return_value={"created": [], "updated": [], "deleted": []}), \
              patch("medharness.services.design_validation.validate_generate_dhf", return_value=[]):
             mock_claude.return_value = (0, "")
             generate_dhf("CR-055", dhf)
@@ -806,6 +816,8 @@ class TestGenerateDhf:
         dhf.mkdir()
         with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
              patch("medharness.services.cr_generation._get_pr_feedback") as mock_fb, \
+             patch("medharness.services.cr_generation.git.collect_dhf_item_changes",
+                   return_value={"created": [], "updated": [], "deleted": []}), \
              patch("medharness.services.design_validation.validate_generate_dhf", return_value=[]):
             mock_claude.return_value = (0, "")
             mock_fb.return_value = {
@@ -817,12 +829,15 @@ class TestGenerateDhf:
         mock_fb.assert_called_once_with(12)
         prompt = mock_claude.call_args_list[0][0][0]
         assert "review feedback" in prompt.lower()
+        assert "Product Impact" in prompt
 
     def test_design_impact_not_recorded_on_residual_errors(self, tmp_path):
         dhf = tmp_path / "DHF"
         dhf.mkdir()
         errors = [{"field": "schema", "issue": "x", "fix": "y"}]
         with patch("medharness.services.cr_generation._run_claude", return_value=(0, "")), \
+             patch("medharness.services.cr_generation.git.collect_dhf_item_changes",
+                   return_value={"created": [], "updated": [], "deleted": []}), \
              patch("medharness.services.design_validation.validate_generate_dhf",
                    side_effect=[errors, errors]), \
              patch("medharness.services.cr_generation._record_design_impact_in_cr") as mock_impact:

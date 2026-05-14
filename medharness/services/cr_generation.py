@@ -760,6 +760,7 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> di
         block = _build_dhf_context_block(dhf_path)
         if block:
             prompt += "\n\n" + block
+        prompt = _append_skills(prompt)
         steps.append(_finish_step(prompt_step, prompt_perf, "ok"))
     else:
         prompt_step, prompt_perf = _begin_step(
@@ -831,7 +832,7 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> di
         )
 
     artifact_step, artifact_perf = _begin_step(
-        "collect_artifacts", {"kind": "dhf_items_changed"}
+        "collect_artifacts", {"kind": "dhf_items_changed", "snapshot_only": True}
     )
     steps.append(
         _finish_step(artifact_step, artifact_perf, "ok", {"items_changed": items_changed})
