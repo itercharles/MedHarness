@@ -143,7 +143,7 @@ def create_test_dhf() -> Path:
                 'id',
                 {'name': 'title', 'format': 'short_text', 'label': 'Title'},
                 {'name': 'content', 'format': 'long_text', 'label': 'Content'},
-                {'name': 'implements', 'format': 'relationship', 'target_types': ['SYS'], 'label': 'Implements'},
+                {'name': 'design', 'format': 'item_multiselect', 'target_types': ['SYS'], 'label': 'Designs Requirements'},
             ],
         },
         {
@@ -237,7 +237,7 @@ def get_test_dataset() -> List[Dict]:
             "id": "SYSARCH-001",
             "title": "System Architecture Component",
             "content": "Architecture component for test system",
-            "implements": ["SYS-001"],
+            "design": ["SYS-001"],
         },
         {
             "id": "CR-001",

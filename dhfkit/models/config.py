@@ -54,31 +54,26 @@ class GlobalLifecycle(BaseModel):
     states: List[LifecycleState] = Field(default_factory=list, description="All available lifecycle states")
 
 
-class RelationConfig(BaseModel):
-    """Configuration for a relationship."""
-    target: str = Field(..., description="Target Document Type Code")
-    label: str = Field(..., description="Label for the relationship")
-
-
 class DocTypeConfig(BaseModel):
-    """Configuration for a document type."""
+    """Configuration for a document type.
+
+    Only project-variable fields live here. V-model relationships, default
+    roles, and traceability rules are derived from ItemType for known codes.
+    """
 
     code: str = Field(..., description="Document type code (e.g., 'SYS')")
-    type_name: Optional[str] = Field(None, description="medharness domain name (e.g., 'system_requirement'); falls back to code if absent")
-    parent_types: Optional[List[str]] = Field(None, description="medharness domain parent type names for traceability hierarchy")
     name: str = Field(..., description="Human-readable name")
     prefix: str = Field(..., description="ID prefix (e.g., 'SYS-')")
     directory: Optional[str] = Field(None, description="Storage directory name")
-    allowed_parents: Optional[List[str]] = Field(None, description="Allowed parent document types")
-    relations: Optional[List[RelationConfig]] = Field(None, description="Relationship configurations")
-    type: Optional[str] = Field(None, description="Special type (e.g., 'test')")
+    role: Optional[str] = Field(None, description="Semantic role; derived from ItemType when code is a known V-model type")
+    type: Optional[str] = Field(None, description="Special type marker (e.g., 'test')")
     verifies: Optional[List[str]] = Field(None, description="Document types this verifies")
-    properties: Optional[List[Any]] = Field(None, description="Properties to display")
-
+    properties: Optional[List[Any]] = Field(None, description="Project-specific field schema")
     lifecycle: Optional[dict] = Field(None, description="Lifecycle configuration with states and transitions")
-    has_verification: Optional[bool] = Field(None, description="Whether this type supports verification tracking")
-    verification_states: Optional[List[str]] = Field(None, description="Verification states")
-    role: Optional[str] = Field(None, description="Semantic role for AI context (e.g., 'system_requirement', 'risk')")
+    has_verification: Optional[bool] = Field(None, description="Whether this type supports verification tracking; derived from ItemType when absent")
+    verification_states: Optional[List[str]] = Field(None, description="Verification state labels")
+    # kept for loading compat — not used by any engine code
+    allowed_parents: Optional[List[str]] = Field(None, description="Deprecated. Use required_traceability in global.yaml.")
 
 
 class TraceabilityMatrix(BaseModel):

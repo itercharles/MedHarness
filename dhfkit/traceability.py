@@ -1,8 +1,7 @@
 """Traceability validation for DHF items.
 
 Checks:
-- Required: mandatory links defined by required_traceability rules (new)
-- Orphans: items missing required parent links (based on deprecated allowed_parents)
+- Required: mandatory links defined by required_traceability rules (or V-model defaults)
 - Coverage: every item at a parent level is linked by at least one child
 """
 
@@ -16,15 +15,11 @@ def _prefix_of(uid: str) -> str:
     return parts[0] + "-" if len(parts) == 2 else ""
 
 
-def _code_for_prefix(prefix: str, config: Any) -> str | None:
-    for dt in config.doc_types:
-        if dt.prefix == prefix:
-            return dt.code
-    return None
-
-
 def check_required_traceability(items: list[dict], config: Any) -> dict:
-    """Check mandatory traceability rules from required_traceability config.
+    """Check mandatory traceability rules.
+
+    Uses rules from config.required_traceability when present; falls back to
+    the V-model defaults derived from ItemType when the list is empty.
 
     Args:
         items: List of item dicts with 'id', 'all_linked_uids', and item fields.
@@ -33,11 +28,15 @@ def check_required_traceability(items: list[dict], config: Any) -> dict:
     Returns:
         {"passed": bool, "failures": [...], "summary": str}
     """
-    rules = config.required_traceability or []
+    from dhfkit.item_type import default_traceability_rules
+
+    # None = not configured → use V-model defaults; [] = explicitly empty → no rules
+    rules = config.required_traceability
+    if rules is None:
+        rules = default_traceability_rules()
+
     if not rules:
         return {"passed": True, "failures": [], "summary": "No required_traceability rules configured."}
-
-    by_id = {item["id"]: item for item in items}
 
     failures = []
     for rule in rules:
@@ -67,7 +66,7 @@ def check_required_traceability(items: list[dict], config: Any) -> dict:
                 )
 
             if count < rule.min_count:
-                direction_label = f"{rule.field} →" if rule.direction == "upstream" else f"covered by"
+                direction_label = f"{rule.field} →" if rule.direction == "upstream" else "covered by"
                 failures.append({
                     "id": s_item["id"],
                     "type": rule.source_type,
@@ -99,60 +98,30 @@ def check_traceability(items: list[dict], config: Any) -> dict:
 
     Args:
         items: List of item dicts (each must have 'id' and 'all_linked_uids').
-        config: ProjectConfig with doc_types (each has .code, .prefix, .allowed_parents).
+        config: ProjectConfig with doc_types and optional traceability config.
 
     Returns:
         {
           "passed": bool,
-          "orphans": [...],
+          "orphans": [],
           "coverage": [...],
           "required": {...},
-          "deprecation_warnings": [...],
+          "deprecation_warnings": [],
           "summary": str,
         }
     """
+    from dhfkit.item_type import default_coverage_chains
+
     by_id = {item["id"]: item for item in items}
 
-    # --- Required traceability (new) ------------------------------------------
     required_result = check_required_traceability(items, config)
 
-    # --- Orphan check (deprecated allowed_parents) -----------------------------
-    orphans = []
-    deprecation_warnings = []
-    for item in items:
-        uid = item["id"]
-        pfx = _prefix_of(uid)
-        dt = config.get_doc_type_by_prefix(pfx)
-        if not dt or not dt.allowed_parents:
-            continue  # no parent requirement for this type
+    matrices = config.traceability_matrices or []
+    if not matrices:
+        matrices = default_coverage_chains()
 
-        deprecation_warnings.append(
-            f"doc_type '{dt.code}' uses deprecated allowed_parents. "
-            f"Migrate to required_traceability in global.yaml."
-        )
-
-        linked = item.get("all_linked_uids") or []
-        linked_codes = {_code_for_prefix(_prefix_of(p), config) for p in linked if p in by_id}
-        linked_codes.discard(None)
-
-        # Skip orphan check for non-Functional items (e.g. Maintainability, Change Control)
-        category = item.get("category", "Functional")
-        if category and category != "Functional":
-            continue
-
-        has_valid_parent = bool(linked_codes & set(dt.allowed_parents))
-        if not has_valid_parent:
-            orphans.append({
-                "id": uid,
-                "type": dt.code,
-                "required_parents": dt.allowed_parents,
-                "linked_to": sorted(linked_codes),
-                "issue": f"No link to any of {dt.allowed_parents}",
-            })
-
-    # --- Coverage check (per traceability_matrices path) ----------------------
     coverage_results = []
-    for matrix in (config.traceability_matrices or []):
+    for matrix in matrices:
         path = matrix.path
         for i in range(len(path) - 1):
             parent_code = path[i]
@@ -169,7 +138,6 @@ def check_traceability(items: list[dict], config: Any) -> dict:
 
             uncovered = []
             for p_item in parent_items:
-                # A child covers a parent when the child links to the parent
                 covered = any(
                     p_item["id"] in (by_id.get(c_item["id"], {}).get("all_linked_uids") or [])
                     for c_item in items
@@ -188,17 +156,11 @@ def check_traceability(items: list[dict], config: Any) -> dict:
                 "passed": len(uncovered) == 0,
             })
 
-    passed = (
-        required_result["passed"]
-        and len(orphans) == 0
-        and all(r["passed"] for r in coverage_results)
-    )
+    passed = required_result["passed"] and all(r["passed"] for r in coverage_results)
 
     parts = []
     if not required_result["passed"]:
         parts.append(f"{len(required_result['failures'])} required failure(s)")
-    if orphans:
-        parts.append(f"{len(orphans)} orphan(s)")
     uncovered_count = sum(len(r["uncovered"]) for r in coverage_results)
     if uncovered_count:
         parts.append(f"{uncovered_count} uncovered item(s)")
@@ -207,8 +169,8 @@ def check_traceability(items: list[dict], config: Any) -> dict:
     return {
         "passed": passed,
         "required": required_result,
-        "orphans": orphans,
+        "orphans": [],
         "coverage": coverage_results,
-        "deprecation_warnings": deprecation_warnings,
+        "deprecation_warnings": [],
         "summary": summary,
     }

@@ -3,9 +3,6 @@ role: system_requirement
 name: System Requirement
 prefix: SYS-
 directory: 02_sys
-allowed_parents:
-- CRS
-- RCM
 properties:
 - id
 - name: title
