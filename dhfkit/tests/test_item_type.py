@@ -88,6 +88,20 @@ def test_custom_type_not_in_itemtype_gracefully_handled():
     assert parent_types == []
 
 
+def test_item_type_dict_name_uses_human_readable_name():
+    """_item_type_dict should use dt.name (human-readable) not dt.code."""
+    from dhfkit.local_adapter import LocalDHFAdapter
+    from dhfkit.models.config import ProjectConfig
+    from dhfkit.tests.fixtures import create_test_dhf
+
+    dhf_path = create_test_dhf()
+    adapter = LocalDHFAdapter(dhf_path)
+    types = {t["code"]: t for t in adapter.list_item_types()}
+    sys_type = types.get("SYS")
+    assert sys_type is not None
+    assert sys_type["name"] != "SYS", "name should be human-readable, not the code"
+
+
 def test_has_verification_defaults():
     assert ItemType.SYS.value.has_verification is True
     assert ItemType.SRS.value.has_verification is True

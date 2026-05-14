@@ -20,6 +20,20 @@ def test_phase0_accepts_new(monkeypatch, stub_adapter):
     assert '"valid": true' in result.output
 
 
+def test_phase0_accepts_design(monkeypatch, stub_adapter):
+    stub_adapter.create_item({"id": "CR-002", "title": "Test CR", "status": "design"})
+    result = _invoke_check_status(monkeypatch, stub_adapter, "CR-002")
+    assert result.exit_code == 0
+    assert '"valid": true' in result.output
+
+
+def test_phase0_accepts_develop(monkeypatch, stub_adapter):
+    stub_adapter.create_item({"id": "CR-003", "title": "Test CR", "status": "develop"})
+    result = _invoke_check_status(monkeypatch, stub_adapter, "CR-003")
+    assert result.exit_code == 0
+    assert '"valid": true' in result.output
+
+
 def test_phase0_rejects_completed(monkeypatch, stub_adapter):
     stub_adapter.create_item({"id": "CR-004", "title": "Test CR", "status": "completed"})
     result = _invoke_check_status(monkeypatch, stub_adapter, "CR-004")

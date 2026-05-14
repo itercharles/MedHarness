@@ -32,7 +32,8 @@ def check_required_traceability(items: list[dict], config: Any) -> dict:
 
     # None = not configured → use V-model defaults; [] = explicitly empty → no rules
     rules = config.required_traceability
-    if rules is None:
+    using_defaults = rules is None
+    if using_defaults:
         rules = default_traceability_rules()
 
     if not rules:
@@ -83,12 +84,14 @@ def check_required_traceability(items: list[dict], config: Any) -> dict:
                 })
 
     passed = len(failures) == 0
-    summary = f"{'PASS' if passed else 'FAIL'} — {len(failures)} required traceability failure(s)"
+    suffix = " (V-model defaults; set required_traceability: [] in global.yaml to opt out)" if using_defaults else ""
+    summary = f"{'PASS' if passed else 'FAIL'} — {len(failures)} required traceability failure(s){suffix}"
 
     return {
         "passed": passed,
         "failures": failures,
         "summary": summary,
+        "using_vmodel_defaults": using_defaults,
     }
 
 

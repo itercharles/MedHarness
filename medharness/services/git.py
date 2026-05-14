@@ -118,11 +118,13 @@ def validate_atomic_branch(
 ) -> dict:
     """Validate that a branch carries the coupled change set a CR expects.
 
-    Checks that DHF item changes are present when expected and, when
-    ``code_paths`` is non-empty, that at least one product-code file changed.
-    A spec file is no longer required; if one is present it is inspected for
-    affected/proposed item expectations, otherwise DHF-change enforcement is
-    skipped.
+    DHF item changes are always required — generate-dhf must run on every CR
+    branch. When ``spec_path`` is provided it is inspected for
+    affected/proposed expectations (legacy flow); the DHF-change check fires
+    regardless.
+
+    When ``code_paths`` is non-empty, at least one file under those paths must
+    also have changed.
     """
     errors: list[dict] = []
     dhf_item_changes = collect_dhf_item_changes(repo_root, since_ref)
@@ -150,11 +152,11 @@ def validate_atomic_branch(
             "fix": "Add the implementation changes on the same branch before opening a PR.",
         })
 
-    if (affected or proposed) and dhf_change_count == 0:
+    if dhf_change_count == 0:
         errors.append({
             "field": "dhf_branch",
-            "issue": "The spec expects DHF item impact, but no DHF item YAML changes were found on the branch.",
-            "fix": "Include the required DHF item create/update changes on the same branch as the implementation.",
+            "issue": f"No DHF item YAML changes found on the branch since {since_ref}.",
+            "fix": "Run generate-dhf to create or update the required DHF items on this branch.",
         })
 
     return {
@@ -162,7 +164,7 @@ def validate_atomic_branch(
         "since_ref": since_ref,
         "passed": not errors,
         "spec_path": str(resolved_spec) if resolved_spec else None,
-        "expected_dhf_changes": bool(affected or proposed),
+        "expected_dhf_changes": True,
         "dhf_item_changes": dhf_item_changes,
         "code_changes": code_changes,
         "errors": errors,

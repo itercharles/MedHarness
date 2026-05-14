@@ -14,10 +14,7 @@ from medharness.services.cr_generation import (
     generate_code,
     generate_dhf,
 )
-from medharness.services.cr_impact import (
-    _build_design_impact_notes,
-    _replace_managed_block,
-)
+from medharness.services.cr_impact import _record_design_impact_in_cr
 from medharness.services.prompt_assembly import (
     MAX_DIFF_CHARS,
     _append_skills,
@@ -235,29 +232,6 @@ class TestRunClaude:
         assert rc == 1
         assert "out" in output
         assert "err" in output
-
-
-class TestDesignImpactSnapshotHelpers:
-    def test_build_design_impact_notes_includes_actual_items(self):
-        notes = _build_design_impact_notes(
-            {"created": ["SRS-005"], "updated": ["SYS-001"], "deleted": []},
-        )
-        assert "DHF items created: SRS-005" in notes
-        assert "DHF items updated: SYS-001" in notes
-        assert "DHF items deleted: none" in notes
-
-    def test_replace_managed_block_replaces_existing_snapshot(self):
-        original = (
-            "Manual intro\n\n"
-            "<!-- medharness:design-impact:start -->\nOld block\n"
-            "<!-- medharness:design-impact:end -->\n\n"
-            "Manual outro"
-        )
-        updated = _replace_managed_block(original, "<!-- medharness:design-impact:start -->\nNew block\n<!-- medharness:design-impact:end -->")
-        assert "Old block" not in updated
-        assert "New block" in updated
-        assert "Manual intro" in updated
-        assert "Manual outro" in updated
 
 
 # ── generate_dhf ──────────────────────────────────────────────────────────────

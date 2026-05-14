@@ -75,6 +75,10 @@ def workflow_intake_github_issue(
         "should_create": result.should_create, "reason": result.reason,
         "cr_id": result.cr_id, "branch": result.branch,
         "cr_path": result.cr_path, "title": result.title,
+        # Deprecated — spec generation removed; kept for API compatibility.
+        "spec_generated": False, "spec_status": None,
+        "spec_validation": None, "spec_path": None,
+        "spec_json_path": None, "spec_error": None,
     }
 
 
@@ -179,6 +183,10 @@ def workflow_intake_github_issue_ci(
         "should_create": result.should_create, "reason": result.reason,
         "cr_id": result.cr_id, "branch": result.branch,
         "branch_url": branch_url, "pr_url": pr_url, "title": result.title,
+        # Deprecated — spec generation removed; kept for API compatibility.
+        "spec_generated": False, "spec_status": None,
+        "spec_validation": None, "spec_path": None,
+        "spec_json_path": None, "spec_error": None,
     }
 
 
@@ -250,7 +258,7 @@ def check_status(ctx: click.Context, cr_id: str) -> dict:
         return {"cr_id": cr_id, "found": False, "error": f"CR '{cr_id}' not found"}
 
     status = item.get("status", "")
-    valid_statuses = {"new"}
+    valid_statuses = {"new", "design", "develop"}
     return {
         "cr_id": cr_id, "found": True,
         "status": status, "valid": status in valid_statuses,

@@ -57,9 +57,18 @@ lifecycle:
     to_state: new
   - from_states:
     - new
+    to_state: design
+    label: Start Design
+  - from_states:
+    - design
+    to_state: develop
+    label: Start Development
+  - from_states:
+    - develop
     to_state: completed
     label: Complete
   - from_states:
     - new
+    - design
     to_state: rejected
     label: Reject

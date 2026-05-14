@@ -11,8 +11,12 @@ CR ID: {{cr_id}}
 
 - CR item: `DHF/items/09_cr/{{cr_id}}.yaml`
 - Repository context: `CLAUDE.md`, `README.md`
+- Source code: relevant modules under `apps/`, `packages/`, or equivalent
+  source roots described in `CLAUDE.md` — identify and read these based on
+  what the CR touches before writing SWDD items
 
-Read these files first.
+Read the CR item and repository context first, then identify which source
+modules are relevant and read them before writing any SWDD items.
 
 ## Step 1: Triage
 
@@ -39,7 +43,7 @@ rejection reason and stop.
 
 ## Step 2: V-Model Generation
 
-## V-Model Generation Order
+### Generation Order
 
 The V-model is your **reasoning framework**, not a sequential execution plan.
 Reason top-down to understand requirements; create items in this order so
@@ -76,6 +80,40 @@ convention from requirement IDs (TC-SYS-001-001 from SYS-001, TC-SRS-003-001
 from SRS-003). Tests link back via `medharness.links` in JUnit -- no links in
 DHF item YAML are needed.
 
+## SWDD Items
+
+**SWDD items capture design decisions — choices that are not obvious from the
+requirement alone.** Apply this threshold before creating or updating a SWDD:
+
+> *Would a competent developer, given only the SRS, make a meaningfully wrong
+> architectural or structural choice without this SWDD?*
+
+If no, skip the SWDD. Examples that do **not** warrant a SWDD:
+- Visual-only changes: button color, spacing, typography, icon swap, layout
+  position
+- Copy or label changes
+- Configuration value changes
+- Trivial bug fixes where the fix is self-evident from the SRS
+
+Examples that **do** warrant a SWDD:
+- New module or service with non-trivial business logic
+- Change to data flow, state management pattern, or caching strategy
+- New or changed API contract (endpoint shape, auth mechanism, error codes)
+- Algorithm or calculation change
+- Integration with an external system or library
+
+When a SWDD is warranted, read the source files for the module first:
+
+1. Identify which source module(s) the SRS requirement maps to — use `CLAUDE.md`
+   and the directory structure to find the right folder.
+2. Read the relevant files. For a new module that does not exist yet, describe
+   the intended design; for an existing module, describe the actual structure
+   plus the changes the CR requires.
+3. SWDD content should cover: module responsibility, key data structures or
+   types, the main algorithm or control flow, and interfaces to adjacent modules.
+   One SWDD item per logical module or component boundary — do not create one
+   per function.
+
 SWDD, RISK, and RCM items do **not** need `verification_criteria` -- omit it.
 
 If you are updating an existing CRS/SYS/SRS and `verification_criteria` is
@@ -102,9 +140,50 @@ absent or vague, add or improve it.
 
 Do **not** write YAML files directly. Do **not** modify the CR item itself.
 
+## Step 3: Implementation Plan
+
+After all DHF items pass validation, write an implementation plan into the CR's
+`implementation_notes` field. This plan is the primary input for the `develop-cr`
+session — write it so a developer can implement the CR without re-reading the
+source code or re-deriving design decisions.
+
+**Format:**
+
+```
+## Overview
+One paragraph: what this CR changes and why.
+
+## Current State
+Describe the relevant existing code — modules involved, key types, current
+behaviour. Reference specific files and functions by name.
+
+## Changes Required
+For each area of change:
+- **File / module**: what changes and why
+- Distinguish: new file | modify existing | delete
+
+## Implementation Steps
+Ordered list of concrete steps. Each step should be independently verifiable.
+
+## Edge Cases & Constraints
+Anything a developer might miss: error paths, concurrency, backwards compat,
+validation rules, regulatory constraints from the DHF items.
+
+## Tests
+What to test and at what level (unit / integration / manual). Reference the
+SRS/SYS item IDs that each test covers.
+```
+
+Write this to the CR item:
+
+    python -m medharness --dhf DHF dhf item update {{cr_id}} \
+      --data '{"implementation_notes": "<plan>"}' \
+      --author "github-actions[bot]" --cr "{{cr_id}}"
+
 ## Inline Validation Hook
 
-After writing all items, validate and self-correct before finishing:
+After writing all DHF items (before writing the implementation plan), validate
+and self-correct:
 
     python -m medharness --dhf DHF dhf validate schema
     python -m medharness --dhf DHF dhf validate traceability
@@ -118,6 +197,6 @@ and re-validate. Repeat until both pass cleanly.
 - Do not create items for hypothetical future changes.
 - Do not modify files outside `DHF/`.
 - Do not edit the CR item except to set `status: rejected` and `impact_assessment`
-  when the triage result is rejection (Step 1 above).
+  when rejecting (Step 1), or to write `implementation_notes` (Step 3).
 
 ## DHF Impact Skills

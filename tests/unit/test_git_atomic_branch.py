@@ -88,8 +88,23 @@ def test_validate_atomic_branch_fails_without_code_changes(tmp_path: Path):
     assert any(e["field"] == "code_branch" for e in result["errors"])
 
 
-def test_validate_atomic_branch_passes_without_spec(tmp_path: Path):
-    """Spec is optional — omitting spec_path is valid and does not cause errors."""
+def test_validate_atomic_branch_passes_without_spec_when_dhf_changes_present(tmp_path: Path):
+    """Spec is optional; DHF changes are still required and sufficient to pass."""
+    repo_root = tmp_path
+    dhf = repo_root / "DHF"
+    dhf.mkdir()
+
+    with patch("medharness.services.git.collect_dhf_item_changes",
+               return_value={"created": ["SRS-010"], "updated": [], "deleted": []}):
+        result = validate_atomic_branch(repo_root, dhf, "CR-001")
+
+    assert result["passed"] is True
+    assert result["errors"] == []
+    assert result["spec_path"] is None
+
+
+def test_validate_atomic_branch_fails_without_spec_and_without_dhf_changes(tmp_path: Path):
+    """Without a spec, DHF changes are always required (generate-dhf must run on every CR branch)."""
     repo_root = tmp_path
     dhf = repo_root / "DHF"
     dhf.mkdir()
@@ -98,9 +113,8 @@ def test_validate_atomic_branch_passes_without_spec(tmp_path: Path):
                return_value={"created": [], "updated": [], "deleted": []}):
         result = validate_atomic_branch(repo_root, dhf, "CR-001")
 
-    assert result["passed"] is True
-    assert result["errors"] == []
-    assert result["spec_path"] is None
+    assert result["passed"] is False
+    assert any(e["field"] == "dhf_branch" for e in result["errors"])
 
 
 def test_validate_atomic_branch_fails_without_dhf_changes_when_spec_expects_them(tmp_path: Path):
