@@ -29,6 +29,7 @@ from medharness.services.prompt_assembly import (
     _assemble_review_code_prompt,
     _assemble_review_design_prompt,
     _assemble_review_spec_prompt,
+    _build_dhf_context_block,
     _load_prompt,
     _load_skill,
 )
@@ -756,6 +757,9 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> di
             f"  python -m medharness --dhf DHF dhf validate traceability\n\n"
             f"Review feedback:\n{feedback['prompt_text']}"
         )
+        block = _build_dhf_context_block(dhf_path)
+        if block:
+            prompt += "\n\n" + block
         steps.append(_finish_step(prompt_step, prompt_perf, "ok"))
     else:
         prompt_step, prompt_perf = _begin_step(
@@ -774,11 +778,13 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> di
     )
     critical_step_failed = critical_step_failed or rc != 0
 
-    dummy_spec = repo_root / "docs" / "cr-specs" / f"{cr_id}-Spec.md"
+    items_changed = git.collect_dhf_item_changes(repo_root, "origin/main")
     validate_step, validate_perf = _begin_step(
-        "validate_initial", {"validator": "design_validation"}
+        "validate_initial", {"validator": "validate_generate_dhf"}
     )
-    errors: list[dict] = design_validation.validate_design(cr_id, dhf_path, dummy_spec)
+    errors: list[dict] = design_validation.validate_generate_dhf(
+        cr_id, dhf_path, items_changed
+    )
     diagnostics["initial_error_count"] = len(errors)
     diagnostics["final_error_count"] = len(errors)
     steps.append(
@@ -809,10 +815,11 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> di
             critical=True,
         )
         critical_step_failed = critical_step_failed or rc != 0
+        items_changed = git.collect_dhf_item_changes(repo_root, "origin/main")
         validate_fix_step, validate_fix_perf = _begin_step(
-            "validate_after_fix", {"validator": "design_validation"}
+            "validate_after_fix", {"validator": "validate_generate_dhf"}
         )
-        errors = design_validation.validate_design(cr_id, dhf_path, dummy_spec)
+        errors = design_validation.validate_generate_dhf(cr_id, dhf_path, items_changed)
         diagnostics["final_error_count"] = len(errors)
         steps.append(
             _finish_step(
@@ -826,7 +833,6 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> di
     artifact_step, artifact_perf = _begin_step(
         "collect_artifacts", {"kind": "dhf_items_changed"}
     )
-    items_changed = git.collect_dhf_item_changes(repo_root, "origin/main")
     steps.append(
         _finish_step(artifact_step, artifact_perf, "ok", {"items_changed": items_changed})
     )
@@ -835,7 +841,7 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> di
     if not errors:
         impact_step, impact_perf = _begin_step("record_design_impact")
         design_impact = _record_design_impact_in_cr(
-            cr_id, dhf_path, dummy_spec, items_changed
+            cr_id, dhf_path, repo_root / "docs" / "cr-specs" / f"{cr_id}-Spec.md", items_changed
         )
         steps.append(
             _finish_step(

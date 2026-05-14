@@ -171,6 +171,11 @@ class TestCRGenerationCommands:
         r = _run("medharness", "ci", "develop-cr", "--help")
         assert r.returncode == 0, r.stderr
 
+    def test_generate_dhf_help(self):
+        """medharness ci generate-dhf --help exits 0."""
+        r = _run("medharness", "ci", "generate-dhf", "--help")
+        assert r.returncode == 0, r.stderr
+
     def test_validate_design_help(self):
         """medharness ci validate-design --help exits 0."""
         r = _run("medharness", "ci", "validate-design", "--help")
@@ -209,6 +214,11 @@ class TestCRGenerationCommands:
     def test_develop_cr_requires_cr_flag(self):
         """medharness ci develop-cr without --cr exits non-zero with usage error."""
         r = _run("medharness", "ci", "develop-cr")
+        assert r.returncode != 0
+
+    def test_generate_dhf_requires_cr_flag(self):
+        """medharness ci generate-dhf without --cr exits non-zero."""
+        r = _run("medharness", "ci", "generate-dhf")
         assert r.returncode != 0
 
     def test_validate_design_requires_cr_flag(self):
@@ -255,7 +265,7 @@ class TestCRGenerationCommands:
         """Generation and preflight commands are listed in medharness ci --help."""
         r = _run("medharness", "ci", "--help")
         assert r.returncode == 0, r.stderr
-        for cmd in ["analyze-cr", "design-cr", "develop-cr", "validate-design", "validate-code", "validate-branch"]:
+        for cmd in ["analyze-cr", "design-cr", "develop-cr", "generate-dhf", "validate-design", "validate-code", "validate-branch"]:
             assert cmd in r.stdout, f"Command {cmd!r} missing from ci --help"
 
 

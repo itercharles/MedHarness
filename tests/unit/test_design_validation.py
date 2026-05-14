@@ -10,7 +10,7 @@ import yaml
 
 from dhfkit.exceptions import ValidationError
 
-from medharness.services.design_validation import validate_design
+from medharness.services.design_validation import validate_design, validate_generate_dhf
 
 
 def _write_spec(path: Path, affected: list[str], proposed_new_items: list[dict] | None = None) -> None:
@@ -64,7 +64,10 @@ class TestValidateDesignSchema:
         _write_spec(spec, ["SYS-001"])
         with patch("dhfkit.api.validate_schema", return_value={"valid": True, "errors": []}), \
              patch("dhfkit.api.validate_traceability", return_value={"passed": True}), \
-             patch("dhfkit.api.list_items", return_value=[{"id": "SYS-001"}]):
+             patch("dhfkit.api.list_items", return_value=[{
+                 "id": "SYS-001",
+                 "verification_criteria": "Response < 2s at 95th percentile.",
+             }]):
             errors = validate_design("CR-001", dhf, spec)
         assert errors == []
 
@@ -311,15 +314,73 @@ class TestValidateDesignVerificationCriteria:
             errors = validate_design("CR-001", dhf, spec)
         assert all("verification_criteria" not in e["field"] for e in errors)
 
-    def test_no_spec_file_skips_check(self, repo):
-        """generate_dhf path: non-existent spec -> no verification_criteria errors."""
-        dhf, _ = repo
-        bogus_spec = dhf / "nonexistent-Spec.md"
+    def test_missing_verification_criteria_on_new_crs_produces_error(self, repo):
+        dhf, spec = repo
+        _write_spec(spec, [], proposed_new_items=[{"type": "CRS", "title": "New customer req"}])
+        with patch("dhfkit.api.validate_schema", return_value={"valid": True, "errors": []}), \
+             patch("dhfkit.api.validate_traceability", return_value={"passed": True}), \
+             patch("dhfkit.api.list_items", return_value=[
+                 {"id": "CRS-010", "type": "CRS", "title": "New customer req",
+                  "all_linked_uids": [], "verification_criteria": None},
+             ]):
+            errors = validate_design("CR-001", dhf, spec)
+        vc_errors = [e for e in errors if "verification_criteria" in e["field"]]
+        assert len(vc_errors) == 1
+        assert "CRS" in vc_errors[0]["issue"]
+
+    def test_missing_verification_criteria_on_affected_existing_sys_produces_error(self, repo):
+        dhf, spec = repo
+        _write_spec(spec, ["SYS-001"])
         with patch("dhfkit.api.validate_schema", return_value={"valid": True, "errors": []}), \
              patch("dhfkit.api.validate_traceability", return_value={"passed": True}), \
              patch("dhfkit.api.list_items", return_value=[
                  {"id": "SYS-001", "type": "SYS", "title": "Existing req",
                   "all_linked_uids": [], "verification_criteria": ""},
              ]):
-            errors = validate_design("CR-001", dhf, bogus_spec)
+            errors = validate_design("CR-001", dhf, spec)
+        vc_errors = [e for e in errors if e["field"] == "affected_items[0].verification_criteria"]
+        assert len(vc_errors) == 1
+        assert "SYS-001" in vc_errors[0]["issue"]
+
+
+class TestValidateGenerateDhf:
+    def test_missing_verification_criteria_on_changed_sys_produces_error(self, repo):
+        dhf, _ = repo
+        with patch("dhfkit.api.validate_schema", return_value={"valid": True, "errors": []}), \
+             patch("dhfkit.api.validate_traceability", return_value={"passed": True}), \
+             patch("dhfkit.api.list_items", return_value=[
+                 {"id": "SYS-001", "type": "SYS", "title": "Existing req",
+                  "all_linked_uids": [], "verification_criteria": ""},
+             ]):
+            errors = validate_generate_dhf(
+                "CR-001", dhf, {"created": [], "updated": ["SYS-001"], "deleted": []}
+            )
+        vc_errors = [e for e in errors if e["field"] == "changed_items[0].verification_criteria"]
+        assert len(vc_errors) == 1
+        assert "SYS-001" in vc_errors[0]["issue"]
+
+    def test_populated_verification_criteria_on_changed_sys_passes(self, repo):
+        dhf, _ = repo
+        with patch("dhfkit.api.validate_schema", return_value={"valid": True, "errors": []}), \
+             patch("dhfkit.api.validate_traceability", return_value={"passed": True}), \
+             patch("dhfkit.api.list_items", return_value=[
+                 {"id": "SYS-001", "type": "SYS", "title": "Existing req",
+                  "all_linked_uids": [], "verification_criteria": "Response < 2s."},
+             ]):
+            errors = validate_generate_dhf(
+                "CR-001", dhf, {"created": [], "updated": ["SYS-001"], "deleted": []}
+            )
+        assert all("verification_criteria" not in e["field"] for e in errors)
+
+    def test_swdd_change_does_not_require_verification_criteria(self, repo):
+        dhf, _ = repo
+        with patch("dhfkit.api.validate_schema", return_value={"valid": True, "errors": []}), \
+             patch("dhfkit.api.validate_traceability", return_value={"passed": True}), \
+             patch("dhfkit.api.list_items", return_value=[
+                 {"id": "SWDD-001", "type": "SWDD", "title": "Existing design",
+                  "all_linked_uids": []},
+             ]):
+            errors = validate_generate_dhf(
+                "CR-001", dhf, {"created": [], "updated": ["SWDD-001"], "deleted": []}
+            )
         assert all("verification_criteria" not in e["field"] for e in errors)

@@ -733,7 +733,7 @@ class TestGenerateDhf:
         dhf = tmp_path / "DHF"
         dhf.mkdir()
         with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
-             patch("medharness.services.design_validation.validate_design", return_value=[]):
+             patch("medharness.services.design_validation.validate_generate_dhf", return_value=[]):
             mock_claude.return_value = (0, "")
             result = generate_dhf("CR-050", dhf)
         assert result["cr_id"] == "CR-050"
@@ -747,7 +747,7 @@ class TestGenerateDhf:
         dhf = tmp_path / "DHF"
         dhf.mkdir()
         with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
-             patch("medharness.services.design_validation.validate_design", return_value=[]):
+             patch("medharness.services.design_validation.validate_generate_dhf", return_value=[]):
             mock_claude.return_value = (0, "")
             result = generate_dhf("CR-051", dhf)
         assert mock_claude.call_count == 1
@@ -758,7 +758,7 @@ class TestGenerateDhf:
         dhf.mkdir()
         first_errors = [{"field": "schema", "issue": "x", "fix": "y"}]
         with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
-             patch("medharness.services.design_validation.validate_design",
+             patch("medharness.services.design_validation.validate_generate_dhf",
                    side_effect=[first_errors, []]):
             mock_claude.return_value = (0, "")
             result = generate_dhf("CR-052", dhf)
@@ -773,7 +773,7 @@ class TestGenerateDhf:
         dhf.mkdir()
         errors = [{"field": "schema", "issue": "x", "fix": "y"}]
         with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
-             patch("medharness.services.design_validation.validate_design",
+             patch("medharness.services.design_validation.validate_generate_dhf",
                    side_effect=[errors, errors]):
             mock_claude.return_value = (0, "")
             result = generate_dhf("CR-053", dhf)
@@ -783,7 +783,7 @@ class TestGenerateDhf:
         dhf = tmp_path / "DHF"
         dhf.mkdir()
         with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
-             patch("medharness.services.design_validation.validate_design", return_value=[]):
+             patch("medharness.services.design_validation.validate_generate_dhf", return_value=[]):
             mock_claude.return_value = (0, "")
             generate_dhf("CR-055", dhf)
         prompt = mock_claude.call_args_list[0][0][0]
@@ -791,12 +791,22 @@ class TestGenerateDhf:
         assert "verification_criteria" in prompt
         assert "V-model" in prompt or "V-Model" in prompt
 
+    def test_no_spec_path_validates_changed_items_not_spec(self, tmp_path):
+        dhf = tmp_path / "DHF"
+        dhf.mkdir()
+        items_changed = {"created": ["SYS-001"], "updated": ["SRS-001"], "deleted": []}
+        with patch("medharness.services.cr_generation._run_claude", return_value=(0, "")), \
+             patch("medharness.services.cr_generation.git.collect_dhf_item_changes", return_value=items_changed), \
+             patch("medharness.services.design_validation.validate_generate_dhf", return_value=[]) as mock_validate:
+            generate_dhf("CR-054", dhf)
+        mock_validate.assert_called_once_with("CR-054", dhf, items_changed)
+
     def test_revision_mode_uses_pr_feedback(self, tmp_path):
         dhf = tmp_path / "DHF"
         dhf.mkdir()
         with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
              patch("medharness.services.cr_generation._get_pr_feedback") as mock_fb, \
-             patch("medharness.services.design_validation.validate_design", return_value=[]):
+             patch("medharness.services.design_validation.validate_generate_dhf", return_value=[]):
             mock_claude.return_value = (0, "")
             mock_fb.return_value = {
                 "prompt_text": "some review feedback",
@@ -813,7 +823,7 @@ class TestGenerateDhf:
         dhf.mkdir()
         errors = [{"field": "schema", "issue": "x", "fix": "y"}]
         with patch("medharness.services.cr_generation._run_claude", return_value=(0, "")), \
-             patch("medharness.services.design_validation.validate_design",
+             patch("medharness.services.design_validation.validate_generate_dhf",
                    side_effect=[errors, errors]), \
              patch("medharness.services.cr_generation._record_design_impact_in_cr") as mock_impact:
             generate_dhf("CR-058", dhf)
