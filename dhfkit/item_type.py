@@ -34,6 +34,8 @@ class ItemType(Enum):
 
     UC      = ItemTypeMeta("UC",      "UC-",      "Use Case",                      "use_case",             False, [],                                           ["CRS"])
     CRS     = ItemTypeMeta("CRS",     "CRS-",     "Customer Requirement",          "customer_requirement",  True,  [("derives_from", "UC")],                    ["SYS"])
+    # SYS has no required upstream: it can derive from CRS or implement RCM,
+    # but both are optional per IEC 62304 — projects enforce via explicit rules.
     SYS     = ItemTypeMeta("SYS",     "SYS-",     "System Requirement",            "system_requirement",    True,  [],                                           ["SRS", "SYSARCH"])
     SRS     = ItemTypeMeta("SRS",     "SRS-",     "Software Requirement",          "software_requirement",  True,  [("derives_from", "SYS")],                   ["SWDD"])
     SWDD    = ItemTypeMeta("SWDD",    "SWDD-",    "Software Detailed Design",      "design_detail",         True,  [("implements", "SRS")],                     [])

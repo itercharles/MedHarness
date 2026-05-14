@@ -113,7 +113,6 @@ def check_traceability(items: list[dict], config: Any) -> dict:
     from dhfkit.item_type import default_coverage_chains
 
     by_id = {item["id"]: item for item in items}
-
     required_result = check_required_traceability(items, config)
 
     matrices = config.traceability_matrices or []

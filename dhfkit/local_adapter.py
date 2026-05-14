@@ -113,8 +113,7 @@ class LocalDHFAdapter:
         """Add medharness domain fields (type, all_linked_uids) to an item dict."""
         d = item.model_dump(by_alias=True, exclude_none=True)
         d['all_linked_uids'] = item.all_linked_uids
-        prefix = item.uid.split('-')[0] + '-'
-        dt = self._config.get_doc_type_by_prefix(prefix)
+        dt = self._config.get_doc_type_by_prefix(item.prefix)
         if dt:
             it = ItemType.from_code(dt.code)
             d['type'] = dt.role or (it.value.role if it else dt.code)
