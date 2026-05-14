@@ -70,7 +70,7 @@ class LocalDHFAdapter:
             else (it.value.has_verification if it else False)
         )
         return {
-            "name": role,
+            "name": dt.code,
             "code": dt.code,
             "prefix": dt.prefix,
             "role": role,
@@ -115,8 +115,7 @@ class LocalDHFAdapter:
         d['all_linked_uids'] = item.all_linked_uids
         dt = self._config.get_doc_type_by_prefix(item.prefix)
         if dt:
-            it = ItemType.from_code(dt.code)
-            d['type'] = dt.role or (it.value.role if it else dt.code)
+            d['type'] = dt.code
         else:
             d['type'] = item.uid.split('-')[0]
         return d
