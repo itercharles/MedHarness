@@ -14,15 +14,29 @@ Building software for a medical device means every requirement, risk, architectu
 
 That's a real documentation burden. Teams spend meaningful engineering time on traceability matrices, impact assessments, and evidence bundles — work that doesn't ship features but is genuinely required to ship regulated products.
 
-MedHarness makes that work AI-assisted without making it ungoverned. It gives Claude a structured role in your DHF workflow — writing specs, updating design items, implementing code — while keeping you in the loop at every approval gate. The agent executes; you decide when to advance.
+MedHarness makes that work AI-assisted without making it ungoverned. It gives Claude a structured role in your DHF workflow — generating design items, implementing code — while keeping you in the loop at every approval gate. The agent executes; you decide when to advance.
 
 ---
 
 ## How it works
 
-Every non-trivial change flows through a **Change Request (CR)** in the DHF. MedHarness runs Claude at each stage, validates the output deterministically, and opens a PR for your review before anything moves forward.
+Every non-trivial change flows through a **Change Request (CR)** in the DHF. MedHarness runs Claude in two phases, validates the output deterministically, and opens a PR for your review before anything moves forward.
 
-At each stage, MedHarness pre-computes DHF context — item lists, traceability graph, coverage gaps — and injects it into Claude's prompt so the agent reasons about your actual DHF rather than guessing. After Claude runs, a deterministic validator checks schema, traceability links, and test annotations, and self-corrects if it can. Only then does a PR open for your review.
+**Phase 1 — Design (`generate-dhf`)**
+
+Claude reads the CR, triages it (duplicate? out-of-scope? too large?), then reads the relevant source modules and reasons top-down through the V-model hierarchy:
+
+```
+CR → CRS → SYS → { SYSARCH, RISK, RCM } → SRS → SWDD
+```
+
+It writes DHF items via the CLI, validates schema and traceability inline, and finally produces a detailed implementation plan in `implementation_notes` on the CR item. A PR opens for your review — you see the design items and the implementation plan before any code is written.
+
+**Phase 2 — Implementation (`develop-cr`)**
+
+After the design PR is approved, Claude reads `implementation_notes` and the linked DHF items, implements the code, annotates tests with `@links:` requirement IDs, runs `medharness ci test-coverage` to verify every requirement has a passing test, and reconciles any deviations back onto `implementation_notes` and the SWDD items.
+
+At each phase, MedHarness pre-computes DHF context — item lists, traceability graph, coverage gaps — and injects it into Claude's prompt so the agent reasons about your actual DHF rather than guessing. After Claude runs, a deterministic validator checks schema, traceability links, and test annotations, and self-corrects if it can.
 
 ---
 
@@ -100,37 +114,47 @@ git init && git add -A && git commit -m "feat: initialize DHF"
 ## The CR workflow in practice
 
 ```bash
-# Stage 1 — Claude writes the spec, validates it, opens a PR
-medharness --dhf DHF ci analyze-cr --cr CR-034
+# Phase 1 — Claude triages the CR, generates DHF items, and writes an
+# implementation plan. Opens a PR for design review.
+medharness --dhf DHF ci generate-dhf --cr CR-034
 
-# Stage 2 — after you approve the spec PR, Claude creates DHF items
-medharness --dhf DHF ci design-cr --cr CR-034
-
-# Stage 3 — after you approve the design PR, Claude implements the code
+# Phase 2 — after the design PR is approved, Claude implements the code,
+# verifies test coverage, and reconciles any deviations back onto the DHF.
 medharness --dhf DHF ci develop-cr --cr CR-034
 ```
 
-If you want a single-session DHF cascade without the spec-first handoff, use:
+Claude reasons top-down through the V-model during design, reading relevant
+source modules before writing SWDD items so the reviewed design reflects the
+actual codebase. The implementation plan in `implementation_notes` is the
+handoff artifact — it drives the develop phase without re-deriving the design.
+
+Got review comments on a design PR? Pass `--pr N` to revise based on the feedback:
 
 ```bash
-# Alternative flow — Claude generates the DHF cascade in one pass
-medharness --dhf DHF ci generate-dhf --cr CR-034
-```
-
-This command reasons top-down through the V-model and creates or updates the
-required CRS, SYS, SYSARCH, RISK, RCM, SRS, and SWDD items directly. It validates
-schema and traceability inline, then runs the same deterministic validation/fix
-pass used by the staged design flow.
-
-Got review comments on a PR? Pass `--pr N` to any command to revise based on the feedback:
-
-```bash
-medharness --dhf DHF ci analyze-cr --cr CR-034 --pr 42
+medharness --dhf DHF ci generate-dhf --cr CR-034 --pr 42
 ```
 
 `ANTHROPIC_MODEL` selects the Claude model. `GH_TOKEN` is required when using `--pr`.
 
 Each command outputs structured JSON with outcome, errors, timing, and artifact paths — so CI automation can act on results without parsing text.
+
+---
+
+## CR lifecycle
+
+A CR moves through these states automatically as the workflow progresses:
+
+| State | Meaning |
+|-------|---------|
+| `new` | CR created, awaiting design |
+| `design` | `generate-dhf` has run; design PR open for review |
+| `develop` | Design approved; `develop-cr` has run; code PR open |
+| `completed` | Code PR merged |
+| `rejected` | Triage determined the CR is out-of-scope, duplicate, or too large |
+
+The auto workflow does not enforce state transitions as gates — `generate-dhf`
+and `develop-cr` can run regardless of the current state. States are recorded
+for traceability and audit, not for blocking automation.
 
 ---
 
@@ -148,7 +172,7 @@ Validates item schemas, required fields, and traceability links across the entir
 ```bash
 medharness ci test-coverage --dhf DHF --junit-dir test-results
 ```
-Reads JUnit XML test results and checks that every verifiable requirement has at least one linked passing test. Tests link to DHF items via a `medharness.links` property in their JUnit output. Exits non-zero when gaps exist.
+Reads JUnit XML test results and checks that every verifiable requirement has at least one linked passing test. Tests link to DHF items via `@links:<ITEM_ID>` annotations in their source, surfaced through JUnit properties. Exits non-zero when gaps exist.
 
 **Evidence bundle**
 ```bash
@@ -174,15 +198,19 @@ medharness --dhf DHF dhf doc export SYS        # PDF (requires [docs])
 medharness cr workflow intake-github-issue-ci
 medharness cr workflow complete-from-github-pr
 
+# CR generation (AI-assisted)
+medharness --dhf DHF ci generate-dhf --cr CR-034
+medharness --dhf DHF ci develop-cr --cr CR-034
+
 # CI gates
 medharness ci dhf-validate --dhf DHF
 medharness ci test-coverage --dhf DHF --junit-dir test-results
 medharness ci evidence bundle --dhf DHF --out-dir artifacts
-medharness --dhf DHF ci validate-design --cr CR-034
 medharness --dhf DHF ci validate-code --cr CR-034
+medharness --dhf DHF ci validate-branch --cr CR-034
 
 # Status surface (machine-readable, for automation routing)
-medharness ci cr-status --cr CR-034 --stage spec --pr 18
+medharness ci cr-status --cr CR-034 --stage design --pr 18
 medharness ci github-event --event "$GITHUB_EVENT_PATH"
 ```
 
@@ -195,8 +223,7 @@ from medharness.client import DHFClient
 
 client = DHFClient(Path("DHF"))
 cr   = client.get_item("CR-034")
-spec = client.get_cr_context("CR-034")   # {"cr": {...}, "spec": "..."}
-client.transition_item("CR-034", "in_review", performed_by="alice")
+client.transition_item("CR-034", "completed", performed_by="alice")
 ```
 
 `dhfkit` standalone — no dependency on `medharness`:

@@ -1,7 +1,7 @@
 # Architecture
 
 > **Stability:** Stable
-> **Last reviewed:** 2026-05-13
+> **Last reviewed:** 2026-05-14
 
 ---
 
@@ -127,13 +127,49 @@ This repo does not use `@links`/`@test_id` metadata or `ci test-coverage` for it
 
 ---
 
-## CR Generation Service Topology
+## CR Workflow
 
-The CR-generation path in `medharness.services` is intentionally split by responsibility:
+### Two-phase flow
 
-- `cr_generation.py` owns stage orchestration, Claude invocation, PR-feedback retrieval, and stable `generate_spec` / `generate_design` / `generate_code` entry points
-- `prompt_assembly.py` owns prompt-template loading plus prompt composition, including design-prompt injection from the precomputed spec JSON companion
-- `cr_impact.py` owns design-impact snapshot formatting and write-back onto the CR item after successful design validation
-- `design_validation.py` owns deterministic post-design checks and only catches expected environment and DHF-validation failures
+Every CR moves through two AI-assisted phases on a single branch and PR:
 
-This split is internal structure, not a public import contract. The public behavior remains the CLI and JSON response contracts documented elsewhere.
+```
+generate-dhf  →  (design PR reviewed + approved)  →  develop-cr
+```
+
+**`generate-dhf`**
+
+1. Triage — checks for duplicate, out-of-scope, architecture-conflict, or too-large
+2. V-model cascade — creates/updates DHF items top-down: CR → CRS → SYS → {SYSARCH, RISK, RCM} → SRS → SWDD. Reads relevant source modules before writing SWDD items so the design reflects the actual codebase.
+3. Implementation plan — writes a structured implementation plan (overview, current state, changes required, steps, edge cases, tests) into `implementation_notes` on the CR item
+4. Deterministic validation — `dhf validate schema` + `dhf validate traceability`; self-corrects if errors remain
+
+**`develop-cr`**
+
+1. Reads `implementation_notes` as the primary implementation spec (reviewed and approved with the design PR)
+2. Implements code following the plan; reads SWDD items for module-level design decisions
+3. Annotates tests with `@links:<ITEM_ID>`, runs `medharness ci test-coverage` against JUnit output, adds missing annotations until all requirements are covered
+4. Reconciles `implementation_notes` and SWDD items if the implementation deviated from the plan
+
+### CR lifecycle states
+
+| State | Set by | Meaning |
+|-------|--------|---------|
+| `new` | Intake | CR created |
+| `design` | `generate-dhf` | Design phase started |
+| `develop` | `develop-cr` | Implementation phase started |
+| `completed` | PR merge | Code merged to main |
+| `rejected` | `generate-dhf` triage | Out-of-scope / duplicate / too large |
+
+State transitions are not enforced as execution gates — the auto workflow proceeds regardless. States are recorded for traceability.
+
+### CR Generation Service Topology
+
+The CR-generation path in `medharness.services` is split by responsibility:
+
+- `cr_generation.py` — stage orchestration, Claude invocation, PR-feedback retrieval; public entry points are `generate_dhf` and `generate_code`
+- `prompt_assembly.py` — prompt-template loading and composition; injects pre-computed DHF context (item lists, traceability graph, coverage gaps) into each prompt
+- `cr_impact.py` — writes `affected_items` back onto the CR item after `generate-dhf` completes; `implementation_notes` is LLM-authored and not overwritten by the harness
+- `design_validation.py` — deterministic post-design checks; only catches schema, traceability, and DHF-validation failures
+
+This split is internal structure, not a public import contract. The public behavior is the CLI and JSON response contracts documented in `docs/compatibility-contracts.md`.
