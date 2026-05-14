@@ -22,9 +22,6 @@ properties:
 - name: release_notes
   format: long_text
   label: Release Notes
-icon: 🚀
-page_enabled: true
-page_number: 4
 lifecycle:
   transitions:
   - from_states:

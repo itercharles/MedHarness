@@ -63,6 +63,3 @@ properties:
 - name: risk_benefit
   format: long_text
   label: Risk Benefit
-icon: ⚠️
-page_enabled: true
-page_number: 12

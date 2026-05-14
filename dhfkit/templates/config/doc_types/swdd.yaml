@@ -24,9 +24,6 @@ properties:
   - failed
   label: Verification Status
   default: not_verified
-icon: 📋
-page_enabled: true
-page_number: 10
 verification_states:
 - not_verified
 - verified

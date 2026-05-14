@@ -50,9 +50,6 @@ properties:
   target_types:
   - RELEASE
   label: Target Release
-icon: 📝
-page_enabled: true
-page_number: 9
 lifecycle:
   transitions:
   - from_states:

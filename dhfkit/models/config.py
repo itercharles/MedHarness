@@ -11,54 +11,31 @@ import yaml
 
 
 class PropertyFormat(str, Enum):
-    """Built-in property formats for UI rendering."""
+    """Property formats for schema validation and traceability link resolution."""
     SHORT_TEXT = "short_text"
     LONG_TEXT = "long_text"
     MARKDOWN = "markdown"
     URL = "url"
     SELECT = "select"
     MULTISELECT = "multiselect"
-    RADIO = "radio"
     CHECKBOX = "checkbox"
-    TOGGLE = "toggle"
     NUMBER = "number"
-    SLIDER = "slider"
     DATE = "date"
     DATETIME = "datetime"
     ITEM_REFERENCE = "item_reference"
     ITEM_MULTISELECT = "item_multiselect"
-    FILE_UPLOAD = "file_upload"
     RELATIONSHIP = "relationship"
 
 
 class PropertyConfig(BaseModel):
-    """Configuration for a single property with explicit format."""
+    """Configuration for a single property."""
     name: str = Field(..., description="Property name (field name in data)")
-    format: PropertyFormat = Field(PropertyFormat.SHORT_TEXT, description="Display format")
-    label: Optional[str] = Field(None, description="Display label (auto-generated from name if not provided)")
+    format: PropertyFormat = Field(PropertyFormat.SHORT_TEXT, description="Property format")
+    label: Optional[str] = Field(None, description="Human-readable label")
     required: bool = Field(False, description="Whether this field is required")
     default: Optional[Any] = Field(None, description="Default value")
-    placeholder: Optional[str] = Field(None, description="Placeholder text for input fields")
-    help: Optional[str] = Field(None, description="Help text displayed below the field")
-
-    # Format-specific options
-    options: Optional[List[str]] = Field(None, description="Options for select/multiselect/radio")
-    height: Optional[int] = Field(None, description="Height in pixels for text areas")
-    min_value: Optional[float] = Field(None, description="Minimum value for number/slider")
-    max_value: Optional[float] = Field(None, description="Maximum value for number/slider")
-    step: Optional[float] = Field(None, description="Step size for slider")
+    options: Optional[List[str]] = Field(None, description="Allowed values for select/multiselect")
     target_types: Optional[List[str]] = Field(None, description="Target document types for item references")
-    allowed_extensions: Optional[List[str]] = Field(None, description="Allowed file extensions for file upload")
-
-    # New relationship format fields
-    relationship_type: Optional[str] = Field(None, description="Reference to relationship type in global registry")
-
-    @property
-    def display_label(self) -> str:
-        """Get display label (use custom or generate from name)."""
-        if self.label:
-            return self.label
-        return self.name.replace('_', ' ').title()
 
 
 class LifecycleState(BaseModel):
@@ -98,10 +75,6 @@ class DocTypeConfig(BaseModel):
     verifies: Optional[List[str]] = Field(None, description="Document types this verifies")
     properties: Optional[List[Any]] = Field(None, description="Properties to display")
 
-    # Universal framework fields
-    icon: Optional[str] = Field(None, description="Icon for UI display")
-    page_enabled: Optional[bool] = Field(None, description="Whether to generate a page for this type")
-    page_number: Optional[int] = Field(None, description="Page number in Streamlit sidebar")
     lifecycle: Optional[dict] = Field(None, description="Lifecycle configuration with states and transitions")
     has_verification: Optional[bool] = Field(None, description="Whether this type supports verification tracking")
     verification_states: Optional[List[str]] = Field(None, description="Verification states")

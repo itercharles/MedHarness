@@ -24,9 +24,6 @@ properties:
 - name: verification_criteria
   format: long_text
   label: Verification Criteria
-icon: 💻
-page_enabled: true
-page_number: 7
 has_verification: true
 verification_states:
 - not_verified
