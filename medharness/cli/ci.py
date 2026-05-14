@@ -679,6 +679,32 @@ def register(main):
         click.echo(_format_summary("Design", "revised" if pr_number else "generated", cr_id, result), err=True)
         _raise_for_tool_error(result)
 
+    @ci.command("generate-dhf")
+    @click.option("--cr", "cr_id", required=True, metavar="CR_ID")
+    @click.option("--pr", "pr_number", default=None, type=int, metavar="N",
+                  help="PR number — revision mode: revise DHF cascade based on review comments")
+    @click.pass_context
+    def ci_generate_dhf(ctx: click.Context, cr_id: str, pr_number: int | None) -> None:
+        """Generate the full DHF item cascade for a CR in a single Claude session.
+
+        Drives the V-model (CRS→SYS→SYSARCH/RISK/RCM→SRS→SWDD) without a prior
+        analyze-cr spec stage. Claude uses the medharness CLI to create/update DHF
+        items and validates traceability inline. Python-side validation and a fix
+        pass run as a safety net.
+
+        Model is read from ANTHROPIC_MODEL env var.
+        Pass --pr N to revise existing DHF items based on PR review comments.
+        """
+        from medharness.services.cr_generation import generate_dhf  # noqa: PLC0415
+        dhf: Path = ctx.obj["dhf"]
+        result = generate_dhf(cr_id, dhf, pr_number=pr_number)
+        click.echo(json.dumps(result))
+        click.echo(
+            _format_summary("DHF cascade", "revised" if pr_number else "generated", cr_id, result),
+            err=True,
+        )
+        _raise_for_tool_error(result)
+
     @ci.command("develop-cr")
     @click.option("--cr", "cr_id", required=True, metavar="CR_ID")
     @click.option("--pr", "pr_number", default=None, type=int, metavar="N",

@@ -22,6 +22,7 @@ from medharness.services.cr_generation import (
     _run_claude,
     generate_code,
     generate_design,
+    generate_dhf,
     generate_spec,
 )
 
@@ -52,6 +53,14 @@ class TestLoadPrompt:
     def test_load_cr_develop(self):
         text = _load_prompt("cr_develop.md")
         assert "{{cr_id}}" in text
+
+    def test_load_cr_generate_dhf(self):
+        text = _load_prompt("cr_generate_dhf.md")
+        assert "{{cr_id}}" in text
+        assert "verification_criteria" in text
+        assert "V-model" in text or "V-Model" in text
+        assert "dhf item create" in text
+        assert "dhf validate traceability" in text
 
     def test_missing_prompt_raises(self):
         import importlib.resources
@@ -156,6 +165,22 @@ class TestAssemblePrompts:
         prompt = _assemble_develop_prompt("CR-099")
         assert "Risk Impact" not in prompt
         assert "SOUP Impact" not in prompt
+
+    def test_generate_dhf_substitutes_cr_id(self):
+        from medharness.services.prompt_assembly import _assemble_generate_dhf_prompt
+        prompt = _assemble_generate_dhf_prompt("CR-077")
+        assert "CR-077" in prompt
+        assert "{{cr_id}}" not in prompt
+
+    def test_generate_dhf_includes_skills(self):
+        from medharness.services.prompt_assembly import _assemble_generate_dhf_prompt
+        prompt = _assemble_generate_dhf_prompt("CR-001")
+        assert "Product Impact" in prompt or "product_impact" in prompt
+
+    def test_generate_dhf_includes_verification_criteria_instructions(self):
+        from medharness.services.prompt_assembly import _assemble_generate_dhf_prompt
+        prompt = _assemble_generate_dhf_prompt("CR-001")
+        assert "verification_criteria" in prompt
 
     def test_review_spec_substitutes_cr_id(self):
         prompt = _assemble_review_spec_prompt("CR-042")
@@ -699,6 +724,100 @@ class TestDesignImpactSnapshotHelpers:
         assert "New block" in updated
         assert "Manual intro" in updated
         assert "Manual outro" in updated
+
+
+# ── generate_dhf ──────────────────────────────────────────────────────────────
+
+class TestGenerateDhf:
+    def test_returns_dict_with_required_keys(self, tmp_path):
+        dhf = tmp_path / "DHF"
+        dhf.mkdir()
+        with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
+             patch("medharness.services.design_validation.validate_design", return_value=[]):
+            mock_claude.return_value = (0, "")
+            result = generate_dhf("CR-050", dhf)
+        assert result["cr_id"] == "CR-050"
+        assert result["stage"] == "generate_dhf"
+        assert result["outcome"] == "ok"
+        assert result["errors"] == []
+        for key in ("summary", "timing", "inputs", "steps", "artifacts", "diagnostics", "warnings"):
+            assert key in result
+
+    def test_happy_path_calls_claude_once(self, tmp_path):
+        dhf = tmp_path / "DHF"
+        dhf.mkdir()
+        with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
+             patch("medharness.services.design_validation.validate_design", return_value=[]):
+            mock_claude.return_value = (0, "")
+            result = generate_dhf("CR-051", dhf)
+        assert mock_claude.call_count == 1
+        assert result["diagnostics"]["fix_attempted"] is False
+
+    def test_fix_pass_triggered_when_validation_fails(self, tmp_path):
+        dhf = tmp_path / "DHF"
+        dhf.mkdir()
+        first_errors = [{"field": "schema", "issue": "x", "fix": "y"}]
+        with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
+             patch("medharness.services.design_validation.validate_design",
+                   side_effect=[first_errors, []]):
+            mock_claude.return_value = (0, "")
+            result = generate_dhf("CR-052", dhf)
+        assert mock_claude.call_count == 2
+        fix_prompt = mock_claude.call_args_list[1][0][0]
+        assert "deterministic validation" in fix_prompt
+        assert result["outcome"] == "corrected"
+        assert result["diagnostics"]["fix_attempted"] is True
+
+    def test_residual_errors_yield_completed_with_errors(self, tmp_path):
+        dhf = tmp_path / "DHF"
+        dhf.mkdir()
+        errors = [{"field": "schema", "issue": "x", "fix": "y"}]
+        with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
+             patch("medharness.services.design_validation.validate_design",
+                   side_effect=[errors, errors]):
+            mock_claude.return_value = (0, "")
+            result = generate_dhf("CR-053", dhf)
+        assert result["outcome"] == "completed_with_errors"
+
+    def test_generation_prompt_contains_cr_id_and_key_phrases(self, tmp_path):
+        dhf = tmp_path / "DHF"
+        dhf.mkdir()
+        with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
+             patch("medharness.services.design_validation.validate_design", return_value=[]):
+            mock_claude.return_value = (0, "")
+            generate_dhf("CR-055", dhf)
+        prompt = mock_claude.call_args_list[0][0][0]
+        assert "CR-055" in prompt
+        assert "verification_criteria" in prompt
+        assert "V-model" in prompt or "V-Model" in prompt
+
+    def test_revision_mode_uses_pr_feedback(self, tmp_path):
+        dhf = tmp_path / "DHF"
+        dhf.mkdir()
+        with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
+             patch("medharness.services.cr_generation._get_pr_feedback") as mock_fb, \
+             patch("medharness.services.design_validation.validate_design", return_value=[]):
+            mock_claude.return_value = (0, "")
+            mock_fb.return_value = {
+                "prompt_text": "some review feedback",
+                "diagnostics": {"attempted": True, "comments_status": "ok"},
+                "warnings": [],
+            }
+            generate_dhf("CR-056", dhf, pr_number=12)
+        mock_fb.assert_called_once_with(12)
+        prompt = mock_claude.call_args_list[0][0][0]
+        assert "review feedback" in prompt.lower()
+
+    def test_design_impact_not_recorded_on_residual_errors(self, tmp_path):
+        dhf = tmp_path / "DHF"
+        dhf.mkdir()
+        errors = [{"field": "schema", "issue": "x", "fix": "y"}]
+        with patch("medharness.services.cr_generation._run_claude", return_value=(0, "")), \
+             patch("medharness.services.design_validation.validate_design",
+                   side_effect=[errors, errors]), \
+             patch("medharness.services.cr_generation._record_design_impact_in_cr") as mock_impact:
+            generate_dhf("CR-058", dhf)
+        mock_impact.assert_not_called()
 
 
 # ── generate_code ─────────────────────────────────────────────────────────────

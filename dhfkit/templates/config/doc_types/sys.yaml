@@ -63,6 +63,9 @@ properties:
   target_types:
   - CRS
   help: Alternative relationship to customer requirements
+- name: verification_criteria
+  format: long_text
+  label: Verification Criteria
 relations:
 - target: CRS
   label: satisfies

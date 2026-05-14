@@ -217,4 +217,32 @@ def validate_design(
                         ),
                     })
 
+            verifiable_types = {"CRS", "SYS", "SRS"}
+            for idx, item in enumerate(proposed):
+                if not isinstance(item, dict):
+                    continue
+                item_type = str(item.get("type", "") or "")
+                title = str(item.get("title", "") or "").strip()
+                if item_type not in verifiable_types or not item_type or not title:
+                    continue
+                created_item = by_type_title_to_item.get((item_type, title))
+                if created_item is None:
+                    continue
+                verification_criteria = str(
+                    created_item.get("verification_criteria") or ""
+                ).strip()
+                if not verification_criteria:
+                    errors.append({
+                        "field": f"proposed_new_items[{idx}].verification_criteria",
+                        "issue": (
+                            f"Spec proposes a new {item_type} item titled '{title}', "
+                            "but the created item has no `verification_criteria`."
+                        ),
+                        "fix": (
+                            f"Update the {item_type} item titled '{title}' and add a "
+                            "`verification_criteria` field with a measurable pass/fail "
+                            "criterion."
+                        ),
+                    })
+
     return errors

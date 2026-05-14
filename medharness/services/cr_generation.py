@@ -25,6 +25,7 @@ from medharness.services.prompt_assembly import (
     _assemble_design_prompt,
     _assemble_design_prompt_with_spec_json,
     _assemble_develop_prompt,
+    _assemble_generate_dhf_prompt,
     _assemble_review_code_prompt,
     _assemble_review_design_prompt,
     _assemble_review_spec_prompt,
@@ -41,6 +42,7 @@ from medharness.services.spec_validation import (
 __all__ = [
     "generate_code",
     "generate_design",
+    "generate_dhf",
     "generate_spec",
 ]
 
@@ -274,6 +276,7 @@ def _build_summary(
         "spec": "Spec",
         "design": "Design generation",
         "develop": "Implementation generation",
+        "generate_dhf": "DHF cascade generation",
     }.get(stage, stage.capitalize())
     if outcome == "tool_error":
         if warnings:
@@ -684,6 +687,173 @@ def generate_design(cr_id: str, dhf_path: Path, pr_number: int | None = None) ->
         steps=steps,
         artifacts={
             "spec_path": str(spec_path),
+            "items_changed": items_changed,
+            "design_impact": design_impact,
+        },
+        diagnostics=diagnostics,
+        warnings=warnings,
+        errors=errors,
+        critical_step_failed=critical_step_failed,
+    )
+
+
+def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> dict:
+    """Generate the complete DHF item cascade for a CR in a single LLM session.
+
+    The V-model (CR→CRS→SYS→{SYSARCH,RISK,RCM}→SRS→SWDD) is the reasoning
+    framework embedded in the prompt. The LLM writes items via the medharness
+    CLI and validates traceability inline before returning.
+
+    Python-side validation runs as a safety net. If errors remain after the
+    LLM's inline self-correction, one deterministic fix pass is attempted.
+    No spec file is produced; this command replaces analyze-cr + design-cr.
+    """
+    started_at = _now_iso()
+    started_perf = time.perf_counter()
+
+    repo_root = dhf_path.resolve().parent
+    steps: list[dict] = []
+    warnings: list[dict] = []
+    critical_step_failed = False
+    diagnostics: dict = {
+        "anthropic_model": os.environ.get("ANTHROPIC_MODEL") or None,
+        "github_feedback": {"attempted": False},
+        "fix_attempted": False,
+        "initial_error_count": 0,
+        "final_error_count": 0,
+    }
+    inputs = {
+        "dhf_path": str(dhf_path),
+        "repo_root": str(repo_root),
+        "pr_number": pr_number,
+        "revision_mode": pr_number is not None,
+        "since_ref": "origin/main",
+    }
+
+    if pr_number:
+        feedback_step, feedback_perf = _begin_step("fetch_pr_feedback")
+        feedback = _get_pr_feedback(pr_number)
+        diagnostics["github_feedback"] = feedback["diagnostics"]
+        warnings.extend(feedback["warnings"])
+        steps.append(
+            _finish_step(
+                feedback_step,
+                feedback_perf,
+                "warning" if feedback["warnings"] else "ok",
+                feedback["diagnostics"],
+            )
+        )
+        prompt_step, prompt_perf = _begin_step(
+            "prepare_prompt",
+            {"prompt_kind": "generate_dhf_revision", "used_pr_feedback": True},
+        )
+        prompt = (
+            f"Read the DHF items in DHF/ related to {cr_id}, "
+            f"then revise them based on the following pull request review feedback. "
+            f"Continue using the CLI (`dhf item create` / `dhf item update`) only. "
+            f"After making changes, re-run:\n"
+            f"  python -m medharness --dhf DHF dhf validate schema\n"
+            f"  python -m medharness --dhf DHF dhf validate traceability\n\n"
+            f"Review feedback:\n{feedback['prompt_text']}"
+        )
+        steps.append(_finish_step(prompt_step, prompt_perf, "ok"))
+    else:
+        prompt_step, prompt_perf = _begin_step(
+            "prepare_prompt",
+            {"prompt_kind": "generate_dhf_generation", "used_pr_feedback": False},
+        )
+        prompt = _assemble_generate_dhf_prompt(cr_id, dhf_path)
+        steps.append(_finish_step(prompt_step, prompt_perf, "ok"))
+
+    rc, _ = _run_claude_step(
+        name="run_initial_generation",
+        prompt=prompt,
+        steps=steps,
+        warnings=warnings,
+        critical=True,
+    )
+    critical_step_failed = critical_step_failed or rc != 0
+
+    dummy_spec = repo_root / "docs" / "cr-specs" / f"{cr_id}-Spec.md"
+    validate_step, validate_perf = _begin_step(
+        "validate_initial", {"validator": "design_validation"}
+    )
+    errors: list[dict] = design_validation.validate_design(cr_id, dhf_path, dummy_spec)
+    diagnostics["initial_error_count"] = len(errors)
+    diagnostics["final_error_count"] = len(errors)
+    steps.append(
+        _finish_step(
+            validate_step,
+            validate_perf,
+            "failed" if errors else "ok",
+            {"error_count": len(errors)},
+        )
+    )
+
+    if errors:
+        diagnostics["fix_attempted"] = True
+        fix_prompt = (
+            f"The DHF cascade for {cr_id} failed deterministic validation:\n"
+            f"{_format_error_lines(errors)}\n\n"
+            f"Fix only the items needed to clear these errors via the medharness "
+            f"CLI (`dhf item create` / `dhf item update`). Do not introduce other "
+            f"changes. After fixing, re-run:\n"
+            f"  python -m medharness --dhf DHF dhf validate schema\n"
+            f"  python -m medharness --dhf DHF dhf validate traceability"
+        )
+        rc, _ = _run_claude_step(
+            name="run_fix_generation",
+            prompt=fix_prompt,
+            steps=steps,
+            warnings=warnings,
+            critical=True,
+        )
+        critical_step_failed = critical_step_failed or rc != 0
+        validate_fix_step, validate_fix_perf = _begin_step(
+            "validate_after_fix", {"validator": "design_validation"}
+        )
+        errors = design_validation.validate_design(cr_id, dhf_path, dummy_spec)
+        diagnostics["final_error_count"] = len(errors)
+        steps.append(
+            _finish_step(
+                validate_fix_step,
+                validate_fix_perf,
+                "failed" if errors else "ok",
+                {"error_count": len(errors)},
+            )
+        )
+
+    artifact_step, artifact_perf = _begin_step(
+        "collect_artifacts", {"kind": "dhf_items_changed"}
+    )
+    items_changed = git.collect_dhf_item_changes(repo_root, "origin/main")
+    steps.append(
+        _finish_step(artifact_step, artifact_perf, "ok", {"items_changed": items_changed})
+    )
+
+    design_impact: dict = {"recorded": False, "reason": "skipped_due_to_validation_errors"}
+    if not errors:
+        impact_step, impact_perf = _begin_step("record_design_impact")
+        design_impact = _record_design_impact_in_cr(
+            cr_id, dhf_path, dummy_spec, items_changed
+        )
+        steps.append(
+            _finish_step(
+                impact_step,
+                impact_perf,
+                "ok" if design_impact.get("recorded") else "warning",
+                design_impact,
+            )
+        )
+
+    return _build_response(
+        cr_id=cr_id,
+        stage="generate_dhf",
+        started_at=started_at,
+        started_perf=started_perf,
+        inputs=inputs,
+        steps=steps,
+        artifacts={
             "items_changed": items_changed,
             "design_impact": design_impact,
         },

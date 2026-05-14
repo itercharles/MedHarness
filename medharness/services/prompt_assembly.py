@@ -208,6 +208,15 @@ def _assemble_design_prompt_with_spec_json(
     return prompt
 
 
+def _assemble_generate_dhf_prompt(cr_id: str, dhf_path: Path | None = None) -> str:
+    prompt = _load_prompt("cr_generate_dhf.md").replace("{{cr_id}}", cr_id)
+    if dhf_path is not None:
+        block = _build_dhf_context_block(dhf_path)
+        if block:
+            prompt += "\n\n" + block
+    return _append_skills(prompt)
+
+
 def _build_impact_closure_block(dhf_path: Path, spec_json: dict) -> str:
     # Inline imports avoid coupling prompt_assembly to dhfkit/medharness core
     # at import-time. These modules are only needed when a real DHF path is
