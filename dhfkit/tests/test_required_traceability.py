@@ -191,9 +191,10 @@ def test_swdd_has_srs_pass():
     assert result["passed"] is True
 
 
-# ── No rules ────────────────────────────────────────────────────────────────
+# ── No rules / opt-out ──────────────────────────────────────────────────────
 
-def test_no_rules_configured_pass():
+def test_explicit_empty_rules_skips_vmodel_defaults():
+    """required_traceability=[] (explicit empty) opts out of V-model defaults."""
     config = _make_config([])
     items = [
         {"id": "SRS-001", "derives_from": [], "all_linked_uids": []},
@@ -203,40 +204,56 @@ def test_no_rules_configured_pass():
     assert "No required_traceability rules" in result["summary"]
 
 
-# ── allowed_parents deprecation (in check_traceability) ──────────────────────
-
-def test_allowed_parents_produces_deprecation_warning():
-    from dhfkit.traceability import check_traceability
-
+def test_none_rules_applies_vmodel_defaults():
+    """required_traceability=None (not configured) falls back to V-model defaults."""
     config = ProjectConfig(
         doc_types=[
-            DocTypeConfig(code="SRS", name="Software Requirement", prefix="SRS-", allowed_parents=["SYS"]),
+            DocTypeConfig(code="SRS", name="Software Requirement", prefix="SRS-"),
+            DocTypeConfig(code="SYS", name="System Requirement", prefix="SYS-"),
+        ],
+    )
+    # SRS-001 has no derives_from SYS → should fail under V-model defaults
+    items = [
+        {"id": "SRS-001", "derives_from": [], "all_linked_uids": []},
+        {"id": "SYS-001", "all_linked_uids": []},
+    ]
+    result = check_required_traceability(items, config)
+    assert result["passed"] is False
+    assert any(f["id"] == "SRS-001" for f in result["failures"])
+
+
+def test_vmodel_defaults_pass_when_links_correct():
+    """V-model default rules pass when items have proper upstream links."""
+    config = ProjectConfig(
+        doc_types=[
+            DocTypeConfig(code="SRS", name="Software Requirement", prefix="SRS-"),
             DocTypeConfig(code="SYS", name="System Requirement", prefix="SYS-"),
         ],
     )
     items = [
-        {"id": "SRS-001", "derives_from": ["SYS-001"], "all_linked_uids": ["SYS-001"], "category": "Functional"},
+        {"id": "SRS-001", "derives_from": ["SYS-001"], "all_linked_uids": ["SYS-001"]},
         {"id": "SYS-001", "all_linked_uids": []},
     ]
-    result = check_traceability(items, config)
-    assert result["passed"] is True  # SRS-001 has valid parent, so still passes
-    assert len(result["deprecation_warnings"]) > 0
-    assert "deprecated allowed_parents" in result["deprecation_warnings"][0]
+    result = check_required_traceability(items, config)
+    assert result["passed"] is True
 
 
-def test_allowed_parents_orphan_still_detected():
+# ── orphans key preserved for API compat ─────────────────────────────────────
+
+def test_orphans_key_always_empty_list():
+    """check_traceability always returns orphans=[] (deprecated field preserved for compat)."""
     from dhfkit.traceability import check_traceability
 
     config = ProjectConfig(
         doc_types=[
-            DocTypeConfig(code="SRS", name="Software Requirement", prefix="SRS-", allowed_parents=["SYS"]),
-            DocTypeConfig(code="CRS", name="Customer Requirement", prefix="CRS-"),  # wrong type
+            DocTypeConfig(code="SRS", name="Software Requirement", prefix="SRS-"),
+            DocTypeConfig(code="SYS", name="System Requirement", prefix="SYS-"),
         ],
+        required_traceability=[],
     )
     items = [
-        {"id": "SRS-001", "derives_from": ["CRS-001"], "all_linked_uids": ["CRS-001"], "category": "Functional"},
-        {"id": "CRS-001", "all_linked_uids": []},
+        {"id": "SRS-001", "derives_from": [], "all_linked_uids": []},
     ]
     result = check_traceability(items, config)
-    assert result["passed"] is False  # SRS-001 links to CRS, not SYS → orphan
-    assert len(result["orphans"]) == 1
+    assert result["orphans"] == []
+    assert result["deprecation_warnings"] == []

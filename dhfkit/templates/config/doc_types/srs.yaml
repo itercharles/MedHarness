@@ -3,8 +3,6 @@ role: software_requirement
 name: Software Requirement
 prefix: SRS-
 directory: 03_srs
-allowed_parents:
-- SYS
 properties:
 - id
 - name: title

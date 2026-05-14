@@ -3,9 +3,6 @@ role: system_requirement
 name: System Requirement
 prefix: SYS-
 directory: 02_sys
-allowed_parents:
-- CRS
-- RCM
 properties:
 - id
 - name: title
@@ -58,11 +55,6 @@ properties:
 - name: verification_criteria
   format: long_text
   label: Verification Criteria
-relations:
-- target: CRS
-  label: satisfies
-- target: RCM
-  label: implements
 has_verification: true
 verification_states:
 - not_verified

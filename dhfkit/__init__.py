@@ -13,6 +13,7 @@ Internal (not part of the public API):
     — these are implementation details of the adapter layer.
 """
 
+from dhfkit.item_type import ItemType
 from dhfkit.models.item import Item
 from dhfkit.models.config import ProjectConfig, DocTypeConfig
 from dhfkit.exceptions import ValidationError
@@ -23,6 +24,7 @@ from dhfkit.artifact_fetcher import GitHubArtifactFetcher
 from dhfkit.local_adapter import LocalDHFAdapter
 
 __all__ = [
+    "ItemType",
     "Item",
     "ProjectConfig",
     "DocTypeConfig",

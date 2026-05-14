@@ -9,6 +9,7 @@ from typing import Dict, List, Optional
 from dhfkit.artifact_fetcher import GitHubArtifactFetcher, GitLabArtifactFetcher, JenkinsArtifactFetcher
 from dhfkit.exceptions import ValidationError
 from dhfkit.junit_parser import parse_junit_xml
+from dhfkit.item_type import ItemType
 from dhfkit.models.config import ProjectConfig
 from dhfkit.models.item import Item
 from dhfkit.repository.git import GitRepository
@@ -60,36 +61,33 @@ class LocalDHFAdapter:
     # Item type metadata
     # ------------------------------------------------------------------
 
+    def _item_type_dict(self, dt) -> dict:
+        it = ItemType.from_code(dt.code)
+        role = dt.role or (it.value.role if it else dt.code)
+        parent_types = [r[1] for r in it.value.required_upstream] if it else []
+        has_verification = (
+            dt.has_verification if dt.has_verification is not None
+            else (it.value.has_verification if it else False)
+        )
+        return {
+            "name": dt.code,
+            "code": dt.code,
+            "prefix": dt.prefix,
+            "role": role,
+            "parent_types": parent_types,
+            "has_verification": bool(has_verification),
+            "lifecycle": dt.lifecycle,
+            "fields": dt.properties or [],
+        }
+
     def get_item_type(self, prefix: str) -> Optional[dict]:
         dt = self._config.get_doc_type_by_prefix(prefix)
         if dt is None:
             return None
-        result = {
-            "name": dt.type_name or dt.code,
-            "code": dt.code,
-            "prefix": dt.prefix,
-            "role": dt.role,
-            "parent_types": dt.parent_types or [],
-            "has_verification": bool(dt.has_verification),
-            "lifecycle": dt.lifecycle,
-            "fields": dt.properties or [],
-        }
-        return result
+        return self._item_type_dict(dt)
 
     def list_item_types(self) -> List[dict]:
-        return [
-            {
-                "name": dt.type_name or dt.code,
-                "code": dt.code,
-                "prefix": dt.prefix,
-                "role": dt.role,
-                "parent_types": dt.parent_types or [],
-                "has_verification": bool(dt.has_verification),
-                "lifecycle": dt.lifecycle,
-                "fields": dt.properties or [],
-            }
-            for dt in self._config.doc_types
-        ]
+        return [self._item_type_dict(dt) for dt in self._config.doc_types]
 
     def get_lifecycle_states(self) -> List[dict]:
         gl = self._config.global_lifecycle
@@ -115,9 +113,9 @@ class LocalDHFAdapter:
         """Add medharness domain fields (type, all_linked_uids) to an item dict."""
         d = item.model_dump(by_alias=True, exclude_none=True)
         d['all_linked_uids'] = item.all_linked_uids
-        dt = self._config.get_doc_type_by_prefix(item.uid.split('-')[0] + '-')
+        dt = self._config.get_doc_type_by_prefix(item.prefix)
         if dt:
-            d['type'] = dt.type_name or dt.code
+            d['type'] = dt.code
         else:
             d['type'] = item.uid.split('-')[0]
         return d

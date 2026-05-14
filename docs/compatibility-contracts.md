@@ -218,10 +218,29 @@ Required fields:
 - `directory` — items subdirectory (e.g., `02_sys`)
 
 Optional fields:
-- `type_name` — display name
+- `name` — human-readable display name
+- `role` — semantic role string (e.g., `system_requirement`); derived from the internal `ItemType` enum for standard V-model types
 - `properties` — field definitions
 - `lifecycle` — state machine transitions
-- `has_verification` — whether items support verification status
+- `has_verification` — whether items support verification status; derived from `ItemType` for standard types when absent
+
+Removed fields (no longer valid, silently ignored on load):
+- `type_name` — replaced by `role`
+- `parent_types` — derived from `ItemType.required_upstream`
+- `relations` — was never read by the engine
+- `icon`, `page_enabled`, `page_number` — UI-only metadata removed from dhfkit
+
+### Traceability default behavior (added in this version)
+
+When `required_traceability` is absent from `global.yaml` (i.e., `null`/not set),
+dhfkit now enforces the V-model chain automatically using rules baked into the
+`ItemType` enum. Affected rules: CRS→UC, SRS→SYS, SWDD→SRS, SYSARCH→SYS,
+RCM→RISK, RCM→SYS.
+
+To opt out (no traceability rules enforced), set explicitly:
+```yaml
+required_traceability: []
+```
 
 ---
 
