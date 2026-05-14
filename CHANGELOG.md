@@ -11,6 +11,10 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+---
+
+## [0.5.0] — 2026-05-14
+
 ### Changes
 
 - **Remove cr-spec phase; collapse design+dev into single generate-dhf → develop-cr flow**

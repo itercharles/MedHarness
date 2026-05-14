@@ -1,7 +1,7 @@
 # Compatibility Contracts
 
-> **Version:** 0.1.0
-> **Last updated:** 2026-05-03
+> **Version:** 0.5.0
+> **Last updated:** 2026-05-14
 
 This document defines which behaviors are version-stable contracts and must
 not change without a MAJOR version bump. See [CHANGELOG.md](../CHANGELOG.md)
