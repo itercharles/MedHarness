@@ -22,17 +22,10 @@ CR ID: {{cr_id}}
    approach or deviate from it unless you discover a concrete blocker, in
    which case note the deviation clearly in a comment.
 
-2. Implement all changes required by the design:
-   - Product code changes in the appropriate workspace (`apps/client/`,
-     `apps/api/`, `packages/shared-types/`)
-   - Tests colocated at `*.test.ts(x)` with `@links:SRS-xxx` or `@links:SYS-xxx`
-     annotations for any DHF-linked requirements
+2. Implement all changes required by the design. Check `CLAUDE.md` for the
+   project's source layout, workspace names, and test file conventions.
 
-3. Follow CLAUDE.md conventions:
-   - TypeScript strict mode, no `any`
-   - Tailwind only, no inline styles
-   - Define shared types before using them
-   - Write tests alongside every functional change
+3. Follow all coding conventions documented in `CLAUDE.md`.
 
 4. Run build, tests, then coverage check.
 
@@ -64,7 +57,8 @@ CR ID: {{cr_id}}
 
 6. **Reconcile implementation against the plan and DHF items.**
 
-   Run `git diff origin/main -- apps/ packages/` to see every file changed.
+   Run `git diff origin/main` scoped to the source roots listed in `CLAUDE.md`
+   to see every file changed.
    Then check:
 
    a. **Code vs implementation plan** — if the implementation deviated from
