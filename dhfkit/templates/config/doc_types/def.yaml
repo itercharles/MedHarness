@@ -62,9 +62,6 @@ properties:
   target_types:
   - REL
   label: Fixed in Release
-icon: 🐛
-page_enabled: true
-page_number: 13
 lifecycle:
   transitions:
   - from_states:

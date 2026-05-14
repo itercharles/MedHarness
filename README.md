@@ -110,6 +110,18 @@ medharness --dhf DHF ci design-cr --cr CR-034
 medharness --dhf DHF ci develop-cr --cr CR-034
 ```
 
+If you want a single-session DHF cascade without the spec-first handoff, use:
+
+```bash
+# Alternative flow — Claude generates the DHF cascade in one pass
+medharness --dhf DHF ci generate-dhf --cr CR-034
+```
+
+This command reasons top-down through the V-model and creates or updates the
+required CRS, SYS, SYSARCH, RISK, RCM, SRS, and SWDD items directly. It validates
+schema and traceability inline, then runs the same deterministic validation/fix
+pass used by the staged design flow.
+
 Got review comments on a PR? Pass `--pr N` to any command to revise based on the feedback:
 
 ```bash

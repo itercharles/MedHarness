@@ -37,9 +37,9 @@ properties:
   - Low
   default: Medium
   label: Priority
-icon: 🎯
-page_enabled: true
-page_number: 5
+- name: verification_criteria
+  format: long_text
+  label: Verification Criteria
 has_verification: true
 verification_states:
 - not_verified

@@ -41,6 +41,3 @@ properties:
 - name: verification_method
   format: short_text
   label: Verification Method
-icon: 📦
-page_enabled: true
-page_number: 11

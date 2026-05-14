@@ -11,6 +11,3 @@ properties:
 - name: content
   format: long_text
   label: Content
-icon: 👤
-page_enabled: true
-page_number: 4

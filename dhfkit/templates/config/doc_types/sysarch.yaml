@@ -19,6 +19,3 @@ properties:
 relations:
 - target: SYS
   label: design
-icon: 🏗️
-page_enabled: true
-page_number: 8

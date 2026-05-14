@@ -89,9 +89,6 @@ def create_test_dhf() -> Path:
             'name': 'Use Case',
             'prefix': 'UC-',
             'directory': '00_uc',
-            'icon': '👤',
-            'page_enabled': True,
-            'page_number': 4,
             'properties': [
                 'id',
                 {'name': 'title', 'format': 'short_text', 'label': 'Title'},
@@ -103,9 +100,6 @@ def create_test_dhf() -> Path:
             'name': 'Customer Requirement',
             'prefix': 'CRS-',
             'directory': '01_crs',
-            'icon': '🎯',
-            'page_enabled': True,
-            'page_number': 5,
             'properties': [
                 'id',
                 {'name': 'title', 'format': 'short_text', 'label': 'Title'},
@@ -118,9 +112,6 @@ def create_test_dhf() -> Path:
             'name': 'System Requirement',
             'prefix': 'SYS-',
             'directory': '02_sys',
-            'icon': '⚙️',
-            'page_enabled': True,
-            'page_number': 6,
             'has_verification': True,
             'verification_states': ['not_verified', 'verified', 'failed'],
             'properties': [
@@ -136,9 +127,6 @@ def create_test_dhf() -> Path:
             'name': 'Software Requirement',
             'prefix': 'SRS-',
             'directory': '03_srs',
-            'icon': '💻',
-            'page_enabled': True,
-            'page_number': 7,
             'properties': [
                 'id',
                 {'name': 'title', 'format': 'short_text', 'label': 'Title'},
@@ -151,9 +139,6 @@ def create_test_dhf() -> Path:
             'name': 'System Architecture',
             'prefix': 'SYSARCH-',
             'directory': '07_sysarch',
-            'icon': '🏗️',
-            'page_enabled': True,
-            'page_number': 8,
             'properties': [
                 'id',
                 {'name': 'title', 'format': 'short_text', 'label': 'Title'},
@@ -166,9 +151,6 @@ def create_test_dhf() -> Path:
             'name': 'Change Request',
             'prefix': 'CR-',
             'directory': '08_cr',
-            'icon': '📝',
-            'page_enabled': True,
-            'page_number': 9,
             'properties': [
                 'id',
                 {'name': 'title', 'format': 'short_text', 'label': 'Title'},

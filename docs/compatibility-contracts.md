@@ -80,6 +80,21 @@ for the versioning policy.
   - `initial_error_count`
   - `final_error_count`
 
+#### `medharness ci generate-dhf`
+
+- Writes the same top-level JSON keys as `ci analyze-cr`
+- `artifacts` includes:
+  - `items_changed`
+  - `design_impact`
+- Does not write or require a spec artifact
+- `diagnostics` exposes at minimum:
+  - `anthropic_model`
+  - `github_feedback`
+  - `fix_attempted`
+  - `initial_error_count`
+  - `final_error_count`
+- `summary` describes the command as `DHF cascade generation`
+
 #### `medharness ci cr-status`
 
 - Writes JSON to stdout with these keys:
