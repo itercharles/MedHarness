@@ -22,8 +22,6 @@ import medharness._helpers as _h
 from medharness.services.ci import ci_structural_gate, ci_test_coverage_gate
 from medharness.services.github_event import parse_github_event, plan_github_event
 from medharness.services.github_session import get_session, put_session
-from medharness.services.spec_validation import validate_spec
-
 _ITEM_ID_RE = re.compile(r"^([A-Z]+-\d+)")
 
 
@@ -93,12 +91,6 @@ def _format_summary(stage_label: str, verb: str, cr_id: str, result: dict) -> st
 def _raise_for_tool_error(result: dict) -> None:
     if result.get("outcome") == "tool_error":
         raise click.exceptions.Exit(1)
-
-
-def _validation_spec_path(dhf_path: Path, cr_id: str, spec_path: Path | None) -> Path:
-    if spec_path is not None:
-        return spec_path
-    return dhf_path.resolve().parent / "docs" / "cr-specs" / f"{cr_id}-Spec.md"
 
 
 def register(main):
@@ -314,82 +306,20 @@ def register(main):
         if not result["passed"]:
             raise click.ClickException("Test coverage gaps found.")
 
-    # ── Spec validation ──
-
-    @ci.command("validate-spec")
-    @click.option("--cr", "cr_id", required=True, metavar="CR_ID")
-    @click.option("--spec", "spec_path", default=None, type=click.Path(path_type=Path),
-                  metavar="PATH", help="Path to spec file (default: DHF/documents/specs/<cr_id>-Spec.md)")
-    @click.option("--dhf", "dhf_path", default=None, type=click.Path(file_okay=False, path_type=Path),
-                  metavar="PATH", help="DHF directory for item existence checks.")
-    def ci_validate_spec(cr_id: str, spec_path: Path | None, dhf_path: Path | None) -> None:
-        """Validate spec YAML front-matter produced by cr-analyze.
-
-        Checks cr_id, direction_fit, affected_items (existence in DHF),
-        and test_plan structure. Exits non-zero if any check fails.
-        """
-        if spec_path is None:
-            if dhf_path:
-                spec_path = dhf_path / "documents" / "specs" / f"{cr_id}-Spec.md"
-            else:
-                raise click.UsageError("Provide --spec <path> or --dhf <path> to locate the spec.")
-
-        errors = validate_spec(spec_path, cr_id, dhf_path)
-        if not errors:
-            click.echo(f"PASS [validate-spec] {cr_id}: front-matter valid.", err=True)
-            return
-
-        for e in errors:
-            click.echo(f"FAIL [validate-spec] {cr_id} ({e['field']}): {e['issue']}", err=True)
-            click.echo(f"    Fix: {e['fix']}", err=True)
-        raise click.ClickException(f"Spec validation failed for {cr_id} ({len(errors)} error(s)).")
-
-    @ci.command("validate-design")
-    @click.option("--cr", "cr_id", required=True, metavar="CR_ID")
-    @click.option("--spec", "spec_path", default=None, type=click.Path(path_type=Path),
-                  metavar="PATH", help="Path to spec file (default: docs/cr-specs/<cr_id>-Spec.md)")
-    @click.pass_context
-    def ci_validate_design(ctx: click.Context, cr_id: str, spec_path: Path | None) -> None:
-        """Run deterministic design validation without invoking the AI loop."""
-        from medharness.services.design_validation import validate_design  # noqa: PLC0415
-
-        dhf_path: Path = ctx.obj["dhf"]
-        resolved_spec = _validation_spec_path(dhf_path, cr_id, spec_path)
-        errors = validate_design(cr_id, dhf_path, resolved_spec)
-        payload = {
-            "cr_id": cr_id,
-            "stage": "design",
-            "passed": not errors,
-            "spec_path": str(resolved_spec),
-            "errors": errors,
-        }
-        click.echo(json.dumps(payload))
-        if not errors:
-            click.echo(f"PASS [validate-design] {cr_id}: deterministic checks passed.", err=True)
-            return
-        for error in errors:
-            click.echo(f"FAIL [validate-design] {cr_id} ({error['field']}): {error['issue']}", err=True)
-            click.echo(f"    Fix: {error['fix']}", err=True)
-        raise click.exceptions.Exit(1)
-
     @ci.command("validate-code")
     @click.option("--cr", "cr_id", required=True, metavar="CR_ID")
-    @click.option("--spec", "spec_path", default=None, type=click.Path(path_type=Path),
-                  metavar="PATH", help="Path to spec file (default: docs/cr-specs/<cr_id>-Spec.md)")
     @click.option("--since-ref", default="origin/main", metavar="REF")
     @click.pass_context
-    def ci_validate_code(ctx: click.Context, cr_id: str, spec_path: Path | None, since_ref: str) -> None:
+    def ci_validate_code(ctx: click.Context, cr_id: str, since_ref: str) -> None:
         """Run deterministic implementation validation without invoking the AI loop."""
         from medharness.services.code_validation import validate_code  # noqa: PLC0415
 
         dhf_path: Path = ctx.obj["dhf"]
-        resolved_spec = _validation_spec_path(dhf_path, cr_id, spec_path)
-        errors = validate_code(cr_id, dhf_path, resolved_spec, since_ref=since_ref)
+        errors = validate_code(cr_id, dhf_path, since_ref=since_ref)
         payload = {
             "cr_id": cr_id,
             "stage": "develop",
             "passed": not errors,
-            "spec_path": str(resolved_spec),
             "since_ref": since_ref,
             "errors": errors,
         }
@@ -404,8 +334,6 @@ def register(main):
 
     @ci.command("validate-branch")
     @click.option("--cr", "cr_id", required=True, metavar="CR_ID")
-    @click.option("--spec", "spec_path", default=None, type=click.Path(path_type=Path),
-                  metavar="PATH", help="Path to spec file (default: docs/cr-specs/<cr_id>-Spec.md)")
     @click.option("--since-ref", default="origin/main", metavar="REF")
     @click.option("--code-path", "code_paths", multiple=True, metavar="PATH",
                   help="Opt into code-change enforcement: path(s) under which at least one file must be modified. "
@@ -414,7 +342,6 @@ def register(main):
     def ci_validate_branch(
         ctx: click.Context,
         cr_id: str,
-        spec_path: Path | None,
         since_ref: str,
         code_paths: tuple[str, ...],
     ) -> None:
@@ -423,22 +350,20 @@ def register(main):
 
         dhf_path: Path = ctx.obj["dhf"]
         repo_root = dhf_path.resolve().parent
-        resolved_spec = _validation_spec_path(dhf_path, cr_id, spec_path)
         payload = validate_atomic_branch(
             repo_root,
             dhf_path,
             cr_id,
             since_ref=since_ref,
             code_paths=code_paths,
-            spec_path=resolved_spec,
         )
         click.echo(json.dumps(payload))
         if payload["passed"]:
             if code_paths:
-                click.echo(f"PASS [validate-branch] {cr_id}: branch carries coupled spec, code, and DHF changes.", err=True)
+                click.echo(f"PASS [validate-branch] {cr_id}: branch carries coupled DHF and code changes.", err=True)
             else:
                 click.echo(
-                    f"PASS [validate-branch] {cr_id}: branch carries spec and DHF changes "
+                    f"PASS [validate-branch] {cr_id}: branch carries DHF changes "
                     f"(pass --code-path to also enforce code changes).",
                     err=True,
                 )
@@ -548,7 +473,7 @@ def register(main):
 
     @ci.command("approve-gate")
     @click.option("--cr", "cr_id", required=True, metavar="CR_ID")
-    @click.option("--stage", required=True, type=click.Choice(["spec", "design", "develop"]))
+    @click.option("--stage", required=True, type=click.Choice(["design", "develop"]))
     @click.option("--pr", "pr_number", required=True, type=int, metavar="N")
     @click.option("--token", default="", metavar="TOKEN")
     def ci_approve_gate(cr_id: str, stage: str, pr_number: int, token: str) -> None:
@@ -576,7 +501,7 @@ def register(main):
     @ci.command("cr-status")
     @click.option("--cr", "cr_id", required=True, metavar="CR_ID")
     @click.option("--pr", "pr_number", default=None, type=int, metavar="N")
-    @click.option("--stage", default="", type=click.Choice(["", "spec", "design", "develop"]))
+    @click.option("--stage", default="", type=click.Choice(["", "design", "develop"]))
     @click.option("--branch", "branch_ref", default="", metavar="REF")
     @click.option("--token", default="", metavar="TOKEN")
     def ci_cr_status(cr_id: str, pr_number: int | None, stage: str, branch_ref: str, token: str) -> None:
@@ -636,48 +561,6 @@ def register(main):
             click.echo(json.dumps({"action": cmd.action, "reason": cmd.reason}))
 
     # ── CR generation ──
-
-    @ci.command("analyze-cr")
-    @click.option("--cr", "cr_id", required=True, metavar="CR_ID")
-    @click.option("--pr", "pr_number", default=None, type=int, metavar="N",
-                  help="PR number — revision mode: revise spec based on review comments")
-    @click.pass_context
-    def ci_analyze_cr(ctx: click.Context, cr_id: str, pr_number: int | None) -> None:
-        """Generate or revise a CR spec using Claude.
-
-        Assembles prompt (with embedded DHF impact skills), invokes claude -p,
-        validates the spec front-matter, and self-corrects if validation fails.
-
-        Model is read from ANTHROPIC_MODEL env var.
-        Pass --pr N to revise an existing spec based on PR review comments.
-        """
-        from medharness.services.cr_generation import generate_spec  # noqa: PLC0415
-        dhf: Path = ctx.obj["dhf"]
-        result = generate_spec(cr_id, dhf, pr_number=pr_number)
-        click.echo(json.dumps(result))
-        click.echo(_format_summary("Spec", "revised" if pr_number else "generated", cr_id, result), err=True)
-        _raise_for_tool_error(result)
-
-    @ci.command("design-cr")
-    @click.option("--cr", "cr_id", required=True, metavar="CR_ID")
-    @click.option("--pr", "pr_number", default=None, type=int, metavar="N",
-                  help="PR number — revision mode: revise design based on review comments")
-    @click.pass_context
-    def ci_design_cr(ctx: click.Context, cr_id: str, pr_number: int | None) -> None:
-        """Generate or revise DHF design items for a CR using Claude.
-
-        Assembles prompt (with embedded DHF impact skills), invokes claude -p
-        to create/update DHF items via the medharness CLI.
-
-        Model is read from ANTHROPIC_MODEL env var.
-        Pass --pr N to revise existing design based on PR review comments.
-        """
-        from medharness.services.cr_generation import generate_design  # noqa: PLC0415
-        dhf: Path = ctx.obj["dhf"]
-        result = generate_design(cr_id, dhf, pr_number=pr_number)
-        click.echo(json.dumps(result))
-        click.echo(_format_summary("Design", "revised" if pr_number else "generated", cr_id, result), err=True)
-        _raise_for_tool_error(result)
 
     @ci.command("generate-dhf")
     @click.option("--cr", "cr_id", required=True, metavar="CR_ID")

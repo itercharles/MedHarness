@@ -1,7 +1,7 @@
 # Compatibility Contracts
 
-> **Version:** 0.1.0
-> **Last updated:** 2026-05-03
+> **Version:** 0.5.0
+> **Last updated:** 2026-05-14
 
 This document defines which behaviors are version-stable contracts and must
 not change without a MAJOR version bump. See [CHANGELOG.md](../CHANGELOG.md)
@@ -147,21 +147,17 @@ for the versioning policy.
   - `cr_id`
   - `since_ref`
   - `passed`
-  - `spec_path`
-  - `expected_dhf_changes`
-  - `spec_changes`
+  - `spec_path` — always `null`; spec files are no longer part of the CR workflow
+  - `expected_dhf_changes` — always `true`; DHF changes are always required
   - `dhf_item_changes`
   - `code_changes`
   - `errors`
-- Requires the approved spec file to exist for the CR, but does not require
-  that the implementation branch modify that spec file relative to `since_ref`
+- DHF item changes are always required; branches with no DHF item YAML changes
+  fail with a `dhf_branch` error
 - Uses exit code `0` when `passed` is true, non-zero otherwise
 
-#### `medharness ci validate-spec`
-
-- Exposes a local `--dhf PATH` option for item-existence checks when the spec
-  path alone is not enough to locate the DHF
-- Writes human-readable validation output to stderr only
+Removed keys (no longer emitted):
+  - `spec_changes` — removed when spec phase was removed
 
 #### `medharness ci github-event`
 

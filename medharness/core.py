@@ -188,7 +188,7 @@ class MedHarnessCore:
         prefix_map: Dict[str, str] = {}
         if True:  # always proceed via adapter
             for it in self._adapter.list_item_types():
-                prefix_map[it.get("name", "OTHER")] = it.get("prefix")
+                prefix_map[it.get("code", "OTHER")] = it.get("prefix")
 
         def get_code(item_id: str) -> str:
             for name, prefix in prefix_map.items():

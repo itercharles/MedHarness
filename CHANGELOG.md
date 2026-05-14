@@ -11,9 +11,42 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+---
+
+## [0.5.0] — 2026-05-14
+
 ### Changes
 
-- None yet.
+- **Remove cr-spec phase; collapse design+dev into single generate-dhf → develop-cr flow**
+  - `ci analyze-cr` and `ci design-cr` commands removed. The new two-phase flow is
+    `generate-dhf` (design + DHF items + implementation plan) followed by `develop-cr` (code).
+  - `generate-dhf` now includes triage (duplicate / out-of-scope / too-large /
+    architecture-conflict), V-model DHF cascade, and writes a structured
+    implementation plan into `implementation_notes` on the CR item.
+  - `generate-dhf` reads relevant source modules before writing SWDD items so
+    the reviewed design reflects the actual codebase. SWDD is only created when
+    a genuine design decision exists (threshold rule baked into prompt).
+  - `develop-cr` reads `implementation_notes` as its primary implementation spec;
+    runs `medharness ci test-coverage` after tests to verify requirement coverage;
+    reconciles `implementation_notes` and SWDD items if implementation deviated.
+  - CR lifecycle simplified: `new → design → develop → completed` or `new/design → rejected`.
+    State transitions are recorded for traceability but not enforced as CI gates.
+  - `validate-spec` and `validate-design` commands removed; `validate-code` and
+    `validate-branch` retained.
+  - `validate-branch` now enforces DHF item changes unconditionally (previously
+    only when a spec file was present).
+  - `--generate-spec` flag removed from `cr workflow intake-github-issue` and
+    `intake-github-issue-ci`. Intake payloads still include `spec_generated`,
+    `spec_status`, `spec_validation`, `spec_path`, `spec_json_path`, `spec_error`
+    as `false`/`null` for API compatibility.
+  - `implementation_notes` is now LLM-authored; the harness no longer writes a
+    "Design Impact Snapshot" block to it.
+  - `check_status` gate accepts `new`, `design`, and `develop` as valid states.
+  - `ItemType` enum V-model defaults: traceability summary now includes an
+    opt-out hint when V-model defaults are applied
+    (`required_traceability: []` in `global.yaml` to disable).
+  - `_item_type_dict` now returns `dt.name` (human-readable) for the `name`
+    field instead of `dt.code`.
 
 ## [0.4.0] — 2026-05-13
 

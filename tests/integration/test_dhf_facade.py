@@ -80,6 +80,29 @@ def test_dhf_item_transition(monkeypatch, stub_adapter):
     assert payload["implementing_by"] == "tester"
 
 
+def test_build_traceability_chains_with_local_adapter():
+    """build_traceability_chains must key by code not name.
+
+    LocalDHFAdapter.list_item_types() returns human-readable name values
+    (e.g. 'System Requirement') since the _item_type_dict fix. Keying
+    prefix_map by name instead of code would make get_code() return display
+    labels, breaking path comparisons against codes like ['SYS', 'SRS'].
+    """
+    from dhfkit.local_adapter import LocalDHFAdapter
+    from dhfkit.tests.fixtures import create_test_dhf, populate_test_dhf_direct
+
+    dhf_path = create_test_dhf()
+    populate_test_dhf_direct(dhf_path)
+    adapter = LocalDHFAdapter(dhf_path)
+    core = MedHarnessCore(adapter)
+
+    chains = core.build_traceability_chains(["SYS", "SRS"])
+
+    assert len(chains) > 0, "expected at least one chain — prefix_map may be keyed by name instead of code"
+    sys_items = [c for c in chains if c.get("SYS") is not None]
+    assert len(sys_items) > 0, "no SYS items resolved — get_code() is not matching 'SYS' code"
+
+
 def test_core_get_implementation_context(stub_adapter):
     """
     core returns CR item, implementation spec, and DHF references.

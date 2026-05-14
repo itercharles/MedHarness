@@ -118,54 +118,32 @@ def validate_atomic_branch(
 ) -> dict:
     """Validate that a branch carries the coupled change set a CR expects.
 
-    This is a deterministic branch-level contract for single-repo product
-    setups: implementation branches should carry DHF item changes when the
-    approved spec expects them, and a readable approved spec file for the CR.
-    The spec file may already be present on ``since_ref``.
+    DHF item changes are always required — generate-dhf must run on every CR
+    branch. When ``spec_path`` is provided it is inspected for
+    affected/proposed expectations (legacy flow); the DHF-change check fires
+    regardless.
 
-    When ``code_paths`` is non-empty the validator also asserts that at least
-    one file under those paths changed. Pass project-specific paths via
-    ``--code-path`` on the CLI (e.g. ``src/``, ``lib/``); omitting the option
-    skips the code-change check entirely.
+    When ``code_paths`` is non-empty, at least one file under those paths must
+    also have changed.
     """
     errors: list[dict] = []
-    resolved_spec = _resolve_repo_path(
-        repo_root,
-        spec_path or (repo_root / "docs" / "cr-specs" / f"{cr_id}-Spec.md"),
-    ).resolve()
     dhf_item_changes = collect_dhf_item_changes(repo_root, since_ref)
-    spec_changed = {"created": [], "updated": [], "deleted": []}
-
-    try:
-        spec_rel = str(resolved_spec.relative_to(repo_root))
-    except ValueError:
-        errors.append({
-            "field": "spec_path",
-            "issue": f"Spec path {resolved_spec} is outside the repository root {repo_root}.",
-            "fix": "Pass --spec as a repo-relative path or an absolute path inside the product repository.",
-        })
-        spec_rel = None
-
-    if spec_rel is not None:
-        spec_changed = collect_path_changes(repo_root, since_ref, spec_rel)
 
     code_changes = collect_path_changes(repo_root, since_ref, *code_paths) if code_paths else {
         "created": [], "updated": [], "deleted": [],
     }
 
-    fm = parse_spec_frontmatter(resolved_spec) or {}
-    affected = fm.get("affected_items") if isinstance(fm.get("affected_items"), list) else []
-    proposed = fm.get("proposed_new_items") if isinstance(fm.get("proposed_new_items"), list) else []
-
     code_change_count = sum(len(code_changes[b]) for b in ("created", "updated", "deleted"))
     dhf_change_count = sum(len(dhf_item_changes[b]) for b in ("created", "updated", "deleted"))
 
-    if not resolved_spec.exists():
-        errors.append({
-            "field": "spec_path",
-            "issue": f"Missing approved spec at {spec_rel or resolved_spec}.",
-            "fix": "Merge or generate the approved spec for this CR before validating the implementation branch.",
-        })
+    resolved_spec: Path | None = None
+    if spec_path is not None:
+        resolved_spec = _resolve_repo_path(repo_root, spec_path).resolve()
+
+    fm = parse_spec_frontmatter(resolved_spec) if resolved_spec else {}
+    fm = fm or {}
+    affected = fm.get("affected_items") if isinstance(fm.get("affected_items"), list) else []
+    proposed = fm.get("proposed_new_items") if isinstance(fm.get("proposed_new_items"), list) else []
 
     if code_paths and code_change_count == 0:
         errors.append({
@@ -174,21 +152,19 @@ def validate_atomic_branch(
             "fix": "Add the implementation changes on the same branch before opening a PR.",
         })
 
-    if affected or proposed:
-        if dhf_change_count == 0:
-            errors.append({
-                "field": "dhf_branch",
-                "issue": "The spec expects DHF item impact, but no DHF item YAML changes were found on the branch.",
-                "fix": "Include the required DHF item create/update changes on the same branch as the implementation.",
-            })
+    if dhf_change_count == 0:
+        errors.append({
+            "field": "dhf_branch",
+            "issue": f"No DHF item YAML changes found on the branch since {since_ref}.",
+            "fix": "Run generate-dhf to create or update the required DHF items on this branch.",
+        })
 
     return {
         "cr_id": cr_id,
         "since_ref": since_ref,
         "passed": not errors,
-        "spec_path": str(resolved_spec),
-        "expected_dhf_changes": bool(affected or proposed),
-        "spec_changes": spec_changed,
+        "spec_path": str(resolved_spec) if resolved_spec else None,
+        "expected_dhf_changes": True,
         "dhf_item_changes": dhf_item_changes,
         "code_changes": code_changes,
         "errors": errors,

@@ -1,123 +1,20 @@
 """Deterministic post-implementation validation.
 
-Checks that the test artifacts the spec promised are actually present in
-the diff. Project-specific lint rules (TypeScript strict, Tailwind-only,
-no inline styles, etc.) are enforced by the project's own CI; this
-validator stays project-agnostic and focuses on what only the spec can tell us.
+Without a spec artifact, this validator is a no-op placeholder. Test coverage
+enforcement is delegated to the project's own CI (TypeScript strict, Tailwind-only,
+colocated test conventions, etc.) and the PR review process.
 """
 
 from __future__ import annotations
 
-import re
 from pathlib import Path
-
-from medharness.services.git import compute_diff
-from medharness.services.spec_validation import parse_spec_frontmatter
-
-_ITEM_ID_RE = re.compile(r"^[A-Z]+-\d+$")
 
 
 def validate_code(
     cr_id: str,
     dhf_path: Path,
-    spec_path: Path,
+    spec_path: Path | None = None,
     since_ref: str = "origin/main",
 ) -> list[dict]:
-    """Validate post-implementation diff against the spec test plan.
-
-    Args:
-        cr_id: CR identifier (e.g., "CR-042"). Currently unused, reserved.
-        dhf_path: Path to the DHF root directory; its parent is the repo root.
-        spec_path: Path to the approved spec markdown file.
-        since_ref: Git ref to diff against (default ``origin/main``).
-
-    Returns:
-        List of error dicts with keys ``field``, ``issue``, ``fix``.
-    """
-    errors: list[dict] = []
-
-    fm = parse_spec_frontmatter(spec_path)
-    if not fm:
-        return errors  # cannot validate without spec front-matter
-
-    test_plan = fm.get("test_plan") or {}
-    needs_new_tc = test_plan.get("needs_new_tc")
-    if not isinstance(needs_new_tc, list) or not needs_new_tc:
-        return errors
-
-    repo_root = dhf_path.resolve().parent
-    diff_text = compute_diff(repo_root, since_ref, "apps/", "packages/")
-    if diff_text is None:
-        # Environment failure (git missing, ref unfetched, etc.) — emit one
-        # actionable error rather than fabricating per-item annotation errors
-        # the model has no way to fix.
-        return [{
-            "field": "environment",
-            "issue": (
-                f"Could not compute `git diff {since_ref}` from {repo_root}; "
-                f"the test-annotation check could not run."
-            ),
-            "fix": (
-                f"Ensure `git` is installed and `{since_ref}` is fetched in "
-                f"the working tree (e.g. `git fetch origin main`). Re-run "
-                f"`ci develop-cr` once the diff is available."
-            ),
-        }]
-
-    added = "\n".join(
-        line[1:]
-        for line in diff_text.splitlines()
-        if line.startswith("+") and not line.startswith("+++")
-    )
-
-    for uid in needs_new_tc:
-        uid = str(uid)
-        if not _requires_annotation(uid):
-            continue
-        if not _annotation_present(added, uid):
-            errors.append({
-                "field": "test_plan.needs_new_tc",
-                "issue": (
-                    f"No newly added `@links:{uid}` annotation found in "
-                    f"apps/ or packages/ since {since_ref}."
-                ),
-                "fix": (
-                    f"Add a colocated `*.test.ts(x)` test that exercises {uid} "
-                    f"and includes a leading comment such as `// @links:{uid}`."
-                ),
-            })
-
-    return errors
-
-
-_ANNOTATION_PATTERN_CACHE: dict[str, re.Pattern[str]] = {}
-_COMMENT_PREFIX_RE = re.compile(r"^\s*(//|/\*+|\*|#)")
-
-
-def _requires_annotation(uid: str) -> bool:
-    """Return True when ``uid`` is a traceable DHF item ID.
-
-    Free-form prose entries in ``needs_new_tc`` remain valid analysis output,
-    but deterministic ``@links:`` enforcement only applies to actual DHF item
-    IDs.
-    """
-    return _ITEM_ID_RE.fullmatch(uid) is not None
-
-
-def _annotation_present(text: str, uid: str) -> bool:
-    """Return True if a stripped added-diff line comment contains ``@links:`` with ``uid``.
-
-    Matches both single-id (``@links:SRS-001``) and grouped
-    (``@links:SRS-001,SRS-002``) annotations. ``text`` is expected to contain
-    added diff lines after the leading ``+`` prefixes have been stripped.
-    """
-    pat = _ANNOTATION_PATTERN_CACHE.get(uid)
-    if pat is None:
-        pat = re.compile(rf"@links:[^\n]*\b{re.escape(uid)}\b")
-        _ANNOTATION_PATTERN_CACHE[uid] = pat
-    for line in text.splitlines():
-        if not _COMMENT_PREFIX_RE.match(line):
-            continue
-        if pat.search(line):
-            return True
-    return False
+    """Validate post-implementation diff. Returns empty list (no spec to check against)."""
+    return []

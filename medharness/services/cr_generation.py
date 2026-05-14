@@ -13,38 +13,19 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from medharness.services import code_validation, design_validation, git
-from medharness.services.cr_impact import (
-    _build_design_impact_notes,
-    _record_design_impact_in_cr,
-    _replace_managed_block,
-)
+from medharness.services.cr_impact import _record_design_impact_in_cr
 from medharness.services.prompt_assembly import (
     MAX_DIFF_CHARS,
     _append_skills,
-    _assemble_analyze_prompt,
-    _assemble_design_prompt,
-    _assemble_design_prompt_with_spec_json,
     _assemble_develop_prompt,
     _assemble_generate_dhf_prompt,
     _assemble_review_code_prompt,
-    _assemble_review_design_prompt,
-    _assemble_review_spec_prompt,
     _build_dhf_context_block,
-    _load_prompt,
-    _load_skill,
-)
-from medharness.services.spec_validation import (
-    extract_structured_analysis,
-    parse_spec_frontmatter,
-    validate_spec,
-    write_spec_json,
 )
 
 __all__ = [
     "generate_code",
-    "generate_design",
     "generate_dhf",
-    "generate_spec",
 ]
 
 # Default source paths scanned by develop-cr for diff injection and artifact
@@ -340,168 +321,6 @@ def _build_response(
     }
 
 
-def generate_spec(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> dict:
-    """Generate or revise the CR spec. Writes docs/cr-specs/<cr_id>-Spec.md."""
-    started_at = _now_iso()
-    started_perf = time.perf_counter()
-
-    repo_root = dhf_path.resolve().parent
-    spec_path = repo_root / "docs" / "cr-specs" / f"{cr_id}-Spec.md"
-    steps: list[dict] = []
-    warnings: list[dict] = []
-    critical_step_failed = False
-    diagnostics = {
-        "anthropic_model": os.environ.get("ANTHROPIC_MODEL") or None,
-        "github_feedback": {"attempted": False},
-        "fix_attempted": False,
-        "initial_error_count": 0,
-        "final_error_count": 0,
-    }
-    inputs = {
-        "dhf_path": str(dhf_path),
-        "repo_root": str(repo_root),
-        "spec_path": str(spec_path),
-        "pr_number": pr_number,
-        "revision_mode": pr_number is not None,
-    }
-
-    if pr_number:
-        feedback_step, feedback_perf = _begin_step("fetch_pr_feedback")
-        feedback = _get_pr_feedback(pr_number)
-        diagnostics["github_feedback"] = feedback["diagnostics"]
-        warnings.extend(feedback["warnings"])
-        feedback_outcome = "warning" if feedback["warnings"] else "ok"
-        steps.append(_finish_step(feedback_step, feedback_perf, feedback_outcome, feedback["diagnostics"]))
-        prompt_step, prompt_perf = _begin_step(
-            "prepare_prompt",
-            {"prompt_kind": "spec_revision", "used_pr_feedback": True},
-        )
-        prompt = (
-            f"Read {spec_path} (the current spec on this branch), "
-            f"then revise it based on the following pull request review feedback. "
-            f"Update docs/cr-specs/ only if changes are warranted.\n\n"
-            f"Review feedback:\n{feedback['prompt_text']}"
-        )
-        steps.append(_finish_step(prompt_step, prompt_perf, "ok"))
-    else:
-        prompt_step, prompt_perf = _begin_step(
-            "prepare_prompt",
-            {"prompt_kind": "spec_generation", "used_pr_feedback": False},
-        )
-        prompt = _assemble_analyze_prompt(cr_id, dhf_path)
-        steps.append(_finish_step(prompt_step, prompt_perf, "ok"))
-
-    spec_path.parent.mkdir(parents=True, exist_ok=True)
-    rc, _ = _run_claude_step(
-        name="run_initial_generation",
-        prompt=prompt,
-        steps=steps,
-        warnings=warnings,
-        critical=True,
-    )
-    critical_step_failed = critical_step_failed or rc != 0
-
-    analysis: dict | None = None
-    errors: list[dict] = []
-    if spec_path.exists():
-        validate_step, validate_perf = _begin_step("validate_initial", {"validator": "spec_validation"})
-        errors = validate_spec(spec_path, cr_id, dhf_path)
-        diagnostics["initial_error_count"] = len(errors)
-        diagnostics["final_error_count"] = len(errors)
-        steps.append(
-            _finish_step(
-                validate_step,
-                validate_perf,
-                "failed" if errors else "ok",
-                {"error_count": len(errors)},
-            )
-        )
-        if errors:
-            diagnostics["fix_attempted"] = True
-            fix_prompt = (
-                f"The spec at {spec_path} failed validation.\n"
-                f"{_format_error_lines(errors)}\n\n"
-                f"Fix only the front-matter fields that caused errors. "
-                f"Do not change the markdown content."
-            )
-            rc, _ = _run_claude_step(
-                name="run_fix_generation",
-                prompt=fix_prompt,
-                steps=steps,
-                warnings=warnings,
-                critical=True,
-            )
-            critical_step_failed = critical_step_failed or rc != 0
-            validate_fix_step, validate_fix_perf = _begin_step("validate_after_fix", {"validator": "spec_validation"})
-            errors = validate_spec(spec_path, cr_id, dhf_path)
-            diagnostics["final_error_count"] = len(errors)
-            steps.append(
-                _finish_step(
-                    validate_fix_step,
-                    validate_fix_perf,
-                    "failed" if errors else "ok",
-                    {"error_count": len(errors)},
-                )
-            )
-        analysis = extract_structured_analysis(spec_path)
-    else:
-        warnings.append(
-            _warning(
-                "spec_file_missing",
-                f"Expected generated spec file was not found at {spec_path}.",
-            )
-        )
-        missing_step, missing_perf = _begin_step("validate_initial", {"validator": "spec_validation"})
-        steps.append(
-            _finish_step(
-                missing_step,
-                missing_perf,
-                "warning",
-                {"skipped": True, "reason": "spec_file_missing"},
-            )
-        )
-
-    spec_json_path: str | None = None
-    write_json_step, write_json_perf = _begin_step("write_spec_json")
-    if spec_path.exists():
-        fm = parse_spec_frontmatter(spec_path)
-        if fm is not None:
-            spec_json_path = str(write_spec_json(spec_path, fm))
-    steps.append(
-        _finish_step(
-            write_json_step,
-            write_json_perf,
-            "ok" if spec_json_path else "warning",
-            {"spec_json_path": spec_json_path},
-        )
-    )
-
-    review_prompt = _augment_review_prompt(_assemble_review_spec_prompt(cr_id), errors)
-    _run_claude_step(
-        name="run_review",
-        prompt=review_prompt,
-        steps=steps,
-        warnings=warnings,
-        critical=False,
-    )
-
-    return _build_response(
-        cr_id=cr_id,
-        stage="spec",
-        started_at=started_at,
-        started_perf=started_perf,
-        inputs=inputs,
-        steps=steps,
-        artifacts={
-            "spec_path": str(spec_path),
-            "spec_json_path": spec_json_path,
-            "analysis": analysis,
-        },
-        diagnostics=diagnostics,
-        warnings=warnings,
-        errors=errors,
-        critical_step_failed=critical_step_failed,
-    )
 
 
 def _format_error_lines(errors: list[dict]) -> str:
@@ -530,171 +349,6 @@ def _augment_review_prompt(base: str, errors: list[dict]) -> str:
         "\n\n## Deterministic Checks (residual issues)\n\n"
         f"The following deterministic-check failures remain after one fix attempt:\n"
         f"{residual}\n\nNote these in the review output."
-    )
-
-
-def generate_design(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> dict:
-    """Generate or revise DHF design items for a CR.
-
-    Pipeline: design pass → deterministic validation → fix-only pass on
-    errors → trimmed soft-review pass. Mechanical checks (schema,
-    traceability, presence of spec `affected_items`) live in
-    :mod:`medharness.services.design_validation`; the soft review focuses
-    on intent, completeness, and clarity.
-    """
-    started_at = _now_iso()
-    started_perf = time.perf_counter()
-
-    repo_root = dhf_path.resolve().parent
-    spec_path = repo_root / "docs" / "cr-specs" / f"{cr_id}-Spec.md"
-    steps: list[dict] = []
-    warnings: list[dict] = []
-    critical_step_failed = False
-    diagnostics = {
-        "anthropic_model": os.environ.get("ANTHROPIC_MODEL") or None,
-        "github_feedback": {"attempted": False},
-        "fix_attempted": False,
-        "initial_error_count": 0,
-        "final_error_count": 0,
-    }
-    inputs = {
-        "dhf_path": str(dhf_path),
-        "repo_root": str(repo_root),
-        "spec_path": str(spec_path),
-        "pr_number": pr_number,
-        "revision_mode": pr_number is not None,
-        "since_ref": "origin/main",
-    }
-
-    if pr_number:
-        feedback_step, feedback_perf = _begin_step("fetch_pr_feedback")
-        feedback = _get_pr_feedback(pr_number)
-        diagnostics["github_feedback"] = feedback["diagnostics"]
-        warnings.extend(feedback["warnings"])
-        steps.append(
-            _finish_step(
-                feedback_step,
-                feedback_perf,
-                "warning" if feedback["warnings"] else "ok",
-                feedback["diagnostics"],
-            )
-        )
-        prompt_step, prompt_perf = _begin_step(
-            "prepare_prompt",
-            {"prompt_kind": "design_revision", "used_pr_feedback": True},
-        )
-        prompt = (
-            f"Read the DHF design items in DHF/ related to {cr_id}, "
-            f"then revise them based on the following pull request review feedback.\n\n"
-            f"Review feedback:\n{feedback['prompt_text']}"
-        )
-        steps.append(_finish_step(prompt_step, prompt_perf, "ok"))
-    else:
-        prompt_step, prompt_perf = _begin_step(
-            "prepare_prompt",
-            {"prompt_kind": "design_generation", "used_pr_feedback": False},
-        )
-        prompt = _assemble_design_prompt_with_spec_json(cr_id, spec_path, dhf_path)
-        steps.append(
-            _finish_step(
-                prompt_step,
-                prompt_perf,
-                "ok",
-                {"used_spec_json": spec_path.with_suffix(".json").exists()},
-            )
-        )
-
-    rc, _ = _run_claude_step(
-        name="run_initial_generation",
-        prompt=prompt,
-        steps=steps,
-        warnings=warnings,
-        critical=True,
-    )
-    critical_step_failed = critical_step_failed or rc != 0
-
-    validate_step, validate_perf = _begin_step("validate_initial", {"validator": "design_validation"})
-    errors = design_validation.validate_design(cr_id, dhf_path, spec_path)
-    diagnostics["initial_error_count"] = len(errors)
-    diagnostics["final_error_count"] = len(errors)
-    steps.append(
-        _finish_step(
-            validate_step,
-            validate_perf,
-            "failed" if errors else "ok",
-            {"error_count": len(errors)},
-        )
-    )
-    if errors:
-        diagnostics["fix_attempted"] = True
-        fix_prompt = (
-            f"The DHF design for {cr_id} failed deterministic validation:\n"
-            f"{_format_error_lines(errors)}\n\n"
-            f"Fix only the items needed to clear these errors via the medharness "
-            f"CLI (`dhf item create` / `dhf item update`). Do not introduce other "
-            f"changes."
-        )
-        rc, _ = _run_claude_step(
-            name="run_fix_generation",
-            prompt=fix_prompt,
-            steps=steps,
-            warnings=warnings,
-            critical=True,
-        )
-        critical_step_failed = critical_step_failed or rc != 0
-        validate_fix_step, validate_fix_perf = _begin_step("validate_after_fix", {"validator": "design_validation"})
-        errors = design_validation.validate_design(cr_id, dhf_path, spec_path)
-        diagnostics["final_error_count"] = len(errors)
-        steps.append(
-            _finish_step(
-                validate_fix_step,
-                validate_fix_perf,
-                "failed" if errors else "ok",
-                {"error_count": len(errors)},
-            )
-        )
-
-    review_prompt = _augment_review_prompt(_assemble_review_design_prompt(cr_id), errors)
-    _run_claude_step(
-        name="run_review",
-        prompt=review_prompt,
-        steps=steps,
-        warnings=warnings,
-        critical=False,
-    )
-
-    artifact_step, artifact_perf = _begin_step("collect_artifacts", {"kind": "dhf_items_changed"})
-    items_changed = git.collect_dhf_item_changes(repo_root, "origin/main")
-    steps.append(_finish_step(artifact_step, artifact_perf, "ok", {"items_changed": items_changed}))
-    design_impact = {"recorded": False, "reason": "skipped_due_to_validation_errors"}
-    if not errors:
-        impact_step, impact_perf = _begin_step("record_design_impact")
-        design_impact = _record_design_impact_in_cr(cr_id, dhf_path, spec_path, items_changed)
-        steps.append(
-            _finish_step(
-                impact_step,
-                impact_perf,
-                "ok" if design_impact.get("recorded") else "warning",
-                design_impact,
-            )
-        )
-
-    return _build_response(
-        cr_id=cr_id,
-        stage="design",
-        started_at=started_at,
-        started_perf=started_perf,
-        inputs=inputs,
-        steps=steps,
-        artifacts={
-            "spec_path": str(spec_path),
-            "items_changed": items_changed,
-            "design_impact": design_impact,
-        },
-        diagnostics=diagnostics,
-        warnings=warnings,
-        errors=errors,
-        critical_step_failed=critical_step_failed,
     )
 
 
@@ -841,9 +495,7 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> di
     design_impact: dict = {"recorded": False, "reason": "skipped_due_to_validation_errors"}
     if not errors:
         impact_step, impact_perf = _begin_step("record_design_impact")
-        design_impact = _record_design_impact_in_cr(
-            cr_id, dhf_path, repo_root / "docs" / "cr-specs" / f"{cr_id}-Spec.md", items_changed
-        )
+        design_impact = _record_design_impact_in_cr(cr_id, dhf_path, items_changed)
         steps.append(
             _finish_step(
                 impact_step,
@@ -872,17 +524,11 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> di
 
 
 def generate_code(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> dict:
-    """Generate or revise implementation code for a CR.
-
-    Pipeline: develop pass → deterministic validation (test annotations vs.
-    spec `test_plan.needs_new_tc`) → fix-only pass on errors → trimmed
-    soft-review pass.
-    """
+    """Generate or revise implementation code for a CR."""
     started_at = _now_iso()
     started_perf = time.perf_counter()
 
     repo_root = dhf_path.resolve().parent
-    spec_path = repo_root / "docs" / "cr-specs" / f"{cr_id}-Spec.md"
     steps: list[dict] = []
     warnings: list[dict] = []
     critical_step_failed = False
@@ -896,7 +542,6 @@ def generate_code(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> d
     inputs = {
         "dhf_path": str(dhf_path),
         "repo_root": str(repo_root),
-        "spec_path": str(spec_path),
         "pr_number": pr_number,
         "revision_mode": pr_number is not None,
         "since_ref": "origin/main",
@@ -959,7 +604,7 @@ def generate_code(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> d
     critical_step_failed = critical_step_failed or rc != 0
 
     validate_step, validate_perf = _begin_step("validate_initial", {"validator": "code_validation"})
-    errors = code_validation.validate_code(cr_id, dhf_path, spec_path)
+    errors = code_validation.validate_code(cr_id, dhf_path)
     diagnostics["initial_error_count"] = len(errors)
     diagnostics["final_error_count"] = len(errors)
     steps.append(
@@ -987,7 +632,7 @@ def generate_code(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> d
         )
         critical_step_failed = critical_step_failed or rc != 0
         validate_fix_step, validate_fix_perf = _begin_step("validate_after_fix", {"validator": "code_validation"})
-        errors = code_validation.validate_code(cr_id, dhf_path, spec_path)
+        errors = code_validation.validate_code(cr_id, dhf_path)
         diagnostics["final_error_count"] = len(errors)
         steps.append(
             _finish_step(
@@ -1019,7 +664,6 @@ def generate_code(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> d
         inputs=inputs,
         steps=steps,
         artifacts={
-            "spec_path": str(spec_path),
             "files_changed": files_changed,
         },
         diagnostics=diagnostics,

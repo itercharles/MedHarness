@@ -43,14 +43,12 @@ def test_validate_atomic_branch_passes_when_spec_code_and_dhf_are_present(tmp_pa
     spec = repo_root / "docs" / "cr-specs" / "CR-001-Spec.md"
     _write_spec(spec, affected=["SYS-001"], proposed=[{"type": "SRS", "title": "New req"}])
 
-    with patch("medharness.services.git.collect_path_changes") as mock_paths, \
-         patch("medharness.services.git.collect_dhf_item_changes") as mock_items:
-        mock_paths.side_effect = [
-            {"created": [], "updated": ["docs/cr-specs/CR-001-Spec.md"], "deleted": []},
-            {"created": ["apps/client/src/feature.ts"], "updated": [], "deleted": []},
-        ]
+    with patch("medharness.services.git.collect_dhf_item_changes") as mock_items:
         mock_items.return_value = {"created": ["SRS-010"], "updated": ["SYS-001"], "deleted": []}
-        result = validate_atomic_branch(repo_root, dhf, "CR-001")
+        result = validate_atomic_branch(
+            repo_root, dhf, "CR-001",
+            spec_path=Path("docs/cr-specs/CR-001-Spec.md"),
+        )
 
     assert result["passed"] is True
     assert result["errors"] == []
@@ -64,33 +62,25 @@ def test_validate_atomic_branch_allows_spec_already_merged_on_main(tmp_path: Pat
     spec = repo_root / "docs" / "cr-specs" / "CR-001-Spec.md"
     _write_spec(spec, affected=["SYS-001"])
 
-    with patch("medharness.services.git.collect_path_changes") as mock_paths, \
-         patch("medharness.services.git.collect_dhf_item_changes") as mock_items:
-        mock_paths.side_effect = [
-            {"created": [], "updated": [], "deleted": []},
-            {"created": ["apps/client/src/feature.ts"], "updated": [], "deleted": []},
-        ]
+    with patch("medharness.services.git.collect_dhf_item_changes") as mock_items:
         mock_items.return_value = {"created": [], "updated": ["SYS-001"], "deleted": []}
-        result = validate_atomic_branch(repo_root, dhf, "CR-001")
+        result = validate_atomic_branch(
+            repo_root, dhf, "CR-001",
+            spec_path=Path("docs/cr-specs/CR-001-Spec.md"),
+        )
 
     assert result["passed"] is True
     assert result["errors"] == []
-    assert result["spec_changes"] == {"created": [], "updated": [], "deleted": []}
 
 
 def test_validate_atomic_branch_fails_without_code_changes(tmp_path: Path):
     repo_root = tmp_path
     dhf = repo_root / "DHF"
     dhf.mkdir()
-    spec = repo_root / "docs" / "cr-specs" / "CR-001-Spec.md"
-    _write_spec(spec)
 
     with patch("medharness.services.git.collect_path_changes") as mock_paths, \
          patch("medharness.services.git.collect_dhf_item_changes", return_value={"created": [], "updated": [], "deleted": []}):
-        mock_paths.side_effect = [
-            {"created": [], "updated": ["docs/cr-specs/CR-001-Spec.md"], "deleted": []},
-            {"created": [], "updated": [], "deleted": []},
-        ]
+        mock_paths.return_value = {"created": [], "updated": [], "deleted": []}
         # code_paths must be explicit — the default () skips the code-change check
         result = validate_atomic_branch(repo_root, dhf, "CR-001", code_paths=("src/",))
 
@@ -98,21 +88,33 @@ def test_validate_atomic_branch_fails_without_code_changes(tmp_path: Path):
     assert any(e["field"] == "code_branch" for e in result["errors"])
 
 
-def test_validate_atomic_branch_fails_when_spec_is_missing(tmp_path: Path):
+def test_validate_atomic_branch_passes_without_spec_when_dhf_changes_present(tmp_path: Path):
+    """Spec is optional; DHF changes are still required and sufficient to pass."""
     repo_root = tmp_path
     dhf = repo_root / "DHF"
     dhf.mkdir()
 
-    with patch("medharness.services.git.collect_path_changes") as mock_paths, \
-         patch("medharness.services.git.collect_dhf_item_changes", return_value={"created": [], "updated": [], "deleted": []}):
-        mock_paths.side_effect = [
-            {"created": [], "updated": [], "deleted": []},
-            {"created": ["apps/client/src/feature.ts"], "updated": [], "deleted": []},
-        ]
+    with patch("medharness.services.git.collect_dhf_item_changes",
+               return_value={"created": ["SRS-010"], "updated": [], "deleted": []}):
+        result = validate_atomic_branch(repo_root, dhf, "CR-001")
+
+    assert result["passed"] is True
+    assert result["errors"] == []
+    assert result["spec_path"] is None
+
+
+def test_validate_atomic_branch_fails_without_spec_and_without_dhf_changes(tmp_path: Path):
+    """Without a spec, DHF changes are always required (generate-dhf must run on every CR branch)."""
+    repo_root = tmp_path
+    dhf = repo_root / "DHF"
+    dhf.mkdir()
+
+    with patch("medharness.services.git.collect_dhf_item_changes",
+               return_value={"created": [], "updated": [], "deleted": []}):
         result = validate_atomic_branch(repo_root, dhf, "CR-001")
 
     assert result["passed"] is False
-    assert any(e["field"] == "spec_path" for e in result["errors"])
+    assert any(e["field"] == "dhf_branch" for e in result["errors"])
 
 
 def test_validate_atomic_branch_fails_without_dhf_changes_when_spec_expects_them(tmp_path: Path):
@@ -122,13 +124,12 @@ def test_validate_atomic_branch_fails_without_dhf_changes_when_spec_expects_them
     spec = repo_root / "docs" / "cr-specs" / "CR-001-Spec.md"
     _write_spec(spec, proposed=[{"type": "SRS", "title": "New req"}])
 
-    with patch("medharness.services.git.collect_path_changes") as mock_paths, \
-         patch("medharness.services.git.collect_dhf_item_changes", return_value={"created": [], "updated": [], "deleted": []}):
-        mock_paths.side_effect = [
-            {"created": [], "updated": ["docs/cr-specs/CR-001-Spec.md"], "deleted": []},
-            {"created": ["apps/client/src/feature.ts"], "updated": [], "deleted": []},
-        ]
-        result = validate_atomic_branch(repo_root, dhf, "CR-001")
+    with patch("medharness.services.git.collect_dhf_item_changes",
+               return_value={"created": [], "updated": [], "deleted": []}):
+        result = validate_atomic_branch(
+            repo_root, dhf, "CR-001",
+            spec_path=Path("docs/cr-specs/CR-001-Spec.md"),
+        )
 
     assert result["passed"] is False
     assert any(e["field"] == "dhf_branch" for e in result["errors"])

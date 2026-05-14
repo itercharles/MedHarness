@@ -240,11 +240,11 @@ class TestCiApproveGate:
     def test_approve_gate_status(self, approved, expected_status, expected_exit):
         runner = CliRunner()
         with patch("medharness.services.pr_approval.check_approved", return_value=approved):
-            r = runner.invoke(main, ["ci", "approve-gate", "--cr", "CR-001", "--stage", "spec", "--pr", "42"])
+            r = runner.invoke(main, ["ci", "approve-gate", "--cr", "CR-001", "--stage", "design", "--pr", "42"])
         assert r.exit_code == expected_exit, r.output
         payload = _first_json_line(r.output)
         assert payload["approved"] is approved
-        assert payload["label"] == "cr-spec-approved"
+        assert payload["label"] == "cr-design-approved"
         assert expected_status in r.output
 
     @pytest.mark.parametrize("stage,label", [
@@ -264,18 +264,18 @@ class TestCiCrStatus:
     def test_explicit_stage_and_pr_reports_approved(self):
         runner = CliRunner()
         with patch("medharness.services.pr_approval.check_approved", return_value=True):
-            r = runner.invoke(main, ["ci", "cr-status", "--cr", "CR-001", "--stage", "spec", "--pr", "42"])
+            r = runner.invoke(main, ["ci", "cr-status", "--cr", "CR-001", "--stage", "design", "--pr", "42"])
         assert r.exit_code == 0, r.output
         payload = _first_json_line(r.output)
-        assert payload["stage"] == "spec"
-        assert payload["approval_label"] == "cr-spec-approved"
+        assert payload["stage"] == "design"
+        assert payload["approval_label"] == "cr-design-approved"
         assert payload["approval_state"] == "approved"
         assert payload["approved"] is True
 
     def test_explicit_stage_and_pr_reports_pending(self):
         runner = CliRunner()
         with patch("medharness.services.pr_approval.check_approved", return_value=False):
-            r = runner.invoke(main, ["ci", "cr-status", "--cr", "CR-001", "--stage", "spec", "--pr", "42"])
+            r = runner.invoke(main, ["ci", "cr-status", "--cr", "CR-001", "--stage", "design", "--pr", "42"])
         assert r.exit_code == 0, r.output
         payload = _first_json_line(r.output)
         assert payload["approval_state"] == "pending"

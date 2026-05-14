@@ -19,8 +19,6 @@ import pytest
 
 from medharness.services.cr_generation import (
     generate_code,
-    generate_design,
-    generate_spec,
 )
 
 # ── Stable contracts (what JSON consumers may depend on) ─────────────────────
@@ -52,7 +50,7 @@ REMOVED_LEGACY_KEYS = {
     "spec_path", "analysis", "spec_json_path", "items_changed", "files_changed",
 }
 
-STAGE_VALUES = {"spec", "design", "develop"}
+STAGE_VALUES = {"develop", "generate_dhf"}
 OUTCOME_VALUES = {"ok", "corrected", "completed_with_errors", "tool_error"}
 
 
@@ -69,111 +67,6 @@ def dhf(tmp_path: Path) -> Path:
 
 def _empty_diff() -> MagicMock:
     return MagicMock(stdout="", returncode=0)
-
-
-# ── generate_spec ────────────────────────────────────────────────────────────
-
-class TestGenerateSpecContract:
-    def _spec(self, dhf: Path, cr_id: str = "CR-001") -> Path:
-        spec_path = dhf.parent / "docs" / "cr-specs" / f"{cr_id}-Spec.md"
-        spec_path.parent.mkdir(parents=True, exist_ok=True)
-        spec_path.write_text(
-            f'---\ncr_id: "{cr_id}"\ndisposition: approve\npipeline_route: standard\n'
-            'affected_items: []\nproposed_new_items: []\n'
-            'design_impact_summary: "Test summary."\n'
-            'test_plan:\n  auto_covered: []\n'
-            '  needs_new_tc: []\n  must_be_manual: []\n---\n',
-            encoding="utf-8",
-        )
-        return spec_path
-
-    def test_keys_present_and_no_legacy_leak(self, dhf):
-        self._spec(dhf)
-        with patch("medharness.services.cr_generation._run_claude",
-                   return_value=(0, "")):
-            result = generate_spec("CR-001", dhf)
-        assert COMMON_KEYS <= result.keys(), (
-            f"missing keys: {COMMON_KEYS - result.keys()}"
-        )
-        assert REMOVED_LEGACY_KEYS.isdisjoint(result.keys()), (
-            f"legacy key leaked back: {REMOVED_LEGACY_KEYS & result.keys()}"
-        )
-        assert isinstance(result["errors"], list)
-        assert isinstance(result["warnings"], list)
-        assert isinstance(result["timing"]["elapsed_ms"], int)
-        assert isinstance(result["timing"]["started_at"], str)
-        assert isinstance(result["artifacts"]["spec_path"], str)
-        assert isinstance(result["artifacts"]["analysis"], dict)
-        assert isinstance(result["artifacts"]["spec_json_path"], str)
-
-    def test_value_domains(self, dhf):
-        self._spec(dhf)
-        with patch("medharness.services.cr_generation._run_claude",
-                   return_value=(0, "")):
-            result = generate_spec("CR-001", dhf)
-        assert result["stage"] == "spec"
-        assert result["outcome"] in OUTCOME_VALUES
-        assert set(result["artifacts"]["analysis"]) == {
-            "disposition",
-            "pipeline_route",
-            "decline_rationale",
-            "affected_items",
-            "proposed_new_items",
-            "design_impact_summary",
-            "test_plan",
-        }
-
-
-# ── generate_design ──────────────────────────────────────────────────────────
-
-class TestGenerateDesignContract:
-    def test_keys_present_and_no_legacy_leak(self, dhf):
-        with patch("medharness.services.cr_generation._run_claude",
-                   return_value=(0, "")), \
-             patch("medharness.services.design_validation.validate_design",
-                   return_value=[]), \
-             patch("subprocess.run", return_value=_empty_diff()):
-            result = generate_design("CR-100", dhf)
-        assert COMMON_KEYS <= result.keys(), (
-            f"missing keys: {COMMON_KEYS - result.keys()}"
-        )
-        assert REMOVED_LEGACY_KEYS.isdisjoint(result.keys()), (
-            f"legacy key leaked back: {REMOVED_LEGACY_KEYS & result.keys()}"
-        )
-
-    def test_value_domains(self, dhf):
-        with patch("medharness.services.cr_generation._run_claude",
-                   return_value=(0, "")), \
-             patch("medharness.services.design_validation.validate_design",
-                   return_value=[]), \
-             patch("subprocess.run", return_value=_empty_diff()):
-            result = generate_design("CR-100", dhf)
-        assert result["stage"] == "design"
-        assert result["outcome"] in OUTCOME_VALUES
-
-    def test_items_changed_shape(self, dhf):
-        with patch("medharness.services.cr_generation._run_claude",
-                   return_value=(0, "")), \
-             patch("medharness.services.design_validation.validate_design",
-                   return_value=[]), \
-             patch("subprocess.run", return_value=_empty_diff()):
-            result = generate_design("CR-100", dhf)
-        items = result["artifacts"]["items_changed"]
-        assert set(items.keys()) == _change_bucket_keys()
-        for bucket in items.values():
-            assert isinstance(bucket, list)
-
-    def test_completed_with_errors_when_residual(self, dhf):
-        residual = [{"field": "schema", "issue": "x", "fix": "y"}]
-        with patch("medharness.services.cr_generation._run_claude",
-                   return_value=(0, "")), \
-             patch("medharness.services.design_validation.validate_design",
-                   side_effect=[residual, residual]), \
-             patch("subprocess.run", return_value=_empty_diff()):
-            result = generate_design("CR-100", dhf)
-        assert result["outcome"] == "completed_with_errors"
-        assert result["errors"][0]["field"] == "schema"
-        assert result["errors"][0]["code"] == "schema"
 
 
 # ── generate_code ────────────────────────────────────────────────────────────
@@ -219,18 +112,6 @@ class TestGenerateCodeContract:
 # ── JSON-serializability — the contract is JSON, not Python dicts ────────────
 
 class TestResponseIsJsonSerializable:
-    def test_design_response_is_json(self, dhf):
-        import json
-        with patch("medharness.services.cr_generation._run_claude",
-                   return_value=(0, "")), \
-             patch("medharness.services.design_validation.validate_design",
-                   return_value=[]), \
-             patch("subprocess.run", return_value=_empty_diff()):
-            result = generate_design("CR-300", dhf)
-        # If this raises, a non-JSON-safe value (e.g. a Path) leaked into the
-        # response and would crash `click.echo(json.dumps(result))`.
-        json.dumps(result)
-
     def test_code_response_is_json(self, dhf):
         import json
         with patch("medharness.services.cr_generation._run_claude",
