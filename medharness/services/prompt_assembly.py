@@ -3,10 +3,8 @@ from __future__ import annotations
 """Prompt loading and assembly helpers for CR generation flows."""
 
 import importlib.resources
-import json
 from pathlib import Path
 
-from medharness.services.spec_validation import read_spec_json
 
 MAX_ITEMS = 200
 MAX_DIFF_CHARS = 40_000
@@ -150,62 +148,12 @@ def _build_dhf_context_block(dhf_path: Path) -> str:
     return "".join(lines)
 
 
-def _assemble_analyze_prompt(cr_id: str, dhf_path: Path | None = None) -> str:
-    prompt = _load_prompt("cr_analyze.md").replace("{{cr_id}}", cr_id)
-    if dhf_path is not None:
-        block = _build_dhf_context_block(dhf_path)
-        if block:
-            prompt += "\n\n" + block
-    return _append_skills(prompt)
-
-
-def _assemble_design_prompt(cr_id: str) -> str:
-    prompt = _load_prompt("cr_design.md").replace("{{cr_id}}", cr_id)
-    return _append_skills(prompt)
-
-
 def _assemble_develop_prompt(cr_id: str) -> str:
     return _load_prompt("cr_develop.md").replace("{{cr_id}}", cr_id)
 
 
-def _assemble_review_spec_prompt(cr_id: str) -> str:
-    return _load_prompt("cr_review_spec.md").replace("{{cr_id}}", cr_id)
-
-
-def _assemble_review_design_prompt(cr_id: str) -> str:
-    return _load_prompt("cr_review_design.md").replace("{{cr_id}}", cr_id)
-
-
 def _assemble_review_code_prompt(cr_id: str) -> str:
     return _load_prompt("cr_review_code.md").replace("{{cr_id}}", cr_id)
-
-
-def _assemble_design_prompt_with_spec_json(
-    cr_id: str, spec_path: Path, dhf_path: Path | None = None
-) -> str:
-    prompt = _assemble_design_prompt(cr_id)
-    spec_json = read_spec_json(spec_path)
-    if not spec_json:
-        return prompt
-    prompt += (
-        f"\n\n## Pre-computed Spec Summary (from {cr_id}-Spec.json)\n"
-        "The following structured data was extracted from the approved spec. "
-        "Use it directly — do not re-read or re-interpret the Markdown spec.\n"
-        "For each proposed_new_items entry, preserve any explicit `parent` "
-        "value when creating the DHF item so the design output matches the "
-        "approved spec metadata.\n"
-        "If a proposed_new_items entry includes `verification_method`, map that "
-        "analysis metadata into the target item's actual schema instead of copying "
-        "it verbatim: `SYS` uses `verification_method` as a single-element list, "
-        "`SOUP` uses it as a scalar string, and item types without that field must "
-        "not receive a synthetic `verification_method` property.\n"
-        f"```json\n{json.dumps(spec_json, indent=2)}\n```\n"
-    )
-    if dhf_path is not None:
-        closure = _build_impact_closure_block(dhf_path, spec_json)
-        if closure:
-            prompt += closure
-    return prompt
 
 
 def _assemble_generate_dhf_prompt(cr_id: str, dhf_path: Path | None = None) -> str:
@@ -217,44 +165,3 @@ def _assemble_generate_dhf_prompt(cr_id: str, dhf_path: Path | None = None) -> s
     return _append_skills(prompt)
 
 
-def _build_impact_closure_block(dhf_path: Path, spec_json: dict) -> str:
-    # Inline imports avoid coupling prompt_assembly to dhfkit/medharness core
-    # at import-time. These modules are only needed when a real DHF path is
-    # provided at runtime.
-    from dhfkit.local_adapter import LocalDHFAdapter
-
-    from medharness.core import MedHarnessCore
-
-    affected = spec_json.get("affected_items")
-    if not isinstance(affected, list) or not affected:
-        return ""
-
-    # Silent degradation: if the DHF cannot be loaded the design prompt still
-    # gets the spec JSON; it just won't receive pre-computed impact closure.
-    try:
-        adapter = LocalDHFAdapter(dhf_path)
-        core = MedHarnessCore(adapter)
-    except Exception:
-        return ""
-
-    lines = ["## Pre-computed Impact Closure\n"]
-    lines.append(
-        "For each affected item the upstream (requirements hierarchy) and "
-        "downstream (linked tests, risks, etc.) nodes are listed so you can "
-        "verify completeness without traversing the graph yourself.\n"
-    )
-
-    for uid in affected:
-        uid = str(uid)
-        chain = core.graph.get_item_chain(uid)
-        if chain is None:
-            lines.append(f"### {uid}\n\nNot found in DHF graph.\n")
-            continue
-        upstream = chain.get("upstream", [])
-        downstream = chain.get("downstream", [])
-        lines.append(f"### {uid}\n")
-        us = ", ".join(sorted(upstream)) if upstream else "none"
-        ds = ", ".join(sorted(downstream)) if downstream else "none"
-        lines.append(f"Upstream: {us}\nDownstream: {ds}\n\n")
-
-    return "".join(lines)

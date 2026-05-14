@@ -10,6 +10,8 @@ patched so no LLM is invoked). Asserts that:
 This complements ``test_response_contract.py`` (which tests the service
 function directly) by also exercising ``cli/ci.py`` ``_format_summary``
 and the ``json.dumps``/``click.echo`` plumbing.
+
+Covered stages: develop-cr, validate-code, validate-branch.
 """
 
 from __future__ import annotations
@@ -51,107 +53,6 @@ def _split_stdout_json(stdout: str) -> dict:
 # CI summary assertions intentionally check ``r.output`` rather than ``r.stderr``.
 
 
-class TestAnalyzeCrJsonContract:
-    def test_json_payload_has_documented_keys(self, dhf):
-        spec_path = dhf.parent / "docs" / "cr-specs" / "CR-001-Spec.md"
-        spec_path.parent.mkdir(parents=True, exist_ok=True)
-        spec_path.write_text(
-            '---\ncr_id: "CR-001"\ndisposition: approve\npipeline_route: standard\n'
-            'affected_items: []\nproposed_new_items: []\n'
-            'design_impact_summary: "Test summary."\n'
-            'test_plan:\n  auto_covered: []\n'
-            '  needs_new_tc: []\n  must_be_manual: []\n---\n',
-            encoding="utf-8",
-        )
-        runner = CliRunner()
-        with patch("medharness.services.cr_generation._run_claude",
-                   return_value=(0, "")):
-            r = runner.invoke(main, ["--dhf", str(dhf), "ci", "analyze-cr", "--cr", "CR-001"])
-        assert r.exit_code == 0, (r.output, r.stderr)
-        payload = _split_stdout_json(r.stdout)
-        for key in (
-            "cr_id", "stage", "outcome", "summary", "timing", "inputs",
-            "progress", "steps", "artifacts", "diagnostics", "warnings", "errors",
-        ):
-            assert key in payload, f"missing {key}; got {sorted(payload)}"
-        assert payload["stage"] == "spec"
-
-    def test_stderr_summary_format(self, dhf):
-        spec_path = dhf.parent / "docs" / "cr-specs" / "CR-002-Spec.md"
-        spec_path.parent.mkdir(parents=True, exist_ok=True)
-        spec_path.write_text(
-            '---\ncr_id: "CR-002"\ndisposition: approve\npipeline_route: standard\n'
-            'affected_items: []\nproposed_new_items: []\n'
-            'design_impact_summary: "Test summary."\n'
-            'test_plan:\n  auto_covered: []\n'
-            '  needs_new_tc: []\n  must_be_manual: []\n---\n',
-            encoding="utf-8",
-        )
-        runner = CliRunner()
-        with patch("medharness.services.cr_generation._run_claude",
-                   return_value=(0, "")):
-            r = runner.invoke(main, ["--dhf", str(dhf), "ci", "analyze-cr", "--cr", "CR-002"])
-        assert r.exit_code == 0
-        assert "OK Spec generated for CR-002" in r.output
-        assert "outcome:" in r.output
-
-    def test_tool_error_exits_non_zero_and_uses_error_summary(self, dhf):
-        spec_path = dhf.parent / "docs" / "cr-specs" / "CR-003-Spec.md"
-        spec_path.parent.mkdir(parents=True, exist_ok=True)
-        spec_path.write_text(
-            '---\ncr_id: "CR-003"\ndisposition: approve\npipeline_route: standard\n'
-            'affected_items: []\nproposed_new_items: []\n'
-            'design_impact_summary: "Test summary."\n'
-            'test_plan:\n  auto_covered: []\n'
-            '  needs_new_tc: []\n  must_be_manual: []\n---\n',
-            encoding="utf-8",
-        )
-        runner = CliRunner()
-        with patch("medharness.services.cr_generation._run_claude", return_value=(1, "claude failed")):
-            r = runner.invoke(main, ["--dhf", str(dhf), "ci", "analyze-cr", "--cr", "CR-003"])
-        assert r.exit_code == 1
-        payload = _split_stdout_json(r.stdout)
-        assert payload["outcome"] == "tool_error"
-        assert "ERROR Spec generated for CR-003" in r.output
-
-
-class TestDesignCrJsonContract:
-    def test_json_payload_has_documented_keys(self, dhf):
-        runner = CliRunner()
-        with patch("medharness.services.cr_generation._run_claude",
-                   return_value=(0, "")), \
-             patch("medharness.services.design_validation.validate_design",
-                   return_value=[]), \
-             patch("subprocess.run", return_value=_empty_diff()):
-            r = runner.invoke(main, ["--dhf", str(dhf), "ci", "design-cr", "--cr", "CR-100"])
-        assert r.exit_code == 0, (r.output, r.stderr)
-        payload = _split_stdout_json(r.stdout)
-        for key in (
-            "cr_id", "stage", "outcome", "summary", "timing", "inputs",
-            "progress", "steps", "artifacts", "diagnostics", "warnings", "errors",
-        ):
-            assert key in payload, f"missing {key}"
-        assert payload["stage"] == "design"
-        # Removed legacy fields must not reappear.
-        for legacy in ("items_created", "items_updated", "files_written", "status", "corrections", "validation"):
-            assert legacy not in payload, f"removed key reappeared: {legacy}"
-
-    def test_residual_errors_propagate_to_stderr(self, dhf):
-        residual = [{"field": "schema", "issue": "x", "fix": "y"}]
-        runner = CliRunner()
-        with patch("medharness.services.cr_generation._run_claude",
-                   return_value=(0, "")), \
-             patch("medharness.services.design_validation.validate_design",
-                   side_effect=[residual, residual]), \
-             patch("subprocess.run", return_value=_empty_diff()):
-            r = runner.invoke(main, ["--dhf", str(dhf), "ci", "design-cr", "--cr", "CR-101"])
-        assert r.exit_code == 0
-        payload = _split_stdout_json(r.stdout)
-        assert payload["outcome"] == "completed_with_errors"
-        assert payload["errors"][0]["field"] == "schema"
-        assert "errors: 1" in r.output
-
-
 class TestDevelopCrJsonContract:
     def test_json_payload_has_documented_keys(self, dhf):
         runner = CliRunner()
@@ -173,29 +74,6 @@ class TestDevelopCrJsonContract:
             assert legacy not in payload, f"removed key reappeared: {legacy}"
 
 
-class TestValidateDesignJsonContract:
-    def test_json_payload_has_documented_keys(self, dhf):
-        runner = CliRunner()
-        with patch("medharness.services.design_validation.validate_design", return_value=[]):
-            r = runner.invoke(main, ["--dhf", str(dhf), "ci", "validate-design", "--cr", "CR-300"])
-        assert r.exit_code == 0, (r.output, r.stderr)
-        payload = _split_stdout_json(r.stdout)
-        for key in ("cr_id", "stage", "passed", "spec_path", "errors"):
-            assert key in payload, f"missing {key}"
-        assert payload["stage"] == "design"
-        assert payload["passed"] is True
-
-    def test_errors_propagate_and_exit_non_zero(self, dhf):
-        residual = [{"field": "schema", "issue": "x", "fix": "y"}]
-        runner = CliRunner()
-        with patch("medharness.services.design_validation.validate_design", return_value=residual):
-            r = runner.invoke(main, ["--dhf", str(dhf), "ci", "validate-design", "--cr", "CR-301"])
-        assert r.exit_code == 1
-        payload = _split_stdout_json(r.stdout)
-        assert payload["passed"] is False
-        assert payload["errors"] == residual
-
-
 class TestValidateCodeJsonContract:
     def test_json_payload_has_documented_keys(self, dhf):
         runner = CliRunner()
@@ -203,7 +81,7 @@ class TestValidateCodeJsonContract:
             r = runner.invoke(main, ["--dhf", str(dhf), "ci", "validate-code", "--cr", "CR-400"])
         assert r.exit_code == 0, (r.output, r.stderr)
         payload = _split_stdout_json(r.stdout)
-        for key in ("cr_id", "stage", "passed", "spec_path", "since_ref", "errors"):
+        for key in ("cr_id", "stage", "passed", "since_ref", "errors"):
             assert key in payload, f"missing {key}"
         assert payload["stage"] == "develop"
         assert payload["passed"] is True
@@ -230,9 +108,8 @@ class TestValidateBranchJsonContract:
             "cr_id": "CR-500",
             "since_ref": "origin/main",
             "passed": True,
-            "spec_path": str(dhf.parent / "docs" / "cr-specs" / "CR-500-Spec.md"),
+            "spec_path": None,
             "expected_dhf_changes": True,
-            "spec_changes": {"created": [], "updated": ["docs/cr-specs/CR-500-Spec.md"], "deleted": []},
             "dhf_item_changes": {"created": ["SRS-010"], "updated": [], "deleted": []},
             "code_changes": {"created": ["apps/client/src/feature.ts"], "updated": [], "deleted": []},
             "errors": [],
@@ -243,7 +120,7 @@ class TestValidateBranchJsonContract:
         payload = _split_stdout_json(r.stdout)
         for key in (
             "cr_id", "since_ref", "passed", "spec_path", "expected_dhf_changes",
-            "spec_changes", "dhf_item_changes", "code_changes", "errors",
+            "dhf_item_changes", "code_changes", "errors",
         ):
             assert key in payload, f"missing {key}"
         assert payload["passed"] is True
@@ -253,9 +130,8 @@ class TestValidateBranchJsonContract:
             "cr_id": "CR-501",
             "since_ref": "origin/main",
             "passed": False,
-            "spec_path": str(dhf.parent / "docs" / "cr-specs" / "CR-501-Spec.md"),
+            "spec_path": None,
             "expected_dhf_changes": True,
-            "spec_changes": {"created": [], "updated": [], "deleted": []},
             "dhf_item_changes": {"created": [], "updated": [], "deleted": []},
             "code_changes": {"created": [], "updated": [], "deleted": []},
             "errors": [{"field": "code_branch", "issue": "x", "fix": "y"}],

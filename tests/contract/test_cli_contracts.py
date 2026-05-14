@@ -156,16 +156,6 @@ class TestInitCommand:
 class TestCRGenerationCommands:
     """Contract tests for medharness CR generation and preflight CI commands."""
 
-    def test_analyze_cr_help(self):
-        """medharness ci analyze-cr --help exits 0."""
-        r = _run("medharness", "ci", "analyze-cr", "--help")
-        assert r.returncode == 0, r.stderr
-
-    def test_design_cr_help(self):
-        """medharness ci design-cr --help exits 0."""
-        r = _run("medharness", "ci", "design-cr", "--help")
-        assert r.returncode == 0, r.stderr
-
     def test_develop_cr_help(self):
         """medharness ci develop-cr --help exits 0."""
         r = _run("medharness", "ci", "develop-cr", "--help")
@@ -175,12 +165,6 @@ class TestCRGenerationCommands:
         """medharness ci generate-dhf --help exits 0."""
         r = _run("medharness", "ci", "generate-dhf", "--help")
         assert r.returncode == 0, r.stderr
-
-    def test_validate_design_help(self):
-        """medharness ci validate-design --help exits 0."""
-        r = _run("medharness", "ci", "validate-design", "--help")
-        assert r.returncode == 0, r.stderr
-        assert "--dhf" not in r.stdout
 
     def test_validate_code_help(self):
         """medharness ci validate-code --help exits 0."""
@@ -194,23 +178,6 @@ class TestCRGenerationCommands:
         assert r.returncode == 0, r.stderr
         assert "--dhf" not in r.stdout
 
-    def test_validate_spec_help_shows_local_dhf(self):
-        """medharness ci validate-spec --help shows local --dhf."""
-        r = _run("medharness", "ci", "validate-spec", "--help")
-        assert r.returncode == 0, r.stderr
-        assert "--dhf" in r.stdout
-
-    def test_analyze_cr_requires_cr_flag(self):
-        """medharness ci analyze-cr without --cr exits non-zero with usage error."""
-        r = _run("medharness", "ci", "analyze-cr")
-        assert r.returncode != 0
-        assert "cr" in r.stderr.lower() or "cr" in r.stdout.lower()
-
-    def test_design_cr_requires_cr_flag(self):
-        """medharness ci design-cr without --cr exits non-zero with usage error."""
-        r = _run("medharness", "ci", "design-cr")
-        assert r.returncode != 0
-
     def test_develop_cr_requires_cr_flag(self):
         """medharness ci develop-cr without --cr exits non-zero with usage error."""
         r = _run("medharness", "ci", "develop-cr")
@@ -219,11 +186,6 @@ class TestCRGenerationCommands:
     def test_generate_dhf_requires_cr_flag(self):
         """medharness ci generate-dhf without --cr exits non-zero."""
         r = _run("medharness", "ci", "generate-dhf")
-        assert r.returncode != 0
-
-    def test_validate_design_requires_cr_flag(self):
-        """medharness ci validate-design without --cr exits non-zero."""
-        r = _run("medharness", "ci", "validate-design")
         assert r.returncode != 0
 
     def test_validate_code_requires_cr_flag(self):
@@ -235,16 +197,6 @@ class TestCRGenerationCommands:
         """medharness ci validate-branch without --cr exits non-zero."""
         r = _run("medharness", "ci", "validate-branch")
         assert r.returncode != 0
-
-    def test_analyze_cr_accepts_pr_flag(self):
-        """medharness ci analyze-cr --help shows --pr option."""
-        r = _run("medharness", "ci", "analyze-cr", "--help")
-        assert "--pr" in r.stdout
-
-    def test_design_cr_accepts_pr_flag(self):
-        """medharness ci design-cr --help shows --pr option."""
-        r = _run("medharness", "ci", "design-cr", "--help")
-        assert "--pr" in r.stdout
 
     def test_develop_cr_accepts_pr_flag(self):
         """medharness ci develop-cr --help shows --pr option."""
@@ -265,7 +217,7 @@ class TestCRGenerationCommands:
         """Generation and preflight commands are listed in medharness ci --help."""
         r = _run("medharness", "ci", "--help")
         assert r.returncode == 0, r.stderr
-        for cmd in ["analyze-cr", "design-cr", "develop-cr", "generate-dhf", "validate-design", "validate-code", "validate-branch"]:
+        for cmd in ["develop-cr", "generate-dhf", "validate-code", "validate-branch"]:
             assert cmd in r.stdout, f"Command {cmd!r} missing from ci --help"
 
 

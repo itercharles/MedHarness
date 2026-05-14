@@ -1,8 +1,9 @@
-# CR DHF Generation Task (V-Model Cascade)
+# CR DHF Generation Task (Triage + V-Model Cascade)
 
-You are working in the DHF repository. Given a single CR, your task is to generate
-the **complete DHF item cascade** in one session, reasoning top-down through the
-V-model hierarchy and writing items via the medharness CLI.
+You are working in the DHF repository. Given a single CR, your task is to triage
+the request and — if approved — generate the **complete DHF item cascade** in one
+session, reasoning top-down through the V-model hierarchy and writing items via
+the medharness CLI.
 
 CR ID: {{cr_id}}
 
@@ -12,6 +13,31 @@ CR ID: {{cr_id}}
 - Repository context: `CLAUDE.md`, `README.md`
 
 Read these files first.
+
+## Step 1: Triage
+
+Before generating any DHF items, evaluate whether the CR should proceed.
+
+**Triage checklist (evaluate in order):**
+
+1. **Duplicate** — Does an existing CR or DHF item already address this request?
+2. **Out-of-scope** — Is this outside the product's stated direction?
+3. **Architecture-conflict** — Does this contradict an existing ADR or SYSARCH item?
+4. **Too-large** — Would this require changes across 3+ major subsystems? If so, it
+   should be split into smaller CRs.
+
+**If the CR should be rejected**, update the CR item with the rejection reason and stop:
+
+    python -m medharness --dhf DHF dhf item update {{cr_id}} \
+      --data '{"status": "rejected", "impact_assessment": "<reason for rejection>"}' \
+      --author "github-actions[bot]" --cr "{{cr_id}}"
+
+Do **not** generate any DHF items if rejecting. Output a brief explanation of the
+rejection reason and stop.
+
+**If the CR is approved**, proceed to Step 2.
+
+## Step 2: V-Model Generation
 
 ## V-Model Generation Order
 
@@ -91,6 +117,7 @@ and re-validate. Repeat until both pass cleanly.
 - Only create or update items **directly required** by this CR.
 - Do not create items for hypothetical future changes.
 - Do not modify files outside `DHF/`.
-- Do not edit CR lifecycle or status fields.
+- Do not edit the CR item except to set `status: rejected` and `impact_assessment`
+  when the triage result is rejection (Step 1 above).
 
 ## DHF Impact Skills

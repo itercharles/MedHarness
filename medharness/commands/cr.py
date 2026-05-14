@@ -21,54 +21,6 @@ from medharness.workflows.cr_intake import (
 from dhfkit.change_requests import complete_change_request
 
 
-def _generate_initial_spec(cr_id: str, dhf_root: Path) -> dict:
-    from medharness.services.cr_generation import generate_spec  # noqa: PLC0415
-
-    result = generate_spec(cr_id, dhf_root)
-    outcome = result.get("outcome")
-    spec_status = "error" if outcome == "tool_error" else (
-        "completed_with_errors" if outcome == "completed_with_errors" else "ok"
-    )
-    spec_validation = None
-    if outcome == "ok":
-        spec_validation = "passed"
-    elif outcome in {"corrected", "completed_with_errors"}:
-        spec_validation = "corrected"
-    return {
-        "spec_generated": True,
-        "spec_status": spec_status,
-        "spec_validation": spec_validation,
-        "spec_path": (result.get("artifacts") or {}).get("spec_path"),
-        "spec_json_path": (result.get("artifacts") or {}).get("spec_json_path"),
-        "spec_error": None,
-    }
-
-
-def _empty_spec_payload() -> dict:
-    return {
-        "spec_generated": False,
-        "spec_status": None,
-        "spec_validation": None,
-        "spec_path": None,
-        "spec_json_path": None,
-        "spec_error": None,
-    }
-
-
-def _safe_generate_initial_spec(cr_id: str, dhf_root: Path) -> dict:
-    try:
-        return _generate_initial_spec(cr_id, dhf_root)
-    except Exception as exc:  # noqa: BLE001
-        return {
-            "spec_generated": False,
-            "spec_status": "error",
-            "spec_validation": None,
-            "spec_path": None,
-            "spec_json_path": None,
-            "spec_error": str(exc),
-        }
-
-
 def workflow_complete(
     ctx: click.Context, dhf_repo: Path | None, cr_id: str,
     performed_by: str, commit_changes: bool, push: bool,
@@ -108,7 +60,7 @@ def workflow_intake_github_issue(
     ctx: click.Context, dhf_repo: Path | None, event_path: Path,
     comments_path: Path | None, active_milestone: str | None,
     marker_name: str, branch_prefix: str, title_prefix: str,
-    write: bool, generate_spec_draft: bool,
+    write: bool,
 ) -> dict:
     _, dhf_root = _h._resolve_dhf_repo_paths(ctx, dhf_repo)
     adapter = _h._make_adapter_for_dhf_root(dhf_root)
@@ -119,22 +71,18 @@ def workflow_intake_github_issue(
         write=write, adapter=adapter,
         marker_name=marker_name, branch_prefix=branch_prefix, title_prefix=title_prefix,
     )
-    payload = {
+    return {
         "should_create": result.should_create, "reason": result.reason,
         "cr_id": result.cr_id, "branch": result.branch,
         "cr_path": result.cr_path, "title": result.title,
-        **_empty_spec_payload(),
     }
-    if write and generate_spec_draft and result.should_create and result.cr_id:
-        payload.update(_safe_generate_initial_spec(result.cr_id, dhf_root))
-    return payload
 
 
 def workflow_intake_github_issue_ci(
     ctx: click.Context, dhf_repo: Path | None, event_path: Path,
     comments_path: Path | None, active_milestone: str | None,
     marker_name: str, branch_prefix: str, title_prefix: str,
-    write: bool, create_branch: bool, open_pr: bool, generate_spec_draft: bool,
+    write: bool, create_branch: bool, open_pr: bool,
     source_repo: str | None, comment_source_issue: bool,
     issue_number: int | None, github_token: str | None,
     milestone_title: str | None,
@@ -160,10 +108,7 @@ def workflow_intake_github_issue_ci(
 
     branch_url = ""
     pr_url = ""
-    spec_payload = _empty_spec_payload()
     if result.should_create and write:
-        if result.cr_id and generate_spec_draft:
-            spec_payload = _safe_generate_initial_spec(result.cr_id, dhf_root)
         branch = result.branch
         if create_branch:
             _h._run_git(repo_root, ["checkout", "-B", branch])
@@ -193,8 +138,8 @@ def workflow_intake_github_issue_ci(
                         f"Automated CR intake from {src_repo} issue:\n\n"
                         f"- Source issue: {event.html_url}\n"
                         f"- Target weekly milestone: {milestone}\n\n"
-                        f"This PR creates {result.cr_id} and the initial spec draft. "
-                        f"The first review gate is the spec.\n"
+                        f"This PR creates {result.cr_id}. "
+                        f"Design (generate-dhf) will run on the next CI trigger.\n"
                     )
                     proc = subprocess.run(
                         [
@@ -234,7 +179,6 @@ def workflow_intake_github_issue_ci(
         "should_create": result.should_create, "reason": result.reason,
         "cr_id": result.cr_id, "branch": result.branch,
         "branch_url": branch_url, "pr_url": pr_url, "title": result.title,
-        **spec_payload,
     }
 
 
@@ -306,7 +250,7 @@ def check_status(ctx: click.Context, cr_id: str) -> dict:
         return {"cr_id": cr_id, "found": False, "error": f"CR '{cr_id}' not found"}
 
     status = item.get("status", "")
-    valid_statuses = {"new", "analyzing", "developing"}
+    valid_statuses = {"new"}
     return {
         "cr_id": cr_id, "found": True,
         "status": status, "valid": status in valid_statuses,
