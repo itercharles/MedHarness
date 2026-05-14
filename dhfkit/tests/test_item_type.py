@@ -102,6 +102,7 @@ def test_item_type_dict_name_uses_human_readable_name():
     assert sys_type["name"] != "SYS", "name should be human-readable, not the code"
 
 
+
 def test_has_verification_defaults():
     assert ItemType.SYS.value.has_verification is True
     assert ItemType.SRS.value.has_verification is True
