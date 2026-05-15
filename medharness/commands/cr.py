@@ -82,10 +82,6 @@ def workflow_intake_github_issue(
         "should_create": result.should_create, "reason": result.reason,
         "cr_id": result.cr_id, "branch": result.branch,
         "cr_path": result.cr_path, "title": result.title,
-        # Deprecated — spec generation removed; kept for API compatibility.
-        "spec_generated": False, "spec_status": None,
-        "spec_validation": None, "spec_path": None,
-        "spec_json_path": None, "spec_error": None,
     }
 
 
@@ -190,10 +186,6 @@ def workflow_intake_github_issue_ci(
         "should_create": result.should_create, "reason": result.reason,
         "cr_id": result.cr_id, "branch": result.branch,
         "branch_url": branch_url, "pr_url": pr_url, "title": result.title,
-        # Deprecated — spec generation removed; kept for API compatibility.
-        "spec_generated": False, "spec_status": None,
-        "spec_validation": None, "spec_path": None,
-        "spec_json_path": None, "spec_error": None,
     }
 
 

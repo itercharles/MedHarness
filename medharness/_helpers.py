@@ -58,16 +58,6 @@ def _parse_json_object(data: str) -> dict:
     return parsed
 
 
-def _get_document_with_legacy_fallback(adapter, dhf_path: Path, doc_id: str) -> str | None:
-    content = adapter.get_document(doc_id)
-    if content is not None:
-        return content
-    legacy_path = dhf_path.parent / "docs" / "cr-specs" / f"{doc_id}.md"
-    if legacy_path.is_file():
-        return legacy_path.read_text(encoding="utf-8")
-    return None
-
-
 DEFAULT_ACCEPTANCE_COVERAGE_PAIRS = ("UC:CRS", "CRS:SYS", "SYS:SRS", "SRS:SWDD")
 DEFAULT_TRACEABILITY_DOC_TYPES = ("UC", "CRS", "SYS", "SRS", "SWDD")
 
