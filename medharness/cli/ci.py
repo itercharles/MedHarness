@@ -579,7 +579,14 @@ def register(main):
         Pass --pr N to revise existing DHF items based on PR review comments.
         """
         from medharness.services.cr_generation import generate_dhf  # noqa: PLC0415
+        from medharness.workflows.cr_state import assert_cr_active  # noqa: PLC0415
         dhf: Path = ctx.obj["dhf"]
+        try:
+            assert_cr_active(_h._make_adapter(ctx), cr_id)
+        except ValueError as exc:
+            raise click.ClickException(str(exc)) from exc
+        except (FileNotFoundError, OSError):
+            pass  # DHF config not loadable yet; generate_dhf will surface the error
         result = generate_dhf(cr_id, dhf, pr_number=pr_number)
         click.echo(json.dumps(result))
         click.echo(
@@ -603,7 +610,14 @@ def register(main):
         Pass --pr N to revise existing implementation based on PR review comments.
         """
         from medharness.services.cr_generation import generate_code  # noqa: PLC0415
+        from medharness.workflows.cr_state import assert_cr_active  # noqa: PLC0415
         dhf: Path = ctx.obj["dhf"]
+        try:
+            assert_cr_active(_h._make_adapter(ctx), cr_id)
+        except ValueError as exc:
+            raise click.ClickException(str(exc)) from exc
+        except (FileNotFoundError, OSError):
+            pass  # DHF config not loadable yet; generate_code will surface the error
         result = generate_code(cr_id, dhf, pr_number=pr_number)
         click.echo(json.dumps(result))
         click.echo(_format_summary("Implementation", "revised" if pr_number else "generated", cr_id, result), err=True)

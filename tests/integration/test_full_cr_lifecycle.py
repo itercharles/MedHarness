@@ -98,10 +98,15 @@ class TestScaffoldBaseline:
 class TestCRItemLifecycle:
     """Walk a freshly-created CR through its lifecycle via the CLI.
 
-    The template global lifecycle defines 'new', 'develop', 'completed' states.
-    We create a CR (gets initial status 'new'), directly update it to 'develop'
-    via dhf item update (the intermediate states are not in the global lifecycle
-    config), then complete it via the workflow command.
+    The CR doc-type lifecycle defines transitions: null→new, new→design,
+    design→develop, develop→completed. However, 'design' and 'develop' are not
+    defined in the template's global_lifecycle.states, so execute_transition
+    skips them (lifecycle engine requires target state to be in global config).
+
+    We bypass this template gap by using dhf item update to set status='develop'
+    directly — this does not invoke the lifecycle engine, only the saver. The
+    develop→completed transition then works because 'completed' IS in global
+    lifecycle and the CR doc-type has [develop]→completed defined.
     """
 
     @pytest.fixture(scope="class")
@@ -184,6 +189,10 @@ class TestCRItemLifecycle:
         )
         assert "Traceback" not in r.stdout
         assert "Traceback" not in r.stderr
+        # Must exit 0 (skip) or 1 (explicit error), never crash
+        assert r.returncode in (0, 1)
+        # The response or error must reference the CR ID so the caller knows what was skipped
+        assert cr_id in (r.stdout + r.stderr)
 
 
 class TestItemCreationValidation:

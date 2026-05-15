@@ -33,10 +33,8 @@ def run_doctor(dhf_path: Optional[Path] = None) -> dict:
     except Exception as exc:
         checks.append(_check("medharness_package", False, f"import failed: {exc}"))
 
-    # dhfkit importable
+    # dhfkit importable (ships inside medharness; verify the import works)
     try:
-        import importlib.metadata
-        version = importlib.metadata.version("medharness")  # dhfkit ships inside medharness
         import dhfkit  # noqa: F401
         checks.append(_check("dhfkit_package", True, "dhfkit importable"))
     except Exception as exc:

@@ -18,6 +18,13 @@ from dhfkit.repository.saver import ItemSaver
 from dhfkit.result_store import ResultStore
 from dhfkit.id_generator import get_next_id
 
+_ITEM_LINK_FIELDS = (
+    "derives_from", "implements", "mitigates", "satisfies",
+    "guided_by", "informs", "design", "verifies", "validates",
+    "mitigated_by",
+)
+_UID_PATTERN = re.compile(r"^[A-Z][A-Z0-9]*(-[A-Z0-9]+)*-\d+$")
+
 
 class LocalDHFAdapter:
     """Implements DHFAdapter for a local filesystem DHF directory."""
@@ -146,15 +153,8 @@ class LocalDHFAdapter:
         against malformed LLM output being persisted silently.
         """
         known_prefixes = {dt.prefix for dt in self._config.doc_types}
-        _LINK_FIELDS = (
-            "derives_from", "implements", "mitigates", "satisfies",
-            "guided_by", "informs", "design", "verifies", "validates",
-            "mitigated_by",
-        )
-        import re as _re
-        uid_pattern = _re.compile(r"^[A-Z][A-Z0-9]*(-[A-Z0-9]+)*-\d+$")
         errors = []
-        for field in _LINK_FIELDS:
+        for field in _ITEM_LINK_FIELDS:
             val = data.get(field)
             if not val:
                 continue
@@ -163,7 +163,7 @@ class LocalDHFAdapter:
                 if not isinstance(uid, str):
                     errors.append(f"{field}: expected string UID, got {type(uid).__name__} ({uid!r})")
                     continue
-                if not uid_pattern.match(uid):
+                if not _UID_PATTERN.match(uid):
                     errors.append(f"{field}: '{uid}' does not match expected UID pattern (e.g. SYS-001)")
                     continue
                 prefix = uid.rsplit("-", 1)[0] + "-"

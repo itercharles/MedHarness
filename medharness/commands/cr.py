@@ -32,6 +32,13 @@ def workflow_complete(
     try:
         transition = complete_change_request(adapter, cr_id, performed_by=performed_by)
     except ValueError as exc:
+        item = adapter.get_item(cr_id)
+        current_status = item.get("status", "unknown") if item else "unknown"
+        if current_status in ("completed", "cancelled"):
+            return {
+                "skip": True, "cr_id": cr_id, "status": current_status,
+                "reason": f"Already '{current_status}' — nothing to do.",
+            }
         raise click.ClickException(str(exc)) from exc
 
     changed = _h._git_has_changes(repo_root)

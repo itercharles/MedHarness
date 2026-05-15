@@ -17,6 +17,11 @@ jobs:
       - name: Check out source
         uses: actions/checkout@v5
 
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+
       - name: Extract tag version
         id: tag
         run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
@@ -48,8 +53,10 @@ jobs:
         run: |
           VERSION="${{ steps.tag.outputs.version }}"
           PACKAGE="medharness"
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://pypi.org/pypi/$PACKAGE/$VERSION/json")
-          if [ "$STATUS" = "200" ]; then
+          STATUS=$(curl -sf -o /dev/null -w "%{http_code}" "https://pypi.org/pypi/$PACKAGE/$VERSION/json" || echo "curl_error")
+          if [ "$STATUS" = "curl_error" ] || [ -z "$STATUS" ]; then
+            echo "WARNING: Could not reach PyPI — skipping duplicate-version check."
+          elif [ "$STATUS" = "200" ]; then
             echo "ERROR: $PACKAGE==$VERSION already exists on PyPI — did you forget to bump the version?"
             exit 1
           fi

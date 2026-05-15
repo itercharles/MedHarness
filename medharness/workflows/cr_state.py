@@ -7,10 +7,6 @@ gates on CR status uses the same source of truth instead of inline string sets.
 from __future__ import annotations
 
 from enum import Enum
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    pass
 
 
 class CRPhase(str, Enum):

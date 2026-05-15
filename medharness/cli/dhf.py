@@ -339,6 +339,7 @@ def register(main):
         Shows required-link failures, coverage gaps, and a per-matrix breakdown.
         Use --format json to get the raw validation dict for scripting.
         """
+        import sys as _sys
         from dhfkit.traceability import format_traceability_report
         result = _api.validate_traceability(_resolve(ctx))
         if fmt == "json":
@@ -351,7 +352,7 @@ def register(main):
         else:
             click.echo(output)
         if not result.get("passed"):
-            raise SystemExit(1)
+            _sys.exit(1)
 
     @dhf_context.command("overview")
     @click.option("--cr", "cr_id", default=None, metavar="CR_ID")
