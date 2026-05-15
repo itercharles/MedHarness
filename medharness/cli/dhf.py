@@ -326,6 +326,34 @@ def register(main):
 
         click.echo(json.dumps(result, default=str))
 
+    # ── Report ──
+
+    @dhf.command("report")
+    @click.option("--format", "fmt", type=click.Choice(["text", "json"]), default="text", show_default=True)
+    @click.option("--out", "out_path", default=None, type=click.Path(dir_okay=False, path_type=Path),
+                  help="Write report to this file instead of stdout.")
+    @click.pass_context
+    def dhf_report(ctx: click.Context, fmt: str, out_path: Path | None) -> None:
+        """Print a human-readable traceability coverage report.
+
+        Shows required-link failures, coverage gaps, and a per-matrix breakdown.
+        Use --format json to get the raw validation dict for scripting.
+        """
+        import sys as _sys
+        from dhfkit.traceability import format_traceability_report
+        result = _api.validate_traceability(_resolve(ctx))
+        if fmt == "json":
+            output = json.dumps(result, indent=2)
+        else:
+            output = format_traceability_report(result)
+        if out_path:
+            out_path.write_text(output + "\n", encoding="utf-8")
+            click.echo(f"Report written to {out_path}", err=True)
+        else:
+            click.echo(output)
+        if not result.get("passed"):
+            _sys.exit(1)
+
     @dhf_context.command("overview")
     @click.option("--cr", "cr_id", default=None, metavar="CR_ID")
     @click.option("--junit", "junit_files", multiple=True, type=click.Path(exists=True, dir_okay=False, path_type=Path))

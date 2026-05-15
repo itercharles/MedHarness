@@ -18,6 +18,15 @@ from dhfkit.repository.saver import ItemSaver
 from dhfkit.result_store import ResultStore
 from dhfkit.id_generator import get_next_id
 
+_ITEM_LINK_FIELDS = (
+    "derives_from", "implements", "mitigates", "satisfies",
+    "guided_by", "informs", "design", "verifies", "validates",
+    "mitigated_by",
+    # CR and DEF built-in relationship fields
+    "affected_items", "target_release", "found_in_release", "fixed_in_release",
+)
+_UID_PATTERN = re.compile(r"^[A-Z][A-Z0-9]*(-[A-Z0-9]+)*-\d+$")
+
 
 class LocalDHFAdapter:
     """Implements DHFAdapter for a local filesystem DHF directory."""
@@ -138,6 +147,44 @@ class LocalDHFAdapter:
             result.append(self._enrich_item_dict(item))
         return result
 
+    def _validate_item_links(self, data: dict) -> None:
+        """Raise ValidationError if any relationship field references an unknown prefix.
+
+        Checks all known link fields (derives_from, implements, mitigates, etc.)
+        to ensure every UID value matches a known doc-type prefix. This guards
+        against malformed LLM output being persisted silently.
+        """
+        known_prefixes = {dt.prefix for dt in self._config.doc_types}
+        errors = []
+        for field in _ITEM_LINK_FIELDS:
+            val = data.get(field)
+            if not val:
+                continue
+            if isinstance(val, str):
+                uids = [val]
+            elif isinstance(val, (list, tuple)):
+                uids = val
+            else:
+                errors.append(
+                    f"{field}: expected list of UID strings, got {type(val).__name__} ({val!r})"
+                )
+                continue
+            for uid in uids:
+                if not isinstance(uid, str):
+                    errors.append(f"{field}: expected string UID, got {type(uid).__name__} ({uid!r})")
+                    continue
+                if not _UID_PATTERN.match(uid):
+                    errors.append(f"{field}: '{uid}' does not match expected UID pattern (e.g. SYS-001)")
+                    continue
+                prefix = uid.rsplit("-", 1)[0] + "-"
+                if prefix not in known_prefixes:
+                    errors.append(
+                        f"{field}: '{uid}' has unknown prefix '{prefix}' "
+                        f"(known: {sorted(known_prefixes)})"
+                    )
+        if errors:
+            raise ValidationError("Item link validation failed:\n" + "\n".join(f"  - {e}" for e in errors))
+
     def create_item(self, data: dict, author: str = "system", cr_id: Optional[str] = None) -> dict:
         # CR-006: ID is always auto-generated; any caller-supplied id is ignored
         data = {k: v for k, v in data.items() if k != 'id'}
@@ -160,6 +207,8 @@ class LocalDHFAdapter:
                 if None in from_states or 'null' in from_states:
                     data['status'] = t['to_state']
                     break
+
+        self._validate_item_links(data)
 
         # Validate against doc-type schema before saving
         if self._loader.project_config:
@@ -209,6 +258,7 @@ class LocalDHFAdapter:
         updated_data.update(data)
         # Remove keys explicitly set to None (signal to clear the field)
         updated_data = {k: v for k, v in updated_data.items() if v is not None}
+        self._validate_item_links(updated_data)
         item = Item.model_validate(updated_data)
         self._saver.save(item, author=author, cr_id=cr_id)
         return self._enrich_item_dict(item)
@@ -551,3 +601,64 @@ class LocalDHFAdapter:
     def list_documents(self) -> List[str]:
         """Return logical document IDs (filename stems) for all files under documents/."""
         return list(self._doc_index.keys())
+
+    # ------------------------------------------------------------------
+    # CR context
+    # ------------------------------------------------------------------
+
+    def get_implementation_context(self, cr_id: str) -> dict:
+        """Return a structured context dict for a CR — items, traceability, spec."""
+        cr = self.get_item(cr_id)
+        items = self.list_items()
+        trace = self.validate_traceability()
+        coverage_summary = [
+            {
+                "parent": c["parent_type"],
+                "child": c["child_type"],
+                "covered": c["covered"],
+                "total": c["total"],
+            }
+            for c in trace.get("coverage", [])
+        ]
+        spec_text = self.get_document(f"{cr_id}-Spec") or ""
+        return {
+            "cr": cr or {"id": cr_id, "found": False},
+            "spec_text": spec_text,
+            "item_count": len(items),
+            "items": [
+                {
+                    "id": it["id"],
+                    "type": it.get("type", ""),
+                    "title": it.get("title", ""),
+                    "status": it.get("status", ""),
+                    "tracelinks": it.get("all_linked_uids", []),
+                }
+                for it in sorted(items, key=lambda x: x["id"])
+            ],
+            "traceability": {
+                "valid": all(c["covered"] == c["total"] for c in coverage_summary),
+                "coverage": coverage_summary,
+                "orphan_count": len(trace.get("orphans", [])),
+            },
+        }
+
+    # ------------------------------------------------------------------
+    # Compliance run history (extension point — not persisted by default)
+    # ------------------------------------------------------------------
+
+    def record_compliance_run(
+        self,
+        group_id: str,
+        report_dict: dict,
+        commit_sha: str = "",
+        trigger: str = "manual",
+    ) -> None:
+        """Record a compliance run. Override in subclasses to persist."""
+
+    def get_compliance_runs(
+        self,
+        group_id: str,
+        since_date: Optional[str] = None,
+    ) -> List[Dict]:
+        """Return compliance runs for a group. Override in subclasses to persist."""
+        return []

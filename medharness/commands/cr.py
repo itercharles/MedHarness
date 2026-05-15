@@ -32,6 +32,13 @@ def workflow_complete(
     try:
         transition = complete_change_request(adapter, cr_id, performed_by=performed_by)
     except ValueError as exc:
+        item = adapter.get_item(cr_id)
+        current_status = item.get("status", "unknown") if item else "unknown"
+        if current_status in ("completed", "cancelled"):
+            return {
+                "skip": True, "cr_id": cr_id, "status": current_status,
+                "reason": f"Already '{current_status}' — nothing to do.",
+            }
         raise click.ClickException(str(exc)) from exc
 
     changed = _h._git_has_changes(repo_root)
@@ -252,14 +259,20 @@ def workflow_complete_from_github_pr(
 
 
 def check_status(ctx: click.Context, cr_id: str) -> dict:
+    from medharness.workflows.cr_state import CRPhase, ACTIVE_PHASES
     core = _h._make_core(ctx)
     item = core.get_item(cr_id)
     if item is None:
         return {"cr_id": cr_id, "found": False, "error": f"CR '{cr_id}' not found"}
 
     status = item.get("status", "")
-    valid_statuses = {"new", "design", "develop"}
+    try:
+        phase = CRPhase(status)
+        valid = phase in ACTIVE_PHASES
+    except ValueError:
+        valid = False
     return {
         "cr_id": cr_id, "found": True,
-        "status": status, "valid": status in valid_statuses,
+        "status": status, "valid": valid,
+        "active_phases": [p.value for p in ACTIVE_PHASES],
     }
