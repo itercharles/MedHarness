@@ -13,13 +13,12 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ### Breaking Changes
 
-- **`workflow_intake_github_issue` and `workflow_intake_github_issue_ci` no longer return deprecated spec fields**
-  - The keys `spec_generated`, `spec_status`, `spec_validation`, `spec_path`,
-    `spec_json_path`, and `spec_error` have been removed from both functions'
-    return dicts. They were previously stubbed to `false`/`null` since the
-    spec-generation phase was removed in 0.5.0. Callers that unpack these
-    keys from the Python API or parse them from CLI JSON output must remove
-    those references.
+- **`workflow_intake_github_issue` and `workflow_intake_github_issue_ci` drop the spec compatibility stubs**
+  - 0.5.0 removed spec generation but kept `spec_generated`, `spec_status`,
+    `spec_validation`, `spec_path`, `spec_json_path`, and `spec_error` in
+    both return dicts as `false`/`null` stubs "for API compatibility."
+    Those stubs are now removed. Callers that read these keys from the Python
+    API or parse them from CLI JSON output must drop those references.
 
 ### Changes
 
