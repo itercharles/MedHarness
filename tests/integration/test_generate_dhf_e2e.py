@@ -29,6 +29,21 @@ REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 # Fixtures
 # ---------------------------------------------------------------------------
 
+def _init_dhf_repo(dhf_dir: Path, name: str, email: str) -> None:
+    """Initialise a git repo in dhf_dir with origin/main pointing at itself."""
+    for cmd in [
+        ["git", "init", "-b", "main", str(dhf_dir)],
+        ["git", "-C", str(dhf_dir), "config", "user.email", email],
+        ["git", "-C", str(dhf_dir), "config", "user.name", name],
+        ["git", "-C", str(dhf_dir), "add", "-A"],
+        ["git", "-C", str(dhf_dir), "commit", "-m", "init"],
+        # Self-remote so origin/main resolves locally without a network call.
+        ["git", "-C", str(dhf_dir), "remote", "add", "origin", str(dhf_dir)],
+        ["git", "-C", str(dhf_dir), "fetch", "origin"],
+    ]:
+        subprocess.run(cmd, capture_output=True, check=True)
+
+
 @pytest.fixture(scope="module")
 def dhf_repo():
     """Scaffold a DHF with a git repo initialised at origin/main."""
@@ -36,17 +51,7 @@ def dhf_repo():
         dhf_dir = Path(tmp) / "e2e-dhf"
         _scaffold_dhf(dhf_dir)
         _replace_placeholders(dhf_dir, "E2E Test Project")
-        for cmd in [
-            ["git", "init", "-b", "main", str(dhf_dir)],
-            ["git", "-C", str(dhf_dir), "config", "user.email", "e2e@test.local"],
-            ["git", "-C", str(dhf_dir), "config", "user.name", "E2E Test"],
-            ["git", "-C", str(dhf_dir), "add", "-A"],
-            ["git", "-C", str(dhf_dir), "commit", "-m", "init"],
-            # Create an origin remote alias so origin/main resolves locally.
-            ["git", "-C", str(dhf_dir), "remote", "add", "origin", str(dhf_dir)],
-            ["git", "-C", str(dhf_dir), "fetch", "origin"],
-        ]:
-            subprocess.run(cmd, capture_output=True, check=True)
+        _init_dhf_repo(dhf_dir, "E2E Test", "e2e@test.local")
         yield dhf_dir
 
 
@@ -284,16 +289,7 @@ def _make_fix_pass_dhf(tmp: str) -> Path:
     dhf_dir = Path(tmp) / "fix-pass-dhf"
     _scaffold_dhf(dhf_dir)
     _replace_placeholders(dhf_dir, "Fix Pass Test")
-    for cmd in [
-        ["git", "init", "-b", "main", str(dhf_dir)],
-        ["git", "-C", str(dhf_dir), "config", "user.email", "fix@test.local"],
-        ["git", "-C", str(dhf_dir), "config", "user.name", "Fix Pass Test"],
-        ["git", "-C", str(dhf_dir), "add", "-A"],
-        ["git", "-C", str(dhf_dir), "commit", "-m", "init"],
-        ["git", "-C", str(dhf_dir), "remote", "add", "origin", str(dhf_dir)],
-        ["git", "-C", str(dhf_dir), "fetch", "origin"],
-    ]:
-        subprocess.run(cmd, capture_output=True, check=True)
+    _init_dhf_repo(dhf_dir, "Fix Pass Test", "fix@test.local")
     return dhf_dir
 
 
@@ -312,7 +308,8 @@ class TestGenerateDhfFixPassFlow:
             def _stub(prompt: str) -> tuple[int, str]:
                 call_count["n"] += 1
                 if call_count["n"] == 1:
-                    # Create a CRS item with no SYS child — cascade check will fire.
+                    # Create a CRS item (auto-assigned CRS-002, since CRS-001 is in
+                    # the scaffold) with no SYS child — cascade check will fire.
                     subprocess.run(
                         [
                             sys.executable, "-m", "medharness",
@@ -326,15 +323,17 @@ class TestGenerateDhfFixPassFlow:
                                 "priority": "Low",
                             }),
                         ],
-                        capture_output=True, cwd=str(REPO_ROOT),
+                        capture_output=True, check=True, cwd=str(REPO_ROOT),
                     )
-                    # Commit the new file so `git diff origin/main` detects it.
-                    # (git diff <tree> only sees committed or modified-tracked
-                    # changes, not untracked or merely staged files.)
-                    subprocess.run(["git", "-C", str(dhf_dir), "add", "-A"], capture_output=True)
+                    # Commit so `git diff origin/main` detects the new file.
+                    # (git diff <tree> skips untracked and staged-only files.)
+                    subprocess.run(
+                        ["git", "-C", str(dhf_dir), "add", "-A"],
+                        capture_output=True, check=True,
+                    )
                     subprocess.run(
                         ["git", "-C", str(dhf_dir), "commit", "-m", "stub: add CRS item"],
-                        capture_output=True,
+                        capture_output=True, check=True,
                     )
                 # Fix-pass call (n >= 2): noop — cascade error remains.
                 return 0, "ok"
