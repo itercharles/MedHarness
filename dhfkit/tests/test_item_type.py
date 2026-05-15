@@ -99,7 +99,7 @@ def test_item_type_dict_name_uses_human_readable_name():
     types = {t["code"]: t for t in adapter.list_item_types()}
     sys_type = types.get("SYS")
     assert sys_type is not None
-    assert sys_type["name"] != "SYS", "name should be human-readable, not the code"
+    assert sys_type["display_name"] != "SYS", "display_name should be human-readable, not the code"
 
 
 

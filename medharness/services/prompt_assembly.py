@@ -93,7 +93,7 @@ def _build_dhf_context_block(dhf_path: Path) -> str:
         for dt in adapter.list_item_types():
             if dt.get("role"):
                 role = dt["role"]
-                entry = f"{dt['code']} ({dt['name']})"
+                entry = f"{dt['code']} ({dt['display_name']})"
                 by_role.setdefault(role, []).append(entry)
                 role_codes.setdefault(role, []).append(dt["code"])
     except Exception:

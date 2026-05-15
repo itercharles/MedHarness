@@ -48,7 +48,11 @@ def ci_structural_gate(
     core = MedHarnessCore(adapter)
 
     passed = True
-    results: dict[str, dict] = {}
+    results: dict[str, Any] = {
+        "coverage_gaps": [],
+        "orphans": [],
+        "verification_gaps": [],
+    }
 
     if run_schema:
         r = adapter.validate_schema()
@@ -77,6 +81,38 @@ def ci_structural_gate(
         for c in coverage_list:
             if not c.get("passed", True) and fail_on_uncovered:
                 passed = False
+
+        # Structured extracts for machine consumers
+        results["coverage_gaps"] = [
+            {
+                "matrix": c.get("matrix"),
+                "parent_type": c.get("parent_type"),
+                "child_type": c.get("child_type"),
+                "uncovered": c.get("uncovered", []),
+            }
+            for c in coverage_list
+            if not c.get("passed", True)
+        ]
+        results["orphans"] = tr.get("orphans", [])
+
+        # verification_criteria gaps: verifiable items missing the field
+        _VERIFIABLE = frozenset({"CRS", "SYS", "SRS"})
+        verification_gaps = []
+        try:
+            for item in adapter.list_items():
+                uid = item.get("id", "")
+                type_code = uid.split("-")[0] if "-" in uid else ""
+                if type_code in _VERIFIABLE:
+                    vc = str(item.get("verification_criteria") or "").strip()
+                    if not vc:
+                        verification_gaps.append({
+                            "id": uid,
+                            "type": type_code,
+                            "issue": "missing verification_criteria",
+                        })
+        except Exception:
+            pass
+        results["verification_gaps"] = verification_gaps
 
     if coverage_pairs:
         pairs = _parse_coverage_pairs(coverage_pairs)

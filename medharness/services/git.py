@@ -148,7 +148,11 @@ def validate_atomic_branch(
     if code_paths and code_change_count == 0:
         errors.append({
             "field": "code_branch",
-            "issue": f"No product code changes found under {', '.join(code_paths)} since {since_ref}.",
+            "issue": (
+                f"No product code changes found under {', '.join(code_paths)} "
+                f"since {since_ref}. "
+                f"(checked paths: {', '.join(code_paths)})"
+            ),
             "fix": "Add the implementation changes on the same branch before opening a PR.",
         })
 
@@ -158,6 +162,27 @@ def validate_atomic_branch(
             "issue": f"No DHF item YAML changes found on the branch since {since_ref}.",
             "fix": "Run generate-dhf to create or update the required DHF items on this branch.",
         })
+
+    # Validate that spec affected_items exist in the DHF
+    if affected and dhf_path.is_dir():
+        try:
+            from dhfkit.local_adapter import LocalDHFAdapter
+            adapter = LocalDHFAdapter(dhf_path)
+            for uid in affected:
+                if adapter.get_item(uid) is None:
+                    errors.append({
+                        "field": "spec.affected_items",
+                        "issue": (
+                            f"Spec lists '{uid}' in affected_items "
+                            "but that item does not exist in the DHF."
+                        ),
+                        "fix": (
+                            f"Create '{uid}' via generate-dhf, or remove it from "
+                            "the spec's affected_items list."
+                        ),
+                    })
+        except (FileNotFoundError, OSError, ValueError):
+            pass  # DHF config not loadable — skip item existence check
 
     return {
         "cr_id": cr_id,
