@@ -600,6 +600,9 @@ def register(main):
             _format_summary("DHF cascade", "revised" if pr_number else "generated", cr_id, result),
             err=True,
         )
+        for _err in result.get("errors") or []:
+            click.echo(f"  FAIL ({_err['field']}): {_err['issue']}", err=True)
+            click.echo(f"    Fix: {_err['fix']}", err=True)
         _raise_for_tool_error(result)
 
     @ci.command("develop-cr")
@@ -628,4 +631,7 @@ def register(main):
         result = generate_code(cr_id, dhf, pr_number=pr_number)
         click.echo(json.dumps(result))
         click.echo(_format_summary("Implementation", "revised" if pr_number else "generated", cr_id, result), err=True)
+        for _err in result.get("errors") or []:
+            click.echo(f"  FAIL ({_err['field']}): {_err['issue']}", err=True)
+            click.echo(f"    Fix: {_err['fix']}", err=True)
         _raise_for_tool_error(result)

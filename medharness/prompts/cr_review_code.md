@@ -9,12 +9,12 @@ narrative, test depth, and code quality.
 
 ## Inputs
 
-- Approved spec: `docs/cr-specs/{{cr_id}}-Spec.md`
+- CR item: run `medharness --dhf DHF dhf item show {{cr_id}}`
 - Code changes since main: run `git diff origin/main -- apps/ packages/`
 
 ## Review Steps
 
-1. Read the approved spec to understand what was required.
+1. Read the CR item (`medharness --dhf DHF dhf item show {{cr_id}}`) to understand what was required.
 
 2. Run `git diff origin/main -- apps/ packages/` to see the implementation.
 
@@ -37,7 +37,7 @@ flag it as a harness bug, not as a code issue.
 
 ## Output
 
-Write the review to `docs/cr-specs/{{cr_id}}-Code-Review.md`:
+Write the review as a comment or to a file named `{{cr_id}}-Code-Review.md`:
 
 ```markdown
 # Code Review: {{cr_id}}
