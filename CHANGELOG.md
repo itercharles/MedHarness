@@ -11,6 +11,29 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+### Breaking Changes
+
+- **`workflow_intake_github_issue` and `workflow_intake_github_issue_ci` no longer return deprecated spec fields**
+  - The keys `spec_generated`, `spec_status`, `spec_validation`, `spec_path`,
+    `spec_json_path`, and `spec_error` have been removed from both functions'
+    return dicts. They were previously stubbed to `false`/`null` since the
+    spec-generation phase was removed in 0.5.0. Callers that unpack these
+    keys from the Python API or parse them from CLI JSON output must remove
+    those references.
+
+### Changes
+
+- Removed unused `_get_document_with_legacy_fallback` helper from `_helpers.py`
+  (legacy `docs/cr-specs/` fallback path, no callers).
+- `ci generate-dhf` and `ci develop-cr` now emit per-error `field`/`issue`/`Fix:`
+  detail lines to stderr when validation errors remain after generation, matching
+  the existing pattern in `ci validate-code` and `ci validate-branch`.
+- `cr_review_code.md` prompt updated: references CR item via
+  `medharness --dhf DHF dhf item show {{cr_id}}` instead of the removed
+  `docs/cr-specs/` file path; review output written to `docs/reviews/`.
+- Added golden E2E integration tests (`test_generate_dhf_e2e.py`) covering
+  `generate_dhf` and `generate_code` orchestration with a stubbed Claude CLI.
+
 ---
 
 ## [0.5.0] — 2026-05-14

@@ -58,7 +58,6 @@ def _parse_json_object(data: str) -> dict:
     return parsed
 
 
-
 DEFAULT_ACCEPTANCE_COVERAGE_PAIRS = ("UC:CRS", "CRS:SYS", "SYS:SRS", "SRS:SWDD")
 DEFAULT_TRACEABILITY_DOC_TYPES = ("UC", "CRS", "SYS", "SRS", "SWDD")
 

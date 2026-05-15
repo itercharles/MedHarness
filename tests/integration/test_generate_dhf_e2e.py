@@ -1,7 +1,7 @@
 """Golden E2E integration test for generate_dhf and generate_code orchestration.
 
 Exercises the full Python-side orchestration without invoking the Claude CLI:
-  - scaffold real DHF, initialise git, create a CR item
+  - scaffold real DHF, initialise git (CR-001 comes from the scaffold)
   - monkeypatch _run_claude to control exit code and output
   - call generate_dhf / generate_code directly
   - verify response structure, step names, outcome, and artifact shape
@@ -252,7 +252,7 @@ class TestGenerateCodeSuccessStub:
         from medharness.services.cr_generation import generate_code
         result = generate_code("CR-001", dhf_repo / "DHF")
         artifacts = result.get("artifacts", {})
-        assert "files_changed" in artifacts
+        assert _REQUIRED_ARTIFACT_KEYS_CODE <= artifacts.keys()
         fc = artifacts["files_changed"]
         assert "created" in fc and "updated" in fc and "deleted" in fc
 
