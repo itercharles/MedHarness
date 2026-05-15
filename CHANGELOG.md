@@ -13,6 +13,16 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ---
 
+## [0.6.1] — 2026-05-15
+
+### Changes
+
+- Test cleanup: extracted `_init_dhf_repo()` helper to eliminate duplicated
+  git setup across E2E test fixtures; added `check=True` to subprocess calls
+  inside the fix-pass stub so silent failures raise immediately.
+
+---
+
 ## [0.6.0] — 2026-05-15
 
 ### Breaking Changes
