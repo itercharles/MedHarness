@@ -162,11 +162,15 @@ def _item_references(item: dict, uid: str) -> bool:
 
 def _validate_cascade_completeness(
     created_ids: list[str],
-    all_changed_ids: set[str],
     by_id: dict[str, dict],
 ) -> list[dict]:
-    """Check that newly created parent-tier items have at least one child-tier item
-    in this CR's changed set that links back to them via a standard link field."""
+    """Check that newly created parent-tier items have at least one child-tier
+    item anywhere in the current DHF that links back to them.
+
+    Searches by_id (the full post-generate-dhf DHF state) rather than only the
+    items touched in this run, so that child items created or updated in the same
+    generate-dhf pass are found regardless of how the caller bucketed them.
+    """
     errors: list[dict] = []
     child_prefixes_for = {
         code: tuple(f"{c}-" for c in children)
@@ -183,9 +187,8 @@ def _validate_cascade_completeness(
             continue
 
         covered = any(
-            cid.startswith(child_prefixes)
-            and _item_references(by_id.get(cid) or {}, uid)
-            for cid in all_changed_ids
+            cid.startswith(child_prefixes) and _item_references(item, uid)
+            for cid, item in by_id.items()
         )
         if not covered:
             child_codes = _CASCADE_CHILDREN[parent_type]
@@ -193,7 +196,7 @@ def _validate_cascade_completeness(
                 "field": f"cascade.{uid}",
                 "issue": (
                     f"'{uid}' ({parent_type}) was created by generate-dhf but no "
-                    f"{' or '.join(child_codes)} item in this CR's changes links back to it."
+                    f"{' or '.join(child_codes)} item in the DHF links back to it."
                 ),
                 "fix": (
                     f"Create a {' or '.join(child_codes)} item that links to '{uid}', "
@@ -264,5 +267,5 @@ def validate_generate_dhf(
                 ),
             })
 
-    errors.extend(_validate_cascade_completeness(created_ids, set(ordered_changed_ids), by_id))
+    errors.extend(_validate_cascade_completeness(created_ids, by_id))
     return errors

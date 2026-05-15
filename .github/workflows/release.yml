@@ -19,15 +19,17 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Assert tag is reachable from origin/main
+      - name: Assert tag points at the current tip of origin/main
         run: |
           git fetch origin main
           TAG_COMMIT=$(git rev-list -n 1 "$GITHUB_REF")
-          if ! git merge-base --is-ancestor "$TAG_COMMIT" origin/main; then
-            echo "ERROR: Tagged commit is not an ancestor of origin/main — only release from the main branch."
+          MAIN_TIP=$(git rev-parse origin/main)
+          if [ "$TAG_COMMIT" != "$MAIN_TIP" ]; then
+            echo "ERROR: Tag points at $TAG_COMMIT but origin/main is at $MAIN_TIP."
+            echo "Only tag the current tip of main for a release."
             exit 1
           fi
-          echo "Ancestry check passed: tag commit is on origin/main."
+          echo "Tip check passed: tag commit matches origin/main HEAD."
 
       - name: Set up Python
         uses: actions/setup-python@v6
