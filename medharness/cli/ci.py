@@ -228,6 +228,7 @@ def register(main):
                                      run_traceability=run_traceability,
                                      coverage_pairs=coverage_pairs,
                                      fail_on_uncovered=fail_on_uncovered)
+        click.echo(json.dumps(result, default=str))
         r = result["results"]
         dhf_arg = f"--dhf {dhf_path}"
         if "schema" in r:

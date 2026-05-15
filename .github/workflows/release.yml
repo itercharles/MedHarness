@@ -16,6 +16,18 @@ jobs:
     steps:
       - name: Check out source
         uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Assert tag is reachable from origin/main
+        run: |
+          git fetch origin main
+          TAG_COMMIT=$(git rev-list -n 1 "$GITHUB_REF")
+          if ! git merge-base --is-ancestor "$TAG_COMMIT" origin/main; then
+            echo "ERROR: Tagged commit is not an ancestor of origin/main — only release from the main branch."
+            exit 1
+          fi
+          echo "Ancestry check passed: tag commit is on origin/main."
 
       - name: Set up Python
         uses: actions/setup-python@v6

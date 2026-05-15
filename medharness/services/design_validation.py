@@ -19,6 +19,15 @@ from dhfkit.exceptions import ValidationError
 
 _VERIFIABLE_TYPES = frozenset({"CRS", "SYS", "SRS"})
 
+# Maps parent tier code → expected child tier codes.
+# If generate-dhf creates a parent item, at least one child-tier item in the
+# same CR's changed_items should link back to it.
+_CASCADE_CHILDREN: dict[str, list[str]] = {
+    "CRS": ["SYS"],
+    "SYS": ["SRS", "SYSARCH"],
+    "SRS": ["SWDD"],
+}
+
 
 def _load_api():
     try:
@@ -130,6 +139,45 @@ def _item_type_from_id(uid: str) -> str:
     return uid.split("-", 1)[0] if uid else ""
 
 
+def _validate_cascade_completeness(
+    ordered_changed_ids: list[str],
+    by_id: dict[str, dict],
+) -> list[dict]:
+    """Check that newly created parent-tier items have at least one child-tier item
+    in the same generate-dhf run that links back to them."""
+    errors: list[dict] = []
+    changed_set = set(ordered_changed_ids)
+
+    for uid in ordered_changed_ids:
+        parent_type = _item_type_from_id(uid)
+        child_codes = _CASCADE_CHILDREN.get(parent_type)
+        if not child_codes:
+            continue
+
+        item = by_id.get(uid)
+        if item is None:
+            continue
+
+        covered = any(
+            cid.startswith(tuple(f"{c}-" for c in child_codes))
+            and uid in (by_id.get(cid) or {}).get("all_linked_uids", [])
+            for cid in changed_set
+        )
+        if not covered:
+            errors.append({
+                "field": f"cascade.{uid}",
+                "issue": (
+                    f"'{uid}' ({parent_type}) was changed by generate-dhf but has no "
+                    f"{' or '.join(child_codes)} item in this CR's changes linking back to it."
+                ),
+                "fix": (
+                    f"Create a {' or '.join(child_codes)} item that links to '{uid}', "
+                    "or confirm this tier is explicitly out of scope for this CR."
+                ),
+            })
+    return errors
+
+
 def validate_generate_dhf(
     cr_id: str,
     dhf_path: Path,
@@ -184,4 +232,5 @@ def validate_generate_dhf(
                 ),
             })
 
+    errors.extend(_validate_cascade_completeness(ordered_changed_ids, by_id))
     return errors

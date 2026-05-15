@@ -13,7 +13,7 @@ def test_field_name_and_format():
     """Field metadata includes name and format."""
     adapter = StubDHFAdapter()
     adapter._item_types = [{
-        "name": "SYS", "code": "SYS", "prefix": "SYS-",
+        "display_name": "System Requirement", "code": "SYS", "prefix": "SYS-",
         "parent_types": [], "has_verification": False, "lifecycle": None,
         "fields": [{"name": "title", "format": "short_text", "label": "Title"}],
     }]
@@ -26,7 +26,7 @@ def test_item_type_carries_fields():
     """get_item_type returns fields list."""
     adapter = StubDHFAdapter()
     adapter._item_types = [{
-        "name": "SYS", "code": "SYS", "prefix": "SYS-",
+        "display_name": "System Requirement", "code": "SYS", "prefix": "SYS-",
         "parent_types": [], "has_verification": False, "lifecycle": None,
         "fields": [{"name": "content", "format": "long_text", "required": True}],
     }]
@@ -46,9 +46,9 @@ def test_list_item_types():
     adapter = StubDHFAdapter()
     types = adapter.list_item_types()
     assert len(types) >= 5
-    names = [t["name"] for t in types]
-    assert "SYS" in names
-    assert "CRS" in names
+    codes = [t["code"] for t in types]
+    assert "SYS" in codes
+    assert "CRS" in codes
 
 def test_parent_types():
     """CRS parent_types includes UC."""

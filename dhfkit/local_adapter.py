@@ -79,7 +79,7 @@ class LocalDHFAdapter:
             else (it.value.has_verification if it else False)
         )
         return {
-            "name": dt.name or dt.code,
+            "display_name": dt.name or dt.code,
             "code": dt.code,
             "prefix": dt.prefix,
             "role": role,

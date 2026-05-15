@@ -175,7 +175,7 @@ class MedHarnessCore:
             prefix = item_id.split('-')[0] + '-'
             item_type = self._adapter.get_item_type(prefix)
             if item_type:
-                return item_type.get("name", "OTHER")
+                return item_type.get("display_name", "OTHER")
         return "OTHER"
 
     def build_traceability_chains(self, path: List[str]) -> List[Dict[str, Any]]:
@@ -481,11 +481,14 @@ class MedHarnessCore:
         if True:  # always proceed via adapter
             for t in self._adapter.list_item_types():
                 entry: Dict[str, Any] = {
-                    "name": t.get("name", "OTHER"),
+                    "name": t.get("display_name", "OTHER"),
                     "id_prefix": t.get("prefix"),
                     "parent_types": t.get("parent_types", []),
                     "has_verification": t.get("has_verification"),
-                    "fields": [f.model_dump() for f in t.fields],
+                    "fields": [
+                        f.model_dump() if hasattr(f, "model_dump") else f
+                        for f in t.get("fields", [])
+                    ],
                 }
                 item_types.append(entry)
 
@@ -540,7 +543,7 @@ class MedHarnessCore:
                 prefix = item_id.split("-")[0] + "-"
                 item_type_schema = self._adapter.get_item_type(prefix)
                 if item_type_schema:
-                    resolved_type = item_type_schema.get("name", "OTHER")
+                    resolved_type = item_type_schema.get("code", "OTHER")
         else:
             item_type_schema = self._adapter.get_item_type(resolved_type)
 

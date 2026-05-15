@@ -12,17 +12,17 @@ from typing import Dict, List, Optional
 
 def _default_item_types() -> list[dict]:
     return [
-        {"name": "UC", "code": "UC", "prefix": "UC-", "parent_types": [], "has_verification": False, "lifecycle": None, "fields": []},
-        {"name": "CRS", "code": "CRS", "prefix": "CRS-", "parent_types": ["UC"], "has_verification": False, "lifecycle": None, "fields": []},
-        {"name": "SYS", "code": "SYS", "prefix": "SYS-", "parent_types": ["CRS"], "has_verification": True, "lifecycle": None, "fields": []},
-        {"name": "SRS", "code": "SRS", "prefix": "SRS-", "parent_types": ["SYS"], "has_verification": False, "lifecycle": None, "fields": []},
-        {"name": "SYSARCH", "code": "SYSARCH", "prefix": "SYSARCH-", "parent_types": ["SYS"], "has_verification": False, "lifecycle": None, "fields": []},
-        {"name": "RISK", "code": "RISK", "prefix": "RISK-", "parent_types": [], "has_verification": False, "lifecycle": None, "fields": []},
-        {"name": "RCM", "code": "RCM", "prefix": "RCM-", "parent_types": ["RISK"], "has_verification": False, "lifecycle": None, "fields": []},
-        {"name": "REL", "code": "REL", "prefix": "REL-", "parent_types": [], "has_verification": False, "lifecycle": None, "fields": []},
-        {"name": "DEF", "code": "DEF", "prefix": "DEF-", "parent_types": [], "has_verification": False, "lifecycle": None, "fields": []},
-        {"name": "CR", "code": "CR", "prefix": "CR-", "parent_types": [], "has_verification": False, "lifecycle": None, "fields": []},
-        {"name": "TC", "code": "TC", "prefix": "TC-", "parent_types": [], "has_verification": False, "lifecycle": None, "fields": []},
+        {"display_name": "Use Case", "code": "UC", "prefix": "UC-", "parent_types": [], "has_verification": False, "lifecycle": None, "fields": []},
+        {"display_name": "Customer Requirement", "code": "CRS", "prefix": "CRS-", "parent_types": ["UC"], "has_verification": False, "lifecycle": None, "fields": []},
+        {"display_name": "System Requirement", "code": "SYS", "prefix": "SYS-", "parent_types": ["CRS"], "has_verification": True, "lifecycle": None, "fields": []},
+        {"display_name": "Software Requirement", "code": "SRS", "prefix": "SRS-", "parent_types": ["SYS"], "has_verification": False, "lifecycle": None, "fields": []},
+        {"display_name": "System Architecture", "code": "SYSARCH", "prefix": "SYSARCH-", "parent_types": ["SYS"], "has_verification": False, "lifecycle": None, "fields": []},
+        {"display_name": "Risk Analysis", "code": "RISK", "prefix": "RISK-", "parent_types": [], "has_verification": False, "lifecycle": None, "fields": []},
+        {"display_name": "Risk Control Measure", "code": "RCM", "prefix": "RCM-", "parent_types": ["RISK"], "has_verification": False, "lifecycle": None, "fields": []},
+        {"display_name": "Release", "code": "REL", "prefix": "REL-", "parent_types": [], "has_verification": False, "lifecycle": None, "fields": []},
+        {"display_name": "Defect", "code": "DEF", "prefix": "DEF-", "parent_types": [], "has_verification": False, "lifecycle": None, "fields": []},
+        {"display_name": "Change Request", "code": "CR", "prefix": "CR-", "parent_types": [], "has_verification": False, "lifecycle": None, "fields": []},
+        {"display_name": "Test Case", "code": "TC", "prefix": "TC-", "parent_types": [], "has_verification": False, "lifecycle": None, "fields": []},
     ]
 
 

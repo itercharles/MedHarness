@@ -616,7 +616,7 @@ class TestBuildDhfContextBlock:
         adapter = StubDHFAdapter()
         adapter.create_item({"id": "SYSREQ-001", "title": "Custom-prefix req"})
         adapter._item_types.append({
-            "name": "System Requirement", "code": "SYSREQ",
+            "display_name": "System Requirement", "code": "SYSREQ",
             "prefix": "SYSREQ-", "role": "system_requirement",
             "parent_types": [], "has_verification": True,
             "lifecycle": None, "fields": [],

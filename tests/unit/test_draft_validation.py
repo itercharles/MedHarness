@@ -13,7 +13,7 @@ from tests.fixtures.stub_adapter import StubDHFAdapter
 def _adapter_with_sys_schema() -> StubDHFAdapter:
     adapter = StubDHFAdapter()
     adapter._item_types = [{
-        "name": "SYS", "code": "SYS", "prefix": "SYS-",
+        "display_name": "System Requirement", "code": "SYS", "prefix": "SYS-",
         "parent_types": [], "has_verification": False, "lifecycle": None,
         "fields": [
             {"name": "title", "format": "short_text", "label": "Title", "required": True},
