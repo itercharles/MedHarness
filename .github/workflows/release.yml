@@ -1,7 +1,7 @@
 name: Release
 
 # Triggered when a vX.Y.Z tag is pushed.
-# Builds the wheel and publishes it to GitHub Releases and PyPI.
+# Preflight checks run first; build+publish only proceeds on success.
 # MedHarness releases contain only the installable Python package.
 
 on:
@@ -10,8 +10,54 @@ on:
       - 'v*'
 
 jobs:
+  preflight:
+    name: Release preflight checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v5
+
+      - name: Extract tag version
+        id: tag
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Assert pyproject.toml version matches tag
+        run: |
+          PKG_VERSION=$(python3 -c "
+          import tomllib
+          with open('pyproject.toml', 'rb') as f:
+              print(tomllib.load(f)['project']['version'])
+          ")
+          TAG_VERSION="${{ steps.tag.outputs.version }}"
+          if [ "$PKG_VERSION" != "$TAG_VERSION" ]; then
+            echo "ERROR: pyproject.toml version ($PKG_VERSION) != tag ($TAG_VERSION)"
+            exit 1
+          fi
+          echo "Version check passed: $PKG_VERSION"
+
+      - name: Assert CHANGELOG.md contains version
+        run: |
+          VERSION="${{ steps.tag.outputs.version }}"
+          if ! grep -qF "$VERSION" CHANGELOG.md; then
+            echo "ERROR: CHANGELOG.md does not mention version $VERSION"
+            exit 1
+          fi
+          echo "Changelog check passed."
+
+      - name: Assert version not already on PyPI
+        run: |
+          VERSION="${{ steps.tag.outputs.version }}"
+          PACKAGE="medharness"
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://pypi.org/pypi/$PACKAGE/$VERSION/json")
+          if [ "$STATUS" = "200" ]; then
+            echo "ERROR: $PACKAGE==$VERSION already exists on PyPI — did you forget to bump the version?"
+            exit 1
+          fi
+          echo "PyPI check passed: $PACKAGE $VERSION not yet published."
+
   build-and-publish:
     name: Build and publish wheel
+    needs: preflight
     runs-on: ubuntu-latest
     permissions:
       contents: write

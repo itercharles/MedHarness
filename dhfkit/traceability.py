@@ -176,3 +176,70 @@ def check_traceability(items: list[dict], config: Any) -> dict:
         "deprecation_warnings": [],
         "summary": summary,
     }
+
+
+def format_traceability_report(result: dict) -> str:
+    """Render a check_traceability result as a human-readable text report.
+
+    Args:
+        result: Dict returned by check_traceability().
+
+    Returns:
+        Multi-line string suitable for printing or writing to a file.
+    """
+    lines: list[str] = []
+    lines.append("DHF Traceability Report")
+    lines.append("=" * 40)
+    lines.append("")
+
+    status = "PASS" if result.get("passed") else "FAIL"
+    lines.append(f"Status: {status}")
+    lines.append(f"Summary: {result.get('summary', '')}")
+    lines.append("")
+
+    # Required traceability
+    required = result.get("required", {})
+    lines.append("Required Traceability")
+    lines.append("-" * 40)
+    failures = required.get("failures", [])
+    if not failures:
+        lines.append("  All required links satisfied.")
+    else:
+        for f in failures:
+            lines.append(
+                f"  FAIL  {f['id']} — {f['rule']} "
+                f"(count={f['current_count']}, need ≥{f['min_count']})"
+            )
+    lines.append("")
+
+    # Coverage matrix
+    coverage = result.get("coverage", [])
+    lines.append("Coverage Matrix")
+    lines.append("-" * 40)
+    if not coverage:
+        lines.append("  No coverage matrices configured.")
+    else:
+        col_w = max(len(c.get("matrix", "")) for c in coverage) + 2
+        for c in coverage:
+            matrix = c.get("matrix", "")
+            covered = c.get("covered", 0)
+            total = c.get("total", 0)
+            status_icon = "PASS" if c.get("passed") else "FAIL"
+            pct = f"{int(covered / total * 100)}%" if total else "n/a"
+            line = f"  {status_icon}  {matrix:<{col_w}} {covered}/{total} ({pct})"
+            lines.append(line)
+            for uid in c.get("uncovered", []):
+                lines.append(f"         ↳ uncovered: {uid}")
+    lines.append("")
+
+    # Orphans
+    orphans = result.get("orphans", [])
+    if orphans:
+        lines.append("Orphaned Items")
+        lines.append("-" * 40)
+        for o in orphans:
+            oid = o.get("id", o) if isinstance(o, dict) else o
+            lines.append(f"  {oid}")
+        lines.append("")
+
+    return "\n".join(lines)
