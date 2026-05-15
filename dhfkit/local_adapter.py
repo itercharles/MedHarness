@@ -22,6 +22,8 @@ _ITEM_LINK_FIELDS = (
     "derives_from", "implements", "mitigates", "satisfies",
     "guided_by", "informs", "design", "verifies", "validates",
     "mitigated_by",
+    # CR and DEF built-in relationship fields
+    "affected_items", "target_release", "found_in_release", "fixed_in_release",
 )
 _UID_PATTERN = re.compile(r"^[A-Z][A-Z0-9]*(-[A-Z0-9]+)*-\d+$")
 
@@ -158,7 +160,15 @@ class LocalDHFAdapter:
             val = data.get(field)
             if not val:
                 continue
-            uids = [val] if isinstance(val, str) else val
+            if isinstance(val, str):
+                uids = [val]
+            elif isinstance(val, (list, tuple)):
+                uids = val
+            else:
+                errors.append(
+                    f"{field}: expected list of UID strings, got {type(val).__name__} ({val!r})"
+                )
+                continue
             for uid in uids:
                 if not isinstance(uid, str):
                     errors.append(f"{field}: expected string UID, got {type(uid).__name__} ({uid!r})")
