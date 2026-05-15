@@ -11,6 +11,10 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+---
+
+## [0.6.0] — 2026-05-15
+
 ### Breaking Changes
 
 - **`workflow_intake_github_issue` and `workflow_intake_github_issue_ci` drop the spec compatibility stubs**
@@ -28,10 +32,13 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
   detail lines to stderr when validation errors remain after generation, matching
   the existing pattern in `ci validate-code` and `ci validate-branch`.
 - `cr_review_code.md` prompt updated: references CR item via
-  `medharness --dhf DHF dhf item show {{cr_id}}` instead of the removed
+  `medharness --dhf DHF dhf item get {{cr_id}}` instead of the removed
   `docs/cr-specs/` file path; review output written to `docs/reviews/`.
+- DHF scaffold now creates `docs/reviews/` so the code-review output path
+  exists in newly initialised repos.
 - Added golden E2E integration tests (`test_generate_dhf_e2e.py`) covering
-  `generate_dhf` and `generate_code` orchestration with a stubbed Claude CLI.
+  `generate_dhf` and `generate_code` orchestration with a stubbed Claude CLI,
+  including the full validate→fix→validate cycle.
 
 ---
 

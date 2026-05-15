@@ -11,8 +11,11 @@ All operations run against real DHF fixtures. No network calls are made.
 
 from __future__ import annotations
 
+import json
 import subprocess
+import sys
 import tempfile
+import unittest.mock as mock
 from pathlib import Path
 
 import pytest
@@ -261,3 +264,109 @@ class TestGenerateCodeSuccessStub:
         from medharness.services.cr_generation import generate_code
         result = generate_code("CR-001", dhf_repo / "DHF")
         assert "run_review" in _step_names(result)
+
+
+# ---------------------------------------------------------------------------
+# generate_dhf — fix-pass flow
+#
+# The first _run_claude call writes a real CRS item to the DHF via the CLI.
+# git detects the new file; validate_generate_dhf fires the cascade check
+# (CRS-002 has no SYS child) and returns errors.  The fix pass is triggered.
+# The second _run_claude call noops.  validate_after_fix still finds errors
+# (cascade unresolved), so outcome is "completed_with_errors".
+#
+# This exercises: initial_error_count > 0 → fix_attempted → run_fix_generation
+# → validate_after_fix → completed_with_errors outcome.
+# ---------------------------------------------------------------------------
+
+def _make_fix_pass_dhf(tmp: str) -> Path:
+    """Scaffold an isolated DHF with origin/main wired for the fix-pass tests."""
+    dhf_dir = Path(tmp) / "fix-pass-dhf"
+    _scaffold_dhf(dhf_dir)
+    _replace_placeholders(dhf_dir, "Fix Pass Test")
+    for cmd in [
+        ["git", "init", "-b", "main", str(dhf_dir)],
+        ["git", "-C", str(dhf_dir), "config", "user.email", "fix@test.local"],
+        ["git", "-C", str(dhf_dir), "config", "user.name", "Fix Pass Test"],
+        ["git", "-C", str(dhf_dir), "add", "-A"],
+        ["git", "-C", str(dhf_dir), "commit", "-m", "init"],
+        ["git", "-C", str(dhf_dir), "remote", "add", "origin", str(dhf_dir)],
+        ["git", "-C", str(dhf_dir), "fetch", "origin"],
+    ]:
+        subprocess.run(cmd, capture_output=True, check=True)
+    return dhf_dir
+
+
+class TestGenerateDhfFixPassFlow:
+    """Verify the validate→fix→validate cycle when initial generation has errors."""
+
+    @pytest.fixture(scope="class")
+    def fix_pass_result(self):
+        """Run generate_dhf once with a stub that creates a bare CRS item on the
+        first call (triggering the cascade check) and noops on the fix pass."""
+        with tempfile.TemporaryDirectory() as tmp:
+            dhf_dir = _make_fix_pass_dhf(tmp)
+            dhf_path = dhf_dir / "DHF"
+            call_count = {"n": 0}
+
+            def _stub(prompt: str) -> tuple[int, str]:
+                call_count["n"] += 1
+                if call_count["n"] == 1:
+                    # Create a CRS item with no SYS child — cascade check will fire.
+                    subprocess.run(
+                        [
+                            sys.executable, "-m", "medharness",
+                            "--dhf", str(dhf_path),
+                            "dhf", "item", "create",
+                            "--type", "CRS",
+                            "--data", json.dumps({
+                                "title": "Fix-Pass Test CRS",
+                                "content": "Stub-created item for cascade test.",
+                                "user_group": "Engineering",
+                                "priority": "Low",
+                            }),
+                        ],
+                        capture_output=True, cwd=str(REPO_ROOT),
+                    )
+                    # Commit the new file so `git diff origin/main` detects it.
+                    # (git diff <tree> only sees committed or modified-tracked
+                    # changes, not untracked or merely staged files.)
+                    subprocess.run(["git", "-C", str(dhf_dir), "add", "-A"], capture_output=True)
+                    subprocess.run(
+                        ["git", "-C", str(dhf_dir), "commit", "-m", "stub: add CRS item"],
+                        capture_output=True,
+                    )
+                # Fix-pass call (n >= 2): noop — cascade error remains.
+                return 0, "ok"
+
+            with mock.patch("medharness.services.cr_generation._run_claude", _stub):
+                from medharness.services.cr_generation import generate_dhf
+                result = generate_dhf("CR-001", dhf_path)
+
+            yield result
+
+    def test_fix_was_attempted(self, fix_pass_result):
+        assert fix_pass_result["diagnostics"]["fix_attempted"] is True
+
+    def test_initial_error_count_positive(self, fix_pass_result):
+        assert fix_pass_result["diagnostics"]["initial_error_count"] > 0
+
+    def test_run_fix_generation_step_present(self, fix_pass_result):
+        assert "run_fix_generation" in _step_names(fix_pass_result)
+
+    def test_validate_after_fix_step_present(self, fix_pass_result):
+        assert "validate_after_fix" in _step_names(fix_pass_result)
+
+    def test_outcome_is_completed_with_errors(self, fix_pass_result):
+        assert fix_pass_result["outcome"] == "completed_with_errors"
+
+    def test_cascade_error_present_in_errors(self, fix_pass_result):
+        """At least one error must reference the cascade check for the new CRS item."""
+        cascade_errors = [
+            e for e in fix_pass_result["errors"]
+            if e.get("field", "").startswith("cascade.")
+        ]
+        assert cascade_errors, (
+            f"Expected a cascade.* error; got fields: "
+            f"{[e.get('field') for e in fix_pass_result['errors']]}"
+        )
