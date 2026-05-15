@@ -48,7 +48,11 @@ def ci_structural_gate(
     core = MedHarnessCore(adapter)
 
     passed = True
-    results: dict[str, dict] = {}
+    results: dict[str, Any] = {
+        "coverage_gaps": [],
+        "orphans": [],
+        "verification_gaps": [],
+    }
 
     if run_schema:
         r = adapter.validate_schema()

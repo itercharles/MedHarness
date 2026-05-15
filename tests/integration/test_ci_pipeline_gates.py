@@ -25,7 +25,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 
 
 # ---------------------------------------------------------------------------
-# Shared fixture
+# Shared fixtures
 # ---------------------------------------------------------------------------
 
 @pytest.fixture(scope="module")
@@ -46,15 +46,22 @@ def dhf():
         yield dhf_dir
 
 
+@pytest.fixture(scope="module")
+def dhf_validate_result(dhf):
+    """Run ci dhf-validate once and share the parsed result across the test class."""
+    r = subprocess.run(
+        [sys.executable, "-m", "medharness", "ci", "dhf-validate", "--dhf", str(dhf / "DHF")],
+        capture_output=True, text=True, cwd=REPO_ROOT,
+    )
+    assert r.returncode in (0, 1), f"ci dhf-validate crashed:\n{r.stderr}"
+    return json.loads(r.stdout)
+
+
 def _medharness(*args: str) -> subprocess.CompletedProcess:
     return subprocess.run(
         [sys.executable, "-m", "medharness"] + list(args),
         capture_output=True, text=True, cwd=REPO_ROOT,
     )
-
-
-def _dhf(dhf_root: str, *args: str) -> subprocess.CompletedProcess:
-    return _medharness("--dhf", dhf_root, "dhf", *args)
 
 
 # ---------------------------------------------------------------------------
@@ -64,57 +71,56 @@ def _dhf(dhf_root: str, *args: str) -> subprocess.CompletedProcess:
 class TestCiStructuralGate:
     """Verify that ci dhf-validate returns the expected structured fields."""
 
-    def test_schema_passes_on_clean_dhf(self, dhf):
-        r = _medharness("ci", "dhf-validate", "--dhf", str(dhf / "DHF"))
-        assert r.returncode in (0, 1), f"crashed:\n{r.stderr}"
-        result = json.loads(r.stdout)
+    def test_schema_passes_on_clean_dhf(self, dhf_validate_result):
+        result = dhf_validate_result
         assert "passed" in result
         assert "results" in result
         assert "schema" in result["results"]
-        assert result["results"]["schema"]["passed"], (
-            f"Schema should pass on fresh scaffold:\n{r.stderr}"
-        )
+        assert result["results"]["schema"]["passed"], "Schema should pass on fresh scaffold"
 
-    def test_traceability_result_shape(self, dhf):
-        r = _medharness("ci", "dhf-validate", "--dhf", str(dhf / "DHF"))
-        result = json.loads(r.stdout)
-        tr = result["results"].get("traceability", {})
+    def test_traceability_result_shape(self, dhf_validate_result):
+        tr = dhf_validate_result["results"].get("traceability", {})
         assert "passed" in tr
         assert "required" in tr
         assert "coverage" in tr
 
-    def test_structured_coverage_gaps_key_present(self, dhf):
-        r = _medharness("ci", "dhf-validate", "--dhf", str(dhf / "DHF"))
-        result = json.loads(r.stdout)
-        assert "coverage_gaps" in result["results"], (
+    def test_structured_coverage_gaps_key_present(self, dhf_validate_result):
+        assert "coverage_gaps" in dhf_validate_result["results"], (
             "ci dhf-validate must return structured coverage_gaps list"
         )
-        assert isinstance(result["results"]["coverage_gaps"], list)
+        assert isinstance(dhf_validate_result["results"]["coverage_gaps"], list)
 
-    def test_structured_orphans_key_present(self, dhf):
-        r = _medharness("ci", "dhf-validate", "--dhf", str(dhf / "DHF"))
-        result = json.loads(r.stdout)
-        assert "orphans" in result["results"]
-        assert isinstance(result["results"]["orphans"], list)
+    def test_structured_orphans_key_present(self, dhf_validate_result):
+        assert "orphans" in dhf_validate_result["results"]
+        assert isinstance(dhf_validate_result["results"]["orphans"], list)
 
-    def test_structured_verification_gaps_key_present(self, dhf):
-        r = _medharness("ci", "dhf-validate", "--dhf", str(dhf / "DHF"))
-        result = json.loads(r.stdout)
-        assert "verification_gaps" in result["results"]
-        vgaps = result["results"]["verification_gaps"]
+    def test_structured_verification_gaps_key_present(self, dhf_validate_result):
+        assert "verification_gaps" in dhf_validate_result["results"]
+        vgaps = dhf_validate_result["results"]["verification_gaps"]
         assert isinstance(vgaps, list)
         for gap in vgaps:
             assert "id" in gap
             assert "type" in gap
             assert "issue" in gap
 
-    def test_coverage_gap_entries_have_required_keys(self, dhf):
-        r = _medharness("ci", "dhf-validate", "--dhf", str(dhf / "DHF"))
-        result = json.loads(r.stdout)
-        for gap in result["results"]["coverage_gaps"]:
+    def test_coverage_gap_entries_have_required_keys(self, dhf_validate_result):
+        for gap in dhf_validate_result["results"]["coverage_gaps"]:
             assert "parent_type" in gap
             assert "child_type" in gap
             assert "uncovered" in gap
+
+    def test_structured_keys_present_regardless_of_traceability_flag(self, dhf):
+        """coverage_gaps, orphans, verification_gaps must be present even when
+        traceability is disabled, so machine consumers can always rely on them."""
+        r = _medharness(
+            "ci", "dhf-validate", "--dhf", str(dhf / "DHF"),
+            "--no-run-traceability",
+        )
+        assert r.returncode in (0, 1), f"crashed:\n{r.stderr}"
+        result = json.loads(r.stdout)
+        assert "coverage_gaps" in result["results"]
+        assert "orphans" in result["results"]
+        assert "verification_gaps" in result["results"]
 
 
 # ---------------------------------------------------------------------------
@@ -179,24 +185,22 @@ class TestValidateBranch:
 class TestValidateGenerateDhfCascade:
     """Unit-level tests for the cascade completeness check."""
 
-    def test_cascade_no_error_when_child_present(self):
+    def test_cascade_no_error_when_child_links_back(self):
         from medharness.services.design_validation import _validate_cascade_completeness
 
         by_id = {
-            "CRS-001": {"id": "CRS-001", "all_linked_uids": []},
-            "SYS-001": {"id": "SYS-001", "all_linked_uids": ["CRS-001"]},
+            "CRS-001": {"id": "CRS-001"},
+            "SYS-001": {"id": "SYS-001", "derives_from": ["CRS-001"]},
         }
-        errors = _validate_cascade_completeness(["CRS-001", "SYS-001"], by_id)
-        # CRS-001 has SYS-001 linking back → no cascade error
+        all_changed = {"CRS-001", "SYS-001"}
+        errors = _validate_cascade_completeness(["CRS-001"], all_changed, by_id)
         assert not any(e["field"].startswith("cascade.CRS-001") for e in errors)
 
     def test_cascade_error_when_child_missing(self):
         from medharness.services.design_validation import _validate_cascade_completeness
 
-        by_id = {
-            "CRS-001": {"id": "CRS-001", "all_linked_uids": []},
-        }
-        errors = _validate_cascade_completeness(["CRS-001"], by_id)
+        by_id = {"CRS-001": {"id": "CRS-001"}}
+        errors = _validate_cascade_completeness(["CRS-001"], {"CRS-001"}, by_id)
         assert any(e["field"].startswith("cascade.CRS-001") for e in errors)
 
     def test_cascade_no_error_for_leaf_types(self):
@@ -204,17 +208,40 @@ class TestValidateGenerateDhfCascade:
         from medharness.services.design_validation import _validate_cascade_completeness
 
         by_id = {
-            "SWDD-001": {"id": "SWDD-001", "all_linked_uids": []},
-            "RISK-001": {"id": "RISK-001", "all_linked_uids": []},
+            "SWDD-001": {"id": "SWDD-001"},
+            "RISK-001": {"id": "RISK-001"},
         }
-        errors = _validate_cascade_completeness(["SWDD-001", "RISK-001"], by_id)
+        errors = _validate_cascade_completeness(
+            ["SWDD-001", "RISK-001"], {"SWDD-001", "RISK-001"}, by_id
+        )
         assert errors == []
+
+    def test_cascade_not_triggered_for_updated_items(self):
+        """Updating an existing parent should NOT trigger the cascade check."""
+        from medharness.services.design_validation import _validate_cascade_completeness
+
+        by_id = {"SYS-001": {"id": "SYS-001"}}
+        # SYS-001 is in all_changed but NOT in created_ids
+        errors = _validate_cascade_completeness([], {"SYS-001"}, by_id)
+        assert errors == []
+
+    def test_cascade_uses_link_fields_not_all_linked_uids(self):
+        """Cascade check must work from raw link fields, not the enriched all_linked_uids."""
+        from medharness.services.design_validation import _validate_cascade_completeness
+
+        by_id = {
+            "SRS-001": {"id": "SRS-001"},
+            "SWDD-001": {"id": "SWDD-001", "implements": ["SRS-001"]},
+        }
+        # No all_linked_uids set — must still resolve via raw field
+        errors = _validate_cascade_completeness(["SRS-001"], {"SRS-001", "SWDD-001"}, by_id)
+        assert not any(e["field"].startswith("cascade.SRS-001") for e in errors)
 
     def test_cascade_error_has_fix_hint(self):
         from medharness.services.design_validation import _validate_cascade_completeness
 
-        by_id = {"SYS-001": {"id": "SYS-001", "all_linked_uids": []}}
-        errors = _validate_cascade_completeness(["SYS-001"], by_id)
+        by_id = {"SYS-001": {"id": "SYS-001"}}
+        errors = _validate_cascade_completeness(["SYS-001"], {"SYS-001"}, by_id)
         assert errors
         assert "fix" in errors[0]
         assert "SRS" in errors[0]["fix"] or "SYSARCH" in errors[0]["fix"]

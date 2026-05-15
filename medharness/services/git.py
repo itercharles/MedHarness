@@ -181,8 +181,8 @@ def validate_atomic_branch(
                             "the spec's affected_items list."
                         ),
                     })
-        except Exception:
-            pass  # DHF not loadable — skip item existence check
+        except (FileNotFoundError, OSError, ValueError):
+            pass  # DHF config not loadable — skip item existence check
 
     return {
         "cr_id": cr_id,

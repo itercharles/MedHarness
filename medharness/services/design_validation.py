@@ -139,36 +139,61 @@ def _item_type_from_id(uid: str) -> str:
     return uid.split("-", 1)[0] if uid else ""
 
 
+_CASCADE_LINK_FIELDS = (
+    "derives_from", "implements", "design", "mitigates",
+    "satisfies", "guided_by", "informs",
+)
+
+
+def _item_references(item: dict, uid: str) -> bool:
+    """Return True if any link field in item contains uid."""
+    for field in _CASCADE_LINK_FIELDS:
+        val = item.get(field)
+        if val is None:
+            continue
+        if isinstance(val, str):
+            if val == uid:
+                return True
+        elif isinstance(val, list):
+            if uid in val:
+                return True
+    return False
+
+
 def _validate_cascade_completeness(
-    ordered_changed_ids: list[str],
+    created_ids: list[str],
+    all_changed_ids: set[str],
     by_id: dict[str, dict],
 ) -> list[dict]:
     """Check that newly created parent-tier items have at least one child-tier item
-    in the same generate-dhf run that links back to them."""
+    in this CR's changed set that links back to them via a standard link field."""
     errors: list[dict] = []
-    changed_set = set(ordered_changed_ids)
+    child_prefixes_for = {
+        code: tuple(f"{c}-" for c in children)
+        for code, children in _CASCADE_CHILDREN.items()
+    }
 
-    for uid in ordered_changed_ids:
+    for uid in created_ids:
         parent_type = _item_type_from_id(uid)
-        child_codes = _CASCADE_CHILDREN.get(parent_type)
-        if not child_codes:
+        child_prefixes = child_prefixes_for.get(parent_type)
+        if not child_prefixes:
             continue
 
-        item = by_id.get(uid)
-        if item is None:
+        if by_id.get(uid) is None:
             continue
 
         covered = any(
-            cid.startswith(tuple(f"{c}-" for c in child_codes))
-            and uid in (by_id.get(cid) or {}).get("all_linked_uids", [])
-            for cid in changed_set
+            cid.startswith(child_prefixes)
+            and _item_references(by_id.get(cid) or {}, uid)
+            for cid in all_changed_ids
         )
         if not covered:
+            child_codes = _CASCADE_CHILDREN[parent_type]
             errors.append({
                 "field": f"cascade.{uid}",
                 "issue": (
-                    f"'{uid}' ({parent_type}) was changed by generate-dhf but has no "
-                    f"{' or '.join(child_codes)} item in this CR's changes linking back to it."
+                    f"'{uid}' ({parent_type}) was created by generate-dhf but no "
+                    f"{' or '.join(child_codes)} item in this CR's changes links back to it."
                 ),
                 "fix": (
                     f"Create a {' or '.join(child_codes)} item that links to '{uid}', "
@@ -193,6 +218,13 @@ def validate_generate_dhf(
     listed_items, item_errors = _list_items(_api, dhf_path, "changed_items")
     errors.extend(item_errors)
     by_id = {item["id"]: item for item in listed_items}
+
+    created_ids: list[str] = []
+    seen_created: set[str] = set()
+    for uid in changed_items.get("created", []):
+        if uid not in seen_created:
+            seen_created.add(uid)
+            created_ids.append(uid)
 
     seen: set[str] = set()
     ordered_changed_ids: list[str] = []
@@ -232,5 +264,5 @@ def validate_generate_dhf(
                 ),
             })
 
-    errors.extend(_validate_cascade_completeness(ordered_changed_ids, by_id))
+    errors.extend(_validate_cascade_completeness(created_ids, set(ordered_changed_ids), by_id))
     return errors
