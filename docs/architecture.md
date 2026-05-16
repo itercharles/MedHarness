@@ -151,21 +151,6 @@ ones) within a specific module. SWDD items are requirement-oriented like SYSARCH
 but they belong to a MODULE. The combined picture — MODULE overview + its SWDD
 items — forms the Software Design Document for that module.
 
-### Coverage rules (defaults)
-
-The traceability validator enforces coverage in both directions using these
-default matrices. Projects may extend or restrict them via `global.yaml`.
-
-| Matrix | Meaning |
-|--------|---------|
-| UC → CRS | Every use case is addressed by at least one customer requirement |
-| CRS → SYS | Every customer requirement is allocated to at least one system requirement |
-| SYS → SRS | Every system requirement is refined into at least one software requirement |
-| SRS → SWDD | Every software requirement has at least one detailed design item |
-| SYS → SYSARCH | Every system requirement has at least one architectural design |
-| MODULE → SWDD | Every defined module has at least one detailed design item |
-| RISK → RCM | Every identified risk has at least one control measure |
-
 ---
 
 ## DHF Repo Lifecycle
