@@ -125,43 +125,43 @@ traceability_matrices:
   - RCM
 document_specifications:
   UC:
-    template: requirements_specification.md.j2
+    source: requirements_specification.md.j2
     output: DHF/documents/specs/use_case_specification.md
     doc_type_name: Use Case
   CRS:
-    template: customer_requirement_specification.md.j2
+    source: customer_requirement_specification.md.j2
     output: DHF/documents/specs/customer_requirement_specification.md
     doc_type_name: Customer Requirement
   SYS:
-    template: requirements_specification.md.j2
+    source: requirements_specification.md.j2
     output: DHF/documents/specs/system_requirement_specification.md
     doc_type_name: System Requirement
   SRS:
-    template: requirements_specification.md.j2
+    source: requirements_specification.md.j2
     output: DHF/documents/specs/software_requirement_specification.md
     doc_type_name: Software Requirement Specification
   MODULE:
-    template: software_design_document.md.j2
+    source: software_design_document.md.j2
     output: DHF/documents/specs/software_design_document.md
     doc_type_name: Software Module
   SWDD:
-    template: requirements_specification.md.j2
+    source: requirements_specification.md.j2
     output: DHF/documents/specs/software_detailed_design_document.md
     doc_type_name: Software Detailed Design Document
   SYSARCH:
-    template: architecture_design_specification.md.j2
+    source: architecture_design_specification.md.j2
     output: DHF/documents/specs/architecture_design_specification.md
     doc_type_name: System Architecture Specification
   RISK:
-    template: risk_specification.md.j2
+    source: risk_specification.md.j2
     output: DHF/documents/specs/risk_analysis_specification.md
     doc_type_name: Risk Analysis
   RCM:
-    template: rcm_specification.md.j2
+    source: rcm_specification.md.j2
     output: DHF/documents/specs/risk_control_measures_specification.md
     doc_type_name: Risk Control Measures
   CR:
-    template: change_request_specification.md.j2
+    source: change_request_specification.md.j2
     output: DHF/documents/specs/change_request_specification.md
     doc_type_name: Change Request
 test_integration:
