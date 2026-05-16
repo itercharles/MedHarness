@@ -606,10 +606,14 @@ def register(main):
             "ok": ok,
         }
         click.echo(json.dumps(payload))
-        if ok:
-            click.echo(f"OK Advanced stage {from_stage} → {to_stage} on PR #{pr_number}.", err=True)
-        else:
-            click.echo(f"WARN Stage label advance had errors for PR #{pr_number}.", err=True)
+        if not ok:
+            click.echo(
+                f"FAIL [{to_stage}-advance] Could not add label '{to_label}' to PR #{pr_number} — "
+                f"check GH_TOKEN permissions and that the label exists.",
+                err=True,
+            )
+            raise click.exceptions.Exit(1)
+        click.echo(f"OK Advanced stage {from_stage} → {to_stage} on PR #{pr_number}.", err=True)
 
     # ── CR generation ──
 
