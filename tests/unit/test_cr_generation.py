@@ -574,6 +574,28 @@ class TestGenerateCode:
         assert "truncated" in prompt
         assert large_diff not in prompt  # full diff not present
 
+    def test_first_revision_with_no_stored_marker_starts_fresh(self, tmp_path, monkeypatch):
+        """First --pr rerun on a PR with no stored session must not pass --resume."""
+        dhf = tmp_path / "DHF"
+        dhf.mkdir()
+        # Simulate get_session returning "" (no marker comment yet — including the
+        # fixed case where jq previously emitted "null" and we now return "")
+        monkeypatch.setattr("medharness.services.cr_generation.get_session", lambda pr: "")
+        resume_sessions_captured: list[str] = []
+
+        def _stub(prompt: str, *, resume_session: str = "") -> tuple[int, str, str]:
+            resume_sessions_captured.append(resume_session)
+            return 0, "", f"sess-{len(resume_sessions_captured)}"
+
+        with patch("medharness.services.cr_generation._run_claude", side_effect=_stub), \
+             patch("medharness.services.cr_generation._get_pr_feedback",
+                   return_value={"prompt_text": "", "diagnostics": {}, "warnings": []}), \
+             patch("medharness.services.code_validation.validate_code", return_value=[]):
+            generate_code("CR-030", dhf, pr_number=99)
+        assert all(s == "" for s in resume_sessions_captured[:1]), (
+            f"initial develop step must start fresh; got resume_session={resume_sessions_captured[0]!r}"
+        )
+
 
 # ── DHF context block ──────────────────────────────────────────────────────────
 
