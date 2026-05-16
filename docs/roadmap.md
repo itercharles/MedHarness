@@ -33,9 +33,12 @@ Based on the current repository, MedHarness already provides:
 
 - DHF item creation, update, validation, and document generation
 - traceability validation and requirement coverage checks
-- CI commands for DHF validation, test coverage, and evidence bundling
-- AI-assisted CR analysis, design, and development stages
-- machine-readable CR stage and approval status via the CLI
+- CI commands for DHF validation, test coverage, branch and code validation, and evidence bundling
+- AI-assisted CR design (`generate-dhf`) and implementation (`develop-cr`) with session threading and PR-comment feedback
+- explicit approval gating (`ci approve-gate`, `ci advance-stage`, `ci cr-status`, `ci parse-approval`) with machine-readable outputs for CI routing
+- SOUP manifest synchronisation (`ci soup-sync`) for IEC 62304 §5.3.3 compliance
+- IEC 62304 §9 release baseline automation (`ci release-baseline`) with software BOM generation and REL item creation
+- human-readable traceability coverage report (`dhf report`) and AI context bundles (`dhf context implementation`)
 - a scaffolded single-repo workflow for software teams managing DHF artifacts alongside code
 
 These are the capabilities the public roadmap should build on.
@@ -143,15 +146,21 @@ highest-value remaining near-term work breaks down into the following phases.
 The following areas are now implemented and are no longer the primary roadmap
 focus:
 
-- structured CR analysis output, including companion machine-readable spec
-  artifacts and stronger `test_plan` contracts
+- structured CR output, including machine-readable JSON contracts, consistent
+  stdout/stderr split, and non-zero exit on errors across all CI commands
 - explicit machine-readable approval and stage-status CLI surfaces
+  (`ci approve-gate`, `ci advance-stage`, `ci cr-status`, `ci parse-approval`)
 - deterministic preflight validation for design, code, and coupled
-  implementation branches
+  implementation branches (`ci validate-branch`, `ci validate-code`)
 - stronger spec-to-design coupling, including validation that proposed DHF
   items are actually materialized
+- SOUP manifest sync and IEC 62304 §9 release baseline (`ci soup-sync`,
+  `ci release-baseline`) — addresses Theme 1 (structured outputs) and part
+  of Theme 4 (regulatory workflow completeness)
+- human-readable traceability report and AI context bundles
+  (`dhf report`, `dhf context implementation`)
 
-These completed slices correspond to the earlier Phase 1 and Phase 2 work.
+These completed slices correspond to Themes 1 and 2 and the earlier Phase 1–2 work.
 
 ### Phase 3: Risk Management as a First-Class Workflow
 
