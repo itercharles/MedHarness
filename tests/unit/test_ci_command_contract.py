@@ -148,3 +148,72 @@ class TestValidateBranchJsonContract:
         payload = _split_stdout_json(r.stdout)
         assert payload["passed"] is False
         assert payload["errors"] == [{"field": "code_branch", "issue": "x", "fix": "y"}]
+
+
+class TestAdvanceStageContract:
+    """ci advance-stage: exits 0 on success, exits 1 when add_label fails."""
+
+    def test_exits_zero_on_success(self):
+        runner = CliRunner()
+        with patch("medharness.services.github_pr.remove_label", return_value=True), \
+             patch("medharness.services.github_pr.add_label", return_value=True):
+            r = runner.invoke(main, [
+                "ci", "advance-stage",
+                "--pr", "7", "--from-stage", "cr", "--to-stage", "design",
+            ])
+        assert r.exit_code == 0, r.output
+        payload = json.loads(r.stdout.splitlines()[0])
+        assert payload["ok"] is True
+        assert payload["from_label"] == "cr:stage/cr"
+        assert payload["to_label"] == "cr:stage/design"
+
+    def test_exits_one_when_add_label_fails(self):
+        runner = CliRunner()
+        with patch("medharness.services.github_pr.remove_label", return_value=True), \
+             patch("medharness.services.github_pr.add_label", return_value=False):
+            r = runner.invoke(main, [
+                "ci", "advance-stage",
+                "--pr", "7", "--from-stage", "cr", "--to-stage", "design",
+            ])
+        assert r.exit_code == 1, r.output
+        payload = json.loads(r.stdout.splitlines()[0])
+        assert payload["ok"] is False
+        assert "FAIL" in r.output
+
+    def test_custom_label_prefix(self):
+        runner = CliRunner()
+        with patch("medharness.services.github_pr.remove_label", return_value=True), \
+             patch("medharness.services.github_pr.add_label", return_value=True):
+            r = runner.invoke(main, [
+                "ci", "advance-stage",
+                "--pr", "3", "--from-stage", "design", "--to-stage", "code",
+                "--label-prefix", "stage/",
+            ])
+        assert r.exit_code == 0, r.output
+        payload = json.loads(r.stdout.splitlines()[0])
+        assert payload["from_label"] == "stage/design"
+        assert payload["to_label"] == "stage/code"
+
+    def test_also_updates_issue_when_provided(self):
+        calls: list[tuple] = []
+
+        def _add(number, label, **kw):
+            calls.append(("add", number, label))
+            return True
+
+        def _remove(number, label, **kw):
+            calls.append(("remove", number, label))
+            return True
+
+        runner = CliRunner()
+        with patch("medharness.services.github_pr.remove_label", side_effect=_remove), \
+             patch("medharness.services.github_pr.add_label", side_effect=_add):
+            r = runner.invoke(main, [
+                "ci", "advance-stage",
+                "--pr", "7", "--from-stage", "design", "--to-stage", "code",
+                "--issue", "42",
+            ])
+        assert r.exit_code == 0, r.output
+        added_numbers = [n for op, n, _ in calls if op == "add"]
+        assert 7 in added_numbers
+        assert 42 in added_numbers
