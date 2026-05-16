@@ -390,8 +390,8 @@ def _auto_post_pr_feedback(pr_number: int, cr_id: str, result: dict, *, token: s
         if url:
             comments.append(url)
 
-    if result.get("outcome") == "completed_with_errors":
-        errors = result.get("errors") or []
+    errors = result.get("errors") or []
+    if result.get("outcome") == "completed_with_errors" and errors:
         lines = "\n".join(
             f"- **{e.get('field', '?')}**: {e.get('issue', '')}\n  _Fix:_ {e.get('fix', '')}"
             for e in errors

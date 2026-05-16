@@ -809,16 +809,10 @@ class TestAutoPostPrFeedback:
             "outcome": "completed_with_errors",
             "errors": [{"field": "srs", "issue": "missing SRS", "fix": "create SRS-001"}],
         }
-        counter = {"n": 0}
-
-        def side_effect(pr, body, **kw):
-            counter["n"] += 1
-            return f"https://url-{counter['n']}"
-
-        with patch(self.MOCK_TARGET, side_effect=side_effect) as mock_post:
+        with patch(self.MOCK_TARGET, side_effect=["https://url-1", "https://url-2"]) as mock_post:
             urls = _auto_post_pr_feedback(42, "CR-042", result)
         assert mock_post.call_count == 2
-        assert len(urls) == 2
+        assert urls == ["https://url-1", "https://url-2"]
 
     def test_no_warnings_no_errors_returns_empty(self):
         result = {"outcome": "completed", "warnings": [], "errors": []}
@@ -830,11 +824,12 @@ class TestAutoPostPrFeedback:
     def test_warning_body_format(self):
         result = {"warnings": [{"code": "W-TRACE", "message": "traceability gap"}], "outcome": "ok"}
         captured: list[str] = []
-        with patch(self.MOCK_TARGET, side_effect=lambda pr, body, **kw: captured.append(body) or "https://u"):
+        with patch(self.MOCK_TARGET, side_effect=lambda pr, body, **kw: captured.append(body) or "https://u") as mock_post:
             _auto_post_pr_feedback(42, "CR-042", result)
         assert len(captured) == 1
         assert "⚠️ **Warnings for CR-042:**" in captured[0]
         assert "- `W-TRACE`: traceability gap" in captured[0]
+        assert mock_post.call_args.args[0] == 42
 
     def test_error_body_format(self):
         result = {
@@ -857,11 +852,21 @@ class TestAutoPostPrFeedback:
             urls = _auto_post_pr_feedback(42, "CR-042", result)
         assert urls == []
 
-    def test_token_kwarg_forwarded(self):
+    def test_token_kwarg_forwarded_on_warning_branch(self):
         result = {"warnings": [{"code": "W001", "message": "x"}], "outcome": "ok"}
         with patch(self.MOCK_TARGET, side_effect=lambda pr, body, **kw: "https://u") as mock_post:
             _auto_post_pr_feedback(42, "CR-042", result, token="my-token")
         assert mock_post.call_args.kwargs.get("token") == "my-token"
+
+    def test_token_kwarg_forwarded_on_error_branch(self):
+        result = {
+            "warnings": [],
+            "outcome": "completed_with_errors",
+            "errors": [{"field": "f", "issue": "i", "fix": "x"}],
+        }
+        with patch(self.MOCK_TARGET, side_effect=lambda pr, body, **kw: "https://u") as mock_post:
+            _auto_post_pr_feedback(42, "CR-042", result, token="err-token")
+        assert mock_post.call_args.kwargs.get("token") == "err-token"
 
     def test_explicit_empty_warnings_no_warning_comment(self):
         result = {
@@ -878,6 +883,14 @@ class TestAutoPostPrFeedback:
     def test_missing_result_keys_produces_no_comments(self):
         with patch(self.MOCK_TARGET) as mock_post:
             urls = _auto_post_pr_feedback(42, "CR-042", {})
+        mock_post.assert_not_called()
+        assert urls == []
+
+    def test_completed_with_errors_but_no_errors_key_posts_no_comment(self):
+        # outcome == completed_with_errors with absent errors key → empty list → no post
+        result = {"warnings": [], "outcome": "completed_with_errors"}
+        with patch(self.MOCK_TARGET) as mock_post:
+            urls = _auto_post_pr_feedback(42, "CR-042", result)
         mock_post.assert_not_called()
         assert urls == []
 
