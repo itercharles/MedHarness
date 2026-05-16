@@ -13,6 +13,35 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ---
 
+## [0.6.2] — 2026-05-16
+
+### Bug Fixes
+
+- **`get_session` returning `"null"` on first revision run** — the `jq` query
+  used `[] | last` which emits the literal string `null` when no session marker
+  comment exists yet. Added `// empty` to the jq pipeline and a defensive
+  `!= "null"` filter on the return value so the first `--pr` rerun on a PR
+  with no stored marker correctly starts a fresh Claude session instead of
+  passing `--resume null`.
+
+- **`_run_claude` discarding empty `result` field** — `data.get("result") or
+  result.stdout` fell back to the raw JSON envelope when Claude returned an
+  empty-string result. Changed to an explicit `None`-check so an intentional
+  empty output is preserved.
+
+### Changes
+
+- **Session ID threading** — `generate_dhf` and `generate_code` now capture
+  the `session_id` from Claude's `--output-format json` envelope and thread it
+  through the full step chain: initial generation → fix pass → (for
+  `generate_code`) review step all share one continuous Claude session.
+  On revision runs the prior session stored in the PR comment via
+  `github_session.get_session` / `put_session` is automatically resumed.
+  Session IDs are recorded in `diagnostics.session_id` and
+  `diagnostics.resumed_session_id` for observability.
+
+---
+
 ## [0.6.1] — 2026-05-15
 
 ### Changes
