@@ -109,6 +109,29 @@ def _build_dhf_context_block(dhf_path: Path) -> str:
                 lines.append(f"{label}: {', '.join(by_role[role])}\n")
         lines.append("\n")
 
+    # Relationship model — injected once so every generate-dhf session has
+    # the full traceability graph in context without reading external docs.
+    lines.append(
+        "### Traceability Link Model\n"
+        "(Canonical link fields and what each relationship means.)\n\n"
+        "| Written on | Field | Points to | Meaning |\n"
+        "|------------|-------|-----------|---------|\n"
+        "| CRS | `derives_from` | UC | customer requirement ← use case |\n"
+        "| SYS | `satisfies` | CRS | system requirement ← customer need |\n"
+        "| SYSARCH | `design` | SYS | arch decision designs this SYS requirement |\n"
+        "| SRS | `derives_from` | SYS | software requirement ← system requirement |\n"
+        "| SWDD | `implements` | SRS | detailed design implements this SRS |\n"
+        "| SWDD | `module` | MODULE | detailed design belongs to this module |\n"
+        "| RCM | `mitigates` | RISK | control measure mitigates this risk |\n"
+        "| RCM | `implements` | SYS | control measure is a system requirement |\n"
+        "\n"
+        "Design layer roles:\n"
+        "- SYSARCH — one per SYS requirement; records the system-level design decision for that requirement\n"
+        "- MODULE — one per software unit; defines the module's responsibility and interfaces (module-oriented, not requirement-oriented)\n"
+        "- SWDD — one per SRS requirement; records design decisions within a specific module; must carry both `implements` (SRS) and `module` (MODULE)\n"
+        "\n"
+    )
+
     items = adapter.list_items()
     cap = MAX_ITEMS
     if items:

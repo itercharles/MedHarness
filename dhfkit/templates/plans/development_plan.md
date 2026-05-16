@@ -53,13 +53,48 @@ Every non-trivial change starts from a Change Request (CR) tracked in the DHF:
 - Product-side workflows own executable implementation, test execution, and requirement-to-test evidence
 - Cross-repo integrity is maintained through shared CR IDs, linked item IDs, and CI-produced evidence artifacts
 
-## 3. Verification and Testing Strategy
+## 3. Traceability Maintenance
+
+Every change that introduces or modifies DHF items must preserve the traceability
+chain. The following coverage rules are enforced by `dhf validate traceability`
+and must pass before a CR can be considered complete.
+
+### 3.1 Required coverage
+
+| Rule | Meaning |
+|------|---------|
+| UC → CRS | Every use case is addressed by at least one customer requirement |
+| CRS → SYS | Every customer requirement is allocated to at least one system requirement |
+| SYS → SRS | Every system requirement is refined into at least one software requirement |
+| SRS → SWDD | Every software requirement has at least one detailed design item |
+| SYS → SYSARCH | Every system requirement has at least one architectural design item |
+| MODULE → SWDD | Every defined software module has at least one detailed design item |
+| RISK → RCM | Every identified risk has at least one risk control measure |
+
+### 3.2 Required links per item type
+
+In addition to coverage, individual items must carry the following upstream links:
+
+| Item type | Required link | Target |
+|-----------|--------------|--------|
+| CRS | `derives_from` | UC |
+| SRS | `derives_from` | SYS |
+| SYSARCH | `design` | SYS |
+| SWDD | `implements` | SRS |
+| SWDD | `module` | MODULE |
+| RCM | `mitigates` | RISK |
+| RCM | `implements` | SYS |
+
+Missing links are reported as `required traceability failures` by the validator
+and block the compliance gate.
+
+## 4. Verification and Testing Strategy
 
 Testing is part of the development plan rather than a parallel process document.
 The product family uses layered tests, structured evidence conventions, and CI
 contracts that allow runtime outputs to be traced back to controlled requirements.
 
-### 3.1 Test Layers
+### 4.1 Test Layers
 
 | Layer | Location | What it covers |
 |-------|----------|---------------|
@@ -70,7 +105,7 @@ contracts that allow runtime outputs to be traced back to controlled requirement
 Tests should validate externally visible behavior or controlled interfaces, not
 private implementation details.
 
-### 3.2 Evidence Conventions
+### 4.2 Evidence Conventions
 
 Executable tests are expected to emit JUnit XML. Test cases should carry stable
 test identifiers and requirement links so evidence can be imported or evaluated
@@ -92,7 +127,7 @@ def test_TC_SYS_027_001_init_creates_dhf_structure(tmp_path):
 The `@links` contract connects executable evidence to the DHF requirement chain.
 The product repo must prove requirement coverage through test metadata and results.
 
-### 3.3 JUnit Contract
+### 4.3 JUnit Contract
 
 ```xml
 <testcase name="test_TC_SYS_027_001_...">
@@ -107,7 +142,7 @@ The product repo must prove requirement coverage through test metadata and resul
 processing. The evidence bundle is assembled from runtime artifacts that satisfy
 this contract.
 
-### 3.4 Local Execution Expectations
+### 4.4 Local Execution Expectations
 
 Developers are expected to run relevant tests and traceability checks locally
 before opening or updating a PR. At minimum:
@@ -121,7 +156,7 @@ medharness --dhf DHF dhf validate traceability
 Local runs are fast feedback mechanisms. They reduce CI churn but do not replace
 the CI record.
 
-### 3.5 CI Expectations
+### 4.5 CI Expectations
 
 CI is the canonical execution environment for release-quality evidence.
 Product-side CI is expected to:
@@ -137,7 +172,7 @@ DHF-side CI is expected to:
 - validate structural traceability and design coverage
 - enforce CR-driven document updates where applicable
 
-### 3.6 Development Tests vs Formal Verification Evidence
+### 4.6 Development Tests vs Formal Verification Evidence
 
 Not every local or exploratory test run is formal verification evidence. The
 distinction is:
@@ -148,28 +183,28 @@ distinction is:
 This distinction matters because the OSS system promises runtime evidence bundle
 generation, not blanket capture of every engineering action.
 
-### 3.7 What Not to Test
+### 4.7 What Not to Test
 
 - private implementation details instead of observable behavior
 - unstable filesystem side effects outside isolated fixtures
 - non-deterministic external services as part of the default coverage gate
 
-## 4. CI Pipeline
+## 5. CI Pipeline
 
-### 4.1 Product CI
+### 5.1 Product CI
 
 1. **TESTING** — SYS and CRS test suites run and publish JUnit evidence
 2. **ACCEPTANCE GATE** — `ci test-coverage` checks requirement-to-test coverage
 3. **EVIDENCE** (main only) — `ci evidence bundle` produces runtime audit artifacts
 4. **AUDIT** — OSS build hygiene and workflow integrity checks run on PRs
 
-### 4.2 DHF Structural CI
+### 5.2 DHF Structural CI
 
 DHF repo CI runs CR validation and design traceability checks. Its role is
 structural and document-centric: it ensures the controlled design record stays
 coherent as implementation evolves.
 
-### 4.3 Generated Product CI
+### 5.3 Generated Product CI
 
 Scaffolded product repos get:
 
@@ -178,30 +213,30 @@ Scaffolded product repos get:
 - `ci evidence bundle` on merge to `main`
 - `cr-complete.yml` for automatic CR completion on PR merge
 
-## 5. Release and Build
+## 6. Release and Build
 
-### 5.1 MedHarness
+### 6.1 MedHarness
 
 - **Trigger:** push of `v*` tag
 - **Output:** Python wheel published to GitHub Releases
 - **Release contains:** installable package (harness code and metadata, including `dhfkit`)
 - **Release does not contain:** DHF templates as prebuilt document deliverables
 
-### 5.2 dhfkit
+### 6.2 dhfkit
 
 - **Package:** `dhfkit` bundled in the `medharness` distribution
 - **All DHF operations available via `medharness dhf` after `pip install medharness`.
 - **Templates:** bundled within the `medharness` package at `dhfkit/templates/`
 
-### 5.3 Evidence Bundles
+### 6.3 Evidence Bundles
 
 Evidence bundles are runtime CI outputs, not release payloads. They are
 produced on merge to `main` by `ci evidence bundle` and uploaded as CI artifacts
 for audit consumption.
 
-## 6. Document Control
+## 7. Document Control
 
-### 6.1 Canonical Product Documents
+### 7.1 Canonical Product Documents
 
 Formal product documents live in the DHF repository under `DHF/documents/`:
 
@@ -212,13 +247,13 @@ Formal product documents live in the DHF repository under `DHF/documents/`:
 These are the authoritative source for product requirements, architecture, and
 development process. MedHarness repo-level docs are derivative summaries.
 
-### 6.2 Generated Documents
+### 7.2 Generated Documents
 
 DHF item content is rendered into specification documents via Jinja2 templates
 under `DHF/documents/specs/`. Generated output is runtime-only and need not be
 committed as source material.
 
-### 6.3 Update Process
+### 7.3 Update Process
 
 - product direction is updated in the CRS narrative chapters when mission, scope, or roadmap changes
 - architecture narrative is updated when repo boundaries, delivery mechanics, or agent-guidance structure changes
