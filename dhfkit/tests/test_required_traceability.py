@@ -326,6 +326,60 @@ def test_swdd_module_field_populates_all_linked_uids():
     assert "SRS-001" in item.all_linked_uids
 
 
+def test_swdd_module_in_default_rules():
+    from dhfkit.item_type import default_traceability_rules
+    rules = default_traceability_rules()
+    rule_keys = {(r.source_type, r.field, r.target_type) for r in rules}
+    assert ("SWDD", "module", "MODULE") in rule_keys
+
+
+def test_swdd_module_default_rule_skipped_when_module_not_configured():
+    """Default SWDD→MODULE rule is skipped when MODULE isn't in the project's doc types."""
+    from dhfkit.traceability import check_traceability
+    from dhfkit.models.item import Item
+
+    config = ProjectConfig(
+        doc_types=[
+            DocTypeConfig(code="SRS", name="Software Requirement", prefix="SRS-"),
+            DocTypeConfig(code="SWDD", name="Detailed Design", prefix="SWDD-"),
+        ],
+        required_traceability=None,  # use defaults
+    )
+    swdd = Item.model_validate({"id": "SWDD-001", "title": "t", "implements": ["SRS-001"]})
+    items = [
+        {"id": "SRS-001", "all_linked_uids": []},
+        {"id": "SWDD-001", "all_linked_uids": swdd.all_linked_uids, "implements": swdd.implements},
+    ]
+    result = check_traceability(items, config)
+    # SWDD→MODULE rule should be skipped since MODULE is not configured
+    swdd_module_failures = [f for f in result["required"]["failures"] if f.get("field") == "module"]
+    assert swdd_module_failures == [], f"Unexpected module failures: {swdd_module_failures}"
+
+
+def test_swdd_module_default_rule_enforced_when_module_configured():
+    """Default SWDD→MODULE rule fires when MODULE is in doc types but SWDD has no module link."""
+    from dhfkit.traceability import check_traceability
+    from dhfkit.models.item import Item
+
+    config = ProjectConfig(
+        doc_types=[
+            DocTypeConfig(code="SRS", name="Software Requirement", prefix="SRS-"),
+            DocTypeConfig(code="SWDD", name="Detailed Design", prefix="SWDD-"),
+            DocTypeConfig(code="MODULE", name="Software Module", prefix="MODULE-"),
+        ],
+        required_traceability=None,  # use defaults
+    )
+    swdd = Item.model_validate({"id": "SWDD-001", "title": "t", "implements": ["SRS-001"]})
+    items = [
+        {"id": "SRS-001", "all_linked_uids": []},
+        {"id": "MODULE-001", "all_linked_uids": []},
+        {"id": "SWDD-001", "all_linked_uids": swdd.all_linked_uids, "implements": swdd.implements},
+    ]
+    result = check_traceability(items, config)
+    swdd_module_failures = [f for f in result["required"]["failures"] if f.get("field") == "module"]
+    assert any(f["id"] == "SWDD-001" for f in swdd_module_failures)
+
+
 def test_swdd_module_required_link_rule():
     from dhfkit.traceability import check_traceability
     from dhfkit.models.item import Item

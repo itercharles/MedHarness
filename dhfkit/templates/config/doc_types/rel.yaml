@@ -2,7 +2,7 @@ code: REL
 role: release
 name: Release
 prefix: REL-
-directory: 07_rel
+directory: 08_rel
 properties:
 - id
 - name: title

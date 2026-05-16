@@ -5,3 +5,5 @@ content: |-
   for your product.
 implements:
   - SRS-001
+module:
+  - MODULE-001

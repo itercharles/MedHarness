@@ -26,7 +26,8 @@ _TRACEABILITY_LINK_FIELDS = (
 )
 # Full set of relationship fields on any item — superset of traceability fields.
 _ITEM_LINK_FIELDS = _TRACEABILITY_LINK_FIELDS + (
-    "affected_items", "target_release", "found_in_release", "fixed_in_release",
+    "affected_items", "affected_risk_items",
+    "target_release", "found_in_release", "fixed_in_release",
 )
 _UID_PATTERN = re.compile(r"^[A-Z][A-Z0-9]*(-[A-Z0-9]+)*-\d+$")
 

@@ -130,12 +130,11 @@ def test_module_in_default_coverage_chains():
     assert ("MODULE", "SWDD") in paths
 
 
-def test_default_traceability_rules_cover_swdd_implements():
+def test_default_traceability_rules_cover_swdd_implements_and_module():
     rules = default_traceability_rules()
     rule_keys = {(r.source_type, r.field, r.target_type) for r in rules}
     assert ("SWDD", "implements", "SRS") in rule_keys
-    # MODULE→SWDD is a coverage matrix, not a required_upstream rule on SWDD
-    assert not any(r.source_type == "SWDD" and r.field == "module" for r in rules)
+    assert ("SWDD", "module", "MODULE") in rule_keys
 
 
 # ---------------------------------------------------------------------------
@@ -162,3 +161,19 @@ def test_item_no_refines_field():
     from dhfkit.models.item import Item
     item = Item.model_validate({"id": "SWDD-003", "title": "t"})
     assert "refines" not in item.all_links
+
+
+def test_affected_risk_items_in_all_links():
+    from dhfkit.models.item import Item
+    item = Item.model_validate({"id": "CR-001", "title": "t", "affected_risk_items": ["RISK-001", "RCM-002"]})
+    assert item.affected_risk_items == ["RISK-001", "RCM-002"]
+    assert "RISK-001" in item.all_linked_uids
+    assert "RCM-002" in item.all_linked_uids
+    assert item.all_links["affected_risk_items"] == ["RISK-001", "RCM-002"]
+
+
+def test_affected_risk_items_absent_gives_empty():
+    from dhfkit.models.item import Item
+    item = Item.model_validate({"id": "CR-002", "title": "t"})
+    assert item.affected_risk_items is None
+    assert item.all_links["affected_risk_items"] == []
