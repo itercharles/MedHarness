@@ -90,8 +90,6 @@ The generated DHF repo does not contain `dhfkit/` or `medharness/` source code. 
 | `{{product_repo_name}}` | `insulin-pump` |
 | `{{github_org}}` | `acme-medical` |
 | `{{dhf_repo_name}}` | `insulin-pump-dhf` |
-| `{{compliantflow_version}}` | `0.3.5` |
-| `{{compliantflow_repo}}` | `itercharles/MedHarness` |
 | `{{primary_test_tool}}` | `pytest` |
 
 ---
