@@ -72,9 +72,14 @@ def _empty_diff() -> MagicMock:
 # ── generate_code ────────────────────────────────────────────────────────────
 
 class TestGenerateCodeContract:
+    @pytest.fixture(autouse=True)
+    def stub_session(self, monkeypatch):
+        monkeypatch.setattr("medharness.services.cr_generation.get_session", lambda pr: "")
+        monkeypatch.setattr("medharness.services.cr_generation.put_session", lambda pr, sid: None)
+
     def test_keys_present_and_no_legacy_leak(self, dhf):
         with patch("medharness.services.cr_generation._run_claude",
-                   return_value=(0, "")), \
+                   return_value=(0, "", "")), \
              patch("medharness.services.code_validation.validate_code",
                    return_value=[]), \
              patch("subprocess.run", return_value=_empty_diff()):
@@ -88,7 +93,7 @@ class TestGenerateCodeContract:
 
     def test_value_domains(self, dhf):
         with patch("medharness.services.cr_generation._run_claude",
-                   return_value=(0, "")), \
+                   return_value=(0, "", "")), \
              patch("medharness.services.code_validation.validate_code",
                    return_value=[]), \
              patch("subprocess.run", return_value=_empty_diff()):
@@ -98,7 +103,7 @@ class TestGenerateCodeContract:
 
     def test_files_changed_shape(self, dhf):
         with patch("medharness.services.cr_generation._run_claude",
-                   return_value=(0, "")), \
+                   return_value=(0, "", "")), \
              patch("medharness.services.code_validation.validate_code",
                    return_value=[]), \
              patch("subprocess.run", return_value=_empty_diff()):
@@ -112,10 +117,15 @@ class TestGenerateCodeContract:
 # ── JSON-serializability — the contract is JSON, not Python dicts ────────────
 
 class TestResponseIsJsonSerializable:
+    @pytest.fixture(autouse=True)
+    def stub_session(self, monkeypatch):
+        monkeypatch.setattr("medharness.services.cr_generation.get_session", lambda pr: "")
+        monkeypatch.setattr("medharness.services.cr_generation.put_session", lambda pr, sid: None)
+
     def test_code_response_is_json(self, dhf):
         import json
         with patch("medharness.services.cr_generation._run_claude",
-                   return_value=(0, "")), \
+                   return_value=(0, "", "")), \
              patch("medharness.services.code_validation.validate_code",
                    return_value=[]), \
              patch("subprocess.run", return_value=_empty_diff()):

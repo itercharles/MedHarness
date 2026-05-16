@@ -50,10 +50,11 @@ def get_session(pr_number: int | str, *, token: str = "") -> str:
                 "gh", "pr", "view", str(pr_number),
                 "--json", "comments",
                 "--jq",
-                f'[.comments[].body | select(startswith("{_MARKER_START}"))] | last | ltrimstr("{_MARKER_START} ") | rtrimstr(" {_MARKER_END}")',
+                f'[.comments[].body | select(startswith("{_MARKER_START}"))] | last // empty | ltrimstr("{_MARKER_START} ") | rtrimstr(" {_MARKER_END}")',
             ],
             capture_output=True, text=True, env=env, timeout=15,
         )
-        return result.stdout.strip() if result.returncode == 0 else ""
+        sid = result.stdout.strip() if result.returncode == 0 else ""
+        return sid if sid != "null" else ""
     except Exception:
         return ""
