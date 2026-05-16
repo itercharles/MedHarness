@@ -1,0 +1,13 @@
+code: MODULE
+role: software_module
+name: Software Module
+prefix: MODULE-
+directory: 04_modules
+properties:
+- id
+- name: title
+  format: short_text
+  label: Module Name
+- name: content
+  format: long_text
+  label: Description

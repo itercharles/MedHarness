@@ -38,8 +38,9 @@ class ItemType(Enum):
     # but both are optional per IEC 62304 — projects enforce via explicit rules.
     SYS     = ItemTypeMeta("SYS",     "SYS-",     "System Requirement",            "system_requirement",    True,  [],                                           ["SRS", "SYSARCH"])
     SRS     = ItemTypeMeta("SRS",     "SRS-",     "Software Requirement",          "software_requirement",  True,  [("derives_from", "SYS")],                   ["SWDD"])
-    SWDD    = ItemTypeMeta("SWDD",    "SWDD-",    "Software Detailed Design",      "design_detail",         True,  [("implements", "SRS")],                     [])
+    SWDD    = ItemTypeMeta("SWDD",    "SWDD-",    "Software Detailed Design",      "design_detail",         True,  [("implements", "SRS")],                         [])
     SYSARCH = ItemTypeMeta("SYSARCH", "SYSARCH-", "System Architecture",           "architecture",          False, [("design", "SYS")],                         [])
+    MODULE  = ItemTypeMeta("MODULE",  "MODULE-",  "Software Module",               "software_module",       False, [],                                           ["SWDD"])
     RISK    = ItemTypeMeta("RISK",    "RISK-",    "Risk Analysis",                 "risk",                  False, [],                                           ["RCM"])
     RCM     = ItemTypeMeta("RCM",     "RCM-",     "Risk Control Measure",          "risk_control",          False, [("mitigates", "RISK"), ("implements", "SYS")], [])
     CR      = ItemTypeMeta("CR",      "CR-",      "Change Request",                "change_request",        False, [],                                           [])

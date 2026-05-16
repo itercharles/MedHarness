@@ -41,6 +41,8 @@ class Item(BaseModel):
     satisfies: Optional[List[str]] = Field(default=None, description="Items this satisfies")
     verifies: Optional[List[str]] = Field(default=None, description="Items this verifies")
     validates: Optional[List[str]] = Field(default=None, description="Items this validates")
+    refines: Optional[List[str]] = Field(default=None, description="Items this refines")
+    module: Optional[List[str]] = Field(default=None, description="Module this item belongs to")
 
     # Common fields
     title: Optional[str] = Field(None, description="Item title")
@@ -69,7 +71,9 @@ class Item(BaseModel):
             'mitigates': self.mitigates or [],
             'satisfies': self.satisfies or [],
             'verifies': self.verifies or [],
-            'validates': self.validates or []
+            'validates': self.validates or [],
+            'refines': self.refines or [],
+            'module': self.module or [],
         }
 
     @property

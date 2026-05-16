@@ -56,7 +56,7 @@ CR (input -- do not modify)
           ├─► RISK     (hazards arising from SYS)
           ├─► RCM      (mitigates RISK, implements SYS)
           └─► SRS   (derives_from SYS, constrained by RCM where applicable)
-               └─► SWDD  (implements SRS -- link implements to SRS IDs)
+               └─► SWDD  (implements SRS; module MODULE -- link both fields)
 
 Before writing any items, enumerate existing items for each type you plan to touch:
 
@@ -83,7 +83,13 @@ DHF item YAML are needed.
 ## SWDD Items
 
 **SWDD items capture design decisions — choices that are not obvious from the
-requirement alone.** Apply this threshold before creating or updating a SWDD:
+requirement alone.** Each SWDD item belongs to a software module (MODULE) and
+must carry both `implements` (SRS IDs) and `module` (MODULE ID). List existing
+MODULE items first to find or create the right module:
+
+    python -m medharness --dhf DHF dhf item list --type MODULE
+
+**Apply this threshold before creating or updating a SWDD:**
 
 > *Would a competent developer, given only the SRS, make a meaningfully wrong
 > architectural or structural choice without this SWDD?*

@@ -113,6 +113,11 @@ traceability_matrices:
   path:
   - SYS
   - SYSARCH
+- name: Module to Detailed Design
+  description: Every software module has at least one detailed design item
+  path:
+  - MODULE
+  - SWDD
 - name: Risk to Control Measures
   description: Risks to risk control measures
   path:

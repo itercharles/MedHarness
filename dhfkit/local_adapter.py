@@ -21,7 +21,7 @@ from dhfkit.id_generator import get_next_id
 _ITEM_LINK_FIELDS = (
     "derives_from", "implements", "mitigates", "satisfies",
     "guided_by", "informs", "design", "verifies", "validates",
-    "mitigated_by",
+    "mitigated_by", "refines", "module",
     # CR and DEF built-in relationship fields
     "affected_items", "target_release", "found_in_release", "fixed_in_release",
 )
@@ -304,7 +304,7 @@ class LocalDHFAdapter:
         """Check required traceability, orphans, and coverage."""
         from dhfkit.traceability import check_traceability
         items = self._loader.load_all()
-        _LINK_FIELDS = ("derives_from", "implements", "mitigates", "satisfies", "guided_by", "informs", "design", "verifies", "validates")
+        _LINK_FIELDS = ("derives_from", "implements", "mitigates", "satisfies", "guided_by", "informs", "design", "verifies", "validates", "refines", "module")
         item_dicts = [
             {
                 "id": it.uid,
