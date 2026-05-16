@@ -54,6 +54,11 @@ global_lifecycle:
     action_label: Approve
     icon: "\u2705"
     color: success
+  - id: designing
+    label: Designing
+    action_label: Start Design
+    icon: "\U0001F4D0"
+    color: info
   - id: implementing
     label: Implementing
     action_label: Start Implementation
@@ -123,6 +128,36 @@ traceability_matrices:
   path:
   - RISK
   - RCM
+required_traceability:
+- source_type: SRS
+  direction: upstream
+  field: derives_from
+  target_type: SYS
+  min_count: 1
+- source_type: SWDD
+  direction: upstream
+  field: implements
+  target_type: SRS
+  min_count: 1
+- source_type: SWDD
+  direction: upstream
+  field: module
+  target_type: MODULE
+  min_count: 1
+- source_type: RCM
+  direction: upstream
+  field: mitigates
+  target_type: RISK
+  min_count: 1
+- source_type: RCM
+  direction: upstream
+  field: implements
+  target_type: SYS
+  min_count: 1
+- source_type: CRS
+  direction: downstream
+  target_type: SYS
+  min_count: 1
 document_specifications:
   UC:
     source: requirements_specification.md.j2
