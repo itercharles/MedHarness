@@ -13,6 +13,18 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ---
 
+## [0.6.4] — 2026-05-16
+
+### Bug Fixes
+
+- **`ci advance-stage` exits 1 when `add_label` fails** — previously the
+  command printed `WARN` and exited 0 when `gh api` calls failed (invalid
+  token, missing label, wrong repo context), silently leaving the PR on the
+  wrong stage. Now exits 1 with a `FAIL` message when adding the to-stage
+  label fails. `remove_label` remains non-fatal (idempotent).
+
+---
+
 ## [0.6.3] — 2026-05-16
 
 ### New Features
