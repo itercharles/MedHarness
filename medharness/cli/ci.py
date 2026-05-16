@@ -716,7 +716,7 @@ def register(main):
     ) -> None:
         """Build an IEC 62304 §9 release baseline.
 
-        Verifies all included CRs are completed or cancelled, collects a
+        Verifies all included CRs are in `completed` state, collects a
         software BOM from DHF SOUP items and manifest packages, and writes
         release-baseline.json and software-bom.json to --out-dir.
         Pass --write to also create a REL item in the DHF.
