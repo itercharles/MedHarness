@@ -11,6 +11,23 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+### New Features
+
+- **`ci soup-sync` command** — parses `requirements.txt` (pinned `==` entries)
+  and `package.json` (`dependencies`, `devDependencies`, `peerDependencies`) and
+  diffs them against DHF SOUP items. Reports new packages, version-drifted items,
+  and orphaned SOUP records. `--write` applies creates/updates via `dhfkit.api`.
+  Duplicate package names across manifests are deduplicated (first occurrence wins)
+  to prevent multiple SOUP records for the same dependency.
+
+- **`ci release-baseline` command** — IEC 62304 §9 release record automation.
+  Verifies all included CRs are in `completed` state (cancelled/rejected fail the
+  gate), auto-collects completed unreleased CRs when `--cr` is omitted, builds a
+  software BOM from DHF SOUP items and package manifests, and writes
+  `release-baseline.json` and `software-bom.json` to `--out-dir`. `--write`
+  creates a REL item in the DHF. Manifest parse failures propagate as errors so
+  an incomplete BOM never silently looks successful.
+
 ---
 
 ## [0.6.4] — 2026-05-16

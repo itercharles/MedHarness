@@ -1,7 +1,7 @@
 # Compatibility Contracts
 
-> **Version:** 0.5.0
-> **Last updated:** 2026-05-14
+> **Version:** 0.6.5 (unreleased)
+> **Last updated:** 2026-05-16
 
 This document defines which behaviors are version-stable contracts and must
 not change without a MAJOR version bump. See [CHANGELOG.md](../CHANGELOG.md)
@@ -182,6 +182,89 @@ Removed keys (no longer emitted):
   - `action`
 - Uses caller-supplied mappings to decide `stage` and `action`; MedHarness
   parses event context but does not hardcode repo lifecycle policy
+
+#### `medharness ci approve-gate`
+
+- Checks whether a CR stage has an explicit approval label on the PR
+- Writes JSON to stdout with these keys:
+  - `cr_id`
+  - `stage`
+  - `pr_number`
+  - `approved` (bool)
+  - `label` (the approval label checked)
+- Uses exit code `0` when `approved` is true, non-zero otherwise
+- Uses stderr only for human-readable summaries
+
+#### `medharness ci advance-stage`
+
+- Removes `{label-prefix}{from-stage}` label and adds `{label-prefix}{to-stage}`
+  label on the specified PR (and optionally issue)
+- Default `--label-prefix` is `cr:stage/`; callers may override
+- A missing from-stage label is silently ignored (idempotent)
+- Writes JSON to stdout with these keys:
+  - `pr_number`
+  - `from_label`
+  - `to_label`
+  - `issue_number` (null when `--issue` is not supplied)
+  - `ok` (bool — whether the to-stage label was successfully added)
+- Uses exit code `0` on success, `1` when `add_label` fails
+- Uses stderr only for human-readable summaries
+
+#### `medharness ci parse-approval`
+
+- Parses a PR comment body for `/approve` or `/reject` commands
+- Writes JSON to stdout with these keys:
+  - `action` (one of `"approve"`, `"reject"`, or `null` when no command found)
+  - `reason` (extracted reason string, or `""`)
+- Always exits `0`; never writes to stderr
+
+#### `medharness ci soup-sync`
+
+- Requires the global `medharness --dhf PATH` flag
+- Accepts one or more `--manifest PATH` options (repeatable); supports
+  `requirements.txt` and `package.json` formats
+- Writes JSON to stdout with these keys:
+  - `outcome` — `"completed"` or `"completed_with_errors"`
+  - `manifests_parsed` — list of successfully parsed manifest paths
+  - `packages_found` — deduplicated package count after parsing
+  - `to_create` — list of package names not yet in the DHF
+  - `to_update` — list of `{uid, name, old_version, new_version}` dicts
+  - `orphans` — list of `{uid, name}` dicts for SOUP items with no manifest match
+  - `matched_count` — count of items that already match
+  - `items_created` — UIDs created (non-empty only when `--write` is set)
+  - `items_updated` — UIDs updated (non-empty only when `--write` is set)
+  - `write` (bool)
+  - `errors` — list of error strings
+- Without `--write`, no DHF state is changed (dry-run by default)
+- Uses exit code `0` on success, `1` on `completed_with_errors`
+- Prints `FAIL: {error}` lines to stderr before exiting `1`
+
+#### `medharness ci release-baseline`
+
+- Requires the global `medharness --dhf PATH` flag
+- Requires `--version VERSION`; other options (`--manifest`, `--cr`, `--out-dir`,
+  `--write`, `--author`) are optional
+- Only CRs in `completed` state may be included; `cancelled` and `rejected` CRs
+  fail the gate
+- When `--cr` is omitted, auto-collects completed CRs not yet referenced in any
+  existing REL item
+- Always writes `release-baseline.json` and `software-bom.json` to `--out-dir`
+  (created if missing) when the gate passes
+- Writes JSON to stdout with these keys:
+  - `outcome` — `"completed"` or `"completed_with_errors"`
+  - `version`
+  - `cr_ids` — sorted list of included CR IDs
+  - `rel_uid` — UID of the created REL item, or `null` when `--write` is not set
+  - `gate_violations` — list of `{cr, issue}` dicts (non-empty when gate fails)
+  - `artifacts` — list of written file paths
+  - `soup_count` — count of DHF SOUP items in the BOM
+  - `manifest_packages_count` — count of manifest packages in the BOM
+  - `write` (bool)
+  - `errors` — list of error strings
+- Gate-failure early return includes all keys above with `artifacts: []`,
+  `rel_uid: null`, `soup_count: 0`, `manifest_packages_count: 0`
+- Uses exit code `0` on success, `1` on gate failure or `completed_with_errors`
+- Prints `FAIL: {error}` lines to stderr before exiting `1`
 
 ### Output Format
 
