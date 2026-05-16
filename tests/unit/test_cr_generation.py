@@ -269,7 +269,7 @@ class TestGenerateDhf:
     @pytest.fixture(autouse=True)
     def stub_session(self, monkeypatch):
         monkeypatch.setattr("medharness.services.cr_generation.get_session", lambda pr: "")
-        monkeypatch.setattr("medharness.services.cr_generation.put_session", lambda pr, sid: "")
+        monkeypatch.setattr("medharness.services.cr_generation.put_session", lambda pr, sid: None)
 
     def test_returns_dict_with_required_keys(self, tmp_path):
         dhf = tmp_path / "DHF"
@@ -385,6 +385,25 @@ class TestGenerateDhf:
              patch("medharness.services.cr_generation._record_design_impact_in_cr") as mock_impact:
             generate_dhf("CR-058", dhf)
         mock_impact.assert_not_called()
+
+    def test_fix_pass_resumes_from_initial_session(self, tmp_path):
+        dhf = tmp_path / "DHF"
+        dhf.mkdir()
+        resume_sessions_captured: list[str] = []
+
+        def _stub(prompt: str, *, resume_session: str = "") -> tuple[int, str, str]:
+            resume_sessions_captured.append(resume_session)
+            return 0, "", f"sess-{len(resume_sessions_captured)}"
+
+        first_errors = [{"field": "f", "issue": "i", "fix": "x"}]
+        with patch("medharness.services.cr_generation._run_claude", side_effect=_stub), \
+             patch("medharness.services.cr_generation.git.collect_dhf_item_changes",
+                   return_value={"created": [], "updated": [], "deleted": []}), \
+             patch("medharness.services.design_validation.validate_generate_dhf",
+                   side_effect=[first_errors, []]):
+            generate_dhf("CR-059", dhf)
+        assert resume_sessions_captured[0] == "", "initial step must start fresh (no prior session)"
+        assert resume_sessions_captured[1] == "sess-1", "fix-pass must resume from initial step session"
 
 
 # ── generate_code ─────────────────────────────────────────────────────────────

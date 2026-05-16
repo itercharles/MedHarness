@@ -154,7 +154,8 @@ def _run_claude(prompt: str, *, resume_session: str = "") -> tuple[int, str, str
     if result.stdout.strip():
         try:
             data = json.loads(result.stdout)
-            text_output = data.get("result") or result.stdout
+            result_val = data.get("result")
+            text_output = result_val if result_val is not None else result.stdout
             session_id = data.get("session_id") or ""
         except (json.JSONDecodeError, AttributeError):
             pass
@@ -227,7 +228,7 @@ def _run_claude_step(
     rc, output, session_id = _run_claude(prompt, resume_session=resume_session)
     cli_found = "claude CLI not found" not in output
     outcome = "ok" if rc == 0 else ("failed" if critical else "warning")
-    details: dict = {"exit_code": rc, "cli_found": cli_found}
+    details: dict[str, object] = {"exit_code": rc, "cli_found": cli_found}
     if session_id:
         details["session_id"] = session_id
     if resume_session:
