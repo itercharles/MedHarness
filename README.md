@@ -333,7 +333,6 @@ items   = adapter.list_items("SRS")
 ## Docs
 
 - [docs/architecture.md](docs/architecture.md) — packages, scaffold model, DHF lifecycle
-- [docs/compatibility-contracts.md](docs/compatibility-contracts.md) — stable public contracts
 - [docs/adr/](docs/adr/) — architecture decision records
 - [CHANGELOG.md](CHANGELOG.md) — version history
 
