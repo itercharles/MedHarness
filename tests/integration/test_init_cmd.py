@@ -114,7 +114,7 @@ class TestInitCmd:
     def test_scaffold_creates_items_directories(self, tmp_path):
         """_scaffold_dhf creates DHF item directories for all doc types."""
         _scaffold_dhf(tmp_path)
-        for d in ("00_uc", "01_crs", "02_sys", "03_srs", "04_swdd", "06_cr"):
+        for d in ("00_uc", "01_crs", "02_sys", "03_srs", "04_modules", "05_swdd", "07_cr"):
             assert (tmp_path / "DHF" / "items" / d).is_dir(), f"Missing items/{d}"
 
     def test_scaffold_creates_prompt_files(self, tmp_path):

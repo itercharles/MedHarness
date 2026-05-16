@@ -130,7 +130,7 @@ class TestScaffoldStructure:
         """
         items_dir = scaffolded / "DHF" / "items"
         item_files = list(items_dir.rglob("*.yaml"))
-        assert len(item_files) == 12, f"Expected 12 starter items, got {len(item_files)}"
+        assert len(item_files) == 13, f"Expected 13 starter items, got {len(item_files)}"
 
     def test_no_embedded_engine_files(self, scaffolded):
         """
