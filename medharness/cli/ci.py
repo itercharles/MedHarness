@@ -653,6 +653,93 @@ def register(main):
             click.echo(f"    Fix: {error['fix']}", err=True)
         _raise_for_outcome_error(result)
 
+    # ── SOUP manifest sync ──
+
+    @ci.command("soup-sync")
+    @click.option("--manifest", "manifest_paths", multiple=True, required=True,
+                  type=click.Path(exists=True, dir_okay=False, path_type=Path),
+                  metavar="PATH", help="requirements.txt or package.json to parse (repeatable)")
+    @click.option("--write", is_flag=True, default=False,
+                  help="Create/update SOUP items in the DHF (dry-run by default)")
+    @click.option("--author", default="ci", show_default=True, metavar="NAME")
+    @click.option("--cr", "cr_id", default=None, metavar="CR_ID",
+                  help="CR to attribute writes to")
+    @click.pass_context
+    def ci_soup_sync(
+        ctx: click.Context, manifest_paths: tuple[Path, ...],
+        write: bool, author: str, cr_id: str | None,
+    ) -> None:
+        """Sync SOUP items in the DHF with package manifests.
+
+        Compares requirements.txt / package.json entries against existing
+        SOUP items and reports new, version-drifted, and orphaned entries.
+        Pass --write to apply creates/updates to the DHF.
+        """
+        from medharness.services.soup_sync import sync_soup_items  # noqa: PLC0415
+        dhf: Path = ctx.obj["dhf"]
+        result = sync_soup_items(dhf, list(manifest_paths), write=write, author=author, cr_id=cr_id)
+        click.echo(json.dumps(result))
+        create_count = len(result.get("to_create") or [])
+        update_count = len(result.get("to_update") or [])
+        orphan_count = len(result.get("orphans") or [])
+        written = f" ({len(result.get('items_created', []))} created, {len(result.get('items_updated', []))} updated)" if write else " (dry-run)"
+        click.echo(
+            f"OK soup-sync{written}: +{create_count} new, ~{update_count} drift, "
+            f"{orphan_count} orphan(s), {result.get('matched_count', 0)} matched.",
+            err=True,
+        )
+        if result.get("outcome") == "completed_with_errors":
+            raise click.exceptions.Exit(1)
+
+    # ── Release baseline ──
+
+    @ci.command("release-baseline")
+    @click.option("--version", "version", required=True, metavar="VERSION",
+                  help="Release version string (e.g. 1.0.0)")
+    @click.option("--manifest", "manifest_paths", multiple=True,
+                  type=click.Path(exists=True, dir_okay=False, path_type=Path),
+                  metavar="PATH", help="requirements.txt or package.json for BOM (repeatable)")
+    @click.option("--cr", "cr_ids", multiple=True, metavar="CR_ID",
+                  help="CR to include (repeatable; auto-collected if omitted)")
+    @click.option("--out-dir", type=click.Path(file_okay=False, path_type=Path),
+                  default=Path("."), show_default=True,
+                  help="Directory to write release-baseline.json and software-bom.json")
+    @click.option("--write", is_flag=True, default=False,
+                  help="Create a REL item in the DHF (dry-run by default)")
+    @click.option("--author", default="ci", show_default=True, metavar="NAME")
+    @click.pass_context
+    def ci_release_baseline(
+        ctx: click.Context, version: str, manifest_paths: tuple[Path, ...],
+        cr_ids: tuple[str, ...], out_dir: Path, write: bool, author: str,
+    ) -> None:
+        """Build an IEC 62304 §9 release baseline.
+
+        Verifies all included CRs are completed or cancelled, collects a
+        software BOM from DHF SOUP items and manifest packages, and writes
+        release-baseline.json and software-bom.json to --out-dir.
+        Pass --write to also create a REL item in the DHF.
+        CRs are auto-collected (completed, not yet in any REL) when --cr is omitted.
+        """
+        from medharness.services.release_baseline import build_release_baseline  # noqa: PLC0415
+        dhf: Path = ctx.obj["dhf"]
+        result = build_release_baseline(
+            dhf, version, list(manifest_paths), list(cr_ids), out_dir,
+            write=write, author=author,
+        )
+        click.echo(json.dumps(result))
+        if result.get("outcome") == "completed_with_errors":
+            for err in result.get("errors") or []:
+                click.echo(f"  FAIL: {err}", err=True)
+            raise click.exceptions.Exit(1)
+        rel_note = f" → {result['rel_uid']}" if result.get("rel_uid") else ""
+        click.echo(
+            f"OK release-baseline {version}{rel_note}: "
+            f"{len(result.get('cr_ids', []))} CR(s), "
+            f"{result.get('soup_count', 0)} SOUP item(s), "
+            f"{len(result.get('artifacts', []))} artifact(s) written.",
+            err=True,
+        )
+
     @ci.command("develop-cr")
     @click.option("--cr", "cr_id", required=True, metavar="CR_ID")
     @click.option("--pr", "pr_number", default=None, type=int, metavar="N",
