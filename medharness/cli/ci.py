@@ -88,8 +88,9 @@ def _format_summary(stage_label: str, verb: str, cr_id: str, result: dict) -> st
     return f"{prefix} {stage_label} {verb} for {cr_id} ({', '.join(details)})."
 
 
-def _raise_for_tool_error(result: dict) -> None:
-    if result.get("outcome") == "tool_error":
+def _raise_for_outcome_error(result: dict) -> None:
+    """Exit non-zero for tool_error and completed_with_errors outcomes."""
+    if result.get("outcome") in ("tool_error", "completed_with_errors"):
         raise click.exceptions.Exit(1)
 
 
@@ -567,6 +568,49 @@ def register(main):
         else:
             click.echo(json.dumps({"action": cmd.action, "reason": cmd.reason}))
 
+    # ── Stage label management ──
+
+    @ci.command("advance-stage")
+    @click.option("--pr", "pr_number", required=True, type=int, metavar="N")
+    @click.option("--from-stage", "from_stage", required=True, metavar="STAGE")
+    @click.option("--to-stage", "to_stage", required=True, metavar="STAGE")
+    @click.option("--issue", "issue_number", default=None, type=int, metavar="N")
+    @click.option("--label-prefix", default="cr:stage/", show_default=True, metavar="PREFIX")
+    @click.option("--token", default="", metavar="TOKEN")
+    def ci_advance_stage(
+        pr_number: int, from_stage: str, to_stage: str,
+        issue_number: int | None, label_prefix: str, token: str,
+    ) -> None:
+        """Advance a CR stage label on a PR (and optionally an issue).
+
+        Removes the from-stage label and adds the to-stage label. A missing
+        from-stage label is silently ignored (idempotent).
+        """
+        from medharness.services.github_pr import add_label, remove_label  # noqa: PLC0415
+
+        from_label = f"{label_prefix}{from_stage}"
+        to_label = f"{label_prefix}{to_stage}"
+
+        remove_label(pr_number, from_label, token=token)
+        ok = add_label(pr_number, to_label, token=token)
+
+        if issue_number is not None:
+            remove_label(issue_number, from_label, token=token)
+            add_label(issue_number, to_label, token=token)
+
+        payload = {
+            "pr_number": pr_number,
+            "from_label": from_label,
+            "to_label": to_label,
+            "issue_number": issue_number,
+            "ok": ok,
+        }
+        click.echo(json.dumps(payload))
+        if ok:
+            click.echo(f"OK Advanced stage {from_stage} → {to_stage} on PR #{pr_number}.", err=True)
+        else:
+            click.echo(f"WARN Stage label advance had errors for PR #{pr_number}.", err=True)
+
     # ── CR generation ──
 
     @ci.command("generate-dhf")
@@ -603,7 +647,7 @@ def register(main):
         for error in result.get("errors") or []:
             click.echo(f"  FAIL ({error['field']}): {error['issue']}", err=True)
             click.echo(f"    Fix: {error['fix']}", err=True)
-        _raise_for_tool_error(result)
+        _raise_for_outcome_error(result)
 
     @ci.command("develop-cr")
     @click.option("--cr", "cr_id", required=True, metavar="CR_ID")
@@ -634,4 +678,4 @@ def register(main):
         for error in result.get("errors") or []:
             click.echo(f"  FAIL ({error['field']}): {error['issue']}", err=True)
             click.echo(f"    Fix: {error['fix']}", err=True)
-        _raise_for_tool_error(result)
+        _raise_for_outcome_error(result)
