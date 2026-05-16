@@ -405,6 +405,37 @@ class TestGenerateDhf:
         assert resume_sessions_captured[0] == "", "initial step must start fresh (no prior session)"
         assert resume_sessions_captured[1] == "sess-1", "fix-pass must resume from initial step session"
 
+    def test_auto_posts_errors_on_completed_with_errors(self, tmp_path):
+        dhf = tmp_path / "DHF"
+        dhf.mkdir()
+        posted_bodies: list[str] = []
+        errors = [{"field": "crs", "issue": "no CRS item", "fix": "create CRS-001"}]
+        with patch("medharness.services.cr_generation._run_claude", return_value=(0, "", "")), \
+             patch("medharness.services.cr_generation.git.collect_dhf_item_changes",
+                   return_value={"created": [], "updated": [], "deleted": []}), \
+             patch("medharness.services.design_validation.validate_generate_dhf",
+                   return_value=errors), \
+             patch("medharness.services.cr_generation.post_pr_comment",
+                   side_effect=lambda pr, body, **kw: posted_bodies.append(body) or "https://err-url"):
+            result = generate_dhf("CR-099", dhf, pr_number=55)
+        assert result["outcome"] == "completed_with_errors"
+        assert any("Validation errors" in b for b in posted_bodies)
+        assert "https://err-url" in result["pr_comments"]
+
+    def test_no_auto_post_without_pr_number(self, tmp_path):
+        dhf = tmp_path / "DHF"
+        dhf.mkdir()
+        errors = [{"field": "crs", "issue": "no CRS item", "fix": "create CRS-001"}]
+        with patch("medharness.services.cr_generation._run_claude", return_value=(0, "", "")), \
+             patch("medharness.services.cr_generation.git.collect_dhf_item_changes",
+                   return_value={"created": [], "updated": [], "deleted": []}), \
+             patch("medharness.services.design_validation.validate_generate_dhf",
+                   return_value=errors), \
+             patch("medharness.services.cr_generation.post_pr_comment") as mock_post:
+            result = generate_dhf("CR-099", dhf, pr_number=None)
+        mock_post.assert_not_called()
+        assert "pr_comments" not in result
+
 
 # ── generate_code ─────────────────────────────────────────────────────────────
 
@@ -595,6 +626,47 @@ class TestGenerateCode:
         assert all(s == "" for s in resume_sessions_captured[:1]), (
             f"initial develop step must start fresh; got resume_session={resume_sessions_captured[0]!r}"
         )
+
+    def test_auto_posts_warnings_when_pr_number_given(self, tmp_path):
+        dhf = tmp_path / "DHF"
+        dhf.mkdir()
+        posted_bodies: list[str] = []
+        with patch("medharness.services.cr_generation._run_claude", return_value=(0, "", "")), \
+             patch("medharness.services.cr_generation._get_pr_feedback",
+                   return_value={"prompt_text": "", "diagnostics": {}, "warnings": []}), \
+             patch("medharness.services.code_validation.validate_code", return_value=[]), \
+             patch("medharness.services.cr_generation.post_pr_comment",
+                   side_effect=lambda pr, body, **kw: posted_bodies.append(body) or "url") as mock_post:
+            result = generate_code("CR-099", dhf, pr_number=55)
+        assert mock_post.call_count == 0, "no warnings → no comment expected"
+        assert result.get("pr_comments") == []
+
+    def test_auto_posts_errors_on_completed_with_errors(self, tmp_path):
+        dhf = tmp_path / "DHF"
+        dhf.mkdir()
+        posted_bodies: list[str] = []
+        errors = [{"field": "test_links", "issue": "missing @links", "fix": "add @links"}]
+        with patch("medharness.services.cr_generation._run_claude", return_value=(0, "", "")), \
+             patch("medharness.services.cr_generation._get_pr_feedback",
+                   return_value={"prompt_text": "", "diagnostics": {}, "warnings": []}), \
+             patch("medharness.services.code_validation.validate_code", return_value=errors), \
+             patch("medharness.services.cr_generation.post_pr_comment",
+                   side_effect=lambda pr, body, **kw: posted_bodies.append(body) or "https://comment-url"):
+            result = generate_code("CR-099", dhf, pr_number=55)
+        assert result["outcome"] == "completed_with_errors"
+        assert any("Validation errors" in b for b in posted_bodies), f"expected error comment; got: {posted_bodies}"
+        assert "https://comment-url" in result["pr_comments"]
+
+    def test_no_auto_post_without_pr_number(self, tmp_path):
+        dhf = tmp_path / "DHF"
+        dhf.mkdir()
+        errors = [{"field": "test_links", "issue": "missing @links", "fix": "add @links"}]
+        with patch("medharness.services.cr_generation._run_claude", return_value=(0, "", "")), \
+             patch("medharness.services.code_validation.validate_code", return_value=errors), \
+             patch("medharness.services.cr_generation.post_pr_comment") as mock_post:
+            result = generate_code("CR-099", dhf, pr_number=None)
+        mock_post.assert_not_called()
+        assert "pr_comments" not in result
 
 
 # ── DHF context block ──────────────────────────────────────────────────────────

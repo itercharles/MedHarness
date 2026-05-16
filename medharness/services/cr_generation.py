@@ -15,6 +15,7 @@ from pathlib import Path
 from medharness.services import code_validation, design_validation, git
 from medharness.services.cr_impact import _record_design_impact_in_cr
 from medharness.services.github_session import get_session, put_session
+from medharness.services.github_pr import post_pr_comment
 from medharness.services.prompt_assembly import (
     MAX_DIFF_CHARS,
     _append_skills,
@@ -376,6 +377,36 @@ def _augment_review_prompt(base: str, errors: list[dict]) -> str:
     )
 
 
+def _auto_post_pr_feedback(pr_number: int, cr_id: str, result: dict, *, token: str = "") -> list[str]:
+    """Post warning and error comments to the PR. Returns list of posted comment URLs."""
+    comments: list[str] = []
+
+    warnings = result.get("warnings") or []
+    if warnings:
+        lines = "\n".join(
+            f"- `{w.get('code', '?')}`: {w.get('message', '')}" for w in warnings
+        )
+        url = post_pr_comment(pr_number, f"⚠️ **Warnings for {cr_id}:**\n\n{lines}", token=token)
+        if url:
+            comments.append(url)
+
+    if result.get("outcome") == "completed_with_errors":
+        errors = result.get("errors") or []
+        lines = "\n".join(
+            f"- **{e.get('field', '?')}**: {e.get('issue', '')}\n  _Fix:_ {e.get('fix', '')}"
+            for e in errors
+        )
+        url = post_pr_comment(
+            pr_number,
+            f"⚠️ **Validation errors for {cr_id}:**\n\n{lines}",
+            token=token,
+        )
+        if url:
+            comments.append(url)
+
+    return comments
+
+
 def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> dict:
     """Generate the complete DHF item cascade for a CR in a single LLM session.
 
@@ -545,7 +576,7 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> di
     if session_id and pr_number:
         put_session(pr_number, session_id)
 
-    return _build_response(
+    result = _build_response(
         cr_id=cr_id,
         stage="generate_dhf",
         started_at=started_at,
@@ -561,6 +592,10 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> di
         errors=errors,
         critical_step_failed=critical_step_failed,
     )
+    if pr_number:
+        token = os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN") or ""
+        result["pr_comments"] = _auto_post_pr_feedback(pr_number, cr_id, result, token=token)
+    return result
 
 
 def generate_code(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> dict:
@@ -716,7 +751,7 @@ def generate_code(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> d
     files_changed = git.collect_path_changes(repo_root, "origin/main", *_DEFAULT_CODE_PATHS)
     steps.append(_finish_step(artifact_step, artifact_perf, "ok", {"files_changed": files_changed}))
 
-    return _build_response(
+    result = _build_response(
         cr_id=cr_id,
         stage="develop",
         started_at=started_at,
@@ -731,3 +766,7 @@ def generate_code(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> d
         errors=errors,
         critical_step_failed=critical_step_failed,
     )
+    if pr_number:
+        token = os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN") or ""
+        result["pr_comments"] = _auto_post_pr_feedback(pr_number, cr_id, result, token=token)
+    return result

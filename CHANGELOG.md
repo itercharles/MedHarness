@@ -13,6 +13,35 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ---
 
+## [0.6.3] — 2026-05-16
+
+### New Features
+
+- **`ci advance-stage` command** — replaces multi-step `gh api` label management
+  bash in CR lifecycle workflows. Takes `--pr N --from-stage STAGE --to-stage STAGE`
+  (optionally `--issue N` to mirror the advance on a linked issue) and
+  `--label-prefix PREFIX` (default `cr:stage/`). Idempotent: a missing from-stage
+  label is silently ignored.
+
+- **Auto-post PR comments on warnings and errors** — `generate-dhf` and
+  `develop-cr` now automatically post a PR comment when warnings are present or
+  when the outcome is `completed_with_errors`, eliminating the "Surface warnings"
+  and "Gate on X validation" workflow steps that previously duplicated this logic.
+  Auto-posting only occurs when `--pr N` is supplied. The posted comment URLs
+  are returned in the `pr_comments` field of the JSON response.
+
+- **`ci generate-dhf` and `ci develop-cr` exit non-zero on `completed_with_errors`**
+  — previously these commands exited 0 even when deterministic validation found
+  residual errors, requiring the caller to parse JSON and check the `outcome`
+  field. They now exit 1 for both `tool_error` and `completed_with_errors`,
+  allowing workflows to gate on exit code alone.
+
+- **`medharness/services/github_pr.py`** — new internal service providing
+  `post_pr_comment`, `add_label`, and `remove_label` helpers used by the above
+  features and available for custom tooling.
+
+---
+
 ## [0.6.2] — 2026-05-16
 
 ### Bug Fixes
