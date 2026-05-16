@@ -14,6 +14,7 @@ from pathlib import Path
 
 from medharness.services import code_validation, design_validation, git
 from medharness.services.cr_impact import _record_design_impact_in_cr
+from medharness.services.github_session import get_session, put_session
 from medharness.services.prompt_assembly import (
     MAX_DIFF_CHARS,
     _append_skills,
@@ -131,19 +132,35 @@ def _get_pr_feedback(pr_number: int) -> str:
 
 # ── Claude invocation ─────────────────────────────────────────────────────────
 
-def _run_claude(prompt: str) -> tuple[int, str]:
+def _run_claude(prompt: str, *, resume_session: str = "") -> tuple[int, str, str]:
+    """Invoke claude -p. Returns (exit_code, text_output, session_id).
+
+    Uses --output-format json so the session_id is always captured from the
+    structured response envelope. Falls back gracefully if JSON cannot be parsed.
+    """
     model = os.environ.get("ANTHROPIC_MODEL", "")
-    cmd = ["claude", "-p", "--dangerously-skip-permissions", prompt]
+    cmd = ["claude", "-p", "--dangerously-skip-permissions", "--output-format", "json"]
     if model:
-        cmd = ["claude", "-p", "--dangerously-skip-permissions", "--model", model, prompt]
+        cmd += ["--model", model]
+    if resume_session:
+        cmd += ["--resume", resume_session]
+    cmd.append(prompt)
     try:
         result = subprocess.run(cmd, capture_output=True, text=True)  # noqa: S603
     except FileNotFoundError:
-        return 1, "claude CLI not found — install @anthropic-ai/claude-code"
-    combined = result.stdout
+        return 1, "claude CLI not found — install @anthropic-ai/claude-code", ""
+    session_id = ""
+    text_output = result.stdout
+    if result.stdout.strip():
+        try:
+            data = json.loads(result.stdout)
+            text_output = data.get("result") or result.stdout
+            session_id = data.get("session_id") or ""
+        except (json.JSONDecodeError, AttributeError):
+            pass
     if result.stderr:
-        combined += "\n" + result.stderr
-    return result.returncode, combined
+        text_output += "\n" + result.stderr
+    return result.returncode, text_output, session_id
 
 
 def _now_iso() -> str:
@@ -203,12 +220,18 @@ def _run_claude_step(
     steps: list[dict],
     warnings: list[dict],
     critical: bool,
-) -> tuple[int, str]:
+    resume_session: str = "",
+) -> tuple[int, str, str]:
+    """Run a Claude step. Returns (exit_code, output, session_id)."""
     step, step_perf = _begin_step(name, {"tool": "claude"})
-    rc, output = _run_claude(prompt)
+    rc, output, session_id = _run_claude(prompt, resume_session=resume_session)
     cli_found = "claude CLI not found" not in output
     outcome = "ok" if rc == 0 else ("failed" if critical else "warning")
-    details = {"exit_code": rc, "cli_found": cli_found}
+    details: dict = {"exit_code": rc, "cli_found": cli_found}
+    if session_id:
+        details["session_id"] = session_id
+    if resume_session:
+        details["resumed_session_id"] = resume_session
     if output.strip():
         details["output_excerpt"] = _truncate(output)
     steps.append(_finish_step(step, step_perf, outcome, details))
@@ -220,7 +243,7 @@ def _run_claude_step(
                 {"step": name, "exit_code": rc},
             )
         )
-    return rc, output
+    return rc, output, session_id
 
 
 def _final_progress(steps: list[dict]) -> dict:
@@ -376,6 +399,8 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> di
         "fix_attempted": False,
         "initial_error_count": 0,
         "final_error_count": 0,
+        "session_id": None,
+        "resumed_session_id": None,
     }
     inputs = {
         "dhf_path": str(dhf_path),
@@ -384,6 +409,10 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> di
         "revision_mode": pr_number is not None,
         "since_ref": "origin/main",
     }
+
+    prior_session = get_session(pr_number) if pr_number else ""
+    if prior_session:
+        diagnostics["resumed_session_id"] = prior_session
 
     if pr_number:
         feedback_step, feedback_perf = _begin_step("fetch_pr_feedback")
@@ -424,14 +453,17 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> di
         prompt = _assemble_generate_dhf_prompt(cr_id, dhf_path)
         steps.append(_finish_step(prompt_step, prompt_perf, "ok"))
 
-    rc, _ = _run_claude_step(
+    rc, _, session_id = _run_claude_step(
         name="run_initial_generation",
         prompt=prompt,
         steps=steps,
         warnings=warnings,
         critical=True,
+        resume_session=prior_session,
     )
     critical_step_failed = critical_step_failed or rc != 0
+    if session_id:
+        diagnostics["session_id"] = session_id
 
     items_changed = git.collect_dhf_item_changes(repo_root, "origin/main")
     validate_step, validate_perf = _begin_step(
@@ -462,14 +494,18 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> di
             f"  python -m medharness --dhf DHF dhf validate schema\n"
             f"  python -m medharness --dhf DHF dhf validate traceability"
         )
-        rc, _ = _run_claude_step(
+        rc, _, fix_session_id = _run_claude_step(
             name="run_fix_generation",
             prompt=fix_prompt,
             steps=steps,
             warnings=warnings,
             critical=True,
+            resume_session=session_id,
         )
         critical_step_failed = critical_step_failed or rc != 0
+        if fix_session_id:
+            session_id = fix_session_id
+            diagnostics["session_id"] = session_id
         items_changed = git.collect_dhf_item_changes(repo_root, "origin/main")
         validate_fix_step, validate_fix_perf = _begin_step(
             "validate_after_fix", {"validator": "validate_generate_dhf"}
@@ -505,6 +541,9 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> di
             )
         )
 
+    if session_id and pr_number:
+        put_session(pr_number, session_id)
+
     return _build_response(
         cr_id=cr_id,
         stage="generate_dhf",
@@ -538,6 +577,8 @@ def generate_code(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> d
         "fix_attempted": False,
         "initial_error_count": 0,
         "final_error_count": 0,
+        "session_id": None,
+        "resumed_session_id": None,
     }
     inputs = {
         "dhf_path": str(dhf_path),
@@ -546,6 +587,10 @@ def generate_code(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> d
         "revision_mode": pr_number is not None,
         "since_ref": "origin/main",
     }
+
+    prior_session = get_session(pr_number) if pr_number else ""
+    if prior_session:
+        diagnostics["resumed_session_id"] = prior_session
 
     if pr_number:
         feedback_step, feedback_perf = _begin_step("fetch_pr_feedback")
@@ -594,14 +639,17 @@ def generate_code(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> d
                 )
         steps.append(_finish_step(prompt_step, prompt_perf, "ok", {"diff_injected": bool(diff)}))
 
-    rc, _ = _run_claude_step(
+    rc, _, session_id = _run_claude_step(
         name="run_initial_generation",
         prompt=prompt,
         steps=steps,
         warnings=warnings,
         critical=True,
+        resume_session=prior_session,
     )
     critical_step_failed = critical_step_failed or rc != 0
+    if session_id:
+        diagnostics["session_id"] = session_id
 
     validate_step, validate_perf = _begin_step("validate_initial", {"validator": "code_validation"})
     errors = code_validation.validate_code(cr_id, dhf_path)
@@ -623,14 +671,18 @@ def generate_code(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> d
             f"Add only the missing colocated tests with `@links:` annotations. "
             f"Do not introduce other changes."
         )
-        rc, _ = _run_claude_step(
+        rc, _, fix_session_id = _run_claude_step(
             name="run_fix_generation",
             prompt=fix_prompt,
             steps=steps,
             warnings=warnings,
             critical=True,
+            resume_session=session_id,
         )
         critical_step_failed = critical_step_failed or rc != 0
+        if fix_session_id:
+            session_id = fix_session_id
+            diagnostics["session_id"] = session_id
         validate_fix_step, validate_fix_perf = _begin_step("validate_after_fix", {"validator": "code_validation"})
         errors = code_validation.validate_code(cr_id, dhf_path)
         diagnostics["final_error_count"] = len(errors)
@@ -644,13 +696,20 @@ def generate_code(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> d
         )
 
     review_prompt = _augment_review_prompt(_assemble_review_code_prompt(cr_id), errors)
-    _run_claude_step(
+    _, _, review_session_id = _run_claude_step(
         name="run_review",
         prompt=review_prompt,
         steps=steps,
         warnings=warnings,
         critical=False,
+        resume_session=session_id,
     )
+    if review_session_id:
+        session_id = review_session_id
+        diagnostics["session_id"] = session_id
+
+    if session_id and pr_number:
+        put_session(pr_number, session_id)
 
     artifact_step, artifact_perf = _begin_step("collect_artifacts", {"kind": "files_changed"})
     files_changed = git.collect_path_changes(repo_root, "origin/main", *_DEFAULT_CODE_PATHS)

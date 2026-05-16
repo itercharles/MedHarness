@@ -54,10 +54,15 @@ def _split_stdout_json(stdout: str) -> dict:
 
 
 class TestDevelopCrJsonContract:
+    @pytest.fixture(autouse=True)
+    def stub_session(self, monkeypatch):
+        monkeypatch.setattr("medharness.services.cr_generation.get_session", lambda pr: "")
+        monkeypatch.setattr("medharness.services.cr_generation.put_session", lambda pr, sid: None)
+
     def test_json_payload_has_documented_keys(self, dhf):
         runner = CliRunner()
         with patch("medharness.services.cr_generation._run_claude",
-                   return_value=(0, "")), \
+                   return_value=(0, "", "")), \
              patch("medharness.services.code_validation.validate_code",
                    return_value=[]), \
              patch("subprocess.run", return_value=_empty_diff()):

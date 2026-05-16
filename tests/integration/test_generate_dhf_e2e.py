@@ -84,8 +84,10 @@ class TestGenerateDhfSuccessStub:
     def stub_claude_ok(self, monkeypatch):
         monkeypatch.setattr(
             "medharness.services.cr_generation._run_claude",
-            lambda prompt: (0, "DHF generation complete."),
+            lambda prompt, *, resume_session="": (0, "DHF generation complete.", "sess-abc"),
         )
+        monkeypatch.setattr("medharness.services.cr_generation.get_session", lambda pr: "")
+        monkeypatch.setattr("medharness.services.cr_generation.put_session", lambda pr, sid: "")
 
     def test_response_has_required_keys(self, dhf_repo):
         from medharness.services.cr_generation import generate_dhf
@@ -148,6 +150,16 @@ class TestGenerateDhfSuccessStub:
             assert "issue" in err, f"error missing 'issue': {err}"
             assert "fix" in err, f"error missing 'fix': {err}"
 
+    def test_session_id_captured_in_diagnostics(self, dhf_repo):
+        from medharness.services.cr_generation import generate_dhf
+        result = generate_dhf("CR-001", dhf_repo / "DHF")
+        assert result["diagnostics"]["session_id"] == "sess-abc"
+
+    def test_resumed_session_id_is_none_without_pr(self, dhf_repo):
+        from medharness.services.cr_generation import generate_dhf
+        result = generate_dhf("CR-001", dhf_repo / "DHF")
+        assert result["diagnostics"]["resumed_session_id"] is None
+
 
 # ---------------------------------------------------------------------------
 # generate_dhf — tool error stub (Claude exits non-zero)
@@ -160,8 +172,10 @@ class TestGenerateDhfToolErrorStub:
     def stub_claude_fail(self, monkeypatch):
         monkeypatch.setattr(
             "medharness.services.cr_generation._run_claude",
-            lambda prompt: (1, "fatal: claude not found"),
+            lambda prompt, *, resume_session="": (1, "fatal: claude not found", ""),
         )
+        monkeypatch.setattr("medharness.services.cr_generation.get_session", lambda pr: "")
+        monkeypatch.setattr("medharness.services.cr_generation.put_session", lambda pr, sid: "")
 
     def test_outcome_is_tool_error(self, dhf_repo):
         from medharness.services.cr_generation import generate_dhf
@@ -197,7 +211,7 @@ class TestGenerateDhfRevisionMode:
     def stub_claude_ok(self, monkeypatch):
         monkeypatch.setattr(
             "medharness.services.cr_generation._run_claude",
-            lambda prompt: (0, "Revision complete."),
+            lambda prompt, *, resume_session="": (0, "Revision complete.", "sess-rev"),
         )
         # Stub PR feedback fetch so no network call is made.
         monkeypatch.setattr(
@@ -208,6 +222,15 @@ class TestGenerateDhfRevisionMode:
                                 "comments_status": "ok", "reviews_status": "ok"},
                 "warnings": [],
             },
+        )
+        monkeypatch.setattr(
+            "medharness.services.cr_generation.get_session",
+            lambda pr: "sess-prior",
+        )
+        self._stored: list[tuple] = []
+        monkeypatch.setattr(
+            "medharness.services.cr_generation.put_session",
+            lambda pr, sid: self._stored.append((pr, sid)) or "",
         )
 
     def test_revision_mode_echoed_in_inputs(self, dhf_repo):
@@ -226,6 +249,18 @@ class TestGenerateDhfRevisionMode:
         result = generate_dhf("CR-001", dhf_repo / "DHF", pr_number=42)
         assert result["outcome"] != "tool_error"
 
+    def test_prior_session_echoed_in_diagnostics(self, dhf_repo):
+        from medharness.services.cr_generation import generate_dhf
+        result = generate_dhf("CR-001", dhf_repo / "DHF", pr_number=42)
+        assert result["diagnostics"]["resumed_session_id"] == "sess-prior"
+
+    def test_session_id_stored_to_pr(self, dhf_repo):
+        from medharness.services.cr_generation import generate_dhf
+        generate_dhf("CR-001", dhf_repo / "DHF", pr_number=42)
+        assert any(pr == 42 for pr, _ in self._stored), (
+            f"put_session not called with pr=42; calls: {self._stored}"
+        )
+
 
 # ---------------------------------------------------------------------------
 # generate_code — happy stub
@@ -238,8 +273,10 @@ class TestGenerateCodeSuccessStub:
     def stub_claude_ok(self, monkeypatch):
         monkeypatch.setattr(
             "medharness.services.cr_generation._run_claude",
-            lambda prompt: (0, "Implementation complete."),
+            lambda prompt, *, resume_session="": (0, "Implementation complete.", "sess-code"),
         )
+        monkeypatch.setattr("medharness.services.cr_generation.get_session", lambda pr: "")
+        monkeypatch.setattr("medharness.services.cr_generation.put_session", lambda pr, sid: "")
 
     def test_response_has_required_keys(self, dhf_repo):
         from medharness.services.cr_generation import generate_code
@@ -305,7 +342,7 @@ class TestGenerateDhfFixPassFlow:
             dhf_path = dhf_dir / "DHF"
             call_count = {"n": 0}
 
-            def _stub(prompt: str) -> tuple[int, str]:
+            def _stub(prompt: str, *, resume_session: str = "") -> tuple[int, str, str]:
                 call_count["n"] += 1
                 if call_count["n"] == 1:
                     # Create a CRS item (auto-assigned CRS-002, since CRS-001 is in
@@ -336,9 +373,11 @@ class TestGenerateDhfFixPassFlow:
                         capture_output=True, check=True,
                     )
                 # Fix-pass call (n >= 2): noop — cascade error remains.
-                return 0, "ok"
+                return 0, "ok", ""
 
-            with mock.patch("medharness.services.cr_generation._run_claude", _stub):
+            with mock.patch("medharness.services.cr_generation._run_claude", _stub), \
+                 mock.patch("medharness.services.cr_generation.get_session", return_value=""), \
+                 mock.patch("medharness.services.cr_generation.put_session", return_value=""):
                 from medharness.services.cr_generation import generate_dhf
                 result = generate_dhf("CR-001", dhf_path)
 

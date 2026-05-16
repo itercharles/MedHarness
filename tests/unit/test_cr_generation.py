@@ -199,19 +199,24 @@ class TestGetPrFeedback:
 
 class TestRunClaude:
     def test_passes_prompt_to_claude(self):
+        json_out = '{"result": "done", "session_id": "sid-1"}'
         with patch("subprocess.run") as mock_run:
-            mock_run.return_value = MagicMock(returncode=0, stdout="done", stderr="")
-            rc, output = _run_claude("my prompt")
+            mock_run.return_value = MagicMock(returncode=0, stdout=json_out, stderr="")
+            rc, output, session_id = _run_claude("my prompt")
         assert rc == 0
+        assert output == "done"
+        assert session_id == "sid-1"
         args = mock_run.call_args[0][0]
         assert "claude" in args
         assert "my prompt" in args
         assert "--dangerously-skip-permissions" in args
+        assert "--output-format" in args
+        assert "json" in args
 
     def test_includes_model_flag_when_env_set(self, monkeypatch):
         monkeypatch.setenv("ANTHROPIC_MODEL", "claude-opus-4-7")
         with patch("subprocess.run") as mock_run:
-            mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
+            mock_run.return_value = MagicMock(returncode=0, stdout='{"result":"","session_id":""}', stderr="")
             _run_claude("prompt")
         args = mock_run.call_args[0][0]
         assert "--model" in args
@@ -220,23 +225,52 @@ class TestRunClaude:
     def test_omits_model_flag_when_env_unset(self, monkeypatch):
         monkeypatch.delenv("ANTHROPIC_MODEL", raising=False)
         with patch("subprocess.run") as mock_run:
-            mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
+            mock_run.return_value = MagicMock(returncode=0, stdout='{"result":"","session_id":""}', stderr="")
             _run_claude("prompt")
         args = mock_run.call_args[0][0]
         assert "--model" not in args
 
+    def test_resume_session_flag_passed(self):
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=0, stdout='{"result":"ok","session_id":"sid-2"}', stderr="")
+            _run_claude("prompt", resume_session="sid-prior")
+        args = mock_run.call_args[0][0]
+        assert "--resume" in args
+        assert "sid-prior" in args
+
+    def test_no_resume_flag_when_empty(self):
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=0, stdout='{"result":"ok","session_id":""}', stderr="")
+            _run_claude("prompt")
+        args = mock_run.call_args[0][0]
+        assert "--resume" not in args
+
+    def test_fallback_on_invalid_json(self):
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=0, stdout="not json", stderr="")
+            rc, output, session_id = _run_claude("prompt")
+        assert rc == 0
+        assert output == "not json"
+        assert session_id == ""
+
     def test_combines_stdout_and_stderr(self):
         with patch("subprocess.run") as mock_run:
             mock_run.return_value = MagicMock(returncode=1, stdout="out", stderr="err")
-            rc, output = _run_claude("x")
+            rc, output, session_id = _run_claude("x")
         assert rc == 1
         assert "out" in output
         assert "err" in output
+        assert session_id == ""
 
 
 # ── generate_dhf ──────────────────────────────────────────────────────────────
 
 class TestGenerateDhf:
+    @pytest.fixture(autouse=True)
+    def stub_session(self, monkeypatch):
+        monkeypatch.setattr("medharness.services.cr_generation.get_session", lambda pr: "")
+        monkeypatch.setattr("medharness.services.cr_generation.put_session", lambda pr, sid: "")
+
     def test_returns_dict_with_required_keys(self, tmp_path):
         dhf = tmp_path / "DHF"
         dhf.mkdir()
@@ -244,7 +278,7 @@ class TestGenerateDhf:
              patch("medharness.services.cr_generation.git.collect_dhf_item_changes",
                    return_value={"created": [], "updated": [], "deleted": []}), \
              patch("medharness.services.design_validation.validate_generate_dhf", return_value=[]):
-            mock_claude.return_value = (0, "")
+            mock_claude.return_value = (0, "", "")
             result = generate_dhf("CR-050", dhf)
         assert result["cr_id"] == "CR-050"
         assert result["stage"] == "generate_dhf"
@@ -260,7 +294,7 @@ class TestGenerateDhf:
              patch("medharness.services.cr_generation.git.collect_dhf_item_changes",
                    return_value={"created": [], "updated": [], "deleted": []}), \
              patch("medharness.services.design_validation.validate_generate_dhf", return_value=[]):
-            mock_claude.return_value = (0, "")
+            mock_claude.return_value = (0, "", "")
             result = generate_dhf("CR-051", dhf)
         assert mock_claude.call_count == 1
         assert result["diagnostics"]["fix_attempted"] is False
@@ -274,7 +308,7 @@ class TestGenerateDhf:
                    return_value={"created": [], "updated": [], "deleted": []}), \
              patch("medharness.services.design_validation.validate_generate_dhf",
                    side_effect=[first_errors, []]):
-            mock_claude.return_value = (0, "")
+            mock_claude.return_value = (0, "", "")
             result = generate_dhf("CR-052", dhf)
         assert mock_claude.call_count == 2
         fix_prompt = mock_claude.call_args_list[1][0][0]
@@ -291,7 +325,7 @@ class TestGenerateDhf:
                    return_value={"created": [], "updated": [], "deleted": []}), \
              patch("medharness.services.design_validation.validate_generate_dhf",
                    side_effect=[errors, errors]):
-            mock_claude.return_value = (0, "")
+            mock_claude.return_value = (0, "", "")
             result = generate_dhf("CR-053", dhf)
         assert result["outcome"] == "completed_with_errors"
 
@@ -302,7 +336,7 @@ class TestGenerateDhf:
              patch("medharness.services.cr_generation.git.collect_dhf_item_changes",
                    return_value={"created": [], "updated": [], "deleted": []}), \
              patch("medharness.services.design_validation.validate_generate_dhf", return_value=[]):
-            mock_claude.return_value = (0, "")
+            mock_claude.return_value = (0, "", "")
             generate_dhf("CR-055", dhf)
         prompt = mock_claude.call_args_list[0][0][0]
         assert "CR-055" in prompt
@@ -313,7 +347,7 @@ class TestGenerateDhf:
         dhf = tmp_path / "DHF"
         dhf.mkdir()
         items_changed = {"created": ["SYS-001"], "updated": ["SRS-001"], "deleted": []}
-        with patch("medharness.services.cr_generation._run_claude", return_value=(0, "")), \
+        with patch("medharness.services.cr_generation._run_claude", return_value=(0, "", "")), \
              patch("medharness.services.cr_generation.git.collect_dhf_item_changes", return_value=items_changed), \
              patch("medharness.services.design_validation.validate_generate_dhf", return_value=[]) as mock_validate:
             generate_dhf("CR-054", dhf)
@@ -327,7 +361,7 @@ class TestGenerateDhf:
              patch("medharness.services.cr_generation.git.collect_dhf_item_changes",
                    return_value={"created": [], "updated": [], "deleted": []}), \
              patch("medharness.services.design_validation.validate_generate_dhf", return_value=[]):
-            mock_claude.return_value = (0, "")
+            mock_claude.return_value = (0, "", "")
             mock_fb.return_value = {
                 "prompt_text": "some review feedback",
                 "diagnostics": {"attempted": True, "comments_status": "ok"},
@@ -343,7 +377,7 @@ class TestGenerateDhf:
         dhf = tmp_path / "DHF"
         dhf.mkdir()
         errors = [{"field": "schema", "issue": "x", "fix": "y"}]
-        with patch("medharness.services.cr_generation._run_claude", return_value=(0, "")), \
+        with patch("medharness.services.cr_generation._run_claude", return_value=(0, "", "")), \
              patch("medharness.services.cr_generation.git.collect_dhf_item_changes",
                    return_value={"created": [], "updated": [], "deleted": []}), \
              patch("medharness.services.design_validation.validate_generate_dhf",
@@ -358,13 +392,18 @@ class TestGenerateDhf:
 class TestGenerateCode:
     """Pipeline: develop pass → deterministic check → fix-only on errors → soft review."""
 
+    @pytest.fixture(autouse=True)
+    def stub_session(self, monkeypatch):
+        monkeypatch.setattr("medharness.services.cr_generation.get_session", lambda pr: "")
+        monkeypatch.setattr("medharness.services.cr_generation.put_session", lambda pr, sid: None)
+
     def test_returns_dict_with_required_keys(self, tmp_path):
         dhf = tmp_path / "DHF"
         dhf.mkdir()
         with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
              patch("medharness.services.code_validation.validate_code",
                    return_value=[]):
-            mock_claude.return_value = (0, "")
+            mock_claude.return_value = (0, "", "")
             result = generate_code("CR-020", dhf)
         assert result["cr_id"] == "CR-020"
         assert result["stage"] == "develop"
@@ -380,7 +419,7 @@ class TestGenerateCode:
         with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
              patch("medharness.services.code_validation.validate_code",
                    return_value=[]):
-            mock_claude.return_value = (0, "")
+            mock_claude.return_value = (0, "", "")
             result = generate_code("CR-021", dhf)
         assert mock_claude.call_count == 2
         assert result["outcome"] == "ok"
@@ -398,7 +437,7 @@ class TestGenerateCode:
         with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
              patch("medharness.services.code_validation.validate_code",
                    side_effect=[first_errors, []]):
-            mock_claude.return_value = (0, "")
+            mock_claude.return_value = (0, "", "")
             result = generate_code("CR-024", dhf)
         assert mock_claude.call_count == 3
         fix_prompt = mock_claude.call_args_list[1][0][0]
@@ -420,7 +459,7 @@ class TestGenerateCode:
                    return_value=[]), \
              patch("subprocess.run",
                    return_value=MagicMock(stdout=diff_output, returncode=0)):
-            mock_claude.return_value = (0, "")
+            mock_claude.return_value = (0, "", "")
             result = generate_code("CR-025", dhf)
         assert result["artifacts"]["files_changed"] == {
             "created": ["apps/client/src/foo.ts"],
@@ -434,7 +473,7 @@ class TestGenerateCode:
         with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
              patch("medharness.services.code_validation.validate_code",
                    return_value=[]):
-            mock_claude.return_value = (0, "")
+            mock_claude.return_value = (0, "", "")
             generate_code("CR-022", dhf)
         prompt = mock_claude.call_args_list[0][0][0]
         assert "CR-022" in prompt
@@ -447,7 +486,7 @@ class TestGenerateCode:
              patch("medharness.services.cr_generation._get_pr_feedback") as mock_fb, \
              patch("medharness.services.code_validation.validate_code",
                     return_value=[]):
-            mock_claude.return_value = (0, "")
+            mock_claude.return_value = (0, "", "")
             mock_fb.return_value = {
                 "prompt_text": '{"comments": [], "reviews": []}',
                 "diagnostics": {"attempted": True, "comments_status": "ok", "reviews_status": "ok"},
@@ -467,7 +506,7 @@ class TestGenerateCode:
                     return_value=[]), \
              patch("medharness.services.git.compute_diff",
                     return_value=diff_output):
-            mock_claude.return_value = (0, "")
+            mock_claude.return_value = (0, "", "")
             generate_code("CR-026", dhf)
         prompt = mock_claude.call_args_list[0][0][0]
         assert "Existing Implementation" in prompt
@@ -482,7 +521,7 @@ class TestGenerateCode:
                     return_value=[]), \
              patch("medharness.services.git.compute_diff",
                     return_value=""):
-            mock_claude.return_value = (0, "")
+            mock_claude.return_value = (0, "", "")
             generate_code("CR-027", dhf)
         prompt = mock_claude.call_args_list[0][0][0]
         assert "Existing Implementation" not in prompt
@@ -495,7 +534,7 @@ class TestGenerateCode:
                     return_value=[]), \
              patch("medharness.services.git.compute_diff",
                     return_value=None):
-            mock_claude.return_value = (0, "")
+            mock_claude.return_value = (0, "", "")
             generate_code("CR-028", dhf)
         prompt = mock_claude.call_args_list[0][0][0]
         assert "Existing Implementation" not in prompt
@@ -509,7 +548,7 @@ class TestGenerateCode:
                     return_value=[]), \
              patch("medharness.services.git.compute_diff",
                     return_value=large_diff):
-            mock_claude.return_value = (0, "")
+            mock_claude.return_value = (0, "", "")
             generate_code("CR-029", dhf)
         prompt = mock_claude.call_args_list[0][0][0]
         assert "Existing Implementation" in prompt
