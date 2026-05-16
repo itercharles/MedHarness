@@ -218,6 +218,28 @@ After writing all DHF items and recording risk impact, validate and self-correct
 If either reports errors introduced by your changes, fix them via `dhf item update`
 and re-validate. Repeat until both pass cleanly.
 
+## Step 2.5: Risk Impact Recording
+
+After validation passes, explicitly record which existing RISK and RCM items are
+relevant to this CR — even if they required no structural changes.
+
+1. List all existing risk items:
+
+       python -m medharness --dhf DHF dhf item list --type RISK
+       python -m medharness --dhf DHF dhf item list --type RCM
+
+2. For each, assess: does this CR change behavior that could alter the hazard
+   likelihood, harm severity, or effectiveness of the control?
+
+3. Collect the IDs of all affected items — those you created, updated, or
+   determined are relevant but unchanged — and write them to the CR:
+
+       python -m medharness --dhf DHF dhf item update {{cr_id}} \
+         --data '{"affected_risk_items": ["RISK-001", "RCM-002"]}' \
+         --author "github-actions[bot]" --cr "{{cr_id}}"
+
+   Use `[]` if no risk items are relevant. Do not omit this step.
+
 ## Scope Constraints
 
 - Only create or update items **directly required** by this CR.

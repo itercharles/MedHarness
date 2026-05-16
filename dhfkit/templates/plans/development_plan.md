@@ -299,11 +299,18 @@ Formal product documents live in the DHF repository under `DHF/documents/`:
 These are the authoritative source for product requirements, architecture, and
 development process. MedHarness repo-level docs are derivative summaries.
 
-### 8.2 Generated Documents
+### 8.2 Document Sources and Generated Output
 
-DHF item content is rendered into specification documents via Jinja2 templates
-under `DHF/documents/specs/`. Generated output is runtime-only and need not be
-committed as source material.
+Files ending in `.md.j2` under `DHF/documents/specs/` are **document sources** —
+they contain the project's controlled document narrative (sections, rationale, scope)
+with Jinja2 placeholders used only for injecting DHF item tables at generation time.
+They are not blank forms; they are the document itself.
+
+`DHF/config/global.yaml` maps each doc type to its source file via the `source:` key
+under `document_specifications`. The `output:` key controls where the rendered
+Markdown is written. Treat `.md.j2` files like any other controlled document:
+update them through the CR workflow, review them in PRs, and keep their narrative
+current as the product evolves.
 
 ### 8.3 Update Process
 

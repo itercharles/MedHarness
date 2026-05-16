@@ -66,7 +66,7 @@ class DocumentGenerator:
             raise ValueError(f"No document specification configured for {doc_type_code}")
 
         spec_config = doc_specs[doc_type_code]
-        template_name = spec_config['template']
+        template_name = spec_config.get('source') or spec_config['template']
         output_rel_path = spec_config['output']
         output_path = dhf_root.parent / output_rel_path
 
