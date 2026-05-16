@@ -3,13 +3,10 @@
 from pathlib import Path
 from unittest.mock import patch
 
-import pytest
-
 from medharness.services.soup_sync import (
     _find_soup_item,
     _normalize_name,
     _normalize_version,
-    _package_key,
     diff_against_dhf,
     parse_package_json,
     parse_requirements_txt,
@@ -32,6 +29,10 @@ def _pkg_json(tmp_path: Path, content: dict) -> Path:
     p = tmp_path / "package.json"
     p.write_text(json.dumps(content), encoding="utf-8")
     return p
+
+
+def _make_soup_item(uid: str, name: str, version: str) -> dict:
+    return {"uid": uid, "type": "SOUP", "name": name, "version": version}
 
 
 # ---------------------------------------------------------------------------
@@ -131,12 +132,33 @@ class TestNormalizeHelpers:
 
 
 # ---------------------------------------------------------------------------
-# diff_against_dhf
+# _find_soup_item
 # ---------------------------------------------------------------------------
 
-def _make_soup_item(uid: str, name: str, version: str) -> dict:
-    return {"uid": uid, "type": "SOUP", "name": name, "version": version}
+class TestFindSoupItem:
+    def test_exact_match(self):
+        items = [_make_soup_item("SOUP-001", "requests", "2.31.0")]
+        assert _find_soup_item(items, "requests")["uid"] == "SOUP-001"
 
+    def test_case_insensitive_match(self):
+        items = [_make_soup_item("SOUP-001", "Requests", "2.31.0")]
+        assert _find_soup_item(items, "requests") is not None
+
+    def test_hyphen_underscore_match(self):
+        items = [_make_soup_item("SOUP-001", "my_package", "1.0.0")]
+        assert _find_soup_item(items, "my-package") is not None
+
+    def test_no_match_returns_none(self):
+        items = [_make_soup_item("SOUP-001", "flask", "3.0.0")]
+        assert _find_soup_item(items, "click") is None
+
+    def test_empty_list_returns_none(self):
+        assert _find_soup_item([], "requests") is None
+
+
+# ---------------------------------------------------------------------------
+# diff_against_dhf
+# ---------------------------------------------------------------------------
 
 class TestDiffAgainstDhf:
     def test_new_package_goes_to_create(self):
@@ -162,6 +184,12 @@ class TestDiffAgainstDhf:
         assert len(diff["to_update"]) == 1
         assert diff["to_update"][0]["old_version"] == "7.0.0"
         assert diff["to_update"][0]["pkg"]["version"] == "8.0.0"
+
+    def test_to_update_entries_are_dicts(self):
+        soup = [_make_soup_item("SOUP-001", "click", "7.0.0")]
+        packages = [{"name": "click", "version": "8.0.0", "ecosystem": "pypi"}]
+        diff = diff_against_dhf(packages, soup)
+        assert isinstance(diff["to_update"][0], dict)
 
     def test_extra_soup_item_is_orphan(self):
         soup = [_make_soup_item("SOUP-001", "oldlib", "1.0.0")]
@@ -191,7 +219,7 @@ class TestDiffAgainstDhf:
 class TestSyncSoupItems:
     def test_dry_run_returns_diff_without_writing(self, tmp_path):
         req = _req_txt(tmp_path, "requests==2.31.0\n")
-        with patch("dhfkit.api.list_items", return_value=[]) as mock_list, \
+        with patch("dhfkit.api.list_items", return_value=[]), \
              patch("dhfkit.api.create_item") as mock_create:
             result = sync_soup_items(tmp_path / "DHF", [req], write=False)
 
@@ -256,3 +284,41 @@ class TestSyncSoupItems:
 
         assert result["outcome"] == "completed_with_errors"
         assert any("Failed to list SOUP" in e for e in result["errors"])
+
+    def test_deduplication_across_manifests(self, tmp_path):
+        # Same package in two manifests should create only one SOUP item.
+        req1 = _req_txt(tmp_path, "requests==2.31.0\n")
+        req2 = tmp_path / "req2.txt"
+        # Use a second file with same name logic won't trigger (not named requirements.txt)
+        # Simulate by calling with package.json that also lists 'requests' as peerDep
+        pkg = _pkg_json(tmp_path, {"peerDependencies": {"requests": "^2.31.0"}})
+        with patch("dhfkit.api.list_items", return_value=[]), \
+             patch("dhfkit.api.create_item", return_value={"uid": "SOUP-001"}) as mock_create:
+            result = sync_soup_items(tmp_path / "DHF", [req1, pkg], write=True)
+
+        # "requests" appears in requirements.txt (pypi) and peerDependencies (npm) but
+        # after deduplication only one create call should happen
+        assert mock_create.call_count == 1
+
+    def test_deduplication_peer_and_direct_dep(self, tmp_path):
+        # Same npm package in both dependencies and peerDependencies — only one entry.
+        pkg = _pkg_json(tmp_path, {
+            "dependencies": {"axios": "^1.6.0"},
+            "peerDependencies": {"axios": "^1.0.0"},
+        })
+        with patch("dhfkit.api.list_items", return_value=[]):
+            result = sync_soup_items(tmp_path / "DHF", [pkg], write=False)
+
+        assert result["to_create"].count("axios") == 1
+
+    def test_partial_write_failure_is_completed_with_errors(self, tmp_path):
+        # create_item succeeds for first package, fails for second
+        req = _req_txt(tmp_path, "flask==3.0.0\nnumpy==1.26.0\n")
+        side_effects = [{"uid": "SOUP-001"}, RuntimeError("db error")]
+        with patch("dhfkit.api.list_items", return_value=[]), \
+             patch("dhfkit.api.create_item", side_effect=side_effects):
+            result = sync_soup_items(tmp_path / "DHF", [req], write=True)
+
+        assert result["outcome"] == "completed_with_errors"
+        assert result["items_created"] == ["SOUP-001"]
+        assert any("Failed to create" in e for e in result["errors"])

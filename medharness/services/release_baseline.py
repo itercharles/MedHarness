@@ -1,6 +1,6 @@
 """Release baseline builder — IEC 62304 §9 release record automation.
 
-Verifies that all included CRs are completed or cancelled, collects the
+Verifies that all included CRs are in `completed` state, collects the
 software BOM from DHF SOUP items, and writes a release baseline JSON artifact.
 Optionally creates a REL item in the DHF.
 """
@@ -19,11 +19,14 @@ from medharness.services.soup_sync import parse_package_json, parse_requirements
 # Gate helpers
 # ---------------------------------------------------------------------------
 
-_TERMINAL_STATES = {"completed", "cancelled", "rejected"}
+# Only completed CRs may be included in a release.  cancelled/rejected CRs
+# represent abandoned work and are not deliverables; including them would
+# produce a REL item that fails validate_release() in dhfkit/core.py.
+_RELEASABLE_STATE = "completed"
 
 
-def _verify_cr_gates(dhf, cr_ids: list[str]) -> list[dict]:
-    """Return violation dicts for any CR not in a terminal state."""
+def _verify_cr_gates(dhf: Path, cr_ids: list[str]) -> list[dict]:
+    """Return violation dicts for any CR not in `completed` state."""
     import dhfkit.api as api
 
     violations: list[dict] = []
@@ -33,42 +36,48 @@ def _verify_cr_gates(dhf, cr_ids: list[str]) -> list[dict]:
             violations.append({"cr": cr_id, "issue": "CR not found"})
             continue
         state = item.get("state") or item.get("status") or ""
-        if state not in _TERMINAL_STATES:
+        if state != _RELEASABLE_STATE:
             violations.append({
                 "cr": cr_id,
-                "issue": f"CR is in state '{state}', expected one of {sorted(_TERMINAL_STATES)}",
+                "issue": f"CR is in state '{state}', must be '{_RELEASABLE_STATE}' to be included in a release",
             })
     return violations
 
 
-def _auto_collect_crs(dhf) -> list[str]:
+def _auto_collect_crs(dhf: Path) -> list[str]:
     """Return IDs of completed CRs not already referenced in a REL item."""
     import dhfkit.api as api
 
     released_crs: set[str] = set()
-    for item in api.list_items(dhf):
-        if item.get("type") != "REL":
-            continue
-        for cr_id in item.get("included_items") or []:
-            released_crs.add(cr_id)
+    completed_unreleased: list[str] = []
 
-    result: list[str] = []
     for item in api.list_items(dhf):
-        if item.get("type") != "CR":
-            continue
-        state = item.get("state") or item.get("status") or ""
-        if state == "completed" and item["uid"] not in released_crs:
-            result.append(item["uid"])
-    return sorted(result)
+        item_type = item.get("type")
+        if item_type == "REL":
+            for cr_id in item.get("included_items") or []:
+                released_crs.add(cr_id)
+        elif item_type == "CR":
+            state = item.get("state") or item.get("status") or ""
+            if state == _RELEASABLE_STATE:
+                completed_unreleased.append(item["uid"])
+
+    return sorted(uid for uid in completed_unreleased if uid not in released_crs)
 
 
 # ---------------------------------------------------------------------------
 # BOM collection
 # ---------------------------------------------------------------------------
 
-def _collect_bom(dhf, manifest_paths: list[Path]) -> dict:
-    """Collect SOUP items and manifest packages into a software BOM."""
+def _collect_bom(dhf: Path, manifest_paths: list[Path]) -> tuple[dict, list[str]]:
+    """Collect SOUP items and manifest packages into a software BOM.
+
+    Returns ``(bom_dict, errors)`` where errors is non-empty when any manifest
+    is unreadable or unsupported — callers must propagate these to avoid
+    producing an incomplete BOM that silently looks successful.
+    """
     import dhfkit.api as api
+
+    bom_errors: list[str] = []
 
     dhf_soup: list[dict] = []
     for item in api.list_items(dhf):
@@ -90,12 +99,13 @@ def _collect_bom(dhf, manifest_paths: list[Path]) -> dict:
             elif path.name == "package.json":
                 pkgs = parse_package_json(path)
             else:
+                bom_errors.append(f"Unsupported manifest format for BOM: {path}")
                 continue
             manifest_packages.extend(pkgs)
-        except Exception:  # noqa: BLE001
-            pass
+        except Exception as exc:  # noqa: BLE001
+            bom_errors.append(f"Failed to parse BOM manifest {path}: {exc}")
 
-    return {"dhf_soup": dhf_soup, "manifest_packages": manifest_packages}
+    return {"dhf_soup": dhf_soup, "manifest_packages": manifest_packages}, bom_errors
 
 
 # ---------------------------------------------------------------------------
@@ -106,7 +116,7 @@ def _generate_release_notes(
     version: str,
     cr_ids: list[str],
     bom: dict,
-    dhf,
+    dhf: Path,
 ) -> str:
     import dhfkit.api as api
 
@@ -122,7 +132,7 @@ def _generate_release_notes(
 
     soup_count = len(bom.get("dhf_soup") or [])
     if soup_count:
-        lines.append(f"## Software BOM")
+        lines.append("## Software BOM")
         lines.append(f"{soup_count} SOUP component(s) in DHF — see software-bom.json for details.")
         lines.append("")
 
@@ -155,7 +165,7 @@ def build_release_baseline(
     if not cr_ids:
         cr_ids = _auto_collect_crs(dhf)
 
-    # Gate: all CRs must be in a terminal state
+    # Gate: all CRs must be completed
     gate_violations = _verify_cr_gates(dhf, cr_ids)
     for v in gate_violations:
         errors.append(f"{v['cr']}: {v['issue']}")
@@ -164,26 +174,33 @@ def build_release_baseline(
         return {
             "outcome": "completed_with_errors",
             "version": version,
-            "cr_ids": cr_ids,
+            "cr_ids": sorted(cr_ids),
+            "rel_uid": None,
             "gate_violations": gate_violations,
-            "errors": errors,
-            "write": write,
             "artifacts": [],
+            "soup_count": 0,
+            "manifest_packages_count": 0,
+            "write": write,
+            "errors": errors,
         }
 
-    # Collect BOM
-    bom = _collect_bom(dhf, manifest_paths)
+    # Collect BOM — propagate any manifest errors so an incomplete BOM fails loudly
+    bom, bom_errors = _collect_bom(dhf, manifest_paths)
+    errors.extend(bom_errors)
 
     # Generate release notes
     release_notes = _generate_release_notes(version, cr_ids, bom, dhf)
+
+    soup_count = len(bom.get("dhf_soup") or [])
+    manifest_packages_count = len(bom.get("manifest_packages") or [])
 
     # Build baseline record
     baseline = {
         "version": version,
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "included_crs": sorted(cr_ids),
-        "soup_count": len(bom.get("dhf_soup") or []),
-        "manifest_packages_count": len(bom.get("manifest_packages") or []),
+        "soup_count": soup_count,
+        "manifest_packages_count": manifest_packages_count,
         "release_notes": release_notes,
     }
 
@@ -233,8 +250,8 @@ def build_release_baseline(
         "cr_ids": sorted(cr_ids),
         "rel_uid": rel_uid,
         "artifacts": artifacts,
-        "soup_count": len(bom.get("dhf_soup") or []),
-        "manifest_packages_count": len(bom.get("manifest_packages") or []),
+        "soup_count": soup_count,
+        "manifest_packages_count": manifest_packages_count,
         "write": write,
         "errors": errors,
     }

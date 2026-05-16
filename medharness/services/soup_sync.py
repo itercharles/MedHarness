@@ -89,10 +89,6 @@ def _find_soup_item(soup_items: list[dict], package_name: str) -> Optional[dict]
     return None
 
 
-def _package_key(pkg: dict) -> str:
-    return f"{pkg['ecosystem']}:{pkg['name']}"
-
-
 def diff_against_dhf(
     packages: list[dict],
     soup_items: list[dict],
@@ -115,7 +111,7 @@ def diff_against_dhf(
         }
     """
     to_create: list[dict] = []
-    to_update: list[list] = []
+    to_update: list[dict] = []
     matched: list[dict] = []
     matched_item_ids: set[str] = set()
 
@@ -176,6 +172,18 @@ def sync_soup_items(
             manifests_parsed.append(str(path))
         except Exception as exc:  # noqa: BLE001
             errors.append(f"Failed to parse {path}: {exc}")
+
+    # Deduplicate by normalised name — first occurrence wins.
+    # Prevents duplicate SOUP creates when the same package appears in both
+    # dependencies and peerDependencies, or in multiple manifests.
+    seen: set[str] = set()
+    deduped: list[dict] = []
+    for pkg in packages:
+        key = _normalize_name(pkg["name"])
+        if key not in seen:
+            seen.add(key)
+            deduped.append(pkg)
+    packages = deduped
 
     soup_items: list[dict] = []
     try:

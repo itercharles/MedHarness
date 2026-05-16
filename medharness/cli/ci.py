@@ -689,6 +689,8 @@ def register(main):
             err=True,
         )
         if result.get("outcome") == "completed_with_errors":
+            for err in result.get("errors") or []:
+                click.echo(f"  FAIL: {err}", err=True)
             raise click.exceptions.Exit(1)
 
     # ── Release baseline ──
