@@ -186,21 +186,10 @@ Write this to the CR item:
       --data '{"implementation_notes": "<plan>"}' \
       --author "github-actions[bot]" --cr "{{cr_id}}"
 
-## Inline Validation Hook
-
-After writing all DHF items (before writing the implementation plan), validate
-and self-correct:
-
-    python -m medharness --dhf DHF dhf validate schema
-    python -m medharness --dhf DHF dhf validate traceability
-
-If either reports errors introduced by your changes, fix them via `dhf item update`
-and re-validate. Repeat until both pass cleanly.
-
 ## Step 2.5: Risk Impact Recording
 
-After validation passes, explicitly record which existing RISK and RCM items are
-relevant to this CR — even if they required no structural changes.
+After writing all DHF items (before validation), explicitly record which existing
+RISK and RCM items are relevant to this CR — even if they required no structural changes.
 
 1. List all existing risk items:
 
@@ -218,6 +207,16 @@ relevant to this CR — even if they required no structural changes.
          --author "github-actions[bot]" --cr "{{cr_id}}"
 
    Use `[]` if no risk items are relevant. Do not omit this step.
+
+## Inline Validation Hook
+
+After writing all DHF items and recording risk impact, validate and self-correct:
+
+    python -m medharness --dhf DHF dhf validate schema
+    python -m medharness --dhf DHF dhf validate traceability
+
+If either reports errors introduced by your changes, fix them via `dhf item update`
+and re-validate. Repeat until both pass cleanly.
 
 ## Scope Constraints
 

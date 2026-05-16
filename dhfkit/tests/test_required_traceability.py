@@ -257,3 +257,91 @@ def test_orphans_key_always_empty_list():
     result = check_traceability(items, config)
     assert result["orphans"] == []
     assert result["deprecation_warnings"] == []
+
+
+# ── MODULE → SWDD coverage matrix ────────────────────────────────────────────
+
+def _module_swdd_config(extra_rules: list | None = None) -> ProjectConfig:
+    from dhfkit.models.config import TraceabilityMatrix
+    return ProjectConfig(
+        doc_types=[
+            DocTypeConfig(code="MODULE", name="Software Module", prefix="MODULE-"),
+            DocTypeConfig(code="SWDD", name="Detailed Design", prefix="SWDD-"),
+            DocTypeConfig(code="SRS", name="Software Requirement", prefix="SRS-"),
+        ],
+        required_traceability=[RequiredTraceabilityRule(**r) for r in (extra_rules or [])],
+        traceability_matrices=[
+            TraceabilityMatrix(
+                name="Module to Detailed Design",
+                description="Every module has at least one SWDD item",
+                path=["MODULE", "SWDD"],
+            )
+        ],
+    )
+
+
+def test_module_swdd_coverage_passes():
+    from dhfkit.traceability import check_traceability
+    from dhfkit.models.item import Item
+
+    swdd = Item.model_validate({"id": "SWDD-001", "title": "t", "implements": ["SRS-001"], "module": ["MODULE-001"]})
+    items = [
+        {"id": "MODULE-001", "all_linked_uids": []},
+        {
+            "id": "SWDD-001",
+            "all_linked_uids": swdd.all_linked_uids,
+            "module": swdd.module,
+            "implements": swdd.implements,
+        },
+    ]
+    result = check_traceability(items, _module_swdd_config())
+    coverage = {r["matrix"]: r for r in result["coverage"]}
+    assert coverage["Module to Detailed Design"]["uncovered"] == []
+    assert result["passed"] is True
+
+
+def test_module_swdd_coverage_fails_when_no_swdd_links_module():
+    from dhfkit.traceability import check_traceability
+
+    items = [
+        {"id": "MODULE-001", "all_linked_uids": []},
+        {"id": "SWDD-001", "all_linked_uids": [], "implements": ["SRS-001"]},
+    ]
+    result = check_traceability(items, _module_swdd_config())
+    coverage = {r["matrix"]: r for r in result["coverage"]}
+    assert "MODULE-001" in coverage["Module to Detailed Design"]["uncovered"]
+    assert result["passed"] is False
+
+
+def test_swdd_module_field_populates_all_linked_uids():
+    from dhfkit.models.item import Item
+
+    item = Item.model_validate({
+        "id": "SWDD-001",
+        "title": "t",
+        "implements": ["SRS-001"],
+        "module": ["MODULE-001"],
+    })
+    assert "MODULE-001" in item.all_linked_uids
+    assert "SRS-001" in item.all_linked_uids
+
+
+def test_swdd_module_required_link_rule():
+    from dhfkit.traceability import check_traceability
+    from dhfkit.models.item import Item
+
+    config = _module_swdd_config(extra_rules=[
+        {"source_type": "SWDD", "direction": "upstream", "field": "module", "target_type": "MODULE", "min_count": 1},
+    ])
+    swdd_missing = Item.model_validate({"id": "SWDD-001", "title": "t", "implements": ["SRS-001"]})
+    items = [
+        {"id": "MODULE-001", "all_linked_uids": []},
+        {
+            "id": "SWDD-001",
+            "all_linked_uids": swdd_missing.all_linked_uids,
+            "module": swdd_missing.module or [],
+        },
+    ]
+    result = check_traceability(items, config)
+    failures = [f["id"] for f in result["required"]["failures"]]
+    assert "SWDD-001" in failures

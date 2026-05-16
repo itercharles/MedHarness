@@ -5,8 +5,8 @@ from dhfkit.item_type import ItemType, default_traceability_rules, default_cover
 from dhfkit.models.config import DocTypeConfig, ProjectConfig
 
 
-_ALL_CODES = ["UC", "CRS", "SYS", "SRS", "SWDD", "SYSARCH", "RISK", "RCM", "CR", "REL", "SOUP", "DEF"]
-_ALL_PREFIXES = ["UC-", "CRS-", "SYS-", "SRS-", "SWDD-", "SYSARCH-", "RISK-", "RCM-", "CR-", "REL-", "SOUP-", "DEF-"]
+_ALL_CODES = ["UC", "CRS", "SYS", "SRS", "SWDD", "SYSARCH", "MODULE", "RISK", "RCM", "CR", "REL", "SOUP", "DEF"]
+_ALL_PREFIXES = ["UC-", "CRS-", "SYS-", "SRS-", "SWDD-", "SYSARCH-", "MODULE-", "RISK-", "RCM-", "CR-", "REL-", "SOUP-", "DEF-"]
 
 
 def test_from_code_all_known_types():
@@ -111,3 +111,54 @@ def test_has_verification_defaults():
     assert ItemType.UC.value.has_verification is False
     assert ItemType.RISK.value.has_verification is False
     assert ItemType.CR.value.has_verification is False
+    assert ItemType.MODULE.value.has_verification is False
+
+
+def test_module_type_metadata():
+    m = ItemType.MODULE.value
+    assert m.code == "MODULE"
+    assert m.default_prefix == "MODULE-"
+    assert m.role == "software_module"
+    assert m.has_verification is False
+    assert m.required_upstream == []
+    assert "SWDD" in m.coverage_children
+
+
+def test_module_in_default_coverage_chains():
+    chains = default_coverage_chains()
+    paths = [tuple(c.path) for c in chains]
+    assert ("MODULE", "SWDD") in paths
+
+
+def test_default_traceability_rules_cover_swdd_implements():
+    rules = default_traceability_rules()
+    rule_keys = {(r.source_type, r.field, r.target_type) for r in rules}
+    assert ("SWDD", "implements", "SRS") in rule_keys
+    # MODULE→SWDD is a coverage matrix, not a required_upstream rule on SWDD
+    assert not any(r.source_type == "SWDD" and r.field == "module" for r in rules)
+
+
+# ---------------------------------------------------------------------------
+# Item.module field and all_links
+# ---------------------------------------------------------------------------
+
+def test_item_module_field_in_all_links():
+    from dhfkit.models.item import Item
+    item = Item.model_validate({"id": "SWDD-001", "title": "t", "module": ["MODULE-001"], "implements": ["SRS-001"]})
+    assert item.module == ["MODULE-001"]
+    assert "MODULE-001" in item.all_linked_uids
+    assert item.all_links["module"] == ["MODULE-001"]
+
+
+def test_item_module_absent_gives_empty_list():
+    from dhfkit.models.item import Item
+    item = Item.model_validate({"id": "SWDD-002", "title": "t", "implements": ["SRS-001"]})
+    assert item.module is None
+    assert item.all_links["module"] == []
+    assert "MODULE-001" not in item.all_linked_uids
+
+
+def test_item_no_refines_field():
+    from dhfkit.models.item import Item
+    item = Item.model_validate({"id": "SWDD-003", "title": "t"})
+    assert "refines" not in item.all_links
