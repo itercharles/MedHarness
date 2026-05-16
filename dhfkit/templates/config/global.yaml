@@ -118,11 +118,6 @@ traceability_matrices:
   path:
   - RISK
   - RCM
-- name: Risk Control to System
-  description: Risk control measures to system requirements
-  path:
-  - RCM
-  - SYS
 document_specifications:
   UC:
     template: requirements_specification.md.j2
