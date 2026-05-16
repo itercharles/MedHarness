@@ -308,6 +308,10 @@ class LocalDHFAdapter:
         """Check required traceability, orphans, and coverage."""
         from dhfkit.traceability import check_traceability
         items = self._loader.load_all()
+<<<<<<< HEAD
+=======
+        _LINK_FIELDS = ("derives_from", "implements", "mitigates", "satisfies", "guided_by", "informs", "design", "verifies", "validates", "refines", "module")
+>>>>>>> 1e90631 (feat: MODULE as first-class item type for software design organization)
         item_dicts = [
             {
                 "id": it.uid,
