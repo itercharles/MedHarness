@@ -9,6 +9,7 @@ from unittest.mock import MagicMock, call, patch
 import pytest
 
 from medharness.services.cr_generation import (
+    _auto_post_pr_feedback,
     _get_pr_feedback,
     _run_claude,
     generate_code,
@@ -780,4 +781,118 @@ class TestBuildDhfContextBlock:
             result = _build_dhf_context_block(dhf)
         assert "System requirements (tier 2): SYSREQ" in result
 
+
+class TestAutoPostPrFeedback:
+    MOCK_TARGET = "medharness.services.cr_generation.post_pr_comment"
+
+    def test_warnings_only_posts_one_comment(self):
+        result = {"warnings": [{"code": "W001", "message": "something odd"}], "outcome": "ok"}
+        with patch(self.MOCK_TARGET, side_effect=lambda pr, body, **kw: "https://url-1") as mock_post:
+            urls = _auto_post_pr_feedback(42, "CR-042", result)
+        assert mock_post.call_count == 1
+        assert urls == ["https://url-1"]
+
+    def test_errors_only_posts_one_comment(self):
+        result = {
+            "warnings": [],
+            "outcome": "completed_with_errors",
+            "errors": [{"field": "crs", "issue": "missing", "fix": "add it"}],
+        }
+        with patch(self.MOCK_TARGET, side_effect=lambda pr, body, **kw: "https://url-2") as mock_post:
+            urls = _auto_post_pr_feedback(42, "CR-042", result)
+        assert mock_post.call_count == 1
+        assert urls == ["https://url-2"]
+
+    def test_warnings_and_errors_posts_two_comments(self):
+        result = {
+            "warnings": [{"code": "W001", "message": "watch out"}],
+            "outcome": "completed_with_errors",
+            "errors": [{"field": "srs", "issue": "missing SRS", "fix": "create SRS-001"}],
+        }
+        counter = {"n": 0}
+
+        def side_effect(pr, body, **kw):
+            counter["n"] += 1
+            return f"https://url-{counter['n']}"
+
+        with patch(self.MOCK_TARGET, side_effect=side_effect) as mock_post:
+            urls = _auto_post_pr_feedback(42, "CR-042", result)
+        assert mock_post.call_count == 2
+        assert len(urls) == 2
+
+    def test_no_warnings_no_errors_returns_empty(self):
+        result = {"outcome": "completed", "warnings": [], "errors": []}
+        with patch(self.MOCK_TARGET) as mock_post:
+            urls = _auto_post_pr_feedback(42, "CR-042", result)
+        mock_post.assert_not_called()
+        assert urls == []
+
+    def test_warning_body_format(self):
+        result = {"warnings": [{"code": "W-TRACE", "message": "traceability gap"}], "outcome": "ok"}
+        captured: list[str] = []
+        with patch(self.MOCK_TARGET, side_effect=lambda pr, body, **kw: captured.append(body) or "https://u"):
+            _auto_post_pr_feedback(42, "CR-042", result)
+        assert len(captured) == 1
+        assert "⚠️ **Warnings for CR-042:**" in captured[0]
+        assert "- `W-TRACE`: traceability gap" in captured[0]
+
+    def test_error_body_format(self):
+        result = {
+            "warnings": [],
+            "outcome": "completed_with_errors",
+            "errors": [{"field": "srs_link", "issue": "no link", "fix": "add @links:SRS-001"}],
+        }
+        captured: list[str] = []
+        with patch(self.MOCK_TARGET, side_effect=lambda pr, body, **kw: captured.append(body) or "https://u"):
+            _auto_post_pr_feedback(42, "CR-042", result)
+        assert len(captured) == 1
+        assert "⚠️ **Validation errors for CR-042:**" in captured[0]
+        assert "**srs_link**" in captured[0]
+        assert "no link" in captured[0]
+        assert "_Fix:_ add @links:SRS-001" in captured[0]
+
+    def test_empty_url_not_added_to_list(self):
+        result = {"warnings": [{"code": "W001", "message": "warn"}], "outcome": "ok"}
+        with patch(self.MOCK_TARGET, return_value=""):
+            urls = _auto_post_pr_feedback(42, "CR-042", result)
+        assert urls == []
+
+    def test_token_kwarg_forwarded(self):
+        result = {"warnings": [{"code": "W001", "message": "x"}], "outcome": "ok"}
+        with patch(self.MOCK_TARGET, side_effect=lambda pr, body, **kw: "https://u") as mock_post:
+            _auto_post_pr_feedback(42, "CR-042", result, token="my-token")
+        assert mock_post.call_args.kwargs.get("token") == "my-token"
+
+    def test_explicit_empty_warnings_no_warning_comment(self):
+        result = {
+            "warnings": [],
+            "outcome": "completed_with_errors",
+            "errors": [{"field": "f", "issue": "i", "fix": "x"}],
+        }
+        captured: list[str] = []
+        with patch(self.MOCK_TARGET, side_effect=lambda pr, body, **kw: captured.append(body) or "https://u"):
+            _auto_post_pr_feedback(42, "CR-042", result)
+        assert all("Warnings" not in b for b in captured)
+        assert any("Validation errors" in b for b in captured)
+
+    def test_missing_result_keys_produces_no_comments(self):
+        with patch(self.MOCK_TARGET) as mock_post:
+            urls = _auto_post_pr_feedback(42, "CR-042", {})
+        mock_post.assert_not_called()
+        assert urls == []
+
+    def test_multiple_warnings_combined_into_single_body(self):
+        result = {
+            "warnings": [
+                {"code": "W001", "message": "first warning"},
+                {"code": "W002", "message": "second warning"},
+            ],
+            "outcome": "ok",
+        }
+        captured: list[str] = []
+        with patch(self.MOCK_TARGET, side_effect=lambda pr, body, **kw: captured.append(body) or "https://u") as mock_post:
+            _auto_post_pr_feedback(42, "CR-042", result)
+        assert mock_post.call_count == 1
+        assert "- `W001`: first warning" in captured[0]
+        assert "- `W002`: second warning" in captured[0]
 
