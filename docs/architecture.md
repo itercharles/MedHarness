@@ -1,7 +1,7 @@
 # Architecture
 
 > **Stability:** Stable
-> **Last reviewed:** 2026-05-14
+> **Last reviewed:** 2026-05-16
 
 ---
 
@@ -17,8 +17,11 @@ MedHarness ships two Python packages from a single repository:
 ### `medharness` owns
 
 - CLI surface and user-facing onboarding (`medharness init`)
-- CI gate commands (`ci test-coverage`, `ci dhf-validate`, `ci evidence bundle`)
-- CR workflow orchestration (`cr workflow`, `cr check-status`, `cr intake`)
+- CI gate commands (`ci dhf-validate`, `ci test-coverage`, `ci validate-branch`, `ci validate-code`, `ci evidence bundle`)
+- AI-assisted CR generation (`ci generate-dhf`, `ci develop-cr`)
+- SOUP management and release baseline (`ci soup-sync`, `ci release-baseline`)
+- Approval gating and stage management (`ci approve-gate`, `ci advance-stage`, `ci cr-status`, `ci parse-approval`)
+- CR workflow orchestration (`cr workflow`, `cr check-status`)
 - Product repo file generation (`CLAUDE.md`, `.gitignore`)
 - DHF repo scaffolding from bundled templates
 - Adapter protocol for pluggable DHF backends
@@ -159,6 +162,7 @@ generate-dhf  →  (design PR reviewed + approved)  →  develop-cr
 | `design` | `generate-dhf` | Design phase started |
 | `develop` | `develop-cr` | Implementation phase started |
 | `completed` | PR merge | Code merged to main |
+| `cancelled` | PR close | PR closed without merging |
 | `rejected` | `generate-dhf` triage | Out-of-scope / duplicate / too large |
 
 State transitions are not enforced as execution gates — the auto workflow proceeds regardless. States are recorded for traceability.
@@ -172,4 +176,4 @@ The CR-generation path in `medharness.services` is split by responsibility:
 - `cr_impact.py` — writes `affected_items` back onto the CR item after `generate-dhf` completes; `implementation_notes` is LLM-authored and not overwritten by the harness
 - `design_validation.py` — deterministic post-design checks; only catches schema, traceability, and DHF-validation failures
 
-This split is internal structure, not a public import contract. The public behavior is the CLI and JSON response contracts documented in `docs/compatibility-contracts.md`.
+This split is internal structure, not a public import contract. The public behavior is the CLI and JSON response contracts documented in the CHANGELOG and enforced by consumer-side contract tests.
