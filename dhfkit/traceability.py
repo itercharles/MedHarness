@@ -47,6 +47,10 @@ def check_required_traceability(items: list[dict], config: Any) -> dict:
 
         source_items = [it for it in items if it["id"].startswith(source_dt.prefix)]
         target_dt = config.get_doc_type(rule.target_type)
+        if target_dt is None and using_defaults:
+            # Target type not configured in this project — rule is not applicable.
+            # Explicit config rules (using_defaults=False) are always enforced.
+            continue
         target_prefix = target_dt.prefix if target_dt else f"{rule.target_type}-"
 
         for s_item in source_items:

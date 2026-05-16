@@ -2,7 +2,7 @@ code: DEF
 role: defect
 name: Defect
 prefix: DEF-
-directory: 11_def
+directory: 12_def
 properties:
 - id
 - name: title

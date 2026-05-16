@@ -141,7 +141,7 @@ generate-dhf  →  (design PR reviewed + approved)  →  develop-cr
 **`generate-dhf`**
 
 1. Triage — checks for duplicate, out-of-scope, architecture-conflict, or too-large
-2. V-model cascade — creates/updates DHF items top-down: CR → CRS → SYS → {SYSARCH, RISK, RCM} → SRS → SWDD. Reads relevant source modules before writing SWDD items so the design reflects the actual codebase.
+2. V-model cascade — creates/updates DHF items top-down: CR → CRS → SYS → {SYSARCH, RISK, RCM} → SRS → SWDD. Each SWDD item links to an existing MODULE and implements the relevant SRS items. Reads relevant source modules before writing SWDD items so the design reflects the actual codebase.
 3. Implementation plan — writes a structured implementation plan (overview, current state, changes required, steps, edge cases, tests) into `implementation_notes` on the CR item
 4. Deterministic validation — `dhf validate schema` + `dhf validate traceability`; self-corrects if errors remain
 

@@ -29,9 +29,13 @@ Return a concise risk impact entry:
 ```markdown
 Risk / Risk Controls: Required | Not required | Follow-up needed
 Justification: <one sentence>
-Impacted items: <risk / risk control item IDs or "None">
+Impacted items: <RISK-NNN, RCM-NNN, ... or "None">
 Recommended action: <none, update risk items, or create risk items during design>
 ```
+
+The `Impacted items` line should include every RISK or RCM item that is
+relevant to this CR — whether or not it was structurally changed. These IDs
+feed directly into Step 2.5 (`affected_risk_items` on the CR).
 
 For purely cosmetic or non-functional removals, use `Not required` only when no
 clinical workflow, safety control, or data integrity behavior changes.

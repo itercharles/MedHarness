@@ -2,7 +2,7 @@ code: SWDD
 role: design_detail
 name: Software Detailed Design
 prefix: SWDD-
-directory: 04_swdd
+directory: 05_swdd
 properties:
 - id
 - name: title
@@ -16,6 +16,11 @@ properties:
   target_types:
   - SRS
   label: Implements
+- name: module
+  format: relationship
+  target_types:
+  - MODULE
+  label: Module
 - name: verification_status
   format: enum
   values:

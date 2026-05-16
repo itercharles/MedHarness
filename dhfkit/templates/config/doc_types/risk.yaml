@@ -2,7 +2,7 @@ code: RISK
 role: risk
 name: Risk Analysis
 prefix: RISK-
-directory: 09_risk
+directory: 10_risk
 properties:
 - id
 - name: title

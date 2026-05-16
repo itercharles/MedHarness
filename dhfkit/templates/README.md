@@ -26,14 +26,15 @@ This is the DHF (Design History File) for {{project_name}}, scaffolded by
 │   │   ├── 01_crs/           # Customer Requirements (CRS-NNN.yaml)
 │   │   ├── 02_sys/           # System Requirements (SYS-NNN.yaml)
 │   │   ├── 03_srs/           # Software Requirements (SRS-NNN.yaml)
-│   │   ├── 04_swdd/          # Detailed Design (SWDD-NNN.yaml)
-│   │   ├── 05_sysarch/       # System Architecture (SYSARCH-NNN.yaml)
-│   │   ├── 06_cr/            # Change Requests (CR-NNN.yaml)
-│   │   ├── 07_rel/           # Releases (REL-NNN.yaml)
-│   │   ├── 08_soup/          # SOUP items (SOUP-NNN.yaml)
-│   │   ├── 09_risk/          # Risk items (RISK-NNN.yaml)
-│   │   ├── 10_rcm/           # Risk Control Measures (RCM-NNN.yaml)
-│   │   └── 11_def/           # Defects (DEF-NNN.yaml)
+│   │   ├── 04_modules/       # Software Modules (MODULE-NNN.yaml)
+│   │   ├── 05_swdd/          # Detailed Design (SWDD-NNN.yaml)
+│   │   ├── 06_sysarch/       # System Architecture (SYSARCH-NNN.yaml)
+│   │   ├── 07_cr/            # Change Requests (CR-NNN.yaml)
+│   │   ├── 08_rel/           # Releases (REL-NNN.yaml)
+│   │   ├── 09_soup/          # SOUP items (SOUP-NNN.yaml)
+│   │   ├── 10_risk/          # Risk items (RISK-NNN.yaml)
+│   │   ├── 11_rcm/           # Risk Control Measures (RCM-NNN.yaml)
+│   │   └── 12_def/           # Defects (DEF-NNN.yaml)
 │   ├── config/               # Project configuration
 │   │   ├── global.yaml       # Global settings (project name, lifecycle states)
 │   │   └── doc_types/        # One YAML per document type (SYS.yaml, CR.yaml, …)
@@ -49,6 +50,58 @@ This is the DHF (Design History File) for {{project_name}}, scaffolded by
 │   └── workflows/            # DHF-side CI: schema validation, CR automation
 └── README.md
 ```
+
+## DHF Item Type Model
+
+Items are organized into 13 standard types that follow the V-model hierarchy. Each type has a
+fixed code prefix and a defined role in the design and traceability chain.
+
+| Code | Name | One item per… |
+|------|------|---------------|
+| `UC` | Use Case | User goal or operating scenario |
+| `CRS` | Customer Requirement | Stakeholder need |
+| `SYS` | System Requirement | System-level behavioural obligation |
+| `SRS` | Software Requirement | Software-level behavioural obligation |
+| `MODULE` | Software Module | Software unit defined in the architecture decomposition |
+| `SWDD` | Software Detailed Design | Design decisions for an SRS requirement within a module |
+| `SYSARCH` | System Architecture | System-level design decision for a SYS requirement |
+| `RISK` | Risk | Identified hazard or hazardous situation |
+| `RCM` | Risk Control Measure | Mitigation for a risk, implemented as a system requirement |
+| `CR` | Change Request | Proposed change driving a DHF update cycle |
+| `SOUP` | SOUP | Third-party dependency tracked for IEC 62304 §5.3.3 |
+| `REL` | Release | Software release record (IEC 62304 §9) |
+| `DEF` | Defect | Tracked problem or non-conformance |
+
+### Traceability Links
+
+Items reference each other through typed link fields. All links are written on the child item
+and point upward to the parent.
+
+| Link field | Written on | Points to | Meaning |
+|------------|-----------|-----------|---------|
+| `derives_from` | CRS | UC | Customer requirement derives from a use case |
+| `satisfies` | SYS | CRS | System requirement satisfies a customer requirement |
+| `design` | SYSARCH | SYS | Architecture item records the design decision for a SYS requirement |
+| `derives_from` | SRS | SYS | Software requirement derives from a system requirement |
+| `module` | SWDD | MODULE | Detailed design belongs to this software module |
+| `implements` | SWDD | SRS | Detailed design implements a software requirement |
+| `mitigates` | RCM | RISK | Risk control measure mitigates a risk |
+| `implements` | RCM | SYS | Risk control measure is implemented as a system requirement |
+
+### Design Layer: SYSARCH / MODULE / SWDD
+
+Three item types together describe the software design:
+
+- **SYSARCH** — one per SYS requirement. Records the system-level design decision for that
+  specific requirement (which module handles it, what protocol is used, where the boundary falls).
+  Requirement-oriented, not module-oriented.
+- **MODULE** — one per software unit. Defines each unit's responsibility, key interfaces, and
+  internal structure. These are declared in the architecture overview, not tied to individual
+  requirements.
+- **SWDD** — one per SRS requirement, grouped under a MODULE. Records detailed design decisions
+  within a specific module. Must carry both `implements` (SRS ID) and `module` (MODULE ID).
+  The combined picture — MODULE overview + its SWDD items — forms the Software Design Document for
+  that module.
 
 ### AI-harness/context.md
 

@@ -18,12 +18,16 @@ from dhfkit.repository.saver import ItemSaver
 from dhfkit.result_store import ResultStore
 from dhfkit.id_generator import get_next_id
 
-_ITEM_LINK_FIELDS = (
+# V-model traceability link fields — used for orphan and coverage checks.
+_TRACEABILITY_LINK_FIELDS = (
     "derives_from", "implements", "mitigates", "satisfies",
     "guided_by", "informs", "design", "verifies", "validates",
-    "mitigated_by",
-    # CR and DEF built-in relationship fields
-    "affected_items", "target_release", "found_in_release", "fixed_in_release",
+    "mitigated_by", "module",
+)
+# Full set of relationship fields on any item — superset of traceability fields.
+_ITEM_LINK_FIELDS = _TRACEABILITY_LINK_FIELDS + (
+    "affected_items", "affected_risk_items",
+    "target_release", "found_in_release", "fixed_in_release",
 )
 _UID_PATTERN = re.compile(r"^[A-Z][A-Z0-9]*(-[A-Z0-9]+)*-\d+$")
 
@@ -304,12 +308,11 @@ class LocalDHFAdapter:
         """Check required traceability, orphans, and coverage."""
         from dhfkit.traceability import check_traceability
         items = self._loader.load_all()
-        _LINK_FIELDS = ("derives_from", "implements", "mitigates", "satisfies", "guided_by", "informs", "design", "verifies", "validates")
         item_dicts = [
             {
                 "id": it.uid,
                 "all_linked_uids": it.all_linked_uids,
-                **{f: getattr(it, f) for f in _LINK_FIELDS if getattr(it, f, None)},
+                **{f: getattr(it, f) for f in _TRACEABILITY_LINK_FIELDS if getattr(it, f, None)},
                 **{k: v for k, v in it.model_extra.items() if v is not None},
             }
             for it in items

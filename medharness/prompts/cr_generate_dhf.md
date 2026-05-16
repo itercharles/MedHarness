@@ -56,7 +56,7 @@ CR (input -- do not modify)
           ├─► RISK     (hazards arising from SYS)
           ├─► RCM      (mitigates RISK, implements SYS)
           └─► SRS   (derives_from SYS, constrained by RCM where applicable)
-               └─► SWDD  (implements SRS -- link implements to SRS IDs)
+               └─► SWDD  (implements SRS; module MODULE -- link both fields)
 
 Before writing any items, enumerate existing items for each type you plan to touch:
 
@@ -83,7 +83,13 @@ DHF item YAML are needed.
 ## SWDD Items
 
 **SWDD items capture design decisions — choices that are not obvious from the
-requirement alone.** Apply this threshold before creating or updating a SWDD:
+requirement alone.** Each SWDD item belongs to a software module (MODULE) and
+must carry both `implements` (SRS IDs) and `module` (MODULE ID). List existing
+MODULE items first to find or create the right module:
+
+    python -m medharness --dhf DHF dhf item list --type MODULE
+
+**Apply this threshold before creating or updating a SWDD:**
 
 > *Would a competent developer, given only the SRS, make a meaningfully wrong
 > architectural or structural choice without this SWDD?*
@@ -180,10 +186,31 @@ Write this to the CR item:
       --data '{"implementation_notes": "<plan>"}' \
       --author "github-actions[bot]" --cr "{{cr_id}}"
 
+## Step 2.5: Risk Impact Recording
+
+After writing all DHF items (before validation), explicitly record which existing
+RISK and RCM items are relevant to this CR — even if they required no structural changes.
+
+1. List all existing risk items:
+
+       python -m medharness --dhf DHF dhf item list --type RISK
+       python -m medharness --dhf DHF dhf item list --type RCM
+
+2. For each, assess: does this CR change behavior that could alter the hazard
+   likelihood, harm severity, or effectiveness of the control?
+
+3. Collect the IDs of all affected items — those you created, updated, or
+   determined are relevant but unchanged — and write them to the CR:
+
+       python -m medharness --dhf DHF dhf item update {{cr_id}} \
+         --data '{"affected_risk_items": ["RISK-001", "RCM-002"]}' \
+         --author "github-actions[bot]" --cr "{{cr_id}}"
+
+   Use `[]` if no risk items are relevant. Do not omit this step.
+
 ## Inline Validation Hook
 
-After writing all DHF items (before writing the implementation plan), validate
-and self-correct:
+After writing all DHF items and recording risk impact, validate and self-correct:
 
     python -m medharness --dhf DHF dhf validate schema
     python -m medharness --dhf DHF dhf validate traceability
@@ -197,6 +224,7 @@ and re-validate. Repeat until both pass cleanly.
 - Do not create items for hypothetical future changes.
 - Do not modify files outside `DHF/`.
 - Do not edit the CR item except to set `status: rejected` and `impact_assessment`
-  when rejecting (Step 1), or to write `implementation_notes` (Step 3).
+  when rejecting (Step 1), write `affected_risk_items` (Step 2.5), or write
+  `implementation_notes` (Step 3).
 
 ## DHF Impact Skills
