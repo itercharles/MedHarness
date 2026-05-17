@@ -206,6 +206,20 @@ def _validate_cascade_completeness(
     return errors
 
 
+def validate_dhf_structure(dhf_path: Path) -> list[dict]:
+    """Run schema and traceability checks only — no item-level or reconciliation logic.
+
+    Used as a pre-flight inside develop-cr to surface structural DHF gaps
+    before the LLM runs, without triggering false positives from reconciliation
+    checks that require a non-empty created_ids list.
+    """
+    _api, errors = _load_api()
+    if _api is None:
+        return errors
+    errors.extend(_validate_schema_and_traceability(_api, dhf_path))
+    return errors
+
+
 def _validate_spec_reconciliation(
     cr_id: str,
     dhf_path: Path,

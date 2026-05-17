@@ -175,7 +175,6 @@ def _build_risk_context_block(dhf_path: Path) -> str:
     """Summarise the current RISK/RCM landscape for injection into generate-dhf prompts."""
     try:
         from dhfkit.local_adapter import LocalDHFAdapter
-        from dhfkit.traceability import find_affected_risks
 
         adapter = LocalDHFAdapter(dhf_path)
         config = adapter._config

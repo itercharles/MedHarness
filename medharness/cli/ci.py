@@ -384,8 +384,7 @@ def register(main):
 
         for item in result.get("missing_items", []):
             click.echo(
-                f"FAIL [cr-complete] {item['type']}: expected {item['expected']} "
-                f"item(s), found {item['actual']}",
+                f"FAIL [cr-complete] {item['type']}: {item.get('issue', 'proposed item not found')}",
                 err=True,
             )
         for item in result.get("verification_gaps", []):

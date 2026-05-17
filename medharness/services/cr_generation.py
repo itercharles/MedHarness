@@ -659,12 +659,12 @@ def generate_code(
 
     # Pre-flight DHF traceability check — catch structural gaps before the LLM runs
     # so the prompt can include specific fixes rather than the LLM discovering them later.
+    # Uses validate_dhf_structure (schema + traceability only) to avoid false positives
+    # from reconciliation checks that require a non-empty created_ids list.
     if not pr_number and ci_failures is None:
         preflight_step, preflight_perf = _begin_step("preflight_traceability")
         try:
-            preflight_errors = design_validation.validate_generate_dhf(
-                cr_id, dhf_path, {"created": [], "updated": []}
-            )
+            preflight_errors = design_validation.validate_dhf_structure(dhf_path)
         except Exception:
             preflight_errors = []
         diagnostics["preflight_errors"] = len(preflight_errors)
