@@ -99,6 +99,57 @@ def check_required_traceability(items: list[dict], config: Any) -> dict:
     }
 
 
+def build_risk_chain(items: list[dict], config: Any) -> list[dict]:
+    """Build a per-RISK summary of linked RCMs and their implemented requirements.
+
+    Returns a list of dicts:
+        {
+          "risk_id": str,
+          "title": str,
+          "rcms": [
+            {"rcm_id": str, "title": str, "implements": [str]},
+            ...
+          ],
+        }
+
+    Returns an empty list when RISK or RCM doc types are not configured.
+    """
+    risk_dt = config.get_doc_type("RISK")
+    rcm_dt = config.get_doc_type("RCM")
+    if not risk_dt or not rcm_dt:
+        return []
+
+    risk_prefix = risk_dt.prefix
+    rcm_prefix = rcm_dt.prefix
+
+    risk_items = [it for it in items if it["id"].startswith(risk_prefix)]
+    rcm_items = [it for it in items if it["id"].startswith(rcm_prefix)]
+
+    chain = []
+    for risk in sorted(risk_items, key=lambda x: x["id"]):
+        rcms_for_risk = []
+        for rcm in sorted(rcm_items, key=lambda x: x["id"]):
+            mitigates = rcm.get("mitigates") or []
+            if isinstance(mitigates, str):
+                mitigates = [mitigates]
+            if risk["id"] not in mitigates:
+                continue
+            implements = rcm.get("implements") or []
+            if isinstance(implements, str):
+                implements = [implements]
+            rcms_for_risk.append({
+                "rcm_id": rcm["id"],
+                "title": rcm.get("title", ""),
+                "implements": sorted(implements),
+            })
+        chain.append({
+            "risk_id": risk["id"],
+            "title": risk.get("title", ""),
+            "rcms": rcms_for_risk,
+        })
+    return chain
+
+
 def check_traceability(items: list[dict], config: Any) -> dict:
     """
     Run full traceability validation.
@@ -113,6 +164,7 @@ def check_traceability(items: list[dict], config: Any) -> dict:
           "orphans": [],
           "coverage": [...],
           "required": {...},
+          "risk_chain": [...],
           "deprecation_warnings": [],
           "summary": str,
         }
@@ -177,6 +229,7 @@ def check_traceability(items: list[dict], config: Any) -> dict:
         "required": required_result,
         "orphans": [],
         "coverage": coverage_results,
+        "risk_chain": build_risk_chain(items, config),
         "deprecation_warnings": [],
         "summary": summary,
     }
@@ -244,6 +297,22 @@ def format_traceability_report(result: dict) -> str:
         for o in orphans:
             oid = o.get("id", o) if isinstance(o, dict) else o
             lines.append(f"  {oid}")
+        lines.append("")
+
+    # Risk chain
+    risk_chain = result.get("risk_chain", [])
+    if risk_chain:
+        lines.append("Risk Chain")
+        lines.append("-" * 40)
+        for risk in risk_chain:
+            lines.append(f"  {risk['risk_id']}  {risk['title']}")
+            if not risk["rcms"]:
+                lines.append("    (no RCMs linked)")
+            else:
+                for rcm in risk["rcms"]:
+                    impl = ", ".join(rcm["implements"]) if rcm["implements"] else "—"
+                    lines.append(f"    {rcm['rcm_id']}  {rcm['title']}")
+                    lines.append(f"      implements: {impl}")
         lines.append("")
 
     return "\n".join(lines)
