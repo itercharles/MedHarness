@@ -355,8 +355,8 @@ def init_cmd(ctx: click.Context, project_name: str) -> None:
     """Bootstrap a minimal standalone DHF.
 
     Creates the DHF directory with a minimal config (global.yaml + core
-    doc types) and empty item directories. The resulting DHF works with all
-    dhfkit commands out of the box.
+    doc types), empty item directories, and a documents/specs/ folder so
+    item and document commands work immediately.
 
     \b
     Example:
@@ -373,6 +373,7 @@ def init_cmd(ctx: click.Context, project_name: str) -> None:
     # config/global.yaml — minimal standalone version (no lifecycle states, no AI harness)
     config_dir = dhf_path / "config"
     config_dir.mkdir(parents=True, exist_ok=True)
+    dhf_name = dhf_path.name  # used in output paths so doc generation resolves correctly
     (config_dir / "global.yaml").write_text(
         yaml.dump({"project_name": project_name}, default_flow_style=False, allow_unicode=True)
         + "\n"
@@ -403,7 +404,25 @@ def init_cmd(ctx: click.Context, project_name: str) -> None:
         "  description: Risks and their controls\n"
         "  path:\n"
         "  - RISK\n"
-        "  - RCM\n",
+        "  - RCM\n"
+        "\n"
+        f"document_specifications:\n"
+        f"  SYS:\n"
+        f"    source: requirements_specification.md.j2\n"
+        f"    output: {dhf_name}/documents/specs/system_requirement_specification.md\n"
+        f"    doc_type_name: System Requirement\n"
+        f"  SRS:\n"
+        f"    source: requirements_specification.md.j2\n"
+        f"    output: {dhf_name}/documents/specs/software_requirement_specification.md\n"
+        f"    doc_type_name: Software Requirement\n"
+        f"  RISK:\n"
+        f"    source: risk_specification.md.j2\n"
+        f"    output: {dhf_name}/documents/specs/risk_analysis_specification.md\n"
+        f"    doc_type_name: Risk Analysis\n"
+        f"  RCM:\n"
+        f"    source: rcm_specification.md.j2\n"
+        f"    output: {dhf_name}/documents/specs/risk_control_measures_specification.md\n"
+        f"    doc_type_name: Risk Control Measures\n",
         encoding="utf-8",
     )
 
@@ -417,6 +436,12 @@ def init_cmd(ctx: click.Context, project_name: str) -> None:
     # empty item directories
     for directory in ("02_sys", "03_srs", "10_risk", "11_rcm"):
         (dhf_path / "items" / directory).mkdir(parents=True, exist_ok=True)
+
+    # documents/specs/ — copy the four core Jinja2 templates so doc generate works
+    specs_dir = dhf_path / "documents" / "specs"
+    specs_dir.mkdir(parents=True, exist_ok=True)
+    for tmpl in ("requirements_specification.md.j2", "risk_specification.md.j2", "rcm_specification.md.j2"):
+        shutil.copy2(_templates / "specs" / tmpl, specs_dir / tmpl)
 
     click.echo(json.dumps({"created": str(dhf_path), "project_name": project_name}))
     click.echo(f"DHF initialised at {dhf_path}", err=True)

@@ -40,9 +40,15 @@ def pytest_configure(config: pytest.Config) -> None:
 @pytest.fixture(autouse=True)
 def _dhf_junit_properties(request: pytest.FixtureRequest, record_property: Callable[[str, object], None]) -> None:
     links_marker = request.node.get_closest_marker("dhf_links")
+    id_marker = request.node.get_closest_marker("dhf_id")
+
     if links_marker:
         record_property("medharness.links", ",".join(str(a) for a in links_marker.args))
 
-    id_marker = request.node.get_closest_marker("dhf_id")
     if id_marker and id_marker.args:
         record_property("medharness.id", str(id_marker.args[0]))
+    elif links_marker and links_marker.args:
+        # Auto-derive TC ID from the first linked requirement so parse_junit_xml
+        # picks up the result for evidence ingestion without requiring dhf_id.
+        # Use explicit @pytest.mark.dhf_id when multiple tests cover the same requirement.
+        record_property("medharness.id", f"TC-{links_marker.args[0]}")

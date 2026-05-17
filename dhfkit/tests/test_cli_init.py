@@ -84,3 +84,36 @@ def test_init_project_name_with_quotes(tmp_path: Path) -> None:
     assert result.exit_code == 0, result.output
     config = yaml.safe_load((dhf / "config" / "global.yaml").read_text())
     assert config["project_name"] == 'My "Device" v2'
+
+
+def test_init_creates_documents_specs_dir(tmp_path: Path) -> None:
+    dhf = tmp_path / "DHF"
+    CliRunner().invoke(main, ["--dhf", str(dhf), "init"])
+    assert (dhf / "documents" / "specs").is_dir()
+
+
+def test_init_global_yaml_has_document_specifications(tmp_path: Path) -> None:
+    dhf = tmp_path / "DHF"
+    CliRunner().invoke(main, ["--dhf", str(dhf), "init"])
+    config = yaml.safe_load((dhf / "config" / "global.yaml").read_text())
+    doc_specs = config.get("document_specifications", {})
+    assert "SYS" in doc_specs
+    assert "SRS" in doc_specs
+    assert "RISK" in doc_specs
+    assert "RCM" in doc_specs
+
+
+def test_init_doc_spec_output_uses_dhf_dir_name(tmp_path: Path) -> None:
+    dhf = tmp_path / "my-dhf"
+    CliRunner().invoke(main, ["--dhf", str(dhf), "init"])
+    config = yaml.safe_load((dhf / "config" / "global.yaml").read_text())
+    output = config["document_specifications"]["SYS"]["output"]
+    assert output.startswith("my-dhf/")
+
+
+def test_init_doc_generate_succeeds(tmp_path: Path) -> None:
+    """doc generate SYS works on a freshly initialised DHF."""
+    dhf = tmp_path / "DHF"
+    CliRunner().invoke(main, ["--dhf", str(dhf), "init"])
+    result = CliRunner().invoke(main, ["--dhf", str(dhf), "doc", "generate", "SYS"])
+    assert result.exit_code == 0, result.output

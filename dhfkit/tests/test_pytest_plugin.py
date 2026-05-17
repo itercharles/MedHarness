@@ -115,3 +115,39 @@ def test_single_dhf_link(pytester: pytest.Pytester) -> None:
 
     props = _properties(xml, "test_one")
     assert props.get("medharness.links") == "SRS-001"
+
+
+def test_dhf_links_alone_auto_emits_tc_id(pytester: pytest.Pytester) -> None:
+    """dhf_links without dhf_id should auto-emit medharness.id for evidence ingestion."""
+    pytester.makeconftest("pytest_plugins = ['dhfkit.pytest_plugin']")
+    pytester.makepyfile("""
+        import pytest
+
+        @pytest.mark.dhf_links("SRS-007", "SYS-002")
+        def test_auto_id():
+            pass
+    """)
+    xml = pytester.path / "result.xml"
+    pytester.runpytest(f"--junit-xml={xml}")
+
+    props = _properties(xml, "test_auto_id")
+    assert props.get("medharness.id") == "TC-SRS-007"
+    assert props.get("medharness.links") == "SRS-007,SYS-002"
+
+
+def test_explicit_dhf_id_takes_precedence(pytester: pytest.Pytester) -> None:
+    """Explicit dhf_id wins over the auto-derived value."""
+    pytester.makeconftest("pytest_plugins = ['dhfkit.pytest_plugin']")
+    pytester.makepyfile("""
+        import pytest
+
+        @pytest.mark.dhf_id("TC-SRS-099")
+        @pytest.mark.dhf_links("SRS-007")
+        def test_override():
+            pass
+    """)
+    xml = pytester.path / "result.xml"
+    pytester.runpytest(f"--junit-xml={xml}")
+
+    props = _properties(xml, "test_override")
+    assert props.get("medharness.id") == "TC-SRS-099"
