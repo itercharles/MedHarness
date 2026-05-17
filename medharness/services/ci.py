@@ -403,3 +403,128 @@ def compute_item_coverage(
             "categories": ["Usability"],
         },
     }
+
+
+# ---------------------------------------------------------------------------
+# validate_verification_completeness — backs ci validate-verification
+# ---------------------------------------------------------------------------
+
+_NON_TEST_METHODS = frozenset({"Inspection", "Analysis", "Demonstration"})
+
+
+def validate_verification_completeness(
+    dhf_path: Path,
+    junit_paths: list[Path] = (),
+    req_types: tuple[str, ...] = (),
+) -> dict[str, Any]:
+    """Check that every requirement has a declared verification method with evidence.
+
+    Three distinct gap categories are returned:
+
+    - ``missing_method``: items with no ``verification_method`` field declared.
+      These are unconditional failures — no verification can be planned or
+      tracked without a declared method.
+
+    - ``unverified_test``: items that declare "Test" as a method but have no
+      linked passing test case in the provided JUnit evidence. Gate failure when
+      JUnit paths are supplied; warning when no JUnit paths are provided.
+
+    - ``manual_review_required``: items that declare only non-Test methods
+      (Inspection, Analysis, Demonstration). These cannot be automatically
+      verified; they are surfaced for human sign-off tracking. Not a gate
+      failure by default.
+
+    Args:
+        dhf_path: Path to the DHF directory.
+        junit_paths: JUnit XML files providing test evidence (optional).
+        req_types: Requirement type codes to check (default: SRS, SYS, CRS).
+
+    Returns:
+        {
+          "passed": bool,
+          "missing_method": [{"id": str, "type": str, "title": str}],
+          "unverified_test": [{"id": str, "type": str, "title": str}],
+          "manual_review_required": [{"id": str, "type": str, "title": str, "methods": list[str]}],
+          "summary": str,
+        }
+    """
+    import xml.etree.ElementTree as ET
+
+    from dhfkit.local_adapter import LocalDHFAdapter
+    from dhfkit.junit_parser import JUNIT_LINKS
+
+    adapter = LocalDHFAdapter(dhf_path)
+    all_items = adapter.list_items()
+    types_to_check = set(req_types) if req_types else {"SRS", "SYS", "CRS"}
+
+    # Build set of requirement IDs covered by passing tests
+    covered_by_test: set[str] = set()
+    for jp in junit_paths:
+        if not jp.is_file():
+            continue
+        tree = ET.parse(jp)
+        for tc in tree.iter("testcase"):
+            if list(tc.iter("failure")) or list(tc.iter("error")) or list(tc.iter("skipped")):
+                continue
+            for props in tc.iter("properties"):
+                for prop in props.iter("property"):
+                    if prop.get("name") == JUNIT_LINKS:
+                        for link in (prop.get("value") or "").split(","):
+                            link = link.strip()
+                            if link:
+                                covered_by_test.add(link)
+
+    missing_method: list[dict] = []
+    unverified_test: list[dict] = []
+    manual_review_required: list[dict] = []
+
+    config = adapter._config
+    for item in all_items:
+        uid = item.get("id", "")
+        type_code = uid.split("-")[0] if "-" in uid else ""
+        if type_code not in types_to_check:
+            continue
+
+        raw_method = item.get("verification_method")
+        if isinstance(raw_method, str):
+            methods = [m.strip() for m in raw_method.split(",") if m.strip()] if raw_method.strip() else []
+        elif isinstance(raw_method, list):
+            methods = [str(m).strip() for m in raw_method if str(m).strip()]
+        else:
+            methods = []
+
+        title = item.get("title", "")
+        entry = {"id": uid, "type": type_code, "title": title}
+
+        if not methods:
+            missing_method.append(entry)
+            continue
+
+        test_methods = [m for m in methods if m == "Test"]
+        non_test_methods = [m for m in methods if m in _NON_TEST_METHODS]
+
+        if test_methods and uid not in covered_by_test:
+            unverified_test.append(entry)
+
+        if non_test_methods and not test_methods:
+            manual_review_required.append({**entry, "methods": non_test_methods})
+
+    has_junit = bool(junit_paths)
+    passed = not missing_method and (not unverified_test if has_junit else True)
+
+    parts = []
+    if missing_method:
+        parts.append(f"{len(missing_method)} missing verification_method")
+    if unverified_test:
+        parts.append(f"{len(unverified_test)} unverified (Test method, no passing TC)")
+    if manual_review_required:
+        parts.append(f"{len(manual_review_required)} require manual sign-off")
+    summary = ("PASS" if passed else "FAIL") + " — " + ", ".join(parts) if parts else "All verification checks passed."
+
+    return {
+        "passed": passed,
+        "missing_method": missing_method,
+        "unverified_test": unverified_test,
+        "manual_review_required": manual_review_required,
+        "summary": summary,
+    }

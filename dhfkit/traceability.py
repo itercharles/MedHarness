@@ -201,6 +201,89 @@ def find_affected_risks(changed_ids: set[str], items: list[dict], config: Any) -
     ]
 
 
+def build_module_map(items: list[dict], config: Any) -> list[dict]:
+    """Build a MODULE → SWDD → SRS resolution map for AI implementation context.
+
+    Scans all SWDD items for their ``module`` field (→ MODULE) and ``implements``
+    field (→ SRS), then groups them by MODULE to produce a structured map that
+    shows which software modules own which design items and requirements.
+
+    Args:
+        items: All DHF items with their field data.
+        config: ProjectConfig used to identify MODULE and SWDD doc types.
+
+    Returns:
+        Sorted list of dicts:
+        [
+          {
+            "module_id": str,
+            "title": str,
+            "swdds": [{"swdd_id": str, "title": str, "implements": [str]}, ...],
+            "all_requirements": [str],   # deduplicated SRS IDs across all SWDDs
+          },
+          ...
+        ]
+        Empty when MODULE or SWDD doc types are not configured.
+    """
+    module_dt = config.get_doc_type("MODULE")
+    swdd_dt = config.get_doc_type("SWDD")
+    if not module_dt or not swdd_dt:
+        return []
+
+    module_prefix = module_dt.prefix
+    swdd_prefix = swdd_dt.prefix
+
+    module_items = {it["id"]: it for it in items if it["id"].startswith(module_prefix)}
+
+    # Group SWDDs by their module field
+    by_module: dict[str, list[dict]] = {}
+    for it in items:
+        if not it["id"].startswith(swdd_prefix):
+            continue
+        raw_module = it.get("module") or []
+        if isinstance(raw_module, str):
+            raw_module = [raw_module] if raw_module.strip() else []
+        for mod_id in raw_module:
+            mod_id = mod_id.strip()
+            if mod_id:
+                by_module.setdefault(mod_id, []).append(it)
+
+    result = []
+    for mod_id in sorted(by_module):
+        mod_meta = module_items.get(mod_id, {})
+        swdds = []
+        all_reqs: list[str] = []
+        for swdd in sorted(by_module[mod_id], key=lambda x: x["id"]):
+            raw_impl = swdd.get("implements") or []
+            if isinstance(raw_impl, str):
+                raw_impl = [raw_impl] if raw_impl.strip() else []
+            implements = [i.strip() for i in raw_impl if i.strip()]
+            swdds.append({
+                "swdd_id": swdd["id"],
+                "title": swdd.get("title", ""),
+                "implements": implements,
+            })
+            all_reqs.extend(r for r in implements if r not in all_reqs)
+        result.append({
+            "module_id": mod_id,
+            "title": mod_meta.get("title", ""),
+            "swdds": swdds,
+            "all_requirements": all_reqs,
+        })
+
+    # Include modules with no SWDDs so the map is complete
+    for mod_id in sorted(module_items):
+        if mod_id not in by_module:
+            result.append({
+                "module_id": mod_id,
+                "title": module_items[mod_id].get("title", ""),
+                "swdds": [],
+                "all_requirements": [],
+            })
+
+    return sorted(result, key=lambda x: x["module_id"])
+
+
 def check_traceability(items: list[dict], config: Any) -> dict:
     """
     Run full traceability validation.

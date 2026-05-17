@@ -171,8 +171,45 @@ def _build_dhf_context_block(dhf_path: Path) -> str:
     return "".join(lines)
 
 
-def _assemble_develop_prompt(cr_id: str) -> str:
-    return _load_prompt("cr_develop.md").replace("{{cr_id}}", cr_id)
+def _build_module_context_block(dhf_path: Path) -> str:
+    """Pre-compute the MODULE → SWDD → SRS map for the develop prompt."""
+    try:
+        from dhfkit.local_adapter import LocalDHFAdapter
+        from dhfkit.traceability import build_module_map
+
+        adapter = LocalDHFAdapter(dhf_path)
+        module_map = build_module_map(adapter.list_items(), adapter._config)
+    except Exception:
+        return ""
+
+    if not module_map:
+        return ""
+
+    lines = ["## Module → Design → Requirement Map\n",
+             "(Pre-computed from DHF. Use this to identify which module to touch "
+             "for a given requirement, and which SWDDs to update after implementation.)\n\n"]
+    for entry in module_map:
+        mod_id = entry["module_id"]
+        mod_title = entry["title"]
+        lines.append(f"**{mod_id}** — {mod_title}\n")
+        if not entry["swdds"]:
+            lines.append("  _(no SWDD items linked)_\n")
+        else:
+            for swdd in entry["swdds"]:
+                impl_str = ", ".join(swdd["implements"]) if swdd["implements"] else "—"
+                lines.append(f"  - {swdd['swdd_id']}: {swdd['title']}\n")
+                lines.append(f"    implements: {impl_str}\n")
+        lines.append("\n")
+    return "".join(lines)
+
+
+def _assemble_develop_prompt(cr_id: str, dhf_path: Path | None = None) -> str:
+    prompt = _load_prompt("cr_develop.md").replace("{{cr_id}}", cr_id)
+    if dhf_path is not None:
+        module_block = _build_module_context_block(dhf_path)
+        if module_block:
+            prompt += "\n\n" + module_block
+    return prompt
 
 
 def _assemble_review_code_prompt(cr_id: str) -> str:

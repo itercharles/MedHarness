@@ -211,6 +211,14 @@ def register(main):
              "covered": c["covered"], "total": c["total"]}
             for c in trace.get("coverage", [])
         ]
+
+        module_map: list[dict] = []
+        try:
+            from dhfkit.traceability import build_module_map
+            module_map = build_module_map(items, adapter._config)
+        except Exception:
+            pass
+
         overview = {
             "project": dhf_path.parent.name,
             "cr": ({"id": cr_id, "title": cr.get("title", ""), "status": cr.get("status", "")}
@@ -226,6 +234,7 @@ def register(main):
                 "coverage": coverage_summary,
                 "orphan_count": len(trace.get("orphans", [])),
             },
+            "module_map": module_map,
             "test_coverage": {"computed": False},
         }
         context_path = out_dir / "implementation-context.json"
