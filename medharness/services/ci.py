@@ -455,7 +455,15 @@ def validate_verification_completeness(
 
     adapter = LocalDHFAdapter(dhf_path)
     all_items = adapter.list_items()
-    types_to_check = set(req_types) if req_types else {"SRS", "SYS", "CRS"}
+    config = adapter._config
+
+    # Resolve configured prefixes so custom prefixes (e.g. SYSREQ-) are handled correctly.
+    default_types = req_types if req_types else ("SRS", "SYS", "CRS")
+    prefix_to_code: dict[str, str] = {}
+    for rt in default_types:
+        dt = config.get_doc_type(rt)
+        if dt:
+            prefix_to_code[dt.prefix] = rt
 
     # Build set of requirement IDs covered by passing tests
     covered_by_test: set[str] = set()
@@ -478,11 +486,10 @@ def validate_verification_completeness(
     unverified_test: list[dict] = []
     manual_review_required: list[dict] = []
 
-    config = adapter._config
     for item in all_items:
         uid = item.get("id", "")
-        type_code = uid.split("-")[0] if "-" in uid else ""
-        if type_code not in types_to_check:
+        type_code = next((code for pfx, code in prefix_to_code.items() if uid.startswith(pfx)), None)
+        if not type_code:
             continue
 
         raw_method = item.get("verification_method")

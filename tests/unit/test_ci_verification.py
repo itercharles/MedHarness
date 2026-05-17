@@ -131,6 +131,30 @@ def test_req_types_filter(tmp_path: Path) -> None:
     assert not result["missing_method"]
 
 
+def test_custom_type_code_not_in_defaults_is_checked_when_specified(tmp_path: Path) -> None:
+    """A fully custom doc type (e.g. SYSREQ, not in the default SRS/SYS/CRS set) must be
+    checked when explicitly included in req_types — the gate must resolve via the configured
+    prefix, not by comparing uid.split('-')[0] against a hardcoded set."""
+    dhf = _make_dhf(tmp_path, [])
+    # Register a custom doc type not in the defaults
+    custom_cfg = dhf / "config" / "doc_types" / "sysreq.yaml"
+    custom_cfg.write_text(
+        "code: SYSREQ\nrole: system_requirement\nname: System Requirement\n"
+        "prefix: SYSREQ-\ndirectory: 99_sysreq\nproperties:\n- id\n"
+        "- name: title\n  format: short_text\n  label: Title\n"
+        "has_verification: true\nverification_states:\n- not_verified\n- verified\n"
+    )
+    items_dir = dhf / "items" / "99_sysreq"
+    items_dir.mkdir(parents=True, exist_ok=True)
+    (items_dir / "SYSREQ-001.yaml").write_text(
+        "id: SYSREQ-001\ntitle: Custom req\nstatus: draft\n"
+    )
+    result = validate_verification_completeness(dhf, req_types=("SYSREQ",))
+    assert not result["passed"]
+    ids = [i["id"] for i in result["missing_method"]]
+    assert "SYSREQ-001" in ids, f"Expected SYSREQ-001 in missing_method; got {ids}"
+
+
 # ---------------------------------------------------------------------------
 # CLI integration tests
 # ---------------------------------------------------------------------------
