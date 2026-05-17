@@ -11,6 +11,23 @@ import pytest
 pytest_plugins = ["pytester"]
 
 
+@pytest.fixture(autouse=True)
+def _ensure_plugin_loaded(pytester: pytest.Pytester) -> None:
+    """Load the plugin in the inner pytest session, guarding against double-registration.
+
+    In CI the package is installed with a pytest11 entry point (name='dhfkit'), so the
+    plugin is already active. Locally (source-only, no editable install) it isn't, so we
+    import it explicitly.  The has_plugin guard prevents the ValueError that pluggy raises
+    when the same module is registered under two different names.
+    """
+    pytester.makeconftest("""
+def pytest_configure(config):
+    pm = config.pluginmanager
+    if not pm.has_plugin('dhfkit') and not pm.has_plugin('dhfkit.pytest_plugin'):
+        pm.import_plugin('dhfkit.pytest_plugin')
+""")
+
+
 def _properties(junit_xml: Path, test_name_substr: str) -> dict[str, str]:
     """Parse JUnit XML and return properties dict for the matching testcase."""
     tree = ET.parse(junit_xml)
@@ -24,7 +41,6 @@ def _properties(junit_xml: Path, test_name_substr: str) -> dict[str, str]:
 
 
 def test_dhf_links_marker_injects_links_property(pytester: pytest.Pytester) -> None:
-    pytester.makeconftest("pytest_plugins = ['dhfkit.pytest_plugin']")
     pytester.makepyfile("""
         import pytest
 
@@ -41,7 +57,6 @@ def test_dhf_links_marker_injects_links_property(pytester: pytest.Pytester) -> N
 
 
 def test_dhf_id_marker_injects_id_property(pytester: pytest.Pytester) -> None:
-    pytester.makeconftest("pytest_plugins = ['dhfkit.pytest_plugin']")
     pytester.makepyfile("""
         import pytest
 
@@ -57,7 +72,6 @@ def test_dhf_id_marker_injects_id_property(pytester: pytest.Pytester) -> None:
 
 
 def test_both_markers_combined(pytester: pytest.Pytester) -> None:
-    pytester.makeconftest("pytest_plugins = ['dhfkit.pytest_plugin']")
     pytester.makepyfile("""
         import pytest
 
@@ -75,7 +89,6 @@ def test_both_markers_combined(pytester: pytest.Pytester) -> None:
 
 
 def test_unmarked_test_has_no_dhf_properties(pytester: pytest.Pytester) -> None:
-    pytester.makeconftest("pytest_plugins = ['dhfkit.pytest_plugin']")
     pytester.makepyfile("""
         def test_plain():
             pass
@@ -89,7 +102,6 @@ def test_unmarked_test_has_no_dhf_properties(pytester: pytest.Pytester) -> None:
 
 
 def test_markers_registered_no_unknown_warning(pytester: pytest.Pytester) -> None:
-    pytester.makeconftest("pytest_plugins = ['dhfkit.pytest_plugin']")
     pytester.makepyfile("""
         import pytest
 
@@ -102,7 +114,6 @@ def test_markers_registered_no_unknown_warning(pytester: pytest.Pytester) -> Non
 
 
 def test_single_dhf_link(pytester: pytest.Pytester) -> None:
-    pytester.makeconftest("pytest_plugins = ['dhfkit.pytest_plugin']")
     pytester.makepyfile("""
         import pytest
 
@@ -119,7 +130,6 @@ def test_single_dhf_link(pytester: pytest.Pytester) -> None:
 
 def test_dhf_links_alone_auto_emits_tc_id(pytester: pytest.Pytester) -> None:
     """dhf_links without dhf_id should auto-emit medharness.id for evidence ingestion."""
-    pytester.makeconftest("pytest_plugins = ['dhfkit.pytest_plugin']")
     pytester.makepyfile("""
         import pytest
 
@@ -137,7 +147,6 @@ def test_dhf_links_alone_auto_emits_tc_id(pytester: pytest.Pytester) -> None:
 
 def test_explicit_dhf_id_takes_precedence(pytester: pytest.Pytester) -> None:
     """Explicit dhf_id wins over the auto-derived value."""
-    pytester.makeconftest("pytest_plugins = ['dhfkit.pytest_plugin']")
     pytester.makepyfile("""
         import pytest
 
