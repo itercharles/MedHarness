@@ -19,6 +19,8 @@ These properties are read by `ci test-coverage` to determine requirement coverag
 
 from __future__ import annotations
 
+from typing import Callable
+
 import pytest
 
 
@@ -36,7 +38,7 @@ def pytest_configure(config: pytest.Config) -> None:
 
 
 @pytest.fixture(autouse=True)
-def _dhf_junit_properties(request: pytest.FixtureRequest, record_property: pytest.FixtureRequest) -> None:
+def _dhf_junit_properties(request: pytest.FixtureRequest, record_property: Callable[[str, object], None]) -> None:
     links_marker = request.node.get_closest_marker("dhf_links")
     if links_marker:
         record_property("medharness.links", ",".join(str(a) for a in links_marker.args))

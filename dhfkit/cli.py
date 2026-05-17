@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 
 import click
+import yaml
 
 
 def _resolve_dhf(dhf_option: str | None) -> Path:
@@ -373,8 +374,8 @@ def init_cmd(ctx: click.Context, project_name: str) -> None:
     config_dir = dhf_path / "config"
     config_dir.mkdir(parents=True, exist_ok=True)
     (config_dir / "global.yaml").write_text(
-        f'project_name: "{project_name}"\n'
-        "\n"
+        yaml.dump({"project_name": project_name}, default_flow_style=False, allow_unicode=True)
+        + "\n"
         "required_traceability:\n"
         "- source_type: SRS\n"
         "  direction: upstream\n"

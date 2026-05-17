@@ -76,3 +76,11 @@ def test_init_default_project_name(tmp_path: Path) -> None:
     CliRunner().invoke(main, ["--dhf", str(dhf), "init"])
     config = yaml.safe_load((dhf / "config" / "global.yaml").read_text())
     assert config["project_name"] == "My Project"
+
+
+def test_init_project_name_with_quotes(tmp_path: Path) -> None:
+    dhf = tmp_path / "DHF"
+    result = CliRunner().invoke(main, ["--dhf", str(dhf), "init", "--project-name", 'My "Device" v2'])
+    assert result.exit_code == 0, result.output
+    config = yaml.safe_load((dhf / "config" / "global.yaml").read_text())
+    assert config["project_name"] == 'My "Device" v2'
