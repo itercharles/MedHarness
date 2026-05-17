@@ -308,6 +308,50 @@ def register(main):
         if not result["passed"]:
             raise click.ClickException("Test coverage gaps found.")
 
+    @ci.command("validate-verification")
+    @click.option("--dhf", "dhf_path", type=click.Path(file_okay=False, path_type=Path), required=True)
+    @click.option("--junit-dir", "junit_dirs", multiple=True, type=click.Path(file_okay=False, path_type=Path))
+    @click.option("--junit", "junit_files", multiple=True, type=click.Path(exists=True, dir_okay=False, path_type=Path))
+    @click.option("--requirement-type", "req_types", multiple=True, metavar="CODE")
+    @click.pass_context
+    def ci_validate_verification(
+        ctx: click.Context,
+        dhf_path: Path,
+        junit_dirs: tuple[Path, ...],
+        junit_files: tuple[Path, ...],
+        req_types: tuple[str, ...],
+    ) -> None:
+        """Check that every requirement has a declared verification method with evidence.
+
+        Three gap categories are reported:
+          missing_method      — no verification_method declared (gate failure)
+          unverified_test     — Test method declared but no passing TC in JUnit (gate failure)
+          manual_review_required — non-Test method only; requires human sign-off (warning)
+
+        Exits non-zero when missing_method or unverified_test gaps exist.
+        """
+        from medharness.services.ci import validate_verification_completeness
+
+        junit_paths = _h._collect_junit_paths(junit_files, junit_dirs)
+        result = validate_verification_completeness(
+            dhf_path=dhf_path,
+            junit_paths=junit_paths,
+            req_types=req_types,
+        )
+        click.echo(json.dumps(result))
+
+        for item in result.get("missing_method", []):
+            click.echo(f"FAIL [validate-verification] {item['id']}: no verification_method declared", err=True)
+        for item in result.get("unverified_test", []):
+            click.echo(f"FAIL [validate-verification] {item['id']}: Test method declared but no passing TC linked", err=True)
+        for item in result.get("manual_review_required", []):
+            methods = ", ".join(item.get("methods", []))
+            click.echo(f"WARN [validate-verification] {item['id']}: {methods} — requires manual sign-off record", err=True)
+
+        click.echo(result["summary"], err=True)
+        if not result["passed"]:
+            raise click.ClickException("Verification completeness gaps found.")
+
     @ci.command("validate-code")
     @click.option("--cr", "cr_id", required=True, metavar="CR_ID")
     @click.option("--since-ref", default="origin/main", metavar="REF")

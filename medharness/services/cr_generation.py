@@ -656,7 +656,7 @@ def generate_code(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> d
             "prepare_prompt",
             {"prompt_kind": "develop_generation", "used_pr_feedback": False},
         )
-        prompt = _assemble_develop_prompt(cr_id)
+        prompt = _assemble_develop_prompt(cr_id, dhf_path=dhf_path)
         diff = git.compute_diff(repo_root, "origin/main", *_DEFAULT_CODE_PATHS)
         if diff:
             truncated = len(diff) > MAX_DIFF_CHARS
