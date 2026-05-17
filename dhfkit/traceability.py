@@ -173,7 +173,6 @@ def find_affected_risks(changed_ids: set[str], items: list[dict], config: Any) -
     risk_prefix = risk_dt.prefix
     rcm_prefix = rcm_dt.prefix
 
-    by_id = {it["id"]: it for it in items}
     risk_items = {it["id"]: it for it in items if it["id"].startswith(risk_prefix)}
 
     affected: dict[str, set[str]] = {}  # risk_id → set of rcm_ids that implicate it
@@ -195,7 +194,7 @@ def find_affected_risks(changed_ids: set[str], items: list[dict], config: Any) -
     return [
         {
             "risk_id": risk_id,
-            "title": by_id.get(risk_id, {}).get("title", ""),
+            "title": risk_items[risk_id].get("title", ""),
             "via_rcms": sorted(affected[risk_id]),
         }
         for risk_id in sorted(affected)

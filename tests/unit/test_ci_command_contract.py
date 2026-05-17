@@ -117,6 +117,7 @@ class TestValidateBranchJsonContract:
             "expected_dhf_changes": True,
             "dhf_item_changes": {"created": ["SRS-010"], "updated": [], "deleted": []},
             "code_changes": {"created": ["apps/client/src/feature.ts"], "updated": [], "deleted": []},
+            "risk_impact": [],
             "errors": [],
         }
         with patch("medharness.services.git.validate_atomic_branch", return_value=branch_result):
@@ -125,10 +126,35 @@ class TestValidateBranchJsonContract:
         payload = _split_stdout_json(r.stdout)
         for key in (
             "cr_id", "since_ref", "passed", "spec_path", "expected_dhf_changes",
-            "dhf_item_changes", "code_changes", "errors",
+            "dhf_item_changes", "code_changes", "risk_impact", "errors",
         ):
             assert key in payload, f"missing {key}"
         assert payload["passed"] is True
+
+    def test_warn_emitted_to_stderr_when_risks_affected(self, dhf):
+        runner = CliRunner()
+        branch_result = {
+            "cr_id": "CR-502",
+            "since_ref": "origin/main",
+            "passed": True,
+            "spec_path": None,
+            "expected_dhf_changes": True,
+            "dhf_item_changes": {"created": ["SYS-010"], "updated": [], "deleted": []},
+            "code_changes": {"created": [], "updated": [], "deleted": []},
+            "risk_impact": [
+                {"risk_id": "RISK-001", "title": "Dose error", "via_rcms": ["RCM-001"]},
+                {"risk_id": "RISK-003", "title": "Data loss", "via_rcms": ["RCM-002"]},
+            ],
+            "errors": [],
+        }
+        with patch("medharness.services.git.validate_atomic_branch", return_value=branch_result):
+            r = runner.invoke(main, ["--dhf", str(dhf), "ci", "validate-branch", "--cr", "CR-502"],
+                              catch_exceptions=False)
+        assert r.exit_code == 0
+        assert "WARN" in r.stderr
+        assert "RISK-001" in r.stderr
+        assert "RISK-003" in r.stderr
+        assert "2 risk item(s)" in r.stderr
 
     def test_errors_propagate_and_exit_non_zero(self, dhf):
         branch_result = {
