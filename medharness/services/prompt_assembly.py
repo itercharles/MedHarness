@@ -171,6 +171,63 @@ def _build_dhf_context_block(dhf_path: Path) -> str:
     return "".join(lines)
 
 
+def _build_risk_context_block(dhf_path: Path) -> str:
+    """Summarise the current RISK/RCM landscape for injection into generate-dhf prompts."""
+    try:
+        from dhfkit.local_adapter import LocalDHFAdapter
+
+        adapter = LocalDHFAdapter(dhf_path)
+        config = adapter._config
+        items = adapter.list_items()
+    except Exception:
+        return ""
+
+    risk_dt = config.get_doc_type("RISK")
+    rcm_dt = config.get_doc_type("RCM")
+    if not risk_dt or not rcm_dt:
+        return ""
+
+    risk_prefix = risk_dt.prefix
+    rcm_prefix = rcm_dt.prefix
+
+    risk_items = {it["id"]: it for it in items if it["id"].startswith(risk_prefix)}
+    rcm_items = {it["id"]: it for it in items if it["id"].startswith(rcm_prefix)}
+
+    if not risk_items:
+        return ""
+
+    lines = [
+        "## Risk & Control Context\n",
+        "(Pre-computed from DHF. When proposing new system requirements, check whether "
+        "they implement an existing RCM. When proposing changes that affect an existing "
+        "RCM-linked SYS item, flag the related RISK for re-evaluation.)\n\n",
+    ]
+
+    for risk_id, risk in sorted(risk_items.items()):
+        severity = risk.get("severity", "—")
+        risk_level = risk.get("risk_level", "—")
+        lines.append(f"**{risk_id}** [{severity} · {risk_level}] — {risk.get('title', '')}\n")
+        rcms_for_risk = [
+            (rid, rcm) for rid, rcm in rcm_items.items()
+            if risk_id in (
+                rcm.get("mitigates") if isinstance(rcm.get("mitigates"), list)
+                else ([rcm.get("mitigates")] if rcm.get("mitigates") else [])
+            )
+        ]
+        if rcms_for_risk:
+            for rcm_id, rcm in sorted(rcms_for_risk):
+                implements = rcm.get("implements") or []
+                if isinstance(implements, str):
+                    implements = [implements]
+                impl_str = ", ".join(implements) if implements else "—"
+                lines.append(f"  ↳ {rcm_id} — {rcm.get('title', '')} (implements: {impl_str})\n")
+        else:
+            lines.append("  ↳ _(no RCM items yet)_\n")
+        lines.append("\n")
+
+    return "".join(lines)
+
+
 def _build_module_context_block(dhf_path: Path) -> str:
     """Pre-compute the MODULE → SWDD → SRS map for the develop prompt."""
     try:
@@ -222,6 +279,9 @@ def _assemble_generate_dhf_prompt(cr_id: str, dhf_path: Path | None = None) -> s
         block = _build_dhf_context_block(dhf_path)
         if block:
             prompt += "\n\n" + block
+        risk_block = _build_risk_context_block(dhf_path)
+        if risk_block:
+            prompt += "\n\n" + risk_block
     return _append_skills(prompt)
 
 

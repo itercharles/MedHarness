@@ -352,6 +352,53 @@ def register(main):
         if not result["passed"]:
             raise click.ClickException("Verification completeness gaps found.")
 
+    @ci.command("cr-complete")
+    @click.option("--cr", "cr_id", required=True, metavar="CR_ID")
+    @click.option("--dhf", "dhf_path", type=click.Path(file_okay=False, path_type=Path))
+    @click.option("--junit-dir", "junit_dirs", multiple=True, type=click.Path(file_okay=False, path_type=Path))
+    @click.option("--junit", "junit_files", multiple=True, type=click.Path(exists=True, dir_okay=False, path_type=Path))
+    @click.pass_context
+    def ci_cr_complete(
+        ctx: click.Context,
+        cr_id: str,
+        dhf_path: Path | None,
+        junit_dirs: tuple[Path, ...],
+        junit_files: tuple[Path, ...],
+    ) -> None:
+        """Verify CR closure: all proposed items created and verification evidence present.
+
+        Reads the CR spec's proposed_new_items, checks each proposed type was
+        created in the DHF, then runs the verification completeness gate for those
+        types. Use after a CR branch is merged and CI evidence is available.
+
+        Exits non-zero when any proposed items are missing or unverified.
+        """
+        from medharness.services.ci import cr_closure_gate
+
+        effective_dhf = dhf_path or ctx.obj.get("dhf")
+        if effective_dhf is None:
+            raise click.ClickException("--dhf is required when not set globally")
+        junit_paths = _h._collect_junit_paths(junit_files, junit_dirs)
+        result = cr_closure_gate(cr_id=cr_id, dhf_path=effective_dhf, junit_paths=junit_paths)
+        click.echo(json.dumps(result))
+
+        for item in result.get("missing_items", []):
+            click.echo(
+                f"FAIL [cr-complete] {item['type']}: {item.get('issue', 'proposed item not found')}",
+                err=True,
+            )
+        for item in result.get("verification_gaps", []):
+            click.echo(f"FAIL [cr-complete] {item['id']}: no verification_method declared", err=True)
+        for item in result.get("unverified_test", []):
+            click.echo(f"FAIL [cr-complete] {item['id']}: Test method declared but no passing TC linked", err=True)
+        for item in result.get("manual_review_required", []):
+            methods = ", ".join(item.get("methods", []))
+            click.echo(f"WARN [cr-complete] {item['id']}: {methods} — requires manual sign-off record", err=True)
+
+        click.echo(result["summary"], err=True)
+        if not result["passed"]:
+            raise click.ClickException(f"CR {cr_id} closure verification failed.")
+
     @ci.command("validate-code")
     @click.option("--cr", "cr_id", required=True, metavar="CR_ID")
     @click.option("--since-ref", default="origin/main", metavar="REF")
@@ -798,8 +845,12 @@ def register(main):
     @click.option("--cr", "cr_id", required=True, metavar="CR_ID")
     @click.option("--pr", "pr_number", default=None, type=int, metavar="N",
                   help="PR number — revision mode: revise implementation based on review comments")
+    @click.option("--ci-failures", "ci_failures_path", default=None,
+                  type=click.Path(exists=True, dir_okay=False, path_type=Path),
+                  help="JSON file containing structured CI failure output to feed back to Claude")
     @click.pass_context
-    def ci_develop_cr(ctx: click.Context, cr_id: str, pr_number: int | None) -> None:
+    def ci_develop_cr(ctx: click.Context, cr_id: str, pr_number: int | None,
+                      ci_failures_path: Path | None) -> None:
         """Generate or revise implementation code for a CR using Claude.
 
         Reads the approved spec and CR item, then invokes claude -p to implement
@@ -807,6 +858,8 @@ def register(main):
 
         Model is read from ANTHROPIC_MODEL env var.
         Pass --pr N to revise existing implementation based on PR review comments.
+        Pass --ci-failures PATH to feed structured CI failure JSON back as a
+        targeted correction prompt instead of free-text PR review comments.
         """
         from medharness.services.cr_generation import generate_code  # noqa: PLC0415
         from medharness.workflows.cr_state import assert_cr_active  # noqa: PLC0415
@@ -817,7 +870,13 @@ def register(main):
             raise click.ClickException(str(exc)) from exc
         except (FileNotFoundError, OSError):
             pass  # DHF config not loadable yet; generate_code will surface the error
-        result = generate_code(cr_id, dhf, pr_number=pr_number)
+        ci_failures: dict | None = None
+        if ci_failures_path is not None:
+            try:
+                ci_failures = json.loads(ci_failures_path.read_text(encoding="utf-8"))
+            except (json.JSONDecodeError, OSError) as exc:
+                raise click.ClickException(f"Could not read --ci-failures file: {exc}") from exc
+        result = generate_code(cr_id, dhf, pr_number=pr_number, ci_failures=ci_failures)
         click.echo(json.dumps(result))
         click.echo(_format_summary("Implementation", "revised" if pr_number else "generated", cr_id, result), err=True)
         for error in result.get("errors") or []:

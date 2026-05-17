@@ -206,6 +206,76 @@ def _validate_cascade_completeness(
     return errors
 
 
+def validate_dhf_structure(dhf_path: Path) -> list[dict]:
+    """Run schema and traceability checks only — no item-level or reconciliation logic.
+
+    Used as a pre-flight inside develop-cr to surface structural DHF gaps
+    before the LLM runs, without triggering false positives from reconciliation
+    checks that require a non-empty created_ids list.
+    """
+    _api, errors = _load_api()
+    if _api is None:
+        return errors
+    errors.extend(_validate_schema_and_traceability(_api, dhf_path))
+    return errors
+
+
+def _validate_spec_reconciliation(
+    cr_id: str,
+    dhf_path: Path,
+    created_ids: list[str],
+) -> list[dict]:
+    """Check that items created by generate-dhf match what the approved spec proposed.
+
+    Loads the CR spec from DHF/documents/specs/{cr_id}-Spec.md and compares
+    proposed_new_items type counts against the types actually created. Silently
+    skips if the spec file doesn't exist or has no proposed_new_items — not all
+    CRs use the structured spec flow.
+    """
+    import collections
+
+    spec_path = dhf_path / "documents" / "specs" / f"{cr_id}-Spec.md"
+    if not spec_path.exists():
+        return []
+
+    try:
+        from medharness.services.spec_validation import parse_spec_frontmatter
+        fm = parse_spec_frontmatter(spec_path) or {}
+    except Exception:
+        return []
+
+    proposed = fm.get("proposed_new_items")
+    if not proposed or not isinstance(proposed, list):
+        return []
+
+    proposed_counts: dict[str, int] = collections.Counter(
+        str(entry.get("type", "")).strip().upper()
+        for entry in proposed
+        if isinstance(entry, dict)
+    )
+
+    created_counts: dict[str, int] = collections.Counter(
+        _item_type_from_id(uid) for uid in created_ids
+    )
+
+    errors: list[dict] = []
+    for item_type, expected in proposed_counts.items():
+        actual = created_counts.get(item_type, 0)
+        if actual < expected:
+            errors.append({
+                "field": f"spec_reconciliation.{item_type}",
+                "issue": (
+                    f"Spec proposed {expected} {item_type} item(s) but only "
+                    f"{actual} were created."
+                ),
+                "fix": (
+                    f"Create the missing {expected - actual} {item_type} item(s) "
+                    f"as described in {cr_id}-Spec.md under `proposed_new_items`."
+                ),
+            })
+    return errors
+
+
 def validate_generate_dhf(
     cr_id: str,
     dhf_path: Path,
@@ -268,4 +338,5 @@ def validate_generate_dhf(
             })
 
     errors.extend(_validate_cascade_completeness(created_ids, by_id))
+    errors.extend(_validate_spec_reconciliation(cr_id, dhf_path, created_ids))
     return errors
