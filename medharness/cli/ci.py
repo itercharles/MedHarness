@@ -366,6 +366,14 @@ def register(main):
             spec_path=spec_path,
         )
         click.echo(json.dumps(payload))
+        risk_impact = payload.get("risk_impact", [])
+        if risk_impact:
+            ids = ", ".join(r["risk_id"] for r in risk_impact)
+            click.echo(
+                f"WARN [validate-branch] {cr_id}: {len(risk_impact)} risk item(s) potentially affected"
+                f" — {ids}. Verify risk controls are current.",
+                err=True,
+            )
         if payload["passed"]:
             if code_paths:
                 click.echo(f"PASS [validate-branch] {cr_id}: branch carries coupled DHF and code changes.", err=True)

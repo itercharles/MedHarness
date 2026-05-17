@@ -1,7 +1,7 @@
-"""Unit tests for build_risk_chain and its appearance in format_traceability_report."""
+"""Unit tests for build_risk_chain, find_affected_risks, and format_traceability_report."""
 
 from dhfkit.models.config import ProjectConfig, DocTypeConfig
-from dhfkit.traceability import build_risk_chain, format_traceability_report
+from dhfkit.traceability import build_risk_chain, find_affected_risks, format_traceability_report
 
 
 def _config() -> ProjectConfig:
@@ -132,3 +132,97 @@ def test_report_omits_risk_chain_section_when_empty():
     }
     report = format_traceability_report(result)
     assert "Risk Chain" not in report
+
+
+# ── find_affected_risks ──────────────────────────────────────────────────────
+
+def test_find_affected_risks_basic():
+    items = [
+        {"id": "RISK-001", "title": "Incorrect dose", "all_linked_uids": []},
+        {
+            "id": "RCM-001",
+            "title": "Range check",
+            "mitigates": ["RISK-001"],
+            "implements": ["SYS-004"],
+            "all_linked_uids": ["RISK-001", "SYS-004"],
+        },
+        {"id": "SYS-004", "title": "Dose input validation", "all_linked_uids": []},
+    ]
+    result = find_affected_risks({"SYS-004"}, items, _config())
+    assert len(result) == 1
+    assert result[0]["risk_id"] == "RISK-001"
+    assert result[0]["via_rcms"] == ["RCM-001"]
+
+
+def test_find_affected_risks_no_overlap():
+    items = _items()
+    result = find_affected_risks({"SYS-999"}, items, _config())
+    assert result == []
+
+
+def test_find_affected_risks_multiple_risks():
+    items = [
+        {"id": "RISK-001", "title": "Risk A", "all_linked_uids": []},
+        {"id": "RISK-002", "title": "Risk B", "all_linked_uids": []},
+        {
+            "id": "RCM-001",
+            "title": "Control 1",
+            "mitigates": ["RISK-001"],
+            "implements": ["SYS-001"],
+            "all_linked_uids": [],
+        },
+        {
+            "id": "RCM-002",
+            "title": "Control 2",
+            "mitigates": ["RISK-002"],
+            "implements": ["SYS-001"],
+            "all_linked_uids": [],
+        },
+    ]
+    result = find_affected_risks({"SYS-001"}, items, _config())
+    assert {r["risk_id"] for r in result} == {"RISK-001", "RISK-002"}
+
+
+def test_find_affected_risks_rcm_mitigates_multiple_risks():
+    items = [
+        {"id": "RISK-001", "title": "Risk A", "all_linked_uids": []},
+        {"id": "RISK-002", "title": "Risk B", "all_linked_uids": []},
+        {
+            "id": "RCM-001",
+            "title": "Combined control",
+            "mitigates": ["RISK-001", "RISK-002"],
+            "implements": ["SYS-001"],
+            "all_linked_uids": [],
+        },
+    ]
+    result = find_affected_risks({"SYS-001"}, items, _config())
+    assert len(result) == 2
+    assert result[0]["via_rcms"] == ["RCM-001"]
+
+
+def test_find_affected_risks_string_fields():
+    items = [
+        {"id": "RISK-001", "title": "Risk", "all_linked_uids": []},
+        {
+            "id": "RCM-001",
+            "title": "Control",
+            "mitigates": "RISK-001",
+            "implements": "SYS-001",
+            "all_linked_uids": [],
+        },
+    ]
+    result = find_affected_risks({"SYS-001"}, items, _config())
+    assert result[0]["risk_id"] == "RISK-001"
+
+
+def test_find_affected_risks_missing_doc_types():
+    config = ProjectConfig(doc_types=[
+        DocTypeConfig(code="SYS", name="System Requirement", prefix="SYS-"),
+    ])
+    result = find_affected_risks({"SYS-001"}, _items(), config)
+    assert result == []
+
+
+def test_find_affected_risks_empty_changed_ids():
+    result = find_affected_risks(set(), _items(), _config())
+    assert result == []

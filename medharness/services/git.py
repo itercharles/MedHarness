@@ -163,10 +163,12 @@ def validate_atomic_branch(
             "fix": "Run generate-dhf to create or update the required DHF items on this branch.",
         })
 
-    # Validate that spec affected_items exist in the DHF
-    if affected and dhf_path.is_dir():
+    # Validate that spec affected_items exist in the DHF; collect risk impact
+    risk_impact: list[dict] = []
+    if dhf_path.is_dir():
         try:
             from dhfkit.local_adapter import LocalDHFAdapter
+            from dhfkit.traceability import find_affected_risks
             adapter = LocalDHFAdapter(dhf_path)
             for uid in affected:
                 if adapter.get_item(uid) is None:
@@ -181,8 +183,14 @@ def validate_atomic_branch(
                             "the spec's affected_items list."
                         ),
                     })
+            changed_ids = set(
+                dhf_item_changes["created"]
+                + dhf_item_changes["updated"]
+                + dhf_item_changes["deleted"]
+            )
+            risk_impact = find_affected_risks(changed_ids, adapter.list_items(), adapter._config)
         except (FileNotFoundError, OSError, ValueError):
-            pass  # DHF config not loadable — skip item existence check
+            pass  # DHF not loadable — skip item existence and risk checks
 
     return {
         "cr_id": cr_id,
@@ -192,6 +200,7 @@ def validate_atomic_branch(
         "expected_dhf_changes": True,
         "dhf_item_changes": dhf_item_changes,
         "code_changes": code_changes,
+        "risk_impact": risk_impact,
         "errors": errors,
     }
 

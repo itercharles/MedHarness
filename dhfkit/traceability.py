@@ -150,6 +150,57 @@ def build_risk_chain(items: list[dict], config: Any) -> list[dict]:
     return chain
 
 
+def find_affected_risks(changed_ids: set[str], items: list[dict], config: Any) -> list[dict]:
+    """Return RISK items potentially affected by a set of changed DHF item IDs.
+
+    Traverses the link graph in reverse: changed item → RCMs that implement it
+    → RISK items those RCMs mitigate.
+
+    Args:
+        changed_ids: Item IDs modified on the branch (any type).
+        items: All DHF items with their field data.
+        config: ProjectConfig used to identify RISK and RCM doc types.
+
+    Returns:
+        Sorted list of dicts: [{"risk_id": str, "title": str, "via_rcms": [str]}, ...]
+        Empty when no RISK or RCM doc types are configured, or no overlap found.
+    """
+    risk_dt = config.get_doc_type("RISK")
+    rcm_dt = config.get_doc_type("RCM")
+    if not risk_dt or not rcm_dt:
+        return []
+
+    risk_prefix = risk_dt.prefix
+    rcm_prefix = rcm_dt.prefix
+
+    risk_items = {it["id"]: it for it in items if it["id"].startswith(risk_prefix)}
+
+    affected: dict[str, set[str]] = {}  # risk_id → set of rcm_ids that implicate it
+    for it in items:
+        if not it["id"].startswith(rcm_prefix):
+            continue
+        implements = it.get("implements") or []
+        if isinstance(implements, str):
+            implements = [implements]
+        if not any(uid in changed_ids for uid in implements):
+            continue
+        mitigates = it.get("mitigates") or []
+        if isinstance(mitigates, str):
+            mitigates = [mitigates]
+        for risk_id in mitigates:
+            if risk_id in risk_items:
+                affected.setdefault(risk_id, set()).add(it["id"])
+
+    return [
+        {
+            "risk_id": risk_id,
+            "title": risk_items[risk_id].get("title", ""),
+            "via_rcms": sorted(affected[risk_id]),
+        }
+        for risk_id in sorted(affected)
+    ]
+
+
 def check_traceability(items: list[dict], config: Any) -> dict:
     """
     Run full traceability validation.
