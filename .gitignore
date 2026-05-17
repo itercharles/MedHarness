@@ -51,4 +51,5 @@ examples/DHF/
 .claude/agent-memory/
 .claude/agents/
 .claude/settings.local.json
+.claude/scheduled_tasks.lock
 .venv
