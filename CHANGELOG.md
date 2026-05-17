@@ -11,7 +11,35 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+---
+
+## [0.7.0] — 2026-05-17
+
 ### New Features
+
+- **Risk chain in `dhf report`** — `check_traceability()` now includes a
+  `risk_chain` key mapping each RISK item to its linked RCMs and the
+  requirements those RCMs implement. Rendered as a "Risk Chain" section in the
+  human-readable traceability report.
+
+- **Risk impact in `ci validate-branch`** — `validate_atomic_branch()` traverses
+  changed DHF item IDs through RCM `implements` → `mitigates` links to surface
+  RISK items potentially affected by the branch. Emits a WARN to stderr when
+  risks are found; `risk_impact` key added to the JSON payload.
+
+- **pytest plugin (`dhfkit.pytest_plugin`)** — `@pytest.mark.dhf_links(*ids)`
+  and `@pytest.mark.dhf_id(id)` markers write `medharness.links` and
+  `medharness.id` JUnit XML properties, wiring test results to DHF requirement
+  IDs. Auto-registered via `pytest11` entry point. When only `dhf_links` is
+  present, a `medharness.id` is auto-derived from the first link so evidence
+  ingestion works without requiring an explicit `dhf_id`.
+
+- **`dhfkit init` command** — bootstraps a new DHF directory from the bundled
+  starter template. Writes `global.yaml` (with `project_name`, `required_traceability`,
+  `document_specifications`), copies core doc-type configs, seeds `documents/specs/`
+  with Jinja2 templates, and creates item directories for SYS, SRS, RISK, RCM.
+  Outputs a JSON summary line to stdout; exits non-zero if the target directory
+  is not empty.
 
 - **`ci soup-sync` command** — parses `requirements.txt` (pinned `==` entries)
   and `package.json` (`dependencies`, `devDependencies`, `peerDependencies`) and
