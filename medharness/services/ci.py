@@ -535,3 +535,88 @@ def validate_verification_completeness(
         "manual_review_required": manual_review_required,
         "summary": summary,
     }
+
+
+def cr_closure_gate(
+    cr_id: str,
+    dhf_path: Path,
+    junit_paths: tuple[Path, ...] = (),
+) -> dict:
+    """Verify that a CR is fully closed: all proposed items created and verified.
+
+    Checks:
+    1. All ``proposed_new_items`` from the CR spec exist in the DHF.
+    2. All created items of verifiable types have ``verification_method`` set.
+    3. Items with ``Test`` method have passing JUnit evidence (when JUnit provided).
+
+    Args:
+        cr_id: CR identifier (e.g. CR-012).
+        dhf_path: Path to the DHF directory.
+        junit_paths: JUnit XML files providing test evidence (optional).
+
+    Returns:
+        {
+          "passed": bool,
+          "cr_id": str,
+          "missing_items": [{"type": str, "expected": int, "actual": int}],
+          "verification_gaps": [{"id": str, "type": str, "title": str}],
+          "unverified_test": [{"id": str, "type": str, "title": str}],
+          "summary": str,
+        }
+    """
+    import collections
+
+    from dhfkit.local_adapter import LocalDHFAdapter
+    from medharness.services.spec_validation import parse_spec_frontmatter
+
+    adapter = LocalDHFAdapter(dhf_path)
+    all_items = adapter.list_items()
+    config = adapter._config
+
+    # Load proposed_new_items from spec
+    spec_path = dhf_path / "documents" / "specs" / f"{cr_id}-Spec.md"
+    proposed: list[dict] = []
+    if spec_path.exists():
+        fm = parse_spec_frontmatter(spec_path) or {}
+        raw = fm.get("proposed_new_items") or []
+        if isinstance(raw, list):
+            proposed = [e for e in raw if isinstance(e, dict)]
+
+    # Count proposed vs actual by type
+    proposed_counts: dict[str, int] = collections.Counter(
+        str(e.get("type", "")).strip().upper() for e in proposed
+    )
+    missing_items: list[dict] = []
+    for item_type, expected in proposed_counts.items():
+        dt = config.get_doc_type(item_type)
+        prefix = dt.prefix if dt else f"{item_type}-"
+        actual = sum(1 for it in all_items if it["id"].startswith(prefix))
+        if actual < expected:
+            missing_items.append({"type": item_type, "expected": expected, "actual": actual})
+
+    # Determine which types to check for verification — the set from the spec
+    types_to_check: list[str] = list(proposed_counts.keys()) or ["SRS", "SYS", "CRS"]
+    verify_result = validate_verification_completeness(
+        dhf_path, junit_paths=junit_paths, req_types=tuple(types_to_check)
+    )
+
+    passed = not missing_items and verify_result["passed"]
+
+    parts: list[str] = []
+    if missing_items:
+        parts.append(f"{len(missing_items)} item type(s) under-created vs spec")
+    if not verify_result["passed"]:
+        parts.append(verify_result["summary"])
+    summary = ("PASS" if passed else "FAIL") + (" — " + ", ".join(parts) if parts else "")
+    if passed and not parts:
+        summary = f"CR {cr_id} closure verified — all proposed items present and verified."
+
+    return {
+        "passed": passed,
+        "cr_id": cr_id,
+        "missing_items": missing_items,
+        "verification_gaps": verify_result.get("missing_method", []),
+        "unverified_test": verify_result.get("unverified_test", []),
+        "manual_review_required": verify_result.get("manual_review_required", []),
+        "summary": summary,
+    }
