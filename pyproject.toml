@@ -65,6 +65,9 @@ medharness = "medharness.cli:main"
 dhfkit = "dhfkit.cli:main"
 dhf = "dhfkit.cli:main"
 
+[project.entry-points."pytest11"]
+dhfkit = "dhfkit.pytest_plugin"
+
 [tool.setuptools]
 license-files = ["LICENSE"]
 
