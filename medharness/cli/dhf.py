@@ -11,8 +11,6 @@ import click
 import medharness._helpers as _h
 import dhfkit.api as _api
 from medharness.services.git import commit_dhf_item
-from medharness.services.spec_validation import parse_spec_frontmatter
-
 
 def register(main):
 
@@ -182,9 +180,9 @@ def register(main):
     @click.option("--out-dir", required=True, type=click.Path(file_okay=False, path_type=Path))
     @click.pass_context
     def dhf_context_implementation(ctx: click.Context, cr_id: str, out_dir: Path) -> None:
-        """Write CR item, spec, and DHF overview to out-dir for CI/agent consumption.
+        """Write CR item and DHF overview to out-dir for CI/agent consumption.
 
-        Outputs JSON with paths to the written files: {"cr": "...", "implementation_spec": "...", "context": "..."}.
+        Outputs JSON with paths to the written files: {"cr": "...", "context": "..."}.
         """
         adapter = _h._make_adapter(ctx)
         dhf_path: Path = ctx.obj["dhf"]
@@ -196,13 +194,6 @@ def register(main):
             cr_path.write_text(json.dumps(cr, default=str) + "\n", encoding="utf-8")
         else:
             cr_path.write_text(json.dumps({"id": cr_id, "found": False}) + "\n", encoding="utf-8")
-
-        spec = adapter.get_document(f"{cr_id}-Spec")
-        spec_path = out_dir / f"{cr_id}-Spec.md"
-        if spec:
-            spec_path.write_text(spec, encoding="utf-8")
-        else:
-            spec_path.write_text("", encoding="utf-8")
 
         items = adapter.list_items()
         trace = adapter.validate_traceability()
@@ -242,36 +233,26 @@ def register(main):
 
         click.echo(json.dumps({
             "cr": str(cr_path),
-            "implementation_spec": str(spec_path),
             "context": str(context_path),
         }))
 
     @dhf_context.command("for-stage")
     @click.argument("stage", type=click.Choice(["analyze", "design", "develop"]))
     @click.option("--cr", "cr_id", required=True, metavar="CR_ID")
-    @click.option("--spec", "spec_path", default=None, type=click.Path(path_type=Path),
-                  metavar="PATH", help="Path to spec file (auto-detected if omitted).")
     @click.pass_context
-    def dhf_context_for_stage(ctx: click.Context, stage: str, cr_id: str,
-                               spec_path: Path | None) -> None:
+    def dhf_context_for_stage(ctx: click.Context, stage: str, cr_id: str) -> None:
         """Output scoped DHF context for a specific workflow stage.
 
         Returns only the information relevant to the current stage:
-          analyze — CR item, all items summarized, traceability gaps, test coverage
-          design  — CR item, approved spec plan, affected items only
-          develop — CR item, spec plan, affected items, full spec text
+          analyze — CR item, all items summarized, traceability gaps
+          design  — CR item, affected items
+          develop — CR item, affected items
         """
         adapter = _h._make_adapter(ctx)
-        dhf_path: Path = ctx.obj["dhf"]
 
         cr = adapter.get_item(cr_id)
         cr_summary = ({"id": cr_id, "title": cr.get("title", ""), "status": cr.get("status", "")}
                       if cr else {"id": cr_id, "found": False})
-
-        # Locate spec
-        if spec_path is None:
-            spec_path = dhf_path / "documents" / "specs" / f"{cr_id}-Spec.md"
-        fm = parse_spec_frontmatter(spec_path)
 
         if stage == "analyze":
             items = adapter.list_items()
@@ -299,33 +280,12 @@ def register(main):
                 },
             }
 
-        elif stage == "design":
-            affected_ids: list[str] = fm.get("affected_items", []) if fm else []
-            affected_items = [
-                adapter.get_item(uid) for uid in affected_ids
-            ]
-            result = {
-                "stage": "design",
-                "cr": cr_summary,
-                "spec_plan": fm,
-                "affected_items": [
-                    {"id": it["id"], "type": it.get("type", ""), "title": it.get("title", ""),
-                     "status": it.get("status", ""), "tracelinks": it.get("all_linked_uids", [])}
-                    for it in affected_items if it is not None
-                ],
-            }
-
-        else:  # develop
-            affected_ids = fm.get("affected_items", []) if fm else []
+        else:  # design or develop
+            affected_ids: list[str] = list(cr.get("affected_items") or []) if cr else []
             affected_items = [adapter.get_item(uid) for uid in affected_ids]
-            spec_text = adapter.get_document(f"{cr_id}-Spec") or ""
-            if not spec_text and spec_path.exists():
-                spec_text = spec_path.read_text(encoding="utf-8")
             result = {
-                "stage": "develop",
+                "stage": stage,
                 "cr": cr_summary,
-                "spec_plan": fm,
-                "spec_text": spec_text,
                 "affected_items": [
                     {"id": it["id"], "type": it.get("type", ""), "title": it.get("title", ""),
                      "status": it.get("status", ""), "tracelinks": it.get("all_linked_uids", [])}

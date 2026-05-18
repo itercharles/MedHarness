@@ -113,7 +113,6 @@ class TestValidateBranchJsonContract:
             "cr_id": "CR-500",
             "since_ref": "origin/main",
             "passed": True,
-            "spec_path": None,
             "expected_dhf_changes": True,
             "dhf_item_changes": {"created": ["SRS-010"], "updated": [], "deleted": []},
             "code_changes": {"created": ["apps/client/src/feature.ts"], "updated": [], "deleted": []},
@@ -125,10 +124,11 @@ class TestValidateBranchJsonContract:
         assert r.exit_code == 0, (r.output, r.stderr)
         payload = _split_stdout_json(r.stdout)
         for key in (
-            "cr_id", "since_ref", "passed", "spec_path", "expected_dhf_changes",
+            "cr_id", "since_ref", "passed", "expected_dhf_changes",
             "dhf_item_changes", "code_changes", "risk_impact", "errors",
         ):
             assert key in payload, f"missing {key}"
+        assert "spec_path" not in payload
         assert payload["passed"] is True
 
     def test_warn_emitted_to_stderr_when_risks_affected(self, dhf):
@@ -137,7 +137,6 @@ class TestValidateBranchJsonContract:
             "cr_id": "CR-502",
             "since_ref": "origin/main",
             "passed": True,
-            "spec_path": None,
             "expected_dhf_changes": True,
             "dhf_item_changes": {"created": ["SYS-010"], "updated": [], "deleted": []},
             "code_changes": {"created": [], "updated": [], "deleted": []},
@@ -161,7 +160,6 @@ class TestValidateBranchJsonContract:
             "cr_id": "CR-501",
             "since_ref": "origin/main",
             "passed": False,
-            "spec_path": None,
             "expected_dhf_changes": True,
             "dhf_item_changes": {"created": [], "updated": [], "deleted": []},
             "code_changes": {"created": [], "updated": [], "deleted": []},

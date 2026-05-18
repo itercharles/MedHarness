@@ -51,6 +51,8 @@ properties:
 - name: implementation_notes
   format: long_text
   label: Implementation Notes
+- name: proposed_new_items
+  label: Proposed New Items
 - name: target_release
   format: relationship
   target_types:

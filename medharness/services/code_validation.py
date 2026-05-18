@@ -13,8 +13,7 @@ from pathlib import Path
 def validate_code(
     cr_id: str,
     dhf_path: Path,
-    spec_path: Path | None = None,
     since_ref: str = "origin/main",
 ) -> list[dict]:
-    """Validate post-implementation diff. Returns empty list (no spec to check against)."""
+    """Validate post-implementation diff. Returns empty list."""
     return []

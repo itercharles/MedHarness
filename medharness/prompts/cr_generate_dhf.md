@@ -218,55 +218,26 @@ relevant to this CR — even if they required no structural changes.
 
    Use `[]` if no risk items are relevant. Do not omit this step.
 
-## Step 4: Write Design Record
+## Step 4: Record Proposed Items
 
-After all items are created, validated, and risk impact recorded, add
-`proposed_new_items` to the CR spec file. The `ci cr-complete` closure gate
-reads this field to verify every promised item was actually materialised.
-
-**Update the existing spec file — do not recreate it.** `DHF/documents/specs/{{cr_id}}-Spec.md`
-is the approved analysis spec written by `cr-analyze`. Overwriting it destroys
-required fields (`cr_id`, `pipeline_route`, `design_impact_summary`, `test_plan`).
-Patch only the `proposed_new_items` key.
+After all items are created, validated, and risk impact recorded, write
+`proposed_new_items` onto the CR item. The `ci cr-complete` closure gate
+reads this field from the CR item to verify every promised item was materialised.
 
 1. Collect every DHF item you **created** in this session — type code and title.
    Do not include items you only updated. Include all types: CRS, SYS, SRS,
    SYSARCH, SWDD, RISK, RCM, etc.
 
-2. Patch the spec file:
+2. Update the CR item:
 
-```python
-import yaml, pathlib
-
-spec_path = pathlib.Path("DHF/documents/specs/{{cr_id}}-Spec.md")
-
-proposed = [
+```
+python -m medharness --dhf DHF dhf item update {{cr_id}} \
+  --data '{"proposed_new_items": [
     {"type": "SRS",  "title": "Rate limit input validation"},
     {"type": "RISK", "title": "Unintended data modification from concurrent edits"},
-    {"type": "RCM",  "title": "Optimistic-lock concurrency control for edit sessions"},
-    # one entry per item you created
-]
-
-if spec_path.exists():
-    text = spec_path.read_text()
-    parts = text.split("---", 2)          # ["", frontmatter_str, body]
-    if len(parts) == 3:
-        fm = yaml.safe_load(parts[1]) or {}
-        fm["proposed_new_items"] = proposed
-        spec_path.write_text("---\n" + yaml.dump(fm, default_flow_style=False) + "---" + parts[2])
-    else:
-        # Spec exists but has no YAML frontmatter block — prepend one.
-        spec_path.write_text(
-            "---\n" + yaml.dump({"disposition": "approve", "proposed_new_items": proposed},
-                                default_flow_style=False) + "---\n\n" + text
-        )
-else:
-    # Spec not yet written — create a minimal one (unusual in normal workflow).
-    spec_path.parent.mkdir(parents=True, exist_ok=True)
-    spec_path.write_text(
-        "---\n" + yaml.dump({"disposition": "approve", "proposed_new_items": proposed},
-                            default_flow_style=False) + "---\n\n# {{cr_id}} Design Record\n"
-    )
+    {"type": "RCM",  "title": "Optimistic-lock concurrency control for edit sessions"}
+  ]}' \
+  --author "github-actions[bot]" --cr "{{cr_id}}"
 ```
 
    Each entry's `title` must match the `title:` field of the created DHF item.
@@ -282,7 +253,7 @@ else:
 - Do not create items for hypothetical future changes.
 - Do not modify files outside `DHF/`.
 - Do not edit the CR item except to set `status: rejected` and `impact_assessment`
-  when rejecting (Step 1), write `affected_risk_items` (Step 2.5), or write
-  `implementation_notes` (Step 3).
+  when rejecting (Step 1), write `affected_risk_items` (Step 2.5),
+  `implementation_notes` (Step 3), or `proposed_new_items` (Step 4).
 
 ## DHF Impact Skills

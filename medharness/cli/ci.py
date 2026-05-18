@@ -367,7 +367,7 @@ def register(main):
     ) -> None:
         """Verify CR closure: all proposed items created and verification evidence present.
 
-        Reads the CR spec's proposed_new_items, checks each proposed type was
+        Reads proposed_new_items from the CR item, checks each proposed type was
         created in the DHF, then runs the verification completeness gate for those
         types. Use after a CR branch is merged and CI evidence is available.
 
@@ -431,17 +431,12 @@ def register(main):
     @click.option("--code-path", "code_paths", multiple=True, metavar="PATH",
                   help="Opt into code-change enforcement: path(s) under which at least one file must be modified. "
                        "Omitting this option skips the code-change check entirely.")
-    @click.option("--spec", "spec_path", default=None,
-                  type=click.Path(dir_okay=False, path_type=Path),
-                  help="Path to a CR spec YAML/Markdown file. When provided, affected_items "
-                       "listed in the spec frontmatter are verified to exist in the DHF.")
     @click.pass_context
     def ci_validate_branch(
         ctx: click.Context,
         cr_id: str,
         since_ref: str,
         code_paths: tuple[str, ...],
-        spec_path: Path | None,
     ) -> None:
         """Validate that a single branch carries the expected coupled CR changes."""
         from medharness.services.git import validate_atomic_branch  # noqa: PLC0415
@@ -454,7 +449,6 @@ def register(main):
             cr_id,
             since_ref=since_ref,
             code_paths=code_paths,
-            spec_path=spec_path,
         )
         click.echo(json.dumps(payload))
         risk_impact = payload.get("risk_impact", [])

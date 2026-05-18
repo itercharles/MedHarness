@@ -5,8 +5,6 @@ from __future__ import annotations
 import subprocess
 from pathlib import Path
 
-from medharness.services.spec_validation import parse_spec_frontmatter
-
 
 def compute_diff(
     repo_root: Path,
@@ -114,17 +112,12 @@ def validate_atomic_branch(
     *,
     since_ref: str = "origin/main",
     code_paths: tuple[str, ...] = (),
-    spec_path: Path | None = None,
 ) -> dict:
     """Validate that a branch carries the coupled change set a CR expects.
 
     DHF item changes are always required — generate-dhf must run on every CR
-    branch. When ``spec_path`` is provided it is inspected for
-    affected/proposed expectations (legacy flow); the DHF-change check fires
-    regardless.
-
-    When ``code_paths`` is non-empty, at least one file under those paths must
-    also have changed.
+    branch. When ``code_paths`` is non-empty, at least one file under those
+    paths must also have changed.
     """
     errors: list[dict] = []
     dhf_item_changes = collect_dhf_item_changes(repo_root, since_ref)
@@ -135,15 +128,6 @@ def validate_atomic_branch(
 
     code_change_count = sum(len(code_changes[b]) for b in ("created", "updated", "deleted"))
     dhf_change_count = sum(len(dhf_item_changes[b]) for b in ("created", "updated", "deleted"))
-
-    resolved_spec: Path | None = None
-    if spec_path is not None:
-        resolved_spec = _resolve_repo_path(repo_root, spec_path).resolve()
-
-    fm = parse_spec_frontmatter(resolved_spec) if resolved_spec else {}
-    fm = fm or {}
-    affected = fm.get("affected_items") if isinstance(fm.get("affected_items"), list) else []
-    proposed = fm.get("proposed_new_items") if isinstance(fm.get("proposed_new_items"), list) else []
 
     if code_paths and code_change_count == 0:
         errors.append({
@@ -163,26 +147,13 @@ def validate_atomic_branch(
             "fix": "Run generate-dhf to create or update the required DHF items on this branch.",
         })
 
-    # Validate that spec affected_items exist in the DHF; collect risk impact
+    # Collect risk impact from the DHF for changed items.
     risk_impact: list[dict] = []
     if dhf_path.is_dir():
         try:
             from dhfkit.local_adapter import LocalDHFAdapter
             from dhfkit.traceability import find_affected_risks
             adapter = LocalDHFAdapter(dhf_path)
-            for uid in affected:
-                if adapter.get_item(uid) is None:
-                    errors.append({
-                        "field": "spec.affected_items",
-                        "issue": (
-                            f"Spec lists '{uid}' in affected_items "
-                            "but that item does not exist in the DHF."
-                        ),
-                        "fix": (
-                            f"Create '{uid}' via generate-dhf, or remove it from "
-                            "the spec's affected_items list."
-                        ),
-                    })
             changed_ids = set(
                 dhf_item_changes["created"]
                 + dhf_item_changes["updated"]
@@ -190,13 +161,12 @@ def validate_atomic_branch(
             )
             risk_impact = find_affected_risks(changed_ids, adapter.list_items(), adapter._config)
         except (FileNotFoundError, OSError, ValueError):
-            pass  # DHF not loadable — skip item existence and risk checks
+            pass  # DHF not loadable — skip risk checks
 
     return {
         "cr_id": cr_id,
         "since_ref": since_ref,
         "passed": not errors,
-        "spec_path": str(resolved_spec) if resolved_spec else None,
         "expected_dhf_changes": True,
         "dhf_item_changes": dhf_item_changes,
         "code_changes": code_changes,
