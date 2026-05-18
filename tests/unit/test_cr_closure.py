@@ -45,6 +45,26 @@ def _write_srs_item(
     (items_dir / f"{item_id}.yaml").write_text("\n".join(lines) + "\n")
 
 
+def _write_risk_item(dhf: Path, item_id: str, title: str) -> None:
+    items_dir = dhf / "items" / "10_risk"
+    items_dir.mkdir(parents=True, exist_ok=True)
+    lines = [
+        f"id: {item_id}", f"title: {title}",
+        "hazard: example", "cause: example", "effect: example",
+        "severity_pre: S1", "probability_pre: P1",
+        "severity_post: S1", "probability_post: P1",
+        "risk_acceptability: Acceptable",
+    ]
+    (items_dir / f"{item_id}.yaml").write_text("\n".join(lines) + "\n")
+
+
+def _write_rcm_item(dhf: Path, item_id: str, title: str, mitigates: str) -> None:
+    items_dir = dhf / "items" / "11_rcm"
+    items_dir.mkdir(parents=True, exist_ok=True)
+    lines = [f"id: {item_id}", f"title: {title}", f"mitigates:\n  - {mitigates}"]
+    (items_dir / f"{item_id}.yaml").write_text("\n".join(lines) + "\n")
+
+
 def _make_junit(tmp_path: Path, passing_links: list[str]) -> Path:
     root = ET.Element("testsuites")
     suite = ET.SubElement(root, "testsuite", name="suite", tests=str(len(passing_links)))
@@ -156,6 +176,75 @@ def test_test_method_with_no_junit_at_all_fails(tmp_path: Path) -> None:
     assert result["passed"] is False
     ids = [i["id"] for i in result["unverified_test"]]
     assert "SRS-001" in ids
+
+
+def test_proposed_item_with_empty_title_is_skipped(tmp_path: Path) -> None:
+    """Malformed proposed entry (empty title) is skipped, not treated as a wildcard match."""
+    dhf = _make_dhf(tmp_path)
+    _write_spec(dhf, "CR-001", [
+        {"type": "SRS", "title": ""},          # empty title — should be skipped
+        {"type": "SRS", "title": "Real req"},  # valid entry — must be present
+    ])
+    _write_srs_item(dhf, "SRS-001", "Real req", verification_method=["Inspection"])
+    result = cr_closure_gate("CR-001", dhf)
+    assert result["passed"] is True
+    assert result["missing_items"] == []
+
+
+def test_duplicate_proposed_entries_deduplicated(tmp_path: Path) -> None:
+    """Two identical proposed entries with one real item → passes (deduplication).
+
+    Duplicate entries in proposed_new_items are an LLM authoring quirk. One
+    real DHF item satisfies both identical promises — deduplicate before checking.
+    """
+    dhf = _make_dhf(tmp_path)
+    _write_spec(dhf, "CR-001", [
+        {"type": "SRS", "title": "Same title"},
+        {"type": "SRS", "title": "Same title"},  # duplicate
+    ])
+    _write_srs_item(dhf, "SRS-001", "Same title", verification_method=["Inspection"])
+    result = cr_closure_gate("CR-001", dhf)
+    assert result["passed"] is True
+    assert result["missing_items"] == []
+
+
+def test_risk_rcm_in_proposed_items_passes_without_verification_method(tmp_path: Path) -> None:
+    """RISK and RCM items do not have verification_method — closure must not require it."""
+    dhf = _make_dhf(tmp_path)
+    _write_spec(dhf, "CR-001", [
+        {"type": "RISK", "title": "Unintended data modification"},
+        {"type": "RCM", "title": "Optimistic-lock concurrency control"},
+    ])
+    _write_risk_item(dhf, "RISK-002", "Unintended data modification")
+    _write_rcm_item(dhf, "RCM-002", "Optimistic-lock concurrency control", "RISK-002")
+    result = cr_closure_gate("CR-001", dhf)
+    assert result["passed"] is True
+    assert result["missing_items"] == []
+    assert result["verification_gaps"] == []
+
+
+def test_risk_rcm_missing_from_dhf_fails(tmp_path: Path) -> None:
+    """Proposed RISK item not created → closure fails."""
+    dhf = _make_dhf(tmp_path)
+    _write_spec(dhf, "CR-001", [{"type": "RISK", "title": "Unintended data modification"}])
+    result = cr_closure_gate("CR-001", dhf)
+    assert result["passed"] is False
+    assert any(m["type"] == "RISK" for m in result["missing_items"])
+
+
+def test_mixed_srs_and_risk_in_proposed_items(tmp_path: Path) -> None:
+    """SRS requires verification_method; RISK does not. Both in proposed_new_items."""
+    dhf = _make_dhf(tmp_path)
+    _write_spec(dhf, "CR-001", [
+        {"type": "SRS", "title": "Req A"},
+        {"type": "RISK", "title": "New hazard from Req A"},
+    ])
+    _write_srs_item(dhf, "SRS-001", "Req A", verification_method=["Inspection"])
+    _write_risk_item(dhf, "RISK-002", "New hazard from Req A")
+    result = cr_closure_gate("CR-001", dhf)
+    assert result["passed"] is True
+    assert result["missing_items"] == []
+    assert result["verification_gaps"] == []
 
 
 # ---------------------------------------------------------------------------

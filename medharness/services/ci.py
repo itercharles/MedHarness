@@ -410,6 +410,8 @@ def compute_item_coverage(
 # ---------------------------------------------------------------------------
 
 _NON_TEST_METHODS = frozenset({"Inspection", "Analysis", "Demonstration"})
+# Item types that carry a verification_method field — RISK, RCM, SWDD, etc. do not.
+_VERIFIABLE_ITEM_TYPES = frozenset({"CRS", "SRS", "SYS", "SOUP"})
 
 
 def validate_verification_completeness(
@@ -565,6 +567,7 @@ def cr_closure_gate(
           "missing_items": [{"type": str, "title": str, "issue": str}],
           "verification_gaps": [{"id": str, "type": str, "title": str}],
           "unverified_test": [{"id": str, "type": str, "title": str}],
+          "manual_review_required": [{"id": str, "type": str, "title": str, "methods": list}],
           "summary": str,
         }
     """
@@ -577,7 +580,8 @@ def cr_closure_gate(
     all_items = adapter.list_items()
     config = adapter._config
 
-    # Load proposed_new_items from spec
+    # Load proposed_new_items from the CR spec file — generate-dhf Step 4 updates
+    # this file's frontmatter in-place, preserving all cr-analyze fields.
     spec_path = dhf_path / "documents" / "specs" / f"{cr_id}-Spec.md"
     proposed: list[dict] = []
     if spec_path.exists():
@@ -586,7 +590,7 @@ def cr_closure_gate(
         if isinstance(raw, list):
             proposed = [e for e in raw if isinstance(e, dict)]
 
-    # No proposed items in the spec means there is nothing to reconcile.
+    # No proposed items means there is nothing to reconcile.
     if not proposed:
         return {
             "passed": True,
@@ -611,24 +615,34 @@ def cr_closure_gate(
         if affected_ids else all_items
     )
 
-    # Check each proposed item by (type, title) — more precise than counting by type.
-    missing_items: list[dict] = []
+    # Check each proposed item by (type, title).
+    # Deduplicate proposed entries first: if the same (type, title) appears N times,
+    # only one real DHF item is required — duplicate proposals are a LLM authoring
+    # quirk, not a requirement for N identical items.
+    seen_proposed: set[tuple[str, str]] = set()
+    deduped_proposed: list[dict] = []
     for entry in proposed:
         item_type = str(entry.get("type", "")).strip().upper()
         title = str(entry.get("title", "")).strip()
-        if not item_type:
+        if not item_type or not title:
             continue
+        key = (item_type, title.lower())
+        if key not in seen_proposed:
+            seen_proposed.add(key)
+            deduped_proposed.append({"type": item_type, "title": title})
+
+    missing_items: list[dict] = []
+    for entry in deduped_proposed:
+        item_type = entry["type"]
+        title = entry["title"]
         dt = config.get_doc_type(item_type)
         prefix = dt.prefix if dt else f"{item_type}-"
         title_lower = title.lower()
-        if title_lower:
-            found = any(
-                it["id"].startswith(prefix)
-                and str(it.get("title", "")).strip().lower() == title_lower
-                for it in scoped_items
-            )
-        else:
-            found = any(it["id"].startswith(prefix) for it in scoped_items)
+        found = any(
+            it["id"].startswith(prefix)
+            and str(it.get("title", "")).strip().lower() == title_lower
+            for it in scoped_items
+        )
         if not found:
             missing_items.append({
                 "type": item_type,
@@ -636,11 +650,12 @@ def cr_closure_gate(
                 "issue": f"No {item_type} item matching '{title}' found in CR's generated artifacts",
             })
 
-    # Determine which types to check for verification — the set from the spec.
-    # enforce_test_evidence=True: Test items without JUnit evidence always fail at
-    # closure (missing evidence is itself the gap, not an acceptable "not yet checked" state).
-    proposed_types = list({str(e.get("type", "")).strip().upper() for e in proposed if e.get("type")})
-    types_to_check: list[str] = proposed_types or ["SRS", "SYS", "CRS"]
+    # Determine which types to check for verification — restrict to types that
+    # carry a verification_method field. RISK, RCM, SWDD, etc. do not have that
+    # field, so including them would produce false missing_method failures.
+    proposed_types = list({e["type"] for e in deduped_proposed})
+    verifiable = [t for t in proposed_types if t in _VERIFIABLE_ITEM_TYPES]
+    types_to_check: list[str] = verifiable or ["SRS", "SYS", "CRS"]
     verify_result = validate_verification_completeness(
         dhf_path,
         junit_paths=junit_paths,

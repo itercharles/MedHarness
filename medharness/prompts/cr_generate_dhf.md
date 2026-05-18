@@ -186,28 +186,6 @@ Write this to the CR item:
       --data '{"implementation_notes": "<plan>"}' \
       --author "github-actions[bot]" --cr "{{cr_id}}"
 
-## Step 2.5: Risk Impact Recording
-
-After writing all DHF items (before validation), explicitly record which existing
-RISK and RCM items are relevant to this CR — even if they required no structural changes.
-
-1. List all existing risk items:
-
-       python -m medharness --dhf DHF dhf item list --type RISK
-       python -m medharness --dhf DHF dhf item list --type RCM
-
-2. For each, assess: does this CR change behavior that could alter the hazard
-   likelihood, harm severity, or effectiveness of the control?
-
-3. Collect the IDs of all affected items — those you created, updated, or
-   determined are relevant but unchanged — and write them to the CR:
-
-       python -m medharness --dhf DHF dhf item update {{cr_id}} \
-         --data '{"affected_risk_items": ["RISK-001", "RCM-002"]}' \
-         --author "github-actions[bot]" --cr "{{cr_id}}"
-
-   Use `[]` if no risk items are relevant. Do not omit this step.
-
 ## Inline Validation Hook
 
 After writing all DHF items and recording risk impact, validate and self-correct:
@@ -239,6 +217,64 @@ relevant to this CR — even if they required no structural changes.
          --author "github-actions[bot]" --cr "{{cr_id}}"
 
    Use `[]` if no risk items are relevant. Do not omit this step.
+
+## Step 4: Write Design Record
+
+After all items are created, validated, and risk impact recorded, add
+`proposed_new_items` to the CR spec file. The `ci cr-complete` closure gate
+reads this field to verify every promised item was actually materialised.
+
+**Update the existing spec file — do not recreate it.** `DHF/documents/specs/{{cr_id}}-Spec.md`
+is the approved analysis spec written by `cr-analyze`. Overwriting it destroys
+required fields (`cr_id`, `pipeline_route`, `design_impact_summary`, `test_plan`).
+Patch only the `proposed_new_items` key.
+
+1. Collect every DHF item you **created** in this session — type code and title.
+   Do not include items you only updated. Include all types: CRS, SYS, SRS,
+   SYSARCH, SWDD, RISK, RCM, etc.
+
+2. Patch the spec file:
+
+```python
+import yaml, pathlib
+
+spec_path = pathlib.Path("DHF/documents/specs/{{cr_id}}-Spec.md")
+
+proposed = [
+    {"type": "SRS",  "title": "Rate limit input validation"},
+    {"type": "RISK", "title": "Unintended data modification from concurrent edits"},
+    {"type": "RCM",  "title": "Optimistic-lock concurrency control for edit sessions"},
+    # one entry per item you created
+]
+
+if spec_path.exists():
+    text = spec_path.read_text()
+    parts = text.split("---", 2)          # ["", frontmatter_str, body]
+    if len(parts) == 3:
+        fm = yaml.safe_load(parts[1]) or {}
+        fm["proposed_new_items"] = proposed
+        spec_path.write_text("---\n" + yaml.dump(fm, default_flow_style=False) + "---" + parts[2])
+    else:
+        # Spec exists but has no YAML frontmatter block — prepend one.
+        spec_path.write_text(
+            "---\n" + yaml.dump({"disposition": "approve", "proposed_new_items": proposed},
+                                default_flow_style=False) + "---\n\n" + text
+        )
+else:
+    # Spec not yet written — create a minimal one (unusual in normal workflow).
+    spec_path.parent.mkdir(parents=True, exist_ok=True)
+    spec_path.write_text(
+        "---\n" + yaml.dump({"disposition": "approve", "proposed_new_items": proposed},
+                            default_flow_style=False) + "---\n\n# {{cr_id}} Design Record\n"
+    )
+```
+
+   Each entry's `title` must match the `title:` field of the created DHF item.
+   Matching at closure is case-insensitive and whitespace-trimmed.
+
+   **Do not list items you updated but did not create.**
+   **Do not confuse with `affected_risk_items`** (Step 2.5) — that records which
+   RISK/RCM items are *relevant*; `proposed_new_items` records what was *created*.
 
 ## Scope Constraints
 
