@@ -567,6 +567,7 @@ def cr_closure_gate(
           "missing_items": [{"type": str, "title": str, "issue": str}],
           "verification_gaps": [{"id": str, "type": str, "title": str}],
           "unverified_test": [{"id": str, "type": str, "title": str}],
+          "manual_review_required": [{"id": str, "type": str, "title": str, "methods": list}],
           "summary": str,
         }
     """
@@ -618,19 +619,16 @@ def cr_closure_gate(
     for entry in proposed:
         item_type = str(entry.get("type", "")).strip().upper()
         title = str(entry.get("title", "")).strip()
-        if not item_type:
+        if not item_type or not title:
             continue
         dt = config.get_doc_type(item_type)
         prefix = dt.prefix if dt else f"{item_type}-"
         title_lower = title.lower()
-        if title_lower:
-            found = any(
-                it["id"].startswith(prefix)
-                and str(it.get("title", "")).strip().lower() == title_lower
-                for it in scoped_items
-            )
-        else:
-            found = any(it["id"].startswith(prefix) for it in scoped_items)
+        found = any(
+            it["id"].startswith(prefix)
+            and str(it.get("title", "")).strip().lower() == title_lower
+            for it in scoped_items
+        )
         if not found:
             missing_items.append({
                 "type": item_type,

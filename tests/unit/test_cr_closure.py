@@ -178,6 +178,20 @@ def test_test_method_with_no_junit_at_all_fails(tmp_path: Path) -> None:
     assert "SRS-001" in ids
 
 
+def test_proposed_item_with_empty_title_is_skipped(tmp_path: Path) -> None:
+    """Malformed proposed entry (empty title) is skipped, not treated as a wildcard match."""
+    dhf = _make_dhf(tmp_path)
+    _write_spec(dhf, "CR-001", [
+        {"type": "SRS", "title": ""},          # empty title — should be skipped
+        {"type": "SRS", "title": "Real req"},  # valid entry — must be present
+    ])
+    _write_srs_item(dhf, "SRS-001", "Real req", verification_method=["Inspection"])
+    result = cr_closure_gate("CR-001", dhf)
+    # empty-title entry skipped; "Real req" present → passes
+    assert result["passed"] is True
+    assert result["missing_items"] == []
+
+
 def test_risk_rcm_in_proposed_items_passes_without_verification_method(tmp_path: Path) -> None:
     """RISK and RCM items do not have verification_method — closure must not require it."""
     dhf = _make_dhf(tmp_path)

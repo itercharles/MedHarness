@@ -228,28 +228,36 @@ file to verify that every promised item was actually materialised.
    for each. Items you updated but did not create should **not** be listed.
    Include ALL created types: CRS, SYS, SRS, SYSARCH, SWDD, RISK, RCM, etc.
 
-2. Write `DHF/documents/specs/{{cr_id}}-Spec.md`:
+2. Write `DHF/documents/specs/{{cr_id}}-Spec.md` using a shell heredoc — substitute
+   the actual titles you used when creating items:
 
-```python
-import yaml, pathlib
+```bash
+mkdir -p DHF/documents/specs
+cat > DHF/documents/specs/{{cr_id}}-Spec.md << 'SPEC_EOF'
+---
+disposition: approve
+proposed_new_items:
+  - type: SRS
+    title: "Rate limit input validation"
+  - type: RISK
+    title: "Unintended data modification from concurrent edits"
+  - type: RCM
+    title: "Optimistic-lock concurrency control for edit sessions"
+---
 
-frontmatter = {
-    "disposition": "approve",
-    "proposed_new_items": [
-        # one entry per created item, e.g.:
-        # {"type": "SRS", "title": "Rate limit input validation"},
-        # {"type": "RISK", "title": "Unintended data modification from concurrent edits"},
-        # {"type": "RCM", "title": "Optimistic-lock concurrency control for edit sessions"},
-    ],
-}
-body = f"# {{cr_id}} Design Record\n\n(Summary of items designed in this session.)\n"
-spec = "---\n" + yaml.dump(frontmatter, default_flow_style=False) + "---\n\n" + body
-pathlib.Path("DHF/documents/specs/{{cr_id}}-Spec.md").write_text(spec)
+# {{cr_id}} Design Record
+
+One-paragraph summary of what was designed in this session.
+SPEC_EOF
 ```
 
-   Or use any equivalent shell command. The critical requirement is that
-   `proposed_new_items` lists every item created with the exact title written
-   to the DHF item.
+   The critical requirement is that each entry's `title` exactly matches the
+   `title:` field of the created DHF item. Matching at closure is
+   case-insensitive and whitespace-trimmed, so use the canonical casing for
+   readability.
+
+   **Do not include items you updated but did not create.**
+   **Do not list `affected_risk_items` here** — those go in the CR item via Step 2.5.
 
 ## Scope Constraints
 
