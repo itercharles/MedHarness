@@ -28,10 +28,13 @@ def _write_cr_proposed(dhf: Path, cr_id: str, proposed: list[dict]) -> None:
     """Write proposed_new_items directly into the CR item YAML."""
     cr_dir = dhf / "items" / "07_cr"
     cr_dir.mkdir(parents=True, exist_ok=True)
-    lines = [f"id: {cr_id}", f'title: "Test CR"', "proposed_new_items:"]
-    for item in proposed:
-        lines.append(f"  - type: {item['type']}")
-        lines.append(f"    title: \"{item['title']}\"")
+    if not proposed:
+        lines = [f"id: {cr_id}", f'title: "Test CR"', "proposed_new_items: []"]
+    else:
+        lines = [f"id: {cr_id}", f'title: "Test CR"', "proposed_new_items:"]
+        for item in proposed:
+            lines.append(f"  - type: {item['type']}")
+            lines.append(f"    title: \"{item['title']}\"")
     (cr_dir / f"{cr_id}.yaml").write_text("\n".join(lines) + "\n")
 
 
@@ -87,9 +90,30 @@ def _make_junit(tmp_path: Path, passing_links: list[str]) -> Path:
 # ---------------------------------------------------------------------------
 
 
-def test_no_spec_file_passes(tmp_path: Path) -> None:
-    """No spec → no proposed items → closure check is vacuously satisfied."""
+def test_missing_proposed_new_items_fails(tmp_path: Path) -> None:
+    """CR item with no proposed_new_items field → closure gate fails with actionable message."""
     dhf = _make_dhf(tmp_path)
+    # Write a CR item without the proposed_new_items field
+    cr_dir = dhf / "items" / "07_cr"
+    cr_dir.mkdir(parents=True, exist_ok=True)
+    (cr_dir / "CR-001.yaml").write_text('id: CR-001\ntitle: "Test CR"\n')
+    result = cr_closure_gate("CR-001", dhf)
+    assert result["passed"] is False
+    assert "proposed_new_items" in result["summary"]
+
+
+def test_absent_cr_item_fails(tmp_path: Path) -> None:
+    """No CR item at all → closure gate fails (generate-dhf Step 4 not run)."""
+    dhf = _make_dhf(tmp_path)
+    result = cr_closure_gate("CR-001", dhf)
+    assert result["passed"] is False
+    assert result["missing_items"] == []
+
+
+def test_empty_proposed_new_items_passes(tmp_path: Path) -> None:
+    """Explicitly empty proposed_new_items → no artifact reconciliation required → passes."""
+    dhf = _make_dhf(tmp_path)
+    _write_cr_proposed(dhf, "CR-001", [])
     result = cr_closure_gate("CR-001", dhf)
     assert result["passed"] is True
     assert result["missing_items"] == []
