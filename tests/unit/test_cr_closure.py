@@ -45,6 +45,7 @@ def _write_srs_item(
     (items_dir / f"{item_id}.yaml").write_text("\n".join(lines) + "\n")
 
 
+
 def _write_risk_item(dhf: Path, item_id: str, title: str) -> None:
     items_dir = dhf / "items" / "10_risk"
     items_dir.mkdir(parents=True, exist_ok=True)
@@ -187,7 +188,23 @@ def test_proposed_item_with_empty_title_is_skipped(tmp_path: Path) -> None:
     ])
     _write_srs_item(dhf, "SRS-001", "Real req", verification_method=["Inspection"])
     result = cr_closure_gate("CR-001", dhf)
-    # empty-title entry skipped; "Real req" present → passes
+    assert result["passed"] is True
+    assert result["missing_items"] == []
+
+
+def test_duplicate_proposed_entries_deduplicated(tmp_path: Path) -> None:
+    """Two identical proposed entries with one real item → passes (deduplication).
+
+    Duplicate entries in proposed_new_items are an LLM authoring quirk. One
+    real DHF item satisfies both identical promises — deduplicate before checking.
+    """
+    dhf = _make_dhf(tmp_path)
+    _write_spec(dhf, "CR-001", [
+        {"type": "SRS", "title": "Same title"},
+        {"type": "SRS", "title": "Same title"},  # duplicate
+    ])
+    _write_srs_item(dhf, "SRS-001", "Same title", verification_method=["Inspection"])
+    result = cr_closure_gate("CR-001", dhf)
     assert result["passed"] is True
     assert result["missing_items"] == []
 
@@ -210,10 +227,7 @@ def test_risk_rcm_in_proposed_items_passes_without_verification_method(tmp_path:
 def test_risk_rcm_missing_from_dhf_fails(tmp_path: Path) -> None:
     """Proposed RISK item not created → closure fails."""
     dhf = _make_dhf(tmp_path)
-    _write_spec(dhf, "CR-001", [
-        {"type": "RISK", "title": "Unintended data modification"},
-    ])
-    # No RISK item with that title created
+    _write_spec(dhf, "CR-001", [{"type": "RISK", "title": "Unintended data modification"}])
     result = cr_closure_gate("CR-001", dhf)
     assert result["passed"] is False
     assert any(m["type"] == "RISK" for m in result["missing_items"])

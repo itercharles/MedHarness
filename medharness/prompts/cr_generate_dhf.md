@@ -220,44 +220,54 @@ relevant to this CR — even if they required no structural changes.
 
 ## Step 4: Write Design Record
 
-After all items are created, validated, and risk impact recorded, write a
-machine-readable design record. The `ci cr-complete` closure gate reads this
-file to verify that every promised item was actually materialised.
+After all items are created, validated, and risk impact recorded, add
+`proposed_new_items` to the CR spec file. The `ci cr-complete` closure gate
+reads this field to verify every promised item was actually materialised.
 
-1. Collect every DHF item you **created** in this session — type code and title
-   for each. Items you updated but did not create should **not** be listed.
-   Include ALL created types: CRS, SYS, SRS, SYSARCH, SWDD, RISK, RCM, etc.
+**Update the existing spec file — do not recreate it.** `DHF/documents/specs/{{cr_id}}-Spec.md`
+is the approved analysis spec written by `cr-analyze`. Overwriting it destroys
+required fields (`cr_id`, `pipeline_route`, `design_impact_summary`, `test_plan`).
+Patch only the `proposed_new_items` key.
 
-2. Write `DHF/documents/specs/{{cr_id}}-Spec.md` using a shell heredoc — substitute
-   the actual titles you used when creating items:
+1. Collect every DHF item you **created** in this session — type code and title.
+   Do not include items you only updated. Include all types: CRS, SYS, SRS,
+   SYSARCH, SWDD, RISK, RCM, etc.
 
-```bash
-mkdir -p DHF/documents/specs
-cat > DHF/documents/specs/{{cr_id}}-Spec.md << 'SPEC_EOF'
----
-disposition: approve
-proposed_new_items:
-  - type: SRS
-    title: "Rate limit input validation"
-  - type: RISK
-    title: "Unintended data modification from concurrent edits"
-  - type: RCM
-    title: "Optimistic-lock concurrency control for edit sessions"
----
+2. Patch the spec file:
 
-# {{cr_id}} Design Record
+```python
+import yaml, pathlib, re
 
-One-paragraph summary of what was designed in this session.
-SPEC_EOF
+spec_path = pathlib.Path("DHF/documents/specs/{{cr_id}}-Spec.md")
+
+proposed = [
+    {"type": "SRS",  "title": "Rate limit input validation"},
+    {"type": "RISK", "title": "Unintended data modification from concurrent edits"},
+    {"type": "RCM",  "title": "Optimistic-lock concurrency control for edit sessions"},
+    # one entry per item you created
+]
+
+if spec_path.exists():
+    text = spec_path.read_text()
+    parts = text.split("---", 2)          # ["", frontmatter_str, body]
+    fm = yaml.safe_load(parts[1]) or {}
+    fm["proposed_new_items"] = proposed
+    spec_path.write_text("---\n" + yaml.dump(fm, default_flow_style=False) + "---" + parts[2])
+else:
+    # Spec not yet written — create a minimal one (unusual in normal workflow).
+    spec_path.parent.mkdir(parents=True, exist_ok=True)
+    spec_path.write_text(
+        "---\n" + yaml.dump({"disposition": "approve", "proposed_new_items": proposed},
+                            default_flow_style=False) + "---\n\n# {{cr_id}} Design Record\n"
+    )
 ```
 
-   The critical requirement is that each entry's `title` exactly matches the
-   `title:` field of the created DHF item. Matching at closure is
-   case-insensitive and whitespace-trimmed, so use the canonical casing for
-   readability.
+   Each entry's `title` must match the `title:` field of the created DHF item.
+   Matching at closure is case-insensitive and whitespace-trimmed.
 
-   **Do not include items you updated but did not create.**
-   **Do not list `affected_risk_items` here** — those go in the CR item via Step 2.5.
+   **Do not list items you updated but did not create.**
+   **Do not confuse with `affected_risk_items`** (Step 2.5) — that records which
+   RISK/RCM items are *relevant*; `proposed_new_items` records what was *created*.
 
 ## Scope Constraints
 
