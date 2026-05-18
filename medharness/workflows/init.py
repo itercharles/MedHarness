@@ -55,8 +55,12 @@ def _scaffold_dhf(project_dir: Path) -> None:
     # DHF README goes inside DHF/ — root README is the project README
     _cp("README.md", "DHF/README.md")
 
-    # GitHub AI prompts
+    # GitHub AI prompts and CI workflow
     _cp("github/prompts", ".github/prompts")
+    _cp("github/workflows", ".github/workflows")
+
+    # AI agent context file
+    _cp("AI-harness", "AI-harness")
 
     # Empty test-results dir
     results_dir = project_dir / "DHF" / "test-results"
@@ -234,6 +238,7 @@ def run_init() -> None:
     click.echo("       medharness --dhf DHF ci evidence bundle --out-dir artifacts --junit-dir test-results")
     click.echo()
     click.secho("  4. Replace sample DHF content:", bold=True)
+    click.echo(f"       Edit AI-harness/context.md with your product description.")
     click.echo(f"       Edit DHF/items/ with your real requirements, risks, and CRs.")
     click.echo(f"       Validate: medharness --dhf DHF dhf validate schema")
     click.echo()

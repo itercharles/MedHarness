@@ -19,7 +19,7 @@ jobs:
         with:
           python-version: '3.11'
 
-      - run: pip install medharness  # pin to a version once your workflow is stable
+      - run: pip install medharness=={{medharness_version}}
 
       - name: Schema and traceability check
         run: medharness ci dhf-validate --dhf DHF
@@ -36,7 +36,7 @@ jobs:
         with:
           python-version: '3.11'
 
-      - run: pip install medharness
+      - run: pip install medharness=={{medharness_version}}
 
       - name: Build evidence bundle
         run: medharness ci evidence bundle --dhf DHF --out-dir artifacts
