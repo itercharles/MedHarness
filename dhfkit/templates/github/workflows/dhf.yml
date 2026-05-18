@@ -19,7 +19,7 @@ jobs:
         with:
           python-version: '3.11'
 
-      - run: pip install medharness
+      - run: pip install medharness  # pin to a version once your workflow is stable
 
       - name: Schema and traceability check
         run: medharness ci dhf-validate --dhf DHF
@@ -27,6 +27,7 @@ jobs:
   evidence-bundle:
     name: Evidence bundle
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: dhf-validate
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

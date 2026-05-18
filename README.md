@@ -10,7 +10,7 @@
 
 Building software for a medical device means every requirement, risk, architectural decision, and test has to be traced and documented in a **Design History File (DHF)** — before code ships, and in a form that holds up under FDA or notified body scrutiny.
 
-MedHarness makes that work AI-assisted without making it ungoverned. It gives Claude a structured role in your DHF workflow — generating design items, implementing code, managing SOUP, building release records — while keeping you in the loop at every approval gate.
+MedHarness makes that work AI-assisted without making it ungoverned. It gives Claude a structured role in your DHF workflow — generating design items, implementing code, managing SOUP, building release records — while keeping you in the loop at every approval gate. The agent executes; you decide when to advance.
 
 ---
 
@@ -43,7 +43,27 @@ pip install medharness
 medharness init
 ```
 
-`medharness init` gives you a working DHF with sample requirements, risks, traceability config, document templates, and plans. Replace the sample items with your own content, then commit:
+`medharness init` gives you a working DHF with sample requirements, risks, traceability config, document templates, and plans:
+
+```
+my-device/
+├── DHF/
+│   ├── config/           # project name, doc type schemas
+│   ├── items/            # one YAML file per requirement, risk, CR, etc.
+│   │   ├── 01_crs/       # Customer Requirements
+│   │   ├── 02_sys/       # System Requirements
+│   │   ├── 03_srs/       # Software Requirements
+│   │   ├── 07_cr/        # Change Requests
+│   │   └── ...           # Use Cases, SOUP, Risk, RCM, Releases, Defects
+│   └── documents/        # Jinja2 spec templates and plan documents
+├── AI-harness/
+│   └── context.md        # Product context for AI agents
+└── .github/
+    └── workflows/
+        └── dhf.yml       # CI: validate on PR, evidence bundle on main
+```
+
+Replace the sample items with your own content, then commit:
 
 ```bash
 # 2. Replace sample content and commit
@@ -51,7 +71,7 @@ git init && git add -A && git commit -m "feat: initialize DHF"
 ```
 
 ```bash
-# 3. Write a Change Request item (DHF/items/07_cr/CR-001.yaml), then run design phase
+# 3. Edit DHF/items/07_cr/CR-001.yaml with your first change request, then run design phase
 medharness --dhf DHF ci generate-dhf --cr CR-001
 # → Claude triages the CR, generates DHF items, writes an implementation plan, opens a PR
 ```

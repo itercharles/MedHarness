@@ -36,7 +36,7 @@ Traceability links between items are typed fields on child items (`derives_from`
 
 ## Using dhfkit standalone
 
-If your team has its own orchestration and only needs the DHF engine — item storage, traceability graphs, lifecycle transitions, document generation — `dhfkit` works without the `medharness` CLI harness or AI workflow. Install with `pip install medharness` (dhfkit is bundled) and import from `dhfkit` directly. It has no dependency on the CI gates or prompt assembly layer. The `LocalDHFAdapter` gives programmatic access to items; the document generation pipeline is available separately. This is the right entry point for teams integrating DHF tooling into an existing CI system rather than adopting the full CR workflow.
+`dhfkit` is the DHF engine inside MedHarness — it ships as part of the same package (`pip install medharness`), not as a separate PyPI distribution. If your team has its own orchestration and only needs the engine layer — item storage, traceability graphs, lifecycle transitions, document generation — you can import from `dhfkit` directly and ignore the `medharness` CLI harness and AI workflow entirely. It has no dependency on the CI gates or prompt assembly layer. The `LocalDHFAdapter` gives programmatic access to items; the document generation pipeline is available separately. This is the right entry point for teams integrating DHF tooling into an existing CI system rather than adopting the full CR workflow.
 
 ## Incremental adoption
 
