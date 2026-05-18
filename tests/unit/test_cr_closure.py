@@ -45,7 +45,6 @@ def _write_srs_item(
     (items_dir / f"{item_id}.yaml").write_text("\n".join(lines) + "\n")
 
 
-
 def _write_risk_item(dhf: Path, item_id: str, title: str) -> None:
     items_dir = dhf / "items" / "10_risk"
     items_dir.mkdir(parents=True, exist_ok=True)

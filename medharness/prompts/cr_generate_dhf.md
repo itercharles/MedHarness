@@ -236,7 +236,7 @@ Patch only the `proposed_new_items` key.
 2. Patch the spec file:
 
 ```python
-import yaml, pathlib, re
+import yaml, pathlib
 
 spec_path = pathlib.Path("DHF/documents/specs/{{cr_id}}-Spec.md")
 
@@ -250,9 +250,16 @@ proposed = [
 if spec_path.exists():
     text = spec_path.read_text()
     parts = text.split("---", 2)          # ["", frontmatter_str, body]
-    fm = yaml.safe_load(parts[1]) or {}
-    fm["proposed_new_items"] = proposed
-    spec_path.write_text("---\n" + yaml.dump(fm, default_flow_style=False) + "---" + parts[2])
+    if len(parts) == 3:
+        fm = yaml.safe_load(parts[1]) or {}
+        fm["proposed_new_items"] = proposed
+        spec_path.write_text("---\n" + yaml.dump(fm, default_flow_style=False) + "---" + parts[2])
+    else:
+        # Spec exists but has no YAML frontmatter block — prepend one.
+        spec_path.write_text(
+            "---\n" + yaml.dump({"disposition": "approve", "proposed_new_items": proposed},
+                                default_flow_style=False) + "---\n\n" + text
+        )
 else:
     # Spec not yet written — create a minimal one (unusual in normal workflow).
     spec_path.parent.mkdir(parents=True, exist_ok=True)
