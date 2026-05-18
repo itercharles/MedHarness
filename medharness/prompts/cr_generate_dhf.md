@@ -186,28 +186,6 @@ Write this to the CR item:
       --data '{"implementation_notes": "<plan>"}' \
       --author "github-actions[bot]" --cr "{{cr_id}}"
 
-## Step 2.5: Risk Impact Recording
-
-After writing all DHF items (before validation), explicitly record which existing
-RISK and RCM items are relevant to this CR — even if they required no structural changes.
-
-1. List all existing risk items:
-
-       python -m medharness --dhf DHF dhf item list --type RISK
-       python -m medharness --dhf DHF dhf item list --type RCM
-
-2. For each, assess: does this CR change behavior that could alter the hazard
-   likelihood, harm severity, or effectiveness of the control?
-
-3. Collect the IDs of all affected items — those you created, updated, or
-   determined are relevant but unchanged — and write them to the CR:
-
-       python -m medharness --dhf DHF dhf item update {{cr_id}} \
-         --data '{"affected_risk_items": ["RISK-001", "RCM-002"]}' \
-         --author "github-actions[bot]" --cr "{{cr_id}}"
-
-   Use `[]` if no risk items are relevant. Do not omit this step.
-
 ## Inline Validation Hook
 
 After writing all DHF items and recording risk impact, validate and self-correct:
@@ -239,6 +217,39 @@ relevant to this CR — even if they required no structural changes.
          --author "github-actions[bot]" --cr "{{cr_id}}"
 
    Use `[]` if no risk items are relevant. Do not omit this step.
+
+## Step 4: Write Design Record
+
+After all items are created, validated, and risk impact recorded, write a
+machine-readable design record. The `ci cr-complete` closure gate reads this
+file to verify that every promised item was actually materialised.
+
+1. Collect every DHF item you **created** in this session — type code and title
+   for each. Items you updated but did not create should **not** be listed.
+   Include ALL created types: CRS, SYS, SRS, SYSARCH, SWDD, RISK, RCM, etc.
+
+2. Write `DHF/documents/specs/{{cr_id}}-Spec.md`:
+
+```python
+import yaml, pathlib
+
+frontmatter = {
+    "disposition": "approve",
+    "proposed_new_items": [
+        # one entry per created item, e.g.:
+        # {"type": "SRS", "title": "Rate limit input validation"},
+        # {"type": "RISK", "title": "Unintended data modification from concurrent edits"},
+        # {"type": "RCM", "title": "Optimistic-lock concurrency control for edit sessions"},
+    ],
+}
+body = f"# {{cr_id}} Design Record\n\n(Summary of items designed in this session.)\n"
+spec = "---\n" + yaml.dump(frontmatter, default_flow_style=False) + "---\n\n" + body
+pathlib.Path("DHF/documents/specs/{{cr_id}}-Spec.md").write_text(spec)
+```
+
+   Or use any equivalent shell command. The critical requirement is that
+   `proposed_new_items` lists every item created with the exact title written
+   to the DHF item.
 
 ## Scope Constraints
 

@@ -410,6 +410,8 @@ def compute_item_coverage(
 # ---------------------------------------------------------------------------
 
 _NON_TEST_METHODS = frozenset({"Inspection", "Analysis", "Demonstration"})
+# Item types that carry a verification_method field — RISK, RCM, SWDD, etc. do not.
+_VERIFIABLE_ITEM_TYPES = frozenset({"CRS", "SRS", "SYS", "SOUP"})
 
 
 def validate_verification_completeness(
@@ -636,11 +638,12 @@ def cr_closure_gate(
                 "issue": f"No {item_type} item matching '{title}' found in CR's generated artifacts",
             })
 
-    # Determine which types to check for verification — the set from the spec.
-    # enforce_test_evidence=True: Test items without JUnit evidence always fail at
-    # closure (missing evidence is itself the gap, not an acceptable "not yet checked" state).
+    # Determine which types to check for verification — restrict to types that
+    # carry a verification_method field. RISK, RCM, SWDD, etc. do not have that
+    # field, so including them would produce false missing_method failures.
     proposed_types = list({str(e.get("type", "")).strip().upper() for e in proposed if e.get("type")})
-    types_to_check: list[str] = proposed_types or ["SRS", "SYS", "CRS"]
+    verifiable = [t for t in proposed_types if t in _VERIFIABLE_ITEM_TYPES]
+    types_to_check: list[str] = verifiable or ["SRS", "SYS", "CRS"]
     verify_result = validate_verification_completeness(
         dhf_path,
         junit_paths=junit_paths,
