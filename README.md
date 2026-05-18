@@ -8,13 +8,69 @@
 
 ---
 
-## What this is
-
 Building software for a medical device means every requirement, risk, architectural decision, and test has to be traced and documented in a **Design History File (DHF)** — before code ships, and in a form that holds up under FDA or notified body scrutiny.
 
-That's a real documentation burden. Teams spend meaningful engineering time on traceability matrices, impact assessments, and evidence bundles — work that doesn't ship features but is genuinely required to ship regulated products.
+MedHarness makes that work AI-assisted without making it ungoverned. It gives Claude a structured role in your DHF workflow — generating design items, implementing code, managing SOUP, building release records — while keeping you in the loop at every approval gate.
 
-MedHarness makes that work AI-assisted without making it ungoverned. It gives Claude a structured role in your DHF workflow — generating design items, implementing code, managing SOUP, building release records — while keeping you in the loop at every approval gate. The agent executes; you decide when to advance.
+---
+
+## Install
+
+```bash
+pip install medharness[full]
+```
+
+`[full]` includes optional extras: `ai` (AI review) and `docs` (PDF export via WeasyPrint). Leave it off for a minimal install — `dhfkit` is always included either way.
+
+**From source:**
+
+```bash
+git clone https://github.com/itercharles/MedHarness
+cd MedHarness
+pip install -e ".[dev]"
+pytest dhfkit/tests/ tests/
+```
+
+---
+
+## Quick start
+
+```bash
+# 1. Scaffold a new DHF project
+mkdir my-device && cd my-device
+python -m venv .venv && source .venv/bin/activate
+pip install medharness
+medharness init
+```
+
+`medharness init` gives you a working DHF with sample requirements, risks, traceability config, document templates, and plans. Replace the sample items with your own content, then commit:
+
+```bash
+# 2. Replace sample content and commit
+git init && git add -A && git commit -m "feat: initialize DHF"
+```
+
+```bash
+# 3. Write a Change Request item (DHF/items/07_cr/CR-001.yaml), then run design phase
+medharness --dhf DHF ci generate-dhf --cr CR-001
+# → Claude triages the CR, generates DHF items, writes an implementation plan, opens a PR
+```
+
+```bash
+# 4. After the design PR is reviewed and approved, run the implementation phase
+medharness --dhf DHF ci develop-cr --cr CR-001
+# → Claude implements code, annotates tests, verifies coverage, opens a code PR
+```
+
+The scaffolded project includes `.github/workflows/dhf.yml` — a GitHub Actions workflow that runs `dhf-validate` on every DHF PR and produces an evidence bundle on merge to main.
+
+---
+
+## Coming from an existing system
+
+If you have an existing DHF in Excel, Jira, Polarion, or a custom format, migration is writing YAML files — one per requirement, risk, or CR record. MedHarness items map directly to familiar artifact types: requirements spreadsheets become SRS/SYS items, risk registers become RISK + RCM items, SOUP lists become SOUP items.
+
+See [docs/adopting.md](docs/adopting.md) for the full mental model: starting fresh, migrating an existing DHF, using `dhfkit` standalone, and adopting incrementally.
 
 ---
 
@@ -50,68 +106,7 @@ At each phase, MedHarness pre-computes DHF context — item lists, traceability 
 
 ---
 
-## Install
-
-```bash
-pip install medharness[full]
-```
-
-`[full]` includes optional extras: `ai` (AI review) and `docs` (PDF export via WeasyPrint). Leave it off for a minimal install — `dhfkit` is always included either way.
-
-```bash
-medharness --help
-dhfkit --help
-```
-
-**From source:**
-
-```bash
-git clone https://github.com/itercharles/MedHarness
-cd MedHarness
-pip install -e ".[dev]"
-pytest dhfkit/tests/ tests/
-```
-
----
-
-## Quick start
-
-`medharness init` scaffolds a complete DHF project in the current directory — no prompts, nothing to fill out:
-
-```bash
-mkdir my-device && cd my-device
-python -m venv .venv && source .venv/bin/activate
-pip install medharness
-medharness init
-```
-
-You get a working DHF with sample requirements, risks, traceability config, document templates, and plans — ready to replace with your real content:
-
-```
-my-device/
-├── DHF/
-│   ├── config/           # project name, lifecycle states, doc type schemas
-│   ├── items/            # one YAML file per requirement, risk, CR, etc.
-│   │   ├── 01_crs/       # Customer Requirements
-│   │   ├── 02_sys/       # System Requirements
-│   │   ├── 03_srs/       # Software Requirements
-│   │   ├── 06_cr/        # Change Requests
-│   │   └── ...           # Use Cases, SOUP, Risk, RCM, Releases, Defects
-│   ├── documents/        # Jinja2 spec templates and plan documents
-│   └── test-results/
-├── CLAUDE.md             # AI agent entrypoint
-└── README.md
-```
-
-Then push it to git and you're tracking your DHF from day one:
-
-```bash
-git init && git add -A && git commit -m "feat: initialize DHF"
-```
-
----
-
-## The CR workflow in practice
+## CR workflow
 
 ```bash
 # Phase 1 — Claude triages the CR, generates DHF items, and writes an
@@ -122,8 +117,6 @@ medharness --dhf DHF ci generate-dhf --cr CR-034
 # verifies test coverage, and reconciles any deviations back onto the DHF.
 medharness --dhf DHF ci develop-cr --cr CR-034
 ```
-
-Claude reasons top-down through the V-model during design, reading relevant source modules before writing SWDD items so the reviewed design reflects the actual codebase. The implementation plan in `implementation_notes` is the handoff artifact — it drives the develop phase without re-deriving the design.
 
 Got review comments on a design PR? Pass `--pr N` to revise based on the feedback:
 
@@ -255,7 +248,7 @@ When `--cr` is omitted, all completed CRs not yet referenced in any existing REL
 
 ## Automation model
 
-MedHarness ships no prescribed CI workflow files — the stable interface is the CLI. Wire it into whatever automation layer fits your team (GitHub Actions, GitLab CI, Jenkins, local scripts):
+MedHarness ships a minimal GitHub Actions workflow (scaffolded into new projects by `medharness init`). The stable interface is the CLI — wire it into whatever automation layer fits your team (GitHub Actions, GitLab CI, Jenkins, local scripts):
 
 ```bash
 # ── DHF operations ──────────────────────────────────────────────────────────
@@ -332,6 +325,7 @@ items   = adapter.list_items("SRS")
 
 ## Docs
 
+- [docs/adopting.md](docs/adopting.md) — starting fresh, migrating an existing DHF, incremental adoption
 - [docs/architecture.md](docs/architecture.md) — packages, scaffold model, DHF lifecycle
 - [docs/adr/](docs/adr/) — architecture decision records
 - [CHANGELOG.md](CHANGELOG.md) — version history
