@@ -455,7 +455,7 @@ def init_cmd(ctx: click.Context, project_name: str) -> None:
 @click.option("--out", "out_path", default=None, type=click.Path(dir_okay=False, path_type=Path),
               help="Write report to this file instead of stdout.")
 @click.pass_context
-def report_cmd(ctx: click.Context, fmt: str, out_path: "Path | None") -> None:
+def report_cmd(ctx: click.Context, fmt: str, out_path: Path | None) -> None:
     """Print a human-readable traceability coverage report.
 
     Shows required-link failures, coverage gaps, and a per-matrix breakdown.
@@ -469,7 +469,7 @@ def report_cmd(ctx: click.Context, fmt: str, out_path: "Path | None") -> None:
     else:
         output = format_traceability_report(result)
     if out_path:
-        Path(out_path).write_text(output + "\n", encoding="utf-8")
+        out_path.write_text(output + "\n", encoding="utf-8")
         click.echo(f"Report written to {out_path}", err=True)
     else:
         click.echo(output)

@@ -178,3 +178,18 @@ class TestOutputContract:
             item = json.loads(line)
             assert "id" in item
             assert "type" in item
+
+    def test_dhfkit_report_stdout(self, scaffolded_dhf):
+        """dhfkit report writes traceability report to stdout."""
+        r = _run("dhfkit", "--dhf", str(scaffolded_dhf / "DHF"), "report")
+        assert r.returncode in (0, 1), f"report crashed:\n{r.stderr}"
+        assert "DHF Traceability Report" in r.stdout
+
+    def test_dhfkit_report_json(self, scaffolded_dhf):
+        """dhfkit report --format json writes JSON to stdout."""
+        import json
+        r = _run("dhfkit", "--dhf", str(scaffolded_dhf / "DHF"), "report", "--format", "json")
+        assert r.returncode in (0, 1), f"report --format json crashed:\n{r.stderr}"
+        result = json.loads(r.stdout)
+        assert "passed" in result
+        assert "coverage" in result

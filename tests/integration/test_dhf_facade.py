@@ -5,8 +5,6 @@ Item CRUD, transition, and validate operations live in dhfkit —
 these tests cover the medharness-specific adapter integration.
 """
 
-from pathlib import Path
-
 from medharness.core import MedHarnessCore
 
 
