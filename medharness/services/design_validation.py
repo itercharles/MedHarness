@@ -62,7 +62,7 @@ def _validate_schema_and_traceability(_api, dhf_path: Path) -> list[dict]:
                 "field": "schema",
                 "issue": str(msg),
                 "fix": "Fix the offending DHF item via "
-                       "`medharness --dhf DHF dhf item update <ITEM_ID> --data '<JSON>'`.",
+                       "`dhfkit --dhf DHF item update <ITEM_ID> --data '<JSON>'`.",
             })
 
     try:
@@ -71,7 +71,7 @@ def _validate_schema_and_traceability(_api, dhf_path: Path) -> list[dict]:
         errors.append({
             "field": "traceability",
             "issue": f"Traceability validation raised: {exc}",
-            "fix": "Run `medharness --dhf DHF dhf validate traceability` locally to reproduce.",
+            "fix": "Run `dhfkit --dhf DHF validate traceability` locally to reproduce.",
         })
         trace_result = {"passed": True}
 
@@ -127,7 +127,7 @@ def _list_items(_api, dhf_path: Path, field: str) -> tuple[list[dict], list[dict
         return [], [{
             "field": field,
             "issue": f"Could not enumerate DHF items to verify expectations: {exc}",
-            "fix": "Run `medharness --dhf DHF dhf item list` locally to debug.",
+            "fix": "Run `dhfkit --dhf DHF item list` locally to debug.",
         }]
 
 

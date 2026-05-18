@@ -14,7 +14,7 @@ This is the DHF (Design History File) for {{project_name}}, scaffolded by
 
 1. Replace all sample items under `DHF/items/` with your project's actual requirements
 2. Adapt documents under `DHF/documents/plans/` to your project's processes
-3. Run `medharness --dhf DHF dhf validate schema` to verify
+3. Run `dhfkit --dhf DHF validate schema` to verify
 4. Commit and push to start the CR-driven development workflow
 
 ## Directory Layout
@@ -182,30 +182,27 @@ After test import, `verification_status` is recomputed for each linked requireme
 The `dhfkit` package (installed via `pip install medharness`) exposes a data-management CLI for item CRUD, schema validation, document generation, and reading test results.
 
 ```bash
-# From the DHF repo root
-medharness dhf --help
-
 # Item operations
-medharness --dhf DHF dhf item list --type SYS
-medharness --dhf DHF dhf item get SYS-001
-medharness --dhf DHF dhf item create --type SYS --data '{"title": "My req"}'
-medharness --dhf DHF dhf item update SYS-001 --data '{"title": "Updated"}'
-medharness --dhf DHF dhf item delete SYS-001
+dhfkit --dhf DHF item list --type SYS
+dhfkit --dhf DHF item get SYS-001
+dhfkit --dhf DHF item create --type SYS --data '{"title": "My req"}'
+dhfkit --dhf DHF item update SYS-001 --data '{"title": "Updated"}'
+dhfkit --dhf DHF item delete SYS-001
 
 # Lifecycle transitions (CR, REL, DEF only)
-medharness --dhf DHF dhf item transitions CR-001
-medharness --dhf DHF dhf item transition CR-001 approved --by "Alice"
+dhfkit --dhf DHF item transitions CR-001
+dhfkit --dhf DHF item transition CR-001 approved --by "Alice"
 
 # Schema validation
-medharness --dhf DHF dhf validate schema
+dhfkit --dhf DHF validate schema
 
 # Document generation
-medharness --dhf DHF dhf doc generate ALL
-medharness --dhf DHF dhf doc generate SYS
+dhfkit --dhf DHF doc generate ALL
+dhfkit --dhf DHF doc generate SYS
 
 # Test result reads
-medharness --dhf DHF dhf test list
-medharness --dhf DHF dhf test list --status FAIL
+dhfkit --dhf DHF test list
+dhfkit --dhf DHF test list --status FAIL
 ```
 
 ## What Lives Outside DHF

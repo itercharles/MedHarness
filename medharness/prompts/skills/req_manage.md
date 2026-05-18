@@ -83,26 +83,26 @@ across non-adjacent tiers unless the project's traceability rules explicitly all
 
 ```bash
 # Create a new item (use the type code from the Type Registry)
-python -m medharness --dhf DHF dhf item create \
+python -m dhfkit --dhf DHF item create \
   --type <TYPE> \
   --data '<JSON>' \
   --author "github-actions[bot]" \
   --cr "<CR_ID>"
 
 # Update an existing item
-python -m medharness --dhf DHF dhf item update <ITEM_ID> \
+python -m dhfkit --dhf DHF item update <ITEM_ID> \
   --data '<JSON>' \
   --author "github-actions[bot]" \
   --cr "<CR_ID>"
 ```
 
-IDs are assigned by medharness on creation.
+IDs are assigned automatically on creation.
 
 ## Design Workflow
 
-1. **Check existing coverage** — run `python -m medharness --dhf DHF dhf item list --type <TYPE>` for each relevant type
+1. **Check existing coverage** — run `python -m dhfkit --dhf DHF item list --type <TYPE>` for each relevant type
 2. **Check for conflicts and duplicates** — read existing items before writing anything
 3. **List gaps** — identify missing items at each tier
 4. **Apply change preference top-down** — tier 0 first, then tier 1, tier 2, tier 3; for each: no change > update > create; apply quality rules
-5. **Validate schema** — run `python -m medharness --dhf DHF dhf validate schema`
-6. **Validate traceability** — run `python -m medharness --dhf DHF dhf validate traceability`; fix orphans or uncovered pairs, repeat until clean
+5. **Validate schema** — run `python -m dhfkit --dhf DHF validate schema`
+6. **Validate traceability** — run `python -m dhfkit --dhf DHF validate traceability`; fix orphans or uncovered pairs, repeat until clean

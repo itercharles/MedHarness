@@ -450,6 +450,33 @@ def init_cmd(ctx: click.Context, project_name: str) -> None:
     click.echo(f"  dhfkit --dhf {dhf_path} validate traceability", err=True)
 
 
+@main.command("report")
+@click.option("--format", "fmt", type=click.Choice(["text", "json"]), default="text", show_default=True)
+@click.option("--out", "out_path", default=None, type=click.Path(dir_okay=False, path_type=Path),
+              help="Write report to this file instead of stdout.")
+@click.pass_context
+def report_cmd(ctx: click.Context, fmt: str, out_path: "Path | None") -> None:
+    """Print a human-readable traceability coverage report.
+
+    Shows required-link failures, coverage gaps, and a per-matrix breakdown.
+    Use --format json to get the raw validation dict for scripting.
+    """
+    from dhfkit.traceability import format_traceability_report
+    adapter = _make_adapter(ctx.obj["dhf"])
+    result = adapter.validate_traceability()
+    if fmt == "json":
+        output = json.dumps(result, indent=2)
+    else:
+        output = format_traceability_report(result)
+    if out_path:
+        Path(out_path).write_text(output + "\n", encoding="utf-8")
+        click.echo(f"Report written to {out_path}", err=True)
+    else:
+        click.echo(output)
+    if not result.get("passed"):
+        sys.exit(1)
+
+
 @doc.command("export")
 @click.argument("doc_type")
 @click.pass_context

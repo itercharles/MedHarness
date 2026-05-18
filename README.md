@@ -271,15 +271,17 @@ When `--cr` is omitted, all completed CRs not yet referenced in any existing REL
 MedHarness ships a minimal GitHub Actions workflow (scaffolded into new projects by `medharness init`). The stable interface is the CLI — wire it into whatever automation layer fits your team (GitHub Actions, GitLab CI, Jenkins, local scripts):
 
 ```bash
-# ── DHF operations ──────────────────────────────────────────────────────────
-medharness --dhf DHF dhf item list --type SYS
-medharness --dhf DHF dhf item get CR-034
-medharness --dhf DHF dhf item transition CR-034 completed --by "alice"
-medharness --dhf DHF dhf validate schema
-medharness --dhf DHF dhf validate traceability
-medharness --dhf DHF dhf doc generate SYS
-medharness --dhf DHF dhf doc export SYS            # PDF (requires [docs])
-medharness --dhf DHF dhf report                    # human-readable traceability coverage
+# ── DHF data operations (dhfkit) ────────────────────────────────────────────
+dhfkit --dhf DHF item list --type SYS
+dhfkit --dhf DHF item get CR-034
+dhfkit --dhf DHF item transition CR-034 completed --by "alice"
+dhfkit --dhf DHF validate schema
+dhfkit --dhf DHF validate traceability
+dhfkit --dhf DHF doc generate SYS
+dhfkit --dhf DHF doc export SYS            # PDF (requires [docs])
+dhfkit --dhf DHF report                    # human-readable traceability coverage
+
+# ── AI harness context (medharness) ─────────────────────────────────────────
 medharness --dhf DHF dhf context implementation \  # AI/CI context bundle for a CR
   --cr CR-034 --out-dir /tmp/ctx
 

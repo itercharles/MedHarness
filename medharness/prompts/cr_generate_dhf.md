@@ -32,7 +32,7 @@ Before generating any DHF items, evaluate whether the CR should proceed.
 
 **If the CR should be rejected**, update the CR item with the rejection reason and stop:
 
-    python -m medharness --dhf DHF dhf item update {{cr_id}} \
+    python -m dhfkit --dhf DHF item update {{cr_id}} \
       --data '{"status": "rejected", "impact_assessment": "<reason for rejection>"}' \
       --author "github-actions[bot]" --cr "{{cr_id}}"
 
@@ -60,7 +60,7 @@ CR (input -- do not modify)
 
 Before writing any items, enumerate existing items for each type you plan to touch:
 
-    python -m medharness --dhf DHF dhf item list --type <TYPE>
+    python -m dhfkit --dhf DHF item list --type <TYPE>
 
 Apply the change preference: **no change > update existing > create new**.
 Only create a new item when no existing item covers the need.
@@ -87,7 +87,7 @@ requirement alone.** Each SWDD item belongs to a software module (MODULE) and
 must carry both `implements` (SRS IDs) and `module` (MODULE ID). List existing
 MODULE items first to find or create the right module:
 
-    python -m medharness --dhf DHF dhf item list --type MODULE
+    python -m dhfkit --dhf DHF item list --type MODULE
 
 **Apply this threshold before creating or updating a SWDD:**
 
@@ -127,22 +127,22 @@ absent or vague, add or improve it.
 
 ## CLI Commands
 
-**Create a new item (ID assigned automatically by medharness):**
+**Create a new item (ID assigned automatically):**
 
-    python -m medharness --dhf DHF dhf item create \
+    python -m dhfkit --dhf DHF item create \
       --type <TYPE> --data '<JSON>' \
       --author "github-actions[bot]" --cr "{{cr_id}}"
 
 **Update an existing item:**
 
-    python -m medharness --dhf DHF dhf item update <ITEM_ID> \
+    python -m dhfkit --dhf DHF item update <ITEM_ID> \
       --data '<JSON>' \
       --author "github-actions[bot]" --cr "{{cr_id}}"
 
 **List items for context:**
 
-    python -m medharness --dhf DHF dhf item list --type <TYPE>
-    python -m medharness --dhf DHF dhf item list
+    python -m dhfkit --dhf DHF item list --type <TYPE>
+    python -m dhfkit --dhf DHF item list
 
 Do **not** write YAML files directly. Do **not** modify the CR item itself.
 
@@ -182,7 +182,7 @@ SRS/SYS item IDs that each test covers.
 
 Write this to the CR item:
 
-    python -m medharness --dhf DHF dhf item update {{cr_id}} \
+    python -m dhfkit --dhf DHF item update {{cr_id}} \
       --data '{"implementation_notes": "<plan>"}' \
       --author "github-actions[bot]" --cr "{{cr_id}}"
 
@@ -190,10 +190,10 @@ Write this to the CR item:
 
 After writing all DHF items and recording risk impact, validate and self-correct:
 
-    python -m medharness --dhf DHF dhf validate schema
-    python -m medharness --dhf DHF dhf validate traceability
+    python -m dhfkit --dhf DHF validate schema
+    python -m dhfkit --dhf DHF validate traceability
 
-If either reports errors introduced by your changes, fix them via `dhf item update`
+If either reports errors introduced by your changes, fix them via `dhfkit item update`
 and re-validate. Repeat until both pass cleanly.
 
 ## Step 2.5: Risk Impact Recording
@@ -203,8 +203,8 @@ relevant to this CR — even if they required no structural changes.
 
 1. List all existing risk items:
 
-       python -m medharness --dhf DHF dhf item list --type RISK
-       python -m medharness --dhf DHF dhf item list --type RCM
+       python -m dhfkit --dhf DHF item list --type RISK
+       python -m dhfkit --dhf DHF item list --type RCM
 
 2. For each, assess: does this CR change behavior that could alter the hazard
    likelihood, harm severity, or effectiveness of the control?
@@ -212,7 +212,7 @@ relevant to this CR — even if they required no structural changes.
 3. Collect the IDs of all affected items — those you created, updated, or
    determined are relevant but unchanged — and write them to the CR:
 
-       python -m medharness --dhf DHF dhf item update {{cr_id}} \
+       python -m dhfkit --dhf DHF item update {{cr_id}} \
          --data '{"affected_risk_items": ["RISK-001", "RCM-002"]}' \
          --author "github-actions[bot]" --cr "{{cr_id}}"
 
@@ -231,7 +231,7 @@ reads this field from the CR item to verify every promised item was materialised
 2. Update the CR item:
 
 ```
-python -m medharness --dhf DHF dhf item update {{cr_id}} \
+python -m dhfkit --dhf DHF item update {{cr_id}} \
   --data '{"proposed_new_items": [{"type": "SRS", "title": "Rate limit input validation"}, {"type": "RISK", "title": "Unintended data modification from concurrent edits"}, {"type": "RCM", "title": "Optimistic-lock concurrency control for edit sessions"}]}' \
   --author "github-actions[bot]" --cr "{{cr_id}}"
 ```

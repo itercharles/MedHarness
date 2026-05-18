@@ -243,7 +243,7 @@ def register(main):
                     m = _ITEM_ID_RE.match(str(err))
                     if m:
                         iid = m.group(1)
-                        click.echo(f"    Fix: medharness {dhf_arg} dhf item update {iid}"
+                        click.echo(f"    Fix: dhfkit {dhf_arg} item update {iid}"
                                    f" --data '{{\"<field>\": \"<value>\"}}'", err=True)
         if "traceability" in r:
             t = r["traceability"]
@@ -253,14 +253,14 @@ def register(main):
                     click.echo(f"FAIL [required] {f['id']}: {f['issue']}", err=True)
                     click.echo(f"    Fix: add 'dhf_links: [<parent-id>]' to"
                                f" {f['id']}.yaml, or:", err=True)
-                    click.echo(f"         medharness {dhf_arg} dhf item update {f['id']}"
+                    click.echo(f"         dhfkit {dhf_arg} item update {f['id']}"
                                f" --data '{{\"dhf_links\": [\"<parent-id>\"]}}'", err=True)
             for c in t.get("coverage", []):
                 click.echo(f"{'PASS' if c['passed'] else 'FAIL'} [coverage] "
                            f"{c['parent_type']}→{c['child_type']}: "
                            f"{c['covered']}/{c['total']} covered", err=True)
                 if not c["passed"]:
-                    click.echo(f"    Fix: medharness {dhf_arg} dhf item list"
+                    click.echo(f"    Fix: dhfkit {dhf_arg} item list"
                                f" --type {c['child_type']} to find uncovered items,"
                                f" then add dhf_links to their YAML.", err=True)
             if t.get("summary"):
@@ -303,7 +303,7 @@ def register(main):
                 for uid in row.get("uncovered", []):
                     click.echo(f"      ↳ uncovered: {uid}", err=True)
                     click.echo(f"        Fix: add 'dhf_links: [{uid}]' to a test case, or:", err=True)
-                    click.echo(f"             medharness {dhf_arg} dhf item create --type TC"
+                    click.echo(f"             dhfkit {dhf_arg} item create --type TC"
                                f" --data '{{\"title\": \"Test {uid}\", \"dhf_links\": [\"{uid}\"]}}'", err=True)
         if not result["passed"]:
             raise click.ClickException("Test coverage gaps found.")

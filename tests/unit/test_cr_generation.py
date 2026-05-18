@@ -38,8 +38,8 @@ class TestLoadPrompt:
         assert "{{cr_id}}" in text
         assert "verification_criteria" in text
         assert "V-model" in text or "V-Model" in text
-        assert "dhf item create" in text
-        assert "dhf validate traceability" in text
+        assert "python -m dhfkit" in text
+        assert "validate traceability" in text
 
     def test_missing_prompt_raises(self):
         import importlib.resources
@@ -72,7 +72,7 @@ class TestLoadSkill:
 
     def test_req_manage_has_cli_syntax(self):
         text = _load_skill("req_manage.md")
-        assert "dhf item create" in text
+        assert "item create" in text
         assert "--cr" in text
 
     def test_architecture_impact_has_output_template(self):

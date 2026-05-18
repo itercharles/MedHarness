@@ -1,83 +1,13 @@
 """
-Tests for DHF facade: DHF automation facade commands.
+Tests for DHF facade: traceability and implementation context.
 
-Verifies that MedHarness exposes generic DHF item operations and
-implementation-context packaging through the adapter boundary.
-
+Item CRUD, transition, and validate operations live in dhfkit —
+these tests cover the medharness-specific adapter integration.
 """
 
-import json
 from pathlib import Path
 
-from click.testing import CliRunner
-
-from medharness.cli import main
 from medharness.core import MedHarnessCore
-
-
-def _invoke(monkeypatch, stub_adapter, args):
-    monkeypatch.setattr("dhfkit.api._adapter", lambda dhf_root: stub_adapter)
-    monkeypatch.setattr("medharness._helpers._make_adapter", lambda ctx: stub_adapter)
-    runner = CliRunner()
-    return runner.invoke(main, args)
-
-
-def test_dhf_item_list_uses_adapter(monkeypatch, stub_adapter):
-    """
-    dhf item list returns adapter items as JSON lines.
-
-    """
-    stub_adapter.create_item({"id": "CR-900", "title": "Facade CR", "status": "planned"})
-
-    result = _invoke(monkeypatch, stub_adapter, ["dhf", "item", "list", "--type", "CR"])
-
-    assert result.exit_code == 0
-    assert '"id": "CR-900"' in result.output
-
-
-def test_dhf_item_create_update_delete(monkeypatch, stub_adapter):
-    """
-    dhf item create, update, and delete mutate through adapter.
-
-    """
-    create = _invoke(
-        monkeypatch,
-        stub_adapter,
-        ["dhf", "item", "create", "--type", "CR", "--data", '{"title":"Facade"}'],
-    )
-    assert create.exit_code == 0
-    item_id = json.loads(create.output)["id"]
-
-    update = _invoke(
-        monkeypatch,
-        stub_adapter,
-        ["dhf", "item", "update", item_id, "--data", '{"title":"Updated"}'],
-    )
-    assert update.exit_code == 0
-    assert json.loads(update.output)["title"] == "Updated"
-
-    delete = _invoke(monkeypatch, stub_adapter, ["dhf", "item", "delete", item_id])
-    assert delete.exit_code == 0
-    assert stub_adapter.get_item(item_id) is None
-
-
-def test_dhf_item_transition(monkeypatch, stub_adapter):
-    """
-    dhf item transition delegates lifecycle changes to adapter.
-
-    """
-    stub_adapter.create_item({"id": "CR-901", "title": "Transition", "status": "planned"})
-
-    result = _invoke(
-        monkeypatch,
-        stub_adapter,
-        ["dhf", "item", "transition", "CR-901", "implementing", "--by", "tester"],
-    )
-
-    assert result.exit_code == 0
-    payload = json.loads(result.output)
-    assert payload["status"] == "implementing"
-    assert payload["implementing_by"] == "tester"
 
 
 def test_build_traceability_chains_with_local_adapter():

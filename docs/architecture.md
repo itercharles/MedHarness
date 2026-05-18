@@ -101,7 +101,7 @@ The generated DHF repo does not contain `dhfkit/` or `medharness/` source code. 
 | New project | `medharness init` creates the DHF repo |
 | Feature or bugfix | Open a CR, run the CR workflow, merge to main |
 | New MedHarness release | Re-scaffold into a new directory, apply diff selectively — never overwrite existing DHF content |
-| Regenerate documents | `medharness --dhf DHF dhf doc generate ALL` — run after item changes or template updates |
+| Regenerate documents | `dhfkit --dhf DHF doc generate ALL` — run after item changes or template updates |
 | Product retirement | Archive the DHF repo in Git with an archival date in the README; preserve for regulatory audit |
 
 ### Product repo vs DHF repo
