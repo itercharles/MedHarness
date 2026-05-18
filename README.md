@@ -312,15 +312,7 @@ medharness ci github-event --event "$GITHUB_EVENT_PATH"
 
 ## Python API
 
-```python
-from medharness.client import DHFClient
-
-client = DHFClient(Path("DHF"))
-cr   = client.get_item("CR-034")
-client.transition_item("CR-034", "completed", performed_by="alice")
-```
-
-`dhfkit` standalone — no dependency on `medharness`:
+`dhfkit` — no dependency on `medharness`:
 
 ```python
 from dhfkit.local_adapter import LocalDHFAdapter
