@@ -232,11 +232,7 @@ reads this field from the CR item to verify every promised item was materialised
 
 ```
 python -m medharness --dhf DHF dhf item update {{cr_id}} \
-  --data '{"proposed_new_items": [
-    {"type": "SRS",  "title": "Rate limit input validation"},
-    {"type": "RISK", "title": "Unintended data modification from concurrent edits"},
-    {"type": "RCM",  "title": "Optimistic-lock concurrency control for edit sessions"}
-  ]}' \
+  --data '{"proposed_new_items": [{"type": "SRS", "title": "Rate limit input validation"}, {"type": "RISK", "title": "Unintended data modification from concurrent edits"}, {"type": "RCM", "title": "Optimistic-lock concurrency control for edit sessions"}]}' \
   --author "github-actions[bot]" --cr "{{cr_id}}"
 ```
 

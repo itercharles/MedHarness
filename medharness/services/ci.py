@@ -571,8 +571,6 @@ def cr_closure_gate(
           "summary": str,
         }
     """
-    import collections
-
     from dhfkit.local_adapter import LocalDHFAdapter
 
     adapter = LocalDHFAdapter(dhf_path)

@@ -53,6 +53,7 @@ properties:
   label: Implementation Notes
 - name: proposed_new_items
   label: Proposed New Items
+  # list of {type, title} dicts written by generate-dhf; no format validator applies
 - name: target_release
   format: relationship
   target_types:
