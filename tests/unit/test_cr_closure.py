@@ -16,18 +16,26 @@ from medharness.services.ci import cr_closure_gate
 def _make_dhf(tmp_path: Path) -> Path:
     dhf = tmp_path / "DHF"
     CliRunner().invoke(dhfkit_main, ["--dhf", str(dhf), "init"])
+    # dhfkit init only registers sys/srs/risk/rcm; add CR so the closure gate
+    # can write and read CR items via the adapter.
+    import importlib.resources
+    cr_src = importlib.resources.files("dhfkit").joinpath("templates/config/doc_types/cr.yaml")
+    (dhf / "config" / "doc_types" / "cr.yaml").write_bytes(cr_src.read_bytes())
     return dhf
 
 
-def _write_spec(dhf: Path, cr_id: str, proposed: list[dict]) -> None:
-    specs_dir = dhf / "documents" / "specs"
-    specs_dir.mkdir(parents=True, exist_ok=True)
-    lines = ["---", "disposition: approve", "proposed_new_items:"]
-    for item in proposed:
-        lines.append(f"  - type: {item['type']}")
-        lines.append(f"    title: \"{item['title']}\"")
-    lines += ["---", "", "# Spec body"]
-    (specs_dir / f"{cr_id}-Spec.md").write_text("\n".join(lines) + "\n")
+def _write_cr_proposed(dhf: Path, cr_id: str, proposed: list[dict]) -> None:
+    """Write proposed_new_items directly into the CR item YAML."""
+    cr_dir = dhf / "items" / "07_cr"
+    cr_dir.mkdir(parents=True, exist_ok=True)
+    if not proposed:
+        lines = [f"id: {cr_id}", f'title: "Test CR"', "proposed_new_items: []"]
+    else:
+        lines = [f"id: {cr_id}", f'title: "Test CR"', "proposed_new_items:"]
+        for item in proposed:
+            lines.append(f"  - type: {item['type']}")
+            lines.append(f"    title: \"{item['title']}\"")
+    (cr_dir / f"{cr_id}.yaml").write_text("\n".join(lines) + "\n")
 
 
 def _write_srs_item(
@@ -82,9 +90,30 @@ def _make_junit(tmp_path: Path, passing_links: list[str]) -> Path:
 # ---------------------------------------------------------------------------
 
 
-def test_no_spec_file_passes(tmp_path: Path) -> None:
-    """No spec → no proposed items → closure check is vacuously satisfied."""
+def test_missing_proposed_new_items_fails(tmp_path: Path) -> None:
+    """CR item with no proposed_new_items field → closure gate fails with actionable message."""
     dhf = _make_dhf(tmp_path)
+    # Write a CR item without the proposed_new_items field
+    cr_dir = dhf / "items" / "07_cr"
+    cr_dir.mkdir(parents=True, exist_ok=True)
+    (cr_dir / "CR-001.yaml").write_text('id: CR-001\ntitle: "Test CR"\n')
+    result = cr_closure_gate("CR-001", dhf)
+    assert result["passed"] is False
+    assert "proposed_new_items" in result["summary"]
+
+
+def test_absent_cr_item_fails(tmp_path: Path) -> None:
+    """No CR item at all → closure gate fails (generate-dhf Step 4 not run)."""
+    dhf = _make_dhf(tmp_path)
+    result = cr_closure_gate("CR-001", dhf)
+    assert result["passed"] is False
+    assert result["missing_items"] == []
+
+
+def test_empty_proposed_new_items_passes(tmp_path: Path) -> None:
+    """Explicitly empty proposed_new_items → no artifact reconciliation required → passes."""
+    dhf = _make_dhf(tmp_path)
+    _write_cr_proposed(dhf, "CR-001", [])
     result = cr_closure_gate("CR-001", dhf)
     assert result["passed"] is True
     assert result["missing_items"] == []
@@ -92,7 +121,7 @@ def test_no_spec_file_passes(tmp_path: Path) -> None:
 
 def test_proposed_items_all_created_with_junit_passes(tmp_path: Path) -> None:
     dhf = _make_dhf(tmp_path)
-    _write_spec(dhf, "CR-001", [
+    _write_cr_proposed(dhf, "CR-001", [
         {"type": "SRS", "title": "Req A"},
         {"type": "SRS", "title": "Req B"},
     ])
@@ -107,7 +136,7 @@ def test_proposed_items_all_created_with_junit_passes(tmp_path: Path) -> None:
 def test_missing_proposed_item_by_title_fails(tmp_path: Path) -> None:
     """Item with wrong title does not satisfy a proposed item."""
     dhf = _make_dhf(tmp_path)
-    _write_spec(dhf, "CR-001", [{"type": "SRS", "title": "Req A"}])
+    _write_cr_proposed(dhf, "CR-001", [{"type": "SRS", "title": "Req A"}])
     # Item exists but has a different title — should not match
     _write_srs_item(dhf, "SRS-001", "Something unrelated", verification_method=["Test"])
     junit = _make_junit(tmp_path, ["SRS-001"])
@@ -118,7 +147,7 @@ def test_missing_proposed_item_by_title_fails(tmp_path: Path) -> None:
 
 def test_title_match_is_case_insensitive(tmp_path: Path) -> None:
     dhf = _make_dhf(tmp_path)
-    _write_spec(dhf, "CR-001", [{"type": "SRS", "title": "Rate Limit Input Validation"}])
+    _write_cr_proposed(dhf, "CR-001", [{"type": "SRS", "title": "Rate Limit Input Validation"}])
     # Title matches case-insensitively
     _write_srs_item(dhf, "SRS-001", "rate limit input validation", verification_method=["Inspection"])
     result = cr_closure_gate("CR-001", dhf)
@@ -132,7 +161,7 @@ def test_pre_existing_item_does_not_satisfy_proposed_item(tmp_path: Path) -> Non
     whether it was created by this CR. Title-matching prevents that false pass.
     """
     dhf = _make_dhf(tmp_path)
-    _write_spec(dhf, "CR-001", [{"type": "SRS", "title": "New feature requirement"}])
+    _write_cr_proposed(dhf, "CR-001", [{"type": "SRS", "title": "New feature requirement"}])
     # Pre-existing item with a different title (e.g. from a previous CR)
     _write_srs_item(dhf, "SRS-099", "Old unrelated requirement", verification_method=["Test"])
     result = cr_closure_gate("CR-001", dhf)
@@ -142,7 +171,7 @@ def test_pre_existing_item_does_not_satisfy_proposed_item(tmp_path: Path) -> Non
 
 def test_item_without_verification_method_fails(tmp_path: Path) -> None:
     dhf = _make_dhf(tmp_path)
-    _write_spec(dhf, "CR-001", [{"type": "SRS", "title": "Req A"}])
+    _write_cr_proposed(dhf, "CR-001", [{"type": "SRS", "title": "Req A"}])
     _write_srs_item(dhf, "SRS-001", "Req A")  # no verification_method
     result = cr_closure_gate("CR-001", dhf)
     assert result["passed"] is False
@@ -153,7 +182,7 @@ def test_item_without_verification_method_fails(tmp_path: Path) -> None:
 def test_test_method_without_junit_evidence_fails(tmp_path: Path) -> None:
     """Empty JUnit (no passing TCs) with Test method → fails."""
     dhf = _make_dhf(tmp_path)
-    _write_spec(dhf, "CR-001", [{"type": "SRS", "title": "Req A"}])
+    _write_cr_proposed(dhf, "CR-001", [{"type": "SRS", "title": "Req A"}])
     _write_srs_item(dhf, "SRS-001", "Req A", verification_method=["Test"])
     junit = _make_junit(tmp_path, [])
     result = cr_closure_gate("CR-001", dhf, junit_paths=(junit,))
@@ -170,7 +199,7 @@ def test_test_method_with_no_junit_at_all_fails(tmp_path: Path) -> None:
     The closure gate must require evidence (enforce_test_evidence=True).
     """
     dhf = _make_dhf(tmp_path)
-    _write_spec(dhf, "CR-001", [{"type": "SRS", "title": "Req A"}])
+    _write_cr_proposed(dhf, "CR-001", [{"type": "SRS", "title": "Req A"}])
     _write_srs_item(dhf, "SRS-001", "Req A", verification_method=["Test"])
     result = cr_closure_gate("CR-001", dhf, junit_paths=())
     assert result["passed"] is False
@@ -181,7 +210,7 @@ def test_test_method_with_no_junit_at_all_fails(tmp_path: Path) -> None:
 def test_proposed_item_with_empty_title_is_skipped(tmp_path: Path) -> None:
     """Malformed proposed entry (empty title) is skipped, not treated as a wildcard match."""
     dhf = _make_dhf(tmp_path)
-    _write_spec(dhf, "CR-001", [
+    _write_cr_proposed(dhf, "CR-001", [
         {"type": "SRS", "title": ""},          # empty title — should be skipped
         {"type": "SRS", "title": "Real req"},  # valid entry — must be present
     ])
@@ -198,7 +227,7 @@ def test_duplicate_proposed_entries_deduplicated(tmp_path: Path) -> None:
     real DHF item satisfies both identical promises — deduplicate before checking.
     """
     dhf = _make_dhf(tmp_path)
-    _write_spec(dhf, "CR-001", [
+    _write_cr_proposed(dhf, "CR-001", [
         {"type": "SRS", "title": "Same title"},
         {"type": "SRS", "title": "Same title"},  # duplicate
     ])
@@ -211,7 +240,7 @@ def test_duplicate_proposed_entries_deduplicated(tmp_path: Path) -> None:
 def test_risk_rcm_in_proposed_items_passes_without_verification_method(tmp_path: Path) -> None:
     """RISK and RCM items do not have verification_method — closure must not require it."""
     dhf = _make_dhf(tmp_path)
-    _write_spec(dhf, "CR-001", [
+    _write_cr_proposed(dhf, "CR-001", [
         {"type": "RISK", "title": "Unintended data modification"},
         {"type": "RCM", "title": "Optimistic-lock concurrency control"},
     ])
@@ -226,7 +255,7 @@ def test_risk_rcm_in_proposed_items_passes_without_verification_method(tmp_path:
 def test_risk_rcm_missing_from_dhf_fails(tmp_path: Path) -> None:
     """Proposed RISK item not created → closure fails."""
     dhf = _make_dhf(tmp_path)
-    _write_spec(dhf, "CR-001", [{"type": "RISK", "title": "Unintended data modification"}])
+    _write_cr_proposed(dhf, "CR-001", [{"type": "RISK", "title": "Unintended data modification"}])
     result = cr_closure_gate("CR-001", dhf)
     assert result["passed"] is False
     assert any(m["type"] == "RISK" for m in result["missing_items"])
@@ -235,7 +264,7 @@ def test_risk_rcm_missing_from_dhf_fails(tmp_path: Path) -> None:
 def test_mixed_srs_and_risk_in_proposed_items(tmp_path: Path) -> None:
     """SRS requires verification_method; RISK does not. Both in proposed_new_items."""
     dhf = _make_dhf(tmp_path)
-    _write_spec(dhf, "CR-001", [
+    _write_cr_proposed(dhf, "CR-001", [
         {"type": "SRS", "title": "Req A"},
         {"type": "RISK", "title": "New hazard from Req A"},
     ])
@@ -254,7 +283,7 @@ def test_mixed_srs_and_risk_in_proposed_items(tmp_path: Path) -> None:
 
 def test_cli_cr_complete_passes(tmp_path: Path) -> None:
     dhf = _make_dhf(tmp_path)
-    _write_spec(dhf, "CR-001", [{"type": "SRS", "title": "Req A"}])
+    _write_cr_proposed(dhf, "CR-001", [{"type": "SRS", "title": "Req A"}])
     _write_srs_item(dhf, "SRS-001", "Req A", verification_method=["Test"])
     junit = _make_junit(tmp_path, ["SRS-001"])
     result = CliRunner().invoke(
@@ -270,7 +299,7 @@ def test_cli_cr_complete_passes(tmp_path: Path) -> None:
 
 def test_cli_cr_complete_fails_on_missing_item(tmp_path: Path) -> None:
     dhf = _make_dhf(tmp_path)
-    _write_spec(dhf, "CR-001", [{"type": "SRS", "title": "Missing req"}])
+    _write_cr_proposed(dhf, "CR-001", [{"type": "SRS", "title": "Missing req"}])
     # No item with matching title created
     result = CliRunner().invoke(
         main,
@@ -281,7 +310,7 @@ def test_cli_cr_complete_fails_on_missing_item(tmp_path: Path) -> None:
 
 def test_cli_cr_complete_fails_without_junit_for_test_items(tmp_path: Path) -> None:
     dhf = _make_dhf(tmp_path)
-    _write_spec(dhf, "CR-001", [{"type": "SRS", "title": "Req A"}])
+    _write_cr_proposed(dhf, "CR-001", [{"type": "SRS", "title": "Req A"}])
     _write_srs_item(dhf, "SRS-001", "Req A", verification_method=["Test"])
     result = CliRunner().invoke(
         main,
