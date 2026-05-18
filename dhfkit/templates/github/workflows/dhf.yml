@@ -1,0 +1,47 @@
+name: DHF
+
+on:
+  pull_request:
+    paths:
+      - 'DHF/**'
+  push:
+    branches:
+      - main
+
+jobs:
+  dhf-validate:
+    name: Validate DHF
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - run: pip install medharness=={{medharness_version}}
+
+      - name: Schema and traceability check
+        run: medharness ci dhf-validate --dhf DHF
+
+  evidence-bundle:
+    name: Evidence bundle
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: dhf-validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - run: pip install medharness=={{medharness_version}}
+
+      - name: Build evidence bundle
+        run: medharness ci evidence bundle --dhf DHF --out-dir artifacts
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dhf-evidence
+          path: artifacts/
