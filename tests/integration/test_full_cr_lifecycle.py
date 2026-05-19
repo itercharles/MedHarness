@@ -64,7 +64,10 @@ def _cli(dhf_root: str, *args: str) -> subprocess.CompletedProcess:
 
 
 def _dhf(dhf_root: str, *args: str) -> subprocess.CompletedProcess:
-    return _cli(dhf_root, "dhf", *args)
+    return subprocess.run(
+        [sys.executable, "-m", "dhfkit", "--dhf", dhf_root] + list(args),
+        capture_output=True, text=True, cwd=REPO_ROOT,
+    )
 
 
 class TestScaffoldBaseline:
@@ -72,8 +75,7 @@ class TestScaffoldBaseline:
 
     def test_schema_valid(self, dhf):
         r = _dhf(str(dhf / "DHF"), "validate", "schema")
-        result = json.loads(r.stdout)
-        assert result["valid"], f"Schema invalid:\n{r.stderr}"
+        assert r.returncode == 0, f"Schema invalid:\n{r.stderr}"
 
     def test_starter_cr_exists(self, dhf):
         r = _dhf(str(dhf / "DHF"), "item", "get", "CR-001")
@@ -103,7 +105,7 @@ class TestCRItemLifecycle:
     defined in the template's global_lifecycle.states, so execute_transition
     skips them (lifecycle engine requires target state to be in global config).
 
-    We bypass this template gap by using dhf item update to set status='develop'
+    We bypass this template gap by using dhfkit item update to set status='develop'
     directly — this does not invoke the lifecycle engine, only the saver. The
     develop→completed transition then works because 'completed' IS in global
     lifecycle and the CR doc-type has [develop]→completed defined.

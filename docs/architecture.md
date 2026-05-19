@@ -1,7 +1,7 @@
 # Architecture
 
 > **Stability:** Stable
-> **Last reviewed:** 2026-05-16
+> **Last reviewed:** 2026-05-18
 
 ---
 
@@ -11,18 +11,16 @@ MedHarness ships two Python packages from a single repository:
 
 | Package | CLI | Role |
 |---------|-----|------|
-| `medharness` | `medharness` | Orchestration, scaffolding, CI gates, CR workflows, DHF operations |
-| `dhfkit` | `dhfkit` / `dhf` | DHF engine: item CRUD, lifecycle, traceability, document generation; standalone use without `medharness` |
+| `medharness` | `medharness` | AI harness: scaffolding, CI gates, CR workflows, approval gating |
+| `dhfkit` | `dhfkit` / `dhf` | DHF engine: item CRUD, lifecycle, traceability, document generation, SOUP sync, release baseline |
 
 ### `medharness` owns
 
 - CLI surface and user-facing onboarding (`medharness init`)
 - CI gate commands (`ci dhf-validate`, `ci test-coverage`, `ci validate-branch`, `ci validate-code`, `ci evidence bundle`)
 - AI-assisted CR generation (`ci generate-dhf`, `ci develop-cr`)
-- SOUP management and release baseline (`ci soup-sync`, `ci release-baseline`)
 - Approval gating and stage management (`ci approve-gate`, `ci advance-stage`, `ci cr-status`, `ci parse-approval`)
 - CR workflow orchestration (`cr workflow`, `cr check-status`)
-- Product repo file generation (`CLAUDE.md`, `.gitignore`)
 - DHF repo scaffolding from bundled templates
 - Adapter protocol for pluggable DHF backends
 
@@ -35,6 +33,8 @@ MedHarness ships two Python packages from a single repository:
 - JUnit XML parsing and CI artifact fetching
 - Git-backed YAML repository layer (loader/saver)
 - Result store for test result history
+- SOUP manifest synchronisation (`soup-sync`)
+- Release baseline builder (`release-baseline`)
 
 ### Boundary rules
 
@@ -57,7 +57,10 @@ dhfkit/templates/
 │   └── styles/                # PDF CSS stylesheet
 ├── plans/                     # Plan document templates
 ├── github/
-│   └── prompts/               # Optional prompt templates for repo-local automation
+│   ├── prompts/               # AI agent prompt templates
+│   └── workflows/             # DHF-side CI workflows
+├── AI-harness/
+│   └── context.md             # Product context template for AI agents
 └── README.md                  # DHF repo starter README
 ```
 
@@ -74,12 +77,15 @@ dhfkit/templates/
 │   │   └── plans/                # Plan documents
 │   ├── items/                    # One subdir per doc type (ready for YAML items)
 │   └── test-results/             # .gitkeep (ready for JUnit evidence)
+├── AI-harness/
+│   └── context.md                # Product context for AI agents
 ├── .github/
-│   └── prompts/                  # Optional prompt files; automation is client-owned
+│   ├── prompts/                  # AI agent prompts for CR workflows
+│   └── workflows/                # DHF-side CI: schema validation, CR automation
 └── README.md
 ```
 
-The generated DHF repo does not contain `dhfkit/` or `medharness/` source code. Users install MedHarness separately and run `medharness --dhf DHF ...` against the generated DHF directory.
+The generated DHF repo does not contain `dhfkit/` or `medharness/` source code. Install MedHarness separately. Use `dhfkit --dhf DHF ...` for data operations (item CRUD, validate, docs); use `medharness --dhf DHF ci ...` for AI-assisted CR workflows and CI gates.
 
 ### Placeholder substitution
 
@@ -101,7 +107,7 @@ The generated DHF repo does not contain `dhfkit/` or `medharness/` source code. 
 | New project | `medharness init` creates the DHF repo |
 | Feature or bugfix | Open a CR, run the CR workflow, merge to main |
 | New MedHarness release | Re-scaffold into a new directory, apply diff selectively — never overwrite existing DHF content |
-| Regenerate documents | `medharness --dhf DHF dhf doc generate ALL` — run after item changes or template updates |
+| Regenerate documents | `dhfkit --dhf DHF doc generate ALL` — run after item changes or template updates |
 | Product retirement | Archive the DHF repo in Git with an archival date in the README; preserve for regulatory audit |
 
 ### Product repo vs DHF repo
@@ -143,7 +149,7 @@ generate-dhf  →  (design PR reviewed + approved)  →  develop-cr
 1. Triage — checks for duplicate, out-of-scope, architecture-conflict, or too-large
 2. V-model cascade — creates/updates DHF items top-down: CR → CRS → SYS → {SYSARCH, RISK, RCM} → SRS → SWDD. Each SWDD item links to an existing MODULE and implements the relevant SRS items. Reads relevant source modules before writing SWDD items so the design reflects the actual codebase.
 3. Implementation plan — writes a structured implementation plan (overview, current state, changes required, steps, edge cases, tests) into `implementation_notes` on the CR item
-4. Deterministic validation — `dhf validate schema` + `dhf validate traceability`; self-corrects if errors remain
+4. Deterministic validation — `dhfkit validate schema` + `dhfkit validate traceability`; self-corrects if errors remain
 
 **`develop-cr`**
 

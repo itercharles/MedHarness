@@ -151,11 +151,11 @@ jobs:
               _scaffold_dhf(dhf_dir)
               _replace_placeholders(dhf_dir, 'Test Project')
               dhf = str(dhf_dir / 'DHF')
-              subprocess.run([sys.executable, '-m', 'medharness', '--dhf', dhf, 'dhf', 'validate', 'schema'], check=True)
-              subprocess.run([sys.executable, '-m', 'medharness', '--dhf', dhf, 'dhf', 'item', 'list', '--type', 'CRS'], check=True)
-              subprocess.run([sys.executable, '-m', 'medharness', '--dhf', dhf, 'dhf', 'item', 'list', '--type', 'SYS'], check=True)
+              subprocess.run([sys.executable, '-m', 'dhfkit', '--dhf', dhf, 'validate', 'schema'], check=True)
+              subprocess.run([sys.executable, '-m', 'dhfkit', '--dhf', dhf, 'item', 'list', '--type', 'CRS'], check=True)
+              subprocess.run([sys.executable, '-m', 'dhfkit', '--dhf', dhf, 'item', 'list', '--type', 'SYS'], check=True)
               for dt in 'UC CRS SYS SRS SWDD SYSARCH RISK RCM CR'.split():
-                  subprocess.run([sys.executable, '-m', 'medharness', '--dhf', dhf, 'dhf', 'doc', 'generate', dt], check=True)
+                  subprocess.run([sys.executable, '-m', 'dhfkit', '--dhf', dhf, 'doc', 'generate', dt], check=True)
               print('OK: starter DHF workflow valid')
           "
 

@@ -1,14 +1,12 @@
 """Contract tests for DHFAdapter protocol surface.
 
-Verifies that DHFClient and LocalDHFAdapter satisfy the DHFAdapter Protocol,
-and that CONTRACT_VERSION is asserted so downstream repos get an explicit
-failure on upgrade rather than a silent regression.
+Verifies that LocalDHFAdapter satisfies the DHFAdapter Protocol, and that
+CONTRACT_VERSION is asserted so downstream repos get an explicit failure
+on upgrade rather than a silent regression.
 """
 
 import inspect
-from pathlib import Path
 
-from medharness.client import DHFClient
 from medharness.contracts import CONTRACT_VERSION
 from medharness.adapters.protocol import DHFAdapter
 from dhfkit.local_adapter import LocalDHFAdapter
@@ -21,30 +19,7 @@ def test_contract_version_is_defined():
 
 
 def test_contract_version_is_stable():
-    # Downstream repos pin against this string. Bump it in contracts.py when
-    # the adapter surface changes; change the expected value here at the same time.
     assert CONTRACT_VERSION == "1.0"
-
-
-# ── DHFClient public surface ───────────────────────────────────────────────────
-
-def test_dhf_import_works():
-    from medharness import DHFClient as ImportedClient
-    assert ImportedClient is DHFClient
-
-
-def test_client_has_required_methods():
-    methods = [
-        "list_items", "get_item", "create_item", "update_item",
-        "transition_item", "get_document", "get_cr_context",
-    ]
-    for name in methods:
-        assert hasattr(DHFClient, name), f"DHFClient missing method: {name}"
-
-
-def test_client_init_accepts_path():
-    sig = inspect.signature(DHFClient.__init__)
-    assert "dhf_path" in sig.parameters
 
 
 # ── DHFAdapter Protocol completeness on LocalDHFAdapter ───────────────────────
@@ -78,8 +53,6 @@ def test_local_adapter_implements_all_protocol_methods():
 
 
 def test_local_adapter_satisfies_runtime_protocol():
-    # DHFAdapter is @runtime_checkable — isinstance check validates structural
-    # compatibility without constructing a real adapter instance.
     assert issubclass(LocalDHFAdapter, DHFAdapter), (
         "LocalDHFAdapter no longer satisfies the DHFAdapter Protocol. "
         "Check that all required methods are present with matching signatures."

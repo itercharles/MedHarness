@@ -31,7 +31,7 @@ def dhf():
 def _dhf(dhf_root: str, *args: str) -> "subprocess.CompletedProcess":
     import subprocess
     return subprocess.run(
-        [sys.executable, "-m", "medharness", "--dhf", dhf_root, "dhf"] + list(args),
+        [sys.executable, "-m", "dhfkit", "--dhf", dhf_root] + list(args),
         capture_output=True, text=True, cwd=REPO_ROOT,
     )
 

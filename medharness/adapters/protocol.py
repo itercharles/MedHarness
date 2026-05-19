@@ -35,21 +35,9 @@ class DHFAdapter(Protocol):
 
     # -- Item type metadata (replaces get_project_config) ------------------
 
-    def get_item_type(self, prefix: str) -> Optional[dict]:
-        """Return metadata for the item type with the given ID prefix.
-
-        Returns a dict with keys: name, prefix, parent_types, has_verification,
-        lifecycle, fields.  None if unknown.
-        """
-        ...
-
-    def list_item_types(self) -> List[dict]:
-        """Return list of all item type metadata dicts."""
-        ...
-
-    def get_lifecycle_states(self) -> List[dict]:
-        """Return global lifecycle states as list of {id, label, is_stable, ...}."""
-        ...
+    def get_item_type(self, prefix: str) -> Optional[dict]: ...
+    def list_item_types(self) -> List[dict]: ...
+    def get_lifecycle_states(self) -> List[dict]: ...
 
     # -- Test results ------------------------------------------------------
 

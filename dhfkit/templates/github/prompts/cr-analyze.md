@@ -68,5 +68,5 @@ After the front-matter, write:
 
 ## Phase 4 — Validate
 
-Run `medharness dhf validate schema` and confirm no errors introduced.
+Run `dhfkit --dhf DHF validate schema` and confirm no errors introduced.
 Do NOT modify any DHF items directly — spec only.

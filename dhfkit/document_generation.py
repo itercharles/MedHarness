@@ -12,14 +12,6 @@ class DocumentGenerator:
     """Generate regulatory documents from templates."""
 
     def __init__(self, loader, config, template_dir: Path):
-        """
-        Initialize document generator.
-
-        Args:
-            loader: ItemLoader instance
-            config: ProjectConfig instance
-            template_dir: Path to templates directory
-        """
         self.loader = loader
         self.config = config
         self.template_dir = template_dir
@@ -34,16 +26,13 @@ class DocumentGenerator:
         self._register_filters()
 
     def _register_filters(self):
-        """Register custom Jinja2 filters."""
         self.jinja_env.filters['status_badge'] = self._status_badge
         self.jinja_env.filters['format_date'] = self._format_date
 
     def _status_badge(self, status: str) -> str:
-        """Format status as text badge."""
         return status.upper() if status else 'UNKNOWN'
 
     def _format_date(self, date_str) -> str:
-        """Format ISO date or date object."""
         if not date_str:
             return 'N/A'
         if hasattr(date_str, 'isoformat'):
@@ -51,17 +40,6 @@ class DocumentGenerator:
         return str(date_str)[:10]
 
     def generate_markdown_spec(self, doc_type_code: str, doc_specs: dict, dhf_root: Path) -> Tuple[str, Path]:
-        """
-        Generate markdown specification and save to static file location.
-
-        Args:
-            doc_type_code: Document type code (e.g., 'CRS', 'SYS')
-            doc_specs: document_specifications dict from global config
-            dhf_root: Path to DHF root directory
-
-        Returns:
-            Tuple of (markdown_content, output_path)
-        """
         if doc_type_code not in doc_specs:
             raise ValueError(f"No document specification configured for {doc_type_code}")
 

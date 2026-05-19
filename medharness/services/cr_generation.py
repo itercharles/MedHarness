@@ -488,10 +488,10 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> di
         prompt = (
             f"Read the DHF items in DHF/ related to {cr_id}, "
             f"then revise them based on the following pull request review feedback. "
-            f"Continue using the CLI (`dhf item create` / `dhf item update`) only. "
+            f"Continue using the CLI (`dhfkit item create` / `dhfkit item update`) only. "
             f"After making changes, re-run:\n"
-            f"  python -m medharness --dhf DHF dhf validate schema\n"
-            f"  python -m medharness --dhf DHF dhf validate traceability\n\n"
+            f"  python -m dhfkit --dhf DHF validate schema\n"
+            f"  python -m dhfkit --dhf DHF validate traceability\n\n"
             f"Review feedback:\n{feedback['prompt_text']}"
         )
         block = _build_dhf_context_block(dhf_path)
@@ -542,11 +542,11 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> di
         fix_prompt = (
             f"The DHF cascade for {cr_id} failed deterministic validation:\n"
             f"{_format_error_lines(errors)}\n\n"
-            f"Fix only the items needed to clear these errors via the medharness "
-            f"CLI (`dhf item create` / `dhf item update`). Do not introduce other "
+            f"Fix only the items needed to clear these errors via the dhfkit "
+            f"CLI (`dhfkit item create` / `dhfkit item update`). Do not introduce other "
             f"changes. After fixing, re-run:\n"
-            f"  python -m medharness --dhf DHF dhf validate schema\n"
-            f"  python -m medharness --dhf DHF dhf validate traceability"
+            f"  python -m dhfkit --dhf DHF validate schema\n"
+            f"  python -m dhfkit --dhf DHF validate traceability"
         )
         rc, _, fix_session_id = _run_claude_step(
             name="run_fix_generation",

@@ -34,7 +34,7 @@ the product repository and its CI outputs.
 
 Every non-trivial change starts from a Change Request (CR) tracked in the DHF:
 
-1. **CR created** — `medharness dhf item create --type CR`
+1. **CR created** — `dhfkit --dhf DHF item create --type CR`
 2. **Design updated** — impacted CRS, SYS, SRS, SWDD, SYSARCH, risk, or test-facing items are revised in the DHF as needed
 3. **Implementation** — code changes proceed on a branch with the CR ID in the title
 4. **PR review** — product CI runs the coverage gate; DHF CI runs structural and design validation
@@ -108,7 +108,7 @@ Three item types together describe the software design:
 ## 4. Traceability Maintenance
 
 Every change that introduces or modifies DHF items must preserve the traceability
-chain. The following coverage rules are enforced by `dhf validate traceability`
+chain. The following coverage rules are enforced by `dhfkit validate traceability`
 and must pass before a CR can be considered complete.
 
 ### 4.1 Required coverage
@@ -202,7 +202,7 @@ before opening or updating a PR. At minimum:
 ```bash
 pytest tests/ -q --junitxml=test-results/results.xml
 medharness --dhf DHF ci test-coverage --junit-dir test-results
-medharness --dhf DHF dhf validate traceability
+dhfkit --dhf DHF validate traceability
 ```
 
 Local runs are fast feedback mechanisms. They reduce CI churn but do not replace

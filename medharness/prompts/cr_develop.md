@@ -65,7 +65,7 @@ CR ID: {{cr_id}}
       `implementation_notes` (different file, different approach, extra edge
       case), update the field to reflect what was actually built:
 
-          python -m medharness --dhf DHF dhf item update {{cr_id}} \
+          python -m dhfkit --dhf DHF item update {{cr_id}} \
             --data '{"implementation_notes": "<updated plan>"}' \
             --author "github-actions[bot]" --cr "{{cr_id}}"
 
@@ -73,7 +73,7 @@ CR ID: {{cr_id}}
       SWDD describes (component split, interface changed shape), update the
       SWDD to match:
 
-          python -m medharness --dhf DHF dhf item update <SWDD-ID> \
+          python -m dhfkit --dhf DHF item update <SWDD-ID> \
             --data '{"content": "<updated description>"}' \
             --author "github-actions[bot]" --cr "{{cr_id}}"
 

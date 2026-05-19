@@ -349,9 +349,9 @@ class TestGenerateDhfFixPassFlow:
                     # the scaffold) with no SYS child — cascade check will fire.
                     subprocess.run(
                         [
-                            sys.executable, "-m", "medharness",
+                            sys.executable, "-m", "dhfkit",
                             "--dhf", str(dhf_path),
-                            "dhf", "item", "create",
+                            "item", "create",
                             "--type", "CRS",
                             "--data", json.dumps({
                                 "title": "Fix-Pass Test CRS",

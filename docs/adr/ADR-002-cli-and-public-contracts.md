@@ -11,7 +11,8 @@ stable public contracts and which were internal implementation details.
 ## Decision
 
 Establish explicit public contracts:
-- Stable CLI commands for `medharness` (including `dhf item|validate|doc|test|config`)
+- Stable CLI commands for `medharness` (AI harness: `ci`, `cr`, `dhf context`)
+- Stable CLI commands for `dhfkit` (data layer: `item`, `validate`, `doc`, `test`, `config`, `report`)
 - Stable `dhfkit` import API
 - Stable scaffold output structure and template variables
 - Automation commands write JSON to stdout, interactive commands use stderr

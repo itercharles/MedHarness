@@ -131,7 +131,7 @@ def _write_claude_md(project_dir: Path, project_name: str) -> Path:
 ## Key Rules
 
 - PR title must include a CR ID (e.g. `feat(CR-012): description`)
-- DHF mutations go through `medharness --dhf DHF dhf item` commands
+- DHF mutations go through `dhfkit --dhf DHF item` commands
 - `ci test-coverage` enforces requirement→test coverage on every PR
 - Evidence bundle is produced on merge to `main`
 - Canonical product docs live in `DHF/documents/`:
@@ -240,5 +240,5 @@ def run_init() -> None:
     click.secho("  4. Replace sample DHF content:", bold=True)
     click.echo(f"       Edit AI-harness/context.md with your product description.")
     click.echo(f"       Edit DHF/items/ with your real requirements, risks, and CRs.")
-    click.echo(f"       Validate: medharness --dhf DHF dhf validate schema")
+    click.echo(f"       Validate: dhfkit --dhf DHF validate schema")
     click.echo()

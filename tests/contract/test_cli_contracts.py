@@ -51,97 +51,10 @@ class TestMedHarnessCLI:
         assert r.returncode == 0, r.stderr
 
     def test_dhf_facade_commands_exist(self):
-        """All dhf facade subcommands exist."""
+        """medharness dhf exists and exposes context subcommand."""
         r = _run("medharness", "dhf", "--help")
         assert r.returncode == 0
-        for sub in ["item", "validate"]:
-            assert sub in r.stdout, f"Missing dhf subcommand group: {sub}"
-
-
-class TestDhfCLI:
-    """Verify dhf operations via medharness dhf ..."""
-
-    def test_dhf_help(self):
-        """medharness dhf --help exits 0."""
-        r = _run("medharness", "dhf", "--help")
-        assert r.returncode == 0, r.stderr
-
-    def test_dhf_validate_schema(self, scaffolded_dhf):
-        """medharness dhf validate schema passes."""
-        r = _run("medharness", "--dhf", str(scaffolded_dhf / "DHF"), "dhf", "validate", "schema")
-        assert r.returncode == 0, r.stderr
-
-    def test_dhf_test_list(self, scaffolded_dhf):
-        """medharness dhf test list exits 0."""
-        r = _run("medharness", "--dhf", str(scaffolded_dhf / "DHF"), "dhf", "test", "list")
-        assert r.returncode == 0, r.stderr
-
-    def test_dhf_doc_list(self, scaffolded_dhf):
-        """medharness dhf doc list returns doc types."""
-        import json
-        r = _run("medharness", "--dhf", str(scaffolded_dhf / "DHF"), "dhf", "doc", "list")
-        assert r.returncode == 0, r.stderr
-        result = json.loads(r.stdout)
-        types = result.get("doc_types", [])
-        assert isinstance(types, list)
-        assert "CRS" in types
-
-    def test_dhf_doc_generate(self, scaffolded_dhf):
-        """medharness dhf doc generate SYS produces output."""
-        import json
-        r = _run("medharness", "--dhf", str(scaffolded_dhf / "DHF"), "dhf", "doc", "generate", "SYS")
-        if r.returncode != 0 and "cannot load library" in r.stderr:
-            return
-        assert r.returncode == 0, r.stderr
-        result = json.loads(r.stdout)
-        assert result["doc_type"] == "SYS"
-        assert Path(result["output_path"]).exists()
-
-    def test_dhf_item_all_types(self, scaffolded_dhf):
-        """All 12 item types can be listed."""
-        import json
-        for code in ["UC", "CRS", "SYS", "SRS", "SWDD", "SYSARCH", "RISK", "RCM", "CR", "REL", "DEF", "SOUP"]:
-            r = _run("medharness", "--dhf", str(scaffolded_dhf / "DHF"), "dhf", "item", "list", "--type", code)
-            assert r.returncode == 0, f"dhf item list --type {code} failed"
-            lines = r.stdout.strip().split("\n")
-            assert len(lines) >= 1, f"No items for type {code}"
-
-
-class TestDhfCommands:
-    """Verify remaining dhf subcommands."""
-
-    def test_dhf_item_transitions(self, scaffolded_dhf):
-        """medharness dhf item transitions CR-001 returns JSON list."""
-        import json
-        r = _run("medharness", "--dhf", str(scaffolded_dhf / "DHF"), "dhf", "item", "transitions", "CR-001")
-        assert r.returncode == 0, r.stderr
-        data = json.loads(r.stdout)
-        assert isinstance(data, list)
-        assert len(data) >= 0
-
-    def test_dhf_validate_traceability(self, scaffolded_dhf):
-        """medharness dhf validate traceability exits 0."""
-        r = _run("medharness", "--dhf", str(scaffolded_dhf / "DHF"), "dhf", "validate", "traceability")
-        assert r.returncode == 0, r.stderr
-
-    def test_dhf_doc_export(self, scaffolded_dhf):
-        """medharness dhf doc export SYS produces PDF output."""
-        import json
-        r = _run("medharness", "--dhf", str(scaffolded_dhf / "DHF"), "dhf", "doc", "export", "SYS")
-        if r.returncode != 0 and ("cannot load library" in r.stderr or "weasyprint" in r.stderr.lower() or "no module" in r.stderr.lower()):
-            return
-        assert r.returncode == 0, r.stderr
-        result = json.loads(r.stdout)
-        assert "pdf_path" in result
-
-    def test_dhf_config_doc_types(self, scaffolded_dhf):
-        """medharness dhf config doc-types returns type list."""
-        import json
-        r = _run("medharness", "--dhf", str(scaffolded_dhf / "DHF"), "dhf", "config", "doc-types")
-        assert r.returncode == 0, r.stderr
-        data = json.loads(r.stdout)
-        assert isinstance(data, list)
-        assert len(data) >= 3  # At least a few doc types
+        assert "context" in r.stdout, "Missing dhf subcommand group: context"
 
 
 class TestInitCommand:
@@ -233,10 +146,10 @@ class TestCLIEntrypoints:
 class TestOutputContract:
     """Verify automation commands write JSON to stdout, human messages to stderr."""
 
-    def test_dhf_item_get_json_on_stdout(self, scaffolded_dhf):
-        """medharness dhf item get writes JSON to stdout."""
+    def test_dhfkit_item_get_json_on_stdout(self, scaffolded_dhf):
+        """dhfkit item get writes JSON to stdout."""
         import json
-        r = _run("medharness", "--dhf", str(scaffolded_dhf / "DHF"), "dhf", "item", "get", "SYS-001")
+        r = _run("dhfkit", "--dhf", str(scaffolded_dhf / "DHF"), "item", "get", "SYS-001")
         assert r.returncode == 0
         item = json.loads(r.stdout)
         assert "id" in item
@@ -248,16 +161,16 @@ class TestOutputContract:
             except json.JSONDecodeError:
                 pass
 
-    def test_dhf_validate_schema_stderr(self, scaffolded_dhf):
-        """medharness dhf validate schema produces output."""
-        r = _run("medharness", "--dhf", str(scaffolded_dhf / "DHF"), "dhf", "validate", "schema")
+    def test_dhfkit_validate_schema_output(self, scaffolded_dhf):
+        """dhfkit validate schema produces output."""
+        r = _run("dhfkit", "--dhf", str(scaffolded_dhf / "DHF"), "validate", "schema")
         assert r.returncode == 0
         assert len(r.stdout.strip() + r.stderr.strip()) > 0, "produced no output"
 
-    def test_dhf_item_list_ndjson(self, scaffolded_dhf):
-        """medharness dhf item list writes NDJSON to stdout."""
+    def test_dhfkit_item_list_ndjson(self, scaffolded_dhf):
+        """dhfkit item list writes NDJSON to stdout."""
         import json
-        r = _run("medharness", "--dhf", str(scaffolded_dhf / "DHF"), "dhf", "item", "list", "--type", "SYS")
+        r = _run("dhfkit", "--dhf", str(scaffolded_dhf / "DHF"), "item", "list", "--type", "SYS")
         assert r.returncode == 0
         lines = r.stdout.strip().split("\n")
         assert len(lines) > 0
@@ -265,3 +178,18 @@ class TestOutputContract:
             item = json.loads(line)
             assert "id" in item
             assert "type" in item
+
+    def test_dhfkit_report_stdout(self, scaffolded_dhf):
+        """dhfkit report writes traceability report to stdout."""
+        r = _run("dhfkit", "--dhf", str(scaffolded_dhf / "DHF"), "report")
+        assert r.returncode in (0, 1), f"report crashed:\n{r.stderr}"
+        assert "DHF Traceability Report" in r.stdout
+
+    def test_dhfkit_report_json(self, scaffolded_dhf):
+        """dhfkit report --format json writes JSON to stdout."""
+        import json
+        r = _run("dhfkit", "--dhf", str(scaffolded_dhf / "DHF"), "report", "--format", "json")
+        assert r.returncode in (0, 1), f"report --format json crashed:\n{r.stderr}"
+        result = json.loads(r.stdout)
+        assert "passed" in result
+        assert "coverage" in result

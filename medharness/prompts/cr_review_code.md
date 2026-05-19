@@ -9,12 +9,12 @@ narrative, test depth, and code quality.
 
 ## Inputs
 
-- CR item: run `medharness --dhf DHF dhf item get {{cr_id}}`
+- CR item: run `dhfkit --dhf DHF item get {{cr_id}}`
 - Code changes since main: run `git diff origin/main -- apps/ packages/`
 
 ## Review Steps
 
-1. Read the CR item (`medharness --dhf DHF dhf item get {{cr_id}}`) to understand what was required.
+1. Read the CR item (`dhfkit --dhf DHF item get {{cr_id}}`) to understand what was required.
 
 2. Run `git diff origin/main -- apps/ packages/` to see the implementation.
 
