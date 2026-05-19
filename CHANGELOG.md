@@ -13,6 +13,56 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ---
 
+## [0.8.0] — 2026-05-19
+
+### Breaking Changes
+
+- **`dhfkit` now owns all DHF data-layer CLI commands** — `medharness dhf item`,
+  `medharness dhf validate`, `medharness dhf doc`, `medharness dhf test`,
+  `medharness dhf config`, and `medharness dhf report` have moved to `dhfkit`.
+  Use `dhfkit --dhf DHF <command>` for all data operations. `medharness dhf`
+  now exposes only AI-harness context commands (`context implementation`,
+  `context for-stage`, `context overview`).
+
+- **`dhfkit soup-sync` and `dhfkit release-baseline`** — these commands moved
+  from `medharness ci soup-sync` / `medharness ci release-baseline` to top-level
+  `dhfkit` commands. Update workflow files and scripts accordingly.
+
+- **`ci evidence import` and `ci artifacts generate` removed** — these commands
+  had no active callers and have been deleted entirely.
+
+- **`--spec` flag removed from `ci validate-branch`** — `proposed_new_items` is
+  now written directly to the CR item (via `dhf item update` in `generate-dhf`
+  Step 4) rather than to a spec Markdown file. The spec-file path argument is no
+  longer accepted.
+
+### New Features
+
+- **Risk context in `generate-dhf` prompt** — `_build_risk_context_block()`
+  injects the full RISK/RCM landscape into the design prompt so the LLM can
+  correctly assign `implements: [RCM-xxx]` on new SYS requirements and avoid
+  creating duplicate risks.
+
+- **Spec-to-artifact reconciliation in `develop-cr`** — `_validate_spec_reconciliation()`
+  compares `proposed_new_items` type counts from the approved CR spec against
+  what was actually created. Shortfalls surface as structured errors in the
+  fix-pass loop.
+
+- **`proposed_new_items` written to CR item** — `generate-dhf` Step 4 now
+  writes the bill of materials directly onto the CR item. `ci cr-complete`
+  closure gate enforcement is now live (previously always vacuously passed
+  because the spec file was never written).
+
+- **CI workflow template in scaffold** — `medharness init` now includes
+  `dhf.yml` in `.github/workflows/`, giving new projects a working CI pipeline
+  (dhf-validate on PR, evidence bundle on merge) out of the box.
+
+- **`docs/adopting.md`** — new guide covering four adoption paths: starting
+  fresh, migrating an existing DHF, using dhfkit standalone, and incremental
+  adoption into an existing regulated product.
+
+---
+
 ## [0.7.0] — 2026-05-17
 
 ### New Features
