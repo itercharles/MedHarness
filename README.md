@@ -226,16 +226,16 @@ medharness ci parse-approval --comment "$COMMENT_BODY"
 
 ### SOUP synchronisation (IEC 62304 §5.3.3)
 
-`ci soup-sync` reads your package manifests and diffs them against SOUP items already in the DHF, reporting new dependencies, version drift, and orphaned records.
+`soup-sync` reads your package manifests and diffs them against SOUP items already in the DHF, reporting new dependencies, version drift, and orphaned records.
 
 ```bash
 # Dry-run: show what would change
-medharness --dhf DHF ci soup-sync \
+dhfkit --dhf DHF soup-sync \
   --manifest requirements.txt \
   --manifest apps/client/package.json
 
 # Apply creates and updates
-medharness --dhf DHF ci soup-sync \
+dhfkit --dhf DHF soup-sync \
   --manifest requirements.txt \
   --write --author "ci" --cr CR-034
 ```
@@ -244,17 +244,17 @@ Supports `requirements.txt` (pinned `==` entries only) and `package.json` (`depe
 
 ### Release baseline (IEC 62304 §9)
 
-`ci release-baseline` verifies that all included CRs are completed, collects a software BOM from DHF SOUP items and package manifests, and writes `release-baseline.json` and `software-bom.json` to `--out-dir`.
+`release-baseline` verifies that all included CRs are completed, collects a software BOM from DHF SOUP items and package manifests, and writes `release-baseline.json` and `software-bom.json` to `--out-dir`.
 
 ```bash
 # Dry-run: auto-collect completed unreleased CRs, write artifacts
-medharness --dhf DHF ci release-baseline \
+dhfkit --dhf DHF release-baseline \
   --version 1.0.0 \
   --manifest requirements.txt \
   --out-dir artifacts/release
 
 # Explicitly specify CRs and create a REL item in the DHF
-medharness --dhf DHF ci release-baseline \
+dhfkit --dhf DHF release-baseline \
   --version 1.0.0 \
   --cr CR-030 --cr CR-031 --cr CR-034 \
   --manifest requirements.txt \
@@ -290,8 +290,8 @@ medharness --dhf DHF ci generate-dhf --cr CR-034   # design phase
 medharness --dhf DHF ci develop-cr --cr CR-034     # implement phase
 
 # ── SOUP and release ─────────────────────────────────────────────────────────
-medharness --dhf DHF ci soup-sync --manifest requirements.txt
-medharness --dhf DHF ci release-baseline --version 1.0.0 --out-dir artifacts/release
+dhfkit --dhf DHF soup-sync --manifest requirements.txt
+dhfkit --dhf DHF release-baseline --version 1.0.0 --out-dir artifacts/release
 
 # ── CI gates ─────────────────────────────────────────────────────────────────
 medharness ci dhf-validate --dhf DHF

@@ -52,7 +52,7 @@ def test_cr_workflow_complete_transitions_and_commits(monkeypatch, tmp_path):
             return " M DHF/items/06_cr/CR-043.yaml\n"
         return ""
 
-    monkeypatch.setattr("medharness._helpers._make_adapter_for_dhf_root", lambda dhf_root: adapter)
+    monkeypatch.setattr("medharness._helpers._make_adapter", lambda dhf_root: adapter)
     monkeypatch.setattr("medharness._helpers._run_git", fake_run_git)
 
     result = CliRunner().invoke(
@@ -100,7 +100,7 @@ def test_cr_workflow_complete_noops_without_changes(monkeypatch, tmp_path):
             return ""
         return ""
 
-    monkeypatch.setattr("medharness._helpers._make_adapter_for_dhf_root", lambda dhf_root: adapter)
+    monkeypatch.setattr("medharness._helpers._make_adapter", lambda dhf_root: adapter)
     monkeypatch.setattr("medharness._helpers._run_git", fake_run_git)
 
     result = CliRunner().invoke(
@@ -130,7 +130,7 @@ def test_cr_workflow_complete_fails_when_cr_missing(monkeypatch, tmp_path):
     (dhf_repo / "DHF").mkdir(parents=True)
     adapter = FakeCompleteAdapter()
 
-    monkeypatch.setattr("medharness._helpers._make_adapter_for_dhf_root", lambda dhf_root: adapter)
+    monkeypatch.setattr("medharness._helpers._make_adapter", lambda dhf_root: adapter)
 
     result = CliRunner().invoke(
         main,
@@ -168,7 +168,7 @@ class TestCompleteFromGitHubPR:
         event_path = self._make_event(tmp_path, "feat(CR-050): add evidence bundle")
         git_calls = []
 
-        monkeypatch.setattr("medharness._helpers._make_adapter_for_dhf_root", lambda x: adapter)
+        monkeypatch.setattr("medharness._helpers._make_adapter", lambda x: adapter)
         monkeypatch.setattr("medharness._helpers._run_git", lambda repo, args: git_calls.append(args))
         monkeypatch.setattr("medharness._helpers._git_has_changes", lambda repo: True)
         monkeypatch.setattr("medharness._helpers.subprocess.run", lambda *a, **kw: git_calls.append(kw.get("args", a)))
@@ -191,7 +191,7 @@ class TestCompleteFromGitHubPR:
         (dhf_repo / "DHF").mkdir(parents=True)
         event_path = self._make_event(tmp_path, "chore: update docs")
 
-        monkeypatch.setattr("medharness._helpers._make_adapter_for_dhf_root", lambda x: FakeCompleteAdapter())
+        monkeypatch.setattr("medharness._helpers._make_adapter", lambda x: FakeCompleteAdapter())
 
         result = CliRunner().invoke(main, [
             "--dhf", str(dhf_repo / "DHF"),
@@ -208,7 +208,7 @@ class TestCompleteFromGitHubPR:
         dhf_repo = tmp_path / "dhf"
         (dhf_repo / "DHF").mkdir(parents=True)
 
-        monkeypatch.setattr("medharness._helpers._make_adapter_for_dhf_root", lambda x: FakeCompleteAdapter())
+        monkeypatch.setattr("medharness._helpers._make_adapter", lambda x: FakeCompleteAdapter())
 
         result = CliRunner().invoke(main, [
             "--dhf", str(dhf_repo / "DHF"),
@@ -226,7 +226,7 @@ class TestCompleteFromGitHubPR:
         adapter = FakeCompleteAdapter({"id": "CR-099", "status": "implementing"})
         event_path = self._make_event(tmp_path, "ignore this")
 
-        monkeypatch.setattr("medharness._helpers._make_adapter_for_dhf_root", lambda x: adapter)
+        monkeypatch.setattr("medharness._helpers._make_adapter", lambda x: adapter)
         monkeypatch.setattr("medharness._helpers._run_git", lambda repo, args: None)
         monkeypatch.setattr("medharness._helpers._git_has_changes", lambda repo: False)
         monkeypatch.setattr("medharness._helpers.subprocess.run", lambda *a, **kw: None)

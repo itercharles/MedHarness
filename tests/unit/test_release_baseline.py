@@ -1,10 +1,10 @@
-"""Unit tests for medharness.services.release_baseline."""
+"""Unit tests for dhfkit.release_baseline."""
 
 import json
 from pathlib import Path
 from unittest.mock import patch
 
-from medharness.services.release_baseline import (
+from dhfkit.release_baseline import (
     _auto_collect_crs,
     _collect_bom,
     _generate_release_notes,

@@ -27,7 +27,7 @@ def workflow_complete(
     message: str | None,
 ) -> dict:
     repo_root, dhf_root = _h._resolve_dhf_repo_paths(ctx, dhf_repo)
-    adapter = _h._make_adapter_for_dhf_root(dhf_root)
+    adapter = _h._make_adapter(dhf_root)
 
     try:
         transition = complete_change_request(adapter, cr_id, performed_by=performed_by)
@@ -70,7 +70,7 @@ def workflow_intake_github_issue(
     write: bool,
 ) -> dict:
     _, dhf_root = _h._resolve_dhf_repo_paths(ctx, dhf_repo)
-    adapter = _h._make_adapter_for_dhf_root(dhf_root)
+    adapter = _h._make_adapter(dhf_root)
     result = prepare_cr_from_issue(
         load_github_issue_event(event_path),
         active_milestone or current_iso_week_milestone(),
@@ -95,7 +95,7 @@ def workflow_intake_github_issue_ci(
     milestone_title: str | None,
 ) -> dict:
     repo_root, dhf_root = _h._resolve_dhf_repo_paths(ctx, dhf_repo)
-    adapter = _h._make_adapter_for_dhf_root(dhf_root)
+    adapter = _h._make_adapter(dhf_root)
     gh_token = github_token or os.environ.get("GH_TOKEN") or ""
     source_token = os.environ.get("GITHUB_TOKEN") or gh_token
     gh_env = _h._github_env(gh_token)
@@ -208,7 +208,7 @@ def workflow_complete_from_github_pr(
 
     cr_id = cr_match.group(0)
     repo_root, dhf_root = _h._resolve_dhf_repo_paths(ctx, dhf_repo)
-    adapter = _h._make_adapter_for_dhf_root(dhf_root)
+    adapter = _h._make_adapter(dhf_root)
 
     subprocess.run(
         ["git", "-C", str(repo_root), "config", "user.name", "GitHub Actions [bot]"],
@@ -252,7 +252,7 @@ def workflow_complete_from_github_pr(
 
 def check_status(ctx: click.Context, cr_id: str) -> dict:
     from medharness.workflows.cr_state import CRPhase, ACTIVE_PHASES
-    core = _h._make_core(ctx)
+    core = _h._make_core(ctx.obj["dhf"])
     item = core.get_item(cr_id)
     if item is None:
         return {"cr_id": cr_id, "found": False, "error": f"CR '{cr_id}' not found"}

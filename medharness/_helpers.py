@@ -5,47 +5,24 @@ import json
 import os
 import shutil
 import subprocess
-import sys
 from datetime import datetime
 from pathlib import Path
 import click
 
-def _resolve_dhf(dhf_option: str | None) -> Path | None:
-    """Return the DHF path from --dhf, or None if not provided."""
-    return Path(dhf_option) if dhf_option else None
 
-
-def _make_core(ctx: click.Context):
-    """Instantiate MedHarnessCore from CLI context.
-
-    Single-project mode (default): uses ``ctx.obj["dhf"]`` path with a
-    ``LocalDHFAdapter`` (requires the DHF system to be installed alongside
-    this tool, e.g. by installing medharness and pointing --dhf at a DHF repo).
-
-    """
-    try:
-        from dhfkit.local_adapter import LocalDHFAdapter
-    except ImportError:
-        raise click.ClickException(
-            "LocalDHFAdapter not found. Add your DHF system (e.g. a DHF project repo) "
-            "to the Python path before running the CLI."
-        )
-    from medharness.core import MedHarnessCore
-
-
-    dhf_path: Path = ctx.obj["dhf"]
-    return MedHarnessCore(LocalDHFAdapter(dhf_path, auto_commit=False))
-
-
-def _make_adapter(ctx: click.Context):
-    """Instantiate the configured DHF adapter for facade operations."""
+def _make_adapter(dhf_path: Path):
     try:
         from dhfkit.local_adapter import LocalDHFAdapter
     except ImportError:
         raise click.ClickException(
             "LocalDHFAdapter not found. Add your DHF system to PYTHONPATH before running the CLI."
         )
-    return LocalDHFAdapter(ctx.obj["dhf"], auto_commit=False)
+    return LocalDHFAdapter(dhf_path, auto_commit=False)
+
+
+def _make_core(dhf_path: Path):
+    from medharness.core import MedHarnessCore
+    return MedHarnessCore(_make_adapter(dhf_path))
 
 
 def _parse_json_object(data: str) -> dict:
@@ -129,35 +106,6 @@ def _run_acceptance_gate(core, junit_paths: list[Path], coverage_pairs: tuple[st
         "coverage": coverage,
         "junit_files": [str(path) for path in junit_paths],
     }
-
-
-def _summarize_import_result(result: dict) -> dict:
-    recorded = result.get("recorded", [])
-    skipped = result.get("skipped", 0)
-    items_updated = sorted({uid for r in recorded for uid in r.get("links", [])})
-    failed_tcs = [r["tc_id"] for r in recorded if r.get("testing_status") == "FAIL"]
-    return {
-        "imported": len(recorded),
-        "skipped": skipped,
-        "items_updated": items_updated,
-        "failed_tcs": failed_tcs,
-    }
-
-
-def _import_results_file(adapter, path: Path, tester: str, run_id: str,
-                         run_url: str, commit: str) -> dict:
-    if not hasattr(adapter, "import_results_from_file"):
-        raise click.ClickException("Configured DHF adapter does not support test result import.")
-    result = adapter.import_results_from_file(
-        xml_path=path,
-        tester=tester,
-        run_id=run_id,
-        run_url=run_url,
-        commit_sha=commit,
-    )
-    summary = _summarize_import_result(result)
-    summary["path"] = str(path)
-    return summary
 
 
 def _run_command(args: list[str], cwd: Path | None = None, check: bool = True) -> subprocess.CompletedProcess:
@@ -580,16 +528,6 @@ def _load_issue_comments(
     if not isinstance(comments, list):
         raise click.ClickException("gh api returned unexpected issue comments payload")
     return comments
-
-
-def _make_adapter_for_dhf_root(dhf_root: Path):
-    try:
-        from dhfkit.local_adapter import LocalDHFAdapter
-    except ImportError:
-        raise click.ClickException(
-            "LocalDHFAdapter not found. Add your DHF system to PYTHONPATH before running the CLI."
-        )
-    return LocalDHFAdapter(dhf_root, auto_commit=False)
 
 
 def _generate_plan_artifacts(dhf_path: Path, out_dir: Path) -> list[dict]:

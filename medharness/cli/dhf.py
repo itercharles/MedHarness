@@ -34,7 +34,7 @@ def register(main):
 
         Outputs JSON with paths to the written files: {"cr": "...", "context": "..."}.
         """
-        adapter = _h._make_adapter(ctx)
+        adapter = _h._make_adapter(ctx.obj["dhf"])
         dhf_path: Path = ctx.obj["dhf"]
         out_dir.mkdir(parents=True, exist_ok=True)
 
@@ -98,7 +98,7 @@ def register(main):
           design  — CR item, affected items
           develop — CR item, affected items
         """
-        adapter = _h._make_adapter(ctx)
+        adapter = _h._make_adapter(ctx.obj["dhf"])
 
         cr = adapter.get_item(cr_id)
         cr_summary = ({"id": cr_id, "title": cr.get("title", ""), "status": cr.get("status", "")}
@@ -153,7 +153,7 @@ def register(main):
     def dhf_context_overview(ctx: click.Context, cr_id: str | None,
                               junit_files: tuple[Path, ...], junit_dirs: tuple[Path, ...]) -> None:
         """Output DHF overview as JSON for AI agents (item summaries, traceability gaps)."""
-        adapter = _h._make_adapter(ctx)
+        adapter = _h._make_adapter(ctx.obj["dhf"])
         dhf_path: Path = ctx.obj["dhf"]
         result: dict = {"project": dhf_path.parent.name}
 

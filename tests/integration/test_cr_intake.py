@@ -250,7 +250,7 @@ def test_cli_intake_github_issue_writes_output(monkeypatch, tmp_path):
     comments_path.write_text("[]\n", encoding="utf-8")
     adapter = FakeIntakeAdapter()
 
-    monkeypatch.setattr("medharness._helpers._make_adapter_for_dhf_root", lambda dhf_root: adapter)
+    monkeypatch.setattr("medharness._helpers._make_adapter", lambda dhf_root: adapter)
 
     result = CliRunner().invoke(
         main,
@@ -318,7 +318,7 @@ class TestIntakeGitHubIssueCI:
         output_path = tmp_path / "intake.json"
         github_output = tmp_path / "github-output.txt"
 
-        monkeypatch.setattr("medharness._helpers._make_adapter_for_dhf_root",
+        monkeypatch.setattr("medharness._helpers._make_adapter",
                             lambda dhf_root: self._make_stub_adapter())
         monkeypatch.setattr("medharness.workflows.cr_intake.current_iso_week_milestone",
                             lambda: "2026-W18")
@@ -352,7 +352,7 @@ class TestIntakeGitHubIssueCI:
         comments_path = tmp_path / "comments.json"
         comments_path.write_text("[]\n", encoding="utf-8")
 
-        monkeypatch.setattr("medharness._helpers._make_adapter_for_dhf_root",
+        monkeypatch.setattr("medharness._helpers._make_adapter",
                             lambda dhf_root: self._make_stub_adapter())
         monkeypatch.setattr("medharness.workflows.cr_intake.current_iso_week_milestone",
                             lambda: "2026-W18")
@@ -384,7 +384,7 @@ class TestIntakeGitHubIssueCI:
         comments_path = tmp_path / "comments.json"
         comments_path.write_text("[]\n", encoding="utf-8")
 
-        monkeypatch.setattr("medharness._helpers._make_adapter_for_dhf_root",
+        monkeypatch.setattr("medharness._helpers._make_adapter",
                             lambda dhf_root: self._make_stub_adapter())
         monkeypatch.setattr("medharness.workflows.cr_intake.current_iso_week_milestone",
                             lambda: "2026-W18")
@@ -412,7 +412,7 @@ class TestIntakeGitHubIssueCI:
         (dhf_repo / "DHF").mkdir(parents=True)
         event_path = self._create_event(tmp_path)
 
-        monkeypatch.setattr("medharness._helpers._make_adapter_for_dhf_root",
+        monkeypatch.setattr("medharness._helpers._make_adapter",
                             lambda dhf_root: self._make_stub_adapter())
         monkeypatch.setattr("medharness._helpers._resolve_dhf_repo_paths",
                             lambda ctx, dhf_repo: (dhf_repo, dhf_repo / "DHF"))
@@ -473,7 +473,7 @@ class TestIntakeGitHubIssueCI:
         (dhf_repo / "DHF").mkdir(parents=True)
         event_path = self._create_event(tmp_path)
 
-        monkeypatch.setattr("medharness._helpers._make_adapter_for_dhf_root",
+        monkeypatch.setattr("medharness._helpers._make_adapter",
                             lambda dhf_root: self._make_stub_adapter())
         monkeypatch.setattr("medharness._helpers._resolve_dhf_repo_paths",
                             lambda ctx, dhf_repo: (dhf_repo, dhf_repo / "DHF"))

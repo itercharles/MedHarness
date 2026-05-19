@@ -84,21 +84,7 @@ class TestCITestCoverage:
 
 
 class TestCIEvidence:
-    """Functional tests for ci evidence import/bundle."""
-
-    def test_evidence_import(self, scaffolded_dhf, tmp_path):
-        """ci evidence import ingests a JUnit file (persist-first pattern)."""
-        junit_file = tmp_path / "results.xml"
-        junit_file.write_text(JUNIT_XML)
-        dhf_root = scaffolded_dhf / "DHF"
-        r = _run(
-            "medharness", "--dhf", str(dhf_root),
-            "ci", "evidence", "import",
-            str(junit_file),
-        )
-        assert r.returncode == 0, r.stderr
-        data = json.loads(r.stdout)
-        assert "imported" in data
+    """Functional tests for ci evidence bundle."""
 
     def test_evidence_bundle(self, scaffolded_dhf, tmp_path):
         """ci evidence bundle produces an out-dir (consume-at-bundle model)."""
@@ -117,39 +103,3 @@ class TestCIEvidence:
         assert (out_dir / "evidence-manifest.json").exists()
 
 
-class TestCIArtifacts:
-    """Functional tests for ci artifacts generate."""
-
-    def test_artifacts_generate(self, scaffolded_dhf, tmp_path):
-        """ci artifacts generate produces Markdown specs + JSON traceability report."""
-        out_dir = tmp_path / "artifacts"
-        dhf_root = scaffolded_dhf / "DHF"
-        r = _run(
-            "medharness", "--dhf", str(dhf_root),
-            "ci", "artifacts", "generate",
-            "--out-dir", str(out_dir),
-            "--skip-plans",
-        )
-        if r.returncode != 0 and ("cannot load library" in r.stderr or "weasyprint" in r.stderr.lower() or "no module" in r.stderr.lower()):
-            return
-        assert r.returncode == 0, r.stderr
-        data = json.loads(r.stdout)
-        assert "traceability" in data
-
-    def test_artifacts_generate_with_junit_dir(self, scaffolded_dhf, tmp_path):
-        """ci artifacts generate picks up JUnit from directories."""
-        junit_dir = tmp_path / "junit"
-        junit_dir.mkdir()
-        (junit_dir / "results.xml").write_text(JUNIT_XML)
-        out_dir = tmp_path / "artifacts2"
-        dhf_root = scaffolded_dhf / "DHF"
-        r = _run(
-            "medharness", "--dhf", str(dhf_root),
-            "ci", "artifacts", "generate",
-            "--out-dir", str(out_dir),
-            "--junit-dir", str(junit_dir),
-            "--skip-plans",
-        )
-        if r.returncode != 0 and ("cannot load library" in r.stderr or "weasyprint" in r.stderr.lower() or "no module" in r.stderr.lower()):
-            return
-        assert r.returncode == 0, r.stderr

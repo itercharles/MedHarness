@@ -29,19 +29,3 @@ def test_build_traceability_chains_with_local_adapter():
     assert len(chains) > 0, "expected at least one chain — prefix_map may be keyed by name instead of code"
     sys_items = [c for c in chains if c.get("SYS") is not None]
     assert len(sys_items) > 0, "no SYS items resolved — get_code() is not matching 'SYS' code"
-
-
-def test_core_get_implementation_context(stub_adapter):
-    """
-    core returns CR item, implementation spec, and DHF references.
-
-    """
-    stub_adapter.create_item({"id": "CR-902", "title": "Context", "status": "implementing"})
-    stub_adapter._documents["CR-902-Spec"] = "# Implementation Spec\n"
-
-    context = MedHarnessCore(stub_adapter).get_implementation_context("CR-902")
-
-    assert context["cr"]["id"] == "CR-902"
-    assert context["implementation_spec"] == "# Implementation Spec\n"
-    assert context["dhf_references"] == ["CR-902", "CR-902-Spec"]
-

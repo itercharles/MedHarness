@@ -7,9 +7,8 @@ Calls services/ci.py and _helpers directly. No commands/ci.py intermediate layer
   - ci dhf-validate takes --dhf DHF: called from the DHF repo (dhf/ci.yml)
   - ci test-coverage takes --dhf PATH: called from the product repo,
     DHF is a checked-out subdirectory
-  - ci evidence bundle / artifacts generate / evidence import:
-    use the global medharness --dhf PATH flag, also run from
-    the product repo
+  - ci evidence bundle: uses the global medharness --dhf PATH flag,
+    runs from the product repo
 """
 
 from __future__ import annotations
@@ -102,39 +101,7 @@ def register(main):
 
     @ci.group("evidence")
     def ci_evidence() -> None:
-        """CI evidence ingestion commands."""
-
-    @ci_evidence.command("import")
-    @click.argument("paths", nargs=-1, required=True, type=click.Path(exists=True, dir_okay=False, path_type=Path))
-    @click.option("--format", "fmt", default="junit", show_default=True, type=click.Choice(["junit"]))
-    @click.option("--tester", default="")
-    @click.option("--run-id", default="")
-    @click.option("--run-url", default="")
-    @click.option("--commit", default="")
-    @click.pass_context
-    def ci_evidence_import(ctx: click.Context, paths: tuple[Path, ...], fmt: str,
-                           tester: str, run_id: str, run_url: str, commit: str) -> None:
-        """Import test evidence files into the DHF (persist-first pattern).
-
-        Alternative to ci evidence bundle's consume-at-bundle-time model:
-        use this to persist JUnit results into the DHF repo first,
-        then reference them at bundle time.
-
-        """
-        adapter = _h._make_adapter(ctx)
-        files = [_h._import_results_file(adapter, p, tester, run_id, run_url, commit) for p in paths]
-        summary = {
-            "format": fmt, "files": files,
-            "imported": sum(f["imported"] for f in files),
-            "skipped": sum(f["skipped"] for f in files),
-            "items_updated": sorted({uid for f in files for uid in f["items_updated"]}),
-            "failed_tcs": [tc for f in files for tc in f["failed_tcs"]],
-        }
-        click.echo(json.dumps(summary, default=str))
-        click.echo(f"OK Imported {summary['imported']} result(s), skipped {summary['skipped']}, "
-                   f"updated {len(summary['items_updated'])} item(s).", err=True)
-        if summary["failed_tcs"]:
-            click.echo(f"FAIL Failing TCs: {summary['failed_tcs']}", err=True)
+        """CI evidence commands."""
 
     @ci_evidence.command("bundle")
     @click.option("--out-dir", type=click.Path(file_okay=False, path_type=Path), required=True)
@@ -173,41 +140,6 @@ def register(main):
         click.echo(f"OK Bundle written to {out_dir} (gate {'PASS' if gate_passed else 'FAIL'}).", err=True)
         if not gate_passed and not continue_on_gate_failure:
             raise click.ClickException("DHF acceptance gate failed.")
-
-    @ci.group("artifacts")
-    def ci_artifacts() -> None:
-        """CI artifact generation commands."""
-
-    @ci_artifacts.command("generate")
-    @click.option("--out-dir", type=click.Path(file_okay=False, path_type=Path), required=True)
-    @click.option("--doc-type", "doc_types", multiple=True, metavar="CODE")
-    @click.option("--traceability-type", "traceability_types", multiple=True, metavar="CODE")
-    @click.option("--junit", "junit_files", multiple=True, type=click.Path(exists=True, dir_okay=False, path_type=Path))
-    @click.option("--junit-dir", "junit_dirs", multiple=True, type=click.Path(file_okay=False, path_type=Path))
-    @click.option("--skip-plans", is_flag=True, default=False)
-    @click.pass_context
-    def ci_artifacts_generate(ctx: click.Context, out_dir: Path, doc_types: tuple,
-                              traceability_types: tuple, junit_files: tuple[Path, ...],
-                              junit_dirs: tuple[Path, ...], skip_plans: bool) -> None:
-        """Generate CI-ready DHF artifacts: specs + traceability report.
-
-        Outputs specification documents, plan documents, and a traceability
-        report. The traceability report is written as JSON (machine-readable,
-        consumed by compliance gates) and — when WeasyPrint is installed —
-        also as a PDF matrix document at the same basename.
-
-        """
-        adapter = _h._make_adapter(ctx)
-        core = _h._make_core(ctx)
-        dhf_path = ctx.obj["dhf"]
-        junit_paths = _h._collect_junit_paths(junit_files, junit_dirs)
-        result = _h._run_artifact_generation(adapter, core, dhf_path, out_dir,
-                                              doc_types, traceability_types,
-                                              junit_paths, skip_plans)
-        click.echo(json.dumps(result, default=str))
-        click.echo(f"OK Generated {len(result['specifications'])} specification(s), "
-                   f"{len(result['plans'])} plan(s), "
-                   f"traceability report at {result['traceability']['path']}.", err=True)
 
     @ci.command("dhf-validate")
     @click.option("--dhf", "dhf_path", type=click.Path(file_okay=False, path_type=Path), required=True)
@@ -730,7 +662,7 @@ def register(main):
         from medharness.workflows.cr_state import assert_cr_active  # noqa: PLC0415
         dhf: Path = ctx.obj["dhf"]
         try:
-            assert_cr_active(_h._make_adapter(ctx), cr_id)
+            assert_cr_active(_h._make_adapter(ctx.obj["dhf"]), cr_id)
         except ValueError as exc:
             raise click.ClickException(str(exc)) from exc
         except (FileNotFoundError, OSError):
@@ -745,95 +677,6 @@ def register(main):
             click.echo(f"  FAIL ({error['field']}): {error['issue']}", err=True)
             click.echo(f"    Fix: {error['fix']}", err=True)
         _raise_for_outcome_error(result)
-
-    # ── SOUP manifest sync ──
-
-    @ci.command("soup-sync")
-    @click.option("--manifest", "manifest_paths", multiple=True, required=True,
-                  type=click.Path(exists=True, dir_okay=False, path_type=Path),
-                  metavar="PATH", help="requirements.txt or package.json to parse (repeatable)")
-    @click.option("--write", is_flag=True, default=False,
-                  help="Create/update SOUP items in the DHF (dry-run by default)")
-    @click.option("--author", default="ci", show_default=True, metavar="NAME")
-    @click.option("--cr", "cr_id", default=None, metavar="CR_ID",
-                  help="CR to attribute writes to")
-    @click.pass_context
-    def ci_soup_sync(
-        ctx: click.Context, manifest_paths: tuple[Path, ...],
-        write: bool, author: str, cr_id: str | None,
-    ) -> None:
-        """Sync SOUP items in the DHF with package manifests.
-
-        Compares requirements.txt / package.json entries against existing
-        SOUP items and reports new, version-drifted, and orphaned entries.
-        Pass --write to apply creates/updates to the DHF.
-        """
-        from medharness.services.soup_sync import sync_soup_items  # noqa: PLC0415
-        dhf: Path = ctx.obj["dhf"]
-        result = sync_soup_items(dhf, list(manifest_paths), write=write, author=author, cr_id=cr_id)
-        click.echo(json.dumps(result))
-        create_count = len(result.get("to_create") or [])
-        update_count = len(result.get("to_update") or [])
-        orphan_count = len(result.get("orphans") or [])
-        written = f" ({len(result.get('items_created', []))} created, {len(result.get('items_updated', []))} updated)" if write else " (dry-run)"
-        click.echo(
-            f"OK soup-sync{written}: +{create_count} new, ~{update_count} drift, "
-            f"{orphan_count} orphan(s), {result.get('matched_count', 0)} matched.",
-            err=True,
-        )
-        if result.get("outcome") == "completed_with_errors":
-            for err in result.get("errors") or []:
-                click.echo(f"  FAIL: {err}", err=True)
-            raise click.exceptions.Exit(1)
-
-    # ── Release baseline ──
-
-    @ci.command("release-baseline")
-    @click.option("--version", "version", required=True, metavar="VERSION",
-                  help="Release version string (e.g. 1.0.0)")
-    @click.option("--manifest", "manifest_paths", multiple=True,
-                  type=click.Path(exists=True, dir_okay=False, path_type=Path),
-                  metavar="PATH", help="requirements.txt or package.json for BOM (repeatable)")
-    @click.option("--cr", "cr_ids", multiple=True, metavar="CR_ID",
-                  help="CR to include (repeatable; auto-collected if omitted)")
-    @click.option("--out-dir", type=click.Path(file_okay=False, path_type=Path),
-                  default=Path("."), show_default=True,
-                  help="Directory to write release-baseline.json and software-bom.json")
-    @click.option("--write", is_flag=True, default=False,
-                  help="Create a REL item in the DHF (dry-run by default)")
-    @click.option("--author", default="ci", show_default=True, metavar="NAME")
-    @click.pass_context
-    def ci_release_baseline(
-        ctx: click.Context, version: str, manifest_paths: tuple[Path, ...],
-        cr_ids: tuple[str, ...], out_dir: Path, write: bool, author: str,
-    ) -> None:
-        """Build an IEC 62304 §9 release baseline.
-
-        Verifies all included CRs are in `completed` state, collects a
-        software BOM from DHF SOUP items and manifest packages, and writes
-        release-baseline.json and software-bom.json to --out-dir.
-        Pass --write to also create a REL item in the DHF.
-        CRs are auto-collected (completed, not yet in any REL) when --cr is omitted.
-        """
-        from medharness.services.release_baseline import build_release_baseline  # noqa: PLC0415
-        dhf: Path = ctx.obj["dhf"]
-        result = build_release_baseline(
-            dhf, version, list(manifest_paths), list(cr_ids), out_dir,
-            write=write, author=author,
-        )
-        click.echo(json.dumps(result))
-        if result.get("outcome") == "completed_with_errors":
-            for err in result.get("errors") or []:
-                click.echo(f"  FAIL: {err}", err=True)
-            raise click.exceptions.Exit(1)
-        rel_note = f" → {result['rel_uid']}" if result.get("rel_uid") else ""
-        click.echo(
-            f"OK release-baseline {version}{rel_note}: "
-            f"{len(result.get('cr_ids', []))} CR(s), "
-            f"{result.get('soup_count', 0)} SOUP item(s), "
-            f"{len(result.get('artifacts', []))} artifact(s) written.",
-            err=True,
-        )
 
     @ci.command("develop-cr")
     @click.option("--cr", "cr_id", required=True, metavar="CR_ID")
@@ -859,7 +702,7 @@ def register(main):
         from medharness.workflows.cr_state import assert_cr_active  # noqa: PLC0415
         dhf: Path = ctx.obj["dhf"]
         try:
-            assert_cr_active(_h._make_adapter(ctx), cr_id)
+            assert_cr_active(_h._make_adapter(ctx.obj["dhf"]), cr_id)
         except ValueError as exc:
             raise click.ClickException(str(exc)) from exc
         except (FileNotFoundError, OSError):

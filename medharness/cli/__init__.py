@@ -19,7 +19,7 @@ import medharness._helpers as _h
 def main(ctx: click.Context, dhf: str | None) -> None:
     """MedHarness CLI — AI harness and DHF tooling for medical device software."""
     ctx.ensure_object(dict)
-    ctx.obj["dhf"] = _h._resolve_dhf(dhf)
+    ctx.obj["dhf"] = Path(dhf) if dhf else None
 
 
 from medharness.cli.dhf import register as register_dhf
