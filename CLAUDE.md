@@ -16,14 +16,24 @@ Before proposing or implementing any significant change, read:
   Propose work that aligns with the active themes; call out explicitly if a
   proposed change falls outside scope.
 
+## CLI Boundary
+
+| CLI | Owns |
+|-----|------|
+| `dhfkit` | Item CRUD, validate, doc generate, report, soup-sync, release-baseline |
+| `medharness` | AI CR workflow (generate-dhf, develop-cr), CI gates, scaffolding, approval gating |
+
+`medharness dhf` exposes only AI-harness context commands (`context implementation/for-stage/overview`).
+All DHF data operations use `dhfkit --dhf DHF <command>`.
+
 ## Repo Responsibility
 
 | Directory | Purpose |
 |-----------|---------|
-| `medharness/` | Harness CLI, CI gate logic, scaffolding templates |
-| `dhfkit/` | DHF engine: items, config, traceability, document generation |
-| `dhfkit/templates/` | Starter DHF scaffold — config, specs, plans, 12 sample items |
-| `docs/` | Architecture and roadmap |
+| `medharness/` | Harness CLI, CI gate logic, scaffolding |
+| `dhfkit/` | DHF engine: items, config, traceability, doc generation, SOUP sync, release baseline |
+| `dhfkit/templates/` | Starter DHF scaffold — config, specs, plans, sample items, CI workflow |
+| `docs/` | Architecture, roadmap, adopting guide |
 | `tests/unit/` | Unit tests |
 | `tests/integration/` | Integration tests |
 | `tests/contract/` | Contract tests |
@@ -40,6 +50,11 @@ Before proposing or implementing any significant change, read:
 - Do not add comments to self-explanatory code. Only comment when the WHY is
   non-obvious: a hidden constraint, a workaround, an external API contract, or
   behavior that would surprise a reader unfamiliar with the context.
+
+## Session Start
+
+At the start of every new request, run `git fetch origin && git checkout main && git pull`
+before reading files or making changes, unless the user specifies a different branch.
 
 ## Test Environment
 
