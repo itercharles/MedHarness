@@ -12,9 +12,6 @@ Before proposing or implementing any significant change, read:
 - [`docs/architecture.md`](docs/architecture.md) — package boundaries, CR workflow
   topology, layer responsibilities, and test organisation. Do not violate the
   `dhfkit` → `medharness` import boundary.
-- [`docs/roadmap.md`](docs/roadmap.md) — current project priorities and scope.
-  Propose work that aligns with the active themes; call out explicitly if a
-  proposed change falls outside scope.
 
 ## CLI Boundary
 
@@ -33,7 +30,7 @@ All DHF data operations use `dhfkit --dhf DHF <command>`.
 | `medharness/` | Harness CLI, CI gate logic, scaffolding |
 | `dhfkit/` | DHF engine: items, config, traceability, doc generation, SOUP sync, release baseline |
 | `dhfkit/templates/` | Starter DHF scaffold — config, specs, plans, sample items, CI workflow |
-| `docs/` | Architecture, roadmap, adopting guide |
+| `docs/` | Architecture docs and adopting guide |
 | `tests/unit/` | Unit tests |
 | `tests/integration/` | Integration tests |
 | `tests/contract/` | Contract tests |
