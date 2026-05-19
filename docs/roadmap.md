@@ -154,28 +154,26 @@ focus:
   implementation branches (`ci validate-branch`, `ci validate-code`)
 - stronger spec-to-design coupling, including validation that proposed DHF
   items are actually materialized
-- SOUP manifest sync and IEC 62304 §9 release baseline (`ci soup-sync`,
-  `ci release-baseline`) — addresses Theme 1 (structured outputs) and part
+- SOUP manifest sync and IEC 62304 §9 release baseline (`dhfkit soup-sync`,
+  `dhfkit release-baseline`) — addresses Theme 1 (structured outputs) and part
   of Theme 4 (regulatory workflow completeness)
 - human-readable traceability report and AI context bundles
-  (`dhf report`, `dhf context implementation`)
+  (`dhfkit report`, `dhf context implementation`)
+- risk management as a first-class workflow:
+  - `MODULE` as a first-class item type with SOFTWARE DESIGN DOCUMENT template
+  - risk chain in `dhfkit report` — RISK → RCM → SYS linkage rendered in the
+    traceability report
+  - risk impact in `ci validate-branch` — surfaces RISK items affected by a
+    branch change via RCM `implements` traversal
+  - risk context injected into `generate-dhf` prompt — LLM sees full RISK/RCM
+    landscape when proposing new requirements; avoids duplicate risks and
+    correctly links RCMs
+  - RISK/RCM included in `proposed_new_items` and CR closure gate — risk
+    controls are part of the bill of materials enforced at merge
+  - verification completeness gate in `develop-cr` — checks that all
+    requirements have test coverage before implementation is considered done
 
-These completed slices correspond to Themes 1 and 2 and the earlier Phase 1–2 work.
-
-### Phase 3: Risk Management as a First-Class Workflow
-
-With the core CR loop stronger, the next major gap is deeper risk integration.
-
-Priority areas:
-
-- identifying which risk items are affected during CR analysis
-- adding stronger CI checks for risk-to-requirement and risk-to-verification
-  coverage
-- validating the approach against real WebTPS risk management needs
-
-This phase maps most directly to:
-
-- stronger risk and verification flows
+These completed slices correspond to Themes 1, 2, and 4.
 
 ### Phase 4: Adoption and Ecosystem
 
