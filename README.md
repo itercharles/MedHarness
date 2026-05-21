@@ -110,7 +110,7 @@ It writes DHF items via the CLI, validates schema and traceability inline, and f
 
 **Phase 2 — Implementation (`develop-cr`)**
 
-After the design PR is approved, Claude reads `implementation_notes` and the linked DHF items, implements the code, annotates tests with `@links:` requirement IDs, runs `medharness ci test-coverage` to verify every requirement has a passing test, and reconciles any deviations back onto `implementation_notes` and the SWDD items.
+After the design PR is approved, Claude reads `implementation_notes` and the linked DHF items, implements the code, annotates tests with `@links:` requirement IDs and `@testing:Tn` test-point tags, runs `medharness ci test-coverage` and `medharness ci test-points` to verify every requirement and every numbered test point has a passing test, and reconciles any deviations back onto `implementation_notes` and the SWDD items.
 
 At each phase, MedHarness pre-computes DHF context — item lists, traceability graph, coverage gaps — and injects it into Claude's prompt so the agent reasons about your actual DHF rather than guessing. After Claude runs, a deterministic validator checks schema, traceability links, and test annotations, and self-corrects if it can.
 
@@ -185,6 +185,16 @@ medharness ci test-coverage --dhf DHF --junit-dir test-results
 ```
 
 Reads JUnit XML test results and checks that every verifiable requirement has at least one linked passing test. Tests link to DHF items via `@links:<ITEM_ID>` annotations in their source, surfaced through JUnit properties. Exits non-zero when gaps exist.
+
+### Test-point coverage (TDD gate)
+
+```bash
+medharness ci test-points --dhf DHF --junit-dir test-results
+```
+
+Enforces test-driven development at the DHF level. Requirements carry numbered test points in their `testing` field (`T1: given X, when Y, then Z`). Tests declare which points they cover via `@pytest.mark.dhf_testing("T1", "T2")` (Python) or an `@testing:T1` tag embedded in the test name (JS/any). The gate checks every declared point in every linked requirement has at least one covering test — exits non-zero on any gap.
+
+This closes the loop between design intent and test code: test points are written at design time, before implementation, making TDD a natural part of the DHF workflow rather than a retrofit.
 
 ### Branch and code validation
 
@@ -296,6 +306,7 @@ dhfkit --dhf DHF release-baseline --version 1.0.0 --out-dir artifacts/release
 # ── CI gates ─────────────────────────────────────────────────────────────────
 medharness ci dhf-validate --dhf DHF
 medharness ci test-coverage --dhf DHF --junit-dir test-results
+medharness ci test-points --dhf DHF --junit-dir test-results
 medharness ci evidence bundle --dhf DHF --out-dir artifacts
 medharness --dhf DHF ci validate-branch --cr CR-034
 medharness --dhf DHF ci validate-code --cr CR-034

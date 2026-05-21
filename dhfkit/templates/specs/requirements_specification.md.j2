@@ -53,6 +53,12 @@ This specification covers all {{ doc_type_name }}s defined in the MedHarness sys
 {% endfor %}
 {% endif %}
 
+{% if item.testing %}
+#### Testing
+
+{{ item.testing }}
+{% endif %}
+
 {% if item.verification_status %}
 #### Verification Status
 
