@@ -20,7 +20,7 @@ from medharness._helpers import (
     _run_acceptance_gate,
     _run_artifact_generation,
 )
-from dhfkit.junit_parser import JUNIT_LINKS, JUNIT_TESTING
+from dhfkit.junit_parser import JUNIT_LINKS, JUNIT_TESTING, LINKS_TAG_RE, TESTING_TAG_RE
 from dhfkit.testing_points import parse_testing_points
 
 
@@ -174,6 +174,8 @@ def ci_test_coverage_gate(
                                 v.strip() for v in value.split(",") if v.strip()
                             )
                         break
+            # Also pick up @links:REQ-ID embedded in the test name (JS/non-pytest path)
+            covered_reqs.update(LINKS_TAG_RE.findall(tc.get("name", "")))
 
     adapter = LocalDHFAdapter(dhf_path)
     all_items = adapter.list_items()
@@ -456,7 +458,6 @@ def validate_verification_completeness(
     import xml.etree.ElementTree as ET
 
     from dhfkit.local_adapter import LocalDHFAdapter
-    from dhfkit.junit_parser import JUNIT_LINKS
 
     adapter = LocalDHFAdapter(dhf_path)
     all_items = adapter.list_items()
@@ -713,10 +714,7 @@ def cr_closure_gate(
 # ci_test_points_gate — backs ci test-points
 # ---------------------------------------------------------------------------
 
-# Matches @links:SRS-011 embedded in test names (JS tests)
-_LINKS_TAG_RE = re.compile(r"@links:([\w-]+)")
-# Matches @testing:T1 embedded in test names (JS tests)
-_TESTING_TAG_IN_NAME_RE = re.compile(r"@testing:(T\d+)")
+# LINKS_TAG_RE and TESTING_TAG_RE imported from dhfkit.junit_parser
 
 
 def ci_test_points_gate(
@@ -784,8 +782,8 @@ def ci_test_points_gate(
             testing_from_props = [pt.strip() for pt in props.get(JUNIT_TESTING, "").split(",") if pt.strip()]
 
             # Extract @links and @testing tags from test name (JS / non-pytest path)
-            links_from_name = _LINKS_TAG_RE.findall(name)
-            testing_from_name = _TESTING_TAG_IN_NAME_RE.findall(name)
+            links_from_name = LINKS_TAG_RE.findall(name)
+            testing_from_name = TESTING_TAG_RE.findall(name)
 
             all_links = list(dict.fromkeys(links_from_props + links_from_name))
             all_points = list(dict.fromkeys(testing_from_props + testing_from_name))
@@ -806,6 +804,14 @@ def ci_test_points_gate(
     for rt in default_types:
         dt = config.get_doc_type(rt)
         if not dt:
+            results.append({
+                "req_id": rt,
+                "total": 0,
+                "covered": 0,
+                "uncovered": [],
+                "passed": True,
+                "warning": "Unknown requirement type",
+            })
             continue
         prefix = dt.prefix
         req_items = [it for it in all_items if it["id"].startswith(prefix)]

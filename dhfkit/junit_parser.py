@@ -35,8 +35,14 @@ _TC_ID_RE = re.compile(
     re.IGNORECASE,
 )
 
+# Matches @links:SRS-011 embedded in test names (JS/non-pytest tests)
+LINKS_TAG_RE = re.compile(r"@links:([\w-]+)")
+
 # Matches @testing:T1 or @testing:T42 embedded in test names (JS/non-pytest tests)
-_TESTING_TAG_RE = re.compile(r"@testing:(T\d+)")
+TESTING_TAG_RE = re.compile(r"@testing:(T\d+)")
+
+# Keep private aliases so existing internal callers still work
+_TESTING_TAG_RE = TESTING_TAG_RE
 
 
 @dataclass

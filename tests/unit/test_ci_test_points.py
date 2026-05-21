@@ -83,9 +83,7 @@ def test_all_points_covered_passes(tmp_path: Path) -> None:
     ])
     result = ci_test_points_gate(dhf_path=dhf, junit_paths=[junit])
     assert result["passed"] is True
-    assert len(result["results"]) == 1
-    row = result["results"][0]
-    assert row["req_id"] == "SRS-001"
+    row = next(r for r in result["results"] if r["req_id"] == "SRS-001")
     assert row["covered"] == 2
     assert row["total"] == 2
     assert row["uncovered"] == []
@@ -176,6 +174,17 @@ def test_no_junit_files_returns_error(tmp_path: Path) -> None:
     result = ci_test_points_gate(dhf_path=dhf, junit_paths=[])
     assert result["passed"] is False
     assert "error" in result
+
+
+def test_unknown_req_type_produces_warning_entry(tmp_path: Path) -> None:
+    """An unrecognised --req-type should produce a warning entry, not silently pass."""
+    dhf = _make_dhf(tmp_path, [])
+    junit = _make_junit(tmp_path, [])
+    result = ci_test_points_gate(dhf_path=dhf, junit_paths=[junit], req_types=("TYPO",))
+    warning_rows = [r for r in result["results"] if r.get("warning")]
+    assert len(warning_rows) == 1
+    assert warning_rows[0]["req_id"] == "TYPO"
+    assert warning_rows[0]["passed"] is True
 
 
 def test_multiple_requirements(tmp_path: Path) -> None:
