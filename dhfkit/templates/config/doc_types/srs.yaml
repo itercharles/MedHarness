@@ -19,6 +19,9 @@ properties:
 - name: performance
   format: long_text
   label: Performance
+- name: testing
+  format: long_text
+  label: Testing
 - name: verification_criteria
   format: long_text
   label: Verification Criteria

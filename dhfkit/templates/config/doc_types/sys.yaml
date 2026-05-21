@@ -52,6 +52,9 @@ properties:
   label: Derives From
   target_types:
   - CRS
+- name: testing
+  format: long_text
+  label: Testing
 - name: verification_criteria
   format: long_text
   label: Verification Criteria
