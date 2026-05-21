@@ -23,6 +23,7 @@ from typing import List, Optional
 # Stable JUnit XML property namespace — downstream reporters should use these
 JUNIT_ID = "medharness.id"
 JUNIT_LINKS = "medharness.links"
+JUNIT_TESTING = "medharness.testing"
 JUNIT_TITLE = "medharness.title"
 JUNIT_REVIEWER = "medharness.reviewer"
 JUNIT_REVIEW_DATE = "medharness.review_date"
@@ -34,6 +35,9 @@ _TC_ID_RE = re.compile(
     re.IGNORECASE,
 )
 
+# Matches @testing:T1 or @testing:T42 embedded in test names (JS/non-pytest tests)
+_TESTING_TAG_RE = re.compile(r"@testing:(T\d+)")
+
 
 @dataclass
 class ExecutionResult:
@@ -43,6 +47,7 @@ class ExecutionResult:
     testing_status: str   # PASS / FAIL / SKIP
     name: str             # Raw test name from XML
     links: List[str] = field(default_factory=list)  # from medharness.links property
+    testing_points: List[str] = field(default_factory=list)  # from medharness.testing property
     title: str = ""       # from medharness.title property (optional)
     reviewer: str = ""    # from medharness.reviewer property (optional)
     review_date: str = ""  # from medharness.review_date property (optional)
@@ -72,6 +77,12 @@ def parse_junit_xml(path: Path) -> List[ExecutionResult]:
 
         links_raw = props.get(JUNIT_LINKS, "")
         links = [lnk.strip() for lnk in links_raw.split(",") if lnk.strip()] if links_raw else []
+
+        testing_raw = props.get(JUNIT_TESTING, "")
+        testing_points = [pt.strip() for pt in testing_raw.split(",") if pt.strip()] if testing_raw else []
+        # Also extract @testing:T\d+ tags from the test name (JS tests that don't use pytest markers)
+        testing_points = list(dict.fromkeys(testing_points + _TESTING_TAG_RE.findall(name)))
+
         title = props.get(JUNIT_TITLE, "")
         reviewer = props.get(JUNIT_REVIEWER, "")
         review_date = props.get(JUNIT_REVIEW_DATE, "")
@@ -99,6 +110,7 @@ def parse_junit_xml(path: Path) -> List[ExecutionResult]:
                 testing_status=status,
                 name=name,
                 links=links,
+                testing_points=testing_points,
                 title=title,
                 reviewer=reviewer,
                 review_date=review_date,

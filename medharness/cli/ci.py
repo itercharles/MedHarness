@@ -18,7 +18,7 @@ import re
 from pathlib import Path
 import click
 import medharness._helpers as _h
-from medharness.services.ci import ci_structural_gate, ci_test_coverage_gate
+from medharness.services.ci import ci_structural_gate, ci_test_coverage_gate, ci_test_points_gate
 from medharness.services.github_event import parse_github_event, plan_github_event
 from medharness.services.github_session import get_session, put_session
 _ITEM_ID_RE = re.compile(r"^([A-Z]+-\d+)")
@@ -239,6 +239,46 @@ def register(main):
                                f" --data '{{\"title\": \"Test {uid}\", \"dhf_links\": [\"{uid}\"]}}'", err=True)
         if not result["passed"]:
             raise click.ClickException("Test coverage gaps found.")
+
+    @ci.command("test-points")
+    @click.option("--dhf", "dhf_path", type=click.Path(file_okay=False, path_type=Path), required=True)
+    @click.option("--junit-dir", "junit_dirs", multiple=True, type=click.Path(file_okay=False, path_type=Path))
+    @click.option("--junit", "junit_files", multiple=True, type=click.Path(exists=True, dir_okay=False, path_type=Path))
+    @click.option("--req-type", "req_types", multiple=True, metavar="TYPE")
+    @click.pass_context
+    def ci_test_points(ctx: click.Context, dhf_path: Path,
+                       junit_dirs: tuple[Path, ...], junit_files: tuple[Path, ...],
+                       req_types: tuple[str, ...]) -> None:
+        """Check that every numbered test point on each requirement is covered.
+
+        Reads the ``testing`` field on CRS/SYS/SRS items (T1: …, T2: …, …) and
+        verifies each point is covered by at least one passing test that declares
+        both the requirement ID (medharness.links) and the point ID
+        (medharness.testing) in JUnit XML.
+
+        Takes its own --dhf PATH option because it runs from the product repo
+        where the DHF is a subdirectory.
+        """
+        junit_paths = _h._collect_junit_paths(junit_files, junit_dirs)
+        result = ci_test_points_gate(dhf_path=dhf_path, junit_paths=junit_paths, req_types=req_types)
+        if result.get("error"):
+            raise click.ClickException(result["error"])
+        click.echo(json.dumps(result))
+        for row in result["results"]:
+            if row["passed"]:
+                click.echo(
+                    f"PASS [test-points] {row['req_id']}: {row['covered']}/{row['total']} covered",
+                    err=True,
+                )
+            else:
+                click.echo(
+                    f"FAIL [test-points] {row['req_id']}: {row['covered']}/{row['total']} covered",
+                    err=True,
+                )
+                for pt in row.get("uncovered", []):
+                    click.echo(f"      ↳ uncovered: {pt}", err=True)
+        if not result["passed"]:
+            raise click.ClickException("Test-point coverage gaps found.")
 
     @ci.command("validate-verification")
     @click.option("--dhf", "dhf_path", type=click.Path(file_okay=False, path_type=Path), required=True)

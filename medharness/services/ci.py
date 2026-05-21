@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 from pathlib import Path
@@ -19,7 +20,8 @@ from medharness._helpers import (
     _run_acceptance_gate,
     _run_artifact_generation,
 )
-from dhfkit.junit_parser import JUNIT_LINKS
+from dhfkit.junit_parser import JUNIT_LINKS, JUNIT_TESTING
+from dhfkit.testing_points import parse_testing_points
 
 
 # ---------------------------------------------------------------------------
@@ -705,3 +707,127 @@ def cr_closure_gate(
         "manual_review_required": verify_result.get("manual_review_required", []),
         "summary": summary,
     }
+
+
+# ---------------------------------------------------------------------------
+# ci_test_points_gate — backs ci test-points
+# ---------------------------------------------------------------------------
+
+# Matches @links:SRS-011 embedded in test names (JS tests)
+_LINKS_TAG_RE = re.compile(r"@links:([\w-]+)")
+# Matches @testing:T1 embedded in test names (JS tests)
+_TESTING_TAG_IN_NAME_RE = re.compile(r"@testing:(T\d+)")
+
+
+def ci_test_points_gate(
+    dhf_path: Path,
+    junit_paths: list[Path],
+    req_types: tuple[str, ...] = (),
+) -> dict[str, Any]:
+    """Check that every numbered test point on each requirement is covered by a passing test.
+
+    For each CRS/SYS/SRS item that has a non-empty ``testing`` field, parses the
+    numbered test points (T1, T2, …) and checks whether each one is covered by at
+    least one passing test case in the supplied JUnit evidence.
+
+    A test case covers ``REQ-ID.Tn`` when it is passing AND either:
+    - carries ``medharness.links`` containing ``REQ-ID`` AND
+      ``medharness.testing`` containing ``Tn``; or
+    - its test name contains both ``@links:REQ-ID`` and ``@testing:Tn``.
+
+    Returns:
+        {
+          "passed": bool,
+          "results": [
+            {
+              "req_id": str,
+              "total": int,
+              "covered": int,
+              "uncovered": list[str],
+              "passed": bool,
+            },
+            ...
+          ]
+        }
+    """
+    from dhfkit.local_adapter import LocalDHFAdapter
+
+    if not junit_paths:
+        return {
+            "passed": False,
+            "error": "No JUnit files found.",
+            "results": [],
+        }
+
+    # Collect (req_id, point_id) pairs from passing tests across all JUnit files.
+    covered_pairs: set[tuple[str, str]] = set()
+    for jp in junit_paths:
+        if not jp.is_file():
+            continue
+        tree = ET.parse(jp)
+        for tc in tree.iter("testcase"):
+            if list(tc.iter("failure")) or list(tc.iter("error")) or list(tc.iter("skipped")):
+                continue
+
+            name = tc.get("name", "")
+
+            # Extract from JUnit properties (pytest path)
+            props: dict[str, str] = {}
+            properties_el = tc.find("properties")
+            if properties_el is not None:
+                for prop in properties_el.findall("property"):
+                    pname = prop.get("name", "")
+                    if pname:
+                        props[pname] = prop.get("value", "")
+
+            links_from_props = [lnk.strip() for lnk in props.get(JUNIT_LINKS, "").split(",") if lnk.strip()]
+            testing_from_props = [pt.strip() for pt in props.get(JUNIT_TESTING, "").split(",") if pt.strip()]
+
+            # Extract @links and @testing tags from test name (JS / non-pytest path)
+            links_from_name = _LINKS_TAG_RE.findall(name)
+            testing_from_name = _TESTING_TAG_IN_NAME_RE.findall(name)
+
+            all_links = list(dict.fromkeys(links_from_props + links_from_name))
+            all_points = list(dict.fromkeys(testing_from_props + testing_from_name))
+
+            for req_id in all_links:
+                for point_id in all_points:
+                    covered_pairs.add((req_id, point_id))
+
+    # Load DHF items and check coverage per item.
+    adapter = LocalDHFAdapter(dhf_path)
+    all_items = adapter.list_items()
+    config = adapter._config
+
+    default_types = req_types if req_types else ("SRS", "SYS", "CRS")
+    passed = True
+    results: list[dict] = []
+
+    for rt in default_types:
+        dt = config.get_doc_type(rt)
+        if not dt:
+            continue
+        prefix = dt.prefix
+        req_items = [it for it in all_items if it["id"].startswith(prefix)]
+
+        for item in req_items:
+            req_id = item["id"]
+            testing_text = item.get("testing") or ""
+            points = parse_testing_points(testing_text)
+            if not points:
+                continue
+
+            uncovered = [pt for pt in points if (req_id, pt) not in covered_pairs]
+            covered_count = len(points) - len(uncovered)
+            item_passed = not uncovered
+            if not item_passed:
+                passed = False
+            results.append({
+                "req_id": req_id,
+                "total": len(points),
+                "covered": covered_count,
+                "uncovered": uncovered,
+                "passed": item_passed,
+            })
+
+    return {"passed": passed, "results": results}
