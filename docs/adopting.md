@@ -38,6 +38,46 @@ Traceability links between items are typed fields on child items (`derives_from`
 
 `dhfkit` is the DHF engine inside MedHarness — it ships as part of the same package (`pip install medharness`), not as a separate PyPI distribution. If your team has its own orchestration and only needs the engine layer — item storage, traceability graphs, lifecycle transitions, document generation — you can import from `dhfkit` directly and ignore the `medharness` CLI harness and AI workflow entirely. It has no dependency on the CI gates or prompt assembly layer. The `LocalDHFAdapter` gives programmatic access to items; the document generation pipeline is available separately. This is the right entry point for teams integrating DHF tooling into an existing CI system rather than adopting the full CR workflow.
 
+## Test-driven development with test points
+
+MedHarness supports TDD at the DHF level. The idea is that test intent is expressed in the design, not retrofitted after code is written.
+
+Each requirement (CRS, SYS, SRS) has a `testing` field where you write numbered test points at design time:
+
+```yaml
+id: SRS-012
+title: "Password must be at least 12 characters"
+content: "The system shall reject passwords shorter than 12 characters."
+testing: |
+  T1: Given a password of 11 characters, registration returns a validation error.
+  T2: Given a password of exactly 12 characters, registration succeeds.
+  T3: Given a password of 13+ characters, registration succeeds.
+```
+
+During implementation, tests declare which points they cover:
+
+```python
+# Python — pytest marker
+@pytest.mark.dhf_links("SRS-012")
+@pytest.mark.dhf_testing("T1", "T2", "T3")
+def test_password_length_validation():
+    ...
+```
+
+```javascript
+// JS/Jest — embedded tag in the test name
+test("rejects short password @links:SRS-012 @testing:T1", () => { ... });
+test("accepts 12-char password @links:SRS-012 @testing:T2", () => { ... });
+```
+
+When tests run with `--junit-xml`, these annotations are written as JUnit XML properties (`medharness.links`, `medharness.testing`). The CI gate checks them:
+
+```bash
+medharness ci test-points --dhf DHF --junit-dir test-results
+```
+
+This exits non-zero if any declared test point has no covering test, making gaps in test coverage visible before merge. Combined with `ci test-coverage` (requirement-level) and `ci dhf-validate` (schema and links), the three gates together enforce that every requirement is linked, every point is defined, and every point is tested.
+
 ## Incremental adoption
 
-Nothing requires adopting everything at once. `medharness ci dhf-validate` is useful as a standalone CI gate well before any AI workflow is wired up — it catches broken traceability links and schema errors on every PR. Add `ci test-coverage` once you have test annotations. The AI phases (`generate-dhf`, `develop-cr`) can come later, or not at all if your team prefers manual design with automated validation. Each layer adds value independently.
+Nothing requires adopting everything at once. `medharness ci dhf-validate` is useful as a standalone CI gate well before any AI workflow is wired up — it catches broken traceability links and schema errors on every PR. Add `ci test-coverage` once you have test annotations. Add `ci test-points` once requirements include numbered testing fields. The AI phases (`generate-dhf`, `develop-cr`) can come later, or not at all if your team prefers manual design with automated validation. Each layer adds value independently.
