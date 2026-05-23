@@ -32,11 +32,11 @@ Artifacts from common sources map directly to item types. A requirements spreads
 
 What you do not need to migrate: test code (it stays in pytest, linked to DHF items via `medharness.links` annotations in JUnit output), generated documents (they are produced from items on demand), and CI scripts (use the scaffolded workflow from `init`). Migration is writing YAML files. The schema is self-documenting — look at the sample items from `init` to see every field and its expected values.
 
-Traceability links between items are typed fields on child items (`derives_from`, `satisfies`, `implements`, `mitigates`, etc.). Run `medharness ci dhf-validate --dhf DHF` at any point to check link integrity. The validator tells you exactly which links are broken.
+Traceability links between items are typed fields on child items (`derives_from`, `satisfies`, `implements`, `mitigates`, etc.). Run `medharness --dhf DHF verify dhf` at any point to check link integrity. The validator tells you exactly which links are broken.
 
 ## Using dhfkit standalone
 
-`dhfkit` is the DHF engine inside MedHarness — it ships as part of the same package (`pip install medharness`), not as a separate PyPI distribution. If your team has its own orchestration and only needs the engine layer — item storage, traceability graphs, lifecycle transitions, document generation — you can import from `dhfkit` directly and ignore the `medharness` CLI harness and AI workflow entirely. It has no dependency on the CI gates or prompt assembly layer. The `LocalDHFAdapter` gives programmatic access to items; the document generation pipeline is available separately. This is the right entry point for teams integrating DHF tooling into an existing CI system rather than adopting the full CR workflow.
+`dhfkit` is the DHF engine inside MedHarness — it ships as part of the same package (`pip install medharness`), not as a separate PyPI distribution. If your team has its own orchestration and only needs the engine layer — item storage, traceability graphs, lifecycle transitions, document generation — you can import from `dhfkit` directly and ignore the `medharness` CLI harness and AI workflow entirely. It has no dependency on the verification commands or prompt assembly layer. The `LocalDHFAdapter` gives programmatic access to items; the document generation pipeline is available separately. This is the right entry point for teams integrating DHF tooling into an existing CI system rather than adopting the full CR workflow.
 
 ## Test-driven development with test points
 
@@ -73,11 +73,11 @@ test("accepts 12-char password @links:SRS-012 @testing:T2", () => { ... });
 When tests run with `--junit-xml`, these annotations are written as JUnit XML properties (`medharness.links`, `medharness.testing`). The CI gate checks them:
 
 ```bash
-medharness ci test-points --dhf DHF --junit-dir test-results
+medharness --dhf DHF verify tests --junit-dir test-results
 ```
 
-This exits non-zero if any declared test point has no covering test, making gaps in test coverage visible before merge. Combined with `ci test-coverage` (requirement-level) and `ci dhf-validate` (schema and links), the three gates together enforce that every requirement is linked, every point is defined, and every point is tested.
+This exits non-zero if a requirement lacks coverage or if any declared test point has no covering test, making gaps in test coverage visible before merge. Combined with `verify dhf` (schema and links), it enforces that requirements are linked and verified before merge.
 
 ## Incremental adoption
 
-Nothing requires adopting everything at once. `medharness ci dhf-validate` is useful as a standalone CI gate well before any AI workflow is wired up — it catches broken traceability links and schema errors on every PR. Add `ci test-coverage` once you have test annotations. Add `ci test-points` once requirements include numbered testing fields. The AI phases (`generate-dhf`, `develop-cr`) can come later, or not at all if your team prefers manual design with automated validation. Each layer adds value independently.
+Nothing requires adopting everything at once. `medharness --dhf DHF verify dhf` is useful as a standalone CI gate well before any AI workflow is wired up — it catches broken traceability links and schema errors on every PR. Add `verify tests` once you have test annotations. If requirements include numbered testing fields, the same gate also enforces those test points. The AI phases (`change plan`, `change implement`) can come later, or not at all if your team prefers manual design with automated validation. Each layer adds value independently.

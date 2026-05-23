@@ -31,29 +31,29 @@ JUNIT_XML = """<?xml version="1.0" encoding="UTF-8"?>
 
 
 class TestCIDhfValidate:
-    """Functional tests for ci dhf-validate."""
+    """Functional tests for verify dhf."""
 
     def test_dhf_validate_passes(self, scaffolded_dhf):
-        """ci dhf-validate passes on a clean scaffolded DHF."""
+        """verify dhf passes on a clean scaffolded DHF."""
         r = _run(
-            "medharness", "ci", "dhf-validate",
+            "medharness", "verify", "dhf",
             "--dhf", str(scaffolded_dhf / "DHF"),
         )
         assert r.returncode == 0, r.stderr
 
     def test_dhf_validate_schema_only(self, scaffolded_dhf):
-        """ci dhf-validate --no-run-traceability passes on a clean DHF."""
+        """verify dhf --no-run-traceability passes on a clean DHF."""
         r = _run(
-            "medharness", "ci", "dhf-validate",
+            "medharness", "verify", "dhf",
             "--dhf", str(scaffolded_dhf / "DHF"),
             "--no-run-traceability",
         )
         assert r.returncode == 0, r.stderr
 
     def test_dhf_validate_with_coverage_pairs(self, scaffolded_dhf):
-        """ci dhf-validate with explicit coverage pairs."""
+        """verify dhf with explicit coverage pairs."""
         r = _run(
-            "medharness", "ci", "dhf-validate",
+            "medharness", "verify", "dhf",
             "--dhf", str(scaffolded_dhf / "DHF"),
             "--coverage-pair", "UC:CRS",
         )
@@ -61,22 +61,22 @@ class TestCIDhfValidate:
 
 
 class TestCITestCoverage:
-    """Functional tests for ci test-coverage."""
+    """Functional tests for verify tests."""
 
     def test_test_coverage_no_junit(self, scaffolded_dhf, tmp_path):
-        """ci test-coverage fails when no JUnit files provided."""
+        """verify tests fails when no JUnit files provided."""
         r = _run(
-            "medharness", "ci", "test-coverage",
+            "medharness", "verify", "tests",
             "--dhf", str(scaffolded_dhf / "DHF"),
         )
         assert r.returncode != 0
 
     def test_test_coverage_with_junit(self, scaffolded_dhf, tmp_path):
-        """ci test-coverage runs with JUnit evidence."""
+        """verify tests runs with JUnit evidence."""
         junit_file = tmp_path / "results.xml"
         junit_file.write_text(JUNIT_XML)
         r = _run(
-            "medharness", "ci", "test-coverage",
+            "medharness", "verify", "tests",
             "--dhf", str(scaffolded_dhf / "DHF"),
             "--junit", str(junit_file),
         )
@@ -84,15 +84,15 @@ class TestCITestCoverage:
 
 
 class TestCIEvidence:
-    """Functional tests for ci evidence bundle."""
+    """Functional tests for evidence bundle."""
 
     def test_evidence_bundle(self, scaffolded_dhf, tmp_path):
-        """ci evidence bundle produces an out-dir (consume-at-bundle model)."""
+        """evidence bundle produces an out-dir (consume-at-bundle model)."""
         out_dir = tmp_path / "bundle"
         dhf_root = scaffolded_dhf / "DHF"
         r = _run(
             "medharness", "--dhf", str(dhf_root),
-            "ci", "evidence", "bundle",
+            "evidence", "bundle",
             "--out-dir", str(out_dir),
         )
         if r.returncode != 0 and ("cannot load library" in r.stderr or "weasyprint" in r.stderr.lower() or "no module" in r.stderr.lower()):

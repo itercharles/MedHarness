@@ -1,8 +1,8 @@
 """Golden integration tests for CI pipeline gate commands.
 
 Covers the validation surface that does NOT require LLM calls:
-  - ci dhf-validate (ci_structural_gate): schema, traceability, structured reporting
-  - ci validate-branch: DHF change detection, spec item existence
+  - verify dhf (ci_structural_gate): schema, traceability, structured reporting
+  - verify branch: DHF change detection, spec item existence
   - validate_generate_dhf: verification_criteria, V-model cascade completeness
   - ItemType display_name / code contract
 
@@ -48,12 +48,12 @@ def dhf():
 
 @pytest.fixture(scope="module")
 def dhf_validate_result(dhf):
-    """Run ci dhf-validate once and share the parsed result across the test class."""
+    """Run verify dhf once and share the parsed result across the test class."""
     r = subprocess.run(
-        [sys.executable, "-m", "medharness", "ci", "dhf-validate", "--dhf", str(dhf / "DHF")],
+        [sys.executable, "-m", "medharness", "verify", "dhf", "--dhf", str(dhf / "DHF")],
         capture_output=True, text=True, cwd=REPO_ROOT,
     )
-    assert r.returncode in (0, 1), f"ci dhf-validate crashed:\n{r.stderr}"
+    assert r.returncode in (0, 1), f"verify dhf crashed:\n{r.stderr}"
     return json.loads(r.stdout)
 
 
@@ -65,11 +65,11 @@ def _medharness(*args: str) -> subprocess.CompletedProcess:
 
 
 # ---------------------------------------------------------------------------
-# ci dhf-validate — ci_structural_gate structured output
+# verify dhf — ci_structural_gate structured output
 # ---------------------------------------------------------------------------
 
 class TestCiStructuralGate:
-    """Verify that ci dhf-validate returns the expected structured fields."""
+    """Verify that verify dhf returns the expected structured fields."""
 
     def test_schema_passes_on_clean_dhf(self, dhf_validate_result):
         result = dhf_validate_result
@@ -86,7 +86,7 @@ class TestCiStructuralGate:
 
     def test_structured_coverage_gaps_key_present(self, dhf_validate_result):
         assert "coverage_gaps" in dhf_validate_result["results"], (
-            "ci dhf-validate must return structured coverage_gaps list"
+            "verify dhf must return structured coverage_gaps list"
         )
         assert isinstance(dhf_validate_result["results"]["coverage_gaps"], list)
 
@@ -113,7 +113,7 @@ class TestCiStructuralGate:
         """coverage_gaps, orphans, verification_gaps must be present even when
         traceability is disabled, so machine consumers can always rely on them."""
         r = _medharness(
-            "ci", "dhf-validate", "--dhf", str(dhf / "DHF"),
+            "verify", "dhf", "--dhf", str(dhf / "DHF"),
             "--no-run-traceability",
         )
         assert r.returncode in (0, 1), f"crashed:\n{r.stderr}"
@@ -124,7 +124,7 @@ class TestCiStructuralGate:
 
 
 # ---------------------------------------------------------------------------
-# ci validate-branch — change detection and spec item existence
+# verify branch — change detection and spec item existence
 # ---------------------------------------------------------------------------
 
 class TestValidateBranch:
@@ -134,7 +134,7 @@ class TestValidateBranch:
         """A branch with no commits since HEAD has no DHF changes."""
         r = _medharness(
             "--dhf", str(dhf / "DHF"),
-            "ci", "validate-branch",
+            "verify", "branch",
             "--cr", "CR-001",
             "--since-ref", "HEAD",
         )
@@ -148,7 +148,7 @@ class TestValidateBranch:
     def test_result_includes_dhf_item_changes(self, dhf):
         r = _medharness(
             "--dhf", str(dhf / "DHF"),
-            "ci", "validate-branch",
+            "verify", "branch",
             "--cr", "CR-001",
             "--since-ref", "HEAD",
         )
@@ -160,7 +160,7 @@ class TestValidateBranch:
     def test_result_includes_cr_id(self, dhf):
         r = _medharness(
             "--dhf", str(dhf / "DHF"),
-            "ci", "validate-branch",
+            "verify", "branch",
             "--cr", "CR-001",
             "--since-ref", "HEAD",
         )
@@ -170,7 +170,7 @@ class TestValidateBranch:
     def test_since_ref_is_echoed(self, dhf):
         r = _medharness(
             "--dhf", str(dhf / "DHF"),
-            "ci", "validate-branch",
+            "verify", "branch",
             "--cr", "CR-001",
             "--since-ref", "HEAD",
         )

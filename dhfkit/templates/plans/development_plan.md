@@ -201,7 +201,7 @@ before opening or updating a PR. At minimum:
 
 ```bash
 pytest tests/ -q --junitxml=test-results/results.xml
-medharness --dhf DHF ci test-coverage --junit-dir test-results
+medharness --dhf DHF verify tests --junit-dir test-results
 dhfkit --dhf DHF validate traceability
 ```
 
@@ -215,7 +215,7 @@ Product-side CI is expected to:
 
 - execute the relevant automated test suites
 - persist JUnit XML artifacts
-- run `ci test-coverage`
+- run `verify tests`
 - generate an evidence bundle on merge to `main`
 
 DHF-side CI is expected to:
@@ -246,8 +246,8 @@ generation, not blanket capture of every engineering action.
 ### 6.1 Product CI
 
 1. **TESTING** — SYS and CRS test suites run and publish JUnit evidence
-2. **ACCEPTANCE GATE** — `ci test-coverage` checks requirement-to-test coverage
-3. **EVIDENCE** (main only) — `ci evidence bundle` produces runtime audit artifacts
+2. **ACCEPTANCE GATE** — `verify tests` checks requirement-to-test coverage
+3. **EVIDENCE** (main only) — `evidence bundle` produces runtime audit artifacts
 4. **AUDIT** — OSS build hygiene and workflow integrity checks run on PRs
 
 ### 6.2 DHF Structural CI
@@ -261,8 +261,8 @@ coherent as implementation evolves.
 Scaffolded product repos get:
 
 - test execution with JUnit artifact upload
-- `ci test-coverage`
-- `ci evidence bundle` on merge to `main`
+- `verify tests`
+- `evidence bundle` on merge to `main`
 - `cr-complete.yml` for automatic CR completion on PR merge
 
 ## 7. Release and Build
@@ -283,7 +283,7 @@ Scaffolded product repos get:
 ### 7.3 Evidence Bundles
 
 Evidence bundles are runtime CI outputs, not release payloads. They are
-produced on merge to `main` by `ci evidence bundle` and uploaded as CI artifacts
+produced on merge to `main` by `evidence bundle` and uploaded as CI artifacts
 for audit consumption.
 
 ## 8. Document Control

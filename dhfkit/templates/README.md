@@ -100,8 +100,8 @@ dhfkit --dhf DHF doc generate ALL
 dhfkit --dhf DHF report
 
 # AI-assisted CR workflow (medharness)
-medharness --dhf DHF ci generate-dhf --cr CR-001   # design phase
-medharness --dhf DHF ci develop-cr --cr CR-001     # implement phase
+medharness --dhf DHF change plan --cr CR-001   # design phase
+medharness --dhf DHF change implement --cr CR-001     # implement phase
 ```
 
 See the [MedHarness README](https://github.com/itercharles/MedHarness) for the full command reference and CI gate documentation.

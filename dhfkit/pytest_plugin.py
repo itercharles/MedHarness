@@ -20,8 +20,9 @@ When pytest is run with --junit-xml, each marked test case gets:
   <property name="medharness.id"      value="TC-SYS-001"/>
   <property name="medharness.testing" value="T1,T2"/>
 
-These properties are read by `ci test-coverage` and `ci test-points` to
-determine requirement and test-point coverage.
+These properties are read by `verify tests` to determine requirement
+coverage and, when requirements define numbered test points, test-point
+coverage as well.
 """
 
 from __future__ import annotations

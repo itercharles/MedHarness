@@ -11,15 +11,15 @@ MedHarness ships two Python packages from a single repository:
 
 | Package | CLI | Role |
 |---------|-----|------|
-| `medharness` | `medharness` | AI harness: scaffolding, CI gates, CR workflows, approval gating |
+| `medharness` | `medharness` | AI harness: scaffolding, verification, change workflows, approval flow |
 | `dhfkit` | `dhfkit` / `dhf` | DHF engine: item CRUD, lifecycle, traceability, document generation, SOUP sync, release baseline |
 
 ### `medharness` owns
 
 - CLI surface and user-facing onboarding (`medharness init`)
-- CI gate commands (`ci dhf-validate`, `ci test-coverage`, `ci validate-branch`, `ci validate-code`, `ci evidence bundle`)
-- AI-assisted CR generation (`ci generate-dhf`, `ci develop-cr`)
-- Approval gating and stage management (`ci approve-gate`, `ci advance-stage`, `ci cr-status`, `ci parse-approval`)
+- Verification commands (`verify dhf`, `verify tests`, `verify branch`, `verify code`, `evidence bundle`)
+- AI-assisted CR generation (`change plan`, `change implement`)
+- Approval and stage management (`approval check`, `change advance`, `change status`, `approval parse`)
 - CR workflow orchestration (`cr workflow`, `cr check-status`)
 - DHF repo scaffolding from bundled templates
 - Adapter protocol for pluggable DHF backends
@@ -85,7 +85,7 @@ dhfkit/templates/
 └── README.md
 ```
 
-The generated DHF repo does not contain `dhfkit/` or `medharness/` source code. Install MedHarness separately. Use `dhfkit --dhf DHF ...` for data operations (item CRUD, validate, docs); use `medharness --dhf DHF ci ...` for AI-assisted CR workflows and CI gates.
+The generated DHF repo does not contain `dhfkit/` or `medharness/` source code. Install MedHarness separately. Use `dhfkit --dhf DHF ...` for data operations (item CRUD, validate, docs); use `medharness --dhf DHF change ...`, `verify ...`, and `evidence ...` for AI-assisted change workflows and validation.
 
 ### Placeholder substitution
 
@@ -130,7 +130,7 @@ The generated DHF repo does not contain `dhfkit/` or `medharness/` source code. 
 | Contract | `tests/contract/` | Public contracts: CLI, scaffold structure, example smoke |
 | Engine | `dhfkit/tests/` | dhfkit-specific: CRUD, validation, document generation |
 
-This repo does not use `@links`/`@test_id` metadata or `ci test-coverage` for its own governance. Those features are available to scaffolded user DHF repos.
+This repo does not use `@links`/`@test_id` metadata or `verify tests` for its own governance. Those features are available to scaffolded user DHF repos.
 
 ---
 
@@ -141,21 +141,21 @@ This repo does not use `@links`/`@test_id` metadata or `ci test-coverage` for it
 Every CR moves through two AI-assisted phases on a single branch and PR:
 
 ```
-generate-dhf  →  (design PR reviewed + approved)  →  develop-cr
+change plan  →  (design PR reviewed + approved)  →  change implement
 ```
 
-**`generate-dhf`**
+**`change plan`**
 
 1. Triage — checks for duplicate, out-of-scope, architecture-conflict, or too-large
 2. V-model cascade — creates/updates DHF items top-down: CR → CRS → SYS → {SYSARCH, RISK, RCM} → SRS → SWDD. Each SWDD item links to an existing MODULE and implements the relevant SRS items. Reads relevant source modules before writing SWDD items so the design reflects the actual codebase.
 3. Implementation plan — writes a structured implementation plan (overview, current state, changes required, steps, edge cases, tests) into `implementation_notes` on the CR item
 4. Deterministic validation — `dhfkit validate schema` + `dhfkit validate traceability`; self-corrects if errors remain
 
-**`develop-cr`**
+**`change implement`**
 
 1. Reads `implementation_notes` as the primary implementation spec (reviewed and approved with the design PR)
 2. Implements code following the plan; reads SWDD items for module-level design decisions
-3. Annotates tests with `@links:<ITEM_ID>`, runs `medharness ci test-coverage` against JUnit output, adds missing annotations until all requirements are covered
+3. Annotates tests with `@links:<ITEM_ID>`, runs `medharness verify tests` against JUnit output, adds missing annotations until all requirements are covered
 4. Reconciles `implementation_notes` and SWDD items if the implementation deviated from the plan
 
 ### CR lifecycle states
@@ -163,11 +163,11 @@ generate-dhf  →  (design PR reviewed + approved)  →  develop-cr
 | State | Set by | Meaning |
 |-------|--------|---------|
 | `new` | Intake | CR created |
-| `design` | `generate-dhf` | Design phase started |
-| `develop` | `develop-cr` | Implementation phase started |
+| `design` | `change plan` | Design phase started |
+| `develop` | `change implement` | Implementation phase started |
 | `completed` | PR merge | Code merged to main |
 | `cancelled` | PR close | PR closed without merging |
-| `rejected` | `generate-dhf` triage | Out-of-scope / duplicate / too large |
+| `rejected` | `change plan` triage | Out-of-scope / duplicate / too large |
 
 State transitions are not enforced as execution gates — the auto workflow proceeds regardless. States are recorded for traceability.
 
@@ -177,7 +177,7 @@ The CR-generation path in `medharness.services` is split by responsibility:
 
 - `cr_generation.py` — stage orchestration, Claude invocation, PR-feedback retrieval; public entry points are `generate_dhf` and `generate_code`
 - `prompt_assembly.py` — prompt-template loading and composition; injects pre-computed DHF context (item lists, traceability graph, coverage gaps) into each prompt
-- `cr_impact.py` — writes `affected_items` back onto the CR item after `generate-dhf` completes; `implementation_notes` is LLM-authored and not overwritten by the harness
+- `cr_impact.py` — writes `affected_items` back onto the CR item after `change plan` completes; `implementation_notes` is LLM-authored and not overwritten by the harness
 - `design_validation.py` — deterministic post-design checks; only catches schema, traceability, and DHF-validation failures
 
 This split is internal structure, not a public import contract. The public behavior is the CLI and JSON response contracts documented in the CHANGELOG and enforced by consumer-side contract tests.
