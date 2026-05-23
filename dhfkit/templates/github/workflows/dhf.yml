@@ -22,7 +22,7 @@ jobs:
       - run: pip install medharness=={{medharness_version}}
 
       - name: Schema and traceability check
-        run: medharness ci dhf-validate --dhf DHF
+        run: medharness verify dhf --dhf DHF
 
   evidence-bundle:
     name: Evidence bundle
@@ -39,7 +39,7 @@ jobs:
       - run: pip install medharness=={{medharness_version}}
 
       - name: Build evidence bundle
-        run: medharness ci evidence bundle --dhf DHF --out-dir artifacts
+        run: medharness evidence bundle --dhf DHF --out-dir artifacts
 
       - uses: actions/upload-artifact@v4
         with:

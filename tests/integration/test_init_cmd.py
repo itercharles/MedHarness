@@ -40,7 +40,7 @@ class TestInitCmd:
         _write_claude_md(tmp_path, "Device")
         content = (tmp_path / "CLAUDE.md").read_text()
         assert "CR ID" in content
-        assert "ci test-coverage" in content
+        assert "verify tests" in content
 
     def test_write_claude_md_single_repo_layout(self, tmp_path):
         """CLAUDE.md describes single-repo structure with DHF/ directory."""

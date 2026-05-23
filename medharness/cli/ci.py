@@ -1,14 +1,6 @@
-"""CI gate and evidence commands — Click declarations + presentation.
+"""Workflow-facing commands — Click declarations + presentation.
 
 Calls services/ci.py and _helpers directly. No commands/ci.py intermediate layer.
-
-
---dhf convention (by-design):
-  - ci dhf-validate takes --dhf DHF: called from the DHF repo (dhf/ci.yml)
-  - ci test-coverage takes --dhf PATH: called from the product repo,
-    DHF is a checked-out subdirectory
-  - ci evidence bundle: uses the global medharness --dhf PATH flag,
-    runs from the product repo
 """
 
 from __future__ import annotations
@@ -95,15 +87,27 @@ def _raise_for_outcome_error(result: dict) -> None:
 
 def register(main):
 
-    @main.group("ci")
-    def ci() -> None:
-        """CI-facing facade commands for DHF gates, evidence, and artifacts."""
+    @main.group("verify")
+    def verify() -> None:
+        """Run validation and coverage checks for controlled changes."""
 
-    @ci.group("evidence")
-    def ci_evidence() -> None:
-        """CI evidence commands."""
+    @main.group("evidence")
+    def evidence() -> None:
+        """Build evidence and delivery artifacts."""
 
-    @ci_evidence.command("bundle")
+    @main.group("approval")
+    def approval() -> None:
+        """Check and interpret approval state for a change."""
+
+    @main.group("change")
+    def change() -> None:
+        """Analyze, implement, and track change requests."""
+
+    @main.group("automation")
+    def automation() -> None:
+        """Helpers for workflow automation and integrations."""
+
+    @evidence.command("bundle")
     @click.option("--out-dir", type=click.Path(file_okay=False, path_type=Path), required=True)
     @click.option("--junit", "junit_files", multiple=True, type=click.Path(exists=True, dir_okay=False, path_type=Path))
     @click.option("--junit-dir", "junit_dirs", multiple=True, type=click.Path(file_okay=False, path_type=Path))
@@ -114,7 +118,7 @@ def register(main):
     @click.option("--commit", "commit_sha", default="")
     @click.option("--continue-on-gate-failure", is_flag=True, default=False)
     @click.pass_context
-    def ci_evidence_bundle(ctx: click.Context, out_dir: Path,
+    def evidence_bundle(ctx: click.Context, out_dir: Path,
                            junit_files: tuple[Path, ...], junit_dirs: tuple[Path, ...],
                            coverage_pairs: tuple[str, ...], traceability_types: tuple[str, ...],
                            run_id: str, run_url: str, commit_sha: str,
@@ -141,14 +145,14 @@ def register(main):
         if not gate_passed and not continue_on_gate_failure:
             raise click.ClickException("DHF acceptance gate failed.")
 
-    @ci.command("dhf-validate")
-    @click.option("--dhf", "dhf_path", type=click.Path(file_okay=False, path_type=Path), required=True)
+    @verify.command("dhf")
+    @click.option("--dhf", "dhf_path", type=click.Path(file_okay=False, path_type=Path))
     @click.option("--run-schema/--no-run-schema", default=True, show_default=True)
     @click.option("--run-traceability/--no-run-traceability", default=True, show_default=True)
     @click.option("--coverage-pair", "coverage_pairs", multiple=True, metavar="PARENT:CHILD")
     @click.option("--fail-on-uncovered", is_flag=True, default=False)
     @click.pass_context
-    def ci_dhf_validate(ctx: click.Context, dhf_path: Path, run_schema: bool,
+    def verify_dhf(ctx: click.Context, dhf_path: Path, run_schema: bool,
                         run_traceability: bool, coverage_pairs: tuple[str, ...],
                         fail_on_uncovered: bool) -> None:
         """Structural DHF validation gate for CI pipelines.
@@ -157,13 +161,16 @@ def register(main):
         where the DHF root is simply 'DHF' (not a subdirectory).
 
         """
-        result = ci_structural_gate(dhf_path=dhf_path, run_schema=run_schema,
+        effective_dhf = dhf_path or ctx.obj.get("dhf")
+        if effective_dhf is None:
+            raise click.ClickException("--dhf is required when not set globally")
+        result = ci_structural_gate(dhf_path=effective_dhf, run_schema=run_schema,
                                      run_traceability=run_traceability,
                                      coverage_pairs=coverage_pairs,
                                      fail_on_uncovered=fail_on_uncovered)
         click.echo(json.dumps(result, default=str))
         r = result["results"]
-        dhf_arg = f"--dhf {dhf_path}"
+        dhf_arg = f"--dhf {effective_dhf}"
         if "schema" in r:
             s = r["schema"]
             if s["passed"]:
@@ -205,26 +212,30 @@ def register(main):
         if not result["passed"]:
             raise click.ClickException("DHF validation failed.")
 
-    @ci.command("test-coverage")
-    @click.option("--dhf", "dhf_path", type=click.Path(file_okay=False, path_type=Path), required=True)
+    @verify.command("tests")
+    @click.option("--dhf", "dhf_path", type=click.Path(file_okay=False, path_type=Path))
     @click.option("--junit-dir", "junit_dirs", multiple=True, type=click.Path(file_okay=False, path_type=Path))
     @click.option("--junit", "junit_files", multiple=True, type=click.Path(exists=True, dir_okay=False, path_type=Path))
     @click.option("--requirement-type", "req_types", multiple=True, metavar="CODE")
     @click.pass_context
-    def ci_test_coverage(ctx: click.Context, dhf_path: Path,
+    def verify_tests(ctx: click.Context, dhf_path: Path,
                          junit_dirs: tuple[Path, ...], junit_files: tuple[Path, ...],
                          req_types: tuple[str, ...]) -> None:
-        """Check that every requirement has test coverage from JUnit evidence.
+        """Check requirement coverage from JUnit evidence.
 
         Takes its own --dhf PATH option because it runs from the PRODUCT repo
         where the DHF is a subdirectory (e.g. dhf/DHF or medharness-dhf/DHF).
 
         """
+        effective_dhf = dhf_path or ctx.obj.get("dhf")
+        if effective_dhf is None:
+            raise click.ClickException("--dhf is required when not set globally")
         junit_paths = _h._collect_junit_paths(junit_files, junit_dirs)
-        result = ci_test_coverage_gate(dhf_path=dhf_path, junit_paths=junit_paths, req_types=req_types)
+        result = ci_test_coverage_gate(dhf_path=effective_dhf, junit_paths=junit_paths, req_types=req_types)
         if result.get("error"):
             raise click.ClickException(result["error"])
-        dhf_arg = f"--dhf {dhf_path}"
+        click.echo(json.dumps(result))
+        dhf_arg = f"--dhf {effective_dhf}"
         for row in result["results"]:
             if "warning" in row:
                 click.echo(f"WARN: {row['warning']} '{row['type']}' — skipped.", err=True)
@@ -237,16 +248,29 @@ def register(main):
                     click.echo(f"        Fix: add 'dhf_links: [{uid}]' to a test case, or:", err=True)
                     click.echo(f"             dhfkit {dhf_arg} item create --type TC"
                                f" --data '{{\"title\": \"Test {uid}\", \"dhf_links\": [\"{uid}\"]}}'", err=True)
+        for row in result.get("testing_points", []):
+            if row["passed"]:
+                click.echo(
+                    f"PASS [test-coverage] {row['req_id']} test points: {row['covered']}/{row['total']} covered",
+                    err=True,
+                )
+            else:
+                click.echo(
+                    f"FAIL [test-coverage] {row['req_id']} test points: {row['covered']}/{row['total']} covered",
+                    err=True,
+                )
+                for pt in row.get("uncovered", []):
+                    click.echo(f"      ↳ uncovered test point: {pt}", err=True)
         if not result["passed"]:
             raise click.ClickException("Test coverage gaps found.")
 
-    @ci.command("validate-verification")
-    @click.option("--dhf", "dhf_path", type=click.Path(file_okay=False, path_type=Path), required=True)
+    @verify.command("verification")
+    @click.option("--dhf", "dhf_path", type=click.Path(file_okay=False, path_type=Path))
     @click.option("--junit-dir", "junit_dirs", multiple=True, type=click.Path(file_okay=False, path_type=Path))
     @click.option("--junit", "junit_files", multiple=True, type=click.Path(exists=True, dir_okay=False, path_type=Path))
     @click.option("--requirement-type", "req_types", multiple=True, metavar="CODE")
     @click.pass_context
-    def ci_validate_verification(
+    def verify_verification(
         ctx: click.Context,
         dhf_path: Path,
         junit_dirs: tuple[Path, ...],
@@ -264,9 +288,12 @@ def register(main):
         """
         from medharness.services.ci import validate_verification_completeness
 
+        effective_dhf = dhf_path or ctx.obj.get("dhf")
+        if effective_dhf is None:
+            raise click.ClickException("--dhf is required when not set globally")
         junit_paths = _h._collect_junit_paths(junit_files, junit_dirs)
         result = validate_verification_completeness(
-            dhf_path=dhf_path,
+            dhf_path=effective_dhf,
             junit_paths=junit_paths,
             req_types=req_types,
         )
@@ -284,13 +311,13 @@ def register(main):
         if not result["passed"]:
             raise click.ClickException("Verification completeness gaps found.")
 
-    @ci.command("cr-complete")
+    @verify.command("completion")
     @click.option("--cr", "cr_id", required=True, metavar="CR_ID")
     @click.option("--dhf", "dhf_path", type=click.Path(file_okay=False, path_type=Path))
     @click.option("--junit-dir", "junit_dirs", multiple=True, type=click.Path(file_okay=False, path_type=Path))
     @click.option("--junit", "junit_files", multiple=True, type=click.Path(exists=True, dir_okay=False, path_type=Path))
     @click.pass_context
-    def ci_cr_complete(
+    def verify_completion(
         ctx: click.Context,
         cr_id: str,
         dhf_path: Path | None,
@@ -331,11 +358,11 @@ def register(main):
         if not result["passed"]:
             raise click.ClickException(f"CR {cr_id} closure verification failed.")
 
-    @ci.command("validate-code")
+    @verify.command("code")
     @click.option("--cr", "cr_id", required=True, metavar="CR_ID")
     @click.option("--since-ref", default="origin/main", metavar="REF")
     @click.pass_context
-    def ci_validate_code(ctx: click.Context, cr_id: str, since_ref: str) -> None:
+    def verify_code(ctx: click.Context, cr_id: str, since_ref: str) -> None:
         """Run deterministic implementation validation without invoking the AI loop."""
         from medharness.services.code_validation import validate_code  # noqa: PLC0415
 
@@ -357,14 +384,14 @@ def register(main):
             click.echo(f"    Fix: {error['fix']}", err=True)
         raise click.exceptions.Exit(1)
 
-    @ci.command("validate-branch")
+    @verify.command("branch")
     @click.option("--cr", "cr_id", required=True, metavar="CR_ID")
     @click.option("--since-ref", default="origin/main", metavar="REF")
     @click.option("--code-path", "code_paths", multiple=True, metavar="PATH",
                   help="Opt into code-change enforcement: path(s) under which at least one file must be modified. "
                        "Omitting this option skips the code-change check entirely.")
     @click.pass_context
-    def ci_validate_branch(
+    def verify_branch(
         ctx: click.Context,
         cr_id: str,
         since_ref: str,
@@ -408,7 +435,7 @@ def register(main):
 
     # ── GitHub event context ──
 
-    @ci.command("github-event")
+    @automation.command("github-event")
     @click.option("--event", "event_path", default=None, type=click.Path(exists=True, dir_okay=False, path_type=Path))
     @click.option("--manual-cr", default="", metavar="CR_ID")
     @click.option("--manual-stage", default="", metavar="STAGE")
@@ -426,7 +453,7 @@ def register(main):
                   help="Fallback action when no explicit mapping matches.")
     @click.option("--github-output", "github_output_path", default=None, type=click.Path(dir_okay=False, path_type=Path))
     @click.pass_context
-    def ci_github_event(ctx: click.Context, event_path: Path | None, manual_cr: str,
+    def automation_github_event(ctx: click.Context, event_path: Path | None, manual_cr: str,
                         manual_stage: str,
                         branch_stage_values: tuple[str, ...],
                         stage_label_prefix: str,
@@ -481,35 +508,35 @@ def register(main):
 
     # ── Claude session ──
 
-    @ci.group("claude-session")
-    def ci_claude_session() -> None:
+    @automation.group("session")
+    def automation_session() -> None:
         """Store and retrieve Claude Code session IDs via PR comments."""
 
-    @ci_claude_session.command("put")
+    @automation_session.command("put")
     @click.argument("pr_number", type=int)
     @click.argument("session_id")
     @click.option("--token", default="", metavar="TOKEN")
-    def ci_claude_session_put(pr_number: int, session_id: str, token: str) -> None:
+    def automation_session_put(pr_number: int, session_id: str, token: str) -> None:
         """Store a Claude session ID as a PR comment marker."""
         url = put_session(pr_number, session_id, token=token)
         click.echo(url)
 
-    @ci_claude_session.command("get")
+    @automation_session.command("get")
     @click.argument("pr_number", type=int)
     @click.option("--token", default="", metavar="TOKEN")
-    def ci_claude_session_get(pr_number: int, token: str) -> None:
+    def automation_session_get(pr_number: int, token: str) -> None:
         """Retrieve the last stored Claude session ID from PR comments."""
         session_id = get_session(pr_number, token=token)
         click.echo(session_id)
 
     # ── Approval gate ──
 
-    @ci.command("approve-gate")
+    @approval.command("check")
     @click.option("--cr", "cr_id", required=True, metavar="CR_ID")
     @click.option("--stage", required=True, type=click.Choice(["design", "develop"]))
     @click.option("--pr", "pr_number", required=True, type=int, metavar="N")
     @click.option("--token", default="", metavar="TOKEN")
-    def ci_approve_gate(cr_id: str, stage: str, pr_number: int, token: str) -> None:
+    def approval_check(cr_id: str, stage: str, pr_number: int, token: str) -> None:
         """Check whether a CR stage has been explicitly approved via PR label.
 
         Exits 0 if the stage label is present on the PR, non-zero otherwise.
@@ -531,13 +558,13 @@ def register(main):
             click.echo(f"FAIL [{stage}-approve] {cr_id}: label '{label}' missing on PR #{pr_number}.", err=True)
             raise click.exceptions.Exit(1)
 
-    @ci.command("cr-status")
+    @change.command("status")
     @click.option("--cr", "cr_id", required=True, metavar="CR_ID")
     @click.option("--pr", "pr_number", default=None, type=int, metavar="N")
     @click.option("--stage", default="", type=click.Choice(["", "design", "develop"]))
     @click.option("--branch", "branch_ref", default="", metavar="REF")
     @click.option("--token", default="", metavar="TOKEN")
-    def ci_cr_status(cr_id: str, pr_number: int | None, stage: str, branch_ref: str, token: str) -> None:
+    def change_status(cr_id: str, pr_number: int | None, stage: str, branch_ref: str, token: str) -> None:
         """Report machine-readable CR stage and approval status.
 
         The stage may be supplied directly or inferred from a branch ref using
@@ -578,9 +605,9 @@ def register(main):
             details.append(f"pr=#{pr_number}")
         click.echo(f"OK CR status for {cr_id} ({', '.join(details)}).", err=True)
 
-    @ci.command("parse-approval")
+    @approval.command("parse")
     @click.option("--comment", "comment_body", required=True, metavar="TEXT")
-    def ci_parse_approval(comment_body: str) -> None:
+    def approval_parse(comment_body: str) -> None:
         """Parse a PR comment body for /approve or /reject commands.
 
         Outputs JSON with action and reason. Useful in CI workflow steps
@@ -595,14 +622,14 @@ def register(main):
 
     # ── Stage label management ──
 
-    @ci.command("advance-stage")
+    @change.command("advance")
     @click.option("--pr", "pr_number", required=True, type=int, metavar="N")
     @click.option("--from-stage", "from_stage", required=True, metavar="STAGE")
     @click.option("--to-stage", "to_stage", required=True, metavar="STAGE")
     @click.option("--issue", "issue_number", default=None, type=int, metavar="N")
     @click.option("--label-prefix", default="cr:stage/", show_default=True, metavar="PREFIX")
     @click.option("--token", default="", metavar="TOKEN")
-    def ci_advance_stage(
+    def change_advance(
         pr_number: int, from_stage: str, to_stage: str,
         issue_number: int | None, label_prefix: str, token: str,
     ) -> None:
@@ -642,12 +669,12 @@ def register(main):
 
     # ── CR generation ──
 
-    @ci.command("generate-dhf")
+    @change.command("plan")
     @click.option("--cr", "cr_id", required=True, metavar="CR_ID")
     @click.option("--pr", "pr_number", default=None, type=int, metavar="N",
                   help="PR number — revision mode: revise DHF cascade based on review comments")
     @click.pass_context
-    def ci_generate_dhf(ctx: click.Context, cr_id: str, pr_number: int | None) -> None:
+    def change_plan(ctx: click.Context, cr_id: str, pr_number: int | None) -> None:
         """Generate the full DHF item cascade for a CR in a single Claude session.
 
         Drives the V-model (CRS→SYS→SYSARCH/RISK/RCM→SRS→SWDD) without a prior
@@ -678,7 +705,7 @@ def register(main):
             click.echo(f"    Fix: {error['fix']}", err=True)
         _raise_for_outcome_error(result)
 
-    @ci.command("develop-cr")
+    @change.command("implement")
     @click.option("--cr", "cr_id", required=True, metavar="CR_ID")
     @click.option("--pr", "pr_number", default=None, type=int, metavar="N",
                   help="PR number — revision mode: revise implementation based on review comments")
@@ -686,7 +713,7 @@ def register(main):
                   type=click.Path(exists=True, dir_okay=False, path_type=Path),
                   help="JSON file containing structured CI failure output to feed back to Claude")
     @click.pass_context
-    def ci_develop_cr(ctx: click.Context, cr_id: str, pr_number: int | None,
+    def change_implement(ctx: click.Context, cr_id: str, pr_number: int | None,
                       ci_failures_path: Path | None) -> None:
         """Generate or revise implementation code for a CR using Claude.
 

@@ -13,6 +13,30 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ---
 
+## [0.9.0] — 2026-05-21
+
+### New Features
+
+- **`testing` field on CRS, SYS, SRS items** — requirements now carry numbered
+  test points (`T1:`, `T2:`, …) written at design time. Rendered in spec
+  documents under a "Testing" section.
+
+- **`@testing:Tn` test annotation** — Python tests declare covered points via
+  `@pytest.mark.dhf_testing("T1", "T2")`; JS tests embed `@testing:T1` in the
+  test name. Both write `medharness.testing` to JUnit XML output via the
+  `dhf_testing` pytest marker.
+
+- **`ci test-points` gate** — checks that every numbered test point declared on
+  a requirement has at least one covering passing test. Exits non-zero on gaps.
+  Consistent with `ci test-coverage`: reads both JUnit `medharness.links`
+  properties and inline `@links:REQ-ID` tags from test names.
+
+- **TDD workflow documented** — README and `docs/adopting.md` updated with
+  end-to-end examples of writing test points at design time and gating coverage
+  in CI.
+
+---
+
 ## [0.8.0] — 2026-05-19
 
 ### Breaking Changes

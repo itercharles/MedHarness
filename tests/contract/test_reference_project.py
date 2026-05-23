@@ -1,7 +1,7 @@
 """Integration tests against scaffolded starter DHF: validates core workflows.
 
 Scaffolds a temp DHF from templates, then runs schema validation, item ops,
-doc generation, template rendering, and ci test-coverage against it.
+doc generation, template rendering, and verify tests against it.
 
 """
 
@@ -100,7 +100,7 @@ class TestDocGeneration:
 
 
 class TestCICoverageGate:
-    """Behavioral regression for ci test-coverage user feature."""
+    """Behavioral regression for verify tests user feature."""
 
     def test_coverage_gate_evaluates(self, dhf):
         dhf_root = str(dhf / "DHF")
@@ -118,9 +118,9 @@ class TestCICoverageGate:
   </testsuite>
 </testsuites>"""
             (Path(junit_tmp) / "demo.xml").write_text(xml)
-            r = _cf(dhf_root, "ci", "test-coverage", "--dhf", dhf_root,
+            r = _cf(dhf_root, "verify", "tests", "--dhf", dhf_root,
                     "--junit-dir", junit_tmp, "--requirement-type", "CRS")
-            assert r.returncode in (0, 1), f"ci test-coverage crashed:\n{r.stderr}"
+            assert r.returncode in (0, 1), f"verify tests crashed:\n{r.stderr}"
             assert "CRS" in (r.stderr + r.stdout)
 
 

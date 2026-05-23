@@ -31,18 +31,18 @@ class TestMedHarnessCLI:
         assert r.returncode == 0, r.stderr
 
     def test_ci_test_coverage_help(self):
-        """medharness ci test-coverage --help exits 0."""
-        r = _run("medharness", "ci", "test-coverage", "--help")
+        """medharness verify tests --help exits 0."""
+        r = _run("medharness", "verify", "tests", "--help")
         assert r.returncode == 0, r.stderr
 
     def test_ci_dhf_validate_help(self):
-        """medharness ci dhf-validate --help exits 0."""
-        r = _run("medharness", "ci", "dhf-validate", "--help")
+        """medharness verify dhf --help exits 0."""
+        r = _run("medharness", "verify", "dhf", "--help")
         assert r.returncode == 0, r.stderr
 
     def test_ci_evidence_bundle_help(self):
-        """medharness ci evidence bundle --help exits 0."""
-        r = _run("medharness", "ci", "evidence", "bundle", "--help")
+        """medharness evidence bundle --help exits 0."""
+        r = _run("medharness", "evidence", "bundle", "--help")
         assert r.returncode == 0, r.stderr
 
     def test_cr_check_status_help(self):
@@ -70,68 +70,72 @@ class TestCRGenerationCommands:
     """Contract tests for medharness CR generation and preflight CI commands."""
 
     def test_develop_cr_help(self):
-        """medharness ci develop-cr --help exits 0."""
-        r = _run("medharness", "ci", "develop-cr", "--help")
+        """medharness change implement --help exits 0."""
+        r = _run("medharness", "change", "implement", "--help")
         assert r.returncode == 0, r.stderr
 
     def test_generate_dhf_help(self):
-        """medharness ci generate-dhf --help exits 0."""
-        r = _run("medharness", "ci", "generate-dhf", "--help")
+        """medharness change plan --help exits 0."""
+        r = _run("medharness", "change", "plan", "--help")
         assert r.returncode == 0, r.stderr
 
     def test_validate_code_help(self):
-        """medharness ci validate-code --help exits 0."""
-        r = _run("medharness", "ci", "validate-code", "--help")
+        """medharness verify code --help exits 0."""
+        r = _run("medharness", "verify", "code", "--help")
         assert r.returncode == 0, r.stderr
         assert "--dhf" not in r.stdout
 
     def test_validate_branch_help(self):
-        """medharness ci validate-branch --help exits 0."""
-        r = _run("medharness", "ci", "validate-branch", "--help")
+        """medharness verify branch --help exits 0."""
+        r = _run("medharness", "verify", "branch", "--help")
         assert r.returncode == 0, r.stderr
         assert "--dhf" not in r.stdout
 
     def test_develop_cr_requires_cr_flag(self):
-        """medharness ci develop-cr without --cr exits non-zero with usage error."""
-        r = _run("medharness", "ci", "develop-cr")
+        """medharness change implement without --cr exits non-zero with usage error."""
+        r = _run("medharness", "change", "implement")
         assert r.returncode != 0
 
     def test_generate_dhf_requires_cr_flag(self):
-        """medharness ci generate-dhf without --cr exits non-zero."""
-        r = _run("medharness", "ci", "generate-dhf")
+        """medharness change plan without --cr exits non-zero."""
+        r = _run("medharness", "change", "plan")
         assert r.returncode != 0
 
     def test_validate_code_requires_cr_flag(self):
-        """medharness ci validate-code without --cr exits non-zero."""
-        r = _run("medharness", "ci", "validate-code")
+        """medharness verify code without --cr exits non-zero."""
+        r = _run("medharness", "verify", "code")
         assert r.returncode != 0
 
     def test_validate_branch_requires_cr_flag(self):
-        """medharness ci validate-branch without --cr exits non-zero."""
-        r = _run("medharness", "ci", "validate-branch")
+        """medharness verify branch without --cr exits non-zero."""
+        r = _run("medharness", "verify", "branch")
         assert r.returncode != 0
 
     def test_develop_cr_accepts_pr_flag(self):
-        """medharness ci develop-cr --help shows --pr option."""
-        r = _run("medharness", "ci", "develop-cr", "--help")
+        """medharness change implement --help shows --pr option."""
+        r = _run("medharness", "change", "implement", "--help")
         assert "--pr" in r.stdout
 
     def test_validate_code_accepts_since_ref_flag(self):
-        """medharness ci validate-code --help shows --since-ref option."""
-        r = _run("medharness", "ci", "validate-code", "--help")
+        """medharness verify code --help shows --since-ref option."""
+        r = _run("medharness", "verify", "code", "--help")
         assert "--since-ref" in r.stdout
 
     def test_validate_branch_accepts_code_path_flag(self):
-        """medharness ci validate-branch --help shows --code-path option."""
-        r = _run("medharness", "ci", "validate-branch", "--help")
+        """medharness verify branch --help shows --code-path option."""
+        r = _run("medharness", "verify", "branch", "--help")
         assert "--code-path" in r.stdout
 
-    def test_commands_appear_in_ci_group_help(self):
-        """Generation and preflight commands are listed in medharness ci --help."""
-        r = _run("medharness", "ci", "--help")
-        assert r.returncode == 0, r.stderr
-        for cmd in ["develop-cr", "generate-dhf", "validate-code", "validate-branch"]:
-            assert cmd in r.stdout, f"Command {cmd!r} missing from ci --help"
+    def test_commands_appear_in_help_groups(self):
+        """Primary change and verify commands are listed in their help output."""
+        r_verify = _run("medharness", "verify", "--help")
+        r_change = _run("medharness", "change", "--help")
+        assert r_verify.returncode == 0, r_verify.stderr
+        assert r_change.returncode == 0, r_change.stderr
+        for cmd in ["code", "branch", "dhf", "tests"]:
+            assert cmd in r_verify.stdout, f"Command {cmd!r} missing from verify --help"
+        for cmd in ["plan", "implement", "status", "advance"]:
+            assert cmd in r_change.stdout, f"Command {cmd!r} missing from change --help"
 
 
 class TestCLIEntrypoints:

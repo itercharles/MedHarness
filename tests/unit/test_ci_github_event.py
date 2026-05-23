@@ -1,4 +1,4 @@
-"""CLI tests for `medharness ci github-event`."""
+"""CLI tests for `medharness automation github-event`."""
 
 from __future__ import annotations
 
@@ -30,7 +30,7 @@ def test_github_event_outputs_rich_context(monkeypatch, tmp_path: Path):
     result = runner.invoke(
         main,
         [
-            "ci",
+            "automation",
             "github-event",
             "--event",
             str(event_path),
@@ -63,7 +63,7 @@ def test_github_event_writes_outputs_file(monkeypatch, tmp_path: Path):
     result = runner.invoke(
         main,
         [
-            "ci",
+            "automation",
             "github-event",
             "--event",
             str(event_path),
@@ -99,7 +99,7 @@ def test_github_event_issue_comment_infers_stage_from_pr_labels(monkeypatch, tmp
     result = runner.invoke(
         main,
         [
-            "ci",
+            "automation",
             "github-event",
             "--event",
             str(event_path),

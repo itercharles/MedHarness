@@ -66,7 +66,7 @@ class TestDevelopCrJsonContract:
              patch("medharness.services.code_validation.validate_code",
                    return_value=[]), \
              patch("subprocess.run", return_value=_empty_diff()):
-            r = runner.invoke(main, ["--dhf", str(dhf), "ci", "develop-cr", "--cr", "CR-200"])
+            r = runner.invoke(main, ["--dhf", str(dhf), "change", "implement", "--cr", "CR-200"])
         assert r.exit_code == 0, (r.output, r.stderr)
         payload = _split_stdout_json(r.stdout)
         for key in (
@@ -83,7 +83,7 @@ class TestValidateCodeJsonContract:
     def test_json_payload_has_documented_keys(self, dhf):
         runner = CliRunner()
         with patch("medharness.services.code_validation.validate_code", return_value=[]):
-            r = runner.invoke(main, ["--dhf", str(dhf), "ci", "validate-code", "--cr", "CR-400"])
+            r = runner.invoke(main, ["--dhf", str(dhf), "verify", "code", "--cr", "CR-400"])
         assert r.exit_code == 0, (r.output, r.stderr)
         payload = _split_stdout_json(r.stdout)
         for key in ("cr_id", "stage", "passed", "since_ref", "errors"):
@@ -97,7 +97,7 @@ class TestValidateCodeJsonContract:
         runner = CliRunner()
         with patch("medharness.services.code_validation.validate_code", return_value=residual):
             r = runner.invoke(main, [
-                "--dhf", str(dhf), "ci", "validate-code", "--cr", "CR-401", "--since-ref", "origin/feature-base",
+                "--dhf", str(dhf), "verify", "code", "--cr", "CR-401", "--since-ref", "origin/feature-base",
             ])
         assert r.exit_code == 1
         payload = _split_stdout_json(r.stdout)
@@ -120,7 +120,7 @@ class TestValidateBranchJsonContract:
             "errors": [],
         }
         with patch("medharness.services.git.validate_atomic_branch", return_value=branch_result):
-            r = runner.invoke(main, ["--dhf", str(dhf), "ci", "validate-branch", "--cr", "CR-500"])
+            r = runner.invoke(main, ["--dhf", str(dhf), "verify", "branch", "--cr", "CR-500"])
         assert r.exit_code == 0, (r.output, r.stderr)
         payload = _split_stdout_json(r.stdout)
         for key in (
@@ -147,7 +147,7 @@ class TestValidateBranchJsonContract:
             "errors": [],
         }
         with patch("medharness.services.git.validate_atomic_branch", return_value=branch_result):
-            r = runner.invoke(main, ["--dhf", str(dhf), "ci", "validate-branch", "--cr", "CR-502"],
+            r = runner.invoke(main, ["--dhf", str(dhf), "verify", "branch", "--cr", "CR-502"],
                               catch_exceptions=False)
         assert r.exit_code == 0
         assert "WARN" in r.stderr
@@ -167,7 +167,7 @@ class TestValidateBranchJsonContract:
         }
         runner = CliRunner()
         with patch("medharness.services.git.validate_atomic_branch", return_value=branch_result):
-            r = runner.invoke(main, ["--dhf", str(dhf), "ci", "validate-branch", "--cr", "CR-501"])
+            r = runner.invoke(main, ["--dhf", str(dhf), "verify", "branch", "--cr", "CR-501"])
         assert r.exit_code == 1
         payload = _split_stdout_json(r.stdout)
         assert payload["passed"] is False
@@ -175,14 +175,14 @@ class TestValidateBranchJsonContract:
 
 
 class TestAdvanceStageContract:
-    """ci advance-stage: exits 0 on success, exits 1 when add_label fails."""
+    """change advance: exits 0 on success, exits 1 when add_label fails."""
 
     def test_exits_zero_on_success(self):
         runner = CliRunner()
         with patch("medharness.services.github_pr.remove_label", return_value=True), \
              patch("medharness.services.github_pr.add_label", return_value=True):
             r = runner.invoke(main, [
-                "ci", "advance-stage",
+                "change", "advance",
                 "--pr", "7", "--from-stage", "cr", "--to-stage", "design",
             ])
         assert r.exit_code == 0, r.output
@@ -196,7 +196,7 @@ class TestAdvanceStageContract:
         with patch("medharness.services.github_pr.remove_label", return_value=True), \
              patch("medharness.services.github_pr.add_label", return_value=False):
             r = runner.invoke(main, [
-                "ci", "advance-stage",
+                "change", "advance",
                 "--pr", "7", "--from-stage", "cr", "--to-stage", "design",
             ])
         assert r.exit_code == 1, r.output
@@ -209,7 +209,7 @@ class TestAdvanceStageContract:
         with patch("medharness.services.github_pr.remove_label", return_value=True), \
              patch("medharness.services.github_pr.add_label", return_value=True):
             r = runner.invoke(main, [
-                "ci", "advance-stage",
+                "change", "advance",
                 "--pr", "3", "--from-stage", "design", "--to-stage", "code",
                 "--label-prefix", "stage/",
             ])
@@ -233,7 +233,7 @@ class TestAdvanceStageContract:
         with patch("medharness.services.github_pr.remove_label", side_effect=_remove), \
              patch("medharness.services.github_pr.add_label", side_effect=_add):
             r = runner.invoke(main, [
-                "ci", "advance-stage",
+                "change", "advance",
                 "--pr", "7", "--from-stage", "design", "--to-stage", "code",
                 "--issue", "42",
             ])

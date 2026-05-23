@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 from pathlib import Path
@@ -19,7 +20,8 @@ from medharness._helpers import (
     _run_acceptance_gate,
     _run_artifact_generation,
 )
-from dhfkit.junit_parser import JUNIT_LINKS
+from dhfkit.junit_parser import JUNIT_LINKS, JUNIT_TESTING, LINKS_TAG_RE, TESTING_TAG_RE
+from dhfkit.testing_points import parse_testing_points
 
 
 # ---------------------------------------------------------------------------
@@ -138,10 +140,14 @@ def ci_test_coverage_gate(
     junit_paths: list[Path],
     req_types: tuple[str, ...] = (),
 ) -> dict[str, Any]:
-    """Check that every requirement has test coverage from JUnit evidence.
+    """Check requirement coverage from JUnit evidence.
 
     Returns a dict with ``passed`` (bool) and a ``results`` list of
     per-type coverage dicts.
+
+    Every requirement must have at least one passing linked test.
+    If a requirement declares numbered test points in its ``testing`` field,
+    each declared point must also be covered by at least one passing linked test.
     """
     from dhfkit.local_adapter import LocalDHFAdapter
 
@@ -153,6 +159,7 @@ def ci_test_coverage_gate(
         }
 
     covered_reqs: set[str] = set()
+    covered_pairs: set[tuple[str, str]] = set()
     for jp in junit_paths:
         if not jp.is_file():
             continue
@@ -163,21 +170,34 @@ def ci_test_coverage_gate(
             skipped = list(tc.iter("skipped"))
             if failures or errors or skipped:
                 continue
-            for props in tc.iter("properties"):
-                for prop in props.iter("property"):
-                    if prop.get("name") == JUNIT_LINKS:
-                        value = prop.get("value", "")
-                        if value:
-                            covered_reqs.update(
-                                v.strip() for v in value.split(",") if v.strip()
-                            )
-                        break
+            name = tc.get("name", "")
+            props: dict[str, str] = {}
+            properties_el = tc.find("properties")
+            if properties_el is not None:
+                for prop in properties_el.findall("property"):
+                    pname = prop.get("name", "")
+                    if pname:
+                        props[pname] = prop.get("value", "")
+
+            links_from_props = [v.strip() for v in props.get(JUNIT_LINKS, "").split(",") if v.strip()]
+            testing_from_props = [v.strip() for v in props.get(JUNIT_TESTING, "").split(",") if v.strip()]
+            links_from_name = LINKS_TAG_RE.findall(name)
+            testing_from_name = TESTING_TAG_RE.findall(name)
+
+            all_links = list(dict.fromkeys(links_from_props + links_from_name))
+            all_points = list(dict.fromkeys(testing_from_props + testing_from_name))
+
+            covered_reqs.update(all_links)
+            for req_id in all_links:
+                for point_id in all_points:
+                    covered_pairs.add((req_id, point_id))
 
     adapter = LocalDHFAdapter(dhf_path)
     all_items = adapter.list_items()
 
     passed = True
     results: list[dict] = []
+    testing_points: list[dict] = []
     default_types = req_types if req_types else ("SRS", "SYS", "CRS")
 
     for rt in default_types:
@@ -200,10 +220,33 @@ def ci_test_coverage_gate(
         covered_count = 0
         uncovered: list[str] = []
         for ri in req_items:
-            if ri["id"] in covered_reqs:
+            req_id = ri["id"]
+            has_req_coverage = req_id in covered_reqs
+            testing_text = ri.get("testing") or ""
+            points = parse_testing_points(testing_text)
+            uncovered_points = [pt for pt in points if (req_id, pt) not in covered_pairs]
+            if uncovered_points:
+                passed = False
+                testing_points.append({
+                    "req_id": req_id,
+                    "total": len(points),
+                    "covered": len(points) - len(uncovered_points),
+                    "uncovered": uncovered_points,
+                    "passed": False,
+                })
+            elif points:
+                testing_points.append({
+                    "req_id": req_id,
+                    "total": len(points),
+                    "covered": len(points),
+                    "uncovered": [],
+                    "passed": True,
+                })
+
+            if has_req_coverage:
                 covered_count += 1
             else:
-                uncovered.append(ri["id"])
+                uncovered.append(req_id)
         total = len(req_items)
         type_passed = covered_count == total
         if not type_passed:
@@ -216,7 +259,7 @@ def ci_test_coverage_gate(
             "uncovered": uncovered,
         })
 
-    return {"passed": passed, "results": results}
+    return {"passed": passed, "results": results, "testing_points": testing_points}
 
 
 # ---------------------------------------------------------------------------
@@ -454,7 +497,6 @@ def validate_verification_completeness(
     import xml.etree.ElementTree as ET
 
     from dhfkit.local_adapter import LocalDHFAdapter
-    from dhfkit.junit_parser import JUNIT_LINKS
 
     adapter = LocalDHFAdapter(dhf_path)
     all_items = adapter.list_items()
@@ -705,3 +747,4 @@ def cr_closure_gate(
         "manual_review_required": verify_result.get("manual_review_required", []),
         "summary": summary,
     }
+
