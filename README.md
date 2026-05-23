@@ -1,336 +1,211 @@
 # MedHarness
 
-**Design-controlled AI development for medical device software.**
+**AI coding harness for design-controlled medical software teams.**
 
 [![PyPI](https://img.shields.io/pypi/v/medharness)](https://pypi.org/project/medharness/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://python.org)
 
----
+MedHarness is an AI coding harness for medical software teams that need implementation to stay grounded in design inputs, traceability, and controlled verification.
 
-Building software for a medical device means every requirement, risk, architectural decision, and test has to be traced and documented in a **Design History File (DHF)** — before code ships, and in a form that holds up under FDA or notified body scrutiny.
+The core value is that MedHarness can automatically analyze the design context behind a change, drive implementation from that design, and then verify the result against the design again.
 
-MedHarness makes that work AI-assisted without making it ungoverned. It gives Claude a structured role in your DHF workflow — generating design items, implementing code, managing SOUP, building release records — while keeping you in the loop at every approval gate. The agent executes; you decide when to advance.
+That design analysis can include customer needs, software requirements, detailed design, SOUP, risk-related items, and the traceability already attached to the change request. For each change request, MedHarness also generates the impact analysis and traceability updates needed to keep the work controlled.
 
----
+MedHarness brings together:
 
-## Install
-
-```bash
-pip install medharness[full]
-```
-
-`[full]` includes optional extras: `ai` (AI review) and `docs` (PDF export via WeasyPrint). Leave it off for a minimal install — `dhfkit` is always included either way.
-
-**From source:**
-
-```bash
-git clone https://github.com/itercharles/MedHarness
-cd MedHarness
-pip install -e ".[dev]"
-pytest dhfkit/tests/ tests/
-```
+- an AI coding workflow that analyzes the impacted design, prepares the implementation path, writes code and tests, and verifies the resulting change against the design
+- `dhfkit`, a traceability layer that can work in Git-based workflows or alongside systems such as Jira and Rally
+- deterministic validation and pipeline hooks that make the delegated work reviewable and auditable
 
 ---
 
-## Quick start
+## Why teams use it
+
+Medical software teams need more than code generation. They need a harness that can safely take work off engineers without breaking traceability or review discipline.
+
+They still need clear answers to:
+
+- What changed, and why?
+- Which requirements, risks, and design items were affected?
+- Which tests verify each requirement?
+- What evidence was produced for this release?
+
+MedHarness is built around those questions.
+
+| Problem | What MedHarness does |
+|---------|----------------------|
+| Engineers spend time on repetitive bugfix and small-change work | Runs an AI coding workflow designed to handle controlled low-risk changes |
+| AI output is hard to govern in regulated environments | Keeps AI inside explicit CR stages with validation and approval gates |
+| DHF data already lives in existing systems | Uses `dhfkit` as a traceability layer that can fit Git-based workflows or adapt to tools like Jira and Rally |
+| Traceability breaks as code moves | Validates links across CR, requirement, risk, design, and test artifacts |
+| Release evidence is assembled manually | Produces evidence bundles and release baselines from repository state and test artifacts |
+| Adoption feels all-or-nothing | Lets teams adopt the harness, `dhfkit`, and pipeline checks independently |
+
+This repo is not trying to be a full QMS. It is focused on controlled AI-assisted software execution for teams that still need DHF-grade traceability around the work.
+
+---
+
+## Getting started
 
 ```bash
-# 1. Scaffold a new DHF project
 mkdir my-device && cd my-device
-python -m venv .venv && source .venv/bin/activate
-pip install medharness
+python -m venv .venv
+source .venv/bin/activate
+pip install medharness[full]
 medharness init
 ```
 
-`medharness init` gives you a working DHF with sample requirements, risks, traceability config, document templates, and plans:
+Use `pip install medharness` for a minimal install.
 
-```
+If you are using the AI workflow, set the required environment variables before running CR commands.
+
+Optional extras:
+
+- `medharness[ai]` for AI-assisted workflows
+- `medharness[docs]` for document export
+- `medharness[full]` for both
+
+This creates a starter structure like:
+
+```text
 my-device/
 ├── DHF/
-│   ├── config/           # project name, doc type schemas
-│   ├── items/            # one YAML file per requirement, risk, CR, etc.
-│   │   ├── 01_crs/       # Customer Requirements
-│   │   ├── 02_sys/       # System Requirements
-│   │   ├── 03_srs/       # Software Requirements
-│   │   ├── 07_cr/        # Change Requests
-│   │   └── ...           # Use Cases, SOUP, Risk, RCM, Releases, Defects
-│   └── documents/        # Jinja2 spec templates and plan documents
+│   ├── config/
+│   ├── items/
+│   │   ├── 01_crs/
+│   │   ├── 02_sys/
+│   │   ├── 03_srs/
+│   │   ├── 07_cr/
+│   │   └── ...
+│   └── documents/
 ├── AI-harness/
-│   └── context.md        # Product context for AI agents
+│   └── context.md
 └── .github/
     └── workflows/
-        └── dhf.yml       # CI: validate on PR, evidence bundle on main
+        └── dhf.yml
 ```
 
-Replace the sample items with your own content, then commit:
+### Create your first controlled baseline
+
+Replace the sample items with your own project content, then commit:
 
 ```bash
-# 2. Replace sample content and commit
-git init && git add -A && git commit -m "feat: initialize DHF"
+git init
+git add -A
+git commit -m "feat: initialize DHF"
 ```
+
+### Run the first CR
+
+Edit `DHF/items/07_cr/CR-001.yaml`, then run:
 
 ```bash
-# 3. Edit DHF/items/07_cr/CR-001.yaml with your first change request, then run design phase
-medharness --dhf DHF ci generate-dhf --cr CR-001
-# → Claude triages the CR, generates DHF items, writes an implementation plan, opens a PR
+medharness --dhf DHF change plan --cr CR-001
 ```
+
+After the design PR is reviewed and approved:
 
 ```bash
-# 4. After the design PR is reviewed and approved, run the implementation phase
-medharness --dhf DHF ci develop-cr --cr CR-001
-# → Claude implements code, annotates tests, verifies coverage, opens a code PR
+medharness --dhf DHF change implement --cr CR-001
 ```
 
-The scaffolded project includes `.github/workflows/dhf.yml` — a GitHub Actions workflow that runs `dhf-validate` on every DHF PR and produces an evidence bundle on merge to main.
+The scaffolded workflow validates DHF updates on PRs and can build evidence on merge to `main`.
+
+### Adopting with existing systems
+
+You do not need to replace Jira, Rally, or another existing system of record to use MedHarness.
+
+`dhfkit` can be used as the traceability and control layer around an existing workflow, while MedHarness provides the design analysis, implementation, and verification path for controlled changes.
+
+Interoperability with systems such as Jira and Rally is under development.
 
 ---
 
-## Coming from an existing system
+## Core commands
 
-If you have an existing DHF in Excel, Jira, Polarion, or a custom format, migration is writing YAML files — one per requirement, risk, or CR record. MedHarness items map directly to familiar artifact types: requirements spreadsheets become SRS/SYS items, risk registers become RISK + RCM items, SOUP lists become SOUP items.
-
-See [docs/adopting.md](docs/adopting.md) for the full mental model: starting fresh, migrating an existing DHF, using `dhfkit` standalone, and adopting incrementally.
-
----
-
-## How it works
-
-Every non-trivial change flows through a **Change Request (CR)** in the DHF. MedHarness runs Claude in two phases, validates the output deterministically, and opens a PR for your review before anything moves forward.
-
-**Phase 1 — Design (`generate-dhf`)**
-
-Claude reads the CR, triages it (duplicate? out-of-scope? too large?), then reads the relevant source modules and reasons top-down through the V-model hierarchy:
-
-```
-CR → CRS → SYS → { SYSARCH, RISK, RCM } → SRS → SWDD
-```
-
-It writes DHF items via the CLI, validates schema and traceability inline, and finally produces a detailed implementation plan in `implementation_notes` on the CR item. A PR opens for your review — you see the design items and the implementation plan before any code is written.
-
-**Phase 2 — Implementation (`develop-cr`)**
-
-After the design PR is approved, Claude reads `implementation_notes` and the linked DHF items, implements the code, annotates tests with `@links:` requirement IDs and `@testing:Tn` test-point tags, runs `medharness ci test-coverage` and `medharness ci test-points` to verify every requirement and every numbered test point has a passing test, and reconciles any deviations back onto `implementation_notes` and the SWDD items.
-
-At each phase, MedHarness pre-computes DHF context — item lists, traceability graph, coverage gaps — and injects it into Claude's prompt so the agent reasons about your actual DHF rather than guessing. After Claude runs, a deterministic validator checks schema, traceability links, and test annotations, and self-corrects if it can.
-
----
-
-## Who it's for
-
-- **Medical device software teams** working under IEC 62304, FDA 21 CFR 820.30, or MDR who want AI help that doesn't bypass the process
-- **Platform / DevOps engineers** building regulated CI pipelines who need programmatic hooks into DHF validation and evidence generation
-- **Startups** bootstrapping a DHF alongside their product without a dedicated RA team writing everything by hand
-
-`dhfkit` — the DHF engine inside MedHarness — also works standalone if you only need YAML-based item storage, traceability graphs, and document generation without the full CR workflow.
-
----
-
-## CR workflow
+### DHF and traceability
 
 ```bash
-# Phase 1 — Claude triages the CR, generates DHF items, and writes an
-# implementation plan. Opens a PR for design review.
-medharness --dhf DHF ci generate-dhf --cr CR-034
+cd my-device
 
-# Phase 2 — after the design PR is approved, Claude implements the code,
-# verifies test coverage, and reconciles any deviations back onto the DHF.
-medharness --dhf DHF ci develop-cr --cr CR-034
+dhfkit --dhf DHF item list --type SYS
+dhfkit --dhf DHF item get CR-034
+dhfkit --dhf DHF validate schema
+dhfkit --dhf DHF validate traceability
+dhfkit --dhf DHF doc generate SYS
+dhfkit --dhf DHF report
 ```
 
-Got review comments on a design PR? Pass `--pr N` to revise based on the feedback:
+### AI coding workflow
 
 ```bash
-medharness --dhf DHF ci generate-dhf --cr CR-034 --pr 42
-medharness --dhf DHF ci develop-cr --cr CR-034 --pr 42
+medharness --dhf DHF change plan --cr CR-034
+medharness --dhf DHF change implement --cr CR-034
+```
+
+If you are revising from PR feedback:
+
+```bash
+medharness --dhf DHF change plan --cr CR-034 --pr 42
+medharness --dhf DHF change implement --cr CR-034 --pr 42
 ```
 
 `ANTHROPIC_MODEL` selects the Claude model. `GH_TOKEN` is required when using `--pr`.
 
-Each command outputs structured JSON with outcome, errors, timing, and artifact paths — so CI automation can act on results without parsing text.
-
----
-
-## CR lifecycle
-
-A CR moves through these states as the workflow progresses:
-
-| State | Meaning |
-|-------|---------|
-| `new` | CR created, awaiting design |
-| `design` | `generate-dhf` has run; design PR open for review |
-| `develop` | Design approved; `develop-cr` has run; code PR open |
-| `completed` | Code PR merged |
-| `cancelled` | PR closed without merging |
-| `rejected` | Triage determined the CR is out-of-scope, duplicate, or too large |
-
-States are recorded for traceability and audit. Only `completed` CRs may be included in a release baseline — `cancelled` and `rejected` CRs are not deliverables.
-
----
-
-## CI gates
-
-### DHF schema and traceability
+### Verification
 
 ```bash
-medharness ci dhf-validate --dhf DHF
+medharness --dhf DHF verify dhf
+medharness --dhf DHF verify tests --junit-dir test-results
+medharness --dhf DHF verify branch --cr CR-034
+medharness --dhf DHF verify code --cr CR-034
+medharness --dhf DHF evidence bundle --out-dir artifacts
 ```
 
-Validates item schemas, required fields, and traceability links across the entire DHF.
-
-### Requirement-to-test coverage
+### SOUP management
 
 ```bash
-medharness ci test-coverage --dhf DHF --junit-dir test-results
+dhfkit --dhf DHF soup-sync --manifest <dependency-manifest>
 ```
 
-Reads JUnit XML test results and checks that every verifiable requirement has at least one linked passing test. Tests link to DHF items via `@links:<ITEM_ID>` annotations in their source, surfaced through JUnit properties. Exits non-zero when gaps exist.
-
-### Test-point coverage (TDD gate)
+### Release baseline
 
 ```bash
-medharness ci test-points --dhf DHF --junit-dir test-results
-```
-
-Enforces test-driven development at the DHF level. Requirements carry numbered test points in their `testing` field (`T1: given X, when Y, then Z`). Tests declare which points they cover via `@pytest.mark.dhf_testing("T1", "T2")` (Python) or an `@testing:T1` tag embedded in the test name (JS/any). The gate checks every declared point in every linked requirement has at least one covering test — exits non-zero on any gap.
-
-This closes the loop between design intent and test code: test points are written at design time, before implementation, making TDD a natural part of the DHF workflow rather than a retrofit.
-
-### Branch and code validation
-
-```bash
-# Verify the CR's design items and traceability are complete before merging
-medharness --dhf DHF ci validate-branch --cr CR-034
-
-# Run deterministic implementation validation (schema + coverage) without Claude
-medharness --dhf DHF ci validate-code --cr CR-034
-```
-
-### Evidence bundle
-
-```bash
-medharness ci evidence bundle --dhf DHF --out-dir artifacts --junit-dir test-results
-```
-
-Produces a timestamped DHF snapshot and test evidence archive, typically run on merge to `main`.
-
-### Approval gating and stage management
-
-```bash
-# Guard against acting on the wrong event — check that a stage has an explicit approval
-medharness ci approve-gate --cr CR-034 --stage design --pr 42
-
-# Report machine-readable CR stage and label state (for routing in CI)
-medharness --dhf DHF ci cr-status --cr CR-034 --pr 42
-
-# Advance the stage label on a PR (removes old label, adds new one, idempotent)
-medharness ci advance-stage --pr 42 --from-stage design --to-stage develop
-
-# Parse a PR comment for /approve or /reject commands
-medharness ci parse-approval --comment "$COMMENT_BODY"
-```
-
----
-
-## SOUP management and release baseline
-
-### SOUP synchronisation (IEC 62304 §5.3.3)
-
-`soup-sync` reads your package manifests and diffs them against SOUP items already in the DHF, reporting new dependencies, version drift, and orphaned records.
-
-```bash
-# Dry-run: show what would change
-dhfkit --dhf DHF soup-sync \
-  --manifest requirements.txt \
-  --manifest apps/client/package.json
-
-# Apply creates and updates
-dhfkit --dhf DHF soup-sync \
-  --manifest requirements.txt \
-  --write --author "ci" --cr CR-034
-```
-
-Supports `requirements.txt` (pinned `==` entries only) and `package.json` (`dependencies`, `devDependencies`, `peerDependencies`). Fuzzy name matching handles hyphen/underscore/case variants; duplicate packages across manifests are deduplicated automatically.
-
-### Release baseline (IEC 62304 §9)
-
-`release-baseline` verifies that all included CRs are completed, collects a software BOM from DHF SOUP items and package manifests, and writes `release-baseline.json` and `software-bom.json` to `--out-dir`.
-
-```bash
-# Dry-run: auto-collect completed unreleased CRs, write artifacts
-dhfkit --dhf DHF release-baseline \
-  --version 1.0.0 \
-  --manifest requirements.txt \
-  --out-dir artifacts/release
-
-# Explicitly specify CRs and create a REL item in the DHF
-dhfkit --dhf DHF release-baseline \
-  --version 1.0.0 \
-  --cr CR-030 --cr CR-031 --cr CR-034 \
-  --manifest requirements.txt \
-  --out-dir artifacts/release \
-  --write --author "ci"
-```
-
-When `--cr` is omitted, all completed CRs not yet referenced in any existing REL item are collected automatically. The gate exits non-zero if any specified CR is not in `completed` state.
-
----
-
-## Automation model
-
-MedHarness ships a minimal GitHub Actions workflow (scaffolded into new projects by `medharness init`). The stable interface is the CLI — wire it into whatever automation layer fits your team (GitHub Actions, GitLab CI, Jenkins, local scripts):
-
-```bash
-# ── DHF data operations (dhfkit) ────────────────────────────────────────────
-dhfkit --dhf DHF item list --type SYS
-dhfkit --dhf DHF item get CR-034
-dhfkit --dhf DHF item transition CR-034 completed --by "alice"
-dhfkit --dhf DHF validate schema
-dhfkit --dhf DHF validate traceability
-dhfkit --dhf DHF doc generate SYS
-dhfkit --dhf DHF doc export SYS            # PDF (requires [docs])
-dhfkit --dhf DHF report                    # human-readable traceability coverage
-
-# ── AI harness context (medharness) ─────────────────────────────────────────
-medharness --dhf DHF dhf context implementation \  # AI/CI context bundle for a CR
-  --cr CR-034 --out-dir /tmp/ctx
-
-# ── AI-assisted CR workflow ──────────────────────────────────────────────────
-medharness --dhf DHF ci generate-dhf --cr CR-034   # design phase
-medharness --dhf DHF ci develop-cr --cr CR-034     # implement phase
-
-# ── SOUP and release ─────────────────────────────────────────────────────────
-dhfkit --dhf DHF soup-sync --manifest requirements.txt
 dhfkit --dhf DHF release-baseline --version 1.0.0 --out-dir artifacts/release
-
-# ── CI gates ─────────────────────────────────────────────────────────────────
-medharness ci dhf-validate --dhf DHF
-medharness ci test-coverage --dhf DHF --junit-dir test-results
-medharness ci test-points --dhf DHF --junit-dir test-results
-medharness ci evidence bundle --dhf DHF --out-dir artifacts
-medharness --dhf DHF ci validate-branch --cr CR-034
-medharness --dhf DHF ci validate-code --cr CR-034
-
-# ── Observability and event routing ──────────────────────────────────────────
-medharness --dhf DHF ci cr-status --cr CR-034 --pr 42
-medharness ci approve-gate --cr CR-034 --stage design --pr 42
-medharness ci advance-stage --pr 42 --from-stage design --to-stage develop
-medharness ci parse-approval --comment "$COMMENT_BODY"
-medharness ci github-event --event "$GITHUB_EVENT_PATH"
 ```
+
+For more on dependency tracking and release documentation, see [docs/adopting.md](docs/adopting.md).
+
+### PR/stage automation
+
+```bash
+medharness --dhf DHF change status --cr CR-034 --pr 42
+medharness --dhf DHF approval check --cr CR-034 --stage design --pr 42
+medharness --dhf DHF change advance --pr 42 --from-stage design --to-stage develop
+medharness --dhf DHF approval parse --comment "$COMMENT_BODY"
+```
+
+These commands are designed to integrate cleanly with automation.
 
 ---
 
-## Python API
+## Who this fits
 
-`dhfkit` — no dependency on `medharness`:
+- medical device and SaMD teams working under IEC 62304, FDA 21 CFR 820.30, or MDR
+- teams that want AI to carry controlled changes without losing review control
+- organizations that already have requirements or work tracking in systems like Jira or Rally and still need a usable traceability layer
+- engineering teams that want their senior developers focused more on major feature development than on repetitive controlled changes
 
-```python
-from dhfkit.local_adapter import LocalDHFAdapter
+---
 
-adapter = LocalDHFAdapter(Path("DHF"))
-items   = adapter.list_items("SRS")
-```
+## Documentation
+
+- [CONTRIBUTING.md](CONTRIBUTING.md): contributor setup and local development
+- [docs/adopting.md](docs/adopting.md): starting fresh, migrating an existing DHF, and incremental adoption
+- [docs/architecture.md](docs/architecture.md): package boundaries, CR workflow, and scaffold topology
+- [docs/adr/](docs/adr/): architecture decision records
+- [CHANGELOG.md](CHANGELOG.md): version history
 
 ---
 
@@ -338,25 +213,16 @@ items   = adapter.list_items("SRS")
 
 | Directory | Purpose |
 |-----------|---------|
-| `medharness/` | CLI harness, CI gates, CR workflows, `init` scaffolding |
+| `medharness/` | harness CLI, verification, change workflows, scaffolding |
 | `dhfkit/` | DHF engine: items, lifecycle, traceability, document generation |
-| `dhfkit/templates/` | Starter DHF scaffold — config, specs, plans, sample items |
-| `tests/` | MedHarness and dhfkit test suites |
-| `docs/` | Architecture, ADRs, compatibility contracts |
+| `dhfkit/templates/` | starter DHF scaffold and templates |
+| `tests/` | MedHarness and `dhfkit` test suites |
+| `docs/` | architecture docs and ADRs |
 
-`dhfkit` has no dependency on `medharness` and can be used on its own.
-
----
-
-## Docs
-
-- [docs/adopting.md](docs/adopting.md) — starting fresh, migrating an existing DHF, incremental adoption
-- [docs/architecture.md](docs/architecture.md) — packages, scaffold model, DHF lifecycle
-- [docs/adr/](docs/adr/) — architecture decision records
-- [CHANGELOG.md](CHANGELOG.md) — version history
+`dhfkit` has no dependency on `medharness`, so the DHF engine can be adopted standalone.
 
 ---
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT. See [LICENSE](LICENSE).

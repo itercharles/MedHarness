@@ -1,4 +1,4 @@
-"""Unit tests for ci validate-verification (validate_verification_completeness)."""
+"""Unit tests for verify verification (validate_verification_completeness)."""
 
 from __future__ import annotations
 
@@ -165,7 +165,7 @@ def test_cli_validate_verification_passes(tmp_path: Path) -> None:
     junit = _make_junit(tmp_path, ["SRS-001"])
     result = CliRunner().invoke(
         main,
-        ["--dhf", str(dhf), "ci", "validate-verification",
+        ["--dhf", str(dhf), "verify", "verification",
          "--dhf", str(dhf), "--junit", str(junit)],
     )
     assert result.exit_code == 0, result.output
@@ -177,7 +177,7 @@ def test_cli_validate_verification_fails_on_missing_method(tmp_path: Path) -> No
     dhf = _make_dhf(tmp_path, [{"id": "SRS-001", "title": "No method"}])
     result = CliRunner().invoke(
         main,
-        ["--dhf", str(dhf), "ci", "validate-verification", "--dhf", str(dhf)],
+        ["--dhf", str(dhf), "verify", "verification", "--dhf", str(dhf)],
     )
     assert result.exit_code != 0
 
@@ -186,7 +186,7 @@ def test_cli_validate_verification_json_stdout(tmp_path: Path) -> None:
     dhf = _make_dhf(tmp_path, [{"id": "SRS-001", "verification_method": ["Test"]}])
     result = CliRunner().invoke(
         main,
-        ["--dhf", str(dhf), "ci", "validate-verification", "--dhf", str(dhf)],
+        ["--dhf", str(dhf), "verify", "verification", "--dhf", str(dhf)],
     )
     payload = json.loads(result.output.splitlines()[0])
     assert "passed" in payload
