@@ -137,6 +137,8 @@ dhfkit --dhf DHF doc generate SYS
 dhfkit --dhf DHF report
 ```
 
+This is only a small subset of the `dhfkit` surface. For item creation, updates, config inspection, test results, and other DHF operations, see `dhfkit --help` and the relevant subcommand help such as `dhfkit item --help`.
+
 ### AI coding workflow
 
 ```bash
