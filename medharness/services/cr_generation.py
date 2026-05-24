@@ -645,26 +645,6 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> di
             )
         )
 
-    artifact_step, artifact_perf = _begin_step(
-        "collect_artifacts", {"kind": "dhf_items_changed", "snapshot_only": True}
-    )
-    steps.append(
-        _finish_step(artifact_step, artifact_perf, "ok", {"items_changed": items_changed})
-    )
-
-    design_impact: dict = {"recorded": False, "reason": "skipped_due_to_validation_errors"}
-    if not errors:
-        impact_step, impact_perf = _begin_step("record_design_impact")
-        design_impact = _record_design_impact_in_cr(cr_id, dhf_path, items_changed)
-        steps.append(
-            _finish_step(
-                impact_step,
-                impact_perf,
-                "ok" if design_impact.get("recorded") else "warning",
-                design_impact,
-            )
-        )
-
     design_review_log: list[dict] = []
     design_review_verdict = "unknown"
     for review_cycle in range(1, _MAX_DESIGN_REVIEW_CYCLES + 1):
@@ -710,8 +690,44 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> di
             session_id = fix_session_id
             diagnostics["session_id"] = session_id
 
+        items_changed = git.collect_dhf_item_changes(repo_root, "origin/main")
+        validate_review_fix_step, validate_review_fix_perf = _begin_step(
+            f"validate_after_review_fix_{review_cycle}", {"validator": "validate_generate_dhf"}
+        )
+        errors = design_validation.validate_generate_dhf(cr_id, dhf_path, items_changed)
+        diagnostics["final_error_count"] = len(errors)
+        steps.append(
+            _finish_step(
+                validate_review_fix_step,
+                validate_review_fix_perf,
+                "failed" if errors else "ok",
+                {"error_count": len(errors)},
+            )
+        )
+
     diagnostics["design_review_verdict"] = design_review_verdict
     diagnostics["design_review_cycles"] = review_cycle
+
+    items_changed = git.collect_dhf_item_changes(repo_root, "origin/main")
+    artifact_step, artifact_perf = _begin_step(
+        "collect_artifacts", {"kind": "dhf_items_changed", "snapshot_only": True}
+    )
+    steps.append(
+        _finish_step(artifact_step, artifact_perf, "ok", {"items_changed": items_changed})
+    )
+
+    design_impact: dict = {"recorded": False, "reason": "skipped_due_to_validation_errors"}
+    if not errors:
+        impact_step, impact_perf = _begin_step("record_design_impact")
+        design_impact = _record_design_impact_in_cr(cr_id, dhf_path, items_changed)
+        steps.append(
+            _finish_step(
+                impact_step,
+                impact_perf,
+                "ok" if design_impact.get("recorded") else "warning",
+                design_impact,
+            )
+        )
 
     if session_id and pr_number:
         put_session(pr_number, session_id)
@@ -954,6 +970,20 @@ def generate_code(
         if fix_session_id:
             session_id = fix_session_id
             diagnostics["session_id"] = session_id
+
+        validate_review_fix_step, validate_review_fix_perf = _begin_step(
+            f"validate_after_review_fix_{review_cycle}", {"validator": "code_validation"}
+        )
+        errors = code_validation.validate_code(cr_id, dhf_path)
+        diagnostics["final_error_count"] = len(errors)
+        steps.append(
+            _finish_step(
+                validate_review_fix_step,
+                validate_review_fix_perf,
+                "failed" if errors else "ok",
+                {"error_count": len(errors)},
+            )
+        )
 
     diagnostics["code_review_verdict"] = code_review_verdict
     diagnostics["code_review_cycles"] = review_cycle
