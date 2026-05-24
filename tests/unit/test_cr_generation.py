@@ -18,6 +18,7 @@ from medharness.services.cr_generation import (
     _read_design_review_data,
     _resolve_stage_llm,
     _run_claude,
+    _run_claude_step,
     _run_openai_compatible,
     generate_code,
     generate_dhf,
@@ -412,6 +413,52 @@ class TestRunClaude:
         assert "out" in output
         assert "err" in output
         assert session_id == ""
+
+
+# ── _run_claude_step ──────────────────────────────────────────────────────────
+
+class TestRunClaudeStep:
+    def test_tool_label_is_claude_for_anthropic(self):
+        steps: list[dict] = []
+        with patch("medharness.services.cr_generation._run_llm", return_value=(0, "", "")):
+            _run_claude_step(
+                name="test_step",
+                prompt="p",
+                steps=steps,
+                warnings=[],
+                critical=False,
+                llm_config=LLMConfig(provider="anthropic", model="claude-opus-4-7"),
+            )
+        assert steps[0]["details"]["tool"] == "claude"
+
+    def test_tool_label_is_model_label_for_non_anthropic(self):
+        steps: list[dict] = []
+        with patch("medharness.services.cr_generation._run_llm", return_value=(0, "", "")):
+            _run_claude_step(
+                name="test_step",
+                prompt="p",
+                steps=steps,
+                warnings=[],
+                critical=False,
+                llm_config=LLMConfig(provider="openai", model="gpt-4o"),
+            )
+        assert steps[0]["details"]["tool"] == "openai:gpt-4o"
+
+    def test_warning_code_is_not_cli_missing_for_non_anthropic(self):
+        """Non-anthropic provider failure must not emit claude_cli_missing warning."""
+        warnings: list[dict] = []
+        with patch("medharness.services.cr_generation._run_llm", return_value=(1, "api error", "")):
+            _run_claude_step(
+                name="test_step",
+                prompt="p",
+                steps=[],
+                warnings=warnings,
+                critical=False,
+                llm_config=LLMConfig(provider="openai", model="gpt-4o", api_key="sk"),
+            )
+        assert warnings
+        assert all(w["code"] != "claude_cli_missing" for w in warnings)
+        assert warnings[0]["code"] == "claude_step_failed"
 
 
 # ── generate_dhf ──────────────────────────────────────────────────────────────
@@ -1293,6 +1340,14 @@ class TestResolveStageLlm:
         assert cfg.provider == "anthropic"
         assert cfg.model == "claude-opus-4-7"
 
+    def test_unknown_provider_returns_empty_api_key_and_base_url(self, monkeypatch):
+        monkeypatch.setenv("MEDHARNESS_DESIGN_MODEL", "custom:my-model")
+        cfg = _resolve_stage_llm("design")
+        assert cfg.provider == "custom"
+        assert cfg.model == "my-model"
+        assert cfg.api_key == ""
+        assert cfg.base_url == ""
+
 
 class TestModelLabel:
     def test_anthropic_with_model(self):
@@ -1393,6 +1448,106 @@ class TestRunOpenaiCompatible:
             )
         assert rc == 1
         assert "401" in output
+
+    def test_url_error_returns_exit_code_1(self):
+        import urllib.error
+        with patch("urllib.request.urlopen", side_effect=urllib.error.URLError("connection refused")):
+            rc, output, _ = _run_openai_compatible(
+                "prompt", model="gpt-4o", api_key="sk-test", base_url=self.BASE_URL
+            )
+        assert rc == 1
+        assert "connection refused" in output
+
+    def test_none_content_in_response_is_skipped(self):
+        """Model returns content=None (tool_calls-only turn) — must not crash or add empty string."""
+        response_body = json.dumps({
+            "choices": [{"message": {"role": "assistant", "content": None}, "finish_reason": "stop"}]
+        }).encode()
+        mock_resp = MagicMock()
+        mock_resp.__enter__ = lambda s: s
+        mock_resp.__exit__ = MagicMock(return_value=False)
+        mock_resp.read.return_value = response_body
+        with patch("urllib.request.urlopen", return_value=mock_resp):
+            rc, output, _ = _run_openai_compatible(
+                "prompt", model="gpt-4o", api_key="sk-test", base_url=self.BASE_URL
+            )
+        assert rc == 0
+        assert output == ""
+
+    def test_max_turns_terminates_loop(self):
+        """Loop exits after max_turns even when the model keeps requesting tool calls."""
+        tool_call = {"id": "c1", "type": "function", "function": {"name": "bash", "arguments": '{"command": "true"}'}}
+        always_tool = json.dumps({
+            "choices": [{"message": {"role": "assistant", "content": None, "tool_calls": [tool_call]}, "finish_reason": "tool_calls"}]
+        }).encode()
+        api_call_count = {"n": 0}
+        mock_resp = MagicMock()
+        mock_resp.__enter__ = lambda s: s
+        mock_resp.__exit__ = MagicMock(return_value=False)
+        def _read():
+            api_call_count["n"] += 1
+            return always_tool
+        mock_resp.read.side_effect = _read
+        with patch("urllib.request.urlopen", return_value=mock_resp), \
+             patch("subprocess.run", return_value=MagicMock(returncode=0, stdout="", stderr="")):
+            rc, _, _ = _run_openai_compatible(
+                "prompt", model="gpt-4o", api_key="sk-test", base_url=self.BASE_URL, max_turns=3
+            )
+        assert rc == 0
+        assert api_call_count["n"] == 3
+
+    def test_subprocess_timeout_captured_as_tool_result(self):
+        """A timed-out tool call must not crash the loop — the timeout message is sent back."""
+        tool_call = {"id": "c1", "type": "function", "function": {"name": "bash", "arguments": '{"command": "sleep 999"}'}}
+        first_response = self._make_response("", [tool_call])
+        second_response = self._make_response("got timeout result")
+        responses = iter([first_response, second_response])
+        mock_resp = MagicMock()
+        mock_resp.__enter__ = lambda s: s
+        mock_resp.__exit__ = MagicMock(return_value=False)
+        mock_resp.read.side_effect = lambda: next(responses)
+        with patch("urllib.request.urlopen", return_value=mock_resp), \
+             patch("subprocess.run", side_effect=subprocess.TimeoutExpired("sleep", 120)):
+            rc, output, _ = _run_openai_compatible(
+                "prompt", model="gpt-4o", api_key="sk-test", base_url=self.BASE_URL
+            )
+        assert rc == 0
+        assert "got timeout result" in output
+
+    def test_subprocess_exception_captured_as_tool_result(self):
+        """A subprocess error (non-timeout) must not crash the loop — the error is sent back."""
+        tool_call = {"id": "c1", "type": "function", "function": {"name": "bash", "arguments": '{"command": "bad"}'}}
+        first_response = self._make_response("", [tool_call])
+        second_response = self._make_response("got error result")
+        responses = iter([first_response, second_response])
+        mock_resp = MagicMock()
+        mock_resp.__enter__ = lambda s: s
+        mock_resp.__exit__ = MagicMock(return_value=False)
+        mock_resp.read.side_effect = lambda: next(responses)
+        with patch("urllib.request.urlopen", return_value=mock_resp), \
+             patch("subprocess.run", side_effect=OSError("permission denied")):
+            rc, output, _ = _run_openai_compatible(
+                "prompt", model="gpt-4o", api_key="sk-test", base_url=self.BASE_URL
+            )
+        assert rc == 0
+        assert "got error result" in output
+
+    def test_malformed_tool_arguments_captured_as_error(self):
+        """Invalid JSON in tool call arguments must not crash the loop."""
+        tool_call = {"id": "c1", "type": "function", "function": {"name": "bash", "arguments": "not-json"}}
+        first_response = self._make_response("", [tool_call])
+        second_response = self._make_response("recovered")
+        responses = iter([first_response, second_response])
+        mock_resp = MagicMock()
+        mock_resp.__enter__ = lambda s: s
+        mock_resp.__exit__ = MagicMock(return_value=False)
+        mock_resp.read.side_effect = lambda: next(responses)
+        with patch("urllib.request.urlopen", return_value=mock_resp):
+            rc, output, _ = _run_openai_compatible(
+                "prompt", model="gpt-4o", api_key="sk-test", base_url=self.BASE_URL
+            )
+        assert rc == 0
+        assert "recovered" in output
 
 
 # ── diagnostics model fields ───────────────────────────────────────────────────
