@@ -177,7 +177,7 @@ State transitions are not enforced as execution gates — the auto workflow proc
 
 The CR-generation path in `medharness.services` is split by responsibility:
 
-- `cr_generation.py` — stage orchestration, Claude invocation, PR-feedback retrieval; public entry points are `generate_dhf` and `generate_code`. Both return a `design_review` / `code_review` field with per-cycle `{verdict, issues}` data and a human-readable `narrative` list.
+- `cr_generation.py` — stage orchestration, LLM invocation, PR-feedback retrieval; public entry points are `generate_dhf` and `generate_code`. Both return a `design_review` / `code_review` field with per-cycle `{verdict, issues}` data and a human-readable `narrative` list. Each workflow stage resolves its own `LLMConfig` from `MEDHARNESS_{DESIGN|DESIGN_REVIEW|DEVELOP|CODE_REVIEW}_MODEL` env vars; supported providers are `anthropic` (Claude CLI, default), `openai`, and `deepseek`.
 - `prompt_assembly.py` — prompt-template loading and composition; injects pre-computed DHF context (item lists, traceability graph, coverage gaps) into each prompt
 - `cr_impact.py` — writes `affected_items` back onto the CR item after `change plan` completes; `implementation_notes` is LLM-authored and not overwritten by the harness
 - `design_validation.py` — deterministic post-design checks; only catches schema, traceability, and DHF-validation failures
