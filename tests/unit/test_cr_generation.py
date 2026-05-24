@@ -1435,3 +1435,59 @@ class TestDiagnosticsModelFields:
         assert "review_model" not in result["diagnostics"]
         assert "anthropic_model" not in result["diagnostics"]
 
+    def test_generate_dhf_routes_generation_and_review_to_different_models(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("MEDHARNESS_DESIGN_MODEL", "openai:gpt-4o")
+        monkeypatch.setenv("MEDHARNESS_DESIGN_REVIEW_MODEL", "deepseek:deepseek-chat")
+        monkeypatch.setenv("OPENAI_API_KEY", "sk-1")
+        monkeypatch.setenv("DEEPSEEK_API_KEY", "ds-1")
+        dhf = tmp_path / "DHF"
+        dhf.mkdir()
+
+        from medharness.services.cr_generation import LLMConfig
+        configs_used: list[LLMConfig] = []
+
+        def capture(prompt, *, config, resume_session=""):
+            configs_used.append(config)
+            return 0, "", ""
+
+        with patch("medharness.services.cr_generation._run_llm", side_effect=capture), \
+             patch("medharness.services.cr_generation.git.collect_dhf_item_changes",
+                   return_value={"created": [], "updated": [], "deleted": []}), \
+             patch("medharness.services.design_validation.validate_generate_dhf", return_value=[]):
+            generate_dhf("CR-072", dhf)
+
+        providers = [c.provider for c in configs_used]
+        assert "openai" in providers, "generation step must use design model (openai)"
+        assert "deepseek" in providers, "review step must use design_review model (deepseek)"
+        # generation step is always first
+        assert configs_used[0].provider == "openai"
+        # review step is last
+        assert configs_used[-1].provider == "deepseek"
+
+    def test_generate_code_routes_generation_and_review_to_different_models(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("MEDHARNESS_DEVELOP_MODEL", "deepseek:deepseek-chat")
+        monkeypatch.setenv("MEDHARNESS_CODE_REVIEW_MODEL", "openai:gpt-4o")
+        monkeypatch.setenv("DEEPSEEK_API_KEY", "ds-1")
+        monkeypatch.setenv("OPENAI_API_KEY", "sk-1")
+        dhf = tmp_path / "DHF"
+        dhf.mkdir()
+
+        from medharness.services.cr_generation import LLMConfig
+        configs_used: list[LLMConfig] = []
+
+        def capture(prompt, *, config, resume_session=""):
+            configs_used.append(config)
+            return 0, "", ""
+
+        with patch("medharness.services.cr_generation._run_llm", side_effect=capture), \
+             patch("medharness.services.code_validation.validate_code", return_value=[]):
+            generate_code("CR-073", dhf)
+
+        providers = [c.provider for c in configs_used]
+        assert "deepseek" in providers, "generation step must use develop model (deepseek)"
+        assert "openai" in providers, "review step must use code_review model (openai)"
+        # generation step is always first
+        assert configs_used[0].provider == "deepseek"
+        # review step is last
+        assert configs_used[-1].provider == "openai"
+
