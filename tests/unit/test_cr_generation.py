@@ -10,7 +10,10 @@ import pytest
 
 from medharness.services.cr_generation import (
     _auto_post_pr_feedback,
+    _build_review_result,
     _get_pr_feedback,
+    _parse_review_data,
+    _read_design_review_data,
     _run_claude,
     generate_code,
     generate_dhf,
@@ -132,6 +135,149 @@ class TestAssemblePrompts:
         from medharness.services.prompt_assembly import _assemble_generate_dhf_prompt
         prompt = _assemble_generate_dhf_prompt("CR-001")
         assert "verification_criteria" in prompt
+
+    def test_review_design_substitutes_cr_id(self):
+        from medharness.services.prompt_assembly import _assemble_review_design_prompt
+        prompt = _assemble_review_design_prompt("CR-042")
+        assert "CR-042" in prompt
+        assert "{{cr_id}}" not in prompt
+
+    def test_review_design_covers_three_criteria(self):
+        from medharness.services.prompt_assembly import _assemble_review_design_prompt
+        prompt = _assemble_review_design_prompt("CR-001")
+        assert "Necessity" in prompt
+        assert "Strategy" in prompt or "strategy" in prompt
+        assert "SWDD" in prompt
+
+    def test_review_design_does_not_write_files(self):
+        from medharness.services.prompt_assembly import _assemble_review_design_prompt
+        prompt = _assemble_review_design_prompt("CR-001")
+        assert "do not modify any dhf item files" in prompt.lower()
+
+
+# ── _parse_review_data ────────────────────────────────────────────────────────
+
+class TestParseReviewData:
+    def test_approved_verdict(self):
+        text = "**Verdict:** Approved"
+        assert _parse_review_data(text)["verdict"] == "approved"
+
+    def test_needs_revision_verdict(self):
+        text = "**Verdict:** Needs Revision"
+        assert _parse_review_data(text)["verdict"] == "needs_revision"
+
+    def test_unknown_when_no_verdict_line(self):
+        assert _parse_review_data("Some review text without a verdict")["verdict"] == "unknown"
+
+    def test_verdict_case_insensitive(self):
+        assert _parse_review_data("**Verdict:** APPROVED")["verdict"] == "approved"
+        assert _parse_review_data("**Verdict:** needs revision")["verdict"] == "needs_revision"
+
+    def test_extracts_issue_lines(self):
+        text = (
+            "**Verdict:** Needs Revision\n\n"
+            "## Issues\n"
+            "- [ ] `src/foo.ts:12`: missing null check\n"
+            "- [ ] `src/bar.ts:5`: wrong return type\n"
+        )
+        result = _parse_review_data(text)
+        assert result["issues"] == [
+            "`src/foo.ts:12`: missing null check",
+            "`src/bar.ts:5`: wrong return type",
+        ]
+
+    def test_no_issues_returns_empty_list(self):
+        text = "**Verdict:** Approved\n\nNo issues found."
+        assert _parse_review_data(text)["issues"] == []
+
+    def test_empty_string_returns_unknown_no_issues(self):
+        result = _parse_review_data("")
+        assert result == {"verdict": "unknown", "issues": []}
+
+    def test_returns_both_verdict_and_issues(self):
+        text = "**Verdict:** Needs Revision\n- [ ] item-1: problem"
+        result = _parse_review_data(text)
+        assert result["verdict"] == "needs_revision"
+        assert len(result["issues"]) == 1
+
+
+# ── _read_design_review_data ──────────────────────────────────────────────────
+
+class TestReadDesignReviewData:
+    def test_missing_file_returns_unknown(self, tmp_path):
+        result = _read_design_review_data(tmp_path, "CR-999")
+        assert result == {"verdict": "unknown", "issues": []}
+
+    def test_reads_approved_verdict(self, tmp_path):
+        review_dir = tmp_path / "docs" / "reviews"
+        review_dir.mkdir(parents=True)
+        (review_dir / "CR-001-Design-Review.md").write_text(
+            "# Design Review: CR-001\n\n**Verdict:** Approved\n\nNo issues found.\n"
+        )
+        result = _read_design_review_data(tmp_path, "CR-001")
+        assert result["verdict"] == "approved"
+        assert result["issues"] == []
+
+    def test_reads_needs_revision_with_issues(self, tmp_path):
+        review_dir = tmp_path / "docs" / "reviews"
+        review_dir.mkdir(parents=True)
+        (review_dir / "CR-002-Design-Review.md").write_text(
+            "**Verdict:** Needs Revision\n\n"
+            "## Issues\n"
+            "- [ ] `SWDD-003`: implementation_notes incomplete\n"
+            "- [ ] `SRS-005`: out of scope for this CR\n"
+        )
+        result = _read_design_review_data(tmp_path, "CR-002")
+        assert result["verdict"] == "needs_revision"
+        assert len(result["issues"]) == 2
+        assert "`SWDD-003`: implementation_notes incomplete" in result["issues"]
+
+
+# ── _build_review_result ──────────────────────────────────────────────────────
+
+class TestBuildReviewResult:
+    def test_approved_on_first_pass(self):
+        log = [{"cycle": 1, "verdict": "approved", "issues": []}]
+        result = _build_review_result("Design", log)
+        assert result["cycles"] == [{"cycle": 1, "verdict": "approved", "issues": []}]
+        assert result["narrative"][0] == "Design completed."
+        assert "Review: approved." in result["narrative"][1]
+
+    def test_needs_revision_then_approved(self):
+        log = [
+            {"cycle": 1, "verdict": "needs_revision", "issues": ["item-1: bad", "item-2: wrong"]},
+            {"cycle": 2, "verdict": "approved", "issues": []},
+        ]
+        result = _build_review_result("Implementation", log)
+        assert "2 issues found" in result["narrative"][1]
+        assert "fix pass triggered" in result["narrative"][1]
+        assert "all issues resolved" in result["narrative"][2]
+
+    def test_singular_issue_label(self):
+        log = [{"cycle": 1, "verdict": "needs_revision", "issues": ["file.ts:1: error"]}]
+        result = _build_review_result("Design", log)
+        assert "1 issue found" in result["narrative"][1]
+        assert "issues found" not in result["narrative"][1].replace("1 issue found", "")
+
+    def test_unknown_verdict(self):
+        log = [{"cycle": 1, "verdict": "unknown", "issues": []}]
+        result = _build_review_result("Design", log)
+        assert "unknown" in result["narrative"][1]
+
+    def test_cycles_list_matches_log(self):
+        log = [
+            {"cycle": 1, "verdict": "needs_revision", "issues": ["x"]},
+            {"cycle": 2, "verdict": "approved", "issues": []},
+        ]
+        result = _build_review_result("Design", log)
+        assert len(result["cycles"]) == 2
+        assert result["cycles"][0]["cycle"] == 1
+        assert result["cycles"][1]["cycle"] == 2
+
+    def test_empty_log_produces_only_stage_line(self):
+        result = _build_review_result("Design", [])
+        assert result["narrative"] == ["Design completed."]
+        assert result["cycles"] == []
 
 
 # ── PR feedback ───────────────────────────────────────────────────────────────
@@ -288,7 +434,8 @@ class TestGenerateDhf:
         for key in ("summary", "timing", "inputs", "steps", "artifacts", "diagnostics", "warnings"):
             assert key in result
 
-    def test_happy_path_calls_claude_once(self, tmp_path):
+    def test_happy_path_calls_claude_twice(self, tmp_path):
+        # generation + design review; no fix pass on happy path
         dhf = tmp_path / "DHF"
         dhf.mkdir()
         with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
@@ -297,10 +444,11 @@ class TestGenerateDhf:
              patch("medharness.services.design_validation.validate_generate_dhf", return_value=[]):
             mock_claude.return_value = (0, "", "")
             result = generate_dhf("CR-051", dhf)
-        assert mock_claude.call_count == 1
+        assert mock_claude.call_count == 2
         assert result["diagnostics"]["fix_attempted"] is False
 
     def test_fix_pass_triggered_when_validation_fails(self, tmp_path):
+        # generation + fix + design review = 3 Claude calls
         dhf = tmp_path / "DHF"
         dhf.mkdir()
         first_errors = [{"field": "schema", "issue": "x", "fix": "y"}]
@@ -311,11 +459,68 @@ class TestGenerateDhf:
                    side_effect=[first_errors, []]):
             mock_claude.return_value = (0, "", "")
             result = generate_dhf("CR-052", dhf)
-        assert mock_claude.call_count == 2
+        assert mock_claude.call_count == 3
         fix_prompt = mock_claude.call_args_list[1][0][0]
         assert "deterministic validation" in fix_prompt
         assert result["outcome"] == "corrected"
         assert result["diagnostics"]["fix_attempted"] is True
+
+    def test_design_review_loop_fixes_and_reruns_until_approved(self, tmp_path):
+        # review_1 → needs_revision → fix_1 → review_2 → approved
+        # Claude calls: generation + review_1 + fix_1 + review_2 = 4
+        dhf = tmp_path / "DHF"
+        dhf.mkdir()
+
+        data_sequence = iter([
+            {"verdict": "needs_revision", "issues": ["SYS-003: out of scope", "SWDD-002: notes unclear"]},
+            {"verdict": "approved", "issues": []},
+        ])
+
+        with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
+             patch("medharness.services.cr_generation.git.collect_dhf_item_changes",
+                   return_value={"created": [], "updated": [], "deleted": []}), \
+             patch("medharness.services.design_validation.validate_generate_dhf", return_value=[]), \
+             patch("medharness.services.cr_generation._read_design_review_data",
+                   side_effect=lambda repo_root, cr_id: next(data_sequence)):
+            mock_claude.return_value = (0, "", "")
+            result = generate_dhf("CR-060", dhf)
+
+        assert mock_claude.call_count == 4
+        step_names = [s["name"] for s in result["steps"]]
+        assert "run_design_review" in step_names
+        assert "run_design_fix_1" in step_names
+        assert "run_design_review_2" in step_names
+        assert result["diagnostics"]["design_review_verdict"] == "approved"
+        assert result["diagnostics"]["design_review_cycles"] == 2
+
+        fix_prompt = mock_claude.call_args_list[2][0][0]
+        assert "Design-Review.md" in fix_prompt
+
+        dr = result["design_review"]
+        assert dr["cycles"][0] == {"cycle": 1, "verdict": "needs_revision", "issues": ["SYS-003: out of scope", "SWDD-002: notes unclear"]}
+        assert dr["cycles"][1] == {"cycle": 2, "verdict": "approved", "issues": []}
+        assert "2 issues found" in dr["narrative"][1]
+        assert "all issues resolved" in dr["narrative"][2]
+
+    def test_design_review_loop_stops_at_max_cycles(self, tmp_path):
+        # verdict always needs_revision → loop runs _MAX_DESIGN_REVIEW_CYCLES times then stops
+        dhf = tmp_path / "DHF"
+        dhf.mkdir()
+        with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
+             patch("medharness.services.cr_generation.git.collect_dhf_item_changes",
+                   return_value={"created": [], "updated": [], "deleted": []}), \
+             patch("medharness.services.design_validation.validate_generate_dhf", return_value=[]), \
+             patch("medharness.services.cr_generation._read_design_review_data",
+                   return_value={"verdict": "needs_revision", "issues": ["item-1: problem"]}):
+            mock_claude.return_value = (0, "", "")
+            result = generate_dhf("CR-061", dhf)
+
+        # generation + (fix + review) * (MAX-1) + final_review
+        from medharness.services.cr_generation import _MAX_DESIGN_REVIEW_CYCLES
+        expected_claude_calls = 1 + (_MAX_DESIGN_REVIEW_CYCLES - 1) * 2 + 1
+        assert mock_claude.call_count == expected_claude_calls
+        assert result["diagnostics"]["design_review_cycles"] == _MAX_DESIGN_REVIEW_CYCLES
+        assert len(result["design_review"]["cycles"]) == _MAX_DESIGN_REVIEW_CYCLES
 
     def test_residual_errors_yield_completed_with_errors(self, tmp_path):
         dhf = tmp_path / "DHF"
@@ -668,6 +873,57 @@ class TestGenerateCode:
             result = generate_code("CR-099", dhf, pr_number=None)
         mock_post.assert_not_called()
         assert "pr_comments" not in result
+
+    def test_code_review_loop_fixes_and_reruns_until_approved(self, tmp_path):
+        # review_1 → needs_revision → fix_1 → review_2 → approved
+        # Claude calls: develop + review_1 + fix_1 + review_2 = 4
+        dhf = tmp_path / "DHF"
+        dhf.mkdir()
+        data_sequence = iter([
+            {"verdict": "needs_revision", "issues": ["src/foo.ts:12: missing null check"]},
+            {"verdict": "approved", "issues": []},
+        ])
+        with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
+             patch("medharness.services.code_validation.validate_code", return_value=[]), \
+             patch("medharness.services.cr_generation._parse_review_data",
+                   side_effect=lambda text: next(data_sequence)):
+            mock_claude.return_value = (0, "", "")
+            result = generate_code("CR-070", dhf)
+
+        assert mock_claude.call_count == 4
+        step_names = [s["name"] for s in result["steps"]]
+        assert "run_review" in step_names
+        assert "run_code_fix_1" in step_names
+        assert "run_review_2" in step_names
+        assert result["diagnostics"]["code_review_verdict"] == "approved"
+        assert result["diagnostics"]["code_review_cycles"] == 2
+
+        fix_prompt = mock_claude.call_args_list[2][0][0]
+        assert "issues" in fix_prompt.lower()
+
+        cr = result["code_review"]
+        assert cr["cycles"][0] == {"cycle": 1, "verdict": "needs_revision", "issues": ["src/foo.ts:12: missing null check"]}
+        assert cr["cycles"][1] == {"cycle": 2, "verdict": "approved", "issues": []}
+        assert "1 issue found" in cr["narrative"][1]
+        assert "all issues resolved" in cr["narrative"][2]
+
+    def test_code_review_loop_stops_at_max_cycles(self, tmp_path):
+        # verdict always needs_revision → loop runs _MAX_CODE_REVIEW_CYCLES times then stops
+        dhf = tmp_path / "DHF"
+        dhf.mkdir()
+        with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
+             patch("medharness.services.code_validation.validate_code", return_value=[]), \
+             patch("medharness.services.cr_generation._parse_review_data",
+                   return_value={"verdict": "needs_revision", "issues": ["file.ts:1: problem"]}):
+            mock_claude.return_value = (0, "", "")
+            result = generate_code("CR-071", dhf)
+
+        from medharness.services.cr_generation import _MAX_CODE_REVIEW_CYCLES
+        # develop + (_MAX - 1) * (review + fix) + final review
+        expected = 1 + (_MAX_CODE_REVIEW_CYCLES - 1) * 2 + 1
+        assert mock_claude.call_count == expected
+        assert result["diagnostics"]["code_review_cycles"] == _MAX_CODE_REVIEW_CYCLES
+        assert len(result["code_review"]["cycles"]) == _MAX_CODE_REVIEW_CYCLES
 
 
 # ── DHF context block ──────────────────────────────────────────────────────────

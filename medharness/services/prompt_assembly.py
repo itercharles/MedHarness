@@ -273,6 +273,10 @@ def _assemble_review_code_prompt(cr_id: str) -> str:
     return _load_prompt("cr_review_code.md").replace("{{cr_id}}", cr_id)
 
 
+def _assemble_review_design_prompt(cr_id: str) -> str:
+    return _load_prompt("cr_review_design.md").replace("{{cr_id}}", cr_id)
+
+
 def _assemble_generate_dhf_prompt(cr_id: str, dhf_path: Path | None = None) -> str:
     prompt = _load_prompt("cr_generate_dhf.md").replace("{{cr_id}}", cr_id)
     if dhf_path is not None:

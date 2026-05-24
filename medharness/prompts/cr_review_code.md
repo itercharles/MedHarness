@@ -37,9 +37,9 @@ flag it as a harness bug, not as a code issue.
 
 ## Output
 
-Write the review to `docs/reviews/{{cr_id}}-Code-Review.md`:
+Respond with the review in this exact format — do not write any files:
 
-```markdown
+```
 # Code Review: {{cr_id}}
 
 **Verdict:** Approved | Needs Revision
