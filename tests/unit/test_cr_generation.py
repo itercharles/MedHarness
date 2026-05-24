@@ -1273,18 +1273,18 @@ class TestResolveStageLlm:
         assert cfg.base_url == "https://api.openai.com/v1"
 
     def test_deepseek_provider(self, monkeypatch):
-        monkeypatch.setenv("MEDHARNESS_REVIEW_MODEL", "deepseek:deepseek-chat")
+        monkeypatch.setenv("MEDHARNESS_CODE_REVIEW_MODEL", "deepseek:deepseek-chat")
         monkeypatch.setenv("DEEPSEEK_API_KEY", "ds-key")
-        cfg = _resolve_stage_llm("review")
+        cfg = _resolve_stage_llm("code_review")
         assert cfg.provider == "deepseek"
         assert cfg.model == "deepseek-chat"
         assert cfg.api_key == "ds-key"
         assert cfg.base_url == "https://api.deepseek.com/v1"
 
     def test_stage_names_are_uppercased(self, monkeypatch):
-        monkeypatch.setenv("MEDHARNESS_REVIEW_MODEL", "openai:gpt-4o")
+        monkeypatch.setenv("MEDHARNESS_DESIGN_REVIEW_MODEL", "openai:gpt-4o")
         monkeypatch.setenv("OPENAI_API_KEY", "k")
-        cfg = _resolve_stage_llm("review")
+        cfg = _resolve_stage_llm("design_review")
         assert cfg.provider == "openai"
 
     def test_bare_model_without_provider_treated_as_anthropic(self, monkeypatch):
@@ -1403,9 +1403,9 @@ class TestDiagnosticsModelFields:
         monkeypatch.setattr("medharness.services.cr_generation.get_session", lambda pr: "")
         monkeypatch.setattr("medharness.services.cr_generation.put_session", lambda pr, sid: None)
 
-    def test_generate_dhf_has_design_and_review_model(self, tmp_path, monkeypatch):
+    def test_generate_dhf_has_design_and_design_review_model(self, tmp_path, monkeypatch):
         monkeypatch.setenv("MEDHARNESS_DESIGN_MODEL", "openai:gpt-4o")
-        monkeypatch.setenv("MEDHARNESS_REVIEW_MODEL", "deepseek:deepseek-chat")
+        monkeypatch.setenv("MEDHARNESS_DESIGN_REVIEW_MODEL", "deepseek:deepseek-chat")
         monkeypatch.setenv("OPENAI_API_KEY", "sk-1")
         monkeypatch.setenv("DEEPSEEK_API_KEY", "ds-1")
         dhf = tmp_path / "DHF"
@@ -1416,12 +1416,13 @@ class TestDiagnosticsModelFields:
              patch("medharness.services.design_validation.validate_generate_dhf", return_value=[]):
             result = generate_dhf("CR-070", dhf)
         assert result["diagnostics"]["design_model"] == "openai:gpt-4o"
-        assert result["diagnostics"]["review_model"] == "deepseek:deepseek-chat"
+        assert result["diagnostics"]["design_review_model"] == "deepseek:deepseek-chat"
+        assert "review_model" not in result["diagnostics"]
         assert "anthropic_model" not in result["diagnostics"]
 
-    def test_generate_code_has_develop_and_review_model(self, tmp_path, monkeypatch):
+    def test_generate_code_has_develop_and_code_review_model(self, tmp_path, monkeypatch):
         monkeypatch.setenv("MEDHARNESS_DEVELOP_MODEL", "deepseek:deepseek-chat")
-        monkeypatch.setenv("MEDHARNESS_REVIEW_MODEL", "openai:gpt-4o")
+        monkeypatch.setenv("MEDHARNESS_CODE_REVIEW_MODEL", "openai:gpt-4o")
         monkeypatch.setenv("DEEPSEEK_API_KEY", "ds-1")
         monkeypatch.setenv("OPENAI_API_KEY", "sk-1")
         dhf = tmp_path / "DHF"
@@ -1430,6 +1431,7 @@ class TestDiagnosticsModelFields:
              patch("medharness.services.code_validation.validate_code", return_value=[]):
             result = generate_code("CR-071", dhf)
         assert result["diagnostics"]["develop_model"] == "deepseek:deepseek-chat"
-        assert result["diagnostics"]["review_model"] == "openai:gpt-4o"
+        assert result["diagnostics"]["code_review_model"] == "openai:gpt-4o"
+        assert "review_model" not in result["diagnostics"]
         assert "anthropic_model" not in result["diagnostics"]
 

@@ -674,10 +674,10 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> di
     warnings: list[dict] = []
     critical_step_failed = False
     design_llm = _resolve_stage_llm("design")
-    review_llm = _resolve_stage_llm("review")
+    review_llm = _resolve_stage_llm("design_review")
     diagnostics: dict = {
         "design_model": _model_label(design_llm),
-        "review_model": _model_label(review_llm),
+        "design_review_model": _model_label(review_llm),
         "github_feedback": {"attempted": False},
         "fix_attempted": False,
         "initial_error_count": 0,
@@ -935,10 +935,10 @@ def generate_code(
     warnings: list[dict] = []
     critical_step_failed = False
     develop_llm = _resolve_stage_llm("develop")
-    review_llm = _resolve_stage_llm("review")
+    review_llm = _resolve_stage_llm("code_review")
     diagnostics = {
         "develop_model": _model_label(develop_llm),
-        "review_model": _model_label(review_llm),
+        "code_review_model": _model_label(review_llm),
         "github_feedback": {"attempted": False},
         "ci_failures_injected": ci_failures is not None,
         "preflight_errors": 0,
