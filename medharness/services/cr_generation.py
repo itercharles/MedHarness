@@ -716,6 +716,15 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> di
     prior_session = get_session(pr_number) if pr_number else ""
     if prior_session:
         diagnostics["resumed_session_id"] = prior_session
+    if pr_number and any(llm.provider != "anthropic" for llm in (design_llm, review_llm)):
+        warnings.append(
+            _warning(
+                "non_anthropic_provider_no_session",
+                "Revision mode is active but one or more stages use a non-anthropic provider. "
+                "Session continuity is not supported outside the Anthropic Claude CLI; "
+                "this run cannot resume from or persist to a previous session.",
+            )
+        )
 
     if pr_number:
         feedback_step, feedback_perf = _begin_step("fetch_pr_feedback")
@@ -979,6 +988,15 @@ def generate_code(
     prior_session = get_session(pr_number) if pr_number else ""
     if prior_session:
         diagnostics["resumed_session_id"] = prior_session
+    if pr_number and any(llm.provider != "anthropic" for llm in (develop_llm, review_llm)):
+        warnings.append(
+            _warning(
+                "non_anthropic_provider_no_session",
+                "Revision mode is active but one or more stages use a non-anthropic provider. "
+                "Session continuity is not supported outside the Anthropic Claude CLI; "
+                "this run cannot resume from or persist to a previous session.",
+            )
+        )
 
     # Pre-flight DHF traceability check — catch structural gaps before the LLM runs
     # so the prompt can include specific fixes rather than the LLM discovering them later.

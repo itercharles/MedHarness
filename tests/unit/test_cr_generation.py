@@ -1677,3 +1677,89 @@ class TestDiagnosticsModelFields:
         # review step is last
         assert configs_used[-1].provider == "openai"
 
+
+class TestNonAnthropicProviderSessionWarning:
+    """Warning emitted when revision mode is active but a stage uses a non-anthropic provider."""
+
+    @pytest.fixture(autouse=True)
+    def stub_session(self, monkeypatch):
+        monkeypatch.setattr("medharness.services.cr_generation.get_session", lambda pr: "")
+        monkeypatch.setattr("medharness.services.cr_generation.put_session", lambda pr, sid: None)
+
+    def test_generate_dhf_warns_when_design_model_non_anthropic_with_pr(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("MEDHARNESS_DESIGN_MODEL", "openai:gpt-4o")
+        monkeypatch.setenv("OPENAI_API_KEY", "sk-1")
+        dhf = tmp_path / "DHF"
+        dhf.mkdir()
+        with patch("medharness.services.cr_generation._run_llm", return_value=(0, "", "")), \
+             patch("medharness.services.cr_generation._get_pr_feedback",
+                   return_value={"diagnostics": {}, "warnings": [], "prompt_text": ""}), \
+             patch("medharness.services.cr_generation.git.collect_dhf_item_changes",
+                   return_value={"created": [], "updated": [], "deleted": []}), \
+             patch("medharness.services.design_validation.validate_generate_dhf", return_value=[]):
+            result = generate_dhf("CR-080", dhf, pr_number=42)
+        codes = [w["code"] for w in result["warnings"]]
+        assert "non_anthropic_provider_no_session" in codes
+
+    def test_generate_dhf_no_warning_when_all_anthropic_with_pr(self, tmp_path, monkeypatch):
+        dhf = tmp_path / "DHF"
+        dhf.mkdir()
+        with patch("medharness.services.cr_generation._run_llm", return_value=(0, "", "")), \
+             patch("medharness.services.cr_generation._get_pr_feedback",
+                   return_value={"diagnostics": {}, "warnings": [], "prompt_text": ""}), \
+             patch("medharness.services.cr_generation.git.collect_dhf_item_changes",
+                   return_value={"created": [], "updated": [], "deleted": []}), \
+             patch("medharness.services.design_validation.validate_generate_dhf", return_value=[]):
+            result = generate_dhf("CR-081", dhf, pr_number=42)
+        codes = [w["code"] for w in result["warnings"]]
+        assert "non_anthropic_provider_no_session" not in codes
+
+    def test_generate_dhf_no_warning_when_non_anthropic_without_pr(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("MEDHARNESS_DESIGN_MODEL", "openai:gpt-4o")
+        monkeypatch.setenv("OPENAI_API_KEY", "sk-1")
+        dhf = tmp_path / "DHF"
+        dhf.mkdir()
+        with patch("medharness.services.cr_generation._run_llm", return_value=(0, "", "")), \
+             patch("medharness.services.cr_generation.git.collect_dhf_item_changes",
+                   return_value={"created": [], "updated": [], "deleted": []}), \
+             patch("medharness.services.design_validation.validate_generate_dhf", return_value=[]):
+            result = generate_dhf("CR-082", dhf)
+        codes = [w["code"] for w in result["warnings"]]
+        assert "non_anthropic_provider_no_session" not in codes
+
+    def test_generate_code_warns_when_develop_model_non_anthropic_with_pr(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("MEDHARNESS_DEVELOP_MODEL", "openai:gpt-4o")
+        monkeypatch.setenv("OPENAI_API_KEY", "sk-1")
+        dhf = tmp_path / "DHF"
+        dhf.mkdir()
+        with patch("medharness.services.cr_generation._run_llm", return_value=(0, "", "")), \
+             patch("medharness.services.cr_generation._get_pr_feedback",
+                   return_value={"diagnostics": {}, "warnings": [], "prompt_text": ""}), \
+             patch("medharness.services.code_validation.validate_code", return_value=[]):
+            result = generate_code("CR-083", dhf, pr_number=42)
+        codes = [w["code"] for w in result["warnings"]]
+        assert "non_anthropic_provider_no_session" in codes
+
+    def test_generate_code_no_warning_when_all_anthropic_with_pr(self, tmp_path, monkeypatch):
+        dhf = tmp_path / "DHF"
+        dhf.mkdir()
+        with patch("medharness.services.cr_generation._run_llm", return_value=(0, "", "")), \
+             patch("medharness.services.cr_generation._get_pr_feedback",
+                   return_value={"diagnostics": {}, "warnings": [], "prompt_text": ""}), \
+             patch("medharness.services.code_validation.validate_code", return_value=[]):
+            result = generate_code("CR-084", dhf, pr_number=42)
+        codes = [w["code"] for w in result["warnings"]]
+        assert "non_anthropic_provider_no_session" not in codes
+
+    def test_generate_code_warns_when_review_model_non_anthropic_with_pr(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("MEDHARNESS_CODE_REVIEW_MODEL", "deepseek:deepseek-chat")
+        monkeypatch.setenv("DEEPSEEK_API_KEY", "ds-1")
+        dhf = tmp_path / "DHF"
+        dhf.mkdir()
+        with patch("medharness.services.cr_generation._run_llm", return_value=(0, "", "")), \
+             patch("medharness.services.cr_generation._get_pr_feedback",
+                   return_value={"diagnostics": {}, "warnings": [], "prompt_text": ""}), \
+             patch("medharness.services.code_validation.validate_code", return_value=[]):
+            result = generate_code("CR-085", dhf, pr_number=42)
+        codes = [w["code"] for w in result["warnings"]]
+        assert "non_anthropic_provider_no_session" in codes
