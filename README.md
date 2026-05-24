@@ -163,8 +163,9 @@ medharness --dhf DHF change implement --cr CR-034 --pr 42
 | `MEDHARNESS_DESIGN_REVIEW_MODEL` | LLM for the design review loop |
 | `MEDHARNESS_DEVELOP_MODEL` | LLM for `change implement` generation |
 | `MEDHARNESS_CODE_REVIEW_MODEL` | LLM for the code review loop |
+| `MEDHARNESS_{STAGE}_BASE_URL` | Override the API endpoint for a stage (Azure, Ollama, vLLM, …) |
 
-Each `MEDHARNESS_*_MODEL` variable takes a `provider:model` value. Supported providers: `anthropic` (default, uses the Claude CLI), `openai` (requires `OPENAI_API_KEY`), `deepseek` (requires `DEEPSEEK_API_KEY`). Any stage without a `MEDHARNESS_*_MODEL` env var falls back to the Anthropic Claude CLI.
+Each `MEDHARNESS_*_MODEL` variable takes a `provider:model` value. Supported providers: `anthropic` (default, uses the Claude CLI), `openai` (requires `OPENAI_API_KEY`), `deepseek` (requires `DEEPSEEK_API_KEY`). Any stage without a `MEDHARNESS_*_MODEL` env var falls back to the Anthropic Claude CLI. Set `MEDHARNESS_{STAGE}_BASE_URL` to point a stage at a custom endpoint (e.g. `https://my-resource.openai.azure.com/openai/deployments/gpt4o`).
 
 ### Verification
 

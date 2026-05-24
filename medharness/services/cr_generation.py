@@ -9,7 +9,7 @@ import subprocess
 import time
 import urllib.error
 import urllib.request
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -71,9 +71,14 @@ _PROVIDER_API_KEY_ENVS: dict[str, str] = {
 def _resolve_stage_llm(stage: str) -> LLMConfig:
     """Resolve LLM config for a workflow stage.
 
-    Reads MEDHARNESS_{DESIGN|DEVELOP|REVIEW}_MODEL env var.
-    Format: "provider:model" (e.g. "deepseek:deepseek-chat", "openai:gpt-4o").
+    Reads MEDHARNESS_{stage}_MODEL (e.g. MEDHARNESS_DESIGN_MODEL,
+    MEDHARNESS_DESIGN_REVIEW_MODEL, MEDHARNESS_DEVELOP_MODEL,
+    MEDHARNESS_CODE_REVIEW_MODEL). Format: "provider:model"
+    (e.g. "deepseek:deepseek-chat", "openai:gpt-4o").
     Falls back to anthropic + ANTHROPIC_MODEL if not set.
+
+    For non-anthropic providers, MEDHARNESS_{stage}_BASE_URL overrides the
+    default endpoint, enabling Azure OpenAI, Ollama, vLLM, LM Studio, etc.
     """
     raw = os.environ.get(f"MEDHARNESS_{stage.upper()}_MODEL", "")
     if raw:
@@ -89,7 +94,10 @@ def _resolve_stage_llm(stage: str) -> LLMConfig:
 
     api_key_env = _PROVIDER_API_KEY_ENVS.get(provider, "")
     api_key = os.environ.get(api_key_env, "") if api_key_env else ""
-    base_url = _PROVIDER_BASE_URLS.get(provider, "")
+    base_url = (
+        os.environ.get(f"MEDHARNESS_{stage.upper()}_BASE_URL")
+        or _PROVIDER_BASE_URLS.get(provider, "")
+    )
     return LLMConfig(provider=provider, model=model, api_key=api_key, base_url=base_url)
 
 
@@ -254,7 +262,17 @@ def _run_openai_compatible(
         },
     }
 
-    messages: list[dict] = [{"role": "user", "content": prompt}]
+    messages: list[dict] = [
+        {
+            "role": "system",
+            "content": (
+                "You are an expert software engineering assistant. "
+                "Use the bash tool to read files, run CLI commands, create and modify "
+                "DHF items, and verify your work. Complete the task fully before stopping."
+            ),
+        },
+        {"role": "user", "content": prompt},
+    ]
     output_parts: list[str] = []
 
     for _ in range(max_turns):

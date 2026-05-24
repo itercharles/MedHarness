@@ -1348,6 +1348,20 @@ class TestResolveStageLlm:
         assert cfg.api_key == ""
         assert cfg.base_url == ""
 
+    def test_custom_base_url_overrides_default(self, monkeypatch):
+        monkeypatch.setenv("MEDHARNESS_DESIGN_MODEL", "openai:gpt-4o")
+        monkeypatch.setenv("MEDHARNESS_DESIGN_BASE_URL", "https://my-azure.openai.azure.com/v1")
+        monkeypatch.setenv("OPENAI_API_KEY", "sk-1")
+        cfg = _resolve_stage_llm("design")
+        assert cfg.base_url == "https://my-azure.openai.azure.com/v1"
+
+    def test_default_base_url_used_when_custom_not_set(self, monkeypatch):
+        monkeypatch.setenv("MEDHARNESS_DESIGN_MODEL", "openai:gpt-4o")
+        monkeypatch.delenv("MEDHARNESS_DESIGN_BASE_URL", raising=False)
+        monkeypatch.setenv("OPENAI_API_KEY", "sk-1")
+        cfg = _resolve_stage_llm("design")
+        assert cfg.base_url == "https://api.openai.com/v1"
+
 
 class TestModelLabel:
     def test_anthropic_with_model(self):
@@ -1401,6 +1415,23 @@ class TestRunOpenaiCompatible:
         assert rc == 1
         assert "API key" in output
         assert sid == ""
+
+    def test_system_message_included_in_first_request(self):
+        response_body = self._make_response("ok")
+        mock_resp = MagicMock()
+        mock_resp.__enter__ = lambda s: s
+        mock_resp.__exit__ = MagicMock(return_value=False)
+        mock_resp.read.return_value = response_body
+        captured_payload: list[dict] = []
+        def fake_urlopen(req, timeout=None):
+            captured_payload.append(json.loads(req.data))
+            return mock_resp
+        with patch("urllib.request.urlopen", side_effect=fake_urlopen):
+            _run_openai_compatible("do the task", model="gpt-4o", api_key="sk-test", base_url=self.BASE_URL)
+        messages = captured_payload[0]["messages"]
+        assert messages[0]["role"] == "system"
+        assert messages[1]["role"] == "user"
+        assert messages[1]["content"] == "do the task"
 
     def test_returns_text_content_on_success(self):
         response_body = self._make_response("hello from gpt")

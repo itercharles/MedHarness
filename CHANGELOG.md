@@ -23,6 +23,17 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
   OpenAI-compatible providers run an agentic bash-tool loop against the
   `/chat/completions` endpoint.
 
+- **Custom base URL per stage** — set `MEDHARNESS_{STAGE}_BASE_URL` to target
+  Azure OpenAI, Ollama, vLLM, LM Studio, or any other OpenAI-compatible
+  endpoint. Overrides the default endpoint for that stage.
+
+### Breaking Changes
+
+- **`diagnostics["anthropic_model"]` removed** — `generate_dhf` now reports
+  `design_model` and `design_review_model`; `generate_code` reports
+  `develop_model` and `code_review_model`. Consumers reading
+  `result["diagnostics"]["anthropic_model"]` must update to the new keys.
+
 ---
 
 ## [0.9.0] — 2026-05-21
