@@ -22,6 +22,7 @@ from medharness.services.prompt_assembly import (
     _assemble_develop_prompt,
     _assemble_generate_dhf_prompt,
     _assemble_review_code_prompt,
+    _assemble_review_design_prompt,
     _build_dhf_context_block,
 )
 
@@ -40,6 +41,9 @@ _DEFAULT_CODE_PATHS: tuple[str, ...] = tuple(
     for p in os.environ.get("MEDHARNESS_CODE_PATHS", "apps/,packages/").split(",")
     if p.strip()
 )
+
+_MAX_DESIGN_REVIEW_CYCLES = 3
+_MAX_CODE_REVIEW_CYCLES = 3
 
 
 # ── GitHub PR feedback ────────────────────────────────────────────────────────
@@ -399,6 +403,70 @@ def _augment_review_prompt(base: str, errors: list[dict]) -> str:
     )
 
 
+def _parse_review_data(text: str) -> dict:
+    """Parse a review response into verdict and issue list.
+
+    Returns {"verdict": "approved"|"needs_revision"|"unknown", "issues": [str, ...]}.
+    Issues are extracted from Markdown task-list lines starting with "- [ ]".
+    """
+    verdict = "unknown"
+    issues: list[str] = []
+    for line in text.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("**Verdict:**"):
+            lower = stripped.lower()
+            if "approved" in lower:
+                verdict = "approved"
+            elif "needs revision" in lower:
+                verdict = "needs_revision"
+        elif stripped.startswith("- [ ]"):
+            issues.append(stripped[5:].strip())
+    return {"verdict": verdict, "issues": issues}
+
+
+def _read_design_review_data(repo_root: Path, cr_id: str) -> dict:
+    """Read and parse the design review file.
+
+    Returns {"verdict": ..., "issues": [...]} or {"verdict": "unknown", "issues": []}
+    if the file is absent or unparseable.
+    """
+    review_file = repo_root / "docs" / "reviews" / f"{cr_id}-Design-Review.md"
+    try:
+        content = review_file.read_text()
+    except OSError:
+        return {"verdict": "unknown", "issues": []}
+    return _parse_review_data(content)
+
+
+def _build_review_result(stage_label: str, log: list[dict]) -> dict:
+    """Build the client-facing review summary from per-cycle log entries.
+
+    Returns {"cycles": [...], "narrative": [str, ...]}.
+    """
+    narrative = [f"{stage_label} completed."]
+    for entry in log:
+        cycle = entry["cycle"]
+        verdict = entry["verdict"]
+        issues = entry.get("issues") or []
+        prefix = "Review" if cycle == 1 else f"Re-review (cycle {cycle})"
+        if verdict == "needs_revision":
+            n = len(issues)
+            issue_str = f"{n} issue{'s' if n != 1 else ''}" if n else "issues"
+            narrative.append(f"{prefix}: {issue_str} found — fix pass triggered.")
+        elif verdict == "approved":
+            msg = f"{prefix}: approved." if cycle == 1 else f"{prefix}: all issues resolved, approved."
+            narrative.append(msg)
+        else:
+            narrative.append(f"{prefix}: completed (verdict unknown).")
+    return {
+        "cycles": [
+            {"cycle": e["cycle"], "verdict": e["verdict"], "issues": e.get("issues") or []}
+            for e in log
+        ],
+        "narrative": narrative,
+    }
+
+
 def _auto_post_pr_feedback(pr_number: int, cr_id: str, result: dict, *, token: str = "") -> list[str]:
     """Post warning and error comments to the PR. Returns list of posted comment URLs."""
     comments: list[str] = []
@@ -453,6 +521,8 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> di
         "fix_attempted": False,
         "initial_error_count": 0,
         "final_error_count": 0,
+        "design_review_verdict": None,
+        "design_review_cycles": 0,
         "session_id": None,
         "resumed_session_id": None,
     }
@@ -595,6 +665,54 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> di
             )
         )
 
+    design_review_log: list[dict] = []
+    design_review_verdict = "unknown"
+    for review_cycle in range(1, _MAX_DESIGN_REVIEW_CYCLES + 1):
+        review_step_name = "run_design_review" if review_cycle == 1 else f"run_design_review_{review_cycle}"
+        review_prompt = _augment_review_prompt(_assemble_review_design_prompt(cr_id), errors)
+        _, _, review_session_id = _run_claude_step(
+            name=review_step_name,
+            prompt=review_prompt,
+            steps=steps,
+            warnings=warnings,
+            critical=False,
+            resume_session=session_id,
+        )
+        if review_session_id:
+            session_id = review_session_id
+            diagnostics["session_id"] = session_id
+
+        review_data = _read_design_review_data(repo_root, cr_id)
+        design_review_verdict = review_data["verdict"]
+        design_review_log.append({"cycle": review_cycle, **review_data})
+
+        if design_review_verdict != "needs_revision" or review_cycle >= _MAX_DESIGN_REVIEW_CYCLES:
+            break
+
+        fix_review_prompt = (
+            f"The design review for {cr_id} found issues. "
+            f"Read the review at docs/reviews/{cr_id}-Design-Review.md for the specific issues, "
+            f"then fix each item via the dhfkit CLI (dhfkit item create / dhfkit item update). "
+            f"After making changes, re-run:\n"
+            f"  python -m dhfkit --dhf DHF validate schema\n"
+            f"  python -m dhfkit --dhf DHF validate traceability\n"
+            f"Do not modify the review file itself."
+        )
+        _, _, fix_session_id = _run_claude_step(
+            name=f"run_design_fix_{review_cycle}",
+            prompt=fix_review_prompt,
+            steps=steps,
+            warnings=warnings,
+            critical=False,
+            resume_session=session_id,
+        )
+        if fix_session_id:
+            session_id = fix_session_id
+            diagnostics["session_id"] = session_id
+
+    diagnostics["design_review_verdict"] = design_review_verdict
+    diagnostics["design_review_cycles"] = review_cycle
+
     if session_id and pr_number:
         put_session(pr_number, session_id)
 
@@ -614,6 +732,7 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> di
         errors=errors,
         critical_step_failed=critical_step_failed,
     )
+    result["design_review"] = _build_review_result("Design", design_review_log)
     if pr_number:
         token = os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN") or ""
         result["pr_comments"] = _auto_post_pr_feedback(pr_number, cr_id, result, token=token)
@@ -642,6 +761,8 @@ def generate_code(
         "fix_attempted": False,
         "initial_error_count": 0,
         "final_error_count": 0,
+        "code_review_verdict": None,
+        "code_review_cycles": 0,
         "session_id": None,
         "resumed_session_id": None,
     }
@@ -793,18 +914,49 @@ def generate_code(
             )
         )
 
-    review_prompt = _augment_review_prompt(_assemble_review_code_prompt(cr_id), errors)
-    _, _, review_session_id = _run_claude_step(
-        name="run_review",
-        prompt=review_prompt,
-        steps=steps,
-        warnings=warnings,
-        critical=False,
-        resume_session=session_id,
-    )
-    if review_session_id:
-        session_id = review_session_id
-        diagnostics["session_id"] = session_id
+    code_review_log: list[dict] = []
+    code_review_verdict = "unknown"
+    for review_cycle in range(1, _MAX_CODE_REVIEW_CYCLES + 1):
+        review_step_name = "run_review" if review_cycle == 1 else f"run_review_{review_cycle}"
+        review_prompt = _augment_review_prompt(_assemble_review_code_prompt(cr_id), errors)
+        _, review_output, review_session_id = _run_claude_step(
+            name=review_step_name,
+            prompt=review_prompt,
+            steps=steps,
+            warnings=warnings,
+            critical=False,
+            resume_session=session_id,
+        )
+        if review_session_id:
+            session_id = review_session_id
+            diagnostics["session_id"] = session_id
+
+        review_data = _parse_review_data(review_output)
+        code_review_verdict = review_data["verdict"]
+        code_review_log.append({"cycle": review_cycle, **review_data})
+
+        if code_review_verdict != "needs_revision" or review_cycle >= _MAX_CODE_REVIEW_CYCLES:
+            break
+
+        fix_review_prompt = (
+            f"The code review for {cr_id} found issues. "
+            f"Fix each issue flagged in the review above — modify only the affected files. "
+            f"Do not make unrelated changes."
+        )
+        _, _, fix_session_id = _run_claude_step(
+            name=f"run_code_fix_{review_cycle}",
+            prompt=fix_review_prompt,
+            steps=steps,
+            warnings=warnings,
+            critical=False,
+            resume_session=session_id,
+        )
+        if fix_session_id:
+            session_id = fix_session_id
+            diagnostics["session_id"] = session_id
+
+    diagnostics["code_review_verdict"] = code_review_verdict
+    diagnostics["code_review_cycles"] = review_cycle
 
     if session_id and pr_number:
         put_session(pr_number, session_id)
@@ -828,6 +980,7 @@ def generate_code(
         errors=errors,
         critical_step_failed=critical_step_failed,
     )
+    result["code_review"] = _build_review_result("Implementation", code_review_log)
     if pr_number:
         token = os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN") or ""
         result["pr_comments"] = _auto_post_pr_feedback(pr_number, cr_id, result, token=token)

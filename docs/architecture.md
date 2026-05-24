@@ -1,7 +1,7 @@
 # Architecture
 
 > **Stability:** Stable
-> **Last reviewed:** 2026-05-18
+> **Last reviewed:** 2026-05-24
 
 ---
 
@@ -150,6 +150,7 @@ change plan  →  (design PR reviewed + approved)  →  change implement
 2. V-model cascade — creates/updates DHF items top-down: CR → CRS → SYS → {SYSARCH, RISK, RCM} → SRS → SWDD. Each SWDD item links to an existing MODULE and implements the relevant SRS items. Reads relevant source modules before writing SWDD items so the design reflects the actual codebase.
 3. Implementation plan — writes a structured implementation plan (overview, current state, changes required, steps, edge cases, tests) into `implementation_notes` on the CR item
 4. Deterministic validation — `dhfkit validate schema` + `dhfkit validate traceability`; self-corrects if errors remain
+5. Design review (soft) — reviews every changed DHF item for necessity, product/technical strategy alignment, and SWDD + implementation note clarity. Writes verdict and issues to `docs/reviews/<CR>-Design-Review.md`. If **Needs Revision**, a fix pass runs and the review repeats up to three cycles.
 
 **`change implement`**
 
@@ -157,6 +158,7 @@ change plan  →  (design PR reviewed + approved)  →  change implement
 2. Implements code following the plan; reads SWDD items for module-level design decisions
 3. Annotates tests with `@links:<ITEM_ID>`, runs `medharness verify tests` against JUnit output, adds missing annotations until all requirements are covered
 4. Reconciles `implementation_notes` and SWDD items if the implementation deviated from the plan
+5. Code review (soft) — reviews the implementation for completeness, test depth, scope, and conventions. Verdict is returned inline (no file written). If **Needs Revision**, a fix pass runs and the review repeats up to three cycles.
 
 ### CR lifecycle states
 
@@ -175,7 +177,7 @@ State transitions are not enforced as execution gates — the auto workflow proc
 
 The CR-generation path in `medharness.services` is split by responsibility:
 
-- `cr_generation.py` — stage orchestration, Claude invocation, PR-feedback retrieval; public entry points are `generate_dhf` and `generate_code`
+- `cr_generation.py` — stage orchestration, Claude invocation, PR-feedback retrieval; public entry points are `generate_dhf` and `generate_code`. Both return a `design_review` / `code_review` field with per-cycle `{verdict, issues}` data and a human-readable `narrative` list.
 - `prompt_assembly.py` — prompt-template loading and composition; injects pre-computed DHF context (item lists, traceability graph, coverage gaps) into each prompt
 - `cr_impact.py` — writes `affected_items` back onto the CR item after `change plan` completes; `implementation_notes` is LLM-authored and not overwritten by the harness
 - `design_validation.py` — deterministic post-design checks; only catches schema, traceability, and DHF-validation failures
