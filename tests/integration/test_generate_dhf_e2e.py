@@ -84,7 +84,7 @@ class TestGenerateDhfSuccessStub:
     def stub_claude_ok(self, monkeypatch):
         monkeypatch.setattr(
             "medharness.services.cr_generation._run_claude",
-            lambda prompt, *, resume_session="": (0, "DHF generation complete.", "sess-abc"),
+            lambda prompt, *, resume_session="", model="": (0, "DHF generation complete.", "sess-abc"),
         )
         monkeypatch.setattr("medharness.services.cr_generation.get_session", lambda pr: "")
         monkeypatch.setattr("medharness.services.cr_generation.put_session", lambda pr, sid: "")
@@ -172,7 +172,7 @@ class TestGenerateDhfToolErrorStub:
     def stub_claude_fail(self, monkeypatch):
         monkeypatch.setattr(
             "medharness.services.cr_generation._run_claude",
-            lambda prompt, *, resume_session="": (1, "fatal: claude not found", ""),
+            lambda prompt, *, resume_session="", model="": (1, "fatal: claude not found", ""),
         )
         monkeypatch.setattr("medharness.services.cr_generation.get_session", lambda pr: "")
         monkeypatch.setattr("medharness.services.cr_generation.put_session", lambda pr, sid: "")
@@ -211,7 +211,7 @@ class TestGenerateDhfRevisionMode:
     def stub_claude_ok(self, monkeypatch):
         monkeypatch.setattr(
             "medharness.services.cr_generation._run_claude",
-            lambda prompt, *, resume_session="": (0, "Revision complete.", "sess-rev"),
+            lambda prompt, *, resume_session="", model="": (0, "Revision complete.", "sess-rev"),
         )
         # Stub PR feedback fetch so no network call is made.
         monkeypatch.setattr(
@@ -273,7 +273,7 @@ class TestGenerateCodeSuccessStub:
     def stub_claude_ok(self, monkeypatch):
         monkeypatch.setattr(
             "medharness.services.cr_generation._run_claude",
-            lambda prompt, *, resume_session="": (0, "Implementation complete.", "sess-code"),
+            lambda prompt, *, resume_session="", model="": (0, "Implementation complete.", "sess-code"),
         )
         monkeypatch.setattr("medharness.services.cr_generation.get_session", lambda pr: "")
         monkeypatch.setattr("medharness.services.cr_generation.put_session", lambda pr, sid: "")
@@ -342,7 +342,7 @@ class TestGenerateDhfFixPassFlow:
             dhf_path = dhf_dir / "DHF"
             call_count = {"n": 0}
 
-            def _stub(prompt: str, *, resume_session: str = "") -> tuple[int, str, str]:
+            def _stub(prompt: str, *, resume_session: str = "", model: str = "") -> tuple[int, str, str]:
                 call_count["n"] += 1
                 if call_count["n"] == 1:
                     # Create a CRS item (auto-assigned CRS-002, since CRS-001 is in

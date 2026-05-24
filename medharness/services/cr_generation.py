@@ -9,6 +9,7 @@ import subprocess
 import time
 import urllib.error
 import urllib.request
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -44,6 +45,58 @@ _DEFAULT_CODE_PATHS: tuple[str, ...] = tuple(
 
 _MAX_DESIGN_REVIEW_CYCLES = 3
 _MAX_CODE_REVIEW_CYCLES = 3
+
+
+# ── Multi-provider LLM config ─────────────────────────────────────────────────
+
+@dataclass
+class LLMConfig:
+    provider: str = "anthropic"  # "anthropic" | "openai" | "deepseek"
+    model: str = ""
+    api_key: str = ""
+    base_url: str = ""
+
+
+_PROVIDER_BASE_URLS: dict[str, str] = {
+    "openai": "https://api.openai.com/v1",
+    "deepseek": "https://api.deepseek.com/v1",
+}
+
+_PROVIDER_API_KEY_ENVS: dict[str, str] = {
+    "openai": "OPENAI_API_KEY",
+    "deepseek": "DEEPSEEK_API_KEY",
+}
+
+
+def _resolve_stage_llm(stage: str) -> LLMConfig:
+    """Resolve LLM config for a workflow stage.
+
+    Reads MEDHARNESS_{DESIGN|DEVELOP|REVIEW}_MODEL env var.
+    Format: "provider:model" (e.g. "deepseek:deepseek-chat", "openai:gpt-4o").
+    Falls back to anthropic + ANTHROPIC_MODEL if not set.
+    """
+    raw = os.environ.get(f"MEDHARNESS_{stage.upper()}_MODEL", "")
+    if raw:
+        provider, _, model = raw.partition(":")
+        if not model:
+            provider, model = "anthropic", raw
+    else:
+        provider = "anthropic"
+        model = os.environ.get("ANTHROPIC_MODEL", "")
+
+    if provider == "anthropic":
+        return LLMConfig(provider=provider, model=model)
+
+    api_key_env = _PROVIDER_API_KEY_ENVS.get(provider, "")
+    api_key = os.environ.get(api_key_env, "") if api_key_env else ""
+    base_url = _PROVIDER_BASE_URLS.get(provider, "")
+    return LLMConfig(provider=provider, model=model, api_key=api_key, base_url=base_url)
+
+
+def _model_label(config: LLMConfig) -> str:
+    if config.model:
+        return f"{config.provider}:{config.model}"
+    return config.provider
 
 
 # ── GitHub PR feedback ────────────────────────────────────────────────────────
@@ -137,16 +190,16 @@ def _get_pr_feedback(pr_number: int) -> str:
 
 # ── Claude invocation ─────────────────────────────────────────────────────────
 
-def _run_claude(prompt: str, *, resume_session: str = "") -> tuple[int, str, str]:
+def _run_claude(prompt: str, *, resume_session: str = "", model: str = "") -> tuple[int, str, str]:
     """Invoke claude -p. Returns (exit_code, text_output, session_id).
 
     Uses --output-format json so the session_id is always captured from the
     structured response envelope. Falls back gracefully if JSON cannot be parsed.
     """
-    model = os.environ.get("ANTHROPIC_MODEL", "")
+    effective_model = model or os.environ.get("ANTHROPIC_MODEL", "")
     cmd = ["claude", "-p", "--dangerously-skip-permissions", "--output-format", "json"]
-    if model:
-        cmd += ["--model", model]
+    if effective_model:
+        cmd += ["--model", effective_model]
     if resume_session:
         cmd += ["--resume", resume_session]
     cmd.append(prompt)
@@ -167,6 +220,107 @@ def _run_claude(prompt: str, *, resume_session: str = "") -> tuple[int, str, str
     if result.stderr:
         text_output += "\n" + result.stderr
     return result.returncode, text_output, session_id
+
+
+def _run_openai_compatible(
+    prompt: str,
+    *,
+    model: str,
+    api_key: str,
+    base_url: str,
+    max_turns: int = 100,
+) -> tuple[int, str, str]:
+    """Run an agentic loop against an OpenAI-compatible chat completions API.
+
+    Exposes a single `bash` function tool. Loops until the model stops calling
+    tools or max_turns is reached. Returns (exit_code, text_output, session_id).
+    Session IDs are not supported by OpenAI-compatible APIs; always returns "".
+    """
+    if not api_key:
+        return 1, f"API key not configured for provider at {base_url}", ""
+
+    bash_tool = {
+        "type": "function",
+        "function": {
+            "name": "bash",
+            "description": "Run a shell command and return its output.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "command": {"type": "string", "description": "Shell command to run."},
+                },
+                "required": ["command"],
+            },
+        },
+    }
+
+    messages: list[dict] = [{"role": "user", "content": prompt}]
+    output_parts: list[str] = []
+
+    for _ in range(max_turns):
+        payload = json.dumps({"model": model, "tools": [bash_tool], "messages": messages}).encode()
+        req = urllib.request.Request(
+            f"{base_url}/chat/completions",
+            data=payload,
+            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=300) as resp:
+                data = json.loads(resp.read())
+        except urllib.error.HTTPError as exc:
+            return 1, f"HTTP {exc.code}: {exc.reason}", ""
+        except (urllib.error.URLError, OSError, json.JSONDecodeError) as exc:
+            return 1, f"API error: {exc}", ""
+
+        choice = (data.get("choices") or [{}])[0]
+        message = choice.get("message", {})
+        messages.append(message)
+
+        content = message.get("content") or ""
+        if content:
+            output_parts.append(content)
+
+        tool_calls = message.get("tool_calls") or []
+        if not tool_calls:
+            break
+
+        tool_results: list[dict] = []
+        for tc in tool_calls:
+            tc_id = tc.get("id", "")
+            fn = tc.get("function", {})
+            try:
+                args = json.loads(fn.get("arguments", "{}"))
+                command = args.get("command", "")
+                proc = subprocess.run(  # noqa: S603 S602
+                    command, shell=True, capture_output=True, text=True, timeout=120
+                )
+                tc_output = proc.stdout + (("\n" + proc.stderr) if proc.stderr else "")
+            except subprocess.TimeoutExpired:
+                tc_output = "Command timed out."
+            except Exception as exc:  # noqa: BLE001
+                tc_output = f"Error: {exc}"
+            tool_results.append({"role": "tool", "tool_call_id": tc_id, "content": tc_output})
+        messages.extend(tool_results)
+
+    return 0, "\n".join(output_parts), ""
+
+
+def _run_llm(
+    prompt: str,
+    *,
+    config: LLMConfig,
+    resume_session: str = "",
+) -> tuple[int, str, str]:
+    """Dispatch to the appropriate LLM runner based on config.provider."""
+    if config.provider == "anthropic":
+        return _run_claude(prompt, resume_session=resume_session, model=config.model)
+    return _run_openai_compatible(
+        prompt,
+        model=config.model,
+        api_key=config.api_key,
+        base_url=config.base_url,
+    )
 
 
 def _now_iso() -> str:
@@ -227,11 +381,15 @@ def _run_claude_step(
     warnings: list[dict],
     critical: bool,
     resume_session: str = "",
+    llm_config: LLMConfig | None = None,
 ) -> tuple[int, str, str]:
-    """Run a Claude step. Returns (exit_code, output, session_id)."""
-    step, step_perf = _begin_step(name, {"tool": "claude"})
-    rc, output, session_id = _run_claude(prompt, resume_session=resume_session)
-    cli_found = "claude CLI not found" not in output
+    """Run an LLM step. Returns (exit_code, output, session_id)."""
+    config = llm_config or LLMConfig()
+    is_anthropic = config.provider == "anthropic"
+    tool_label = "claude" if is_anthropic else _model_label(config)
+    step, step_perf = _begin_step(name, {"tool": tool_label})
+    rc, output, session_id = _run_llm(prompt, config=config, resume_session=resume_session)
+    cli_found = "claude CLI not found" not in output if is_anthropic else True
     outcome = "ok" if rc == 0 else ("failed" if critical else "warning")
     details: dict[str, object] = {"exit_code": rc, "cli_found": cli_found}
     if session_id:
@@ -244,8 +402,8 @@ def _run_claude_step(
     if rc != 0:
         warnings.append(
             _warning(
-                "claude_cli_missing" if not cli_found else "claude_step_failed",
-                f"Claude step `{name}` exited with code {rc}.",
+                "claude_cli_missing" if (is_anthropic and not cli_found) else "claude_step_failed",
+                f"Step `{name}` exited with code {rc}.",
                 {"step": name, "exit_code": rc},
             )
         )
@@ -515,8 +673,11 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> di
     steps: list[dict] = []
     warnings: list[dict] = []
     critical_step_failed = False
+    design_llm = _resolve_stage_llm("design")
+    review_llm = _resolve_stage_llm("review")
     diagnostics: dict = {
-        "anthropic_model": os.environ.get("ANTHROPIC_MODEL") or None,
+        "design_model": _model_label(design_llm),
+        "review_model": _model_label(review_llm),
         "github_feedback": {"attempted": False},
         "fix_attempted": False,
         "initial_error_count": 0,
@@ -584,6 +745,7 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> di
         warnings=warnings,
         critical=True,
         resume_session=prior_session,
+        llm_config=design_llm,
     )
     critical_step_failed = critical_step_failed or rc != 0
     if session_id:
@@ -625,6 +787,7 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> di
             warnings=warnings,
             critical=True,
             resume_session=session_id,
+            llm_config=design_llm,
         )
         critical_step_failed = critical_step_failed or rc != 0
         if fix_session_id:
@@ -657,6 +820,7 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> di
             warnings=warnings,
             critical=False,
             resume_session=session_id,
+            llm_config=review_llm,
         )
         if review_session_id:
             session_id = review_session_id
@@ -685,6 +849,7 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> di
             warnings=warnings,
             critical=False,
             resume_session=session_id,
+            llm_config=design_llm,
         )
         if fix_session_id:
             session_id = fix_session_id
@@ -769,8 +934,11 @@ def generate_code(
     steps: list[dict] = []
     warnings: list[dict] = []
     critical_step_failed = False
+    develop_llm = _resolve_stage_llm("develop")
+    review_llm = _resolve_stage_llm("review")
     diagnostics = {
-        "anthropic_model": os.environ.get("ANTHROPIC_MODEL") or None,
+        "develop_model": _model_label(develop_llm),
+        "review_model": _model_label(review_llm),
         "github_feedback": {"attempted": False},
         "ci_failures_injected": ci_failures is not None,
         "preflight_errors": 0,
@@ -881,6 +1049,7 @@ def generate_code(
         warnings=warnings,
         critical=True,
         resume_session=prior_session,
+        llm_config=develop_llm,
     )
     critical_step_failed = critical_step_failed or rc != 0
     if session_id:
@@ -913,6 +1082,7 @@ def generate_code(
             warnings=warnings,
             critical=True,
             resume_session=session_id,
+            llm_config=develop_llm,
         )
         critical_step_failed = critical_step_failed or rc != 0
         if fix_session_id:
@@ -942,6 +1112,7 @@ def generate_code(
             warnings=warnings,
             critical=False,
             resume_session=session_id,
+            llm_config=review_llm,
         )
         if review_session_id:
             session_id = review_session_id
@@ -966,6 +1137,7 @@ def generate_code(
             warnings=warnings,
             critical=False,
             resume_session=session_id,
+            llm_config=develop_llm,
         )
         if fix_session_id:
             session_id = fix_session_id
