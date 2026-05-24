@@ -522,6 +522,59 @@ class TestGenerateDhf:
         assert result["diagnostics"]["design_review_cycles"] == _MAX_DESIGN_REVIEW_CYCLES
         assert len(result["design_review"]["cycles"]) == _MAX_DESIGN_REVIEW_CYCLES
 
+    def test_dhf_validation_reruns_after_design_review_fix(self, tmp_path):
+        # P1b: validate_generate_dhf must run after each review fix, not just before the loop.
+        # Simulate: initial ok → review needs_revision → fix introduces a new schema error.
+        dhf = tmp_path / "DHF"
+        dhf.mkdir()
+        new_error = [{"field": "schema", "issue": "broken after review fix", "fix": "update item"}]
+        review_data_sequence = iter([
+            {"verdict": "needs_revision", "issues": ["SYS-001: out of scope"]},
+            {"verdict": "approved", "issues": []},
+        ])
+        with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
+             patch("medharness.services.cr_generation.git.collect_dhf_item_changes",
+                   return_value={"created": [], "updated": [], "deleted": []}), \
+             patch("medharness.services.design_validation.validate_generate_dhf",
+                   side_effect=[[], new_error]) as mock_validate, \
+             patch("medharness.services.cr_generation._read_design_review_data",
+                   side_effect=lambda repo_root, cr_id: next(review_data_sequence)):
+            mock_claude.return_value = (0, "", "")
+            result = generate_dhf("CR-083", dhf)
+
+        assert mock_validate.call_count == 2
+        assert result["diagnostics"]["final_error_count"] == 1
+        step_names = [s["name"] for s in result["steps"]]
+        assert "validate_after_review_fix_1" in step_names
+
+    def test_artifacts_collected_after_review_loop(self, tmp_path):
+        # P2: items_changed snapshot must be taken after the review loop so that items
+        # added by review-fix passes appear in artifacts.items_changed.
+        dhf = tmp_path / "DHF"
+        dhf.mkdir()
+        items_before = {"created": ["SYS-001"], "updated": [], "deleted": []}
+        items_after = {"created": ["SYS-001", "SRS-002"], "updated": [], "deleted": []}
+        collect_calls = iter([
+            items_before,  # after initial generation
+            items_after,   # after review fix (P1b re-validate)
+            items_after,   # final collect_artifacts
+        ])
+        review_data_sequence = iter([
+            {"verdict": "needs_revision", "issues": ["SYS-001: incomplete"]},
+            {"verdict": "approved", "issues": []},
+        ])
+        with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
+             patch("medharness.services.cr_generation.git.collect_dhf_item_changes",
+                   side_effect=lambda *_: next(collect_calls)), \
+             patch("medharness.services.design_validation.validate_generate_dhf", return_value=[]), \
+             patch("medharness.services.cr_generation._read_design_review_data",
+                   side_effect=lambda repo_root, cr_id: next(review_data_sequence)):
+            mock_claude.return_value = (0, "", "")
+            result = generate_dhf("CR-084", dhf)
+
+        assert result["artifacts"]["items_changed"] == items_after
+        assert "SRS-002" in result["artifacts"]["items_changed"]["created"]
+
     def test_residual_errors_yield_completed_with_errors(self, tmp_path):
         dhf = tmp_path / "DHF"
         dhf.mkdir()
@@ -924,6 +977,29 @@ class TestGenerateCode:
         assert mock_claude.call_count == expected
         assert result["diagnostics"]["code_review_cycles"] == _MAX_CODE_REVIEW_CYCLES
         assert len(result["code_review"]["cycles"]) == _MAX_CODE_REVIEW_CYCLES
+
+    def test_validate_code_reruns_after_review_fix(self, tmp_path):
+        # P1a: validate_code must run after each review fix so that errors introduced
+        # by the fix are captured in final_error_count and outcome.
+        dhf = tmp_path / "DHF"
+        dhf.mkdir()
+        new_error = [{"field": "test_links", "issue": "new error after review fix", "fix": "add @links"}]
+        review_data_sequence = iter([
+            {"verdict": "needs_revision", "issues": ["src/foo.ts:1: bad"]},
+            {"verdict": "approved", "issues": []},
+        ])
+        with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
+             patch("medharness.services.code_validation.validate_code",
+                   side_effect=[[], new_error]) as mock_validate, \
+             patch("medharness.services.cr_generation._parse_review_data",
+                   side_effect=lambda text: next(review_data_sequence)):
+            mock_claude.return_value = (0, "", "")
+            result = generate_code("CR-080", dhf)
+
+        assert mock_validate.call_count == 2
+        assert result["diagnostics"]["final_error_count"] == 1
+        step_names = [s["name"] for s in result["steps"]]
+        assert "validate_after_review_fix_1" in step_names
 
 
 # ── DHF context block ──────────────────────────────────────────────────────────
