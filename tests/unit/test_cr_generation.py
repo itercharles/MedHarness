@@ -9,12 +9,17 @@ from unittest.mock import MagicMock, call, patch
 import pytest
 
 from medharness.services.cr_generation import (
+    LLMConfig,
     _auto_post_pr_feedback,
     _build_review_result,
     _get_pr_feedback,
+    _model_label,
     _parse_review_data,
     _read_design_review_data,
+    _resolve_stage_llm,
     _run_claude,
+    _run_claude_step,
+    _run_openai_compatible,
     generate_code,
     generate_dhf,
 )
@@ -410,6 +415,52 @@ class TestRunClaude:
         assert session_id == ""
 
 
+# ── _run_claude_step ──────────────────────────────────────────────────────────
+
+class TestRunClaudeStep:
+    def test_tool_label_is_claude_for_anthropic(self):
+        steps: list[dict] = []
+        with patch("medharness.services.cr_generation._run_llm", return_value=(0, "", "")):
+            _run_claude_step(
+                name="test_step",
+                prompt="p",
+                steps=steps,
+                warnings=[],
+                critical=False,
+                llm_config=LLMConfig(provider="anthropic", model="claude-opus-4-7"),
+            )
+        assert steps[0]["details"]["tool"] == "claude"
+
+    def test_tool_label_is_model_label_for_non_anthropic(self):
+        steps: list[dict] = []
+        with patch("medharness.services.cr_generation._run_llm", return_value=(0, "", "")):
+            _run_claude_step(
+                name="test_step",
+                prompt="p",
+                steps=steps,
+                warnings=[],
+                critical=False,
+                llm_config=LLMConfig(provider="openai", model="gpt-4o"),
+            )
+        assert steps[0]["details"]["tool"] == "openai:gpt-4o"
+
+    def test_warning_code_is_not_cli_missing_for_non_anthropic(self):
+        """Non-anthropic provider failure must not emit claude_cli_missing warning."""
+        warnings: list[dict] = []
+        with patch("medharness.services.cr_generation._run_llm", return_value=(1, "api error", "")):
+            _run_claude_step(
+                name="test_step",
+                prompt="p",
+                steps=[],
+                warnings=warnings,
+                critical=False,
+                llm_config=LLMConfig(provider="openai", model="gpt-4o", api_key="sk"),
+            )
+        assert warnings
+        assert all(w["code"] != "claude_cli_missing" for w in warnings)
+        assert warnings[0]["code"] == "claude_step_failed"
+
+
 # ── generate_dhf ──────────────────────────────────────────────────────────────
 
 class TestGenerateDhf:
@@ -650,7 +701,7 @@ class TestGenerateDhf:
         dhf.mkdir()
         resume_sessions_captured: list[str] = []
 
-        def _stub(prompt: str, *, resume_session: str = "") -> tuple[int, str, str]:
+        def _stub(prompt: str, *, resume_session: str = "", model: str = "") -> tuple[int, str, str]:
             resume_sessions_captured.append(resume_session)
             return 0, "", f"sess-{len(resume_sessions_captured)}"
 
@@ -873,7 +924,7 @@ class TestGenerateCode:
         monkeypatch.setattr("medharness.services.cr_generation.get_session", lambda pr: "")
         resume_sessions_captured: list[str] = []
 
-        def _stub(prompt: str, *, resume_session: str = "") -> tuple[int, str, str]:
+        def _stub(prompt: str, *, resume_session: str = "", model: str = "") -> tuple[int, str, str]:
             resume_sessions_captured.append(resume_session)
             return 0, "", f"sess-{len(resume_sessions_captured)}"
 
@@ -1241,3 +1292,474 @@ class TestAutoPostPrFeedback:
         assert "- `W001`: first warning" in captured[0]
         assert "- `W002`: second warning" in captured[0]
 
+
+# ── LLMConfig and _resolve_stage_llm ──────────────────────────────────────────
+
+class TestResolveStageLlm:
+    def test_defaults_to_anthropic_when_no_env(self, monkeypatch):
+        monkeypatch.delenv("MEDHARNESS_DESIGN_MODEL", raising=False)
+        monkeypatch.delenv("ANTHROPIC_MODEL", raising=False)
+        cfg = _resolve_stage_llm("design")
+        assert cfg.provider == "anthropic"
+        assert cfg.model == ""
+
+    def test_picks_up_anthropic_model_env(self, monkeypatch):
+        monkeypatch.delenv("MEDHARNESS_DESIGN_MODEL", raising=False)
+        monkeypatch.setenv("ANTHROPIC_MODEL", "claude-opus-4-7")
+        cfg = _resolve_stage_llm("design")
+        assert cfg.provider == "anthropic"
+        assert cfg.model == "claude-opus-4-7"
+
+    def test_provider_colon_model_format(self, monkeypatch):
+        monkeypatch.setenv("MEDHARNESS_DEVELOP_MODEL", "openai:gpt-4o")
+        monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
+        cfg = _resolve_stage_llm("develop")
+        assert cfg.provider == "openai"
+        assert cfg.model == "gpt-4o"
+        assert cfg.api_key == "sk-test"
+        assert cfg.base_url == "https://api.openai.com/v1"
+
+    def test_deepseek_provider(self, monkeypatch):
+        monkeypatch.setenv("MEDHARNESS_CODE_REVIEW_MODEL", "deepseek:deepseek-chat")
+        monkeypatch.setenv("DEEPSEEK_API_KEY", "ds-key")
+        cfg = _resolve_stage_llm("code_review")
+        assert cfg.provider == "deepseek"
+        assert cfg.model == "deepseek-chat"
+        assert cfg.api_key == "ds-key"
+        assert cfg.base_url == "https://api.deepseek.com/v1"
+
+    def test_stage_names_are_uppercased(self, monkeypatch):
+        monkeypatch.setenv("MEDHARNESS_DESIGN_REVIEW_MODEL", "openai:gpt-4o")
+        monkeypatch.setenv("OPENAI_API_KEY", "k")
+        cfg = _resolve_stage_llm("design_review")
+        assert cfg.provider == "openai"
+
+    def test_bare_model_without_provider_treated_as_anthropic(self, monkeypatch):
+        monkeypatch.setenv("MEDHARNESS_DESIGN_MODEL", "claude-opus-4-7")
+        cfg = _resolve_stage_llm("design")
+        assert cfg.provider == "anthropic"
+        assert cfg.model == "claude-opus-4-7"
+
+    def test_unknown_provider_returns_empty_api_key_and_base_url(self, monkeypatch):
+        monkeypatch.setenv("MEDHARNESS_DESIGN_MODEL", "custom:my-model")
+        cfg = _resolve_stage_llm("design")
+        assert cfg.provider == "custom"
+        assert cfg.model == "my-model"
+        assert cfg.api_key == ""
+        assert cfg.base_url == ""
+
+    def test_custom_base_url_overrides_default(self, monkeypatch):
+        monkeypatch.setenv("MEDHARNESS_DESIGN_MODEL", "openai:gpt-4o")
+        monkeypatch.setenv("MEDHARNESS_DESIGN_BASE_URL", "https://my-azure.openai.azure.com/v1")
+        monkeypatch.setenv("OPENAI_API_KEY", "sk-1")
+        cfg = _resolve_stage_llm("design")
+        assert cfg.base_url == "https://my-azure.openai.azure.com/v1"
+
+    def test_default_base_url_used_when_custom_not_set(self, monkeypatch):
+        monkeypatch.setenv("MEDHARNESS_DESIGN_MODEL", "openai:gpt-4o")
+        monkeypatch.delenv("MEDHARNESS_DESIGN_BASE_URL", raising=False)
+        monkeypatch.setenv("OPENAI_API_KEY", "sk-1")
+        cfg = _resolve_stage_llm("design")
+        assert cfg.base_url == "https://api.openai.com/v1"
+
+
+class TestModelLabel:
+    def test_anthropic_with_model(self):
+        assert _model_label(LLMConfig(provider="anthropic", model="claude-opus-4-7")) == "anthropic:claude-opus-4-7"
+
+    def test_provider_without_model(self):
+        assert _model_label(LLMConfig(provider="anthropic")) == "anthropic"
+
+    def test_openai_with_model(self):
+        assert _model_label(LLMConfig(provider="openai", model="gpt-4o")) == "openai:gpt-4o"
+
+
+# ── _run_claude model param ────────────────────────────────────────────────────
+
+class TestRunClaudeModelParam:
+    def test_model_param_takes_precedence_over_env(self, monkeypatch):
+        monkeypatch.setenv("ANTHROPIC_MODEL", "claude-haiku-4-5")
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=0, stdout='{"result":"","session_id":""}', stderr="")
+            _run_claude("p", model="claude-opus-4-7")
+        args = mock_run.call_args[0][0]
+        assert "--model" in args
+        idx = args.index("--model")
+        assert args[idx + 1] == "claude-opus-4-7"
+
+    def test_env_used_when_model_param_empty(self, monkeypatch):
+        monkeypatch.setenv("ANTHROPIC_MODEL", "claude-haiku-4-5")
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=0, stdout='{"result":"","session_id":""}', stderr="")
+            _run_claude("p", model="")
+        args = mock_run.call_args[0][0]
+        idx = args.index("--model")
+        assert args[idx + 1] == "claude-haiku-4-5"
+
+
+# ── _run_openai_compatible ─────────────────────────────────────────────────────
+
+class TestRunOpenaiCompatible:
+    BASE_URL = "https://api.openai.com/v1"
+
+    def _make_response(self, content: str, tool_calls: list | None = None) -> bytes:
+        message: dict = {"role": "assistant", "content": content}
+        if tool_calls is not None:
+            message["tool_calls"] = tool_calls
+        return json.dumps({
+            "choices": [{"message": message, "finish_reason": "stop" if not tool_calls else "tool_calls"}]
+        }).encode()
+
+    def test_returns_error_when_no_api_key(self):
+        rc, output, sid = _run_openai_compatible("prompt", model="gpt-4o", api_key="", base_url=self.BASE_URL)
+        assert rc == 1
+        assert "API key" in output
+        assert sid == ""
+
+    def test_system_message_included_in_first_request(self):
+        response_body = self._make_response("ok")
+        mock_resp = MagicMock()
+        mock_resp.__enter__ = lambda s: s
+        mock_resp.__exit__ = MagicMock(return_value=False)
+        mock_resp.read.return_value = response_body
+        captured_payload: list[dict] = []
+        def fake_urlopen(req, timeout=None):
+            captured_payload.append(json.loads(req.data))
+            return mock_resp
+        with patch("urllib.request.urlopen", side_effect=fake_urlopen):
+            _run_openai_compatible("do the task", model="gpt-4o", api_key="sk-test", base_url=self.BASE_URL)
+        messages = captured_payload[0]["messages"]
+        assert messages[0]["role"] == "system"
+        assert messages[1]["role"] == "user"
+        assert messages[1]["content"] == "do the task"
+
+    def test_returns_text_content_on_success(self):
+        response_body = self._make_response("hello from gpt")
+        mock_resp = MagicMock()
+        mock_resp.__enter__ = lambda s: s
+        mock_resp.__exit__ = MagicMock(return_value=False)
+        mock_resp.read.return_value = response_body
+        with patch("urllib.request.urlopen", return_value=mock_resp):
+            rc, output, sid = _run_openai_compatible(
+                "prompt", model="gpt-4o", api_key="sk-test", base_url=self.BASE_URL
+            )
+        assert rc == 0
+        assert "hello from gpt" in output
+        assert sid == ""
+
+    def test_executes_tool_call_and_returns_result(self):
+        tool_call = {
+            "id": "call_1",
+            "type": "function",
+            "function": {"name": "bash", "arguments": '{"command": "echo hi"}'},
+        }
+        first_response = self._make_response("", [tool_call])
+        second_response = self._make_response("done")
+        responses = iter([first_response, second_response])
+        mock_resp = MagicMock()
+        mock_resp.__enter__ = lambda s: s
+        mock_resp.__exit__ = MagicMock(return_value=False)
+        mock_resp.read.side_effect = lambda: next(responses)
+        with patch("urllib.request.urlopen", return_value=mock_resp), \
+             patch("subprocess.run") as mock_sub:
+            mock_sub.return_value = MagicMock(returncode=0, stdout="hi\n", stderr="")
+            rc, output, _ = _run_openai_compatible(
+                "prompt", model="gpt-4o", api_key="sk-test", base_url=self.BASE_URL
+            )
+        assert rc == 0
+        assert "done" in output
+        cmd_args = mock_sub.call_args
+        assert cmd_args[0][0] == "echo hi"
+
+    def test_http_error_returns_exit_code_1(self):
+        import urllib.error
+        with patch("urllib.request.urlopen", side_effect=urllib.error.HTTPError(None, 401, "Unauthorized", {}, None)):
+            rc, output, _ = _run_openai_compatible(
+                "prompt", model="gpt-4o", api_key="sk-test", base_url=self.BASE_URL
+            )
+        assert rc == 1
+        assert "401" in output
+
+    def test_url_error_returns_exit_code_1(self):
+        import urllib.error
+        with patch("urllib.request.urlopen", side_effect=urllib.error.URLError("connection refused")):
+            rc, output, _ = _run_openai_compatible(
+                "prompt", model="gpt-4o", api_key="sk-test", base_url=self.BASE_URL
+            )
+        assert rc == 1
+        assert "connection refused" in output
+
+    def test_none_content_in_response_is_skipped(self):
+        """Model returns content=None (tool_calls-only turn) — must not crash or add empty string."""
+        response_body = json.dumps({
+            "choices": [{"message": {"role": "assistant", "content": None}, "finish_reason": "stop"}]
+        }).encode()
+        mock_resp = MagicMock()
+        mock_resp.__enter__ = lambda s: s
+        mock_resp.__exit__ = MagicMock(return_value=False)
+        mock_resp.read.return_value = response_body
+        with patch("urllib.request.urlopen", return_value=mock_resp):
+            rc, output, _ = _run_openai_compatible(
+                "prompt", model="gpt-4o", api_key="sk-test", base_url=self.BASE_URL
+            )
+        assert rc == 0
+        assert output == ""
+
+    def test_max_turns_terminates_loop(self):
+        """Loop exits after max_turns even when the model keeps requesting tool calls."""
+        tool_call = {"id": "c1", "type": "function", "function": {"name": "bash", "arguments": '{"command": "true"}'}}
+        always_tool = json.dumps({
+            "choices": [{"message": {"role": "assistant", "content": None, "tool_calls": [tool_call]}, "finish_reason": "tool_calls"}]
+        }).encode()
+        api_call_count = {"n": 0}
+        mock_resp = MagicMock()
+        mock_resp.__enter__ = lambda s: s
+        mock_resp.__exit__ = MagicMock(return_value=False)
+        def _read():
+            api_call_count["n"] += 1
+            return always_tool
+        mock_resp.read.side_effect = _read
+        with patch("urllib.request.urlopen", return_value=mock_resp), \
+             patch("subprocess.run", return_value=MagicMock(returncode=0, stdout="", stderr="")):
+            rc, _, _ = _run_openai_compatible(
+                "prompt", model="gpt-4o", api_key="sk-test", base_url=self.BASE_URL, max_turns=3
+            )
+        assert rc == 0
+        assert api_call_count["n"] == 3
+
+    def test_subprocess_timeout_captured_as_tool_result(self):
+        """A timed-out tool call must not crash the loop — the timeout message is sent back."""
+        tool_call = {"id": "c1", "type": "function", "function": {"name": "bash", "arguments": '{"command": "sleep 999"}'}}
+        first_response = self._make_response("", [tool_call])
+        second_response = self._make_response("got timeout result")
+        responses = iter([first_response, second_response])
+        mock_resp = MagicMock()
+        mock_resp.__enter__ = lambda s: s
+        mock_resp.__exit__ = MagicMock(return_value=False)
+        mock_resp.read.side_effect = lambda: next(responses)
+        with patch("urllib.request.urlopen", return_value=mock_resp), \
+             patch("subprocess.run", side_effect=subprocess.TimeoutExpired("sleep", 120)):
+            rc, output, _ = _run_openai_compatible(
+                "prompt", model="gpt-4o", api_key="sk-test", base_url=self.BASE_URL
+            )
+        assert rc == 0
+        assert "got timeout result" in output
+
+    def test_subprocess_exception_captured_as_tool_result(self):
+        """A subprocess error (non-timeout) must not crash the loop — the error is sent back."""
+        tool_call = {"id": "c1", "type": "function", "function": {"name": "bash", "arguments": '{"command": "bad"}'}}
+        first_response = self._make_response("", [tool_call])
+        second_response = self._make_response("got error result")
+        responses = iter([first_response, second_response])
+        mock_resp = MagicMock()
+        mock_resp.__enter__ = lambda s: s
+        mock_resp.__exit__ = MagicMock(return_value=False)
+        mock_resp.read.side_effect = lambda: next(responses)
+        with patch("urllib.request.urlopen", return_value=mock_resp), \
+             patch("subprocess.run", side_effect=OSError("permission denied")):
+            rc, output, _ = _run_openai_compatible(
+                "prompt", model="gpt-4o", api_key="sk-test", base_url=self.BASE_URL
+            )
+        assert rc == 0
+        assert "got error result" in output
+
+    def test_malformed_tool_arguments_captured_as_error(self):
+        """Invalid JSON in tool call arguments must not crash the loop."""
+        tool_call = {"id": "c1", "type": "function", "function": {"name": "bash", "arguments": "not-json"}}
+        first_response = self._make_response("", [tool_call])
+        second_response = self._make_response("recovered")
+        responses = iter([first_response, second_response])
+        mock_resp = MagicMock()
+        mock_resp.__enter__ = lambda s: s
+        mock_resp.__exit__ = MagicMock(return_value=False)
+        mock_resp.read.side_effect = lambda: next(responses)
+        with patch("urllib.request.urlopen", return_value=mock_resp):
+            rc, output, _ = _run_openai_compatible(
+                "prompt", model="gpt-4o", api_key="sk-test", base_url=self.BASE_URL
+            )
+        assert rc == 0
+        assert "recovered" in output
+
+
+# ── diagnostics model fields ───────────────────────────────────────────────────
+
+class TestDiagnosticsModelFields:
+    @pytest.fixture(autouse=True)
+    def stub_session(self, monkeypatch):
+        monkeypatch.setattr("medharness.services.cr_generation.get_session", lambda pr: "")
+        monkeypatch.setattr("medharness.services.cr_generation.put_session", lambda pr, sid: None)
+
+    def test_generate_dhf_has_design_and_design_review_model(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("MEDHARNESS_DESIGN_MODEL", "openai:gpt-4o")
+        monkeypatch.setenv("MEDHARNESS_DESIGN_REVIEW_MODEL", "deepseek:deepseek-chat")
+        monkeypatch.setenv("OPENAI_API_KEY", "sk-1")
+        monkeypatch.setenv("DEEPSEEK_API_KEY", "ds-1")
+        dhf = tmp_path / "DHF"
+        dhf.mkdir()
+        with patch("medharness.services.cr_generation._run_llm", return_value=(0, "", "")), \
+             patch("medharness.services.cr_generation.git.collect_dhf_item_changes",
+                   return_value={"created": [], "updated": [], "deleted": []}), \
+             patch("medharness.services.design_validation.validate_generate_dhf", return_value=[]):
+            result = generate_dhf("CR-070", dhf)
+        assert result["diagnostics"]["design_model"] == "openai:gpt-4o"
+        assert result["diagnostics"]["design_review_model"] == "deepseek:deepseek-chat"
+        assert "review_model" not in result["diagnostics"]
+        assert "anthropic_model" not in result["diagnostics"]
+
+    def test_generate_code_has_develop_and_code_review_model(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("MEDHARNESS_DEVELOP_MODEL", "deepseek:deepseek-chat")
+        monkeypatch.setenv("MEDHARNESS_CODE_REVIEW_MODEL", "openai:gpt-4o")
+        monkeypatch.setenv("DEEPSEEK_API_KEY", "ds-1")
+        monkeypatch.setenv("OPENAI_API_KEY", "sk-1")
+        dhf = tmp_path / "DHF"
+        dhf.mkdir()
+        with patch("medharness.services.cr_generation._run_llm", return_value=(0, "", "")), \
+             patch("medharness.services.code_validation.validate_code", return_value=[]):
+            result = generate_code("CR-071", dhf)
+        assert result["diagnostics"]["develop_model"] == "deepseek:deepseek-chat"
+        assert result["diagnostics"]["code_review_model"] == "openai:gpt-4o"
+        assert "review_model" not in result["diagnostics"]
+        assert "anthropic_model" not in result["diagnostics"]
+
+    def test_generate_dhf_routes_generation_and_review_to_different_models(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("MEDHARNESS_DESIGN_MODEL", "openai:gpt-4o")
+        monkeypatch.setenv("MEDHARNESS_DESIGN_REVIEW_MODEL", "deepseek:deepseek-chat")
+        monkeypatch.setenv("OPENAI_API_KEY", "sk-1")
+        monkeypatch.setenv("DEEPSEEK_API_KEY", "ds-1")
+        dhf = tmp_path / "DHF"
+        dhf.mkdir()
+
+        from medharness.services.cr_generation import LLMConfig
+        configs_used: list[LLMConfig] = []
+
+        def capture(prompt, *, config, resume_session=""):
+            configs_used.append(config)
+            return 0, "", ""
+
+        with patch("medharness.services.cr_generation._run_llm", side_effect=capture), \
+             patch("medharness.services.cr_generation.git.collect_dhf_item_changes",
+                   return_value={"created": [], "updated": [], "deleted": []}), \
+             patch("medharness.services.design_validation.validate_generate_dhf", return_value=[]):
+            generate_dhf("CR-072", dhf)
+
+        providers = [c.provider for c in configs_used]
+        assert "openai" in providers, "generation step must use design model (openai)"
+        assert "deepseek" in providers, "review step must use design_review model (deepseek)"
+        # generation step is always first
+        assert configs_used[0].provider == "openai"
+        # review step is last
+        assert configs_used[-1].provider == "deepseek"
+
+    def test_generate_code_routes_generation_and_review_to_different_models(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("MEDHARNESS_DEVELOP_MODEL", "deepseek:deepseek-chat")
+        monkeypatch.setenv("MEDHARNESS_CODE_REVIEW_MODEL", "openai:gpt-4o")
+        monkeypatch.setenv("DEEPSEEK_API_KEY", "ds-1")
+        monkeypatch.setenv("OPENAI_API_KEY", "sk-1")
+        dhf = tmp_path / "DHF"
+        dhf.mkdir()
+
+        from medharness.services.cr_generation import LLMConfig
+        configs_used: list[LLMConfig] = []
+
+        def capture(prompt, *, config, resume_session=""):
+            configs_used.append(config)
+            return 0, "", ""
+
+        with patch("medharness.services.cr_generation._run_llm", side_effect=capture), \
+             patch("medharness.services.code_validation.validate_code", return_value=[]):
+            generate_code("CR-073", dhf)
+
+        providers = [c.provider for c in configs_used]
+        assert "deepseek" in providers, "generation step must use develop model (deepseek)"
+        assert "openai" in providers, "review step must use code_review model (openai)"
+        # generation step is always first
+        assert configs_used[0].provider == "deepseek"
+        # review step is last
+        assert configs_used[-1].provider == "openai"
+
+
+class TestNonAnthropicProviderSessionWarning:
+    """Warning emitted when revision mode is active but a stage uses a non-anthropic provider."""
+
+    @pytest.fixture(autouse=True)
+    def stub_session(self, monkeypatch):
+        monkeypatch.setattr("medharness.services.cr_generation.get_session", lambda pr: "")
+        monkeypatch.setattr("medharness.services.cr_generation.put_session", lambda pr, sid: None)
+
+    def test_generate_dhf_warns_when_design_model_non_anthropic_with_pr(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("MEDHARNESS_DESIGN_MODEL", "openai:gpt-4o")
+        monkeypatch.setenv("OPENAI_API_KEY", "sk-1")
+        dhf = tmp_path / "DHF"
+        dhf.mkdir()
+        with patch("medharness.services.cr_generation._run_llm", return_value=(0, "", "")), \
+             patch("medharness.services.cr_generation._get_pr_feedback",
+                   return_value={"diagnostics": {}, "warnings": [], "prompt_text": ""}), \
+             patch("medharness.services.cr_generation.git.collect_dhf_item_changes",
+                   return_value={"created": [], "updated": [], "deleted": []}), \
+             patch("medharness.services.design_validation.validate_generate_dhf", return_value=[]):
+            result = generate_dhf("CR-080", dhf, pr_number=42)
+        codes = [w["code"] for w in result["warnings"]]
+        assert "non_anthropic_provider_no_session" in codes
+
+    def test_generate_dhf_no_warning_when_all_anthropic_with_pr(self, tmp_path, monkeypatch):
+        dhf = tmp_path / "DHF"
+        dhf.mkdir()
+        with patch("medharness.services.cr_generation._run_llm", return_value=(0, "", "")), \
+             patch("medharness.services.cr_generation._get_pr_feedback",
+                   return_value={"diagnostics": {}, "warnings": [], "prompt_text": ""}), \
+             patch("medharness.services.cr_generation.git.collect_dhf_item_changes",
+                   return_value={"created": [], "updated": [], "deleted": []}), \
+             patch("medharness.services.design_validation.validate_generate_dhf", return_value=[]):
+            result = generate_dhf("CR-081", dhf, pr_number=42)
+        codes = [w["code"] for w in result["warnings"]]
+        assert "non_anthropic_provider_no_session" not in codes
+
+    def test_generate_dhf_no_warning_when_non_anthropic_without_pr(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("MEDHARNESS_DESIGN_MODEL", "openai:gpt-4o")
+        monkeypatch.setenv("OPENAI_API_KEY", "sk-1")
+        dhf = tmp_path / "DHF"
+        dhf.mkdir()
+        with patch("medharness.services.cr_generation._run_llm", return_value=(0, "", "")), \
+             patch("medharness.services.cr_generation.git.collect_dhf_item_changes",
+                   return_value={"created": [], "updated": [], "deleted": []}), \
+             patch("medharness.services.design_validation.validate_generate_dhf", return_value=[]):
+            result = generate_dhf("CR-082", dhf)
+        codes = [w["code"] for w in result["warnings"]]
+        assert "non_anthropic_provider_no_session" not in codes
+
+    def test_generate_code_warns_when_develop_model_non_anthropic_with_pr(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("MEDHARNESS_DEVELOP_MODEL", "openai:gpt-4o")
+        monkeypatch.setenv("OPENAI_API_KEY", "sk-1")
+        dhf = tmp_path / "DHF"
+        dhf.mkdir()
+        with patch("medharness.services.cr_generation._run_llm", return_value=(0, "", "")), \
+             patch("medharness.services.cr_generation._get_pr_feedback",
+                   return_value={"diagnostics": {}, "warnings": [], "prompt_text": ""}), \
+             patch("medharness.services.code_validation.validate_code", return_value=[]):
+            result = generate_code("CR-083", dhf, pr_number=42)
+        codes = [w["code"] for w in result["warnings"]]
+        assert "non_anthropic_provider_no_session" in codes
+
+    def test_generate_code_no_warning_when_all_anthropic_with_pr(self, tmp_path, monkeypatch):
+        dhf = tmp_path / "DHF"
+        dhf.mkdir()
+        with patch("medharness.services.cr_generation._run_llm", return_value=(0, "", "")), \
+             patch("medharness.services.cr_generation._get_pr_feedback",
+                   return_value={"diagnostics": {}, "warnings": [], "prompt_text": ""}), \
+             patch("medharness.services.code_validation.validate_code", return_value=[]):
+            result = generate_code("CR-084", dhf, pr_number=42)
+        codes = [w["code"] for w in result["warnings"]]
+        assert "non_anthropic_provider_no_session" not in codes
+
+    def test_generate_code_warns_when_review_model_non_anthropic_with_pr(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("MEDHARNESS_CODE_REVIEW_MODEL", "deepseek:deepseek-chat")
+        monkeypatch.setenv("DEEPSEEK_API_KEY", "ds-1")
+        dhf = tmp_path / "DHF"
+        dhf.mkdir()
+        with patch("medharness.services.cr_generation._run_llm", return_value=(0, "", "")), \
+             patch("medharness.services.cr_generation._get_pr_feedback",
+                   return_value={"diagnostics": {}, "warnings": [], "prompt_text": ""}), \
+             patch("medharness.services.code_validation.validate_code", return_value=[]):
+            result = generate_code("CR-085", dhf, pr_number=42)
+        codes = [w["code"] for w in result["warnings"]]
+        assert "non_anthropic_provider_no_session" in codes
