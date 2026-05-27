@@ -671,9 +671,15 @@ def register(main):
             if cmd.reason:
                 body_lines.append(f"\nReason: {cmd.reason}")
             comment_ok = post_comment(pr_number, "\n".join(body_lines), token=token)
-            close_ok = close_pr(pr_number, token=token)
             payload["reason"] = cmd.reason
             payload["comment_posted"] = comment_ok
+            if not comment_ok:
+                payload["pr_closed"] = False
+                payload["success"] = False
+                click.echo(json.dumps(payload))
+                click.echo(f"FAIL [approval-act] PR #{pr_number}: could not post rejection comment.", err=True)
+                raise click.exceptions.Exit(1)
+            close_ok = close_pr(pr_number, token=token)
             payload["pr_closed"] = close_ok
             payload["success"] = close_ok
             click.echo(json.dumps(payload))
