@@ -39,7 +39,16 @@ Before generating any DHF items, evaluate whether the CR should proceed.
 Do **not** generate any DHF items if rejecting. Output a brief explanation of the
 rejection reason and stop.
 
-**If the CR is approved**, proceed to Step 2.
+**If the CR is approved**, record the triage findings before proceeding:
+
+    python -m dhfkit --dhf DHF item update {{cr_id}} \
+      --data '{"triage_result": {"verdict": "approved", "complexity": "<small|medium|large>", "affected_subsystems": ["<name>"], "related_crs": [], "notes": "<one sentence: why approved and the key constraint>"}}' \
+      --author "github-actions[bot]" --cr "{{cr_id}}"
+
+Complexity scale: `small` = 1 subsystem, <5 DHF items likely; `medium` = 2 subsystems
+or 5–15 items; `large` = 3+ subsystems or >15 items.
+
+Then proceed to Step 2.
 
 ## Step 2: V-Model Generation
 
@@ -249,7 +258,8 @@ python -m dhfkit --dhf DHF item update {{cr_id}} \
 - Do not create items for hypothetical future changes.
 - Do not modify files outside `DHF/`.
 - Do not edit the CR item except to set `status: rejected` and `impact_assessment`
-  when rejecting (Step 1), write `affected_risk_items` (Step 2.5),
-  `implementation_notes` (Step 3), or `proposed_new_items` (Step 4).
+  when rejecting (Step 1), write `triage_result` when approving (Step 1),
+  write `affected_risk_items` (Step 2.5), `implementation_notes` (Step 3),
+  or `proposed_new_items` (Step 4).
 
 ## DHF Impact Skills
