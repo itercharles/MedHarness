@@ -355,6 +355,21 @@ class TestApprovalActCLI:
         assert payload["label_added"] is False
         assert payload["success"] is False
 
+    def test_approve_comment_failure_exits_nonzero(self):
+        runner = CliRunner()
+        # First call (add_approval_label) succeeds; second call (post_comment) fails.
+        with patch("subprocess.run") as mock_run:
+            mock_run.side_effect = [
+                MagicMock(returncode=0, stdout=""),
+                MagicMock(returncode=1, stdout=""),
+            ]
+            r = runner.invoke(main, ["approval", "act", "--comment", "/approve", "--pr", "42", "--stage", "design"])
+        assert r.exit_code != 0
+        payload = json.loads(r.output.splitlines()[0])
+        assert payload["label_added"] is True
+        assert payload["comment_posted"] is False
+        assert payload["success"] is False
+
     def test_reject_posts_comment_and_closes_pr(self):
         runner = CliRunner()
         with patch("subprocess.run") as mock_run:

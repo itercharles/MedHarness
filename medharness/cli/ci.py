@@ -658,13 +658,15 @@ def register(main):
             payload["label"] = label
             payload["label_added"] = label_ok
             payload["comment_posted"] = comment_ok
-            payload["success"] = label_ok
+            payload["success"] = label_ok and comment_ok
             click.echo(json.dumps(payload))
-            if label_ok:
-                click.echo(f"PASS [approval-act] PR #{pr_number}: approved at stage={stage}.", err=True)
-            else:
+            if not label_ok:
                 click.echo(f"FAIL [approval-act] PR #{pr_number}: could not add label '{label}'.", err=True)
                 raise click.exceptions.Exit(1)
+            if not comment_ok:
+                click.echo(f"FAIL [approval-act] PR #{pr_number}: label added but could not post confirmation comment.", err=True)
+                raise click.exceptions.Exit(1)
+            click.echo(f"PASS [approval-act] PR #{pr_number}: approved at stage={stage}.", err=True)
 
         elif cmd.action == "reject":
             body_lines = ["Change request rejected."]
@@ -681,7 +683,7 @@ def register(main):
                 raise click.exceptions.Exit(1)
             close_ok = close_pr(pr_number, token=token)
             payload["pr_closed"] = close_ok
-            payload["success"] = close_ok
+            payload["success"] = comment_ok and close_ok
             click.echo(json.dumps(payload))
             if close_ok:
                 click.echo(f"PASS [approval-act] PR #{pr_number}: rejected and closed.", err=True)
