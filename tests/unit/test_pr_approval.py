@@ -306,3 +306,93 @@ class TestCiCrStatus:
         assert payload["stage"] == ""
         assert payload["approval_label"] is None
         assert payload["approval_state"] == "not_applicable"
+
+
+class TestApprovalActCLI:
+    def test_no_command_exits_0_with_null_action(self):
+        runner = CliRunner()
+        r = runner.invoke(main, ["approval", "act", "--comment", "LGTM!", "--pr", "10", "--stage", "design"])
+        assert r.exit_code == 0, r.output
+        import json
+        payload = json.loads(r.output.splitlines()[0])
+        assert payload["action"] is None
+        assert payload["success"] is True
+
+    def test_approve_adds_label_and_posts_comment(self):
+        runner = CliRunner()
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=0, stdout="")
+            r = runner.invoke(main, ["approval", "act", "--comment", "/approve", "--pr", "42", "--stage", "design"])
+        assert r.exit_code == 0, r.output
+        import json
+        payload = json.loads(r.output.splitlines()[0])
+        assert payload["action"] == "approve"
+        assert payload["label"] == "cr-design-approved"
+        assert payload["label_added"] is True
+        assert payload["success"] is True
+
+    def test_approve_stage_spec(self):
+        runner = CliRunner()
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=0, stdout="")
+            r = runner.invoke(main, ["approval", "act", "--comment", "/approve", "--pr", "5", "--stage", "spec"])
+        assert r.exit_code == 0, r.output
+        import json
+        payload = json.loads(r.output.splitlines()[0])
+        assert payload["label"] == "cr-spec-approved"
+
+    def test_approve_stage_develop(self):
+        runner = CliRunner()
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=0, stdout="")
+            r = runner.invoke(main, ["approval", "act", "--comment", "/approve", "--pr", "7", "--stage", "develop"])
+        assert r.exit_code == 0, r.output
+        import json
+        payload = json.loads(r.output.splitlines()[0])
+        assert payload["label"] == "cr-code-approved"
+
+    def test_approve_label_failure_exits_nonzero(self):
+        runner = CliRunner()
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=1, stdout="")
+            r = runner.invoke(main, ["approval", "act", "--comment", "/approve", "--pr", "42", "--stage", "design"])
+        assert r.exit_code != 0
+        import json
+        payload = json.loads(r.output.splitlines()[0])
+        assert payload["label_added"] is False
+        assert payload["success"] is False
+
+    def test_reject_posts_comment_and_closes_pr(self):
+        runner = CliRunner()
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=0, stdout="")
+            r = runner.invoke(main, ["approval", "act", "--comment", "/reject needs more detail", "--pr", "99", "--stage", "design"])
+        assert r.exit_code == 0, r.output
+        import json
+        payload = json.loads(r.output.splitlines()[0])
+        assert payload["action"] == "reject"
+        assert payload["reason"] == "needs more detail"
+        assert payload["pr_closed"] is True
+        assert payload["success"] is True
+
+    def test_reject_without_reason(self):
+        runner = CliRunner()
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=0, stdout="")
+            r = runner.invoke(main, ["approval", "act", "--comment", "/reject", "--pr", "11", "--stage", "design"])
+        assert r.exit_code == 0, r.output
+        import json
+        payload = json.loads(r.output.splitlines()[0])
+        assert payload["action"] == "reject"
+        assert payload["reason"] == ""
+
+    def test_reject_close_failure_exits_nonzero(self):
+        runner = CliRunner()
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=1, stdout="")
+            r = runner.invoke(main, ["approval", "act", "--comment", "/reject", "--pr", "11", "--stage", "design"])
+        assert r.exit_code != 0
+        import json
+        payload = json.loads(r.output.splitlines()[0])
+        assert payload["pr_closed"] is False
+        assert payload["success"] is False

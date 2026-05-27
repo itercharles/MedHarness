@@ -620,6 +620,69 @@ def register(main):
         else:
             click.echo(json.dumps({"action": cmd.action, "reason": cmd.reason}))
 
+    @approval.command("act")
+    @click.option("--comment", "comment_body", required=True, metavar="TEXT")
+    @click.option("--pr", "pr_number", required=True, type=int, metavar="N")
+    @click.option("--stage", required=True, type=click.Choice(["spec", "design", "develop"]))
+    @click.option("--token", default="", metavar="TOKEN")
+    def approval_act(comment_body: str, pr_number: int, stage: str, token: str) -> None:
+        """Execute an approval command from a PR comment body.
+
+        On /approve: adds the stage label and posts a confirmation comment.
+        On /reject: posts a rejection comment (with reason) and closes the PR.
+        On no command: exits 0 with action=null.
+        """
+        from medharness.services.pr_approval import (  # noqa: PLC0415
+            add_approval_label,
+            close_pr,
+            label_for_stage,
+            parse_approval_command,
+            post_comment,
+        )
+
+        cmd = parse_approval_command(comment_body)
+        payload: dict = {"pr_number": pr_number, "stage": stage, "action": None, "success": True}
+
+        if cmd is None:
+            click.echo(json.dumps(payload))
+            click.echo("OK [approval-act]: no command found in comment.", err=True)
+            return
+
+        payload["action"] = cmd.action
+
+        if cmd.action == "approve":
+            label = label_for_stage(stage)
+            label_ok = add_approval_label(pr_number, stage, token=token)
+            comment_body_text = f"Approved — label `{label}` added. Ready for next stage."
+            comment_ok = post_comment(pr_number, comment_body_text, token=token)
+            payload["label"] = label
+            payload["label_added"] = label_ok
+            payload["comment_posted"] = comment_ok
+            payload["success"] = label_ok
+            click.echo(json.dumps(payload))
+            if label_ok:
+                click.echo(f"PASS [approval-act] PR #{pr_number}: approved at stage={stage}.", err=True)
+            else:
+                click.echo(f"FAIL [approval-act] PR #{pr_number}: could not add label '{label}'.", err=True)
+                raise click.exceptions.Exit(1)
+
+        elif cmd.action == "reject":
+            body_lines = ["Change request rejected."]
+            if cmd.reason:
+                body_lines.append(f"\nReason: {cmd.reason}")
+            comment_ok = post_comment(pr_number, "\n".join(body_lines), token=token)
+            close_ok = close_pr(pr_number, token=token)
+            payload["reason"] = cmd.reason
+            payload["comment_posted"] = comment_ok
+            payload["pr_closed"] = close_ok
+            payload["success"] = close_ok
+            click.echo(json.dumps(payload))
+            if close_ok:
+                click.echo(f"PASS [approval-act] PR #{pr_number}: rejected and closed.", err=True)
+            else:
+                click.echo(f"FAIL [approval-act] PR #{pr_number}: could not close PR.", err=True)
+                raise click.exceptions.Exit(1)
+
     # ── Stage label management ──
 
     @change.command("advance")
