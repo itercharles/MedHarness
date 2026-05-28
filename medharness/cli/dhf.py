@@ -165,7 +165,7 @@ def register(main):
                 if cr else {"id": cr_id, "found": False}
             )
             result = {
-                "stage": "develop",
+                "stage": stage,
                 "cr": cr_develop,
                 "affected_items": [
                     {

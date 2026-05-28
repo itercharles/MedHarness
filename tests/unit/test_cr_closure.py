@@ -181,6 +181,24 @@ def test_empty_affected_risk_items_passes(tmp_path: Path) -> None:
     assert all(f["field"] != "affected_risk_items" for f in result["incomplete_cr_fields"])
 
 
+def test_null_affected_risk_items_fails(tmp_path: Path) -> None:
+    """affected_risk_items: null in YAML must fail — only an explicit list is valid."""
+    dhf = _make_dhf(tmp_path)
+    cr_dir = dhf / "items" / "07_cr"
+    cr_dir.mkdir(parents=True, exist_ok=True)
+    (cr_dir / "CR-001.yaml").write_text(
+        'id: CR-001\ntitle: "Test CR"\n'
+        "implementation_notes: 'plan'\n"
+        "affected_risk_items: null\n"
+        "triage_result:\n  verdict: approved\n"
+        "proposed_new_items: []\n"
+    )
+    result = cr_closure_gate("CR-001", dhf)
+    assert result["passed"] is False
+    fields = [f["field"] for f in result["incomplete_cr_fields"]]
+    assert "affected_risk_items" in fields
+
+
 def test_missing_triage_result_fails(tmp_path: Path) -> None:
     dhf = _make_dhf(tmp_path)
     _write_cr_proposed(dhf, "CR-001", [], triage_result=None)

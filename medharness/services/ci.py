@@ -599,7 +599,7 @@ def _check_cr_fields(cr_item: dict, cr_id: str) -> list[dict]:
                 "run generate-dhf Step 3 to record the implementation plan."
             ),
         })
-    if "affected_risk_items" not in cr_item:
+    if not isinstance(cr_item.get("affected_risk_items"), list):
         issues.append({
             "field": "affected_risk_items",
             "issue": (
