@@ -54,6 +54,9 @@ All DHF data operations use `dhfkit --dhf DHF <command>`.
   the same commit or PR — docs and code ship together.
 - Keep code minimal. No speculative abstractions, no over-engineering. Three
   similar lines is better than a premature abstraction.
+- When encountering a bug or unexpected behavior, find the root cause and fix
+  it. Do not add workarounds, fallbacks, or defensive patches that mask the
+  underlying problem.
 
 ## Session Start
 
