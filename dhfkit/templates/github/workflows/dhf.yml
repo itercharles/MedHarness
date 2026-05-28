@@ -7,6 +7,8 @@ on:
   push:
     branches:
       - main
+    tags:
+      - 'v*'
 
 jobs:
   dhf-validate:
@@ -44,4 +46,49 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: dhf-evidence
+          path: artifacts/
+
+  release-baseline:
+    name: Release Baseline
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: dhf-validate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - run: pip install medharness=={{medharness_version}}
+
+      - name: Extract version from tag
+        id: ver
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Build release baseline
+        run: |
+          dhfkit --dhf DHF release-baseline \
+            --version ${{ steps.ver.outputs.version }} \
+            --out-dir artifacts \
+            --write \
+            --author "github-actions[bot]"
+
+      - name: Commit REL item
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add DHF/
+          git diff --cached --quiet || \
+            git commit -m "ci: release baseline ${{ steps.ver.outputs.version }}" && \
+            git push origin HEAD:main
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-baseline-${{ steps.ver.outputs.version }}
           path: artifacts/
