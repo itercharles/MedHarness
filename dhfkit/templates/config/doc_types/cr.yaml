@@ -54,6 +54,9 @@ properties:
 - name: proposed_new_items
   label: Proposed New Items
   # list of {type, title} dicts written by generate-dhf; no format validator applies
+- name: triage_result
+  label: Triage Result
+  # {verdict, complexity, affected_subsystems, related_crs, notes} written by generate-dhf Step 1
 - name: target_release
   format: relationship
   target_types:

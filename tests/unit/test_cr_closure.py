@@ -24,14 +24,39 @@ def _make_dhf(tmp_path: Path) -> Path:
     return dhf
 
 
-def _write_cr_proposed(dhf: Path, cr_id: str, proposed: list[dict]) -> None:
-    """Write proposed_new_items directly into the CR item YAML."""
+def _write_cr_proposed(
+    dhf: Path,
+    cr_id: str,
+    proposed: list[dict],
+    *,
+    implementation_notes: str | None = "Implementation plan: do the thing.",
+    affected_risk_items=...,  # ... → write []; None → omit field; list → write that list
+    triage_result=...,        # ... → write {"verdict": "approved"}; None → omit; dict → write it
+) -> None:
+    """Write proposed_new_items and mandatory closure fields into the CR item YAML.
+
+    Pass ``None`` for any keyword arg to omit that field (tests the absence case).
+    Use ``...`` (default) to write the minimal valid value.
+    """
+    ari = [] if affected_risk_items is ... else affected_risk_items
+    tr = {"verdict": "approved"} if triage_result is ... else triage_result
+
     cr_dir = dhf / "items" / "07_cr"
     cr_dir.mkdir(parents=True, exist_ok=True)
+    lines = [f"id: {cr_id}", 'title: "Test CR"']
+    if implementation_notes is not None:
+        lines.append(f"implementation_notes: {repr(implementation_notes)}")
+    if ari is not None:
+        lines.append("affected_risk_items: []" if not ari else "affected_risk_items:")
+        for uid in ari or []:
+            lines.append(f"  - {uid}")
+    if tr is not None:
+        lines.append("triage_result:")
+        lines.append(f"  verdict: {tr.get('verdict', '')}")
     if not proposed:
-        lines = [f"id: {cr_id}", f'title: "Test CR"', "proposed_new_items: []"]
+        lines.append("proposed_new_items: []")
     else:
-        lines = [f"id: {cr_id}", f'title: "Test CR"', "proposed_new_items:"]
+        lines.append("proposed_new_items:")
         for item in proposed:
             lines.append(f"  - type: {item['type']}")
             lines.append(f"    title: \"{item['title']}\"")
@@ -117,6 +142,92 @@ def test_empty_proposed_new_items_passes(tmp_path: Path) -> None:
     result = cr_closure_gate("CR-001", dhf)
     assert result["passed"] is True
     assert result["missing_items"] == []
+    assert result["incomplete_cr_fields"] == []
+
+
+def test_missing_implementation_notes_fails(tmp_path: Path) -> None:
+    dhf = _make_dhf(tmp_path)
+    _write_cr_proposed(dhf, "CR-001", [], implementation_notes=None)
+    result = cr_closure_gate("CR-001", dhf)
+    assert result["passed"] is False
+    fields = [f["field"] for f in result["incomplete_cr_fields"]]
+    assert "implementation_notes" in fields
+
+
+def test_empty_implementation_notes_fails(tmp_path: Path) -> None:
+    dhf = _make_dhf(tmp_path)
+    _write_cr_proposed(dhf, "CR-001", [], implementation_notes="")
+    result = cr_closure_gate("CR-001", dhf)
+    assert result["passed"] is False
+    fields = [f["field"] for f in result["incomplete_cr_fields"]]
+    assert "implementation_notes" in fields
+
+
+def test_missing_affected_risk_items_fails(tmp_path: Path) -> None:
+    dhf = _make_dhf(tmp_path)
+    _write_cr_proposed(dhf, "CR-001", [], affected_risk_items=None)
+    result = cr_closure_gate("CR-001", dhf)
+    assert result["passed"] is False
+    fields = [f["field"] for f in result["incomplete_cr_fields"]]
+    assert "affected_risk_items" in fields
+
+
+def test_empty_affected_risk_items_passes(tmp_path: Path) -> None:
+    """affected_risk_items: [] is valid — means agent confirmed no risk items apply."""
+    dhf = _make_dhf(tmp_path)
+    _write_cr_proposed(dhf, "CR-001", [], affected_risk_items=[])
+    result = cr_closure_gate("CR-001", dhf)
+    assert result["passed"] is True
+    assert all(f["field"] != "affected_risk_items" for f in result["incomplete_cr_fields"])
+
+
+def test_null_affected_risk_items_fails(tmp_path: Path) -> None:
+    """affected_risk_items: null in YAML must fail — only an explicit list is valid."""
+    dhf = _make_dhf(tmp_path)
+    cr_dir = dhf / "items" / "07_cr"
+    cr_dir.mkdir(parents=True, exist_ok=True)
+    (cr_dir / "CR-001.yaml").write_text(
+        'id: CR-001\ntitle: "Test CR"\n'
+        "implementation_notes: 'plan'\n"
+        "affected_risk_items: null\n"
+        "triage_result:\n  verdict: approved\n"
+        "proposed_new_items: []\n"
+    )
+    result = cr_closure_gate("CR-001", dhf)
+    assert result["passed"] is False
+    fields = [f["field"] for f in result["incomplete_cr_fields"]]
+    assert "affected_risk_items" in fields
+
+
+def test_missing_triage_result_fails(tmp_path: Path) -> None:
+    dhf = _make_dhf(tmp_path)
+    _write_cr_proposed(dhf, "CR-001", [], triage_result=None)
+    result = cr_closure_gate("CR-001", dhf)
+    assert result["passed"] is False
+    fields = [f["field"] for f in result["incomplete_cr_fields"]]
+    assert "triage_result" in fields
+
+
+def test_triage_result_not_approved_fails(tmp_path: Path) -> None:
+    dhf = _make_dhf(tmp_path)
+    _write_cr_proposed(dhf, "CR-001", [], triage_result={"verdict": "rejected"})
+    result = cr_closure_gate("CR-001", dhf)
+    assert result["passed"] is False
+    fields = [f["field"] for f in result["incomplete_cr_fields"]]
+    assert "triage_result" in fields
+
+
+def test_all_cr_fields_present_passes(tmp_path: Path) -> None:
+    """All three mandatory CR fields present → incomplete_cr_fields is empty."""
+    dhf = _make_dhf(tmp_path)
+    _write_cr_proposed(
+        dhf, "CR-001", [],
+        implementation_notes="## Overview\nDo the thing.",
+        affected_risk_items=[],
+        triage_result={"verdict": "approved"},
+    )
+    result = cr_closure_gate("CR-001", dhf)
+    assert result["incomplete_cr_fields"] == []
 
 
 def test_proposed_items_all_created_with_junit_passes(tmp_path: Path) -> None:
@@ -295,6 +406,21 @@ def test_cli_cr_complete_passes(tmp_path: Path) -> None:
     payload = json.loads(result.output.splitlines()[0])
     assert payload["passed"] is True
     assert payload["cr_id"] == "CR-001"
+
+
+def test_cli_cr_complete_fails_on_incomplete_cr_fields(tmp_path: Path) -> None:
+    """CLI prints FAIL [cr-complete] lines for each missing mandatory CR field."""
+    dhf = _make_dhf(tmp_path)
+    _write_cr_proposed(dhf, "CR-001", [], implementation_notes=None, affected_risk_items=None)
+    result = CliRunner().invoke(
+        main,
+        ["--dhf", str(dhf), "verify", "completion", "--cr", "CR-001"],
+    )
+    assert result.exit_code != 0
+    payload = json.loads(result.output.splitlines()[0])
+    assert payload["passed"] is False
+    assert len(payload["incomplete_cr_fields"]) >= 2
+    assert "FAIL [cr-complete]" in result.output
 
 
 def test_cli_cr_complete_fails_on_missing_item(tmp_path: Path) -> None:

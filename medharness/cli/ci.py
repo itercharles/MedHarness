@@ -341,6 +341,8 @@ def register(main):
         result = cr_closure_gate(cr_id=cr_id, dhf_path=effective_dhf, junit_paths=junit_paths)
         click.echo(json.dumps(result))
 
+        for field in result.get("incomplete_cr_fields", []):
+            click.echo(f"FAIL [cr-complete] {field['issue']}", err=True)
         for item in result.get("missing_items", []):
             click.echo(
                 f"FAIL [cr-complete] {item['type']}: {item.get('issue', 'proposed item not found')}",

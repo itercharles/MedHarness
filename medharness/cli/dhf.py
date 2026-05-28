@@ -13,6 +13,12 @@ import click
 import medharness._helpers as _h
 
 
+_DEVELOP_ITEM_FIELDS = (
+    "id", "type", "title", "status",
+    "description", "content", "verification_criteria",
+)
+
+
 def register(main):
 
     @main.group("dhf")
@@ -130,15 +136,42 @@ def register(main):
                 },
             }
 
-        else:  # design or develop
-            affected_ids: list[str] = list(cr.get("affected_items") or []) if cr else []
-            affected_items = [adapter.get_item(uid) for uid in affected_ids]
+        elif stage == "design":
+            items = adapter.list_items()
             result = {
-                "stage": stage,
-                "cr": cr_summary,
-                "affected_items": [
+                "stage": "design",
+                "cr": cr or {"id": cr_id, "found": False},
+                "item_count": len(items),
+                "items": [
                     {"id": it["id"], "type": it.get("type", ""), "title": it.get("title", ""),
                      "status": it.get("status", ""), "tracelinks": it.get("all_linked_uids", [])}
+                    for it in sorted(items, key=lambda x: x["id"])
+                ],
+            }
+
+        else:  # develop
+            affected_ids: list[str] = list(cr.get("affected_items") or []) if cr else []
+            affected_items = [adapter.get_item(uid) for uid in affected_ids]
+            cr_develop: dict = (
+                {
+                    "id": cr_id,
+                    "title": cr.get("title", ""),
+                    "status": cr.get("status", ""),
+                    "implementation_notes": cr.get("implementation_notes") or "",
+                    "proposed_new_items": cr.get("proposed_new_items") or [],
+                    "triage_result": cr.get("triage_result") or {},
+                    "affected_risk_items": cr.get("affected_risk_items") or [],
+                }
+                if cr else {"id": cr_id, "found": False}
+            )
+            result = {
+                "stage": stage,
+                "cr": cr_develop,
+                "affected_items": [
+                    {
+                        **{f: it.get(f, "") for f in _DEVELOP_ITEM_FIELDS},
+                        "tracelinks": it.get("all_linked_uids", []),
+                    }
                     for it in affected_items if it is not None
                 ],
             }
