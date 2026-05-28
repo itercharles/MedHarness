@@ -47,6 +47,13 @@ All DHF data operations use `dhfkit --dhf DHF <command>`.
 - Do not add comments to self-explanatory code. Only comment when the WHY is
   non-obvious: a hidden constraint, a workaround, an external API contract, or
   behavior that would surprise a reader unfamiliar with the context.
+- Every code change must be accompanied by tests. If a change genuinely cannot
+  be tested (e.g., prompt text, LLM-dependent behavior), state explicitly why
+  it is untestable and what manual verification step is required instead.
+- If a change affects documented behavior, update the relevant documentation in
+  the same commit or PR — docs and code ship together.
+- Keep code minimal. No speculative abstractions, no over-engineering. Three
+  similar lines is better than a premature abstraction.
 
 ## Session Start
 

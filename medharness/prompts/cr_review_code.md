@@ -26,9 +26,11 @@ narrative, test depth, and code quality.
      happy path?
    - **Scope** — any unrelated refactoring, dead code, or speculative
      additions outside what the spec describes?
-   - **Conventions** — TypeScript strict (no `any`), Tailwind only (no
-     inline styles), shared types defined in `packages/shared-types`
-     before use in apps.
+   - **Conventions** — Read `CLAUDE.md` (and `AI-harness/context.md` if
+     present) for this project's coding conventions, then check the
+     implementation against them. If no conventions are documented, limit
+     your review to correctness, test depth, completeness, and scope —
+     do not import conventions from other projects.
 
 Do not re-verify the presence of `@links:` annotations for item-ID entries in
 `test_plan.needs_new_tc` — those are checked deterministically. If you

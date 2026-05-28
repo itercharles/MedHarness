@@ -19,6 +19,21 @@ from dhfkit.exceptions import ValidationError
 
 _VERIFIABLE_TYPES = frozenset({"CRS", "SYS", "SRS"})
 
+_VAGUE_VC_PHRASES: frozenset[str] = frozenset({
+    "works correctly",
+    "behaves as expected",
+    "behaves correctly",
+    "functions properly",
+    "functions correctly",
+    "operates correctly",
+    "operates as expected",
+    "as expected",
+    "should work",
+    "is correct",
+    "properly implemented",
+    "implemented correctly",
+})
+
 # Maps parent tier code → expected child tier codes.
 # If generate-dhf creates a parent item, at least one child-tier item in the
 # same CR's changed_items should link back to it.
@@ -283,3 +298,58 @@ def validate_generate_dhf(
 
     errors.extend(_validate_cascade_completeness(created_ids, by_id))
     return errors
+
+
+def check_verification_quality(
+    dhf_path: Path,
+    changed_items: dict[str, list[str]],
+) -> list[dict]:
+    """Return warning-level quality issues about verification_criteria content.
+
+    Detects vague, non-measurable criteria on changed verifiable items (CRS, SYS, SRS).
+    Does not trigger fix passes — caller surfaces these as warnings only.
+    """
+    _api, _ = _load_api()
+    if _api is None:
+        return []
+
+    try:
+        listed = _api.list_items(dhf_path)
+    except Exception:
+        return []
+
+    by_id = {item["id"]: item for item in listed}
+    seen: set[str] = set()
+    warnings: list[dict] = []
+
+    for uid in (*changed_items.get("created", []), *changed_items.get("updated", [])):
+        if uid in seen:
+            continue
+        seen.add(uid)
+
+        if _item_type_from_id(uid) not in _VERIFIABLE_TYPES:
+            continue
+
+        item = by_id.get(uid)
+        if item is None:
+            continue
+
+        vc = str((item.get("verification_criteria") or "")).strip()
+        if not vc:
+            continue  # absence is a hard error caught by validate_generate_dhf
+
+        lower = vc.lower()
+        matched = next((p for p in _VAGUE_VC_PHRASES if p in lower), None)
+        if matched:
+            excerpt = vc[:100] + ("..." if len(vc) > 100 else "")
+            warnings.append({
+                "code": "vague_verification_criteria",
+                "field": f"{uid}.verification_criteria",
+                "message": (
+                    f"{uid}: verification_criteria may be vague (matched '{matched}'). "
+                    f"State a measurable outcome, threshold, or pass/fail condition. "
+                    f'Current: "{excerpt}"'
+                ),
+            })
+
+    return warnings
