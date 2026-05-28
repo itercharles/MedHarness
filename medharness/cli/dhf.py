@@ -13,6 +13,12 @@ import click
 import medharness._helpers as _h
 
 
+_DEVELOP_ITEM_FIELDS = (
+    "id", "type", "title", "status",
+    "description", "content", "verification_criteria",
+)
+
+
 def register(main):
 
     @main.group("dhf")
@@ -157,10 +163,6 @@ def register(main):
                     "affected_risk_items": cr.get("affected_risk_items") or [],
                 }
                 if cr else {"id": cr_id, "found": False}
-            )
-            _DEVELOP_ITEM_FIELDS = (
-                "id", "type", "title", "status",
-                "description", "content", "verification_criteria",
             )
             result = {
                 "stage": "develop",
