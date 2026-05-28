@@ -30,30 +30,29 @@ def _write_cr_proposed(
     proposed: list[dict],
     *,
     implementation_notes: str | None = "Implementation plan: do the thing.",
-    affected_risk_items: list | None = [],
-    triage_result: dict | None = {"verdict": "approved"},
+    affected_risk_items=...,  # ... → write []; None → omit field; list → write that list
+    triage_result=...,        # ... → write {"verdict": "approved"}; None → omit; dict → write it
 ) -> None:
     """Write proposed_new_items and mandatory closure fields into the CR item YAML.
 
     Pass ``None`` for any keyword arg to omit that field (tests the absence case).
+    Use ``...`` (default) to write the minimal valid value.
     """
+    ari = [] if affected_risk_items is ... else affected_risk_items
+    tr = {"verdict": "approved"} if triage_result is ... else triage_result
+
     cr_dir = dhf / "items" / "07_cr"
     cr_dir.mkdir(parents=True, exist_ok=True)
     lines = [f"id: {cr_id}", 'title: "Test CR"']
     if implementation_notes is not None:
-        # Use block scalar to avoid quoting issues
         lines.append(f"implementation_notes: {repr(implementation_notes)}")
-    if affected_risk_items is not None:
-        if affected_risk_items:
-            lines.append("affected_risk_items:")
-            for uid in affected_risk_items:
-                lines.append(f"  - {uid}")
-        else:
-            lines.append("affected_risk_items: []")
-    if triage_result is not None:
-        verdict = triage_result.get("verdict", "")
+    if ari is not None:
+        lines.append("affected_risk_items: []" if not ari else "affected_risk_items:")
+        for uid in ari or []:
+            lines.append(f"  - {uid}")
+    if tr is not None:
         lines.append("triage_result:")
-        lines.append(f"  verdict: {verdict}")
+        lines.append(f"  verdict: {tr.get('verdict', '')}")
     if not proposed:
         lines.append("proposed_new_items: []")
     else:
@@ -389,6 +388,21 @@ def test_cli_cr_complete_passes(tmp_path: Path) -> None:
     payload = json.loads(result.output.splitlines()[0])
     assert payload["passed"] is True
     assert payload["cr_id"] == "CR-001"
+
+
+def test_cli_cr_complete_fails_on_incomplete_cr_fields(tmp_path: Path) -> None:
+    """CLI prints FAIL [cr-complete] lines for each missing mandatory CR field."""
+    dhf = _make_dhf(tmp_path)
+    _write_cr_proposed(dhf, "CR-001", [], implementation_notes=None, affected_risk_items=None)
+    result = CliRunner().invoke(
+        main,
+        ["--dhf", str(dhf), "verify", "completion", "--cr", "CR-001"],
+    )
+    assert result.exit_code != 0
+    payload = json.loads(result.output.splitlines()[0])
+    assert payload["passed"] is False
+    assert len(payload["incomplete_cr_fields"]) >= 2
+    assert "FAIL [cr-complete]" in result.output
 
 
 def test_cli_cr_complete_fails_on_missing_item(tmp_path: Path) -> None:
