@@ -11,28 +11,48 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+---
+
+## [0.10.0] — 2026-05-28
+
 ### New Features
 
-- **Per-stage LLM configuration** — each CR workflow stage can now use a
-  different model and provider. Set `MEDHARNESS_DESIGN_MODEL`,
-  `MEDHARNESS_DESIGN_REVIEW_MODEL`, `MEDHARNESS_DEVELOP_MODEL`, and/or
-  `MEDHARNESS_CODE_REVIEW_MODEL` to a `provider:model` string (e.g.
-  `openai:gpt-4o`, `deepseek:deepseek-chat`). The Anthropic Claude CLI remains
-  the default for any unset stage; `ANTHROPIC_MODEL` continues to work for the
-  anthropic provider. Supported providers: `anthropic`, `openai`, `deepseek`.
-  OpenAI-compatible providers run an agentic bash-tool loop against the
-  `/chat/completions` endpoint.
+- **`ci verify completion` CR field checks** — closure gate now requires
+  `implementation_notes`, `affected_risk_items`, and
+  `triage_result.verdict == "approved"` on the CR item before passing.
+  Missing or null values emit `FAIL [cr-complete]` and block the gate.
 
-- **Custom base URL per stage** — set `MEDHARNESS_{STAGE}_BASE_URL` to target
-  Azure OpenAI, Ollama, vLLM, LM Studio, or any other OpenAI-compatible
-  endpoint. Overrides the default endpoint for that stage.
+- **`approval act` command** — executes `/approve` (adds stage label +
+  confirmation comment) and `/reject` (posts reason + closes PR) from a PR
+  comment body.
 
-### Breaking Changes
+- **`dhf context for-stage design`** — now returns the full DHF item list so
+  the LLM can decide create-vs-update at the start of generate-dhf. Previously
+  returned `affected_items`, which is empty at that point.
 
-- **`diagnostics["anthropic_model"]` removed** — `generate_dhf` now reports
-  `design_model` and `design_review_model`; `generate_code` reports
-  `develop_model` and `code_review_model`. Consumers reading
-  `result["diagnostics"]["anthropic_model"]` must update to the new keys.
+- **`dhf context for-stage develop`** — now includes `implementation_notes`,
+  `proposed_new_items`, `triage_result`, and richer affected-item fields
+  (`description`, `content`, `verification_criteria`).
+
+- **Triage structured record** — generate-dhf writes `triage_result` (verdict,
+  complexity, affected_subsystems, notes) onto the CR item on approval.
+
+- **Vague `verification_criteria` detection** — warns when criteria on changed
+  CRS/SYS/SRS items contain non-measurable phrases ("works correctly", "behaves
+  as expected", etc.). Does not trigger a fix pass; surfaced as a warning only.
+
+- **Release baseline in scaffold workflow** — the sample `dhf.yml` gains a
+  `release-baseline` job triggered on `v*` tags. Runs
+  `dhfkit release-baseline --write`, commits the REL item back to `main`, and
+  uploads `release-baseline.json` + `software-bom.json` as artifacts.
+
+- **`ci test-points` coverage scenarios** — 6 additional test cases covering
+  multi-test coverage, per-requirement isolation, and SYS/CRS item types.
+
+### Improvements
+
+- Code review conventions now driven by the project's `CLAUDE.md` instead of
+  hardcoded TypeScript/Tailwind defaults.
 
 ---
 
