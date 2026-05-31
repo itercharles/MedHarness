@@ -197,3 +197,37 @@ class TestOutputContract:
         result = json.loads(r.stdout)
         assert "passed" in result
         assert "coverage" in result
+
+    def test_verify_completion_output_shape(self, scaffolded_dhf, tmp_path):
+        """verify completion writes JSON with all required keys to stdout."""
+        import json, importlib.resources
+        dhf = scaffolded_dhf / "DHF"
+        # Install CR doc type (not in default scaffold)
+        cr_src = importlib.resources.files("dhfkit").joinpath(
+            "templates/config/doc_types/cr.yaml"
+        )
+        (dhf / "config" / "doc_types" / "cr.yaml").write_bytes(cr_src.read_bytes())
+        # Write a minimal CR with all mandatory closure fields
+        cr_dir = dhf / "items" / "07_cr"
+        cr_dir.mkdir(parents=True, exist_ok=True)
+        (cr_dir / "CR-CONTRACT.yaml").write_text(
+            "id: CR-CONTRACT\n"
+            "title: Contract test CR\n"
+            "implementation_notes: 'plan'\n"
+            "affected_risk_items: []\n"
+            "triage_result:\n  verdict: approved\n"
+            "proposed_new_items: []\n"
+        )
+        r = _run("medharness", "--dhf", str(dhf), "verify", "completion", "--cr", "CR-CONTRACT")
+        payload = json.loads(r.stdout.splitlines()[0])
+        required_keys = {
+            "passed", "cr_id", "incomplete_cr_fields",
+            "missing_items", "verification_gaps", "unverified_test",
+            "manual_review_required", "summary",
+        }
+        assert required_keys <= payload.keys(), (
+            f"Missing keys: {required_keys - payload.keys()}"
+        )
+        assert isinstance(payload["incomplete_cr_fields"], list)
+        assert isinstance(payload["missing_items"], list)
+        assert isinstance(payload["passed"], bool)
