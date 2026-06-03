@@ -118,7 +118,7 @@ def register(main):
             gaps = [c for c in coverage if c.get("covered", 0) < c.get("total", 0)]
             result: dict = {
                 "stage": "analyze",
-                "cr": cr_summary,
+                "cr": cr or {"id": cr_id, "found": False},
                 "item_count": len(items),
                 "items": [
                     {"id": it["id"], "type": it.get("type", ""), "title": it.get("title", ""),

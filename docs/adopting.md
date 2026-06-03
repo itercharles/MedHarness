@@ -78,6 +78,48 @@ medharness --dhf DHF verify tests --junit-dir test-results
 
 This exits non-zero if a requirement lacks coverage or if any declared test point has no covering test, making gaps in test coverage visible before merge. Combined with `verify dhf` (schema and links), it enforces that requirements are linked and verified before merge.
 
+## AI-assisted CR workflow
+
+MedHarness can drive the full design-to-code cycle for a change request. The workflow is optional — each step is a separate CLI command you can run manually or wire into CI.
+
+### `change plan` — design phase
+
+```bash
+medharness --dhf DHF change plan --cr CR-001
+```
+
+Runs triage, then generates the V-model DHF item cascade (CRS → SYS → SRS → SWDD), then writes an implementation plan into `implementation_notes` on the CR item. On completion the CR item carries:
+
+| Field | Written by | Required at closure |
+|-------|-----------|-------------------|
+| `triage_result` | Step 1 (triage) | ✓ verdict must be `approved` |
+| `affected_risk_items` | Step 2.5 (risk impact) | ✓ explicit list (can be `[]`) |
+| `implementation_notes` | Step 3 (impl plan) | ✓ non-empty |
+| `proposed_new_items` | Step 4 (artifact record) | ✓ list of created items |
+
+### `change implement` — development phase
+
+```bash
+medharness --dhf DHF change implement --cr CR-001
+```
+
+Reads `implementation_notes` as the primary spec and implements the code, annotates tests with `@links:<ITEM_ID>`, and runs a code review loop.
+
+### `verify completion` — closure gate
+
+```bash
+medharness --dhf DHF verify completion --cr CR-001 --junit-dir test-results
+```
+
+Run after the branch is merged. Checks:
+
+1. All four CR fields above are populated.
+2. Every item listed in `proposed_new_items` exists in the DHF.
+3. All created verifiable items (CRS, SYS, SRS) have `verification_method` set.
+4. Items with `Test` method have passing JUnit evidence.
+
+Exits non-zero and prints `FAIL [cr-complete]` lines for each gap.
+
 ## Incremental adoption
 
 Nothing requires adopting everything at once. `medharness --dhf DHF verify dhf` is useful as a standalone CI gate well before any AI workflow is wired up — it catches broken traceability links and schema errors on every PR. Add `verify tests` once you have test annotations. If requirements include numbered testing fields, the same gate also enforces those test points. The AI phases (`change plan`, `change implement`) can come later, or not at all if your team prefers manual design with automated validation. Each layer adds value independently.

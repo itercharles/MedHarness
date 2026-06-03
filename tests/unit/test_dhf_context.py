@@ -52,6 +52,26 @@ def _invoke(dhf: Path, stage: str, cr_id: str = "CR-001") -> dict:
     return json.loads(result.output.splitlines()[0])
 
 
+class TestForStageAnalyze:
+    def test_includes_full_cr_item(self, tmp_path: Path) -> None:
+        """analyze stage returns the full CR item, not just id/title/status summary."""
+        dhf = _make_dhf(tmp_path)
+        _write_cr(dhf, "CR-001", triage_result={"verdict": "approved"})
+        payload = _invoke(dhf, "analyze")
+        assert payload["stage"] == "analyze"
+        cr = payload["cr"]
+        assert cr["id"] == "CR-001"
+        assert "triage_result" in cr
+
+    def test_includes_item_list_and_traceability(self, tmp_path: Path) -> None:
+        dhf = _make_dhf(tmp_path)
+        _write_cr(dhf, "CR-001")
+        payload = _invoke(dhf, "analyze")
+        assert "items" in payload
+        assert "item_count" in payload
+        assert "traceability_gaps" in payload
+
+
 class TestForStageDesign:
     def test_returns_full_item_list(self, tmp_path: Path) -> None:
         dhf = _make_dhf(tmp_path)
