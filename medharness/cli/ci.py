@@ -360,6 +360,39 @@ def register(main):
         if not result["passed"]:
             raise click.ClickException(f"CR {cr_id} closure verification failed.")
 
+    @verify.command("soup")
+    @click.option("--dhf", "dhf_path", type=click.Path(file_okay=False, path_type=Path))
+    @click.pass_context
+    def verify_soup(ctx: click.Context, dhf_path: Path | None) -> None:
+        """Check SOUP items against the OSV vulnerability database.
+
+        SOUP items must have an 'ecosystem' field (e.g. PyPI, npm) to be checked.
+        Exits non-zero if any known vulnerabilities are found or the API is unreachable.
+        Outputs structured JSON to stdout; human-readable messages to stderr.
+        """
+        from medharness.services.ci import soup_vuln_gate
+
+        effective_dhf = dhf_path or ctx.obj.get("dhf")
+        if effective_dhf is None:
+            raise click.ClickException("--dhf is required when not set globally")
+        result = soup_vuln_gate(effective_dhf)
+        click.echo(json.dumps(result))
+
+        for item in result.get("skipped", []):
+            click.echo(f"SKIP [soup-vuln] {item['soup_id']}: {item['reason']}", err=True)
+        for item in result.get("vulnerable", []):
+            for v in item.get("vulns", []):
+                click.echo(
+                    f"FAIL [soup-vuln] {item['soup_id']} ({item['name']}@{item['version']}): "
+                    f"{v['id']} — {v['summary']}",
+                    err=True,
+                )
+        if result.get("error"):
+            click.echo(f"ERROR [soup-vuln] {result['error']}", err=True)
+        click.echo(result["summary"], err=True)
+        if not result["passed"]:
+            raise click.ClickException("SOUP vulnerability check failed.")
+
     @verify.command("code")
     @click.option("--cr", "cr_id", required=True, metavar="CR_ID")
     @click.option("--since-ref", default="origin/main", metavar="REF")
