@@ -98,6 +98,16 @@ def _write_rcm_item(dhf: Path, item_id: str, title: str, mitigates: str) -> None
     (items_dir / f"{item_id}.yaml").write_text("\n".join(lines) + "\n")
 
 
+def _write_design_review(project_dir: Path, cr_id: str, verdict: str = "approved") -> None:
+    """Write a minimal design review file under docs/reviews/."""
+    review_dir = project_dir / "docs" / "reviews"
+    review_dir.mkdir(parents=True, exist_ok=True)
+    verdict_label = "Approved" if verdict == "approved" else "Needs Revision"
+    (review_dir / f"{cr_id}-Design-Review.md").write_text(
+        f"# Design Review: {cr_id}\n\n**Verdict:** {verdict_label}\n"
+    )
+
+
 def _make_junit(tmp_path: Path, passing_links: list[str]) -> Path:
     root = ET.Element("testsuites")
     suite = ET.SubElement(root, "testsuite", name="suite", tests=str(len(passing_links)))
@@ -139,6 +149,7 @@ def test_empty_proposed_new_items_passes(tmp_path: Path) -> None:
     """Explicitly empty proposed_new_items → no artifact reconciliation required → passes."""
     dhf = _make_dhf(tmp_path)
     _write_cr_proposed(dhf, "CR-001", [])
+    _write_design_review(tmp_path, "CR-001")
     result = cr_closure_gate("CR-001", dhf)
     assert result["passed"] is True
     assert result["missing_items"] == []
@@ -176,6 +187,7 @@ def test_empty_affected_risk_items_passes(tmp_path: Path) -> None:
     """affected_risk_items: [] is valid — means agent confirmed no risk items apply."""
     dhf = _make_dhf(tmp_path)
     _write_cr_proposed(dhf, "CR-001", [], affected_risk_items=[])
+    _write_design_review(tmp_path, "CR-001")
     result = cr_closure_gate("CR-001", dhf)
     assert result["passed"] is True
     assert all(f["field"] != "affected_risk_items" for f in result["incomplete_cr_fields"])
@@ -218,7 +230,7 @@ def test_triage_result_not_approved_fails(tmp_path: Path) -> None:
 
 
 def test_all_cr_fields_present_passes(tmp_path: Path) -> None:
-    """All three mandatory CR fields present → incomplete_cr_fields is empty."""
+    """All mandatory CR fields present and design review approved → incomplete_cr_fields is empty."""
     dhf = _make_dhf(tmp_path)
     _write_cr_proposed(
         dhf, "CR-001", [],
@@ -226,6 +238,7 @@ def test_all_cr_fields_present_passes(tmp_path: Path) -> None:
         affected_risk_items=[],
         triage_result={"verdict": "approved"},
     )
+    _write_design_review(tmp_path, "CR-001")
     result = cr_closure_gate("CR-001", dhf)
     assert result["incomplete_cr_fields"] == []
 
@@ -236,6 +249,7 @@ def test_proposed_items_all_created_with_junit_passes(tmp_path: Path) -> None:
         {"type": "SRS", "title": "Req A"},
         {"type": "SRS", "title": "Req B"},
     ])
+    _write_design_review(tmp_path, "CR-001")
     _write_srs_item(dhf, "SRS-001", "Req A", verification_method=["Test"])
     _write_srs_item(dhf, "SRS-002", "Req B", verification_method=["Test"])
     junit = _make_junit(tmp_path, ["SRS-001", "SRS-002"])
@@ -259,7 +273,7 @@ def test_missing_proposed_item_by_title_fails(tmp_path: Path) -> None:
 def test_title_match_is_case_insensitive(tmp_path: Path) -> None:
     dhf = _make_dhf(tmp_path)
     _write_cr_proposed(dhf, "CR-001", [{"type": "SRS", "title": "Rate Limit Input Validation"}])
-    # Title matches case-insensitively
+    _write_design_review(tmp_path, "CR-001")
     _write_srs_item(dhf, "SRS-001", "rate limit input validation", verification_method=["Inspection"])
     result = cr_closure_gate("CR-001", dhf)
     assert result["missing_items"] == []
@@ -325,6 +339,7 @@ def test_proposed_item_with_empty_title_is_skipped(tmp_path: Path) -> None:
         {"type": "SRS", "title": ""},          # empty title — should be skipped
         {"type": "SRS", "title": "Real req"},  # valid entry — must be present
     ])
+    _write_design_review(tmp_path, "CR-001")
     _write_srs_item(dhf, "SRS-001", "Real req", verification_method=["Inspection"])
     result = cr_closure_gate("CR-001", dhf)
     assert result["passed"] is True
@@ -342,6 +357,7 @@ def test_duplicate_proposed_entries_deduplicated(tmp_path: Path) -> None:
         {"type": "SRS", "title": "Same title"},
         {"type": "SRS", "title": "Same title"},  # duplicate
     ])
+    _write_design_review(tmp_path, "CR-001")
     _write_srs_item(dhf, "SRS-001", "Same title", verification_method=["Inspection"])
     result = cr_closure_gate("CR-001", dhf)
     assert result["passed"] is True
@@ -355,6 +371,7 @@ def test_risk_rcm_in_proposed_items_passes_without_verification_method(tmp_path:
         {"type": "RISK", "title": "Unintended data modification"},
         {"type": "RCM", "title": "Optimistic-lock concurrency control"},
     ])
+    _write_design_review(tmp_path, "CR-001")
     _write_risk_item(dhf, "RISK-002", "Unintended data modification")
     _write_rcm_item(dhf, "RCM-002", "Optimistic-lock concurrency control", "RISK-002")
     result = cr_closure_gate("CR-001", dhf)
@@ -379,6 +396,7 @@ def test_mixed_srs_and_risk_in_proposed_items(tmp_path: Path) -> None:
         {"type": "SRS", "title": "Req A"},
         {"type": "RISK", "title": "New hazard from Req A"},
     ])
+    _write_design_review(tmp_path, "CR-001")
     _write_srs_item(dhf, "SRS-001", "Req A", verification_method=["Inspection"])
     _write_risk_item(dhf, "RISK-002", "New hazard from Req A")
     result = cr_closure_gate("CR-001", dhf)
@@ -395,6 +413,7 @@ def test_mixed_srs_and_risk_in_proposed_items(tmp_path: Path) -> None:
 def test_cli_cr_complete_passes(tmp_path: Path) -> None:
     dhf = _make_dhf(tmp_path)
     _write_cr_proposed(dhf, "CR-001", [{"type": "SRS", "title": "Req A"}])
+    _write_design_review(tmp_path, "CR-001")
     _write_srs_item(dhf, "SRS-001", "Req A", verification_method=["Test"])
     junit = _make_junit(tmp_path, ["SRS-001"])
     result = CliRunner().invoke(
@@ -443,3 +462,53 @@ def test_cli_cr_complete_fails_without_junit_for_test_items(tmp_path: Path) -> N
         ["--dhf", str(dhf), "verify", "completion", "--cr", "CR-001"],
     )
     assert result.exit_code != 0
+
+
+# ---------------------------------------------------------------------------
+# Design review check tests
+# ---------------------------------------------------------------------------
+
+
+def test_missing_design_review_fails(tmp_path: Path) -> None:
+    """No design review file → closure gate fails with actionable message."""
+    dhf = _make_dhf(tmp_path)
+    _write_cr_proposed(dhf, "CR-001", [])
+    # No design review file written
+    result = cr_closure_gate("CR-001", dhf)
+    assert result["passed"] is False
+    fields = [f["field"] for f in result["incomplete_cr_fields"]]
+    assert "design_review" in fields
+
+
+def test_design_review_needs_revision_fails(tmp_path: Path) -> None:
+    """Design review with needs_revision verdict → closure gate fails."""
+    dhf = _make_dhf(tmp_path)
+    _write_cr_proposed(dhf, "CR-001", [])
+    _write_design_review(tmp_path, "CR-001", verdict="needs_revision")
+    result = cr_closure_gate("CR-001", dhf)
+    assert result["passed"] is False
+    fields = [f["field"] for f in result["incomplete_cr_fields"]]
+    assert "design_review" in fields
+
+
+def test_design_review_approved_clears_field(tmp_path: Path) -> None:
+    """Approved design review → design_review not in incomplete_cr_fields."""
+    dhf = _make_dhf(tmp_path)
+    _write_cr_proposed(dhf, "CR-001", [])
+    _write_design_review(tmp_path, "CR-001", verdict="approved")
+    result = cr_closure_gate("CR-001", dhf)
+    fields = [f["field"] for f in result["incomplete_cr_fields"]]
+    assert "design_review" not in fields
+
+
+def test_design_review_unknown_verdict_fails(tmp_path: Path) -> None:
+    """Design review file exists but verdict line is missing → fails."""
+    dhf = _make_dhf(tmp_path)
+    _write_cr_proposed(dhf, "CR-001", [])
+    review_dir = tmp_path / "docs" / "reviews"
+    review_dir.mkdir(parents=True, exist_ok=True)
+    (review_dir / "CR-001-Design-Review.md").write_text("# Review\n\nNo verdict line here.\n")
+    result = cr_closure_gate("CR-001", dhf)
+    assert result["passed"] is False
+    fields = [f["field"] for f in result["incomplete_cr_fields"]]
+    assert "design_review" in fields

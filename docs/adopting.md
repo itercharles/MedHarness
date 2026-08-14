@@ -114,11 +114,47 @@ medharness --dhf DHF verify completion --cr CR-001 --junit-dir test-results
 Run after the branch is merged. Checks:
 
 1. All four CR fields above are populated.
-2. Every item listed in `proposed_new_items` exists in the DHF.
-3. All created verifiable items (CRS, SYS, SRS) have `verification_method` set.
-4. Items with `Test` method have passing JUnit evidence.
+2. A design review file exists at `docs/reviews/<CR>-Design-Review.md` with `**Verdict:** Approved`.
+3. Every item listed in `proposed_new_items` exists in the DHF.
+4. All created verifiable items (CRS, SYS, SRS) have `verification_method` set.
+5. Items with `Test` method have passing JUnit evidence.
 
 Exits non-zero and prints `FAIL [cr-complete]` lines for each gap.
+
+## SOUP vulnerability scanning (`verify soup`)
+
+SOUP items that carry an `ecosystem` field (e.g. `PyPI`, `npm`, `Go`) are checked against the [OSV vulnerability database](https://osv.dev) on every run:
+
+```bash
+medharness --dhf DHF verify soup
+```
+
+Add the `ecosystem` field to each SOUP item to enable scanning:
+
+```yaml
+id: SOUP-012
+name: requests
+version: "2.28.2"
+ecosystem: PyPI     # enables CVE scanning via osv.dev
+manufacturer: Python Software Foundation
+purpose: HTTP client for REST API calls
+```
+
+Items without `ecosystem` are skipped with a note. The command exits non-zero if any known vulnerabilities are found and outputs structured JSON to stdout. Wire it into CI after `verify dhf` to catch unresolved CVEs before release.
+
+## Keeping your scaffold up to date (`upgrade`)
+
+When a new MedHarness version ships, CI workflows, AI prompts, and spec templates may change. The `upgrade` command shows what's drifted and optionally applies the updates:
+
+```bash
+medharness upgrade                      # report only — exits non-zero if outdated
+medharness upgrade --apply              # apply updates from the installed version
+medharness upgrade --project-dir /path  # specify project root (default: cwd)
+```
+
+Files that are always **user-owned** (never modified by upgrade): `DHF/items/`, `DHF/config/global.yaml`, `AI-harness/context.md`, `CLAUDE.md`.
+
+Files that upgrade manages: CI workflow (`.github/workflows/dhf.yml`), AI prompts (`.github/prompts/`), spec Jinja2 templates (`DHF/documents/specs/`), doc-type configs (`DHF/config/doc_types/`).
 
 ## Incremental adoption
 

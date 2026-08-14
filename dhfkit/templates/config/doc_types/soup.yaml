@@ -29,6 +29,10 @@ properties:
 - name: homepage
   format: short_text
   label: Homepage
+- name: ecosystem
+  format: short_text
+  label: Package Ecosystem
+  # OSV ecosystem identifier for vulnerability scanning, e.g. PyPI, npm, Go, Maven
 - name: cve_count
   format: short_text
   label: CVE Count
