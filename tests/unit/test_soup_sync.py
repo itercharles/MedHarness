@@ -46,7 +46,7 @@ class TestParseRequirementsTxt:
         assert len(pkgs) == 1
         assert pkgs[0]["name"] == "requests"
         assert pkgs[0]["version"] == "2.31.0"
-        assert pkgs[0]["ecosystem"] == "pypi"
+        assert pkgs[0]["ecosystem"] == "PyPI"
 
     def test_extras_ignored(self, tmp_path):
         path = _req_txt(tmp_path, "medharness[llm]==0.6.3\n")

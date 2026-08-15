@@ -478,9 +478,14 @@ def report_cmd(ctx: click.Context, fmt: str, out_path: Path | None) -> None:
 
 
 @main.command("soup-sync")
-@click.option("--manifest", "manifest_paths", multiple=True, required=True,
+@click.option("--manifest", "manifest_paths", multiple=True,
               type=click.Path(exists=True, dir_okay=False, path_type=Path),
-              metavar="PATH", help="requirements.txt or package.json to parse (repeatable)")
+              metavar="PATH",
+              help="Manifest file to parse (repeatable). When omitted, reads "
+                   "DHF/config/soup-sources.yaml or auto-discovers manifests.")
+@click.option("--from-command", "extra_commands", multiple=True, metavar="CMD",
+              help="Shell command whose stdout is NDJSON {name,version,ecosystem} "
+                   "(repeatable). Use to plug in syft, trivy, or custom scripts.")
 @click.option("--write", is_flag=True, default=False,
               help="Create/update SOUP items in the DHF (dry-run by default)")
 @click.option("--author", default="ci", show_default=True, metavar="NAME")
@@ -488,18 +493,31 @@ def report_cmd(ctx: click.Context, fmt: str, out_path: Path | None) -> None:
               help="CR to attribute writes to")
 @click.pass_context
 def soup_sync_cmd(
-    ctx: click.Context, manifest_paths: tuple[Path, ...],
-    write: bool, author: str, cr_id: str | None,
+    ctx: click.Context,
+    manifest_paths: tuple[Path, ...],
+    extra_commands: tuple[str, ...],
+    write: bool,
+    author: str,
+    cr_id: str | None,
 ) -> None:
     """Sync SOUP items in the DHF with package manifests.
 
-    Compares requirements.txt / package.json entries against existing
-    SOUP items and reports new, version-drifted, and orphaned entries.
-    Pass --write to apply creates/updates to the DHF.
+    Without --manifest / --from-command, reads DHF/config/soup-sources.yaml
+    (if present) or auto-discovers manifest files in the project root.
+
+    Supported manifest formats: requirements.txt, uv.lock, poetry.lock,
+    pyproject.toml, package.json, package-lock.json, go.mod, Cargo.lock, pom.xml.
+
+    Compares found packages against existing SOUP items and reports new,
+    version-drifted, and orphaned entries. Pass --write to apply changes.
     """
     from dhfkit.soup_sync import sync_soup_items
     dhf: Path = ctx.obj["dhf"]
-    result = sync_soup_items(dhf, list(manifest_paths), write=write, author=author, cr_id=cr_id)
+    result = sync_soup_items(
+        dhf, list(manifest_paths),
+        write=write, author=author, cr_id=cr_id,
+        extra_commands=list(extra_commands),
+    )
     click.echo(json.dumps(result))
     create_count = len(result.get("to_create") or [])
     update_count = len(result.get("to_update") or [])
