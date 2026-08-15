@@ -585,6 +585,134 @@ def validate_verification_completeness(
     }
 
 
+def soup_vuln_gate(dhf_path: Path) -> dict:
+    """Check SOUP items against the OSV vulnerability database.
+
+    For each SOUP item that has both ``name`` and ``ecosystem`` fields, queries
+    https://api.osv.dev/v1/querybatch and reports known vulnerabilities.
+
+    Items without an ``ecosystem`` field are skipped with a note so adopters can
+    add the field without breaking CI.
+
+    Returns:
+        {
+          "passed": bool,
+          "soup_count": int,
+          "checked_count": int,
+          "vulnerable": [{"soup_id", "name", "version", "vulns": [...]}],
+          "skipped": [{"soup_id", "reason"}],
+          "error": str | None,
+          "summary": str,
+        }
+    """
+    import json as _json
+    import urllib.error
+    import urllib.request
+
+    from dhfkit.local_adapter import LocalDHFAdapter
+
+    adapter = LocalDHFAdapter(dhf_path)
+    all_items = adapter.list_items()
+    soup_items = [it for it in all_items if it.get("type") == "SOUP"]
+
+    checkable: list[dict] = []
+    skipped: list[dict] = []
+
+    for item in soup_items:
+        soup_id = item.get("id", "?")
+        name = str(item.get("name") or "").strip()
+        version = str(item.get("version") or "").strip()
+        ecosystem = str(item.get("ecosystem") or "").strip()
+        if not name or not version:
+            skipped.append({"soup_id": soup_id, "reason": "missing name or version"})
+            continue
+        if not ecosystem:
+            skipped.append({"soup_id": soup_id, "reason": "ecosystem not specified — add e.g. ecosystem: PyPI"})
+            continue
+        checkable.append({"soup_id": soup_id, "name": name, "version": version, "ecosystem": ecosystem})
+
+    if not checkable:
+        n_soup = len(soup_items)
+        return {
+            "passed": True,
+            "soup_count": n_soup,
+            "checked_count": 0,
+            "vulnerable": [],
+            "skipped": skipped,
+            "error": None,
+            "summary": (
+                f"{n_soup} SOUP item(s) found; none checkable "
+                "(add 'ecosystem' field to enable vulnerability scanning)."
+            ) if n_soup else "No SOUP items in DHF.",
+        }
+
+    queries = [
+        {"package": {"name": c["name"], "ecosystem": c["ecosystem"]}, "version": c["version"]}
+        for c in checkable
+    ]
+    body = _json.dumps({"queries": queries}).encode()
+    req = urllib.request.Request(
+        "https://api.osv.dev/v1/querybatch",
+        data=body,
+        headers={"Content-Type": "application/json"},
+    )
+
+    try:
+        with urllib.request.urlopen(req, timeout=20) as resp:
+            results = _json.loads(resp.read()).get("results", [])
+    except urllib.error.URLError as exc:
+        return {
+            "passed": False,
+            "soup_count": len(soup_items),
+            "checked_count": 0,
+            "vulnerable": [],
+            "skipped": skipped,
+            "error": f"osv.dev unreachable: {exc}",
+            "summary": f"SOUP vulnerability check failed: {exc}",
+        }
+
+    vulnerable: list[dict] = []
+    for meta, result in zip(checkable, results):
+        vulns_raw = result.get("vulns") or []
+        if not vulns_raw:
+            continue
+        vulns = [
+            {
+                "id": v.get("id", ""),
+                "summary": v.get("summary", ""),
+                "severity": (
+                    v.get("database_specific", {}).get("severity")
+                    or (v.get("severity") or [{}])[0].get("score", "")
+                ),
+            }
+            for v in vulns_raw
+        ]
+        vulnerable.append({
+            "soup_id": meta["soup_id"],
+            "name": meta["name"],
+            "version": meta["version"],
+            "vulns": vulns,
+        })
+
+    passed = len(vulnerable) == 0
+    n_vuln = sum(len(v["vulns"]) for v in vulnerable)
+    summary_parts = [
+        f"{len(soup_items)} SOUP item(s), {len(checkable)} checked.",
+        f"{n_vuln} vulnerability(-ies) found across {len(vulnerable)} item(s)."
+        if not passed
+        else "No known vulnerabilities found.",
+    ]
+    return {
+        "passed": passed,
+        "soup_count": len(soup_items),
+        "checked_count": len(checkable),
+        "vulnerable": vulnerable,
+        "skipped": skipped,
+        "error": None,
+        "summary": " ".join(summary_parts),
+    }
+
+
 def _check_cr_fields(cr_item: dict, cr_id: str) -> list[dict]:
     """Check that generate-dhf mandatory CR fields are populated.
 
@@ -619,6 +747,43 @@ def _check_cr_fields(cr_item: dict, cr_id: str) -> list[dict]:
     return issues
 
 
+def _check_design_review(dhf_path: Path, cr_id: str) -> list[dict]:
+    """Check that a design review file exists with an approved verdict.
+
+    The review file lives at docs/reviews/<CR>-Design-Review.md relative to
+    the project root (one level above dhf_path).
+    """
+    review_file = dhf_path.parent / "docs" / "reviews" / f"{cr_id}-Design-Review.md"
+    if not review_file.exists():
+        return [{
+            "field": "design_review",
+            "issue": (
+                f"CR {cr_id} — no design review file at "
+                f"docs/reviews/{cr_id}-Design-Review.md; "
+                "run 'change plan' to generate the design review."
+            ),
+        }]
+    verdict = "unknown"
+    for line in review_file.read_text().splitlines():
+        stripped = line.strip()
+        if stripped.startswith("**Verdict:**"):
+            lower = stripped.lower()
+            if "approved" in lower:
+                verdict = "approved"
+            elif "needs revision" in lower:
+                verdict = "needs_revision"
+            break
+    if verdict != "approved":
+        return [{
+            "field": "design_review",
+            "issue": (
+                f"CR {cr_id} — design review verdict is '{verdict}', not 'approved'; "
+                "resolve open issues before closing."
+            ),
+        }]
+    return []
+
+
 def cr_closure_gate(
     cr_id: str,
     dhf_path: Path,
@@ -628,9 +793,10 @@ def cr_closure_gate(
 
     Checks:
     1. CR item carries implementation_notes, affected_risk_items, and an approved triage_result.
-    2. All ``proposed_new_items`` from the CR item exist in the DHF.
-    3. All created items of verifiable types have ``verification_method`` set.
-    4. Items with ``Test`` method have passing JUnit evidence (when JUnit provided).
+    2. A design review file exists at docs/reviews/<CR>-Design-Review.md with verdict=approved.
+    3. All ``proposed_new_items`` from the CR item exist in the DHF.
+    4. All created items of verifiable types have ``verification_method`` set.
+    5. Items with ``Test`` method have passing JUnit evidence (when JUnit provided).
 
     Args:
         cr_id: CR identifier (e.g. CR-012).
@@ -659,6 +825,7 @@ def cr_closure_gate(
     # field via `dhf item update` so it persists in the CR YAML alongside the CR itself.
     cr_item = adapter.get_item(cr_id) or {}
     incomplete_cr_fields = _check_cr_fields(cr_item, cr_id)
+    incomplete_cr_fields.extend(_check_design_review(dhf_path, cr_id))
 
     raw = cr_item.get("proposed_new_items")
     if raw is None:

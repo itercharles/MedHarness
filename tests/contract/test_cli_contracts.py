@@ -132,10 +132,21 @@ class TestCRGenerationCommands:
         r_change = _run("medharness", "change", "--help")
         assert r_verify.returncode == 0, r_verify.stderr
         assert r_change.returncode == 0, r_change.stderr
-        for cmd in ["code", "branch", "dhf", "tests"]:
+        for cmd in ["code", "branch", "dhf", "tests", "soup"]:
             assert cmd in r_verify.stdout, f"Command {cmd!r} missing from verify --help"
         for cmd in ["plan", "implement", "status", "advance"]:
             assert cmd in r_change.stdout, f"Command {cmd!r} missing from change --help"
+
+    def test_upgrade_help(self):
+        """medharness upgrade --help exits 0."""
+        r = _run("medharness", "upgrade", "--help")
+        assert r.returncode == 0, r.stderr
+        assert "--apply" in r.stdout
+
+    def test_verify_soup_help(self):
+        """medharness verify soup --help exits 0."""
+        r = _run("medharness", "verify", "soup", "--help")
+        assert r.returncode == 0, r.stderr
 
 
 class TestCLIEntrypoints:
@@ -218,6 +229,12 @@ class TestOutputContract:
             "triage_result:\n  verdict: approved\n"
             "proposed_new_items: []\n"
         )
+        # Write an approved design review file (required by closure gate)
+        review_dir = scaffolded_dhf / "docs" / "reviews"
+        review_dir.mkdir(parents=True, exist_ok=True)
+        (review_dir / "CR-CONTRACT-Design-Review.md").write_text(
+            "# Design Review: CR-CONTRACT\n\n**Verdict:** Approved\n"
+        )
         r = _run("medharness", "--dhf", str(dhf), "verify", "completion", "--cr", "CR-CONTRACT")
         payload = json.loads(r.stdout.splitlines()[0])
         required_keys = {
@@ -231,3 +248,30 @@ class TestOutputContract:
         assert isinstance(payload["incomplete_cr_fields"], list)
         assert isinstance(payload["missing_items"], list)
         assert isinstance(payload["passed"], bool)
+
+    def test_verify_soup_output_shape(self, scaffolded_dhf):
+        """verify soup writes JSON with all required keys to stdout."""
+        import json
+        dhf = scaffolded_dhf / "DHF"
+        r = _run("medharness", "--dhf", str(dhf), "verify", "soup")
+        # No SOUP items with ecosystem → passes with checked_count=0
+        assert r.returncode == 0, r.stderr
+        payload = json.loads(r.stdout.splitlines()[0])
+        required_keys = {"passed", "soup_count", "checked_count", "vulnerable", "skipped", "summary"}
+        assert required_keys <= payload.keys(), f"Missing keys: {required_keys - payload.keys()}"
+        assert isinstance(payload["passed"], bool)
+        assert isinstance(payload["vulnerable"], list)
+        assert isinstance(payload["skipped"], list)
+
+    def test_upgrade_output_shape(self, scaffolded_dhf):
+        """upgrade writes JSON with all required keys to stdout."""
+        import json
+        r = _run("medharness", "upgrade", "--project-dir", str(scaffolded_dhf))
+        # A freshly scaffolded DHF should be up to date
+        assert r.returncode == 0, r.stderr
+        payload = json.loads(r.stdout.splitlines()[0])
+        required_keys = {"installed_version", "files_checked", "up_to_date", "outdated", "missing", "summary"}
+        assert required_keys <= payload.keys(), f"Missing keys: {required_keys - payload.keys()}"
+        assert isinstance(payload["up_to_date"], list)
+        assert isinstance(payload["outdated"], list)
+        assert isinstance(payload["missing"], list)
