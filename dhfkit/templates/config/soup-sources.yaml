@@ -1,0 +1,55 @@
+# SOUP sources — dhfkit soup-sync reads this file when no --manifest flags are given.
+#
+# Supported entry types:
+#
+#   manifest  — parse a dependency/lockfile relative to the project root
+#   command   — run a shell command; stdout must be NDJSON: {"name":…,"version":…,"ecosystem":…}
+#   manual    — static entries for hardware, OS, commercial tools, or anything
+#               not in a package manager (no ecosystem = no CVE scan)
+#
+# Auto-detected formats: requirements.txt · uv.lock · poetry.lock · pyproject.toml
+#                        package.json · package-lock.json · go.mod · Cargo.lock · pom.xml
+#
+# Edit this file to add your project's dependency sources.
+
+sources:
+  # --- Manifest files ---
+  # Uncomment and adjust paths for your project layout.
+  # - type: manifest
+  #   path: requirements.txt
+
+  # - type: manifest
+  #   path: uv.lock                      # uv lockfile (recommended for Python)
+
+  # - type: manifest
+  #   path: frontend/package-lock.json   # pinned npm lockfile
+
+  # - type: manifest
+  #   path: go.mod
+
+  # - type: manifest
+  #   path: Cargo.lock
+
+  # --- External tools ---
+  # Run any tool that outputs NDJSON per package on stdout.
+  # - type: command
+  #   run: "syft . -o syft-json=- | python3 -c \"
+  #     import sys,json
+  #     for a in json.load(sys.stdin)['artifacts']:
+  #         print(json.dumps({'name':a['name'],'version':a['version'],'ecosystem':a['type']}))
+  #     \""
+
+  # --- Manual / non-package SOUP ---
+  # Hardware components, operating systems, commercial software, etc.
+  # - type: manual
+  #   items:
+  #     - name: Ubuntu Server
+  #       version: "22.04.3 LTS"
+  #       manufacturer: Canonical Ltd.
+  #       license: GPL-2.0
+  #       ecosystem: null    # null = no OSV scan; leave blank for safety-class SOUP
+  #     - name: PostgreSQL
+  #       version: "14.10"
+  #       manufacturer: PostgreSQL Global Development Group
+  #       license: PostgreSQL
+  #       ecosystem: null

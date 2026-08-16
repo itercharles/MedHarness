@@ -121,6 +121,83 @@ Run after the branch is merged. Checks:
 
 Exits non-zero and prints `FAIL [cr-complete]` lines for each gap.
 
+## Syncing SOUP items from dependency manifests (`dhfkit soup-sync`)
+
+The `soup-sync` command reads dependency files from your project and creates or updates SOUP items in the DHF. It supports nine lockfile/manifest formats across multiple ecosystems:
+
+| File | Ecosystem |
+|------|-----------|
+| `requirements.txt` | PyPI (pinned `==` only) |
+| `uv.lock` | PyPI |
+| `poetry.lock` | PyPI |
+| `pyproject.toml` | PyPI (best-effort; prefer lockfile) |
+| `package.json` | npm |
+| `package-lock.json` | npm (v1/v2/v3) |
+| `go.mod` | Go |
+| `Cargo.lock` | crates.io |
+| `pom.xml` | Maven |
+
+### Auto-discovery
+
+With no flags, `soup-sync` looks for the supported files in the project root automatically:
+
+```bash
+dhfkit --dhf DHF soup-sync
+```
+
+To target a specific file:
+
+```bash
+dhfkit --dhf DHF soup-sync --manifest uv.lock
+dhfkit --dhf DHF soup-sync --manifest go.mod --manifest Cargo.lock
+```
+
+### Persistent source configuration (`soup-sources.yaml`)
+
+For projects with non-standard layouts, multiple manifests, hardware SOUP, or third-party scanning tools, create `DHF/config/soup-sources.yaml`. This file is checked by default whenever no `--manifest` flags are given:
+
+```yaml
+sources:
+  # Manifest files — paths relative to project root
+  - type: manifest
+    path: backend/requirements.txt
+
+  - type: manifest
+    path: frontend/package-lock.json
+
+  # External tool — stdout must be NDJSON: {"name":…,"version":…,"ecosystem":…}
+  - type: command
+    run: "syft . -o syft-json=- | python3 -c \"
+      import sys,json
+      for a in json.load(sys.stdin)['artifacts']:
+          print(json.dumps({'name':a['name'],'version':a['version'],'ecosystem':a['type']}))
+      \""
+
+  # Manual entries — hardware, OS, commercial tools (no ecosystem = no CVE scan)
+  - type: manual
+    items:
+      - name: Ubuntu Server
+        version: "22.04.3 LTS"
+        manufacturer: Canonical Ltd.
+        license: GPL-2.0
+        ecosystem: null
+      - name: PostgreSQL
+        version: "14.10"
+        manufacturer: PostgreSQL Global Development Group
+        ecosystem: null
+```
+
+Source priority when multiple are configured: explicit `--manifest` flags → `--from-command` flags → `soup-sources.yaml` → auto-discovery.
+
+### Applying changes
+
+By default `soup-sync` prints a diff and exits. Pass `--write` to create and update SOUP items:
+
+```bash
+dhfkit --dhf DHF soup-sync --write
+dhfkit --dhf DHF soup-sync --write --manifest uv.lock --cr CR-042
+```
+
 ## SOUP vulnerability scanning (`verify soup`)
 
 SOUP items that carry an `ecosystem` field (e.g. `PyPI`, `npm`, `Go`) are checked against the [OSV vulnerability database](https://osv.dev) on every run:
