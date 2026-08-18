@@ -2,9 +2,12 @@
 
 ## Supported Versions
 
+The latest minor release always receives security fixes. Older minor versions are not actively patched.
+
 | Version | Supported |
 |---------|-----------|
-| 0.1.x   | ✓         |
+| 0.11.x  | ✓         |
+| < 0.11  | ✗         |
 
 ## Reporting a Vulnerability
 
