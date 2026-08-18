@@ -36,6 +36,14 @@ properties:
 - name: cve_count
   format: short_text
   label: CVE Count
+- name: accepted_vulns
+  format: list
+  label: Accepted Vulnerabilities
+  # Vulnerabilities assessed under IEC 62304 §8.1.2 and judged acceptable.
+  # Each entry needs both keys or it keeps blocking 'verify soup':
+  #   - id: GHSA-xxxx-yyyy-zzzz
+  #     rationale: "Affected API is not reachable from our code paths."
+  # Acceptance is per-ID, so newly published vulnerabilities still block.
 - name: risk_rating
   format: short_text
   label: Risk Rating

@@ -585,7 +585,83 @@ def validate_verification_completeness(
     }
 
 
-def soup_vuln_gate(dhf_path: Path) -> dict:
+def _parse_accepted_vulns(item: dict, soup_id: str) -> tuple[dict[str, str], list[str]]:
+    """Read a SOUP item's ``accepted_vulns`` into {vuln_id: rationale}.
+
+    IEC 62304 §8.1.2 requires SOUP anomalies to be *evaluated*, not necessarily
+    fixed. An acceptance is only honoured when it names a specific vulnerability
+    ID and records why it is acceptable — a bare ID carries no assessment, and
+    blanket acceptance would silently absorb newly published CVEs.
+
+    Returns ({vuln_id: rationale}, malformed_entry_messages).
+    """
+    accepted: dict[str, str] = {}
+    problems: list[str] = []
+
+    for entry in item.get("accepted_vulns") or []:
+        if not isinstance(entry, dict):
+            problems.append(
+                f"{soup_id} — accepted_vulns entry {entry!r} must be a mapping with "
+                "'id' and 'rationale'; the vulnerability still blocks."
+            )
+            continue
+        vuln_id = str(entry.get("id") or "").strip()
+        rationale = str(entry.get("rationale") or "").strip()
+        if not vuln_id:
+            problems.append(f"{soup_id} — accepted_vulns entry is missing 'id'.")
+            continue
+        if not rationale:
+            problems.append(
+                f"{soup_id} — accepted_vulns entry {vuln_id} is missing 'rationale'; "
+                "record why the vulnerability is acceptable or it will keep blocking."
+            )
+            continue
+        accepted[vuln_id] = rationale
+
+    return accepted, problems
+
+
+_VULN_DETAIL_BUDGET = 25
+
+
+def _vuln_detail(vuln_id: str, batch_entry: dict, *, fetch: bool) -> dict:
+    """Build a reportable vulnerability record for *vuln_id*.
+
+    osv.dev's ``querybatch`` returns only ``id`` and ``modified`` — summary and
+    severity live on the per-vulnerability endpoint — so a batch entry alone
+    cannot describe what is wrong. Fetch that detail when *fetch* is set, and
+    always emit a URL so the finding stays actionable if the lookup fails.
+    """
+    import json as _json
+    import urllib.error
+    import urllib.request
+
+    summary = batch_entry.get("summary") or ""
+    severity = (
+        batch_entry.get("database_specific", {}).get("severity")
+        or (batch_entry.get("severity") or [{}])[0].get("score", "")
+    )
+
+    if fetch and vuln_id and not summary:
+        try:
+            with urllib.request.urlopen(
+                f"https://api.osv.dev/v1/vulns/{vuln_id}", timeout=10
+            ) as resp:
+                detail = _json.loads(resp.read())
+            summary = detail.get("summary") or (detail.get("details") or "").split("\n")[0]
+            severity = severity or detail.get("database_specific", {}).get("severity") or ""
+        except (urllib.error.URLError, ValueError, TimeoutError):
+            pass  # URL below still identifies the finding
+
+    return {
+        "id": vuln_id,
+        "summary": summary.strip()[:200],
+        "severity": severity,
+        "url": f"https://osv.dev/vulnerability/{vuln_id}" if vuln_id else "",
+    }
+
+
+def soup_vuln_gate(dhf_path: Path, *, offline_mode: str = "fail") -> dict:
     """Check SOUP items against the OSV vulnerability database.
 
     For each SOUP item that has both ``name`` and ``ecosystem`` fields, queries
@@ -594,13 +670,23 @@ def soup_vuln_gate(dhf_path: Path) -> dict:
     Items without an ``ecosystem`` field are skipped with a note so adopters can
     add the field without breaking CI.
 
+    A vulnerability listed in the item's ``accepted_vulns`` (with a rationale) is
+    reported as accepted rather than blocking — see :func:`_parse_accepted_vulns`.
+
+    Args:
+        offline_mode: ``"fail"`` (default) treats an unreachable osv.dev as a gate
+            failure. ``"warn"`` reports the outage but leaves the gate passing, for
+            air-gapped or proxy-restricted pipelines where the scan runs elsewhere.
+
     Returns:
         {
           "passed": bool,
           "soup_count": int,
           "checked_count": int,
           "vulnerable": [{"soup_id", "name", "version", "vulns": [...]}],
+          "accepted": [{"soup_id", "name", "version", "vuln_id", "rationale"}],
           "skipped": [{"soup_id", "reason"}],
+          "acceptance_problems": [str],
           "error": str | None,
           "summary": str,
         }
@@ -617,19 +703,25 @@ def soup_vuln_gate(dhf_path: Path) -> dict:
 
     checkable: list[dict] = []
     skipped: list[dict] = []
+    acceptance_problems: list[str] = []
 
     for item in soup_items:
         soup_id = item.get("id", "?")
         name = str(item.get("name") or "").strip()
         version = str(item.get("version") or "").strip()
         ecosystem = str(item.get("ecosystem") or "").strip()
+        accepted, problems = _parse_accepted_vulns(item, soup_id)
+        acceptance_problems.extend(problems)
         if not name or not version:
             skipped.append({"soup_id": soup_id, "reason": "missing name or version"})
             continue
         if not ecosystem:
             skipped.append({"soup_id": soup_id, "reason": "ecosystem not specified — add e.g. ecosystem: PyPI"})
             continue
-        checkable.append({"soup_id": soup_id, "name": name, "version": version, "ecosystem": ecosystem})
+        checkable.append({
+            "soup_id": soup_id, "name": name, "version": version,
+            "ecosystem": ecosystem, "accepted": accepted,
+        })
 
     if not checkable:
         n_soup = len(soup_items)
@@ -638,7 +730,9 @@ def soup_vuln_gate(dhf_path: Path) -> dict:
             "soup_count": n_soup,
             "checked_count": 0,
             "vulnerable": [],
+            "accepted": [],
             "skipped": skipped,
+            "acceptance_problems": acceptance_problems,
             "error": None,
             "summary": (
                 f"{n_soup} SOUP item(s) found; none checkable "
@@ -661,53 +755,73 @@ def soup_vuln_gate(dhf_path: Path) -> dict:
         with urllib.request.urlopen(req, timeout=20) as resp:
             results = _json.loads(resp.read()).get("results", [])
     except urllib.error.URLError as exc:
+        tolerated = offline_mode == "warn"
         return {
-            "passed": False,
+            "passed": tolerated,
             "soup_count": len(soup_items),
             "checked_count": 0,
             "vulnerable": [],
+            "accepted": [],
             "skipped": skipped,
+            "acceptance_problems": acceptance_problems,
             "error": f"osv.dev unreachable: {exc}",
-            "summary": f"SOUP vulnerability check failed: {exc}",
+            "summary": (
+                f"SOUP vulnerability scan skipped — osv.dev unreachable ({exc}). "
+                "Gate tolerated the outage (--offline-mode warn); scan SOUP through "
+                "your offline process to keep IEC 62304 §8.1.2 evidence complete."
+                if tolerated
+                else f"SOUP vulnerability check failed: {exc}"
+            ),
         }
 
     vulnerable: list[dict] = []
+    accepted_found: list[dict] = []
+    detail_budget = _VULN_DETAIL_BUDGET
     for meta, result in zip(checkable, results):
         vulns_raw = result.get("vulns") or []
         if not vulns_raw:
             continue
-        vulns = [
-            {
-                "id": v.get("id", ""),
-                "summary": v.get("summary", ""),
-                "severity": (
-                    v.get("database_specific", {}).get("severity")
-                    or (v.get("severity") or [{}])[0].get("score", "")
-                ),
-            }
-            for v in vulns_raw
-        ]
-        vulnerable.append({
-            "soup_id": meta["soup_id"],
-            "name": meta["name"],
-            "version": meta["version"],
-            "vulns": vulns,
-        })
+        blocking = []
+        for v in vulns_raw:
+            vuln_id = v.get("id", "")
+            rationale = meta["accepted"].get(vuln_id)
+            if rationale is not None:
+                accepted_found.append({
+                    "soup_id": meta["soup_id"],
+                    "name": meta["name"],
+                    "version": meta["version"],
+                    "vuln_id": vuln_id,
+                    "rationale": rationale,
+                })
+                continue
+            blocking.append(_vuln_detail(vuln_id, v, fetch=detail_budget > 0))
+            detail_budget -= 1
+        if blocking:
+            vulnerable.append({
+                "soup_id": meta["soup_id"],
+                "name": meta["name"],
+                "version": meta["version"],
+                "vulns": blocking,
+            })
 
     passed = len(vulnerable) == 0
     n_vuln = sum(len(v["vulns"]) for v in vulnerable)
     summary_parts = [
         f"{len(soup_items)} SOUP item(s), {len(checkable)} checked.",
-        f"{n_vuln} vulnerability(-ies) found across {len(vulnerable)} item(s)."
+        f"{n_vuln} unresolved vulnerability(-ies) across {len(vulnerable)} item(s)."
         if not passed
-        else "No known vulnerabilities found.",
+        else "No unresolved vulnerabilities found.",
     ]
+    if accepted_found:
+        summary_parts.append(f"{len(accepted_found)} documented as accepted.")
     return {
         "passed": passed,
         "soup_count": len(soup_items),
         "checked_count": len(checkable),
         "vulnerable": vulnerable,
+        "accepted": accepted_found,
         "skipped": skipped,
+        "acceptance_problems": acceptance_problems,
         "error": None,
         "summary": " ".join(summary_parts),
     }

@@ -362,12 +362,25 @@ def register(main):
 
     @verify.command("soup")
     @click.option("--dhf", "dhf_path", type=click.Path(file_okay=False, path_type=Path))
+    @click.option("--offline-mode", type=click.Choice(["fail", "warn"]), default="fail",
+                  help="Behaviour when osv.dev is unreachable. 'warn' keeps the gate "
+                       "passing for air-gapped or proxy-restricted pipelines.")
     @click.pass_context
-    def verify_soup(ctx: click.Context, dhf_path: Path | None) -> None:
+    def verify_soup(ctx: click.Context, dhf_path: Path | None, offline_mode: str) -> None:
         """Check SOUP items against the OSV vulnerability database.
 
         SOUP items must have an 'ecosystem' field (e.g. PyPI, npm) to be checked.
-        Exits non-zero if any known vulnerabilities are found or the API is unreachable.
+        Exits non-zero if any unresolved vulnerabilities are found.
+
+        A vulnerability the team has assessed can be recorded on the SOUP item so it
+        no longer blocks, per IEC 62304 §8.1.2 — both 'id' and 'rationale' are required:
+
+            accepted_vulns:
+              - id: GHSA-xxxx-yyyy-zzzz
+                rationale: "Affected API is not reachable from our code paths."
+
+        Newly published vulnerabilities still block, because acceptance is per-ID.
+
         Outputs structured JSON to stdout; human-readable messages to stderr.
         """
         from medharness.services.ci import soup_vuln_gate
@@ -375,20 +388,31 @@ def register(main):
         effective_dhf = dhf_path or ctx.obj.get("dhf")
         if effective_dhf is None:
             raise click.ClickException("--dhf is required when not set globally")
-        result = soup_vuln_gate(effective_dhf)
+        result = soup_vuln_gate(effective_dhf, offline_mode=offline_mode)
         click.echo(json.dumps(result))
 
         for item in result.get("skipped", []):
             click.echo(f"SKIP [soup-vuln] {item['soup_id']}: {item['reason']}", err=True)
+        for entry in result.get("accepted", []):
+            click.echo(
+                f"ACCEPTED [soup-vuln] {entry['soup_id']} ({entry['name']}@{entry['version']}): "
+                f"{entry['vuln_id']} — {entry['rationale']}",
+                err=True,
+            )
+        for problem in result.get("acceptance_problems", []):
+            click.echo(f"WARN [soup-vuln] {problem}", err=True)
         for item in result.get("vulnerable", []):
             for v in item.get("vulns", []):
+                detail = v.get("summary") or v.get("url") or "see osv.dev"
+                severity = f"[{v['severity']}] " if v.get("severity") else ""
                 click.echo(
                     f"FAIL [soup-vuln] {item['soup_id']} ({item['name']}@{item['version']}): "
-                    f"{v['id']} — {v['summary']}",
+                    f"{v['id']} — {severity}{detail}",
                     err=True,
                 )
         if result.get("error"):
-            click.echo(f"ERROR [soup-vuln] {result['error']}", err=True)
+            level = "WARN" if result["passed"] else "ERROR"
+            click.echo(f"{level} [soup-vuln] {result['error']}", err=True)
         click.echo(result["summary"], err=True)
         if not result["passed"]:
             raise click.ClickException("SOUP vulnerability check failed.")

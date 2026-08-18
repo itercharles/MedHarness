@@ -8,7 +8,11 @@ from pathlib import Path
 def register(main):
     @main.command("init")
     def init_cmd() -> None:
-        """Interactive onboarding: scaffold a product repo and a DHF repo."""
+        """Scaffold a DHF and AI-harness structure in the current directory.
+
+        Takes no prompts — the project name is derived from the directory name.
+        Existing files are not overwritten.
+        """
         from medharness.workflows.init import run_init
         run_init()
 
