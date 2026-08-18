@@ -217,7 +217,35 @@ manufacturer: Python Software Foundation
 purpose: HTTP client for REST API calls
 ```
 
-Items without `ecosystem` are skipped with a note. The command exits non-zero if any known vulnerabilities are found and outputs structured JSON to stdout. Wire it into CI after `verify dhf` to catch unresolved CVEs before release.
+Items without `ecosystem` are skipped with a note. The command exits non-zero if any unresolved vulnerabilities are found and outputs structured JSON to stdout. Wire it into CI after `verify dhf` to catch unresolved CVEs before release.
+
+### Accepting a vulnerability you have assessed
+
+IEC 62304 §8.1.2 requires SOUP anomalies to be *evaluated* — not necessarily fixed. Many CVEs do not affect how your product uses the package, and some have no upstream patch. Record the assessment on the SOUP item and the gate stops blocking on it:
+
+```yaml
+id: SOUP-012
+name: requests
+version: "2.28.2"
+ecosystem: PyPI
+accepted_vulns:
+  - id: GHSA-x84v-xcm2-53pg
+    rationale: "Affected redirect handling is not reachable — we never follow cross-host redirects. Assessed in CR-018."
+```
+
+Both keys are required. An entry without a `rationale` — or a bare ID string — is reported as a warning and the vulnerability **keeps blocking**, because an acceptance with no recorded reason is not an assessment.
+
+Acceptance is per-vulnerability-ID by design. A newly published CVE against the same package still fails the gate, so blanket suppression cannot silently absorb future findings. `verify soup` prints accepted entries as `ACCEPTED [soup-vuln]` lines and includes them in its JSON output, so they stay visible in CI logs and evidence bundles.
+
+### Air-gapped and proxy-restricted pipelines
+
+`verify soup` calls `api.osv.dev`. Where that host is unreachable, the gate fails by default rather than passing silently. If your SOUP scanning happens through a separate offline process, tolerate the outage explicitly:
+
+```bash
+medharness --dhf DHF verify soup --offline-mode warn
+```
+
+The gate then passes, but still records the outage in its JSON output and prints a `WARN [soup-vuln]` line — so the gap is visible in the evidence bundle rather than invisible. Keep the default (`--offline-mode fail`) anywhere the scan is expected to run.
 
 ## Keeping your scaffold up to date (`upgrade`)
 

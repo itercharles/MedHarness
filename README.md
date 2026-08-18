@@ -58,13 +58,31 @@ medharness init
 
 Use `pip install medharness` for a minimal install.
 
-If you are using the AI workflow, set the required environment variables before running CR commands.
-
 Optional extras:
 
 - `medharness[ai]` for AI-assisted workflows
 - `medharness[docs]` for document export
 - `medharness[full]` for both
+
+### If you plan to use the AI workflow
+
+The `change plan` and `change implement` stages need one more thing that pip cannot install — a model CLI or API key:
+
+```bash
+npm install -g @anthropic-ai/claude-code   # default path, provides the `claude` CLI
+```
+
+Or set `MEDHARNESS_*_MODEL` to use an OpenAI-compatible provider instead (see [Core commands](#ai-coding-workflow)).
+
+Verify your environment at any time:
+
+```bash
+medharness doctor
+```
+
+**Before enabling AI stages, read [docs/ai-security.md](docs/ai-security.md).** These stages run an agentic loop with an unrestricted shell tool, and are designed to run on an ephemeral CI runner rather than a workstation holding your credentials.
+
+Everything else — traceability, validation, verification gates, evidence bundles — is deterministic and needs no model access at all.
 
 This creates a starter structure like:
 
@@ -233,6 +251,7 @@ If you want to see MedHarness running on a real codebase before adopting it, Con
 
 - [CONTRIBUTING.md](CONTRIBUTING.md): contributor setup and local development
 - [docs/adopting.md](docs/adopting.md): starting fresh, migrating an existing DHF, and incremental adoption
+- [docs/ai-security.md](docs/ai-security.md): what the AI stages can do, isolation guidance, audit trail, and how to run with no AI at all
 - [docs/architecture.md](docs/architecture.md): package boundaries, CR workflow, and scaffold topology
 - [docs/adr/](docs/adr/): architecture decision records
 - [CHANGELOG.md](CHANGELOG.md): version history
