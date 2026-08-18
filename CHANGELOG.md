@@ -13,6 +13,52 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ---
 
+## [0.11.0] — 2026-08-18
+
+### New Features
+
+- **Multi-ecosystem SOUP sync** — `dhfkit soup-sync` now supports 9 manifest
+  formats: `requirements.txt`, `uv.lock`, `poetry.lock`, `pyproject.toml`,
+  `package.json`, `package-lock.json` (v1/v2/v3), `go.mod`, `Cargo.lock`, and
+  `pom.xml`. Auto-discovers known manifest files in the project root when no
+  `--manifest` flag is given.
+
+- **`soup-sources.yaml` extension config** — persistent per-project source list
+  at `DHF/config/soup-sources.yaml` with three entry types:
+  - `manifest` — path to any supported lockfile/manifest
+  - `command` — arbitrary shell command emitting NDJSON `{name,version,ecosystem}`
+    per line; enables integration with tools like `syft`, `trivy`, or custom
+    scanners
+  - `manual` — static entries for hardware, operating systems, and commercial
+    software that have no package manager
+
+  Source priority: explicit `--manifest` flags → `--from-command` → `soup-sources.yaml`
+  → auto-discovery. New projects get a commented-out template via `medharness init`.
+
+- **Design review gate in `verify completion`** — closure gate now requires
+  `docs/reviews/<CR>-Design-Review.md` to exist and contain
+  `**Verdict:** Approved`. Missing or non-approved review files emit
+  `FAIL [cr-complete]` and block closure.
+
+- **`verify soup` SOUP vulnerability scanning** — new CI gate queries the
+  [OSV vulnerability database](https://osv.dev) for all SOUP items that carry
+  an `ecosystem` field. Exits non-zero if any known CVEs are found. Items
+  without `ecosystem` are skipped with a note. Add `ecosystem: PyPI` (or `npm`,
+  `Go`, `Maven`, `crates.io`, etc.) to a SOUP item to enable scanning.
+
+- **`medharness upgrade` scaffold migration** — new command diffs 24 scaffold
+  infrastructure files (CI workflow, AI prompts, spec templates, doc-type
+  configs) against the installed version and optionally applies updates.
+  Never modifies DHF items, `global.yaml`, `context.md`, or `CLAUDE.md`.
+
+### Bug Fixes
+
+- Fixed `parse_pom_xml` namespace traversal bug where child-element lookups
+  used the wrong side of a namespace ternary, causing non-namespaced `pom.xml`
+  files to parse as empty.
+
+---
+
 ## [0.10.0] — 2026-05-28
 
 ### New Features
