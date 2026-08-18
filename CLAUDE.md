@@ -63,6 +63,25 @@ All DHF data operations use `dhfkit --dhf DHF <command>`.
 At the start of every new request, run `git fetch origin && git checkout main && git pull`
 before reading files or making changes, unless the user specifies a different branch.
 
+## Release Process
+
+Releases are fully automated via `.github/workflows/release.yml` using PyPI Trusted Publishing (OIDC — no token needed).
+
+Steps:
+1. Open a PR to `main` with the version bump in `pyproject.toml` and a `CHANGELOG.md` entry
+2. Merge the PR
+3. **Only after the PR is merged**, push the tag:
+
+```bash
+git tag v0.X.0 && git push origin v0.X.0
+```
+
+GitHub Actions then: runs preflight checks → builds wheel + sdist → publishes to PyPI → attaches wheel to the GitHub Release.
+
+> **Critical**: the tag must point to the current tip of `origin/main`. Pushing the tag
+> before the changelog PR is merged will fail the preflight "tag == main tip" check and
+> block the publish. Always merge first, tag second.
+
 ## Test Environment
 
 The repo has a `.venv` at the root. `pytest.ini` sets `pythonpath = .` so no
