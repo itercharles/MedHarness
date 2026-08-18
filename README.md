@@ -213,6 +213,22 @@ These commands are designed to integrate cleanly with automation.
 
 ---
 
+## Real-world example
+
+[**ContourLab**](https://github.com/itercharles/ContourLab) is a browser-based contouring workspace for radiation oncology — a real SaMD product maintained entirely with MedHarness.
+
+Its repository shows what production adoption looks like end-to-end:
+
+- `DHF/` holds all design inputs, traceability items, and generated specifications
+- every change goes through a CR with `change plan` → design review → `change implement` → verification gates
+- the CI pipeline runs `verify dhf`, `verify tests`, and `evidence bundle` on every PR
+- SOUP items are managed with `dhfkit soup-sync` and scanned for CVEs via `verify soup`
+- releases produce a signed release baseline and software BOM
+
+If you want to see MedHarness running on a real codebase before adopting it, ContourLab is the reference.
+
+---
+
 ## Documentation
 
 - [CONTRIBUTING.md](CONTRIBUTING.md): contributor setup and local development
