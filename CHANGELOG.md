@@ -13,6 +13,109 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ---
 
+## [0.12.0] — 2026-08-19
+
+Two correctness fixes in the verification gates, and the SOUP gate becomes
+usable in regulated pipelines. **Read "Behaviour changes" below before
+upgrading** — `verify dhf` can now fail on a DHF that previously passed.
+
+### Bug Fixes
+
+- **Dangling traceability links are now detected.** A link whose target ID does
+  not exist was never reported as such. It surfaced only as a downstream
+  coverage gap — with remediation advice ("add a link") that did not apply,
+  because the link was already there and simply resolved to nothing. Where
+  coverage happened to be satisfied elsewhere, the broken reference was
+  completely silent. `verify dhf` and `dhfkit validate traceability` now name
+  the source item, field, and missing target:
+
+  ```
+  FAIL [dangling] RCM-001.mitigates → RISK-404: target does not exist
+      Fix: correct the ID in RCM-001.yaml, or create RISK-404.
+           The link exists but resolves to nothing.
+  ```
+
+- **Advisory coverage gaps no longer print `FAIL` on a passing build.** Coverage
+  gaps have always been advisory unless `--fail-on-uncovered` is set, but both
+  CLIs labelled them `FAIL` — so a green check sat on a CI log full of failures,
+  telling readers the gate had blocked when it had not. They now print `WARN`
+  (`⚠` in `dhfkit`) with a note on how to enforce them.
+
+- **Scaffolded CI now enforces the coverage gate it reports.** The `dhf.yml`
+  template ran `verify dhf --dhf DHF` without `--fail-on-uncovered`, so every
+  project created by `medharness init` had a coverage gate that could not fail.
+
+- `medharness verify dhf --fail-on-uncovered` had no help text at all.
+
+- `medharness init` was documented as "Interactive onboarding" while taking no
+  prompts.
+
+### New Features
+
+- **`verify soup --offline-mode warn`** — an unreachable `api.osv.dev` failed the
+  gate outright, which is a hard block for the air-gapped and proxy-restricted
+  pipelines common in this industry. `warn` tolerates the outage while still
+  recording it in the JSON output and printing a `WARN` line, so the gap stays
+  visible in evidence rather than becoming invisible. Default remains `fail`.
+
+- **Documented vulnerability acceptance on SOUP items.** IEC 62304 §8.1.2
+  requires SOUP anomalies to be *evaluated*, not necessarily fixed. The gate
+  previously blocked on every finding with no suppression path, so a project
+  carrying an assessed-and-accepted CVE had to either fix it or disable the gate.
+  Record the assessment on the item instead:
+
+  ```yaml
+  accepted_vulns:
+    - id: GHSA-xxxx-yyyy-zzzz
+      rationale: "Affected API is not reachable from our code paths."
+  ```
+
+  Both keys are required — an entry without a rationale, or a bare ID string,
+  is reported as a warning and keeps blocking. Acceptance is per-vulnerability-ID
+  by design, so a newly published CVE against the same package still fails.
+
+- **Vulnerability findings now carry a summary and a link.** osv.dev's
+  `querybatch` returns only `{id, modified}`, so every finding was reported as a
+  bare ID with an empty description. Details are now fetched per finding
+  (budgeted), and an `osv.dev` URL is always emitted so the finding stays
+  actionable if the lookup fails.
+
+- **[`docs/ai-security.md`](docs/ai-security.md)** — what the AI stages can do,
+  where they should run, the audit trail they leave, and how to run MedHarness
+  with no AI at all. The AI stages execute an agentic loop with an unrestricted
+  shell tool; that boundary was previously undocumented, which is not a
+  defensible position for a tool aimed at regulated teams.
+
+### Documentation
+
+- README gains a Mermaid diagram of the CR lifecycle and real `verify dhf`
+  output showing what the gates actually catch.
+- The `claude` CLI is an external dependency `pip` cannot install; the install
+  section now says so and points at `medharness doctor`.
+- [ContourLab](https://github.com/itercharles/ContourLab) documented as the
+  real-world reference implementation.
+- `docs/adopting.md` gains a blocking-vs-advisory table for `verify dhf`.
+- `SECURITY.md` supported-versions table was still pinned at `0.1.x`.
+
+### Security
+
+- Upgraded `gitpython` 3.1.50→3.1.59, `cryptography` 48.0.1→50.0.0,
+  `pillow` 12.2.0→12.3.0, `pyasn1` 0.6.3→0.6.4, closing 36 Dependabot alerts.
+
+### Behaviour changes
+
+- **Dangling links now block.** A DHF carrying one was already broken — it just
+  was not being reported. Run `medharness --dhf DHF verify dhf` before upgrading
+  CI to see whether you have any.
+- **Newly scaffolded projects enforce coverage.** Existing projects are
+  unaffected: their `dhf.yml` lives in their own repository. `medharness upgrade`
+  surfaces the new template. If you are backfilling an existing DHF, drop
+  `--fail-on-uncovered` until the backlog is clear.
+- `verify soup` output gained `accepted`, `acceptance_problems`, and a `url`
+  field on each vulnerability. Existing keys are unchanged.
+
+---
+
 ## [0.11.0] — 2026-08-18
 
 ### New Features

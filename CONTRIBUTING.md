@@ -21,8 +21,11 @@ No separate clone or install is needed.
 
 ## PR Conventions
 
-- Branch naming: `feature/`, `fix/`, `refactor/`
-- PR title must include the CR ID: `feat(CR-042): description`
+- Branch naming: `feat/`, `fix/`, `docs/`, `chore/`, `refactor/`
+- PR title follows [Conventional Commits](https://www.conventionalcommits.org/):
+  `type: description` — for example `fix: detect dangling traceability links`.
+  Maintainers working a CR may scope it as `feat(CR-042): description`; external
+  contributors do not need a CR ID.
 - Body: change summary, DHF files updated, validation run, manual testing remaining
 
 ### PR Type Labels
