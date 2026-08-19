@@ -76,8 +76,14 @@ def check_upgrade(project_dir: Path) -> dict:
           "up_to_date": [{"file": str}],
           "outdated": [{"file": str, "added_lines": int, "removed_lines": int}],
           "missing": [{"file": str}],
+          "unavailable": [{"file": str, "template": str}],
           "summary": str,
         }
+
+    ``unavailable`` lists templates this build cannot supply. That is a packaging
+    fault rather than a project state, so it is reported rather than skipped —
+    silently passing over a file the map claims to manage would let `upgrade`
+    report "all up to date" about a file it never looked at.
     """
     try:
         installed_version = pkg_version("medharness")
@@ -89,12 +95,14 @@ def check_upgrade(project_dir: Path) -> dict:
     up_to_date: list[dict] = []
     outdated: list[dict] = []
     missing: list[dict] = []
+    unavailable: list[dict] = []
 
     for tmpl_rel, proj_rel in _UPGRADE_MAP:
         tmpl_path = _TEMPLATES_DIR / tmpl_rel
         proj_path = project_dir / proj_rel
 
         if not tmpl_path.exists():
+            unavailable.append({"file": proj_rel, "template": tmpl_rel})
             continue
 
         try:
@@ -134,6 +142,11 @@ def check_upgrade(project_dir: Path) -> dict:
         if n_miss:
             parts.append(f"{n_miss} file(s) missing")
         summary = f"{', '.join(parts).capitalize()}. Run 'medharness upgrade --apply' to update."
+    if unavailable:
+        summary += (
+            f" {len(unavailable)} template(s) missing from the medharness"
+            f" installation — this build cannot manage them."
+        )
 
     return {
         "installed_version": installed_version,
@@ -141,6 +154,7 @@ def check_upgrade(project_dir: Path) -> dict:
         "up_to_date": up_to_date,
         "outdated": outdated,
         "missing": missing,
+        "unavailable": unavailable,
         "summary": summary,
     }
 

@@ -13,6 +13,47 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ---
 
+## [0.12.1] — 2026-08-19
+
+### Bug Fixes
+
+- **The CI workflow template was never shipped.** `templates/github/workflows`
+  had been excluded from the wheel via `exclude-package-data` since #189, where
+  it was added alongside the `tests` exclusion with no explanation. The effects
+  compounded quietly:
+
+  - `medharness init` scaffolded no `.github/workflows/dhf.yml`, though the
+    README documents it as part of the output and `_scaffold_dhf` copies it
+    explicitly — `_cp` returns early when the source is absent.
+  - `medharness upgrade` manages that path in its template map, but skipped any
+    template missing from the installation without comment, then reported
+    "All 25 scaffold file(s) are up to date".
+  - The v0.12.0 change making the scaffolded pipeline enforce its own coverage
+    gate therefore reached nobody installing from PyPI.
+
+  Nothing caught it: the scaffold CI job installs with `pip install -e .`, where
+  the repository tree stands in for the package and every template is present.
+
+- **`medharness upgrade` now reports templates it cannot supply.** A template
+  absent from the installation is a packaging fault rather than a project state,
+  so it appears under a new `unavailable` key and in the summary instead of being
+  passed over silently.
+
+### Internal
+
+- `tests/unit/test_packaging_templates.py` inspects the built wheel and asserts
+  every template in the upgrade map survives packaging. It builds with
+  `python -m build` from a clean copy of the tree, because neither shortcut
+  reproduces what gets published: `uv build` resolves a different setuptools and
+  applies `exclude-package-data` globs differently, and a stale
+  `*.egg-info/SOURCES.txt` in the working tree masks exclusion changes entirely.
+- The unit-test CI job installs `.[dev]`, which now carries `build`; without it
+  the packaging suite skips and the fault it guards reaches PyPI unnoticed.
+- The scaffold CI check asserts `.github/workflows/dhf.yml` exists, which it
+  previously did not.
+
+---
+
 ## [0.12.0] — 2026-08-19
 
 Two correctness fixes in the verification gates, and the SOUP gate becomes

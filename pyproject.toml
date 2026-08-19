@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "medharness"
-version = "0.12.0"
+version = "0.12.1"
 description = "Open-source design-controlled development infrastructure for medical device and SaMD teams — includes dhfkit"
 readme = "README.md"
 license = { text = "MIT" }
@@ -51,7 +51,7 @@ dependencies = [
 [project.optional-dependencies]
 ai = ["google-genai"]
 docs = ["weasyprint"]
-dev = ["pytest", "pytest-cov"]
+dev = ["pytest", "pytest-cov", "build"]
 full = ["medharness[ai,docs]"]
 
 [project.urls]
@@ -81,4 +81,6 @@ exclude = ["tests*", "dhfkit.tests*"]
 "medharness" = ["prompts/**/*"]
 
 [tool.setuptools.exclude-package-data]
-"dhfkit" = ["tests", "tests/*", "tests/**/*", "templates/github/workflows", "templates/github/workflows/*"]
+# templates/github/workflows must stay packaged — `medharness init` scaffolds it
+# to .github/workflows/dhf.yml and `medharness upgrade` manages it thereafter.
+"dhfkit" = ["tests", "tests/*", "tests/**/*"]
