@@ -71,14 +71,21 @@ def ci_structural_gate(
         tr = adapter.validate_traceability()
         required = tr.get("required", {})
         coverage_list = tr.get("coverage", [])
+        dangling = tr.get("dangling", [])
         results["traceability"] = {
             "passed": required.get("passed", True)
+            and not dangling
             and all(c.get("passed", True) for c in coverage_list),
             "required": required,
+            "dangling": dangling,
             "coverage": coverage_list,
             "summary": tr.get("summary", ""),
         }
         if not required.get("passed", True):
+            passed = False
+        # A link that resolves to nothing is always an error — unlike an uncovered
+        # item, it is not a gap in the design but a broken reference.
+        if dangling:
             passed = False
         for c in coverage_list:
             if not c.get("passed", True) and fail_on_uncovered:

@@ -150,7 +150,9 @@ def register(main):
     @click.option("--run-schema/--no-run-schema", default=True, show_default=True)
     @click.option("--run-traceability/--no-run-traceability", default=True, show_default=True)
     @click.option("--coverage-pair", "coverage_pairs", multiple=True, metavar="PARENT:CHILD")
-    @click.option("--fail-on-uncovered", is_flag=True, default=False)
+    @click.option("--fail-on-uncovered", is_flag=True, default=False,
+                  help="Exit non-zero when items lack downstream coverage. "
+                       "Without it, coverage gaps are reported as WARN only.")
     @click.pass_context
     def verify_dhf(ctx: click.Context, dhf_path: Path, run_schema: bool,
                         run_traceability: bool, coverage_pairs: tuple[str, ...],
@@ -160,6 +162,10 @@ def register(main):
         Takes its own --dhf PATH option because it runs from the DHF repo
         where the DHF root is simply 'DHF' (not a subdirectory).
 
+        Always blocking: schema errors, required-traceability failures, and
+        dangling links (a link whose target ID does not exist).
+
+        Advisory by default: coverage gaps — pass --fail-on-uncovered to enforce.
         """
         effective_dhf = dhf_path or ctx.obj.get("dhf")
         if effective_dhf is None:
@@ -194,16 +200,26 @@ def register(main):
                                f" {f['id']}.yaml, or:", err=True)
                     click.echo(f"         dhfkit {dhf_arg} item update {f['id']}"
                                f" --data '{{\"dhf_links\": [\"<parent-id>\"]}}'", err=True)
+            for d in t.get("dangling", []):
+                click.echo(f"FAIL [dangling] {d['source']}.{d['field']} → {d['target']}:"
+                           f" target does not exist", err=True)
+                click.echo(f"    Fix: correct the ID in {d['source']}.yaml, or create"
+                           f" {d['target']}. The link exists but resolves to nothing.",
+                           err=True)
+            # Uncovered items are advisory unless --fail-on-uncovered is set; label
+            # them WARN so a green build never prints FAIL.
+            gap_label = "FAIL" if fail_on_uncovered else "WARN"
             for c in t.get("coverage", []):
-                click.echo(f"{'PASS' if c['passed'] else 'FAIL'} [coverage] "
+                click.echo(f"{'PASS' if c['passed'] else gap_label} [coverage] "
                            f"{c['parent_type']}→{c['child_type']}: "
                            f"{c['covered']}/{c['total']} covered", err=True)
                 if not c["passed"]:
                     click.echo(f"    Fix: dhfkit {dhf_arg} item list"
                                f" --type {c['child_type']} to find uncovered items,"
                                f" then add dhf_links to their YAML.", err=True)
-            if t.get("summary"):
-                click.echo(t["summary"], err=True)
+                    if not fail_on_uncovered:
+                        click.echo("         Advisory only — pass --fail-on-uncovered"
+                                   " to block the build on this.", err=True)
         if "coverage" in r:
             for row in r["coverage"].get("pairs", []):
                 click.echo(f"{'PASS' if row.get('passed') else 'FAIL'} [gate] "

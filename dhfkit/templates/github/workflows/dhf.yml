@@ -23,8 +23,12 @@ jobs:
 
       - run: pip install medharness=={{medharness_version}}
 
+      # --fail-on-uncovered makes a requirement with no downstream design or test
+      # block the build. Drop the flag while backfilling an existing DHF; coverage
+      # gaps then report as WARN and only schema, required links, and dangling
+      # links block.
       - name: Schema and traceability check
-        run: medharness verify dhf --dhf DHF
+        run: medharness verify dhf --dhf DHF --fail-on-uncovered
 
   evidence-bundle:
     name: Evidence bundle

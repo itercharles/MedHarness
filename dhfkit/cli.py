@@ -209,6 +209,38 @@ def validate_schema(ctx: click.Context) -> None:
     click.echo(f"✓ All {result.get('item_count', 0)} items passed schema validation.", err=True)
 
 
+def _traceability_summary(result: dict, fail_on_uncovered: bool) -> str:
+    """Summarise a traceability result by what actually blocks the exit code.
+
+    check_traceability() reports uncovered items as a failure, but the CLI only
+    exits non-zero for them under --fail-on-uncovered. Reporting those as "FAIL"
+    regardless would tell CI readers a green build had blocked.
+    """
+    blocking, advisory = [], []
+
+    required_failures = result.get("required", {}).get("failures", [])
+    if required_failures:
+        blocking.append(f"{len(required_failures)} required failure(s)")
+    if result.get("orphans"):
+        blocking.append(f"{len(result['orphans'])} orphan(s)")
+    if result.get("dangling"):
+        blocking.append(f"{len(result['dangling'])} dangling link(s)")
+
+    uncovered = sum(len(c.get("uncovered", [])) for c in result.get("coverage", []))
+    if uncovered:
+        (blocking if fail_on_uncovered else advisory).append(f"{uncovered} uncovered item(s)")
+
+    if blocking:
+        note = f" ({', '.join(advisory)} advisory)" if advisory else ""
+        return f"FAIL — {', '.join(blocking)}{note}"
+    if advisory:
+        return (
+            f"PASS — {', '.join(advisory)} not blocking; "
+            "re-run with --fail-on-uncovered to enforce coverage."
+        )
+    return "All checks passed."
+
+
 @validate.command("traceability")
 @click.option("--fail-on-uncovered", is_flag=True, default=False,
               help="Exit 1 if any items lack downstream coverage (default: warn only).")
@@ -241,9 +273,20 @@ def validate_traceability(ctx: click.Context, fail_on_uncovered: bool, report_pa
     for o in result["orphans"]:
         click.echo(f"  ✗ ORPHAN {o['id']}: {o['issue']}", err=True)
 
-    # Report coverage per matrix pair
+    # Report dangling links — always blocking, distinct from coverage gaps
+    dangling = result.get("dangling", [])
+    for d in dangling:
+        click.echo(
+            f"  ✗ DANGLING {d['source']}.{d['field']} → {d['target']}: target does not exist",
+            err=True,
+        )
+
+    # Report coverage per matrix pair. Uncovered items are advisory unless
+    # --fail-on-uncovered is set, so label them WARN rather than implying a
+    # blocked build.
+    gap_label = "✗" if fail_on_uncovered else "⚠"
     for c in result["coverage"]:
-        status = "✓" if c["passed"] else "✗"
+        status = "✓" if c["passed"] else gap_label
         click.echo(
             f"  {status} {c['parent_type']} → {c['child_type']}: "
             f"{c['covered']}/{c['total']} covered",
@@ -252,7 +295,7 @@ def validate_traceability(ctx: click.Context, fail_on_uncovered: bool, report_pa
         for uid in c["uncovered"]:
             click.echo(f"      ↳ uncovered: {uid}", err=True)
 
-    click.echo(result["summary"], err=True)
+    click.echo(_traceability_summary(result, fail_on_uncovered), err=True)
 
     if report_path:
         import json as _json
@@ -262,6 +305,8 @@ def validate_traceability(ctx: click.Context, fail_on_uncovered: bool, report_pa
     if not required.get("passed", True):
         sys.exit(1)
     if result["orphans"]:
+        sys.exit(1)
+    if dangling:
         sys.exit(1)
     if fail_on_uncovered and not result["passed"]:
         sys.exit(1)

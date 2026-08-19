@@ -284,6 +284,34 @@ def build_module_map(items: list[dict], config: Any) -> list[dict]:
     return sorted(result, key=lambda x: x["module_id"])
 
 
+_LINK_FIELDS = (
+    "derives_from", "implements", "guided_by", "informs", "design",
+    "mitigates", "satisfies", "verifies", "validates", "module",
+    "affected_risk_items",
+)
+
+
+def find_dangling_links(items: list[dict]) -> list[dict]:
+    """Find traceability links pointing at IDs that do not exist in the DHF.
+
+    A dangling link is not the same failure as missing coverage: the author did
+    write a link, it just resolves to nothing. Reported separately so the fix
+    ("correct the target ID") is not confused with the coverage remediation
+    ("add a link"), and so a typo cannot hide as a downstream coverage gap.
+
+    Returns [{"source", "field", "target"}] sorted for stable output.
+    """
+    known = {item["id"] for item in items}
+    dangling: list[dict] = []
+    for item in items:
+        source = item.get("id", "")
+        for field in _LINK_FIELDS:
+            for target in item.get(field) or []:
+                if target and target not in known:
+                    dangling.append({"source": source, "field": field, "target": target})
+    return sorted(dangling, key=lambda d: (d["source"], d["field"], d["target"]))
+
+
 def check_traceability(items: list[dict], config: Any) -> dict:
     """
     Run full traceability validation.
@@ -348,11 +376,18 @@ def check_traceability(items: list[dict], config: Any) -> dict:
                 "passed": len(uncovered) == 0,
             })
 
-    passed = required_result["passed"] and all(r["passed"] for r in coverage_results)
+    dangling = find_dangling_links(items)
+    passed = (
+        required_result["passed"]
+        and not dangling
+        and all(r["passed"] for r in coverage_results)
+    )
 
     parts = []
     if not required_result["passed"]:
         parts.append(f"{len(required_result['failures'])} required failure(s)")
+    if dangling:
+        parts.append(f"{len(dangling)} dangling link(s)")
     uncovered_count = sum(len(r["uncovered"]) for r in coverage_results)
     if uncovered_count:
         parts.append(f"{uncovered_count} uncovered item(s)")
@@ -362,6 +397,7 @@ def check_traceability(items: list[dict], config: Any) -> dict:
         "passed": passed,
         "required": required_result,
         "orphans": [],
+        "dangling": dangling,
         "coverage": coverage_results,
         "risk_chain": build_risk_chain(items, config),
         "deprecation_warnings": [],
@@ -402,6 +438,17 @@ def format_traceability_report(result: dict) -> str:
                 f"(count={f['current_count']}, need ≥{f['min_count']})"
             )
     lines.append("")
+
+    # Dangling links
+    dangling = result.get("dangling", [])
+    if dangling:
+        lines.append("Dangling Links")
+        lines.append("-" * 40)
+        for d in dangling:
+            lines.append(
+                f"  FAIL  {d['source']}.{d['field']} → {d['target']} (target does not exist)"
+            )
+        lines.append("")
 
     # Coverage matrix
     coverage = result.get("coverage", [])

@@ -287,6 +287,9 @@ def test_module_swdd_coverage_passes():
     swdd = Item.model_validate({"id": "SWDD-001", "title": "t", "implements": ["SRS-001"], "module": ["MODULE-001"]})
     items = [
         {"id": "MODULE-001", "all_linked_uids": []},
+        # SRS-001 is present so the set is self-consistent — SWDD-001 implements
+        # it, and an absent target would (correctly) register as a dangling link.
+        {"id": "SRS-001", "all_linked_uids": []},
         {
             "id": "SWDD-001",
             "all_linked_uids": swdd.all_linked_uids,
