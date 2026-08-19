@@ -104,9 +104,16 @@ class TestCoverageIsAdvisoryByDefault:
             assert (r.exit_code == 0) is expect_pass
 
 
-class TestScaffoldWorkflowEnforcesCoverage:
-    def test_shipped_ci_template_passes_the_flag(self, tmp_path: Path) -> None:
-        """The scaffolded pipeline must actually enforce what it reports."""
+class TestDocumentedWorkflowEnforcesCoverage:
+    """CI is not scaffolded, so the recipe adopters copy is the thing to pin."""
+
+    def test_documented_pipeline_passes_the_flag(self) -> None:
+        recipe = (Path(__file__).resolve().parents[2]
+                  / "dhfkit" / "templates" / "github" / "workflows" / "dhf.yml").read_text()
+        assert "verify dhf --dhf DHF --fail-on-uncovered" in recipe
+
+    def test_scaffold_does_not_create_a_workflow(self, tmp_path: Path) -> None:
+        """Scaffolding it would silently do nothing on an installed package."""
         _scaffold_dhf(tmp_path)
-        workflow = (tmp_path / ".github" / "workflows" / "dhf.yml").read_text()
-        assert "verify dhf --dhf DHF --fail-on-uncovered" in workflow
+        assert not (tmp_path / ".github" / "workflows").exists()
+        assert (tmp_path / ".github" / "prompts").exists()

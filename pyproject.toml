@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "medharness"
-version = "0.12.0"
+version = "0.12.1"
 description = "Open-source design-controlled development infrastructure for medical device and SaMD teams — includes dhfkit"
 readme = "README.md"
 license = { text = "MIT" }
@@ -51,7 +51,7 @@ dependencies = [
 [project.optional-dependencies]
 ai = ["google-genai"]
 docs = ["weasyprint"]
-dev = ["pytest", "pytest-cov"]
+dev = ["pytest", "pytest-cov", "build"]
 full = ["medharness[ai,docs]"]
 
 [project.urls]
@@ -81,4 +81,7 @@ exclude = ["tests*", "dhfkit.tests*"]
 "medharness" = ["prompts/**/*"]
 
 [tool.setuptools.exclude-package-data]
+# The CI workflow is deliberately not part of the release payload — adopters
+# copy it from docs/adopting.md and own it thereafter. Enforced by
+# scripts/audit_oss_delivery.sh and tests/unit/test_packaging_templates.py.
 "dhfkit" = ["tests", "tests/*", "tests/**/*", "templates/github/workflows", "templates/github/workflows/*"]

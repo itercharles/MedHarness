@@ -32,8 +32,10 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pytest
-          pip install -e .
+          # [dev] carries `build`, which test_packaging_templates.py needs to
+          # inspect the wheel. Without it that suite skips and packaging faults
+          # reach PyPI unnoticed.
+          pip install -e ".[dev]"
       - name: Run unit tests
         run: |
           export PYTHONPATH="${PYTHONPATH}:${PWD}"
@@ -124,6 +126,9 @@ jobs:
               assert (dhf_dir / 'DHF' / 'documents' / 'specs').exists()
               assert (dhf_dir / 'DHF' / 'items').exists()
               assert (dhf_dir / '.github' / 'prompts').exists()
+              # CI is not part of the release payload — adopters copy it from
+              # docs/adopting.md, so init must not claim to create it.
+              assert not (dhf_dir / '.github' / 'workflows').exists()
               print('OK: scaffold structure valid')
           "
 

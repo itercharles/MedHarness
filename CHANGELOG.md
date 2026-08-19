@@ -13,6 +13,60 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ---
 
+## [0.12.1] — 2026-08-19
+
+### Bug Fixes
+
+- **`medharness init` no longer claims to create a CI workflow it cannot.** The
+  CI workflow is deliberately not part of the release payload — a policy dating
+  to May 2026 and enforced by `scripts/audit_oss_delivery.sh`. The rest of the
+  project had never been reconciled with it:
+
+  - `_scaffold_dhf` copied `github/workflows` into `.github/workflows`, which
+    silently did nothing on an installed package because the source is absent.
+  - The README showed `.github/workflows/dhf.yml` as part of `init` output.
+  - `medharness upgrade` listed that path in its template map and claimed to
+    manage it, while skipping any template missing from the installation without
+    comment — then reporting "All 25 scaffold file(s) are up to date".
+  - `docs/adopting.md` told adopters to use "the scaffolded workflow from
+    `init`", which never existed for anyone installing from PyPI.
+
+  Nothing caught the split: the scaffold CI job installs with `pip install -e .`,
+  where the repository tree stands in for the package and every template is
+  present.
+
+  `init` now scaffolds only what it can deliver, and the CI recipe has a real
+  home in [Setting up CI](docs/adopting.md#setting-up-ci).
+
+- **`medharness upgrade` reports templates it cannot supply.** A template absent
+  from the installation is a packaging fault rather than a project state, so it
+  now appears under an `unavailable` key and in the summary rather than being
+  passed over silently.
+
+### Documentation
+
+- **New "Setting up CI" section** in `docs/adopting.md` with the complete
+  `.github/workflows/dhf.yml` and a table of what each job does. This is now the
+  delivery path for the pipeline, including the `--fail-on-uncovered` change
+  from v0.12.0.
+- README no longer shows `.github/workflows/` in the `init` output tree.
+
+### Internal
+
+- `tests/unit/test_packaging_templates.py` inspects the built wheel: workflow
+  templates stay out, every template the upgrade map claims survives packaging,
+  and `docs/adopting.md` embeds the workflow recipe verbatim so the two cannot
+  drift. It builds with `python -m build` from a clean copy of the tree, because
+  neither shortcut reproduces what gets published — `uv build` resolves a
+  different setuptools and applies `exclude-package-data` globs differently, and
+  a stale `*.egg-info/SOURCES.txt` in the working tree masks exclusion changes
+  entirely.
+- The unit-test CI job installs `.[dev]`, which now carries `build`; without it
+  the packaging suite skips and the faults it guards reach PyPI unnoticed.
+- The scaffold CI check asserts `.github/workflows` is *not* created.
+
+---
+
 ## [0.12.0] — 2026-08-19
 
 Two correctness fixes in the verification gates, and the SOUP gate becomes

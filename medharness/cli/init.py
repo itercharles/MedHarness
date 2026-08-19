@@ -41,6 +41,9 @@ def register(main):
             click.echo(f"OUTDATED {f['file']} (+{f['added_lines']}/-{f['removed_lines']} lines)", err=True)
         for f in result.get("missing", []):
             click.echo(f"MISSING  {f['file']}", err=True)
+        for f in result.get("unavailable", []):
+            click.echo(f"UNAVAILABLE {f['file']} — template {f['template']} is not in this"
+                       f" medharness installation", err=True)
         for f in result.get("applied", []):
             click.echo(f"UPDATED  {f}", err=True)
 
