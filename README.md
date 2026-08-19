@@ -20,6 +20,56 @@ MedHarness brings together:
 
 ---
 
+## How a change moves
+
+Every change is a Change Request that walks a fixed path. AI drafts; humans approve; deterministic gates decide whether it can close.
+
+```mermaid
+flowchart LR
+    CR["CR-042<br/>opened"] --> PLAN
+    PLAN["change plan<br/><br/>AI drafts DHF items<br/>and impact analysis"] --> REV{"Human<br/>review"}
+    REV -.->|rejected| PLAN
+    REV -->|"/approve"| IMPL["change implement<br/><br/>AI writes code<br/>and tests"]
+    IMPL --> GATES["Verification gates<br/><br/>verify dhf<br/>verify tests<br/>verify soup<br/>verify completion"]
+    GATES -.->|any gate fails| IMPL
+    GATES ==>|all pass| MERGE["Merge to main<br/><br/>evidence bundle<br/>release baseline"]
+
+    style PLAN fill:#4c6ef5,color:#fff,stroke:#364fc7
+    style IMPL fill:#4c6ef5,color:#fff,stroke:#364fc7
+    style REV fill:#f59f00,color:#fff,stroke:#e67700
+    style GATES fill:#f1f3f5,color:#212529,stroke:#868e96
+    style MERGE fill:#2f9e44,color:#fff,stroke:#2b8a3e
+```
+
+The blue steps are the only ones that call a model. Everything in the verification band is ordinary code — it does not ask an LLM whether the work is done. See [docs/ai-security.md](docs/ai-security.md) for the boundary in detail.
+
+---
+
+## What it catches
+
+`verify dhf` on a DHF where a risk control points at a risk that no longer exists:
+
+```console
+$ medharness --dhf DHF verify dhf
+PASS [schema]: 13 items valid
+FAIL [dangling] RCM-001.mitigates → RISK-404: target does not exist
+    Fix: correct the ID in RCM-001.yaml, or create RISK-404. The link exists but resolves to nothing.
+PASS [coverage] UC→CRS: 1/1 covered
+PASS [coverage] CRS→SYS: 1/1 covered
+PASS [coverage] SYS→SRS: 1/1 covered
+PASS [coverage] SRS→SWDD: 1/1 covered
+PASS [coverage] SYS→SYSARCH: 1/1 covered
+PASS [coverage] MODULE→SWDD: 1/1 covered
+WARN [coverage] RISK→RCM: 0/1 covered
+    Fix: dhfkit --dhf DHF item list --type RCM to find uncovered items, then add dhf_links to their YAML.
+         Advisory only — pass --fail-on-uncovered to block the build on this.
+Error: DHF validation failed.
+```
+
+Broken references (`FAIL`) always block. Incomplete-but-valid design (`WARN`) blocks only with `--fail-on-uncovered`, which the scaffolded CI workflow enables. The distinction matters: a dangling link is a typo to correct, an uncovered item is design still to be written.
+
+---
+
 ## Why teams use it
 
 Medical software teams need more than code generation. They need a harness that can safely take work off engineers without breaking traceability or review discipline.

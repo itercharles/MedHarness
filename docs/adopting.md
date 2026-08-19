@@ -32,7 +32,27 @@ Artifacts from common sources map directly to item types. A requirements spreads
 
 What you do not need to migrate: test code (it stays in pytest, linked to DHF items via `medharness.links` annotations in JUnit output), generated documents (they are produced from items on demand), and CI scripts (use the scaffolded workflow from `init`). Migration is writing YAML files. The schema is self-documenting — look at the sample items from `init` to see every field and its expected values.
 
-Traceability links between items are typed fields on child items (`derives_from`, `satisfies`, `implements`, `mitigates`, etc.). Run `medharness --dhf DHF verify dhf` at any point to check link integrity. The validator tells you exactly which links are broken.
+Traceability links between items are typed fields on child items (`derives_from`, `satisfies`, `implements`, `mitigates`, etc.). Run `medharness --dhf DHF verify dhf` at any point to check link integrity. The validator names the exact item, field, and target for every broken link.
+
+### What blocks a build, and what only warns
+
+`verify dhf` separates broken references from incomplete design, because the two need different fixes:
+
+| Finding | Blocks? | Meaning |
+|---------|---------|---------|
+| Schema error | Always | An item does not match its doc-type schema |
+| Required-traceability failure | Always | An item type that must have a parent link has none |
+| **Dangling link** | Always | A link exists but its target ID does not — usually a typo or a deleted item |
+| Coverage gap | Only with `--fail-on-uncovered` | An item has no downstream child yet — normal mid-project |
+
+A dangling link is reported on its own rather than as a coverage gap. `SRS-001` pointing at a nonexistent `SYS-999` would otherwise show up only as "SYS→SRS 0/1 covered", and the remediation for that ("add a link") does not apply — the link is already there, it just resolves to nothing:
+
+```
+FAIL [dangling] RCM-001.mitigates → RISK-404: target does not exist
+    Fix: correct the ID in RCM-001.yaml, or create RISK-404. The link exists but resolves to nothing.
+```
+
+Coverage gaps print as `WARN [coverage]` and leave the exit code at zero unless you pass `--fail-on-uncovered`. The scaffolded CI workflow passes it, so new projects enforce coverage from the first commit. If you are backfilling an existing DHF and want the other checks green while you work through the gaps, drop the flag from `.github/workflows/dhf.yml` and add it back when the backlog is clear.
 
 ## Using dhfkit standalone
 
