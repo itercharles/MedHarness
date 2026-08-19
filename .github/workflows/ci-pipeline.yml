@@ -126,7 +126,9 @@ jobs:
               assert (dhf_dir / 'DHF' / 'documents' / 'specs').exists()
               assert (dhf_dir / 'DHF' / 'items').exists()
               assert (dhf_dir / '.github' / 'prompts').exists()
-              assert (dhf_dir / '.github' / 'workflows' / 'dhf.yml').exists()
+              # CI is not part of the release payload — adopters copy it from
+              # docs/adopting.md, so init must not claim to create it.
+              assert not (dhf_dir / '.github' / 'workflows').exists()
               print('OK: scaffold structure valid')
           "
 

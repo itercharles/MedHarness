@@ -150,9 +150,10 @@ my-device/
 ├── AI-harness/
 │   └── context.md
 └── .github/
-    └── workflows/
-        └── dhf.yml
+    └── prompts/
 ```
+
+CI is not scaffolded — the pipeline references your branch names, runners, and secrets, so you own it. [docs/adopting.md](docs/adopting.md#setting-up-ci) carries a ready-to-paste `.github/workflows/dhf.yml`.
 
 ### Create your first controlled baseline
 

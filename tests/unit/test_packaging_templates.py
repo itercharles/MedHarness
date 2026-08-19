@@ -1,13 +1,16 @@
-"""Guard: every scaffold template must survive packaging.
+"""Guards on what the wheel does and does not carry.
 
-`templates/github/workflows` was excluded from the wheel via
-`exclude-package-data`, so `medharness init` silently created no CI workflow and
-`medharness upgrade` reported "all up to date" about a file it never opened.
-Nothing caught it: the scaffold CI job installs with `pip install -e .`, where
-the repo tree stands in for the package and every template is present.
+The CI workflow is deliberately not part of the release payload — adopters copy
+it from `docs/adopting.md` and own it. That policy had drifted: `_scaffold_dhf`
+copied the template, `_UPGRADE_MAP` claimed to manage it, and the README showed
+it as init output, while `exclude-package-data` kept it out of the wheel. So
+`init` silently created no workflow and `upgrade` reported "all up to date"
+about a file it never opened.
 
-These tests check the built distribution, which is the only place the fault is
-visible.
+Nothing caught it, because the scaffold CI job installs with `pip install -e .`,
+where the repo tree stands in for the package and every template is present.
+These tests check the built distribution, which is the only place the split
+between policy and payload is visible.
 """
 
 from __future__ import annotations
@@ -25,6 +28,10 @@ from medharness.workflows.upgrade import _TEMPLATES_DIR, _UPGRADE_MAP
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
+WORKFLOW_TEMPLATE = REPO_ROOT / "dhfkit" / "templates" / "github" / "workflows" / "dhf.yml"
+ADOPTING_DOC = REPO_ROOT / "docs" / "adopting.md"
+
+
 class TestTemplateSourcesExist:
     """Cheap check: the upgrade map and the template tree agree."""
 
@@ -32,9 +39,25 @@ class TestTemplateSourcesExist:
         missing = [rel for rel, _ in _UPGRADE_MAP if not (_TEMPLATES_DIR / rel).exists()]
         assert missing == [], f"upgrade map references absent templates: {missing}"
 
-    def test_ci_workflow_template_is_mapped(self) -> None:
+    def test_ci_workflow_is_not_mapped(self) -> None:
+        """upgrade cannot manage a file this build has no template for."""
         mapped = {proj for _, proj in _UPGRADE_MAP}
-        assert ".github/workflows/dhf.yml" in mapped
+        assert ".github/workflows/dhf.yml" not in mapped
+
+
+class TestDocumentedRecipeMatchesTemplate:
+    """The docs are the only delivery path for the CI recipe, so pin them to it."""
+
+    def test_adopting_doc_embeds_the_template_verbatim(self) -> None:
+        recipe = WORKFLOW_TEMPLATE.read_text().rstrip("\n")
+        doc = ADOPTING_DOC.read_text()
+        assert recipe in doc, (
+            "docs/adopting.md no longer embeds the workflow template verbatim — "
+            "adopters copy the recipe from there, so the two must not drift"
+        )
+
+    def test_setup_section_exists(self) -> None:
+        assert "## Setting up CI" in ADOPTING_DOC.read_text()
 
 
 _BUILD_NOISE = shutil.ignore_patterns(
@@ -77,12 +100,14 @@ def built_wheel(tmp_path_factory: pytest.TempPathFactory) -> Path:
 
 
 class TestWheelContents:
-    def test_ci_workflow_template_is_packaged(self, built_wheel: Path) -> None:
+    def test_workflow_templates_are_not_packaged(self, built_wheel: Path) -> None:
+        """Mirrors scripts/audit_oss_delivery.sh, but fails in the dev loop."""
         with zipfile.ZipFile(built_wheel) as zf:
             names = zf.namelist()
-        assert "dhfkit/templates/github/workflows/dhf.yml" in names, (
-            "the CI workflow template is missing from the wheel — `medharness init` "
-            "would scaffold no .github/workflows/dhf.yml"
+        bundled = [n for n in names if "templates/github/workflows/" in n]
+        assert bundled == [], (
+            f"the CI workflow is not part of the release payload, but the wheel "
+            f"carries {bundled}"
         )
 
     def test_every_upgrade_template_is_packaged(self, built_wheel: Path) -> None:

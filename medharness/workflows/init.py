@@ -55,9 +55,10 @@ def _scaffold_dhf(project_dir: Path) -> None:
     # DHF README goes inside DHF/ — root README is the project README
     _cp("README.md", "DHF/README.md")
 
-    # GitHub AI prompts and CI workflow
+    # AI prompts only. The CI workflow is not part of the release payload —
+    # adopters copy it from docs/adopting.md and own it from there, so scaffolding
+    # it here would silently do nothing on an installed package.
     _cp("github/prompts", ".github/prompts")
-    _cp("github/workflows", ".github/workflows")
 
     # AI agent context file
     _cp("AI-harness", "AI-harness")

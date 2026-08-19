@@ -101,10 +101,15 @@ class TestInitCmd:
         assert "git clone" not in src
         assert "subprocess.run" not in src
 
-    def test_scaffold_emits_github_workflow(self, tmp_path):
-        """_scaffold_dhf copies dhf.yml into .github/workflows/."""
+    def test_scaffold_emits_github_prompts(self, tmp_path):
+        """_scaffold_dhf copies the AI prompts into .github/prompts/."""
         _scaffold_dhf(tmp_path)
-        assert (tmp_path / ".github" / "workflows" / "dhf.yml").exists()
+        assert (tmp_path / ".github" / "prompts" / "cr-analyze.md").exists()
+
+    def test_scaffold_omits_github_workflow(self, tmp_path):
+        """CI is not in the release payload, so init must not claim to create it."""
+        _scaffold_dhf(tmp_path)
+        assert not (tmp_path / ".github" / "workflows").exists()
 
     def test_scaffold_emits_ai_harness_context(self, tmp_path):
         """_scaffold_dhf creates AI-harness/context.md for agent context."""

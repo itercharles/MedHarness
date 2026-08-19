@@ -81,6 +81,7 @@ exclude = ["tests*", "dhfkit.tests*"]
 "medharness" = ["prompts/**/*"]
 
 [tool.setuptools.exclude-package-data]
-# templates/github/workflows must stay packaged — `medharness init` scaffolds it
-# to .github/workflows/dhf.yml and `medharness upgrade` manages it thereafter.
-"dhfkit" = ["tests", "tests/*", "tests/**/*"]
+# The CI workflow is deliberately not part of the release payload — adopters
+# copy it from docs/adopting.md and own it thereafter. Enforced by
+# scripts/audit_oss_delivery.sh and tests/unit/test_packaging_templates.py.
+"dhfkit" = ["tests", "tests/*", "tests/**/*", "templates/github/workflows", "templates/github/workflows/*"]

@@ -16,8 +16,10 @@ _TEMPLATES_DIR = Path(__file__).resolve().parent.parent.parent / "dhfkit" / "tem
 
 # (template_rel, project_rel) — files that medharness owns and can auto-upgrade.
 # DHF items, global.yaml, context.md, and CLAUDE.md are user-owned; never listed here.
+# The CI workflow is user-owned too: it is not in the release payload, so this
+# build has no template to compare against. docs/adopting.md carries the current
+# recipe and the changelog calls out when it changes.
 _UPGRADE_MAP: list[tuple[str, str]] = [
-    ("github/workflows/dhf.yml",                              ".github/workflows/dhf.yml"),
     ("github/prompts/cr-analyze.md",                          ".github/prompts/cr-analyze.md"),
     ("github/prompts/cr-develop.md",                          ".github/prompts/cr-develop.md"),
     ("specs/architecture_design_specification.md.j2",         "DHF/documents/specs/architecture_design_specification.md.j2"),

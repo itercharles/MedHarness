@@ -32,20 +32,20 @@ class TestCheckUpgrade:
     def test_modified_file_reported_outdated(self, tmp_path: Path) -> None:
         """Modifying a scaffold file marks it outdated."""
         _scaffold_project(tmp_path)
-        workflow_file = tmp_path / ".github" / "workflows" / "dhf.yml"
-        workflow_file.write_text(workflow_file.read_text() + "\n# user modification\n")
+        managed_file = tmp_path / ".github" / "prompts" / "cr-analyze.md"
+        managed_file.write_text(managed_file.read_text() + "\n# user modification\n")
         result = check_upgrade(tmp_path)
         outdated_files = [f["file"] for f in result["outdated"]]
-        assert ".github/workflows/dhf.yml" in outdated_files
+        assert ".github/prompts/cr-analyze.md" in outdated_files
 
     def test_missing_file_reported(self, tmp_path: Path) -> None:
         """Deleting a scaffold file marks it as missing."""
         _scaffold_project(tmp_path)
-        workflow_file = tmp_path / ".github" / "workflows" / "dhf.yml"
-        workflow_file.unlink()
+        managed_file = tmp_path / ".github" / "prompts" / "cr-analyze.md"
+        managed_file.unlink()
         result = check_upgrade(tmp_path)
         missing_files = [f["file"] for f in result["missing"]]
-        assert ".github/workflows/dhf.yml" in missing_files
+        assert ".github/prompts/cr-analyze.md" in missing_files
 
     def test_result_keys_present(self, tmp_path: Path) -> None:
         _scaffold_project(tmp_path)
@@ -65,22 +65,22 @@ class TestCheckUpgrade:
 class TestApplyUpgrade:
     def test_apply_restores_modified_file(self, tmp_path: Path) -> None:
         _scaffold_project(tmp_path)
-        workflow_file = tmp_path / ".github" / "workflows" / "dhf.yml"
-        original = workflow_file.read_text()
-        workflow_file.write_text(original + "\n# user modification\n")
+        managed_file = tmp_path / ".github" / "prompts" / "cr-analyze.md"
+        original = managed_file.read_text()
+        managed_file.write_text(original + "\n# user modification\n")
 
         result = apply_upgrade(tmp_path)
-        assert ".github/workflows/dhf.yml" in result.get("applied", [])
-        assert workflow_file.read_text() == original
+        assert ".github/prompts/cr-analyze.md" in result.get("applied", [])
+        assert managed_file.read_text() == original
 
     def test_apply_creates_missing_file(self, tmp_path: Path) -> None:
         _scaffold_project(tmp_path)
-        workflow_file = tmp_path / ".github" / "workflows" / "dhf.yml"
-        workflow_file.unlink()
+        managed_file = tmp_path / ".github" / "prompts" / "cr-analyze.md"
+        managed_file.unlink()
 
         result = apply_upgrade(tmp_path)
-        assert ".github/workflows/dhf.yml" in result.get("applied", [])
-        assert workflow_file.exists()
+        assert ".github/prompts/cr-analyze.md" in result.get("applied", [])
+        assert managed_file.exists()
 
     def test_apply_result_has_applied_key(self, tmp_path: Path) -> None:
         _scaffold_project(tmp_path)
@@ -104,16 +104,16 @@ class TestUpgradeCLI:
 
     def test_outdated_exits_nonzero_without_apply(self, tmp_path: Path) -> None:
         _scaffold_project(tmp_path)
-        workflow_file = tmp_path / ".github" / "workflows" / "dhf.yml"
-        workflow_file.write_text(workflow_file.read_text() + "\n# stale\n")
+        managed_file = tmp_path / ".github" / "prompts" / "cr-analyze.md"
+        managed_file.write_text(managed_file.read_text() + "\n# stale\n")
         r = CliRunner().invoke(main, ["upgrade", "--project-dir", str(tmp_path)])
         assert r.exit_code != 0
         assert "OUTDATED" in r.output
 
     def test_apply_flag_exits_zero(self, tmp_path: Path) -> None:
         _scaffold_project(tmp_path)
-        workflow_file = tmp_path / ".github" / "workflows" / "dhf.yml"
-        workflow_file.write_text(workflow_file.read_text() + "\n# stale\n")
+        managed_file = tmp_path / ".github" / "prompts" / "cr-analyze.md"
+        managed_file.write_text(managed_file.read_text() + "\n# stale\n")
         r = CliRunner().invoke(main, ["upgrade", "--apply", "--project-dir", str(tmp_path)])
         assert r.exit_code == 0, r.output
         assert "UPDATED" in r.output

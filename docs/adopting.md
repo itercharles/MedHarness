@@ -9,7 +9,7 @@ Run `medharness init` in an empty directory. You get a complete DHF scaffold wit
 3. `DHF/config/global.yaml` — set your project name
 4. `AI-harness/context.md` — describe your product so Claude reasons about the right domain
 
-Commit the result and start writing CRs. Everything else — the CI workflow, document generation, traceability — works against whatever items you've put in.
+Commit the result and start writing CRs. Document generation and traceability work against whatever items you have put in. CI is the one piece you add yourself — see [Setting up CI](#setting-up-ci).
 
 ## Bringing an existing DHF
 
@@ -30,7 +30,7 @@ MedHarness stores DHF content as YAML items, one file per record. Each item has 
 
 Artifacts from common sources map directly to item types. A requirements spreadsheet becomes SRS and SYS items — one row per item, with `title` and `content` fields. A risk register becomes RISK items paired with RCM items (each RCM carries a `mitigates` field pointing to the RISK ID it controls). A SOUP list becomes SOUP items with `name`, `version`, and `purpose` fields.
 
-What you do not need to migrate: test code (it stays in pytest, linked to DHF items via `medharness.links` annotations in JUnit output), generated documents (they are produced from items on demand), and CI scripts (use the scaffolded workflow from `init`). Migration is writing YAML files. The schema is self-documenting — look at the sample items from `init` to see every field and its expected values.
+What you do not need to migrate: test code (it stays in pytest, linked to DHF items via `medharness.links` annotations in JUnit output), generated documents (they are produced from items on demand), and CI scripts (start from the recipe in [Setting up CI](#setting-up-ci)). Migration is writing YAML files. The schema is self-documenting — look at the sample items from `init` to see every field and its expected values.
 
 Traceability links between items are typed fields on child items (`derives_from`, `satisfies`, `implements`, `mitigates`, etc.). Run `medharness --dhf DHF verify dhf` at any point to check link integrity. The validator names the exact item, field, and target for every broken link.
 
@@ -52,7 +52,7 @@ FAIL [dangling] RCM-001.mitigates → RISK-404: target does not exist
     Fix: correct the ID in RCM-001.yaml, or create RISK-404. The link exists but resolves to nothing.
 ```
 
-Coverage gaps print as `WARN [coverage]` and leave the exit code at zero unless you pass `--fail-on-uncovered`. The scaffolded CI workflow passes it, so new projects enforce coverage from the first commit. If you are backfilling an existing DHF and want the other checks green while you work through the gaps, drop the flag from `.github/workflows/dhf.yml` and add it back when the backlog is clear.
+Coverage gaps print as `WARN [coverage]` and leave the exit code at zero unless you pass `--fail-on-uncovered`. The recommended pipeline in [Setting up CI](#setting-up-ci) passes it. If you are backfilling an existing DHF and want the other checks green while you work through the gaps, drop the flag and add it back when the backlog is clear.
 
 ## Using dhfkit standalone
 
@@ -277,9 +277,133 @@ medharness upgrade --apply              # apply updates from the installed versi
 medharness upgrade --project-dir /path  # specify project root (default: cwd)
 ```
 
-Files that are always **user-owned** (never modified by upgrade): `DHF/items/`, `DHF/config/global.yaml`, `AI-harness/context.md`, `CLAUDE.md`.
+Files that are always **user-owned** (never modified by upgrade): `DHF/items/`, `DHF/config/global.yaml`, `AI-harness/context.md`, `CLAUDE.md`, and your CI workflow.
 
-Files that upgrade manages: CI workflow (`.github/workflows/dhf.yml`), AI prompts (`.github/prompts/`), spec Jinja2 templates (`DHF/documents/specs/`), doc-type configs (`DHF/config/doc_types/`).
+Files that upgrade manages: AI prompts (`.github/prompts/`), spec Jinja2 templates (`DHF/documents/specs/`), doc-type configs (`DHF/config/doc_types/`).
+
+Your CI workflow is deliberately not managed — it is not part of the release payload, so `upgrade` has no template to compare against. When the recommended pipeline changes, the changelog says so and [Setting up CI](#setting-up-ci) carries the current recipe.
+
+## Setting up CI
+
+MedHarness does not install a CI workflow. The pipeline is yours to own — it references your branch names, runner labels, and secrets, and `medharness upgrade` will never overwrite it.
+
+Create `.github/workflows/dhf.yml` with the recipe below, replacing `{{medharness_version}}` with the version you pinned in step one.
+
+<details>
+<summary><code>.github/workflows/dhf.yml</code></summary>
+
+```yaml
+name: DHF
+
+on:
+  pull_request:
+    paths:
+      - 'DHF/**'
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+
+jobs:
+  dhf-validate:
+    name: Validate DHF
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - run: pip install medharness=={{medharness_version}}
+
+      # --fail-on-uncovered makes a requirement with no downstream design or test
+      # block the build. Drop the flag while backfilling an existing DHF; coverage
+      # gaps then report as WARN and only schema, required links, and dangling
+      # links block.
+      - name: Schema and traceability check
+        run: medharness verify dhf --dhf DHF --fail-on-uncovered
+
+  evidence-bundle:
+    name: Evidence bundle
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: dhf-validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - run: pip install medharness=={{medharness_version}}
+
+      - name: Build evidence bundle
+        run: medharness evidence bundle --dhf DHF --out-dir artifacts
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dhf-evidence
+          path: artifacts/
+
+  release-baseline:
+    name: Release Baseline
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: dhf-validate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - run: pip install medharness=={{medharness_version}}
+
+      - name: Extract version from tag
+        id: ver
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Build release baseline
+        run: |
+          dhfkit --dhf DHF release-baseline \
+            --version ${{ steps.ver.outputs.version }} \
+            --out-dir artifacts \
+            --write \
+            --author "github-actions[bot]"
+
+      - name: Commit REL item
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add DHF/
+          git diff --cached --quiet || \
+            git commit -m "ci: release baseline ${{ steps.ver.outputs.version }}" && \
+            git push origin HEAD:main
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-baseline-${{ steps.ver.outputs.version }}
+          path: artifacts/
+```
+
+</details>
+
+What each job does:
+
+| Job | Trigger | Purpose |
+|-----|---------|---------|
+| `dhf-validate` | PRs touching `DHF/**`, pushes to `main` | Schema, required links, dangling links, coverage |
+| `evidence-bundle` | Merge to `main` | Produces the runtime evidence artifact |
+| `release-baseline` | `v*` tags | Writes the REL item and software BOM back to `main` |
+
+Adopt it incrementally: `dhf-validate` alone is useful from day one. Add the other two when you need release artifacts.
 
 ## Incremental adoption
 
