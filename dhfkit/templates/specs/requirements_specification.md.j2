@@ -35,7 +35,7 @@ This specification covers all {{ doc_type_name }}s defined in the MedHarness sys
 
 <div class="requirement-section" markdown="1">
 
-**Status**: <span class="status-{{ item.status }}">{{ item.status | upper }}</span>  
+**Status**: <span class="status-{{ item.status or "unknown" }}">{{ item.status | status_badge }}</span>  
 {% if item.reviewer %}**Reviewer**: {{ item.reviewer }}  {% endif %}
 {% if item.review_date %}**Review Date**: {{ item.review_date | format_date }}  {% endif %}
 {% if item.category %}**Category**: {{ item.category }}  {% endif %}

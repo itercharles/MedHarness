@@ -35,7 +35,7 @@ This specification covers all risks identified in the MedHarness system as of {{
 
 <div class="risk-section" markdown="1">
 
-**Status**: <span class="status-{{ item.status }}">{{ item.status | upper }}</span>  
+**Status**: <span class="status-{{ item.status or "unknown" }}">{{ item.status | status_badge }}</span>  
 {% if item.reviewer %}**Reviewer**: {{ item.reviewer }}  {% endif %}
 {% if item.review_date %}**Review Date**: {{ item.review_date | format_date }}  {% endif %}
 

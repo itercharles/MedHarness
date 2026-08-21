@@ -413,22 +413,33 @@ def _available_doc_types(adapter) -> list[str]:
 
 
 def _generate_specification_artifacts(adapter, out_dir: Path,
-                                      doc_types: tuple[str, ...]) -> list[dict]:
-    if not hasattr(adapter, "export_pdf"):
-        raise click.ClickException("Configured DHF adapter does not support PDF export.")
+                                      doc_types: tuple[str, ...],
+                                      doc_format: str = "html") -> list[dict]:
+    # HTML is the default so a base `pip install medharness` can build a bundle;
+    # PDF needs the docs extra plus native cairo/pango.
+    exporter = f"export_{doc_format}"
+    if not hasattr(adapter, exporter):
+        raise click.ClickException(
+            f"Configured DHF adapter does not support {doc_format.upper()} export."
+        )
     spec_dir = out_dir / "specifications"
     spec_dir.mkdir(parents=True, exist_ok=True)
     generated = []
     for doc_type in doc_types:
-        result = adapter.export_pdf(doc_type)
-        pdf_path = Path(result["pdf_path"])
-        destination = spec_dir / pdf_path.name
-        if pdf_path.resolve() != destination.resolve():
-            shutil.copy2(pdf_path, destination)
+        try:
+            result = getattr(adapter, exporter)(doc_type)
+        except RuntimeError as exc:
+            # Renderer unavailable (e.g. PDF without native libs) — the message
+            # already says what to install, so present it rather than traceback.
+            raise click.ClickException(str(exc)) from exc
+        source_path = Path(result[f"{doc_format}_path"])
+        destination = spec_dir / source_path.name
+        if source_path.resolve() != destination.resolve():
+            shutil.copy2(source_path, destination)
         generated.append({
             "doc_type": doc_type,
             "path": str(destination),
-            "source": str(pdf_path),
+            "source": str(source_path),
             "version": result.get("version"),
         })
     return generated
@@ -443,13 +454,16 @@ def _run_artifact_generation(
     traceability_types: tuple[str, ...],
     junit_paths: list[Path],
     skip_plans: bool,
+    doc_format: str = "html",
 ) -> dict:
     selected_doc_types = doc_types or tuple(_available_doc_types(adapter))
     selected_traceability = traceability_types or DEFAULT_TRACEABILITY_DOC_TYPES
 
     out_dir.mkdir(parents=True, exist_ok=True)
-    specifications = _generate_specification_artifacts(adapter, out_dir, selected_doc_types)
-    plans = [] if skip_plans else _generate_plan_artifacts(dhf_path, out_dir)
+    specifications = _generate_specification_artifacts(
+        adapter, out_dir, selected_doc_types, doc_format
+    )
+    plans = [] if skip_plans else _generate_plan_artifacts(dhf_path, out_dir, doc_format)
     traceability = _write_traceability_report(
         core,
         selected_traceability,
@@ -530,17 +544,29 @@ def _load_issue_comments(
     return comments
 
 
-def _generate_plan_artifacts(dhf_path: Path, out_dir: Path) -> list[dict]:
+def _generate_plan_artifacts(dhf_path: Path, out_dir: Path,
+                             doc_format: str = "html") -> list[dict]:
     plans_dir = dhf_path / "documents" / "plans"
     if not plans_dir.is_dir():
         return []
     try:
         import markdown as _markdown
-        from weasyprint import HTML
     except ImportError as exc:
         raise click.ClickException(
-            "markdown and weasyprint are required to generate plan PDF artifacts."
+            "The 'markdown' package is required to generate plan artifacts."
         ) from exc
+
+    render_pdf = None
+    if doc_format == "pdf":
+        try:
+            from weasyprint import HTML as render_pdf
+        except (ImportError, OSError) as exc:
+            # WeasyPrint imports cleanly but raises OSError when its native
+            # cairo/pango libraries are absent, so both cases land here.
+            raise click.ClickException(
+                f"PDF plan artifacts need medharness[docs] plus native "
+                f"cairo/pango libraries: {exc}. Use --doc-format html instead."
+            ) from exc
 
     css_candidates = [
         dhf_path / "documents" / "specifications" / "templates" / "styles" / "default.css",
@@ -560,11 +586,15 @@ def _generate_plan_artifacts(dhf_path: Path, out_dir: Path) -> list[dict]:
             plan.read_text(encoding="utf-8"),
             extensions=["tables", "fenced_code", "toc"],
         )
-        output = output_dir / f"{plan.stem}.pdf"
-        HTML(
-            string=f"<!doctype html><html><head>{css}</head><body>{html}</body></html>",
-            base_url=str(plan.parent),
-        ).write_pdf(str(output))
+        document = (
+            f'<!doctype html><html lang="en"><head><meta charset="utf-8">'
+            f"{css}</head><body>{html}</body></html>"
+        )
+        output = output_dir / f"{plan.stem}.{doc_format}"
+        if render_pdf is not None:
+            render_pdf(string=document, base_url=str(plan.parent)).write_pdf(str(output))
+        else:
+            output.write_text(document, encoding="utf-8")
         generated.append({"source": str(plan), "path": str(output)})
     return generated
 

@@ -35,7 +35,7 @@ This specification covers all risk control measures defined in the MedHarness sy
 
 <div class="rcm-section" markdown="1">
 
-**Status**: <span class="status-{{ item.status }}">{{ item.status | upper }}</span>  
+**Status**: <span class="status-{{ item.status or "unknown" }}">{{ item.status | status_badge }}</span>  
 {% if item.control_type %}**Control Type**: {{ item.control_type }}  {% endif %}
 {% if item.implementation_status %}**Implementation Status**: {{ item.implementation_status }}  {% endif %}
 

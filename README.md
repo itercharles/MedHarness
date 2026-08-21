@@ -203,8 +203,12 @@ dhfkit --dhf DHF item get CR-034
 dhfkit --dhf DHF validate schema
 dhfkit --dhf DHF validate traceability
 dhfkit --dhf DHF doc generate SYS
+dhfkit --dhf DHF doc export SYS              # standalone styled HTML
+dhfkit --dhf DHF doc export ALL --format pdf # needs medharness[docs]
 dhfkit --dhf DHF report
 ```
+
+Specifications export to self-contained HTML by default — no native libraries, so it works on a base install and the output can be committed, published, or handed to a reviewer as-is. PDF is available with the `docs` extra, which additionally needs WeasyPrint's cairo/pango stack.
 
 This is only a small subset of the `dhfkit` surface. For item creation, updates, config inspection, test results, and other DHF operations, see `dhfkit --help` and the relevant subcommand help such as `dhfkit item --help`.
 

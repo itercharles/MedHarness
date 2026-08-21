@@ -174,7 +174,7 @@ document_specifications:
   SRS:
     source: requirements_specification.md.j2
     output: DHF/documents/specs/software_requirement_specification.md
-    doc_type_name: Software Requirement Specification
+    doc_type_name: Software Requirement
   MODULE:
     source: software_design_document.md.j2
     output: DHF/documents/specs/software_design_document.md

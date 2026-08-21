@@ -117,12 +117,16 @@ def register(main):
     @click.option("--run-url", "run_url", default="")
     @click.option("--commit", "commit_sha", default="")
     @click.option("--continue-on-gate-failure", is_flag=True, default=False)
+    @click.option("--doc-format", "doc_format", type=click.Choice(["html", "pdf"]),
+                  default="html", show_default=True,
+                  help="Format for bundled specifications and plans. HTML needs no "
+                       "native libraries; PDF requires medharness[docs] plus cairo/pango.")
     @click.pass_context
     def evidence_bundle(ctx: click.Context, out_dir: Path,
                            junit_files: tuple[Path, ...], junit_dirs: tuple[Path, ...],
                            coverage_pairs: tuple[str, ...], traceability_types: tuple[str, ...],
                            run_id: str, run_url: str, commit_sha: str,
-                           continue_on_gate_failure: bool) -> None:
+                           continue_on_gate_failure: bool, doc_format: str) -> None:
         """Produce a read-only CI evidence bundle.
 
         Consumes JUnit files directly at bundle time (consume-at-bundle model).
@@ -137,6 +141,7 @@ def register(main):
             coverage_pairs=coverage_pairs, traceability_types=traceability_types,
             run_id=run_id, run_url=run_url, commit_sha=commit_sha,
             continue_on_gate_failure=continue_on_gate_failure,
+            doc_format=doc_format,
         )
         manifest = result["manifest"]
         gate_passed = result["gate_passed"]
