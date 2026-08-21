@@ -87,19 +87,42 @@ class TestCIEvidence:
     """Functional tests for evidence bundle."""
 
     def test_evidence_bundle(self, scaffolded_dhf, tmp_path):
-        """evidence bundle produces an out-dir (consume-at-bundle model)."""
+        """evidence bundle produces an out-dir (consume-at-bundle model).
+
+        The bundle defaults to HTML precisely so this needs no native renderer.
+        This test previously bailed out whenever weasyprint was missing, which
+        meant it asserted nothing at all on CI — and hid the fact that the
+        bundle could not be built on a base install.
+
+        --continue-on-gate-failure because a starter DHF has no JUnit evidence,
+        so the acceptance gate correctly fails; the artifacts are what is under
+        test here, not the gate verdict.
+        """
         out_dir = tmp_path / "bundle"
         dhf_root = scaffolded_dhf / "DHF"
         r = _run(
             "medharness", "--dhf", str(dhf_root),
             "evidence", "bundle",
             "--out-dir", str(out_dir),
+            "--continue-on-gate-failure",
         )
-        if r.returncode != 0 and ("cannot load library" in r.stderr or "weasyprint" in r.stderr.lower() or "no module" in r.stderr.lower()):
-            return  # weasyprint not available on this system
         assert r.returncode == 0, r.stderr
         data = json.loads(r.stdout)
         assert "gate_passed" in data
         assert (out_dir / "evidence-manifest.json").exists()
+
+        specs = list((out_dir / "specifications").glob("*.html"))
+        assert specs, "no specifications rendered into the bundle"
+        assert "<!DOCTYPE html>" in specs[0].read_text()
+
+    def test_evidence_bundle_gate_failure_exits_nonzero(self, scaffolded_dhf, tmp_path):
+        """Without --continue-on-gate-failure a failing gate must block."""
+        r = _run(
+            "medharness", "--dhf", str(scaffolded_dhf / "DHF"),
+            "evidence", "bundle",
+            "--out-dir", str(tmp_path / "bundle"),
+        )
+        assert r.returncode != 0
+        assert "acceptance gate failed" in r.stderr.lower()
 
 

@@ -338,16 +338,34 @@ class LocalDHFAdapter:
         self._rebuild_doc_index()
         return {"doc_type": doc_type_code, "output_path": str(output_path), "version": version}
 
-    def export_pdf(self, doc_type_code: str) -> dict:
+    def export_pdf(self, doc_type_code: str, out_dir: Path | None = None) -> dict:
         spec_result = self.generate_doc(doc_type_code)
         from dhfkit.document_generation import DocumentGenerator
         template_dir = self._resolve_template_dir()
         gen = DocumentGenerator(self._loader, self._config, template_dir)
-        pdf_path = gen.export_static_doc_to_pdf(doc_type_code, self._doc_specs, self._dhf_root)
+        pdf_path = gen.export_static_doc_to_pdf(
+            doc_type_code, self._doc_specs, self._dhf_root, out_dir
+        )
         return {
             "doc_type": doc_type_code,
             "md_path": spec_result["output_path"],
             "pdf_path": str(pdf_path),
+            "version": spec_result["version"],
+        }
+
+    def export_html(self, doc_type_code: str, out_dir: Path | None = None) -> dict:
+        spec_result = self.generate_doc(doc_type_code)
+        from dhfkit.document_generation import DocumentGenerator
+        template_dir = self._resolve_template_dir()
+        gen = DocumentGenerator(self._loader, self._config, template_dir)
+        html_path = gen.export_static_doc_to_html(
+            doc_type_code, self._doc_specs, self._dhf_root,
+            out_dir or (self._dhf_root / "documents" / "exports"),
+        )
+        return {
+            "doc_type": doc_type_code,
+            "md_path": spec_result["output_path"],
+            "html_path": str(html_path),
             "version": spec_result["version"],
         }
 

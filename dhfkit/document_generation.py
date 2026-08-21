@@ -8,6 +8,21 @@ import markdown
 import re
 
 
+_VOLATILE_ROWS = re.compile(
+    r'^\|\s*\*\*(?:Version|Generated)\*\*\s*\|.*$', re.MULTILINE
+)
+
+
+def _body(markdown_content: str) -> str:
+    """Strip the rows that change on every run, for content comparison.
+
+    Version and generation date are metadata about the render, not about the
+    document's substance; comparing with them in place would make every
+    regeneration look like a revision.
+    """
+    return _VOLATILE_ROWS.sub('', markdown_content).strip()
+
+
 class DocumentGenerator:
     """Generate regulatory documents from templates."""
 
@@ -52,75 +67,108 @@ class DocumentGenerator:
         if not doc_type_config:
             raise ValueError(f"Unknown document type: {doc_type_code}")
 
-        current_version = "1.0"
+        existing_content = ""
+        existing_version = None
         if output_path.exists():
             existing_content = output_path.read_text(encoding="utf-8")
             version_match = re.search(r'\|\s*\*\*Version\*\*\s*\|\s*(\d+)\.(\d+)\s*\|', existing_content)
             if version_match:
-                major = int(version_match.group(1))
-                minor = int(version_match.group(2))
-                current_version = f"{major}.{minor + 1}"
+                existing_version = (int(version_match.group(1)), int(version_match.group(2)))
 
-        # Gather all items of this type
+        # Match on the configured prefix, not the bare code: "SYSARCH-001"
+        # startswith("SYS") is true, which put every architecture item into the
+        # system requirements specification.
+        prefix = getattr(doc_type_config, "prefix", None) or f"{doc_type_code}-"
         all_items = self.loader.load_all()
         items = [
             item.model_dump(by_alias=True, exclude_none=True)
             for item in all_items
-            if item.uid.startswith(doc_type_code)
+            if item.uid.startswith(prefix)
         ]
         items.sort(key=lambda x: x['id'])
 
         project_name = getattr(self.config, 'project_name', 'DHF Project')
-        data = {
-            'doc_type_code': doc_type_code,
-            'doc_type_name': spec_config.get('doc_type_name', doc_type_config.name),
-            'test_type': spec_config.get('test_type', ''),
-            'project_name': project_name,
-            'version': current_version,
-            'generation_date': datetime.now().isoformat()[:10],
-            'status': 'Draft',
-            'items': items,
-            'directory': doc_type_config.directory if hasattr(doc_type_config, 'directory') else ''
-        }
-
         template = self.jinja_env.get_template(template_name)
-        markdown_content = template.render(**data)
+
+        def _render(version: str) -> str:
+            return template.render(
+                doc_type_code=doc_type_code,
+                doc_type_name=spec_config.get('doc_type_name', doc_type_config.name),
+                test_type=spec_config.get('test_type', ''),
+                project_name=project_name,
+                version=version,
+                generation_date=datetime.now().isoformat()[:10],
+                status='Draft',
+                items=items,
+                directory=getattr(doc_type_config, 'directory', ''),
+            )
+
+        # The document version is regulatory metadata: it must track content
+        # revisions, not how many times the generator ran. Previously every
+        # regeneration bumped the minor version and rewrote the file, so a CI
+        # job that regenerates docs inflated the version of a controlled
+        # document without anything having changed.
+        base_major, base_minor = existing_version or (1, 0)
+        markdown_content = _render(f"{base_major}.{base_minor}")
+
+        if existing_content:
+            if _body(markdown_content) == _body(existing_content):
+                return existing_content, output_path
+            markdown_content = _render(f"{base_major}.{base_minor + 1}")
 
         output_path.parent.mkdir(parents=True, exist_ok=True)
         output_path.write_text(markdown_content, encoding="utf-8")
 
         return markdown_content, output_path
 
-    def export_static_doc_to_pdf(self, doc_type_code: str, doc_specs: dict, dhf_root: Path) -> Path:
+    def _read_static_doc(self, doc_type_code: str, doc_specs: dict, dhf_root: Path) -> tuple[str, str]:
+        """Return (markdown, stem) for a generated specification on disk."""
+        if doc_type_code not in doc_specs:
+            raise ValueError(f"No document specification configured for {doc_type_code}")
+
+        static_file_path = dhf_root.parent / doc_specs[doc_type_code]['output']
+        if not static_file_path.exists():
+            raise FileNotFoundError(f"Static document not found: {static_file_path}")
+
+        stem = f"{doc_type_code}_Specification_{datetime.now().strftime('%Y%m%d')}"
+        return static_file_path.read_text(encoding="utf-8"), stem
+
+    def export_static_doc_to_html(self, doc_type_code: str, doc_specs: dict,
+                                  dhf_root: Path, out_dir: Path) -> Path:
+        """Render a generated specification to a standalone, styled HTML file.
+
+        Needs no native libraries, so it works on a base ``pip install
+        medharness`` — unlike the PDF path, which requires WeasyPrint's
+        cairo/pango stack.
         """
-        Export existing static markdown document to PDF.
+        markdown_content, stem = self._read_static_doc(doc_type_code, doc_specs, dhf_root)
+        out_dir.mkdir(parents=True, exist_ok=True)
+        output_path = out_dir / f"{stem}.html"
+        output_path.write_text(self._build_html(markdown_content), encoding="utf-8")
+        return output_path
+
+    def export_static_doc_to_pdf(self, doc_type_code: str, doc_specs: dict,
+                                 dhf_root: Path, out_dir: Path | None = None) -> Path:
+        """Export a generated specification to PDF.
 
         Args:
             doc_type_code: Document type code
             doc_specs: document_specifications dict from global config
             dhf_root: Path to DHF root directory
+            out_dir: Destination directory. Defaults to the DHF's exports
+                directory — never a shared /tmp, where concurrent runs on one
+                CI runner overwrite each other's evidence.
 
         Returns:
             Path to generated PDF file
         """
-        if doc_type_code not in doc_specs:
-            raise ValueError(f"No document specification configured for {doc_type_code}")
+        markdown_content, stem = self._read_static_doc(doc_type_code, doc_specs, dhf_root)
+        target = out_dir or (dhf_root / "documents" / "exports")
+        target.mkdir(parents=True, exist_ok=True)
+        return self._export_pdf(markdown_content, target / f"{stem}.pdf")
 
-        spec_config = doc_specs[doc_type_code]
-        static_file_path = dhf_root.parent / spec_config['output']
-
-        if not static_file_path.exists():
-            raise FileNotFoundError(f"Static document not found: {static_file_path}")
-
-        markdown_content = static_file_path.read_text(encoding="utf-8")
-
-        filename = f"{doc_type_code}_Specification_{datetime.now().strftime('%Y%m%d')}"
-        return self._export_pdf(markdown_content, filename)
-
-    def _export_pdf(self, markdown_content: str, filename: str) -> Path:
-        """Export markdown to PDF using WeasyPrint."""
-        from weasyprint import HTML
-
+    def _build_html(self, markdown_content: str) -> str:
+        """Render markdown to a self-contained HTML document with inline CSS."""
         html_content = markdown.markdown(
             markdown_content,
             extensions=['tables', 'fenced_code', 'toc', 'md_in_html']
@@ -129,23 +177,37 @@ class DocumentGenerator:
         css_path = self.template_dir / 'styles' / 'default.css'
         css_content = css_path.read_text(encoding="utf-8") if css_path.exists() else self._get_default_css()
 
-        full_html = f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="utf-8">
-            <style>
-                {css_content}
-            </style>
-        </head>
-        <body>
-            {html_content}
-        </body>
-        </html>
-        """
+        return (
+            "<!DOCTYPE html>\n"
+            '<html lang="en">\n'
+            "<head>\n"
+            '<meta charset="utf-8">\n'
+            '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
+            f"<style>\n{css_content}\n</style>\n"
+            "</head>\n"
+            f"<body>\n{html_content}\n</body>\n"
+            "</html>\n"
+        )
 
-        output_path = Path(f"/tmp/{filename}.pdf")
-        HTML(string=full_html).write_pdf(output_path)
+    def _export_pdf(self, markdown_content: str, output_path: Path) -> Path:
+        """Export markdown to PDF using WeasyPrint."""
+        try:
+            from weasyprint import HTML
+        except ImportError as exc:
+            raise RuntimeError(
+                "PDF export needs the 'docs' extra: pip install 'medharness[docs]'. "
+                "WeasyPrint also requires native cairo/pango libraries. "
+                "Use HTML export instead if those are unavailable."
+            ) from exc
+        except OSError as exc:
+            # WeasyPrint imports cleanly but raises OSError when its native
+            # libraries are missing — common on macOS without Homebrew pango.
+            raise RuntimeError(
+                f"PDF export unavailable — WeasyPrint cannot load its native "
+                f"libraries: {exc}. Use HTML export instead."
+            ) from exc
+
+        HTML(string=self._build_html(markdown_content)).write_pdf(output_path)
         return output_path
 
     def _get_default_css(self) -> str:

@@ -11,6 +11,54 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+### Bug Fixes
+
+- **Specifications contained items belonging to other document types.** The item
+  filter matched on the bare doc-type code, and `"SYSARCH-001".startswith("SYS")`
+  is true — so every architecture item was emitted into the system requirements
+  specification. It now matches on the configured prefix (`SYS-`). This affected
+  the default scaffold, whose starter DHF has both `SYS-001` and `SYSARCH-001`.
+
+- **Document versions tracked how often the generator ran, not content.** Every
+  regeneration bumped the minor version and rewrote the file, so a CI job that
+  regenerates docs inflated the version of a controlled document with nothing
+  changed (1.0 → 1.3 after three no-op runs). The version now advances only when
+  the rendered content actually differs, and an unchanged document is not
+  rewritten at all.
+
+- **`evidence bundle` could not run on a base install.** Both the specification
+  and plan paths hard-required WeasyPrint, which lives in the optional `docs`
+  extra, so `pip install medharness` followed by `evidence bundle` raised an
+  unhandled `ModuleNotFoundError`. Bundles now render HTML by default;
+  `--doc-format pdf` opts back into the PDF path.
+
+- **PDF exports were written to a hardcoded `/tmp` path**, so concurrent runs on
+  one CI runner overwrote each other's evidence, and the path was unusable on
+  Windows. Output now defaults to `DHF/documents/exports` and accepts
+  `--out-dir`.
+
+- **A missing PDF renderer produced a traceback** rather than a message saying
+  what to install. It now reports the extra and the native-library requirement,
+  and points at HTML export.
+
+- The SRS specification was titled "Software Requirement Specification
+  Specification" — `doc_type_name` already carried the suffix the template
+  appends. Items without a `status` rendered as an empty `<span class="status-">`.
+
+### New Features
+
+- **`dhfkit doc export --format html`** (now the default) renders a
+  specification to a standalone HTML file with inlined CSS. No native libraries,
+  so it works everywhere `medharness` installs — and the result can be committed,
+  published, or handed to a reviewer without a viewer.
+
+### Internal
+
+- `dhfkit/tests/test_document_generation.py` covers all of the above.
+- The `evidence bundle` contract test returned early whenever WeasyPrint was
+  absent, so on CI it asserted nothing at all — which is why none of this was
+  caught. It now runs the bundle and checks the rendered artifacts.
+
 ---
 
 ## [0.12.1] — 2026-08-19

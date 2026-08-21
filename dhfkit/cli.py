@@ -632,19 +632,28 @@ def release_baseline_cmd(
 
 @doc.command("export")
 @click.argument("doc_type")
+@click.option("--format", "fmt", type=click.Choice(["html", "pdf"]), default="html",
+              show_default=True,
+              help="HTML needs no native libraries and works on a base install; "
+                   "PDF requires medharness[docs] plus cairo/pango.")
+@click.option("--out-dir", "out_dir", default=None,
+              type=click.Path(file_okay=False, path_type=Path),
+              help="Destination directory (default: DHF/documents/exports).")
 @click.pass_context
-def doc_export(ctx: click.Context, doc_type: str) -> None:
-    """Regenerate spec and export to PDF.
+def doc_export(ctx: click.Context, doc_type: str, fmt: str, out_dir: Path | None) -> None:
+    """Regenerate spec and export it.
 
     DOC_TYPE is a configured code (e.g. SYS) or ALL.
     """
     adapter = _make_adapter(ctx.obj["dhf"])
     codes = adapter.get_available_doc_types() if doc_type.upper() == "ALL" else [doc_type]
+    key = f"{fmt}_path"
     for code in codes:
         try:
-            result = adapter.export_pdf(code)
+            result = (adapter.export_html(code, out_dir) if fmt == "html"
+                      else adapter.export_pdf(code, out_dir))
             click.echo(json.dumps(result))
-            click.echo(f"✓ {code} → {result['pdf_path']}", err=True)
+            click.echo(f"✓ {code} → {result[key]}", err=True)
         except Exception as e:
             click.echo(f"✗ {code}: {e}", err=True)
             if len(codes) == 1:

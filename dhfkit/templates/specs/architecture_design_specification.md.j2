@@ -133,7 +133,7 @@ The boundary between implementation and formal evidence is carried by:
 
 <div class="architecture-section" markdown="1">
 
-**Status**: <span class="status-{{ item.status }}">{{ item.status | upper }}</span>  
+**Status**: <span class="status-{{ item.status or "unknown" }}">{{ item.status | status_badge }}</span>  
 {% if item.component %}**Component**: {{ item.component }}  {% endif %}
 {% if item.architecture_type %}**Architecture Type**: {{ item.architecture_type }}  {% endif %}
 

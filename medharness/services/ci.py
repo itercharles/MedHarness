@@ -284,6 +284,7 @@ def build_evidence_bundle(
     run_url: str = "",
     commit_sha: str = "",
     continue_on_gate_failure: bool = False,
+    doc_format: str = "html",
 ) -> dict[str, Any]:
     """Produce a self-contained CI evidence bundle.
 
@@ -313,7 +314,7 @@ def build_evidence_bundle(
 
     artifacts = _run_artifact_generation(
         adapter, core, dhf_path, out_dir, doc_types, trace_types,
-        list(junit_paths), skip_plans=False,
+        list(junit_paths), skip_plans=False, doc_format=doc_format,
     )
 
     compliance_reports: list[dict] = []
