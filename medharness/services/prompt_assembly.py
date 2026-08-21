@@ -61,21 +61,33 @@ _ROLE_LABELS: dict[str, str] = {
 }
 
 
-def _build_dhf_context_block(dhf_path: Path) -> str:
-    # Inline imports avoid coupling prompt_assembly to dhfkit/medharness core
-    # at import-time. These modules are only needed when a real DHF path is
-    # provided at runtime.
+def _load_adapter(dhf_path: Path, purpose: str):
+    """Open the DHF for prompt enrichment, failing loudly when it cannot be read.
+
+    A caller that passes a dhf_path is asking for that context. Degrading to an
+    empty block would send the design stage to the model with no knowledge of the
+    existing DHF — it would then propose a V-model cascade blind to what is
+    already there, and nothing downstream would report why.
+
+    Callers that want no DHF context pass dhf_path=None instead.
+    """
+    # Inline import avoids coupling prompt_assembly to dhfkit at import-time;
+    # it is only needed when a real DHF path is provided at runtime.
     from dhfkit.local_adapter import LocalDHFAdapter
 
+    try:
+        return LocalDHFAdapter(dhf_path)
+    except Exception as exc:
+        raise RuntimeError(
+            f"Cannot load DHF at {dhf_path} for {purpose}: {exc}"
+        ) from exc
+
+
+def _build_dhf_context_block(dhf_path: Path) -> str:
     from medharness.core import MedHarnessCore
 
-    # Silent degradation: prompt assembly is a best-effort enrichment. If the
-    # DHF cannot be loaded the caller still gets the base prompt + skills.
-    try:
-        adapter = LocalDHFAdapter(dhf_path)
-        core = MedHarnessCore(adapter)
-    except Exception:
-        return ""
+    adapter = _load_adapter(dhf_path, "DHF context")
+    core = MedHarnessCore(adapter)
 
     lines = ["## Pre-computed DHF Context\n"]
 
@@ -89,15 +101,12 @@ def _build_dhf_context_block(dhf_path: Path) -> str:
 
     by_role: dict[str, list[str]] = {}
     role_codes: dict[str, list[str]] = {}
-    try:
-        for dt in adapter.list_item_types():
-            if dt.get("role"):
-                role = dt["role"]
-                entry = f"{dt['code']} ({dt['display_name']})"
-                by_role.setdefault(role, []).append(entry)
-                role_codes.setdefault(role, []).append(dt["code"])
-    except Exception:
-        pass  # Type Registry is best-effort; degrade if adapter is unavailable
+    for dt in adapter.list_item_types():
+        if dt.get("role"):
+            role = dt["role"]
+            entry = f"{dt['code']} ({dt['display_name']})"
+            by_role.setdefault(role, []).append(entry)
+            role_codes.setdefault(role, []).append(dt["code"])
     if by_role:
         lines.append(
             "### Type Registry\n"
@@ -173,14 +182,9 @@ def _build_dhf_context_block(dhf_path: Path) -> str:
 
 def _build_risk_context_block(dhf_path: Path) -> str:
     """Summarise the current RISK/RCM landscape for injection into generate-dhf prompts."""
-    try:
-        from dhfkit.local_adapter import LocalDHFAdapter
-
-        adapter = LocalDHFAdapter(dhf_path)
-        config = adapter._config
-        items = adapter.list_items()
-    except Exception:
-        return ""
+    adapter = _load_adapter(dhf_path, "risk context")
+    config = adapter._config
+    items = adapter.list_items()
 
     risk_dt = config.get_doc_type("RISK")
     rcm_dt = config.get_doc_type("RCM")
@@ -230,14 +234,10 @@ def _build_risk_context_block(dhf_path: Path) -> str:
 
 def _build_module_context_block(dhf_path: Path) -> str:
     """Pre-compute the MODULE → SWDD → SRS map for the develop prompt."""
-    try:
-        from dhfkit.local_adapter import LocalDHFAdapter
-        from dhfkit.traceability import build_module_map
+    from dhfkit.traceability import build_module_map
 
-        adapter = LocalDHFAdapter(dhf_path)
-        module_map = build_module_map(adapter.list_items(), adapter._config)
-    except Exception:
-        return ""
+    adapter = _load_adapter(dhf_path, "module map")
+    module_map = build_module_map(adapter.list_items(), adapter._config)
 
     if not module_map:
         return ""
@@ -260,12 +260,34 @@ def _build_module_context_block(dhf_path: Path) -> str:
     return "".join(lines)
 
 
-def _assemble_develop_prompt(cr_id: str, dhf_path: Path | None = None) -> str:
+def _enrich(prompt: str, builder, dhf_path: Path, warnings: list[dict] | None) -> str:
+    """Append an optional context block, recording the reason when it is absent.
+
+    Enrichment stays non-fatal — a DHF that cannot be read should not abort a
+    stage that can still run without it — but the failure is now reported through
+    the caller's warnings channel instead of vanishing. Silently returning the
+    bare prompt sent the model into a stage believing it had seen the DHF.
+
+    The warning shape mirrors cr_generation._warning; prompt_assembly cannot
+    import it without a cycle, since cr_generation imports from here.
+    """
+    try:
+        block = builder(dhf_path)
+    except Exception as exc:  # noqa: BLE001 — reported, not swallowed
+        if warnings is not None:
+            warnings.append({
+                "code": "dhf_context_unavailable",
+                "message": str(exc),
+            })
+        return prompt
+    return prompt + "\n\n" + block if block else prompt
+
+
+def _assemble_develop_prompt(cr_id: str, dhf_path: Path | None = None,
+                             warnings: list[str] | None = None) -> str:
     prompt = _load_prompt("cr_develop.md").replace("{{cr_id}}", cr_id)
     if dhf_path is not None:
-        module_block = _build_module_context_block(dhf_path)
-        if module_block:
-            prompt += "\n\n" + module_block
+        prompt = _enrich(prompt, _build_module_context_block, dhf_path, warnings)
     return prompt
 
 
@@ -277,15 +299,12 @@ def _assemble_review_design_prompt(cr_id: str) -> str:
     return _load_prompt("cr_review_design.md").replace("{{cr_id}}", cr_id)
 
 
-def _assemble_generate_dhf_prompt(cr_id: str, dhf_path: Path | None = None) -> str:
+def _assemble_generate_dhf_prompt(cr_id: str, dhf_path: Path | None = None,
+                                  warnings: list[str] | None = None) -> str:
     prompt = _load_prompt("cr_generate_dhf.md").replace("{{cr_id}}", cr_id)
     if dhf_path is not None:
-        block = _build_dhf_context_block(dhf_path)
-        if block:
-            prompt += "\n\n" + block
-        risk_block = _build_risk_context_block(dhf_path)
-        if risk_block:
-            prompt += "\n\n" + risk_block
+        prompt = _enrich(prompt, _build_dhf_context_block, dhf_path, warnings)
+        prompt = _enrich(prompt, _build_risk_context_block, dhf_path, warnings)
     return _append_skills(prompt)
 
 

@@ -25,6 +25,7 @@ from medharness.services.prompt_assembly import (
     _assemble_review_code_prompt,
     _assemble_review_design_prompt,
     _build_dhf_context_block,
+    _enrich,
 )
 
 __all__ = [
@@ -752,9 +753,7 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> di
             f"  python -m dhfkit --dhf DHF validate traceability\n\n"
             f"Review feedback:\n{feedback['prompt_text']}"
         )
-        block = _build_dhf_context_block(dhf_path)
-        if block:
-            prompt += "\n\n" + block
+        prompt = _enrich(prompt, _build_dhf_context_block, dhf_path, warnings)
         prompt = _append_skills(prompt)
         steps.append(_finish_step(prompt_step, prompt_perf, "ok"))
     else:
@@ -762,7 +761,7 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> di
             "prepare_prompt",
             {"prompt_kind": "generate_dhf_generation", "used_pr_feedback": False},
         )
-        prompt = _assemble_generate_dhf_prompt(cr_id, dhf_path)
+        prompt = _assemble_generate_dhf_prompt(cr_id, dhf_path, warnings)
         steps.append(_finish_step(prompt_step, prompt_perf, "ok"))
 
     rc, _, session_id = _run_claude_step(
@@ -1062,7 +1061,7 @@ def generate_code(
             "prepare_prompt",
             {"prompt_kind": "develop_generation", "used_pr_feedback": False},
         )
-        prompt = _assemble_develop_prompt(cr_id, dhf_path=dhf_path)
+        prompt = _assemble_develop_prompt(cr_id, dhf_path=dhf_path, warnings=warnings)
         diff = git.compute_diff(repo_root, "origin/main", *_DEFAULT_CODE_PATHS)
         if diff:
             truncated = len(diff) > MAX_DIFF_CHARS

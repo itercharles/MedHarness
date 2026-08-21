@@ -1056,10 +1056,47 @@ class TestGenerateCode:
 # ── DHF context block ──────────────────────────────────────────────────────────
 
 class TestBuildDhfContextBlock:
-    def test_returns_empty_on_adapter_failure(self, tmp_path):
+    def test_raises_on_adapter_failure(self, tmp_path):
+        """An unreadable DHF must not degrade to an empty block in silence."""
+        from medharness.services.prompt_assembly import _build_dhf_context_block as build
+
         dhf = tmp_path / "nonexistent"
-        result = _build_dhf_context_block(dhf)
-        assert result == ""
+        with pytest.raises(RuntimeError, match="Cannot load DHF"):
+            build(dhf)
+
+    def test_enrich_records_failure_as_warning_and_continues(self, tmp_path):
+        """Callers keep running, but the reason reaches the warnings channel."""
+        from medharness.services.prompt_assembly import (
+            _build_dhf_context_block as build,
+            _enrich,
+        )
+
+        warnings: list[dict] = []
+        prompt = _enrich("BASE", build, tmp_path / "nonexistent", warnings)
+
+        assert prompt == "BASE"
+        assert len(warnings) == 1
+        assert warnings[0]["code"] == "dhf_context_unavailable"
+        assert "Cannot load DHF" in warnings[0]["message"]
+
+    def test_enrich_tolerates_no_warnings_channel(self, tmp_path):
+        from medharness.services.prompt_assembly import (
+            _build_dhf_context_block as build,
+            _enrich,
+        )
+
+        assert _enrich("BASE", build, tmp_path / "nonexistent", None) == "BASE"
+
+    def test_generate_dhf_surfaces_context_failure(self, tmp_path):
+        """The warning must reach the caller's result, not just an internal list."""
+        from medharness.services.prompt_assembly import _assemble_generate_dhf_prompt
+
+        warnings: list[dict] = []
+        _assemble_generate_dhf_prompt("CR-001", tmp_path / "nonexistent", warnings)
+
+        assert [w["code"] for w in warnings] == [
+            "dhf_context_unavailable", "dhf_context_unavailable",
+        ]  # DHF context block and risk block both report
 
     def test_includes_item_type_summary(self, tmp_path):
         from tests.fixtures.stub_adapter import StubDHFAdapter
