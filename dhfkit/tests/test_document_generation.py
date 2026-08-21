@@ -130,11 +130,17 @@ class TestHtmlExport:
         assert r.exit_code == 0, r.output
         assert list(target.glob("*.html"))
 
-    def test_export_writes_nothing_to_tmp(self, dhf: Path) -> None:
-        """The old path hardcoded /tmp, which collided across concurrent runs."""
-        CliRunner().invoke(main, ["--dhf", str(dhf), "doc", "export", "SRS"])
+    def test_output_is_scoped_to_the_dhf(self, dhf: Path) -> None:
+        """The old path was a fixed /tmp location shared by every run.
+
+        Asserting the absence of "/tmp" would be wrong — pytest's own tmp_path
+        lives under /tmp on Linux. What matters is that the destination derives
+        from the DHF, so two DHFs on one runner cannot collide.
+        """
+        r = CliRunner().invoke(main, ["--dhf", str(dhf), "doc", "export", "SRS"])
+        assert r.exit_code == 0, r.output
         written = next((dhf / "documents" / "exports").glob("*.html"))
-        assert not str(written).startswith("/tmp/")
+        assert written.is_relative_to(dhf)
 
 
 class TestPdfFallback:
