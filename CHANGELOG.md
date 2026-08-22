@@ -11,6 +11,15 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+### Internal
+
+- Removed `medharness/services/release_baseline.py`, a dead duplicate of
+  `dhfkit/release_baseline.py` orphaned by #189 when DHF data operations moved
+  to `dhfkit`. Nothing imported it — the two copies differed only in one import
+  line — but it shipped in the wheel, showed as 0% coverage (diluting the signal
+  used to find genuinely untested code), and was a trap: editing it would have
+  had no effect and raised no error.
+
 ### Bug Fixes
 
 - **Specifications contained items belonging to other document types.** The item
