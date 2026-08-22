@@ -13,6 +13,50 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ### Bug Fixes
 
+- **Document versions still advanced once per day.** The previous fix compared
+  renders with the `Version` and `Generated` metadata rows masked, but every
+  spec template also prints the date in prose (`**Last Updated**: …`), so a
+  regeneration on a later day still read as a content change. Comparison now
+  re-renders using the existing document's own date, which is exact and does not
+  depend on knowing where a template prints it. The earlier test could not catch
+  this because all its generations ran within one second.
+
+- **A running GitLab pipeline shadowed the finished one.** Dropping the
+  `status=success` filter made failing runs fetchable, but also let a re-run
+  still in flight — or a cancelled one — win the "newest pipeline" query and
+  return zero artifacts. GitLab has no `completed` status to ask for, so a page
+  is fetched and the newest terminal pipeline (`success` or `failed`) is taken,
+  matching what GitHub's `status=completed` already did.
+
+- **JUnit injection kept requirements verified by deleted tests.** The merge
+  introduced in the previous release preserved *every* stored result, so
+  removing a test left its requirement `verified` by a stale stored PASS. The
+  merge now preserves only what a JUnit run cannot carry — manual review records
+  — while ordinary automated results are superseded by the batch. This keeps the
+  behaviour that merge was chosen for and drops the part that was never intended.
+
+- `evidence bundle` wrote date-stamped HTML into `DHF/documents/exports/` with
+  no `.gitignore` entry, so a merge-to-main CI run dirtied the tree and
+  accumulated a fresh set daily.
+
+- In the test specification template, `{{ status or 'NOT VERIFIED' | upper }}`
+  binds as `status or ('NOT VERIFIED' | upper)`, so a set status rendered
+  lowercase beside the badge that was just fixed to uppercase it.
+
+- `gh api --slurp` requires gh 2.44. On an older CLI the paginated call failed
+  outright, aborting CR intake where it previously succeeded with truncated
+  input; it now falls back to a single page.
+
+### Internal
+
+- `dhfkit/tests/test_document_generation.py` imported `medharness.workflows.init`,
+  breaking the `dhfkit` → `medharness` boundary and the ability to run dhfkit's
+  suite standalone. It now builds its fixture from the bundled templates
+  directly. A check over the whole package confirms no such import remains.
+
+
+### Bug Fixes
+
 - **`medharness init` permanently corrupted the installed package.** The
   documented setup creates `.venv` inside the project, and
   `_replace_placeholders` walked the whole tree — so it rewrote

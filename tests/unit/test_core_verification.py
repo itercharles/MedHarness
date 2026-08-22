@@ -41,11 +41,13 @@ def _core(dhf: Path) -> MedHarnessCore:
     return MedHarnessCore(LocalDHFAdapter(dhf))
 
 
-def _record(dhf: Path, tc_id: str, links: list[str], status: str = "PASS") -> None:
-    adapter = LocalDHFAdapter(dhf)
-    adapter._result_store.record_executions(
-        [{"tc_id": tc_id, "testing_status": status, "links": links}]
-    )
+def _record(dhf: Path, tc_id: str, links: list[str], status: str = "PASS",
+            reviewer: str = "") -> None:
+    """Record a result. Passing `reviewer` makes it a manual review record."""
+    entry = {"tc_id": tc_id, "testing_status": status, "links": links}
+    if reviewer:
+        entry.update({"reviewer": reviewer, "review_status": "approved"})
+    LocalDHFAdapter(dhf)._result_store.record_executions([entry])
 
 
 def _junit(path: Path, links: str, failed: bool = False) -> Path:
@@ -88,9 +90,15 @@ class TestVerificationRequiresEvidence:
 
 
 class TestJunitInjectionMerges:
-    def test_stored_verification_survives_an_unrelated_junit(self, dhf: Path, tmp_path: Path) -> None:
-        """Replacing wholesale wiped evidence the JUnit could not carry."""
-        _record(dhf, "TC-SRS-001", ["SRS-001"])
+    """Merge only what a JUnit run cannot carry.
+
+    Manual review records live solely in the store and must survive. Ordinary
+    automated results are superseded by the batch — otherwise deleting a test
+    left its requirement `verified` by a stale stored PASS.
+    """
+
+    def test_manual_review_record_survives_an_unrelated_junit(self, dhf: Path, tmp_path: Path) -> None:
+        _record(dhf, "TC-SRS-001", ["SRS-001"], reviewer="qa@example.com")
         core = _core(dhf)
         assert core.get_item("SRS-001")["verification_status"] == "verified"
 
@@ -98,6 +106,17 @@ class TestJunitInjectionMerges:
 
         assert core.get_item("SRS-001")["verification_status"] == "verified"
         assert core.get_item("SYS-001")["verification_status"] == "verified"
+
+    def test_stale_automated_result_does_not_survive(self, dhf: Path, tmp_path: Path) -> None:
+        """A deleted test must drop its requirement, not leave it verified."""
+        _record(dhf, "TC-SRS-001", ["SRS-001"])
+        core = _core(dhf)
+        assert core.get_item("SRS-001")["verification_status"] == "verified"
+
+        # The batch no longer contains a test for SRS-001 — it was deleted.
+        core.inject_junit_results([_junit(tmp_path / "sys.xml", "SYS-001")])
+
+        assert core.get_item("SRS-001")["verification_status"] == "not_verified"
 
     def test_junit_overrides_the_store_for_the_same_item(self, dhf: Path, tmp_path: Path) -> None:
         _record(dhf, "TC-SRS-001", ["SRS-001"])

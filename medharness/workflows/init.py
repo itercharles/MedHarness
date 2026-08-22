@@ -185,6 +185,10 @@ __pycache__/
 # committed alongside the items it verifies.
 /test-results/
 artifacts/
+
+# Regenerated on demand from the items, and date-stamped, so a new set appears
+# every day an evidence bundle runs.
+DHF/documents/exports/
 *.egg-info/
 dist/
 build/
