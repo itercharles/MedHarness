@@ -52,7 +52,7 @@ class MedHarnessCore:
             node_id
             for node_id in self.graph.graph.nodes
             if (
-                cfg := self._adapter.get_item_type(node_id.split("-")[0] + "-")
+                cfg := self._adapter.get_item_type(node_id.rsplit("-", 1)[0] + "-")
             ) and cfg.get("has_verification")
         }
         self._inject_verification_status(verifiable_ids)
@@ -96,7 +96,7 @@ class MedHarnessCore:
             node_id
             for node_id in self.graph.graph.nodes
             if (
-                cfg := self._adapter.get_item_type(node_id.split("-")[0] + "-")
+                cfg := self._adapter.get_item_type(node_id.rsplit("-", 1)[0] + "-")
             ) and cfg.get("has_verification")
         }
         # Merge, don't replace. Items named in the supplied JUnit take their
@@ -134,7 +134,7 @@ class MedHarnessCore:
         for item_id in item_ids:
             if not self.graph.graph.has_node(item_id):
                 continue
-            prefix = item_id.split("-")[0] + "-"
+            prefix = item_id.rsplit("-", 1)[0] + "-"
             doc_type_cfg = self._adapter.get_item_type(prefix)
             if not doc_type_cfg or not doc_type_cfg.get("has_verification"):
                 continue
@@ -173,7 +173,7 @@ class MedHarnessCore:
     # ------------------------------------------------------------------
 
     def _get_item_type_name(self, item_id: str) -> str:
-        prefix = item_id.split('-')[0] + '-'
+        prefix = item_id.rsplit("-", 1)[0] + "-"
         item_type = self._adapter.get_item_type(prefix)
         if item_type:
             return item_type.get("display_name", "OTHER")
@@ -276,8 +276,15 @@ class MedHarnessCore:
     def validate(self) -> Dict[str, Any]:
         return self.graph.validate()
 
-    def check_coverage(self, pairs: List[tuple]) -> Dict[str, Any]:
+    def check_coverage(self, pairs: List[tuple], strict: bool = True) -> Dict[str, Any]:
         """Check that every item at the parent level is covered by at least one child.
+
+        Args:
+            strict: When True (user-supplied pairs), an unconfigured document
+                type is an error — the caller asked for something that does not
+                exist. When False (implicit defaults spanning the full V-model),
+                unconfigured layers are skipped, since a project is entitled to
+                omit one.
 
         Args:
             pairs: List of (parent_type, child_type) tuples, e.g.
@@ -304,6 +311,19 @@ class MedHarnessCore:
                     (parent_type, parent_prefix), (child_type, child_prefix)
                 ) if prefix is None
             ]
+            if unknown and not strict:
+                # Implicit defaults span the full V-model; a project that does
+                # not configure a layer is not in error for omitting it.
+                results.append({
+                    "parent_type": parent_type,
+                    "child_type": child_type,
+                    "passed": True,
+                    "total": 0,
+                    "covered": 0,
+                    "uncovered": [],
+                    "skipped": f"not configured: {', '.join(unknown)}",
+                })
+                continue
             if unknown:
                 results.append({
                     "parent_type": parent_type,

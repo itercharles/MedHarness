@@ -227,6 +227,16 @@ def register(main):
                                    " to block the build on this.", err=True)
         if "coverage" in r:
             for row in r["coverage"].get("pairs", []):
+                if row.get("error"):
+                    # Without this the line read as a coverage shortfall, which
+                    # sent people looking for missing items rather than a typo.
+                    click.echo(f"FAIL [gate] {row['parent_type']}→{row['child_type']}: "
+                               f"{row['error']}", err=True)
+                    continue
+                if row.get("skipped"):
+                    click.echo(f"SKIP [gate] {row['parent_type']}→{row['child_type']}: "
+                               f"{row['skipped']}", err=True)
+                    continue
                 click.echo(f"{'PASS' if row.get('passed') else 'FAIL'} [gate] "
                            f"{row['parent_type']}→{row['child_type']}: "
                            f"{row['covered']}/{row['total']} covered", err=True)
