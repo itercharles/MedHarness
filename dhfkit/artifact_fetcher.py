@@ -25,6 +25,7 @@ from pathlib import Path
 from typing import List
 import urllib.error
 import urllib.request
+from urllib.parse import quote
 from urllib.request import Request, urlopen
 
 from dhfkit.junit_parser import ExecutionResult, parse_junit_xml
@@ -33,6 +34,10 @@ _GITHUB_API = "https://api.github.com"
 
 # Artifact names uploaded by the CI pipeline
 _ARTIFACT_NAMES = {"unit-test-results", "sys-test-results", "crs-test-results"}
+
+# Provider defaults are small (GitHub 30, GitLab 20). A matrix build easily
+# exceeds them, and a silently truncated listing loses evidence.
+_PER_PAGE = 100
 
 
 class GitHubArtifactFetcher:
@@ -114,7 +119,7 @@ class GitHubArtifactFetcher:
         """Return the most recent completed workflow run ID for the given commit."""
         data = self._api_get(
             f"/repos/{self._repo}/actions/runs"
-            f"?head_sha={commit_sha}&status=completed"
+            f"?head_sha={commit_sha}&status=completed&per_page={_PER_PAGE}"
         )
         runs = data.get("workflow_runs", [])
         if not runs:
@@ -126,7 +131,7 @@ class GitHubArtifactFetcher:
 
     def _fetch_by_run_id(self, run_id: str) -> List[ExecutionResult]:
         data = self._api_get(
-            f"/repos/{self._repo}/actions/runs/{run_id}/artifacts"
+            f"/repos/{self._repo}/actions/runs/{run_id}/artifacts?per_page={_PER_PAGE}"
         )
         results: List[ExecutionResult] = []
         for artifact in data.get("artifacts", []):
@@ -245,6 +250,16 @@ class GitLabArtifactFetcher:
         self._token = token
         self._dhf_path = dhf_path
 
+    @property
+    def _api_project(self) -> str:
+        """Project identifier as GitLab's API expects it in a URL path.
+
+        A numeric ID is used as-is; a ``namespace/project`` path must be
+        URL-encoded, since an unescaped slash makes the API read it as extra
+        path segments and every request 404s.
+        """
+        return quote(self._project_id, safe="")
+
     @classmethod
     def from_environment(cls, dhf_path: Path) -> "GitLabArtifactFetcher":
         token = os.environ.get("GITLAB_TOKEN", "")
@@ -302,31 +317,40 @@ class GitLabArtifactFetcher:
     # ------------------------------------------------------------------
 
     def _find_latest_pipeline_id(self, commit_sha: str) -> str:
+        # No status filter: a DHF has to record FAIL evidence, so the pipeline
+        # whose tests failed is exactly the one whose results are needed.
+        # Filtering on status=success made those runs unfetchable.
         data = self._api_get(
-            f"/api/v4/projects/{self._project_id}/pipelines"
-            f"?sha={commit_sha}&status=success&order_by=id&sort=desc&per_page=1"
+            f"/api/v4/projects/{self._api_project}/pipelines"
+            f"?sha={commit_sha}&order_by=id&sort=desc&per_page=1"
         )
         if not data:
             raise ValueError(
-                f"No successful GitLab pipeline found for commit {commit_sha[:8]}."
+                f"No GitLab pipeline found for commit {commit_sha[:8]}."
             )
         return str(data[0]["id"])
 
     def _fetch_by_pipeline_id(self, pipeline_id: str) -> List[ExecutionResult]:
         jobs = self._api_get(
-            f"/api/v4/projects/{self._project_id}/pipelines/{pipeline_id}/jobs"
+            f"/api/v4/projects/{self._api_project}/pipelines/{pipeline_id}/jobs"
+            f"?per_page={_PER_PAGE}"
         )
         results: List[ExecutionResult] = []
         for job in jobs:
             job_id = str(job["id"])
             artifact_url = (
-                f"{self._base_url}/api/v4/projects/{self._project_id}"
+                f"{self._base_url}/api/v4/projects/{self._api_project}"
                 f"/jobs/{job_id}/artifacts"
             )
             try:
                 raw = self._download_raw(artifact_url)
-            except Exception:
-                continue
+            except urllib.error.HTTPError as exc:
+                # Most jobs upload nothing, and GitLab answers 404 for those.
+                # Anything else — 403, 5xx — means evidence exists but could not
+                # be read, which must not be reported as "no results".
+                if exc.code == 404:
+                    continue
+                raise
             results.extend(self._parse_zip(raw))
         return results
 

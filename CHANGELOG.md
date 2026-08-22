@@ -13,6 +13,38 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ### Bug Fixes
 
+- **GitLab artifact fetching was broken for every auto-detected project.** The
+  project path (`namespace/project`) was interpolated unencoded into
+  `/api/v4/projects/{id}/...`, so the unescaped slash made GitLab read it as
+  extra path segments and every request 404d. It is now URL-encoded; a numeric
+  `GITLAB_PROJECT_ID` is still passed through as-is.
+
+- **Failing GitLab pipelines could not be fetched.** The pipeline lookup
+  filtered on `status=success`, so a run whose tests failed raised "no pipeline
+  found" — the run whose results a DHF most needs to record. The filter is gone;
+  the most recent pipeline for the commit is used regardless of outcome. GitHub
+  was already correct here, filtering on `status=completed`.
+
+- **Denied artifact downloads were reported as "no evidence".** A bare
+  `except Exception: continue` swallowed 403s and transport errors alongside the
+  404s that legitimately mean "this job uploaded nothing", so an auth failure
+  silently recorded every requirement as unverified. Only 404 is skipped now;
+  anything else propagates.
+
+- **Artifact and job listings were truncated silently.** Neither fetcher set
+  `per_page`, so GitHub returned at most 30 artifacts and GitLab 20 jobs. A
+  matrix build exceeding those limits lost evidence with no indication. Both now
+  request 100.
+
+### Internal
+
+- `dhfkit/tests/test_artifact_fetcher.py` — the module had no test file at all
+  (250 statements, reachable only through `test pull` against a live CI
+  provider). A fake `urlopen` records requested URLs, so the tests assert on the
+  requests themselves rather than only on parsed output. Coverage 20% → 63%.
+
+### Bug Fixes
+
 - **Specifications contained items belonging to other document types.** The item
   filter matched on the bare doc-type code, and `"SYSARCH-001".startswith("SYS")`
   is true — so every architecture item was emitted into the system requirements
