@@ -181,7 +181,10 @@ def _build_traceability_report_payload(core, doc_types: tuple[str, ...],
             item_id = row.get(col)
             if not item_id:
                 continue
-            prefix = item_id.split("-")[0] + "-"
+            # rsplit matches dhfkit's Item.prefix: a doc type may configure a
+            # multi-segment prefix such as TC-VER-, which split()[0] reduces
+            # to "TC-" and no lookup then matches.
+            prefix = item_id.rsplit("-", 1)[0] + "-"
             cfg = core._adapter.get_item_type(prefix)
             if not cfg or not cfg.get("has_verification"):
                 continue
@@ -203,7 +206,10 @@ def _build_traceability_report_payload(core, doc_types: tuple[str, ...],
             if not item_id or item_id in seen_ids:
                 continue
             seen_ids.add(item_id)
-            prefix = item_id.split("-")[0] + "-"
+            # rsplit matches dhfkit's Item.prefix: a doc type may configure a
+            # multi-segment prefix such as TC-VER-, which split()[0] reduces
+            # to "TC-" and no lookup then matches.
+            prefix = item_id.rsplit("-", 1)[0] + "-"
             cfg = core._adapter.get_item_type(prefix)
             if not cfg or not cfg.get("has_verification"):
                 continue
@@ -211,7 +217,7 @@ def _build_traceability_report_payload(core, doc_types: tuple[str, ...],
             if not item:
                 continue
             test_cases = item.get("test_cases") or []
-            coverage.setdefault(item_id.split("-")[0], []).append({
+            coverage.setdefault(item_id.rsplit("-", 1)[0], []).append({
                 "id": item_id,
                 "title": item.get("title", ""),
                 "status": item.get("verification_status", "not_verified"),
@@ -520,9 +526,14 @@ def _load_issue_comments(
     if not source_repo or issue_number is None:
         return []
 
+    # --paginate follows Link headers; --slurp wraps the pages in an outer
+    # array so the output stays valid JSON. Without them an issue past 100
+    # comments was silently truncated, and the CR was built from partial input.
     command = [
         "gh",
         "api",
+        "--paginate",
+        "--slurp",
         f"repos/{source_repo}/issues/{issue_number}/comments?per_page=100",
     ]
     proc = subprocess.run(
@@ -536,12 +547,17 @@ def _load_issue_comments(
         message = (proc.stderr or proc.stdout).strip()
         raise click.ClickException(message or f"failed to fetch comments for issue {issue_number}")
     try:
-        comments = json.loads(proc.stdout or "[]")
+        payload = json.loads(proc.stdout or "[]")
     except json.JSONDecodeError as exc:
         raise click.ClickException("gh api returned invalid JSON for issue comments") from exc
-    if not isinstance(comments, list):
+    if not isinstance(payload, list):
         raise click.ClickException("gh api returned unexpected issue comments payload")
-    return comments
+
+    # --slurp yields a list of pages; flatten it. A plain list of comments is
+    # still accepted so a --comments-file fixture or an unslurped response works.
+    if payload and all(isinstance(page, list) for page in payload):
+        return [comment for page in payload for comment in page]
+    return payload
 
 
 def _generate_plan_artifacts(dhf_path: Path, out_dir: Path,

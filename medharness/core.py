@@ -44,9 +44,10 @@ class MedHarnessCore:
     # ------------------------------------------------------------------
 
     def _refresh_verification_status(self) -> None:
-        all_results = self._adapter.get_all_test_results()
-        if not all_results:
-            return
+        # No early return on an empty store: verification_status is derived, so
+        # "no evidence" must resolve to not_verified. Returning early left a
+        # stale `verification_status: verified` in the YAML standing, and adding
+        # one unrelated result then flipped the same item to not_verified.
         verifiable_ids = {
             node_id
             for node_id in self.graph.graph.nodes
@@ -98,19 +99,35 @@ class MedHarnessCore:
                 cfg := self._adapter.get_item_type(node_id.split("-")[0] + "-")
             ) and cfg.get("has_verification")
         }
+        # Merge, don't replace. Items named in the supplied JUnit take their
+        # status from it; items absent from it keep whatever the result store
+        # already established. Replacing wholesale wiped verification that only
+        # lives in the store — notably manual review records, which can never
+        # appear in a freshly generated JUnit file.
+        stored = self._adapter.get_all_test_results()
         for item_id in verifiable_ids:
             if not self.graph.graph.has_node(item_id):
                 continue
-            statuses = item_statuses.get(item_id, [])
-            if not statuses:
-                vs = "not_verified"
-            elif "FAIL" in statuses:
-                vs = "failed"
-            else:
-                vs = "verified"
             node_item = self.graph.graph.nodes[item_id]["item"]
+            statuses = item_statuses.get(item_id, [])
+
+            if statuses:
+                vs = "failed" if "FAIL" in statuses else "verified"
+                node_item["test_cases"] = item_tests.get(item_id, [])
+            else:
+                linked = [
+                    rec for rec in stored.values()
+                    if item_id in (rec.get("links") or [])
+                    and rec.get("testing_status") in ("PASS", "FAIL")
+                ]
+                if not linked:
+                    vs = "not_verified"
+                elif any(r["testing_status"] == "FAIL" for r in linked):
+                    vs = "failed"
+                else:
+                    vs = "verified"
+                node_item.setdefault("test_cases", [])
             node_item["verification_status"] = vs
-            node_item["test_cases"] = item_tests.get(item_id, [])
 
     def _inject_verification_status(self, item_ids: set) -> None:
         all_results = self._adapter.get_all_test_results()
@@ -279,6 +296,29 @@ class MedHarnessCore:
             parent_prefix = self._get_prefix(parent_type)
             child_prefix = self._get_prefix(child_type)
 
+            # An unknown code matches no items, which previously produced
+            # total=0 and passed=True — so a typo in --coverage-pair greened
+            # the gate instead of reporting itself.
+            unknown = [
+                code for code, prefix in (
+                    (parent_type, parent_prefix), (child_type, child_prefix)
+                ) if prefix is None
+            ]
+            if unknown:
+                results.append({
+                    "parent_type": parent_type,
+                    "child_type": child_type,
+                    "passed": False,
+                    "total": 0,
+                    "covered": 0,
+                    "uncovered": [],
+                    "error": (
+                        f"unknown document type(s): {', '.join(unknown)}. "
+                        f"Configured: {', '.join(sorted(self._configured_codes()))}"
+                    ),
+                })
+                continue
+
             parent_nodes = [n for n in G.nodes if n.startswith(parent_prefix)]
             uncovered = [
                 n for n in parent_nodes
@@ -298,11 +338,21 @@ class MedHarnessCore:
             "results": results,
         }
 
-    def _get_prefix(self, type_code: str) -> str:
-        t = self._adapter.get_item_type(type_code)
-        if t:
-            return t.get("prefix")
-        return f"{type_code}-"
+    def _configured_codes(self) -> set:
+        return {t.get("code") for t in self._adapter.list_item_types() if t.get("code")}
+
+    def _get_prefix(self, type_code: str) -> Optional[str]:
+        """Return the configured prefix for a doc-type code, or None if unknown.
+
+        get_item_type() matches on *prefix*, so passing a code never hit and the
+        method always fell through to ``code + "-"``. That is right only when the
+        prefix happens to equal the code plus a dash — a project configuring
+        ``TC-VER-`` for code ``TCVER`` got ``TCVER-`` and matched nothing.
+        """
+        for item_type in self._adapter.list_item_types():
+            if item_type.get("code") == type_code:
+                return item_type.get("prefix")
+        return None
 
     def get_all_test_results(
         self,

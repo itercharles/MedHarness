@@ -6,3 +6,4 @@ content: |-
 description: "Example CR demonstrating lifecycle states"
 justification: "Starter content for demonstration purposes"
 priority: Low
+status: new

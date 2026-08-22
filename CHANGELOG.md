@@ -11,6 +11,53 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+### Bug Fixes
+
+- **`change plan` reported "CR not found" for the CR the scaffold just wrote.**
+  The starter `CR-001.yaml` carries no `status` field, and `get_cr_phase`
+  returned `None` for a missing CR, an absent status, and an unrecognised status
+  alike — so the documented first command of a new project failed on the item it
+  was pointed at. An absent status now reads as `new`, the scaffolded CR states
+  it explicitly, and `assert_cr_active` checks existence separately so its
+  error names the real problem. `CRPhase` gains `rejected`, which the
+  generate-dhf triage step writes and which was previously indistinguishable
+  from a missing CR.
+
+- **An item could report `verified` with no evidence at all.**
+  `_refresh_verification_status` returned early on an empty result store,
+  leaving a stale `verification_status: verified` in the YAML standing. Adding a
+  single *unrelated* result then flipped the same item to `not_verified` — the
+  status of one requirement depended on whether another had a test. The status
+  is derived, so it is now always computed: no linked evidence means
+  `not_verified`.
+
+- **`evidence bundle --junit` wiped verification held in the result store.**
+  `inject_junit_results` computed status purely from the supplied files, so a
+  requirement verified by previously pulled CI results — or by a manual review
+  record, which can never appear in a generated JUnit file — was silently
+  demoted to `not_verified`. Injection now merges: items named in the JUnit take
+  their status from it, items absent from it keep what the store established.
+
+- **A typo in `--coverage-pair` greened the gate.** An unknown document type
+  matched no items and reported `passed: True, total: 0`. Unknown codes are now
+  reported as a failure naming the configured codes.
+
+- **`_get_prefix` never resolved a prefix from config.** It passed a doc-type
+  *code* to `get_item_type`, which matches on *prefix*, so the lookup always
+  missed and fell through to `code + "-"`. That is correct only when the prefix
+  happens to be the code plus a dash; a project configuring `TC-VER-` for code
+  `TCVER` got `TCVER-` and matched nothing.
+
+- **Multi-segment prefixes were dropped from the traceability report.** The
+  verification column derived a prefix with `split("-")[0]`, reducing `TC-VER-`
+  to `TC-`, while `dhfkit`'s own `Item.prefix` uses `rsplit("-", 1)`. Now
+  consistent.
+
+- **Issue comments were truncated at 100.** CR intake called `gh api` with
+  `per_page=100` but no `--paginate`, so a long discussion silently built the CR
+  from partial input. Now paginated, with the `--slurp` page wrapper flattened.
+
+
 ### Internal
 
 - Removed `medharness/services/release_baseline.py`, a dead duplicate of
