@@ -99,12 +99,16 @@ class MedHarnessCore:
                 cfg := self._adapter.get_item_type(node_id.rsplit("-", 1)[0] + "-")
             ) and cfg.get("has_verification")
         }
-        # Merge, don't replace. Items named in the supplied JUnit take their
-        # status from it; items absent from it keep whatever the result store
-        # already established. Replacing wholesale wiped verification that only
-        # lives in the store — notably manual review records, which can never
-        # appear in a freshly generated JUnit file.
-        stored = self._adapter.get_all_test_results()
+        # Merge only what a JUnit run cannot carry. Manual review records live
+        # solely in the store and would be wiped by a wholesale replace; ordinary
+        # automated results are superseded by the batch, so deleting a test
+        # correctly drops the requirement back to not_verified rather than
+        # leaving it verified by a stale stored PASS.
+        stored = {
+            tc_id: rec for tc_id, rec in self._adapter.get_all_test_results().items()
+            if str(rec.get("review_status") or "").strip()
+            or str(rec.get("reviewer") or "").strip()
+        }
         for item_id in verifiable_ids:
             if not self.graph.graph.has_node(item_id):
                 continue

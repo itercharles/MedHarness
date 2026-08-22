@@ -131,7 +131,7 @@ class TestGitLabProjectPathEncoding:
 
     def test_detected_path_is_url_encoded_in_requests(self, repo: Path, monkeypatch) -> None:
         http = FakeHTTP({
-            "/pipelines?": [{"id": 77}],
+            "/pipelines?": [{"id": 77, "status": "success"}],
             "/pipelines/77/jobs": [],
         })
         http.install(monkeypatch)
@@ -145,7 +145,7 @@ class TestGitLabProjectPathEncoding:
         assert "projects/acme-med/contour-lab" not in pipelines_url
 
     def test_numeric_project_id_is_left_alone(self, repo: Path, monkeypatch) -> None:
-        http = FakeHTTP({"/pipelines?": [{"id": 5}], "/jobs": []})
+        http = FakeHTTP({"/pipelines?": [{"id": 5, "status": "success"}], "/jobs": []})
         http.install(monkeypatch)
 
         _gitlab(repo, project_id="4815").fetch(commit_sha="abc123")
@@ -155,8 +155,8 @@ class TestGitLabProjectPathEncoding:
 
     def test_job_artifact_url_is_encoded_too(self, repo: Path, monkeypatch) -> None:
         http = FakeHTTP({
-            "/pipelines?": [{"id": 77}],
-            "/pipelines/77/jobs": [{"id": 900}],
+            "/pipelines?": [{"id": 77, "status": "success"}],
+            "/pipelines/77/jobs": [{"id": 900, "status": "success"}],
             "/jobs/900/artifacts": _junit_zip(),
         })
         http.install(monkeypatch)
@@ -176,7 +176,7 @@ class TestGitLabPipelineSelection:
         """
         http = FakeHTTP({
             "/pipelines?": [{"id": 42, "status": "failed"}],
-            "/pipelines/42/jobs": [{"id": 900}],
+            "/pipelines/42/jobs": [{"id": 900, "status": "success"}],
             "/jobs/900/artifacts": _junit_zip(),
         })
         http.install(monkeypatch)
@@ -189,6 +189,30 @@ class TestGitLabPipelineSelection:
         )
         assert result["run_id"] == "42"
         assert len(result["results"]) == 2  # one pass, one failure
+
+    def test_running_rerun_does_not_shadow_the_finished_pipeline(self, repo: Path, monkeypatch) -> None:
+        """A re-run in flight is newest but holds no artifacts yet."""
+        http = FakeHTTP({
+            "/pipelines?": [
+                {"id": 99, "status": "running"},
+                {"id": 42, "status": "failed"},
+            ],
+            "/pipelines/42/jobs": [{"id": 900}],
+            "/jobs/900/artifacts": _junit_zip(),
+        })
+        http.install(monkeypatch)
+
+        result = _gitlab(repo).fetch(commit_sha="deadbeef")
+        assert result["run_id"] == "42"
+        assert len(result["results"]) == 2
+
+    def test_only_unfinished_pipelines_reports_their_states(self, repo: Path, monkeypatch) -> None:
+        http = FakeHTTP({"/pipelines?": [{"id": 99, "status": "running"}]})
+        http.install(monkeypatch)
+
+        with pytest.raises(ValueError) as exc:
+            _gitlab(repo).fetch(commit_sha="deadbeef")
+        assert "running" in str(exc.value)
 
     def test_no_pipeline_raises_a_clear_error(self, repo: Path, monkeypatch) -> None:
         http = FakeHTTP({"/pipelines?": []})
@@ -208,8 +232,8 @@ class TestGitLabDownloadFailures:
         """
         http = FakeHTTP(
             routes={
-                "/pipelines?": [{"id": 7}],
-                "/pipelines/7/jobs": [{"id": 900}],
+                "/pipelines?": [{"id": 7, "status": "success"}],
+                "/pipelines/7/jobs": [{"id": 900, "status": "success"}],
             },
             errors={"/jobs/900/artifacts": 403},
         )
@@ -223,7 +247,7 @@ class TestGitLabDownloadFailures:
         """404 on artifacts is normal — most jobs upload nothing."""
         http = FakeHTTP(
             routes={
-                "/pipelines?": [{"id": 7}],
+                "/pipelines?": [{"id": 7, "status": "success"}],
                 "/pipelines/7/jobs": [{"id": 900}, {"id": 901}],
                 "/jobs/901/artifacts": _junit_zip(),
             },
@@ -238,7 +262,7 @@ class TestGitLabDownloadFailures:
 class TestGitLabRunUrl:
     def test_run_url_uses_the_project_path(self, repo: Path, monkeypatch) -> None:
         """run_url is persisted into DHF execution records as the audit trail."""
-        http = FakeHTTP({"/pipelines?": [{"id": 77}], "/jobs": []})
+        http = FakeHTTP({"/pipelines?": [{"id": 77, "status": "success"}], "/jobs": []})
         http.install(monkeypatch)
 
         result = _gitlab(repo).fetch(commit_sha="abc")
@@ -332,7 +356,7 @@ class TestPagination:
     """Provider defaults truncate silently: GitHub lists 30, GitLab 20."""
 
     def test_gitlab_jobs_listing_requests_a_full_page(self, repo: Path, monkeypatch) -> None:
-        http = FakeHTTP({"/pipelines?": [{"id": 1}], "/jobs": []})
+        http = FakeHTTP({"/pipelines?": [{"id": 1, "status": "success"}], "/jobs": []})
         http.install(monkeypatch)
 
         _gitlab(repo).fetch(commit_sha="abc")
@@ -350,7 +374,7 @@ class TestPagination:
 
     def test_github_runs_listing_requests_a_full_page(self, repo: Path, monkeypatch) -> None:
         http = FakeHTTP({
-            "/actions/runs?": {"workflow_runs": [{"id": 3}]},
+            "/actions/runs?": {"workflow_runs": [{"id": 3, "status": "success"}]},
             "/runs/3/artifacts": {"artifacts": []},
         })
         http.install(monkeypatch)

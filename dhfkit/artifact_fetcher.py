@@ -39,6 +39,10 @@ _ARTIFACT_NAMES = {"unit-test-results", "sys-test-results", "crs-test-results"}
 # exceeds them, and a silently truncated listing loses evidence.
 _PER_PAGE = 100
 
+# GitLab pipeline states that mean "this run is over and its artifacts, if any,
+# are final". A running or cancelled re-run must not shadow a finished one.
+_GITLAB_TERMINAL = frozenset({"success", "failed"})
+
 
 class GitHubArtifactFetcher:
     """Fetch test results from GitHub Actions artifacts.
@@ -317,18 +321,26 @@ class GitLabArtifactFetcher:
     # ------------------------------------------------------------------
 
     def _find_latest_pipeline_id(self, commit_sha: str) -> str:
-        # No status filter: a DHF has to record FAIL evidence, so the pipeline
-        # whose tests failed is exactly the one whose results are needed.
-        # Filtering on status=success made those runs unfetchable.
+        """Newest *finished* pipeline for the commit, whatever its outcome.
+
+        Filtering on status=success made failing runs unfetchable, but dropping
+        the filter entirely let a still-running or cancelled re-run shadow the
+        finished pipeline that actually holds the artifacts. GitLab has no
+        "completed" status to ask for, so a page is fetched and the first
+        terminal one is taken — matching what GitHub's status=completed does.
+        """
         data = self._api_get(
             f"/api/v4/projects/{self._api_project}/pipelines"
-            f"?sha={commit_sha}&order_by=id&sort=desc&per_page=1"
+            f"?sha={commit_sha}&order_by=id&sort=desc&per_page={_PER_PAGE}"
         )
-        if not data:
+        finished = [p for p in (data or []) if p.get("status") in _GITLAB_TERMINAL]
+        if not finished:
             raise ValueError(
-                f"No GitLab pipeline found for commit {commit_sha[:8]}."
+                f"No finished GitLab pipeline found for commit {commit_sha[:8]}. "
+                f"Statuses seen: "
+                f"{', '.join(sorted({str(p.get('status')) for p in (data or [])})) or 'none'}."
             )
-        return str(data[0]["id"])
+        return str(finished[0]["id"])
 
     def _fetch_by_pipeline_id(self, pipeline_id: str) -> List[ExecutionResult]:
         jobs = self._api_get(

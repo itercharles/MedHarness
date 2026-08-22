@@ -23,14 +23,31 @@ from click.testing import CliRunner
 
 from dhfkit.cli import main
 from dhfkit.local_adapter import LocalDHFAdapter
-from medharness.workflows.init import _replace_placeholders, _scaffold_dhf
 
 
 @pytest.fixture
 def dhf(tmp_path: Path) -> Path:
-    _scaffold_dhf(tmp_path)
-    _replace_placeholders(tmp_path, "Trial")
-    return tmp_path / "DHF"
+    """Build a DHF with dhfkit alone.
+
+    dhfkit must not import medharness (docs/architecture.md), and its suite has
+    to run standalone — so this copies the bundled templates directly rather
+    than calling medharness's scaffolder.
+    """
+    import shutil
+
+    templates = Path(__file__).resolve().parents[1] / "templates"
+    root = tmp_path / "DHF"
+    for src, dst in (("config", "config"), ("specs", "documents/specs"),
+                     ("plans", "documents/plans"), ("items", "items")):
+        source = templates / src
+        if source.is_dir():
+            shutil.copytree(source, root / dst, dirs_exist_ok=True)
+    for path in root.rglob("*"):
+        if path.is_file() and path.suffix in {".md", ".yaml", ".yml", ".j2"}:
+            text = path.read_text()
+            if "{{project_name}}" in text:
+                path.write_text(text.replace("{{project_name}}", "Trial"))
+    return root
 
 
 def _generate(dhf: Path, code: str) -> str:

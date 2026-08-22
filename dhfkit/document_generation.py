@@ -12,6 +12,8 @@ _VOLATILE_ROWS = re.compile(
     r'^\|\s*\*\*(?:Version|Generated)\*\*\s*\|.*$', re.MULTILINE
 )
 
+_GENERATED_DATE = re.compile(r'\|\s*\*\*Generated\*\*\s*\|\s*(\d{4}-\d{2}-\d{2})\s*\|')
+
 
 def _body(markdown_content: str) -> str:
     """Strip the rows that change on every run, for content comparison.
@@ -69,11 +71,15 @@ class DocumentGenerator:
 
         existing_content = ""
         existing_version = None
+        existing_date = None
         if output_path.exists():
             existing_content = output_path.read_text(encoding="utf-8")
             version_match = re.search(r'\|\s*\*\*Version\*\*\s*\|\s*(\d+)\.(\d+)\s*\|', existing_content)
             if version_match:
                 existing_version = (int(version_match.group(1)), int(version_match.group(2)))
+            date_match = _GENERATED_DATE.search(existing_content)
+            if date_match:
+                existing_date = date_match.group(1)
 
         # Match on the configured prefix, not the bare code: "SYSARCH-001"
         # startswith("SYS") is true, which put every architecture item into the
@@ -90,14 +96,16 @@ class DocumentGenerator:
         project_name = getattr(self.config, 'project_name', 'DHF Project')
         template = self.jinja_env.get_template(template_name)
 
-        def _render(version: str) -> str:
+        today = datetime.now().isoformat()[:10]
+
+        def _render(version: str, generation_date: str) -> str:
             return template.render(
                 doc_type_code=doc_type_code,
                 doc_type_name=spec_config.get('doc_type_name', doc_type_config.name),
                 test_type=spec_config.get('test_type', ''),
                 project_name=project_name,
                 version=version,
-                generation_date=datetime.now().isoformat()[:10],
+                generation_date=generation_date,
                 status='Draft',
                 items=items,
                 directory=getattr(doc_type_config, 'directory', ''),
@@ -109,12 +117,18 @@ class DocumentGenerator:
         # job that regenerates docs inflated the version of a controlled
         # document without anything having changed.
         base_major, base_minor = existing_version or (1, 0)
-        markdown_content = _render(f"{base_major}.{base_minor}")
 
         if existing_content:
-            if _body(markdown_content) == _body(existing_content):
+            # Compare a render that reuses the existing document's date. Masking
+            # only the metadata rows was not enough — templates also print the
+            # date in prose ("**Last Updated**: …"), so a regeneration on a later
+            # day looked like a content change and bumped the version.
+            candidate = _render(f"{base_major}.{base_minor}", existing_date or today)
+            if _body(candidate) == _body(existing_content):
                 return existing_content, output_path
-            markdown_content = _render(f"{base_major}.{base_minor + 1}")
+            markdown_content = _render(f"{base_major}.{base_minor + 1}", today)
+        else:
+            markdown_content = _render(f"{base_major}.{base_minor}", today)
 
         output_path.parent.mkdir(parents=True, exist_ok=True)
         output_path.write_text(markdown_content, encoding="utf-8")

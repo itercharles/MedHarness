@@ -540,13 +540,18 @@ def _load_issue_comments(
         "--slurp",
         f"repos/{source_repo}/issues/{issue_number}/comments?per_page=100",
     ]
-    proc = subprocess.run(
-        command,
-        capture_output=True,
-        text=True,
-        check=False,
-        env=_github_env(source_token),
-    )
+    def _run(cmd: list[str]):
+        return subprocess.run(
+            cmd, capture_output=True, text=True, check=False,
+            env=_github_env(source_token),
+        )
+
+    proc = _run(command)
+    if proc.returncode != 0 and "--slurp" in (proc.stderr or ""):
+        # --slurp arrived in gh 2.44. On an older CLI, fall back to a single
+        # page rather than failing outright — truncated input is worse than
+        # complete input, but far better than no CR intake at all.
+        proc = _run([c for c in command if c not in ("--paginate", "--slurp")])
     if proc.returncode != 0:
         message = (proc.stderr or proc.stdout).strip()
         raise click.ClickException(message or f"failed to fetch comments for issue {issue_number}")
