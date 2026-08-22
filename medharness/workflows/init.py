@@ -13,6 +13,7 @@ No prompts — everything is derived from the current directory.
 
 from __future__ import annotations
 
+import os
 import shutil
 from importlib.metadata import version as pkg_version
 from pathlib import Path
@@ -69,6 +70,29 @@ def _scaffold_dhf(project_dir: Path) -> None:
     (results_dir / ".gitkeep").touch(exist_ok=True)
 
 
+# Directories that may sit inside a project root but are never scaffold output.
+# A virtualenv is the dangerous one: the documented setup creates .venv inside
+# the project, so an unrestricted walk rewrote the installed package's own
+# templates — permanently, and for every later project built from that venv.
+_NON_SCAFFOLD_DIRS = frozenset({
+    ".venv", "venv", ".git", "node_modules", "__pycache__",
+    "site-packages", ".tox", ".mypy_cache", ".pytest_cache",
+})
+
+def _substitutable_files(project_dir: Path):
+    """Yield project files, pruning trees the scaffold never owns.
+
+    Pruning rather than allow-listing: an allow-list would silently stop
+    covering any directory the scaffold gains later, while the failure this
+    guards against is specifically a walk descending into an environment
+    directory that happens to sit inside the project root.
+    """
+    for dirpath, dirnames, filenames in os.walk(project_dir):
+        dirnames[:] = [d for d in dirnames if d not in _NON_SCAFFOLD_DIRS]
+        for filename in filenames:
+            yield Path(dirpath) / filename
+
+
 def _replace_placeholders(project_dir: Path, project_name: str) -> None:
     """Substitute template placeholders in scaffolded content."""
     try:
@@ -78,15 +102,15 @@ def _replace_placeholders(project_dir: Path, project_name: str) -> None:
 
     text_extensions = {".md", ".yaml", ".yml", ".j2", ".css", ".txt", ".gitkeep"}
 
-    for path in project_dir.rglob("*"):
-        if not path.is_file():
-            continue
+    for path in _substitutable_files(project_dir):
         if path.suffix not in text_extensions:
             continue
         try:
             text = path.read_text()
         except UnicodeDecodeError:
             continue
+        except OSError:
+            continue  # read-only or otherwise unreadable — not ours to rewrite
         original = text
         text = text.replace("{{project_name}}", project_name)
         text = text.replace("{{medharness_version}}", medharness_version)
@@ -154,7 +178,12 @@ __pycache__/
 *.pyc
 *.pyo
 .DS_Store
-test-results/
+
+# Transient JUnit output from local test runs. DHF/test-results/ is deliberately
+# NOT ignored: it holds the result store, which carries verification evidence —
+# including manual review records that exist nowhere else — and must be
+# committed alongside the items it verifies.
+/test-results/
 artifacts/
 *.egg-info/
 dist/

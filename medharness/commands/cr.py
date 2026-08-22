@@ -251,18 +251,17 @@ def workflow_complete_from_github_pr(
 
 
 def check_status(ctx: click.Context, cr_id: str) -> dict:
-    from medharness.workflows.cr_state import CRPhase, ACTIVE_PHASES
+    from medharness.workflows.cr_state import ACTIVE_PHASES, get_cr_phase
     core = _h._make_core(ctx.obj["dhf"])
     item = core.get_item(cr_id)
     if item is None:
         return {"cr_id": cr_id, "found": False, "error": f"CR '{cr_id}' not found"}
 
+    # Delegate so `cr status` and `assert_cr_active` cannot disagree about the
+    # same CR — notably a status-less item, which reads as NEW.
     status = item.get("status", "")
-    try:
-        phase = CRPhase(status)
-        valid = phase in ACTIVE_PHASES
-    except ValueError:
-        valid = False
+    phase = get_cr_phase(core, cr_id)
+    valid = phase in ACTIVE_PHASES if phase else False
     return {
         "cr_id": cr_id, "found": True,
         "status": status, "valid": valid,

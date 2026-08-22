@@ -13,6 +13,52 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ### Bug Fixes
 
+- **`medharness init` permanently corrupted the installed package.** The
+  documented setup creates `.venv` inside the project, and
+  `_replace_placeholders` walked the whole tree — so it rewrote
+  `site-packages/dhfkit/templates` in place, substituting the first project's
+  name into the shipped templates. Every later `init` from that virtualenv then
+  scaffolded with the wrong project name, and `upgrade` compared against
+  corrupted templates while reporting everything up to date. The walk now prunes
+  environment directories, and an unreadable file is skipped rather than
+  aborting the scaffold.
+
+- **The scaffolded `.gitignore` excluded the result store.** The pattern
+  `test-results/` matched `DHF/test-results/`, so `results.yaml` — which holds
+  verification evidence, including the manual review records the previous
+  release taught `evidence bundle` to preserve — was never committed. Now
+  anchored as `/test-results/`, which still ignores transient local JUnit output
+  at the project root.
+
+- **The prefix fix in 0.12.x reached only half the callers.** `core.py` still
+  derived prefixes with `split("-")[0]` in three places, so a doc type
+  configuring a multi-segment prefix (code `VER`, prefix `VER-SW-`) never
+  resolved and its items never received a `verification_status`. The previous
+  changelog's "now consistent" claim was wrong.
+
+- **Unknown coverage types are no longer fatal for the implicit defaults.**
+  Making unknown types an error applied it to `DEFAULT_ACCEPTANCE_COVERAGE_PAIRS`
+  as well, so a DHF that legitimately omits a V-model layer started failing the
+  acceptance gate with no user change. Pairs the user supplies stay strict — a
+  typo there is a real error; the implicit defaults now skip layers the project
+  does not configure.
+
+- **A rejected coverage pair printed as a coverage shortfall.** The explanatory
+  `error` was returned in JSON but never written to stderr, so a typo surfaced
+  as `FAIL [gate] NOPE→CRS: 0/0 covered` and sent people looking for missing
+  items. Both the error and the new skip reason are now printed.
+
+- **`cr status` and `assert_cr_active` disagreed about the same CR.** The former
+  still parsed the raw status string, so a status-less CR was accepted by the
+  workflow gate and simultaneously reported `valid: false`. It now delegates to
+  `get_cr_phase`.
+
+- The traceability report grouped coverage by a prefix guessed from the item ID.
+  It now uses the resolved doc-type code, which is what the matrix columns use.
+
+
+### Bug Fixes
+
 - **`change plan` reported "CR not found" for the CR the scaffold just wrote.**
   The starter `CR-001.yaml` carries no `status` field, and `get_cr_phase`
   returned `None` for a missing CR, an absent status, and an unrecognised status

@@ -92,8 +92,9 @@ def _run_acceptance_gate(core, junit_paths: list[Path], coverage_pairs: tuple[st
     traceability = core.validate()
     adapter_result = core._adapter.validate_traceability()
     required = adapter_result.get("required", {})
+    user_supplied = bool(coverage_pairs)
     pairs = coverage_pairs or DEFAULT_ACCEPTANCE_COVERAGE_PAIRS
-    coverage = core.check_coverage(_parse_coverage_pairs(pairs))
+    coverage = core.check_coverage(_parse_coverage_pairs(pairs), strict=user_supplied)
     passed = (
         traceability.get("valid", True)
         and coverage.get("passed", True)
@@ -217,7 +218,10 @@ def _build_traceability_report_payload(core, doc_types: tuple[str, ...],
             if not item:
                 continue
             test_cases = item.get("test_cases") or []
-            coverage.setdefault(item_id.rsplit("-", 1)[0], []).append({
+            # Group by the resolved doc-type code so the key matches the matrix
+            # columns. Deriving it from the ID guesses wrong for any multi-segment
+            # prefix, in either split direction.
+            coverage.setdefault(cfg.get("code") or item_id.rsplit("-", 1)[0], []).append({
                 "id": item_id,
                 "title": item.get("title", ""),
                 "status": item.get("verification_status", "not_verified"),
