@@ -138,21 +138,24 @@ class TestPytestMarker:
         test_file = tmp_path / "test_marked.py"
         test_file.write_text(body)
         junit = tmp_path / "out.xml"
+        # No -p flag: dhfkit registers the plugin as a pytest11 entry point, so
+        # loading it explicitly registers it twice and pytest refuses. Relying on
+        # the entry point also means this exercises the path a real user gets.
         proc = subprocess.run(
             [sys.executable, "-m", "pytest", str(test_file), "-q",
-             "-p", "dhfkit.pytest_plugin", f"--junit-xml={junit}"],
+             f"--junit-xml={junit}"],
             capture_output=True, text=True, cwd=tmp_path,
         )
         return proc.returncode, proc.stdout + proc.stderr, junit
 
     def test_marker_writes_the_property(self, tmp_path: Path) -> None:
-        code, _, junit = self._run(tmp_path, (
+        code, output, junit = self._run(tmp_path, (
             "import pytest\n"
             '@pytest.mark.dhf_links("SRS-001")\n'
             '@pytest.mark.dhf_level("integration")\n'
             "def test_x(): assert True\n"
         ))
-        assert code == 0
+        assert code == 0, output
         assert 'name="medharness.level" value="integration"' in junit.read_text()
 
     def test_unmarked_test_writes_no_level(self, tmp_path: Path) -> None:
@@ -176,11 +179,11 @@ class TestPytestMarker:
 
     @pytest.mark.parametrize("level", TEST_LEVELS)
     def test_every_modelled_level_is_accepted(self, tmp_path: Path, level: str) -> None:
-        code, _, junit = self._run(tmp_path, (
+        code, output, junit = self._run(tmp_path, (
             "import pytest\n"
             '@pytest.mark.dhf_links("SRS-001")\n'
             f'@pytest.mark.dhf_level("{level}")\n'
             "def test_x(): assert True\n"
         ))
-        assert code == 0
+        assert code == 0, output
         assert f'value="{level}"' in junit.read_text()
