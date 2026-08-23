@@ -19,6 +19,13 @@ properties:
   target_types:
   - CR
   label: Included Items
+- name: known_anomalies
+  format: list
+  label: Known Anomalies
+  # IEC 62304 §9.7 — the unresolved defects this release ships with, each with
+  # the assessment that made it acceptable. Populated by `release-baseline`
+  # from DEF items still open; an unresolved defect without a
+  # release_rationale blocks the baseline.
 - name: release_notes
   format: long_text
   label: Release Notes

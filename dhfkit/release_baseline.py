@@ -25,6 +25,56 @@ from dhfkit.soup_sync import parse_package_json, parse_requirements_txt
 _RELEASABLE_STATE = "completed"
 
 
+# A defect in any of these states still affects the software being released.
+# 'cancelled' means the report was withdrawn, not that the software changed.
+_UNRESOLVED_DEFECT_STATES = ("draft", "open", "in_progress")
+
+
+def _collect_known_anomalies(dhf: Path) -> tuple[list[dict], list[str]]:
+    """Gather unresolved defects and the rationale each carries.
+
+    IEC 62304 §9.7 requires a release to document its residual known anomalies
+    and why each is acceptable. A defect may ship — but not silently, and not
+    without someone having judged it.
+
+    Mirrors the SOUP accepted_vulns mechanism: an assessment recorded against
+    the specific finding, not a blanket suppression.
+
+    Returns (anomalies, errors).
+    """
+    import dhfkit.api as api
+
+    anomalies: list[dict] = []
+    errors: list[str] = []
+
+    for item in api.list_items(dhf):
+        uid = str(item.get("id") or item.get("uid") or "")
+        if not uid.startswith("DEF-"):
+            continue
+        state = str(item.get("state") or item.get("status") or "").strip().lower()
+        if state not in _UNRESOLVED_DEFECT_STATES:
+            continue
+
+        rationale = str(item.get("release_rationale") or "").strip()
+        entry = {
+            "defect": uid,
+            "title": item.get("title", ""),
+            "severity": item.get("severity", ""),
+            "state": state,
+            "rationale": rationale,
+        }
+        anomalies.append(entry)
+        if not rationale:
+            errors.append(
+                f"{uid} is unresolved (state '{state}') and has no "
+                f"release_rationale. §9.7 requires the residual anomalies a "
+                f"release ships with to be documented and assessed — record why "
+                f"it is acceptable, or resolve it before baselining."
+            )
+
+    return sorted(anomalies, key=lambda a: a["defect"]), errors
+
+
 def _verify_cr_gates(dhf: Path, cr_ids: list[str]) -> list[dict]:
     """Return violation dicts for any CR not in `completed` state."""
     import dhfkit.api as api
@@ -59,7 +109,7 @@ def _auto_collect_crs(dhf: Path) -> list[str]:
         elif item_type == "CR":
             state = item.get("state") or item.get("status") or ""
             if state == _RELEASABLE_STATE:
-                completed_unreleased.append(item["uid"])
+                completed_unreleased.append(item["id"])
 
     return sorted(uid for uid in completed_unreleased if uid not in released_crs)
 
@@ -83,7 +133,9 @@ def _collect_bom(dhf: Path, manifest_paths: list[Path]) -> tuple[dict, list[str]
     for item in api.list_items(dhf):
         if item.get("type") == "SOUP":
             dhf_soup.append({
-                "uid": item["uid"],
+                # Items expose "id"; keep the artifact key as "uid" so existing
+                # release-baseline.json consumers are unaffected.
+                "uid": item["id"],
                 "name": item.get("name", ""),
                 "version": item.get("version", ""),
                 "manufacturer": item.get("manufacturer", ""),
@@ -184,6 +236,24 @@ def build_release_baseline(
             "errors": errors,
         }
 
+    # Gate: unresolved defects must each carry an assessment (§9.7)
+    known_anomalies, anomaly_errors = _collect_known_anomalies(dhf)
+    errors.extend(anomaly_errors)
+    if anomaly_errors:
+        return {
+            "outcome": "completed_with_errors",
+            "version": version,
+            "cr_ids": sorted(cr_ids),
+            "rel_uid": None,
+            "gate_violations": gate_violations,
+            "known_anomalies": known_anomalies,
+            "artifacts": [],
+            "soup_count": 0,
+            "manifest_packages_count": 0,
+            "write": write,
+            "errors": errors,
+        }
+
     # Collect BOM — propagate any manifest errors so an incomplete BOM fails loudly
     bom, bom_errors = _collect_bom(dhf, manifest_paths)
     errors.extend(bom_errors)
@@ -201,6 +271,7 @@ def build_release_baseline(
         "included_crs": sorted(cr_ids),
         "soup_count": soup_count,
         "manifest_packages_count": manifest_packages_count,
+        "known_anomalies": known_anomalies,
         "release_notes": release_notes,
     }
 
@@ -236,10 +307,13 @@ def build_release_baseline(
                 "type": "REL",
                 "version": version,
                 "included_items": sorted(cr_ids),
+                # §9.7: the anomalies this release ships with, carried on the
+                # record rather than only in the generated artifact.
+                "known_anomalies": known_anomalies,
                 "release_notes": release_notes,
             }
             new_item = api.create_item(dhf, rel_data, author=author)
-            rel_uid = new_item["uid"]
+            rel_uid = new_item["id"]
         except Exception as exc:  # noqa: BLE001
             errors.append(f"Failed to create REL item: {exc}")
 
@@ -249,6 +323,7 @@ def build_release_baseline(
         "version": version,
         "cr_ids": sorted(cr_ids),
         "rel_uid": rel_uid,
+        "known_anomalies": known_anomalies,
         "artifacts": artifacts,
         "soup_count": soup_count,
         "manifest_packages_count": manifest_packages_count,
