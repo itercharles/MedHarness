@@ -321,6 +321,27 @@ def register(main):
                     click.echo(f"        Fix: add 'dhf_links: [{uid}]' to a test case, or:", err=True)
                     click.echo(f"             dhfkit {dhf_arg} item create --type TC"
                                f" --data '{{\"title\": \"Test {uid}\", \"dhf_links\": [\"{uid}\"]}}'", err=True)
+        required_levels = result.get("required_levels") or []
+        if required_levels:
+            click.echo(
+                f"      levels required by the declared class: "
+                f"{', '.join(required_levels)}; seen in this evidence: "
+                f"{', '.join(result.get('levels_seen') or ['none'])}",
+                err=True,
+            )
+        for gap in result.get("level_gaps", []):
+            click.echo(
+                f"FAIL [test-level] {gap['req_id']}: verified at "
+                f"{', '.join(gap['have']) or 'no level'} but missing "
+                f"{', '.join(gap['missing'])}",
+                err=True,
+            )
+            click.echo(
+                f"      Fix: mark a covering test with "
+                f"@pytest.mark.dhf_level(\"{gap['missing'][0]}\"), or set the "
+                f"medharness.level JUnit property.",
+                err=True,
+            )
         for row in result.get("testing_points", []):
             if row["passed"]:
                 click.echo(

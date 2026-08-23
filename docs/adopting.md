@@ -58,6 +58,55 @@ Coverage gaps print as `WARN [coverage]` and leave the exit code at zero unless 
 
 `dhfkit` is the DHF engine inside MedHarness — it ships as part of the same package (`pip install medharness`), not as a separate PyPI distribution. If your team has its own orchestration and only needs the engine layer — item storage, traceability graphs, lifecycle transitions, document generation — you can import from `dhfkit` directly and ignore the `medharness` CLI harness and AI workflow entirely. It has no dependency on the verification commands or prompt assembly layer. The `LocalDHFAdapter` gives programmatic access to items; the document generation pipeline is available separately. This is the right entry point for teams integrating DHF tooling into an existing CI system rather than adopting the full CR workflow.
 
+## Software safety classification
+
+IEC 62304 §4.3 asks every project to classify its software, and the class decides which activities the standard requires at all — architectural design, detailed design, integration testing, and system testing are not demanded of every class.
+
+Declare it in `DHF/config/global.yaml`:
+
+```yaml
+software_safety_class: "B"      # A | B | C
+classification_rationale: >
+  Failure can contribute to a hazardous situation resulting in
+  non-serious injury. Segregation of the reporting module is
+  documented in SYSARCH-004.
+```
+
+| Class | Meaning |
+|-------|---------|
+| A | No injury or damage to health is possible |
+| B | Non-serious injury is possible |
+| C | Death or serious injury is possible |
+
+```bash
+medharness --dhf DHF verify classification
+medharness --dhf DHF verify plans
+```
+
+### The activity map is yours
+
+`DHF/config/safety_activities.yaml` maps each class to the items, plans, and test levels it requires. It ships with a documented default **and is meant to be edited**: assessors differ on how the §5 activity table reads, and your regulatory strategy may reasonably require more than the minimum. The file lives in the DHF, so your interpretation is recorded beside the evidence it governs.
+
+Some things the standard fixes regardless, and the file does not override: risk management (§7, ISO 14971), release (§5.8), configuration management (§8), and problem resolution (§9) apply to every class.
+
+### Per-module classification
+
+§4.3(b) permits a software item to carry a lower class than the system where segregation is documented. MODULE items accept it:
+
+```yaml
+id: MODULE-004
+safety_class: A
+segregation_rationale: >
+  Runs in a separate process with no shared state; separation is
+  described in SYSARCH-001.
+```
+
+An override without a rationale is reported as a warning rather than an error — the justification may legitimately live in the architecture rather than on the item.
+
+### Adoption is opt-in
+
+A DHF with no declared class warns and exits zero, and the class-dependent checks (`verify plans`, and verification levels in `verify tests`) stay inactive. Nothing that passes today starts failing because this exists.
+
 ## Test-driven development with test points
 
 MedHarness supports TDD at the DHF level. The idea is that test intent is expressed in the design, not retrofitted after code is written.
@@ -95,6 +144,29 @@ When tests run with `--junit-xml`, these annotations are written as JUnit XML pr
 ```bash
 medharness --dhf DHF verify tests --junit-dir test-results
 ```
+
+### Verification levels
+
+IEC 62304 asks for integration testing (§5.6) and system testing (§5.7) as records distinct from unit verification (§5.5). Declare the level a test provides:
+
+```python
+@pytest.mark.dhf_links("SRS-012")
+@pytest.mark.dhf_level("integration")
+def test_password_policy_enforced_end_to_end():
+    ...
+```
+
+The level travels as a JUnit property (`medharness.level`) rather than being inferred from a directory, so a results file copied between CI jobs keeps saying what it is.
+
+Once a [safety class](#software-safety-classification) is declared, `verify tests` requires the levels that class demands. A requirement verified only by unit tests then reports:
+
+```
+FAIL [test-level] SRS-012: verified at unit but missing integration, system
+      Fix: mark a covering test with @pytest.mark.dhf_level("integration"), or
+           set the medharness.level JUnit property.
+```
+
+**Unlabelled tests count as unit**, which is what they were already being counted as — existing suites keep working, and the requirement only applies once a class demanding it is declared.
 
 This exits non-zero if a requirement lacks coverage or if any declared test point has no covering test, making gaps in test coverage visible before merge. Combined with `verify dhf` (schema and links), it enforces that requirements are linked and verified before merge.
 

@@ -13,6 +13,43 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ### New Features
 
+- **Verification levels (IEC 62304 §5.6, §5.7).** `verify tests` mapped JUnit
+  results to requirements without regard for whether they came from unit,
+  integration, or system testing — so a project running only unit tests showed
+  every requirement `verified`, and the distinct integration and system testing
+  records the standard asks for were invisible.
+
+  Tests declare their level with a marker:
+
+  ```python
+  @pytest.mark.dhf_links("SRS-012")
+  @pytest.mark.dhf_level("integration")
+  def test_password_policy_enforced_end_to_end():
+      ...
+  ```
+
+  It travels as the `medharness.level` JUnit property rather than being inferred
+  from a directory, so a results file copied between CI jobs keeps saying what
+  it is. A level the marker does not recognise raises rather than recording the
+  wrong one silently.
+
+  ```
+  FAIL [test-level] SRS-012: verified at unit but missing integration, system
+  ```
+
+  **Unlabelled tests count as unit** — which is what they were already being
+  counted as. Existing suites keep working, and the requirement only applies
+  once a class demanding it is declared.
+
+### Documentation
+
+- `docs/adopting.md` gains a **Software safety classification** section covering
+  the class, the project-owned activity map, §4.3(b) per-module overrides, and
+  the opt-in behaviour — Phase 1 shipped the feature without it.
+
+
+### New Features
+
 - **Plan completeness (IEC 62304 §5.1).** The scaffold ships seven plans as
   templates and nothing verified any of them was ever filled in — a DHF of
   untouched placeholders passed every gate. `verify plans` checks the plans the

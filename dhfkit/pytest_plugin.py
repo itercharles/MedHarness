@@ -48,6 +48,12 @@ def pytest_configure(config: pytest.Config) -> None:
         "dhf_testing(*points): declare numbered test-point IDs covered by this test "
         "(writes medharness.testing property to JUnit XML output, e.g. 'T1,T2')",
     )
+    config.addinivalue_line(
+        "markers",
+        "dhf_level(level): declare the verification level this test provides — "
+        "unit, integration, or system (IEC 62304 §5.5/§5.6/§5.7). Unlabelled "
+        "tests count as unit.",
+    )
 
 
 @pytest.fixture(autouse=True)
@@ -55,6 +61,7 @@ def _dhf_junit_properties(request: pytest.FixtureRequest, record_property: Calla
     links_marker = request.node.get_closest_marker("dhf_links")
     id_marker = request.node.get_closest_marker("dhf_id")
     testing_marker = request.node.get_closest_marker("dhf_testing")
+    level_marker = request.node.get_closest_marker("dhf_level")
 
     if links_marker:
         record_property("medharness.links", ",".join(str(a) for a in links_marker.args))
@@ -69,3 +76,13 @@ def _dhf_junit_properties(request: pytest.FixtureRequest, record_property: Calla
 
     if testing_marker:
         record_property("medharness.testing", ",".join(str(a) for a in testing_marker.args))
+
+    if level_marker and level_marker.args:
+        from dhfkit.junit_parser import TEST_LEVELS
+
+        level = str(level_marker.args[0]).strip().lower()
+        if level not in TEST_LEVELS:
+            raise ValueError(
+                f"dhf_level must be one of {', '.join(TEST_LEVELS)}; got {level!r}"
+            )
+        record_property("medharness.level", level)

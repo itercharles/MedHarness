@@ -20,7 +20,15 @@ from medharness._helpers import (
     _run_acceptance_gate,
     _run_artifact_generation,
 )
-from dhfkit.junit_parser import JUNIT_LINKS, JUNIT_TESTING, LINKS_TAG_RE, TESTING_TAG_RE
+from dhfkit.junit_parser import (
+    DEFAULT_TEST_LEVEL,
+    JUNIT_LEVEL,
+    JUNIT_LINKS,
+    JUNIT_TESTING,
+    LINKS_TAG_RE,
+    TESTING_TAG_RE,
+    TEST_LEVELS,
+)
 from dhfkit.testing_points import parse_testing_points
 
 
@@ -167,6 +175,11 @@ def ci_test_coverage_gate(
 
     covered_reqs: set[str] = set()
     covered_pairs: set[tuple[str, str]] = set()
+    # requirement -> the levels that actually verified it. §5.6 and §5.7 ask for
+    # integration and system testing as distinct records; without this a suite
+    # of unit tests alone made every requirement read as verified.
+    covered_levels: dict[str, set[str]] = {}
+    seen_levels: set[str] = set()
     for jp in junit_paths:
         if not jp.is_file():
             continue
@@ -194,8 +207,14 @@ def ci_test_coverage_gate(
             all_links = list(dict.fromkeys(links_from_props + links_from_name))
             all_points = list(dict.fromkeys(testing_from_props + testing_from_name))
 
+            level = (props.get(JUNIT_LEVEL) or "").strip().lower()
+            if level not in TEST_LEVELS:
+                level = DEFAULT_TEST_LEVEL
+            seen_levels.add(level)
+
             covered_reqs.update(all_links)
             for req_id in all_links:
+                covered_levels.setdefault(req_id, set()).add(level)
                 for point_id in all_points:
                     covered_pairs.add((req_id, point_id))
 
@@ -206,6 +225,15 @@ def ci_test_coverage_gate(
     results: list[dict] = []
     testing_points: list[dict] = []
     default_types = req_types if req_types else ("SRS", "SYS", "CRS")
+
+    # Levels the declared safety class requires. Absent a class this is empty and
+    # the level dimension is inert, so a project that has not opted in to
+    # classification sees exactly the behaviour it saw before.
+    required_levels = [
+        lvl for lvl in (adapter._config.required_activities().get("required_test_levels") or [])
+        if lvl in TEST_LEVELS
+    ]
+    level_gaps: list[dict] = []
 
     for rt in default_types:
         config = adapter._config
@@ -250,6 +278,17 @@ def ci_test_coverage_gate(
                     "passed": True,
                 })
 
+            if has_req_coverage and required_levels:
+                have = covered_levels.get(req_id, set())
+                missing_levels = [lvl for lvl in required_levels if lvl not in have]
+                if missing_levels:
+                    passed = False
+                    level_gaps.append({
+                        "req_id": req_id,
+                        "have": sorted(have),
+                        "missing": missing_levels,
+                    })
+
             if has_req_coverage:
                 covered_count += 1
             else:
@@ -266,7 +305,14 @@ def ci_test_coverage_gate(
             "uncovered": uncovered,
         })
 
-    return {"passed": passed, "results": results, "testing_points": testing_points}
+    return {
+        "passed": passed,
+        "results": results,
+        "testing_points": testing_points,
+        "required_levels": required_levels,
+        "levels_seen": sorted(seen_levels),
+        "level_gaps": level_gaps,
+    }
 
 
 # ---------------------------------------------------------------------------

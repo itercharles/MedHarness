@@ -29,6 +29,17 @@ JUNIT_REVIEWER = "medharness.reviewer"
 JUNIT_REVIEW_DATE = "medharness.review_date"
 JUNIT_REVIEW_STATUS = "medharness.review_status"
 
+# IEC 62304 distinguishes unit verification (§5.5), integration testing (§5.6),
+# and system testing (§5.7). The level travels with the evidence rather than
+# being inferred from a directory, so it survives the CI boundary.
+JUNIT_LEVEL = "medharness.level"
+
+TEST_LEVELS = ("unit", "integration", "system")
+
+# Evidence produced before levels existed, and any suite that does not label
+# itself, is unit evidence — which is what it was already being counted as.
+DEFAULT_TEST_LEVEL = "unit"
+
 # Matches: TC_SYS_001, TC-SYS-001, tc_sys_001, TC-CRS-009-001, TC-SRS-032-005
 _TC_ID_RE = re.compile(
     r"(?:^|[^A-Za-z])(TC)[_-]([A-Z]+)[_-](\d+)(?:[_-](\d+))?",
