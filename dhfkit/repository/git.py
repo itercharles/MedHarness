@@ -108,7 +108,11 @@ class GitRepository:
             history = []
             for commit in commits:
                 history.append({
-                    "sha": commit.hexsha[:8],
+                    # Full hash: an approval record identifies the state it
+                    # accepted by its commit, and a truncated hash is not an
+                    # identifier an audit can rely on.
+                    "sha": commit.hexsha,
+                    "short_sha": commit.hexsha[:8],
                     "message": commit.message.strip(),
                     "author": str(commit.author),
                     "date": commit.committed_datetime.isoformat(),

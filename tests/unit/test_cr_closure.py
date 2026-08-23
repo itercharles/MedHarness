@@ -512,3 +512,61 @@ def test_design_review_unknown_verdict_fails(tmp_path: Path) -> None:
     assert result["passed"] is False
     fields = [f["field"] for f in result["incomplete_cr_fields"]]
     assert "design_review" in fields
+
+
+class TestApprovalRecordPrecedence:
+    """The APR item is the record of record; the file convention is fallback.
+
+    Projects mid-flight keep working, but a DHF that has adopted approval items
+    is judged on them — otherwise a stale review file could approve a CR whose
+    recorded verdict says otherwise.
+    """
+
+    def _dhf(self, tmp_path):
+        from medharness.workflows.init import _replace_placeholders, _scaffold_dhf
+        _scaffold_dhf(tmp_path)
+        _replace_placeholders(tmp_path, "Trial")
+        return tmp_path / "DHF"
+
+    def test_apr_item_satisfies_the_check_without_a_file(self, tmp_path):
+        from dhfkit.approval import record_approval
+        from medharness.services.ci import _check_design_review
+
+        dhf = self._dhf(tmp_path)
+        record_approval(dhf, approves="CR-001", stage="design",
+                        verdict="approved", approver="qa@example.com")
+
+        assert _check_design_review(dhf, "CR-001") == []
+
+    def test_non_approved_apr_blocks(self, tmp_path):
+        from dhfkit.approval import record_approval
+        from medharness.services.ci import _check_design_review
+
+        dhf = self._dhf(tmp_path)
+        record_approval(dhf, approves="CR-001", stage="design",
+                        verdict="needs_revision", approver="qa@example.com")
+
+        issues = _check_design_review(dhf, "CR-001")
+        assert issues and "needs_revision" in issues[0]["issue"]
+
+    def test_apr_item_outranks_a_contradicting_file(self, tmp_path):
+        from dhfkit.approval import record_approval
+        from medharness.services.ci import _check_design_review
+
+        dhf = self._dhf(tmp_path)
+        reviews = dhf.parent / "docs" / "reviews"
+        reviews.mkdir(parents=True, exist_ok=True)
+        (reviews / "CR-001-Design-Review.md").write_text("**Verdict:** Approved\n")
+        record_approval(dhf, approves="CR-001", stage="design",
+                        verdict="rejected", approver="qa@example.com")
+
+        issues = _check_design_review(dhf, "CR-001")
+        assert issues, "a stale file must not override the recorded decision"
+
+    def test_message_names_both_routes_when_neither_exists(self, tmp_path):
+        from medharness.services.ci import _check_design_review
+
+        dhf = self._dhf(tmp_path)
+        issue = _check_design_review(dhf, "CR-001")[0]["issue"]
+        assert "APR item" in issue
+        assert "docs/reviews" in issue
