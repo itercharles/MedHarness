@@ -11,118 +11,55 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
-### New Features
+---
 
-- **Known anomalies in the release record (IEC 62304 §9.7).** The REL item held
-  `title · version · content · included_items · release_notes`, and nothing
-  connected an unresolved defect to the release shipping with it. §9.7 does not
-  forbid releasing with known anomalies — it requires that they be documented
-  and assessed.
+## [0.13.0] — 2026-08-23
 
-  `release-baseline` now collects DEF items still in `draft`, `open`, or
-  `in_progress` into the REL item and the baseline artifact, each carrying the
-  assessment that made it acceptable:
+Completeness gates. Every check before this release answered one shape of
+question — *are these items consistent with each other?* None could answer
+*is this DHF complete for the kind of software it describes, and did someone
+approve it?* Five gates close that gap, keyed to the IEC 62304 safety class a
+project declares.
 
-  ```yaml
-  release_rationale: >
-    Affects an export path unreachable in the released configuration —
-    series over 900 slices are rejected at import. Assessed under RISK-001.
-  ```
+**Adoption is opt-in.** A DHF with no declared `software_safety_class` sees
+the new gates stay inactive, so nothing that passes today starts failing —
+with one deliberate exception, called out under Behaviour changes.
 
-  The mechanism mirrors SOUP `accepted_vulns`: an assessment recorded against
-  the specific finding, never a blanket suppression.
-
-### Behaviour changes
-
-- **An unresolved defect without a `release_rationale` blocks the baseline.**
-  This is the one deliberate break in the gap-closure sequence. A release that
-  ships with an unassessed anomaly is exactly what §9.7 exists to prevent, and
-  the error names the defect and both ways out — assess it, or resolve it.
-
-### Bug Fixes
-
-- **`release-baseline` crashed on any scaffolded DHF.** It read `item["uid"]`
-  while items expose `id`, and every scaffold ships a SOUP item — so the §9
-  release baseline, a regulatory deliverable, raised `KeyError` on a default
-  project.
-
-  Its tests stayed green because their own helpers built `{"uid": …}` dicts,
-  a shape neither `LocalDHFAdapter` nor the test stub produces. The fixture and
-  the production code shared one wrong assumption and agreed with each other;
-  only running against a real DHF disagreed. The `uid` key in the emitted
-  artifact is unchanged, so existing consumers are unaffected.
-
+This release also carries a large batch of correctness fixes found by four
+review passes over the verification gates and the document pipeline. Several
+of them concern the DHF misreporting itself, which for a tool whose output is
+a compliance record is the defect class that matters most.
 
 ### New Features
 
-- **Verification levels (IEC 62304 §5.6, §5.7).** `verify tests` mapped JUnit
-  results to requirements without regard for whether they came from unit,
-  integration, or system testing — so a project running only unit tests showed
-  every requirement `verified`, and the distinct integration and system testing
-  records the standard asks for were invisible.
-
-  Tests declare their level with a marker:
-
-  ```python
-  @pytest.mark.dhf_links("SRS-012")
-  @pytest.mark.dhf_level("integration")
-  def test_password_policy_enforced_end_to_end():
-      ...
-  ```
-
-  It travels as the `medharness.level` JUnit property rather than being inferred
-  from a directory, so a results file copied between CI jobs keeps saying what
-  it is. A level the marker does not recognise raises rather than recording the
-  wrong one silently.
+- **Software safety classification (IEC 62304 §4.3).** The class a project
+  declares decides which development activities the standard requires, and the
+  DHF had no way to express it. `DHF/config/global.yaml` gains
+  `software_safety_class` (A/B/C) and `classification_rationale`, and a new gate
+  reports what the declared class demands:
 
   ```
-  FAIL [test-level] SRS-012: verified at unit but missing integration, system
+  $ medharness --dhf DHF verify classification
+  FAIL [classification] Class C requires SWDD items and the DHF has none (§5.4 detailed design).
   ```
 
-  **Unlabelled tests count as unit** — which is what they were already being
-  counted as. Existing suites keep working, and the requirement only applies
-  once a class demanding it is declared.
+  Until now every gate could prove that existing items were consistent with each
+  other; none could ask whether the items a project is *required* to have exist.
 
-### Documentation
+  **Adoption is opt-in.** A DHF with no declared class warns and exits zero, so
+  nothing that passes today starts failing.
 
-- `docs/adopting.md` gains a **Software safety classification** section covering
-  the class, the project-owned activity map, §4.3(b) per-module overrides, and
-  the opt-in behaviour — Phase 1 shipped the feature without it.
+- **The class-to-activity map is project-owned.** `config/safety_activities.yaml`
+  ships with a documented default and is meant to be edited: assessors differ on
+  how the §5 activity table reads, and a project's interpretation is part of its
+  regulatory strategy rather than something the tool should decide. The file
+  lives in the DHF, so the choice is recorded beside the evidence it governs.
 
-
-### New Features
-
-- **Plan completeness (IEC 62304 §5.1).** The scaffold ships seven plans as
-  templates and nothing verified any of them was ever filled in — a DHF of
-  untouched placeholders passed every gate. `verify plans` checks the plans the
-  declared safety class requires:
-
-  ```
-  PASS [plan] verification_plan.md
-  FAIL [plan] development_plan.md: unchanged from the template (29 section(s))
-  WARN [plan] integration_plan.md: 6 section(s) still match the shipped template
-  SKIP [plan] maintenance_plan.md: not required for Class B
-  ```
-
-  **Detection compares against the template, not marker text.** Only
-  `development_plan.md` carries a "starter content" banner; the other six read
-  like finished plans, so a marker-based check would miss six of seven. Removing
-  a banner is also not the same as writing a plan.
-
-  Comparison is per section and starts at level-2 headings — a document's title
-  block is its own front matter, so editing it cannot make an unwritten plan
-  read as written.
-
-  A plan whose every section still matches the template **fails**: §5.1 asks for
-  a plan that is maintained, not one that was scaffolded. Individual unchanged
-  sections **warn**, because a project may legitimately accept some shipped
-  wording and the tool cannot tell that from neglect. No percentage threshold is
-  involved.
-
-  Inactive until a safety class is declared, like the rest of Phase 1's checks.
-
-
-### New Features
+- **Per-module classification (§4.3(b)).** MODULE items accept `safety_class`
+  and `segregation_rationale`, for systems where a lower-class item is separated
+  from higher-class ones. An override without a rationale is reported as a
+  warning, not an error — the justification may legitimately live in the
+  architecture.
 
 - **Approval records are DHF items (IEC 62304 §5.1.1, 21 CFR 820.30(e)).** Who
   accepted a change, and against which state of the design, lived in a GitHub
@@ -157,54 +94,116 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
   that has adopted approval items is judged on them — a stale review file can no
   longer approve a CR whose recorded verdict says otherwise.
 
+- **Plan completeness (IEC 62304 §5.1).** The scaffold ships seven plans as
+  templates and nothing verified any of them was ever filled in — a DHF of
+  untouched placeholders passed every gate. `verify plans` checks the plans the
+  declared safety class requires:
+
+  ```
+  PASS [plan] verification_plan.md
+  FAIL [plan] development_plan.md: unchanged from the template (29 section(s))
+  WARN [plan] integration_plan.md: 6 section(s) still match the shipped template
+  SKIP [plan] maintenance_plan.md: not required for Class B
+  ```
+
+  **Detection compares against the template, not marker text.** Only
+  `development_plan.md` carries a "starter content" banner; the other six read
+  like finished plans, so a marker-based check would miss six of seven. Removing
+  a banner is also not the same as writing a plan.
+
+  Comparison is per section and starts at level-2 headings — a document's title
+  block is its own front matter, so editing it cannot make an unwritten plan
+  read as written.
+
+  A plan whose every section still matches the template **fails**: §5.1 asks for
+  a plan that is maintained, not one that was scaffolded. Individual unchanged
+  sections **warn**, because a project may legitimately accept some shipped
+  wording and the tool cannot tell that from neglect. No percentage threshold is
+  involved.
+
+  Inactive until a safety class is declared, like the rest of Phase 1's checks.
+
+- **Verification levels (IEC 62304 §5.6, §5.7).** `verify tests` mapped JUnit
+  results to requirements without regard for whether they came from unit,
+  integration, or system testing — so a project running only unit tests showed
+  every requirement `verified`, and the distinct integration and system testing
+  records the standard asks for were invisible.
+
+  Tests declare their level with a marker:
+
+  ```python
+  @pytest.mark.dhf_links("SRS-012")
+  @pytest.mark.dhf_level("integration")
+  def test_password_policy_enforced_end_to_end():
+      ...
+  ```
+
+  It travels as the `medharness.level` JUnit property rather than being inferred
+  from a directory, so a results file copied between CI jobs keeps saying what
+  it is. A level the marker does not recognise raises rather than recording the
+  wrong one silently.
+
+  ```
+  FAIL [test-level] SRS-012: verified at unit but missing integration, system
+  ```
+
+  **Unlabelled tests count as unit** — which is what they were already being
+  counted as. Existing suites keep working, and the requirement only applies
+  once a class demanding it is declared.
+
+- **Known anomalies in the release record (IEC 62304 §9.7).** The REL item held
+  `title · version · content · included_items · release_notes`, and nothing
+  connected an unresolved defect to the release shipping with it. §9.7 does not
+  forbid releasing with known anomalies — it requires that they be documented
+  and assessed.
+
+  `release-baseline` now collects DEF items still in `draft`, `open`, or
+  `in_progress` into the REL item and the baseline artifact, each carrying the
+  assessment that made it acceptable:
+
+  ```yaml
+  release_rationale: >
+    Affects an export path unreachable in the released configuration —
+    series over 900 slices are rejected at import. Assessed under RISK-001.
+  ```
+
+  The mechanism mirrors SOUP `accepted_vulns`: an assessment recorded against
+  the specific finding, never a blanket suppression.
+
+- **`dhfkit doc export --format html`** (now the default) renders a
+  specification to a standalone HTML file with inlined CSS. No native libraries,
+  so it works everywhere `medharness` installs — and the result can be committed,
+  published, or handed to a reviewer without a viewer.
+
+### Behaviour changes
+
+- **An unresolved defect without a `release_rationale` blocks the baseline.**
+  This is the one deliberate break in the gap-closure sequence. A release that
+  ships with an unassessed anomaly is exactly what §9.7 exists to prevent, and
+  the error names the defect and both ways out — assess it, or resolve it.
+
 ### Bug Fixes
+
+- **`release-baseline` crashed on any scaffolded DHF.** It read `item["uid"]`
+  while items expose `id`, and every scaffold ships a SOUP item — so the §9
+  release baseline, a regulatory deliverable, raised `KeyError` on a default
+  project.
+
+  Its tests stayed green because their own helpers built `{"uid": …}` dicts,
+  a shape neither `LocalDHFAdapter` nor the test stub produces. The fixture and
+  the production code shared one wrong assumption and agreed with each other;
+  only running against a real DHF disagreed. The `uid` key in the emitted
+  artifact is unchanged, so existing consumers are unaffected.
 
 - `GitRepository.get_file_history` truncated commit hashes to eight characters.
   An approval identifies the state it accepted by its commit, and a truncated
   hash is not an identifier an audit can rely on. Full hashes are now returned,
   with `short_sha` alongside for display.
 
-
-### New Features
-
-- **Software safety classification (IEC 62304 §4.3).** The class a project
-  declares decides which development activities the standard requires, and the
-  DHF had no way to express it. `DHF/config/global.yaml` gains
-  `software_safety_class` (A/B/C) and `classification_rationale`, and a new gate
-  reports what the declared class demands:
-
-  ```
-  $ medharness --dhf DHF verify classification
-  FAIL [classification] Class C requires SWDD items and the DHF has none (§5.4 detailed design).
-  ```
-
-  Until now every gate could prove that existing items were consistent with each
-  other; none could ask whether the items a project is *required* to have exist.
-
-  **Adoption is opt-in.** A DHF with no declared class warns and exits zero, so
-  nothing that passes today starts failing.
-
-- **The class-to-activity map is project-owned.** `config/safety_activities.yaml`
-  ships with a documented default and is meant to be edited: assessors differ on
-  how the §5 activity table reads, and a project's interpretation is part of its
-  regulatory strategy rather than something the tool should decide. The file
-  lives in the DHF, so the choice is recorded beside the evidence it governs.
-
-- **Per-module classification (§4.3(b)).** MODULE items accept `safety_class`
-  and `segregation_rationale`, for systems where a lower-class item is separated
-  from higher-class ones. An override without a rationale is reported as a
-  warning, not an error — the justification may legitimately live in the
-  architecture.
-
-### Bug Fixes
-
 - **Generated documents named the wrong project.** `ProjectConfig` did not
   declare `project_name`, and pydantic drops undeclared fields, so every
   specification rendered `| **Project** | DHF Project |` regardless of what
   `medharness init` had written into `global.yaml`.
-
-
-### Bug Fixes
 
 - **Document versions still advanced once per day.** The previous fix compared
   renders with the `Version` and `Generated` metadata rows masked, but every
@@ -239,16 +238,6 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 - `gh api --slurp` requires gh 2.44. On an older CLI the paginated call failed
   outright, aborting CR intake where it previously succeeded with truncated
   input; it now falls back to a single page.
-
-### Internal
-
-- `dhfkit/tests/test_document_generation.py` imported `medharness.workflows.init`,
-  breaking the `dhfkit` → `medharness` boundary and the ability to run dhfkit's
-  suite standalone. It now builds its fixture from the bundled templates
-  directly. A check over the whole package confirms no such import remains.
-
-
-### Bug Fixes
 
 - **`medharness init` permanently corrupted the installed package.** The
   documented setup creates `.venv` inside the project, and
@@ -292,9 +281,6 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 - The traceability report grouped coverage by a prefix guessed from the item ID.
   It now uses the resolved doc-type code, which is what the matrix columns use.
-
-
-### Bug Fixes
 
 - **`change plan` reported "CR not found" for the CR the scaffold just wrote.**
   The starter `CR-001.yaml` carries no `status` field, and `get_cr_phase`
@@ -340,18 +326,6 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
   `per_page=100` but no `--paginate`, so a long discussion silently built the CR
   from partial input. Now paginated, with the `--slurp` page wrapper flattened.
 
-
-### Internal
-
-- Removed `medharness/services/release_baseline.py`, a dead duplicate of
-  `dhfkit/release_baseline.py` orphaned by #189 when DHF data operations moved
-  to `dhfkit`. Nothing imported it — the two copies differed only in one import
-  line — but it shipped in the wheel, showed as 0% coverage (diluting the signal
-  used to find genuinely untested code), and was a trap: editing it would have
-  had no effect and raised no error.
-
-### Bug Fixes
-
 - **GitLab artifact fetching was broken for every auto-detected project.** The
   project path (`namespace/project`) was interpolated unencoded into
   `/api/v4/projects/{id}/...`, so the unescaped slash made GitLab read it as
@@ -374,15 +348,6 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
   `per_page`, so GitHub returned at most 30 artifacts and GitLab 20 jobs. A
   matrix build exceeding those limits lost evidence with no indication. Both now
   request 100.
-
-### Internal
-
-- `dhfkit/tests/test_artifact_fetcher.py` — the module had no test file at all
-  (250 statements, reachable only through `test pull` against a live CI
-  provider). A fake `urlopen` records requested URLs, so the tests assert on the
-  requests themselves rather than only on parsed output. Coverage 20% → 63%.
-
-### Bug Fixes
 
 - **Specifications contained items belonging to other document types.** The item
   filter matched on the bare doc-type code, and `"SYSARCH-001".startswith("SYS")`
@@ -416,19 +381,38 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
   Specification" — `doc_type_name` already carried the suffix the template
   appends. Items without a `status` rendered as an empty `<span class="status-">`.
 
-### New Features
+### Documentation
 
-- **`dhfkit doc export --format html`** (now the default) renders a
-  specification to a standalone HTML file with inlined CSS. No native libraries,
-  so it works everywhere `medharness` installs — and the result can be committed,
-  published, or handed to a reviewer without a viewer.
+- `docs/adopting.md` gains a **Software safety classification** section covering
+  the class, the project-owned activity map, §4.3(b) per-module overrides, and
+  the opt-in behaviour — Phase 1 shipped the feature without it.
 
 ### Internal
 
+- `dhfkit/tests/test_document_generation.py` imported `medharness.workflows.init`,
+  breaking the `dhfkit` → `medharness` boundary and the ability to run dhfkit's
+  suite standalone. It now builds its fixture from the bundled templates
+  directly. A check over the whole package confirms no such import remains.
+
+- Removed `medharness/services/release_baseline.py`, a dead duplicate of
+  `dhfkit/release_baseline.py` orphaned by #189 when DHF data operations moved
+  to `dhfkit`. Nothing imported it — the two copies differed only in one import
+  line — but it shipped in the wheel, showed as 0% coverage (diluting the signal
+  used to find genuinely untested code), and was a trap: editing it would have
+  had no effect and raised no error.
+
+- `dhfkit/tests/test_artifact_fetcher.py` — the module had no test file at all
+  (250 statements, reachable only through `test pull` against a live CI
+  provider). A fake `urlopen` records requested URLs, so the tests assert on the
+  requests themselves rather than only on parsed output. Coverage 20% → 63%.
+
 - `dhfkit/tests/test_document_generation.py` covers all of the above.
+
 - The `evidence bundle` contract test returned early whenever WeasyPrint was
   absent, so on CI it asserted nothing at all — which is why none of this was
   caught. It now runs the bundle and checks the rendered artifacts.
+
+---
 
 ---
 
