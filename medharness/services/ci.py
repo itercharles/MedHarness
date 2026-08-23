@@ -1087,3 +1087,144 @@ def cr_closure_gate(
         "summary": summary,
     }
 
+
+
+# ---------------------------------------------------------------------------
+# classification_gate — backs verify classification
+# ---------------------------------------------------------------------------
+
+_SAFETY_CLASSES = ("A", "B", "C")
+
+
+def classification_gate(dhf_path: Path) -> dict:
+    """Check the declared software safety class and what it requires.
+
+    IEC 62304 §4.3 makes the class the axis the standard turns on: it decides
+    which activities are required at all. Without a declared class the tool can
+    verify that items are consistent with each other, but not that the project
+    has done what its class demands.
+
+    An undeclared class is reported as a warning rather than a failure, so an
+    existing DHF keeps passing until it opts in.
+
+    Returns:
+        {
+          "passed": bool,
+          "declared": str | None,
+          "rationale_present": bool,
+          "missing_item_types": [{"code", "clause_hint"}],
+          "module_overrides": [{"id", "safety_class", "justified": bool}],
+          "warnings": [str],
+          "errors": [str],
+          "summary": str,
+        }
+    """
+    from dhfkit.local_adapter import LocalDHFAdapter
+
+    adapter = LocalDHFAdapter(dhf_path)
+    config = adapter._config
+
+    declared = (config.software_safety_class or "").strip().upper()
+    rationale = (config.classification_rationale or "").strip()
+    warnings: list[str] = []
+    errors: list[str] = []
+
+    if not declared:
+        return {
+            "passed": True,
+            "declared": None,
+            "rationale_present": False,
+            "missing_item_types": [],
+            "module_overrides": [],
+            "warnings": [
+                "No software_safety_class declared in DHF/config/global.yaml. "
+                "IEC 62304 §4.3 requires one, and it determines which activities "
+                "this project must complete. Set A, B, or C to enable the check."
+            ],
+            "errors": [],
+            "summary": "No safety class declared — classification checks are inactive.",
+        }
+
+    if declared not in _SAFETY_CLASSES:
+        errors.append(
+            f"software_safety_class is '{declared}'; expected one of "
+            f"{', '.join(_SAFETY_CLASSES)}."
+        )
+    if not rationale:
+        errors.append(
+            "classification_rationale is empty. The class is a judgement about the "
+            "device, and the reasoning belongs in the record."
+        )
+
+    required = config.required_activities()
+    if declared in _SAFETY_CLASSES and not required:
+        warnings.append(
+            f"Class {declared} is declared but safety_activities.yaml defines no "
+            f"activities for it, so nothing is being checked against the class."
+        )
+
+    present_types = {
+        str(item.get("id", "")).rsplit("-", 1)[0]
+        for item in adapter.list_items()
+        if item.get("id")
+    }
+    present_codes = set()
+    for item_type in adapter.list_item_types():
+        prefix = (item_type.get("prefix") or "").rstrip("-")
+        if prefix and prefix in present_types:
+            present_codes.add(item_type.get("code"))
+
+    missing_item_types = [
+        {"code": code, "clause_hint": _CLASS_CLAUSE_HINTS.get(code, "")}
+        for code in (required.get("required_items") or [])
+        if code not in present_codes
+    ]
+    for entry in missing_item_types:
+        errors.append(
+            f"Class {declared} requires {entry['code']} items and the DHF has none"
+            + (f" ({entry['clause_hint']})." if entry["clause_hint"] else ".")
+        )
+
+    # §4.3(b) allows a software item to carry a lower class than the system when
+    # segregation is documented. Record the overrides; an unjustified one is a
+    # gap rather than an error, since the justification may live in the
+    # architecture rather than on the item.
+    module_overrides = []
+    for item in adapter.list_items():
+        override = str(item.get("safety_class") or "").strip().upper()
+        if not override or not str(item.get("id", "")).startswith("MODULE-"):
+            continue
+        justified = bool(str(item.get("segregation_rationale") or "").strip())
+        module_overrides.append(
+            {"id": item["id"], "safety_class": override, "justified": justified}
+        )
+        if not justified:
+            warnings.append(
+                f"{item['id']} declares safety_class {override}, below the system "
+                f"class {declared}, without a segregation_rationale (§4.3(b))."
+            )
+
+    passed = not errors
+    summary = (
+        f"Class {declared}: "
+        + ("all required activities present." if passed else f"{len(errors)} gap(s).")
+    )
+    return {
+        "passed": passed,
+        "declared": declared,
+        "rationale_present": bool(rationale),
+        "missing_item_types": missing_item_types,
+        "module_overrides": module_overrides,
+        "warnings": warnings,
+        "errors": errors,
+        "summary": summary,
+    }
+
+
+_CLASS_CLAUSE_HINTS = {
+    "SYSARCH": "§5.3 architectural design",
+    "SWDD": "§5.4 detailed design",
+    "MODULE": "§5.4 detailed design",
+    "RISK": "§7 / ISO 14971",
+    "RCM": "§7 risk control",
+}

@@ -1,5 +1,19 @@
 project_name: "My Medical Device Software"
 
+# IEC 62304 §4.3 — software safety classification.
+# Decides which development activities the standard requires; see
+# safety_activities.yaml for the mapping this project uses.
+#   A  no injury or damage to health is possible
+#   B  non-serious injury is possible
+#   C  death or serious injury is possible
+# Leave unset while you are still deciding: `verify classification` warns rather
+# than failing, so nothing breaks until you declare one.
+software_safety_class: ""
+
+# Why that class. Required once a class is declared — the classification is a
+# judgement about the device, and the reasoning is part of the record.
+classification_rationale: ""
+
 global_lifecycle:
   states:
   - id: new
