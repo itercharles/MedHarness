@@ -13,6 +13,48 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ### New Features
 
+- **Known anomalies in the release record (IEC 62304 §9.7).** The REL item held
+  `title · version · content · included_items · release_notes`, and nothing
+  connected an unresolved defect to the release shipping with it. §9.7 does not
+  forbid releasing with known anomalies — it requires that they be documented
+  and assessed.
+
+  `release-baseline` now collects DEF items still in `draft`, `open`, or
+  `in_progress` into the REL item and the baseline artifact, each carrying the
+  assessment that made it acceptable:
+
+  ```yaml
+  release_rationale: >
+    Affects an export path unreachable in the released configuration —
+    series over 900 slices are rejected at import. Assessed under RISK-001.
+  ```
+
+  The mechanism mirrors SOUP `accepted_vulns`: an assessment recorded against
+  the specific finding, never a blanket suppression.
+
+### Behaviour changes
+
+- **An unresolved defect without a `release_rationale` blocks the baseline.**
+  This is the one deliberate break in the gap-closure sequence. A release that
+  ships with an unassessed anomaly is exactly what §9.7 exists to prevent, and
+  the error names the defect and both ways out — assess it, or resolve it.
+
+### Bug Fixes
+
+- **`release-baseline` crashed on any scaffolded DHF.** It read `item["uid"]`
+  while items expose `id`, and every scaffold ships a SOUP item — so the §9
+  release baseline, a regulatory deliverable, raised `KeyError` on a default
+  project.
+
+  Its tests stayed green because their own helpers built `{"uid": …}` dicts,
+  a shape neither `LocalDHFAdapter` nor the test stub produces. The fixture and
+  the production code shared one wrong assumption and agreed with each other;
+  only running against a real DHF disagreed. The `uid` key in the emitted
+  artifact is unchanged, so existing consumers are unaffected.
+
+
+### New Features
+
 - **Verification levels (IEC 62304 §5.6, §5.7).** `verify tests` mapped JUnit
   results to requirements without regard for whether they came from unit,
   integration, or system testing — so a project running only unit tests showed

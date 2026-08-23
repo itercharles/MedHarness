@@ -18,11 +18,16 @@ from dhfkit.release_baseline import (
 # ---------------------------------------------------------------------------
 
 def _cr_item(uid: str, state: str, title: str = "") -> dict:
-    return {"uid": uid, "type": "CR", "state": state, "title": title}
+    # Items are keyed by "id" — both LocalDHFAdapter and the stub produce that.
+    # These helpers used "uid", a shape neither one emits, and the production
+    # code read the same wrong key, so the two agreed with each other while
+    # both disagreed with reality: release-baseline crashed on any real DHF
+    # while this suite stayed green.
+    return {"id": uid, "type": "CR", "state": state, "title": title}
 
 
 def _rel_item(uid: str, included: list[str]) -> dict:
-    return {"uid": uid, "type": "REL", "version": "0.1.0", "included_items": included}
+    return {"id": uid, "type": "REL", "version": "0.1.0", "included_items": included}
 
 
 def _req_txt(tmp_path: Path, content: str) -> Path:
@@ -132,7 +137,7 @@ class TestAutoCollectCrs:
 
 class TestCollectBom:
     def test_dhf_soup_items_included(self, tmp_path):
-        soup = {"uid": "SOUP-001", "type": "SOUP", "name": "requests", "version": "2.31.0",
+        soup = {"id": "SOUP-001", "type": "SOUP", "name": "requests", "version": "2.31.0",
                 "manufacturer": "", "license": "Apache-2.0", "safety_class": ""}
         with patch("dhfkit.api.list_items", return_value=[soup]):
             bom, errors = _collect_bom(tmp_path / "DHF", [])
@@ -188,7 +193,7 @@ class TestGenerateReleaseNotes:
         assert "CR-001: Add login" in notes
 
     def test_soup_count_mentioned(self, tmp_path):
-        soup = [{"uid": "SOUP-001", "name": "requests"}]
+        soup = [{"id": "SOUP-001", "name": "requests"}]
         with patch("dhfkit.api.get_item", return_value=None):
             notes = _generate_release_notes("1.0.0", [], {"dhf_soup": soup, "manifest_packages": []}, tmp_path)
         assert "1 SOUP component(s)" in notes
@@ -255,7 +260,7 @@ class TestBuildReleaseBaseline:
         out = tmp_path / "out"
         with patch("dhfkit.api.get_item", return_value=_cr_item("CR-001", "completed")), \
              patch("dhfkit.api.list_items", return_value=[]), \
-             patch("dhfkit.api.create_item", return_value={"uid": "REL-001"}) as mock_create:
+             patch("dhfkit.api.create_item", return_value={"id": "REL-001"}) as mock_create:
             result = build_release_baseline(
                 tmp_path / "DHF", "1.0.0", [], ["CR-001"], out, write=True,
             )

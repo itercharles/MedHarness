@@ -57,6 +57,11 @@ properties:
   target_types:
   - REL
   label: Found in Release
+- name: release_rationale
+  format: long_text
+  label: Release Rationale
+  # Why this defect is acceptable to ship unresolved (IEC 62304 §9.7). Required
+  # before a release baseline can be built while the defect is still open.
 - name: fixed_in_release
   format: relationship
   target_types:
