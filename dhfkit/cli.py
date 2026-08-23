@@ -339,6 +339,66 @@ def doc() -> None:
     """Commands for document generation."""
 
 
+@main.group("approval")
+def approval() -> None:
+    """Approval records — the DHF's account of who accepted what."""
+
+
+@approval.command("show")
+@click.argument("apr_id")
+@click.pass_context
+def approval_show(ctx: click.Context, apr_id: str) -> None:
+    """Resolve the revision an approval was made against.
+
+    The approved revision is the commit that introduced the record, not a field
+    inside it — a field could be edited to disagree with git, and this record
+    exists precisely to be trustworthy.
+    """
+    from dhfkit.approval import resolve_approval
+
+    try:
+        result = resolve_approval(ctx.obj["dhf"], apr_id)
+    except ValueError as exc:
+        raise SystemExit(str(exc)) from exc
+
+    click.echo(json.dumps(result))
+    if result["resolved"]:
+        click.echo(f"{apr_id} approved at {result['short_revision']} "
+                   f"({result['date'][:10]}) by {result['committer']}", err=True)
+    else:
+        click.echo(f"WARN {apr_id}: revision unresolved — {result['reason']}", err=True)
+
+
+@approval.command("import")
+@click.option("--reviews-dir", "reviews_dir", default=None,
+              type=click.Path(file_okay=False, path_type=Path),
+              help="Directory of legacy review files (default: ../docs/reviews).")
+@click.option("--approver", default="", help="Approver to record on imported items.")
+@click.pass_context
+def approval_import(ctx: click.Context, reviews_dir: Path | None, approver: str) -> None:
+    """Backfill approval records from the legacy docs/reviews/*.md convention.
+
+    Safe to re-run: a CR that already has a design-stage approval is skipped.
+    """
+    from dhfkit.approval import import_review_files
+
+    dhf: Path = ctx.obj["dhf"]
+    target = reviews_dir or (dhf.parent / "docs" / "reviews")
+    result = import_review_files(dhf, target, approver=approver)
+    click.echo(json.dumps(result))
+
+    for entry in result["imported"]:
+        click.echo(f"OK   {entry['file']} → {entry['apr_id']} ({entry['verdict']})", err=True)
+    for entry in result["skipped"]:
+        click.echo(f"SKIP {entry['file']}: {entry['reason']}", err=True)
+    for message in result["errors"]:
+        click.echo(f"FAIL {message}", err=True)
+    click.echo(f"{len(result['imported'])} imported, {len(result['skipped'])} skipped.",
+               err=True)
+    if result["errors"]:
+        raise SystemExit(1)
+
+
 @doc.command("list")
 @click.pass_context
 def doc_list(ctx: click.Context) -> None:

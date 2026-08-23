@@ -85,6 +85,48 @@ def _raise_for_outcome_error(result: dict) -> None:
         raise click.exceptions.Exit(1)
 
 
+def _record_approval_item(ctx, payload: dict, cr_id: str, stage: str,
+                          verdict: str, approver: str) -> None:
+    """Write the decision into the DHF when the caller asked for it.
+
+    Recording is best-effort relative to the PR action: the label and comment
+    have already landed, so a DHF write failure must be reported rather than
+    unwinding a decision that is already public. It is surfaced in the payload
+    and on stderr, never swallowed.
+    """
+    if not cr_id:
+        return
+    if not approver:
+        payload["apr_error"] = "--approver is required with --cr"
+        click.echo("FAIL [approval-act] --cr given without --approver; no record written.",
+                   err=True)
+        payload["success"] = False
+        return
+    if stage not in ("design", "develop", "release"):
+        payload["apr_error"] = f"stage '{stage}' is not recordable as an APR item"
+        click.echo(f"WARN [approval-act] stage '{stage}' has no APR representation; "
+                   "no record written.", err=True)
+        return
+    try:
+        from dhfkit.approval import record_approval
+
+        item = record_approval(
+            ctx.obj["dhf"], approves=cr_id, stage=stage, verdict=verdict,
+            approver=approver,
+            scope=f"PR #{payload.get('pr_number')} at stage {stage}.",
+            author=approver,
+        )
+    except Exception as exc:  # noqa: BLE001 — reported, never swallowed
+        payload["apr_error"] = str(exc)
+        payload["success"] = False
+        click.echo(f"FAIL [approval-act] decision applied to the PR but not recorded "
+                   f"in the DHF: {exc}", err=True)
+        return
+    payload["apr_id"] = item["id"]
+    click.echo(f"OK [approval-act] recorded {item['id']} ({verdict} by {approver}).",
+               err=True)
+
+
 def register(main):
 
     @main.group("verify")
@@ -752,12 +794,24 @@ def register(main):
     @click.option("--pr", "pr_number", required=True, type=int, metavar="N")
     @click.option("--stage", required=True, type=click.Choice(["spec", "design", "develop"]))
     @click.option("--token", default="", metavar="TOKEN")
-    def approval_act(comment_body: str, pr_number: int, stage: str, token: str) -> None:
+    @click.option("--cr", "cr_id", default="", metavar="CR-NNN",
+                  help="Record the decision as an APR item in the DHF.")
+    @click.option("--approver", default="", metavar="IDENTITY",
+                  help="Who is accountable for the decision. Required with --cr; "
+                       "the git committer is often a bot and cannot be accountable.")
+    @click.pass_context
+    def approval_act(ctx: click.Context, comment_body: str, pr_number: int, stage: str,
+                     token: str, cr_id: str, approver: str) -> None:
         """Execute an approval command from a PR comment body.
 
         On /approve: adds the stage label and posts a confirmation comment.
         On /reject: posts a rejection comment (with reason) and closes the PR.
         On no command: exits 0 with action=null.
+
+        With --cr and --approver, the decision is also written into the DHF as an
+        APR item, so the record lives with the design rather than only in a
+        platform's comment history. The revision it covers is that item's own
+        commit — see `dhfkit approval show`.
         """
         from medharness.services.pr_approval import (  # noqa: PLC0415
             add_approval_label,
@@ -793,6 +847,7 @@ def register(main):
             if not comment_ok:
                 click.echo(f"FAIL [approval-act] PR #{pr_number}: label added but could not post confirmation comment.", err=True)
                 raise click.exceptions.Exit(1)
+            _record_approval_item(ctx, payload, cr_id, stage, "approved", approver)
             click.echo(f"PASS [approval-act] PR #{pr_number}: approved at stage={stage}.", err=True)
 
         elif cmd.action == "reject":
@@ -811,6 +866,8 @@ def register(main):
             close_ok = close_pr(pr_number, token=token)
             payload["pr_closed"] = close_ok
             payload["success"] = comment_ok and close_ok
+            # A rejection is a decision that belongs in the record too.
+            _record_approval_item(ctx, payload, cr_id, stage, "rejected", approver)
             click.echo(json.dumps(payload))
             if close_ok:
                 click.echo(f"PASS [approval-act] PR #{pr_number}: rejected and closed.", err=True)

@@ -870,19 +870,44 @@ def _check_cr_fields(cr_item: dict, cr_id: str) -> list[dict]:
 
 
 def _check_design_review(dhf_path: Path, cr_id: str) -> list[dict]:
-    """Check that a design review file exists with an approved verdict.
+    """Check that the design stage was approved.
 
-    The review file lives at docs/reviews/<CR>-Design-Review.md relative to
-    the project root (one level above dhf_path).
+    An APR item is the record of record: it is a DHF item, so it appears in the
+    traceability matrix and the evidence bundle, and the revision it covers is
+    its own commit rather than a field that could be edited to disagree.
+
+    The legacy docs/reviews/<CR>-Design-Review.md convention is still accepted so
+    projects mid-flight are not stranded; `dhfkit approval import` converts it.
     """
+    from dhfkit.approval import find_approvals
+
+    try:
+        approvals = find_approvals(dhf_path, approves=cr_id, stage="design")
+    except Exception:  # noqa: BLE001 — fall through to the file convention
+        approvals = []
+
+    if approvals:
+        latest = approvals[-1]
+        verdict = str(latest.get("verdict") or "unknown")
+        if verdict == "approved":
+            return []
+        return [{
+            "field": "design_review",
+            "issue": (
+                f"CR {cr_id} — {latest['id']} records verdict '{verdict}', not "
+                "'approved'; resolve open issues before closing."
+            ),
+        }]
+
     review_file = dhf_path.parent / "docs" / "reviews" / f"{cr_id}-Design-Review.md"
     if not review_file.exists():
         return [{
             "field": "design_review",
             "issue": (
-                f"CR {cr_id} — no design review file at "
-                f"docs/reviews/{cr_id}-Design-Review.md; "
-                "run 'change plan' to generate the design review."
+                f"CR {cr_id} — no approval record. Expected an APR item approving "
+                f"{cr_id} at the design stage, or the legacy review file at "
+                f"docs/reviews/{cr_id}-Design-Review.md. Run 'change plan' to "
+                "generate the design review, or 'approval act' to record a decision."
             ),
         }]
     verdict = "unknown"

@@ -13,6 +13,49 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ### New Features
 
+- **Approval records are DHF items (IEC 62304 §5.1.1, 21 CFR 820.30(e)).** Who
+  accepted a change, and against which state of the design, lived in a GitHub
+  label and a `docs/reviews/*.md` file — outside the DHF, so absent from the
+  traceability matrix, from evidence bundles, and from every gate. A new `APR`
+  doc type makes the decision a first-class item.
+
+  **The approved revision is deliberately not a field.** It is the commit that
+  introduced the record. Writing it in would be circular — the SHA of the commit
+  containing `APR-014` cannot appear inside `APR-014` — and would create a second
+  source of truth a hand edit could make disagree with git:
+
+  ```
+  $ dhfkit --dhf DHF approval show APR-001
+  APR-001 approved at 66136e7b (2026-08-23) by T
+  ```
+
+  `approver` is kept because git records who *wrote* the file, which in CI is a
+  bot, and a bot cannot be accountable for a decision.
+
+- **`approval act --cr --approver`** writes the decision into the DHF alongside
+  the label and comment it already posts. Rejections are recorded too — a
+  rejection is a decision that belongs in the account. A DHF write that fails is
+  reported rather than unwinding a decision the PR has already made public.
+
+- **`dhfkit approval import`** backfills records from the legacy review-file
+  convention, mapping design reviews to the design stage and code reviews to
+  develop. Safe to re-run.
+
+- **`verify completion` checks the record, not a filename.** The file convention
+  still works as a fallback so projects mid-flight are not stranded, but a DHF
+  that has adopted approval items is judged on them — a stale review file can no
+  longer approve a CR whose recorded verdict says otherwise.
+
+### Bug Fixes
+
+- `GitRepository.get_file_history` truncated commit hashes to eight characters.
+  An approval identifies the state it accepted by its commit, and a truncated
+  hash is not an identifier an audit can rely on. Full hashes are now returned,
+  with `short_sha` alongside for display.
+
+
+### New Features
+
 - **Software safety classification (IEC 62304 §4.3).** The class a project
   declares decides which development activities the standard requires, and the
   DHF had no way to express it. `DHF/config/global.yaml` gains
