@@ -13,6 +13,10 @@ jobs:
   preflight:
     name: Release preflight checks
     runs-on: ubuntu-latest
+    # Read-only: preflight inspects the tag, pyproject, changelog, and PyPI.
+    # Declared explicitly so the job cannot inherit a broader default.
+    permissions:
+      contents: read
     steps:
       - name: Check out source
         uses: actions/checkout@v5
