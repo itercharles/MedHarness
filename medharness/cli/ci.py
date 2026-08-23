@@ -470,6 +470,46 @@ def register(main):
         if not result["passed"]:
             raise click.ClickException("Safety classification check failed.")
 
+    @verify.command("plans")
+    @click.option("--dhf", "dhf_path", type=click.Path(file_okay=False, path_type=Path))
+    @click.pass_context
+    def verify_plans(ctx: click.Context, dhf_path: Path | None) -> None:
+        """Check that the plans the declared safety class requires have been written.
+
+        The scaffold ships seven plans as templates and nothing verified any was
+        filled in, so a DHF of untouched placeholders passed every gate.
+
+        Each plan is compared against its shipped template section by section.
+        Only one of the seven templates carries "starter content" text, so a
+        marker-based check would miss the rest — and removing a banner is not
+        the same as writing a plan.
+
+        Inactive until a safety class is declared.
+        """
+        from medharness.services.ci import plans_gate
+
+        effective_dhf = dhf_path or ctx.obj.get("dhf")
+        if effective_dhf is None:
+            raise click.ClickException("--dhf is required when not set globally")
+        result = plans_gate(effective_dhf)
+        click.echo(json.dumps(result))
+
+        for entry in result.get("checked", []):
+            click.echo(f"PASS [plan] {entry['plan']}", err=True)
+        for entry in result.get("missing", []):
+            click.echo(f"FAIL [plan] {entry['plan']}: required for Class "
+                       f"{result['declared']} and absent", err=True)
+        for entry in result.get("unwritten", []):
+            click.echo(f"FAIL [plan] {entry['plan']}: unchanged from the template "
+                       f"({entry['sections']} section(s))", err=True)
+        for message in result.get("warnings", []):
+            click.echo(f"WARN [plan] {message}", err=True)
+        for entry in result.get("skipped", []):
+            click.echo(f"SKIP [plan] {entry['plan']}: {entry['reason']}", err=True)
+        click.echo(result["summary"], err=True)
+        if not result["passed"]:
+            raise click.ClickException("Plan completeness check failed.")
+
     @verify.command("soup")
     @click.option("--dhf", "dhf_path", type=click.Path(file_okay=False, path_type=Path))
     @click.option("--offline-mode", type=click.Choice(["fail", "warn"]), default="fail",
