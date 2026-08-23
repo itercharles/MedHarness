@@ -98,6 +98,17 @@ class RequiredTraceabilityRule(BaseModel):
 class ProjectConfig(BaseModel):
     """Project configuration."""
 
+    project_name: str = Field("DHF Project", description="Product name, shown on generated documents")
+    software_safety_class: Optional[str] = Field(
+        None, description="IEC 62304 §4.3 software safety classification: A, B, or C"
+    )
+    classification_rationale: str = Field(
+        "", description="Justification for the declared safety class"
+    )
+    safety_activities: dict = Field(
+        default_factory=dict,
+        description="Class-to-required-activity map, loaded from safety_activities.yaml",
+    )
     global_lifecycle: Optional[GlobalLifecycle] = Field(None, description="Global lifecycle configuration")
     doc_types: List[DocTypeConfig] = Field(..., description="Document type configurations")
     traceability_matrices: List[TraceabilityMatrix] = Field(default_factory=list, description="Traceability matrix configurations")
@@ -119,7 +130,24 @@ class ProjectConfig(BaseModel):
             for f in sorted(doc_types_dir.glob("*.yaml")):
                 doc_types.append(yaml.safe_load(f.read_text(encoding="utf-8")))
 
+        # The class-to-activity map lives in its own file so a project can adjust
+        # it — assessors differ on how the §5 activity table reads, and that
+        # choice is part of the project's regulatory strategy, not the tool's.
+        activities_path = config_dir / "safety_activities.yaml"
+        if activities_path.exists():
+            global_data.setdefault(
+                "safety_activities",
+                yaml.safe_load(activities_path.read_text(encoding="utf-8")) or {},
+            )
+
         return cls(**global_data, doc_types=doc_types)
+
+    def required_activities(self) -> dict:
+        """Activities the declared class requires, or {} when none is declared."""
+        if not self.software_safety_class:
+            return {}
+        classes = self.safety_activities.get("classes") or {}
+        return classes.get(self.software_safety_class.upper()) or {}
 
     def get_doc_type(self, code: str) -> Optional[DocTypeConfig]:
         """Get document type configuration by code."""

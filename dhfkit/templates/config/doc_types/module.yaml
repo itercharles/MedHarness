@@ -12,3 +12,13 @@ properties:
 - name: content
   format: long_text
   label: Description
+- name: safety_class
+  format: short_text
+  label: Safety Class
+  # IEC 62304 §4.3(b): a software item may carry a lower class than the system
+  # when segregation is documented. Leave unset to inherit the system class.
+- name: segregation_rationale
+  format: long_text
+  label: Segregation Rationale
+  # Required when safety_class is set below the system class — how separation
+  # from higher-class items is achieved and assured.

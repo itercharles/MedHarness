@@ -391,6 +391,43 @@ def register(main):
         if not result["passed"]:
             raise click.ClickException(f"CR {cr_id} closure verification failed.")
 
+    @verify.command("classification")
+    @click.option("--dhf", "dhf_path", type=click.Path(file_okay=False, path_type=Path))
+    @click.pass_context
+    def verify_classification(ctx: click.Context, dhf_path: Path | None) -> None:
+        """Check the IEC 62304 §4.3 software safety class and what it requires.
+
+        The class decides which development activities the standard demands, so
+        without one the other gates can only prove that existing items are
+        consistent — not that the required ones exist.
+
+        An undeclared class warns and exits zero, so adopting this is opt-in.
+        Declaring a class activates the activity checks in
+        DHF/config/safety_activities.yaml, which the project owns and can edit.
+        """
+        from medharness.services.ci import classification_gate
+
+        effective_dhf = dhf_path or ctx.obj.get("dhf")
+        if effective_dhf is None:
+            raise click.ClickException("--dhf is required when not set globally")
+        result = classification_gate(effective_dhf)
+        click.echo(json.dumps(result))
+
+        declared = result.get("declared")
+        if declared:
+            click.echo(f"PASS [classification] software safety class: {declared}", err=True)
+        for entry in result.get("module_overrides", []):
+            mark = "OK" if entry["justified"] else "WARN"
+            click.echo(f"{mark} [classification] {entry['id']} overrides to "
+                       f"class {entry['safety_class']}", err=True)
+        for message in result.get("warnings", []):
+            click.echo(f"WARN [classification] {message}", err=True)
+        for message in result.get("errors", []):
+            click.echo(f"FAIL [classification] {message}", err=True)
+        click.echo(result["summary"], err=True)
+        if not result["passed"]:
+            raise click.ClickException("Safety classification check failed.")
+
     @verify.command("soup")
     @click.option("--dhf", "dhf_path", type=click.Path(file_okay=False, path_type=Path))
     @click.option("--offline-mode", type=click.Choice(["fail", "warn"]), default="fail",

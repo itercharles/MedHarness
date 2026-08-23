@@ -1,0 +1,89 @@
+# Software safety classification → required activities (IEC 62304 §4.3, §5)
+#
+# The class a project declares in global.yaml decides which development
+# activities the standard requires of it. This file maps that class to the
+# artifacts `medharness verify classification` looks for.
+#
+# ── Read this before relying on it ────────────────────────────────────────
+#
+# This is an interpretation of the §5 activity table, not the table itself.
+# Assessors and notified bodies differ on where some clauses land, and your
+# regulatory strategy may reasonably require more than the minimum. Edit it to
+# match what your project has agreed — the file is part of your DHF, so the
+# choice is recorded alongside the evidence it governs.
+#
+# What the standard fixes, and this file does not override:
+#   - Risk management (§7, ISO 14971) applies to every class.
+#   - Software release (§5.8) applies to every class.
+#   - Configuration management (§8) and problem resolution (§9) apply to every
+#     class.
+#
+# The classes themselves (§4.3):
+#   A — no injury or damage to health is possible
+#   B — non-serious injury is possible
+#   C — death or serious injury is possible
+
+classes:
+
+  A:
+    description: No injury or damage to health is possible
+    # §5.3 architectural design and §5.4 detailed design are not required.
+    required_items:
+      - CRS
+      - SYS
+      - SRS
+      - RISK
+      - RCM
+    required_plans:
+      - development_plan
+      - risk_management_plan
+      - configuration_management_plan
+    required_test_levels:
+      - unit
+
+  B:
+    description: Non-serious injury is possible
+    # Adds §5.3 architectural design, §5.6 integration testing, §5.7 system
+    # testing. §5.4 detailed design of software units remains Class C.
+    required_items:
+      - CRS
+      - SYS
+      - SRS
+      - SYSARCH
+      - RISK
+      - RCM
+    required_plans:
+      - development_plan
+      - risk_management_plan
+      - configuration_management_plan
+      - verification_plan
+      - integration_plan
+    required_test_levels:
+      - unit
+      - integration
+      - system
+
+  C:
+    description: Death or serious injury is possible
+    # Adds §5.4 detailed design of software units.
+    required_items:
+      - CRS
+      - SYS
+      - SRS
+      - SYSARCH
+      - MODULE
+      - SWDD
+      - RISK
+      - RCM
+    required_plans:
+      - development_plan
+      - risk_management_plan
+      - configuration_management_plan
+      - verification_plan
+      - validation_plan
+      - integration_plan
+      - maintenance_plan
+    required_test_levels:
+      - unit
+      - integration
+      - system

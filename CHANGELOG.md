@@ -11,6 +11,45 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+### New Features
+
+- **Software safety classification (IEC 62304 §4.3).** The class a project
+  declares decides which development activities the standard requires, and the
+  DHF had no way to express it. `DHF/config/global.yaml` gains
+  `software_safety_class` (A/B/C) and `classification_rationale`, and a new gate
+  reports what the declared class demands:
+
+  ```
+  $ medharness --dhf DHF verify classification
+  FAIL [classification] Class C requires SWDD items and the DHF has none (§5.4 detailed design).
+  ```
+
+  Until now every gate could prove that existing items were consistent with each
+  other; none could ask whether the items a project is *required* to have exist.
+
+  **Adoption is opt-in.** A DHF with no declared class warns and exits zero, so
+  nothing that passes today starts failing.
+
+- **The class-to-activity map is project-owned.** `config/safety_activities.yaml`
+  ships with a documented default and is meant to be edited: assessors differ on
+  how the §5 activity table reads, and a project's interpretation is part of its
+  regulatory strategy rather than something the tool should decide. The file
+  lives in the DHF, so the choice is recorded beside the evidence it governs.
+
+- **Per-module classification (§4.3(b)).** MODULE items accept `safety_class`
+  and `segregation_rationale`, for systems where a lower-class item is separated
+  from higher-class ones. An override without a rationale is reported as a
+  warning, not an error — the justification may legitimately live in the
+  architecture.
+
+### Bug Fixes
+
+- **Generated documents named the wrong project.** `ProjectConfig` did not
+  declare `project_name`, and pydantic drops undeclared fields, so every
+  specification rendered `| **Project** | DHF Project |` regardless of what
+  `medharness init` had written into `global.yaml`.
+
+
 ### Bug Fixes
 
 - **Document versions still advanced once per day.** The previous fix compared
