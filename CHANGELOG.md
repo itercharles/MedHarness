@@ -13,6 +13,38 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ### New Features
 
+- **Plan completeness (IEC 62304 §5.1).** The scaffold ships seven plans as
+  templates and nothing verified any of them was ever filled in — a DHF of
+  untouched placeholders passed every gate. `verify plans` checks the plans the
+  declared safety class requires:
+
+  ```
+  PASS [plan] verification_plan.md
+  FAIL [plan] development_plan.md: unchanged from the template (29 section(s))
+  WARN [plan] integration_plan.md: 6 section(s) still match the shipped template
+  SKIP [plan] maintenance_plan.md: not required for Class B
+  ```
+
+  **Detection compares against the template, not marker text.** Only
+  `development_plan.md` carries a "starter content" banner; the other six read
+  like finished plans, so a marker-based check would miss six of seven. Removing
+  a banner is also not the same as writing a plan.
+
+  Comparison is per section and starts at level-2 headings — a document's title
+  block is its own front matter, so editing it cannot make an unwritten plan
+  read as written.
+
+  A plan whose every section still matches the template **fails**: §5.1 asks for
+  a plan that is maintained, not one that was scaffolded. Individual unchanged
+  sections **warn**, because a project may legitimately accept some shipped
+  wording and the tool cannot tell that from neglect. No percentage threshold is
+  involved.
+
+  Inactive until a safety class is declared, like the rest of Phase 1's checks.
+
+
+### New Features
+
 - **Approval records are DHF items (IEC 62304 §5.1.1, 21 CFR 820.30(e)).** Who
   accepted a change, and against which state of the design, lived in a GitHub
   label and a `docs/reviews/*.md` file — outside the DHF, so absent from the

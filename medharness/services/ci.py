@@ -1253,3 +1253,178 @@ _CLASS_CLAUSE_HINTS = {
     "RISK": "§7 / ISO 14971",
     "RCM": "§7 risk control",
 }
+
+
+# ---------------------------------------------------------------------------
+# plans_gate — backs verify plans
+# ---------------------------------------------------------------------------
+
+_HEADING = re.compile(r"^(#{1,6})\s+(.*)$", re.MULTILINE)
+
+# Boilerplate the scaffold ships. Removing it is housekeeping, not authorship,
+# so it is normalised out of both sides before comparison — otherwise deleting
+# the banner would make an untouched plan look partially written.
+_TEMPLATE_BANNER = re.compile(
+    r"^.*(?:Starter Content|scaffolded by MedHarness|Template — adapt|"
+    r"starter plan|Replace for Your Project).*$",
+    re.MULTILINE | re.IGNORECASE,
+)
+
+
+def _strip_banner(markdown_text: str) -> str:
+    return _TEMPLATE_BANNER.sub("", markdown_text)
+
+
+def _sections(markdown_text: str, min_level: int = 2) -> dict:
+    """Split a plan into {heading: body}, so comparison is per-section.
+
+    Whole-file comparison would be useless — a project that edits one section
+    makes the file differ and the plan would read as written.
+
+    Level-1 sections are excluded by default: the body under a document's title
+    is its own front matter, and edits there are formatting rather than the
+    substance §5.1 asks a plan to carry.
+    """
+    sections: dict[str, str] = {}
+    matches = list(_HEADING.finditer(markdown_text))
+    for index, match in enumerate(matches):
+        start = match.end()
+        end = matches[index + 1].start() if index + 1 < len(matches) else len(markdown_text)
+        if len(match.group(1)) < min_level:
+            continue
+        sections[match.group(2).strip()] = markdown_text[start:end].strip()
+    return sections
+
+
+def plans_gate(dhf_path: Path) -> dict:
+    """Check that the plans the declared safety class requires have been written.
+
+    IEC 62304 §5.1 requires a development plan that is maintained, and the
+    scaffold ships seven plans as templates. Nothing verified any of them was
+    ever filled in: a DHF of untouched placeholders passed every gate.
+
+    Detection compares each plan against the template it came from, section by
+    section. Sentinel text ("starter content") only appears in one of the seven
+    templates, so a marker-based check would miss six — and deleting a banner is
+    not the same as writing a plan.
+
+    A plan whose every section still matches the template has not been
+    maintained, and fails. Individual unchanged sections are reported as
+    warnings: a project may legitimately accept some shipped wording, and the
+    tool cannot tell that from neglect.
+    """
+    from dhfkit.local_adapter import LocalDHFAdapter
+
+    adapter = LocalDHFAdapter(dhf_path)
+    config = adapter._config
+    declared = (config.software_safety_class or "").strip().upper()
+    required = config.required_activities().get("required_plans") or []
+
+    if not declared:
+        return {
+            "passed": True,
+            "declared": None,
+            "checked": [],
+            "missing": [],
+            "unwritten": [],
+            "partial": [],
+            "skipped": [],
+            "warnings": [
+                "No software_safety_class declared, so no plans are required yet. "
+                "Declare one in global.yaml to activate this check."
+            ],
+            "summary": "No safety class declared — plan checks are inactive.",
+        }
+
+    templates_dir = _plan_templates_dir()
+    plans_dir = dhf_path / "documents" / "plans"
+    project_name = config.project_name
+
+    checked, missing, unwritten, partial, skipped = [], [], [], [], []
+
+    for stem in sorted(required):
+        filename = f"{stem}.md"
+        plan_path = plans_dir / filename
+        if not plan_path.exists():
+            missing.append({"plan": filename})
+            continue
+
+        template_path = templates_dir / filename if templates_dir else None
+        if template_path is None or not template_path.exists():
+            skipped.append({
+                "plan": filename,
+                "reason": "no shipped template to compare against",
+            })
+            continue
+
+        project_sections = _sections(_strip_banner(plan_path.read_text(encoding="utf-8")))
+        template_sections = _sections(_strip_banner(
+            _fill_placeholders(template_path.read_text(encoding="utf-8"), project_name)
+        ))
+
+        untouched = [
+            heading for heading, body in template_sections.items()
+            if project_sections.get(heading, "").strip() == body.strip() and body.strip()
+        ]
+        comparable = [h for h, b in template_sections.items() if b.strip()]
+
+        if comparable and len(untouched) == len(comparable):
+            unwritten.append({"plan": filename, "sections": len(untouched)})
+        elif untouched:
+            partial.append({"plan": filename, "sections": untouched})
+        else:
+            checked.append({"plan": filename})
+
+    all_plans = {p.name for p in plans_dir.glob("*.md")} if plans_dir.is_dir() else set()
+    not_required = sorted(all_plans - {f"{s}.md" for s in required})
+
+    warnings = [
+        f"{entry['plan']}: {len(entry['sections'])} section(s) still match the "
+        f"shipped template — {', '.join(entry['sections'][:3])}"
+        + ("…" if len(entry["sections"]) > 3 else "")
+        for entry in partial
+    ]
+    errors = (
+        [f"{e['plan']} is required for Class {declared} and is absent." for e in missing]
+        + [
+            f"{e['plan']} is unchanged from the template — §5.1 requires a plan "
+            f"that is maintained, not one that was scaffolded."
+            for e in unwritten
+        ]
+    )
+
+    passed = not errors
+    return {
+        "passed": passed,
+        "declared": declared,
+        "checked": checked,
+        "missing": missing,
+        "unwritten": unwritten,
+        "partial": partial,
+        "skipped": skipped + [{"plan": p, "reason": f"not required for Class {declared}"}
+                             for p in not_required],
+        "warnings": warnings,
+        "errors": errors,
+        "summary": (
+            f"Class {declared}: {len(checked)} plan(s) written, "
+            f"{len(missing)} missing, {len(unwritten)} unchanged."
+        ),
+    }
+
+
+def _plan_templates_dir() -> Optional[Path]:
+    try:
+        import dhfkit
+        candidate = Path(dhfkit.__file__).resolve().parent / "templates" / "plans"
+        return candidate if candidate.is_dir() else None
+    except Exception:  # noqa: BLE001 — absence is reported, not fatal
+        return None
+
+
+def _fill_placeholders(text: str, project_name: str) -> str:
+    """Apply the substitutions the scaffold makes, so comparison is like-for-like."""
+    return (
+        text.replace("{{project_name}}", project_name)
+        .replace("{{medharness_repo}}", "itercharles/MedHarness")
+        .replace("{{primary_test_tool}}", "pytest")
+    )
