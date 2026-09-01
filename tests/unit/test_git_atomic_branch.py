@@ -18,8 +18,8 @@ def test_validate_atomic_branch_passes_when_code_and_dhf_are_present(tmp_path: P
         result = validate_atomic_branch(repo_root, dhf, "CR-001")
 
     assert result["passed"] is True
-    assert result["errors"] == []
-    assert result["expected_dhf_changes"] is True
+    assert result["details"]["findings"] == []
+    assert result["details"]["expected_dhf_changes"] is True
 
 
 def test_validate_atomic_branch_fails_without_code_changes(tmp_path: Path):
@@ -34,7 +34,7 @@ def test_validate_atomic_branch_fails_without_code_changes(tmp_path: Path):
         result = validate_atomic_branch(repo_root, dhf, "CR-001", code_paths=("src/",))
 
     assert result["passed"] is False
-    assert any(e["field"] == "code_branch" for e in result["errors"])
+    assert any(e["field"] == "code_branch" for e in result["details"]["findings"])
 
 
 def test_validate_atomic_branch_passes_when_dhf_changes_present(tmp_path: Path):
@@ -48,7 +48,7 @@ def test_validate_atomic_branch_passes_when_dhf_changes_present(tmp_path: Path):
         result = validate_atomic_branch(repo_root, dhf, "CR-001")
 
     assert result["passed"] is True
-    assert result["errors"] == []
+    assert result["details"]["findings"] == []
     assert "spec_path" not in result
 
 
@@ -63,7 +63,7 @@ def test_validate_atomic_branch_fails_without_dhf_changes(tmp_path: Path):
         result = validate_atomic_branch(repo_root, dhf, "CR-001")
 
     assert result["passed"] is False
-    assert any(e["field"] == "dhf_branch" for e in result["errors"])
+    assert any(e["field"] == "dhf_branch" for e in result["details"]["findings"])
 
 
 def test_validate_atomic_branch_includes_risk_impact(tmp_path: Path):
@@ -85,7 +85,7 @@ def test_validate_atomic_branch_includes_risk_impact(tmp_path: Path):
         result = validate_atomic_branch(repo_root, dhf, "CR-001")
 
     assert result["passed"] is True
-    assert result["risk_impact"] == expected_impact
+    assert result["details"]["risk_impact"] == expected_impact
 
 
 def test_validate_atomic_branch_risk_impact_empty_when_dhf_not_loadable(tmp_path: Path):
@@ -98,4 +98,4 @@ def test_validate_atomic_branch_risk_impact_empty_when_dhf_not_loadable(tmp_path
         result = validate_atomic_branch(repo_root, dhf, "CR-001")
 
     assert result["passed"] is True
-    assert result["risk_impact"] == []
+    assert result["details"]["risk_impact"] == []

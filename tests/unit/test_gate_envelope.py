@@ -35,6 +35,23 @@ SIMPLE_GATES = (
     "plans_gate",
 )
 
+#: Arguments each CLI gate needs to reach its reporting path.
+GATE_ARGS = {
+    "verify tests": ["--junit-dir", "{dhf}/test-results"],
+    "verify completion": ["--cr", "CR-001"],
+    "verify branch": ["--cr", "CR-001"],
+    "verify code": ["--cr", "CR-001"],
+}
+
+
+def _run_gate(command: str, dhf) -> dict:
+    from medharness.cli import main as cli_main
+
+    args = ["--dhf", str(dhf), *command.split()]
+    args += [a.format(dhf=dhf) for a in GATE_ARGS.get(command, [])]
+    r = CliRunner().invoke(cli_main, args)
+    return json.loads(r.output.splitlines()[0])
+
 
 @pytest.fixture
 def dhf(tmp_path: Path) -> Path:
@@ -49,6 +66,40 @@ def _call(name: str, dhf: Path):
     if "offline_mode" in inspect.signature(fn).parameters:
         kwargs["offline_mode"] = "warn"  # keep the network out of the test
     return fn(dhf, **kwargs)
+
+
+class TestEveryCLIGateHonoursTheContract:
+    """All nine, not just the four callable with a bare path.
+
+    An earlier version parametrised only SIMPLE_GATES, so `verify branch` shipped
+    with dicts in `errors` and `verify verification` failed with nothing in it —
+    both invisible to a test that never called them.
+    """
+
+    @staticmethod
+    def _commands() -> list[str]:
+        from medharness.services.gates import GATES
+
+        return [g["command"] for g in GATES]
+
+    def test_messages_are_strings(self, dhf: Path) -> None:
+        offenders = {
+            cmd: [m for m in _run_gate(cmd, dhf)["errors"] + _run_gate(cmd, dhf)["warnings"]
+                  if not isinstance(m, str)]
+            for cmd in self._commands()
+        }
+        assert not {k: v for k, v in offenders.items() if v}
+
+    def test_a_failing_gate_says_why(self, dhf: Path) -> None:
+        silent = [
+            cmd for cmd in self._commands()
+            if not (r := _run_gate(cmd, dhf))["passed"] and not r["errors"]
+        ]
+        assert not silent, f"gates failed without explaining: {silent}"
+
+    def test_summary_is_never_empty(self, dhf: Path) -> None:
+        blank = [cmd for cmd in self._commands() if not _run_gate(cmd, dhf)["summary"].strip()]
+        assert not blank, f"gates with no summary: {blank}"
 
 
 class TestEnvelopeShape:
@@ -81,22 +132,36 @@ class TestEnvelopeShape:
 
 
 class TestNoGateEscapesTheEnvelope:
-    def test_every_gate_in_the_module_is_covered(self) -> None:
-        """Guards the next gate, not just today's.
+    def test_every_cli_gate_emits_the_envelope(self, dhf: Path) -> None:
+        """Discovery through the CLI, not through function names.
 
-        A gate added without the envelope is caught here rather than by a
-        caller discovering its parser does not fit.
+        An earlier version of this test enumerated functions named ``*_gate``
+        in one module. Three gates — verification, branch, code — are
+        implemented elsewhere, so they escaped it and shipped with their own
+        shapes. Asking the CLI what commands exist has no such blind spot.
         """
-        found = {
-            name for name, obj in vars(ci_module).items()
-            if name.endswith("_gate") and inspect.isfunction(obj)
-            and not name.startswith("_")
+        from medharness.services.gates import GATES
+
+        # Arguments each gate needs to reach its reporting path.
+        extra = {
+            "tests": ["--junit-dir", str(dhf / "test-results")],
+            "completion": ["--cr", "CR-001"],
+            "branch": ["--cr", "CR-001"],
+            "code": ["--cr", "CR-001"],
         }
-        # Two gates take more than a DHF path and are exercised separately below.
-        assert found - {"cr_closure_gate", "ci_test_coverage_gate"} == set(SIMPLE_GATES), (
-            f"gate set changed: {found}. Add it to SIMPLE_GATES or give it its "
-            f"own envelope test."
-        )
+        offenders = []
+        for gate in GATES:
+            name = gate["command"].removeprefix("verify ")
+            args = ["--dhf", str(dhf), "verify", name] + extra.get(name, [])
+            r = CliRunner().invoke(main, args)
+            line = (r.output or "").splitlines()
+            try:
+                payload = json.loads(line[0])
+            except (IndexError, json.JSONDecodeError):
+                offenders.append((name, "no JSON on stdout")); continue
+            if set(payload) != set(ENVELOPE_KEYS):
+                offenders.append((name, sorted(set(payload) ^ set(ENVELOPE_KEYS))))
+        assert not offenders, f"gates not emitting the envelope: {offenders}"
 
     def test_cr_closure_gate_uses_the_envelope(self, dhf: Path) -> None:
         from medharness.services.ci import cr_closure_gate
