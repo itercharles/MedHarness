@@ -357,6 +357,8 @@ Your CI workflow is deliberately not managed — it is not part of the release p
 
 ## Setting up CI
 
+MedHarness does not install a CI workflow, and [docs/interface.md](interface.md) is the contract to build one against — the result shape every gate returns, exit-code semantics, and what may change. `medharness gates` lists the gates with what each requires and whether it blocks.
+
 MedHarness does not install a CI workflow. The pipeline is yours to own — it references your branch names, runner labels, and secrets, and `medharness upgrade` will never overwrite it.
 
 Create `.github/workflows/dhf.yml` with the recipe below, replacing `{{medharness_version}}` with the version you pinned in step one.

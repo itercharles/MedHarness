@@ -11,6 +11,27 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+### Documentation
+
+- **[docs/interface.md](docs/interface.md)** — the machine interface as a
+  contract: the result envelope, exit-code semantics, what blocks a build, and a
+  stability promise saying which fields a caller may rely on and which may
+  change.
+
+  Declining to scaffold CI is only defensible if the interface is described well
+  enough to build against. This is the other half of that decision, and it
+  serves the same two readers as `medharness gates` — a pipeline author and an
+  agent.
+
+  It states plainly what is *not* a contract: `details` varies per gate, and
+  stderr is written for a person and must never be parsed.
+
+  `tests/unit/test_interface_doc.py` checks the document against the
+  implementation — envelope keys, exit codes, the blocking vocabulary, and that
+  every opt-in gate is named. A document that drifts is worse than none, because
+  it produces confident code resting on a promise nothing keeps.
+
+
 ### New Features
 
 - **`medharness gates`** — the verification gates, described for whoever calls

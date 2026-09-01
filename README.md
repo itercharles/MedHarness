@@ -305,6 +305,7 @@ If you want to see MedHarness running on a real codebase before adopting it, Con
 ## Documentation
 
 - [CONTRIBUTING.md](CONTRIBUTING.md): contributor setup and local development
+- [docs/interface.md](docs/interface.md): the machine interface — result envelope, exit codes, and what a CI script or agent may rely on
 - [docs/adopting.md](docs/adopting.md): starting fresh, migrating an existing DHF, and incremental adoption
 - [docs/ai-security.md](docs/ai-security.md): what the AI stages can do, isolation guidance, audit trail, and how to run with no AI at all
 - [docs/architecture.md](docs/architecture.md): package boundaries, CR workflow, and scaffold topology
