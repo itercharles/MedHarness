@@ -16,6 +16,24 @@ from medharness.services.github_session import get_session, put_session
 _ITEM_ID_RE = re.compile(r"^([A-Z]+-\d+)")
 
 
+def _d(result: dict) -> dict:
+    """Gate-specific payload. Envelope keys stay at the top level."""
+    return result.get("details") or {}
+
+
+def _render_envelope(result: dict, tag: str) -> None:
+    """Print the envelope's errors and warnings.
+
+    Every gate carries these, so every command renders them the same way. Gate
+    commands print their own detailed lines first; this is the backstop that
+    guarantees nothing in the envelope goes unreported.
+    """
+    for message in result.get("warnings") or []:
+        click.echo(f"WARN [{tag}] {message}", err=True)
+    for message in result.get("errors") or []:
+        click.echo(f"FAIL [{tag}] {message}", err=True)
+
+
 def _parse_key_value_pairs(
     values: tuple[str, ...],
     *,
@@ -222,7 +240,7 @@ def register(main):
                                      coverage_pairs=coverage_pairs,
                                      fail_on_uncovered=fail_on_uncovered)
         click.echo(json.dumps(result, default=str))
-        r = result["results"]
+        r = _d(result)["results"]
         dhf_arg = f"--dhf {effective_dhf}"
         if "schema" in r:
             s = r["schema"]
@@ -305,11 +323,11 @@ def register(main):
             raise click.ClickException("--dhf is required when not set globally")
         junit_paths = _h._collect_junit_paths(junit_files, junit_dirs)
         result = ci_test_coverage_gate(dhf_path=effective_dhf, junit_paths=junit_paths, req_types=req_types)
-        if result.get("error"):
-            raise click.ClickException(result["error"])
+        if _d(result).get("error"):
+            raise click.ClickException(_d(result)["error"])
         click.echo(json.dumps(result))
         dhf_arg = f"--dhf {effective_dhf}"
-        for row in result["results"]:
+        for row in _d(result)["results"]:
             if "warning" in row:
                 click.echo(f"WARN: {row['warning']} '{row['type']}' — skipped.", err=True)
             elif row["passed"]:
@@ -321,7 +339,7 @@ def register(main):
                     click.echo(f"        Fix: add 'dhf_links: [{uid}]' to a test case, or:", err=True)
                     click.echo(f"             dhfkit {dhf_arg} item create --type TC"
                                f" --data '{{\"title\": \"Test {uid}\", \"dhf_links\": [\"{uid}\"]}}'", err=True)
-        required_levels = result.get("required_levels") or []
+        required_levels = _d(result).get("required_levels") or []
         if required_levels:
             click.echo(
                 f"      levels required by the declared class: "
@@ -329,7 +347,7 @@ def register(main):
                 f"{', '.join(result.get('levels_seen') or ['none'])}",
                 err=True,
             )
-        for gap in result.get("level_gaps", []):
+        for gap in _d(result).get("level_gaps", []):
             click.echo(
                 f"FAIL [test-level] {gap['req_id']}: verified at "
                 f"{', '.join(gap['have']) or 'no level'} but missing "
@@ -342,7 +360,7 @@ def register(main):
                 f"medharness.level JUnit property.",
                 err=True,
             )
-        for row in result.get("testing_points", []):
+        for row in _d(result).get("testing_points", []):
             if row["passed"]:
                 click.echo(
                     f"PASS [test-coverage] {row['req_id']} test points: {row['covered']}/{row['total']} covered",
@@ -395,9 +413,9 @@ def register(main):
 
         for item in result.get("missing_method", []):
             click.echo(f"FAIL [validate-verification] {item['id']}: no verification_method declared", err=True)
-        for item in result.get("unverified_test", []):
+        for item in _d(result).get("unverified_test", []):
             click.echo(f"FAIL [validate-verification] {item['id']}: Test method declared but no passing TC linked", err=True)
-        for item in result.get("manual_review_required", []):
+        for item in _d(result).get("manual_review_required", []):
             methods = ", ".join(item.get("methods", []))
             click.echo(f"WARN [validate-verification] {item['id']}: {methods} — requires manual sign-off record", err=True)
 
@@ -435,18 +453,18 @@ def register(main):
         result = cr_closure_gate(cr_id=cr_id, dhf_path=effective_dhf, junit_paths=junit_paths)
         click.echo(json.dumps(result))
 
-        for field in result.get("incomplete_cr_fields", []):
+        for field in _d(result).get("incomplete_cr_fields", []):
             click.echo(f"FAIL [cr-complete] {field['issue']}", err=True)
-        for item in result.get("missing_items", []):
+        for item in _d(result).get("missing_items", []):
             click.echo(
                 f"FAIL [cr-complete] {item['type']}: {item.get('issue', 'proposed item not found')}",
                 err=True,
             )
-        for item in result.get("verification_gaps", []):
+        for item in _d(result).get("verification_gaps", []):
             click.echo(f"FAIL [cr-complete] {item['id']}: no verification_method declared", err=True)
-        for item in result.get("unverified_test", []):
+        for item in _d(result).get("unverified_test", []):
             click.echo(f"FAIL [cr-complete] {item['id']}: Test method declared but no passing TC linked", err=True)
-        for item in result.get("manual_review_required", []):
+        for item in _d(result).get("manual_review_required", []):
             methods = ", ".join(item.get("methods", []))
             click.echo(f"WARN [cr-complete] {item['id']}: {methods} — requires manual sign-off record", err=True)
 
@@ -476,10 +494,10 @@ def register(main):
         result = classification_gate(effective_dhf)
         click.echo(json.dumps(result))
 
-        declared = result.get("declared")
+        declared = _d(result).get("declared")
         if declared:
             click.echo(f"PASS [classification] software safety class: {declared}", err=True)
-        for entry in result.get("module_overrides", []):
+        for entry in _d(result).get("module_overrides", []):
             mark = "OK" if entry["justified"] else "WARN"
             click.echo(f"{mark} [classification] {entry['id']} overrides to "
                        f"class {entry['safety_class']}", err=True)
@@ -515,17 +533,17 @@ def register(main):
         result = plans_gate(effective_dhf)
         click.echo(json.dumps(result))
 
-        for entry in result.get("checked", []):
+        for entry in _d(result).get("checked", []):
             click.echo(f"PASS [plan] {entry['plan']}", err=True)
-        for entry in result.get("missing", []):
+        for entry in _d(result).get("missing", []):
             click.echo(f"FAIL [plan] {entry['plan']}: required for Class "
                        f"{result['declared']} and absent", err=True)
-        for entry in result.get("unwritten", []):
+        for entry in _d(result).get("unwritten", []):
             click.echo(f"FAIL [plan] {entry['plan']}: unchanged from the template "
                        f"({entry['sections']} section(s))", err=True)
         for message in result.get("warnings", []):
             click.echo(f"WARN [plan] {message}", err=True)
-        for entry in result.get("skipped", []):
+        for entry in _d(result).get("skipped", []):
             click.echo(f"SKIP [plan] {entry['plan']}: {entry['reason']}", err=True)
         click.echo(result["summary"], err=True)
         if not result["passed"]:
@@ -562,17 +580,18 @@ def register(main):
         result = soup_vuln_gate(effective_dhf, offline_mode=offline_mode)
         click.echo(json.dumps(result))
 
-        for item in result.get("skipped", []):
+        for item in _d(result).get("skipped", []):
             click.echo(f"SKIP [soup-vuln] {item['soup_id']}: {item['reason']}", err=True)
-        for entry in result.get("accepted", []):
+        for entry in _d(result).get("accepted", []):
             click.echo(
                 f"ACCEPTED [soup-vuln] {entry['soup_id']} ({entry['name']}@{entry['version']}): "
                 f"{entry['vuln_id']} — {entry['rationale']}",
                 err=True,
             )
-        for problem in result.get("acceptance_problems", []):
+        for problem in _d(result).get("acceptance_problems", []):
             click.echo(f"WARN [soup-vuln] {problem}", err=True)
-        for item in result.get("vulnerable", []):
+        _render_envelope(result, "soup-vuln")
+        for item in _d(result).get("vulnerable", []):
             for v in item.get("vulns", []):
                 detail = v.get("summary") or v.get("url") or "see osv.dev"
                 severity = f"[{v['severity']}] " if v.get("severity") else ""
@@ -581,9 +600,6 @@ def register(main):
                     f"{v['id']} — {severity}{detail}",
                     err=True,
                 )
-        if result.get("error"):
-            level = "WARN" if result["passed"] else "ERROR"
-            click.echo(f"{level} [soup-vuln] {result['error']}", err=True)
         click.echo(result["summary"], err=True)
         if not result["passed"]:
             raise click.ClickException("SOUP vulnerability check failed.")

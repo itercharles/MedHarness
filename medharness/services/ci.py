@@ -33,6 +33,63 @@ from dhfkit.testing_points import parse_testing_points
 
 
 # ---------------------------------------------------------------------------
+# Gate result envelope
+# ---------------------------------------------------------------------------
+
+#: Keys every gate result carries, whatever the gate. A caller — a CI script or
+#: an agent — parses this once and handles any gate, present or future.
+ENVELOPE_KEYS = ("gate", "passed", "summary", "errors", "warnings", "details")
+
+
+def gate_result(
+    gate: str,
+    passed: bool,
+    summary: str,
+    *,
+    errors: list[str] | None = None,
+    warnings: list[str] | None = None,
+    **details: Any,
+) -> dict[str, Any]:
+    """Wrap a gate outcome in the common envelope.
+
+    Gate-specific payload goes under ``details`` rather than at the top level,
+    so adding a field to one gate cannot change the shape callers rely on.
+    Before this, the only key shared by every gate was ``passed`` — five gates
+    meant five parsers.
+
+    ``errors`` are what made the gate fail; ``warnings`` are what it noticed
+    without failing. Both are plain strings, already phrased for a human,
+    because the machine-readable form of the same information is in ``details``.
+    """
+    return {
+        "gate": gate,
+        "passed": passed,
+        "summary": summary,
+        "errors": list(errors or []),
+        "warnings": list(warnings or []),
+        "details": details,
+    }
+
+
+def envelope_from(gate: str, raw: dict) -> dict:
+    """Restructure a gate's own dict into the common envelope.
+
+    The gate keeps building its own messages — it knows what its findings mean.
+    This only moves the gate-specific keys under ``details`` so the top level is
+    identical across gates.
+    """
+    return gate_result(
+        gate,
+        bool(raw.get("passed", False)),
+        str(raw.get("summary") or ""),
+        errors=raw.get("errors") or [],
+        warnings=raw.get("warnings") or [],
+        **{k: v for k, v in raw.items()
+           if k not in ("passed", "summary", "errors", "warnings")},
+    )
+
+
+# ---------------------------------------------------------------------------
 # ci_structural_gate — backs ci dhf-validate
 # ---------------------------------------------------------------------------
 
@@ -142,7 +199,42 @@ def ci_structural_gate(
             "pairs": cov.get("results", []),
         }
 
-    return {"passed": passed, "results": results}
+    errors, warnings = _structural_messages(results, fail_on_uncovered)
+    schema_n = results.get("schema", {}).get("item_count", 0)
+    return gate_result(
+        "verify dhf", passed,
+        f"{schema_n} item(s) checked; {len(errors)} error(s), {len(warnings)} warning(s).",
+        errors=errors, warnings=warnings, results=results,
+    )
+
+
+def _structural_messages(results: dict, fail_on_uncovered: bool) -> tuple[list[str], list[str]]:
+    """Split structural findings into what blocks and what merely advises."""
+    errors: list[str] = []
+    warnings: list[str] = []
+
+    schema = results.get("schema") or {}
+    errors.extend(str(e) for e in (schema.get("errors") or []))
+
+    trace = results.get("traceability") or {}
+    for failure in (trace.get("required") or {}).get("failures", []):
+        errors.append(f"{failure.get('id')}: {failure.get('issue')}")
+    for d in trace.get("dangling", []):
+        errors.append(
+            f"{d['source']}.{d['field']} -> {d['target']}: target does not exist"
+        )
+
+    # Uncovered items block only under --fail-on-uncovered; anywhere else they
+    # are a gap in design still to be written, not a broken reference.
+    bucket = errors if fail_on_uncovered else warnings
+    for gap in results.get("coverage_gaps", []):
+        bucket.append(
+            f"{gap['parent_type']}->{gap['child_type']}: "
+            f"{len(gap.get('uncovered') or [])} uncovered"
+        )
+    for gap in results.get("verification_gaps", []):
+        warnings.append(f"{gap['id']}: {gap['issue']}")
+    return errors, warnings
 
 
 # ---------------------------------------------------------------------------
@@ -167,11 +259,12 @@ def ci_test_coverage_gate(
     from dhfkit.local_adapter import LocalDHFAdapter
 
     if not junit_paths:
-        return {
-            "passed": False,
-            "error": "No JUnit files found.",
-            "results": [],
-        }
+        return gate_result(
+            "verify tests", False,
+            "No JUnit files found.",
+            errors=["No JUnit files found — pass --junit-dir or --junit."],
+            results=[],
+        )
 
     covered_reqs: set[str] = set()
     covered_pairs: set[tuple[str, str]] = set()
@@ -305,14 +398,30 @@ def ci_test_coverage_gate(
             "uncovered": uncovered,
         })
 
-    return {
-        "passed": passed,
-        "results": results,
-        "testing_points": testing_points,
-        "required_levels": required_levels,
-        "levels_seen": sorted(seen_levels),
-        "level_gaps": level_gaps,
-    }
+    errors = [
+        f"{row['type']}: {row['covered']}/{row['total']} requirements covered"
+        for row in results if not row.get("passed") and "warning" not in row
+    ] + [
+        f"{tp['req_id']}: test points {', '.join(tp['uncovered'])} uncovered"
+        for tp in testing_points if not tp["passed"]
+    ] + [
+        f"{gap['req_id']}: verified at {', '.join(gap['have']) or 'no level'} "
+        f"but missing {', '.join(gap['missing'])}"
+        for gap in level_gaps
+    ]
+    warnings = [row["warning"] for row in results if row.get("warning")]
+    covered = sum(r.get("covered", 0) for r in results)
+    total = sum(r.get("total", 0) for r in results)
+    return gate_result(
+        "verify tests", passed,
+        f"{covered}/{total} requirement(s) covered by passing tests.",
+        errors=errors, warnings=warnings,
+        results=results,
+        testing_points=testing_points,
+        required_levels=required_levels,
+        levels_seen=sorted(seen_levels),
+        level_gaps=level_gaps,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -779,7 +888,7 @@ def soup_vuln_gate(dhf_path: Path, *, offline_mode: str = "fail") -> dict:
 
     if not checkable:
         n_soup = len(soup_items)
-        return {
+        return envelope_from("verify soup", {
             "passed": True,
             "soup_count": n_soup,
             "checked_count": 0,
@@ -792,7 +901,7 @@ def soup_vuln_gate(dhf_path: Path, *, offline_mode: str = "fail") -> dict:
                 f"{n_soup} SOUP item(s) found; none checkable "
                 "(add 'ecosystem' field to enable vulnerability scanning)."
             ) if n_soup else "No SOUP items in DHF.",
-        }
+        })
 
     queries = [
         {"package": {"name": c["name"], "ecosystem": c["ecosystem"]}, "version": c["version"]}
@@ -810,8 +919,13 @@ def soup_vuln_gate(dhf_path: Path, *, offline_mode: str = "fail") -> dict:
             results = _json.loads(resp.read()).get("results", [])
     except urllib.error.URLError as exc:
         tolerated = offline_mode == "warn"
-        return {
+        outage = f"osv.dev unreachable: {exc}"
+        return envelope_from("verify soup", {
             "passed": tolerated,
+            # The outage belongs in the envelope, not a private key: a caller
+            # that handles `errors`/`warnings` for every gate handles this too.
+            "errors": [] if tolerated else [outage],
+            "warnings": [outage] if tolerated else [],
             "soup_count": len(soup_items),
             "checked_count": 0,
             "vulnerable": [],
@@ -826,7 +940,7 @@ def soup_vuln_gate(dhf_path: Path, *, offline_mode: str = "fail") -> dict:
                 if tolerated
                 else f"SOUP vulnerability check failed: {exc}"
             ),
-        }
+        })
 
     vulnerable: list[dict] = []
     accepted_found: list[dict] = []
@@ -868,7 +982,7 @@ def soup_vuln_gate(dhf_path: Path, *, offline_mode: str = "fail") -> dict:
     ]
     if accepted_found:
         summary_parts.append(f"{len(accepted_found)} documented as accepted.")
-    return {
+    return envelope_from("verify soup", {
         "passed": passed,
         "soup_count": len(soup_items),
         "checked_count": len(checkable),
@@ -878,7 +992,7 @@ def soup_vuln_gate(dhf_path: Path, *, offline_mode: str = "fail") -> dict:
         "acceptance_problems": acceptance_problems,
         "error": None,
         "summary": " ".join(summary_parts),
-    }
+    })
 
 
 def _check_cr_fields(cr_item: dict, cr_id: str) -> list[dict]:
@@ -1022,7 +1136,7 @@ def cr_closure_gate(
 
     raw = cr_item.get("proposed_new_items")
     if raw is None:
-        return {
+        return envelope_from("verify completion", {
             "passed": False,
             "cr_id": cr_id,
             "incomplete_cr_fields": incomplete_cr_fields,
@@ -1034,11 +1148,11 @@ def cr_closure_gate(
                 f"CR {cr_id} — proposed_new_items field is absent from the CR item; "
                 "re-run generate-dhf Step 4 to record the items created in this session."
             ),
-        }
+        })
     proposed: list[dict] = [e for e in raw if isinstance(e, dict)] if isinstance(raw, list) else []
 
     if not proposed:
-        return {
+        return envelope_from("verify completion", {
             "passed": not bool(incomplete_cr_fields),
             "cr_id": cr_id,
             "incomplete_cr_fields": incomplete_cr_fields,
@@ -1051,7 +1165,7 @@ def cr_closure_gate(
                 if not incomplete_cr_fields
                 else f"CR {cr_id} — proposed_new_items is empty but CR fields are incomplete."
             ),
-        }
+        })
 
     # Scope item lookup to those generated by this specific CR when possible.
     # generate-dhf writes affected_items onto the CR item after every run, so
@@ -1116,7 +1230,7 @@ def cr_closure_gate(
         summary = ("PASS" if passed else "FAIL") + (" — " + ", ".join(parts) if parts else "")
         if passed:
             summary = f"CR {cr_id} closure verified — all proposed items present."
-        return {
+        return envelope_from("verify completion", {
             "passed": passed,
             "cr_id": cr_id,
             "incomplete_cr_fields": incomplete_cr_fields,
@@ -1125,7 +1239,7 @@ def cr_closure_gate(
             "unverified_test": [],
             "manual_review_required": [],
             "summary": summary,
-        }
+        })
 
     verify_result = validate_verification_completeness(
         dhf_path,
@@ -1147,7 +1261,7 @@ def cr_closure_gate(
     if passed and not parts:
         summary = f"CR {cr_id} closure verified — all proposed items present and verified."
 
-    return {
+    return envelope_from("verify completion", {
         "passed": passed,
         "cr_id": cr_id,
         "incomplete_cr_fields": incomplete_cr_fields,
@@ -1156,7 +1270,7 @@ def cr_closure_gate(
         "unverified_test": verify_result.get("unverified_test", []),
         "manual_review_required": verify_result.get("manual_review_required", []),
         "summary": summary,
-    }
+    })
 
 
 
@@ -1201,7 +1315,7 @@ def classification_gate(dhf_path: Path) -> dict:
     errors: list[str] = []
 
     if not declared:
-        return {
+        return envelope_from("verify classification", {
             "passed": True,
             "declared": None,
             "rationale_present": False,
@@ -1214,7 +1328,7 @@ def classification_gate(dhf_path: Path) -> dict:
             ],
             "errors": [],
             "summary": "No safety class declared — classification checks are inactive.",
-        }
+        })
 
     if declared not in _SAFETY_CLASSES:
         errors.append(
@@ -1280,7 +1394,7 @@ def classification_gate(dhf_path: Path) -> dict:
         f"Class {declared}: "
         + ("all required activities present." if passed else f"{len(errors)} gap(s).")
     )
-    return {
+    return envelope_from("verify classification", {
         "passed": passed,
         "declared": declared,
         "rationale_present": bool(rationale),
@@ -1289,7 +1403,7 @@ def classification_gate(dhf_path: Path) -> dict:
         "warnings": warnings,
         "errors": errors,
         "summary": summary,
-    }
+    })
 
 
 _CLASS_CLAUSE_HINTS = {
@@ -1367,7 +1481,7 @@ def plans_gate(dhf_path: Path) -> dict:
     required = config.required_activities().get("required_plans") or []
 
     if not declared:
-        return {
+        return envelope_from("verify plans", {
             "passed": True,
             "declared": None,
             "checked": [],
@@ -1380,7 +1494,7 @@ def plans_gate(dhf_path: Path) -> dict:
                 "Declare one in global.yaml to activate this check."
             ],
             "summary": "No safety class declared — plan checks are inactive.",
-        }
+        })
 
     templates_dir = _plan_templates_dir()
     plans_dir = dhf_path / "documents" / "plans"
@@ -1440,7 +1554,7 @@ def plans_gate(dhf_path: Path) -> dict:
     )
 
     passed = not errors
-    return {
+    return envelope_from("verify plans", {
         "passed": passed,
         "declared": declared,
         "checked": checked,
@@ -1455,7 +1569,7 @@ def plans_gate(dhf_path: Path) -> dict:
             f"Class {declared}: {len(checked)} plan(s) written, "
             f"{len(missing)} missing, {len(unwritten)} unchanged."
         ),
-    }
+    })
 
 
 def _plan_templates_dir() -> Optional[Path]:

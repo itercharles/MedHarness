@@ -142,7 +142,7 @@ def test_absent_cr_item_fails(tmp_path: Path) -> None:
     dhf = _make_dhf(tmp_path)
     result = cr_closure_gate("CR-001", dhf)
     assert result["passed"] is False
-    assert result["missing_items"] == []
+    assert result["details"]["missing_items"] == []
 
 
 def test_empty_proposed_new_items_passes(tmp_path: Path) -> None:
@@ -152,8 +152,8 @@ def test_empty_proposed_new_items_passes(tmp_path: Path) -> None:
     _write_design_review(tmp_path, "CR-001")
     result = cr_closure_gate("CR-001", dhf)
     assert result["passed"] is True
-    assert result["missing_items"] == []
-    assert result["incomplete_cr_fields"] == []
+    assert result["details"]["missing_items"] == []
+    assert result["details"]["incomplete_cr_fields"] == []
 
 
 def test_missing_implementation_notes_fails(tmp_path: Path) -> None:
@@ -161,7 +161,7 @@ def test_missing_implementation_notes_fails(tmp_path: Path) -> None:
     _write_cr_proposed(dhf, "CR-001", [], implementation_notes=None)
     result = cr_closure_gate("CR-001", dhf)
     assert result["passed"] is False
-    fields = [f["field"] for f in result["incomplete_cr_fields"]]
+    fields = [f["field"] for f in result["details"]["incomplete_cr_fields"]]
     assert "implementation_notes" in fields
 
 
@@ -170,7 +170,7 @@ def test_empty_implementation_notes_fails(tmp_path: Path) -> None:
     _write_cr_proposed(dhf, "CR-001", [], implementation_notes="")
     result = cr_closure_gate("CR-001", dhf)
     assert result["passed"] is False
-    fields = [f["field"] for f in result["incomplete_cr_fields"]]
+    fields = [f["field"] for f in result["details"]["incomplete_cr_fields"]]
     assert "implementation_notes" in fields
 
 
@@ -179,7 +179,7 @@ def test_missing_affected_risk_items_fails(tmp_path: Path) -> None:
     _write_cr_proposed(dhf, "CR-001", [], affected_risk_items=None)
     result = cr_closure_gate("CR-001", dhf)
     assert result["passed"] is False
-    fields = [f["field"] for f in result["incomplete_cr_fields"]]
+    fields = [f["field"] for f in result["details"]["incomplete_cr_fields"]]
     assert "affected_risk_items" in fields
 
 
@@ -190,7 +190,7 @@ def test_empty_affected_risk_items_passes(tmp_path: Path) -> None:
     _write_design_review(tmp_path, "CR-001")
     result = cr_closure_gate("CR-001", dhf)
     assert result["passed"] is True
-    assert all(f["field"] != "affected_risk_items" for f in result["incomplete_cr_fields"])
+    assert all(f["field"] != "affected_risk_items" for f in result["details"]["incomplete_cr_fields"])
 
 
 def test_null_affected_risk_items_fails(tmp_path: Path) -> None:
@@ -207,7 +207,7 @@ def test_null_affected_risk_items_fails(tmp_path: Path) -> None:
     )
     result = cr_closure_gate("CR-001", dhf)
     assert result["passed"] is False
-    fields = [f["field"] for f in result["incomplete_cr_fields"]]
+    fields = [f["field"] for f in result["details"]["incomplete_cr_fields"]]
     assert "affected_risk_items" in fields
 
 
@@ -216,7 +216,7 @@ def test_missing_triage_result_fails(tmp_path: Path) -> None:
     _write_cr_proposed(dhf, "CR-001", [], triage_result=None)
     result = cr_closure_gate("CR-001", dhf)
     assert result["passed"] is False
-    fields = [f["field"] for f in result["incomplete_cr_fields"]]
+    fields = [f["field"] for f in result["details"]["incomplete_cr_fields"]]
     assert "triage_result" in fields
 
 
@@ -225,7 +225,7 @@ def test_triage_result_not_approved_fails(tmp_path: Path) -> None:
     _write_cr_proposed(dhf, "CR-001", [], triage_result={"verdict": "rejected"})
     result = cr_closure_gate("CR-001", dhf)
     assert result["passed"] is False
-    fields = [f["field"] for f in result["incomplete_cr_fields"]]
+    fields = [f["field"] for f in result["details"]["incomplete_cr_fields"]]
     assert "triage_result" in fields
 
 
@@ -240,7 +240,7 @@ def test_all_cr_fields_present_passes(tmp_path: Path) -> None:
     )
     _write_design_review(tmp_path, "CR-001")
     result = cr_closure_gate("CR-001", dhf)
-    assert result["incomplete_cr_fields"] == []
+    assert result["details"]["incomplete_cr_fields"] == []
 
 
 def test_proposed_items_all_created_with_junit_passes(tmp_path: Path) -> None:
@@ -255,7 +255,7 @@ def test_proposed_items_all_created_with_junit_passes(tmp_path: Path) -> None:
     junit = _make_junit(tmp_path, ["SRS-001", "SRS-002"])
     result = cr_closure_gate("CR-001", dhf, junit_paths=(junit,))
     assert result["passed"] is True
-    assert result["missing_items"] == []
+    assert result["details"]["missing_items"] == []
 
 
 def test_missing_proposed_item_by_title_fails(tmp_path: Path) -> None:
@@ -267,7 +267,7 @@ def test_missing_proposed_item_by_title_fails(tmp_path: Path) -> None:
     junit = _make_junit(tmp_path, ["SRS-001"])
     result = cr_closure_gate("CR-001", dhf, junit_paths=(junit,))
     assert result["passed"] is False
-    assert any(m["type"] == "SRS" for m in result["missing_items"])
+    assert any(m["type"] == "SRS" for m in result["details"]["missing_items"])
 
 
 def test_title_match_is_case_insensitive(tmp_path: Path) -> None:
@@ -276,7 +276,7 @@ def test_title_match_is_case_insensitive(tmp_path: Path) -> None:
     _write_design_review(tmp_path, "CR-001")
     _write_srs_item(dhf, "SRS-001", "rate limit input validation", verification_method=["Inspection"])
     result = cr_closure_gate("CR-001", dhf)
-    assert result["missing_items"] == []
+    assert result["details"]["missing_items"] == []
 
 
 def test_pre_existing_item_does_not_satisfy_proposed_item(tmp_path: Path) -> None:
@@ -291,7 +291,7 @@ def test_pre_existing_item_does_not_satisfy_proposed_item(tmp_path: Path) -> Non
     _write_srs_item(dhf, "SRS-099", "Old unrelated requirement", verification_method=["Test"])
     result = cr_closure_gate("CR-001", dhf)
     assert result["passed"] is False
-    assert any(m["type"] == "SRS" for m in result["missing_items"])
+    assert any(m["type"] == "SRS" for m in result["details"]["missing_items"])
 
 
 def test_item_without_verification_method_fails(tmp_path: Path) -> None:
@@ -300,7 +300,7 @@ def test_item_without_verification_method_fails(tmp_path: Path) -> None:
     _write_srs_item(dhf, "SRS-001", "Req A")  # no verification_method
     result = cr_closure_gate("CR-001", dhf)
     assert result["passed"] is False
-    ids = [i["id"] for i in result["verification_gaps"]]
+    ids = [i["id"] for i in result["details"]["verification_gaps"]]
     assert "SRS-001" in ids
 
 
@@ -312,7 +312,7 @@ def test_test_method_without_junit_evidence_fails(tmp_path: Path) -> None:
     junit = _make_junit(tmp_path, [])
     result = cr_closure_gate("CR-001", dhf, junit_paths=(junit,))
     assert result["passed"] is False
-    ids = [i["id"] for i in result["unverified_test"]]
+    ids = [i["id"] for i in result["details"]["unverified_test"]]
     assert "SRS-001" in ids
 
 
@@ -328,7 +328,7 @@ def test_test_method_with_no_junit_at_all_fails(tmp_path: Path) -> None:
     _write_srs_item(dhf, "SRS-001", "Req A", verification_method=["Test"])
     result = cr_closure_gate("CR-001", dhf, junit_paths=())
     assert result["passed"] is False
-    ids = [i["id"] for i in result["unverified_test"]]
+    ids = [i["id"] for i in result["details"]["unverified_test"]]
     assert "SRS-001" in ids
 
 
@@ -343,7 +343,7 @@ def test_proposed_item_with_empty_title_is_skipped(tmp_path: Path) -> None:
     _write_srs_item(dhf, "SRS-001", "Real req", verification_method=["Inspection"])
     result = cr_closure_gate("CR-001", dhf)
     assert result["passed"] is True
-    assert result["missing_items"] == []
+    assert result["details"]["missing_items"] == []
 
 
 def test_duplicate_proposed_entries_deduplicated(tmp_path: Path) -> None:
@@ -361,7 +361,7 @@ def test_duplicate_proposed_entries_deduplicated(tmp_path: Path) -> None:
     _write_srs_item(dhf, "SRS-001", "Same title", verification_method=["Inspection"])
     result = cr_closure_gate("CR-001", dhf)
     assert result["passed"] is True
-    assert result["missing_items"] == []
+    assert result["details"]["missing_items"] == []
 
 
 def test_risk_rcm_in_proposed_items_passes_without_verification_method(tmp_path: Path) -> None:
@@ -376,8 +376,8 @@ def test_risk_rcm_in_proposed_items_passes_without_verification_method(tmp_path:
     _write_rcm_item(dhf, "RCM-002", "Optimistic-lock concurrency control", "RISK-002")
     result = cr_closure_gate("CR-001", dhf)
     assert result["passed"] is True
-    assert result["missing_items"] == []
-    assert result["verification_gaps"] == []
+    assert result["details"]["missing_items"] == []
+    assert result["details"]["verification_gaps"] == []
 
 
 def test_risk_rcm_missing_from_dhf_fails(tmp_path: Path) -> None:
@@ -386,7 +386,7 @@ def test_risk_rcm_missing_from_dhf_fails(tmp_path: Path) -> None:
     _write_cr_proposed(dhf, "CR-001", [{"type": "RISK", "title": "Unintended data modification"}])
     result = cr_closure_gate("CR-001", dhf)
     assert result["passed"] is False
-    assert any(m["type"] == "RISK" for m in result["missing_items"])
+    assert any(m["type"] == "RISK" for m in result["details"]["missing_items"])
 
 
 def test_mixed_srs_and_risk_in_proposed_items(tmp_path: Path) -> None:
@@ -401,8 +401,8 @@ def test_mixed_srs_and_risk_in_proposed_items(tmp_path: Path) -> None:
     _write_risk_item(dhf, "RISK-002", "New hazard from Req A")
     result = cr_closure_gate("CR-001", dhf)
     assert result["passed"] is True
-    assert result["missing_items"] == []
-    assert result["verification_gaps"] == []
+    assert result["details"]["missing_items"] == []
+    assert result["details"]["verification_gaps"] == []
 
 
 # ---------------------------------------------------------------------------
@@ -424,7 +424,7 @@ def test_cli_cr_complete_passes(tmp_path: Path) -> None:
     assert result.exit_code == 0, result.output
     payload = json.loads(result.output.splitlines()[0])
     assert payload["passed"] is True
-    assert payload["cr_id"] == "CR-001"
+    assert payload["details"]["cr_id"] == "CR-001"
 
 
 def test_cli_cr_complete_fails_on_incomplete_cr_fields(tmp_path: Path) -> None:
@@ -438,7 +438,7 @@ def test_cli_cr_complete_fails_on_incomplete_cr_fields(tmp_path: Path) -> None:
     assert result.exit_code != 0
     payload = json.loads(result.output.splitlines()[0])
     assert payload["passed"] is False
-    assert len(payload["incomplete_cr_fields"]) >= 2
+    assert len(payload["details"]["incomplete_cr_fields"]) >= 2
     assert "FAIL [cr-complete]" in result.output
 
 
@@ -476,7 +476,7 @@ def test_missing_design_review_fails(tmp_path: Path) -> None:
     # No design review file written
     result = cr_closure_gate("CR-001", dhf)
     assert result["passed"] is False
-    fields = [f["field"] for f in result["incomplete_cr_fields"]]
+    fields = [f["field"] for f in result["details"]["incomplete_cr_fields"]]
     assert "design_review" in fields
 
 
@@ -487,7 +487,7 @@ def test_design_review_needs_revision_fails(tmp_path: Path) -> None:
     _write_design_review(tmp_path, "CR-001", verdict="needs_revision")
     result = cr_closure_gate("CR-001", dhf)
     assert result["passed"] is False
-    fields = [f["field"] for f in result["incomplete_cr_fields"]]
+    fields = [f["field"] for f in result["details"]["incomplete_cr_fields"]]
     assert "design_review" in fields
 
 
@@ -497,7 +497,7 @@ def test_design_review_approved_clears_field(tmp_path: Path) -> None:
     _write_cr_proposed(dhf, "CR-001", [])
     _write_design_review(tmp_path, "CR-001", verdict="approved")
     result = cr_closure_gate("CR-001", dhf)
-    fields = [f["field"] for f in result["incomplete_cr_fields"]]
+    fields = [f["field"] for f in result["details"]["incomplete_cr_fields"]]
     assert "design_review" not in fields
 
 
@@ -510,7 +510,7 @@ def test_design_review_unknown_verdict_fails(tmp_path: Path) -> None:
     (review_dir / "CR-001-Design-Review.md").write_text("# Review\n\nNo verdict line here.\n")
     result = cr_closure_gate("CR-001", dhf)
     assert result["passed"] is False
-    fields = [f["field"] for f in result["incomplete_cr_fields"]]
+    fields = [f["field"] for f in result["details"]["incomplete_cr_fields"]]
     assert "design_review" in fields
 
 
