@@ -11,6 +11,44 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+### Breaking Changes
+
+- **Every gate now returns the same envelope.** The only key all gates shared
+  was `passed` — five gates meant five shapes, and each new gate added another
+  for callers to special-case. Gate-specific payload moves under `details`:
+
+  ```json
+  {
+    "gate": "verify plans",
+    "passed": false,
+    "summary": "Class B: 1 plan(s) written, 0 missing, 3 unchanged.",
+    "errors": ["development_plan.md is unchanged from the template ..."],
+    "warnings": ["integration_plan.md: 6 section(s) still match ..."],
+    "details": { "declared": "B", "checked": [...], "unwritten": [...] }
+  }
+  ```
+
+  A CI script or an agent parses this once and handles any gate, including ones
+  that do not exist yet. `errors` are what made the gate fail; `warnings` are
+  what it noticed without failing — both plain strings, already phrased for a
+  reader, because the machine-readable form is in `details`.
+
+  **What breaks:** anything reading a gate-specific key at the top level of the
+  JSON. Exit codes, `passed`, and all stderr output are unchanged, so a pipeline
+  that only checks exit status — which is how the reference project consumes
+  them — is unaffected.
+
+  `verify soup` no longer carries a private `error` key; an unreachable osv.dev
+  appears in `errors`, or in `warnings` under `--offline-mode warn`, like any
+  other finding.
+
+### Internal
+
+- `tests/unit/test_gate_envelope.py` pins the contract, including a discovery
+  test that enumerates the module rather than naming gates — a gate added
+  without the envelope fails there rather than reaching a caller.
+
+
 ---
 
 ## [0.13.0] — 2026-08-23

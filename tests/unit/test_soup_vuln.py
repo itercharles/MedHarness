@@ -65,16 +65,16 @@ class TestSoupVulnGate:
         dhf = _make_dhf(tmp_path)
         result = soup_vuln_gate(dhf)
         assert result["passed"] is True
-        assert result["soup_count"] == 0
-        assert result["checked_count"] == 0
+        assert result["details"]["soup_count"] == 0
+        assert result["details"]["checked_count"] == 0
 
     def test_soup_without_ecosystem_skipped(self, tmp_path: Path) -> None:
         dhf = _make_dhf(tmp_path)
         _write_soup(dhf, "SOUP-001", "requests", "2.25.0")  # no ecosystem
         result = soup_vuln_gate(dhf)
         assert result["passed"] is True
-        assert result["checked_count"] == 0
-        assert any("ecosystem" in s["reason"] for s in result["skipped"])
+        assert result["details"]["checked_count"] == 0
+        assert any("ecosystem" in s["reason"] for s in result["details"]["skipped"])
 
     def test_clean_soup_passes(self, tmp_path: Path) -> None:
         dhf = _make_dhf(tmp_path)
@@ -86,8 +86,8 @@ class TestSoupVulnGate:
             mock_open.return_value.read.return_value = json.dumps(osv_response).encode()
             result = soup_vuln_gate(dhf)
         assert result["passed"] is True
-        assert result["checked_count"] == 1
-        assert result["vulnerable"] == []
+        assert result["details"]["checked_count"] == 1
+        assert result["details"]["vulnerable"] == []
 
     def test_vulnerable_soup_fails(self, tmp_path: Path) -> None:
         dhf = _make_dhf(tmp_path)
@@ -96,9 +96,9 @@ class TestSoupVulnGate:
             _osv(mock_open, {"results": [{"vulns": [_VULN]}]})
             result = soup_vuln_gate(dhf)
         assert result["passed"] is False
-        assert len(result["vulnerable"]) == 1
-        assert result["vulnerable"][0]["soup_id"] == "SOUP-001"
-        assert result["vulnerable"][0]["vulns"][0]["id"] == "GHSA-x84v-xcm2-53pg"
+        assert len(result["details"]["vulnerable"]) == 1
+        assert result["details"]["vulnerable"][0]["soup_id"] == "SOUP-001"
+        assert result["details"]["vulnerable"][0]["vulns"][0]["id"] == "GHSA-x84v-xcm2-53pg"
 
     def test_network_error_fails(self, tmp_path: Path) -> None:
         import urllib.error
@@ -107,8 +107,7 @@ class TestSoupVulnGate:
         with patch("urllib.request.urlopen", side_effect=urllib.error.URLError("timeout")):
             result = soup_vuln_gate(dhf)
         assert result["passed"] is False
-        assert result["error"] is not None
-        assert "unreachable" in result["error"]
+        assert any("unreachable" in e for e in result["errors"])
 
     def test_network_error_tolerated_in_warn_mode(self, tmp_path: Path) -> None:
         import urllib.error
@@ -117,7 +116,7 @@ class TestSoupVulnGate:
         with patch("urllib.request.urlopen", side_effect=urllib.error.URLError("timeout")):
             result = soup_vuln_gate(dhf, offline_mode="warn")
         assert result["passed"] is True
-        assert "unreachable" in result["error"]
+        assert any("unreachable" in w for w in result["warnings"])
         assert "offline process" in result["summary"]
 
     def test_multiple_items_batched(self, tmp_path: Path) -> None:
@@ -131,7 +130,7 @@ class TestSoupVulnGate:
             mock_open.return_value.read.return_value = json.dumps(osv_response).encode()
             result = soup_vuln_gate(dhf)
         assert result["passed"] is True
-        assert result["checked_count"] == 2
+        assert result["details"]["checked_count"] == 2
         # Verify it was a single batch call
         assert mock_open.call_count == 1
 
@@ -143,8 +142,8 @@ class TestSoupVulnGate:
             "id: SOUP-001\ntitle: Unnamed\nversion: '1.0'\necosystem: PyPI\n"
         )
         result = soup_vuln_gate(dhf)
-        assert result["checked_count"] == 0
-        assert any("name" in s["reason"] for s in result["skipped"])
+        assert result["details"]["checked_count"] == 0
+        assert any("name" in s["reason"] for s in result["details"]["skipped"])
 
 
 # ---------------------------------------------------------------------------
@@ -174,7 +173,7 @@ class TestVulnDetail:
 
         with patch("urllib.request.urlopen", side_effect=_responses):
             result = soup_vuln_gate(dhf)
-        vuln = result["vulnerable"][0]["vulns"][0]
+        vuln = result["details"]["vulnerable"][0]["vulns"][0]
         assert vuln["summary"] == "CRLF injection in requests"
         assert vuln["severity"] == "HIGH"
 
@@ -198,7 +197,7 @@ class TestVulnDetail:
 
         with patch("urllib.request.urlopen", side_effect=_responses):
             result = soup_vuln_gate(dhf)
-        vuln = result["vulnerable"][0]["vulns"][0]
+        vuln = result["details"]["vulnerable"][0]["vulns"][0]
         assert result["passed"] is False
         assert vuln["summary"] == ""
         assert vuln["url"] == "https://osv.dev/vulnerability/GHSA-x84v-xcm2-53pg"
@@ -248,7 +247,7 @@ class TestVulnDetail:
 
         with patch("urllib.request.urlopen", side_effect=_responses):
             result = soup_vuln_gate(dhf)
-        assert len(result["vulnerable"][0]["vulns"]) == _VULN_DETAIL_BUDGET + 10
+        assert len(result["details"]["vulnerable"][0]["vulns"]) == _VULN_DETAIL_BUDGET + 10
         assert calls["n"] == _VULN_DETAIL_BUDGET + 1  # batch + budgeted lookups
 
     def test_budget_resets_between_calls(self, tmp_path: Path) -> None:
@@ -271,7 +270,7 @@ class TestVulnDetail:
 
             with patch("urllib.request.urlopen", side_effect=_responses):
                 result = soup_vuln_gate(dhf)
-            return result["vulnerable"][0]["vulns"][0]["summary"]
+            return result["details"]["vulnerable"][0]["vulns"][0]["summary"]
 
         assert _run() == "enriched"
         assert _run() == "enriched"  # second call still has budget
@@ -293,10 +292,10 @@ class TestAcceptedVulns:
             _osv(mock_open, {"results": [{"vulns": [_VULN]}]})
             result = soup_vuln_gate(dhf)
         assert result["passed"] is True
-        assert result["vulnerable"] == []
-        assert len(result["accepted"]) == 1
-        assert result["accepted"][0]["vuln_id"] == "GHSA-x84v-xcm2-53pg"
-        assert "not reachable" in result["accepted"][0]["rationale"]
+        assert result["details"]["vulnerable"] == []
+        assert len(result["details"]["accepted"]) == 1
+        assert result["details"]["accepted"][0]["vuln_id"] == "GHSA-x84v-xcm2-53pg"
+        assert "not reachable" in result["details"]["accepted"][0]["rationale"]
 
     def test_unlisted_vuln_still_blocks(self, tmp_path: Path) -> None:
         """Acceptance is per-ID, so a newly published CVE is not absorbed."""
@@ -309,8 +308,8 @@ class TestAcceptedVulns:
             _osv(mock_open, {"results": [{"vulns": [_VULN]}]})
             result = soup_vuln_gate(dhf)
         assert result["passed"] is False
-        assert result["vulnerable"][0]["vulns"][0]["id"] == "GHSA-x84v-xcm2-53pg"
-        assert result["accepted"] == []
+        assert result["details"]["vulnerable"][0]["vulns"][0]["id"] == "GHSA-x84v-xcm2-53pg"
+        assert result["details"]["accepted"] == []
 
     def test_acceptance_without_rationale_still_blocks(self, tmp_path: Path) -> None:
         dhf = _make_dhf(tmp_path)
@@ -322,7 +321,7 @@ class TestAcceptedVulns:
             _osv(mock_open, {"results": [{"vulns": [_VULN]}]})
             result = soup_vuln_gate(dhf)
         assert result["passed"] is False
-        assert any("rationale" in p for p in result["acceptance_problems"])
+        assert any("rationale" in p for p in result["details"]["acceptance_problems"])
 
     def test_bare_string_entry_still_blocks(self, tmp_path: Path) -> None:
         dhf = _make_dhf(tmp_path)
@@ -334,7 +333,7 @@ class TestAcceptedVulns:
             _osv(mock_open, {"results": [{"vulns": [_VULN]}]})
             result = soup_vuln_gate(dhf)
         assert result["passed"] is False
-        assert any("mapping" in p for p in result["acceptance_problems"])
+        assert any("mapping" in p for p in result["details"]["acceptance_problems"])
 
     def test_partial_acceptance_blocks_on_remainder(self, tmp_path: Path) -> None:
         dhf = _make_dhf(tmp_path)
@@ -347,8 +346,8 @@ class TestAcceptedVulns:
             _osv(mock_open, {"results": [{"vulns": [_VULN, other]}]})
             result = soup_vuln_gate(dhf)
         assert result["passed"] is False
-        assert len(result["accepted"]) == 1
-        assert [v["id"] for v in result["vulnerable"][0]["vulns"]] == ["GHSA-second-vuln"]
+        assert len(result["details"]["accepted"]) == 1
+        assert [v["id"] for v in result["details"]["vulnerable"][0]["vulns"]] == ["GHSA-second-vuln"]
 
 
 # ---------------------------------------------------------------------------
@@ -400,7 +399,7 @@ class TestVerifySoupCLI:
         with patch("urllib.request.urlopen", side_effect=urllib.error.URLError("no route")):
             r = CliRunner().invoke(main, ["--dhf", str(dhf), "verify", "soup"])
         assert r.exit_code != 0
-        assert "ERROR [soup-vuln]" in r.output
+        assert "FAIL [soup-vuln]" in r.output
 
     def test_accepted_vuln_reported_and_exits_zero(self, tmp_path: Path) -> None:
         dhf = _make_dhf(tmp_path)

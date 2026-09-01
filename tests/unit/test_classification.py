@@ -19,7 +19,7 @@ from click.testing import CliRunner
 
 from dhfkit.models.config import ProjectConfig
 from medharness.cli import main
-from medharness.services.ci import classification_gate
+from medharness.services.ci import ENVELOPE_KEYS, classification_gate
 from medharness.workflows.init import _replace_placeholders, _scaffold_dhf
 
 
@@ -52,7 +52,7 @@ class TestUndeclaredIsOptIn:
     def test_undeclared_passes_with_a_warning(self, dhf: Path) -> None:
         result = classification_gate(dhf)
         assert result["passed"] is True
-        assert result["declared"] is None
+        assert result["details"]["declared"] is None
         assert any("§4.3" in w for w in result["warnings"])
 
     def test_undeclared_exits_zero(self, dhf: Path) -> None:
@@ -71,7 +71,7 @@ class TestDeclaredClassActivatesChecks:
         _declare(dhf, "B")
         result = classification_gate(dhf)
         assert result["passed"] is True, result["errors"]
-        assert result["declared"] == "B"
+        assert result["details"]["declared"] == "B"
 
     def test_class_c_requires_detailed_design(self, dhf: Path) -> None:
         _declare(dhf, "C")
@@ -79,7 +79,7 @@ class TestDeclaredClassActivatesChecks:
 
         result = classification_gate(dhf)
         assert result["passed"] is False
-        missing = {e["code"] for e in result["missing_item_types"]}
+        missing = {e["code"] for e in result["details"]["missing_item_types"]}
         assert missing == {"SWDD", "MODULE"}
 
     def test_class_b_does_not_require_detailed_design(self, dhf: Path) -> None:
@@ -104,7 +104,7 @@ class TestDeclaredClassActivatesChecks:
     def test_missing_items_name_the_clause(self, dhf: Path) -> None:
         _declare(dhf, "C")
         _drop_items(dhf, "05_swdd")
-        entry = next(e for e in classification_gate(dhf)["missing_item_types"]
+        entry = next(e for e in classification_gate(dhf)["details"]["missing_item_types"]
                      if e["code"] == "SWDD")
         assert "5.4" in entry["clause_hint"]
 
@@ -118,7 +118,7 @@ class TestRationaleIsRequired:
 
     def test_rationale_present_is_reported(self, dhf: Path) -> None:
         _declare(dhf, "B")
-        assert classification_gate(dhf)["rationale_present"] is True
+        assert classification_gate(dhf)["details"]["rationale_present"] is True
 
 
 class TestInvalidClass:
@@ -131,7 +131,7 @@ class TestInvalidClass:
     def test_lowercase_class_is_accepted(self, dhf: Path) -> None:
         _declare(dhf, "b")
         result = classification_gate(dhf)
-        assert result["declared"] == "B"
+        assert result["details"]["declared"] == "B"
         assert result["passed"] is True
 
 
@@ -147,7 +147,7 @@ class TestModuleOverride:
         self._module(dhf, "safety_class: A\n")
 
         result = classification_gate(dhf)
-        override = result["module_overrides"][0]
+        override = result["details"]["module_overrides"][0]
         assert override["safety_class"] == "A"
         assert override["justified"] is False
         assert any("segregation_rationale" in w for w in result["warnings"])
@@ -161,7 +161,7 @@ class TestModuleOverride:
         )
 
         result = classification_gate(dhf)
-        assert result["module_overrides"][0]["justified"] is True
+        assert result["details"]["module_overrides"][0]["justified"] is True
         assert not result["warnings"]
 
     def test_override_never_blocks_the_gate(self, dhf: Path) -> None:
@@ -187,7 +187,7 @@ class TestActivityMapIsProjectOwned:
 
         result = classification_gate(dhf)
         assert result["passed"] is False
-        assert result["missing_item_types"][0]["code"] == "SYSARCH"
+        assert result["details"]["missing_item_types"][0]["code"] == "SYSARCH"
 
     def test_class_with_no_mapping_warns_rather_than_passing_silently(self, dhf: Path) -> None:
         _declare(dhf, "B")
@@ -218,8 +218,9 @@ class TestCLIContract:
         _declare(dhf, "B")
         r = CliRunner().invoke(main, ["--dhf", str(dhf), "verify", "classification"])
         payload = json.loads(r.output.splitlines()[0])
-        assert payload["declared"] == "B"
-        assert set(payload) >= {"passed", "declared", "warnings", "errors", "summary"}
+        assert payload["details"]["declared"] == "B"
+        assert set(payload) == set(ENVELOPE_KEYS)
+        assert "declared" in payload["details"]
 
     def test_failure_exits_nonzero(self, dhf: Path) -> None:
         _declare(dhf, "C")

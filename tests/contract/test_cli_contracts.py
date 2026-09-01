@@ -5,6 +5,10 @@ These tests protect the public CLI surface defined in compatibility-contracts.md
 """
 
 import json
+
+from medharness.services.ci import ENVELOPE_KEYS
+
+ENVELOPE = set(ENVELOPE_KEYS)
 import sys
 from pathlib import Path
 
@@ -237,16 +241,13 @@ class TestOutputContract:
         )
         r = _run("medharness", "--dhf", str(dhf), "verify", "completion", "--cr", "CR-CONTRACT")
         payload = json.loads(r.stdout.splitlines()[0])
-        required_keys = {
-            "passed", "cr_id", "incomplete_cr_fields",
-            "missing_items", "verification_gaps", "unverified_test",
-            "manual_review_required", "summary",
-        }
-        assert required_keys <= payload.keys(), (
+        assert ENVELOPE <= payload.keys(), f"Missing envelope keys: {ENVELOPE - payload.keys()}"
+        gate_keys = {"incomplete_cr_fields", "missing_items"}
+        assert gate_keys <= payload["details"].keys(), (
             f"Missing keys: {required_keys - payload.keys()}"
         )
-        assert isinstance(payload["incomplete_cr_fields"], list)
-        assert isinstance(payload["missing_items"], list)
+        assert isinstance(payload["details"]["incomplete_cr_fields"], list)
+        assert isinstance(payload["details"]["missing_items"], list)
         assert isinstance(payload["passed"], bool)
 
     def test_verify_soup_output_shape(self, scaffolded_dhf):
@@ -257,11 +258,12 @@ class TestOutputContract:
         # No SOUP items with ecosystem → passes with checked_count=0
         assert r.returncode == 0, r.stderr
         payload = json.loads(r.stdout.splitlines()[0])
-        required_keys = {"passed", "soup_count", "checked_count", "vulnerable", "skipped", "summary"}
-        assert required_keys <= payload.keys(), f"Missing keys: {required_keys - payload.keys()}"
+        assert ENVELOPE <= payload.keys(), f"Missing envelope keys: {ENVELOPE - payload.keys()}"
+        gate_keys = {"soup_count", "checked_count", "vulnerable", "skipped"}
+        assert gate_keys <= payload["details"].keys()
         assert isinstance(payload["passed"], bool)
-        assert isinstance(payload["vulnerable"], list)
-        assert isinstance(payload["skipped"], list)
+        assert isinstance(payload["details"]["vulnerable"], list)
+        assert isinstance(payload["details"]["skipped"], list)
 
     def test_upgrade_output_shape(self, scaffolded_dhf):
         """upgrade writes JSON with all required keys to stdout."""

@@ -74,29 +74,29 @@ class TestCiStructuralGate:
     def test_schema_passes_on_clean_dhf(self, dhf_validate_result):
         result = dhf_validate_result
         assert "passed" in result
-        assert "results" in result
-        assert "schema" in result["results"]
-        assert result["results"]["schema"]["passed"], "Schema should pass on fresh scaffold"
+        assert "results" in result["details"]
+        assert "schema" in result["details"]["results"]
+        assert result["details"]["results"]["schema"]["passed"], "Schema should pass on fresh scaffold"
 
     def test_traceability_result_shape(self, dhf_validate_result):
-        tr = dhf_validate_result["results"].get("traceability", {})
+        tr = dhf_validate_result["details"]["results"].get("traceability", {})
         assert "passed" in tr
         assert "required" in tr
         assert "coverage" in tr
 
     def test_structured_coverage_gaps_key_present(self, dhf_validate_result):
-        assert "coverage_gaps" in dhf_validate_result["results"], (
+        assert "coverage_gaps" in dhf_validate_result["details"]["results"], (
             "verify dhf must return structured coverage_gaps list"
         )
-        assert isinstance(dhf_validate_result["results"]["coverage_gaps"], list)
+        assert isinstance(dhf_validate_result["details"]["results"]["coverage_gaps"], list)
 
     def test_structured_orphans_key_present(self, dhf_validate_result):
-        assert "orphans" in dhf_validate_result["results"]
-        assert isinstance(dhf_validate_result["results"]["orphans"], list)
+        assert "orphans" in dhf_validate_result["details"]["results"]
+        assert isinstance(dhf_validate_result["details"]["results"]["orphans"], list)
 
     def test_structured_verification_gaps_key_present(self, dhf_validate_result):
-        assert "verification_gaps" in dhf_validate_result["results"]
-        vgaps = dhf_validate_result["results"]["verification_gaps"]
+        assert "verification_gaps" in dhf_validate_result["details"]["results"]
+        vgaps = dhf_validate_result["details"]["results"]["verification_gaps"]
         assert isinstance(vgaps, list)
         for gap in vgaps:
             assert "id" in gap
@@ -104,7 +104,7 @@ class TestCiStructuralGate:
             assert "issue" in gap
 
     def test_coverage_gap_entries_have_required_keys(self, dhf_validate_result):
-        for gap in dhf_validate_result["results"]["coverage_gaps"]:
+        for gap in dhf_validate_result["details"]["results"]["coverage_gaps"]:
             assert "parent_type" in gap
             assert "child_type" in gap
             assert "uncovered" in gap
@@ -118,9 +118,9 @@ class TestCiStructuralGate:
         )
         assert r.returncode in (0, 1), f"crashed:\n{r.stderr}"
         result = json.loads(r.stdout)
-        assert "coverage_gaps" in result["results"]
-        assert "orphans" in result["results"]
-        assert "verification_gaps" in result["results"]
+        assert "coverage_gaps" in result["details"]["results"]
+        assert "orphans" in result["details"]["results"]
+        assert "verification_gaps" in result["details"]["results"]
 
 
 # ---------------------------------------------------------------------------

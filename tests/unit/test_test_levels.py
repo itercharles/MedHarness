@@ -61,14 +61,14 @@ class TestInertWithoutAClass:
         junit = _junit(tmp_path / "u.xml", "SRS-001", "unit")
         result = ci_test_coverage_gate(dhf, [junit], req_types=("SRS",))
 
-        assert result["required_levels"] == []
-        assert result["level_gaps"] == []
-        assert result["results"][0]["passed"] is True
+        assert result["details"]["required_levels"] == []
+        assert result["details"]["level_gaps"] == []
+        assert result["details"]["results"][0]["passed"] is True
 
     def test_level_is_still_recorded_when_not_gated(self, dhf: Path, tmp_path: Path) -> None:
         junit = _junit(tmp_path / "i.xml", "SRS-001", "integration")
         result = ci_test_coverage_gate(dhf, [junit], req_types=("SRS",))
-        assert result["levels_seen"] == ["integration"]
+        assert result["details"]["levels_seen"] == ["integration"]
 
 
 class TestClassRequiresLevels:
@@ -80,7 +80,7 @@ class TestClassRequiresLevels:
         result = ci_test_coverage_gate(dhf, [junit], req_types=("SRS",))
 
         assert result["passed"] is False
-        gap = result["level_gaps"][0]
+        gap = result["details"]["level_gaps"][0]
         assert gap["req_id"] == "SRS-001"
         assert gap["have"] == ["unit"]
         assert set(gap["missing"]) == {"integration", "system"}
@@ -93,21 +93,21 @@ class TestClassRequiresLevels:
         ]
 
         result = ci_test_coverage_gate(dhf, junits, req_types=("SRS",))
-        assert result["level_gaps"] == []
+        assert result["details"]["level_gaps"] == []
 
     def test_class_a_requires_unit_only(self, dhf: Path, tmp_path: Path) -> None:
         _declare(dhf, "A")
         junit = _junit(tmp_path / "u.xml", "SRS-001", "unit")
 
         result = ci_test_coverage_gate(dhf, [junit], req_types=("SRS",))
-        assert result["required_levels"] == ["unit"]
-        assert result["level_gaps"] == []
+        assert result["details"]["required_levels"] == ["unit"]
+        assert result["details"]["level_gaps"] == []
 
     def test_gap_names_what_is_missing(self, dhf: Path, tmp_path: Path) -> None:
         _declare(dhf, "C")
         junit = _junit(tmp_path / "u.xml", "SRS-001", "integration")
 
-        gap = ci_test_coverage_gate(dhf, [junit], req_types=("SRS",))["level_gaps"][0]
+        gap = ci_test_coverage_gate(dhf, [junit], req_types=("SRS",))["details"]["level_gaps"][0]
         assert "unit" in gap["missing"]
         assert "system" in gap["missing"]
         assert gap["have"] == ["integration"]
@@ -120,15 +120,15 @@ class TestUnlabelledIsUnit:
         junit = _junit(tmp_path / "plain.xml", "SRS-001", None)
 
         result = ci_test_coverage_gate(dhf, [junit], req_types=("SRS",))
-        assert result["levels_seen"] == [DEFAULT_TEST_LEVEL]
-        assert result["level_gaps"] == []
+        assert result["details"]["levels_seen"] == [DEFAULT_TEST_LEVEL]
+        assert result["details"]["level_gaps"] == []
 
     def test_unrecognised_level_falls_back_to_unit(self, dhf: Path, tmp_path: Path) -> None:
         _declare(dhf, "A")
         junit = _junit(tmp_path / "odd.xml", "SRS-001", "smoke")
 
         result = ci_test_coverage_gate(dhf, [junit], req_types=("SRS",))
-        assert result["levels_seen"] == ["unit"]
+        assert result["details"]["levels_seen"] == ["unit"]
 
 
 class TestPytestMarker:

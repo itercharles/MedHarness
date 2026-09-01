@@ -18,7 +18,7 @@ import pytest
 from click.testing import CliRunner
 
 from medharness.cli import main
-from medharness.services.ci import _sections, plans_gate
+from medharness.services.ci import ENVELOPE_KEYS, _sections, plans_gate
 from medharness.workflows.init import _replace_placeholders, _scaffold_dhf
 
 WRITTEN_PLAN = """# Verification Plan
@@ -59,7 +59,7 @@ class TestInactiveUntilClassed:
     def test_undeclared_class_checks_nothing(self, dhf: Path) -> None:
         result = plans_gate(dhf)
         assert result["passed"] is True
-        assert result["checked"] == []
+        assert result["details"]["checked"] == []
         assert any("no plans are required" in w for w in result["warnings"])
 
     def test_undeclared_exits_zero(self, dhf: Path) -> None:
@@ -74,7 +74,7 @@ class TestUnwrittenPlansFail:
         result = plans_gate(dhf)
 
         assert result["passed"] is False
-        assert {e["plan"] for e in result["unwritten"]} >= {
+        assert {e["plan"] for e in result["details"]["unwritten"]} >= {
             "development_plan.md", "risk_management_plan.md",
         }
 
@@ -92,7 +92,7 @@ class TestUnwrittenPlansFail:
             text = (dhf / "documents" / "plans" / name).read_text()
             assert "Starter Content" not in text, f"{name} unexpectedly has a banner"
 
-        unwritten = {e["plan"] for e in plans_gate(dhf)["unwritten"]}
+        unwritten = {e["plan"] for e in plans_gate(dhf)["details"]["unwritten"]}
         assert set(banner_free) <= unwritten
 
     def test_deleting_the_banner_block_does_not_launder_a_plan(self, dhf: Path) -> None:
@@ -108,7 +108,7 @@ class TestUnwrittenPlansFail:
         ]
         plan.write_text("\n".join(kept))
 
-        unwritten = {e["plan"] for e in plans_gate(dhf)["unwritten"]}
+        unwritten = {e["plan"] for e in plans_gate(dhf)["details"]["unwritten"]}
         assert "development_plan.md" in unwritten
 
     def test_editing_only_the_front_matter_does_not_launder_a_plan(self, dhf: Path) -> None:
@@ -126,7 +126,7 @@ class TestUnwrittenPlansFail:
             text = text.replace(marker, "")
         plan.write_text(text)
 
-        unwritten = {e["plan"] for e in plans_gate(dhf)["unwritten"]}
+        unwritten = {e["plan"] for e in plans_gate(dhf)["details"]["unwritten"]}
         assert "development_plan.md" in unwritten
 
     def test_missing_required_plan_fails(self, dhf: Path) -> None:
@@ -134,7 +134,7 @@ class TestUnwrittenPlansFail:
         (dhf / "documents" / "plans" / "integration_plan.md").unlink()
 
         result = plans_gate(dhf)
-        assert {e["plan"] for e in result["missing"]} == {"integration_plan.md"}
+        assert {e["plan"] for e in result["details"]["missing"]} == {"integration_plan.md"}
         assert any("absent" in e for e in result["errors"])
 
 
@@ -143,7 +143,7 @@ class TestWrittenPlansPass:
         _declare(dhf, "B")
         _write(dhf, "verification_plan")
 
-        checked = {e["plan"] for e in plans_gate(dhf)["checked"]}
+        checked = {e["plan"] for e in plans_gate(dhf)["details"]["checked"]}
         assert "verification_plan.md" in checked
 
     def test_all_written_passes_the_gate(self, dhf: Path) -> None:
@@ -155,7 +155,7 @@ class TestWrittenPlansPass:
 
         result = plans_gate(dhf)
         assert result["passed"] is True, result["errors"]
-        assert len(result["checked"]) == 5
+        assert len(result["details"]["checked"]) == 5
 
 
 class TestPartialIsAWarning:
@@ -171,8 +171,8 @@ class TestPartialIsAWarning:
         plan.write_text("\n".join(lines))
 
         result = plans_gate(dhf)
-        partial = {e["plan"] for e in result["partial"]}
-        unwritten = {e["plan"] for e in result["unwritten"]}
+        partial = {e["plan"] for e in result["details"]["partial"]}
+        unwritten = {e["plan"] for e in result["details"]["unwritten"]}
         assert "integration_plan.md" in partial
         assert "integration_plan.md" not in unwritten
         assert any("integration_plan.md" in w for w in result["warnings"])
@@ -181,21 +181,21 @@ class TestPartialIsAWarning:
 class TestClassScoping:
     def test_class_b_skips_plans_it_does_not_require(self, dhf: Path) -> None:
         _declare(dhf, "B")
-        skipped = {e["plan"] for e in plans_gate(dhf)["skipped"]}
+        skipped = {e["plan"] for e in plans_gate(dhf)["details"]["skipped"]}
         assert "maintenance_plan.md" in skipped
         assert "validation_plan.md" in skipped
 
     def test_class_c_requires_more(self, dhf: Path) -> None:
         _declare(dhf, "C")
-        required = {e["plan"] for e in plans_gate(dhf)["unwritten"]}
+        required = {e["plan"] for e in plans_gate(dhf)["details"]["unwritten"]}
         assert "maintenance_plan.md" in required
         assert "validation_plan.md" in required
 
     def test_class_a_requires_fewest(self, dhf: Path) -> None:
         _declare(dhf, "A")
         result = plans_gate(dhf)
-        required = {e["plan"] for e in result["unwritten"]} | {
-            e["plan"] for e in result["checked"]
+        required = {e["plan"] for e in result["details"]["unwritten"]} | {
+            e["plan"] for e in result["details"]["checked"]
         }
         assert "verification_plan.md" not in required
         assert "development_plan.md" in required
@@ -219,8 +219,9 @@ class TestCLIContract:
         _declare(dhf, "B")
         r = CliRunner().invoke(main, ["--dhf", str(dhf), "verify", "plans"])
         payload = json.loads(r.output.splitlines()[0])
-        assert set(payload) >= {"passed", "declared", "checked", "missing",
-                                "unwritten", "partial", "skipped", "summary"}
+        assert set(payload) == set(ENVELOPE_KEYS)
+        assert set(payload["details"]) >= {"declared", "checked", "missing",
+                                           "unwritten", "partial", "skipped"}
 
     def test_failure_exits_nonzero(self, dhf: Path) -> None:
         _declare(dhf, "B")

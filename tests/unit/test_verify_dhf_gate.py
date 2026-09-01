@@ -49,7 +49,7 @@ class TestDanglingAlwaysBlocks:
         _break_link(dhf, "RCM-*.yaml", "RISK-001", "RISK-404")
         result = ci_structural_gate(dhf_path=dhf)
         assert result["passed"] is False
-        assert result["results"]["traceability"]["dangling"]
+        assert result["details"]["results"]["traceability"]["dangling"]
 
     def test_fix_hint_points_at_the_reference_not_the_link(self, tmp_path: Path) -> None:
         dhf = _scaffold(tmp_path)
