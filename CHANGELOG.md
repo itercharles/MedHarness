@@ -30,6 +30,12 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
   missing `proposed_new_items`. A `passed: false` with an empty `errors` is the
   defect the document names.
 
+- **The interface document's sample manifest drifted from the real one.** The
+  exit-code table was corrected while the sample JSON above it kept the
+  superseded wording — the same defect class, in the same document, introduced
+  by the fix for it. The guard compared only the table's codes; it now parses
+  the sample and compares it to `gates_manifest()`.
+
 - **The documented exit codes were wrong.** A usage error raised before a gate
   runs — a missing `--dhf`, for instance — exits **1** with no stdout, not 2. The
   document's own sample consumer would have raised `IndexError` on it. Both the

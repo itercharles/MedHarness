@@ -22,9 +22,9 @@ The JSON manifest lists every gate with what it checks, the standard clauses it 
 {
   "envelope": ["gate", "passed", "summary", "errors", "warnings", "details"],
   "exit_codes": {
-    "0": "gate passed",
-    "1": "gate failed; see errors",
-    "2": "usage error (bad arguments)"
+    "0": "gate passed; JSON on stdout",
+    "1": "gate failed (JSON on stdout), or a usage error raised before the gate ran (no stdout)",
+    "2": "argument parsing error; no stdout"
   },
   "gates": [ { "command": "verify soup", "blocking": "always", ... } ]
 }
