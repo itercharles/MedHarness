@@ -11,6 +11,52 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+### New Features
+
+- **`medharness gates`** — the verification gates, described for whoever calls
+  them. `--json` for an agent discovering what it can invoke; plain text for a
+  person wiring a pipeline:
+
+  ```
+  verify soup  [network]
+      SOUP items against the OSV vulnerability database, honouring documented
+      per-CVE acceptances.
+      clauses:  IEC 62304 §8.1.2
+      requires: --dhf
+      blocking: always
+                An unreachable osv.dev fails by default; --offline-mode warn
+                tolerates it for air-gapped runners.
+  ```
+
+  CI is deliberately not scaffolded — a pipeline carries a project's runner
+  labels, secrets, and branch names, and a generated one would be wrong for most
+  teams. That choice only holds up if the interface is described well enough to
+  build against, which is what this is. The same manifest serves both readers.
+
+  The registry is hand-written, because the facts that matter most — whether a
+  gate blocks, reaches the network, or is inert until a safety class is declared
+  — are not expressible as command metadata. A test asserts it against the live
+  Click command tree, so it cannot drift.
+
+### Bug Fixes
+
+- **Three gates were not answering with the envelope.** `verify verification`,
+  `verify branch`, and `verify code` are implemented outside
+  `services/ci.py`, and the discovery test added with the envelope enumerated
+  functions named `*_gate` in that one module — so it never saw them. All nine
+  now share the shape, and discovery walks the CLI command tree instead, which
+  has no such blind spot.
+
+- **`verify branch` put dicts in `errors`.** The envelope's messages are strings
+  a caller can print; the structured findings now live in `details.findings`.
+  Its `summary` was empty.
+
+- **`verify verification` and `verify completion` failed while saying nothing.**
+  Their findings sat in `details` but never reached `errors`, so a caller saw
+  `passed: false` with no explanation. `verify completion` has four exit paths;
+  an early one that skips later checks still has to say why it failed.
+
+
 ### Breaking Changes
 
 - **Every gate now returns the same envelope.** The only key all gates shared

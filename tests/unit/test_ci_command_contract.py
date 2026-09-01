@@ -86,11 +86,13 @@ class TestValidateCodeJsonContract:
             r = runner.invoke(main, ["--dhf", str(dhf), "verify", "code", "--cr", "CR-400"])
         assert r.exit_code == 0, (r.output, r.stderr)
         payload = _split_stdout_json(r.stdout)
-        for key in ("cr_id", "stage", "passed", "since_ref", "errors"):
-            assert key in payload, f"missing {key}"
-        assert payload["stage"] == "develop"
+        for key in ("passed", "errors", "summary"):
+            assert key in payload, f"missing envelope key {key}"
+        for key in ("cr_id", "stage", "since_ref"):
+            assert key in payload["details"], f"missing detail {key}"
+        assert payload["details"]["stage"] == "develop"
         assert payload["passed"] is True
-        assert payload["since_ref"] == "origin/main"
+        assert payload["details"]["since_ref"] == "origin/main"
 
     def test_errors_propagate_and_exit_non_zero(self, dhf):
         residual = [{"field": "test_plan.needs_new_tc", "issue": "x", "fix": "y"}]
@@ -102,8 +104,8 @@ class TestValidateCodeJsonContract:
         assert r.exit_code == 1
         payload = _split_stdout_json(r.stdout)
         assert payload["passed"] is False
-        assert payload["since_ref"] == "origin/feature-base"
-        assert payload["errors"] == residual
+        assert payload["details"]["since_ref"] == "origin/feature-base"
+        assert payload["details"]["findings"] == residual
 
 
 class TestValidateBranchJsonContract:

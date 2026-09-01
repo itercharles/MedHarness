@@ -142,7 +142,7 @@ class TestValidateBranch:
         assert not result["passed"], (
             "Branch with no changes since HEAD should fail the DHF-change check"
         )
-        fields = [e["field"] for e in result["errors"]]
+        fields = [e["field"] for e in result["details"]["findings"]]
         assert "dhf_branch" in fields
 
     def test_result_includes_dhf_item_changes(self, dhf):
@@ -153,8 +153,8 @@ class TestValidateBranch:
             "--since-ref", "HEAD",
         )
         result = json.loads(r.stdout)
-        assert "dhf_item_changes" in result
-        changes = result["dhf_item_changes"]
+        assert "dhf_item_changes" in result["details"]
+        changes = result["details"]["dhf_item_changes"]
         assert "created" in changes and "updated" in changes and "deleted" in changes
 
     def test_result_includes_cr_id(self, dhf):
@@ -165,7 +165,7 @@ class TestValidateBranch:
             "--since-ref", "HEAD",
         )
         result = json.loads(r.stdout)
-        assert result.get("cr_id") == "CR-001"
+        assert result["details"].get("cr_id") == "CR-001"
 
     def test_since_ref_is_echoed(self, dhf):
         r = _medharness(
@@ -175,7 +175,7 @@ class TestValidateBranch:
             "--since-ref", "HEAD",
         )
         result = json.loads(r.stdout)
-        assert result.get("since_ref") == "HEAD"
+        assert result["details"].get("since_ref") == "HEAD"
 
 
 # ---------------------------------------------------------------------------

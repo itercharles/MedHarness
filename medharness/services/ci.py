@@ -739,13 +739,21 @@ def validate_verification_completeness(
         parts.append(f"{len(manual_review_required)} require manual sign-off")
     summary = ("PASS" if passed else "FAIL") + " — " + ", ".join(parts) if parts else "All verification checks passed."
 
-    return {
+    return envelope_from("verify verification", {
         "passed": passed,
+        "errors": (
+            [f"{g['id']}: no verification_method declared" for g in missing_method]
+            + [f"{g['id']}: declares Test but has no passing evidence" for g in unverified_test]
+        ),
+        "warnings": [
+            f"{g['id']}: verified by {', '.join(g['methods'])} — needs manual review"
+            for g in manual_review_required
+        ],
         "missing_method": missing_method,
         "unverified_test": unverified_test,
         "manual_review_required": manual_review_required,
         "summary": summary,
-    }
+    })
 
 
 def _parse_accepted_vulns(item: dict, soup_id: str) -> tuple[dict[str, str], list[str]]:
@@ -1091,6 +1099,21 @@ def _check_design_review(dhf_path: Path, cr_id: str) -> list[dict]:
     return []
 
 
+def _closure_errors(incomplete=(), missing=(), gaps=(), unverified=()) -> list[str]:
+    """Phrase closure findings for the envelope.
+
+    Shared by every exit path: an early return that skips the later checks
+    still has to say why it failed, or a caller sees `passed: false` with an
+    empty `errors` and nothing to act on.
+    """
+    return (
+        [i["issue"] for i in incomplete]
+        + [f"{m}: named in proposed_new_items but absent from the DHF" for m in missing]
+        + [f"{g['id']}: no verification_method declared" for g in gaps]
+        + [f"{g['id']}: declares Test but has no passing JUnit evidence" for g in unverified]
+    )
+
+
 def cr_closure_gate(
     cr_id: str,
     dhf_path: Path,
@@ -1138,6 +1161,7 @@ def cr_closure_gate(
     if raw is None:
         return envelope_from("verify completion", {
             "passed": False,
+            "errors": _closure_errors(incomplete=incomplete_cr_fields),
             "cr_id": cr_id,
             "incomplete_cr_fields": incomplete_cr_fields,
             "missing_items": [],
@@ -1154,6 +1178,7 @@ def cr_closure_gate(
     if not proposed:
         return envelope_from("verify completion", {
             "passed": not bool(incomplete_cr_fields),
+            "errors": _closure_errors(incomplete=incomplete_cr_fields),
             "cr_id": cr_id,
             "incomplete_cr_fields": incomplete_cr_fields,
             "missing_items": [],
@@ -1232,6 +1257,8 @@ def cr_closure_gate(
             summary = f"CR {cr_id} closure verified — all proposed items present."
         return envelope_from("verify completion", {
             "passed": passed,
+            "errors": _closure_errors(incomplete=incomplete_cr_fields,
+                                      missing=missing_items),
             "cr_id": cr_id,
             "incomplete_cr_fields": incomplete_cr_fields,
             "missing_items": missing_items,
@@ -1263,12 +1290,18 @@ def cr_closure_gate(
 
     return envelope_from("verify completion", {
         "passed": passed,
+        "errors": _closure_errors(
+            incomplete=incomplete_cr_fields, missing=missing_items,
+            gaps=verify_result["details"].get("missing_method", []),
+            unverified=verify_result["details"].get("unverified_test", []),
+        ),
         "cr_id": cr_id,
         "incomplete_cr_fields": incomplete_cr_fields,
         "missing_items": missing_items,
-        "verification_gaps": verify_result.get("missing_method", []),
-        "unverified_test": verify_result.get("unverified_test", []),
-        "manual_review_required": verify_result.get("manual_review_required", []),
+        # verify_result is itself an envelope now; its findings live in details.
+        "verification_gaps": verify_result["details"].get("missing_method", []),
+        "unverified_test": verify_result["details"].get("unverified_test", []),
+        "manual_review_required": verify_result["details"].get("manual_review_required", []),
         "summary": summary,
     })
 

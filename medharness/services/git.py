@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import subprocess
+from medharness.services.ci import envelope_from
 from pathlib import Path
 
 
@@ -163,16 +164,20 @@ def validate_atomic_branch(
         except (FileNotFoundError, OSError, ValueError):
             pass  # DHF not loadable — skip risk checks
 
-    return {
+    return envelope_from("verify branch", {
         "cr_id": cr_id,
         "since_ref": since_ref,
         "passed": not errors,
+        "summary": f"{cr_id}: {len(errors)} branch finding(s) since {since_ref}.",
+        # Envelope messages are strings a caller can print; the structured form
+        # of the same findings stays in details.
+        "errors": [f"{e['field']}: {e['issue']}" for e in errors],
+        "findings": errors,
         "expected_dhf_changes": True,
         "dhf_item_changes": dhf_item_changes,
         "code_changes": code_changes,
         "risk_impact": risk_impact,
-        "errors": errors,
-    }
+    })
 
 
 def commit_dhf_item(

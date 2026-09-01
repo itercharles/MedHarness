@@ -11,6 +11,7 @@ from click.testing import CliRunner
 
 from dhfkit.cli import main as dhfkit_main
 from medharness.cli import main
+from medharness.services.ci import ENVELOPE_KEYS
 from medharness.services.ci import validate_verification_completeness
 
 
@@ -61,7 +62,7 @@ def test_missing_verification_method_is_reported(tmp_path: Path) -> None:
     dhf = _make_dhf(tmp_path, [{"id": "SRS-001", "title": "No method"}])
     result = validate_verification_completeness(dhf)
     assert not result["passed"]
-    ids = [i["id"] for i in result["missing_method"]]
+    ids = [i["id"] for i in result["details"]["missing_method"]]
     assert "SRS-001" in ids
 
 
@@ -70,7 +71,7 @@ def test_item_with_test_method_and_passing_tc_passes(tmp_path: Path) -> None:
     junit = _make_junit(tmp_path, ["SRS-001"])
     result = validate_verification_completeness(dhf, junit_paths=[junit])
     assert result["passed"]
-    assert not result["unverified_test"]
+    assert not result["details"]["unverified_test"]
 
 
 def test_item_with_test_method_but_no_junit_is_unverified(tmp_path: Path) -> None:
@@ -78,7 +79,7 @@ def test_item_with_test_method_but_no_junit_is_unverified(tmp_path: Path) -> Non
     junit = _make_junit(tmp_path, [])  # no passing tests
     result = validate_verification_completeness(dhf, junit_paths=[junit])
     assert not result["passed"]
-    ids = [i["id"] for i in result["unverified_test"]]
+    ids = [i["id"] for i in result["details"]["unverified_test"]]
     assert "SRS-001" in ids
 
 
@@ -93,7 +94,7 @@ def test_inspection_method_surfaced_as_manual_review_required(tmp_path: Path) ->
     dhf = _make_dhf(tmp_path, [{"id": "SRS-001", "verification_method": ["Inspection"]}])
     result = validate_verification_completeness(dhf)
     assert result["passed"]  # not a gate failure
-    ids = [i["id"] for i in result["manual_review_required"]]
+    ids = [i["id"] for i in result["details"]["manual_review_required"]]
     assert "SRS-001" in ids
 
 
@@ -105,7 +106,7 @@ def test_mixed_test_and_inspection_covered_by_test(tmp_path: Path) -> None:
     junit = _make_junit(tmp_path, ["SRS-001"])
     result = validate_verification_completeness(dhf, junit_paths=[junit])
     assert result["passed"]
-    assert not result["unverified_test"]
+    assert not result["details"]["unverified_test"]
 
 
 def test_multiple_items_mixed_results(tmp_path: Path) -> None:
@@ -117,9 +118,9 @@ def test_multiple_items_mixed_results(tmp_path: Path) -> None:
     junit = _make_junit(tmp_path, ["SRS-001"])  # only SRS-001 covered
     result = validate_verification_completeness(dhf, junit_paths=[junit])
     assert not result["passed"]
-    assert any(i["id"] == "SRS-003" for i in result["missing_method"])
-    assert any(i["id"] == "SRS-002" for i in result["unverified_test"])
-    assert not any(i["id"] == "SRS-001" for i in result["unverified_test"])
+    assert any(i["id"] == "SRS-003" for i in result["details"]["missing_method"])
+    assert any(i["id"] == "SRS-002" for i in result["details"]["unverified_test"])
+    assert not any(i["id"] == "SRS-001" for i in result["details"]["unverified_test"])
 
 
 def test_req_types_filter(tmp_path: Path) -> None:
@@ -128,7 +129,7 @@ def test_req_types_filter(tmp_path: Path) -> None:
     result = validate_verification_completeness(dhf, req_types=("SYS",))
     # SRS-001 should not appear — only SYS is checked and there are no SYS items
     assert result["passed"]
-    assert not result["missing_method"]
+    assert not result["details"]["missing_method"]
 
 
 def test_custom_type_code_not_in_defaults_is_checked_when_specified(tmp_path: Path) -> None:
@@ -151,7 +152,7 @@ def test_custom_type_code_not_in_defaults_is_checked_when_specified(tmp_path: Pa
     )
     result = validate_verification_completeness(dhf, req_types=("SYSREQ",))
     assert not result["passed"]
-    ids = [i["id"] for i in result["missing_method"]]
+    ids = [i["id"] for i in result["details"]["missing_method"]]
     assert "SYSREQ-001" in ids, f"Expected SYSREQ-001 in missing_method; got {ids}"
 
 
@@ -189,8 +190,6 @@ def test_cli_validate_verification_json_stdout(tmp_path: Path) -> None:
         ["--dhf", str(dhf), "verify", "verification", "--dhf", str(dhf)],
     )
     payload = json.loads(result.output.splitlines()[0])
-    assert "passed" in payload
-    assert "missing_method" in payload
-    assert "unverified_test" in payload
-    assert "manual_review_required" in payload
-    assert "summary" in payload
+    assert set(payload) == set(ENVELOPE_KEYS)
+    assert {"missing_method", "unverified_test",
+            "manual_review_required"} <= payload["details"].keys()
