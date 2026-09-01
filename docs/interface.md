@@ -66,15 +66,23 @@ A gate that fails always populates `errors`. That is enforced by the test suite 
 
 ## Exit codes
 
-| Code | Meaning |
-|------|---------|
-| `0` | Gate passed |
-| `1` | Gate failed — see `errors` |
-| `2` | Usage error: bad or missing arguments |
+| Code | stdout | Meaning |
+|------|--------|---------|
+| `0` | JSON | Gate passed |
+| `1` | JSON | Gate ran and failed — see `errors` |
+| `1` | *empty* | Usage error raised before the gate ran, e.g. a missing `--dhf` |
+| `2` | *empty* | Argument parsing error, e.g. an unknown flag |
 
-`0`/`1` always agree with `passed`. A pipeline that only checks exit status is a valid consumer and needs to parse nothing — which is how the reference project consumes these.
+A pipeline that only checks exit status is a valid consumer and needs to parse nothing — which is how the reference project consumes these.
 
-Code `2` comes from the CLI framework before a gate runs, so there is no JSON on stdout in that case. Distinguish it if you parse: an empty stdout with a non-zero exit is a usage problem, not a finding.
+**If you parse, check stdout is non-empty first.** Exit `1` means either a finding or a usage problem, and only the first writes JSON. Treating an empty stdout as parseable is the one mistake this interface invites:
+
+```python
+line = proc.stdout.splitlines()
+if not line:                      # usage error — the gate never ran
+    raise SystemExit(proc.stderr)
+result = json.loads(line[0])
+```
 
 ---
 
@@ -154,7 +162,10 @@ for gate in manifest["gates"]:
         ["medharness", "--dhf", "DHF", *gate["command"].split(), *args_for(gate)],
         capture_output=True, text=True,
     )
-    result = json.loads(proc.stdout.splitlines()[0])
+    lines = proc.stdout.splitlines()
+    if not lines:                 # usage error; the gate never ran
+        raise SystemExit(f"{gate['command']}: {proc.stderr.strip()}")
+    result = json.loads(lines[0])
     if not result["passed"]:
         report(result["gate"], result["errors"])
 ```

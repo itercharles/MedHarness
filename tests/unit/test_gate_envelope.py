@@ -45,12 +45,25 @@ GATE_ARGS = {
 
 
 def _run_gate(command: str, dhf) -> dict:
-    from medharness.cli import main as cli_main
+    """Run a gate in a real subprocess.
 
-    args = ["--dhf", str(dhf), *command.split()]
+    Deliberately not CliRunner: it captures an exception raised *after* the JSON
+    line is written, so a command that prints its result and then crashes looks
+    identical to one that succeeded. Two crashes shipped behind exactly that —
+    `verify plans` on a missing plan and `verify branch` on any failure.
+    """
+    import subprocess
+    import sys
+
+    args = [sys.executable, "-m", "medharness", "--dhf", str(dhf), *command.split()]
     args += [a.format(dhf=dhf) for a in GATE_ARGS.get(command, [])]
-    r = CliRunner().invoke(cli_main, args)
-    return json.loads(r.output.splitlines()[0])
+    proc = subprocess.run(args, capture_output=True, text=True)
+    assert "Traceback" not in proc.stderr, (
+        f"{command} crashed:\n{proc.stderr[-600:]}"
+    )
+    lines = proc.stdout.splitlines()
+    assert lines, f"{command} wrote no JSON to stdout:\n{proc.stderr[-400:]}"
+    return json.loads(lines[0])
 
 
 @pytest.fixture
@@ -220,3 +233,89 @@ class TestCLIEmitsTheEnvelope:
             r = CliRunner().invoke(main, ["--dhf", str(dhf), "verify", command])
             payload = json.loads(r.output.splitlines()[0])
             assert (r.exit_code == 0) is payload["passed"], command
+
+
+@pytest.fixture
+def failing_dhf(tmp_path: Path) -> Path:
+    """A DHF broken in the way each gate's failure path needs.
+
+    The clean-scaffold fixture reaches only the happy paths — soup
+    short-circuits on "none checkable", plans skips everything without a class,
+    and branch has nothing to compare. Every crash found in review lived on a
+    failure path, so the contract has to be checked there too.
+    """
+    import subprocess
+
+    _scaffold_dhf(tmp_path)
+    _replace_placeholders(tmp_path, "Broken")
+    dhf = tmp_path / "DHF"
+
+    config = dhf / "config" / "global.yaml"
+    config.write_text(
+        config.read_text()
+        .replace('software_safety_class: ""', 'software_safety_class: "B"')
+        .replace('classification_rationale: ""', 'classification_rationale: "Assessed."')
+    )
+    # A required plan that is absent, not merely unwritten.
+    (dhf / "documents" / "plans" / "integration_plan.md").unlink(missing_ok=True)
+    # A link that resolves to nothing.
+    rcm = next((dhf / "items").rglob("RCM-*.yaml"))
+    rcm.write_text(rcm.read_text().replace("RISK-001", "RISK-404"))
+
+    for cmd in (["init", "-q"], ["add", "-A"], ["-c", "user.email=t@e", "-c",
+                "user.name=t", "commit", "-qm", "base"]):
+        subprocess.run(["git", *cmd], cwd=tmp_path, capture_output=True)
+    return dhf
+
+
+class TestFailurePathsHonourTheContract:
+    """Where the crashes were.
+
+    Every defect the review found sat on a path the clean-scaffold tests never
+    reached: a missing plan, a branch with no changes, a coverage pair that
+    fails. A contract checked only on success is not checked.
+    """
+
+    FAILING = ("verify dhf", "verify plans", "verify classification",
+               "verify verification", "verify completion", "verify branch")
+
+    @pytest.mark.parametrize("command", FAILING)
+    def test_no_crash_on_the_failure_path(self, command: str, failing_dhf: Path) -> None:
+        _run_gate(command, failing_dhf)  # asserts no traceback, JSON present
+
+    @pytest.mark.parametrize("command", FAILING)
+    def test_a_failing_gate_still_explains_itself(self, command: str, failing_dhf: Path) -> None:
+        result = _run_gate(command, failing_dhf)
+        if not result["passed"]:
+            assert result["errors"], f"{command} failed with empty errors"
+
+    def test_explicit_coverage_pair_failure_is_reported(self, failing_dhf: Path) -> None:
+        """--coverage-pair results live under their own key and were skipped."""
+        from medharness.services.ci import ci_structural_gate
+
+        r = ci_structural_gate(failing_dhf, coverage_pairs=("NOPE:CRS",))
+        assert r["passed"] is False
+        assert r["errors"], "an explicit coverage pair failed with nothing in errors"
+
+    def test_soup_reports_real_vulnerabilities(self, dhf: Path) -> None:
+        """The scaffold has nothing checkable, so the finding path needs a stub."""
+        from unittest.mock import MagicMock, patch
+
+        from medharness.services.ci import soup_vuln_gate
+
+        soup = dhf / "items" / "09_soup"
+        soup.mkdir(parents=True, exist_ok=True)
+        (soup / "SOUP-900.yaml").write_text(
+            "id: SOUP-900\ntitle: requests\nname: requests\n"
+            "version: '2.6.0'\necosystem: PyPI\n"
+        )
+        with patch("urllib.request.urlopen") as opened:
+            opened.return_value.__enter__ = lambda s: s
+            opened.return_value.__exit__ = MagicMock(return_value=False)
+            opened.return_value.read.return_value = json.dumps(
+                {"results": [{"vulns": [{"id": "GHSA-x", "modified": "2024-01-01"}]}]}
+            ).encode()
+            result = soup_vuln_gate(dhf)
+
+        assert result["passed"] is False
+        assert result["errors"], "vulnerable SOUP reported with empty errors"

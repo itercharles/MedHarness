@@ -158,10 +158,13 @@ def gates_manifest() -> dict[str, Any]:
 
     return {
         "envelope": list(ENVELOPE_KEYS),
+        # 1 covers two cases the caller must distinguish by stdout: a gate that
+        # ran and failed writes JSON; a usage error raised before it ran does not.
         "exit_codes": {
-            "0": "gate passed",
-            "1": "gate failed; see errors",
-            "2": "usage error (bad arguments)",
+            "0": "gate passed; JSON on stdout",
+            "1": "gate failed (JSON on stdout), or a usage error raised before "
+                 "the gate ran (no stdout)",
+            "2": "argument parsing error; no stdout",
         },
         "gates": list(GATES),
     }

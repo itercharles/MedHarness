@@ -234,6 +234,17 @@ def _structural_messages(results: dict, fail_on_uncovered: bool) -> tuple[list[s
         )
     for gap in results.get("verification_gaps", []):
         warnings.append(f"{gap['id']}: {gap['issue']}")
+
+    # --coverage-pair results live under their own key; a caller who asked for a
+    # pair explicitly gets an error, not a warning.
+    for row in (results.get("coverage") or {}).get("pairs", []):
+        if row.get("error"):
+            errors.append(f"{row['parent_type']}->{row['child_type']}: {row['error']}")
+        elif not row.get("passed", True):
+            errors.append(
+                f"{row['parent_type']}->{row['child_type']}: "
+                f"{row['covered']}/{row['total']} covered"
+            )
     return errors, warnings
 
 
@@ -992,6 +1003,15 @@ def soup_vuln_gate(dhf_path: Path, *, offline_mode: str = "fail") -> dict:
         summary_parts.append(f"{len(accepted_found)} documented as accepted.")
     return envelope_from("verify soup", {
         "passed": passed,
+        "errors": [
+            f"{item['soup_id']} ({item['name']}@{item['version']}): {v['id']}"
+            + (f" — {v['summary']}" if v.get("summary") else "")
+            for item in vulnerable for v in item["vulns"]
+        ],
+        "warnings": list(acceptance_problems) + [
+            f"{a['soup_id']}: {a['vuln_id']} accepted — {a['rationale']}"
+            for a in accepted_found
+        ],
         "soup_count": len(soup_items),
         "checked_count": len(checkable),
         "vulnerable": vulnerable,
@@ -1161,7 +1181,10 @@ def cr_closure_gate(
     if raw is None:
         return envelope_from("verify completion", {
             "passed": False,
-            "errors": _closure_errors(incomplete=incomplete_cr_fields),
+            "errors": _closure_errors(incomplete=incomplete_cr_fields) + [
+                f"CR {cr_id}: proposed_new_items is absent — re-run generate-dhf "
+                f"Step 4 to record the items created in this session."
+            ],
             "cr_id": cr_id,
             "incomplete_cr_fields": incomplete_cr_fields,
             "missing_items": [],

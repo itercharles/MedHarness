@@ -384,7 +384,7 @@ def register(main):
             click.echo(
                 f"      levels required by the declared class: "
                 f"{', '.join(required_levels)}; seen in this evidence: "
-                f"{', '.join(result.get('levels_seen') or ['none'])}",
+                f"{', '.join(_d(result).get('levels_seen') or ['none'])}",
                 err=True,
             )
         for gap in _d(result).get("level_gaps", []):
@@ -451,7 +451,7 @@ def register(main):
         )
         click.echo(json.dumps(result))
 
-        for item in result.get("missing_method", []):
+        for item in _d(result).get("missing_method", []):
             click.echo(f"FAIL [validate-verification] {item['id']}: no verification_method declared", err=True)
         for item in _d(result).get("unverified_test", []):
             click.echo(f"FAIL [validate-verification] {item['id']}: Test method declared but no passing TC linked", err=True)
@@ -577,7 +577,7 @@ def register(main):
             click.echo(f"PASS [plan] {entry['plan']}", err=True)
         for entry in _d(result).get("missing", []):
             click.echo(f"FAIL [plan] {entry['plan']}: required for Class "
-                       f"{result['declared']} and absent", err=True)
+                       f"{_d(result).get('declared')} and absent", err=True)
         for entry in _d(result).get("unwritten", []):
             click.echo(f"FAIL [plan] {entry['plan']}: unchanged from the template "
                        f"({entry['sections']} section(s))", err=True)
@@ -697,7 +697,7 @@ def register(main):
             code_paths=code_paths,
         )
         click.echo(json.dumps(payload))
-        risk_impact = payload.get("risk_impact", [])
+        risk_impact = _d(payload).get("risk_impact", [])
         if risk_impact:
             ids = ", ".join(r["risk_id"] for r in risk_impact)
             click.echo(
@@ -715,7 +715,7 @@ def register(main):
                     err=True,
                 )
             return
-        for error in payload["errors"]:
+        for error in _d(payload).get("findings", []):
             click.echo(f"FAIL [validate-branch] {cr_id} ({error['field']}): {error['issue']}", err=True)
             click.echo(f"    Fix: {error['fix']}", err=True)
         raise click.exceptions.Exit(1)
