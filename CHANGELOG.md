@@ -11,6 +11,68 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+---
+
+## [0.14.0] — 2026-09-02
+
+### Breaking Changes
+
+- **Every gate now returns the same envelope.** The only key all gates shared
+  was `passed` — five gates meant five shapes, and each new gate added another
+  for callers to special-case. Gate-specific payload moves under `details`:
+
+  ```json
+  {
+    "gate": "verify plans",
+    "passed": false,
+    "summary": "Class B: 1 plan(s) written, 0 missing, 3 unchanged.",
+    "errors": ["development_plan.md is unchanged from the template ..."],
+    "warnings": ["integration_plan.md: 6 section(s) still match ..."],
+    "details": { "declared": "B", "checked": [...], "unwritten": [...] }
+  }
+  ```
+
+  A CI script or an agent parses this once and handles any gate, including ones
+  that do not exist yet. `errors` are what made the gate fail; `warnings` are
+  what it noticed without failing — both plain strings, already phrased for a
+  reader, because the machine-readable form is in `details`.
+
+  **What breaks:** anything reading a gate-specific key at the top level of the
+  JSON. Exit codes, `passed`, and all stderr output are unchanged, so a pipeline
+  that only checks exit status — which is how the reference project consumes
+  them — is unaffected.
+
+  `verify soup` no longer carries a private `error` key; an unreachable osv.dev
+  appears in `errors`, or in `warnings` under `--offline-mode warn`, like any
+  other finding.
+
+### New Features
+
+- **`medharness gates`** — the verification gates, described for whoever calls
+  them. `--json` for an agent discovering what it can invoke; plain text for a
+  person wiring a pipeline:
+
+  ```
+  verify soup  [network]
+      SOUP items against the OSV vulnerability database, honouring documented
+      per-CVE acceptances.
+      clauses:  IEC 62304 §8.1.2
+      requires: --dhf
+      blocking: always
+                An unreachable osv.dev fails by default; --offline-mode warn
+                tolerates it for air-gapped runners.
+  ```
+
+  CI is deliberately not scaffolded — a pipeline carries a project's runner
+  labels, secrets, and branch names, and a generated one would be wrong for most
+  teams. That choice only holds up if the interface is described well enough to
+  build against, which is what this is. The same manifest serves both readers.
+
+  The registry is hand-written, because the facts that matter most — whether a
+  gate blocks, reaches the network, or is inert until a safety class is declared
+  — are not expressible as command metadata. A test asserts it against the live
+  Click command tree, so it cannot drift.
+
 ### Bug Fixes
 
 - **Two gates crashed on their failure path.** Moving gate payloads under
@@ -65,18 +127,21 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
   document and the manifest now describe the three real cases, and the sample
   checks stdout before parsing.
 
-### Internal
+- **Three gates were not answering with the envelope.** `verify verification`,
+  `verify branch`, and `verify code` are implemented outside
+  `services/ci.py`, and the discovery test added with the envelope enumerated
+  functions named `*_gate` in that one module — so it never saw them. All nine
+  now share the shape, and discovery walks the CLI command tree instead, which
+  has no such blind spot.
 
-- **The envelope tests ran gates through `CliRunner`, which hid both crashes.**
-  It captures an exception raised *after* the JSON line reaches stdout, so a
-  command that prints its result and then dies looked identical to one that
-  succeeded. They now run real subprocesses and assert no traceback.
+- **`verify branch` put dicts in `errors`.** The envelope's messages are strings
+  a caller can print; the structured findings now live in `details.findings`.
+  Its `summary` was empty.
 
-- **They also only ever ran against a clean scaffold**, where soup short-circuits,
-  plans skips everything, and branch has nothing to compare — so every defect
-  above sat on a path the suite never reached. A deliberately broken DHF now
-  exercises each gate's failure path.
-
+- **`verify verification` and `verify completion` failed while saying nothing.**
+  Their findings sat in `details` but never reached `errors`, so a caller saw
+  `passed: false` with no explanation. `verify completion` has four exit paths;
+  an early one that skips later checks still has to say why it failed.
 
 ### Documentation
 
@@ -98,90 +163,21 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
   every opt-in gate is named. A document that drifts is worse than none, because
   it produces confident code resting on a promise nothing keeps.
 
-
-### New Features
-
-- **`medharness gates`** — the verification gates, described for whoever calls
-  them. `--json` for an agent discovering what it can invoke; plain text for a
-  person wiring a pipeline:
-
-  ```
-  verify soup  [network]
-      SOUP items against the OSV vulnerability database, honouring documented
-      per-CVE acceptances.
-      clauses:  IEC 62304 §8.1.2
-      requires: --dhf
-      blocking: always
-                An unreachable osv.dev fails by default; --offline-mode warn
-                tolerates it for air-gapped runners.
-  ```
-
-  CI is deliberately not scaffolded — a pipeline carries a project's runner
-  labels, secrets, and branch names, and a generated one would be wrong for most
-  teams. That choice only holds up if the interface is described well enough to
-  build against, which is what this is. The same manifest serves both readers.
-
-  The registry is hand-written, because the facts that matter most — whether a
-  gate blocks, reaches the network, or is inert until a safety class is declared
-  — are not expressible as command metadata. A test asserts it against the live
-  Click command tree, so it cannot drift.
-
-### Bug Fixes
-
-- **Three gates were not answering with the envelope.** `verify verification`,
-  `verify branch`, and `verify code` are implemented outside
-  `services/ci.py`, and the discovery test added with the envelope enumerated
-  functions named `*_gate` in that one module — so it never saw them. All nine
-  now share the shape, and discovery walks the CLI command tree instead, which
-  has no such blind spot.
-
-- **`verify branch` put dicts in `errors`.** The envelope's messages are strings
-  a caller can print; the structured findings now live in `details.findings`.
-  Its `summary` was empty.
-
-- **`verify verification` and `verify completion` failed while saying nothing.**
-  Their findings sat in `details` but never reached `errors`, so a caller saw
-  `passed: false` with no explanation. `verify completion` has four exit paths;
-  an early one that skips later checks still has to say why it failed.
-
-
-### Breaking Changes
-
-- **Every gate now returns the same envelope.** The only key all gates shared
-  was `passed` — five gates meant five shapes, and each new gate added another
-  for callers to special-case. Gate-specific payload moves under `details`:
-
-  ```json
-  {
-    "gate": "verify plans",
-    "passed": false,
-    "summary": "Class B: 1 plan(s) written, 0 missing, 3 unchanged.",
-    "errors": ["development_plan.md is unchanged from the template ..."],
-    "warnings": ["integration_plan.md: 6 section(s) still match ..."],
-    "details": { "declared": "B", "checked": [...], "unwritten": [...] }
-  }
-  ```
-
-  A CI script or an agent parses this once and handles any gate, including ones
-  that do not exist yet. `errors` are what made the gate fail; `warnings` are
-  what it noticed without failing — both plain strings, already phrased for a
-  reader, because the machine-readable form is in `details`.
-
-  **What breaks:** anything reading a gate-specific key at the top level of the
-  JSON. Exit codes, `passed`, and all stderr output are unchanged, so a pipeline
-  that only checks exit status — which is how the reference project consumes
-  them — is unaffected.
-
-  `verify soup` no longer carries a private `error` key; an unreachable osv.dev
-  appears in `errors`, or in `warnings` under `--offline-mode warn`, like any
-  other finding.
-
 ### Internal
+
+- **The envelope tests ran gates through `CliRunner`, which hid both crashes.**
+  It captures an exception raised *after* the JSON line reaches stdout, so a
+  command that prints its result and then dies looked identical to one that
+  succeeded. They now run real subprocesses and assert no traceback.
+
+- **They also only ever ran against a clean scaffold**, where soup short-circuits,
+  plans skips everything, and branch has nothing to compare — so every defect
+  above sat on a path the suite never reached. A deliberately broken DHF now
+  exercises each gate's failure path.
 
 - `tests/unit/test_gate_envelope.py` pins the contract, including a discovery
   test that enumerates the module rather than naming gates — a gate added
   without the envelope fails there rather than reaching a caller.
-
 
 ---
 
@@ -583,8 +579,6 @@ a compliance record is the defect class that matters most.
 - The `evidence bundle` contract test returned early whenever WeasyPrint was
   absent, so on CI it asserted nothing at all — which is why none of this was
   caught. It now runs the bundle and checks the rendered artifacts.
-
----
 
 ---
 
