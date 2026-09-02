@@ -11,6 +11,25 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+---
+
+## [0.15.0] — 2026-09-02
+
+### Behaviour changes
+
+- **`verify classification` now fails when a declared class has no activity map.**
+  It previously warned and exited zero, summarising "all required activities
+  present" while checking nothing. Declaring the class is taking the opt-in, so
+  a gate that then cannot check anything has to say so in a way CI cannot
+  ignore.
+
+  **What breaks:** a project that declared `software_safety_class` but has no
+  `DHF/config/safety_activities.yaml` goes from green to red on this gate. That
+  is the state `medharness upgrade` used to leave projects in — run
+  `medharness upgrade --apply` to obtain the file, then edit it to match what
+  your project has agreed. This is why the release is a minor rather than a
+  patch.
+
 ### Bug Fixes
 
 - **`medharness upgrade` never delivered three scaffold files.** `_UPGRADE_MAP`
@@ -24,14 +43,8 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
   `verify completion` requires could not be created at all. Every one of the
   twelve sibling doc types was listed; this one was missed and nothing said so.
 
-  `safety_activities.yaml` failed quietly instead — see below.
-
-- **`verify classification` passed while checking nothing.** With a class
-  declared and no activity map, the gate warned and exited zero, summarising
-  "all required activities present". Declaring the class *is* taking the opt-in,
-  so this is now an error: a green build that audited nothing is worse than a
-  gate that is plainly inert. Reported by the reference project, which declared
-  Class C and saw three gates go green without enforcing anything.
+  `safety_activities.yaml` failed quietly instead: the gates that depend on it
+  ran and passed. See **Behaviour changes** above.
 
 - **`verify dhf`'s verification_criteria warning read as a bug in the gate.** It
   said only "missing verification_criteria" while `dhfkit validate schema`
@@ -67,9 +80,6 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
   most return scalars or empty lists that cannot carry a stale key, and every
   structured one currently matches. The gap was never a backlog of bad mocks —
   it was having nothing that notices when one goes bad.
-
-
----
 
 ## [0.14.0] — 2026-09-02
 
@@ -236,8 +246,6 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 - `tests/unit/test_gate_envelope.py` pins the contract, including a discovery
   test that enumerates the module rather than naming gates — a gate added
   without the envelope fails there rather than reaching a caller.
-
----
 
 ## [0.13.0] — 2026-08-23
 
