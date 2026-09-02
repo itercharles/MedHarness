@@ -1003,9 +1003,13 @@ def soup_vuln_gate(dhf_path: Path, *, offline_mode: str = "fail") -> dict:
         summary_parts.append(f"{len(accepted_found)} documented as accepted.")
     return envelope_from("verify soup", {
         "passed": passed,
+        # Phrased exactly as a reader needs it — severity and a URL fallback
+        # included — so the CLI renders the envelope instead of rebuilding the
+        # same line beside it. Two renderers printed every vulnerability twice.
         "errors": [
-            f"{item['soup_id']} ({item['name']}@{item['version']}): {v['id']}"
-            + (f" — {v['summary']}" if v.get("summary") else "")
+            f"{item['soup_id']} ({item['name']}@{item['version']}): {v['id']} — "
+            + (f"[{v['severity']}] " if v.get("severity") else "")
+            + (v.get("summary") or v.get("url") or "see osv.dev")
             for item in vulnerable for v in item["vulns"]
         ],
         "warnings": list(acceptance_problems) + [

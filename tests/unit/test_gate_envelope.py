@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import inspect
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -319,3 +320,113 @@ class TestFailurePathsHonourTheContract:
 
         assert result["passed"] is False
         assert result["errors"], "vulnerable SOUP reported with empty errors"
+
+
+def _stderr_of(command: str, dhf: Path) -> tuple[dict, str]:
+    """Run a gate and return both halves of what it told the world."""
+    import subprocess
+    import sys
+
+    args = [sys.executable, "-m", "medharness", "--dhf", str(dhf), *command.split()]
+    args += [a.format(dhf=dhf) for a in GATE_ARGS.get(command, [])]
+    proc = subprocess.run(args, capture_output=True, text=True)
+    lines = proc.stdout.splitlines()
+    assert lines, f"{command} wrote no JSON:\n{proc.stderr[-400:]}"
+    return json.loads(lines[0]), proc.stderr
+
+
+#: What a finding is *about* — an item ID, a file, a package. stderr may phrase
+#: the rest however it likes, but it cannot omit these and still be actionable.
+IDENTIFIER = re.compile(r"[A-Z]{2,}-\d+[\w.]*|[\w-]+\.(?:md|ya?ml)|[\w-]+@[\w.]+")
+
+
+def _normalise(text: str) -> str:
+    return text.replace("\u2192", "->").replace("\u2014", "-")
+
+
+def _words(text: str) -> list[str]:
+    return [w for w in re.findall(r"[\w./@-]+", _normalise(text)) if len(w) > 3]
+
+
+class TestStderrCarriesTheEnvelope:
+    """stdout is the contract; stderr is what a person reads in a CI log.
+
+    A finding the gate computed, put in the envelope, and never printed is
+    invisible to everyone not parsing JSON. `verify tests` failed on a missing
+    --junit-dir with "Test coverage gaps found." — naming the wrong cause — and
+    `verify dhf` never showed its verification_criteria warnings at all.
+    """
+
+    ALL = ("verify dhf", "verify tests", "verify classification", "verify plans",
+           "verify verification", "verify completion", "verify branch", "verify code")
+
+    @pytest.mark.parametrize("command", ALL)
+    def test_stderr_reports_the_envelope(self, command: str, failing_dhf: Path) -> None:
+        result, stderr = _stderr_of(command, failing_dhf)
+        normalised = _normalise(stderr)
+        for message in result["errors"] + result["warnings"]:
+            names = set(IDENTIFIER.findall(_normalise(message)))
+            if names:
+                # A finding about something nameable: stderr must name it.
+                missing = sorted(n for n in names if n not in normalised)
+                assert not missing, (
+                    f"{command}: stderr never mentions {missing} from:\n"
+                    f"  {message}\n  stderr was:\n{stderr[-500:]}"
+                )
+                continue
+            # Nothing to name — fall back to overlap, which is what caught
+            # "No JUnit files found" being reported as a coverage gap.
+            words = _words(message)
+            if not words:
+                continue
+            hit = sum(1 for w in words if w in normalised)
+            assert hit / len(words) >= 0.6, (
+                f"{command}: envelope message never reached stderr:\n"
+                f"  {message}\n  stderr was:\n{stderr[-500:]}"
+            )
+
+    @pytest.mark.parametrize("command", ALL)
+    def test_no_finding_is_printed_twice(self, command: str, failing_dhf: Path) -> None:
+        _, stderr = _stderr_of(command, failing_dhf)
+        lines = [line for line in stderr.splitlines() if line.strip()]
+        duplicated = {line for line in lines if lines.count(line) > 1}
+        assert not duplicated, (
+            f"{command} printed the same line twice — two renderers over one "
+            f"finding:\n  " + "\n  ".join(sorted(duplicated))
+        )
+
+    def test_soup_prints_each_vulnerability_once(self, dhf: Path) -> None:
+        """The generic duplication check cannot reach here.
+
+        `failing_dhf` has no checkable SOUP, so the gate short-circuits and its
+        rendering path is never exercised — which is why the double-print (one
+        line from `_render_envelope`, an identical one from a manual loop beside
+        it) survived a suite that already checked every other gate for it.
+        """
+        from unittest.mock import MagicMock, patch
+
+        from click.testing import CliRunner
+
+        soup = dhf / "items" / "09_soup"
+        soup.mkdir(parents=True, exist_ok=True)
+        (soup / "SOUP-900.yaml").write_text(
+            "id: SOUP-900\ntitle: requests\nname: requests\n"
+            "version: '2.6.0'\necosystem: PyPI\n"
+        )
+
+        def _osv(*_a, **_k):
+            resp = MagicMock()
+            resp.__enter__ = lambda s: s
+            resp.__exit__ = MagicMock(return_value=False)
+            resp.read.return_value = json.dumps(
+                {"results": [{"vulns": [{"id": "GHSA-x", "modified": "2024-01-01"}]}],
+                 "id": "GHSA-x", "summary": "Session fixation"}
+            ).encode()
+            return resp
+
+        with patch("urllib.request.urlopen", side_effect=_osv):
+            r = CliRunner().invoke(main, ["--dhf", str(dhf), "verify", "soup"])
+
+        lines = [line for line in r.stderr.splitlines() if "GHSA-x" in line]
+        assert len(lines) == 1, f"vulnerability reported {len(lines)}x:\n" + "\n".join(lines)
+        assert "Session fixation" in lines[0], "the reader lost the summary"

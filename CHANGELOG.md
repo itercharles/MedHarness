@@ -30,6 +30,29 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
   missing `proposed_new_items`. A `passed: false` with an empty `errors` is the
   defect the document names.
 
+- **`verify tests` named the wrong cause.** A missing `--junit-dir` failed with
+  "Test coverage gaps found." while the envelope correctly said "No JUnit files
+  found". Every stderr detail loop in that command iterates `results`, which is
+  empty on that path, so nothing but the generic exception text was printed.
+
+- **`verify dhf` never showed its verification_criteria warnings.** They reached
+  the envelope and the JSON; the command had no loop that rendered them, so a
+  reader of CI logs never saw them.
+
+- **`verify soup` printed every vulnerability twice.** `_render_envelope` and a
+  manual loop beside it rendered the same findings. The envelope strings now
+  carry severity and the URL fallback, and the manual loop is gone.
+
+- **The branch gate's contract test asserted the superseded shape.** It mocked
+  the service with a flat pre-envelope dict and asserted flat top-level keys —
+  including `errors` as a list of dicts, which contradicts the documented string
+  type. Removing the envelope from `verify branch` entirely left it passing.
+
+  New guards: every envelope message must be findable on stderr, no gate may
+  print a finding twice, and SOUP's rendering path is exercised with a stubbed
+  osv.dev because the scaffold has nothing checkable to reach it. Each was
+  verified by reintroducing the defect it was written for.
+
 - **The interface document's sample manifest drifted from the real one.** The
   exit-code table was corrected while the sample JSON above it kept the
   superseded wording — the same defect class, in the same document, introduced
