@@ -301,6 +301,9 @@ def register(main):
                                    f" --data '{{\"<field>\": \"<value>\"}}'", err=True)
         for gap in r.get("verification_gaps", []):
             click.echo(f"WARN [verification] {gap['id']}: {gap['issue']}", err=True)
+            click.echo(f"      Fix: dhfkit {dhf_arg} item update {gap['id']}"
+                       f" --data '{{\"verification_criteria\": \"<how this is verified>\"}}'",
+                       err=True)
         if "traceability" in r:
             t = r["traceability"]
             req = t.get("required", {})

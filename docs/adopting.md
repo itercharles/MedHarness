@@ -107,6 +107,8 @@ An override without a rationale is reported as a warning rather than an error â€
 
 A DHF with no declared class warns and exits zero, and the class-dependent checks (`verify plans`, and verification levels in `verify tests`) stay inactive. Nothing that passes today starts failing because this exists.
 
+Once you declare one, `verify classification` requires `DHF/config/safety_activities.yaml` to define activities for that class. A project that adopted MedHarness before the file existed can obtain it with `medharness upgrade --apply`; it is project-owned from then on, and upgrade will never overwrite your edits.
+
 ## Test-driven development with test points
 
 MedHarness supports TDD at the DHF level. The idea is that test intent is expressed in the design, not retrofitted after code is written.

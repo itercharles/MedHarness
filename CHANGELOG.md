@@ -11,6 +11,43 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+### Bug Fixes
+
+- **`medharness upgrade` never delivered three scaffold files.** `_UPGRADE_MAP`
+  is hand-written, and `config/doc_types/apr.yaml`, `config/safety_activities.yaml`
+  and `config/soup-sources.yaml` were absent from it — so a project that adopted
+  MedHarness before those files existed never received them, while `upgrade`
+  reported everything up to date.
+
+  `apr.yaml` was the hard failure: without the doc type, `dhfkit item create
+  --type APR` exits with "Unknown doc type", so the approval records
+  `verify completion` requires could not be created at all. Every one of the
+  twelve sibling doc types was listed; this one was missed and nothing said so.
+
+  `safety_activities.yaml` failed quietly instead — see below.
+
+- **`verify classification` passed while checking nothing.** With a class
+  declared and no activity map, the gate warned and exited zero, summarising
+  "all required activities present". Declaring the class *is* taking the opt-in,
+  so this is now an error: a green build that audited nothing is worse than a
+  gate that is plainly inert. Reported by the reference project, which declared
+  Class C and saw three gates go green without enforcing anything.
+
+- **`verify dhf`'s verification_criteria warning read as a bug in the gate.** It
+  said only "missing verification_criteria" while `dhfkit validate schema`
+  passed, so a reader concluded the gate was warning about a field the schema
+  never defined. The field *is* defined on CRS/SYS/SRS and is optional; the
+  warning now says so and gives the command to fill it.
+
+- **Files the project owns are seeded, not overwritten.** `safety_activities.yaml`
+  and `soup-sources.yaml` are created when absent and left alone thereafter —
+  managing them like templates would report an edited copy as outdated and
+  replace a project's agreed scope on `--apply`.
+
+  `tests/unit/test_upgrade_map_covers_scaffold.py` asserts every file `init`
+  writes is claimed by exactly one category, so a template added later cannot
+  be forgotten silently. Verified by removing each of the three entries.
+
 ### Internal
 
 - **Mocks are now checked against the functions they stand in for.** A mock is a
