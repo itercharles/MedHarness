@@ -11,6 +11,24 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+### Bug Fixes
+
+- **A review-file naming mismatch was invisible from both ends.** `approval
+  import` globbed `*-Review.md`, so a project whose files are named
+  `CR-013-Design.md` saw `0 imported, 0 skipped` with nothing in `errors` — the
+  files were never looked at. `verify completion` then failed with "no approval
+  record" and nothing connected the two. Every `.md` in the directory is now
+  read, and one the importer cannot parse is reported with the pattern it
+  expected. `--help` names that pattern too.
+
+- **The verification-level fix hint assumed pytest.** It read
+  `Fix: mark a covering test with @pytest.mark.dhf_level("integration")`. The
+  gate consumes JUnit XML precisely so it works for any runner; a project whose
+  tests are Vitest was sent looking for a decorator that cannot exist in a
+  TypeScript file. The hint now leads with the `medharness.level` JUnit property
+  and mentions the pytest mark as one way to set it.
+
+
 ---
 
 ## [0.15.0] — 2026-09-02

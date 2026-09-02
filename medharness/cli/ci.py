@@ -408,10 +408,14 @@ def register(main):
                 f"{', '.join(gap['missing'])}",
                 err=True,
             )
+            # Language-neutral first. The gate reads JUnit XML precisely so it
+            # works for any runner; leading with a pytest mark sent a project
+            # whose tests are Vitest looking for a decorator that cannot exist
+            # in a TypeScript file.
             click.echo(
-                f"      Fix: mark a covering test with "
-                f"@pytest.mark.dhf_level(\"{gap['missing'][0]}\"), or set the "
-                f"medharness.level JUnit property.",
+                f"      Fix: set the JUnit property medharness.level="
+                f"\"{gap['missing'][0]}\" on a test covering {gap['req_id']}. "
+                f"In pytest: @pytest.mark.dhf_level(\"{gap['missing'][0]}\").",
                 err=True,
             )
         for row in _d(result).get("testing_points", []):

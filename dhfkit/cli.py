@@ -378,6 +378,13 @@ def approval_show(ctx: click.Context, apr_id: str) -> None:
 def approval_import(ctx: click.Context, reviews_dir: Path | None, approver: str) -> None:
     """Backfill approval records from the legacy docs/reviews/*.md convention.
 
+    Reads <CR-ID>-Design-Review.md (recorded at the design stage) and
+    <CR-ID>-Code-Review.md (develop stage), each carrying a '**Verdict:**' line.
+    Any other .md in the directory is reported as skipped rather than passed over
+    silently — a project whose files are named differently would otherwise see
+    "0 imported" with no reason given, then fail `verify completion` with "no
+    approval record" and nothing connecting the two.
+
     Safe to re-run: a CR that already has a design-stage approval is skipped.
     """
     from dhfkit.approval import import_review_files

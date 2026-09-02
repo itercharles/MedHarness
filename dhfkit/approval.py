@@ -167,10 +167,19 @@ def import_review_files(dhf_root: Path, reviews_dir: Path, *,
     skipped: list[dict] = []
     errors: list[str] = []
 
-    for review in sorted(reviews_dir.glob("*-Review.md")):
+    # Globbing "*-Review.md" made a naming mismatch invisible: a directory of
+    # CR-013-Design.md files reported "0 imported, 0 skipped" with nothing in
+    # errors, and `verify completion` then failed with "no approval record"
+    # with no way to connect the two. Look at every .md and say what was passed
+    # over, so a convention this does not read is reported rather than silent.
+    for review in sorted(reviews_dir.glob("*.md")):
         match = _REVIEW_FILENAME.match(review.name)
         if not match:
-            skipped.append({"file": review.name, "reason": "filename not recognised"})
+            skipped.append({
+                "file": review.name,
+                "reason": "filename does not match <CR-ID>-Design-Review.md or "
+                          "<CR-ID>-Code-Review.md",
+            })
             continue
         cr_id = match.group("cr")
         stage = _KIND_TO_STAGE[match.group("kind").lower()]
