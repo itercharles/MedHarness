@@ -11,6 +11,27 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+### Internal
+
+- **Mocks are now checked against the functions they stand in for.** A mock is a
+  claim about what a service returns, and nothing failed when the claim stopped
+  being true: the test kept feeding the CLI a shape production no longer
+  produced, the line stayed green in coverage, and only the real call path
+  broke. That is how `verify branch` shipped a `TypeError` in 0.14.0 — its test
+  mocked the service with dicts in `errors` while the service had moved to
+  strings.
+
+  `tests/unit/test_mock_contracts.py` compares every literal mock in the suite
+  against the shape the real function returns, resolving re-exported patch
+  targets and preferring a declared `-> tuple[...]` annotation over inference.
+  A service that changes shape now fails there rather than in a pipeline.
+
+  The audit that motivated it found **no stale mock today**: of 173 patch sites,
+  most return scalars or empty lists that cannot carry a stale key, and every
+  structured one currently matches. The gap was never a backlog of bad mocks —
+  it was having nothing that notices when one goes bad.
+
+
 ---
 
 ## [0.14.0] — 2026-09-02
