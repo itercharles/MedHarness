@@ -32,6 +32,7 @@ _UPGRADE_MAP: list[tuple[str, str]] = [
     ("specs/test_specification.md.j2",                        "DHF/documents/specs/test_specification.md.j2"),
     ("specs/traceability_matrix.md.j2",                       "DHF/documents/specs/traceability_matrix.md.j2"),
     ("specs/styles/default.css",                              "DHF/documents/specs/styles/default.css"),
+    ("config/doc_types/apr.yaml",                             "DHF/config/doc_types/apr.yaml"),
     ("config/doc_types/cr.yaml",                              "DHF/config/doc_types/cr.yaml"),
     ("config/doc_types/crs.yaml",                             "DHF/config/doc_types/crs.yaml"),
     ("config/doc_types/def.yaml",                             "DHF/config/doc_types/def.yaml"),
@@ -47,6 +48,39 @@ _UPGRADE_MAP: list[tuple[str, str]] = [
     ("config/doc_types/uc.yaml",                              "DHF/config/doc_types/uc.yaml"),
 ]
 
+
+# (template_rel, project_rel) — files the project owns and edits, but that a
+# project upgrading from an older medharness never received. Seeded when absent
+# and never overwritten: putting them in _UPGRADE_MAP would report an edited
+# file as "outdated" and --apply would discard the project's own decisions.
+#
+# safety_activities.yaml is the clearest case. Without it, `verify classification`
+# and `verify plans` run but check nothing — they exit 0 having verified that a
+# class is declared and then finding no activities to require of it. A project
+# that upgraded rather than scaffolded got a silently inert gate.
+_SEED_MAP: list[tuple[str, str]] = [
+    ("config/safety_activities.yaml", "DHF/config/safety_activities.yaml"),
+    ("config/soup-sources.yaml",      "DHF/config/soup-sources.yaml"),
+]
+
+#: Scaffold output medharness must never write after `init`. Listed rather than
+#: merely absent from the maps so that `test_every_scaffolded_file_is_classified`
+#: can tell "deliberately user-owned" from "forgotten" — apr.yaml was forgotten
+#: for three releases while every other doc type was managed, and nothing said so.
+_USER_OWNED: frozenset[str] = frozenset({
+    "AI-harness/context.md",
+    "DHF/README.md",
+    "DHF/config/global.yaml",
+    "DHF/documents/plans/configuration_management_plan.md",
+    "DHF/documents/plans/development_plan.md",
+    "DHF/documents/plans/integration_plan.md",
+    "DHF/documents/plans/maintenance_plan.md",
+    "DHF/documents/plans/risk_management_plan.md",
+    "DHF/documents/plans/validation_plan.md",
+    "DHF/documents/plans/verification_plan.md",
+    "DHF/test-results/.gitkeep",
+    "docs/reviews/.gitkeep",
+})
 
 def _read_project_name(project_dir: Path) -> str:
     global_yaml = project_dir / "DHF" / "config" / "global.yaml"
@@ -133,6 +167,16 @@ def check_upgrade(project_dir: Path) -> dict:
             removed = len(proj_lines - tmpl_lines)
             outdated.append({"file": proj_rel, "added_lines": added, "removed_lines": removed})
 
+    # Seeded files are reported only when absent. An existing one carries the
+    # project's own edits, so comparing it to the template would be noise.
+    for tmpl_rel, proj_rel in _SEED_MAP:
+        if not (_TEMPLATES_DIR / tmpl_rel).exists():
+            unavailable.append({"file": proj_rel, "template": tmpl_rel})
+        elif not (project_dir / proj_rel).exists():
+            missing.append({"file": proj_rel})
+        else:
+            up_to_date.append({"file": proj_rel})
+
     n_out = len(outdated)
     n_miss = len(missing)
     if n_out == 0 and n_miss == 0:
@@ -181,6 +225,19 @@ def apply_upgrade(project_dir: Path) -> dict:
             continue
         tmpl_path = _TEMPLATES_DIR / tmpl_rel
         proj_path = project_dir / proj_rel
+        try:
+            rendered = _substitute(tmpl_path.read_text(), project_name, installed_version)
+        except OSError:
+            continue
+        proj_path.parent.mkdir(parents=True, exist_ok=True)
+        proj_path.write_text(rendered)
+        applied.append(proj_rel)
+
+    for tmpl_rel, proj_rel in _SEED_MAP:
+        proj_path = project_dir / proj_rel
+        if proj_path.exists():
+            continue  # the project's copy wins, always
+        tmpl_path = _TEMPLATES_DIR / tmpl_rel
         try:
             rendered = _substitute(tmpl_path.read_text(), project_name, installed_version)
         except OSError:

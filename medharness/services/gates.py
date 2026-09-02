@@ -79,7 +79,9 @@ GATES: tuple[dict[str, Any], ...] = (
         "options": {"required": ["--dhf"], "optional": []},
         "blocking": "opt_in",
         "blocking_note": "Warns and exits zero until software_safety_class is "
-                         "declared in global.yaml.",
+                         "declared in global.yaml. Once declared, a missing or "
+                         "empty safety_activities.yaml fails: the opt-in has "
+                         "been taken and the gate cannot check anything.",
         "needs_network": False,
         "needs_safety_class": True,
     },

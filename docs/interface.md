@@ -104,6 +104,8 @@ Two distinctions worth knowing before you wire anything:
 
 **Gates that wait for a safety class.** `verify classification` and `verify plans` warn and exit zero until `software_safety_class` is declared in `global.yaml`. You can add them to a pipeline before deciding the class; they will start doing work when you do.
 
+Declaring the class is taking the opt-in, so from that point `verify classification` fails if `safety_activities.yaml` is missing or defines nothing for the class — a gate that reports a pass having checked nothing is worse than one that is plainly inert. `medharness upgrade --apply` supplies the file; it is yours to edit thereafter and upgrade will not overwrite it.
+
 ---
 
 ## Stability

@@ -182,7 +182,12 @@ def ci_structural_gate(
                         verification_gaps.append({
                             "id": uid,
                             "type": type_code,
-                            "issue": "missing verification_criteria",
+                            # Says the field is optional. Without that, a reader
+                            # sees `validate schema` pass and concludes the gate
+                            # is warning about a field the schema never defined.
+                            "issue": "verification_criteria is empty — an optional "
+                                     "field, but §5.7 verification needs a stated "
+                                     "criterion to verify against",
                         })
         except Exception:
             pass
@@ -1402,10 +1407,17 @@ def classification_gate(dhf_path: Path) -> dict:
         )
 
     required = config.required_activities()
-    if declared in _SAFETY_CLASSES and not required:
-        warnings.append(
+    no_activities = declared in _SAFETY_CLASSES and not required
+    if no_activities:
+        # An error, not a warning. Declaring the class *is* taking the opt-in, so
+        # the gate is no longer inert — it is being asked to do a job it cannot
+        # do. Reported as a pass, a project sees green and believes it is being
+        # audited while nothing is checked against the class at all.
+        errors.append(
             f"Class {declared} is declared but safety_activities.yaml defines no "
-            f"activities for it, so nothing is being checked against the class."
+            f"activities for it, so nothing is being checked against the class. "
+            f"Run 'medharness upgrade --apply' to obtain the file, then edit it "
+            f"to match what this project has agreed."
         )
 
     present_types = {
@@ -1450,9 +1462,11 @@ def classification_gate(dhf_path: Path) -> dict:
             )
 
     passed = not errors
-    summary = (
-        f"Class {declared}: "
-        + ("all required activities present." if passed else f"{len(errors)} gap(s).")
+    summary = f"Class {declared}: " + (
+        "no activities defined for this class — nothing was checked."
+        if no_activities
+        else "all required activities present." if passed
+        else f"{len(errors)} gap(s)."
     )
     return envelope_from("verify classification", {
         "passed": passed,

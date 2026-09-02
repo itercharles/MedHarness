@@ -139,7 +139,9 @@ class TestUpgradeReportsUnavailableTemplates:
         monkeypatch.setattr(upgrade_mod, "_TEMPLATES_DIR", empty)
 
         result = upgrade_mod.check_upgrade(tmp_path / "project")
-        assert len(result["unavailable"]) == len(_UPGRADE_MAP)
+        # Seeded files are mapped too: a missing template makes them unavailable
+        # for the same reason, and skipping them would under-report the fault.
+        assert len(result["unavailable"]) == len(_UPGRADE_MAP) + len(upgrade_mod._SEED_MAP)
         assert "cannot manage them" in result["summary"]
 
     def test_healthy_install_reports_none_unavailable(self, tmp_path: Path) -> None:

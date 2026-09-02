@@ -189,12 +189,23 @@ class TestActivityMapIsProjectOwned:
         assert result["passed"] is False
         assert result["details"]["missing_item_types"][0]["code"] == "SYSARCH"
 
-    def test_class_with_no_mapping_warns_rather_than_passing_silently(self, dhf: Path) -> None:
+    def test_class_with_no_mapping_fails_rather_than_passing_silently(self, dhf: Path) -> None:
+        """A warning was not enough — a green build reads as "audited".
+
+        The reference project declared Class C, had no activity map (the file
+        predates its adoption and `upgrade` never supplied it), and saw this gate
+        pass. Declaring the class *is* taking the opt-in, so a gate that cannot
+        then check anything has to say so in a way CI cannot ignore.
+        """
         _declare(dhf, "B")
         (dhf / "config" / "safety_activities.yaml").write_text("classes: {}\n")
 
         result = classification_gate(dhf)
-        assert any("nothing is being checked" in w for w in result["warnings"])
+        assert result["passed"] is False
+        assert any("nothing is being checked" in e for e in result["errors"])
+        assert "nothing was checked" in result["summary"], (
+            "the summary claimed the activities were present"
+        )
 
 
 class TestProjectNameReachesDocuments:
