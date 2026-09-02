@@ -53,6 +53,24 @@ class TestExitCodesMatch:
         documented = set(re.findall(r"^\|\s*`(\d)`\s*\|", text, re.M))
         assert documented == set(gates_manifest()["exit_codes"])
 
+    def test_the_sample_manifest_matches_the_real_one(self, text: str) -> None:
+        """The sample is what a reader believes; comparing keys is not enough.
+
+        The exit-code table and the sample manifest drifted apart once already
+        — the table was corrected and the sample kept the superseded wording.
+        """
+        import json
+
+        blocks = re.findall(r"```json\n(\{.*?\n\})\n```", text, re.S)
+        sample = next((b for b in blocks if '"exit_codes"' in b), None)
+        assert sample, "no sample manifest in the document"
+
+        # Elide the illustrative "..." in the gates list before parsing.
+        parsed = json.loads(re.sub(r'"gates":.*?\]', '"gates": []', sample, flags=re.S))
+        real = gates_manifest()
+        assert parsed["envelope"] == real["envelope"]
+        assert parsed["exit_codes"] == real["exit_codes"]
+
 
 class TestBlockingVocabulary:
     @pytest.mark.parametrize("value", BLOCKING)

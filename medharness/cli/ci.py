@@ -24,9 +24,13 @@ def _d(result: dict) -> dict:
 def _render_envelope(result: dict, tag: str) -> None:
     """Print the envelope's errors and warnings.
 
-    Every gate carries these, so every command renders them the same way. Gate
-    commands print their own detailed lines first; this is the backstop that
-    guarantees nothing in the envelope goes unreported.
+    Used where the envelope is the *only* source for a finding. Gates whose own
+    loops already print a richer line (uncovered IDs, fix hints) must not also
+    call this — two renderers over the same findings printed every SOUP
+    vulnerability twice.
+
+    `test_stderr_reports_the_envelope` asserts the other half: no gate may leave
+    an envelope message unprinted.
     """
     for message in result.get("warnings") or []:
         click.echo(f"WARN [{tag}] {message}", err=True)
@@ -295,6 +299,8 @@ def register(main):
                         iid = m.group(1)
                         click.echo(f"    Fix: dhfkit {dhf_arg} item update {iid}"
                                    f" --data '{{\"<field>\": \"<value>\"}}'", err=True)
+        for gap in r.get("verification_gaps", []):
+            click.echo(f"WARN [verification] {gap['id']}: {gap['issue']}", err=True)
         if "traceability" in r:
             t = r["traceability"]
             req = t.get("required", {})
@@ -363,11 +369,16 @@ def register(main):
             raise click.ClickException("--dhf is required when not set globally")
         junit_paths = _h._collect_junit_paths(junit_files, junit_dirs)
         result = ci_test_coverage_gate(dhf_path=effective_dhf, junit_paths=junit_paths, req_types=req_types)
-        if _d(result).get("error"):
-            raise click.ClickException(_d(result)["error"])
         click.echo(json.dumps(result))
         dhf_arg = f"--dhf {effective_dhf}"
-        for row in _d(result)["results"]:
+        rows = _d(result)["results"]
+        if not rows:
+            # Every detail loop below iterates `results`; with none, the envelope
+            # is the only place the reason exists. Without this, a missing
+            # --junit-dir failed with "Test coverage gaps found." — pointing at
+            # coverage when nothing had been read.
+            _render_envelope(result, "test-coverage")
+        for row in rows:
             if "warning" in row:
                 click.echo(f"WARN: {row['warning']} '{row['type']}' — skipped.", err=True)
             elif row["passed"]:
@@ -384,7 +395,7 @@ def register(main):
             click.echo(
                 f"      levels required by the declared class: "
                 f"{', '.join(required_levels)}; seen in this evidence: "
-                f"{', '.join(result.get('levels_seen') or ['none'])}",
+                f"{', '.join(_d(result).get('levels_seen') or ['none'])}",
                 err=True,
             )
         for gap in _d(result).get("level_gaps", []):
@@ -451,7 +462,7 @@ def register(main):
         )
         click.echo(json.dumps(result))
 
-        for item in result.get("missing_method", []):
+        for item in _d(result).get("missing_method", []):
             click.echo(f"FAIL [validate-verification] {item['id']}: no verification_method declared", err=True)
         for item in _d(result).get("unverified_test", []):
             click.echo(f"FAIL [validate-verification] {item['id']}: Test method declared but no passing TC linked", err=True)
@@ -577,7 +588,7 @@ def register(main):
             click.echo(f"PASS [plan] {entry['plan']}", err=True)
         for entry in _d(result).get("missing", []):
             click.echo(f"FAIL [plan] {entry['plan']}: required for Class "
-                       f"{result['declared']} and absent", err=True)
+                       f"{_d(result).get('declared')} and absent", err=True)
         for entry in _d(result).get("unwritten", []):
             click.echo(f"FAIL [plan] {entry['plan']}: unchanged from the template "
                        f"({entry['sections']} section(s))", err=True)
@@ -628,18 +639,7 @@ def register(main):
                 f"{entry['vuln_id']} — {entry['rationale']}",
                 err=True,
             )
-        for problem in _d(result).get("acceptance_problems", []):
-            click.echo(f"WARN [soup-vuln] {problem}", err=True)
         _render_envelope(result, "soup-vuln")
-        for item in _d(result).get("vulnerable", []):
-            for v in item.get("vulns", []):
-                detail = v.get("summary") or v.get("url") or "see osv.dev"
-                severity = f"[{v['severity']}] " if v.get("severity") else ""
-                click.echo(
-                    f"FAIL [soup-vuln] {item['soup_id']} ({item['name']}@{item['version']}): "
-                    f"{v['id']} — {severity}{detail}",
-                    err=True,
-                )
         click.echo(result["summary"], err=True)
         if not result["passed"]:
             raise click.ClickException("SOUP vulnerability check failed.")
@@ -697,7 +697,7 @@ def register(main):
             code_paths=code_paths,
         )
         click.echo(json.dumps(payload))
-        risk_impact = payload.get("risk_impact", [])
+        risk_impact = _d(payload).get("risk_impact", [])
         if risk_impact:
             ids = ", ".join(r["risk_id"] for r in risk_impact)
             click.echo(
@@ -715,7 +715,7 @@ def register(main):
                     err=True,
                 )
             return
-        for error in payload["errors"]:
+        for error in _d(payload).get("findings", []):
             click.echo(f"FAIL [validate-branch] {cr_id} ({error['field']}): {error['issue']}", err=True)
             click.echo(f"    Fix: {error['fix']}", err=True)
         raise click.exceptions.Exit(1)

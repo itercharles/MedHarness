@@ -11,6 +11,73 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+### Bug Fixes
+
+- **Two gates crashed on their failure path.** Moving gate payloads under
+  `details` left several CLI reader sites unconverted: `verify plans` raised
+  `KeyError: 'declared'` whenever a required plan was absent, and `verify branch`
+  raised `TypeError` on every failure, because the envelope's `errors` are now
+  strings while the loop still read `error['field']`.
+
+- **Findings vanished from stderr.** `verify verification` read `missing_method`
+  at the top level, so "no verification_method declared" lines were silently
+  dropped; `verify branch`'s risk-impact warning became dead code; and
+  `verify tests` always printed "seen in this evidence: none".
+
+- **Three gates could fail while saying nothing.** `docs/interface.md` states
+  that a failing gate always populates `errors`, and three paths did not: SOUP
+  with real vulnerabilities, an explicit `--coverage-pair` failure, and a CR
+  missing `proposed_new_items`. A `passed: false` with an empty `errors` is the
+  defect the document names.
+
+- **`verify tests` named the wrong cause.** A missing `--junit-dir` failed with
+  "Test coverage gaps found." while the envelope correctly said "No JUnit files
+  found". Every stderr detail loop in that command iterates `results`, which is
+  empty on that path, so nothing but the generic exception text was printed.
+
+- **`verify dhf` never showed its verification_criteria warnings.** They reached
+  the envelope and the JSON; the command had no loop that rendered them, so a
+  reader of CI logs never saw them.
+
+- **`verify soup` printed every vulnerability twice.** `_render_envelope` and a
+  manual loop beside it rendered the same findings. The envelope strings now
+  carry severity and the URL fallback, and the manual loop is gone.
+
+- **The branch gate's contract test asserted the superseded shape.** It mocked
+  the service with a flat pre-envelope dict and asserted flat top-level keys —
+  including `errors` as a list of dicts, which contradicts the documented string
+  type. Removing the envelope from `verify branch` entirely left it passing.
+
+  New guards: every envelope message must be findable on stderr, no gate may
+  print a finding twice, and SOUP's rendering path is exercised with a stubbed
+  osv.dev because the scaffold has nothing checkable to reach it. Each was
+  verified by reintroducing the defect it was written for.
+
+- **The interface document's sample manifest drifted from the real one.** The
+  exit-code table was corrected while the sample JSON above it kept the
+  superseded wording — the same defect class, in the same document, introduced
+  by the fix for it. The guard compared only the table's codes; it now parses
+  the sample and compares it to `gates_manifest()`.
+
+- **The documented exit codes were wrong.** A usage error raised before a gate
+  runs — a missing `--dhf`, for instance — exits **1** with no stdout, not 2. The
+  document's own sample consumer would have raised `IndexError` on it. Both the
+  document and the manifest now describe the three real cases, and the sample
+  checks stdout before parsing.
+
+### Internal
+
+- **The envelope tests ran gates through `CliRunner`, which hid both crashes.**
+  It captures an exception raised *after* the JSON line reaches stdout, so a
+  command that prints its result and then dies looked identical to one that
+  succeeded. They now run real subprocesses and assert no traceback.
+
+- **They also only ever ran against a clean scaffold**, where soup short-circuits,
+  plans skips everything, and branch has nothing to compare — so every defect
+  above sat on a path the suite never reached. A deliberately broken DHF now
+  exercises each gate's failure path.
+
+
 ### Documentation
 
 - **[docs/interface.md](docs/interface.md)** — the machine interface as a

@@ -110,35 +110,51 @@ class TestValidateCodeJsonContract:
 
 class TestValidateBranchJsonContract:
     def test_json_payload_has_documented_keys(self, dhf):
+        """The CLI passes the envelope through unchanged.
+
+        Scope: this mocks the service, so it cannot show the service *builds* an
+        envelope — test_gate_envelope.py does that in a real subprocess. What it
+        did before was worse than narrow: the mock was a hand-written flat dict
+        and the assertions named the pre-envelope keys, so it described a
+        contract the command no longer had.
+        """
+        from medharness.services.ci import ENVELOPE_KEYS, envelope_from
+
         runner = CliRunner()
-        branch_result = {
+        branch_result = envelope_from("verify branch", {
             "cr_id": "CR-500",
             "since_ref": "origin/main",
             "passed": True,
+            "summary": "CR-500: 0 branch finding(s) since origin/main.",
             "expected_dhf_changes": True,
             "dhf_item_changes": {"created": ["SRS-010"], "updated": [], "deleted": []},
             "code_changes": {"created": ["apps/client/src/feature.ts"], "updated": [], "deleted": []},
             "risk_impact": [],
             "errors": [],
-        }
+            "findings": [],
+        })
         with patch("medharness.services.git.validate_atomic_branch", return_value=branch_result):
             r = runner.invoke(main, ["--dhf", str(dhf), "verify", "branch", "--cr", "CR-500"])
         assert r.exit_code == 0, (r.output, r.stderr)
         payload = _split_stdout_json(r.stdout)
-        for key in (
-            "cr_id", "since_ref", "passed", "expected_dhf_changes",
-            "dhf_item_changes", "code_changes", "risk_impact", "errors",
-        ):
-            assert key in payload, f"missing {key}"
-        assert "spec_path" not in payload
+        assert set(payload) == set(ENVELOPE_KEYS), "verify branch left the envelope"
+        for key in ("cr_id", "since_ref", "expected_dhf_changes",
+                    "dhf_item_changes", "code_changes", "risk_impact"):
+            assert key in payload["details"], f"{key} is not under details"
+        assert "spec_path" not in payload["details"]
         assert payload["passed"] is True
 
     def test_warn_emitted_to_stderr_when_risks_affected(self, dhf):
         runner = CliRunner()
-        branch_result = {
+        # Built through the real helper: a mock shaped by hand would let the
+        # test pass against a contract the code no longer honours.
+        from medharness.services.ci import envelope_from
+
+        branch_result = envelope_from("verify branch", {
             "cr_id": "CR-502",
             "since_ref": "origin/main",
             "passed": True,
+            "summary": "CR-502: 0 branch finding(s) since origin/main.",
             "expected_dhf_changes": True,
             "dhf_item_changes": {"created": ["SYS-010"], "updated": [], "deleted": []},
             "code_changes": {"created": [], "updated": [], "deleted": []},
@@ -147,7 +163,8 @@ class TestValidateBranchJsonContract:
                 {"risk_id": "RISK-003", "title": "Data loss", "via_rcms": ["RCM-002"]},
             ],
             "errors": [],
-        }
+            "findings": [],
+        })
         with patch("medharness.services.git.validate_atomic_branch", return_value=branch_result):
             r = runner.invoke(main, ["--dhf", str(dhf), "verify", "branch", "--cr", "CR-502"],
                               catch_exceptions=False)
@@ -158,22 +175,34 @@ class TestValidateBranchJsonContract:
         assert "2 risk item(s)" in r.stderr
 
     def test_errors_propagate_and_exit_non_zero(self, dhf):
-        branch_result = {
+        """`errors` is a list of strings — this asserted a list of dicts.
+
+        docs/interface.md types `errors` as strings a caller can print. Anyone
+        satisfying the old assertion would have broken that for every consumer.
+        """
+        from medharness.services.ci import envelope_from
+
+        finding = {"field": "code_branch", "issue": "x", "fix": "y"}
+        branch_result = envelope_from("verify branch", {
             "cr_id": "CR-501",
             "since_ref": "origin/main",
             "passed": False,
+            "summary": "CR-501: 1 branch finding(s) since origin/main.",
             "expected_dhf_changes": True,
             "dhf_item_changes": {"created": [], "updated": [], "deleted": []},
             "code_changes": {"created": [], "updated": [], "deleted": []},
-            "errors": [{"field": "code_branch", "issue": "x", "fix": "y"}],
-        }
+            "errors": [f"{finding['field']}: {finding['issue']}"],
+            "findings": [finding],
+        })
         runner = CliRunner()
         with patch("medharness.services.git.validate_atomic_branch", return_value=branch_result):
             r = runner.invoke(main, ["--dhf", str(dhf), "verify", "branch", "--cr", "CR-501"])
         assert r.exit_code == 1
         payload = _split_stdout_json(r.stdout)
         assert payload["passed"] is False
-        assert payload["errors"] == [{"field": "code_branch", "issue": "x", "fix": "y"}]
+        assert payload["errors"] == ["code_branch: x"]
+        assert all(isinstance(e, str) for e in payload["errors"])
+        assert payload["details"]["findings"] == [finding]
 
 
 class TestAdvanceStageContract:
