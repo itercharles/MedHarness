@@ -303,3 +303,54 @@ class TestAnUnreadableLevelMapFails:
         result = ci_test_coverage_gate(dhf, [junit], req_types=("SRS",))
         assert result["errors"] == []
         assert result["details"]["required_levels"] == {"SRS": ["unit"]}
+
+
+class TestTheGateSaysWhyLevelsAreInert:
+    """An empty `required_levels` has three causes and looked the same in all.
+
+    A project with a correct per-type mapping but no declared class saw
+    `{'SRS': [], 'SYS': []}` and nothing else — no mention of a class anywhere
+    in the output. It spent a debugging round rewriting the mapping's YAML,
+    which had never been the problem.
+    """
+
+    def test_an_undeclared_class_is_named_as_the_reason(self, dhf: Path, tmp_path: Path) -> None:
+        (dhf / "config" / "safety_activities.yaml").write_text(
+            "classes:\n  C:\n    required_items: [SRS]\n    required_plans: []\n"
+            "    required_test_levels:\n      SRS: [unit, integration]\n"
+        )
+        junit = _junit(tmp_path / "u.xml", "SRS-001", "unit")
+
+        result = ci_test_coverage_gate(dhf, [junit], req_types=("SRS",))
+
+        assert result["details"]["required_levels"] == {"SRS": []}
+        assert any("software_safety_class" in w for w in result["warnings"]), (
+            "the gate reported no level requirements without saying why"
+        )
+
+    def test_the_warning_goes_away_once_a_class_is_declared(self, dhf: Path, tmp_path: Path) -> None:
+        (dhf / "config" / "safety_activities.yaml").write_text(
+            "classes:\n  C:\n    required_items: [SRS]\n    required_plans: []\n"
+            "    required_test_levels:\n      SRS: [unit, integration]\n"
+        )
+        _declare(dhf, "C")
+        junit = _junit(tmp_path / "u.xml", "SRS-001", "unit")
+
+        result = ci_test_coverage_gate(dhf, [junit], req_types=("SRS",))
+
+        assert not any("software_safety_class" in w for w in result["warnings"])
+        assert result["details"]["required_levels"] == {"SRS": ["unit", "integration"]}
+
+    def test_a_block_list_under_a_type_key_is_read(self, dhf: Path, tmp_path: Path) -> None:
+        """Only the outer bullets break it — the reference project fixed a
+        format that had never been wrong, because nothing said what was."""
+        (dhf / "config" / "safety_activities.yaml").write_text(
+            "classes:\n  C:\n    required_items: [SRS]\n    required_plans: []\n"
+            "    required_test_levels:\n      SRS:\n        - unit\n        - integration\n"
+        )
+        _declare(dhf, "C")
+        junit = _junit(tmp_path / "u.xml", "SRS-001", "unit")
+
+        result = ci_test_coverage_gate(dhf, [junit], req_types=("SRS",))
+        assert result["details"]["required_levels"] == {"SRS": ["unit", "integration"]}
+        assert result["errors"] == [] or all("could not be read" not in e for e in result["errors"])

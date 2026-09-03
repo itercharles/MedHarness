@@ -263,6 +263,21 @@ def failing_dhf(tmp_path: Path) -> Path:
     rcm = next((dhf / "items").rglob("RCM-*.yaml"))
     rcm.write_text(rcm.read_text().replace("RISK-001", "RISK-404"))
 
+    # Real JUnit evidence, so `verify tests` reaches its row-rendering path.
+    # Without it `results` is empty, the envelope backstop fires, and a warning
+    # that only the row path can drop looks reported — which is how a gate-level
+    # warning ("levels are not being checked") stayed off stderr.
+    results = dhf / "test-results"
+    results.mkdir(exist_ok=True)
+    req = next((i.stem for i in (dhf / "items").rglob("SRS-*.yaml")), "SRS-001")
+    (results / "j.xml").write_text(
+        '<testsuites><testsuite name="s" tests="1" failures="0" errors="0">'
+        '<testcase classname="t" name="a"><properties>'
+        f'<property name="medharness.links" value="{req}"/>'
+        '<property name="medharness.level" value="unit"/>'
+        "</properties></testcase></testsuite></testsuites>"
+    )
+
     for cmd in (["init", "-q"], ["add", "-A"], ["-c", "user.email=t@e", "-c",
                 "user.name=t", "commit", "-qm", "base"]):
         subprocess.run(["git", *cmd], cwd=tmp_path, capture_output=True)
@@ -430,3 +445,46 @@ class TestStderrCarriesTheEnvelope:
         lines = [line for line in r.stderr.splitlines() if "GHSA-x" in line]
         assert len(lines) == 1, f"vulnerability reported {len(lines)}x:\n" + "\n".join(lines)
         assert "Session fixation" in lines[0], "the reader lost the summary"
+
+
+class TestGateLevelWarningsReachStderr:
+    """A warning about the gate, not about a row, had nowhere to be printed.
+
+    `verify tests` renders per-type rows and — since an earlier fix — the
+    envelope when there are no rows at all. A warning that applies to the whole
+    gate while rows exist fell between the two: it was in the JSON and absent
+    from the log. `failing_dhf` cannot catch it, because it declares a class and
+    so never produces one.
+    """
+
+    @pytest.fixture
+    def inert_dhf(self, tmp_path: Path) -> Path:
+        _scaffold_dhf(tmp_path)
+        _replace_placeholders(tmp_path, "Inert")
+        dhf = tmp_path / "DHF"
+        results = dhf / "test-results"
+        results.mkdir(exist_ok=True)
+        req = next((i.stem for i in (dhf / "items").rglob("SRS-*.yaml")), "SRS-001")
+        (results / "j.xml").write_text(
+            '<testsuites><testsuite name="s" tests="1" failures="0" errors="0">'
+            '<testcase classname="t" name="a"><properties>'
+            f'<property name="medharness.links" value="{req}"/>'
+            '<property name="medharness.level" value="unit"/>'
+            "</properties></testcase></testsuite></testsuites>"
+        )
+        return dhf
+
+    def test_the_reason_levels_are_inert_is_printed(self, inert_dhf: Path) -> None:
+        result, stderr = _stderr_of("verify tests", inert_dhf)
+
+        gate_level = [
+            w for w in result["warnings"]
+            if not any(w == row.get("warning") for row in result["details"]["results"])
+        ]
+        assert gate_level, "no class is declared, so the gate should say levels are inert"
+        assert result["details"]["results"], "the fixture must produce rows to be meaningful"
+        for message in gate_level:
+            assert "software_safety_class" in stderr, (
+                f"a gate-level warning stayed out of the log:\n  {message}\n"
+                f"  stderr was:\n{stderr[-400:]}"
+            )

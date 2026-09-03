@@ -397,6 +397,17 @@ def ci_test_coverage_gate(
     # classification sees exactly the behaviour it saw before.
     raw_levels = adapter._config.required_activities().get("required_test_levels")
     required_levels, level_config_problems = _levels_by_type(raw_levels, default_types)
+    # Say why the level dimension is doing nothing. An empty `required_levels`
+    # looks identical whether the class is undeclared, the map is silent, or the
+    # map could not be read — and a project that had written a mapping spent a
+    # debugging round on exactly that ambiguity.
+    level_notes: list[str] = []
+    if not adapter._config.software_safety_class:
+        level_notes.append(
+            "Verification levels are not being checked: no software_safety_class "
+            "is declared in global.yaml, so safety_activities.yaml does not apply "
+            "yet. Requirement coverage below is unaffected."
+        )
     level_gaps: list[dict] = []
 
     for rt in default_types:
@@ -484,7 +495,7 @@ def ci_test_coverage_gate(
         f"but missing {', '.join(gap['missing'])}"
         for gap in level_gaps
     ]
-    warnings = [row["warning"] for row in results if row.get("warning")]
+    warnings = level_notes + [row["warning"] for row in results if row.get("warning")]
     covered = sum(r.get("covered", 0) for r in results)
     total = sum(r.get("total", 0) for r in results)
     if level_config_problems:

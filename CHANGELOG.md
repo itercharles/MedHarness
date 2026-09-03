@@ -11,6 +11,28 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+### Bug Fixes
+
+- **`verify tests` did not say why it was checking no levels.** An empty
+  `required_levels` has three causes — no class declared, the map is silent for
+  that class, or the map could not be read — and they were indistinguishable in
+  the output. The reference project, whose per-type mapping was correct, saw
+  `{"SRS": [], "SYS": []}` with no mention of a class anywhere in stderr and
+  spent a round rewriting YAML that had never been wrong. The gate now warns
+  that levels are inert until `software_safety_class` is declared.
+
+- **A gate-level warning could not reach stderr at all.** `verify tests` renders
+  per-type rows, and — since the previous release — the envelope when there are
+  no rows. A warning about the whole gate while rows exist fell between the two:
+  present in the JSON, absent from the log. This is the second time that command
+  has dropped a message the envelope carried; the guard now covers the case,
+  which the earlier fixture could not reach because it declares a class and so
+  never produces such a warning.
+
+- The per-type summary line now reads `19/19 requirements covered`, matching the
+  wording of the same finding in `errors`.
+
+
 ---
 
 ## [0.16.1] — 2026-09-03
