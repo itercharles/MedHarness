@@ -11,6 +11,33 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+### Bug Fixes
+
+- **An unreadable `required_test_levels` disabled level checking and reported a
+  pass.** The per-type form added in 0.16.0 is a mapping, but the flat form uses
+  `-` bullets — so writing the mapping the same way is the natural mistake:
+
+  ```yaml
+  required_test_levels:
+    - SRS: [unit, integration]     # parses as a list of dicts
+    - SYS: [system]
+  ```
+
+  That matched no level, required nothing of any type, and the gate passed. The
+  only trace was `details.required_levels` reading `{"SRS": [], "SYS": []}` —
+  which is also what a correctly-empty map looks like, so an empty `level_gaps`
+  read as proof the mapping had worked.
+
+  The reference project made exactly this edit, measured it as a success, and
+  committed it believing unit and integration evidence was being enforced. It
+  was not.
+
+  `verify tests` now fails when it cannot read the setting, and the error shows
+  the correct form rather than only rejecting the wrong one. A misspelled level
+  (`integraton`) and a type that is not being checked are reported too — both
+  were silently dropped, each quietly weakening the gate.
+
+
 ---
 
 ## [0.16.0] — 2026-09-03

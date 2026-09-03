@@ -258,7 +258,9 @@ def _structural_messages(results: dict, fail_on_uncovered: bool) -> tuple[list[s
 # ---------------------------------------------------------------------------
 
 
-def _levels_by_type(raw: Any, req_types: tuple[str, ...]) -> dict[str, list[str]]:
+def _levels_by_type(
+    raw: Any, req_types: tuple[str, ...]
+) -> tuple[dict[str, list[str]], list[str]]:
     """Resolve ``required_test_levels`` to the levels each requirement type needs.
 
     Two forms, because one of them could not express what IEC 62304 actually
@@ -276,12 +278,41 @@ def _levels_by_type(raw: Any, req_types: tuple[str, ...]) -> dict[str, list[str]
     silence is "not required here", not "inherit the others".
     """
     if isinstance(raw, dict):
+        unknown = sorted(set(raw) - set(req_types))
+        problems = [
+            f"required_test_levels names {rt}, which is not a requirement type "
+            f"being checked ({', '.join(req_types)})."
+            for rt in unknown
+        ]
+        for rt, levels in raw.items():
+            bad = [lvl for lvl in (levels or []) if lvl not in TEST_LEVELS]
+            if bad:
+                problems.append(
+                    f"required_test_levels[{rt}] contains {bad}, which are not "
+                    f"levels ({', '.join(TEST_LEVELS)})."
+                )
         return {
             rt: [lvl for lvl in (raw.get(rt) or []) if lvl in TEST_LEVELS]
             for rt in req_types
-        }
-    flat = [lvl for lvl in (raw or []) if lvl in TEST_LEVELS]
-    return {rt: list(flat) for rt in req_types}
+        }, problems
+
+    entries = list(raw or [])
+    # A mapping written with bullets parses as a list of dicts, which silently
+    # matched no level and required nothing of anything — reported as a pass.
+    # The flat form uses bullets, so writing the mapping that way is the natural
+    # mistake. Anything unreadable now fails the gate rather than disabling it.
+    unreadable = [e for e in entries if e not in TEST_LEVELS]
+    if unreadable:
+        return {rt: [] for rt in req_types}, [
+            "required_test_levels could not be read. Use a list of levels "
+            f"({', '.join(TEST_LEVELS)}) applying to every requirement type, or "
+            "a mapping of type to levels written without '-' bullets:\n"
+            "      required_test_levels:\n"
+            "        SRS: [unit, integration]\n"
+            "        SYS: [system]\n"
+            f"    Unreadable entries: {unreadable}"
+        ]
+    return {rt: list(entries) for rt in req_types}, []
 
 
 def ci_test_coverage_gate(
@@ -365,7 +396,7 @@ def ci_test_coverage_gate(
     # the level dimension is inert, so a project that has not opted in to
     # classification sees exactly the behaviour it saw before.
     raw_levels = adapter._config.required_activities().get("required_test_levels")
-    required_levels = _levels_by_type(raw_levels, default_types)
+    required_levels, level_config_problems = _levels_by_type(raw_levels, default_types)
     level_gaps: list[dict] = []
 
     for rt in default_types:
@@ -439,7 +470,10 @@ def ci_test_coverage_gate(
             "uncovered": uncovered,
         })
 
-    errors = [
+    # A level map the gate cannot read disables level checking entirely, so it
+    # has to fail rather than pass quietly: the reference project read an empty
+    # `level_gaps` as proof its mapping worked when nothing had been required.
+    errors = list(level_config_problems) + [
         f"{row['type']}: {row['covered']}/{row['total']} requirements covered"
         for row in results if not row.get("passed") and "warning" not in row
     ] + [
@@ -453,6 +487,8 @@ def ci_test_coverage_gate(
     warnings = [row["warning"] for row in results if row.get("warning")]
     covered = sum(r.get("covered", 0) for r in results)
     total = sum(r.get("total", 0) for r in results)
+    if level_config_problems:
+        passed = False
     return gate_result(
         "verify tests", passed,
         f"{covered}/{total} requirement(s) covered by passing tests.",
