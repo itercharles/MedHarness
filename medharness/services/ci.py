@@ -258,6 +258,32 @@ def _structural_messages(results: dict, fail_on_uncovered: bool) -> tuple[list[s
 # ---------------------------------------------------------------------------
 
 
+def _levels_by_type(raw: Any, req_types: tuple[str, ...]) -> dict[str, list[str]]:
+    """Resolve ``required_test_levels`` to the levels each requirement type needs.
+
+    Two forms, because one of them could not express what IEC 62304 actually
+    asks. A flat list applied to every type meant a project could only demand
+    all levels of every requirement or none of any:
+
+        required_test_levels: [unit, integration, system]
+
+        required_test_levels:
+          SRS: [unit, integration]     # §5.5, §5.6
+          SYS: [system]                # §5.7
+
+    The flat form still means "every type", so an existing activity map keeps
+    behaving exactly as it did. A mapping requires nothing of a type it omits —
+    silence is "not required here", not "inherit the others".
+    """
+    if isinstance(raw, dict):
+        return {
+            rt: [lvl for lvl in (raw.get(rt) or []) if lvl in TEST_LEVELS]
+            for rt in req_types
+        }
+    flat = [lvl for lvl in (raw or []) if lvl in TEST_LEVELS]
+    return {rt: list(flat) for rt in req_types}
+
+
 def ci_test_coverage_gate(
     dhf_path: Path,
     junit_paths: list[Path],
@@ -338,10 +364,8 @@ def ci_test_coverage_gate(
     # Levels the declared safety class requires. Absent a class this is empty and
     # the level dimension is inert, so a project that has not opted in to
     # classification sees exactly the behaviour it saw before.
-    required_levels = [
-        lvl for lvl in (adapter._config.required_activities().get("required_test_levels") or [])
-        if lvl in TEST_LEVELS
-    ]
+    raw_levels = adapter._config.required_activities().get("required_test_levels")
+    required_levels = _levels_by_type(raw_levels, default_types)
     level_gaps: list[dict] = []
 
     for rt in default_types:
@@ -387,9 +411,10 @@ def ci_test_coverage_gate(
                     "passed": True,
                 })
 
-            if has_req_coverage and required_levels:
+            levels_for_type = required_levels.get(rt) or []
+            if has_req_coverage and levels_for_type:
                 have = covered_levels.get(req_id, set())
-                missing_levels = [lvl for lvl in required_levels if lvl not in have]
+                missing_levels = [lvl for lvl in levels_for_type if lvl not in have]
                 if missing_levels:
                     passed = False
                     level_gaps.append({

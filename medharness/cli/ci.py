@@ -393,14 +393,26 @@ def register(main):
                     click.echo(f"        Fix: add 'dhf_links: [{uid}]' to a test case, or:", err=True)
                     click.echo(f"             dhfkit {dhf_arg} item create --type TC"
                                f" --data '{{\"title\": \"Test {uid}\", \"dhf_links\": [\"{uid}\"]}}'", err=True)
-        required_levels = _d(result).get("required_levels") or []
-        if required_levels:
-            click.echo(
-                f"      levels required by the declared class: "
-                f"{', '.join(required_levels)}; seen in this evidence: "
-                f"{', '.join(_d(result).get('levels_seen') or ['none'])}",
-                err=True,
-            )
+        # A mapping now, because the class may require different levels of
+        # different requirement types. Printing the union would misreport a
+        # project that asks for system testing of SYS but not of SRS.
+        required_levels = _d(result).get("required_levels") or {}
+        seen = ", ".join(_d(result).get("levels_seen") or ["none"])
+        demanded = {rt: lv for rt, lv in required_levels.items() if lv}
+        if demanded:
+            uniform = len({tuple(v) for v in demanded.values()}) == 1
+            if uniform:
+                only = next(iter(demanded.values()))
+                click.echo(
+                    f"      levels required by the declared class: "
+                    f"{', '.join(only)}; seen in this evidence: {seen}",
+                    err=True,
+                )
+            else:
+                click.echo("      levels required by the declared class:", err=True)
+                for rt in sorted(demanded):
+                    click.echo(f"        {rt}: {', '.join(demanded[rt])}", err=True)
+                click.echo(f"      seen in this evidence: {seen}", err=True)
         for gap in _d(result).get("level_gaps", []):
             click.echo(
                 f"FAIL [test-level] {gap['req_id']}: verified at "

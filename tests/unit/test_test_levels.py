@@ -61,7 +61,7 @@ class TestInertWithoutAClass:
         junit = _junit(tmp_path / "u.xml", "SRS-001", "unit")
         result = ci_test_coverage_gate(dhf, [junit], req_types=("SRS",))
 
-        assert result["details"]["required_levels"] == []
+        assert result["details"]["required_levels"] == {"SRS": []}
         assert result["details"]["level_gaps"] == []
         assert result["details"]["results"][0]["passed"] is True
 
@@ -100,7 +100,7 @@ class TestClassRequiresLevels:
         junit = _junit(tmp_path / "u.xml", "SRS-001", "unit")
 
         result = ci_test_coverage_gate(dhf, [junit], req_types=("SRS",))
-        assert result["details"]["required_levels"] == ["unit"]
+        assert result["details"]["required_levels"] == {"SRS": ["unit"]}
         assert result["details"]["level_gaps"] == []
 
     def test_gap_names_what_is_missing(self, dhf: Path, tmp_path: Path) -> None:
@@ -187,3 +187,55 @@ class TestPytestMarker:
         ))
         assert code == 0, output
         assert f'value="{level}"' in junit.read_text()
+
+
+class TestLevelsCanDifferByRequirementType:
+    """A flat list could not express what IEC 62304 asks.
+
+    §5.5 unit verification, §5.6 integration testing and §5.7 system testing do
+    not all apply to the same artefact. With one list for every requirement
+    type, a project could demand all three of every requirement or none of any —
+    so the reference project, which wanted integration evidence for SRS and
+    system evidence for SYS, had no way to say so. `safety_activities.yaml` is
+    documented as the project's own interpretation; before this it could not
+    hold one.
+    """
+
+    def _map(self, dhf: Path, mapping: str) -> None:
+        (dhf / "config" / "safety_activities.yaml").write_text(
+            "classes:\n  B:\n    required_items: [SRS, SYS]\n"
+            "    required_plans: []\n"
+            f"    required_test_levels:\n{mapping}"
+        )
+
+    def test_a_type_gets_only_the_levels_named_for_it(self, dhf: Path, tmp_path: Path) -> None:
+        _declare(dhf, "B")
+        self._map(dhf, "      SRS: [unit, integration]\n      SYS: [system]\n")
+        junit = _junit(tmp_path / "u.xml", "SRS-001", "unit")
+
+        result = ci_test_coverage_gate(dhf, [junit], req_types=("SRS",))
+        gaps = result["details"]["level_gaps"]
+        assert len(gaps) == 1
+        assert gaps[0]["missing"] == ["integration"], (
+            "SRS was asked for system testing, which the map assigns to SYS"
+        )
+
+    def test_a_type_the_map_omits_requires_nothing(self, dhf: Path, tmp_path: Path) -> None:
+        """Silence means 'not required here', not 'inherit the others'."""
+        _declare(dhf, "B")
+        self._map(dhf, "      SYS: [system]\n")
+        junit = _junit(tmp_path / "u.xml", "SRS-001", "unit")
+
+        result = ci_test_coverage_gate(dhf, [junit], req_types=("SRS",))
+        assert result["details"]["level_gaps"] == []
+        assert result["details"]["required_levels"] == {"SRS": []}
+
+    def test_the_flat_form_still_applies_to_every_type(self, dhf: Path, tmp_path: Path) -> None:
+        """An existing activity map must keep behaving exactly as it did."""
+        _declare(dhf, "B")
+        self._map(dhf, "      - unit\n      - integration\n")
+        junit = _junit(tmp_path / "u.xml", "SRS-001", "unit")
+
+        result = ci_test_coverage_gate(dhf, [junit], req_types=("SRS",))
+        assert result["details"]["required_levels"] == {"SRS": ["unit", "integration"]}
+        assert result["details"]["level_gaps"][0]["missing"] == ["integration"]

@@ -170,6 +170,16 @@ FAIL [test-level] SRS-012: verified at unit but missing integration, system
 
 **Unlabelled tests count as unit**, which is what they were already being counted as — existing suites keep working, and the requirement only applies once a class demanding it is declared.
 
+Which levels a class demands can differ by requirement type — §5.5 unit verification, §5.6 integration testing and §5.7 system testing do not verify the same artefact. In `safety_activities.yaml`, a list applies to every type while a mapping applies per type:
+
+```yaml
+required_test_levels:
+  SRS: [unit, integration]
+  SYS: [system]
+```
+
+A type the mapping omits requires no level. Which clause covers which artefact depends on how your project defines SYS against SRS, so the shipped defaults are a starting point rather than a ruling — the file is yours, and `upgrade` will not overwrite it.
+
 This exits non-zero if a requirement lacks coverage or if any declared test point has no covering test, making gaps in test coverage visible before merge. Combined with `verify dhf` (schema and links), it enforces that requirements are linked and verified before merge.
 
 ## AI-assisted CR workflow
