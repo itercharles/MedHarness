@@ -232,3 +232,38 @@ class TestLegacyImport:
         item = find_approvals(dhf, approves="CR-001")[0]
         assert "Backfilled" in item["notes"]
         assert "CR-001-Design-Review.md" in item["scope"]
+
+
+class TestUnreadableConventionsAreReported:
+    """Silence is the failure mode that costs the most to diagnose.
+
+    A project whose reviews are named `CR-013-Design.md` saw "0 imported,
+    0 skipped" with nothing in `errors` — the glob never reached those files —
+    and then `verify completion` failed with "no approval record". Nothing
+    connected the two, so the naming mismatch was invisible from both ends.
+    """
+
+    def test_a_filename_the_importer_cannot_read_is_reported(self, dhf: Path) -> None:
+        reviews = dhf.parent / "docs" / "reviews"
+        reviews.mkdir(parents=True)
+        (reviews / "CR-013-Design.md").write_text("# Review\n\n**Verdict:** Approved\n")
+
+        result = import_review_files(dhf, reviews, approver="qa@example.com")
+
+        assert result["imported"] == []
+        assert len(result["skipped"]) == 1, (
+            "a review file the importer cannot read was passed over in silence"
+        )
+        reason = result["skipped"][0]["reason"]
+        assert "Design-Review.md" in reason, f"the reason must name the pattern: {reason}"
+
+    def test_a_recognised_filename_still_imports(self, dhf: Path) -> None:
+        """Widening the glob must not change what is actually read."""
+        reviews = dhf.parent / "docs" / "reviews"
+        reviews.mkdir(parents=True)
+        (reviews / "CR-013-Design-Review.md").write_text("# R\n\n**Verdict:** Approved\n")
+
+        result = import_review_files(dhf, reviews, approver="qa@example.com")
+
+        assert len(result["imported"]) == 1
+        assert result["imported"][0]["stage"] == "design"
