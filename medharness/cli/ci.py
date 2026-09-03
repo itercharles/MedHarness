@@ -374,6 +374,12 @@ def register(main):
         result = ci_test_coverage_gate(dhf_path=effective_dhf, junit_paths=junit_paths, req_types=req_types)
         click.echo(json.dumps(result))
         dhf_arg = f"--dhf {effective_dhf}"
+        # Envelope warnings the row loops below cannot produce — they iterate
+        # `results`, so anything about the gate as a whole was printed only when
+        # there were no rows at all.
+        for message in result.get("warnings") or []:
+            if not any(message == row.get("warning") for row in _d(result)["results"]):
+                click.echo(f"WARN [test-coverage] {message}", err=True)
         rows = _d(result)["results"]
         if not rows:
             # Every detail loop below iterates `results`; with none, the envelope
@@ -385,9 +391,11 @@ def register(main):
             if "warning" in row:
                 click.echo(f"WARN: {row['warning']} '{row['type']}' — skipped.", err=True)
             elif row["passed"]:
-                click.echo(f"PASS [test-coverage] {row['type']}: {row['covered']}/{row['total']} covered", err=True)
+                click.echo(f"PASS [test-coverage] {row['type']}: "
+                           f"{row['covered']}/{row['total']} requirements covered", err=True)
             else:
-                click.echo(f"FAIL [test-coverage] {row['type']}: {row['covered']}/{row['total']} covered", err=True)
+                click.echo(f"FAIL [test-coverage] {row['type']}: "
+                           f"{row['covered']}/{row['total']} requirements covered", err=True)
                 for uid in row.get("uncovered", []):
                     click.echo(f"      ↳ uncovered: {uid}", err=True)
                     click.echo(f"        Fix: add 'dhf_links: [{uid}]' to a test case, or:", err=True)
