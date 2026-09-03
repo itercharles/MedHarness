@@ -11,6 +11,10 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+---
+
+## [0.16.1] — 2026-09-03
+
 ### Bug Fixes
 
 - **An unreadable `required_test_levels` disabled level checking and reported a
@@ -36,9 +40,6 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
   the correct form rather than only rejecting the wrong one. A misspelled level
   (`integraton`) and a type that is not being checked are reported too — both
   were silently dropped, each quietly weakening the gate.
-
-
----
 
 ## [0.16.0] — 2026-09-03
 
@@ -774,8 +775,6 @@ a compliance record is the defect class that matters most.
 - The unit-test CI job installs `.[dev]`, which now carries `build`; without it
   the packaging suite skips and the faults it guards reach PyPI unnoticed.
 - The scaffold CI check asserts `.github/workflows` is *not* created.
-
----
 
 ## [0.12.0] — 2026-08-19
 
