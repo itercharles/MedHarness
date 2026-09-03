@@ -18,6 +18,24 @@
 #   - Configuration management (§8) and problem resolution (§9) apply to every
 #     class.
 #
+# ── required_test_levels ──────────────────────────────────────────────────
+#
+# A list applies to every requirement type:
+#
+#     required_test_levels: [unit, integration, system]
+#
+# A mapping applies per type, which is what §5.5-§5.7 actually distinguishes —
+# unit verification, integration testing and system testing do not all verify
+# the same artefact:
+#
+#     required_test_levels:
+#       SRS: [unit, integration]
+#       SYS: [system]
+#
+# A type the mapping omits requires no level at all. Which artefact each clause
+# verifies depends on how this project defines SYS against SRS, so the shipped
+# lists below are a starting point, not a ruling.
+#
 # The classes themselves (§4.3):
 #   A — no injury or damage to health is possible
 #   B — non-serious injury is possible

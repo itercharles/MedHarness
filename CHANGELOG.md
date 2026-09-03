@@ -11,6 +11,38 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+### New Features
+
+- **`required_test_levels` can differ by requirement type.** §5.5 unit
+  verification, §5.6 integration testing and §5.7 system testing do not verify
+  the same artefact, but the setting was a single list applied to every
+  requirement — so a project could demand all three levels of every requirement
+  or none of any:
+
+  ```yaml
+  required_test_levels:
+    SRS: [unit, integration]     # §5.5, §5.6
+    SYS: [system]                # §5.7
+  ```
+
+  A list still applies to every type, so an existing activity map behaves
+  exactly as it did. A type the mapping omits requires no level — silence is
+  "not required here", not "inherit the others".
+
+  `safety_activities.yaml` is documented as the project's own interpretation of
+  the §5 activity table. Until now it could not hold one: the reference project
+  wanted integration evidence for SRS and system evidence for SYS, and the only
+  available edit was to drop a level for everything at once.
+
+  The shipped defaults are unchanged. Which clause verifies which artefact
+  depends on how a project defines SYS against SRS, and that is not a judgement
+  this project should make on anyone's behalf.
+
+  `details.required_levels` is now a `{type: [levels]}` mapping rather than a
+  list, and stderr prints one line per type when they differ. `details` is
+  documented as gate-specific and unstable; nothing in the envelope changed.
+
+
 ### Bug Fixes
 
 - **A review-file naming mismatch was invisible from both ends.** `approval
