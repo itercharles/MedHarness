@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "medharness"
-version = "0.16.1"
+version = "0.16.2"
 description = "Open-source design-controlled development infrastructure for medical device and SaMD teams — includes dhfkit"
 readme = "README.md"
 license = { text = "MIT" }
