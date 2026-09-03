@@ -239,3 +239,67 @@ class TestLevelsCanDifferByRequirementType:
         result = ci_test_coverage_gate(dhf, [junit], req_types=("SRS",))
         assert result["details"]["required_levels"] == {"SRS": ["unit", "integration"]}
         assert result["details"]["level_gaps"][0]["missing"] == ["integration"]
+
+
+class TestAnUnreadableLevelMapFails:
+    """Disabling the check must not look like passing it.
+
+    The flat form uses '-' bullets, so writing the mapping the same way is the
+    natural mistake:
+
+        required_test_levels:
+          - SRS: [unit, integration]     # parses as a list of dicts
+
+    That matched no level, required nothing of anything, and reported success.
+    The reference project made exactly this edit, read the empty `level_gaps`
+    as proof the mapping worked, and committed it — believing unit and
+    integration evidence was being enforced when nothing was.
+    """
+
+    def _levels(self, dhf: Path, block: str) -> None:
+        (dhf / "config" / "safety_activities.yaml").write_text(
+            "classes:\n  B:\n    required_items: [SRS]\n    required_plans: []\n"
+            f"    required_test_levels:\n{block}"
+        )
+
+    def test_a_mapping_written_with_bullets_fails_loudly(self, dhf: Path, tmp_path: Path) -> None:
+        _declare(dhf, "B")
+        self._levels(dhf, "      - SRS: [unit, integration]\n      - SYS: [system]\n")
+        junit = _junit(tmp_path / "u.xml", "SRS-001", "unit")
+
+        result = ci_test_coverage_gate(dhf, [junit], req_types=("SRS",))
+
+        assert result["passed"] is False, "an unreadable level map passed the gate"
+        assert any("could not be read" in e for e in result["errors"])
+        assert any("without '-' bullets" in e for e in result["errors"]), (
+            "the error must show the correct form, not just reject the wrong one"
+        )
+
+    def test_a_typo_in_a_level_name_is_reported(self, dhf: Path, tmp_path: Path) -> None:
+        _declare(dhf, "B")
+        self._levels(dhf, "      SRS: [unit, integraton]\n")
+        junit = _junit(tmp_path / "u.xml", "SRS-001", "unit")
+
+        result = ci_test_coverage_gate(dhf, [junit], req_types=("SRS",))
+        assert result["passed"] is False
+        assert any("integraton" in e for e in result["errors"]), (
+            "a misspelled level was silently dropped, weakening the gate"
+        )
+
+    def test_a_type_that_is_not_being_checked_is_reported(self, dhf: Path, tmp_path: Path) -> None:
+        """Naming SWDD here requires nothing of it — say so rather than ignore it."""
+        _declare(dhf, "B")
+        self._levels(dhf, "      SRS: [unit]\n      SWDD: [unit]\n")
+        junit = _junit(tmp_path / "u.xml", "SRS-001", "unit")
+
+        result = ci_test_coverage_gate(dhf, [junit], req_types=("SRS",))
+        assert any("SWDD" in e for e in result["errors"])
+
+    def test_the_valid_forms_still_pass(self, dhf: Path, tmp_path: Path) -> None:
+        _declare(dhf, "B")
+        self._levels(dhf, "      SRS: [unit]\n")
+        junit = _junit(tmp_path / "u.xml", "SRS-001", "unit")
+
+        result = ci_test_coverage_gate(dhf, [junit], req_types=("SRS",))
+        assert result["errors"] == []
+        assert result["details"]["required_levels"] == {"SRS": ["unit"]}
