@@ -11,6 +11,10 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+---
+
+## [0.16.0] — 2026-09-03
+
 ### New Features
 
 - **`required_test_levels` can differ by requirement type.** §5.5 unit
@@ -42,7 +46,6 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
   list, and stderr prints one line per type when they differ. `details` is
   documented as gate-specific and unstable; nothing in the envelope changed.
 
-
 ### Bug Fixes
 
 - **A review-file naming mismatch was invisible from both ends.** `approval
@@ -59,9 +62,6 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
   tests are Vitest was sent looking for a decorator that cannot exist in a
   TypeScript file. The hint now leads with the `medharness.level` JUnit property
   and mentions the pytest mark as one way to set it.
-
-
----
 
 ## [0.15.0] — 2026-09-02
 
@@ -695,8 +695,6 @@ a compliance record is the defect class that matters most.
 - The `evidence bundle` contract test returned early whenever WeasyPrint was
   absent, so on CI it asserted nothing at all — which is why none of this was
   caught. It now runs the bundle and checks the rendered artifacts.
-
----
 
 ## [0.12.1] — 2026-08-19
 
