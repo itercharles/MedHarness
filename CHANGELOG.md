@@ -11,6 +11,10 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+---
+
+## [0.16.2] — 2026-09-03
+
 ### Bug Fixes
 
 - **`verify tests` did not say why it was checking no levels.** An empty
@@ -31,9 +35,6 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 - The per-type summary line now reads `19/19 requirements covered`, matching the
   wording of the same finding in `errors`.
-
-
----
 
 ## [0.16.1] — 2026-09-03
 
@@ -898,8 +899,6 @@ upgrading** — `verify dhf` can now fail on a DHF that previously passed.
   `--fail-on-uncovered` until the backlog is clear.
 - `verify soup` output gained `accepted`, `acceptance_problems`, and a `url`
   field on each vulnerability. Existing keys are unchanged.
-
----
 
 ## [0.11.0] — 2026-08-18
 
