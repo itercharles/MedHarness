@@ -302,6 +302,34 @@ dhfkit --dhf DHF soup-sync --write
 dhfkit --dhf DHF soup-sync --write --manifest uv.lock --cr CR-042
 ```
 
+## Exporting an SBOM (`dhfkit sbom`)
+
+The SOUP register already holds what an SBOM needs — name, version, ecosystem,
+licence, supplier — recorded there because IEC 62304 §8.1.2 asks for it. FDA's
+premarket cybersecurity guidance and the EU Cyber Resilience Act want that in a
+standard machine-readable format:
+
+```bash
+dhfkit --dhf DHF sbom                      # writes DHF/sbom.cdx.json
+dhfkit --dhf DHF sbom --output build/sbom.cdx.json
+dhfkit --dhf DHF sbom --stdout             # for a pipeline
+```
+
+The output is CycloneDX 1.6 JSON, checked against the official schema by the
+test suite rather than by assertion. Each component carries its SOUP id as
+`bom-ref` and as a `dhfkit:soup_id` property, so a finding in the SBOM leads back
+to the DHF item holding the justification and any documented vulnerability
+acceptance.
+
+**A component whose ecosystem has no package-URL type is emitted without a
+`purl`**, and the command says how many. A wrong purl resolves against a real
+registry, so an absent one is safer than a guessed one. The mapped ecosystems are
+PyPI, npm, Go, Maven, crates.io, NuGet, RubyGems, Packagist, Hex and Pub.
+
+Regenerating an unchanged SBOM leaves the file alone, timestamp included — the
+serial number is derived from the component set rather than randomised, so a
+regeneration is not a diff in a repository whose purpose is showing what changed.
+
 ## SOUP vulnerability scanning (`verify soup`)
 
 SOUP items that carry an `ecosystem` field (e.g. `PyPI`, `npm`, `Go`) are checked against the [OSV vulnerability database](https://osv.dev) on every run:

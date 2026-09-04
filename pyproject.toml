@@ -51,7 +51,7 @@ dependencies = [
 [project.optional-dependencies]
 ai = ["google-genai"]
 docs = ["weasyprint"]
-dev = ["pytest", "pytest-cov", "build"]
+dev = ["pytest", "pytest-cov", "build", "jsonschema"]
 full = ["medharness[ai,docs]"]
 
 [project.urls]
