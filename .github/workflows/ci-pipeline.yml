@@ -91,8 +91,10 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pytest
-          pip install -e .
+          # [dev] carries jsonschema, which test_sbom.py needs to check the SBOM
+          # against the official CycloneDX schema. Without it that check skips
+          # and "bomFormat: CycloneDX" ships as an unverified claim.
+          pip install -e ".[dev]"
       - name: Run dhfkit tests
         run: |
           export PYTHONPATH="${PYTHONPATH}:${PWD}"

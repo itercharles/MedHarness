@@ -649,6 +649,75 @@ def soup_sync_cmd(
         sys.exit(1)
 
 
+@main.command("sbom")
+@click.option("--output", "output_path", type=click.Path(dir_okay=False, path_type=Path),
+              help="Where to write the SBOM (default: <dhf>/sbom.cdx.json).")
+@click.option("--stdout", "to_stdout", is_flag=True,
+              help="Write the document to stdout instead of a file.")
+@click.pass_context
+def sbom_cmd(ctx: click.Context, output_path: Path | None, to_stdout: bool) -> None:
+    """Generate a CycloneDX SBOM from the DHF's SOUP items.
+
+    The SOUP register already holds what an SBOM needs, recorded there because
+    IEC 62304 §8.1.2 asks for it. This serialises it into the format FDA
+    cybersecurity guidance and the EU Cyber Resilience Act expect.
+
+    A component whose ecosystem has no package-URL type is included without a
+    `purl` rather than given a guessed one — a wrong purl resolves against a
+    real registry, so an absent one is safer.
+
+    Regenerating an unchanged SBOM leaves the file alone, including its
+    timestamp, so a regeneration is not a diff.
+    """
+    from importlib.metadata import version as pkg_version
+
+    from dhfkit.local_adapter import LocalDHFAdapter
+    from dhfkit.sbom import build_sbom, write_sbom
+
+    dhf: Path = ctx.obj["dhf"]
+    adapter = LocalDHFAdapter(dhf)
+    soup_items = [
+        i for i in adapter.list_items()
+        if str(i.get("id", "")).startswith("SOUP-")
+    ]
+    try:
+        tool_version = pkg_version("dhfkit")
+    except Exception:
+        tool_version = "unknown"
+
+    document = build_sbom(
+        soup_items,
+        project_name=adapter._config.project_name or dhf.resolve().parent.name,
+        tool_version=tool_version,
+    )
+
+    if to_stdout:
+        click.echo(json.dumps(document, indent=2))
+        return
+
+    target = output_path or (dhf / "sbom.cdx.json")
+    written, changed = write_sbom(document, target)
+    click.echo(json.dumps({
+        "path": str(written),
+        "components": len(document["components"]),
+        "without_purl": sum(1 for c in document["components"] if "purl" not in c),
+        "changed": changed,
+    }))
+    n = len(document["components"])
+    unmapped = [c["name"] for c in document["components"] if "purl" not in c]
+    click.echo(
+        f"{'Wrote' if changed else 'Unchanged'} {written} — {n} component(s).",
+        err=True,
+    )
+    if unmapped:
+        click.echo(
+            f"WARN [sbom] {len(unmapped)} component(s) have no purl "
+            f"(unmapped ecosystem): {', '.join(unmapped[:5])}"
+            + (" …" if len(unmapped) > 5 else ""),
+            err=True,
+        )
+
+
 @main.command("release-baseline")
 @click.option("--version", "version", required=True, metavar="VERSION",
               help="Release version string (e.g. 1.0.0)")

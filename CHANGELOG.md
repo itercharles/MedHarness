@@ -11,6 +11,44 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+### New Features
+
+- **`dhfkit sbom` — a CycloneDX 1.6 SBOM from the SOUP register.** The register
+  already holds what an SBOM needs — name, version, ecosystem, licence, supplier
+  — recorded there because IEC 62304 §8.1.2 asks for it. What was missing was
+  the serialisation: FDA's premarket cybersecurity guidance and the EU Cyber
+  Resilience Act want a standard machine-readable file, not a project's own YAML.
+
+  ```bash
+  dhfkit --dhf DHF sbom                  # writes DHF/sbom.cdx.json
+  dhfkit --dhf DHF sbom --stdout         # for a pipeline
+  ```
+
+  Each component carries its SOUP id as `bom-ref` and as a `dhfkit:soup_id`
+  property, so a finding in the SBOM leads back to the DHF item holding the
+  justification and any documented vulnerability acceptance.
+
+  **A component whose ecosystem has no package-URL type is emitted without a
+  `purl`**, and the command reports how many. A wrong purl resolves against a
+  real registry, so an absent one is safer than a guess.
+
+  **Regenerating an unchanged SBOM leaves the file alone**, timestamp included.
+  The serial number is derived from the component set rather than randomised.
+  Document generation had this defect once already: a regeneration on a later
+  day looked like a content change, and an SBOM can churn on two fields at once.
+
+  No CycloneDX library is used. The subset of the schema an SBOM of libraries
+  needs is small, and a dependency added here would become a SOUP item in every
+  project that adopts this tool — a cost the tool would then ask its users to
+  document.
+
+  The output is validated against the **official CycloneDX 1.6 schema**, vendored
+  under `dhfkit/tests/schema/` so the check runs offline and in CI rather than
+  skipping. `jsonschema` moves into the `dev` extra for that reason: a document
+  claiming `"bomFormat": "CycloneDX"` that nothing checks is an unverified claim
+  in a file a project may submit to a regulator.
+
+
 ---
 
 ## [0.16.2] — 2026-09-03
