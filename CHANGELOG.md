@@ -11,6 +11,10 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+---
+
+## [0.17.0] — 2026-09-06
+
 ### New Features
 
 - **`dhfkit sbom` — a CycloneDX 1.6 SBOM from the SOUP register.** The register
@@ -58,9 +62,6 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
   skipping. `jsonschema` moves into the `dev` extra for that reason: a document
   claiming `"bomFormat": "CycloneDX"` that nothing checks is an unverified claim
   in a file a project may submit to a regulator.
-
-
----
 
 ## [0.16.2] — 2026-09-03
 
@@ -992,8 +993,6 @@ upgrading** — `verify dhf` can now fail on a DHF that previously passed.
 - Fixed `parse_pom_xml` namespace traversal bug where child-element lookups
   used the wrong side of a namespace ternary, causing non-namespaced `pom.xml`
   files to parse as empty.
-
----
 
 ## [0.10.0] — 2026-05-28
 
