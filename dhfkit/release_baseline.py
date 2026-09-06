@@ -299,6 +299,40 @@ def build_release_baseline(
     except Exception as exc:  # noqa: BLE001
         errors.append(f"Failed to write software-bom.json: {exc}")
 
+    # The same components in the format a regulator asks for. software-bom.json
+    # is dhfkit's own shape and stays as it is; this is the CycloneDX view of
+    # the release, which is what FDA cybersecurity guidance and the EU CRA want.
+    try:
+        from importlib.metadata import version as pkg_version
+
+        from dhfkit.models.config import ProjectConfig
+        from dhfkit.sbom import build_sbom, merge_release_components, write_sbom
+
+        soup_items = [i for i in api.list_items(dhf) if i.get("type") == "SOUP"]
+        components = merge_release_components(soup_items, bom["manifest_packages"])
+        try:
+            tool_version = pkg_version("dhfkit")
+        except Exception:  # noqa: BLE001
+            tool_version = "unknown"
+        try:
+            project_name = ProjectConfig.load(dhf / "config").project_name
+        except Exception:  # noqa: BLE001
+            # Cosmetic metadata. It must not turn a successful release into
+            # completed_with_errors — a name the SBOM cannot read is not a
+            # reason to fail the baseline.
+            project_name = dhf.resolve().parent.name
+        document = build_sbom(
+            components, project_name=project_name, tool_version=tool_version,
+        )
+        sbom_path, _changed = write_sbom(document, out_dir / "sbom.cdx.json")
+        artifacts.append(str(sbom_path))
+        sbom_without_purl = sum(
+            1 for c in document["components"] if "purl" not in c
+        )
+    except Exception as exc:  # noqa: BLE001
+        errors.append(f"Failed to write sbom.cdx.json: {exc}")
+        sbom_without_purl = 0
+
     # Optionally create a REL item
     rel_uid: Optional[str] = None
     if write:
@@ -327,6 +361,7 @@ def build_release_baseline(
         "artifacts": artifacts,
         "soup_count": soup_count,
         "manifest_packages_count": manifest_packages_count,
+        "sbom_without_purl": sbom_without_purl,
         "write": write,
         "errors": errors,
     }

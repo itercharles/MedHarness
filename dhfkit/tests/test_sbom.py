@@ -15,7 +15,12 @@ import pytest
 from click.testing import CliRunner
 
 from dhfkit.cli import main
-from dhfkit.sbom import build_sbom, purl_for, write_sbom
+from dhfkit.sbom import (
+    build_sbom,
+    merge_release_components,
+    purl_for,
+    write_sbom,
+)
 
 SCHEMA_DIR = Path(__file__).parent / "schema"
 
@@ -192,3 +197,114 @@ class TestCLI:
         assert r.exit_code == 0
         assert json.loads(r.stdout)["bomFormat"] == "CycloneDX"
         assert not (dhf / "sbom.cdx.json").exists()
+
+
+class TestMergingTheTwoRegisters:
+    """An SBOM that lists only documented components understates what ships.
+
+    A package in requirements.txt that nobody has made a SOUP item for is still
+    in the release. Omitting it would also hide the §8.1.2 gap `soup-sync`
+    exists to close, so it is included and says where it came from.
+    """
+
+    def test_a_soup_item_wins_over_the_manifest_entry(self) -> None:
+        merged = merge_release_components(
+            [{"id": "SOUP-001", "name": "requests", "version": "2.31.0",
+              "ecosystem": "PyPI", "license": "Apache-2.0"}],
+            [{"name": "requests", "version": "2.31.0", "ecosystem": "PyPI",
+              "source": "requirements.txt"}],
+        )
+        assert len(merged) == 1
+        assert merged[0]["id"] == "SOUP-001", "the inferred entry displaced the documented one"
+        assert merged[0]["license"] == "Apache-2.0"
+
+    def test_a_manifest_only_package_is_kept_and_marked(self) -> None:
+        merged = merge_release_components(
+            [], [{"name": "urllib3", "version": "2.0.0", "ecosystem": "PyPI",
+                  "source": "requirements.txt"}],
+        )
+        document = build_sbom(merged, project_name="P", tool_version="1.0")
+        props = {p["name"]: p["value"] for p in document["components"][0]["properties"]}
+        assert "dhfkit:soup_id" not in props
+        assert props["dhfkit:manifest_source"] == "requirements.txt"
+
+    def test_different_versions_of_one_package_are_distinct(self) -> None:
+        """bom-ref must be unique; the name alone would collide."""
+        document = build_sbom(
+            merge_release_components([], [
+                {"name": "a", "version": "1.0", "ecosystem": "PyPI"},
+                {"name": "a", "version": "2.0", "ecosystem": "PyPI"},
+            ]),
+            project_name="P", tool_version="1.0",
+        )
+        refs = [c["bom-ref"] for c in document["components"]]
+        assert len(refs) == len(set(refs)) == 2, refs
+
+
+class TestReleaseBaselineEmitsAnSbom:
+    def test_the_release_carries_a_cyclonedx_file(self, dhf: Path, tmp_path: Path) -> None:
+        from dhfkit.release_baseline import build_release_baseline
+
+        _soup(dhf, "SOUP-001",
+              "title: requests\nname: requests\nversion: '2.31.0'\n"
+              "ecosystem: PyPI\nlicense: Apache-2.0\n")
+        manifest = tmp_path / "requirements.txt"
+        manifest.write_text("requests==2.31.0\nurllib3==2.0.0\n")
+        out = tmp_path / "out"
+
+        result = build_release_baseline(
+            dhf, "1.0.0", [manifest], [], out, write=False, author="t"
+        )
+
+        sbom_path = out / "sbom.cdx.json"
+        assert sbom_path.exists(), f"no SBOM in {result['artifacts']}"
+        assert str(sbom_path) in result["artifacts"]
+
+        document = json.loads(sbom_path.read_text())
+        by_name = {c["name"]: c for c in document["components"]}
+        assert set(by_name) == {"requests", "urllib3"}, (
+            "a package that ships was left out of the release SBOM"
+        )
+        documented = {p["name"]: p["value"] for p in by_name["requests"]["properties"]}
+        inferred = {p["name"]: p["value"] for p in by_name["urllib3"]["properties"]}
+        assert documented["dhfkit:soup_id"] == "SOUP-001"
+        assert "dhfkit:soup_id" not in inferred
+
+    def test_the_existing_artifacts_are_unchanged(self, dhf: Path, tmp_path: Path) -> None:
+        """software-bom.json keeps its own shape; consumers of it are unaffected."""
+        from dhfkit.release_baseline import build_release_baseline
+
+        _soup(dhf, "SOUP-001", "title: a\nname: a\nversion: '1'\necosystem: PyPI\n")
+        out = tmp_path / "out"
+        build_release_baseline(dhf, "1.0.0", [], [], out, write=False, author="t")
+
+        legacy = json.loads((out / "software-bom.json").read_text())
+        assert {"dhf_soup", "manifest_packages"} <= set(legacy)
+        # "uid", not "id" — the artifact key predates the item field and
+        # existing consumers read it.
+        assert legacy["dhf_soup"][0]["uid"] == "SOUP-001"
+        assert "id" not in legacy["dhf_soup"][0]
+
+    def test_an_unreadable_project_name_does_not_fail_the_release(
+        self, tmp_path: Path
+    ) -> None:
+        """Cosmetic metadata must not turn a successful release into an errored one.
+
+        Reading the project name from config was fatal at first: a caller
+        without a loadable DHF config got `completed_with_errors` on an
+        otherwise clean baseline.
+        """
+        from unittest.mock import patch
+
+        from dhfkit.release_baseline import build_release_baseline
+
+        out = tmp_path / "out"
+        with patch("dhfkit.api.get_item", return_value={
+            "id": "CR-001", "type": "CR", "state": "completed", "title": "x",
+        }), patch("dhfkit.api.list_items", return_value=[]):
+            result = build_release_baseline(
+                tmp_path / "nonexistent-DHF", "1.0.0", [], ["CR-001"], out,
+            )
+
+        assert result["outcome"] == "completed", result["errors"]
+        assert (out / "sbom.cdx.json").exists()

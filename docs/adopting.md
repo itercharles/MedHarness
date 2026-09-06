@@ -330,6 +330,21 @@ Regenerating an unchanged SBOM leaves the file alone, timestamp included — the
 serial number is derived from the component set rather than randomised, so a
 regeneration is not a diff in a repository whose purpose is showing what changed.
 
+`release-baseline` writes one too, alongside its existing artifacts:
+
+```
+out/release-baseline.json
+out/software-bom.json      # dhfkit's own shape, unchanged
+out/sbom.cdx.json          # the same release in CycloneDX
+```
+
+The release SBOM merges both registers. A package read from a `--manifest` but
+absent from the SOUP register still ships, so it appears — carrying a
+`dhfkit:manifest_source` property instead of a `dhfkit:soup_id`. Leaving it out
+would understate the release and hide the §8.1.2 gap `soup-sync` exists to close.
+Where a package is in both, the SOUP item wins: it carries the licence, supplier
+and any documented vulnerability acceptance that the manifest does not.
+
 ## SOUP vulnerability scanning (`verify soup`)
 
 SOUP items that carry an `ecosystem` field (e.g. `PyPI`, `npm`, `Go`) are checked against the [OSV vulnerability database](https://osv.dev) on every run:

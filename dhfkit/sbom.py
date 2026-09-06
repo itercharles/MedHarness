@@ -82,16 +82,18 @@ def _component(item: dict) -> dict[str, Any]:
     version = str(item.get("version") or "").strip()
     ecosystem = str(item.get("ecosystem") or "").strip()
 
+    purl = purl_for(name, version, ecosystem)
     component: dict[str, Any] = {
         "type": "library",
-        # The SOUP id, so a finding in the SBOM leads back to the DHF item that
-        # carries the justification and any documented vulnerability acceptance.
-        "bom-ref": str(item.get("id") or name),
+        # The SOUP id where there is one, so a finding in the SBOM leads back to
+        # the DHF item carrying the justification and any documented
+        # vulnerability acceptance. A manifest-only package has no id, and
+        # bom-ref must still be unique — two versions of one library would
+        # otherwise collide on the name alone.
+        "bom-ref": str(item.get("id") or purl or f"{name}@{version}"),
         "name": name,
         "version": version,
     }
-
-    purl = purl_for(name, version, ecosystem)
     if purl:
         component["purl"] = purl
 
@@ -113,7 +115,15 @@ def _component(item: dict) -> dict[str, Any]:
     if description:
         component["description"] = description
 
-    properties = [{"name": "dhfkit:soup_id", "value": str(item.get("id") or "")}]
+    properties: list[dict[str, str]] = []
+    if item.get("id"):
+        properties.append({"name": "dhfkit:soup_id", "value": str(item["id"])})
+    source = str(item.get("source") or "").strip()
+    if source:
+        # A package read from a manifest but absent from the SOUP register. It
+        # ships, so it belongs in the SBOM; saying where it came from keeps the
+        # §8.1.2 gap visible instead of absorbing it into the documented set.
+        properties.append({"name": "dhfkit:manifest_source", "value": source})
     if ecosystem:
         properties.append({"name": "dhfkit:ecosystem", "value": ecosystem})
     accepted = item.get("accepted_vulns") or []
@@ -136,6 +146,35 @@ def _serial_number(project: str, components: list[dict]) -> str:
         f"{c.get('bom-ref')}|{c.get('name')}|{c.get('version')}" for c in components
     )
     return f"urn:uuid:{uuid.uuid5(uuid.NAMESPACE_URL, seed)}"
+
+
+def merge_release_components(
+    soup_items: list[dict], manifest_packages: list[dict]
+) -> list[dict]:
+    """The components a release actually ships, from both registers.
+
+    An SBOM that lists only the documented components understates what ships:
+    a package in requirements.txt that nobody has made a SOUP item for is still
+    in the release, and a regulator reading the SBOM should see it. Omitting it
+    would also hide the §8.1.2 gap that `soup-sync` exists to close.
+
+    A SOUP item wins over the manifest entry for the same package — it carries
+    licence, supplier and any documented vulnerability acceptance, and the
+    manifest carries none of that.
+    """
+    def key(entry: dict) -> tuple[str, str, str]:
+        return (
+            str(entry.get("ecosystem") or "").strip().lower(),
+            str(entry.get("name") or "").strip().lower(),
+            str(entry.get("version") or "").strip(),
+        )
+
+    merged: dict[tuple[str, str, str], dict] = {}
+    for pkg in manifest_packages:
+        merged[key(pkg)] = pkg
+    for item in soup_items:
+        merged[key(item)] = item  # documented beats inferred
+    return list(merged.values())
 
 
 def build_sbom(
