@@ -42,6 +42,17 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
   project that adopts this tool — a cost the tool would then ask its users to
   document.
 
+  `release-baseline` writes one too, as `sbom.cdx.json` beside its existing
+  artifacts. `software-bom.json` keeps its own shape, so consumers of it are
+  unaffected.
+
+  The release SBOM merges both registers: a package read from a `--manifest` but
+  absent from the SOUP register still ships, so it appears with a
+  `dhfkit:manifest_source` property rather than a `dhfkit:soup_id`. Omitting it
+  would understate the release and hide the §8.1.2 gap. Where a package is in
+  both, the SOUP item wins — it carries the licence, supplier and any documented
+  vulnerability acceptance.
+
   The output is validated against the **official CycloneDX 1.6 schema**, vendored
   under `dhfkit/tests/schema/` so the check runs offline and in CI rather than
   skipping. `jsonschema` moves into the `dev` extra for that reason: a document
