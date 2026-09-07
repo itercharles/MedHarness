@@ -11,6 +11,17 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+### Bug Fixes
+
+- **`release-baseline --manifest` read two formats where `soup-sync` reads
+  nine.** It listed `requirements.txt` and `package.json` by hand and failed the
+  whole baseline with `completed_with_errors` on the other seven — so a project
+  that synced its SOUP register from `package-lock.json`, `go.mod`, `uv.lock`,
+  `poetry.lock`, `pyproject.toml`, `Cargo.lock` or `pom.xml` could not then build
+  a release from it. Both now route through the same dispatch. A genuinely
+  unknown format is still reported rather than swallowed.
+
+
 ---
 
 ## [0.17.0] — 2026-09-06

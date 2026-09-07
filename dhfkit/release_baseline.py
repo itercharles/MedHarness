@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
-from dhfkit.soup_sync import parse_package_json, parse_requirements_txt
+from dhfkit.soup_sync import _dispatch_parser
 
 
 # ---------------------------------------------------------------------------
@@ -146,14 +146,14 @@ def _collect_bom(dhf: Path, manifest_paths: list[Path]) -> tuple[dict, list[str]
     manifest_packages: list[dict] = []
     for path in manifest_paths:
         try:
-            if path.name == "requirements.txt":
-                pkgs = parse_requirements_txt(path)
-            elif path.name == "package.json":
-                pkgs = parse_package_json(path)
-            else:
-                bom_errors.append(f"Unsupported manifest format for BOM: {path}")
-                continue
+            # The same dispatch soup-sync uses. This listed requirements.txt and
+            # package.json by hand and failed the whole baseline on the other
+            # seven formats soup-sync reads — a project on a lockfile could sync
+            # its SOUP register and then not build a release from it.
+            pkgs = _dispatch_parser(path)
             manifest_packages.extend(pkgs)
+        except ValueError as exc:
+            bom_errors.append(f"Unsupported manifest format for BOM: {path} ({exc})")
         except Exception as exc:  # noqa: BLE001
             bom_errors.append(f"Failed to parse BOM manifest {path}: {exc}")
 
