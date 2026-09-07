@@ -338,6 +338,8 @@ out/software-bom.json      # dhfkit's own shape, unchanged
 out/sbom.cdx.json          # the same release in CycloneDX
 ```
 
+`--manifest` accepts every format `soup-sync` reads — `requirements.txt`, `uv.lock`, `poetry.lock`, `pyproject.toml`, `package.json`, `package-lock.json`, `go.mod`, `Cargo.lock`, `pom.xml`.
+
 The release SBOM merges both registers. A package read from a `--manifest` but
 absent from the SOUP register still ships, so it appears — carrying a
 `dhfkit:manifest_source` property instead of a `dhfkit:soup_id`. Leaving it out
