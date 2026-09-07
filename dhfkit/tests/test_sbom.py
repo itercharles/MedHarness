@@ -354,3 +354,23 @@ class TestReleaseBaselineReadsEveryManifestSoupSyncDoes:
         )
         assert result["outcome"] == "completed_with_errors"
         assert any("Unsupported manifest format" in e for e in result["errors"])
+
+    def test_a_malformed_manifest_is_not_called_unsupported(
+        self, dhf: Path, tmp_path: Path
+    ) -> None:
+        """A JSONDecodeError is a ValueError, and so was the "unsupported" signal.
+
+        Catching the parser's exception to mean "format not supported" reported
+        a malformed package.json as an unsupported format, sending a reader
+        after the wrong problem. Support is decided by filename instead.
+        """
+        from dhfkit.release_baseline import build_release_baseline
+
+        manifest = tmp_path / "package.json"
+        manifest.write_text("{not valid json}")
+        result = build_release_baseline(
+            dhf, "1.0.0", [manifest], [], tmp_path / "out", write=False, author="t"
+        )
+        assert result["outcome"] == "completed_with_errors"
+        assert any("Failed to parse" in e for e in result["errors"]), result["errors"]
+        assert not any("Unsupported" in e for e in result["errors"])

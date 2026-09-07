@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
-from dhfkit.soup_sync import _dispatch_parser
+from dhfkit.soup_sync import _KNOWN_MANIFESTS, _dispatch_parser
 
 
 # ---------------------------------------------------------------------------
@@ -145,15 +145,19 @@ def _collect_bom(dhf: Path, manifest_paths: list[Path]) -> tuple[dict, list[str]
 
     manifest_packages: list[dict] = []
     for path in manifest_paths:
+        # Support is decided by filename, not by catching the parser's error:
+        # a malformed package.json raises JSONDecodeError, which is a ValueError,
+        # and reporting that as "unsupported format" would send a reader looking
+        # for the wrong problem.
+        if path.name not in _KNOWN_MANIFESTS:
+            bom_errors.append(f"Unsupported manifest format for BOM: {path}")
+            continue
         try:
             # The same dispatch soup-sync uses. This listed requirements.txt and
             # package.json by hand and failed the whole baseline on the other
             # seven formats soup-sync reads — a project on a lockfile could sync
             # its SOUP register and then not build a release from it.
-            pkgs = _dispatch_parser(path)
-            manifest_packages.extend(pkgs)
-        except ValueError as exc:
-            bom_errors.append(f"Unsupported manifest format for BOM: {path} ({exc})")
+            manifest_packages.extend(_dispatch_parser(path))
         except Exception as exc:  # noqa: BLE001
             bom_errors.append(f"Failed to parse BOM manifest {path}: {exc}")
 
