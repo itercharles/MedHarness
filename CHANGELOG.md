@@ -11,6 +11,10 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+---
+
+## [0.17.1] — 2026-09-07
+
 ### Bug Fixes
 
 - **`release-baseline --manifest` read two formats where `soup-sync` reads
@@ -20,9 +24,6 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
   `poetry.lock`, `pyproject.toml`, `Cargo.lock` or `pom.xml` could not then build
   a release from it. Both now route through the same dispatch. A genuinely
   unknown format is still reported rather than swallowed.
-
-
----
 
 ## [0.17.0] — 2026-09-06
 
@@ -1045,8 +1046,6 @@ upgrading** — `verify dhf` can now fail on a DHF that previously passed.
 
 - Code review conventions now driven by the project's `CLAUDE.md` instead of
   hardcoded TypeScript/Tailwind defaults.
-
----
 
 ## [0.9.0] — 2026-05-21
 
