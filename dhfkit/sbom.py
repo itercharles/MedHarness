@@ -45,6 +45,12 @@ _PURL_TYPES = {
 _NAMESPACE_SEPARATORS = {"maven": ":", "npm": "/"}
 
 
+#: A version that is not one. A purl carrying a range resolves against a real
+#: registry and matches nothing — the exact harm `purl_for` claims to avoid, and
+#: the reference project hit it: `pkg:npm/@kitware/vtk.js@%5E34.15.1`.
+_NOT_A_VERSION = re.compile(r"[\^~*<>|\s]|(?:^(?:latest|next|\*)$)")
+
+
 def _quote(text: str) -> str:
     """Percent-encode the characters purl reserves, leaving the rest readable."""
     return "".join(
@@ -62,6 +68,10 @@ def purl_for(name: str, version: str, ecosystem: str) -> str | None:
     purl_type = _PURL_TYPES.get((ecosystem or "").strip().lower())
     if not purl_type or not name:
         return None
+    if version and _NOT_A_VERSION.search(version):
+        # A range, not a version. §8.1.2 wants the version actually used, and a
+        # purl built from "^34.15.1" points at nothing.
+        return None
 
     namespace = ""
     bare = name.strip()
@@ -74,6 +84,25 @@ def purl_for(name: str, version: str, ecosystem: str) -> str | None:
 
     path = f"{_quote(namespace)}/{_quote(bare)}" if namespace else _quote(bare)
     return f"pkg:{purl_type}/{path}@{_quote(version)}" if version else f"pkg:{purl_type}/{path}"
+
+
+def purl_gap(name: str, version: str, ecosystem: str) -> str | None:
+    """Why this component has no purl, or None when it has one.
+
+    Two causes needing different fixes: an ecosystem this tool cannot map, and
+    a version that is not a version. Reporting only a count told the reference
+    project it had a problem without saying which one.
+    """
+    if purl_for(name, version, ecosystem):
+        return None
+    if not _PURL_TYPES.get((ecosystem or "").strip().lower()):
+        return f"ecosystem {ecosystem or '(unset)'!s} has no package-URL type"
+    if version and _NOT_A_VERSION.search(version):
+        return (
+            f"version {version!r} is a range, not a version — record the version "
+            f"actually used (IEC 62304 §8.1.2)"
+        )
+    return "name or version is missing"
 
 
 def _component(item: dict) -> dict[str, Any]:

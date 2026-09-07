@@ -374,3 +374,42 @@ class TestReleaseBaselineReadsEveryManifestSoupSyncDoes:
         assert result["outcome"] == "completed_with_errors"
         assert any("Failed to parse" in e for e in result["errors"]), result["errors"]
         assert not any("Unsupported" in e for e in result["errors"])
+
+
+class TestAVersionRangeIsNotAVersion:
+    """`purl_for` promised this and did not do it.
+
+    Its docstring says a wrong purl is worse than an absent one, because a
+    consumer resolves it against a real registry. It then built
+    `pkg:npm/@kitware/vtk.js@%5E34.15.1` from a SOUP item recording a semver
+    range — a purl that resolves against npm and matches nothing. The reference
+    project found it in the first SBOM they generated.
+    """
+
+    @pytest.mark.parametrize("version", ["^34.15.1", "~4.17.0", ">=1.0,<2.0", "*", "latest"])
+    def test_a_range_yields_no_purl(self, version: str) -> None:
+        assert purl_for("pkg", version, "npm") is None
+
+    @pytest.mark.parametrize("version", ["34.15.1", "1.0.0-rc.1", "2.0.0+build", "0.9"])
+    def test_a_real_version_still_does(self, version: str) -> None:
+        assert purl_for("pkg", version, "npm") == f"pkg:npm/pkg@{version}"
+
+    def test_the_reason_distinguishes_the_two_causes(self) -> None:
+        """A count said there was a problem without saying which one."""
+        from dhfkit.sbom import purl_gap
+
+        assert "range" in (purl_gap("pkg", "^1.0.0", "npm") or "")
+        assert "package-URL type" in (purl_gap("pkg", "1.0.0", "Conan") or "")
+        assert purl_gap("pkg", "1.0.0", "npm") is None
+
+    def test_the_component_is_still_listed(self) -> None:
+        """No purl is not a reason to drop a component that ships."""
+        document = build_sbom(
+            [{"id": "SOUP-001", "name": "vtk", "version": "^34.15.1", "ecosystem": "npm"}],
+            project_name="P", tool_version="1.0",
+        )
+        assert len(document["components"]) == 1
+        assert "purl" not in document["components"][0]
+        assert document["components"][0]["version"] == "^34.15.1", (
+            "the SBOM must report what the DHF records, not a cleaned-up guess"
+        )

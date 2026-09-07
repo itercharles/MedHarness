@@ -11,6 +11,23 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+### Bug Fixes
+
+- **A version range produced a purl that resolves to nothing.** `purl_for`'s own
+  docstring says a wrong purl is worse than an absent one, because a consumer
+  resolves it against a real registry. It then built
+  `pkg:npm/@kitware/vtk.js@%5E34.15.1` from a SOUP item recording `^34.15.1` —
+  exactly the harm it claimed to avoid. The reference project found it in the
+  first SBOM they generated.
+
+  A range now yields no purl, and the component is still listed with the version
+  the DHF records — the SBOM reports the register, it does not clean it up.
+
+  The warning also names the cause per component instead of counting them. An
+  unmappable ecosystem and an unusable version need different fixes, and
+  `2 component(s) have no purl` said which was needed for neither.
+
+
 ---
 
 ## [0.17.1] — 2026-09-07
