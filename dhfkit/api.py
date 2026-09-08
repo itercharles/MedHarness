@@ -84,5 +84,16 @@ def list_test_results(dhf_root: Path, status_filter: Optional[str] = None) -> di
 
 # -- Config operations --------------------------------------------------------
 
+def get_config(dhf_root: Path):
+    """The project's configuration — safety class, doc types, traceability rules.
+
+    `medharness` read `adapter._config` in ten places: a private attribute of a
+    `dhfkit` class, reached across the package boundary. `dhfkit` is meant to be
+    usable standalone, which means it has a public surface, and a consumer
+    pinned to an underscore has no contract at all.
+    """
+    return _adapter(dhf_root)._config
+
+
 def list_doc_type_configs(dhf_root: Path) -> list[dict]:
     return _adapter(dhf_root).list_item_types()

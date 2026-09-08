@@ -62,7 +62,7 @@ def register(main):
         module_map: list[dict] = []
         try:
             from dhfkit.traceability import build_module_map
-            module_map = build_module_map(items, adapter._config)
+            module_map = build_module_map(items, adapter.config)
         except Exception:
             pass
 

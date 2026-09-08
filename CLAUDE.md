@@ -15,10 +15,15 @@ Before proposing or implementing any significant change, read:
 
 ## CLI Boundary
 
-| CLI | Owns |
-|-----|------|
-| `dhfkit` | Item CRUD, validate, doc generate, report, soup-sync, release-baseline |
-| `medharness` | AI CR workflow (generate-dhf, develop-cr), CI gates, scaffolding, approval gating |
+| CLI | Owns | Commands |
+|-----|------|----------|
+| `dhfkit` | DHF **data**: items, schemas, documents, SOUP, releases | `approval` · `config` · `doc` · `init` · `item` · `release-baseline` · `report` · `sbom` · `soup-sync` · `test` · `validate` |
+| `medharness` | The **process** around it: AI CR workflow, CI gates, scaffolding, approval | `approval` · `automation` · `change` · `cr` · `dhf` · `doctor` · `evidence` · `gates` · `init` · `upgrade` · `verify` |
+
+Both have an `approval` group and they do different things: `dhfkit approval`
+records APR items (data), `medharness approval` drives PR-based approval
+(process). `tests/unit/test_cli_boundary_is_documented.py` checks this table
+against the live command tree.
 
 `medharness dhf` exposes only AI-harness context commands (`context implementation/for-stage/overview`).
 All DHF data operations use `dhfkit --dhf DHF <command>`.

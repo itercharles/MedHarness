@@ -160,7 +160,7 @@ def validate_atomic_branch(
                 + dhf_item_changes["updated"]
                 + dhf_item_changes["deleted"]
             )
-            risk_impact = find_affected_risks(changed_ids, adapter.list_items(), adapter._config)
+            risk_impact = find_affected_risks(changed_ids, adapter.list_items(), adapter.config)
         except (FileNotFoundError, OSError, ValueError):
             pass  # DHF not loadable — skip risk checks
 
