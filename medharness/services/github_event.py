@@ -28,6 +28,7 @@ class GitHubEventContext:
     merged: bool = False
     labels: tuple[str, ...] = ()
     dispatch_stage: str = ""
+    issue_number: int | None = None
 
 
 @dataclass(frozen=True)
@@ -42,9 +43,29 @@ class GitHubLifecyclePlan:
     branch_ref: str = ""
     review_state: str = ""
     merged: bool = False
+    issue_number: int | None = None
 
 
 _CR_RE = re.compile(r"CR-\d+")
+
+#: GitHub links a PR to an issue only through a closing keyword. A bare "#12" is
+#: a reference, not a link, so matching it would name an issue the PR does not
+#: close.
+#:
+#: This covers the keyword form only. An issue linked through the GitHub UI
+#: leaves no trace in the event payload, so `issue_number` being absent means
+#: "not derivable from the payload", not "there is none" — a caller that needs
+#: those still has to ask the API.
+_CLOSES_RE = re.compile(
+    r"\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\b\s*:?\s*#(\d+)",
+    re.IGNORECASE,
+)
+
+
+def _linked_issue(body: str) -> int | None:
+    """The issue a pull-request body says it closes, or None."""
+    match = _CLOSES_RE.search(body or "")
+    return int(match.group(1)) if match else None
 
 
 def parse_github_event(
@@ -88,6 +109,11 @@ def parse_github_event(
         for lab in raw_labels
         if isinstance(lab, dict) and lab.get("name")
     )
+    # For issue_comment on a PR, GitHub puts the PR body under "issue".
+    linked_issue = _linked_issue(
+        str((event.get("pull_request", {}) or {}).get("body", "") or "")
+        or str((event.get("issue", {}) or {}).get("body", "") or "")
+    )
     review_state = str((event.get("review", {}) or {}).get("state", "") or "")
     dispatch_stage = str((event.get("inputs", {}) or {}).get("stage", "") or "")
 
@@ -96,6 +122,7 @@ def parse_github_event(
         cr_id = manual_cr_id or (event.get("inputs", {}) or {}).get("cr_id", "")
         if cr_id:
             return GitHubEventContext(
+                issue_number=linked_issue,
                 cr_id=cr_id,
                 mode="new",
                 event_name=event_name or "workflow_dispatch",
@@ -105,6 +132,7 @@ def parse_github_event(
                 dispatch_stage=dispatch_stage,
             )
         return GitHubEventContext(
+            issue_number=linked_issue,
             cr_id=None,
             mode="skip",
             reason="No cr_id input",
@@ -125,6 +153,7 @@ def parse_github_event(
                 cr_id = _extract_cr_from_diff(merge_commit_sha)
             if cr_id:
                 return GitHubEventContext(
+                    issue_number=linked_issue,
                     cr_id=cr_id,
                     mode="new",
                     event_name=event_name,
@@ -133,6 +162,7 @@ def parse_github_event(
                     labels=labels,
                 )
             return GitHubEventContext(
+                issue_number=linked_issue,
                 cr_id=None,
                 mode="skip",
                 reason="No CR ID in merged PR",
@@ -147,6 +177,7 @@ def parse_github_event(
             cr_id = _extract_cr(head_ref)
             if not merged:
                 return GitHubEventContext(
+                    issue_number=linked_issue,
                     cr_id=cr_id,
                     mode="cancel" if cr_id else "skip",
                     event_name=event_name,
@@ -155,6 +186,7 @@ def parse_github_event(
                     labels=labels,
                 )
             return GitHubEventContext(
+                issue_number=linked_issue,
                 cr_id=cr_id,
                 mode="new",
                 event_name=event_name,
@@ -165,6 +197,7 @@ def parse_github_event(
 
         pr_number = (event.get("pull_request", {}) or {}).get("number")
         return GitHubEventContext(
+            issue_number=linked_issue,
             cr_id=_extract_cr(head_ref),
             mode="skip",
             pr_number=pr_number,
@@ -183,6 +216,7 @@ def parse_github_event(
         cr_id = _extract_cr(head_ref)
         if not cr_id:
             return GitHubEventContext(
+                issue_number=linked_issue,
                 cr_id=None,
                 mode="skip",
                 reason="No CR ID in PR branch",
@@ -193,6 +227,7 @@ def parse_github_event(
             )
         if review.get("state") == "changes_requested":
             return GitHubEventContext(
+                issue_number=linked_issue,
                 cr_id=cr_id, mode="iterate",
                 pr_number=pr_info.get("number"),
                 event_name=event_name,
@@ -205,6 +240,7 @@ def parse_github_event(
         # caller-defined action, so clients can choose whether "approved"
         # advances a stage, records status, or does nothing.
         return GitHubEventContext(
+            issue_number=linked_issue,
             cr_id=cr_id,
             mode="skip",
             reason="Review not changes_requested; planner may still map review_state",
@@ -220,6 +256,7 @@ def parse_github_event(
         issue = event.get("issue", {}) or {}
         if not issue.get("pull_request"):
             return GitHubEventContext(
+                issue_number=linked_issue,
                 cr_id=None,
                 mode="skip",
                 reason="Issue comment is not on a pull request",
@@ -232,6 +269,7 @@ def parse_github_event(
         if not cr_id:
             cr_id = _extract_cr(str((event.get("comment", {}) or {}).get("body", "") or ""))
         return GitHubEventContext(
+            issue_number=linked_issue,
             cr_id=cr_id,
             mode="skip",
             pr_number=issue.get("number"),
@@ -247,6 +285,7 @@ def parse_github_event(
         cr_id = (event.get("client_payload", {}) or {}).get("cr_id", "")
         if cr_id:
             return GitHubEventContext(
+                issue_number=linked_issue,
                 cr_id=cr_id,
                 mode="new",
                 event_name=event_name,
@@ -255,6 +294,7 @@ def parse_github_event(
                 labels=labels,
             )
         return GitHubEventContext(
+            issue_number=linked_issue,
             cr_id=None,
             mode="skip",
             reason="No cr_id in dispatch payload",
@@ -265,6 +305,7 @@ def parse_github_event(
         )
 
     return GitHubEventContext(
+        issue_number=linked_issue,
         cr_id=None,
         mode="skip",
         reason=f"Unhandled event: {event_name}",
@@ -331,6 +372,7 @@ def plan_github_event(
             branch_ref=context.branch_ref,
             review_state=context.review_state,
             merged=context.merged,
+            issue_number=context.issue_number,
         )
 
     stage = manual_stage or context.dispatch_stage or infer_stage(
@@ -370,6 +412,7 @@ def plan_github_event(
         branch_ref=context.branch_ref,
         review_state=context.review_state,
         merged=context.merged,
+        issue_number=context.issue_number,
     )
 
 

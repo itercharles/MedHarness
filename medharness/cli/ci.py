@@ -810,12 +810,16 @@ def register(main):
             "dispatch_stage": result.dispatch_stage,
             "stage": plan.stage,
             "action": plan.action,
+            # Absent means "not derivable from the payload", not "none": an
+            # issue linked through the GitHub UI leaves no trace there.
+            "issue_number": plan.issue_number,
         }
         click.echo(json.dumps(payload, default=str))
 
         if github_output_path:
             with open(github_output_path, "a", encoding="utf-8") as f:
-                for key in ("cr_id", "mode", "pr_number", "stage", "action", "event_name", "branch_ref"):
+                for key in ("cr_id", "mode", "pr_number", "stage", "action",
+                            "event_name", "branch_ref", "issue_number"):
                     val = payload.get(key)
                     if val is not None and val != "":
                         f.write(f"{key}={val}\n")
