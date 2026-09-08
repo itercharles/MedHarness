@@ -30,16 +30,6 @@ def _make_core(dhf_path: Path):
     return MedHarnessCore(_make_adapter(dhf_path))
 
 
-def _parse_json_object(data: str) -> dict:
-    try:
-        parsed = json.loads(data)
-    except json.JSONDecodeError as exc:
-        raise click.BadParameter(f"expected JSON object: {exc}") from exc
-    if not isinstance(parsed, dict):
-        raise click.BadParameter("expected JSON object")
-    return parsed
-
-
 DEFAULT_ACCEPTANCE_COVERAGE_PAIRS = ("UC:CRS", "CRS:SYS", "SYS:SRS", "SRS:SWDD")
 DEFAULT_TRACEABILITY_DOC_TYPES = ("UC", "CRS", "SYS", "SRS", "SWDD")
 
@@ -114,13 +104,6 @@ def _run_acceptance_gate(core, junit_paths: list[Path], coverage_pairs: tuple[st
     }
 
 
-def _run_command(args: list[str], cwd: Path | None = None, check: bool = True) -> subprocess.CompletedProcess:
-    proc = subprocess.run(args, cwd=cwd, text=True, check=False)
-    if check and proc.returncode != 0:
-        raise click.ClickException(f"command failed ({proc.returncode}): {' '.join(args)}")
-    return proc
-
-
 def _run_git(repo_root: Path, args: list[str]) -> str:
     proc = subprocess.run(
         ["git", "-C", str(repo_root), *args],
@@ -136,41 +119,6 @@ def _run_git(repo_root: Path, args: list[str]) -> str:
 
 def _git_has_changes(repo_root: Path) -> bool:
     return bool(_run_git(repo_root, ["status", "--porcelain"]).strip())
-
-
-def _run_pytest_junit(test_paths: tuple[str, ...], junit_dir: Path) -> list[Path]:
-    junit_dir.mkdir(parents=True, exist_ok=True)
-    generated: list[Path] = []
-    for raw_path in test_paths:
-        path = Path(raw_path)
-        name = path.name or path.as_posix().replace("/", "-")
-        xml_path = junit_dir / f"{name.replace('/', '-')}.xml"
-        _run_command(["pytest", raw_path, "-v", f"--junitxml={xml_path}"])
-        generated.append(xml_path)
-    return generated
-
-
-def _summarize_junit_file(path: Path) -> dict:
-    from dhfkit.junit_parser import parse_junit_xml
-
-    results = parse_junit_xml(path)
-    recorded = [
-        {
-            "tc_id": r.id,
-            "testing_status": r.testing_status,
-            "links": r.links or [],
-        }
-        for r in results
-        if r.testing_status != "SKIP"
-    ]
-    skipped = sum(1 for r in results if r.testing_status == "SKIP")
-    return {
-        "path": str(path),
-        "imported": len(recorded),
-        "skipped": skipped,
-        "items_updated": sorted({uid for r in recorded for uid in r["links"]}),
-        "failed_tcs": [r["tc_id"] for r in recorded if r["testing_status"] == "FAIL"],
-    }
 
 
 def _build_traceability_report_payload(core, doc_types: tuple[str, ...],
