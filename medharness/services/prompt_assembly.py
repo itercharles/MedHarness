@@ -183,7 +183,7 @@ def _build_dhf_context_block(dhf_path: Path) -> str:
 def _build_risk_context_block(dhf_path: Path) -> str:
     """Summarise the current RISK/RCM landscape for injection into generate-dhf prompts."""
     adapter = _load_adapter(dhf_path, "risk context")
-    config = adapter._config
+    config = adapter.config
     items = adapter.list_items()
 
     risk_dt = config.get_doc_type("RISK")
@@ -237,7 +237,7 @@ def _build_module_context_block(dhf_path: Path) -> str:
     from dhfkit.traceability import build_module_map
 
     adapter = _load_adapter(dhf_path, "module map")
-    module_map = build_module_map(adapter.list_items(), adapter._config)
+    module_map = build_module_map(adapter.list_items(), adapter.config)
 
     if not module_map:
         return ""

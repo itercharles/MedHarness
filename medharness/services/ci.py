@@ -409,14 +409,14 @@ def ci_test_coverage_gate(
     # Levels the declared safety class requires. Absent a class this is empty and
     # the level dimension is inert, so a project that has not opted in to
     # classification sees exactly the behaviour it saw before.
-    raw_levels = adapter._config.required_activities().get("required_test_levels")
+    raw_levels = adapter.config.required_activities().get("required_test_levels")
     required_levels, level_config_problems = _levels_by_type(raw_levels, default_types)
     # Say why the level dimension is doing nothing. An empty `required_levels`
     # looks identical whether the class is undeclared, the map is silent, or the
     # map could not be read — and a project that had written a mapping spent a
     # debugging round on exactly that ambiguity.
     level_notes: list[str] = []
-    if not adapter._config.software_safety_class:
+    if not adapter.config.software_safety_class:
         level_notes.append(
             "Verification levels are not being checked: no software_safety_class "
             "is declared in global.yaml, so safety_activities.yaml does not apply "
@@ -425,7 +425,7 @@ def ci_test_coverage_gate(
     level_gaps: list[dict] = []
 
     for rt in default_types:
-        config = adapter._config
+        config = adapter.config
         dt = config.get_doc_type(rt)
         if not dt:
             results.append({
@@ -771,7 +771,7 @@ def validate_verification_completeness(
 
     adapter = LocalDHFAdapter(dhf_path)
     all_items = adapter.list_items()
-    config = adapter._config
+    config = adapter.config
 
     # Resolve configured prefixes so custom prefixes (e.g. SYSREQ-) are handled correctly.
     default_types = req_types if req_types else ("SRS", "SYS", "CRS")
@@ -1270,7 +1270,7 @@ def cr_closure_gate(
 
     adapter = LocalDHFAdapter(dhf_path)
     all_items = adapter.list_items()
-    config = adapter._config
+    config = adapter.config
 
     # Load proposed_new_items from the CR item — generate-dhf Step 4 writes this
     # field via `dhf item update` so it persists in the CR YAML alongside the CR itself.
@@ -1464,7 +1464,7 @@ def classification_gate(dhf_path: Path) -> dict:
     from dhfkit.local_adapter import LocalDHFAdapter
 
     adapter = LocalDHFAdapter(dhf_path)
-    config = adapter._config
+    config = adapter.config
 
     declared = (config.software_safety_class or "").strip().upper()
     rationale = (config.classification_rationale or "").strip()
@@ -1642,7 +1642,7 @@ def plans_gate(dhf_path: Path) -> dict:
     from dhfkit.local_adapter import LocalDHFAdapter
 
     adapter = LocalDHFAdapter(dhf_path)
-    config = adapter._config
+    config = adapter.config
     declared = (config.software_safety_class or "").strip().upper()
     required = config.required_activities().get("required_plans") or []
 

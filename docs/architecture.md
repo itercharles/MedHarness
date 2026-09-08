@@ -21,7 +21,9 @@ MedHarness ships two Python packages from a single repository:
 - AI-assisted CR generation (`change plan`, `change implement`)
 - Approval and stage management (`approval check`, `change advance`, `change status`, `approval parse`)
 - CR workflow orchestration (`cr workflow`, `cr check-status`)
-- DHF repo scaffolding from bundled templates
+- DHF repo scaffolding from bundled templates (`medharness init`, `medharness upgrade`)
+- Environment and setup diagnostics (`medharness doctor`)
+- Machine-readable description of the gates (`medharness gates`)
 - Adapter protocol for pluggable DHF backends
 
 ### `dhfkit` owns
@@ -35,12 +37,21 @@ MedHarness ships two Python packages from a single repository:
 - Result store for test result history
 - SOUP manifest synchronisation (`soup-sync`)
 - Release baseline builder (`release-baseline`)
+- CycloneDX SBOM serialisation from the SOUP register (`sbom`)
+- Traceability coverage reporting (`report`)
+- Approval records as DHF items (`approval import`, `approval show`)
 
 ### Boundary rules
 
 - `medharness` may import from `dhfkit`
 - `dhfkit` MUST NOT import from `medharness`
 - `dhfkit` can be used standalone without `medharness`
+- `medharness` uses `dhfkit`'s **public** surface. Standalone use means `dhfkit`
+  has a contract, and a consumer pinned to an underscore has none — ten sites
+  read `adapter._config` before this rule was written down and checked.
+
+`tests/unit/test_package_boundary.py` enforces the last two; the import
+direction was already guarded, what a consumer may touch was not.
 
 ---
 

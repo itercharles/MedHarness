@@ -13,6 +13,35 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ### Internal
 
+- **`medharness` read a private `dhfkit` attribute in ten places.**
+  `adapter._config` — a private member of a `dhfkit` class, across the package
+  boundary. `dhfkit` is documented as usable standalone, which means it has a
+  contract, and a consumer pinned to an underscore has none: any refactor of
+  `LocalDHFAdapter` would have broken `medharness` silently.
+
+  `LocalDHFAdapter.config` is a public property now, and `dhfkit.api.get_config`
+  serves callers that only have a path. `tests/unit/test_package_boundary.py`
+  fails on any private reach across the boundary, by file and line — the import
+  direction was already guarded, what a consumer may *touch* was not.
+
+- **CLAUDE.md's CLI table was stale, including the whole gate surface.** It
+  listed six `dhfkit` commands and described `medharness` in prose, missing
+  `dhfkit init`/`sbom` and `medharness automation`/`doctor`/`init`/`upgrade`/
+  `verify`. An instruction file is read as current, so a stale one is worse than
+  a thin one. Both tables are now checked against the live command tree in both
+  directions, and the `approval` group that exists in both CLIs is explained
+  rather than left as a collision.
+
+- `docs/architecture.md` gained the commands it never mentioned (`report`,
+  `sbom`, `doctor`, `upgrade`) and the boundary rule above.
+
+- Removed `medharness/workflows/cr_intake.py::find_existing_cr_for_issue`, an
+  unused wrapper — the duplicate-CR check it delegated to runs in
+  `dhfkit/change_requests.py`.
+
+
+### Internal
+
 - **The mock-contract guard could not have caught the defect it was written
   for.** It scanned dict literals passed straight to `patch`. The fixture that
   shipped a broken `soup-sync` was a helper returning `{"uid": …, "type":

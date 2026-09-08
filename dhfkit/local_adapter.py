@@ -304,6 +304,16 @@ class LocalDHFAdapter:
             errors.append(str(e))
         return {'valid': len(errors) == 0, 'errors': errors, 'item_count': len(self._loader.load_all()) if not errors else 0}
 
+    @property
+    def config(self):
+        """The project configuration this adapter was opened against.
+
+        `medharness` read `self._config` from outside in ten places. `dhfkit`
+        is meant to be usable standalone, so it has a public surface, and a
+        consumer pinned to an underscore has no contract at all.
+        """
+        return self._config
+
     def validate_traceability(self) -> dict:
         """Check required traceability, orphans, and coverage."""
         from dhfkit.traceability import check_traceability

@@ -64,12 +64,6 @@ def next_cr_id(items: list[dict[str, Any]]) -> str:
     return next_change_request_id(items)
 
 
-def find_existing_cr_for_issue(items: list[dict[str, Any]], source_issue_url: str) -> str | None:
-    from dhfkit.change_requests import find_change_request_by_source
-
-    return find_change_request_by_source(items, source_issue_url)
-
-
 def current_iso_week_milestone(today: dt.date | None = None) -> str:
     current = today or dt.date.today()
     iso_year, iso_week, _ = current.isocalendar()
