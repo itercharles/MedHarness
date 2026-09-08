@@ -305,6 +305,23 @@ class TestFailurePathsHonourTheContract:
         if not result["passed"]:
             assert result["errors"], f"{command} failed with empty errors"
 
+    @pytest.mark.parametrize("command", FAILING)
+    def test_a_gate_carrying_errors_does_not_pass(
+        self, command: str, failing_dhf: Path
+    ) -> None:
+        """The converse, which this file did not check.
+
+        `errors` is what made the gate fail. `verify dhf` computed `passed`
+        before building its messages, so an error appended afterwards — a check
+        that could not run — left it reporting success with errors attached.
+        """
+        result = _run_gate(command, failing_dhf)
+        if result["errors"]:
+            assert result["passed"] is False, (
+                f"{command} passed while carrying {len(result['errors'])} error(s): "
+                f"{result['errors'][:2]}"
+            )
+
     def test_explicit_coverage_pair_failure_is_reported(self, failing_dhf: Path) -> None:
         """--coverage-pair results live under their own key and were skipped."""
         from medharness.services.ci import ci_structural_gate

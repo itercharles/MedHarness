@@ -189,8 +189,13 @@ def ci_structural_gate(
                                      "field, but §5.7 verification needs a stated "
                                      "criterion to verify against",
                         })
-        except Exception:
-            pass
+        except Exception as exc:  # noqa: BLE001
+            # Say so. Swallowing this reported "no verification_criteria gaps"
+            # on a DHF whose items could not be read — a pass indistinguishable
+            # from a clean one.
+            results["verification_gaps_error"] = (
+                f"verification_criteria could not be checked: {exc}"
+            )
         results["verification_gaps"] = verification_gaps
 
     if coverage_pairs:
@@ -206,6 +211,11 @@ def ci_structural_gate(
 
     errors, warnings = _structural_messages(results, fail_on_uncovered)
     schema_n = results.get("schema", {}).get("item_count", 0)
+    # `errors` is what made the gate fail (docs/interface.md), so a gate cannot
+    # carry one and still pass. `passed` was computed before the messages were
+    # built, so an error added there — a check that could not run, say — left
+    # the two disagreeing.
+    passed = passed and not errors
     return gate_result(
         "verify dhf", passed,
         f"{schema_n} item(s) checked; {len(errors)} error(s), {len(warnings)} warning(s).",
@@ -239,6 +249,10 @@ def _structural_messages(results: dict, fail_on_uncovered: bool) -> tuple[list[s
         )
     for gap in results.get("verification_gaps", []):
         warnings.append(f"{gap['id']}: {gap['issue']}")
+    # A check that could not run is an error, not silence: reporting zero gaps
+    # because the items would not load is the same output as a clean DHF.
+    if results.get("verification_gaps_error"):
+        errors.append(results["verification_gaps_error"])
 
     # --coverage-pair results live under their own key; a caller who asked for a
     # pair explicitly gets an error, not a warning.
@@ -651,6 +665,7 @@ def compute_item_coverage(
     uncovered: dict[str, list[str]] = {}
     item_type_map: dict[str, str] = {}
     manual_candidates: dict[str, dict[str, list[str] | str]] = {}
+    manual_candidates_error = ""
     if adapter is not None:
         try:
             all_items = adapter.list_items()
@@ -675,8 +690,10 @@ def compute_item_coverage(
                         "type": item.get("type", ""),
                         "reasons": reasons,
                     }
-        except Exception:
-            pass
+        except Exception as exc:  # noqa: BLE001
+            # An empty manual_candidates and an unreadable DHF looked identical
+            # to a caller. They are not the same answer.
+            manual_candidates_error = f"manual-review candidates unavailable: {exc}"
 
     default_types = ("SRS", "SYS", "CRS")
     for rt in default_types:
@@ -691,6 +708,9 @@ def compute_item_coverage(
         "coverage_by_item": coverage_by_item,
         "uncovered_requirements": {k: v for k, v in uncovered.items() if v},
         "manual_verification_candidates": manual_candidates,
+        # Empty because there are none, or empty because the DHF would not
+        # load? A caller cannot tell from the list alone.
+        "manual_verification_candidates_error": manual_candidates_error,
         "manual_verification_criteria": {
             "critical_safety": True,
             "verification_methods": ["Inspection", "Demonstration"],

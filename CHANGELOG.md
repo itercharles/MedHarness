@@ -13,6 +13,22 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ### Bug Fixes
 
+- **Two checks could fail silently and the gate still passed.** The
+  verification_criteria scan and the manual-review candidate scan were each
+  wrapped in `except Exception: pass`. A DHF whose items would not load reported
+  zero findings — the same output as a clean one — and `verify dhf` passed. Both
+  now record why they could not run, and the structural gate reports it as an
+  error.
+
+- **`verify dhf` could pass while carrying errors.** `passed` was computed
+  before the messages were built, so an error appended afterwards left the two
+  disagreeing — against `docs/interface.md`, where `errors` is what made the
+  gate fail. The envelope guard only checked one direction (a failing gate must
+  explain itself); it now checks the converse too.
+
+
+### Bug Fixes
+
 - **One mistyped field in one item crashed nine of thirteen commands.** A DHF
   item with an unknown field raised `ValidationError` out to the terminal as a
   traceback — from `verify dhf`, `verify verification`, `verify completion`,

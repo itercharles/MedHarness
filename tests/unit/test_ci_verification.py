@@ -193,3 +193,47 @@ def test_cli_validate_verification_json_stdout(tmp_path: Path) -> None:
     assert set(payload) == set(ENVELOPE_KEYS)
     assert {"missing_method", "unverified_test",
             "manual_review_required"} <= payload["details"].keys()
+
+
+class TestACheckThatCouldNotRunIsReported:
+    """Zero findings and an unreadable DHF produced the same output.
+
+    Both the verification_criteria scan and the manual-review candidate scan
+    were wrapped in `except Exception: pass`. A DHF whose items would not load
+    reported no gaps — the same answer as a clean one — and the gate passed.
+    """
+
+    def test_the_structural_gate_says_when_it_could_not_check(self, tmp_path) -> None:
+        from unittest.mock import patch
+
+        from dhfkit.local_adapter import LocalDHFAdapter
+        from medharness.services.ci import ci_structural_gate
+        from medharness.workflows.init import _replace_placeholders, _scaffold_dhf
+
+        _scaffold_dhf(tmp_path)
+        _replace_placeholders(tmp_path, "Flaky")
+        real = LocalDHFAdapter.list_items
+        calls = {"n": 0}
+
+        def flaky(self, *a, **k):
+            calls["n"] += 1
+            if calls["n"] > 1:  # the first call feeds schema validation
+                raise RuntimeError("boom")
+            return real(self, *a, **k)
+
+        with patch.object(LocalDHFAdapter, "list_items", flaky):
+            result = ci_structural_gate(tmp_path / "DHF")
+
+        assert any("could not be checked" in e for e in result["errors"]), result["errors"]
+        assert result["passed"] is False, (
+            "the gate passed while reporting a check it could not run"
+        )
+
+    def test_a_healthy_dhf_reports_no_such_error(self, tmp_path) -> None:
+        from medharness.services.ci import ci_structural_gate
+        from medharness.workflows.init import _replace_placeholders, _scaffold_dhf
+
+        _scaffold_dhf(tmp_path)
+        _replace_placeholders(tmp_path, "Fine")
+        result = ci_structural_gate(tmp_path / "DHF")
+        assert not any("could not be checked" in e for e in result["errors"])
