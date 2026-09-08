@@ -19,7 +19,10 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
-TESTS = ROOT / "tests"
+#: Both suites. Scanning only `tests/` left every `dhfkit/tests/` mock
+#: unchecked, and that is where soup-sync's whole suite fed items keyed "uid"
+#: while production produced "id" — nine parsers shipped broken behind it.
+TEST_DIRS = (ROOT / "tests", ROOT / "dhfkit" / "tests")
 
 
 def _own_returns(fn: ast.FunctionDef) -> list[object]:
@@ -122,14 +125,16 @@ def _mock_shape(node: ast.expr) -> object | None:
 
 def _mocks() -> list[tuple[str, object, str, int]]:
     found = []
-    for f in sorted(TESTS.rglob("test_*.py")):
+    for f in sorted(f for d in TEST_DIRS for f in d.rglob("test_*.py")):
         for n in ast.walk(ast.parse(f.read_text())):
             if not (isinstance(n, ast.Call) and getattr(n.func, "id", "") == "patch"):
                 continue
             if not (n.args and isinstance(n.args[0], ast.Constant)):
                 continue
             target = n.args[0].value
-            if not target.startswith("medharness."):
+            # Both packages. Filtering to "medharness." excluded every
+            # dhfkit.* patch — half the codebase, and the half that was broken.
+            if not target.startswith(("medharness.", "dhfkit.")):
                 continue
             rv = next((k.value for k in n.keywords if k.arg == "return_value"), None)
             shape = _mock_shape(rv) if rv is not None else None
@@ -162,3 +167,46 @@ def test_mock_matches_what_the_service_returns(
         f"but it returns {[sorted(r) if isinstance(r, frozenset) else r for r in real]}.\n"
         f"The mock froze a shape the service no longer produces."
     )
+
+
+def _item_shaped_mocks() -> list[tuple[str, frozenset, str, int]]:
+    """Literal dict mocks standing in for a function that returns a DHF item."""
+    item_apis = ("create_item", "get_item", "update_item", "list_items")
+    found = []
+    for target, shape, where, line in MOCKS:
+        if isinstance(shape, frozenset) and target.rpartition(".")[2] in item_apis:
+            found.append((target, shape, where, line))
+    return found
+
+
+ITEM_MOCKS = _item_shaped_mocks()
+
+
+class TestNoMockInventsAnItemField:
+    """`uid` is not an item field and never was.
+
+    The mock-contract check above cannot reach these: `api.create_item`
+    delegates to an adapter method, so it has no literal return to compare
+    against and is skipped. That skip is exactly where the defect lived —
+    soup-sync's suite mocked items as {"uid": ...} while production produced
+    {"id": ...}, and seven `item["uid"]` reads shipped, crashing the command on
+    every real DHF.
+
+    Items expose `id`. Some *artifacts* key the same value `uid` for consumers
+    that predate the field name, but an item never does.
+    """
+
+    def test_the_scan_found_item_mocks(self) -> None:
+        assert ITEM_MOCKS, "no item-returning mocks found — the scan is broken"
+
+    @pytest.mark.parametrize(
+        "target,shape,where,line", ITEM_MOCKS,
+        ids=[f"{f}:{ln}" for _t, _s, f, ln in ITEM_MOCKS],
+    )
+    def test_an_item_mock_uses_id(
+        self, target: str, shape: frozenset, where: str, line: int
+    ) -> None:
+        assert "uid" not in shape, (
+            f"{where}:{line} mocks {target} with a 'uid' key. Items carry 'id'; "
+            f"a mock keyed 'uid' lets code read item['uid'] and pass."
+        )

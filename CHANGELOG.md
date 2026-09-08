@@ -13,6 +13,28 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ### Bug Fixes
 
+- **`soup-sync` crashed on every real DHF.** It read `item["uid"]` in seven
+  places; items carry `id` and always have. `KeyError: 'uid'` on any project,
+  empty register or not — so nine manifest parsers, multi-ecosystem support and
+  `soup-sources.yaml`, shipped since v0.11.0, could not populate a SOUP register
+  at all.
+
+  Its whole suite passed because every test mocked `api.list_items` and
+  `api.create_item` with dicts keyed `uid`. The tests supplied a shape
+  production has never produced, which is precisely the failure mode
+  `test_mock_contracts.py` was written to prevent — and that guard scanned only
+  `tests/` and only `medharness.*` patch targets, so `dhfkit/tests/` and every
+  `dhfkit.*` mock fell outside it. Half the codebase, and the half that was
+  broken.
+
+  Artifact keys stay `uid`: `sync_soup_items` reports orphans and matches with
+  that name and existing consumers read it. Only the item reads were wrong.
+
+  Three things now cover this: `soup-sync` runs against a real DHF with nothing
+  mocked; the mock-contract guard scans both suites and both packages; and no
+  mock of an item-returning API may use a `uid` key — the check that reaches
+  `create_item`, which delegates and so has no return shape to compare against.
+
 - **A version range produced a purl that resolves to nothing.** `purl_for`'s own
   docstring says a wrong purl is worse than an absent one, because a consumer
   resolves it against a real registry. It then built

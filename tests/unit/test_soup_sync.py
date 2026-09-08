@@ -32,7 +32,7 @@ def _pkg_json(tmp_path: Path, content: dict) -> Path:
 
 
 def _make_soup_item(uid: str, name: str, version: str) -> dict:
-    return {"uid": uid, "type": "SOUP", "name": name, "version": version}
+    return {"id": uid, "type": "SOUP", "name": name, "version": version}
 
 
 # ---------------------------------------------------------------------------
@@ -138,7 +138,7 @@ class TestNormalizeHelpers:
 class TestFindSoupItem:
     def test_exact_match(self):
         items = [_make_soup_item("SOUP-001", "requests", "2.31.0")]
-        assert _find_soup_item(items, "requests")["uid"] == "SOUP-001"
+        assert _find_soup_item(items, "requests")["id"] == "SOUP-001"
 
     def test_case_insensitive_match(self):
         items = [_make_soup_item("SOUP-001", "Requests", "2.31.0")]
@@ -195,7 +195,9 @@ class TestDiffAgainstDhf:
         soup = [_make_soup_item("SOUP-001", "oldlib", "1.0.0")]
         diff = diff_against_dhf([], soup)
         assert len(diff["orphans"]) == 1
-        assert diff["orphans"][0]["uid"] == "SOUP-001"
+        # diff_against_dhf returns the raw items, which carry "id".
+        # sync_soup_items converts them to artifact dicts keyed "uid".
+        assert diff["orphans"][0]["id"] == "SOUP-001"
 
     def test_fuzzy_name_matching(self):
         soup = [_make_soup_item("SOUP-001", "My_Package", "1.0.0")]
@@ -230,7 +232,7 @@ class TestSyncSoupItems:
     def test_write_creates_new_items(self, tmp_path):
         req = _req_txt(tmp_path, "flask==3.0.0\n")
         with patch("dhfkit.api.list_items", return_value=[]), \
-             patch("dhfkit.api.create_item", return_value={"uid": "SOUP-001"}) as mock_create:
+             patch("dhfkit.api.create_item", return_value={"id": "SOUP-001"}) as mock_create:
             result = sync_soup_items(tmp_path / "DHF", [req], write=True)
 
         mock_create.assert_called_once()
@@ -261,7 +263,7 @@ class TestSyncSoupItems:
     def test_author_and_cr_forwarded(self, tmp_path):
         req = _req_txt(tmp_path, "numpy==1.26.0\n")
         with patch("dhfkit.api.list_items", return_value=[]), \
-             patch("dhfkit.api.create_item", return_value={"uid": "SOUP-002"}) as mock_create:
+             patch("dhfkit.api.create_item", return_value={"id": "SOUP-002"}) as mock_create:
             sync_soup_items(tmp_path / "DHF", [req], write=True, author="agent", cr_id="CR-007")
 
         _, kwargs = mock_create.call_args
@@ -293,7 +295,7 @@ class TestSyncSoupItems:
         # Simulate by calling with package.json that also lists 'requests' as peerDep
         pkg = _pkg_json(tmp_path, {"peerDependencies": {"requests": "^2.31.0"}})
         with patch("dhfkit.api.list_items", return_value=[]), \
-             patch("dhfkit.api.create_item", return_value={"uid": "SOUP-001"}) as mock_create:
+             patch("dhfkit.api.create_item", return_value={"id": "SOUP-001"}) as mock_create:
             result = sync_soup_items(tmp_path / "DHF", [req1, pkg], write=True)
 
         # "requests" appears in requirements.txt (pypi) and peerDependencies (npm) but
@@ -314,7 +316,7 @@ class TestSyncSoupItems:
     def test_partial_write_failure_is_completed_with_errors(self, tmp_path):
         # create_item succeeds for first package, fails for second
         req = _req_txt(tmp_path, "flask==3.0.0\nnumpy==1.26.0\n")
-        side_effects = [{"uid": "SOUP-001"}, RuntimeError("db error")]
+        side_effects = [{"id": "SOUP-001"}, RuntimeError("db error")]
         with patch("dhfkit.api.list_items", return_value=[]), \
              patch("dhfkit.api.create_item", side_effect=side_effects):
             result = sync_soup_items(tmp_path / "DHF", [req], write=True)
