@@ -7,6 +7,8 @@ import sys
 from pathlib import Path
 
 import click
+
+from dhfkit.cli_errors import DHFAwareGroup
 import yaml
 
 
@@ -30,7 +32,7 @@ def _make_adapter(dhf_path: Path):
 # Root group
 # ---------------------------------------------------------------------------
 
-@click.group()
+@click.group(cls=DHFAwareGroup)
 @click.option(
     "--dhf",
     default=None,

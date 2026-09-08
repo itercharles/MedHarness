@@ -7,6 +7,7 @@ Checks:
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from typing import Any
 
 
@@ -284,14 +285,19 @@ def build_module_map(items: list[dict], config: Any) -> list[dict]:
     return sorted(result, key=lambda x: x["module_id"])
 
 
+#: Link names this package knows about regardless of schema. A project's doc
+#: types are the real source — see ProjectConfig.relationship_fields — and this
+#: is the floor, so a DHF whose config omits a field still gets it checked.
 _LINK_FIELDS = (
     "derives_from", "implements", "guided_by", "informs", "design",
     "mitigates", "satisfies", "verifies", "validates", "module",
-    "affected_risk_items",
+    "affected_risk_items", "affected_items",
 )
 
 
-def find_dangling_links(items: list[dict]) -> list[dict]:
+def find_dangling_links(
+    items: list[dict], link_fields: Iterable[str] | None = None
+) -> list[dict]:
     """Find traceability links pointing at IDs that do not exist in the DHF.
 
     A dangling link is not the same failure as missing coverage: the author did
@@ -302,10 +308,14 @@ def find_dangling_links(items: list[dict]) -> list[dict]:
     Returns [{"source", "field", "target"}] sorted for stable output.
     """
     known = {item["id"] for item in items}
+    # The schema decides what a link is; _LINK_FIELDS is only the floor. Two
+    # hand-written lists used to decide it between them and disagreed, leaving
+    # five of the nine relationship fields in the shipped schema unchecked.
+    fields = sorted(set(_LINK_FIELDS) | set(link_fields or ()))
     dangling: list[dict] = []
     for item in items:
         source = item.get("id", "")
-        for field in _LINK_FIELDS:
+        for field in fields:
             for target in item.get(field) or []:
                 if target and target not in known:
                     dangling.append({"source": source, "field": field, "target": target})
@@ -376,7 +386,9 @@ def check_traceability(items: list[dict], config: Any) -> dict:
                 "passed": len(uncovered) == 0,
             })
 
-    dangling = find_dangling_links(items)
+    dangling = find_dangling_links(
+        items, getattr(config, "relationship_fields", lambda: ())()
+    )
     passed = (
         required_result["passed"]
         and not dangling

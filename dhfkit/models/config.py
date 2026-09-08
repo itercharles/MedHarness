@@ -149,6 +149,29 @@ class ProjectConfig(BaseModel):
         classes = self.safety_activities.get("classes") or {}
         return classes.get(self.software_safety_class.upper()) or {}
 
+    def relationship_fields(self) -> set[str]:
+        """Every field any doc type declares as a link, from the schema itself.
+
+        Two hand-written lists used to decide this — one in the adapter, one in
+        the traceability checker — and they disagreed. Five of the nine
+        relationship fields in the shipped schema had no dangling-link
+        detection at all, including `affected_risk_items`, which the checker
+        listed but the adapter never supplied.
+
+        Doc types are project-owned, so a project that adds a relationship
+        field gets it checked without editing this package.
+        """
+        fields: set[str] = set()
+        for doc_type in self.doc_types:
+            # properties is optional on a doc type, and a config assembled in
+            # code rather than loaded from YAML often leaves it unset.
+            for prop in doc_type.properties or ():
+                if isinstance(prop, dict) and prop.get("format") == "relationship":
+                    name = prop.get("name")
+                    if name:
+                        fields.add(str(name))
+        return fields
+
     def get_doc_type(self, code: str) -> Optional[DocTypeConfig]:
         """Get document type configuration by code."""
         for dt in self.doc_types:
