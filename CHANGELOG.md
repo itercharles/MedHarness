@@ -11,20 +11,24 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
-### Internal
+---
 
-- **Four unreachable functions in `_helpers.py`**, 46 lines with no reference
-  anywhere — including inside the file itself. A shared-utility module is where
-  unreachable code goes to stay, so `tests/unit/test_no_dead_helpers.py` now
-  fails on any helper without a caller.
+## [0.18.0] — 2026-09-08
 
-  Scoped to that one module deliberately: a blanket dead-code rule across the
-  repo would flag Click commands, pytest hooks and `dhfkit.api`'s public
-  surface, and a check with false positives gets suppressed rather than fixed.
+### Behaviour changes
 
-  A hand scan had cleared `_run_command`; the guard caught it. That is the
-  point of writing the check rather than doing the pass.
+- **Gates now fail where they used to pass silently.** Three cases, all of
+  them a check that could not run reporting the same as a clean result:
 
+  - `verify dhf` fails when a check it was asked to make could not be made —
+    an unreadable DHF used to report zero findings.
+  - Every command reports a DHF it cannot read instead of raising a traceback.
+    Exit codes are unchanged; only the traceback is gone.
+  - Item IDs are drawn from every ID the repository has ever held, so numbering
+    skips a deleted item's number rather than reusing it.
+
+  A project whose DHF is clean sees no change. One that was passing on a fault
+  will now see the fault.
 
 ### Bug Fixes
 
@@ -46,9 +50,6 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
   `global.yaml` is project-owned, so an existing project must add the two states
   itself; `medharness upgrade` will not rewrite it.
 
-
-### Bug Fixes
-
 - **An interrupted write destroyed the item it was replacing.** `save` opened
   the file with mode `'w'`, which truncates before anything is written, so a
   failure part-way through `yaml.dump` — a full disk, a serialisation error —
@@ -60,9 +61,6 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
   was decided *after* the file was written, so `file_path.exists()` was always
   true. The git history is the DHF's account of when an item came into being,
   and it recorded every creation as an edit.
-
-
-### Bug Fixes
 
 - **A deleted item's ID was handed to the next one.** The next-ID calculation
   looked only at items present on disk, so deleting `SRS-003` and creating
@@ -78,9 +76,6 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
   A DHF outside git behaves exactly as before. Costs ~80ms on this repository's
   history, once per item creation.
 
-
-### Bug Fixes
-
 - **`medharness dhf context overview` crashed without `--dhf`.** It reached
   pathlib with `None` and raised `TypeError: expected str, bytes or
   os.PathLike object, not NoneType`. Three sibling commands wrote the check by
@@ -93,9 +88,6 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
   command, and the first version of that test scaffolded a DHF over the
   checkout and substituted the placeholders inside `dhfkit/templates/`. The
   suite now asserts the checkout is unchanged afterwards.
-
-
-### Bug Fixes
 
 - **Seven network calls had no timeout.** Every `urlopen` in
   `artifact_fetcher.py` — the GitHub and GitLab API calls behind `evidence
@@ -114,61 +106,6 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
   Both are checked at the source level across both packages, so a call added
   later is caught rather than discovered during an outage.
 
-
-### Internal
-
-- **`medharness` read a private `dhfkit` attribute in ten places.**
-  `adapter._config` — a private member of a `dhfkit` class, across the package
-  boundary. `dhfkit` is documented as usable standalone, which means it has a
-  contract, and a consumer pinned to an underscore has none: any refactor of
-  `LocalDHFAdapter` would have broken `medharness` silently.
-
-  `LocalDHFAdapter.config` is a public property now, and `dhfkit.api.get_config`
-  serves callers that only have a path. `tests/unit/test_package_boundary.py`
-  fails on any private reach across the boundary, by file and line — the import
-  direction was already guarded, what a consumer may *touch* was not.
-
-- **CLAUDE.md's CLI table was stale, including the whole gate surface.** It
-  listed six `dhfkit` commands and described `medharness` in prose, missing
-  `dhfkit init`/`sbom` and `medharness automation`/`doctor`/`init`/`upgrade`/
-  `verify`. An instruction file is read as current, so a stale one is worse than
-  a thin one. Both tables are now checked against the live command tree in both
-  directions, and the `approval` group that exists in both CLIs is explained
-  rather than left as a collision.
-
-- `docs/architecture.md` gained the commands it never mentioned (`report`,
-  `sbom`, `doctor`, `upgrade`) and the boundary rule above.
-
-- Removed `medharness/workflows/cr_intake.py::find_existing_cr_for_issue`, an
-  unused wrapper — the duplicate-CR check it delegated to runs in
-  `dhfkit/change_requests.py`.
-
-
-### Internal
-
-- **The mock-contract guard could not have caught the defect it was written
-  for.** It scanned dict literals passed straight to `patch`. The fixture that
-  shipped a broken `soup-sync` was a helper returning `{"uid": …, "type":
-  "SOUP", …}` handed to `return_value=[…]` — a call inside a list, invisible to
-  that scan, and it kept seven `item["uid"]` reads alive for six releases. Of
-  the 82 `dhfkit.api` mocks in the suite, the guard reached 11.
-
-  It now checks every item-shaped dict literal anywhere in a test file, scoped
-  to dicts carrying a `type` key because that is what makes a dict an item.
-  Artifacts legitimately key the same value `uid` — `soup-sync` orphans and
-  `release-baseline`'s `dhf_soup` entries — and carry no `type`. Verified by
-  restoring the historical fixture: it fails by file and line.
-
-- **Four tests asserted only that nothing was raised.** A no-op implementation
-  passed every one. `test_unreadable_file_does_not_abort_the_scaffold` claimed
-  the scaffold continued past the unreadable file and never checked that it
-  had; the double-scaffold test never checked the scaffold still existed.
-  Each now asserts the property its name claims, verified by stubbing the
-  function under test to a no-op.
-
-
-### Bug Fixes
-
 - **Two checks could fail silently and the gate still passed.** The
   verification_criteria scan and the manual-review candidate scan were each
   wrapped in `except Exception: pass`. A DHF whose items would not load reported
@@ -181,9 +118,6 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
   disagreeing — against `docs/interface.md`, where `errors` is what made the
   gate fail. The envelope guard only checked one direction (a failing gate must
   explain itself); it now checks the converse too.
-
-
-### Bug Fixes
 
 - **One mistyped field in one item crashed nine of thirteen commands.** A DHF
   item with an unknown field raised `ValidationError` out to the terminal as a
@@ -216,9 +150,6 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
   a relationship field gets it checked without editing this package —
   `test_dangling_covers_the_schema.py` covers fields that do not exist yet.
 
-
-### Bug Fixes
-
 - **The only `command` example in `soup-sources.yaml` could never have run.** It
   embedded multi-line Python in a double-quoted YAML string, and YAML folds those
   newlines into spaces — the script collapsed to one unparseable line. The
@@ -234,8 +165,65 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
   embedded script compiles, and runs one through `soup-sync` end to end against
   a stub. An example nobody executes is a suggestion, not documentation.
 
+### Internal
 
----
+- **Four unreachable functions in `_helpers.py`**, 46 lines with no reference
+  anywhere — including inside the file itself. A shared-utility module is where
+  unreachable code goes to stay, so `tests/unit/test_no_dead_helpers.py` now
+  fails on any helper without a caller.
+
+  Scoped to that one module deliberately: a blanket dead-code rule across the
+  repo would flag Click commands, pytest hooks and `dhfkit.api`'s public
+  surface, and a check with false positives gets suppressed rather than fixed.
+
+  A hand scan had cleared `_run_command`; the guard caught it. That is the
+  point of writing the check rather than doing the pass.
+
+- **`medharness` read a private `dhfkit` attribute in ten places.**
+  `adapter._config` — a private member of a `dhfkit` class, across the package
+  boundary. `dhfkit` is documented as usable standalone, which means it has a
+  contract, and a consumer pinned to an underscore has none: any refactor of
+  `LocalDHFAdapter` would have broken `medharness` silently.
+
+  `LocalDHFAdapter.config` is a public property now, and `dhfkit.api.get_config`
+  serves callers that only have a path. `tests/unit/test_package_boundary.py`
+  fails on any private reach across the boundary, by file and line — the import
+  direction was already guarded, what a consumer may *touch* was not.
+
+- **CLAUDE.md's CLI table was stale, including the whole gate surface.** It
+  listed six `dhfkit` commands and described `medharness` in prose, missing
+  `dhfkit init`/`sbom` and `medharness automation`/`doctor`/`init`/`upgrade`/
+  `verify`. An instruction file is read as current, so a stale one is worse than
+  a thin one. Both tables are now checked against the live command tree in both
+  directions, and the `approval` group that exists in both CLIs is explained
+  rather than left as a collision.
+
+- `docs/architecture.md` gained the commands it never mentioned (`report`,
+  `sbom`, `doctor`, `upgrade`) and the boundary rule above.
+
+- Removed `medharness/workflows/cr_intake.py::find_existing_cr_for_issue`, an
+  unused wrapper — the duplicate-CR check it delegated to runs in
+  `dhfkit/change_requests.py`.
+
+- **The mock-contract guard could not have caught the defect it was written
+  for.** It scanned dict literals passed straight to `patch`. The fixture that
+  shipped a broken `soup-sync` was a helper returning `{"uid": …, "type":
+  "SOUP", …}` handed to `return_value=[…]` — a call inside a list, invisible to
+  that scan, and it kept seven `item["uid"]` reads alive for six releases. Of
+  the 82 `dhfkit.api` mocks in the suite, the guard reached 11.
+
+  It now checks every item-shaped dict literal anywhere in a test file, scoped
+  to dicts carrying a `type` key because that is what makes a dict an item.
+  Artifacts legitimately key the same value `uid` — `soup-sync` orphans and
+  `release-baseline`'s `dhf_soup` entries — and carry no `type`. Verified by
+  restoring the historical fixture: it fails by file and line.
+
+- **Four tests asserted only that nothing was raised.** A no-op implementation
+  passed every one. `test_unreadable_file_does_not_abort_the_scaffold` claimed
+  the scaffold continued past the unreadable file and never checked that it
+  had; the double-scaffold test never checked the scaffold still existed.
+  Each now asserts the property its name claims, verified by stubbing the
+  function under test to a no-op.
 
 ## [0.17.2] — 2026-09-08
 
@@ -1380,8 +1368,6 @@ upgrading** — `verify dhf` can now fail on a DHF that previously passed.
 - **`docs/adopting.md`** — new guide covering four adoption paths: starting
   fresh, migrating an existing DHF, using dhfkit standalone, and incremental
   adoption into an existing regulated product.
-
----
 
 ## [0.7.0] — 2026-05-17
 
