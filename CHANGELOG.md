@@ -13,6 +13,23 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ### Bug Fixes
 
+- **A deleted item's ID was handed to the next one.** The next-ID calculation
+  looked only at items present on disk, so deleting `SRS-003` and creating
+  another produced `SRS-003` again — while git still held the original with
+  different content. Every reference retargeted silently: a CR's
+  `affected_items`, an approval record's `approves`, a test's `dhf_links`.
+
+  For IEC 62304 traceability an identifier that means two things over a
+  project's life is a broken record. IDs are now drawn from every item the
+  repository has ever held, not just the surviving ones — the same principle
+  the DHF already applies elsewhere: if git knows it, ask git.
+
+  A DHF outside git behaves exactly as before. Costs ~80ms on this repository's
+  history, once per item creation.
+
+
+### Bug Fixes
+
 - **`medharness dhf context overview` crashed without `--dhf`.** It reached
   pathlib with `None` and raised `TypeError: expected str, bytes or
   os.PathLike object, not NoneType`. Three sibling commands wrote the check by

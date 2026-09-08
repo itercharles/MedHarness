@@ -96,6 +96,39 @@ class GitRepository:
             author_email=author_email
         )
 
+    def item_ids_ever_added(self, items_dir: Path) -> set[str]:
+        """Every item ID this repository has ever held, deleted ones included.
+
+        An ID that once meant one requirement must not later mean another. The
+        next-ID calculation looked only at items present, so deleting SRS-003
+        and creating a new item produced SRS-003 again — while git still held
+        the original, and every CR, approval record and `dhf_links` marker
+        pointing at SRS-003 silently retargeted.
+
+        Returns an empty set when there is no repository, so a DHF outside git
+        behaves as it did.
+        """
+        if not self.is_available():
+            return set()
+        try:
+            rel = items_dir.resolve().relative_to(Path(self.repo.working_tree_dir).resolve())
+        except (ValueError, TypeError):
+            return set()
+        try:
+            output = self.repo.git.log(
+                "--all", "--pretty=format:", "--name-only",
+                "--diff-filter=A", "--", str(rel),
+            )
+        except Exception:  # noqa: BLE001
+            # A shallow clone or an unborn HEAD: fall back to what is present
+            # rather than failing item creation.
+            return set()
+        return {
+            Path(line).stem
+            for line in output.splitlines()
+            if line.strip().endswith((".yaml", ".yml"))
+        }
+
     def get_file_history(self, file_path: Path, max_count: int = 10) -> list:
         """Get commit history for a file."""
         if not self.repo:
