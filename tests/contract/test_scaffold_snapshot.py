@@ -169,4 +169,12 @@ class TestScaffoldIdempotency:
         with tempfile.TemporaryDirectory() as tmp:
             dhf_dir = Path(tmp) / "test-dhf"
             _scaffold_dhf(dhf_dir)
+            first = sorted(p.relative_to(dhf_dir) for p in dhf_dir.rglob("*") if p.is_file())
             _scaffold_dhf(dhf_dir)  # should not raise
+            second = sorted(p.relative_to(dhf_dir) for p in dhf_dir.rglob("*") if p.is_file())
+
+            # "does not crash" is not the property that matters: the scaffold
+            # has to still be there. Without this the test passes if the second
+            # call silently wipes it.
+            assert second == first, "the second scaffold changed the file set"
+            assert first, "the first scaffold produced nothing"

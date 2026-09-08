@@ -71,7 +71,14 @@ class TestInitCmd:
     def test_replace_placeholders_handles_missing_dir(self, tmp_path):
         """_replace_placeholders handles directories with no substitutable files gracefully."""
         (tmp_path / "DHF").mkdir()
+        untouched = tmp_path / "DHF" / "keep.txt"
+        untouched.write_text("no placeholders here")
+
         _replace_placeholders(tmp_path, "Device")
+
+        # A no-op would pass on "does not raise" alone; what matters is that it
+        # left a file with nothing to substitute exactly as it was.
+        assert untouched.read_text() == "no placeholders here"
 
     # ── .gitignore ───────────────────────────────────────────────────────────
 

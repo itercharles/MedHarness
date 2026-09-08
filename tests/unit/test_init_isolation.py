@@ -25,6 +25,13 @@ from medharness.workflows.init import (
 )
 
 
+def _safe_read(path) -> str:
+    try:
+        return path.read_text()
+    except (OSError, UnicodeDecodeError):
+        return ""
+
+
 class TestScaffoldIsolation:
     def test_venv_contents_are_not_rewritten(self, tmp_path: Path) -> None:
         """The documented setup puts .venv inside the project root."""
@@ -68,6 +75,18 @@ class TestScaffoldIsolation:
             _replace_placeholders(tmp_path, "Trial")  # must not raise
         finally:
             locked.chmod(0o644)
+
+        # "does not abort" is a claim about the files after the unreadable one.
+        # Without this the test passes if _replace_placeholders becomes a no-op.
+        substituted = [
+            f for f in (tmp_path / "DHF").rglob("*")
+            if f.is_file() and f != locked and "Trial" in _safe_read(f)
+        ]
+        assert substituted, "no file was substituted — the walk stopped or never ran"
+        assert not any("{{project_name}}" in _safe_read(f)
+                       for f in (tmp_path / "DHF").rglob("*")
+                       if f.is_file() and f != locked), \
+            "a placeholder survived past the unreadable file"
 
 
 class TestGitignoreScope:

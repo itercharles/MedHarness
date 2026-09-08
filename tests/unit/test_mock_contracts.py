@@ -123,6 +123,24 @@ def _mock_shape(node: ast.expr) -> object | None:
     return None
 
 
+def _item_dicts_anywhere(path: Path) -> list[tuple[frozenset, int]]:
+    """Every dict literal in a file that looks like a DHF item.
+
+    Not only the ones passed straight to `patch`. The shape that shipped a
+    broken `soup-sync` was built by a helper — `return {"uid": uid, "type":
+    "SOUP", ...}` — and handed to `return_value=[...]`, so a scan of `patch`
+    arguments alone saw neither the list's contents nor the helper.
+    """
+    found = []
+    for node in ast.walk(ast.parse(path.read_text())):
+        if not isinstance(node, ast.Dict):
+            continue
+        keys = {k.value for k in node.keys if isinstance(k, ast.Constant)}
+        if {"type"} <= keys and ("uid" in keys or "id" in keys):
+            found.append((frozenset(keys), node.lineno))
+    return found
+
+
 def _mocks() -> list[tuple[str, object, str, int]]:
     found = []
     for f in sorted(f for d in TEST_DIRS for f in d.rglob("test_*.py")):
@@ -209,4 +227,37 @@ class TestNoMockInventsAnItemField:
         assert "uid" not in shape, (
             f"{where}:{line} mocks {target} with a 'uid' key. Items carry 'id'; "
             f"a mock keyed 'uid' lets code read item['uid'] and pass."
+        )
+
+
+ITEM_LITERALS = [
+    (str(f.relative_to(ROOT)), keys, line)
+    for d in TEST_DIRS for f in sorted(d.rglob("test_*.py"))
+    for keys, line in _item_dicts_anywhere(f)
+]
+
+
+class TestNoItemLiteralUsesUid:
+    """An item-shaped dict must key its identifier `id`.
+
+    The check above only sees dicts passed directly to `patch`. The fixture that
+    shipped a broken `soup-sync` was a helper returning `{"uid": …, "type":
+    "SOUP", …}` handed to `return_value=[…]` — invisible to a scan of patch
+    arguments, and it kept seven `item["uid"]` reads alive for six releases.
+
+    Scoped to dicts carrying a `type` key, because that is what makes a dict an
+    item. Artifacts legitimately key the same value `uid` — `soup-sync` reports
+    orphans that way, and `release-baseline` writes `dhf_soup` entries — and
+    those carry no `type`.
+    """
+
+    def test_the_scan_found_item_literals(self) -> None:
+        assert len(ITEM_LITERALS) > 10, f"only {len(ITEM_LITERALS)} found — scan broken"
+
+    @pytest.mark.parametrize("where,keys,line", ITEM_LITERALS,
+                             ids=[f"{w}:{ln}" for w, _k, ln in ITEM_LITERALS])
+    def test_it_uses_id(self, where: str, keys: frozenset, line: int) -> None:
+        assert "uid" not in keys, (
+            f"{where}:{line} builds an item keyed 'uid'. Items carry 'id'; a "
+            f"fixture keyed 'uid' lets production code read item['uid'] and pass."
         )
