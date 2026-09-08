@@ -1200,7 +1200,7 @@ def _check_design_review(dhf_path: Path, cr_id: str) -> list[dict]:
             ),
         }]
     verdict = "unknown"
-    for line in review_file.read_text().splitlines():
+    for line in review_file.read_text(encoding="utf-8").splitlines():
         stripped = line.strip()
         if stripped.startswith("**Verdict:**"):
             lower = stripped.lower()

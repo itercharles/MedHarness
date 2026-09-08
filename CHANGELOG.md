@@ -11,6 +11,26 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+### Bug Fixes
+
+- **Seven network calls had no timeout.** Every `urlopen` in
+  `artifact_fetcher.py` — the GitHub and GitLab API calls behind `evidence
+  bundle` and JUnit artifact retrieval. Python's default is to block forever, so
+  a hung endpoint hung the CI job until the runner's own limit killed it, with
+  nothing pointing at the cause. All carry a 30-second timeout now.
+
+- **Text IO used the runner's locale.** Nineteen `read_text()` / `write_text()`
+  calls named no encoding, so on Python 3.11 they fall back to
+  `locale.getpreferredencoding()`. A DHF containing any non-ASCII text — a
+  requirement title in Chinese, an accented supplier name — reads fine on a
+  developer's UTF-8 machine and raises `UnicodeDecodeError` on a runner whose
+  locale is `C`. Scaffolding, upgrade, SBOM writing and report export were all
+  affected. Verified by reading a DHF with Chinese titles under `LC_ALL=C`.
+
+  Both are checked at the source level across both packages, so a call added
+  later is caught rather than discovered during an outage.
+
+
 ### Internal
 
 - **`medharness` read a private `dhfkit` attribute in ten places.**
