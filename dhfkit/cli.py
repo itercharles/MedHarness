@@ -672,7 +672,7 @@ def sbom_cmd(ctx: click.Context, output_path: Path | None, to_stdout: bool) -> N
     from importlib.metadata import version as pkg_version
 
     from dhfkit.local_adapter import LocalDHFAdapter
-    from dhfkit.sbom import build_sbom, write_sbom
+    from dhfkit.sbom import build_sbom, purl_gap, write_sbom
 
     dhf: Path = ctx.obj["dhf"]
     adapter = LocalDHFAdapter(dhf)
@@ -704,17 +704,21 @@ def sbom_cmd(ctx: click.Context, output_path: Path | None, to_stdout: bool) -> N
         "changed": changed,
     }))
     n = len(document["components"])
-    unmapped = [c["name"] for c in document["components"] if "purl" not in c]
     click.echo(
         f"{'Wrote' if changed else 'Unchanged'} {written} — {n} component(s).",
         err=True,
     )
-    if unmapped:
+    # Name the cause per component. A bare count says there is a problem without
+    # saying which of the two it is, and they need different fixes.
+    for component in document["components"]:
+        if "purl" in component:
+            continue
+        props = {p["name"]: p["value"] for p in component.get("properties", [])}
+        reason = purl_gap(
+            component["name"], component["version"], props.get("dhfkit:ecosystem", "")
+        )
         click.echo(
-            f"WARN [sbom] {len(unmapped)} component(s) have no purl "
-            f"(unmapped ecosystem): {', '.join(unmapped[:5])}"
-            + (" …" if len(unmapped) > 5 else ""),
-            err=True,
+            f"WARN [sbom] {component['bom-ref']}: no purl — {reason}", err=True
         )
 
 

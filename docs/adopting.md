@@ -321,8 +321,16 @@ test suite rather than by assertion. Each component carries its SOUP id as
 to the DHF item holding the justification and any documented vulnerability
 acceptance.
 
-**A component whose ecosystem has no package-URL type is emitted without a
-`purl`**, and the command says how many. A wrong purl resolves against a real
+**A component gets no `purl` when one cannot be built honestly**, and the command
+names the reason per component. Two causes need different fixes:
+
+- the ecosystem has no package-URL type — the mapping is a fixed table;
+- the version is a range (`^34.15.1`) rather than a version. §8.1.2 wants the
+  version actually in use, and a purl built from a range resolves against a real
+  registry and matches nothing.
+
+The component is still listed either way, and its `version` is reported exactly as
+the DHF records it — the SBOM does not clean up the register's data. A wrong purl resolves against a real
 registry, so an absent one is safer than a guessed one. The mapped ecosystems are
 PyPI, npm, Go, Maven, crates.io, NuGet, RubyGems, Packagist, Hex and Pub.
 
