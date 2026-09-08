@@ -11,6 +11,21 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+### Internal
+
+- **Four unreachable functions in `_helpers.py`**, 46 lines with no reference
+  anywhere — including inside the file itself. A shared-utility module is where
+  unreachable code goes to stay, so `tests/unit/test_no_dead_helpers.py` now
+  fails on any helper without a caller.
+
+  Scoped to that one module deliberately: a blanket dead-code rule across the
+  repo would flag Click commands, pytest hooks and `dhfkit.api`'s public
+  surface, and a check with false positives gets suppressed rather than fixed.
+
+  A hand scan had cleared `_run_command`; the guard caught it. That is the
+  point of writing the check rather than doing the pass.
+
+
 ### Bug Fixes
 
 - **A scaffolded CR could never reach `completed`.** `cr.yaml` transitions to
