@@ -67,6 +67,13 @@ def _validate_criteria(
         elif check_type == "relationship_field":
             if not item.get(field):
                 blocking.append(criterion["id"])
+        elif check_type == "field_present":
+            # Present but possibly empty. "Assessed, nothing affected" is a
+            # complete answer and an empty list is how it is written — the two
+            # checks above cannot say that, because both read a falsy value as
+            # absent. `verify completion` already accepts [] for exactly this.
+            if field not in item or item.get(field) is None:
+                blocking.append(criterion["id"])
     return (len(blocking) == 0, blocking)
 
 

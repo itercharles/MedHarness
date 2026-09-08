@@ -79,6 +79,32 @@ lifecycle:
     - develop
     to_state: completed
     label: Complete
+    # `verify completion` checks these in CI, after the fact. Checking them here
+    # refuses the transition instead, at the moment someone tries to close a CR
+    # that is not finished — which is the difference between a record that is
+    # right and one that is corrected later.
+    #
+    # The approval record `verify completion` also requires lives on a separate
+    # APR item, which a per-item criterion cannot see. That check stays in the
+    # gate; these three do not need it.
+    criteria:
+    - id: implementation_recorded
+      name: Implementation notes written
+      check_type: field_not_empty
+      field: implementation_notes
+      required: true
+    - id: risk_impact_assessed
+      name: Risk impact recorded
+      # `field_present`, not `relationship_field`: an empty list means the risks
+      # were assessed and none are affected, which is a complete answer.
+      check_type: field_present
+      field: affected_risk_items
+      required: true
+    - id: triaged
+      name: Triage decision recorded
+      check_type: field_not_empty
+      field: triage_result
+      required: true
   - from_states:
     - new
     - design

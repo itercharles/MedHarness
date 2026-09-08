@@ -11,6 +11,49 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+### Behaviour changes
+
+- **A CR cannot be closed before it carries what closure means.** The shipped
+  `cr.yaml` defined five transitions and zero criteria, so `completed` was
+  reachable from `develop` with no checks at all. The reference project had
+  eight CRs marked `completed` and all eight failed `verify completion`; the
+  clearest was one where the AI workflow wrote a good plan, the process broke
+  off before the approval gate, and someone transitioned the CR by hand.
+
+  `develop → completed` now requires `implementation_notes`, `affected_risk_items`
+  and `triage_result`, and names the missing ones when it refuses. The lifecycle
+  engine has supported blocking criteria since it was written — they had simply
+  never been configured for the doc type whose purpose is recording that a
+  change was carried out.
+
+  The approval record `verify completion` also requires lives on a separate APR
+  item, which a per-item criterion cannot see. That check stays in the gate. The
+  difference is when the other three are enforced: at the moment someone tries
+  to close an unfinished CR, rather than in CI afterwards.
+
+  **What breaks:** a CR closed through `cr workflow complete` without those
+  fields is refused. That is the case the change exists for.
+
+### Bug Fixes
+
+- **`update_item` reset the lifecycle state on every edit.** Any update that did
+  not itself set `status` sent the item back to its initial state — a CR in
+  `develop` returned to `new` because someone filled in a field. The comment
+  above the code described the intended rule, which is that editing a *stable*
+  (approved, released) item returns it for re-approval and clears its approval
+  fields; the code applied it to every state.
+
+  Found while adding the closure criteria above: filling in a CR's required
+  fields sent it back to `new`, so the act of qualifying disqualified it.
+
+- **Criteria could not express "assessed, nothing found."** Both check types read
+  a falsy value as absent, so `affected_risk_items: []` — the way "risks
+  assessed, none affected" is written, and what `verify completion` explicitly
+  accepts — counted as unassessed. A new `field_present` check distinguishes an
+  absent field from an empty one. A criterion stricter than the gate it mirrors
+  would refuse a CR the gate would pass.
+
+
 ### New Features
 
 - **`automation github-event` reports the linked issue.** `--github-output` now

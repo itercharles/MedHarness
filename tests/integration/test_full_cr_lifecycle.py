@@ -127,6 +127,20 @@ class TestCRItemLifecycle:
         assert r.returncode == 0, f"CR create failed:\n{r.stderr}"
         item = json.loads(r.stdout)
         assert item["id"].startswith("CR-")
+
+        # A CR can only close once it carries what closure is supposed to mean.
+        # The AI workflow writes these; a fixture standing in for a CR that has
+        # been through it has to supply them, or it is standing in for a CR that
+        # has not.
+        u = _dhf(
+            str(dhf / "DHF"), "item", "update", item["id"],
+            "--data", json.dumps({
+                "implementation_notes": "Implemented by the golden test.",
+                "affected_risk_items": [],
+                "triage_result": {"verdict": "approved"},
+            }),
+        )
+        assert u.returncode == 0, f"CR update failed:\n{u.stderr}"
         return item["id"]
 
     def test_initial_status_is_new(self, dhf, cr_id):
