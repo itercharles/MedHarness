@@ -31,13 +31,35 @@ sources:
   #   path: Cargo.lock
 
   # --- External tools ---
-  # Run any tool that outputs NDJSON per package on stdout.
+  # Run any tool that prints one JSON object per line on stdout.
+  #
+  # Use a block scalar (|) for anything multi-line. A double-quoted YAML string
+  # folds newlines into spaces, which turns embedded Python into one unparseable
+  # line — the example here used to do exactly that, so it never ran.
+  #
   # - type: command
-  #   run: "syft . -o syft-json=- | python3 -c \"
-  #     import sys,json
+  #   run: |
+  #     syft . -o syft-json=- | python3 -c "
+  #     import sys, json
   #     for a in json.load(sys.stdin)['artifacts']:
-  #         print(json.dumps({'name':a['name'],'version':a['version'],'ecosystem':a['type']}))
-  #     \""
+  #         print(json.dumps({'name': a['name'], 'version': a['version'],
+  #                           'ecosystem': a['type']}))
+  #     "
+  #
+  # A package manager with no parser here — pnpm, yarn, conda, Bazel — goes in
+  # this form too, and lets you choose the depth. Direct dependencies are usually
+  # what a SOUP register should hold; the full transitive closure is rarely a set
+  # anyone assesses one by one (IEC 62304 §8.1.2).
+  #
+  # - type: command
+  #   run: |
+  #     pnpm list --depth 0 --json | python3 -c "
+  #     import sys, json
+  #     for root in json.load(sys.stdin):
+  #         for name, info in (root.get('dependencies') or {}).items():
+  #             print(json.dumps({'name': name, 'version': info['version'],
+  #                               'ecosystem': 'npm'}))
+  #     "
 
   # --- Manual / non-package SOUP ---
   # Hardware components, operating systems, commercial software, etc.
