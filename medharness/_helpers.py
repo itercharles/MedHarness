@@ -11,6 +11,11 @@ import click
 
 
 def _make_adapter(dhf_path: Path):
+    # The shared choke point, so every command gets the check rather than the
+    # three that remembered to write it. `medharness dhf context overview`
+    # without --dhf reached pathlib with None and raised TypeError.
+    if dhf_path is None:
+        raise click.ClickException("--dhf is required when not set globally")
     try:
         from dhfkit.local_adapter import LocalDHFAdapter
     except ImportError:

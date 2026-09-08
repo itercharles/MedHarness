@@ -13,6 +13,22 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ### Bug Fixes
 
+- **`medharness dhf context overview` crashed without `--dhf`.** It reached
+  pathlib with `None` and raised `TypeError: expected str, bytes or
+  os.PathLike object, not NoneType`. Three sibling commands wrote the check by
+  hand and this one did not, so it now lives in `_make_adapter` — the shared
+  choke point every command already goes through.
+
+  All 43 leaf commands are walked from the live CLI and invoked bare, so a
+  command added later is covered without editing the test. Each runs in a
+  throwaway directory: a walk of a command tree runs `init` like any other
+  command, and the first version of that test scaffolded a DHF over the
+  checkout and substituted the placeholders inside `dhfkit/templates/`. The
+  suite now asserts the checkout is unchanged afterwards.
+
+
+### Bug Fixes
+
 - **Seven network calls had no timeout.** Every `urlopen` in
   `artifact_fetcher.py` — the GitHub and GitLab API calls behind `evidence
   bundle` and JUnit artifact retrieval. Python's default is to block forever, so
