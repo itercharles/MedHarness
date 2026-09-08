@@ -130,4 +130,7 @@ class TestResponseIsJsonSerializable:
                    return_value=[]), \
              patch("subprocess.run", return_value=_empty_diff()):
             result = generate_code("CR-301", dhf)
+        # Serialisable *and* non-empty: json.dumps({}) succeeds, so the round
+        # trip alone would pass on a function that returned nothing.
         json.dumps(result)
+        assert isinstance(result, dict) and result, result

@@ -11,6 +11,29 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+### Internal
+
+- **The mock-contract guard could not have caught the defect it was written
+  for.** It scanned dict literals passed straight to `patch`. The fixture that
+  shipped a broken `soup-sync` was a helper returning `{"uid": …, "type":
+  "SOUP", …}` handed to `return_value=[…]` — a call inside a list, invisible to
+  that scan, and it kept seven `item["uid"]` reads alive for six releases. Of
+  the 82 `dhfkit.api` mocks in the suite, the guard reached 11.
+
+  It now checks every item-shaped dict literal anywhere in a test file, scoped
+  to dicts carrying a `type` key because that is what makes a dict an item.
+  Artifacts legitimately key the same value `uid` — `soup-sync` orphans and
+  `release-baseline`'s `dhf_soup` entries — and carry no `type`. Verified by
+  restoring the historical fixture: it fails by file and line.
+
+- **Four tests asserted only that nothing was raised.** A no-op implementation
+  passed every one. `test_unreadable_file_does_not_abort_the_scaffold` claimed
+  the scaffold continued past the unreadable file and never checked that it
+  had; the double-scaffold test never checked the scaffold still existed.
+  Each now asserts the property its name claims, verified by stubbing the
+  function under test to a no-op.
+
+
 ### Bug Fixes
 
 - **Two checks could fail silently and the gate still passed.** The
