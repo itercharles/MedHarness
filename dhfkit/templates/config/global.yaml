@@ -73,6 +73,20 @@ global_lifecycle:
     action_label: Start Design
     icon: "\U0001F4D0"
     color: info
+  # The CR workflow's own states. cr.yaml transitions to `design` and `develop`
+  # and this list had only `designing` and `developing`, so a scaffolded CR
+  # could reach nothing but `rejected` — `completed` was unreachable, and with
+  # it every gate and release baseline that requires a completed CR.
+  - id: design
+    label: Design
+    action_label: Start Design
+    icon: "\U0001F4D0"
+    color: info
+  - id: develop
+    label: Develop
+    action_label: Start Development
+    icon: "\U0001F527"
+    color: warning
   - id: implementing
     label: Implementing
     action_label: Start Implementation
