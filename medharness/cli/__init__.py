@@ -3,11 +3,13 @@ from __future__ import annotations
 """MedHarness CLI — main entrypoint and group registration."""
 
 import click
+
+from dhfkit.cli_errors import DHFAwareGroup
 from pathlib import Path
 import medharness._helpers as _h
 
 
-@click.group()
+@click.group(cls=DHFAwareGroup)
 @click.version_option(package_name="medharness")
 @click.option(
     "--dhf",

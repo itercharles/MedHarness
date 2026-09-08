@@ -308,11 +308,16 @@ class LocalDHFAdapter:
         """Check required traceability, orphans, and coverage."""
         from dhfkit.traceability import check_traceability
         items = self._loader.load_all()
+        # Every field the schema calls a relationship, not just the V-model
+        # ones: a link the checker looks at but the loader never supplies is a
+        # check that silently does nothing, which is what happened to
+        # affected_risk_items.
+        link_fields = set(_TRACEABILITY_LINK_FIELDS) | (self._config.relationship_fields() or set())
         item_dicts = [
             {
                 "id": it.uid,
                 "all_linked_uids": it.all_linked_uids,
-                **{f: getattr(it, f) for f in _TRACEABILITY_LINK_FIELDS if getattr(it, f, None)},
+                **{f: getattr(it, f) for f in link_fields if getattr(it, f, None)},
                 **{k: v for k, v in it.model_extra.items() if v is not None},
             }
             for it in items

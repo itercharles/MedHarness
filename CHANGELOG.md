@@ -13,6 +13,40 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ### Bug Fixes
 
+- **One mistyped field in one item crashed nine of thirteen commands.** A DHF
+  item with an unknown field raised `ValidationError` out to the terminal as a
+  traceback — from `verify dhf`, `verify verification`, `verify completion`,
+  `verify soup`, `dhfkit report`, `sbom`, `item list`, `release-baseline` and
+  `validate traceability`. Only `dhfkit validate schema` handled it, and a
+  hand-edited item with a typo is the likeliest mistake a DHF user makes.
+
+  For the gates this also misreported the fault: exit 1 with nothing on stdout
+  is what `docs/interface.md` defines as "a usage error raised before the gate
+  ran", so a consumer following the documented pattern would blame its own
+  invocation rather than the DHF.
+
+  Both CLIs now report it: `Error: The DHF could not be read: RISK-001.yaml:
+  Unknown field 'typo_field' for doc type 'RISK'`. Exit codes are unchanged —
+  the gate genuinely could not run — and the traceback is gone.
+
+- **Five of the nine relationship fields in the schema had no dangling-link
+  detection.** Two hand-written lists decided which fields were links — one in
+  the adapter, one in the checker — and they disagreed. `affected_items`,
+  `fixed_in_release`, `found_in_release` and `target_release` were in neither;
+  `affected_risk_items` was in the checker but never supplied by the adapter, so
+  a check someone had written did nothing.
+
+  A CR pointing at a deleted RISK through `affected_risk_items` went unreported,
+  which is exactly the broken reference `find_dangling_links` exists to catch.
+
+  The field set is derived from the doc-type schema now, with the hand-written
+  list kept only as a floor. Doc types are project-owned, so a project that adds
+  a relationship field gets it checked without editing this package —
+  `test_dangling_covers_the_schema.py` covers fields that do not exist yet.
+
+
+### Bug Fixes
+
 - **The only `command` example in `soup-sources.yaml` could never have run.** It
   embedded multi-line Python in a double-quoted YAML string, and YAML folds those
   newlines into spaces — the script collapsed to one unparseable line. The
