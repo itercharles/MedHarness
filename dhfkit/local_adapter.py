@@ -39,6 +39,7 @@ class LocalDHFAdapter:
         self._dhf_root = Path(dhf_root)
         self._config = ProjectConfig.load(self._dhf_root / "config")
         items_dir = self._dhf_root / "items"
+        self._items_dir = items_dir
         self._git = GitRepository(self._dhf_root, auto_commit=auto_commit)
         self._loader = ItemLoader(items_dir, project_config=self._config)
         self._saver = ItemSaver(items_dir, git_repo=self._git, project_config=self._config)
@@ -199,8 +200,16 @@ class LocalDHFAdapter:
         if not dt_cfg:
             raise ValueError(f"Unknown doc type: {doc_type_code}")
         all_items = self._loader.load_all()
-        existing_ids = [i.uid for i in all_items if i.uid.startswith(dt_cfg.prefix)]
-        data['id'] = get_next_id(dt_cfg.prefix, existing_ids)
+        # Every ID ever used, not only those present. Reusing a deleted ID makes
+        # one identifier mean two different items over a project's life, and
+        # every reference to it — a CR's affected_items, an approval record, a
+        # test's dhf_links — silently retargets.
+        existing_ids = {i.uid for i in all_items}
+        existing_ids |= self._git.item_ids_ever_added(self._items_dir)
+        data['id'] = get_next_id(
+            dt_cfg.prefix,
+            [i for i in existing_ids if i.startswith(dt_cfg.prefix)],
+        )
 
         doc_type_code = data['id'].split('-')[0]
         dt_cfg = self._config.get_doc_type(doc_type_code)
