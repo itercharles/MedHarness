@@ -58,12 +58,36 @@ class TestTheScaffoldedCRCanReachCompleted:
     """The state every gate and release baseline depends on."""
 
     def test_the_full_path(self, tmp_path: Path) -> None:
+        """Closing needs the record that closure is supposed to mean."""
         _scaffold_dhf(tmp_path)
         _replace_placeholders(tmp_path, "Lifecycle")
         dhf = tmp_path / "DHF"
-        for state in ("design", "develop", "completed"):
+        for state in ("design", "develop"):
             api.transition_item(dhf, "CR-001", state)
+
+        with pytest.raises(ValueError, match="implementation_recorded"):
+            api.transition_item(dhf, "CR-001", "completed")
+
+        api.update_item(dhf, "CR-001", {
+            "implementation_notes": "Toolbar updated.",
+            "affected_risk_items": ["RISK-001"],
+            "triage_result": {"verdict": "approved"},
+        })
+        api.transition_item(dhf, "CR-001", "completed")
         assert api.get_item(dhf, "CR-001")["status"] == "completed"
+
+    def test_updating_a_field_does_not_undo_the_lifecycle(self, tmp_path: Path) -> None:
+        """`update_item` reset any non-stable state to the initial one.
+
+        Filling in a CR's required fields sent it back to `new`, so the criteria
+        above could never be satisfied — the act of qualifying disqualified it.
+        """
+        _scaffold_dhf(tmp_path)
+        _replace_placeholders(tmp_path, "Lifecycle")
+        dhf = tmp_path / "DHF"
+        api.transition_item(dhf, "CR-001", "design")
+        api.update_item(dhf, "CR-001", {"implementation_notes": "x"})
+        assert api.get_item(dhf, "CR-001")["status"] == "design"
 
     def test_an_undefined_state_is_still_refused(self, tmp_path: Path) -> None:
         """Widening the state list must not make the machine permissive."""
