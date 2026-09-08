@@ -11,6 +11,24 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+### Bug Fixes
+
+- **The only `command` example in `soup-sources.yaml` could never have run.** It
+  embedded multi-line Python in a double-quoted YAML string, and YAML folds those
+  newlines into spaces — the script collapsed to one unparseable line. The
+  `command` source is the escape hatch for a package manager with no parser, so
+  the documented way out of an unsupported ecosystem was itself broken.
+
+  Both examples use a block scalar (`|`) now, and a second one shows the pnpm
+  case: `pnpm list --depth 0` chooses the depth, which a hardcoded lockfile
+  parser cannot. Direct dependencies are usually what a SOUP register should
+  hold — the full transitive closure is rarely a set anyone assesses one by one.
+
+  `test_soup_sources_examples.py` uncomments every example, parses it, checks the
+  embedded script compiles, and runs one through `soup-sync` end to end against
+  a stub. An example nobody executes is a suggestion, not documentation.
+
+
 ---
 
 ## [0.17.2] — 2026-09-08
