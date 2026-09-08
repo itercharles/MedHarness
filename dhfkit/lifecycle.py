@@ -109,6 +109,24 @@ def get_available_transitions(
         try:
             state_info = get_state_info(config, to_state)
         except ValueError:
+            # The doc type offers this transition and global.yaml does not
+            # define its target. Dropping it silently made a configuration fault
+            # look like a rule: a scaffolded CR could not reach `completed`, and
+            # the only symptom was that `completed` was not on offer.
+            #
+            # global.yaml is project-owned and `upgrade` never rewrites it, so a
+            # project that scaffolded before a state was added keeps a config
+            # its doc types have outgrown. Reporting beats guessing which.
+            available.append({
+                "to_state": to_state,
+                "action_label": to_state.title(),
+                "icon": None,
+                "color": None,
+                "can_transition": False,
+                "blocking_criteria": [
+                    f"state {to_state!r} is not defined in global_lifecycle.states"
+                ],
+            })
             continue
 
         can_transition, blocking = _validate_criteria(

@@ -31,6 +31,28 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
   not implement — with the fix, a stale one would block every transition using
   it, which is the safe direction but still a broken scaffold.
 
+- **A transition whose target state is undefined vanished silently.**
+  `get_available_transitions` skipped past any transition it could not resolve,
+  so a configuration fault looked like a rule: a scaffolded CR could not reach
+  `completed`, and the only symptom was that `completed` was absent from the
+  list of available transitions. Executing it then said "not allowed from state
+  'develop'", blaming the state machine for a gap in the config.
+
+  v0.18.0 fixed the template that caused it. This fixes the mechanism: the
+  transition is now reported, marked unavailable, naming the state
+  `global_lifecycle.states` does not define.
+
+  That distinction matters because `global.yaml` is project-owned and `upgrade`
+  never rewrites it — correctly, since it holds the safety class and its
+  rationale. But it also defines the lifecycle states shipped doc types
+  reference, so **a project that scaffolded before a state was added can never
+  receive it.** Diffing the v0.14.0 scaffold against today, that file is the
+  only changed one no upgrade category manages, and `design`/`develop` are the
+  only difference in it.
+
+  A second check asserts no shipped doc type targets a state `global.yaml` does
+  not define — catching this at the source rather than in a project.
+
 ### Behaviour changes
 
 - **A CR cannot be closed before it carries what closure means.** The shipped
