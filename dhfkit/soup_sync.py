@@ -502,6 +502,9 @@ def diff_against_dhf(
     to_create: list[dict] = []
     to_update: list[dict] = []
     matched: list[dict] = []
+    # Items expose "id". The artifact keys below stay "uid" because existing
+    # consumers read them — the same split release-baseline makes. Reading
+    # item["uid"] was simply wrong, and crashed soup-sync on every real DHF.
     matched_item_ids: set[str] = set()
 
     for pkg in packages:
@@ -509,7 +512,7 @@ def diff_against_dhf(
         if item is None:
             to_create.append(pkg)
         else:
-            matched_item_ids.add(item["uid"])
+            matched_item_ids.add(item["id"])
             soup_ver = _normalize_version(item.get("version") or "")
             manifest_ver = _normalize_version(pkg["version"])
             if soup_ver != manifest_ver:
@@ -517,7 +520,7 @@ def diff_against_dhf(
             else:
                 matched.append({"pkg": pkg, "item": item})
 
-    orphans = [it for it in soup_items if it["uid"] not in matched_item_ids]
+    orphans = [it for it in soup_items if it["id"] not in matched_item_ids]
     return {
         "to_create": to_create,
         "to_update": to_update,
@@ -630,7 +633,7 @@ def sync_soup_items(
                     "license": "",
                 }
                 new_item = api.create_item(dhf, data, author=author, cr_id=cr_id)
-                items_created.append(new_item["uid"])
+                items_created.append(new_item["id"])
             except Exception as exc:
                 errors.append(f"Failed to create SOUP item for {pkg['name']}: {exc}")
 
@@ -638,9 +641,9 @@ def sync_soup_items(
             pkg = entry["pkg"]
             item = entry["item"]
             try:
-                api.update_item(dhf, item["uid"], {"version": pkg["version"]},
+                api.update_item(dhf, item["id"], {"version": pkg["version"]},
                                 author=author, cr_id=cr_id)
-                items_updated.append(item["uid"])
+                items_updated.append(item["id"])
             except Exception as exc:
                 errors.append(f"Failed to update {item['uid']}: {exc}")
 
@@ -651,11 +654,11 @@ def sync_soup_items(
         "packages_found": len(packages),
         "to_create": [p["name"] for p in diff["to_create"]],
         "to_update": [
-            {"uid": e["item"]["uid"], "name": e["pkg"]["name"],
+            {"uid": e["item"]["id"], "name": e["pkg"]["name"],
              "old_version": e["old_version"], "new_version": e["pkg"]["version"]}
             for e in diff["to_update"]
         ],
-        "orphans": [{"uid": it["uid"], "name": it.get("name", "")} for it in diff["orphans"]],
+        "orphans": [{"uid": it["id"], "name": it.get("name", "")} for it in diff["orphans"]],
         "matched_count": len(diff["matched"]),
         "items_created": items_created,
         "items_updated": items_updated,
