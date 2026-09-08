@@ -11,6 +11,10 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+---
+
+## [0.17.2] — 2026-09-08
+
 ### Bug Fixes
 
 - **`soup-sync` crashed on every real DHF.** It read `item["uid"]` in seven
@@ -48,9 +52,6 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
   The warning also names the cause per component instead of counting them. An
   unmappable ecosystem and an unusable version need different fixes, and
   `2 component(s) have no purl` said which was needed for neither.
-
-
----
 
 ## [0.17.1] — 2026-09-07
 
@@ -1107,8 +1108,6 @@ upgrading** — `verify dhf` can now fail on a DHF that previously passed.
 - **TDD workflow documented** — README and `docs/adopting.md` updated with
   end-to-end examples of writing test points at design time and gating coverage
   in CI.
-
----
 
 ## [0.8.0] — 2026-05-19
 
