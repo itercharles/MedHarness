@@ -1,6 +1,7 @@
 """YAML file saver for items."""
 
 from pathlib import Path
+import os
 import yaml
 from typing import Optional, Dict, Any
 from dhfkit.models.item import Item
@@ -76,17 +77,30 @@ class ItemSaver:
         if data.get('history') == []:
             data.pop('history', None)
 
-        with open(file_path, 'w', encoding='utf-8') as f:
-            yaml.dump(
-                data,
-                f,
-                default_flow_style=False,
-                allow_unicode=True,
-                sort_keys=False
-            )
+        # Decided before the write. `file_path.exists()` after it is always
+        # true, so every new item was committed as "Updated" — and in a DHF the
+        # git history is the record of when an item came into being.
+        action = "updated" if file_path.exists() else "created"
+
+        # Written to a sibling and moved into place: `open(path, 'w')` truncates
+        # first, so a failure part-way through yaml.dump left a half-written
+        # item that no longer loads. os.replace is atomic on the same
+        # filesystem, so the item is either the old one or the new one.
+        tmp_path = file_path.with_name(f".{file_path.name}.tmp")
+        try:
+            with open(tmp_path, 'w', encoding='utf-8') as f:
+                yaml.dump(
+                    data,
+                    f,
+                    default_flow_style=False,
+                    allow_unicode=True,
+                    sort_keys=False
+                )
+            os.replace(tmp_path, file_path)
+        finally:
+            tmp_path.unlink(missing_ok=True)
 
         if self.git_repo and self.git_repo.is_available():
-            action = "created" if not file_path.exists() else "updated"
             self.git_repo.commit_item_change(
                 item.uid,
                 file_path,
