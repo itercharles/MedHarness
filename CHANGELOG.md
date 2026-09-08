@@ -13,6 +13,21 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ### Bug Fixes
 
+- **An interrupted write destroyed the item it was replacing.** `save` opened
+  the file with mode `'w'`, which truncates before anything is written, so a
+  failure part-way through `yaml.dump` — a full disk, a serialisation error —
+  left a half-written item that no longer loads. In a DHF that item *is* the
+  record. Items are written to a sibling and moved into place with
+  `os.replace` now, so an item is either the old one or the new one.
+
+- **Every new item was committed to git as "Updated".** `created` vs `updated`
+  was decided *after* the file was written, so `file_path.exists()` was always
+  true. The git history is the DHF's account of when an item came into being,
+  and it recorded every creation as an edit.
+
+
+### Bug Fixes
+
 - **A deleted item's ID was handed to the next one.** The next-ID calculation
   looked only at items present on disk, so deleting `SRS-003` and creating
   another produced `SRS-003` again — while git still held the original with
