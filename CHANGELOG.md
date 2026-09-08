@@ -11,6 +11,26 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+### Bug Fixes
+
+- **An unreadable transition criterion passed instead of blocking.**
+  `_validate_criteria` was an if/elif chain with no else, so a `check_type` the
+  engine did not recognise — a typo, or a key that predates a rename — fell off
+  the end and the criterion never blocked. A project would have configured a
+  gate, watched it approve everything, and had nothing to distinguish that from
+  a gate that was satisfied.
+
+  This is the third instance of the same shape this cycle:
+  `required_test_levels` written with the wrong YAML form disabled level
+  checking and reported a pass; the `command` example in `soup-sources.yaml`
+  collapsed to one unparseable line; a mistyped `check_type` opened the gate it
+  was meant to close. An unreadable criterion now blocks and names both the
+  criterion and the type it could not read.
+
+  A second check asserts no shipped doc type uses a `check_type` the engine does
+  not implement — with the fix, a stale one would block every transition using
+  it, which is the safe direction but still a broken scaffold.
+
 ### Behaviour changes
 
 - **A CR cannot be closed before it carries what closure means.** The shipped

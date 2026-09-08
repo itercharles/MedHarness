@@ -74,6 +74,15 @@ def _validate_criteria(
             # absent. `verify completion` already accepts [] for exactly this.
             if field not in item or item.get(field) is None:
                 blocking.append(criterion["id"])
+        else:
+            # A criterion the engine cannot read blocks rather than passes. A
+            # typo in `check_type` used to fall off the end of this chain and
+            # let the transition through — a project would have configured a
+            # gate, watched it approve everything, and had no way to tell.
+            blocking.append(
+                f"{criterion.get('id', '?')} (unknown check_type "
+                f"{check_type!r})"
+            )
     return (len(blocking) == 0, blocking)
 
 
