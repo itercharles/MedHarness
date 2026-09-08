@@ -246,7 +246,7 @@ def _write_traceability_report(core, doc_types: tuple[str, ...], output: Path,
     output.parent.mkdir(parents=True, exist_ok=True)
 
     json_output = output.with_suffix(".json")
-    json_output.write_text(json.dumps(matrix, indent=2))
+    json_output.write_text(json.dumps(matrix, indent=2), encoding="utf-8")
 
     result: dict = {
         "path": str(json_output),

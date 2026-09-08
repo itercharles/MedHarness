@@ -257,12 +257,12 @@ def write_sbom(document: dict, output_path: Path) -> tuple[Path, bool]:
     """
     if output_path.exists():
         try:
-            existing = json.loads(output_path.read_text())
+            existing = json.loads(output_path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
             existing = None
         if existing and _without_timestamp(existing) == _without_timestamp(document):
             return output_path, False
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(json.dumps(document, indent=2, sort_keys=False) + "\n")
+    output_path.write_text(json.dumps(document, indent=2, sort_keys=False) + "\n", encoding="utf-8")
     return output_path, True

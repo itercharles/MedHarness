@@ -609,7 +609,7 @@ def _read_design_review_data(repo_root: Path, cr_id: str) -> dict:
     """
     review_file = repo_root / "docs" / "reviews" / f"{cr_id}-Design-Review.md"
     try:
-        content = review_file.read_text()
+        content = review_file.read_text(encoding="utf-8")
     except OSError:
         return {"verdict": "unknown", "issues": []}
     return _parse_review_data(content)

@@ -85,7 +85,7 @@ _USER_OWNED: frozenset[str] = frozenset({
 def _read_project_name(project_dir: Path) -> str:
     global_yaml = project_dir / "DHF" / "config" / "global.yaml"
     try:
-        text = global_yaml.read_text()
+        text = global_yaml.read_text(encoding="utf-8")
         m = re.search(r'project_name:\s*["\']?([^"\'\n]+)["\']?', text)
         if m:
             return m.group(1).strip()
@@ -142,7 +142,7 @@ def check_upgrade(project_dir: Path) -> dict:
             continue
 
         try:
-            tmpl_text = tmpl_path.read_text()
+            tmpl_text = tmpl_path.read_text(encoding="utf-8")
         except OSError:
             continue
 
@@ -153,7 +153,7 @@ def check_upgrade(project_dir: Path) -> dict:
             continue
 
         try:
-            proj_text = proj_path.read_text()
+            proj_text = proj_path.read_text(encoding="utf-8")
         except OSError:
             missing.append({"file": proj_rel})
             continue
@@ -226,11 +226,11 @@ def apply_upgrade(project_dir: Path) -> dict:
         tmpl_path = _TEMPLATES_DIR / tmpl_rel
         proj_path = project_dir / proj_rel
         try:
-            rendered = _substitute(tmpl_path.read_text(), project_name, installed_version)
+            rendered = _substitute(tmpl_path.read_text(encoding="utf-8"), project_name, installed_version)
         except OSError:
             continue
         proj_path.parent.mkdir(parents=True, exist_ok=True)
-        proj_path.write_text(rendered)
+        proj_path.write_text(rendered, encoding="utf-8")
         applied.append(proj_rel)
 
     for tmpl_rel, proj_rel in _SEED_MAP:
@@ -239,11 +239,11 @@ def apply_upgrade(project_dir: Path) -> dict:
             continue  # the project's copy wins, always
         tmpl_path = _TEMPLATES_DIR / tmpl_rel
         try:
-            rendered = _substitute(tmpl_path.read_text(), project_name, installed_version)
+            rendered = _substitute(tmpl_path.read_text(encoding="utf-8"), project_name, installed_version)
         except OSError:
             continue
         proj_path.parent.mkdir(parents=True, exist_ok=True)
-        proj_path.write_text(rendered)
+        proj_path.write_text(rendered, encoding="utf-8")
         applied.append(proj_rel)
 
     n_applied = len(applied)

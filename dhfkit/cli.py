@@ -301,7 +301,7 @@ def validate_traceability(ctx: click.Context, fail_on_uncovered: bool, report_pa
 
     if report_path:
         import json as _json
-        Path(report_path).write_text(_json.dumps(result, indent=2, default=str))
+        Path(report_path).write_text(_json.dumps(result, indent=2, default=str), encoding="utf-8")
         click.echo(f"✓ Traceability report written to {report_path}", err=True)
 
     if not required.get("passed", True):

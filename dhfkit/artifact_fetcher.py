@@ -30,6 +30,11 @@ from urllib.request import Request, urlopen
 
 from dhfkit.junit_parser import ExecutionResult, parse_junit_xml
 
+#: Seconds. Python's default is no timeout at all — a urlopen against a hung
+#: endpoint blocks forever, and these run inside CI, where "forever" means the
+#: job hangs until the runner's own limit kills it with no useful message.
+_HTTP_TIMEOUT = 30
+
 _GITHUB_API = "https://api.github.com"
 
 # Artifact names uploaded by the CI pipeline
@@ -160,7 +165,7 @@ class GitHubArtifactFetcher:
     def _api_get(self, path: str) -> dict:
         url = f"{_GITHUB_API}{path}"
         req = Request(url, headers=self._auth_headers())
-        with urlopen(req) as resp:
+        with urlopen(req, timeout=_HTTP_TIMEOUT) as resp:
             return json.loads(resp.read())
 
     def _api_get_raw(self, url: str) -> bytes:
@@ -190,7 +195,7 @@ class GitHubArtifactFetcher:
                 raise ValueError(f"Redirect from {url} had no Location header") from exc
 
         # Step 2: unauthenticated download from the pre-signed storage URL.
-        with urlopen(redirect_url) as resp:
+        with urlopen(redirect_url, timeout=_HTTP_TIMEOUT) as resp:
             return resp.read()
 
     def _auth_headers(self) -> dict:
@@ -384,12 +389,12 @@ class GitLabArtifactFetcher:
     def _api_get(self, path: str) -> object:
         url = f"{self._base_url}{path}" if path.startswith("/") else path
         req = Request(url, headers={"PRIVATE-TOKEN": self._token})
-        with urlopen(req) as resp:
+        with urlopen(req, timeout=_HTTP_TIMEOUT) as resp:
             return json.loads(resp.read())
 
     def _download_raw(self, url: str) -> bytes:
         req = Request(url, headers={"PRIVATE-TOKEN": self._token})
-        with urlopen(req) as resp:
+        with urlopen(req, timeout=_HTTP_TIMEOUT) as resp:
             return resp.read()
 
     @staticmethod
@@ -531,12 +536,12 @@ class JenkinsArtifactFetcher:
 
     def _api_get(self, url: str) -> dict:
         req = Request(url, headers=self._auth_headers())
-        with urlopen(req) as resp:
+        with urlopen(req, timeout=_HTTP_TIMEOUT) as resp:
             return json.loads(resp.read())
 
     def _download_raw(self, url: str) -> bytes:
         req = Request(url, headers=self._auth_headers())
-        with urlopen(req) as resp:
+        with urlopen(req, timeout=_HTTP_TIMEOUT) as resp:
             return resp.read()
 
     def _auth_headers(self) -> dict:

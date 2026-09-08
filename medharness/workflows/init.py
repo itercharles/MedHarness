@@ -106,7 +106,7 @@ def _replace_placeholders(project_dir: Path, project_name: str) -> None:
         if path.suffix not in text_extensions:
             continue
         try:
-            text = path.read_text()
+            text = path.read_text(encoding="utf-8")
         except UnicodeDecodeError:
             continue
         except OSError:
@@ -117,16 +117,16 @@ def _replace_placeholders(project_dir: Path, project_name: str) -> None:
         text = text.replace("{{medharness_repo}}", "itercharles/MedHarness")
         text = text.replace("{{primary_test_tool}}", "pytest")
         if text != original:
-            path.write_text(text)
+            path.write_text(text, encoding="utf-8")
 
     global_yaml = project_dir / "DHF" / "config" / "global.yaml"
     if global_yaml.exists():
-        content = global_yaml.read_text()
+        content = global_yaml.read_text(encoding="utf-8")
         content = content.replace(
             'project_name: "My Medical Device Software"',
             f'project_name: "{project_name}"',
         )
-        global_yaml.write_text(content)
+        global_yaml.write_text(content, encoding="utf-8")
 
 
 # ---------------------------------------------------------------------------
@@ -163,7 +163,7 @@ def _write_claude_md(project_dir: Path, project_name: str) -> Path:
   - `DHF/documents/specs/customer_requirement_specification.md`
   - `DHF/documents/specs/architecture_design_specification.md`
   - `DHF/documents/plans/development_plan.md`
-""")
+""", encoding="utf-8")
     return dest
 
 
@@ -193,7 +193,7 @@ DHF/documents/exports/
 dist/
 build/
 .pytest_cache/
-""")
+""", encoding="utf-8")
     return dest
 
 
