@@ -13,6 +13,27 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ### Bug Fixes
 
+- **A scaffolded CR could never reach `completed`.** `cr.yaml` transitions to
+  `design` and `develop`; `global.yaml` listed only `designing` and
+  `developing`. `get_available_transitions` drops a transition whose target it
+  cannot resolve — silently — so the only move available from `new` was
+  `rejected`. `completed` was unreachable, and with it `verify completion` and
+  every release baseline that requires a completed CR.
+
+  Nothing failed. The transition was simply not offered. The two states are
+  defined now, and every doc-type transition target is checked against the
+  global lifecycle.
+
+  This affects `transition_item` — the API path, and the one a project using
+  `dhfkit` standalone would take. The AI workflow writes CR states directly, as
+  `docs/architecture.md` says, so it was unaffected.
+
+  `global.yaml` is project-owned, so an existing project must add the two states
+  itself; `medharness upgrade` will not rewrite it.
+
+
+### Bug Fixes
+
 - **An interrupted write destroyed the item it was replacing.** `save` opened
   the file with mode `'w'`, which truncates before anything is written, so a
   failure part-way through `yaml.dump` — a full disk, a serialisation error —
