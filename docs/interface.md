@@ -176,6 +176,30 @@ for gate in manifest["gates"]:
 
 ---
 
+## Event context for a workflow
+
+`medharness automation github-event --github-output "$GITHUB_OUTPUT"` writes the
+CR context straight to a job's outputs:
+
+```
+cr_id  mode  pr_number  stage  action  event_name  branch_ref  issue_number
+```
+
+A value is written only when it is known, so a downstream `if:` sees an absent
+output rather than an empty string. **Do not re-read these through a file and
+`jq -r '.field // ""'`** — that turns a failed parse into an empty value that
+flows onward and makes every dependent job skip silently, which reads as a green
+run that did nothing.
+
+`issue_number` is the issue the pull request closes, read from a closing keyword
+(`Closes #88`, `Fixes #13`) in the body carried by the payload. A bare `#12` is a
+reference, not a link, and is not reported. **An issue linked through the GitHub
+UI leaves no trace in the payload**, so an absent `issue_number` means "not
+derivable here", not "there is none" — a workflow that needs those cases still
+has to ask the API.
+
+---
+
 ## Beyond the gates
 
 `dhfkit` follows the same output convention for DHF data operations — item CRUD, validation, document generation, SOUP sync, release baselines — but those commands predate the envelope and keep their own result shapes. Read `--help` for the command you need. `dhfkit` has no dependency on `medharness`, so a project that wants only the engine can use it alone; see [adopting.md](adopting.md#using-dhfkit-standalone).

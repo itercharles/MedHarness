@@ -11,6 +11,29 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+### New Features
+
+- **`automation github-event` reports the linked issue.** `--github-output` now
+  writes `issue_number` alongside the rest of the CR context, read from a closing
+  keyword in the pull-request body the payload already carries.
+
+  This exists because of what it removes. The reference project called
+  `--github-output "$GITHUB_OUTPUT"` correctly, then ran a second step that
+  re-read the same fields with `jq -r '.cr_id // ""'` purely so it could add
+  `issue_number` from a `gh api` call. That re-read is where a failed parse
+  became an empty `cr_id` flowing to seven downstream jobs, each of which then
+  skipped silently — a green run that did nothing, which is the worst outcome a
+  compliance tool can produce.
+
+  A bare `#12` is a reference, not a link, and is not reported: naming an issue
+  the PR does not close is worse than naming none. An issue linked through the
+  GitHub UI leaves no trace in the payload, so an absent `issue_number` means
+  "not derivable here" — a workflow needing those still has to ask the API.
+
+  A value is written only when known, so a downstream `if:` sees an absent output
+  rather than an empty string.
+
+
 ---
 
 ## [0.18.0] — 2026-09-08
