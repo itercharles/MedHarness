@@ -73,6 +73,22 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
   count and entries had survived in the payload while the one line anybody
   reads said "Applied 0 update(s). 27 already current."
 
+- **Two files claiming one item ID went undetected.** An ID is what the rest of
+  the DHF points at — `dhf_links`, `affected_items`, an approval's scope, a
+  test's evidence. With two items answering to `SRS-001`, `get_item` returns
+  whichever the loader saw first and the other exists, unreferenced and
+  unreachable.
+
+  Nothing reported it. Each file was individually schema-valid, `validate schema`
+  counted them separately and passed, and `verify dhf` returned `passed: true`.
+  The only visible symptom was one traceability warning printed twice — which
+  reads as a rendering glitch, not as a second item.
+
+  `validate schema` now fails naming both paths, and `verify dhf` with it. The
+  filename is still not what makes a duplicate: the `id` inside the file is
+  authoritative, so a renamed file with a unique ID is fine and a copy under any
+  name is not.
+
 ### Behaviour changes
 
 - **A CR cannot be closed before it carries what closure means.** The shipped
