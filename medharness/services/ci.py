@@ -137,12 +137,15 @@ def ci_structural_gate(
         required = tr.get("required", {})
         coverage_list = tr.get("coverage", [])
         dangling = tr.get("dangling", [])
+        cycles = tr.get("cycles", [])
         results["traceability"] = {
             "passed": required.get("passed", True)
             and not dangling
+            and not cycles
             and all(c.get("passed", True) for c in coverage_list),
             "required": required,
             "dangling": dangling,
+            "cycles": cycles,
             "coverage": coverage_list,
             "summary": tr.get("summary", ""),
         }
@@ -151,6 +154,10 @@ def ci_structural_gate(
         # A link that resolves to nothing is always an error — unlike an uncovered
         # item, it is not a gap in the design but a broken reference.
         if dangling:
+            passed = False
+        # Same class as a dangling link: not a gap in the design, a broken
+        # reference. A cycle means neither item has an origin.
+        if cycles:
             passed = False
         for c in coverage_list:
             if not c.get("passed", True) and fail_on_uncovered:
@@ -238,6 +245,11 @@ def _structural_messages(results: dict, fail_on_uncovered: bool) -> tuple[list[s
         errors.append(
             f"{d['source']}.{d['field']} -> {d['target']}: target does not exist"
         )
+    for cycle in trace.get("cycles", []):
+        # The V-model is directed. A cycle means neither item has an origin, so
+        # the matrix stops being one.
+        path = " -> ".join(cycle + [cycle[0]]) if len(cycle) > 1 else f"{cycle[0]} -> itself"
+        errors.append(f"Traceability cycle: {path}")
 
     # Uncovered items block only under --fail-on-uncovered; anywhere else they
     # are a gap in design still to be written, not a broken reference.
