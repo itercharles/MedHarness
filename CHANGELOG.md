@@ -11,6 +11,55 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+---
+
+## [0.19.0] — 2026-09-09
+
+### New Features
+
+- **`automation github-event` reports the linked issue.** `--github-output` now
+  writes `issue_number` alongside the rest of the CR context, read from a closing
+  keyword in the pull-request body the payload already carries.
+
+  This exists because of what it removes. The reference project called
+  `--github-output "$GITHUB_OUTPUT"` correctly, then ran a second step that
+  re-read the same fields with `jq -r '.cr_id // ""'` purely so it could add
+  `issue_number` from a `gh api` call. That re-read is where a failed parse
+  became an empty `cr_id` flowing to seven downstream jobs, each of which then
+  skipped silently — a green run that did nothing, which is the worst outcome a
+  compliance tool can produce.
+
+  A bare `#12` is a reference, not a link, and is not reported: naming an issue
+  the PR does not close is worse than naming none. An issue linked through the
+  GitHub UI leaves no trace in the payload, so an absent `issue_number` means
+  "not derivable here" — a workflow needing those still has to ask the API.
+
+  A value is written only when known, so a downstream `if:` sees an absent output
+  rather than an empty string.
+
+### Behaviour changes
+
+- **A CR cannot be closed before it carries what closure means.** The shipped
+  `cr.yaml` defined five transitions and zero criteria, so `completed` was
+  reachable from `develop` with no checks at all. The reference project had
+  eight CRs marked `completed` and all eight failed `verify completion`; the
+  clearest was one where the AI workflow wrote a good plan, the process broke
+  off before the approval gate, and someone transitioned the CR by hand.
+
+  `develop → completed` now requires `implementation_notes`, `affected_risk_items`
+  and `triage_result`, and names the missing ones when it refuses. The lifecycle
+  engine has supported blocking criteria since it was written — they had simply
+  never been configured for the doc type whose purpose is recording that a
+  change was carried out.
+
+  The approval record `verify completion` also requires lives on a separate APR
+  item, which a per-item criterion cannot see. That check stays in the gate. The
+  difference is when the other three are enforced: at the moment someone tries
+  to close an unfinished CR, rather than in CI afterwards.
+
+  **What breaks:** a CR closed through `cr workflow complete` without those
+  fields is refused. That is the case the change exists for.
+
 ### Bug Fixes
 
 - **An unreadable transition criterion passed instead of blocking.**
@@ -109,31 +158,6 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
   now asserts no finding key is left behind — the same drift that has bitten
   `_UPGRADE_MAP`, the gates manifest, and the envelope's reader sites.
 
-### Behaviour changes
-
-- **A CR cannot be closed before it carries what closure means.** The shipped
-  `cr.yaml` defined five transitions and zero criteria, so `completed` was
-  reachable from `develop` with no checks at all. The reference project had
-  eight CRs marked `completed` and all eight failed `verify completion`; the
-  clearest was one where the AI workflow wrote a good plan, the process broke
-  off before the approval gate, and someone transitioned the CR by hand.
-
-  `develop → completed` now requires `implementation_notes`, `affected_risk_items`
-  and `triage_result`, and names the missing ones when it refuses. The lifecycle
-  engine has supported blocking criteria since it was written — they had simply
-  never been configured for the doc type whose purpose is recording that a
-  change was carried out.
-
-  The approval record `verify completion` also requires lives on a separate APR
-  item, which a per-item criterion cannot see. That check stays in the gate. The
-  difference is when the other three are enforced: at the moment someone tries
-  to close an unfinished CR, rather than in CI afterwards.
-
-  **What breaks:** a CR closed through `cr workflow complete` without those
-  fields is refused. That is the case the change exists for.
-
-### Bug Fixes
-
 - **`update_item` reset the lifecycle state on every edit.** Any update that did
   not itself set `status` sent the item back to its initial state — a CR in
   `develop` returned to `new` because someone filled in a field. The comment
@@ -150,32 +174,6 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
   accepts — counted as unassessed. A new `field_present` check distinguishes an
   absent field from an empty one. A criterion stricter than the gate it mirrors
   would refuse a CR the gate would pass.
-
-
-### New Features
-
-- **`automation github-event` reports the linked issue.** `--github-output` now
-  writes `issue_number` alongside the rest of the CR context, read from a closing
-  keyword in the pull-request body the payload already carries.
-
-  This exists because of what it removes. The reference project called
-  `--github-output "$GITHUB_OUTPUT"` correctly, then ran a second step that
-  re-read the same fields with `jq -r '.cr_id // ""'` purely so it could add
-  `issue_number` from a `gh api` call. That re-read is where a failed parse
-  became an empty `cr_id` flowing to seven downstream jobs, each of which then
-  skipped silently — a green run that did nothing, which is the worst outcome a
-  compliance tool can produce.
-
-  A bare `#12` is a reference, not a link, and is not reported: naming an issue
-  the PR does not close is worse than naming none. An issue linked through the
-  GitHub UI leaves no trace in the payload, so an absent `issue_number` means
-  "not derivable here" — a workflow needing those still has to ask the API.
-
-  A value is written only when known, so a downstream `if:` sees an absent output
-  rather than an empty string.
-
-
----
 
 ## [0.18.0] — 2026-09-08
 
@@ -1575,8 +1573,6 @@ upgrading** — `verify dhf` can now fail on a DHF that previously passed.
   `release-baseline.json` and `software-bom.json` to `--out-dir`. `--write`
   creates a REL item in the DHF. Manifest parse failures propagate as errors so
   an incomplete BOM never silently looks successful.
-
----
 
 ## [0.6.4] — 2026-05-16
 
