@@ -68,17 +68,13 @@ def _validate_criteria(
             if not item.get(field):
                 blocking.append(criterion["id"])
         elif check_type == "field_present":
-            # Present but possibly empty. "Assessed, nothing affected" is a
-            # complete answer and an empty list is how it is written — the two
-            # checks above cannot say that, because both read a falsy value as
-            # absent. `verify completion` already accepts [] for exactly this.
+            # Present but possibly empty: "assessed, nothing affected" is a
+            # complete answer, and the checks above read [] as absent.
             if field not in item or item.get(field) is None:
                 blocking.append(criterion["id"])
         else:
-            # A criterion the engine cannot read blocks rather than passes. A
-            # typo in `check_type` used to fall off the end of this chain and
-            # let the transition through — a project would have configured a
-            # gate, watched it approve everything, and had no way to tell.
+            # Fail closed: a typo in `check_type` must block the transition,
+            # not fall off the end of this chain and approve everything.
             blocking.append(
                 f"{criterion.get('id', '?')} (unknown check_type "
                 f"{check_type!r})"
@@ -109,14 +105,10 @@ def get_available_transitions(
         try:
             state_info = get_state_info(config, to_state)
         except ValueError:
-            # The doc type offers this transition and global.yaml does not
-            # define its target. Dropping it silently made a configuration fault
-            # look like a rule: a scaffolded CR could not reach `completed`, and
-            # the only symptom was that `completed` was not on offer.
-            #
-            # global.yaml is project-owned and `upgrade` never rewrites it, so a
-            # project that scaffolded before a state was added keeps a config
-            # its doc types have outgrown. Reporting beats guessing which.
+            # global.yaml is project-owned and `upgrade` never rewrites it, so
+            # a doc type can outgrow it. Report the missing state rather than
+            # dropping the transition, which makes a config fault look like a
+            # rule.
             available.append({
                 "to_state": to_state,
                 "action_label": to_state.title(),

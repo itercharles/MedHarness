@@ -79,14 +79,10 @@ lifecycle:
     - develop
     to_state: completed
     label: Complete
-    # `verify completion` checks these in CI, after the fact. Checking them here
-    # refuses the transition instead, at the moment someone tries to close a CR
-    # that is not finished — which is the difference between a record that is
-    # right and one that is corrected later.
-    #
-    # The approval record `verify completion` also requires lives on a separate
-    # APR item, which a per-item criterion cannot see. That check stays in the
-    # gate; these three do not need it.
+    # `verify completion` checks these in CI after the fact; checking them here
+    # refuses the transition instead. The approval record it also requires lives
+    # on a separate APR item, which a per-item criterion cannot see, so that one
+    # check stays in the gate.
     criteria:
     - id: implementation_recorded
       name: Implementation notes written

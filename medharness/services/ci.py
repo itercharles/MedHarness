@@ -163,8 +163,7 @@ def ci_structural_gate(
         # item, it is not a gap in the design but a broken reference.
         if dangling:
             passed = False
-        # Same class as a dangling link: not a gap in the design, a broken
-        # reference. A cycle means neither item has an origin.
+        # Same class as a dangling link: a broken reference, not a design gap.
         if cycles:
             passed = False
         for c in coverage_list:
@@ -254,8 +253,7 @@ def _structural_messages(results: dict, fail_on_uncovered: bool) -> tuple[list[s
             f"{d['source']}.{d['field']} -> {d['target']}: target does not exist"
         )
     for cycle in trace.get("cycles", []):
-        # The V-model is directed. A cycle means neither item has an origin, so
-        # the matrix stops being one.
+
         path = " -> ".join(cycle + [cycle[0]]) if len(cycle) > 1 else f"{cycle[0]} -> itself"
         errors.append(f"Traceability cycle: {path}")
 

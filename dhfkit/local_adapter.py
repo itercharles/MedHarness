@@ -249,11 +249,9 @@ class LocalDHFAdapter:
         doc_type_code = uid.split("-")[0]
         dt = self._config.get_doc_type_by_prefix(doc_type_code + "-")
         if dt and dt.lifecycle:
-            # Only a *stable* state resets. Editing an approved or released item
-            # returns it for re-approval, which is design control; editing one
-            # mid-lifecycle does not, and resetting it there silently discarded
-            # the item's progress — filling in a CR's required fields sent it
-            # back to `new`, so it could never satisfy the criteria for closing.
+            # Only a *stable* state resets: editing an approved item returns it
+            # for re-approval, but editing one mid-lifecycle must not discard its
+            # progress — that made a CR's closure criteria unsatisfiable.
             old_status = existing.model_dump().get("status")
             if old_status and is_stable(self._config, old_status):
                 initial = get_initial_state(self._config, doc_type_code)

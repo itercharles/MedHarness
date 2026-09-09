@@ -16,7 +16,9 @@ at a missing issue in the first place. Everything below needs the set.
 
 from __future__ import annotations
 
-from typing import Any, Dict, Iterable, List, Optional
+from typing import Any, Iterable, List
+
+import networkx as nx
 
 from dhfkit.item_type import ItemType
 from dhfkit.traceability import _LINK_FIELDS, _prefix_of, find_dangling_links
@@ -237,7 +239,6 @@ def build_module_map(items: list[dict], config: Any) -> list[dict]:
 
     module_items = {it["id"]: it for it in items if it["id"].startswith(module_prefix)}
 
-    # Group SWDDs by their module field
     by_module: dict[str, list[dict]] = {}
     for it in items:
         if not it["id"].startswith(swdd_prefix):
@@ -273,7 +274,6 @@ def build_module_map(items: list[dict], config: Any) -> list[dict]:
             "all_requirements": all_reqs,
         })
 
-    # Include modules with no SWDDs so the map is complete
     for mod_id in sorted(module_items):
         if mod_id not in by_module:
             result.append({
@@ -295,17 +295,13 @@ def find_link_cycles(
     each derive from the other, so neither has an origin and the matrix loses
     the direction that makes it a matrix.
 
-    `medharness/graph.py` has had cycle detection since it was written, and
-    nothing on the `verify dhf` path called it — a cycle passed every gate.
-    Detected here instead, next to the other link checks, so it travels with
-    them rather than depending on a separate graph being built.
-
-    Returns each cycle as the list of IDs in it, starting from its lowest ID so
-    the same cycle reads the same way between runs.
+    Returns each cycle as the list of IDs in it, rotated to start at its lowest
+    ID so the same cycle reads the same way between runs.
     """
     fields = sorted(set(_LINK_FIELDS) | set(link_fields or ()))
     known = {str(i.get("id")) for i in items if i.get("id")}
-    edges: dict[str, set[str]] = {}
+
+    graph = nx.DiGraph()
     for item in items:
         source = str(item.get("id") or "")
         if not source:
@@ -314,47 +310,15 @@ def find_link_cycles(
             value = item.get(field)
             targets = value if isinstance(value, list) else [value] if value else []
             for target in targets:
-                target = str(target)
-                # Absent targets are dropped so the graph holds only real
-                # items. It cannot change the result — a target that is not an
-                # item has no outgoing edges, so no walk returns through it —
-                # but a graph containing nodes nobody can open is harder to
-                # reason about than one that does not.
-                #
-                # A self-link is kept: an item deriving from itself is the
-                # degenerate cycle, and just as wrong as a two-item one.
-                if target in known:
-                    edges.setdefault(source, set()).add(target)
+                if str(target) in known:
+                    graph.add_edge(source, str(target))
 
-    cycles: list[list[str]] = []
-    seen_signatures: set[frozenset] = set()
-    colour: dict[str, int] = {}   # 0 unvisited, 1 on the stack, 2 done
+    cycles = []
+    for cycle in nx.simple_cycles(graph):
+        start = cycle.index(min(cycle))
+        cycles.append(cycle[start:] + cycle[:start])
+    return sorted(cycles, key=lambda c: (c[0], c))
 
-    def walk(node: str, stack: list[str]) -> None:
-        colour[node] = 1
-        stack.append(node)
-        for nxt in sorted(edges.get(node, ())):
-            if nxt == node:
-                signature = frozenset({node})
-                if signature not in seen_signatures:
-                    seen_signatures.add(signature)
-                    cycles.append([node])
-            elif colour.get(nxt, 0) == 1:
-                cycle = stack[stack.index(nxt):]
-                signature = frozenset(cycle)
-                if signature not in seen_signatures:
-                    seen_signatures.add(signature)
-                    start = cycle.index(min(cycle))
-                    cycles.append(cycle[start:] + cycle[:start])
-            elif colour.get(nxt, 0) == 0:
-                walk(nxt, stack)
-        stack.pop()
-        colour[node] = 2
-
-    for node in sorted(edges):
-        if colour.get(node, 0) == 0:
-            walk(node, [])
-    return sorted(cycles, key=lambda c: c[0])
 
 def check_traceability(items: list[dict], config: Any) -> dict:
     """
@@ -472,7 +436,6 @@ def format_traceability_report(result: dict) -> str:
     lines.append(f"Summary: {result.get('summary', '')}")
     lines.append("")
 
-    # Required traceability
     required = result.get("required", {})
     lines.append("Required Traceability")
     lines.append("-" * 40)
@@ -487,7 +450,6 @@ def format_traceability_report(result: dict) -> str:
             )
     lines.append("")
 
-    # Dangling links
     dangling = result.get("dangling", [])
     if dangling:
         lines.append("Dangling Links")
@@ -498,7 +460,6 @@ def format_traceability_report(result: dict) -> str:
             )
         lines.append("")
 
-    # Coverage matrix
     coverage = result.get("coverage", [])
     lines.append("Coverage Matrix")
     lines.append("-" * 40)
@@ -518,7 +479,6 @@ def format_traceability_report(result: dict) -> str:
                 lines.append(f"         ↳ uncovered: {uid}")
     lines.append("")
 
-    # Orphans
     orphans = result.get("orphans", [])
     if orphans:
         lines.append("Orphaned Items")
@@ -528,7 +488,6 @@ def format_traceability_report(result: dict) -> str:
             lines.append(f"  {oid}")
         lines.append("")
 
-    # Risk chain
     risk_chain = result.get("risk_chain", [])
     if risk_chain:
         lines.append("Risk Chain")
@@ -558,10 +517,6 @@ def analyse(adapter) -> dict:
     """
     return check_traceability(adapter.list_items(), adapter.config)
 
-
-#: The V-model defaults: which layer must link to which, and which layer
-#: covers which. These are modelling decisions about the process, not
-#: constraints a store enforces — a project overrides them in global.yaml.
 
 def default_traceability_rules() -> List["RequiredTraceabilityRule"]:
     """Generate required traceability rules from ItemType V-model metadata."""
