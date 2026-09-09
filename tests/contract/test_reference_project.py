@@ -55,10 +55,6 @@ class TestSchemaValidation:
         r = _dhf(dhf_root, "validate", "schema")
         assert r.returncode == 0, f"Schema validation failed:\n{r.stderr}"
 
-    def test_validate_traceability_runs(self, dhf):
-        dhf_root = str(dhf / "DHF")
-        r = _dhf(dhf_root, "validate", "traceability")
-        assert r.returncode in (0, 1)
 
 
 class TestItemOperations:

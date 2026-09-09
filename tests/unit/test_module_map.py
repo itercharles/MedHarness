@@ -1,10 +1,10 @@
-"""Tests for dhfkit.traceability.build_module_map."""
+"""Tests for medharness.services.traceability.build_module_map."""
 
 from __future__ import annotations
 
 import pytest
 
-from dhfkit.traceability import build_module_map
+from medharness.services.traceability import build_module_map
 
 
 class _FakeDocType:

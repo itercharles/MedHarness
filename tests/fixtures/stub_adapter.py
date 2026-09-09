@@ -114,8 +114,6 @@ class StubDHFAdapter:
     def validate_schema(self) -> dict:
         return {"valid": True, "errors": []}
 
-    def validate_traceability(self) -> dict:
-        return {"valid": True, "orphans": [], "gaps": []}
 
     # ------------------------------------------------------------------
     # Test results
@@ -155,8 +153,6 @@ class StubDHFAdapter:
     def list_documents(self) -> List[str]:
         return list(self._documents.keys())
 
-    def get_implementation_context(self, cr_id: str) -> dict:
-        return {"cr": self.get_item(cr_id), "implementation_spec": None}
 
     # ------------------------------------------------------------------
     # Compliance runs (no-op)

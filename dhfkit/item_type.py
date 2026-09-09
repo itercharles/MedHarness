@@ -63,33 +63,5 @@ class ItemType(Enum):
         return None
 
 
-def default_traceability_rules() -> List["RequiredTraceabilityRule"]:
-    """Generate required traceability rules from ItemType V-model metadata."""
-    from dhfkit.models.config import RequiredTraceabilityRule
-    rules = []
-    for member in ItemType:
-        meta = member.value
-        for link_field, target_code in meta.required_upstream:
-            rules.append(RequiredTraceabilityRule(
-                source_type=meta.code,
-                direction="upstream",
-                field=link_field,
-                target_type=target_code,
-                min_count=1,
-            ))
-    return rules
 
 
-def default_coverage_chains() -> List["TraceabilityMatrix"]:
-    """Generate traceability matrices from ItemType coverage_children metadata."""
-    from dhfkit.models.config import TraceabilityMatrix
-    matrices = []
-    for member in ItemType:
-        meta = member.value
-        for child_code in meta.coverage_children:
-            matrices.append(TraceabilityMatrix(
-                name=f"{meta.code} → {child_code}",
-                description=f"{meta.display_name} covered by {child_code}",
-                path=[meta.code, child_code],
-            ))
-    return matrices

@@ -1,7 +1,7 @@
 """Unit tests for build_risk_chain, find_affected_risks, and format_traceability_report."""
 
 from dhfkit.models.config import ProjectConfig, DocTypeConfig
-from dhfkit.traceability import build_risk_chain, find_affected_risks, format_traceability_report
+from medharness.services.traceability import build_risk_chain, find_affected_risks, format_traceability_report
 
 
 def _config() -> ProjectConfig:

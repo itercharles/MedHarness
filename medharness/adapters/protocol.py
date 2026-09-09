@@ -31,7 +31,6 @@ class DHFAdapter(Protocol):
     # -- Validation --------------------------------------------------------
 
     def validate_schema(self) -> dict: ...
-    def validate_traceability(self) -> dict: ...
 
     # -- Item type metadata (replaces get_project_config) ------------------
 
@@ -60,8 +59,6 @@ class DHFAdapter(Protocol):
     def list_documents(self) -> List[str]: ...
 
     # -- CR context --------------------------------------------------------
-
-    def get_implementation_context(self, cr_id: str) -> dict: ...
 
     # -- Compliance run history (optional extension point) -----------------
 

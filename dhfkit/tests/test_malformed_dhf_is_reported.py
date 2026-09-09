@@ -32,7 +32,6 @@ COMMANDS = [
     ("medharness", ["verify", "soup", "--offline-mode", "warn"]),
     ("dhfkit", ["validate", "schema"]),
     ("dhfkit", ["validate", "traceability"]),
-    ("dhfkit", ["report"]),
     ("dhfkit", ["sbom"]),
     ("dhfkit", ["item", "list"]),
     ("dhfkit", ["release-baseline", "--version", "1.0", "--out-dir", "{tmp}/out"]),
@@ -94,7 +93,14 @@ def test_the_fixture_actually_reaches_most_commands(broken: Path) -> None:
         f"{m} {args[0]}" for m, args in COMMANDS
         if "could not be read" in (lambda p: p.stderr + p.stdout)(_run(m, args, broken))
     ]
-    assert len(reached) >= 8, f"only {len(reached)} commands read the DHF: {reached}"
+    # Was 8 before `dhfkit validate traceability` and `dhfkit report` were
+    # removed — both read the DHF, and both were analysis that moved to
+    # medharness. The floor tracks the command surface, not a fixed number.
+    assert len(reached) >= 7, f"only {len(reached)} commands read the DHF: {reached}"
+    assert len(reached) >= len(COMMANDS) // 2, (
+        f"the fixture reaches {len(reached)} of {len(COMMANDS)} commands — "
+        f"the checks above could pass by never getting there"
+    )
 
 
 class TestAMissingDHFIsAlsoAMessage:

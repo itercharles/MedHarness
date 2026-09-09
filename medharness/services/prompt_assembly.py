@@ -234,7 +234,7 @@ def _build_risk_context_block(dhf_path: Path) -> str:
 
 def _build_module_context_block(dhf_path: Path) -> str:
     """Pre-compute the MODULE → SWDD → SRS map for the develop prompt."""
-    from dhfkit.traceability import build_module_map
+    from medharness.services.traceability import build_module_map
 
     adapter = _load_adapter(dhf_path, "module map")
     module_map = build_module_map(adapter.list_items(), adapter.config)

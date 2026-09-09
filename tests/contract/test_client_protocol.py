@@ -30,7 +30,7 @@ _PROTOCOL_METHODS = [
     # Lifecycle
     "execute_transition", "get_available_transitions",
     # Validation
-    "validate_schema", "validate_traceability",
+    "validate_schema",
     # Item type metadata
     "get_item_type", "list_item_types", "get_lifecycle_states",
     # Test results
@@ -39,7 +39,6 @@ _PROTOCOL_METHODS = [
     # Documents
     "get_document", "list_documents",
     # CR context
-    "get_implementation_context",
     # Compliance runs
     "record_compliance_run", "get_compliance_runs",
     # Doc generation

@@ -11,6 +11,53 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+### Breaking Changes
+
+- **Traceability analysis moved from `dhfkit` to `medharness`.** `dhfkit` stores
+  and retrieves records; `medharness` analyses them.
+
+  A change-controlled organisation may already keep its DHF in Jira, Azure
+  DevOps or a system of its own, and those manage a single item well. What none
+  of them do is take the items together and ask whether the V-model holds —
+  whether every system requirement gives rise to a software one, whether a chain
+  closes back on itself, which risks a change touches. That analysis is the
+  point of this project, so it cannot live inside one storage implementation:
+  `dhfkit` is one backend among possible others, and a team swapping it must
+  keep the analysis.
+
+  **Removed:** `dhfkit validate traceability`, `dhfkit report`,
+  `dhfkit.api.validate_traceability`, `LocalDHFAdapter.validate_traceability`,
+  and `get_implementation_context` (which had no callers — only a protocol
+  declaration, a stub, and a contract test maintaining an interface nobody
+  used).
+
+  **Added:** `dhfkit validate links`, which is what stayed behind — does every
+  link name an item that exists. That is referential integrity, and a store
+  answers it on its own; a Jira link cannot dangle in the first place.
+
+  `medharness verify dhf` is unchanged and now covers everything the removed
+  commands did.
+
+  The adapter protocol lost `validate_traceability` too: a backend had to
+  implement the V-model analysis to count as a store.
+
+  The V-model defaults (`default_traceability_rules`, `default_coverage_chains`)
+  moved with it — "every SRS must derive from a SYS" is a modelling decision
+  about the process, not a storage constraint, and Jira will not enforce it
+  either.
+
+  `tests/unit/test_storage_does_not_analyse.py` keeps the line: no analysis
+  function may live in `dhfkit`, the analysis may not import a storage backend
+  or touch the filesystem, and the adapter protocol may not demand analysis.
+
+### Bug Fixes
+
+- **The structural gate stopped reporting a traceability check it could not
+  run.** Moving the analysis out replaced a call that had no guard; a failure
+  there now says so rather than escaping, matching what schema and
+  verification_criteria already did.
+
+
 ---
 
 ## [0.19.0] — 2026-09-09

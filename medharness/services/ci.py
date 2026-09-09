@@ -30,6 +30,7 @@ from dhfkit.junit_parser import (
     TEST_LEVELS,
 )
 from dhfkit.testing_points import parse_testing_points
+from medharness.services.traceability import analyse
 
 
 # ---------------------------------------------------------------------------
@@ -133,7 +134,14 @@ def ci_structural_gate(
             passed = False
 
     if run_traceability:
-        tr = adapter.validate_traceability()
+        try:
+            tr = analyse(adapter)
+        except Exception as exc:  # noqa: BLE001
+            # Reporting zero findings on a DHF the analysis could not read is a
+            # pass indistinguishable from a sound one. Say it could not run.
+            tr = {}
+            results["traceability_error"] = f"traceability could not be checked: {exc}"
+            passed = False
         required = tr.get("required", {})
         coverage_list = tr.get("coverage", [])
         dangling = tr.get("dangling", [])
@@ -265,6 +273,8 @@ def _structural_messages(results: dict, fail_on_uncovered: bool) -> tuple[list[s
     # because the items would not load is the same output as a clean DHF.
     if results.get("verification_gaps_error"):
         errors.append(results["verification_gaps_error"])
+    if results.get("traceability_error"):
+        errors.append(results["traceability_error"])
 
     # --coverage-pair results live under their own key; a caller who asked for a
     # pair explicitly gets an error, not a warning.

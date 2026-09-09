@@ -188,6 +188,38 @@ def validate() -> None:
     """Commands for DHF data validation."""
 
 
+@validate.command("links")
+@click.pass_context
+def validate_links(ctx: click.Context) -> None:
+    """Check that every traceability link names an item that exists.
+
+    Referential integrity of what is stored, not whether the V-model holds. A
+    link resolving to nothing is a typo or a deleted item, and a store answers
+    that on its own; whether coverage is adequate is analysis and lives in
+    `medharness verify dhf`.
+
+    Exits 1 if any link points at a missing item.
+    """
+    from dhfkit.traceability import find_dangling_links
+
+    dhf_path: Path = ctx.obj["dhf"]
+    adapter = _make_adapter(dhf_path)
+    dangling = find_dangling_links(
+        adapter.list_items(),
+        adapter.config.relationship_fields() or (),
+    )
+    click.echo(json.dumps({"passed": not dangling, "dangling": dangling}))
+    for d in dangling:
+        click.echo(
+            f"  ✗ {d['source']}.{d['field']} → {d['target']}: target does not exist",
+            err=True,
+        )
+    if dangling:
+        click.echo(f"{len(dangling)} dangling link(s).", err=True)
+        sys.exit(1)
+    click.echo("✓ All traceability links resolve.", err=True)
+
+
 @validate.command("schema")
 @click.pass_context
 def validate_schema(ctx: click.Context) -> None:
@@ -243,75 +275,6 @@ def _traceability_summary(result: dict, fail_on_uncovered: bool) -> str:
     return "All checks passed."
 
 
-@validate.command("traceability")
-@click.option("--fail-on-uncovered", is_flag=True, default=False,
-              help="Exit 1 if any items lack downstream coverage (default: warn only).")
-@click.option("--report", "report_path", default=None, metavar="PATH",
-              help="Write full traceability report as JSON to this file.")
-@click.pass_context
-def validate_traceability(ctx: click.Context, fail_on_uncovered: bool, report_path: str | None) -> None:
-    """Check required traceability, orphan detection, and coverage.
-
-    Exits 1 on required traceability failures or orphaned items.
-    Exits 1 on uncovered items only when --fail-on-uncovered is set.
-    """
-    dhf_path: Path = ctx.obj["dhf"]
-    adapter = _make_adapter(dhf_path)
-    result = adapter.validate_traceability()
-
-    # Report required traceability failures
-    required = result.get("required", {})
-    for f in required.get("failures", []):
-        click.echo(f"  ✗ REQUIRED {f['id']}: {f['issue']}", err=True)
-
-    # Report deprecation warnings (deduplicated)
-    seen_warnings = set()
-    for w in result.get("deprecation_warnings", []):
-        if w not in seen_warnings:
-            seen_warnings.add(w)
-            click.echo(f"  ⚠ DEPRECATED {w}", err=True)
-
-    # Report orphans (deprecated allowed_parents)
-    for o in result["orphans"]:
-        click.echo(f"  ✗ ORPHAN {o['id']}: {o['issue']}", err=True)
-
-    # Report dangling links — always blocking, distinct from coverage gaps
-    dangling = result.get("dangling", [])
-    for d in dangling:
-        click.echo(
-            f"  ✗ DANGLING {d['source']}.{d['field']} → {d['target']}: target does not exist",
-            err=True,
-        )
-
-    # Report coverage per matrix pair. Uncovered items are advisory unless
-    # --fail-on-uncovered is set, so label them WARN rather than implying a
-    # blocked build.
-    gap_label = "✗" if fail_on_uncovered else "⚠"
-    for c in result["coverage"]:
-        status = "✓" if c["passed"] else gap_label
-        click.echo(
-            f"  {status} {c['parent_type']} → {c['child_type']}: "
-            f"{c['covered']}/{c['total']} covered",
-            err=True,
-        )
-        for uid in c["uncovered"]:
-            click.echo(f"      ↳ uncovered: {uid}", err=True)
-
-    click.echo(_traceability_summary(result, fail_on_uncovered), err=True)
-
-    if report_path:
-        import json as _json
-        Path(report_path).write_text(_json.dumps(result, indent=2, default=str), encoding="utf-8")
-        click.echo(f"✓ Traceability report written to {report_path}", err=True)
-
-    if not required.get("passed", True):
-        sys.exit(1)
-    if result["orphans"]:
-        sys.exit(1)
-    if dangling:
-        sys.exit(1)
-    if fail_on_uncovered and not result["passed"]:
-        sys.exit(1)
 
 
 # ---------------------------------------------------------------------------
@@ -564,31 +527,6 @@ def init_cmd(ctx: click.Context, project_name: str) -> None:
     click.echo(f"  dhfkit --dhf {dhf_path} validate traceability", err=True)
 
 
-@main.command("report")
-@click.option("--format", "fmt", type=click.Choice(["text", "json"]), default="text", show_default=True)
-@click.option("--out", "out_path", default=None, type=click.Path(dir_okay=False, path_type=Path),
-              help="Write report to this file instead of stdout.")
-@click.pass_context
-def report_cmd(ctx: click.Context, fmt: str, out_path: Path | None) -> None:
-    """Print a human-readable traceability coverage report.
-
-    Shows required-link failures, coverage gaps, and a per-matrix breakdown.
-    Use --format json to get the raw validation dict for scripting.
-    """
-    from dhfkit.traceability import format_traceability_report
-    adapter = _make_adapter(ctx.obj["dhf"])
-    result = adapter.validate_traceability()
-    if fmt == "json":
-        output = json.dumps(result, indent=2)
-    else:
-        output = format_traceability_report(result)
-    if out_path:
-        out_path.write_text(output + "\n", encoding="utf-8")
-        click.echo(f"Report written to {out_path}", err=True)
-    else:
-        click.echo(output)
-    if not result.get("passed"):
-        sys.exit(1)
 
 
 @main.command("soup-sync")

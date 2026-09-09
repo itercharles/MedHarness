@@ -81,7 +81,7 @@ def test_validate_atomic_branch_includes_risk_impact(tmp_path: Path):
     with patch("medharness.services.git.collect_dhf_item_changes",
                return_value={"created": ["SYS-010"], "updated": [], "deleted": []}), \
          patch("dhfkit.local_adapter.LocalDHFAdapter", return_value=mock_adapter), \
-         patch("dhfkit.traceability.find_affected_risks", return_value=expected_impact):
+         patch("medharness.services.traceability.find_affected_risks", return_value=expected_impact):
         result = validate_atomic_branch(repo_root, dhf, "CR-001")
 
     assert result["passed"] is True

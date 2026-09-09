@@ -16,6 +16,7 @@ from pathlib import Path
 import yaml
 
 from dhfkit.exceptions import ValidationError
+from medharness.services.traceability import analyse
 
 _VERIFIABLE_TYPES = frozenset({"CRS", "SYS", "SRS"})
 
@@ -81,7 +82,8 @@ def _validate_schema_and_traceability(_api, dhf_path: Path) -> list[dict]:
             })
 
     try:
-        trace_result = _api.validate_traceability(dhf_path)
+        from dhfkit.local_adapter import LocalDHFAdapter
+        trace_result = analyse(LocalDHFAdapter(dhf_path))
     except (FileNotFoundError, ValidationError, ValueError, yaml.YAMLError) as exc:
         errors.append({
             "field": "traceability",

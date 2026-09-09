@@ -8,6 +8,7 @@ import subprocess
 from datetime import datetime
 from pathlib import Path
 import click
+from medharness.services.traceability import analyse as _analyse
 
 
 def _make_adapter(dhf_path: Path):
@@ -85,7 +86,7 @@ def _run_acceptance_gate(core, junit_paths: list[Path], coverage_pairs: tuple[st
         core.inject_junit_results(junit_paths)
 
     traceability = core.validate()
-    adapter_result = core._adapter.validate_traceability()
+    adapter_result = _analyse(core._adapter)
     required = adapter_result.get("required", {})
     user_supplied = bool(coverage_pairs)
     pairs = coverage_pairs or DEFAULT_ACCEPTANCE_COVERAGE_PAIRS
