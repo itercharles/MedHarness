@@ -295,6 +295,78 @@ _LINK_FIELDS = (
 )
 
 
+def find_link_cycles(
+    items: list[dict], link_fields: Iterable[str] | None = None
+) -> list[list[str]]:
+    """Find traceability links that form a cycle.
+
+    The V-model is directed: a customer requirement gives rise to a system
+    requirement, which gives rise to a software one. A cycle means two items
+    each derive from the other, so neither has an origin and the matrix loses
+    the direction that makes it a matrix.
+
+    `medharness/graph.py` has had cycle detection since it was written, and
+    nothing on the `verify dhf` path called it — a cycle passed every gate.
+    Detected here instead, next to the other link checks, so it travels with
+    them rather than depending on a separate graph being built.
+
+    Returns each cycle as the list of IDs in it, starting from its lowest ID so
+    the same cycle reads the same way between runs.
+    """
+    fields = sorted(set(_LINK_FIELDS) | set(link_fields or ()))
+    known = {str(i.get("id")) for i in items if i.get("id")}
+    edges: dict[str, set[str]] = {}
+    for item in items:
+        source = str(item.get("id") or "")
+        if not source:
+            continue
+        for field in fields:
+            value = item.get(field)
+            targets = value if isinstance(value, list) else [value] if value else []
+            for target in targets:
+                target = str(target)
+                # Absent targets are dropped so the graph holds only real
+                # items. It cannot change the result — a target that is not an
+                # item has no outgoing edges, so no walk returns through it —
+                # but a graph containing nodes nobody can open is harder to
+                # reason about than one that does not.
+                #
+                # A self-link is kept: an item deriving from itself is the
+                # degenerate cycle, and just as wrong as a two-item one.
+                if target in known:
+                    edges.setdefault(source, set()).add(target)
+
+    cycles: list[list[str]] = []
+    seen_signatures: set[frozenset] = set()
+    colour: dict[str, int] = {}   # 0 unvisited, 1 on the stack, 2 done
+
+    def walk(node: str, stack: list[str]) -> None:
+        colour[node] = 1
+        stack.append(node)
+        for nxt in sorted(edges.get(node, ())):
+            if nxt == node:
+                signature = frozenset({node})
+                if signature not in seen_signatures:
+                    seen_signatures.add(signature)
+                    cycles.append([node])
+            elif colour.get(nxt, 0) == 1:
+                cycle = stack[stack.index(nxt):]
+                signature = frozenset(cycle)
+                if signature not in seen_signatures:
+                    seen_signatures.add(signature)
+                    start = cycle.index(min(cycle))
+                    cycles.append(cycle[start:] + cycle[:start])
+            elif colour.get(nxt, 0) == 0:
+                walk(nxt, stack)
+        stack.pop()
+        colour[node] = 2
+
+    for node in sorted(edges):
+        if colour.get(node, 0) == 0:
+            walk(node, [])
+    return sorted(cycles, key=lambda c: c[0])
+
+
 def find_dangling_links(
     items: list[dict], link_fields: Iterable[str] | None = None
 ) -> list[dict]:
@@ -389,6 +461,9 @@ def check_traceability(items: list[dict], config: Any) -> dict:
     dangling = find_dangling_links(
         items, getattr(config, "relationship_fields", lambda: ())()
     )
+    cycles = find_link_cycles(
+        items, getattr(config, "relationship_fields", lambda: ())()
+    )
     passed = (
         required_result["passed"]
         and not dangling
@@ -410,6 +485,7 @@ def check_traceability(items: list[dict], config: Any) -> dict:
         "required": required_result,
         "orphans": [],
         "dangling": dangling,
+        "cycles": cycles,
         "coverage": coverage_results,
         "risk_chain": build_risk_chain(items, config),
         "deprecation_warnings": [],

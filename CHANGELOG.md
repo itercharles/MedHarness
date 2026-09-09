@@ -89,6 +89,26 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
   authoritative, so a renamed file with a unique ID is fine and a copy under any
   name is not.
 
+- **A cycle in the traceability graph passed every gate.** The V-model is
+  directed: a customer requirement gives rise to a system requirement, which
+  gives rise to a software one. Two items each deriving from the other leaves
+  neither with an origin, and the matrix stops being one.
+
+  `medharness/graph.py` has had `validate_for_cycles` since it was written. Its
+  only caller is not on the `verify dhf` path, so the detection existed, was
+  correct, and never ran on anything a project would notice — built and never
+  wired, the same as the closure criteria and `soup-sync`.
+
+  Cycles are found next to the other link checks now and reported by
+  `verify dhf` naming the path. A self-link counts: an item deriving from itself
+  is the degenerate case and just as wrong.
+
+  Wiring it surfaced a second fault: `ci_structural_gate` rebuilds its
+  traceability result field by field from a hand-written copy, so `cycles` was
+  computed, returned by the adapter, and dropped on the way to the gate. A test
+  now asserts no finding key is left behind — the same drift that has bitten
+  `_UPGRADE_MAP`, the gates manifest, and the envelope's reader sites.
+
 ### Behaviour changes
 
 - **A CR cannot be closed before it carries what closure means.** The shipped
