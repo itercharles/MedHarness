@@ -782,7 +782,12 @@ def register(main):
         client repo keep lifecycle policy in Python while still choosing its
         own branch conventions, label scheme, and action names.
         """
-        result = parse_github_event(event_path, manual_cr_id=manual_cr)
+        try:
+            result = parse_github_event(event_path, manual_cr_id=manual_cr)
+        except ValueError as exc:
+            # A usage-shaped failure: exit 1 with nothing on stdout, which
+            # docs/interface.md defines as "raised before the command ran".
+            raise click.ClickException(str(exc)) from exc
         branch_stage_pairs = _parse_branch_stage_pairs(branch_stage_values)
         dispatch_actions = _parse_key_value_pairs(dispatch_action_values, option_name="--dispatch-action")
         review_actions = _parse_key_value_pairs(review_action_values, option_name="--review-action")

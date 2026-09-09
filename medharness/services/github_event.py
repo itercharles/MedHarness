@@ -82,13 +82,25 @@ def parse_github_event(
     kwargs are only needed when the caller already has extracted values and
     wants to avoid re-reading the event file.
     """
-    event_path = event_path or Path(os.environ.get("GITHUB_EVENT_PATH", ""))
+    raw_path = os.environ.get("GITHUB_EVENT_PATH", "")
+    # An unset variable becomes Path("") -> Path("."), and a directory passes
+    # exists(). Reading it then raised IsADirectoryError, which the swallow used
+    # to hide and this function now reports — so the absent case has to be
+    # recognised as absent rather than as an unreadable file.
+    event_path = event_path or (Path(raw_path) if raw_path else None)
     event: dict = {}
-    if event_path.exists():
+    if event_path is not None and event_path.is_file():
         try:
             event = json.loads(event_path.read_text(encoding="utf-8"))
-        except (json.JSONDecodeError, OSError):
-            pass
+        except (json.JSONDecodeError, OSError) as exc:
+            # Swallowing this produced `{}`, and parsing then reported exactly
+            # what a genuine no-op event reports: cr_id=None, mode="skip",
+            # exit 0. A workflow could not tell "nothing to do here" from
+            # "the payload was unreadable and nothing ran" — the whole run
+            # green, every job skipped.
+            raise ValueError(
+                f"GitHub event payload at {event_path} could not be read: {exc}"
+            ) from exc
 
     event_name = os.environ.get("GITHUB_EVENT_NAME", "")
     if head_ref is None:

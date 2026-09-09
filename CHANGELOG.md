@@ -53,6 +53,26 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
   A second check asserts no shipped doc type targets a state `global.yaml` does
   not define — catching this at the source rather than in a project.
 
+- **An unreadable GitHub event payload looked like an event with nothing to do.**
+  A malformed `GITHUB_EVENT_PATH` was swallowed, parsing continued against `{}`,
+  and the result was byte-identical to a genuine no-op: `cr_id=None`,
+  `mode="skip"`, exit 0. Every downstream job skipped and the run was green.
+  In a compliance pipeline the alternative to a red build is not a green build,
+  it is a green build that checked nothing.
+
+  It is now reported as a usage error — exit 1, nothing on stdout, no traceback.
+  An *absent* payload is still tolerated, which needed a second fix: an unset
+  variable becomes `Path(".")`, a directory passes `exists()`, and reading it
+  raised `IsADirectoryError` — hidden by the same swallow until it was removed.
+
+- **`upgrade` dropped templates it could not read.** A missing template was
+  reported as unavailable; an unreadable one two lines later was skipped, so it
+  appeared in none of the four buckets and the summary counted a smaller total
+  while still saying everything was current. Both are reported now, and
+  `apply_upgrade` no longer overwrites the warning out of its summary — the
+  count and entries had survived in the payload while the one line anybody
+  reads said "Applied 0 update(s). 27 already current."
+
 ### Behaviour changes
 
 - **A CR cannot be closed before it carries what closure means.** The shipped
