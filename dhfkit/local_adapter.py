@@ -308,11 +308,45 @@ class LocalDHFAdapter:
     def validate_schema(self) -> dict:
         """Validate all YAML files; returns {'valid': bool, 'errors': [...]}."""
         errors = []
+        items = []
         try:
             items = self._loader.load_all()
         except ValidationError as e:
             errors.append(str(e))
-        return {'valid': len(errors) == 0, 'errors': errors, 'item_count': len(self._loader.load_all()) if not errors else 0}
+        errors.extend(self._duplicate_id_errors())
+        return {'valid': len(errors) == 0, 'errors': errors,
+                'item_count': len(items) if not errors else 0}
+
+    def _duplicate_id_errors(self) -> List[str]:
+        """Two files claiming one ID make every reference to it ambiguous.
+
+        An ID is what the rest of the DHF points at — dhf_links, affected_items,
+        an approval's scope, a test's evidence. With two items answering to
+        SRS-001, `get_item` returns whichever the loader saw first and the other
+        exists unreferenced. Nothing reported it: the schema passed both files
+        as individually valid, and the only visible symptom was a traceability
+        warning printed twice, which reads as a rendering glitch.
+        """
+        import yaml
+
+        seen: Dict[str, List[str]] = {}
+        items_root = self._dhf_root / "items"
+        if not items_root.is_dir():
+            return []
+        for path in sorted(items_root.rglob("*.yaml")):
+            try:
+                data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+            except (OSError, yaml.YAMLError):
+                continue  # a file that will not parse is the loader's to report
+            uid = str(data.get("id") or "").strip()
+            if uid:
+                seen.setdefault(uid, []).append(
+                    str(path.relative_to(self._dhf_root))
+                )
+        return [
+            f"Duplicate item ID {uid!r} in: {', '.join(paths)}"
+            for uid, paths in sorted(seen.items()) if len(paths) > 1
+        ]
 
     @property
     def config(self):
