@@ -71,6 +71,25 @@ Analysis takes items as data — `medharness.services.traceability` receives a
 list of dicts and a config, never a path or a loader — so it works against any
 adapter satisfying `medharness/adapters/protocol.py`.
 
+### One exception, deliberately
+
+`medharness init` and `medharness upgrade` write DHF files directly — the config
+files, the spec templates, the plan documents a new project starts from.
+
+That is not analysis reaching into storage. Those commands create and maintain
+the *repository skeleton*: they bring a DHF into existence and keep its
+scaffold current across versions. `dhfkit` manages records; it does not manage
+the shape of the repository that holds them, and giving it a "write my config
+file" API to satisfy a rule would put storage in the business of scaffolding.
+
+Everywhere else, medharness asks the store. `verify plans` reads plan documents
+through `list_documents("plans")` and `get_document()`; `upgrade` reads the
+project name through `ProjectConfig.load()` rather than the regex it used to
+apply to global.yaml — which took a trailing comment as part of the name.
+
+`tests/unit/test_storage_access_is_bounded.py` holds the exception to the two
+scaffold modules.
+
 ### Boundary rules
 
 - `medharness` may import from `dhfkit`

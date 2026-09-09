@@ -72,8 +72,10 @@ def run_doctor(dhf_path: Optional[Path] = None) -> dict:
     # DHF config (only if a DHF path was provided)
     if dhf_path is not None:
         try:
-            from dhfkit.models.config import ProjectConfig
-            config = ProjectConfig.load(dhf_path / "config")
+            from dhfkit.local_adapter import LocalDHFAdapter
+            # The adapter knows where its own config lives; building the path
+            # here duplicated that and would go stale if the layout moved.
+            config = LocalDHFAdapter(dhf_path).config
             n_types = len(config.doc_types)
             checks.append(_check("dhf_config", True, f"{n_types} doc type(s) loaded from {dhf_path}"))
         except Exception as exc:

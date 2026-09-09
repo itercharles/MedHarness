@@ -1685,15 +1685,16 @@ def plans_gate(dhf_path: Path) -> dict:
         })
 
     templates_dir = _plan_templates_dir()
-    plans_dir = dhf_path / "documents" / "plans"
+    # The plans are records; the store produces them. The shipped templates are
+    # medharness's own asset, so those still come off disk here.
     project_name = config.project_name
+    stored_plans = set(adapter.list_documents("plans"))
 
     checked, missing, unwritten, partial, skipped = [], [], [], [], []
 
     for stem in sorted(required):
         filename = f"{stem}.md"
-        plan_path = plans_dir / filename
-        if not plan_path.exists():
+        if stem not in stored_plans:
             missing.append({"plan": filename})
             continue
 
@@ -1705,7 +1706,7 @@ def plans_gate(dhf_path: Path) -> dict:
             })
             continue
 
-        project_sections = _sections(_strip_banner(plan_path.read_text(encoding="utf-8")))
+        project_sections = _sections(_strip_banner(adapter.get_document(stem) or ""))
         template_sections = _sections(_strip_banner(
             _fill_placeholders(template_path.read_text(encoding="utf-8"), project_name)
         ))
@@ -1723,8 +1724,7 @@ def plans_gate(dhf_path: Path) -> dict:
         else:
             checked.append({"plan": filename})
 
-    all_plans = {p.name for p in plans_dir.glob("*.md")} if plans_dir.is_dir() else set()
-    not_required = sorted(all_plans - {f"{s}.md" for s in required})
+    not_required = sorted(f"{s}.md" for s in stored_plans - set(required))
 
     warnings = [
         f"{entry['plan']}: {len(entry['sections'])} section(s) still match the "

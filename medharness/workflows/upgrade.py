@@ -83,15 +83,20 @@ _USER_OWNED: frozenset[str] = frozenset({
 })
 
 def _read_project_name(project_dir: Path) -> str:
-    global_yaml = project_dir / "DHF" / "config" / "global.yaml"
+    """The project's name, read the way dhfkit reads it.
+
+    This parsed global.yaml with a regex, which is dhfkit's job done worse: a
+    trailing comment became part of the name, a folded scalar returned ">-", and
+    a single-quoted value containing double quotes was truncated at the first
+    one. Storage owns the format; medharness asks storage.
+    """
+    from dhfkit.models.config import ProjectConfig
+
     try:
-        text = global_yaml.read_text(encoding="utf-8")
-        m = re.search(r'project_name:\s*["\']?([^"\'\n]+)["\']?', text)
-        if m:
-            return m.group(1).strip()
-    except OSError:
-        pass
-    return project_dir.name.replace("-", " ").replace("_", " ").title()
+        name = ProjectConfig.load(project_dir / "DHF" / "config").project_name
+    except Exception:  # noqa: BLE001
+        name = ""
+    return name or project_dir.name.replace("-", " ").replace("_", " ").title()
 
 
 def _substitute(text: str, project_name: str, medharness_version: str) -> str:

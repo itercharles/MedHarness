@@ -659,9 +659,31 @@ class LocalDHFAdapter:
             return None
         return path.read_text(encoding="utf-8")
 
-    def list_documents(self) -> List[str]:
-        """Return logical document IDs (filename stems) for all files under documents/."""
-        return list(self._doc_index.keys())
+    def list_documents(self, category: Optional[str] = None) -> List[str]:
+        """Logical document IDs (filename stems) under documents/.
+
+        `category` narrows to one subdirectory — `list_documents("plans")` gives
+        the plan documents. Without it the subdirectory is invisible in the
+        result, so a caller wanting only the plans had to go to the filesystem
+        itself, which is how `verify plans` came to read `documents/plans/*.md`
+        directly.
+        """
+        if category is None:
+            return list(self._doc_index.keys())
+        root = (self._dhf_root / "documents" / category).resolve()
+        return [
+            doc_id for doc_id, path in self._doc_index.items()
+            if root in path.resolve().parents
+        ]
+
+    def document_path(self, doc_id: str) -> Optional[Path]:
+        """Where a document lives, for a caller that must report the filename.
+
+        `verify plans` names the file it is complaining about, and a stem is not
+        a filename. Returning the path keeps that possible without a second
+        filesystem walk in the caller.
+        """
+        return self._doc_index.get(doc_id)
 
     # ------------------------------------------------------------------
     # CR context
