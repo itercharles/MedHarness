@@ -2,7 +2,7 @@
 
 import pytest
 from dhfkit.models.config import ProjectConfig, DocTypeConfig, RequiredTraceabilityRule
-from dhfkit.traceability import check_required_traceability
+from medharness.services.traceability import check_required_traceability
 
 
 def _make_config(rules: list) -> ProjectConfig:
@@ -242,7 +242,7 @@ def test_vmodel_defaults_pass_when_links_correct():
 
 def test_orphans_key_always_empty_list():
     """check_traceability always returns orphans=[] (deprecated field preserved for compat)."""
-    from dhfkit.traceability import check_traceability
+    from medharness.services.traceability import check_traceability
 
     config = ProjectConfig(
         doc_types=[
@@ -281,7 +281,7 @@ def _module_swdd_config(extra_rules: list | None = None) -> ProjectConfig:
 
 
 def test_module_swdd_coverage_passes():
-    from dhfkit.traceability import check_traceability
+    from medharness.services.traceability import check_traceability
     from dhfkit.models.item import Item
 
     swdd = Item.model_validate({"id": "SWDD-001", "title": "t", "implements": ["SRS-001"], "module": ["MODULE-001"]})
@@ -304,7 +304,7 @@ def test_module_swdd_coverage_passes():
 
 
 def test_module_swdd_coverage_fails_when_no_swdd_links_module():
-    from dhfkit.traceability import check_traceability
+    from medharness.services.traceability import check_traceability
 
     items = [
         {"id": "MODULE-001", "all_linked_uids": []},
@@ -330,7 +330,7 @@ def test_swdd_module_field_populates_all_linked_uids():
 
 
 def test_swdd_module_in_default_rules():
-    from dhfkit.item_type import default_traceability_rules
+    from medharness.services.traceability import default_traceability_rules
     rules = default_traceability_rules()
     rule_keys = {(r.source_type, r.field, r.target_type) for r in rules}
     assert ("SWDD", "module", "MODULE") in rule_keys
@@ -338,7 +338,7 @@ def test_swdd_module_in_default_rules():
 
 def test_swdd_module_default_rule_skipped_when_module_not_configured():
     """Default SWDD→MODULE rule is skipped when MODULE isn't in the project's doc types."""
-    from dhfkit.traceability import check_traceability
+    from medharness.services.traceability import check_traceability
     from dhfkit.models.item import Item
 
     config = ProjectConfig(
@@ -361,7 +361,7 @@ def test_swdd_module_default_rule_skipped_when_module_not_configured():
 
 def test_swdd_module_default_rule_enforced_when_module_configured():
     """Default SWDD→MODULE rule fires when MODULE is in doc types but SWDD has no module link."""
-    from dhfkit.traceability import check_traceability
+    from medharness.services.traceability import check_traceability
     from dhfkit.models.item import Item
 
     config = ProjectConfig(
@@ -384,7 +384,7 @@ def test_swdd_module_default_rule_enforced_when_module_configured():
 
 
 def test_swdd_module_required_link_rule():
-    from dhfkit.traceability import check_traceability
+    from medharness.services.traceability import check_traceability
     from dhfkit.models.item import Item
 
     config = _module_swdd_config(extra_rules=[

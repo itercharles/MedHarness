@@ -83,18 +83,7 @@ class TestScaffoldBaseline:
         item = json.loads(r.stdout)
         assert item["id"] == "CR-001"
 
-    def test_traceability_report_runs(self, dhf):
-        r = _dhf(str(dhf / "DHF"), "report", "--format", "text")
-        assert r.returncode in (0, 1), f"report crashed:\n{r.stderr}"
-        assert "DHF Traceability Report" in r.stdout
 
-    def test_traceability_report_json(self, dhf):
-        r = _dhf(str(dhf / "DHF"), "report", "--format", "json")
-        assert r.returncode in (0, 1), f"report crashed:\n{r.stderr}"
-        result = json.loads(r.stdout)
-        assert "passed" in result
-        assert "coverage" in result
-        assert "required" in result
 
 
 class TestCRItemLifecycle:

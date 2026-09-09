@@ -11,6 +11,7 @@ import json
 from pathlib import Path
 import click
 import medharness._helpers as _h
+from medharness.services.traceability import analyse
 
 
 _DEVELOP_ITEM_FIELDS = (
@@ -52,7 +53,7 @@ def register(main):
             cr_path.write_text(json.dumps({"id": cr_id, "found": False}) + "\n", encoding="utf-8")
 
         items = adapter.list_items()
-        trace = adapter.validate_traceability()
+        trace = analyse(adapter)
         coverage_summary = [
             {"parent": c["parent_type"], "child": c["child_type"],
              "covered": c["covered"], "total": c["total"]}
@@ -61,7 +62,7 @@ def register(main):
 
         module_map: list[dict] = []
         try:
-            from dhfkit.traceability import build_module_map
+            from medharness.services.traceability import build_module_map
             module_map = build_module_map(items, adapter.config)
         except Exception:
             pass
@@ -112,7 +113,7 @@ def register(main):
 
         if stage == "analyze":
             items = adapter.list_items()
-            trace = adapter.validate_traceability()
+            trace = analyse(adapter)
             orphans = trace.get("orphans", [])
             coverage = trace.get("coverage", [])
             gaps = [c for c in coverage if c.get("covered", 0) < c.get("total", 0)]
@@ -205,7 +206,7 @@ def register(main):
             for it in sorted(items, key=lambda x: x["id"])
         ]
 
-        trace = adapter.validate_traceability()
+        trace = analyse(adapter)
         coverage_summary = [
             {"parent": c["parent_type"], "child": c["child_type"],
              "covered": c["covered"], "total": c["total"]}

@@ -358,25 +358,6 @@ class LocalDHFAdapter:
         """
         return self._config
 
-    def validate_traceability(self) -> dict:
-        """Check required traceability, orphans, and coverage."""
-        from dhfkit.traceability import check_traceability
-        items = self._loader.load_all()
-        # Every field the schema calls a relationship, not just the V-model
-        # ones: a link the checker looks at but the loader never supplies is a
-        # check that silently does nothing, which is what happened to
-        # affected_risk_items.
-        link_fields = set(_TRACEABILITY_LINK_FIELDS) | (self._config.relationship_fields() or set())
-        item_dicts = [
-            {
-                "id": it.uid,
-                "all_linked_uids": it.all_linked_uids,
-                **{f: getattr(it, f) for f in link_fields if getattr(it, f, None)},
-                **{k: v for k, v in it.model_extra.items() if v is not None},
-            }
-            for it in items
-        ]
-        return check_traceability(item_dicts, self._config)
 
     # ------------------------------------------------------------------
     # Document generation
@@ -686,41 +667,6 @@ class LocalDHFAdapter:
     # CR context
     # ------------------------------------------------------------------
 
-    def get_implementation_context(self, cr_id: str) -> dict:
-        """Return a structured context dict for a CR — items, traceability, spec."""
-        cr = self.get_item(cr_id)
-        items = self.list_items()
-        trace = self.validate_traceability()
-        coverage_summary = [
-            {
-                "parent": c["parent_type"],
-                "child": c["child_type"],
-                "covered": c["covered"],
-                "total": c["total"],
-            }
-            for c in trace.get("coverage", [])
-        ]
-        spec_text = self.get_document(f"{cr_id}-Spec") or ""
-        return {
-            "cr": cr or {"id": cr_id, "found": False},
-            "spec_text": spec_text,
-            "item_count": len(items),
-            "items": [
-                {
-                    "id": it["id"],
-                    "type": it.get("type", ""),
-                    "title": it.get("title", ""),
-                    "status": it.get("status", ""),
-                    "tracelinks": it.get("all_linked_uids", []),
-                }
-                for it in sorted(items, key=lambda x: x["id"])
-            ],
-            "traceability": {
-                "valid": all(c["covered"] == c["total"] for c in coverage_summary),
-                "coverage": coverage_summary,
-                "orphan_count": len(trace.get("orphans", [])),
-            },
-        }
 
     # ------------------------------------------------------------------
     # Compliance run history (extension point — not persisted by default)

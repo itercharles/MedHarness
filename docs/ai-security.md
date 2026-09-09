@@ -112,7 +112,8 @@ Nothing here is regulatory advice. How you classify and justify AI-assisted deve
 Remove the AI stage jobs from `.github/workflows/dhf.yml` and never invoke `change plan` / `change implement`. Everything else keeps working:
 
 ```bash
-dhfkit --dhf DHF validate traceability
+dhfkit --dhf DHF validate links
+medharness --dhf DHF verify dhf
 medharness --dhf DHF verify dhf
 medharness --dhf DHF verify tests --junit-dir test-results
 medharness --dhf DHF verify soup

@@ -54,8 +54,6 @@ def validate_schema(dhf_root: Path) -> dict:
     return _adapter(dhf_root).validate_schema()
 
 
-def validate_traceability(dhf_root: Path) -> dict:
-    return _adapter(dhf_root).validate_traceability()
 
 
 # -- Document operations ------------------------------------------------------

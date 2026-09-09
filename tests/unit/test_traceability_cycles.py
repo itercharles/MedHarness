@@ -22,7 +22,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-from dhfkit.traceability import find_link_cycles
+from medharness.services.traceability import find_link_cycles
 from medharness.workflows.init import _replace_placeholders, _scaffold_dhf
 
 
@@ -119,7 +119,7 @@ class TestTheGateCopiesEveryFinding:
     """`cycles` was computed, returned, and dropped by a hand-written copy.
 
     `ci_structural_gate` rebuilds `results["traceability"]` field by field from
-    `validate_traceability()`. A finding the adapter reports and that copy omits
+    `analyse()`. A finding the analysis reports and that copy omits
     is computed and thrown away — which is what happened here, and is the same
     drift that has bitten `_UPGRADE_MAP`, the gates manifest, and the envelope's
     reader sites.
@@ -128,18 +128,19 @@ class TestTheGateCopiesEveryFinding:
     def test_no_finding_key_is_left_behind(self, tmp_path: Path) -> None:
         from dhfkit.local_adapter import LocalDHFAdapter
         from medharness.services.ci import ci_structural_gate
+        from medharness.services.traceability import analyse
 
         _scaffold_dhf(tmp_path)
         _replace_placeholders(tmp_path, "Copy")
         dhf = tmp_path / "DHF"
 
-        produced = set(LocalDHFAdapter(dhf).validate_traceability())
+        produced = set(analyse(LocalDHFAdapter(dhf)))
         copied = set(ci_structural_gate(dhf)["details"]["results"]["traceability"])
 
         # Keys the gate deliberately reshapes or reports elsewhere.
         elsewhere = {"orphans", "risk_chain", "deprecation_warnings"}
         missing = produced - copied - elsewhere
         assert not missing, (
-            f"validate_traceability reports {sorted(missing)} and the gate's copy "
+            f"analyse reports {sorted(missing)} and the gate's copy "
             f"drops them — computed, then thrown away"
         )

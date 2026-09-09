@@ -20,7 +20,7 @@ def dhf(tmp_path: Path) -> Path:
 class TestValidateGenerateDhf:
     def test_missing_verification_criteria_on_changed_sys_produces_error(self, dhf):
         with patch("dhfkit.api.validate_schema", return_value={"valid": True, "errors": []}), \
-             patch("dhfkit.api.validate_traceability", return_value={"passed": True}), \
+             patch("medharness.services.design_validation.analyse", return_value={"passed": True}), \
              patch("dhfkit.api.list_items", return_value=[
                  {"id": "SYS-001", "type": "SYS", "title": "Existing req",
                   "all_linked_uids": [], "verification_criteria": ""},
@@ -34,7 +34,7 @@ class TestValidateGenerateDhf:
 
     def test_populated_verification_criteria_on_changed_sys_passes(self, dhf):
         with patch("dhfkit.api.validate_schema", return_value={"valid": True, "errors": []}), \
-             patch("dhfkit.api.validate_traceability", return_value={"passed": True}), \
+             patch("medharness.services.design_validation.analyse", return_value={"passed": True}), \
              patch("dhfkit.api.list_items", return_value=[
                  {"id": "SYS-001", "type": "SYS", "title": "Existing req",
                   "all_linked_uids": [], "verification_criteria": "Response < 2s."},
@@ -46,7 +46,7 @@ class TestValidateGenerateDhf:
 
     def test_swdd_change_does_not_require_verification_criteria(self, dhf):
         with patch("dhfkit.api.validate_schema", return_value={"valid": True, "errors": []}), \
-             patch("dhfkit.api.validate_traceability", return_value={"passed": True}), \
+             patch("medharness.services.design_validation.analyse", return_value={"passed": True}), \
              patch("dhfkit.api.list_items", return_value=[
                  {"id": "SWDD-001", "type": "SWDD", "title": "Existing design",
                   "all_linked_uids": []},

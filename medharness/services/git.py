@@ -153,7 +153,7 @@ def validate_atomic_branch(
     if dhf_path.is_dir():
         try:
             from dhfkit.local_adapter import LocalDHFAdapter
-            from dhfkit.traceability import find_affected_risks
+            from medharness.services.traceability import find_affected_risks
             adapter = LocalDHFAdapter(dhf_path)
             changed_ids = set(
                 dhf_item_changes["created"]

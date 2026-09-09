@@ -17,8 +17,8 @@ Before proposing or implementing any significant change, read:
 
 | CLI | Owns | Commands |
 |-----|------|----------|
-| `dhfkit` | DHF **data**: items, schemas, documents, SOUP, releases | `approval` · `config` · `doc` · `init` · `item` · `release-baseline` · `report` · `sbom` · `soup-sync` · `test` · `validate` |
-| `medharness` | The **process** around it: AI CR workflow, CI gates, scaffolding, approval | `approval` · `automation` · `change` · `cr` · `dhf` · `doctor` · `evidence` · `gates` · `init` · `upgrade` · `verify` |
+| `dhfkit` | DHF **data**: items, schemas, documents, SOUP, releases. Storage and retrieval only — no analysis. | `approval` · `config` · `doc` · `init` · `item` · `release-baseline` · `sbom` · `soup-sync` · `test` · `validate` |
+| `medharness` | The **process** around it: AI CR workflow, CI gates, scaffolding, approval, and all traceability analysis over the item set | `approval` · `automation` · `change` · `cr` · `dhf` · `doctor` · `evidence` · `gates` · `init` · `upgrade` · `verify` |
 
 Both have an `approval` group and they do different things: `dhfkit approval`
 records APR items (data), `medharness approval` drives PR-based approval
