@@ -11,6 +11,34 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+### Bug Fixes
+
+- **`upgrade` parsed `global.yaml` with a regex.** `project_name: Planner  # the
+  product` gave the name as `Planner  # the product`; a folded scalar returned
+  `>-`; a single-quoted value containing double quotes was truncated at the
+  first one. It reads through `ProjectConfig.load()` now — storage owns the
+  format, and medharness asks storage.
+
+### Behaviour changes
+
+- **medharness asks the store rather than the filesystem.** `verify plans` read
+  `documents/plans/*.md` directly, and plan-artifact generation walked the same
+  directory and guessed at two possible stylesheet locations. Both go through
+  the adapter now.
+
+  That needed something from the store first: `list_documents()` returned
+  filename stems with the subdirectory discarded, so there was no way to ask for
+  the plans. It takes an optional category — `list_documents("plans")` — and a
+  companion `document_path()` for callers that must name the file they are
+  reporting on.
+
+  **The scaffold is a deliberate exception.** `init` and `upgrade` write DHF
+  files directly, because those commands create and maintain the repository
+  skeleton rather than the records inside it. Giving `dhfkit` a "write my config
+  file" API to satisfy a rule would put storage in the business of scaffolding.
+  `tests/unit/test_storage_access_is_bounded.py` holds the exception to those
+  two modules and checks the store can answer what the filesystem was asked.
+
 ### Breaking Changes
 
 - **Traceability analysis moved from `dhfkit` to `medharness`.** `dhfkit` stores

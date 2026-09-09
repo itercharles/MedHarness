@@ -525,8 +525,13 @@ def _load_issue_comments(
 
 def _generate_plan_artifacts(dhf_path: Path, out_dir: Path,
                              doc_format: str = "html") -> list[dict]:
-    plans_dir = dhf_path / "documents" / "plans"
-    if not plans_dir.is_dir():
+    from dhfkit.local_adapter import LocalDHFAdapter
+
+    # The plans are records: the store lists them and hands over their text.
+    # Only the output directory below is this command's own.
+    adapter = LocalDHFAdapter(dhf_path)
+    plan_ids = sorted(adapter.list_documents("plans"))
+    if not plan_ids:
         return []
     try:
         import markdown as _markdown
@@ -547,34 +552,31 @@ def _generate_plan_artifacts(dhf_path: Path, out_dir: Path,
                 f"cairo/pango libraries: {exc}. Use --doc-format html instead."
             ) from exc
 
-    css_candidates = [
-        dhf_path / "documents" / "specifications" / "templates" / "styles" / "default.css",
-        dhf_path / "documents" / "specs" / "styles" / "default.css",
-    ]
-    css = ""
-    for css_path in css_candidates:
-        if css_path.exists():
-            css = f"<style>{css_path.read_text(encoding='utf-8')}</style>"
-            break
+    # The stylesheet is a document too, and its location has moved between
+    # scaffold versions — asking by name finds it wherever it now lives.
+    css_text = adapter.get_document("default") or ""
+    css = f"<style>{css_text}</style>" if css_text else ""
 
     output_dir = out_dir / "plans"
     output_dir.mkdir(parents=True, exist_ok=True)
     generated = []
-    for plan in sorted(plans_dir.glob("*.md")):
+    for plan_id in plan_ids:
+        source = adapter.document_path(plan_id)
         html = _markdown.markdown(
-            plan.read_text(encoding="utf-8"),
+            adapter.get_document(plan_id) or "",
             extensions=["tables", "fenced_code", "toc"],
         )
         document = (
             f'<!doctype html><html lang="en"><head><meta charset="utf-8">'
             f"{css}</head><body>{html}</body></html>"
         )
-        output = output_dir / f"{plan.stem}.{doc_format}"
+        output = output_dir / f"{plan_id}.{doc_format}"
         if render_pdf is not None:
-            render_pdf(string=document, base_url=str(plan.parent)).write_pdf(str(output))
+            base = str(source.parent) if source else str(dhf_path)
+            render_pdf(string=document, base_url=base).write_pdf(str(output))
         else:
             output.write_text(document, encoding="utf-8")
-        generated.append({"source": str(plan), "path": str(output)})
+        generated.append({"source": str(source or plan_id), "path": str(output)})
     return generated
 
 
