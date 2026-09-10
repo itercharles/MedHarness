@@ -11,6 +11,37 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.21.0] — 2026-09-10
+
+### Breaking Changes
+
+- **`verify dhf` JSON no longer carries `orphans` or `deprecation_warnings`.**
+  `check_traceability` returned both as hardcoded `[]` — nothing could ever
+  write into them. Six files read them anyway: `dhfkit validate` counted them
+  as blocking reasons, the text report had an "Orphaned Items" section,
+  `medharness dhf context` reported `orphan_count` in three payloads, and
+  design validation built fix instructions from `required_parents`, a field no
+  orphan dict ever had. None of it could fire.
+
+  A consumer reading `orphan_count` was reading a constant zero, so nothing it
+  reported changes — but the key is gone and a strict reader will notice.
+
+  Orphan detection that does work is untouched: the graph's `find_orphans`
+  (which is what the verification plan template's `stats.orphans` renders) and
+  `soup-sync`'s orphans, a different concept — a SOUP item absent from every
+  manifest.
+
+### Internal
+
+- `find_link_cycles` used a hand-rolled colour-marking DFS. `networkx` is
+  already a dependency and the graph module already calls `simple_cycles`; 56
+  lines became 12 with the same output contract.
+
+- Comments added over the last few versions were trimmed. They had drifted into
+  bug post-mortems — four to six lines retelling how a fault was found where one
+  states the constraint. 80 comment lines out, 29 back in. `CLAUDE.md` records
+  the specific shapes that got past rules it already had.
+
 ### Bug Fixes
 
 - **Every CR the AI workflow planned listed itself in `affected_items`.**
