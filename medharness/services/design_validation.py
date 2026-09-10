@@ -5,7 +5,7 @@ error dicts suitable for assembling a fix-only LLM prompt.
 
 Checks:
 - Schema validity of all DHF items
-- Required traceability rules, orphans, coverage gaps
+- Required traceability rules, coverage gaps
 - verification_criteria present on verifiable items touched by generate-dhf
 """
 
@@ -105,16 +105,6 @@ def _validate_schema_and_traceability(_api, dhf_path: Path) -> list[dict]:
                     f"Update {failure.get('id')} so its `{failure.get('field')}` "
                     f"references a {failure.get('target_type')} item "
                     f"(need at least {failure.get('min_count', 1)})."
-                ),
-            })
-
-        for orphan in trace_result.get("orphans", []):
-            errors.append({
-                "field": "traceability.orphan",
-                "issue": f"{orphan.get('id')}: {orphan.get('issue', 'orphan item')}",
-                "fix": (
-                    f"Add a link from {orphan.get('id')} to one of "
-                    f"{orphan.get('required_parents')} via `dhf item update`."
                 ),
             })
 

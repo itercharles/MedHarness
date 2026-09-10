@@ -90,10 +90,6 @@ class TestCiStructuralGate:
         )
         assert isinstance(dhf_validate_result["details"]["results"]["coverage_gaps"], list)
 
-    def test_structured_orphans_key_present(self, dhf_validate_result):
-        assert "orphans" in dhf_validate_result["details"]["results"]
-        assert isinstance(dhf_validate_result["details"]["results"]["orphans"], list)
-
     def test_structured_verification_gaps_key_present(self, dhf_validate_result):
         assert "verification_gaps" in dhf_validate_result["details"]["results"]
         vgaps = dhf_validate_result["details"]["results"]["verification_gaps"]
@@ -110,7 +106,7 @@ class TestCiStructuralGate:
             assert "uncovered" in gap
 
     def test_structured_keys_present_regardless_of_traceability_flag(self, dhf):
-        """coverage_gaps, orphans, verification_gaps must be present even when
+        """coverage_gaps and verification_gaps must be present even when
         traceability is disabled, so machine consumers can always rely on them."""
         r = _medharness(
             "verify", "dhf", "--dhf", str(dhf / "DHF"),
@@ -119,7 +115,6 @@ class TestCiStructuralGate:
         assert r.returncode in (0, 1), f"crashed:\n{r.stderr}"
         result = json.loads(r.stdout)
         assert "coverage_gaps" in result["details"]["results"]
-        assert "orphans" in result["details"]["results"]
         assert "verification_gaps" in result["details"]["results"]
 
 

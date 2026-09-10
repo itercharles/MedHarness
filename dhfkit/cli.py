@@ -255,8 +255,6 @@ def _traceability_summary(result: dict, fail_on_uncovered: bool) -> str:
     required_failures = result.get("required", {}).get("failures", [])
     if required_failures:
         blocking.append(f"{len(required_failures)} required failure(s)")
-    if result.get("orphans"):
-        blocking.append(f"{len(result['orphans'])} orphan(s)")
     if result.get("dangling"):
         blocking.append(f"{len(result['dangling'])} dangling link(s)")
 

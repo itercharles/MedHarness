@@ -331,11 +331,9 @@ def check_traceability(items: list[dict], config: Any) -> dict:
     Returns:
         {
           "passed": bool,
-          "orphans": [],
           "coverage": [...],
           "required": {...},
           "risk_chain": [...],
-          "deprecation_warnings": [],
           "summary": str,
         }
     """
@@ -408,12 +406,10 @@ def check_traceability(items: list[dict], config: Any) -> dict:
     return {
         "passed": passed,
         "required": required_result,
-        "orphans": [],
         "dangling": dangling,
         "cycles": cycles,
         "coverage": coverage_results,
         "risk_chain": build_risk_chain(items, config),
-        "deprecation_warnings": [],
         "summary": summary,
     }
 
@@ -478,15 +474,6 @@ def format_traceability_report(result: dict) -> str:
             for uid in c.get("uncovered", []):
                 lines.append(f"         ↳ uncovered: {uid}")
     lines.append("")
-
-    orphans = result.get("orphans", [])
-    if orphans:
-        lines.append("Orphaned Items")
-        lines.append("-" * 40)
-        for o in orphans:
-            oid = o.get("id", o) if isinstance(o, dict) else o
-            lines.append(f"  {oid}")
-        lines.append("")
 
     risk_chain = result.get("risk_chain", [])
     if risk_chain:

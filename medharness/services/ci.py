@@ -118,7 +118,6 @@ def ci_structural_gate(
     passed = True
     results: dict[str, Any] = {
         "coverage_gaps": [],
-        "orphans": [],
         "verification_gaps": [],
     }
 
@@ -181,7 +180,6 @@ def ci_structural_gate(
             for c in coverage_list
             if not c.get("passed", True)
         ]
-        results["orphans"] = tr.get("orphans", [])
 
         # verification_criteria gaps: verifiable items missing the field
         _VERIFIABLE = frozenset({"CRS", "SYS", "SRS"})

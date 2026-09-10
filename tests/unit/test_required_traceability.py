@@ -240,25 +240,6 @@ def test_vmodel_defaults_pass_when_links_correct():
 
 # ── orphans key preserved for API compat ─────────────────────────────────────
 
-def test_orphans_key_always_empty_list():
-    """check_traceability always returns orphans=[] (deprecated field preserved for compat)."""
-    from medharness.services.traceability import check_traceability
-
-    config = ProjectConfig(
-        doc_types=[
-            DocTypeConfig(code="SRS", name="Software Requirement", prefix="SRS-"),
-            DocTypeConfig(code="SYS", name="System Requirement", prefix="SYS-"),
-        ],
-        required_traceability=[],
-    )
-    items = [
-        {"id": "SRS-001", "derives_from": [], "all_linked_uids": []},
-    ]
-    result = check_traceability(items, config)
-    assert result["orphans"] == []
-    assert result["deprecation_warnings"] == []
-
-
 # ── MODULE → SWDD coverage matrix ────────────────────────────────────────────
 
 def _module_swdd_config(extra_rules: list | None = None) -> ProjectConfig:
