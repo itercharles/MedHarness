@@ -84,11 +84,15 @@ Releases are fully automated via `.github/workflows/release.yml` using PyPI Trus
 Steps:
 1. Open a PR to `main` with the version bump in `pyproject.toml` and a `CHANGELOG.md` entry
 2. Merge the PR
-3. **Only after the PR is merged**, push the tag:
+3. **Only after the PR is merged**, pull, then push the tag:
 
 ```bash
-git tag v0.X.0 && git push origin v0.X.0
+git checkout main && git pull && git tag v0.X.0 && git push origin v0.X.0
 ```
+
+   The `git pull` is not optional. Merging in the GitHub UI leaves local `main`
+   behind, so tagging in the right order still puts the tag on the wrong commit
+   — v0.21.0 landed on the v0.20.0 commit this way.
 
 GitHub Actions then: runs preflight checks → builds wheel + sdist → publishes to PyPI → attaches wheel to the GitHub Release.
 
