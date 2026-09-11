@@ -15,6 +15,7 @@ between policy and payload is visible.
 
 from __future__ import annotations
 
+import re
 import shutil
 import subprocess
 import sys
@@ -151,3 +152,46 @@ class TestUpgradeReportsUnavailableTemplates:
         _scaffold_dhf(tmp_path)
         _replace_placeholders(tmp_path, "Trial")
         assert check_upgrade(tmp_path)["unavailable"] == []
+
+
+def _recipe_commands() -> list[tuple[str, ...]]:
+    """Every medharness/dhfkit invocation in the CI recipe, one per entry."""
+    text = WORKFLOW_TEMPLATE.read_text()
+    text = re.sub(r"\$\{\{[^}]*\}\}", "X", text)
+    text = re.sub(r"\\\n\s*", " ", text)
+    calls = []
+    for line in text.splitlines():
+        line = re.sub(r"^\s*(-\s*)?(name:.*|run:\s*)", "", line).strip()
+        if re.match(r"^(medharness|dhfkit)\s", line):
+            calls.append(tuple(line.split()))
+    return calls
+
+
+RECIPE_CALLS = _recipe_commands()
+
+
+class TestRecipeCommandsParse:
+    """The recipe is copy-paste deployment, so its options must exist.
+
+    `test_documented_commands_exist` strips every flag before checking, so it
+    verifies the command path and nothing else. The recipe shipped
+    `evidence bundle --dhf DHF` for months; `--dhf` is a group option there, not
+    a command one, and the job died with exit 2 on the adopter's first merge.
+    """
+
+    def test_the_scan_found_commands(self) -> None:
+        assert len(RECIPE_CALLS) >= 3, f"only found {RECIPE_CALLS}"
+
+    @pytest.mark.parametrize(
+        "call", RECIPE_CALLS, ids=[" ".join(c[:3]) for c in RECIPE_CALLS]
+    )
+    def test_a_recipe_command_parses(self, call: tuple[str, ...]) -> None:
+        result = subprocess.run(
+            [sys.executable, "-m", call[0], *call[1:], "--help"],
+            capture_output=True, text=True, cwd=REPO_ROOT,
+        )
+        output = result.stderr + result.stdout
+        for fault in ("No such option", "No such command", "Got unexpected extra argument"):
+            assert fault not in output, (
+                f"the CI recipe runs `{' '.join(call)}`, which fails: {fault}"
+            )

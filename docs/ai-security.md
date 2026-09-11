@@ -18,7 +18,7 @@ Only two commands send anything to a model:
 | `medharness change plan --cr <ID>` | Design | DHF item updates, impact analysis, design review |
 | `medharness change implement --cr <ID>` | Develop | Source code and tests for the approved design |
 
-**Every other command is deterministic.** `dhfkit` (item CRUD, validation, traceability, document generation, SOUP sync, release baseline) makes no network calls to any model and has no dependency on `medharness`. All `verify` gates, `evidence bundle`, and `approval` commands are pure local computation.
+**Every other command is deterministic.** `dhfkit` (item CRUD, validation, link integrity, document generation, SOUP sync, release baseline) makes no network calls to any model and has no dependency on `medharness`. All `verify` gates, `evidence bundle`, and `approval` commands are pure local computation.
 
 This split is intentional: you can adopt the traceability engine and CI gates with no AI in the pipeline at all. See [adopting.md](adopting.md#incremental-adoption).
 

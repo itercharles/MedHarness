@@ -12,7 +12,7 @@ MedHarness ships two Python packages from a single repository:
 | Package | CLI | Role |
 |---------|-----|------|
 | `medharness` | `medharness` | AI harness: scaffolding, verification, change workflows, approval flow |
-| `dhfkit` | `dhfkit` / `dhf` | DHF engine: item CRUD, lifecycle, traceability, document generation, SOUP sync, release baseline |
+| `dhfkit` | `dhfkit` / `dhf` | DHF storage: item CRUD, lifecycle, link integrity, document generation, SOUP sync, release baseline |
 
 ### `medharness` owns
 
