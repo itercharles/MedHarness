@@ -3,7 +3,7 @@
 ## Project
 
 MedHarness — open-source tooling for design-controlled development.
-Includes `dhfkit`, the DHF/document/traceability engine.
+Includes `dhfkit`, the DHF storage and document engine.
 
 ## Guiding Documents
 
@@ -33,7 +33,7 @@ All DHF data operations use `dhfkit --dhf DHF <command>`.
 | Directory | Purpose |
 |-----------|---------|
 | `medharness/` | Harness CLI, CI gate logic, scaffolding |
-| `dhfkit/` | DHF engine: items, config, traceability, doc generation, SOUP sync, release baseline |
+| `dhfkit/` | DHF storage: items, config, link integrity, doc generation, SOUP sync, release baseline |
 | `dhfkit/templates/` | Starter DHF scaffold — config, specs, plans, sample items, CI workflow |
 | `docs/` | Architecture docs and adopting guide |
 | `tests/unit/` | Unit tests |
@@ -82,7 +82,8 @@ before reading files or making changes, unless the user specifies a different br
 Releases are fully automated via `.github/workflows/release.yml` using PyPI Trusted Publishing (OIDC — no token needed).
 
 Steps:
-1. Open a PR to `main` with the version bump in `pyproject.toml` and a `CHANGELOG.md` entry
+1. Open a PR to `main` with the version bump in `pyproject.toml`, the pinned
+   version in the README's CI snippet, and a `CHANGELOG.md` entry
 2. Merge the PR
 3. **Only after the PR is merged**, pull, then push the tag:
 

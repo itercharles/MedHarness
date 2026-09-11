@@ -137,7 +137,7 @@ jobs:
         with:
           python-version: '3.11'
       - run: pip install medharness==0.21.0
-      - run: medharness verify dhf --dhf DHF --fail-on-uncovered
+      - run: medharness --dhf DHF verify dhf --fail-on-uncovered
 ```
 
 Drop `--fail-on-uncovered` while backfilling an existing DHF: coverage gaps then

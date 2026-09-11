@@ -100,3 +100,20 @@ def test_a_documented_command_exists(
         f"{source} documents `{module} {' '.join(tokens)}`, but "
         f"`{tokens[0]}` takes no subcommand"
     )
+
+
+def test_readme_pins_the_current_version() -> None:
+    """The README's copy-paste CI snippet names a real, current version.
+
+    docs/adopting.md uses a `{{medharness_version}}` placeholder, which cannot
+    go stale. The README shows a concrete version so the snippet runs as pasted,
+    and that one does — silently, on every release, telling new users to install
+    whatever was current when the line was last touched.
+    """
+    pinned = re.search(r"pip install medharness==([\d.]+)", (ROOT / "README.md").read_text())
+    assert pinned, "the README no longer shows a pinned install"
+    current = re.search(r'^version = "([^"]+)"', (ROOT / "pyproject.toml").read_text(), re.M)
+    assert pinned.group(1) == current.group(1), (
+        f"README pins medharness=={pinned.group(1)} but pyproject.toml is at "
+        f"{current.group(1)} — update the README in the release PR"
+    )

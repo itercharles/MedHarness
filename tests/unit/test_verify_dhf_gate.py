@@ -110,7 +110,8 @@ class TestDocumentedWorkflowEnforcesCoverage:
     def test_documented_pipeline_passes_the_flag(self) -> None:
         recipe = (Path(__file__).resolve().parents[2]
                   / "dhfkit" / "templates" / "github" / "workflows" / "dhf.yml").read_text()
-        assert "verify dhf --dhf DHF --fail-on-uncovered" in recipe
+        line = next(l for l in recipe.splitlines() if "verify dhf" in l)
+        assert "--fail-on-uncovered" in line, line
 
     def test_scaffold_does_not_create_a_workflow(self, tmp_path: Path) -> None:
         """Scaffolding it would silently do nothing on an installed package."""
