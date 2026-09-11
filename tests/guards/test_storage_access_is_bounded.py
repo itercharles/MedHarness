@@ -47,19 +47,20 @@ def test_the_scan_found_modules() -> None:
     assert len(MODULES) > 15, f"only {len(MODULES)} — the scan is broken"
 
 
-@pytest.mark.parametrize("path", MODULES, ids=[str(p.relative_to(ROOT)) for p in MODULES])
-def test_only_the_scaffold_names_dhf_directories(path: Path) -> None:
-    rel = str(path.relative_to(ROOT))
-    if rel in SCAFFOLD:
-        return
-    offending = [
-        (i + 1, line.strip())
-        for i, line in enumerate(path.read_text(encoding="utf-8").splitlines())
-        if DHF_CONTENT.search(line) and not line.lstrip().startswith("#")
-    ]
+def test_only_the_scaffold_names_dhf_directories() -> None:
+    offending = []
+    for path in MODULES:
+        rel = str(path.relative_to(ROOT))
+        if rel in SCAFFOLD:
+            continue
+        offending += [
+            f"{rel}:{i + 1}: {line.strip()[:90]}"
+            for i, line in enumerate(path.read_text(encoding="utf-8").splitlines())
+            if DHF_CONTENT.search(line) and not line.lstrip().startswith("#")
+        ]
     assert not offending, (
-        f"{rel} builds a path into the DHF:\n  "
-        + "\n  ".join(f"{n}: {l[:90]}" for n, l in offending[:4])
+        "these build a path into the DHF:\n  "
+        + "\n  ".join(offending)
         + "\n\nAsk the store instead — list_documents(category), get_document(), "
           "list_items(), ProjectConfig.load(). Only init and upgrade write the "
           "repository skeleton."

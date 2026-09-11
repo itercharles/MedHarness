@@ -169,21 +169,22 @@ def test_the_scan_found_the_mocks() -> None:
     assert len(MOCKS) > 30, f"only {len(MOCKS)} literal mocks found — scan is broken"
 
 
-@pytest.mark.parametrize(
-    "target,shape,where,line",
-    MOCKS,
-    ids=[f"{t.rpartition('.')[2]}@{f}:{ln}" for t, _s, f, ln in MOCKS],
-)
-def test_mock_matches_what_the_service_returns(
-    target: str, shape: object, where: str, line: int
-) -> None:
-    real = _real_shapes(target)
-    if not real:
-        pytest.skip(f"{target}: no literal return shape to compare against")
-    assert shape in real, (
-        f"{where}:{line} mocks {target} as {sorted(shape) if isinstance(shape, frozenset) else shape}, "
-        f"but it returns {[sorted(r) if isinstance(r, frozenset) else r for r in real]}.\n"
-        f"The mock froze a shape the service no longer produces."
+def _show(shape: object) -> object:
+    return sorted(shape) if isinstance(shape, frozenset) else shape
+
+
+def test_mocks_match_what_the_service_returns() -> None:
+    stale = []
+    for target, shape, where, line in MOCKS:
+        real = _real_shapes(target)
+        if real and shape not in real:
+            stale.append(
+                f"{where}:{line} mocks {target} as {_show(shape)}, "
+                f"but it returns {[_show(r) for r in real]}"
+            )
+    assert not stale, (
+        "these mocks froze a shape the service no longer produces:\n  "
+        + "\n  ".join(stale)
     )
 
 
@@ -217,16 +218,15 @@ class TestNoMockInventsAnItemField:
     def test_the_scan_found_item_mocks(self) -> None:
         assert ITEM_MOCKS, "no item-returning mocks found — the scan is broken"
 
-    @pytest.mark.parametrize(
-        "target,shape,where,line", ITEM_MOCKS,
-        ids=[f"{f}:{ln}" for _t, _s, f, ln in ITEM_MOCKS],
-    )
-    def test_an_item_mock_uses_id(
-        self, target: str, shape: frozenset, where: str, line: int
-    ) -> None:
-        assert "uid" not in shape, (
-            f"{where}:{line} mocks {target} with a 'uid' key. Items carry 'id'; "
-            f"a mock keyed 'uid' lets code read item['uid'] and pass."
+    def test_item_mocks_use_id(self) -> None:
+        bad = [
+            f"{where}:{line} mocks {target}"
+            for target, shape, where, line in ITEM_MOCKS
+            if "uid" in shape
+        ]
+        assert not bad, (
+            "Items carry 'id'; a mock keyed 'uid' lets code read item['uid'] "
+            "and pass:\n  " + "\n  ".join(bad)
         )
 
 
@@ -254,10 +254,10 @@ class TestNoItemLiteralUsesUid:
     def test_the_scan_found_item_literals(self) -> None:
         assert len(ITEM_LITERALS) > 10, f"only {len(ITEM_LITERALS)} found — scan broken"
 
-    @pytest.mark.parametrize("where,keys,line", ITEM_LITERALS,
-                             ids=[f"{w}:{ln}" for w, _k, ln in ITEM_LITERALS])
-    def test_it_uses_id(self, where: str, keys: frozenset, line: int) -> None:
-        assert "uid" not in keys, (
-            f"{where}:{line} builds an item keyed 'uid'. Items carry 'id'; a "
-            f"fixture keyed 'uid' lets production code read item['uid'] and pass."
+    def test_they_use_id(self) -> None:
+        bad = [f"{where}:{line}" for where, keys, line in ITEM_LITERALS if "uid" in keys]
+        assert not bad, (
+            "these build an item keyed 'uid'. Items carry 'id'; a fixture keyed "
+            "'uid' lets production code read item['uid'] and pass:\n  "
+            + "\n  ".join(bad)
         )
