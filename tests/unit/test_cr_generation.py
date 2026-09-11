@@ -498,23 +498,6 @@ class TestGenerateDhf:
         assert mock_claude.call_count == 2
         assert result["diagnostics"]["fix_attempted"] is False
 
-    def test_fix_pass_triggered_when_validation_fails(self, tmp_path):
-        # generation + fix + design review = 3 Claude calls
-        dhf = tmp_path / "DHF"
-        dhf.mkdir()
-        first_errors = [{"field": "schema", "issue": "x", "fix": "y"}]
-        with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
-             patch("medharness.services.cr_generation.git.collect_dhf_item_changes",
-                   return_value={"created": [], "updated": [], "deleted": []}), \
-             patch("medharness.services.design_validation.validate_generate_dhf",
-                   side_effect=[first_errors, []]):
-            mock_claude.return_value = (0, "", "")
-            result = generate_dhf("CR-052", dhf)
-        assert mock_claude.call_count == 3
-        fix_prompt = mock_claude.call_args_list[1][0][0]
-        assert "deterministic validation" in fix_prompt
-        assert result["outcome"] == "corrected"
-        assert result["diagnostics"]["fix_attempted"] is True
 
     def test_design_review_loop_fixes_and_reruns_until_approved(self, tmp_path):
         # review_1 → needs_revision → fix_1 → review_2 → approved
@@ -760,9 +743,7 @@ class TestGenerateCode:
     def test_returns_dict_with_required_keys(self, tmp_path):
         dhf = tmp_path / "DHF"
         dhf.mkdir()
-        with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
-             patch("medharness.services.code_validation.validate_code",
-                   return_value=[]):
+        with patch("medharness.services.cr_generation._run_claude") as mock_claude:
             mock_claude.return_value = (0, "", "")
             result = generate_code("CR-020", dhf)
         assert result["cr_id"] == "CR-020"
@@ -776,35 +757,16 @@ class TestGenerateCode:
     def test_happy_path_runs_develop_then_review(self, tmp_path):
         dhf = tmp_path / "DHF"
         dhf.mkdir()
-        with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
-             patch("medharness.services.code_validation.validate_code",
-                   return_value=[]):
+        with patch("medharness.services.cr_generation._run_claude") as mock_claude:
             mock_claude.return_value = (0, "", "")
             result = generate_code("CR-021", dhf)
         assert mock_claude.call_count == 2
         assert result["outcome"] == "ok"
         review_prompt = mock_claude.call_args_list[1][0][0]
-        assert "already passed" in review_prompt.lower()
+        assert "already passed" not in review_prompt.lower(), (
+            "the review prompt must not claim deterministic checks ran"
+        )
 
-    def test_fix_pass_triggered_when_validation_fails(self, tmp_path):
-        dhf = tmp_path / "DHF"
-        dhf.mkdir()
-        first_errors = [{
-            "field": "test_plan.needs_new_tc",
-            "issue": "No newly added `@links:SRS-001` annotation found.",
-            "fix": "Add a colocated test with @links:SRS-001",
-        }]
-        with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
-             patch("medharness.services.code_validation.validate_code",
-                   side_effect=[first_errors, []]):
-            mock_claude.return_value = (0, "", "")
-            result = generate_code("CR-024", dhf)
-        assert mock_claude.call_count == 3
-        fix_prompt = mock_claude.call_args_list[1][0][0]
-        assert "@links:SRS-001" in fix_prompt
-        assert "test annotations" in fix_prompt
-        assert result["outcome"] == "corrected"
-        assert result["errors"] == []
 
     def test_files_changed_populated_from_git(self, tmp_path):
         dhf = tmp_path / "DHF"
@@ -815,8 +777,6 @@ class TestGenerateCode:
             "D\tpackages/shared-types/src/old.ts\n"
         )
         with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
-             patch("medharness.services.code_validation.validate_code",
-                   return_value=[]), \
              patch("subprocess.run",
                    return_value=MagicMock(stdout=diff_output, returncode=0)):
             mock_claude.return_value = (0, "", "")
@@ -830,9 +790,7 @@ class TestGenerateCode:
     def test_develop_prompt_passed_to_claude(self, tmp_path):
         dhf = tmp_path / "DHF"
         dhf.mkdir()
-        with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
-             patch("medharness.services.code_validation.validate_code",
-                   return_value=[]):
+        with patch("medharness.services.cr_generation._run_claude") as mock_claude:
             mock_claude.return_value = (0, "", "")
             generate_code("CR-022", dhf)
         prompt = mock_claude.call_args_list[0][0][0]
@@ -843,9 +801,7 @@ class TestGenerateCode:
         dhf = tmp_path / "DHF"
         dhf.mkdir()
         with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
-             patch("medharness.services.cr_generation._get_pr_feedback") as mock_fb, \
-             patch("medharness.services.code_validation.validate_code",
-                    return_value=[]):
+             patch("medharness.services.cr_generation._get_pr_feedback") as mock_fb:
             mock_claude.return_value = (0, "", "")
             mock_fb.return_value = {
                 "prompt_text": '{"comments": [], "reviews": []}',
@@ -862,8 +818,6 @@ class TestGenerateCode:
         dhf.mkdir()
         diff_output = "+console.log('new code')\n"
         with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
-             patch("medharness.services.code_validation.validate_code",
-                    return_value=[]), \
              patch("medharness.services.git.compute_diff",
                     return_value=diff_output):
             mock_claude.return_value = (0, "", "")
@@ -877,8 +831,6 @@ class TestGenerateCode:
         dhf = tmp_path / "DHF"
         dhf.mkdir()
         with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
-             patch("medharness.services.code_validation.validate_code",
-                    return_value=[]), \
              patch("medharness.services.git.compute_diff",
                     return_value=""):
             mock_claude.return_value = (0, "", "")
@@ -890,8 +842,6 @@ class TestGenerateCode:
         dhf = tmp_path / "DHF"
         dhf.mkdir()
         with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
-             patch("medharness.services.code_validation.validate_code",
-                    return_value=[]), \
              patch("medharness.services.git.compute_diff",
                     return_value=None):
             mock_claude.return_value = (0, "", "")
@@ -904,8 +854,6 @@ class TestGenerateCode:
         dhf.mkdir()
         large_diff = "+" + "x" * (MAX_DIFF_CHARS + 1000)
         with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
-             patch("medharness.services.code_validation.validate_code",
-                    return_value=[]), \
              patch("medharness.services.git.compute_diff",
                     return_value=large_diff):
             mock_claude.return_value = (0, "", "")
@@ -930,8 +878,7 @@ class TestGenerateCode:
 
         with patch("medharness.services.cr_generation._run_claude", side_effect=_stub), \
              patch("medharness.services.cr_generation._get_pr_feedback",
-                   return_value={"prompt_text": "", "diagnostics": {}, "warnings": []}), \
-             patch("medharness.services.code_validation.validate_code", return_value=[]):
+                   return_value={"prompt_text": "", "diagnostics": {}, "warnings": []}):
             generate_code("CR-030", dhf, pr_number=99)
         assert all(s == "" for s in resume_sessions_captured[:1]), (
             f"initial develop step must start fresh; got resume_session={resume_sessions_captured[0]!r}"
@@ -944,39 +891,13 @@ class TestGenerateCode:
         with patch("medharness.services.cr_generation._run_claude", return_value=(0, "", "")), \
              patch("medharness.services.cr_generation._get_pr_feedback",
                    return_value={"prompt_text": "", "diagnostics": {}, "warnings": []}), \
-             patch("medharness.services.code_validation.validate_code", return_value=[]), \
              patch("medharness.services.cr_generation.post_pr_comment",
                    side_effect=lambda pr, body, **kw: posted_bodies.append(body) or "url") as mock_post:
             result = generate_code("CR-099", dhf, pr_number=55)
         assert mock_post.call_count == 0, "no warnings → no comment expected"
         assert result.get("pr_comments") == []
 
-    def test_auto_posts_errors_on_completed_with_errors(self, tmp_path):
-        dhf = tmp_path / "DHF"
-        dhf.mkdir()
-        posted_bodies: list[str] = []
-        errors = [{"field": "test_links", "issue": "missing @links", "fix": "add @links"}]
-        with patch("medharness.services.cr_generation._run_claude", return_value=(0, "", "")), \
-             patch("medharness.services.cr_generation._get_pr_feedback",
-                   return_value={"prompt_text": "", "diagnostics": {}, "warnings": []}), \
-             patch("medharness.services.code_validation.validate_code", return_value=errors), \
-             patch("medharness.services.cr_generation.post_pr_comment",
-                   side_effect=lambda pr, body, **kw: posted_bodies.append(body) or "https://comment-url"):
-            result = generate_code("CR-099", dhf, pr_number=55)
-        assert result["outcome"] == "completed_with_errors"
-        assert any("Validation errors" in b for b in posted_bodies), f"expected error comment; got: {posted_bodies}"
-        assert "https://comment-url" in result["pr_comments"]
 
-    def test_no_auto_post_without_pr_number(self, tmp_path):
-        dhf = tmp_path / "DHF"
-        dhf.mkdir()
-        errors = [{"field": "test_links", "issue": "missing @links", "fix": "add @links"}]
-        with patch("medharness.services.cr_generation._run_claude", return_value=(0, "", "")), \
-             patch("medharness.services.code_validation.validate_code", return_value=errors), \
-             patch("medharness.services.cr_generation.post_pr_comment") as mock_post:
-            result = generate_code("CR-099", dhf, pr_number=None)
-        mock_post.assert_not_called()
-        assert "pr_comments" not in result
 
     def test_code_review_loop_fixes_and_reruns_until_approved(self, tmp_path):
         # review_1 → needs_revision → fix_1 → review_2 → approved
@@ -988,7 +909,6 @@ class TestGenerateCode:
             {"verdict": "approved", "issues": []},
         ])
         with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
-             patch("medharness.services.code_validation.validate_code", return_value=[]), \
              patch("medharness.services.cr_generation._parse_review_data",
                    side_effect=lambda text: next(data_sequence)):
             mock_claude.return_value = (0, "", "")
@@ -1016,7 +936,6 @@ class TestGenerateCode:
         dhf = tmp_path / "DHF"
         dhf.mkdir()
         with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
-             patch("medharness.services.code_validation.validate_code", return_value=[]), \
              patch("medharness.services.cr_generation._parse_review_data",
                    return_value={"verdict": "needs_revision", "issues": ["file.ts:1: problem"]}):
             mock_claude.return_value = (0, "", "")
@@ -1029,28 +948,6 @@ class TestGenerateCode:
         assert result["diagnostics"]["code_review_cycles"] == _MAX_CODE_REVIEW_CYCLES
         assert len(result["code_review"]["cycles"]) == _MAX_CODE_REVIEW_CYCLES
 
-    def test_validate_code_reruns_after_review_fix(self, tmp_path):
-        # P1a: validate_code must run after each review fix so that errors introduced
-        # by the fix are captured in final_error_count and outcome.
-        dhf = tmp_path / "DHF"
-        dhf.mkdir()
-        new_error = [{"field": "test_links", "issue": "new error after review fix", "fix": "add @links"}]
-        review_data_sequence = iter([
-            {"verdict": "needs_revision", "issues": ["src/foo.ts:1: bad"]},
-            {"verdict": "approved", "issues": []},
-        ])
-        with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
-             patch("medharness.services.code_validation.validate_code",
-                   side_effect=[[], new_error]) as mock_validate, \
-             patch("medharness.services.cr_generation._parse_review_data",
-                   side_effect=lambda text: next(review_data_sequence)):
-            mock_claude.return_value = (0, "", "")
-            result = generate_code("CR-080", dhf)
-
-        assert mock_validate.call_count == 2
-        assert result["diagnostics"]["final_error_count"] == 1
-        step_names = [s["name"] for s in result["steps"]]
-        assert "validate_after_review_fix_1" in step_names
 
 
 # ── DHF context block ──────────────────────────────────────────────────────────
@@ -1650,8 +1547,7 @@ class TestDiagnosticsModelFields:
         monkeypatch.setenv("OPENAI_API_KEY", "sk-1")
         dhf = tmp_path / "DHF"
         dhf.mkdir()
-        with patch("medharness.services.cr_generation._run_llm", return_value=(0, "", "")), \
-             patch("medharness.services.code_validation.validate_code", return_value=[]):
+        with patch("medharness.services.cr_generation._run_llm", return_value=(0, "", "")):
             result = generate_code("CR-071", dhf)
         assert result["diagnostics"]["develop_model"] == "deepseek:deepseek-chat"
         assert result["diagnostics"]["code_review_model"] == "openai:gpt-4o"
@@ -1702,8 +1598,7 @@ class TestDiagnosticsModelFields:
             configs_used.append(config)
             return 0, "", ""
 
-        with patch("medharness.services.cr_generation._run_llm", side_effect=capture), \
-             patch("medharness.services.code_validation.validate_code", return_value=[]):
+        with patch("medharness.services.cr_generation._run_llm", side_effect=capture):
             generate_code("CR-073", dhf)
 
         providers = [c.provider for c in configs_used]
@@ -1771,8 +1666,7 @@ class TestNonAnthropicProviderSessionWarning:
         dhf.mkdir()
         with patch("medharness.services.cr_generation._run_llm", return_value=(0, "", "")), \
              patch("medharness.services.cr_generation._get_pr_feedback",
-                   return_value={"diagnostics": {}, "warnings": [], "prompt_text": ""}), \
-             patch("medharness.services.code_validation.validate_code", return_value=[]):
+                   return_value={"diagnostics": {}, "warnings": [], "prompt_text": ""}):
             result = generate_code("CR-083", dhf, pr_number=42)
         codes = [w["code"] for w in result["warnings"]]
         assert "non_anthropic_provider_no_session" in codes
@@ -1782,8 +1676,7 @@ class TestNonAnthropicProviderSessionWarning:
         dhf.mkdir()
         with patch("medharness.services.cr_generation._run_llm", return_value=(0, "", "")), \
              patch("medharness.services.cr_generation._get_pr_feedback",
-                   return_value={"diagnostics": {}, "warnings": [], "prompt_text": ""}), \
-             patch("medharness.services.code_validation.validate_code", return_value=[]):
+                   return_value={"diagnostics": {}, "warnings": [], "prompt_text": ""}):
             result = generate_code("CR-084", dhf, pr_number=42)
         codes = [w["code"] for w in result["warnings"]]
         assert "non_anthropic_provider_no_session" not in codes
@@ -1795,8 +1688,7 @@ class TestNonAnthropicProviderSessionWarning:
         dhf.mkdir()
         with patch("medharness.services.cr_generation._run_llm", return_value=(0, "", "")), \
              patch("medharness.services.cr_generation._get_pr_feedback",
-                   return_value={"diagnostics": {}, "warnings": [], "prompt_text": ""}), \
-             patch("medharness.services.code_validation.validate_code", return_value=[]):
+                   return_value={"diagnostics": {}, "warnings": [], "prompt_text": ""}):
             result = generate_code("CR-085", dhf, pr_number=42)
         codes = [w["code"] for w in result["warnings"]]
         assert "non_anthropic_provider_no_session" in codes

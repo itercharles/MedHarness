@@ -80,8 +80,6 @@ class TestGenerateCodeContract:
     def test_keys_present_and_no_legacy_leak(self, dhf):
         with patch("medharness.services.cr_generation._run_claude",
                    return_value=(0, "", "")), \
-             patch("medharness.services.code_validation.validate_code",
-                   return_value=[]), \
              patch("subprocess.run", return_value=_empty_diff()):
             result = generate_code("CR-200", dhf)
         assert COMMON_KEYS <= result.keys(), (
@@ -94,8 +92,6 @@ class TestGenerateCodeContract:
     def test_value_domains(self, dhf):
         with patch("medharness.services.cr_generation._run_claude",
                    return_value=(0, "", "")), \
-             patch("medharness.services.code_validation.validate_code",
-                   return_value=[]), \
              patch("subprocess.run", return_value=_empty_diff()):
             result = generate_code("CR-200", dhf)
         assert result["stage"] == "develop"
@@ -104,8 +100,6 @@ class TestGenerateCodeContract:
     def test_files_changed_shape(self, dhf):
         with patch("medharness.services.cr_generation._run_claude",
                    return_value=(0, "", "")), \
-             patch("medharness.services.code_validation.validate_code",
-                   return_value=[]), \
              patch("subprocess.run", return_value=_empty_diff()):
             result = generate_code("CR-200", dhf)
         files = result["artifacts"]["files_changed"]
@@ -126,8 +120,6 @@ class TestResponseIsJsonSerializable:
         import json
         with patch("medharness.services.cr_generation._run_claude",
                    return_value=(0, "", "")), \
-             patch("medharness.services.code_validation.validate_code",
-                   return_value=[]), \
              patch("subprocess.run", return_value=_empty_diff()):
             result = generate_code("CR-301", dhf)
         # Serialisable *and* non-empty: json.dumps({}) succeeds, so the round

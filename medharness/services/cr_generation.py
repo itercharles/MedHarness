@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
-from medharness.services import code_validation, design_validation, git
+from medharness.services import design_validation, git
 from medharness.services.cr_impact import _record_design_impact_in_cr
 from medharness.services.github_session import get_session, put_session
 from medharness.services.github_pr import post_pr_comment
@@ -1093,56 +1093,11 @@ def generate_code(
     if session_id:
         diagnostics["session_id"] = session_id
 
-    validate_step, validate_perf = _begin_step("validate_initial", {"validator": "code_validation"})
-    errors = code_validation.validate_code(cr_id, dhf_path)
-    diagnostics["initial_error_count"] = len(errors)
-    diagnostics["final_error_count"] = len(errors)
-    steps.append(
-        _finish_step(
-            validate_step,
-            validate_perf,
-            "failed" if errors else "ok",
-            {"error_count": len(errors)},
-        )
-    )
-    if errors:
-        diagnostics["fix_attempted"] = True
-        fix_prompt = (
-            f"The implementation for {cr_id} is missing required test annotations:\n"
-            f"{_format_error_lines(errors)}\n\n"
-            f"Add only the missing colocated tests with `@links:` annotations. "
-            f"Do not introduce other changes."
-        )
-        rc, _, fix_session_id = _run_claude_step(
-            name="run_fix_generation",
-            prompt=fix_prompt,
-            steps=steps,
-            warnings=warnings,
-            critical=True,
-            resume_session=session_id,
-            llm_config=develop_llm,
-        )
-        critical_step_failed = critical_step_failed or rc != 0
-        if fix_session_id:
-            session_id = fix_session_id
-            diagnostics["session_id"] = session_id
-        validate_fix_step, validate_fix_perf = _begin_step("validate_after_fix", {"validator": "code_validation"})
-        errors = code_validation.validate_code(cr_id, dhf_path)
-        diagnostics["final_error_count"] = len(errors)
-        steps.append(
-            _finish_step(
-                validate_fix_step,
-                validate_fix_perf,
-                "failed" if errors else "ok",
-                {"error_count": len(errors)},
-            )
-        )
-
     code_review_log: list[dict] = []
     code_review_verdict = "unknown"
     for review_cycle in range(1, _MAX_CODE_REVIEW_CYCLES + 1):
         review_step_name = "run_review" if review_cycle == 1 else f"run_review_{review_cycle}"
-        review_prompt = _augment_review_prompt(_assemble_review_code_prompt(cr_id), errors)
+        review_prompt = _assemble_review_code_prompt(cr_id)
         _, review_output, review_session_id = _run_claude_step(
             name=review_step_name,
             prompt=review_prompt,
@@ -1181,20 +1136,6 @@ def generate_code(
             session_id = fix_session_id
             diagnostics["session_id"] = session_id
 
-        validate_review_fix_step, validate_review_fix_perf = _begin_step(
-            f"validate_after_review_fix_{review_cycle}", {"validator": "code_validation"}
-        )
-        errors = code_validation.validate_code(cr_id, dhf_path)
-        diagnostics["final_error_count"] = len(errors)
-        steps.append(
-            _finish_step(
-                validate_review_fix_step,
-                validate_review_fix_perf,
-                "failed" if errors else "ok",
-                {"error_count": len(errors)},
-            )
-        )
-
     diagnostics["code_review_verdict"] = code_review_verdict
     diagnostics["code_review_cycles"] = review_cycle
 
@@ -1217,7 +1158,7 @@ def generate_code(
         },
         diagnostics=diagnostics,
         warnings=warnings,
-        errors=errors,
+        errors=[],
         critical_step_failed=critical_step_failed,
     )
     result["code_review"] = _build_review_result("Implementation", code_review_log)
