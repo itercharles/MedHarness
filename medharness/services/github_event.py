@@ -52,10 +52,8 @@ _CR_RE = re.compile(r"CR-\d+")
 #: a reference, not a link, so matching it would name an issue the PR does not
 #: close.
 #:
-#: This covers the keyword form only. An issue linked through the GitHub UI
-#: leaves no trace in the event payload, so `issue_number` being absent means
-#: "not derivable from the payload", not "there is none" — a caller that needs
-#: those still has to ask the API.
+#: Keyword form only: an issue linked through the GitHub UI leaves no trace in
+#: the payload, so an absent `issue_number` means "not derivable", not "none".
 _CLOSES_RE = re.compile(
     r"\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\b\s*:?\s*#(\d+)",
     re.IGNORECASE,
@@ -83,21 +81,16 @@ def parse_github_event(
     wants to avoid re-reading the event file.
     """
     raw_path = os.environ.get("GITHUB_EVENT_PATH", "")
-    # An unset variable becomes Path("") -> Path("."), and a directory passes
-    # exists(). Reading it then raised IsADirectoryError, which the swallow used
-    # to hide and this function now reports — so the absent case has to be
-    # recognised as absent rather than as an unreadable file.
+    # is_file(), not exists(): an unset variable becomes Path("") -> Path("."),
+    # and a directory would pass exists() and then raise on read.
     event_path = event_path or (Path(raw_path) if raw_path else None)
     event: dict = {}
     if event_path is not None and event_path.is_file():
         try:
             event = json.loads(event_path.read_text(encoding="utf-8"))
         except (json.JSONDecodeError, OSError) as exc:
-            # Swallowing this produced `{}`, and parsing then reported exactly
-            # what a genuine no-op event reports: cr_id=None, mode="skip",
-            # exit 0. A workflow could not tell "nothing to do here" from
-            # "the payload was unreadable and nothing ran" — the whole run
-            # green, every job skipped.
+            # Raise: swallowing this yields `{}`, which parses to the same
+            # cr_id=None/skip/exit-0 a genuine no-op event produces.
             raise ValueError(
                 f"GitHub event payload at {event_path} could not be read: {exc}"
             ) from exc

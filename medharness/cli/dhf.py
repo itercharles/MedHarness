@@ -80,7 +80,6 @@ def register(main):
             "traceability": {
                 "valid": all(c["covered"] == c["total"] for c in trace.get("coverage", [])),
                 "coverage": coverage_summary,
-                "orphan_count": len(trace.get("orphans", [])),
             },
             "module_map": module_map,
             "test_coverage": {"computed": False},
@@ -114,7 +113,6 @@ def register(main):
         if stage == "analyze":
             items = adapter.list_items()
             trace = analyse(adapter)
-            orphans = trace.get("orphans", [])
             coverage = trace.get("coverage", [])
             gaps = [c for c in coverage if c.get("covered", 0) < c.get("total", 0)]
             result: dict = {
@@ -127,8 +125,6 @@ def register(main):
                     for it in sorted(items, key=lambda x: x["id"])
                 ],
                 "traceability_gaps": {
-                    "orphan_count": len(orphans),
-                    "orphans": [o.get("id") for o in orphans[:20]],
                     "uncovered_pairs": [
                         {"parent": g["parent_type"], "child": g["child_type"],
                          "covered": g["covered"], "total": g["total"]}
@@ -215,7 +211,6 @@ def register(main):
         result["traceability"] = {
             "valid": all(c["covered"] == c["total"] for c in trace.get("coverage", [])),
             "coverage": coverage_summary,
-            "orphan_count": len(trace.get("orphans", [])),
         }
 
         junit_paths = _h._collect_junit_paths(junit_files, junit_dirs)

@@ -149,10 +149,8 @@ def check_upgrade(project_dir: Path) -> dict:
         try:
             tmpl_text = tmpl_path.read_text(encoding="utf-8")
         except OSError as exc:
-            # A template that exists but cannot be read is the same fault as one
-            # that is absent, and is reported the same way. Skipping it silently
-            # dropped the file from every bucket, so the summary counted a
-            # smaller total and still said "all up to date".
+            # An unreadable template is the same fault as an absent one, and is
+            # reported the same way — skipping it drops the file from the counts.
             unavailable.append({"file": proj_rel, "template": tmpl_rel,
                                 "reason": str(exc)})
             continue
@@ -240,8 +238,6 @@ def apply_upgrade(project_dir: Path) -> dict:
         try:
             rendered = _substitute(tmpl_path.read_text(encoding="utf-8"), project_name, installed_version)
         except OSError as exc:
-            # Not applied, and said so. Dropping it left "Applied N update(s)"
-            # true of a smaller N, with the file that failed unmentioned.
             failed.append({"file": proj_rel, "reason": str(exc)})
             continue
         proj_path.parent.mkdir(parents=True, exist_ok=True)
@@ -256,8 +252,6 @@ def apply_upgrade(project_dir: Path) -> dict:
         try:
             rendered = _substitute(tmpl_path.read_text(encoding="utf-8"), project_name, installed_version)
         except OSError as exc:
-            # Not applied, and said so. Dropping it left "Applied N update(s)"
-            # true of a smaller N, with the file that failed unmentioned.
             failed.append({"file": proj_rel, "reason": str(exc)})
             continue
         proj_path.parent.mkdir(parents=True, exist_ok=True)
@@ -271,9 +265,8 @@ def apply_upgrade(project_dir: Path) -> dict:
         (f"{len(failed)} file(s) could not be written. " if failed else "")
         + f"Applied {n_applied} update(s). "
         + f"{len(report['up_to_date'])} file(s) were already current."
-        # check_upgrade's summary carries this and apply overwrote it, so a
-        # template this build cannot supply was counted, stored, and then left
-        # out of the one line anybody reads.
+        # Carry check_upgrade's unreadable count into the summary; overwriting
+        # it drops those files from the one line anybody reads.
         + (f" {len(report['unavailable'])} template(s) missing from the "
            f"medharness installation — this build cannot manage them."
            if report["unavailable"] else "")

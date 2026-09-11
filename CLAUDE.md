@@ -52,6 +52,10 @@ All DHF data operations use `dhfkit --dhf DHF <command>`.
 - Do not add comments to self-explanatory code. Only comment when the WHY is
   non-obvious: a hidden constraint, a workaround, an external API contract, or
   behavior that would surprise a reader unfamiliar with the context.
+  State the constraint, do not retell the bug. A comment that narrates how a
+  fault was found ("used to fall off the end of this chain and let the
+  transition through") belongs in the commit message; the code needs the one
+  line that says what must hold. Two lines is usually the ceiling.
 - Every code change must be accompanied by tests. If a change genuinely cannot
   be tested (e.g., prompt text, LLM-dependent behavior), state explicitly why
   it is untestable and what manual verification step is required instead.
@@ -59,6 +63,11 @@ All DHF data operations use `dhfkit --dhf DHF <command>`.
   the same commit or PR — docs and code ship together.
 - Keep code minimal. No speculative abstractions, no over-engineering. Three
   similar lines is better than a premature abstraction.
+- Before writing an algorithm, check whether a current dependency already has
+  it. `networkx` is one, and cycle detection was hand-rolled twice anyway.
+- Delete a field that is structurally always empty, along with everything that
+  reads it. "Preserved for compat" on a value nothing can ever write is dead
+  code with a reason attached, and the readers rot around it.
 - When encountering a bug or unexpected behavior, find the root cause and fix
   it. Do not add workarounds, fallbacks, or defensive patches that mask the
   underlying problem.

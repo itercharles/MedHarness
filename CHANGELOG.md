@@ -11,6 +11,60 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.21.0] — 2026-09-10
+
+### Breaking Changes
+
+- **`verify dhf` JSON no longer carries `orphans` or `deprecation_warnings`.**
+  `check_traceability` returned both as hardcoded `[]` — nothing could ever
+  write into them. Six files read them anyway: `dhfkit validate` counted them
+  as blocking reasons, the text report had an "Orphaned Items" section,
+  `medharness dhf context` reported `orphan_count` in three payloads, and
+  design validation built fix instructions from `required_parents`, a field no
+  orphan dict ever had. None of it could fire.
+
+  A consumer reading `orphan_count` was reading a constant zero, so nothing it
+  reported changes — but the key is gone and a strict reader will notice.
+
+  Orphan detection that does work is untouched: the graph's `find_orphans`
+  (which is what the verification plan template's `stats.orphans` renders) and
+  `soup-sync`'s orphans, a different concept — a SOUP item absent from every
+  manifest.
+
+### Internal
+
+- `find_link_cycles` used a hand-rolled colour-marking DFS. `networkx` is
+  already a dependency and the graph module already calls `simple_cycles`; 56
+  lines became 12 with the same output contract.
+
+- Comments added over the last few versions were trimmed. They had drifted into
+  bug post-mortems — four to six lines retelling how a fault was found where one
+  states the constraint. 80 comment lines out, 29 back in. `CLAUDE.md` records
+  the specific shapes that got past rules it already had.
+
+### Bug Fixes
+
+- **Every CR the AI workflow planned listed itself in `affected_items`.**
+  `change plan` writes `triage_result`, `affected_risk_items` and
+  `implementation_notes` onto the CR, so the CR is always among the items
+  changed on the branch — and `_record_design_impact_in_cr` recorded that whole
+  set as what the CR affects, including the CR.
+
+  That is a one-item traceability cycle. It was invisible until 0.20.0 added
+  cycle detection, at which point **every planned CR failed the gate that
+  shipped to catch broken references.** The reference project hit it on CR-012
+  (`affected_items: [CR-012]`) and CR-013 within minutes of upgrading, and
+  correctly predicted the next `change plan` run would reproduce it.
+
+  Another CR in the change set is still recorded — only this one is excluded.
+
+  Nothing caught it here because every test of this path fed an empty change
+  set: 20 of the 23 mocks standing in for `collect_dhf_item_changes` return
+  `{"created": [], "updated": [], "deleted": []}`, and a CR can only appear in a
+  change set that is not empty. A check now asserts the suite drives the
+  populated case too.
+
+
 ---
 
 ## [0.20.0] — 2026-09-09

@@ -90,8 +90,7 @@ def purl_gap(name: str, version: str, ecosystem: str) -> str | None:
     """Why this component has no purl, or None when it has one.
 
     Two causes needing different fixes: an ecosystem this tool cannot map, and
-    a version that is not a version. Reporting only a count told the reference
-    project it had a problem without saying which one.
+    a version that is not a version.
     """
     if purl_for(name, version, ecosystem):
         return None
@@ -114,11 +113,9 @@ def _component(item: dict) -> dict[str, Any]:
     purl = purl_for(name, version, ecosystem)
     component: dict[str, Any] = {
         "type": "library",
-        # The SOUP id where there is one, so a finding in the SBOM leads back to
-        # the DHF item carrying the justification and any documented
-        # vulnerability acceptance. A manifest-only package has no id, and
-        # bom-ref must still be unique — two versions of one library would
-        # otherwise collide on the name alone.
+        # The SOUP id where there is one, so a finding leads back to the DHF
+        # item. A manifest-only package has no id, and bom-ref must still be
+        # unique — name alone collides across two versions of one library.
         "bom-ref": str(item.get("id") or purl or f"{name}@{version}"),
         "name": name,
         "version": version,
@@ -182,14 +179,10 @@ def merge_release_components(
 ) -> list[dict]:
     """The components a release actually ships, from both registers.
 
-    An SBOM that lists only the documented components understates what ships:
-    a package in requirements.txt that nobody has made a SOUP item for is still
-    in the release, and a regulator reading the SBOM should see it. Omitting it
-    would also hide the §8.1.2 gap that `soup-sync` exists to close.
-
-    A SOUP item wins over the manifest entry for the same package — it carries
-    licence, supplier and any documented vulnerability acceptance, and the
-    manifest carries none of that.
+    A package in requirements.txt that nobody has made a SOUP item for still
+    ships, so it belongs here — omitting it would hide the §8.1.2 gap that
+    `soup-sync` exists to close. A SOUP item wins over the manifest entry for
+    the same package: it carries licence, supplier and vulnerability acceptance.
     """
     def key(entry: dict) -> tuple[str, str, str]:
         return (
