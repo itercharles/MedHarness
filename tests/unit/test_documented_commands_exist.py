@@ -34,26 +34,43 @@ def _documented_calls() -> list[tuple[str, tuple[str, ...], str]]:
     sources = sorted((ROOT / "docs").glob("*.md")) + [ROOT / "README.md"]
     for path in sources:
         for raw in path.read_text(encoding="utf-8").splitlines():
-            line = raw.strip().lstrip("$").strip()
-            match = re.match(r"^(dhfkit|medharness)\s+(.+)$", line)
-            if not match:
-                continue
-            tokens, skip = [], False
-            for arg in match.group(2).split():
-                if skip:
-                    skip = False
-                    continue
-                if arg in VALUE_FLAGS:
-                    skip = True
-                    continue
-                if arg.startswith(("-", "<", "|", "#")):
-                    continue
-                tokens.append(arg)
-            if tokens:
-                found.setdefault(
-                    (match.group(1), tuple(tokens[:2])), path.name
-                )
+            # A command in a table cell or inline prose is documented just as
+            # loudly as one on its own line, and was invisible here until the
+            # README moved its command reference into a table — taking twelve
+            # commands out of this guard's reach without failing anything.
+            for candidate in [raw] + re.findall(r"`([^`]+)`", raw):
+                for line in _alternatives(candidate.replace(r"\|", "|")):
+                    call = _parse(line)
+                    if call:
+                        found.setdefault(call, path.name)
     return [(mod, toks, src) for (mod, toks), src in sorted(found.items())]
+
+
+def _alternatives(line: str) -> list[str]:
+    """`change plan|implement` documents two commands, not one."""
+    match = re.search(r"\b(\w+(?:\|\w+)+)", line)
+    if not match:
+        return [line]
+    return [line.replace(match.group(1), alt) for alt in match.group(1).split("|")]
+
+
+def _parse(line: str) -> tuple[str, tuple[str, ...]] | None:
+    match = re.match(r"^(dhfkit|medharness)\s+(.+)$", line.strip().lstrip("$").strip())
+    if not match:
+        return None
+    tokens, skip = [], False
+    for arg in match.group(2).split():
+        if skip:
+            skip = False
+            continue
+        if arg in VALUE_FLAGS:
+            skip = True
+            continue
+        # "..." stands in for arguments the prose is not spelling out.
+        if arg.startswith(("-", "<", "|", "#")) or set(arg) == {"."}:
+            continue
+        tokens.append(arg)
+    return (match.group(1), tuple(tokens[:2])) if tokens else None
 
 
 CALLS = _documented_calls()
