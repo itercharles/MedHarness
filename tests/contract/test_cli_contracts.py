@@ -83,11 +83,6 @@ class TestCRGenerationCommands:
         r = _run("medharness", "change", "plan", "--help")
         assert r.returncode == 0, r.stderr
 
-    def test_validate_code_help(self):
-        """medharness verify code --help exits 0."""
-        r = _run("medharness", "verify", "code", "--help")
-        assert r.returncode == 0, r.stderr
-        assert "--dhf" not in r.stdout
 
     def test_validate_branch_help(self):
         """medharness verify branch --help exits 0."""
@@ -120,10 +115,6 @@ class TestCRGenerationCommands:
         r = _run("medharness", "change", "implement", "--help")
         assert "--pr" in r.stdout
 
-    def test_validate_code_accepts_since_ref_flag(self):
-        """medharness verify code --help shows --since-ref option."""
-        r = _run("medharness", "verify", "code", "--help")
-        assert "--since-ref" in r.stdout
 
     def test_validate_branch_accepts_code_path_flag(self):
         """medharness verify branch --help shows --code-path option."""
@@ -136,7 +127,7 @@ class TestCRGenerationCommands:
         r_change = _run("medharness", "change", "--help")
         assert r_verify.returncode == 0, r_verify.stderr
         assert r_change.returncode == 0, r_change.stderr
-        for cmd in ["code", "branch", "dhf", "tests", "soup"]:
+        for cmd in ["branch", "dhf", "tests", "soup"]:
             assert cmd in r_verify.stdout, f"Command {cmd!r} missing from verify --help"
         for cmd in ["plan", "implement", "status", "advance"]:
             assert cmd in r_change.stdout, f"Command {cmd!r} missing from change --help"

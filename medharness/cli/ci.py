@@ -671,33 +671,6 @@ def register(main):
         if not result["passed"]:
             raise click.ClickException("SOUP vulnerability check failed.")
 
-    @verify.command("code")
-    @click.option("--cr", "cr_id", required=True, metavar="CR_ID")
-    @click.option("--since-ref", default="origin/main", metavar="REF")
-    @click.pass_context
-    def verify_code(ctx: click.Context, cr_id: str, since_ref: str) -> None:
-        """Run deterministic implementation validation without invoking the AI loop."""
-        from medharness.services.code_validation import validate_code  # noqa: PLC0415
-
-        dhf_path: Path = ctx.obj["dhf"]
-        from medharness.services.ci import gate_result  # noqa: PLC0415
-
-        errors = validate_code(cr_id, dhf_path, since_ref=since_ref)
-        payload = gate_result(
-            "verify code", not errors,
-            f"{cr_id}: {len(errors)} deterministic finding(s) since {since_ref}.",
-            errors=[f"{e['field']}: {e['issue']}" for e in errors],
-            cr_id=cr_id, stage="develop", since_ref=since_ref, findings=errors,
-        )
-        click.echo(json.dumps(payload))
-        if not errors:
-            click.echo(f"PASS [validate-code] {cr_id}: deterministic checks passed.", err=True)
-            return
-        for error in errors:
-            click.echo(f"FAIL [validate-code] {cr_id} ({error['field']}): {error['issue']}", err=True)
-            click.echo(f"    Fix: {error['fix']}", err=True)
-        raise click.exceptions.Exit(1)
-
     @verify.command("branch")
     @click.option("--cr", "cr_id", required=True, metavar="CR_ID")
     @click.option("--since-ref", default="origin/main", metavar="REF")

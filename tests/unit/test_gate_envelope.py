@@ -41,7 +41,6 @@ GATE_ARGS = {
     "verify tests": ["--junit-dir", "{dhf}/test-results"],
     "verify completion": ["--cr", "CR-001"],
     "verify branch": ["--cr", "CR-001"],
-    "verify code": ["--cr", "CR-001"],
 }
 
 
@@ -161,7 +160,6 @@ class TestNoGateEscapesTheEnvelope:
             "tests": ["--junit-dir", str(dhf / "test-results")],
             "completion": ["--cr", "CR-001"],
             "branch": ["--cr", "CR-001"],
-            "code": ["--cr", "CR-001"],
         }
         offenders = []
         for gate in GATES:
@@ -390,7 +388,7 @@ class TestStderrCarriesTheEnvelope:
     """
 
     ALL = ("verify dhf", "verify tests", "verify classification", "verify plans",
-           "verify verification", "verify completion", "verify branch", "verify code")
+           "verify verification", "verify completion", "verify branch")
 
     @pytest.mark.parametrize("command", ALL)
     def test_stderr_reports_the_envelope(self, command: str, failing_dhf: Path) -> None:

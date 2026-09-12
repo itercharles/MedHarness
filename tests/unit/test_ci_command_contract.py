@@ -63,8 +63,6 @@ class TestDevelopCrJsonContract:
         runner = CliRunner()
         with patch("medharness.services.cr_generation._run_claude",
                    return_value=(0, "", "")), \
-             patch("medharness.services.code_validation.validate_code",
-                   return_value=[]), \
              patch("subprocess.run", return_value=_empty_diff()):
             r = runner.invoke(main, ["--dhf", str(dhf), "change", "implement", "--cr", "CR-200"])
         assert r.exit_code == 0, (r.output, r.stderr)
@@ -77,35 +75,6 @@ class TestDevelopCrJsonContract:
         assert payload["stage"] == "develop"
         for legacy in ("items_created", "items_updated", "files_written", "status", "corrections", "validation"):
             assert legacy not in payload, f"removed key reappeared: {legacy}"
-
-
-class TestValidateCodeJsonContract:
-    def test_json_payload_has_documented_keys(self, dhf):
-        runner = CliRunner()
-        with patch("medharness.services.code_validation.validate_code", return_value=[]):
-            r = runner.invoke(main, ["--dhf", str(dhf), "verify", "code", "--cr", "CR-400"])
-        assert r.exit_code == 0, (r.output, r.stderr)
-        payload = _split_stdout_json(r.stdout)
-        for key in ("passed", "errors", "summary"):
-            assert key in payload, f"missing envelope key {key}"
-        for key in ("cr_id", "stage", "since_ref"):
-            assert key in payload["details"], f"missing detail {key}"
-        assert payload["details"]["stage"] == "develop"
-        assert payload["passed"] is True
-        assert payload["details"]["since_ref"] == "origin/main"
-
-    def test_errors_propagate_and_exit_non_zero(self, dhf):
-        residual = [{"field": "test_plan.needs_new_tc", "issue": "x", "fix": "y"}]
-        runner = CliRunner()
-        with patch("medharness.services.code_validation.validate_code", return_value=residual):
-            r = runner.invoke(main, [
-                "--dhf", str(dhf), "verify", "code", "--cr", "CR-401", "--since-ref", "origin/feature-base",
-            ])
-        assert r.exit_code == 1
-        payload = _split_stdout_json(r.stdout)
-        assert payload["passed"] is False
-        assert payload["details"]["since_ref"] == "origin/feature-base"
-        assert payload["details"]["findings"] == residual
 
 
 class TestValidateBranchJsonContract:

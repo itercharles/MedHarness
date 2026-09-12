@@ -139,18 +139,6 @@ GATES: tuple[dict[str, Any], ...] = (
         "needs_network": False,
         "needs_safety_class": False,
     },
-    {
-        "command": "verify code",
-        "checks": "Deterministic post-implementation checks on the diff, without "
-                  "invoking a model.",
-        "clauses": ["IEC 62304 §5.5"],
-        "options": {"required": ["--cr"], "optional": ["--since-ref"]},
-        "blocking": "always",
-        "blocking_note": "Currently a placeholder: project CI owns code-quality "
-                         "enforcement, so this reports no findings.",
-        "needs_network": False,
-        "needs_safety_class": False,
-    },
 )
 
 
