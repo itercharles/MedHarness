@@ -11,6 +11,58 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.23.0] — 2026-09-12
+
+### Breaking Changes
+
+**The command surface went from 51 to 32.** It had grown by accretion: a CI
+pipeline's individual steps had each become a command, and `dhfkit` had taken on
+work that belongs to analysis.
+
+- **`dhfkit soup-sync` is now `medharness analyse soup-drift`.** It read
+  dependency manifests from outside the DHF and diffed two sets. Both are
+  analysis, and the analysis has to work for a team whose DHF lives in Jira.
+
+- **`dhfkit release-baseline` is now `medharness release baseline`.** It judged
+  whether every included CR was `completed` — a rule over a set of items.
+
+- **Removed as internal state or GitHub glue:** `automation session get/put`,
+  `change advance`, `change status`, `approval parse`, `approval act`,
+  `cr check-status`, and all four `cr workflow` commands. `change advance` moved
+  one GitHub label to another; `gh pr edit --add-label` does that without
+  pretending it is design control.
+
+- **Removed from dhfkit as internal structure:** `config doc-types`, `doc list`,
+  `test list`, `item delete`, `approval import`, `approval show`. A DHF is a
+  change-controlled record, so deleting an item outright is not a routine
+  operation — retire it through a CR instead.
+
+- **`dhfkit validate links` is gone.** Link integrity needs the whole item set,
+  so `verify dhf` reports it; the check itself stays on the write path.
+
+- **Merged, because each pair asked two halves of one question:**
+  `item transitions` into `item transition` (omit the target state to list them),
+  `verify plans` into `verify classification` (§4.3 and §5.1 together — its
+  `details` JSON now nests under `classification` and `plans`), and
+  `medharness dhf context X` is now `medharness context X`.
+
+### Added
+
+- **`medharness analyse risk-impact --since-ref`** — which risks the changes
+  since a ref touch, by walking changed item → the risk controls implementing it
+  → the hazards those controls mitigate. `find_affected_risks` has existed since
+  0.20.0 and only `verify branch` called it, so the question ISO 14971 asks on
+  every change had no way to be asked directly.
+
+- **`dhfkit.paths.config_file`** — where a config file lives is the store's to
+  answer. Takes a root rather than an adapter, so a DHF with no `global.yaml`
+  yet can still be inspected.
+
+### Fixed
+
+- The storage guard caught both moved modules joining paths into the DHF
+  themselves. They now ask dhfkit.
+
 ## [0.22.0] — 2026-09-12
 
 ### Breaking Changes
