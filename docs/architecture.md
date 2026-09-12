@@ -87,7 +87,7 @@ through `list_documents("plans")` and `get_document()`; `upgrade` reads the
 project name through `ProjectConfig.load()` rather than the regex it used to
 apply to global.yaml — which took a trailing comment as part of the name.
 
-`tests/unit/test_storage_access_is_bounded.py` holds the exception to the two
+`tests/guards/test_storage_access_is_bounded.py` holds the exception to the two
 scaffold modules.
 
 ### Boundary rules
@@ -99,7 +99,7 @@ scaffold modules.
   has a contract, and a consumer pinned to an underscore has none — ten sites
   read `adapter._config` before this rule was written down and checked.
 
-`tests/unit/test_package_boundary.py` enforces the last two; the import
+`tests/guards/test_package_boundary.py` enforces the last two; the import
 direction was already guarded, what a consumer may touch was not.
 
 ---
@@ -186,6 +186,7 @@ The generated DHF repo does not contain `dhfkit/` or `medharness/` source code. 
 | Layer | Directory | Scope |
 |-------|-----------|-------|
 | Unit | `tests/unit/` | Pure logic: parsers, config, lifecycle, traceability |
+| Guards | `tests/guards/` | The repo about itself: import boundaries, documented commands, packaging, mock contracts |
 | Integration | `tests/integration/` | Package integration: init, DHF facade, CR workflows |
 | Contract | `tests/contract/` | Public contracts: CLI, scaffold structure, example smoke |
 | Engine | `dhfkit/tests/` | dhfkit-specific: CRUD, validation, document generation |

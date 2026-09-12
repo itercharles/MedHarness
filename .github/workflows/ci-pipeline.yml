@@ -39,7 +39,7 @@ jobs:
       - name: Run unit tests
         run: |
           export PYTHONPATH="${PYTHONPATH}:${PWD}"
-          pytest tests/unit/ -v
+          pytest tests/unit/ tests/guards/ -v
 
   tests-integration:
     name: Test | Integration

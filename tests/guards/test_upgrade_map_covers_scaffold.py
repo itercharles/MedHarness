@@ -78,11 +78,14 @@ def test_the_categories_do_not_overlap() -> None:
     assert not seeded & owned, seeded & owned
 
 
-@pytest.mark.parametrize("tmpl,proj", list(_UPGRADE_MAP) + list(_SEED_MAP),
-                         ids=[p for _t, p in list(_UPGRADE_MAP) + list(_SEED_MAP)])
-def test_every_mapped_template_ships_in_this_build(tmpl: str, proj: str) -> None:
+def test_every_mapped_template_ships_in_this_build() -> None:
     """A map entry with no template silently manages nothing."""
-    assert (_TEMPLATES_DIR / tmpl).exists(), f"{proj}: template {tmpl} is not packaged"
+    missing = [
+        f"{proj}: template {tmpl} is not packaged"
+        for tmpl, proj in list(_UPGRADE_MAP) + list(_SEED_MAP)
+        if not (_TEMPLATES_DIR / tmpl).exists()
+    ]
+    assert not missing, "\n  ".join([""] + missing)
 
 
 def test_every_doc_type_is_managed(scaffolded: set[str]) -> None:

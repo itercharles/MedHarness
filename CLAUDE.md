@@ -22,7 +22,7 @@ Before proposing or implementing any significant change, read:
 
 Both have an `approval` group and they do different things: `dhfkit approval`
 records APR items (data), `medharness approval` drives PR-based approval
-(process). `tests/unit/test_cli_boundary_is_documented.py` checks this table
+(process). `tests/guards/test_cli_boundary_is_documented.py` checks this table
 against the live command tree.
 
 `medharness dhf` exposes only AI-harness context commands (`context implementation/for-stage/overview`).
@@ -36,7 +36,8 @@ All DHF data operations use `dhfkit --dhf DHF <command>`.
 | `dhfkit/` | DHF storage: items, config, link integrity, doc generation, SOUP sync, release baseline |
 | `dhfkit/templates/` | Starter DHF scaffold — config, specs, plans, sample items, CI workflow |
 | `docs/` | Architecture docs and adopting guide |
-| `tests/unit/` | Unit tests |
+| `tests/unit/` | Unit tests — behaviour of a function or command |
+| `tests/guards/` | Checks on the repo itself: import boundaries, documented commands, packaging, mock contracts |
 | `tests/integration/` | Integration tests |
 | `tests/contract/` | Contract tests |
 | `dhfkit/tests/` | dhfkit tests |

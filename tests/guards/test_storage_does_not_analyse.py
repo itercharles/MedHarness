@@ -52,16 +52,20 @@ def test_the_scan_found_functions() -> None:
     assert len(FUNCTIONS) > 50, f"only {len(FUNCTIONS)} — the scan is broken"
 
 
-@pytest.mark.parametrize("where,name", FUNCTIONS, ids=[f"{n}" for _w, n in FUNCTIONS])
-def test_no_analysis_function_lives_in_storage(where: str, name: str) -> None:
-    if name in ALLOWED:
-        return
-    lowered = name.lower()
-    hit = next((a for a in ANALYSIS if a in lowered and "lifecycle" not in lowered), None)
-    assert hit is None, (
-        f"{where}::{name} looks like analysis ({hit!r}) and dhfkit stores.\n"
-        f"Analysis over the item set belongs in medharness.services.traceability, "
-        f"which takes items as data so it works against any adapter."
+def test_no_analysis_function_lives_in_storage() -> None:
+    offenders = []
+    for where, name in FUNCTIONS:
+        if name in ALLOWED:
+            continue
+        lowered = name.lower()
+        hit = next((a for a in ANALYSIS if a in lowered and "lifecycle" not in lowered), None)
+        if hit:
+            offenders.append(f"{where}::{name} ({hit!r})")
+    assert not offenders, (
+        "dhfkit stores; these look like analysis:\n  "
+        + "\n  ".join(offenders)
+        + "\nAnalysis over the item set belongs in medharness.services.traceability, "
+        "which takes items as data so it works against any adapter."
     )
 
 
