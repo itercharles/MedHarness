@@ -75,7 +75,7 @@ If you must run locally, use a dedicated checkout and a shell without your prima
 The AI cannot advance a change on its own. Every stage transition is gated:
 
 1. **`change plan` produces a design PR.** No code is written. A human reviews the DHF diff and the generated design review.
-2. **Approval is explicit.** `medharness approval check` requires a stage label plus a maintainer `/approve` comment before `change advance` will move the CR to `develop`.
+2. **Approval is evidence.** `medharness approval check` requires an approving GitHub review of the commit the PR would merge — author, timestamp and revision, all recorded outside this tool's control. A label is not accepted: anyone with write access can add or remove one, and it says nothing about what was reviewed.
 3. **`change implement` produces a code PR.** It cannot run until the design stage is approved.
 4. **Closure is gated deterministically.** `verify completion` requires an approved design review file, populated CR fields, and passing JUnit evidence for every requirement — none of which the AI can satisfy by assertion.
 

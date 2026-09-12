@@ -174,7 +174,14 @@ class TestWithMockedGh:
             assert add_approval_label(42, "spec", token="tok") is False
 
     def test_check_approved_true(self):
-        with patch("subprocess.run", return_value=self._mock_run(0, "true")):
+        """Two gh calls now: the head commit, then the reviews on it."""
+        import json as _json
+
+        head = "a" * 40
+        reviews = _json.dumps([{"state": "APPROVED", "commit_id": head,
+                                "login": "r", "submitted_at": "t"}])
+        with patch("medharness.services.pr_approval._gh",
+                   side_effect=[(0, head), (0, reviews)]):
             assert check_approved(42, "design", token="tok") is True
 
     def test_check_approved_false_label_absent(self):
@@ -207,31 +214,47 @@ def _first_json_line(output: str) -> dict:
 
 
 class TestCiApproveGate:
-    @pytest.mark.parametrize("approved,expected_status,expected_exit", [
-        (True, "PASS", 0),
-        (False, "FAIL", 1),
-    ])
-    def test_approve_gate_status(self, approved, expected_status, expected_exit):
-        runner = CliRunner()
-        with patch("medharness.services.pr_approval.check_approved", return_value=approved):
-            r = runner.invoke(main, ["approval", "check", "--cr", "CR-001", "--stage", "design", "--pr", "42"])
-        assert r.exit_code == expected_exit, r.output
-        payload = _first_json_line(r.output)
-        assert payload["approved"] is approved
-        assert payload["label"] == "cr-design-approved"
-        assert expected_status in r.output
+    """The CLI reports the evidence, not just a verdict."""
 
-    @pytest.mark.parametrize("stage,label", [
-        ("design", "cr-design-approved"),
-        ("develop", "cr-code-approved"),
-    ])
-    def test_stage_label(self, stage, label):
-        runner = CliRunner()
-        with patch("medharness.services.pr_approval.check_approved", return_value=True):
-            r = runner.invoke(main, ["approval", "check", "--cr", "CR-001", "--stage", stage, "--pr", "42"])
+    EVIDENCE = {
+        "approved": True, "reason": "", "head_sha": "a" * 40,
+        "approvals": [{"by": "reviewer", "at": "2026-09-12T00:00:00Z", "commit": "a" * 40}],
+        "stale_approvals": [],
+    }
+
+    def test_an_approved_stage_passes_and_names_the_reviewer(self):
+        with patch("medharness.services.pr_approval.approval_evidence",
+                   return_value=self.EVIDENCE):
+            r = CliRunner().invoke(main, ["approval", "check", "--cr", "CR-001",
+                                          "--stage", "design", "--pr", "42"])
         assert r.exit_code == 0, r.output
         payload = _first_json_line(r.output)
-        assert payload["label"] == label
+        assert payload["approved"] is True
+        assert payload["approvals"][0]["by"] == "reviewer"
+        assert "reviewer" in r.output
+
+    def test_a_stale_approval_fails_and_says_which_commit(self):
+        evidence = {
+            "approved": False,
+            "reason": "every approving review is against an earlier commit",
+            "head_sha": "a" * 40,
+            "approvals": [],
+            "stale_approvals": [{"by": "early", "at": "x", "commit": "b" * 40}],
+        }
+        with patch("medharness.services.pr_approval.approval_evidence",
+                   return_value=evidence):
+            r = CliRunner().invoke(main, ["approval", "check", "--cr", "CR-001",
+                                          "--stage", "design", "--pr", "42"])
+        assert r.exit_code == 1
+        assert "earlier commit" in r.output
+        assert "bbbbbbb" in r.output, "the reviewed commit is not named"
+
+    def test_the_payload_no_longer_carries_a_label(self):
+        with patch("medharness.services.pr_approval.approval_evidence",
+                   return_value=self.EVIDENCE):
+            r = CliRunner().invoke(main, ["approval", "check", "--cr", "CR-001",
+                                          "--stage", "design", "--pr", "42"])
+        assert "label" not in _first_json_line(r.output)
 
 
 
