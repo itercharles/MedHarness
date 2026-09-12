@@ -15,6 +15,7 @@ Commands (typed in PR comments):
 
 from __future__ import annotations
 
+import json
 import os
 import re
 import subprocess
@@ -107,17 +108,84 @@ def close_pr(pr_number: int | str, *, token: str = "") -> bool:
     return rc == 0
 
 
-def check_approved(pr_number: int | str, stage: str, *, token: str = "") -> bool:
-    """Check whether the stage approval label is present on the PR."""
-    label = label_for_stage(stage)
-    if not label:
-        return False
-    rc, output = _gh(
-        [
-            "pr", "view", str(pr_number),
-            "--json", "labels",
-            "--jq", f'[.labels[].name] | contains(["{label}"])',
-        ],
+def _pr_head_sha(pr_number: int | str, *, token: str = "") -> str:
+    rc, out = _gh(
+        ["pr", "view", str(pr_number), "--json", "headRefOid", "--jq", ".headRefOid"],
         token=token,
     )
-    return rc == 0 and output.strip() == "true"
+    return out.strip() if rc == 0 else ""
+
+
+def _reviews(pr_number: int | str, *, token: str = "") -> list[dict] | None:
+    """Reviews with the commit each one approved, or None when unreadable.
+
+    The REST endpoint rather than `gh pr view --json reviews`, which omits
+    `commit_id` — and a review that does not say what it reviewed is no better
+    than a label.
+    """
+    rc, out = _gh(
+        ["api", f"repos/{{owner}}/{{repo}}/pulls/{pr_number}/reviews",
+         "--paginate", "--jq",
+         '[.[] | {state, commit_id, login: .user.login, submitted_at}]'],
+        token=token,
+    )
+    if rc != 0:
+        return None
+    try:
+        payload = json.loads(out or "[]")
+    except json.JSONDecodeError:
+        return None
+    return payload if isinstance(payload, list) else None
+
+
+def approval_evidence(pr_number: int | str, stage: str, *, token: str = "") -> dict:
+    """What approves this stage, and whether it still applies.
+
+    A GitHub label was the old answer. Anyone with write access can add or
+    remove one, it carries no author, no time, and no revision — so it records
+    that someone clicked, not that anyone reviewed. A review carries all three,
+    and naming the commit is what makes it evidence: approval of work that has
+    since changed is not approval of what ships.
+    """
+    head = _pr_head_sha(pr_number, token=token)
+    reviews = _reviews(pr_number, token=token)
+    if reviews is None:
+        return {
+            "approved": False,
+            "reason": "the pull request's reviews could not be read",
+            "head_sha": head,
+            "approvals": [],
+            "stale_approvals": [],
+        }
+
+    approvals, stale = [], []
+    for r in reviews:
+        if str(r.get("state", "")).upper() != "APPROVED":
+            continue
+        entry = {
+            "by": r.get("login"),
+            "at": r.get("submitted_at"),
+            "commit": r.get("commit_id"),
+        }
+        # An unreadable commit counts as stale: the gate must not pass on an
+        # approval it cannot tie to what is being merged.
+        (approvals if head and r.get("commit_id") == head else stale).append(entry)
+
+    if approvals:
+        reason = ""
+    elif stale:
+        reason = "every approving review is against an earlier commit"
+    else:
+        reason = "no approving review"
+    return {
+        "approved": bool(approvals),
+        "reason": reason,
+        "head_sha": head,
+        "approvals": approvals,
+        "stale_approvals": stale,
+    }
+
+
+def check_approved(pr_number: int | str, stage: str, *, token: str = "") -> bool:
+    """Whether an approving review covers the commit this PR would merge."""
+    return approval_evidence(pr_number, stage, token=token)["approved"]

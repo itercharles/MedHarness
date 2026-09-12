@@ -11,6 +11,34 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.24.0] — 2026-09-12
+
+### Breaking Changes
+
+- **`medharness approval check` reads the pull request's reviews, not a label.**
+
+  It used to run `gh pr view --json labels` and pass when `cr:approved/design`
+  was present. A label can be added or removed by anyone with write access, names
+  no author, carries no timestamp, and is not tied to a revision — it recorded
+  that someone clicked, not that anyone reviewed. Meanwhile `verify completion`
+  required an APR record, so one workflow held two unrelated definitions of
+  "approved".
+
+  The gate now passes when an approving review covers **the commit the PR would
+  merge**. That last part is what a label cannot express: approval of work that
+  has since changed is not approval of what ships. A stale approval is reported
+  by name and commit rather than silently accepted.
+
+  It fails closed — unreadable reviews, an unknown head commit, or a review whose
+  commit cannot be determined all block rather than pass.
+
+  **A pipeline that passed this gate by applying a label will start failing.**
+  That is the fix, not a regression: nothing was verifying that a human had
+  looked. Have a reviewer approve the PR.
+
+  The JSON payload drops `label` and gains `head_sha`, `approvals`,
+  `stale_approvals` and `reason`.
+
 ## [0.23.0] — 2026-09-12
 
 ### Breaking Changes

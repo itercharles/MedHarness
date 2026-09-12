@@ -807,22 +807,37 @@ def register(main):
 
         Exits 0 if the stage label is present on the PR, non-zero otherwise.
         """
-        from medharness.services.pr_approval import check_approved, label_for_stage  # noqa: PLC0415
-        approved = check_approved(pr_number, stage, token=token)
-        label = label_for_stage(stage)
-        payload = {
-            "cr_id": cr_id,
-            "stage": stage,
-            "pr_number": pr_number,
-            "approved": approved,
-            "label": label,
-        }
+        from medharness.services.pr_approval import approval_evidence  # noqa: PLC0415
+
+        evidence = approval_evidence(pr_number, stage, token=token)
+        payload = {"cr_id": cr_id, "stage": stage, "pr_number": pr_number, **evidence}
         click.echo(json.dumps(payload))
-        if approved:
-            click.echo(f"PASS [{stage}-approve] {cr_id}: label '{label}' found on PR #{pr_number}.", err=True)
-        else:
-            click.echo(f"FAIL [{stage}-approve] {cr_id}: label '{label}' missing on PR #{pr_number}.", err=True)
-            raise click.exceptions.Exit(1)
+
+        if evidence["approved"]:
+            who = ", ".join(
+                f"{a['by']} at {a['at']}" for a in evidence["approvals"] if a.get("by")
+            )
+            click.echo(
+                f"PASS [{stage}-approve] {cr_id}: approved on PR #{pr_number} "
+                f"({who or 'reviewer unknown'}), commit {evidence['head_sha'][:7]}.",
+                err=True,
+            )
+            return
+        click.echo(
+            f"FAIL [{stage}-approve] {cr_id}: {evidence['reason']} on PR #{pr_number}.",
+            err=True,
+        )
+        for a in evidence["stale_approvals"]:
+            commit = (a.get("commit") or "?")[:7]
+            click.echo(
+                f"    {a.get('by')} approved commit {commit}; the PR now merges "
+                f"{evidence['head_sha'][:7] or '?'}.", err=True,
+            )
+        click.echo(
+            "    Fix: a label is not evidence — have a reviewer approve the "
+            "current commit.", err=True,
+        )
+        raise click.exceptions.Exit(1)
 
 
 
