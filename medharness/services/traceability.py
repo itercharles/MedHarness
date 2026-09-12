@@ -390,6 +390,7 @@ def check_traceability(items: list[dict], config: Any) -> dict:
     passed = (
         required_result["passed"]
         and not dangling
+        and not cycles
         and all(r["passed"] for r in coverage_results)
     )
 
@@ -398,6 +399,8 @@ def check_traceability(items: list[dict], config: Any) -> dict:
         parts.append(f"{len(required_result['failures'])} required failure(s)")
     if dangling:
         parts.append(f"{len(dangling)} dangling link(s)")
+    if cycles:
+        parts.append(f"{len(cycles)} link cycle(s)")
     uncovered_count = sum(len(r["uncovered"]) for r in coverage_results)
     if uncovered_count:
         parts.append(f"{uncovered_count} uncovered item(s)")
