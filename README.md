@@ -136,7 +136,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - run: pip install medharness==0.21.0
+      - run: pip install medharness==0.22.0
       - run: medharness --dhf DHF verify dhf --fail-on-uncovered
 ```
 
