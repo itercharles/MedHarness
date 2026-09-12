@@ -182,7 +182,7 @@ jobs:
         run: |
           export PYTHONPATH="${PYTHONPATH}:${PWD}"
           python -m medharness --help > /dev/null
-          python -m medharness dhf --help > /dev/null
+          python -m dhfkit --help > /dev/null
           echo 'OK: both CLI entrypoints available'
 
   # ── OSS BUILD HYGIENE AUDIT ───────────────────────────────────────────────
