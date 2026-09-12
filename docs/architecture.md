@@ -11,11 +11,14 @@ MedHarness ships two Python packages from a single repository:
 
 | Package | CLI | Role |
 |---------|-----|------|
-| `medharness` | `medharness` | AI harness: scaffolding, verification, change workflows, approval flow |
+| `medharness` | `medharness` | AI harness: traceability analysis over the item set, scaffolding, verification, change workflows, approval flow |
 | `dhfkit` | `dhfkit` / `dhf` | DHF storage: item CRUD, lifecycle, link integrity, document generation, SOUP sync, release baseline |
 
 ### `medharness` owns
 
+- Traceability analysis over the whole item set — coverage chains, required
+  links, link cycles, risk chains, which risks a change touches
+  (`services/traceability.py`)
 - CLI surface and user-facing onboarding (`medharness init`)
 - Verification commands (`verify dhf`, `verify tests`, `verify branch`, `evidence bundle`)
 - AI-assisted CR generation (`change plan`, `change implement`)
