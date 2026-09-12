@@ -16,24 +16,36 @@ ordinary code — no model is asked whether the work is done.
 
 ---
 
-## What it catches
+## What only it can tell you
+
+Your issue tracker manages one item well. It cannot take every item together and
+ask whether the V-model still holds — whether each requirement gives rise to the
+next, whether a chain closes back on itself, which risks a change touches. That
+analysis is what MedHarness is for, and it reads items as data, so it works
+whether they live in YAML here or in Jira.
 
 ```console
 $ medharness --dhf DHF verify dhf
-PASS [schema]: 13 items valid
-FAIL [dangling] RCM-001.mitigates → RISK-404: target does not exist
-    Fix: correct the ID in RCM-001.yaml, or create RISK-404. The link exists but resolves to nothing.
-PASS [coverage] SYS→SRS: 1/1 covered
-WARN [coverage] RISK→RCM: 0/1 covered
+FAIL [cycle] SRS-014 → SYS-006 → SRS-014
+    Fix: the V-model is directed. Remove whichever link reverses the chain so each item has an origin.
+FAIL [required] SRS-022: SRS derives_from → SYS (count=0, need ≥1)
+WARN [coverage] RISK→RCM: 3/4 covered
     Fix: dhfkit --dhf DHF item list --type RCM to find uncovered items, then add dhf_links to their YAML.
          Advisory only — pass --fail-on-uncovered to block the build on this.
 Error: DHF validation failed.
 ```
 
-A broken reference (`FAIL`) always blocks — it is a typo to correct. Incomplete
-design (`WARN`) blocks only under `--fail-on-uncovered`, because it is design
-still to be written. Conflating the two is what makes traceability checks
+A cycle means two items each derive from the other, so neither has an origin and
+the matrix loses the direction that makes it a matrix. A missing required link
+means a requirement traces to nothing above it. Both are structural — they block.
+
+Incomplete design (`WARN`) blocks only under `--fail-on-uncovered`, because it is
+design still to be written. Conflating the two is what makes traceability checks
 something teams learn to ignore.
+
+Storage-level checks — schema, and links whose target does not exist — come from
+`dhfkit` and run in the same pass. A backend that enforces referential integrity
+of its own makes them redundant; the analysis above it does not go away.
 
 ---
 

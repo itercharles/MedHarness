@@ -320,6 +320,11 @@ def register(main):
                 click.echo(f"    Fix: correct the ID in {d['source']}.yaml, or create"
                            f" {d['target']}. The link exists but resolves to nothing.",
                            err=True)
+            for cycle in t.get("cycles", []):
+                path = " → ".join(cycle + [cycle[0]]) if len(cycle) > 1 else f"{cycle[0]} → itself"
+                click.echo(f"FAIL [cycle] {path}", err=True)
+                click.echo("    Fix: the V-model is directed. Remove whichever link "
+                           "reverses the chain so each item has an origin.", err=True)
             # Uncovered items are advisory unless --fail-on-uncovered is set; label
             # them WARN so a green build never prints FAIL.
             gap_label = "FAIL" if fail_on_uncovered else "WARN"
