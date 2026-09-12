@@ -41,7 +41,7 @@ LEAVES = [(m, path) for m in ("dhfkit", "medharness") for path in _leaf_commands
 
 def test_the_walk_found_the_cli() -> None:
     """A walk that resolved nothing would make every case below vacuous."""
-    assert len(LEAVES) >= 30, f"only {len(LEAVES)} leaf commands found"
+    assert len(LEAVES) >= 25, f"only {len(LEAVES)} leaf commands found"
 
 
 @pytest.mark.parametrize("module,path", LEAVES,

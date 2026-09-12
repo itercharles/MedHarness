@@ -1,4 +1,4 @@
-"""Tests for medharness dhf context for-stage command."""
+"""Tests for medharness context for-stage command."""
 
 from __future__ import annotations
 
@@ -46,7 +46,7 @@ def _write_cr(dhf: Path, cr_id: str, **fields) -> None:
 def _invoke(dhf: Path, stage: str, cr_id: str = "CR-001") -> dict:
     result = CliRunner().invoke(
         main,
-        ["--dhf", str(dhf), "dhf", "context", "for-stage", stage, "--cr", cr_id],
+        ["--dhf", str(dhf), "context", "for-stage", stage, "--cr", cr_id],
     )
     assert result.exit_code == 0, result.output
     return json.loads(result.output.splitlines()[0])

@@ -26,12 +26,10 @@ def main(ctx: click.Context, dhf: str | None) -> None:
 
 from medharness.cli.dhf import register as register_dhf
 from medharness.cli.ci import register as register_ci
-from medharness.cli.cr import register as register_cr
 from medharness.cli.init import register as register_init
 from medharness.cli.doctor import register as register_doctor
 
 register_dhf(main)
 register_ci(main)
-register_cr(main)
 register_init(main)
 register_doctor(main)

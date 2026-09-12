@@ -18,14 +18,14 @@ Before proposing or implementing any significant change, read:
 | CLI | Owns | Commands |
 |-----|------|----------|
 | `dhfkit` | DHF **data**: items, schemas, documents, SOUP, releases. Storage and retrieval only — no analysis. | `approval` · `config` · `doc` · `init` · `item` · `release-baseline` · `sbom` · `soup-sync` · `test` · `validate` |
-| `medharness` | The **process** around it: AI CR workflow, CI gates, scaffolding, approval, and all traceability analysis over the item set | `approval` · `automation` · `change` · `cr` · `dhf` · `doctor` · `evidence` · `gates` · `init` · `upgrade` · `verify` |
+| `medharness` | The **process** around it: AI CR workflow, CI gates, scaffolding, approval, and all traceability analysis over the item set | `approval` · `automation` · `change` · `context` · `doctor` · `evidence` · `gates` · `init` · `upgrade` · `verify` |
 
 Both have an `approval` group and they do different things: `dhfkit approval`
 records APR items (data), `medharness approval` drives PR-based approval
 (process). `tests/guards/test_cli_boundary_is_documented.py` checks this table
 against the live command tree.
 
-`medharness dhf` exposes only AI-harness context commands (`context implementation/for-stage/overview`).
+`medharness context` assembles design context for an AI agent or a CI step (`implementation`, `for-stage`, `overview`).
 All DHF data operations use `dhfkit --dhf DHF <command>`.
 
 ## Repo Responsibility

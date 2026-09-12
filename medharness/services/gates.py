@@ -75,25 +75,13 @@ GATES: tuple[dict[str, Any], ...] = (
         "command": "verify classification",
         "checks": "That a software safety class is declared with a rationale, and "
                   "that the item types the class requires exist.",
-        "clauses": ["IEC 62304 §4.3"],
+        "clauses": ["IEC 62304 §4.3", "§5.1"],
         "options": {"required": ["--dhf"], "optional": []},
         "blocking": "opt_in",
         "blocking_note": "Warns and exits zero until software_safety_class is "
                          "declared in global.yaml. Once declared, a missing or "
                          "empty safety_activities.yaml fails: the opt-in has "
                          "been taken and the gate cannot check anything.",
-        "needs_network": False,
-        "needs_safety_class": True,
-    },
-    {
-        "command": "verify plans",
-        "checks": "That the plans the declared class requires exist and are no "
-                  "longer the shipped template.",
-        "clauses": ["IEC 62304 §5.1"],
-        "options": {"required": ["--dhf"], "optional": []},
-        "blocking": "opt_in",
-        "blocking_note": "Inert until a safety class is declared. A wholly "
-                         "unchanged plan fails; individual unchanged sections warn.",
         "needs_network": False,
         "needs_safety_class": True,
     },

@@ -85,7 +85,7 @@ scaffold current across versions. `dhfkit` manages records; it does not manage
 the shape of the repository that holds them, and giving it a "write my config
 file" API to satisfy a rule would put storage in the business of scaffolding.
 
-Everywhere else, medharness asks the store. `verify plans` reads plan documents
+Everywhere else, medharness asks the store. `verify classification` reads plan documents
 through `list_documents("plans")` and `get_document()`; `upgrade` reads the
 project name through `ProjectConfig.load()` rather than the regex it used to
 apply to global.yaml — which took a trailing comment as part of the name.

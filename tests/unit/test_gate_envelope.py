@@ -50,7 +50,7 @@ def _run_gate(command: str, dhf) -> dict:
     Deliberately not CliRunner: it captures an exception raised *after* the JSON
     line is written, so a command that prints its result and then crashes looks
     identical to one that succeeded. Two crashes shipped behind exactly that —
-    `verify plans` on a missing plan and `verify branch` on any failure.
+    `verify classification` on a missing plan and `verify branch` on any failure.
     """
     import subprocess
     import sys
@@ -221,14 +221,14 @@ class TestEnvelopeHelper:
 class TestCLIEmitsTheEnvelope:
     """stdout is the machine surface; it must carry the envelope verbatim."""
 
-    @pytest.mark.parametrize("command", ["dhf", "classification", "plans"])
+    @pytest.mark.parametrize("command", ["dhf", "classification"])
     def test_stdout_first_line_is_the_envelope(self, command: str, dhf: Path) -> None:
         r = CliRunner().invoke(main, ["--dhf", str(dhf), "verify", command])
         payload = json.loads(r.output.splitlines()[0])
         assert set(payload) == set(ENVELOPE_KEYS)
 
     def test_passed_agrees_with_the_exit_code(self, dhf: Path) -> None:
-        for command in ("dhf", "classification", "plans"):
+        for command in ("dhf", "classification"):
             r = CliRunner().invoke(main, ["--dhf", str(dhf), "verify", command])
             payload = json.loads(r.output.splitlines()[0])
             assert (r.exit_code == 0) is payload["passed"], command
@@ -290,7 +290,7 @@ class TestFailurePathsHonourTheContract:
     fails. A contract checked only on success is not checked.
     """
 
-    FAILING = ("verify dhf", "verify plans", "verify classification",
+    FAILING = ("verify dhf", "verify classification",
                "verify verification", "verify completion", "verify branch")
 
     @pytest.mark.parametrize("command", FAILING)
@@ -387,7 +387,7 @@ class TestStderrCarriesTheEnvelope:
     `verify dhf` never showed its verification_criteria warnings at all.
     """
 
-    ALL = ("verify dhf", "verify tests", "verify classification", "verify plans",
+    ALL = ("verify dhf", "verify tests", "verify classification",
            "verify verification", "verify completion", "verify branch")
 
     @pytest.mark.parametrize("command", ALL)

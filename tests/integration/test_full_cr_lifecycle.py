@@ -138,12 +138,6 @@ class TestCRItemLifecycle:
         item = json.loads(r.stdout)
         assert item["status"] == "new", f"Expected 'new', got '{item['status']}'"
 
-    def test_cr_check_status_valid_when_new(self, dhf, cr_id):
-        r = _cli(str(dhf / "DHF"), "cr", "check-status", cr_id)
-        result = json.loads(r.stdout)
-        assert result["found"]
-        assert result["valid"], f"{cr_id} not active: {result}"
-        assert "active_phases" in result
 
     def test_advance_to_develop_via_update(self, dhf, cr_id):
         """Set status to 'develop' directly — global lifecycle lacks 'design' state."""
@@ -156,48 +150,9 @@ class TestCRItemLifecycle:
         item = json.loads(r.stdout)
         assert item["status"] == "develop"
 
-    def test_cr_check_status_valid_when_develop(self, dhf, cr_id):
-        r = _cli(str(dhf / "DHF"), "cr", "check-status", cr_id)
-        result = json.loads(r.stdout)
-        assert result["found"] and result["valid"]
-        assert result["status"] == "develop"
 
-    def test_cr_workflow_complete(self, dhf, cr_id):
-        r = _cli(
-            str(dhf / "DHF"),
-            "cr", "workflow", "complete",
-            "--dhf-repo", str(dhf),
-            "--cr", cr_id,
-            "--no-commit",
-        )
-        assert r.returncode == 0, f"workflow complete failed:\n{r.stderr}\n{r.stdout}"
-        result = json.loads(r.stdout)
-        assert result["cr_id"] == cr_id
-        # transition is the updated item dict — status reflects the new state
-        assert result["transition"]["status"] == "completed"
 
-    def test_cr_is_terminal_after_completion(self, dhf, cr_id):
-        r = _cli(str(dhf / "DHF"), "cr", "check-status", cr_id)
-        result = json.loads(r.stdout)
-        assert result["found"]
-        assert result["status"] == "completed"
-        assert not result["valid"], "Completed CR should not be valid for further work"
 
-    def test_cr_complete_is_idempotent(self, dhf, cr_id):
-        """Completing an already-completed CR should skip gracefully, not raise."""
-        r = _cli(
-            str(dhf / "DHF"),
-            "cr", "workflow", "complete",
-            "--dhf-repo", str(dhf),
-            "--cr", cr_id,
-            "--no-commit",
-        )
-        assert "Traceback" not in r.stdout
-        assert "Traceback" not in r.stderr
-        # Must exit 0 (skip) or 1 (explicit error), never crash
-        assert r.returncode in (0, 1)
-        # The response or error must reference the CR ID so the caller knows what was skipped
-        assert cr_id in (r.stdout + r.stderr)
 
 
 class TestItemCreationValidation:

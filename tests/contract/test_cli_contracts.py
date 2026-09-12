@@ -49,14 +49,10 @@ class TestMedHarnessCLI:
         r = _run("medharness", "evidence", "bundle", "--help")
         assert r.returncode == 0, r.stderr
 
-    def test_cr_check_status_help(self):
-        """medharness cr check-status --help exits 0."""
-        r = _run("medharness", "cr", "check-status", "--help")
-        assert r.returncode == 0, r.stderr
 
-    def test_dhf_facade_commands_exist(self):
+    def test_context_commands_exist(self):
         """medharness dhf exists and exposes context subcommand."""
-        r = _run("medharness", "dhf", "--help")
+        r = _run("medharness", "context", "--help")
         assert r.returncode == 0
         assert "context" in r.stdout, "Missing dhf subcommand group: context"
 
@@ -129,7 +125,7 @@ class TestCRGenerationCommands:
         assert r_change.returncode == 0, r_change.stderr
         for cmd in ["branch", "dhf", "tests", "soup"]:
             assert cmd in r_verify.stdout, f"Command {cmd!r} missing from verify --help"
-        for cmd in ["plan", "implement", "status", "advance"]:
+        for cmd in ["plan", "implement"]:
             assert cmd in r_change.stdout, f"Command {cmd!r} missing from change --help"
 
     def test_upgrade_help(self):

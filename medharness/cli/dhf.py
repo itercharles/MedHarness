@@ -22,15 +22,9 @@ _DEVELOP_ITEM_FIELDS = (
 
 def register(main):
 
-    @main.group("dhf")
-    def dhf() -> None:
-        """DHF context assembly for AI agents and CI pipelines."""
-
-    # ── Context (AI harness) ──
-
-    @dhf.group("context")
+    @main.group("context")
     def dhf_context() -> None:
-        """DHF context for AI agents and CI pipelines."""
+        """Design context for an AI agent or a CI step."""
 
     @dhf_context.command("implementation")
     @click.option("--cr", "cr_id", required=True, metavar="CR_ID")

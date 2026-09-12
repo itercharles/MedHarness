@@ -559,78 +559,61 @@ def register(main):
     @click.option("--dhf", "dhf_path", type=click.Path(file_okay=False, path_type=Path))
     @click.pass_context
     def verify_classification(ctx: click.Context, dhf_path: Path | None) -> None:
-        """Check the IEC 62304 §4.3 software safety class and what it requires.
+        """Check the IEC 62304 §4.3 safety class and the plans it requires.
 
-        The class decides which development activities the standard demands, so
-        without one the other gates can only prove that existing items are
-        consistent — not that the required ones exist.
+        The class decides which development activities the standard demands, and
+        §5.1 decides which plans those activities need. Asking them separately let
+        a project declare a class and ship seven untouched plan templates.
 
         An undeclared class warns and exits zero, so adopting this is opt-in.
-        Declaring a class activates the activity checks in
-        DHF/config/safety_activities.yaml, which the project owns and can edit.
         """
-        from medharness.services.ci import classification_gate
+        from medharness.services.ci import classification_gate, gate_result, plans_gate
 
         effective_dhf = dhf_path or ctx.obj.get("dhf")
         if effective_dhf is None:
             raise click.ClickException("--dhf is required when not set globally")
-        result = classification_gate(effective_dhf)
+
+        cls = classification_gate(effective_dhf)
+        plans = plans_gate(effective_dhf)
+        result = gate_result(
+            "verify classification",
+            cls["passed"] and plans["passed"],
+            f"{cls['summary']} {plans['summary']}",
+            errors=list(cls.get("errors", [])) + list(plans.get("errors", [])),
+            warnings=list(cls.get("warnings", [])) + list(plans.get("warnings", [])),
+            classification=_d(cls),
+            plans=_d(plans),
+        )
         click.echo(json.dumps(result))
 
-        declared = _d(result).get("declared")
+        declared = _d(cls).get("declared")
         if declared:
             click.echo(f"PASS [classification] software safety class: {declared}", err=True)
-        for entry in _d(result).get("module_overrides", []):
+        for entry in _d(cls).get("module_overrides", []):
             mark = "OK" if entry["justified"] else "WARN"
             click.echo(f"{mark} [classification] {entry['id']} overrides to "
                        f"class {entry['safety_class']}", err=True)
-        for message in result.get("warnings", []):
+        for message in cls.get("warnings", []):
             click.echo(f"WARN [classification] {message}", err=True)
-        for message in result.get("errors", []):
+        for message in cls.get("errors", []):
             click.echo(f"FAIL [classification] {message}", err=True)
+
+        for entry in _d(plans).get("checked", []):
+            click.echo(f"PASS [plan] {entry['plan']}", err=True)
+        for entry in _d(plans).get("missing", []):
+            click.echo(f"FAIL [plan] {entry['plan']}: required for Class "
+                       f"{declared} and absent", err=True)
+        for entry in _d(plans).get("unwritten", []):
+            click.echo(f"FAIL [plan] {entry['plan']}: unchanged from the template "
+                       f"({entry['sections']} section(s))", err=True)
+        for message in plans.get("warnings", []):
+            click.echo(f"WARN [plan] {message}", err=True)
+        for entry in _d(plans).get("skipped", []):
+            click.echo(f"SKIP [plan] {entry['plan']}: {entry['reason']}", err=True)
+
         click.echo(result["summary"], err=True)
         if not result["passed"]:
             raise click.ClickException("Safety classification check failed.")
-
-    @verify.command("plans")
-    @click.option("--dhf", "dhf_path", type=click.Path(file_okay=False, path_type=Path))
-    @click.pass_context
-    def verify_plans(ctx: click.Context, dhf_path: Path | None) -> None:
-        """Check that the plans the declared safety class requires have been written.
-
-        The scaffold ships seven plans as templates and nothing verified any was
-        filled in, so a DHF of untouched placeholders passed every gate.
-
-        Each plan is compared against its shipped template section by section.
-        Only one of the seven templates carries "starter content" text, so a
-        marker-based check would miss the rest — and removing a banner is not
-        the same as writing a plan.
-
-        Inactive until a safety class is declared.
-        """
-        from medharness.services.ci import plans_gate
-
-        effective_dhf = dhf_path or ctx.obj.get("dhf")
-        if effective_dhf is None:
-            raise click.ClickException("--dhf is required when not set globally")
-        result = plans_gate(effective_dhf)
-        click.echo(json.dumps(result))
-
-        for entry in _d(result).get("checked", []):
-            click.echo(f"PASS [plan] {entry['plan']}", err=True)
-        for entry in _d(result).get("missing", []):
-            click.echo(f"FAIL [plan] {entry['plan']}: required for Class "
-                       f"{_d(result).get('declared')} and absent", err=True)
-        for entry in _d(result).get("unwritten", []):
-            click.echo(f"FAIL [plan] {entry['plan']}: unchanged from the template "
-                       f"({entry['sections']} section(s))", err=True)
-        for message in result.get("warnings", []):
-            click.echo(f"WARN [plan] {message}", err=True)
-        for entry in _d(result).get("skipped", []):
-            click.echo(f"SKIP [plan] {entry['plan']}: {entry['reason']}", err=True)
-        click.echo(result["summary"], err=True)
-        if not result["passed"]:
-            raise click.ClickException("Plan completeness check failed.")
 
     @verify.command("soup")
     @click.option("--dhf", "dhf_path", type=click.Path(file_okay=False, path_type=Path))
@@ -809,26 +792,8 @@ def register(main):
 
     # ── Claude session ──
 
-    @automation.group("session")
-    def automation_session() -> None:
-        """Store and retrieve Claude Code session IDs via PR comments."""
 
-    @automation_session.command("put")
-    @click.argument("pr_number", type=int)
-    @click.argument("session_id")
-    @click.option("--token", default="", metavar="TOKEN")
-    def automation_session_put(pr_number: int, session_id: str, token: str) -> None:
-        """Store a Claude session ID as a PR comment marker."""
-        url = put_session(pr_number, session_id, token=token)
-        click.echo(url)
 
-    @automation_session.command("get")
-    @click.argument("pr_number", type=int)
-    @click.option("--token", default="", metavar="TOKEN")
-    def automation_session_get(pr_number: int, token: str) -> None:
-        """Retrieve the last stored Claude session ID from PR comments."""
-        session_id = get_session(pr_number, token=token)
-        click.echo(session_id)
 
     # ── Approval gate ──
 
@@ -859,200 +824,11 @@ def register(main):
             click.echo(f"FAIL [{stage}-approve] {cr_id}: label '{label}' missing on PR #{pr_number}.", err=True)
             raise click.exceptions.Exit(1)
 
-    @change.command("status")
-    @click.option("--cr", "cr_id", required=True, metavar="CR_ID")
-    @click.option("--pr", "pr_number", default=None, type=int, metavar="N")
-    @click.option("--stage", default="", type=click.Choice(["", "design", "develop"]))
-    @click.option("--branch", "branch_ref", default="", metavar="REF")
-    @click.option("--token", default="", metavar="TOKEN")
-    def change_status(cr_id: str, pr_number: int | None, stage: str, branch_ref: str, token: str) -> None:
-        """Report machine-readable CR stage and approval status.
 
-        The stage may be supplied directly or inferred from a branch ref using
-        the built-in stage prefixes. Approval is only checked when both a PR
-        number and a known stage are available.
-        """
-        from medharness.services.pr_approval import (  # noqa: PLC0415
-            check_approved,
-            label_for_stage,
-            stage_for_branch,
-        )
 
-        resolved_stage = stage or (stage_for_branch(branch_ref) or "")
-        label = label_for_stage(resolved_stage) if resolved_stage else None
-        approved: bool | None = None
-        approval_state = "not_applicable"
-        if pr_number is not None and resolved_stage and label:
-            approved = check_approved(pr_number, resolved_stage, token=token)
-            approval_state = "approved" if approved else "pending"
-
-        payload = {
-            "cr_id": cr_id,
-            "pr_number": pr_number,
-            "branch_ref": branch_ref,
-            "stage": resolved_stage,
-            "approval_label": label,
-            "approval_state": approval_state,
-            "approved": approved,
-        }
-        click.echo(json.dumps(payload))
-
-        details = [f"approval: {approval_state}"]
-        if resolved_stage:
-            details.append(f"stage={resolved_stage}")
-        if label:
-            details.append(f"label={label}")
-        if pr_number is not None:
-            details.append(f"pr=#{pr_number}")
-        click.echo(f"OK CR status for {cr_id} ({', '.join(details)}).", err=True)
-
-    @approval.command("parse")
-    @click.option("--comment", "comment_body", required=True, metavar="TEXT")
-    def approval_parse(comment_body: str) -> None:
-        """Parse a PR comment body for /approve or /reject commands.
-
-        Outputs JSON with action and reason. Useful in CI workflow steps
-        that receive the comment body from the GitHub event payload.
-        """
-        from medharness.services.pr_approval import parse_approval_command  # noqa: PLC0415
-        cmd = parse_approval_command(comment_body)
-        if cmd is None:
-            click.echo(json.dumps({"action": None, "reason": ""}))
-        else:
-            click.echo(json.dumps({"action": cmd.action, "reason": cmd.reason}))
-
-    @approval.command("act")
-    @click.option("--comment", "comment_body", required=True, metavar="TEXT")
-    @click.option("--pr", "pr_number", required=True, type=int, metavar="N")
-    @click.option("--stage", required=True, type=click.Choice(["spec", "design", "develop"]))
-    @click.option("--token", default="", metavar="TOKEN")
-    @click.option("--cr", "cr_id", default="", metavar="CR-NNN",
-                  help="Record the decision as an APR item in the DHF.")
-    @click.option("--approver", default="", metavar="IDENTITY",
-                  help="Who is accountable for the decision. Required with --cr; "
-                       "the git committer is often a bot and cannot be accountable.")
-    @click.pass_context
-    def approval_act(ctx: click.Context, comment_body: str, pr_number: int, stage: str,
-                     token: str, cr_id: str, approver: str) -> None:
-        """Execute an approval command from a PR comment body.
-
-        On /approve: adds the stage label and posts a confirmation comment.
-        On /reject: posts a rejection comment (with reason) and closes the PR.
-        On no command: exits 0 with action=null.
-
-        With --cr and --approver, the decision is also written into the DHF as an
-        APR item, so the record lives with the design rather than only in a
-        platform's comment history. The revision it covers is that item's own
-        commit — see `dhfkit approval show`.
-        """
-        from medharness.services.pr_approval import (  # noqa: PLC0415
-            add_approval_label,
-            close_pr,
-            label_for_stage,
-            parse_approval_command,
-            post_comment,
-        )
-
-        cmd = parse_approval_command(comment_body)
-        payload: dict = {"pr_number": pr_number, "stage": stage, "action": None, "success": True}
-
-        if cmd is None:
-            click.echo(json.dumps(payload))
-            click.echo("OK [approval-act]: no command found in comment.", err=True)
-            return
-
-        payload["action"] = cmd.action
-
-        if cmd.action == "approve":
-            label = label_for_stage(stage)
-            label_ok = add_approval_label(pr_number, stage, token=token)
-            comment_body_text = f"Approved — label `{label}` added. Ready for next stage."
-            comment_ok = post_comment(pr_number, comment_body_text, token=token)
-            payload["label"] = label
-            payload["label_added"] = label_ok
-            payload["comment_posted"] = comment_ok
-            payload["success"] = label_ok and comment_ok
-            click.echo(json.dumps(payload))
-            if not label_ok:
-                click.echo(f"FAIL [approval-act] PR #{pr_number}: could not add label '{label}'.", err=True)
-                raise click.exceptions.Exit(1)
-            if not comment_ok:
-                click.echo(f"FAIL [approval-act] PR #{pr_number}: label added but could not post confirmation comment.", err=True)
-                raise click.exceptions.Exit(1)
-            _record_approval_item(ctx, payload, cr_id, stage, "approved", approver)
-            click.echo(f"PASS [approval-act] PR #{pr_number}: approved at stage={stage}.", err=True)
-
-        elif cmd.action == "reject":
-            body_lines = ["Change request rejected."]
-            if cmd.reason:
-                body_lines.append(f"\nReason: {cmd.reason}")
-            comment_ok = post_comment(pr_number, "\n".join(body_lines), token=token)
-            payload["reason"] = cmd.reason
-            payload["comment_posted"] = comment_ok
-            if not comment_ok:
-                payload["pr_closed"] = False
-                payload["success"] = False
-                click.echo(json.dumps(payload))
-                click.echo(f"FAIL [approval-act] PR #{pr_number}: could not post rejection comment.", err=True)
-                raise click.exceptions.Exit(1)
-            close_ok = close_pr(pr_number, token=token)
-            payload["pr_closed"] = close_ok
-            payload["success"] = comment_ok and close_ok
-            # A rejection is a decision that belongs in the record too.
-            _record_approval_item(ctx, payload, cr_id, stage, "rejected", approver)
-            click.echo(json.dumps(payload))
-            if close_ok:
-                click.echo(f"PASS [approval-act] PR #{pr_number}: rejected and closed.", err=True)
-            else:
-                click.echo(f"FAIL [approval-act] PR #{pr_number}: could not close PR.", err=True)
-                raise click.exceptions.Exit(1)
 
     # ── Stage label management ──
 
-    @change.command("advance")
-    @click.option("--pr", "pr_number", required=True, type=int, metavar="N")
-    @click.option("--from-stage", "from_stage", required=True, metavar="STAGE")
-    @click.option("--to-stage", "to_stage", required=True, metavar="STAGE")
-    @click.option("--issue", "issue_number", default=None, type=int, metavar="N")
-    @click.option("--label-prefix", default="cr:stage/", show_default=True, metavar="PREFIX")
-    @click.option("--token", default="", metavar="TOKEN")
-    def change_advance(
-        pr_number: int, from_stage: str, to_stage: str,
-        issue_number: int | None, label_prefix: str, token: str,
-    ) -> None:
-        """Advance a CR stage label on a PR (and optionally an issue).
-
-        Removes the from-stage label and adds the to-stage label. A missing
-        from-stage label is silently ignored (idempotent).
-        """
-        from medharness.services.github_pr import add_label, remove_label  # noqa: PLC0415
-
-        from_label = f"{label_prefix}{from_stage}"
-        to_label = f"{label_prefix}{to_stage}"
-
-        remove_label(pr_number, from_label, token=token)
-        ok = add_label(pr_number, to_label, token=token)
-
-        if issue_number is not None:
-            remove_label(issue_number, from_label, token=token)
-            add_label(issue_number, to_label, token=token)
-
-        payload = {
-            "pr_number": pr_number,
-            "from_label": from_label,
-            "to_label": to_label,
-            "issue_number": issue_number,
-            "ok": ok,
-        }
-        click.echo(json.dumps(payload))
-        if not ok:
-            click.echo(
-                f"FAIL [{to_stage}-advance] Could not add label '{to_label}' to PR #{pr_number} — "
-                f"check GH_TOKEN permissions and that the label exists.",
-                err=True,
-            )
-            raise click.exceptions.Exit(1)
-        click.echo(f"OK Advanced stage {from_stage} → {to_stage} on PR #{pr_number}.", err=True)
 
     # ── CR generation ──
 

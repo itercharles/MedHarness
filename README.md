@@ -191,11 +191,9 @@ environment variable.
 | `medharness verify soup` | CVE scan against the OSV database |
 | `medharness verify completion` | CR closure gate |
 | `medharness verify branch --cr CR-034` | the branch carries the items the CR proposed |
-| `medharness verify classification` | IEC 62304 §4.3 safety class |
-| `medharness verify plans` | the plans the declared class requires |
-| `medharness verify verification` | every requirement has a declared verification level |
+| `medharness verify classification` | IEC 62304 §4.3 safety class and the §5.1 plans it requires |
+| `medharness verify verification` | every requirement has a declared verification method |
 | `medharness evidence bundle --out-dir artifacts` | runtime evidence for a release |
-| `medharness change status --cr CR-034 --pr 42` | stage automation for CI |
 | `medharness upgrade` | update the scaffold without touching your content |
 
 `medharness gates` and `--help` on any subcommand carry the full surface.

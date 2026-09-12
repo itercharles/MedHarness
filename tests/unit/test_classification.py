@@ -229,9 +229,9 @@ class TestCLIContract:
         _declare(dhf, "B")
         r = CliRunner().invoke(main, ["--dhf", str(dhf), "verify", "classification"])
         payload = json.loads(r.output.splitlines()[0])
-        assert payload["details"]["declared"] == "B"
+        assert payload["details"]["classification"]["declared"] == "B"
         assert set(payload) == set(ENVELOPE_KEYS)
-        assert "declared" in payload["details"]
+        assert set(payload["details"]) == {"classification", "plans"}
 
     def test_failure_exits_nonzero(self, dhf: Path) -> None:
         _declare(dhf, "C")
