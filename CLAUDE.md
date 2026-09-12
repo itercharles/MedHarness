@@ -85,8 +85,10 @@ Releases are fully automated via `.github/workflows/release.yml` using PyPI Trus
 Steps:
 1. Open a PR to `main` with the version bump in `pyproject.toml`, the pinned
    version in the README's CI snippet, and a `CHANGELOG.md` entry
-2. Merge the PR
-3. **Only after the PR is merged**, pull, then push the tag:
+2. Run `uv lock` — the version is recorded in `uv.lock` too, and CI's
+   `uv lock --check` blocks the build when the two disagree
+3. Merge the PR
+4. **Only after the PR is merged**, pull, then push the tag:
 
 ```bash
 git checkout main && git pull && git tag v0.X.0 && git push origin v0.X.0
