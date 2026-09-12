@@ -11,6 +11,65 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.22.0] — 2026-09-12
+
+### Breaking Changes
+
+- **`medharness verify code` is removed.** It was registered as an
+  always-blocking gate citing IEC 62304 §5.5, and its validator was `return []`.
+  It printed `PASS [validate-code] ... deterministic checks passed` on every run
+  and could not do otherwise.
+
+  Three things went with it. The AI workflow recorded three telemetry steps
+  (`validate_initial`, `validate_after_fix`, `validate_after_review_fix`) with
+  status `ok` for validation that never ran. The fix-retry loop those steps
+  gated — 70 lines that re-invoke the model to repair findings — was unreachable
+  in production; tests kept it alive by patching the validator to return errors
+  it structurally could not return. And the code-review prompt told the reviewer
+  that schema, traceability and `@links:` annotations "have been verified
+  mechanically. Do not re-derive them" — false on that path, and an instruction
+  to skip the checks.
+
+  A green check recorded as evidence for a check that never ran is the worst
+  failure available to a design-control tool. If your pipeline calls
+  `verify code`, delete the step: it never reported anything.
+
+  Gate count is now 8. `verify dhf`, `verify tests`, `verify branch`,
+  `verify soup`, `verify plans`, `verify classification`, `verify verification`
+  and `verify completion` are unaffected.
+
+- **`verify dhf` JSON dropped `orphans` and `deprecation_warnings` in 0.21.0.**
+  Restated here because the 0.21.0 notes reached PyPI with a CI recipe that did
+  not run — see below.
+
+### Bug Fixes
+
+- **The documented CI recipe had a job that always failed.**
+  `medharness evidence bundle --dhf DHF` — `--dhf` is a group option, not a
+  command one, so the evidence-bundle job exited 2 on an adopter's first merge
+  to `main`. Every documented invocation is now `medharness --dhf DHF <command>`.
+
+- **`dhfkit` was still documented as doing traceability analysis**, which moved
+  to `medharness` in 0.20.0. `architecture.md` contradicted itself on the point,
+  and `ai-security.md` carried the same stale wording.
+
+### Internal
+
+- `uv.lock` said medharness 0.12.1 while `pyproject.toml` said 0.21.0 — nine
+  versions of drift, because no job or test read the file. The hygiene job now
+  runs `uv lock --check`, and the dhfkit suite installs with `uv sync --locked`.
+
+- The test suite reported 1885 tests and contained 1251. Property guards
+  parametrized over a scanned corpus inflated the count —
+  `test_storage_does_not_analyse` was 5 assertions reported as 241 tests. They
+  now assert on the full offender list. Repo-checking tests moved to
+  `tests/guards/`, and a new guard fails when a directory holding tests is
+  absent from every pytest invocation in CI.
+
+- New guards, each verified by reintroducing the fault it catches: a public
+  service function may not always return an empty list; the CI recipe's commands
+  must parse; the README's pinned version must match `pyproject.toml`.
+
 ## [0.21.0] — 2026-09-10
 
 ### Breaking Changes
