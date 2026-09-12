@@ -1,0 +1,11 @@
+id: SOUP-001
+title: "Starter SOUP Item — Replace with your own"
+content: |-
+  Example SOUP (Software of Unknown Provenance) item. Replace this
+  with real third-party software inventory for your product.
+name: example-library
+version: "1.0.0"
+manufacturer: Example Corp
+license: MIT
+purpose: Demonstrates SOUP item format
+risk_rating: Low

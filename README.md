@@ -148,7 +148,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - run: pip install medharness==0.22.0
+      - run: pip install medharness==0.23.0
       - run: medharness --dhf DHF verify dhf --fail-on-uncovered
 ```
 
@@ -178,12 +178,12 @@ environment variable.
 |---|---|
 | `dhfkit item list --type SYS` | list items; `item get`, `item create`, `item update` for one |
 | `dhfkit validate schema` | schema conformance |
-| `dhfkit validate links` | do the links resolve — storage integrity |
+| `medharness verify dhf` | do the links resolve — storage integrity |
 | `dhfkit doc generate SYS` | build a specification from the items |
 | `dhfkit doc export SYS` | self-contained HTML, or PDF with `[docs]` |
-| `dhfkit soup-sync --manifest <file>` | sync SOUP items from a dependency manifest |
+| `medharness analyse soup-drift --manifest <file>` | sync SOUP items from a dependency manifest |
 | `dhfkit sbom` | CycloneDX 1.6 SBOM from the SOUP register |
-| `dhfkit release-baseline --version 1.0.0` | frozen release record |
+| `medharness release baseline --version 1.0.0` | frozen release record |
 | `medharness change plan --cr CR-034` | AI drafts DHF items and impact analysis |
 | `medharness change implement --cr CR-034` | AI writes code and tests (`--pr 42` to revise from feedback) |
 | `medharness verify dhf` | coverage, cycles, dangling links, required traceability |
@@ -191,11 +191,9 @@ environment variable.
 | `medharness verify soup` | CVE scan against the OSV database |
 | `medharness verify completion` | CR closure gate |
 | `medharness verify branch --cr CR-034` | the branch carries the items the CR proposed |
-| `medharness verify classification` | IEC 62304 §4.3 safety class |
-| `medharness verify plans` | the plans the declared class requires |
-| `medharness verify verification` | every requirement has a declared verification level |
+| `medharness verify classification` | IEC 62304 §4.3 safety class and the §5.1 plans it requires |
+| `medharness verify verification` | every requirement has a declared verification method |
 | `medharness evidence bundle --out-dir artifacts` | runtime evidence for a release |
-| `medharness change status --cr CR-034 --pr 42` | stage automation for CI |
 | `medharness upgrade` | update the scaffold without touching your content |
 
 `medharness gates` and `--help` on any subcommand carry the full surface.

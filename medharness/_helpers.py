@@ -26,9 +26,6 @@ def _make_adapter(dhf_path: Path):
     return LocalDHFAdapter(dhf_path, auto_commit=False)
 
 
-def _make_core(dhf_path: Path):
-    from medharness.core import MedHarnessCore
-    return MedHarnessCore(_make_adapter(dhf_path))
 
 
 DEFAULT_ACCEPTANCE_COVERAGE_PAIRS = ("UC:CRS", "CRS:SYS", "SYS:SRS", "SRS:SWDD")
@@ -105,21 +102,8 @@ def _run_acceptance_gate(core, junit_paths: list[Path], coverage_pairs: tuple[st
     }
 
 
-def _run_git(repo_root: Path, args: list[str]) -> str:
-    proc = subprocess.run(
-        ["git", "-C", str(repo_root), *args],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    if proc.returncode != 0:
-        message = (proc.stderr or proc.stdout).strip()
-        raise click.ClickException(message or f"git {' '.join(args)} failed")
-    return proc.stdout
 
 
-def _git_has_changes(repo_root: Path) -> bool:
-    return bool(_run_git(repo_root, ["status", "--porcelain"]).strip())
 
 
 def _build_traceability_report_payload(core, doc_types: tuple[str, ...],
@@ -443,18 +427,6 @@ def _run_artifact_generation(
     }
 
 
-def _resolve_dhf_repo_paths(ctx: click.Context, dhf_repo: Path | None) -> tuple[Path, Path]:
-    """Resolve a DHF repository root and DHF root directory for workflow commands."""
-    if dhf_repo is not None:
-        repo_root = dhf_repo.resolve()
-        dhf_root = repo_root / "DHF"
-        if repo_root.name == "DHF":
-            dhf_root = repo_root
-            repo_root = repo_root.parent
-        return repo_root, dhf_root
-
-    dhf_root = Path(ctx.obj["dhf"]).resolve()
-    return dhf_root.parent, dhf_root
 
 
 def _github_env(token: str | None = None) -> dict[str, str]:

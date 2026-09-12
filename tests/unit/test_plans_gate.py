@@ -55,16 +55,6 @@ def _write(dhf: Path, stem: str, content: str = WRITTEN_PLAN) -> None:
     (dhf / "documents" / "plans" / f"{stem}.md").write_text(content)
 
 
-class TestInactiveUntilClassed:
-    def test_undeclared_class_checks_nothing(self, dhf: Path) -> None:
-        result = plans_gate(dhf)
-        assert result["passed"] is True
-        assert result["details"]["checked"] == []
-        assert any("no plans are required" in w for w in result["warnings"])
-
-    def test_undeclared_exits_zero(self, dhf: Path) -> None:
-        r = CliRunner().invoke(main, ["--dhf", str(dhf), "verify", "plans"])
-        assert r.exit_code == 0, r.output
 
 
 class TestUnwrittenPlansFail:
@@ -213,18 +203,9 @@ class TestSectionSplitting:
     def test_body_free_heading_is_captured_as_empty(self) -> None:
         assert _sections("## Heading\n\n## Next\nbody\n")["Heading"] == ""
 
-
-class TestCLIContract:
-    def test_outputs_structured_json(self, dhf: Path) -> None:
-        _declare(dhf, "B")
-        r = CliRunner().invoke(main, ["--dhf", str(dhf), "verify", "plans"])
-        payload = json.loads(r.output.splitlines()[0])
-        assert set(payload) == set(ENVELOPE_KEYS)
-        assert set(payload["details"]) >= {"declared", "checked", "missing",
-                                           "unwritten", "partial", "skipped"}
-
-    def test_failure_exits_nonzero(self, dhf: Path) -> None:
-        _declare(dhf, "B")
-        r = CliRunner().invoke(main, ["--dhf", str(dhf), "verify", "plans"])
-        assert r.exit_code != 0
-        assert "FAIL [plan]" in r.output
+class TestInactiveUntilClassed:
+    def test_undeclared_class_checks_nothing(self, dhf: Path) -> None:
+        result = plans_gate(dhf)
+        assert result["passed"] is True
+        assert result["details"]["checked"] == []
+        assert any("no plans are required" in w for w in result["warnings"])

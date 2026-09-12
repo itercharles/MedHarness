@@ -129,47 +129,29 @@ def item_update(ctx: click.Context, item_id: str, data: str, author: str, cr_id:
     click.echo(f"✓ Updated {item_id}.", err=True)
 
 
-@item.command("delete")
-@click.argument("item_id")
-@click.option("--author", default="cli", show_default=True, help="Author name for git commit.")
-@click.pass_context
-def item_delete(ctx: click.Context, item_id: str, author: str) -> None:
-    """Delete a DHF item. Exits 1 if item not found."""
-    adapter = _make_adapter(ctx.obj["dhf"])
-    success = adapter.delete_item(item_id, author=author)
-    if not success:
-        click.echo(f"ERROR: Item '{item_id}' not found or could not be deleted.", err=True)
-        sys.exit(1)
-    click.echo(json.dumps({"deleted": item_id}))
-    click.echo(f"✓ Deleted {item_id}.", err=True)
 
 
-@item.command("transitions")
-@click.argument("item_id")
-@click.pass_context
-def item_transitions(ctx: click.Context, item_id: str) -> None:
-    """List available lifecycle transitions for an item. Outputs JSON."""
-    adapter = _make_adapter(ctx.obj["dhf"])
-    it = adapter.get_item(item_id)
-    if it is None:
-        click.echo(f"ERROR: Item '{item_id}' not found.", err=True)
-        sys.exit(1)
-    transitions = adapter.get_available_transitions(item_id)
-    click.echo(json.dumps({
-        "item_id": item_id,
-        "current_status": it.get("status"),
-        "transitions": transitions,
-    }, default=str))
 
 
 @item.command("transition")
 @click.argument("item_id")
-@click.argument("to_state")
+@click.argument("to_state", required=False)
 @click.option("--by", "performed_by", default="cli", show_default=True, help="User performing the transition.")
 @click.pass_context
-def item_transition(ctx: click.Context, item_id: str, to_state: str, performed_by: str) -> None:
-    """Execute a lifecycle state transition for an item."""
+def item_transition(ctx: click.Context, item_id: str, to_state: str | None, performed_by: str) -> None:
+    """Move an item to TO_STATE, or list where it can go when TO_STATE is omitted."""
     adapter = _make_adapter(ctx.obj["dhf"])
+    if to_state is None:
+        it = adapter.get_item(item_id)
+        if it is None:
+            click.echo(f"ERROR: Item '{item_id}' not found.", err=True)
+            sys.exit(1)
+        click.echo(json.dumps({
+            "item_id": item_id,
+            "current_status": it.get("status"),
+            "transitions": adapter.get_available_transitions(item_id),
+        }, default=str))
+        return
     try:
         result = adapter.execute_transition(item_id, to_state, performed_by=performed_by)
     except ValueError as e:
@@ -188,36 +170,6 @@ def validate() -> None:
     """Commands for DHF data validation."""
 
 
-@validate.command("links")
-@click.pass_context
-def validate_links(ctx: click.Context) -> None:
-    """Check that every traceability link names an item that exists.
-
-    Referential integrity of what is stored, not whether the V-model holds. A
-    link resolving to nothing is a typo or a deleted item, and a store answers
-    that on its own; whether coverage is adequate is analysis and lives in
-    `medharness verify dhf`.
-
-    Exits 1 if any link points at a missing item.
-    """
-    from dhfkit.traceability import find_dangling_links
-
-    dhf_path: Path = ctx.obj["dhf"]
-    adapter = _make_adapter(dhf_path)
-    dangling = find_dangling_links(
-        adapter.list_items(),
-        adapter.config.relationship_fields() or (),
-    )
-    click.echo(json.dumps({"passed": not dangling, "dangling": dangling}))
-    for d in dangling:
-        click.echo(
-            f"  ✗ {d['source']}.{d['field']} → {d['target']}: target does not exist",
-            err=True,
-        )
-    if dangling:
-        click.echo(f"{len(dangling)} dangling link(s).", err=True)
-        sys.exit(1)
-    click.echo("✓ All traceability links resolve.", err=True)
 
 
 @validate.command("schema")
@@ -279,18 +231,8 @@ def _traceability_summary(result: dict, fail_on_uncovered: bool) -> str:
 # config group
 # ---------------------------------------------------------------------------
 
-@main.group()
-def config() -> None:
-    """Commands for inspecting DHF configuration."""
 
 
-@config.command("doc-types")
-@click.pass_context
-def config_doc_types(ctx: click.Context) -> None:
-    """List all configured doc types. Outputs JSON."""
-    adapter = _make_adapter(ctx.obj["dhf"])
-    result = [{"code": dt.code, "name": dt.name, "prefix": dt.prefix} for dt in adapter._config.doc_types]
-    click.echo(json.dumps(result, default=str))
 
 
 # ---------------------------------------------------------------------------
@@ -302,79 +244,103 @@ def doc() -> None:
     """Commands for document generation."""
 
 
-@main.group("approval")
-def approval() -> None:
-    """Approval records — the DHF's account of who accepted what."""
 
 
-@approval.command("show")
-@click.argument("apr_id")
+
+
+
+
+
+
+
+
+# ---------------------------------------------------------------------------
+# test group
+# ---------------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+@main.command("sbom")
+@click.option("--output", "output_path", type=click.Path(dir_okay=False, path_type=Path),
+              help="Where to write the SBOM (default: <dhf>/sbom.cdx.json).")
+@click.option("--stdout", "to_stdout", is_flag=True,
+              help="Write the document to stdout instead of a file.")
 @click.pass_context
-def approval_show(ctx: click.Context, apr_id: str) -> None:
-    """Resolve the revision an approval was made against.
+def sbom_cmd(ctx: click.Context, output_path: Path | None, to_stdout: bool) -> None:
+    """Generate a CycloneDX SBOM from the DHF's SOUP items.
 
-    The approved revision is the commit that introduced the record, not a field
-    inside it — a field could be edited to disagree with git, and this record
-    exists precisely to be trustworthy.
+    The SOUP register already holds what an SBOM needs, recorded there because
+    IEC 62304 §8.1.2 asks for it. This serialises it into the format FDA
+    cybersecurity guidance and the EU Cyber Resilience Act expect.
+
+    A component whose ecosystem has no package-URL type is included without a
+    `purl` rather than given a guessed one — a wrong purl resolves against a
+    real registry, so an absent one is safer.
+
+    Regenerating an unchanged SBOM leaves the file alone, including its
+    timestamp, so a regeneration is not a diff.
     """
-    from dhfkit.approval import resolve_approval
+    from importlib.metadata import version as pkg_version
 
-    try:
-        result = resolve_approval(ctx.obj["dhf"], apr_id)
-    except ValueError as exc:
-        raise SystemExit(str(exc)) from exc
-
-    click.echo(json.dumps(result))
-    if result["resolved"]:
-        click.echo(f"{apr_id} approved at {result['short_revision']} "
-                   f"({result['date'][:10]}) by {result['committer']}", err=True)
-    else:
-        click.echo(f"WARN {apr_id}: revision unresolved — {result['reason']}", err=True)
-
-
-@approval.command("import")
-@click.option("--reviews-dir", "reviews_dir", default=None,
-              type=click.Path(file_okay=False, path_type=Path),
-              help="Directory of legacy review files (default: ../docs/reviews).")
-@click.option("--approver", default="", help="Approver to record on imported items.")
-@click.pass_context
-def approval_import(ctx: click.Context, reviews_dir: Path | None, approver: str) -> None:
-    """Backfill approval records from the legacy docs/reviews/*.md convention.
-
-    Reads <CR-ID>-Design-Review.md (recorded at the design stage) and
-    <CR-ID>-Code-Review.md (develop stage), each carrying a '**Verdict:**' line.
-    Any other .md in the directory is reported as skipped rather than passed over
-    silently — a project whose files are named differently would otherwise see
-    "0 imported" with no reason given, then fail `verify completion` with "no
-    approval record" and nothing connecting the two.
-
-    Safe to re-run: a CR that already has a design-stage approval is skipped.
-    """
-    from dhfkit.approval import import_review_files
+    from dhfkit.local_adapter import LocalDHFAdapter
+    from dhfkit.sbom import build_sbom, purl_gap, write_sbom
 
     dhf: Path = ctx.obj["dhf"]
-    target = reviews_dir or (dhf.parent / "docs" / "reviews")
-    result = import_review_files(dhf, target, approver=approver)
-    click.echo(json.dumps(result))
+    adapter = LocalDHFAdapter(dhf)
+    soup_items = [
+        i for i in adapter.list_items()
+        if str(i.get("id", "")).startswith("SOUP-")
+    ]
+    try:
+        tool_version = pkg_version("dhfkit")
+    except Exception:
+        tool_version = "unknown"
 
-    for entry in result["imported"]:
-        click.echo(f"OK   {entry['file']} → {entry['apr_id']} ({entry['verdict']})", err=True)
-    for entry in result["skipped"]:
-        click.echo(f"SKIP {entry['file']}: {entry['reason']}", err=True)
-    for message in result["errors"]:
-        click.echo(f"FAIL {message}", err=True)
-    click.echo(f"{len(result['imported'])} imported, {len(result['skipped'])} skipped.",
-               err=True)
-    if result["errors"]:
-        raise SystemExit(1)
+    document = build_sbom(
+        soup_items,
+        project_name=adapter._config.project_name or dhf.resolve().parent.name,
+        tool_version=tool_version,
+    )
+
+    if to_stdout:
+        click.echo(json.dumps(document, indent=2))
+        return
+
+    target = output_path or (dhf / "sbom.cdx.json")
+    written, changed = write_sbom(document, target)
+    click.echo(json.dumps({
+        "path": str(written),
+        "components": len(document["components"]),
+        "without_purl": sum(1 for c in document["components"] if "purl" not in c),
+        "changed": changed,
+    }))
+    n = len(document["components"])
+    click.echo(
+        f"{'Wrote' if changed else 'Unchanged'} {written} — {n} component(s).",
+        err=True,
+    )
+    # Name the cause per component. A bare count says there is a problem without
+    # saying which of the two it is, and they need different fixes.
+    for component in document["components"]:
+        if "purl" in component:
+            continue
+        props = {p["name"]: p["value"] for p in component.get("properties", [])}
+        reason = purl_gap(
+            component["name"], component["version"], props.get("dhfkit:ecosystem", "")
+        )
+        click.echo(
+            f"WARN [sbom] {component['bom-ref']}: no purl — {reason}", err=True
+        )
 
 
-@doc.command("list")
-@click.pass_context
-def doc_list(ctx: click.Context) -> None:
-    """List available document type codes."""
-    adapter = _make_adapter(ctx.obj["dhf"])
-    click.echo(json.dumps({"doc_types": adapter.get_available_doc_types()}))
 
 
 @doc.command("generate")
@@ -398,28 +364,34 @@ def doc_generate(ctx: click.Context, doc_type: str) -> None:
                 raise SystemExit(1)
 
 
-# ---------------------------------------------------------------------------
-# test group
-# ---------------------------------------------------------------------------
-
-@main.group()
-def test() -> None:
-    """Commands for managing test results stored in the DHF."""
-
-
-@test.command("list")
-@click.option("--status", "status_filter", default=None, metavar="STATUS",
-              help="Filter by testing_status (PASS, FAIL, SKIP).")
+@doc.command("export")
+@click.argument("doc_type")
+@click.option("--format", "fmt", type=click.Choice(["html", "pdf"]), default="html",
+              show_default=True,
+              help="HTML needs no native libraries and works on a base install; "
+                   "PDF requires medharness[docs] plus cairo/pango.")
+@click.option("--out-dir", "out_dir", default=None,
+              type=click.Path(file_okay=False, path_type=Path),
+              help="Destination directory (default: DHF/documents/exports).")
 @click.pass_context
-def test_list(ctx: click.Context, status_filter: str) -> None:
-    """List all stored test results, one JSON object per line."""
-    from dhfkit.result_store import ResultStore
-    dhf_path: Path = ctx.obj["dhf"]
-    store = ResultStore(dhf_path)
-    records = store.get_all(status_filter)
-    for record in records.values():
-        click.echo(json.dumps(record, default=str))
-    click.echo(f"({len(records)} record(s))", err=True)
+def doc_export(ctx: click.Context, doc_type: str, fmt: str, out_dir: Path | None) -> None:
+    """Regenerate spec and export it.
+
+    DOC_TYPE is a configured code (e.g. SYS) or ALL.
+    """
+    adapter = _make_adapter(ctx.obj["dhf"])
+    codes = adapter.get_available_doc_types() if doc_type.upper() == "ALL" else [doc_type]
+    key = f"{fmt}_path"
+    for code in codes:
+        try:
+            result = (adapter.export_html(code, out_dir) if fmt == "html"
+                      else adapter.export_pdf(code, out_dir))
+            click.echo(json.dumps(result))
+            click.echo(f"✓ {code} → {result[key]}", err=True)
+        except Exception as e:
+            click.echo(f"✗ {code}: {e}", err=True)
+            if len(codes) == 1:
+                raise SystemExit(1)
 
 
 @main.command("init")
@@ -523,216 +495,3 @@ def init_cmd(ctx: click.Context, project_name: str) -> None:
     click.echo("Next steps:", err=True)
     click.echo(f"  dhfkit --dhf {dhf_path} item create SYS --data '{{\"title\": \"My first requirement\"}}'", err=True)
     click.echo(f"  dhfkit --dhf {dhf_path} validate traceability", err=True)
-
-
-
-
-@main.command("soup-sync")
-@click.option("--manifest", "manifest_paths", multiple=True,
-              type=click.Path(exists=True, dir_okay=False, path_type=Path),
-              metavar="PATH",
-              help="Manifest file to parse (repeatable). When omitted, reads "
-                   "DHF/config/soup-sources.yaml or auto-discovers manifests.")
-@click.option("--from-command", "extra_commands", multiple=True, metavar="CMD",
-              help="Shell command whose stdout is NDJSON {name,version,ecosystem} "
-                   "(repeatable). Use to plug in syft, trivy, or custom scripts.")
-@click.option("--write", is_flag=True, default=False,
-              help="Create/update SOUP items in the DHF (dry-run by default)")
-@click.option("--author", default="ci", show_default=True, metavar="NAME")
-@click.option("--cr", "cr_id", default=None, metavar="CR_ID",
-              help="CR to attribute writes to")
-@click.pass_context
-def soup_sync_cmd(
-    ctx: click.Context,
-    manifest_paths: tuple[Path, ...],
-    extra_commands: tuple[str, ...],
-    write: bool,
-    author: str,
-    cr_id: str | None,
-) -> None:
-    """Sync SOUP items in the DHF with package manifests.
-
-    Without --manifest / --from-command, reads DHF/config/soup-sources.yaml
-    (if present) or auto-discovers manifest files in the project root.
-
-    Supported manifest formats: requirements.txt, uv.lock, poetry.lock,
-    pyproject.toml, package.json, package-lock.json, go.mod, Cargo.lock, pom.xml.
-
-    Compares found packages against existing SOUP items and reports new,
-    version-drifted, and orphaned entries. Pass --write to apply changes.
-    """
-    from dhfkit.soup_sync import sync_soup_items
-    dhf: Path = ctx.obj["dhf"]
-    result = sync_soup_items(
-        dhf, list(manifest_paths),
-        write=write, author=author, cr_id=cr_id,
-        extra_commands=list(extra_commands),
-    )
-    click.echo(json.dumps(result))
-    create_count = len(result.get("to_create") or [])
-    update_count = len(result.get("to_update") or [])
-    orphan_count = len(result.get("orphans") or [])
-    written = (
-        f" ({len(result.get('items_created', []))} created, {len(result.get('items_updated', []))} updated)"
-        if write else " (dry-run)"
-    )
-    click.echo(
-        f"OK soup-sync{written}: +{create_count} new, ~{update_count} drift, "
-        f"{orphan_count} orphan(s), {result.get('matched_count', 0)} matched.",
-        err=True,
-    )
-    if result.get("outcome") == "completed_with_errors":
-        for err in result.get("errors") or []:
-            click.echo(f"  FAIL: {err}", err=True)
-        sys.exit(1)
-
-
-@main.command("sbom")
-@click.option("--output", "output_path", type=click.Path(dir_okay=False, path_type=Path),
-              help="Where to write the SBOM (default: <dhf>/sbom.cdx.json).")
-@click.option("--stdout", "to_stdout", is_flag=True,
-              help="Write the document to stdout instead of a file.")
-@click.pass_context
-def sbom_cmd(ctx: click.Context, output_path: Path | None, to_stdout: bool) -> None:
-    """Generate a CycloneDX SBOM from the DHF's SOUP items.
-
-    The SOUP register already holds what an SBOM needs, recorded there because
-    IEC 62304 §8.1.2 asks for it. This serialises it into the format FDA
-    cybersecurity guidance and the EU Cyber Resilience Act expect.
-
-    A component whose ecosystem has no package-URL type is included without a
-    `purl` rather than given a guessed one — a wrong purl resolves against a
-    real registry, so an absent one is safer.
-
-    Regenerating an unchanged SBOM leaves the file alone, including its
-    timestamp, so a regeneration is not a diff.
-    """
-    from importlib.metadata import version as pkg_version
-
-    from dhfkit.local_adapter import LocalDHFAdapter
-    from dhfkit.sbom import build_sbom, purl_gap, write_sbom
-
-    dhf: Path = ctx.obj["dhf"]
-    adapter = LocalDHFAdapter(dhf)
-    soup_items = [
-        i for i in adapter.list_items()
-        if str(i.get("id", "")).startswith("SOUP-")
-    ]
-    try:
-        tool_version = pkg_version("dhfkit")
-    except Exception:
-        tool_version = "unknown"
-
-    document = build_sbom(
-        soup_items,
-        project_name=adapter._config.project_name or dhf.resolve().parent.name,
-        tool_version=tool_version,
-    )
-
-    if to_stdout:
-        click.echo(json.dumps(document, indent=2))
-        return
-
-    target = output_path or (dhf / "sbom.cdx.json")
-    written, changed = write_sbom(document, target)
-    click.echo(json.dumps({
-        "path": str(written),
-        "components": len(document["components"]),
-        "without_purl": sum(1 for c in document["components"] if "purl" not in c),
-        "changed": changed,
-    }))
-    n = len(document["components"])
-    click.echo(
-        f"{'Wrote' if changed else 'Unchanged'} {written} — {n} component(s).",
-        err=True,
-    )
-    # Name the cause per component. A bare count says there is a problem without
-    # saying which of the two it is, and they need different fixes.
-    for component in document["components"]:
-        if "purl" in component:
-            continue
-        props = {p["name"]: p["value"] for p in component.get("properties", [])}
-        reason = purl_gap(
-            component["name"], component["version"], props.get("dhfkit:ecosystem", "")
-        )
-        click.echo(
-            f"WARN [sbom] {component['bom-ref']}: no purl — {reason}", err=True
-        )
-
-
-@main.command("release-baseline")
-@click.option("--version", "version", required=True, metavar="VERSION",
-              help="Release version string (e.g. 1.0.0)")
-@click.option("--manifest", "manifest_paths", multiple=True,
-              type=click.Path(exists=True, dir_okay=False, path_type=Path),
-              metavar="PATH", help="requirements.txt or package.json for BOM (repeatable)")
-@click.option("--cr", "cr_ids", multiple=True, metavar="CR_ID",
-              help="CR to include (repeatable; auto-collected if omitted)")
-@click.option("--out-dir", type=click.Path(file_okay=False, path_type=Path),
-              default=Path("."), show_default=True,
-              help="Directory to write release-baseline.json and software-bom.json")
-@click.option("--write", is_flag=True, default=False,
-              help="Create a REL item in the DHF (dry-run by default)")
-@click.option("--author", default="ci", show_default=True, metavar="NAME")
-@click.pass_context
-def release_baseline_cmd(
-    ctx: click.Context, version: str, manifest_paths: tuple[Path, ...],
-    cr_ids: tuple[str, ...], out_dir: Path, write: bool, author: str,
-) -> None:
-    """Build an IEC 62304 §9 release baseline.
-
-    Verifies all included CRs are in `completed` state, collects a
-    software BOM from DHF SOUP items and manifest packages, and writes
-    release-baseline.json and software-bom.json to --out-dir.
-    Pass --write to also create a REL item in the DHF.
-    CRs are auto-collected (completed, not yet in any REL) when --cr is omitted.
-    """
-    from dhfkit.release_baseline import build_release_baseline
-    dhf: Path = ctx.obj["dhf"]
-    result = build_release_baseline(
-        dhf, version, list(manifest_paths), list(cr_ids), out_dir,
-        write=write, author=author,
-    )
-    click.echo(json.dumps(result))
-    if result.get("outcome") == "completed_with_errors":
-        for err in result.get("errors") or []:
-            click.echo(f"  FAIL: {err}", err=True)
-        sys.exit(1)
-    rel_note = f" → {result['rel_uid']}" if result.get("rel_uid") else ""
-    click.echo(
-        f"OK release-baseline {version}{rel_note}: "
-        f"{len(result.get('cr_ids', []))} CR(s), "
-        f"{result.get('soup_count', 0)} SOUP item(s), "
-        f"{len(result.get('artifacts', []))} artifact(s) written.",
-        err=True,
-    )
-
-
-@doc.command("export")
-@click.argument("doc_type")
-@click.option("--format", "fmt", type=click.Choice(["html", "pdf"]), default="html",
-              show_default=True,
-              help="HTML needs no native libraries and works on a base install; "
-                   "PDF requires medharness[docs] plus cairo/pango.")
-@click.option("--out-dir", "out_dir", default=None,
-              type=click.Path(file_okay=False, path_type=Path),
-              help="Destination directory (default: DHF/documents/exports).")
-@click.pass_context
-def doc_export(ctx: click.Context, doc_type: str, fmt: str, out_dir: Path | None) -> None:
-    """Regenerate spec and export it.
-
-    DOC_TYPE is a configured code (e.g. SYS) or ALL.
-    """
-    adapter = _make_adapter(ctx.obj["dhf"])
-    codes = adapter.get_available_doc_types() if doc_type.upper() == "ALL" else [doc_type]
-    key = f"{fmt}_path"
-    for code in codes:
-        try:
-            result = (adapter.export_html(code, out_dir) if fmt == "html"
-                      else adapter.export_pdf(code, out_dir))
-            click.echo(json.dumps(result))
-            click.echo(f"✓ {code} → {result[key]}", err=True)
-        except Exception as e:
-            click.echo(f"✗ {code}: {e}", err=True)
-            if len(codes) == 1:
-                raise SystemExit(1)

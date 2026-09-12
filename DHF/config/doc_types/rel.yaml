@@ -1,0 +1,55 @@
+code: REL
+role: release
+name: Release
+prefix: REL-
+directory: 08_rel
+properties:
+- id
+- name: title
+  format: short_text
+  label: Title
+- name: version
+  format: short_text
+  label: Version
+- name: content
+  format: long_text
+  label: Content
+- name: included_items
+  format: item_multiselect
+  target_types:
+  - CR
+  label: Included Items
+- name: known_anomalies
+  format: list
+  label: Known Anomalies
+  # IEC 62304 §9.7 — the unresolved defects this release ships with, each with
+  # the assessment that made it acceptable. Populated by `release-baseline`
+  # from DEF items still open; an unresolved defect without a
+  # release_rationale blocks the baseline.
+- name: release_notes
+  format: long_text
+  label: Release Notes
+lifecycle:
+  transitions:
+  - from_states:
+    - null
+    to_state: draft
+  - from_states:
+    - draft
+    to_state: approved
+    criteria:
+    - id: version_set
+      name: Version defined
+      check_type: field_not_empty
+      field: version
+      required: true
+    - id: items_planned
+      name: Items planned
+      check_type: field_not_empty
+      field: included_items
+      required: false
+    label: Approve
+  - from_states:
+    - approved
+    to_state: released
+    label: Release

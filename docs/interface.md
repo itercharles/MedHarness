@@ -40,7 +40,7 @@ The manifest is checked against the live command tree by the test suite, so it c
 
 ```json
 {
-  "gate": "verify plans",
+  "gate": "verify classification",
   "passed": false,
   "summary": "Class B: 1 plan(s) written, 0 missing, 3 unchanged.",
   "errors": ["development_plan.md is unchanged from the template — §5.1 requires a plan that is maintained."],
@@ -51,7 +51,7 @@ The manifest is checked against the live command tree by the test suite, so it c
 
 | Key | Type | Meaning |
 |-----|------|---------|
-| `gate` | string | The command that produced this, e.g. `verify plans` |
+| `gate` | string | The command that produced this, e.g. `verify classification` |
 | `passed` | boolean | Whether the gate is satisfied. Always agrees with the exit code |
 | `summary` | string | One line, never empty |
 | `errors` | list of strings | What made the gate fail. Empty when `passed` is true |
@@ -102,7 +102,7 @@ Two distinctions worth knowing before you wire anything:
 
 **Broken references versus incomplete design.** `verify dhf` always fails on a link whose target does not exist — that is a typo or a deleted item. An item with no downstream child yet is normal mid-project and only fails under `--fail-on-uncovered`. They need different fixes, so they are reported differently.
 
-**Gates that wait for a safety class.** `verify classification` and `verify plans` warn and exit zero until `software_safety_class` is declared in `global.yaml`. You can add them to a pipeline before deciding the class; they will start doing work when you do.
+**Gates that wait for a safety class.** `verify classification` warns and exits zero until `software_safety_class` is declared in `global.yaml`. You can add it to a pipeline before deciding the class; it starts doing work when you do.
 
 Declaring the class is taking the opt-in, so from that point `verify classification` fails if `safety_activities.yaml` is missing or defines nothing for the class — a gate that reports a pass having checked nothing is worse than one that is plainly inert. `medharness upgrade --apply` supplies the file; it is yours to edit thereafter and upgrade will not overwrite it.
 
