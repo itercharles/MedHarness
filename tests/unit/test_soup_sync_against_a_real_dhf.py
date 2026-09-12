@@ -18,13 +18,14 @@ from pathlib import Path
 import pytest
 from click.testing import CliRunner
 
-from dhfkit.cli import main
+from dhfkit.cli import main as dhfkit_main
+from medharness.cli import main as mh_main
 
 
 @pytest.fixture
 def project(tmp_path: Path) -> Path:
     dhf = tmp_path / "DHF"
-    CliRunner().invoke(main, ["--dhf", str(dhf), "init"])
+    CliRunner().invoke(dhfkit_main, ["--dhf", str(dhf), "init"])
     (dhf / "config" / "doc_types" / "soup.yaml").write_bytes(
         resources.files("dhfkit")
         .joinpath("templates/config/doc_types/soup.yaml")
@@ -35,8 +36,8 @@ def project(tmp_path: Path) -> Path:
 
 
 def _sync(project: Path, *extra: str) -> dict:
-    r = CliRunner().invoke(main, [
-        "--dhf", str(project / "DHF"), "soup-sync",
+    r = CliRunner().invoke(mh_main, [
+        "--dhf", str(project / "DHF"), "analyse", "soup-drift",
         "--manifest", str(project / "requirements.txt"), *extra,
     ])
     assert "Traceback" not in (r.stderr or ""), r.stderr[-500:]

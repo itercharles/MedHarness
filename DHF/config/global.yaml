@@ -1,0 +1,235 @@
+project_name: "Medharness"
+
+# IEC 62304 §4.3 — software safety classification.
+# Decides which development activities the standard requires; see
+# safety_activities.yaml for the mapping this project uses.
+#   A  no injury or damage to health is possible
+#   B  non-serious injury is possible
+#   C  death or serious injury is possible
+# Leave unset while you are still deciding: `verify classification` warns rather
+# than failing, so nothing breaks until you declare one.
+software_safety_class: ""
+
+# Why that class. Required once a class is declared — the classification is a
+# judgement about the device, and the reasoning is part of the record.
+classification_rationale: ""
+
+global_lifecycle:
+  states:
+  - id: new
+    label: New
+    action_label: Submit
+    icon: "\U0001F195"
+    color: info
+  - id: analyzing
+    label: Analyzing
+    action_label: Start Analysis
+    icon: "\U0001F50D"
+    color: info
+  - id: developing
+    label: Developing
+    action_label: Start Development
+    icon: "\U0001F527"
+    color: warning
+  - id: rejected
+    label: Rejected
+    action_label: Reject
+    icon: "\u274C"
+    color: danger
+    is_stable: true
+  - id: draft
+    label: Draft
+    action_label: Create
+    icon: "\U0001F4DD"
+    color: warning
+    is_initial: true
+  - id: in_review
+    label: In Review
+    action_label: Submit for Review
+    icon: "\U0001F50D"
+    color: info
+  - id: open
+    label: Open
+    action_label: Submit
+    icon: "\U0001F4C2"
+    color: info
+  - id: in_progress
+    label: In Progress
+    action_label: Start Work
+    icon: "\U0001F527"
+    color: warning
+  - id: resolved
+    label: Resolved
+    action_label: Resolve
+    icon: "\u2705"
+    color: success
+  - id: approved
+    label: Approved
+    action_label: Approve
+    icon: "\u2705"
+    color: success
+  - id: designing
+    label: Designing
+    action_label: Start Design
+    icon: "\U0001F4D0"
+    color: info
+  # The CR workflow's own states. cr.yaml transitions to `design` and `develop`
+  # and this list had only `designing` and `developing`, so a scaffolded CR
+  # could reach nothing but `rejected` — `completed` was unreachable, and with
+  # it every gate and release baseline that requires a completed CR.
+  - id: design
+    label: Design
+    action_label: Start Design
+    icon: "\U0001F4D0"
+    color: info
+  - id: develop
+    label: Develop
+    action_label: Start Development
+    icon: "\U0001F527"
+    color: warning
+  - id: implementing
+    label: Implementing
+    action_label: Start Implementation
+    icon: "\U0001F527"
+    color: warning
+  - id: completed
+    label: Completed
+    action_label: Complete
+    icon: "\U0001F3AF"
+    color: success
+  - id: verified
+    label: Verified
+    action_label: Verify
+    icon: "\u2713"
+    color: success
+  - id: validated
+    label: Validated
+    action_label: Validate
+    icon: "\u2713\u2713"
+    color: success
+  - id: released
+    label: Released
+    action_label: Release
+    icon: "\U0001F680"
+    color: success
+    is_stable: true
+  - id: cancelled
+    label: Cancelled
+    action_label: Cancel
+    icon: "\U0001F6AB"
+    color: secondary
+    is_stable: true
+  - id: retired
+    label: Retired
+    action_label: Retire
+    icon: "\U0001F4E6"
+    color: secondary
+    is_stable: true
+  - id: closed
+    label: Closed
+    action_label: Close
+    icon: "\U0001F6AB"
+    color: secondary
+    is_stable: true
+traceability_matrices:
+- name: Complete Requirements Chain
+  description: Full traceability from use cases through all requirement levels to
+    detailed design
+  path:
+  - UC
+  - CRS
+  - SYS
+  - SRS
+  - SWDD
+- name: System Requirements to System Architecture
+  description: System requirements and their architectural designs
+  path:
+  - SYS
+  - SYSARCH
+- name: Module to Detailed Design
+  description: Every software module has at least one detailed design item
+  path:
+  - MODULE
+  - SWDD
+- name: Risk to Control Measures
+  description: Risks to risk control measures
+  path:
+  - RISK
+  - RCM
+required_traceability:
+- source_type: SRS
+  direction: upstream
+  field: derives_from
+  target_type: SYS
+  min_count: 1
+- source_type: SWDD
+  direction: upstream
+  field: implements
+  target_type: SRS
+  min_count: 1
+- source_type: SWDD
+  direction: upstream
+  field: module
+  target_type: MODULE
+  min_count: 1
+- source_type: RCM
+  direction: upstream
+  field: mitigates
+  target_type: RISK
+  min_count: 1
+- source_type: RCM
+  direction: upstream
+  field: implements
+  target_type: SYS
+  min_count: 1
+- source_type: CRS
+  direction: downstream
+  target_type: SYS
+  min_count: 1
+document_specifications:
+  UC:
+    source: requirements_specification.md.j2
+    output: DHF/documents/specs/use_case_specification.md
+    doc_type_name: Use Case
+  CRS:
+    source: customer_requirement_specification.md.j2
+    output: DHF/documents/specs/customer_requirement_specification.md
+    doc_type_name: Customer Requirement
+  SYS:
+    source: requirements_specification.md.j2
+    output: DHF/documents/specs/system_requirement_specification.md
+    doc_type_name: System Requirement
+  SRS:
+    source: requirements_specification.md.j2
+    output: DHF/documents/specs/software_requirement_specification.md
+    doc_type_name: Software Requirement
+  MODULE:
+    source: software_design_document.md.j2
+    output: DHF/documents/specs/software_design_document.md
+    doc_type_name: Software Module
+  SWDD:
+    source: requirements_specification.md.j2
+    output: DHF/documents/specs/software_detailed_design_document.md
+    doc_type_name: Software Detailed Design Document
+  SYSARCH:
+    source: architecture_design_specification.md.j2
+    output: DHF/documents/specs/architecture_design_specification.md
+    doc_type_name: System Architecture Specification
+  RISK:
+    source: risk_specification.md.j2
+    output: DHF/documents/specs/risk_analysis_specification.md
+    doc_type_name: Risk Analysis
+  RCM:
+    source: rcm_specification.md.j2
+    output: DHF/documents/specs/risk_control_measures_specification.md
+    doc_type_name: Risk Control Measures
+  CR:
+    source: change_request_specification.md.j2
+    output: DHF/documents/specs/change_request_specification.md
+    doc_type_name: Change Request
+test_integration:
+  result_store:
+    path: test-results/results.yaml
+  manual:
+    require_verified_by: true
+    require_verification_date: true

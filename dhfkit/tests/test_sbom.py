@@ -243,7 +243,7 @@ class TestMergingTheTwoRegisters:
 
 class TestReleaseBaselineEmitsAnSbom:
     def test_the_release_carries_a_cyclonedx_file(self, dhf: Path, tmp_path: Path) -> None:
-        from dhfkit.release_baseline import build_release_baseline
+        from medharness.services.release_baseline import build_release_baseline
 
         _soup(dhf, "SOUP-001",
               "title: requests\nname: requests\nversion: '2.31.0'\n"
@@ -272,7 +272,7 @@ class TestReleaseBaselineEmitsAnSbom:
 
     def test_the_existing_artifacts_are_unchanged(self, dhf: Path, tmp_path: Path) -> None:
         """software-bom.json keeps its own shape; consumers of it are unaffected."""
-        from dhfkit.release_baseline import build_release_baseline
+        from medharness.services.release_baseline import build_release_baseline
 
         _soup(dhf, "SOUP-001", "title: a\nname: a\nversion: '1'\necosystem: PyPI\n")
         out = tmp_path / "out"
@@ -296,7 +296,7 @@ class TestReleaseBaselineEmitsAnSbom:
         """
         from unittest.mock import patch
 
-        from dhfkit.release_baseline import build_release_baseline
+        from medharness.services.release_baseline import build_release_baseline
 
         out = tmp_path / "out"
         with patch("dhfkit.api.get_item", return_value={
@@ -329,7 +329,7 @@ class TestReleaseBaselineReadsEveryManifestSoupSyncDoes:
     def test_a_supported_manifest_does_not_fail_the_baseline(
         self, dhf: Path, tmp_path: Path, filename, content, expected
     ) -> None:
-        from dhfkit.release_baseline import build_release_baseline
+        from medharness.services.release_baseline import build_release_baseline
 
         manifest = tmp_path / filename
         manifest.write_text(content)
@@ -345,7 +345,7 @@ class TestReleaseBaselineReadsEveryManifestSoupSyncDoes:
 
     def test_an_unknown_format_is_still_reported(self, dhf: Path, tmp_path: Path) -> None:
         """Widening the set must not swallow a genuinely unreadable file."""
-        from dhfkit.release_baseline import build_release_baseline
+        from medharness.services.release_baseline import build_release_baseline
 
         manifest = tmp_path / "Gemfile.lock"
         manifest.write_text("GEM\n")
@@ -364,7 +364,7 @@ class TestReleaseBaselineReadsEveryManifestSoupSyncDoes:
         a malformed package.json as an unsupported format, sending a reader
         after the wrong problem. Support is decided by filename instead.
         """
-        from dhfkit.release_baseline import build_release_baseline
+        from medharness.services.release_baseline import build_release_baseline
 
         manifest = tmp_path / "package.json"
         manifest.write_text("{not valid json}")

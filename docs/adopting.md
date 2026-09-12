@@ -28,7 +28,7 @@ Document generation and traceability work against whatever items you have put in
 
 `init` does not write a CI workflow, because the pipeline references your branch names, runner labels and secrets. You own it, and `upgrade` will never touch it.
 
-Copy the recipe below into `.github/workflows/dhf.yml` and replace `{{medharness_version}}` with the version you pin. It is the whole deployment — three jobs, no server, no database, no account:
+Copy the recipe below into `.github/workflows/dhf.yml` and replace `0.21.0` with the version you pin. It is the whole deployment — three jobs, no server, no database, no account:
 
 <details>
 <summary><code>.github/workflows/dhf.yml</code></summary>
@@ -113,7 +113,7 @@ jobs:
 
       - name: Build release baseline
         run: |
-          dhfkit --dhf DHF release-baseline \
+          medharness --dhf DHF release baseline \
             --version ${{ steps.ver.outputs.version }} \
             --out-dir artifacts \
             --write \
@@ -357,7 +357,7 @@ Run after the branch is merged. Checks:
 
 Exits non-zero and prints `FAIL [cr-complete]` lines for each gap.
 
-## Syncing SOUP items from dependency manifests (`dhfkit soup-sync`)
+## Syncing SOUP items from dependency manifests (`medharness analyse soup-drift`)
 
 The `soup-sync` command reads dependency files from your project and creates or updates SOUP items in the DHF. It supports nine lockfile/manifest formats across multiple ecosystems:
 
@@ -378,14 +378,14 @@ The `soup-sync` command reads dependency files from your project and creates or 
 With no flags, `soup-sync` looks for the supported files in the project root automatically:
 
 ```bash
-dhfkit --dhf DHF soup-sync
+medharness --dhf DHF analyse soup-drift
 ```
 
 To target a specific file:
 
 ```bash
-dhfkit --dhf DHF soup-sync --manifest uv.lock
-dhfkit --dhf DHF soup-sync --manifest go.mod --manifest Cargo.lock
+medharness --dhf DHF analyse soup-drift --manifest uv.lock
+medharness --dhf DHF analyse soup-drift --manifest go.mod --manifest Cargo.lock
 ```
 
 ### Persistent source configuration (`soup-sources.yaml`)
@@ -430,8 +430,8 @@ Source priority when multiple are configured: explicit `--manifest` flags → `-
 By default `soup-sync` prints a diff and exits. Pass `--write` to create and update SOUP items:
 
 ```bash
-dhfkit --dhf DHF soup-sync --write
-dhfkit --dhf DHF soup-sync --write --manifest uv.lock --cr CR-042
+medharness --dhf DHF analyse soup-drift --write
+medharness --dhf DHF analyse soup-drift --write --manifest uv.lock --cr CR-042
 ```
 
 ## Exporting an SBOM (`dhfkit sbom`)

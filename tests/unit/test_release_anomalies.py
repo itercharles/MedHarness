@@ -17,7 +17,7 @@ from pathlib import Path
 
 import pytest
 
-from dhfkit.release_baseline import _collect_known_anomalies, build_release_baseline
+from medharness.services.release_baseline import _collect_known_anomalies, build_release_baseline
 
 DEFECT = """id: {uid}
 title: {title}
@@ -30,8 +30,8 @@ status: {status}
 
 @pytest.fixture
 def dhf(tmp_path: Path) -> Path:
-    """Built from bundled templates — dhfkit's suite must not import medharness."""
-    templates = Path(__file__).resolve().parents[1] / "templates"
+    """Built from the bundled dhfkit templates."""
+    templates = Path(__file__).resolve().parents[2] / "dhfkit" / "templates"
     root = tmp_path / "DHF"
     for src, dst in (("config", "config"), ("items", "items")):
         source = templates / src

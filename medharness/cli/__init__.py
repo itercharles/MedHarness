@@ -28,8 +28,10 @@ from medharness.cli.dhf import register as register_dhf
 from medharness.cli.ci import register as register_ci
 from medharness.cli.init import register as register_init
 from medharness.cli.doctor import register as register_doctor
+from medharness.cli.analyse import register as register_analyse
 
 register_dhf(main)
 register_ci(main)
 register_init(main)
 register_doctor(main)
+register_analyse(main)

@@ -85,25 +85,5 @@ def _break_link(dhf, item_glob: str, old: str, new: str) -> None:
     path.write_text(text.replace(old, new))
 
 
-class TestValidateLinksCLI:
-    def test_dangling_link_exits_nonzero(self, populated_dhf) -> None:
-        _break_link(populated_dhf, "SRS-*.yaml", "SYS-", "SYS-DOES-NOT-EXIST-")
-        r = CliRunner().invoke(main, ["--dhf", str(populated_dhf), "validate", "links"])
-        assert r.exit_code == 1, r.output
-        assert "target does not exist" in r.output
-
-    def test_dangling_link_names_source_field_and_target(self, populated_dhf) -> None:
-        _break_link(populated_dhf, "SRS-*.yaml", "SYS-", "SYS-GONE-")
-        r = CliRunner().invoke(main, ["--dhf", str(populated_dhf), "validate", "links"])
-        assert "derives_from" in r.output
-        assert "SYS-GONE-" in r.output
-        assert "target does not exist" in r.output
-
-    def test_stdout_carries_the_machine_readable_result(self, populated_dhf) -> None:
-        _break_link(populated_dhf, "SRS-*.yaml", "SYS-", "SYS-GONE-")
-        r = CliRunner().invoke(main, ["--dhf", str(populated_dhf), "validate", "links"])
-        payload = json.loads(r.stdout.splitlines()[0])
-        assert payload["passed"] is False
-        assert payload["dangling"]
 
 

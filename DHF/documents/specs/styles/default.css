@@ -1,0 +1,200 @@
+@page {
+    size: A4;
+    margin: 2.5cm 2cm 3cm 2cm;
+
+    @top-center {
+        content: "MedHarness Documentation";
+        font-size: 9pt;
+        color: #7f8c8d;
+        font-family: Arial, sans-serif;
+    }
+
+    @bottom-left {
+        content: "Version 1.0";
+        font-size: 8pt;
+        color: #95a5a6;
+    }
+
+    @bottom-right {
+        content: "Page " counter(page) " of " counter(pages);
+        font-size: 8pt;
+        color: #95a5a6;
+    }
+}
+
+body {
+    font-family: 'Calibri', 'Arial', 'Helvetica', sans-serif;
+    font-size: 11pt;
+    line-height: 1.5;
+    color: #2c3e50;
+    text-align: justify;
+}
+
+/* Title Page Styling */
+h1 {
+    color: #1a5490;
+    font-size: 24pt;
+    font-weight: bold;
+    margin-top: 0;
+    margin-bottom: 0.3em;
+    padding-bottom: 0.3em;
+    border-bottom: 3px solid #3498db;
+    page-break-after: avoid;
+}
+
+h2 {
+    color: #2c3e50;
+    font-size: 16pt;
+    font-weight: bold;
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    padding-bottom: 0.2em;
+    border-bottom: 2px solid #bdc3c7;
+    page-break-after: avoid;
+}
+
+h3 {
+    color: #34495e;
+    font-size: 13pt;
+    font-weight: bold;
+    margin-top: 1.2em;
+    margin-bottom: 0.4em;
+    page-break-after: avoid;
+}
+
+h4 {
+    color: #555;
+    font-size: 11pt;
+    font-weight: bold;
+    margin-top: 1em;
+    margin-bottom: 0.3em;
+}
+
+/* Document Metadata */
+p strong {
+    color: #2c3e50;
+    font-weight: 600;
+}
+
+/* Tables */
+table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 1em 0 1.5em 0;
+    page-break-inside: avoid;
+    font-size: 10pt;
+}
+
+th {
+    background-color: #34495e;
+    color: white;
+    font-weight: bold;
+    padding: 10px 12px;
+    text-align: left;
+    border: 1px solid #2c3e50;
+}
+
+td {
+    padding: 8px 12px;
+    border: 1px solid #bdc3c7;
+    vertical-align: top;
+}
+
+tr:nth-child(even) {
+    background-color: #f8f9fa;
+}
+
+tr:nth-child(odd) {
+    background-color: white;
+}
+
+/* Lists */
+ul,
+ol {
+    margin: 0.5em 0;
+    padding-left: 2em;
+}
+
+li {
+    margin: 0.3em 0;
+}
+
+/* Code and Pre */
+code {
+    background-color: #ecf0f1;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: 'Courier New', 'Consolas', monospace;
+    font-size: 9pt;
+    color: #c7254e;
+}
+
+pre {
+    background-color: #f4f6f7;
+    padding: 12px;
+    border-left: 4px solid #3498db;
+    overflow-x: auto;
+    page-break-inside: avoid;
+    font-family: 'Courier New', 'Consolas', monospace;
+    font-size: 9pt;
+    line-height: 1.4;
+}
+
+/* Horizontal Rules */
+hr {
+    border: none;
+    border-top: 1px solid #bdc3c7;
+    margin: 2em 0;
+}
+
+/* Status Badges */
+.status-approved {
+    color: #27ae60;
+    font-weight: 600;
+}
+
+.status-draft {
+    color: #f39c12;
+    font-weight: 600;
+}
+
+.status-retired {
+    color: #95a5a6;
+    font-weight: 600;
+}
+
+/* Requirement Sections */
+.requirement-section {
+    margin-bottom: 2em;
+    padding-bottom: 1em;
+    border-bottom: 1px solid #ecf0f1;
+}
+
+/* Links */
+a {
+    color: #3498db;
+    text-decoration: none;
+}
+
+/* Page Breaks */
+.page-break {
+    page-break-before: always;
+}
+
+.avoid-break {
+    page-break-inside: avoid;
+}
+
+/* Document Info Box */
+.doc-info {
+    background-color: #f8f9fa;
+    border-left: 4px solid #3498db;
+    padding: 15px 20px;
+    margin: 1.5em 0;
+    page-break-inside: avoid;
+}
+
+.doc-info p {
+    margin: 0.3em 0;
+    line-height: 1.6;
+}

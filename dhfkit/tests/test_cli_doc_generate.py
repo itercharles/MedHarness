@@ -17,12 +17,11 @@ def _parse_json(output: str):
             return json.loads(line)
     raise ValueError(f"No JSON found in output: {output!r}")
 
+def _get_available_doc_types(dhf):
+    """Doc-type codes that have a document specification, per the store."""
+    from dhfkit.local_adapter import LocalDHFAdapter
 
-
-def _get_available_doc_types(populated_dhf) -> list[str]:
-    """Helper: return available doc types from the test DHF."""
-    result = CliRunner().invoke(main, ['--dhf', str(populated_dhf), 'doc', 'list'])
-    return _parse_json(result.output).get('doc_types', [])
+    return LocalDHFAdapter(dhf).get_available_doc_types()
 
 
 def test_doc_generate_single_type(populated_dhf):

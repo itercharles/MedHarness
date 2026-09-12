@@ -1,0 +1,56 @@
+code: APR
+role: approval
+name: Approval Record
+prefix: APR-
+directory: 13_apr
+properties:
+- id
+- name: title
+  format: short_text
+  label: Title
+- name: approves
+  format: item_multiselect
+  target_types:
+  - CR
+  label: Approves
+  # The artifact this decision concerns. A CR in the normal flow, but any item
+  # type may be approved where a project's process calls for it.
+- name: stage
+  format: select
+  label: Stage
+  options:
+  - design
+  - develop
+  - release
+- name: verdict
+  format: select
+  label: Verdict
+  options:
+  - approved
+  - rejected
+  - needs_revision
+- name: approver
+  format: short_text
+  label: Approver
+  # The person accountable for the decision. Distinct from the git author: in
+  # CI the committer is often a bot, and a bot cannot be accountable.
+- name: scope
+  format: long_text
+  label: Scope
+  # What was in view when the decision was made — which items, which analysis.
+- name: notes
+  format: long_text
+  label: Notes
+
+relations:
+- target: CR
+  label: approves
+
+# Deliberately absent: reviewed_revision and approval_date.
+#
+# The approved revision is the commit that introduces this item, and the date is
+# that commit's date. Writing either into the file would be circular — the SHA
+# of the commit containing APR-014 cannot appear inside APR-014 — and would
+# create a second source of truth that a hand edit can make disagree with git.
+#
+# `dhfkit approval show APR-014` resolves both from history.

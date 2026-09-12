@@ -1,0 +1,9 @@
+id: CR-001
+title: "Starter Change Request — Replace with your own"
+content: |-
+  Example change request. Replace this with real change requests
+  for your product.
+description: "Example CR demonstrating lifecycle states"
+justification: "Starter content for demonstration purposes"
+priority: Low
+status: new

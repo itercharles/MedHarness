@@ -1,0 +1,108 @@
+code: CR
+role: change_request
+name: Change Request
+prefix: CR-
+directory: 07_cr
+properties:
+- id
+- name: title
+  format: short_text
+  label: Title
+- name: content
+  format: long_text
+  label: Content
+- name: description
+  format: long_text
+  label: Description
+- name: justification
+  format: long_text
+  label: Justification
+- name: impact_assessment
+  format: long_text
+  label: Impact Assessment
+- name: priority
+  format: select
+  options:
+  - High
+  - Medium
+  - Low
+  label: Priority
+- name: requested_by
+  format: short_text
+  label: Requested By
+- name: assigned_to
+  format: short_text
+  label: Assigned To
+- name: affected_items
+  format: relationship
+  label: Affected Items
+- name: affected_risk_items
+  format: relationship
+  target_types:
+  - RISK
+  - RCM
+  label: Affected Risk Items
+- name: target_version
+  format: short_text
+  label: Target Version
+- name: category
+  format: short_text
+  label: Category
+- name: implementation_notes
+  format: long_text
+  label: Implementation Notes
+- name: proposed_new_items
+  label: Proposed New Items
+  # list of {type, title} dicts written by generate-dhf; no format validator applies
+- name: triage_result
+  label: Triage Result
+  # {verdict, complexity, affected_subsystems, related_crs, notes} written by generate-dhf Step 1
+- name: target_release
+  format: relationship
+  target_types:
+  - RELEASE
+  label: Target Release
+lifecycle:
+  transitions:
+  - from_states:
+    - null
+    to_state: new
+  - from_states:
+    - new
+    to_state: design
+    label: Start Design
+  - from_states:
+    - design
+    to_state: develop
+    label: Start Development
+  - from_states:
+    - develop
+    to_state: completed
+    label: Complete
+    # `verify completion` checks these in CI after the fact; checking them here
+    # refuses the transition instead. The approval record it also requires lives
+    # on a separate APR item, which a per-item criterion cannot see, so that one
+    # check stays in the gate.
+    criteria:
+    - id: implementation_recorded
+      name: Implementation notes written
+      check_type: field_not_empty
+      field: implementation_notes
+      required: true
+    - id: risk_impact_assessed
+      name: Risk impact recorded
+      # `field_present`, not `relationship_field`: an empty list means the risks
+      # were assessed and none are affected, which is a complete answer.
+      check_type: field_present
+      field: affected_risk_items
+      required: true
+    - id: triaged
+      name: Triage decision recorded
+      check_type: field_not_empty
+      field: triage_result
+      required: true
+  - from_states:
+    - new
+    - design
+    to_state: rejected
+    label: Reject

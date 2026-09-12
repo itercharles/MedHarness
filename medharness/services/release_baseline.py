@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
-from dhfkit.soup_sync import _KNOWN_MANIFESTS, _dispatch_parser
+from medharness.services.soup_sync import _KNOWN_MANIFESTS, _dispatch_parser
 
 
 # ---------------------------------------------------------------------------
@@ -309,7 +309,7 @@ def build_release_baseline(
     try:
         from importlib.metadata import version as pkg_version
 
-        from dhfkit.models.config import ProjectConfig
+        from dhfkit.local_adapter import LocalDHFAdapter
         from dhfkit.sbom import build_sbom, merge_release_components, write_sbom
 
         soup_items = [i for i in api.list_items(dhf) if i.get("type") == "SOUP"]
@@ -319,7 +319,7 @@ def build_release_baseline(
         except Exception:  # noqa: BLE001
             tool_version = "unknown"
         try:
-            project_name = ProjectConfig.load(dhf / "config").project_name
+            project_name = LocalDHFAdapter(dhf).config.project_name
         except Exception:  # noqa: BLE001
             # Cosmetic metadata. It must not turn a successful release into
             # completed_with_errors — a name the SBOM cannot read is not a

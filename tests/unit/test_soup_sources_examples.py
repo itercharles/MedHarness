@@ -98,10 +98,11 @@ class TestTheCommandSourceRunsForReal:
     def test_a_block_scalar_command_produces_items(self, tmp_path: Path) -> None:
         from click.testing import CliRunner
 
-        from dhfkit.cli import main
+        from dhfkit.cli import main as dhfkit_main
+        from medharness.cli import main
 
         dhf = tmp_path / "DHF"
-        CliRunner().invoke(main, ["--dhf", str(dhf), "init"])
+        CliRunner().invoke(dhfkit_main, ["--dhf", str(dhf), "init"])
         (dhf / "config" / "doc_types" / "soup.yaml").write_bytes(
             resources.files("dhfkit")
             .joinpath("templates/config/doc_types/soup.yaml").read_bytes()
@@ -122,7 +123,7 @@ class TestTheCommandSourceRunsForReal:
             "                                'ecosystem': 'npm'}))\n"
             "      \"\n"
         )
-        r = CliRunner().invoke(main, ["--dhf", str(dhf), "soup-sync", "--write"])
+        r = CliRunner().invoke(main, ["--dhf", str(dhf), "analyse", "soup-drift", "--write"])
         payload = json.loads(r.stdout.splitlines()[0])
         assert payload["outcome"] == "completed", payload["errors"]
         assert payload["packages_found"] == 1

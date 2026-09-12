@@ -154,12 +154,12 @@ The generated DHF repo does not contain `dhfkit/` or `medharness/` source code. 
 
 | Placeholder | Example value |
 |-------------|---------------|
-| `{{project_name}}` | `Insulin Pump Firmware` |
+| `Medharness` | `Insulin Pump Firmware` |
 | `{{product_repo}}` | `acme-medical/insulin-pump` |
 | `{{product_repo_name}}` | `insulin-pump` |
 | `{{github_org}}` | `acme-medical` |
 | `{{dhf_repo_name}}` | `insulin-pump-dhf` |
-| `{{primary_test_tool}}` | `pytest` |
+| `pytest` | `pytest` |
 
 ---
 
@@ -213,7 +213,7 @@ change plan  →  (design PR reviewed + approved)  →  change implement
 1. Triage — checks for duplicate, out-of-scope, architecture-conflict, or too-large; writes `triage_result` (verdict, complexity, affected_subsystems, notes) onto the CR item
 2. V-model cascade — creates/updates DHF items top-down: CR → CRS → SYS → {SYSARCH, RISK, RCM} → SRS → SWDD. Each SWDD item links to an existing MODULE and implements the relevant SRS items. Reads relevant source modules before writing SWDD items so the design reflects the actual codebase. Writes `affected_risk_items` (list of RISK/RCM IDs relevant to this CR, or `[]`) onto the CR item.
 3. Implementation plan — writes a structured implementation plan (overview, current state, changes required, steps, edge cases, tests) into `implementation_notes` on the CR item
-4. Deterministic validation — `dhfkit validate schema` + `dhfkit validate links` for the stored data, `medharness verify dhf` for the analysis; self-corrects if errors remain
+4. Deterministic validation — `dhfkit validate schema` + `medharness verify dhf` for the stored data, `medharness verify dhf` for the analysis; self-corrects if errors remain
 5. Design review (soft) — reviews every changed DHF item for necessity, product/technical strategy alignment, and SWDD + implementation note clarity. Writes verdict and issues to `docs/reviews/<CR>-Design-Review.md`. If **Needs Revision**, a fix pass runs and the review repeats up to three cycles.
 
 **`change implement`**

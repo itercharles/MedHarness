@@ -178,12 +178,12 @@ environment variable.
 |---|---|
 | `dhfkit item list --type SYS` | list items; `item get`, `item create`, `item update` for one |
 | `dhfkit validate schema` | schema conformance |
-| `dhfkit validate links` | do the links resolve — storage integrity |
+| `medharness verify dhf` | do the links resolve — storage integrity |
 | `dhfkit doc generate SYS` | build a specification from the items |
 | `dhfkit doc export SYS` | self-contained HTML, or PDF with `[docs]` |
-| `dhfkit soup-sync --manifest <file>` | sync SOUP items from a dependency manifest |
+| `medharness analyse soup-drift --manifest <file>` | sync SOUP items from a dependency manifest |
 | `dhfkit sbom` | CycloneDX 1.6 SBOM from the SOUP register |
-| `dhfkit release-baseline --version 1.0.0` | frozen release record |
+| `medharness release baseline --version 1.0.0` | frozen release record |
 | `medharness change plan --cr CR-034` | AI drafts DHF items and impact analysis |
 | `medharness change implement --cr CR-034` | AI writes code and tests (`--pr 42` to revise from feedback) |
 | `medharness verify dhf` | coverage, cycles, dangling links, required traceability |

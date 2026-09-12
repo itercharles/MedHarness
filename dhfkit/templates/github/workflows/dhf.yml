@@ -77,7 +77,7 @@ jobs:
 
       - name: Build release baseline
         run: |
-          dhfkit --dhf DHF release-baseline \
+          medharness --dhf DHF release baseline \
             --version ${{ steps.ver.outputs.version }} \
             --out-dir artifacts \
             --write \

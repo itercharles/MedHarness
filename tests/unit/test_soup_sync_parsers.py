@@ -1,4 +1,4 @@
-"""Tests for dhfkit.soup_sync manifest parsers and extension mechanisms."""
+"""Tests for medharness.services.soup_sync manifest parsers and extension mechanisms."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from dhfkit.soup_sync import (
+from medharness.services.soup_sync import (
     _run_external_command,
     discover_manifests,
     load_soup_sources,

@@ -358,8 +358,8 @@ def load_soup_sources(dhf_path: Path, project_dir: Path) -> tuple[list[dict], li
     """
     import yaml  # type: ignore[import]
 
-    sources_file = dhf_path / "config" / "soup-sources.yaml"
-    if not sources_file.exists():
+    sources_file = config_file(dhf_path, "soup-sources.yaml")
+    if sources_file is None:
         return [], []
 
     try:
@@ -533,6 +533,9 @@ def diff_against_dhf(
 # Main entrypoint
 # ---------------------------------------------------------------------------
 
+from dhfkit.paths import config_file
+
+
 def sync_soup_items(
     dhf: Path,
     manifest_paths: list[Path],
@@ -583,7 +586,7 @@ def sync_soup_items(
 
     # 3. soup-sources.yaml (when no explicit sources given)
     if not manifest_paths and not extra_commands:
-        if use_sources_file and (dhf / "config" / "soup-sources.yaml").exists():
+        if use_sources_file and config_file(dhf, "soup-sources.yaml"):
             src_pkgs, src_errors = load_soup_sources(dhf, project_dir)
             packages.extend(src_pkgs)
             errors.extend(src_errors)

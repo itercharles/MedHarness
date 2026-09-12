@@ -1,9 +1,9 @@
-"""Unit tests for dhfkit.soup_sync."""
+"""Unit tests for medharness.services.soup_sync."""
 
 from pathlib import Path
 from unittest.mock import patch
 
-from dhfkit.soup_sync import (
+from medharness.services.soup_sync import (
     _find_soup_item,
     _normalize_name,
     _normalize_version,

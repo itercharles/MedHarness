@@ -356,6 +356,17 @@ class LocalDHFAdapter:
         """
         return self._config
 
+    def config_file(self, name: str) -> Optional[Path]:
+        """Path to a project config file, or None when it is absent.
+
+        Config lives under the store's own layout, so a caller that joins the
+        path itself is coupled to this backend. `soup-sources.yaml` is the one
+        a consumer needs by name.
+        """
+        from dhfkit.paths import config_file
+
+        return config_file(self._dhf_root, name)
+
 
     # ------------------------------------------------------------------
     # Document generation

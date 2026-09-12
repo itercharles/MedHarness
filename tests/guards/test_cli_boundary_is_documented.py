@@ -56,11 +56,3 @@ def test_the_table_lists_no_command_that_does_not_exist(
     assert not orphaned, f"the table lists {orphaned}, which {module} does not have"
 
 
-class TestTheOverlapIsExplained:
-    def test_both_clis_really_do_have_approval(self) -> None:
-        assert "approval" in _live_commands("dhfkit")
-        assert "approval" in _live_commands("medharness")
-
-    def test_the_table_says_why(self, claude_md: str) -> None:
-        """Two commands with one name is the thing a reader will trip on."""
-        assert "dhfkit approval" in claude_md and "medharness approval" in claude_md
