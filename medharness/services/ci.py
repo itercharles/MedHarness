@@ -1848,6 +1848,13 @@ def _soup_drift(
                 for e in diff["to_update"]
             ],
             "no_longer_shipped": [it["id"] for it in diff["orphans"]],
+            # An entry with no purpose satisfies "is it documented" and answers
+            # nothing §8.1.2 asks. soup-sync leaves it empty rather than filling
+            # in "Dependency from PyPI", so the gap is visible instead of
+            # papered over.
+            "undescribed": sorted(
+                it["id"] for it in soup_items if not str(it.get("purpose") or "").strip()
+            ),
             "blocking": fail_on_drift,
             "errors": errors,
         }

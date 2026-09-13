@@ -611,7 +611,6 @@ def sync_soup_items(
     *,
     write: bool = False,
     author: str = "ci",
-    cr_id: Optional[str] = None,
     extra_commands: list[str] | None = None,
     use_sources_file: bool = True,
 ) -> dict:
@@ -653,10 +652,14 @@ def sync_soup_items(
                     "version": pkg["version"],
                     "ecosystem": pkg.get("ecosystem") or "",
                     "manufacturer": pkg.get("manufacturer") or "",
-                    "purpose": f"Dependency from {pkg.get('ecosystem') or 'manifest'}",
+                    # Left empty on purpose. §8.1.2 asks why a component is
+                    # used; "Dependency from PyPI" answers nothing and would
+                    # make the register look complete while saying nothing.
+                    # `verify soup` reports the gap until a person fills it.
+                    "purpose": "",
                     "license": "",
                 }
-                new_item = api.create_item(dhf, data, author=author, cr_id=cr_id)
+                new_item = api.create_item(dhf, data, author=author)
                 items_created.append(new_item["id"])
             except Exception as exc:
                 errors.append(f"Failed to create SOUP item for {pkg['name']}: {exc}")
@@ -666,7 +669,7 @@ def sync_soup_items(
             item = entry["item"]
             try:
                 api.update_item(dhf, item["id"], {"version": pkg["version"]},
-                                author=author, cr_id=cr_id)
+                                author=author)
                 items_updated.append(item["id"])
             except Exception as exc:
                 errors.append(f"Failed to update {item['uid']}: {exc}")

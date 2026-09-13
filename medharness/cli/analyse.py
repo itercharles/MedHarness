@@ -78,9 +78,8 @@ def register(main):
     @click.option("--write", is_flag=True, default=False,
                   help="Create or update SOUP items (report-only by default).")
     @click.option("--author", default="ci", show_default=True, metavar="NAME")
-    @click.option("--cr", "cr_id", default=None, metavar="CR_ID")
     @click.pass_context
-    def soup_sync(ctx, manifest_paths, extra_commands, write, author, cr_id) -> None:
+    def soup_sync(ctx, manifest_paths, extra_commands, write, author) -> None:
         """Compare the SOUP register against the project's dependency manifests.
 
         IEC 62304 §8.1.2 wants the SOUP a release ships to be the SOUP it
@@ -95,7 +94,7 @@ def register(main):
             raise click.ClickException("--dhf is required when not set globally")
         result = sync_soup_items(
             Path(dhf), list(manifest_paths),
-            write=write, author=author, cr_id=cr_id,
+            write=write, author=author,
             extra_commands=list(extra_commands),
         )
         click.echo(json.dumps(result))
