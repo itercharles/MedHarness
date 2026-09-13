@@ -658,6 +658,7 @@ def sync_soup_items(
                     # `verify soup` reports the gap until a person fills it.
                     "purpose": "",
                     "license": "",
+                    "source": pkg.get("source") or "",
                 }
                 new_item = api.create_item(dhf, data, author=author)
                 items_created.append(new_item["id"])

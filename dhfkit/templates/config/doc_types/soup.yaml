@@ -29,6 +29,12 @@ properties:
 - name: homepage
   format: short_text
   label: Homepage
+- name: source
+  format: short_text
+  label: Recorded from
+  # Which manifest produced this entry. `soup-sync --write` writes the DHF
+  # outside any CR, so without this a reviewer sees a record with no account of
+  # why it exists. Empty means a person wrote it by hand.
 - name: ecosystem
   format: short_text
   label: Package Ecosystem
