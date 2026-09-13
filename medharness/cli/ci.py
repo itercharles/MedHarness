@@ -682,6 +682,9 @@ def register(main):
                        f"it is also never scanned for vulnerabilities.", err=True)
         for note in drift.get("misversioned", []):
             click.echo(f"{label} [soup-drift] {note}", err=True)
+        for soup_id in drift.get("undescribed", []):
+            click.echo(f"WARN [soup-drift] {soup_id} has no purpose recorded — "
+                       f"§8.1.2 asks why the component is used.", err=True)
         for soup_id in drift.get("no_longer_shipped", []):
             click.echo(f"WARN [soup-drift] {soup_id} is in the register but no "
                        f"manifest resolves it.", err=True)

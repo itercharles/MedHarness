@@ -247,7 +247,7 @@ class TestSyncSoupItems:
 
         mock_update.assert_called_once_with(
             tmp_path / "DHF", "SOUP-001", {"version": "8.1.7"},
-            author="ci", cr_id=None,
+            author="ci",
         )
         assert result["items_updated"] == ["SOUP-001"]
 
@@ -260,15 +260,6 @@ class TestSyncSoupItems:
         assert result["outcome"] == "completed_with_errors"
         assert any("Unsupported manifest" in e for e in result["errors"])
 
-    def test_author_and_cr_forwarded(self, tmp_path):
-        req = _req_txt(tmp_path, "numpy==1.26.0\n")
-        with patch("dhfkit.api.list_items", return_value=[]), \
-             patch("dhfkit.api.create_item", return_value={"id": "SOUP-002"}) as mock_create:
-            sync_soup_items(tmp_path / "DHF", [req], write=True, author="agent", cr_id="CR-007")
-
-        _, kwargs = mock_create.call_args
-        assert kwargs.get("author") == "agent"
-        assert kwargs.get("cr_id") == "CR-007"
 
     def test_multiple_manifests_merged(self, tmp_path):
         req = _req_txt(tmp_path, "flask==3.0.0\n")

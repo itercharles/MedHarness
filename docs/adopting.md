@@ -431,7 +431,7 @@ By default `soup-sync` prints a diff and exits. Pass `--write` to create and upd
 
 ```bash
 medharness --dhf DHF soup-sync --write
-medharness --dhf DHF soup-sync --write --manifest uv.lock --cr CR-042
+medharness --dhf DHF soup-sync --write --manifest uv.lock
 ```
 
 ## Exporting an SBOM (`dhfkit sbom`)
