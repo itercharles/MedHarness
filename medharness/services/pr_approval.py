@@ -1,9 +1,10 @@
-"""PR approval gate — parse /approve and /reject commands from PR comments.
+"""PR approval: the review is the evidence, the label marks the stage.
 
-Provides a machine-readable approval mechanism that replaces the implicit
-"merging = approval" convention with an explicit command-and-label scheme.
+A GitHub review carries an author, a time, and the commit it approved. A label
+carries none of those and anyone with write access can move it, so since 0.24.0
+the gate reads reviews and pins them to the commit being merged. The labels stay
+as the visible marker of which stage a PR has reached:
 
-Label scheme:
     cr-spec-approved   — spec approved, ready for design stage
     cr-design-approved — design approved, ready for develop stage
     cr-code-approved   — code approved, ready to merge
@@ -146,6 +147,11 @@ def approval_evidence(pr_number: int | str, stage: str, *, token: str = "") -> d
     that someone clicked, not that anyone reviewed. A review carries all three,
     and naming the commit is what makes it evidence: approval of work that has
     since changed is not approval of what ships.
+
+    `stage` names the gate asking, and is recorded in the result. It does not
+    narrow the search: what separates the stages is the commit. A design
+    approval covers the DHF cascade that was the head at the time, and goes
+    stale the moment the code lands, so the develop gate needs its own review.
     """
     head = _pr_head_sha(pr_number, token=token)
     reviews = _reviews(pr_number, token=token)
@@ -153,6 +159,7 @@ def approval_evidence(pr_number: int | str, stage: str, *, token: str = "") -> d
         return {
             "approved": False,
             "reason": "the pull request's reviews could not be read",
+            "stage": stage,
             "head_sha": head,
             "approvals": [],
             "stale_approvals": [],
@@ -180,6 +187,7 @@ def approval_evidence(pr_number: int | str, stage: str, *, token: str = "") -> d
     return {
         "approved": bool(approvals),
         "reason": reason,
+        "stage": stage,
         "head_sha": head,
         "approvals": approvals,
         "stale_approvals": stale,

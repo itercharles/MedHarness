@@ -160,10 +160,6 @@ def register(main):
     def evidence() -> None:
         """Build evidence and delivery artifacts."""
 
-    @main.group("approval")
-    def approval() -> None:
-        """Check and interpret approval state for a change."""
-
     @main.group("change")
     def change() -> None:
         """Analyze, implement, and track change requests."""
@@ -433,7 +429,7 @@ def register(main):
     @click.option("--junit", "junit_files", multiple=True, type=click.Path(exists=True, dir_okay=False, path_type=Path))
     @click.option("--pr", "pr_number", type=int, default=None, metavar="N",
                   help="Read the design approval from this pull request's reviews, "
-                       "the same evidence `approval check` uses. Without it, an APR "
+                       "the same evidence `change verify-approval` uses. Without it, an APR "
                        "item is required instead.")
     @click.pass_context
     def verify_completion(
@@ -447,8 +443,14 @@ def register(main):
         """Verify CR closure: all proposed items created and verification evidence present.
 
         Reads proposed_new_items from the CR item, checks each proposed type was
-        created in the DHF, then runs the verification completeness gate for those
-        types. Use after a CR branch is merged and CI evidence is available.
+        created in the DHF, then runs the verification completeness gate over the
+        items this CR touched — its affected_items and the items matching its
+        proposals — so a CR is not charged with the DHF's existing gaps.
+
+        Reads only the working tree, so it runs on the branch as well as on main.
+        Run it on the branch to block the merge: the CR fields, the approval and
+        the proposed items settle there. Run it again on main for the half that
+        can differ — the tests re-run against whatever else landed meanwhile.
 
         Exits non-zero when any proposed items are missing or unverified.
         """
@@ -621,6 +623,7 @@ def register(main):
 
     @change.command("verify-branch")
     @click.option("--cr", "cr_id", required=True, metavar="CR_ID")
+    @click.option("--dhf", "dhf_override", type=click.Path(file_okay=False, path_type=Path))
     @click.option("--since-ref", default="origin/main", metavar="REF")
     @click.option("--code-path", "code_paths", multiple=True, metavar="PATH",
                   help="Opt into code-change enforcement: path(s) under which at least one file must be modified. "
@@ -629,13 +632,14 @@ def register(main):
     def verify_branch(
         ctx: click.Context,
         cr_id: str,
+        dhf_override: Path | None,
         since_ref: str,
         code_paths: tuple[str, ...],
     ) -> None:
         """Validate that a single branch carries the expected coupled CR changes."""
         from medharness.services.git import validate_atomic_branch  # noqa: PLC0415
 
-        dhf_path: Path = ctx.obj["dhf"]
+        dhf_path: Path = dhf_override or ctx.obj["dhf"]
         repo_root = dhf_path.resolve().parent
         payload = validate_atomic_branch(
             repo_root,
@@ -749,26 +753,51 @@ def register(main):
 
     # ── Approval gate ──
 
-    @approval.command("check")
+    @change.command("verify-approval")
     @click.option("--cr", "cr_id", required=True, metavar="CR_ID")
     @click.option("--stage", required=True, type=click.Choice(["design", "develop"]))
     @click.option("--pr", "pr_number", required=True, type=int, metavar="N")
     @click.option("--token", default="", metavar="TOKEN")
-    def approval_check(cr_id: str, stage: str, pr_number: int, token: str) -> None:
-        """Check whether a CR stage has been explicitly approved via PR label.
+    def verify_approval(cr_id: str, stage: str, pr_number: int, token: str) -> None:
+        """Check that a reviewer approved the commit this PR would merge.
 
-        Exits 0 if the stage label is present on the PR, non-zero otherwise.
+        Reads the PR's reviews and requires an APPROVED one whose `commit_id`
+        is the current head. An approval of an earlier commit is reported as
+        stale and fails: it approved work that has since changed.
+
+        `--stage` names the gate asking and is recorded in the output; it does
+        not narrow the search. The commit is what separates the stages — a
+        design approval goes stale as soon as the code lands.
+
+        Exits 0 when such a review exists, 1 otherwise.
         """
+        from medharness.services.ci import envelope_from  # noqa: PLC0415
         from medharness.services.pr_approval import approval_evidence  # noqa: PLC0415
 
         evidence = approval_evidence(pr_number, stage, token=token)
-        payload = {"cr_id": cr_id, "stage": stage, "pr_number": pr_number, **evidence}
+        approved = evidence["approved"]
+        who = ", ".join(
+            f"{a['by']} at {a['at']}" for a in evidence["approvals"] if a.get("by")
+        )
+        payload = envelope_from("change verify-approval", {
+            "passed": approved,
+            "summary": (
+                f"PASS — {cr_id} approved on PR #{pr_number} by "
+                f"{who or 'an unnamed reviewer'} at commit "
+                f"{evidence['head_sha'][:7] or '?'}."
+                if approved else
+                f"FAIL — {cr_id}: {evidence['reason']} on PR #{pr_number}."
+            ),
+            "errors": [] if approved else [
+                f"{cr_id}: {evidence['reason']} on PR #{pr_number}."
+            ],
+            "cr_id": cr_id,
+            "pr_number": pr_number,
+            **evidence,
+        })
         click.echo(json.dumps(payload))
 
         if evidence["approved"]:
-            who = ", ".join(
-                f"{a['by']} at {a['at']}" for a in evidence["approvals"] if a.get("by")
-            )
             click.echo(
                 f"PASS [{stage}-approve] {cr_id}: approved on PR #{pr_number} "
                 f"({who or 'reviewer unknown'}), commit {evidence['head_sha'][:7]}.",

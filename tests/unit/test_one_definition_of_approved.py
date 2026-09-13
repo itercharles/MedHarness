@@ -1,4 +1,4 @@
-"""`approval check` and `change verify-completion` must not disagree.
+"""`change verify-approval` and `change verify-completion` must not disagree.
 
 Before 0.24.0 the stage gate read a GitHub label while the closure gate required
 an APR record — one workflow, two unrelated definitions of approved, and the
@@ -66,6 +66,6 @@ def test_both_gates_call_the_same_function() -> None:
         for n in ast.walk(ast.parse(source)) if isinstance(n, ast.Call)
     }
     assert "approval_evidence" in called, (
-        "closure no longer uses the evidence `approval check` uses; the two "
+        "closure no longer uses the evidence `change verify-approval` uses; the two "
         "gates can disagree about whether a stage was approved"
     )

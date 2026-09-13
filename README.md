@@ -212,7 +212,7 @@ the CR workflow. A PR with no CR is not their business.
 | `medharness change implement --cr CR-034` | AI writes code and tests (`--pr 42` to revise from feedback) |
 | `medharness change verify-branch --cr CR-034` | the branch changes the items the CR listed in `affected_items` |
 | `medharness change verify-completion --cr CR-034` | the CR created the items it proposed, and they are verified |
-| `medharness approval check --cr CR-034 --stage design --pr 42` | an approving review of the commit being merged |
+| `medharness change verify-approval --cr CR-034 --stage design --pr 42` | an approving review of the commit being merged |
 | `medharness context implementation --cr CR-034` | which modules, designs and requirements a CR touches |
 | `medharness context for-stage develop --cr CR-034` | what an agent needs to know at one stage |
 | `medharness context overview` | the DHF as a whole, for an agent new to it |

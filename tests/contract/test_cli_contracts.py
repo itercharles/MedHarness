@@ -81,10 +81,15 @@ class TestCRGenerationCommands:
 
 
     def test_validate_branch_help(self):
-        """medharness change verify-branch --help exits 0."""
+        """medharness change verify-branch --help exits 0.
+
+        It carries its own --dhf like the other DHF-reading gates. It was the
+        one that did not, so a caller building from the gate manifest hit a
+        usage error on the option every sibling accepts.
+        """
         r = _run("medharness", "change", "verify-branch", "--help")
         assert r.returncode == 0, r.stderr
-        assert "--dhf" not in r.stdout
+        assert "--dhf" in r.stdout
 
     def test_develop_cr_requires_cr_flag(self):
         """medharness change implement without --cr exits non-zero with usage error."""

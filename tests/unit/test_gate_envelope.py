@@ -41,6 +41,9 @@ GATE_ARGS = {
     "verify tests": ["--junit-dir", "{dhf}/test-results"],
     "change verify-completion": ["--cr", "CR-001"],
     "change verify-branch": ["--cr", "CR-001"],
+    # No network in the test environment, so the reviews come back unreadable —
+    # which is a reporting path like any other, and the one that must not pass.
+    "change verify-approval": ["--cr", "CR-001", "--stage", "design", "--pr", "1"],
 }
 
 
@@ -160,6 +163,7 @@ class TestNoGateEscapesTheEnvelope:
             "verify tests": ["--junit-dir", str(dhf / "test-results")],
             "change verify-completion": ["--cr", "CR-001"],
             "change verify-branch": ["--cr", "CR-001"],
+            "change verify-approval": ["--cr", "CR-001", "--stage", "design", "--pr", "1"],
         }
         offenders = []
         for gate in GATES:
@@ -172,9 +176,9 @@ class TestNoGateEscapesTheEnvelope:
             try:
                 payload = json.loads(line[0])
             except (IndexError, json.JSONDecodeError):
-                offenders.append((name, "no JSON on stdout")); continue
+                offenders.append((gate["command"], "no JSON on stdout")); continue
             if set(payload) != set(ENVELOPE_KEYS):
-                offenders.append((name, sorted(set(payload) ^ set(ENVELOPE_KEYS))))
+                offenders.append((gate["command"], sorted(set(payload) ^ set(ENVELOPE_KEYS))))
         assert not offenders, f"gates not emitting the envelope: {offenders}"
 
     def test_cr_closure_gate_uses_the_envelope(self, dhf: Path) -> None:
