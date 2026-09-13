@@ -85,7 +85,7 @@ class TestEveryCLIGateHonoursTheContract:
     """All nine, not just the four callable with a bare path.
 
     An earlier version parametrised only SIMPLE_GATES, so `verify branch` shipped
-    with dicts in `errors` and `verify verification` failed with nothing in it —
+    with dicts in `errors` and `verify tests` failed with nothing in it —
     both invisible to a test that never called them.
     """
 
@@ -291,7 +291,7 @@ class TestFailurePathsHonourTheContract:
     """
 
     FAILING = ("verify dhf", "verify classification",
-               "verify verification", "verify completion", "verify branch")
+               "verify tests", "verify completion", "verify branch")
 
     @pytest.mark.parametrize("command", FAILING)
     def test_no_crash_on_the_failure_path(self, command: str, failing_dhf: Path) -> None:
@@ -388,7 +388,7 @@ class TestStderrCarriesTheEnvelope:
     """
 
     ALL = ("verify dhf", "verify tests", "verify classification",
-           "verify verification", "verify completion", "verify branch")
+           "verify tests", "verify completion", "verify branch")
 
     @pytest.mark.parametrize("command", ALL)
     def test_stderr_reports_the_envelope(self, command: str, failing_dhf: Path) -> None:

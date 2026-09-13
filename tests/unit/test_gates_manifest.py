@@ -107,5 +107,5 @@ class TestCommand:
 class TestEveryGateAnswersWithTheEnvelope:
     """Discovery through the CLI, so a gate implemented anywhere is covered."""
 
-    def test_all_seven_gates_are_registered(self) -> None:
-        assert len(_cli_verify_commands()) == len(GATES) == 7
+    def test_all_six_gates_are_registered(self) -> None:
+        assert len(_cli_verify_commands()) == len(GATES) == 6

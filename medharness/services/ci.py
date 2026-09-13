@@ -351,6 +351,7 @@ def ci_test_coverage_gate(
     dhf_path: Path,
     junit_paths: list[Path],
     req_types: tuple[str, ...] = (),
+    require_method: bool = False,
 ) -> dict[str, Any]:
     """Check requirement coverage from JUnit evidence.
 
@@ -364,11 +365,33 @@ def ci_test_coverage_gate(
     from dhfkit.local_adapter import LocalDHFAdapter
 
     if not junit_paths:
+        # Declaring a verification method needs no test run, so returning here
+        # skipped a check that had nothing to do with the missing evidence.
+        methods = validate_verification_completeness(
+            dhf_path, [], req_types, enforce_test_evidence=False,
+        )
+        md = methods.get("details", methods)
+        missing = md.get("missing_method", [])
+        # Missing evidence still fails: this gate's job is to confirm the tests
+        # ran and passed, and it cannot. The method check is extra, not a
+        # replacement — reporting FAIL on stderr while exiting 0 was the bug
+        # this replaced.
         return gate_result(
             "verify tests", False,
-            "No JUnit files found.",
-            errors=["No JUnit files found — pass --junit-dir or --junit."],
+            "No JUnit evidence given — test results were not checked.",
+            errors=(
+                [f"{g['id']}: no verification_method declared" for g in missing]
+                if require_method else
+                ["No JUnit files found — pass --junit-dir or --junit."]
+            ),
+            warnings=(
+                [] if require_method else
+                [f"{g['id']}: no verification_method declared" for g in missing]
+            ),
             results=[],
+            missing_method=missing,
+            unverified_test=[],
+            manual_review_required=md.get("manual_review_required", []),
         )
 
     covered_reqs: set[str] = set()
@@ -532,6 +555,48 @@ def ci_test_coverage_gate(
     total = sum(r.get("total", 0) for r in results)
     if level_config_problems:
         passed = False
+
+    # Coverage alone reads every requirement as one that should have a test. A
+    # requirement verified by Inspection has none by design, and asking the two
+    # questions from separate gates produced two answers: this one called it
+    # uncovered while `verify verification` called it manual sign-off. Neither
+    # was wrong about its half.
+    methods = validate_verification_completeness(
+        dhf_path, list(junit_paths), req_types,
+        enforce_test_evidence=bool(junit_paths),
+    )
+    md = methods.get("details", methods)
+    errors += [
+        f"{gap['id']}: no verification_method declared"
+        for gap in md.get("missing_method", [])
+    ] + [
+        f"{gap['id']}: declares Test but no passing case is linked"
+        for gap in md.get("unverified_test", [])
+    ]
+    warnings += [
+        f"{gap['id']}: verified by {', '.join(gap.get('methods', []))} — needs a "
+        f"human sign-off record"
+        for gap in md.get("manual_review_required", [])
+    ]
+    if not junit_paths:
+        warnings.append(
+            "No JUnit evidence given, so test results were not checked — "
+            "pass --junit-dir to verify them."
+        )
+    # A requirement with no declared method is a §5.7 gap, but a project that
+    # adopted this before the field existed has one on every item. It warns
+    # until asked to block, the call `verify dhf` makes for coverage gaps.
+    if require_method:
+        passed = passed and not md.get("missing_method")
+    else:
+        warnings += [
+            f"{gap['id']}: no verification_method declared — pass "
+            f"--require-method to block on this"
+            for gap in md.get("missing_method", [])
+        ]
+        errors = [e for e in errors if "no verification_method declared" not in e]
+    passed = passed and not md.get("unverified_test")
+
     return gate_result(
         "verify tests", passed,
         f"{covered}/{total} requirement(s) covered by passing tests.",
@@ -541,6 +606,9 @@ def ci_test_coverage_gate(
         required_levels=required_levels,
         levels_seen=sorted(seen_levels),
         level_gaps=level_gaps,
+        missing_method=md.get("missing_method", []),
+        unverified_test=md.get("unverified_test", []),
+        manual_review_required=md.get("manual_review_required", []),
     )
 
 
@@ -1306,10 +1374,14 @@ def cr_closure_gate(
 
     Checks:
     1. CR item carries implementation_notes, affected_risk_items, and an approved triage_result.
-    2. A design review file exists at docs/reviews/<CR>-Design-Review.md with verdict=approved.
+    2. The design stage was approved: an approving review on ``pr_number`` when
+       given, otherwise an APR item, falling back to the legacy
+       docs/reviews/<CR>-Design-Review.md convention.
     3. All ``proposed_new_items`` from the CR item exist in the DHF.
     4. All created items of verifiable types have ``verification_method`` set.
-    5. Items with ``Test`` method have passing JUnit evidence (when JUnit provided).
+    5. Items with ``Test`` method have passing JUnit evidence. Without JUnit paths
+       the evidence is not checked, and the result says so rather than passing
+       quietly.
 
     Args:
         cr_id: CR identifier (e.g. CR-012).
@@ -1464,6 +1536,11 @@ def cr_closure_gate(
     passed = not missing_items and verify_result["passed"] and not incomplete_cr_fields
 
     parts: list[str] = []
+    if not junit_paths:
+        # `enforce_test_evidence=True` above has nothing to enforce against, so
+        # a Test-verified item passes closure on the strength of no evidence.
+        # Say it rather than let the PASS imply otherwise.
+        parts.append("test evidence not checked (no JUnit given)")
     if incomplete_cr_fields:
         parts.append(f"{len(incomplete_cr_fields)} CR field(s) incomplete")
     if missing_items:

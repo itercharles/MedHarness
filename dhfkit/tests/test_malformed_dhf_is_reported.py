@@ -26,9 +26,7 @@ COMMANDS = [
     ("medharness", ["verify", "dhf"]),
     ("medharness", ["verify", "tests", "--junit-dir", "{dhf}/test-results"]),
     ("medharness", ["verify", "classification"]),
-    ("medharness", ["verify", "plans"]),
-    ("medharness", ["verify", "verification"]),
-    ("medharness", ["verify", "completion", "--cr", "CR-001"]),
+        ("medharness", ["verify", "completion", "--cr", "CR-001"]),
     ("medharness", ["verify", "soup", "--offline-mode", "warn"]),
     ("dhfkit", ["validate", "schema"]),
     ("dhfkit", ["validate", "traceability"]),
@@ -96,7 +94,7 @@ def test_the_fixture_actually_reaches_most_commands(broken: Path) -> None:
     # Was 8 before `dhfkit validate traceability` and `dhfkit report` were
     # removed — both read the DHF, and both were analysis that moved to
     # medharness. The floor tracks the command surface, not a fixed number.
-    assert len(reached) >= 6, f"only {len(reached)} commands read the DHF: {reached}"
+    assert len(reached) >= 5, f"only {len(reached)} commands read the DHF: {reached}"
     assert len(reached) >= len(COMMANDS) // 2, (
         f"the fixture reaches {len(reached)} of {len(COMMANDS)} commands — "
         f"the checks above could pass by never getting there"

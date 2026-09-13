@@ -362,10 +362,14 @@ def register(main):
     @click.option("--junit-dir", "junit_dirs", multiple=True, type=click.Path(file_okay=False, path_type=Path))
     @click.option("--junit", "junit_files", multiple=True, type=click.Path(exists=True, dir_okay=False, path_type=Path))
     @click.option("--requirement-type", "req_types", multiple=True, metavar="CODE")
+    @click.option("--require-method", is_flag=True, default=False,
+                  help="Make a requirement with no declared verification_method fail. "
+                       "Warns by default, so a project adding the field is not blocked.")
     @click.pass_context
     def verify_tests(ctx: click.Context, dhf_path: Path,
                          junit_dirs: tuple[Path, ...], junit_files: tuple[Path, ...],
-                         req_types: tuple[str, ...]) -> None:
+                         req_types: tuple[str, ...],
+                         require_method: bool = False) -> None:
         """Check requirement coverage from JUnit evidence.
 
         Takes its own --dhf PATH option because it runs from the PRODUCT repo
@@ -376,7 +380,8 @@ def register(main):
         if effective_dhf is None:
             raise click.ClickException("--dhf is required when not set globally")
         junit_paths = _h._collect_junit_paths(junit_files, junit_dirs)
-        result = ci_test_coverage_gate(dhf_path=effective_dhf, junit_paths=junit_paths, req_types=req_types)
+        result = ci_test_coverage_gate(dhf_path=effective_dhf, junit_paths=junit_paths,
+                                       require_method=require_method, req_types=req_types)
         click.echo(json.dumps(result))
         dhf_arg = f"--dhf {effective_dhf}"
         # Envelope warnings the row loops below cannot produce — they iterate
@@ -459,52 +464,6 @@ def register(main):
         if not result["passed"]:
             raise click.ClickException("Test coverage gaps found.")
 
-    @verify.command("verification")
-    @click.option("--dhf", "dhf_path", type=click.Path(file_okay=False, path_type=Path))
-    @click.option("--junit-dir", "junit_dirs", multiple=True, type=click.Path(file_okay=False, path_type=Path))
-    @click.option("--junit", "junit_files", multiple=True, type=click.Path(exists=True, dir_okay=False, path_type=Path))
-    @click.option("--requirement-type", "req_types", multiple=True, metavar="CODE")
-    @click.pass_context
-    def verify_verification(
-        ctx: click.Context,
-        dhf_path: Path,
-        junit_dirs: tuple[Path, ...],
-        junit_files: tuple[Path, ...],
-        req_types: tuple[str, ...],
-    ) -> None:
-        """Check that every requirement has a declared verification method with evidence.
-
-        Three gap categories are reported:
-          missing_method      — no verification_method declared (gate failure)
-          unverified_test     — Test method declared but no passing TC in JUnit (gate failure)
-          manual_review_required — non-Test method only; requires human sign-off (warning)
-
-        Exits non-zero when missing_method or unverified_test gaps exist.
-        """
-        from medharness.services.ci import validate_verification_completeness
-
-        effective_dhf = dhf_path or ctx.obj.get("dhf")
-        if effective_dhf is None:
-            raise click.ClickException("--dhf is required when not set globally")
-        junit_paths = _h._collect_junit_paths(junit_files, junit_dirs)
-        result = validate_verification_completeness(
-            dhf_path=effective_dhf,
-            junit_paths=junit_paths,
-            req_types=req_types,
-        )
-        click.echo(json.dumps(result))
-
-        for item in _d(result).get("missing_method", []):
-            click.echo(f"FAIL [validate-verification] {item['id']}: no verification_method declared", err=True)
-        for item in _d(result).get("unverified_test", []):
-            click.echo(f"FAIL [validate-verification] {item['id']}: Test method declared but no passing TC linked", err=True)
-        for item in _d(result).get("manual_review_required", []):
-            methods = ", ".join(item.get("methods", []))
-            click.echo(f"WARN [validate-verification] {item['id']}: {methods} — requires manual sign-off record", err=True)
-
-        click.echo(result["summary"], err=True)
-        if not result["passed"]:
-            raise click.ClickException("Verification completeness gaps found.")
 
     @verify.command("completion")
     @click.option("--cr", "cr_id", required=True, metavar="CR_ID")

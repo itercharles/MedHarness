@@ -1,4 +1,4 @@
-"""Unit tests for verify verification (validate_verification_completeness)."""
+"""Unit tests for verify tests (validate_verification_completeness)."""
 
 from __future__ import annotations
 
@@ -166,7 +166,7 @@ def test_cli_validate_verification_passes(tmp_path: Path) -> None:
     junit = _make_junit(tmp_path, ["SRS-001"])
     result = CliRunner().invoke(
         main,
-        ["--dhf", str(dhf), "verify", "verification",
+        ["--dhf", str(dhf), "verify", "tests",
          "--dhf", str(dhf), "--junit", str(junit)],
     )
     assert result.exit_code == 0, result.output
@@ -174,11 +174,22 @@ def test_cli_validate_verification_passes(tmp_path: Path) -> None:
     assert payload["passed"] is True
 
 
-def test_cli_validate_verification_fails_on_missing_method(tmp_path: Path) -> None:
+def test_a_missing_method_warns_by_default(tmp_path: Path) -> None:
+    """A project adding verification_method has a gap on every item at first."""
+    dhf = _make_dhf(tmp_path, [{"id": "SRS-001", "title": "No method"}])
+    result = CliRunner().invoke(
+        main, ["--dhf", str(dhf), "verify", "tests", "--dhf", str(dhf)],
+    )
+    payload = json.loads(result.output.splitlines()[0])
+    assert [g["id"] for g in payload["details"]["missing_method"]] == ["SRS-001"]
+    assert any("no verification_method" in w for w in payload["warnings"])
+
+
+def test_require_method_makes_it_fail(tmp_path: Path) -> None:
     dhf = _make_dhf(tmp_path, [{"id": "SRS-001", "title": "No method"}])
     result = CliRunner().invoke(
         main,
-        ["--dhf", str(dhf), "verify", "verification", "--dhf", str(dhf)],
+        ["--dhf", str(dhf), "verify", "tests", "--dhf", str(dhf), "--require-method"],
     )
     assert result.exit_code != 0
 
@@ -187,7 +198,7 @@ def test_cli_validate_verification_json_stdout(tmp_path: Path) -> None:
     dhf = _make_dhf(tmp_path, [{"id": "SRS-001", "verification_method": ["Test"]}])
     result = CliRunner().invoke(
         main,
-        ["--dhf", str(dhf), "verify", "verification", "--dhf", str(dhf)],
+        ["--dhf", str(dhf), "verify", "tests", "--dhf", str(dhf)],
     )
     payload = json.loads(result.output.splitlines()[0])
     assert set(payload) == set(ENVELOPE_KEYS)
