@@ -644,7 +644,7 @@ class TestGenerateDhf:
              patch("medharness.services.cr_generation.git.collect_dhf_item_changes", return_value=items_changed), \
              patch("medharness.services.design_validation.validate_generate_dhf", return_value=[]) as mock_validate:
             generate_dhf("CR-054", dhf)
-        mock_validate.assert_called_once_with("CR-054", dhf, items_changed)
+        mock_validate.assert_called_once_with(dhf, items_changed)
 
     def test_revision_mode_uses_pr_feedback(self, tmp_path):
         dhf = tmp_path / "DHF"

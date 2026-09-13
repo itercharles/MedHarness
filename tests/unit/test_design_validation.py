@@ -26,7 +26,7 @@ class TestValidateGenerateDhf:
                   "all_linked_uids": [], "verification_criteria": ""},
              ]):
             errors = validate_generate_dhf(
-                "CR-001", dhf, {"created": [], "updated": ["SYS-001"], "deleted": []}
+                dhf, {"created": [], "updated": ["SYS-001"], "deleted": []}
             )
         vc_errors = [e for e in errors if e["field"] == "changed_items[0].verification_criteria"]
         assert len(vc_errors) == 1
@@ -40,7 +40,7 @@ class TestValidateGenerateDhf:
                   "all_linked_uids": [], "verification_criteria": "Response < 2s."},
              ]):
             errors = validate_generate_dhf(
-                "CR-001", dhf, {"created": [], "updated": ["SYS-001"], "deleted": []}
+                dhf, {"created": [], "updated": ["SYS-001"], "deleted": []}
             )
         assert all("verification_criteria" not in e["field"] for e in errors)
 
@@ -52,7 +52,7 @@ class TestValidateGenerateDhf:
                   "all_linked_uids": []},
              ]):
             errors = validate_generate_dhf(
-                "CR-001", dhf, {"created": [], "updated": ["SWDD-001"], "deleted": []}
+                dhf, {"created": [], "updated": ["SWDD-001"], "deleted": []}
             )
         assert all("verification_criteria" not in e["field"] for e in errors)
 

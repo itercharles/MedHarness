@@ -97,7 +97,6 @@ def envelope_from(gate: str, raw: dict) -> dict:
 
 def ci_structural_gate(
     dhf_path: Path,
-    governance_dir: Path | None = None,
     run_schema: bool = True,
     run_traceability: bool = True,
     coverage_pairs: tuple[str, ...] = (),
@@ -626,7 +625,6 @@ def build_evidence_bundle(
     run_id: str = "",
     run_url: str = "",
     commit_sha: str = "",
-    continue_on_gate_failure: bool = False,
     doc_format: str = "html",
 ) -> dict[str, Any]:
     """Produce a self-contained CI evidence bundle.

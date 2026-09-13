@@ -297,7 +297,6 @@ class LocalDHFAdapter:
             update_item_fn=lambda uid, data: self.update_item(uid, data, author=performed_by),
             item_id=item_id,
             to_state=to_state,
-            performed_by=performed_by,
         )
 
     def delete_item(self, uid: str, author: Optional[str] = None) -> bool:

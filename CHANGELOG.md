@@ -11,6 +11,78 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.26.0] — 2026-09-13
+
+The same pass, continued one level down: not which commands should exist, but
+whether each one does what its name and its options say.
+
+### Breaking Changes
+
+- **`medharness approval check` is now `medharness change verify-approval`.**
+  It requires `--cr`, so it is a CR-workflow gate, and it belongs beside
+  `change verify-branch` and `change verify-completion`. This also retires the
+  `medharness approval` group and the collision with `dhfkit approval`, which
+  the CLI boundary table needed a paragraph to explain. Its output is now the
+  same gate envelope the other six use — it had been answering in its own shape.
+- **Seven options that recorded nothing are gone**: `--author` and `--cr` on
+  `dhfkit item create` / `item update`, `--by` on `dhfkit item transition`, and
+  `--author` on `medharness release baseline` and `medharness soup-sync`. They
+  all ended at `GitRepository.commit_item_change`, which returns on its first
+  line unless `auto_commit` is set — and every entry point sets it False.
+  `item update SRS-001 --author bob.dev` left no trace of bob anywhere.
+  Attribution is the commit that carries the change, which is what the scaffold's
+  own release workflow already does. Thirteen places taught the agent to pass
+  them; all have been corrected.
+- **`medharness context implementation` prints JSON to stdout** instead of
+  requiring `--out-dir` and writing two files. Its siblings always did, and the
+  README's own example did not run.
+
+### Fixed
+
+- **`context overview` and `context implementation` no longer tell an agent a
+  broken DHF is sound.** `traceability.valid` came from coverage alone, so a DHF
+  with a link cycle reported `valid: true` while `verify dhf` failed the same DHF
+  on the same run. `valid` is now the whole verdict, and the cycles, dangling
+  links and required-rule failures come with it.
+- **`project` was empty for every relative `--dhf`.** It came from
+  `Path("DHF").parent.name`; it now comes from `project_name` in the config.
+- **`change verify-completion` charged a CR with the DHF's backlog.** The
+  verification check ran over every item of every type the CR proposed, so a
+  starter `SRS-001` with no declared method failed an unrelated CR's gate and
+  blocked its merge. It now reads only the items the CR touched.
+- **`--stage` did nothing.** It reached the signature of `approval_evidence` and
+  no further, so `--stage design` and `--stage develop` returned the same
+  verdict, and the docstring still described the labels replaced in 0.24.0. The
+  commit is what separates the stages — a design approval goes stale the moment
+  the code lands. `stage` is now recorded in the evidence and documented as a
+  record, not a filter.
+- **`change verify-branch` now takes `--dhf`** like its three sibling gates, and
+  the gate manifest declares it.
+- **`dhfkit validate schema` writes its result to stdout.** It reported only to
+  stderr, so a caller could not read the error list.
+- **`change verify-completion`'s docstring said "use after a CR branch is
+  merged".** It reads the working tree and always ran on either side.
+
+### Changed
+
+- Four service parameters that no body read are gone: `governance_dir`,
+  `continue_on_gate_failure` (the CLI honours it itself), `cr_id` on
+  `validate_generate_dhf`, and `performed_by` on `lifecycle.execute_transition`.
+- The README's command tables now give each command's return value and the
+  situation it is for.
+
+### Added
+
+- `tests/guards/test_no_parameter_is_decorative.py` — a parameter no body reads
+  is a promise the function does not keep, and neither a type checker nor a test
+  that calls the function will notice.
+- `tests/guards/test_no_text_names_a_dead_option.py` — prompts, docs and the
+  shipped workflows may not name an option the command does not have.
+- `tests/unit/test_context_agrees_with_the_gate.py`,
+  `tests/unit/test_closure_blames_only_its_own_cr.py`.
+- `test_gates_manifest` checked that declared options exist; it now also checks
+  that required ones are declared.
+
 ## [0.25.0] — 2026-09-13
 
 A review of the command surface, command by command, asking of each what it is

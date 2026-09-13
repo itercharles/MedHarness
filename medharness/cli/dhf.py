@@ -49,32 +49,25 @@ def register(main):
 
     @dhf_context.command("implementation")
     @click.option("--cr", "cr_id", required=True, metavar="CR_ID")
-    @click.option("--out-dir", required=True, type=click.Path(file_okay=False, path_type=Path))
     @click.pass_context
-    def dhf_context_implementation(ctx: click.Context, cr_id: str, out_dir: Path) -> None:
-        """Write CR item and DHF overview to out-dir for CI/agent consumption.
+    def dhf_context_implementation(ctx: click.Context, cr_id: str) -> None:
+        """What an agent needs to implement a CR: the CR, the item set, the modules.
 
-        Outputs JSON with paths to the written files: {"cr": "...", "context": "..."}.
+        JSON on stdout: {project, cr, item_count, items, traceability, module_map},
+        where `cr` is the full CR item. `traceability` carries the same verdict
+        `verify dhf` reaches, so the agent is not told the DHF is sound while the
+        gate is failing it.
         """
-        adapter = _h._make_adapter(ctx.obj["dhf"])
-        out_dir.mkdir(parents=True, exist_ok=True)
-
-        cr = adapter.get_item(cr_id)
-        cr_path = out_dir / f"{cr_id}.json"
-        if cr:
-            cr_path.write_text(json.dumps(cr, default=str) + "\n", encoding="utf-8")
-        else:
-            cr_path.write_text(json.dumps({"id": cr_id, "found": False}) + "\n", encoding="utf-8")
-
         from medharness.services.traceability import build_module_map
 
+        adapter = _h._make_adapter(ctx.obj["dhf"])
+        cr = adapter.get_item(cr_id)
         items = adapter.list_items()
         trace = analyse(adapter)
 
-        overview = {
+        click.echo(json.dumps({
             "project": adapter.config.project_name,
-            "cr": ({"id": cr_id, "title": cr.get("title", ""), "status": cr.get("status", "")}
-                   if cr else {"id": cr_id, "found": False}),
+            "cr": cr if cr else {"id": cr_id, "found": False},
             "item_count": len(items),
             "items": [
                 {"id": it["id"], "type": it.get("type", ""), "title": it.get("title", ""),
@@ -83,14 +76,7 @@ def register(main):
             ],
             "traceability": _traceability_summary(trace),
             "module_map": build_module_map(items, adapter.config),
-        }
-        context_path = out_dir / "implementation-context.json"
-        context_path.write_text(json.dumps(overview, default=str) + "\n", encoding="utf-8")
-
-        click.echo(json.dumps({
-            "cr": str(cr_path),
-            "context": str(context_path),
-        }))
+        }, default=str))
 
     @dhf_context.command("for-stage")
     @click.argument("stage", type=click.Choice(["analyze", "design", "develop"]))

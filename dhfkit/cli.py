@@ -181,8 +181,10 @@ def validate_schema(ctx: click.Context) -> None:
         adapter = _make_adapter(dhf_path)
         result = adapter.validate_schema()
     except ValidationError as e:
+        click.echo(json.dumps({"valid": False, "item_count": 0, "errors": [str(e)]}))
         click.echo(f"SCHEMA ERROR: {e}", err=True)
         sys.exit(1)
+    click.echo(json.dumps(result, default=str))
     if not result['valid']:
         for err in result.get('errors', []):
             click.echo(f"  ✗ {err}", err=True)

@@ -201,7 +201,6 @@ def register(main):
             dhf_path=dhf, out_dir=out_dir, junit_paths=junit_paths,
             coverage_pairs=coverage_pairs, traceability_types=traceability_types,
             run_id=run_id, run_url=run_url, commit_sha=commit_sha,
-            continue_on_gate_failure=continue_on_gate_failure,
             doc_format=doc_format,
         )
         manifest = result["manifest"]
