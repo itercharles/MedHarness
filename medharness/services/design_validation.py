@@ -227,7 +227,71 @@ def validate_dhf_structure(dhf_path: Path) -> list[dict]:
     return errors
 
 
+def _check_cr_workflow_fields(_api, dhf_path: Path, cr_id: str) -> list[dict]:
+    """The two fields `change plan` is supposed to leave behind.
+
+    Nothing but the prompt writes them, so a run that skipped a step reported
+    success and the omission only surfaced at the closure gate, releases later.
+    Reported here so the fix pass can correct it in the same run.
+    """
+    try:
+        cr_item = _api.get_item(dhf_path, cr_id) or {}
+    except Exception as exc:  # noqa: BLE001 — reported, not swallowed
+        return [{
+            "field": "cr_item",
+            "issue": f"CR item '{cr_id}' could not be read: {exc}",
+            "fix": f"Check that {cr_id} exists in the DHF.",
+        }]
+
+    if not cr_item:
+        return [{
+            "field": "cr_item",
+            "issue": f"CR item '{cr_id}' is not in the DHF.",
+            "fix": f"Create {cr_id} before running `change plan`.",
+        }]
+
+    # A rejected CR stops at Step 1 and produces no cascade, so neither field applies.
+    if str(cr_item.get("status") or "") == "rejected":
+        return []
+
+    errors: list[dict] = []
+    triage = cr_item.get("triage_result")
+    if not isinstance(triage, dict) or triage.get("verdict") != "approved":
+        errors.append({
+            "field": "triage_result",
+            "issue": (
+                f"{cr_id} has no approved `triage_result`; Step 1 records the "
+                f"triage decision and it was not written."
+            ),
+            "fix": (
+                f"dhfkit --dhf DHF item update {cr_id} --data "
+                f"'{{\"triage_result\": {{\"verdict\": \"approved\", "
+                f"\"complexity\": \"<small|medium|large>\", "
+                f"\"affected_subsystems\": [\"<name>\"], \"related_crs\": [], "
+                f"\"notes\": \"<why approved and the key constraint>\"}}}}'"
+            ),
+        })
+
+    if cr_item.get("proposed_new_items") is None:
+        errors.append({
+            "field": "proposed_new_items",
+            "issue": (
+                f"{cr_id} has no `proposed_new_items`; Step 4 records the items "
+                f"this session created and it was not written. The closure gate "
+                f"cannot reconcile the CR without it."
+            ),
+            "fix": (
+                f"dhfkit --dhf DHF item update {cr_id} --data "
+                f"'{{\"proposed_new_items\": [{{\"type\": \"SRS\", "
+                f"\"title\": \"<title exactly as created>\"}}]}}' "
+                f"— use [] if this CR created no new items."
+            ),
+        })
+    return errors
+
+
 def validate_generate_dhf(
+    cr_id: str,
     dhf_path: Path,
     changed_items: dict[str, list[str]],
 ) -> list[dict]:
@@ -237,6 +301,7 @@ def validate_generate_dhf(
         return errors
 
     errors.extend(_validate_schema_and_traceability(_api, dhf_path))
+    errors.extend(_check_cr_workflow_fields(_api, dhf_path, cr_id))
 
     listed_items, item_errors = _list_items(_api, dhf_path, "changed_items")
     errors.extend(item_errors)

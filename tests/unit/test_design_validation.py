@@ -18,7 +18,15 @@ def dhf(tmp_path: Path) -> Path:
 
 
 class TestValidateGenerateDhf:
-    def test_missing_verification_criteria_on_changed_sys_produces_error(self, dhf):
+    """Scoped to the changed-item checks.
+
+    `_check_cr_workflow_fields` is stubbed out here: these fixtures carry no CR
+    item, and what it reports has its own tests in
+    test_plan_leaves_what_closure_needs.py.
+    """
+
+    @patch("medharness.services.design_validation._check_cr_workflow_fields", return_value=[])
+    def test_missing_verification_criteria_on_changed_sys_produces_error(self, _cr, dhf):
         with patch("dhfkit.api.validate_schema", return_value={"valid": True, "errors": []}), \
              patch("medharness.services.design_validation.analyse", return_value={"passed": True}), \
              patch("dhfkit.api.list_items", return_value=[
@@ -26,13 +34,14 @@ class TestValidateGenerateDhf:
                   "all_linked_uids": [], "verification_criteria": ""},
              ]):
             errors = validate_generate_dhf(
-                dhf, {"created": [], "updated": ["SYS-001"], "deleted": []}
+                "CR-001", dhf, {"created": [], "updated": ["SYS-001"], "deleted": []}
             )
         vc_errors = [e for e in errors if e["field"] == "changed_items[0].verification_criteria"]
         assert len(vc_errors) == 1
         assert "SYS-001" in vc_errors[0]["issue"]
 
-    def test_populated_verification_criteria_on_changed_sys_passes(self, dhf):
+    @patch("medharness.services.design_validation._check_cr_workflow_fields", return_value=[])
+    def test_populated_verification_criteria_on_changed_sys_passes(self, _cr, dhf):
         with patch("dhfkit.api.validate_schema", return_value={"valid": True, "errors": []}), \
              patch("medharness.services.design_validation.analyse", return_value={"passed": True}), \
              patch("dhfkit.api.list_items", return_value=[
@@ -40,11 +49,12 @@ class TestValidateGenerateDhf:
                   "all_linked_uids": [], "verification_criteria": "Response < 2s."},
              ]):
             errors = validate_generate_dhf(
-                dhf, {"created": [], "updated": ["SYS-001"], "deleted": []}
+                "CR-001", dhf, {"created": [], "updated": ["SYS-001"], "deleted": []}
             )
         assert all("verification_criteria" not in e["field"] for e in errors)
 
-    def test_swdd_change_does_not_require_verification_criteria(self, dhf):
+    @patch("medharness.services.design_validation._check_cr_workflow_fields", return_value=[])
+    def test_swdd_change_does_not_require_verification_criteria(self, _cr, dhf):
         with patch("dhfkit.api.validate_schema", return_value={"valid": True, "errors": []}), \
              patch("medharness.services.design_validation.analyse", return_value={"passed": True}), \
              patch("dhfkit.api.list_items", return_value=[
@@ -52,7 +62,7 @@ class TestValidateGenerateDhf:
                   "all_linked_uids": []},
              ]):
             errors = validate_generate_dhf(
-                dhf, {"created": [], "updated": ["SWDD-001"], "deleted": []}
+                "CR-001", dhf, {"created": [], "updated": ["SWDD-001"], "deleted": []}
             )
         assert all("verification_criteria" not in e["field"] for e in errors)
 
