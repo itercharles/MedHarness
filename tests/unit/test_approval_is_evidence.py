@@ -3,7 +3,7 @@
 The gate used to pass when `cr:approved/design` was on the PR. Anyone with write
 access can add or remove that, it names no author, carries no time, and is not
 tied to a revision — so it recorded that someone clicked, not that anyone
-reviewed. `verify completion` meanwhile required an APR record, so one workflow
+reviewed. `change verify-completion` meanwhile required an APR record, so one workflow
 held two unrelated definitions of "approved".
 
 A review carries author, time and the commit it covers. The commit is what makes

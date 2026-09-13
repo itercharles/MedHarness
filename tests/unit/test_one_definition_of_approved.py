@@ -1,4 +1,4 @@
-"""`approval check` and `verify completion` must not disagree.
+"""`approval check` and `change verify-completion` must not disagree.
 
 Before 0.24.0 the stage gate read a GitHub label while the closure gate required
 an APR record — one workflow, two unrelated definitions of approved, and the

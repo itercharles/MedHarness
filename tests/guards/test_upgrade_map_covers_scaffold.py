@@ -4,7 +4,7 @@
 while all twelve sibling doc types were listed, and nothing noticed: a project
 that upgraded rather than scaffolded never received the APR doc type, so
 `dhfkit item create --type APR` failed with "Unknown doc type" — and
-`verify completion`, which requires an APR item, could not be satisfied at all.
+`change verify-completion`, which requires an APR item, could not be satisfied at all.
 
 `config/safety_activities.yaml` was missing the same way, with a quieter
 failure: `verify classification` and `verify plans` ran, found no activities to

@@ -95,7 +95,7 @@ class TestTheSuiteExercisesANonEmptyChangeSet:
     Of the mocks standing in for `collect_dhf_item_changes`, twenty returned
     `{"created": [], "updated": [], "deleted": []}`. A CR can only appear in its
     own change set when that set is not empty, so the defect lived in the shape
-    no test supplied — the same failure mode as `verify branch` shipping a
+    no test supplied — the same failure mode as `change verify-branch` shipping a
     TypeError behind mocks that fed the pre-envelope shape.
 
     This does not demand every mock change. It demands that *some* test drive

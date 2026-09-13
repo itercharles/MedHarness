@@ -60,7 +60,7 @@ flowchart LR
     PLAN["change plan<br/><br/>AI drafts DHF items<br/>and impact analysis"] --> REV{"Human<br/>review"}
     REV -.->|rejected| PLAN
     REV -->|"/approve"| IMPL["change implement<br/><br/>AI writes code<br/>and tests"]
-    IMPL --> GATES["Verification gates<br/><br/>verify dhf<br/>verify tests<br/>verify soup<br/>verify completion"]
+    IMPL --> GATES["Verification gates<br/><br/>verify dhf<br/>verify tests<br/>verify soup<br/>change verify-completion"]
     GATES -.->|any gate fails| IMPL
     GATES ==>|all pass| MERGE["Merge to main<br/><br/>evidence bundle<br/>release baseline"]
 
@@ -192,25 +192,28 @@ Both take `--dhf DHF`; `dhfkit` also reads `COMPLIANTFLOW_DHF`.
 |---|---|
 | `medharness soup-sync --write` | update the SOUP register from the project's manifests |
 
-### Gates — each exits non-zero on failure, JSON on stdout
+### Gates on the DHF — no CR needed, JSON on stdout, non-zero on failure
 
 | | |
 |---|---|
 | `medharness verify dhf` | coverage, cycles, dangling links, required traceability |
-| `medharness verify tests --junit-dir test-results` | requirement-to-test coverage from JUnit |
-| `medharness verify soup` | CVE scan against the OSV database |
-| `medharness verify branch --cr CR-034` | the branch changes the items the CR listed in affected_items |
+| `medharness verify tests --junit-dir test-results` | every requirement verified by its declared method |
+| `medharness verify soup` | the SOUP register against the manifests, and against OSV |
 | `medharness verify classification` | IEC 62304 §4.3 safety class and the §5.1 plans it requires |
-| `medharness verify completion --cr CR-034` | CR closure gate |
-| `medharness approval check --cr CR-034 --stage design --pr 42` | an approving review of the commit being merged |
 | `medharness gates` | every gate, what it needs, what blocks — `--json` for a pipeline |
 
 ### The AI change workflow
+
+These read fields `change plan` writes, so they apply only to a project running
+the CR workflow. A PR with no CR is not their business.
 
 | | |
 |---|---|
 | `medharness change plan --cr CR-034` | AI drafts the DHF item cascade and impact analysis |
 | `medharness change implement --cr CR-034` | AI writes code and tests (`--pr 42` to revise from feedback) |
+| `medharness change verify-branch --cr CR-034` | the branch changes the items the CR listed in `affected_items` |
+| `medharness change verify-completion --cr CR-034` | the CR created the items it proposed, and they are verified |
+| `medharness approval check --cr CR-034 --stage design --pr 42` | an approving review of the commit being merged |
 | `medharness context implementation --cr CR-034` | which modules, designs and requirements a CR touches |
 | `medharness context for-stage develop --cr CR-034` | what an agent needs to know at one stage |
 | `medharness context overview` | the DHF as a whole, for an agent new to it |

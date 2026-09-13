@@ -39,8 +39,8 @@ SIMPLE_GATES = (
 #: Arguments each CLI gate needs to reach its reporting path.
 GATE_ARGS = {
     "verify tests": ["--junit-dir", "{dhf}/test-results"],
-    "verify completion": ["--cr", "CR-001"],
-    "verify branch": ["--cr", "CR-001"],
+    "change verify-completion": ["--cr", "CR-001"],
+    "change verify-branch": ["--cr", "CR-001"],
 }
 
 
@@ -50,7 +50,7 @@ def _run_gate(command: str, dhf) -> dict:
     Deliberately not CliRunner: it captures an exception raised *after* the JSON
     line is written, so a command that prints its result and then crashes looks
     identical to one that succeeded. Two crashes shipped behind exactly that —
-    `verify classification` on a missing plan and `verify branch` on any failure.
+    `verify classification` on a missing plan and `change verify-branch` on any failure.
     """
     import subprocess
     import sys
@@ -84,7 +84,7 @@ def _call(name: str, dhf: Path):
 class TestEveryCLIGateHonoursTheContract:
     """All nine, not just the four callable with a bare path.
 
-    An earlier version parametrised only SIMPLE_GATES, so `verify branch` shipped
+    An earlier version parametrised only SIMPLE_GATES, so `change verify-branch` shipped
     with dicts in `errors` and `verify tests` failed with nothing in it —
     both invisible to a test that never called them.
     """
@@ -157,14 +157,16 @@ class TestNoGateEscapesTheEnvelope:
 
         # Arguments each gate needs to reach its reporting path.
         extra = {
-            "tests": ["--junit-dir", str(dhf / "test-results")],
-            "completion": ["--cr", "CR-001"],
-            "branch": ["--cr", "CR-001"],
+            "verify tests": ["--junit-dir", str(dhf / "test-results")],
+            "change verify-completion": ["--cr", "CR-001"],
+            "change verify-branch": ["--cr", "CR-001"],
         }
         offenders = []
         for gate in GATES:
-            name = gate["command"].removeprefix("verify ")
-            args = ["--dhf", str(dhf), "verify", name] + extra.get(name, [])
+            # The gate's own path: two of them live under `change`, because they
+            # read what `change plan` wrote. Assuming `verify` would have
+            # stopped exercising them without failing.
+            args = ["--dhf", str(dhf), *gate["command"].split()] + extra.get(gate["command"], [])
             r = CliRunner().invoke(main, args)
             line = (r.output or "").splitlines()
             try:
@@ -291,7 +293,7 @@ class TestFailurePathsHonourTheContract:
     """
 
     FAILING = ("verify dhf", "verify classification",
-               "verify tests", "verify completion", "verify branch")
+               "verify tests", "change verify-completion", "change verify-branch")
 
     @pytest.mark.parametrize("command", FAILING)
     def test_no_crash_on_the_failure_path(self, command: str, failing_dhf: Path) -> None:
@@ -388,7 +390,7 @@ class TestStderrCarriesTheEnvelope:
     """
 
     ALL = ("verify dhf", "verify tests", "verify classification",
-           "verify tests", "verify completion", "verify branch")
+           "verify tests", "change verify-completion", "change verify-branch")
 
     @pytest.mark.parametrize("command", ALL)
     def test_stderr_reports_the_envelope(self, command: str, failing_dhf: Path) -> None:

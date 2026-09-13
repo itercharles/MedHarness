@@ -81,8 +81,8 @@ class TestCRGenerationCommands:
 
 
     def test_validate_branch_help(self):
-        """medharness verify branch --help exits 0."""
-        r = _run("medharness", "verify", "branch", "--help")
+        """medharness change verify-branch --help exits 0."""
+        r = _run("medharness", "change", "verify-branch", "--help")
         assert r.returncode == 0, r.stderr
         assert "--dhf" not in r.stdout
 
@@ -102,8 +102,8 @@ class TestCRGenerationCommands:
         assert r.returncode != 0
 
     def test_validate_branch_requires_cr_flag(self):
-        """medharness verify branch without --cr exits non-zero."""
-        r = _run("medharness", "verify", "branch")
+        """medharness change verify-branch without --cr exits non-zero."""
+        r = _run("medharness", "change", "verify-branch")
         assert r.returncode != 0
 
     def test_develop_cr_accepts_pr_flag(self):
@@ -113,8 +113,8 @@ class TestCRGenerationCommands:
 
 
     def test_validate_branch_accepts_code_path_flag(self):
-        """medharness verify branch --help shows --code-path option."""
-        r = _run("medharness", "verify", "branch", "--help")
+        """medharness change verify-branch --help shows --code-path option."""
+        r = _run("medharness", "change", "verify-branch", "--help")
         assert "--code-path" in r.stdout
 
     def test_commands_appear_in_help_groups(self):
@@ -123,9 +123,11 @@ class TestCRGenerationCommands:
         r_change = _run("medharness", "change", "--help")
         assert r_verify.returncode == 0, r_verify.stderr
         assert r_change.returncode == 0, r_change.stderr
-        for cmd in ["branch", "dhf", "tests", "soup"]:
+        # DHF-quality gates live under `verify`; the two that check a CR's
+        # promises live under `change`, with the commands that make them.
+        for cmd in ["dhf", "tests", "soup", "classification"]:
             assert cmd in r_verify.stdout, f"Command {cmd!r} missing from verify --help"
-        for cmd in ["plan", "implement"]:
+        for cmd in ["plan", "implement", "verify-branch", "verify-completion"]:
             assert cmd in r_change.stdout, f"Command {cmd!r} missing from change --help"
 
     def test_upgrade_help(self):
@@ -188,7 +190,7 @@ class TestOutputContract:
 
 
     def test_verify_completion_output_shape(self, scaffolded_dhf, tmp_path):
-        """verify completion writes JSON with all required keys to stdout."""
+        """change verify-completion writes JSON with all required keys to stdout."""
         import json, importlib.resources
         dhf = scaffolded_dhf / "DHF"
         # Install CR doc type (not in default scaffold)
@@ -213,7 +215,7 @@ class TestOutputContract:
         (review_dir / "CR-CONTRACT-Design-Review.md").write_text(
             "# Design Review: CR-CONTRACT\n\n**Verdict:** Approved\n"
         )
-        r = _run("medharness", "--dhf", str(dhf), "verify", "completion", "--cr", "CR-CONTRACT")
+        r = _run("medharness", "--dhf", str(dhf), "change", "verify-completion", "--cr", "CR-CONTRACT")
         payload = json.loads(r.stdout.splitlines()[0])
         assert ENVELOPE <= payload.keys(), f"Missing envelope keys: {ENVELOPE - payload.keys()}"
         gate_keys = {"incomplete_cr_fields", "missing_items"}

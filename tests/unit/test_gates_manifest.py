@@ -22,16 +22,27 @@ from medharness.services.ci import ENVELOPE_KEYS
 from medharness.services.gates import BLOCKING, GATES, gates_manifest
 
 
-def _cli_verify_commands() -> set[str]:
-    """Every `verify` subcommand the CLI actually exposes."""
-    verify = main.commands["verify"]
-    return {f"verify {name}" for name in verify.commands}
+def _cli_gate_commands() -> set[str]:
+    """Every gate the CLI exposes, wherever it lives.
+
+    Gates used to all sit under `verify`. The two that check a CR's promises —
+    `change verify-branch`, `change verify-completion` — moved under `change`,
+    because they read fields `change plan` writes and mean nothing to a project
+    that does not use the CR workflow. Reading one group again would silently
+    stop checking them.
+    """
+    found = set()
+    for group in ("verify", "change"):
+        for name, cmd in main.commands[group].commands.items():
+            if group == "verify" or name.startswith("verify-"):
+                found.add(f"{group} {name}")
+    return found
 
 
 class TestManifestMatchesTheCLI:
     def test_every_cli_gate_is_described(self) -> None:
         described = {g["command"] for g in GATES}
-        missing = _cli_verify_commands() - described
+        missing = _cli_gate_commands() - described
         assert not missing, (
             f"undocumented gate(s): {sorted(missing)}. Add them to GATES — an "
             f"agent discovers gates through the manifest and cannot call what "
@@ -40,16 +51,16 @@ class TestManifestMatchesTheCLI:
 
     def test_no_described_gate_is_imaginary(self) -> None:
         described = {g["command"] for g in GATES}
-        stale = described - _cli_verify_commands()
+        stale = described - _cli_gate_commands()
         assert not stale, f"manifest describes commands that do not exist: {sorted(stale)}"
 
     @pytest.mark.parametrize("gate", GATES, ids=lambda g: g["command"])
     def test_required_options_exist_on_the_command(self, gate: dict) -> None:
         """A required option the command does not have would misdirect a caller."""
-        name = gate["command"].removeprefix("verify ")
+        group, _, name = gate["command"].partition(" ")
         params = {
             opt
-            for param in main.commands["verify"].commands[name].params
+            for param in main.commands[group].commands[name].params
             for opt in param.opts
         }
         for declared in gate["options"]["required"]:
@@ -108,4 +119,4 @@ class TestEveryGateAnswersWithTheEnvelope:
     """Discovery through the CLI, so a gate implemented anywhere is covered."""
 
     def test_all_six_gates_are_registered(self) -> None:
-        assert len(_cli_verify_commands()) == len(GATES) == 6
+        assert len(_cli_gate_commands()) == len(GATES) == 6

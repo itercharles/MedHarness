@@ -341,10 +341,10 @@ medharness --dhf DHF change implement --cr CR-001
 
 Reads `implementation_notes` as the primary spec and implements the code, annotates tests with `@links:<ITEM_ID>`, and runs a code review loop.
 
-### `verify completion` — closure gate
+### `change verify-completion` — closure gate
 
 ```bash
-medharness --dhf DHF verify completion --cr CR-001 --junit-dir test-results
+medharness --dhf DHF change verify-completion --cr CR-001 --junit-dir test-results
 ```
 
 Run after the branch is merged. Checks:

@@ -239,7 +239,7 @@ class TestUnreadableConventionsAreReported:
 
     A project whose reviews are named `CR-013-Design.md` saw "0 imported,
     0 skipped" with nothing in `errors` — the glob never reached those files —
-    and then `verify completion` failed with "no approval record". Nothing
+    and then `change verify-completion` failed with "no approval record". Nothing
     connected the two, so the naming mismatch was invisible from both ends.
     """
 
