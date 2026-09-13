@@ -11,6 +11,28 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.26.2] — 2026-09-13
+
+### Fixed
+
+- **`change plan` no longer reports success without the fields closure
+  requires.** `triage_result` (Step 1) and `proposed_new_items` (Step 4) are
+  written by nothing but the prompt — the model is told to run `dhfkit item
+  update`, and no code checked that it did. A run that skipped either step
+  returned `outcome: ok`, and the omission surfaced much later at
+  `change verify-completion`, whose own message says "re-run generate-dhf
+  Step 4" — naming a producer that had already declared success. All thirteen
+  CRs in the one real adopter are missing both.
+
+  Both are now checked by `validate_generate_dhf`, so they reach the fix pass
+  with a runnable `dhfkit item update` and are corrected inside the same run
+  rather than failing a CR weeks later. A rejected CR stops at Step 1 and is
+  exempt; an empty `proposed_new_items` is a complete answer and passes.
+
+  `validate_generate_dhf` takes `cr_id` again — it was removed in 0.26.0 as a
+  parameter the body never read, which it was; this gives it one.
+
+
 ## [0.26.1] — 2026-09-13
 
 ### Fixed
