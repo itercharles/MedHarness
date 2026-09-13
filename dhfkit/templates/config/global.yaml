@@ -203,6 +203,10 @@ document_specifications:
     source: requirements_specification.md.j2
     output: DHF/documents/specs/software_requirement_specification.md
     doc_type_name: Software Requirement
+  SOUP:
+    source: soup_specification.md.j2
+    output: DHF/documents/specs/soup_register.md
+    doc_type_name: SOUP
   MODULE:
     source: software_design_document.md.j2
     output: DHF/documents/specs/software_design_document.md

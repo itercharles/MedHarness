@@ -105,105 +105,7 @@ def check_required_traceability(items: list[dict], config: Any) -> dict:
         "using_vmodel_defaults": using_defaults,
     }
 
-def build_risk_chain(items: list[dict], config: Any) -> list[dict]:
-    """Build a per-RISK summary of linked RCMs and their implemented requirements.
 
-    Returns a list of dicts:
-        {
-          "risk_id": str,
-          "title": str,
-          "rcms": [
-            {"rcm_id": str, "title": str, "implements": [str]},
-            ...
-          ],
-        }
-
-    Returns an empty list when RISK or RCM doc types are not configured.
-    """
-    risk_dt = config.get_doc_type("RISK")
-    rcm_dt = config.get_doc_type("RCM")
-    if not risk_dt or not rcm_dt:
-        return []
-
-    risk_prefix = risk_dt.prefix
-    rcm_prefix = rcm_dt.prefix
-
-    risk_items = [it for it in items if it["id"].startswith(risk_prefix)]
-    rcm_items = [it for it in items if it["id"].startswith(rcm_prefix)]
-
-    chain = []
-    for risk in sorted(risk_items, key=lambda x: x["id"]):
-        rcms_for_risk = []
-        for rcm in sorted(rcm_items, key=lambda x: x["id"]):
-            mitigates = rcm.get("mitigates") or []
-            if isinstance(mitigates, str):
-                mitigates = [mitigates]
-            if risk["id"] not in mitigates:
-                continue
-            implements = rcm.get("implements") or []
-            if isinstance(implements, str):
-                implements = [implements]
-            rcms_for_risk.append({
-                "rcm_id": rcm["id"],
-                "title": rcm.get("title", ""),
-                "implements": sorted(implements),
-            })
-        chain.append({
-            "risk_id": risk["id"],
-            "title": risk.get("title", ""),
-            "rcms": rcms_for_risk,
-        })
-    return chain
-
-def find_affected_risks(changed_ids: set[str], items: list[dict], config: Any) -> list[dict]:
-    """Return RISK items potentially affected by a set of changed DHF item IDs.
-
-    Traverses the link graph in reverse: changed item → RCMs that implement it
-    → RISK items those RCMs mitigate.
-
-    Args:
-        changed_ids: Item IDs modified on the branch (any type).
-        items: All DHF items with their field data.
-        config: ProjectConfig used to identify RISK and RCM doc types.
-
-    Returns:
-        Sorted list of dicts: [{"risk_id": str, "title": str, "via_rcms": [str]}, ...]
-        Empty when no RISK or RCM doc types are configured, or no overlap found.
-    """
-    risk_dt = config.get_doc_type("RISK")
-    rcm_dt = config.get_doc_type("RCM")
-    if not risk_dt or not rcm_dt:
-        return []
-
-    risk_prefix = risk_dt.prefix
-    rcm_prefix = rcm_dt.prefix
-
-    risk_items = {it["id"]: it for it in items if it["id"].startswith(risk_prefix)}
-
-    affected: dict[str, set[str]] = {}  # risk_id → set of rcm_ids that implicate it
-    for it in items:
-        if not it["id"].startswith(rcm_prefix):
-            continue
-        implements = it.get("implements") or []
-        if isinstance(implements, str):
-            implements = [implements]
-        if not any(uid in changed_ids for uid in implements):
-            continue
-        mitigates = it.get("mitigates") or []
-        if isinstance(mitigates, str):
-            mitigates = [mitigates]
-        for risk_id in mitigates:
-            if risk_id in risk_items:
-                affected.setdefault(risk_id, set()).add(it["id"])
-
-    return [
-        {
-            "risk_id": risk_id,
-            "title": risk_items[risk_id].get("title", ""),
-            "via_rcms": sorted(affected[risk_id]),
-        }
-        for risk_id in sorted(affected)
-    ]
 
 def build_module_map(items: list[dict], config: Any) -> list[dict]:
     """Build a MODULE → SWDD → SRS resolution map for AI implementation context.
@@ -333,7 +235,6 @@ def check_traceability(items: list[dict], config: Any) -> dict:
           "passed": bool,
           "coverage": [...],
           "required": {...},
-          "risk_chain": [...],
           "summary": str,
         }
     """
@@ -412,88 +313,9 @@ def check_traceability(items: list[dict], config: Any) -> dict:
         "dangling": dangling,
         "cycles": cycles,
         "coverage": coverage_results,
-        "risk_chain": build_risk_chain(items, config),
         "summary": summary,
     }
 
-def format_traceability_report(result: dict) -> str:
-    """Render a check_traceability result as a human-readable text report.
-
-    Args:
-        result: Dict returned by check_traceability().
-
-    Returns:
-        Multi-line string suitable for printing or writing to a file.
-    """
-    lines: list[str] = []
-    lines.append("DHF Traceability Report")
-    lines.append("=" * 40)
-    lines.append("")
-
-    status = "PASS" if result.get("passed") else "FAIL"
-    lines.append(f"Status: {status}")
-    lines.append(f"Summary: {result.get('summary', '')}")
-    lines.append("")
-
-    required = result.get("required", {})
-    lines.append("Required Traceability")
-    lines.append("-" * 40)
-    failures = required.get("failures", [])
-    if not failures:
-        lines.append("  All required links satisfied.")
-    else:
-        for f in failures:
-            lines.append(
-                f"  FAIL  {f['id']} — {f['rule']} "
-                f"(count={f['current_count']}, need ≥{f['min_count']})"
-            )
-    lines.append("")
-
-    dangling = result.get("dangling", [])
-    if dangling:
-        lines.append("Dangling Links")
-        lines.append("-" * 40)
-        for d in dangling:
-            lines.append(
-                f"  FAIL  {d['source']}.{d['field']} → {d['target']} (target does not exist)"
-            )
-        lines.append("")
-
-    coverage = result.get("coverage", [])
-    lines.append("Coverage Matrix")
-    lines.append("-" * 40)
-    if not coverage:
-        lines.append("  No coverage matrices configured.")
-    else:
-        col_w = max(len(c.get("matrix", "")) for c in coverage) + 2
-        for c in coverage:
-            matrix = c.get("matrix", "")
-            covered = c.get("covered", 0)
-            total = c.get("total", 0)
-            status_icon = "PASS" if c.get("passed") else "FAIL"
-            pct = f"{int(covered / total * 100)}%" if total else "n/a"
-            line = f"  {status_icon}  {matrix:<{col_w}} {covered}/{total} ({pct})"
-            lines.append(line)
-            for uid in c.get("uncovered", []):
-                lines.append(f"         ↳ uncovered: {uid}")
-    lines.append("")
-
-    risk_chain = result.get("risk_chain", [])
-    if risk_chain:
-        lines.append("Risk Chain")
-        lines.append("-" * 40)
-        for risk in risk_chain:
-            lines.append(f"  {risk['risk_id']}  {risk['title']}")
-            if not risk["rcms"]:
-                lines.append("    (no RCMs linked)")
-            else:
-                for rcm in risk["rcms"]:
-                    impl = ", ".join(rcm["implements"]) if rcm["implements"] else "—"
-                    lines.append(f"    {rcm['rcm_id']}  {rcm['title']}")
-                    lines.append(f"      implements: {impl}")
-        lines.append("")
-
-    return "\n".join(lines)
 
 
 def analyse(adapter) -> dict:

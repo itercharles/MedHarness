@@ -141,28 +141,49 @@ def validate_atomic_branch(
             "fix": "Add the implementation changes on the same branch before opening a PR.",
         })
 
-    if dhf_change_count == 0:
-        errors.append({
-            "field": "dhf_branch",
-            "issue": f"No DHF item YAML changes found on the branch since {since_ref}.",
-            "fix": "Run generate-dhf to create or update the required DHF items on this branch.",
-        })
+    changed_ids = set(
+        dhf_item_changes["created"]
+        + dhf_item_changes["updated"]
+        + dhf_item_changes["deleted"]
+    )
 
-    # Collect risk impact from the DHF for changed items.
-    risk_impact: list[dict] = []
+    unchanged_promised: list[str] = []
+    cr_item = None
     if dhf_path.is_dir():
         try:
             from dhfkit.local_adapter import LocalDHFAdapter
-            from medharness.services.traceability import find_affected_risks
-            adapter = LocalDHFAdapter(dhf_path)
-            changed_ids = set(
-                dhf_item_changes["created"]
-                + dhf_item_changes["updated"]
-                + dhf_item_changes["deleted"]
-            )
-            risk_impact = find_affected_risks(changed_ids, adapter.list_items(), adapter.config)
+            cr_item = LocalDHFAdapter(dhf_path).get_item(cr_id)
         except (FileNotFoundError, OSError, ValueError):
-            pass  # DHF not loadable — skip risk checks
+            pass  # DHF not loadable — skip the checks that need it
+
+    # What the CR said it would touch is the thing to check. "Any DHF change at
+    # all" passes a branch that edited something unrelated, and fails a PR that
+    # has no CR — so the rule had to be carried in each adopter's workflow
+    # conditions instead of here.
+    promised = list((cr_item or {}).get("affected_items") or [])
+    if promised:
+        unchanged_promised = sorted(set(promised) - changed_ids)
+        if unchanged_promised:
+            errors.append({
+                "field": "dhf_branch",
+                "issue": (
+                    f"{cr_id} lists {', '.join(unchanged_promised)} in affected_items, "
+                    f"but the branch does not change them since {since_ref}."
+                ),
+                "fix": (
+                    "Make the change the CR proposed, or update affected_items to "
+                    "match what this CR actually touches."
+                ),
+            })
+    elif cr_item is not None and dhf_change_count == 0:
+        errors.append({
+            "field": "dhf_branch",
+            "issue": (
+                f"No DHF item YAML changes found on the branch since {since_ref}, "
+                f"and {cr_id} lists no affected_items to check against."
+            ),
+            "fix": "Run `change plan` so the CR records what it affects.",
+        })
 
     return envelope_from("verify branch", {
         "cr_id": cr_id,
@@ -173,10 +194,10 @@ def validate_atomic_branch(
         # of the same findings stays in details.
         "errors": [f"{e['field']}: {e['issue']}" for e in errors],
         "findings": errors,
-        "expected_dhf_changes": True,
+        "promised_but_unchanged": unchanged_promised,
+        "cr_found": cr_item is not None,
         "dhf_item_changes": dhf_item_changes,
         "code_changes": code_changes,
-        "risk_impact": risk_impact,
     })
 
 

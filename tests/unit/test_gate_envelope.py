@@ -31,7 +31,7 @@ from medharness.workflows.init import _replace_placeholders, _scaffold_dhf
 #: Gates that take only a DHF path, so they can be called generically.
 SIMPLE_GATES = (
     "ci_structural_gate",
-    "soup_vuln_gate",
+    "soup_gate",
     "classification_gate",
     "plans_gate",
 )
@@ -332,7 +332,7 @@ class TestFailurePathsHonourTheContract:
         """The scaffold has nothing checkable, so the finding path needs a stub."""
         from unittest.mock import MagicMock, patch
 
-        from medharness.services.ci import soup_vuln_gate
+        from medharness.services.ci import soup_gate
 
         soup = dhf / "items" / "09_soup"
         soup.mkdir(parents=True, exist_ok=True)
@@ -346,7 +346,7 @@ class TestFailurePathsHonourTheContract:
             opened.return_value.read.return_value = json.dumps(
                 {"results": [{"vulns": [{"id": "GHSA-x", "modified": "2024-01-01"}]}]}
             ).encode()
-            result = soup_vuln_gate(dhf)
+            result = soup_gate(dhf)
 
         assert result["passed"] is False
         assert result["errors"], "vulnerable SOUP reported with empty errors"

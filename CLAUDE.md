@@ -18,7 +18,7 @@ Before proposing or implementing any significant change, read:
 | CLI | Owns | Commands |
 |-----|------|----------|
 | `dhfkit` | DHF **data**: items, schemas, documents, SOUP, releases. Storage and retrieval only — no analysis. | `doc` · `init` · `item` · `sbom` · `validate` |
-| `medharness` | The **process** around it: AI CR workflow, CI gates, scaffolding, approval, and all traceability analysis over the item set | `analyse` · `approval` · `automation` · `change` · `context` · `doctor` · `evidence` · `gates` · `init` · `release` · `upgrade` · `verify` |
+| `medharness` | The **process** around it: AI CR workflow, CI gates, scaffolding, approval, and all traceability analysis over the item set | `approval` · `automation` · `change` · `context` · `doctor` · `evidence` · `gates` · `init` · `release` · `soup-sync` · `upgrade` · `verify` |
 
 `tests/guards/test_cli_boundary_is_documented.py` checks this table against the
 live command tree.

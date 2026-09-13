@@ -750,7 +750,7 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> di
             f"Continue using the CLI (`dhfkit item create` / `dhfkit item update`) only. "
             f"After making changes, re-run:\n"
             f"  python -m dhfkit --dhf DHF validate schema\n"
-            f"  python -m dhfkit --dhf DHF validate traceability\n\n"
+            f"  python -m medharness --dhf DHF verify dhf\n\n"
             f"Review feedback:\n{feedback['prompt_text']}"
         )
         prompt = _enrich(prompt, _build_dhf_context_block, dhf_path, warnings)
@@ -804,7 +804,7 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> di
             f"CLI (`dhfkit item create` / `dhfkit item update`). Do not introduce other "
             f"changes. After fixing, re-run:\n"
             f"  python -m dhfkit --dhf DHF validate schema\n"
-            f"  python -m dhfkit --dhf DHF validate traceability"
+            f"  python -m medharness --dhf DHF verify dhf"
         )
         rc, _, fix_session_id = _run_claude_step(
             name="run_fix_generation",
@@ -868,7 +868,7 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> di
             f"then fix each item via the dhfkit CLI (dhfkit item create / dhfkit item update). "
             f"After making changes, re-run:\n"
             f"  python -m dhfkit --dhf DHF validate schema\n"
-            f"  python -m dhfkit --dhf DHF validate traceability\n"
+            f"  python -m medharness --dhf DHF verify dhf\n"
             f"Do not modify the review file itself."
         )
         _, _, fix_session_id = _run_claude_step(

@@ -113,35 +113,6 @@ class TestValidateBranchJsonContract:
         assert "spec_path" not in payload["details"]
         assert payload["passed"] is True
 
-    def test_warn_emitted_to_stderr_when_risks_affected(self, dhf):
-        runner = CliRunner()
-        # Built through the real helper: a mock shaped by hand would let the
-        # test pass against a contract the code no longer honours.
-        from medharness.services.ci import envelope_from
-
-        branch_result = envelope_from("verify branch", {
-            "cr_id": "CR-502",
-            "since_ref": "origin/main",
-            "passed": True,
-            "summary": "CR-502: 0 branch finding(s) since origin/main.",
-            "expected_dhf_changes": True,
-            "dhf_item_changes": {"created": ["SYS-010"], "updated": [], "deleted": []},
-            "code_changes": {"created": [], "updated": [], "deleted": []},
-            "risk_impact": [
-                {"risk_id": "RISK-001", "title": "Dose error", "via_rcms": ["RCM-001"]},
-                {"risk_id": "RISK-003", "title": "Data loss", "via_rcms": ["RCM-002"]},
-            ],
-            "errors": [],
-            "findings": [],
-        })
-        with patch("medharness.services.git.validate_atomic_branch", return_value=branch_result):
-            r = runner.invoke(main, ["--dhf", str(dhf), "verify", "branch", "--cr", "CR-502"],
-                              catch_exceptions=False)
-        assert r.exit_code == 0
-        assert "WARN" in r.stderr
-        assert "RISK-001" in r.stderr
-        assert "RISK-003" in r.stderr
-        assert "2 risk item(s)" in r.stderr
 
     def test_errors_propagate_and_exit_non_zero(self, dhf):
         """`errors` is a list of strings — this asserted a list of dicts.

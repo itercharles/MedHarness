@@ -190,8 +190,7 @@ Both take `--dhf DHF`; `dhfkit` also reads `COMPLIANTFLOW_DHF`.
 
 | | |
 |---|---|
-| `medharness analyse risk-impact --since-ref origin/main` | which risks this change touches (ISO 14971) |
-| `medharness analyse soup-drift` | the SOUP register against the project's manifests; `--write` to apply |
+| `medharness soup-sync --write` | update the SOUP register from the project's manifests |
 
 ### Gates — each exits non-zero on failure, JSON on stdout
 
@@ -201,7 +200,7 @@ Both take `--dhf DHF`; `dhfkit` also reads `COMPLIANTFLOW_DHF`.
 | `medharness verify tests --junit-dir test-results` | requirement-to-test coverage from JUnit |
 | `medharness verify verification` | every requirement has a declared verification method |
 | `medharness verify soup` | CVE scan against the OSV database |
-| `medharness verify branch --cr CR-034` | the branch carries the items the CR proposed |
+| `medharness verify branch --cr CR-034` | the branch changes the items the CR listed in affected_items |
 | `medharness verify classification` | IEC 62304 §4.3 safety class and the §5.1 plans it requires |
 | `medharness verify completion --cr CR-034` | CR closure gate |
 | `medharness approval check --cr CR-034 --stage design --pr 42` | an approving review of the commit being merged |

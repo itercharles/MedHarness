@@ -26,6 +26,7 @@ _UPGRADE_MAP: list[tuple[str, str]] = [
     ("specs/change_request_specification.md.j2",              "DHF/documents/specs/change_request_specification.md.j2"),
     ("specs/customer_requirement_specification.md.j2",        "DHF/documents/specs/customer_requirement_specification.md.j2"),
     ("specs/rcm_specification.md.j2",                         "DHF/documents/specs/rcm_specification.md.j2"),
+    ("specs/soup_specification.md.j2",                        "DHF/documents/specs/soup_specification.md.j2"),
     ("specs/requirements_specification.md.j2",                "DHF/documents/specs/requirements_specification.md.j2"),
     ("specs/risk_specification.md.j2",                        "DHF/documents/specs/risk_specification.md.j2"),
     ("specs/software_design_document.md.j2",                  "DHF/documents/specs/software_design_document.md.j2"),

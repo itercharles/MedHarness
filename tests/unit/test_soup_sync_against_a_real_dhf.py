@@ -37,7 +37,7 @@ def project(tmp_path: Path) -> Path:
 
 def _sync(project: Path, *extra: str) -> dict:
     r = CliRunner().invoke(mh_main, [
-        "--dhf", str(project / "DHF"), "analyse", "soup-drift",
+        "--dhf", str(project / "DHF"), "soup-sync",
         "--manifest", str(project / "requirements.txt"), *extra,
     ])
     assert "Traceback" not in (r.stderr or ""), r.stderr[-500:]

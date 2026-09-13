@@ -958,8 +958,23 @@ def _vuln_detail(vuln_id: str, batch_entry: dict, *, fetch: bool) -> dict:
     }
 
 
-def soup_vuln_gate(dhf_path: Path, *, offline_mode: str = "fail") -> dict:
-    """Check SOUP items against the OSV vulnerability database.
+def soup_gate(
+    dhf_path: Path,
+    *,
+    offline_mode: str = "fail",
+    manifest_paths: list[Path] | None = None,
+    fail_on_drift: bool = False,
+) -> dict:
+    """The SOUP register against the manifests, and against known CVEs.
+
+    Both halves of IEC 62304 §8.1.2, because asking them separately gives a
+    dangerous answer: a package in a lockfile with no SOUP item is never queried
+    for vulnerabilities at all. It does not come back clean — it comes back
+    absent.
+
+    Drift warns by default so a project backfilling its register is not blocked;
+    `fail_on_drift` makes an undocumented or misversioned component fail.
+
 
     For each SOUP item that has both ``name`` and ``ecosystem`` fields, queries
     https://api.osv.dev/v1/querybatch and reports known vulnerabilities.
@@ -997,6 +1012,10 @@ def soup_vuln_gate(dhf_path: Path, *, offline_mode: str = "fail") -> dict:
     adapter = LocalDHFAdapter(dhf_path)
     all_items = adapter.list_items()
     soup_items = [it for it in all_items if it.get("type") == "SOUP"]
+    drift = _soup_drift(dhf_path, soup_items, manifest_paths, fail_on_drift)
+    drift_blocks = fail_on_drift and bool(
+        drift["drift"]["undocumented"] or drift["drift"]["misversioned"]
+    )
 
     checkable: list[dict] = []
     skipped: list[dict] = []
@@ -1023,13 +1042,14 @@ def soup_vuln_gate(dhf_path: Path, *, offline_mode: str = "fail") -> dict:
     if not checkable:
         n_soup = len(soup_items)
         return envelope_from("verify soup", {
-            "passed": True,
+            "passed": not drift_blocks,
             "soup_count": n_soup,
             "checked_count": 0,
             "vulnerable": [],
             "accepted": [],
             "skipped": skipped,
             "acceptance_problems": acceptance_problems,
+            **drift,
             "error": None,
             "summary": (
                 f"{n_soup} SOUP item(s) found; none checkable "
@@ -1055,7 +1075,7 @@ def soup_vuln_gate(dhf_path: Path, *, offline_mode: str = "fail") -> dict:
         tolerated = offline_mode == "warn"
         outage = f"osv.dev unreachable: {exc}"
         return envelope_from("verify soup", {
-            "passed": tolerated,
+            "passed": tolerated and not drift_blocks,
             # The outage belongs in the envelope, not a private key: a caller
             # that handles `errors`/`warnings` for every gate handles this too.
             "errors": [] if tolerated else [outage],
@@ -1066,6 +1086,7 @@ def soup_vuln_gate(dhf_path: Path, *, offline_mode: str = "fail") -> dict:
             "accepted": [],
             "skipped": skipped,
             "acceptance_problems": acceptance_problems,
+            **drift,
             "error": f"osv.dev unreachable: {exc}",
             "summary": (
                 f"SOUP vulnerability scan skipped — osv.dev unreachable ({exc}). "
@@ -1117,7 +1138,7 @@ def soup_vuln_gate(dhf_path: Path, *, offline_mode: str = "fail") -> dict:
     if accepted_found:
         summary_parts.append(f"{len(accepted_found)} documented as accepted.")
     return envelope_from("verify soup", {
-        "passed": passed,
+        "passed": passed and not drift_blocks,
         # Phrased exactly as a reader needs it — severity and a URL fallback
         # included — so the CLI renders the envelope instead of rebuilding the
         # same line beside it. Two renderers printed every vulnerability twice.
@@ -1137,6 +1158,7 @@ def soup_vuln_gate(dhf_path: Path, *, offline_mode: str = "fail") -> dict:
         "accepted": accepted_found,
         "skipped": skipped,
         "acceptance_problems": acceptance_problems,
+        **drift,
         "error": None,
         "summary": " ".join(summary_parts),
     })
@@ -1176,7 +1198,9 @@ def _check_cr_fields(cr_item: dict, cr_id: str) -> list[dict]:
     return issues
 
 
-def _check_design_review(dhf_path: Path, cr_id: str) -> list[dict]:
+def _check_design_review(
+    dhf_path: Path, cr_id: str, pr_number: int | None = None
+) -> list[dict]:
     """Check that the design stage was approved.
 
     An APR item is the record of record: it is a DHF item, so it appears in the
@@ -1187,6 +1211,24 @@ def _check_design_review(dhf_path: Path, cr_id: str) -> list[dict]:
     projects mid-flight are not stranded; `dhfkit approval import` converts it.
     """
     from dhfkit.approval import find_approvals
+
+    # A pull request is the AI workflow's approval record: the review carries
+    # author, time and the commit it covers, and nothing here can rewrite it.
+    # `approval check` reads the same thing, so the two gates cannot disagree
+    # about whether a stage was approved. An APR item remains the record for an
+    # approval that never had a PR.
+    if pr_number is not None:
+        from medharness.services.pr_approval import approval_evidence
+
+        evidence = approval_evidence(pr_number, "design")
+        if evidence["approved"]:
+            return []
+        return [{
+            "field": "design_review",
+            "issue": (
+                f"CR {cr_id} — {evidence['reason']} on PR #{pr_number}."
+            ),
+        }]
 
     try:
         approvals = find_approvals(dhf_path, approves=cr_id, stage="design")
@@ -1257,6 +1299,8 @@ def cr_closure_gate(
     cr_id: str,
     dhf_path: Path,
     junit_paths: tuple[Path, ...] = (),
+    *,
+    pr_number: int | None = None,
 ) -> dict:
     """Verify that a CR is fully closed: all proposed items created and verified.
 
@@ -1294,7 +1338,7 @@ def cr_closure_gate(
     # field via `dhf item update` so it persists in the CR YAML alongside the CR itself.
     cr_item = adapter.get_item(cr_id) or {}
     incomplete_cr_fields = _check_cr_fields(cr_item, cr_id)
-    incomplete_cr_fields.extend(_check_design_review(dhf_path, cr_id))
+    incomplete_cr_fields.extend(_check_design_review(dhf_path, cr_id, pr_number))
 
     raw = cr_item.get("proposed_new_items")
     if raw is None:
@@ -1772,3 +1816,39 @@ def _fill_placeholders(text: str, project_name: str) -> str:
         .replace("{{medharness_repo}}", "itercharles/MedHarness")
         .replace("{{primary_test_tool}}", "pytest")
     )
+
+
+def _soup_drift(
+    dhf_path: Path,
+    soup_items: list[dict],
+    manifest_paths: list[Path] | None,
+    fail_on_drift: bool,
+) -> dict:
+    """The register against the manifests, read-only.
+
+    Writing back is a separate action: a gate that edits the DHF it is judging
+    has no business being a gate.
+    """
+    from medharness.services.soup_sync import (
+        collect_manifest_packages,
+        diff_against_dhf,
+    )
+
+    packages, _parsed, errors = collect_manifest_packages(
+        dhf_path, list(manifest_paths or [])
+    )
+    diff = diff_against_dhf(packages, soup_items)
+    return {
+        "drift": {
+            "manifests_read": len(packages),
+            "undocumented": [p["name"] for p in diff["to_create"]],
+            "misversioned": [
+                f"{e['item']['id']} records {e['old_version']}, manifests resolve "
+                f"{e['pkg']['version']}"
+                for e in diff["to_update"]
+            ],
+            "no_longer_shipped": [it["id"] for it in diff["orphans"]],
+            "blocking": fail_on_drift,
+            "errors": errors,
+        }
+    }

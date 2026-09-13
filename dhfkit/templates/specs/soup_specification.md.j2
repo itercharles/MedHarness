@@ -1,0 +1,87 @@
+# {{ doc_type_name }} Register
+
+---
+
+**Document Metadata**
+
+| Field | Value |
+|-------|-------|
+| **Document ID** | {{ doc_type_code }}-SPEC |
+| **Version** | {{ version }} |
+| **Generated** | {{ generation_date }} |
+| **Status** | {{ status }} |
+| **Project** | {{ project_name }} |
+
+---
+
+## 1. Introduction
+
+This register records the Software of Unknown Provenance (SOUP) that
+{{ project_name }} ships, as IEC 62304 §8.1.2 requires: what each component is,
+which version, who supplies it, and why it is used.
+
+`medharness verify soup` checks this register against the project's dependency
+manifests and against the OSV vulnerability database. A component that ships
+without an entry here is neither documented nor scanned.
+
+---
+
+## 2. Register
+
+| ID | Component | Version | Supplier | Licence | Purpose |
+|----|-----------|---------|----------|---------|---------|
+{% for item in items -%}
+| {{ item.id }} | {{ item.name or item.title }} | {{ item.version or "—" }} | {{ item.manufacturer or "—" }} | {{ item.license or "—" }} | {{ item.purpose or "—" }} |
+{% endfor %}
+
+---
+
+## 3. Components
+
+{% for item in items %}
+### {{ loop.index }}. {{ item.id }}: {{ item.name or item.title }}
+
+**Version**: {{ item.version or "not recorded" }}  
+{% if item.ecosystem %}**Ecosystem**: {{ item.ecosystem }}  {% endif %}
+{% if item.manufacturer %}**Supplier**: {{ item.manufacturer }}  {% endif %}
+{% if item.license %}**Licence**: {{ item.license }}  {% endif %}
+{% if item.homepage %}**Homepage**: {{ item.homepage }}  {% endif %}
+{% if item.safety_class %}**Safety class**: {{ item.safety_class }}  {% endif %}
+
+{% if item.purpose %}
+#### Purpose
+
+{{ item.purpose }}
+{% endif %}
+
+{% if item.content %}
+#### Notes
+
+{{ item.content }}
+{% endif %}
+
+{% if item.accepted_vulns %}
+#### Accepted vulnerabilities
+
+A vulnerability listed here has been assessed and accepted with a rationale; it
+does not block the build. One that is not listed does.
+
+{% for vuln in item.accepted_vulns %}
+- **{{ vuln.id if vuln.id is defined else vuln }}**{% if vuln.rationale is defined %} — {{ vuln.rationale }}{% endif %}
+{% endfor %}
+{% endif %}
+
+{% if item.verification_method %}
+#### Verification
+
+{{ item.verification_method }}
+{% endif %}
+
+---
+{% endfor %}
+
+## 4. Machine-readable form
+
+`dhfkit sbom` emits the same register as CycloneDX {{ "1.6" }}, which is the
+form FDA cybersecurity guidance and the EU Cyber Resilience Act ask for. This
+document is the form a reviewer reads.
