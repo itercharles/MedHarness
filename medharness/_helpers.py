@@ -23,7 +23,7 @@ def _make_adapter(dhf_path: Path):
         raise click.ClickException(
             "LocalDHFAdapter not found. Add your DHF system to PYTHONPATH before running the CLI."
         )
-    return LocalDHFAdapter(dhf_path, auto_commit=False)
+    return LocalDHFAdapter(dhf_path)
 
 
 

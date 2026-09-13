@@ -16,18 +16,12 @@ class ChangeRequestAdapter(Protocol):
 
     def list_items(self, doc_type: str | None = None) -> list[dict[str, Any]]: ...
 
-    def create_item(
-        self,
-        data: dict[str, Any],
-        author: str = "system",
-        cr_id: str | None = None,
-    ) -> dict[str, Any]: ...
+    def create_item(self, data: dict[str, Any]) -> dict[str, Any]: ...
 
     def execute_transition(
         self,
         item_id: str,
         to_state: str,
-        performed_by: str | None = None,
     ) -> dict[str, Any]: ...
 
 
@@ -98,7 +92,6 @@ def prepare_change_request(
     branch_prefix: str = "cr",
     title_prefix: str = "cr",
     source_label: str = "source",
-    author: str = "issue-to-cr",
 ) -> ChangeRequestPreparation:
     """Prepare or create a DHF CR for an external change request."""
     all_cr_items = adapter.list_items("CR")
@@ -111,7 +104,7 @@ def prepare_change_request(
         return ChangeRequestPreparation(False, "source request already has CR", cr_id=existing_cr_id)
 
     if write:
-        created = adapter.create_item(build_change_request_data(request), author=author)
+        created = adapter.create_item(build_change_request_data(request))
         cr_id = str(created["id"])
     else:
         cr_id = next_change_request_id(all_cr_items)
@@ -132,14 +125,12 @@ def prepare_change_request(
 def complete_change_request(
     adapter: ChangeRequestAdapter,
     cr_id: str,
-    *,
-    performed_by: str,
 ) -> dict[str, Any]:
     """Transition a DHF CR to completed."""
     existing = adapter.get_item(cr_id)
     if existing is None:
         raise ValueError(f"CR '{cr_id}' not found.")
-    return adapter.execute_transition(cr_id, "completed", performed_by=performed_by)
+    return adapter.execute_transition(cr_id, "completed")
 
 
 def _slugify(value: str) -> str:

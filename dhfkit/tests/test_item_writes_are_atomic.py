@@ -44,7 +44,7 @@ class TestAFailedWriteLeavesTheItemIntact:
 
         with patch("dhfkit.repository.saver.yaml.dump", fail_midway):
             with pytest.raises(OSError):
-                api.update_item(dhf, "SRS-001", {"title": "new"}, author="t")
+                api.update_item(dhf, "SRS-001", {"title": "new"})
 
         assert item.read_text(encoding="utf-8") == before, "the item was truncated"
 
@@ -57,7 +57,7 @@ class TestAFailedWriteLeavesTheItemIntact:
 
         with patch("dhfkit.repository.saver.yaml.dump", fail_midway):
             with pytest.raises(OSError):
-                api.update_item(dhf, "SRS-001", {"title": "new"}, author="t")
+                api.update_item(dhf, "SRS-001", {"title": "new"})
 
         assert api.list_items(dhf), "the DHF no longer loads after a failed write"
 
@@ -70,13 +70,21 @@ class TestAFailedWriteLeavesTheItemIntact:
 
         with patch("dhfkit.repository.saver.yaml.dump", fail_midway):
             with pytest.raises(OSError):
-                api.update_item(dhf, "SRS-001", {"title": "new"}, author="t")
+                api.update_item(dhf, "SRS-001", {"title": "new"})
 
         leftovers = list((dhf / "items").rglob(".*.tmp"))
         assert not leftovers, f"temporary files left behind: {leftovers}"
 
 
-class TestGitRecordsCreationAsCreation:
+class TestDhfkitDoesNotCommit:
+    """The DHF is committed by the workflow that carries the change.
+
+    `dhfkit` used to be able to commit each item itself, under an author passed
+    on the command line. No entry point ever enabled it, and a per-item commit
+    would fight the change-request branch it runs inside: the record of who
+    changed an item is the author of the commit that carried it.
+    """
+
     def _repo(self, tmp_path: Path) -> Path:
         _scaffold_dhf(tmp_path)
         _replace_placeholders(tmp_path, "Labels")
@@ -86,27 +94,31 @@ class TestGitRecordsCreationAsCreation:
             subprocess.run(["git", *args], cwd=tmp_path, capture_output=True)
         return tmp_path
 
-    def test_a_new_item_is_committed_as_created(self, tmp_path: Path) -> None:
-        root = self._repo(tmp_path)
-        adapter = LocalDHFAdapter(root / "DHF", auto_commit=True)
-        adapter.create_item(
-            {"type": "SRS", "title": "new", "derives_from": ["SYS-001"]}, author="t"
-        )
-        head = subprocess.run(
+    def _head(self, root: Path) -> str:
+        return subprocess.run(
             ["git", "log", "--oneline", "-1"], cwd=root,
             capture_output=True, text=True,
-        ).stdout
-        assert "Created" in head, f"a new item was committed as: {head.strip()}"
+        ).stdout.strip()
 
-    def test_an_edit_is_still_committed_as_updated(self, tmp_path: Path) -> None:
+    def test_a_new_item_is_left_uncommitted(self, tmp_path: Path) -> None:
         root = self._repo(tmp_path)
-        adapter = LocalDHFAdapter(root / "DHF", auto_commit=True)
-        created = adapter.create_item(
-            {"type": "SRS", "title": "new", "derives_from": ["SYS-001"]}, author="t"
+        before = self._head(root)
+        LocalDHFAdapter(root / "DHF").create_item(
+            {"type": "SRS", "title": "new", "derives_from": ["SYS-001"]}
         )
-        adapter.update_item(created["id"], {"title": "edited"}, author="t")
-        head = subprocess.run(
-            ["git", "log", "--oneline", "-1"], cwd=root,
+        assert self._head(root) == before, "dhfkit made a commit of its own"
+        dirty = subprocess.run(
+            ["git", "status", "--porcelain"], cwd=root,
             capture_output=True, text=True,
         ).stdout
-        assert "Updated" in head, f"an edit was committed as: {head.strip()}"
+        assert dirty.strip(), "the item was not written to the working tree either"
+
+    def test_an_edit_is_left_uncommitted(self, tmp_path: Path) -> None:
+        root = self._repo(tmp_path)
+        adapter = LocalDHFAdapter(root / "DHF")
+        created = adapter.create_item(
+            {"type": "SRS", "title": "new", "derives_from": ["SYS-001"]}
+        )
+        before = self._head(root)
+        adapter.update_item(created["id"], {"title": "edited"})
+        assert self._head(root) == before, "dhfkit made a commit of its own"

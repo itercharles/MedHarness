@@ -136,7 +136,6 @@ def _record_approval_item(ctx, payload: dict, cr_id: str, stage: str,
             ctx.obj["dhf"], approves=cr_id, stage=stage, verdict=verdict,
             approver=approver,
             scope=f"PR #{payload.get('pr_number')} at stage {stage}.",
-            author=approver,
         )
     except Exception as exc:  # noqa: BLE001 — reported, never swallowed
         payload["apr_error"] = str(exc)

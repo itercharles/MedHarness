@@ -13,7 +13,7 @@ from dhfkit.exceptions import ValidationError
 # dynamically from the doc type's lifecycle config in _build_lifecycle_fields().
 _SYSTEM_FIELDS = {
     # Written by the saver
-    'id', 'doc_type', 'type', 'status', 'history', 'active', 'file_path', 'timestamp',
+    'id', 'doc_type', 'type', 'status', 'active', 'file_path', 'timestamp',
     # Explicit fields on the Item model — available for any doc type
     'reviewer', 'review_date',
 }

@@ -19,7 +19,7 @@ def test_contract_version_is_defined():
 
 
 def test_contract_version_is_stable():
-    assert CONTRACT_VERSION == "1.0"
+    assert CONTRACT_VERSION == "2.0"
 
 
 # ── DHFAdapter Protocol completeness on LocalDHFAdapter ───────────────────────
@@ -65,9 +65,9 @@ def test_protocol_method_signatures_stable():
     breaking change that must increment CONTRACT_VERSION.
     """
     checks = {
-        "create_item": ["data", "author", "cr_id"],
-        "update_item": ["uid", "data", "author", "cr_id"],
-        "execute_transition": ["item_id", "to_state", "performed_by"],
+        "create_item": ["data"],
+        "update_item": ["uid", "data"],
+        "execute_transition": ["item_id", "to_state"],
         "get_item": ["uid"],
         "list_items": ["doc_type"],
     }

@@ -148,7 +148,7 @@ class TestRevisionResolution:
         _git(git_dhf, "commit", "-qm", "APR: approve CR-001")
         first = resolve_approval(git_dhf, "APR-001")["revision"]
 
-        api.update_item(git_dhf, "APR-001", {"notes": "typo fixed"}, author="t")
+        api.update_item(git_dhf, "APR-001", {"notes": "typo fixed"})
         _git(git_dhf, "add", "-A")
         _git(git_dhf, "commit", "-qm", "fix typo")
 

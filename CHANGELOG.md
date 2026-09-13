@@ -27,8 +27,7 @@ whether each one does what its name and its options say.
 - **Seven options that recorded nothing are gone**: `--author` and `--cr` on
   `dhfkit item create` / `item update`, `--by` on `dhfkit item transition`, and
   `--author` on `medharness release baseline` and `medharness soup-sync`. They
-  all ended at `GitRepository.commit_item_change`, which returns on its first
-  line unless `auto_commit` is set — and every entry point sets it False.
+  all ended at an auto-commit path that no entry point enabled.
   `item update SRS-001 --author bob.dev` left no trace of bob anywhere.
   Attribution is the commit that carries the change, which is what the scaffold's
   own release workflow already does. Thirteen places taught the agent to pass
@@ -36,6 +35,22 @@ whether each one does what its name and its options say.
 - **`medharness context implementation` prints JSON to stdout** instead of
   requiring `--out-dir` and writing two files. Its siblings always did, and the
   README's own example did not run.
+- **The auto-commit path is gone.** `LocalDHFAdapter(auto_commit=...)`,
+  `GitRepository.commit_file` / `commit_item_change`, `ItemSaver(git_repo=...)`,
+  and the `author` / `cr_id` / `performed_by` parameters that fed them are
+  removed from the adapter, `dhfkit.api`, and the `DHFAdapter` protocol.
+  `CONTRACT_VERSION` is now `"2.0"`. `dhfkit` never committed in any shipped
+  configuration and should not: a per-item commit fights the change-request
+  branch it runs inside, and the record of who changed an item is the author of
+  the commit that carried it. `GitRepository` keeps its read side
+  (`item_ids_ever_added`, `get_file_history`), which the ID-retirement and
+  approval-revision logic depend on.
+- **`Item.history` is removed.** `dhfkit` never wrote it and the saver stripped
+  it whenever it was empty, so it was an empty list on every item in every DHF —
+  a field that looked like an internal audit trail and held nothing. Migration:
+  if any of your item YAML files carry a `history:` key, delete it, or schema
+  validation will reject the item as having an unknown field. Neither MedHarness's
+  own DHF nor ContourLab's had one.
 
 ### Fixed
 

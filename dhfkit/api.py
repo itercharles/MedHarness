@@ -11,7 +11,7 @@ from dhfkit.local_adapter import LocalDHFAdapter
 
 
 def _adapter(dhf_root: Path) -> LocalDHFAdapter:
-    return LocalDHFAdapter(dhf_root, auto_commit=False)
+    return LocalDHFAdapter(dhf_root)
 
 
 # -- Item operations ----------------------------------------------------------
@@ -24,28 +24,24 @@ def list_items(dhf_root: Path, doc_type: Optional[str] = None) -> list[dict]:
     return _adapter(dhf_root).list_items(doc_type)
 
 
-def create_item(dhf_root: Path, data: dict, author: str = "system",
-                cr_id: Optional[str] = None) -> dict:
-    return _adapter(dhf_root).create_item(data, author=author, cr_id=cr_id)
+def create_item(dhf_root: Path, data: dict) -> dict:
+    return _adapter(dhf_root).create_item(data)
 
 
-def update_item(dhf_root: Path, item_id: str, data: dict,
-                author: Optional[str] = None,
-                cr_id: Optional[str] = None) -> Optional[dict]:
-    return _adapter(dhf_root).update_item(item_id, data, author=author, cr_id=cr_id)
+def update_item(dhf_root: Path, item_id: str, data: dict) -> Optional[dict]:
+    return _adapter(dhf_root).update_item(item_id, data)
 
 
-def delete_item(dhf_root: Path, item_id: str, author: Optional[str] = None) -> bool:
-    return _adapter(dhf_root).delete_item(item_id, author=author)
+def delete_item(dhf_root: Path, item_id: str) -> bool:
+    return _adapter(dhf_root).delete_item(item_id)
 
 
 def get_item_transitions(dhf_root: Path, item_id: str) -> list[dict]:
     return _adapter(dhf_root).get_available_transitions(item_id)
 
 
-def transition_item(dhf_root: Path, item_id: str, to_state: str,
-                    performed_by: Optional[str] = None) -> dict:
-    return _adapter(dhf_root).execute_transition(item_id, to_state, performed_by=performed_by)
+def transition_item(dhf_root: Path, item_id: str, to_state: str) -> dict:
+    return _adapter(dhf_root).execute_transition(item_id, to_state)
 
 
 # -- Validation operations ----------------------------------------------------

@@ -1,7 +1,7 @@
 """Pydantic v2 models for MedHarness items."""
 
 from pydantic import BaseModel, Field, ConfigDict
-from typing import Optional, List, Any, Dict
+from typing import Optional, List, Dict
 from datetime import date
 from enum import Enum
 
@@ -52,9 +52,6 @@ class Item(BaseModel):
     # Verification — accepts both TC-level (PASS/FAIL/PENDING) and
     # requirement-level (verified/failed/not_verified) status strings.
     verification_status: Optional[str] = Field(None, description="Verification status")
-
-    # History tracking
-    history: Optional[List[Dict[str, Any]]] = Field(default_factory=list, description="Change history")
 
     # Dynamic attributes are handled by model_config['extra'] = 'allow'
     # This allows any field defined in project_config.yaml to be stored on the item

@@ -88,7 +88,7 @@ The gates in step 4 are ordinary code. They do not ask a model whether the work 
 | Artifact | Where it lives | Contains |
 |----------|----------------|----------|
 | Session ID | CR item, captured from the `claude` CLI JSON envelope | Correlates a CR stage to a model session |
-| DHF item history | Git, one commit per change with author and CR ID | Every design input the AI added or modified |
+| DHF item history | Git — the commit on the CR branch that carried the change, authored by whoever made it | Every design input the AI added or modified |
 | PR diff | GitHub | Every line of code the AI wrote, under normal review |
 | Design review | `docs/reviews/<CR>-Design-Review.md` | Verdict and open issues, required by `verify completion` |
 | Evidence bundle | `medharness evidence bundle` output | Test results and traceability state at merge |

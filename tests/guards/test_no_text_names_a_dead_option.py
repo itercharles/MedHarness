@@ -2,10 +2,9 @@
 
 `--author` and `--cr` on `dhfkit item create/update`, `--by` on `item
 transition`, and `--author` on `release baseline` and `soup-sync` all ended at
-`GitRepository.commit_item_change`, which returns on its first line unless
-`auto_commit` is set — and every entry point sets it False. Thirteen places
-across the prompts, `docs/adopting.md`, and the scaffold's own workflow told
-the agent to pass an attribution that was dropped on the floor.
+an auto-commit path no entry point enabled, so the attribution was dropped on
+the floor. Thirteen places across the prompts, `docs/adopting.md`, and the
+scaffold's own workflow told the agent to pass one anyway.
 
 `test_no_source_names_a_dead_command` checks command paths, and skips over
 options on the way. This checks the options, and reads the files that one
