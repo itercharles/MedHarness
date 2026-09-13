@@ -26,7 +26,6 @@ MedHarness ships two Python packages from a single repository:
 - CR workflow orchestration (`cr workflow`, `cr check-status`)
 - DHF repo scaffolding from bundled templates (`medharness init`, `medharness upgrade`)
 - Environment and setup diagnostics (`medharness doctor`)
-- Machine-readable description of the gates (`medharness gates`)
 - Adapter protocol for pluggable DHF backends
 
 ### `dhfkit` owns

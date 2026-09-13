@@ -155,7 +155,7 @@ jobs:
 Drop `--fail-on-uncovered` while backfilling an existing DHF: coverage gaps then
 report as `WARN`, and only schema, required links, and dangling links block.
 
-`medharness gates` lists every gate with what it requires and whether it blocks.
+`medharness verify --help` lists the gates; each subcommand's `--help` gives its options.
 [docs/interface.md](docs/interface.md) is the contract to build against — result
 shape, exit codes, and what may change.
 [docs/adopting.md](docs/adopting.md#setting-up-ci) carries the full workflow
@@ -200,7 +200,6 @@ Both take `--dhf DHF`; `dhfkit` also reads `COMPLIANTFLOW_DHF`.
 | `medharness verify tests --junit-dir test-results` | every requirement verified by its declared method |
 | `medharness verify soup` | the SOUP register against the manifests, and against OSV |
 | `medharness verify classification` | IEC 62304 §4.3 safety class and the §5.1 plans it requires |
-| `medharness gates` | every gate, what it needs, what blocks — `--json` for a pipeline |
 
 ### The AI change workflow
 
@@ -234,7 +233,7 @@ the CR workflow. A PR with no CR is not their business.
 | `medharness upgrade` | update the scaffold without touching your content |
 | `medharness doctor` | environment, CLI tools, and DHF config health |
 
-`medharness gates` and `--help` on any subcommand carry the full surface.
+`--help` on any subcommand carries the full surface.
 
 **Model configuration.** Each stage falls back to the Anthropic Claude CLI
 unless you set `MEDHARNESS_{DESIGN,DESIGN_REVIEW,DEVELOP,CODE_REVIEW}_MODEL` to

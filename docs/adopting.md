@@ -146,7 +146,7 @@ What each job does:
 
 Adopt it incrementally: `dhf-validate` alone is useful from day one. Add the other two when you need release artifacts.
 
-Writing your own pipeline instead? [interface.md](interface.md) is the contract — the result shape every gate returns, exit-code semantics, and what may change between versions. `medharness gates` lists every gate with what it requires and whether it blocks.
+Writing your own pipeline instead? [interface.md](interface.md) is the contract — the result shape every gate returns, exit-code semantics, and what may change between versions.
 
 ## Bringing an existing DHF
 
