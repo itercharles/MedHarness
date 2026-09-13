@@ -81,7 +81,7 @@ class TestLoadSkill:
     def test_req_manage_has_cli_syntax(self):
         text = _load_skill("req_manage.md")
         assert "item create" in text
-        assert "--cr" in text
+        assert "--data" in text
 
     def test_architecture_impact_has_output_template(self):
         text = _load_skill("architecture_impact.md")

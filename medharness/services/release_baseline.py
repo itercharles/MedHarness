@@ -207,7 +207,6 @@ def build_release_baseline(
     out_dir: Path,
     *,
     write: bool = False,
-    author: str = "ci",
 ) -> dict:
     """Build a release baseline, write artifacts, optionally create a REL item.
 
@@ -350,7 +349,7 @@ def build_release_baseline(
                 "known_anomalies": known_anomalies,
                 "release_notes": release_notes,
             }
-            new_item = api.create_item(dhf, rel_data, author=author)
+            new_item = api.create_item(dhf, rel_data)
             rel_uid = new_item["id"]
         except Exception as exc:  # noqa: BLE001
             errors.append(f"Failed to create REL item: {exc}")

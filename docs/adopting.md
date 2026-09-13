@@ -116,8 +116,7 @@ jobs:
           medharness --dhf DHF release baseline \
             --version ${{ steps.ver.outputs.version }} \
             --out-dir artifacts \
-            --write \
-            --author "github-actions[bot]"
+            --write
 
       - name: Commit REL item
         run: |

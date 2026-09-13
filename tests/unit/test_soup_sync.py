@@ -247,7 +247,6 @@ class TestSyncSoupItems:
 
         mock_update.assert_called_once_with(
             tmp_path / "DHF", "SOUP-001", {"version": "8.1.7"},
-            author="ci",
         )
         assert result["items_updated"] == ["SOUP-001"]
 

@@ -32,11 +32,10 @@ def register(main):
                   help="Directory to write release-baseline.json and software-bom.json")
     @click.option("--write", is_flag=True, default=False,
                   help="Create a REL item in the DHF (dry-run by default)")
-    @click.option("--author", default="ci", show_default=True, metavar="NAME")
     @click.pass_context
     def release_baseline_cmd(
         ctx: click.Context, version: str, manifest_paths: tuple[Path, ...],
-        cr_ids: tuple[str, ...], out_dir: Path, write: bool, author: str,
+        cr_ids: tuple[str, ...], out_dir: Path, write: bool,
     ) -> None:
         """Build an IEC 62304 §9 release baseline.
 
@@ -53,7 +52,7 @@ def register(main):
         dhf = Path(dhf)
         result = build_release_baseline(
             dhf, version, list(manifest_paths), list(cr_ids), out_dir,
-            write=write, author=author,
+            write=write,
         )
         click.echo(json.dumps(result))
         if result.get("outcome") == "completed_with_errors":
@@ -77,9 +76,8 @@ def register(main):
                   help="External tool emitting NDJSON components (repeatable).")
     @click.option("--write", is_flag=True, default=False,
                   help="Create or update SOUP items (report-only by default).")
-    @click.option("--author", default="ci", show_default=True, metavar="NAME")
     @click.pass_context
-    def soup_sync(ctx, manifest_paths, extra_commands, write, author) -> None:
+    def soup_sync(ctx, manifest_paths, extra_commands, write) -> None:
         """Compare the SOUP register against the project's dependency manifests.
 
         IEC 62304 §8.1.2 wants the SOUP a release ships to be the SOUP it
@@ -94,7 +92,7 @@ def register(main):
             raise click.ClickException("--dhf is required when not set globally")
         result = sync_soup_items(
             Path(dhf), list(manifest_paths),
-            write=write, author=author,
+            write=write,
             extra_commands=list(extra_commands),
         )
         click.echo(json.dumps(result))

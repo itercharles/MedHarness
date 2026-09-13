@@ -83,10 +83,8 @@ def item_list(ctx: click.Context, doc_type: str | None) -> None:
 @item.command("create")
 @click.option("--type", "doc_type", required=True, metavar="CODE", help="Doc type code (e.g. SYS, SRS).")
 @click.option("--data", required=True, metavar="JSON", help="Item fields as JSON object.")
-@click.option("--author", default="cli", show_default=True, help="Author name for git commit.")
-@click.option("--cr", "cr_id", default=None, metavar="CR_ID", help="Change Request ID.")
 @click.pass_context
-def item_create(ctx: click.Context, doc_type: str, data: str, author: str, cr_id: str | None) -> None:
+def item_create(ctx: click.Context, doc_type: str, data: str) -> None:
     """Create a new DHF item. Outputs the created item as JSON."""
     import json as _json
     try:
@@ -98,7 +96,7 @@ def item_create(ctx: click.Context, doc_type: str, data: str, author: str, cr_id
     adapter = _make_adapter(ctx.obj["dhf"])
     from dhfkit.exceptions import ValidationError
     try:
-        result = adapter.create_item(item_data, author=author, cr_id=cr_id)
+        result = adapter.create_item(item_data)
     except (ValidationError, ValueError) as e:
         click.echo(f"ERROR: {e}", err=True)
         sys.exit(1)
@@ -109,10 +107,8 @@ def item_create(ctx: click.Context, doc_type: str, data: str, author: str, cr_id
 @item.command("update")
 @click.argument("item_id")
 @click.option("--data", required=True, metavar="JSON", help="Fields to update as JSON (merged into existing).")
-@click.option("--author", default="cli", show_default=True, help="Author name for git commit.")
-@click.option("--cr", "cr_id", default=None, metavar="CR_ID", help="Change Request ID.")
 @click.pass_context
-def item_update(ctx: click.Context, item_id: str, data: str, author: str, cr_id: str | None) -> None:
+def item_update(ctx: click.Context, item_id: str, data: str) -> None:
     """Update fields of an existing DHF item."""
     import json as _json
     try:
@@ -121,7 +117,7 @@ def item_update(ctx: click.Context, item_id: str, data: str, author: str, cr_id:
         click.echo(f"ERROR: --data is not valid JSON: {e}", err=True)
         sys.exit(1)
     adapter = _make_adapter(ctx.obj["dhf"])
-    result = adapter.update_item(item_id, update_data, author=author, cr_id=cr_id)
+    result = adapter.update_item(item_id, update_data)
     if result is None:
         click.echo(f"ERROR: Item '{item_id}' not found.", err=True)
         sys.exit(1)
@@ -136,9 +132,8 @@ def item_update(ctx: click.Context, item_id: str, data: str, author: str, cr_id:
 @item.command("transition")
 @click.argument("item_id")
 @click.argument("to_state", required=False)
-@click.option("--by", "performed_by", default="cli", show_default=True, help="User performing the transition.")
 @click.pass_context
-def item_transition(ctx: click.Context, item_id: str, to_state: str | None, performed_by: str) -> None:
+def item_transition(ctx: click.Context, item_id: str, to_state: str | None) -> None:
     """Move an item to TO_STATE, or list where it can go when TO_STATE is omitted."""
     adapter = _make_adapter(ctx.obj["dhf"])
     if to_state is None:
@@ -153,7 +148,7 @@ def item_transition(ctx: click.Context, item_id: str, to_state: str | None, perf
         }, default=str))
         return
     try:
-        result = adapter.execute_transition(item_id, to_state, performed_by=performed_by)
+        result = adapter.execute_transition(item_id, to_state)
     except ValueError as e:
         click.echo(f"ERROR: {e}", err=True)
         sys.exit(1)
