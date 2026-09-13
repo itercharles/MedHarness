@@ -88,7 +88,7 @@ def _validate_schema_and_traceability(_api, dhf_path: Path) -> list[dict]:
         errors.append({
             "field": "traceability",
             "issue": f"Traceability validation raised: {exc}",
-            "fix": "Run `dhfkit --dhf DHF validate traceability` locally to reproduce.",
+            "fix": "Run `medharness --dhf DHF verify dhf` locally to reproduce.",
         })
         trace_result = {"passed": True}
 

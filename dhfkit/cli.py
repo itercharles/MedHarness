@@ -409,7 +409,7 @@ def init_cmd(ctx: click.Context, project_name: str) -> None:
     Example:
         dhfkit --dhf path/to/DHF init --project-name "My Device"
         dhfkit --dhf path/to/DHF item create SYS --data '{"title": "..."}'
-        dhfkit --dhf path/to/DHF validate traceability
+        dhfkit --dhf path/to/DHF validate schema
     """
     dhf_path: Path = ctx.obj["dhf"]
     _templates = Path(__file__).parent / "templates"
@@ -494,4 +494,4 @@ def init_cmd(ctx: click.Context, project_name: str) -> None:
     click.echo(f"DHF initialised at {dhf_path}", err=True)
     click.echo("Next steps:", err=True)
     click.echo(f"  dhfkit --dhf {dhf_path} item create SYS --data '{{\"title\": \"My first requirement\"}}'", err=True)
-    click.echo(f"  dhfkit --dhf {dhf_path} validate traceability", err=True)
+    click.echo(f"  medharness --dhf {dhf_path} verify dhf", err=True)
