@@ -357,7 +357,7 @@ Run after the branch is merged. Checks:
 
 Exits non-zero and prints `FAIL [cr-complete]` lines for each gap.
 
-## Syncing SOUP items from dependency manifests (`medharness analyse soup-drift`)
+## Syncing SOUP items from dependency manifests (`medharness soup-sync`)
 
 The `soup-sync` command reads dependency files from your project and creates or updates SOUP items in the DHF. It supports nine lockfile/manifest formats across multiple ecosystems:
 
@@ -378,14 +378,14 @@ The `soup-sync` command reads dependency files from your project and creates or 
 With no flags, `soup-sync` looks for the supported files in the project root automatically:
 
 ```bash
-medharness --dhf DHF analyse soup-drift
+medharness --dhf DHF soup-sync
 ```
 
 To target a specific file:
 
 ```bash
-medharness --dhf DHF analyse soup-drift --manifest uv.lock
-medharness --dhf DHF analyse soup-drift --manifest go.mod --manifest Cargo.lock
+medharness --dhf DHF soup-sync --manifest uv.lock
+medharness --dhf DHF soup-sync --manifest go.mod --manifest Cargo.lock
 ```
 
 ### Persistent source configuration (`soup-sources.yaml`)
@@ -430,8 +430,8 @@ Source priority when multiple are configured: explicit `--manifest` flags → `-
 By default `soup-sync` prints a diff and exits. Pass `--write` to create and update SOUP items:
 
 ```bash
-medharness --dhf DHF analyse soup-drift --write
-medharness --dhf DHF analyse soup-drift --write --manifest uv.lock --cr CR-042
+medharness --dhf DHF soup-sync --write
+medharness --dhf DHF soup-sync --write --manifest uv.lock --cr CR-042
 ```
 
 ## Exporting an SBOM (`dhfkit sbom`)

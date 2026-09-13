@@ -536,36 +536,26 @@ def diff_against_dhf(
 from dhfkit.paths import config_file
 
 
-def sync_soup_items(
+def collect_manifest_packages(
     dhf: Path,
-    manifest_paths: list[Path],
+    manifest_paths: list[Path] | None = None,
     *,
-    write: bool = False,
-    author: str = "ci",
-    cr_id: Optional[str] = None,
     extra_commands: list[str] | None = None,
     use_sources_file: bool = True,
-) -> dict:
-    """Parse manifests, diff against DHF SOUP items, optionally write changes.
+) -> tuple[list[dict], list[str], list[str]]:
+    """Every package the project's manifests resolve, deduplicated by name.
 
-    Source priority (highest wins on name collision):
-    1. Explicit ``manifest_paths``
-    2. ``extra_commands`` (--from-command)
-    3. ``DHF/config/soup-sources.yaml`` (when ``use_sources_file=True``)
-    4. Auto-discovery of manifest files in the project root (when all above
-       are empty and no sources file is present)
-
-    Returns a structured result dict with outcome and counts.
+    Returns ``(packages, manifests_parsed, errors)``. Shared by the read-only
+    drift half of the SOUP gate and by the write action, so the two can never
+    disagree about what the manifests say.
     """
-    import dhfkit.api as api
-
     errors: list[str] = []
     packages: list[dict] = []
     manifests_parsed: list[str] = []
     project_dir = dhf.parent
 
     # 1. Explicit manifest paths
-    for path in manifest_paths:
+    for path in manifest_paths or []:
         try:
             pkgs = _dispatch_parser(path)
             packages.extend(pkgs)
@@ -611,6 +601,37 @@ def sync_soup_items(
             seen.add(key)
             deduped.append(pkg)
     packages = deduped
+
+    return packages, manifests_parsed, errors
+
+
+def sync_soup_items(
+    dhf: Path,
+    manifest_paths: list[Path],
+    *,
+    write: bool = False,
+    author: str = "ci",
+    cr_id: Optional[str] = None,
+    extra_commands: list[str] | None = None,
+    use_sources_file: bool = True,
+) -> dict:
+    """Parse manifests, diff against DHF SOUP items, optionally write changes.
+
+    Source priority (highest wins on name collision):
+    1. Explicit ``manifest_paths``
+    2. ``extra_commands`` (--from-command)
+    3. ``DHF/config/soup-sources.yaml`` (when ``use_sources_file=True``)
+    4. Auto-discovery of manifest files in the project root (when all above
+       are empty and no sources file is present)
+
+    Returns a structured result dict with outcome and counts.
+    """
+    import dhfkit.api as api
+
+    packages, manifests_parsed, errors = collect_manifest_packages(
+        dhf, list(manifest_paths),
+        extra_commands=extra_commands, use_sources_file=use_sources_file,
+    )
 
     soup_items: list[dict] = []
     try:

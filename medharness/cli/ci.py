@@ -617,11 +617,25 @@ def register(main):
 
     @verify.command("soup")
     @click.option("--dhf", "dhf_path", type=click.Path(file_okay=False, path_type=Path))
+    @click.option("--manifest", "manifest_paths", multiple=True,
+                  type=click.Path(exists=True, dir_okay=False, path_type=Path),
+                  metavar="PATH",
+                  help="Dependency manifest to compare the register against (repeatable). "
+                       "Auto-discovers when omitted.")
+    @click.option("--fail-on-drift", is_flag=True, default=False,
+                  help="Make an undocumented or misversioned component fail the gate. "
+                       "Warns by default, so a project backfilling its register is not blocked.")
     @click.option("--offline-mode", type=click.Choice(["fail", "warn"]), default="fail",
                   help="Behaviour when osv.dev is unreachable. 'warn' keeps the gate "
                        "passing for air-gapped or proxy-restricted pipelines.")
     @click.pass_context
-    def verify_soup(ctx: click.Context, dhf_path: Path | None, offline_mode: str) -> None:
+    def verify_soup(
+        ctx: click.Context,
+        dhf_path: Path | None,
+        manifest_paths: tuple[Path, ...],
+        fail_on_drift: bool,
+        offline_mode: str,
+    ) -> None:
         """Check SOUP items against the OSV vulnerability database.
 
         SOUP items must have an 'ecosystem' field (e.g. PyPI, npm) to be checked.
@@ -638,12 +652,13 @@ def register(main):
 
         Outputs structured JSON to stdout; human-readable messages to stderr.
         """
-        from medharness.services.ci import soup_vuln_gate
+        from medharness.services.ci import soup_gate
 
         effective_dhf = dhf_path or ctx.obj.get("dhf")
         if effective_dhf is None:
             raise click.ClickException("--dhf is required when not set globally")
-        result = soup_vuln_gate(effective_dhf, offline_mode=offline_mode)
+        result = soup_gate(effective_dhf, offline_mode=offline_mode,
+                           manifest_paths=list(manifest_paths), fail_on_drift=fail_on_drift)
         click.echo(json.dumps(result))
 
         for item in _d(result).get("skipped", []):
@@ -654,10 +669,26 @@ def register(main):
                 f"{entry['vuln_id']} — {entry['rationale']}",
                 err=True,
             )
+        drift = _d(result).get("drift") or {}
+        label = "FAIL" if drift.get("blocking") else "WARN"
+        for name in drift.get("undocumented", []):
+            click.echo(f"{label} [soup-drift] {name} ships but has no SOUP item — "
+                       f"it is also never scanned for vulnerabilities.", err=True)
+        for note in drift.get("misversioned", []):
+            click.echo(f"{label} [soup-drift] {note}", err=True)
+        for soup_id in drift.get("no_longer_shipped", []):
+            click.echo(f"WARN [soup-drift] {soup_id} is in the register but no "
+                       f"manifest resolves it.", err=True)
+        for problem in drift.get("errors", []):
+            click.echo(f"WARN [soup-drift] {problem}", err=True)
+        if (drift.get("undocumented") or drift.get("misversioned")) and not drift.get("blocking"):
+            click.echo("    Fix: medharness --dhf DHF soup-sync --write, then commit. "
+                       "Pass --fail-on-drift to block the build on this.", err=True)
+
         _render_envelope(result, "soup-vuln")
         click.echo(result["summary"], err=True)
         if not result["passed"]:
-            raise click.ClickException("SOUP vulnerability check failed.")
+            raise click.ClickException("SOUP check failed.")
 
     @verify.command("branch")
     @click.option("--cr", "cr_id", required=True, metavar="CR_ID")

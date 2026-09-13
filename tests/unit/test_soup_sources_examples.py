@@ -123,7 +123,7 @@ class TestTheCommandSourceRunsForReal:
             "                                'ecosystem': 'npm'}))\n"
             "      \"\n"
         )
-        r = CliRunner().invoke(main, ["--dhf", str(dhf), "analyse", "soup-drift", "--write"])
+        r = CliRunner().invoke(main, ["--dhf", str(dhf), "soup-sync", "--write"])
         payload = json.loads(r.stdout.splitlines()[0])
         assert payload["outcome"] == "completed", payload["errors"]
         assert payload["packages_found"] == 1

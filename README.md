@@ -190,8 +190,7 @@ Both take `--dhf DHF`; `dhfkit` also reads `COMPLIANTFLOW_DHF`.
 
 | | |
 |---|---|
-| `medharness analyse risk-impact --since-ref origin/main` | which risks this change touches (ISO 14971) |
-| `medharness analyse soup-drift` | the SOUP register against the project's manifests; `--write` to apply |
+| `medharness soup-sync --write` | update the SOUP register from the project's manifests |
 
 ### Gates — each exits non-zero on failure, JSON on stdout
 

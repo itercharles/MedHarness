@@ -69,11 +69,7 @@ def register(main):
             err=True,
         )
 
-    @main.group("analyse")
-    def analyse() -> None:
-        """Analysis over the whole item set."""
-
-    @analyse.command("soup-drift")
+    @main.command("soup-sync")
     @click.option("--manifest", "manifest_paths", multiple=True,
                   type=click.Path(exists=True, dir_okay=False, path_type=Path),
                   metavar="PATH", help="Manifest to read (repeatable). Auto-discovers when omitted.")
@@ -84,7 +80,7 @@ def register(main):
     @click.option("--author", default="ci", show_default=True, metavar="NAME")
     @click.option("--cr", "cr_id", default=None, metavar="CR_ID")
     @click.pass_context
-    def soup_drift(ctx, manifest_paths, extra_commands, write, author, cr_id) -> None:
+    def soup_sync(ctx, manifest_paths, extra_commands, write, author, cr_id) -> None:
         """Compare the SOUP register against the project's dependency manifests.
 
         IEC 62304 §8.1.2 wants the SOUP a release ships to be the SOUP it
@@ -108,7 +104,7 @@ def register(main):
             f"{len(result.get('items_updated', []))} updated)" if write else " (dry-run)"
         )
         click.echo(
-            f"OK soup-drift{written}: +{len(result.get('to_create') or [])} new, "
+            f"OK soup-sync{written}: +{len(result.get('to_create') or [])} new, "
             f"~{len(result.get('to_update') or [])} drift, "
             f"{len(result.get('orphans') or [])} orphan(s), "
             f"{result.get('matched_count', 0)} matched.", err=True,
@@ -118,50 +114,3 @@ def register(main):
                 click.echo(f"  FAIL: {err}", err=True)
             sys.exit(1)
 
-    @analyse.command("risk-impact")
-    @click.option("--since-ref", default="origin/main", show_default=True, metavar="REF")
-    @click.pass_context
-    def risk_impact(ctx: click.Context, since_ref: str) -> None:
-        """Which risks the changes since SINCE_REF touch.
-
-        Walks the link graph backwards: a changed item, the risk controls that
-        implement it, the hazards those controls mitigate. ISO 14971 asks for risk
-        to be reassessed when a change affects it, and nothing else in the toolchain
-        can answer which risks those are — a single-item store has no graph to walk.
-        """
-        from dhfkit.local_adapter import LocalDHFAdapter
-        from medharness.services.git import collect_dhf_item_changes
-        from medharness.services.traceability import find_affected_risks
-
-        dhf = ctx.obj.get("dhf")
-        if dhf is None:
-            raise click.ClickException("--dhf is required when not set globally")
-        dhf_path = Path(dhf)
-        changes = collect_dhf_item_changes(dhf_path.parent, since_ref)
-        changed_ids = set(changes["created"] + changes["updated"] + changes["deleted"])
-
-        adapter = LocalDHFAdapter(dhf_path)
-        risks = find_affected_risks(changed_ids, adapter.list_items(), adapter.config)
-
-        click.echo(json.dumps({
-            "since_ref": since_ref,
-            "changed_items": sorted(changed_ids),
-            "affected_risks": risks,
-        }, default=str))
-
-        if not changed_ids:
-            click.echo(f"No DHF items changed since {since_ref}.", err=True)
-            return
-        if not risks:
-            click.echo(
-                f"{len(changed_ids)} item(s) changed since {since_ref}; none trace to a RISK.",
-                err=True,
-            )
-            return
-        for r in risks:
-            click.echo(f"RISK {r['risk_id']}  {r.get('title', '')}", err=True)
-            click.echo(f"    via {', '.join(r['via_rcms'])}", err=True)
-        click.echo(
-            f"{len(risks)} risk(s) affected by {len(changed_ids)} changed item(s) "
-            f"since {since_ref}. ISO 14971 asks each to be reassessed.", err=True,
-        )
