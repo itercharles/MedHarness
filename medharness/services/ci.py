@@ -1198,7 +1198,9 @@ def _check_cr_fields(cr_item: dict, cr_id: str) -> list[dict]:
     return issues
 
 
-def _check_design_review(dhf_path: Path, cr_id: str) -> list[dict]:
+def _check_design_review(
+    dhf_path: Path, cr_id: str, pr_number: int | None = None
+) -> list[dict]:
     """Check that the design stage was approved.
 
     An APR item is the record of record: it is a DHF item, so it appears in the
@@ -1209,6 +1211,24 @@ def _check_design_review(dhf_path: Path, cr_id: str) -> list[dict]:
     projects mid-flight are not stranded; `dhfkit approval import` converts it.
     """
     from dhfkit.approval import find_approvals
+
+    # A pull request is the AI workflow's approval record: the review carries
+    # author, time and the commit it covers, and nothing here can rewrite it.
+    # `approval check` reads the same thing, so the two gates cannot disagree
+    # about whether a stage was approved. An APR item remains the record for an
+    # approval that never had a PR.
+    if pr_number is not None:
+        from medharness.services.pr_approval import approval_evidence
+
+        evidence = approval_evidence(pr_number, "design")
+        if evidence["approved"]:
+            return []
+        return [{
+            "field": "design_review",
+            "issue": (
+                f"CR {cr_id} — {evidence['reason']} on PR #{pr_number}."
+            ),
+        }]
 
     try:
         approvals = find_approvals(dhf_path, approves=cr_id, stage="design")
@@ -1279,6 +1299,8 @@ def cr_closure_gate(
     cr_id: str,
     dhf_path: Path,
     junit_paths: tuple[Path, ...] = (),
+    *,
+    pr_number: int | None = None,
 ) -> dict:
     """Verify that a CR is fully closed: all proposed items created and verified.
 
@@ -1316,7 +1338,7 @@ def cr_closure_gate(
     # field via `dhf item update` so it persists in the CR YAML alongside the CR itself.
     cr_item = adapter.get_item(cr_id) or {}
     incomplete_cr_fields = _check_cr_fields(cr_item, cr_id)
-    incomplete_cr_fields.extend(_check_design_review(dhf_path, cr_id))
+    incomplete_cr_fields.extend(_check_design_review(dhf_path, cr_id, pr_number))
 
     raw = cr_item.get("proposed_new_items")
     if raw is None:

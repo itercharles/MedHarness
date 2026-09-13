@@ -511,6 +511,10 @@ def register(main):
     @click.option("--dhf", "dhf_path", type=click.Path(file_okay=False, path_type=Path))
     @click.option("--junit-dir", "junit_dirs", multiple=True, type=click.Path(file_okay=False, path_type=Path))
     @click.option("--junit", "junit_files", multiple=True, type=click.Path(exists=True, dir_okay=False, path_type=Path))
+    @click.option("--pr", "pr_number", type=int, default=None, metavar="N",
+                  help="Read the design approval from this pull request's reviews, "
+                       "the same evidence `approval check` uses. Without it, an APR "
+                       "item is required instead.")
     @click.pass_context
     def verify_completion(
         ctx: click.Context,
@@ -518,6 +522,7 @@ def register(main):
         dhf_path: Path | None,
         junit_dirs: tuple[Path, ...],
         junit_files: tuple[Path, ...],
+        pr_number: int | None,
     ) -> None:
         """Verify CR closure: all proposed items created and verification evidence present.
 
@@ -533,7 +538,8 @@ def register(main):
         if effective_dhf is None:
             raise click.ClickException("--dhf is required when not set globally")
         junit_paths = _h._collect_junit_paths(junit_files, junit_dirs)
-        result = cr_closure_gate(cr_id=cr_id, dhf_path=effective_dhf, junit_paths=junit_paths)
+        result = cr_closure_gate(cr_id=cr_id, dhf_path=effective_dhf,
+                                 junit_paths=junit_paths, pr_number=pr_number)
         click.echo(json.dumps(result))
 
         for field in _d(result).get("incomplete_cr_fields", []):
