@@ -85,15 +85,11 @@ across non-adjacent tiers unless the project's traceability rules explicitly all
 # Create a new item (use the type code from the Type Registry)
 python -m dhfkit --dhf DHF item create \
   --type <TYPE> \
-  --data '<JSON>' \
-  --author "github-actions[bot]" \
-  --cr "<CR_ID>"
+  --data '<JSON>'
 
 # Update an existing item
 python -m dhfkit --dhf DHF item update <ITEM_ID> \
-  --data '<JSON>' \
-  --author "github-actions[bot]" \
-  --cr "<CR_ID>"
+  --data '<JSON>'
 ```
 
 IDs are assigned automatically on creation.

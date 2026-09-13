@@ -66,16 +66,14 @@ CR ID: {{cr_id}}
       case), update the field to reflect what was actually built:
 
           python -m dhfkit --dhf DHF item update {{cr_id}} \
-            --data '{"implementation_notes": "<updated plan>"}' \
-            --author "github-actions[bot]" --cr "{{cr_id}}"
+            --data '{"implementation_notes": "<updated plan>"}'
 
    b. **Code vs SWDD** — if a module ended up structured differently than its
       SWDD describes (component split, interface changed shape), update the
       SWDD to match:
 
           python -m dhfkit --dhf DHF item update <SWDD-ID> \
-            --data '{"content": "<updated description>"}' \
-            --author "github-actions[bot]" --cr "{{cr_id}}"
+            --data '{"content": "<updated description>"}'
 
    If nothing deviated, no updates are needed — do not make cosmetic edits.
 

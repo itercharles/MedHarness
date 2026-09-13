@@ -32,22 +32,14 @@ class FakeAdapter:
     def create_item(
         self,
         data: dict[str, Any],
-        author: str = "system",
-        cr_id: str | None = None,
     ) -> dict[str, Any]:
-        self.created_author = author
         self.created_data = data
         created = {"id": self.created_id, **data}
         self.items.append(created)
         return created
 
-    def execute_transition(
-        self,
-        item_id: str,
-        to_state: str,
-        performed_by: str | None = None,
-    ) -> dict[str, Any]:
-        transition = {"id": item_id, "status": to_state, "performed_by": performed_by}
+    def execute_transition(self, item_id: str, to_state: str) -> dict[str, Any]:
+        transition = {"id": item_id, "status": to_state}
         self.transitions.append(transition)
         return transition
 
@@ -100,7 +92,6 @@ def test_prepare_change_request_creates_with_adapter():
     assert result.cr_id == "CR-034"
     assert result.branch == "cr/CR-034-from-issue-123-add-weekly-cr-intake"
     assert result.title == "cr(CR-034): Add weekly CR intake"
-    assert adapter.created_author == "issue-to-cr"
     assert adapter.created_data == build_change_request_data(make_request())
 
 
@@ -136,12 +127,12 @@ def test_prepare_change_request_dry_run_uses_next_id():
 
 def test_complete_change_request_transitions_to_completed():
     adapter = FakeAdapter([{"id": "CR-043", "status": "implementing"}])
-    result = complete_change_request(adapter, "CR-043", performed_by="github-actions[bot]")
+    result = complete_change_request(adapter, "CR-043")
 
-    assert result == {"id": "CR-043", "status": "completed", "performed_by": "github-actions[bot]"}
+    assert result == {"id": "CR-043", "status": "completed"}
     assert adapter.transitions == [result]
 
 
 def test_complete_change_request_fails_when_missing():
     with pytest.raises(ValueError, match="CR 'CR-999' not found"):
-        complete_change_request(FakeAdapter(), "CR-999", performed_by="system")
+        complete_change_request(FakeAdapter(), "CR-999")

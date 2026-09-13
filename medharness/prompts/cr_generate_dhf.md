@@ -33,8 +33,7 @@ Before generating any DHF items, evaluate whether the CR should proceed.
 **If the CR should be rejected**, update the CR item with the rejection reason and stop:
 
     python -m dhfkit --dhf DHF item update {{cr_id}} \
-      --data '{"status": "rejected", "impact_assessment": "<reason for rejection>"}' \
-      --author "github-actions[bot]" --cr "{{cr_id}}"
+      --data '{"status": "rejected", "impact_assessment": "<reason for rejection>"}'
 
 Do **not** generate any DHF items if rejecting. Output a brief explanation of the
 rejection reason and stop.
@@ -42,8 +41,7 @@ rejection reason and stop.
 **If the CR is approved**, record the triage findings before proceeding:
 
     python -m dhfkit --dhf DHF item update {{cr_id}} \
-      --data '{"triage_result": {"verdict": "approved", "complexity": "<small|medium|large>", "affected_subsystems": ["<name>"], "related_crs": [], "notes": "<one sentence: why approved and the key constraint>"}}' \
-      --author "github-actions[bot]" --cr "{{cr_id}}"
+      --data '{"triage_result": {"verdict": "approved", "complexity": "<small|medium|large>", "affected_subsystems": ["<name>"], "related_crs": [], "notes": "<one sentence: why approved and the key constraint>"}}'
 
 Complexity scale: `small` = 1 subsystem, <5 DHF items likely; `medium` = 2 subsystems
 or 5–15 items; `large` = 3+ subsystems or >15 items.
@@ -139,14 +137,12 @@ absent or vague, add or improve it.
 **Create a new item (ID assigned automatically):**
 
     python -m dhfkit --dhf DHF item create \
-      --type <TYPE> --data '<JSON>' \
-      --author "github-actions[bot]" --cr "{{cr_id}}"
+      --type <TYPE> --data '<JSON>'
 
 **Update an existing item:**
 
     python -m dhfkit --dhf DHF item update <ITEM_ID> \
-      --data '<JSON>' \
-      --author "github-actions[bot]" --cr "{{cr_id}}"
+      --data '<JSON>'
 
 **List items for context:**
 
@@ -192,8 +188,7 @@ SRS/SYS item IDs that each test covers.
 Write this to the CR item:
 
     python -m dhfkit --dhf DHF item update {{cr_id}} \
-      --data '{"implementation_notes": "<plan>"}' \
-      --author "github-actions[bot]" --cr "{{cr_id}}"
+      --data '{"implementation_notes": "<plan>"}'
 
 ## Inline Validation Hook
 
@@ -222,8 +217,7 @@ relevant to this CR — even if they required no structural changes.
    determined are relevant but unchanged — and write them to the CR:
 
        python -m dhfkit --dhf DHF item update {{cr_id}} \
-         --data '{"affected_risk_items": ["RISK-001", "RCM-002"]}' \
-         --author "github-actions[bot]" --cr "{{cr_id}}"
+         --data '{"affected_risk_items": ["RISK-001", "RCM-002"]}'
 
    Use `[]` if no risk items are relevant. Do not omit this step.
 
@@ -241,8 +235,7 @@ reads this field from the CR item to verify every promised item was materialised
 
 ```
 python -m dhfkit --dhf DHF item update {{cr_id}} \
-  --data '{"proposed_new_items": [{"type": "SRS", "title": "Rate limit input validation"}, {"type": "RISK", "title": "Unintended data modification from concurrent edits"}, {"type": "RCM", "title": "Optimistic-lock concurrency control for edit sessions"}]}' \
-  --author "github-actions[bot]" --cr "{{cr_id}}"
+  --data '{"proposed_new_items": [{"type": "SRS", "title": "Rate limit input validation"}, {"type": "RISK", "title": "Unintended data modification from concurrent edits"}, {"type": "RCM", "title": "Optimistic-lock concurrency control for edit sessions"}]}'
 ```
 
    Each entry's `title` must match the `title:` field of the created DHF item.

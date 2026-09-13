@@ -225,12 +225,13 @@ class TestCiApproveGate:
     def test_an_approved_stage_passes_and_names_the_reviewer(self):
         with patch("medharness.services.pr_approval.approval_evidence",
                    return_value=self.EVIDENCE):
-            r = CliRunner().invoke(main, ["approval", "check", "--cr", "CR-001",
+            r = CliRunner().invoke(main, ["change", "verify-approval", "--cr", "CR-001",
                                           "--stage", "design", "--pr", "42"])
         assert r.exit_code == 0, r.output
         payload = _first_json_line(r.output)
-        assert payload["approved"] is True
-        assert payload["approvals"][0]["by"] == "reviewer"
+        assert payload["passed"] is True
+        assert payload["details"]["approved"] is True
+        assert payload["details"]["approvals"][0]["by"] == "reviewer"
         assert "reviewer" in r.output
 
     def test_a_stale_approval_fails_and_says_which_commit(self):
@@ -243,7 +244,7 @@ class TestCiApproveGate:
         }
         with patch("medharness.services.pr_approval.approval_evidence",
                    return_value=evidence):
-            r = CliRunner().invoke(main, ["approval", "check", "--cr", "CR-001",
+            r = CliRunner().invoke(main, ["change", "verify-approval", "--cr", "CR-001",
                                           "--stage", "design", "--pr", "42"])
         assert r.exit_code == 1
         assert "earlier commit" in r.output
@@ -252,9 +253,9 @@ class TestCiApproveGate:
     def test_the_payload_no_longer_carries_a_label(self):
         with patch("medharness.services.pr_approval.approval_evidence",
                    return_value=self.EVIDENCE):
-            r = CliRunner().invoke(main, ["approval", "check", "--cr", "CR-001",
+            r = CliRunner().invoke(main, ["change", "verify-approval", "--cr", "CR-001",
                                           "--stage", "design", "--pr", "42"])
-        assert "label" not in _first_json_line(r.output)
+        assert "label" not in json.dumps(_first_json_line(r.output))
 
 
 

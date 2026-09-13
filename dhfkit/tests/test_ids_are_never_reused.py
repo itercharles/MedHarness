@@ -40,7 +40,7 @@ def repo(tmp_path: Path) -> Path:
 
 def _new_srs(dhf: Path, title: str) -> str:
     return api.create_item(
-        dhf, {"type": "SRS", "title": title, "derives_from": ["SYS-001"]}, author="t"
+        dhf, {"type": "SRS", "title": title, "derives_from": ["SYS-001"]}
     )["id"]
 
 

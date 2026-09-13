@@ -22,7 +22,7 @@ MedHarness ships two Python packages from a single repository:
 - CLI surface and user-facing onboarding (`medharness init`)
 - Verification commands (`verify dhf`, `verify tests`, `change verify-branch`, `evidence bundle`)
 - AI-assisted CR generation (`change plan`, `change implement`)
-- Approval as evidence (`approval check` — an approving review of the merged commit)
+- Approval as evidence (`change verify-approval` — an approving review of the merged commit)
 - CR workflow orchestration (`cr workflow`, `cr check-status`)
 - DHF repo scaffolding from bundled templates (`medharness init`, `medharness upgrade`)
 - Environment and setup diagnostics (`medharness doctor`)

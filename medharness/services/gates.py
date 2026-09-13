@@ -1,17 +1,14 @@
 """Machine-readable description of the verification gates.
 
-Two consumers, one artifact: an agent discovering what it can call, and a person
-wiring a pipeline deciding what to run. Both need the same facts — what a gate
-checks, what it needs, and whether its failure stops a build.
-
 CI is deliberately not scaffolded, because a pipeline carries a project's runner
 labels, secrets, and branch names. That decision only holds up if the interface
-is described well enough to build against, which is what this is.
+is described well enough to build against, which is what this is: `docs/interface.md`
+is written from these facts and checked against them.
 
 The registry is hand-written rather than derived from Click, because the facts
-that matter most — whether a gate blocks, whether it reaches the network, which
-clause it serves — are not expressible as command metadata. A test asserts the
-registry and the CLI agree, so it cannot drift.
+that matter most — whether a gate blocks, whether it reaches the network — are
+not expressible as command metadata. Tests assert both directions: every gate
+command appears here, and every option declared here exists on the command.
 """
 
 from __future__ import annotations
@@ -98,13 +95,28 @@ GATES: tuple[dict[str, Any], ...] = (
         "command": "change verify-branch",
         "checks": "That a branch carries the DHF and code changes its CR implies.",
         "options": {
-            "required": ["--cr"],
+            "required": ["--dhf", "--cr"],
             "optional": ["--since-ref", "--code-path"],
         },
         "blocking": "always",
         "blocking_note": "Code-change enforcement applies only when --code-path "
                          "is given.",
         "needs_network": False,
+        "needs_safety_class": False,
+    },
+    {
+        "command": "change verify-approval",
+        "checks": "That an approving review on the PR names the commit being "
+                  "merged, so the approval covers what ships.",
+        "options": {
+            "required": ["--cr", "--stage", "--pr"],
+            "optional": ["--token"],
+        },
+        "blocking": "always",
+        "blocking_note": "An approval of an earlier commit is stale and fails. "
+                         "--stage is recorded, not searched on: the commit is "
+                         "what separates the stages.",
+        "needs_network": True,
         "needs_safety_class": False,
     },
 )

@@ -142,7 +142,6 @@ def execute_transition(
     update_item_fn,
     item_id: str,
     to_state: str,
-    performed_by: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Execute a lifecycle transition.
 
@@ -152,7 +151,6 @@ def execute_transition(
         update_item_fn: Callable(uid, data) -> dict — persist item.
         item_id:        UID of the item to transition.
         to_state:       Target state ID.
-        performed_by:   User performing the transition (for audit trail).
 
     Raises:
         ValueError: if item not found, transition not allowed, or criteria unmet.

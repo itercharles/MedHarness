@@ -148,7 +148,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - run: pip install medharness==0.25.0
+      - run: pip install medharness==0.26.0
       - run: medharness --dhf DHF verify dhf --fail-on-uncovered
 ```
 
@@ -165,73 +165,99 @@ with evidence bundles and release baselines.
 
 ## Commands
 
-`dhfkit` owns DHF **data** — storage and retrieval. `medharness` owns the
-**analysis over the item set** and the process around it. A team whose DHF
-already lives in Jira or Azure DevOps keeps that and still needs the analysis.
+`dhfkit` owns DHF **data** — storage and retrieval, no analysis. `medharness`
+owns the **analysis over the item set** and the process around it. A team whose
+DHF already lives in Jira or Azure DevOps keeps that and still needs the
+analysis.
 
 Both take `--dhf DHF`; `dhfkit` also reads `COMPLIANTFLOW_DHF`.
+Every command writes JSON to stdout and human-readable lines to stderr, so
+`cmd > out.json` gives you the payload and the terminal still reads normally.
 
-### Storing and reading the DHF — `dhfkit`
+**Gates** — `verify *` and `change verify-*` — all answer with the same
+envelope, so one CI step can handle any of them:
 
-| | |
-|---|---|
-| `dhfkit item list --type SYS` | every item of a type |
-| `dhfkit item get SRS-012` | one item, with its fields and links |
-| `dhfkit item create --type SRS --data '{...}'` | add an item |
-| `dhfkit item update SRS-012 --data '{...}'` | change fields on an item |
-| `dhfkit item transition CR-034 completed` | move an item; omit the state to list where it can go |
-| `dhfkit validate schema` | every item matches its doc-type schema |
-| `dhfkit doc generate SYS` | build a specification from the items |
-| `dhfkit doc export SYS` | self-contained HTML, or PDF with `[docs]` |
-| `dhfkit sbom` | CycloneDX 1.6 SBOM from the SOUP register |
-| `dhfkit init` | a minimal standalone DHF, no AI harness |
+```json
+{"gate": "verify dhf", "passed": false, "summary": "FAIL — 1 link cycle(s)",
+ "errors": ["..."], "warnings": ["..."], "details": {}}
+```
 
-### Analysis over the whole set — what a single-item store cannot answer
+`0` the gate passed · `1` it failed (JSON on stdout) or a usage error was raised
+before it ran (no stdout) · `2` argument parsing failed.
 
-| | |
-|---|---|
-| `medharness soup-sync --write` | update the SOUP register from the project's manifests |
+### Gates on the DHF — no CR needed
 
-### Gates on the DHF — no CR needed, JSON on stdout, non-zero on failure
+Run these on any DHF, whether or not the project uses the AI change workflow.
 
-| | |
-|---|---|
-| `medharness verify dhf` | coverage, cycles, dangling links, required traceability |
-| `medharness verify tests --junit-dir test-results` | every requirement verified by its declared method |
-| `medharness verify soup` | the SOUP register against the manifests, and against OSV |
-| `medharness verify classification` | IEC 62304 §4.3 safety class and the §5.1 plans it requires |
+| Command | Returns in `details` | Use it when |
+|---|---|---|
+| `medharness verify dhf` | `results.schema`, `results.traceability` (required-rule failures, dangling links, cycles), `results.coverage` | Every push. This is the one gate a DHF cannot do without: it is the only check that reads the items *together* and asks whether the V-model closes. |
+| `medharness verify tests --junit-dir test-results` | `missing_method`, `unverified_test`, `manual_review_required` | After the test job, to prove each requirement was verified **by the method it declared** — a Test-verified requirement needs a passing linked test, not just any evidence. |
+| `medharness verify soup --manifest requirements.txt` | `drift` (register vs manifests), `vulnerabilities` (OSV), `accepted` | Nightly and before a release. Answers both §8.1.2 questions at once: is the register what actually ships, and is any of it known-vulnerable. `--offline-mode warn` for air-gapped runners. |
+| `medharness verify classification` | `safety_class`, `missing_plans`, `rationale` | Once a safety class is declared, to check the §5.1 plans that class requires exist. Warns and exits 0 until you declare one, so it is safe to wire before you have decided. |
+
+### Gates on a change request
+
+These read fields `change plan` writes, so they apply only to a project running
+the CR workflow. A PR with no CR passes them.
+
+| Command | Returns in `details` | Use it when |
+|---|---|---|
+| `medharness change verify-branch --cr CR-034` | `promised_but_unchanged`, `cr_found`, `findings` | On the PR. Checks the branch actually changed the items the CR listed in `affected_items` — a CR that promised to touch SYS-001 and did not is caught before review, not after. |
+| `medharness change verify-completion --cr CR-034 --junit-dir test-results` | `incomplete_cr_fields`, `missing_items`, `verification_gaps`, `unverified_test`, `manual_review_required` | Twice. On the branch to block the merge — the CR fields, the approval and the proposed items settle there. Again on `main`, where the tests re-run against whatever else landed. Reports only items **this CR** touched. |
+| `medharness change verify-approval --cr CR-034 --stage design --pr 42` | `approved`, `approvals`, `stale_approvals`, `head_sha`, `stage` | Before merging. Requires an approving GitHub review whose commit is the one being merged; an approval of an earlier commit is reported as stale and fails. `--stage` is recorded, not searched on — the commit is what separates design from develop. Needs `GH_TOKEN`. |
 
 ### The AI change workflow
 
-These read fields `change plan` writes, so they apply only to a project running
-the CR workflow. A PR with no CR is not their business.
+| Command | Returns | Use it when |
+|---|---|---|
+| `medharness change plan --cr CR-034` | `outcome`, `items_changed`, `review_cycles`, `diagnostics` | The CR has been triaged. Drafts the whole DHF item cascade and the impact analysis, then validates its own output and fixes what it broke. |
+| `medharness change implement --cr CR-034` | `outcome`, `files_changed`, `review_cycles` | The design is approved. Writes code and tests against the cascade. `--pr 42` revises from review feedback; `--ci-failures` from a failing run. |
+| `medharness automation github-event` | `cr_id`, `stage`, `action`, `pr_number`, `mode`, `reason` | First step of a workflow. Reads the GitHub event and says which CR and stage it concerns and what to do — so the workflow branches on one command's output instead of a ladder of `if` expressions. |
 
-| | |
-|---|---|
-| `medharness change plan --cr CR-034` | AI drafts the DHF item cascade and impact analysis |
-| `medharness change implement --cr CR-034` | AI writes code and tests (`--pr 42` to revise from feedback) |
-| `medharness change verify-branch --cr CR-034` | the branch changes the items the CR listed in `affected_items` |
-| `medharness change verify-completion --cr CR-034` | the CR created the items it proposed, and they are verified |
-| `medharness approval check --cr CR-034 --stage design --pr 42` | an approving review of the commit being merged |
-| `medharness context implementation --cr CR-034` | which modules, designs and requirements a CR touches |
-| `medharness context for-stage develop --cr CR-034` | what an agent needs to know at one stage |
-| `medharness context overview` | the DHF as a whole, for an agent new to it |
-| `medharness automation github-event` | the CR and stage a GitHub event concerns |
+### Context for an agent
+
+All three print JSON to stdout and make no changes.
+
+| Command | Returns | Use it when |
+|---|---|---|
+| `medharness context overview` | `project`, `item_count`, `items`, `traceability`, `test_coverage` | An agent or a person is new to the DHF. `traceability.valid` is the same verdict `verify dhf` reaches. Pass `--junit-dir` to get real test coverage instead of `{"computed": false}`. |
+| `medharness context implementation --cr CR-034` | `project`, `cr` (the full item), `items`, `traceability`, `module_map` | An agent is about to write code for a CR: which modules own which designs and requirements. |
+| `medharness context for-stage develop --cr CR-034` | `stage`, `cr`, `affected_items` (or `traceability_gaps` at `analyze`) | You want the smaller answer — only what one stage needs, rather than the whole DHF. |
 
 ### Evidence and release
 
-| | |
-|---|---|
-| `medharness evidence bundle --out-dir artifacts` | the read-only bundle an auditor reads |
-| `medharness release baseline --version 1.0.0` | frozen release record (IEC 62304 §9) |
+| Command | Returns | Use it when |
+|---|---|---|
+| `medharness evidence bundle --out-dir artifacts` | `gate_passed`, `manifest`, `artifacts` | On merge to `main`. Runs the acceptance gate and writes the read-only bundle an auditor reads: specifications, plans, traceability, test evidence, SBOM, and a manifest with a hash per file. `--doc-format pdf` needs `medharness[docs]`. |
+| `medharness release baseline --version 1.0.0 --write` | `version`, `cr_ids`, `rel_uid`, `artifacts`, `soup_count` | Cutting a release (IEC 62304 §9). Verifies every included CR is `completed`, freezes the software BOM, and writes the REL item. Dry-run without `--write`. |
+| `medharness soup-sync --manifest requirements.txt --write` | `to_create`, `to_update`, `orphans`, `items_created`, `items_updated` | A dependency changed. Reconciles the SOUP register with the project's manifests. Without `--write` it reports only — read that first: it writes items you then have to fill in a purpose and risk rating for. |
 
 ### Setting up and keeping current
 
-| | |
-|---|---|
-| `medharness init` | scaffold a DHF and AI harness |
-| `medharness upgrade` | update the scaffold without touching your content |
-| `medharness doctor` | environment, CLI tools, and DHF config health |
+| Command | Returns | Use it when |
+|---|---|---|
+| `medharness init` | list of created paths | Once, in an empty project. Scaffolds the DHF, the AI harness, and a CI workflow. Never overwrites. |
+| `medharness upgrade` | `outdated`, `missing`, `up_to_date`, `installed_version` | After upgrading the package. Reports scaffold drift; `--apply` writes it. Your DHF items, `global.yaml` and `context.md` are never touched. |
+| `medharness doctor` | `checks`, `passed`, `failed` | CI is behaving oddly. Checks Python, the CLIs, `gh` auth, and whether the DHF config and adapter load. |
+
+### Storing and reading the DHF — `dhfkit`
+
+| Command | Returns | Use it when |
+|---|---|---|
+| `dhfkit item list --type SYS` | one JSON object per line | Enumerating items of a type. |
+| `dhfkit item get SRS-012` | the item, with `all_linked_uids` resolved | You need one item's fields and links. |
+| `dhfkit item create --type SRS --data '{...}'` | the created item, with its assigned ID | Adding an item. The ID is allocated for you. |
+| `dhfkit item update SRS-012 --data '{...}'` | the updated item | Changing fields. The JSON is merged, not replaced; editing an approved item returns it for re-approval. |
+| `dhfkit item transition CR-034 completed` | the item in its new state | Moving an item through its lifecycle. Omit the state to get the transitions available and which criteria block the rest. |
+| `dhfkit validate schema` | `valid`, `item_count`, `errors` | Before committing. Every item against its doc-type schema. |
+| `dhfkit doc generate SYS` | `doc_type`, `output_path`, `version` | Building a specification document from the items. |
+| `dhfkit doc export SYS --format pdf` | `output_path` | Handing a specification to someone outside the repo. HTML is self-contained; PDF needs `[docs]`. |
+| `dhfkit sbom` | `path`, `components`, `without_purl` | You need a CycloneDX 1.6 SBOM from the SOUP register. `without_purl` counts the components no tool downstream can match. |
+| `dhfkit init` | list of created paths | You want the DHF without the AI harness. |
+
+Attribution is the commit, not a flag: `dhfkit` does not commit, so who changed
+an item is whoever authored the commit that carried it.
 
 `--help` on any subcommand carries the full surface.
 

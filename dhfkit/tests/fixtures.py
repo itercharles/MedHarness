@@ -263,8 +263,7 @@ def populate_test_dhf_direct(test_dhf_root: Path) -> Path:
 
 
     config = ProjectConfig.load(test_dhf_root / "config")
-    # git_repo=None → no auto-commit; items are written directly as YAML files
-    saver = ItemSaver(test_dhf_root / "items", git_repo=None, project_config=config)
+    saver = ItemSaver(test_dhf_root / "items", project_config=config)
 
     for item_data in get_test_dataset():
         try:

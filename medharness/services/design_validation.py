@@ -228,7 +228,6 @@ def validate_dhf_structure(dhf_path: Path) -> list[dict]:
 
 
 def validate_generate_dhf(
-    cr_id: str,
     dhf_path: Path,
     changed_items: dict[str, list[str]],
 ) -> list[dict]:

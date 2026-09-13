@@ -35,14 +35,14 @@ _UID_PATTERN = re.compile(r"^[A-Z][A-Z0-9]*(-[A-Z0-9]+)*-\d+$")
 class LocalDHFAdapter:
     """Implements DHFAdapter for a local filesystem DHF directory."""
 
-    def __init__(self, dhf_root: Path, auto_commit: bool = False):
+    def __init__(self, dhf_root: Path):
         self._dhf_root = Path(dhf_root)
         self._config = ProjectConfig.load(self._dhf_root / "config")
         items_dir = self._dhf_root / "items"
         self._items_dir = items_dir
-        self._git = GitRepository(self._dhf_root, auto_commit=auto_commit)
+        self._git = GitRepository(self._dhf_root)
         self._loader = ItemLoader(items_dir, project_config=self._config)
-        self._saver = ItemSaver(items_dir, git_repo=self._git, project_config=self._config)
+        self._saver = ItemSaver(items_dir, project_config=self._config)
 
         result_store_cfg = self._config.test_integration.get("result_store", {})
         self._result_store = ResultStore(self._dhf_root, result_store_cfg)
@@ -190,7 +190,7 @@ class LocalDHFAdapter:
         if errors:
             raise ValidationError("Item link validation failed:\n" + "\n".join(f"  - {e}" for e in errors))
 
-    def create_item(self, data: dict, author: str = "system", cr_id: Optional[str] = None) -> dict:
+    def create_item(self, data: dict) -> dict:
         # CR-006: ID is always auto-generated; any caller-supplied id is ignored
         data = {k: v for k, v in data.items() if k != 'id'}
         doc_type_code = data.get('type')
@@ -229,10 +229,10 @@ class LocalDHFAdapter:
             self._loader._validate_against_schema(data, _Path(f"{data['id']}.yaml"))
 
         item = Item.model_validate(data)
-        self._saver.save(item, author=author, cr_id=cr_id)
+        self._saver.save(item)
         return self._enrich_item_dict(item)
 
-    def update_item(self, uid: str, data: dict, author: Optional[str] = None, cr_id: Optional[str] = None) -> Optional[dict]:
+    def update_item(self, uid: str, data: dict) -> Optional[dict]:
         from dhfkit.lifecycle import get_initial_state, is_stable
 
         existing = self._loader.load_by_uid(uid)
@@ -272,7 +272,7 @@ class LocalDHFAdapter:
         updated_data = {k: v for k, v in updated_data.items() if v is not None}
         self._validate_item_links(updated_data)
         item = Item.model_validate(updated_data)
-        self._saver.save(item, author=author, cr_id=cr_id)
+        self._saver.save(item)
         return self._enrich_item_dict(item)
 
     def get_available_transitions(self, item_id: str) -> List[Dict]:
@@ -283,25 +283,19 @@ class LocalDHFAdapter:
             return []
         return get_available_transitions(self._config, item)
 
-    def execute_transition(
-        self,
-        item_id: str,
-        to_state: str,
-        performed_by: Optional[str] = None,
-    ) -> Dict:
+    def execute_transition(self, item_id: str, to_state: str) -> Dict:
         """Execute a lifecycle state transition for an item."""
         from dhfkit.lifecycle import execute_transition
         return execute_transition(
             config=self._config,
             get_item_fn=self.get_item,
-            update_item_fn=lambda uid, data: self.update_item(uid, data, author=performed_by),
+            update_item_fn=self.update_item,
             item_id=item_id,
             to_state=to_state,
-            performed_by=performed_by,
         )
 
-    def delete_item(self, uid: str, author: Optional[str] = None) -> bool:
-        return self._saver.delete(uid, author=author)
+    def delete_item(self, uid: str) -> bool:
+        return self._saver.delete(uid)
 
     def validate_schema(self) -> dict:
         """Validate all YAML files; returns {'valid': bool, 'errors': [...]}."""

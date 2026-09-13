@@ -20,6 +20,27 @@ _DEVELOP_ITEM_FIELDS = (
 )
 
 
+def _traceability_summary(trace: dict) -> dict:
+    """Summarise `analyse()` for an agent.
+
+    `valid` must be the whole verdict. Deriving it from coverage alone told an
+    agent the DHF was sound while `verify dhf` was failing the same DHF on a
+    link cycle.
+    """
+    return {
+        "valid": trace.get("passed", False),
+        "coverage": [
+            {"parent": c["parent_type"], "child": c["child_type"],
+             "covered": c["covered"], "total": c["total"],
+             "uncovered": c.get("uncovered", [])}
+            for c in trace.get("coverage", [])
+        ],
+        "cycles": trace.get("cycles", []),
+        "dangling": trace.get("dangling", []),
+        "required_failures": trace.get("required", {}).get("failures", []),
+    }
+
+
 def register(main):
 
     @main.group("context")
@@ -28,63 +49,34 @@ def register(main):
 
     @dhf_context.command("implementation")
     @click.option("--cr", "cr_id", required=True, metavar="CR_ID")
-    @click.option("--out-dir", required=True, type=click.Path(file_okay=False, path_type=Path))
     @click.pass_context
-    def dhf_context_implementation(ctx: click.Context, cr_id: str, out_dir: Path) -> None:
-        """Write CR item and DHF overview to out-dir for CI/agent consumption.
+    def dhf_context_implementation(ctx: click.Context, cr_id: str) -> None:
+        """What an agent needs to implement a CR: the CR, the item set, the modules.
 
-        Outputs JSON with paths to the written files: {"cr": "...", "context": "..."}.
+        JSON on stdout: {project, cr, item_count, items, traceability, module_map},
+        where `cr` is the full CR item. `traceability` carries the same verdict
+        `verify dhf` reaches, so the agent is not told the DHF is sound while the
+        gate is failing it.
         """
+        from medharness.services.traceability import build_module_map
+
         adapter = _h._make_adapter(ctx.obj["dhf"])
-        dhf_path: Path = ctx.obj["dhf"]
-        out_dir.mkdir(parents=True, exist_ok=True)
-
         cr = adapter.get_item(cr_id)
-        cr_path = out_dir / f"{cr_id}.json"
-        if cr:
-            cr_path.write_text(json.dumps(cr, default=str) + "\n", encoding="utf-8")
-        else:
-            cr_path.write_text(json.dumps({"id": cr_id, "found": False}) + "\n", encoding="utf-8")
-
         items = adapter.list_items()
         trace = analyse(adapter)
-        coverage_summary = [
-            {"parent": c["parent_type"], "child": c["child_type"],
-             "covered": c["covered"], "total": c["total"]}
-            for c in trace.get("coverage", [])
-        ]
 
-        module_map: list[dict] = []
-        try:
-            from medharness.services.traceability import build_module_map
-            module_map = build_module_map(items, adapter.config)
-        except Exception:
-            pass
-
-        overview = {
-            "project": dhf_path.parent.name,
-            "cr": ({"id": cr_id, "title": cr.get("title", ""), "status": cr.get("status", "")}
-                   if cr else {"id": cr_id, "found": False}),
+        click.echo(json.dumps({
+            "project": adapter.config.project_name,
+            "cr": cr if cr else {"id": cr_id, "found": False},
             "item_count": len(items),
             "items": [
                 {"id": it["id"], "type": it.get("type", ""), "title": it.get("title", ""),
                  "status": it.get("status", ""), "tracelinks": it.get("all_linked_uids", [])}
                 for it in sorted(items, key=lambda x: x["id"])
             ],
-            "traceability": {
-                "valid": all(c["covered"] == c["total"] for c in trace.get("coverage", [])),
-                "coverage": coverage_summary,
-            },
-            "module_map": module_map,
-            "test_coverage": {"computed": False},
-        }
-        context_path = out_dir / "implementation-context.json"
-        context_path.write_text(json.dumps(overview, default=str) + "\n", encoding="utf-8")
-
-        click.echo(json.dumps({
-            "cr": str(cr_path),
-            "context": str(context_path),
-        }))
+            "traceability": _traceability_summary(trace),
+            "module_map": build_module_map(items, adapter.config),
+        }, default=str))
 
     @dhf_context.command("for-stage")
     @click.argument("stage", type=click.Choice(["analyze", "design", "develop"]))
@@ -124,6 +116,8 @@ def register(main):
                          "covered": g["covered"], "total": g["total"]}
                         for g in gaps
                     ],
+                    "cycles": trace.get("cycles", []),
+                    "dangling": trace.get("dangling", []),
                 },
             }
 
@@ -178,8 +172,7 @@ def register(main):
                               junit_files: tuple[Path, ...], junit_dirs: tuple[Path, ...]) -> None:
         """Output DHF overview as JSON for AI agents (item summaries, traceability gaps)."""
         adapter = _h._make_adapter(ctx.obj["dhf"])
-        dhf_path: Path = ctx.obj["dhf"]
-        result: dict = {"project": dhf_path.parent.name}
+        result: dict = {"project": adapter.config.project_name}
 
         if cr_id:
             cr = adapter.get_item(cr_id)
@@ -197,15 +190,7 @@ def register(main):
         ]
 
         trace = analyse(adapter)
-        coverage_summary = [
-            {"parent": c["parent_type"], "child": c["child_type"],
-             "covered": c["covered"], "total": c["total"]}
-            for c in trace.get("coverage", [])
-        ]
-        result["traceability"] = {
-            "valid": all(c["covered"] == c["total"] for c in trace.get("coverage", [])),
-            "coverage": coverage_summary,
-        }
+        result["traceability"] = _traceability_summary(trace)
 
         junit_paths = _h._collect_junit_paths(junit_files, junit_dirs)
         if junit_paths:

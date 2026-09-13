@@ -11,7 +11,7 @@ import re
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Iterable, Optional
 
 from medharness._helpers import (
     DEFAULT_ACCEPTANCE_COVERAGE_PAIRS,
@@ -97,7 +97,6 @@ def envelope_from(gate: str, raw: dict) -> dict:
 
 def ci_structural_gate(
     dhf_path: Path,
-    governance_dir: Path | None = None,
     run_schema: bool = True,
     run_traceability: bool = True,
     coverage_pairs: tuple[str, ...] = (),
@@ -626,7 +625,6 @@ def build_evidence_bundle(
     run_id: str = "",
     run_url: str = "",
     commit_sha: str = "",
-    continue_on_gate_failure: bool = False,
     doc_format: str = "html",
 ) -> dict[str, Any]:
     """Produce a self-contained CI evidence bundle.
@@ -819,6 +817,7 @@ def validate_verification_completeness(
     junit_paths: list[Path] = (),
     req_types: tuple[str, ...] = (),
     enforce_test_evidence: bool = False,
+    item_ids: Iterable[str] | None = None,
 ) -> dict[str, Any]:
     """Check that every requirement has a declared verification method with evidence.
 
@@ -841,6 +840,9 @@ def validate_verification_completeness(
         dhf_path: Path to the DHF directory.
         junit_paths: JUnit XML files providing test evidence (optional).
         req_types: Requirement type codes to check (default: SRS, SYS, CRS).
+        item_ids: Restrict the scan to these items. A CR-scoped caller must pass
+            them; scanning the whole DHF charges one CR with every pre-existing
+            requirement that never declared a method.
 
     Returns:
         {
@@ -857,6 +859,9 @@ def validate_verification_completeness(
 
     adapter = LocalDHFAdapter(dhf_path)
     all_items = adapter.list_items()
+    if item_ids is not None:
+        in_scope = set(item_ids)
+        all_items = [it for it in all_items if it.get("id") in in_scope]
     config = adapter.config
 
     # Resolve configured prefixes so custom prefixes (e.g. SYSREQ-) are handled correctly.
@@ -1479,17 +1484,20 @@ def cr_closure_gate(
             deduped_proposed.append({"type": item_type, "title": title})
 
     missing_items: list[dict] = []
+    matched_ids: set[str] = set()
     for entry in deduped_proposed:
         item_type = entry["type"]
         title = entry["title"]
         dt = config.get_doc_type(item_type)
         prefix = dt.prefix if dt else f"{item_type}-"
         title_lower = title.lower()
-        found = any(
-            it["id"].startswith(prefix)
+        matches = [
+            it["id"] for it in scoped_items
+            if it["id"].startswith(prefix)
             and str(it.get("title", "")).strip().lower() == title_lower
-            for it in scoped_items
-        )
+        ]
+        matched_ids.update(matches)
+        found = bool(matches)
         if not found:
             missing_items.append({
                 "type": item_type,
@@ -1526,11 +1534,15 @@ def cr_closure_gate(
             "summary": summary,
         })
 
+    # Only the items this CR touched. Scanning the whole DHF charged one CR with
+    # every starter and legacy requirement that had never declared a method.
+    cr_scope = affected_ids | matched_ids
     verify_result = validate_verification_completeness(
         dhf_path,
         junit_paths=junit_paths,
         req_types=tuple(verifiable),
         enforce_test_evidence=True,
+        item_ids=cr_scope,
     )
 
     passed = not missing_items and verify_result["passed"] and not incomplete_cr_fields

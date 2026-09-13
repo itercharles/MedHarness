@@ -70,6 +70,31 @@ class TestManifestMatchesTheCLI:
                 f"{gate['command']} does not accept {declared}"
             )
 
+    @pytest.mark.parametrize("gate", GATES, ids=lambda g: g["command"])
+    def test_every_required_option_is_declared(self, gate: dict) -> None:
+        """The other direction.
+
+        Checking only declared→exists let `change verify-branch` ship a
+        `required` list that omitted an option the command will not run without.
+        A caller building from the manifest gets a usage error.
+        """
+        group, _, name = gate["command"].partition(" ")
+        enforced = {
+            param.opts[0]
+            for param in main.commands[group].commands[name].params
+            if getattr(param, "required", False)
+        }
+        declared = {
+            a.strip()
+            for entry in gate["options"]["required"]
+            for a in entry.split(" or ")
+        }
+        missing = enforced - declared
+        assert not missing, (
+            f"{gate['command']} requires {sorted(missing)}, which the manifest "
+            f"does not declare"
+        )
+
 
 class TestManifestShape:
     @pytest.mark.parametrize("gate", GATES, ids=lambda g: g["command"])
@@ -95,5 +120,5 @@ class TestManifestShape:
 class TestEveryGateAnswersWithTheEnvelope:
     """Discovery through the CLI, so a gate implemented anywhere is covered."""
 
-    def test_all_six_gates_are_registered(self) -> None:
-        assert len(_cli_gate_commands()) == len(GATES) == 6
+    def test_every_gate_is_registered(self) -> None:
+        assert len(_cli_gate_commands()) == len(GATES) == 7

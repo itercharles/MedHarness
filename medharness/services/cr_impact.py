@@ -34,12 +34,7 @@ def _record_design_impact_in_cr(
 
     # Only update affected_items — implementation_notes is LLM-authored
     # during generate-dhf and must not be overwritten by the harness.
-    adapter.update_item(
-        cr_id,
-        {"affected_items": recorded_affected},
-        author="medharness",
-        cr_id=cr_id,
-    )
+    adapter.update_item(cr_id, {"affected_items": recorded_affected})
     return {
         "recorded": True,
         "reason": "updated",

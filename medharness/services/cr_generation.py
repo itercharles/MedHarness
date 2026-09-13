@@ -782,7 +782,7 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> di
         "validate_initial", {"validator": "validate_generate_dhf"}
     )
     errors: list[dict] = design_validation.validate_generate_dhf(
-        cr_id, dhf_path, items_changed
+        dhf_path, items_changed
     )
     diagnostics["initial_error_count"] = len(errors)
     diagnostics["final_error_count"] = len(errors)
@@ -823,7 +823,7 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> di
         validate_fix_step, validate_fix_perf = _begin_step(
             "validate_after_fix", {"validator": "validate_generate_dhf"}
         )
-        errors = design_validation.validate_generate_dhf(cr_id, dhf_path, items_changed)
+        errors = design_validation.validate_generate_dhf(dhf_path, items_changed)
         diagnostics["final_error_count"] = len(errors)
         steps.append(
             _finish_step(
@@ -888,7 +888,7 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> di
         validate_review_fix_step, validate_review_fix_perf = _begin_step(
             f"validate_after_review_fix_{review_cycle}", {"validator": "validate_generate_dhf"}
         )
-        errors = design_validation.validate_generate_dhf(cr_id, dhf_path, items_changed)
+        errors = design_validation.validate_generate_dhf(dhf_path, items_changed)
         diagnostics["final_error_count"] = len(errors)
         steps.append(
             _finish_step(

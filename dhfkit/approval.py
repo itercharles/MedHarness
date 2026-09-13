@@ -39,7 +39,6 @@ def record_approval(
     approver: str,
     scope: str = "",
     notes: str = "",
-    author: str = "system",
 ) -> dict:
     """Create an APR item for a decision.
 
@@ -72,8 +71,6 @@ def record_approval(
             "scope": scope,
             "notes": notes,
         },
-        author=author,
-        cr_id=approves if approves.startswith("CR-") else None,
     )
 
 
@@ -152,7 +149,7 @@ def resolve_approval(dhf_root: Path, apr_id: str) -> dict:
 
 
 def import_review_files(dhf_root: Path, reviews_dir: Path, *,
-                        approver: str = "", author: str = "system") -> dict:
+                        approver: str = "") -> dict:
     """Backfill APR items from the legacy ``docs/reviews/*.md`` convention.
 
     Files whose CR already has a design-stage approval are skipped, so the
@@ -206,7 +203,6 @@ def import_review_files(dhf_root: Path, reviews_dir: Path, *,
                     "approved revision is this record's own commit, not the "
                     "review file's."
                 ),
-                author=author,
             )
         except Exception as exc:  # noqa: BLE001 — reported per file, not fatal
             errors.append(f"{review.name}: {exc}")

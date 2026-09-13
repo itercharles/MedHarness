@@ -18,7 +18,7 @@ Only two commands send anything to a model:
 | `medharness change plan --cr <ID>` | Design | DHF item updates, impact analysis, design review |
 | `medharness change implement --cr <ID>` | Develop | Source code and tests for the approved design |
 
-**Every other command is deterministic.** `dhfkit` (item CRUD, validation, link integrity, document generation, SOUP sync, release baseline) makes no network calls to any model and has no dependency on `medharness`. All `verify` gates, `evidence bundle`, and `approval` commands are pure local computation.
+**Every other command is deterministic.** `dhfkit` (item CRUD, validation, link integrity, document generation, SOUP sync, release baseline) makes no network calls to any model and has no dependency on `medharness`. All `verify` gates, `change verify-*` gates, and `evidence bundle` are pure local computation.
 
 This split is intentional: you can adopt the traceability engine and CI gates with no AI in the pipeline at all. See [adopting.md](adopting.md#incremental-adoption).
 
@@ -75,7 +75,7 @@ If you must run locally, use a dedicated checkout and a shell without your prima
 The AI cannot advance a change on its own. Every stage transition is gated:
 
 1. **`change plan` produces a design PR.** No code is written. A human reviews the DHF diff and the generated design review.
-2. **Approval is evidence.** `medharness approval check` requires an approving GitHub review of the commit the PR would merge — author, timestamp and revision, all recorded outside this tool's control. A label is not accepted: anyone with write access can add or remove one, and it says nothing about what was reviewed.
+2. **Approval is evidence.** `medharness change verify-approval` requires an approving GitHub review of the commit the PR would merge — author, timestamp and revision, all recorded outside this tool's control. A label is not accepted: anyone with write access can add or remove one, and it says nothing about what was reviewed.
 3. **`change implement` produces a code PR.** It cannot run until the design stage is approved.
 4. **Closure is gated deterministically.** `verify completion` requires an approved design review file, populated CR fields, and passing JUnit evidence for every requirement — none of which the AI can satisfy by assertion.
 
@@ -88,7 +88,7 @@ The gates in step 4 are ordinary code. They do not ask a model whether the work 
 | Artifact | Where it lives | Contains |
 |----------|----------------|----------|
 | Session ID | CR item, captured from the `claude` CLI JSON envelope | Correlates a CR stage to a model session |
-| DHF item history | Git, one commit per change with author and CR ID | Every design input the AI added or modified |
+| DHF item history | Git — the commit on the CR branch that carried the change, authored by whoever made it | Every design input the AI added or modified |
 | PR diff | GitHub | Every line of code the AI wrote, under normal review |
 | Design review | `docs/reviews/<CR>-Design-Review.md` | Verdict and open issues, required by `verify completion` |
 | Evidence bundle | `medharness evidence bundle` output | Test results and traceability state at merge |

@@ -5,7 +5,6 @@ import os
 import yaml
 from typing import Optional, Dict, Any
 from dhfkit.models.item import Item
-from dhfkit.repository.git import GitRepository
 
 
 class ItemSaver:
@@ -14,7 +13,6 @@ class ItemSaver:
     def __init__(
         self,
         specs_dir: Path,
-        git_repo: Optional[GitRepository] = None,
         project_config: Optional[Any] = None
     ):
         """
@@ -22,29 +20,19 @@ class ItemSaver:
 
         Args:
             specs_dir: Path to specifications directory
-            git_repo: Optional Git repository for auto-commits
             project_config: Optional ProjectConfig for directory mapping
         """
         self.specs_dir = specs_dir
-        self.git_repo = git_repo
         self.project_config = project_config
         self._prefix_map = None
 
-    def save(
-        self,
-        item: Item,
-        subdirectory: Optional[str] = None,
-        author: Optional[str] = None,
-        cr_id: Optional[str] = None
-    ) -> Path:
+    def save(self, item: Item, subdirectory: Optional[str] = None) -> Path:
         """
         Save an item to a YAML file.
 
         Args:
             item: Item to save
             subdirectory: Optional subdirectory within specs_dir
-            author: Optional author name for git commit
-            cr_id: Optional Change Request ID for git commit reference
 
         Returns:
             Path to saved file
@@ -74,13 +62,6 @@ class ItemSaver:
 
         if data.get('active') == True:
             data.pop('active', None)
-        if data.get('history') == []:
-            data.pop('history', None)
-
-        # Decided before the write. `file_path.exists()` after it is always
-        # true, so every new item was committed as "Updated" — and in a DHF the
-        # git history is the record of when an item came into being.
-        action = "updated" if file_path.exists() else "created"
 
         # Written to a sibling and moved into place: `open(path, 'w')` truncates
         # first, so a failure part-way through yaml.dump left a half-written
@@ -100,38 +81,20 @@ class ItemSaver:
         finally:
             tmp_path.unlink(missing_ok=True)
 
-        if self.git_repo and self.git_repo.is_available():
-            self.git_repo.commit_item_change(
-                item.uid,
-                file_path,
-                action=action,
-                author=author,
-                cr_id=cr_id
-            )
-
         return file_path
 
-    def delete(self, uid: str, author: Optional[str] = None) -> bool:
+    def delete(self, uid: str) -> bool:
         """
         Delete an item file.
 
         Args:
             uid: Item UID
-            author: Optional author name for git commit
 
         Returns:
             True if deleted successfully
         """
         for yaml_file in self.specs_dir.rglob(f"{uid}.yaml"):
             try:
-                if self.git_repo and self.git_repo.is_available():
-                    self.git_repo.commit_item_change(
-                        uid,
-                        yaml_file,
-                        action="deleted",
-                        author=author
-                    )
-
                 yaml_file.unlink()
                 return True
 

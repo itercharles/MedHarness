@@ -253,7 +253,7 @@ class TestReleaseBaselineEmitsAnSbom:
         out = tmp_path / "out"
 
         result = build_release_baseline(
-            dhf, "1.0.0", [manifest], [], out, write=False, author="t"
+            dhf, "1.0.0", [manifest], [], out, write=False
         )
 
         sbom_path = out / "sbom.cdx.json"
@@ -276,7 +276,7 @@ class TestReleaseBaselineEmitsAnSbom:
 
         _soup(dhf, "SOUP-001", "title: a\nname: a\nversion: '1'\necosystem: PyPI\n")
         out = tmp_path / "out"
-        build_release_baseline(dhf, "1.0.0", [], [], out, write=False, author="t")
+        build_release_baseline(dhf, "1.0.0", [], [], out, write=False)
 
         legacy = json.loads((out / "software-bom.json").read_text())
         assert {"dhf_soup", "manifest_packages"} <= set(legacy)
@@ -336,7 +336,7 @@ class TestReleaseBaselineReadsEveryManifestSoupSyncDoes:
         out = tmp_path / "out"
 
         result = build_release_baseline(
-            dhf, "1.0.0", [manifest], [], out, write=False, author="t"
+            dhf, "1.0.0", [manifest], [], out, write=False
         )
 
         assert result["outcome"] == "completed", result["errors"]
@@ -350,7 +350,7 @@ class TestReleaseBaselineReadsEveryManifestSoupSyncDoes:
         manifest = tmp_path / "Gemfile.lock"
         manifest.write_text("GEM\n")
         result = build_release_baseline(
-            dhf, "1.0.0", [manifest], [], tmp_path / "out", write=False, author="t"
+            dhf, "1.0.0", [manifest], [], tmp_path / "out", write=False
         )
         assert result["outcome"] == "completed_with_errors"
         assert any("Unsupported manifest format" in e for e in result["errors"])
@@ -369,7 +369,7 @@ class TestReleaseBaselineReadsEveryManifestSoupSyncDoes:
         manifest = tmp_path / "package.json"
         manifest.write_text("{not valid json}")
         result = build_release_baseline(
-            dhf, "1.0.0", [manifest], [], tmp_path / "out", write=False, author="t"
+            dhf, "1.0.0", [manifest], [], tmp_path / "out", write=False
         )
         assert result["outcome"] == "completed_with_errors"
         assert any("Failed to parse" in e for e in result["errors"]), result["errors"]

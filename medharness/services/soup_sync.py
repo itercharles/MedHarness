@@ -610,7 +610,6 @@ def sync_soup_items(
     manifest_paths: list[Path],
     *,
     write: bool = False,
-    author: str = "ci",
     extra_commands: list[str] | None = None,
     use_sources_file: bool = True,
 ) -> dict:
@@ -660,7 +659,7 @@ def sync_soup_items(
                     "license": "",
                     "source": pkg.get("source") or "",
                 }
-                new_item = api.create_item(dhf, data, author=author)
+                new_item = api.create_item(dhf, data)
                 items_created.append(new_item["id"])
             except Exception as exc:
                 errors.append(f"Failed to create SOUP item for {pkg['name']}: {exc}")
@@ -669,8 +668,7 @@ def sync_soup_items(
             pkg = entry["pkg"]
             item = entry["item"]
             try:
-                api.update_item(dhf, item["id"], {"version": pkg["version"]},
-                                author=author)
+                api.update_item(dhf, item["id"], {"version": pkg["version"]})
                 items_updated.append(item["id"])
             except Exception as exc:
                 errors.append(f"Failed to update {item['uid']}: {exc}")
