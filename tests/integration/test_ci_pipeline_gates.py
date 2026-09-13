@@ -2,7 +2,7 @@
 
 Covers the validation surface that does NOT require LLM calls:
   - verify dhf (ci_structural_gate): schema, traceability, structured reporting
-  - verify branch: DHF change detection, spec item existence
+  - change verify-branch: DHF change detection, spec item existence
   - validate_generate_dhf: verification_criteria, V-model cascade completeness
   - ItemType display_name / code contract
 
@@ -119,7 +119,7 @@ class TestCiStructuralGate:
 
 
 # ---------------------------------------------------------------------------
-# verify branch — change detection and spec item existence
+# change verify-branch — change detection and spec item existence
 # ---------------------------------------------------------------------------
 
 class TestValidateBranch:
@@ -129,7 +129,7 @@ class TestValidateBranch:
         """A branch with no commits since HEAD has no DHF changes."""
         r = _medharness(
             "--dhf", str(dhf / "DHF"),
-            "verify", "branch",
+            "change", "verify-branch",
             "--cr", "CR-001",
             "--since-ref", "HEAD",
         )
@@ -143,7 +143,7 @@ class TestValidateBranch:
     def test_result_includes_dhf_item_changes(self, dhf):
         r = _medharness(
             "--dhf", str(dhf / "DHF"),
-            "verify", "branch",
+            "change", "verify-branch",
             "--cr", "CR-001",
             "--since-ref", "HEAD",
         )
@@ -155,7 +155,7 @@ class TestValidateBranch:
     def test_result_includes_cr_id(self, dhf):
         r = _medharness(
             "--dhf", str(dhf / "DHF"),
-            "verify", "branch",
+            "change", "verify-branch",
             "--cr", "CR-001",
             "--since-ref", "HEAD",
         )
@@ -165,7 +165,7 @@ class TestValidateBranch:
     def test_since_ref_is_echoed(self, dhf):
         r = _medharness(
             "--dhf", str(dhf / "DHF"),
-            "verify", "branch",
+            "change", "verify-branch",
             "--cr", "CR-001",
             "--since-ref", "HEAD",
         )

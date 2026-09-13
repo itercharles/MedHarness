@@ -465,7 +465,7 @@ def register(main):
             raise click.ClickException("Test coverage gaps found.")
 
 
-    @verify.command("completion")
+    @change.command("verify-completion")
     @click.option("--cr", "cr_id", required=True, metavar="CR_ID")
     @click.option("--dhf", "dhf_path", type=click.Path(file_okay=False, path_type=Path))
     @click.option("--junit-dir", "junit_dirs", multiple=True, type=click.Path(file_okay=False, path_type=Path))
@@ -658,7 +658,7 @@ def register(main):
         if not result["passed"]:
             raise click.ClickException("SOUP check failed.")
 
-    @verify.command("branch")
+    @change.command("verify-branch")
     @click.option("--cr", "cr_id", required=True, metavar="CR_ID")
     @click.option("--since-ref", default="origin/main", metavar="REF")
     @click.option("--code-path", "code_paths", multiple=True, metavar="PATH",

@@ -86,7 +86,7 @@ GATES: tuple[dict[str, Any], ...] = (
         "needs_safety_class": True,
     },
     {
-        "command": "verify completion",
+        "command": "change verify-completion",
         "checks": "CR closure: mandatory CR fields, an approval record, created "
                   "items, and test evidence for each.",
         "clauses": ["IEC 62304 §5.1.1", "21 CFR 820.30(e)"],
@@ -100,7 +100,7 @@ GATES: tuple[dict[str, Any], ...] = (
         "needs_safety_class": False,
     },
     {
-        "command": "verify branch",
+        "command": "change verify-branch",
         "checks": "That a branch carries the DHF and code changes its CR implies.",
         "clauses": ["IEC 62304 §8.2"],
         "options": {
