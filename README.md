@@ -166,35 +166,67 @@ with evidence bundles and release baselines.
 ## Commands
 
 `dhfkit` owns DHF **data** — storage and retrieval. `medharness` owns the
-**process** around it, including all analysis over the item set. A team whose
-DHF already lives in Jira or Azure DevOps keeps that and still needs the
-analysis.
+**analysis over the item set** and the process around it. A team whose DHF
+already lives in Jira or Azure DevOps keeps that and still needs the analysis.
 
-Every `dhfkit` command needs the DHF path — pass `--dhf DHF`, or set
-`COMPLIANTFLOW_DHF=DHF` once. `medharness` takes `--dhf DHF` and reads no
-environment variable.
+Both take `--dhf DHF`; `dhfkit` also reads `COMPLIANTFLOW_DHF`.
+
+### Storing and reading the DHF — `dhfkit`
 
 | | |
 |---|---|
 | `dhfkit item list --type SYS` | list items; `item get`, `item create`, `item update` for one |
-| `dhfkit validate schema` | schema conformance |
-| `medharness verify dhf` | do the links resolve — storage integrity |
+| `dhfkit item transition CR-034 completed` | move an item; omit the state to list where it can go |
+| `dhfkit validate schema` | every item matches its doc-type schema |
 | `dhfkit doc generate SYS` | build a specification from the items |
 | `dhfkit doc export SYS` | self-contained HTML, or PDF with `[docs]` |
-| `medharness analyse soup-drift --manifest <file>` | sync SOUP items from a dependency manifest |
 | `dhfkit sbom` | CycloneDX 1.6 SBOM from the SOUP register |
-| `medharness release baseline --version 1.0.0` | frozen release record |
-| `medharness change plan --cr CR-034` | AI drafts DHF items and impact analysis |
-| `medharness change implement --cr CR-034` | AI writes code and tests (`--pr 42` to revise from feedback) |
+| `dhfkit init` | a minimal standalone DHF, no AI harness |
+
+### Analysis over the whole set — what a single-item store cannot answer
+
+| | |
+|---|---|
+| `medharness analyse risk-impact --since-ref origin/main` | which risks this change touches (ISO 14971) |
+| `medharness analyse soup-drift` | the SOUP register against the project's manifests; `--write` to apply |
+
+### Gates — each exits non-zero on failure, JSON on stdout
+
+| | |
+|---|---|
 | `medharness verify dhf` | coverage, cycles, dangling links, required traceability |
 | `medharness verify tests --junit-dir test-results` | requirement-to-test coverage from JUnit |
+| `medharness verify verification` | every requirement has a declared verification method |
 | `medharness verify soup` | CVE scan against the OSV database |
-| `medharness verify completion` | CR closure gate |
 | `medharness verify branch --cr CR-034` | the branch carries the items the CR proposed |
 | `medharness verify classification` | IEC 62304 §4.3 safety class and the §5.1 plans it requires |
-| `medharness verify verification` | every requirement has a declared verification method |
-| `medharness evidence bundle --out-dir artifacts` | runtime evidence for a release |
+| `medharness verify completion --cr CR-034` | CR closure gate |
+| `medharness approval check --cr CR-034 --stage design --pr 42` | an approving review of the commit being merged |
+| `medharness gates` | every gate, what it needs, what blocks — `--json` for a pipeline |
+
+### The AI change workflow
+
+| | |
+|---|---|
+| `medharness change plan --cr CR-034` | AI drafts the DHF item cascade and impact analysis |
+| `medharness change implement --cr CR-034` | AI writes code and tests (`--pr 42` to revise from feedback) |
+| `medharness context implementation --cr CR-034` | design context for an agent — also `medharness context for-stage` and `medharness context overview` |
+| `medharness automation github-event` | the CR and stage a GitHub event concerns |
+
+### Evidence and release
+
+| | |
+|---|---|
+| `medharness evidence bundle --out-dir artifacts` | the read-only bundle an auditor reads |
+| `medharness release baseline --version 1.0.0` | frozen release record (IEC 62304 §9) |
+
+### Setting up and keeping current
+
+| | |
+|---|---|
+| `medharness init` | scaffold a DHF and AI harness |
 | `medharness upgrade` | update the scaffold without touching your content |
+| `medharness doctor` | environment, CLI tools, and DHF config health |
 
 `medharness gates` and `--help` on any subcommand carry the full surface.
 
