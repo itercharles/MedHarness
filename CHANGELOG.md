@@ -11,6 +11,29 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.26.1] — 2026-09-13
+
+### Fixed
+
+- **A Claude session that cannot be resumed no longer fails the whole run.**
+  `change plan --pr N` and `change implement --pr N` store a session id in a PR
+  comment and pass it to `claude --resume` next time. The transcript lives in
+  `~/.claude` on the machine that created it, so on a CI runner — a new machine
+  every run — the resume always fails:
+
+  ```
+  No conversation found with session ID: 158a6d1a-…
+  ```
+
+  That step is critical, so one unusable session id turned the run into
+  `tool_error` and the CR stage never advanced. The step now runs again without
+  the session, records `resume_unavailable` in its step details, and raises a
+  `resume_session_unavailable` warning. The revision prompt tells the model to
+  read the branch and carries the PR feedback inline, so the session was
+  continuity, not a precondition. A failure that is not a missing session is
+  still reported as before — no blanket retry.
+
+
 ## [0.26.0] — 2026-09-13
 
 The same pass, continued one level down: not which commands should exist, but

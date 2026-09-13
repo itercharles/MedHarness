@@ -325,6 +325,15 @@ def _run_openai_compatible(
     return 0, "\n".join(output_parts), ""
 
 
+#: What `claude --resume` prints when the transcript is not on this machine.
+_SESSION_GONE = "no conversation found with session id"
+
+
+def _resume_unavailable(output: str) -> bool:
+    """Whether a failure was the stored session being absent, not the work failing."""
+    return _SESSION_GONE in output.lower()
+
+
 def _run_llm(
     prompt: str,
     *,
@@ -408,6 +417,15 @@ def _run_claude_step(
     tool_label = "claude" if is_anthropic else _model_label(config)
     step, step_perf = _begin_step(name, {"tool": tool_label})
     rc, output, session_id = _run_llm(prompt, config=config, resume_session=resume_session)
+
+    # A session lives on the machine that created it, so a CI runner can never
+    # resume one. The prompt reads the branch and carries its feedback inline,
+    # so the session is continuity, not a precondition.
+    resume_dropped = False
+    if rc != 0 and resume_session and _resume_unavailable(output):
+        resume_dropped = True
+        rc, output, session_id = _run_llm(prompt, config=config, resume_session="")
+
     cli_found = "claude CLI not found" not in output if is_anthropic else True
     outcome = "ok" if rc == 0 else ("failed" if critical else "warning")
     details: dict[str, object] = {"exit_code": rc, "cli_found": cli_found}
@@ -415,9 +433,20 @@ def _run_claude_step(
         details["session_id"] = session_id
     if resume_session:
         details["resumed_session_id"] = resume_session
+    if resume_dropped:
+        details["resume_unavailable"] = True
     if output.strip():
         details["output_excerpt"] = _truncate(output)
     steps.append(_finish_step(step, step_perf, outcome, details))
+    if resume_dropped:
+        warnings.append(
+            _warning(
+                "resume_session_unavailable",
+                f"Session `{resume_session}` is not on this machine; "
+                f"step `{name}` ran without it.",
+                {"step": name, "session_id": resume_session},
+            )
+        )
     if rc != 0:
         warnings.append(
             _warning(
