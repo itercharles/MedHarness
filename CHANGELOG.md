@@ -11,6 +11,91 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.25.0] — 2026-09-13
+
+A review of the command surface, command by command, asking of each what it is
+for rather than who happens to call it. 51 commands to 29.
+
+### Breaking Changes
+
+**Gates**
+
+- **`verify verification` is merged into `verify tests`.** They took the same
+  four arguments and overlapped on §5.7, and `ci_test_coverage_gate` never read
+  `verification_method` — so a requirement verified by Inspection came back two
+  ways: uncovered from one gate, manual sign-off from the other. Neither was
+  wrong about its half. The declared method now decides what counts as verified.
+  A missing method warns; `--require-method` makes it block.
+
+- **`verify branch` → `change verify-branch`**, **`verify completion` →
+  `change verify-completion`.** These read `affected_items` and
+  `proposed_new_items`, fields `change plan` writes, and mean nothing to a
+  project not running the CR workflow. Grouped under `verify` with the other
+  four, the README read as "wire all six into CI".
+
+- **`verify branch` now checks the CR it is given.** `--cr` previously reached
+  only `details.cr_id`; the verdict came from "did any DHF item change at all",
+  which passed a branch that edited something unrelated and failed any PR
+  without a CR. It now compares the CR's `affected_items` against the diff. A
+  branch with no CR is no longer this gate's business.
+
+- **`verify soup` carries both halves of §8.1.2.** It scanned for CVEs without
+  knowing whether the register it scanned was current. A package in a lockfile
+  with no SOUP item was never queried at all — it did not come back clean, it
+  came back absent. Drift warns by default and blocks under `--fail-on-drift`;
+  `--manifest` names the files to compare against.
+
+- **`verify completion --pr` reads the pull request's reviews**, the same
+  evidence `approval check` uses since 0.24.0. Without it an APR item is still
+  the record — that is the approval which never had a PR.
+
+**Commands removed**
+
+- **`medharness gates`.** Everything it described was available from
+  `verify --help`, each subcommand's `--help`, and `docs/interface.md`. The one
+  thing only it carried — the IEC 62304 clause mapping — was read by nothing but
+  its own print statement.
+- **`medharness analyse risk-impact`** duplicated `verify branch`, which already
+  emitted the same `risk_impact` with the same evidence on every PR.
+- **`medharness analyse soup-drift` → `medharness soup-sync`.** It both reported
+  drift and, with `--write`, changed the DHF, so what it returned was neither a
+  verdict nor a document. Detection moved into the gate; the write stayed an
+  action. A gate that edits the DHF it is judging has no business being one.
+- **`soup-sync --cr`.** It reached only the git commit message — it did not
+  check the CR existed, link the item to it, or touch `affected_items`, so the
+  association lived in git and never in the DHF.
+- **`find_affected_risks`, `build_risk_chain`, `format_traceability_report`.**
+  The last had no callers at all; the second's only output was read by the last.
+  `check_traceability` computed a risk chain on every run for a reader that did
+  not exist.
+
+**Behaviour**
+
+- **`soup-sync` no longer invents a purpose.** Every item it created carried
+  `purpose: "Dependency from PyPI"`, which satisfies "is it documented" and
+  answers nothing §8.1.2 asks. The field is left empty and `verify soup` reports
+  the gap.
+
+### Added
+
+- **A SOUP register document.** `doc export` produced specifications for ten
+  item types and SOUP was not one of them, so the only form the register took
+  was CycloneDX — meant for a scanner, not a reviewer. It generates like every
+  other spec and lands in the evidence bundle.
+- **`dhfkit.paths.config_file`** — where a config file lives is the store's to
+  answer. Takes a root rather than an adapter, so a DHF with no `global.yaml`
+  can still be inspected.
+
+### Fixed
+
+- A traceability cycle failed the build without saying so: `check_traceability`
+  computed `passed` without consulting cycles and reported "All checks passed",
+  while no stderr line named the cycle at all.
+- The documented CI recipe ran `medharness evidence bundle --dhf DHF`. `--dhf`
+  is a group option there, so that job exited 2 on an adopter's first merge.
+- Five source strings told a reader — and the model — to run
+  `dhfkit validate traceability`, removed in 0.20.0. Three were prompt strings.
+
 ## [0.24.0] — 2026-09-12
 
 ### Breaking Changes
