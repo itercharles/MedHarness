@@ -79,3 +79,21 @@ def test_no_command_is_given_two_rows() -> None:
     heads = [" ".join(r.split()[:3]) for r in rows]
     dupes = sorted({h for h in heads if heads.count(h) > 1})
     assert not dupes, f"listed more than once: {dupes}"
+
+
+def test_a_row_documents_one_command() -> None:
+    """A row naming other commands in its description is two rows pretending.
+
+    `item list` once carried "list items; `item get`, `item create`, `item
+    update` for one" — four commands in one cell, none of them explained, and
+    the coverage check above was satisfied by the mention.
+    """
+    offenders = []
+    for row in re.findall(r"^\| `([^`]+)` \| ([^|]+) \|$", _commands_section(), re.M):
+        command, description = row
+        others = re.findall(r"`((?:dhfkit|medharness) [^`]+)`", description)
+        if others:
+            offenders.append(f"`{command}` names {others} in its description")
+    assert not offenders, (
+        "give each command its own row:\n  " + "\n  ".join(offenders)
+    )

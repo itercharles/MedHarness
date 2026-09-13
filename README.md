@@ -175,7 +175,10 @@ Both take `--dhf DHF`; `dhfkit` also reads `COMPLIANTFLOW_DHF`.
 
 | | |
 |---|---|
-| `dhfkit item list --type SYS` | list items; `item get`, `item create`, `item update` for one |
+| `dhfkit item list --type SYS` | every item of a type |
+| `dhfkit item get SRS-012` | one item, with its fields and links |
+| `dhfkit item create --type SRS --data '{...}'` | add an item |
+| `dhfkit item update SRS-012 --data '{...}'` | change fields on an item |
 | `dhfkit item transition CR-034 completed` | move an item; omit the state to list where it can go |
 | `dhfkit validate schema` | every item matches its doc-type schema |
 | `dhfkit doc generate SYS` | build a specification from the items |
@@ -210,7 +213,9 @@ Both take `--dhf DHF`; `dhfkit` also reads `COMPLIANTFLOW_DHF`.
 |---|---|
 | `medharness change plan --cr CR-034` | AI drafts the DHF item cascade and impact analysis |
 | `medharness change implement --cr CR-034` | AI writes code and tests (`--pr 42` to revise from feedback) |
-| `medharness context implementation --cr CR-034` | design context for an agent — also `medharness context for-stage` and `medharness context overview` |
+| `medharness context implementation --cr CR-034` | which modules, designs and requirements a CR touches |
+| `medharness context for-stage develop --cr CR-034` | what an agent needs to know at one stage |
+| `medharness context overview` | the DHF as a whole, for an agent new to it |
 | `medharness automation github-event` | the CR and stage a GitHub event concerns |
 
 ### Evidence and release
