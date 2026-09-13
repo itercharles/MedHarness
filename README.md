@@ -198,7 +198,6 @@ Both take `--dhf DHF`; `dhfkit` also reads `COMPLIANTFLOW_DHF`.
 |---|---|
 | `medharness verify dhf` | coverage, cycles, dangling links, required traceability |
 | `medharness verify tests --junit-dir test-results` | requirement-to-test coverage from JUnit |
-| `medharness verify verification` | every requirement has a declared verification method |
 | `medharness verify soup` | CVE scan against the OSV database |
 | `medharness verify branch --cr CR-034` | the branch changes the items the CR listed in affected_items |
 | `medharness verify classification` | IEC 62304 §4.3 safety class and the §5.1 plans it requires |

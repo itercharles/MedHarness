@@ -48,7 +48,7 @@ GATES: tuple[dict[str, Any], ...] = (
         "command": "verify tests",
         "checks": "Requirement-to-test coverage from JUnit evidence, including "
                   "declared test points and verification levels.",
-        "clauses": ["IEC 62304 §5.5", "§5.6", "§5.7"],
+        "clauses": ["IEC 62304 §5.5", "§5.6", "§5.7", "ISO 14971 §9"],
         "options": {
             "required": ["--dhf", "--junit-dir or --junit"],
             "optional": ["--requirement-type"],
@@ -84,20 +84,6 @@ GATES: tuple[dict[str, Any], ...] = (
                          "been taken and the gate cannot check anything.",
         "needs_network": False,
         "needs_safety_class": True,
-    },
-    {
-        "command": "verify verification",
-        "checks": "That every requirement declares a verification method and that "
-                  "methods requiring evidence have it.",
-        "clauses": ["IEC 62304 §5.7", "ISO 14971 §9"],
-        "options": {
-            "required": ["--dhf"],
-            "optional": ["--junit-dir", "--junit", "--requirement-type"],
-        },
-        "blocking": "always",
-        "blocking_note": "",
-        "needs_network": False,
-        "needs_safety_class": False,
     },
     {
         "command": "verify completion",
