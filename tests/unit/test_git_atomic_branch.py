@@ -65,45 +65,11 @@ def test_a_cr_with_nothing_promised_and_nothing_changed_fails(tmp_path: Path):
                return_value={"created": [], "updated": [], "deleted": []}), \
          patch("dhfkit.local_adapter.LocalDHFAdapter") as adapter:
         adapter.return_value.get_item.return_value = {"id": "CR-001", "affected_items": []}
-        adapter.return_value.list_items.return_value = []
-        adapter.return_value.config = None
-        with patch("medharness.services.traceability.find_affected_risks", return_value=[]):
-            result = validate_atomic_branch(repo_root, dhf, "CR-001")
+        result = validate_atomic_branch(repo_root, dhf, "CR-001")
 
     assert result["passed"] is False
     assert any(e["field"] == "dhf_branch" for e in result["details"]["findings"])
 
 
-def test_validate_atomic_branch_includes_risk_impact(tmp_path: Path):
-    """risk_impact is populated from find_affected_risks when DHF is loadable."""
-    repo_root = tmp_path
-    dhf = repo_root / "DHF"
-    dhf.mkdir()
-
-    mock_adapter = MagicMock()
-    mock_adapter.list_items.return_value = []
-    mock_adapter._config = MagicMock()
-
-    expected_impact = [{"risk_id": "RISK-001", "title": "Dose error", "via_rcms": ["RCM-001"]}]
-
-    with patch("medharness.services.git.collect_dhf_item_changes",
-               return_value={"created": ["SYS-010"], "updated": [], "deleted": []}), \
-         patch("dhfkit.local_adapter.LocalDHFAdapter", return_value=mock_adapter), \
-         patch("medharness.services.traceability.find_affected_risks", return_value=expected_impact):
-        result = validate_atomic_branch(repo_root, dhf, "CR-001")
-
-    assert result["passed"] is True
-    assert result["details"]["risk_impact"] == expected_impact
 
 
-def test_validate_atomic_branch_risk_impact_empty_when_dhf_not_loadable(tmp_path: Path):
-    """risk_impact is [] when the DHF directory is missing (graceful degradation)."""
-    repo_root = tmp_path
-    dhf = repo_root / "DHF"  # directory not created
-
-    with patch("medharness.services.git.collect_dhf_item_changes",
-               return_value={"created": ["SYS-010"], "updated": [], "deleted": []}):
-        result = validate_atomic_branch(repo_root, dhf, "CR-001")
-
-    assert result["passed"] is True
-    assert result["details"]["risk_impact"] == []

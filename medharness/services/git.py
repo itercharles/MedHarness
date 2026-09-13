@@ -147,16 +147,12 @@ def validate_atomic_branch(
         + dhf_item_changes["deleted"]
     )
 
-    risk_impact: list[dict] = []
     unchanged_promised: list[str] = []
     cr_item = None
     if dhf_path.is_dir():
         try:
             from dhfkit.local_adapter import LocalDHFAdapter
-            from medharness.services.traceability import find_affected_risks
-            adapter = LocalDHFAdapter(dhf_path)
-            risk_impact = find_affected_risks(changed_ids, adapter.list_items(), adapter.config)
-            cr_item = adapter.get_item(cr_id)
+            cr_item = LocalDHFAdapter(dhf_path).get_item(cr_id)
         except (FileNotFoundError, OSError, ValueError):
             pass  # DHF not loadable — skip the checks that need it
 
@@ -202,7 +198,6 @@ def validate_atomic_branch(
         "cr_found": cr_item is not None,
         "dhf_item_changes": dhf_item_changes,
         "code_changes": code_changes,
-        "risk_impact": risk_impact,
     })
 
 

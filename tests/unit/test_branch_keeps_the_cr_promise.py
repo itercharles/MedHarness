@@ -26,12 +26,9 @@ def _run(tmp_path: Path, cr_item, dhf_changes=CHANGED):
     with patch("medharness.services.git.collect_dhf_item_changes", return_value=dhf_changes), \
          patch("dhfkit.local_adapter.LocalDHFAdapter") as adapter:
         adapter.return_value.get_item.return_value = cr_item
-        adapter.return_value.list_items.return_value = []
-        adapter.return_value.config = None
-        with patch("medharness.services.traceability.find_affected_risks", return_value=[]):
-            dhf = tmp_path / "DHF"
-            dhf.mkdir(exist_ok=True)
-            return validate_atomic_branch(tmp_path, dhf, "CR-001", since_ref="main")
+        dhf = tmp_path / "DHF"
+        dhf.mkdir(exist_ok=True)
+        return validate_atomic_branch(tmp_path, dhf, "CR-001", since_ref="main")
 
 
 class TestThePromiseIsChecked:
@@ -69,3 +66,40 @@ class TestWhenThereIsNothingToCheckAgainst:
             "guard this command with workflow conditions"
         )
         assert result["details"]["cr_found"] is False
+
+
+class TestAgainstARealChangeSet:
+    """Inline, populated change sets.
+
+    `test_cr_does_not_affect_itself` counts these: a CR can only appear in its
+    own change set when that set is not empty, and the suite once drove the
+    empty case almost everywhere. Shared constants are invisible to that count,
+    so these spell the dict out.
+    """
+
+    def test_a_promise_kept_across_several_changed_items(self, tmp_path: Path) -> None:
+        with patch("medharness.services.git.collect_dhf_item_changes",
+                   return_value={"created": ["SWDD-007"], "updated": ["SRS-001", "SYS-001"],
+                                 "deleted": []}), \
+             patch("dhfkit.local_adapter.LocalDHFAdapter") as adapter:
+            adapter.return_value.get_item.return_value = {
+                "id": "CR-001", "affected_items": ["SRS-001", "SYS-001"],
+            }
+            dhf = tmp_path / "DHF"
+            dhf.mkdir(exist_ok=True)
+            result = validate_atomic_branch(tmp_path, dhf, "CR-001", since_ref="main")
+        assert result["passed"] is True, result["errors"]
+
+    def test_a_deleted_item_still_counts_as_changed(self, tmp_path: Path) -> None:
+        """Retiring an item is how a CR keeps a promise to change it."""
+        with patch("medharness.services.git.collect_dhf_item_changes",
+                   return_value={"created": [], "updated": ["SRS-002"],
+                                 "deleted": ["SRS-001"]}), \
+             patch("dhfkit.local_adapter.LocalDHFAdapter") as adapter:
+            adapter.return_value.get_item.return_value = {
+                "id": "CR-001", "affected_items": ["SRS-001"],
+            }
+            dhf = tmp_path / "DHF"
+            dhf.mkdir(exist_ok=True)
+            result = validate_atomic_branch(tmp_path, dhf, "CR-001", since_ref="main")
+        assert result["passed"] is True, result["errors"]
