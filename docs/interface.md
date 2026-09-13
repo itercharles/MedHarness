@@ -12,8 +12,6 @@ MedHarness deliberately does not scaffold a CI workflow — a pipeline carries y
 ## Discovering what exists
 
 ```bash
-medharness gates            # for a person wiring a pipeline
-medharness gates --json     # for a program
 ```
 
 The JSON manifest lists every gate with what it checks, the standard clauses it serves, the options it requires, whether it reaches the network, and whether its failure blocks a build. A caller that reads the manifest does not need this document hard-coded into it.

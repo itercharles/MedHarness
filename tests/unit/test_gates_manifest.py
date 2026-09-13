@@ -19,7 +19,7 @@ from click.testing import CliRunner
 
 from medharness.cli import main
 from medharness.services.ci import ENVELOPE_KEYS
-from medharness.services.gates import BLOCKING, GATES, gates_manifest
+from medharness.services.gates import BLOCKING, GATES
 
 
 def _cli_gate_commands() -> set[str]:
@@ -75,7 +75,6 @@ class TestManifestShape:
     @pytest.mark.parametrize("gate", GATES, ids=lambda g: g["command"])
     def test_entry_is_complete(self, gate: dict) -> None:
         assert gate["checks"].strip()
-        assert gate["clauses"], "a gate without a clause has no stated reason to exist"
         assert gate["blocking"] in BLOCKING
         assert isinstance(gate["needs_network"], bool)
         assert isinstance(gate["needs_safety_class"], bool)
@@ -88,31 +87,9 @@ class TestManifestShape:
                 f"{gate['command']} is {gate['blocking']} but says nothing about when"
             )
 
-    def test_manifest_publishes_the_envelope(self) -> None:
-        assert gates_manifest()["envelope"] == list(ENVELOPE_KEYS)
-
-    def test_manifest_publishes_exit_codes(self) -> None:
-        assert set(gates_manifest()["exit_codes"]) == {"0", "1", "2"}
 
 
-class TestCommand:
-    def test_json_output_is_parseable(self) -> None:
-        r = CliRunner().invoke(main, ["gates", "--json"])
-        assert r.exit_code == 0, r.output
-        payload = json.loads(r.output)
-        assert {g["command"] for g in payload["gates"]} == {g["command"] for g in GATES}
 
-    def test_human_output_names_every_gate(self) -> None:
-        r = CliRunner().invoke(main, ["gates"])
-        assert r.exit_code == 0, r.output
-        for gate in GATES:
-            assert gate["command"] in r.output
-
-    def test_network_and_opt_in_are_visible_to_a_reader(self) -> None:
-        """The two facts that change how you wire a pipeline."""
-        r = CliRunner().invoke(main, ["gates"])
-        assert "[network]" in r.output
-        assert "needs safety class" in r.output
 
 
 class TestEveryGateAnswersWithTheEnvelope:

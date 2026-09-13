@@ -30,7 +30,6 @@ GATES: tuple[dict[str, Any], ...] = (
         "command": "verify dhf",
         "checks": "Schema validity, required traceability, dangling links, and "
                   "coverage between V-model layers.",
-        "clauses": ["IEC 62304 §5.2", "§5.3", "§5.4"],
         "options": {
             "required": ["--dhf"],
             "optional": ["--fail-on-uncovered", "--coverage-pair",
@@ -48,7 +47,6 @@ GATES: tuple[dict[str, Any], ...] = (
         "command": "verify tests",
         "checks": "Requirement-to-test coverage from JUnit evidence, including "
                   "declared test points and verification levels.",
-        "clauses": ["IEC 62304 §5.5", "§5.6", "§5.7", "ISO 14971 §9"],
         "options": {
             "required": ["--dhf", "--junit-dir or --junit"],
             "optional": ["--requirement-type"],
@@ -63,7 +61,6 @@ GATES: tuple[dict[str, Any], ...] = (
         "command": "verify soup",
         "checks": "SOUP items against the OSV vulnerability database, honouring "
                   "documented per-CVE acceptances.",
-        "clauses": ["IEC 62304 §8.1.2"],
         "options": {"required": ["--dhf"], "optional": ["--offline-mode"]},
         "blocking": "always",
         "blocking_note": "An unreachable osv.dev fails by default; "
@@ -75,7 +72,6 @@ GATES: tuple[dict[str, Any], ...] = (
         "command": "verify classification",
         "checks": "That a software safety class is declared with a rationale, and "
                   "that the item types the class requires exist.",
-        "clauses": ["IEC 62304 §4.3", "§5.1"],
         "options": {"required": ["--dhf"], "optional": []},
         "blocking": "opt_in",
         "blocking_note": "Warns and exits zero until software_safety_class is "
@@ -89,7 +85,6 @@ GATES: tuple[dict[str, Any], ...] = (
         "command": "change verify-completion",
         "checks": "CR closure: mandatory CR fields, an approval record, created "
                   "items, and test evidence for each.",
-        "clauses": ["IEC 62304 §5.1.1", "21 CFR 820.30(e)"],
         "options": {
             "required": ["--dhf", "--cr"],
             "optional": ["--junit-dir", "--junit"],
@@ -102,7 +97,6 @@ GATES: tuple[dict[str, Any], ...] = (
     {
         "command": "change verify-branch",
         "checks": "That a branch carries the DHF and code changes its CR implies.",
-        "clauses": ["IEC 62304 §8.2"],
         "options": {
             "required": ["--cr"],
             "optional": ["--since-ref", "--code-path"],

@@ -155,45 +155,6 @@ def register(main):
     def verify() -> None:
         """Run validation and coverage checks for controlled changes."""
 
-    @main.command("gates")
-    @click.option("--json", "as_json", is_flag=True, default=False,
-                  help="Emit the manifest as JSON for a pipeline or an agent.")
-    def gates_cmd(as_json: bool) -> None:
-        """List the verification gates, what each needs, and what blocks.
-
-        CI is deliberately not scaffolded — a pipeline carries your runner
-        labels, secrets, and branch names. This is the description to build one
-        against, and the same manifest an agent reads to discover what it can
-        call.
-        """
-        from medharness.services.gates import gates_manifest
-
-        manifest = gates_manifest()
-        if as_json:
-            click.echo(json.dumps(manifest, indent=2))
-            return
-
-        click.echo(f"Every gate answers with: {', '.join(manifest['envelope'])}")
-        click.echo("Exit codes: " + "  ".join(
-            f"{code}={meaning}" for code, meaning in manifest["exit_codes"].items()
-        ))
-        click.echo("")
-        for gate in manifest["gates"]:
-            marks = []
-            if gate["needs_network"]:
-                marks.append("network")
-            if gate["needs_safety_class"]:
-                marks.append("needs safety class")
-            suffix = f"  [{', '.join(marks)}]" if marks else ""
-            click.echo(f"{gate['command']}{suffix}")
-            click.echo(f"    {gate['checks']}")
-            click.echo(f"    clauses:  {', '.join(gate['clauses'])}")
-            required = ", ".join(gate["options"]["required"]) or "none"
-            click.echo(f"    requires: {required}")
-            click.echo(f"    blocking: {gate['blocking']}")
-            if gate["blocking_note"]:
-                click.echo(f"              {gate['blocking_note']}")
-            click.echo("")
 
     @main.group("evidence")
     def evidence() -> None:
