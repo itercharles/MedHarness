@@ -11,6 +11,47 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.27.0] — 2026-09-14
+
+### Breaking Changes
+
+- **A gate returns the verdict and what it found, and nothing else.** `details`
+  is no longer serialised; the envelope is `{gate, passed, summary, errors,
+  warnings}`. It carried a structured second copy of the same findings that no
+  caller has ever read — not ContourLab, not the evidence bundle, not any
+  shipped workflow — while accounting for 76% of the payload. The only readers
+  were the CLI, rendering its own stderr lines from it in the same process, and
+  the test suite. `CONTRACT_VERSION` is now `"3.0"`.
+
+  A caller branches on `passed` and the exit code, and prints `errors` and
+  `warnings`. `summary` says what was checked, which is how a real pass is told
+  from a gate that examined nothing.
+
+  The structures are still there in-process (`GATE_RESULT_KEYS`), so the log
+  reads exactly as before, including the `PASS [coverage] …` lines.
+
+### Fixed
+
+- **`verify soup` returned `warnings: []` beside two warnings in its own log.**
+  The gate returns from three places and only one assembled the messages, so
+  `skipped` items and every drift finding reached stderr and never the envelope.
+  A caller reading JSON saw a clean run. Assembled once now, shared by all three.
+- **One finding was printed in two spellings.** The cycle and dangling-link
+  lines were rebuilt in the CLI (`CRS-001 → SYS-001`) beside the gate's own
+  wording (`CRS-001 -> SYS-001`). The CLI prints the gate's string.
+- Three README rows named keys the gates do not return (`results.coverage`,
+  `safety_class`, `missing_plans`, `rationale`, `vulnerabilities`). The column
+  documenting them is gone with `details`, so the whole class cannot recur.
+
+### Added
+
+- `tests/guards/test_a_finding_reaches_the_caller.py` — every FAIL/WARN in a
+  gate's log must be in its `errors`/`warnings`, a failing gate must say what
+  failed, and stdout must be the envelope exactly. Plus one test that pins
+  content: consistency alone cannot see a finding dropped from both channels
+  at once, which is what the soup bug did.
+
+
 ## [0.26.3] — 2026-09-14
 
 ### Fixed

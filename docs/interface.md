@@ -18,7 +18,7 @@ The JSON manifest lists every gate with what it checks, the standard clauses it 
 
 ```json
 {
-  "envelope": ["gate", "passed", "summary", "errors", "warnings", "details"],
+  "envelope": ["gate", "passed", "summary", "errors", "warnings"],
   "exit_codes": {
     "0": "gate passed; JSON on stdout",
     "1": "gate failed (JSON on stdout), or a usage error raised before the gate ran (no stdout)",
@@ -34,7 +34,7 @@ The manifest is checked against the live command tree by the test suite, so it c
 
 ## The result envelope
 
-**stdout carries exactly one line of JSON.** Every gate answers with the same six keys:
+**stdout carries exactly one line of JSON.** Every gate answers with the same five keys:
 
 ```json
 {
@@ -42,8 +42,7 @@ The manifest is checked against the live command tree by the test suite, so it c
   "passed": false,
   "summary": "Class B: 1 plan(s) written, 0 missing, 3 unchanged.",
   "errors": ["development_plan.md is unchanged from the template — §5.1 requires a plan that is maintained."],
-  "warnings": ["integration_plan.md: 6 section(s) still match the shipped template"],
-  "details": { "declared": "B", "checked": [...], "unwritten": [...] }
+  "warnings": ["integration_plan.md: 6 section(s) still match the shipped template"]
 }
 ```
 
@@ -54,9 +53,10 @@ The manifest is checked against the live command tree by the test suite, so it c
 | `summary` | string | One line, never empty |
 | `errors` | list of strings | What made the gate fail. Empty when `passed` is true |
 | `warnings` | list of strings | What the gate noticed without failing |
-| `details` | object | Gate-specific payload; shape varies by gate |
 
-`errors` and `warnings` are **strings already phrased for a reader**, because the machine-readable form of the same findings is in `details`. A caller that prints them produces a usable report without knowing which gate it ran.
+`errors` and `warnings` are **strings already phrased for a reader**, and they are the whole of what the gate found — a caller that prints them produces a usable report without knowing which gate it ran. There is no structured second copy: gates used to carry one under `details`, no caller ever read it, and the documentation of its shape was wrong in three places by the time it was removed.
+
+`summary` is where "what was checked" lives — `13 item(s) checked` distinguishes a real pass from a gate that examined nothing.
 
 A gate that fails always populates `errors`. That is enforced by the test suite across every gate, not by convention — a `passed: false` with nothing to act on is a defect.
 
@@ -110,9 +110,8 @@ Declaring the class is taking the opt-in, so from that point `verify classificat
 
 What a caller may rely on:
 
-- **The six envelope keys** are stable. New keys may be added at the top level; existing ones will not be removed or change type without a major version.
+- **The five envelope keys** are stable. New keys may be added at the top level; existing ones will not be removed or change type without a major version.
 - **Exit code meanings** are stable.
-- **`details` is not stable.** Its shape is specific to each gate and may change in a minor release. Read it for a gate you have looked at, not generically.
 - **stderr is not a contract.** It is written for a person and its wording changes freely. Never parse it — the same information is in `errors` and `warnings`.
 - **The manifest is the source of truth** for which gates exist and what they require. Prefer reading it over hard-coding a list.
 

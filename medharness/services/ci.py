@@ -39,7 +39,13 @@ from medharness.services.traceability import analyse
 
 #: Keys every gate result carries, whatever the gate. A caller — a CI script or
 #: an agent — parses this once and handles any gate, present or future.
-ENVELOPE_KEYS = ("gate", "passed", "summary", "errors", "warnings", "details")
+#: What a gate writes to stdout. `details` is built alongside it for the CLI
+#: to render lines from, in-process, and is deliberately not serialised.
+ENVELOPE_KEYS = ("gate", "passed", "summary", "errors", "warnings")
+
+#: What a gate hands back in-process. One key wider than what is emitted: the
+#: CLI renders its lines from `details` and then drops it.
+GATE_RESULT_KEYS = ENVELOPE_KEYS + ("details",)
 
 
 def gate_result(
@@ -53,14 +59,14 @@ def gate_result(
 ) -> dict[str, Any]:
     """Wrap a gate outcome in the common envelope.
 
-    Gate-specific payload goes under ``details`` rather than at the top level,
-    so adding a field to one gate cannot change the shape callers rely on.
-    Before this, the only key shared by every gate was ``passed`` — five gates
-    meant five parsers.
+    The answer is the verdict and what the gate found: ``errors`` are what made
+    it fail, ``warnings`` what it noticed without failing, both already phrased
+    for a human. Every finding must reach one of those two — they are the whole
+    answer, so anything only in ``details`` is invisible to a caller.
 
-    ``errors`` are what made the gate fail; ``warnings`` are what it noticed
-    without failing. Both are plain strings, already phrased for a human,
-    because the machine-readable form of the same information is in ``details``.
+    ``details`` carries the same findings structured, for the CLI to render its
+    stderr lines from in the same process. It is not serialised: no caller has
+    ever read it, and a shape nobody reads is one that drifts.
     """
     return {
         "gate": gate,
@@ -247,11 +253,11 @@ def _structural_messages(results: dict, fail_on_uncovered: bool) -> tuple[list[s
         errors.append(f"{failure.get('id')}: {failure.get('issue')}")
     for d in trace.get("dangling", []):
         errors.append(
-            f"{d['source']}.{d['field']} -> {d['target']}: target does not exist"
+            f"{d['source']}.{d['field']} → {d['target']}: target does not exist"
         )
     for cycle in trace.get("cycles", []):
 
-        path = " -> ".join(cycle + [cycle[0]]) if len(cycle) > 1 else f"{cycle[0]} -> itself"
+        path = " → ".join(cycle + [cycle[0]]) if len(cycle) > 1 else f"{cycle[0]} → itself"
         errors.append(f"Traceability cycle: {path}")
 
     # Uncovered items block only under --fail-on-uncovered; anywhere else they
@@ -1031,6 +1037,14 @@ def _vuln_detail(vuln_id: str, batch_entry: dict, *, fetch: bool) -> dict:
     }
 
 
+def _drift_messages(drift: dict) -> list[str]:
+    """The drift findings that change severity with `--fail-on-drift`."""
+    return [
+        f"{name} ships but has no SOUP item — it is also never scanned for "
+        f"vulnerabilities." for name in drift.get("undocumented", [])
+    ] + list(drift.get("misversioned", []))
+
+
 def soup_gate(
     dhf_path: Path,
     *,
@@ -1112,10 +1126,27 @@ def soup_gate(
             "ecosystem": ecosystem, "accepted": accepted,
         })
 
+    # Assembled once: the gate returns from three places and two of them used
+    # to forget, so the JSON said `warnings: []` beside warnings in the log.
+    found = drift["drift"]
+    base_errors = _drift_messages(found) if drift_blocks else []
+    base_warnings = (
+        list(acceptance_problems)
+        + [f"{item['soup_id']} was not checked: {item['reason']}" for item in skipped]
+        + ([] if drift_blocks else _drift_messages(found))
+        + [f"{soup_id} has no purpose recorded — §8.1.2 asks why the component "
+           f"is used." for soup_id in found.get("undescribed", [])]
+        + [f"{soup_id} is in the register but no manifest resolves it."
+           for soup_id in found.get("no_longer_shipped", [])]
+        + list(found.get("errors", []))
+    )
+
     if not checkable:
         n_soup = len(soup_items)
         return envelope_from("verify soup", {
             "passed": not drift_blocks,
+            "errors": base_errors,
+            "warnings": base_warnings,
             "soup_count": n_soup,
             "checked_count": 0,
             "vulnerable": [],
@@ -1151,8 +1182,8 @@ def soup_gate(
             "passed": tolerated and not drift_blocks,
             # The outage belongs in the envelope, not a private key: a caller
             # that handles `errors`/`warnings` for every gate handles this too.
-            "errors": [] if tolerated else [outage],
-            "warnings": [outage] if tolerated else [],
+            "errors": base_errors + ([] if tolerated else [outage]),
+            "warnings": base_warnings + ([outage] if tolerated else []),
             "soup_count": len(soup_items),
             "checked_count": 0,
             "vulnerable": [],
@@ -1220,8 +1251,8 @@ def soup_gate(
             + (f"[{v['severity']}] " if v.get("severity") else "")
             + (v.get("summary") or v.get("url") or "see osv.dev")
             for item in vulnerable for v in item["vulns"]
-        ],
-        "warnings": list(acceptance_problems) + [
+        ] + base_errors,
+        "warnings": base_warnings + [
             f"{a['soup_id']}: {a['vuln_id']} accepted — {a['rationale']}"
             for a in accepted_found
         ],

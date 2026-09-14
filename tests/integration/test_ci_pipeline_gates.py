@@ -48,13 +48,14 @@ def dhf():
 
 @pytest.fixture(scope="module")
 def dhf_validate_result(dhf):
-    """Run verify dhf once and share the parsed result across the test class."""
-    r = subprocess.run(
-        [sys.executable, "-m", "medharness", "verify", "dhf", "--dhf", str(dhf / "DHF")],
-        capture_output=True, text=True, cwd=REPO_ROOT,
-    )
-    assert r.returncode in (0, 1), f"verify dhf crashed:\n{r.stderr}"
-    return json.loads(r.stdout)
+    """The gate's own result, shared across the class.
+
+    The service rather than the CLI: these assert the structured findings, and
+    the command emits only the verdict and the messages.
+    """
+    from medharness.services.ci import ci_structural_gate
+
+    return ci_structural_gate(dhf / "DHF")
 
 
 def _medharness(*args: str) -> subprocess.CompletedProcess:
@@ -105,17 +106,16 @@ class TestCiStructuralGate:
             assert "child_type" in gap
             assert "uncovered" in gap
 
-    def test_structured_keys_present_regardless_of_traceability_flag(self, dhf):
-        """coverage_gaps and verification_gaps must be present even when
-        traceability is disabled, so machine consumers can always rely on them."""
+    def test_the_gate_still_answers_with_traceability_off(self, dhf):
+        """Turning a check off must not change the shape of the answer."""
+        from medharness.services.ci import ENVELOPE_KEYS
+
         r = _medharness(
             "verify", "dhf", "--dhf", str(dhf / "DHF"),
             "--no-run-traceability",
         )
         assert r.returncode in (0, 1), f"crashed:\n{r.stderr}"
-        result = json.loads(r.stdout)
-        assert "coverage_gaps" in result["details"]["results"]
-        assert "verification_gaps" in result["details"]["results"]
+        assert set(json.loads(r.stdout)) == set(ENVELOPE_KEYS)
 
 
 # ---------------------------------------------------------------------------
@@ -123,53 +123,36 @@ class TestCiStructuralGate:
 # ---------------------------------------------------------------------------
 
 class TestValidateBranch:
-    """Verify validate-branch catches missing DHF changes and bad spec items."""
+    """Verify validate-branch catches missing DHF changes and bad spec items.
 
-    def test_clean_branch_has_no_dhf_changes(self, dhf):
+    Against the service: the command emits the verdict and the messages, and
+    what is asserted here is the structure behind them.
+    """
+
+    @pytest.fixture(scope="class")
+    def result(self, dhf):
+        from medharness.services.git import validate_atomic_branch
+
+        return validate_atomic_branch(dhf, dhf / "DHF", "CR-001", since_ref="HEAD")
+
+    def test_clean_branch_has_no_dhf_changes(self, result):
         """A branch with no commits since HEAD has no DHF changes."""
-        r = _medharness(
-            "--dhf", str(dhf / "DHF"),
-            "change", "verify-branch",
-            "--cr", "CR-001",
-            "--since-ref", "HEAD",
-        )
-        result = json.loads(r.stdout)
         assert not result["passed"], (
             "Branch with no changes since HEAD should fail the DHF-change check"
         )
-        fields = [e["field"] for e in result["details"]["findings"]]
-        assert "dhf_branch" in fields
+        assert "dhf_branch" in [e["field"] for e in result["details"]["findings"]]
 
-    def test_result_includes_dhf_item_changes(self, dhf):
-        r = _medharness(
-            "--dhf", str(dhf / "DHF"),
-            "change", "verify-branch",
-            "--cr", "CR-001",
-            "--since-ref", "HEAD",
-        )
-        result = json.loads(r.stdout)
-        assert "dhf_item_changes" in result["details"]
+    def test_the_failure_is_also_a_message_a_caller_can_print(self, result):
+        """The command emits only `errors`, so a finding that is not one is lost."""
+        assert result["errors"], "a failing gate with nothing in errors is unactionable"
+        assert any("dhf_branch" in e for e in result["errors"])
+
+    def test_result_includes_dhf_item_changes(self, result):
         changes = result["details"]["dhf_item_changes"]
         assert "created" in changes and "updated" in changes and "deleted" in changes
 
-    def test_result_includes_cr_id(self, dhf):
-        r = _medharness(
-            "--dhf", str(dhf / "DHF"),
-            "change", "verify-branch",
-            "--cr", "CR-001",
-            "--since-ref", "HEAD",
-        )
-        result = json.loads(r.stdout)
+    def test_result_records_what_it_was_asked(self, result):
         assert result["details"].get("cr_id") == "CR-001"
-
-    def test_since_ref_is_echoed(self, dhf):
-        r = _medharness(
-            "--dhf", str(dhf / "DHF"),
-            "change", "verify-branch",
-            "--cr", "CR-001",
-            "--since-ref", "HEAD",
-        )
-        result = json.loads(r.stdout)
         assert result["details"].get("since_ref") == "HEAD"
 
 

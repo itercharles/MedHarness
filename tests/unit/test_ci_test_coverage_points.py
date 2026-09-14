@@ -165,7 +165,9 @@ def test_cli_test_coverage_reports_point_gaps_in_json(tmp_path: Path) -> None:
     assert result.exit_code != 0
     payload = json.loads(result.output.splitlines()[0])
     assert payload["passed"] is False
-    assert payload["details"]["testing_points"][0]["uncovered"] == ["T2"]
+    assert any("T2" in e for e in payload["errors"]), (
+        f"the uncovered testing point is not in what the caller receives: {payload['errors']}"
+    )
 
 
 def test_test_points_covered_across_separate_tests(tmp_path: Path) -> None:

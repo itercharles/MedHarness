@@ -22,6 +22,7 @@ from click.testing import CliRunner
 from medharness.cli import main
 from medharness.services import ci as ci_module
 from medharness.services.ci import (
+    GATE_RESULT_KEYS,
     ENVELOPE_KEYS,
     ci_test_coverage_gate,
     gate_result,
@@ -121,7 +122,8 @@ class TestEveryCLIGateHonoursTheContract:
 class TestEnvelopeShape:
     @pytest.mark.parametrize("gate", SIMPLE_GATES)
     def test_top_level_is_exactly_the_envelope(self, gate: str, dhf: Path) -> None:
-        assert set(_call(gate, dhf)) == set(ENVELOPE_KEYS)
+        """In-process, so one key wider than what the command emits."""
+        assert set(_call(gate, dhf)) == set(GATE_RESULT_KEYS)
 
     @pytest.mark.parametrize("gate", SIMPLE_GATES)
     def test_field_types_are_stable(self, gate: str, dhf: Path) -> None:
@@ -185,12 +187,12 @@ class TestNoGateEscapesTheEnvelope:
         from medharness.services.ci import cr_closure_gate
 
         result = cr_closure_gate(dhf_path=dhf, cr_id="CR-001", junit_paths=[])
-        assert set(result) == set(ENVELOPE_KEYS)
+        assert set(result) == set(GATE_RESULT_KEYS)
 
     def test_test_coverage_gate_uses_the_envelope(self, dhf: Path) -> None:
         from medharness.services.ci import ci_test_coverage_gate
 
-        assert set(ci_test_coverage_gate(dhf, [])) == set(ENVELOPE_KEYS)
+        assert set(ci_test_coverage_gate(dhf, [])) == set(GATE_RESULT_KEYS)
 
     def test_test_coverage_gate_envelope_holds_with_evidence(
         self, dhf: Path, tmp_path: Path
@@ -204,7 +206,7 @@ class TestNoGateEscapesTheEnvelope:
             "<property name='medharness.links' value='SRS-001'/>"
             "</properties></testcase></testsuite></testsuites>"
         )
-        assert set(ci_test_coverage_gate(dhf, [junit])) == set(ENVELOPE_KEYS)
+        assert set(ci_test_coverage_gate(dhf, [junit])) == set(GATE_RESULT_KEYS)
 
 
 class TestEnvelopeHelper:
@@ -496,16 +498,22 @@ class TestGateLevelWarningsReachStderr:
         return dhf
 
     def test_the_reason_levels_are_inert_is_printed(self, inert_dhf: Path) -> None:
+        """Every warning must reach the log, including the ones tied to no item.
+
+        The gate-level ones had no row to be printed beside and were dropped.
+        Checked against `warnings` rather than the structures behind it: that is
+        what a caller receives, so a message missing from it is missing.
+        """
         result, stderr = _stderr_of("verify tests", inert_dhf)
 
-        gate_level = [
-            w for w in result["warnings"]
-            if not any(w == row.get("warning") for row in result["details"]["results"])
-        ]
-        assert gate_level, "no class is declared, so the gate should say levels are inert"
-        assert result["details"]["results"], "the fixture must produce rows to be meaningful"
-        for message in gate_level:
-            assert "software_safety_class" in stderr, (
-                f"a gate-level warning stayed out of the log:\n  {message}\n"
+        assert result["warnings"], (
+            "no class is declared, so the gate should say levels are inert"
+        )
+        assert any("software_safety_class" in w for w in result["warnings"]), (
+            f"the gate-level warning is not in the envelope: {result['warnings']}"
+        )
+        for message in result["warnings"]:
+            assert message in stderr, (
+                f"a warning stayed out of the log:\n  {message}\n"
                 f"  stderr was:\n{stderr[-400:]}"
             )
