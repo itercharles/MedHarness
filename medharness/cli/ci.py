@@ -17,8 +17,19 @@ _ITEM_ID_RE = re.compile(r"^([A-Z]+-\d+)")
 
 
 def _d(result: dict) -> dict:
-    """Gate-specific payload. Envelope keys stay at the top level."""
+    """The gate's structured findings, for rendering the lines below.
+
+    In-process only. `_emit` does not serialise them: a caller acts on the
+    verdict and reads the messages, and nothing has ever read the structures.
+    """
     return result.get("details") or {}
+
+
+def _emit(result: dict) -> None:
+    """Write the gate's answer to stdout: the verdict, and what it found."""
+    click.echo(json.dumps(
+        {k: v for k, v in result.items() if k != "details"}, default=str,
+    ))
 
 
 def _render_envelope(result: dict, tag: str) -> None:
@@ -238,7 +249,7 @@ def register(main):
                                      run_traceability=run_traceability,
                                      coverage_pairs=coverage_pairs,
                                      fail_on_uncovered=fail_on_uncovered)
-        click.echo(json.dumps(result, default=str))
+        _emit(result)
         r = _d(result)["results"]
         dhf_arg = f"--dhf {effective_dhf}"
         if "schema" in r:
@@ -269,17 +280,17 @@ def register(main):
                                f" {f['id']}.yaml, or:", err=True)
                     click.echo(f"         dhfkit {dhf_arg} item update {f['id']}"
                                f" --data '{{\"dhf_links\": [\"<parent-id>\"]}}'", err=True)
-            for d in t.get("dangling", []):
-                click.echo(f"FAIL [dangling] {d['source']}.{d['field']} → {d['target']}:"
-                           f" target does not exist", err=True)
-                click.echo(f"    Fix: correct the ID in {d['source']}.yaml, or create"
-                           f" {d['target']}. The link exists but resolves to nothing.",
-                           err=True)
-            for cycle in t.get("cycles", []):
-                path = " → ".join(cycle + [cycle[0]]) if len(cycle) > 1 else f"{cycle[0]} → itself"
-                click.echo(f"FAIL [cycle] {path}", err=True)
+            for message in [e for e in result["errors"] if "target does not exist" in e]:
+                click.echo(f"FAIL [dangling] {message}", err=True)
+                click.echo("    Fix: correct the ID in the source item, or create the "
+                           "target. The link exists but resolves to nothing.", err=True)
+            for message in [e for e in result["errors"] if e.startswith("Traceability cycle:")]:
+                # The gate's own wording, not a second rendering of it: two
+                # spellings of one finding is two findings to a reader.
+                click.echo(f"FAIL [cycle] {message}", err=True)
                 click.echo("    Fix: the V-model is directed. Remove whichever link "
                            "reverses the chain so each item has an origin.", err=True)
+
             # Uncovered items are advisory unless --fail-on-uncovered is set; label
             # them WARN so a green build never prints FAIL.
             gap_label = "FAIL" if fail_on_uncovered else "WARN"
@@ -337,7 +348,7 @@ def register(main):
         junit_paths = _h._collect_junit_paths(junit_files, junit_dirs)
         result = ci_test_coverage_gate(dhf_path=effective_dhf, junit_paths=junit_paths,
                                        require_method=require_method, req_types=req_types)
-        click.echo(json.dumps(result))
+        _emit(result)
         dhf_arg = f"--dhf {effective_dhf}"
         # Envelope warnings the row loops below cannot produce — they iterate
         # `results`, so anything about the gate as a whole was printed only when
@@ -460,7 +471,7 @@ def register(main):
         junit_paths = _h._collect_junit_paths(junit_files, junit_dirs)
         result = cr_closure_gate(cr_id=cr_id, dhf_path=effective_dhf,
                                  junit_paths=junit_paths, pr_number=pr_number)
-        click.echo(json.dumps(result))
+        _emit(result)
 
         for field in _d(result).get("incomplete_cr_fields", []):
             click.echo(f"FAIL [cr-complete] {field['issue']}", err=True)
@@ -510,7 +521,7 @@ def register(main):
             classification=_d(cls),
             plans=_d(plans),
         )
-        click.echo(json.dumps(result))
+        _emit(result)
 
         declared = _d(cls).get("declared")
         if declared:
@@ -585,36 +596,20 @@ def register(main):
             raise click.ClickException("--dhf is required when not set globally")
         result = soup_gate(effective_dhf, offline_mode=offline_mode,
                            manifest_paths=list(manifest_paths), fail_on_drift=fail_on_drift)
-        click.echo(json.dumps(result))
+        _emit(result)
 
-        for item in _d(result).get("skipped", []):
-            click.echo(f"SKIP [soup-vuln] {item['soup_id']}: {item['reason']}", err=True)
         for entry in _d(result).get("accepted", []):
             click.echo(
                 f"ACCEPTED [soup-vuln] {entry['soup_id']} ({entry['name']}@{entry['version']}): "
                 f"{entry['vuln_id']} — {entry['rationale']}",
                 err=True,
             )
-        drift = _d(result).get("drift") or {}
-        label = "FAIL" if drift.get("blocking") else "WARN"
-        for name in drift.get("undocumented", []):
-            click.echo(f"{label} [soup-drift] {name} ships but has no SOUP item — "
-                       f"it is also never scanned for vulnerabilities.", err=True)
-        for note in drift.get("misversioned", []):
-            click.echo(f"{label} [soup-drift] {note}", err=True)
-        for soup_id in drift.get("undescribed", []):
-            click.echo(f"WARN [soup-drift] {soup_id} has no purpose recorded — "
-                       f"§8.1.2 asks why the component is used.", err=True)
-        for soup_id in drift.get("no_longer_shipped", []):
-            click.echo(f"WARN [soup-drift] {soup_id} is in the register but no "
-                       f"manifest resolves it.", err=True)
-        for problem in drift.get("errors", []):
-            click.echo(f"WARN [soup-drift] {problem}", err=True)
-        if (drift.get("undocumented") or drift.get("misversioned")) and not drift.get("blocking"):
-            click.echo("    Fix: medharness --dhf DHF soup-sync --write, then commit. "
-                       "Pass --fail-on-drift to block the build on this.", err=True)
 
         _render_envelope(result, "soup-vuln")
+        if _d(result).get("drift", {}).get("undocumented") or \
+                _d(result).get("drift", {}).get("misversioned"):
+            click.echo("    Fix: medharness --dhf DHF soup-sync --write, then commit. "
+                       "Pass --fail-on-drift to block the build on this.", err=True)
         click.echo(result["summary"], err=True)
         if not result["passed"]:
             raise click.ClickException("SOUP check failed.")
@@ -646,7 +641,7 @@ def register(main):
             since_ref=since_ref,
             code_paths=code_paths,
         )
-        click.echo(json.dumps(payload))
+        _emit(payload)
         if payload["passed"]:
             if code_paths:
                 click.echo(f"PASS [validate-branch] {cr_id}: branch carries coupled DHF and code changes.", err=True)
@@ -658,7 +653,7 @@ def register(main):
                 )
             return
         for error in _d(payload).get("findings", []):
-            click.echo(f"FAIL [validate-branch] {cr_id} ({error['field']}): {error['issue']}", err=True)
+            click.echo(f"FAIL [validate-branch] {error['field']}: {error['issue']}", err=True)
             click.echo(f"    Fix: {error['fix']}", err=True)
         raise click.exceptions.Exit(1)
 
@@ -793,7 +788,7 @@ def register(main):
             "pr_number": pr_number,
             **evidence,
         })
-        click.echo(json.dumps(payload))
+        _emit(payload)
 
         if evidence["approved"]:
             click.echo(
@@ -852,7 +847,7 @@ def register(main):
         except (FileNotFoundError, OSError):
             pass  # DHF config not loadable yet; generate_dhf will surface the error
         result = generate_dhf(cr_id, dhf, pr_number=pr_number)
-        click.echo(json.dumps(result))
+        _emit(result)
         click.echo(
             _format_summary("DHF cascade", "revised" if pr_number else "generated", cr_id, result),
             err=True,
@@ -898,7 +893,7 @@ def register(main):
             except (json.JSONDecodeError, OSError) as exc:
                 raise click.ClickException(f"Could not read --ci-failures file: {exc}") from exc
         result = generate_code(cr_id, dhf, pr_number=pr_number, ci_failures=ci_failures)
-        click.echo(json.dumps(result))
+        _emit(result)
         click.echo(_format_summary("Implementation", "revised" if pr_number else "generated", cr_id, result), err=True)
         for error in result.get("errors") or []:
             click.echo(f"  FAIL ({error['field']}): {error['issue']}", err=True)

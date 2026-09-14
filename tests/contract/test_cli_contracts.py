@@ -222,14 +222,12 @@ class TestOutputContract:
         )
         r = _run("medharness", "--dhf", str(dhf), "change", "verify-completion", "--cr", "CR-CONTRACT")
         payload = json.loads(r.stdout.splitlines()[0])
-        assert ENVELOPE <= payload.keys(), f"Missing envelope keys: {ENVELOPE - payload.keys()}"
-        gate_keys = {"incomplete_cr_fields", "missing_items"}
-        assert gate_keys <= payload["details"].keys(), (
-            f"Missing keys: {required_keys - payload.keys()}"
+        assert payload.keys() == ENVELOPE, (
+            f"stdout is the envelope and nothing else; got {sorted(payload)}"
         )
-        assert isinstance(payload["details"]["incomplete_cr_fields"], list)
-        assert isinstance(payload["details"]["missing_items"], list)
         assert isinstance(payload["passed"], bool)
+        assert isinstance(payload["errors"], list)
+        assert isinstance(payload["warnings"], list)
 
     def test_verify_soup_output_shape(self, scaffolded_dhf):
         """verify soup writes JSON with all required keys to stdout."""
@@ -239,12 +237,11 @@ class TestOutputContract:
         # No SOUP items with ecosystem → passes with checked_count=0
         assert r.returncode == 0, r.stderr
         payload = json.loads(r.stdout.splitlines()[0])
-        assert ENVELOPE <= payload.keys(), f"Missing envelope keys: {ENVELOPE - payload.keys()}"
-        gate_keys = {"soup_count", "checked_count", "vulnerable", "skipped"}
-        assert gate_keys <= payload["details"].keys()
+        assert payload.keys() == ENVELOPE, (
+            f"stdout is the envelope and nothing else; got {sorted(payload)}"
+        )
         assert isinstance(payload["passed"], bool)
-        assert isinstance(payload["details"]["vulnerable"], list)
-        assert isinstance(payload["details"]["skipped"], list)
+        assert payload["summary"], "a pass with no summary cannot be told from an empty check"
 
     def test_upgrade_output_shape(self, scaffolded_dhf):
         """upgrade writes JSON with all required keys to stdout."""

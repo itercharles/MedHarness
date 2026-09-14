@@ -181,8 +181,10 @@ def test_a_missing_method_warns_by_default(tmp_path: Path) -> None:
         main, ["--dhf", str(dhf), "verify", "tests", "--dhf", str(dhf)],
     )
     payload = json.loads(result.output.splitlines()[0])
-    assert [g["id"] for g in payload["details"]["missing_method"]] == ["SRS-001"]
-    assert any("no verification_method" in w for w in payload["warnings"])
+    assert any("SRS-001" in w and "no verification_method" in w
+               for w in payload["warnings"]), (
+        f"the item with no declared method is not named: {payload['warnings']}"
+    )
 
 
 def test_require_method_makes_it_fail(tmp_path: Path) -> None:
@@ -202,8 +204,6 @@ def test_cli_validate_verification_json_stdout(tmp_path: Path) -> None:
     )
     payload = json.loads(result.output.splitlines()[0])
     assert set(payload) == set(ENVELOPE_KEYS)
-    assert {"missing_method", "unverified_test",
-            "manual_review_required"} <= payload["details"].keys()
 
 
 class TestACheckThatCouldNotRunIsReported:

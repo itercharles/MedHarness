@@ -62,6 +62,10 @@ All DHF data operations use `dhfkit --dhf DHF <command>`.
   the same commit or PR — docs and code ship together.
 - Keep code minimal. No speculative abstractions, no over-engineering. Three
   similar lines is better than a premature abstraction.
+- Do not invent what nothing uses yet. This applies to output as much as to
+  code: a field returned "in case a caller wants it" is a shape that drifts,
+  and every gate's `details` was wrong in three documented places by the time
+  it was removed. Ship the answer, extend when something needs more.
 - Before writing an algorithm, check whether a current dependency already has
   it. `networkx` is one, and cycle detection was hand-rolled twice anyway.
 - Delete a field that is structurally always empty, along with everything that

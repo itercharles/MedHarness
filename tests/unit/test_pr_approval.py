@@ -230,8 +230,9 @@ class TestCiApproveGate:
         assert r.exit_code == 0, r.output
         payload = _first_json_line(r.output)
         assert payload["passed"] is True
-        assert payload["details"]["approved"] is True
-        assert payload["details"]["approvals"][0]["by"] == "reviewer"
+        assert "reviewer" in payload["summary"], (
+            f"the approver is not in what the caller receives: {payload['summary']}"
+        )
         assert "reviewer" in r.output
 
     def test_a_stale_approval_fails_and_says_which_commit(self):

@@ -229,9 +229,10 @@ class TestCLIContract:
         _declare(dhf, "B")
         r = CliRunner().invoke(main, ["--dhf", str(dhf), "verify", "classification"])
         payload = json.loads(r.output.splitlines()[0])
-        assert payload["details"]["classification"]["declared"] == "B"
         assert set(payload) == set(ENVELOPE_KEYS)
-        assert set(payload["details"]) == {"classification", "plans"}
+        assert "B" in payload["summary"], (
+            f"the declared class is not in what the caller receives: {payload['summary']}"
+        )
 
     def test_failure_exits_nonzero(self, dhf: Path) -> None:
         _declare(dhf, "C")

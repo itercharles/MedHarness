@@ -424,7 +424,7 @@ def test_cli_cr_complete_passes(tmp_path: Path) -> None:
     assert result.exit_code == 0, result.output
     payload = json.loads(result.output.splitlines()[0])
     assert payload["passed"] is True
-    assert payload["details"]["cr_id"] == "CR-001"
+    assert "CR-001" in payload["summary"]
 
 
 def test_cli_cr_complete_fails_on_incomplete_cr_fields(tmp_path: Path) -> None:
@@ -438,7 +438,9 @@ def test_cli_cr_complete_fails_on_incomplete_cr_fields(tmp_path: Path) -> None:
     assert result.exit_code != 0
     payload = json.loads(result.output.splitlines()[0])
     assert payload["passed"] is False
-    assert len(payload["details"]["incomplete_cr_fields"]) >= 2
+    assert len(payload["errors"]) >= 2, (
+        f"two CR fields are incomplete; the caller receives {payload['errors']}"
+    )
     assert "FAIL [cr-complete]" in result.output
 
 

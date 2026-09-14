@@ -107,10 +107,6 @@ class TestValidateBranchJsonContract:
         assert r.exit_code == 0, (r.output, r.stderr)
         payload = _split_stdout_json(r.stdout)
         assert set(payload) == set(ENVELOPE_KEYS), "change verify-branch left the envelope"
-        for key in ("cr_id", "since_ref", "expected_dhf_changes",
-                    "dhf_item_changes", "code_changes", "risk_impact"):
-            assert key in payload["details"], f"{key} is not under details"
-        assert "spec_path" not in payload["details"]
         assert payload["passed"] is True
 
 
@@ -142,6 +138,5 @@ class TestValidateBranchJsonContract:
         assert payload["passed"] is False
         assert payload["errors"] == ["code_branch: x"]
         assert all(isinstance(e, str) for e in payload["errors"])
-        assert payload["details"]["findings"] == [finding]
 
 

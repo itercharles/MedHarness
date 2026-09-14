@@ -148,7 +148,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - run: pip install medharness==0.26.3
+      - run: pip install medharness==0.27.0
       - run: medharness --dhf DHF verify dhf --fail-on-uncovered
 ```
 
@@ -178,40 +178,41 @@ Every command writes JSON to stdout and human-readable lines to stderr, so
 envelope, so one CI step can handle any of them:
 
 ```json
-{"gate": "verify dhf", "passed": false, "summary": "FAIL — 1 link cycle(s)",
- "errors": ["..."], "warnings": ["..."], "details": {}}
+{"gate": "verify dhf", "passed": false,
+ "summary": "13 item(s) checked; 1 error(s), 3 warning(s).",
+ "errors": ["Traceability cycle: CRS-001 -> SYS-001 -> CRS-001"],
+ "warnings": ["CRS-001 states no verification criterion — §5.7 needs one"]}
 ```
 
 `0` the gate passed · `1` it failed (JSON on stdout) or a usage error was raised
 before it ran (no stdout) · `2` argument parsing failed.
 
-So the verdict is always `passed` and the exit code — that is what a CI step
-branches on. The tables below say what each gate puts in `details`, which is the
-only part that differs between them: a gate that answered `false` and nothing
-else could not be acted on, and §62304 evidence records what was checked, not
-just the verdict.
+That is the whole answer: the verdict, and every finding as a line you can
+print. A gate that answered only `false` could not be acted on, so the findings
+come with it — but nothing more. `summary` says what was checked, which is how
+you tell a real pass from a gate that examined nothing.
 
 ### Gates on the DHF — no CR needed
 
 Run these on any DHF, whether or not the project uses the AI change workflow.
 
-| Command | `details` carries | Use it when |
-|---|---|---|
-| `medharness verify dhf` | `results.schema` — is the data readable at all, checked first because the rest is only true if it is. `results.traceability` — four separate questions, because each has a different fix: `required` (a mandatory link is absent), `dangling` (a link names an item that does not exist), `cycles` (two items each derive from the other, so neither has an origin), `coverage` (per parent→child pair, how many are covered and which are not). Plus `results.verification_gaps` — items that state no verification criterion. | Every push. This is the one gate a DHF cannot do without: it is the only check that reads the items *together* and asks whether the V-model closes. |
-| `medharness verify tests --junit-dir test-results` | `missing_method`, `unverified_test`, `manual_review_required` | After the test job, to prove each requirement was verified **by the method it declared** — a Test-verified requirement needs a passing linked test, not just any evidence. |
-| `medharness verify soup --manifest requirements.txt` | `drift` — the register against the manifests, split by how it diverged (`undocumented`, `no_longer_shipped`, `misversioned`, `undescribed`). `vulnerable` — OSV matches. `accepted` — CVEs this project has documented a decision on, and `acceptance_problems` where that record is unusable. | Nightly and before a release. Answers both §8.1.2 questions at once: is the register what actually ships, and is any of it known-vulnerable. `--offline-mode warn` for air-gapped runners. |
-| `medharness verify classification` | `classification.declared` — the class set in global.yaml, empty until you set one. `classification.rationale_present`, `classification.missing_item_types` — the item types this class requires that the DHF has none of. `plans.declared` / `plans.checked` — the §5.1 plans the class calls for, and which were found. | Once a safety class is declared, to check the §5.1 plans that class requires exist. Warns and exits 0 until you declare one, so it is safe to wire before you have decided. |
+| Command | Use it when |
+|---|---|
+| `medharness verify dhf` | Every push. This is the one gate a DHF cannot do without: it is the only check that reads the items *together* and asks whether the V-model closes. |
+| `medharness verify tests --junit-dir test-results` | After the test job, to prove each requirement was verified **by the method it declared** — a Test-verified requirement needs a passing linked test, not just any evidence. |
+| `medharness verify soup --manifest requirements.txt` | Nightly and before a release. Answers both §8.1.2 questions at once: is the register what actually ships, and is any of it known-vulnerable. `--offline-mode warn` for air-gapped runners. |
+| `medharness verify classification` | Once a safety class is declared, to check the §5.1 plans that class requires exist. Warns and exits 0 until you declare one, so it is safe to wire before you have decided. |
 
 ### Gates on a change request
 
 These read fields `change plan` writes, so they apply only to a project running
 the CR workflow. A PR with no CR passes them.
 
-| Command | `details` carries | Use it when |
-|---|---|---|
-| `medharness change verify-branch --cr CR-034` | `promised_but_unchanged`, `cr_found`, `findings` | On the PR. Checks the branch actually changed the items the CR listed in `affected_items` — a CR that promised to touch SYS-001 and did not is caught before review, not after. |
-| `medharness change verify-completion --cr CR-034 --junit-dir test-results` | `incomplete_cr_fields`, `missing_items`, `verification_gaps`, `unverified_test`, `manual_review_required` | Twice. On the branch to block the merge — the CR fields, the approval and the proposed items settle there. Again on `main`, where the tests re-run against whatever else landed. Reports only items **this CR** touched. |
-| `medharness change verify-approval --cr CR-034 --stage design --pr 42` | `approved`, `approvals`, `stale_approvals`, `head_sha`, `stage` | Before merging. Requires an approving GitHub review whose commit is the one being merged; an approval of an earlier commit is reported as stale and fails. `--stage` is recorded, not searched on — the commit is what separates design from develop. Needs `GH_TOKEN`. |
+| Command | Use it when |
+|---|---|
+| `medharness change verify-branch --cr CR-034` | On the PR. Checks the branch actually changed the items the CR listed in `affected_items` — a CR that promised to touch SYS-001 and did not is caught before review, not after. |
+| `medharness change verify-completion --cr CR-034 --junit-dir test-results` | Twice. On the branch to block the merge — the CR fields, the approval and the proposed items settle there. Again on `main`, where the tests re-run against whatever else landed. Reports only items **this CR** touched. |
+| `medharness change verify-approval --cr CR-034 --stage design --pr 42` | Before merging. Requires an approving GitHub review whose commit is the one being merged; an approval of an earlier commit is reported as stale and fails. `--stage` is recorded, not searched on — the commit is what separates design from develop. Needs `GH_TOKEN`. |
 
 ### The AI change workflow
 
