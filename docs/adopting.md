@@ -95,6 +95,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      pull-requests: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -118,14 +119,28 @@ jobs:
             --out-dir artifacts \
             --write
 
-      - name: Commit REL item
+      # Through a pull request, not a push to main: a branch protection rule
+      # requiring review is the normal configuration for a controlled repo, and
+      # a REL item is a DHF record like any other.
+      - name: Open a pull request for the REL item
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.ver.outputs.version }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add DHF/
-          git diff --cached --quiet || \
-            git commit -m "ci: release baseline ${{ steps.ver.outputs.version }}" && \
-            git push origin HEAD:main
+          if git diff --cached --quiet; then
+            echo "No DHF change to record for $VERSION."
+            exit 0
+          fi
+          BRANCH="chore/release-baseline-$VERSION"
+          git checkout -b "$BRANCH"
+          git commit -m "ci: release baseline $VERSION"
+          git push origin "$BRANCH"
+          gh pr create --base main --head "$BRANCH" \
+            --title "ci: release baseline $VERSION" \
+            --body "REL item and software BOM for version $VERSION, written by the release-baseline job. Artifacts are attached to the workflow run."
 
       - uses: actions/upload-artifact@v4
         with:

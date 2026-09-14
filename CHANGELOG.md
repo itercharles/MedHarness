@@ -11,6 +11,40 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.26.3] — 2026-09-14
+
+### Fixed
+
+- **The shipped release workflow no longer requires branch protection to be
+  off.** Its "Commit REL item" step ran `git push origin HEAD:main` with
+  `GITHUB_TOKEN`, which fails on any repository whose default branch requires a
+  pull request — the normal configuration for a controlled repo, and the one
+  this tool exists to support:
+
+  ```
+  remote: error: GH006: Protected branch update failed for refs/heads/main.
+  ```
+
+  Pushing a *branch* is never blocked, so the step now pushes
+  `chore/release-baseline-<version>` and opens a pull request with `gh pr
+  create`. No PAT, no third-party action, and the REL item reaches `main`
+  through review like every other DHF record. The job gains
+  `pull-requests: write`.
+
+- **The same step pushed even when there was nothing to commit.**
+  `A || B && C` groups in bash as `(A || B) && C`, so an empty change set
+  skipped the commit and ran the push anyway. It is now an explicit `if`.
+
+- `docs/adopting.md` carries the corrected recipe; a guard already required the
+  two to match verbatim.
+
+### Added
+
+- `tests/guards/test_shipped_workflows_respect_protection.py` — nothing we ship
+  may push straight to the default branch, and the release job must keep the
+  permission and the conditional it needs.
+
+
 ## [0.26.2] — 2026-09-13
 
 ### Fixed
