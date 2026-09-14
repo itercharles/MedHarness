@@ -185,11 +185,17 @@ envelope, so one CI step can handle any of them:
 `0` the gate passed · `1` it failed (JSON on stdout) or a usage error was raised
 before it ran (no stdout) · `2` argument parsing failed.
 
+So the verdict is always `passed` and the exit code — that is what a CI step
+branches on. The tables below say what each gate puts in `details`, which is the
+only part that differs between them: a gate that answered `false` and nothing
+else could not be acted on, and §62304 evidence records what was checked, not
+just the verdict.
+
 ### Gates on the DHF — no CR needed
 
 Run these on any DHF, whether or not the project uses the AI change workflow.
 
-| Command | Returns in `details` | Use it when |
+| Command | `details` carries | Use it when |
 |---|---|---|
 | `medharness verify dhf` | `results.schema`, `results.traceability` (required-rule failures, dangling links, cycles), `results.coverage` | Every push. This is the one gate a DHF cannot do without: it is the only check that reads the items *together* and asks whether the V-model closes. |
 | `medharness verify tests --junit-dir test-results` | `missing_method`, `unverified_test`, `manual_review_required` | After the test job, to prove each requirement was verified **by the method it declared** — a Test-verified requirement needs a passing linked test, not just any evidence. |
@@ -201,7 +207,7 @@ Run these on any DHF, whether or not the project uses the AI change workflow.
 These read fields `change plan` writes, so they apply only to a project running
 the CR workflow. A PR with no CR passes them.
 
-| Command | Returns in `details` | Use it when |
+| Command | `details` carries | Use it when |
 |---|---|---|
 | `medharness change verify-branch --cr CR-034` | `promised_but_unchanged`, `cr_found`, `findings` | On the PR. Checks the branch actually changed the items the CR listed in `affected_items` — a CR that promised to touch SYS-001 and did not is caught before review, not after. |
 | `medharness change verify-completion --cr CR-034 --junit-dir test-results` | `incomplete_cr_fields`, `missing_items`, `verification_gaps`, `unverified_test`, `manual_review_required` | Twice. On the branch to block the merge — the CR fields, the approval and the proposed items settle there. Again on `main`, where the tests re-run against whatever else landed. Reports only items **this CR** touched. |
