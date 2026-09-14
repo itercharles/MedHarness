@@ -4,7 +4,7 @@ Python's `urlopen` has no default timeout: against a hung endpoint it blocks
 forever. These run inside CI, where forever means the job hangs until the
 runner's own limit kills it — with no message pointing at the cause.
 
-Seven calls in `artifact_fetcher.py` had none. The check is source-level and
+Seven calls in the CI artifact fetcher had none. The check is source-level and
 covers both packages, so a call added later is caught rather than discovered
 during an outage.
 """
@@ -51,9 +51,19 @@ UNTIMED = _calls_without_timeout()
 
 
 def test_the_scan_finds_network_calls_at_all() -> None:
-    """A scan matching nothing would make the assertion below vacuous."""
-    text = (ROOT / "dhfkit" / "artifact_fetcher.py").read_text()
-    assert text.count("urlopen(") >= 4, "the probe file no longer has the calls"
+    """A scan matching nothing would make the assertion below vacuous.
+
+    Counted across the packages rather than in one named file: the calls this
+    was written for lived in a module that has since been deleted, and naming
+    it left the probe pointing at nothing.
+    """
+    total = 0
+    for package in ("dhfkit", "medharness"):
+        for path in (ROOT / package).rglob("*.py"):
+            if "tests" in path.parts:
+                continue
+            total += path.read_text(encoding="utf-8").count("urlopen(")
+    assert total >= 2, f"only {total} network calls found — the scan reaches nothing"
 
 
 @pytest.mark.parametrize("where,line,name", UNTIMED,

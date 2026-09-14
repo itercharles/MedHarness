@@ -11,6 +11,45 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.28.0] — 2026-09-14
+
+### Breaking Changes
+
+- **The result store is gone.** `DHF/test-results/`, the
+  `test_integration.result_store` config, `dhfkit.result_store`, and the adapter
+  and API methods behind it (`get_test_result`, `get_all_test_results`,
+  `record_test_result`, `get_test_result_items`, `import_results_from_file`,
+  `pull_results_from_artifacts`) are removed, along with the `DHFAdapter`
+  protocol methods that required them. `CONTRACT_VERSION` is now `"4.0"`.
+
+  Nothing ever wrote it. `inject_junit_results` says so in its own docstring —
+  "without storing to DHF … held in-memory only" — and no CLI command reached
+  the writing methods at all. A scaffolded project got an empty directory, a
+  config key pointing at a file that would never exist, and a `.gitignore`
+  comment explaining that the directory "holds verification evidence —
+  including manual review records that exist nowhere else".
+
+- **The traceability report no longer has a `test_results` section.** It was
+  populated from the store, so it was empty in every report ever generated,
+  including with `--junit` supplied. An auditor reading the evidence bundle saw
+  "Test Results: none". Requirement-to-test coverage was always reported from
+  the JUnit evidence itself, under `coverage`, and still is.
+
+- **`dhfkit.artifact_fetcher` is removed** — GitHub, GitLab and Jenkins artifact
+  fetchers whose only caller was `pull_results_from_artifacts`.
+
+### Changed
+
+- `MedHarnessCore._refresh_verification_status` sets every verifiable item to
+  `not_verified` directly instead of deriving it from an empty store, and the
+  JUnit merge no longer looks for stored records to preserve. Behaviour is
+  unchanged: evidence comes from the JUnit batch, and an item with none is
+  `not_verified`.
+- `test_network_calls_have_timeouts` probed one named file to prove its scan
+  reached something. That file is one of the ones deleted here, so the probe
+  counts across both packages now.
+
+
 ## [0.27.0] — 2026-09-14
 
 ### Breaking Changes

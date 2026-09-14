@@ -34,9 +34,7 @@ class MedHarnessCore:
 
     def refresh(self):
         """Reload all items, rebuild graph, and recompute verification status."""
-        raw_items = self._adapter.list_items()
-        tc_items = self._adapter.get_test_result_items()
-        self.graph.build_from_items(raw_items + tc_items)
+        self.graph.build_from_items(self._adapter.list_items())
         self._refresh_verification_status()
 
     # ------------------------------------------------------------------
@@ -44,18 +42,15 @@ class MedHarnessCore:
     # ------------------------------------------------------------------
 
     def _refresh_verification_status(self) -> None:
-        # No early return on an empty store: verification_status is derived, so
-        # "no evidence" must resolve to not_verified. Returning early left a
-        # stale `verification_status: verified` in the YAML standing, and adding
-        # one unrelated result then flipped the same item to not_verified.
-        verifiable_ids = {
-            node_id
-            for node_id in self.graph.graph.nodes
-            if (
-                cfg := self._adapter.get_item_type(node_id.rsplit("-", 1)[0] + "-")
-            ) and cfg.get("has_verification")
-        }
-        self._inject_verification_status(verifiable_ids)
+        """Every verifiable item starts not_verified; JUnit evidence raises it.
+
+        Derived, never read from the item: a stale `verification_status:
+        verified` left in the YAML must not stand in for evidence.
+        """
+        for node_id in self.graph.graph.nodes:
+            cfg = self._adapter.get_item_type(node_id.rsplit("-", 1)[0] + "-")
+            if cfg and cfg.get("has_verification"):
+                self.graph.graph.nodes[node_id]["item"]["verification_status"] = "not_verified"
 
     def inject_junit_results(self, junit_paths: List[Path]) -> None:
         """Inject verification status from JUnit XML files without storing to DHF.
@@ -99,16 +94,6 @@ class MedHarnessCore:
                 cfg := self._adapter.get_item_type(node_id.rsplit("-", 1)[0] + "-")
             ) and cfg.get("has_verification")
         }
-        # Merge only what a JUnit run cannot carry. Manual review records live
-        # solely in the store and would be wiped by a wholesale replace; ordinary
-        # automated results are superseded by the batch, so deleting a test
-        # correctly drops the requirement back to not_verified rather than
-        # leaving it verified by a stale stored PASS.
-        stored = {
-            tc_id: rec for tc_id, rec in self._adapter.get_all_test_results().items()
-            if str(rec.get("review_status") or "").strip()
-            or str(rec.get("reviewer") or "").strip()
-        }
         for item_id in verifiable_ids:
             if not self.graph.graph.has_node(item_id):
                 continue
@@ -119,41 +104,12 @@ class MedHarnessCore:
                 vs = "failed" if "FAIL" in statuses else "verified"
                 node_item["test_cases"] = item_tests.get(item_id, [])
             else:
-                linked = [
-                    rec for rec in stored.values()
-                    if item_id in (rec.get("links") or [])
-                    and rec.get("testing_status") in ("PASS", "FAIL")
-                ]
-                if not linked:
-                    vs = "not_verified"
-                elif any(r["testing_status"] == "FAIL" for r in linked):
-                    vs = "failed"
-                else:
-                    vs = "verified"
+                # Deleting a test correctly drops the requirement back rather
+                # than leaving it verified by whatever the YAML last said.
+                vs = "not_verified"
                 node_item.setdefault("test_cases", [])
             node_item["verification_status"] = vs
 
-    def _inject_verification_status(self, item_ids: set) -> None:
-        all_results = self._adapter.get_all_test_results()
-        for item_id in item_ids:
-            if not self.graph.graph.has_node(item_id):
-                continue
-            prefix = item_id.rsplit("-", 1)[0] + "-"
-            doc_type_cfg = self._adapter.get_item_type(prefix)
-            if not doc_type_cfg or not doc_type_cfg.get("has_verification"):
-                continue
-            linked = [
-                rec for rec in all_results.values()
-                if item_id in (rec.get("links") or [])
-                and rec.get("testing_status") in ("PASS", "FAIL")
-            ]
-            if not linked:
-                new_status = "not_verified"
-            elif any(r["testing_status"] == "FAIL" for r in linked):
-                new_status = "failed"
-            else:
-                new_status = "verified"
-            self.graph.graph.nodes[item_id]["item"]["verification_status"] = new_status
 
     # ------------------------------------------------------------------
     # Item read access
@@ -378,9 +334,3 @@ class MedHarnessCore:
                 return item_type.get("prefix")
         return None
 
-    def get_all_test_results(
-        self,
-        status_filter: Optional[str] = None,
-    ) -> Dict[str, Any]:
-        """Return all stored test results, optionally filtered by status."""
-        return self._adapter.get_all_test_results(status_filter)

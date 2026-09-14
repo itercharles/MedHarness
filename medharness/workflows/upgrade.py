@@ -79,7 +79,6 @@ _USER_OWNED: frozenset[str] = frozenset({
     "DHF/documents/plans/risk_management_plan.md",
     "DHF/documents/plans/validation_plan.md",
     "DHF/documents/plans/verification_plan.md",
-    "DHF/test-results/.gitkeep",
     "docs/reviews/.gitkeep",
 })
 

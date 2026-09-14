@@ -170,7 +170,6 @@ def _build_traceability_report_payload(core, doc_types: tuple[str, ...],
         coverage[level].sort(key=lambda x: x["id"])
 
     matrix["coverage"] = coverage
-    matrix["test_results"] = core.get_all_test_results()
     return matrix
 
 
@@ -242,7 +241,6 @@ def _format_traceability_matrix_markdown(matrix: dict) -> str:
     columns: list[str] = matrix.get("columns") or []
     rows: list[dict] = matrix.get("rows") or []
     coverage: dict[str, list[dict]] = matrix.get("coverage") or {}
-    test_results: dict = matrix.get("test_results") or {}
 
     def _esc(value) -> str:
         if value is None or value == "":
@@ -324,18 +322,6 @@ def _format_traceability_matrix_markdown(matrix: dict) -> str:
                     f"| {_esc(it.get('status', 'not_verified'))} | {_esc(tests)} |"
                 )
             lines.append("")
-
-    if test_results:
-        passed = sum(1 for r in test_results.values() if r.get("testing_status") == "PASS")
-        failed = sum(1 for r in test_results.values() if r.get("testing_status") == "FAIL")
-        skipped = sum(1 for r in test_results.values() if r.get("testing_status") == "SKIP")
-        lines.append("## Test Results")
-        lines.append("")
-        lines.append(f"- **Total:** {len(test_results)}")
-        lines.append(f"- **Passed:** {passed}")
-        lines.append(f"- **Failed:** {failed}")
-        lines.append(f"- **Skipped:** {skipped}")
-        lines.append("")
 
     lines.append("## Compliance References")
     lines.append("")

@@ -66,16 +66,6 @@ def export_pdf(dhf_root: Path, doc_type_code: str) -> dict:
     return _adapter(dhf_root).export_pdf(doc_type_code)
 
 
-# -- Test result operations ---------------------------------------------------
-
-def get_test_status(dhf_root: Path, tc_id: str) -> Optional[dict]:
-    return _adapter(dhf_root).get_test_result(tc_id)
-
-
-def list_test_results(dhf_root: Path, status_filter: Optional[str] = None) -> dict[str, dict]:
-    return _adapter(dhf_root).get_all_test_results(status_filter)
-
-
 # -- Config operations --------------------------------------------------------
 
 def get_config(dhf_root: Path):
