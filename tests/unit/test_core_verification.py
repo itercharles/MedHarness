@@ -5,8 +5,6 @@ compliance-load-bearing:
 
 * an item claimed ``verified`` with an empty result store, and flipped to
   ``not_verified`` when an *unrelated* result was added;
-* ``evidence bundle --junit`` wiped verification that lived only in the result
-  store, including manual review records that can never appear in a JUnit file;
 * a typo in ``--coverage-pair`` reported ``passed: True`` over zero items;
 * ``change plan --cr CR-001`` on a freshly scaffolded project answered
   "CR 'CR-001' not found" for the CR the scaffold had just written.
@@ -41,15 +39,6 @@ def _core(dhf: Path) -> MedHarnessCore:
     return MedHarnessCore(LocalDHFAdapter(dhf))
 
 
-def _record(dhf: Path, tc_id: str, links: list[str], status: str = "PASS",
-            reviewer: str = "") -> None:
-    """Record a result. Passing `reviewer` makes it a manual review record."""
-    entry = {"tc_id": tc_id, "testing_status": status, "links": links}
-    if reviewer:
-        entry.update({"reviewer": reviewer, "review_status": "approved"})
-    LocalDHFAdapter(dhf)._result_store.record_executions([entry])
-
-
 def _junit(path: Path, links: str, failed: bool = False) -> Path:
     failure = "<failure message='boom'>x</failure>" if failed else ""
     path.write_text(
@@ -62,72 +51,37 @@ def _junit(path: Path, links: str, failed: bool = False) -> Path:
 
 
 class TestVerificationRequiresEvidence:
-    def test_empty_store_does_not_leave_a_stale_verified(self, dhf: Path) -> None:
-        """A YAML claiming verified with no results must not be believed."""
+    """Verification status is derived from evidence, never read from the item."""
+
+    def test_a_yaml_claiming_verified_is_not_believed(self, dhf: Path) -> None:
         srs = next((dhf / "items" / "03_srs").glob("SRS-*.yaml"))
         srs.write_text(srs.read_text() + "\nverification_status: verified\n")
 
         assert _core(dhf).get_item("SRS-001")["verification_status"] == "not_verified"
 
-    def test_status_does_not_depend_on_unrelated_items(self, dhf: Path) -> None:
-        """Previously: empty store said verified, one unrelated result said not."""
-        srs = next((dhf / "items" / "03_srs").glob("SRS-*.yaml"))
-        srs.write_text(srs.read_text() + "\nverification_status: verified\n")
-        before = _core(dhf).get_item("SRS-001")["verification_status"]
-
-        _record(dhf, "TC-SYS-001", ["SYS-001"])
-        after = _core(dhf).get_item("SRS-001")["verification_status"]
-
-        assert before == after == "not_verified"
-
-    def test_linked_passing_result_verifies(self, dhf: Path) -> None:
-        _record(dhf, "TC-SRS-001", ["SRS-001"])
-        assert _core(dhf).get_item("SRS-001")["verification_status"] == "verified"
-
-    def test_linked_failing_result_marks_failed(self, dhf: Path) -> None:
-        _record(dhf, "TC-SRS-001", ["SRS-001"], status="FAIL")
-        assert _core(dhf).get_item("SRS-001")["verification_status"] == "failed"
-
-
-class TestJunitInjectionMerges:
-    """Merge only what a JUnit run cannot carry.
-
-    Manual review records live solely in the store and must survive. Ordinary
-    automated results are superseded by the batch — otherwise deleting a test
-    left its requirement `verified` by a stale stored PASS.
-    """
-
-    def test_manual_review_record_survives_an_unrelated_junit(self, dhf: Path, tmp_path: Path) -> None:
-        _record(dhf, "TC-SRS-001", ["SRS-001"], reviewer="qa@example.com")
+    def test_a_linked_passing_test_verifies(self, dhf: Path, tmp_path: Path) -> None:
         core = _core(dhf)
+        core.inject_junit_results([_junit(tmp_path / "srs.xml", "SRS-001")])
         assert core.get_item("SRS-001")["verification_status"] == "verified"
 
-        core.inject_junit_results([_junit(tmp_path / "sys.xml", "SYS-001")])
-
-        assert core.get_item("SRS-001")["verification_status"] == "verified"
-        assert core.get_item("SYS-001")["verification_status"] == "verified"
-
-    def test_stale_automated_result_does_not_survive(self, dhf: Path, tmp_path: Path) -> None:
-        """A deleted test must drop its requirement, not leave it verified."""
-        _record(dhf, "TC-SRS-001", ["SRS-001"])
+    def test_a_linked_failing_test_marks_failed(self, dhf: Path, tmp_path: Path) -> None:
         core = _core(dhf)
-        assert core.get_item("SRS-001")["verification_status"] == "verified"
-
-        # The batch no longer contains a test for SRS-001 — it was deleted.
-        core.inject_junit_results([_junit(tmp_path / "sys.xml", "SYS-001")])
-
-        assert core.get_item("SRS-001")["verification_status"] == "not_verified"
-
-    def test_junit_overrides_the_store_for_the_same_item(self, dhf: Path, tmp_path: Path) -> None:
-        _record(dhf, "TC-SRS-001", ["SRS-001"])
-        core = _core(dhf)
-
         core.inject_junit_results([_junit(tmp_path / "srs.xml", "SRS-001", failed=True)])
-
         assert core.get_item("SRS-001")["verification_status"] == "failed"
 
-    def test_item_with_no_evidence_anywhere_is_not_verified(self, dhf: Path, tmp_path: Path) -> None:
+    def test_evidence_for_another_item_verifies_nothing(self, dhf: Path, tmp_path: Path) -> None:
+        """An item is verified by its own evidence or not at all."""
         core = _core(dhf)
+        core.inject_junit_results([_junit(tmp_path / "sys.xml", "SYS-001")])
+        assert core.get_item("SYS-001")["verification_status"] == "verified"
+        assert core.get_item("SRS-001")["verification_status"] == "not_verified"
+
+    def test_a_deleted_test_drops_its_requirement(self, dhf: Path, tmp_path: Path) -> None:
+        """The batch is the whole truth: no lingering PASS from a previous run."""
+        core = _core(dhf)
+        core.inject_junit_results([_junit(tmp_path / "srs.xml", "SRS-001")])
+        assert core.get_item("SRS-001")["verification_status"] == "verified"
+
         core.inject_junit_results([_junit(tmp_path / "sys.xml", "SYS-001")])
         assert core.get_item("SRS-001")["verification_status"] == "not_verified"
 

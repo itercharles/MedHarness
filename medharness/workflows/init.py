@@ -64,10 +64,6 @@ def _scaffold_dhf(project_dir: Path) -> None:
     # AI agent context file
     _cp("AI-harness", "AI-harness")
 
-    # Empty test-results dir
-    results_dir = project_dir / "DHF" / "test-results"
-    results_dir.mkdir(parents=True, exist_ok=True)
-    (results_dir / ".gitkeep").touch(exist_ok=True)
 
 
 # Directories that may sit inside a project root but are never scaffold output.
@@ -179,10 +175,8 @@ __pycache__/
 *.pyo
 .DS_Store
 
-# Transient JUnit output from local test runs. DHF/test-results/ is deliberately
-# NOT ignored: it holds the result store, which carries verification evidence —
-# including manual review records that exist nowhere else — and must be
-# committed alongside the items it verifies.
+# Transient JUnit output from local test runs. Evidence of verification is the
+# bundle a run produces, not anything left in the working tree.
 /test-results/
 artifacts/
 

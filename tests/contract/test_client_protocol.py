@@ -19,7 +19,7 @@ def test_contract_version_is_defined():
 
 
 def test_contract_version_is_stable():
-    assert CONTRACT_VERSION == "3.0"
+    assert CONTRACT_VERSION == "4.0"
 
 
 # ── DHFAdapter Protocol completeness on LocalDHFAdapter ───────────────────────
@@ -33,9 +33,6 @@ _PROTOCOL_METHODS = [
     "validate_schema",
     # Item type metadata
     "get_item_type", "list_item_types", "get_lifecycle_states",
-    # Test results
-    "get_test_result", "get_all_test_results", "get_test_result_items",
-    "import_results_from_file", "record_test_result", "pull_results_from_artifacts",
     # Documents
     "get_document", "list_documents",
     # CR context

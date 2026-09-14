@@ -167,10 +167,14 @@ class TestPrefixConsistency:
         items.mkdir(parents=True)
         (items / "VER-SW-001.yaml").write_text("id: VER-SW-001\ntitle: Verify something\n")
 
-        adapter = LocalDHFAdapter(dhf)
-        adapter._result_store.record_executions(
-            [{"tc_id": "TC-VER-001", "testing_status": "PASS", "links": ["VER-SW-001"]}]
+        junit = tmp_path / "ver.xml"
+        junit.write_text(
+            "<testsuites><testsuite name='s' tests='1'>"
+            "<testcase classname='t' name='test_x'><properties>"
+            "<property name='medharness.links' value='VER-SW-001'/>"
+            "</properties></testcase></testsuite></testsuites>"
         )
         core = MedHarnessCore(LocalDHFAdapter(dhf))
+        core.inject_junit_results([junit])
 
         assert core.get_item("VER-SW-001")["verification_status"] == "verified"

@@ -110,7 +110,6 @@ def test_format_matrix_markdown_renders_summary_and_matrix():
     assert "| UC-001 | CRS-001 | SYS-001 | verified |" in md
     assert "## Coverage by Level" in md
     assert "TC-001" in md
-    assert "**Passed:** 1" in md
 
 
 def test_format_matrix_markdown_handles_dict_tests():

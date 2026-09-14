@@ -24,7 +24,6 @@ class TestScaffoldStructure:
         "DHF/documents/specs",
         "DHF/documents/plans",
         "DHF/items",
-        "DHF/test-results",
         ".github",
         ".github/prompts",
     ]
@@ -149,17 +148,6 @@ class TestScaffoldStructure:
         prompt_dir = scaffolded / ".github" / "prompts"
         prompts = list(prompt_dir.glob("*.md"))
         assert len(prompts) > 0, f"No prompt files found in {prompt_dir}"
-
-    def test_test_results_dir_has_gitkeep(self, scaffolded):
-        """
-        test-results/ has a .gitkeep file.
-
-        """
-        assert (scaffolded / "DHF" / "test-results" / ".gitkeep").exists()
-
-
-class TestScaffoldIdempotency:
-    """Scaffolding should be idempotent — re-running should not fail."""
 
     def test_double_scaffold_does_not_crash(self):
         """
