@@ -139,8 +139,8 @@ def _reviews(pr_number: int | str, *, token: str = "") -> list[dict] | None:
     return payload if isinstance(payload, list) else None
 
 
-def approval_evidence(pr_number: int | str, stage: str, *, token: str = "") -> dict:
-    """What approves this stage, and whether it still applies.
+def approval_evidence(pr_number: int | str, *, token: str = "") -> dict:
+    """What approves this pull request, and whether it still applies.
 
     A GitHub label was the old answer. Anyone with write access can add or
     remove one, it carries no author, no time, and no revision — so it records
@@ -148,10 +148,9 @@ def approval_evidence(pr_number: int | str, stage: str, *, token: str = "") -> d
     and naming the commit is what makes it evidence: approval of work that has
     since changed is not approval of what ships.
 
-    `stage` names the gate asking, and is recorded in the result. It does not
-    narrow the search: what separates the stages is the commit. A design
-    approval covers the DHF cascade that was the head at the time, and goes
-    stale the moment the code lands, so the develop gate needs its own review.
+    There is no stage to pass: the commit is what separates them. A design
+    approval covers the cascade that was the head at the time and goes stale
+    the moment the code lands, so the develop gate needs its own review.
     """
     head = _pr_head_sha(pr_number, token=token)
     reviews = _reviews(pr_number, token=token)
@@ -159,7 +158,6 @@ def approval_evidence(pr_number: int | str, stage: str, *, token: str = "") -> d
         return {
             "approved": False,
             "reason": "the pull request's reviews could not be read",
-            "stage": stage,
             "head_sha": head,
             "approvals": [],
             "stale_approvals": [],
@@ -187,13 +185,8 @@ def approval_evidence(pr_number: int | str, stage: str, *, token: str = "") -> d
     return {
         "approved": bool(approvals),
         "reason": reason,
-        "stage": stage,
         "head_sha": head,
         "approvals": approvals,
         "stale_approvals": stale,
     }
 
-
-def check_approved(pr_number: int | str, stage: str, *, token: str = "") -> bool:
-    """Whether an approving review covers the commit this PR would merge."""
-    return approval_evidence(pr_number, stage, token=token)["approved"]

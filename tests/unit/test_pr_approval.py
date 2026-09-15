@@ -12,7 +12,7 @@ from medharness.cli import main
 from medharness.services.pr_approval import (
     ApprovalCommand,
     add_approval_label,
-    check_approved,
+    approval_evidence,
     close_pr,
     label_for_stage,
     parse_approval_command,
@@ -136,20 +136,18 @@ class TestGhDependentFunctions:
         monkeypatch.setenv("GITHUB_TOKEN", "")
         assert close_pr(42) is False
 
-    def test_check_approved_graceful_no_gh_cli(self, monkeypatch):
+    def test_evidence_graceful_no_gh_cli(self, monkeypatch):
+        """No gh means the reviews cannot be read, which is not an approval."""
         monkeypatch.setenv("PATH", "/nonexistent")
         monkeypatch.setenv("GH_TOKEN", "")
         monkeypatch.setenv("GITHUB_TOKEN", "")
-        assert check_approved(42, "spec") is False
+        evidence = approval_evidence(42)
+        assert evidence["approved"] is False
+        assert "could not be read" in evidence["reason"]
 
     def test_add_label_unknown_stage(self, monkeypatch):
         monkeypatch.setenv("PATH", "/nonexistent")
         assert add_approval_label(42, "nonexistent") is False
-
-    def test_check_approved_unknown_stage(self, monkeypatch):
-        monkeypatch.setenv("PATH", "/nonexistent")
-        assert check_approved(42, "nonexistent") is False
-
 
 # ── gh mock tests ─────────────────────────────────────────────────────────────
 
@@ -173,8 +171,8 @@ class TestWithMockedGh:
         with patch("subprocess.run", return_value=self._mock_run(1, "")):
             assert add_approval_label(42, "spec", token="tok") is False
 
-    def test_check_approved_true(self):
-        """Two gh calls now: the head commit, then the reviews on it."""
+    def test_an_approval_of_the_head_commit_counts(self):
+        """Two gh calls: the head commit, then the reviews on it."""
         import json as _json
 
         head = "a" * 40
@@ -182,15 +180,15 @@ class TestWithMockedGh:
                                 "login": "r", "submitted_at": "t"}])
         with patch("medharness.services.pr_approval._gh",
                    side_effect=[(0, head), (0, reviews)]):
-            assert check_approved(42, "design", token="tok") is True
+            assert approval_evidence(42, token="tok")["approved"] is True
 
-    def test_check_approved_false_label_absent(self):
+    def test_no_approving_review_is_not_an_approval(self):
         with patch("subprocess.run", return_value=self._mock_run(0, "false")):
-            assert check_approved(42, "design", token="tok") is False
+            assert approval_evidence(42, token="tok")["approved"] is False
 
-    def test_check_approved_false_gh_error(self):
+    def test_a_gh_error_is_not_an_approval(self):
         with patch("subprocess.run", return_value=self._mock_run(1, "")):
-            assert check_approved(42, "develop", token="tok") is False
+            assert approval_evidence(42, token="tok")["approved"] is False
 
     def test_post_comment_success(self):
         with patch("subprocess.run", return_value=self._mock_run(0, "https://gh/comment/1")):
@@ -226,7 +224,7 @@ class TestCiApproveGate:
         with patch("medharness.services.pr_approval.approval_evidence",
                    return_value=self.EVIDENCE):
             r = CliRunner().invoke(main, ["change", "verify-approval", "--cr", "CR-001",
-                                          "--stage", "design", "--pr", "42"])
+                                          "--pr", "42"])
         assert r.exit_code == 0, r.output
         payload = _first_json_line(r.output)
         assert payload["passed"] is True
@@ -246,7 +244,7 @@ class TestCiApproveGate:
         with patch("medharness.services.pr_approval.approval_evidence",
                    return_value=evidence):
             r = CliRunner().invoke(main, ["change", "verify-approval", "--cr", "CR-001",
-                                          "--stage", "design", "--pr", "42"])
+                                          "--pr", "42"])
         assert r.exit_code == 1
         assert "earlier commit" in r.output
         assert "bbbbbbb" in r.output, "the reviewed commit is not named"
@@ -255,7 +253,7 @@ class TestCiApproveGate:
         with patch("medharness.services.pr_approval.approval_evidence",
                    return_value=self.EVIDENCE):
             r = CliRunner().invoke(main, ["change", "verify-approval", "--cr", "CR-001",
-                                          "--stage", "design", "--pr", "42"])
+                                          "--pr", "42"])
         assert "label" not in json.dumps(_first_json_line(r.output))
 
 

@@ -39,25 +39,25 @@ def _review(state="APPROVED", commit=HEAD, login="reviewer"):
 class TestWhatCounts:
     def test_an_approving_review_of_the_head_commit_passes(self) -> None:
         with patch("medharness.services.pr_approval._gh", _gh_returning([_review()])):
-            e = approval_evidence(7, "design")
+            e = approval_evidence(7)
         assert e["approved"] is True
         assert e["approvals"][0]["by"] == "reviewer"
 
     def test_no_review_does_not_pass(self) -> None:
         with patch("medharness.services.pr_approval._gh", _gh_returning([])):
-            e = approval_evidence(7, "design")
+            e = approval_evidence(7)
         assert e["approved"] is False
         assert e["reason"] == "no approving review"
 
     def test_a_comment_only_review_does_not_pass(self) -> None:
         with patch("medharness.services.pr_approval._gh",
                    _gh_returning([_review(state="COMMENTED")])):
-            assert approval_evidence(7, "design")["approved"] is False
+            assert approval_evidence(7)["approved"] is False
 
     def test_changes_requested_does_not_pass(self) -> None:
         with patch("medharness.services.pr_approval._gh",
                    _gh_returning([_review(state="CHANGES_REQUESTED")])):
-            assert approval_evidence(7, "design")["approved"] is False
+            assert approval_evidence(7)["approved"] is False
 
 
 class TestApprovalIsBoundToARevision:
@@ -66,7 +66,7 @@ class TestApprovalIsBoundToARevision:
     def test_an_approval_of_an_earlier_commit_does_not_pass(self) -> None:
         with patch("medharness.services.pr_approval._gh",
                    _gh_returning([_review(commit=OLDER)])):
-            e = approval_evidence(7, "design")
+            e = approval_evidence(7)
         assert e["approved"] is False
         assert e["reason"] == "every approving review is against an earlier commit"
         assert e["stale_approvals"][0]["commit"] == OLDER
@@ -74,7 +74,7 @@ class TestApprovalIsBoundToARevision:
     def test_a_fresh_approval_alongside_a_stale_one_passes(self) -> None:
         with patch("medharness.services.pr_approval._gh",
                    _gh_returning([_review(commit=OLDER, login="early"), _review(login="late")])):
-            e = approval_evidence(7, "design")
+            e = approval_evidence(7)
         assert e["approved"] is True
         assert [a["by"] for a in e["approvals"]] == ["late"]
         assert [a["by"] for a in e["stale_approvals"]] == ["early"]
@@ -82,19 +82,19 @@ class TestApprovalIsBoundToARevision:
     def test_an_approval_with_no_commit_is_not_trusted(self) -> None:
         with patch("medharness.services.pr_approval._gh",
                    _gh_returning([_review(commit=None)])):
-            assert approval_evidence(7, "design")["approved"] is False
+            assert approval_evidence(7)["approved"] is False
 
 
 class TestItFailsClosed:
     def test_unreadable_reviews_do_not_pass(self) -> None:
         with patch("medharness.services.pr_approval._gh", _gh_returning([], rc=1)):
-            e = approval_evidence(7, "design")
+            e = approval_evidence(7)
         assert e["approved"] is False
         assert "could not be read" in e["reason"]
 
     def test_an_unknown_head_does_not_pass(self) -> None:
         with patch("medharness.services.pr_approval._gh", _gh_returning([_review()], head="")):
-            assert approval_evidence(7, "design")["approved"] is False
+            assert approval_evidence(7)["approved"] is False
 
 
 def test_a_label_no_longer_decides() -> None:

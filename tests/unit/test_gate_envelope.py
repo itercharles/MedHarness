@@ -44,7 +44,7 @@ GATE_ARGS = {
     "change verify-branch": ["--cr", "CR-001"],
     # No network in the test environment, so the reviews come back unreadable —
     # which is a reporting path like any other, and the one that must not pass.
-    "change verify-approval": ["--cr", "CR-001", "--stage", "design", "--pr", "1"],
+    "change verify-approval": ["--cr", "CR-001", "--pr", "1"],
 }
 
 
@@ -165,7 +165,7 @@ class TestNoGateEscapesTheEnvelope:
             "verify tests": ["--junit-dir", str(dhf / "test-results")],
             "change verify-completion": ["--cr", "CR-001"],
             "change verify-branch": ["--cr", "CR-001"],
-            "change verify-approval": ["--cr", "CR-001", "--stage", "design", "--pr", "1"],
+            "change verify-approval": ["--cr", "CR-001", "--pr", "1"],
         }
         offenders = []
         for gate in GATES:
