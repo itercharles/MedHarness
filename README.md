@@ -148,7 +148,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - run: pip install medharness==0.28.0
+      - run: pip install medharness==0.29.0
       - run: medharness --dhf DHF verify dhf --fail-on-uncovered
 ```
 
@@ -212,7 +212,7 @@ the CR workflow. A PR with no CR passes them.
 |---|---|
 | `medharness change verify-branch --cr CR-034` | On the PR. Checks the branch actually changed the items the CR listed in `affected_items` — a CR that promised to touch SYS-001 and did not is caught before review, not after. |
 | `medharness change verify-completion --cr CR-034 --junit-dir test-results` | Twice. On the branch to block the merge — the CR fields, the approval and the proposed items settle there. Again on `main`, where the tests re-run against whatever else landed. Reports only items **this CR** touched. |
-| `medharness change verify-approval --cr CR-034 --stage design --pr 42` | Before merging. Requires an approving GitHub review whose commit is the one being merged; an approval of an earlier commit is reported as stale and fails. `--stage` is recorded, not searched on — the commit is what separates design from develop. Needs `GH_TOKEN`. |
+| `medharness change verify-approval --cr CR-034 --pr 42` | Before merging, at each stage that needs a sign-off. Requires an approving GitHub review of the exact commit the PR would merge; an approval of an earlier commit is stale and fails. That is also what keeps the stages honest — a design approval expires the moment code lands, so the develop stage needs its own. Needs `GH_TOKEN`. |
 
 ### The AI change workflow
 

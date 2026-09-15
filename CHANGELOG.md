@@ -11,6 +11,36 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.29.0] — 2026-09-15
+
+### Breaking Changes
+
+- **`change verify-approval` no longer takes `--stage`.** It was required and
+  never changed a verdict. 0.26.0 caught that it was unread and recorded it in
+  the output instead of asking why it was required; 0.27.0 removed the part of
+  the output it had been recorded in, leaving it inert again — with a README
+  sentence still explaining the mechanism. Two runs differing only in `--stage`
+  produced byte-identical JSON.
+
+  Nothing is lost: the commit is what separates the stages. A design approval
+  stops matching the head the moment code lands, so the develop stage needs its
+  own review whether or not anything is told which stage is asking. The stderr
+  tag is now `[approve]` rather than `[design-approve]`.
+
+  Callers drop the flag: `change verify-approval --cr CR-034 --pr 42`.
+
+- **`check_approved` is removed** — a wrapper over `approval_evidence` with no
+  production caller. `approval_evidence(pr_number, *, token)` loses its `stage`
+  parameter and the `stage` key it returned.
+
+### Added
+
+- `tests/guards/test_a_required_option_changes_the_answer.py` pins the approval
+  gate's required options to what it actually reads.
+  `test_no_parameter_is_decorative` could not catch `--stage`: it reads function
+  bodies, and `stage` was read — it reached a dict literal.
+
+
 ## [0.28.0] — 2026-09-14
 
 ### Breaking Changes

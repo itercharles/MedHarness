@@ -748,26 +748,24 @@ def register(main):
 
     @change.command("verify-approval")
     @click.option("--cr", "cr_id", required=True, metavar="CR_ID")
-    @click.option("--stage", required=True, type=click.Choice(["design", "develop"]))
     @click.option("--pr", "pr_number", required=True, type=int, metavar="N")
     @click.option("--token", default="", metavar="TOKEN")
-    def verify_approval(cr_id: str, stage: str, pr_number: int, token: str) -> None:
+    def verify_approval(cr_id: str, pr_number: int, token: str) -> None:
         """Check that a reviewer approved the commit this PR would merge.
 
         Reads the PR's reviews and requires an APPROVED one whose `commit_id`
         is the current head. An approval of an earlier commit is reported as
         stale and fails: it approved work that has since changed.
 
-        `--stage` names the gate asking and is recorded in the output; it does
-        not narrow the search. The commit is what separates the stages — a
-        design approval goes stale as soon as the code lands.
+        There is no stage to pass: a design approval goes stale as soon as the
+        code lands, so the develop gate needs its own review either way.
 
         Exits 0 when such a review exists, 1 otherwise.
         """
         from medharness.services.ci import envelope_from  # noqa: PLC0415
         from medharness.services.pr_approval import approval_evidence  # noqa: PLC0415
 
-        evidence = approval_evidence(pr_number, stage, token=token)
+        evidence = approval_evidence(pr_number, token=token)
         approved = evidence["approved"]
         who = ", ".join(
             f"{a['by']} at {a['at']}" for a in evidence["approvals"] if a.get("by")
@@ -792,13 +790,13 @@ def register(main):
 
         if evidence["approved"]:
             click.echo(
-                f"PASS [{stage}-approve] {cr_id}: approved on PR #{pr_number} "
+                f"PASS [approve] {cr_id}: approved on PR #{pr_number} "
                 f"({who or 'reviewer unknown'}), commit {evidence['head_sha'][:7]}.",
                 err=True,
             )
             return
         click.echo(
-            f"FAIL [{stage}-approve] {cr_id}: {evidence['reason']} on PR #{pr_number}.",
+            f"FAIL [approve] {cr_id}: {evidence['reason']} on PR #{pr_number}.",
             err=True,
         )
         for a in evidence["stale_approvals"]:

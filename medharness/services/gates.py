@@ -109,13 +109,11 @@ GATES: tuple[dict[str, Any], ...] = (
         "checks": "That an approving review on the PR names the commit being "
                   "merged, so the approval covers what ships.",
         "options": {
-            "required": ["--cr", "--stage", "--pr"],
+            "required": ["--cr", "--pr"],
             "optional": ["--token"],
         },
         "blocking": "always",
-        "blocking_note": "An approval of an earlier commit is stale and fails. "
-                         "--stage is recorded, not searched on: the commit is "
-                         "what separates the stages.",
+        "blocking_note": "An approval of an earlier commit is stale and fails.",
         "needs_network": True,
         "needs_safety_class": False,
     },

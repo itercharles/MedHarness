@@ -1324,7 +1324,7 @@ def _check_design_review(
     if pr_number is not None:
         from medharness.services.pr_approval import approval_evidence
 
-        evidence = approval_evidence(pr_number, "design")
+        evidence = approval_evidence(pr_number)
         if evidence["approved"]:
             return []
         return [{
