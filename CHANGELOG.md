@@ -11,6 +11,47 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.30.0] — 2026-09-16
+
+### Breaking Changes
+
+- **Approval records leave the DHF. The pull request is the record.** The `APR`
+  doc type, `dhfkit/approval.py`, and the approval check inside
+  `change verify-completion` are all removed, along with `--pr` on that command.
+  `change verify-approval` is now the only gate that rules on approval, and it
+  reads the PR's reviews.
+
+  The reason APR existed was that a label and a `docs/reviews/*.md` file lived
+  outside the DHF, "absent from the traceability matrix, from evidence bundles,
+  and from every gate". Measured, the record never got there either: no `APR`
+  specification is generated, no APR row appears in the traceability report, and
+  `global.yaml` configures no document for it. Its one advantage over a review
+  was never built. A review also names the commit it approved; the function that
+  derived the same for an APR had no caller.
+
+  Migration: drop `--pr` from `change verify-completion` and call
+  `change verify-approval --cr X --pr N` for the approval. Existing `APR-*.yaml`
+  items become unknown doc types — delete them, or keep the doc type in your own
+  `DHF/config/doc_types/`.
+
+- `cr_closure_gate` no longer takes `pr_number`. `CONTRACT_VERSION` is `"5.0"`.
+
+### Removed
+
+- `dhfkit.approval` entirely: `record_approval`, `find_approvals`,
+  `import_review_files`, `resolve_approval` and their helpers. The last three had
+  no caller at all; `record_approval` was reachable only from a CLI helper whose
+  own command went in 0.26.0.
+- 841 lines net.
+
+### Changed
+
+- `tests/unit/test_one_definition_of_approved.py` guarded two gates agreeing on
+  "approved". With one gate left it guards the separation instead — that closure
+  takes no pull request and reads no approval record, which is how a second
+  definition would creep back.
+
+
 ## [0.29.1] — 2026-09-16
 
 ### Fixed

@@ -104,7 +104,7 @@ class TestAnUnreadableTemplateIsAccountedFor:
 
     @pytest.fixture
     def unreadable_template(self):
-        target = U._TEMPLATES_DIR / "config" / "doc_types" / "apr.yaml"
+        target = U._TEMPLATES_DIR / "config" / "doc_types" / "cr.yaml"
         mode = target.stat().st_mode
         os.chmod(target, 0o000)
         try:
@@ -116,7 +116,7 @@ class TestAnUnreadableTemplateIsAccountedFor:
     def test_it_is_reported_as_unavailable(self, project, unreadable_template) -> None:
         report = U.check_upgrade(project)
         files = {u["file"] for u in report["unavailable"]}
-        assert any("apr.yaml" in f for f in files), (
+        assert any("cr.yaml" in f for f in files), (
             f"the unreadable template vanished from the report: {report['unavailable']}"
         )
 
@@ -128,9 +128,9 @@ class TestAnUnreadableTemplateIsAccountedFor:
         reads said "Applied 0 update(s). 27 already current." — which is true,
         and reads as nothing being wrong.
         """
-        (project / "DHF" / "config" / "doc_types" / "apr.yaml").unlink()
+        (project / "DHF" / "config" / "doc_types" / "cr.yaml").unlink()
         report = U.apply_upgrade(project)
-        assert any("apr.yaml" in u["file"] for u in report["unavailable"])
+        assert any("cr.yaml" in u["file"] for u in report["unavailable"])
         assert "this build cannot manage them" in report["summary"], report["summary"]
 
     def test_a_healthy_install_reports_neither(self, project) -> None:

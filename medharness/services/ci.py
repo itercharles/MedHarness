@@ -1302,90 +1302,6 @@ def _check_cr_fields(cr_item: dict, cr_id: str) -> list[dict]:
     return issues
 
 
-def _check_design_review(
-    dhf_path: Path, cr_id: str, pr_number: int | None = None
-) -> list[dict]:
-    """Check that the design stage was approved.
-
-    An APR item is the record of record: it is a DHF item, so it appears in the
-    traceability matrix and the evidence bundle, and the revision it covers is
-    its own commit rather than a field that could be edited to disagree.
-
-    The legacy docs/reviews/<CR>-Design-Review.md convention is still accepted so
-    projects mid-flight are not stranded; `dhfkit approval import` converts it.
-    """
-    from dhfkit.approval import find_approvals
-
-    # A pull request is the AI workflow's approval record: the review carries
-    # author, time and the commit it covers, and nothing here can rewrite it.
-    # `approval check` reads the same thing, so the two gates cannot disagree
-    # about whether a stage was approved. An APR item remains the record for an
-    # approval that never had a PR.
-    if pr_number is not None:
-        from medharness.services.pr_approval import approval_evidence
-
-        evidence = approval_evidence(pr_number)
-        if evidence["approved"]:
-            return []
-        return [{
-            "field": "design_review",
-            "issue": (
-                f"CR {cr_id} — {evidence['reason']} on PR #{pr_number}."
-            ),
-        }]
-
-    try:
-        approvals = find_approvals(dhf_path, approves=cr_id, stage="design")
-    except Exception:  # noqa: BLE001 — fall through to the file convention
-        approvals = []
-
-    if approvals:
-        latest = approvals[-1]
-        verdict = str(latest.get("verdict") or "unknown")
-        if verdict == "approved":
-            return []
-        return [{
-            "field": "design_review",
-            "issue": (
-                f"CR {cr_id} — {latest['id']} records verdict '{verdict}', not "
-                "'approved'; resolve open issues before closing."
-            ),
-        }]
-
-    review_file = dhf_path.parent / "docs" / "reviews" / f"{cr_id}-Design-Review.md"
-    if not review_file.exists():
-        return [{
-            "field": "design_review",
-            "issue": (
-                f"CR {cr_id} — no approval record. Expected an APR item approving "
-                f"{cr_id} at the design stage, or the legacy review file at "
-                f"docs/reviews/{cr_id}-Design-Review.md. Record one with: "
-                f"dhfkit --dhf DHF item create --type APR --data "
-                f"'{{\"title\": \"Design approved\", \"approves\": [\"{cr_id}\"], "
-                f"\"stage\": \"design\", \"verdict\": \"approved\", "
-                f"\"approver\": \"<who>\"}}' — or pass --pr N to read the "
-                f"approving review from the pull request instead."
-            ),
-        }]
-    verdict = "unknown"
-    for line in review_file.read_text(encoding="utf-8").splitlines():
-        stripped = line.strip()
-        if stripped.startswith("**Verdict:**"):
-            lower = stripped.lower()
-            if "approved" in lower:
-                verdict = "approved"
-            elif "needs revision" in lower:
-                verdict = "needs_revision"
-            break
-    if verdict != "approved":
-        return [{
-            "field": "design_review",
-            "issue": (
-                f"CR {cr_id} — design review verdict is '{verdict}', not 'approved'; "
-                "resolve open issues before closing."
-            ),
-        }]
-    return []
 
 
 def _closure_errors(incomplete=(), missing=(), gaps=(), unverified=()) -> list[str]:
@@ -1407,21 +1323,19 @@ def cr_closure_gate(
     cr_id: str,
     dhf_path: Path,
     junit_paths: tuple[Path, ...] = (),
-    *,
-    pr_number: int | None = None,
 ) -> dict:
     """Verify that a CR is fully closed: all proposed items created and verified.
 
     Checks:
     1. CR item carries implementation_notes, affected_risk_items, and an approved triage_result.
-    2. The design stage was approved: an approving review on ``pr_number`` when
-       given, otherwise an APR item, falling back to the legacy
-       docs/reviews/<CR>-Design-Review.md convention.
-    3. All ``proposed_new_items`` from the CR item exist in the DHF.
-    4. All created items of verifiable types have ``verification_method`` set.
-    5. Items with ``Test`` method have passing JUnit evidence. Without JUnit paths
+    2. All ``proposed_new_items`` from the CR item exist in the DHF.
+    3. All created items of verifiable types have ``verification_method`` set.
+    4. Items with ``Test`` method have passing JUnit evidence. Without JUnit paths
        the evidence is not checked, and the result says so rather than passing
        quietly.
+
+    Approval is not checked here. It lives in the pull request, which this gate
+    does not read — ``change verify-approval`` does.
 
     Args:
         cr_id: CR identifier (e.g. CR-012).
@@ -1450,7 +1364,6 @@ def cr_closure_gate(
     # field via `dhf item update` so it persists in the CR YAML alongside the CR itself.
     cr_item = adapter.get_item(cr_id) or {}
     incomplete_cr_fields = _check_cr_fields(cr_item, cr_id)
-    incomplete_cr_fields.extend(_check_design_review(dhf_path, cr_id, pr_number))
 
     raw = cr_item.get("proposed_new_items")
     if raw is None:

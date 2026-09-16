@@ -1,21 +1,21 @@
 """A fix a gate suggests must be runnable, and must fix the thing.
 
-The closure gate told a reader to run `medharness approval act`. No such command
-exists — the `approval` group went when its one gate moved under `change`, and
-the message kept naming it. A developer working by hand, without the AI, was
-sent to a command that does not exist and away from the one that works.
+The closure gate once told a reader to run `medharness approval act`. No such
+command existed — the `approval` group had gone and the message kept the name.
+That check is itself gone now (approval lives in the pull request, so
+`change verify-approval` owns it), but the failure mode is not specific to it:
+any gate can print a hint that names a command nobody can run.
 
-`test_no_source_names_a_dead_command` missed it: that guard matches full command
-lines (`python -m medharness …`), not a bare name quoted inside prose.
+`test_no_source_names_a_dead_command` matches full command lines, not a bare
+name quoted inside prose, which is why it missed the original.
 
-Checked end to end rather than by existence — the hint is extracted from the
-gate's own error, run verbatim, and the gate re-run. A hint that parses but does
-not resolve the finding is no better than a wrong one.
+Checked end to end rather than by existence: the hint is extracted from the
+gate's own stderr, run verbatim, and the gate re-run. A hint that parses but
+does not resolve the finding is no better than a wrong one.
 """
 
 from __future__ import annotations
 
-import json
 import re
 import shlex
 import subprocess
@@ -26,6 +26,10 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
 
+#: `Fix:` lines carry a runnable command. The hint spells the real --dhf path,
+#: not a literal, so it is copy-pasteable as printed.
+HINT = re.compile(r"Fix:\s*(dhfkit --dhf \S+ .*?\}')")
+
 
 @pytest.fixture
 def dhf(tmp_path: Path) -> Path:
@@ -34,58 +38,47 @@ def dhf(tmp_path: Path) -> Path:
     path = tmp_path / "DHF"
     if not (path / "config" / "global.yaml").exists():
         pytest.skip("scaffold unavailable")
-    _dhfkit(path, "item", "create", "--type", "SRS", "--data", json.dumps({
-        "title": "Hand written req", "derives_from": ["SYS-001"],
-        "verification_method": ["Inspection"], "verification_criteria": "c",
-    }))
-    _dhfkit(path, "item", "update", "CR-001", "--data", json.dumps({
-        "implementation_notes": "by hand", "affected_risk_items": [],
-        "triage_result": {"verdict": "approved"},
-        "proposed_new_items": [{"type": "SRS", "title": "Hand written req"}],
-        "affected_items": ["SRS-002"],
-    }))
     return path
 
 
-def _dhfkit(dhf: Path, *args: str):
-    return subprocess.run(
-        [sys.executable, "-m", "dhfkit", "--dhf", str(dhf), *args],
-        capture_output=True, text=True, cwd=ROOT,
-    )
-
-
-def _closure(dhf: Path) -> dict:
+def _verify_dhf(dhf: Path) -> str:
     proc = subprocess.run(
-        [sys.executable, "-m", "medharness", "--dhf", str(dhf),
-         "change", "verify-completion", "--cr", "CR-001"],
+        [sys.executable, "-m", "medharness", "--dhf", str(dhf), "verify", "dhf"],
         capture_output=True, text=True, cwd=ROOT,
     )
-    return json.loads(proc.stdout.splitlines()[0])
-
-
-def _approval_error(payload: dict) -> str:
-    return next(e for e in payload["errors"] if "no approval record" in e)
+    return proc.stderr
 
 
 class TestTheHintIsUsable:
-    def test_the_gate_asks_for_an_approval_on_a_hand_written_cr(self, dhf: Path) -> None:
-        """The premise: a CR made by hand, no git, no AI, still needs a record."""
-        assert _approval_error(_closure(dhf)), "nothing to fix — this test proves nothing"
+    def test_the_gate_offers_a_fix_at_all(self, dhf: Path) -> None:
+        """The premise. Without a hint on the starter DHF this proves nothing."""
+        assert HINT.search(_verify_dhf(dhf)), (
+            "verify dhf printed no runnable Fix: line on a fresh scaffold"
+        )
 
     def test_running_the_hint_verbatim_clears_the_finding(self, dhf: Path) -> None:
-        """The whole point: do what it says, and the gate stops saying it."""
-        hint = _approval_error(_closure(dhf))
-        match = re.search(r"(dhfkit --dhf DHF item create.*?\}')", hint)
-        assert match, f"no runnable command found in the hint: {hint}"
+        before = _verify_dhf(dhf)
+        match = HINT.search(before)
+        assert match, before[-400:]
 
         args = shlex.split(match.group(1))
-        assert args[:3] == ["dhfkit", "--dhf", "DHF"]
-        result = _dhfkit(dhf, *args[3:])
+        assert args[0] == "dhfkit" and args[1] == "--dhf"
+        assert Path(args[2]) == dhf, (
+            f"the hint names {args[2]}, not the DHF it was run against — a "
+            f"reader pasting it would edit the wrong tree"
+        )
+        # The item the hint names, so the assertion below is about that one.
+        item_id = args[args.index("update") + 1]
+
+        result = subprocess.run(
+            [sys.executable, "-m", "dhfkit", *args[1:]],
+            capture_output=True, text=True, cwd=ROOT,
+        )
         assert result.returncode == 0, (
             f"the suggested command failed:\n{result.stderr[-400:]}"
         )
 
-        after = _closure(dhf)
-        assert not any("no approval record" in e for e in after["errors"]), (
-            f"the fix ran but the gate still reports it: {after['errors']}"
+        after = _verify_dhf(dhf)
+        assert item_id not in after or "verification_criteria is empty" not in after, (
+            f"the fix ran but the gate still reports {item_id}:\n{after[-400:]}"
         )

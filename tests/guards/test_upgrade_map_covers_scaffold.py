@@ -2,9 +2,9 @@
 
 `_UPGRADE_MAP` is hand-written. `config/doc_types/apr.yaml` was left out of it
 while all twelve sibling doc types were listed, and nothing noticed: a project
-that upgraded rather than scaffolded never received the APR doc type, so
-`dhfkit item create --type APR` failed with "Unknown doc type" — and
-`change verify-completion`, which requires an APR item, could not be satisfied at all.
+that upgraded rather than scaffolded never received one of the doc types, so
+`dhfkit item create --type <that type>` failed with "Unknown doc type" and the
+gate that needed those items could not be satisfied at all.
 
 `config/safety_activities.yaml` was missing the same way, with a quieter
 failure: `verify classification` and `verify plans` ran, found no activities to
