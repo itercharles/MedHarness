@@ -11,6 +11,29 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.29.1] — 2026-09-16
+
+### Fixed
+
+- **The closure gate told a reader to run a command that does not exist.** Its
+  "no approval record" message named `approval act`; the `approval` group went
+  in 0.26.0 when its one gate moved under `change`, and the message kept the
+  name. A developer recording an approval by hand was sent to a dead command
+  and away from the one that works.
+
+  It now prints a runnable `dhfkit item create --type APR …` with the CR filled
+  in, and mentions `--pr N` as the alternative.
+
+  `test_no_source_names_a_dead_command` missed it: that guard matches full
+  command lines, not a bare name quoted in prose.
+
+### Added
+
+- `tests/guards/test_a_fix_hint_can_be_run.py` extracts the hint from the gate's
+  own error, runs it verbatim, and re-runs the gate. A hint that names a real
+  command but does not resolve the finding fails too.
+
+
 ## [0.29.0] — 2026-09-15
 
 ### Breaking Changes
