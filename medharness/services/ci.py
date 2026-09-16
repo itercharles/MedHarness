@@ -1359,8 +1359,12 @@ def _check_design_review(
             "issue": (
                 f"CR {cr_id} — no approval record. Expected an APR item approving "
                 f"{cr_id} at the design stage, or the legacy review file at "
-                f"docs/reviews/{cr_id}-Design-Review.md. Run 'change plan' to "
-                "generate the design review, or 'approval act' to record a decision."
+                f"docs/reviews/{cr_id}-Design-Review.md. Record one with: "
+                f"dhfkit --dhf DHF item create --type APR --data "
+                f"'{{\"title\": \"Design approved\", \"approves\": [\"{cr_id}\"], "
+                f"\"stage\": \"design\", \"verdict\": \"approved\", "
+                f"\"approver\": \"<who>\"}}' — or pass --pr N to read the "
+                f"approving review from the pull request instead."
             ),
         }]
     verdict = "unknown"
