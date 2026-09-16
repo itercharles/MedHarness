@@ -691,6 +691,16 @@ def register(main):
         The base parser returns CR context. Optional stage/action mappings let a
         client repo keep lifecycle policy in Python while still choosing its
         own branch conventions, label scheme, and action names.
+
+        Branch on `action`, not on `mode`. `action` is the verdict your own
+        mappings produced and is an opaque string this tool never interprets.
+        `mode` is this tool's built-in reading of the event — one of `new`,
+        `iterate`, `cancel`, `skip` — and is only the value `action` falls back
+        to when no mapping matches. They differ whenever a mapping fires, which
+        is the normal case, not a contradiction.
+
+        This is not a gate: it reports what an event concerns and exits 0
+        whatever it finds. Nothing here passes or fails.
         """
         try:
             result = parse_github_event(event_path, manual_cr_id=manual_cr)
