@@ -80,8 +80,8 @@ GATES: tuple[dict[str, Any], ...] = (
     },
     {
         "command": "change verify-completion",
-        "checks": "CR closure: mandatory CR fields, an approval record, created "
-                  "items, and test evidence for each.",
+        "checks": "CR closure: mandatory CR fields, the items the CR proposed, "
+                  "and test evidence for each. Approval is `change verify-approval`.",
         "options": {
             "required": ["--dhf", "--cr"],
             "optional": ["--junit-dir", "--junit"],

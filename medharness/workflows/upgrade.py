@@ -33,7 +33,6 @@ _UPGRADE_MAP: list[tuple[str, str]] = [
     ("specs/test_specification.md.j2",                        "DHF/documents/specs/test_specification.md.j2"),
     ("specs/traceability_matrix.md.j2",                       "DHF/documents/specs/traceability_matrix.md.j2"),
     ("specs/styles/default.css",                              "DHF/documents/specs/styles/default.css"),
-    ("config/doc_types/apr.yaml",                             "DHF/config/doc_types/apr.yaml"),
     ("config/doc_types/cr.yaml",                              "DHF/config/doc_types/cr.yaml"),
     ("config/doc_types/crs.yaml",                             "DHF/config/doc_types/crs.yaml"),
     ("config/doc_types/def.yaml",                             "DHF/config/doc_types/def.yaml"),
@@ -66,8 +65,8 @@ _SEED_MAP: list[tuple[str, str]] = [
 
 #: Scaffold output medharness must never write after `init`. Listed rather than
 #: merely absent from the maps so that `test_every_scaffolded_file_is_classified`
-#: can tell "deliberately user-owned" from "forgotten" — apr.yaml was forgotten
-#: for three releases while every other doc type was managed, and nothing said so.
+#: can tell "deliberately user-owned" from "forgotten" — a doc type went
+#: unmanaged for three releases while every other one was, and nothing said so.
 _USER_OWNED: frozenset[str] = frozenset({
     "AI-harness/context.md",
     "DHF/README.md",

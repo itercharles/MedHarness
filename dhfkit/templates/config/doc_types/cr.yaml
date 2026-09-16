@@ -80,9 +80,7 @@ lifecycle:
     to_state: completed
     label: Complete
     # `verify completion` checks these in CI after the fact; checking them here
-    # refuses the transition instead. The approval record it also requires lives
-    # on a separate APR item, which a per-item criterion cannot see, so that one
-    # check stays in the gate.
+    # refuses the transition instead.
     criteria:
     - id: implementation_recorded
       name: Implementation notes written
