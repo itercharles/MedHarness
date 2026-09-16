@@ -220,7 +220,7 @@ the CR workflow. A PR with no CR passes them.
 |---|---|---|
 | `medharness change plan --cr CR-034` | `outcome`, `items_changed`, `review_cycles`, `diagnostics` | The CR has been triaged. Drafts the whole DHF item cascade and the impact analysis, then validates its own output and fixes what it broke. |
 | `medharness change implement --cr CR-034` | `outcome`, `files_changed`, `review_cycles` | The design is approved. Writes code and tests against the cascade. `--pr 42` revises from review feedback; `--ci-failures` from a failing run. |
-| `medharness automation github-event` | `cr_id`, `stage`, `action`, `pr_number`, `mode`, `reason` | First step of a workflow. Reads the GitHub event and says which CR and stage it concerns and what to do — so the workflow branches on one command's output instead of a ladder of `if` expressions. |
+| `medharness automation github-event` | `cr_id`, `stage`, `pr_number`, `reason`, and two verdicts: **`action`** — what your own `--review-action` / `--branch-stage` mappings decided, an opaque string this tool never interprets, and which is the one to branch on; `mode` — this tool's own reading (`new` / `iterate` / `cancel` / `skip`), which is only what `action` falls back to when no mapping matches. They differ whenever a mapping fires. | First step of a workflow, so it branches on one command's output instead of a ladder of `if` expressions. Not a gate: it exits 0 whatever it finds. |
 
 ### Context for an agent
 

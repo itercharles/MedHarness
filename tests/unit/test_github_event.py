@@ -342,3 +342,60 @@ def test_plan_issue_comment_uses_stage_label_config():
 
     assert plan.stage == "spec"
     assert plan.action == "record-approval"
+
+
+# ── What the docs tell a caller to branch on ──────────────────────────────────
+
+
+class TestActionIsTheVerdictAndModeIsTheFallback:
+    """`--help` and the README say: branch on `action`, never on `mode`.
+
+    They are two vocabularies, not one. `mode` is this tool's own reading of the
+    event — a fixed `new`/`iterate`/`cancel`/`skip` — and `action` is whatever
+    the caller's mappings name, falling back to `mode` when none matches. Seeing
+    them differ in one payload reads as a contradiction until you know that; it
+    is the normal case, and it is why the two fields are now explained where a
+    caller meets them.
+    """
+
+    def _context(self) -> GitHubEventContext:
+        return GitHubEventContext(
+            cr_id="CR-007",
+            mode="skip",
+            pr_number=42,
+            event_name="pull_request_review",
+            branch_ref="feat/CR-007",
+            review_state="approved",
+        )
+
+    def test_action_falls_back_to_mode_when_nothing_maps(self):
+        plan = plan_github_event(
+            self._context(), branch_stage_pairs=(("feat/", "develop"),),
+        )
+        assert plan.action == "skip", (
+            "with no mapping and no --default-action, `action` must be `mode`, "
+            "so a caller branching on `action` alone still gets an answer"
+        )
+
+    def test_a_mapping_overrides_mode_without_rewriting_it(self):
+        plan = plan_github_event(
+            self._context(),
+            branch_stage_pairs=(("feat/", "develop"),),
+            review_actions={"approved": "advance"},
+        )
+        assert plan.action == "advance", "the caller's mapping must win"
+        assert plan.mode == "skip", (
+            "`mode` is this tool's own reading; a caller's mapping must not "
+            "rewrite it"
+        )
+        assert plan.action != plan.mode, (
+            "this is the case that reads as a contradiction until the docs "
+            "explain it; if the two stop differing the fixture stops testing it"
+        )
+
+    def test_default_action_also_displaces_mode(self):
+        plan = plan_github_event(
+            self._context(), branch_stage_pairs=(("feat/", "develop"),),
+            default_action="noop",
+        )
+        assert plan.action == "noop" and plan.mode == "skip"
