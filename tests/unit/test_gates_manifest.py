@@ -102,12 +102,11 @@ class TestManifestShape:
         assert gate["checks"].strip()
         assert gate["blocking"] in BLOCKING
         assert isinstance(gate["needs_network"], bool)
-        assert isinstance(gate["needs_safety_class"], bool)
 
     @pytest.mark.parametrize("gate", GATES, ids=lambda g: g["command"])
-    def test_conditional_and_opt_in_gates_explain_themselves(self, gate: dict) -> None:
+    def test_conditional_gates_explain_themselves(self, gate: dict) -> None:
         """"Sometimes blocks" is useless to a caller without the condition."""
-        if gate["blocking"] in ("conditional", "opt_in"):
+        if gate["blocking"] == "conditional":
             assert gate["blocking_note"].strip(), (
                 f"{gate['command']} is {gate['blocking']} but says nothing about when"
             )
@@ -121,4 +120,4 @@ class TestEveryGateAnswersWithTheEnvelope:
     """Discovery through the CLI, so a gate implemented anywhere is covered."""
 
     def test_every_gate_is_registered(self) -> None:
-        assert len(_cli_gate_commands()) == len(GATES) == 7
+        assert len(_cli_gate_commands()) == len(GATES) == 6

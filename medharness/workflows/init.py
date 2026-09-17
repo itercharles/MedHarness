@@ -49,7 +49,6 @@ def _scaffold_dhf(project_dir: Path) -> None:
     # DHF content
     _cp("config", "DHF/config")
     _cp("specs", "DHF/documents/specs")
-    _cp("plans", "DHF/documents/plans")
     _cp("items", "DHF/items")
     _cp("reviews", "docs/reviews")
 
@@ -158,7 +157,6 @@ def _write_claude_md(project_dir: Path, project_name: str) -> Path:
 - Canonical product docs live in `DHF/documents/`:
   - `DHF/documents/specs/customer_requirement_specification.md`
   - `DHF/documents/specs/architecture_design_specification.md`
-  - `DHF/documents/plans/development_plan.md`
 """, encoding="utf-8")
     return dest
 

@@ -33,8 +33,6 @@ from medharness.workflows.init import _replace_placeholders, _scaffold_dhf
 SIMPLE_GATES = (
     "ci_structural_gate",
     "soup_gate",
-    "classification_gate",
-    "plans_gate",
 )
 
 #: Arguments each CLI gate needs to reach its reporting path.
@@ -229,14 +227,14 @@ class TestEnvelopeHelper:
 class TestCLIEmitsTheEnvelope:
     """stdout is the machine surface; it must carry the envelope verbatim."""
 
-    @pytest.mark.parametrize("command", ["dhf", "classification"])
+    @pytest.mark.parametrize("command", ["dhf", "tests"])
     def test_stdout_first_line_is_the_envelope(self, command: str, dhf: Path) -> None:
         r = CliRunner().invoke(main, ["--dhf", str(dhf), "verify", command])
         payload = json.loads(r.output.splitlines()[0])
         assert set(payload) == set(ENVELOPE_KEYS)
 
     def test_passed_agrees_with_the_exit_code(self, dhf: Path) -> None:
-        for command in ("dhf", "classification"):
+        for command in ("dhf", "tests"):
             r = CliRunner().invoke(main, ["--dhf", str(dhf), "verify", command])
             payload = json.loads(r.output.splitlines()[0])
             assert (r.exit_code == 0) is payload["passed"], command
@@ -247,8 +245,7 @@ def failing_dhf(tmp_path: Path) -> Path:
     """A DHF broken in the way each gate's failure path needs.
 
     The clean-scaffold fixture reaches only the happy paths — soup
-    short-circuits on "none checkable", plans skips everything without a class,
-    and branch has nothing to compare. Every crash found in review lived on a
+    short-circuits on "none checkable" and branch has nothing to compare. Every crash found in review lived on a
     failure path, so the contract has to be checked there too.
     """
     import subprocess
@@ -257,22 +254,13 @@ def failing_dhf(tmp_path: Path) -> Path:
     _replace_placeholders(tmp_path, "Broken")
     dhf = tmp_path / "DHF"
 
-    config = dhf / "config" / "global.yaml"
-    config.write_text(
-        config.read_text()
-        .replace('software_safety_class: ""', 'software_safety_class: "B"')
-        .replace('classification_rationale: ""', 'classification_rationale: "Assessed."')
-    )
-    # A required plan that is absent, not merely unwritten.
-    (dhf / "documents" / "plans" / "integration_plan.md").unlink(missing_ok=True)
     # A link that resolves to nothing.
     rcm = next((dhf / "items").rglob("RCM-*.yaml"))
     rcm.write_text(rcm.read_text().replace("RISK-001", "RISK-404"))
 
     # Real JUnit evidence, so `verify tests` reaches its row-rendering path.
-    # Without it `results` is empty, the envelope backstop fires, and a warning
-    # that only the row path can drop looks reported — which is how a gate-level
-    # warning ("levels are not being checked") stayed off stderr.
+    # Without it `results` is empty and the envelope backstop fires, hiding a
+    # warning that only the row path can drop.
     results = dhf / "test-results"
     results.mkdir(exist_ok=True)
     req = next((i.stem for i in (dhf / "items").rglob("SRS-*.yaml")), "SRS-001")
@@ -298,8 +286,8 @@ class TestFailurePathsHonourTheContract:
     fails. A contract checked only on success is not checked.
     """
 
-    FAILING = ("verify dhf", "verify classification",
-               "verify tests", "change verify-completion", "change verify-branch")
+    FAILING = ("verify dhf", "verify tests",
+               "change verify-completion", "change verify-branch")
 
     @pytest.mark.parametrize("command", FAILING)
     def test_no_crash_on_the_failure_path(self, command: str, failing_dhf: Path) -> None:
@@ -395,8 +383,8 @@ class TestStderrCarriesTheEnvelope:
     `verify dhf` never showed its verification_criteria warnings at all.
     """
 
-    ALL = ("verify dhf", "verify tests", "verify classification",
-           "verify tests", "change verify-completion", "change verify-branch")
+    ALL = ("verify dhf", "verify tests",
+           "change verify-completion", "change verify-branch")
 
     @pytest.mark.parametrize("command", ALL)
     def test_stderr_reports_the_envelope(self, command: str, failing_dhf: Path) -> None:
@@ -476,8 +464,7 @@ class TestGateLevelWarningsReachStderr:
     `verify tests` renders per-type rows and — since an earlier fix — the
     envelope when there are no rows at all. A warning that applies to the whole
     gate while rows exist fell between the two: it was in the JSON and absent
-    from the log. `failing_dhf` cannot catch it, because it declares a class and
-    so never produces one.
+    from the log.
     """
 
     @pytest.fixture
@@ -492,25 +479,21 @@ class TestGateLevelWarningsReachStderr:
             '<testsuites><testsuite name="s" tests="1" failures="0" errors="0">'
             '<testcase classname="t" name="a"><properties>'
             f'<property name="medharness.links" value="{req}"/>'
-            '<property name="medharness.level" value="unit"/>'
             "</properties></testcase></testsuite></testsuites>"
         )
         return dhf
 
-    def test_the_reason_levels_are_inert_is_printed(self, inert_dhf: Path) -> None:
-        """Every warning must reach the log, including the ones tied to no item.
+    def test_a_warning_tied_to_no_row_is_printed(self, inert_dhf: Path) -> None:
+        """Every warning must reach the log, including the ones tied to no row.
 
-        The gate-level ones had no row to be printed beside and were dropped.
         Checked against `warnings` rather than the structures behind it: that is
         what a caller receives, so a message missing from it is missing.
         """
         result, stderr = _stderr_of("verify tests", inert_dhf)
 
-        assert result["warnings"], (
-            "no class is declared, so the gate should say levels are inert"
-        )
-        assert any("software_safety_class" in w for w in result["warnings"]), (
-            f"the gate-level warning is not in the envelope: {result['warnings']}"
+        assert any("no verification_method declared" in w for w in result["warnings"]), (
+            f"the scaffold declares no verification_method, so the gate should "
+            f"say so: {result['warnings']}"
         )
         for message in result["warnings"]:
             assert message in stderr, (

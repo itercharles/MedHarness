@@ -7,7 +7,7 @@ API to satisfy a rule would put storage in the business of scaffolding.
 
 Everywhere else, reaching for a DHF path is a duplicate of something the store
 already does — and does better. `upgrade` parsed global.yaml with a regex that
-took a trailing comment as part of the project name; `verify plans` walked
+took a trailing comment as part of the project name; a report walked
 `documents/plans/*.md` because `list_documents()` gave stems with no way to ask
 for one category.
 """
@@ -76,6 +76,11 @@ class TestTheStoreCanAnswerWhatWasAskedOfTheFilesystem:
 
         _scaffold_dhf(tmp_path)
         _replace_placeholders(tmp_path, "Bounded")
+        # The scaffold ships no plans; a project writes its own, and this asks
+        # whether the store can find one once it exists.
+        plans = tmp_path / "DHF" / "documents" / "plans"
+        plans.mkdir(parents=True, exist_ok=True)
+        (plans / "development_plan.md").write_text("# Development Plan\n")
         return LocalDHFAdapter(tmp_path / "DHF")
 
     def test_documents_can_be_listed_by_category(self, tmp_path: Path) -> None:
@@ -89,7 +94,7 @@ class TestTheStoreCanAnswerWhatWasAskedOfTheFilesystem:
         assert self._adapter(tmp_path).list_documents("nowhere") == []
 
     def test_a_document_path_is_available_for_reporting(self, tmp_path: Path) -> None:
-        """`verify plans` names the file it complains about; a stem is not one."""
+        """A reader needs the file a report names; a stem is not one."""
         path = self._adapter(tmp_path).document_path("development_plan")
         assert path is not None and path.name == "development_plan.md"
 

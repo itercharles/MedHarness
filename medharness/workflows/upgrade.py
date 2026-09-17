@@ -53,13 +53,7 @@ _UPGRADE_MAP: list[tuple[str, str]] = [
 # project upgrading from an older medharness never received. Seeded when absent
 # and never overwritten: putting them in _UPGRADE_MAP would report an edited
 # file as "outdated" and --apply would discard the project's own decisions.
-#
-# safety_activities.yaml is the clearest case. Without it, `verify classification`
-# and `verify plans` run but check nothing — they exit 0 having verified that a
-# class is declared and then finding no activities to require of it. A project
-# that upgraded rather than scaffolded got a silently inert gate.
 _SEED_MAP: list[tuple[str, str]] = [
-    ("config/safety_activities.yaml", "DHF/config/safety_activities.yaml"),
     ("config/soup-sources.yaml",      "DHF/config/soup-sources.yaml"),
 ]
 
@@ -71,13 +65,6 @@ _USER_OWNED: frozenset[str] = frozenset({
     "AI-harness/context.md",
     "DHF/README.md",
     "DHF/config/global.yaml",
-    "DHF/documents/plans/configuration_management_plan.md",
-    "DHF/documents/plans/development_plan.md",
-    "DHF/documents/plans/integration_plan.md",
-    "DHF/documents/plans/maintenance_plan.md",
-    "DHF/documents/plans/risk_management_plan.md",
-    "DHF/documents/plans/validation_plan.md",
-    "DHF/documents/plans/verification_plan.md",
     "docs/reviews/.gitkeep",
 })
 

@@ -130,7 +130,7 @@ class TestCRGenerationCommands:
         assert r_change.returncode == 0, r_change.stderr
         # DHF-quality gates live under `verify`; the two that check a CR's
         # promises live under `change`, with the commands that make them.
-        for cmd in ["dhf", "tests", "soup", "classification"]:
+        for cmd in ["dhf", "tests", "soup"]:
             assert cmd in r_verify.stdout, f"Command {cmd!r} missing from verify --help"
         for cmd in ["plan", "implement", "verify-branch", "verify-completion"]:
             assert cmd in r_change.stdout, f"Command {cmd!r} missing from change --help"

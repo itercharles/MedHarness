@@ -11,7 +11,7 @@ import re
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Iterable, Optional
+from typing import Any, Iterable
 
 from medharness._helpers import (
     DEFAULT_ACCEPTANCE_COVERAGE_PAIRS,
@@ -21,13 +21,10 @@ from medharness._helpers import (
     _run_artifact_generation,
 )
 from dhfkit.junit_parser import (
-    DEFAULT_TEST_LEVEL,
-    JUNIT_LEVEL,
     JUNIT_LINKS,
     JUNIT_TESTING,
     LINKS_TAG_RE,
     TESTING_TAG_RE,
-    TEST_LEVELS,
 )
 from dhfkit.testing_points import parse_testing_points
 from medharness.services.traceability import analyse
@@ -295,61 +292,6 @@ def _structural_messages(results: dict, fail_on_uncovered: bool) -> tuple[list[s
 # ---------------------------------------------------------------------------
 
 
-def _levels_by_type(
-    raw: Any, req_types: tuple[str, ...]
-) -> tuple[dict[str, list[str]], list[str]]:
-    """Resolve ``required_test_levels`` to the levels each requirement type needs.
-
-    Two forms, because one of them could not express what IEC 62304 actually
-    asks. A flat list applied to every type meant a project could only demand
-    all levels of every requirement or none of any:
-
-        required_test_levels: [unit, integration, system]
-
-        required_test_levels:
-          SRS: [unit, integration]     # §5.5, §5.6
-          SYS: [system]                # §5.7
-
-    The flat form still means "every type", so an existing activity map keeps
-    behaving exactly as it did. A mapping requires nothing of a type it omits —
-    silence is "not required here", not "inherit the others".
-    """
-    if isinstance(raw, dict):
-        unknown = sorted(set(raw) - set(req_types))
-        problems = [
-            f"required_test_levels names {rt}, which is not a requirement type "
-            f"being checked ({', '.join(req_types)})."
-            for rt in unknown
-        ]
-        for rt, levels in raw.items():
-            bad = [lvl for lvl in (levels or []) if lvl not in TEST_LEVELS]
-            if bad:
-                problems.append(
-                    f"required_test_levels[{rt}] contains {bad}, which are not "
-                    f"levels ({', '.join(TEST_LEVELS)})."
-                )
-        return {
-            rt: [lvl for lvl in (raw.get(rt) or []) if lvl in TEST_LEVELS]
-            for rt in req_types
-        }, problems
-
-    entries = list(raw or [])
-    # A mapping written with bullets parses as a list of dicts, which silently
-    # matched no level and required nothing of anything — reported as a pass.
-    # The flat form uses bullets, so writing the mapping that way is the natural
-    # mistake. Anything unreadable now fails the gate rather than disabling it.
-    unreadable = [e for e in entries if e not in TEST_LEVELS]
-    if unreadable:
-        return {rt: [] for rt in req_types}, [
-            "required_test_levels could not be read. Use a list of levels "
-            f"({', '.join(TEST_LEVELS)}) applying to every requirement type, or "
-            "a mapping of type to levels written without '-' bullets:\n"
-            "      required_test_levels:\n"
-            "        SRS: [unit, integration]\n"
-            "        SYS: [system]\n"
-            f"    Unreadable entries: {unreadable}"
-        ]
-    return {rt: list(entries) for rt in req_types}, []
 
 
 def ci_test_coverage_gate(
@@ -401,11 +343,6 @@ def ci_test_coverage_gate(
 
     covered_reqs: set[str] = set()
     covered_pairs: set[tuple[str, str]] = set()
-    # requirement -> the levels that actually verified it. §5.6 and §5.7 ask for
-    # integration and system testing as distinct records; without this a suite
-    # of unit tests alone made every requirement read as verified.
-    covered_levels: dict[str, set[str]] = {}
-    seen_levels: set[str] = set()
     for jp in junit_paths:
         if not jp.is_file():
             continue
@@ -433,14 +370,8 @@ def ci_test_coverage_gate(
             all_links = list(dict.fromkeys(links_from_props + links_from_name))
             all_points = list(dict.fromkeys(testing_from_props + testing_from_name))
 
-            level = (props.get(JUNIT_LEVEL) or "").strip().lower()
-            if level not in TEST_LEVELS:
-                level = DEFAULT_TEST_LEVEL
-            seen_levels.add(level)
-
             covered_reqs.update(all_links)
             for req_id in all_links:
-                covered_levels.setdefault(req_id, set()).add(level)
                 for point_id in all_points:
                     covered_pairs.add((req_id, point_id))
 
@@ -451,24 +382,6 @@ def ci_test_coverage_gate(
     results: list[dict] = []
     testing_points: list[dict] = []
     default_types = req_types if req_types else ("SRS", "SYS", "CRS")
-
-    # Levels the declared safety class requires. Absent a class this is empty and
-    # the level dimension is inert, so a project that has not opted in to
-    # classification sees exactly the behaviour it saw before.
-    raw_levels = adapter.config.required_activities().get("required_test_levels")
-    required_levels, level_config_problems = _levels_by_type(raw_levels, default_types)
-    # Say why the level dimension is doing nothing. An empty `required_levels`
-    # looks identical whether the class is undeclared, the map is silent, or the
-    # map could not be read — and a project that had written a mapping spent a
-    # debugging round on exactly that ambiguity.
-    level_notes: list[str] = []
-    if not adapter.config.software_safety_class:
-        level_notes.append(
-            "Verification levels are not being checked: no software_safety_class "
-            "is declared in global.yaml, so safety_activities.yaml does not apply "
-            "yet. Requirement coverage below is unaffected."
-        )
-    level_gaps: list[dict] = []
 
     for rt in default_types:
         config = adapter.config
@@ -513,18 +426,6 @@ def ci_test_coverage_gate(
                     "passed": True,
                 })
 
-            levels_for_type = required_levels.get(rt) or []
-            if has_req_coverage and levels_for_type:
-                have = covered_levels.get(req_id, set())
-                missing_levels = [lvl for lvl in levels_for_type if lvl not in have]
-                if missing_levels:
-                    passed = False
-                    level_gaps.append({
-                        "req_id": req_id,
-                        "have": sorted(have),
-                        "missing": missing_levels,
-                    })
-
             if has_req_coverage:
                 covered_count += 1
             else:
@@ -541,25 +442,16 @@ def ci_test_coverage_gate(
             "uncovered": uncovered,
         })
 
-    # A level map the gate cannot read disables level checking entirely, so it
-    # has to fail rather than pass quietly: the reference project read an empty
-    # `level_gaps` as proof its mapping worked when nothing had been required.
-    errors = list(level_config_problems) + [
+    errors = [
         f"{row['type']}: {row['covered']}/{row['total']} requirements covered"
         for row in results if not row.get("passed") and "warning" not in row
     ] + [
         f"{tp['req_id']}: test points {', '.join(tp['uncovered'])} uncovered"
         for tp in testing_points if not tp["passed"]
-    ] + [
-        f"{gap['req_id']}: verified at {', '.join(gap['have']) or 'no level'} "
-        f"but missing {', '.join(gap['missing'])}"
-        for gap in level_gaps
     ]
-    warnings = level_notes + [row["warning"] for row in results if row.get("warning")]
+    warnings = [row["warning"] for row in results if row.get("warning")]
     covered = sum(r.get("covered", 0) for r in results)
     total = sum(r.get("total", 0) for r in results)
-    if level_config_problems:
-        passed = False
 
     # Coverage alone reads every requirement as one that should have a test. A
     # requirement verified by Inspection has none by design, and asking the two
@@ -608,9 +500,6 @@ def ci_test_coverage_gate(
         errors=errors, warnings=warnings,
         results=results,
         testing_points=testing_points,
-        required_levels=required_levels,
-        levels_seen=sorted(seen_levels),
-        level_gaps=level_gaps,
         missing_method=md.get("missing_method", []),
         unverified_test=md.get("unverified_test", []),
         manual_review_required=md.get("manual_review_required", []),
@@ -1537,138 +1426,6 @@ def cr_closure_gate(
 _SAFETY_CLASSES = ("A", "B", "C")
 
 
-def classification_gate(dhf_path: Path) -> dict:
-    """Check the declared software safety class and what it requires.
-
-    IEC 62304 §4.3 makes the class the axis the standard turns on: it decides
-    which activities are required at all. Without a declared class the tool can
-    verify that items are consistent with each other, but not that the project
-    has done what its class demands.
-
-    An undeclared class is reported as a warning rather than a failure, so an
-    existing DHF keeps passing until it opts in.
-
-    Returns:
-        {
-          "passed": bool,
-          "declared": str | None,
-          "rationale_present": bool,
-          "missing_item_types": [{"code", "clause_hint"}],
-          "module_overrides": [{"id", "safety_class", "justified": bool}],
-          "warnings": [str],
-          "errors": [str],
-          "summary": str,
-        }
-    """
-    from dhfkit.local_adapter import LocalDHFAdapter
-
-    adapter = LocalDHFAdapter(dhf_path)
-    config = adapter.config
-
-    declared = (config.software_safety_class or "").strip().upper()
-    rationale = (config.classification_rationale or "").strip()
-    warnings: list[str] = []
-    errors: list[str] = []
-
-    if not declared:
-        return envelope_from("verify classification", {
-            "passed": True,
-            "declared": None,
-            "rationale_present": False,
-            "missing_item_types": [],
-            "module_overrides": [],
-            "warnings": [
-                "No software_safety_class declared in DHF/config/global.yaml. "
-                "IEC 62304 §4.3 requires one, and it determines which activities "
-                "this project must complete. Set A, B, or C to enable the check."
-            ],
-            "errors": [],
-            "summary": "No safety class declared — classification checks are inactive.",
-        })
-
-    if declared not in _SAFETY_CLASSES:
-        errors.append(
-            f"software_safety_class is '{declared}'; expected one of "
-            f"{', '.join(_SAFETY_CLASSES)}."
-        )
-    if not rationale:
-        errors.append(
-            "classification_rationale is empty. The class is a judgement about the "
-            "device, and the reasoning belongs in the record."
-        )
-
-    required = config.required_activities()
-    no_activities = declared in _SAFETY_CLASSES and not required
-    if no_activities:
-        # An error, not a warning. Declaring the class *is* taking the opt-in, so
-        # the gate is no longer inert — it is being asked to do a job it cannot
-        # do. Reported as a pass, a project sees green and believes it is being
-        # audited while nothing is checked against the class at all.
-        errors.append(
-            f"Class {declared} is declared but safety_activities.yaml defines no "
-            f"activities for it, so nothing is being checked against the class. "
-            f"Run 'medharness upgrade --apply' to obtain the file, then edit it "
-            f"to match what this project has agreed."
-        )
-
-    present_types = {
-        str(item.get("id", "")).rsplit("-", 1)[0]
-        for item in adapter.list_items()
-        if item.get("id")
-    }
-    present_codes = set()
-    for item_type in adapter.list_item_types():
-        prefix = (item_type.get("prefix") or "").rstrip("-")
-        if prefix and prefix in present_types:
-            present_codes.add(item_type.get("code"))
-
-    missing_item_types = [
-        {"code": code, "clause_hint": _CLASS_CLAUSE_HINTS.get(code, "")}
-        for code in (required.get("required_items") or [])
-        if code not in present_codes
-    ]
-    for entry in missing_item_types:
-        errors.append(
-            f"Class {declared} requires {entry['code']} items and the DHF has none"
-            + (f" ({entry['clause_hint']})." if entry["clause_hint"] else ".")
-        )
-
-    # §4.3(b) allows a software item to carry a lower class than the system when
-    # segregation is documented. Record the overrides; an unjustified one is a
-    # gap rather than an error, since the justification may live in the
-    # architecture rather than on the item.
-    module_overrides = []
-    for item in adapter.list_items():
-        override = str(item.get("safety_class") or "").strip().upper()
-        if not override or not str(item.get("id", "")).startswith("MODULE-"):
-            continue
-        justified = bool(str(item.get("segregation_rationale") or "").strip())
-        module_overrides.append(
-            {"id": item["id"], "safety_class": override, "justified": justified}
-        )
-        if not justified:
-            warnings.append(
-                f"{item['id']} declares safety_class {override}, below the system "
-                f"class {declared}, without a segregation_rationale (§4.3(b))."
-            )
-
-    passed = not errors
-    summary = f"Class {declared}: " + (
-        "no activities defined for this class — nothing was checked."
-        if no_activities
-        else "all required activities present." if passed
-        else f"{len(errors)} gap(s)."
-    )
-    return envelope_from("verify classification", {
-        "passed": passed,
-        "declared": declared,
-        "rationale_present": bool(rationale),
-        "missing_item_types": missing_item_types,
-        "module_overrides": module_overrides,
-        "warnings": warnings,
-        "errors": errors,
-        "summary": summary,
-    })
 
 
 _CLASS_CLAUSE_HINTS = {
@@ -1696,163 +1453,14 @@ _TEMPLATE_BANNER = re.compile(
 )
 
 
-def _strip_banner(markdown_text: str) -> str:
-    return _TEMPLATE_BANNER.sub("", markdown_text)
 
 
-def _sections(markdown_text: str, min_level: int = 2) -> dict:
-    """Split a plan into {heading: body}, so comparison is per-section.
-
-    Whole-file comparison would be useless — a project that edits one section
-    makes the file differ and the plan would read as written.
-
-    Level-1 sections are excluded by default: the body under a document's title
-    is its own front matter, and edits there are formatting rather than the
-    substance §5.1 asks a plan to carry.
-    """
-    sections: dict[str, str] = {}
-    matches = list(_HEADING.finditer(markdown_text))
-    for index, match in enumerate(matches):
-        start = match.end()
-        end = matches[index + 1].start() if index + 1 < len(matches) else len(markdown_text)
-        if len(match.group(1)) < min_level:
-            continue
-        sections[match.group(2).strip()] = markdown_text[start:end].strip()
-    return sections
 
 
-def plans_gate(dhf_path: Path) -> dict:
-    """Check that the plans the declared safety class requires have been written.
-
-    IEC 62304 §5.1 requires a development plan that is maintained, and the
-    scaffold ships seven plans as templates. Nothing verified any of them was
-    ever filled in: a DHF of untouched placeholders passed every gate.
-
-    Detection compares each plan against the template it came from, section by
-    section. Sentinel text ("starter content") only appears in one of the seven
-    templates, so a marker-based check would miss six — and deleting a banner is
-    not the same as writing a plan.
-
-    A plan whose every section still matches the template has not been
-    maintained, and fails. Individual unchanged sections are reported as
-    warnings: a project may legitimately accept some shipped wording, and the
-    tool cannot tell that from neglect.
-    """
-    from dhfkit.local_adapter import LocalDHFAdapter
-
-    adapter = LocalDHFAdapter(dhf_path)
-    config = adapter.config
-    declared = (config.software_safety_class or "").strip().upper()
-    required = config.required_activities().get("required_plans") or []
-
-    if not declared:
-        return envelope_from("verify plans", {
-            "passed": True,
-            "declared": None,
-            "checked": [],
-            "missing": [],
-            "unwritten": [],
-            "partial": [],
-            "skipped": [],
-            "warnings": [
-                "No software_safety_class declared, so no plans are required yet. "
-                "Declare one in global.yaml to activate this check."
-            ],
-            "summary": "No safety class declared — plan checks are inactive.",
-        })
-
-    templates_dir = _plan_templates_dir()
-    # The plans are records; the store produces them. The shipped templates are
-    # medharness's own asset, so those still come off disk here.
-    project_name = config.project_name
-    stored_plans = set(adapter.list_documents("plans"))
-
-    checked, missing, unwritten, partial, skipped = [], [], [], [], []
-
-    for stem in sorted(required):
-        filename = f"{stem}.md"
-        if stem not in stored_plans:
-            missing.append({"plan": filename})
-            continue
-
-        template_path = templates_dir / filename if templates_dir else None
-        if template_path is None or not template_path.exists():
-            skipped.append({
-                "plan": filename,
-                "reason": "no shipped template to compare against",
-            })
-            continue
-
-        project_sections = _sections(_strip_banner(adapter.get_document(stem) or ""))
-        template_sections = _sections(_strip_banner(
-            _fill_placeholders(template_path.read_text(encoding="utf-8"), project_name)
-        ))
-
-        untouched = [
-            heading for heading, body in template_sections.items()
-            if project_sections.get(heading, "").strip() == body.strip() and body.strip()
-        ]
-        comparable = [h for h, b in template_sections.items() if b.strip()]
-
-        if comparable and len(untouched) == len(comparable):
-            unwritten.append({"plan": filename, "sections": len(untouched)})
-        elif untouched:
-            partial.append({"plan": filename, "sections": untouched})
-        else:
-            checked.append({"plan": filename})
-
-    not_required = sorted(f"{s}.md" for s in stored_plans - set(required))
-
-    warnings = [
-        f"{entry['plan']}: {len(entry['sections'])} section(s) still match the "
-        f"shipped template — {', '.join(entry['sections'][:3])}"
-        + ("…" if len(entry["sections"]) > 3 else "")
-        for entry in partial
-    ]
-    errors = (
-        [f"{e['plan']} is required for Class {declared} and is absent." for e in missing]
-        + [
-            f"{e['plan']} is unchanged from the template — §5.1 requires a plan "
-            f"that is maintained, not one that was scaffolded."
-            for e in unwritten
-        ]
-    )
-
-    passed = not errors
-    return envelope_from("verify plans", {
-        "passed": passed,
-        "declared": declared,
-        "checked": checked,
-        "missing": missing,
-        "unwritten": unwritten,
-        "partial": partial,
-        "skipped": skipped + [{"plan": p, "reason": f"not required for Class {declared}"}
-                             for p in not_required],
-        "warnings": warnings,
-        "errors": errors,
-        "summary": (
-            f"Class {declared}: {len(checked)} plan(s) written, "
-            f"{len(missing)} missing, {len(unwritten)} unchanged."
-        ),
-    })
 
 
-def _plan_templates_dir() -> Optional[Path]:
-    try:
-        import dhfkit
-        candidate = Path(dhfkit.__file__).resolve().parent / "templates" / "plans"
-        return candidate if candidate.is_dir() else None
-    except Exception:  # noqa: BLE001 — absence is reported, not fatal
-        return None
 
 
-def _fill_placeholders(text: str, project_name: str) -> str:
-    """Apply the substitutions the scaffold makes, so comparison is like-for-like."""
-    return (
-        text.replace("{{project_name}}", project_name)
-        .replace("{{medharness_repo}}", "itercharles/MedHarness")
-        .replace("{{primary_test_tool}}", "pytest")
-    )
 
 
 def _soup_drift(

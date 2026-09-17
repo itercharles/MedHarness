@@ -6,7 +6,7 @@ that upgraded rather than scaffolded never received one of the doc types, so
 `dhfkit item create --type <that type>` failed with "Unknown doc type" and the
 gate that needed those items could not be satisfied at all.
 
-`config/safety_activities.yaml` was missing the same way, with a quieter
+`config/soup-sources.yaml` was missing the same way, with a quieter
 failure: `verify classification` and `verify plans` ran, found no activities to
 require, and exited 0. A green build that checked nothing.
 
@@ -102,10 +102,10 @@ def test_every_doc_type_is_managed(scaffolded: set[str]) -> None:
 class TestSeededFilesBelongToTheProject:
     """Seeded files carry project decisions; upgrade must not overwrite them.
 
-    `safety_activities.yaml` is an interpretation of the §5 activity table that
-    the project is expected to edit. If upgrade treated it like a managed file,
-    an edited copy would read as "outdated" and --apply would silently replace
-    the project's agreed scope with the shipped default.
+    `soup-sources.yaml` records where the project looks up its dependencies,
+    which it is expected to edit. If upgrade treated it like a managed file, an
+    edited copy would read as "outdated" and --apply would silently replace the
+    project's sources with the shipped default.
     """
 
     def _project(self, tmp_path: Path) -> Path:
@@ -117,18 +117,18 @@ class TestSeededFilesBelongToTheProject:
         from medharness.workflows.upgrade import check_upgrade
 
         root = self._project(tmp_path)
-        target = root / "DHF" / "config" / "safety_activities.yaml"
+        target = root / "DHF" / "config" / "soup-sources.yaml"
         target.write_text(target.read_text() + "\n# this project's own decision\n")
 
         report = check_upgrade(root)
         outdated = {e["file"] for e in report["outdated"]}
-        assert "DHF/config/safety_activities.yaml" not in outdated
+        assert "DHF/config/soup-sources.yaml" not in outdated
 
     def test_apply_does_not_overwrite_an_edited_seed_file(self, tmp_path: Path) -> None:
         from medharness.workflows.upgrade import apply_upgrade
 
         root = self._project(tmp_path)
-        target = root / "DHF" / "config" / "safety_activities.yaml"
+        target = root / "DHF" / "config" / "soup-sources.yaml"
         edited = target.read_text() + "\n# this project's own decision\n"
         target.write_text(edited)
 
@@ -139,7 +139,7 @@ class TestSeededFilesBelongToTheProject:
         from medharness.workflows.upgrade import apply_upgrade
 
         root = self._project(tmp_path)
-        target = root / "DHF" / "config" / "safety_activities.yaml"
+        target = root / "DHF" / "config" / "soup-sources.yaml"
         target.unlink()
 
         apply_upgrade(root)
