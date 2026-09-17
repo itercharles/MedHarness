@@ -19,7 +19,7 @@ def test_contract_version_is_defined():
 
 
 def test_contract_version_is_stable():
-    assert CONTRACT_VERSION == "6.0"
+    assert CONTRACT_VERSION == "7.0"
 
 
 # ── DHFAdapter Protocol completeness on LocalDHFAdapter ───────────────────────

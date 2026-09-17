@@ -26,7 +26,7 @@ COMMANDS = [
     ("medharness", ["verify", "dhf"]),
     ("medharness", ["verify", "tests", "--junit-dir", "{dhf}/test-results"]),
     ("medharness", ["verify", "classification"]),
-        ("medharness", ["change", "verify-completion", "--cr", "CR-001"]),
+        ("medharness", ["verify", "completion", "--cr", "CR-001"]),
     ("medharness", ["verify", "soup", "--offline-mode", "warn"]),
     ("dhfkit", ["validate", "schema"]),
     ("dhfkit", ["validate", "traceability"]),

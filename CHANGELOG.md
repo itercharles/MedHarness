@@ -11,6 +11,57 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.32.0] — 2026-09-17
+
+### Breaking Changes
+
+- **Three verbs.** Every command now sits under the verb that matches what it
+  reads. The `change` and `automation` groups are gone, and so is the top-level
+  `soup-sync`.
+
+  | Was | Is now |
+  |-----|--------|
+  | `change verify-completion` | `verify completion` |
+  | `change verify-branch` | `workflow branch` |
+  | `change verify-approval` | `workflow approval` |
+  | `change plan` | `build plan` |
+  | `change implement` | `build code` |
+  | `automation github-event` | `workflow github-event` |
+  | `soup-sync` | `build dhf` |
+
+  The rule, now written into CLAUDE.md so the next command has one to follow:
+
+  - `verify` reads the DHF and nothing else. It runs the same on a laptop with
+    no remote, no branch and no PR as it does in CI.
+  - `build` writes — items, code, or artifacts.
+  - `workflow` cannot answer without the repository. These are CI helper
+    scripts; a developer working locally never needs them.
+
+  The old rule was "does it need a CR", which split the gates across two groups
+  for a reason invisible in the names: a project not running the CR workflow had
+  no way to tell which of the six gates applied to it.
+
+  The `gate` field follows the command, so `change verify-approval` in an
+  envelope is now `workflow approval`, and `verify branch` is `workflow branch`.
+
+  **No aliases.** The old names fail with "No such command" rather than working
+  quietly, so a pipeline learns it was renamed instead of passing on a name the
+  docs no longer teach. `tests/guards/test_the_verbs_are_the_surface.py` holds
+  that, at the CLI and in every document an adopter reads.
+
+  `CONTRACT_VERSION` moves to `7.0`.
+
+  Not renamed: `evidence bundle` and `release baseline` keep their groups.
+  Merging them into `build release` is agreed and not yet built.
+
+### Changed
+
+- `tests/guards/test_gates_sit_where_they_belong.py` now enforces the new rule
+  by reachability rather than by name: no `verify` command may reach
+  `services/git.py`, `services/pr_approval.py` or the GitHub modules, and every
+  `workflow` command must. A `verify` gate that grows a `git diff` three calls
+  down is caught.
+
 ## [0.31.0] — 2026-09-17
 
 ### Breaking Changes

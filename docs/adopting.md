@@ -248,10 +248,10 @@ This exits non-zero if a requirement lacks coverage or if any declared test poin
 
 MedHarness can drive the full design-to-code cycle for a change request. The workflow is optional — each step is a separate CLI command you can run manually or wire into CI.
 
-### `change plan` — design phase
+### `build plan` — design phase
 
 ```bash
-medharness --dhf DHF change plan --cr CR-001
+medharness --dhf DHF build plan --cr CR-001
 ```
 
 Runs triage, then generates the V-model DHF item cascade (CRS → SYS → SRS → SWDD), then writes an implementation plan into `implementation_notes` on the CR item. On completion the CR item carries:
@@ -263,18 +263,18 @@ Runs triage, then generates the V-model DHF item cascade (CRS → SYS → SRS �
 | `implementation_notes` | Step 3 (impl plan) | ✓ non-empty |
 | `proposed_new_items` | Step 4 (artifact record) | ✓ list of created items |
 
-### `change implement` — development phase
+### `build code` — development phase
 
 ```bash
-medharness --dhf DHF change implement --cr CR-001
+medharness --dhf DHF build code --cr CR-001
 ```
 
 Reads `implementation_notes` as the primary spec and implements the code, annotates tests with `@links:<ITEM_ID>`, and runs a code review loop.
 
-### `change verify-completion` — closure gate
+### `verify completion` — closure gate
 
 ```bash
-medharness --dhf DHF change verify-completion --cr CR-001 --junit-dir test-results
+medharness --dhf DHF verify completion --cr CR-001 --junit-dir test-results
 ```
 
 Run after the branch is merged. Checks:
@@ -287,9 +287,9 @@ Run after the branch is merged. Checks:
 
 Exits non-zero and prints `FAIL [cr-complete]` lines for each gap.
 
-## Syncing SOUP items from dependency manifests (`medharness soup-sync`)
+## Syncing SOUP items from dependency manifests (`medharness build dhf`)
 
-The `soup-sync` command reads dependency files from your project and creates or updates SOUP items in the DHF. It supports nine lockfile/manifest formats across multiple ecosystems:
+The `build dhf` command reads dependency files from your project and creates or updates SOUP items in the DHF. It supports nine lockfile/manifest formats across multiple ecosystems:
 
 | File | Ecosystem |
 |------|-----------|
@@ -305,17 +305,17 @@ The `soup-sync` command reads dependency files from your project and creates or 
 
 ### Auto-discovery
 
-With no flags, `soup-sync` looks for the supported files in the project root automatically:
+With no flags, `build dhf` looks for the supported files in the project root automatically:
 
 ```bash
-medharness --dhf DHF soup-sync
+medharness --dhf DHF build dhf
 ```
 
 To target a specific file:
 
 ```bash
-medharness --dhf DHF soup-sync --manifest uv.lock
-medharness --dhf DHF soup-sync --manifest go.mod --manifest Cargo.lock
+medharness --dhf DHF build dhf --manifest uv.lock
+medharness --dhf DHF build dhf --manifest go.mod --manifest Cargo.lock
 ```
 
 ### Persistent source configuration (`soup-sources.yaml`)
@@ -357,11 +357,11 @@ Source priority when multiple are configured: explicit `--manifest` flags → `-
 
 ### Applying changes
 
-By default `soup-sync` prints a diff and exits. Pass `--write` to create and update SOUP items:
+By default `build dhf` prints a diff and exits. Pass `--write` to create and update SOUP items:
 
 ```bash
-medharness --dhf DHF soup-sync --write
-medharness --dhf DHF soup-sync --write --manifest uv.lock
+medharness --dhf DHF build dhf --write
+medharness --dhf DHF build dhf --write --manifest uv.lock
 ```
 
 ## Exporting an SBOM (`dhfkit sbom`)
@@ -408,12 +408,12 @@ out/software-bom.json      # dhfkit's own shape, unchanged
 out/sbom.cdx.json          # the same release in CycloneDX
 ```
 
-`--manifest` accepts every format `soup-sync` reads — `requirements.txt`, `uv.lock`, `poetry.lock`, `pyproject.toml`, `package.json`, `package-lock.json`, `go.mod`, `Cargo.lock`, `pom.xml`.
+`--manifest` accepts every format `build dhf` reads — `requirements.txt`, `uv.lock`, `poetry.lock`, `pyproject.toml`, `package.json`, `package-lock.json`, `go.mod`, `Cargo.lock`, `pom.xml`.
 
 The release SBOM merges both registers. A package read from a `--manifest` but
 absent from the SOUP register still ships, so it appears — carrying a
 `dhfkit:manifest_source` property instead of a `dhfkit:soup_id`. Leaving it out
-would understate the release and hide the §8.1.2 gap `soup-sync` exists to close.
+would understate the release and hide the §8.1.2 gap `build dhf` exists to close.
 Where a package is in both, the SOUP item wins: it carries the licence, supplier
 and any documented vulnerability acceptance that the manifest does not.
 
@@ -498,7 +498,7 @@ Each layer is useful on its own. None requires the next.
 |------|-----|-------|
 | 1 | `verify dhf` as a PR gate | Nothing — works on day one |
 | 2 | `verify tests` | Test annotations in JUnit output |
-| 3 | `soup-sync`, `sbom`, `verify soup` | A dependency manifest |
-| 4 | `change plan` / `change implement` | An AI key, and the appetite for it |
+| 3 | `build dhf`, `sbom`, `verify soup` | A dependency manifest |
+| 4 | `build plan` / `build code` | An AI key, and the appetite for it |
 
 Step 4 is optional in the strong sense: teams that prefer manual design with automated validation stop at step 3 and lose nothing the standard asks for.

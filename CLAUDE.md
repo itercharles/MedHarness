@@ -18,10 +18,30 @@ Before proposing or implementing any significant change, read:
 | CLI | Owns | Commands |
 |-----|------|----------|
 | `dhfkit` | DHF **data**: items, schemas, documents, SOUP, releases. Storage and retrieval only — no analysis. | `doc` · `init` · `item` · `sbom` · `validate` |
-| `medharness` | The **process** around it: AI CR workflow, CI gates, scaffolding, approval, and all traceability analysis over the item set | `automation` · `change` · `context` · `doctor` · `evidence` · `init` · `release` · `soup-sync` · `upgrade` · `verify` |
+| `medharness` | The **process** around it: AI CR workflow, CI gates, scaffolding, approval, and all traceability analysis over the item set | `build` · `context` · `doctor` · `evidence` · `init` · `release` · `upgrade` · `verify` · `workflow` |
 
 `tests/guards/test_cli_boundary_is_documented.py` checks this table against the
 live command tree.
+
+### What each verb means
+
+A new command goes under the verb that matches what it *reads*, not who calls it
+or when. The line was drawn this way because "does it need a CR" — the old rule —
+was invisible in the name, so the gates ended up split across two groups for a
+reason no reader could recover.
+
+| Verb | Reads | Examples |
+|------|-------|----------|
+| `verify` | the DHF, and nothing else — never Git or GitHub | `dhf`, `tests`, `soup`, `completion` |
+| `build` | whatever it needs; **writes** items, code, or artifacts | `plan`, `code`, `dhf` |
+| `workflow` | the repository; cannot answer without Git or GitHub | `branch`, `approval`, `github-event` |
+
+`workflow *` are CI helper scripts, not the tool's value. A developer working
+locally runs `verify *` and `build *` and never needs them. `workflow branch`
+does open the DHF to read what the CR promised, but it cannot answer without a
+diff — what a command *requires* is what places it, not everything it touches.
+
+`tests/guards/test_gates_sit_where_they_belong.py` enforces the line.
 
 `medharness context` assembles design context for an AI agent or a CI step (`implementation`, `for-stage`, `overview`).
 All DHF data operations use `dhfkit --dhf DHF <command>`.

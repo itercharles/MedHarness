@@ -25,17 +25,20 @@ from medharness.services.gates import BLOCKING, GATES
 def _cli_gate_commands() -> set[str]:
     """Every gate the CLI exposes, wherever it lives.
 
-    Gates used to all sit under `verify`. The two that check a CR's promises —
-    `change verify-branch`, `change verify-completion` — moved under `change`,
-    because they read fields `change plan` writes and mean nothing to a project
-    that does not use the CR workflow. Reading one group again would silently
-    stop checking them.
+    Gates sit under two verbs, not one: `verify *` answers from the DHF,
+    `workflow *` cannot answer without the repository. Reading one group would
+    silently stop checking the other — which is how `change`'s two gates went
+    undescribed the first time this was a single-group walk.
+
+    `workflow github-event` is not a gate: it exits 0 whatever it finds, so it
+    has no verdict for the manifest to describe.
     """
     found = set()
-    for group in ("verify", "change"):
-        for name, cmd in main.commands[group].commands.items():
-            if group == "verify" or name.startswith("verify-"):
-                found.add(f"{group} {name}")
+    for group in ("verify", "workflow"):
+        for name in main.commands[group].commands:
+            if (group, name) == ("workflow", "github-event"):
+                continue
+            found.add(f"{group} {name}")
     return found
 
 
@@ -74,7 +77,7 @@ class TestManifestMatchesTheCLI:
     def test_every_required_option_is_declared(self, gate: dict) -> None:
         """The other direction.
 
-        Checking only declared→exists let `change verify-branch` ship a
+        Checking only declared→exists let `workflow branch` ship a
         `required` list that omitted an option the command will not run without.
         A caller building from the manifest gets a usage error.
         """

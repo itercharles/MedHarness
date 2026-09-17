@@ -1,9 +1,9 @@
-"""`change plan` must not report success without the fields closure requires.
+"""`build plan` must not report success without the fields closure requires.
 
 `triage_result` and `proposed_new_items` are written by nothing but the prompt:
 the LLM is told to run `dhfkit item update`, and no code checked that it did.
 A run that skipped Step 1 or Step 4 reported `outcome: ok`, and the omission
-surfaced at `change verify-completion` — whose own message says "re-run
+surfaced at `verify completion` — whose own message says "re-run
 generate-dhf Step 4", naming a producer that had already declared success.
 
 All thirteen CRs in the one real adopter are missing both.

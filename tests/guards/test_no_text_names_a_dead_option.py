@@ -1,7 +1,7 @@
 """An option named in a prompt, a doc, or a shipped workflow must exist.
 
 `--author` and `--cr` on `dhfkit item create/update`, `--by` on `item
-transition`, and `--author` on `release baseline` and `soup-sync` all ended at
+transition`, and `--author` on `release baseline` and `build dhf` all ended at
 an auto-commit path no entry point enabled, so the attribution was dropped on
 the floor. Thirteen places across the prompts, `docs/adopting.md`, and the
 scaffold's own workflow told the agent to pass one anyway.

@@ -228,7 +228,7 @@ def validate_dhf_structure(dhf_path: Path) -> list[dict]:
 
 
 def _check_cr_workflow_fields(_api, dhf_path: Path, cr_id: str) -> list[dict]:
-    """The two fields `change plan` is supposed to leave behind.
+    """The two fields `build plan` is supposed to leave behind.
 
     Nothing but the prompt writes them, so a run that skipped a step reported
     success and the omission only surfaced at the closure gate, releases later.
@@ -247,7 +247,7 @@ def _check_cr_workflow_fields(_api, dhf_path: Path, cr_id: str) -> list[dict]:
         return [{
             "field": "cr_item",
             "issue": f"CR item '{cr_id}' is not in the DHF.",
-            "fix": f"Create {cr_id} before running `change plan`.",
+            "fix": f"Create {cr_id} before running `build plan`.",
         }]
 
     # A rejected CR stops at Step 1 and produces no cascade, so neither field applies.

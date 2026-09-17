@@ -47,7 +47,7 @@ def _documented_calls() -> list[tuple[str, tuple[str, ...], str]]:
 
 
 def _alternatives(line: str) -> list[str]:
-    """`change plan|implement` documents two commands, not one."""
+    """`build plan|implement` documents two commands, not one."""
     match = re.search(r"\b(\w+(?:\|\w+)+)", line)
     if not match:
         return [line]

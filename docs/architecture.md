@@ -20,9 +20,9 @@ MedHarness ships two Python packages from a single repository:
   links, link cycles, risk chains, which risks a change touches
   (`services/traceability.py`)
 - CLI surface and user-facing onboarding (`medharness init`)
-- Verification commands (`verify dhf`, `verify tests`, `change verify-branch`, `evidence bundle`)
-- AI-assisted CR generation (`change plan`, `change implement`)
-- Approval as evidence (`change verify-approval` — an approving review of the merged commit)
+- Verification commands (`verify dhf`, `verify tests`, `workflow branch`, `evidence bundle`)
+- AI-assisted CR generation (`build plan`, `build code`)
+- Approval as evidence (`workflow approval` — an approving review of the merged commit)
 - CR workflow orchestration (`cr workflow`, `cr check-status`)
 - DHF repo scaffolding from bundled templates (`medharness init`, `medharness upgrade`)
 - Environment and setup diagnostics (`medharness doctor`)
@@ -37,7 +37,7 @@ MedHarness ships two Python packages from a single repository:
 - JUnit XML parsing and CI artifact fetching
 - Git-backed YAML repository layer (loader/saver)
 - Result store for test result history
-- SOUP manifest synchronisation (`soup-sync`)
+- SOUP manifest synchronisation (`build dhf`)
 - Release baseline builder (`release-baseline`)
 - CycloneDX SBOM serialisation from the SOUP register (`sbom`)
 - Approval records as DHF items (`approval import`, `approval show`)
@@ -147,7 +147,7 @@ dhfkit/templates/
 └── README.md
 ```
 
-The generated DHF repo does not contain `dhfkit/` or `medharness/` source code. Install MedHarness separately. Use `dhfkit --dhf DHF ...` for data operations (item CRUD, validate, docs); use `medharness --dhf DHF change ...`, `verify ...`, and `evidence ...` for AI-assisted change workflows and validation.
+The generated DHF repo does not contain `dhfkit/` or `medharness/` source code. Install MedHarness separately. Use `dhfkit --dhf DHF ...` for data operations (item CRUD, validate, docs); use `medharness --dhf DHF build ...`, `verify ...`, and `workflow ...` for AI-assisted change workflows and validation.
 
 ### Placeholder substitution
 
@@ -204,10 +204,10 @@ This repo does not use `@links`/`@test_id` metadata or `verify tests` for its ow
 Every CR moves through two AI-assisted phases on a single branch and PR:
 
 ```
-change plan  →  (design PR reviewed + approved)  →  change implement
+build plan  →  (design PR reviewed + approved)  →  build code
 ```
 
-**`change plan`**
+**`build plan`**
 
 1. Triage — checks for duplicate, out-of-scope, architecture-conflict, or too-large; writes `triage_result` (verdict, complexity, affected_subsystems, notes) onto the CR item
 2. V-model cascade — creates/updates DHF items top-down: CR → CRS → SYS → {SYSARCH, RISK, RCM} → SRS → SWDD. Each SWDD item links to an existing MODULE and implements the relevant SRS items. Reads relevant source modules before writing SWDD items so the design reflects the actual codebase. Writes `affected_risk_items` (list of RISK/RCM IDs relevant to this CR, or `[]`) onto the CR item.
@@ -215,7 +215,7 @@ change plan  →  (design PR reviewed + approved)  →  change implement
 4. Deterministic validation — `dhfkit validate schema` + `medharness verify dhf` for the stored data, `medharness verify dhf` for the analysis; self-corrects if errors remain
 5. Design review (soft) — reviews every changed DHF item for necessity, product/technical strategy alignment, and SWDD + implementation note clarity. Writes verdict and issues to `docs/reviews/<CR>-Design-Review.md`. If **Needs Revision**, a fix pass runs and the review repeats up to three cycles.
 
-**`change implement`**
+**`build code`**
 
 1. Reads `implementation_notes` as the primary implementation spec (reviewed and approved with the design PR)
 2. Implements code following the plan; reads SWDD items for module-level design decisions
@@ -228,11 +228,11 @@ change plan  →  (design PR reviewed + approved)  →  change implement
 | State | Set by | Meaning |
 |-------|--------|---------|
 | `new` | Intake | CR created |
-| `design` | `change plan` | Design phase started |
-| `develop` | `change implement` | Implementation phase started |
+| `design` | `build plan` | Design phase started |
+| `develop` | `build code` | Implementation phase started |
 | `completed` | PR merge | Code merged to main |
 | `cancelled` | PR close | PR closed without merging |
-| `rejected` | `change plan` triage | Out-of-scope / duplicate / too large |
+| `rejected` | `build plan` triage | Out-of-scope / duplicate / too large |
 
 State transitions are not enforced as execution gates — the auto workflow proceeds regardless. States are recorded for traceability.
 
@@ -242,7 +242,7 @@ The CR-generation path in `medharness.services` is split by responsibility:
 
 - `cr_generation.py` — stage orchestration, LLM invocation, PR-feedback retrieval; public entry points are `generate_dhf` and `generate_code`. Both return a `design_review` / `code_review` field with per-cycle `{verdict, issues}` data and a human-readable `narrative` list. Each workflow stage resolves its own `LLMConfig` from `MEDHARNESS_{DESIGN|DESIGN_REVIEW|DEVELOP|CODE_REVIEW}_MODEL` env vars; supported providers are `anthropic` (Claude CLI, default), `openai`, and `deepseek`.
 - `prompt_assembly.py` — prompt-template loading and composition; injects pre-computed DHF context (item lists, traceability graph, coverage gaps) into each prompt
-- `cr_impact.py` — writes `affected_items` back onto the CR item after `change plan` completes; `implementation_notes` is LLM-authored and not overwritten by the harness
+- `cr_impact.py` — writes `affected_items` back onto the CR item after `build plan` completes; `implementation_notes` is LLM-authored and not overwritten by the harness
 - `design_validation.py` — deterministic post-design checks; only catches schema, traceability, and DHF-validation failures
 
 This split is internal structure, not a public import contract. The public behavior is the CLI and JSON response contracts documented in the CHANGELOG and enforced by consumer-side contract tests.

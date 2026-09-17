@@ -1224,7 +1224,7 @@ def cr_closure_gate(
        quietly.
 
     Approval is not checked here. It lives in the pull request, which this gate
-    does not read — ``change verify-approval`` does.
+    does not read — ``workflow approval`` does.
 
     Args:
         cr_id: CR identifier (e.g. CR-012).
@@ -1494,7 +1494,7 @@ def _soup_drift(
             ],
             "no_longer_shipped": [it["id"] for it in diff["orphans"]],
             # An entry with no purpose satisfies "is it documented" and answers
-            # nothing §8.1.2 asks. soup-sync leaves it empty rather than filling
+            # nothing §8.1.2 asks. `build dhf` leaves it empty rather than filling
             # in "Dependency from PyPI", so the gap is visible instead of
             # papered over.
             "undescribed": sorted(

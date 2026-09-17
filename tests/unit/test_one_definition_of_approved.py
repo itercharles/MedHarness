@@ -6,8 +6,8 @@ weaker one decided whether a stage could advance. 0.24.0 made both read the
 review; this removes the second reader entirely.
 
 Approval is a pull-request review. It lives in GitHub, not in the DHF, so a gate
-that reads the DHF has no business ruling on it. `change verify-approval` asks
-whether the commit being merged was approved; `change verify-completion` asks
+that reads the DHF has no business ruling on it. `workflow approval` asks
+whether the commit being merged was approved; `verify completion` asks
 whether the CR delivered what it promised. Neither answers the other's question.
 
 What this guards is the separation. A second definition creeps back the moment
@@ -37,7 +37,7 @@ class TestClosureDoesNotRuleOnApproval:
         for name in ("approval_evidence", "find_approvals", "design_review", "APR"):
             assert name not in source, (
                 f"closure mentions {name!r}; approval belongs to "
-                f"`change verify-approval`, which reads the pull request"
+                f"`workflow approval`, which reads the pull request"
             )
 
     def test_nothing_in_the_gate_module_reads_an_approval_record(self) -> None:
@@ -80,12 +80,13 @@ class TestApprovalIsOwnedByOneGate:
     def test_only_the_approval_gate_reads_the_pull_request(self) -> None:
         from medharness.cli import main
 
-        change = main.commands["change"].commands
         takes_pr = {
-            name for name, cmd in change.items()
+            f"{verb} {name}"
+            for verb in ("verify", "workflow")
+            for name, cmd in main.commands[verb].commands.items()
             if any("--pr" in p.opts for p in cmd.params)
         }
-        assert "verify-approval" in takes_pr
-        assert "verify-completion" not in takes_pr, (
+        assert "workflow approval" in takes_pr
+        assert "verify completion" not in takes_pr, (
             "closure takes a pull request again"
         )

@@ -418,7 +418,7 @@ def test_cli_cr_complete_passes(tmp_path: Path) -> None:
     junit = _make_junit(tmp_path, ["SRS-001"])
     result = CliRunner().invoke(
         main,
-        ["--dhf", str(dhf), "change", "verify-completion",
+        ["--dhf", str(dhf), "verify", "completion",
          "--cr", "CR-001", "--junit", str(junit)],
     )
     assert result.exit_code == 0, result.output
@@ -433,7 +433,7 @@ def test_cli_cr_complete_fails_on_incomplete_cr_fields(tmp_path: Path) -> None:
     _write_cr_proposed(dhf, "CR-001", [], implementation_notes=None, affected_risk_items=None)
     result = CliRunner().invoke(
         main,
-        ["--dhf", str(dhf), "change", "verify-completion", "--cr", "CR-001"],
+        ["--dhf", str(dhf), "verify", "completion", "--cr", "CR-001"],
     )
     assert result.exit_code != 0
     payload = json.loads(result.output.splitlines()[0])
@@ -450,7 +450,7 @@ def test_cli_cr_complete_fails_on_missing_item(tmp_path: Path) -> None:
     # No item with matching title created
     result = CliRunner().invoke(
         main,
-        ["--dhf", str(dhf), "change", "verify-completion", "--cr", "CR-001"],
+        ["--dhf", str(dhf), "verify", "completion", "--cr", "CR-001"],
     )
     assert result.exit_code != 0
 
@@ -461,7 +461,7 @@ def test_cli_cr_complete_fails_without_junit_for_test_items(tmp_path: Path) -> N
     _write_srs_item(dhf, "SRS-001", "Req A", verification_method=["Test"])
     result = CliRunner().invoke(
         main,
-        ["--dhf", str(dhf), "change", "verify-completion", "--cr", "CR-001"],
+        ["--dhf", str(dhf), "verify", "completion", "--cr", "CR-001"],
     )
     assert result.exit_code != 0
 

@@ -1,6 +1,6 @@
 """A session that cannot be resumed is not a failed generation.
 
-`change plan --pr N` and `change implement --pr N` store a Claude session id in
+`build plan --pr N` and `build code --pr N` store a Claude session id in
 a PR comment and pass it to `claude --resume` on the next run. The transcript
 lives in `~/.claude` on the machine that created it, and every CI runner is a
 new machine, so in CI that resume always fails:

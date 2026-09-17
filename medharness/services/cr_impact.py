@@ -24,7 +24,7 @@ def _record_design_impact_in_cr(
     touched_ids: list[str] = []
     for bucket in ("created", "updated", "deleted"):
         touched_ids.extend(items_changed.get(bucket, []) or [])
-    # The CR is always in its own change set: `change plan` writes triage_result,
+    # The CR is always in its own change set: `build plan` writes triage_result,
     # affected_risk_items and implementation_notes onto it, so it shows up as an
     # updated item and was then recorded as affecting itself. That is a
     # one-item traceability cycle, and `verify dhf` fails on it as of 0.20.0 —

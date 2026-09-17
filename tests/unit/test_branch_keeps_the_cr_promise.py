@@ -5,7 +5,7 @@ item change at all". That passes a branch which edited something unrelated, and
 fails any PR without a CR — so the rule about when it applies had to live in
 each adopter's workflow conditions rather than in the command.
 
-`change plan` already writes `affected_items`. Comparing the promise to the diff
+`build plan` already writes `affected_items`. Comparing the promise to the diff
 is the check the name always claimed.
 """
 

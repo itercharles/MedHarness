@@ -1,6 +1,6 @@
 """`issue_number` in the event output, and why it is sometimes absent.
 
-The reference project's workflow ran `automation github-event --github-output`
+The reference project's workflow ran `workflow github-event --github-output`
 and then a second `enrich` step that re-read the same fields with
 `jq -r '.cr_id // ""'` purely so it could add `issue_number` from a `gh api`
 call. That re-read is where a failed parse became an empty `cr_id` flowing to
@@ -71,7 +71,7 @@ class TestItReachesTheOutput:
 
     def _run(self, event: Path, out: Path) -> tuple[dict, list[str]]:
         proc = subprocess.run(
-            [sys.executable, "-m", "medharness", "automation", "github-event",
+            [sys.executable, "-m", "medharness", "workflow", "github-event",
              "--event", str(event), "--github-output", str(out)],
             capture_output=True, text=True,
             env={**os.environ, "GITHUB_EVENT_NAME": "pull_request"},
@@ -106,7 +106,7 @@ class TestItReachesTheOutput:
             "comment": {"body": "/approve"},
         }))
         proc = subprocess.run(
-            [sys.executable, "-m", "medharness", "automation", "github-event",
+            [sys.executable, "-m", "medharness", "workflow", "github-event",
              "--event", str(p)],
             capture_output=True, text=True,
             env={**os.environ, "GITHUB_EVENT_NAME": "issue_comment"},

@@ -153,9 +153,9 @@ def _collect_bom(dhf: Path, manifest_paths: list[Path]) -> tuple[dict, list[str]
             bom_errors.append(f"Unsupported manifest format for BOM: {path}")
             continue
         try:
-            # The same dispatch soup-sync uses. This listed requirements.txt and
+            # The same dispatch `build dhf` uses. This listed requirements.txt and
             # package.json by hand and failed the whole baseline on the other
-            # seven formats soup-sync reads — a project on a lockfile could sync
+            # seven formats `build dhf` reads — a project on a lockfile could sync
             # its SOUP register and then not build a release from it.
             manifest_packages.extend(_dispatch_parser(path))
         except Exception as exc:  # noqa: BLE001

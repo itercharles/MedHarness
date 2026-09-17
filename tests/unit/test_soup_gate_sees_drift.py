@@ -76,14 +76,14 @@ class TestTheGateDoesNotWrite:
         after = sorted(p.name for p in (dhf / "items").rglob("SOUP-*.yaml"))
         assert before == after, (
             "the gate wrote to the DHF it is judging; writing back is the "
-            "`soup-sync` action's job"
+            "`build dhf` action's job"
         )
 
 
 class TestAnEntryWithNoPurposeIsNotDocumented:
     """§8.1.2 asks why a component is used, not merely that it is listed.
 
-    soup-sync used to write `purpose: "Dependency from PyPI"` into every item it
+    build dhf used to write `purpose: "Dependency from PyPI"` into every item it
     created. That satisfied "is it in the register" and answered nothing — the
     register looked complete while saying nothing a reviewer could use. It now
     leaves the field empty, and the gate says so.
@@ -130,6 +130,6 @@ def test_soup_sync_does_not_invent_a_purpose() -> None:
             if isinstance(v, ast.Constant) and isinstance(v.value, str)
         ]
     assert not any("Dependency from" in lit for lit in literals), (
-        "soup-sync fills in a purpose again; an invented answer to 'why is this "
+        "build dhf fills in a purpose again; an invented answer to 'why is this "
         "component used' is worse than a visible gap"
     )

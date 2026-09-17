@@ -182,10 +182,10 @@ def validate_atomic_branch(
                 f"No DHF item YAML changes found on the branch since {since_ref}, "
                 f"and {cr_id} lists no affected_items to check against."
             ),
-            "fix": "Run `change plan` so the CR records what it affects.",
+            "fix": "Run `build plan` so the CR records what it affects.",
         })
 
-    return envelope_from("verify branch", {
+    return envelope_from("workflow branch", {
         "cr_id": cr_id,
         "since_ref": since_ref,
         "passed": not errors,

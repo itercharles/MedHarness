@@ -3,7 +3,7 @@
 The closure gate once told a reader to run `medharness approval act`. No such
 command existed — the `approval` group had gone and the message kept the name.
 That check is itself gone now (approval lives in the pull request, so
-`change verify-approval` owns it), but the failure mode is not specific to it:
+`workflow approval` owns it), but the failure mode is not specific to it:
 any gate can print a hint that names a command nobody can run.
 
 `test_no_source_names_a_dead_command` matches full command lines, not a bare

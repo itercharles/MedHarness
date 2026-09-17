@@ -5,7 +5,7 @@
 
 This document describes what the AI stages of MedHarness are allowed to do, where they run, and what evidence they leave behind. It exists because MedHarness is used in regulated environments where "an AI wrote this code" is not an acceptable answer to an auditor — the boundary has to be stated, not assumed.
 
-If you are evaluating MedHarness for a design-controlled project, read this before enabling `change plan` or `change implement`.
+If you are evaluating MedHarness for a design-controlled project, read this before enabling `build plan` or `build code`.
 
 ---
 
@@ -15,10 +15,10 @@ Only two commands send anything to a model:
 
 | Command | Stage | What it produces |
 |---------|-------|------------------|
-| `medharness change plan --cr <ID>` | Design | DHF item updates, impact analysis, design review |
-| `medharness change implement --cr <ID>` | Develop | Source code and tests for the approved design |
+| `medharness build plan --cr <ID>` | Design | DHF item updates, impact analysis, design review |
+| `medharness build code --cr <ID>` | Develop | Source code and tests for the approved design |
 
-**Every other command is deterministic.** `dhfkit` (item CRUD, validation, link integrity, document generation, SOUP sync, release baseline) makes no network calls to any model and has no dependency on `medharness`. All `verify` gates, `change verify-*` gates, and `evidence bundle` are pure local computation.
+**Every other command is deterministic.** `dhfkit` (item CRUD, validation, link integrity, document generation, SOUP sync, release baseline) makes no network calls to any model and has no dependency on `medharness`. All `verify` and `workflow` gates and `evidence bundle` are pure local computation.
 
 This split is intentional: you can adopt the traceability engine and CI gates with no AI in the pipeline at all. See [adopting.md](adopting.md#incremental-adoption).
 
@@ -74,9 +74,9 @@ If you must run locally, use a dedicated checkout and a shell without your prima
 
 The AI cannot advance a change on its own. Every stage transition is gated:
 
-1. **`change plan` produces a design PR.** No code is written. A human reviews the DHF diff and the generated design review.
-2. **Approval is evidence.** `medharness change verify-approval` requires an approving GitHub review of the commit the PR would merge — author, timestamp and revision, all recorded outside this tool's control. A label is not accepted: anyone with write access can add or remove one, and it says nothing about what was reviewed.
-3. **`change implement` produces a code PR.** It cannot run until the design stage is approved.
+1. **`build plan` produces a design PR.** No code is written. A human reviews the DHF diff and the generated design review.
+2. **Approval is evidence.** `medharness workflow approval` requires an approving GitHub review of the commit the PR would merge — author, timestamp and revision, all recorded outside this tool's control. A label is not accepted: anyone with write access can add or remove one, and it says nothing about what was reviewed.
+3. **`build code` produces a code PR.** It cannot run until the design stage is approved.
 4. **Closure is gated deterministically.** `verify completion` requires an approved design review file, populated CR fields, and passing JUnit evidence for every requirement — none of which the AI can satisfy by assertion.
 
 The gates in step 4 are ordinary code. They do not ask a model whether the work is done.
@@ -109,7 +109,7 @@ Nothing here is regulatory advice. How you classify and justify AI-assisted deve
 
 ## Disabling AI entirely
 
-Remove the AI stage jobs from `.github/workflows/dhf.yml` and never invoke `change plan` / `change implement`. Everything else keeps working:
+Remove the AI stage jobs from `.github/workflows/dhf.yml` and never invoke `build plan` / `build code`. Everything else keeps working:
 
 ```bash
 dhfkit --dhf DHF validate links

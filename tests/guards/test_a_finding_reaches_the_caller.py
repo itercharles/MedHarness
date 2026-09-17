@@ -28,8 +28,8 @@ GATES = {
     "verify dhf": [],
     "verify tests": ["--junit-dir", "{dhf}/test-results"],
     "verify soup": ["--offline-mode", "warn"],
-    "change verify-branch": ["--cr", "CR-001"],
-    "change verify-completion": ["--cr", "CR-001"],
+    "workflow branch": ["--cr", "CR-001"],
+    "verify completion": ["--cr", "CR-001"],
 }
 
 #: stderr lines that report a finding. PASS records what held, not what failed.

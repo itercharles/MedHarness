@@ -203,7 +203,7 @@ class TestMergingTheTwoRegisters:
     """An SBOM that lists only documented components understates what ships.
 
     A package in requirements.txt that nobody has made a SOUP item for is still
-    in the release. Omitting it would also hide the §8.1.2 gap `soup-sync`
+    in the release. Omitting it would also hide the §8.1.2 gap `build dhf`
     exists to close, so it is included and says where it came from.
     """
 
@@ -313,7 +313,7 @@ class TestReleaseBaselineEmitsAnSbom:
 class TestReleaseBaselineReadsEveryManifestSoupSyncDoes:
     """The two commands disagreed on what a manifest is.
 
-    `soup-sync` reads nine formats; `release-baseline --manifest` listed two by
+    `build dhf` reads nine formats; `release-baseline --manifest` listed two by
     hand and failed the whole baseline on the rest. A project that synced its
     SOUP register from a lockfile could not then build a release from it.
     """
