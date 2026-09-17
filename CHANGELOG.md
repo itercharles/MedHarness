@@ -11,6 +11,39 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.31.0] — 2026-09-17
+
+### Breaking Changes
+
+- **The medical-device standard checks leave the open-source tool.** MedHarness
+  does not check conformance to IEC 62304's activity table any more; that
+  belongs in a separate tool. Removed:
+
+  - `medharness verify classification`, with `classification_gate` and
+    `plans_gate` behind it.
+  - `software_safety_class`, `classification_rationale` and `safety_activities`
+    on `ProjectConfig`, along with `required_activities()` and the
+    `safety_activities.yaml` the loader read them from.
+  - The verification-level dimension of `verify tests`: `required_test_levels`,
+    the `@pytest.mark.dhf_level` marker, the `medharness.level` JUnit property,
+    and `TEST_LEVELS` / `JUNIT_LEVEL` / `DEFAULT_TEST_LEVEL` in
+    `dhfkit.junit_parser`. `verify tests` is now requirement-to-test coverage
+    and nothing else.
+  - The seven plan templates under `dhfkit/templates/plans/`. `init` no longer
+    scaffolds `DHF/documents/plans/`; a project writes the plans it needs and
+    `evidence bundle` still renders whatever it finds there.
+  - The empty `13_apr/` item directory the 0.30.0 APR removal left behind.
+  - `opt_in` as a `blocking` value — no gate uses it now.
+
+  `CONTRACT_VERSION` moves to `6.0`. A project that declared a class keeps the
+  field in `global.yaml` harmlessly; nothing reads it. Declaring a class no
+  longer changes any verdict, so a pipeline that was passing keeps passing —
+  the gate that could fail on it is gone.
+
+  The commercial tool is where conformance checking will live. Keeping a
+  half-built version of it here meant a gate that reported a pass having
+  checked nothing, which is the failure mode this codebase keeps producing.
+
 ## [0.30.0] — 2026-09-16
 
 ### Breaking Changes

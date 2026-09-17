@@ -338,43 +338,6 @@ def register(main):
                     click.echo(f"        Fix: add 'dhf_links: [{uid}]' to a test case, or:", err=True)
                     click.echo(f"             dhfkit {dhf_arg} item create --type TC"
                                f" --data '{{\"title\": \"Test {uid}\", \"dhf_links\": [\"{uid}\"]}}'", err=True)
-        # A mapping now, because the class may require different levels of
-        # different requirement types. Printing the union would misreport a
-        # project that asks for system testing of SYS but not of SRS.
-        required_levels = _d(result).get("required_levels") or {}
-        seen = ", ".join(_d(result).get("levels_seen") or ["none"])
-        demanded = {rt: lv for rt, lv in required_levels.items() if lv}
-        if demanded:
-            uniform = len({tuple(v) for v in demanded.values()}) == 1
-            if uniform:
-                only = next(iter(demanded.values()))
-                click.echo(
-                    f"      levels required by the declared class: "
-                    f"{', '.join(only)}; seen in this evidence: {seen}",
-                    err=True,
-                )
-            else:
-                click.echo("      levels required by the declared class:", err=True)
-                for rt in sorted(demanded):
-                    click.echo(f"        {rt}: {', '.join(demanded[rt])}", err=True)
-                click.echo(f"      seen in this evidence: {seen}", err=True)
-        for gap in _d(result).get("level_gaps", []):
-            click.echo(
-                f"FAIL [test-level] {gap['req_id']}: verified at "
-                f"{', '.join(gap['have']) or 'no level'} but missing "
-                f"{', '.join(gap['missing'])}",
-                err=True,
-            )
-            # Language-neutral first. The gate reads JUnit XML precisely so it
-            # works for any runner; leading with a pytest mark sent a project
-            # whose tests are Vitest looking for a decorator that cannot exist
-            # in a TypeScript file.
-            click.echo(
-                f"      Fix: set the JUnit property medharness.level="
-                f"\"{gap['missing'][0]}\" on a test covering {gap['req_id']}. "
-                f"In pytest: @pytest.mark.dhf_level(\"{gap['missing'][0]}\").",
-                err=True,
-            )
         for row in _d(result).get("testing_points", []):
             if row["passed"]:
                 click.echo(
@@ -447,66 +410,6 @@ def register(main):
         click.echo(result["summary"], err=True)
         if not result["passed"]:
             raise click.ClickException(f"CR {cr_id} closure verification failed.")
-
-    @verify.command("classification")
-    @click.option("--dhf", "dhf_path", type=click.Path(file_okay=False, path_type=Path))
-    @click.pass_context
-    def verify_classification(ctx: click.Context, dhf_path: Path | None) -> None:
-        """Check the IEC 62304 §4.3 safety class and the plans it requires.
-
-        The class decides which development activities the standard demands, and
-        §5.1 decides which plans those activities need. Asking them separately let
-        a project declare a class and ship seven untouched plan templates.
-
-        An undeclared class warns and exits zero, so adopting this is opt-in.
-        """
-        from medharness.services.ci import classification_gate, gate_result, plans_gate
-
-        effective_dhf = dhf_path or ctx.obj.get("dhf")
-        if effective_dhf is None:
-            raise click.ClickException("--dhf is required when not set globally")
-
-        cls = classification_gate(effective_dhf)
-        plans = plans_gate(effective_dhf)
-        result = gate_result(
-            "verify classification",
-            cls["passed"] and plans["passed"],
-            f"{cls['summary']} {plans['summary']}",
-            errors=list(cls.get("errors", [])) + list(plans.get("errors", [])),
-            warnings=list(cls.get("warnings", [])) + list(plans.get("warnings", [])),
-            classification=_d(cls),
-            plans=_d(plans),
-        )
-        _emit(result)
-
-        declared = _d(cls).get("declared")
-        if declared:
-            click.echo(f"PASS [classification] software safety class: {declared}", err=True)
-        for entry in _d(cls).get("module_overrides", []):
-            mark = "OK" if entry["justified"] else "WARN"
-            click.echo(f"{mark} [classification] {entry['id']} overrides to "
-                       f"class {entry['safety_class']}", err=True)
-        for message in cls.get("warnings", []):
-            click.echo(f"WARN [classification] {message}", err=True)
-        for message in cls.get("errors", []):
-            click.echo(f"FAIL [classification] {message}", err=True)
-
-        for entry in _d(plans).get("checked", []):
-            click.echo(f"PASS [plan] {entry['plan']}", err=True)
-        for entry in _d(plans).get("missing", []):
-            click.echo(f"FAIL [plan] {entry['plan']}: required for Class "
-                       f"{declared} and absent", err=True)
-        for entry in _d(plans).get("unwritten", []):
-            click.echo(f"FAIL [plan] {entry['plan']}: unchanged from the template "
-                       f"({entry['sections']} section(s))", err=True)
-        for message in plans.get("warnings", []):
-            click.echo(f"WARN [plan] {message}", err=True)
-        for entry in _d(plans).get("skipped", []):
-            click.echo(f"SKIP [plan] {entry['plan']}: {entry['reason']}", err=True)
-
-        click.echo(result["summary"], err=True)
-        if not result["passed"]:
-            raise click.ClickException("Safety classification check failed.")
 
     @verify.command("soup")
     @click.option("--dhf", "dhf_path", type=click.Path(file_okay=False, path_type=Path))

@@ -91,13 +91,6 @@ class TestPromisesAreKeptElsewhere:
         assert "stderr is not a contract" in text.lower() or \
                "**stderr is not a contract**" in text
 
-    def test_names_the_gates_that_wait_for_a_class(self, text: str) -> None:
-        opt_in = [g["command"] for g in GATES if g["blocking"] == "opt_in"]
-        for command in opt_in:
-            assert f"`{command}`" in text, (
-                f"{command} is opt_in but the document does not say so"
-            )
-
 
 class TestDocumentIsReachable:
     def test_linked_from_adopting_or_readme(self) -> None:

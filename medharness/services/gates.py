@@ -19,8 +19,7 @@ from typing import Any
 #:
 #: ``always``      — any finding fails the gate.
 #: ``conditional`` — some findings always fail, others only under a flag.
-#: ``opt_in``      — inert until the project opts in; passes otherwise.
-BLOCKING = ("always", "conditional", "opt_in")
+BLOCKING = ("always", "conditional")
 
 GATES: tuple[dict[str, Any], ...] = (
     {
@@ -38,21 +37,18 @@ GATES: tuple[dict[str, Any], ...] = (
                          "links always fail. Coverage gaps warn unless "
                          "--fail-on-uncovered is passed.",
         "needs_network": False,
-        "needs_safety_class": False,
     },
     {
         "command": "verify tests",
         "checks": "Requirement-to-test coverage from JUnit evidence, including "
-                  "declared test points and verification levels.",
+                  "declared test points.",
         "options": {
             "required": ["--dhf", "--junit-dir or --junit"],
             "optional": ["--requirement-type"],
         },
         "blocking": "always",
-        "blocking_note": "Level requirements apply only once a safety class is "
-                         "declared; unlabelled tests count as unit.",
+        "blocking_note": "",
         "needs_network": False,
-        "needs_safety_class": False,
     },
     {
         "command": "verify soup",
@@ -63,20 +59,6 @@ GATES: tuple[dict[str, Any], ...] = (
         "blocking_note": "An unreachable osv.dev fails by default; "
                          "--offline-mode warn tolerates it for air-gapped runners.",
         "needs_network": True,
-        "needs_safety_class": False,
-    },
-    {
-        "command": "verify classification",
-        "checks": "That a software safety class is declared with a rationale, and "
-                  "that the item types the class requires exist.",
-        "options": {"required": ["--dhf"], "optional": []},
-        "blocking": "opt_in",
-        "blocking_note": "Warns and exits zero until software_safety_class is "
-                         "declared in global.yaml. Once declared, a missing or "
-                         "empty safety_activities.yaml fails: the opt-in has "
-                         "been taken and the gate cannot check anything.",
-        "needs_network": False,
-        "needs_safety_class": True,
     },
     {
         "command": "change verify-completion",
@@ -89,7 +71,6 @@ GATES: tuple[dict[str, Any], ...] = (
         "blocking": "always",
         "blocking_note": "",
         "needs_network": False,
-        "needs_safety_class": False,
     },
     {
         "command": "change verify-branch",
@@ -102,7 +83,6 @@ GATES: tuple[dict[str, Any], ...] = (
         "blocking_note": "Code-change enforcement applies only when --code-path "
                          "is given.",
         "needs_network": False,
-        "needs_safety_class": False,
     },
     {
         "command": "change verify-approval",
@@ -115,7 +95,6 @@ GATES: tuple[dict[str, Any], ...] = (
         "blocking": "always",
         "blocking_note": "An approval of an earlier commit is stale and fails.",
         "needs_network": True,
-        "needs_safety_class": False,
     },
 )
 

@@ -127,7 +127,3 @@ class TestScaffoldGuidance:
         readme = (dhf / "DHF" / "README.md").read_text()
         assert "starter sample content" in readme.lower() or "replace" in readme.lower()
 
-    def test_development_plan_has_starter_note(self, dhf):
-        plan = (dhf / "DHF" / "documents" / "plans" / "development_plan.md").read_text()
-        assert "starter" in plan.lower() or "replace" in plan.lower()
-

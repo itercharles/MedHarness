@@ -22,7 +22,6 @@ class TestScaffoldStructure:
         "DHF/config/doc_types",
         "DHF/documents",
         "DHF/documents/specs",
-        "DHF/documents/plans",
         "DHF/items",
         ".github",
         ".github/prompts",

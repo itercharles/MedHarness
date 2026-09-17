@@ -7,12 +7,11 @@ pip install medharness
 medharness init            # in an empty directory
 ```
 
-You get a complete DHF scaffold — sample items, config, document templates, plans, and AI prompts. Four things to replace before your first real CR:
+You get a complete DHF scaffold — sample items, config, document templates, and AI prompts. Three things to replace before your first real CR:
 
 | Replace | Why |
 |---------|-----|
 | `DHF/items/` | Delete the sample YAML and add your own, or keep them while you learn the schema |
-| `DHF/documents/plans/` | Your project's SDP, SMP, and the rest |
 | `DHF/config/global.yaml` | Set the project name |
 | `AI-harness/context.md` | Describe the product, so the AI reasons about your domain |
 
@@ -205,56 +204,6 @@ FAIL [dangling] RCM-001.mitigates → RISK-404: target does not exist
 
 Coverage gaps print as `WARN [coverage]` and leave the exit code at zero unless you pass `--fail-on-uncovered`. The recommended pipeline in [Setting up CI](#setting-up-ci) passes it. If you are backfilling an existing DHF and want the other checks green while you work through the gaps, drop the flag and add it back when the backlog is clear.
 
-## Software safety classification
-
-IEC 62304 §4.3 asks every project to classify its software, and the class decides which activities the standard requires at all — architectural design, detailed design, integration testing, and system testing are not demanded of every class.
-
-Declare it in `DHF/config/global.yaml`:
-
-```yaml
-software_safety_class: "B"      # A | B | C
-classification_rationale: >
-  Failure can contribute to a hazardous situation resulting in
-  non-serious injury. Segregation of the reporting module is
-  documented in SYSARCH-004.
-```
-
-| Class | Meaning |
-|-------|---------|
-| A | No injury or damage to health is possible |
-| B | Non-serious injury is possible |
-| C | Death or serious injury is possible |
-
-```bash
-medharness --dhf DHF verify classification
-```
-
-### The activity map is yours
-
-`DHF/config/safety_activities.yaml` maps each class to the items, plans, and test levels it requires. It ships with a documented default **and is meant to be edited**: assessors differ on how the §5 activity table reads, and your regulatory strategy may reasonably require more than the minimum. The file lives in the DHF, so your interpretation is recorded beside the evidence it governs.
-
-Some things the standard fixes regardless, and the file does not override: risk management (§7, ISO 14971), release (§5.8), configuration management (§8), and problem resolution (§9) apply to every class.
-
-### Per-module classification
-
-§4.3(b) permits a software item to carry a lower class than the system where segregation is documented. MODULE items accept it:
-
-```yaml
-id: MODULE-004
-safety_class: A
-segregation_rationale: >
-  Runs in a separate process with no shared state; separation is
-  described in SYSARCH-001.
-```
-
-An override without a rationale is reported as a warning rather than an error — the justification may legitimately live in the architecture rather than on the item.
-
-### Adoption is opt-in
-
-A DHF with no declared class warns and exits zero, and the class-dependent checks (`verify classification`, and verification levels in `verify tests`) stay inactive. Nothing that passes today starts failing because this exists.
-
-Once you declare one, `verify classification` requires `DHF/config/safety_activities.yaml` to define activities for that class. A project that adopted MedHarness before the file existed can obtain it with `medharness upgrade --apply`; it is project-owned from then on, and upgrade will never overwrite your edits.
-
 ## Test-driven development with test points
 
 MedHarness supports TDD at the DHF level. The idea is that test intent is expressed in the design, not retrofitted after code is written.
@@ -292,39 +241,6 @@ When tests run with `--junit-xml`, these annotations are written as JUnit XML pr
 ```bash
 medharness --dhf DHF verify tests --junit-dir test-results
 ```
-
-### Verification levels
-
-IEC 62304 asks for integration testing (§5.6) and system testing (§5.7) as records distinct from unit verification (§5.5). Declare the level a test provides:
-
-```python
-@pytest.mark.dhf_links("SRS-012")
-@pytest.mark.dhf_level("integration")
-def test_password_policy_enforced_end_to_end():
-    ...
-```
-
-The level travels as a JUnit property (`medharness.level`) rather than being inferred from a directory, so a results file copied between CI jobs keeps saying what it is.
-
-Once a [safety class](#software-safety-classification) is declared, `verify tests` requires the levels that class demands. A requirement verified only by unit tests then reports:
-
-```
-FAIL [test-level] SRS-012: verified at unit but missing integration, system
-      Fix: mark a covering test with @pytest.mark.dhf_level("integration"), or
-           set the medharness.level JUnit property.
-```
-
-**Unlabelled tests count as unit**, which is what they were already being counted as — existing suites keep working, and the requirement only applies once a class demanding it is declared.
-
-Which levels a class demands can differ by requirement type — §5.5 unit verification, §5.6 integration testing and §5.7 system testing do not verify the same artefact. In `safety_activities.yaml`, a list applies to every type while a mapping applies per type:
-
-```yaml
-required_test_levels:
-  SRS: [unit, integration]
-  SYS: [system]
-```
-
-A type the mapping omits requires no level. Which clause covers which artefact depends on how your project defines SYS against SRS, so the shipped defaults are a starting point rather than a ruling — the file is yours, and `upgrade` will not overwrite it.
 
 This exits non-zero if a requirement lacks coverage or if any declared test point has no covering test, making gaps in test coverage visible before merge. Combined with `verify dhf` (schema and links), it enforces that requirements are linked and verified before merge.
 

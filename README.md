@@ -148,7 +148,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - run: pip install medharness==0.30.0
+      - run: pip install medharness==0.31.0
       - run: medharness --dhf DHF verify dhf --fail-on-uncovered
 ```
 
@@ -201,7 +201,6 @@ Run these on any DHF, whether or not the project uses the AI change workflow.
 | `medharness verify dhf` | Every push. This is the one gate a DHF cannot do without: it is the only check that reads the items *together* and asks whether the V-model closes. |
 | `medharness verify tests --junit-dir test-results` | After the test job, to prove each requirement was verified **by the method it declared** — a Test-verified requirement needs a passing linked test, not just any evidence. |
 | `medharness verify soup --manifest requirements.txt` | Nightly and before a release. Answers both §8.1.2 questions at once: is the register what actually ships, and is any of it known-vulnerable. `--offline-mode warn` for air-gapped runners. |
-| `medharness verify classification` | Once a safety class is declared, to check the §5.1 plans that class requires exist. Warns and exits 0 until you declare one, so it is safe to wire before you have decided. |
 
 ### Gates on a change request
 

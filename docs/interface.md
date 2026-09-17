@@ -38,17 +38,17 @@ The manifest is checked against the live command tree by the test suite, so it c
 
 ```json
 {
-  "gate": "verify classification",
+  "gate": "verify tests",
   "passed": false,
-  "summary": "Class B: 1 plan(s) written, 0 missing, 3 unchanged.",
-  "errors": ["development_plan.md is unchanged from the template — §5.1 requires a plan that is maintained."],
-  "warnings": ["integration_plan.md: 6 section(s) still match the shipped template"]
+  "summary": "1/3 requirement(s) covered by passing tests.",
+  "errors": ["SYS: 0/1 requirements covered"],
+  "warnings": ["SRS-001: no verification_method declared — pass --require-method to block on this"]
 }
 ```
 
 | Key | Type | Meaning |
 |-----|------|---------|
-| `gate` | string | The command that produced this, e.g. `verify classification` |
+| `gate` | string | The command that produced this, e.g. `verify tests` |
 | `passed` | boolean | Whether the gate is satisfied. Always agrees with the exit code |
 | `summary` | string | One line, never empty |
 | `errors` | list of strings | What made the gate fail. Empty when `passed` is true |
@@ -92,17 +92,10 @@ The manifest gives each gate a `blocking` value:
 |-------|---------|
 | `always` | Any finding fails the gate |
 | `conditional` | Some findings always fail; others only under a flag |
-| `opt_in` | Inert until the project opts in; passes otherwise |
 
-Every `conditional` and `opt_in` gate carries a `blocking_note` saying when — "sometimes blocks" is useless without the condition. The suite asserts that note is present.
+Every `conditional` gate carries a `blocking_note` saying when — "sometimes blocks" is useless without the condition. The suite asserts that note is present.
 
-Two distinctions worth knowing before you wire anything:
-
-**Broken references versus incomplete design.** `verify dhf` always fails on a link whose target does not exist — that is a typo or a deleted item. An item with no downstream child yet is normal mid-project and only fails under `--fail-on-uncovered`. They need different fixes, so they are reported differently.
-
-**Gates that wait for a safety class.** `verify classification` warns and exits zero until `software_safety_class` is declared in `global.yaml`. You can add it to a pipeline before deciding the class; it starts doing work when you do.
-
-Declaring the class is taking the opt-in, so from that point `verify classification` fails if `safety_activities.yaml` is missing or defines nothing for the class — a gate that reports a pass having checked nothing is worse than one that is plainly inert. `medharness upgrade --apply` supplies the file; it is yours to edit thereafter and upgrade will not overwrite it.
+One distinction worth knowing before you wire anything. **Broken references versus incomplete design:** `verify dhf` always fails on a link whose target does not exist — that is a typo or a deleted item. An item with no downstream child yet is normal mid-project and only fails under `--fail-on-uncovered`. They need different fixes, so they are reported differently.
 
 ---
 
