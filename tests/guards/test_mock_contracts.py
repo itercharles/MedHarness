@@ -2,7 +2,7 @@
 
 When the claim stops being true, nothing fails: the test keeps feeding the CLI
 a shape production no longer produces, the line stays green in coverage, and the
-real call path breaks. That is exactly how `change verify-branch` shipped a TypeError
+real call path breaks. That is exactly how `workflow branch` shipped a TypeError
 in 0.14.0 — its test mocked the service with dicts in `errors` while the service
 had moved to strings.
 
@@ -20,7 +20,7 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
 #: Both suites. Scanning only `tests/` left every `dhfkit/tests/` mock
-#: unchecked, and that is where soup-sync's whole suite fed items keyed "uid"
+#: unchecked, and that is where build dhf's whole suite fed items keyed "uid"
 #: while production produced "id" — nine parsers shipped broken behind it.
 TEST_DIRS = (ROOT / "tests", ROOT / "dhfkit" / "tests")
 
@@ -127,7 +127,7 @@ def _item_dicts_anywhere(path: Path) -> list[tuple[frozenset, int]]:
     """Every dict literal in a file that looks like a DHF item.
 
     Not only the ones passed straight to `patch`. The shape that shipped a
-    broken `soup-sync` was built by a helper — `return {"uid": uid, "type":
+    broken `build dhf` was built by a helper — `return {"uid": uid, "type":
     "SOUP", ...}` — and handed to `return_value=[...]`, so a scan of `patch`
     arguments alone saw neither the list's contents nor the helper.
     """
@@ -207,7 +207,7 @@ class TestNoMockInventsAnItemField:
     The mock-contract check above cannot reach these: `api.create_item`
     delegates to an adapter method, so it has no literal return to compare
     against and is skipped. That skip is exactly where the defect lived —
-    soup-sync's suite mocked items as {"uid": ...} while production produced
+    build dhf's suite mocked items as {"uid": ...} while production produced
     {"id": ...}, and seven `item["uid"]` reads shipped, crashing the command on
     every real DHF.
 
@@ -241,12 +241,12 @@ class TestNoItemLiteralUsesUid:
     """An item-shaped dict must key its identifier `id`.
 
     The check above only sees dicts passed directly to `patch`. The fixture that
-    shipped a broken `soup-sync` was a helper returning `{"uid": …, "type":
+    shipped a broken `build dhf` was a helper returning `{"uid": …, "type":
     "SOUP", …}` handed to `return_value=[…]` — invisible to a scan of patch
     arguments, and it kept seven `item["uid"]` reads alive for six releases.
 
     Scoped to dicts carrying a `type` key, because that is what makes a dict an
-    item. Artifacts legitimately key the same value `uid` — `soup-sync` reports
+    item. Artifacts legitimately key the same value `uid` — `build dhf` reports
     orphans that way, and `release-baseline` writes `dhf_soup` entries — and
     those carry no `type`.
     """

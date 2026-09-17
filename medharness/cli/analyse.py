@@ -15,6 +15,8 @@ import click
 
 
 def register(main):
+    build = main.commands["build"]
+
     @main.group("release")
     def release() -> None:
         """Release records under IEC 62304 §9."""
@@ -68,7 +70,7 @@ def register(main):
             err=True,
         )
 
-    @main.command("soup-sync")
+    @build.command("dhf")
     @click.option("--manifest", "manifest_paths", multiple=True,
                   type=click.Path(exists=True, dir_okay=False, path_type=Path),
                   metavar="PATH", help="Manifest to read (repeatable). Auto-discovers when omitted.")
@@ -77,8 +79,8 @@ def register(main):
     @click.option("--write", is_flag=True, default=False,
                   help="Create or update SOUP items (report-only by default).")
     @click.pass_context
-    def soup_sync(ctx, manifest_paths, extra_commands, write) -> None:
-        """Compare the SOUP register against the project's dependency manifests.
+    def build_dhf(ctx, manifest_paths, extra_commands, write) -> None:
+        """Reconcile SOUP items from the project's dependency manifests.
 
         IEC 62304 §8.1.2 wants the SOUP a release ships to be the SOUP it
         documents. A package in a lockfile with no SOUP item is an undocumented
@@ -101,7 +103,7 @@ def register(main):
             f"{len(result.get('items_updated', []))} updated)" if write else " (dry-run)"
         )
         click.echo(
-            f"OK soup-sync{written}: +{len(result.get('to_create') or [])} new, "
+            f"OK build dhf{written}: +{len(result.get('to_create') or [])} new, "
             f"~{len(result.get('to_update') or [])} drift, "
             f"{len(result.get('orphans') or [])} orphan(s), "
             f"{result.get('matched_count', 0)} matched.", err=True,

@@ -1,6 +1,6 @@
 """A CR is always in its own change set, and was recorded as affecting itself.
 
-`change plan` writes `triage_result`, `affected_risk_items` and
+`build plan` writes `triage_result`, `affected_risk_items` and
 `implementation_notes` onto the CR item, so the CR appears among the items
 changed on the branch. `_record_design_impact_in_cr` then wrote that whole set
 into the CR's own `affected_items` — including the CR.
@@ -35,7 +35,7 @@ def dhf(tmp_path: Path) -> Path:
 
 class TestTheCrIsExcludedFromItsOwnImpact:
     def test_a_change_set_containing_the_cr_does_not_record_it(self, dhf: Path) -> None:
-        """The real shape: `change plan` updates the CR, so it is in `updated`."""
+        """The real shape: `build plan` updates the CR, so it is in `updated`."""
         result = _record_design_impact_in_cr(
             "CR-001", dhf,
             {"created": ["SRS-020"], "updated": ["CR-001", "SYS-001"], "deleted": []},
@@ -95,7 +95,7 @@ class TestTheSuiteExercisesANonEmptyChangeSet:
     Of the mocks standing in for `collect_dhf_item_changes`, twenty returned
     `{"created": [], "updated": [], "deleted": []}`. A CR can only appear in its
     own change set when that set is not empty, so the defect lived in the shape
-    no test supplied — the same failure mode as `change verify-branch` shipping a
+    no test supplied — the same failure mode as `workflow branch` shipping a
     TypeError behind mocks that fed the pre-envelope shape.
 
     This does not demand every mock change. It demands that *some* test drive

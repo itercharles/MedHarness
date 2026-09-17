@@ -75,7 +75,7 @@ class TestAnUnreadableEventPayloadIsNotANoOp:
         broken = tmp_path / "event.json"
         broken.write_text("{not json")
         proc = subprocess.run(
-            [sys.executable, "-m", "medharness", "automation", "github-event",
+            [sys.executable, "-m", "medharness", "workflow", "github-event",
              "--event", str(broken)],
             capture_output=True, text=True,
             env={**os.environ, "GITHUB_EVENT_NAME": "pull_request"},

@@ -70,35 +70,35 @@ class TestCRGenerationCommands:
     """Contract tests for medharness CR generation and preflight CI commands."""
 
     def test_develop_cr_help(self):
-        """medharness change implement --help exits 0."""
-        r = _run("medharness", "change", "implement", "--help")
+        """medharness build code --help exits 0."""
+        r = _run("medharness", "build", "code", "--help")
         assert r.returncode == 0, r.stderr
 
     def test_generate_dhf_help(self):
-        """medharness change plan --help exits 0."""
-        r = _run("medharness", "change", "plan", "--help")
+        """medharness build plan --help exits 0."""
+        r = _run("medharness", "build", "plan", "--help")
         assert r.returncode == 0, r.stderr
 
 
     def test_validate_branch_help(self):
-        """medharness change verify-branch --help exits 0.
+        """medharness workflow branch --help exits 0.
 
         It carries its own --dhf like the other DHF-reading gates. It was the
         one that did not, so a caller building from the gate manifest hit a
         usage error on the option every sibling accepts.
         """
-        r = _run("medharness", "change", "verify-branch", "--help")
+        r = _run("medharness", "workflow", "branch", "--help")
         assert r.returncode == 0, r.stderr
         assert "--dhf" in r.stdout
 
     def test_develop_cr_requires_cr_flag(self):
-        """medharness change implement without --cr exits non-zero with usage error."""
-        r = _run("medharness", "change", "implement")
+        """medharness build code without --cr exits non-zero with usage error."""
+        r = _run("medharness", "build", "code")
         assert r.returncode != 0
 
     def test_generate_dhf_requires_cr_flag(self):
-        """medharness change plan without --cr exits non-zero."""
-        r = _run("medharness", "change", "plan")
+        """medharness build plan without --cr exits non-zero."""
+        r = _run("medharness", "build", "plan")
         assert r.returncode != 0
 
     def test_validate_code_requires_cr_flag(self):
@@ -107,33 +107,33 @@ class TestCRGenerationCommands:
         assert r.returncode != 0
 
     def test_validate_branch_requires_cr_flag(self):
-        """medharness change verify-branch without --cr exits non-zero."""
-        r = _run("medharness", "change", "verify-branch")
+        """medharness workflow branch without --cr exits non-zero."""
+        r = _run("medharness", "workflow", "branch")
         assert r.returncode != 0
 
     def test_develop_cr_accepts_pr_flag(self):
-        """medharness change implement --help shows --pr option."""
-        r = _run("medharness", "change", "implement", "--help")
+        """medharness build code --help shows --pr option."""
+        r = _run("medharness", "build", "code", "--help")
         assert "--pr" in r.stdout
 
 
     def test_validate_branch_accepts_code_path_flag(self):
-        """medharness change verify-branch --help shows --code-path option."""
-        r = _run("medharness", "change", "verify-branch", "--help")
+        """medharness workflow branch --help shows --code-path option."""
+        r = _run("medharness", "workflow", "branch", "--help")
         assert "--code-path" in r.stdout
 
     def test_commands_appear_in_help_groups(self):
-        """Primary change and verify commands are listed in their help output."""
-        r_verify = _run("medharness", "verify", "--help")
-        r_change = _run("medharness", "change", "--help")
-        assert r_verify.returncode == 0, r_verify.stderr
-        assert r_change.returncode == 0, r_change.stderr
-        # DHF-quality gates live under `verify`; the two that check a CR's
-        # promises live under `change`, with the commands that make them.
-        for cmd in ["dhf", "tests", "soup"]:
-            assert cmd in r_verify.stdout, f"Command {cmd!r} missing from verify --help"
-        for cmd in ["plan", "implement", "verify-branch", "verify-completion"]:
-            assert cmd in r_change.stdout, f"Command {cmd!r} missing from change --help"
+        """Each verb lists its own commands, so `--help` finds them all."""
+        expected = {
+            "verify": ["dhf", "tests", "soup", "completion"],
+            "build": ["plan", "code", "dhf"],
+            "workflow": ["branch", "approval", "github-event"],
+        }
+        for verb, commands in expected.items():
+            r = _run("medharness", verb, "--help")
+            assert r.returncode == 0, r.stderr
+            for cmd in commands:
+                assert cmd in r.stdout, f"{cmd!r} missing from `{verb} --help`"
 
     def test_upgrade_help(self):
         """medharness upgrade --help exits 0."""
@@ -195,7 +195,7 @@ class TestOutputContract:
 
 
     def test_verify_completion_output_shape(self, scaffolded_dhf, tmp_path):
-        """change verify-completion writes JSON with all required keys to stdout."""
+        """verify completion writes JSON with all required keys to stdout."""
         import json, importlib.resources
         dhf = scaffolded_dhf / "DHF"
         # Install CR doc type (not in default scaffold)
@@ -220,7 +220,7 @@ class TestOutputContract:
         (review_dir / "CR-CONTRACT-Design-Review.md").write_text(
             "# Design Review: CR-CONTRACT\n\n**Verdict:** Approved\n"
         )
-        r = _run("medharness", "--dhf", str(dhf), "change", "verify-completion", "--cr", "CR-CONTRACT")
+        r = _run("medharness", "--dhf", str(dhf), "verify", "completion", "--cr", "CR-CONTRACT")
         payload = json.loads(r.stdout.splitlines()[0])
         assert payload.keys() == ENVELOPE, (
             f"stdout is the envelope and nothing else; got {sorted(payload)}"

@@ -1,4 +1,4 @@
-# SOUP sources — dhfkit soup-sync reads this file when no --manifest flags are given.
+# SOUP sources — `medharness build dhf` reads this file when no --manifest flags are given.
 #
 # Supported entry types:
 #

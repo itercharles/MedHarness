@@ -168,7 +168,7 @@ for gate in manifest["gates"]:
 
 ## Event context for a workflow
 
-`medharness automation github-event --github-output "$GITHUB_OUTPUT"` writes the
+`medharness workflow github-event --github-output "$GITHUB_OUTPUT"` writes the
 CR context straight to a job's outputs:
 
 ```
@@ -194,4 +194,4 @@ has to ask the API.
 
 `dhfkit` follows the same output convention for DHF data operations — item CRUD, validation, document generation, SOUP sync, release baselines — but those commands predate the envelope and keep their own result shapes. Read `--help` for the command you need. `dhfkit` has no dependency on `medharness`, so a project that wants only the engine can use it alone; see [adopting.md](adopting.md#using-dhfkit-standalone).
 
-The AI stages (`change plan`, `change implement`) are not gates and do not answer with the envelope. They report progress and outcomes in their own shape, documented in [adopting.md](adopting.md#ai-assisted-cr-workflow), and their execution boundary is described in [ai-security.md](ai-security.md).
+The AI stages (`build plan`, `build code`) are not gates and do not answer with the envelope. They report progress and outcomes in their own shape, documented in [adopting.md](adopting.md#ai-assisted-cr-workflow), and their execution boundary is described in [ai-security.md](ai-security.md).

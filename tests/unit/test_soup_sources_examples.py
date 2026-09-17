@@ -93,7 +93,7 @@ def test_the_embedded_script_compiles(block: str) -> None:
 
 
 class TestTheCommandSourceRunsForReal:
-    """End to end through soup-sync, with a stub standing in for the tool."""
+    """End to end through build dhf, with a stub standing in for the tool."""
 
     def test_a_block_scalar_command_produces_items(self, tmp_path: Path) -> None:
         from click.testing import CliRunner
@@ -123,7 +123,7 @@ class TestTheCommandSourceRunsForReal:
             "                                'ecosystem': 'npm'}))\n"
             "      \"\n"
         )
-        r = CliRunner().invoke(main, ["--dhf", str(dhf), "soup-sync", "--write"])
+        r = CliRunner().invoke(main, ["--dhf", str(dhf), "build", "dhf", "--write"])
         payload = json.loads(r.stdout.splitlines()[0])
         assert payload["outcome"] == "completed", payload["errors"]
         assert payload["packages_found"] == 1

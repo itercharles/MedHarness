@@ -1,7 +1,7 @@
 """A CR cannot be closed before it carries what closure means.
 
 The reference project had eight CRs marked `completed` and all eight failed
-`change verify-completion`. The most instructive was CR-012: the AI workflow wrote a
+`verify completion`. The most instructive was CR-012: the AI workflow wrote a
 good plan, the process broke off before the approval gate, and someone
 transitioned the CR to `completed` by hand. Nothing stopped them — the shipped
 `cr.yaml` defined five transitions and zero criteria, so `completed` was
@@ -70,7 +70,7 @@ class TestClosureIsRefusedUntilTheRecordExists:
 class TestAssessedAndEmptyIsAnAnswer:
     """`affected_risk_items: []` means the risks were assessed and none apply.
 
-    `change verify-completion` accepts it — it checks `isinstance(..., list)` and its
+    `verify completion` accepts it — it checks `isinstance(..., list)` and its
     own message says "use [] if none". A criterion reading falsy-as-absent would
     have been stricter than the gate it mirrors, and would have forced projects
     to invent an affected risk to close a CR that affects none.
@@ -95,7 +95,7 @@ class TestAssessedAndEmptyIsAnAnswer:
 class TestTheCriteriaMirrorTheGate:
     """Two checks of the same thing must not disagree.
 
-    A criterion stricter than `change verify-completion` would refuse a CR the gate
+    A criterion stricter than `verify completion` would refuse a CR the gate
     would pass — the tool contradicting itself, with no way for a project to
     satisfy both.
     """
@@ -122,6 +122,6 @@ class TestTheCriteriaMirrorTheGate:
         ).read_text()
         for field in fields:
             assert field in gate, (
-                f"closure requires {field!r}, which change verify-completion never "
+                f"closure requires {field!r}, which verify completion never "
                 f"checks — the two would be enforcing different contracts"
             )

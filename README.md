@@ -57,10 +57,10 @@ deterministic gates decide whether it can close.
 ```mermaid
 flowchart LR
     CR["CR-042<br/>opened"] --> PLAN
-    PLAN["change plan<br/><br/>AI drafts DHF items<br/>and impact analysis"] --> REV{"Human<br/>review"}
+    PLAN["build plan<br/><br/>AI drafts DHF items<br/>and impact analysis"] --> REV{"Human<br/>review"}
     REV -.->|rejected| PLAN
-    REV -->|"/approve"| IMPL["change implement<br/><br/>AI writes code<br/>and tests"]
-    IMPL --> GATES["Verification gates<br/><br/>verify dhf<br/>verify tests<br/>verify soup<br/>change verify-completion"]
+    REV -->|"/approve"| IMPL["build code<br/><br/>AI writes code<br/>and tests"]
+    IMPL --> GATES["Verification gates<br/><br/>verify dhf<br/>verify tests<br/>verify soup<br/>verify completion"]
     GATES -.->|any gate fails| IMPL
     GATES ==>|all pass| MERGE["Merge to main<br/><br/>evidence bundle<br/>release baseline"]
 
@@ -98,7 +98,7 @@ medharness doctor
 
 ### Before enabling the AI stages
 
-`change plan` and `change implement` need a model CLI or API key, which pip
+`build plan` and `build code` need a model CLI or API key, which pip
 cannot install:
 
 ```bash
@@ -120,9 +120,9 @@ deterministic and needs no model access.
 git init && git add -A && git commit -m "feat: initialize DHF"
 
 # Edit DHF/items/07_cr/CR-001.yaml, then:
-medharness --dhf DHF change plan --cr CR-001       # AI drafts DHF items + impact analysis
+medharness --dhf DHF build plan --cr CR-001       # AI drafts DHF items + impact analysis
 # review and approve the design PR, then:
-medharness --dhf DHF change implement --cr CR-001  # AI writes code and tests
+medharness --dhf DHF build code --cr CR-001  # AI writes code and tests
 medharness --dhf DHF verify dhf                    # gates decide whether it can close
 ```
 
@@ -148,7 +148,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - run: pip install medharness==0.31.0
+      - run: pip install medharness==0.32.0
       - run: medharness --dhf DHF verify dhf --fail-on-uncovered
 ```
 
@@ -174,7 +174,7 @@ Both take `--dhf DHF`; `dhfkit` also reads `COMPLIANTFLOW_DHF`.
 Every command writes JSON to stdout and human-readable lines to stderr, so
 `cmd > out.json` gives you the payload and the terminal still reads normally.
 
-**Gates** — `verify *` and `change verify-*` — all answer with the same
+**Gates** — `verify *` and `workflow *` — all answer with the same
 envelope, so one CI step can handle any of them:
 
 ```json
@@ -192,34 +192,37 @@ print. A gate that answered only `false` could not be acted on, so the findings
 come with it — but nothing more. `summary` says what was checked, which is how
 you tell a real pass from a gate that examined nothing.
 
-### Gates on the DHF — no CR needed
+### `verify` — what the DHF says
 
-Run these on any DHF, whether or not the project uses the AI change workflow.
+Answers from the DHF alone. No remote, no branch, no PR: these run the same on a
+laptop as in CI. `verify completion` reads a CR item from the DHF; it does not
+need the pull request that carries it.
 
 | Command | Use it when |
 |---|---|
 | `medharness verify dhf` | Every push. This is the one gate a DHF cannot do without: it is the only check that reads the items *together* and asks whether the V-model closes. |
 | `medharness verify tests --junit-dir test-results` | After the test job, to prove each requirement was verified **by the method it declared** — a Test-verified requirement needs a passing linked test, not just any evidence. |
 | `medharness verify soup --manifest requirements.txt` | Nightly and before a release. Answers both §8.1.2 questions at once: is the register what actually ships, and is any of it known-vulnerable. `--offline-mode warn` for air-gapped runners. |
+| `medharness verify completion --cr CR-034 --junit-dir test-results` | Twice. On the branch to block the merge — the CR fields and the proposed items settle there. Again on `main`, where the tests re-run against whatever else landed. Reports only items **this CR** touched. Approval is not its question: that is `workflow approval`. |
 
-### Gates on a change request
-
-These read fields `change plan` writes, so they apply only to a project running
-the CR workflow. A PR with no CR passes them.
-
-| Command | Use it when |
-|---|---|
-| `medharness change verify-branch --cr CR-034` | On the PR. Checks the branch actually changed the items the CR listed in `affected_items` — a CR that promised to touch SYS-001 and did not is caught before review, not after. |
-| `medharness change verify-completion --cr CR-034 --junit-dir test-results` | Twice. On the branch to block the merge — the CR fields and the proposed items settle there. Again on `main`, where the tests re-run against whatever else landed. Reports only items **this CR** touched. Approval is not its question: that is `change verify-approval`. |
-| `medharness change verify-approval --cr CR-034 --pr 42` | Before merging, at each stage that needs a sign-off. Requires an approving GitHub review of the exact commit the PR would merge; an approval of an earlier commit is stale and fails. That is also what keeps the stages honest — a design approval expires the moment code lands, so the develop stage needs its own. Needs `GH_TOKEN`. |
-
-### The AI change workflow
+### `build` — what it produces
 
 | Command | Returns | Use it when |
 |---|---|---|
-| `medharness change plan --cr CR-034` | `outcome`, `items_changed`, `review_cycles`, `diagnostics` | The CR has been triaged. Drafts the whole DHF item cascade and the impact analysis, then validates its own output and fixes what it broke. |
-| `medharness change implement --cr CR-034` | `outcome`, `files_changed`, `review_cycles` | The design is approved. Writes code and tests against the cascade. `--pr 42` revises from review feedback; `--ci-failures` from a failing run. |
-| `medharness automation github-event` | `cr_id`, `stage`, `pr_number`, `reason`, and two verdicts: **`action`** — what your own `--review-action` / `--branch-stage` mappings decided, an opaque string this tool never interprets, and which is the one to branch on; `mode` — this tool's own reading (`new` / `iterate` / `cancel` / `skip`), which is only what `action` falls back to when no mapping matches. They differ whenever a mapping fires. | First step of a workflow, so it branches on one command's output instead of a ladder of `if` expressions. Not a gate: it exits 0 whatever it finds. |
+| `medharness build plan --cr CR-034` | `outcome`, `items_changed`, `review_cycles`, `diagnostics` | The CR has been triaged. Drafts the whole DHF item cascade and the impact analysis, then validates its own output and fixes what it broke. |
+| `medharness build code --cr CR-034` | `outcome`, `files_changed`, `review_cycles` | The design is approved. Writes code and tests against the cascade. `--pr 42` revises from review feedback; `--ci-failures` from a failing run. |
+| `medharness build dhf --manifest requirements.txt --write` | `to_create`, `to_update`, `orphans`, `items_created`, `items_updated` | A dependency changed. Reconciles the SOUP register with the project's manifests. Without `--write` it reports only — read that first: it writes items you then have to fill in a purpose and risk rating for. |
+
+### `workflow` — what Git and GitHub say
+
+CI helper scripts. They cannot answer without the repository, which is why they
+are not under `verify`; a developer working locally never needs them.
+
+| Command | Returns | Use it when |
+|---|---|---|
+| `medharness workflow branch --cr CR-034` | the gate envelope | On the PR. Checks the branch actually changed the items the CR listed in `affected_items` — a CR that promised to touch SYS-001 and did not is caught before review, not after. |
+| `medharness workflow approval --cr CR-034 --pr 42` | the gate envelope | Before merging, at each stage that needs a sign-off. Requires an approving GitHub review of the exact commit the PR would merge; an approval of an earlier commit is stale and fails. That is also what keeps the stages honest — a design approval expires the moment code lands, so the develop stage needs its own. Needs `GH_TOKEN`. |
+| `medharness workflow github-event` | `cr_id`, `stage`, `pr_number`, `reason`, and two verdicts: **`action`** — what your own `--review-action` / `--branch-stage` mappings decided, an opaque string this tool never interprets, and which is the one to branch on; `mode` — this tool's own reading (`new` / `iterate` / `cancel` / `skip`), which is only what `action` falls back to when no mapping matches. They differ whenever a mapping fires. | First step of a workflow, so it branches on one command's output instead of a ladder of `if` expressions. Not a gate: it exits 0 whatever it finds. |
 
 ### Context for an agent
 
@@ -233,11 +236,12 @@ All three print JSON to stdout and make no changes.
 
 ### Evidence and release
 
+Not under a verb yet: merging these into `build release` is agreed and not built.
+
 | Command | Returns | Use it when |
 |---|---|---|
 | `medharness evidence bundle --out-dir artifacts` | `gate_passed`, `manifest`, `artifacts` | On merge to `main`. Runs the acceptance gate and writes the read-only bundle an auditor reads: specifications, plans, traceability, test evidence, SBOM, and a manifest with a hash per file. `--doc-format pdf` needs `medharness[docs]`. |
 | `medharness release baseline --version 1.0.0 --write` | `version`, `cr_ids`, `rel_uid`, `artifacts`, `soup_count` | Cutting a release (IEC 62304 §9). Verifies every included CR is `completed`, freezes the software BOM, and writes the REL item. Dry-run without `--write`. |
-| `medharness soup-sync --manifest requirements.txt --write` | `to_create`, `to_update`, `orphans`, `items_created`, `items_updated` | A dependency changed. Reconciles the SOUP register with the project's manifests. Without `--write` it reports only — read that first: it writes items you then have to fill in a purpose and risk rating for. |
 
 ### Setting up and keeping current
 

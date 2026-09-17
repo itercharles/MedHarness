@@ -504,7 +504,7 @@ def diff_against_dhf(
     matched: list[dict] = []
     # Items expose "id". The artifact keys below stay "uid" because existing
     # consumers read them — the same split release-baseline makes. Reading
-    # item["uid"] was simply wrong, and crashed soup-sync on every real DHF.
+    # item["uid"] was simply wrong, and crashed the sync on every real DHF.
     matched_item_ids: set[str] = set()
 
     for pkg in packages:

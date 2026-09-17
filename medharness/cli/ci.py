@@ -122,22 +122,13 @@ def _raise_for_outcome_error(result: dict) -> None:
 
 def register(main):
 
-    @main.group("verify")
-    def verify() -> None:
-        """Run validation and coverage checks for controlled changes."""
-
+    verify = main.commands["verify"]
+    build = main.commands["build"]
+    workflow = main.commands["workflow"]
 
     @main.group("evidence")
     def evidence() -> None:
         """Build evidence and delivery artifacts."""
-
-    @main.group("change")
-    def change() -> None:
-        """Analyze, implement, and track change requests."""
-
-    @main.group("automation")
-    def automation() -> None:
-        """Helpers for workflow automation and integrations."""
 
     @evidence.command("bundle")
     @click.option("--out-dir", type=click.Path(file_okay=False, path_type=Path), required=True)
@@ -355,7 +346,7 @@ def register(main):
             raise click.ClickException("Test coverage gaps found.")
 
 
-    @change.command("verify-completion")
+    @verify.command("completion")
     @click.option("--cr", "cr_id", required=True, metavar="CR_ID")
     @click.option("--dhf", "dhf_path", type=click.Path(file_okay=False, path_type=Path))
     @click.option("--junit-dir", "junit_dirs", multiple=True, type=click.Path(file_okay=False, path_type=Path))
@@ -467,13 +458,13 @@ def register(main):
         _render_envelope(result, "soup-vuln")
         if _d(result).get("drift", {}).get("undocumented") or \
                 _d(result).get("drift", {}).get("misversioned"):
-            click.echo("    Fix: medharness --dhf DHF soup-sync --write, then commit. "
+            click.echo("    Fix: medharness --dhf DHF build dhf --write, then commit. "
                        "Pass --fail-on-drift to block the build on this.", err=True)
         click.echo(result["summary"], err=True)
         if not result["passed"]:
             raise click.ClickException("SOUP check failed.")
 
-    @change.command("verify-branch")
+    @workflow.command("branch")
     @click.option("--cr", "cr_id", required=True, metavar="CR_ID")
     @click.option("--dhf", "dhf_override", type=click.Path(file_okay=False, path_type=Path))
     @click.option("--since-ref", default="origin/main", metavar="REF")
@@ -518,7 +509,7 @@ def register(main):
 
     # ── GitHub event context ──
 
-    @automation.command("github-event")
+    @workflow.command("github-event")
     @click.option("--event", "event_path", default=None, type=click.Path(exists=True, dir_okay=False, path_type=Path))
     @click.option("--manual-cr", default="", metavar="CR_ID")
     @click.option("--manual-stage", default="", metavar="STAGE")
@@ -615,7 +606,7 @@ def register(main):
 
     # ── Approval gate ──
 
-    @change.command("verify-approval")
+    @workflow.command("approval")
     @click.option("--cr", "cr_id", required=True, metavar="CR_ID")
     @click.option("--pr", "pr_number", required=True, type=int, metavar="N")
     @click.option("--token", default="", metavar="TOKEN")
@@ -639,7 +630,7 @@ def register(main):
         who = ", ".join(
             f"{a['by']} at {a['at']}" for a in evidence["approvals"] if a.get("by")
         )
-        payload = envelope_from("change verify-approval", {
+        payload = envelope_from("workflow approval", {
             "passed": approved,
             "summary": (
                 f"PASS — {cr_id} approved on PR #{pr_number} by "
@@ -688,7 +679,7 @@ def register(main):
 
     # ── CR generation ──
 
-    @change.command("plan")
+    @build.command("plan")
     @click.option("--cr", "cr_id", required=True, metavar="CR_ID")
     @click.option("--pr", "pr_number", default=None, type=int, metavar="N",
                   help="PR number — revision mode: revise DHF cascade based on review comments")
@@ -724,7 +715,7 @@ def register(main):
             click.echo(f"    Fix: {error['fix']}", err=True)
         _raise_for_outcome_error(result)
 
-    @change.command("implement")
+    @build.command("code")
     @click.option("--cr", "cr_id", required=True, metavar="CR_ID")
     @click.option("--pr", "pr_number", default=None, type=int, metavar="N",
                   help="PR number — revision mode: revise implementation based on review comments")

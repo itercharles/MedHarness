@@ -24,6 +24,24 @@ def main(ctx: click.Context, dhf: str | None) -> None:
     ctx.obj["dhf"] = Path(dhf) if dhf else None
 
 
+# The three verbs are defined here, not in the module that happens to register
+# first: several modules attach commands to the same group, and whoever created
+# it would silently decide the group's help text.
+@main.group("verify")
+def verify() -> None:
+    """Ask the DHF whether a change is sound."""
+
+
+@main.group("build")
+def build() -> None:
+    """Produce DHF items, code, and delivery artifacts."""
+
+
+@main.group("workflow")
+def workflow() -> None:
+    """Check what Git and GitHub say about a change. CI helpers."""
+
+
 from medharness.cli.dhf import register as register_dhf
 from medharness.cli.ci import register as register_ci
 from medharness.cli.init import register as register_init

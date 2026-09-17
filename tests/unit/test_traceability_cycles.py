@@ -9,7 +9,7 @@ direction that makes it a matrix.
 only caller was `_run_acceptance_gate`, which is not on the `verify dhf` path —
 so the detection existed, was correct, and never ran on anything a project
 would notice. Built and never wired, the same as the closure criteria and
-`soup-sync`.
+`build dhf`.
 """
 
 from __future__ import annotations

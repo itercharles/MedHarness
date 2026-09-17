@@ -181,7 +181,7 @@ def merge_release_components(
 
     A package in requirements.txt that nobody has made a SOUP item for still
     ships, so it belongs here — omitting it would hide the §8.1.2 gap that
-    `soup-sync` exists to close. A SOUP item wins over the manifest entry for
+    `medharness build dhf` exists to close. A SOUP item wins over the manifest entry for
     the same package: it carries licence, supplier and vulnerability acceptance.
     """
     def key(entry: dict) -> tuple[str, str, str]:

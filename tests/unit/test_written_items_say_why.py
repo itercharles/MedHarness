@@ -1,6 +1,6 @@
 """An item medharness writes must account for its own existence.
 
-`soup-sync --write` changes the DHF outside any CR. Git records that "ci" did
+`build dhf --write` changes the DHF outside any CR. Git records that "ci" did
 it; nothing recorded why. A reviewer opening SOUP-003 found a component with no
 account of where it came from.
 
@@ -45,7 +45,7 @@ class TestAnAutoCreatedItemRecordsItsOrigin:
         dhf = project / "DHF"
         sync_soup_items(dhf, [project / "requirements.txt"], write=True)
         created = [i for i in _soup_items(dhf) if i.get("name") == "flask"]
-        assert created, "soup-sync created nothing"
+        assert created, "build dhf created nothing"
         assert created[0].get("source") == str(project / "requirements.txt"), (
             "the item does not say which manifest produced it; a reviewer sees a "
             "record with no account of why it exists"

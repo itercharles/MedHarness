@@ -1,7 +1,7 @@
-"""soup-sync, run against a real DHF with nothing mocked.
+"""build dhf, run against a real DHF with nothing mocked.
 
 Every existing test mocked `api.list_items` with dicts keyed "uid". Items carry
-"id" and always have. So `soup-sync` — nine parsers, multi-ecosystem, the
+"id" and always have. So `build dhf` — nine parsers, multi-ecosystem, the
 headline of v0.11.0 — raised `KeyError: 'uid'` on every real project, in seven
 places, while its suite passed.
 
@@ -37,7 +37,7 @@ def project(tmp_path: Path) -> Path:
 
 def _sync(project: Path, *extra: str) -> dict:
     r = CliRunner().invoke(mh_main, [
-        "--dhf", str(project / "DHF"), "soup-sync",
+        "--dhf", str(project / "DHF"), "build", "dhf",
         "--manifest", str(project / "requirements.txt"), *extra,
     ])
     assert "Traceback" not in (r.stderr or ""), r.stderr[-500:]

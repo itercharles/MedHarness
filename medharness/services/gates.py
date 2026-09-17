@@ -61,9 +61,9 @@ GATES: tuple[dict[str, Any], ...] = (
         "needs_network": True,
     },
     {
-        "command": "change verify-completion",
+        "command": "verify completion",
         "checks": "CR closure: mandatory CR fields, the items the CR proposed, "
-                  "and test evidence for each. Approval is `change verify-approval`.",
+                  "and test evidence for each. Approval is `workflow approval`.",
         "options": {
             "required": ["--dhf", "--cr"],
             "optional": ["--junit-dir", "--junit"],
@@ -73,7 +73,7 @@ GATES: tuple[dict[str, Any], ...] = (
         "needs_network": False,
     },
     {
-        "command": "change verify-branch",
+        "command": "workflow branch",
         "checks": "That a branch carries the DHF and code changes its CR implies.",
         "options": {
             "required": ["--dhf", "--cr"],
@@ -85,7 +85,7 @@ GATES: tuple[dict[str, Any], ...] = (
         "needs_network": False,
     },
     {
-        "command": "change verify-approval",
+        "command": "workflow approval",
         "checks": "That an approving review on the PR names the commit being "
                   "merged, so the approval covers what ships.",
         "options": {

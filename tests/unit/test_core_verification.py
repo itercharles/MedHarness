@@ -6,7 +6,7 @@ compliance-load-bearing:
 * an item claimed ``verified`` with an empty result store, and flipped to
   ``not_verified`` when an *unrelated* result was added;
 * a typo in ``--coverage-pair`` reported ``passed: True`` over zero items;
-* ``change plan --cr CR-001`` on a freshly scaffolded project answered
+* ``build plan --cr CR-001`` on a freshly scaffolded project answered
   "CR 'CR-001' not found" for the CR the scaffold had just written.
 """
 

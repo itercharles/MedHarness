@@ -64,7 +64,7 @@ class TestDevelopCrJsonContract:
         with patch("medharness.services.cr_generation._run_claude",
                    return_value=(0, "", "")), \
              patch("subprocess.run", return_value=_empty_diff()):
-            r = runner.invoke(main, ["--dhf", str(dhf), "change", "implement", "--cr", "CR-200"])
+            r = runner.invoke(main, ["--dhf", str(dhf), "build", "code", "--cr", "CR-200"])
         assert r.exit_code == 0, (r.output, r.stderr)
         payload = _split_stdout_json(r.stdout)
         for key in (
@@ -90,7 +90,7 @@ class TestValidateBranchJsonContract:
         from medharness.services.ci import ENVELOPE_KEYS, envelope_from
 
         runner = CliRunner()
-        branch_result = envelope_from("change verify-branch", {
+        branch_result = envelope_from("workflow branch", {
             "cr_id": "CR-500",
             "since_ref": "origin/main",
             "passed": True,
@@ -103,10 +103,10 @@ class TestValidateBranchJsonContract:
             "findings": [],
         })
         with patch("medharness.services.git.validate_atomic_branch", return_value=branch_result):
-            r = runner.invoke(main, ["--dhf", str(dhf), "change", "verify-branch", "--cr", "CR-500"])
+            r = runner.invoke(main, ["--dhf", str(dhf), "workflow", "branch", "--cr", "CR-500"])
         assert r.exit_code == 0, (r.output, r.stderr)
         payload = _split_stdout_json(r.stdout)
-        assert set(payload) == set(ENVELOPE_KEYS), "change verify-branch left the envelope"
+        assert set(payload) == set(ENVELOPE_KEYS), "workflow branch left the envelope"
         assert payload["passed"] is True
 
 
@@ -119,7 +119,7 @@ class TestValidateBranchJsonContract:
         from medharness.services.ci import envelope_from
 
         finding = {"field": "code_branch", "issue": "x", "fix": "y"}
-        branch_result = envelope_from("change verify-branch", {
+        branch_result = envelope_from("workflow branch", {
             "cr_id": "CR-501",
             "since_ref": "origin/main",
             "passed": False,
@@ -132,7 +132,7 @@ class TestValidateBranchJsonContract:
         })
         runner = CliRunner()
         with patch("medharness.services.git.validate_atomic_branch", return_value=branch_result):
-            r = runner.invoke(main, ["--dhf", str(dhf), "change", "verify-branch", "--cr", "CR-501"])
+            r = runner.invoke(main, ["--dhf", str(dhf), "workflow", "branch", "--cr", "CR-501"])
         assert r.exit_code == 1
         payload = _split_stdout_json(r.stdout)
         assert payload["passed"] is False
