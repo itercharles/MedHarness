@@ -39,10 +39,10 @@ SIMPLE_GATES = (
 GATE_ARGS = {
     "verify tests": ["--junit-dir", "{dhf}/test-results"],
     "verify completion": ["--cr", "CR-001"],
-    "workflow branch": ["--cr", "CR-001"],
+    "workflow check-changes": ["--cr", "CR-001"],
     # No network in the test environment, so the reviews come back unreadable —
     # which is a reporting path like any other, and the one that must not pass.
-    "workflow approval": ["--cr", "CR-001", "--pr", "1"],
+    "workflow check-approval": ["--cr", "CR-001", "--pr", "1"],
 }
 
 
@@ -52,7 +52,7 @@ def _run_gate(command: str, dhf) -> dict:
     Deliberately not CliRunner: it captures an exception raised *after* the JSON
     line is written, so a command that prints its result and then crashes looks
     identical to one that succeeded. Two crashes shipped behind exactly that —
-    `verify classification` on a missing plan and `workflow branch` on any failure.
+    `verify classification` on a missing plan and `workflow check-changes` on any failure.
     """
     import subprocess
     import sys
@@ -86,7 +86,7 @@ def _call(name: str, dhf: Path):
 class TestEveryCLIGateHonoursTheContract:
     """All nine, not just the four callable with a bare path.
 
-    An earlier version parametrised only SIMPLE_GATES, so `workflow branch` shipped
+    An earlier version parametrised only SIMPLE_GATES, so `workflow check-changes` shipped
     with dicts in `errors` and `verify tests` failed with nothing in it —
     both invisible to a test that never called them.
     """
@@ -162,8 +162,8 @@ class TestNoGateEscapesTheEnvelope:
         extra = {
             "verify tests": ["--junit-dir", str(dhf / "test-results")],
             "verify completion": ["--cr", "CR-001"],
-            "workflow branch": ["--cr", "CR-001"],
-            "workflow approval": ["--cr", "CR-001", "--pr", "1"],
+            "workflow check-changes": ["--cr", "CR-001"],
+            "workflow check-approval": ["--cr", "CR-001", "--pr", "1"],
         }
         offenders = []
         for gate in GATES:
@@ -287,7 +287,7 @@ class TestFailurePathsHonourTheContract:
     """
 
     FAILING = ("verify dhf", "verify tests",
-               "verify completion", "workflow branch")
+               "verify completion", "workflow check-changes")
 
     @pytest.mark.parametrize("command", FAILING)
     def test_no_crash_on_the_failure_path(self, command: str, failing_dhf: Path) -> None:
@@ -384,7 +384,7 @@ class TestStderrCarriesTheEnvelope:
     """
 
     ALL = ("verify dhf", "verify tests",
-           "verify completion", "workflow branch")
+           "verify completion", "workflow check-changes")
 
     @pytest.mark.parametrize("command", ALL)
     def test_stderr_reports_the_envelope(self, command: str, failing_dhf: Path) -> None:

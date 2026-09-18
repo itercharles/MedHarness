@@ -20,9 +20,9 @@ MedHarness ships two Python packages from a single repository:
   links, link cycles, risk chains, which risks a change touches
   (`services/traceability.py`)
 - CLI surface and user-facing onboarding (`medharness init`)
-- Verification commands (`verify dhf`, `verify tests`, `workflow branch`, `evidence bundle`)
+- Verification commands (`verify dhf`, `verify tests`, `workflow check-changes`, `evidence bundle`)
 - AI-assisted CR generation (`build plan`, `build code`)
-- Approval as evidence (`workflow approval` — an approving review of the merged commit)
+- Approval as evidence (`workflow check-approval` — an approving review of the merged commit)
 - CR workflow orchestration (`cr workflow`, `cr check-status`)
 - DHF repo scaffolding from bundled templates (`medharness init`, `medharness upgrade`)
 - Environment and setup diagnostics (`medharness doctor`)

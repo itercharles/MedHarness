@@ -40,8 +40,8 @@ def test_the_approval_gate_requires_only_what_it_reads() -> None:
     A stage cannot: the commit is what separates design from develop, because a
     design approval stops matching the head the moment code lands.
     """
-    assert _required("workflow", "approval") == {"--cr", "--pr"}, (
-        f"required options are {sorted(_required('workflow', 'approval'))}; "
+    assert _required("workflow", "check-approval") == {"--cr", "--pr"}, (
+        f"required options are {sorted(_required('workflow', 'check-approval'))}; "
         f"each one must narrow or identify what the gate reads"
     )
 
@@ -56,8 +56,8 @@ def test_both_required_options_reach_the_answer() -> None:
 
     runner = CliRunner()
     with patch("medharness.services.pr_approval.approval_evidence", side_effect=fake):
-        a = runner.invoke(main, ["workflow", "approval", "--cr", "CR-1", "--pr", "7"])
-        b = runner.invoke(main, ["workflow", "approval", "--cr", "CR-2", "--pr", "9"])
+        a = runner.invoke(main, ["workflow", "check-approval", "--cr", "CR-1", "--pr", "7"])
+        b = runner.invoke(main, ["workflow", "check-approval", "--cr", "CR-2", "--pr", "9"])
 
     assert seen == [7, 9], "--pr does not reach the evidence lookup"
     assert "CR-1" in a.output and "CR-2" in b.output, "--cr does not reach the answer"

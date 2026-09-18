@@ -464,7 +464,7 @@ def register(main):
         if not result["passed"]:
             raise click.ClickException("SOUP check failed.")
 
-    @workflow.command("branch")
+    @workflow.command("check-changes")
     @click.option("--cr", "cr_id", required=True, metavar="CR_ID")
     @click.option("--dhf", "dhf_override", type=click.Path(file_okay=False, path_type=Path))
     @click.option("--since-ref", default="origin/main", metavar="REF")
@@ -494,16 +494,16 @@ def register(main):
         _emit(payload)
         if payload["passed"]:
             if code_paths:
-                click.echo(f"PASS [validate-branch] {cr_id}: branch carries coupled DHF and code changes.", err=True)
+                click.echo(f"PASS [check-changes] {cr_id}: branch carries coupled DHF and code changes.", err=True)
             else:
                 click.echo(
-                    f"PASS [validate-branch] {cr_id}: branch carries DHF changes "
+                    f"PASS [check-changes] {cr_id}: branch carries DHF changes "
                     f"(pass --code-path to also enforce code changes).",
                     err=True,
                 )
             return
         for error in _d(payload).get("findings", []):
-            click.echo(f"FAIL [validate-branch] {error['field']}: {error['issue']}", err=True)
+            click.echo(f"FAIL [check-changes] {error['field']}: {error['issue']}", err=True)
             click.echo(f"    Fix: {error['fix']}", err=True)
         raise click.exceptions.Exit(1)
 
@@ -606,7 +606,7 @@ def register(main):
 
     # ── Approval gate ──
 
-    @workflow.command("approval")
+    @workflow.command("check-approval")
     @click.option("--cr", "cr_id", required=True, metavar="CR_ID")
     @click.option("--pr", "pr_number", required=True, type=int, metavar="N")
     @click.option("--token", default="", metavar="TOKEN")
@@ -630,7 +630,7 @@ def register(main):
         who = ", ".join(
             f"{a['by']} at {a['at']}" for a in evidence["approvals"] if a.get("by")
         )
-        payload = envelope_from("workflow approval", {
+        payload = envelope_from("workflow check-approval", {
             "passed": approved,
             "summary": (
                 f"PASS — {cr_id} approved on PR #{pr_number} by "

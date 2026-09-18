@@ -34,10 +34,10 @@ reason no reader could recover.
 |------|-------|----------|
 | `verify` | the DHF, and nothing else — never Git or GitHub | `dhf`, `tests`, `soup`, `completion` |
 | `build` | whatever it needs; **writes** items, code, or artifacts | `plan`, `code`, `dhf` |
-| `workflow` | the repository; cannot answer without Git or GitHub | `branch`, `approval`, `github-event` |
+| `workflow` | the repository; cannot answer without Git or GitHub | `check-changes`, `check-approval`, `github-event` |
 
 `workflow *` are CI helper scripts, not the tool's value. A developer working
-locally runs `verify *` and `build *` and never needs them. `workflow branch`
+locally runs `verify *` and `build *` and never needs them. `workflow check-changes`
 does open the DHF to read what the CR promised, but it cannot answer without a
 diff — what a command *requires* is what places it, not everything it touches.
 

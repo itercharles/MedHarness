@@ -127,7 +127,7 @@ def test_every_workflow_command_reaches_git_or_github() -> None:
 
 def test_the_check_can_see_a_vcs_module() -> None:
     """Falsifier: if the walk resolved nothing, both tests above pass silently."""
-    assert _reaches(main.commands["workflow"].commands["branch"]) & VCS_MODULES
+    assert _reaches(main.commands["workflow"].commands["check-changes"]) & VCS_MODULES
 
 
 def test_every_manifest_command_resolves() -> None:
