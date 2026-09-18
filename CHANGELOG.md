@@ -11,6 +11,21 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.33.1] — 2026-09-18
+
+### Changed
+
+- **`workflow check-changes --help` says what it checks.** The summary line
+  still opened with "Validate that a single branch carries the expected coupled
+  CR changes", which is the sentence that made the command need explaining in
+  the first place. It now leads with the question — did the branch change the
+  items the CR said it would — and spells out the three cases: a promised item
+  the branch never touches, a CR that promised nothing and changed no DHF item,
+  and the `--code-path` requirement that is skipped unless you pass it.
+
+  The two callbacks were still named `verify_branch` and `verify_approval`
+  after 0.33.0 renamed the commands. No behaviour change.
+
 ## [0.33.0] — 2026-09-18
 
 ### Breaking Changes

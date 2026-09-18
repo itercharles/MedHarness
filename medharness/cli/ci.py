@@ -472,14 +472,27 @@ def register(main):
                   help="Opt into code-change enforcement: path(s) under which at least one file must be modified. "
                        "Omitting this option skips the code-change check entirely.")
     @click.pass_context
-    def verify_branch(
+    def check_changes(
         ctx: click.Context,
         cr_id: str,
         dhf_override: Path | None,
         since_ref: str,
         code_paths: tuple[str, ...],
     ) -> None:
-        """Validate that a single branch carries the expected coupled CR changes."""
+        """Check the branch changed the items the CR said it would.
+
+        Reads `affected_items` off the CR and diffs the branch against
+        `--since-ref`. An item the CR promised that the branch never touches
+        fails, and so does a CR that promised nothing and changed no DHF item
+        at all — that means `build plan` never ran.
+
+        `--code-path src/` adds a second requirement: at least one file under
+        those paths must have changed too. Without the flag that check is
+        skipped, so a design-only branch passes.
+
+        Needs a reachable `--since-ref`. This is the only command that reads a
+        git diff, which is what puts it under `workflow` rather than `verify`.
+        """
         from medharness.services.git import validate_atomic_branch  # noqa: PLC0415
 
         dhf_path: Path = dhf_override or ctx.obj["dhf"]
@@ -610,7 +623,7 @@ def register(main):
     @click.option("--cr", "cr_id", required=True, metavar="CR_ID")
     @click.option("--pr", "pr_number", required=True, type=int, metavar="N")
     @click.option("--token", default="", metavar="TOKEN")
-    def verify_approval(cr_id: str, pr_number: int, token: str) -> None:
+    def check_approval(cr_id: str, pr_number: int, token: str) -> None:
         """Check that a reviewer approved the commit this PR would merge.
 
         Reads the PR's reviews and requires an APPROVED one whose `commit_id`
