@@ -2,7 +2,7 @@
 
 When the claim stops being true, nothing fails: the test keeps feeding the CLI
 a shape production no longer produces, the line stays green in coverage, and the
-real call path breaks. That is exactly how `workflow branch` shipped a TypeError
+real call path breaks. That is exactly how `workflow check-changes` shipped a TypeError
 in 0.14.0 — its test mocked the service with dicts in `errors` while the service
 had moved to strings.
 

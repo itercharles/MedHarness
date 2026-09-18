@@ -29,11 +29,14 @@ RETIRED_GROUPS = ("change", "automation", "soup-sync")
 #: old invocation -> what replaced it.
 RENAMED = {
     "change verify-completion": "verify completion",
-    "change verify-branch": "workflow branch",
-    "change verify-approval": "workflow approval",
+    "change verify-branch": "workflow check-changes",
+    "change verify-approval": "workflow check-approval",
     "change plan": "build plan",
     "change implement": "build code",
     "automation github-event": "workflow github-event",
+    # 0.33.0. Both named the object; the commands ask a question about it.
+    "workflow approval": "workflow check-approval",
+    "workflow branch": "workflow check-changes",
 }
 
 #: Everything an adopter reads to learn the commands.

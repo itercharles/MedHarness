@@ -185,7 +185,7 @@ def validate_atomic_branch(
             "fix": "Run `build plan` so the CR records what it affects.",
         })
 
-    return envelope_from("workflow branch", {
+    return envelope_from("workflow check-changes", {
         "cr_id": cr_id,
         "since_ref": since_ref,
         "passed": not errors,

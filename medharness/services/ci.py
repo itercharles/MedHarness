@@ -1224,7 +1224,7 @@ def cr_closure_gate(
        quietly.
 
     Approval is not checked here. It lives in the pull request, which this gate
-    does not read — ``workflow approval`` does.
+    does not read — ``workflow check-approval`` does.
 
     Args:
         cr_id: CR identifier (e.g. CR-012).

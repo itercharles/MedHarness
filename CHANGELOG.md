@@ -11,6 +11,30 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.33.0] — 2026-09-18
+
+### Breaking Changes
+
+- **Both `workflow` gates say what they ask.**
+
+  | Was | Is now |
+  |-----|--------|
+  | `workflow approval` | `workflow check-approval` |
+  | `workflow branch` | `workflow check-changes` |
+
+  Each named the object it looked at rather than the question it asks. `branch`
+  was the worse of the two: it reads a CR's `affected_items` and checks the
+  branch diff actually changed those files, which "branch" says nothing about.
+
+  The old names fail with "No such command" — both are in the retired-names
+  guard, which checks the CLI and every document an adopter reads.
+
+  The `gate` field follows the command, so an envelope that said
+  `workflow approval` now says `workflow check-approval`, and `workflow branch`
+  now says `workflow check-changes`.
+
+  `CONTRACT_VERSION` moves to `8.0`.
+
 ## [0.32.0] — 2026-09-17
 
 ### Breaking Changes

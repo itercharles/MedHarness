@@ -81,13 +81,13 @@ class TestCRGenerationCommands:
 
 
     def test_validate_branch_help(self):
-        """medharness workflow branch --help exits 0.
+        """medharness workflow check-changes --help exits 0.
 
         It carries its own --dhf like the other DHF-reading gates. It was the
         one that did not, so a caller building from the gate manifest hit a
         usage error on the option every sibling accepts.
         """
-        r = _run("medharness", "workflow", "branch", "--help")
+        r = _run("medharness", "workflow", "check-changes", "--help")
         assert r.returncode == 0, r.stderr
         assert "--dhf" in r.stdout
 
@@ -107,8 +107,8 @@ class TestCRGenerationCommands:
         assert r.returncode != 0
 
     def test_validate_branch_requires_cr_flag(self):
-        """medharness workflow branch without --cr exits non-zero."""
-        r = _run("medharness", "workflow", "branch")
+        """medharness workflow check-changes without --cr exits non-zero."""
+        r = _run("medharness", "workflow", "check-changes")
         assert r.returncode != 0
 
     def test_develop_cr_accepts_pr_flag(self):
@@ -118,8 +118,8 @@ class TestCRGenerationCommands:
 
 
     def test_validate_branch_accepts_code_path_flag(self):
-        """medharness workflow branch --help shows --code-path option."""
-        r = _run("medharness", "workflow", "branch", "--help")
+        """medharness workflow check-changes --help shows --code-path option."""
+        r = _run("medharness", "workflow", "check-changes", "--help")
         assert "--code-path" in r.stdout
 
     def test_commands_appear_in_help_groups(self):
@@ -127,7 +127,7 @@ class TestCRGenerationCommands:
         expected = {
             "verify": ["dhf", "tests", "soup", "completion"],
             "build": ["plan", "code", "dhf"],
-            "workflow": ["branch", "approval", "github-event"],
+            "workflow": ["check-changes", "check-approval", "github-event"],
         }
         for verb, commands in expected.items():
             r = _run("medharness", verb, "--help")

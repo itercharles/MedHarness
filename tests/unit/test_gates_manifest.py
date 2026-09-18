@@ -77,7 +77,7 @@ class TestManifestMatchesTheCLI:
     def test_every_required_option_is_declared(self, gate: dict) -> None:
         """The other direction.
 
-        Checking only declared→exists let `workflow branch` ship a
+        Checking only declared→exists let `workflow check-changes` ship a
         `required` list that omitted an option the command will not run without.
         A caller building from the manifest gets a usage error.
         """
