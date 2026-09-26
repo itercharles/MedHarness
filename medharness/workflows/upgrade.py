@@ -60,7 +60,6 @@ _SEED_MAP: list[tuple[str, str]] = [
 _USER_OWNED: frozenset[str] = frozenset({
     "DHF/README.md",
     "DHF/config/global.yaml",
-    "docs/reviews/.gitkeep",
 })
 
 def _read_project_name(project_dir: Path) -> str:

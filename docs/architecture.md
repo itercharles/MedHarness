@@ -56,12 +56,12 @@ that line.
 │   │   └── soup-sources.yaml     # where the dependency manifests are
 │   ├── items/NN_type/            # one directory per item type, with a sample item
 │   └── documents/specs/          # Jinja2 templates and the stylesheet
-├── docs/reviews/                 # where `build plan` writes design reviews
 ├── CLAUDE.md                     # product context the AI stages read
 └── .gitignore
 ```
 
-The source is `dhfkit/templates/`. Placeholders: `{{project_name}}` (from the
+`build plan` writes its design reviews to `docs/reviews/`, creating it on first
+use. The source is `dhfkit/templates/`. Placeholders: `{{project_name}}` (from the
 directory name) and `{{medharness_version}}`.
 
 `upgrade` manages the 13 doc-type configs and the spec templates with their stylesheet — it reports
