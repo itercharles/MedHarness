@@ -17,56 +17,78 @@ import click
 def register(main):
     build = main.commands["build"]
 
-    @main.group("release")
-    def release() -> None:
-        """Release records under IEC 62304 §9."""
-
-    @release.command("baseline")
+    @build.command("release")
     @click.option("--version", "version", required=True, metavar="VERSION",
-                  help="Release version string (e.g. 1.0.0)")
-    @click.option("--manifest", "manifest_paths", multiple=True,
-                  type=click.Path(exists=True, dir_okay=False, path_type=Path),
-                  metavar="PATH", help="requirements.txt or package.json for BOM (repeatable)")
-    @click.option("--cr", "cr_ids", multiple=True, metavar="CR_ID",
-                  help="CR to include (repeatable; auto-collected if omitted)")
-    @click.option("--out-dir", type=click.Path(file_okay=False, path_type=Path),
-                  default=Path("."), show_default=True,
-                  help="Directory to write release-baseline.json and software-bom.json")
+                  help="The version being released, e.g. 1.2.0.")
+    @click.option("--out-dir", required=True, type=click.Path(file_okay=False, path_type=Path),
+                  help="Where to write the baseline, BOM, SBOM and evidence bundle.")
     @click.option("--write", is_flag=True, default=False,
-                  help="Create a REL item in the DHF (dry-run by default)")
+                  help="Record a REL item in the DHF. Happens only when every check "
+                       "passed; without it the DHF is not changed.")
+    @click.option("--cr", "cr_ids", multiple=True, metavar="CR_ID",
+                  help="A CR to include (repeatable). Default: every completed CR "
+                       "not yet in a release.")
+    @click.option("--manifest", "manifest_paths", multiple=True,
+                  type=click.Path(exists=True, dir_okay=False, path_type=Path), metavar="PATH",
+                  help="Dependency manifest whose packages the BOM lists beside the "
+                       "SOUP register (repeatable).")
+    @click.option("--junit-dir", "junit_dirs", multiple=True,
+                  type=click.Path(file_okay=False, path_type=Path),
+                  help="Directory of JUnit XML to include as test evidence (repeatable).")
+    @click.option("--junit", "junit_files", multiple=True,
+                  type=click.Path(exists=True, dir_okay=False, path_type=Path),
+                  help="A JUnit XML file to include as test evidence (repeatable).")
+    @click.option("--coverage-pair", "coverage_pairs", multiple=True, metavar="PARENT:CHILD",
+                  help="An extra coverage requirement for the DHF check, e.g. UC:CRS "
+                       "(repeatable). The configured traceability always applies.")
+    @click.option("--traceability-type", "traceability_types", multiple=True, metavar="CODE",
+                  help="Doc type to render a traceability matrix for (repeatable). "
+                       "Default: UC, CRS, SYS, SRS, SWDD.")
+    @click.option("--doc-format", type=click.Choice(["html", "pdf"]), default="html",
+                  show_default=True,
+                  help="Format of the bundled specifications. PDF needs "
+                       "medharness[docs] plus cairo/pango.")
+    @click.option("--run-id", default="", help="CI run ID, recorded in the evidence manifest.")
+    @click.option("--run-url", default="", help="CI run URL, recorded in the evidence manifest.")
+    @click.option("--commit", "commit_sha", default="",
+                  help="Commit SHA, recorded in the evidence manifest.")
     @click.pass_context
-    def release_baseline_cmd(
-        ctx: click.Context, version: str, manifest_paths: tuple[Path, ...],
-        cr_ids: tuple[str, ...], out_dir: Path, write: bool,
-    ) -> None:
-        """Build an IEC 62304 §9 release baseline.
+    def build_release_cmd(ctx, version, out_dir, write, cr_ids, manifest_paths, junit_dirs,
+                          junit_files, coverage_pairs, traceability_types, doc_format,
+                          run_id, run_url, commit_sha) -> None:
+        """Build everything one release needs (IEC 62304 §9).
 
-        Verifies all included CRs are in `completed` state, collects a
-        software BOM from DHF SOUP items and manifest packages, and writes
-        release-baseline.json and software-bom.json to --out-dir.
-        Pass --write to also create a REL item in the DHF.
-        CRs are auto-collected (completed, not yet in any REL) when --cr is omitted.
+        Checks the DHF — coverage gaps fail here — and that every included CR is
+        completed and every open defect assessed. Writes to --out-dir the release
+        baseline, the software BOM, a CycloneDX SBOM, the specifications,
+        traceability, test evidence, and a manifest hashing every file.
+
+        With --write, and only if all of that passed, records the REL item.
         """
-        from medharness.services.release_baseline import build_release_baseline
-        dhf = ctx.obj.get("dhf")
-        if dhf is None:
-            raise click.ClickException("--dhf is required when not set globally")
-        dhf = Path(dhf)
-        result = build_release_baseline(
-            dhf, version, list(manifest_paths), list(cr_ids), out_dir,
-            write=write,
+        import medharness._helpers as _h
+        from medharness.services.release_baseline import build_release
+
+        result = build_release(
+            ctx.obj["dhf"], version, out_dir,
+            manifest_paths=list(manifest_paths), cr_ids=list(cr_ids),
+            junit_paths=_h._collect_junit_paths(junit_files, junit_dirs),
+            coverage_pairs=coverage_pairs, traceability_types=traceability_types,
+            run_id=run_id, run_url=run_url, commit_sha=commit_sha,
+            doc_format=doc_format, write=write,
         )
         click.echo(json.dumps(result))
-        if result.get("outcome") == "completed_with_errors":
-            for err in result.get("errors") or []:
-                click.echo(f"  FAIL: {err}", err=True)
+        for err in result["errors"]:
+            click.echo(f"FAIL [release] {err}", err=True)
+        if result["errors"]:
+            note = " No REL item was recorded." if write else ""
+            click.echo(f"Release {version} is not ready: {len(result['errors'])} "
+                       f"problem(s).{note}", err=True)
             sys.exit(1)
-        rel_note = f" → {result['rel_uid']}" if result.get("rel_uid") else ""
+        rel_note = f", recorded as {result['rel_uid']}" if result["rel_uid"] else " (dry run)"
         click.echo(
-            f"OK release-baseline {version}{rel_note}: "
-            f"{len(result.get('cr_ids', []))} CR(s), "
-            f"{result.get('soup_count', 0)} SOUP item(s), "
-            f"{len(result.get('artifacts', []))} artifact(s) written.",
+            f"OK build release {version}{rel_note}: {len(result['cr_ids'])} CR(s), "
+            f"{result['soup_count']} SOUP item(s), {len(result['artifacts'])} file(s) "
+            f"in {out_dir}.",
             err=True,
         )
 
@@ -89,11 +111,8 @@ def register(main):
         """
         from medharness.services.soup_sync import sync_soup_items
 
-        dhf = ctx.obj.get("dhf")
-        if dhf is None:
-            raise click.ClickException("--dhf is required when not set globally")
         result = sync_soup_items(
-            Path(dhf), list(manifest_paths),
+            ctx.obj["dhf"], list(manifest_paths),
             write=write,
             extra_commands=list(extra_commands),
         )

@@ -10,6 +10,7 @@ from medharness.services.release_baseline import (
     _generate_release_notes,
     _verify_cr_gates,
     build_release_baseline,
+    record_release,
 )
 
 
@@ -223,7 +224,6 @@ class TestBuildReleaseBaseline:
             result = build_release_baseline(
                 tmp_path / "DHF", "1.0.0", [], ["CR-001"], tmp_path / "out",
             )
-        assert result["rel_uid"] is None
         assert result["soup_count"] == 0
         assert result["manifest_packages_count"] == 0
         assert result["artifacts"] == []
@@ -256,41 +256,24 @@ class TestBuildReleaseBaseline:
         assert data["version"] == "2.0.0"
         assert "CR-001" in data["included_crs"]
 
-    def test_write_creates_rel_item(self, tmp_path):
+    def test_record_release_creates_the_rel_item(self, tmp_path):
         out = tmp_path / "out"
         with patch("dhfkit.api.get_item", return_value=_cr_item("CR-001", "completed")), \
              patch("dhfkit.api.list_items", return_value=[]), \
              patch("dhfkit.api.create_item", return_value={"id": "REL-001"}) as mock_create:
-            result = build_release_baseline(
-                tmp_path / "DHF", "1.0.0", [], ["CR-001"], out, write=True,
-            )
+            baseline = build_release_baseline(tmp_path / "DHF", "1.0.0", [], ["CR-001"], out)
+            rel_uid = record_release(tmp_path / "DHF", baseline)
         mock_create.assert_called_once()
-        assert result["rel_uid"] == "REL-001"
+        assert rel_uid == "REL-001"
+        assert mock_create.call_args[0][1]["included_items"] == ["CR-001"]
 
-    def test_dry_run_no_rel_item_created(self, tmp_path):
+    def test_the_baseline_alone_never_writes_to_the_dhf(self, tmp_path):
         out = tmp_path / "out"
         with patch("dhfkit.api.get_item", return_value=_cr_item("CR-001", "completed")), \
              patch("dhfkit.api.list_items", return_value=[]), \
              patch("dhfkit.api.create_item") as mock_create:
-            result = build_release_baseline(
-                tmp_path / "DHF", "1.0.0", [], ["CR-001"], out, write=False,
-            )
+            build_release_baseline(tmp_path / "DHF", "1.0.0", [], ["CR-001"], out)
         mock_create.assert_not_called()
-        assert result["rel_uid"] is None
-
-    def test_rel_create_failure_is_completed_with_errors(self, tmp_path):
-        out = tmp_path / "out"
-        with patch("dhfkit.api.get_item", return_value=_cr_item("CR-001", "completed")), \
-             patch("dhfkit.api.list_items", return_value=[]), \
-             patch("dhfkit.api.create_item", side_effect=RuntimeError("dhf error")):
-            result = build_release_baseline(
-                tmp_path / "DHF", "1.0.0", [], ["CR-001"], out, write=True,
-            )
-        assert result["outcome"] == "completed_with_errors"
-        assert result["rel_uid"] is None
-        # Artifacts are still written even when REL creation fails
-        assert (out / "release-baseline.json").exists()
-        assert any("Failed to create REL" in e for e in result["errors"])
 
     def test_auto_collect_when_no_cr_ids(self, tmp_path):
         out = tmp_path / "out"

@@ -38,7 +38,13 @@ def _documented_calls() -> list[tuple[str, tuple[str, ...], str]]:
             # loudly as one on its own line, and was invisible here until the
             # README moved its command reference into a table — taking twelve
             # commands out of this guard's reach without failing anything.
-            for candidate in [raw] + re.findall(r"`([^`]+)`", raw):
+            # And a command spelled as a Python argument list, which is how the
+            # agent example kept calling `medharness gates` after it was removed.
+            as_list = [
+                " ".join(re.findall(r'"([^"]+)"', m))
+                for m in re.findall(r'\[\s*("(?:dhfkit|medharness)"(?:\s*,\s*"[^"]*")+)', raw)
+            ]
+            for candidate in [raw] + re.findall(r"`([^`]+)`", raw) + as_list:
                 for line in _alternatives(candidate.replace(r"\|", "|")):
                     call = _parse(line)
                     if call:
@@ -93,6 +99,12 @@ def test_a_documented_command_exists(
         capture_output=True, text=True,
     )
     output = result.stderr + result.stdout
+    # Positive, not just "no error string": dhfkit's root once raised before
+    # Click could say "No such command", and every dhfkit case passed vacuously.
+    assert result.returncode == 0 and "Usage:" in output, (
+        f"{source} documents `{module} {' '.join(tokens)}`, and "
+        f"`{module} {' '.join(tokens)} --help` failed:\n{output[-300:]}"
+    )
     assert "No such command" not in output, (
         f"{source} documents `{module} {' '.join(tokens)}`, which does not exist"
     )

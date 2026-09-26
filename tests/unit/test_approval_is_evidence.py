@@ -113,7 +113,7 @@ def test_a_label_no_longer_decides() -> None:
         n.func.id if isinstance(n.func, ast.Name) else getattr(n.func, "attr", "")
         for n in ast.walk(tree) if isinstance(n, ast.Call)
     }
-    assert "label_for_stage" not in called, (
+    assert not any("label" in name.lower() for name in called), (
         "approval_evidence consults a label again; a label has no author, no "
         "time and no revision"
     )

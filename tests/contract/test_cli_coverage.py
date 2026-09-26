@@ -36,25 +36,16 @@ class TestCIDhfValidate:
     def test_dhf_validate_passes(self, scaffolded_dhf):
         """verify dhf passes on a clean scaffolded DHF."""
         r = _run(
-            "medharness", "verify", "dhf",
-            "--dhf", str(scaffolded_dhf / "DHF"),
-        )
-        assert r.returncode == 0, r.stderr
-
-    def test_dhf_validate_schema_only(self, scaffolded_dhf):
-        """verify dhf --no-run-traceability passes on a clean DHF."""
-        r = _run(
-            "medharness", "verify", "dhf",
-            "--dhf", str(scaffolded_dhf / "DHF"),
-            "--no-run-traceability",
+            "medharness", "--dhf", str(scaffolded_dhf / "DHF"),
+            "verify", "dhf",
         )
         assert r.returncode == 0, r.stderr
 
     def test_dhf_validate_with_coverage_pairs(self, scaffolded_dhf):
         """verify dhf with explicit coverage pairs."""
         r = _run(
-            "medharness", "verify", "dhf",
-            "--dhf", str(scaffolded_dhf / "DHF"),
+            "medharness", "--dhf", str(scaffolded_dhf / "DHF"),
+            "verify", "dhf",
             "--coverage-pair", "UC:CRS",
         )
         assert r.returncode == 0, r.stderr
@@ -66,8 +57,8 @@ class TestCITestCoverage:
     def test_test_coverage_no_junit(self, scaffolded_dhf, tmp_path):
         """verify tests fails when no JUnit files provided."""
         r = _run(
-            "medharness", "verify", "tests",
-            "--dhf", str(scaffolded_dhf / "DHF"),
+            "medharness", "--dhf", str(scaffolded_dhf / "DHF"),
+            "verify", "tests",
         )
         assert r.returncode != 0
 
@@ -76,53 +67,57 @@ class TestCITestCoverage:
         junit_file = tmp_path / "results.xml"
         junit_file.write_text(JUNIT_XML)
         r = _run(
-            "medharness", "verify", "tests",
-            "--dhf", str(scaffolded_dhf / "DHF"),
+            "medharness", "--dhf", str(scaffolded_dhf / "DHF"),
+            "verify", "tests",
             "--junit", str(junit_file),
         )
         assert r.returncode in (0, 1), r.stderr + r.stdout
 
 
-class TestCIEvidence:
-    """Functional tests for evidence bundle."""
+class TestBuildRelease:
+    """`build release` writes everything one release needs, in one directory."""
 
-    def test_evidence_bundle(self, scaffolded_dhf, tmp_path):
-        """evidence bundle produces an out-dir (consume-at-bundle model).
+    def test_a_starter_dhf_builds_a_release(self, scaffolded_dhf, tmp_path):
+        """HTML by default, so this needs no native renderer.
 
-        The bundle defaults to HTML precisely so this needs no native renderer.
-        This test previously bailed out whenever weasyprint was missing, which
-        meant it asserted nothing at all on CI — and hid the fact that the
-        bundle could not be built on a base install.
-
-        --continue-on-gate-failure because a starter DHF has no JUnit evidence,
-        so the acceptance gate correctly fails; the artifacts are what is under
-        test here, not the gate verdict.
+        The bundle it replaces ran a private gate that failed every starter DHF
+        — CR, DEF, REL and SOUP items were "orphans" for not linking anywhere,
+        which they are not meant to. Callers passed --continue-on-gate-failure
+        on every run to get past it.
         """
-        out_dir = tmp_path / "bundle"
-        dhf_root = scaffolded_dhf / "DHF"
+        out_dir = tmp_path / "release"
         r = _run(
-            "medharness", "--dhf", str(dhf_root),
-            "evidence", "bundle",
-            "--out-dir", str(out_dir),
-            "--continue-on-gate-failure",
+            "medharness", "--dhf", str(scaffolded_dhf / "DHF"),
+            "build", "release", "--version", "1.0.0", "--out-dir", str(out_dir),
         )
         assert r.returncode == 0, r.stderr
         data = json.loads(r.stdout)
-        assert "gate_passed" in data
-        assert (out_dir / "evidence-manifest.json").exists()
+        assert data["outcome"] == "completed" and data["errors"] == []
+        assert data["rel_uid"] is None, "a dry run recorded a REL item"
 
+        for name in ("release-baseline.json", "software-bom.json", "sbom.cdx.json",
+                     "evidence-manifest.json"):
+            assert (out_dir / name).exists(), f"{name} was not written"
         specs = list((out_dir / "specifications").glob("*.html"))
-        assert specs, "no specifications rendered into the bundle"
-        assert "<!DOCTYPE html>" in specs[0].read_text()
+        assert specs and "<!DOCTYPE html>" in specs[0].read_text()
 
-    def test_evidence_bundle_gate_failure_exits_nonzero(self, scaffolded_dhf, tmp_path):
-        """Without --continue-on-gate-failure a failing gate must block."""
+        # The manifest is written last so that it covers the baseline too.
+        manifest = json.loads((out_dir / "evidence-manifest.json").read_text())
+        assert "release-baseline.json" in {f["path"] for f in manifest["files"]}
+
+    def test_a_failing_release_exits_nonzero_and_says_why(self, scaffolded_dhf, tmp_path):
+        dhf = scaffolded_dhf / "DHF"
+        rcm = next((dhf / "items").rglob("RCM-*.yaml"))
+        rcm.write_text(rcm.read_text().replace("RISK-001", "RISK-404"))
+        out_dir = tmp_path / "release"
+
         r = _run(
-            "medharness", "--dhf", str(scaffolded_dhf / "DHF"),
-            "evidence", "bundle",
-            "--out-dir", str(tmp_path / "bundle"),
+            "medharness", "--dhf", str(dhf),
+            "build", "release", "--version", "1.0.0", "--out-dir", str(out_dir), "--write",
         )
-        assert r.returncode != 0
-        assert "acceptance gate failed" in r.stderr.lower()
+        assert r.returncode == 1
+        assert "RISK-404" in r.stderr and "No REL item was recorded" in r.stderr
+        # The evidence is still written, so the failure can be inspected.
+        assert (out_dir / "evidence-manifest.json").exists()
 
 

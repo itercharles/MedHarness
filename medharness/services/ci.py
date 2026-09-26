@@ -7,17 +7,14 @@ from __future__ import annotations
 
 import hashlib
 import json
-import re
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
 from medharness._helpers import (
-    DEFAULT_ACCEPTANCE_COVERAGE_PAIRS,
     DEFAULT_TRACEABILITY_DOC_TYPES,
     _parse_coverage_pairs,
-    _run_acceptance_gate,
     _run_artifact_generation,
 )
 from dhfkit.junit_parser import (
@@ -100,8 +97,6 @@ def envelope_from(gate: str, raw: dict) -> dict:
 
 def ci_structural_gate(
     dhf_path: Path,
-    run_schema: bool = True,
-    run_traceability: bool = True,
     coverage_pairs: tuple[str, ...] = (),
     fail_on_uncovered: bool = False,
 ) -> dict[str, Any]:
@@ -123,94 +118,92 @@ def ci_structural_gate(
         "verification_gaps": [],
     }
 
-    if run_schema:
-        r = adapter.validate_schema()
-        results["schema"] = {
-            "passed": r.get("valid", True),
-            "valid": r.get("valid", True),
-            "item_count": r.get("item_count", 0),
-            "errors": r.get("errors", []),
+    r = adapter.validate_schema()
+    results["schema"] = {
+        "passed": r.get("valid", True),
+        "valid": r.get("valid", True),
+        "item_count": r.get("item_count", 0),
+        "errors": r.get("errors", []),
+    }
+    if not r.get("valid", True):
+        passed = False
+
+    try:
+        tr = analyse(adapter)
+    except Exception as exc:  # noqa: BLE001
+        # Reporting zero findings on a DHF the analysis could not read is a
+        # pass indistinguishable from a sound one. Say it could not run.
+        tr = {}
+        results["traceability_error"] = f"traceability could not be checked: {exc}"
+        passed = False
+    required = tr.get("required", {})
+    coverage_list = tr.get("coverage", [])
+    dangling = tr.get("dangling", [])
+    cycles = tr.get("cycles", [])
+    results["traceability"] = {
+        "passed": required.get("passed", True)
+        and not dangling
+        and not cycles
+        and all(c.get("passed", True) for c in coverage_list),
+        "required": required,
+        "dangling": dangling,
+        "cycles": cycles,
+        "coverage": coverage_list,
+        "summary": tr.get("summary", ""),
+    }
+    if not required.get("passed", True):
+        passed = False
+    # A link that resolves to nothing is always an error — unlike an uncovered
+    # item, it is not a gap in the design but a broken reference.
+    if dangling:
+        passed = False
+    # Same class as a dangling link: a broken reference, not a design gap.
+    if cycles:
+        passed = False
+    for c in coverage_list:
+        if not c.get("passed", True) and fail_on_uncovered:
+            passed = False
+
+    # Structured extracts for machine consumers
+    results["coverage_gaps"] = [
+        {
+            "matrix": c.get("matrix"),
+            "parent_type": c.get("parent_type"),
+            "child_type": c.get("child_type"),
+            "uncovered": c.get("uncovered", []),
         }
-        if not r.get("valid", True):
-            passed = False
+        for c in coverage_list
+        if not c.get("passed", True)
+    ]
 
-    if run_traceability:
-        try:
-            tr = analyse(adapter)
-        except Exception as exc:  # noqa: BLE001
-            # Reporting zero findings on a DHF the analysis could not read is a
-            # pass indistinguishable from a sound one. Say it could not run.
-            tr = {}
-            results["traceability_error"] = f"traceability could not be checked: {exc}"
-            passed = False
-        required = tr.get("required", {})
-        coverage_list = tr.get("coverage", [])
-        dangling = tr.get("dangling", [])
-        cycles = tr.get("cycles", [])
-        results["traceability"] = {
-            "passed": required.get("passed", True)
-            and not dangling
-            and not cycles
-            and all(c.get("passed", True) for c in coverage_list),
-            "required": required,
-            "dangling": dangling,
-            "cycles": cycles,
-            "coverage": coverage_list,
-            "summary": tr.get("summary", ""),
-        }
-        if not required.get("passed", True):
-            passed = False
-        # A link that resolves to nothing is always an error — unlike an uncovered
-        # item, it is not a gap in the design but a broken reference.
-        if dangling:
-            passed = False
-        # Same class as a dangling link: a broken reference, not a design gap.
-        if cycles:
-            passed = False
-        for c in coverage_list:
-            if not c.get("passed", True) and fail_on_uncovered:
-                passed = False
-
-        # Structured extracts for machine consumers
-        results["coverage_gaps"] = [
-            {
-                "matrix": c.get("matrix"),
-                "parent_type": c.get("parent_type"),
-                "child_type": c.get("child_type"),
-                "uncovered": c.get("uncovered", []),
-            }
-            for c in coverage_list
-            if not c.get("passed", True)
-        ]
-
-        # verification_criteria gaps: verifiable items missing the field
-        _VERIFIABLE = frozenset({"CRS", "SYS", "SRS"})
-        verification_gaps = []
-        try:
-            for item in adapter.list_items():
-                uid = item.get("id", "")
-                type_code = uid.split("-")[0] if "-" in uid else ""
-                if type_code in _VERIFIABLE:
-                    vc = str(item.get("verification_criteria") or "").strip()
-                    if not vc:
-                        verification_gaps.append({
-                            "id": uid,
-                            "type": type_code,
-                            # Says the field is optional. Without that, a reader
-                            # sees `validate schema` pass and concludes the gate
-                            # is warning about a field the schema never defined.
-                            "issue": "verification_criteria is empty — an optional "
-                                     "field, but §5.7 verification needs a stated "
-                                     "criterion to verify against",
-                        })
-        except Exception as exc:  # noqa: BLE001
-            # Say so. Swallowing this reported "no verification_criteria gaps"
-            # on a DHF whose items could not be read — a pass indistinguishable
-            # from a clean one.
-            results["verification_gaps_error"] = (
-                f"verification_criteria could not be checked: {exc}"
-            )
-        results["verification_gaps"] = verification_gaps
+    # verification_criteria gaps: verifiable items missing the field
+    _VERIFIABLE = frozenset({"CRS", "SYS", "SRS"})
+    verification_gaps = []
+    try:
+        for item in adapter.list_items():
+            uid = item.get("id", "")
+            type_code = uid.split("-")[0] if "-" in uid else ""
+            if type_code in _VERIFIABLE:
+                vc = str(item.get("verification_criteria") or "").strip()
+                if not vc:
+                    verification_gaps.append({
+                        "id": uid,
+                        "type": type_code,
+                        # Says the field is optional. Without that, a reader
+                        # sees `validate schema` pass and concludes the gate
+                        # is warning about a field the schema never defined.
+                        "issue": "verification_criteria is empty — an optional "
+                                 "field, but §5.7 verification needs a stated "
+                                 "criterion to verify against",
+                    })
+    except Exception as exc:  # noqa: BLE001
+        # Say so. Swallowing this reported "no verification_criteria gaps"
+        # on a DHF whose items could not be read — a pass indistinguishable
+        # from a clean one.
+        results["verification_gaps_error"] = (
+            f"verification_criteria could not be checked: {exc}"
+        )
+    results["verification_gaps"] = verification_gaps
 
     if coverage_pairs:
         pairs = _parse_coverage_pairs(coverage_pairs)
@@ -290,8 +283,6 @@ def _structural_messages(results: dict, fail_on_uncovered: bool) -> tuple[list[s
 # ---------------------------------------------------------------------------
 # ci_test_coverage_gate — backs ci test-coverage
 # ---------------------------------------------------------------------------
-
-
 
 
 def ci_test_coverage_gate(
@@ -514,95 +505,64 @@ def ci_test_coverage_gate(
 def build_evidence_bundle(
     dhf_path: Path,
     out_dir: Path,
+    *,
     junit_paths: list[Path] = (),
-    coverage_pairs: tuple[str, ...] = (),
     traceability_types: tuple[str, ...] = (),
     run_id: str = "",
     run_url: str = "",
     commit_sha: str = "",
     doc_format: str = "html",
+    gate: dict,
 ) -> dict[str, Any]:
-    """Produce a self-contained CI evidence bundle.
+    """Write the specifications, traceability and test evidence, then a manifest.
 
-    Returns a dict with ``gate_passed`` (bool), ``manifest``, and
-    ``artifacts`` keyed by type.
+    Records the gate it is given rather than running its own. The manifest
+    hashes every file in ``out_dir``, so whatever was written there before this
+    runs is covered too. Returns the manifest.
     """
     from dhfkit.local_adapter import LocalDHFAdapter
     from medharness.core import MedHarnessCore
 
     adapter = LocalDHFAdapter(dhf_path)
     core = MedHarnessCore(adapter)
-
     if junit_paths:
-        core.inject_junit_results(junit_paths)
-
-    gate_result = _run_acceptance_gate(core, list(junit_paths), coverage_pairs)
-    gate_passed = gate_result.get("passed", False)
+        core.inject_junit_results(list(junit_paths))
 
     out_dir.mkdir(parents=True, exist_ok=True)
-
-    doc_types = traceability_types if traceability_types else tuple()
-    trace_types: tuple = (
-        traceability_types
-        if traceability_types
-        else DEFAULT_TRACEABILITY_DOC_TYPES
-    )
-
+    trace_types = traceability_types or DEFAULT_TRACEABILITY_DOC_TYPES
     artifacts = _run_artifact_generation(
-        adapter, core, dhf_path, out_dir, doc_types, trace_types,
+        adapter, core, dhf_path, out_dir, traceability_types, trace_types,
         list(junit_paths), skip_plans=False, doc_format=doc_format,
     )
 
-    compliance_reports: list[dict] = []
-
-    summary = {
-        "dhf_root": str(dhf_path),
+    provenance = {
         "run_id": run_id,
         "run_url": run_url,
         "commit_sha": commit_sha,
+        "dhf_root": str(dhf_path),
         "generated_at": datetime.now(timezone.utc).isoformat(),
-        "gate_passed": gate_passed,
-        "gate": gate_result,
-        "artifacts": artifacts,
-        "compliance_reports": compliance_reports,
+        "gate_passed": gate["passed"],
     }
-    summary_path = out_dir / "evidence-summary.json"
-    summary_path.write_text(
-        json.dumps(summary, indent=2, default=str) + "\n", encoding="utf-8"
+    (out_dir / "evidence-summary.json").write_text(
+        json.dumps({**provenance, "gate": gate, "artifacts": artifacts},
+                   indent=2, default=str) + "\n",
+        encoding="utf-8",
     )
 
-    manifest_files: list[dict] = []
+    files: list[dict] = []
     for candidate in sorted(out_dir.rglob("*")):
         if not candidate.is_file() or candidate.name.startswith("."):
             continue
-        sha = hashlib.sha256(candidate.read_bytes()).hexdigest()
-        manifest_files.append({
+        files.append({
             "path": str(candidate.relative_to(out_dir)),
             "size": candidate.stat().st_size,
-            "sha256": sha,
+            "sha256": hashlib.sha256(candidate.read_bytes()).hexdigest(),
         })
-
-    manifest = {
-        "run_id": run_id,
-        "run_url": run_url,
-        "commit_sha": commit_sha,
-        "dhf_root": str(dhf_path),
-        "generated_at": datetime.now(timezone.utc).isoformat(),
-        "gate_passed": gate_passed,
-        "acceptance_result": "PASS" if gate_passed else "FAIL",
-        "files": manifest_files,
-    }
-    manifest_path = out_dir / "evidence-manifest.json"
-    manifest_path.write_text(
+    manifest = {**provenance, "files": files}
+    (out_dir / "evidence-manifest.json").write_text(
         json.dumps(manifest, indent=2, default=str) + "\n", encoding="utf-8"
     )
-
-    return {
-        "gate_passed": gate_passed,
-        "manifest": manifest,
-        "artifacts": artifacts,
-        "compliance_reports": compliance_reports,
-    }
+    return manifest
 
 
 # ---------------------------------------------------------------------------
@@ -1191,8 +1151,6 @@ def _check_cr_fields(cr_item: dict, cr_id: str) -> list[dict]:
     return issues
 
 
-
-
 def _closure_errors(incomplete=(), missing=(), gaps=(), unverified=()) -> list[str]:
     """Phrase closure findings for the envelope.
 
@@ -1418,49 +1376,14 @@ def cr_closure_gate(
     })
 
 
-
 # ---------------------------------------------------------------------------
 # classification_gate — backs verify classification
 # ---------------------------------------------------------------------------
-
-_SAFETY_CLASSES = ("A", "B", "C")
-
-
-
-
-_CLASS_CLAUSE_HINTS = {
-    "SYSARCH": "§5.3 architectural design",
-    "SWDD": "§5.4 detailed design",
-    "MODULE": "§5.4 detailed design",
-    "RISK": "§7 / ISO 14971",
-    "RCM": "§7 risk control",
-}
 
 
 # ---------------------------------------------------------------------------
 # plans_gate — backs verify plans
 # ---------------------------------------------------------------------------
-
-_HEADING = re.compile(r"^(#{1,6})\s+(.*)$", re.MULTILINE)
-
-# Boilerplate the scaffold ships. Removing it is housekeeping, not authorship,
-# so it is normalised out of both sides before comparison — otherwise deleting
-# the banner would make an untouched plan look partially written.
-_TEMPLATE_BANNER = re.compile(
-    r"^.*(?:Starter Content|scaffolded by MedHarness|Template — adapt|"
-    r"starter plan|Replace for Your Project).*$",
-    re.MULTILINE | re.IGNORECASE,
-)
-
-
-
-
-
-
-
-
-
-
 
 
 def _soup_drift(

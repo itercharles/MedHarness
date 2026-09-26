@@ -17,7 +17,11 @@ from pathlib import Path
 
 import pytest
 
-from medharness.services.release_baseline import _collect_known_anomalies, build_release_baseline
+from medharness.services.release_baseline import (
+    _collect_known_anomalies,
+    build_release_baseline,
+    record_release,
+)
 
 DEFECT = """id: {uid}
 title: {title}
@@ -50,8 +54,8 @@ def _defect(dhf: Path, uid: str, status: str, *, severity: str = "Low",
     (target / f"{uid}.yaml").write_text(body)
 
 
-def _baseline(dhf: Path, out: Path, version: str = "1.0.0", write: bool = False) -> dict:
-    return build_release_baseline(dhf, version, [], [], out, write=write)
+def _baseline(dhf: Path, out: Path, version: str = "1.0.0") -> dict:
+    return build_release_baseline(dhf, version, [], [], out)
 
 
 class TestAnomalyCollection:
@@ -85,15 +89,31 @@ class TestAnomalyCollection:
 
 
 class TestGate:
-    def test_unassessed_defect_blocks_the_baseline(self, dhf: Path, tmp_path: Path) -> None:
-        """The deliberate break: shipping an unassessed anomaly is not allowed."""
+    def test_unassessed_defect_blocks_the_release(self, tmp_path: Path) -> None:
+        """The deliberate break: shipping an unassessed anomaly is not allowed.
+
+        End to end, so on a scaffolded DHF: `build release` renders documents,
+        which the config-and-items fixture above does not carry templates for.
+        """
+        import dhfkit.api as api
+        from medharness.services.release_baseline import build_release
+        from medharness.workflows.init import _replace_placeholders, _scaffold_dhf
+
+        _scaffold_dhf(tmp_path / "project")
+        _replace_placeholders(tmp_path / "project", "Anomalies")
+        dhf = tmp_path / "project" / "DHF"
         _defect(dhf, "DEF-001", "open")
 
-        result = _baseline(dhf, tmp_path / "out")
+        def releases() -> set[str]:
+            return {i["id"] for i in api.list_items(dhf) if i.get("type") == "REL"}
+
+        before = releases()
+        result = build_release(dhf, "1.0.0", tmp_path / "out", write=True)
 
         assert result["outcome"] == "completed_with_errors"
-        assert result["rel_uid"] is None
         assert any("§9.7" in e for e in result["errors"])
+        assert result["rel_uid"] is None
+        assert releases() == before, "--write recorded a release that failed its own gate"
 
     def test_assessed_defect_passes_and_is_recorded(self, dhf: Path, tmp_path: Path) -> None:
         _defect(dhf, "DEF-001", "open",
@@ -142,10 +162,10 @@ class TestArtifactAndRecord:
         import dhfkit.api as api
 
         _defect(dhf, "DEF-001", "open", rationale="Assessed under RISK-001.")
-        result = _baseline(dhf, tmp_path / "out", write=True)
+        baseline = _baseline(dhf, tmp_path / "out")
+        assert not baseline["errors"], baseline["errors"]
 
-        assert result["rel_uid"], result["errors"]
-        rel = api.get_item(dhf, result["rel_uid"])
+        rel = api.get_item(dhf, record_release(dhf, baseline))
         assert rel["known_anomalies"][0]["defect"] == "DEF-001"
 
 
@@ -169,3 +189,50 @@ class TestBaselineRunsAtAll:
         _baseline(dhf, out)
         bom = json.loads((out / "software-bom.json").read_text())
         assert bom["dhf_soup"][0]["uid"].startswith("SOUP-")
+
+
+class TestARelIsRecordedOnlyWhenEverythingPassed:
+    """`--write` used to record the REL item even when the run had errors.
+
+    The case that matters is the one where the baseline itself is fine — every
+    CR completed, every anomaly assessed — and something else is not: here, a
+    DHF with a dangling link. The baseline would have written the REL.
+    """
+
+    def _project(self, tmp_path: Path) -> Path:
+        from medharness.workflows.init import _replace_placeholders, _scaffold_dhf
+
+        _scaffold_dhf(tmp_path / "project")
+        _replace_placeholders(tmp_path / "project", "Gated")
+        return tmp_path / "project" / "DHF"
+
+    def _releases(self, dhf: Path) -> set[str]:
+        import dhfkit.api as api
+
+        return {i["id"] for i in api.list_items(dhf) if i.get("type") == "REL"}
+
+    def test_a_dhf_that_fails_its_check_is_not_recorded(self, tmp_path: Path) -> None:
+        from medharness.services.release_baseline import build_release
+
+        dhf = self._project(tmp_path)
+        rcm = next((dhf / "items").rglob("RCM-*.yaml"))
+        rcm.write_text(rcm.read_text().replace("RISK-001", "RISK-404"))
+        before = self._releases(dhf)
+
+        result = build_release(dhf, "1.0.0", tmp_path / "out", write=True)
+
+        assert any(e.startswith("DHF:") and "RISK-404" in e for e in result["errors"]), result["errors"]
+        assert result["rel_uid"] is None
+        assert self._releases(dhf) == before, "--write recorded a release whose DHF check failed"
+
+    def test_a_release_that_passed_is_recorded(self, tmp_path: Path) -> None:
+        """The other half, so the test above cannot pass by never recording."""
+        from medharness.services.release_baseline import build_release
+
+        dhf = self._project(tmp_path)
+        before = self._releases(dhf)
+
+        result = build_release(dhf, "1.0.0", tmp_path / "out", write=True)
+
+        assert result["errors"] == [], result["errors"]
+        assert result["rel_uid"] and result["rel_uid"] not in before

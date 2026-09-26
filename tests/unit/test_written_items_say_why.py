@@ -9,7 +9,7 @@ item was built. Recording it is more honest than a CR reference would be:
 backfilling an existing project's register is not a change request, but "this
 row came from requirements.txt" is true either way.
 
-`release baseline` needs none of this: a REL item carries `included_items`, the
+`build release` needs none of this: a REL item carries `included_items`, the
 CRs the release contains.
 """
 
@@ -77,7 +77,7 @@ def test_a_release_record_names_the_crs_it_contains() -> None:
 
     from medharness.services import release_baseline
 
-    source = inspect.getsource(release_baseline.build_release_baseline)
+    source = inspect.getsource(release_baseline.record_release)
     assert '"included_items"' in source, (
         "a REL item no longer records which CRs the release contains, so a "
         "release record would have no change attribution at all"

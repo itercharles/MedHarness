@@ -106,17 +106,6 @@ class TestCiStructuralGate:
             assert "child_type" in gap
             assert "uncovered" in gap
 
-    def test_the_gate_still_answers_with_traceability_off(self, dhf):
-        """Turning a check off must not change the shape of the answer."""
-        from medharness.services.ci import ENVELOPE_KEYS
-
-        r = _medharness(
-            "verify", "dhf", "--dhf", str(dhf / "DHF"),
-            "--no-run-traceability",
-        )
-        assert r.returncode in (0, 1), f"crashed:\n{r.stderr}"
-        assert set(json.loads(r.stdout)) == set(ENVELOPE_KEYS)
-
 
 # ---------------------------------------------------------------------------
 # workflow check-changes — change detection and spec item existence

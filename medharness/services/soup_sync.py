@@ -105,12 +105,6 @@ _PEP508_RE = re.compile(
     r"==(?P<version>[^\s;#]+)",
 )
 
-_PEP508_ANY_RE = re.compile(
-    r"^(?P<name>[A-Za-z0-9_.-]+)"
-    r"(?:\[[^\]]+\])?"
-    r"(?P<spec>[^;#\n]*)",
-)
-
 
 def parse_requirements_txt(path: Path) -> list[dict]:
     """Pinned packages (==) from requirements.txt."""

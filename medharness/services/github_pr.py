@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import os
 import subprocess
-import urllib.parse
 
 
 def _env(token: str = "") -> dict:
@@ -28,29 +27,3 @@ def post_pr_comment(pr_number: int | str, body: str, *, token: str = "") -> str:
         return ""
 
 
-def remove_label(number: int | str, label: str, *, token: str = "") -> bool:
-    """Remove a label from a PR or issue. Returns True on success (ignores 404)."""
-    encoded = urllib.parse.quote(label, safe="")
-    try:
-        result = subprocess.run(
-            ["gh", "api", "-X", "DELETE",
-             f"repos/{{owner}}/{{repo}}/issues/{number}/labels/{encoded}"],
-            capture_output=True, text=True, env=_env(token), timeout=15,
-        )
-        return result.returncode == 0
-    except Exception:
-        return False
-
-
-def add_label(number: int | str, label: str, *, token: str = "") -> bool:
-    """Add a label to a PR or issue. Returns True on success."""
-    try:
-        result = subprocess.run(
-            ["gh", "api", "-X", "POST",
-             f"repos/{{owner}}/{{repo}}/issues/{number}/labels",
-             "-f", f"labels[]={label}"],
-            capture_output=True, text=True, env=_env(token), timeout=15,
-        )
-        return result.returncode == 0
-    except Exception:
-        return False

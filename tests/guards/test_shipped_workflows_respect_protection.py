@@ -60,14 +60,14 @@ def test_the_detector_would_catch_the_form_that_shipped() -> None:
     assert _PUSH_TO_DEFAULT.search("git push origin main")
     assert _PUSH_TO_DEFAULT.search("git push origin HEAD:refs/heads/main")
     assert not _PUSH_TO_DEFAULT.search('git push origin "$BRANCH"')
-    assert not _PUSH_TO_DEFAULT.search("git push origin chore/release-baseline-1.0.0")
+    assert not _PUSH_TO_DEFAULT.search("git push origin chore/release-1.0.0")
 
 
 class TestTheReleaseJobCanDoWhatItNeeds:
     @pytest.fixture(scope="class")
     def job(self) -> dict:
         wf = yaml.safe_load(_text(ROOT / "dhfkit/templates/github/workflows/dhf.yml"))
-        return wf["jobs"]["release-baseline"]
+        return wf["jobs"]["release"]
 
     def test_it_may_open_a_pull_request(self, job: dict) -> None:
         assert job["permissions"].get("pull-requests") == "write", (

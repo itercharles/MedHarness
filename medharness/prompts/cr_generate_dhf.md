@@ -154,7 +154,7 @@ Do **not** write YAML files directly. Do **not** modify the CR item itself.
 ## Step 3: Implementation Plan
 
 After all DHF items pass validation, write an implementation plan into the CR's
-`implementation_notes` field. This plan is the primary input for the `develop-cr`
+`implementation_notes` field. This plan is the primary input for the `build code`
 session — write it so a developer can implement the CR without re-reading the
 source code or re-deriving design decisions.
 

@@ -160,7 +160,7 @@ def test_cli_test_coverage_reports_point_gaps_in_json(tmp_path: Path) -> None:
     ])
     result = CliRunner().invoke(
         main,
-        ["verify", "tests", "--dhf", str(dhf), "--junit", str(junit)],
+        ["--dhf", str(dhf), "verify", "tests", "--junit", str(junit)],
     )
     assert result.exit_code != 0
     payload = json.loads(result.output.splitlines()[0])

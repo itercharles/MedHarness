@@ -6,22 +6,22 @@ import click
 
 from dhfkit.cli_errors import DHFAwareGroup
 from pathlib import Path
-import medharness._helpers as _h
 
 
 @click.group(cls=DHFAwareGroup)
 @click.version_option(package_name="medharness")
 @click.option(
     "--dhf",
-    default=None,
+    default="DHF",
+    show_default=True,
     metavar="PATH",
-    help="Path to the DHF directory.",
+    help="Path to the DHF directory. Goes before the command.",
 )
 @click.pass_context
-def main(ctx: click.Context, dhf: str | None) -> None:
+def main(ctx: click.Context, dhf: str) -> None:
     """MedHarness CLI — AI harness and DHF tooling for medical device software."""
     ctx.ensure_object(dict)
-    ctx.obj["dhf"] = Path(dhf) if dhf else None
+    ctx.obj["dhf"] = Path(dhf)
 
 
 # The three verbs are defined here, not in the module that happens to register

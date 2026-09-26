@@ -27,7 +27,7 @@ Document generation and traceability work against whatever items you have put in
 
 `init` does not write a CI workflow, because the pipeline references your branch names, runner labels and secrets. You own it, and `upgrade` will never touch it.
 
-Copy the recipe below into `.github/workflows/dhf.yml` and replace `0.21.0` with the version you pin. It is the whole deployment — three jobs, no server, no database, no account:
+Copy the recipe below into `.github/workflows/dhf.yml` and replace `{{medharness_version}}` with the version you pin. It is the whole deployment — two jobs, no server, no database, no account:
 
 <details>
 <summary><code>.github/workflows/dhf.yml</code></summary>
@@ -65,30 +65,8 @@ jobs:
       - name: Schema and traceability check
         run: medharness --dhf DHF verify dhf --fail-on-uncovered
 
-  evidence-bundle:
-    name: Evidence bundle
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: dhf-validate
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - run: pip install medharness=={{medharness_version}}
-
-      - name: Build evidence bundle
-        run: medharness --dhf DHF evidence bundle --out-dir artifacts
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: dhf-evidence
-          path: artifacts/
-
-  release-baseline:
-    name: Release Baseline
+  release:
+    name: Release
     if: startsWith(github.ref, 'refs/tags/v')
     needs: dhf-validate
     runs-on: ubuntu-latest
@@ -111,9 +89,9 @@ jobs:
         id: ver
         run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
 
-      - name: Build release baseline
+      - name: Build the release
         run: |
-          medharness --dhf DHF release baseline \
+          medharness --dhf DHF build release \
             --version ${{ steps.ver.outputs.version }} \
             --out-dir artifacts \
             --write
@@ -133,17 +111,17 @@ jobs:
             echo "No DHF change to record for $VERSION."
             exit 0
           fi
-          BRANCH="chore/release-baseline-$VERSION"
+          BRANCH="chore/release-$VERSION"
           git checkout -b "$BRANCH"
-          git commit -m "ci: release baseline $VERSION"
+          git commit -m "ci: release $VERSION"
           git push origin "$BRANCH"
           gh pr create --base main --head "$BRANCH" \
-            --title "ci: release baseline $VERSION" \
-            --body "REL item and software BOM for version $VERSION, written by the release-baseline job. Artifacts are attached to the workflow run."
+            --title "ci: release $VERSION" \
+            --body "REL item and software BOM for version $VERSION, written by the release job. Artifacts are attached to the workflow run."
 
       - uses: actions/upload-artifact@v4
         with:
-          name: release-baseline-${{ steps.ver.outputs.version }}
+          name: release-${{ steps.ver.outputs.version }}
           path: artifacts/
 ```
 
@@ -154,10 +132,9 @@ What each job does:
 | Job | Trigger | Purpose |
 |-----|---------|---------|
 | `dhf-validate` | PRs touching `DHF/**`, pushes to `main` | Schema, required links, dangling links, coverage |
-| `evidence-bundle` | Merge to `main` | Produces the runtime evidence artifact |
-| `release-baseline` | `v*` tags | Writes the REL item and software BOM back to `main` |
+| `release` | `v*` tags | Runs `build release`: the baseline, BOM, SBOM and evidence bundle as a workflow artifact, and the REL item back to `main` through a pull request |
 
-Adopt it incrementally: `dhf-validate` alone is useful from day one. Add the other two when you need release artifacts.
+Adopt it incrementally: `dhf-validate` alone is useful from day one. Add `release` when you start cutting versions. Evidence is produced once per release, not on every merge.
 
 Writing your own pipeline instead? [interface.md](interface.md) is the contract — the result shape every gate returns, exit-code semantics, and what may change between versions.
 
@@ -277,15 +254,14 @@ Reads `implementation_notes` as the primary spec and implements the code, annota
 medharness --dhf DHF verify completion --cr CR-001 --junit-dir test-results
 ```
 
-Run after the branch is merged. Checks:
+Run it on the branch to block the merge, and again on `main`, where the tests re-run against whatever else landed. Checks, for the items this CR touched only:
 
 1. All four CR fields above are populated.
-2. A design review file exists at `docs/reviews/<CR>-Design-Review.md` with `**Verdict:** Approved`.
-3. Every item listed in `proposed_new_items` exists in the DHF.
-4. All created verifiable items (CRS, SYS, SRS) have `verification_method` set.
-5. Items with `Test` method have passing JUnit evidence.
+2. Every item listed in `proposed_new_items` exists in the DHF.
+3. All created verifiable items (CRS, SYS, SRS) have `verification_method` set.
+4. Items with `Test` method have passing JUnit evidence.
 
-Exits non-zero and prints `FAIL [cr-complete]` lines for each gap.
+Approval is not its question — that is `workflow check-approval`, which reads the pull request's reviews. Exits non-zero and prints `FAIL [cr-complete]` lines for each gap.
 
 ## Syncing SOUP items from dependency manifests (`medharness build dhf`)
 
@@ -400,12 +376,14 @@ Regenerating an unchanged SBOM leaves the file alone, timestamp included — the
 serial number is derived from the component set rather than randomised, so a
 regeneration is not a diff in a repository whose purpose is showing what changed.
 
-`release-baseline` writes one too, alongside its existing artifacts:
+`build release` writes one too, alongside the rest of the release:
 
 ```
-out/release-baseline.json
-out/software-bom.json      # dhfkit's own shape, unchanged
-out/sbom.cdx.json          # the same release in CycloneDX
+release/release-baseline.json
+release/software-bom.json      # dhfkit's own shape, unchanged
+release/sbom.cdx.json          # the same release in CycloneDX
+release/evidence-manifest.json # every file above and below, hashed
+release/specifications/ …      # plus traceability and test evidence
 ```
 
 `--manifest` accepts every format `build dhf` reads — `requirements.txt`, `uv.lock`, `poetry.lock`, `pyproject.toml`, `package.json`, `package-lock.json`, `go.mod`, `Cargo.lock`, `pom.xml`.
@@ -466,6 +444,22 @@ medharness --dhf DHF verify soup --offline-mode warn
 
 The gate then passes, but still records the outage in its JSON output and prints a `WARN [soup-vuln]` line — so the gap is visible in the evidence bundle rather than invisible. Keep the default (`--offline-mode fail`) anywhere the scan is expected to run.
 
+## Cutting a release (`build release`)
+
+```bash
+medharness --dhf DHF build release --version 1.2.0 --out-dir release --junit-dir test-results
+```
+
+One command builds everything a release needs, into one directory: the release baseline, the software BOM, a CycloneDX SBOM, the specifications, traceability matrices, test evidence, and `evidence-manifest.json` hashing every file.
+
+Before writing anything to the DHF it checks that:
+
+- the DHF passes `verify dhf` — with coverage gaps failing, since a release is not the place for advisory findings;
+- every included CR is `completed` (by default, every completed CR not yet in a release; `--cr` to choose);
+- every open defect carries a `release_rationale` (IEC 62304 §9.7).
+
+Add `--write` to record the REL item. It is recorded **only when every check passed** — a failing release still writes its evidence, so you can read why, but leaves the DHF unchanged. The [CI recipe](#setting-up-ci) runs it on `v*` tags and brings the REL item back to `main` through a pull request.
+
 ## Keeping your scaffold up to date (`upgrade`)
 
 When a new MedHarness version ships, CI workflows, AI prompts, and spec templates may change. The `upgrade` command shows what's drifted and optionally applies the updates:
@@ -486,7 +480,7 @@ Your CI workflow is deliberately not managed — it is not part of the release p
 
 `dhfkit` is the storage engine inside MedHarness. It ships in the same package (`pip install medharness`), not as a separate distribution, and has no dependency on the harness — so a team with its own orchestration can import it directly and ignore the CLI harness and AI workflow.
 
-What it gives you: item storage and retrieval, schemas, lifecycle transitions, document generation, SOUP sync, release baselines. `LocalDHFAdapter` is the programmatic entry point.
+What it gives you: item storage and retrieval, schemas, lifecycle transitions, document generation, and a CycloneDX SBOM. SOUP sync (`build dhf`) and releases (`build release`) are `medharness`. `LocalDHFAdapter` is the programmatic entry point.
 
 What it does not give you: **traceability analysis**. Coverage, required links, cycles, and risk chains live in `medharness` and take items as data, so they work against any backend — including a DHF you keep in Jira or Azure DevOps. See [architecture.md](architecture.md).
 
@@ -499,6 +493,7 @@ Each layer is useful on its own. None requires the next.
 | 1 | `verify dhf` as a PR gate | Nothing — works on day one |
 | 2 | `verify tests` | Test annotations in JUnit output |
 | 3 | `build dhf`, `sbom`, `verify soup` | A dependency manifest |
-| 4 | `build plan` / `build code` | An AI key, and the appetite for it |
+| 4 | `build release` on version tags | Steps 1–3 passing |
+| 5 | `build plan` / `build code` | An AI key, and the appetite for it |
 
-Step 4 is optional in the strong sense: teams that prefer manual design with automated validation stop at step 3 and lose nothing the standard asks for.
+Step 5 is optional in the strong sense: teams that prefer manual design with automated validation stop at step 4 and lose nothing the standard asks for.

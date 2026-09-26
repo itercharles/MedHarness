@@ -114,7 +114,7 @@ class TestCICoverageGate:
   </testsuite>
 </testsuites>"""
             (Path(junit_tmp) / "demo.xml").write_text(xml)
-            r = _cf(dhf_root, "verify", "tests", "--dhf", dhf_root,
+            r = _cf(dhf_root, "--dhf", dhf_root, "verify", "tests",
                     "--junit-dir", junit_tmp, "--requirement-type", "CRS")
             assert r.returncode in (0, 1), f"verify tests crashed:\n{r.stderr}"
             assert "CRS" in (r.stderr + r.stdout)

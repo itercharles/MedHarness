@@ -10,6 +10,8 @@ that virtualenv then inherited the first project's name.
 
 from __future__ import annotations
 
+import re
+
 from pathlib import Path
 
 import pytest
@@ -125,25 +127,23 @@ class TestCoveragePairStrictness:
         lenient = core.check_coverage([("SYS", "SRS")], strict=False)
         assert strict["results"][0]["total"] == lenient["results"][0]["total"] > 0
 
-    def test_acceptance_gate_uses_lenient_defaults(self, tmp_path: Path) -> None:
-        from medharness._helpers import _run_acceptance_gate
+    def test_the_release_gate_skips_a_layer_the_project_omits(self, tmp_path: Path) -> None:
+        """`build release` checks the DHF with coverage gaps failing. A project
+        entitled to omit the use-case layer must still be releasable."""
+        from medharness.services.ci import ci_structural_gate
 
         _scaffold_dhf(tmp_path)
         _replace_placeholders(tmp_path, "Trial")
         dhf = tmp_path / "DHF"
-        # A project that does not model the use-case layer at all.
         (dhf / "config" / "doc_types" / "uc.yaml").unlink()
         for stale in (dhf / "items" / "00_uc").glob("*.yaml"):
             stale.unlink()
+        # CRS derived from UC-001; the link would now dangle for another reason.
+        for crs in (dhf / "items" / "01_crs").glob("*.yaml"):
+            crs.write_text(re.sub(r"derives_from:\n(  - UC-\d+\n)+", "", crs.read_text()))
 
-        core = MedHarnessCore(LocalDHFAdapter(dhf))
-        result = _run_acceptance_gate(core, [], ())
-
-        uc_rows = [
-            r for r in result["coverage"]["results"] if r["parent_type"] == "UC"
-        ]
-        assert uc_rows and uc_rows[0]["passed"] is True
-        assert "not configured" in uc_rows[0]["skipped"]
+        gate = ci_structural_gate(dhf, fail_on_uncovered=True)
+        assert not [e for e in gate["errors"] if "UC" in e], gate["errors"]
 
 
 class TestPrefixConsistency:

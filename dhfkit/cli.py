@@ -1,7 +1,6 @@
 """DHF CLI — standalone data-layer operations (no medharness dependency)."""
 
 import json
-import os
 import shutil
 import sys
 from pathlib import Path
@@ -10,16 +9,6 @@ import click
 
 from dhfkit.cli_errors import DHFAwareGroup
 import yaml
-
-
-def _resolve_dhf(dhf_option: str | None) -> Path:
-    """Resolve the DHF directory from CLI option, env var, or default."""
-    if dhf_option:
-        return Path(dhf_option)
-    env = os.environ.get("COMPLIANTFLOW_DHF")
-    if env:
-        return Path(env)
-    raise click.UsageError("--dhf or COMPLIANTFLOW_DHF must be set")
 
 
 def _make_adapter(dhf_path: Path):
@@ -35,15 +24,16 @@ def _make_adapter(dhf_path: Path):
 @click.group(cls=DHFAwareGroup)
 @click.option(
     "--dhf",
-    default=None,
+    default="DHF",
+    show_default=True,
     metavar="PATH",
-    help="Path to the DHF directory. Overrides COMPLIANTFLOW_DHF env var.",
+    help="Path to the DHF directory. Goes before the command.",
 )
 @click.pass_context
-def main(ctx: click.Context, dhf: str | None) -> None:
+def main(ctx: click.Context, dhf: str) -> None:
     """DHF CLI — data-layer operations for the Design History File."""
     ctx.ensure_object(dict)
-    ctx.obj["dhf"] = _resolve_dhf(dhf)
+    ctx.obj["dhf"] = Path(dhf)
 
 
 # ---------------------------------------------------------------------------
@@ -405,7 +395,7 @@ def init_cmd(ctx: click.Context, project_name: str) -> None:
     \b
     Example:
         dhfkit --dhf path/to/DHF init --project-name "My Device"
-        dhfkit --dhf path/to/DHF item create SYS --data '{"title": "..."}'
+        dhfkit --dhf path/to/DHF item create --type SYS --data '{"title": "..."}'
         dhfkit --dhf path/to/DHF validate schema
     """
     dhf_path: Path = ctx.obj["dhf"]
@@ -490,5 +480,5 @@ def init_cmd(ctx: click.Context, project_name: str) -> None:
     click.echo(json.dumps({"created": str(dhf_path), "project_name": project_name}))
     click.echo(f"DHF initialised at {dhf_path}", err=True)
     click.echo("Next steps:", err=True)
-    click.echo(f"  dhfkit --dhf {dhf_path} item create SYS --data '{{\"title\": \"My first requirement\"}}'", err=True)
+    click.echo(f"  dhfkit --dhf {dhf_path} item create --type SYS --data '{{\"title\": \"My first requirement\"}}'", err=True)
     click.echo(f"  medharness --dhf {dhf_path} verify dhf", err=True)

@@ -58,6 +58,26 @@ class TestManifestMatchesTheCLI:
         assert not stale, f"manifest describes commands that do not exist: {sorted(stale)}"
 
     @pytest.mark.parametrize("gate", GATES, ids=lambda g: g["command"])
+    def test_the_manifest_lists_every_option_the_command_takes(self, gate: dict) -> None:
+        """The other direction. Checking only that declared options exist let the
+        manifest keep `--dhf` after it moved to the root, and miss three options
+        `verify tests` and `verify soup` had gained."""
+        group, _, name = gate["command"].partition(" ")
+        cli = {
+            opt for param in main.commands[group].commands[name].params
+            for opt in param.opts if opt.startswith("--")
+        }
+        declared = {
+            alt.strip().split("/")[0]
+            for entry in gate["options"]["required"] + gate["options"]["optional"]
+            for alt in entry.split(" or ")
+        }
+        assert declared == cli, (
+            f"{gate['command']}: manifest lacks {sorted(cli - declared)}, "
+            f"lists nonexistent {sorted(declared - cli)}"
+        )
+
+    @pytest.mark.parametrize("gate", GATES, ids=lambda g: g["command"])
     def test_required_options_exist_on_the_command(self, gate: dict) -> None:
         """A required option the command does not have would misdirect a caller."""
         group, _, name = gate["command"].partition(" ")
