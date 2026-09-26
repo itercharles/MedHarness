@@ -201,25 +201,30 @@ class TestItemCreationValidation:
 class TestDoctorCommand:
     """Smoke-test the doctor command output shape."""
 
-    def test_doctor_json_output(self, dhf):
-        r = _cli(str(dhf / "DHF"), "doctor", "--json")
-        assert r.returncode in (0, 1)
-        report = json.loads(r.stdout)
-        assert "checks" in report
-        assert "healthy" in report
-        assert "summary" in report
-        assert isinstance(report["checks"], list)
-        for check in report["checks"]:
-            assert "check" in check
-            assert "passed" in check
-            assert "detail" in check
-
-    def test_doctor_text_output(self, dhf):
+    def test_doctor_answers_in_json_like_every_command(self, dhf):
+        """It printed prose to stdout unless given --json, alone among commands."""
         r = _cli(str(dhf / "DHF"), "doctor")
         assert r.returncode in (0, 1)
-        # At minimum python_version and medharness_package checks should appear
-        assert "python_version" in r.stdout
-        assert "medharness_package" in r.stdout
+        report = json.loads(r.stdout)
+        assert {"checks", "healthy", "summary"} <= set(report)
+        for check in report["checks"]:
+            assert {"check", "passed", "detail"} <= set(check)
+        assert "python_version" in r.stderr, "the readable lines belong on stderr"
+
+    def test_doctor_checks_the_dhf_it_is_given(self, dhf, tmp_path):
+        named = _cli(str(tmp_path / "nowhere"), "doctor")
+        assert named.returncode == 1
+        failed = {c["check"] for c in json.loads(named.stdout)["checks"] if not c["passed"]}
+        assert "dhf_config" in failed
+
+    def test_doctor_before_init_does_not_fail_on_the_missing_dhf(self, tmp_path):
+        """Nothing is named and ./DHF does not exist: there is no DHF to check yet."""
+        r = subprocess.run(
+            [sys.executable, "-m", "medharness", "doctor"],
+            capture_output=True, text=True, cwd=tmp_path,
+        )
+        checks = {c["check"] for c in json.loads(r.stdout)["checks"]}
+        assert "dhf_config" not in checks, "doctor judged a DHF that nobody asked about"
 
 
 class TestCRPhaseEnum:

@@ -2,33 +2,18 @@ from __future__ import annotations
 
 """Shared CLI helpers."""
 import json
-import os
 import shutil
-import subprocess
 from datetime import datetime
 from pathlib import Path
 import click
-from medharness.services.traceability import analyse as _analyse
 
 
 def _make_adapter(dhf_path: Path):
-    # The shared choke point, so every command gets the check rather than the
-    # three that remembered to write it. `medharness dhf context overview`
-    # without --dhf reached pathlib with None and raised TypeError.
-    if dhf_path is None:
-        raise click.ClickException("--dhf is required when not set globally")
-    try:
-        from dhfkit.local_adapter import LocalDHFAdapter
-    except ImportError:
-        raise click.ClickException(
-            "LocalDHFAdapter not found. Add your DHF system to PYTHONPATH before running the CLI."
-        )
+    from dhfkit.local_adapter import LocalDHFAdapter
+
     return LocalDHFAdapter(dhf_path)
 
 
-
-
-DEFAULT_ACCEPTANCE_COVERAGE_PAIRS = ("UC:CRS", "CRS:SYS", "SYS:SRS", "SRS:SWDD")
 DEFAULT_TRACEABILITY_DOC_TYPES = ("UC", "CRS", "SYS", "SRS", "SWDD")
 
 
@@ -75,35 +60,6 @@ def _collect_junit_paths(junit_files: tuple[Path, ...] = (),
                 _add(xml_path)
 
     return collected
-
-
-def _run_acceptance_gate(core, junit_paths: list[Path], coverage_pairs: tuple[str, ...]) -> dict:
-    """Execute the CI acceptance gate using the provided JUnit evidence."""
-    if junit_paths:
-        core.inject_junit_results(junit_paths)
-
-    traceability = core.validate()
-    adapter_result = _analyse(core._adapter)
-    required = adapter_result.get("required", {})
-    user_supplied = bool(coverage_pairs)
-    pairs = coverage_pairs or DEFAULT_ACCEPTANCE_COVERAGE_PAIRS
-    coverage = core.check_coverage(_parse_coverage_pairs(pairs), strict=user_supplied)
-    passed = (
-        traceability.get("valid", True)
-        and coverage.get("passed", True)
-        and required.get("passed", True)
-    )
-    return {
-        "passed": passed,
-        "traceability": traceability,
-        "required": required,
-        "coverage": coverage,
-        "junit_files": [str(path) for path in junit_paths],
-    }
-
-
-
-
 
 
 def _build_traceability_report_payload(core, doc_types: tuple[str, ...],
@@ -336,7 +292,6 @@ def _format_traceability_matrix_markdown(matrix: dict) -> str:
     return "\n".join(lines)
 
 
-
 def _available_doc_types(adapter) -> list[str]:
     if hasattr(adapter, "get_available_doc_types"):
         return sorted(adapter.get_available_doc_types())
@@ -411,74 +366,6 @@ def _run_artifact_generation(
         "traceability": traceability,
         "junit_files": [str(path) for path in junit_paths],
     }
-
-
-
-
-def _github_env(token: str | None = None) -> dict[str, str]:
-    """Return a subprocess env with GitHub token variables populated when available."""
-    env = os.environ.copy()
-    if token:
-        env["GH_TOKEN"] = token
-        env["GITHUB_TOKEN"] = token
-    return env
-
-
-def _load_issue_comments(
-    comments_path: Path | None,
-    *,
-    source_repo: str | None,
-    issue_number: int | None,
-    source_token: str | None,
-) -> list[dict]:
-    if comments_path is not None:
-        try:
-            comments = json.loads(comments_path.read_text(encoding="utf-8"))
-        except json.JSONDecodeError as exc:
-            raise click.ClickException(f"invalid comments JSON at {comments_path}") from exc
-        if not isinstance(comments, list):
-            raise click.ClickException(f"expected a JSON array in {comments_path}")
-        return comments
-    if not source_repo or issue_number is None:
-        return []
-
-    # --paginate follows Link headers; --slurp wraps the pages in an outer
-    # array so the output stays valid JSON. Without them an issue past 100
-    # comments was silently truncated, and the CR was built from partial input.
-    command = [
-        "gh",
-        "api",
-        "--paginate",
-        "--slurp",
-        f"repos/{source_repo}/issues/{issue_number}/comments?per_page=100",
-    ]
-    def _run(cmd: list[str]):
-        return subprocess.run(
-            cmd, capture_output=True, text=True, check=False,
-            env=_github_env(source_token),
-        )
-
-    proc = _run(command)
-    if proc.returncode != 0 and "--slurp" in (proc.stderr or ""):
-        # --slurp arrived in gh 2.44. On an older CLI, fall back to a single
-        # page rather than failing outright — truncated input is worse than
-        # complete input, but far better than no CR intake at all.
-        proc = _run([c for c in command if c not in ("--paginate", "--slurp")])
-    if proc.returncode != 0:
-        message = (proc.stderr or proc.stdout).strip()
-        raise click.ClickException(message or f"failed to fetch comments for issue {issue_number}")
-    try:
-        payload = json.loads(proc.stdout or "[]")
-    except json.JSONDecodeError as exc:
-        raise click.ClickException("gh api returned invalid JSON for issue comments") from exc
-    if not isinstance(payload, list):
-        raise click.ClickException("gh api returned unexpected issue comments payload")
-
-    # --slurp yields a list of pages; flatten it. A plain list of comments is
-    # still accepted so a --comments-file fixture or an unslurped response works.
-    if payload and all(isinstance(page, list) for page in payload):
-        return [comment for page in payload for comment in page]
-    return payload
 
 
 def _generate_plan_artifacts(dhf_path: Path, out_dir: Path,

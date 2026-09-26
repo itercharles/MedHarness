@@ -1,7 +1,7 @@
 # AI Agent Context — Medharness
 
-> Replace this file with a description of your product. The `generate-dhf` and
-> `develop-cr` workflows read it before running Claude so the agent reasons about
+> Replace this file with a description of your product. `build plan` and
+> `build code` read it before running the model so the agent reasons about
 > the right domain without re-deriving context from source files on every run.
 
 ## Product Overview

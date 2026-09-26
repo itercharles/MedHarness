@@ -18,7 +18,7 @@ Before proposing or implementing any significant change, read:
 | CLI | Owns | Commands |
 |-----|------|----------|
 | `dhfkit` | DHF **data**: items, schemas, documents, SOUP, releases. Storage and retrieval only — no analysis. | `doc` · `init` · `item` · `sbom` · `validate` |
-| `medharness` | The **process** around it: AI CR workflow, CI gates, scaffolding, approval, and all traceability analysis over the item set | `build` · `context` · `doctor` · `evidence` · `init` · `release` · `upgrade` · `verify` · `workflow` |
+| `medharness` | The **process** around it: AI CR workflow, CI gates, scaffolding, approval, releases, and all traceability analysis over the item set | `build` · `context` · `doctor` · `init` · `upgrade` · `verify` · `workflow` |
 
 `tests/guards/test_cli_boundary_is_documented.py` checks this table against the
 live command tree.
@@ -33,7 +33,7 @@ reason no reader could recover.
 | Verb | Reads | Examples |
 |------|-------|----------|
 | `verify` | the DHF, and nothing else — never Git or GitHub | `dhf`, `tests`, `soup`, `completion` |
-| `build` | whatever it needs; **writes** items, code, or artifacts | `plan`, `code`, `dhf` |
+| `build` | whatever it needs; **writes** items, code, or artifacts | `plan`, `code`, `dhf`, `release` |
 | `workflow` | the repository; cannot answer without Git or GitHub | `check-changes`, `check-approval`, `github-event` |
 
 `workflow *` are CI helper scripts, not the tool's value. A developer working
@@ -44,15 +44,16 @@ diff — what a command *requires* is what places it, not everything it touches.
 `tests/guards/test_gates_sit_where_they_belong.py` enforces the line.
 
 `medharness context` assembles design context for an AI agent or a CI step (`implementation`, `for-stage`, `overview`).
-All DHF data operations use `dhfkit --dhf DHF <command>`.
+All DHF data operations use `dhfkit <command>`. Both CLIs take `--dhf PATH` before
+the command, defaulting to `DHF`; no command takes its own.
 
 ## Repo Responsibility
 
 | Directory | Purpose |
 |-----------|---------|
 | `medharness/` | Harness CLI, CI gate logic, scaffolding |
-| `dhfkit/` | DHF storage: items, config, link integrity, doc generation, SOUP sync, release baseline |
-| `dhfkit/templates/` | Starter DHF scaffold — config, specs, plans, sample items, CI workflow |
+| `dhfkit/` | DHF storage: items, config, schema validation, doc generation, SBOM |
+| `dhfkit/templates/` | Starter DHF scaffold — config, specs, sample items, and the CI recipe the docs publish |
 | `docs/` | Architecture docs and adopting guide |
 | `tests/unit/` | Unit tests — behaviour of a function or command |
 | `tests/guards/` | Checks on the repo itself: import boundaries, documented commands, packaging, mock contracts |
@@ -64,10 +65,10 @@ All DHF data operations use `dhfkit --dhf DHF <command>`.
 
 - Product-formal docs are canonical in generated DHF repos, not here
 - `dhfkit` has no dependency on `medharness` — the engine can be used standalone
-- `ci test-coverage` enforces requirement-to-test coverage in consumer repos
-- `ci evidence bundle` produces runtime evidence on merge to `main`
-- All new `ci` commands must: output structured JSON to stdout, write
-  human-readable summaries to stderr only, and exit non-zero on failure
+- `verify tests` enforces requirement-to-test coverage in consumer repos
+- `build release` produces the release evidence, at release time
+- Every command must: output structured JSON to stdout, write human-readable
+  summaries to stderr only, and exit non-zero on failure
 - Do not add comments to self-explanatory code. Only comment when the WHY is
   non-obvious: a hidden constraint, a workaround, an external API contract, or
   behavior that would surprise a reader unfamiliar with the context.

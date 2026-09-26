@@ -64,7 +64,6 @@ def _scaffold_dhf(project_dir: Path) -> None:
     _cp("AI-harness", "AI-harness")
 
 
-
 # Directories that may sit inside a project root but are never scaffold output.
 # A virtualenv is the dangerous one: the documented setup creates .venv inside
 # the project, so an unrestricted walk rewrote the installed package's own
@@ -189,30 +188,30 @@ build/
     return dest
 
 
-def _write_tests_stub(project_dir: Path) -> Path:
-    tests_dir = project_dir / "tests"
-    tests_dir.mkdir(exist_ok=True)
-    (tests_dir / ".gitkeep").touch(exist_ok=True)
-    return tests_dir
-
-
 # ---------------------------------------------------------------------------
 # Main entrypoint
 # ---------------------------------------------------------------------------
 
-def run_init() -> None:
-    """Zero-prompt onboarding: scaffold a single-repo project in the current directory."""
+def run_init() -> dict:
+    """Zero-prompt onboarding: scaffold a single-repo project in the current directory.
+
+    Returns the project and the files written. The walkthrough goes to stderr,
+    so stdout carries only the answer, as it does for every other command.
+    """
     project_dir = Path.cwd()
     raw_name = project_dir.name
     project_name = raw_name.replace("-", " ").replace("_", " ").title()
 
-    click.echo()
-    click.secho("MedHarness Init", bold=True)
-    click.echo("━" * 45)
-    click.echo()
-    click.echo(f"  Directory  : {project_dir}")
-    click.echo(f"  Project    : {project_name}")
-    click.echo()
+    def say(text: str = "", **style) -> None:
+        click.secho(text, err=True, **style)
+
+    say()
+    say("MedHarness Init", bold=True)
+    say("━" * 45)
+    say()
+    say(f"  Directory  : {project_dir}")
+    say(f"  Project    : {project_name}")
+    say()
 
     if (project_dir / "DHF").exists():
         raise click.ClickException(
@@ -220,51 +219,39 @@ def run_init() -> None:
             "Remove it or run from a fresh directory."
         )
 
+    before = {f for f in project_dir.rglob("*") if f.is_file()}
     steps = [
-        "Scaffold DHF structure",
-        "Write CLAUDE.md",
-        "Write .gitignore",
+        ("Scaffold DHF structure", lambda: (_scaffold_dhf(project_dir),
+                                            _replace_placeholders(project_dir, project_name))),
+        ("Write CLAUDE.md", lambda: _write_claude_md(project_dir, project_name)),
+        ("Write .gitignore", lambda: _write_gitignore(project_dir)),
     ]
-    total = len(steps)
-    n = 0
+    for n, (label, run) in enumerate(steps, start=1):
+        click.echo(f"[{n}/{len(steps)}] {label}...", nl=False, err=True)
+        run()
+        click.secho(" ✓", fg="green", err=True)
+    created = sorted(
+        str(f.relative_to(project_dir))
+        for f in project_dir.rglob("*") if f.is_file() and f not in before
+    )
 
-    def _step(msg: str) -> None:
-        nonlocal n
-        n += 1
-        click.echo(f"[{n}/{total}] {msg}...", nl=False)
+    say()
+    say("━" * 45)
+    say("Done. Next steps:", bold=True, fg="green")
+    say()
+    say("  1. Initialize git and make first commit:", bold=True)
+    say("       git init && git add -A")
+    say(f'       git commit -m "feat: initialize {project_name} with MedHarness"')
+    say()
+    say("  2. Replace the sample content:", bold=True)
+    say("       Edit AI-harness/context.md with your product description.")
+    say("       Edit DHF/items/ with your real requirements, risks, and CRs.")
+    say()
+    say("  3. Check it, from this directory:", bold=True)
+    say("       medharness verify dhf")
+    say("       medharness verify tests --junit-dir test-results")
+    say()
+    say("  4. Add CI: copy the recipe in docs/adopting.md, 'Setting up CI'.", bold=True)
+    say()
 
-    _step("Scaffold DHF structure")
-    _scaffold_dhf(project_dir)
-    _replace_placeholders(project_dir, project_name)
-    click.secho(" ✓", fg="green")
-
-    _step("Write CLAUDE.md")
-    _write_claude_md(project_dir, project_name)
-    click.secho(" ✓", fg="green")
-
-    _step("Write .gitignore")
-    _write_gitignore(project_dir)
-    click.secho(" ✓", fg="green")
-
-    click.echo()
-    click.echo("━" * 45)
-    click.secho("Done. Next steps:", bold=True, fg="green")
-    click.echo()
-    click.secho("  1. Initialize git and make first commit:", bold=True)
-    click.echo(f"       git init && git add -A")
-    click.echo(f'       git commit -m "feat: initialize {project_name} with MedHarness"')
-    click.echo()
-    click.secho("  2. Push to GitHub:", bold=True)
-    click.echo(f"       git remote add origin https://github.com/<org>/{raw_name}")
-    click.echo(f"       git push -u origin main")
-    click.echo()
-    click.secho("  3. Wire your automation around the CLI:", bold=True)
-    click.echo("       medharness verify dhf --dhf DHF")
-    click.echo("       medharness verify tests --dhf DHF --junit-dir test-results")
-    click.echo("       medharness --dhf DHF evidence bundle --out-dir artifacts --junit-dir test-results")
-    click.echo()
-    click.secho("  4. Replace sample DHF content:", bold=True)
-    click.echo(f"       Edit AI-harness/context.md with your product description.")
-    click.echo(f"       Edit DHF/items/ with your real requirements, risks, and CRs.")
-    click.echo(f"       Validate: dhfkit --dhf DHF validate schema")
-    click.echo()
+    return {"project_dir": str(project_dir), "project_name": project_name, "created": created}

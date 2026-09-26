@@ -166,8 +166,8 @@ def test_cli_validate_verification_passes(tmp_path: Path) -> None:
     junit = _make_junit(tmp_path, ["SRS-001"])
     result = CliRunner().invoke(
         main,
-        ["--dhf", str(dhf), "verify", "tests",
-         "--dhf", str(dhf), "--junit", str(junit)],
+        ["--dhf", str(dhf),
+         "verify", "tests", "--junit", str(junit)],
     )
     assert result.exit_code == 0, result.output
     payload = json.loads(result.output.splitlines()[0])
@@ -178,7 +178,7 @@ def test_a_missing_method_warns_by_default(tmp_path: Path) -> None:
     """A project adding verification_method has a gap on every item at first."""
     dhf = _make_dhf(tmp_path, [{"id": "SRS-001", "title": "No method"}])
     result = CliRunner().invoke(
-        main, ["--dhf", str(dhf), "verify", "tests", "--dhf", str(dhf)],
+        main, ["--dhf", str(dhf), "verify", "tests"],
     )
     payload = json.loads(result.output.splitlines()[0])
     assert any("SRS-001" in w and "no verification_method" in w
@@ -191,7 +191,7 @@ def test_require_method_makes_it_fail(tmp_path: Path) -> None:
     dhf = _make_dhf(tmp_path, [{"id": "SRS-001", "title": "No method"}])
     result = CliRunner().invoke(
         main,
-        ["--dhf", str(dhf), "verify", "tests", "--dhf", str(dhf), "--require-method"],
+        ["--dhf", str(dhf), "verify", "tests", "--require-method"],
     )
     assert result.exit_code != 0
 
@@ -200,7 +200,7 @@ def test_cli_validate_verification_json_stdout(tmp_path: Path) -> None:
     dhf = _make_dhf(tmp_path, [{"id": "SRS-001", "verification_method": ["Test"]}])
     result = CliRunner().invoke(
         main,
-        ["--dhf", str(dhf), "verify", "tests", "--dhf", str(dhf)],
+        ["--dhf", str(dhf), "verify", "tests"],
     )
     payload = json.loads(result.output.splitlines()[0])
     assert set(payload) == set(ENVELOPE_KEYS)

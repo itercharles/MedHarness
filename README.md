@@ -62,7 +62,8 @@ flowchart LR
     REV -->|"/approve"| IMPL["build code<br/><br/>AI writes code<br/>and tests"]
     IMPL --> GATES["Verification gates<br/><br/>verify dhf<br/>verify tests<br/>verify soup<br/>verify completion"]
     GATES -.->|any gate fails| IMPL
-    GATES ==>|all pass| MERGE["Merge to main<br/><br/>evidence bundle<br/>release baseline"]
+    GATES ==>|all pass| MERGE["Merge to main"]
+    MERGE -.->|"tag v*"| REL["build release<br/><br/>baseline, BOM, SBOM,<br/>evidence, REL item"]
 
     style PLAN fill:#4c6ef5,color:#fff,stroke:#364fc7
     style IMPL fill:#4c6ef5,color:#fff,stroke:#364fc7
@@ -109,7 +110,7 @@ npm install -g @anthropic-ai/claude-code   # default path, provides the `claude`
 agentic loop with an unrestricted shell tool and are designed for an ephemeral
 CI runner, not a workstation holding your credentials.
 
-Everything else — traceability, validation, gates, evidence bundles — is
+Everything else — traceability, validation, gates, releases — is
 deterministic and needs no model access.
 
 ---
@@ -148,7 +149,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - run: pip install medharness==0.34.0
+      - run: pip install medharness==0.35.0
       - run: medharness --dhf DHF verify dhf --fail-on-uncovered
 ```
 
@@ -158,8 +159,8 @@ report as `WARN`, and only schema, required links, and dangling links block.
 `medharness verify --help` lists the gates; each subcommand's `--help` gives its options.
 [docs/interface.md](docs/interface.md) is the contract to build against — result
 shape, exit codes, and what may change.
-[docs/adopting.md](docs/adopting.md#setting-up-ci) carries the full workflow
-with evidence bundles and release baselines.
+[docs/adopting.md](docs/adopting.md#setting-up-ci) carries the full workflow,
+including the release job.
 
 ---
 
@@ -170,7 +171,8 @@ owns the **analysis over the item set** and the process around it. A team whose
 DHF already lives in Jira or Azure DevOps keeps that and still needs the
 analysis.
 
-Both take `--dhf DHF`; `dhfkit` also reads `COMPLIANTFLOW_DHF`.
+Both take `--dhf PATH` before the command, defaulting to `DHF` — so from a
+project root neither needs it.
 Every command writes JSON to stdout and human-readable lines to stderr, so
 `cmd > out.json` gives you the payload and the terminal still reads normally.
 
@@ -212,6 +214,7 @@ need the pull request that carries it.
 | `medharness build plan --cr CR-034` | `outcome`, `items_changed`, `review_cycles`, `diagnostics` | The CR has been triaged. Drafts the whole DHF item cascade and the impact analysis, then validates its own output and fixes what it broke. |
 | `medharness build code --cr CR-034` | `outcome`, `files_changed`, `review_cycles` | The design is approved. Writes code and tests against the cascade. `--pr 42` revises from review feedback; `--ci-failures` from a failing run. |
 | `medharness build dhf --manifest requirements.txt --write` | `to_create`, `to_update`, `orphans`, `items_created`, `items_updated` | A dependency changed. Reconciles the SOUP register with the project's manifests. Without `--write` it reports only — read that first: it writes items you then have to fill in a purpose and risk rating for. |
+| `medharness build release --version 1.0.0 --out-dir release --write` | `outcome`, `version`, `cr_ids`, `rel_uid`, `soup_count`, `artifacts`, `errors` | Cutting a release (IEC 62304 §9). Checks the DHF with coverage gaps failing, that every included CR is `completed` and every open defect assessed; writes the baseline, BOM, SBOM, specifications, traceability, test evidence and a hashed manifest. `--write` records the REL item — only when every check passed. `--doc-format pdf` needs `medharness[docs]`. |
 
 ### `workflow` — what Git and GitHub say
 
@@ -234,22 +237,13 @@ All three print JSON to stdout and make no changes.
 | `medharness context implementation --cr CR-034` | `project`, `cr` (the full item), `items`, `traceability`, `module_map` | An agent is about to write code for a CR: which modules own which designs and requirements. |
 | `medharness context for-stage develop --cr CR-034` | `stage`, `cr`, and at `develop` `affected_items`; at `analyze` and `design`, `items` (every item, summarized), plus `traceability_gaps` at `analyze` | An agent is at one stage of a CR. Only `develop` is small: `analyze` and `design` summarize the whole DHF, because `affected_items` is not written until `build plan` has seen all of it. |
 
-### Evidence and release
-
-Not under a verb yet: merging these into `build release` is agreed and not built.
-
-| Command | Returns | Use it when |
-|---|---|---|
-| `medharness evidence bundle --out-dir artifacts` | `gate_passed`, `manifest`, `artifacts` | On merge to `main`. Runs the acceptance gate and writes the read-only bundle an auditor reads: specifications, plans, traceability, test evidence, SBOM, and a manifest with a hash per file. `--doc-format pdf` needs `medharness[docs]`. |
-| `medharness release baseline --version 1.0.0 --write` | `version`, `cr_ids`, `rel_uid`, `artifacts`, `soup_count` | Cutting a release (IEC 62304 §9). Verifies every included CR is `completed`, freezes the software BOM, and writes the REL item. Dry-run without `--write`. |
-
 ### Setting up and keeping current
 
 | Command | Returns | Use it when |
 |---|---|---|
-| `medharness init` | list of created paths | Once, in an empty project. Scaffolds the DHF, the AI harness, and a CI workflow. Never overwrites. |
-| `medharness upgrade` | `outdated`, `missing`, `up_to_date`, `installed_version` | After upgrading the package. Reports scaffold drift; `--apply` writes it. Your DHF items, `global.yaml` and `context.md` are never touched. |
-| `medharness doctor` | `checks`, `passed`, `failed` | CI is behaving oddly. Checks Python, the CLIs, `gh` auth, and whether the DHF config and adapter load. |
+| `medharness init` | `project_dir`, `project_name`, `created` | Once, in an empty project. Scaffolds the DHF and the AI harness; the CI recipe is in [adopting.md](docs/adopting.md#setting-up-ci). Refuses if `DHF/` exists. |
+| `medharness upgrade` | `outdated`, `missing`, `unavailable`, `up_to_date`, `installed_version`, `summary` | After upgrading the package. Reports scaffold drift; `--apply` writes it. Your DHF items, `global.yaml` and `context.md` are never touched. |
+| `medharness doctor` | `checks`, `healthy`, `summary` | Something is behaving oddly. Checks Python, the CLIs, `gh` auth, and — when there is one — whether the DHF loads. |
 
 ### Storing and reading the DHF — `dhfkit`
 
@@ -261,10 +255,10 @@ Not under a verb yet: merging these into `build release` is agreed and not built
 | `dhfkit item update SRS-012 --data '{...}'` | the updated item | Changing fields. The JSON is merged, not replaced; editing an approved item returns it for re-approval. |
 | `dhfkit item transition CR-034 completed` | the item in its new state | Moving an item through its lifecycle. Omit the state to get the transitions available and which criteria block the rest. |
 | `dhfkit validate schema` | `valid`, `item_count`, `errors` | Before committing. Every item against its doc-type schema. |
-| `dhfkit doc generate SYS` | `doc_type`, `output_path`, `version` | Building a specification document from the items. |
-| `dhfkit doc export SYS --format pdf` | `output_path` | Handing a specification to someone outside the repo. HTML is self-contained; PDF needs `[docs]`. |
-| `dhfkit sbom` | `path`, `components`, `without_purl` | You need a CycloneDX 1.6 SBOM from the SOUP register. `without_purl` counts the components no tool downstream can match. |
-| `dhfkit init` | list of created paths | You want the DHF without the AI harness. |
+| `dhfkit doc generate SYS` | `doc_type`, `output_path`, `version` | Building a specification document from the items. `ALL` builds every type, one object per line. |
+| `dhfkit doc export SYS --format pdf` | `doc_type`, `md_path`, `html_path` or `pdf_path`, `version` | Handing a specification to someone outside the repo. HTML is self-contained; PDF needs `[docs]`. |
+| `dhfkit sbom` | `path`, `components`, `without_purl`, `changed` | You need a CycloneDX 1.6 SBOM from the SOUP register. `without_purl` counts the components no tool downstream can match; `changed` is false when a regeneration left the file as it was. |
+| `dhfkit init --project-name "My Device"` | `created` (the DHF path), `project_name` | You want the DHF without the AI harness. |
 
 Attribution is the commit, not a flag: `dhfkit` does not commit, so who changed
 an item is whoever authored the commit that carried it.

@@ -44,9 +44,9 @@ class TestMedHarnessCLI:
         r = _run("medharness", "verify", "dhf", "--help")
         assert r.returncode == 0, r.stderr
 
-    def test_ci_evidence_bundle_help(self):
-        """medharness evidence bundle --help exits 0."""
-        r = _run("medharness", "evidence", "bundle", "--help")
+    def test_build_release_help(self):
+        """medharness build release --help exits 0."""
+        r = _run("medharness", "build", "release", "--help")
         assert r.returncode == 0, r.stderr
 
 
@@ -80,16 +80,10 @@ class TestCRGenerationCommands:
         assert r.returncode == 0, r.stderr
 
 
-    def test_validate_branch_help(self):
-        """medharness workflow check-changes --help exits 0.
-
-        It carries its own --dhf like the other DHF-reading gates. It was the
-        one that did not, so a caller building from the gate manifest hit a
-        usage error on the option every sibling accepts.
-        """
+    def test_check_changes_help(self):
+        """medharness workflow check-changes --help exits 0."""
         r = _run("medharness", "workflow", "check-changes", "--help")
         assert r.returncode == 0, r.stderr
-        assert "--dhf" in r.stdout
 
     def test_develop_cr_requires_cr_flag(self):
         """medharness build code without --cr exits non-zero with usage error."""
@@ -126,7 +120,7 @@ class TestCRGenerationCommands:
         """Each verb lists its own commands, so `--help` finds them all."""
         expected = {
             "verify": ["dhf", "tests", "soup", "completion"],
-            "build": ["plan", "code", "dhf"],
+            "build": ["plan", "code", "dhf", "release"],
             "workflow": ["check-changes", "check-approval", "github-event"],
         }
         for verb, commands in expected.items():

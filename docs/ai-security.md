@@ -18,7 +18,7 @@ Only two commands send anything to a model:
 | `medharness build plan --cr <ID>` | Design | DHF item updates, impact analysis, design review |
 | `medharness build code --cr <ID>` | Develop | Source code and tests for the approved design |
 
-**Every other command is deterministic.** `dhfkit` (item CRUD, validation, link integrity, document generation, SOUP sync, release baseline) makes no network calls to any model and has no dependency on `medharness`. All `verify` and `workflow` gates and `evidence bundle` are pure local computation.
+**Every other command is deterministic** and makes no call to any model. `dhfkit` (item CRUD, schema validation, document generation, the SBOM) has no dependency on `medharness`. The `verify` gates, `workflow` gates, `build dhf` and `build release` compute their answers from their inputs; the only network they touch is osv.dev for `verify soup` and GitHub for `workflow check-approval`.
 
 This split is intentional: you can adopt the traceability engine and CI gates with no AI in the pipeline at all. See [adopting.md](adopting.md#incremental-adoption).
 
@@ -90,8 +90,8 @@ The gates in step 4 are ordinary code. They do not ask a model whether the work 
 | Session ID | CR item, captured from the `claude` CLI JSON envelope | Correlates a CR stage to a model session |
 | DHF item history | Git — the commit on the CR branch that carried the change, authored by whoever made it | Every design input the AI added or modified |
 | PR diff | GitHub | Every line of code the AI wrote, under normal review |
-| Design review | `docs/reviews/<CR>-Design-Review.md` | Verdict and open issues, required by `verify completion` |
-| Evidence bundle | `medharness evidence bundle` output | Test results and traceability state at merge |
+| Design review | `docs/reviews/<CR>-Design-Review.md` | Verdict and open issues, written by `build plan` |
+| Release evidence | `medharness build release` output | Specifications, traceability, test evidence and a hashed manifest, per release |
 
 The model is never the record. Git is the record, and every AI action lands as a reviewable commit attributed to the CR.
 
@@ -101,7 +101,7 @@ The model is never the record. Git is the record, and every AI action lands as a
 
 MedHarness treats the AI as a **tool operated under design control**, not as a validated component of your device. The generated output is a design input proposal and a code proposal; the controls that make it acceptable are the review and verification gates around it, which are deterministic and testable.
 
-Under IEC 62304, this places the AI stages in your **software development process** rather than in the device software itself. Your `verify` gates and review records are the process evidence. If your quality system requires tool validation for development tools, the deterministic commands (`dhfkit`, `verify *`, `evidence bundle`) are the ones with defined inputs and outputs suitable for that exercise — the AI stages are not, and should not be relied on as a validated transformation.
+Under IEC 62304, this places the AI stages in your **software development process** rather than in the device software itself. Your `verify` gates and review records are the process evidence. If your quality system requires tool validation for development tools, the deterministic commands (`dhfkit`, `verify *`, `build release`) are the ones with defined inputs and outputs suitable for that exercise — the AI stages are not, and should not be relied on as a validated transformation.
 
 Nothing here is regulatory advice. How you classify and justify AI-assisted development in your QMS is your organisation's decision.
 
@@ -109,15 +109,14 @@ Nothing here is regulatory advice. How you classify and justify AI-assisted deve
 
 ## Disabling AI entirely
 
-Remove the AI stage jobs from `.github/workflows/dhf.yml` and never invoke `build plan` / `build code`. Everything else keeps working:
+Never invoke `build plan` or `build code` — the shipped CI recipe runs neither. Everything else keeps working:
 
 ```bash
-dhfkit --dhf DHF validate links
-medharness --dhf DHF verify dhf
+dhfkit --dhf DHF validate schema
 medharness --dhf DHF verify dhf
 medharness --dhf DHF verify tests --junit-dir test-results
 medharness --dhf DHF verify soup
-medharness --dhf DHF evidence bundle --out-dir artifacts
+medharness --dhf DHF build release --version 1.0.0 --out-dir release
 ```
 
 No model credentials, no `claude` CLI, no network calls to any model provider.

@@ -48,7 +48,8 @@ def register(main):
         """Design context for an AI agent or a CI step."""
 
     @dhf_context.command("implementation")
-    @click.option("--cr", "cr_id", required=True, metavar="CR_ID")
+    @click.option("--cr", "cr_id", required=True, metavar="CR_ID",
+                  help="The CR to be implemented.")
     @click.pass_context
     def dhf_context_implementation(ctx: click.Context, cr_id: str) -> None:
         """What an agent needs to implement a CR: the CR, the item set, the modules.
@@ -80,7 +81,8 @@ def register(main):
 
     @dhf_context.command("for-stage")
     @click.argument("stage", type=click.Choice(["analyze", "design", "develop"]))
-    @click.option("--cr", "cr_id", required=True, metavar="CR_ID")
+    @click.option("--cr", "cr_id", required=True, metavar="CR_ID",
+                  help="The CR at that stage.")
     @click.pass_context
     def dhf_context_for_stage(ctx: click.Context, stage: str, cr_id: str) -> None:
         """Output scoped DHF context for a specific workflow stage.
@@ -99,8 +101,6 @@ def register(main):
         adapter = _h._make_adapter(ctx.obj["dhf"])
 
         cr = adapter.get_item(cr_id)
-        cr_summary = ({"id": cr_id, "title": cr.get("title", ""), "status": cr.get("status", "")}
-                      if cr else {"id": cr_id, "found": False})
 
         if stage == "analyze":
             items = adapter.list_items()
@@ -170,13 +170,16 @@ def register(main):
         click.echo(json.dumps(result, default=str))
 
     @dhf_context.command("overview")
-    @click.option("--cr", "cr_id", default=None, metavar="CR_ID")
-    @click.option("--junit", "junit_files", multiple=True, type=click.Path(exists=True, dir_okay=False, path_type=Path))
-    @click.option("--junit-dir", "junit_dirs", multiple=True, type=click.Path(file_okay=False, path_type=Path))
+    @click.option("--cr", "cr_id", default=None, metavar="CR_ID",
+                  help="Add this CR's id, title and status, or found: false.")
+    @click.option("--junit", "junit_files", multiple=True, type=click.Path(exists=True, dir_okay=False, path_type=Path),
+                  help="A JUnit XML results file (repeatable).")
+    @click.option("--junit-dir", "junit_dirs", multiple=True, type=click.Path(file_okay=False, path_type=Path),
+                  help="Directory of JUnit XML results (repeatable). Without any, test_coverage is {\"computed\": false}.")
     @click.pass_context
     def dhf_context_overview(ctx: click.Context, cr_id: str | None,
                               junit_files: tuple[Path, ...], junit_dirs: tuple[Path, ...]) -> None:
-        """Output DHF overview as JSON for AI agents (item summaries, traceability gaps)."""
+        """Summarize the whole DHF: every item, traceability, and test coverage."""
         adapter = _h._make_adapter(ctx.obj["dhf"])
         result: dict = {"project": adapter.config.project_name}
 

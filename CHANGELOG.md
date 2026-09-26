@@ -11,6 +11,89 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.35.0] — 2026-09-26
+
+A review of every command, option and document. The surface is now seven
+top-level commands on `medharness` — `build`, `context`, `doctor`, `init`,
+`upgrade`, `verify`, `workflow` — and one rule for finding the DHF on both CLIs.
+
+### Breaking Changes
+
+- **`build release` replaces `evidence bundle` and `release baseline`.** One
+  command, one output directory: the baseline, software BOM, CycloneDX SBOM,
+  specifications, traceability, test evidence, and a manifest hashing every
+  file — written last, so it covers the baseline too. The `evidence` and
+  `release` groups are gone.
+
+  It checks the DHF with `verify dhf`'s own gate, coverage gaps failing, instead
+  of the bundle's private "acceptance gate". That gate failed **every** starter
+  DHF: CR, DEF, REL and SOUP items were "orphans" for not linking anywhere,
+  which they are not meant to. `--continue-on-gate-failure` existed to get past
+  it, and is gone with it.
+
+  `--write` records the REL item **only when every check passed**. Before, a
+  release whose BOM collection or artifact writing failed was recorded anyway,
+  with errors beside it.
+
+  The shipped CI recipe no longer builds evidence on every push to `main`; the
+  tag-triggered `release` job runs `build release`.
+
+- **`--dhf` goes before the command, and defaults to `DHF`.** Five `medharness`
+  commands also accepted it after the command; the rest rejected it. It now
+  lives only on the root of both CLIs, so from a project root neither needs it.
+  `dhfkit`'s `COMPLIANTFLOW_DHF` environment variable — the name of an earlier
+  product — is gone, and so is the undocumented `dhf` alias for `dhfkit`.
+
+- **`verify dhf --run-schema/--run-traceability` are removed.** Nothing turned
+  them off except two tests, and turning both off made the gate pass having
+  checked zero items.
+
+- **`doctor` and `init` answer in JSON**, like every other command, with the
+  readable lines on stderr. `doctor --json` is gone. `init`'s printed next steps
+  named a removed command and an option the command no longer took; they now
+  run as written.
+
+- `CONTRACT_VERSION` moves to `9.0`.
+
+### Fixed
+
+- **`docs/interface.md` taught callers to discover gates through
+  `medharness gates`, removed in #299** — the section's code block was empty
+  and the agent example called it. The document now carries a table of the six
+  gates, checked against the CLI. Two gates were listed as always blocking
+  while having flag-controlled warnings: `verify tests` and `verify soup` are
+  `conditional`.
+- **The documented-commands guard passed every `dhfkit` example vacuously.**
+  `dhfkit`'s root raised "`--dhf` must be set" before Click could say "No such
+  command", and the guard only checked that phrase was absent — so
+  `dhfkit validate links`, removed long ago, stayed in `ai-security.md`. It now
+  requires `--help` to succeed, and reads commands written as Python argument
+  lists too.
+- The gate manifest listed `--dhf` as each gate's required option and omitted
+  three real ones; it is now checked in both directions.
+- Stale text corrected across `CLAUDE.md`, `architecture.md`, `adopting.md`,
+  `ai-security.md`, the README, prompts and templates: a `ci` command group,
+  `cr workflow`, `approval import`, `validate links`, `generate-dhf`,
+  `develop-cr`, a design-review check `verify completion` stopped making in
+  0.30, and a closure gate said to run "after the merge".
+- `doctor`'s `gh` check printed `gh auth status`'s whole block, cut off
+  mid-word; it now reports the account line.
+
+### Changed
+
+- Every option has help text — 39 had none. Command summaries now say what the
+  command decides: `verify dhf`, `verify soup` (which also checks drift),
+  `verify tests`, `verify completion`, `build plan` and `build code` (which take
+  any `provider:model`, not only Claude), `workflow github-event`,
+  `context overview`.
+- Removed code nothing called: the `/approve`–`/reject` comment parser, stage
+  labels, `close_pr` and `post_comment` from the approval flow retired in
+  0.24–0.30; `workflows/cr_intake.py` and `dhfkit/change_requests.py`, the
+  backend of the `cr workflow` commands removed in 0.24; the label helpers; the
+  safety-class constants 0.31 left behind; and the always-empty
+  `compliance_reports`.
+- `docs/adopting.md` gains a section on cutting a release.
+
 ## [0.34.0] — 2026-09-26
 
 ### Fixed

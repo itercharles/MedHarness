@@ -1,8 +1,8 @@
-"""Release baseline builder — IEC 62304 §9 release record automation.
+"""Everything one release needs, built in one pass — IEC 62304 §9.
 
-Verifies that all included CRs are in `completed` state, collects the
-software BOM from DHF SOUP items, and writes a release baseline JSON artifact.
-Optionally creates a REL item in the DHF.
+`build_release` checks the DHF and the included CRs, writes the baseline, the
+software BOM and the evidence bundle to one directory, and — only when all of
+that passed — records the REL item.
 """
 
 from __future__ import annotations
@@ -205,13 +205,8 @@ def build_release_baseline(
     manifest_paths: list[Path],
     cr_ids: list[str],
     out_dir: Path,
-    *,
-    write: bool = False,
 ) -> dict:
-    """Build a release baseline, write artifacts, optionally create a REL item.
-
-    Returns a structured result dict.
-    """
+    """Check the CRs and anomalies, and write the baseline and BOM artifacts."""
     import dhfkit.api as api
 
     errors: list[str] = []
@@ -230,12 +225,10 @@ def build_release_baseline(
             "outcome": "completed_with_errors",
             "version": version,
             "cr_ids": sorted(cr_ids),
-            "rel_uid": None,
             "gate_violations": gate_violations,
             "artifacts": [],
             "soup_count": 0,
             "manifest_packages_count": 0,
-            "write": write,
             "errors": errors,
         }
 
@@ -247,13 +240,11 @@ def build_release_baseline(
             "outcome": "completed_with_errors",
             "version": version,
             "cr_ids": sorted(cr_ids),
-            "rel_uid": None,
             "gate_violations": gate_violations,
             "known_anomalies": known_anomalies,
             "artifacts": [],
             "soup_count": 0,
             "manifest_packages_count": 0,
-            "write": write,
             "errors": errors,
         }
 
@@ -329,42 +320,87 @@ def build_release_baseline(
         )
         sbom_path, _changed = write_sbom(document, out_dir / "sbom.cdx.json")
         artifacts.append(str(sbom_path))
-        sbom_without_purl = sum(
-            1 for c in document["components"] if "purl" not in c
-        )
     except Exception as exc:  # noqa: BLE001
         errors.append(f"Failed to write sbom.cdx.json: {exc}")
-        sbom_without_purl = 0
 
-    # Optionally create a REL item
-    rel_uid: Optional[str] = None
-    if write:
-        try:
-            rel_data = {
-                "type": "REL",
-                "version": version,
-                "included_items": sorted(cr_ids),
-                # §9.7: the anomalies this release ships with, carried on the
-                # record rather than only in the generated artifact.
-                "known_anomalies": known_anomalies,
-                "release_notes": release_notes,
-            }
-            new_item = api.create_item(dhf, rel_data)
-            rel_uid = new_item["id"]
-        except Exception as exc:  # noqa: BLE001
-            errors.append(f"Failed to create REL item: {exc}")
-
-    outcome = "completed_with_errors" if errors else "completed"
     return {
-        "outcome": outcome,
+        "outcome": "completed_with_errors" if errors else "completed",
         "version": version,
         "cr_ids": sorted(cr_ids),
-        "rel_uid": rel_uid,
         "known_anomalies": known_anomalies,
+        "release_notes": release_notes,
         "artifacts": artifacts,
         "soup_count": soup_count,
         "manifest_packages_count": manifest_packages_count,
-        "sbom_without_purl": sbom_without_purl,
-        "write": write,
+        "errors": errors,
+    }
+
+
+def record_release(dhf: Path, baseline: dict) -> str:
+    """Create the REL item for a baseline that passed. Returns its ID."""
+    import dhfkit.api as api
+
+    item = api.create_item(dhf, {
+        "type": "REL",
+        "version": baseline["version"],
+        "included_items": baseline["cr_ids"],
+        # §9.7: the anomalies this release ships with, carried on the record
+        # rather than only in the generated artifact.
+        "known_anomalies": baseline["known_anomalies"],
+        "release_notes": baseline["release_notes"],
+    })
+    return item["id"]
+
+
+def build_release(
+    dhf: Path,
+    version: str,
+    out_dir: Path,
+    *,
+    manifest_paths: list[Path] = (),
+    cr_ids: list[str] = (),
+    junit_paths: list[Path] = (),
+    coverage_pairs: tuple[str, ...] = (),
+    traceability_types: tuple[str, ...] = (),
+    run_id: str = "",
+    run_url: str = "",
+    commit_sha: str = "",
+    doc_format: str = "html",
+    write: bool = False,
+) -> dict:
+    """Check, build and optionally record one release.
+
+    The DHF is checked by `verify dhf`'s own gate with coverage gaps failing: a
+    release is not the place for advisory findings, and a second definition of
+    "the DHF is sound" is how two gates came to disagree before.
+    """
+    from medharness.services.ci import build_evidence_bundle, ci_structural_gate
+
+    gate = ci_structural_gate(dhf, coverage_pairs=coverage_pairs, fail_on_uncovered=True)
+    baseline = build_release_baseline(dhf, version, list(manifest_paths), list(cr_ids), out_dir)
+    # Last, so its manifest hashes the baseline's files as well as its own.
+    manifest = build_evidence_bundle(
+        dhf, out_dir, junit_paths=list(junit_paths), traceability_types=traceability_types,
+        run_id=run_id, run_url=run_url, commit_sha=commit_sha, doc_format=doc_format,
+        gate=gate,
+    )
+
+    errors = [f"DHF: {e}" for e in gate["errors"]] + baseline["errors"]
+    rel_uid: Optional[str] = None
+    if write and not errors:
+        try:
+            rel_uid = record_release(dhf, baseline)
+        except Exception as exc:  # noqa: BLE001
+            # The artifacts are written; a REL the store refused is reported,
+            # not raised, so the run still says what it produced.
+            errors.append(f"Failed to create REL item: {exc}")
+
+    return {
+        "outcome": "completed_with_errors" if errors else "completed",
+        "version": version,
+        "cr_ids": baseline["cr_ids"],
+        "rel_uid": rel_uid,
+        "soup_count": baseline["soup_count"],
+        "artifacts": [f["path"] for f in manifest["files"]],
         "errors": errors,
     }

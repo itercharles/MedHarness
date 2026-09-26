@@ -81,14 +81,3 @@ def test_the_walk_does_not_touch_the_checkout(tmp_path: Path) -> None:
         ["git", "status", "--porcelain"], capture_output=True, text=True, cwd=str(ROOT)
     ).stdout
     assert after == before, f"running init changed the checkout:\n{after}"
-
-
-class TestTheHelperIsWhereTheCheckLives:
-    def test_a_none_dhf_is_rejected_cleanly(self) -> None:
-        import click
-
-        from medharness._helpers import _make_adapter
-
-        with pytest.raises(click.ClickException) as excinfo:
-            _make_adapter(None)
-        assert "--dhf is required" in str(excinfo.value)

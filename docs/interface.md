@@ -1,7 +1,7 @@
 # Machine interface
 
 > **Stability:** Stable
-> **Last reviewed:** 2026-08-26
+> **Last reviewed:** 2026-09-26
 
 Every verification gate is a command you can call from a pipeline, a script, or an agent. This is the contract those callers build against: one result shape, defined exit codes, and a statement of what may change.
 
@@ -9,26 +9,20 @@ MedHarness deliberately does not scaffold a CI workflow — a pipeline carries y
 
 ---
 
-## Discovering what exists
+## The gates
 
-```bash
-```
+| Gate | Reads | Needs | Network | Blocking |
+|------|-------|-------|---------|----------|
+| `verify dhf` | the DHF | — | no | `conditional` |
+| `verify tests` | the DHF, JUnit results | `--junit-dir` or `--junit` | no | `conditional` |
+| `verify soup` | the DHF, dependency manifests | — | osv.dev | `conditional` |
+| `verify completion` | the DHF | `--cr` | no | `always` |
+| `workflow check-changes` | the DHF, the git diff | `--cr` | no | `always` |
+| `workflow check-approval` | the pull request's reviews | `--cr`, `--pr` | GitHub | `always` |
 
-The JSON manifest lists every gate with what it checks, the standard clauses it serves, the options it requires, whether it reaches the network, and whether its failure blocks a build. A caller that reads the manifest does not need this document hard-coded into it.
+`verify *` answers from the DHF alone, so it runs anywhere the DHF is. `workflow *` cannot answer without the repository; those are CI helpers. Every command takes `--dhf PATH` before the command name, defaulting to `DHF`.
 
-```json
-{
-  "envelope": ["gate", "passed", "summary", "errors", "warnings"],
-  "exit_codes": {
-    "0": "gate passed; JSON on stdout",
-    "1": "gate failed (JSON on stdout), or a usage error raised before the gate ran (no stdout)",
-    "2": "argument parsing error; no stdout"
-  },
-  "gates": [ { "command": "verify soup", "blocking": "always", ... } ]
-}
-```
-
-The manifest is checked against the live command tree by the test suite, so it cannot describe a gate that does not exist or omit one that does.
+The table is checked against the gates the CLI registers, so it cannot list one that does not exist or omit one that does.
 
 ---
 
@@ -68,7 +62,7 @@ A gate that fails always populates `errors`. That is enforced by the test suite 
 |------|--------|---------|
 | `0` | JSON | Gate passed |
 | `1` | JSON | Gate ran and failed — see `errors` |
-| `1` | *empty* | Usage error raised before the gate ran, e.g. a missing `--dhf` |
+| `1` | *empty* | The gate never ran: e.g. a DHF that could not be read |
 | `2` | *empty* | Argument parsing error, e.g. an unknown flag |
 
 A pipeline that only checks exit status is a valid consumer and needs to parse nothing — which is how the reference project consumes these.
@@ -86,14 +80,18 @@ result = json.loads(line[0])
 
 ## What blocks a build
 
-The manifest gives each gate a `blocking` value:
+The `Blocking` column above means:
 
 | Value | Meaning |
 |-------|---------|
 | `always` | Any finding fails the gate |
 | `conditional` | Some findings always fail; others only under a flag |
 
-Every `conditional` gate carries a `blocking_note` saying when — "sometimes blocks" is useless without the condition. The suite asserts that note is present.
+For the `conditional` gates, which findings fail and which only warn:
+
+- `verify dhf` — schema errors, required-link failures and dangling links always fail. Coverage gaps warn unless `--fail-on-uncovered`.
+- `verify tests` — uncovered requirements and unverified tests always fail. A missing `verification_method` warns unless `--require-method`.
+- `verify soup` — known vulnerabilities always fail, and so does an unreachable osv.dev unless `--offline-mode warn`. Drift from the manifests warns unless `--fail-on-drift`.
 
 One distinction worth knowing before you wire anything. **Broken references versus incomplete design:** `verify dhf` always fails on a link whose target does not exist — that is a typo or a deleted item. An item with no downstream child yet is normal mid-project and only fails under `--fail-on-uncovered`. They need different fixes, so they are reported differently.
 
@@ -106,7 +104,7 @@ What a caller may rely on:
 - **The five envelope keys** are stable. New keys may be added at the top level; existing ones will not be removed or change type without a major version.
 - **Exit code meanings** are stable.
 - **stderr is not a contract.** It is written for a person and its wording changes freely. Never parse it — the same information is in `errors` and `warnings`.
-- **The manifest is the source of truth** for which gates exist and what they require. Prefer reading it over hard-coding a list.
+- **The set of gates.** A new gate is announced in the changelog; a renamed or removed one is a breaking change.
 
 Changes to any of the stable items are called out under **Breaking Changes** in the changelog.
 
@@ -137,32 +135,26 @@ exit "$(jq -r 'if .passed then 0 else 1 end' result.json)"
 
 ### From an agent or a script
 
-Because every gate answers alike, one loop covers all of them — including gates added later:
+Because every gate answers alike, one loop covers all of them:
 
 ```python
 import json, subprocess
 
-manifest = json.loads(
-    subprocess.run(["medharness", "gates", "--json"],
-                   capture_output=True, text=True).stdout
-)
+GATES = [
+    ["verify", "dhf", "--fail-on-uncovered"],
+    ["verify", "tests", "--junit-dir", "test-results"],
+    ["verify", "soup"],
+]
 
-for gate in manifest["gates"]:
-    if gate["needs_network"] and offline:
-        continue
-    proc = subprocess.run(
-        ["medharness", "--dhf", "DHF", *gate["command"].split(), *args_for(gate)],
-        capture_output=True, text=True,
-    )
+for gate in GATES:
+    proc = subprocess.run(["medharness", *gate], capture_output=True, text=True)
     lines = proc.stdout.splitlines()
-    if not lines:                 # usage error; the gate never ran
-        raise SystemExit(f"{gate['command']}: {proc.stderr.strip()}")
+    if not lines:                 # the gate never ran
+        raise SystemExit(f"{' '.join(gate)}: {proc.stderr.strip()}")
     result = json.loads(lines[0])
     if not result["passed"]:
         report(result["gate"], result["errors"])
 ```
-
-`args_for` supplies what the manifest says the gate requires — `--cr` for the CR-scoped gates, `--junit-dir` for the ones that read evidence.
 
 ---
 
@@ -192,6 +184,6 @@ has to ask the API.
 
 ## Beyond the gates
 
-`dhfkit` follows the same output convention for DHF data operations — item CRUD, validation, document generation, SOUP sync, release baselines — but those commands predate the envelope and keep their own result shapes. Read `--help` for the command you need. `dhfkit` has no dependency on `medharness`, so a project that wants only the engine can use it alone; see [adopting.md](adopting.md#using-dhfkit-standalone).
+`dhfkit` follows the same output convention for DHF data operations — item CRUD, schema validation, document generation, the SBOM — but those commands predate the envelope and keep their own result shapes. Read `--help` for the command you need. `dhfkit` has no dependency on `medharness`, so a project that wants only the engine can use it alone; see [adopting.md](adopting.md#using-dhfkit-standalone).
 
-The AI stages (`build plan`, `build code`) are not gates and do not answer with the envelope. They report progress and outcomes in their own shape, documented in [adopting.md](adopting.md#ai-assisted-cr-workflow), and their execution boundary is described in [ai-security.md](ai-security.md).
+The `build` commands are not gates and do not answer with the envelope. `build plan` and `build code` report progress and outcomes in their own shape, documented in [adopting.md](adopting.md#ai-assisted-cr-workflow), and their execution boundary is described in [ai-security.md](ai-security.md).

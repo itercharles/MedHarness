@@ -16,7 +16,7 @@ from pathlib import Path
 import pytest
 
 from medharness.services.ci import ENVELOPE_KEYS
-from medharness.services.gates import BLOCKING, GATES, gates_manifest
+from medharness.services.gates import BLOCKING, GATES
 
 DOC = Path(__file__).resolve().parents[2] / "docs" / "interface.md"
 
@@ -50,26 +50,34 @@ class TestEnvelopeIsDocumentedAccurately:
 
 class TestExitCodesMatch:
     def test_documented_codes_are_the_real_ones(self, text: str) -> None:
+        """0 passed, 1 failed or never ran, 2 Click's own usage error."""
         documented = set(re.findall(r"^\|\s*`(\d)`\s*\|", text, re.M))
-        assert documented == set(gates_manifest()["exit_codes"])
+        assert documented == {"0", "1", "2"}
 
-    def test_the_sample_manifest_matches_the_real_one(self, text: str) -> None:
-        """The sample is what a reader believes; comparing keys is not enough.
 
-        The exit-code table and the sample manifest drifted apart once already
-        — the table was corrected and the sample kept the superseded wording.
-        """
-        import json
+class TestTheGateTableMatchesTheCLI:
+    """The table replaced a manifest command that nobody called. It is what a
+    reader believes about which gates exist and when they block."""
 
-        blocks = re.findall(r"```json\n(\{.*?\n\})\n```", text, re.S)
-        sample = next((b for b in blocks if '"exit_codes"' in b), None)
-        assert sample, "no sample manifest in the document"
+    def _rows(self, text: str) -> dict[str, tuple[str, str]]:
+        rows = re.findall(
+            r"^\|\s*`((?:verify|workflow) [a-z-]+)`\s*\|[^|]*\|[^|]*\|\s*([^|]+?)\s*\|\s*`(\w+)`\s*\|",
+            text, re.M,
+        )
+        return {cmd: (network, blocking) for cmd, network, blocking in rows}
 
-        # Elide the illustrative "..." in the gates list before parsing.
-        parsed = json.loads(re.sub(r'"gates":.*?\]', '"gates": []', sample, flags=re.S))
-        real = gates_manifest()
-        assert parsed["envelope"] == real["envelope"]
-        assert parsed["exit_codes"] == real["exit_codes"]
+    def test_every_gate_has_a_row_and_no_row_is_invented(self, text: str) -> None:
+        assert set(self._rows(text)) == {g["command"] for g in GATES}
+
+    @pytest.mark.parametrize("gate", GATES, ids=lambda g: g["command"])
+    def test_the_row_says_how_it_blocks_and_whether_it_needs_the_network(
+        self, gate: dict, text: str,
+    ) -> None:
+        network, blocking = self._rows(text)[gate["command"]]
+        assert blocking == gate["blocking"], f"{gate['command']}: doc says {blocking}"
+        assert (network != "no") == gate["needs_network"], (
+            f"{gate['command']}: doc says network {network!r}"
+        )
 
 
 class TestBlockingVocabulary:

@@ -14,7 +14,7 @@ def register(main):
         Existing files are not overwritten.
         """
         from medharness.workflows.init import run_init
-        run_init()
+        click.echo(json.dumps(run_init()))
 
     @main.command("upgrade")
     @click.option("--apply", is_flag=True, default=False,

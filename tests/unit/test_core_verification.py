@@ -160,36 +160,3 @@ class TestCRPhases:
         assert CRPhase.REJECTED not in ACTIVE_PHASES
 
 
-class TestIssueCommentPagination:
-    """gh api truncates at 100 without --paginate; --slurp then nests the pages."""
-
-    def _call(self, monkeypatch, stdout: str):
-        import subprocess
-        from medharness import _helpers
-
-        captured = {}
-
-        def _fake_run(command, **kwargs):
-            captured["command"] = command
-            return subprocess.CompletedProcess(command, 0, stdout, "")
-
-        monkeypatch.setattr(_helpers.subprocess, "run", _fake_run)
-        result = _helpers._load_issue_comments(
-            comments_path=None, source_repo="acme/cl",
-            issue_number=7, source_token="t",
-        )
-        return result, captured["command"]
-
-    def test_paginate_and_slurp_are_requested(self, monkeypatch) -> None:
-        _, command = self._call(monkeypatch, "[[]]")
-        assert "--paginate" in command
-        assert "--slurp" in command
-
-    def test_pages_are_flattened(self, monkeypatch) -> None:
-        stdout = '[[{"body":"a"},{"body":"b"}],[{"body":"c"}]]'
-        result, _ = self._call(monkeypatch, stdout)
-        assert [c["body"] for c in result] == ["a", "b", "c"]
-
-    def test_unslurped_array_still_accepted(self, monkeypatch) -> None:
-        result, _ = self._call(monkeypatch, '[{"body":"a"}]')
-        assert [c["body"] for c in result] == ["a"]

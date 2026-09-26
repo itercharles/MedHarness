@@ -62,8 +62,12 @@ def run_doctor(dhf_path: Optional[Path] = None) -> dict:
                 capture_output=True, text=True, timeout=5,
             )
             passed = result.returncode == 0
-            detail = (result.stdout + result.stderr).strip() or ("authenticated" if passed else "not authenticated")
-            checks.append(_check("gh_cli_auth", passed, detail[:120]))
+            # `gh auth status` prints a block per host; the account line is the answer.
+            lines = [ln.strip(" ✓X-") for ln in (result.stdout + result.stderr).splitlines()]
+            detail = (next((ln for ln in lines if ln.startswith("Logged in")), None)
+                      or next((ln for ln in lines if ln), "")
+                      or ("authenticated" if passed else "not authenticated"))
+            checks.append(_check("gh_cli_auth", passed, detail))
         except Exception as exc:
             checks.append(_check("gh_cli_auth", False, str(exc)))
     else:

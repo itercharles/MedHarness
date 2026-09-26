@@ -27,10 +27,8 @@ GATES: tuple[dict[str, Any], ...] = (
         "checks": "Schema validity, required traceability, dangling links, and "
                   "coverage between V-model layers.",
         "options": {
-            "required": ["--dhf"],
-            "optional": ["--fail-on-uncovered", "--coverage-pair",
-                         "--run-schema/--no-run-schema",
-                         "--run-traceability/--no-run-traceability"],
+            "required": [],
+            "optional": ["--fail-on-uncovered", "--coverage-pair"],
         },
         "blocking": "conditional",
         "blocking_note": "Schema errors, required-link failures, and dangling "
@@ -43,21 +41,24 @@ GATES: tuple[dict[str, Any], ...] = (
         "checks": "Requirement-to-test coverage from JUnit evidence, including "
                   "declared test points.",
         "options": {
-            "required": ["--dhf", "--junit-dir or --junit"],
-            "optional": ["--requirement-type"],
+            "required": ["--junit-dir or --junit"],
+            "optional": ["--requirement-type", "--require-method"],
         },
-        "blocking": "always",
-        "blocking_note": "",
+        "blocking": "conditional",
+        "blocking_note": "Uncovered requirements and unverified tests always fail. "
+                         "A missing verification_method warns unless --require-method.",
         "needs_network": False,
     },
     {
         "command": "verify soup",
-        "checks": "SOUP items against the OSV vulnerability database, honouring "
+        "checks": "The SOUP register against the dependency manifests, and each "
+                  "item against the OSV vulnerability database, honouring "
                   "documented per-CVE acceptances.",
-        "options": {"required": ["--dhf"], "optional": ["--offline-mode"]},
-        "blocking": "always",
-        "blocking_note": "An unreachable osv.dev fails by default; "
-                         "--offline-mode warn tolerates it for air-gapped runners.",
+        "options": {"required": [], "optional": ["--manifest", "--fail-on-drift", "--offline-mode"]},
+        "blocking": "conditional",
+        "blocking_note": "Known vulnerabilities always fail, and so does an unreachable "
+                         "osv.dev unless --offline-mode warn. Drift from the manifests "
+                         "warns unless --fail-on-drift.",
         "needs_network": True,
     },
     {
@@ -65,7 +66,7 @@ GATES: tuple[dict[str, Any], ...] = (
         "checks": "CR closure: mandatory CR fields, the items the CR proposed, "
                   "and test evidence for each. Approval is `workflow check-approval`.",
         "options": {
-            "required": ["--dhf", "--cr"],
+            "required": ["--cr"],
             "optional": ["--junit-dir", "--junit"],
         },
         "blocking": "always",
@@ -76,7 +77,7 @@ GATES: tuple[dict[str, Any], ...] = (
         "command": "workflow check-changes",
         "checks": "That a branch carries the DHF and code changes its CR implies.",
         "options": {
-            "required": ["--dhf", "--cr"],
+            "required": ["--cr"],
             "optional": ["--since-ref", "--code-path"],
         },
         "blocking": "always",
@@ -97,21 +98,3 @@ GATES: tuple[dict[str, Any], ...] = (
         "needs_network": True,
     },
 )
-
-
-def gates_manifest() -> dict[str, Any]:
-    """Return the manifest, including the envelope every gate answers with."""
-    from medharness.services.ci import ENVELOPE_KEYS
-
-    return {
-        "envelope": list(ENVELOPE_KEYS),
-        # 1 covers two cases the caller must distinguish by stdout: a gate that
-        # ran and failed writes JSON; a usage error raised before it ran does not.
-        "exit_codes": {
-            "0": "gate passed; JSON on stdout",
-            "1": "gate failed (JSON on stdout), or a usage error raised before "
-                 "the gate ran (no stdout)",
-            "2": "argument parsing error; no stdout",
-        },
-        "gates": list(GATES),
-    }

@@ -11,8 +11,8 @@ MedHarness ships two Python packages from a single repository:
 
 | Package | CLI | Role |
 |---------|-----|------|
-| `medharness` | `medharness` | AI harness: traceability analysis over the item set, scaffolding, verification, change workflows, approval flow |
-| `dhfkit` | `dhfkit` / `dhf` | DHF storage: item CRUD, lifecycle, link integrity, document generation, SOUP sync, release baseline |
+| `medharness` | `medharness` | The process: traceability analysis over the item set, verification gates, the AI change workflow, SOUP sync, releases, scaffolding |
+| `dhfkit` | `dhfkit` | DHF storage: item CRUD, lifecycle, link integrity, document generation, SBOM |
 
 ### `medharness` owns
 
@@ -20,10 +20,11 @@ MedHarness ships two Python packages from a single repository:
   links, link cycles, risk chains, which risks a change touches
   (`services/traceability.py`)
 - CLI surface and user-facing onboarding (`medharness init`)
-- Verification commands (`verify dhf`, `verify tests`, `workflow check-changes`, `evidence bundle`)
+- Verification gates over the DHF (`verify dhf`, `verify tests`, `verify soup`, `verify completion`)
+- Gates over the repository (`workflow check-changes`, `workflow check-approval` — an approving review of the merged commit)
 - AI-assisted CR generation (`build plan`, `build code`)
-- Approval as evidence (`workflow check-approval` — an approving review of the merged commit)
-- CR workflow orchestration (`cr workflow`, `cr check-status`)
+- SOUP sync from dependency manifests (`build dhf`)
+- Releases: baseline, BOM, SBOM, evidence bundle and REL item (`build release`)
 - DHF repo scaffolding from bundled templates (`medharness init`, `medharness upgrade`)
 - Environment and setup diagnostics (`medharness doctor`)
 - Adapter protocol for pluggable DHF backends
@@ -32,15 +33,11 @@ MedHarness ships two Python packages from a single repository:
 
 - Item CRUD and lifecycle state machine
 - Project config loading and doc-type schema rendering
-- Referential integrity of stored links (`validate links`)
-- Document generation (Jinja2 → Markdown → PDF)
-- JUnit XML parsing and CI artifact fetching
+- Schema validation of stored items (`validate schema`), and dangling-link detection
+- Document generation (Jinja2 → Markdown → HTML/PDF)
+- JUnit XML parsing, and the pytest plugin that writes the properties it reads
 - Git-backed YAML repository layer (loader/saver)
-- Result store for test result history
-- SOUP manifest synchronisation (`build dhf`)
-- Release baseline builder (`release-baseline`)
 - CycloneDX SBOM serialisation from the SOUP register (`sbom`)
-- Approval records as DHF items (`approval import`, `approval show`)
 
 ### The line between them
 
@@ -84,7 +81,7 @@ scaffold current across versions. `dhfkit` manages records; it does not manage
 the shape of the repository that holds them, and giving it a "write my config
 file" API to satisfy a rule would put storage in the business of scaffolding.
 
-Everywhere else, medharness asks the store. `evidence bundle` reads plan documents
+Everywhere else, medharness asks the store. `build release` reads plan documents
 through `list_documents("plans")` and `get_document()`; `upgrade` reads the
 project name through `ProjectConfig.load()` rather than the regex it used to
 apply to global.yaml — which took a trailing comment as part of the name.

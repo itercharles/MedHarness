@@ -16,7 +16,6 @@ traceback.
 
 from __future__ import annotations
 
-import sys
 
 import click
 
@@ -36,12 +35,11 @@ class DHFAwareGroup(click.Group):
         except DHFDataError as exc:
             raise click.ClickException(f"The DHF could not be read: {exc}") from exc
         except FileNotFoundError as exc:
-            # A missing global.yaml is the common case: pointing --dhf at a
-            # directory that is not a DHF.
-            raise click.ClickException(f"The DHF could not be read: {exc}") from exc
+            # A missing global.yaml is the common case: running outside the
+            # project, or a DHF that does not live at ./DHF.
+            raise click.ClickException(
+                f"The DHF could not be read: {exc}. Run from the project root, "
+                f"or pass --dhf PATH before the command."
+            ) from exc
 
 
-def report_dhf_error(exc: Exception) -> None:
-    """For code paths outside a Click group."""
-    click.echo(f"ERROR: The DHF could not be read: {exc}", err=True)
-    sys.exit(1)

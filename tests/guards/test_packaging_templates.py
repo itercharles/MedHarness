@@ -180,7 +180,9 @@ class TestRecipeCommandsParse:
     """
 
     def test_the_scan_found_commands(self) -> None:
-        assert len(RECIPE_CALLS) >= 3, f"only found {RECIPE_CALLS}"
+        """Both jobs' commands: `verify dhf` on every PR, `build release` on tags."""
+        found = {call[3:5] for call in RECIPE_CALLS}
+        assert found == {("verify", "dhf"), ("build", "release")}, f"found {RECIPE_CALLS}"
 
     @pytest.mark.parametrize(
         "call", RECIPE_CALLS, ids=[" ".join(c[:3]) for c in RECIPE_CALLS]
