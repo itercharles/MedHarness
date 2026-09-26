@@ -326,6 +326,8 @@ class LocalDHFAdapter:
                 data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
             except (OSError, yaml.YAMLError):
                 continue  # a file that will not parse is the loader's to report
+            if not isinstance(data, dict):
+                continue
             uid = str(data.get("id") or "").strip()
             if uid:
                 seen.setdefault(uid, []).append(

@@ -5,9 +5,27 @@ from __future__ import annotations
 from enum import Enum
 from pathlib import Path
 from pydantic import BaseModel, Field
+from pydantic import ValidationError as SchemaError
 from typing import List, Optional, Union, Any
 
 import yaml
+
+from dhfkit.exceptions import DHFDataError
+
+
+def _read_mapping(path: Path) -> dict:
+    """A config file's contents, or a DHFDataError that names the file."""
+    try:
+        data = yaml.safe_load(path.read_text(encoding="utf-8"))
+    except yaml.YAMLError as exc:
+        raise DHFDataError(f"{path} is not valid YAML: {exc}") from exc
+    if data is None:
+        return {}
+    if not isinstance(data, dict):
+        raise DHFDataError(
+            f"{path} must be a mapping of keys to values, not a {type(data).__name__}"
+        )
+    return data
 
 
 class PropertyFormat(str, Enum):
@@ -112,15 +130,18 @@ class ProjectConfig(BaseModel):
         global_path = config_dir / "global.yaml"
         if not global_path.exists():
             raise FileNotFoundError(f"global.yaml not found at {global_path}")
-        global_data = yaml.safe_load(global_path.read_text(encoding="utf-8")) or {}
+        global_data = _read_mapping(global_path)
 
         doc_types = []
         doc_types_dir = config_dir / "doc_types"
         if doc_types_dir.exists():
             for f in sorted(doc_types_dir.glob("*.yaml")):
-                doc_types.append(yaml.safe_load(f.read_text(encoding="utf-8")))
+                doc_types.append(_read_mapping(f))
 
-        return cls(**global_data, doc_types=doc_types)
+        try:
+            return cls(**global_data, doc_types=doc_types)
+        except SchemaError as exc:
+            raise DHFDataError(f"{config_dir} does not match the config schema: {exc}") from exc
 
     def relationship_fields(self) -> set[str]:
         """Every field any doc type declares as a link, from the schema itself.

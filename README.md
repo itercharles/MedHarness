@@ -148,7 +148,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - run: pip install medharness==0.33.1
+      - run: pip install medharness==0.34.0
       - run: medharness --dhf DHF verify dhf --fail-on-uncovered
 ```
 
@@ -232,7 +232,7 @@ All three print JSON to stdout and make no changes.
 |---|---|---|
 | `medharness context overview` | `project`, `item_count`, `items`, `traceability`, `test_coverage` | An agent or a person is new to the DHF. `traceability.valid` is the same verdict `verify dhf` reaches. Pass `--junit-dir` to get real test coverage instead of `{"computed": false}`. |
 | `medharness context implementation --cr CR-034` | `project`, `cr` (the full item), `items`, `traceability`, `module_map` | An agent is about to write code for a CR: which modules own which designs and requirements. |
-| `medharness context for-stage develop --cr CR-034` | `stage`, `cr`, `affected_items` (or `traceability_gaps` at `analyze`) | You want the smaller answer — only what one stage needs, rather than the whole DHF. |
+| `medharness context for-stage develop --cr CR-034` | `stage`, `cr`, and at `develop` `affected_items`; at `analyze` and `design`, `items` (every item, summarized), plus `traceability_gaps` at `analyze` | An agent is at one stage of a CR. Only `develop` is small: `analyze` and `design` summarize the whole DHF, because `affected_items` is not written until `build plan` has seen all of it. |
 
 ### Evidence and release
 

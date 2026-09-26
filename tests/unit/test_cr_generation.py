@@ -485,6 +485,31 @@ class TestGenerateDhf:
         for key in ("summary", "timing", "inputs", "steps", "artifacts", "diagnostics", "warnings"):
             assert key in result
 
+    def test_an_unreadable_diff_is_reported_and_writes_nothing_to_the_cr(self, tmp_path):
+        """The self-check could not see what changed, so it must not say it passed.
+
+        Worse than a false pass: design impact writes affected_items onto the CR
+        from this change set, and an empty one recorded a CR that affects nothing.
+        """
+        from medharness.services.git import DiffUnavailable
+
+        dhf = tmp_path / "DHF"
+        dhf.mkdir()
+        with patch("medharness.services.cr_generation._run_claude", return_value=(0, "", "")) as mock_claude, \
+             patch("medharness.services.cr_generation.git.collect_dhf_item_changes",
+                   side_effect=DiffUnavailable("fatal: bad revision 'origin/main'")), \
+             patch("medharness.services.design_validation.validate_generate_dhf", return_value=[]), \
+             patch("medharness.services.cr_generation._record_design_impact_in_cr") as impact:
+            result = generate_dhf("CR-052", dhf)
+
+        assert result["outcome"] == "completed_with_errors"
+        assert any("bad revision 'origin/main'" in e.get("issue", "") for e in result["errors"]), result["errors"]
+        assert not impact.called, "affected_items was written from a diff nobody could read"
+        assert result["artifacts"]["items_changed"] is None
+        # A fix pass is an LLM call, and no LLM can fetch a ref.
+        assert result["diagnostics"]["fix_attempted"] is False
+        assert mock_claude.call_count == 2
+
     def test_happy_path_calls_claude_twice(self, tmp_path):
         # generation + design review; no fix pass on happy path
         dhf = tmp_path / "DHF"
@@ -743,7 +768,8 @@ class TestGenerateCode:
     def test_returns_dict_with_required_keys(self, tmp_path):
         dhf = tmp_path / "DHF"
         dhf.mkdir()
-        with patch("medharness.services.cr_generation._run_claude") as mock_claude:
+        with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
+             patch("medharness.services.git.collect_path_changes", return_value={"created": [], "updated": [], "deleted": []}):
             mock_claude.return_value = (0, "", "")
             result = generate_code("CR-020", dhf)
         assert result["cr_id"] == "CR-020"
@@ -786,6 +812,15 @@ class TestGenerateCode:
             "updated": ["apps/client/src/bar.tsx"],
             "deleted": ["packages/shared-types/src/old.ts"],
         }
+
+    def test_an_unreadable_diff_is_unknown_not_empty(self, tmp_path):
+        """No git here, so the diff cannot be read — which is not "no files changed"."""
+        dhf = tmp_path / "DHF"
+        dhf.mkdir()
+        with patch("medharness.services.cr_generation._run_claude", return_value=(0, "", "")):
+            result = generate_code("CR-026", dhf)
+        assert result["artifacts"]["files_changed"] is None
+        assert any(w.get("code") == "diff_unavailable" for w in result["warnings"]), result["warnings"]
 
     def test_develop_prompt_passed_to_claude(self, tmp_path):
         dhf = tmp_path / "DHF"
@@ -892,7 +927,8 @@ class TestGenerateCode:
              patch("medharness.services.cr_generation._get_pr_feedback",
                    return_value={"prompt_text": "", "diagnostics": {}, "warnings": []}), \
              patch("medharness.services.cr_generation.post_pr_comment",
-                   side_effect=lambda pr, body, **kw: posted_bodies.append(body) or "url") as mock_post:
+                   side_effect=lambda pr, body, **kw: posted_bodies.append(body) or "url") as mock_post, \
+             patch("medharness.services.git.collect_path_changes", return_value={"created": [], "updated": [], "deleted": []}):
             result = generate_code("CR-099", dhf, pr_number=55)
         assert mock_post.call_count == 0, "no warnings → no comment expected"
         assert result.get("pr_comments") == []

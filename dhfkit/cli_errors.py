@@ -20,7 +20,7 @@ import sys
 
 import click
 
-from dhfkit.exceptions import ValidationError
+from dhfkit.exceptions import DHFDataError, ValidationError
 
 
 class DHFAwareGroup(click.Group):
@@ -33,6 +33,8 @@ class DHFAwareGroup(click.Group):
             raise click.ClickException(
                 f"The DHF could not be read: {exc}"
             ) from exc
+        except DHFDataError as exc:
+            raise click.ClickException(f"The DHF could not be read: {exc}") from exc
         except FileNotFoundError as exc:
             # A missing global.yaml is the common case: pointing --dhf at a
             # directory that is not a DHF.
