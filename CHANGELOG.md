@@ -11,6 +11,66 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.34.0] — 2026-09-26
+
+### Fixed
+
+Every one of these is a DHF or repository that could not be read, answered as
+if it had been read.
+
+- **A malformed config file crashed every gate.** A `global.yaml` or doc type
+  that was not valid YAML, was a list rather than a mapping, or had a field of
+  the wrong type raised straight out of the loader: all five gates answered
+  with a traceback. The loader now names the file and the fault, and every
+  command exits 1 with nothing on stdout — the documented "the gate never ran",
+  which is how a schema fault in an item was already reported.
+  `DHFDataError` existed for exactly this and nothing raised or caught it; now
+  both happen.
+
+- **A malformed item was printed onto stdout and then dropped.** An item file
+  that was not YAML, or was a list, hit a bare `except Exception` that `print`ed
+  `Error loading …` to **stdout** — so the first line of a gate's answer was not
+  the envelope — and returned nothing. The item then left every coverage
+  denominator it belonged to: a broken SRS turned `1/3 covered` into `1/2`, and
+  a gate whose remaining rows were green would have passed. It is now an error
+  naming the file. `dhfkit validate schema` reports it as a finding, as it does
+  any other bad item.
+
+- **`workflow check-changes` passed a CR that broke its promise, once the
+  config was gone.** Loading the CR was wrapped in a `try` that caught
+  `FileNotFoundError` and skipped the promise check. A DHF that exists but will
+  not load now stops the gate. A CR that does not exist still passes — that is
+  a PR the gate does not apply to.
+
+- **"Could not read the diff" was the same answer as "nothing changed".**
+  `collect_path_changes` returned three empty lists for both, so:
+  - `workflow check-changes` in a repo with no remote, or a shallow clone
+    without `origin/main`, told the developer their CR had not changed what it
+    promised, and to run `build plan`. It now says it could not diff, gives
+    git's reason (`fatal: bad revision 'origin/main'`), and says how to fix it.
+  - `build plan`'s self-check validated no changed items and reported clean —
+    then wrote an empty `affected_items` onto the CR from that same empty
+    change set. It now ends `completed_with_errors` saying the items were not
+    checked, and does not write to the CR. The error is added after the fix
+    loop, so it does not buy an LLM fix pass for a git problem.
+  - `build code`'s `files_changed` reported no files changed.
+
+  `collect_path_changes` now raises `DiffUnavailable` with git's own reason.
+
+### Changed
+
+- `artifacts.files_changed` (`build code`) and `artifacts.items_changed`
+  (`build plan`) are `null` when the diff could not be read, rather than an
+  empty `{created, updated, deleted}` claiming nothing changed. A caller that
+  iterates them must handle `null`. `CONTRACT_VERSION` is unchanged: no key was
+  renamed or removed, and the change fails loudly rather than silently.
+
+- `context for-stage --help` described `design` as returning the affected
+  items. It returns every item, summarized, on purpose: `affected_items` is
+  empty until `build plan` writes it, and `build plan` needs the whole DHF to
+  choose between creating an item and updating one. The code and its tests
+  were right; the docstring and the README row are corrected.
+
 ## [0.33.1] — 2026-09-18
 
 ### Changed

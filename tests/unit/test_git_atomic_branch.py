@@ -5,10 +5,24 @@ from __future__ import annotations
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from medharness.services.git import validate_atomic_branch
 
 
-def test_validate_atomic_branch_passes_when_code_and_dhf_are_present(tmp_path: Path):
+@pytest.fixture
+def no_cr():
+    """A DHF that loads and has no CR-001: the case where the gate does not apply.
+
+    These used an empty directory, which only worked because a load failure was
+    swallowed — and that swallow also passed branches that broke their promise.
+    """
+    with patch("dhfkit.local_adapter.LocalDHFAdapter") as adapter:
+        adapter.return_value.get_item.return_value = None
+        yield
+
+
+def test_validate_atomic_branch_passes_when_code_and_dhf_are_present(tmp_path: Path, no_cr) -> None:
     repo_root = tmp_path
     dhf = repo_root / "DHF"
     dhf.mkdir()
@@ -19,10 +33,10 @@ def test_validate_atomic_branch_passes_when_code_and_dhf_are_present(tmp_path: P
 
     assert result["passed"] is True
     assert result["details"]["findings"] == []
-    assert result["details"]["cr_found"] in (True, False)
+    assert result["details"]["cr_found"] is False
 
 
-def test_validate_atomic_branch_fails_without_code_changes(tmp_path: Path):
+def test_validate_atomic_branch_fails_without_code_changes(tmp_path: Path, no_cr) -> None:
     repo_root = tmp_path
     dhf = repo_root / "DHF"
     dhf.mkdir()
@@ -37,7 +51,7 @@ def test_validate_atomic_branch_fails_without_code_changes(tmp_path: Path):
     assert any(e["field"] == "code_branch" for e in result["details"]["findings"])
 
 
-def test_validate_atomic_branch_passes_when_dhf_changes_present(tmp_path: Path):
+def test_validate_atomic_branch_passes_when_dhf_changes_present(tmp_path: Path, no_cr) -> None:
     """DHF changes are required and sufficient to pass."""
     repo_root = tmp_path
     dhf = repo_root / "DHF"

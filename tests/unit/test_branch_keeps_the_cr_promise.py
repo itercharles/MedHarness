@@ -103,3 +103,40 @@ class TestAgainstARealChangeSet:
             dhf.mkdir(exist_ok=True)
             result = validate_atomic_branch(tmp_path, dhf, "CR-001", since_ref="main")
         assert result["passed"] is True, result["errors"]
+
+
+class TestCouldNotCheckIsNotABrokenPromise:
+    """A repo with no remote could not diff, and was told its CR broke a promise.
+
+    `collect_path_changes` returned three empty lists for "git failed" and for
+    "nothing changed" alike. With a CR that promised nothing, that read as "run
+    `build plan`" — the wrong failure with the wrong fix.
+    """
+
+    def _unreadable(self, tmp_path: Path, cr_item):
+        from medharness.services.git import DiffUnavailable
+
+        with patch("medharness.services.git.collect_dhf_item_changes",
+                   side_effect=DiffUnavailable("fatal: bad revision 'origin/main'")), \
+             patch("dhfkit.local_adapter.LocalDHFAdapter") as adapter:
+            adapter.return_value.get_item.return_value = cr_item
+            dhf = tmp_path / "DHF"
+            dhf.mkdir(exist_ok=True)
+            return validate_atomic_branch(tmp_path, dhf, "CR-001")
+
+    @pytest.mark.parametrize("cr_item", [
+        {"id": "CR-001"},
+        {"id": "CR-001", "affected_items": ["SYS-001"]},
+    ], ids=["promised nothing", "promised SYS-001"])
+    def test_it_says_it_could_not_read_the_diff(self, tmp_path: Path, cr_item) -> None:
+        result = self._unreadable(tmp_path, cr_item)
+        assert result["passed"] is False
+        assert result["errors"] == [
+            "diff_unavailable: Could not diff against origin/main: "
+            "fatal: bad revision 'origin/main'."
+        ], result["errors"]
+
+    def test_it_does_not_accuse_the_cr(self, tmp_path: Path) -> None:
+        result = self._unreadable(tmp_path, {"id": "CR-001", "affected_items": ["SYS-001"]})
+        joined = " ".join(result["errors"])
+        assert "dhf_branch" not in joined and "build plan" not in joined, joined

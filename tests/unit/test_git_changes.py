@@ -5,7 +5,9 @@ from __future__ import annotations
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from medharness.services.git import collect_dhf_item_changes, collect_path_changes
+import pytest
+
+from medharness.services.git import DiffUnavailable, collect_dhf_item_changes, collect_path_changes
 
 
 def _completed(stdout: str = "", returncode: int = 0) -> MagicMock:
@@ -38,15 +40,18 @@ class TestCollectPathChanges:
             result = collect_path_changes(tmp_path, "origin/main", "apps/")
         assert result == {"created": [], "updated": ["apps/new.ts"], "deleted": []}
 
-    def test_git_unavailable_returns_empty(self, tmp_path: Path):
-        with patch("subprocess.run", side_effect=FileNotFoundError):
-            result = collect_path_changes(tmp_path, "origin/main", "apps/")
-        assert result == {"created": [], "updated": [], "deleted": []}
+    def test_git_unavailable_is_not_an_empty_diff(self, tmp_path: Path):
+        with patch("subprocess.run", side_effect=FileNotFoundError), \
+             pytest.raises(DiffUnavailable, match="not installed"):
+            collect_path_changes(tmp_path, "origin/main", "apps/")
 
-    def test_nonzero_exit_returns_empty(self, tmp_path: Path):
-        with patch("subprocess.run", return_value=_completed("", 128)):
-            result = collect_path_changes(tmp_path, "origin/main", "apps/")
-        assert result == {"created": [], "updated": [], "deleted": []}
+    def test_a_failed_diff_says_why(self, tmp_path: Path):
+        """An unfetched ref was three empty lists — the same as a branch that changed nothing."""
+        failed = _completed("", 128)
+        failed.stderr = "fatal: bad revision 'origin/main'\n"
+        with patch("subprocess.run", return_value=failed), \
+             pytest.raises(DiffUnavailable, match="bad revision 'origin/main'"):
+            collect_path_changes(tmp_path, "origin/main", "apps/")
 
 
 class TestCollectDhfItemChanges:

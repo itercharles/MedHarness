@@ -4,6 +4,8 @@ from pathlib import Path
 import yaml
 from typing import Any, Dict, List, Optional
 from dhfkit.models.item import Item
+from pydantic import ValidationError as PydanticError
+
 from dhfkit.exceptions import ValidationError
 
 
@@ -64,26 +66,31 @@ class ItemLoader:
             ValidationError: If strict schema validation is enabled and the
                              file does not conform to its doc-type schema.
         """
+        # A file that will not load is an error, never a skipped item: dropping
+        # it silently shrinks every coverage denominator it would have been in.
         try:
             with open(file_path, 'r', encoding='utf-8') as f:
                 data = yaml.safe_load(f)
+        except (OSError, yaml.YAMLError) as exc:
+            raise ValidationError(f"{file_path} could not be read: {exc}") from exc
 
-            if not data:
-                return None
-
-            # Strict schema validation (only when config is available)
-            if self.project_config:
-                self._validate_against_schema(data, file_path)
-
-            item = Item.model_validate(data)
-            item.file_path = str(file_path.absolute())  # type: ignore
-            return item
-
-        except ValidationError:
-            raise  # propagate schema errors unchanged
-        except Exception as e:
-            print(f"Error loading {file_path}: {e}")
+        if not data:
             return None
+        if not isinstance(data, dict):
+            raise ValidationError(
+                f"{file_path} must be a mapping of fields to values, "
+                f"not a {type(data).__name__}"
+            )
+
+        if self.project_config:
+            self._validate_against_schema(data, file_path)
+
+        try:
+            item = Item.model_validate(data)
+        except PydanticError as exc:
+            raise ValidationError(f"{file_path}: {exc}") from exc
+        item.file_path = str(file_path.absolute())  # type: ignore
+        return item
 
     def load_by_prefix(self, prefix: str) -> List[Item]:
         """Load items whose UID starts with *prefix*."""

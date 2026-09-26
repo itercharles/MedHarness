@@ -703,6 +703,15 @@ def _auto_post_pr_feedback(pr_number: int, cr_id: str, result: dict, *, token: s
     return comments
 
 
+def _items_changed(repo_root: Path, unreadable: list[str]) -> dict[str, list[str]]:
+    """The DHF items this branch changed, noting in ``unreadable`` when git could not say."""
+    try:
+        return git.collect_dhf_item_changes(repo_root, "origin/main")
+    except git.DiffUnavailable as exc:
+        unreadable.append(str(exc))
+        return {"created": [], "updated": [], "deleted": []}
+
+
 def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> dict:
     """Generate the complete DHF item cascade for a CR in a single LLM session.
 
@@ -720,6 +729,7 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> di
     repo_root = dhf_path.resolve().parent
     steps: list[dict] = []
     warnings: list[dict] = []
+    unreadable: list[str] = []
     critical_step_failed = False
     design_llm = _resolve_stage_llm("design")
     review_llm = _resolve_stage_llm("design_review")
@@ -806,7 +816,7 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> di
     if session_id:
         diagnostics["session_id"] = session_id
 
-    items_changed = git.collect_dhf_item_changes(repo_root, "origin/main")
+    items_changed = _items_changed(repo_root, unreadable)
     validate_step, validate_perf = _begin_step(
         "validate_initial", {"validator": "validate_generate_dhf"}
     )
@@ -848,7 +858,7 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> di
         if fix_session_id:
             session_id = fix_session_id
             diagnostics["session_id"] = session_id
-        items_changed = git.collect_dhf_item_changes(repo_root, "origin/main")
+        items_changed = _items_changed(repo_root, unreadable)
         validate_fix_step, validate_fix_perf = _begin_step(
             "validate_after_fix", {"validator": "validate_generate_dhf"}
         )
@@ -913,7 +923,7 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> di
             session_id = fix_session_id
             diagnostics["session_id"] = session_id
 
-        items_changed = git.collect_dhf_item_changes(repo_root, "origin/main")
+        items_changed = _items_changed(repo_root, unreadable)
         validate_review_fix_step, validate_review_fix_perf = _begin_step(
             f"validate_after_review_fix_{review_cycle}", {"validator": "validate_generate_dhf"}
         )
@@ -931,7 +941,23 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> di
     diagnostics["design_review_verdict"] = design_review_verdict
     diagnostics["design_review_cycles"] = review_cycle
 
-    items_changed = git.collect_dhf_item_changes(repo_root, "origin/main")
+    items_changed = _items_changed(repo_root, unreadable)
+    if unreadable:
+        # Added after the fix loop on purpose: an LLM fix pass cannot fetch a ref.
+        # It must be in `errors` before design impact, which would otherwise write
+        # an empty affected_items onto the CR.
+        errors.append({
+            "field": "changed_items",
+            "issue": (
+                f"Could not diff against origin/main ({unreadable[-1]}), so the "
+                f"items this run changed were not checked."
+            ),
+            "fix": (
+                "Fetch origin/main and re-run. A shallow clone or a repo with no "
+                "remote cannot diff."
+            ),
+        })
+        items_changed = None
     artifact_step, artifact_perf = _begin_step(
         "collect_artifacts", {"kind": "dhf_items_changed", "snapshot_only": True}
     )
@@ -1172,7 +1198,14 @@ def generate_code(
         put_session(pr_number, session_id)
 
     artifact_step, artifact_perf = _begin_step("collect_artifacts", {"kind": "files_changed"})
-    files_changed = git.collect_path_changes(repo_root, "origin/main", *_DEFAULT_CODE_PATHS)
+    try:
+        files_changed = git.collect_path_changes(repo_root, "origin/main", *_DEFAULT_CODE_PATHS)
+    except git.DiffUnavailable as exc:
+        files_changed = None
+        warnings.append(_warning(
+            "diff_unavailable",
+            f"Could not diff against origin/main ({exc}); files_changed is unknown, not empty.",
+        ))
     steps.append(_finish_step(artifact_step, artifact_perf, "ok", {"files_changed": files_changed}))
 
     result = _build_response(

@@ -85,10 +85,16 @@ def register(main):
     def dhf_context_for_stage(ctx: click.Context, stage: str, cr_id: str) -> None:
         """Output scoped DHF context for a specific workflow stage.
 
-        Returns only the information relevant to the current stage:
-          analyze — CR item, all items summarized, traceability gaps
-          design  — CR item, affected items
-          develop — CR item, affected items
+        Returns what each stage needs to decide:
+
+        \b
+          analyze — CR item, every item summarized, traceability gaps
+          design  — CR item, every item summarized
+          develop — CR item, the items it affects, in full
+
+        design returns every item because `affected_items` is still empty at
+        that point: `build plan` is what writes it, and it has to see the whole
+        DHF to choose between creating an item and updating one.
         """
         adapter = _h._make_adapter(ctx.obj["dhf"])
 

@@ -40,6 +40,10 @@ def _resolve_repo_path(repo_root: Path, path: Path) -> Path:
     return path if path.is_absolute() else (repo_root / path)
 
 
+class DiffUnavailable(Exception):
+    """git could not produce the diff — not the same answer as an empty one."""
+
+
 def collect_path_changes(
     repo_root: Path,
     since_ref: str,
@@ -48,11 +52,9 @@ def collect_path_changes(
     """Return ``{created, updated, deleted}`` lists of file paths changed since ``since_ref``.
 
     Paths are returned exactly as git reports them (relative to ``repo_root``).
-    On environment failure (git missing, ref unfetched, non-zero exit) all
-    three lists are empty; callers that need to distinguish "no changes" from
-    "could not check" should run the diff themselves.
+    Raises DiffUnavailable when git is missing or the diff fails — an unfetched
+    ref in a shallow clone, or no remote at all — with git's own reason.
     """
-    empty: dict[str, list[str]] = {"created": [], "updated": [], "deleted": []}
     try:
         result = subprocess.run(
             ["git", "diff", "--name-status", since_ref, "--", *paths],
@@ -61,10 +63,11 @@ def collect_path_changes(
             cwd=str(repo_root),
             check=False,
         )
-    except FileNotFoundError:
-        return empty
+    except FileNotFoundError as exc:
+        raise DiffUnavailable("git is not installed") from exc
     if result.returncode != 0:
-        return empty
+        reason = (result.stderr or "").strip().splitlines()
+        raise DiffUnavailable(reason[0] if reason else f"git diff {since_ref} exited {result.returncode}")
 
     created: list[str] = []
     updated: list[str] = []
@@ -121,11 +124,31 @@ def validate_atomic_branch(
     paths must also have changed.
     """
     errors: list[dict] = []
-    dhf_item_changes = collect_dhf_item_changes(repo_root, since_ref)
-
-    code_changes = collect_path_changes(repo_root, since_ref, *code_paths) if code_paths else {
-        "created": [], "updated": [], "deleted": [],
-    }
+    try:
+        dhf_item_changes = collect_dhf_item_changes(repo_root, since_ref)
+        code_changes = collect_path_changes(repo_root, since_ref, *code_paths) if code_paths else {
+            "created": [], "updated": [], "deleted": [],
+        }
+    except DiffUnavailable as exc:
+        # Nothing below can be judged without the diff, and "no changes" would
+        # accuse the CR of breaking a promise nobody checked.
+        finding = {
+            "field": "diff_unavailable",
+            "issue": f"Could not diff against {since_ref}: {exc}.",
+            "fix": (
+                f"Fetch it (`git fetch origin main`), or pass --since-ref with a ref "
+                f"that exists here. A shallow clone or a repo with no remote has no "
+                f"{since_ref}."
+            ),
+        }
+        return envelope_from("workflow check-changes", {
+            "cr_id": cr_id,
+            "since_ref": since_ref,
+            "passed": False,
+            "summary": f"{cr_id}: could not read the diff against {since_ref}.",
+            "errors": [f"{finding['field']}: {finding['issue']}"],
+            "findings": [finding],
+        })
 
     code_change_count = sum(len(code_changes[b]) for b in ("created", "updated", "deleted"))
     dhf_change_count = sum(len(dhf_item_changes[b]) for b in ("created", "updated", "deleted"))
@@ -147,14 +170,12 @@ def validate_atomic_branch(
         + dhf_item_changes["deleted"]
     )
 
+    from dhfkit.local_adapter import LocalDHFAdapter
+
     unchanged_promised: list[str] = []
-    cr_item = None
-    if dhf_path.is_dir():
-        try:
-            from dhfkit.local_adapter import LocalDHFAdapter
-            cr_item = LocalDHFAdapter(dhf_path).get_item(cr_id)
-        except (FileNotFoundError, OSError, ValueError):
-            pass  # DHF not loadable — skip the checks that need it
+    # A DHF that will not load must stop the gate: skipping the promise check
+    # passed a branch that broke one. A CR that does not exist is not applicable.
+    cr_item = LocalDHFAdapter(dhf_path).get_item(cr_id)
 
     # What the CR said it would touch is the thing to check. "Any DHF change at
     # all" passes a branch that edited something unrelated, and fails a PR that
