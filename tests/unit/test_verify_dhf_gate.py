@@ -117,4 +117,3 @@ class TestDocumentedWorkflowEnforcesCoverage:
         """Scaffolding it would silently do nothing on an installed package."""
         _scaffold_dhf(tmp_path)
         assert not (tmp_path / ".github" / "workflows").exists()
-        assert (tmp_path / ".github" / "prompts").exists()

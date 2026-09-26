@@ -7,11 +7,10 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 from dhfkit.exceptions import ValidationError
-from dhfkit.junit_parser import parse_junit_xml
 from dhfkit.item_type import ItemType
 from dhfkit.models.config import ProjectConfig
 from dhfkit.models.item import Item
-from dhfkit.repository.git import GitRepository
+from dhfkit.repository.git import item_ids_ever_added
 from dhfkit.repository.loader import ItemLoader
 from dhfkit.repository.saver import ItemSaver
 from dhfkit.id_generator import get_next_id
@@ -38,7 +37,6 @@ class LocalDHFAdapter:
         self._config = ProjectConfig.load(self._dhf_root / "config")
         items_dir = self._dhf_root / "items"
         self._items_dir = items_dir
-        self._git = GitRepository(self._dhf_root)
         self._loader = ItemLoader(items_dir, project_config=self._config)
         self._saver = ItemSaver(items_dir, project_config=self._config)
 
@@ -201,7 +199,7 @@ class LocalDHFAdapter:
         # every reference to it — a CR's affected_items, an approval record, a
         # test's dhf_links — silently retargets.
         existing_ids = {i.uid for i in all_items}
-        existing_ids |= self._git.item_ids_ever_added(self._items_dir)
+        existing_ids |= item_ids_ever_added(self._items_dir)
         data['id'] = get_next_id(
             dt_cfg.prefix,
             [i for i in existing_ids if i.startswith(dt_cfg.prefix)],

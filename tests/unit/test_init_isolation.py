@@ -50,7 +50,7 @@ class TestScaffoldIsolation:
     def test_project_files_are_still_rewritten(self, tmp_path: Path) -> None:
         _scaffold_dhf(tmp_path)
         _replace_placeholders(tmp_path, "Trial")
-        assert "{{project_name}}" not in (tmp_path / "AI-harness" / "context.md").read_text()
+        assert "{{project_name}}" not in (tmp_path / "DHF" / "README.md").read_text()
 
     @pytest.mark.parametrize("pruned", sorted(_NON_SCAFFOLD_DIRS))
     def test_every_pruned_dir_is_skipped(self, tmp_path: Path, pruned: str) -> None:

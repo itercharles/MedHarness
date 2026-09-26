@@ -1,245 +1,131 @@
 # Architecture
 
 > **Stability:** Stable
-> **Last reviewed:** 2026-05-24
+> **Last reviewed:** 2026-09-27
 
----
+How the code is organised, for contributors. What a user calls is in the
+[README](../README.md) and [interface.md](interface.md).
 
-## Packages
+## Two packages, one install
 
-MedHarness ships two Python packages from a single repository:
-
-| Package | CLI | Role |
+| Package | CLI | Owns |
 |---------|-----|------|
-| `medharness` | `medharness` | The process: traceability analysis over the item set, verification gates, the AI change workflow, SOUP sync, releases, scaffolding |
-| `dhfkit` | `dhfkit` | DHF storage: item CRUD, lifecycle, link integrity, document generation, SBOM |
+| `dhfkit` | `dhfkit` | Storage: item CRUD and lifecycle, config and schemas, schema validation, dangling-link detection, document generation, JUnit parsing and the pytest plugin, the CycloneDX SBOM |
+| `medharness` | `medharness` | Analysis and process: traceability over the whole item set, the gates, SOUP sync, releases, the AI change workflow, scaffolding |
 
-### `medharness` owns
+- `medharness` imports from `dhfkit`; `dhfkit` never imports from `medharness`.
+- `medharness` uses only `dhfkit`'s public surface — no underscored names.
 
-- Traceability analysis over the whole item set — coverage chains, required
-  links, link cycles, risk chains, which risks a change touches
-  (`services/traceability.py`)
-- CLI surface and user-facing onboarding (`medharness init`)
-- Verification gates over the DHF (`verify dhf`, `verify tests`, `verify soup`, `verify completion`)
-- Gates over the repository (`workflow check-changes`, `workflow check-approval` — an approving review of the merged commit)
-- AI-assisted CR generation (`build plan`, `build code`)
-- SOUP sync from dependency manifests (`build dhf`)
-- Releases: baseline, BOM, SBOM, evidence bundle and REL item (`build release`)
-- DHF repo scaffolding from bundled templates (`medharness init`, `medharness upgrade`)
-- Environment and setup diagnostics (`medharness doctor`)
-- Adapter protocol for pluggable DHF backends
+`tests/guards/test_package_boundary.py` enforces both.
 
-### `dhfkit` owns
+## Storage versus analysis
 
-- Item CRUD and lifecycle state machine
-- Project config loading and doc-type schema rendering
-- Schema validation of stored items (`validate schema`), and dangling-link detection
-- Document generation (Jinja2 → Markdown → HTML/PDF)
-- JUnit XML parsing, and the pytest plugin that writes the properties it reads
-- Git-backed YAML repository layer (loader/saver)
-- CycloneDX SBOM serialisation from the SOUP register (`sbom`)
+The rule for which package a check belongs to is what a store can answer on
+its own:
 
-### The line between them
-
-`dhfkit` stores and retrieves records. `medharness` analyses them.
-
-A change-controlled organisation may already keep its DHF in Jira, Azure DevOps
-or a system of its own, and those manage a single item well. What none of them
-do is take the items together and ask whether the V-model holds — whether every
-system requirement gives rise to a software one, whether a chain closes back on
-itself, which risks a change touches. That analysis is what this project is for,
-so it cannot live in one storage implementation.
-
-The test is what a store already answers on its own:
-
-| question | whose |
+| Question | Belongs to |
 |---|---|
-| is this item well-formed | store |
-| do two files claim one ID | store |
-| does this link name an item that exists | store |
-| is every SYS covered by an SRS | **medharness** |
-| does a traceability chain cycle | **medharness** |
-| which risks does this change touch | **medharness** |
-| are the required links present for this doc type | **medharness** |
+| Is this item well-formed? | `dhfkit` |
+| Do two files claim one ID? | `dhfkit` |
+| Does this link name an item that exists? | `dhfkit` |
+| Is every SYS covered by an SRS? | `medharness` |
+| Does a traceability chain cycle? | `medharness` |
+| Which risks does this change touch? | `medharness` |
+| Are the links this doc type requires present? | `medharness` |
 
-The last one is the least obvious: "every SRS must derive from a SYS" is a
-modelling decision about the V-model, not a storage constraint. Jira will not
-enforce it either.
+The analysis in `medharness.services.traceability` takes a list of items and a
+config, never a path. **The commands, though, always read the YAML store**
+(`dhfkit.local_adapter.LocalDHFAdapter`); nothing lets you hand them another
+backend. Requirements kept in another system are checked by exporting them into
+`DHF/items/` in the YAML format.
 
-Analysis takes items as data — `medharness.services.traceability` receives a
-list of dicts and a config, never a path or a loader — so it works against any
-adapter satisfying `medharness/adapters/protocol.py`.
+The one place `medharness` writes DHF files directly is scaffolding: `init`
+creates the skeleton and `upgrade` keeps its templates current. Everything else
+goes through the store — `tests/guards/test_storage_access_is_bounded.py` holds
+that line.
 
-### One exception, deliberately
-
-`medharness init` and `medharness upgrade` write DHF files directly — the config
-files, the spec templates, the plan documents a new project starts from.
-
-That is not analysis reaching into storage. Those commands create and maintain
-the *repository skeleton*: they bring a DHF into existence and keep its
-scaffold current across versions. `dhfkit` manages records; it does not manage
-the shape of the repository that holds them, and giving it a "write my config
-file" API to satisfy a rule would put storage in the business of scaffolding.
-
-Everywhere else, medharness asks the store. `build release` reads plan documents
-through `list_documents("plans")` and `get_document()`; `upgrade` reads the
-project name through `ProjectConfig.load()` rather than the regex it used to
-apply to global.yaml — which took a trailing comment as part of the name.
-
-`tests/guards/test_storage_access_is_bounded.py` holds the exception to the two
-scaffold modules.
-
-### Boundary rules
-
-- `medharness` may import from `dhfkit`
-- `dhfkit` MUST NOT import from `medharness`
-- `dhfkit` can be used standalone without `medharness`
-- `medharness` uses `dhfkit`'s **public** surface. Standalone use means `dhfkit`
-  has a contract, and a consumer pinned to an underscore has none — ten sites
-  read `adapter._config` before this rule was written down and checked.
-
-`tests/guards/test_package_boundary.py` enforces the last two; the import
-direction was already guarded, what a consumer may touch was not.
-
----
-
-## Scaffold Model
-
-`medharness init` copies assets from `dhfkit/templates/` (bundled with the package) to create a self-contained DHF repository.
-
-### Template source
+## What `init` writes
 
 ```
-dhfkit/templates/
-├── config/                    # Doc type definitions (global.yaml + doc_types/*.yaml)
-├── specs/                     # Jinja2 templates for document generation (*.md.j2)
-│   └── styles/                # PDF CSS stylesheet
-├── plans/                     # Plan document templates
-├── github/
-│   ├── prompts/               # AI agent prompt templates
-│   └── workflows/             # DHF-side CI workflows
-├── AI-harness/
-│   └── context.md             # Product context template for AI agents
-└── README.md                  # DHF repo starter README
-```
-
-### Generated DHF repo structure
-
-```
-<dhf-repo>/
+<project>/
 ├── DHF/
+│   ├── README.md                 # what the DHF is and how to edit it
 │   ├── config/
-│   │   ├── global.yaml           # Project name, lifecycle, traceability matrices
-│   │   └── doc_types/            # One YAML per doc type
-│   ├── documents/
-│   │   ├── specs/                # Jinja2 templates + default.css
-│   │   └── plans/                # Plan documents
-│   ├── items/                    # One subdir per doc type (ready for YAML items)
-│   └── test-results/             # .gitkeep (ready for JUnit evidence)
-├── AI-harness/
-│   └── context.md                # Product context for AI agents
-├── .github/
-│   ├── prompts/                  # AI agent prompts for CR workflows
-│   └── workflows/                # DHF-side CI: schema validation, CR automation
-└── README.md
+│   │   ├── global.yaml           # project name, lifecycle states, traceability rules
+│   │   ├── doc_types/*.yaml      # 13 item types: fields, links, lifecycle
+│   │   └── soup-sources.yaml     # where the dependency manifests are
+│   ├── items/NN_type/            # one directory per item type, with a sample item
+│   └── documents/specs/          # Jinja2 templates and the stylesheet
+├── docs/reviews/                 # where `build plan` writes design reviews
+├── CLAUDE.md                     # product context the AI stages read
+└── .gitignore
 ```
 
-The generated DHF repo does not contain `dhfkit/` or `medharness/` source code. Install MedHarness separately. Use `dhfkit --dhf DHF ...` for data operations (item CRUD, validate, docs); use `medharness --dhf DHF build ...`, `verify ...`, and `workflow ...` for AI-assisted change workflows and validation.
+The source is `dhfkit/templates/`. Placeholders: `{{project_name}}` (from the
+directory name) and `{{medharness_version}}`.
 
-### Placeholder substitution
+`upgrade` manages the 13 doc-type configs and the spec templates with their stylesheet — it reports
+where they differ from the installed version and `--apply` rewrites them. It
+seeds `soup-sources.yaml` if missing and never overwrites it. It never touches
+`global.yaml`, the items, `DHF/README.md` or `CLAUDE.md`.
 
-| Placeholder | Example value |
-|-------------|---------------|
-| `Medharness` | `Insulin Pump Firmware` |
-| `{{product_repo}}` | `acme-medical/insulin-pump` |
-| `{{product_repo_name}}` | `insulin-pump` |
-| `{{github_org}}` | `acme-medical` |
-| `{{dhf_repo_name}}` | `insulin-pump-dhf` |
-| `pytest` | `pytest` |
+The CI recipe, `dhfkit/templates/github/workflows/dhf.yml`, is **not** installed:
+it names branches, runners and secrets that differ per project. It is published
+through [adopting.md](adopting.md#setting-up-ci), and a test keeps the two
+identical.
 
----
-
-## DHF Repo Lifecycle
-
-| Event | Action |
-|-------|--------|
-| New project | `medharness init` creates the DHF repo |
-| Feature or bugfix | Open a CR, run the CR workflow, merge to main |
-| New MedHarness release | Re-scaffold into a new directory, apply diff selectively — never overwrite existing DHF content |
-| Regenerate documents | `dhfkit --dhf DHF doc generate ALL` — run after item changes or template updates |
-| Product retirement | Archive the DHF repo in Git with an archival date in the README; preserve for regulatory audit |
-
-### Product repo vs DHF repo
-
-| Aspect | Product repo | DHF repo |
-|--------|-------------|----------|
-| Contains | Source code, tests, build config | Requirements, architecture, risk, traceability |
-| CI | Client-owned | Client-owned |
-| Updated | Per feature/bugfix | Per CR-driven change |
-| Archival | With product retirement | Must be preserved for regulatory audit |
-
----
-
-## Test Organization
-
-| Layer | Directory | Scope |
-|-------|-----------|-------|
-| Unit | `tests/unit/` | Pure logic: parsers, config, lifecycle, traceability |
-| Guards | `tests/guards/` | The repo about itself: import boundaries, documented commands, packaging, mock contracts |
-| Integration | `tests/integration/` | Package integration: init, DHF facade, CR workflows |
-| Contract | `tests/contract/` | Public contracts: CLI, scaffold structure, example smoke |
-| Engine | `dhfkit/tests/` | dhfkit-specific: CRUD, validation, document generation |
-
-This repo does not use `@links`/`@test_id` metadata or `verify tests` for its own governance. Those features are available to scaffolded user DHF repos.
-
----
-
-## CR Workflow
-
-### Two-phase flow
-
-Every CR moves through two AI-assisted phases on a single branch and PR:
+## The AI change workflow
 
 ```
-build plan  →  (design PR reviewed + approved)  →  build code
+CR (new) ─► build plan ─► design reviewed on the PR ─► build code ─► verify * ─► merge
 ```
 
 **`build plan`**
 
-1. Triage — checks for duplicate, out-of-scope, architecture-conflict, or too-large; writes `triage_result` (verdict, complexity, affected_subsystems, notes) onto the CR item
-2. V-model cascade — creates/updates DHF items top-down: CR → CRS → SYS → {SYSARCH, RISK, RCM} → SRS → SWDD. Each SWDD item links to an existing MODULE and implements the relevant SRS items. Reads relevant source modules before writing SWDD items so the design reflects the actual codebase. Writes `affected_risk_items` (list of RISK/RCM IDs relevant to this CR, or `[]`) onto the CR item.
-3. Implementation plan — writes a structured implementation plan (overview, current state, changes required, steps, edge cases, tests) into `implementation_notes` on the CR item
-4. Deterministic validation — `dhfkit validate schema` + `medharness verify dhf` for the stored data, `medharness verify dhf` for the analysis; self-corrects if errors remain
-5. Design review (soft) — reviews every changed DHF item for necessity, product/technical strategy alignment, and SWDD + implementation note clarity. Writes verdict and issues to `docs/reviews/<CR>-Design-Review.md`. If **Needs Revision**, a fix pass runs and the review repeats up to three cycles.
+1. Triage: duplicate, out of scope, architecture conflict or too large. Writes
+   `triage_result` on the CR.
+2. V-model cascade: creates or updates items top-down — CRS → SYS → SYSARCH,
+   RISK, RCM → SRS → SWDD — reading the relevant source before writing SWDD.
+   Writes `affected_risk_items` on the CR.
+3. Implementation plan into the CR's `implementation_notes`.
+4. Deterministic validation (`verify dhf`), and one fix pass if it fails.
+5. Design review, written to `docs/reviews/<CR>-Design-Review.md`; up to three
+   fix-and-review cycles.
+6. Records the items it changed as the CR's `affected_items`.
 
 **`build code`**
 
-1. Reads `implementation_notes` as the primary implementation spec (reviewed and approved with the design PR)
-2. Implements code following the plan; reads SWDD items for module-level design decisions
-3. Annotates tests with `@links:<ITEM_ID>`, runs `medharness verify tests` against JUnit output, adds missing annotations until all requirements are covered
-4. Reconciles `implementation_notes` and SWDD items if the implementation deviated from the plan
-5. Code review (soft) — reviews the implementation for completeness, test depth, scope, and conventions. Verdict is returned inline (no file written). If **Needs Revision**, a fix pass runs and the review repeats up to three cycles.
+1. Implements `implementation_notes`, using the SWDD items for module design.
+2. Tags tests with the requirements they verify and runs `verify tests` until
+   every requirement is covered.
+3. Reconciles `implementation_notes` and SWDD if the code deviated.
+4. Code review; up to three fix-and-review cycles.
 
-### CR lifecycle states
+Neither command moves the CR through its lifecycle. The project does, with
+`dhfkit item transition`: `new → design → develop → completed`, or `rejected`
+from `new` or `design`. `completed` is refused until `implementation_notes`,
+`affected_risk_items` and `triage_result` are recorded. `build plan` and
+`build code` refuse a CR that is `completed`, `rejected` or `cancelled`.
 
-| State | Set by | Meaning |
-|-------|--------|---------|
-| `new` | Intake | CR created |
-| `design` | `build plan` | Design phase started |
-| `develop` | `build code` | Implementation phase started |
-| `completed` | PR merge | Code merged to main |
-| `cancelled` | PR close | PR closed without merging |
-| `rejected` | `build plan` triage | Out-of-scope / duplicate / too large |
+Each stage takes its model from `MEDHARNESS_{DESIGN|DESIGN_REVIEW|DEVELOP|CODE_REVIEW}_MODEL`
+as `provider:model` — `anthropic` (the `claude` CLI, the default), `openai`,
+`deepseek` — with `MEDHARNESS_{STAGE}_BASE_URL` for other endpoints.
 
-State transitions are not enforced as execution gates — the auto workflow proceeds regardless. States are recorded for traceability.
+### Where the code is
 
-### CR Generation Service Topology
+| Module | Does |
+|---|---|
+| `services/cr_generation.py` | Stage orchestration, model calls, PR feedback |
+| `services/prompt_assembly.py` | Loads prompts from `medharness/prompts/` and adds DHF context |
+| `services/cr_impact.py` | Writes `affected_items` back onto the CR |
+| `services/design_validation.py` | The deterministic check after each design pass |
 
-The CR-generation path in `medharness.services` is split by responsibility:
+## Tests
 
-- `cr_generation.py` — stage orchestration, LLM invocation, PR-feedback retrieval; public entry points are `generate_dhf` and `generate_code`. Both return a `design_review` / `code_review` field with per-cycle `{verdict, issues}` data and a human-readable `narrative` list. Each workflow stage resolves its own `LLMConfig` from `MEDHARNESS_{DESIGN|DESIGN_REVIEW|DEVELOP|CODE_REVIEW}_MODEL` env vars; supported providers are `anthropic` (Claude CLI, default), `openai`, and `deepseek`.
-- `prompt_assembly.py` — prompt-template loading and composition; injects pre-computed DHF context (item lists, traceability graph, coverage gaps) into each prompt
-- `cr_impact.py` — writes `affected_items` back onto the CR item after `build plan` completes; `implementation_notes` is LLM-authored and not overwritten by the harness
-- `design_validation.py` — deterministic post-design checks; only catches schema, traceability, and DHF-validation failures
-
-This split is internal structure, not a public import contract. The public behavior is the CLI and JSON response contracts documented in the CHANGELOG and enforced by consumer-side contract tests.
+| Layer | Directory | Scope |
+|-------|-----------|-------|
+| Unit | `tests/unit/` | One function or command |
+| Guards | `tests/guards/` | The repository about itself: boundaries, documented commands, packaging |
+| Integration | `tests/integration/` | `init`, the CR workflow end to end |
+| Contract | `tests/contract/` | The CLI and scaffold as a caller sees them |
+| Engine | `dhfkit/tests/` | Storage: CRUD, validation, documents |

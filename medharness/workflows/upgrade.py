@@ -7,8 +7,6 @@ files (items, global.yaml, context.md) are never touched.
 
 from __future__ import annotations
 
-import re
-import shutil
 from importlib.metadata import version as pkg_version
 from pathlib import Path
 
@@ -20,8 +18,6 @@ _TEMPLATES_DIR = Path(__file__).resolve().parent.parent.parent / "dhfkit" / "tem
 # build has no template to compare against. docs/adopting.md carries the current
 # recipe and the changelog calls out when it changes.
 _UPGRADE_MAP: list[tuple[str, str]] = [
-    ("github/prompts/cr-analyze.md",                          ".github/prompts/cr-analyze.md"),
-    ("github/prompts/cr-develop.md",                          ".github/prompts/cr-develop.md"),
     ("specs/architecture_design_specification.md.j2",         "DHF/documents/specs/architecture_design_specification.md.j2"),
     ("specs/change_request_specification.md.j2",              "DHF/documents/specs/change_request_specification.md.j2"),
     ("specs/customer_requirement_specification.md.j2",        "DHF/documents/specs/customer_requirement_specification.md.j2"),
@@ -62,7 +58,6 @@ _SEED_MAP: list[tuple[str, str]] = [
 #: can tell "deliberately user-owned" from "forgotten" — a doc type went
 #: unmanaged for three releases while every other one was, and nothing said so.
 _USER_OWNED: frozenset[str] = frozenset({
-    "AI-harness/context.md",
     "DHF/README.md",
     "DHF/config/global.yaml",
     "docs/reviews/.gitkeep",

@@ -23,8 +23,6 @@ class TestScaffoldStructure:
         "DHF/documents",
         "DHF/documents/specs",
         "DHF/items",
-        ".github",
-        ".github/prompts",
     ]
 
     CORE_FILES = [
@@ -138,15 +136,6 @@ class TestScaffoldStructure:
         assert not (scaffolded / "dhfkit").exists(), "dhfkit/ should not be in generated repo"
         assert not (scaffolded / "pyproject.toml").exists(), "pyproject.toml should not be in generated repo"
         assert not (scaffolded / "medharness").exists(), "medharness/ should not be in generated repo"
-
-    def test_github_prompts_copied(self, scaffolded):
-        """
-        Prompt files are copied to .github/prompts/.
-
-        """
-        prompt_dir = scaffolded / ".github" / "prompts"
-        prompts = list(prompt_dir.glob("*.md"))
-        assert len(prompts) > 0, f"No prompt files found in {prompt_dir}"
 
     def test_double_scaffold_does_not_crash(self):
         """

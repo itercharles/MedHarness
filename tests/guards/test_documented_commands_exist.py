@@ -12,6 +12,7 @@ command line in README.md and docs/.
 from __future__ import annotations
 
 import re
+import shlex
 import subprocess
 import sys
 from pathlib import Path
@@ -26,12 +27,20 @@ VALUE_FLAGS = {
     "--output", "--approver", "--reviews-dir", "--project-dir", "--type",
     "--requirement-type", "--since-ref", "--code-path", "--offline-mode",
     "--coverage-pair", "--junit", "--doc-format", "--data", "--author", "--stage",
+    "--project-name", "--event", "--github-output", "--token", "--pr",
 }
 
 
 def _documented_calls() -> list[tuple[str, tuple[str, ...], str]]:
     found: dict[tuple[str, tuple[str, ...]], str] = {}
-    sources = sorted((ROOT / "docs").glob("*.md")) + [ROOT / "README.md"]
+    # Templates land in every project, and prompts are what the model runs:
+    # a dead command in either is one somebody executes. The project README
+    # named `dhfkit validate traceability` and `dhfkit report` unchecked.
+    sources = (
+        sorted((ROOT / "docs").glob("*.md")) + [ROOT / "README.md"]
+        + sorted((ROOT / "dhfkit" / "templates").rglob("*.md"))
+        + sorted((ROOT / "medharness" / "prompts").rglob("*.md"))
+    )
     for path in sources:
         for raw in path.read_text(encoding="utf-8").splitlines():
             # A command in a table cell or inline prose is documented just as
@@ -65,7 +74,11 @@ def _parse(line: str) -> tuple[str, tuple[str, ...]] | None:
     if not match:
         return None
     tokens, skip = [], False
-    for arg in match.group(2).split():
+    try:
+        args = shlex.split(match.group(2))
+    except ValueError:              # an unbalanced quote in prose
+        args = match.group(2).split()
+    for arg in args:
         if skip:
             skip = False
             continue

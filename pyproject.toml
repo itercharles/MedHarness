@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "medharness"
-version = "0.35.0"
+version = "0.36.0"
 description = "Open-source design-controlled development infrastructure for medical device and SaMD teams — includes dhfkit"
 readme = "README.md"
 license = { text = "MIT" }
@@ -39,20 +39,13 @@ dependencies = [
     "click",
     "networkx",
     "pyyaml",
-    "python-frontmatter",
     "jinja2",
-    "python-docx",
-    "gitpython",
-    "python-dateutil",
-    "python-dotenv",
     "markdown",
 ]
 
 [project.optional-dependencies]
-ai = ["google-genai"]
 docs = ["weasyprint"]
 dev = ["pytest", "pytest-cov", "build", "jsonschema"]
-full = ["medharness[ai,docs]"]
 
 [project.urls]
 Homepage = "https://github.com/itercharles/MedHarness"

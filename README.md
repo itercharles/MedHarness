@@ -1,303 +1,203 @@
 # MedHarness
 
-**AI coding harness for teams shipping software under design control.**
+**Design-control checks for software teams — traceability, verification, SOUP
+and releases, as CI gates.**
 
 [![PyPI](https://img.shields.io/pypi/v/medharness)](https://pypi.org/project/medharness/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://python.org)
 
-AI can write the code. It cannot tell you which requirement the change serves,
-which risk it touches, or whether the traceability still holds — and under IEC
-62304 those are the parts that decide whether the work counts.
+MedHarness keeps a Design History File (DHF) as plain YAML in your repository
+and checks it with ordinary code: does every requirement trace to its parent, is
+each one verified the way it says, does the SOUP register match what ships. Each
+check is a command that answers in JSON with an exit code, so it drops into any
+CI. An optional AI workflow drafts the design and the code for a change request;
+the checks never ask a model.
 
-MedHarness closes that gap. It reads the design behind a change request, drives
-the implementation from it, then checks the result against the design again with
-ordinary code — no model is asked whether the work is done.
+## Quick start
 
----
-
-## What only it can tell you
-
-Your issue tracker manages one item well. It cannot take every item together and
-ask whether the V-model still holds — whether each requirement gives rise to the
-next, whether a chain closes back on itself, which risks a change touches. That
-analysis is what MedHarness is for, and it reads items as data, so it works
-whether they live in YAML here or in Jira.
-
-```console
-$ medharness --dhf DHF verify dhf
-FAIL [cycle] SRS-014 → SYS-006 → SRS-014
-    Fix: the V-model is directed. Remove whichever link reverses the chain so each item has an origin.
-FAIL [required] SRS-022: SRS derives_from → SYS (count=0, need ≥1)
-WARN [coverage] RISK→RCM: 3/4 covered
-    Fix: dhfkit --dhf DHF item list --type RCM to find uncovered items, then add dhf_links to their YAML.
-         Advisory only — pass --fail-on-uncovered to block the build on this.
-Error: DHF validation failed.
+```bash
+pip install medharness
+mkdir my-device && cd my-device
+medharness init            # writes DHF/ with sample items, and CLAUDE.md
+medharness verify dhf      # does the design hold together?
 ```
 
-A cycle means two items each derive from the other, so neither has an origin and
-the matrix loses the direction that makes it a matrix. A missing required link
-means a requirement traces to nothing above it. Both are structural — they block.
+Replace the sample items with your own, then add the checks to CI.
 
-Incomplete design (`WARN`) blocks only under `--fail-on-uncovered`, because it is
-design still to be written. Conflating the two is what makes traceability checks
-something teams learn to ignore.
+## What it checks
 
-Storage-level checks — schema, and links whose target does not exist — come from
-`dhfkit` and run in the same pass. A backend that enforces referential integrity
-of its own makes them redundant; the analysis above it does not go away.
+| Command | The question it answers |
+|---|---|
+| `verify dhf` | Does the V-model hold together — schema, required links, dangling links, cycles, coverage? |
+| `verify tests` | Is each requirement verified by the method it declares — a Test requirement by a passing test? |
+| `verify soup` | Is the SOUP register what actually ships, and is any of it known-vulnerable? |
+| `verify completion` | Did a change request deliver what it proposed, verified? |
+| `workflow check-changes` | Did the branch change the items its change request said it would? |
+| `workflow check-approval` | Did a reviewer approve the exact commit being merged? |
 
----
+```console
+$ medharness verify dhf
+FAIL [cycle] SRS-014 → SYS-006 → SRS-014
+FAIL [required] SRS-022: SRS derives_from → SYS (count=0, need ≥1)
+WARN [coverage] RISK→RCM: 3/4 covered
+```
 
-## How a change moves
+Broken structure — a cycle, a missing required link, a link to nothing — always
+fails. Design not yet written — an item with no child yet — only warns, unless
+you pass `--fail-on-uncovered`.
 
-Every change is a Change Request on a fixed path. AI drafts, humans approve,
-deterministic gates decide whether it can close.
+## What a project looks like
+
+```
+my-device/
+├── DHF/
+│   ├── config/
+│   │   ├── global.yaml          # project name, lifecycle, which links are required
+│   │   ├── doc_types/*.yaml     # each item type: its fields and what it links to
+│   │   └── soup-sources.yaml    # where your dependency manifests are
+│   ├── items/                   # one YAML file per item, one directory per type
+│   │   ├── 01_crs/CRS-001.yaml
+│   │   ├── 03_srs/SRS-001.yaml
+│   │   └── …                    # UC SYS SYSARCH MODULE SWDD RISK RCM SOUP CR DEF REL
+│   └── documents/specs/         # templates the specifications are rendered from
+└── CLAUDE.md                    # product context, read by the AI stages
+```
+
+An item is a small YAML file. Links are written on the child and point up:
+
+```yaml
+id: SRS-012
+title: Password must be at least 12 characters
+derives_from: [SYS-004]
+verification_method: [Test]
+testing: |
+  T1: an 11-character password is rejected
+```
+
+## Fitting it into what you already have
+
+- **Tests.** Any runner that writes JUnit XML. Tag each test case with the
+  requirement it verifies — the `medharness.links` property, or `@links:SRS-012`
+  in the test name. In pytest: `@pytest.mark.dhf_links("SRS-012")`.
+- **CI.** Every check prints JSON to stdout and exits `0` pass, `1` fail. The
+  smallest useful pipeline is two steps in a job that checks out the repository:
+
+  ```yaml
+  - run: pip install medharness==0.36.0
+  - run: medharness verify dhf --fail-on-uncovered
+  ```
+
+  The full recipe, including the release job, is in
+  [adopting.md](docs/adopting.md#setting-up-ci).
+- **Requirements kept elsewhere.** MedHarness reads the item files under
+  `DHF/items/`. To check requirements that live in another tool, export them
+  into that format — one YAML file per item — and run the same commands.
+- **No AI.** Nothing above needs a model. The AI workflow below is opt-in.
+
+## The AI change workflow (optional)
 
 ```mermaid
 flowchart LR
-    CR["CR-042<br/>opened"] --> PLAN
-    PLAN["build plan<br/><br/>AI drafts DHF items<br/>and impact analysis"] --> REV{"Human<br/>review"}
+    CR["CR opened"] --> PLAN["build plan<br/>AI drafts the design"]
+    PLAN --> REV{"Human review"}
     REV -.->|rejected| PLAN
-    REV -->|"/approve"| IMPL["build code<br/><br/>AI writes code<br/>and tests"]
-    IMPL --> GATES["Verification gates<br/><br/>verify dhf<br/>verify tests<br/>verify soup<br/>verify completion"]
-    GATES -.->|any gate fails| IMPL
-    GATES ==>|all pass| MERGE["Merge to main"]
-    MERGE -.->|"tag v*"| REL["build release<br/><br/>baseline, BOM, SBOM,<br/>evidence, REL item"]
-
-    style PLAN fill:#4c6ef5,color:#fff,stroke:#364fc7
-    style IMPL fill:#4c6ef5,color:#fff,stroke:#364fc7
-    style REV fill:#f59f00,color:#fff,stroke:#e67700
-    style GATES fill:#f1f3f5,color:#212529,stroke:#868e96
-    style MERGE fill:#2f9e44,color:#fff,stroke:#2b8a3e
+    REV -->|approved| CODE["build code<br/>AI writes code and tests"]
+    CODE --> GATES["verify *<br/>ordinary code decides"]
+    GATES -.->|fails| CODE
+    GATES ==>|passes| MERGE["merge"]
+    MERGE -.->|"tag v*"| REL["build release"]
 ```
 
-Only the blue steps call a model. Everything in the verification band is
-ordinary code. See [docs/ai-security.md](docs/ai-security.md) for the boundary
-in detail — including how to run with no AI at all.
-
----
-
-## Install
-
-```bash
-mkdir my-device && cd my-device
-python -m venv .venv && source .venv/bin/activate
-pip install medharness
-medharness init
-```
-
-`medharness init` scaffolds `DHF/` (config, items, documents), `AI-harness/`,
-and prompt templates. Extras: `medharness[ai]` for the AI workflow,
-`medharness[docs]` for PDF export, `medharness[full]` for both.
-
-Check the environment at any point:
-
-```bash
-medharness doctor
-```
-
-### Before enabling the AI stages
-
-`build plan` and `build code` need a model CLI or API key, which pip
-cannot install:
-
-```bash
-npm install -g @anthropic-ai/claude-code   # default path, provides the `claude` CLI
-```
-
-**Read [docs/ai-security.md](docs/ai-security.md) first.** These stages run an
-agentic loop with an unrestricted shell tool and are designed for an ephemeral
-CI runner, not a workstation holding your credentials.
-
-Everything else — traceability, validation, gates, releases — is
-deterministic and needs no model access.
-
----
-
-## First change request
-
-```bash
-git init && git add -A && git commit -m "feat: initialize DHF"
-
-# Edit DHF/items/07_cr/CR-001.yaml, then:
-medharness --dhf DHF build plan --cr CR-001       # AI drafts DHF items + impact analysis
-# review and approve the design PR, then:
-medharness --dhf DHF build code --cr CR-001  # AI writes code and tests
-medharness --dhf DHF verify dhf                    # gates decide whether it can close
-```
-
----
-
-## Deploy to CI
-
-MedHarness does not install a CI workflow — it would reference your branch
-names, runners, and secrets, and `medharness upgrade` will never overwrite it.
-Pin the version and call the gates:
-
-```yaml
-name: DHF
-on:
-  pull_request:
-    paths: ['DHF/**']
-
-jobs:
-  dhf-validate:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      - run: pip install medharness==0.35.0
-      - run: medharness --dhf DHF verify dhf --fail-on-uncovered
-```
-
-Drop `--fail-on-uncovered` while backfilling an existing DHF: coverage gaps then
-report as `WARN`, and only schema, required links, and dangling links block.
-
-`medharness verify --help` lists the gates; each subcommand's `--help` gives its options.
-[docs/interface.md](docs/interface.md) is the contract to build against — result
-shape, exit codes, and what may change.
-[docs/adopting.md](docs/adopting.md#setting-up-ci) carries the full workflow,
-including the release job.
-
----
+`build plan` and `build code` run the `claude` CLI by default
+(`npm install -g @anthropic-ai/claude-code`), or any
+`MEDHARNESS_{DESIGN,DESIGN_REVIEW,DEVELOP,CODE_REVIEW}_MODEL=provider:model`
+(`anthropic`, `openai`, `deepseek`; `MEDHARNESS_{STAGE}_BASE_URL` for Azure,
+Ollama or vLLM). They run an agent with a shell, so run them on an ephemeral CI
+runner — read [ai-security.md](docs/ai-security.md) first.
 
 ## Commands
 
-`dhfkit` owns DHF **data** — storage and retrieval, no analysis. `medharness`
-owns the **analysis over the item set** and the process around it. A team whose
-DHF already lives in Jira or Azure DevOps keeps that and still needs the
-analysis.
+Two CLIs from one package: `medharness` runs the checks and the workflow;
+`dhfkit` stores and reads the items. Both take `--dhf PATH` before the command,
+defaulting to `DHF`. Every command writes JSON to stdout and readable lines to
+stderr; `--help` on any of them lists its options.
 
-Both take `--dhf PATH` before the command, defaulting to `DHF` — so from a
-project root neither needs it.
-Every command writes JSON to stdout and human-readable lines to stderr, so
-`cmd > out.json` gives you the payload and the terminal still reads normally.
+### `verify` — reads the DHF only
 
-**Gates** — `verify *` and `workflow *` — all answer with the same
-envelope, so one CI step can handle any of them:
-
-```json
-{"gate": "verify dhf", "passed": false,
- "summary": "13 item(s) checked; 1 error(s), 3 warning(s).",
- "errors": ["Traceability cycle: CRS-001 -> SYS-001 -> CRS-001"],
- "warnings": ["CRS-001 states no verification criterion — §5.7 needs one"]}
-```
-
-`0` the gate passed · `1` it failed (JSON on stdout) or a usage error was raised
-before it ran (no stdout) · `2` argument parsing failed.
-
-That is the whole answer: the verdict, and every finding as a line you can
-print. A gate that answered only `false` could not be acted on, so the findings
-come with it — but nothing more. `summary` says what was checked, which is how
-you tell a real pass from a gate that examined nothing.
-
-### `verify` — what the DHF says
-
-Answers from the DHF alone. No remote, no branch, no PR: these run the same on a
-laptop as in CI. `verify completion` reads a CR item from the DHF; it does not
-need the pull request that carries it.
-
-| Command | Use it when |
+| Command | Returns |
 |---|---|
-| `medharness verify dhf` | Every push. This is the one gate a DHF cannot do without: it is the only check that reads the items *together* and asks whether the V-model closes. |
-| `medharness verify tests --junit-dir test-results` | After the test job, to prove each requirement was verified **by the method it declared** — a Test-verified requirement needs a passing linked test, not just any evidence. |
-| `medharness verify soup --manifest requirements.txt` | Nightly and before a release. Answers both §8.1.2 questions at once: is the register what actually ships, and is any of it known-vulnerable. `--offline-mode warn` for air-gapped runners. |
-| `medharness verify completion --cr CR-034 --junit-dir test-results` | Twice. On the branch to block the merge — the CR fields and the proposed items settle there. Again on `main`, where the tests re-run against whatever else landed. Reports only items **this CR** touched. Approval is not its question: that is `workflow check-approval`. |
+| `medharness verify dhf` | gate result¹ |
+| `medharness verify tests --junit-dir test-results` | gate result |
+| `medharness verify soup` | gate result |
+| `medharness verify completion --cr CR-034` | gate result |
 
-### `build` — what it produces
+### `workflow` — needs Git or GitHub; CI helpers
 
-| Command | Returns | Use it when |
+| Command | What it does | Returns |
 |---|---|---|
-| `medharness build plan --cr CR-034` | `outcome`, `items_changed`, `review_cycles`, `diagnostics` | The CR has been triaged. Drafts the whole DHF item cascade and the impact analysis, then validates its own output and fixes what it broke. |
-| `medharness build code --cr CR-034` | `outcome`, `files_changed`, `review_cycles` | The design is approved. Writes code and tests against the cascade. `--pr 42` revises from review feedback; `--ci-failures` from a failing run. |
-| `medharness build dhf --manifest requirements.txt --write` | `to_create`, `to_update`, `orphans`, `items_created`, `items_updated` | A dependency changed. Reconciles the SOUP register with the project's manifests. Without `--write` it reports only — read that first: it writes items you then have to fill in a purpose and risk rating for. |
-| `medharness build release --version 1.0.0 --out-dir release --write` | `outcome`, `version`, `cr_ids`, `rel_uid`, `soup_count`, `artifacts`, `errors` | Cutting a release (IEC 62304 §9). Checks the DHF with coverage gaps failing, that every included CR is `completed` and every open defect assessed; writes the baseline, BOM, SBOM, specifications, traceability, test evidence and a hashed manifest. `--write` records the REL item — only when every check passed. `--doc-format pdf` needs `medharness[docs]`. |
+| `medharness workflow check-changes --cr CR-034` | Compares the branch diff with the CR's `affected_items` | gate result |
+| `medharness workflow check-approval --cr CR-034 --pr 42` | Requires an approving review of the PR's head commit; needs `GH_TOKEN` | gate result |
+| `medharness workflow github-event` | Reads a GitHub event: which CR and stage, and what to do next. Not a gate | `cr_id`, `stage`, `action`, `mode`, `pr_number` |
 
-### `workflow` — what Git and GitHub say
+¹ Every gate answers `{gate, passed, summary, errors, warnings}`; see
+[interface.md](docs/interface.md).
 
-CI helper scripts. They cannot answer without the repository, which is why they
-are not under `verify`; a developer working locally never needs them.
+### `build` — writes items, code or artifacts
 
-| Command | Returns | Use it when |
+| Command | What it does | Returns |
 |---|---|---|
-| `medharness workflow check-changes --cr CR-034` | the gate envelope | On the PR. Checks the branch actually changed the items the CR listed in `affected_items` — a CR that promised to touch SYS-001 and did not is caught before review, not after. |
-| `medharness workflow check-approval --cr CR-034 --pr 42` | the gate envelope | Before merging, at each stage that needs a sign-off. Requires an approving GitHub review of the exact commit the PR would merge; an approval of an earlier commit is stale and fails. That is also what keeps the stages honest — a design approval expires the moment code lands, so the develop stage needs its own. Needs `GH_TOKEN`. |
-| `medharness workflow github-event` | `cr_id`, `stage`, `pr_number`, `reason`, and two verdicts: **`action`** — what your own `--review-action` / `--branch-stage` mappings decided, an opaque string this tool never interprets, and which is the one to branch on; `mode` — this tool's own reading (`new` / `iterate` / `cancel` / `skip`), which is only what `action` falls back to when no mapping matches. They differ whenever a mapping fires. | First step of a workflow, so it branches on one command's output instead of a ladder of `if` expressions. Not a gate: it exits 0 whatever it finds. |
+| `medharness build plan --cr CR-034` | AI drafts the CR's design items and impact analysis | `outcome`, `items_changed`, `review_cycles` |
+| `medharness build code --cr CR-034` | AI writes the code and tests for the approved design | `outcome`, `files_changed`, `review_cycles` |
+| `medharness build dhf --write` | Reconciles SOUP items with your dependency manifests; without `--write`, only reports | `to_create`, `to_update`, `orphans` |
+| `medharness build release --version 1.0.0 --out-dir release --write` | Checks the DHF, CRs and open defects, writes the baseline, BOM, SBOM and evidence, and — only if every check passed — records the REL item | `outcome`, `cr_ids`, `rel_uid`, `artifacts`, `errors` |
 
-### Context for an agent
+### `context` — what an AI agent reads
 
-All three print JSON to stdout and make no changes.
+| Command | Returns |
+|---|---|
+| `medharness context overview` | every item summarized, traceability, test coverage |
+| `medharness context implementation --cr CR-034` | the CR, its items, and which modules own them |
+| `medharness context for-stage develop --cr CR-034` | what one stage needs: every item at `analyze` and `design`, the CR's items at `develop` |
 
-| Command | Returns | Use it when |
+### Setup
+
+| Command | What it does | Returns |
 |---|---|---|
-| `medharness context overview` | `project`, `item_count`, `items`, `traceability`, `test_coverage` | An agent or a person is new to the DHF. `traceability.valid` is the same verdict `verify dhf` reaches. Pass `--junit-dir` to get real test coverage instead of `{"computed": false}`. |
-| `medharness context implementation --cr CR-034` | `project`, `cr` (the full item), `items`, `traceability`, `module_map` | An agent is about to write code for a CR: which modules own which designs and requirements. |
-| `medharness context for-stage develop --cr CR-034` | `stage`, `cr`, and at `develop` `affected_items`; at `analyze` and `design`, `items` (every item, summarized), plus `traceability_gaps` at `analyze` | An agent is at one stage of a CR. Only `develop` is small: `analyze` and `design` summarize the whole DHF, because `affected_items` is not written until `build plan` has seen all of it. |
+| `medharness init` | Scaffolds `DHF/` and `CLAUDE.md` in the current directory; refuses if `DHF/` exists | `project_name`, `created` |
+| `medharness upgrade` | Reports where the scaffold differs from this version; `--apply` updates it. Never touches items, `global.yaml` or `CLAUDE.md` | `outdated`, `missing`, `up_to_date` |
+| `medharness doctor` | Checks Python, the CLIs, `gh` auth, and the DHF | `checks`, `healthy` |
 
-### Setting up and keeping current
+### `dhfkit` — the items
 
-| Command | Returns | Use it when |
+| Command | What it does | Returns |
 |---|---|---|
-| `medharness init` | `project_dir`, `project_name`, `created` | Once, in an empty project. Scaffolds the DHF and the AI harness; the CI recipe is in [adopting.md](docs/adopting.md#setting-up-ci). Refuses if `DHF/` exists. |
-| `medharness upgrade` | `outdated`, `missing`, `unavailable`, `up_to_date`, `installed_version`, `summary` | After upgrading the package. Reports scaffold drift; `--apply` writes it. Your DHF items, `global.yaml` and `context.md` are never touched. |
-| `medharness doctor` | `checks`, `healthy`, `summary` | Something is behaving oddly. Checks Python, the CLIs, `gh` auth, and — when there is one — whether the DHF loads. |
+| `dhfkit item list --type SYS` | Lists items of a type | one JSON object per line |
+| `dhfkit item get SRS-012` | One item, with its links resolved | the item |
+| `dhfkit item create --type SRS --data '{...}'` | Adds an item; its ID is allocated | the item |
+| `dhfkit item update SRS-012 --data '{...}'` | Merges fields into an item | the item |
+| `dhfkit item transition CR-034 completed` | Moves an item through its lifecycle; without a state, lists where it can go | the item |
+| `dhfkit validate schema` | Checks every item against its type's schema | `valid`, `errors` |
+| `dhfkit doc generate SRS` | Renders a specification from the items; `ALL` for every type | `output_path` |
+| `dhfkit doc export SRS --format pdf` | The same, as HTML or PDF (PDF needs `medharness[docs]`) | `html_path` or `pdf_path` |
+| `dhfkit sbom` | CycloneDX 1.6 SBOM from the SOUP register | `path`, `components` |
+| `dhfkit init` | A bare DHF, without `CLAUDE.md` | `created` |
 
-### Storing and reading the DHF — `dhfkit`
+## Example project
 
-| Command | Returns | Use it when |
-|---|---|---|
-| `dhfkit item list --type SYS` | one JSON object per line | Enumerating items of a type. |
-| `dhfkit item get SRS-012` | the item, with `all_linked_uids` resolved | You need one item's fields and links. |
-| `dhfkit item create --type SRS --data '{...}'` | the created item, with its assigned ID | Adding an item. The ID is allocated for you. |
-| `dhfkit item update SRS-012 --data '{...}'` | the updated item | Changing fields. The JSON is merged, not replaced; editing an approved item returns it for re-approval. |
-| `dhfkit item transition CR-034 completed` | the item in its new state | Moving an item through its lifecycle. Omit the state to get the transitions available and which criteria block the rest. |
-| `dhfkit validate schema` | `valid`, `item_count`, `errors` | Before committing. Every item against its doc-type schema. |
-| `dhfkit doc generate SYS` | `doc_type`, `output_path`, `version` | Building a specification document from the items. `ALL` builds every type, one object per line. |
-| `dhfkit doc export SYS --format pdf` | `doc_type`, `md_path`, `html_path` or `pdf_path`, `version` | Handing a specification to someone outside the repo. HTML is self-contained; PDF needs `[docs]`. |
-| `dhfkit sbom` | `path`, `components`, `without_purl`, `changed` | You need a CycloneDX 1.6 SBOM from the SOUP register. `without_purl` counts the components no tool downstream can match; `changed` is false when a regeneration left the file as it was. |
-| `dhfkit init --project-name "My Device"` | `created` (the DHF path), `project_name` | You want the DHF without the AI harness. |
-
-Attribution is the commit, not a flag: `dhfkit` does not commit, so who changed
-an item is whoever authored the commit that carried it.
-
-`--help` on any subcommand carries the full surface.
-
-**Model configuration.** Each stage falls back to the Anthropic Claude CLI
-unless you set `MEDHARNESS_{DESIGN,DESIGN_REVIEW,DEVELOP,CODE_REVIEW}_MODEL` to
-a `provider:model` value — `anthropic`, `openai` (`OPENAI_API_KEY`), or
-`deepseek` (`DEEPSEEK_API_KEY`). `MEDHARNESS_{STAGE}_BASE_URL` points a stage at
-Azure, Ollama, or vLLM. `GH_TOKEN` is required for `--pr`.
-
----
-
-## Seeing it run
-
-[**ContourLab**](https://github.com/itercharles/ContourLab) is a browser-based
-contouring workspace for radiation oncology, maintained end-to-end with
-MedHarness. Its `DHF/` holds the real design inputs and traceability, every
-change goes through the CR path above, and CI runs the gates on every PR. If you
-want to read a production adoption before committing to one, start there.
-
----
+[ContourLab](https://github.com/itercharles/ContourLab) is an example project
+used to exercise MedHarness end to end: its DHF, its CI, and changes made
+through the AI workflow.
 
 ## Documentation
 
 | | |
 |---|---|
-| [docs/adopting.md](docs/adopting.md) | starting fresh, migrating an existing DHF, incremental adoption |
-| [docs/interface.md](docs/interface.md) | the machine interface — result envelope, exit codes, stability |
-| [docs/ai-security.md](docs/ai-security.md) | what the AI stages can do, isolation, audit trail, no-AI operation |
-| [docs/architecture.md](docs/architecture.md) | package boundaries, CR topology, scaffold layout |
-| [docs/adr/](docs/adr/) · [CHANGELOG.md](CHANGELOG.md) | decision records; version history |
-| [CONTRIBUTING.md](CONTRIBUTING.md) | contributor setup and local development |
-
-`dhfkit` has no dependency on `medharness`, so the DHF engine can be adopted
-standalone.
-
----
+| [adopting.md](docs/adopting.md) | starting fresh, the CI recipe, bringing an existing DHF, releases |
+| [interface.md](docs/interface.md) | the gate result, exit codes, what may change |
+| [ai-security.md](docs/ai-security.md) | what the AI stages can do, and running without them |
+| [architecture.md](docs/architecture.md) | how the code is organised |
+| [CHANGELOG.md](CHANGELOG.md) | version history |
 
 ## License
 

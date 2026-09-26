@@ -147,47 +147,47 @@ def _write_traceability_report(core, doc_types: tuple[str, ...], output: Path,
         "rows": len(matrix["rows"]),
     }
 
-    if output.suffix.lower() == ".pdf":
+    if output.suffix.lower() in (".pdf", ".html"):
         try:
-            pdf_path = _render_traceability_matrix_pdf(matrix, output)
+            rendered = _render_traceability_matrix(matrix, output)
         except _MissingPDFDeps as exc:
             result["pdf_skipped"] = str(exc)
         else:
-            result["path"] = str(pdf_path)
-            result["pdf_path"] = str(pdf_path)
+            result["path"] = str(rendered)
+            result[f"{output.suffix.lower()[1:]}_path"] = str(rendered)
 
     return result
 
 
-def _render_traceability_matrix_pdf(matrix: dict, output: Path) -> Path:
-    """Render the traceability matrix payload as a Markdown -> HTML -> PDF document.
+def _render_traceability_matrix(matrix: dict, output: Path) -> Path:
+    """Render the matrix to ``output`` as HTML, or as PDF when it ends in .pdf.
 
-    WeasyPrint imports its Pango / Cairo / GObject native libraries at import
-    time. Missing or mis-versioned native libs surface as ``OSError`` from
-    ``cffi.dlopen``, not ``ImportError`` — both are caught so the caller can
-    degrade to JSON-only with a ``pdf_skipped`` reason.
+    PDF needs WeasyPrint and its native libraries; when either is missing the
+    caller degrades to the JSON matrix with a ``pdf_skipped`` reason.
     """
-    try:
-        import markdown as _markdown
-        from weasyprint import HTML
-    except (ImportError, OSError) as exc:
-        raise _MissingPDFDeps(str(exc)) from exc
+    import markdown as _markdown
 
     md = _format_traceability_matrix_markdown(matrix)
     html_body = _markdown.markdown(md, extensions=["tables", "fenced_code", "toc"])
-
     css_path = (
         Path(__file__).resolve().parent.parent
         / "dhfkit" / "templates" / "specs" / "styles" / "default.css"
     )
     css = css_path.read_text(encoding="utf-8") if css_path.exists() else ""
-
     full_html = (
         "<!doctype html><html><head><meta charset='utf-8'>"
         f"<style>{css}</style></head><body>{html_body}</body></html>"
     )
 
     output.parent.mkdir(parents=True, exist_ok=True)
+    if output.suffix.lower() != ".pdf":
+        output.write_text(full_html, encoding="utf-8")
+        return output
+    try:
+        from dhfkit.document_generation import load_weasyprint
+        HTML = load_weasyprint()
+    except (ImportError, OSError) as exc:
+        raise _MissingPDFDeps(str(exc)) from exc
     HTML(string=full_html, base_url=str(output.parent)).write_pdf(str(output))
     return output
 
@@ -356,7 +356,7 @@ def _run_artifact_generation(
     traceability = _write_traceability_report(
         core,
         selected_traceability,
-        out_dir / "traceability" / "Requirements_Traceability_Report.pdf",
+        out_dir / "traceability" / f"Requirements_Traceability_Report.{doc_format}",
         [str(path) for path in junit_paths],
     )
     return {
@@ -388,7 +388,8 @@ def _generate_plan_artifacts(dhf_path: Path, out_dir: Path,
     render_pdf = None
     if doc_format == "pdf":
         try:
-            from weasyprint import HTML as render_pdf
+            from dhfkit.document_generation import load_weasyprint
+            render_pdf = load_weasyprint()
         except (ImportError, OSError) as exc:
             # WeasyPrint imports cleanly but raises OSError when its native
             # cairo/pango libraries are absent, so both cases land here.
