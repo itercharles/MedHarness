@@ -11,6 +11,54 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.36.0] — 2026-09-27
+
+Simpler to install, to scaffold and to read. Nothing a command returns changes.
+
+### Changed
+
+- **Four fewer dependencies.** `python-frontmatter`, `python-docx`,
+  `python-dateutil` and `python-dotenv` were declared and never imported.
+  `gitpython` backed a single `git log` — now a subprocess, like the rest of the
+  git handling — and it printed "is not a Git repository" to stderr on every
+  load of a DHF outside git, up to five times per command. A DHF outside git
+  is supported and now says nothing.
+- **The `[ai]` and `[full]` extras are gone.** `[ai]` installed `google-genai`,
+  which nothing imports: the AI stages call the `claude` CLI or a provider's
+  HTTPS API. `[full]` was `[ai]` plus `[docs]`. `pip install medharness[docs]`
+  is the one extra, for PDF output.
+- **`init` writes 43 files, not 46, and nothing nobody reads.**
+  `.github/prompts/cr-analyze.md` and `cr-develop.md` were scaffolded and kept
+  current by `upgrade`, and no code or prompt read them. `AI-harness/context.md`
+  claimed `build plan` read it; only the code review mentioned it, as optional.
+  The product context now lives in the `CLAUDE.md` that `init` writes and both
+  stages read. Existing projects keep their files; nothing reads them.
+- **`global.yaml` starts with 13 lifecycle states, not 21.** `analyzing`,
+  `developing`, `in_review`, `designing`, `implementing`, `verified`,
+  `validated` and `retired` were declared and used by no item type. Only new
+  projects are affected; `global.yaml` is yours once scaffolded.
+- **README rewritten** — 304 lines to about 200: what it checks, what a project
+  looks like on disk, how it fits your tests, CI and existing tools, then the
+  command reference. `architecture.md` rewritten against the code.
+
+### Fixed
+
+- **`build release` could print WeasyPrint's install banner on stdout, ahead of
+  its JSON.** With WeasyPrint installed but cairo/pango missing, importing it
+  prints to stdout — and the release imported it even for HTML output, to try a
+  PDF traceability matrix. The import now sends that banner to stderr, and the
+  matrix is rendered in the `--doc-format` asked for.
+- **The docs said the analysis works on a DHF kept in Jira.** No command can
+  read anything but the YAML store. The README, `adopting.md` and
+  `architecture.md` now say how integration actually works: export items into
+  `DHF/items/` in the YAML format.
+- The DHF README that `init` writes named `dhfkit validate traceability` and
+  `dhfkit report`, which do not exist, and three removed directories. The
+  documented-commands guard now reads the project templates and the model
+  prompts as well as `docs/`.
+- `CR.target_release` named a doc type `RELEASE`; the release type is `REL`.
+- ContourLab was described as a production adoption. It is an example project.
+
 ## [0.35.0] — 2026-09-26
 
 A review of every command, option and document. The surface is now seven

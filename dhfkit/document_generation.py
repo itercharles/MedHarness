@@ -1,7 +1,7 @@
 """Document generation engine for DHF."""
 
 from pathlib import Path
-from typing import Dict, Any, List, Tuple
+from typing import Tuple
 from datetime import datetime
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 import markdown
@@ -14,6 +14,21 @@ _VOLATILE_ROWS = re.compile(
 
 _GENERATED_DATE = re.compile(r'\|\s*\*\*Generated\*\*\s*\|\s*(\d{4}-\d{2}-\d{2})\s*\|')
 
+
+
+def load_weasyprint():
+    """WeasyPrint's ``HTML`` class, imported without touching stdout.
+
+    When its native libraries are missing, WeasyPrint prints an install banner
+    to stdout on import — and stdout is where every command writes its JSON
+    answer. Raises ImportError or OSError as the import itself would.
+    """
+    import contextlib
+    import sys
+
+    with contextlib.redirect_stdout(sys.stderr):
+        from weasyprint import HTML
+    return HTML
 
 def _body(markdown_content: str) -> str:
     """Strip the rows that change on every run, for content comparison.
@@ -206,7 +221,7 @@ class DocumentGenerator:
     def _export_pdf(self, markdown_content: str, output_path: Path) -> Path:
         """Export markdown to PDF using WeasyPrint."""
         try:
-            from weasyprint import HTML
+            HTML = load_weasyprint()
         except ImportError as exc:
             raise RuntimeError(
                 "PDF export needs the 'docs' extra: pip install 'medharness[docs]'. "

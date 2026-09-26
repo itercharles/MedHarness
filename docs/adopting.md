@@ -4,21 +4,22 @@
 
 ```bash
 pip install medharness
-medharness init            # in an empty directory
+medharness init            # in a directory with no DHF/ yet
 ```
 
-You get a complete DHF scaffold — sample items, config, document templates, and AI prompts. Three things to replace before your first real CR:
+You get a DHF with sample items, its config, document templates, and a
+`CLAUDE.md`. Three things to replace before your first real CR:
 
 | Replace | Why |
 |---------|-----|
 | `DHF/items/` | Delete the sample YAML and add your own, or keep them while you learn the schema |
-| `DHF/config/global.yaml` | Set the project name |
-| `AI-harness/context.md` | Describe the product, so the AI reasons about your domain |
+| `DHF/config/global.yaml` | Check the project name; adjust `required_traceability` if your V-model differs |
+| `CLAUDE.md` | Describe the product, so the AI stages reason about your domain |
 
 Check it at any point:
 
 ```bash
-medharness --dhf DHF verify dhf
+medharness verify dhf
 ```
 
 Document generation and traceability work against whatever items you have put in. CI is the one piece you add yourself — [Setting up CI](#setting-up-ci) is next, and is the whole deployment.
@@ -470,9 +471,9 @@ medharness upgrade --apply              # apply updates from the installed versi
 medharness upgrade --project-dir /path  # specify project root (default: cwd)
 ```
 
-Files that are always **user-owned** (never modified by upgrade): `DHF/items/`, `DHF/config/global.yaml`, `AI-harness/context.md`, `CLAUDE.md`, and your CI workflow.
+Files that are always **yours** (never modified by upgrade): `DHF/items/`, `DHF/config/global.yaml`, `DHF/config/soup-sources.yaml` once it exists, `DHF/README.md`, `CLAUDE.md`, and your CI workflow.
 
-Files that upgrade manages: AI prompts (`.github/prompts/`), spec Jinja2 templates (`DHF/documents/specs/`), doc-type configs (`DHF/config/doc_types/`).
+Files that upgrade manages: doc-type configs (`DHF/config/doc_types/`) and the spec templates (`DHF/documents/specs/`).
 
 Your CI workflow is deliberately not managed — it is not part of the release payload, so `upgrade` has no template to compare against. When the recommended pipeline changes, the changelog says so and [Setting up CI](#setting-up-ci) carries the current recipe.
 
@@ -482,7 +483,7 @@ Your CI workflow is deliberately not managed — it is not part of the release p
 
 What it gives you: item storage and retrieval, schemas, lifecycle transitions, document generation, and a CycloneDX SBOM. SOUP sync (`build dhf`) and releases (`build release`) are `medharness`. `LocalDHFAdapter` is the programmatic entry point.
 
-What it does not give you: **traceability analysis**. Coverage, required links, cycles, and risk chains live in `medharness` and take items as data, so they work against any backend — including a DHF you keep in Jira or Azure DevOps. See [architecture.md](architecture.md).
+What it does not give you: **traceability analysis**. Coverage, required links, cycles and risk chains live in `medharness`, which reads the same YAML items. Requirements kept in another system are checked by exporting them into `DHF/items/` in this format. See [architecture.md](architecture.md).
 
 ## What to adopt, in what order
 

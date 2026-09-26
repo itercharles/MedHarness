@@ -60,7 +60,7 @@ properties:
 - name: target_release
   format: relationship
   target_types:
-  - RELEASE
+  - REL
   label: Target Release
 lifecycle:
   transitions:

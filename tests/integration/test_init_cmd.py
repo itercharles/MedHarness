@@ -8,9 +8,7 @@ Tests the zero-prompt init command:
 """
 
 import inspect
-from pathlib import Path
 
-import pytest
 
 from medharness.workflows.init import (
     _scaffold_dhf,
@@ -36,18 +34,19 @@ class TestInitCmd:
         assert "Cardiac Monitor" in (tmp_path / "CLAUDE.md").read_text()
 
     def test_write_claude_md_mentions_cr_workflow(self, tmp_path):
-        """CLAUDE.md references CR ID in PR title and testing conventions."""
+        """CLAUDE.md states the CR-in-PR-title rule and the gates that run."""
         _write_claude_md(tmp_path, "Device")
         content = (tmp_path / "CLAUDE.md").read_text()
-        assert "CR ID" in content
+        assert "names its CR" in content
         assert "verify tests" in content
 
-    def test_write_claude_md_single_repo_layout(self, tmp_path):
-        """CLAUDE.md describes single-repo structure with DHF/ directory."""
+    def test_write_claude_md_carries_the_product_context(self, tmp_path):
+        """It replaced AI-harness/context.md, which the design prompt never read."""
         _write_claude_md(tmp_path, "Device")
         content = (tmp_path / "CLAUDE.md").read_text()
-        assert "DHF/" in content
-        assert "DHF_REPO_TOKEN" not in content
+        for section in ("## Product", "## Architecture", "## Scope", "## Rules"):
+            assert section in content, section
+        assert "Device" in content
 
     # ── placeholder substitution ─────────────────────────────────────────────
 
@@ -108,20 +107,17 @@ class TestInitCmd:
         assert "git clone" not in src
         assert "subprocess.run" not in src
 
-    def test_scaffold_emits_github_prompts(self, tmp_path):
-        """_scaffold_dhf copies the AI prompts into .github/prompts/."""
+    def test_scaffold_writes_nothing_that_nothing_reads(self, tmp_path):
+        """`.github/prompts/*.md` and `AI-harness/context.md` were scaffolded and
+        kept current by `upgrade`, and no code or prompt read them."""
         _scaffold_dhf(tmp_path)
-        assert (tmp_path / ".github" / "prompts" / "cr-analyze.md").exists()
+        assert not (tmp_path / ".github").exists()
+        assert not (tmp_path / "AI-harness").exists()
 
     def test_scaffold_omits_github_workflow(self, tmp_path):
         """CI is not in the release payload, so init must not claim to create it."""
         _scaffold_dhf(tmp_path)
         assert not (tmp_path / ".github" / "workflows").exists()
-
-    def test_scaffold_emits_ai_harness_context(self, tmp_path):
-        """_scaffold_dhf creates AI-harness/context.md for agent context."""
-        _scaffold_dhf(tmp_path)
-        assert (tmp_path / "AI-harness" / "context.md").exists()
 
     def test_scaffold_creates_dhf_readme_inside_dhf(self, tmp_path):
         """_scaffold_dhf places README inside DHF/, not at repo root."""
@@ -133,12 +129,6 @@ class TestInitCmd:
         _scaffold_dhf(tmp_path)
         for d in ("00_uc", "01_crs", "02_sys", "03_srs", "04_modules", "05_swdd", "07_cr"):
             assert (tmp_path / "DHF" / "items" / d).is_dir(), f"Missing items/{d}"
-
-    def test_scaffold_creates_prompt_files(self, tmp_path):
-        """_scaffold_dhf copies prompt files for repo-local automation."""
-        _scaffold_dhf(tmp_path)
-        for prompt in ("cr-analyze.md", "cr-develop.md"):
-            assert (tmp_path / ".github" / "prompts" / prompt).exists(), f"Missing {prompt}"
 
     # ── run_init guards ──────────────────────────────────────────────────────
 

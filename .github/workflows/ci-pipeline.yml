@@ -127,7 +127,9 @@ jobs:
               assert (dhf_dir / 'DHF' / 'config' / 'global.yaml').exists()
               assert (dhf_dir / 'DHF' / 'documents' / 'specs').exists()
               assert (dhf_dir / 'DHF' / 'items').exists()
-              assert (dhf_dir / '.github' / 'prompts').exists()
+              assert (dhf_dir / 'DHF' / 'README.md').exists()
+              assert not (dhf_dir / '.github' / 'prompts').exists()
+              assert not (dhf_dir / 'AI-harness').exists()
               # CI is not part of the release payload — adopters copy it from
               # docs/adopting.md, so init must not claim to create it.
               assert not (dhf_dir / '.github' / 'workflows').exists()

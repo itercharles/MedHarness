@@ -8,7 +8,7 @@ from pathlib import Path
 def register(main):
     @main.command("init")
     def init_cmd() -> None:
-        """Scaffold a DHF and AI-harness structure in the current directory.
+        """Scaffold a DHF and a CLAUDE.md in the current directory.
 
         Takes no prompts — the project name is derived from the directory name.
         Existing files are not overwritten.
@@ -27,7 +27,7 @@ def register(main):
 
         Compares CI workflow, AI prompts, spec templates, and doc-type configs
         against the installed MedHarness version. DHF items, global.yaml, and
-        AI-harness/context.md are never modified.
+        CLAUDE.md are never modified.
 
         Outputs structured JSON to stdout; human-readable messages to stderr.
         Exits non-zero when there are outdated or missing files (even without --apply).

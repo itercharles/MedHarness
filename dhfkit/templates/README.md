@@ -1,111 +1,52 @@
-# DHF — Design History File for {{project_name}}
+# DHF — {{project_name}}
 
-Scaffolded by [MedHarness](https://github.com/itercharles/MedHarness).
+The Design History File: one YAML file per item, checked by
+[MedHarness](https://github.com/itercharles/MedHarness).
 
-> **This repo contains starter sample content.** Replace all items, documents, and plans with your project's real requirements, architecture, risks, and change records before using this for a regulated product.
+> **The items here are samples.** Replace them with your product's real
+> requirements, risks and change requests before relying on this DHF.
 
-## Next Steps
-
-1. Edit `AI-harness/context.md` with your product overview, regulatory class, and architecture constraints
-2. Replace sample items under `DHF/items/` with your project's actual requirements
-3. Adapt plan documents under `DHF/documents/plans/`
-4. Run `dhfkit --dhf DHF validate schema` to verify, then commit and push
-
-## Directory Layout
+## Layout
 
 ```
-├── DHF/
-│   ├── items/                # One YAML file per requirement/risk/CR item
-│   │   ├── 00_uc/            # Use Cases
-│   │   ├── 01_crs/           # Customer Requirements
-│   │   ├── 02_sys/           # System Requirements
-│   │   ├── 03_srs/           # Software Requirements
-│   │   ├── 04_modules/       # Software Modules
-│   │   ├── 05_swdd/          # Detailed Design
-│   │   ├── 06_sysarch/       # System Architecture
-│   │   ├── 07_cr/            # Change Requests
-│   │   ├── 08_rel/           # Releases
-│   │   ├── 09_soup/          # SOUP items
-│   │   ├── 10_risk/          # Risks
-│   │   ├── 11_rcm/           # Risk Control Measures
-│   │   └── 12_def/           # Defects
-│   ├── config/               # global.yaml + doc_types/*.yaml
-│   ├── test-results/         # Automated test result records
-│   └── documents/
-│       ├── plans/            # Planning documents
-│       └── specs/            # Generated specs + Jinja2 templates
-├── AI-harness/
-│   └── context.md            # Product context for AI agents — keep this current
-├── .github/
-│   ├── prompts/              # AI agent prompts for CR workflows
-│   └── workflows/            # DHF-side CI
-└── README.md
+DHF/
+├── config/
+│   ├── global.yaml        # project name, lifecycle, traceability rules
+│   ├── doc_types/*.yaml   # the fields each item type has, and what it links to
+│   └── soup-sources.yaml  # where `build dhf` finds your dependencies
+├── items/                 # one YAML file per item, one directory per type
+└── documents/specs/       # templates that `dhfkit doc generate` renders
 ```
 
-## Item Type Model
+## Item types
 
-Items follow the V-model hierarchy. Each type has a fixed code prefix.
+| Code | Item | Links to |
+|------|------|----------|
+| `UC` | Use case | — |
+| `CRS` | Customer requirement | `derives_from` → UC |
+| `SYS` | System requirement | `satisfies` → CRS |
+| `SYSARCH` | System architecture decision | `design` → SYS |
+| `SRS` | Software requirement | `derives_from` → SYS |
+| `MODULE` | Software module | — |
+| `SWDD` | Software detailed design | `implements` → SRS, `module` → MODULE |
+| `RISK` | Risk | — |
+| `RCM` | Risk control measure | `mitigates` → RISK, `implements` → SYS |
+| `SOUP` | Third-party component | — |
+| `CR` | Change request | `affected_items`, `affected_risk_items` |
+| `DEF` | Defect | `affected_items`, `found_in_release` → REL |
+| `REL` | Release record | — |
 
-| Code | Name | One item per… |
-|------|------|---------------|
-| `UC` | Use Case | User goal or operating scenario |
-| `CRS` | Customer Requirement | Stakeholder need |
-| `SYS` | System Requirement | System-level behavioural obligation |
-| `SRS` | Software Requirement | Software-level behavioural obligation |
-| `MODULE` | Software Module | Software unit in the architecture decomposition |
-| `SWDD` | Software Detailed Design | Design decisions for an SRS requirement within a module |
-| `SYSARCH` | System Architecture | System-level design decision for a SYS requirement |
-| `RISK` | Risk | Identified hazard or hazardous situation |
-| `RCM` | Risk Control Measure | Mitigation for a risk, implemented as a system requirement |
-| `CR` | Change Request | Proposed change driving a DHF update cycle |
-| `SOUP` | SOUP | Third-party dependency (IEC 62304 §5.3.3) |
-| `REL` | Release | Software release record (IEC 62304 §9) |
-| `DEF` | Defect | Tracked problem or non-conformance |
+A link is written on the child and points up to its parent. Which links are
+required is set in `global.yaml`, under `required_traceability`.
 
-### Traceability Links
-
-Links are written on the child item and point upward to the parent.
-
-| Link field | Written on | Points to |
-|------------|-----------|-----------|
-| `derives_from` | CRS | UC |
-| `satisfies` | SYS | CRS |
-| `design` | SYSARCH | SYS |
-| `derives_from` | SRS | SYS |
-| `module` | SWDD | MODULE |
-| `implements` | SWDD | SRS |
-| `mitigates` | RCM | RISK |
-| `implements` | RCM | SYS |
-
-### Design Layer: SYSARCH / MODULE / SWDD
-
-- **SYSARCH** — one per SYS requirement; records the system-level design decision for that requirement
-- **MODULE** — one per software unit; defines responsibility, key interfaces, internal structure
-- **SWDD** — one per SRS requirement under a MODULE; must carry both `implements` (SRS) and `module` (MODULE)
-
-### Approval Model
-
-Requirement items (UC, CRS, SYS, SRS, SWDD, SYSARCH, RISK, RCM) have no `status` field. Approval is implicit from Git: on `main` = approved, on a feature branch = draft.
-
-## Common Commands
+## Commands
 
 ```bash
-# Data operations (dhfkit)
-dhfkit --dhf DHF item list --type SYS
-dhfkit --dhf DHF item get SYS-001
-dhfkit --dhf DHF item create --type SYS --data '{"title": "My requirement"}'
-dhfkit --dhf DHF validate schema
-dhfkit --dhf DHF validate traceability
-dhfkit --dhf DHF doc generate ALL
-dhfkit --dhf DHF report
-
-# AI-assisted CR workflow (medharness)
-medharness --dhf DHF build plan --cr CR-001   # design phase
-medharness --dhf DHF build code --cr CR-001   # implement phase
+dhfkit item list --type SYS
+dhfkit item create --type SYS --data '{"title": "…", "satisfies": ["CRS-001"]}'
+dhfkit item update SYS-001 --data '{"title": "…"}'
+medharness verify dhf        # does the V-model hold together
 ```
 
-See the [MedHarness README](https://github.com/itercharles/MedHarness) for the full command reference and CI gate documentation.
-
----
-
-`dhfkit` is bundled with MedHarness — install with `pip install medharness`.
+Run them from the directory that contains `DHF/`, or pass `--dhf PATH` before
+the command.

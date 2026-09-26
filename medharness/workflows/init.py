@@ -58,10 +58,8 @@ def _scaffold_dhf(project_dir: Path) -> None:
     # AI prompts only. The CI workflow is not part of the release payload —
     # adopters copy it from docs/adopting.md and own it from there, so scaffolding
     # it here would silently do nothing on an installed package.
-    _cp("github/prompts", ".github/prompts")
 
     # AI agent context file
-    _cp("AI-harness", "AI-harness")
 
 
 # Directories that may sit inside a project root but are never scaffold output.
@@ -108,8 +106,6 @@ def _replace_placeholders(project_dir: Path, project_name: str) -> None:
         original = text
         text = text.replace("{{project_name}}", project_name)
         text = text.replace("{{medharness_version}}", medharness_version)
-        text = text.replace("{{medharness_repo}}", "itercharles/MedHarness")
-        text = text.replace("{{primary_test_tool}}", "pytest")
         if text != original:
             path.write_text(text, encoding="utf-8")
 
@@ -128,34 +124,34 @@ def _replace_placeholders(project_dir: Path, project_name: str) -> None:
 # ---------------------------------------------------------------------------
 
 def _write_claude_md(project_dir: Path, project_name: str) -> Path:
-    """Write CLAUDE.md for a single-repo project layout."""
+    """Write the CLAUDE.md the AI stages read for product context and rules."""
     project_dir.mkdir(parents=True, exist_ok=True)
     dest = project_dir / "CLAUDE.md"
     dest.write_text(f"""\
 # CLAUDE.md
 
-## Project
+`build plan` and `build code` read this file before they run. Replace each
+placeholder with what an engineer new to the product would need to know.
 
-{project_name} — medical device software developed under design control.
+## Product
 
-## Repo Structure
+{project_name}: <what it does, in two or three sentences>
 
-| Directory | Purpose |
-|-----------|---------|
-| `DHF/` | Design History File — requirements, risks, traceability |
-| `src/` | Product source code |
-| `tests/` | Product test suite |
-| `.github/` | Optional repo-local automation and prompts |
+## Architecture
 
-## Key Rules
+<subsystems, technology stack, where the source lives>
 
-- PR title must include a CR ID (e.g. `feat(CR-012): description`)
-- DHF mutations go through `dhfkit --dhf DHF item` commands
-- `verify tests` enforces requirement→test coverage on every PR
-- Evidence bundle is produced on merge to `main`
-- Canonical product docs live in `DHF/documents/`:
-  - `DHF/documents/specs/customer_requirement_specification.md`
-  - `DHF/documents/specs/architecture_design_specification.md`
+## Scope
+
+In scope: <…>
+Out of scope: <…>
+
+## Rules
+
+- A PR title names its CR, e.g. `feat(CR-012): description`.
+- DHF items change through `dhfkit item create|update|transition`, never by
+  hand-editing IDs.
+- `medharness verify dhf` and `medharness verify tests` run on every PR.
 """, encoding="utf-8")
     return dest
 
@@ -244,7 +240,7 @@ def run_init() -> dict:
     say(f'       git commit -m "feat: initialize {project_name} with MedHarness"')
     say()
     say("  2. Replace the sample content:", bold=True)
-    say("       Edit AI-harness/context.md with your product description.")
+    say("       Describe the product in CLAUDE.md — the AI stages read it.")
     say("       Edit DHF/items/ with your real requirements, risks, and CRs.")
     say()
     say("  3. Check it, from this directory:", bold=True)

@@ -9,7 +9,7 @@ DHF I/O utilities (for direct DHF-layer consumers such as tests and adapters):
     ItemLoader, parse_junit_xml, ExecutionResult
 
 Internal (not part of the public API):
-    ItemSaver, GitRepository, DocumentGenerator
+    ItemSaver, DocumentGenerator
     — these are implementation details of the adapter layer.
 """
 
