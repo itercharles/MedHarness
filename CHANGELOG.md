@@ -11,6 +11,17 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.36.1] — 2026-09-27
+
+### Fixed
+
+- **`init` from a checkout and `init` from PyPI wrote different files.** The
+  `docs/reviews/.gitkeep` template never reached the wheel, so an installed
+  `init` wrote 42 files where the source wrote 43 — and 0.36.0's changelog and
+  `architecture.md` described the source. The template is gone: `build plan`'s
+  reviewer creates `docs/reviews/` when it writes the first review. A test now
+  builds the wheel and requires every scaffolded template to be in it.
+
 ## [0.36.0] — 2026-09-27
 
 Simpler to install, to scaffold and to read. Nothing a command returns changes.

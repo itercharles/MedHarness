@@ -50,7 +50,6 @@ def _scaffold_dhf(project_dir: Path) -> None:
     _cp("config", "DHF/config")
     _cp("specs", "DHF/documents/specs")
     _cp("items", "DHF/items")
-    _cp("reviews", "docs/reviews")
 
     # DHF README goes inside DHF/ — root README is the project README
     _cp("README.md", "DHF/README.md")

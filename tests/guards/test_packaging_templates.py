@@ -197,3 +197,22 @@ class TestRecipeCommandsParse:
             assert fault not in output, (
                 f"the CI recipe runs `{' '.join(call)}`, which fails: {fault}"
             )
+
+
+class TestTheWheelScaffoldsWhatTheSourceDoes:
+    """`docs/reviews/.gitkeep` was a template that never reached the wheel —
+    the build drops it — so `init` from a checkout wrote one more file than
+    `init` from PyPI, and the docs described the checkout."""
+
+    def test_every_template_init_copies_is_packaged(self, built_wheel: Path) -> None:
+        with zipfile.ZipFile(built_wheel) as zf:
+            packaged = {n.split("dhfkit/templates/", 1)[1] for n in zf.namelist()
+                        if "dhfkit/templates/" in n and not n.endswith("/")}
+        source = {
+            str(p.relative_to(_TEMPLATES_DIR))
+            for p in _TEMPLATES_DIR.rglob("*")
+            if p.is_file() and "__pycache__" not in p.parts
+            # The CI recipe is published through the docs, not the package.
+            and p.relative_to(_TEMPLATES_DIR).parts[:2] != ("github", "workflows")
+        }
+        assert source - packaged == set(), f"not in the wheel: {sorted(source - packaged)}"
