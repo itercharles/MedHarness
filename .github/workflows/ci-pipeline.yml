@@ -125,7 +125,7 @@ jobs:
               dhf_dir = Path(tmp) / 'test-dhf'
               _scaffold_dhf(dhf_dir)
               assert (dhf_dir / 'DHF' / 'config' / 'global.yaml').exists()
-              assert (dhf_dir / 'DHF' / 'documents' / 'specs').exists()
+              assert not (dhf_dir / 'DHF' / 'config' / 'doc_types').exists()  # defaults are inherited
               assert (dhf_dir / 'DHF' / 'items').exists()
               assert (dhf_dir / 'DHF' / 'README.md').exists()
               assert not (dhf_dir / '.github' / 'prompts').exists()
@@ -164,7 +164,7 @@ jobs:
               subprocess.run([sys.executable, '-m', 'dhfkit', '--dhf', dhf, 'item', 'list', '--type', 'CRS'], check=True)
               subprocess.run([sys.executable, '-m', 'dhfkit', '--dhf', dhf, 'item', 'list', '--type', 'SYS'], check=True)
               for dt in 'UC CRS SYS SRS SWDD SYSARCH RISK RCM CR'.split():
-                  subprocess.run([sys.executable, '-m', 'dhfkit', '--dhf', dhf, 'doc', 'generate', dt], check=True)
+                  subprocess.run([sys.executable, '-m', 'dhfkit', '--dhf', dhf, 'doc', dt], check=True)
               print('OK: starter DHF workflow valid')
           "
 

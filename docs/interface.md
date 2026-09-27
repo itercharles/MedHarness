@@ -176,9 +176,9 @@ verification_method: [Test]
 |---|---|
 | One file per item | Named anything ending `.yaml`; the directory under `items/` does not matter, so an export can use its own |
 | `id` | Required. Its prefix (`SRS-`) picks the doc type |
-| Fields | Only those the doc type declares. An undeclared field fails `dhfkit validate schema`, naming it — declare it in the doc type first |
+| Fields | Only those the doc type declares. An undeclared field fails `dhfkit validate schema`, naming it — declare it by overriding the doc type first |
 | Links | Fields of format `relationship` or `item_multiselect`: a list of IDs pointing up the V-model. Which are required is `required_traceability` in `global.yaml` |
-| Types | The doc types in `DHF/config/doc_types/` — the defaults, or your own |
+| Types | The 13 defaults, plus any `DHF/config/doc_types/<type>.yaml` of your own, which replaces the default of that code — see [adopting.md](adopting.md#changing-the-defaults) |
 
 Check an export in two steps: `dhfkit validate schema` for the files, then
 `medharness verify dhf` for the design they describe.

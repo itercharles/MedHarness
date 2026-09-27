@@ -11,6 +11,81 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.37.0] — 2026-09-27
+
+Configure less, learn fewer commands, integrate through a file format.
+
+### Breaking Changes
+
+- **The defaults live in the package; a project keeps only what it changes.**
+  `init` used to copy about 900 lines of config and eleven templates into every
+  project, which froze them at the version that scaffolded them — and `upgrade`
+  existed only to reconcile the copies. Now the doc types, lifecycle,
+  traceability rules and templates are read from the package, and a project
+  overrides them file by file:
+
+  | To change | Do this |
+  |---|---|
+  | A setting | Set its key in `global.yaml`; it replaces the default key |
+  | An item type | `DHF/config/doc_types/<type>.yaml` replaces the default type of that code |
+  | A type you don't use | `omit_doc_types: [UC]` in `global.yaml` |
+  | A template | A file of the same name in `DHF/documents/specs/` |
+
+  `init` writes 17 files, not 42: a `global.yaml` holding the project name, the
+  DHF README, the sample items, `CLAUDE.md` and `.gitignore`. **`upgrade` is
+  removed.** Existing projects keep working unchanged — their copies override
+  the defaults they duplicate; delete the ones you have not changed to follow
+  the defaults again.
+
+- **One `context` command.** `context overview`, `context implementation` and
+  `context for-stage analyze|design|develop` become `context [--cr CR]`.
+  Without `--cr`: every item summarized and the traceability verdict. With it:
+  the CR, the items it affects in full and the modules that own them — or every
+  item, when the CR has not recorded `affected_items` yet. The stage argument
+  encoded what the CR's own state already says.
+
+- **One `dhfkit doc` command.** `doc generate` and `doc export` become
+  `doc TYPE|ALL --format md|html|pdf` (default `md`), answering `md_path` in
+  every format — `generate` called it `output_path`.
+
+- **The config is the one place for traceability rules.**
+  `verify dhf --coverage-pair` restated coverage the config defines, and
+  `verify tests --requirement-type` defaulted to `SRS, SYS, CRS`, hardcoded in
+  three places. Both flags go. The requirement types are the doc types whose
+  `role` ends in `_requirement`, so a project's own requirement type is checked
+  without a flag. (Design items track a verification status too; they are not
+  requirements.)
+
+- **The item file format is the integration contract; the `DHFAdapter`
+  protocol is removed.** No command could take a backend other than the YAML
+  store, so the protocol promised a plugin mechanism that did not exist, and two
+  of its methods were leftovers nothing called. `interface.md` now specifies the
+  format as the way another system integrates: export into `DHF/items/`, then
+  `dhfkit validate schema` and `medharness verify dhf`.
+
+- `CONTRACT_VERSION` moves to `10.0`.
+
+### Added
+
+- **A CR can be cancelled.** `cancelled` was a lifecycle state and a terminal
+  phase in the code, and no transition reached it; a CR whose pull request
+  closed unmerged could only be left in `design` or `develop`. It now
+  transitions from `new`, `design` or `develop`.
+
+### Fixed
+
+- **A DHF not named `DHF` wrote its specifications outside itself.** Output
+  paths resolved from the DHF's parent and assumed its name; `dhfkit init` hid
+  this by writing its own paths. They now resolve against the DHF, and paths
+  written the old way still land where they did.
+- **`verify dhf` reports a malformed item as a finding**, in its envelope and
+  naming the file, rather than stopping as if the gate had not run. That is the
+  job the gate exists to do.
+- `test_cli_doc_export.py` found its doc types with a `doc list` command that
+  does not exist, and CI and `CLAUDE.md` both told pytest to skip it — it never
+  ran. Removed; PDF export is tested in `test_document_generation.py`, which
+  skips when the native libraries are missing, so the suite now runs whole.
+
 ## [0.36.1] — 2026-09-27
 
 ### Fixed

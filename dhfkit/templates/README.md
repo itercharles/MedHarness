@@ -11,12 +11,15 @@ The Design History File: one YAML file per item, checked by
 ```
 DHF/
 ├── config/
-│   ├── global.yaml        # project name, lifecycle, traceability rules
-│   ├── doc_types/*.yaml   # the fields each item type has, and what it links to
-│   └── soup-sources.yaml  # where `build dhf` finds your dependencies
+│   └── global.yaml        # the project name, and anything you change
 ├── items/                 # one YAML file per item, one directory per type
-└── documents/specs/       # templates that `dhfkit doc generate` renders
+└── documents/specs/       # specifications rendered by `dhfkit doc`
 ```
+
+The item types, lifecycles, required links and templates are defaults from
+MedHarness. To change one, put an override next to `global.yaml`: a key in
+`global.yaml` replaces the default key, and `config/doc_types/<type>.yaml`
+replaces the default type of that code.
 
 ## Item types
 
@@ -37,7 +40,7 @@ DHF/
 | `REL` | Release record | — |
 
 A link is written on the child and points up to its parent. Which links are
-required is set in `global.yaml`, under `required_traceability`.
+required is `required_traceability` — a default you can override in `global.yaml`.
 
 ## Commands
 

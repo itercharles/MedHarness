@@ -39,10 +39,22 @@ config, never a path. **The commands, though, always read the YAML store**
 backend. Requirements kept in another system are checked by exporting them into
 `DHF/items/` in the YAML format.
 
-The one place `medharness` writes DHF files directly is scaffolding: `init`
-creates the skeleton and `upgrade` keeps its templates current. Everything else
-goes through the store — `tests/guards/test_storage_access_is_bounded.py` holds
+The one place `medharness` writes DHF files directly is `init`, which creates
+the skeleton. Everything else goes through the store — `tests/guards/test_storage_access_is_bounded.py` holds
 that line.
+
+## Defaults and overrides
+
+`dhfkit/templates/config/` and `dhfkit/templates/specs/` are the defaults every
+DHF reads: the 13 doc types, the lifecycle, the traceability rules, the
+specification templates. `ProjectConfig.load` merges them with the project's own
+config — each `global.yaml` key replaces the default key, a `doc_types/` file
+replaces the default type of its `code`, `omit_doc_types` drops one — and the
+document generator looks for a template in the project, then the package.
+
+So a project holds only what it changes, and a new version's defaults reach it
+by upgrading the package. `tests/guards/test_packaging_templates.py` builds the
+wheel and requires every default to be in it.
 
 ## What `init` writes
 
@@ -50,24 +62,16 @@ that line.
 <project>/
 ├── DHF/
 │   ├── README.md                 # what the DHF is and how to edit it
-│   ├── config/
-│   │   ├── global.yaml           # project name, lifecycle states, traceability rules
-│   │   ├── doc_types/*.yaml      # 13 item types: fields, links, lifecycle
-│   │   └── soup-sources.yaml     # where the dependency manifests are
-│   ├── items/NN_type/            # one directory per item type, with a sample item
-│   └── documents/specs/          # Jinja2 templates and the stylesheet
+│   ├── config/global.yaml        # the project name, and room for overrides
+│   └── items/NN_type/            # one directory per item type, with a sample item
 ├── CLAUDE.md                     # product context the AI stages read
 └── .gitignore
 ```
 
 `build plan` writes its design reviews to `docs/reviews/`, creating it on first
-use. The source is `dhfkit/templates/`. Placeholders: `{{project_name}}` (from the
-directory name) and `{{medharness_version}}`.
-
-`upgrade` manages the 13 doc-type configs and the spec templates with their stylesheet — it reports
-where they differ from the installed version and `--apply` rewrites them. It
-seeds `soup-sources.yaml` if missing and never overwrites it. It never touches
-`global.yaml`, the items, `DHF/README.md` or `CLAUDE.md`.
+use; `dhfkit doc` writes specifications to `DHF/documents/specs/`.
+Placeholders: `{{project_name}}` (from the directory name) and
+`{{medharness_version}}`.
 
 The CI recipe, `dhfkit/templates/github/workflows/dhf.yml`, is **not** installed:
 it names branches, runners and secrets that differ per project. It is published
