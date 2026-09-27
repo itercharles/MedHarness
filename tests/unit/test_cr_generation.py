@@ -287,60 +287,30 @@ class TestBuildReviewResult:
 # ── PR feedback ───────────────────────────────────────────────────────────────
 
 class TestGetPrFeedback:
-    def test_returns_unavailable_when_no_env(self, monkeypatch):
-        monkeypatch.delenv("GH_TOKEN", raising=False)
-        monkeypatch.delenv("GITHUB_TOKEN", raising=False)
-        monkeypatch.delenv("GITHUB_REPOSITORY", raising=False)
-        result = _get_pr_feedback(42)
-        assert "unavailable" in result["prompt_text"]
-        assert result["diagnostics"]["comments_status"] == "skipped"
-        assert result["warnings"][0]["code"] == "github_feedback_env_missing"
+    """Read through gh, so a test replaces one function instead of urllib."""
 
-    def test_uses_github_token_fallback(self, monkeypatch):
-        monkeypatch.delenv("GH_TOKEN", raising=False)
-        monkeypatch.setenv("GITHUB_TOKEN", "tok")
-        monkeypatch.setenv("GITHUB_REPOSITORY", "owner/repo")
-        with patch("urllib.request.urlopen") as mock_open:
-            mock_resp = MagicMock()
-            mock_resp.__enter__ = lambda s: s
-            mock_resp.__exit__ = MagicMock(return_value=False)
-            mock_resp.read.return_value = b"[]"
-            mock_open.return_value = mock_resp
-            result = _get_pr_feedback(1)
-        data = json.loads(result["prompt_text"])
-        assert "comments" in data
-        assert "reviews" in data
+    GH = "medharness.services.cr_generation.gh"
+
+    def test_comments_and_reviews_reach_the_prompt(self):
+        pages = {"comments": '[{"body": "rename it"}]', "reviews": '[{"state": "CHANGES_REQUESTED"}]'}
+        with patch(self.GH, side_effect=lambda args: (0, pages[args[1].rsplit("/", 1)[1]])) as gh:
+            result = _get_pr_feedback(42)
+        assert gh.call_args_list[0].args[0] == ["api", "repos/{owner}/{repo}/pulls/42/comments"]
+        assert json.loads(result["prompt_text"]) == {
+            "comments": [{"body": "rename it"}], "reviews": [{"state": "CHANGES_REQUESTED"}]}
+        assert result["diagnostics"]["comments_count"] == 1
         assert result["warnings"] == []
 
-    def test_http_error_returns_error_payload(self, monkeypatch):
-        monkeypatch.setenv("GH_TOKEN", "tok")
-        monkeypatch.setenv("GITHUB_REPOSITORY", "owner/repo")
-        import urllib.error
-        with patch("urllib.request.urlopen", side_effect=urllib.error.HTTPError(
-            url="", code=404, msg="Not Found", hdrs=None, fp=None
-        )):
+    def test_a_gh_failure_carries_its_reason(self):
+        with patch(self.GH, return_value=(1, "HTTP 404: Not Found")):
             result = _get_pr_feedback(99)
-        assert result["diagnostics"]["comments_status"] == "http_error"
-        assert any(w["code"] == "github_comments_http_error" for w in result["warnings"])
+        assert result["diagnostics"]["comments_status"] == "gh_error"
+        assert result["diagnostics"]["comments_error"] == "HTTP 404: Not Found"
+        assert any(w["code"] == "github_comments_unavailable" and "404" in w["message"]
+                   for w in result["warnings"])
 
-    def test_url_error_returns_error_payload(self, monkeypatch):
-        monkeypatch.setenv("GH_TOKEN", "tok")
-        monkeypatch.setenv("GITHUB_REPOSITORY", "owner/repo")
-        import urllib.error
-        with patch("urllib.request.urlopen", side_effect=urllib.error.URLError("offline")):
-            result = _get_pr_feedback(99)
-        assert result["diagnostics"]["comments_status"] == "transport_error"
-        assert any("offline" in w["message"] for w in result["warnings"])
-
-    def test_invalid_json_returns_error_payload(self, monkeypatch):
-        monkeypatch.setenv("GH_TOKEN", "tok")
-        monkeypatch.setenv("GITHUB_REPOSITORY", "owner/repo")
-        with patch("urllib.request.urlopen") as mock_open:
-            mock_resp = MagicMock()
-            mock_resp.__enter__ = lambda s: s
-            mock_resp.__exit__ = MagicMock(return_value=False)
-            mock_resp.read.return_value = b"{not-json"
-            mock_open.return_value = mock_resp
+    def test_invalid_json_returns_error_payload(self):
+        with patch(self.GH, return_value=(0, "{not-json")):
             result = _get_pr_feedback(1)
         assert result["diagnostics"]["comments_status"] == "decode_error"
         assert any("decoded" in w["message"] for w in result["warnings"])

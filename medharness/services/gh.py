@@ -7,7 +7,9 @@ import subprocess
 
 
 def gh(args: list[str], *, token: str = "", timeout: int = 30) -> tuple[int, str]:
-    """Run ``gh *args``: ``(returncode, stdout)``, or ``(1, reason)`` if it cannot start.
+    """Run ``gh *args``: ``(0, stdout)``, or on failure ``(returncode, gh's reason)``.
+
+    The reason is gh's stderr, or why gh could not start.
 
     The token is *token*, else ``$GH_TOKEN``, else ``$GITHUB_TOKEN`` — the order
     gh itself uses — and is passed to gh under both names.
@@ -23,4 +25,6 @@ def gh(args: list[str], *, token: str = "", timeout: int = 30) -> tuple[int, str
         )
     except (subprocess.SubprocessError, OSError) as exc:
         return 1, str(exc)
-    return result.returncode, result.stdout.strip()
+    if result.returncode != 0:
+        return result.returncode, (result.stderr or result.stdout).strip()
+    return 0, result.stdout.strip()

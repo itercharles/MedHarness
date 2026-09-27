@@ -13,6 +13,14 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ### Breaking Changes
 
+- **`build plan --pr` and `build code --pr` read review comments through `gh`.**
+  They called the GitHub REST API directly and needed `GITHUB_REPOSITORY`.
+  Now they go through the same `gh` helper as every other GitHub call, which
+  finds the repository from the checkout. In `diagnostics.github_feedback`,
+  `repo_env_present` and `token_env_present` are gone. A failed fetch now
+  reports `gh_error` with gh's own reason, replacing `http_error` and
+  `transport_error`. The warning codes are now
+  `github_{comments,reviews}_unavailable`.
 - **`medharness context` requires `--cr` and has the same keys for every CR.**
   Contract version 12.0.
   - **Why:** the command gave an agent one view of the DHF, while `build plan`
@@ -79,6 +87,15 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
   envelope. `build_evidence_bundle` moved to `services/release_artifacts.py`
   and `compute_item_coverage` to `services/context.py`, beside their only
   callers. Function names and behaviour are unchanged.
+- **`verify soup` takes its two osv.dev calls as arguments.** `soup_gate`
+  accepts `query` and `lookup`, which default to `osv_querybatch` and
+  `osv_vuln`. Its tests pass fakes instead of patching `urllib`. An
+  unreachable osv.dev is now recognised by any `OSError`, which includes a
+  bare socket timeout. Before, only `URLError` was caught, so a socket timeout
+  crashed with a traceback.
+- **A failed `gh` call returns gh's reason** (its stderr) instead of an empty
+  string. `doctor`'s `gh auth status` check goes through the same helper and
+  now has unit tests. Before, it had none.
 - **`dhfkit.traceability.LINK_FIELDS` is public.** `medharness` imported it
   as `_LINK_FIELDS`, which crossed the package boundary. The boundary guard
   only caught `obj._private` and missed `from dhfkit... import _private`. It

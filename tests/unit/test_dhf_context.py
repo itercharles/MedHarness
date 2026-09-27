@@ -132,3 +132,13 @@ def test_project_survives_a_relative_dhf_path(tmp_path: Path, monkeypatch) -> No
     _make_dhf(tmp_path)
     monkeypatch.chdir(tmp_path)
     assert _invoke(Path("DHF"), "--cr", "CR-001")["project"], "project name came back empty"
+
+
+def test_interface_doc_lists_exactly_the_keys(tmp_path: Path) -> None:
+    """docs/interface.md is what a caller builds against."""
+    import re
+
+    doc = (Path(__file__).resolve().parents[2] / "docs" / "interface.md").read_text()
+    section = doc.split("## Context for an agent", 1)[1].split("\n## ", 1)[0]
+    documented = set(re.findall(r"^\| `(\w+)` \|", section, re.M))
+    assert documented == set(_invoke(_make_dhf(tmp_path), "--cr", "CR-001")) == KEYS

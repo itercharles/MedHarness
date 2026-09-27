@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
+import json
+import urllib.error
+import urllib.request
 from pathlib import Path
+from typing import Callable
 
 from medharness.services.envelope import envelope_from
 
@@ -46,18 +50,35 @@ def _parse_accepted_vulns(item: dict, soup_id: str) -> tuple[dict[str, str], lis
 _VULN_DETAIL_BUDGET = 25
 
 
-def _vuln_detail(vuln_id: str, batch_entry: dict, *, fetch: bool) -> dict:
+def osv_querybatch(queries: list[dict]) -> list[dict]:
+    """osv.dev's querybatch results, one per query. Raises OSError when unreachable."""
+    req = urllib.request.Request(
+        "https://api.osv.dev/v1/querybatch",
+        data=json.dumps({"queries": queries}).encode(),
+        headers={"Content-Type": "application/json"},
+    )
+    with urllib.request.urlopen(req, timeout=20) as resp:
+        return json.loads(resp.read()).get("results", [])
+
+
+def osv_vuln(vuln_id: str) -> dict:
+    """osv.dev's record for one vulnerability, or ``{}`` when it cannot be read."""
+    try:
+        with urllib.request.urlopen(f"https://api.osv.dev/v1/vulns/{vuln_id}", timeout=10) as resp:
+            return json.loads(resp.read())
+    except (urllib.error.URLError, ValueError, TimeoutError):
+        return {}
+
+
+def _vuln_detail(vuln_id: str, batch_entry: dict, *, fetch: bool,
+                 lookup: Callable[[str], dict]) -> dict:
     """Build a reportable vulnerability record for *vuln_id*.
 
     osv.dev's ``querybatch`` returns only ``id`` and ``modified`` — summary and
     severity live on the per-vulnerability endpoint — so a batch entry alone
-    cannot describe what is wrong. Fetch that detail when *fetch* is set, and
+    cannot describe what is wrong. Look that detail up when *fetch* is set, and
     always emit a URL so the finding stays actionable if the lookup fails.
     """
-    import json as _json
-    import urllib.error
-    import urllib.request
-
     summary = batch_entry.get("summary") or ""
     severity = (
         batch_entry.get("database_specific", {}).get("severity")
@@ -65,15 +86,10 @@ def _vuln_detail(vuln_id: str, batch_entry: dict, *, fetch: bool) -> dict:
     )
 
     if fetch and vuln_id and not summary:
-        try:
-            with urllib.request.urlopen(
-                f"https://api.osv.dev/v1/vulns/{vuln_id}", timeout=10
-            ) as resp:
-                detail = _json.loads(resp.read())
-            summary = detail.get("summary") or (detail.get("details") or "").split("\n")[0]
-            severity = severity or detail.get("database_specific", {}).get("severity") or ""
-        except (urllib.error.URLError, ValueError, TimeoutError):
-            pass  # URL below still identifies the finding
+        # An empty record leaves summary empty; the URL below still identifies it.
+        detail = lookup(vuln_id)
+        summary = detail.get("summary") or (detail.get("details") or "").split("\n")[0]
+        severity = severity or detail.get("database_specific", {}).get("severity") or ""
 
     return {
         "id": vuln_id,
@@ -97,6 +113,8 @@ def soup_gate(
     offline_mode: str = "fail",
     manifest_paths: list[Path] | None = None,
     fail_on_drift: bool = False,
+    query: Callable[[list[dict]], list[dict]] = osv_querybatch,
+    lookup: Callable[[str], dict] = osv_vuln,
 ) -> dict:
     """The SOUP register against the manifests, and against known CVEs.
 
@@ -118,6 +136,9 @@ def soup_gate(
     A vulnerability listed in the item's ``accepted_vulns`` (with a rationale) is
     reported as accepted rather than blocking — see :func:`_parse_accepted_vulns`.
 
+    *query* and *lookup* are the two osv.dev calls, ``osv_querybatch`` and
+    ``osv_vuln``; a test passes its own.
+
     Args:
         offline_mode: ``"fail"`` (default) treats an unreachable osv.dev as a gate
             failure. ``"warn"`` reports the outage but leaves the gate passing, for
@@ -136,10 +157,6 @@ def soup_gate(
           "summary": str,
         }
     """
-    import json as _json
-    import urllib.error
-    import urllib.request
-
     from dhfkit.local_adapter import LocalDHFAdapter
 
     adapter = LocalDHFAdapter(dhf_path)
@@ -211,17 +228,9 @@ def soup_gate(
         {"package": {"name": c["name"], "ecosystem": c["ecosystem"]}, "version": c["version"]}
         for c in checkable
     ]
-    body = _json.dumps({"queries": queries}).encode()
-    req = urllib.request.Request(
-        "https://api.osv.dev/v1/querybatch",
-        data=body,
-        headers={"Content-Type": "application/json"},
-    )
-
     try:
-        with urllib.request.urlopen(req, timeout=20) as resp:
-            results = _json.loads(resp.read()).get("results", [])
-    except urllib.error.URLError as exc:
+        results = query(queries)
+    except OSError as exc:
         tolerated = offline_mode == "warn"
         outage = f"osv.dev unreachable: {exc}"
         return envelope_from("verify soup", {
@@ -267,7 +276,7 @@ def soup_gate(
                     "rationale": rationale,
                 })
                 continue
-            blocking.append(_vuln_detail(vuln_id, v, fetch=detail_budget > 0))
+            blocking.append(_vuln_detail(vuln_id, v, fetch=detail_budget > 0, lookup=lookup))
             detail_budget -= 1
         if blocking:
             vulnerable.append({

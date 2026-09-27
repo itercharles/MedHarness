@@ -6,6 +6,8 @@ import json
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from click.testing import CliRunner
 
 from dhfkit.cli import main as dhfkit_main
@@ -56,10 +58,18 @@ _VULN = {"id": "GHSA-x84v-xcm2-53pg", "modified": "2024-01-01T00:00:00Z"}
 # Service-level tests (osv.dev mocked)
 # ---------------------------------------------------------------------------
 
+def _down(queries):
+    raise OSError("timeout")
+
+
+def _no_detail(vuln_id):
+    raise AssertionError(f"looked up {vuln_id} with no budget or no need")
+
+
 class TestSoupVulnGate:
     def test_no_soup_items_passes(self, tmp_path: Path) -> None:
         dhf = _make_dhf(tmp_path)
-        result = soup_gate(dhf)
+        result = soup_gate(dhf, query=_down)
         assert result["passed"] is True
         assert result["details"]["soup_count"] == 0
         assert result["details"]["checked_count"] == 0
@@ -67,7 +77,7 @@ class TestSoupVulnGate:
     def test_soup_without_ecosystem_skipped(self, tmp_path: Path) -> None:
         dhf = _make_dhf(tmp_path)
         _write_soup(dhf, "SOUP-001", "requests", "2.25.0")  # no ecosystem
-        result = soup_gate(dhf)
+        result = soup_gate(dhf, query=_down)
         assert result["passed"] is True
         assert result["details"]["checked_count"] == 0
         assert any("ecosystem" in s["reason"] for s in result["details"]["skipped"])
@@ -75,12 +85,7 @@ class TestSoupVulnGate:
     def test_clean_soup_passes(self, tmp_path: Path) -> None:
         dhf = _make_dhf(tmp_path)
         _write_soup(dhf, "SOUP-001", "requests", "2.28.0", ecosystem="PyPI")
-        osv_response = {"results": [{"vulns": []}]}
-        with patch("urllib.request.urlopen") as mock_open:
-            mock_open.return_value.__enter__ = lambda s: s
-            mock_open.return_value.__exit__ = MagicMock(return_value=False)
-            mock_open.return_value.read.return_value = json.dumps(osv_response).encode()
-            result = soup_gate(dhf)
+        result = soup_gate(dhf, query=lambda q: [{"vulns": []}])
         assert result["passed"] is True
         assert result["details"]["checked_count"] == 1
         assert result["details"]["vulnerable"] == []
@@ -88,29 +93,23 @@ class TestSoupVulnGate:
     def test_vulnerable_soup_fails(self, tmp_path: Path) -> None:
         dhf = _make_dhf(tmp_path)
         _write_soup(dhf, "SOUP-001", "requests", "2.6.0", ecosystem="PyPI")
-        with patch("urllib.request.urlopen") as mock_open:
-            _osv(mock_open, {"results": [{"vulns": [_VULN]}]})
-            result = soup_gate(dhf)
+        result = soup_gate(dhf, query=lambda q: [{"vulns": [_VULN]}], lookup=lambda v: {})
         assert result["passed"] is False
         assert len(result["details"]["vulnerable"]) == 1
         assert result["details"]["vulnerable"][0]["soup_id"] == "SOUP-001"
         assert result["details"]["vulnerable"][0]["vulns"][0]["id"] == "GHSA-x84v-xcm2-53pg"
 
     def test_network_error_fails(self, tmp_path: Path) -> None:
-        import urllib.error
         dhf = _make_dhf(tmp_path)
         _write_soup(dhf, "SOUP-001", "requests", "2.28.0", ecosystem="PyPI")
-        with patch("urllib.request.urlopen", side_effect=urllib.error.URLError("timeout")):
-            result = soup_gate(dhf)
+        result = soup_gate(dhf, query=_down)
         assert result["passed"] is False
         assert any("unreachable" in e for e in result["errors"])
 
     def test_network_error_tolerated_in_warn_mode(self, tmp_path: Path) -> None:
-        import urllib.error
         dhf = _make_dhf(tmp_path)
         _write_soup(dhf, "SOUP-001", "requests", "2.28.0", ecosystem="PyPI")
-        with patch("urllib.request.urlopen", side_effect=urllib.error.URLError("timeout")):
-            result = soup_gate(dhf, offline_mode="warn")
+        result = soup_gate(dhf, offline_mode="warn", query=_down)
         assert result["passed"] is True
         assert any("unreachable" in w for w in result["warnings"])
         assert "offline process" in result["summary"]
@@ -119,16 +118,11 @@ class TestSoupVulnGate:
         dhf = _make_dhf(tmp_path)
         _write_soup(dhf, "SOUP-001", "requests", "2.28.0", ecosystem="PyPI")
         _write_soup(dhf, "SOUP-002", "flask", "2.0.0", ecosystem="PyPI")
-        osv_response = {"results": [{"vulns": []}, {"vulns": []}]}
-        with patch("urllib.request.urlopen") as mock_open:
-            mock_open.return_value.__enter__ = lambda s: s
-            mock_open.return_value.__exit__ = MagicMock(return_value=False)
-            mock_open.return_value.read.return_value = json.dumps(osv_response).encode()
-            result = soup_gate(dhf)
+        batches = []
+        result = soup_gate(dhf, query=lambda q: batches.append(q) or [{"vulns": []}] * len(q))
         assert result["passed"] is True
         assert result["details"]["checked_count"] == 2
-        # Verify it was a single batch call
-        assert mock_open.call_count == 1
+        assert [[x["package"]["name"] for x in q] for q in batches] == [["requests", "flask"]]
 
     def test_soup_without_name_skipped(self, tmp_path: Path) -> None:
         dhf = _make_dhf(tmp_path)
@@ -137,7 +131,7 @@ class TestSoupVulnGate:
         (soup_dir / "SOUP-001.yaml").write_text(
             "id: SOUP-001\ntitle: Unnamed\nversion: '1.0'\necosystem: PyPI\n"
         )
-        result = soup_gate(dhf)
+        result = soup_gate(dhf, query=_down)
         assert result["details"]["checked_count"] == 0
         assert any("name" in s["reason"] for s in result["details"]["skipped"])
 
@@ -154,45 +148,18 @@ class TestVulnDetail:
     def test_summary_fetched_from_detail_endpoint(self, tmp_path: Path) -> None:
         dhf = _make_dhf(tmp_path)
         _write_soup(dhf, "SOUP-001", "requests", "2.6.0", ecosystem="PyPI")
-        batch = {"results": [{"vulns": [_VULN]}]}
         detail = {"summary": "CRLF injection in requests",
                   "database_specific": {"severity": "HIGH"}}
-
-        def _responses(*args, **kwargs):
-            url = args[0] if isinstance(args[0], str) else args[0].full_url
-            body = detail if "/vulns/" in url else batch
-            resp = MagicMock()
-            resp.__enter__ = lambda s: s
-            resp.__exit__ = MagicMock(return_value=False)
-            resp.read.return_value = json.dumps(body).encode()
-            return resp
-
-        with patch("urllib.request.urlopen", side_effect=_responses):
-            result = soup_gate(dhf)
+        result = soup_gate(dhf, query=lambda q: [{"vulns": [_VULN]}], lookup=lambda v: detail)
         vuln = result["details"]["vulnerable"][0]["vulns"][0]
         assert vuln["summary"] == "CRLF injection in requests"
         assert vuln["severity"] == "HIGH"
 
     def test_url_present_when_detail_lookup_fails(self, tmp_path: Path) -> None:
         """A failed enrichment must still leave the finding actionable."""
-        import urllib.error
         dhf = _make_dhf(tmp_path)
         _write_soup(dhf, "SOUP-001", "requests", "2.6.0", ecosystem="PyPI")
-        batch = {"results": [{"vulns": [_VULN]}]}
-        calls = {"n": 0}
-
-        def _responses(*args, **kwargs):
-            calls["n"] += 1
-            if calls["n"] > 1:  # the detail lookup
-                raise urllib.error.URLError("detail endpoint down")
-            resp = MagicMock()
-            resp.__enter__ = lambda s: s
-            resp.__exit__ = MagicMock(return_value=False)
-            resp.read.return_value = json.dumps(batch).encode()
-            return resp
-
-        with patch("urllib.request.urlopen", side_effect=_responses):
-            result = soup_gate(dhf)
+        result = soup_gate(dhf, query=lambda q: [{"vulns": [_VULN]}], lookup=lambda v: {})
         vuln = result["details"]["vulnerable"][0]["vulns"][0]
         assert result["passed"] is False
         assert vuln["summary"] == ""
@@ -229,52 +196,64 @@ class TestVulnDetail:
         _write_soup(dhf, "SOUP-001", "requests", "2.6.0", ecosystem="PyPI")
         many = [{"id": f"GHSA-{i:04d}", "modified": "2024-01-01T00:00:00Z"}
                 for i in range(_VULN_DETAIL_BUDGET + 10)]
-        batch = {"results": [{"vulns": many}]}
-        calls = {"n": 0}
-
-        def _responses(*args, **kwargs):
-            calls["n"] += 1
-            resp = MagicMock()
-            resp.__enter__ = lambda s: s
-            resp.__exit__ = MagicMock(return_value=False)
-            body = batch if calls["n"] == 1 else {"summary": "x"}
-            resp.read.return_value = json.dumps(body).encode()
-            return resp
-
-        with patch("urllib.request.urlopen", side_effect=_responses):
-            result = soup_gate(dhf)
+        looked_up = []
+        result = soup_gate(dhf, query=lambda q: [{"vulns": many}],
+                           lookup=lambda v: looked_up.append(v) or {"summary": "x"})
         assert len(result["details"]["vulnerable"][0]["vulns"]) == _VULN_DETAIL_BUDGET + 10
-        assert calls["n"] == _VULN_DETAIL_BUDGET + 1  # batch + budgeted lookups
+        assert len(looked_up) == _VULN_DETAIL_BUDGET
 
     def test_budget_resets_between_calls(self, tmp_path: Path) -> None:
         """Budget is per-invocation, not process-global."""
         dhf = _make_dhf(tmp_path)
         _write_soup(dhf, "SOUP-001", "requests", "2.6.0", ecosystem="PyPI")
-        batch = {"results": [{"vulns": [_VULN]}]}
 
-        def _run() -> int:
-            calls = {"n": 0}
-
-            def _responses(*args, **kwargs):
-                calls["n"] += 1
-                resp = MagicMock()
-                resp.__enter__ = lambda s: s
-                resp.__exit__ = MagicMock(return_value=False)
-                body = batch if calls["n"] == 1 else {"summary": "enriched"}
-                resp.read.return_value = json.dumps(body).encode()
-                return resp
-
-            with patch("urllib.request.urlopen", side_effect=_responses):
-                result = soup_gate(dhf)
+        def _run() -> str:
+            result = soup_gate(dhf, query=lambda q: [{"vulns": [_VULN]}],
+                               lookup=lambda v: {"summary": "enriched"})
             return result["details"]["vulnerable"][0]["vulns"][0]["summary"]
 
         assert _run() == "enriched"
         assert _run() == "enriched"  # second call still has budget
 
 
+class TestTheOsvCalls:
+    """The two functions the gate is given by default, against a mocked urlopen."""
+
+    def test_querybatch_posts_the_queries_and_returns_the_results(self) -> None:
+        from medharness.services.verify_soup import osv_querybatch
+
+        with patch("urllib.request.urlopen") as mock_open:
+            _osv(mock_open, {"results": [{"vulns": [_VULN]}]})
+            assert osv_querybatch([{"version": "1"}]) == [{"vulns": [_VULN]}]
+        req = mock_open.call_args.args[0]
+        assert req.full_url == "https://api.osv.dev/v1/querybatch"
+        assert json.loads(req.data) == {"queries": [{"version": "1"}]}
+
+    def test_an_unreachable_osv_raises_oserror(self) -> None:
+        import urllib.error
+
+        from medharness.services.verify_soup import osv_querybatch
+
+        with patch("urllib.request.urlopen", side_effect=urllib.error.URLError("down")), \
+                pytest.raises(OSError):
+            osv_querybatch([])
+
+    def test_a_failed_detail_lookup_is_an_empty_record(self) -> None:
+        import urllib.error
+
+        from medharness.services.verify_soup import osv_vuln
+
+        with patch("urllib.request.urlopen", side_effect=urllib.error.URLError("down")):
+            assert osv_vuln("GHSA-1") == {}
+
+
 # ---------------------------------------------------------------------------
 # Documented vulnerability acceptance (IEC 62304 §8.1.2)
 # ---------------------------------------------------------------------------
+
+def _found(*vulns):
+    return lambda queries: [{"vulns": list(vulns)}]
+
 
 class TestAcceptedVulns:
     def test_documented_acceptance_does_not_block(self, tmp_path: Path) -> None:
@@ -284,9 +263,7 @@ class TestAcceptedVulns:
             accepted_vulns=[{"id": "GHSA-x84v-xcm2-53pg",
                              "rationale": "Affected API not reachable from our code paths."}],
         )
-        with patch("urllib.request.urlopen") as mock_open:
-            _osv(mock_open, {"results": [{"vulns": [_VULN]}]})
-            result = soup_gate(dhf)
+        result = soup_gate(dhf, query=_found(_VULN), lookup=_no_detail)
         assert result["passed"] is True
         assert result["details"]["vulnerable"] == []
         assert len(result["details"]["accepted"]) == 1
@@ -300,9 +277,7 @@ class TestAcceptedVulns:
             dhf, "SOUP-001", "requests", "2.6.0", ecosystem="PyPI",
             accepted_vulns=[{"id": "GHSA-old-known-issue", "rationale": "Assessed in CR-004."}],
         )
-        with patch("urllib.request.urlopen") as mock_open:
-            _osv(mock_open, {"results": [{"vulns": [_VULN]}]})
-            result = soup_gate(dhf)
+        result = soup_gate(dhf, query=_found(_VULN), lookup=lambda v: {})
         assert result["passed"] is False
         assert result["details"]["vulnerable"][0]["vulns"][0]["id"] == "GHSA-x84v-xcm2-53pg"
         assert result["details"]["accepted"] == []
@@ -313,9 +288,7 @@ class TestAcceptedVulns:
             dhf, "SOUP-001", "requests", "2.6.0", ecosystem="PyPI",
             accepted_vulns=[{"id": "GHSA-x84v-xcm2-53pg"}],
         )
-        with patch("urllib.request.urlopen") as mock_open:
-            _osv(mock_open, {"results": [{"vulns": [_VULN]}]})
-            result = soup_gate(dhf)
+        result = soup_gate(dhf, query=_found(_VULN), lookup=lambda v: {})
         assert result["passed"] is False
         assert any("rationale" in p for p in result["details"]["acceptance_problems"])
 
@@ -325,9 +298,7 @@ class TestAcceptedVulns:
             dhf, "SOUP-001", "requests", "2.6.0", ecosystem="PyPI",
             accepted_vulns=["GHSA-x84v-xcm2-53pg"],
         )
-        with patch("urllib.request.urlopen") as mock_open:
-            _osv(mock_open, {"results": [{"vulns": [_VULN]}]})
-            result = soup_gate(dhf)
+        result = soup_gate(dhf, query=_found(_VULN), lookup=lambda v: {})
         assert result["passed"] is False
         assert any("mapping" in p for p in result["details"]["acceptance_problems"])
 
@@ -338,9 +309,7 @@ class TestAcceptedVulns:
             dhf, "SOUP-001", "requests", "2.6.0", ecosystem="PyPI",
             accepted_vulns=[{"id": "GHSA-x84v-xcm2-53pg", "rationale": "Assessed, not exploitable."}],
         )
-        with patch("urllib.request.urlopen") as mock_open:
-            _osv(mock_open, {"results": [{"vulns": [_VULN, other]}]})
-            result = soup_gate(dhf)
+        result = soup_gate(dhf, query=_found(_VULN, other), lookup=lambda v: {})
         assert result["passed"] is False
         assert len(result["details"]["accepted"]) == 1
         assert [v["id"] for v in result["details"]["vulnerable"][0]["vulns"]] == ["GHSA-second-vuln"]

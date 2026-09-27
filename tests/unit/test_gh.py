@@ -34,10 +34,16 @@ def test_no_token_sets_none(monkeypatch) -> None:
     assert "GH_TOKEN" not in env and "GITHUB_TOKEN" not in env
 
 
-def test_it_returns_the_exit_code_and_stripped_stdout() -> None:
-    with patch("subprocess.run", return_value=MagicMock(returncode=3, stdout=" out\n")) as run:
-        assert gh(["pr", "view", "1"]) == (3, "out")
+def test_success_returns_stripped_stdout() -> None:
+    with patch("subprocess.run", return_value=MagicMock(returncode=0, stdout=" out\n", stderr="")) as run:
+        assert gh(["pr", "view", "1"]) == (0, "out")
     assert run.call_args.args[0] == ["gh", "pr", "view", "1"]
+
+
+def test_failure_returns_the_reason_gh_gave() -> None:
+    with patch("subprocess.run", return_value=MagicMock(returncode=1, stdout="",
+                                                        stderr="HTTP 404: Not Found\n")):
+        assert gh(["api", "x"]) == (1, "HTTP 404: Not Found")
 
 
 def test_a_missing_gh_is_a_failure_not_an_exception() -> None:

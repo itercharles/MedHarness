@@ -212,6 +212,30 @@ has to ask the API.
 
 ---
 
+## Context for an agent
+
+`medharness context --cr CR-034` answers with what an agent should read before
+working on that CR. It is the same dict `build plan` and `build code` render
+into their prompts, so an outside agent is told what the built-in stages are.
+It is not a gate: it has no envelope and exits 0 whenever the DHF loads.
+
+The keys are always the same:
+
+| Key | Holds |
+|---|---|
+| `project` | The project name |
+| `cr` | The CR as stored, or `{"id", "found": false}` |
+| `scope` | `whole_dhf` until the CR records `affected_items`, then `affected` |
+| `types` | Every doc type: `code`, `display_name`, `role` |
+| `items` | `whole_dhf`: every item as `id`, `type`, `title`, `status`, `tracelinks`. `affected`: the affected items, adding `description`, `content`, `verification_criteria` |
+| `modules` | Each MODULE with its SWDDs and the requirements they implement; only those touching the affected items when `scope` is `affected` |
+| `risks` | Each RISK with `severity`, `risk_level` and the RCMs that mitigate it |
+
+`--junit`/`--junit-dir` add `test_coverage`. Branch on `scope`, not on which
+keys are present. Whether the DHF holds together is `verify dhf`'s answer.
+
+---
+
 ## Beyond the gates
 
 `dhfkit` follows the same output convention for DHF data operations — item CRUD, schema validation, document generation, the SBOM — but those commands predate the envelope and keep their own result shapes. Read `--help` for the command you need. `dhfkit` has no dependency on `medharness`, so a project that wants only the engine can use it alone; see [adopting.md](adopting.md#using-dhfkit-standalone).
