@@ -1,7 +1,7 @@
 # Machine interface
 
 > **Stability:** Stable
-> **Last reviewed:** 2026-09-26
+> **Last reviewed:** 2026-09-27
 
 Every verification gate is a command you can call from a pipeline, a script, or an agent. This is the contract those callers build against: one result shape, defined exit codes, and a statement of what may change.
 
@@ -18,7 +18,7 @@ MedHarness deliberately does not scaffold a CI workflow — a pipeline carries y
 | `verify soup` | the DHF, dependency manifests | — | osv.dev | `conditional` |
 | `verify completion` | the DHF | `--cr` | no | `always` |
 | `workflow check-changes` | the DHF, the git diff | `--cr` | no | `always` |
-| `workflow check-approval` | the pull request's reviews | `--cr`, `--pr` | GitHub | `always` |
+| `workflow check-approval` | the pull request's reviews | `--pr` | GitHub | `always` |
 
 `verify *` answers from the DHF alone, so it runs anywhere the DHF is. `workflow *` cannot answer without the repository; those are CI helpers. Every command takes `--dhf PATH` before the command name, defaulting to `DHF`.
 
@@ -67,7 +67,7 @@ A gate that fails always populates `errors`. That is enforced by the test suite 
 
 A pipeline that only checks exit status is a valid consumer and needs to parse nothing — which is how the reference project consumes these.
 
-**If you parse, check stdout is non-empty first.** Exit `1` means either a finding or a usage problem, and only the first writes JSON. Treating an empty stdout as parseable is the one mistake this interface invites:
+**If you parse, check stdout is non-empty first.** Exit `1` means either a finding or a gate that never ran, and only the first writes JSON. Treating an empty stdout as parseable is the one mistake this interface invites:
 
 ```python
 line = proc.stdout.splitlines()
@@ -190,4 +190,4 @@ defaults declare is a breaking change.
 
 `dhfkit` follows the same output convention for DHF data operations — item CRUD, schema validation, document generation, the SBOM — but those commands predate the envelope and keep their own result shapes. Read `--help` for the command you need. `dhfkit` has no dependency on `medharness`, so a project that wants only the engine can use it alone; see [adopting.md](adopting.md#using-dhfkit-standalone).
 
-The `build` commands are not gates and do not answer with the envelope. `build plan` and `build code` report progress and outcomes in their own shape, documented in [adopting.md](adopting.md#ai-assisted-cr-workflow), and their execution boundary is described in [ai-security.md](ai-security.md).
+The `build` commands are not gates and do not answer with the envelope. `build plan` and `build code` report in their own shape — `outcome` (`ok`, `corrected`, `completed_with_errors` or `tool_error`), `summary`, `artifacts`, `errors`, and the review — listed in the [README](../README.md#commands); their execution boundary is described in [ai-security.md](ai-security.md).

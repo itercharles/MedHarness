@@ -7,8 +7,9 @@ pip install medharness
 medharness init            # in a directory with no DHF/ yet
 ```
 
-You get a DHF with sample items, its config, document templates, and a
-`CLAUDE.md`. Three things to replace before your first real CR:
+You get a DHF with sample items and a one-line `global.yaml`, a `CLAUDE.md`,
+and a `.gitignore`. The item types and templates are defaults inside the
+package. Three things to replace before your first real CR:
 
 | Replace | Why |
 |---------|-----|
@@ -148,12 +149,15 @@ MedHarness stores DHF content as YAML items, one file per record. Each item has 
 | `UC` | Use cases |
 | `CRS` | Customer requirements |
 | `SYS` | System requirements |
+| `SYSARCH` | System architecture decisions |
 | `SRS` | Software requirements |
+| `MODULE` | Software modules |
+| `SWDD` | Software detailed design |
 | `RISK` | Hazard and risk analysis |
 | `RCM` | Risk control measures |
-| `SWDD` | Software detailed design |
 | `SOUP` | Software of unknown provenance |
 | `CR` | Change requests |
+| `DEF` | Defects |
 | `REL` | Release baselines |
 
 Artifacts from common sources map directly to item types. A requirements spreadsheet becomes SRS and SYS items — one row per item, with `title` and `content` fields. A risk register becomes RISK items paired with RCM items (each RCM carries a `mitigates` field pointing to the RISK ID it controls). A SOUP list becomes SOUP items with `name`, `version`, and `purpose` fields.
@@ -214,7 +218,7 @@ test("rejects short password @links:SRS-012 @testing:T1", () => { ... });
 test("accepts 12-char password @links:SRS-012 @testing:T2", () => { ... });
 ```
 
-When tests run with `--junit-xml`, these annotations are written as JUnit XML properties (`medharness.links`, `medharness.testing`). The CI gate checks them:
+Under pytest with `--junit-xml`, the markers become JUnit properties (`medharness.links`, `medharness.testing`); other runners carry the tags in the test name. The CI gate reads either:
 
 ```bash
 medharness --dhf DHF verify tests --junit test-results

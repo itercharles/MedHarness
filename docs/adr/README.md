@@ -2,7 +2,7 @@
 
 Decision history for MedHarness.
 
-Uses [ADR_TEMPLATE.md](ADR_TEMPLATE.md).
+Uses [ADR-TEMPLATE.md](ADR-TEMPLATE.md).
 
 ## Records
 

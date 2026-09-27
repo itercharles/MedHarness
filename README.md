@@ -159,8 +159,8 @@ stderr; `--help` on any of them lists its options.
 
 | Command | What it does | Returns |
 |---|---|---|
-| `medharness build plan --cr CR-034` | AI drafts the CR's design items and impact analysis | `outcome`, `items_changed`, `review_cycles` |
-| `medharness build code --cr CR-034` | AI writes the code and tests for the approved design | `outcome`, `files_changed`, `review_cycles` |
+| `medharness build plan --cr CR-034` | AI drafts the CR's design items and impact analysis | `outcome`, `artifacts.items_changed`, `design_review`, `errors` |
+| `medharness build code --cr CR-034` | AI writes the code and tests for the approved design | `outcome`, `artifacts.files_changed`, `code_review`, `errors` |
 | `medharness build soup --write` | Reconciles SOUP items with your dependency manifests; without `--write`, only reports | `to_create`, `to_update`, `orphans` |
 | `medharness build release --version 1.0.0 --out-dir release --write` | Checks the DHF, CRs and open defects, writes the baseline, BOM, SBOM and evidence, and — only if every check passed — records the REL item | `outcome`, `cr_ids`, `rel_uid`, `artifacts`, `errors` |
 
@@ -168,21 +168,21 @@ stderr; `--help` on any of them lists its options.
 
 | Command | What it does | Returns |
 |---|---|---|
-| `medharness init` | Scaffolds `DHF/` and `CLAUDE.md` in the current directory; refuses if `DHF/` exists | `project_name`, `created` |
-| `medharness doctor` | Checks Python, the CLIs, `gh` auth, and the DHF | `checks`, `healthy` |
+| `medharness init` | Scaffolds `DHF/` and `CLAUDE.md` in the current directory; refuses if `DHF/` exists | `project_name`, `project_dir`, `created` |
+| `medharness doctor` | Checks Python, the CLIs, `gh` auth, and the DHF | `healthy`, `summary`, `checks` |
 
 ### `dhfkit` — the items
 
 | Command | What it does | Returns |
 |---|---|---|
 | `dhfkit item list --type SYS` | Lists items of a type | one JSON object per line |
-| `dhfkit item get SRS-012` | One item, with its links resolved | the item |
+| `dhfkit item get SRS-012` | One item | the item, with every ID it links to in `all_linked_uids` |
 | `dhfkit item create --type SRS --data '{...}'` | Adds an item; its ID is allocated | the item |
 | `dhfkit item update SRS-012 --data '{...}'` | Merges fields into an item | the item |
-| `dhfkit item transition CR-034 completed` | Moves an item through its lifecycle; without a state, lists where it can go | the item |
+| `dhfkit item transition CR-034 completed` | Moves an item through its lifecycle; without a state, lists where it can go | the item; without a state, `current_status` and `transitions` |
 | `dhfkit validate` | Checks every item against its type's schema, and that no two files claim one ID | `valid`, `errors`, `item_count` |
 | `dhfkit doc SRS --format html` | Renders a specification from the items — `md` by default, `html` or `pdf` (needs `medharness[docs]`); `ALL` for every type | `md_path`, plus `html_path` or `pdf_path` |
-| `dhfkit sbom` | CycloneDX 1.6 SBOM from the SOUP register | `path`, `components` |
+| `dhfkit sbom` | CycloneDX 1.6 SBOM from the SOUP register; `--output -` for stdout | `path`, `components`, `without_purl`, `changed` |
 
 ## Example project
 

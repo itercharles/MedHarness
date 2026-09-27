@@ -1,7 +1,7 @@
 # AI Execution Model
 
 > **Stability:** Stable
-> **Last reviewed:** 2026-08-18
+> **Last reviewed:** 2026-09-27
 
 This document describes what the AI stages of MedHarness are allowed to do, where they run, and what evidence they leave behind. It exists because MedHarness is used in regulated environments where "an AI wrote this code" is not an acceptable answer to an auditor — the boundary has to be stated, not assumed.
 
@@ -20,7 +20,7 @@ Only two commands send anything to a model:
 
 **Every other command is deterministic** and makes no call to any model. `dhfkit` (item CRUD, schema validation, document generation, the SBOM) has no dependency on `medharness`. The `verify` gates, `workflow` gates, `build soup` and `build release` compute their answers from their inputs; the only network they touch is osv.dev for `verify soup` and GitHub for `workflow check-approval`.
 
-This split is intentional: you can adopt the traceability engine and CI gates with no AI in the pipeline at all. See [adopting.md](adopting.md#incremental-adoption).
+This split is intentional: you can adopt the traceability engine and CI gates with no AI in the pipeline at all. See [adopting.md](adopting.md#what-to-adopt-in-what-order).
 
 ---
 
@@ -56,7 +56,7 @@ Bounded only by `max_turns=100` and a 120-second per-command timeout.
 
 ## Recommended isolation
 
-Run the AI stages in a disposable, credential-minimal environment. The scaffolded workflow (`.github/workflows/dhf.yml`) already targets a GitHub Actions runner, which satisfies this: ephemeral, network-isolated from your internal systems, and scoped to a single repository token.
+Run the AI stages in a disposable, credential-minimal environment. A GitHub-hosted Actions runner satisfies this: ephemeral, separate from your internal systems, and scoped to a single repository token. The shipped CI recipe runs neither stage; [adopting.md](adopting.md#wiring-it-into-github-actions) sketches a workflow that does.
 
 | Control | Recommendation |
 |---------|----------------|
@@ -76,8 +76,8 @@ The AI cannot advance a change on its own. Every stage transition is gated:
 
 1. **`build plan` produces a design PR.** No code is written. A human reviews the DHF diff and the generated design review.
 2. **Approval is evidence.** `medharness workflow check-approval` requires an approving GitHub review of the commit the PR would merge — author, timestamp and revision, all recorded outside this tool's control. A label is not accepted: anyone with write access can add or remove one, and it says nothing about what was reviewed.
-3. **`build code` produces a code PR.** It cannot run until the design stage is approved.
-4. **Closure is gated deterministically.** `verify completion` requires an approved design review file, populated CR fields, and passing JUnit evidence for every requirement — none of which the AI can satisfy by assertion.
+3. **`build code` produces a code PR.** Start it only once the design PR is approved: your workflow decides when it runs, and `build code` itself refuses only a CR that is `completed`, `rejected` or `cancelled`.
+4. **Closure is gated deterministically.** `verify completion` requires the CR's recorded fields, every item in its `affected_items` to exist, and passing JUnit evidence for each of those declaring `Test` — none of which the AI can satisfy by assertion.
 
 The gates in step 4 are ordinary code. They do not ask a model whether the work is done.
 
@@ -87,7 +87,7 @@ The gates in step 4 are ordinary code. They do not ask a model whether the work 
 
 | Artifact | Where it lives | Contains |
 |----------|----------------|----------|
-| Session ID | CR item, captured from the `claude` CLI JSON envelope | Correlates a CR stage to a model session |
+| Session ID | A marker comment on the PR, captured from the `claude` CLI JSON envelope | Correlates a CR stage to a model session, so `--pr` resumes it |
 | DHF item history | Git — the commit on the CR branch that carried the change, authored by whoever made it | Every design input the AI added or modified |
 | PR diff | GitHub | Every line of code the AI wrote, under normal review |
 | Design review | `docs/reviews/<CR>-Design-Review.md` | Verdict and open issues, written by `build plan` |
