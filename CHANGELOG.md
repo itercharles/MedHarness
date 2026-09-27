@@ -59,6 +59,15 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
   and `build dhf`; `dhf.py` held `context`. They are now `verify.py`,
   `workflow.py`, `build.py` and `context.py`, plus `output.py` for the shared
   JSON and stderr helpers. The command bodies moved without changes.
+- **One traceability implementation.** `medharness/core.py` (`MedHarnessCore`)
+  and `medharness/graph.py` (`GraphEngine`) were a second graph beside
+  `services/traceability.py`. Their only production use was the traceability
+  matrix in `build release`. That matrix is now built in
+  `services/traceability_report.py` by functions of items and item types, and
+  the output is identical. The rest of `GraphEngine` (orphans, coverage,
+  upstream and downstream traversal, cycle checks) had no production caller
+  and is gone, together with its tests. `verify dhf` still checks orphans and
+  cycles through `services/traceability.py`.
 
 ### Fixed
 

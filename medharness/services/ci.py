@@ -485,17 +485,13 @@ def build_evidence_bundle(
     runs is covered too. Returns the manifest.
     """
     from dhfkit.local_adapter import LocalDHFAdapter
-    from medharness.core import MedHarnessCore
 
     adapter = LocalDHFAdapter(dhf_path)
-    core = MedHarnessCore(adapter)
-    if junit_paths:
-        core.inject_junit_results(list(junit_paths))
 
     out_dir.mkdir(parents=True, exist_ok=True)
     trace_types = traceability_types or DEFAULT_TRACEABILITY_DOC_TYPES
     artifacts = _run_artifact_generation(
-        adapter, core, dhf_path, out_dir, traceability_types, trace_types,
+        adapter, dhf_path, out_dir, traceability_types, trace_types,
         list(junit_paths), skip_plans=False, doc_format=doc_format,
     )
 

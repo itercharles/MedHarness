@@ -48,80 +48,16 @@ def _collect_junit_paths(junit_files: tuple[Path, ...] = (),
     return collected
 
 
-def _build_traceability_report_payload(core, doc_types: tuple[str, ...],
-                                       junit_paths: tuple[str, ...] = ()) -> dict:
-    if junit_paths:
-        core.inject_junit_results([Path(p) for p in junit_paths])
-
-    matrix = core.build_traceability_matrix(list(doc_types))
-
-    columns: list[str] = matrix["columns"]
-    for row in matrix["rows"]:
-        level_statuses: dict[str, str] = {}
-        for col in columns:
-            item_id = row.get(col)
-            if not item_id:
-                continue
-            # rsplit matches dhfkit's Item.prefix: a doc type may configure a
-            # multi-segment prefix such as TC-VER-, which split()[0] reduces
-            # to "TC-" and no lookup then matches.
-            prefix = item_id.rsplit("-", 1)[0] + "-"
-            cfg = core._adapter.get_item_type(prefix)
-            if not cfg or not cfg.get("has_verification"):
-                continue
-            item = core.get_item(item_id)
-            vs = item.get("verification_status") if item else None
-            if vs:
-                level_statuses[col] = vs
-        row["level_statuses"] = level_statuses
-        for col in reversed(columns):
-            if col in level_statuses:
-                row["verification_status"] = level_statuses[col]
-                break
-
-    coverage: dict[str, list[dict]] = {}
-    seen_ids: set[str] = set()
-    for col in columns:
-        for row in matrix["rows"]:
-            item_id = row.get(col)
-            if not item_id or item_id in seen_ids:
-                continue
-            seen_ids.add(item_id)
-            # rsplit matches dhfkit's Item.prefix: a doc type may configure a
-            # multi-segment prefix such as TC-VER-, which split()[0] reduces
-            # to "TC-" and no lookup then matches.
-            prefix = item_id.rsplit("-", 1)[0] + "-"
-            cfg = core._adapter.get_item_type(prefix)
-            if not cfg or not cfg.get("has_verification"):
-                continue
-            item = core.get_item(item_id)
-            if not item:
-                continue
-            test_cases = item.get("test_cases") or []
-            # Group by the resolved doc-type code so the key matches the matrix
-            # columns. Deriving it from the ID guesses wrong for any multi-segment
-            # prefix, in either split direction.
-            coverage.setdefault(cfg.get("code") or item_id.rsplit("-", 1)[0], []).append({
-                "id": item_id,
-                "title": item.get("title", ""),
-                "status": item.get("verification_status", "not_verified"),
-                "tests": test_cases,
-            })
-
-    for level in coverage:
-        coverage[level].sort(key=lambda x: x["id"])
-
-    matrix["coverage"] = coverage
-    return matrix
-
-
 class _MissingPDFDeps(RuntimeError):
     """Raised when WeasyPrint or its native libraries are not available."""
 
 
-def _write_traceability_report(core, doc_types: tuple[str, ...], output: Path,
+def _write_traceability_report(adapter, doc_types: tuple[str, ...], output: Path,
                                 junit_paths: tuple[str, ...] = ()) -> dict:
-    matrix = _build_traceability_report_payload(core, doc_types, junit_paths)
+    from medharness.services.traceability_report import traceability_report
+
+    matrix = traceability_report(adapter.list_items(), adapter.list_item_types(),
+                                 list(doc_types), [Path(p) for p in junit_paths])
     output.parent.mkdir(parents=True, exist_ok=True)
 
     json_output = output.with_suffix(".json")
@@ -245,9 +181,8 @@ def _format_traceability_matrix_markdown(matrix: dict) -> str:
             lines.append("| ID | Title | Status | Tests |")
             lines.append("|---|---|---|---|")
             for it in items:
-                # MedHarnessCore.inject_junit_results stores each test as a
-                # dict {"name", "status"}; legacy callers may pass plain
-                # strings. Handle both.
+                # verification_evidence stores each test as a dict
+                # {"name", "status"}; legacy callers may pass plain strings.
                 test_labels = []
                 for t in it.get("tests") or []:
                     if isinstance(t, dict):
@@ -306,7 +241,6 @@ def _generate_specification_artifacts(adapter, out_dir: Path,
 
 def _run_artifact_generation(
     adapter,
-    core,
     dhf_path: Path,
     out_dir: Path,
     doc_types: tuple[str, ...],
@@ -324,7 +258,7 @@ def _run_artifact_generation(
     )
     plans = [] if skip_plans else _generate_plan_artifacts(dhf_path, out_dir, doc_format)
     traceability = _write_traceability_report(
-        core,
+        adapter,
         selected_traceability,
         out_dir / "traceability" / f"Requirements_Traceability_Report.{doc_format}",
         [str(path) for path in junit_paths],

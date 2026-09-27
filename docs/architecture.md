@@ -38,8 +38,9 @@ its own:
 | Which risks does this change touch? | `medharness` |
 | Are the links this doc type requires present? | `medharness` |
 
-The analysis in `medharness.services.traceability` takes a list of items and a
-config, never a path. **The commands, though, always read the YAML store**
+The analysis in `medharness.services.traceability`, and the release's
+traceability matrix in `medharness.services.traceability_report`, take a list
+of items and a config, never a path. **The commands, though, always read the YAML store**
 (`dhfkit.local_adapter.LocalDHFAdapter`); nothing lets you hand them another
 backend. Requirements kept in another system are checked by exporting them into
 `DHF/items/` in the YAML format.

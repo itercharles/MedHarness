@@ -53,8 +53,8 @@ def build_test_adapter():
     """
     Build a StubDHFAdapter pre-populated with the standard test dataset.
 
-    Returns a fully configured in-memory adapter ready for use as a
-    MedHarnessCore backing store. IDs are stable and cross-reference
+    Returns a fully configured in-memory adapter. IDs are stable and
+    cross-reference
     each other.
     """
     from tests.fixtures.stub_adapter import StubDHFAdapter

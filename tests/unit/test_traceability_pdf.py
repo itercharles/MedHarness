@@ -7,7 +7,6 @@ from pathlib import Path
 import pytest
 
 from medharness import _helpers
-from medharness.core import MedHarnessCore
 
 
 def _weasyprint_runtime_ok() -> bool:
@@ -25,11 +24,10 @@ def test_write_report_with_pdf_path_writes_both(stub_adapter, tmp_path):
     if not _weasyprint_runtime_ok():
         pytest.skip("WeasyPrint runtime libraries not available")
 
-    core = MedHarnessCore(stub_adapter)
     output = tmp_path / "traceability" / "Requirements_Traceability_Report.pdf"
 
     result = _helpers._write_traceability_report(
-        core, ("UC", "CRS", "SYS", "SRS"), output
+        stub_adapter, ("UC", "CRS", "SYS", "SRS"), output
     )
 
     assert output.exists(), "PDF output should be written at the requested path"
@@ -48,11 +46,10 @@ def test_write_report_with_pdf_path_writes_both(stub_adapter, tmp_path):
 
 def test_write_report_with_json_path_only_writes_json(stub_adapter, tmp_path):
     """A non-PDF output path keeps the legacy JSON-only behavior."""
-    core = MedHarnessCore(stub_adapter)
     output = tmp_path / "trace" / "report.json"
 
     result = _helpers._write_traceability_report(
-        core, ("UC", "CRS", "SYS", "SRS"), output
+        stub_adapter, ("UC", "CRS", "SYS", "SRS"), output
     )
 
     assert output.exists()
@@ -65,13 +62,12 @@ def test_write_report_skips_pdf_when_weasyprint_missing(
     stub_adapter, tmp_path, monkeypatch
 ):
     """If WeasyPrint is unavailable, JSON is written and pdf_skipped is reported."""
-    core = MedHarnessCore(stub_adapter)
     output = tmp_path / "traceability" / "report.pdf"
 
     monkeypatch.setitem(sys.modules, "weasyprint", None)
 
     result = _helpers._write_traceability_report(
-        core, ("UC", "CRS", "SYS", "SRS"), output
+        stub_adapter, ("UC", "CRS", "SYS", "SRS"), output
     )
 
     assert not output.exists(), "PDF should not be written when WeasyPrint missing"
@@ -113,11 +109,11 @@ def test_format_matrix_markdown_renders_summary_and_matrix():
 
 
 def test_format_matrix_markdown_handles_dict_tests():
-    """Coverage `tests` may be dicts (from inject_junit_results), not strings.
+    """Coverage `tests` may be dicts (from verification_evidence), not strings.
 
     Regression: 0.3.3 raised TypeError: sequence item 0: expected str instance,
-    dict found when joining the test list, because MedHarnessCore stores each
-    test as {"name", "status"}.
+    dict found when joining the test list, because each test is stored
+    as {"name", "status"}.
     """
     matrix = {
         "columns": ["SRS"],
