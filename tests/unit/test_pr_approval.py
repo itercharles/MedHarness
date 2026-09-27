@@ -38,8 +38,8 @@ class TestWithMockedGh:
         import json as _json
 
         head = "a" * 40
-        reviews = _json.dumps([{"state": "APPROVED", "commit_id": head,
-                                "login": "r", "submitted_at": "t"}])
+        reviews = _json.dumps({"state": "APPROVED", "commit_id": head,
+                               "login": "r", "submitted_at": "t"})
         with patch("medharness.services.pr_approval.gh",
                    side_effect=[(0, head), (0, reviews)]):
             assert approval_evidence(42, token="tok")["approved"] is True

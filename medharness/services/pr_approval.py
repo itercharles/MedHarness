@@ -8,8 +8,11 @@ reads reviews and pins them to the PR's head commit.
 from __future__ import annotations
 
 import json
+import re
 
 from medharness.services.gh import gh
+
+_SPACE = re.compile(r"\s*")
 
 
 def _pr_head_sha(pr_number: int | str, *, token: str = "") -> str:
@@ -27,19 +30,26 @@ def _reviews(pr_number: int | str, *, token: str = "") -> list[dict] | None:
     `commit_id` — and a review that does not say what it reviewed is no better
     than a label.
     """
+    # --paginate applies --jq to each page separately, so a filter that builds
+    # one array yields one array per page; emit one review per value instead.
     rc, out = gh(
         ["api", f"repos/{{owner}}/{{repo}}/pulls/{pr_number}/reviews",
          "--paginate", "--jq",
-         '[.[] | {state, commit_id, login: .user.login, submitted_at}]'],
+         '.[] | {state, commit_id, login: .user.login, submitted_at}'],
         token=token,
     )
     if rc != 0:
         return None
+    decoder, reviews, pos = json.JSONDecoder(), [], 0
     try:
-        payload = json.loads(out or "[]")
+        while (pos := _SPACE.match(out, pos).end()) < len(out):
+            review, pos = decoder.raw_decode(out, pos)
+            if not isinstance(review, dict):
+                return None
+            reviews.append(review)
     except json.JSONDecodeError:
         return None
-    return payload if isinstance(payload, list) else None
+    return reviews
 
 
 def approval_evidence(pr_number: int | str, *, token: str = "") -> dict:

@@ -98,6 +98,16 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ### Fixed
 
+- **`workflow check-approval` reads every page of reviews.** `gh api
+  --paginate` applies `--jq` to each page separately, so the filter built one
+  array per page. From the 31st review on, the output held several arrays,
+  failed to parse, and the gate reported "the pull request's reviews could
+  not be read" on a PR that had been approved. The filter now emits one
+  review per value, and every value is read.
+- **This repository's `DHF/README.md` is the current template.** It still
+  taught `AI-harness/context.md`, `.github/prompts/`, `change plan` and
+  `validate traceability`, all long gone. A guard now holds it to
+  `dhfkit/templates/README.md`.
 - **`build release --traceability-type` no longer drops specifications.** The
   option was passed as the list of specifications to render, so
   `--traceability-type SYS` bundled the SYS specification alone. It now

@@ -27,7 +27,7 @@ def _gh_returning(reviews, head=HEAD, rc=0):
     def fake(args, *, token=""):
         if "headRefOid" in " ".join(args):
             return 0, head
-        return rc, json.dumps(reviews)
+        return rc, "\n".join(json.dumps(r) for r in reviews)
     return fake
 
 
@@ -123,3 +123,34 @@ def test_a_label_no_longer_decides() -> None:
         if isinstance(n, ast.Constant) and isinstance(n.value, str)
     )
     assert "labels" not in strings, "a gh query still asks for labels"
+
+
+class TestEveryPageOfReviewsIsRead:
+    """`--paginate` runs `--jq` once per page, so its output is several values."""
+
+    def _reviews_output(self, out: str):
+        from medharness.services.pr_approval import _reviews
+
+        with patch("medharness.services.pr_approval.gh", return_value=(0, out)) as gh:
+            reviews = _reviews(7)
+        assert gh.call_args.args[0][-1].startswith(".[] |"), "one review per jq value"
+        return reviews
+
+    def test_reviews_from_a_second_page_count(self) -> None:
+        first_page = "\n".join(json.dumps(_review(commit=OLDER, login=f"r{i}")) for i in range(30))
+        second_page = json.dumps(_review(login="late"))
+        e = judge_approval(HEAD, self._reviews_output(first_page + "\n" + second_page))
+        assert e["approved"] is True
+        assert [a["by"] for a in e["approvals"]] == ["late"]
+        assert len(e["stale_approvals"]) == 30
+
+    def test_pretty_printed_values_parse_too(self) -> None:
+        out = json.dumps(_review(), indent=2) + "\n" + json.dumps(_review(login="b"), indent=2)
+        assert [r["login"] for r in self._reviews_output(out)] == ["reviewer", "b"]
+
+    def test_no_reviews_is_an_empty_list(self) -> None:
+        assert self._reviews_output("") == []
+
+    def test_garbage_is_unreadable_not_empty(self) -> None:
+        assert self._reviews_output('{"state": "APPROVED"') is None
+        assert self._reviews_output("[1, 2]") is None
