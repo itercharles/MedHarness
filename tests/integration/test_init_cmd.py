@@ -136,7 +136,7 @@ class TestInitCmd:
         """run_init makes no GitHub API or gh CLI calls."""
         from medharness.workflows.init import run_init
         src = inspect.getsource(run_init)
-        assert "_gh(" not in src
+        assert "gh(" not in src
         assert "_repo_exists" not in src
         assert "_create_dhf_repo" not in src
         assert "_set_secret" not in src

@@ -8,27 +8,12 @@ reads reviews and pins them to the PR's head commit.
 from __future__ import annotations
 
 import json
-import os
-import subprocess
 
-
-def _gh(args: list[str], *, token: str = "") -> tuple[int, str]:
-    env = {**os.environ}
-    gh_token = token or os.environ.get("GH_TOKEN", "") or os.environ.get("GITHUB_TOKEN", "")
-    if gh_token:
-        env["GH_TOKEN"] = gh_token
-        env["GITHUB_TOKEN"] = gh_token
-    try:
-        result = subprocess.run(  # noqa: S603
-            ["gh", *args], capture_output=True, text=True, env=env, timeout=30,
-        )
-        return result.returncode, result.stdout.strip()
-    except (subprocess.SubprocessError, OSError) as exc:
-        return 1, str(exc)
+from medharness.services.gh import gh
 
 
 def _pr_head_sha(pr_number: int | str, *, token: str = "") -> str:
-    rc, out = _gh(
+    rc, out = gh(
         ["pr", "view", str(pr_number), "--json", "headRefOid", "--jq", ".headRefOid"],
         token=token,
     )
@@ -42,7 +27,7 @@ def _reviews(pr_number: int | str, *, token: str = "") -> list[dict] | None:
     `commit_id` — and a review that does not say what it reviewed is no better
     than a label.
     """
-    rc, out = _gh(
+    rc, out = gh(
         ["api", f"repos/{{owner}}/{{repo}}/pulls/{pr_number}/reviews",
          "--paginate", "--jq",
          '[.[] | {state, commit_id, login: .user.login, submitted_at}]'],

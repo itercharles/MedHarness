@@ -87,14 +87,14 @@ class TestItIsReadFromGitHub:
     """`approval_evidence` is the gh calls feeding `judge_approval`."""
 
     def test_the_head_and_the_reviews_both_reach_the_judgement(self) -> None:
-        with patch("medharness.services.pr_approval._gh",
+        with patch("medharness.services.pr_approval.gh",
                    _gh_returning([_review(commit=OLDER)], head=OLDER)):
             e = approval_evidence(7)
         assert e["approved"] is True
         assert e["head_sha"] == OLDER
 
     def test_a_failed_reviews_call_does_not_pass(self) -> None:
-        with patch("medharness.services.pr_approval._gh", _gh_returning([], rc=1)):
+        with patch("medharness.services.pr_approval.gh", _gh_returning([], rc=1)):
             assert "could not be read" in approval_evidence(7)["reason"]
 
 

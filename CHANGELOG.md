@@ -29,6 +29,14 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
   set the same way for every event kind. Before, each of fifteen code paths
   set them by hand.
 
+### Fixed
+
+- **Every `gh` call picks its token the same way.** The session store read
+  `$GITHUB_TOKEN` before `$GH_TOKEN`, while comment posting and the approval
+  gate read them the other way round. So one run could act as two identities.
+  All three now go through `services/gh.py`, which uses the order `gh` itself
+  uses: `--token`, then `$GH_TOKEN`, then `$GITHUB_TOKEN`.
+
 ## [0.38.1] — 2026-09-27
 
 ### Fixed
