@@ -58,7 +58,12 @@ def _documented_calls() -> list[tuple[str, tuple[str, ...], str]]:
                     call = _parse(line)
                     if call:
                         found.setdefault(call, path.name)
+                        LINES.setdefault(line.strip().lstrip("$").strip(), path.name)
     return [(mod, toks, src) for (mod, toks), src in sorted(found.items())]
+
+
+#: Every documented command line, whole, for the parse check below.
+LINES: dict[str, str] = {}
 
 
 def _alternatives(line: str) -> list[str]:
@@ -125,6 +130,61 @@ def test_a_documented_command_exists(
         f"{source} documents `{module} {' '.join(tokens)}`, but "
         f"`{tokens[0]}` takes no subcommand"
     )
+
+
+def _parse_error(line: str) -> str | None:
+    """Click's own verdict on the line, or None when it parses.
+
+    `--help` exits 0 before Click looks at the rest, so `dhfkit validate
+    traceability` and `verify tests --dhf DHF` passed the check above while
+    failing for everyone who ran them — the second inside the prompt `build
+    code` hands its agent.
+    """
+    import click
+
+    from dhfkit.cli import main as dhfkit_main
+    from medharness.cli import main as medharness_main
+
+    module, _, rest = line.partition(" ")
+    try:
+        args = shlex.split(rest)
+    except ValueError:
+        args = rest.split()
+    args = [a for a in args if a != "\\"]          # a line continued below
+    for i, arg in enumerate(args):
+        if arg in {"|", "||", "&&", ";", "#", ">", ">>"} or arg.startswith("#"):
+            args = args[:i]
+            break
+    node = medharness_main if module == "medharness" else dhfkit_main
+    ctx = None
+    while True:
+        ctx = click.Context(node, parent=ctx, info_name=node.name)
+        try:
+            _, positional, _ = node.make_parser(ctx).parse_args(list(args))
+        except click.UsageError as exc:
+            return exc.format_message()
+        if not isinstance(node, click.Group):
+            allowed = sum(p.nargs if p.nargs > 0 else 99
+                          for p in node.params if isinstance(p, click.Argument))
+            return f"unexpected {positional[allowed:]}" if len(positional) > allowed else None
+        if not positional:
+            return None
+        args = args[args.index(positional[0]) + 1:]
+        node = node.commands.get(positional[0])
+        if node is None:
+            return f"no command {positional[0]}"
+
+
+@pytest.mark.parametrize("line", sorted(LINES), ids=lambda l: l[:60])
+def test_a_documented_command_line_parses(line: str) -> None:
+    error = _parse_error(line)
+    assert error is None, f"{LINES[line]} documents `{line}`: {error}"
+
+
+def test_the_parse_check_catches_both_faults() -> None:
+    assert _parse_error("dhfkit --dhf DHF validate traceability")
+    assert _parse_error("medharness verify tests --dhf DHF --junit x")
+    assert _parse_error("medharness --dhf DHF verify tests --junit x") is None
 
 
 def test_readme_pins_the_current_version() -> None:

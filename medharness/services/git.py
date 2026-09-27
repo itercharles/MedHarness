@@ -198,9 +198,9 @@ def judge_branch(
     *cr_item* is the CR as stored, or None when the DHF has no such CR. The two
     change sets are ``{created, updated, deleted}`` — item IDs and file paths.
 
-    DHF item changes are always required — `build plan` must run on every CR
-    branch. When ``code_paths`` is non-empty, at least one file under those
-    paths must also have changed.
+    The branch's DHF item changes and the CR's ``affected_items`` must match,
+    both ways, apart from the CR itself. When ``code_paths`` is non-empty, at
+    least one file under those paths must also have changed.
     """
     errors: list[dict] = []
     code_change_count = sum(len(code_changes[b]) for b in ("created", "updated", "deleted"))
@@ -253,6 +253,23 @@ def judge_branch(
             "fix": "Run `build plan` so the CR records what it affects.",
         })
 
+    # The other direction: an item the branch changes that the CR does not
+    # list is a change nothing records, and `verify completion` never checks it.
+    unlisted = sorted(changed_ids - set(promised) - {cr_id}) if cr_item is not None else []
+    if unlisted:
+        errors.append({
+            "field": "dhf_branch",
+            "issue": (
+                f"The branch changes {', '.join(unlisted)} since {since_ref}, "
+                f"but {cr_id} does not list them in affected_items."
+            ),
+            "fix": (
+                f"Add them: dhfkit item update {cr_id} --data "
+                f"'{{\"affected_items\": [...]}}' — or revert the changes this CR "
+                f"should not make."
+            ),
+        })
+
     return envelope_from("workflow check-changes", {
         "cr_id": cr_id,
         "since_ref": since_ref,
@@ -263,6 +280,7 @@ def judge_branch(
         "errors": [f"{e['field']}: {e['issue']}" for e in errors],
         "findings": errors,
         "promised_but_unchanged": unchanged_promised,
+        "unlisted_changes": unlisted,
         "cr_found": cr_item is not None,
         "dhf_item_changes": dhf_item_changes,
         "code_changes": code_changes,

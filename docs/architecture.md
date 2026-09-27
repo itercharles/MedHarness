@@ -72,7 +72,8 @@ wheel and requires every default to be in it.
 │   ├── README.md                 # what the DHF is and how to edit it
 │   ├── config/global.yaml        # the project name, and room for overrides
 │   └── items/NN_type/            # one directory per item type, with a sample item
-├── CLAUDE.md                     # product context the AI stages read
+├── AGENTS.md                     # product context and the DHF steps, for any agent
+├── CLAUDE.md                     # @AGENTS.md
 └── .gitignore
 ```
 
@@ -91,6 +92,10 @@ identical.
 ```
 CR (new) ─► build plan ─► design reviewed on the PR ─► build code ─► verify * ─► merge
 ```
+
+The steps are the prompts in `medharness/prompts/`, run by one of two agents:
+the one `build plan`/`build code` start (CI), or the one the engineer is already
+using, which reads them from `--prompt` (local). There is one copy of the steps.
 
 **`build plan`**
 

@@ -55,6 +55,14 @@ def _raise_for_outcome_error(result: dict) -> None:
         raise click.exceptions.Exit(1)
 
 
+def _print_prompt(assemble, cr_id: str, dhf: Path) -> None:
+    """Markdown, not JSON: the reader is an agent following it, not a parser."""
+    warnings: list[dict] = []
+    click.echo(assemble(cr_id, dhf_path=dhf, warnings=warnings))
+    for w in warnings:
+        click.echo(f"WARN [prompt] {w.get('message', w)}", err=True)
+
+
 def register(main):
     build = main.commands["build"]
 
@@ -63,8 +71,12 @@ def register(main):
                   help="The CR to design: its item cascade and impact analysis.")
     @click.option("--pr", "pr_number", default=None, type=int, metavar="N",
                   help="PR number — revision mode: revise DHF cascade based on review comments")
+    @click.option("--prompt", "print_prompt", is_flag=True, default=False,
+                  help="Print the stage's instructions, with this CR's DHF context, for an "
+                       "agent that is already running, instead of starting a model.")
     @click.pass_context
-    def change_plan(ctx: click.Context, cr_id: str, pr_number: int | None) -> None:
+    def change_plan(ctx: click.Context, cr_id: str, pr_number: int | None,
+                    print_prompt: bool) -> None:
         """Draft the DHF item cascade and impact analysis for a CR, with a model.
 
         Drives the V-model (CRS→SYS→SYSARCH/RISK/RCM→SRS→SWDD). The model writes
@@ -84,6 +96,10 @@ def register(main):
             raise click.ClickException(str(exc)) from exc
         except (FileNotFoundError, OSError):
             pass  # DHF config not loadable yet; generate_dhf will surface the error
+        if print_prompt:
+            from medharness.services.prompt_assembly import _assemble_generate_dhf_prompt
+            _print_prompt(_assemble_generate_dhf_prompt, cr_id, dhf)
+            return
         result = generate_dhf(cr_id, dhf, pr_number=pr_number)
         emit(result)
         click.echo(
@@ -100,8 +116,12 @@ def register(main):
                   help="The CR whose approved design to implement.")
     @click.option("--pr", "pr_number", default=None, type=int, metavar="N",
                   help="PR number — revision mode: revise implementation based on review comments")
+    @click.option("--prompt", "print_prompt", is_flag=True, default=False,
+                  help="Print the stage's instructions, with this CR's DHF context, for an "
+                       "agent that is already running, instead of starting a model.")
     @click.pass_context
-    def change_implement(ctx: click.Context, cr_id: str, pr_number: int | None) -> None:
+    def change_implement(ctx: click.Context, cr_id: str, pr_number: int | None,
+                         print_prompt: bool) -> None:
         """Write the code and tests for a CR's approved design, with a model.
 
         Reads the CR's implementation_notes and the items it affects, and
@@ -120,6 +140,10 @@ def register(main):
             raise click.ClickException(str(exc)) from exc
         except (FileNotFoundError, OSError):
             pass  # DHF config not loadable yet; generate_code will surface the error
+        if print_prompt:
+            from medharness.services.prompt_assembly import _assemble_develop_prompt
+            _print_prompt(_assemble_develop_prompt, cr_id, dhf)
+            return
         result = generate_code(cr_id, dhf, pr_number=pr_number)
         emit(result)
         click.echo(_format_summary("Implementation", "revised" if pr_number else "generated", cr_id, result), err=True)

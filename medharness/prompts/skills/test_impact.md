@@ -6,7 +6,7 @@ test plan for the requested change.
 ## Inputs
 
 Read:
-- `python -m dhfkit --dhf DHF item get <CR_ID>`
+- `dhfkit --dhf DHF item get <CR_ID>`
 - `DHF/documents/plans/development_plan.md`, section `10. Testing Strategy`
 - `DHF/documents/plans/verification_plan.md`
 - `DHF/documents/plans/validation_plan.md`

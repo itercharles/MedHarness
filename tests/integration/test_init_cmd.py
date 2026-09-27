@@ -1,7 +1,7 @@
 """Tests for medharness init command.
 
 Tests the zero-prompt init command:
-- CLAUDE.md generation for single-repo layout
+- AGENTS.md and CLAUDE.md for coding agents
 - DHF template placeholder substitution
 - prompt scaffolding
 - run_init guards and structure
@@ -13,7 +13,7 @@ import inspect
 from medharness.workflows.init import (
     _scaffold_dhf,
     _replace_placeholders,
-    _write_claude_md,
+    _write_agent_files,
     _write_gitignore,
 )
 
@@ -21,32 +21,33 @@ from medharness.workflows.init import (
 class TestInitCmd:
     """init command — zero-prompt infrastructure onboarding command."""
 
-    # ── CLAUDE.md ────────────────────────────────────────────────────────────
+    # ── AGENTS.md and CLAUDE.md ─────────────────────────────────────────────
 
-    def test_write_claude_md_creates_file(self, tmp_path):
-        """_write_claude_md creates CLAUDE.md in project_dir."""
-        _write_claude_md(tmp_path, "My Device")
-        assert (tmp_path / "CLAUDE.md").exists()
+    def test_a_new_project_gets_agents_md_and_a_claude_md_that_imports_it(self, tmp_path):
+        _write_agent_files(tmp_path, "Cardiac Monitor")
+        agents = (tmp_path / "AGENTS.md").read_text()
+        for section in ("## Product", "## Architecture", "## Scope", "## Design History File"):
+            assert section in agents, section
+        assert "Cardiac Monitor" in agents
+        assert (tmp_path / "CLAUDE.md").read_text() == "@AGENTS.md\n"
 
-    def test_write_claude_md_contains_project_name(self, tmp_path):
-        """CLAUDE.md includes the project name."""
-        _write_claude_md(tmp_path, "Cardiac Monitor")
-        assert "Cardiac Monitor" in (tmp_path / "CLAUDE.md").read_text()
+    def test_the_instructions_name_the_high_level_steps(self, tmp_path):
+        _write_agent_files(tmp_path, "Device")
+        agents = (tmp_path / "AGENTS.md").read_text()
+        for step in ("build plan --cr CR-NNN --prompt", "build code --cr CR-NNN --prompt",
+                     "verify completion --cr CR-NNN", "workflow check-changes --cr CR-NNN"):
+            assert step in agents, step
 
-    def test_write_claude_md_mentions_cr_workflow(self, tmp_path):
-        """CLAUDE.md states the CR-in-PR-title rule and the gates that run."""
-        _write_claude_md(tmp_path, "Device")
-        content = (tmp_path / "CLAUDE.md").read_text()
-        assert "names its CR" in content
-        assert "verify tests" in content
-
-    def test_write_claude_md_carries_the_product_context(self, tmp_path):
-        """It replaced AI-harness/context.md, which the design prompt never read."""
-        _write_claude_md(tmp_path, "Device")
-        content = (tmp_path / "CLAUDE.md").read_text()
-        for section in ("## Product", "## Architecture", "## Scope", "## Rules"):
-            assert section in content, section
-        assert "Device" in content
+    def test_existing_files_are_added_to_not_replaced(self, tmp_path):
+        """init used to overwrite a repository's own CLAUDE.md."""
+        (tmp_path / "AGENTS.md").write_text("# Ours\n\nKeep this.\n")
+        (tmp_path / "CLAUDE.md").write_text("# Ours too\n")
+        _write_agent_files(tmp_path, "Device")
+        _write_agent_files(tmp_path, "Device")
+        agents = (tmp_path / "AGENTS.md").read_text()
+        claude = (tmp_path / "CLAUDE.md").read_text()
+        assert agents.startswith("# Ours\n\nKeep this.") and agents.count("## Design History File") == 1
+        assert claude.startswith("# Ours too") and claude.count("@AGENTS.md") == 1
 
     # ── placeholder substitution ─────────────────────────────────────────────
 
@@ -147,3 +148,13 @@ class TestInitCmd:
         from medharness.workflows.init import run_init
         src = inspect.getsource(run_init)
         assert "click.prompt" not in src
+
+
+def test_adopting_md_shows_the_section_init_writes():
+    """A project that predates AGENTS.md copies it from there."""
+    from pathlib import Path
+
+    from medharness.workflows.init import DHF_INSTRUCTIONS
+
+    adopting = (Path(__file__).resolve().parents[2] / "docs" / "adopting.md").read_text()
+    assert DHF_INSTRUCTIONS in adopting

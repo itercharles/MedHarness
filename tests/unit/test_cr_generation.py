@@ -45,8 +45,8 @@ class TestLoadPrompt:
         assert "{{cr_id}}" in text
         assert "verification_criteria" in text
         assert "V-model" in text or "V-Model" in text
-        assert "python -m dhfkit" in text
-        assert "validate traceability" in text
+        assert "dhfkit --dhf DHF item" in text
+        assert "medharness --dhf DHF verify dhf" in text
 
     def test_missing_prompt_raises(self):
         import importlib.resources

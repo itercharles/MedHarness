@@ -66,7 +66,7 @@ Run the AI stages in a disposable, credential-minimal environment. A GitHub-host
 | Network egress | Restrict to the model endpoint and your package registry where your runner supports it |
 | Source of truth | The AI writes to a branch; `main` stays protected and requires review |
 
-If you must run locally, use a dedicated checkout and a shell without your primary credentials in scope.
+Locally, do not start the stages at all: `build plan --prompt` and `build code --prompt` hand the steps to the agent you are already using, under that agent's own permission prompts. No second agent runs, and nothing skips a confirmation.
 
 ---
 
