@@ -188,6 +188,6 @@ defaults declare is a breaking change.
 
 ## Beyond the gates
 
-`dhfkit` follows the same output convention for DHF data operations — item CRUD, schema validation, document generation, the SBOM — but those commands predate the envelope and keep their own result shapes. Read `--help` for the command you need. `dhfkit` has no dependency on `medharness`, so a project that wants only the engine can use it alone; see [adopting.md](adopting.md#using-dhfkit-standalone).
+`dhfkit` follows the same output convention for DHF data operations — item CRUD, schema validation, document generation, the SBOM — but those commands predate the envelope and keep their own result shapes. Read `--help` for the command you need. `dhfkit` has no dependency on `medharness`, so a project that wants only the engine can use it alone; see [architecture.md](architecture.md#two-packages-one-install).
 
 The `build` commands are not gates and do not answer with the envelope. `build plan --prompt` and `build code --prompt` print Markdown, not JSON: their reader is an agent following the steps. `build plan` and `build code` report in their own shape — `outcome` (`ok`, `corrected`, `completed_with_errors` or `tool_error`), `summary`, `artifacts`, `errors`, and the review — listed in the [README](../README.md#commands); their execution boundary is described in [ai-security.md](ai-security.md).

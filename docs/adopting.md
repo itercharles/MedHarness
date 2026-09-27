@@ -2,14 +2,7 @@
 
 ## Starting fresh
 
-```bash
-pip install medharness
-medharness init            # in a directory with no DHF/ yet
-```
-
-You get a DHF with sample items and a one-line `global.yaml`, an `AGENTS.md`
-with a `CLAUDE.md` that imports it, and a `.gitignore`. The item types and templates are defaults inside the
-package. Three things to replace before your first real CR:
+Run `medharness init` as in the [README](../README.md#quick-start). Then replace:
 
 | Replace | Why |
 |---------|-----|
@@ -17,13 +10,7 @@ package. Three things to replace before your first real CR:
 | `DHF/config/global.yaml` | Check the project name. Anything else you set here overrides a default — see [Changing the defaults](#changing-the-defaults) |
 | `AGENTS.md` | Describe the product, so every coding agent — and the AI stages — reason about your domain |
 
-Check it at any point:
-
-```bash
-medharness verify dhf
-```
-
-Document generation and traceability work against whatever items you have put in. CI is the one piece you add yourself — [Setting up CI](#setting-up-ci) is next, and is the whole deployment.
+CI is the one piece you add yourself, and it is the whole deployment.
 
 ## Setting up CI
 
@@ -142,23 +129,8 @@ Writing your own pipeline instead? [interface.md](interface.md) is the contract 
 
 ## Bringing an existing DHF
 
-MedHarness stores DHF content as YAML items, one file per record. Each item has a `type` that maps to a position in the V-model:
-
-| Type | V-model layer |
-|------|--------------|
-| `UC` | Use cases |
-| `CRS` | Customer requirements |
-| `SYS` | System requirements |
-| `SYSARCH` | System architecture decisions |
-| `SRS` | Software requirements |
-| `MODULE` | Software modules |
-| `SWDD` | Software detailed design |
-| `RISK` | Hazard and risk analysis |
-| `RCM` | Risk control measures |
-| `SOUP` | Software of unknown provenance |
-| `CR` | Change requests |
-| `DEF` | Defects |
-| `REL` | Release baselines |
+MedHarness stores DHF content as YAML items, one file per record. The types and
+the links between them are listed in the `DHF/README.md` that `init` writes.
 
 Artifacts from common sources map directly to item types. A requirements spreadsheet becomes SRS and SYS items — one row per item, with `title` and `content` fields. A risk register becomes RISK items paired with RCM items (each RCM carries a `mitigates` field pointing to the RISK ID it controls). A SOUP list becomes SOUP items with `name`, `version`, and `purpose` fields.
 
@@ -166,25 +138,10 @@ What you do not need to migrate: test code (it stays in pytest, linked to DHF it
 
 Traceability links between items are typed fields on child items (`derives_from`, `satisfies`, `implements`, `mitigates`, etc.). Run `medharness --dhf DHF verify dhf` at any point to check link integrity. The validator names the exact item, field, and target for every broken link.
 
-### What blocks a build, and what only warns
-
-`verify dhf` separates broken references from incomplete design, because the two need different fixes:
-
-| Finding | Blocks? | Meaning |
-|---------|---------|---------|
-| Schema error | Always | An item does not match its doc-type schema |
-| Required-traceability failure | Always | An item type that must have a parent link has none |
-| **Dangling link** | Always | A link exists but its target ID does not — usually a typo or a deleted item |
-| Coverage gap | Only with `--fail-on-uncovered` | An item has no downstream child yet — normal mid-project |
-
-A dangling link is reported on its own rather than as a coverage gap. `SRS-001` pointing at a nonexistent `SYS-999` would otherwise show up only as "SYS→SRS 0/1 covered", and the remediation for that ("add a link") does not apply — the link is already there, it just resolves to nothing:
-
-```
-FAIL [dangling] RCM-001.mitigates → RISK-404: target does not exist
-    Fix: correct the ID in RCM-001.yaml, or create RISK-404. The link exists but resolves to nothing.
-```
-
-Coverage gaps print as `WARN [coverage]` and leave the exit code at zero unless you pass `--fail-on-uncovered`. The recommended pipeline in [Setting up CI](#setting-up-ci) passes it. If you are backfilling an existing DHF and want the other checks green while you work through the gaps, drop the flag and add it back when the backlog is clear.
+Which findings block a build and which only warn is in
+[interface.md](interface.md#what-blocks-a-build). While backfilling, leave
+`--fail-on-uncovered` off: coverage gaps then warn, and schema, required links
+and dangling links still fail.
 
 ## Test-driven development with test points
 
@@ -560,21 +517,11 @@ Add `--write` to record the REL item. It is recorded **only when every check pas
 
 ## Changing the defaults
 
-A project's `DHF/config/global.yaml` holds its name and nothing else to begin
-with. The item types, their fields and lifecycles, which links are required, and
-the specification templates are defaults inside the package — so upgrading
-`medharness` brings their improvements, and there is nothing in your repository
-to reconcile.
-
-Override what you need, file by file:
-
-| To change | Do this |
-|---|---|
-| A setting in `global.yaml`, e.g. `required_traceability` | Set the key in your `global.yaml`; it replaces the default key |
-| An item type | Add `DHF/config/doc_types/<type>.yaml`; it replaces the default type with the same `code`. Start from the default in [`dhfkit/templates/config/doc_types`](../dhfkit/templates/config/doc_types) |
-| A new item type | Add a doc-type file with a new `code` |
-| A type you don't use | `omit_doc_types: [UC]` in `global.yaml` |
-| A specification template | Add a file of the same name to `DHF/documents/specs/` |
+The item types, their fields and lifecycles, the required links and the
+specification templates are defaults inside the package; the
+[README](../README.md#what-a-project-looks-like) lists how to override each. Start
+a doc-type override from the default in
+[`dhfkit/templates/config/doc_types`](../dhfkit/templates/config/doc_types).
 
 An override replaces the whole default of its kind, so an overridden doc type
 no longer follows the package's changes to that type. Keep overrides to what you
@@ -583,14 +530,6 @@ actually change.
 Projects scaffolded before 0.37 carry full copies of the config and templates.
 They keep working: each copy overrides the default it duplicates. To follow the
 defaults again, delete the copies you have not changed.
-
-## Using dhfkit standalone
-
-`dhfkit` is the storage engine inside MedHarness. It ships in the same package (`pip install medharness`), not as a separate distribution, and has no dependency on the harness — so a team with its own orchestration can import it directly and ignore the CLI harness and AI workflow.
-
-What it gives you: item storage and retrieval, schemas, lifecycle transitions, document generation, and a CycloneDX SBOM. SOUP sync (`build soup`) and releases (`build release`) are `medharness`. `LocalDHFAdapter` is the programmatic entry point.
-
-What it does not give you: **traceability analysis**. Coverage, required links, cycles and risk chains live in `medharness`, which reads the same YAML items. Requirements kept in another system are checked by exporting them into `DHF/items/` in this format. See [architecture.md](architecture.md).
 
 ## What to adopt, in what order
 
