@@ -122,7 +122,8 @@ class TestSoupVulnGate:
         result = soup_gate(dhf, query=lambda q: batches.append(q) or [{"vulns": []}] * len(q))
         assert result["passed"] is True
         assert result["details"]["checked_count"] == 2
-        assert [[x["package"]["name"] for x in q] for q in batches] == [["requests", "flask"]]
+        assert len(batches) == 1, "every checkable item goes in one querybatch"
+        assert sorted(x["package"]["name"] for x in batches[0]) == ["flask", "requests"]
 
     def test_soup_without_name_skipped(self, tmp_path: Path) -> None:
         dhf = _make_dhf(tmp_path)
