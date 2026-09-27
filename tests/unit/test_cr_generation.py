@@ -28,7 +28,6 @@ from medharness.services.prompt_assembly import (
     MAX_DIFF_CHARS,
     _append_skills,
     _assemble_develop_prompt,
-    _build_dhf_context_block,
     _load_prompt,
     _load_skill,
 )
@@ -988,24 +987,30 @@ class TestGenerateCode:
 
 # ── DHF context block ──────────────────────────────────────────────────────────
 
-class TestBuildDhfContextBlock:
-    def test_raises_on_adapter_failure(self, tmp_path):
-        """An unreadable DHF must not degrade to an empty block in silence."""
-        from medharness.services.prompt_assembly import _build_dhf_context_block as build
+class TestPlanContext:
+    """The `build plan` prompt renders `cr_context`, the dict `medharness context` prints."""
 
-        dhf = tmp_path / "nonexistent"
+    @staticmethod
+    def _render(adapter, cr_id: str = "CR-001") -> str:
+        from medharness.services.context import cr_context
+        from medharness.services.prompt_assembly import _render_plan_context
+
+        return _render_plan_context(cr_context(adapter, cr_id))
+
+    def test_an_unreadable_dhf_raises(self, tmp_path):
+        """An unreadable DHF must not degrade to an empty block in silence."""
+        from medharness.services.prompt_assembly import _cr_context
+
         with pytest.raises(RuntimeError, match="Cannot load DHF"):
-            build(dhf)
+            _cr_context(tmp_path / "nonexistent", "CR-001")
 
     def test_enrich_records_failure_as_warning_and_continues(self, tmp_path):
         """Callers keep running, but the reason reaches the warnings channel."""
-        from medharness.services.prompt_assembly import (
-            _build_dhf_context_block as build,
-            _enrich,
-        )
+        from medharness.services.prompt_assembly import _cr_context, _enrich
 
         warnings: list[dict] = []
-        prompt = _enrich("BASE", build, tmp_path / "nonexistent", warnings)
+        prompt = _enrich("BASE", lambda p: _cr_context(p, "CR-001"),
+                         tmp_path / "nonexistent", warnings)
 
         assert prompt == "BASE"
         assert len(warnings) == 1
@@ -1013,12 +1018,10 @@ class TestBuildDhfContextBlock:
         assert "Cannot load DHF" in warnings[0]["message"]
 
     def test_enrich_tolerates_no_warnings_channel(self, tmp_path):
-        from medharness.services.prompt_assembly import (
-            _build_dhf_context_block as build,
-            _enrich,
-        )
+        from medharness.services.prompt_assembly import _cr_context, _enrich
 
-        assert _enrich("BASE", build, tmp_path / "nonexistent", None) == "BASE"
+        assert _enrich("BASE", lambda p: _cr_context(p, "CR-001"),
+                       tmp_path / "nonexistent", None) == "BASE"
 
     def test_generate_dhf_surfaces_context_failure(self, tmp_path):
         """The warning must reach the caller's result, not just an internal list."""
@@ -1027,112 +1030,73 @@ class TestBuildDhfContextBlock:
         warnings: list[dict] = []
         _assemble_generate_dhf_prompt("CR-001", tmp_path / "nonexistent", warnings)
 
-        assert [w["code"] for w in warnings] == [
-            "dhf_context_unavailable", "dhf_context_unavailable",
-        ]  # DHF context block and risk block both report
+        assert [w["code"] for w in warnings] == ["dhf_context_unavailable"]
 
-    def test_includes_item_type_summary(self, tmp_path):
+    def test_includes_item_type_summary(self):
         from tests.fixtures.stub_adapter import StubDHFAdapter
 
-        dhf = tmp_path / "DHF"
-        dhf.mkdir()
         adapter = StubDHFAdapter()
         adapter.create_item({"id": "SYS-001", "title": "System req"})
         adapter.create_item({"id": "SRS-001", "title": "Software req"})
-        with patch(
-            "dhfkit.local_adapter.LocalDHFAdapter",
-            return_value=adapter,
-        ):
-            result = _build_dhf_context_block(dhf)
+        result = self._render(adapter)
         assert "Pre-computed DHF Context" in result
-        assert "SYS:" in result or "SYS-" in result
-        assert "SRS:" in result or "SRS-" in result
+        assert "SRS: 1  SYS: 1" in result
 
-    def test_includes_all_dhf_items(self, tmp_path):
+    def test_includes_all_dhf_items(self):
         from tests.fixtures.stub_adapter import StubDHFAdapter
 
-        dhf = tmp_path / "DHF"
-        dhf.mkdir()
         adapter = StubDHFAdapter()
         adapter.create_item({"id": "SYS-001", "title": "System requirement 1"})
-        with patch(
-            "dhfkit.local_adapter.LocalDHFAdapter",
-            return_value=adapter,
-        ):
-            result = _build_dhf_context_block(dhf)
+        result = self._render(adapter)
         assert "All DHF Items" in result
         assert "SYS-001 — System requirement 1" in result
 
-    def test_caps_items_at_max(self, tmp_path):
+    def test_caps_items_at_max(self):
         from tests.fixtures.stub_adapter import StubDHFAdapter
 
-        dhf = tmp_path / "DHF"
-        dhf.mkdir()
         adapter = StubDHFAdapter()
         for i in range(250):
             adapter.create_item({"id": f"SYS-{i+1:03d}", "title": f"Req {i}"})
-        with patch(
-            "dhfkit.local_adapter.LocalDHFAdapter",
-            return_value=adapter,
-        ):
-            result = _build_dhf_context_block(dhf)
-        assert "truncated" in result.lower()
+        result = self._render(adapter)
         assert "200 of 250" in result
-        # SYS-001 through SYS-200 should appear; SYS-250 should not.
         assert "SYS-001 —" in result
         assert "SYS-200 —" in result
         assert "SYS-250 —" not in result
 
-    def test_includes_coverage_gaps_when_uncovered(self, tmp_path):
+    def test_a_cr_that_records_what_it_affects_gets_only_those(self):
         from tests.fixtures.stub_adapter import StubDHFAdapter
 
-        dhf = tmp_path / "DHF"
-        dhf.mkdir()
         adapter = StubDHFAdapter()
-        adapter.create_item({"id": "SYS-001", "title": "Uncovered req"})
-        with patch(
-            "dhfkit.local_adapter.LocalDHFAdapter",
-            return_value=adapter,
-        ):
-            result = _build_dhf_context_block(dhf)
-        assert "manual_verification_candidates" in result
-        assert "SYS-001" in result
+        adapter.create_item({"id": "SYS-001", "title": "Touched"})
+        adapter.create_item({"id": "SYS-002", "title": "Untouched"})
+        adapter.create_item({"id": "CR-001", "title": "CR", "affected_items": ["SYS-001"]})
+        result = self._render(adapter)
+        assert "Items This CR Affects" in result
+        assert "SYS-001 — Touched" in result
+        assert "SYS-002" not in result
 
-    def test_no_coverage_warning_when_all_covered(self, tmp_path):
+    def test_risks_and_their_controls(self):
         from tests.fixtures.stub_adapter import StubDHFAdapter
 
-        dhf = tmp_path / "DHF"
-        dhf.mkdir()
         adapter = StubDHFAdapter()
-        adapter.create_item({"id": "SYS-001", "title": "Covered req"})
-        adapter.create_item({"id": "TC-SYS-001", "title": "Test case",
-                             "verifies": ["SYS-001"]})
-        with patch(
-            "dhfkit.local_adapter.LocalDHFAdapter",
-            return_value=adapter,
-        ):
-            result = _build_dhf_context_block(dhf)
-        assert "manual_verification_candidates" not in result
+        adapter.create_item({"id": "RISK-001", "title": "Overdose", "severity": "critical"})
+        adapter.create_item({"id": "RCM-001", "title": "Limit", "mitigates": ["RISK-001"],
+                             "implements": "SYS-001"})
+        result = self._render(adapter)
+        assert "**RISK-001** [critical · —] — Overdose" in result
+        assert "RCM-001 — Limit (implements: SYS-001)" in result
 
-    def test_coverage_uses_system_requirement_role_code(self, tmp_path):
+    def test_type_registry_uses_the_project_codes(self):
         from tests.fixtures.stub_adapter import StubDHFAdapter
 
-        dhf = tmp_path / "DHF"
-        dhf.mkdir()
         adapter = StubDHFAdapter()
-        adapter.create_item({"id": "SYSREQ-001", "title": "Custom-prefix req"})
         adapter._item_types.append({
             "display_name": "System Requirement", "code": "SYSREQ",
             "prefix": "SYSREQ-", "role": "system_requirement",
             "parent_types": [], "has_verification": True,
             "lifecycle": None, "fields": [],
         })
-        with patch(
-            "dhfkit.local_adapter.LocalDHFAdapter",
-            return_value=adapter,
-        ):
-            result = _build_dhf_context_block(dhf)
-        assert "System requirements (tier 2): SYSREQ" in result
+        assert "System requirements (tier 2): SYSREQ" in self._render(adapter)
 
 
 class TestAutoPostPrFeedback:

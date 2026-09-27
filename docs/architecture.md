@@ -125,7 +125,8 @@ as `provider:model` — `anthropic` (the `claude` CLI, the default), `openai`,
 | Module | Does |
 |---|---|
 | `services/cr_generation.py` | Stage orchestration, model calls, PR feedback |
-| `services/prompt_assembly.py` | Loads prompts from `medharness/prompts/` and adds DHF context |
+| `services/context.py` | What an agent is told about the DHF for one CR; `medharness context --cr` prints it |
+| `services/prompt_assembly.py` | Loads prompts from `medharness/prompts/` and renders `services/context.py` into them |
 | `services/cr_impact.py` | Writes `affected_items` back onto the CR |
 | `services/design_validation.py` | The deterministic check after each design pass |
 

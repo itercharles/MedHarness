@@ -24,8 +24,7 @@ from medharness.services.prompt_assembly import (
     _assemble_generate_dhf_prompt,
     _assemble_review_code_prompt,
     _assemble_review_design_prompt,
-    _build_dhf_context_block,
-    _enrich,
+    _enrich_with_plan_context,
 )
 
 __all__ = [
@@ -792,7 +791,7 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> di
             f"  python -m medharness --dhf DHF verify dhf\n\n"
             f"Review feedback:\n{feedback['prompt_text']}"
         )
-        prompt = _enrich(prompt, _build_dhf_context_block, dhf_path, warnings)
+        prompt = _enrich_with_plan_context(prompt, cr_id, dhf_path, warnings)
         prompt = _append_skills(prompt)
         steps.append(_finish_step(prompt_step, prompt_perf, "ok"))
     else:

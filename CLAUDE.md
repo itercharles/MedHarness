@@ -43,7 +43,8 @@ diff — what a command *requires* is what places it, not everything it touches.
 
 `tests/guards/test_gates_sit_where_they_belong.py` enforces the line.
 
-`medharness context [--cr CR]` assembles design context for an AI agent or a CI step.
+`medharness context --cr CR` is what an AI agent reads before working on a CR — the
+same dict `build plan` and `build code` render into their prompts.
 All DHF data operations use `dhfkit <command>`. Both CLIs take `--dhf PATH` before
 the command, defaulting to `DHF`; no command takes its own.
 

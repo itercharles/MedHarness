@@ -41,7 +41,7 @@ def _append_skills(prompt: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Pre-computed DHF context for the analyze prompt
+# DHF context for the prompts, rendered from services.context
 # ---------------------------------------------------------------------------
 
 
@@ -83,30 +83,30 @@ def _load_adapter(dhf_path: Path, purpose: str):
         ) from exc
 
 
-def _build_dhf_context_block(dhf_path: Path) -> str:
-    from medharness.core import MedHarnessCore
+def _cr_context(dhf_path: Path, cr_id: str) -> dict:
+    from medharness.services.context import cr_context
 
-    adapter = _load_adapter(dhf_path, "DHF context")
-    core = MedHarnessCore(adapter)
+    return cr_context(_load_adapter(dhf_path, "DHF context"), cr_id)
 
-    lines = ["## Pre-computed DHF Context\n"]
 
-    counts = core.graph.node_counts()
-    if counts:
-        type_summary = "  ".join(
-            f"{prefix.rstrip('-')}: {count}"
-            for prefix, count in sorted(counts.items())
-        )
+def _render_plan_context(ctx: dict) -> str:
+    """The `build plan` prompt's view of `medharness context --cr`."""
+    lines = ["## Pre-computed DHF Context\n",
+             f"(From `medharness context --cr {ctx['cr'].get('id', '')}`.)\n\n"]
+    items = ctx["items"]
+
+    if ctx["scope"] == "whole_dhf" and items:
+        counts: dict[str, int] = {}
+        for item in items:
+            prefix = item["id"].rsplit("-", 1)[0]
+            counts[prefix] = counts.get(prefix, 0) + 1
+        type_summary = "  ".join(f"{p}: {n}" for p, n in sorted(counts.items()))
         lines.append(f"### Item Type Summary\n\n{type_summary}\n")
 
     by_role: dict[str, list[str]] = {}
-    role_codes: dict[str, list[str]] = {}
-    for dt in adapter.list_item_types():
-        if dt.get("role"):
-            role = dt["role"]
-            entry = f"{dt['code']} ({dt['display_name']})"
-            by_role.setdefault(role, []).append(entry)
-            role_codes.setdefault(role, []).append(dt["code"])
+    for dt in ctx["types"]:
+        if dt["role"]:
+            by_role.setdefault(dt["role"], []).append(f"{dt['code']} ({dt['display_name']})")
     if by_role:
         lines.append(
             "### Type Registry\n"
@@ -118,8 +118,6 @@ def _build_dhf_context_block(dhf_path: Path) -> str:
                 lines.append(f"{label}: {', '.join(by_role[role])}\n")
         lines.append("\n")
 
-    # Relationship model — injected once so every `build plan` session has
-    # the full traceability graph in context without reading external docs.
     lines.append(
         "### Traceability Link Model\n"
         "(Canonical link fields and what each relationship means.)\n\n"
@@ -141,121 +139,50 @@ def _build_dhf_context_block(dhf_path: Path) -> str:
         "\n"
     )
 
-    items = adapter.list_items()
-    cap = MAX_ITEMS
     if items:
-        lines.append("### All DHF Items\n")
-        for item in items[:cap]:
-            item_id = item.get("id", "")
-            title = item.get("title", "")
-            lines.append(f"- {item_id} — {title}\n")
-        if len(items) > cap:
-            lines.append(
-                f"\n_(truncated — showing {cap} of {len(items)} items)_\n"
-            )
-
-    lines.append("\n")
-
-    # TC is the test-case ID prefix used throughout dhfkit (junit_parser.py
-    # generates TC-DOCTYPE-NNN IDs). This prefix is a project convention, not
-    # a configurable DHF setting. Projects that rename their test prefix can
-    # override it by defining a TC doc type in their DHF config.
-    tc_prefix = "TC"
-    tc_type = adapter.get_item_type(f"{tc_prefix}-")
-    if tc_type is not None and tc_type.get("prefix"):
-        tc_prefix = tc_type["prefix"].rstrip("-")
-
-    sys_prefix = role_codes.get("system_requirement", ["SYS"])[0]
-    cov = core.graph.calculate_coverage(sys_prefix, tc_prefix)
-    uncovered = cov.get("uncovered", [])
-    if uncovered:
-        lines.append(
-            "### $DHF_CONTEXT.test_coverage.manual_verification_candidates\n"
-        )
-        lines.append(
-            ", ".join(uncovered)
-            + "  (no linked TC items — likely manual verification)\n"
-        )
-
-    return "".join(lines)
-
-
-def _build_risk_context_block(dhf_path: Path) -> str:
-    """Summarise the current RISK/RCM landscape for injection into `build plan` prompts."""
-    adapter = _load_adapter(dhf_path, "risk context")
-    config = adapter.config
-    items = adapter.list_items()
-
-    risk_dt = config.get_doc_type("RISK")
-    rcm_dt = config.get_doc_type("RCM")
-    if not risk_dt or not rcm_dt:
-        return ""
-
-    risk_prefix = risk_dt.prefix
-    rcm_prefix = rcm_dt.prefix
-
-    risk_items = {it["id"]: it for it in items if it["id"].startswith(risk_prefix)}
-    rcm_items = {it["id"]: it for it in items if it["id"].startswith(rcm_prefix)}
-
-    if not risk_items:
-        return ""
-
-    lines = [
-        "## Risk & Control Context\n",
-        "(Pre-computed from DHF. When proposing new system requirements, check whether "
-        "they implement an existing RCM. When proposing changes that affect an existing "
-        "RCM-linked SYS item, flag the related RISK for re-evaluation.)\n\n",
-    ]
-
-    for risk_id, risk in sorted(risk_items.items()):
-        severity = risk.get("severity", "—")
-        risk_level = risk.get("risk_level", "—")
-        lines.append(f"**{risk_id}** [{severity} · {risk_level}] — {risk.get('title', '')}\n")
-        rcms_for_risk = [
-            (rid, rcm) for rid, rcm in rcm_items.items()
-            if risk_id in (
-                rcm.get("mitigates") if isinstance(rcm.get("mitigates"), list)
-                else ([rcm.get("mitigates")] if rcm.get("mitigates") else [])
-            )
-        ]
-        if rcms_for_risk:
-            for rcm_id, rcm in sorted(rcms_for_risk):
-                implements = rcm.get("implements") or []
-                if isinstance(implements, str):
-                    implements = [implements]
-                impl_str = ", ".join(implements) if implements else "—"
-                lines.append(f"  ↳ {rcm_id} — {rcm.get('title', '')} (implements: {impl_str})\n")
-        else:
-            lines.append("  ↳ _(no RCM items yet)_\n")
+        heading = "All DHF Items" if ctx["scope"] == "whole_dhf" else "Items This CR Affects"
+        lines.append(f"### {heading}\n")
+        for item in items[:MAX_ITEMS]:
+            lines.append(f"- {item['id']} — {item.get('title', '')}\n")
+        if len(items) > MAX_ITEMS:
+            lines.append(f"\n_(truncated — showing {MAX_ITEMS} of {len(items)} items)_\n")
         lines.append("\n")
 
+    if ctx["risks"]:
+        lines += [
+            "## Risk & Control Context\n",
+            "(When proposing new system requirements, check whether "
+            "they implement an existing RCM. When proposing changes that affect an existing "
+            "RCM-linked SYS item, flag the related RISK for re-evaluation.)\n\n",
+        ]
+        for risk in ctx["risks"]:
+            lines.append(f"**{risk['id']}** [{risk['severity'] or '—'} · "
+                         f"{risk['risk_level'] or '—'}] — {risk['title']}\n")
+            for rcm in risk["controls"]:
+                impl_str = ", ".join(rcm["implements"]) or "—"
+                lines.append(f"  ↳ {rcm['id']} — {rcm['title']} (implements: {impl_str})\n")
+            if not risk["controls"]:
+                lines.append("  ↳ _(no RCM items yet)_\n")
+            lines.append("\n")
+
     return "".join(lines)
 
 
-def _build_module_context_block(dhf_path: Path) -> str:
-    """Pre-compute the MODULE → SWDD → SRS map for the develop prompt."""
-    from medharness.services.traceability import build_module_map
-
-    adapter = _load_adapter(dhf_path, "module map")
-    module_map = build_module_map(adapter.list_items(), adapter.config)
-
-    if not module_map:
+def _render_code_context(ctx: dict) -> str:
+    """The `build code` prompt's view of `medharness context --cr`: the module map."""
+    if not ctx["modules"]:
         return ""
-
     lines = ["## Module → Design → Requirement Map\n",
-             "(Pre-computed from DHF. Use this to identify which module to touch "
+             "(Use this to identify which module to touch "
              "for a given requirement, and which SWDDs to update after implementation.)\n\n"]
-    for entry in module_map:
-        mod_id = entry["module_id"]
-        mod_title = entry["title"]
-        lines.append(f"**{mod_id}** — {mod_title}\n")
+    for entry in ctx["modules"]:
+        lines.append(f"**{entry['module_id']}** — {entry['title']}\n")
         if not entry["swdds"]:
             lines.append("  _(no SWDD items linked)_\n")
-        else:
-            for swdd in entry["swdds"]:
-                impl_str = ", ".join(swdd["implements"]) if swdd["implements"] else "—"
-                lines.append(f"  - {swdd['swdd_id']}: {swdd['title']}\n")
-                lines.append(f"    implements: {impl_str}\n")
+        for swdd in entry["swdds"]:
+            impl_str = ", ".join(swdd["implements"]) if swdd["implements"] else "—"
+            lines.append(f"  - {swdd['swdd_id']}: {swdd['title']}\n")
+            lines.append(f"    implements: {impl_str}\n")
         lines.append("\n")
     return "".join(lines)
 
@@ -283,11 +210,18 @@ def _enrich(prompt: str, builder, dhf_path: Path, warnings: list[dict] | None) -
     return prompt + "\n\n" + block if block else prompt
 
 
+def _enrich_with_plan_context(prompt: str, cr_id: str, dhf_path: Path,
+                              warnings: list[dict] | None) -> str:
+    return _enrich(prompt, lambda p: _render_plan_context(_cr_context(p, cr_id)),
+                   dhf_path, warnings)
+
+
 def _assemble_develop_prompt(cr_id: str, dhf_path: Path | None = None,
                              warnings: list[str] | None = None) -> str:
     prompt = _load_prompt("cr_develop.md").replace("{{cr_id}}", cr_id)
     if dhf_path is not None:
-        prompt = _enrich(prompt, _build_module_context_block, dhf_path, warnings)
+        prompt = _enrich(prompt, lambda p: _render_code_context(_cr_context(p, cr_id)),
+                         dhf_path, warnings)
     return prompt
 
 
@@ -303,8 +237,7 @@ def _assemble_generate_dhf_prompt(cr_id: str, dhf_path: Path | None = None,
                                   warnings: list[str] | None = None) -> str:
     prompt = _load_prompt("cr_generate_dhf.md").replace("{{cr_id}}", cr_id)
     if dhf_path is not None:
-        prompt = _enrich(prompt, _build_dhf_context_block, dhf_path, warnings)
-        prompt = _enrich(prompt, _build_risk_context_block, dhf_path, warnings)
+        prompt = _enrich_with_plan_context(prompt, cr_id, dhf_path, warnings)
     return _append_skills(prompt)
 
 

@@ -169,7 +169,7 @@ stderr; `--help` on any of them lists its options.
 
 | Command | Returns |
 |---|---|
-| `medharness context --cr CR-034` | Without `--cr`: every item summarized, and the traceability verdict. With it: the CR, the items it affects in full and the modules that own them — or every item, if the CR has not recorded what it affects yet. `--junit-dir` adds test coverage |
+| `medharness context --cr CR-034` | The same context `build plan` and `build code` put in their prompts: `project`, `cr`, `scope`, `types`, `items`, `modules`, `risks`. `scope` is `whole_dhf` (every item summarized) until the CR records `affected_items`, then `affected` (those items in full, and the modules that own them). `--junit-dir` adds `test_coverage` |
 
 ### Setup
 

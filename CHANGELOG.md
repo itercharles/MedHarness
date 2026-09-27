@@ -11,6 +11,32 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+### Breaking Changes
+
+- **`medharness context` requires `--cr` and has the same keys for every CR.**
+  Contract version 12.0.
+  - **Why:** the command gave an agent one view of the DHF, while `build plan`
+    and `build code` built their own in `prompt_assembly.py`, and the two had
+    drifted: risks reached only `build plan`, and `context --cr` narrowed the
+    module map while `build code` saw all of it. Now `services/context.py` is
+    the only definition. The command prints it, and both stages render the
+    same dict into their prompts.
+  - **Output:** always `project`, `cr`, `scope`, `types`, `items`, `modules`,
+    `risks`, plus `test_coverage` with `--junit`/`--junit-dir`. `scope` is
+    `whole_dhf` (every item summarized) until the CR records
+    `affected_items`, then `affected` (those items in full). Before, the key
+    changed (`items` or `affected_items`), and a caller had to check which
+    one was present. `module_map` is now `modules`.
+  - **Without `--cr`:** the mode is gone. Its item list is
+    `dhfkit item list`, and its `traceability` verdict is `verify dhf`,
+    which already owned that answer.
+  - **The prompts:** `build plan` no longer gets "manual verification
+    candidates". The list named every SYS item with no `TC-` item linked, and
+    no default doc type creates `TC-` items, so on a real DHF it named every
+    SYS item. `build code` now sees the modules that own the CR's affected
+    items, as `context` does, instead of every module.
+
+
 ### Changed
 
 - **The `workflow` gates can be tested without Git or GitHub.** Each one now
