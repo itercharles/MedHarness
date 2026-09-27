@@ -21,7 +21,7 @@ Increment CONTRACT_VERSION whenever:
 """
 
 # Bump this when the public contract surface breaks.
-CONTRACT_VERSION = "11.0"
+CONTRACT_VERSION = "12.0"
 
 from dhfkit.junit_parser import (  # noqa: F401
     JUNIT_ID,

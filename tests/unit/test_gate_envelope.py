@@ -20,13 +20,10 @@ import pytest
 from click.testing import CliRunner
 
 from medharness.cli import main
-from medharness.services import ci as ci_module
-from medharness.services.ci import (
-    GATE_RESULT_KEYS,
-    ENVELOPE_KEYS,
-    ci_test_coverage_gate,
-    gate_result,
-)
+from medharness.services.verify_dhf import ci_structural_gate
+from medharness.services.verify_soup import soup_gate
+from medharness.services.envelope import GATE_RESULT_KEYS, ENVELOPE_KEYS, gate_result
+from medharness.services.verify_tests import ci_test_coverage_gate
 from medharness.workflows.init import _replace_placeholders, _scaffold_dhf
 
 #: Gates that take only a DHF path, so they can be called generically.
@@ -76,7 +73,7 @@ def dhf(tmp_path: Path) -> Path:
 
 
 def _call(name: str, dhf: Path):
-    fn = getattr(ci_module, name)
+    fn = {"ci_structural_gate": ci_structural_gate, "soup_gate": soup_gate}[name]
     kwargs = {}
     if "offline_mode" in inspect.signature(fn).parameters:
         kwargs["offline_mode"] = "warn"  # keep the network out of the test
@@ -182,13 +179,13 @@ class TestNoGateEscapesTheEnvelope:
         assert not offenders, f"gates not emitting the envelope: {offenders}"
 
     def test_cr_closure_gate_uses_the_envelope(self, dhf: Path) -> None:
-        from medharness.services.ci import cr_closure_gate
+        from medharness.services.verify_completion import cr_closure_gate
 
         result = cr_closure_gate(dhf_path=dhf, cr_id="CR-001", junit_paths=[])
         assert set(result) == set(GATE_RESULT_KEYS)
 
     def test_test_coverage_gate_uses_the_envelope(self, dhf: Path) -> None:
-        from medharness.services.ci import ci_test_coverage_gate
+        from medharness.services.verify_tests import ci_test_coverage_gate
 
         assert set(ci_test_coverage_gate(dhf, [])) == set(GATE_RESULT_KEYS)
 
@@ -320,7 +317,7 @@ class TestFailurePathsHonourTheContract:
         """The scaffold has nothing checkable, so the finding path needs a stub."""
         from unittest.mock import MagicMock, patch
 
-        from medharness.services.ci import soup_gate
+        from medharness.services.verify_soup import soup_gate
 
         soup = dhf / "items" / "09_soup"
         soup.mkdir(parents=True, exist_ok=True)

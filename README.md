@@ -165,12 +165,6 @@ stderr; `--help` on any of them lists its options.
 | `medharness build dhf --write` | Reconciles SOUP items with your dependency manifests; without `--write`, only reports | `to_create`, `to_update`, `orphans` |
 | `medharness build release --version 1.0.0 --out-dir release --write` | Checks the DHF, CRs and open defects, writes the baseline, BOM, SBOM and evidence, and — only if every check passed — records the REL item | `outcome`, `cr_ids`, `rel_uid`, `artifacts`, `errors` |
 
-### `context` — what an AI agent reads
-
-| Command | Returns |
-|---|---|
-| `medharness context --cr CR-034` | Without `--cr`: every item summarized, and the traceability verdict. With it: the CR, the items it affects in full and the modules that own them — or every item, if the CR has not recorded what it affects yet. `--junit-dir` adds test coverage |
-
 ### Setup
 
 | Command | What it does | Returns |

@@ -11,7 +11,6 @@ Emitting `issue_number` removes the reason that step exists.
 
 from __future__ import annotations
 
-import ast
 import json
 import os
 import subprocess
@@ -22,7 +21,6 @@ import pytest
 
 from medharness.services.github_event import (
     GitHubEventContext,
-    GitHubLifecyclePlan,
     _linked_issue,
     parse_github_event,
 )
@@ -114,39 +112,35 @@ class TestItReachesTheOutput:
         assert json.loads(proc.stdout.splitlines()[0])["issue_number"] == 55
 
 
-class TestEveryConstructionCarriesIt:
-    """Two plan constructors exist and one was missed on the first pass.
+class TestEveryEventCarriesIt:
+    """The field was once threaded by hand through fifteen constructors, and a
+    missed one made it vanish on that path. Every event kind must report it."""
 
-    The field reached the parser, the CLI read `plan.issue_number`, and the
-    early-return plan still defaulted to None — so it worked when called
-    directly and returned nothing through the CLI. A field threaded by hand
-    through fifteen constructors needs a check that counts them.
-    """
+    BODY = {"body": "Closes #42", "head": {"ref": "feat/CR-001"}, "number": 5}
 
-    def _source(self) -> ast.Module:
-        path = Path(__file__).resolve().parents[2] / "medharness" / "services" / "github_event.py"
-        return ast.parse(path.read_text())
+    @pytest.mark.parametrize("event_name,event", [
+        ("workflow_dispatch", {"inputs": {"cr_id": "CR-001"}, "pull_request": BODY}),
+        ("workflow_dispatch", {"pull_request": BODY}),
+        ("pull_request", {"pull_request": {**BODY, "merged": True}}),
+        ("pull_request", {"pull_request": {**BODY, "merged": False}}),
+        ("pull_request", {"pull_request": {**BODY, "head": {"ref": "main"}}}),
+        ("pull_request_review", {"review": {"state": "approved"}, "pull_request": BODY}),
+        ("pull_request_review", {"review": {"state": "approved"},
+                                 "pull_request": {**BODY, "head": {"ref": "main"}}}),
+        ("issue_comment", {"issue": {**BODY, "title": "CR-001", "pull_request": {"url": "u"}}}),
+        ("issue_comment", {"issue": BODY}),
+        ("repository_dispatch", {"client_payload": {"cr_id": "CR-001"}, "pull_request": BODY}),
+        ("push", {"pull_request": BODY}),
+    ])
+    def test_every_path_reports_the_linked_issue(self, event_name: str, event: dict) -> None:
+        context = parse_github_event(event, event_name, changed_files=lambda sha: "")
+        assert context.issue_number == 42
 
-    @pytest.mark.parametrize("cls", ["GitHubEventContext", "GitHubLifecyclePlan"])
-    def test_no_construction_omits_issue_number(self, cls: str) -> None:
-        missing = [
-            node.lineno
-            for node in ast.walk(self._source())
-            if isinstance(node, ast.Call)
-            and getattr(node.func, "id", "") == cls
-            and "issue_number" not in {k.arg for k in node.keywords}
-        ]
-        assert not missing, (
-            f"{cls} built without issue_number at line(s) {missing} — it will "
-            f"default to None and the field will vanish on that path"
-        )
-
-    def test_the_field_is_declared_on_both(self) -> None:
-        for cls in (GitHubEventContext, GitHubLifecyclePlan):
-            assert "issue_number" in cls.__dataclass_fields__
+    def test_the_field_is_declared(self) -> None:
+        assert "issue_number" in GitHubEventContext.__dataclass_fields__
 
     def test_the_cli_emits_every_context_field_it_can(self) -> None:
         """A field added to the dataclass but not to --github-output is invisible."""
-        path = Path(__file__).resolve().parents[2] / "medharness" / "cli" / "ci.py"
+        path = Path(__file__).resolve().parents[2] / "medharness" / "cli" / "workflow.py"
         text = path.read_text()
         assert '"issue_number"' in text, "issue_number is not in the --github-output key list"

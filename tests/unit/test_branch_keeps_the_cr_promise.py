@@ -16,36 +16,30 @@ from unittest.mock import patch
 
 import pytest
 
-from medharness.services.git import validate_atomic_branch
+from medharness.services.git import judge_branch, validate_atomic_branch
 
 CHANGED = {"created": [], "updated": ["SRS-001"], "deleted": []}
 NOTHING = {"created": [], "updated": [], "deleted": []}
 
 
-def _run(tmp_path: Path, cr_item, dhf_changes=CHANGED):
-    with patch("medharness.services.git.collect_dhf_item_changes", return_value=dhf_changes), \
-         patch("dhfkit.local_adapter.LocalDHFAdapter") as adapter:
-        adapter.return_value.get_item.return_value = cr_item
-        dhf = tmp_path / "DHF"
-        dhf.mkdir(exist_ok=True)
-        return validate_atomic_branch(tmp_path, dhf, "CR-001", since_ref="main")
+def _run(cr_item, dhf_changes=CHANGED):
+    return judge_branch("CR-001", cr_item, dhf_changes, NOTHING, since_ref="main")
 
 
 class TestThePromiseIsChecked:
-    def test_an_unchanged_promised_item_fails(self, tmp_path: Path) -> None:
-        result = _run(tmp_path, {"id": "CR-001", "affected_items": ["SRS-001", "SYS-001"]})
+    def test_an_unchanged_promised_item_fails(self) -> None:
+        result = _run({"id": "CR-001", "affected_items": ["SRS-001", "SYS-001"]})
         assert result["passed"] is False
         assert "SYS-001" in " ".join(result["errors"])
         assert result["details"]["promised_but_unchanged"] == ["SYS-001"]
 
-    def test_keeping_the_promise_passes(self, tmp_path: Path) -> None:
-        result = _run(tmp_path, {"id": "CR-001", "affected_items": ["SRS-001"]})
+    def test_keeping_the_promise_passes(self) -> None:
+        result = _run({"id": "CR-001", "affected_items": ["SRS-001"]})
         assert result["passed"] is True, result["errors"]
 
-    def test_changing_more_than_promised_is_not_a_failure(self, tmp_path: Path) -> None:
+    def test_changing_more_than_promised_is_not_a_failure(self) -> None:
         """Touching an extra item is not what this gate is for."""
         result = _run(
-            tmp_path,
             {"id": "CR-001", "affected_items": ["SRS-001"]},
             {"created": [], "updated": ["SRS-001", "SWDD-009"], "deleted": []},
         )
@@ -53,14 +47,14 @@ class TestThePromiseIsChecked:
 
 
 class TestWhenThereIsNothingToCheckAgainst:
-    def test_a_cr_with_no_affected_items_and_no_changes_fails(self, tmp_path: Path) -> None:
-        result = _run(tmp_path, {"id": "CR-001", "affected_items": []}, NOTHING)
+    def test_a_cr_with_no_affected_items_and_no_changes_fails(self) -> None:
+        result = _run({"id": "CR-001", "affected_items": []}, NOTHING)
         assert result["passed"] is False
         assert "no affected_items" in " ".join(result["errors"])
 
-    def test_a_missing_cr_does_not_fail_the_branch(self, tmp_path: Path) -> None:
+    def test_a_missing_cr_does_not_fail_the_branch(self) -> None:
         """A PR with no CR is not this gate's business."""
-        result = _run(tmp_path, None, NOTHING)
+        result = _run(None, NOTHING)
         assert result["passed"] is True, (
             "a branch with no CR failed; the old rule forced every adopter to "
             "guard this command with workflow conditions"

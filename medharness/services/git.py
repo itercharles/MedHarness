@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import subprocess
-from medharness.services.ci import envelope_from
+from medharness.services.envelope import envelope_from
 from pathlib import Path
 
 
@@ -112,20 +112,14 @@ def validate_atomic_branch(
     since_ref: str = "origin/main",
     code_paths: tuple[str, ...] = (),
 ) -> dict:
-    """Validate that a branch carries the coupled change set a CR expects.
-
-    DHF item changes are always required — `build plan` must run on every CR
-    branch. When ``code_paths`` is non-empty, at least one file under those
-    paths must also have changed.
-    """
-    errors: list[dict] = []
+    """Read the branch's diff and the CR, then ``judge_branch`` them."""
     try:
         dhf_item_changes = collect_dhf_item_changes(repo_root, since_ref)
         code_changes = collect_path_changes(repo_root, since_ref, *code_paths) if code_paths else {
             "created": [], "updated": [], "deleted": [],
         }
     except DiffUnavailable as exc:
-        # Nothing below can be judged without the diff, and "no changes" would
+        # Nothing can be judged without the diff, and "no changes" would
         # accuse the CR of breaking a promise nobody checked.
         finding = {
             "field": "diff_unavailable",
@@ -145,6 +139,40 @@ def validate_atomic_branch(
             "findings": [finding],
         })
 
+    from dhfkit.local_adapter import LocalDHFAdapter
+
+    # A DHF that will not load must stop the gate: skipping the promise check
+    # passed a branch that broke one. A CR that does not exist is not applicable.
+    cr_item = LocalDHFAdapter(dhf_path).get_item(cr_id)
+    return judge_branch(
+        cr_id,
+        cr_item,
+        dhf_item_changes,
+        code_changes,
+        since_ref=since_ref,
+        code_paths=code_paths,
+    )
+
+
+def judge_branch(
+    cr_id: str,
+    cr_item: dict | None,
+    dhf_item_changes: dict[str, list[str]],
+    code_changes: dict[str, list[str]],
+    *,
+    since_ref: str = "origin/main",
+    code_paths: tuple[str, ...] = (),
+) -> dict:
+    """Whether a branch carries the coupled change set a CR expects.
+
+    *cr_item* is the CR as stored, or None when the DHF has no such CR. The two
+    change sets are ``{created, updated, deleted}`` — item IDs and file paths.
+
+    DHF item changes are always required — `build plan` must run on every CR
+    branch. When ``code_paths`` is non-empty, at least one file under those
+    paths must also have changed.
+    """
+    errors: list[dict] = []
     code_change_count = sum(len(code_changes[b]) for b in ("created", "updated", "deleted"))
     dhf_change_count = sum(len(dhf_item_changes[b]) for b in ("created", "updated", "deleted"))
 
@@ -165,13 +193,7 @@ def validate_atomic_branch(
         + dhf_item_changes["deleted"]
     )
 
-    from dhfkit.local_adapter import LocalDHFAdapter
-
     unchanged_promised: list[str] = []
-    # A DHF that will not load must stop the gate: skipping the promise check
-    # passed a branch that broke one. A CR that does not exist is not applicable.
-    cr_item = LocalDHFAdapter(dhf_path).get_item(cr_id)
-
     # What the CR said it would touch is the thing to check. "Any DHF change at
     # all" passes a branch that edited something unrelated, and fails a PR that
     # has no CR — so the rule had to be carried in each adopter's workflow
@@ -215,5 +237,3 @@ def validate_atomic_branch(
         "dhf_item_changes": dhf_item_changes,
         "code_changes": code_changes,
     })
-
-

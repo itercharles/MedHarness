@@ -18,7 +18,7 @@ Before proposing or implementing any significant change, read:
 | CLI | Owns | Commands |
 |-----|------|----------|
 | `dhfkit` | DHF **data**: items, schemas, documents, the SBOM. Storage and retrieval only — no analysis. | `doc` · `init` · `item` · `sbom` · `validate` |
-| `medharness` | The **process** around it: AI CR workflow, CI gates, scaffolding, approval, releases, and all traceability analysis over the item set | `build` · `context` · `doctor` · `init` · `verify` · `workflow` |
+| `medharness` | The **process** around it: AI CR workflow, CI gates, scaffolding, approval, releases, and all traceability analysis over the item set | `build` · `doctor` · `init` · `verify` · `workflow` |
 
 `tests/guards/test_cli_boundary_is_documented.py` checks this table against the
 live command tree.
@@ -43,7 +43,6 @@ diff — what a command *requires* is what places it, not everything it touches.
 
 `tests/guards/test_gates_sit_where_they_belong.py` enforces the line.
 
-`medharness context [--cr CR]` assembles design context for an AI agent or a CI step.
 All DHF data operations use `dhfkit <command>`. Both CLIs take `--dhf PATH` before
 the command, defaulting to `DHF`; no command takes its own.
 

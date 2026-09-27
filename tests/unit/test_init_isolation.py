@@ -17,7 +17,7 @@ from pathlib import Path
 import pytest
 
 from dhfkit.local_adapter import LocalDHFAdapter
-from medharness.core import MedHarnessCore
+from medharness.services.traceability_report import verification_evidence
 from medharness.workflows.init import (
     _NON_SCAFFOLD_DIRS,
     _replace_placeholders,
@@ -106,7 +106,7 @@ class TestTheReleaseGate:
     def test_the_release_gate_skips_a_layer_the_project_omits(self, tmp_path: Path) -> None:
         """`build release` checks the DHF with coverage gaps failing. A project
         entitled to omit the use-case layer must still be releasable."""
-        from medharness.services.ci import ci_structural_gate
+        from medharness.services.verify_dhf import ci_structural_gate
 
         _scaffold_dhf(tmp_path)
         _replace_placeholders(tmp_path, "Trial")
@@ -124,7 +124,7 @@ class TestTheReleaseGate:
 
 
 class TestPrefixConsistency:
-    """core.py and _helpers.py must agree with dhfkit's Item.prefix."""
+    """services/traceability_report.py must agree with dhfkit's Item.prefix."""
 
     def test_core_resolves_multi_segment_prefixes(self, tmp_path: Path) -> None:
         _scaffold_dhf(tmp_path)
@@ -152,7 +152,7 @@ class TestPrefixConsistency:
             "<property name='medharness.links' value='VER-SW-001'/>"
             "</properties></testcase></testsuite></testsuites>"
         )
-        core = MedHarnessCore(LocalDHFAdapter(dhf))
-        core.inject_junit_results([junit])
+        adapter = LocalDHFAdapter(dhf)
+        evidence = verification_evidence(adapter.list_items(), adapter.list_item_types(), [junit])
 
-        assert core.get_item("VER-SW-001")["verification_status"] == "verified"
+        assert evidence["VER-SW-001"]["verification_status"] == "verified"

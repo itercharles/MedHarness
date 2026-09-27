@@ -16,7 +16,7 @@ from __future__ import annotations
 import json
 from unittest.mock import patch
 
-from medharness.services.pr_approval import approval_evidence
+from medharness.services.pr_approval import approval_evidence, judge_approval
 
 HEAD = "a" * 40
 OLDER = "b" * 40
@@ -38,63 +38,64 @@ def _review(state="APPROVED", commit=HEAD, login="reviewer"):
 
 class TestWhatCounts:
     def test_an_approving_review_of_the_head_commit_passes(self) -> None:
-        with patch("medharness.services.pr_approval._gh", _gh_returning([_review()])):
-            e = approval_evidence(7)
+        e = judge_approval(HEAD, [_review()])
         assert e["approved"] is True
         assert e["approvals"][0]["by"] == "reviewer"
 
     def test_no_review_does_not_pass(self) -> None:
-        with patch("medharness.services.pr_approval._gh", _gh_returning([])):
-            e = approval_evidence(7)
+        e = judge_approval(HEAD, [])
         assert e["approved"] is False
         assert e["reason"] == "no approving review"
 
     def test_a_comment_only_review_does_not_pass(self) -> None:
-        with patch("medharness.services.pr_approval._gh",
-                   _gh_returning([_review(state="COMMENTED")])):
-            assert approval_evidence(7)["approved"] is False
+        assert judge_approval(HEAD, [_review(state="COMMENTED")])["approved"] is False
 
     def test_changes_requested_does_not_pass(self) -> None:
-        with patch("medharness.services.pr_approval._gh",
-                   _gh_returning([_review(state="CHANGES_REQUESTED")])):
-            assert approval_evidence(7)["approved"] is False
+        assert judge_approval(HEAD, [_review(state="CHANGES_REQUESTED")])["approved"] is False
 
 
 class TestApprovalIsBoundToARevision:
     """The half a label cannot express."""
 
     def test_an_approval_of_an_earlier_commit_does_not_pass(self) -> None:
-        with patch("medharness.services.pr_approval._gh",
-                   _gh_returning([_review(commit=OLDER)])):
-            e = approval_evidence(7)
+        e = judge_approval(HEAD, [_review(commit=OLDER)])
         assert e["approved"] is False
         assert e["reason"] == "every approving review is against an earlier commit"
         assert e["stale_approvals"][0]["commit"] == OLDER
 
     def test_a_fresh_approval_alongside_a_stale_one_passes(self) -> None:
-        with patch("medharness.services.pr_approval._gh",
-                   _gh_returning([_review(commit=OLDER, login="early"), _review(login="late")])):
-            e = approval_evidence(7)
+        e = judge_approval(HEAD, [_review(commit=OLDER, login="early"), _review(login="late")])
         assert e["approved"] is True
         assert [a["by"] for a in e["approvals"]] == ["late"]
         assert [a["by"] for a in e["stale_approvals"]] == ["early"]
 
     def test_an_approval_with_no_commit_is_not_trusted(self) -> None:
-        with patch("medharness.services.pr_approval._gh",
-                   _gh_returning([_review(commit=None)])):
-            assert approval_evidence(7)["approved"] is False
+        assert judge_approval(HEAD, [_review(commit=None)])["approved"] is False
 
 
 class TestItFailsClosed:
     def test_unreadable_reviews_do_not_pass(self) -> None:
-        with patch("medharness.services.pr_approval._gh", _gh_returning([], rc=1)):
-            e = approval_evidence(7)
+        e = judge_approval(HEAD, None)
         assert e["approved"] is False
         assert "could not be read" in e["reason"]
 
     def test_an_unknown_head_does_not_pass(self) -> None:
-        with patch("medharness.services.pr_approval._gh", _gh_returning([_review()], head="")):
-            assert approval_evidence(7)["approved"] is False
+        assert judge_approval("", [_review()])["approved"] is False
+
+
+class TestItIsReadFromGitHub:
+    """`approval_evidence` is the gh calls feeding `judge_approval`."""
+
+    def test_the_head_and_the_reviews_both_reach_the_judgement(self) -> None:
+        with patch("medharness.services.pr_approval.gh",
+                   _gh_returning([_review(commit=OLDER)], head=OLDER)):
+            e = approval_evidence(7)
+        assert e["approved"] is True
+        assert e["head_sha"] == OLDER
+
+    def test_a_failed_reviews_call_does_not_pass(self) -> None:
+        with patch("medharness.services.pr_approval.gh", _gh_returning([], rc=1)):
+            assert "could not be read" in approval_evidence(7)["reason"]
 
 
 def test_a_label_no_longer_decides() -> None:
@@ -108,7 +109,7 @@ def test_a_label_no_longer_decides() -> None:
 
     from medharness.services import pr_approval
 
-    tree = ast.parse(inspect.getsource(pr_approval.approval_evidence))
+    tree = ast.parse(inspect.getsource(pr_approval))
     called = {
         n.func.id if isinstance(n.func, ast.Name) else getattr(n.func, "attr", "")
         for n in ast.walk(tree) if isinstance(n, ast.Call)

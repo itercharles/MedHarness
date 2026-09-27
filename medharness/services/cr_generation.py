@@ -16,6 +16,7 @@ from pathlib import Path
 from medharness.services import design_validation, git
 from medharness.services.cr_impact import _record_design_impact_in_cr
 from medharness.services.github_session import get_session, put_session
+from medharness.services.gh import gh
 from medharness.services.github_pr import post_pr_comment
 from medharness.services.prompt_assembly import (
     MAX_DIFF_CHARS,
@@ -24,8 +25,7 @@ from medharness.services.prompt_assembly import (
     _assemble_generate_dhf_prompt,
     _assemble_review_code_prompt,
     _assemble_review_design_prompt,
-    _build_dhf_context_block,
-    _enrich,
+    _enrich_with_plan_context,
 )
 
 __all__ = [
@@ -110,82 +110,39 @@ def _model_label(config: LLMConfig) -> str:
 
 # ── GitHub PR feedback ────────────────────────────────────────────────────────
 
-def _get_pr_feedback(pr_number: int) -> str:
-    token = os.environ.get("GH_TOKEN", "") or os.environ.get("GITHUB_TOKEN", "")
-    repo = os.environ.get("GITHUB_REPOSITORY", "")
-    diagnostics = {
-        "attempted": True,
-        "pr_number": pr_number,
-        "repo_env_present": bool(repo),
-        "token_env_present": bool(token),
-    }
-    if not repo or not token:
-        return {
-            "prompt_text": "(PR feedback unavailable — GH_TOKEN and GITHUB_REPOSITORY not set)",
-            "diagnostics": {
-                **diagnostics,
-                "comments_status": "skipped",
-                "reviews_status": "skipped",
-            },
-            "warnings": [
-                _warning(
-                    "github_feedback_env_missing",
-                    "PR feedback unavailable because GH_TOKEN/GITHUB_TOKEN or GITHUB_REPOSITORY is missing.",
-                ),
-            ],
-        }
+def _get_pr_feedback(pr_number: int) -> dict:
+    """The PR's review comments and reviews, for the revision prompt, via gh."""
 
-    headers = {
-        "Authorization": f"token {token}",
-        "Accept": "application/vnd.github.v3+json",
-        "User-Agent": "medharness",
-    }
-
-    def _fetch(kind: str, url: str) -> dict[str, object]:
-        req = urllib.request.Request(url, headers=headers)
+    def _fetch(kind: str) -> dict[str, object]:
+        rc, out = gh(["api", f"repos/{{owner}}/{{repo}}/pulls/{pr_number}/{kind}"])
+        if rc != 0:
+            return {
+                "status": "gh_error",
+                "data": [{"error": out}],
+                "error": out,
+                "warning": _warning(f"github_{kind}_unavailable", f"GitHub {kind} fetch failed: {out}."),
+            }
         try:
-            with urllib.request.urlopen(req, timeout=30) as resp:
-                return {"status": "ok", "data": json.loads(resp.read()), "error": None}
-        except urllib.error.HTTPError as exc:
-            message = f"HTTP {exc.code}: {exc.reason}"
-            return {
-                "status": "http_error",
-                "data": [{"error": message}],
-                "error": message,
-                "warning": _warning(f"github_{kind}_http_error", f"GitHub {kind} fetch failed: {message}."),
-            }
-        except (urllib.error.URLError, OSError) as exc:
-            message = str(exc)
-            return {
-                "status": "transport_error",
-                "data": [{"error": message}],
-                "error": message,
-                "warning": _warning(f"github_{kind}_transport_error", f"GitHub {kind} fetch failed: {message}."),
-            }
+            return {"status": "ok", "data": json.loads(out or "[]"), "error": None}
         except json.JSONDecodeError as exc:
-            message = str(exc)
             return {
                 "status": "decode_error",
-                "data": [{"error": message}],
-                "error": message,
-                "warning": _warning(f"github_{kind}_decode_error", f"GitHub {kind} response could not be decoded: {message}."),
+                "data": [{"error": str(exc)}],
+                "error": str(exc),
+                "warning": _warning(f"github_{kind}_decode_error",
+                                    f"GitHub {kind} response could not be decoded: {exc}."),
             }
 
-    base = f"https://api.github.com/repos/{repo}/pulls/{pr_number}"
-    comments = _fetch("comments", f"{base}/comments")
-    reviews = _fetch("reviews", f"{base}/reviews")
-    warnings = [
-        warning
-        for warning in (comments.get("warning"), reviews.get("warning"))
-        if isinstance(warning, dict)
-    ]
+    comments = _fetch("comments")
+    reviews = _fetch("reviews")
     return {
         "prompt_text": json.dumps(
             {"comments": comments["data"], "reviews": reviews["data"]},
             indent=2,
         ),
         "diagnostics": {
-            **diagnostics,
+            "attempted": True,
+            "pr_number": pr_number,
             "comments_status": comments["status"],
             "comments_error": comments["error"],
             "reviews_status": reviews["status"],
@@ -193,7 +150,7 @@ def _get_pr_feedback(pr_number: int) -> str:
             "comments_count": len(comments["data"]) if isinstance(comments["data"], list) else 0,
             "reviews_count": len(reviews["data"]) if isinstance(reviews["data"], list) else 0,
         },
-        "warnings": warnings,
+        "warnings": [w for w in (comments.get("warning"), reviews.get("warning")) if isinstance(w, dict)],
     }
 
 
@@ -792,7 +749,7 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> di
             f"  python -m medharness --dhf DHF verify dhf\n\n"
             f"Review feedback:\n{feedback['prompt_text']}"
         )
-        prompt = _enrich(prompt, _build_dhf_context_block, dhf_path, warnings)
+        prompt = _enrich_with_plan_context(prompt, cr_id, dhf_path, warnings)
         prompt = _append_skills(prompt)
         steps.append(_finish_step(prompt_step, prompt_perf, "ok"))
     else:

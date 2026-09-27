@@ -1,127 +1,28 @@
+"""The files `build release` bundles: specifications, plans, the traceability report."""
+
 from __future__ import annotations
 
-"""Shared CLI helpers."""
+import hashlib
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
+
 import click
 
-
-def _make_adapter(dhf_path: Path):
-    from dhfkit.local_adapter import LocalDHFAdapter
-
-    return LocalDHFAdapter(dhf_path)
-
-
 DEFAULT_TRACEABILITY_DOC_TYPES = ("UC", "CRS", "SYS", "SRS", "SWDD")
-
-
-def _collect_junit_paths(junit_files: tuple[Path, ...] = (),
-                         junit_dirs: tuple[Path, ...] = ()) -> list[Path]:
-    """Collect JUnit XML files from explicit files and directories."""
-    collected: list[Path] = []
-    seen: set[str] = set()
-
-    def _add(path: Path) -> None:
-        resolved = str(path.resolve())
-        if resolved in seen:
-            return
-        seen.add(resolved)
-        collected.append(path)
-
-    for junit_file in junit_files:
-        if not junit_file.exists():
-            raise click.ClickException(f"JUnit file '{junit_file}' not found.")
-        if not junit_file.is_file():
-            raise click.ClickException(f"JUnit path '{junit_file}' is not a file.")
-        _add(junit_file)
-
-    for junit_dir in junit_dirs:
-        if not junit_dir.exists():
-            continue
-        if not junit_dir.is_dir():
-            raise click.ClickException(f"JUnit path '{junit_dir}' is not a directory.")
-        for xml_path in sorted(junit_dir.rglob("*.xml")):
-            if xml_path.is_file():
-                _add(xml_path)
-
-    return collected
-
-
-def _build_traceability_report_payload(core, doc_types: tuple[str, ...],
-                                       junit_paths: tuple[str, ...] = ()) -> dict:
-    if junit_paths:
-        core.inject_junit_results([Path(p) for p in junit_paths])
-
-    matrix = core.build_traceability_matrix(list(doc_types))
-
-    columns: list[str] = matrix["columns"]
-    for row in matrix["rows"]:
-        level_statuses: dict[str, str] = {}
-        for col in columns:
-            item_id = row.get(col)
-            if not item_id:
-                continue
-            # rsplit matches dhfkit's Item.prefix: a doc type may configure a
-            # multi-segment prefix such as TC-VER-, which split()[0] reduces
-            # to "TC-" and no lookup then matches.
-            prefix = item_id.rsplit("-", 1)[0] + "-"
-            cfg = core._adapter.get_item_type(prefix)
-            if not cfg or not cfg.get("has_verification"):
-                continue
-            item = core.get_item(item_id)
-            vs = item.get("verification_status") if item else None
-            if vs:
-                level_statuses[col] = vs
-        row["level_statuses"] = level_statuses
-        for col in reversed(columns):
-            if col in level_statuses:
-                row["verification_status"] = level_statuses[col]
-                break
-
-    coverage: dict[str, list[dict]] = {}
-    seen_ids: set[str] = set()
-    for col in columns:
-        for row in matrix["rows"]:
-            item_id = row.get(col)
-            if not item_id or item_id in seen_ids:
-                continue
-            seen_ids.add(item_id)
-            # rsplit matches dhfkit's Item.prefix: a doc type may configure a
-            # multi-segment prefix such as TC-VER-, which split()[0] reduces
-            # to "TC-" and no lookup then matches.
-            prefix = item_id.rsplit("-", 1)[0] + "-"
-            cfg = core._adapter.get_item_type(prefix)
-            if not cfg or not cfg.get("has_verification"):
-                continue
-            item = core.get_item(item_id)
-            if not item:
-                continue
-            test_cases = item.get("test_cases") or []
-            # Group by the resolved doc-type code so the key matches the matrix
-            # columns. Deriving it from the ID guesses wrong for any multi-segment
-            # prefix, in either split direction.
-            coverage.setdefault(cfg.get("code") or item_id.rsplit("-", 1)[0], []).append({
-                "id": item_id,
-                "title": item.get("title", ""),
-                "status": item.get("verification_status", "not_verified"),
-                "tests": test_cases,
-            })
-
-    for level in coverage:
-        coverage[level].sort(key=lambda x: x["id"])
-
-    matrix["coverage"] = coverage
-    return matrix
 
 
 class _MissingPDFDeps(RuntimeError):
     """Raised when WeasyPrint or its native libraries are not available."""
 
 
-def _write_traceability_report(core, doc_types: tuple[str, ...], output: Path,
+def write_traceability_report(adapter, doc_types: tuple[str, ...], output: Path,
                                 junit_paths: tuple[str, ...] = ()) -> dict:
-    matrix = _build_traceability_report_payload(core, doc_types, junit_paths)
+    from medharness.services.traceability_report import traceability_report
+
+    matrix = traceability_report(adapter.list_items(), adapter.list_item_types(),
+                                 list(doc_types), [Path(p) for p in junit_paths])
     output.parent.mkdir(parents=True, exist_ok=True)
 
     json_output = output.with_suffix(".json")
@@ -153,10 +54,10 @@ def _render_traceability_matrix(matrix: dict, output: Path) -> Path:
     """
     import markdown as _markdown
 
-    md = _format_traceability_matrix_markdown(matrix)
+    md = format_traceability_matrix_markdown(matrix)
     html_body = _markdown.markdown(md, extensions=["tables", "fenced_code", "toc"])
     css_path = (
-        Path(__file__).resolve().parent.parent
+        Path(__file__).resolve().parents[2]
         / "dhfkit" / "templates" / "specs" / "styles" / "default.css"
     )
     css = css_path.read_text(encoding="utf-8") if css_path.exists() else ""
@@ -178,7 +79,7 @@ def _render_traceability_matrix(matrix: dict, output: Path) -> Path:
     return output
 
 
-def _format_traceability_matrix_markdown(matrix: dict) -> str:
+def format_traceability_matrix_markdown(matrix: dict) -> str:
     """Render matrix payload as a Markdown traceability matrix document."""
     columns: list[str] = matrix.get("columns") or []
     rows: list[dict] = matrix.get("rows") or []
@@ -245,9 +146,8 @@ def _format_traceability_matrix_markdown(matrix: dict) -> str:
             lines.append("| ID | Title | Status | Tests |")
             lines.append("|---|---|---|---|")
             for it in items:
-                # MedHarnessCore.inject_junit_results stores each test as a
-                # dict {"name", "status"}; legacy callers may pass plain
-                # strings. Handle both.
+                # verification_evidence stores each test as a dict
+                # {"name", "status"}; legacy callers may pass plain strings.
                 test_labels = []
                 for t in it.get("tests") or []:
                     if isinstance(t, dict):
@@ -278,15 +178,6 @@ def _format_traceability_matrix_markdown(matrix: dict) -> str:
     return "\n".join(lines)
 
 
-def _available_doc_types(adapter) -> list[str]:
-    if hasattr(adapter, "get_available_doc_types"):
-        return sorted(adapter.get_available_doc_types())
-    doc_specs = getattr(adapter, "_doc_specs", None)
-    if isinstance(doc_specs, dict):
-        return sorted(doc_specs.keys())
-    raise click.ClickException("Configured DHF adapter does not expose available document types.")
-
-
 def _generate_specification_artifacts(adapter, out_dir: Path,
                                       doc_types: tuple[str, ...],
                                       doc_format: str = "html") -> list[dict]:
@@ -304,28 +195,23 @@ def _generate_specification_artifacts(adapter, out_dir: Path,
     return generated
 
 
-def _run_artifact_generation(
+def generate_release_artifacts(
     adapter,
-    core,
     dhf_path: Path,
     out_dir: Path,
-    doc_types: tuple[str, ...],
     traceability_types: tuple[str, ...],
     junit_paths: list[Path],
-    skip_plans: bool,
     doc_format: str = "html",
 ) -> dict:
-    selected_doc_types = doc_types or tuple(_available_doc_types(adapter))
-    selected_traceability = traceability_types or DEFAULT_TRACEABILITY_DOC_TYPES
-
+    """Every specification, every plan, and the traceability report, into out_dir."""
     out_dir.mkdir(parents=True, exist_ok=True)
     specifications = _generate_specification_artifacts(
-        adapter, out_dir, selected_doc_types, doc_format
+        adapter, out_dir, tuple(sorted(adapter.get_available_doc_types())), doc_format
     )
-    plans = [] if skip_plans else _generate_plan_artifacts(dhf_path, out_dir, doc_format)
-    traceability = _write_traceability_report(
-        core,
-        selected_traceability,
+    plans = _generate_plan_artifacts(dhf_path, out_dir, doc_format)
+    traceability = write_traceability_report(
+        adapter,
+        traceability_types or DEFAULT_TRACEABILITY_DOC_TYPES,
         out_dir / "traceability" / f"Requirements_Traceability_Report.{doc_format}",
         [str(path) for path in junit_paths],
     )
@@ -396,6 +282,59 @@ def _generate_plan_artifacts(dhf_path: Path, out_dir: Path,
     return generated
 
 
-# ---------------------------------------------------------------------------
-# Root group
-# ---------------------------------------------------------------------------
+def build_evidence_bundle(
+    dhf_path: Path,
+    out_dir: Path,
+    *,
+    junit_paths: list[Path] = (),
+    traceability_types: tuple[str, ...] = (),
+    run_id: str = "",
+    run_url: str = "",
+    commit_sha: str = "",
+    doc_format: str = "html",
+    gate: dict,
+) -> dict[str, Any]:
+    """Write the specifications, traceability and test evidence, then a manifest.
+
+    Records the gate it is given rather than running its own. The manifest
+    hashes every file in ``out_dir``, so whatever was written there before this
+    runs is covered too. Returns the manifest.
+    """
+    from dhfkit.local_adapter import LocalDHFAdapter
+
+    adapter = LocalDHFAdapter(dhf_path)
+
+    out_dir.mkdir(parents=True, exist_ok=True)
+    artifacts = generate_release_artifacts(
+        adapter, dhf_path, out_dir, traceability_types, list(junit_paths),
+        doc_format=doc_format,
+    )
+
+    provenance = {
+        "run_id": run_id,
+        "run_url": run_url,
+        "commit_sha": commit_sha,
+        "dhf_root": str(dhf_path),
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "gate_passed": gate["passed"],
+    }
+    (out_dir / "evidence-summary.json").write_text(
+        json.dumps({**provenance, "gate": gate, "artifacts": artifacts},
+                   indent=2, default=str) + "\n",
+        encoding="utf-8",
+    )
+
+    files: list[dict] = []
+    for candidate in sorted(out_dir.rglob("*")):
+        if not candidate.is_file() or candidate.name.startswith("."):
+            continue
+        files.append({
+            "path": str(candidate.relative_to(out_dir)),
+            "size": candidate.stat().st_size,
+            "sha256": hashlib.sha256(candidate.read_bytes()).hexdigest(),
+        })
+    manifest = {**provenance, "files": files}
+    (out_dir / "evidence-manifest.json").write_text(
+        json.dumps(manifest, indent=2, default=str) + "\n", encoding="utf-8"
+    )
+    return manifest

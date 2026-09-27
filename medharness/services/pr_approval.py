@@ -8,27 +8,12 @@ reads reviews and pins them to the PR's head commit.
 from __future__ import annotations
 
 import json
-import os
-import subprocess
 
-
-def _gh(args: list[str], *, token: str = "") -> tuple[int, str]:
-    env = {**os.environ}
-    gh_token = token or os.environ.get("GH_TOKEN", "") or os.environ.get("GITHUB_TOKEN", "")
-    if gh_token:
-        env["GH_TOKEN"] = gh_token
-        env["GITHUB_TOKEN"] = gh_token
-    try:
-        result = subprocess.run(  # noqa: S603
-            ["gh", *args], capture_output=True, text=True, env=env, timeout=30,
-        )
-        return result.returncode, result.stdout.strip()
-    except (subprocess.SubprocessError, OSError) as exc:
-        return 1, str(exc)
+from medharness.services.gh import gh
 
 
 def _pr_head_sha(pr_number: int | str, *, token: str = "") -> str:
-    rc, out = _gh(
+    rc, out = gh(
         ["pr", "view", str(pr_number), "--json", "headRefOid", "--jq", ".headRefOid"],
         token=token,
     )
@@ -42,7 +27,7 @@ def _reviews(pr_number: int | str, *, token: str = "") -> list[dict] | None:
     `commit_id` — and a review that does not say what it reviewed is no better
     than a label.
     """
-    rc, out = _gh(
+    rc, out = gh(
         ["api", f"repos/{{owner}}/{{repo}}/pulls/{pr_number}/reviews",
          "--paginate", "--jq",
          '[.[] | {state, commit_id, login: .user.login, submitted_at}]'],
@@ -58,7 +43,17 @@ def _reviews(pr_number: int | str, *, token: str = "") -> list[dict] | None:
 
 
 def approval_evidence(pr_number: int | str, *, token: str = "") -> dict:
-    """What approves this pull request, and whether it still applies.
+    """What approves this pull request, read from GitHub. See ``judge_approval``."""
+    return judge_approval(
+        _pr_head_sha(pr_number, token=token), _reviews(pr_number, token=token),
+    )
+
+
+def judge_approval(head_sha: str, reviews: list[dict] | None) -> dict:
+    """What approves a pull request at *head_sha*, and whether it still applies.
+
+    *reviews* are ``{state, commit_id, login, submitted_at}`` dicts, or None
+    when they could not be read.
 
     A GitHub label was the old answer. Anyone with write access can add or
     remove one, it carries no author, no time, and no revision — so it records
@@ -70,13 +65,11 @@ def approval_evidence(pr_number: int | str, *, token: str = "") -> dict:
     approval covers the cascade that was the head at the time and goes stale
     the moment the code lands, so the develop gate needs its own review.
     """
-    head = _pr_head_sha(pr_number, token=token)
-    reviews = _reviews(pr_number, token=token)
     if reviews is None:
         return {
             "approved": False,
             "reason": "the pull request's reviews could not be read",
-            "head_sha": head,
+            "head_sha": head_sha,
             "approvals": [],
             "stale_approvals": [],
         }
@@ -92,7 +85,7 @@ def approval_evidence(pr_number: int | str, *, token: str = "") -> dict:
         }
         # An unreadable commit counts as stale: the gate must not pass on an
         # approval it cannot tie to what is being merged.
-        (approvals if head and r.get("commit_id") == head else stale).append(entry)
+        (approvals if head_sha and r.get("commit_id") == head_sha else stale).append(entry)
 
     if approvals:
         reason = ""
@@ -103,8 +96,7 @@ def approval_evidence(pr_number: int | str, *, token: str = "") -> dict:
     return {
         "approved": bool(approvals),
         "reason": reason,
-        "head_sha": head,
+        "head_sha": head_sha,
         "approvals": approvals,
         "stale_approvals": stale,
     }
-

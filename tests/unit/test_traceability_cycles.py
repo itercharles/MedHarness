@@ -127,7 +127,7 @@ class TestTheGateCopiesEveryFinding:
 
     def test_no_finding_key_is_left_behind(self, tmp_path: Path) -> None:
         from dhfkit.local_adapter import LocalDHFAdapter
-        from medharness.services.ci import ci_structural_gate
+        from medharness.services.verify_dhf import ci_structural_gate
         from medharness.services.traceability import analyse
 
         _scaffold_dhf(tmp_path)

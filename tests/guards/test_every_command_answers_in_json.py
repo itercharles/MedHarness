@@ -28,8 +28,6 @@ COMMANDS = [
     ("medharness", ["verify", "completion", "--cr", "CR-001"]),
     ("medharness", ["workflow", "check-changes", "--cr", "CR-001", "--since-ref", "HEAD"]),
     ("medharness", ["workflow", "github-event", "--event", "event.json"]),
-    ("medharness", ["context"]),
-    ("medharness", ["context", "--cr", "CR-001"]),
     ("medharness", ["build", "dhf"]),
     ("medharness", ["build", "release", "--version", "0.1.0", "--out-dir", "release"]),
     ("medharness", ["doctor"]),

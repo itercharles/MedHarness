@@ -6,7 +6,7 @@ These tests protect the public CLI surface defined in compatibility-contracts.md
 
 import json
 
-from medharness.services.ci import ENVELOPE_KEYS
+from medharness.services.envelope import ENVELOPE_KEYS
 
 ENVELOPE = set(ENVELOPE_KEYS)
 import sys
@@ -48,13 +48,6 @@ class TestMedHarnessCLI:
         """medharness build release --help exits 0."""
         r = _run("medharness", "build", "release", "--help")
         assert r.returncode == 0, r.stderr
-
-
-    def test_context_commands_exist(self):
-        """medharness dhf exists and exposes context subcommand."""
-        r = _run("medharness", "context", "--help")
-        assert r.returncode == 0
-        assert "context" in r.stdout, "Missing dhf subcommand group: context"
 
 
 class TestInitCommand:

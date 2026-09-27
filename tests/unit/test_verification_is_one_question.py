@@ -15,7 +15,7 @@ from pathlib import Path
 
 import pytest
 
-from medharness.services.ci import ci_test_coverage_gate
+from medharness.services.verify_tests import ci_test_coverage_gate
 
 
 def _dhf(tmp_path: Path, items: list[dict]) -> Path:

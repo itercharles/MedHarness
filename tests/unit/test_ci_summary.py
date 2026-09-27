@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from medharness.cli.ci import _format_summary
+from medharness.cli.build import _format_summary
 
 
 def _result(**overrides) -> dict:

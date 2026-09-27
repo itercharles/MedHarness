@@ -373,7 +373,8 @@ def build_release(
     release is not the place for advisory findings, and a second definition of
     "the DHF is sound" is how two gates came to disagree before.
     """
-    from medharness.services.ci import build_evidence_bundle, ci_structural_gate
+    from medharness.services.release_artifacts import build_evidence_bundle
+    from medharness.services.verify_dhf import ci_structural_gate
 
     gate = ci_structural_gate(dhf, fail_on_uncovered=True)
     baseline = build_release_baseline(dhf, version, list(manifest_paths), list(cr_ids), out_dir)

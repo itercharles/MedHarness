@@ -18,6 +18,13 @@ How the code is organised, for contributors. What a user calls is in the
 
 `tests/guards/test_package_boundary.py` enforces both.
 
+Each top-level command group lives in the file named after it:
+`medharness/cli/verify.py`, `build.py` and `workflow.py`. A new
+command goes in the file of its verb. `cli/output.py` holds the JSON-to-stdout,
+lines-to-stderr helpers every command shares. Each `verify` check sits in its own
+module, `services/verify_<name>.py`, and answers in the envelope from
+`services/envelope.py`.
+
 ## Storage versus analysis
 
 The rule for which package a check belongs to is what a store can answer on
@@ -33,8 +40,9 @@ its own:
 | Which risks does this change touch? | `medharness` |
 | Are the links this doc type requires present? | `medharness` |
 
-The analysis in `medharness.services.traceability` takes a list of items and a
-config, never a path. **The commands, though, always read the YAML store**
+The analysis in `medharness.services.traceability`, and the release's
+traceability matrix in `medharness.services.traceability_report`, take a list
+of items and a config, never a path. **The commands, though, always read the YAML store**
 (`dhfkit.local_adapter.LocalDHFAdapter`); nothing lets you hand them another
 backend. Requirements kept in another system are checked by exporting them into
 `DHF/items/` in the YAML format.
@@ -120,9 +128,25 @@ as `provider:model` — `anthropic` (the `claude` CLI, the default), `openai`,
 | Module | Does |
 |---|---|
 | `services/cr_generation.py` | Stage orchestration, model calls, PR feedback |
-| `services/prompt_assembly.py` | Loads prompts from `medharness/prompts/` and adds DHF context |
+| `services/context.py` | What the model is told about the DHF for one CR: the whole DHF summarized until the CR records `affected_items`, then those items in full |
+| `services/prompt_assembly.py` | Loads prompts from `medharness/prompts/` and renders `services/context.py` into them |
 | `services/cr_impact.py` | Writes `affected_items` back onto the CR |
 | `services/design_validation.py` | The deterministic check after each design pass |
+
+## The `workflow` gates
+
+Each `workflow` command is a reader and a judge. The reader talks to Git or
+GitHub and hands plain values to the judge, which decides and touches nothing:
+
+| Command | Reader | Judge |
+|---|---|---|
+| `check-changes` | `services/git.py` `validate_atomic_branch` | `judge_branch(cr_id, cr_item, dhf_item_changes, code_changes)` |
+| `check-approval` | `services/pr_approval.py` `approval_evidence` | `judge_approval(head_sha, reviews)` |
+| `github-event` | `services/github_event.py` `read_event` | `parse_github_event(event, event_name)`, `plan_github_event` |
+
+Test a rule by calling its judge with the values you want. Patch the reader only
+to test the reading itself. `parse_github_event` takes `changed_files`, the one
+git lookup it may need, as an argument so you can pass a function in its place.
 
 ## Tests
 

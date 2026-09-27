@@ -8,9 +8,19 @@ import sys
 from pathlib import Path
 from typing import Optional
 
+from medharness.services.gh import gh
+
 
 def _check(name: str, passed: bool, detail: str) -> dict:
     return {"check": name, "passed": passed, "detail": detail}
+
+
+def _auth_detail(output: str, passed: bool) -> str:
+    """The account line of `gh auth status`, which prints a block per host."""
+    lines = [ln.strip(" ✓X-") for ln in output.splitlines()]
+    return (next((ln for ln in lines if ln.startswith("Logged in")), None)
+            or next((ln for ln in lines if ln), "")
+            or ("authenticated" if passed else "not authenticated"))
 
 
 def run_doctor(dhf_path: Optional[Path] = None) -> dict:
@@ -56,20 +66,8 @@ def run_doctor(dhf_path: Optional[Path] = None) -> dict:
 
     # gh CLI
     if shutil.which("gh"):
-        try:
-            result = subprocess.run(
-                ["gh", "auth", "status"],
-                capture_output=True, text=True, timeout=5,
-            )
-            passed = result.returncode == 0
-            # `gh auth status` prints a block per host; the account line is the answer.
-            lines = [ln.strip(" ✓X-") for ln in (result.stdout + result.stderr).splitlines()]
-            detail = (next((ln for ln in lines if ln.startswith("Logged in")), None)
-                      or next((ln for ln in lines if ln), "")
-                      or ("authenticated" if passed else "not authenticated"))
-            checks.append(_check("gh_cli_auth", passed, detail))
-        except Exception as exc:
-            checks.append(_check("gh_cli_auth", False, str(exc)))
+        rc, out = gh(["auth", "status"], timeout=5)
+        checks.append(_check("gh_cli_auth", rc == 0, _auth_detail(out, rc == 0)))
     else:
         checks.append(_check("gh_cli_auth", False, "gh not found on PATH"))
 

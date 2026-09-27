@@ -55,19 +55,31 @@ def _private_reaches() -> list[tuple[str, int, str]]:
     return found
 
 
-REACHES = _private_reaches()
+def _private_imports() -> list[tuple[str, int, str]]:
+    """`from dhfkit... import _private` in medharness — the same reach, by import."""
+    found = []
+    for path in sorted((ROOT / "medharness").rglob("*.py")):
+        for node in ast.walk(ast.parse(path.read_text())):
+            if isinstance(node, ast.ImportFrom) and (node.module or "").startswith("dhfkit"):
+                found += [(str(path.relative_to(ROOT)), node.lineno, f"{node.module}.{a.name}")
+                          for a in node.names
+                          if a.name.startswith("_") and a.name not in _ALLOWED]
+    return found
+
+
+REACHES = _private_reaches() + _private_imports()
 
 
 def test_the_scan_understands_the_code() -> None:
     """A scan that resolves nothing would make the assertion below vacuous."""
-    sample = ast.parse((ROOT / "medharness" / "services" / "ci.py").read_text())
+    sample = ast.parse((ROOT / "medharness" / "services" / "verify_tests.py").read_text())
     names = {
         a.asname or a.name
         for n in ast.walk(sample)
         if isinstance(n, ast.ImportFrom) and (n.module or "").startswith("dhfkit")
         for a in n.names
     }
-    assert names, "no dhfkit imports resolved in services/ci.py — the scan is broken"
+    assert names, "no dhfkit imports resolved in services/verify_tests.py — the scan is broken"
 
 
 @pytest.mark.parametrize("where,line,expr", REACHES,

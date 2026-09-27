@@ -8,7 +8,7 @@ patched so no LLM is invoked). Asserts that:
 - The stderr summary contains the elements clients display.
 
 This complements ``test_response_contract.py`` (which tests the service
-function directly) by also exercising ``cli/ci.py`` ``_format_summary``
+function directly) by also exercising ``cli/build.py`` ``_format_summary``
 and the ``json.dumps``/``click.echo`` plumbing.
 
 Covered stages: `build code`, and the gates it runs.
@@ -87,7 +87,7 @@ class TestValidateBranchJsonContract:
         and the assertions named the pre-envelope keys, so it described a
         contract the command no longer had.
         """
-        from medharness.services.ci import ENVELOPE_KEYS, envelope_from
+        from medharness.services.envelope import ENVELOPE_KEYS, envelope_from
 
         runner = CliRunner()
         branch_result = envelope_from("workflow check-changes", {
@@ -116,7 +116,7 @@ class TestValidateBranchJsonContract:
         docs/interface.md types `errors` as strings a caller can print. Anyone
         satisfying the old assertion would have broken that for every consumer.
         """
-        from medharness.services.ci import envelope_from
+        from medharness.services.envelope import envelope_from
 
         finding = {"field": "code_branch", "issue": "x", "fix": "y"}
         branch_result = envelope_from("workflow check-changes", {

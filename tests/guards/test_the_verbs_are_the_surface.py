@@ -24,7 +24,7 @@ from medharness.cli import main
 ROOT = Path(__file__).resolve().parents[2]
 
 #: Removed top-level groups and commands.
-RETIRED_GROUPS = ("change", "automation", "soup-sync", "upgrade")
+RETIRED_GROUPS = ("change", "automation", "soup-sync", "upgrade", "context")
 
 #: old invocation -> what replaced it.
 RENAMED = {
@@ -37,10 +37,12 @@ RENAMED = {
     # 0.33.0. Both named the object; the commands ask a question about it.
     "workflow approval": "workflow check-approval",
     "workflow branch": "workflow check-changes",
-    # 0.37.0. One command each, where three and two overlapped.
-    "context overview": "context",
-    "context implementation": "context --cr",
-    "context for-stage": "context --cr",
+    # 0.37.0 folded three context commands into one; 0.39.0 removed it, since
+    # the AI stages call services.context directly and nothing ran the command.
+    "context overview": "dhfkit item list",
+    "context implementation": "dhfkit item get",
+    "context for-stage": "dhfkit item get",
+    "medharness context": "dhfkit item list",
     "doc generate": "doc",
     "doc export": "doc --format html",
     # 0.38.0. A group with one command in it.
@@ -100,8 +102,8 @@ def _resolves(path: list[str]) -> bool:
 
 @pytest.mark.parametrize("old", sorted(RENAMED), ids=lambda s: s)
 def test_a_renamed_command_no_longer_exists(old: str) -> None:
-    """By the command tree, not by running it: `context overview --help` now
-    prints `context`'s help and exits 0, which is not the old command."""
+    """By the command tree, not by running it: a group's `--help` can exit 0
+    for a subcommand that is gone."""
     assert not _resolves(old.split()), f"`{old}` is still a command"
 
 
@@ -148,4 +150,4 @@ def test_no_message_or_prompt_names_a_retired_command(path: Path) -> None:
 
 def test_the_source_scan_read_something() -> None:
     assert any(p.name == "cr_generate_dhf.md" for p in SOURCES)
-    assert any(p.name == "ci.py" for p in SOURCES)
+    assert any(p.name == "verify_completion.py" for p in SOURCES)

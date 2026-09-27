@@ -53,7 +53,7 @@ def dhf_validate_result(dhf):
     The service rather than the CLI: these assert the structured findings, and
     the command emits only the verdict and the messages.
     """
-    from medharness.services.ci import ci_structural_gate
+    from medharness.services.verify_dhf import ci_structural_gate
 
     return ci_structural_gate(dhf / "DHF")
 

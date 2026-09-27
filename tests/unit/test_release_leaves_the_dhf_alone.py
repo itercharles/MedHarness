@@ -61,3 +61,19 @@ def test_a_stale_spec_in_the_dhf_is_rendered_current_but_left_as_it_was(tmp_path
     assert md.read_bytes() == stale
     spec = next((tmp_path / "out").rglob("specifications/SRS_Specification_*.html"))
     assert "Renamed since the spec was written" in spec.read_text(encoding="utf-8")
+
+
+def test_choosing_matrix_columns_does_not_drop_specifications(tmp_path: Path) -> None:
+    """`--traceability-type` reached the argument naming which specifications to
+    render, so `--traceability-type SYS` bundled the SYS specification alone."""
+    project = _project(tmp_path)
+
+    build_release(project / "DHF", "1.0.0", tmp_path / "all", write=False)
+    build_release(project / "DHF", "1.0.0", tmp_path / "sys", write=False,
+                  traceability_types=("SYS",))
+
+    def names(out: Path) -> list[str]:
+        return sorted(p.name for p in (out / "specifications").iterdir())
+
+    assert len(names(tmp_path / "all")) > 1
+    assert names(tmp_path / "sys") == names(tmp_path / "all")

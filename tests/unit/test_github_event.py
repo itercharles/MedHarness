@@ -1,8 +1,8 @@
-"""Tests for medharness.services.github_event."""
+"""Tests for medharness.services.github_event.
 
-import json
-from pathlib import Path
-from unittest.mock import patch
+Parsing is a function of the payload dict and the event name, so these need no
+event file, no environment and no git.
+"""
 
 from medharness.services.github_event import (
     GitHubEventContext,
@@ -12,40 +12,58 @@ from medharness.services.github_event import (
 )
 
 
-def _write_event(path: Path, data: dict) -> None:
-    path.write_text(json.dumps(data), encoding="utf-8")
+def _no_git(sha: str) -> str:
+    raise AssertionError(f"git consulted for {sha} when the branch named the CR")
 
 
-def test_workflow_dispatch_with_manual_cr(tmp_path, monkeypatch):
-    monkeypatch.setenv("GITHUB_EVENT_NAME", "workflow_dispatch")
-
-    result = parse_github_event(manual_cr_id="CR-001")
+def test_workflow_dispatch_with_manual_cr():
+    result = parse_github_event({}, "workflow_dispatch", manual_cr_id="CR-001")
 
     assert result.cr_id == "CR-001"
     assert result.mode == "new"
     assert result.event_name == "workflow_dispatch"
 
 
-def test_workflow_dispatch_without_cr(tmp_path, monkeypatch):
-    monkeypatch.setenv("GITHUB_EVENT_NAME", "workflow_dispatch")
+def test_manual_cr_without_an_event_name_is_a_dispatch():
+    result = parse_github_event({}, "", manual_cr_id="CR-001")
 
-    result = parse_github_event()
+    assert result.event_name == "workflow_dispatch"
+    assert result.mode == "new"
+
+
+def test_manual_cr_overrides_any_event():
+    result = parse_github_event(
+        {"pull_request": {"head": {"ref": "feat/CR-002"}}}, "pull_request",
+        manual_cr_id="CR-001",
+    )
+
+    assert result.cr_id == "CR-001"
+    assert result.mode == "new"
+    assert result.event_name == "pull_request"
+
+
+def test_workflow_dispatch_without_cr():
+    result = parse_github_event({}, "workflow_dispatch")
 
     assert result.mode == "skip"
 
 
-def test_pull_request_merged_with_cr_in_branch(tmp_path, monkeypatch):
-    monkeypatch.setenv("GITHUB_EVENT_NAME", "pull_request")
-    event_path = tmp_path / "event.json"
-    _write_event(event_path, {
+def test_workflow_dispatch_reads_cr_from_inputs():
+    result = parse_github_event({"inputs": {"cr_id": "CR-003"}}, "workflow_dispatch")
+
+    assert result.cr_id == "CR-003"
+    assert result.mode == "new"
+
+
+def test_pull_request_merged_with_cr_in_branch():
+    result = parse_github_event({
         "pull_request": {
             "head": {"ref": "cr/CR-034"},
             "merged": True,
+            "merge_commit_sha": "abc123",
             "number": 12,
         },
-    })
-
-    result = parse_github_event(event_path)
+    }, "pull_request", changed_files=_no_git)
 
     assert result.cr_id == "CR-034"
     assert result.mode == "new"
@@ -53,54 +71,72 @@ def test_pull_request_merged_with_cr_in_branch(tmp_path, monkeypatch):
     assert result.merged is True
 
 
-def test_pull_request_merged_falls_back_to_diff_when_branch_has_no_cr(tmp_path, monkeypatch):
-    monkeypatch.setenv("GITHUB_EVENT_NAME", "pull_request")
-    event_path = tmp_path / "event.json"
-    _write_event(event_path, {
+def test_pull_request_merged_falls_back_to_the_merge_commit_when_branch_has_no_cr():
+    seen = []
+
+    def files(sha: str) -> str:
+        seen.append(sha)
+        return "DHF/items/00_cr/CR-099.yaml\nsrc/app.py\n"
+
+    result = parse_github_event({
         "pull_request": {
             "head": {"ref": "feature/new-work"},
             "merged": True,
             "merge_commit_sha": "abc123",
             "number": 12,
         },
-    })
+    }, "pull_request", changed_files=files)
 
-    with patch("medharness.services.github_event._extract_cr_from_diff", return_value="CR-099"):
-        result = parse_github_event(event_path)
-
+    assert seen == ["abc123"]
     assert result.cr_id == "CR-099"
     assert result.mode == "new"
 
 
-def test_pull_request_not_merged_spec_branch(tmp_path, monkeypatch):
-    monkeypatch.setenv("GITHUB_EVENT_NAME", "pull_request")
-    event_path = tmp_path / "event.json"
-    _write_event(event_path, {
+def test_pull_request_merged_with_no_cr_anywhere_is_skipped():
+    result = parse_github_event({
+        "pull_request": {
+            "head": {"ref": "feature/new-work"},
+            "merged": True,
+            "merge_commit_sha": "abc123",
+        },
+    }, "pull_request", changed_files=lambda sha: "README.md\n")
+
+    assert result.cr_id is None
+    assert result.mode == "skip"
+    assert result.reason == "No CR ID in merged PR"
+
+
+def test_pull_request_not_merged_spec_branch():
+    result = parse_github_event({
         "pull_request": {
             "head": {"ref": "spec/CR-034"},
             "merged": False,
             "number": 12,
         },
-    })
-
-    result = parse_github_event(event_path)
+    }, "pull_request")
 
     assert result.cr_id == "CR-034"
     assert result.mode == "cancel"
 
 
-def test_pull_request_review_changes_requested(tmp_path, monkeypatch):
-    monkeypatch.setenv("GITHUB_EVENT_NAME", "pull_request_review")
-    event_path = tmp_path / "event.json"
-    _write_event(event_path, {
+def test_pull_request_not_merged_other_branch_is_skipped_with_its_number():
+    result = parse_github_event({
+        "pull_request": {"head": {"ref": "fix/CR-034"}, "number": 12},
+    }, "pull_request")
+
+    assert result.cr_id == "CR-034"
+    assert result.mode == "skip"
+    assert result.pr_number == 12
+
+
+def test_pull_request_review_changes_requested():
+    result = parse_github_event({
         "review": {"state": "changes_requested"},
         "pull_request": {
             "head": {"ref": "spec/CR-034"},
             "number": 12,
         },
-    })
-
-    result = parse_github_event(event_path)
+    }, "pull_request_review")
 
     assert result.cr_id == "CR-034"
     assert result.mode == "iterate"
@@ -108,26 +144,31 @@ def test_pull_request_review_changes_requested(tmp_path, monkeypatch):
     assert result.review_state == "changes_requested"
 
 
-def test_pull_request_review_not_changes_requested(tmp_path, monkeypatch):
-    monkeypatch.setenv("GITHUB_EVENT_NAME", "pull_request_review")
-    event_path = tmp_path / "event.json"
-    _write_event(event_path, {
+def test_pull_request_review_not_changes_requested():
+    result = parse_github_event({
         "review": {"state": "approved"},
         "pull_request": {
             "head": {"ref": "spec/CR-034"},
             "number": 12,
         },
-    })
-
-    result = parse_github_event(event_path)
+    }, "pull_request_review")
 
     assert result.mode == "skip"
+    assert result.pr_number == 12
 
 
-def test_issue_comment_on_pull_request_extracts_cr_and_labels(tmp_path, monkeypatch):
-    monkeypatch.setenv("GITHUB_EVENT_NAME", "issue_comment")
-    event_path = tmp_path / "event.json"
-    _write_event(event_path, {
+def test_pull_request_review_without_cr_is_skipped():
+    result = parse_github_event({
+        "review": {"state": "approved"},
+        "pull_request": {"head": {"ref": "main"}, "number": 12},
+    }, "pull_request_review")
+
+    assert result.cr_id is None
+    assert result.reason == "No CR ID in PR branch"
+
+
+def test_issue_comment_on_pull_request_extracts_cr_and_labels():
+    result = parse_github_event({
         "issue": {
             "number": 21,
             "title": "CR-034 Spec review",
@@ -135,9 +176,7 @@ def test_issue_comment_on_pull_request_extracts_cr_and_labels(tmp_path, monkeypa
             "labels": [{"name": "cr:stage/spec"}],
         },
         "comment": {"body": "/approve"},
-    })
-
-    result = parse_github_event(event_path)
+    }, "issue_comment")
 
     assert result.cr_id == "CR-034"
     assert result.pr_number == 21
@@ -145,60 +184,48 @@ def test_issue_comment_on_pull_request_extracts_cr_and_labels(tmp_path, monkeypa
     assert result.labels == ("cr:stage/spec",)
 
 
-def test_issue_comment_on_issue_is_skipped(tmp_path, monkeypatch):
-    monkeypatch.setenv("GITHUB_EVENT_NAME", "issue_comment")
-    event_path = tmp_path / "event.json"
-    _write_event(event_path, {
+def test_issue_comment_falls_back_to_the_comment_body():
+    result = parse_github_event({
+        "issue": {"number": 21, "title": "Spec review",
+                  "pull_request": {"url": "u"}},
+        "comment": {"body": "/approve CR-035"},
+    }, "issue_comment")
+
+    assert result.cr_id == "CR-035"
+
+
+def test_issue_comment_on_issue_is_skipped():
+    result = parse_github_event({
         "issue": {
             "number": 22,
             "title": "CR-035 question",
         },
         "comment": {"body": "/approve"},
-    })
-
-    result = parse_github_event(event_path)
+    }, "issue_comment")
 
     assert result.cr_id is None
     assert result.mode == "skip"
     assert "not on a pull request" in result.reason
 
 
-def test_repository_dispatch(tmp_path, monkeypatch):
-    monkeypatch.setenv("GITHUB_EVENT_NAME", "repository_dispatch")
-    event_path = tmp_path / "event.json"
-    _write_event(event_path, {
+def test_repository_dispatch():
+    result = parse_github_event({
         "client_payload": {"cr_id": "CR-034"},
-    })
-
-    result = parse_github_event(event_path)
+    }, "repository_dispatch")
 
     assert result.cr_id == "CR-034"
     assert result.mode == "new"
 
 
-def test_unhandled_event(tmp_path, monkeypatch):
-    monkeypatch.setenv("GITHUB_EVENT_NAME", "push")
-    event_path = tmp_path / "event.json"
-    event_path.write_text("{}", encoding="utf-8")
-
-    result = parse_github_event(event_path)
+def test_unhandled_event():
+    result = parse_github_event({}, "push")
 
     assert result.mode == "skip"
+    assert result.reason == "Unhandled event: push"
 
 
-def test_no_event_path(tmp_path, monkeypatch):
-    monkeypatch.setenv("GITHUB_EVENT_NAME", "push")
-    monkeypatch.setenv("GITHUB_EVENT_PATH", "/nonexistent/event.json")
-
-    result = parse_github_event()
-
-    assert result.mode == "skip"
-
-
-def test_parse_includes_labels_and_dispatch_stage(tmp_path, monkeypatch):
-    monkeypatch.setenv("GITHUB_EVENT_NAME", "workflow_dispatch")
-    event_path = tmp_path / "event.json"
-    _write_event(event_path, {
+def test_parse_includes_labels_and_dispatch_stage():
+    result = parse_github_event({
         "inputs": {
             "cr_id": "CR-010",
             "stage": "spec",
@@ -207,9 +234,7 @@ def test_parse_includes_labels_and_dispatch_stage(tmp_path, monkeypatch):
             "head": {"ref": "feat/CR-010"},
             "labels": [{"name": "cr:stage/design"}],
         },
-    })
-
-    result = parse_github_event(event_path)
+    }, "workflow_dispatch")
 
     assert result.cr_id == "CR-010"
     assert result.dispatch_stage == "spec"
@@ -384,11 +409,11 @@ class TestActionIsTheVerdictAndModeIsTheFallback:
             review_actions={"approved": "advance"},
         )
         assert plan.action == "advance", "the caller's mapping must win"
-        assert plan.mode == "skip", (
+        assert self._context().mode == "skip", (
             "`mode` is this tool's own reading; a caller's mapping must not "
             "rewrite it"
         )
-        assert plan.action != plan.mode, (
+        assert plan.action != self._context().mode, (
             "this is the case that reads as a contradiction until the docs "
             "explain it; if the two stop differing the fixture stops testing it"
         )
@@ -398,4 +423,4 @@ class TestActionIsTheVerdictAndModeIsTheFallback:
             self._context(), branch_stage_pairs=(("feat/", "develop"),),
             default_action="noop",
         )
-        assert plan.action == "noop" and plan.mode == "skip"
+        assert plan.action == "noop" and self._context().mode == "skip"

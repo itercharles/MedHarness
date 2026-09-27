@@ -2,7 +2,7 @@
 DHF utility test fixtures.
 
 Provides test DHF creation and population helpers for DHF/utils tests.
-Data is written via ItemSaver directly — no MedHarnessCore dependency.
+Data is written via ItemSaver directly — no medharness dependency.
 """
 
 import tempfile
@@ -252,7 +252,7 @@ def populate_test_dhf_direct(test_dhf_root: Path) -> Path:
     """
     Populate test DHF with minimal dataset using ItemSaver directly.
 
-    Writes items via ItemSaver (utils layer only) — no MedHarnessCore dependency.
+    Writes items via ItemSaver (utils layer only) — no medharness dependency.
 
     Returns:
         test_dhf_root (for chaining)

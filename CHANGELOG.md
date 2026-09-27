@@ -11,6 +11,104 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+### Breaking Changes
+
+- **`build plan --pr` and `build code --pr` read review comments through `gh`.**
+  They called the GitHub REST API directly and needed `GITHUB_REPOSITORY`.
+  Now they go through the same `gh` helper as every other GitHub call, which
+  finds the repository from the checkout. In `diagnostics.github_feedback`,
+  `repo_env_present` and `token_env_present` are gone. A failed fetch now
+  reports `gh_error` with gh's own reason, replacing `http_error` and
+  `transport_error`. The warning codes are now
+  `github_{comments,reviews}_unavailable`.
+- **`medharness context` is removed.** Contract version 12.0.
+  - **Why:** nothing ran it. The CI recipe, the adopting guide, the scaffold
+    and the prompts never invoked it, and `build plan` and `build code` built
+    their own view of the DHF in `prompt_assembly.py`. That view had drifted
+    from the command's: risks reached only `build plan`, and the command
+    narrowed the module map while `build code` saw all of it.
+  - **Instead:** read items with `dhfkit item list` and `dhfkit item get`,
+    and ask `verify dhf` whether the DHF holds together. `verify tests`
+    answers test coverage, which `context --junit` used to report.
+  - **Inside:** `services/context.py` is now the one definition of what the
+    AI stages are told about a CR. Both prompts render it. The scope comes
+    from the CR's own state: every item summarized until the CR records
+    `affected_items`, then those items in full with the modules that own
+    them.
+  - **The prompts:** `build plan` no longer gets "manual verification
+    candidates". The list named every SYS item with no `TC-` item linked, and
+    no default doc type creates `TC-` items, so on a real DHF it named every
+    SYS item. `build code` now sees the modules that own the CR's affected
+    items instead of every module.
+
+### Changed
+
+- **The `workflow` gates can be tested without Git or GitHub.** Each one now
+  splits into a reader and a judge. The judge is a plain function:
+  `judge_branch` for `check-changes`, `judge_approval` for `check-approval`,
+  and `parse_github_event` for `github-event`. Tests pass it values instead of
+  patching `subprocess`, environment variables or files. CLI output is
+  unchanged.
+- **`parse_github_event(event, event_name, *, manual_cr_id, changed_files)`**
+  takes the payload as a dict. `read_event(event_path, environ)` reads it and
+  `$GITHUB_EVENT_NAME` the way a step sees them. The `head_ref`, `merged` and
+  `merge_commit_sha` overrides are gone because nothing passed them.
+  `GitHubLifecyclePlan` is now `{stage, action}`: the fields it copied from the
+  context are read from the context. Fields that describe the event
+  (`merged`, `review_state`, `labels`, `dispatch_stage`, `issue_number`) are
+  set the same way for every event kind. Before, each of fifteen code paths
+  set them by hand.
+- **`medharness/cli/` has one file per verb.** `ci.py` held `verify`,
+  `workflow`, and `build plan`/`build code`; `analyse.py` held `build release`
+  and `build dhf`. They are now `verify.py`, `workflow.py` and `build.py`,
+  plus `output.py` for the shared JSON and stderr helpers. The command bodies moved without changes.
+- **One traceability implementation.** `medharness/core.py` (`MedHarnessCore`)
+  and `medharness/graph.py` (`GraphEngine`) were a second graph beside
+  `services/traceability.py`. Their only production use was the traceability
+  matrix in `build release`. That matrix is now built in
+  `services/traceability_report.py` by functions of items and item types, and
+  the output is identical. The rest of `GraphEngine` (orphans, coverage,
+  upstream and downstream traversal, cycle checks) had no production caller
+  and is gone, together with its tests. `verify dhf` still checks orphans and
+  cycles through `services/traceability.py`.
+- **`medharness/_helpers.py` is gone.** Its release-bundle rendering is now
+  `services/release_artifacts.py`, and the JUnit option handling is now
+  `cli/options.py`. `_make_adapter` wrapped `LocalDHFAdapter` and nothing else.
+  The dead-code guard now covers every service module instead of that one
+  file.
+- **`services/ci.py` (1,400 lines) is split by gate.** It is now
+  `services/verify_dhf.py`, `verify_tests.py`, `verify_soup.py` and
+  `verify_completion.py`, plus `services/envelope.py` for the shared result
+  envelope. `build_evidence_bundle` moved to `services/release_artifacts.py`,
+  beside its only caller. `compute_item_coverage` went with `context`.
+  Function names and behaviour are unchanged.
+- **`verify soup` takes its two osv.dev calls as arguments.** `soup_gate`
+  accepts `query` and `lookup`, which default to `osv_querybatch` and
+  `osv_vuln`. Its tests pass fakes instead of patching `urllib`. An
+  unreachable osv.dev is now recognised by any `OSError`, which includes a
+  bare socket timeout. Before, only `URLError` was caught, so a socket timeout
+  crashed with a traceback.
+- **A failed `gh` call returns gh's reason** (its stderr) instead of an empty
+  string. `doctor`'s `gh auth status` check goes through the same helper and
+  now has unit tests. Before, it had none.
+- **`dhfkit.traceability.LINK_FIELDS` is public.** `medharness` imported it
+  as `_LINK_FIELDS`, which crossed the package boundary. The boundary guard
+  only caught `obj._private` and missed `from dhfkit... import _private`. It
+  now catches both.
+
+### Fixed
+
+- **`build release --traceability-type` no longer drops specifications.** The
+  option was passed as the list of specifications to render, so
+  `--traceability-type SYS` bundled the SYS specification alone. It now
+  chooses only the traceability matrix's columns. Every specification is
+  always bundled.
+- **Every `gh` call picks its token the same way.** The session store read
+  `$GITHUB_TOKEN` before `$GH_TOKEN`, while comment posting and the approval
+  gate read them the other way round. So one run could act as two identities.
+  All three now go through `services/gh.py`, which uses the order `gh` itself
+  uses: `--token`, then `$GH_TOKEN`, then `$GITHUB_TOKEN`.
+
 ## [0.38.1] — 2026-09-27
 
 ### Fixed
