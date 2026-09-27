@@ -104,3 +104,11 @@ lifecycle:
     - design
     to_state: rejected
     label: Reject
+  # Work stopped before completion — its PR closed unmerged. `rejected` is the
+  # triage verdict; `cancelled` is the change abandoned after it was accepted.
+  - from_states:
+    - new
+    - design
+    - develop
+    to_state: cancelled
+    label: Cancel

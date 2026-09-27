@@ -24,12 +24,7 @@ ROOT = Path(__file__).resolve().parents[2]
 SOURCES = sorted(ROOT.glob("medharness/services/*.py")) + sorted(ROOT.glob("dhfkit/*.py"))
 
 #: Parameters that must stay for a reason other than this function's own body.
-ALLOWED: dict[str, set[str]] = {
-    # Adapter methods implement medharness.adapters.protocol, which a backend
-    # other than the local one does use. tests/contract/test_client_protocol.py
-    # pins the signatures.
-    "LocalDHFAdapter": {"*"},
-}
+ALLOWED: dict[str, set[str]] = {}
 
 
 def _unused_parameters(fn: ast.FunctionDef) -> list[str]:

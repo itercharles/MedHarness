@@ -19,9 +19,6 @@ class TestScaffoldStructure:
     CORE_DIRS = [
         "DHF",
         "DHF/config",
-        "DHF/config/doc_types",
-        "DHF/documents",
-        "DHF/documents/specs",
         "DHF/items",
     ]
 
@@ -71,30 +68,25 @@ class TestScaffoldStructure:
         for f in self.CORE_FILES:
             assert (scaffolded / f).is_file(), f"Missing file: {f}"
 
-    def test_all_templates_copied(self, scaffolded):
-        """
-        All spec templates are copied to DHF/documents/specs/.
+    def test_the_defaults_are_not_copied(self, scaffolded):
+        """The project inherits doc types and templates from the package, so it
+        keeps getting them as MedHarness changes them. A copy froze them."""
+        assert not (scaffolded / "DHF" / "config" / "doc_types").exists()
+        assert not (scaffolded / "DHF" / "documents" / "specs").exists()
 
-        """
-        specs_dir = scaffolded / "DHF" / "documents" / "specs"
+    def test_the_bare_project_has_every_default_type(self, scaffolded):
+        from dhfkit.models.config import ProjectConfig
+
+        config = ProjectConfig.load(scaffolded / "DHF" / "config")
+        codes = {dt.code for dt in config.doc_types}
+        assert {f.split(".")[0].upper() for f in self.REQUIRED_DOC_TYPES} <= codes
+
+    def test_every_default_template_is_found(self, scaffolded):
+        from dhfkit.local_adapter import LocalDHFAdapter
+
+        dirs = LocalDHFAdapter(scaffolded / "DHF")._template_dirs()
         for tmpl in self.REQUIRED_TEMPLATES:
-            assert (specs_dir / tmpl).is_file(), f"Missing template: {tmpl}"
-
-    def test_css_stylesheet_copied(self, scaffolded):
-        """
-        PDF stylesheet is copied to specs/styles/.
-
-        """
-        assert (scaffolded / "DHF" / "documents" / "specs" / "styles" / "default.css").is_file()
-
-    def test_all_doc_types_copied(self, scaffolded):
-        """
-        All doc type configs are copied to config/doc_types/.
-
-        """
-        dt_dir = scaffolded / "DHF" / "config" / "doc_types"
-        for dt in self.REQUIRED_DOC_TYPES:
-            assert (dt_dir / dt).is_file(), f"Missing doc type config: {dt}"
+            assert any((d / tmpl).is_file() for d in dirs), f"no {tmpl} anywhere"
 
     def test_placeholder_substitution(self, scaffolded):
         """

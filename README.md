@@ -52,17 +52,29 @@ you pass `--fail-on-uncovered`.
 ```
 my-device/
 ├── DHF/
-│   ├── config/
-│   │   ├── global.yaml          # project name, lifecycle, which links are required
-│   │   ├── doc_types/*.yaml     # each item type: its fields and what it links to
-│   │   └── soup-sources.yaml    # where your dependency manifests are
-│   ├── items/                   # one YAML file per item, one directory per type
-│   │   ├── 01_crs/CRS-001.yaml
-│   │   ├── 03_srs/SRS-001.yaml
-│   │   └── …                    # UC SYS SYSARCH MODULE SWDD RISK RCM SOUP CR DEF REL
-│   └── documents/specs/         # templates the specifications are rendered from
+│   ├── config/global.yaml       # the project name — and only what you change
+│   └── items/                   # one YAML file per item, one directory per type
+│       ├── 01_crs/CRS-001.yaml
+│       ├── 03_srs/SRS-001.yaml
+│       └── …                    # UC SYS SYSARCH MODULE SWDD RISK RCM SOUP CR DEF REL
 └── CLAUDE.md                    # product context, read by the AI stages
 ```
+
+The 13 item types, their lifecycles, which links are required, and the
+specification templates are **defaults inside the package**, so a project gets
+their improvements by upgrading `medharness`. To change one, override it:
+
+| To change | Do this |
+|---|---|
+| A setting, e.g. which links are required | Set its key in `global.yaml` — it replaces the default key |
+| An item type's fields | Put `DHF/config/doc_types/<type>.yaml` — it replaces the default type of that code |
+| A new item type | Add a file there with a new `code` |
+| A type you don't use | `omit_doc_types: [UC]` in `global.yaml` |
+| A specification template | Put a file of the same name in `DHF/documents/specs/` |
+
+The defaults are in
+[`dhfkit/templates/config`](dhfkit/templates/config) and
+[`dhfkit/templates/specs`](dhfkit/templates/specs).
 
 An item is a small YAML file. Links are written on the child and point up:
 
@@ -84,7 +96,7 @@ testing: |
   smallest useful pipeline is two steps in a job that checks out the repository:
 
   ```yaml
-  - run: pip install medharness==0.36.1
+  - run: pip install medharness==0.37.0
   - run: medharness verify dhf --fail-on-uncovered
   ```
 
@@ -92,7 +104,8 @@ testing: |
   [adopting.md](docs/adopting.md#setting-up-ci).
 - **Requirements kept elsewhere.** MedHarness reads the item files under
   `DHF/items/`. To check requirements that live in another tool, export them
-  into that format — one YAML file per item — and run the same commands.
+  into that format — one YAML file per item — and run the same commands. The
+  format is specified in [interface.md](docs/interface.md#the-item-format--integrating-another-system).
 - **No AI.** Nothing above needs a model. The AI workflow below is opt-in.
 
 ## The AI change workflow (optional)
@@ -156,16 +169,13 @@ stderr; `--help` on any of them lists its options.
 
 | Command | Returns |
 |---|---|
-| `medharness context overview` | every item summarized, traceability, test coverage |
-| `medharness context implementation --cr CR-034` | the CR, its items, and which modules own them |
-| `medharness context for-stage develop --cr CR-034` | what one stage needs: every item at `analyze` and `design`, the CR's items at `develop` |
+| `medharness context --cr CR-034` | Without `--cr`: every item summarized, and the traceability verdict. With it: the CR, the items it affects in full and the modules that own them — or every item, if the CR has not recorded what it affects yet. `--junit-dir` adds test coverage |
 
 ### Setup
 
 | Command | What it does | Returns |
 |---|---|---|
 | `medharness init` | Scaffolds `DHF/` and `CLAUDE.md` in the current directory; refuses if `DHF/` exists | `project_name`, `created` |
-| `medharness upgrade` | Reports where the scaffold differs from this version; `--apply` updates it. Never touches items, `global.yaml` or `CLAUDE.md` | `outdated`, `missing`, `up_to_date` |
 | `medharness doctor` | Checks Python, the CLIs, `gh` auth, and the DHF | `checks`, `healthy` |
 
 ### `dhfkit` — the items
@@ -178,8 +188,7 @@ stderr; `--help` on any of them lists its options.
 | `dhfkit item update SRS-012 --data '{...}'` | Merges fields into an item | the item |
 | `dhfkit item transition CR-034 completed` | Moves an item through its lifecycle; without a state, lists where it can go | the item |
 | `dhfkit validate schema` | Checks every item against its type's schema | `valid`, `errors` |
-| `dhfkit doc generate SRS` | Renders a specification from the items; `ALL` for every type | `output_path` |
-| `dhfkit doc export SRS --format pdf` | The same, as HTML or PDF (PDF needs `medharness[docs]`) | `html_path` or `pdf_path` |
+| `dhfkit doc SRS --format html` | Renders a specification from the items — `md` by default, `html` or `pdf` (needs `medharness[docs]`); `ALL` for every type | `md_path`, plus `html_path` or `pdf_path` |
 | `dhfkit sbom` | CycloneDX 1.6 SBOM from the SOUP register | `path`, `components` |
 | `dhfkit init` | A bare DHF, without `CLAUDE.md` | `created` |
 

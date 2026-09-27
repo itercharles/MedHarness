@@ -35,10 +35,6 @@ def _soup(dhf: Path, soup_id: str, body: str) -> None:
 def dhf(tmp_path: Path) -> Path:
     dhf = tmp_path / "DHF"
     CliRunner().invoke(main, ["--dhf", str(dhf), "init"])
-    import importlib.resources as resources
-
-    src = resources.files("dhfkit").joinpath("templates/config/doc_types/soup.yaml")
-    (dhf / "config" / "doc_types" / "soup.yaml").write_bytes(src.read_bytes())
     return dhf
 
 

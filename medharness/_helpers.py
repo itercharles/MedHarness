@@ -17,19 +17,6 @@ def _make_adapter(dhf_path: Path):
 DEFAULT_TRACEABILITY_DOC_TYPES = ("UC", "CRS", "SYS", "SRS", "SWDD")
 
 
-def _parse_coverage_pairs(pairs: tuple[str, ...]) -> list[tuple[str, str]]:
-    parsed = []
-    for pair in pairs:
-        if ":" not in pair:
-            raise click.BadParameter(
-                f"invalid pair '{pair}', expected PARENT:CHILD format.",
-                param_hint="--coverage-pair",
-            )
-        parent, child = pair.split(":", 1)
-        parsed.append((parent.strip(), child.strip()))
-    return parsed
-
-
 def _collect_junit_paths(junit_files: tuple[Path, ...] = (),
                          junit_dirs: tuple[Path, ...] = ()) -> list[Path]:
     """Collect JUnit XML files from explicit files and directories."""

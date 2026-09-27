@@ -13,7 +13,7 @@ You get a DHF with sample items, its config, document templates, and a
 | Replace | Why |
 |---------|-----|
 | `DHF/items/` | Delete the sample YAML and add your own, or keep them while you learn the schema |
-| `DHF/config/global.yaml` | Check the project name; adjust `required_traceability` if your V-model differs |
+| `DHF/config/global.yaml` | Check the project name. Anything else you set here overrides a default — see [Changing the defaults](#changing-the-defaults) |
 | `CLAUDE.md` | Describe the product, so the AI stages reason about your domain |
 
 Check it at any point:
@@ -26,7 +26,7 @@ Document generation and traceability work against whatever items you have put in
 
 ## Setting up CI
 
-`init` does not write a CI workflow, because the pipeline references your branch names, runner labels and secrets. You own it, and `upgrade` will never touch it.
+`init` does not write a CI workflow, because the pipeline references your branch names, runner labels and secrets. You own it.
 
 Copy the recipe below into `.github/workflows/dhf.yml` and replace `{{medharness_version}}` with the version you pin. It is the whole deployment — two jobs, no server, no database, no account:
 
@@ -461,21 +461,31 @@ Before writing anything to the DHF it checks that:
 
 Add `--write` to record the REL item. It is recorded **only when every check passed** — a failing release still writes its evidence, so you can read why, but leaves the DHF unchanged. The [CI recipe](#setting-up-ci) runs it on `v*` tags and brings the REL item back to `main` through a pull request.
 
-## Keeping your scaffold up to date (`upgrade`)
+## Changing the defaults
 
-When a new MedHarness version ships, CI workflows, AI prompts, and spec templates may change. The `upgrade` command shows what's drifted and optionally applies the updates:
+A project's `DHF/config/global.yaml` holds its name and nothing else to begin
+with. The item types, their fields and lifecycles, which links are required, and
+the specification templates are defaults inside the package — so upgrading
+`medharness` brings their improvements, and there is nothing in your repository
+to reconcile.
 
-```bash
-medharness upgrade                      # report only — exits non-zero if outdated
-medharness upgrade --apply              # apply updates from the installed version
-medharness upgrade --project-dir /path  # specify project root (default: cwd)
-```
+Override what you need, file by file:
 
-Files that are always **yours** (never modified by upgrade): `DHF/items/`, `DHF/config/global.yaml`, `DHF/config/soup-sources.yaml` once it exists, `DHF/README.md`, `CLAUDE.md`, and your CI workflow.
+| To change | Do this |
+|---|---|
+| A setting in `global.yaml`, e.g. `required_traceability` | Set the key in your `global.yaml`; it replaces the default key |
+| An item type | Add `DHF/config/doc_types/<type>.yaml`; it replaces the default type with the same `code`. Start from the default in [`dhfkit/templates/config/doc_types`](../dhfkit/templates/config/doc_types) |
+| A new item type | Add a doc-type file with a new `code` |
+| A type you don't use | `omit_doc_types: [UC]` in `global.yaml` |
+| A specification template | Add a file of the same name to `DHF/documents/specs/` |
 
-Files that upgrade manages: doc-type configs (`DHF/config/doc_types/`) and the spec templates (`DHF/documents/specs/`).
+An override replaces the whole default of its kind, so an overridden doc type
+no longer follows the package's changes to that type. Keep overrides to what you
+actually change.
 
-Your CI workflow is deliberately not managed — it is not part of the release payload, so `upgrade` has no template to compare against. When the recommended pipeline changes, the changelog says so and [Setting up CI](#setting-up-ci) carries the current recipe.
+Projects scaffolded before 0.37 carry full copies of the config and templates.
+They keep working: each copy overrides the default it duplicates. To follow the
+defaults again, delete the copies you have not changed.
 
 ## Using dhfkit standalone
 

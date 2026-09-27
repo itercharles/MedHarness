@@ -1,13 +1,12 @@
 """medharness asks the store, except where it builds the store.
 
-`init` and `upgrade` write DHF files directly, and that is a decision rather
-than drift: those commands create and maintain the repository skeleton, not the
-records inside it. `dhfkit` manages records; giving it a "write my config file"
+`init` writes DHF files directly, and that is a decision rather than drift: it
+creates the repository skeleton, not the records inside it. `dhfkit` manages records; giving it a "write my config file"
 API to satisfy a rule would put storage in the business of scaffolding.
 
 Everywhere else, reaching for a DHF path is a duplicate of something the store
-already does — and does better. `upgrade` parsed global.yaml with a regex that
-took a trailing comment as part of the project name; a report walked
+already does — and does better. A command once parsed global.yaml with a regex
+that took a trailing comment as part of the project name; a report walked
 `documents/plans/*.md` because `list_documents()` gave stems with no way to ask
 for one category.
 """
@@ -24,7 +23,7 @@ ROOT = Path(__file__).resolve().parents[2]
 MEDHARNESS = ROOT / "medharness"
 
 #: Scaffolding: creating a DHF and keeping its skeleton current.
-SCAFFOLD = {"medharness/workflows/init.py", "medharness/workflows/upgrade.py"}
+SCAFFOLD = {"medharness/workflows/init.py"}
 
 #: A path *built* into the DHF: the `/` join operator followed by one of its
 #: directories. A JSON key, a git argument, a variable named doc_types, and a
@@ -62,7 +61,7 @@ def test_only_the_scaffold_names_dhf_directories() -> None:
         "these build a path into the DHF:\n  "
         + "\n  ".join(offending)
         + "\n\nAsk the store instead — list_documents(category), get_document(), "
-          "list_items(), ProjectConfig.load(). Only init and upgrade write the "
+          "list_items(), ProjectConfig.load(). Only init writes the "
           "repository skeleton."
     )
 
@@ -98,17 +97,3 @@ class TestTheStoreCanAnswerWhatWasAskedOfTheFilesystem:
         path = self._adapter(tmp_path).document_path("development_plan")
         assert path is not None and path.name == "development_plan.md"
 
-    def test_the_project_name_comes_from_the_config_loader(self, tmp_path: Path) -> None:
-        """The regex took a trailing comment as part of the name."""
-        from medharness.workflows.init import _replace_placeholders, _scaffold_dhf
-        from medharness.workflows.upgrade import _read_project_name
-
-        _scaffold_dhf(tmp_path)
-        _replace_placeholders(tmp_path, "Bounded")
-        config = tmp_path / "DHF" / "config" / "global.yaml"
-        config.write_text(
-            re.sub(r"^project_name:.*$", "project_name: Planner  # the product",
-                   config.read_text(encoding="utf-8"), count=1, flags=re.M),
-            encoding="utf-8",
-        )
-        assert _read_project_name(tmp_path) == "Planner"

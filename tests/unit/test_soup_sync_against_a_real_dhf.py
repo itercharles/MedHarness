@@ -11,7 +11,6 @@ between the shape the tests supplied and the shape production produces.
 
 from __future__ import annotations
 
-import importlib.resources as resources
 import json
 from pathlib import Path
 
@@ -26,11 +25,6 @@ from medharness.cli import main as mh_main
 def project(tmp_path: Path) -> Path:
     dhf = tmp_path / "DHF"
     CliRunner().invoke(dhfkit_main, ["--dhf", str(dhf), "init"])
-    (dhf / "config" / "doc_types" / "soup.yaml").write_bytes(
-        resources.files("dhfkit")
-        .joinpath("templates/config/doc_types/soup.yaml")
-        .read_bytes()
-    )
     (tmp_path / "requirements.txt").write_text("flask==3.0.0\nnumpy==1.26.0\n")
     return tmp_path
 

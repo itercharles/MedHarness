@@ -20,7 +20,23 @@ from pathlib import Path
 
 import click
 
-_TEMPLATES_DIR = Path(__file__).resolve().parent.parent.parent / "dhfkit" / "templates"
+from dhfkit.paths import DEFAULTS_DIR as _TEMPLATES_DIR
+
+#: The project's whole config at the start. Everything else is a default the
+#: project inherits — and keeps inheriting as MedHarness changes it.
+_GLOBAL_YAML = """\
+# This DHF's config. Anything not set here comes from MedHarness's defaults:
+# the 13 item types, their lifecycle, and which links are required.
+#   https://github.com/itercharles/MedHarness/tree/v{{medharness_version}}/dhfkit/templates/config
+#
+# To change a default, set its key here — it replaces the default key — or put
+# a doc type file in doc_types/, which replaces the default type of that code.
+
+project_name: "{{project_name}}"
+
+# Item types this project does not use, e.g. [UC].
+omit_doc_types: []
+"""
 
 
 # ---------------------------------------------------------------------------
@@ -46,19 +62,12 @@ def _scaffold_dhf(project_dir: Path) -> None:
             dst.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(src, dst)
 
-    # DHF content
-    _cp("config", "DHF/config")
-    _cp("specs", "DHF/documents/specs")
+    config = project_dir / "DHF" / "config" / "global.yaml"
+    config.parent.mkdir(parents=True, exist_ok=True)
+    config.write_text(_GLOBAL_YAML, encoding="utf-8")
     _cp("items", "DHF/items")
-
     # DHF README goes inside DHF/ — root README is the project README
     _cp("README.md", "DHF/README.md")
-
-    # AI prompts only. The CI workflow is not part of the release payload —
-    # adopters copy it from docs/adopting.md and own it from there, so scaffolding
-    # it here would silently do nothing on an installed package.
-
-    # AI agent context file
 
 
 # Directories that may sit inside a project root but are never scaffold output.
@@ -108,14 +117,6 @@ def _replace_placeholders(project_dir: Path, project_name: str) -> None:
         if text != original:
             path.write_text(text, encoding="utf-8")
 
-    global_yaml = project_dir / "DHF" / "config" / "global.yaml"
-    if global_yaml.exists():
-        content = global_yaml.read_text(encoding="utf-8")
-        content = content.replace(
-            'project_name: "My Medical Device Software"',
-            f'project_name: "{project_name}"',
-        )
-        global_yaml.write_text(content, encoding="utf-8")
 
 
 # ---------------------------------------------------------------------------

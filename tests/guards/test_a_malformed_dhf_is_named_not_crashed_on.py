@@ -36,7 +36,7 @@ COMMANDS = [
     "verify soup --offline-mode warn",
     "verify completion --cr CR-001",
     "workflow check-changes --cr CR-001",
-    "context overview",
+    "context",
 ]
 
 
@@ -45,7 +45,8 @@ def _first_srs(dhf: Path) -> Path:
 
 
 def _first_doc_type(dhf: Path) -> Path:
-    return next((dhf / "config" / "doc_types").glob("*.yaml"))
+    """A project override of a default type — the file a project would edit."""
+    return dhf / "config" / "doc_types" / "srs.yaml"
 
 
 #: name -> (which file, what to write). Each is a mistake a hand edit makes.
@@ -80,6 +81,7 @@ def broken(request, tmp_path: Path) -> tuple[Path, Path]:
     if content is None:
         target.unlink()
     else:
+        target.parent.mkdir(exist_ok=True)
         target.write_text(content, encoding="utf-8")
     return dhf, target
 
@@ -104,6 +106,13 @@ def test_the_command_names_the_file_and_stops(command: str, broken) -> None:
     assert proc.returncode == 1, (
         f"`{command}` exited {proc.returncode} on a DHF it could not read"
     )
+    if command == "verify dhf" and target.parent.parent.name == "items":
+        # A malformed item is exactly what `verify dhf` exists to report, so it
+        # answers — a failing envelope naming the file — rather than stopping.
+        result = json.loads(proc.stdout.splitlines()[0])
+        assert result["passed"] is False
+        assert any(target.name in e for e in result["errors"]), result["errors"]
+        return
     # interface.md: exit 1 with nothing on stdout means the gate never ran. A
     # stray line there breaks every caller that parses the first line as JSON.
     assert proc.stdout == "", (

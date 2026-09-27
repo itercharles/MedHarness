@@ -9,19 +9,19 @@ Example (pytest conftest)::
 
     record_property(JUNIT_LINKS, "SYS-005,SYS-008")
 
-CONTRACT_VERSION tracks breaking changes to the public surface (adapter
-protocol shape, JUnit property names, CLI JSON output keys). Downstream
+CONTRACT_VERSION tracks breaking changes to the public surface (the item file
+format, JUnit property names, CLI JSON output keys). Downstream
 repos may assert this value in their contract test suites to get an
 explicit failure when upgrading rather than a silent behavioural regression.
 
 Increment CONTRACT_VERSION whenever:
-  - A DHFAdapter protocol method is added, removed, or has its signature changed
+  - A field the default doc types declare is renamed or removed
   - A JUnit property name constant is renamed or removed
   - A CLI command output key is renamed or removed
 """
 
 # Bump this when the public contract surface breaks.
-CONTRACT_VERSION = "9.0"
+CONTRACT_VERSION = "10.0"
 
 from dhfkit.junit_parser import (  # noqa: F401
     JUNIT_ID,

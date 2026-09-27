@@ -92,21 +92,21 @@ class TestTheAnalysisTakesDataNotStorage:
                 pytest.fail(f"the analysis reads the filesystem: .{node.attr}()")
 
 
-class TestTheStorageProtocolDoesNotDemandAnalysis:
-    """What medharness asks of a backend must be storage only.
+class TestTheStoreHasNoAnalysisMethod:
+    """What medharness asks of the store must be storage only.
 
-    `validate_traceability` used to sit in this protocol, so every backend — a
-    Jira adapter included — had to implement the V-model analysis to satisfy it.
+    `validate_traceability` once sat on the storage interface, which would have
+    made any store — one fed from another system included — implement the
+    V-model analysis just to be a store.
     """
 
-    def test_the_protocol_has_no_analysis_method(self) -> None:
-        protocol = (ROOT / "medharness" / "adapters" / "protocol.py").read_text(encoding="utf-8")
-        for node in ast.walk(ast.parse(protocol)):
+    def test_the_store_has_no_analysis_method(self) -> None:
+        store = (ROOT / "dhfkit" / "local_adapter.py").read_text(encoding="utf-8")
+        for node in ast.walk(ast.parse(store)):
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 lowered = node.name.lower()
                 hit = next((a for a in ANALYSIS
                             if a in lowered and "lifecycle" not in lowered), None)
                 assert hit is None, (
-                    f"the adapter protocol requires {node.name!r} — a backend "
-                    f"would have to implement analysis to be a store"
+                    f"the store defines {node.name!r} — analysis belongs to medharness"
                 )

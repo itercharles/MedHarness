@@ -1,7 +1,7 @@
 """
-StubDHFAdapter — in-memory DHFAdapter for medharness unit tests.
+StubDHFAdapter — an in-memory item store for medharness unit tests.
 
-Implements the full DHFAdapter protocol with no filesystem or utils dependency.
+It answers the calls medharness makes of LocalDHFAdapter, with no filesystem.
 Use build_test_adapter() from tests/fixtures/data.py for a pre-populated instance.
 """
 
@@ -36,15 +36,19 @@ def _default_lifecycle_states() -> list[dict]:
 
 
 class StubDHFAdapter:
-    """In-memory DHFAdapter implementation for testing."""
+    """An in-memory store for testing."""
 
     def __init__(self) -> None:
         self._items: Dict[str, dict] = {}
         self._documents: Dict[str, str] = {}
         self._test_results: Dict[str, dict] = {}
-        self._compliance_runs: Dict[str, List[dict]] = {}
         self._item_types: list[dict] = _default_item_types()
         self._lifecycle_states: list[dict] = _default_lifecycle_states()
+        # The shipped defaults, as the real store would load them.
+        from dhfkit.models.config import ProjectConfig
+        from dhfkit.paths import DEFAULTS_DIR as _TEMPLATES_DIR
+
+        self.config = ProjectConfig.load(_TEMPLATES_DIR / "config")
 
     # ------------------------------------------------------------------
     # Item CRUD
@@ -114,7 +118,6 @@ class StubDHFAdapter:
     def validate_schema(self) -> dict:
         return {"valid": True, "errors": []}
 
-
     # ------------------------------------------------------------------
     # Test results
 
@@ -153,18 +156,8 @@ class StubDHFAdapter:
     def list_documents(self) -> List[str]:
         return list(self._documents.keys())
 
-
     # ------------------------------------------------------------------
     # Compliance runs (no-op)
-
-    def record_compliance_run(self, group_id: str, report_dict: dict,
-                               commit_sha: str = "", trigger: str = "manual") -> None:
-        if group_id not in self._compliance_runs:
-            self._compliance_runs[group_id] = []
-        self._compliance_runs[group_id].append(dict(report_dict))
-
-    def get_compliance_runs(self, group_id: str, since_date: Optional[str] = None) -> List[Dict]:
-        return list(self._compliance_runs.get(group_id, []))
 
     def get_available_doc_types(self) -> List[str]:
         return ["SYS", "CRS", "SRS", "SWDD"]

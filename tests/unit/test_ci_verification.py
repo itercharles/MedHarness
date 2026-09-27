@@ -139,6 +139,7 @@ def test_custom_type_code_not_in_defaults_is_checked_when_specified(tmp_path: Pa
     dhf = _make_dhf(tmp_path, [])
     # Register a custom doc type not in the defaults
     custom_cfg = dhf / "config" / "doc_types" / "sysreq.yaml"
+    custom_cfg.parent.mkdir(exist_ok=True)
     custom_cfg.write_text(
         "code: SYSREQ\nrole: system_requirement\nname: System Requirement\n"
         "prefix: SYSREQ-\ndirectory: 99_sysreq\nproperties:\n- id\n"

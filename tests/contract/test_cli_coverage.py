@@ -41,16 +41,6 @@ class TestCIDhfValidate:
         )
         assert r.returncode == 0, r.stderr
 
-    def test_dhf_validate_with_coverage_pairs(self, scaffolded_dhf):
-        """verify dhf with explicit coverage pairs."""
-        r = _run(
-            "medharness", "--dhf", str(scaffolded_dhf / "DHF"),
-            "verify", "dhf",
-            "--coverage-pair", "UC:CRS",
-        )
-        assert r.returncode == 0, r.stderr
-
-
 class TestCITestCoverage:
     """Functional tests for verify tests."""
 

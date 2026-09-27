@@ -65,7 +65,7 @@ def test_the_scan_sees_the_module() -> None:
         n.name for n in ast.parse(HELPERS.read_text(encoding="utf-8")).body
         if isinstance(n, ast.FunctionDef)
     ]
-    assert len(defined) > 10, f"only {len(defined)} helpers found"
+    assert len(defined) >= 5, f"only {len(defined)} helpers found"
 
 
 @pytest.mark.parametrize("name", UNREFERENCED, ids=UNREFERENCED or ["none"])

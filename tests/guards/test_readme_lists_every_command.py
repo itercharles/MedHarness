@@ -40,7 +40,7 @@ ALL = [("dhfkit", c) for c in _leaves(dhfkit_main)] + [
 
 
 def test_the_scan_found_commands() -> None:
-    assert len(ALL) >= 25, f"only {len(ALL)} — the walk is broken"
+    assert len(ALL) >= 20, f"only {len(ALL)} — the walk is broken"
 
 
 def _commands_section() -> str:

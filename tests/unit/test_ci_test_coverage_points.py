@@ -3,11 +3,9 @@
 from __future__ import annotations
 
 import json
-import shutil
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
-import dhfkit as _dhfkit
 from click.testing import CliRunner
 
 from medharness.cli import main
@@ -34,11 +32,6 @@ def _make_dhf(tmp_path: Path, items: list[dict], item_type: str = "SRS") -> Path
 
     dhf = tmp_path / "DHF"
     CliRunner().invoke(dhfkit_main, ["--dhf", str(dhf), "init"])
-
-    if item_type in _EXTRA_DOC_TYPES:
-        tmpl_root = Path(_dhfkit.__file__).parent / "templates"
-        src = tmpl_root / "config" / "doc_types" / f"{_EXTRA_DOC_TYPES[item_type]}.yaml"
-        shutil.copy2(src, dhf / "config" / "doc_types" / f"{_EXTRA_DOC_TYPES[item_type]}.yaml")
 
     items_dir = dhf / "items" / _ITEM_DIR[item_type]
     items_dir.mkdir(parents=True, exist_ok=True)
@@ -139,16 +132,6 @@ def test_js_style_tags_count_for_requirement_and_point_coverage(tmp_path: Path) 
     assert result["passed"] is True
     assert result["details"]["results"][0]["covered"] == 1
     assert result["details"]["testing_points"][0]["uncovered"] == []
-
-
-def test_unknown_req_type_produces_warning_entry(tmp_path: Path) -> None:
-    dhf = _make_dhf(tmp_path, [])
-    junit = _make_junit(tmp_path, [])
-    result = ci_test_coverage_gate(dhf_path=dhf, junit_paths=[junit], req_types=("TYPO",))
-    warning_rows = [r for r in result["details"]["results"] if r.get("warning")]
-    assert len(warning_rows) == 1
-    assert warning_rows[0]["type"] == "TYPO"
-    assert warning_rows[0]["passed"] is True
 
 
 def test_cli_test_coverage_reports_point_gaps_in_json(tmp_path: Path) -> None:
