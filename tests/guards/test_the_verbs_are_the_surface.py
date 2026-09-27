@@ -47,6 +47,16 @@ RENAMED = {
     "validate schema": "validate",
 }
 
+#: Stage names from before the verbs, which messages kept after the commands went.
+RETIRED_STAGES = ("generate-dhf", "develop-cr", "cr-complete", "soup-sync")
+
+#: What the tools print and what the AI stages are told: messages, help, prompts.
+SOURCES = sorted(
+    p for root in ("medharness", "dhfkit") for p in (ROOT / root).rglob("*")
+    if p.suffix in {".py", ".md", ".j2", ".yaml", ".yml"}
+    and "tests" not in p.relative_to(ROOT).parts
+)
+
 #: Everything an adopter reads to learn the commands.
 DOCS = sorted(
     [ROOT / "README.md", ROOT / "CLAUDE.md"]
@@ -122,3 +132,20 @@ def test_the_document_scan_read_something() -> None:
     assert any("verify dhf" in p.read_text(encoding="utf-8") for p in DOCS), (
         "no scanned document mentions a command at all — the glob is wrong"
     )
+
+
+@pytest.mark.parametrize("path", SOURCES, ids=lambda p: str(p.relative_to(ROOT)))
+def test_no_message_or_prompt_names_a_retired_command(path: Path) -> None:
+    """A gate that says "re-run generate-dhf" sends the reader to a command
+    that no longer exists."""
+    text = path.read_text(encoding="utf-8")
+    found = [
+        name for name in [*RENAMED, *RETIRED_STAGES]
+        if re.search(rf"(?<![\w-]){re.escape(name)}(?![\w-])", text)
+    ]
+    assert not found, f"{path.relative_to(ROOT)} names {', '.join(found)}"
+
+
+def test_the_source_scan_read_something() -> None:
+    assert any(p.name == "cr_generate_dhf.md" for p in SOURCES)
+    assert any(p.name == "ci.py" for p in SOURCES)

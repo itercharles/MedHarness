@@ -85,6 +85,16 @@ class DocumentGenerator:
         return str(date_str)[:10]
 
     def generate_markdown_spec(self, doc_type_code: str, doc_specs: dict, dhf_root: Path) -> Tuple[str, Path]:
+        """Render the specification and write it into the DHF if its content changed."""
+        content, output_path, changed = self.render_markdown_spec(doc_type_code, doc_specs, dhf_root)
+        if changed:
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            output_path.write_text(content, encoding="utf-8")
+        return content, output_path
+
+    def render_markdown_spec(self, doc_type_code: str, doc_specs: dict,
+                             dhf_root: Path) -> Tuple[str, Path, bool]:
+        """(content, where it belongs in the DHF, whether that differs from the file there)."""
         if doc_type_code not in doc_specs:
             raise ValueError(f"No document specification configured for {doc_type_code}")
 
@@ -153,61 +163,21 @@ class DocumentGenerator:
             # day looked like a content change and bumped the version.
             candidate = _render(f"{base_major}.{base_minor}", existing_date or today)
             if _body(candidate) == _body(existing_content):
-                return existing_content, output_path
-            markdown_content = _render(f"{base_major}.{base_minor + 1}", today)
-        else:
-            markdown_content = _render(f"{base_major}.{base_minor}", today)
+                return existing_content, output_path, False
+            return _render(f"{base_major}.{base_minor + 1}", today), output_path, True
+        return _render(f"{base_major}.{base_minor}", today), output_path, True
 
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        output_path.write_text(markdown_content, encoding="utf-8")
+    def export(self, doc_type_code: str, markdown_content: str, fmt: str, out_dir: Path) -> Path:
+        """Write a rendered specification to ``out_dir`` as ``html`` or ``pdf``.
 
-        return markdown_content, output_path
-
-    def _read_static_doc(self, doc_type_code: str, doc_specs: dict, dhf_root: Path) -> tuple[str, str]:
-        """Return (markdown, stem) for a generated specification on disk."""
-        if doc_type_code not in doc_specs:
-            raise ValueError(f"No document specification configured for {doc_type_code}")
-
-        static_file_path = spec_output_path(dhf_root, doc_specs[doc_type_code]['output'])
-        if not static_file_path.exists():
-            raise FileNotFoundError(f"Static document not found: {static_file_path}")
-
-        stem = f"{doc_type_code}_Specification_{datetime.now().strftime('%Y%m%d')}"
-        return static_file_path.read_text(encoding="utf-8"), stem
-
-    def export_static_doc_to_html(self, doc_type_code: str, doc_specs: dict,
-                                  dhf_root: Path, out_dir: Path) -> Path:
-        """Render a generated specification to a standalone, styled HTML file.
-
-        Needs no native libraries, so it works on a base ``pip install
-        medharness`` — unlike the PDF path, which requires WeasyPrint's
-        cairo/pango stack.
+        HTML needs no native libraries; PDF needs WeasyPrint's cairo/pango stack.
         """
-        markdown_content, stem = self._read_static_doc(doc_type_code, doc_specs, dhf_root)
         out_dir.mkdir(parents=True, exist_ok=True)
-        output_path = out_dir / f"{stem}.html"
+        output_path = out_dir / f"{doc_type_code}_Specification_{datetime.now().strftime('%Y%m%d')}.{fmt}"
+        if fmt == "pdf":
+            return self._export_pdf(markdown_content, output_path)
         output_path.write_text(self._build_html(markdown_content), encoding="utf-8")
         return output_path
-
-    def export_static_doc_to_pdf(self, doc_type_code: str, doc_specs: dict,
-                                 dhf_root: Path, out_dir: Path | None = None) -> Path:
-        """Export a generated specification to PDF.
-
-        Args:
-            doc_type_code: Document type code
-            doc_specs: document_specifications dict from global config
-            dhf_root: Path to DHF root directory
-            out_dir: Destination directory. Defaults to the DHF's exports
-                directory — never a shared /tmp, where concurrent runs on one
-                CI runner overwrite each other's evidence.
-
-        Returns:
-            Path to generated PDF file
-        """
-        markdown_content, stem = self._read_static_doc(doc_type_code, doc_specs, dhf_root)
-        target = out_dir or (dhf_root / "documents" / "exports")
-        target.mkdir(parents=True, exist_ok=True)
-        return self._export_pdf(markdown_content, target / f"{stem}.pdf")
 
     def _build_html(self, markdown_content: str) -> str:
         """Render markdown to a self-contained HTML document with inline CSS."""

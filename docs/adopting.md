@@ -262,7 +262,7 @@ Run it on the branch to block the merge, and again on `main`, where the tests re
 3. All created verifiable items (CRS, SYS, SRS) have `verification_method` set.
 4. Items with `Test` method have passing JUnit evidence.
 
-Approval is not its question — that is `workflow check-approval`, which reads the pull request's reviews. Exits non-zero and prints `FAIL [cr-complete]` lines for each gap.
+Approval is not its question — that is `workflow check-approval`, which reads the pull request's reviews. Exits non-zero and prints `FAIL [completion]` lines for each gap.
 
 ## Syncing SOUP items from dependency manifests (`medharness build dhf`)
 

@@ -33,7 +33,7 @@ __all__ = [
     "generate_dhf",
 ]
 
-# Default source paths scanned by develop-cr for diff injection and artifact
+# Default source paths scanned by `build code` for diff injection and artifact
 # collection. Override via the MEDHARNESS_CODE_PATHS environment variable
 # (comma-separated, e.g. "src/,lib/") or by assigning a tuple before calling
 # generate_code(). Projects using different layouts should set this once in
