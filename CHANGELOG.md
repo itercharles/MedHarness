@@ -28,6 +28,11 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
   (`merged`, `review_state`, `labels`, `dispatch_stage`, `issue_number`) are
   set the same way for every event kind. Before, each of fifteen code paths
   set them by hand.
+- **`medharness/cli/` has one file per verb.** `ci.py` held `verify`,
+  `workflow`, and `build plan`/`build code`; `analyse.py` held `build release`
+  and `build dhf`; `dhf.py` held `context`. They are now `verify.py`,
+  `workflow.py`, `build.py` and `context.py`, plus `output.py` for the shared
+  JSON and stderr helpers. The command bodies moved without changes.
 
 ### Fixed
 

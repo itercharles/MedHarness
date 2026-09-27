@@ -141,6 +141,6 @@ class TestEveryEventCarriesIt:
 
     def test_the_cli_emits_every_context_field_it_can(self) -> None:
         """A field added to the dataclass but not to --github-output is invisible."""
-        path = Path(__file__).resolve().parents[2] / "medharness" / "cli" / "ci.py"
+        path = Path(__file__).resolve().parents[2] / "medharness" / "cli" / "workflow.py"
         text = path.read_text()
         assert '"issue_number"' in text, "issue_number is not in the --github-output key list"

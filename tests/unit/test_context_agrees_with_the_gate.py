@@ -11,7 +11,7 @@ import json
 
 import pytest
 
-from medharness.cli.dhf import _traceability_summary
+from medharness.cli.context import _traceability_summary
 
 CYCLE = {
     "passed": False,

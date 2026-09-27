@@ -8,7 +8,7 @@ patched so no LLM is invoked). Asserts that:
 - The stderr summary contains the elements clients display.
 
 This complements ``test_response_contract.py`` (which tests the service
-function directly) by also exercising ``cli/ci.py`` ``_format_summary``
+function directly) by also exercising ``cli/build.py`` ``_format_summary``
 and the ``json.dumps``/``click.echo`` plumbing.
 
 Covered stages: `build code`, and the gates it runs.

@@ -18,6 +18,11 @@ How the code is organised, for contributors. What a user calls is in the
 
 `tests/guards/test_package_boundary.py` enforces both.
 
+Each top-level command group lives in the file named after it:
+`medharness/cli/verify.py`, `build.py`, `workflow.py` and `context.py`. A new
+command goes in the file of its verb. `cli/output.py` holds the JSON-to-stdout,
+lines-to-stderr helpers every command shares.
+
 ## Storage versus analysis
 
 The rule for which package a check belongs to is what a store can answer on

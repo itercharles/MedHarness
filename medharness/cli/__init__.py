@@ -42,14 +42,16 @@ def workflow() -> None:
     """Check what Git and GitHub say about a change. CI helpers."""
 
 
-from medharness.cli.dhf import register as register_dhf
-from medharness.cli.ci import register as register_ci
+from medharness.cli.context import register as register_context
+from medharness.cli.verify import register as register_verify
+from medharness.cli.build import register as register_build
+from medharness.cli.workflow import register as register_workflow
 from medharness.cli.init import register as register_init
 from medharness.cli.doctor import register as register_doctor
-from medharness.cli.analyse import register as register_analyse
 
-register_dhf(main)
-register_ci(main)
+register_context(main)
+register_verify(main)
+register_build(main)
+register_workflow(main)
 register_init(main)
 register_doctor(main)
-register_analyse(main)

@@ -32,6 +32,7 @@ VCS_MODULES = {
     "medharness.services.github_event",
     "medharness.services.github_session",
     "medharness.services.github_pr",
+    "medharness.services.gh",
 }
 
 
@@ -57,7 +58,7 @@ def _seed(command) -> set[str]:
     """Modules the callback itself pulls in, by either import style.
 
     Module-level imports of its *defining* module do not count on their own:
-    `cli/ci.py` imports the GitHub event parser for one command, and charging
+    `cli/workflow.py` imports the GitHub event parser for one command, and charging
     every command in the file with it would make the check meaningless. Only
     names the callback actually mentions are followed.
     """
