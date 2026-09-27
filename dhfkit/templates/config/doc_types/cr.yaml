@@ -91,6 +91,12 @@ lifecycle:
       check_type: field_present
       field: affected_risk_items
       required: true
+    - id: affected_items_recorded
+      name: Affected items recorded
+      # What `verify completion` checks; [] means the CR changed no item.
+      check_type: field_present
+      field: affected_items
+      required: true
     - id: triaged
       name: Triage decision recorded
       check_type: field_not_empty

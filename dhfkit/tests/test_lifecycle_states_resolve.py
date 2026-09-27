@@ -71,6 +71,7 @@ class TestTheScaffoldedCRCanReachCompleted:
         api.update_item(dhf, "CR-001", {
             "implementation_notes": "Toolbar updated.",
             "affected_risk_items": ["RISK-001"],
+            "affected_items": ["SRS-001"],
             "triage_result": {"verdict": "approved"},
         })
         api.transition_item(dhf, "CR-001", "completed")
