@@ -67,7 +67,8 @@ the command, defaulting to `DHF`; no command takes its own.
 - `verify tests` enforces requirement-to-test coverage in consumer repos
 - `build release` produces the release evidence, at release time
 - Every command must: output structured JSON to stdout, write human-readable
-  summaries to stderr only, and exit non-zero on failure
+  summaries to stderr only, and exit non-zero on failure. The one exception is
+  `build plan|code --prompt`, which prints Markdown for an agent to follow
 - Do not add comments to self-explanatory code. Only comment when the WHY is
   non-obvious: a hidden constraint, a workaround, an external API contract, or
   behavior that would surprise a reader unfamiliar with the context.

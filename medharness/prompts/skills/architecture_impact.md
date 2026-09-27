@@ -7,7 +7,7 @@ shared contracts.
 ## Inputs
 
 Read:
-- `python -m dhfkit --dhf DHF item get <CR_ID>`
+- `dhfkit --dhf DHF item get <CR_ID>`
 - `DHF/documents/plans/development_plan.md`
 - Architecture items (see Type Registry — `architecture` role)
 - `DHF/documents/specs/architecture_specification.md.j2`

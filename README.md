@@ -19,7 +19,7 @@ the checks never ask a model.
 ```bash
 pip install medharness
 mkdir my-device && cd my-device
-medharness init            # writes DHF/ with sample items, and CLAUDE.md
+medharness init            # writes DHF/ with sample items, and AGENTS.md
 medharness verify dhf      # does the design hold together?
 ```
 
@@ -33,7 +33,7 @@ Replace the sample items with your own, then add the checks to CI.
 | `verify tests` | Is each requirement verified by the method it declares — a Test requirement by a passing test? |
 | `verify soup` | Is the SOUP register what actually ships, and is any of it known-vulnerable? |
 | `verify completion` | Is a change request's record complete, and is every item it changed verified? |
-| `workflow check-changes` | Did the branch change the items its change request said it would? |
+| `workflow check-changes` | Does the branch change exactly the items its change request lists? |
 | `workflow check-approval` | Did a reviewer approve the exact commit being merged? |
 
 ```console
@@ -57,7 +57,8 @@ my-device/
 │       ├── 01_crs/CRS-001.yaml
 │       ├── 03_srs/SRS-001.yaml
 │       └── …                    # UC SYS SYSARCH MODULE SWDD RISK RCM SOUP CR DEF REL
-└── CLAUDE.md                    # product context, read by the AI stages
+├── AGENTS.md                    # product context and DHF steps, for any coding agent
+└── CLAUDE.md                    # @AGENTS.md, so Claude Code reads it too
 ```
 
 The 13 item types, their lifecycles, which links are required, and the
@@ -96,7 +97,7 @@ testing: |
   smallest useful pipeline is two steps in a job that checks out the repository:
 
   ```yaml
-  - run: pip install medharness==0.42.0
+  - run: pip install medharness==0.43.0
   - run: medharness verify dhf --fail-on-uncovered
   ```
 
@@ -110,6 +111,13 @@ testing: |
 
 ## The AI change workflow (optional)
 
+The same steps run two ways. **In CI**, `build plan` and `build code` start a
+model and do the work unattended. **At your desk**, the coding agent you
+already use does it: `build plan --cr CR-012 --prompt` prints the steps and the
+CR's DHF context instead of starting anything, and the `AGENTS.md` that `init`
+writes tells any agent — Claude Code, Cursor, Codex, Copilot and the rest —
+when to run it. Either way, ordinary code checks the result.
+
 ```mermaid
 flowchart LR
     CR["CR opened"] --> PLAN["build plan<br/>AI drafts the design"]
@@ -122,7 +130,7 @@ flowchart LR
     MERGE -.->|"tag v*"| REL["build release"]
 ```
 
-`build plan` and `build code` run the `claude` CLI by default
+Unattended, `build plan` and `build code` run the `claude` CLI by default
 (`npm install -g @anthropic-ai/claude-code`), or any
 `MEDHARNESS_{DESIGN,DESIGN_REVIEW,DEVELOP,CODE_REVIEW}_MODEL=provider:model`
 (`anthropic`, `openai`, `deepseek`; `MEDHARNESS_{STAGE}_BASE_URL` for Azure,
@@ -149,7 +157,7 @@ stderr; `--help` on any of them lists its options.
 
 | Command | What it does | Returns |
 |---|---|---|
-| `medharness workflow check-changes --cr CR-034` | Compares the branch diff with the CR's `affected_items` | gate result |
+| `medharness workflow check-changes --cr CR-034` | Compares the branch diff with the CR's `affected_items`, both ways | gate result |
 | `medharness workflow check-approval --pr 42` | Requires an approving review of the PR's head commit; needs `GH_TOKEN` | gate result |
 
 ¹ Every gate answers `{gate, passed, summary, errors, warnings}`; see
@@ -159,8 +167,8 @@ stderr; `--help` on any of them lists its options.
 
 | Command | What it does | Returns |
 |---|---|---|
-| `medharness build plan --cr CR-034` | AI drafts the CR's design items and impact analysis | `outcome`, `artifacts.items_changed`, `design_review`, `errors` |
-| `medharness build code --cr CR-034` | AI writes the code and tests for the approved design | `outcome`, `artifacts.files_changed`, `code_review`, `errors` |
+| `medharness build plan --cr CR-034` | AI drafts the CR's design items and impact analysis; `--prompt` prints the steps for an agent already running | `outcome`, `artifacts.items_changed`, `design_review`, `errors` |
+| `medharness build code --cr CR-034` | AI writes the code and tests for the approved design; `--prompt` likewise | `outcome`, `artifacts.files_changed`, `code_review`, `errors` |
 | `medharness build soup --write` | Reconciles SOUP items with your dependency manifests; without `--write`, only reports | `to_create`, `to_update`, `orphans` |
 | `medharness build release --version 1.0.0 --out-dir release --write` | Checks the DHF, CRs and open defects, writes the baseline, BOM, SBOM and evidence, and — only if every check passed — records the REL item | `outcome`, `cr_ids`, `rel_uid`, `artifacts`, `errors` |
 
@@ -168,7 +176,7 @@ stderr; `--help` on any of them lists its options.
 
 | Command | What it does | Returns |
 |---|---|---|
-| `medharness init` | Scaffolds `DHF/` and `CLAUDE.md` in the current directory; refuses if `DHF/` exists | `project_name`, `project_dir`, `created` |
+| `medharness init` | Scaffolds `DHF/`, `AGENTS.md` and `CLAUDE.md` in the current directory, adding to either file if it exists; refuses if `DHF/` exists | `project_name`, `project_dir`, `created` |
 | `medharness doctor` | Checks Python, the CLIs, `gh` auth, and the DHF | `healthy`, `summary`, `checks` |
 
 ### `dhfkit` — the items

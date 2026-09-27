@@ -35,7 +35,7 @@ Read each changed item in full.
    actually demands.
 
    **Strategy alignment** — Does this item fit the product direction and technical
-   strategy described in `CLAUDE.md` and any existing SYSARCH or ADR items? Flag
+   strategy described in `AGENTS.md`/`CLAUDE.md` and any existing SYSARCH or ADR items? Flag
    anything that contradicts stated direction or introduces architectural drift.
 
    **SWDD and implementation note clarity** — For SWDD items: is the design decision

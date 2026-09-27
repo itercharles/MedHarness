@@ -7,15 +7,15 @@ pip install medharness
 medharness init            # in a directory with no DHF/ yet
 ```
 
-You get a DHF with sample items and a one-line `global.yaml`, a `CLAUDE.md`,
-and a `.gitignore`. The item types and templates are defaults inside the
+You get a DHF with sample items and a one-line `global.yaml`, an `AGENTS.md`
+with a `CLAUDE.md` that imports it, and a `.gitignore`. The item types and templates are defaults inside the
 package. Three things to replace before your first real CR:
 
 | Replace | Why |
 |---------|-----|
 | `DHF/items/` | Delete the sample YAML and add your own, or keep them while you learn the schema |
 | `DHF/config/global.yaml` | Check the project name. Anything else you set here overrides a default — see [Changing the defaults](#changing-the-defaults) |
-| `CLAUDE.md` | Describe the product, so the AI stages reason about your domain |
+| `AGENTS.md` | Describe the product, so every coding agent — and the AI stages — reason about your domain |
 
 Check it at any point:
 
@@ -230,6 +230,36 @@ This exits non-zero if a requirement lacks coverage or if any declared test poin
 
 MedHarness can drive the full design-to-code cycle for a change request. The workflow is optional — each step is a separate CLI command you can run manually or wire into CI.
 
+### With the coding agent you already use
+
+`--prompt` on `build plan` and `build code` prints the stage — its steps and
+this CR's DHF context, exactly what the CI agent is given — for an agent that is
+already running, and starts nothing. `init` writes this section into
+`AGENTS.md`, which most coding agents read, and a `CLAUDE.md` that imports it
+for Claude Code. A project that predates it adds the section by hand:
+
+```markdown
+## Design History File
+
+This repository keeps its Design History File in `DHF/`, checked by MedHarness.
+A change to what the product does is not finished until its DHF is.
+
+- **Start a change:** `dhfkit item create --type CR --data '{"title": "…", "description": "…"}'`,
+  then `dhfkit item transition CR-NNN design`.
+- **Design it:** run `medharness build plan --cr CR-NNN --prompt` and do what it says.
+- **Build it:** run `medharness build code --cr CR-NNN --prompt` and do what it says.
+- **Check it**, and fix what they report:
+  - `medharness verify dhf`
+  - `medharness verify completion --cr CR-NNN --junit <results>`
+  - `medharness workflow check-changes --cr CR-NNN`
+- **Close it:** `dhfkit item transition CR-NNN completed`.
+
+Change items with `dhfkit item create|update|transition`, never by editing IDs.
+```
+
+Then ask your agent to "open a CR for the PDF export and update the DHF": it
+creates the CR, runs `build plan --cr CR-015 --prompt`, and does what it says.
+
 ### `build plan` — design phase
 
 ```bash
@@ -243,7 +273,7 @@ Runs triage, then generates the V-model DHF item cascade (CRS → SYS → SRS �
 | `triage_result` | Step 1 (triage) | ✓ verdict must be `approved` |
 | `affected_risk_items` | Step 2.5 (risk impact) | ✓ explicit list (can be `[]`) |
 | `implementation_notes` | Step 3 (impl plan) | ✓ non-empty |
-| `affected_items` | `build plan` itself, from what the run changed | ✓ explicit list (can be `[]`) |
+| `affected_items` | Step 4; in CI, `build plan` and `build code` rewrite it from the branch | ✓ explicit list (can be `[]`) |
 
 ### `build code` — development phase
 

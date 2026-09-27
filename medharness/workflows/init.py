@@ -123,37 +123,68 @@ def _replace_placeholders(project_dir: Path, project_name: str) -> None:
 # File writers
 # ---------------------------------------------------------------------------
 
-def _write_claude_md(project_dir: Path, project_name: str) -> Path:
-    """Write the CLAUDE.md the AI stages read for product context and rules."""
-    project_dir.mkdir(parents=True, exist_ok=True)
-    dest = project_dir / "CLAUDE.md"
-    dest.write_text(f"""\
-# CLAUDE.md
+#: How any coding agent works on the DHF. Plain text in AGENTS.md, which most
+#: agents read; the steps themselves come from the installed package.
+DHF_INSTRUCTIONS = """\
+## Design History File
 
-`build plan` and `build code` read this file before they run. Replace each
-placeholder with what an engineer new to the product would need to know.
+This repository keeps its Design History File in `DHF/`, checked by MedHarness.
+A change to what the product does is not finished until its DHF is.
+
+- **Start a change:** `dhfkit item create --type CR --data '{"title": "…", "description": "…"}'`,
+  then `dhfkit item transition CR-NNN design`.
+- **Design it:** run `medharness build plan --cr CR-NNN --prompt` and do what it says.
+- **Build it:** run `medharness build code --cr CR-NNN --prompt` and do what it says.
+- **Check it**, and fix what they report:
+  - `medharness verify dhf`
+  - `medharness verify completion --cr CR-NNN --junit <results>`
+  - `medharness workflow check-changes --cr CR-NNN`
+- **Close it:** `dhfkit item transition CR-NNN completed`.
+
+Change items with `dhfkit item create|update|transition`, never by editing IDs.
+"""
+
+_PRODUCT_TEMPLATE = """\
+# {name}
+
+Instructions for coding agents. Replace each placeholder with what an engineer
+new to the product would need to know.
 
 ## Product
 
-{project_name}: <what it does, in two or three sentences>
+{name}: <what it does, in two or three sentences>
 
 ## Architecture
 
-<subsystems, technology stack, where the source lives>
+<subsystems, technology stack, where the source lives, how to build and test>
 
 ## Scope
 
 In scope: <…>
 Out of scope: <…>
 
-## Rules
+"""
 
-- A PR title names its CR, e.g. `feat(CR-012): description`.
-- DHF items change through `dhfkit item create|update|transition`, never by
-  hand-editing IDs.
-- `medharness verify dhf` and `medharness verify tests` run on every PR.
-""", encoding="utf-8")
-    return dest
+
+def _write_agent_files(project_dir: Path, project_name: str) -> None:
+    """AGENTS.md for every agent, and a CLAUDE.md that imports it.
+
+    Claude Code reads CLAUDE.md, and AGENTS.md only when there is none. Files
+    that exist are added to, never replaced.
+    """
+    agents = project_dir / "AGENTS.md"
+    if not agents.exists():
+        agents.write_text(_PRODUCT_TEMPLATE.format(name=project_name) + DHF_INSTRUCTIONS,
+                          encoding="utf-8")
+    elif "## Design History File" not in agents.read_text(encoding="utf-8"):
+        with agents.open("a", encoding="utf-8") as f:
+            f.write("\n" + DHF_INSTRUCTIONS)
+    claude = project_dir / "CLAUDE.md"
+    if not claude.exists():
+        claude.write_text("@AGENTS.md\n", encoding="utf-8")
+    elif "@AGENTS.md" not in claude.read_text(encoding="utf-8"):
+        with claude.open("a", encoding="utf-8") as f:
+            f.write("\n@AGENTS.md\n")
 
 
 def _write_gitignore(project_dir: Path) -> Path:
@@ -219,7 +250,7 @@ def run_init() -> dict:
     steps = [
         ("Scaffold DHF structure", lambda: (_scaffold_dhf(project_dir),
                                             _replace_placeholders(project_dir, project_name))),
-        ("Write CLAUDE.md", lambda: _write_claude_md(project_dir, project_name)),
+        ("Write AGENTS.md and CLAUDE.md", lambda: _write_agent_files(project_dir, project_name)),
         ("Write .gitignore", lambda: _write_gitignore(project_dir)),
     ]
     for n, (label, run) in enumerate(steps, start=1):
@@ -240,7 +271,7 @@ def run_init() -> dict:
     say(f'       git commit -m "feat: initialize {project_name} with MedHarness"')
     say()
     say("  2. Replace the sample content:", bold=True)
-    say("       Describe the product in CLAUDE.md — the AI stages read it.")
+    say("       Describe the product in AGENTS.md — every coding agent reads it.")
     say("       Edit DHF/items/ with your real requirements, risks, and CRs.")
     say()
     say("  3. Check it, from this directory:", bold=True)

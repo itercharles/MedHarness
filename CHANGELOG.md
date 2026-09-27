@@ -11,6 +11,51 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.43.0] — 2026-09-27
+
+Two ways to run the same steps: unattended in CI, or by the coding agent an
+engineer already has open. Contract version 15.0.
+
+### Added
+
+- **`build plan --prompt` and `build code --prompt`** print the stage — its
+  steps and this CR's DHF context, exactly what the CI agent is given — for an
+  agent that is already running, and start nothing. Locally this replaces
+  starting a second, permission-skipping agent on an engineer's machine. It is
+  the one command output that is Markdown, not JSON.
+- **`init` writes `AGENTS.md`**, read by Cursor, Codex, Copilot, Gemini CLI,
+  Windsurf and most other coding agents, with the product context and a short
+  "Design History File" section: which high-level command to run to start,
+  design, build, check and close a change. `CLAUDE.md` is `@AGENTS.md`, since
+  Claude Code reads AGENTS.md only when there is no CLAUDE.md. A project that
+  predates this copies the section from adopting.md.
+
+### Breaking Changes
+
+- **`workflow check-changes` compares both ways.** A DHF item the branch
+  changes that the CR's `affected_items` does not list now fails, apart from
+  the CR itself. Nothing else recorded such a change: `verify completion`
+  checks only what is listed. `build code` now rewrites `affected_items` from
+  the branch too, as `build plan` does, and `build plan`'s steps record it for
+  an agent working locally.
+
+### Fixed
+
+- **`init` overwrote an existing `CLAUDE.md`.** It now adds to `AGENTS.md` and
+  `CLAUDE.md` if they exist and replaces neither.
+- **The `build code` prompt's coverage check could not run**:
+  `medharness verify tests --dhf DHF …` puts `--dhf` after the command, which
+  is a usage error. Its agent never saw its coverage gaps — the likely reason
+  ContourLab's CR-014 run left a requirement untested. It now runs
+  `verify completion --cr`, which checks exactly the CR's items.
+- `build plan`'s prompt ran `dhfkit validate traceability`, removed in 0.20.0.
+- The prompts called `python -m dhfkit`, which fails wherever `python` is not
+  the environment medharness is installed in; they call `dhfkit` and
+  `medharness`.
+- The documented-commands guard ran `--help`, which exits before Click checks
+  the rest of the line, so both faults above passed it. It now parses each
+  documented command line with Click.
+
 ## [0.42.0] — 2026-09-27
 
 Found by the first real `build code` run on the 0.39+ surface, in ContourLab.

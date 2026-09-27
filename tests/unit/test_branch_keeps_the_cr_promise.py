@@ -37,11 +37,19 @@ class TestThePromiseIsChecked:
         result = _run({"id": "CR-001", "affected_items": ["SRS-001"]})
         assert result["passed"] is True, result["errors"]
 
-    def test_changing_more_than_promised_is_not_a_failure(self) -> None:
-        """Touching an extra item is not what this gate is for."""
+    def test_changing_an_item_the_cr_does_not_list_fails(self) -> None:
+        """Nothing else records it: `verify completion` checks only what is listed."""
         result = _run(
             {"id": "CR-001", "affected_items": ["SRS-001"]},
             {"created": [], "updated": ["SRS-001", "SWDD-009"], "deleted": []},
+        )
+        assert result["passed"] is False
+        assert "SWDD-009" in " ".join(result["errors"])
+
+    def test_the_cr_itself_need_not_list_itself(self) -> None:
+        result = _run(
+            {"id": "CR-001", "affected_items": ["SRS-001"]},
+            {"created": [], "updated": ["SRS-001", "CR-001"], "deleted": []},
         )
         assert result["passed"] is True, result["errors"]
 
@@ -77,7 +85,7 @@ class TestAgainstARealChangeSet:
                                  "deleted": []}), \
              patch("dhfkit.local_adapter.LocalDHFAdapter") as adapter:
             adapter.return_value.get_item.return_value = {
-                "id": "CR-001", "affected_items": ["SRS-001", "SYS-001"],
+                "id": "CR-001", "affected_items": ["SRS-001", "SYS-001", "SWDD-007"],
             }
             dhf = tmp_path / "DHF"
             dhf.mkdir(exist_ok=True)
@@ -91,7 +99,7 @@ class TestAgainstARealChangeSet:
                                  "deleted": ["SRS-001"]}), \
              patch("dhfkit.local_adapter.LocalDHFAdapter") as adapter:
             adapter.return_value.get_item.return_value = {
-                "id": "CR-001", "affected_items": ["SRS-001"],
+                "id": "CR-001", "affected_items": ["SRS-001", "SRS-002"],
             }
             dhf = tmp_path / "DHF"
             dhf.mkdir(exist_ok=True)

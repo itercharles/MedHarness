@@ -735,8 +735,8 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> di
             f"then revise them based on the following pull request review feedback. "
             f"Continue using the CLI (`dhfkit item create` / `dhfkit item update`) only. "
             f"After making changes, re-run:\n"
-            f"  python -m dhfkit --dhf DHF validate\n"
-            f"  python -m medharness --dhf DHF verify dhf\n\n"
+            f"  dhfkit --dhf DHF validate\n"
+            f"  medharness --dhf DHF verify dhf\n\n"
             f"Review feedback:\n{feedback['prompt_text']}"
         )
         prompt = _enrich_with_plan_context(prompt, cr_id, dhf_path, warnings)
@@ -789,8 +789,8 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> di
             f"Fix only the items needed to clear these errors via the dhfkit "
             f"CLI (`dhfkit item create` / `dhfkit item update`). Do not introduce other "
             f"changes. After fixing, re-run:\n"
-            f"  python -m dhfkit --dhf DHF validate\n"
-            f"  python -m medharness --dhf DHF verify dhf"
+            f"  dhfkit --dhf DHF validate\n"
+            f"  medharness --dhf DHF verify dhf"
         )
         rc, _, fix_session_id = _run_claude_step(
             name="run_fix_generation",
@@ -853,8 +853,8 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> di
             f"Read the review at docs/reviews/{cr_id}-Design-Review.md for the specific issues, "
             f"then fix each item via the dhfkit CLI (dhfkit item create / dhfkit item update). "
             f"After making changes, re-run:\n"
-            f"  python -m dhfkit --dhf DHF validate\n"
-            f"  python -m medharness --dhf DHF verify dhf\n"
+            f"  dhfkit --dhf DHF validate\n"
+            f"  medharness --dhf DHF verify dhf\n"
             f"Do not modify the review file itself."
         )
         _, _, fix_session_id = _run_claude_step(
@@ -1132,6 +1132,14 @@ def generate_code(
         put_session(pr_number, session_id)
 
     _leave_uncommitted(repo_root, start_head, warnings)
+    # Implementing may reconcile SWDD or SRS; the CR's record has to follow, or
+    # `workflow check-changes` finds the branch changing items it does not list.
+    unreadable: list[str] = []
+    items_changed = _items_changed(repo_root, unreadable)
+    if unreadable:
+        warnings.append(_warning("diff_unavailable", f"affected_items not updated: {unreadable[-1]}"))
+    else:
+        _record_design_impact_in_cr(cr_id, dhf_path, items_changed)
     artifact_step, artifact_perf = _begin_step("collect_artifacts", {"kind": "files_changed"})
     try:
         files_changed = git.collect_path_changes(repo_root, "origin/main", *_DEFAULT_CODE_PATHS)

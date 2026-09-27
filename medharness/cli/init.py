@@ -7,7 +7,7 @@ import click
 def register(main):
     @main.command("init")
     def init_cmd() -> None:
-        """Scaffold a DHF and a CLAUDE.md in the current directory.
+        """Scaffold a DHF, and the AGENTS.md coding agents read, in the current directory.
 
         Takes no prompts — the project name is derived from the directory name.
         Existing files are not overwritten.

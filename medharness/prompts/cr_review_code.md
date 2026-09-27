@@ -26,7 +26,7 @@ narrative, test depth, and code quality.
      happy path?
    - **Scope** — any unrelated refactoring, dead code, or speculative
      additions outside what the spec describes?
-   - **Conventions** — Read `CLAUDE.md` for this project's coding
+   - **Conventions** — Read `AGENTS.md`/`CLAUDE.md` for this project's coding
      conventions, then check the
      implementation against them. If no conventions are documented, limit
      your review to correctness, test depth, completeness, and scope —

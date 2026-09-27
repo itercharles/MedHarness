@@ -9,10 +9,10 @@ CR ID: {{cr_id}}
 
 ## Inputs
 
-- CR item: `python -m dhfkit --dhf DHF item get {{cr_id}}`
-- Repository context: `CLAUDE.md`, `README.md`
+- CR item: `dhfkit --dhf DHF item get {{cr_id}}`
+- Repository context: `AGENTS.md` (or `CLAUDE.md`), `README.md`
 - Source code: relevant modules under `apps/`, `packages/`, or equivalent
-  source roots described in `CLAUDE.md` — identify and read these based on
+  source roots described in `AGENTS.md`/`CLAUDE.md` — identify and read these based on
   what the CR touches before writing SWDD items
 
 Read the CR item and repository context first, then identify which source
@@ -32,7 +32,7 @@ Before generating any DHF items, evaluate whether the CR should proceed.
 
 **If the CR should be rejected**, update the CR item with the rejection reason and stop:
 
-    python -m dhfkit --dhf DHF item update {{cr_id}} \
+    dhfkit --dhf DHF item update {{cr_id}} \
       --data '{"status": "rejected", "impact_assessment": "<reason for rejection>"}'
 
 Do **not** generate any DHF items if rejecting. Output a brief explanation of the
@@ -40,7 +40,7 @@ rejection reason and stop.
 
 **If the CR is approved**, record the triage findings before proceeding:
 
-    python -m dhfkit --dhf DHF item update {{cr_id}} \
+    dhfkit --dhf DHF item update {{cr_id}} \
       --data '{"triage_result": {"verdict": "approved", "complexity": "<small|medium|large>", "affected_subsystems": ["<name>"], "related_crs": [], "notes": "<one sentence: why approved and the key constraint>"}}'
 
 Complexity scale: `small` = 1 subsystem, <5 DHF items likely; `medium` = 2 subsystems
@@ -67,7 +67,7 @@ CR (input -- do not modify)
 
 Before writing any items, enumerate existing items for each type you plan to touch:
 
-    python -m dhfkit --dhf DHF item list --type <TYPE>
+    dhfkit --dhf DHF item list --type <TYPE>
 
 Apply the change preference: **no change > update existing > create new**.
 Only create a new item when no existing item covers the need.
@@ -94,7 +94,7 @@ requirement alone.** Each SWDD item belongs to a software module (MODULE) and
 must carry both `implements` (SRS IDs) and `module` (MODULE ID). List existing
 MODULE items first to find or create the right module:
 
-    python -m dhfkit --dhf DHF item list --type MODULE
+    dhfkit --dhf DHF item list --type MODULE
 
 **Apply this threshold before creating or updating a SWDD:**
 
@@ -117,7 +117,7 @@ Examples that **do** warrant a SWDD:
 
 When a SWDD is warranted, read the source files for the module first:
 
-1. Identify which source module(s) the SRS requirement maps to — use `CLAUDE.md`
+1. Identify which source module(s) the SRS requirement maps to — use `AGENTS.md`/`CLAUDE.md`
    and the directory structure to find the right folder.
 2. Read the relevant files. For a new module that does not exist yet, describe
    the intended design; for an existing module, describe the actual structure
@@ -136,18 +136,18 @@ absent or vague, add or improve it.
 
 **Create a new item (ID assigned automatically):**
 
-    python -m dhfkit --dhf DHF item create \
+    dhfkit --dhf DHF item create \
       --type <TYPE> --data '<JSON>'
 
 **Update an existing item:**
 
-    python -m dhfkit --dhf DHF item update <ITEM_ID> \
+    dhfkit --dhf DHF item update <ITEM_ID> \
       --data '<JSON>'
 
 **List items for context:**
 
-    python -m dhfkit --dhf DHF item list --type <TYPE>
-    python -m dhfkit --dhf DHF item list
+    dhfkit --dhf DHF item list --type <TYPE>
+    dhfkit --dhf DHF item list
 
 Do **not** write YAML files directly. Do **not** modify the CR item itself.
 
@@ -187,15 +187,15 @@ SRS/SYS item IDs that each test covers.
 
 Write this to the CR item:
 
-    python -m dhfkit --dhf DHF item update {{cr_id}} \
+    dhfkit --dhf DHF item update {{cr_id}} \
       --data '{"implementation_notes": "<plan>"}'
 
 ## Inline Validation Hook
 
 After writing all DHF items and recording risk impact, validate and self-correct:
 
-    python -m dhfkit --dhf DHF validate
-    python -m dhfkit --dhf DHF validate traceability
+    dhfkit --dhf DHF validate
+    medharness --dhf DHF verify dhf
 
 If either reports errors introduced by your changes, fix them via `dhfkit item update`
 and re-validate. Repeat until both pass cleanly.
@@ -207,8 +207,8 @@ relevant to this CR — even if they required no structural changes.
 
 1. List all existing risk items:
 
-       python -m dhfkit --dhf DHF item list --type RISK
-       python -m dhfkit --dhf DHF item list --type RCM
+       dhfkit --dhf DHF item list --type RISK
+       dhfkit --dhf DHF item list --type RCM
 
 2. For each, assess: does this CR change behavior that could alter the hazard
    likelihood, harm severity, or effectiveness of the control?
@@ -216,10 +216,21 @@ relevant to this CR — even if they required no structural changes.
 3. Collect the IDs of all affected items — those you created, updated, or
    determined are relevant but unchanged — and write them to the CR:
 
-       python -m dhfkit --dhf DHF item update {{cr_id}} \
+       dhfkit --dhf DHF item update {{cr_id}} \
          --data '{"affected_risk_items": ["RISK-001", "RCM-002"]}'
 
    Use `[]` if no risk items are relevant. Do not omit this step.
+
+## Step 4: Record Affected Items
+
+Write every DHF item you created or updated for this CR — not the CR itself —
+to its `affected_items`:
+
+    dhfkit --dhf DHF item update {{cr_id}} \
+      --data '{"affected_items": ["SYS-004", "SRS-012", "SWDD-007"]}'
+
+`medharness workflow check-changes --cr {{cr_id}}` compares this list with the
+items the branch actually changes, in both directions.
 
 ## Scope Constraints
 
@@ -227,10 +238,11 @@ relevant to this CR — even if they required no structural changes.
 - Do not create items for hypothetical future changes.
 - Do not modify files outside `DHF/`.
 - Do not commit, push or open a pull request, whatever the repository's own
-  instructions say. Leave your changes in the working tree; the pipeline that
-  ran you commits them.
+  instructions say. Leave your changes in the working tree for whoever started
+  this run to commit.
 - Do not edit the CR item except to set `status: rejected` and `impact_assessment`
   when rejecting (Step 1), write `triage_result` when approving (Step 1),
-  write `affected_risk_items` (Step 2.5), or `implementation_notes` (Step 3).
+  write `affected_risk_items` (Step 2.5), `implementation_notes` (Step 3), or
+  `affected_items` (Step 4).
 
 ## DHF Impact Skills
