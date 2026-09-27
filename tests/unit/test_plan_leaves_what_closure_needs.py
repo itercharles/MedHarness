@@ -1,12 +1,8 @@
 """`build plan` must not report success without the fields closure requires.
 
-`triage_result` and `proposed_new_items` are written by nothing but the prompt:
-the LLM is told to run `dhfkit item update`, and no code checked that it did.
-A run that skipped Step 1 or Step 4 reported `outcome: ok`, and the omission
-surfaced at `verify completion` — whose own message says "re-run
-generate-dhf Step 4", naming a producer that had already declared success.
-
-All thirteen CRs in the one real adopter are missing both.
+`triage_result` is written by nothing but the prompt: the LLM is told to run
+`dhfkit item update`, and no code checked that it did. A run that skipped Step 1
+reported `outcome: ok`, and the omission surfaced at `verify completion`.
 
 Checked in the validator rather than after it, so the fix pass corrects it in
 the same run instead of failing a CR weeks later.
@@ -34,35 +30,21 @@ def _fields(cr_item: dict | None) -> list[str]:
     return [e["field"] for e in _check_cr_workflow_fields(_api(cr_item), Path("DHF"), "CR-001")]
 
 
-class TestWhatStepOneAndFourLeaveBehind:
+class TestWhatStepOneLeavesBehind:
     def test_a_missing_triage_result_is_reported(self) -> None:
-        assert "triage_result" in _fields({"id": "CR-001", "proposed_new_items": []})
-
-    def test_a_missing_proposed_new_items_is_reported(self) -> None:
-        assert "proposed_new_items" in _fields({"id": "CR-001", "triage_result": APPROVED})
-
-    def test_both_missing_are_both_reported(self) -> None:
-        assert _fields({"id": "CR-001"}) == ["triage_result", "proposed_new_items"]
+        assert "triage_result" in _fields({"id": "CR-001"})
 
     def test_a_complete_cr_reports_nothing(self) -> None:
-        assert _fields({"id": "CR-001", "triage_result": APPROVED,
-                        "proposed_new_items": []}) == []
-
-    def test_an_empty_list_is_an_answer(self) -> None:
-        """A CR that changed only existing items created nothing, and says so."""
-        assert "proposed_new_items" not in _fields(
-            {"id": "CR-001", "triage_result": APPROVED, "proposed_new_items": []}
-        )
+        assert _fields({"id": "CR-001", "triage_result": APPROVED}) == []
 
     def test_an_unapproved_verdict_is_not_a_triage_result(self) -> None:
         assert "triage_result" in _fields(
-            {"id": "CR-001", "triage_result": {"verdict": "needs_info"},
-             "proposed_new_items": []}
+            {"id": "CR-001", "triage_result": {"verdict": "needs_info"}}
         )
 
     def test_a_non_dict_triage_result_is_not_one(self) -> None:
         assert "triage_result" in _fields(
-            {"id": "CR-001", "triage_result": "approved", "proposed_new_items": []}
+            {"id": "CR-001", "triage_result": "approved"}
         )
 
 
@@ -85,7 +67,7 @@ class TestWhenTheChecksDoNotApply:
 class TestTheMessageIsActionable:
     """These errors are fed back to the model as the fix prompt."""
 
-    @pytest.mark.parametrize("field", ["triage_result", "proposed_new_items"])
+    @pytest.mark.parametrize("field", ["triage_result"])
     def test_the_fix_names_the_command_to_run(self, field: str) -> None:
         errors = _check_cr_workflow_fields(_api({"id": "CR-001"}), Path("DHF"), "CR-001")
         fix = next(e["fix"] for e in errors if e["field"] == field)
@@ -117,4 +99,3 @@ class TestAgainstARealDhf:
             "the cascade is complete and the only thing missing is what Step 1 "
             "and Step 4 write; the validator reported none of it"
         )
-        assert "proposed_new_items" in fields

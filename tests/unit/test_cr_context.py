@@ -90,7 +90,7 @@ class TestAfterTheCRRecordsWhatItAffects:
         dhf = _make_dhf(tmp_path)
         srs = _srs(dhf)
         _write_cr(dhf, "CR-001", affected_items=[srs],
-                  implementation_notes="Plan.", proposed_new_items=[])
+                  implementation_notes="Plan.")
         payload = _context(dhf, "CR-001")
         assert payload["scope"] == "affected"
         assert [it["id"] for it in payload["items"]] == [srs]

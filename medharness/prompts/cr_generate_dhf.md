@@ -221,30 +221,6 @@ relevant to this CR — even if they required no structural changes.
 
    Use `[]` if no risk items are relevant. Do not omit this step.
 
-## Step 4: Record Proposed Items
-
-After all items are created, validated, and risk impact recorded, write
-`proposed_new_items` onto the CR item. The `verify completion` closure gate
-reads this field from the CR item to verify every promised item was materialised.
-
-1. Collect every DHF item you **created** in this session — type code and title.
-   Do not include items you only updated. Include all types: CRS, SYS, SRS,
-   SYSARCH, SWDD, RISK, RCM, etc.
-
-2. Update the CR item:
-
-```
-python -m dhfkit --dhf DHF item update {{cr_id}} \
-  --data '{"proposed_new_items": [{"type": "SRS", "title": "Rate limit input validation"}, {"type": "RISK", "title": "Unintended data modification from concurrent edits"}, {"type": "RCM", "title": "Optimistic-lock concurrency control for edit sessions"}]}'
-```
-
-   Each entry's `title` must match the `title:` field of the created DHF item.
-   Matching at closure is case-insensitive and whitespace-trimmed.
-
-   **Do not list items you updated but did not create.**
-   **Do not confuse with `affected_risk_items`** (Step 2.5) — that records which
-   RISK/RCM items are *relevant*; `proposed_new_items` records what was *created*.
-
 ## Scope Constraints
 
 - Only create or update items **directly required** by this CR.
@@ -252,7 +228,6 @@ python -m dhfkit --dhf DHF item update {{cr_id}} \
 - Do not modify files outside `DHF/`.
 - Do not edit the CR item except to set `status: rejected` and `impact_assessment`
   when rejecting (Step 1), write `triage_result` when approving (Step 1),
-  write `affected_risk_items` (Step 2.5), `implementation_notes` (Step 3),
-  or `proposed_new_items` (Step 4).
+  write `affected_risk_items` (Step 2.5), or `implementation_notes` (Step 3).
 
 ## DHF Impact Skills

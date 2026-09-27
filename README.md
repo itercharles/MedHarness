@@ -32,7 +32,7 @@ Replace the sample items with your own, then add the checks to CI.
 | `verify dhf` | Does the V-model hold together — schema, required links, dangling links, cycles, coverage? |
 | `verify tests` | Is each requirement verified by the method it declares — a Test requirement by a passing test? |
 | `verify soup` | Is the SOUP register what actually ships, and is any of it known-vulnerable? |
-| `verify completion` | Did a change request deliver what it proposed, verified? |
+| `verify completion` | Is a change request's record complete, and is every item it changed verified? |
 | `workflow check-changes` | Did the branch change the items its change request said it would? |
 | `workflow check-approval` | Did a reviewer approve the exact commit being merged? |
 

@@ -239,7 +239,7 @@ Runs triage, then generates the V-model DHF item cascade (CRS → SYS → SRS �
 | `triage_result` | Step 1 (triage) | ✓ verdict must be `approved` |
 | `affected_risk_items` | Step 2.5 (risk impact) | ✓ explicit list (can be `[]`) |
 | `implementation_notes` | Step 3 (impl plan) | ✓ non-empty |
-| `proposed_new_items` | Step 4 (artifact record) | ✓ list of created items |
+| `affected_items` | `build plan` itself, from what the run changed | ✓ explicit list (can be `[]`) |
 
 ### `build code` — development phase
 
@@ -257,10 +257,10 @@ medharness --dhf DHF verify completion --cr CR-001 --junit-dir test-results
 
 Run it on the branch to block the merge, and again on `main`, where the tests re-run against whatever else landed. Checks, for the items this CR touched only:
 
-1. All four CR fields above are populated.
-2. Every item listed in `proposed_new_items` exists in the DHF.
-3. All created verifiable items (CRS, SYS, SRS) have `verification_method` set.
-4. Items with `Test` method have passing JUnit evidence.
+1. All four CR fields above are populated. A CR planned by hand records them with `dhfkit item update`.
+2. Every item in `affected_items` exists in the DHF.
+3. Those that are requirements (CRS, SYS, SRS) or SOUP have `verification_method` set.
+4. Those with `Test` have passing JUnit evidence.
 
 Approval is not its question — that is `workflow check-approval`, which reads the pull request's reviews. Exits non-zero and prints `FAIL [completion]` lines for each gap.
 

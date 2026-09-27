@@ -185,19 +185,19 @@ def register(main):
         junit_dirs: tuple[Path, ...],
         junit_files: tuple[Path, ...],
     ) -> None:
-        """Check a CR delivered what it proposed: its items created and verified.
+        """Check a CR's record is complete and the items it changed are verified.
 
-        Reads proposed_new_items from the CR item, checks each proposed type was
-        created in the DHF, then runs the verification completeness gate over the
-        items this CR touched — its affected_items and the items matching its
-        proposals — so a CR is not charged with the DHF's existing gaps.
+        Checks the CR's record is complete, that every item in its
+        affected_items exists, and that those of them that are requirements
+        declare a verification method with passing evidence — only those, so a
+        CR is not charged with the DHF's existing gaps.
 
         Reads only the working tree, so it runs on the branch as well as on main.
-        Run it on the branch to block the merge: the CR fields and the proposed
-        items settle there. Run it again on main for the half that
+        Run it on the branch to block the merge: the CR fields and the items
+        settle there. Run it again on main for the half that
         can differ — the tests re-run against whatever else landed meanwhile.
 
-        Exits non-zero when any proposed items are missing or unverified.
+        Exits non-zero when the record is incomplete or an item is missing or unverified.
         """
         from medharness.services.verify_completion import cr_closure_gate
 
@@ -210,10 +210,8 @@ def register(main):
         for field in details(result).get("incomplete_cr_fields", []):
             click.echo(f"FAIL [completion] {field['issue']}", err=True)
         for item in details(result).get("missing_items", []):
-            click.echo(
-                f"FAIL [completion] {item['type']}: {item.get('issue', 'proposed item not found')}",
-                err=True,
-            )
+            click.echo(f"FAIL [completion] {item}: in affected_items but absent from the DHF",
+                       err=True)
         for item in details(result).get("verification_gaps", []):
             click.echo(f"FAIL [completion] {item['id']}: no verification_method declared", err=True)
         for item in details(result).get("unverified_test", []):

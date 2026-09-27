@@ -19,88 +19,46 @@ def _make_dhf(tmp_path: Path) -> Path:
     return dhf
 
 
-def _write_cr_proposed(
+def _write_cr(
     dhf: Path,
     cr_id: str,
-    proposed: list[dict],
+    affected: list[str] | None,
     *,
     implementation_notes: str | None = "Implementation plan: do the thing.",
-    affected_risk_items=...,  # ... → write []; None → omit field; list → write that list
-    triage_result=...,        # ... → write {"verdict": "approved"}; None → omit; dict → write it
+    affected_risk_items: list[str] | None = (),
+    triage_result: dict | None = {"verdict": "approved"},  # noqa: B006 — never mutated
 ) -> None:
-    """Write proposed_new_items and mandatory closure fields into the CR item YAML.
-
-    Pass ``None`` for any keyword arg to omit that field (tests the absence case).
-    Use ``...`` (default) to write the minimal valid value.
-    """
-    ari = [] if affected_risk_items is ... else affected_risk_items
-    tr = {"verdict": "approved"} if triage_result is ... else triage_result
-
+    """Write a CR with the fields `build plan` records. ``None`` omits a field."""
     cr_dir = dhf / "items" / "07_cr"
     cr_dir.mkdir(parents=True, exist_ok=True)
     lines = [f"id: {cr_id}", 'title: "Test CR"']
     if implementation_notes is not None:
-        lines.append(f"implementation_notes: {repr(implementation_notes)}")
-    if ari is not None:
-        lines.append("affected_risk_items: []" if not ari else "affected_risk_items:")
-        for uid in ari or []:
-            lines.append(f"  - {uid}")
-    if tr is not None:
-        lines.append("triage_result:")
-        lines.append(f"  verdict: {tr.get('verdict', '')}")
-    if not proposed:
-        lines.append("proposed_new_items: []")
-    else:
-        lines.append("proposed_new_items:")
-        for item in proposed:
-            lines.append(f"  - type: {item['type']}")
-            lines.append(f"    title: \"{item['title']}\"")
+        lines.append(f"implementation_notes: {implementation_notes!r}")
+    for name, value in (("affected_risk_items", affected_risk_items), ("affected_items", affected)):
+        if value is not None:
+            lines.append(f"{name}: {json.dumps(list(value))}")
+    if triage_result is not None:
+        lines.append(f"triage_result:\n  verdict: {triage_result.get('verdict', '')}")
     (cr_dir / f"{cr_id}.yaml").write_text("\n".join(lines) + "\n")
 
 
-def _write_srs_item(
-    dhf: Path,
-    item_id: str,
-    title: str,
-    verification_method: list[str] | None = None,
-) -> None:
-    items_dir = dhf / "items" / "03_srs"
-    lines = [f"id: {item_id}", f"title: {title}", "status: draft"]
+def _write_srs_item(dhf: Path, item_id: str, verification_method: list[str] | None = None) -> None:
+    lines = [f"id: {item_id}", f"title: {item_id} title", "status: draft"]
     if verification_method:
-        lines.append("verification_method:")
-        for v in verification_method:
-            lines.append(f"  - {v}")
-    (items_dir / f"{item_id}.yaml").write_text("\n".join(lines) + "\n")
+        lines.append(f"verification_method: {json.dumps(verification_method)}")
+    (dhf / "items" / "03_srs" / f"{item_id}.yaml").write_text("\n".join(lines) + "\n")
 
 
-def _write_risk_item(dhf: Path, item_id: str, title: str) -> None:
+def _write_risk_item(dhf: Path, item_id: str) -> None:
     items_dir = dhf / "items" / "10_risk"
     items_dir.mkdir(parents=True, exist_ok=True)
-    lines = [
-        f"id: {item_id}", f"title: {title}",
+    (items_dir / f"{item_id}.yaml").write_text("\n".join([
+        f"id: {item_id}", "title: A hazard",
         "hazard: example", "cause: example", "effect: example",
         "severity_pre: S1", "probability_pre: P1",
         "severity_post: S1", "probability_post: P1",
         "risk_acceptability: Acceptable",
-    ]
-    (items_dir / f"{item_id}.yaml").write_text("\n".join(lines) + "\n")
-
-
-def _write_rcm_item(dhf: Path, item_id: str, title: str, mitigates: str) -> None:
-    items_dir = dhf / "items" / "11_rcm"
-    items_dir.mkdir(parents=True, exist_ok=True)
-    lines = [f"id: {item_id}", f"title: {title}", f"mitigates:\n  - {mitigates}"]
-    (items_dir / f"{item_id}.yaml").write_text("\n".join(lines) + "\n")
-
-
-def _write_design_review(project_dir: Path, cr_id: str, verdict: str = "approved") -> None:
-    """Write a minimal design review file under docs/reviews/."""
-    review_dir = project_dir / "docs" / "reviews"
-    review_dir.mkdir(parents=True, exist_ok=True)
-    verdict_label = "Approved" if verdict == "approved" else "Needs Revision"
-    (review_dir / f"{cr_id}-Design-Review.md").write_text(
-        f"# Design Review: {cr_id}\n\n**Verdict:** {verdict_label}\n"
-    )
+    ]) + "\n")
 
 
 def _make_junit(tmp_path: Path, passing_links: list[str]) -> Path:
@@ -115,81 +73,60 @@ def _make_junit(tmp_path: Path, passing_links: list[str]) -> Path:
     return path
 
 
-# ---------------------------------------------------------------------------
-# Service-level tests
-# ---------------------------------------------------------------------------
+def _incomplete(result: dict) -> list[str]:
+    return [f["field"] for f in result["details"]["incomplete_cr_fields"]]
 
 
-def test_missing_proposed_new_items_fails(tmp_path: Path) -> None:
-    """CR item with no proposed_new_items field → closure gate fails with actionable message."""
-    dhf = _make_dhf(tmp_path)
-    # Write a CR item without the proposed_new_items field
-    cr_dir = dhf / "items" / "07_cr"
-    cr_dir.mkdir(parents=True, exist_ok=True)
-    (cr_dir / "CR-001.yaml").write_text('id: CR-001\ntitle: "Test CR"\n')
-    result = cr_closure_gate("CR-001", dhf)
-    assert result["passed"] is False
-    assert "proposed_new_items" in result["summary"]
+# ---------------------------------------------------------------------------
+# The CR's record
+# ---------------------------------------------------------------------------
 
 
 def test_absent_cr_item_fails(tmp_path: Path) -> None:
-    """No CR item at all → closure gate fails (`build plan` never recorded proposed_new_items)."""
     dhf = _make_dhf(tmp_path)
     result = cr_closure_gate("CR-001", dhf)
     assert result["passed"] is False
-    assert result["details"]["missing_items"] == []
+    assert "affected_items" in _incomplete(result)
 
 
-def test_empty_proposed_new_items_passes(tmp_path: Path) -> None:
-    """Explicitly empty proposed_new_items → no artifact reconciliation required → passes."""
+def test_missing_affected_items_fails(tmp_path: Path) -> None:
     dhf = _make_dhf(tmp_path)
-    _write_cr_proposed(dhf, "CR-001", [])
-    _write_design_review(tmp_path, "CR-001")
+    _write_cr(dhf, "CR-001", None)
     result = cr_closure_gate("CR-001", dhf)
-    assert result["passed"] is True
+    assert result["passed"] is False
+    assert _incomplete(result) == ["affected_items"]
+    assert any("affected_items" in e for e in result["errors"])
+
+
+def test_empty_affected_items_passes(tmp_path: Path) -> None:
+    """A CR that changed no items says so with []."""
+    dhf = _make_dhf(tmp_path)
+    _write_cr(dhf, "CR-001", [])
+    result = cr_closure_gate("CR-001", dhf)
+    assert result["passed"] is True, result["errors"]
     assert result["details"]["missing_items"] == []
-    assert result["details"]["incomplete_cr_fields"] == []
 
 
 def test_missing_implementation_notes_fails(tmp_path: Path) -> None:
     dhf = _make_dhf(tmp_path)
-    _write_cr_proposed(dhf, "CR-001", [], implementation_notes=None)
-    result = cr_closure_gate("CR-001", dhf)
-    assert result["passed"] is False
-    fields = [f["field"] for f in result["details"]["incomplete_cr_fields"]]
-    assert "implementation_notes" in fields
+    _write_cr(dhf, "CR-001", [], implementation_notes=None)
+    assert "implementation_notes" in _incomplete(cr_closure_gate("CR-001", dhf))
 
 
 def test_empty_implementation_notes_fails(tmp_path: Path) -> None:
     dhf = _make_dhf(tmp_path)
-    _write_cr_proposed(dhf, "CR-001", [], implementation_notes="")
-    result = cr_closure_gate("CR-001", dhf)
-    assert result["passed"] is False
-    fields = [f["field"] for f in result["details"]["incomplete_cr_fields"]]
-    assert "implementation_notes" in fields
+    _write_cr(dhf, "CR-001", [], implementation_notes="")
+    assert "implementation_notes" in _incomplete(cr_closure_gate("CR-001", dhf))
 
 
 def test_missing_affected_risk_items_fails(tmp_path: Path) -> None:
     dhf = _make_dhf(tmp_path)
-    _write_cr_proposed(dhf, "CR-001", [], affected_risk_items=None)
-    result = cr_closure_gate("CR-001", dhf)
-    assert result["passed"] is False
-    fields = [f["field"] for f in result["details"]["incomplete_cr_fields"]]
-    assert "affected_risk_items" in fields
-
-
-def test_empty_affected_risk_items_passes(tmp_path: Path) -> None:
-    """affected_risk_items: [] is valid — means agent confirmed no risk items apply."""
-    dhf = _make_dhf(tmp_path)
-    _write_cr_proposed(dhf, "CR-001", [], affected_risk_items=[])
-    _write_design_review(tmp_path, "CR-001")
-    result = cr_closure_gate("CR-001", dhf)
-    assert result["passed"] is True
-    assert all(f["field"] != "affected_risk_items" for f in result["details"]["incomplete_cr_fields"])
+    _write_cr(dhf, "CR-001", [], affected_risk_items=None)
+    assert "affected_risk_items" in _incomplete(cr_closure_gate("CR-001", dhf))
 
 
 def test_null_affected_risk_items_fails(tmp_path: Path) -> None:
-    """affected_risk_items: null in YAML must fail — only an explicit list is valid."""
+    """Only an explicit list is an answer."""
     dhf = _make_dhf(tmp_path)
     cr_dir = dhf / "items" / "07_cr"
     cr_dir.mkdir(parents=True, exist_ok=True)
@@ -197,284 +134,131 @@ def test_null_affected_risk_items_fails(tmp_path: Path) -> None:
         'id: CR-001\ntitle: "Test CR"\n'
         "implementation_notes: 'plan'\n"
         "affected_risk_items: null\n"
+        "affected_items: []\n"
         "triage_result:\n  verdict: approved\n"
-        "proposed_new_items: []\n"
     )
-    result = cr_closure_gate("CR-001", dhf)
-    assert result["passed"] is False
-    fields = [f["field"] for f in result["details"]["incomplete_cr_fields"]]
-    assert "affected_risk_items" in fields
+    assert "affected_risk_items" in _incomplete(cr_closure_gate("CR-001", dhf))
 
 
 def test_missing_triage_result_fails(tmp_path: Path) -> None:
     dhf = _make_dhf(tmp_path)
-    _write_cr_proposed(dhf, "CR-001", [], triage_result=None)
-    result = cr_closure_gate("CR-001", dhf)
-    assert result["passed"] is False
-    fields = [f["field"] for f in result["details"]["incomplete_cr_fields"]]
-    assert "triage_result" in fields
+    _write_cr(dhf, "CR-001", [], triage_result=None)
+    assert "triage_result" in _incomplete(cr_closure_gate("CR-001", dhf))
 
 
 def test_triage_result_not_approved_fails(tmp_path: Path) -> None:
     dhf = _make_dhf(tmp_path)
-    _write_cr_proposed(dhf, "CR-001", [], triage_result={"verdict": "rejected"})
-    result = cr_closure_gate("CR-001", dhf)
-    assert result["passed"] is False
-    fields = [f["field"] for f in result["details"]["incomplete_cr_fields"]]
-    assert "triage_result" in fields
+    _write_cr(dhf, "CR-001", [], triage_result={"verdict": "rejected"})
+    assert "triage_result" in _incomplete(cr_closure_gate("CR-001", dhf))
 
 
-def test_all_cr_fields_present_passes(tmp_path: Path) -> None:
-    """All mandatory CR fields present and design review approved → incomplete_cr_fields is empty."""
+# ---------------------------------------------------------------------------
+# The affected items
+# ---------------------------------------------------------------------------
+
+
+def test_affected_items_present_and_verified_passes(tmp_path: Path) -> None:
     dhf = _make_dhf(tmp_path)
-    _write_cr_proposed(
-        dhf, "CR-001", [],
-        implementation_notes="## Overview\nDo the thing.",
-        affected_risk_items=[],
-        triage_result={"verdict": "approved"},
-    )
-    _write_design_review(tmp_path, "CR-001")
-    result = cr_closure_gate("CR-001", dhf)
-    assert result["details"]["incomplete_cr_fields"] == []
-
-
-def test_proposed_items_all_created_with_junit_passes(tmp_path: Path) -> None:
-    dhf = _make_dhf(tmp_path)
-    _write_cr_proposed(dhf, "CR-001", [
-        {"type": "SRS", "title": "Req A"},
-        {"type": "SRS", "title": "Req B"},
-    ])
-    _write_design_review(tmp_path, "CR-001")
-    _write_srs_item(dhf, "SRS-001", "Req A", verification_method=["Test"])
-    _write_srs_item(dhf, "SRS-002", "Req B", verification_method=["Test"])
-    junit = _make_junit(tmp_path, ["SRS-001", "SRS-002"])
+    _write_cr(dhf, "CR-001", ["SRS-010", "SRS-011"])
+    _write_srs_item(dhf, "SRS-010", ["Test"])
+    _write_srs_item(dhf, "SRS-011", ["Test"])
+    junit = _make_junit(tmp_path, ["SRS-010", "SRS-011"])
     result = cr_closure_gate("CR-001", dhf, junit_paths=(junit,))
-    assert result["passed"] is True
-    assert result["details"]["missing_items"] == []
+    assert result["passed"] is True, result["errors"]
 
 
-def test_missing_proposed_item_by_title_fails(tmp_path: Path) -> None:
-    """Item with wrong title does not satisfy a proposed item."""
+def test_an_affected_item_absent_from_the_dhf_fails(tmp_path: Path) -> None:
     dhf = _make_dhf(tmp_path)
-    _write_cr_proposed(dhf, "CR-001", [{"type": "SRS", "title": "Req A"}])
-    # Item exists but has a different title — should not match
-    _write_srs_item(dhf, "SRS-001", "Something unrelated", verification_method=["Test"])
-    junit = _make_junit(tmp_path, ["SRS-001"])
-    result = cr_closure_gate("CR-001", dhf, junit_paths=(junit,))
-    assert result["passed"] is False
-    assert any(m["type"] == "SRS" for m in result["details"]["missing_items"])
-
-
-def test_title_match_is_case_insensitive(tmp_path: Path) -> None:
-    dhf = _make_dhf(tmp_path)
-    _write_cr_proposed(dhf, "CR-001", [{"type": "SRS", "title": "Rate Limit Input Validation"}])
-    _write_design_review(tmp_path, "CR-001")
-    _write_srs_item(dhf, "SRS-001", "rate limit input validation", verification_method=["Inspection"])
-    result = cr_closure_gate("CR-001", dhf)
-    assert result["details"]["missing_items"] == []
-
-
-def test_pre_existing_item_does_not_satisfy_proposed_item(tmp_path: Path) -> None:
-    """A pre-existing SRS item with the same type but wrong title must not count.
-
-    Regression: the old count-based check accepted any SRS item regardless of
-    whether it was created by this CR. Title-matching prevents that false pass.
-    """
-    dhf = _make_dhf(tmp_path)
-    _write_cr_proposed(dhf, "CR-001", [{"type": "SRS", "title": "New feature requirement"}])
-    # Pre-existing item with a different title (e.g. from a previous CR)
-    _write_srs_item(dhf, "SRS-099", "Old unrelated requirement", verification_method=["Test"])
+    _write_cr(dhf, "CR-001", ["SRS-404"])
     result = cr_closure_gate("CR-001", dhf)
     assert result["passed"] is False
-    assert any(m["type"] == "SRS" for m in result["details"]["missing_items"])
+    assert result["details"]["missing_items"] == ["SRS-404"]
+    assert any("SRS-404" in e for e in result["errors"])
 
 
 def test_item_without_verification_method_fails(tmp_path: Path) -> None:
     dhf = _make_dhf(tmp_path)
-    _write_cr_proposed(dhf, "CR-001", [{"type": "SRS", "title": "Req A"}])
-    _write_srs_item(dhf, "SRS-001", "Req A")  # no verification_method
+    _write_cr(dhf, "CR-001", ["SRS-010"])
+    _write_srs_item(dhf, "SRS-010")
     result = cr_closure_gate("CR-001", dhf)
     assert result["passed"] is False
-    ids = [i["id"] for i in result["details"]["verification_gaps"]]
-    assert "SRS-001" in ids
+    assert [i["id"] for i in result["details"]["verification_gaps"]] == ["SRS-010"]
 
 
 def test_test_method_without_junit_evidence_fails(tmp_path: Path) -> None:
-    """Empty JUnit (no passing TCs) with Test method → fails."""
     dhf = _make_dhf(tmp_path)
-    _write_cr_proposed(dhf, "CR-001", [{"type": "SRS", "title": "Req A"}])
-    _write_srs_item(dhf, "SRS-001", "Req A", verification_method=["Test"])
+    _write_cr(dhf, "CR-001", ["SRS-010"])
+    _write_srs_item(dhf, "SRS-010", ["Test"])
     junit = _make_junit(tmp_path, [])
     result = cr_closure_gate("CR-001", dhf, junit_paths=(junit,))
     assert result["passed"] is False
-    ids = [i["id"] for i in result["details"]["unverified_test"]]
-    assert "SRS-001" in ids
+    assert "SRS-010" in [i["id"] for i in result["details"]["unverified_test"]]
 
 
 def test_test_method_with_no_junit_at_all_fails(tmp_path: Path) -> None:
-    """No JUnit provided at all with Test method → fails at closure.
-
-    Regression: the old behavior silently passed when junit_paths=() because
-    validate_verification_completeness treated missing evidence as 'not yet checked'.
-    The closure gate must require evidence (enforce_test_evidence=True).
-    """
+    """Closure requires evidence; no JUnit is not 'not yet checked'."""
     dhf = _make_dhf(tmp_path)
-    _write_cr_proposed(dhf, "CR-001", [{"type": "SRS", "title": "Req A"}])
-    _write_srs_item(dhf, "SRS-001", "Req A", verification_method=["Test"])
+    _write_cr(dhf, "CR-001", ["SRS-010"])
+    _write_srs_item(dhf, "SRS-010", ["Test"])
     result = cr_closure_gate("CR-001", dhf, junit_paths=())
     assert result["passed"] is False
-    ids = [i["id"] for i in result["details"]["unverified_test"]]
-    assert "SRS-001" in ids
+    assert "SRS-010" in [i["id"] for i in result["details"]["unverified_test"]]
 
 
-def test_proposed_item_with_empty_title_is_skipped(tmp_path: Path) -> None:
-    """Malformed proposed entry (empty title) is skipped, not treated as a wildcard match."""
+def test_risk_items_need_no_verification_method(tmp_path: Path) -> None:
     dhf = _make_dhf(tmp_path)
-    _write_cr_proposed(dhf, "CR-001", [
-        {"type": "SRS", "title": ""},          # empty title — should be skipped
-        {"type": "SRS", "title": "Real req"},  # valid entry — must be present
-    ])
-    _write_design_review(tmp_path, "CR-001")
-    _write_srs_item(dhf, "SRS-001", "Real req", verification_method=["Inspection"])
+    _write_cr(dhf, "CR-001", ["RISK-002", "SRS-010"])
+    _write_risk_item(dhf, "RISK-002")
+    _write_srs_item(dhf, "SRS-010", ["Inspection"])
     result = cr_closure_gate("CR-001", dhf)
-    assert result["passed"] is True
-    assert result["details"]["missing_items"] == []
-
-
-def test_duplicate_proposed_entries_deduplicated(tmp_path: Path) -> None:
-    """Two identical proposed entries with one real item → passes (deduplication).
-
-    Duplicate entries in proposed_new_items are an LLM authoring quirk. One
-    real DHF item satisfies both identical promises — deduplicate before checking.
-    """
-    dhf = _make_dhf(tmp_path)
-    _write_cr_proposed(dhf, "CR-001", [
-        {"type": "SRS", "title": "Same title"},
-        {"type": "SRS", "title": "Same title"},  # duplicate
-    ])
-    _write_design_review(tmp_path, "CR-001")
-    _write_srs_item(dhf, "SRS-001", "Same title", verification_method=["Inspection"])
-    result = cr_closure_gate("CR-001", dhf)
-    assert result["passed"] is True
-    assert result["details"]["missing_items"] == []
-
-
-def test_risk_rcm_in_proposed_items_passes_without_verification_method(tmp_path: Path) -> None:
-    """RISK and RCM items do not have verification_method — closure must not require it."""
-    dhf = _make_dhf(tmp_path)
-    _write_cr_proposed(dhf, "CR-001", [
-        {"type": "RISK", "title": "Unintended data modification"},
-        {"type": "RCM", "title": "Optimistic-lock concurrency control"},
-    ])
-    _write_design_review(tmp_path, "CR-001")
-    _write_risk_item(dhf, "RISK-002", "Unintended data modification")
-    _write_rcm_item(dhf, "RCM-002", "Optimistic-lock concurrency control", "RISK-002")
-    result = cr_closure_gate("CR-001", dhf)
-    assert result["passed"] is True
-    assert result["details"]["missing_items"] == []
+    assert result["passed"] is True, result["errors"]
     assert result["details"]["verification_gaps"] == []
 
 
-def test_risk_rcm_missing_from_dhf_fails(tmp_path: Path) -> None:
-    """Proposed RISK item not created → closure fails."""
+def test_an_item_the_cr_did_not_touch_is_not_its_problem(tmp_path: Path) -> None:
     dhf = _make_dhf(tmp_path)
-    _write_cr_proposed(dhf, "CR-001", [{"type": "RISK", "title": "Unintended data modification"}])
+    _write_cr(dhf, "CR-001", ["SRS-010"])
+    _write_srs_item(dhf, "SRS-010", ["Inspection"])
+    _write_srs_item(dhf, "SRS-099")  # no method, not this CR's
     result = cr_closure_gate("CR-001", dhf)
-    assert result["passed"] is False
-    assert any(m["type"] == "RISK" for m in result["details"]["missing_items"])
-
-
-def test_mixed_srs_and_risk_in_proposed_items(tmp_path: Path) -> None:
-    """SRS requires verification_method; RISK does not. Both in proposed_new_items."""
-    dhf = _make_dhf(tmp_path)
-    _write_cr_proposed(dhf, "CR-001", [
-        {"type": "SRS", "title": "Req A"},
-        {"type": "RISK", "title": "New hazard from Req A"},
-    ])
-    _write_design_review(tmp_path, "CR-001")
-    _write_srs_item(dhf, "SRS-001", "Req A", verification_method=["Inspection"])
-    _write_risk_item(dhf, "RISK-002", "New hazard from Req A")
-    result = cr_closure_gate("CR-001", dhf)
-    assert result["passed"] is True
-    assert result["details"]["missing_items"] == []
-    assert result["details"]["verification_gaps"] == []
+    assert result["passed"] is True, result["errors"]
 
 
 # ---------------------------------------------------------------------------
-# CLI integration tests
+# CLI
 # ---------------------------------------------------------------------------
 
 
-def test_cli_cr_complete_passes(tmp_path: Path) -> None:
+def _cli(dhf: Path, *args: str):
+    return CliRunner().invoke(main, ["--dhf", str(dhf), "verify", "completion", "--cr", "CR-001", *args])
+
+
+def test_cli_passes(tmp_path: Path) -> None:
     dhf = _make_dhf(tmp_path)
-    _write_cr_proposed(dhf, "CR-001", [{"type": "SRS", "title": "Req A"}])
-    _write_design_review(tmp_path, "CR-001")
-    _write_srs_item(dhf, "SRS-001", "Req A", verification_method=["Test"])
-    junit = _make_junit(tmp_path, ["SRS-001"])
-    result = CliRunner().invoke(
-        main,
-        ["--dhf", str(dhf), "verify", "completion",
-         "--cr", "CR-001", "--junit", str(junit)],
-    )
+    _write_cr(dhf, "CR-001", ["SRS-010"])
+    _write_srs_item(dhf, "SRS-010", ["Test"])
+    junit = _make_junit(tmp_path, ["SRS-010"])
+    result = _cli(dhf, "--junit", str(junit))
     assert result.exit_code == 0, result.output
     payload = json.loads(result.output.splitlines()[0])
     assert payload["passed"] is True
     assert "CR-001" in payload["summary"]
 
 
-def test_cli_cr_complete_fails_on_incomplete_cr_fields(tmp_path: Path) -> None:
-    """CLI prints FAIL [completion] lines for each missing mandatory CR field."""
+def test_cli_fails_on_incomplete_cr_fields(tmp_path: Path) -> None:
     dhf = _make_dhf(tmp_path)
-    _write_cr_proposed(dhf, "CR-001", [], implementation_notes=None, affected_risk_items=None)
-    result = CliRunner().invoke(
-        main,
-        ["--dhf", str(dhf), "verify", "completion", "--cr", "CR-001"],
-    )
+    _write_cr(dhf, "CR-001", [], implementation_notes=None, affected_risk_items=None)
+    result = _cli(dhf)
     assert result.exit_code != 0
     payload = json.loads(result.output.splitlines()[0])
     assert payload["passed"] is False
-    assert len(payload["errors"]) >= 2, (
-        f"two CR fields are incomplete; the caller receives {payload['errors']}"
-    )
+    assert len(payload["errors"]) >= 2, payload["errors"]
     assert "FAIL [completion]" in result.output
 
 
-def test_cli_cr_complete_fails_on_missing_item(tmp_path: Path) -> None:
+def test_cli_names_a_missing_item(tmp_path: Path) -> None:
     dhf = _make_dhf(tmp_path)
-    _write_cr_proposed(dhf, "CR-001", [{"type": "SRS", "title": "Missing req"}])
-    # No item with matching title created
-    result = CliRunner().invoke(
-        main,
-        ["--dhf", str(dhf), "verify", "completion", "--cr", "CR-001"],
-    )
+    _write_cr(dhf, "CR-001", ["SRS-404"])
+    result = _cli(dhf)
     assert result.exit_code != 0
-
-
-def test_cli_cr_complete_fails_without_junit_for_test_items(tmp_path: Path) -> None:
-    dhf = _make_dhf(tmp_path)
-    _write_cr_proposed(dhf, "CR-001", [{"type": "SRS", "title": "Req A"}])
-    _write_srs_item(dhf, "SRS-001", "Req A", verification_method=["Test"])
-    result = CliRunner().invoke(
-        main,
-        ["--dhf", str(dhf), "verify", "completion", "--cr", "CR-001"],
-    )
-    assert result.exit_code != 0
-
-
-# ---------------------------------------------------------------------------
-# Design review check tests
-# ---------------------------------------------------------------------------
-
-
-
-
-
-
-def test_design_review_approved_clears_field(tmp_path: Path) -> None:
-    """Approved design review → design_review not in incomplete_cr_fields."""
-    dhf = _make_dhf(tmp_path)
-    _write_cr_proposed(dhf, "CR-001", [])
-    _write_design_review(tmp_path, "CR-001", verdict="approved")
-    result = cr_closure_gate("CR-001", dhf)
-    fields = [f["field"] for f in result["details"]["incomplete_cr_fields"]]
-    assert "design_review" not in fields
+    assert "FAIL [completion] SRS-404" in result.output

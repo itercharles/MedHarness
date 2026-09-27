@@ -3,8 +3,7 @@
 `cr_closure_gate` ran `validate_verification_completeness` over every item of
 every type the CR proposed, so a starter `SRS-001` that never declared a
 verification method failed the closure gate of an unrelated CR — and blocked
-its merge. The gate already knew the scope: the CR's `affected_items` and the
-items matching its `proposed_new_items`.
+its merge. The gate already knew the scope: the CR's `affected_items`.
 """
 
 from __future__ import annotations
@@ -87,7 +86,6 @@ class TestTheGateUsesTheScope:
         cr = dhf / "items" / "07_cr" / "CR-001.yaml"
         data = yaml.safe_load(cr.read_text())
         data.update({
-            "proposed_new_items": [{"type": "SRS", "title": "Scoped requirement"}],
             "affected_items": ["SRS-002"],
             "implementation_notes": "n",
             "affected_risk_items": [],
