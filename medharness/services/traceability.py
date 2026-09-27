@@ -21,7 +21,8 @@ from typing import Any, Iterable, List
 import networkx as nx
 
 from dhfkit.item_type import ItemType
-from dhfkit.traceability import _LINK_FIELDS, _prefix_of, find_dangling_links
+from dhfkit.models.config import RequiredTraceabilityRule, TraceabilityMatrix
+from dhfkit.traceability import LINK_FIELDS, find_dangling_links
 
 def check_required_traceability(items: list[dict], config: Any) -> dict:
     """Check mandatory traceability rules.
@@ -200,7 +201,7 @@ def find_link_cycles(
     Returns each cycle as the list of IDs in it, rotated to start at its lowest
     ID so the same cycle reads the same way between runs.
     """
-    fields = sorted(set(_LINK_FIELDS) | set(link_fields or ()))
+    fields = sorted(set(LINK_FIELDS) | set(link_fields or ()))
     known = {str(i.get("id")) for i in items if i.get("id")}
 
     graph = nx.DiGraph()
@@ -330,9 +331,8 @@ def analyse(adapter) -> dict:
     return check_traceability(adapter.list_items(), adapter.config)
 
 
-def default_traceability_rules() -> List["RequiredTraceabilityRule"]:
+def default_traceability_rules() -> List[RequiredTraceabilityRule]:
     """Generate required traceability rules from ItemType V-model metadata."""
-    from dhfkit.models.config import RequiredTraceabilityRule
     rules = []
     for member in ItemType:
         meta = member.value
@@ -346,9 +346,8 @@ def default_traceability_rules() -> List["RequiredTraceabilityRule"]:
             ))
     return rules
 
-def default_coverage_chains() -> List["TraceabilityMatrix"]:
+def default_coverage_chains() -> List[TraceabilityMatrix]:
     """Generate traceability matrices from ItemType coverage_children metadata."""
-    from dhfkit.models.config import TraceabilityMatrix
     matrices = []
     for member in ItemType:
         meta = member.value

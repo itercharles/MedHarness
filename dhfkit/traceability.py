@@ -19,7 +19,7 @@ def _prefix_of(uid: str) -> str:
     parts = uid.rsplit("-", 1)
     return parts[0] + "-" if len(parts) == 2 else ""
 
-_LINK_FIELDS = (
+LINK_FIELDS = (
     "derives_from", "implements", "guided_by", "informs", "design",
     "mitigates", "satisfies", "verifies", "validates", "module",
     "affected_risk_items", "affected_items",
@@ -38,10 +38,10 @@ def find_dangling_links(
     Returns [{"source", "field", "target"}] sorted for stable output.
     """
     known = {item["id"] for item in items}
-    # The schema decides what a link is; _LINK_FIELDS is only the floor. Two
+    # The schema decides what a link is; LINK_FIELDS is only the floor. Two
     # hand-written lists used to decide it between them and disagreed, leaving
     # five of the nine relationship fields in the shipped schema unchecked.
-    fields = sorted(set(_LINK_FIELDS) | set(link_fields or ()))
+    fields = sorted(set(LINK_FIELDS) | set(link_fields or ()))
     dangling: list[dict] = []
     for item in items:
         source = item.get("id", "")

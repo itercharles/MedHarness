@@ -1,7 +1,7 @@
 """Every relationship field the schema declares must have dangling detection.
 
 Two hand-written lists decided this between them — `_TRACEABILITY_LINK_FIELDS`
-in the adapter and `_LINK_FIELDS` in the checker — and they disagreed. Of the
+in the adapter and `LINK_FIELDS` in the checker — and they disagreed. Of the
 nine relationship fields in the shipped schema, four were checked.
 
 `affected_risk_items` is the sharpest case: the checker listed it, so someone

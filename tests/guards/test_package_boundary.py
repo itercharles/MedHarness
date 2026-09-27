@@ -55,7 +55,19 @@ def _private_reaches() -> list[tuple[str, int, str]]:
     return found
 
 
-REACHES = _private_reaches()
+def _private_imports() -> list[tuple[str, int, str]]:
+    """`from dhfkit... import _private` in medharness — the same reach, by import."""
+    found = []
+    for path in sorted((ROOT / "medharness").rglob("*.py")):
+        for node in ast.walk(ast.parse(path.read_text())):
+            if isinstance(node, ast.ImportFrom) and (node.module or "").startswith("dhfkit"):
+                found += [(str(path.relative_to(ROOT)), node.lineno, f"{node.module}.{a.name}")
+                          for a in node.names
+                          if a.name.startswith("_") and a.name not in _ALLOWED]
+    return found
+
+
+REACHES = _private_reaches() + _private_imports()
 
 
 def test_the_scan_understands_the_code() -> None:
