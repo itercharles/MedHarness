@@ -98,7 +98,7 @@ jobs:
       - name: Install from the lockfile
         run: uv sync --locked --extra dev
       - name: Run dhfkit tests
-        run: uv run pytest dhfkit/tests/ -v --ignore=dhfkit/tests/test_cli_doc_export.py
+        run: uv run pytest dhfkit/tests/ -v
 
   # ── COMPATIBILITY CHECKS ─────────────────────────────────────────────────
 

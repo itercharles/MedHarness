@@ -66,7 +66,7 @@ class TestAgainstARealDhf:
         gate = ci_structural_gate(dhf)
         assert gate["passed"] is False, "the gate should fail a DHF with a cycle"
 
-        result = CliRunner().invoke(main, ["--dhf", str(dhf), "context", "overview"])
+        result = CliRunner().invoke(main, ["--dhf", str(dhf), "context"])
         assert result.exit_code == 0, result.output
         reported = json.loads(result.stdout)["traceability"]["valid"]
         assert reported is False, "the gate fails this DHF; the agent was told it is valid"
@@ -84,7 +84,7 @@ class TestAgainstARealDhf:
         cwd = os.getcwd()
         try:
             os.chdir(dhf.parent)
-            result = CliRunner().invoke(main, ["--dhf", "DHF", "context", "overview"])
+            result = CliRunner().invoke(main, ["--dhf", "DHF", "context"])
         finally:
             os.chdir(cwd)
 

@@ -36,7 +36,7 @@ COMMANDS = [
     "verify soup --offline-mode warn",
     "verify completion --cr CR-001",
     "workflow check-changes --cr CR-001",
-    "context overview",
+    "context",
 ]
 
 

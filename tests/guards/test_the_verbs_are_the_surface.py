@@ -37,6 +37,12 @@ RENAMED = {
     # 0.33.0. Both named the object; the commands ask a question about it.
     "workflow approval": "workflow check-approval",
     "workflow branch": "workflow check-changes",
+    # 0.37.0. One command each, where three and two overlapped.
+    "context overview": "context",
+    "context implementation": "context --cr",
+    "context for-stage": "context --cr",
+    "doc generate": "doc",
+    "doc export": "doc --format html",
 }
 
 #: Everything an adopter reads to learn the commands.
@@ -63,14 +69,33 @@ def test_a_retired_group_is_not_registered(name: str) -> None:
     )
 
 
+def _resolves(path: list[str]) -> bool:
+    """Whether a command path names a command in either CLI's tree."""
+    import click
+
+    from dhfkit.cli import main as dhfkit_main
+
+    for root in (main, dhfkit_main):
+        node = root
+        for token in path:
+            if not isinstance(node, click.Group) or token not in node.commands:
+                break
+            node = node.commands[token]
+        else:
+            return True
+    return False
+
+
 @pytest.mark.parametrize("old", sorted(RENAMED), ids=lambda s: s)
-def test_a_renamed_command_no_longer_runs(old: str) -> None:
-    proc = subprocess.run(
-        [sys.executable, "-m", "medharness", *old.split(), "--help"],
-        capture_output=True, text=True, cwd=ROOT,
-    )
-    assert proc.returncode != 0, f"`medharness {old}` still runs"
-    assert "No such command" in proc.stderr + proc.stdout
+def test_a_renamed_command_no_longer_exists(old: str) -> None:
+    """By the command tree, not by running it: `context overview --help` now
+    prints `context`'s help and exits 0, which is not the old command."""
+    assert not _resolves(old.split()), f"`{old}` is still a command"
+
+
+def test_the_resolver_sees_current_commands() -> None:
+    """Otherwise the test above passes on anything."""
+    assert _resolves(["verify", "dhf"]) and _resolves(["item", "list"])
 
 
 @pytest.mark.parametrize("path", DOCS, ids=lambda p: p.name)

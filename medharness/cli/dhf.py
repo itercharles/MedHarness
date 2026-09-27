@@ -1,8 +1,6 @@
-"""DHF commands — AI harness context assembly only.
+"""`medharness context` — what an AI agent needs to know about the DHF.
 
-Data-layer operations (item CRUD, validate, doc, test, config) live in
-`dhfkit` — use `dhfkit --dhf DHF item ...` etc. from CI scripts and
-AI agents.
+Storage operations live in `dhfkit`.
 """
 
 from __future__ import annotations
@@ -41,171 +39,72 @@ def _traceability_summary(trace: dict) -> dict:
     }
 
 
+def _summary(item: dict) -> dict:
+    return {"id": item["id"], "type": item.get("type", ""), "title": item.get("title", ""),
+            "status": item.get("status", ""), "tracelinks": item.get("all_linked_uids", [])}
+
+
 def register(main):
 
-    @main.group("context")
-    def dhf_context() -> None:
-        """Design context for an AI agent or a CI step."""
-
-    @dhf_context.command("implementation")
-    @click.option("--cr", "cr_id", required=True, metavar="CR_ID",
-                  help="The CR to be implemented.")
+    @main.command("context")
+    @click.option("--cr", "cr_id", default=None, metavar="CR_ID",
+                  help="Scope the answer to one CR: the CR, the items it affects, "
+                       "and the modules that own them.")
+    @click.option("--junit", "junit_files", multiple=True,
+                  type=click.Path(exists=True, dir_okay=False, path_type=Path),
+                  help="A JUnit XML results file (repeatable). Adds test coverage.")
+    @click.option("--junit-dir", "junit_dirs", multiple=True,
+                  type=click.Path(file_okay=False, path_type=Path),
+                  help="Directory of JUnit XML results (repeatable). Adds test coverage.")
     @click.pass_context
-    def dhf_context_implementation(ctx: click.Context, cr_id: str) -> None:
-        """What an agent needs to implement a CR: the CR, the item set, the modules.
+    def context(ctx: click.Context, cr_id: str | None,
+                junit_files: tuple[Path, ...], junit_dirs: tuple[Path, ...]) -> None:
+        """What an AI agent needs to know about the DHF, as JSON.
 
-        JSON on stdout: {project, cr, item_count, items, traceability, module_map},
-        where `cr` is the full CR item. `traceability` carries the same verdict
-        `verify dhf` reaches, so the agent is not told the DHF is sound while the
-        gate is failing it.
+        \b
+        Without --cr: every item summarized, and the traceability verdict.
+        With --cr:    the CR in full, the items it affects in full, and the
+                      modules that own them. A CR that has not yet recorded
+                      affected_items — before `build plan` — gets every item
+                      summarized instead, since choosing what to change needs
+                      the whole DHF.
+
+        `traceability.valid` is the verdict `verify dhf` reaches.
         """
         from medharness.services.traceability import build_module_map
 
         adapter = _h._make_adapter(ctx.obj["dhf"])
-        cr = adapter.get_item(cr_id)
-        items = adapter.list_items()
-        trace = analyse(adapter)
-
-        click.echo(json.dumps({
-            "project": adapter.config.project_name,
-            "cr": cr if cr else {"id": cr_id, "found": False},
-            "item_count": len(items),
-            "items": [
-                {"id": it["id"], "type": it.get("type", ""), "title": it.get("title", ""),
-                 "status": it.get("status", ""), "tracelinks": it.get("all_linked_uids", [])}
-                for it in sorted(items, key=lambda x: x["id"])
-            ],
-            "traceability": _traceability_summary(trace),
-            "module_map": build_module_map(items, adapter.config),
-        }, default=str))
-
-    @dhf_context.command("for-stage")
-    @click.argument("stage", type=click.Choice(["analyze", "design", "develop"]))
-    @click.option("--cr", "cr_id", required=True, metavar="CR_ID",
-                  help="The CR at that stage.")
-    @click.pass_context
-    def dhf_context_for_stage(ctx: click.Context, stage: str, cr_id: str) -> None:
-        """Output scoped DHF context for a specific workflow stage.
-
-        Returns what each stage needs to decide:
-
-        \b
-          analyze — CR item, every item summarized, traceability gaps
-          design  — CR item, every item summarized
-          develop — CR item, the items it affects, in full
-
-        design returns every item because `affected_items` is still empty at
-        that point: `build plan` is what writes it, and it has to see the whole
-        DHF to choose between creating an item and updating one.
-        """
-        adapter = _h._make_adapter(ctx.obj["dhf"])
-
-        cr = adapter.get_item(cr_id)
-
-        if stage == "analyze":
-            items = adapter.list_items()
-            trace = analyse(adapter)
-            coverage = trace.get("coverage", [])
-            gaps = [c for c in coverage if c.get("covered", 0) < c.get("total", 0)]
-            result: dict = {
-                "stage": "analyze",
-                "cr": cr or {"id": cr_id, "found": False},
-                "item_count": len(items),
-                "items": [
-                    {"id": it["id"], "type": it.get("type", ""), "title": it.get("title", ""),
-                     "status": it.get("status", ""), "tracelinks": it.get("all_linked_uids", [])}
-                    for it in sorted(items, key=lambda x: x["id"])
-                ],
-                "traceability_gaps": {
-                    "uncovered_pairs": [
-                        {"parent": g["parent_type"], "child": g["child_type"],
-                         "covered": g["covered"], "total": g["total"]}
-                        for g in gaps
-                    ],
-                    "cycles": trace.get("cycles", []),
-                    "dangling": trace.get("dangling", []),
-                },
-            }
-
-        elif stage == "design":
-            items = adapter.list_items()
-            result = {
-                "stage": "design",
-                "cr": cr or {"id": cr_id, "found": False},
-                "item_count": len(items),
-                "items": [
-                    {"id": it["id"], "type": it.get("type", ""), "title": it.get("title", ""),
-                     "status": it.get("status", ""), "tracelinks": it.get("all_linked_uids", [])}
-                    for it in sorted(items, key=lambda x: x["id"])
-                ],
-            }
-
-        else:  # develop
-            affected_ids: list[str] = list(cr.get("affected_items") or []) if cr else []
-            affected_items = [adapter.get_item(uid) for uid in affected_ids]
-            cr_develop: dict = (
-                {
-                    "id": cr_id,
-                    "title": cr.get("title", ""),
-                    "status": cr.get("status", ""),
-                    "implementation_notes": cr.get("implementation_notes") or "",
-                    "proposed_new_items": cr.get("proposed_new_items") or [],
-                    "triage_result": cr.get("triage_result") or {},
-                    "affected_risk_items": cr.get("affected_risk_items") or [],
-                }
-                if cr else {"id": cr_id, "found": False}
-            )
-            result = {
-                "stage": stage,
-                "cr": cr_develop,
-                "affected_items": [
-                    {
-                        **{f: it.get(f, "") for f in _DEVELOP_ITEM_FIELDS},
-                        "tracelinks": it.get("all_linked_uids", []),
-                    }
-                    for it in affected_items if it is not None
-                ],
-            }
-
-        click.echo(json.dumps(result, default=str))
-
-    @dhf_context.command("overview")
-    @click.option("--cr", "cr_id", default=None, metavar="CR_ID",
-                  help="Add this CR's id, title and status, or found: false.")
-    @click.option("--junit", "junit_files", multiple=True, type=click.Path(exists=True, dir_okay=False, path_type=Path),
-                  help="A JUnit XML results file (repeatable).")
-    @click.option("--junit-dir", "junit_dirs", multiple=True, type=click.Path(file_okay=False, path_type=Path),
-                  help="Directory of JUnit XML results (repeatable). Without any, test_coverage is {\"computed\": false}.")
-    @click.pass_context
-    def dhf_context_overview(ctx: click.Context, cr_id: str | None,
-                              junit_files: tuple[Path, ...], junit_dirs: tuple[Path, ...]) -> None:
-        """Summarize the whole DHF: every item, traceability, and test coverage."""
-        adapter = _h._make_adapter(ctx.obj["dhf"])
+        items = sorted(adapter.list_items(), key=lambda it: it["id"])
         result: dict = {"project": adapter.config.project_name}
 
-        if cr_id:
+        if cr_id is None:
+            result["item_count"] = len(items)
+            result["items"] = [_summary(it) for it in items]
+            result["traceability"] = _traceability_summary(analyse(adapter))
+        else:
             cr = adapter.get_item(cr_id)
-            if cr:
-                result["cr"] = {"id": cr_id, "title": cr.get("title", ""), "status": cr.get("status", "")}
+            result["cr"] = cr if cr else {"id": cr_id, "found": False}
+            affected = set((cr or {}).get("affected_items") or [])
+            module_map = build_module_map(items, adapter.config)
+            if affected:
+                result["affected_items"] = [
+                    {**{f: it.get(f, "") for f in _DEVELOP_ITEM_FIELDS},
+                     "tracelinks": it.get("all_linked_uids", [])}
+                    for it in items if it["id"] in affected
+                ]
+                module_map = [
+                    m for m in module_map
+                    if m["module_id"] in affected
+                    or affected & {s["swdd_id"] for s in m["swdds"]}
+                    or affected & set(m["all_requirements"])
+                ]
             else:
-                result["cr"] = {"id": cr_id, "found": False}
-
-        items = adapter.list_items()
-        result["item_count"] = len(items)
-        result["items"] = [
-            {"id": it["id"], "type": it.get("type", ""), "title": it.get("title", ""),
-             "status": it.get("status", ""), "tracelinks": it.get("all_linked_uids", [])}
-            for it in sorted(items, key=lambda x: x["id"])
-        ]
-
-        trace = analyse(adapter)
-        result["traceability"] = _traceability_summary(trace)
+                result["items"] = [_summary(it) for it in items]
+            result["module_map"] = module_map
 
         junit_paths = _h._collect_junit_paths(junit_files, junit_dirs)
         if junit_paths:
             from medharness.services.ci import compute_item_coverage
             result["test_coverage"] = compute_item_coverage(junit_paths, adapter)
-        else:
-            result["test_coverage"] = {"computed": False}
 
         click.echo(json.dumps(result, default=str))

@@ -1,4 +1,4 @@
-"""Tests for CLI command: doc generate <doc_type>"""
+"""`dhfkit doc TYPE|ALL [--format md|html|pdf]` — one command for rendering."""
 import json
 import sys
 from pathlib import Path
@@ -25,32 +25,46 @@ def _get_available_doc_types(dhf):
 
 
 def test_doc_generate_single_type(populated_dhf):
-    """doc generate <type> exits 0 and returns JSON with output_path."""
+    """`doc <type>` renders Markdown and says where."""
     doc_types = _get_available_doc_types(populated_dhf)
     if not doc_types:
         pytest.skip("No doc types with document_specifications in test DHF")
 
     result = CliRunner().invoke(main, [
-        '--dhf', str(populated_dhf), 'doc', 'generate', doc_types[0],
+        '--dhf', str(populated_dhf), 'doc', doc_types[0],
     ])
     assert result.exit_code == 0
     data = _parse_json(result.output)
-    assert 'output_path' in data
+    assert data['md_path'].endswith('.md')
 
 
 def test_doc_generate_all(populated_dhf):
-    """doc generate ALL exits 0."""
+    """`doc ALL` renders every type."""
     doc_types = _get_available_doc_types(populated_dhf)
     if not doc_types:
         pytest.skip("No doc types with document_specifications in test DHF")
 
-    result = CliRunner().invoke(main, ['--dhf', str(populated_dhf), 'doc', 'generate', 'ALL'])
+    result = CliRunner().invoke(main, ['--dhf', str(populated_dhf), 'doc', 'ALL'])
     assert result.exit_code == 0
 
 
 def test_doc_generate_unknown_type_exits_1(populated_dhf):
-    """doc generate with an unknown type exits 1."""
+    """An unknown type exits 1, whatever the format."""
+    for fmt in ('md', 'html'):
+        result = CliRunner().invoke(main, [
+            '--dhf', str(populated_dhf), 'doc', 'NONEXISTENT_TYPE_XYZ', '--format', fmt,
+        ])
+        assert result.exit_code == 1, fmt
+
+
+def test_every_format_reports_the_markdown_it_rendered(populated_dhf):
+    """md, html and pdf all render the Markdown first; each says where it is."""
+    doc_types = _get_available_doc_types(populated_dhf)
+    if not doc_types:
+        pytest.skip("No doc types with document_specifications in test DHF")
     result = CliRunner().invoke(main, [
-        '--dhf', str(populated_dhf), 'doc', 'generate', 'NONEXISTENT_TYPE_XYZ',
+        '--dhf', str(populated_dhf), 'doc', doc_types[0], '--format', 'html',
     ])
-    assert result.exit_code == 1
+    assert result.exit_code == 0
+    data = _parse_json(result.output)
+    assert data['md_path'].endswith('.md') and data['html_path'].endswith('.html')

@@ -51,7 +51,7 @@ def dhf(tmp_path: Path) -> Path:
 
 
 def _generate(dhf: Path, code: str) -> str:
-    r = CliRunner().invoke(main, ["--dhf", str(dhf), "doc", "generate", code])
+    r = CliRunner().invoke(main, ["--dhf", str(dhf), "doc", code])
     assert r.exit_code == 0, r.output
     return r.output
 
@@ -127,12 +127,12 @@ class TestTitles:
 
 class TestHtmlExport:
     def test_export_defaults_to_html(self, dhf: Path) -> None:
-        r = CliRunner().invoke(main, ["--dhf", str(dhf), "doc", "export", "SRS"])
+        r = CliRunner().invoke(main, ["--dhf", str(dhf), "doc", "SRS", "--format", "html"])
         assert r.exit_code == 0, r.output
         assert "html_path" in r.output
 
     def test_html_is_self_contained(self, dhf: Path) -> None:
-        CliRunner().invoke(main, ["--dhf", str(dhf), "doc", "export", "SRS"])
+        CliRunner().invoke(main, ["--dhf", str(dhf), "doc", "SRS", "--format", "html"])
         html = next((dhf / "documents" / "exports").glob("*.html")).read_text()
         assert html.startswith("<!DOCTYPE html>")
         assert "<style>" in html          # CSS inlined, no external request
@@ -142,7 +142,7 @@ class TestHtmlExport:
     def test_export_honours_out_dir(self, dhf: Path, tmp_path: Path) -> None:
         target = tmp_path / "somewhere-else"
         r = CliRunner().invoke(
-            main, ["--dhf", str(dhf), "doc", "export", "SRS", "--out-dir", str(target)]
+            main, ["--dhf", str(dhf), "doc", "SRS", "--format", "html", "--out-dir", str(target)]
         )
         assert r.exit_code == 0, r.output
         assert list(target.glob("*.html"))
@@ -154,7 +154,7 @@ class TestHtmlExport:
         lives under /tmp on Linux. What matters is that the destination derives
         from the DHF, so two DHFs on one runner cannot collide.
         """
-        r = CliRunner().invoke(main, ["--dhf", str(dhf), "doc", "export", "SRS"])
+        r = CliRunner().invoke(main, ["--dhf", str(dhf), "doc", "SRS", "--format", "html"])
         assert r.exit_code == 0, r.output
         written = next((dhf / "documents" / "exports").glob("*.html"))
         assert written.is_relative_to(dhf)
@@ -174,7 +174,7 @@ class TestPdfFallback:
 
         monkeypatch.setattr(builtins, "__import__", _no_weasyprint)
         r = CliRunner().invoke(
-            main, ["--dhf", str(dhf), "doc", "export", "SRS", "--format", "pdf"]
+            main, ["--dhf", str(dhf), "doc", "SRS", "--format", "pdf"]
         )
         assert r.exit_code != 0
         assert "medharness[docs]" in r.output

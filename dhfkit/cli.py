@@ -115,10 +115,6 @@ def item_update(ctx: click.Context, item_id: str, data: str) -> None:
     click.echo(f"✓ Updated {item_id}.", err=True)
 
 
-
-
-
-
 @item.command("transition")
 @click.argument("item_id")
 @click.argument("to_state", required=False)
@@ -153,8 +149,6 @@ def item_transition(ctx: click.Context, item_id: str, to_state: str | None) -> N
 @main.group()
 def validate() -> None:
     """Commands for DHF data validation."""
-
-
 
 
 @validate.command("schema")
@@ -212,48 +206,14 @@ def _traceability_summary(result: dict, fail_on_uncovered: bool) -> str:
     return "All checks passed."
 
 
-
-
 # ---------------------------------------------------------------------------
 # config group
 # ---------------------------------------------------------------------------
 
 
-
-
-
 # ---------------------------------------------------------------------------
 # doc group
 # ---------------------------------------------------------------------------
-
-@main.group()
-def doc() -> None:
-    """Commands for document generation."""
-
-
-
-
-
-
-
-
-
-
-
-
-# ---------------------------------------------------------------------------
-# test group
-# ---------------------------------------------------------------------------
-
-
-
-
-
-
-
-
-
-
 
 @main.command("sbom")
 @click.option("--output", "output_path", type=click.Path(dir_okay=False, path_type=Path),
@@ -328,53 +288,35 @@ def sbom_cmd(ctx: click.Context, output_path: Path | None, to_stdout: bool) -> N
         )
 
 
-
-
-@doc.command("generate")
+@main.command("doc")
 @click.argument("doc_type")
-@click.pass_context
-def doc_generate(ctx: click.Context, doc_type: str) -> None:
-    """Generate specification document(s).
-
-    DOC_TYPE is a configured code (e.g. SYS, SYSARCH) or ALL.
-    """
-    adapter = _make_adapter(ctx.obj["dhf"])
-    codes = adapter.get_available_doc_types() if doc_type.upper() == "ALL" else [doc_type]
-    for code in codes:
-        try:
-            result = adapter.generate_doc(code)
-            click.echo(json.dumps(result))
-            click.echo(f"✓ {code} → {result['output_path']}", err=True)
-        except Exception as e:
-            click.echo(f"✗ {code}: {e}", err=True)
-            if len(codes) == 1:
-                raise SystemExit(1)
-
-
-@doc.command("export")
-@click.argument("doc_type")
-@click.option("--format", "fmt", type=click.Choice(["html", "pdf"]), default="html",
+@click.option("--format", "fmt", type=click.Choice(["md", "html", "pdf"]), default="md",
               show_default=True,
-              help="HTML needs no native libraries and works on a base install; "
-                   "PDF requires medharness[docs] plus cairo/pango.")
+              help="md renders the specification from the items. html and pdf render "
+                   "it and export it; pdf needs medharness[docs] plus cairo/pango.")
 @click.option("--out-dir", "out_dir", default=None,
               type=click.Path(file_okay=False, path_type=Path),
-              help="Destination directory (default: DHF/documents/exports).")
+              help="Where html and pdf go (default: DHF/documents/exports).")
 @click.pass_context
-def doc_export(ctx: click.Context, doc_type: str, fmt: str, out_dir: Path | None) -> None:
-    """Regenerate spec and export it.
+def doc_cmd(ctx: click.Context, doc_type: str, fmt: str, out_dir: Path | None) -> None:
+    """Render a specification from the items.
 
-    DOC_TYPE is a configured code (e.g. SYS) or ALL.
+    DOC_TYPE is a configured code (e.g. SRS) or ALL, one JSON object per type:
+    {doc_type, md_path, version}, plus html_path or pdf_path.
     """
     adapter = _make_adapter(ctx.obj["dhf"])
     codes = adapter.get_available_doc_types() if doc_type.upper() == "ALL" else [doc_type]
-    key = f"{fmt}_path"
     for code in codes:
         try:
-            result = (adapter.export_html(code, out_dir) if fmt == "html"
-                      else adapter.export_pdf(code, out_dir))
+            if fmt == "md":
+                generated = adapter.generate_doc(code)
+                result = {"doc_type": generated["doc_type"], "md_path": generated["output_path"],
+                          "version": generated["version"]}
+            else:
+                result = (adapter.export_html(code, out_dir) if fmt == "html"
+                          else adapter.export_pdf(code, out_dir))
             click.echo(json.dumps(result))
-            click.echo(f"✓ {code} → {result[key]}", err=True)
+            click.echo(f"✓ {code} → {result.get(f'{fmt}_path')}", err=True)
         except Exception as e:
             click.echo(f"✗ {code}: {e}", err=True)
             if len(codes) == 1:

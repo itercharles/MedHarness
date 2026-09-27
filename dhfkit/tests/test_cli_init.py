@@ -115,5 +115,5 @@ def test_init_doc_generate_succeeds(tmp_path: Path) -> None:
     """doc generate SYS works on a freshly initialised DHF."""
     dhf = tmp_path / "DHF"
     CliRunner().invoke(main, ["--dhf", str(dhf), "init"])
-    result = CliRunner().invoke(main, ["--dhf", str(dhf), "doc", "generate", "SYS"])
+    result = CliRunner().invoke(main, ["--dhf", str(dhf), "doc", "SYS"])
     assert result.exit_code == 0, result.output

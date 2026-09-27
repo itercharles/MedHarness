@@ -133,7 +133,7 @@ The repo has a `.venv` at the root. `pytest.ini` sets `pythonpath = .` so no
 `PYTHONPATH` prefix is needed.
 
 ```bash
-.venv/bin/pytest dhfkit/tests/ tests/ -q --ignore=dhfkit/tests/test_cli_doc_export.py
+.venv/bin/pytest dhfkit/tests/ tests/ -q
 ```
 
-`test_cli_doc_export.py` requires `libgobject` (WeasyPrint native lib) — skip it locally.
+PDF tests skip themselves when WeasyPrint's native libraries are missing.

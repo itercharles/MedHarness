@@ -82,17 +82,17 @@ class TestItemOperations:
 class TestDocGeneration:
     """Document generation against the scaffolded starter DHF."""
 
-    def test_doc_generate_all_types(self, dhf):
+    def test_doc_renders_every_type(self, dhf):
         dhf_root = str(dhf / "DHF")
         for dt in ("UC", "CRS", "SYS", "SRS", "SWDD", "SYSARCH", "RISK", "RCM", "CR"):
-            r = _dhf(dhf_root, "doc", "generate", dt)
+            r = _dhf(dhf_root, "doc", dt)
             if r.returncode != 0:
                 stderr = r.stderr
                 if "cannot load library" in stderr:
                     continue  # WeasyPrint/Pango missing
-                pytest.fail(f"doc generate {dt} failed:\n{stderr}")
+                pytest.fail(f"doc {dt} failed:\n{stderr}")
             result = json.loads(r.stdout)
-            assert Path(result["output_path"]).exists(), f"Output missing for {dt}: {result['output_path']}"
+            assert Path(result["md_path"]).exists(), f"Output missing for {dt}: {result['md_path']}"
 
 
 class TestCICoverageGate:
