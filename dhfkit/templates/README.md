@@ -27,7 +27,7 @@ replaces the default type of that code.
 |------|------|----------|
 | `UC` | Use case | — |
 | `CRS` | Customer requirement | `derives_from` → UC |
-| `SYS` | System requirement | `satisfies` → CRS, `implements` → RCM |
+| `SYS` | System requirement | `satisfies` → CRS |
 | `SYSARCH` | System architecture decision | `design` → SYS |
 | `SRS` | Software requirement | `derives_from` → SYS |
 | `MODULE` | Software module | — |

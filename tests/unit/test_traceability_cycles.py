@@ -86,7 +86,7 @@ class TestTheGateReportsIt:
         dhf = tmp_path / "DHF"
         sys_item = next((dhf / "items").rglob("SYS-001.yaml"))
         data = yaml.safe_load(sys_item.read_text(encoding="utf-8"))
-        data["derives_from"] = ["SRS-001"]      # SRS-001 already derives from SYS-001
+        data["satisfies"] = ["SRS-001"]         # SRS-001 already derives from SYS-001
         sys_item.write_text(yaml.safe_dump(data, sort_keys=False, allow_unicode=True),
                             encoding="utf-8")
         return dhf

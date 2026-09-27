@@ -42,16 +42,6 @@ properties:
   label: Satisfies (Customer Requirements)
   target_types:
   - CRS
-- name: implements
-  format: item_multiselect
-  label: Implements (Risk Control Measures)
-  target_types:
-  - RCM
-- name: derives_from
-  format: item_multiselect
-  label: Derives From
-  target_types:
-  - CRS
 - name: testing
   format: long_text
   label: Testing

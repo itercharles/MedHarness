@@ -24,6 +24,7 @@ from medharness.workflows.init import _replace_placeholders, _scaffold_dhf
 CLOSURE = {
     "implementation_notes": "Toolbar updated.",
     "affected_risk_items": ["RISK-001"],
+    "affected_items": ["SRS-001"],
     "triage_result": {"verdict": "approved"},
 }
 
@@ -56,6 +57,7 @@ class TestClosureIsRefusedUntilTheRecordExists:
         expected = {
             "implementation_notes": "implementation_recorded",
             "affected_risk_items": "risk_impact_assessed",
+            "affected_items": "affected_items_recorded",
             "triage_result": "triaged",
         }[omit]
         assert expected in str(exc.value)

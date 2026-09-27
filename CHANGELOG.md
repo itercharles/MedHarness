@@ -11,6 +11,30 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.41.0] — 2026-09-27
+
+One field per relationship. Contract version 14.0.
+
+### Breaking Changes
+
+- **SYS loses `derives_from` and `implements`.** SYS had two fields pointing
+  at CRS, `satisfies` and `derives_from`, and SYS and RCM each had an
+  `implements` pointing at the other, so one relationship could be recorded two
+  ways. What remains: `SYS.satisfies` → CRS, and `RCM.implements` → SYS, which
+  is the one `required_traceability` checks. A SYS item that still carries
+  either field fails `dhfkit validate`, naming it. To migrate: move the IDs in a
+  SYS's `derives_from` into its `satisfies`; for each ID in a SYS's
+  `implements`, add that SYS to the RCM's `implements`; then delete both lines.
+- **A CR moves to `completed` only with `affected_items` recorded** (`[]` if it
+  changed no item), which is what `verify completion` already required. The two
+  disagreed: a CR could be closed that the closure gate then failed.
+- **The example `soup-sources.yaml` is no longer in the package's defaults
+  directory.** Nothing read it; it only sat beside the files that are defaults.
+  The documented example in adopting.md is the reference, and it was broken the
+  same way the packaged one had been — a multi-line command in a quoted YAML
+  string, which YAML folds to one line. It is now a block scalar, and a test
+  parses it.
+
 ## [0.40.0] — 2026-09-27
 
 A smaller surface: 20 commands, from 22, and 38 options, from 55. Contract

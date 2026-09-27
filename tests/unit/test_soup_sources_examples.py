@@ -1,16 +1,14 @@
-"""The commented examples in soup-sources.yaml must actually work.
+"""The soup-sources.yaml example in adopting.md must actually work.
 
 The `command` source is the only escape hatch for a package manager with no
-parser. Its one shipped example embedded multi-line Python in a double-quoted
-YAML string — and YAML folds those newlines into spaces, so the example
-collapsed to one unparseable line. It could never have run.
-
-Uncommenting an example and running it is the only check that catches that.
+parser. Its example embedded multi-line Python in a double-quoted YAML string —
+and YAML folds those newlines into spaces, so it collapsed to one unparseable
+line. It could never have run, and was copied from the package into the docs
+with the bug intact.
 """
 
 from __future__ import annotations
 
-import importlib.resources as resources
 import json
 import re
 import subprocess
@@ -21,67 +19,51 @@ import pytest
 import yaml
 from dhfkit.tests.fixtures import bare_dhf
 
-TEMPLATE = resources.files("dhfkit").joinpath("templates/config/soup-sources.yaml")
+ADOPTING = Path(__file__).resolve().parents[2] / "docs" / "adopting.md"
 
 
-def _examples() -> list[str]:
-    """Every commented `- type: …` block, uncommented."""
-    text = TEMPLATE.read_text()
-    stripped = "\n".join(
-        re.sub(r"^  # ?", "", line) if line.startswith("  #") else ""
-        for line in text.splitlines()
-    )
-    blocks, current = [], []
-    for line in stripped.splitlines():
-        if line.startswith("- type:"):
-            if current:
-                blocks.append("\n".join(current))
-            current = [line]
-        elif current and (line.startswith(" ") or not line.strip()):
-            current.append(line)
-        elif current:
-            blocks.append("\n".join(current))
-            current = []
-    if current:
-        blocks.append("\n".join(current))
-    return [b.rstrip() for b in blocks if b.strip()]
+def _examples() -> list[dict]:
+    """Every entry of the documented soup-sources.yaml."""
+    text = ADOPTING.read_text(encoding="utf-8")
+    section = text[text.index("### Persistent source configuration"):]
+    block = re.search(r"```yaml\n(.*?)```", section, re.S).group(1)
+    return yaml.safe_load(block)["sources"]
 
 
 EXAMPLES = _examples()
-COMMANDS = [b for b in EXAMPLES if "type: command" in b]
+COMMANDS = [e for e in EXAMPLES if e.get("type") == "command"]
 
 
 def test_the_scan_found_examples() -> None:
     """A silent zero would make every check below vacuous."""
-    assert len(EXAMPLES) >= 4, [e[:40] for e in EXAMPLES]
+    assert len(EXAMPLES) >= 4, EXAMPLES
     assert COMMANDS, "no command examples found — the escape hatch is undocumented"
 
 
-@pytest.mark.parametrize("block", EXAMPLES, ids=range(len(EXAMPLES)))
-def test_an_example_is_valid_yaml(block: str) -> None:
-    parsed = yaml.safe_load(block)
-    assert isinstance(parsed, list) and parsed[0].get("type")
+@pytest.mark.parametrize("entry", EXAMPLES, ids=range(len(EXAMPLES)))
+def test_an_example_names_a_source_type(entry: dict) -> None:
+    assert entry.get("type") in {"manifest", "command", "manual"}
 
 
-@pytest.mark.parametrize("block", COMMANDS, ids=range(len(COMMANDS)))
-def test_a_command_example_survives_yaml_parsing(block: str) -> None:
+@pytest.mark.parametrize("entry", COMMANDS, ids=range(len(COMMANDS)))
+def test_a_command_example_survives_yaml_parsing(entry: dict) -> None:
     """The failure was here: newlines folded to spaces by a quoted scalar."""
-    run = yaml.safe_load(block)[0]["run"]
+    run = entry["run"]
     assert "\n" in run, (
         "this command is one line after YAML parsing. Embedded Python needs a "
         "block scalar (|); a quoted string folds its newlines into spaces."
     )
 
 
-@pytest.mark.parametrize("block", COMMANDS, ids=range(len(COMMANDS)))
-def test_the_embedded_script_compiles(block: str) -> None:
+@pytest.mark.parametrize("entry", COMMANDS, ids=range(len(COMMANDS)))
+def test_the_embedded_script_compiles(entry: dict) -> None:
     """Run the inner python -c against stub input and check it is parseable.
 
     The tool itself (syft, pnpm) is not installed here, so the pipeline cannot
     run end to end. What can be checked is that the Python the example embeds is
     syntactically valid — which is exactly what the folded version was not.
     """
-    run = yaml.safe_load(block)[0]["run"]
+    run = entry["run"]
     m = re.search(r'python3 -c "\n(.*?)\n\s*"\s*$', run, re.S)
     if not m:
         pytest.skip("no embedded python in this example")

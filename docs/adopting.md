@@ -365,11 +365,12 @@ sources:
 
   # External tool — stdout must be NDJSON: {"name":…,"version":…,"ecosystem":…}
   - type: command
-    run: "syft . -o syft-json=- | python3 -c \"
-      import sys,json
+    run: |
+      syft . -o syft-json=- | python3 -c "
+      import sys, json
       for a in json.load(sys.stdin)['artifacts']:
-          print(json.dumps({'name':a['name'],'version':a['version'],'ecosystem':a['type']}))
-      \""
+          print(json.dumps({'name': a['name'], 'version': a['version'], 'ecosystem': a['type']}))
+      "
 
   # Manual entries — hardware, OS, commercial tools (no ecosystem = no CVE scan)
   - type: manual
