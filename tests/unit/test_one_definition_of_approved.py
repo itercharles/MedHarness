@@ -64,14 +64,14 @@ class TestClosureDoesNotRuleOnApproval:
             "implementation_notes": "n",
             "affected_risk_items": [],
             "triage_result": {"verdict": "approved"},
-            "proposed_new_items": [{"type": "SRS", "title": "Never created"}],
+            "affected_items": ["SRS-404"],
         })
         cr.write_text(yaml.safe_dump(data), encoding="utf-8")
 
         result = cr_closure_gate("CR-001", dhf)
         assert result["passed"] is False
-        assert any("Never created" in e for e in result["errors"]), (
-            f"the CR proposed an item it never created; closure said: "
+        assert any("SRS-404" in e for e in result["errors"]), (
+            f"the CR names an item the DHF does not have; closure said: "
             f"{result['errors']}"
         )
 

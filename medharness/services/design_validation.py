@@ -233,9 +233,9 @@ def validate_dhf_structure(dhf_path: Path) -> list[dict]:
 
 
 def _check_cr_workflow_fields(_api, dhf_path: Path, cr_id: str) -> list[dict]:
-    """The two fields `build plan` is supposed to leave behind.
+    """The triage decision `build plan` is supposed to leave behind.
 
-    Nothing but the prompt writes them, so a run that skipped a step reported
+    Nothing but the prompt writes it, so a run that skipped a step reported
     success and the omission only surfaced at the closure gate, releases later.
     Reported here so the fix pass can correct it in the same run.
     """
@@ -255,7 +255,7 @@ def _check_cr_workflow_fields(_api, dhf_path: Path, cr_id: str) -> list[dict]:
             "fix": f"Create {cr_id} before running `build plan`.",
         }]
 
-    # A rejected CR stops at Step 1 and produces no cascade, so neither field applies.
+    # A rejected CR stops at Step 1 and produces no cascade, so the check does not apply.
     if str(cr_item.get("status") or "") == "rejected":
         return []
 
@@ -277,21 +277,6 @@ def _check_cr_workflow_fields(_api, dhf_path: Path, cr_id: str) -> list[dict]:
             ),
         })
 
-    if cr_item.get("proposed_new_items") is None:
-        errors.append({
-            "field": "proposed_new_items",
-            "issue": (
-                f"{cr_id} has no `proposed_new_items`; Step 4 records the items "
-                f"this session created and it was not written. The closure gate "
-                f"cannot reconcile the CR without it."
-            ),
-            "fix": (
-                f"dhfkit --dhf DHF item update {cr_id} --data "
-                f"'{{\"proposed_new_items\": [{{\"type\": \"SRS\", "
-                f"\"title\": \"<title exactly as created>\"}}]}}' "
-                f"— use [] if this CR created no new items."
-            ),
-        })
     return errors
 
 

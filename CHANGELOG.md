@@ -13,6 +13,16 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ### Breaking Changes
 
+- **`verify completion` reads `affected_items`; `proposed_new_items` is gone.**
+  The prompt told the model to list the items it had just created, and the
+  gate then checked that those items existed — the model's report on its own
+  work, matched by title. `build plan` already records, in code, every item
+  the run changed as `affected_items`. The gate now requires that field (`[]`
+  if none), checks every ID in it exists, and checks verification for those.
+  `details.missing_items` is a list of IDs. `proposed_new_items` is no longer a
+  CR field, so a CR that carries one fails `dhfkit validate` — delete the line.
+  A CR planned without `build plan` records its items with
+  `dhfkit item update CR-NNN --data '{"affected_items": [...]}'`.
 - **`build plan --pr` and `build code --pr` read review comments through `gh`.**
   They called the GitHub REST API directly and needed `GITHUB_REPOSITORY`.
   Now they go through the same `gh` helper as every other GitHub call, which

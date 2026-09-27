@@ -188,7 +188,7 @@ class TestOutputContract:
             "implementation_notes: 'plan'\n"
             "affected_risk_items: []\n"
             "triage_result:\n  verdict: approved\n"
-            "proposed_new_items: []\n"
+            "affected_items: []\n"
         )
         # Write an approved design review file (required by closure gate)
         review_dir = scaffolded_dhf / "docs" / "reviews"

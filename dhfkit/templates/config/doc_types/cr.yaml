@@ -51,9 +51,6 @@ properties:
 - name: implementation_notes
   format: long_text
   label: Implementation Notes
-- name: proposed_new_items
-  label: Proposed New Items
-  # list of {type, title} dicts written by `build plan`; no format validator applies
 - name: triage_result
   label: Triage Result
   # {verdict, complexity, affected_subsystems, related_crs, notes} written by `build plan`, step 1
