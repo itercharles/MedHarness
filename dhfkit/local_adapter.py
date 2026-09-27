@@ -262,6 +262,11 @@ class LocalDHFAdapter:
         # Remove keys explicitly set to None (signal to clear the field)
         updated_data = {k: v for k, v in updated_data.items() if v is not None}
         self._validate_item_links(updated_data)
+        # What the loader would refuse must not be written: one unreadable item
+        # makes the whole DHF unreadable, this command included.
+        self._loader._validate_against_schema(
+            {("id" if k == "uid" else k): v for k, v in updated_data.items()},
+            Path(existing.file_path))
         item = Item.model_validate(updated_data)
         self._saver.save(item, Path(existing.file_path))
         return self._enrich_item_dict(item)
