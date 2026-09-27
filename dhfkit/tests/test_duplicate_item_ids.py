@@ -5,7 +5,7 @@ approval's scope, a test's evidence. With two items answering to SRS-001,
 `get_item` returns whichever the loader saw first and the other exists,
 unreferenced and unreachable.
 
-Nothing reported it. Each file was individually schema-valid, `validate schema`
+Nothing reported it. Each file was individually schema-valid, `validate`
 counted them separately and passed, and `verify dhf` returned `passed: true`.
 The only visible symptom was one traceability warning printed twice — which
 reads as a rendering glitch, not as a second item.
@@ -43,7 +43,7 @@ def _duplicate(dhf: Path, item_id: str, new_name: str) -> Path:
 class TestDuplicatesAreReported:
     def test_validate_schema_names_both_files(self, dhf: Path) -> None:
         _duplicate(dhf, "SRS-001", "SRS-001-copy.yaml")
-        result = CliRunner().invoke(main, ["--dhf", str(dhf), "validate", "schema"])
+        result = CliRunner().invoke(main, ["--dhf", str(dhf), "validate"])
         assert result.exit_code == 1
         assert "Duplicate item ID 'SRS-001'" in result.stderr
         assert "SRS-001.yaml" in result.stderr
@@ -68,7 +68,7 @@ class TestDuplicatesAreReported:
             copy.read_text(encoding="utf-8").replace("title:", "title: Divergent —", 1),
             encoding="utf-8",
         )
-        result = CliRunner().invoke(main, ["--dhf", str(dhf), "validate", "schema"])
+        result = CliRunner().invoke(main, ["--dhf", str(dhf), "validate"])
         assert result.exit_code == 1
         assert "Duplicate item ID 'SRS-001'" in result.stderr
 
@@ -79,30 +79,30 @@ class TestDuplicatesAreReported:
         whose name matches nothing is fine as long as its id is unique.
         """
         _duplicate(dhf, "SRS-001", "notes-about-srs.yaml")
-        result = CliRunner().invoke(main, ["--dhf", str(dhf), "validate", "schema"])
+        result = CliRunner().invoke(main, ["--dhf", str(dhf), "validate"])
         assert result.exit_code == 1
         assert "notes-about-srs.yaml" in result.stderr
 
 
 class TestAHealthyDhfIsUnaffected:
     def test_the_scaffold_passes(self, dhf: Path) -> None:
-        result = CliRunner().invoke(main, ["--dhf", str(dhf), "validate", "schema"])
+        result = CliRunner().invoke(main, ["--dhf", str(dhf), "validate"])
         assert result.exit_code == 0, result.stderr
 
     def test_the_item_count_is_still_reported(self, dhf: Path) -> None:
-        result = CliRunner().invoke(main, ["--dhf", str(dhf), "validate", "schema"])
+        result = CliRunner().invoke(main, ["--dhf", str(dhf), "validate"])
         assert "items passed schema validation" in result.stderr
 
     def test_a_renamed_file_with_a_unique_id_is_fine(self, dhf: Path) -> None:
         source = next((dhf / "items").rglob("SRS-001.yaml"))
         renamed = source.parent / "some-other-name.yaml"
         source.rename(renamed)
-        result = CliRunner().invoke(main, ["--dhf", str(dhf), "validate", "schema"])
+        result = CliRunner().invoke(main, ["--dhf", str(dhf), "validate"])
         assert result.exit_code == 0, result.stderr
         assert api.get_item(dhf, "SRS-001") is not None
 
     def test_an_unparseable_file_is_left_to_the_loader(self, dhf: Path) -> None:
         """The duplicate scan must not become a second YAML error reporter."""
         (dhf / "items" / "03_srs" / "broken.yaml").write_text("{[not yaml", encoding="utf-8")
-        result = CliRunner().invoke(main, ["--dhf", str(dhf), "validate", "schema"])
+        result = CliRunner().invoke(main, ["--dhf", str(dhf), "validate"])
         assert "Duplicate" not in result.stderr

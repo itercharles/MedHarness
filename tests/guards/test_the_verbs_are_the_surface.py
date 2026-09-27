@@ -43,6 +43,8 @@ RENAMED = {
     "context for-stage": "context --cr",
     "doc generate": "doc",
     "doc export": "doc --format html",
+    # 0.38.0. A group with one command in it.
+    "validate schema": "validate",
 }
 
 #: Everything an adopter reads to learn the commands.

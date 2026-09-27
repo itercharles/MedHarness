@@ -145,15 +145,10 @@ def item_transition(ctx: click.Context, item_id: str, to_state: str | None) -> N
 # validate group
 # ---------------------------------------------------------------------------
 
-@main.group()
-def validate() -> None:
-    """Commands for DHF data validation."""
-
-
-@validate.command("schema")
+@main.command("validate")
 @click.pass_context
-def validate_schema(ctx: click.Context) -> None:
-    """Validate all DHF items against their doc-type schema.
+def validate(ctx: click.Context) -> None:
+    """Check every item against its doc type's schema, and that no two files claim one ID.
 
     Exits 1 if any YAML contains unknown or invalid fields.
     """
@@ -336,7 +331,7 @@ def init_cmd(ctx: click.Context, project_name: str) -> None:
     Example:
         dhfkit --dhf path/to/DHF init --project-name "My Device"
         dhfkit --dhf path/to/DHF item create --type SYS --data '{"title": "..."}'
-        dhfkit --dhf path/to/DHF validate schema
+        dhfkit --dhf path/to/DHF validate
     """
     dhf_path: Path = ctx.obj["dhf"]
     if dhf_path.exists() and any(dhf_path.iterdir()):

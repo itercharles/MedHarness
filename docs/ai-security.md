@@ -112,7 +112,7 @@ Nothing here is regulatory advice. How you classify and justify AI-assisted deve
 Never invoke `build plan` or `build code` — the shipped CI recipe runs neither. Everything else keeps working:
 
 ```bash
-dhfkit --dhf DHF validate schema
+dhfkit --dhf DHF validate
 medharness --dhf DHF verify dhf
 medharness --dhf DHF verify tests --junit-dir test-results
 medharness --dhf DHF verify soup

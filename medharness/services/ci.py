@@ -186,7 +186,7 @@ def ci_structural_gate(
                         "id": uid,
                         "type": type_code,
                         # Says the field is optional. Without that, a reader
-                        # sees `validate schema` pass and concludes the gate
+                        # sees `validate` pass and concludes the gate
                         # is warning about a field the schema never defined.
                         "issue": "verification_criteria is empty — an optional "
                                  "field, but §5.7 verification needs a stated "

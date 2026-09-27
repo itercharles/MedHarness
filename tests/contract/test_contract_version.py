@@ -9,4 +9,4 @@ def test_contract_version_is_defined():
 
 
 def test_contract_version_is_stable():
-    assert CONTRACT_VERSION == "10.0"
+    assert CONTRACT_VERSION == "11.0"

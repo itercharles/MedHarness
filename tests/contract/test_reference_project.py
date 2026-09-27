@@ -52,7 +52,7 @@ class TestSchemaValidation:
 
     def test_validate_schema_passes(self, dhf):
         dhf_root = str(dhf / "DHF")
-        r = _dhf(dhf_root, "validate", "schema")
+        r = _dhf(dhf_root, "validate")
         assert r.returncode == 0, f"Schema validation failed:\n{r.stderr}"
 
 

@@ -100,5 +100,5 @@ IDs are assigned automatically on creation.
 2. **Check for conflicts and duplicates** — read existing items before writing anything
 3. **List gaps** — identify missing items at each tier
 4. **Apply change preference top-down** — tier 0 first, then tier 1, tier 2, tier 3; for each: no change > update > create; apply quality rules
-5. **Validate schema** — run `python -m dhfkit --dhf DHF validate schema`
+5. **Validate schema** — run `python -m dhfkit --dhf DHF validate`
 6. **Validate traceability** — run `python -m dhfkit --dhf DHF validate traceability`; fix orphans or uncovered pairs, repeat until clean

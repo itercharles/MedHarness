@@ -11,6 +11,15 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.38.0] — 2026-09-27
+
+### Breaking Changes
+
+- **`dhfkit validate schema` is now `dhfkit validate`.** The group held one
+  command. It checks every item against its doc type's schema and that no two
+  files claim one ID, and answers `{valid, errors, item_count}` as before.
+  Contract version 11.0.
+
 ## [0.37.0] — 2026-09-27
 
 Configure less, learn fewer commands, integrate through a file format.

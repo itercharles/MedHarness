@@ -35,7 +35,7 @@ COMMANDS = [
     ("medharness", ["doctor"]),
     ("dhfkit", ["item", "list"]),
     ("dhfkit", ["item", "get", "SRS-001"]),
-    ("dhfkit", ["validate", "schema"]),
+    ("dhfkit", ["validate"]),
     ("dhfkit", ["doc", "SRS"]),
     ("dhfkit", ["sbom", "--stdout"]),
 ]

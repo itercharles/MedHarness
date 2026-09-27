@@ -74,7 +74,7 @@ class TestScaffoldBaseline:
     """Verify the scaffolded DHF is healthy before lifecycle tests run."""
 
     def test_schema_valid(self, dhf):
-        r = _dhf(str(dhf / "DHF"), "validate", "schema")
+        r = _dhf(str(dhf / "DHF"), "validate")
         assert r.returncode == 0, f"Schema invalid:\n{r.stderr}"
 
     def test_starter_cr_exists(self, dhf):
