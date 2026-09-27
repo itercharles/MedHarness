@@ -158,6 +158,36 @@ for gate in GATES:
 
 ---
 
+## The item format — integrating another system
+
+The gates read one thing: YAML files under `DHF/items/`. That format is the
+integration surface. A team whose requirements live in another tool exports them
+into it and runs the same commands; there is no plugin to write.
+
+```yaml
+# DHF/items/03_srs/SRS-012.yaml
+id: SRS-012                       # required; the prefix decides the type
+title: Password must be at least 12 characters
+derives_from: [SYS-004]           # a link: a list of IDs, written on the child
+verification_method: [Test]
+```
+
+| Rule | |
+|---|---|
+| One file per item | Named anything ending `.yaml`; the directory under `items/` does not matter, so an export can use its own |
+| `id` | Required. Its prefix (`SRS-`) picks the doc type |
+| Fields | Only those the doc type declares. An undeclared field fails `dhfkit validate schema`, naming it — declare it in the doc type first |
+| Links | Fields of format `relationship` or `item_multiselect`: a list of IDs pointing up the V-model. Which are required is `required_traceability` in `global.yaml` |
+| Types | The doc types in `DHF/config/doc_types/` — the defaults, or your own |
+
+Check an export in two steps: `dhfkit validate schema` for the files, then
+`medharness verify dhf` for the design they describe.
+
+The format is covered by `CONTRACT_VERSION`: renaming or removing a field the
+defaults declare is a breaking change.
+
+---
+
 ## Event context for a workflow
 
 `medharness workflow github-event --github-output "$GITHUB_OUTPUT"` writes the

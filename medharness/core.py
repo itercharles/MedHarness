@@ -1,7 +1,7 @@
 """MedHarness product facade.
 
 Single entry point for all business logic. Tests and CLI interact only
-through this class. Accepts any DHFAdapter implementation.
+through this class, over the item store.
 """
 
 import xml.etree.ElementTree as ET
@@ -17,14 +17,14 @@ class MedHarnessCore:
     Core MedHarness library — read-only analysis facade.
 
     Provides traceability analysis, compliance checking, and graph
-    queries over a DHF. All data mutations go through the DHFAdapter
+    queries over a DHF. All data mutations go through the store
     (and the utils CLI) directly.
     """
 
     def __init__(self, adapter):
         """
         Args:
-            adapter: A DHFAdapter instance (e.g. LocalDHFAdapter from
+            adapter: The item store (LocalDHFAdapter from
                      dhfkit.local_adapter, or any custom implementation).
         """
         self._adapter = adapter

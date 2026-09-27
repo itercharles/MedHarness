@@ -1,4 +1,4 @@
-"""LocalDHFAdapter — wraps the dhf package to implement DHFAdapter for a local DHF directory."""
+"""LocalDHFAdapter — the item store: a DHF directory of YAML files."""
 
 from __future__ import annotations
 
@@ -30,7 +30,7 @@ _UID_PATTERN = re.compile(r"^[A-Z][A-Z0-9]*(-[A-Z0-9]+)*-\d+$")
 
 
 class LocalDHFAdapter:
-    """Implements DHFAdapter for a local filesystem DHF directory."""
+    """The item store for a DHF directory on disk."""
 
     def __init__(self, dhf_root: Path):
         self._dhf_root = Path(dhf_root)
@@ -357,7 +357,6 @@ class LocalDHFAdapter:
 
         return config_file(self._dhf_root, name)
 
-
     # ------------------------------------------------------------------
     # Document generation
     # ------------------------------------------------------------------
@@ -411,13 +410,6 @@ class LocalDHFAdapter:
     # ------------------------------------------------------------------
     # Test results
     # ------------------------------------------------------------------
-
-
-
-
-
-
-
 
     # ------------------------------------------------------------------
     # Document access
@@ -482,24 +474,8 @@ class LocalDHFAdapter:
     # CR context
     # ------------------------------------------------------------------
 
-
     # ------------------------------------------------------------------
     # Compliance run history (extension point — not persisted by default)
     # ------------------------------------------------------------------
 
-    def record_compliance_run(
-        self,
-        group_id: str,
-        report_dict: dict,
-        commit_sha: str = "",
-        trigger: str = "manual",
-    ) -> None:
-        """Record a compliance run. Override in subclasses to persist."""
 
-    def get_compliance_runs(
-        self,
-        group_id: str,
-        since_date: Optional[str] = None,
-    ) -> List[Dict]:
-        """Return compliance runs for a group. Override in subclasses to persist."""
-        return []
