@@ -90,11 +90,8 @@ def test_format_matrix_markdown_renders_summary_and_matrix():
         "coverage": {
             "SYS": [
                 {"id": "SYS-001", "title": "Boot", "status": "verified",
-                 "tests": ["TC-001"]},
+                 "tests": [{"name": "TC-001", "status": "PASS"}]},
             ],
-        },
-        "test_results": {
-            "TC-001": {"id": "TC-001", "testing_status": "PASS"},
         },
     }
     md = release_artifacts.format_traceability_matrix_markdown(matrix)
@@ -109,12 +106,7 @@ def test_format_matrix_markdown_renders_summary_and_matrix():
 
 
 def test_format_matrix_markdown_handles_dict_tests():
-    """Coverage `tests` may be dicts (from verification_evidence), not strings.
-
-    Regression: 0.3.3 raised TypeError: sequence item 0: expected str instance,
-    dict found when joining the test list, because each test is stored
-    as {"name", "status"}.
-    """
+    """Each test is a {"name", "status"} dict, as verification_evidence stores it."""
     matrix = {
         "columns": ["SRS"],
         "rows": [{"SRS": "SRS-010", "verification_status": "verified"}],
@@ -131,7 +123,6 @@ def test_format_matrix_markdown_handles_dict_tests():
                 },
             ],
         },
-        "test_results": {},
     }
     md = release_artifacts.format_traceability_matrix_markdown(matrix)
     assert "Boot › cold start [PASS]" in md

@@ -11,6 +11,13 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+### Changed
+
+- Removed three compatibility leftovers nothing produced: the `allowed_parents`
+  doc-type field (replaced by `required_traceability`; a config that still has
+  it loads and ignores it), a plain-string branch in the traceability report's
+  test list, and a duplicate `reviewer` entry in the loader's allowed fields.
+
 ## [0.39.0] — 2026-09-27
 
 ### Breaking Changes
