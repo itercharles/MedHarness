@@ -1,10 +1,8 @@
 # Contributing to MedHarness
 
-MedHarness uses MedHarness itself to manage its own development — a
-Change Request (CR) workflow that mirrors the design-controlled process the
-tool enables for medical device teams. The table below describes how project
-maintainers use the CR lifecycle; external contributors can open a standard
-GitHub issue or PR directly.
+MedHarness keeps its own DHF in `DHF/` and maintainers work through change
+requests, the process the tool supports for medical device teams. External
+contributors can open a standard GitHub issue or PR directly.
 
 ## Development Setup
 
@@ -13,7 +11,7 @@ git clone https://github.com/itercharles/MedHarness
 cd MedHarness
 python3 -m venv .venv
 .venv/bin/pip install -e ".[dev]"
-.venv/bin/pytest tests/ dhfkit/tests/ -q --ignore=dhfkit/tests/test_cli_doc_export.py
+.venv/bin/pytest tests/ dhfkit/tests/ -q
 ```
 
 `pip install -e ".[dev]"` installs `medharness` from this repo with test dependencies.
@@ -41,7 +39,7 @@ Maintainers apply one of these labels before merging:
 
 ## When to Write a Design Doc
 
-An ADR (using [docs/adr/ADR_TEMPLATE.md](docs/adr/ADR_TEMPLATE.md)) is required when:
+An ADR (using [docs/adr/ADR-TEMPLATE.md](docs/adr/ADR-TEMPLATE.md)) is required when:
 
 - Adding or removing a CLI subcommand
 - Modifying the scaffold output structure

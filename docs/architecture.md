@@ -114,8 +114,8 @@ CR (new) ─► build plan ─► design reviewed on the PR ─► build code �
 4. Code review; up to three fix-and-review cycles.
 
 Neither command moves the CR through its lifecycle. The project does, with
-`dhfkit item transition`: `new → design → develop → completed`, or `rejected`
-from `new` or `design`. `completed` is refused until `implementation_notes`,
+`dhfkit item transition`: `new → design → develop → completed`, `rejected`
+from `new` or `design`, or `cancelled` from any of the three. `completed` is refused until `implementation_notes`,
 `affected_risk_items` and `triage_result` are recorded. `build plan` and
 `build code` refuse a CR that is `completed`, `rejected` or `cancelled`.
 

@@ -27,7 +27,7 @@ replaces the default type of that code.
 |------|------|----------|
 | `UC` | Use case | — |
 | `CRS` | Customer requirement | `derives_from` → UC |
-| `SYS` | System requirement | `satisfies` → CRS |
+| `SYS` | System requirement | `satisfies` → CRS, `implements` → RCM |
 | `SYSARCH` | System architecture decision | `design` → SYS |
 | `SRS` | Software requirement | `derives_from` → SYS |
 | `MODULE` | Software module | — |
@@ -35,9 +35,9 @@ replaces the default type of that code.
 | `RISK` | Risk | — |
 | `RCM` | Risk control measure | `mitigates` → RISK, `implements` → SYS |
 | `SOUP` | Third-party component | — |
-| `CR` | Change request | `affected_items`, `affected_risk_items` |
+| `CR` | Change request | `affected_items`, `affected_risk_items` → RISK/RCM, `target_release` → REL |
 | `DEF` | Defect | `affected_items`, `found_in_release` → REL |
-| `REL` | Release record | — |
+| `REL` | Release record | `included_items` → CR |
 
 A link is written on the child and points up to its parent. Which links are
 required is `required_traceability` — a default you can override in `global.yaml`.
