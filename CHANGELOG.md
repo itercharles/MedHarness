@@ -68,9 +68,23 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
   upstream and downstream traversal, cycle checks) had no production caller
   and is gone, together with its tests. `verify dhf` still checks orphans and
   cycles through `services/traceability.py`.
+- **`medharness/_helpers.py` is gone.** Its release-bundle rendering is now
+  `services/release_artifacts.py`, and the JUnit option handling is now
+  `cli/options.py`. `_make_adapter` wrapped `LocalDHFAdapter` and nothing else.
+  The dead-code guard now covers every service module instead of that one
+  file.
+- **`dhfkit.traceability.LINK_FIELDS` is public.** `medharness` imported it
+  as `_LINK_FIELDS`, which crossed the package boundary. The boundary guard
+  only caught `obj._private` and missed `from dhfkit... import _private`. It
+  now catches both.
 
 ### Fixed
 
+- **`build release --traceability-type` no longer drops specifications.** The
+  option was passed as the list of specifications to render, so
+  `--traceability-type SYS` bundled the SYS specification alone. It now
+  chooses only the traceability matrix's columns. Every specification is
+  always bundled.
 - **Every `gh` call picks its token the same way.** The session store read
   `$GITHUB_TOKEN` before `$GH_TOKEN`, while comment posting and the approval
   gate read them the other way round. So one run could act as two identities.

@@ -12,10 +12,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
-from medharness._helpers import (
-    DEFAULT_TRACEABILITY_DOC_TYPES,
-    _run_artifact_generation,
-)
+from medharness.services.release_artifacts import generate_release_artifacts
 from dhfkit.junit_parser import (
     JUNIT_LINKS,
     JUNIT_TESTING,
@@ -489,10 +486,9 @@ def build_evidence_bundle(
     adapter = LocalDHFAdapter(dhf_path)
 
     out_dir.mkdir(parents=True, exist_ok=True)
-    trace_types = traceability_types or DEFAULT_TRACEABILITY_DOC_TYPES
-    artifacts = _run_artifact_generation(
-        adapter, dhf_path, out_dir, traceability_types, trace_types,
-        list(junit_paths), skip_plans=False, doc_format=doc_format,
+    artifacts = generate_release_artifacts(
+        adapter, dhf_path, out_dir, traceability_types, list(junit_paths),
+        doc_format=doc_format,
     )
 
     provenance = {

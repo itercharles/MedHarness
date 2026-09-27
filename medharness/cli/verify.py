@@ -7,7 +7,7 @@ from pathlib import Path
 
 import click
 
-import medharness._helpers as _h
+from medharness.cli.options import collect_junit_paths
 from medharness.cli.output import details, emit, render_envelope
 from medharness.services.ci import ci_structural_gate, ci_test_coverage_gate
 
@@ -125,7 +125,7 @@ def register(main):
         declared test points each need a covering case.
         """
         effective_dhf = ctx.obj["dhf"]
-        junit_paths = _h._collect_junit_paths(junit_files, junit_dirs)
+        junit_paths = collect_junit_paths(junit_files, junit_dirs)
         result = ci_test_coverage_gate(dhf_path=effective_dhf, junit_paths=junit_paths,
                                        require_method=require_method)
         emit(result)
@@ -201,7 +201,7 @@ def register(main):
         from medharness.services.ci import cr_closure_gate
 
         effective_dhf = ctx.obj["dhf"]
-        junit_paths = _h._collect_junit_paths(junit_files, junit_dirs)
+        junit_paths = collect_junit_paths(junit_files, junit_dirs)
         result = cr_closure_gate(cr_id=cr_id, dhf_path=effective_dhf,
                                  junit_paths=junit_paths)
         emit(result)

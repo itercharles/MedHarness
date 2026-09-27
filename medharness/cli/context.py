@@ -7,7 +7,8 @@ from pathlib import Path
 
 import click
 
-import medharness._helpers as _h
+from dhfkit.local_adapter import LocalDHFAdapter
+from medharness.cli.options import collect_junit_paths
 
 
 def register(main):
@@ -40,10 +41,10 @@ def register(main):
         """
         from medharness.services.context import cr_context
 
-        adapter = _h._make_adapter(ctx.obj["dhf"])
+        adapter = LocalDHFAdapter(ctx.obj["dhf"])
         result = cr_context(adapter, cr_id)
 
-        junit_paths = _h._collect_junit_paths(junit_files, junit_dirs)
+        junit_paths = collect_junit_paths(junit_files, junit_dirs)
         if junit_paths:
             from medharness.services.ci import compute_item_coverage
             result["test_coverage"] = compute_item_coverage(junit_paths, adapter)

@@ -8,7 +8,8 @@ from pathlib import Path
 
 import click
 
-import medharness._helpers as _h
+from dhfkit.local_adapter import LocalDHFAdapter
+from medharness.cli.options import collect_junit_paths
 from medharness.cli.output import emit
 
 
@@ -77,7 +78,7 @@ def register(main):
         from medharness.workflows.cr_state import assert_cr_active  # noqa: PLC0415
         dhf: Path = ctx.obj["dhf"]
         try:
-            assert_cr_active(_h._make_adapter(ctx.obj["dhf"]), cr_id)
+            assert_cr_active(LocalDHFAdapter(ctx.obj["dhf"]), cr_id)
         except ValueError as exc:
             raise click.ClickException(str(exc)) from exc
         except (FileNotFoundError, OSError):
@@ -119,7 +120,7 @@ def register(main):
         from medharness.workflows.cr_state import assert_cr_active  # noqa: PLC0415
         dhf: Path = ctx.obj["dhf"]
         try:
-            assert_cr_active(_h._make_adapter(ctx.obj["dhf"]), cr_id)
+            assert_cr_active(LocalDHFAdapter(ctx.obj["dhf"]), cr_id)
         except ValueError as exc:
             raise click.ClickException(str(exc)) from exc
         except (FileNotFoundError, OSError):
@@ -183,13 +184,12 @@ def register(main):
 
         With --write, and only if all of that passed, records the REL item.
         """
-        import medharness._helpers as _h
         from medharness.services.release_baseline import build_release
 
         result = build_release(
             ctx.obj["dhf"], version, out_dir,
             manifest_paths=list(manifest_paths), cr_ids=list(cr_ids),
-            junit_paths=_h._collect_junit_paths(junit_files, junit_dirs),
+            junit_paths=collect_junit_paths(junit_files, junit_dirs),
             traceability_types=traceability_types,
             run_id=run_id, run_url=run_url, commit_sha=commit_sha,
             doc_format=doc_format, write=write,

@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from medharness import _helpers
+from medharness.services import release_artifacts
 
 
 def _weasyprint_runtime_ok() -> bool:
@@ -26,7 +26,7 @@ def test_write_report_with_pdf_path_writes_both(stub_adapter, tmp_path):
 
     output = tmp_path / "traceability" / "Requirements_Traceability_Report.pdf"
 
-    result = _helpers._write_traceability_report(
+    result = release_artifacts.write_traceability_report(
         stub_adapter, ("UC", "CRS", "SYS", "SRS"), output
     )
 
@@ -48,7 +48,7 @@ def test_write_report_with_json_path_only_writes_json(stub_adapter, tmp_path):
     """A non-PDF output path keeps the legacy JSON-only behavior."""
     output = tmp_path / "trace" / "report.json"
 
-    result = _helpers._write_traceability_report(
+    result = release_artifacts.write_traceability_report(
         stub_adapter, ("UC", "CRS", "SYS", "SRS"), output
     )
 
@@ -66,7 +66,7 @@ def test_write_report_skips_pdf_when_weasyprint_missing(
 
     monkeypatch.setitem(sys.modules, "weasyprint", None)
 
-    result = _helpers._write_traceability_report(
+    result = release_artifacts.write_traceability_report(
         stub_adapter, ("UC", "CRS", "SYS", "SRS"), output
     )
 
@@ -97,7 +97,7 @@ def test_format_matrix_markdown_renders_summary_and_matrix():
             "TC-001": {"id": "TC-001", "testing_status": "PASS"},
         },
     }
-    md = _helpers._format_traceability_matrix_markdown(matrix)
+    md = release_artifacts.format_traceability_matrix_markdown(matrix)
 
     assert "# Requirements Traceability Matrix" in md
     assert "UC → CRS → SYS" in md
@@ -133,6 +133,6 @@ def test_format_matrix_markdown_handles_dict_tests():
         },
         "test_results": {},
     }
-    md = _helpers._format_traceability_matrix_markdown(matrix)
+    md = release_artifacts.format_traceability_matrix_markdown(matrix)
     assert "Boot › cold start [PASS]" in md
     assert "Boot › warm start [FAIL]" in md
