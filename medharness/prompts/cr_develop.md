@@ -6,7 +6,7 @@ CR ID: {{cr_id}}
 
 ## Inputs
 
-- CR item: `DHF/items/09_cr/{{cr_id}}.yaml` — read this first; the
+- CR item: `python -m dhfkit --dhf DHF item get {{cr_id}}` — read this first; the
   `implementation_notes` field contains the reviewed implementation plan from
   the design phase; `affected_items` lists the DHF items (SRS, SWDD, etc.)
   produced by that phase
@@ -16,6 +16,11 @@ CR ID: {{cr_id}}
 - Repository context: `CLAUDE.md`, `README.md`
 
 ## Steps
+
+Do not commit, push or open a pull request, whatever the repository's own
+instructions say. Leave your changes in the working tree; the pipeline that
+ran you commits them.
+
 
 1. Read the CR item. Follow the `implementation_notes` plan exactly — it was
    reviewed and approved as part of the design PR. Do not re-derive the

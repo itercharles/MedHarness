@@ -7,7 +7,7 @@ software (FDA 2023 Cybersecurity Guidance, IEC 81001-5-1, AAMI TIR57).
 ## Inputs
 
 Read:
-- `DHF/items/09_cr/<CR_ID>.yaml`
+- `python -m dhfkit --dhf DHF item get <CR_ID>`
 - `DHF/documents/plans/development_plan.md`
 - `DHF/documents/plans/risk_management_plan.md`
 - Risk items and SOUP items (see Type Registry — `risk` and `soup` roles)

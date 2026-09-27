@@ -638,6 +638,17 @@ def _auto_post_pr_feedback(pr_number: int, cr_id: str, result: dict, *, token: s
     return comments
 
 
+def _leave_uncommitted(repo_root: Path, start_head: str | None, warnings: list[dict]) -> None:
+    """The caller commits a stage's work. Commits the agent made are undone, staged."""
+    undone = git.uncommit_since(repo_root, start_head)
+    if undone:
+        warnings.append(_warning(
+            "agent_commits_undone",
+            f"The agent committed {len(undone)} time(s); the commits were undone and "
+            f"their changes left staged for the caller to commit: {', '.join(c[:7] for c in undone)}.",
+        ))
+
+
 def _items_changed(repo_root: Path, unreadable: list[str]) -> dict[str, list[str]]:
     """The DHF items this branch changed, noting in ``unreadable`` when git could not say."""
     try:
@@ -662,6 +673,7 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> di
     started_perf = time.perf_counter()
 
     repo_root = dhf_path.resolve().parent
+    start_head = git.head(repo_root)
     steps: list[dict] = []
     warnings: list[dict] = []
     unreadable: list[str] = []
@@ -875,6 +887,7 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> di
 
     diagnostics["design_review_verdict"] = design_review_verdict
     diagnostics["design_review_cycles"] = review_cycle
+    _leave_uncommitted(repo_root, start_head, warnings)
 
     items_changed = _items_changed(repo_root, unreadable)
     if unreadable:
@@ -949,6 +962,7 @@ def generate_code(
     started_perf = time.perf_counter()
 
     repo_root = dhf_path.resolve().parent
+    start_head = git.head(repo_root)
     steps: list[dict] = []
     warnings: list[dict] = []
     critical_step_failed = False
@@ -1117,6 +1131,7 @@ def generate_code(
     if session_id and pr_number:
         put_session(pr_number, session_id)
 
+    _leave_uncommitted(repo_root, start_head, warnings)
     artifact_step, artifact_perf = _begin_step("collect_artifacts", {"kind": "files_changed"})
     try:
         files_changed = git.collect_path_changes(repo_root, "origin/main", *_DEFAULT_CODE_PATHS)

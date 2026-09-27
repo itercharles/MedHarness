@@ -314,6 +314,17 @@ jobs:
       # then commit and push to the same branch
 ```
 
+**The job commits, not the agent.** `build plan` and `build code` leave their
+work uncommitted: if the agent commits anyway — a repository's `CLAUDE.md` may
+tell it to — the commits are undone, their changes left staged, and the answer
+carries an `agent_commits_undone` warning. So `git add -A && git commit` after
+the step always picks up the whole run.
+
+`artifacts.items_changed` and `artifacts.files_changed` are the branch against
+`origin/main`, committed or not — the CR's whole change set across every run,
+not what this run added. `build plan` records `items_changed` as the CR's
+`affected_items`.
+
 `build plan` and `build code` need the model's credentials in the job's
 environment — see [ai-security.md](ai-security.md) before giving them to a
 runner.

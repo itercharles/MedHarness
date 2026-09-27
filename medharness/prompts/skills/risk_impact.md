@@ -7,7 +7,7 @@ changes.
 ## Inputs
 
 Read:
-- `DHF/items/09_cr/<CR_ID>.yaml`
+- `python -m dhfkit --dhf DHF item get <CR_ID>`
 - `DHF/documents/plans/risk_management_plan.md`
 - Risk items (see Type Registry — `risk` role)
 - Risk control items (see Type Registry — `risk_control` role)

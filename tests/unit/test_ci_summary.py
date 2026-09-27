@@ -45,7 +45,7 @@ class TestFormatSummary:
             "deleted": [],
         }})
         out = _format_summary("Design", "generated", "CR-001", result)
-        assert "DHF: +1 ~2 -0" in out
+        assert "DHF on the branch: +1 ~2 -0" in out
 
     def test_files_changed_counts_surface(self):
         result = _result(stage="develop", artifacts={"files_changed": {
@@ -54,7 +54,7 @@ class TestFormatSummary:
             "deleted": ["b.ts"],
         }})
         out = _format_summary("Implementation", "generated", "CR-001", result)
-        assert "files: +1 ~0 -1" in out
+        assert "files on the branch: +1 ~0 -1" in out
 
     def test_empty_change_buckets_omitted(self):
         result = _result(artifacts={"items_changed": {"created": [], "updated": [], "deleted": []}})

@@ -9,7 +9,7 @@ CR ID: {{cr_id}}
 
 ## Inputs
 
-- CR item: `DHF/items/09_cr/{{cr_id}}.yaml`
+- CR item: `python -m dhfkit --dhf DHF item get {{cr_id}}`
 - Repository context: `CLAUDE.md`, `README.md`
 - Source code: relevant modules under `apps/`, `packages/`, or equivalent
   source roots described in `CLAUDE.md` — identify and read these based on
@@ -226,6 +226,9 @@ relevant to this CR — even if they required no structural changes.
 - Only create or update items **directly required** by this CR.
 - Do not create items for hypothetical future changes.
 - Do not modify files outside `DHF/`.
+- Do not commit, push or open a pull request, whatever the repository's own
+  instructions say. Leave your changes in the working tree; the pipeline that
+  ran you commits them.
 - Do not edit the CR item except to set `status: rejected` and `impact_assessment`
   when rejecting (Step 1), write `triage_result` when approving (Step 1),
   write `affected_risk_items` (Step 2.5), or `implementation_notes` (Step 3).

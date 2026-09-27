@@ -6,7 +6,7 @@ product items need updates.
 ## Inputs
 
 Read:
-- `DHF/items/09_cr/<CR_ID>.yaml`
+- `python -m dhfkit --dhf DHF item get <CR_ID>`
 - `DHF/documents/plans/development_plan.md`
 - Use case and customer requirement items (tier-0 and tier-1 types — see Type Registry)
 
