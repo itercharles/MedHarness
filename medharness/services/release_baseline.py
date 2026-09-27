@@ -360,7 +360,6 @@ def build_release(
     manifest_paths: list[Path] = (),
     cr_ids: list[str] = (),
     junit_paths: list[Path] = (),
-    coverage_pairs: tuple[str, ...] = (),
     traceability_types: tuple[str, ...] = (),
     run_id: str = "",
     run_url: str = "",
@@ -376,7 +375,7 @@ def build_release(
     """
     from medharness.services.ci import build_evidence_bundle, ci_structural_gate
 
-    gate = ci_structural_gate(dhf, coverage_pairs=coverage_pairs, fail_on_uncovered=True)
+    gate = ci_structural_gate(dhf, fail_on_uncovered=True)
     baseline = build_release_baseline(dhf, version, list(manifest_paths), list(cr_ids), out_dir)
     # Last, so its manifest hashes the baseline's files as well as its own.
     manifest = build_evidence_bundle(

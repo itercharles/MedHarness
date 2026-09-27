@@ -104,6 +104,13 @@ def test_the_command_names_the_file_and_stops(command: str, broken) -> None:
     assert proc.returncode == 1, (
         f"`{command}` exited {proc.returncode} on a DHF it could not read"
     )
+    if command == "verify dhf" and target.parent.parent.name == "items":
+        # A malformed item is exactly what `verify dhf` exists to report, so it
+        # answers — a failing envelope naming the file — rather than stopping.
+        result = json.loads(proc.stdout.splitlines()[0])
+        assert result["passed"] is False
+        assert any(target.name in e for e in result["errors"]), result["errors"]
+        return
     # interface.md: exit 1 with nothing on stdout means the gate never ran. A
     # stray line there breaks every caller that parses the first line as JSON.
     assert proc.stdout == "", (

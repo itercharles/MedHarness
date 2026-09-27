@@ -12,8 +12,15 @@ from medharness.services.design_validation import check_verification_quality, va
 
 @pytest.fixture
 def dhf(tmp_path: Path) -> Path:
+    """The default config, so the verifiable types come from where they live;
+    the items themselves are patched per test."""
+    import shutil
+
+    from medharness.workflows.upgrade import _TEMPLATES_DIR
+
     d = tmp_path / "DHF"
-    d.mkdir()
+    shutil.copytree(_TEMPLATES_DIR / "config", d / "config")
+    (d / "items").mkdir()
     return d
 
 

@@ -86,23 +86,6 @@ class TestVerificationRequiresEvidence:
         assert core.get_item("SRS-001")["verification_status"] == "not_verified"
 
 
-class TestCoverageTypeValidation:
-    def test_unknown_type_code_fails_instead_of_passing_vacuously(self, dhf: Path) -> None:
-        result = _core(dhf).check_coverage([("NOPE", "CRS")])
-        assert result["passed"] is False
-        assert "unknown document type" in result["results"][0]["error"]
-
-    def test_error_names_the_configured_codes(self, dhf: Path) -> None:
-        result = _core(dhf).check_coverage([("SYS", "TYPO")])
-        assert "TYPO" in result["results"][0]["error"]
-        assert "SRS" in result["results"][0]["error"]
-
-    def test_known_codes_still_evaluate(self, dhf: Path) -> None:
-        result = _core(dhf).check_coverage([("SYS", "SRS")])
-        assert result["results"][0]["total"] > 0
-        assert "error" not in result["results"][0]
-
-
 class TestPrefixResolution:
     def test_prefix_comes_from_config_not_from_the_code(self, dhf: Path) -> None:
         """get_item_type matches on prefix, so passing a code never resolved."""

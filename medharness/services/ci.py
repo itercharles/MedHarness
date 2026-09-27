@@ -14,7 +14,6 @@ from typing import Any, Iterable
 
 from medharness._helpers import (
     DEFAULT_TRACEABILITY_DOC_TYPES,
-    _parse_coverage_pairs,
     _run_artifact_generation,
 )
 from dhfkit.junit_parser import (
@@ -97,7 +96,6 @@ def envelope_from(gate: str, raw: dict) -> dict:
 
 def ci_structural_gate(
     dhf_path: Path,
-    coverage_pairs: tuple[str, ...] = (),
     fail_on_uncovered: bool = False,
 ) -> dict[str, Any]:
     """Run the DHF structural validation gate.
@@ -107,10 +105,8 @@ def ci_structural_gate(
     is a dict with its own ``passed`` and details.
     """
     from dhfkit.local_adapter import LocalDHFAdapter
-    from medharness.core import MedHarnessCore
 
     adapter = LocalDHFAdapter(dhf_path)
-    core = MedHarnessCore(adapter)
 
     passed = True
     results: dict[str, Any] = {
@@ -177,13 +173,13 @@ def ci_structural_gate(
     ]
 
     # verification_criteria gaps: verifiable items missing the field
-    _VERIFIABLE = frozenset({"CRS", "SYS", "SRS"})
+    _REQUIREMENTS = frozenset(adapter.config.requirement_types())
     verification_gaps = []
     try:
         for item in adapter.list_items():
             uid = item.get("id", "")
             type_code = uid.split("-")[0] if "-" in uid else ""
-            if type_code in _VERIFIABLE:
+            if type_code in _REQUIREMENTS:
                 vc = str(item.get("verification_criteria") or "").strip()
                 if not vc:
                     verification_gaps.append({
@@ -204,17 +200,6 @@ def ci_structural_gate(
             f"verification_criteria could not be checked: {exc}"
         )
     results["verification_gaps"] = verification_gaps
-
-    if coverage_pairs:
-        pairs = _parse_coverage_pairs(coverage_pairs)
-        cov = core.check_coverage(pairs)
-        cov_passed = cov.get("passed", True)
-        if not cov_passed:
-            passed = False
-        results["coverage"] = {
-            "passed": cov_passed,
-            "pairs": cov.get("results", []),
-        }
 
     errors, warnings = _structural_messages(results, fail_on_uncovered)
     schema_n = results.get("schema", {}).get("item_count", 0)
@@ -267,16 +252,6 @@ def _structural_messages(results: dict, fail_on_uncovered: bool) -> tuple[list[s
     if results.get("traceability_error"):
         errors.append(results["traceability_error"])
 
-    # --coverage-pair results live under their own key; a caller who asked for a
-    # pair explicitly gets an error, not a warning.
-    for row in (results.get("coverage") or {}).get("pairs", []):
-        if row.get("error"):
-            errors.append(f"{row['parent_type']}->{row['child_type']}: {row['error']}")
-        elif not row.get("passed", True):
-            errors.append(
-                f"{row['parent_type']}->{row['child_type']}: "
-                f"{row['covered']}/{row['total']} covered"
-            )
     return errors, warnings
 
 
@@ -288,10 +263,12 @@ def _structural_messages(results: dict, fail_on_uncovered: bool) -> tuple[list[s
 def ci_test_coverage_gate(
     dhf_path: Path,
     junit_paths: list[Path],
-    req_types: tuple[str, ...] = (),
     require_method: bool = False,
 ) -> dict[str, Any]:
     """Check requirement coverage from JUnit evidence.
+
+    Checks every requirement type in the config — a role ending in
+    ``_requirement``.
 
     Returns a dict with ``passed`` (bool) and a ``results`` list of
     per-type coverage dicts.
@@ -306,7 +283,7 @@ def ci_test_coverage_gate(
         # Declaring a verification method needs no test run, so returning here
         # skipped a check that had nothing to do with the missing evidence.
         methods = validate_verification_completeness(
-            dhf_path, [], req_types, enforce_test_evidence=False,
+            dhf_path, [], enforce_test_evidence=False,
         )
         md = methods.get("details", methods)
         missing = md.get("missing_method", [])
@@ -372,22 +349,9 @@ def ci_test_coverage_gate(
     passed = True
     results: list[dict] = []
     testing_points: list[dict] = []
-    default_types = req_types if req_types else ("SRS", "SYS", "CRS")
 
-    for rt in default_types:
-        config = adapter.config
-        dt = config.get_doc_type(rt)
-        if not dt:
-            results.append({
-                "type": rt,
-                "passed": True,
-                "covered": 0,
-                "total": 0,
-                "uncovered": [],
-                "warning": f"Unknown requirement type",
-            })
-            continue
-        prefix = dt.prefix
+    for rt in adapter.config.requirement_types():
+        prefix = adapter.config.get_doc_type(rt).prefix
         req_items = [it for it in all_items if it["id"].startswith(prefix)]
         if not req_items:
             continue
@@ -435,12 +399,12 @@ def ci_test_coverage_gate(
 
     errors = [
         f"{row['type']}: {row['covered']}/{row['total']} requirements covered"
-        for row in results if not row.get("passed") and "warning" not in row
+        for row in results if not row.get("passed")
     ] + [
         f"{tp['req_id']}: test points {', '.join(tp['uncovered'])} uncovered"
         for tp in testing_points if not tp["passed"]
     ]
-    warnings = [row["warning"] for row in results if row.get("warning")]
+    warnings: list[str] = []
     covered = sum(r.get("covered", 0) for r in results)
     total = sum(r.get("total", 0) for r in results)
 
@@ -450,7 +414,7 @@ def ci_test_coverage_gate(
     # uncovered while `verify verification` called it manual sign-off. Neither
     # was wrong about its half.
     methods = validate_verification_completeness(
-        dhf_path, list(junit_paths), req_types,
+        dhf_path, list(junit_paths),
         enforce_test_evidence=bool(junit_paths),
     )
     md = methods.get("details", methods)
@@ -634,8 +598,7 @@ def compute_item_coverage(
             # to a caller. They are not the same answer.
             manual_candidates_error = f"manual-review candidates unavailable: {exc}"
 
-    default_types = ("SRS", "SYS", "CRS")
-    for rt in default_types:
+    for rt in (adapter.config.requirement_types() if adapter else ("SRS", "SYS", "CRS")):
         prefix = f"{rt}-"
         uncovered[rt] = []
         for item_id in item_type_map:
@@ -694,7 +657,8 @@ def validate_verification_completeness(
     Args:
         dhf_path: Path to the DHF directory.
         junit_paths: JUnit XML files providing test evidence (optional).
-        req_types: Requirement type codes to check (default: SRS, SYS, CRS).
+        req_types: Requirement type codes to check (default: every
+            requirement type in the config).
         item_ids: Restrict the scan to these items. A CR-scoped caller must pass
             them; scanning the whole DHF charges one CR with every pre-existing
             requirement that never declared a method.
@@ -720,7 +684,7 @@ def validate_verification_completeness(
     config = adapter.config
 
     # Resolve configured prefixes so custom prefixes (e.g. SYSREQ-) are handled correctly.
-    default_types = req_types if req_types else ("SRS", "SYS", "CRS")
+    default_types = req_types or tuple(config.requirement_types())
     prefix_to_code: dict[str, str] = {}
     for rt in default_types:
         dt = config.get_doc_type(rt)

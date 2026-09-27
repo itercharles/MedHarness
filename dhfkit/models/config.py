@@ -143,6 +143,26 @@ class ProjectConfig(BaseModel):
         except SchemaError as exc:
             raise DHFDataError(f"{config_dir} does not match the config schema: {exc}") from exc
 
+    def requirement_types(self) -> list[str]:
+        """Codes of the doc types that are requirements — each must be verified.
+
+        A type is a requirement when its role ends in ``_requirement``: the
+        config's ``role``, or the built-in role of a known V-model type. This is
+        what `verify tests` checks, instead of a list kept in each gate. Design
+        items (SWDD) track a verification status too, but are not requirements.
+        """
+        from dhfkit.item_type import ItemType
+
+        codes = []
+        for dt in self.doc_types:
+            role = dt.role
+            if not role:
+                known = ItemType.from_code(dt.code)
+                role = known.value.role if known else ""
+            if role.endswith("_requirement"):
+                codes.append(dt.code)
+        return codes
+
     def relationship_fields(self) -> set[str]:
         """Every field any doc type declares as a link, from the schema itself.
 

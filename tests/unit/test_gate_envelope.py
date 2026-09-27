@@ -316,14 +316,6 @@ class TestFailurePathsHonourTheContract:
                 f"{result['errors'][:2]}"
             )
 
-    def test_explicit_coverage_pair_failure_is_reported(self, failing_dhf: Path) -> None:
-        """--coverage-pair results live under their own key and were skipped."""
-        from medharness.services.ci import ci_structural_gate
-
-        r = ci_structural_gate(failing_dhf, coverage_pairs=("NOPE:CRS",))
-        assert r["passed"] is False
-        assert r["errors"], "an explicit coverage pair failed with nothing in errors"
-
     def test_soup_reports_real_vulnerabilities(self, dhf: Path) -> None:
         """The scaffold has nothing checkable, so the finding path needs a stub."""
         from unittest.mock import MagicMock, patch

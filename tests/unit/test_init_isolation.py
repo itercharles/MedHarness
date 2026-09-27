@@ -102,31 +102,7 @@ class TestGitignoreScope:
         assert "/test-results/" in _write_gitignore(tmp_path).read_text()
 
 
-class TestCoveragePairStrictness:
-    """User-supplied pairs are strict; the implicit V-model defaults are not."""
-
-    @pytest.fixture
-    def core(self, tmp_path: Path) -> MedHarnessCore:
-        _scaffold_dhf(tmp_path)
-        _replace_placeholders(tmp_path, "Trial")
-        return MedHarnessCore(LocalDHFAdapter(tmp_path / "DHF"))
-
-    def test_strict_reports_an_unknown_type_as_an_error(self, core: MedHarnessCore) -> None:
-        result = core.check_coverage([("NOPE", "CRS")], strict=True)
-        assert result["passed"] is False
-        assert "unknown document type" in result["results"][0]["error"]
-
-    def test_lenient_skips_a_layer_the_project_omits(self, core: MedHarnessCore) -> None:
-        """A DHF entitled to omit a V-model layer must not fail the gate for it."""
-        result = core.check_coverage([("NOPE", "CRS")], strict=False)
-        assert result["passed"] is True
-        assert "not configured" in result["results"][0]["skipped"]
-
-    def test_configured_pairs_evaluate_the_same_either_way(self, core: MedHarnessCore) -> None:
-        strict = core.check_coverage([("SYS", "SRS")], strict=True)
-        lenient = core.check_coverage([("SYS", "SRS")], strict=False)
-        assert strict["results"][0]["total"] == lenient["results"][0]["total"] > 0
-
+class TestTheReleaseGate:
     def test_the_release_gate_skips_a_layer_the_project_omits(self, tmp_path: Path) -> None:
         """`build release` checks the DHF with coverage gaps failing. A project
         entitled to omit the use-case layer must still be releasable."""

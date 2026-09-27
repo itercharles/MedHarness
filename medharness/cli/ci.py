@@ -126,14 +126,11 @@ def register(main):
     workflow = main.commands["workflow"]
 
     @verify.command("dhf")
-    @click.option("--coverage-pair", "coverage_pairs", multiple=True, metavar="PARENT:CHILD",
-                  help="Also require every PARENT item to have a CHILD, e.g. SYS:SRS (repeatable). The configured traceability always applies.")
     @click.option("--fail-on-uncovered", is_flag=True, default=False,
                   help="Exit non-zero when items lack downstream coverage. "
                        "Without it, coverage gaps are reported as WARN only.")
     @click.pass_context
-    def verify_dhf(ctx: click.Context, coverage_pairs: tuple[str, ...],
-                   fail_on_uncovered: bool) -> None:
+    def verify_dhf(ctx: click.Context, fail_on_uncovered: bool) -> None:
         """Check the DHF holds together: schema, links, cycles, coverage.
 
         Always blocking: schema errors, required-traceability failures, and
@@ -143,7 +140,6 @@ def register(main):
         """
         effective_dhf = ctx.obj["dhf"]
         result = ci_structural_gate(dhf_path=effective_dhf,
-                                     coverage_pairs=coverage_pairs,
                                      fail_on_uncovered=fail_on_uncovered)
         _emit(result)
         r = _d(result)["results"]
@@ -224,15 +220,12 @@ def register(main):
                   help="Directory of JUnit XML results (repeatable).")
     @click.option("--junit", "junit_files", multiple=True, type=click.Path(exists=True, dir_okay=False, path_type=Path),
                   help="A JUnit XML results file (repeatable).")
-    @click.option("--requirement-type", "req_types", multiple=True, metavar="CODE",
-                  help="Requirement type to check (repeatable). Default: SRS, SYS, CRS.")
     @click.option("--require-method", is_flag=True, default=False,
                   help="Make a requirement with no declared verification_method fail. "
                        "Warns by default, so a project adding the field is not blocked.")
     @click.pass_context
     def verify_tests(ctx: click.Context,
                          junit_dirs: tuple[Path, ...], junit_files: tuple[Path, ...],
-                         req_types: tuple[str, ...],
                          require_method: bool = False) -> None:
         """Check each requirement is verified by the method it declares.
 
@@ -242,15 +235,13 @@ def register(main):
         effective_dhf = ctx.obj["dhf"]
         junit_paths = _h._collect_junit_paths(junit_files, junit_dirs)
         result = ci_test_coverage_gate(dhf_path=effective_dhf, junit_paths=junit_paths,
-                                       require_method=require_method, req_types=req_types)
+                                       require_method=require_method)
         _emit(result)
         dhf_arg = f"--dhf {effective_dhf}"
-        # Envelope warnings the row loops below cannot produce — they iterate
-        # `results`, so anything about the gate as a whole was printed only when
-        # there were no rows at all.
+        # The rows below print per-type coverage; the envelope's warnings are
+        # about the gate as a whole and have no row to be printed beside.
         for message in result.get("warnings") or []:
-            if not any(message == row.get("warning") for row in _d(result)["results"]):
-                click.echo(f"WARN [test-coverage] {message}", err=True)
+            click.echo(f"WARN [test-coverage] {message}", err=True)
         rows = _d(result)["results"]
         if not rows:
             # Every detail loop below iterates `results`; with none, the envelope
@@ -259,9 +250,7 @@ def register(main):
             # coverage when nothing had been read.
             _render_envelope(result, "test-coverage")
         for row in rows:
-            if "warning" in row:
-                click.echo(f"WARN: {row['warning']} '{row['type']}' — skipped.", err=True)
-            elif row["passed"]:
+            if row["passed"]:
                 click.echo(f"PASS [test-coverage] {row['type']}: "
                            f"{row['covered']}/{row['total']} requirements covered", err=True)
             else:

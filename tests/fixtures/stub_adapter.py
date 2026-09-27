@@ -45,6 +45,11 @@ class StubDHFAdapter:
         self._compliance_runs: Dict[str, List[dict]] = {}
         self._item_types: list[dict] = _default_item_types()
         self._lifecycle_states: list[dict] = _default_lifecycle_states()
+        # The shipped defaults, as the real store would load them.
+        from dhfkit.models.config import ProjectConfig
+        from medharness.workflows.upgrade import _TEMPLATES_DIR
+
+        self.config = ProjectConfig.load(_TEMPLATES_DIR / "config")
 
     # ------------------------------------------------------------------
     # Item CRUD

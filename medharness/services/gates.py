@@ -28,7 +28,7 @@ GATES: tuple[dict[str, Any], ...] = (
                   "coverage between V-model layers.",
         "options": {
             "required": [],
-            "optional": ["--fail-on-uncovered", "--coverage-pair"],
+            "optional": ["--fail-on-uncovered"],
         },
         "blocking": "conditional",
         "blocking_note": "Schema errors, required-link failures, and dangling "
@@ -42,7 +42,7 @@ GATES: tuple[dict[str, Any], ...] = (
                   "declared test points.",
         "options": {
             "required": ["--junit-dir or --junit"],
-            "optional": ["--requirement-type", "--require-method"],
+            "optional": ["--require-method"],
         },
         "blocking": "conditional",
         "blocking_note": "Uncovered requirements and unverified tests always fail. "

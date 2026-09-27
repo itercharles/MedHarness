@@ -38,9 +38,6 @@ def register(main):
     @click.option("--junit", "junit_files", multiple=True,
                   type=click.Path(exists=True, dir_okay=False, path_type=Path),
                   help="A JUnit XML file to include as test evidence (repeatable).")
-    @click.option("--coverage-pair", "coverage_pairs", multiple=True, metavar="PARENT:CHILD",
-                  help="An extra coverage requirement for the DHF check, e.g. UC:CRS "
-                       "(repeatable). The configured traceability always applies.")
     @click.option("--traceability-type", "traceability_types", multiple=True, metavar="CODE",
                   help="Doc type to render a traceability matrix for (repeatable). "
                        "Default: UC, CRS, SYS, SRS, SWDD.")
@@ -54,7 +51,7 @@ def register(main):
                   help="Commit SHA, recorded in the evidence manifest.")
     @click.pass_context
     def build_release_cmd(ctx, version, out_dir, write, cr_ids, manifest_paths, junit_dirs,
-                          junit_files, coverage_pairs, traceability_types, doc_format,
+                          junit_files, traceability_types, doc_format,
                           run_id, run_url, commit_sha) -> None:
         """Build everything one release needs (IEC 62304 §9).
 
@@ -72,7 +69,7 @@ def register(main):
             ctx.obj["dhf"], version, out_dir,
             manifest_paths=list(manifest_paths), cr_ids=list(cr_ids),
             junit_paths=_h._collect_junit_paths(junit_files, junit_dirs),
-            coverage_pairs=coverage_pairs, traceability_types=traceability_types,
+            traceability_types=traceability_types,
             run_id=run_id, run_url=run_url, commit_sha=commit_sha,
             doc_format=doc_format, write=write,
         )

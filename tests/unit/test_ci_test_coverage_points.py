@@ -141,16 +141,6 @@ def test_js_style_tags_count_for_requirement_and_point_coverage(tmp_path: Path) 
     assert result["details"]["testing_points"][0]["uncovered"] == []
 
 
-def test_unknown_req_type_produces_warning_entry(tmp_path: Path) -> None:
-    dhf = _make_dhf(tmp_path, [])
-    junit = _make_junit(tmp_path, [])
-    result = ci_test_coverage_gate(dhf_path=dhf, junit_paths=[junit], req_types=("TYPO",))
-    warning_rows = [r for r in result["details"]["results"] if r.get("warning")]
-    assert len(warning_rows) == 1
-    assert warning_rows[0]["type"] == "TYPO"
-    assert warning_rows[0]["passed"] is True
-
-
 def test_cli_test_coverage_reports_point_gaps_in_json(tmp_path: Path) -> None:
     dhf = _make_dhf(tmp_path, [
         {"id": "SRS-001", "testing": "T1: One.\nT2: Two."},

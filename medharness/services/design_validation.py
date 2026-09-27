@@ -18,7 +18,12 @@ import yaml
 from dhfkit.exceptions import ValidationError
 from medharness.services.traceability import analyse
 
-_VERIFIABLE_TYPES = frozenset({"CRS", "SYS", "SRS"})
+
+
+def _verifiable_types(dhf_path: Path) -> frozenset[str]:
+    import dhfkit.api as api
+
+    return frozenset(api.get_config(dhf_path).requirement_types())
 
 _VAGUE_VC_PHRASES: frozenset[str] = frozenset({
     "works correctly",
@@ -323,6 +328,7 @@ def validate_generate_dhf(
             seen.add(uid)
             ordered_changed_ids.append(uid)
 
+    verifiable = _verifiable_types(dhf_path)
     for idx, uid in enumerate(ordered_changed_ids):
         item = by_id.get(uid)
         if item is None:
@@ -339,7 +345,7 @@ def validate_generate_dhf(
             })
             continue
 
-        if _item_type_from_id(uid) in _VERIFIABLE_TYPES and not _item_has_verification_criteria(item):
+        if _item_type_from_id(uid) in verifiable and not _item_has_verification_criteria(item):
             errors.append({
                 "field": f"changed_items[{idx}].verification_criteria",
                 "issue": (
@@ -378,12 +384,13 @@ def check_verification_quality(
     seen: set[str] = set()
     warnings: list[dict] = []
 
+    verifiable = _verifiable_types(dhf_path)
     for uid in (*changed_items.get("created", []), *changed_items.get("updated", [])):
         if uid in seen:
             continue
         seen.add(uid)
 
-        if _item_type_from_id(uid) not in _VERIFIABLE_TYPES:
+        if _item_type_from_id(uid) not in verifiable:
             continue
 
         item = by_id.get(uid)
