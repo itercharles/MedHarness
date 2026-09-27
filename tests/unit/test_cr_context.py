@@ -16,11 +16,12 @@ from click.testing import CliRunner
 from dhfkit.cli import main as dhfkit_main
 from dhfkit.local_adapter import LocalDHFAdapter
 from medharness.services.context import cr_context
+from dhfkit.tests.fixtures import bare_dhf
 
 
 def _make_dhf(tmp_path: Path) -> Path:
     dhf = tmp_path / "DHF"
-    CliRunner().invoke(dhfkit_main, ["--dhf", str(dhf), "init"])
+    bare_dhf(dhf)
     return dhf
 
 

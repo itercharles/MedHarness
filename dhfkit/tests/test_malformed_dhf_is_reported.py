@@ -24,7 +24,7 @@ from medharness.workflows.init import _replace_placeholders, _scaffold_dhf
 #: Every command that reads DHF items, with the arguments it needs to get there.
 COMMANDS = [
     ("medharness", ["verify", "dhf"]),
-    ("medharness", ["verify", "tests", "--junit-dir", "{dhf}/test-results"]),
+    ("medharness", ["verify", "tests", "--junit", "{dhf}"]),
     ("medharness", ["verify", "classification"]),
         ("medharness", ["verify", "completion", "--cr", "CR-001"]),
     ("medharness", ["verify", "soup", "--offline-mode", "warn"]),

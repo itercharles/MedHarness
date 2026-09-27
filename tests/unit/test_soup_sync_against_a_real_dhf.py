@@ -1,7 +1,7 @@
-"""build dhf, run against a real DHF with nothing mocked.
+"""build soup, run against a real DHF with nothing mocked.
 
 Every existing test mocked `api.list_items` with dicts keyed "uid". Items carry
-"id" and always have. So `build dhf` — nine parsers, multi-ecosystem, the
+"id" and always have. So `build soup` — nine parsers, multi-ecosystem, the
 headline of v0.11.0 — raised `KeyError: 'uid'` on every real project, in seven
 places, while its suite passed.
 
@@ -19,19 +19,20 @@ from click.testing import CliRunner
 
 from dhfkit.cli import main as dhfkit_main
 from medharness.cli import main as mh_main
+from dhfkit.tests.fixtures import bare_dhf
 
 
 @pytest.fixture
 def project(tmp_path: Path) -> Path:
     dhf = tmp_path / "DHF"
-    CliRunner().invoke(dhfkit_main, ["--dhf", str(dhf), "init"])
+    bare_dhf(dhf)
     (tmp_path / "requirements.txt").write_text("flask==3.0.0\nnumpy==1.26.0\n")
     return tmp_path
 
 
 def _sync(project: Path, *extra: str) -> dict:
     r = CliRunner().invoke(mh_main, [
-        "--dhf", str(project / "DHF"), "build", "dhf",
+        "--dhf", str(project / "DHF"), "build", "soup",
         "--manifest", str(project / "requirements.txt"), *extra,
     ])
     assert "Traceback" not in (r.stderr or ""), r.stderr[-500:]

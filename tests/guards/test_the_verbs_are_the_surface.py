@@ -33,7 +33,7 @@ RENAMED = {
     "change verify-approval": "workflow check-approval",
     "change plan": "build plan",
     "change implement": "build code",
-    "automation github-event": "workflow github-event",
+    "automation github-event": "the workflow's own `if:`",
     # 0.33.0. Both named the object; the commands ask a question about it.
     "workflow approval": "workflow check-approval",
     "workflow branch": "workflow check-changes",
@@ -47,6 +47,10 @@ RENAMED = {
     "doc export": "doc --format html",
     # 0.38.0. A group with one command in it.
     "validate schema": "validate",
+    # 0.40.0. The name said the whole DHF; it syncs SOUP. Event routing is the
+    # CI workflow's own job.
+    "build dhf": "build soup",
+    "workflow github-event": "the workflow's own `if:`",
 }
 
 #: Stage names from before the verbs, which messages kept after the commands went.
@@ -121,7 +125,7 @@ def test_no_document_teaches_a_retired_name(path: Path) -> None:
         if re.search(rf"\b{re.escape(old)}\b", text)
     }
     if re.search(r"\bsoup-sync\b", text):
-        offenders["soup-sync"] = "build dhf"
+        offenders["soup-sync"] = "build soup"
     assert not offenders, (
         f"{path.relative_to(ROOT)} still teaches: "
         + ", ".join(f"{old} (now {new})" for old, new in sorted(offenders.items()))

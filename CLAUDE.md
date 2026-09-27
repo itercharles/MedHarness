@@ -17,7 +17,7 @@ Before proposing or implementing any significant change, read:
 
 | CLI | Owns | Commands |
 |-----|------|----------|
-| `dhfkit` | DHF **data**: items, schemas, documents, the SBOM. Storage and retrieval only — no analysis. | `doc` · `init` · `item` · `sbom` · `validate` |
+| `dhfkit` | DHF **data**: items, schemas, documents, the SBOM. Storage and retrieval only — no analysis. | `doc` · `item` · `sbom` · `validate` |
 | `medharness` | The **process** around it: AI CR workflow, CI gates, scaffolding, approval, releases, and all traceability analysis over the item set | `build` · `doctor` · `init` · `verify` · `workflow` |
 
 `tests/guards/test_cli_boundary_is_documented.py` checks this table against the
@@ -33,8 +33,8 @@ reason no reader could recover.
 | Verb | Reads | Examples |
 |------|-------|----------|
 | `verify` | the DHF, and nothing else — never Git or GitHub | `dhf`, `tests`, `soup`, `completion` |
-| `build` | whatever it needs; **writes** items, code, or artifacts | `plan`, `code`, `dhf`, `release` |
-| `workflow` | the repository; cannot answer without Git or GitHub | `check-changes`, `check-approval`, `github-event` |
+| `build` | whatever it needs; **writes** items, code, or artifacts | `plan`, `code`, `soup`, `release` |
+| `workflow` | the repository; cannot answer without Git or GitHub | `check-changes`, `check-approval` |
 
 `workflow *` are CI helper scripts, not the tool's value. A developer working
 locally runs `verify *` and `build *` and never needs them. `workflow check-changes`

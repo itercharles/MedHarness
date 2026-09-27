@@ -4,7 +4,8 @@
 caught once, in 0.26.0, and the fix was to record it in the output rather than to
 ask why it was required — then 0.27.0 removed the part of the output it had been
 recorded in, and it was inert again, with a README sentence still explaining a
-mechanism that no longer existed.
+mechanism that no longer existed. `--cr` was required until 0.40.0 only to be
+echoed back.
 
 `test_no_parameter_is_decorative` reads function bodies, and `stage` was read:
 it reached a dict literal. That is why it survived. This pins the gate's
@@ -40,13 +41,13 @@ def test_the_approval_gate_requires_only_what_it_reads() -> None:
     A stage cannot: the commit is what separates design from develop, because a
     design approval stops matching the head the moment code lands.
     """
-    assert _required("workflow", "check-approval") == {"--cr", "--pr"}, (
+    assert _required("workflow", "check-approval") == {"--pr"}, (
         f"required options are {sorted(_required('workflow', 'check-approval'))}; "
         f"each one must narrow or identify what the gate reads"
     )
 
 
-def test_both_required_options_reach_the_answer() -> None:
+def test_the_required_option_reaches_the_answer() -> None:
     seen: list = []
 
     def fake(pr_number, *, token=""):
@@ -56,11 +57,11 @@ def test_both_required_options_reach_the_answer() -> None:
 
     runner = CliRunner()
     with patch("medharness.services.pr_approval.approval_evidence", side_effect=fake):
-        a = runner.invoke(main, ["workflow", "check-approval", "--cr", "CR-1", "--pr", "7"])
-        b = runner.invoke(main, ["workflow", "check-approval", "--cr", "CR-2", "--pr", "9"])
+        a = runner.invoke(main, ["workflow", "check-approval", "--pr", "7"])
+        b = runner.invoke(main, ["workflow", "check-approval", "--pr", "9"])
 
     assert seen == [7, 9], "--pr does not reach the evidence lookup"
-    assert "CR-1" in a.output and "CR-2" in b.output, "--cr does not reach the answer"
+    assert "#7" in a.output and "#9" in b.output, "--pr does not reach the answer"
 
 
 def test_the_evidence_lookup_takes_no_stage() -> None:

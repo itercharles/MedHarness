@@ -11,12 +11,37 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.40.0] — 2026-09-27
+
+A smaller surface: 20 commands, from 22, and 38 options, from 55. Contract
+version 13.0.
+
+### Breaking Changes
+
+| Was | Now |
+|---|---|
+| `medharness workflow github-event` | Removed. Route events in the workflow's own `if:` — [adopting.md](docs/adopting.md#wiring-it-into-github-actions) has a sketch |
+| `dhfkit init` | Removed. `medharness init` scaffolds a DHF; delete the sample items if you want it bare |
+| `medharness build dhf` | `medharness build soup` — it syncs SOUP, and the name said the whole DHF |
+| `--junit FILE` and `--junit-dir DIR` | One `--junit PATH`, a file or a directory, on `verify tests`, `verify completion` and `build release`. A path that does not exist is now a usage error (exit 2) rather than silently read as "no tests" |
+| `verify tests --require-method` | `--fail-on-missing-method`, like `--fail-on-uncovered` and `--fail-on-drift` |
+| `dhfkit sbom --stdout` | `dhfkit sbom --output -` |
+| `workflow check-approval --cr CR --pr N` | `--pr N`. `--cr` was only echoed back; `cr_id` is gone from the answer |
+| `build code --ci-failures FILE` | Removed; nothing used it |
+
 ### Changed
 
 - Removed three compatibility leftovers nothing produced: the `allowed_parents`
   doc-type field (replaced by `required_traceability`; a config that still has
   it loads and ignores it), a plain-string branch in the traceability report's
   test list, and a duplicate `reviewer` entry in the loader's allowed fields.
+
+### Fixed
+
+- The SBOM's tool version, from `dhfkit sbom` and `build release`, was always
+  `unknown`: it asked for a `dhfkit` distribution, and the package is
+  `medharness`.
+
 
 ## [0.39.0] — 2026-09-27
 

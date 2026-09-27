@@ -34,12 +34,12 @@ SIMPLE_GATES = (
 
 #: Arguments each CLI gate needs to reach its reporting path.
 GATE_ARGS = {
-    "verify tests": ["--junit-dir", "{dhf}/test-results"],
+    "verify tests": ["--junit", "{dhf}"],
     "verify completion": ["--cr", "CR-001"],
     "workflow check-changes": ["--cr", "CR-001"],
     # No network in the test environment, so the reviews come back unreadable —
     # which is a reporting path like any other, and the one that must not pass.
-    "workflow check-approval": ["--cr", "CR-001", "--pr", "1"],
+    "workflow check-approval": ["--pr", "1"],
 }
 
 
@@ -157,10 +157,10 @@ class TestNoGateEscapesTheEnvelope:
 
         # Arguments each gate needs to reach its reporting path.
         extra = {
-            "verify tests": ["--junit-dir", str(dhf / "test-results")],
+            "verify tests": ["--junit", str(dhf)],
             "verify completion": ["--cr", "CR-001"],
             "workflow check-changes": ["--cr", "CR-001"],
-            "workflow check-approval": ["--cr", "CR-001", "--pr", "1"],
+            "workflow check-approval": ["--pr", "1"],
         }
         offenders = []
         for gate in GATES:
@@ -368,7 +368,7 @@ class TestStderrCarriesTheEnvelope:
 
     A finding the gate computed, put in the envelope, and never printed is
     invisible to everyone not parsing JSON. `verify tests` failed on a missing
-    --junit-dir with "Test coverage gaps found." — naming the wrong cause — and
+    --junit with "Test coverage gaps found." — naming the wrong cause — and
     `verify dhf` never showed its verification_criteria warnings at all.
     """
 

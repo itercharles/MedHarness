@@ -21,6 +21,7 @@ from dhfkit.sbom import (
     purl_for,
     write_sbom,
 )
+from dhfkit.tests.fixtures import bare_dhf
 
 SCHEMA_DIR = Path(__file__).parent / "schema"
 
@@ -34,7 +35,7 @@ def _soup(dhf: Path, soup_id: str, body: str) -> None:
 @pytest.fixture
 def dhf(tmp_path: Path) -> Path:
     dhf = tmp_path / "DHF"
-    CliRunner().invoke(main, ["--dhf", str(dhf), "init"])
+    bare_dhf(dhf)
     return dhf
 
 
@@ -189,7 +190,7 @@ class TestCLI:
 
     def test_stdout_mode_writes_no_file(self, dhf: Path) -> None:
         _soup(dhf, "SOUP-001", "title: a\nname: a\nversion: '1'\necosystem: PyPI\n")
-        r = CliRunner().invoke(main, ["--dhf", str(dhf), "sbom", "--stdout"])
+        r = CliRunner().invoke(main, ["--dhf", str(dhf), "sbom", "--output", "-"])
         assert r.exit_code == 0
         assert json.loads(r.stdout)["bomFormat"] == "CycloneDX"
         assert not (dhf / "sbom.cdx.json").exists()
@@ -199,7 +200,7 @@ class TestMergingTheTwoRegisters:
     """An SBOM that lists only documented components understates what ships.
 
     A package in requirements.txt that nobody has made a SOUP item for is still
-    in the release. Omitting it would also hide the §8.1.2 gap `build dhf`
+    in the release. Omitting it would also hide the §8.1.2 gap `build soup`
     exists to close, so it is included and says where it came from.
     """
 
@@ -309,7 +310,7 @@ class TestReleaseBaselineEmitsAnSbom:
 class TestReleaseBaselineReadsEveryManifestSoupSyncDoes:
     """The two commands disagreed on what a manifest is.
 
-    `build dhf` reads nine formats; `release-baseline --manifest` listed two by
+    `build soup` reads nine formats; `release-baseline --manifest` listed two by
     hand and failed the whole baseline on the rest. A project that synced its
     SOUP register from a lockfile could not then build a release from it.
     """
@@ -409,3 +410,21 @@ class TestAVersionRangeIsNotAVersion:
         assert document["components"][0]["version"] == "^34.15.1", (
             "the SBOM must report what the DHF records, not a cleaned-up guess"
         )
+
+
+def test_the_output_dash_writes_to_stdout(tmp_path: Path) -> None:
+    dhf = bare_dhf(tmp_path / "DHF")
+    r = CliRunner().invoke(main, ["--dhf", str(dhf), "sbom", "--output", "-"])
+    assert r.exit_code == 0, r.output
+    assert json.loads(r.stdout)["bomFormat"] == "CycloneDX"
+    assert not (tmp_path / "-").exists() and not (dhf / "sbom.cdx.json").exists()
+
+
+def test_the_tool_version_is_the_installed_package(tmp_path: Path) -> None:
+    """It asked for a `dhfkit` distribution, which does not exist, and said "unknown"."""
+    from importlib.metadata import version
+
+    dhf = bare_dhf(tmp_path / "DHF")
+    r = CliRunner().invoke(main, ["--dhf", str(dhf), "sbom", "--output", "-"])
+    tool = json.loads(r.stdout)["metadata"]["tools"]["components"][0]
+    assert tool["version"] == version("medharness")

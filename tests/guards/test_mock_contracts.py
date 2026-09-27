@@ -20,7 +20,7 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
 #: Both suites. Scanning only `tests/` left every `dhfkit/tests/` mock
-#: unchecked, and that is where build dhf's whole suite fed items keyed "uid"
+#: unchecked, and that is where build soup's whole suite fed items keyed "uid"
 #: while production produced "id" — nine parsers shipped broken behind it.
 TEST_DIRS = (ROOT / "tests", ROOT / "dhfkit" / "tests")
 
@@ -127,7 +127,7 @@ def _item_dicts_anywhere(path: Path) -> list[tuple[frozenset, int]]:
     """Every dict literal in a file that looks like a DHF item.
 
     Not only the ones passed straight to `patch`. The shape that shipped a
-    broken `build dhf` was built by a helper — `return {"uid": uid, "type":
+    broken `build soup` was built by a helper — `return {"uid": uid, "type":
     "SOUP", ...}` — and handed to `return_value=[...]`, so a scan of `patch`
     arguments alone saw neither the list's contents nor the helper.
     """
@@ -207,7 +207,7 @@ class TestNoMockInventsAnItemField:
     The mock-contract check above cannot reach these: `api.create_item`
     delegates to an adapter method, so it has no literal return to compare
     against and is skipped. That skip is exactly where the defect lived —
-    build dhf's suite mocked items as {"uid": ...} while production produced
+    build soup's suite mocked items as {"uid": ...} while production produced
     {"id": ...}, and seven `item["uid"]` reads shipped, crashing the command on
     every real DHF.
 
@@ -241,12 +241,12 @@ class TestNoItemLiteralUsesUid:
     """An item-shaped dict must key its identifier `id`.
 
     The check above only sees dicts passed directly to `patch`. The fixture that
-    shipped a broken `build dhf` was a helper returning `{"uid": …, "type":
+    shipped a broken `build soup` was a helper returning `{"uid": …, "type":
     "SOUP", …}` handed to `return_value=[…]` — invisible to a scan of patch
     arguments, and it kept seven `item["uid"]` reads alive for six releases.
 
     Scoped to dicts carrying a `type` key, because that is what makes a dict an
-    item. Artifacts legitimately key the same value `uid` — `build dhf` reports
+    item. Artifacts legitimately key the same value `uid` — `build soup` reports
     orphans that way, and `release-baseline` writes `dhf_soup` entries — and
     those carry no `type`.
     """

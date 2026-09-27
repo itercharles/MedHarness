@@ -26,7 +26,7 @@ ROOT = Path(__file__).resolve().parents[2]
 #: Every gate, and arguments enough to reach its reporting path.
 GATES = {
     "verify dhf": [],
-    "verify tests": ["--junit-dir", "{dhf}/test-results"],
+    "verify tests": ["--junit", "{dhf}"],
     "verify soup": ["--offline-mode", "warn"],
     "workflow check-changes": ["--cr", "CR-001"],
     "verify completion": ["--cr", "CR-001"],

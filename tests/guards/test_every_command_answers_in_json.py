@@ -24,18 +24,17 @@ from medharness.workflows.init import _replace_placeholders, _scaffold_dhf
 #: (module, args). Each must exit 0 or 1 and put JSON on stdout.
 COMMANDS = [
     ("medharness", ["verify", "dhf"]),
-    ("medharness", ["verify", "tests", "--junit-dir", "test-results"]),
+    ("medharness", ["verify", "tests", "--junit", "."]),
     ("medharness", ["verify", "completion", "--cr", "CR-001"]),
     ("medharness", ["workflow", "check-changes", "--cr", "CR-001", "--since-ref", "HEAD"]),
-    ("medharness", ["workflow", "github-event", "--event", "event.json"]),
-    ("medharness", ["build", "dhf"]),
+    ("medharness", ["build", "soup"]),
     ("medharness", ["build", "release", "--version", "0.1.0", "--out-dir", "release"]),
     ("medharness", ["doctor"]),
     ("dhfkit", ["item", "list"]),
     ("dhfkit", ["item", "get", "SRS-001"]),
     ("dhfkit", ["validate"]),
     ("dhfkit", ["doc", "SRS"]),
-    ("dhfkit", ["sbom", "--stdout"]),
+    ("dhfkit", ["sbom", "--output", "-"]),
 ]
 
 
@@ -45,7 +44,6 @@ def project(tmp_path_factory) -> Path:
     _scaffold_dhf(root)
     _replace_placeholders(root, "Json")
     (root / "test-results").mkdir()
-    (root / "event.json").write_text(json.dumps({"inputs": {"cr_id": "CR-001"}}))
     for args in (["init", "-q"], ["add", "-A"],
                  ["-c", "user.email=t@e", "-c", "user.name=t", "commit", "-qm", "base"]):
         subprocess.run(["git", *args], cwd=root, capture_output=True, check=True)

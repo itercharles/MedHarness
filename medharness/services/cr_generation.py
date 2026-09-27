@@ -515,28 +515,6 @@ def _build_response(
 
 
 
-def _format_ci_failures_for_prompt(ci_failures: dict) -> str:
-    """Render structured CI failure JSON as a concise prompt block."""
-    lines: list[str] = []
-    summary = ci_failures.get("summary") or ""
-    if summary:
-        lines.append(f"**Summary:** {summary}\n")
-    for category in ("missing_method", "unverified_test", "manual_review_required",
-                      "uncovered", "errors", "failures"):
-        items = ci_failures.get(category) or []
-        if not items:
-            continue
-        lines.append(f"**{category.replace('_', ' ').title()}:**")
-        for item in items[:20]:
-            if isinstance(item, dict):
-                uid = item.get("id") or item.get("item_id") or ""
-                desc = item.get("issue") or item.get("title") or item.get("fix") or ""
-                lines.append(f"  - {uid}: {desc}" if uid else f"  - {desc}")
-            else:
-                lines.append(f"  - {item}")
-    return "\n".join(lines) if lines else str(ci_failures)
-
-
 def _format_error_lines(errors: list[dict]) -> str:
     return "\n".join(
         f"- {e.get('field', '?')}: {e.get('issue', '')} (fix: {e.get('fix', '')})"
@@ -965,7 +943,6 @@ def generate_code(
     cr_id: str,
     dhf_path: Path,
     pr_number: int | None = None,
-    ci_failures: dict | None = None,
 ) -> dict:
     """Generate or revise implementation code for a CR."""
     started_at = _now_iso()
@@ -981,7 +958,6 @@ def generate_code(
         "develop_model": _model_label(develop_llm),
         "code_review_model": _model_label(review_llm),
         "github_feedback": {"attempted": False},
-        "ci_failures_injected": ci_failures is not None,
         "preflight_errors": 0,
         "fix_attempted": False,
         "initial_error_count": 0,
@@ -1016,7 +992,7 @@ def generate_code(
     # so the prompt can include specific fixes rather than the LLM discovering them later.
     # Uses validate_dhf_structure (schema + traceability only) to avoid false positives
     # from reconciliation checks that require a non-empty created_ids list.
-    if not pr_number and ci_failures is None:
+    if not pr_number:
         preflight_step, preflight_perf = _begin_step("preflight_traceability")
         try:
             preflight_errors = design_validation.validate_dhf_structure(dhf_path)
@@ -1053,19 +1029,6 @@ def generate_code(
             f"Read the implementation on this branch related to {cr_id}, "
             f"then revise it based on the following pull request review feedback.\n\n"
             f"Review feedback:\n{feedback['prompt_text']}"
-        )
-        steps.append(_finish_step(prompt_step, prompt_perf, "ok"))
-    elif ci_failures is not None:
-        prompt_step, prompt_perf = _begin_step(
-            "prepare_prompt",
-            {"prompt_kind": "develop_ci_correction", "ci_failures_injected": True},
-        )
-        failure_lines = _format_ci_failures_for_prompt(ci_failures)
-        prompt = (
-            f"Read the implementation on this branch related to {cr_id}, "
-            f"then fix the following CI failures.\n\n"
-            f"## CI Failures\n\n{failure_lines}\n\n"
-            f"Address each failure specifically. Do not introduce unrelated changes."
         )
         steps.append(_finish_step(prompt_step, prompt_perf, "ok"))
     else:

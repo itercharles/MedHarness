@@ -19,6 +19,7 @@ from pathlib import Path
 
 import pytest
 import yaml
+from dhfkit.tests.fixtures import bare_dhf
 
 TEMPLATE = resources.files("dhfkit").joinpath("templates/config/soup-sources.yaml")
 
@@ -93,7 +94,7 @@ def test_the_embedded_script_compiles(block: str) -> None:
 
 
 class TestTheCommandSourceRunsForReal:
-    """End to end through build dhf, with a stub standing in for the tool."""
+    """End to end through build soup, with a stub standing in for the tool."""
 
     def test_a_block_scalar_command_produces_items(self, tmp_path: Path) -> None:
         from click.testing import CliRunner
@@ -102,7 +103,7 @@ class TestTheCommandSourceRunsForReal:
         from medharness.cli import main
 
         dhf = tmp_path / "DHF"
-        CliRunner().invoke(dhfkit_main, ["--dhf", str(dhf), "init"])
+        bare_dhf(dhf)
         (tmp_path / "stub.py").write_text(
             "import json\n"
             "print(json.dumps([{'dependencies': {'react': {'version': '18.2.0'}}}]))\n"
@@ -119,7 +120,7 @@ class TestTheCommandSourceRunsForReal:
             "                                'ecosystem': 'npm'}))\n"
             "      \"\n"
         )
-        r = CliRunner().invoke(main, ["--dhf", str(dhf), "build", "dhf", "--write"])
+        r = CliRunner().invoke(main, ["--dhf", str(dhf), "build", "soup", "--write"])
         payload = json.loads(r.stdout.splitlines()[0])
         assert payload["outcome"] == "completed", payload["errors"]
         assert payload["packages_found"] == 1

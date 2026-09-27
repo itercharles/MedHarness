@@ -205,17 +205,11 @@ def _traceability_summary(result: dict, fail_on_uncovered: bool) -> str:
 # ---------------------------------------------------------------------------
 
 
-# ---------------------------------------------------------------------------
-# doc group
-# ---------------------------------------------------------------------------
-
 @main.command("sbom")
-@click.option("--output", "output_path", type=click.Path(dir_okay=False, path_type=Path),
-              help="Where to write the SBOM (default: <dhf>/sbom.cdx.json).")
-@click.option("--stdout", "to_stdout", is_flag=True,
-              help="Write the document to stdout instead of a file.")
+@click.option("--output", "output_path", type=click.Path(dir_okay=False, allow_dash=True, path_type=Path),
+              help="Where to write the SBOM (default: <dhf>/sbom.cdx.json); - for stdout.")
 @click.pass_context
-def sbom_cmd(ctx: click.Context, output_path: Path | None, to_stdout: bool) -> None:
+def sbom_cmd(ctx: click.Context, output_path: Path | None) -> None:
     """Generate a CycloneDX SBOM from the DHF's SOUP items.
 
     The SOUP register already holds what an SBOM needs, recorded there because
@@ -241,7 +235,7 @@ def sbom_cmd(ctx: click.Context, output_path: Path | None, to_stdout: bool) -> N
         if str(i.get("id", "")).startswith("SOUP-")
     ]
     try:
-        tool_version = pkg_version("dhfkit")
+        tool_version = pkg_version("medharness")
     except Exception:
         tool_version = "unknown"
 
@@ -251,7 +245,7 @@ def sbom_cmd(ctx: click.Context, output_path: Path | None, to_stdout: bool) -> N
         tool_version=tool_version,
     )
 
-    if to_stdout:
+    if str(output_path) == "-":
         click.echo(json.dumps(document, indent=2))
         return
 
@@ -317,42 +311,3 @@ def doc_cmd(ctx: click.Context, doc_type: str, fmt: str, out_dir: Path | None) -
                 raise SystemExit(1)
 
 
-@main.command("init")
-@click.option("--project-name", default="My Project", show_default=True,
-              help="Human-readable project name written into global.yaml.")
-@click.pass_context
-def init_cmd(ctx: click.Context, project_name: str) -> None:
-    """A bare DHF: its config and an empty items directory.
-
-    The doc types, lifecycle, traceability rules and templates come from the
-    package's defaults; `global.yaml` holds only what this DHF changes.
-
-    \b
-    Example:
-        dhfkit --dhf path/to/DHF init --project-name "My Device"
-        dhfkit --dhf path/to/DHF item create --type SYS --data '{"title": "..."}'
-        dhfkit --dhf path/to/DHF validate
-    """
-    dhf_path: Path = ctx.obj["dhf"]
-    if dhf_path.exists() and any(dhf_path.iterdir()):
-        raise click.ClickException(f"{dhf_path} already exists and is not empty.")
-
-    config_dir = dhf_path / "config"
-    config_dir.mkdir(parents=True, exist_ok=True)
-    (config_dir / "global.yaml").write_text(
-        "# Anything not set here comes from the defaults shipped with dhfkit.\n"
-        + yaml.dump({"project_name": project_name}, default_flow_style=False, allow_unicode=True),
-        encoding="utf-8",
-    )
-    # One directory per item type, so it is plain where a new item goes.
-    from dhfkit.models.config import ProjectConfig
-
-    for doc_type in ProjectConfig.load(config_dir).doc_types:
-        (dhf_path / "items" / (doc_type.directory or doc_type.code.lower())).mkdir(
-            parents=True, exist_ok=True)
-
-    click.echo(json.dumps({"created": str(dhf_path), "project_name": project_name}))
-    click.echo(f"DHF initialised at {dhf_path}", err=True)
-    click.echo("Next steps:", err=True)
-    click.echo(f"  dhfkit --dhf {dhf_path} item create --type SYS --data '{{\"title\": \"My first requirement\"}}'", err=True)
-    click.echo(f"  medharness --dhf {dhf_path} verify dhf", err=True)
