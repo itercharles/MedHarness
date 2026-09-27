@@ -263,7 +263,7 @@ class LocalDHFAdapter:
         updated_data = {k: v for k, v in updated_data.items() if v is not None}
         self._validate_item_links(updated_data)
         item = Item.model_validate(updated_data)
-        self._saver.save(item)
+        self._saver.save(item, Path(existing.file_path))
         return self._enrich_item_dict(item)
 
     def get_available_transitions(self, item_id: str) -> List[Dict]:

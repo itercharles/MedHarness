@@ -26,28 +26,17 @@ class ItemSaver:
         self.project_config = project_config
         self._prefix_map = None
 
-    def save(self, item: Item, subdirectory: Optional[str] = None) -> Path:
-        """
-        Save an item to a YAML file.
+    def save(self, item: Item, file_path: Optional[Path] = None) -> Path:
+        """Write an item to ``file_path``, or to its doc type's directory when new.
 
-        Args:
-            item: Item to save
-            subdirectory: Optional subdirectory within specs_dir
-
-        Returns:
-            Path to saved file
+        An existing item is rewritten where it was read from: a DHF laid out
+        before the default directories changed keeps its layout, rather than
+        gaining a second file with the same ID.
         """
-        # Determine save directory
-        if subdirectory:
-            save_dir = self.specs_dir / subdirectory
-        else:
+        if file_path is None:
             save_dir = self._get_directory_for_prefix(item.prefix)
-
-        # Create directory if needed
-        save_dir.mkdir(parents=True, exist_ok=True)
-
-        # Determine file path
-        file_path = save_dir / f"{item.uid}.yaml"
+            save_dir.mkdir(parents=True, exist_ok=True)
+            file_path = save_dir / f"{item.uid}.yaml"
 
         data = item.model_dump(
             by_alias=True,
