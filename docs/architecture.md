@@ -124,6 +124,21 @@ as `provider:model` — `anthropic` (the `claude` CLI, the default), `openai`,
 | `services/cr_impact.py` | Writes `affected_items` back onto the CR |
 | `services/design_validation.py` | The deterministic check after each design pass |
 
+## The `workflow` gates
+
+Each `workflow` command is a reader and a judge. The reader talks to Git or
+GitHub and hands plain values to the judge, which decides and touches nothing:
+
+| Command | Reader | Judge |
+|---|---|---|
+| `check-changes` | `services/git.py` `validate_atomic_branch` | `judge_branch(cr_id, cr_item, dhf_item_changes, code_changes)` |
+| `check-approval` | `services/pr_approval.py` `approval_evidence` | `judge_approval(head_sha, reviews)` |
+| `github-event` | `services/github_event.py` `read_event` | `parse_github_event(event, event_name)`, `plan_github_event` |
+
+Test a rule by calling its judge with the values you want. Patch the reader only
+to test the reading itself. `parse_github_event` takes `changed_files`, the one
+git lookup it may need, as an argument so you can pass a function in its place.
+
 ## Tests
 
 | Layer | Directory | Scope |

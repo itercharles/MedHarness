@@ -18,7 +18,7 @@ import sys
 
 import pytest
 
-from medharness.services.github_event import parse_github_event
+from medharness.services.github_event import parse_github_event, read_event
 
 
 class TestAnUnreadableEventPayloadIsNotANoOp:
@@ -34,22 +34,22 @@ class TestAnUnreadableEventPayloadIsNotANoOp:
         broken = tmp_path / "event.json"
         broken.write_text('{"pull_request": {"number": 1, "head"')
         with pytest.raises(ValueError, match="could not be read"):
-            parse_github_event(broken)
+            read_event(broken, environ={})
 
     def test_a_legitimate_no_op_still_parses(self, tmp_path: pathlib.Path) -> None:
         """The distinction only means something if the other side still works."""
         ok = tmp_path / "event.json"
         ok.write_text(json.dumps({"action": "labeled", "label": {"name": "other"}}))
-        context = parse_github_event(ok)
+        event, _ = read_event(ok, environ={})
+        context = parse_github_event(event, "label")
         assert context.cr_id is None and context.mode == "skip"
 
     def test_an_absent_payload_is_still_tolerated(self, tmp_path: pathlib.Path) -> None:
         """Absent is not corrupt: a manual run has no event file at all."""
-        context = parse_github_event(tmp_path / "nothing.json", manual_cr_id="CR-001")
-        assert context.cr_id == "CR-001"
+        assert read_event(tmp_path / "nothing.json", environ={}) == ({}, "")
 
 
-    def test_an_unset_event_path_is_absent_not_unreadable(self, monkeypatch) -> None:
+    def test_an_unset_event_path_is_absent_not_unreadable(self) -> None:
         """`Path("")` is `Path(".")`, and a directory passes `exists()`.
 
         Reporting unreadable payloads made this visible: a manual run with no
@@ -57,16 +57,12 @@ class TestAnUnreadableEventPayloadIsNotANoOp:
         IsADirectoryError, which the old swallow had hidden. Absent has to be
         recognised as absent.
         """
-        monkeypatch.delenv("GITHUB_EVENT_PATH", raising=False)
-        monkeypatch.setenv("GITHUB_EVENT_NAME", "workflow_dispatch")
-        context = parse_github_event(manual_cr_id="CR-001")
-        assert context.cr_id == "CR-001"
+        env = {"GITHUB_EVENT_NAME": "workflow_dispatch"}
+        assert read_event(environ=env) == ({}, "workflow_dispatch")
 
-    def test_a_path_that_is_a_directory_is_not_read(self, tmp_path, monkeypatch) -> None:
-        monkeypatch.setenv("GITHUB_EVENT_PATH", str(tmp_path))
-        monkeypatch.setenv("GITHUB_EVENT_NAME", "workflow_dispatch")
-        context = parse_github_event(manual_cr_id="CR-002")
-        assert context.cr_id == "CR-002"
+    def test_a_path_that_is_a_directory_is_not_read(self, tmp_path) -> None:
+        env = {"GITHUB_EVENT_PATH": str(tmp_path), "GITHUB_EVENT_NAME": "workflow_dispatch"}
+        assert read_event(environ=env) == ({}, "workflow_dispatch")
 
     def test_the_cli_reports_it_within_the_contract(self, tmp_path: pathlib.Path) -> None:
         """exit 1, nothing on stdout, no traceback — docs/interface.md's

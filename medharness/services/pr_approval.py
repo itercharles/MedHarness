@@ -58,7 +58,17 @@ def _reviews(pr_number: int | str, *, token: str = "") -> list[dict] | None:
 
 
 def approval_evidence(pr_number: int | str, *, token: str = "") -> dict:
-    """What approves this pull request, and whether it still applies.
+    """What approves this pull request, read from GitHub. See ``judge_approval``."""
+    return judge_approval(
+        _pr_head_sha(pr_number, token=token), _reviews(pr_number, token=token),
+    )
+
+
+def judge_approval(head_sha: str, reviews: list[dict] | None) -> dict:
+    """What approves a pull request at *head_sha*, and whether it still applies.
+
+    *reviews* are ``{state, commit_id, login, submitted_at}`` dicts, or None
+    when they could not be read.
 
     A GitHub label was the old answer. Anyone with write access can add or
     remove one, it carries no author, no time, and no revision — so it records
@@ -70,13 +80,11 @@ def approval_evidence(pr_number: int | str, *, token: str = "") -> dict:
     approval covers the cascade that was the head at the time and goes stale
     the moment the code lands, so the develop gate needs its own review.
     """
-    head = _pr_head_sha(pr_number, token=token)
-    reviews = _reviews(pr_number, token=token)
     if reviews is None:
         return {
             "approved": False,
             "reason": "the pull request's reviews could not be read",
-            "head_sha": head,
+            "head_sha": head_sha,
             "approvals": [],
             "stale_approvals": [],
         }
@@ -92,7 +100,7 @@ def approval_evidence(pr_number: int | str, *, token: str = "") -> dict:
         }
         # An unreadable commit counts as stale: the gate must not pass on an
         # approval it cannot tie to what is being merged.
-        (approvals if head and r.get("commit_id") == head else stale).append(entry)
+        (approvals if head_sha and r.get("commit_id") == head_sha else stale).append(entry)
 
     if approvals:
         reason = ""
@@ -103,8 +111,7 @@ def approval_evidence(pr_number: int | str, *, token: str = "") -> dict:
     return {
         "approved": bool(approvals),
         "reason": reason,
-        "head_sha": head,
+        "head_sha": head_sha,
         "approvals": approvals,
         "stale_approvals": stale,
     }
-

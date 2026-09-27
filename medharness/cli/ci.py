@@ -11,7 +11,7 @@ from pathlib import Path
 import click
 import medharness._helpers as _h
 from medharness.services.ci import ci_structural_gate, ci_test_coverage_gate
-from medharness.services.github_event import parse_github_event, plan_github_event
+from medharness.services.github_event import parse_github_event, plan_github_event, read_event
 _ITEM_ID_RE = re.compile(r"^([A-Z]+-\d+)")
 
 
@@ -501,11 +501,12 @@ def register(main):
         whatever it finds. Nothing here passes or fails.
         """
         try:
-            result = parse_github_event(event_path, manual_cr_id=manual_cr)
+            event, event_name = read_event(event_path)
         except ValueError as exc:
             # A usage-shaped failure: exit 1 with nothing on stdout, which
             # docs/interface.md defines as "raised before the command ran".
             raise click.ClickException(str(exc)) from exc
+        result = parse_github_event(event, event_name, manual_cr_id=manual_cr)
         branch_stage_pairs = _parse_branch_stage_pairs(branch_stage_values)
         dispatch_actions = _parse_key_value_pairs(dispatch_action_values, option_name="--dispatch-action")
         review_actions = _parse_key_value_pairs(review_action_values, option_name="--review-action")
@@ -535,7 +536,7 @@ def register(main):
             "action": plan.action,
             # Absent means "not derivable from the payload", not "none": an
             # issue linked through the GitHub UI leaves no trace there.
-            "issue_number": plan.issue_number,
+            "issue_number": result.issue_number,
         }
         click.echo(json.dumps(payload, default=str))
 
@@ -546,11 +547,6 @@ def register(main):
                     val = payload.get(key)
                     if val is not None and val != "":
                         f.write(f"{key}={val}\n")
-
-    # ── Claude session ──
-
-
-
 
     # ── Approval gate ──
 
@@ -621,12 +617,6 @@ def register(main):
             "current commit.", err=True,
         )
         raise click.exceptions.Exit(1)
-
-
-
-
-    # ── Stage label management ──
-
 
     # ── CR generation ──
 

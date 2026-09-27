@@ -11,6 +11,24 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+### Changed
+
+- **The `workflow` gates can be tested without Git or GitHub.** Each one now
+  splits into a reader and a judge. The judge is a plain function:
+  `judge_branch` for `check-changes`, `judge_approval` for `check-approval`,
+  and `parse_github_event` for `github-event`. Tests pass it values instead of
+  patching `subprocess`, environment variables or files. CLI output is
+  unchanged.
+- **`parse_github_event(event, event_name, *, manual_cr_id, changed_files)`**
+  takes the payload as a dict. `read_event(event_path, environ)` reads it and
+  `$GITHUB_EVENT_NAME` the way a step sees them. The `head_ref`, `merged` and
+  `merge_commit_sha` overrides are gone because nothing passed them.
+  `GitHubLifecyclePlan` is now `{stage, action}`: the fields it copied from the
+  context are read from the context. Fields that describe the event
+  (`merged`, `review_state`, `labels`, `dispatch_stage`, `issue_number`) are
+  set the same way for every event kind. Before, each of fifteen code paths
+  set them by hand.
+
 ## [0.38.1] — 2026-09-27
 
 ### Fixed
