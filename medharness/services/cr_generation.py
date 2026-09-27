@@ -788,7 +788,7 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> di
             f"then revise them based on the following pull request review feedback. "
             f"Continue using the CLI (`dhfkit item create` / `dhfkit item update`) only. "
             f"After making changes, re-run:\n"
-            f"  python -m dhfkit --dhf DHF validate schema\n"
+            f"  python -m dhfkit --dhf DHF validate\n"
             f"  python -m medharness --dhf DHF verify dhf\n\n"
             f"Review feedback:\n{feedback['prompt_text']}"
         )
@@ -842,7 +842,7 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> di
             f"Fix only the items needed to clear these errors via the dhfkit "
             f"CLI (`dhfkit item create` / `dhfkit item update`). Do not introduce other "
             f"changes. After fixing, re-run:\n"
-            f"  python -m dhfkit --dhf DHF validate schema\n"
+            f"  python -m dhfkit --dhf DHF validate\n"
             f"  python -m medharness --dhf DHF verify dhf"
         )
         rc, _, fix_session_id = _run_claude_step(
@@ -906,7 +906,7 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> di
             f"Read the review at docs/reviews/{cr_id}-Design-Review.md for the specific issues, "
             f"then fix each item via the dhfkit CLI (dhfkit item create / dhfkit item update). "
             f"After making changes, re-run:\n"
-            f"  python -m dhfkit --dhf DHF validate schema\n"
+            f"  python -m dhfkit --dhf DHF validate\n"
             f"  python -m medharness --dhf DHF verify dhf\n"
             f"Do not modify the review file itself."
         )

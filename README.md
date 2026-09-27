@@ -96,7 +96,7 @@ testing: |
   smallest useful pipeline is two steps in a job that checks out the repository:
 
   ```yaml
-  - run: pip install medharness==0.37.0
+  - run: pip install medharness==0.38.0
   - run: medharness verify dhf --fail-on-uncovered
   ```
 
@@ -187,7 +187,7 @@ stderr; `--help` on any of them lists its options.
 | `dhfkit item create --type SRS --data '{...}'` | Adds an item; its ID is allocated | the item |
 | `dhfkit item update SRS-012 --data '{...}'` | Merges fields into an item | the item |
 | `dhfkit item transition CR-034 completed` | Moves an item through its lifecycle; without a state, lists where it can go | the item |
-| `dhfkit validate schema` | Checks every item against its type's schema | `valid`, `errors` |
+| `dhfkit validate` | Checks every item against its type's schema, and that no two files claim one ID | `valid`, `errors`, `item_count` |
 | `dhfkit doc SRS --format html` | Renders a specification from the items — `md` by default, `html` or `pdf` (needs `medharness[docs]`); `ALL` for every type | `md_path`, plus `html_path` or `pdf_path` |
 | `dhfkit sbom` | CycloneDX 1.6 SBOM from the SOUP register | `path`, `components` |
 | `dhfkit init` | A bare DHF, without `CLAUDE.md` | `created` |

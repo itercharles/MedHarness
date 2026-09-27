@@ -3,7 +3,7 @@
 A mistyped field in a hand-edited item is the likeliest mistake a DHF user
 makes. It used to raise ValidationError out of nine of thirteen commands as a
 traceback — including `verify dhf`, whose whole purpose is reporting exactly
-that kind of problem, and `dhfkit validate schema` was the only command that
+that kind of problem, and `dhfkit validate` was the only command that
 handled it.
 
 Every command is checked, not a chosen few: the defect was that most of them
@@ -28,7 +28,7 @@ COMMANDS = [
     ("medharness", ["verify", "classification"]),
         ("medharness", ["verify", "completion", "--cr", "CR-001"]),
     ("medharness", ["verify", "soup", "--offline-mode", "warn"]),
-    ("dhfkit", ["validate", "schema"]),
+    ("dhfkit", ["validate"]),
     ("dhfkit", ["validate", "traceability"]),
     ("dhfkit", ["sbom"]),
     ("dhfkit", ["item", "list"]),

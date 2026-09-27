@@ -9,7 +9,7 @@ Scaffolded by [MedHarness](https://github.com/itercharles/MedHarness).
 1. Edit `AI-harness/context.md` with your product overview, regulatory class, and architecture constraints
 2. Replace sample items under `DHF/items/` with your project's actual requirements
 3. Adapt plan documents under `DHF/documents/plans/`
-4. Run `dhfkit --dhf DHF validate schema` to verify, then commit and push
+4. Run `dhfkit --dhf DHF validate` to verify, then commit and push
 
 ## Directory Layout
 
@@ -94,7 +94,7 @@ Requirement items (UC, CRS, SYS, SRS, SWDD, SYSARCH, RISK, RCM) have no `status`
 dhfkit --dhf DHF item list --type SYS
 dhfkit --dhf DHF item get SYS-001
 dhfkit --dhf DHF item create --type SYS --data '{"title": "My requirement"}'
-dhfkit --dhf DHF validate schema
+dhfkit --dhf DHF validate
 dhfkit --dhf DHF validate traceability
 dhfkit --dhf DHF doc generate ALL
 dhfkit --dhf DHF report

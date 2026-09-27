@@ -57,14 +57,5 @@ doc but still require test coverage.
 ## Before Submitting
 
 ```bash
-.venv/bin/pytest tests/unit/ tests/integration/ tests/contract/ dhfkit/tests/ -q --ignore=dhfkit/tests/test_cli_doc_export.py
-.venv/bin/python -c "
-from medharness.workflows.init import _scaffold_dhf
-from pathlib import Path
-import tempfile, subprocess, sys
-with tempfile.TemporaryDirectory() as tmp:
-    d = Path(tmp) / 'd'
-    _scaffold_dhf(d)
-    subprocess.run([sys.executable, '-m', 'medharness', '--dhf', str(d/'DHF'), 'dhf', 'validate', 'schema'], check=True)
-"
+.venv/bin/pytest tests/ dhfkit/tests/ -q
 ```

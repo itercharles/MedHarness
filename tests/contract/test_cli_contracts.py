@@ -164,8 +164,8 @@ class TestOutputContract:
                 pass
 
     def test_dhfkit_validate_schema_output(self, scaffolded_dhf):
-        """dhfkit validate schema produces output."""
-        r = _run("dhfkit", "--dhf", str(scaffolded_dhf / "DHF"), "validate", "schema")
+        """dhfkit validate produces output."""
+        r = _run("dhfkit", "--dhf", str(scaffolded_dhf / "DHF"), "validate")
         assert r.returncode == 0
         assert len(r.stdout.strip() + r.stderr.strip()) > 0, "produced no output"
 

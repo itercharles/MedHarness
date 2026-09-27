@@ -194,7 +194,7 @@ Write this to the CR item:
 
 After writing all DHF items and recording risk impact, validate and self-correct:
 
-    python -m dhfkit --dhf DHF validate schema
+    python -m dhfkit --dhf DHF validate
     python -m dhfkit --dhf DHF validate traceability
 
 If either reports errors introduced by your changes, fix them via `dhfkit item update`

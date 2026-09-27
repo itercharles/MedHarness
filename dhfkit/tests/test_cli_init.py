@@ -48,7 +48,7 @@ def test_init_produces_valid_dhf(tmp_path: Path) -> None:
     """Initialised DHF passes schema validation."""
     dhf = tmp_path / "DHF"
     CliRunner().invoke(main, ["--dhf", str(dhf), "init"])
-    result = CliRunner().invoke(main, ["--dhf", str(dhf), "validate", "schema"])
+    result = CliRunner().invoke(main, ["--dhf", str(dhf), "validate"])
     assert result.exit_code == 0, result.output
 
 
