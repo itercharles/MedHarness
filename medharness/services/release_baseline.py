@@ -153,9 +153,9 @@ def _collect_bom(dhf: Path, manifest_paths: list[Path]) -> tuple[dict, list[str]
             bom_errors.append(f"Unsupported manifest format for BOM: {path}")
             continue
         try:
-            # The same dispatch `build dhf` uses. This listed requirements.txt and
+            # The same dispatch `build soup` uses. This listed requirements.txt and
             # package.json by hand and failed the whole baseline on the other
-            # seven formats `build dhf` reads — a project on a lockfile could sync
+            # seven formats `build soup` reads — a project on a lockfile could sync
             # its SOUP register and then not build a release from it.
             manifest_packages.extend(_dispatch_parser(path))
         except Exception as exc:  # noqa: BLE001
@@ -305,7 +305,7 @@ def build_release_baseline(
         soup_items = [i for i in api.list_items(dhf) if i.get("type") == "SOUP"]
         components = merge_release_components(soup_items, bom["manifest_packages"])
         try:
-            tool_version = pkg_version("dhfkit")
+            tool_version = pkg_version("medharness")
         except Exception:  # noqa: BLE001
             tool_version = "unknown"
         try:

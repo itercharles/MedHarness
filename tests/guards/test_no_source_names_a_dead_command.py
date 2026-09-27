@@ -21,7 +21,7 @@ import pytest
 ROOT = Path(__file__).resolve().parents[2]
 
 #: Options that take a value, so the token after them is not a subcommand.
-VALUE_FLAGS = {"--dhf", "--cr", "--type", "--version", "--out-dir", "--junit-dir",
+VALUE_FLAGS = {"--dhf", "--cr", "--type", "--version", "--out-dir", "--junit",
                "--manifest", "--since-ref", "--data", "--stage", "--pr", "--author"}
 
 

@@ -14,11 +14,12 @@ from click.testing import CliRunner
 
 from dhfkit.cli import main
 from dhfkit.local_adapter import LocalDHFAdapter
+from dhfkit.tests.fixtures import bare_dhf
 
 
 def _dhf_with_a_cr_in_a_legacy_directory(tmp_path: Path) -> Path:
     dhf = tmp_path / "DHF"
-    CliRunner().invoke(main, ["--dhf", str(dhf), "init"])
+    bare_dhf(dhf)
     legacy = dhf / "items" / "09_cr"
     legacy.mkdir(parents=True)
     (legacy / "CR-001.yaml").write_text('id: CR-001\ntitle: "A change"\nstatus: new\n')

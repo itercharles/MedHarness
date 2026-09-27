@@ -41,12 +41,12 @@ GATES: tuple[dict[str, Any], ...] = (
         "checks": "Requirement-to-test coverage from JUnit evidence, including "
                   "declared test points.",
         "options": {
-            "required": ["--junit-dir or --junit"],
-            "optional": ["--require-method"],
+            "required": ["--junit"],
+            "optional": ["--fail-on-missing-method"],
         },
         "blocking": "conditional",
         "blocking_note": "Uncovered requirements and unverified tests always fail. "
-                         "A missing verification_method warns unless --require-method.",
+                         "A missing verification_method warns unless --fail-on-missing-method.",
         "needs_network": False,
     },
     {
@@ -67,7 +67,7 @@ GATES: tuple[dict[str, Any], ...] = (
                   "exist, and verification evidence for each. Approval is `workflow check-approval`.",
         "options": {
             "required": ["--cr"],
-            "optional": ["--junit-dir", "--junit"],
+            "optional": ["--junit"],
         },
         "blocking": "always",
         "blocking_note": "",
@@ -90,7 +90,7 @@ GATES: tuple[dict[str, Any], ...] = (
         "checks": "That an approving review on the PR names the commit being "
                   "merged, so the approval covers what ships.",
         "options": {
-            "required": ["--cr", "--pr"],
+            "required": ["--pr"],
             "optional": ["--token"],
         },
         "blocking": "always",

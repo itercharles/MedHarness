@@ -10,6 +10,7 @@ from click.testing import CliRunner
 
 from medharness.cli import main
 from medharness.services.verify_tests import ci_test_coverage_gate
+from dhfkit.tests.fixtures import bare_dhf
 
 
 _ITEM_DIR: dict[str, str] = {
@@ -31,7 +32,7 @@ def _make_dhf(tmp_path: Path, items: list[dict], item_type: str = "SRS") -> Path
     from dhfkit.cli import main as dhfkit_main
 
     dhf = tmp_path / "DHF"
-    CliRunner().invoke(dhfkit_main, ["--dhf", str(dhf), "init"])
+    bare_dhf(dhf)
 
     items_dir = dhf / "items" / _ITEM_DIR[item_type]
     items_dir.mkdir(parents=True, exist_ok=True)

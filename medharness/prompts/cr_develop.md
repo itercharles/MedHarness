@@ -36,7 +36,7 @@ CR ID: {{cr_id}}
    ```bash
    <typecheck command from CLAUDE.md>
    <test command from CLAUDE.md>        # produces JUnit XML
-   medharness verify tests --dhf DHF --junit-dir <junit-output-dir>
+   medharness verify tests --dhf DHF --junit <junit-output-dir>
    ```
 
    If `test-coverage` reports uncovered requirements, add `@links:<ITEM_ID>`

@@ -245,7 +245,7 @@ def run_init() -> dict:
     say()
     say("  3. Check it, from this directory:", bold=True)
     say("       medharness verify dhf")
-    say("       medharness verify tests --junit-dir test-results")
+    say("       medharness verify tests --junit test-results")
     say()
     say("  4. Add CI: copy the recipe in docs/adopting.md, 'Setting up CI'.", bold=True)
     say()

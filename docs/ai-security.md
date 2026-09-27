@@ -18,7 +18,7 @@ Only two commands send anything to a model:
 | `medharness build plan --cr <ID>` | Design | DHF item updates, impact analysis, design review |
 | `medharness build code --cr <ID>` | Develop | Source code and tests for the approved design |
 
-**Every other command is deterministic** and makes no call to any model. `dhfkit` (item CRUD, schema validation, document generation, the SBOM) has no dependency on `medharness`. The `verify` gates, `workflow` gates, `build dhf` and `build release` compute their answers from their inputs; the only network they touch is osv.dev for `verify soup` and GitHub for `workflow check-approval`.
+**Every other command is deterministic** and makes no call to any model. `dhfkit` (item CRUD, schema validation, document generation, the SBOM) has no dependency on `medharness`. The `verify` gates, `workflow` gates, `build soup` and `build release` compute their answers from their inputs; the only network they touch is osv.dev for `verify soup` and GitHub for `workflow check-approval`.
 
 This split is intentional: you can adopt the traceability engine and CI gates with no AI in the pipeline at all. See [adopting.md](adopting.md#incremental-adoption).
 
@@ -114,7 +114,7 @@ Never invoke `build plan` or `build code` — the shipped CI recipe runs neither
 ```bash
 dhfkit --dhf DHF validate
 medharness --dhf DHF verify dhf
-medharness --dhf DHF verify tests --junit-dir test-results
+medharness --dhf DHF verify tests --junit test-results
 medharness --dhf DHF verify soup
 medharness --dhf DHF build release --version 1.0.0 --out-dir release
 ```

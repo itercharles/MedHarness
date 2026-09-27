@@ -76,8 +76,7 @@ class TestCiApproveGate:
     def test_an_approved_stage_passes_and_names_the_reviewer(self):
         with patch("medharness.services.pr_approval.approval_evidence",
                    return_value=self.EVIDENCE):
-            r = CliRunner().invoke(main, ["workflow", "check-approval", "--cr", "CR-001",
-                                          "--pr", "42"])
+            r = CliRunner().invoke(main, ["workflow", "check-approval", "--pr", "42"])
         assert r.exit_code == 0, r.output
         payload = _first_json_line(r.output)
         assert payload["passed"] is True
@@ -96,8 +95,7 @@ class TestCiApproveGate:
         }
         with patch("medharness.services.pr_approval.approval_evidence",
                    return_value=evidence):
-            r = CliRunner().invoke(main, ["workflow", "check-approval", "--cr", "CR-001",
-                                          "--pr", "42"])
+            r = CliRunner().invoke(main, ["workflow", "check-approval", "--pr", "42"])
         assert r.exit_code == 1
         assert "earlier commit" in r.output
         assert "bbbbbbb" in r.output, "the reviewed commit is not named"
@@ -105,8 +103,7 @@ class TestCiApproveGate:
     def test_the_payload_no_longer_carries_a_label(self):
         with patch("medharness.services.pr_approval.approval_evidence",
                    return_value=self.EVIDENCE):
-            r = CliRunner().invoke(main, ["workflow", "check-approval", "--cr", "CR-001",
-                                          "--pr", "42"])
+            r = CliRunner().invoke(main, ["workflow", "check-approval", "--pr", "42"])
         assert "label" not in json.dumps(_first_json_line(r.output))
 
 

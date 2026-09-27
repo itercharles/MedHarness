@@ -78,16 +78,16 @@ def test_global_yaml_still_marks_a_dhf(tmp_path: Path) -> None:
 class TestSpecificationsLandInsideTheDHF:
     """The defaults spelled outputs `DHF/documents/...` from the project root, so
     a DHF in a directory with any other name wrote its specifications outside
-    itself. `dhfkit init` hid it by writing its own paths."""
+    itself."""
 
     def test_a_dhf_not_named_dhf_keeps_its_documents(self, tmp_path: Path) -> None:
         from click.testing import CliRunner
 
         from dhfkit.cli import main
+        from dhfkit.tests.fixtures import bare_dhf
 
-        dhf = tmp_path / "mydhf"
+        dhf = bare_dhf(tmp_path / "mydhf")
         runner = CliRunner()
-        assert runner.invoke(main, ["--dhf", str(dhf), "init"]).exit_code == 0
         result = runner.invoke(main, ["--dhf", str(dhf), "doc", "SRS"])
         assert result.exit_code == 0, result.output
         assert (dhf / "documents" / "specs").is_dir()

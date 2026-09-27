@@ -31,7 +31,7 @@ OPTIONS = list(_options("medharness", medharness_main)) + list(_options("dhfkit"
 
 
 def test_the_walk_found_options() -> None:
-    assert len(OPTIONS) >= 50, f"only {len(OPTIONS)} options found"
+    assert len(OPTIONS) >= 35, f"only {len(OPTIONS)} options found"
 
 
 @pytest.mark.parametrize(

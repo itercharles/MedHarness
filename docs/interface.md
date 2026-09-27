@@ -14,7 +14,7 @@ MedHarness deliberately does not scaffold a CI workflow — a pipeline carries y
 | Gate | Reads | Needs | Network | Blocking |
 |------|-------|-------|---------|----------|
 | `verify dhf` | the DHF | — | no | `conditional` |
-| `verify tests` | the DHF, JUnit results | `--junit-dir` or `--junit` | no | `conditional` |
+| `verify tests` | the DHF, JUnit results | `--junit` | no | `conditional` |
 | `verify soup` | the DHF, dependency manifests | — | osv.dev | `conditional` |
 | `verify completion` | the DHF | `--cr` | no | `always` |
 | `workflow check-changes` | the DHF, the git diff | `--cr` | no | `always` |
@@ -36,7 +36,7 @@ The table is checked against the gates the CLI registers, so it cannot list one 
   "passed": false,
   "summary": "1/3 requirement(s) covered by passing tests.",
   "errors": ["SYS: 0/1 requirements covered"],
-  "warnings": ["SRS-001: no verification_method declared — pass --require-method to block on this"]
+  "warnings": ["SRS-001: no verification_method declared — pass --fail-on-missing-method to block on this"]
 }
 ```
 
@@ -90,7 +90,7 @@ The `Blocking` column above means:
 For the `conditional` gates, which findings fail and which only warn:
 
 - `verify dhf` — schema errors, required-link failures and dangling links always fail. Coverage gaps warn unless `--fail-on-uncovered`.
-- `verify tests` — uncovered requirements and unverified tests always fail. A missing `verification_method` warns unless `--require-method`.
+- `verify tests` — uncovered requirements and unverified tests always fail. A missing `verification_method` warns unless `--fail-on-missing-method`.
 - `verify soup` — known vulnerabilities always fail, and so does an unreachable osv.dev unless `--offline-mode warn`. Drift from the manifests warns unless `--fail-on-drift`.
 
 One distinction worth knowing before you wire anything. **Broken references versus incomplete design:** `verify dhf` always fails on a link whose target does not exist — that is a typo or a deleted item. An item with no downstream child yet is normal mid-project and only fails under `--fail-on-uncovered`. They need different fixes, so they are reported differently.
@@ -120,7 +120,7 @@ The simplest correct consumer checks exit status and lets stderr reach the log:
 - name: DHF gates
   run: |
     medharness --dhf DHF verify dhf --fail-on-uncovered
-    medharness --dhf DHF verify tests --junit-dir test-results
+    medharness --dhf DHF verify tests --junit test-results
     medharness --dhf DHF verify soup
 ```
 
@@ -142,7 +142,7 @@ import json, subprocess
 
 GATES = [
     ["verify", "dhf", "--fail-on-uncovered"],
-    ["verify", "tests", "--junit-dir", "test-results"],
+    ["verify", "tests", "--junit", "test-results"],
     ["verify", "soup"],
 ]
 
@@ -185,32 +185,6 @@ Check an export in two steps: `dhfkit validate` for the files, then
 
 The format is covered by `CONTRACT_VERSION`: renaming or removing a field the
 defaults declare is a breaking change.
-
----
-
-## Event context for a workflow
-
-`medharness workflow github-event --github-output "$GITHUB_OUTPUT"` writes the
-CR context straight to a job's outputs:
-
-```
-cr_id  mode  pr_number  stage  action  event_name  branch_ref  issue_number
-```
-
-A value is written only when it is known, so a downstream `if:` sees an absent
-output rather than an empty string. **Do not re-read these through a file and
-`jq -r '.field // ""'`** — that turns a failed parse into an empty value that
-flows onward and makes every dependent job skip silently, which reads as a green
-run that did nothing.
-
-`issue_number` is the issue the pull request closes, read from a closing keyword
-(`Closes #88`, `Fixes #13`) in the body carried by the payload. A bare `#12` is a
-reference, not a link, and is not reported. **An issue linked through the GitHub
-UI leaves no trace in the payload**, so an absent `issue_number` means "not
-derivable here", not "there is none" — a workflow that needs those cases still
-has to ask the API.
-
----
 
 ## Beyond the gates
 

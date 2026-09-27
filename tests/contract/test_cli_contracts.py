@@ -113,8 +113,8 @@ class TestCRGenerationCommands:
         """Each verb lists its own commands, so `--help` finds them all."""
         expected = {
             "verify": ["dhf", "tests", "soup", "completion"],
-            "build": ["plan", "code", "dhf", "release"],
-            "workflow": ["check-changes", "check-approval", "github-event"],
+            "build": ["plan", "code", "soup", "release"],
+            "workflow": ["check-changes", "check-approval"],
         }
         for verb, commands in expected.items():
             r = _run("medharness", verb, "--help")

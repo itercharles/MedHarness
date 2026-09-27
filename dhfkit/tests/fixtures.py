@@ -11,6 +11,18 @@ from typing import Dict, List
 import yaml
 
 
+def bare_dhf(dhf: Path, project_name: str = "My Project") -> Path:
+    """A DHF on the package defaults: global.yaml and one empty directory per item type."""
+    from dhfkit.models.config import ProjectConfig
+
+    config_dir = dhf / "config"
+    config_dir.mkdir(parents=True, exist_ok=True)
+    (config_dir / "global.yaml").write_text(f"project_name: {project_name}\n", encoding="utf-8")
+    for doc_type in ProjectConfig.load(config_dir).doc_types:
+        (dhf / "items" / (doc_type.directory or doc_type.code.lower())).mkdir(parents=True, exist_ok=True)
+    return dhf
+
+
 def create_test_dhf() -> Path:
     """
     Create isolated test DHF directory with proper configuration.

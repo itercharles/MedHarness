@@ -11,11 +11,12 @@ from click.testing import CliRunner
 from dhfkit.cli import main as dhfkit_main
 from medharness.cli import main
 from medharness.services.verify_completion import cr_closure_gate
+from dhfkit.tests.fixtures import bare_dhf
 
 
 def _make_dhf(tmp_path: Path) -> Path:
     dhf = tmp_path / "DHF"
-    CliRunner().invoke(dhfkit_main, ["--dhf", str(dhf), "init"])
+    bare_dhf(dhf)
     return dhf
 
 

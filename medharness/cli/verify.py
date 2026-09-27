@@ -7,7 +7,7 @@ from pathlib import Path
 
 import click
 
-from medharness.cli.options import collect_junit_paths
+from medharness.cli.options import collect_junit_paths, junit_option
 from medharness.cli.output import details, emit, render_envelope
 from medharness.services.verify_dhf import ci_structural_gate
 from medharness.services.verify_tests import ci_test_coverage_gate
@@ -109,28 +109,24 @@ def register(main):
             raise click.ClickException("DHF validation failed.")
 
     @verify.command("tests")
-    @click.option("--junit-dir", "junit_dirs", multiple=True, type=click.Path(file_okay=False, path_type=Path),
-                  help="Directory of JUnit XML results (repeatable).")
-    @click.option("--junit", "junit_files", multiple=True, type=click.Path(exists=True, dir_okay=False, path_type=Path),
-                  help="A JUnit XML results file (repeatable).")
-    @click.option("--require-method", is_flag=True, default=False,
+    @junit_option("JUnit XML results: a file, or a directory searched for *.xml (repeatable).")
+    @click.option("--fail-on-missing-method", is_flag=True, default=False,
                   help="Make a requirement with no declared verification_method fail. "
                        "Warns by default, so a project adding the field is not blocked.")
     @click.pass_context
     def verify_tests(ctx: click.Context,
-                         junit_dirs: tuple[Path, ...], junit_files: tuple[Path, ...],
-                         require_method: bool = False) -> None:
+                         junit_paths: tuple[Path, ...],
+                         fail_on_missing_method: bool = False) -> None:
         """Check each requirement is verified by the method it declares.
 
         A requirement declaring Test needs a passing JUnit case linked to it;
         declared test points each need a covering case.
         """
         effective_dhf = ctx.obj["dhf"]
-        junit_paths = collect_junit_paths(junit_files, junit_dirs)
-        result = ci_test_coverage_gate(dhf_path=effective_dhf, junit_paths=junit_paths,
-                                       require_method=require_method)
+        result = ci_test_coverage_gate(dhf_path=effective_dhf,
+                                       junit_paths=collect_junit_paths(junit_paths),
+                                       fail_on_missing_method=fail_on_missing_method)
         emit(result)
-        dhf_arg = f"--dhf {effective_dhf}"
         # The rows below print per-type coverage; the envelope's warnings are
         # about the gate as a whole and have no row to be printed beside.
         for message in result.get("warnings") or []:
@@ -139,7 +135,7 @@ def register(main):
         if not rows:
             # Every detail loop below iterates `results`; with none, the envelope
             # is the only place the reason exists. Without this, a missing
-            # --junit-dir failed with "Test coverage gaps found." — pointing at
+            # --junit failed with "Test coverage gaps found." — pointing at
             # coverage when nothing had been read.
             render_envelope(result, "test-coverage")
         for row in rows:
@@ -151,9 +147,8 @@ def register(main):
                            f"{row['covered']}/{row['total']} requirements covered", err=True)
                 for uid in row.get("uncovered", []):
                     click.echo(f"      ↳ uncovered: {uid}", err=True)
-                    click.echo(f"        Fix: add 'dhf_links: [{uid}]' to a test case, or:", err=True)
-                    click.echo(f"             dhfkit {dhf_arg} item create --type TC"
-                               f" --data '{{\"title\": \"Test {uid}\", \"dhf_links\": [\"{uid}\"]}}'", err=True)
+                    click.echo(f"        Fix: tag a passing test with {uid} — the JUnit property "
+                               f"medharness.links, or @links:{uid} in its name.", err=True)
         for row in details(result).get("testing_points", []):
             if row["passed"]:
                 click.echo(
@@ -174,16 +169,13 @@ def register(main):
     @verify.command("completion")
     @click.option("--cr", "cr_id", required=True, metavar="CR_ID",
                   help="The CR to close.")
-    @click.option("--junit-dir", "junit_dirs", multiple=True, type=click.Path(file_okay=False, path_type=Path),
-                  help="Directory of JUnit XML results for the items this CR touched (repeatable).")
-    @click.option("--junit", "junit_files", multiple=True, type=click.Path(exists=True, dir_okay=False, path_type=Path),
-                  help="A JUnit XML results file for the items this CR touched (repeatable).")
+    @junit_option("JUnit XML results for the items this CR touched: a file, or a "
+                  "directory searched for *.xml (repeatable).")
     @click.pass_context
     def verify_completion(
         ctx: click.Context,
         cr_id: str,
-        junit_dirs: tuple[Path, ...],
-        junit_files: tuple[Path, ...],
+        junit_paths: tuple[Path, ...],
     ) -> None:
         """Check a CR's record is complete and the items it changed are verified.
 
@@ -202,9 +194,8 @@ def register(main):
         from medharness.services.verify_completion import cr_closure_gate
 
         effective_dhf = ctx.obj["dhf"]
-        junit_paths = collect_junit_paths(junit_files, junit_dirs)
         result = cr_closure_gate(cr_id=cr_id, dhf_path=effective_dhf,
-                                 junit_paths=junit_paths)
+                                 junit_paths=collect_junit_paths(junit_paths))
         emit(result)
 
         for field in details(result).get("incomplete_cr_fields", []):
@@ -280,7 +271,7 @@ def register(main):
         render_envelope(result, "soup-vuln")
         if details(result).get("drift", {}).get("undocumented") or \
                 details(result).get("drift", {}).get("misversioned"):
-            click.echo("    Fix: medharness --dhf DHF build dhf --write, then commit. "
+            click.echo("    Fix: medharness --dhf DHF build soup --write, then commit. "
                        "Pass --fail-on-drift to block the build on this.", err=True)
         click.echo(result["summary"], err=True)
         if not result["passed"]:

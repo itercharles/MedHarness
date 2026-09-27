@@ -29,15 +29,10 @@ def _cli_gate_commands() -> set[str]:
     `workflow *` cannot answer without the repository. Reading one group would
     silently stop checking the other — which is how `change`'s two gates went
     undescribed the first time this was a single-group walk.
-
-    `workflow github-event` is not a gate: it exits 0 whatever it finds, so it
-    has no verdict for the manifest to describe.
     """
     found = set()
     for group in ("verify", "workflow"):
         for name in main.commands[group].commands:
-            if (group, name) == ("workflow", "github-event"):
-                continue
             found.add(f"{group} {name}")
     return found
 
@@ -87,7 +82,7 @@ class TestManifestMatchesTheCLI:
             for opt in param.opts
         }
         for declared in gate["options"]["required"]:
-            # "--junit-dir or --junit" documents a choice between two options.
+            # "--a or --b" documents a choice between two options.
             alternatives = [a.strip() for a in declared.split(" or ")]
             assert any(a in params for a in alternatives), (
                 f"{gate['command']} does not accept {declared}"

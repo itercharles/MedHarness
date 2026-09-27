@@ -32,7 +32,7 @@ ROOT = Path(__file__).resolve().parents[2]
 #: Every command that loads the DHF, with arguments enough to get that far.
 COMMANDS = [
     "verify dhf",
-    "verify tests --junit-dir {dhf}/none",
+    "verify tests --junit {dhf}",
     "verify soup --offline-mode warn",
     "verify completion --cr CR-001",
     "workflow check-changes --cr CR-001",
@@ -134,7 +134,7 @@ def test_a_broken_item_does_not_leave_the_denominator(tmp_path: Path) -> None:
     dhf = tmp_path / "DHF"
     _first_srs(dhf).write_text("- x\n", encoding="utf-8")
 
-    proc = _run("verify tests --junit-dir {dhf}/none", dhf)
+    proc = _run("verify tests --junit {dhf}", dhf)
     answered = [line for line in proc.stdout.splitlines() if line.startswith("{")]
     assert not answered, (
         f"verify tests answered without SRS-001 in it: "

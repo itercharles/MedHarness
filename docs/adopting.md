@@ -217,7 +217,7 @@ test("accepts 12-char password @links:SRS-012 @testing:T2", () => { ... });
 When tests run with `--junit-xml`, these annotations are written as JUnit XML properties (`medharness.links`, `medharness.testing`). The CI gate checks them:
 
 ```bash
-medharness --dhf DHF verify tests --junit-dir test-results
+medharness --dhf DHF verify tests --junit test-results
 ```
 
 This exits non-zero if a requirement lacks coverage or if any declared test point has no covering test, making gaps in test coverage visible before merge. Combined with `verify dhf` (schema and links), it enforces that requirements are linked and verified before merge.
@@ -252,7 +252,7 @@ Reads `implementation_notes` as the primary spec and implements the code, annota
 ### `verify completion` — closure gate
 
 ```bash
-medharness --dhf DHF verify completion --cr CR-001 --junit-dir test-results
+medharness --dhf DHF verify completion --cr CR-001 --junit test-results
 ```
 
 Run it on the branch to block the merge, and again on `main`, where the tests re-run against whatever else landed. Checks, for the items this CR touched only:
@@ -264,9 +264,60 @@ Run it on the branch to block the merge, and again on `main`, where the tests re
 
 Approval is not its question — that is `workflow check-approval`, which reads the pull request's reviews. Exits non-zero and prints `FAIL [completion]` lines for each gap.
 
-## Syncing SOUP items from dependency manifests (`medharness build dhf`)
+### Wiring it into GitHub Actions
 
-The `build dhf` command reads dependency files from your project and creates or updates SOUP items in the DHF. It supports nine lockfile/manifest formats across multiple ecosystems:
+MedHarness does not interpret GitHub events; the workflow's own `if:` does. A
+sketch, with branches named `design/CR-NNN` and `develop/CR-NNN`:
+
+```yaml
+on:
+  workflow_dispatch:
+    inputs:
+      cr:    { description: "CR ID, e.g. CR-012", required: true }
+      stage: { type: choice, options: [plan, code], required: true }
+  pull_request_review:
+    types: [submitted]
+
+jobs:
+  start:            # a person starts a stage by hand
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install medharness
+      - if: inputs.stage == 'plan'
+        run: medharness build plan --cr "${{ inputs.cr }}"
+      - if: inputs.stage == 'code'
+        run: medharness build code --cr "${{ inputs.cr }}"
+      # then commit to design/<CR> or develop/<CR> and open a pull request
+
+  revise:           # a reviewer asked for changes on a stage's pull request
+    if: github.event_name == 'pull_request_review' && github.event.review.state == 'changes_requested'
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      BRANCH: ${{ github.event.pull_request.head.ref }}
+      PR: ${{ github.event.pull_request.number }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: "${{ github.event.pull_request.head.ref }}" }
+      - run: pip install medharness
+      - run: |
+          case "${BRANCH%%/*}" in
+            design)  medharness build plan --cr "${BRANCH#*/}" --pr "$PR" ;;
+            develop) medharness build code --cr "${BRANCH#*/}" --pr "$PR" ;;
+          esac
+      # then commit and push to the same branch
+```
+
+`build plan` and `build code` need the model's credentials in the job's
+environment — see [ai-security.md](ai-security.md) before giving them to a
+runner.
+
+
+## Syncing SOUP items from dependency manifests (`medharness build soup`)
+
+The `build soup` command reads dependency files from your project and creates or updates SOUP items in the DHF. It supports nine lockfile/manifest formats across multiple ecosystems:
 
 | File | Ecosystem |
 |------|-----------|
@@ -282,17 +333,17 @@ The `build dhf` command reads dependency files from your project and creates or 
 
 ### Auto-discovery
 
-With no flags, `build dhf` looks for the supported files in the project root automatically:
+With no flags, `build soup` looks for the supported files in the project root automatically:
 
 ```bash
-medharness --dhf DHF build dhf
+medharness --dhf DHF build soup
 ```
 
 To target a specific file:
 
 ```bash
-medharness --dhf DHF build dhf --manifest uv.lock
-medharness --dhf DHF build dhf --manifest go.mod --manifest Cargo.lock
+medharness --dhf DHF build soup --manifest uv.lock
+medharness --dhf DHF build soup --manifest go.mod --manifest Cargo.lock
 ```
 
 ### Persistent source configuration (`soup-sources.yaml`)
@@ -334,11 +385,11 @@ Source priority when multiple are configured: explicit `--manifest` flags → `-
 
 ### Applying changes
 
-By default `build dhf` prints a diff and exits. Pass `--write` to create and update SOUP items:
+By default `build soup` prints a diff and exits. Pass `--write` to create and update SOUP items:
 
 ```bash
-medharness --dhf DHF build dhf --write
-medharness --dhf DHF build dhf --write --manifest uv.lock
+medharness --dhf DHF build soup --write
+medharness --dhf DHF build soup --write --manifest uv.lock
 ```
 
 ## Exporting an SBOM (`dhfkit sbom`)
@@ -351,7 +402,7 @@ standard machine-readable format:
 ```bash
 dhfkit --dhf DHF sbom                      # writes DHF/sbom.cdx.json
 dhfkit --dhf DHF sbom --output build/sbom.cdx.json
-dhfkit --dhf DHF sbom --stdout             # for a pipeline
+dhfkit --dhf DHF sbom --output -           # to stdout, for a pipeline
 ```
 
 The output is CycloneDX 1.6 JSON, checked against the official schema by the
@@ -387,12 +438,12 @@ release/evidence-manifest.json # every file above and below, hashed
 release/specifications/ …      # plus traceability and test evidence
 ```
 
-`--manifest` accepts every format `build dhf` reads — `requirements.txt`, `uv.lock`, `poetry.lock`, `pyproject.toml`, `package.json`, `package-lock.json`, `go.mod`, `Cargo.lock`, `pom.xml`.
+`--manifest` accepts every format `build soup` reads — `requirements.txt`, `uv.lock`, `poetry.lock`, `pyproject.toml`, `package.json`, `package-lock.json`, `go.mod`, `Cargo.lock`, `pom.xml`.
 
 The release SBOM merges both registers. A package read from a `--manifest` but
 absent from the SOUP register still ships, so it appears — carrying a
 `dhfkit:manifest_source` property instead of a `dhfkit:soup_id`. Leaving it out
-would understate the release and hide the §8.1.2 gap `build dhf` exists to close.
+would understate the release and hide the §8.1.2 gap `build soup` exists to close.
 Where a package is in both, the SOUP item wins: it carries the licence, supplier
 and any documented vulnerability acceptance that the manifest does not.
 
@@ -448,7 +499,7 @@ The gate then passes, but still records the outage in its JSON output and prints
 ## Cutting a release (`build release`)
 
 ```bash
-medharness --dhf DHF build release --version 1.2.0 --out-dir release --junit-dir test-results
+medharness --dhf DHF build release --version 1.2.0 --out-dir release --junit test-results
 ```
 
 One command builds everything a release needs, into one directory: the release baseline, the software BOM, a CycloneDX SBOM, the specifications, traceability matrices, test evidence, and `evidence-manifest.json` hashing every file.
@@ -491,7 +542,7 @@ defaults again, delete the copies you have not changed.
 
 `dhfkit` is the storage engine inside MedHarness. It ships in the same package (`pip install medharness`), not as a separate distribution, and has no dependency on the harness — so a team with its own orchestration can import it directly and ignore the CLI harness and AI workflow.
 
-What it gives you: item storage and retrieval, schemas, lifecycle transitions, document generation, and a CycloneDX SBOM. SOUP sync (`build dhf`) and releases (`build release`) are `medharness`. `LocalDHFAdapter` is the programmatic entry point.
+What it gives you: item storage and retrieval, schemas, lifecycle transitions, document generation, and a CycloneDX SBOM. SOUP sync (`build soup`) and releases (`build release`) are `medharness`. `LocalDHFAdapter` is the programmatic entry point.
 
 What it does not give you: **traceability analysis**. Coverage, required links, cycles and risk chains live in `medharness`, which reads the same YAML items. Requirements kept in another system are checked by exporting them into `DHF/items/` in this format. See [architecture.md](architecture.md).
 
@@ -503,7 +554,7 @@ Each layer is useful on its own. None requires the next.
 |------|-----|-------|
 | 1 | `verify dhf` as a PR gate | Nothing — works on day one |
 | 2 | `verify tests` | Test annotations in JUnit output |
-| 3 | `build dhf`, `sbom`, `verify soup` | A dependency manifest |
+| 3 | `build soup`, `sbom`, `verify soup` | A dependency manifest |
 | 4 | `build release` on version tags | Steps 1–3 passing |
 | 5 | `build plan` / `build code` | An AI key, and the appetite for it |
 

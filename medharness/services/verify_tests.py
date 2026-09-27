@@ -19,7 +19,7 @@ from medharness.services.envelope import envelope_from, gate_result
 def ci_test_coverage_gate(
     dhf_path: Path,
     junit_paths: list[Path],
-    require_method: bool = False,
+    fail_on_missing_method: bool = False,
 ) -> dict[str, Any]:
     """Check requirement coverage from JUnit evidence.
 
@@ -52,11 +52,11 @@ def ci_test_coverage_gate(
             "No JUnit evidence given — test results were not checked.",
             errors=(
                 [f"{g['id']}: no verification_method declared" for g in missing]
-                if require_method else
-                ["No JUnit files found — pass --junit-dir or --junit."]
+                if fail_on_missing_method else
+                ["No JUnit files found — pass --junit."]
             ),
             warnings=(
-                [] if require_method else
+                [] if fail_on_missing_method else
                 [f"{g['id']}: no verification_method declared" for g in missing]
             ),
             results=[],
@@ -189,17 +189,17 @@ def ci_test_coverage_gate(
     if not junit_paths:
         warnings.append(
             "No JUnit evidence given, so test results were not checked — "
-            "pass --junit-dir to verify them."
+            "pass --junit to verify them."
         )
     # A requirement with no declared method is a §5.7 gap, but a project that
     # adopted this before the field existed has one on every item. It warns
     # until asked to block, the call `verify dhf` makes for coverage gaps.
-    if require_method:
+    if fail_on_missing_method:
         passed = passed and not md.get("missing_method")
     else:
         warnings += [
             f"{gap['id']}: no verification_method declared — pass "
-            f"--require-method to block on this"
+            f"--fail-on-missing-method to block on this"
             for gap in md.get("missing_method", [])
         ]
         errors = [e for e in errors if "no verification_method declared" not in e]

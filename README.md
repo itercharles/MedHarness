@@ -96,7 +96,7 @@ testing: |
   smallest useful pipeline is two steps in a job that checks out the repository:
 
   ```yaml
-  - run: pip install medharness==0.39.0
+  - run: pip install medharness==0.40.0
   - run: medharness verify dhf --fail-on-uncovered
   ```
 
@@ -141,7 +141,7 @@ stderr; `--help` on any of them lists its options.
 | Command | Returns |
 |---|---|
 | `medharness verify dhf` | gate result¹ |
-| `medharness verify tests --junit-dir test-results` | gate result |
+| `medharness verify tests --junit test-results` | gate result |
 | `medharness verify soup` | gate result |
 | `medharness verify completion --cr CR-034` | gate result |
 
@@ -150,8 +150,7 @@ stderr; `--help` on any of them lists its options.
 | Command | What it does | Returns |
 |---|---|---|
 | `medharness workflow check-changes --cr CR-034` | Compares the branch diff with the CR's `affected_items` | gate result |
-| `medharness workflow check-approval --cr CR-034 --pr 42` | Requires an approving review of the PR's head commit; needs `GH_TOKEN` | gate result |
-| `medharness workflow github-event` | Reads a GitHub event: which CR and stage, and what to do next. Not a gate | `cr_id`, `stage`, `action`, `mode`, `pr_number` |
+| `medharness workflow check-approval --pr 42` | Requires an approving review of the PR's head commit; needs `GH_TOKEN` | gate result |
 
 ¹ Every gate answers `{gate, passed, summary, errors, warnings}`; see
 [interface.md](docs/interface.md).
@@ -162,7 +161,7 @@ stderr; `--help` on any of them lists its options.
 |---|---|---|
 | `medharness build plan --cr CR-034` | AI drafts the CR's design items and impact analysis | `outcome`, `items_changed`, `review_cycles` |
 | `medharness build code --cr CR-034` | AI writes the code and tests for the approved design | `outcome`, `files_changed`, `review_cycles` |
-| `medharness build dhf --write` | Reconciles SOUP items with your dependency manifests; without `--write`, only reports | `to_create`, `to_update`, `orphans` |
+| `medharness build soup --write` | Reconciles SOUP items with your dependency manifests; without `--write`, only reports | `to_create`, `to_update`, `orphans` |
 | `medharness build release --version 1.0.0 --out-dir release --write` | Checks the DHF, CRs and open defects, writes the baseline, BOM, SBOM and evidence, and — only if every check passed — records the REL item | `outcome`, `cr_ids`, `rel_uid`, `artifacts`, `errors` |
 
 ### Setup
@@ -184,7 +183,6 @@ stderr; `--help` on any of them lists its options.
 | `dhfkit validate` | Checks every item against its type's schema, and that no two files claim one ID | `valid`, `errors`, `item_count` |
 | `dhfkit doc SRS --format html` | Renders a specification from the items — `md` by default, `html` or `pdf` (needs `medharness[docs]`); `ALL` for every type | `md_path`, plus `html_path` or `pdf_path` |
 | `dhfkit sbom` | CycloneDX 1.6 SBOM from the SOUP register | `path`, `components` |
-| `dhfkit init` | A bare DHF, without `CLAUDE.md` | `created` |
 
 ## Example project
 

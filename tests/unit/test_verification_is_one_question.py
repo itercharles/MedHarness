@@ -16,6 +16,7 @@ from pathlib import Path
 import pytest
 
 from medharness.services.verify_tests import ci_test_coverage_gate
+from dhfkit.tests.fixtures import bare_dhf
 
 
 def _dhf(tmp_path: Path, items: list[dict]) -> Path:
@@ -25,7 +26,7 @@ def _dhf(tmp_path: Path, items: list[dict]) -> Path:
     from dhfkit.cli import main as dhfkit_main
 
     dhf = tmp_path / "DHF"
-    CliRunner().invoke(dhfkit_main, ["--dhf", str(dhf), "init"])
+    bare_dhf(dhf)
     items_dir = dhf / "items" / "03_srs"
     items_dir.mkdir(parents=True, exist_ok=True)
     for item in items:
@@ -73,10 +74,10 @@ class TestAMissingMethodWarnsUntilAsked:
         assert [g["id"] for g in result["details"]["missing_method"]] == ["SRS-001"]
         assert any("no verification_method" in w for w in result["warnings"])
 
-    def test_require_method_blocks(self, tmp_path: Path) -> None:
+    def test_fail_on_missing_method_blocks(self, tmp_path: Path) -> None:
         dhf = _dhf(tmp_path, [{"id": "SRS-001"}])
         result = ci_test_coverage_gate(
-            dhf_path=dhf, junit_paths=[_junit(tmp_path)], require_method=True,
+            dhf_path=dhf, junit_paths=[_junit(tmp_path)], fail_on_missing_method=True,
         )
         assert result["passed"] is False
 

@@ -13,6 +13,7 @@ from dhfkit.cli import main as dhfkit_main
 from medharness.cli import main
 from medharness.services.envelope import ENVELOPE_KEYS
 from medharness.services.verify_tests import validate_verification_completeness
+from dhfkit.tests.fixtures import bare_dhf
 
 
 # ---------------------------------------------------------------------------
@@ -23,7 +24,7 @@ from medharness.services.verify_tests import validate_verification_completeness
 def _make_dhf(tmp_path: Path, items: list[dict]) -> Path:
     """Bootstrap a minimal DHF with the given items and return its path."""
     dhf = tmp_path / "DHF"
-    CliRunner().invoke(dhfkit_main, ["--dhf", str(dhf), "init"])
+    bare_dhf(dhf)
     items_dir = dhf / "items" / "03_srs"
     for item in items:
         fname = f"{item['id']}.yaml"
@@ -188,11 +189,11 @@ def test_a_missing_method_warns_by_default(tmp_path: Path) -> None:
     )
 
 
-def test_require_method_makes_it_fail(tmp_path: Path) -> None:
+def test_fail_on_missing_method_makes_it_fail(tmp_path: Path) -> None:
     dhf = _make_dhf(tmp_path, [{"id": "SRS-001", "title": "No method"}])
     result = CliRunner().invoke(
         main,
-        ["--dhf", str(dhf), "verify", "tests", "--require-method"],
+        ["--dhf", str(dhf), "verify", "tests", "--fail-on-missing-method"],
     )
     assert result.exit_code != 0
 
