@@ -6,6 +6,10 @@ class ValidationError(Exception):
     pass
 
 
+class RefusedWrite(ValidationError):
+    """A write was refused because the item would not load; nothing was written."""
+
+
 class DHFDataError(Exception):
     """The DHF's own data could not be read.
 

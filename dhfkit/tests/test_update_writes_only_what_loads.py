@@ -30,7 +30,8 @@ def test_a_value_of_the_wrong_shape_is_refused_and_nothing_is_written(tmp_path: 
                                   "--data", '{"verification_method": "Test"}'])
 
     assert r.exit_code != 0
-    assert "must be a list" in r.output
+    assert "CRS-001 not updated" in r.output and "must be a list" in r.output
+    assert "could not be read" not in r.output, "the DHF is fine; the write was refused"
     assert item.read_bytes() == before
     assert CliRunner().invoke(main, ["--dhf", str(dhf), "validate"]).exit_code == 0
 
