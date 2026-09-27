@@ -772,8 +772,8 @@ class TestGenerateCode:
             "D\tpackages/shared-types/src/old.ts\n"
         )
         with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
-             patch("subprocess.run",
-                   return_value=MagicMock(stdout=diff_output, returncode=0)):
+             patch("subprocess.run", side_effect=lambda cmd, **kw: MagicMock(
+                 stdout=diff_output if "diff" in cmd else "", returncode=0)):
             mock_claude.return_value = (0, "", "")
             result = generate_code("CR-025", dhf)
         assert result["artifacts"]["files_changed"] == {

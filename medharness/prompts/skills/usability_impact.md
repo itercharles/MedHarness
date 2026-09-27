@@ -7,7 +7,7 @@ IEC 62366-1 and FDA guidance on Human Factors Engineering.
 ## Inputs
 
 Read:
-- `DHF/items/09_cr/<CR_ID>.yaml`
+- `python -m dhfkit --dhf DHF item get <CR_ID>`
 - `DHF/documents/plans/development_plan.md`
 - `DHF/documents/plans/usability_engineering_plan.md` (if present)
 - Risk items and use case / customer requirement items identified during impact

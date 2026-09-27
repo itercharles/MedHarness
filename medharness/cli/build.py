@@ -34,9 +34,10 @@ def _format_summary(stage_label: str, verb: str, cr_id: str, result: dict) -> st
     if elapsed_ms is not None:
         details.append(f"{elapsed_ms} ms")
 
+    # The branch's change set against origin/main, across every run — not this run's.
     for label, bucket in (
-        ("DHF", artifacts.get("items_changed") or {}),
-        ("files", artifacts.get("files_changed") or {}),
+        ("DHF on the branch", artifacts.get("items_changed") or {}),
+        ("files on the branch", artifacts.get("files_changed") or {}),
     ):
         created = len(bucket.get("created") or [])
         updated = len(bucket.get("updated") or [])

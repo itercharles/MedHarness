@@ -11,6 +11,32 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.42.0] — 2026-09-27
+
+Found by the first real `build code` run on the 0.39+ surface, in ContourLab.
+
+### Changed
+
+- **`build plan` and `build code` leave their work uncommitted.** The prompts
+  say so, and if the agent commits anyway — the project's `CLAUDE.md` told it
+  to — its commits are undone with their changes left staged, and the answer
+  carries an `agent_commits_undone` warning. A job that ran `git add -A` found
+  nothing to stage, pushed nothing, reported success, and the agent's commit
+  died with the runner.
+
+### Fixed
+
+- **A file the agent created and did not commit is now in the change set.**
+  `items_changed` and `files_changed` came from `git diff origin/main`, which
+  does not see untracked files — so an item `build plan` created and left
+  uncommitted was missing from the CR's `affected_items`.
+- `items_changed` and `files_changed` are the branch's change set against
+  `origin/main`, across every run, not the run's own. The stderr summary said
+  `files: +5 ~2` as if the run had made them; it now says `files on the branch`,
+  and adopting.md says what the fields hold.
+- The prompts sent the model to `DHF/items/09_cr/` for the CR, which is not
+  where the default puts it; they now say `dhfkit item get`.
+
 ## [0.41.0] — 2026-09-27
 
 One field per relationship. Contract version 14.0.

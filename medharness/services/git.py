@@ -35,6 +35,29 @@ def compute_diff(
     return result.stdout or ""
 
 
+def head(repo_root: Path) -> str | None:
+    """The commit HEAD names, or None outside a repository."""
+    result = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True,
+                            text=True, cwd=str(repo_root), check=False)
+    return result.stdout.strip() if result.returncode == 0 else None
+
+
+def uncommit_since(repo_root: Path, start: str | None) -> list[str]:
+    """Undo commits made after ``start``, keeping their changes staged.
+
+    Returns the commits undone, oldest first.
+    """
+    if not start:
+        return []
+    listed = subprocess.run(["git", "rev-list", "--reverse", f"{start}..HEAD"],
+                            capture_output=True, text=True, cwd=str(repo_root), check=False)
+    commits = listed.stdout.split() if listed.returncode == 0 else []
+    if commits:
+        subprocess.run(["git", "reset", "--soft", start], cwd=str(repo_root),
+                       capture_output=True, check=True)
+    return commits
+
+
 class DiffUnavailable(Exception):
     """git could not produce the diff — not the same answer as an empty one."""
 
@@ -67,6 +90,13 @@ def collect_path_changes(
     created: list[str] = []
     updated: list[str] = []
     deleted: list[str] = []
+    # `git diff` compares tracked files only; a file an agent created and left
+    # uncommitted is a change too.
+    untracked = subprocess.run(
+        ["git", "ls-files", "--others", "--exclude-standard", "--", *paths],
+        capture_output=True, text=True, cwd=str(repo_root), check=False,
+    )
+    created.extend(line for line in (untracked.stdout or "").splitlines() if line)
     for line in (result.stdout or "").splitlines():
         if not line:
             continue
