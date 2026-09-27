@@ -90,8 +90,6 @@ class DocTypeConfig(BaseModel):
     lifecycle: Optional[dict] = Field(None, description="Lifecycle configuration with states and transitions")
     has_verification: Optional[bool] = Field(None, description="Whether this type supports verification tracking; derived from ItemType when absent")
     verification_states: Optional[List[str]] = Field(None, description="Verification state labels")
-    # kept for loading compat — not used by any engine code
-    allowed_parents: Optional[List[str]] = Field(None, description="Deprecated. Use required_traceability in global.yaml.")
 
 
 class TraceabilityMatrix(BaseModel):
@@ -102,7 +100,7 @@ class TraceabilityMatrix(BaseModel):
 
 
 class RequiredTraceabilityRule(BaseModel):
-    """Explicit required traceability rule — replaces deprecated allowed_parents.
+    """Explicit required traceability rule.
 
     Each rule defines a mandatory link that must exist between items of two types.
     """

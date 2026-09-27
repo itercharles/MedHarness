@@ -180,7 +180,7 @@ class ItemLoader:
 
         Covers:
           - {state}_by / {state}_date for every transition target state
-          - review_by / review_date for the in_review state (reviewer kept as alias)
+          - review_by / review_date for the in_review state
           - verification_status when the doc type has has_verification: true
           - field names referenced by field_not_empty criteria
         """
@@ -193,7 +193,6 @@ class ItemLoader:
                     if to_state == 'in_review':
                         fields.add('review_by')
                         fields.add('review_date')
-                        fields.add('reviewer')  # legacy alias
                     else:
                         fields.add(f'{to_state}_by')
                         fields.add(f'{to_state}_date')
