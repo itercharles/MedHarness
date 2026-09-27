@@ -33,7 +33,6 @@ COMMANDS = [
     ("medharness", ["build", "dhf"]),
     ("medharness", ["build", "release", "--version", "0.1.0", "--out-dir", "release"]),
     ("medharness", ["doctor"]),
-    ("medharness", ["upgrade"]),
     ("dhfkit", ["item", "list"]),
     ("dhfkit", ["item", "get", "SRS-001"]),
     ("dhfkit", ["validate", "schema"]),

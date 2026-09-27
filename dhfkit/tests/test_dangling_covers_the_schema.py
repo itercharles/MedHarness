@@ -86,8 +86,12 @@ class TestTheFieldSetComesFromTheSchema:
         _scaffold_dhf(tmp_path)
         _replace_placeholders(tmp_path, "Custom")
         dhf = tmp_path / "DHF"
+        from dhfkit.paths import DEFAULT_CONFIG_DIR
+
+        # Customising a type means putting it in the project, from the default.
         srs = dhf / "config" / "doc_types" / "srs.yaml"
-        doc = yaml.safe_load(srs.read_text())
+        srs.parent.mkdir(exist_ok=True)
+        doc = yaml.safe_load((DEFAULT_CONFIG_DIR / "doc_types" / "srs.yaml").read_text())
         doc["properties"].append(
             {"name": "supersedes", "format": "relationship", "label": "Supersedes"}
         )

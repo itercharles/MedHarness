@@ -16,11 +16,6 @@ from medharness.services.ci import cr_closure_gate
 def _make_dhf(tmp_path: Path) -> Path:
     dhf = tmp_path / "DHF"
     CliRunner().invoke(dhfkit_main, ["--dhf", str(dhf), "init"])
-    # dhfkit init only registers sys/srs/risk/rcm; add CR so the closure gate
-    # can write and read CR items via the adapter.
-    import importlib.resources
-    cr_src = importlib.resources.files("dhfkit").joinpath("templates/config/doc_types/cr.yaml")
-    (dhf / "config" / "doc_types" / "cr.yaml").write_bytes(cr_src.read_bytes())
     return dhf
 
 

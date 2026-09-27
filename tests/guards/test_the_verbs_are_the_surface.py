@@ -24,7 +24,7 @@ from medharness.cli import main
 ROOT = Path(__file__).resolve().parents[2]
 
 #: Removed top-level groups and commands.
-RETIRED_GROUPS = ("change", "automation", "soup-sync")
+RETIRED_GROUPS = ("change", "automation", "soup-sync", "upgrade")
 
 #: old invocation -> what replaced it.
 RENAMED = {

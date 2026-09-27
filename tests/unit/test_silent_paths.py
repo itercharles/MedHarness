@@ -19,7 +19,6 @@ import sys
 import pytest
 
 from medharness.services.github_event import parse_github_event
-from medharness.workflows import upgrade as U
 
 
 class TestAnUnreadableEventPayloadIsNotANoOp:
@@ -84,56 +83,3 @@ class TestAnUnreadableEventPayloadIsNotANoOp:
         assert not proc.stdout.strip()
         assert "Traceback" not in proc.stderr
         assert "could not be read" in proc.stderr
-
-
-class TestAnUnreadableTemplateIsAccountedFor:
-    """A template that exists but cannot be read fell out of every bucket.
-
-    `check_upgrade` sorts files into up_to_date / outdated / missing /
-    unavailable. A missing template was reported; an unreadable one two lines
-    later was skipped, so it appeared in none of them and the summary counted a
-    smaller total while still saying everything was current.
-    """
-
-    @pytest.fixture
-    def project(self, tmp_path: pathlib.Path) -> pathlib.Path:
-        from medharness.workflows.init import _replace_placeholders, _scaffold_dhf
-        _scaffold_dhf(tmp_path)
-        _replace_placeholders(tmp_path, "Unreadable")
-        return tmp_path
-
-    @pytest.fixture
-    def unreadable_template(self):
-        target = U._TEMPLATES_DIR / "config" / "doc_types" / "cr.yaml"
-        mode = target.stat().st_mode
-        os.chmod(target, 0o000)
-        try:
-            yield target
-        finally:
-            os.chmod(target, mode)
-
-    @pytest.mark.skipif(os.geteuid() == 0, reason="root reads anything")
-    def test_it_is_reported_as_unavailable(self, project, unreadable_template) -> None:
-        report = U.check_upgrade(project)
-        files = {u["file"] for u in report["unavailable"]}
-        assert any("cr.yaml" in f for f in files), (
-            f"the unreadable template vanished from the report: {report['unavailable']}"
-        )
-
-    @pytest.mark.skipif(os.geteuid() == 0, reason="root reads anything")
-    def test_apply_keeps_the_warning_in_its_summary(self, project, unreadable_template) -> None:
-        """`apply_upgrade` rewrites the summary, and dropped this line.
-
-        The count and the entries survived in the payload; the one line a person
-        reads said "Applied 0 update(s). 27 already current." — which is true,
-        and reads as nothing being wrong.
-        """
-        (project / "DHF" / "config" / "doc_types" / "cr.yaml").unlink()
-        report = U.apply_upgrade(project)
-        assert any("cr.yaml" in u["file"] for u in report["unavailable"])
-        assert "this build cannot manage them" in report["summary"], report["summary"]
-
-    def test_a_healthy_install_reports_neither(self, project) -> None:
-        report = U.apply_upgrade(project)
-        assert not report.get("failed")
-        assert "could not be written" not in report["summary"]

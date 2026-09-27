@@ -46,7 +46,7 @@ class StubDHFAdapter:
         self._lifecycle_states: list[dict] = _default_lifecycle_states()
         # The shipped defaults, as the real store would load them.
         from dhfkit.models.config import ProjectConfig
-        from medharness.workflows.upgrade import _TEMPLATES_DIR
+        from dhfkit.paths import DEFAULTS_DIR as _TEMPLATES_DIR
 
         self.config = ProjectConfig.load(_TEMPLATES_DIR / "config")
 

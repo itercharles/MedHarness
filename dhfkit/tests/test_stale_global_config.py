@@ -29,12 +29,16 @@ from medharness.workflows.init import _replace_placeholders, _scaffold_dhf
 
 @pytest.fixture
 def aged(tmp_path: Path) -> Path:
-    """A DHF whose global.yaml predates the states its doc types use."""
+    """A DHF whose own lifecycle override predates the states its doc types use."""
+    from dhfkit.paths import DEFAULT_CONFIG_DIR
+
     _scaffold_dhf(tmp_path)
     _replace_placeholders(tmp_path, "Aged")
     dhf = tmp_path / "DHF"
     config = dhf / "config" / "global.yaml"
     data = yaml.safe_load(config.read_text())
+    data["global_lifecycle"] = yaml.safe_load(
+        (DEFAULT_CONFIG_DIR / "global.yaml").read_text())["global_lifecycle"]
     data["global_lifecycle"]["states"] = [
         s for s in data["global_lifecycle"]["states"]
         if s["id"] not in ("design", "develop")

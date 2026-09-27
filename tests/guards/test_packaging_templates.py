@@ -24,26 +24,13 @@ from pathlib import Path
 
 import pytest
 
-from medharness.workflows.upgrade import _TEMPLATES_DIR, _UPGRADE_MAP
+from dhfkit.paths import DEFAULTS_DIR as _TEMPLATES_DIR
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
 WORKFLOW_TEMPLATE = REPO_ROOT / "dhfkit" / "templates" / "github" / "workflows" / "dhf.yml"
 ADOPTING_DOC = REPO_ROOT / "docs" / "adopting.md"
-
-
-class TestTemplateSourcesExist:
-    """Cheap check: the upgrade map and the template tree agree."""
-
-    def test_every_mapped_template_exists(self) -> None:
-        missing = [rel for rel, _ in _UPGRADE_MAP if not (_TEMPLATES_DIR / rel).exists()]
-        assert missing == [], f"upgrade map references absent templates: {missing}"
-
-    def test_ci_workflow_is_not_mapped(self) -> None:
-        """upgrade cannot manage a file this build has no template for."""
-        mapped = {proj for _, proj in _UPGRADE_MAP}
-        assert ".github/workflows/dhf.yml" not in mapped
 
 
 class TestDocumentedRecipeMatchesTemplate:
@@ -111,47 +98,11 @@ class TestWheelContents:
             f"carries {bundled}"
         )
 
-    def test_every_upgrade_template_is_packaged(self, built_wheel: Path) -> None:
-        with zipfile.ZipFile(built_wheel) as zf:
-            names = set(zf.namelist())
-        absent = [
-            rel for rel, _ in _UPGRADE_MAP
-            if f"dhfkit/templates/{rel}" not in names
-        ]
-        assert absent == [], (
-            f"templates managed by `medharness upgrade` are absent from the wheel: {absent}"
-        )
-
     def test_tests_are_not_packaged(self, built_wheel: Path) -> None:
         """The exclusion that does belong stays in force."""
         with zipfile.ZipFile(built_wheel) as zf:
             names = zf.namelist()
         assert not [n for n in names if n.startswith("dhfkit/tests/")]
-
-
-class TestUpgradeReportsUnavailableTemplates:
-    """A template absent from the install must be reported, not skipped."""
-
-    def test_unavailable_template_is_surfaced(self, tmp_path: Path, monkeypatch) -> None:
-        from medharness.workflows import upgrade as upgrade_mod
-
-        empty = tmp_path / "no-templates"
-        empty.mkdir()
-        monkeypatch.setattr(upgrade_mod, "_TEMPLATES_DIR", empty)
-
-        result = upgrade_mod.check_upgrade(tmp_path / "project")
-        # Seeded files are mapped too: a missing template makes them unavailable
-        # for the same reason, and skipping them would under-report the fault.
-        assert len(result["unavailable"]) == len(_UPGRADE_MAP) + len(upgrade_mod._SEED_MAP)
-        assert "cannot manage them" in result["summary"]
-
-    def test_healthy_install_reports_none_unavailable(self, tmp_path: Path) -> None:
-        from medharness.workflows.init import _replace_placeholders, _scaffold_dhf
-        from medharness.workflows.upgrade import check_upgrade
-
-        _scaffold_dhf(tmp_path)
-        _replace_placeholders(tmp_path, "Trial")
-        assert check_upgrade(tmp_path)["unavailable"] == []
 
 
 def _recipe_commands() -> list[tuple[str, ...]]:
@@ -199,10 +150,10 @@ class TestRecipeCommandsParse:
             )
 
 
-class TestTheWheelScaffoldsWhatTheSourceDoes:
-    """`docs/reviews/.gitkeep` was a template that never reached the wheel —
-    the build drops it — so `init` from a checkout wrote one more file than
-    `init` from PyPI, and the docs described the checkout."""
+class TestTheWheelCarriesTheDefaults:
+    """Every DHF reads its defaults from the installed package, so a template
+    missing from the wheel is missing from every project. `docs/reviews/.gitkeep`
+    once never reached the wheel — the build drops dotfiles."""
 
     def test_every_template_init_copies_is_packaged(self, built_wheel: Path) -> None:
         with zipfile.ZipFile(built_wheel) as zf:

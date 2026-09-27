@@ -94,6 +94,7 @@ class TestPrefixResolution:
         assert core._get_prefix("SYSARCH") == "SYSARCH-"
 
     def test_multi_segment_prefix_resolves(self, dhf: Path) -> None:
+        (dhf / "config" / "doc_types").mkdir(exist_ok=True)
         (dhf / "config" / "doc_types" / "tcver.yaml").write_text(
             "code: TCVER\nname: Verification Test Case\nprefix: TC-VER-\n"
             "directory: 13_tcver\nfields:\n- name: title\n  format: short_text\n"

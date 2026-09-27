@@ -18,10 +18,8 @@ def test_init_creates_expected_structure(tmp_path: Path) -> None:
     assert result.exit_code == 0, result.output + (result.exception and str(result.exception) or "")
 
     assert (dhf / "config" / "global.yaml").exists()
-    assert (dhf / "config" / "doc_types" / "sys.yaml").exists()
-    assert (dhf / "config" / "doc_types" / "srs.yaml").exists()
-    assert (dhf / "config" / "doc_types" / "risk.yaml").exists()
-    assert (dhf / "config" / "doc_types" / "rcm.yaml").exists()
+    # The types are inherited, not copied: a copy freezes them at this version.
+    assert not (dhf / "config" / "doc_types").exists()
     assert (dhf / "items" / "02_sys").is_dir()
     assert (dhf / "items" / "03_srs").is_dir()
     assert (dhf / "items" / "10_risk").is_dir()
@@ -38,9 +36,10 @@ def test_init_global_yaml_contains_project_name(tmp_path: Path) -> None:
 def test_init_global_yaml_has_required_traceability(tmp_path: Path) -> None:
     dhf = tmp_path / "DHF"
     CliRunner().invoke(main, ["--dhf", str(dhf), "init"])
-    config = yaml.safe_load((dhf / "config" / "global.yaml").read_text())
-    rules = config.get("required_traceability", [])
-    source_types = {r["source_type"] for r in rules}
+    from dhfkit.models.config import ProjectConfig
+
+    rules = ProjectConfig.load(dhf / "config").required_traceability or []
+    source_types = {r.source_type for r in rules}
     assert "SRS" in source_types
     assert "RCM" in source_types
 
@@ -86,29 +85,21 @@ def test_init_project_name_with_quotes(tmp_path: Path) -> None:
     assert config["project_name"] == 'My "Device" v2'
 
 
-def test_init_creates_documents_specs_dir(tmp_path: Path) -> None:
+def test_init_inherits_the_document_specifications(tmp_path: Path) -> None:
+    from dhfkit.models.config import ProjectConfig
+
     dhf = tmp_path / "DHF"
     CliRunner().invoke(main, ["--dhf", str(dhf), "init"])
-    assert (dhf / "documents" / "specs").is_dir()
+    doc_specs = ProjectConfig.load(dhf / "config").document_specifications
+    assert {"SYS", "SRS", "RISK", "RCM"} <= set(doc_specs)
 
 
-def test_init_global_yaml_has_document_specifications(tmp_path: Path) -> None:
-    dhf = tmp_path / "DHF"
-    CliRunner().invoke(main, ["--dhf", str(dhf), "init"])
-    config = yaml.safe_load((dhf / "config" / "global.yaml").read_text())
-    doc_specs = config.get("document_specifications", {})
-    assert "SYS" in doc_specs
-    assert "SRS" in doc_specs
-    assert "RISK" in doc_specs
-    assert "RCM" in doc_specs
-
-
-def test_init_doc_spec_output_uses_dhf_dir_name(tmp_path: Path) -> None:
+def test_documents_land_inside_a_dhf_of_any_name(tmp_path: Path) -> None:
     dhf = tmp_path / "my-dhf"
     CliRunner().invoke(main, ["--dhf", str(dhf), "init"])
-    config = yaml.safe_load((dhf / "config" / "global.yaml").read_text())
-    output = config["document_specifications"]["SYS"]["output"]
-    assert output.startswith("my-dhf/")
+    result = CliRunner().invoke(main, ["--dhf", str(dhf), "doc", "SYS"])
+    assert result.exit_code == 0, result.output
+    assert json.loads(result.output.splitlines()[0])["md_path"].startswith(str(dhf))
 
 
 def test_init_doc_generate_succeeds(tmp_path: Path) -> None:

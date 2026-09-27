@@ -6,7 +6,7 @@ from enum import Enum
 from pathlib import Path
 from pydantic import BaseModel, Field
 from pydantic import ValidationError as SchemaError
-from typing import List, Optional, Union, Any
+from typing import List, Optional, Any
 
 import yaml
 
@@ -126,17 +126,30 @@ class ProjectConfig(BaseModel):
 
     @classmethod
     def load(cls, config_dir: Path) -> "ProjectConfig":
-        """Load from split config directory (global.yaml + doc_types/*.yaml)."""
+        """The shipped defaults, overridden by the project's own config.
+
+        ``global.yaml`` is required: it is what makes a directory a DHF. Each of
+        its top-level keys replaces the default key. A file in ``doc_types/``
+        replaces the default doc type with the same ``code``, or adds a type;
+        ``omit_doc_types`` in ``global.yaml`` drops defaults the project does
+        not use.
+        """
+        from dhfkit.paths import DEFAULT_CONFIG_DIR
+
         global_path = config_dir / "global.yaml"
         if not global_path.exists():
             raise FileNotFoundError(f"global.yaml not found at {global_path}")
-        global_data = _read_mapping(global_path)
+        global_data = {**_read_mapping(DEFAULT_CONFIG_DIR / "global.yaml"),
+                       **_read_mapping(global_path)}
+        omitted = set(global_data.pop("omit_doc_types", None) or [])
 
-        doc_types = []
-        doc_types_dir = config_dir / "doc_types"
-        if doc_types_dir.exists():
-            for f in sorted(doc_types_dir.glob("*.yaml")):
-                doc_types.append(_read_mapping(f))
+        by_code: dict = {}
+        for directory in (DEFAULT_CONFIG_DIR / "doc_types", config_dir / "doc_types"):
+            if directory.is_dir():
+                for f in sorted(directory.glob("*.yaml")):
+                    data = _read_mapping(f)
+                    by_code[data.get("code") or f.stem.upper()] = data
+        doc_types = [data for code, data in by_code.items() if code not in omitted]
 
         try:
             return cls(**global_data, doc_types=doc_types)

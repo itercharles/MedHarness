@@ -129,11 +129,6 @@ class TestCRGenerationCommands:
             for cmd in commands:
                 assert cmd in r.stdout, f"{cmd!r} missing from `{verb} --help`"
 
-    def test_upgrade_help(self):
-        """medharness upgrade --help exits 0."""
-        r = _run("medharness", "upgrade", "--help")
-        assert r.returncode == 0, r.stderr
-        assert "--apply" in r.stdout
 
     def test_verify_soup_help(self):
         """medharness verify soup --help exits 0."""
@@ -187,16 +182,10 @@ class TestOutputContract:
             assert "type" in item
 
 
-
     def test_verify_completion_output_shape(self, scaffolded_dhf, tmp_path):
         """verify completion writes JSON with all required keys to stdout."""
-        import json, importlib.resources
+        import json
         dhf = scaffolded_dhf / "DHF"
-        # Install CR doc type (not in default scaffold)
-        cr_src = importlib.resources.files("dhfkit").joinpath(
-            "templates/config/doc_types/cr.yaml"
-        )
-        (dhf / "config" / "doc_types" / "cr.yaml").write_bytes(cr_src.read_bytes())
         # Write a minimal CR with all mandatory closure fields
         cr_dir = dhf / "items" / "07_cr"
         cr_dir.mkdir(parents=True, exist_ok=True)
@@ -237,15 +226,3 @@ class TestOutputContract:
         assert isinstance(payload["passed"], bool)
         assert payload["summary"], "a pass with no summary cannot be told from an empty check"
 
-    def test_upgrade_output_shape(self, scaffolded_dhf):
-        """upgrade writes JSON with all required keys to stdout."""
-        import json
-        r = _run("medharness", "upgrade", "--project-dir", str(scaffolded_dhf))
-        # A freshly scaffolded DHF should be up to date
-        assert r.returncode == 0, r.stderr
-        payload = json.loads(r.stdout.splitlines()[0])
-        required_keys = {"installed_version", "files_checked", "up_to_date", "outdated", "missing", "summary"}
-        assert required_keys <= payload.keys(), f"Missing keys: {required_keys - payload.keys()}"
-        assert isinstance(payload["up_to_date"], list)
-        assert isinstance(payload["outdated"], list)
-        assert isinstance(payload["missing"], list)

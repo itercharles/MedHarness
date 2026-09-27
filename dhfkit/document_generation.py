@@ -16,6 +16,19 @@ _GENERATED_DATE = re.compile(r'\|\s*\*\*Generated\*\*\s*\|\s*(\d{4}-\d{2}-\d{2})
 
 
 
+
+def spec_output_path(dhf_root: Path, output: str) -> Path:
+    """Where a specification is written: relative to the DHF.
+
+    Configs written before the defaults moved into the package spelled it from
+    the project root, starting with the DHF directory's own name
+    (``DHF/documents/...``); those keep resolving where they always did.
+    """
+    rel = Path(output)
+    if rel.parts and rel.parts[0] == Path(dhf_root).name:
+        return Path(dhf_root).parent / rel
+    return Path(dhf_root) / rel
+
 def load_weasyprint():
     """WeasyPrint's ``HTML`` class, imported without touching stdout.
 
@@ -43,13 +56,13 @@ def _body(markdown_content: str) -> str:
 class DocumentGenerator:
     """Generate regulatory documents from templates."""
 
-    def __init__(self, loader, config, template_dir: Path):
+    def __init__(self, loader, config, template_dirs: list[Path]):
         self.loader = loader
         self.config = config
-        self.template_dir = template_dir
+        self.template_dirs = list(template_dirs)
 
         self.jinja_env = Environment(
-            loader=FileSystemLoader(template_dir),
+            loader=FileSystemLoader(self.template_dirs),
             autoescape=select_autoescape(['html', 'xml']),
             trim_blocks=True,
             lstrip_blocks=True
@@ -78,7 +91,7 @@ class DocumentGenerator:
         spec_config = doc_specs[doc_type_code]
         template_name = spec_config.get('source') or spec_config['template']
         output_rel_path = spec_config['output']
-        output_path = dhf_root.parent / output_rel_path
+        output_path = spec_output_path(dhf_root, output_rel_path)
 
         doc_type_config = self.config.get_doc_type(doc_type_code)
         if not doc_type_config:
@@ -155,7 +168,7 @@ class DocumentGenerator:
         if doc_type_code not in doc_specs:
             raise ValueError(f"No document specification configured for {doc_type_code}")
 
-        static_file_path = dhf_root.parent / doc_specs[doc_type_code]['output']
+        static_file_path = spec_output_path(dhf_root, doc_specs[doc_type_code]['output'])
         if not static_file_path.exists():
             raise FileNotFoundError(f"Static document not found: {static_file_path}")
 
@@ -203,8 +216,9 @@ class DocumentGenerator:
             extensions=['tables', 'fenced_code', 'toc', 'md_in_html']
         )
 
-        css_path = self.template_dir / 'styles' / 'default.css'
-        css_content = css_path.read_text(encoding="utf-8") if css_path.exists() else self._get_default_css()
+        css_path = next((d / 'styles' / 'default.css' for d in self.template_dirs
+                         if (d / 'styles' / 'default.css').exists()), None)
+        css_content = css_path.read_text(encoding="utf-8") if css_path else self._get_default_css()
 
         return (
             "<!DOCTYPE html>\n"

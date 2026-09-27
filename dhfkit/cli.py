@@ -1,7 +1,6 @@
 """DHF CLI — standalone data-layer operations (no medharness dependency)."""
 
 import json
-import shutil
 import sys
 from pathlib import Path
 
@@ -328,11 +327,10 @@ def doc_cmd(ctx: click.Context, doc_type: str, fmt: str, out_dir: Path | None) -
               help="Human-readable project name written into global.yaml.")
 @click.pass_context
 def init_cmd(ctx: click.Context, project_name: str) -> None:
-    """Bootstrap a minimal standalone DHF.
+    """A bare DHF: its config and an empty items directory.
 
-    Creates the DHF directory with a minimal config (global.yaml + core
-    doc types), empty item directories, and a documents/specs/ folder so
-    item and document commands work immediately.
+    The doc types, lifecycle, traceability rules and templates come from the
+    package's defaults; `global.yaml` holds only what this DHF changes.
 
     \b
     Example:
@@ -341,83 +339,22 @@ def init_cmd(ctx: click.Context, project_name: str) -> None:
         dhfkit --dhf path/to/DHF validate schema
     """
     dhf_path: Path = ctx.obj["dhf"]
-    _templates = Path(__file__).parent / "templates"
-
     if dhf_path.exists() and any(dhf_path.iterdir()):
         raise click.ClickException(f"{dhf_path} already exists and is not empty.")
 
-    # config/global.yaml — minimal standalone version (no lifecycle states, no AI harness)
     config_dir = dhf_path / "config"
     config_dir.mkdir(parents=True, exist_ok=True)
-    dhf_name = dhf_path.name  # used in output paths so doc generation resolves correctly
     (config_dir / "global.yaml").write_text(
-        yaml.dump({"project_name": project_name}, default_flow_style=False, allow_unicode=True)
-        + "\n"
-        "required_traceability:\n"
-        "- source_type: SRS\n"
-        "  direction: upstream\n"
-        "  field: derives_from\n"
-        "  target_type: SYS\n"
-        "  min_count: 1\n"
-        "- source_type: RCM\n"
-        "  direction: upstream\n"
-        "  field: mitigates\n"
-        "  target_type: RISK\n"
-        "  min_count: 1\n"
-        "- source_type: RCM\n"
-        "  direction: upstream\n"
-        "  field: implements\n"
-        "  target_type: SYS\n"
-        "  min_count: 1\n"
-        "\n"
-        "traceability_matrices:\n"
-        "- name: Requirements Chain\n"
-        "  description: System to software requirements\n"
-        "  path:\n"
-        "  - SYS\n"
-        "  - SRS\n"
-        "- name: Risk to Control Measures\n"
-        "  description: Risks and their controls\n"
-        "  path:\n"
-        "  - RISK\n"
-        "  - RCM\n"
-        "\n"
-        f"document_specifications:\n"
-        f"  SYS:\n"
-        f"    source: requirements_specification.md.j2\n"
-        f"    output: {dhf_name}/documents/specs/system_requirement_specification.md\n"
-        f"    doc_type_name: System Requirement\n"
-        f"  SRS:\n"
-        f"    source: requirements_specification.md.j2\n"
-        f"    output: {dhf_name}/documents/specs/software_requirement_specification.md\n"
-        f"    doc_type_name: Software Requirement\n"
-        f"  RISK:\n"
-        f"    source: risk_specification.md.j2\n"
-        f"    output: {dhf_name}/documents/specs/risk_analysis_specification.md\n"
-        f"    doc_type_name: Risk Analysis\n"
-        f"  RCM:\n"
-        f"    source: rcm_specification.md.j2\n"
-        f"    output: {dhf_name}/documents/specs/risk_control_measures_specification.md\n"
-        f"    doc_type_name: Risk Control Measures\n",
+        "# Anything not set here comes from the defaults shipped with dhfkit.\n"
+        + yaml.dump({"project_name": project_name}, default_flow_style=False, allow_unicode=True),
         encoding="utf-8",
     )
+    # One directory per item type, so it is plain where a new item goes.
+    from dhfkit.models.config import ProjectConfig
 
-    # config/doc_types/ — copy core four from bundled templates
-    doc_types_dir = config_dir / "doc_types"
-    doc_types_dir.mkdir(exist_ok=True)
-    for code in ("sys", "srs", "risk", "rcm"):
-        src = _templates / "config" / "doc_types" / f"{code}.yaml"
-        shutil.copy2(src, doc_types_dir / f"{code}.yaml")
-
-    # empty item directories
-    for directory in ("02_sys", "03_srs", "10_risk", "11_rcm"):
-        (dhf_path / "items" / directory).mkdir(parents=True, exist_ok=True)
-
-    # documents/specs/ — copy the four core Jinja2 templates so doc generate works
-    specs_dir = dhf_path / "documents" / "specs"
-    specs_dir.mkdir(parents=True, exist_ok=True)
-    for tmpl in ("requirements_specification.md.j2", "risk_specification.md.j2", "rcm_specification.md.j2"):
-        shutil.copy2(_templates / "specs" / tmpl, specs_dir / tmpl)
+    for doc_type in ProjectConfig.load(config_dir).doc_types:
+        (dhf_path / "items" / (doc_type.directory or doc_type.code.lower())).mkdir(
+            parents=True, exist_ok=True)
 
     click.echo(json.dumps({"created": str(dhf_path), "project_name": project_name}))
     click.echo(f"DHF initialised at {dhf_path}", err=True)

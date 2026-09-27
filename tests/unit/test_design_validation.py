@@ -16,7 +16,7 @@ def dhf(tmp_path: Path) -> Path:
     the items themselves are patched per test."""
     import shutil
 
-    from medharness.workflows.upgrade import _TEMPLATES_DIR
+    from dhfkit.paths import DEFAULTS_DIR as _TEMPLATES_DIR
 
     d = tmp_path / "DHF"
     shutil.copytree(_TEMPLATES_DIR / "config", d / "config")

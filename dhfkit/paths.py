@@ -19,3 +19,11 @@ def config_file(dhf_root: Path | str, name: str) -> Path | None:
     """
     candidate = Path(dhf_root) / "config" / name
     return candidate if candidate.is_file() else None
+
+
+#: What every DHF gets unless it says otherwise: the doc types, lifecycle and
+#: traceability rules, and the specification templates. A project's own
+#: `config/` and `documents/specs/` override these file by file.
+DEFAULTS_DIR = Path(__file__).parent / "templates"
+DEFAULT_CONFIG_DIR = DEFAULTS_DIR / "config"
+DEFAULT_SPECS_DIR = DEFAULTS_DIR / "specs"

@@ -2,12 +2,10 @@
 
 from __future__ import annotations
 
-import importlib.resources
 import json
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
 from click.testing import CliRunner
 
 from dhfkit.cli import main as dhfkit_main
@@ -18,8 +16,6 @@ from medharness.services.ci import soup_gate
 def _make_dhf(tmp_path: Path) -> Path:
     dhf = tmp_path / "DHF"
     CliRunner().invoke(dhfkit_main, ["--dhf", str(dhf), "init"])
-    soup_src = importlib.resources.files("dhfkit").joinpath("templates/config/doc_types/soup.yaml")
-    (dhf / "config" / "doc_types" / "soup.yaml").write_bytes(soup_src.read_bytes())
     return dhf
 
 

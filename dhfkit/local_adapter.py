@@ -51,19 +51,16 @@ class LocalDHFAdapter:
         self._doc_index: dict[str, Path] = {}
         self._rebuild_doc_index()
 
-    def _resolve_template_dir(self) -> Path:
-        """Resolve the Jinja2 template directory for spec generation.
+    def _template_dirs(self) -> list[Path]:
+        """Where specification templates are looked up: the project, then the defaults.
 
-        Only supports the flat documents/specs/ layout.
-        Raises FileNotFoundError if .j2 templates are missing.
+        A project overrides one template by putting a file of the same name in
+        `documents/specs/`; everything else comes from the package.
         """
-        template_dir = self._dhf_root / "documents" / "specs"
-        if template_dir.is_dir() and not any(template_dir.glob("*.j2")):
-            raise FileNotFoundError(
-                f"No .j2 templates found in {template_dir}. "
-                "Add specification templates (e.g. requirements_specification.md.j2)."
-            )
-        return template_dir
+        from dhfkit.paths import DEFAULT_SPECS_DIR
+
+        project = self._dhf_root / "documents" / "specs"
+        return ([project] if project.is_dir() else []) + [DEFAULT_SPECS_DIR]
 
     # ------------------------------------------------------------------
     # Item type metadata
@@ -366,8 +363,7 @@ class LocalDHFAdapter:
 
     def generate_doc(self, doc_type_code: str) -> dict:
         from dhfkit.document_generation import DocumentGenerator
-        template_dir = self._resolve_template_dir()
-        gen = DocumentGenerator(self._loader, self._config, template_dir)
+        gen = DocumentGenerator(self._loader, self._config, self._template_dirs())
         content, output_path = gen.generate_markdown_spec(doc_type_code, self._doc_specs, self._dhf_root)
         version = "unknown"
         m = re.search(r'\|\s*\*\*Version\*\*\s*\|\s*([\d.]+)\s*\|', content)
@@ -379,8 +375,7 @@ class LocalDHFAdapter:
     def export_pdf(self, doc_type_code: str, out_dir: Path | None = None) -> dict:
         spec_result = self.generate_doc(doc_type_code)
         from dhfkit.document_generation import DocumentGenerator
-        template_dir = self._resolve_template_dir()
-        gen = DocumentGenerator(self._loader, self._config, template_dir)
+        gen = DocumentGenerator(self._loader, self._config, self._template_dirs())
         pdf_path = gen.export_static_doc_to_pdf(
             doc_type_code, self._doc_specs, self._dhf_root, out_dir
         )
@@ -394,8 +389,7 @@ class LocalDHFAdapter:
     def export_html(self, doc_type_code: str, out_dir: Path | None = None) -> dict:
         spec_result = self.generate_doc(doc_type_code)
         from dhfkit.document_generation import DocumentGenerator
-        template_dir = self._resolve_template_dir()
-        gen = DocumentGenerator(self._loader, self._config, template_dir)
+        gen = DocumentGenerator(self._loader, self._config, self._template_dirs())
         html_path = gen.export_static_doc_to_html(
             doc_type_code, self._doc_specs, self._dhf_root,
             out_dir or (self._dhf_root / "documents" / "exports"),

@@ -103,10 +103,6 @@ class TestTheCommandSourceRunsForReal:
 
         dhf = tmp_path / "DHF"
         CliRunner().invoke(dhfkit_main, ["--dhf", str(dhf), "init"])
-        (dhf / "config" / "doc_types" / "soup.yaml").write_bytes(
-            resources.files("dhfkit")
-            .joinpath("templates/config/doc_types/soup.yaml").read_bytes()
-        )
         (tmp_path / "stub.py").write_text(
             "import json\n"
             "print(json.dumps([{'dependencies': {'react': {'version': '18.2.0'}}}]))\n"

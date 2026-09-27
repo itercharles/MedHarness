@@ -45,7 +45,8 @@ def _first_srs(dhf: Path) -> Path:
 
 
 def _first_doc_type(dhf: Path) -> Path:
-    return next((dhf / "config" / "doc_types").glob("*.yaml"))
+    """A project override of a default type — the file a project would edit."""
+    return dhf / "config" / "doc_types" / "srs.yaml"
 
 
 #: name -> (which file, what to write). Each is a mistake a hand edit makes.
@@ -80,6 +81,7 @@ def broken(request, tmp_path: Path) -> tuple[Path, Path]:
     if content is None:
         target.unlink()
     else:
+        target.parent.mkdir(exist_ok=True)
         target.write_text(content, encoding="utf-8")
     return dhf, target
 

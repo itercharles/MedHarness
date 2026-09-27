@@ -11,7 +11,6 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-import pytest
 from click.testing import CliRunner
 
 from dhfkit.cli import main as dhfkit_main
@@ -26,9 +25,6 @@ def _make_dhf(tmp_path: Path) -> Path:
 
 def _write_cr(dhf: Path, cr_id: str, **fields) -> None:
     """Write a CR item YAML. Field values must be str, list[str|dict], or dict."""
-    import importlib.resources
-    cr_src = importlib.resources.files("dhfkit").joinpath("templates/config/doc_types/cr.yaml")
-    (dhf / "config" / "doc_types" / "cr.yaml").write_bytes(cr_src.read_bytes())
     cr_dir = dhf / "items" / "07_cr"
     cr_dir.mkdir(parents=True, exist_ok=True)
     lines = [f"id: {cr_id}", f'title: "Test CR"']
