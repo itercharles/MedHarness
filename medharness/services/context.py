@@ -1,8 +1,7 @@
 """What an AI agent reads before working on a CR.
 
-One definition: `medharness context --cr` prints it as JSON, and `build plan`
-and `build code` render the same dict into their prompts, so an outside agent
-and the built-in stages cannot be told different things.
+One definition, which `build plan` and `build code` render into their prompts,
+so the two stages cannot be told different things about the same CR.
 
 The CR's own state sets the scope. Before `build plan` records
 `affected_items`, choosing what to change needs every item; after, the agent
@@ -11,7 +10,6 @@ needs only what the CR affects, in full.
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Any
 
 from medharness.services.traceability import build_module_map
@@ -98,90 +96,3 @@ def _risks(items: list[dict], config: Any) -> list[dict]:
         }
         for risk in items if risk["id"].startswith(risk_dt.prefix)
     ]
-
-
-def compute_item_coverage(
-    junit_paths: list[Path],
-    adapter=None,
-) -> dict:
-    """Parse JUnit XML files and return coverage plus manual-verification hints.
-
-    An item becomes a manual-verification candidate when any of these DHF item
-    fields are set: ``critical_safety == True``, ``verification_method`` contains
-    ``"Inspection"`` or ``"Demonstration"``, or ``category == "Usability"``.
-
-    Returns:
-        {
-          "computed": True,
-          "coverage_by_item": dict,
-          "uncovered_requirements": dict,
-          "manual_verification_candidates": dict,
-          "manual_verification_criteria": dict,
-        }
-    """
-    from dhfkit.junit_parser import parse_junit_xml
-
-    coverage_by_item: dict[str, list[str]] = {}
-    for jp in junit_paths:
-        if not jp.is_file():
-            continue
-        for result in parse_junit_xml(jp):
-            if result.testing_status != "PASS":
-                continue
-            for link in result.links or []:
-                coverage_by_item.setdefault(link.strip(), []).append(result.id)
-
-    uncovered: dict[str, list[str]] = {}
-    item_type_map: dict[str, str] = {}
-    manual_candidates: dict[str, dict[str, list[str] | str]] = {}
-    manual_candidates_error = ""
-    if adapter is not None:
-        try:
-            all_items = adapter.list_items()
-            item_type_map = {it["id"]: it.get("type", "") for it in all_items}
-            for item in all_items:
-                reasons: list[str] = []
-                if item.get("critical_safety") is True:
-                    reasons.append("critical_safety")
-
-                verification_method = item.get("verification_method")
-                if isinstance(verification_method, list):
-                    for method in verification_method:
-                        if method in {"Inspection", "Demonstration"}:
-                            reasons.append(f"verification_method:{method}")
-
-                category = item.get("category")
-                if category == "Usability":
-                    reasons.append("category:Usability")
-
-                if reasons:
-                    manual_candidates[item["id"]] = {
-                        "type": item.get("type", ""),
-                        "reasons": reasons,
-                    }
-        except Exception as exc:  # noqa: BLE001
-            # An empty manual_candidates and an unreadable DHF looked identical
-            # to a caller. They are not the same answer.
-            manual_candidates_error = f"manual-review candidates unavailable: {exc}"
-
-    for rt in (adapter.config.requirement_types() if adapter else ("SRS", "SYS", "CRS")):
-        prefix = f"{rt}-"
-        uncovered[rt] = []
-        for item_id in item_type_map:
-            if item_id.startswith(prefix) and item_id not in coverage_by_item:
-                uncovered[rt].append(item_id)
-
-    return {
-        "computed": len(junit_paths) > 0,
-        "coverage_by_item": coverage_by_item,
-        "uncovered_requirements": {k: v for k, v in uncovered.items() if v},
-        "manual_verification_candidates": manual_candidates,
-        # Empty because there are none, or empty because the DHF would not
-        # load? A caller cannot tell from the list alone.
-        "manual_verification_candidates_error": manual_candidates_error,
-        "manual_verification_criteria": {
-            "critical_safety": True,
-            "verification_methods": ["Inspection", "Demonstration"],
-            "categories": ["Usability"],
-        },
-    }

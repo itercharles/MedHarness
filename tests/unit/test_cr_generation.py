@@ -958,7 +958,7 @@ class TestGenerateCode:
 # ── DHF context block ──────────────────────────────────────────────────────────
 
 class TestPlanContext:
-    """The `build plan` prompt renders `cr_context`, the dict `medharness context` prints."""
+    """The `build plan` prompt renders `cr_context`."""
 
     @staticmethod
     def _render(adapter, cr_id: str = "CR-001") -> str:

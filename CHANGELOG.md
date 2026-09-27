@@ -21,29 +21,25 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
   reports `gh_error` with gh's own reason, replacing `http_error` and
   `transport_error`. The warning codes are now
   `github_{comments,reviews}_unavailable`.
-- **`medharness context` requires `--cr` and has the same keys for every CR.**
-  Contract version 12.0.
-  - **Why:** the command gave an agent one view of the DHF, while `build plan`
-    and `build code` built their own in `prompt_assembly.py`, and the two had
-    drifted: risks reached only `build plan`, and `context --cr` narrowed the
-    module map while `build code` saw all of it. Now `services/context.py` is
-    the only definition. The command prints it, and both stages render the
-    same dict into their prompts.
-  - **Output:** always `project`, `cr`, `scope`, `types`, `items`, `modules`,
-    `risks`, plus `test_coverage` with `--junit`/`--junit-dir`. `scope` is
-    `whole_dhf` (every item summarized) until the CR records
-    `affected_items`, then `affected` (those items in full). Before, the key
-    changed (`items` or `affected_items`), and a caller had to check which
-    one was present. `module_map` is now `modules`.
-  - **Without `--cr`:** the mode is gone. Its item list is
-    `dhfkit item list`, and its `traceability` verdict is `verify dhf`,
-    which already owned that answer.
+- **`medharness context` is removed.** Contract version 12.0.
+  - **Why:** nothing ran it. The CI recipe, the adopting guide, the scaffold
+    and the prompts never invoked it, and `build plan` and `build code` built
+    their own view of the DHF in `prompt_assembly.py`. That view had drifted
+    from the command's: risks reached only `build plan`, and the command
+    narrowed the module map while `build code` saw all of it.
+  - **Instead:** read items with `dhfkit item list` and `dhfkit item get`,
+    and ask `verify dhf` whether the DHF holds together. `verify tests`
+    answers test coverage, which `context --junit` used to report.
+  - **Inside:** `services/context.py` is now the one definition of what the
+    AI stages are told about a CR. Both prompts render it. The scope comes
+    from the CR's own state: every item summarized until the CR records
+    `affected_items`, then those items in full with the modules that own
+    them.
   - **The prompts:** `build plan` no longer gets "manual verification
     candidates". The list named every SYS item with no `TC-` item linked, and
     no default doc type creates `TC-` items, so on a real DHF it named every
     SYS item. `build code` now sees the modules that own the CR's affected
-    items, as `context` does, instead of every module.
-
+    items instead of every module.
 
 ### Changed
 
@@ -64,9 +60,8 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
   set them by hand.
 - **`medharness/cli/` has one file per verb.** `ci.py` held `verify`,
   `workflow`, and `build plan`/`build code`; `analyse.py` held `build release`
-  and `build dhf`; `dhf.py` held `context`. They are now `verify.py`,
-  `workflow.py`, `build.py` and `context.py`, plus `output.py` for the shared
-  JSON and stderr helpers. The command bodies moved without changes.
+  and `build dhf`. They are now `verify.py`, `workflow.py` and `build.py`,
+  plus `output.py` for the shared JSON and stderr helpers. The command bodies moved without changes.
 - **One traceability implementation.** `medharness/core.py` (`MedHarnessCore`)
   and `medharness/graph.py` (`GraphEngine`) were a second graph beside
   `services/traceability.py`. Their only production use was the traceability
@@ -84,9 +79,9 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 - **`services/ci.py` (1,400 lines) is split by gate.** It is now
   `services/verify_dhf.py`, `verify_tests.py`, `verify_soup.py` and
   `verify_completion.py`, plus `services/envelope.py` for the shared result
-  envelope. `build_evidence_bundle` moved to `services/release_artifacts.py`
-  and `compute_item_coverage` to `services/context.py`, beside their only
-  callers. Function names and behaviour are unchanged.
+  envelope. `build_evidence_bundle` moved to `services/release_artifacts.py`,
+  beside its only caller. `compute_item_coverage` went with `context`.
+  Function names and behaviour are unchanged.
 - **`verify soup` takes its two osv.dev calls as arguments.** `soup_gate`
   accepts `query` and `lookup`, which default to `osv_querybatch` and
   `osv_vuln`. Its tests pass fakes instead of patching `urllib`. An

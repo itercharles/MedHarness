@@ -42,14 +42,12 @@ def workflow() -> None:
     """Check what Git and GitHub say about a change. CI helpers."""
 
 
-from medharness.cli.context import register as register_context
 from medharness.cli.verify import register as register_verify
 from medharness.cli.build import register as register_build
 from medharness.cli.workflow import register as register_workflow
 from medharness.cli.init import register as register_init
 from medharness.cli.doctor import register as register_doctor
 
-register_context(main)
 register_verify(main)
 register_build(main)
 register_workflow(main)

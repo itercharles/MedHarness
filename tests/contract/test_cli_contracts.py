@@ -50,13 +50,6 @@ class TestMedHarnessCLI:
         assert r.returncode == 0, r.stderr
 
 
-    def test_context_commands_exist(self):
-        """medharness dhf exists and exposes context subcommand."""
-        r = _run("medharness", "context", "--help")
-        assert r.returncode == 0
-        assert "context" in r.stdout, "Missing dhf subcommand group: context"
-
-
 class TestInitCommand:
     """Verify init command is callable (interactive, minimal check)."""
 

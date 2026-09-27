@@ -19,7 +19,7 @@ How the code is organised, for contributors. What a user calls is in the
 `tests/guards/test_package_boundary.py` enforces both.
 
 Each top-level command group lives in the file named after it:
-`medharness/cli/verify.py`, `build.py`, `workflow.py` and `context.py`. A new
+`medharness/cli/verify.py`, `build.py` and `workflow.py`. A new
 command goes in the file of its verb. `cli/output.py` holds the JSON-to-stdout,
 lines-to-stderr helpers every command shares. Each `verify` check sits in its own
 module, `services/verify_<name>.py`, and answers in the envelope from
@@ -128,7 +128,7 @@ as `provider:model` — `anthropic` (the `claude` CLI, the default), `openai`,
 | Module | Does |
 |---|---|
 | `services/cr_generation.py` | Stage orchestration, model calls, PR feedback |
-| `services/context.py` | What an agent is told about the DHF for one CR; `medharness context --cr` prints it |
+| `services/context.py` | What the model is told about the DHF for one CR: the whole DHF summarized until the CR records `affected_items`, then those items in full |
 | `services/prompt_assembly.py` | Loads prompts from `medharness/prompts/` and renders `services/context.py` into them |
 | `services/cr_impact.py` | Writes `affected_items` back onto the CR |
 | `services/design_validation.py` | The deterministic check after each design pass |

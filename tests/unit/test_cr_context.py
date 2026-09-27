@@ -1,13 +1,9 @@
-"""`medharness context --cr` — one command, scoped by the CR's own state.
+"""`cr_context` — what `build plan` and `build code` are told about a CR.
 
-It replaced `overview`, `implementation` and `for-stage analyze|design|develop`.
-The stage argument encoded something the CR already records: before `build plan`
-it has no `affected_items`, so an agent needs the whole DHF to choose what to
-change; after, it needs only what the CR affects.
-
-The keys are the same either way; `scope` says which. It is also what `build
-plan` and `build code` put in their prompts, so there is one definition of what
-an agent is told.
+Scoped by the CR's own state rather than a stage argument: before `build plan`
+it has no `affected_items`, so the model needs the whole DHF to choose what to
+change; after, it needs only what the CR affects. The keys are the same either
+way; `scope` says which.
 """
 
 from __future__ import annotations
@@ -18,7 +14,8 @@ from pathlib import Path
 from click.testing import CliRunner
 
 from dhfkit.cli import main as dhfkit_main
-from medharness.cli import main
+from dhfkit.local_adapter import LocalDHFAdapter
+from medharness.services.context import cr_context
 
 
 def _make_dhf(tmp_path: Path) -> Path:
@@ -49,10 +46,8 @@ def _write_cr(dhf: Path, cr_id: str, **fields) -> None:
     (cr_dir / f"{cr_id}.yaml").write_text("\n".join(lines) + "\n")
 
 
-def _invoke(dhf: Path, *args: str) -> dict:
-    result = CliRunner().invoke(main, ["--dhf", str(dhf), "context", *args])
-    assert result.exit_code == 0, result.output
-    return json.loads(result.output.splitlines()[0])
+def _context(dhf: Path, cr_id: str) -> dict:
+    return cr_context(LocalDHFAdapter(dhf), cr_id)
 
 
 def _srs(dhf: Path) -> str:
@@ -68,26 +63,13 @@ KEYS = {"project", "cr", "scope", "types", "items", "modules", "risks"}
 
 
 class TestTheShapeDoesNotDependOnTheCR:
-    def test_a_cr_is_required(self, tmp_path: Path) -> None:
-        result = CliRunner().invoke(main, ["--dhf", str(_make_dhf(tmp_path)), "context"])
-        assert result.exit_code != 0
-        assert "--cr" in result.output
-
     def test_the_same_keys_before_and_after_build_plan(self, tmp_path: Path) -> None:
         dhf = _make_dhf(tmp_path)
         _write_cr(dhf, "CR-001")
         _write_cr(dhf, "CR-002", affected_items=[_srs(dhf)])
-        before, after = _invoke(dhf, "--cr", "CR-001"), _invoke(dhf, "--cr", "CR-002")
+        before, after = _context(dhf, "CR-001"), _context(dhf, "CR-002")
         assert set(before) == set(after) == KEYS
         assert (before["scope"], after["scope"]) == ("whole_dhf", "affected")
-
-    def test_junit_adds_test_coverage(self, tmp_path: Path) -> None:
-        dhf = _make_dhf(tmp_path)
-        (tmp_path / "r.xml").write_text(
-            '<testsuites><testsuite name="s" tests="1"><testcase classname="t" name="a"/>'
-            "</testsuite></testsuites>")
-        payload = _invoke(dhf, "--cr", "CR-001", "--junit", str(tmp_path / "r.xml"))
-        assert set(payload) == KEYS | {"test_coverage"}
 
 
 class TestBeforeTheCRRecordsWhatItAffects:
@@ -95,7 +77,7 @@ class TestBeforeTheCRRecordsWhatItAffects:
         dhf = _make_dhf(tmp_path)
         srs = _srs(dhf)
         _write_cr(dhf, "CR-001", triage_result={"verdict": "approved"})
-        payload = _invoke(dhf, "--cr", "CR-001")
+        payload = _context(dhf, "CR-001")
         assert payload["scope"] == "whole_dhf"
         assert payload["cr"]["triage_result"]["verdict"] == "approved"
         assert [it["id"] for it in payload["items"]] == ["CR-001", srs], (
@@ -109,7 +91,7 @@ class TestAfterTheCRRecordsWhatItAffects:
         srs = _srs(dhf)
         _write_cr(dhf, "CR-001", affected_items=[srs],
                   implementation_notes="Plan.", proposed_new_items=[])
-        payload = _invoke(dhf, "--cr", "CR-001")
+        payload = _context(dhf, "CR-001")
         assert payload["scope"] == "affected"
         assert [it["id"] for it in payload["items"]] == [srs]
         assert payload["items"][0]["verification_criteria"] == "T1 passes"
@@ -117,28 +99,18 @@ class TestAfterTheCRRecordsWhatItAffects:
 
 
 def test_an_unknown_cr_says_so(tmp_path: Path) -> None:
-    assert _invoke(_make_dhf(tmp_path), "--cr", "CR-999")["cr"] == {"id": "CR-999", "found": False}
+    assert _context(_make_dhf(tmp_path), "CR-999")["cr"] == {"id": "CR-999", "found": False}
 
 
 def test_types_name_the_project_codes(tmp_path: Path) -> None:
-    types = _invoke(_make_dhf(tmp_path), "--cr", "CR-001")["types"]
+    types = _context(_make_dhf(tmp_path), "CR-001")["types"]
     assert {"code": "SYS", "display_name": "System Requirement",
             "role": "system_requirement"} in types
 
 
 def test_project_survives_a_relative_dhf_path(tmp_path: Path, monkeypatch) -> None:
-    """`--dhf DHF` is how the docs and the CI recipe invoke it, and
+    """`--dhf DHF` is how the docs and the CI recipe invoke the stages, and
     `Path("DHF").parent.name` is the empty string."""
     _make_dhf(tmp_path)
     monkeypatch.chdir(tmp_path)
-    assert _invoke(Path("DHF"), "--cr", "CR-001")["project"], "project name came back empty"
-
-
-def test_interface_doc_lists_exactly_the_keys(tmp_path: Path) -> None:
-    """docs/interface.md is what a caller builds against."""
-    import re
-
-    doc = (Path(__file__).resolve().parents[2] / "docs" / "interface.md").read_text()
-    section = doc.split("## Context for an agent", 1)[1].split("\n## ", 1)[0]
-    documented = set(re.findall(r"^\| `(\w+)` \|", section, re.M))
-    assert documented == set(_invoke(_make_dhf(tmp_path), "--cr", "CR-001")) == KEYS
+    assert _context(Path("DHF"), "CR-001")["project"], "project name came back empty"

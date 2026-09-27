@@ -90,9 +90,8 @@ def _cr_context(dhf_path: Path, cr_id: str) -> dict:
 
 
 def _render_plan_context(ctx: dict) -> str:
-    """The `build plan` prompt's view of `medharness context --cr`."""
-    lines = ["## Pre-computed DHF Context\n",
-             f"(From `medharness context --cr {ctx['cr'].get('id', '')}`.)\n\n"]
+    """The `build plan` prompt's view of `cr_context`."""
+    lines = ["## Pre-computed DHF Context\n"]
     items = ctx["items"]
 
     if ctx["scope"] == "whole_dhf" and items:
@@ -169,7 +168,7 @@ def _render_plan_context(ctx: dict) -> str:
 
 
 def _render_code_context(ctx: dict) -> str:
-    """The `build code` prompt's view of `medharness context --cr`: the module map."""
+    """The `build code` prompt's view of `cr_context`: the module map."""
     if not ctx["modules"]:
         return ""
     lines = ["## Module → Design → Requirement Map\n",
