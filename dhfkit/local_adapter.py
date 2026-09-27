@@ -6,7 +6,7 @@ import re
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from dhfkit.exceptions import ValidationError
+from dhfkit.exceptions import RefusedWrite, ValidationError
 from dhfkit.item_type import ItemType
 from dhfkit.models.config import ProjectConfig
 from dhfkit.models.item import Item
@@ -264,9 +264,12 @@ class LocalDHFAdapter:
         self._validate_item_links(updated_data)
         # What the loader would refuse must not be written: one unreadable item
         # makes the whole DHF unreadable, this command included.
-        self._loader._validate_against_schema(
-            {("id" if k == "uid" else k): v for k, v in updated_data.items()},
-            Path(existing.file_path))
+        try:
+            self._loader._validate_against_schema(
+                {("id" if k == "uid" else k): v for k, v in updated_data.items()},
+                Path(existing.file_path))
+        except ValidationError as exc:
+            raise RefusedWrite(f"{uid} not updated: {exc}") from exc
         item = Item.model_validate(updated_data)
         self._saver.save(item, Path(existing.file_path))
         return self._enrich_item_dict(item)

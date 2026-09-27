@@ -106,7 +106,12 @@ def item_update(ctx: click.Context, item_id: str, data: str) -> None:
         click.echo(f"ERROR: --data is not valid JSON: {e}", err=True)
         sys.exit(1)
     adapter = _make_adapter(ctx.obj["dhf"])
-    result = adapter.update_item(item_id, update_data)
+    from dhfkit.exceptions import RefusedWrite
+    try:
+        result = adapter.update_item(item_id, update_data)
+    except RefusedWrite as e:
+        click.echo(f"ERROR: {e}", err=True)
+        sys.exit(1)
     if result is None:
         click.echo(f"ERROR: Item '{item_id}' not found.", err=True)
         sys.exit(1)

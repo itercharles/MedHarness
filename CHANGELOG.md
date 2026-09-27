@@ -11,6 +11,14 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.43.2] — 2026-09-27
+
+### Fixed
+
+- A refused `item update` said "The DHF could not be read", which sends the
+  reader looking for a broken file when the DHF is fine and only the update was
+  refused. It now says `CRS-013 not updated: …`.
+
 ## [0.43.1] — 2026-09-27
 
 ### Fixed
