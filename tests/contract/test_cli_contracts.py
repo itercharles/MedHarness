@@ -6,7 +6,7 @@ These tests protect the public CLI surface defined in compatibility-contracts.md
 
 import json
 
-from medharness.services.ci import ENVELOPE_KEYS
+from medharness.services.envelope import ENVELOPE_KEYS
 
 ENVELOPE = set(ENVELOPE_KEYS)
 import sys

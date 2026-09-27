@@ -72,14 +72,14 @@ REACHES = _private_reaches() + _private_imports()
 
 def test_the_scan_understands_the_code() -> None:
     """A scan that resolves nothing would make the assertion below vacuous."""
-    sample = ast.parse((ROOT / "medharness" / "services" / "ci.py").read_text())
+    sample = ast.parse((ROOT / "medharness" / "services" / "verify_tests.py").read_text())
     names = {
         a.asname or a.name
         for n in ast.walk(sample)
         if isinstance(n, ast.ImportFrom) and (n.module or "").startswith("dhfkit")
         for a in n.names
     }
-    assert names, "no dhfkit imports resolved in services/ci.py — the scan is broken"
+    assert names, "no dhfkit imports resolved in services/verify_tests.py — the scan is broken"
 
 
 @pytest.mark.parametrize("where,line,expr", REACHES,

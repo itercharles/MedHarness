@@ -20,8 +20,8 @@ from __future__ import annotations
 import inspect
 from pathlib import Path
 
-from medharness.services import ci as ci_module
-from medharness.services.ci import cr_closure_gate
+from medharness.services import verify_completion as ci_module
+from medharness.services.verify_completion import cr_closure_gate
 
 
 class TestClosureDoesNotRuleOnApproval:

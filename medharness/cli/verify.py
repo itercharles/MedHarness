@@ -9,7 +9,8 @@ import click
 
 from medharness.cli.options import collect_junit_paths
 from medharness.cli.output import details, emit, render_envelope
-from medharness.services.ci import ci_structural_gate, ci_test_coverage_gate
+from medharness.services.verify_dhf import ci_structural_gate
+from medharness.services.verify_tests import ci_test_coverage_gate
 
 _ITEM_ID_RE = re.compile(r"^([A-Z]+-\d+)")
 
@@ -198,7 +199,7 @@ def register(main):
 
         Exits non-zero when any proposed items are missing or unverified.
         """
-        from medharness.services.ci import cr_closure_gate
+        from medharness.services.verify_completion import cr_closure_gate
 
         effective_dhf = ctx.obj["dhf"]
         junit_paths = collect_junit_paths(junit_files, junit_dirs)
@@ -264,7 +265,7 @@ def register(main):
 
         Outputs structured JSON to stdout; human-readable messages to stderr.
         """
-        from medharness.services.ci import soup_gate
+        from medharness.services.verify_soup import soup_gate
 
         effective_dhf = ctx.obj["dhf"]
         result = soup_gate(effective_dhf, offline_mode=offline_mode,

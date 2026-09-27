@@ -73,6 +73,12 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
   `cli/options.py`. `_make_adapter` wrapped `LocalDHFAdapter` and nothing else.
   The dead-code guard now covers every service module instead of that one
   file.
+- **`services/ci.py` (1,400 lines) is split by gate.** It is now
+  `services/verify_dhf.py`, `verify_tests.py`, `verify_soup.py` and
+  `verify_completion.py`, plus `services/envelope.py` for the shared result
+  envelope. `build_evidence_bundle` moved to `services/release_artifacts.py`
+  and `compute_item_coverage` to `services/context.py`, beside their only
+  callers. Function names and behaviour are unchanged.
 - **`dhfkit.traceability.LINK_FIELDS` is public.** `medharness` imported it
   as `_LINK_FIELDS`, which crossed the package boundary. The boundary guard
   only caught `obj._private` and missed `from dhfkit... import _private`. It

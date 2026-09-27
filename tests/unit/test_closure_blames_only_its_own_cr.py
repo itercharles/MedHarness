@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from medharness.services.ci import validate_verification_completeness
+from medharness.services.verify_tests import validate_verification_completeness
 
 
 def _dhf_with_two_requirements(tmp_path: Path) -> Path:
@@ -81,7 +81,7 @@ class TestTheGateUsesTheScope:
     def test_the_closure_gate_does_not_report_an_unrelated_item(self, tmp_path: Path) -> None:
         import yaml
 
-        from medharness.services.ci import cr_closure_gate
+        from medharness.services.verify_completion import cr_closure_gate
 
         dhf = _dhf_with_two_requirements(tmp_path)
         cr = dhf / "items" / "07_cr" / "CR-001.yaml"

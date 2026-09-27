@@ -16,7 +16,7 @@ from unittest.mock import patch
 
 import pytest
 
-from medharness.services.ci import soup_gate
+from medharness.services.verify_soup import soup_gate
 
 
 @pytest.fixture

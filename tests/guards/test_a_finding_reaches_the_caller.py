@@ -19,7 +19,7 @@ from pathlib import Path
 
 import pytest
 
-from medharness.services.ci import ENVELOPE_KEYS
+from medharness.services.envelope import ENVELOPE_KEYS
 
 ROOT = Path(__file__).resolve().parents[2]
 

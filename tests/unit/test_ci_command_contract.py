@@ -87,7 +87,7 @@ class TestValidateBranchJsonContract:
         and the assertions named the pre-envelope keys, so it described a
         contract the command no longer had.
         """
-        from medharness.services.ci import ENVELOPE_KEYS, envelope_from
+        from medharness.services.envelope import ENVELOPE_KEYS, envelope_from
 
         runner = CliRunner()
         branch_result = envelope_from("workflow check-changes", {
@@ -116,7 +116,7 @@ class TestValidateBranchJsonContract:
         docs/interface.md types `errors` as strings a caller can print. Anyone
         satisfying the old assertion would have broken that for every consumer.
         """
-        from medharness.services.ci import envelope_from
+        from medharness.services.envelope import envelope_from
 
         finding = {"field": "code_branch", "issue": "x", "fix": "y"}
         branch_result = envelope_from("workflow check-changes", {

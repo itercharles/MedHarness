@@ -11,8 +11,8 @@ from click.testing import CliRunner
 
 from dhfkit.cli import main as dhfkit_main
 from medharness.cli import main
-from medharness.services.ci import ENVELOPE_KEYS
-from medharness.services.ci import validate_verification_completeness
+from medharness.services.envelope import ENVELOPE_KEYS
+from medharness.services.verify_tests import validate_verification_completeness
 
 
 # ---------------------------------------------------------------------------
@@ -219,7 +219,7 @@ class TestACheckThatCouldNotRunIsReported:
         from unittest.mock import patch
 
         from dhfkit.local_adapter import LocalDHFAdapter
-        from medharness.services.ci import ci_structural_gate
+        from medharness.services.verify_dhf import ci_structural_gate
         from medharness.workflows.init import _replace_placeholders, _scaffold_dhf
 
         _scaffold_dhf(tmp_path)
@@ -242,7 +242,7 @@ class TestACheckThatCouldNotRunIsReported:
         )
 
     def test_a_healthy_dhf_reports_no_such_error(self, tmp_path) -> None:
-        from medharness.services.ci import ci_structural_gate
+        from medharness.services.verify_dhf import ci_structural_gate
         from medharness.workflows.init import _replace_placeholders, _scaffold_dhf
 
         _scaffold_dhf(tmp_path)

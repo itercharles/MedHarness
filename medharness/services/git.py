@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import subprocess
-from medharness.services.ci import envelope_from
+from medharness.services.envelope import envelope_from
 from pathlib import Path
 
 

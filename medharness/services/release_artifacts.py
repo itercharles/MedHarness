@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 import click
 
@@ -278,3 +280,61 @@ def _generate_plan_artifacts(dhf_path: Path, out_dir: Path,
             output.write_text(document, encoding="utf-8")
         generated.append({"source": str(source or plan_id), "path": str(output)})
     return generated
+
+
+def build_evidence_bundle(
+    dhf_path: Path,
+    out_dir: Path,
+    *,
+    junit_paths: list[Path] = (),
+    traceability_types: tuple[str, ...] = (),
+    run_id: str = "",
+    run_url: str = "",
+    commit_sha: str = "",
+    doc_format: str = "html",
+    gate: dict,
+) -> dict[str, Any]:
+    """Write the specifications, traceability and test evidence, then a manifest.
+
+    Records the gate it is given rather than running its own. The manifest
+    hashes every file in ``out_dir``, so whatever was written there before this
+    runs is covered too. Returns the manifest.
+    """
+    from dhfkit.local_adapter import LocalDHFAdapter
+
+    adapter = LocalDHFAdapter(dhf_path)
+
+    out_dir.mkdir(parents=True, exist_ok=True)
+    artifacts = generate_release_artifacts(
+        adapter, dhf_path, out_dir, traceability_types, list(junit_paths),
+        doc_format=doc_format,
+    )
+
+    provenance = {
+        "run_id": run_id,
+        "run_url": run_url,
+        "commit_sha": commit_sha,
+        "dhf_root": str(dhf_path),
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "gate_passed": gate["passed"],
+    }
+    (out_dir / "evidence-summary.json").write_text(
+        json.dumps({**provenance, "gate": gate, "artifacts": artifacts},
+                   indent=2, default=str) + "\n",
+        encoding="utf-8",
+    )
+
+    files: list[dict] = []
+    for candidate in sorted(out_dir.rglob("*")):
+        if not candidate.is_file() or candidate.name.startswith("."):
+            continue
+        files.append({
+            "path": str(candidate.relative_to(out_dir)),
+            "size": candidate.stat().st_size,
+            "sha256": hashlib.sha256(candidate.read_bytes()).hexdigest(),
+        })
+    manifest = {**provenance, "files": files}
+    (out_dir / "evidence-manifest.json").write_text(
+        json.dumps(manifest, indent=2, default=str) + "\n", encoding="utf-8"
+    )
+    return manifest

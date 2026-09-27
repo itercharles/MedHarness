@@ -46,7 +46,7 @@ def register(main):
 
         junit_paths = collect_junit_paths(junit_files, junit_dirs)
         if junit_paths:
-            from medharness.services.ci import compute_item_coverage
+            from medharness.services.context import compute_item_coverage
             result["test_coverage"] = compute_item_coverage(junit_paths, adapter)
 
         click.echo(json.dumps(result, default=str))

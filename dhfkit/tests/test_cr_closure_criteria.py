@@ -118,7 +118,7 @@ class TestTheCriteriaMirrorTheGate:
 
         gate = (
             Path(__file__).resolve().parents[2]
-            / "medharness" / "services" / "ci.py"
+            / "medharness" / "services" / "verify_completion.py"
         ).read_text()
         for field in fields:
             assert field in gate, (

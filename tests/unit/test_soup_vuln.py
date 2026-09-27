@@ -10,7 +10,7 @@ from click.testing import CliRunner
 
 from dhfkit.cli import main as dhfkit_main
 from medharness.cli import main
-from medharness.services.ci import soup_gate
+from medharness.services.verify_soup import soup_gate
 
 
 def _make_dhf(tmp_path: Path) -> Path:
@@ -223,7 +223,7 @@ class TestVulnDetail:
 
     def test_detail_lookups_are_budgeted(self, tmp_path: Path) -> None:
         """A large finding set must not fan out into unbounded requests."""
-        from medharness.services.ci import _VULN_DETAIL_BUDGET
+        from medharness.services.verify_soup import _VULN_DETAIL_BUDGET
 
         dhf = _make_dhf(tmp_path)
         _write_soup(dhf, "SOUP-001", "requests", "2.6.0", ecosystem="PyPI")

@@ -16,7 +16,7 @@ from pathlib import Path
 from click.testing import CliRunner
 
 from medharness.cli import main
-from medharness.services.ci import ci_structural_gate
+from medharness.services.verify_dhf import ci_structural_gate
 from medharness.workflows.init import _replace_placeholders, _scaffold_dhf
 
 

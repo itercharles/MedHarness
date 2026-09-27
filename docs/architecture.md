@@ -21,7 +21,9 @@ How the code is organised, for contributors. What a user calls is in the
 Each top-level command group lives in the file named after it:
 `medharness/cli/verify.py`, `build.py`, `workflow.py` and `context.py`. A new
 command goes in the file of its verb. `cli/output.py` holds the JSON-to-stdout,
-lines-to-stderr helpers every command shares.
+lines-to-stderr helpers every command shares. Each `verify` check sits in its own
+module, `services/verify_<name>.py`, and answers in the envelope from
+`services/envelope.py`.
 
 ## Storage versus analysis
 

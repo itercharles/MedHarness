@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from medharness.services.ci import compute_item_coverage
+from medharness.services.context import compute_item_coverage
 from tests.fixtures.stub_adapter import StubDHFAdapter
 
 

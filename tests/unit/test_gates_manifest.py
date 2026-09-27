@@ -18,7 +18,7 @@ import pytest
 from click.testing import CliRunner
 
 from medharness.cli import main
-from medharness.services.ci import ENVELOPE_KEYS
+from medharness.services.envelope import ENVELOPE_KEYS
 from medharness.services.gates import BLOCKING, GATES
 
 

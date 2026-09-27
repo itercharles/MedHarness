@@ -106,7 +106,7 @@ class TestTheReleaseGate:
     def test_the_release_gate_skips_a_layer_the_project_omits(self, tmp_path: Path) -> None:
         """`build release` checks the DHF with coverage gaps failing. A project
         entitled to omit the use-case layer must still be releasable."""
-        from medharness.services.ci import ci_structural_gate
+        from medharness.services.verify_dhf import ci_structural_gate
 
         _scaffold_dhf(tmp_path)
         _replace_placeholders(tmp_path, "Trial")

@@ -216,7 +216,7 @@ def register(main):
 
         Exits 0 when such a review exists, 1 otherwise.
         """
-        from medharness.services.ci import envelope_from  # noqa: PLC0415
+        from medharness.services.envelope import envelope_from# noqa: PLC0415
         from medharness.services.pr_approval import approval_evidence  # noqa: PLC0415
 
         evidence = approval_evidence(pr_number, token=token)

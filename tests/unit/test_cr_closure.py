@@ -10,7 +10,7 @@ from click.testing import CliRunner
 
 from dhfkit.cli import main as dhfkit_main
 from medharness.cli import main
-from medharness.services.ci import cr_closure_gate
+from medharness.services.verify_completion import cr_closure_gate
 
 
 def _make_dhf(tmp_path: Path) -> Path:

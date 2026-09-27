@@ -9,7 +9,7 @@ from pathlib import Path
 from click.testing import CliRunner
 
 from medharness.cli import main
-from medharness.services.ci import ci_test_coverage_gate
+from medharness.services.verify_tests import ci_test_coverage_gate
 
 
 _ITEM_DIR: dict[str, str] = {

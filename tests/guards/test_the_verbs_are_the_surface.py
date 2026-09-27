@@ -148,4 +148,4 @@ def test_no_message_or_prompt_names_a_retired_command(path: Path) -> None:
 
 def test_the_source_scan_read_something() -> None:
     assert any(p.name == "cr_generate_dhf.md" for p in SOURCES)
-    assert any(p.name == "ci.py" for p in SOURCES)
+    assert any(p.name == "verify_completion.py" for p in SOURCES)
