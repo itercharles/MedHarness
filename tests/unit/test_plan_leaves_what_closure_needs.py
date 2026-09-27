@@ -1,7 +1,7 @@
 """`build plan` must not report success without the fields closure requires.
 
 `triage_result` is written by nothing but the prompt: the LLM is told to run
-`dhfkit item update`, and no code checked that it did. A run that skipped Step 1
+`medharness item update`, and no code checked that it did. A run that skipped Step 1
 reported `outcome: ok`, and the omission surfaced at `verify completion`.
 
 Checked in the validator rather than after it, so the fix pass corrects it in
@@ -71,7 +71,7 @@ class TestTheMessageIsActionable:
     def test_the_fix_names_the_command_to_run(self, field: str) -> None:
         errors = _check_cr_workflow_fields(_api({"id": "CR-001"}), Path("DHF"), "CR-001")
         fix = next(e["fix"] for e in errors if e["field"] == field)
-        assert "dhfkit" in fix and "item update" in fix and field in fix
+        assert "medharness" in fix and "item update" in fix and field in fix
 
 
 class TestAgainstARealDhf:

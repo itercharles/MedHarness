@@ -28,12 +28,12 @@ GATES: tuple[dict[str, Any], ...] = (
                   "coverage between V-model layers.",
         "options": {
             "required": [],
-            "optional": ["--fail-on-uncovered"],
+            "optional": ["--strict"],
         },
         "blocking": "conditional",
         "blocking_note": "Schema errors, required-link failures, and dangling "
                          "links always fail. Coverage gaps warn unless "
-                         "--fail-on-uncovered is passed.",
+                         "--strict is passed.",
         "needs_network": False,
     },
     {
@@ -42,11 +42,11 @@ GATES: tuple[dict[str, Any], ...] = (
                   "declared test points.",
         "options": {
             "required": ["--junit"],
-            "optional": ["--fail-on-missing-method"],
+            "optional": ["--strict"],
         },
         "blocking": "conditional",
         "blocking_note": "Uncovered requirements and unverified tests always fail. "
-                         "A missing verification_method warns unless --fail-on-missing-method.",
+                         "A missing verification_method warns unless --strict.",
         "needs_network": False,
     },
     {
@@ -54,11 +54,11 @@ GATES: tuple[dict[str, Any], ...] = (
         "checks": "The SOUP register against the dependency manifests, and each "
                   "item against the OSV vulnerability database, honouring "
                   "documented per-CVE acceptances.",
-        "options": {"required": [], "optional": ["--manifest", "--fail-on-drift", "--offline-mode"]},
+        "options": {"required": [], "optional": ["--manifest", "--strict", "--offline-mode"]},
         "blocking": "conditional",
         "blocking_note": "Known vulnerabilities always fail, and so does an unreachable "
                          "osv.dev unless --offline-mode warn. Drift from the manifests "
-                         "warns unless --fail-on-drift.",
+                         "warns unless --strict.",
         "needs_network": True,
     },
     {

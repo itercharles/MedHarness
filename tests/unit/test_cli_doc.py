@@ -1,4 +1,4 @@
-"""`dhfkit doc TYPE|ALL [--format md|html|pdf]` — one command for rendering."""
+"""`medharness build doc TYPE|ALL [--format md|html|pdf]` — one command for rendering."""
 import json
 import sys
 from pathlib import Path
@@ -7,7 +7,7 @@ import pytest
 from click.testing import CliRunner
 
 
-from dhfkit.cli import main
+from medharness.cli import main
 
 def _parse_json(output: str):
     """Return the first JSON line from CLI output, skipping warning/status lines."""
@@ -31,7 +31,7 @@ def test_doc_generate_single_type(populated_dhf):
         pytest.skip("No doc types with document_specifications in test DHF")
 
     result = CliRunner().invoke(main, [
-        '--dhf', str(populated_dhf), 'doc', doc_types[0],
+        '--dhf', str(populated_dhf), 'build', 'doc', doc_types[0],
     ])
     assert result.exit_code == 0
     data = _parse_json(result.output)
@@ -44,7 +44,7 @@ def test_doc_generate_all(populated_dhf):
     if not doc_types:
         pytest.skip("No doc types with document_specifications in test DHF")
 
-    result = CliRunner().invoke(main, ['--dhf', str(populated_dhf), 'doc', 'ALL'])
+    result = CliRunner().invoke(main, ['--dhf', str(populated_dhf), 'build', 'doc', 'ALL'])
     assert result.exit_code == 0
 
 
@@ -52,7 +52,7 @@ def test_doc_generate_unknown_type_exits_1(populated_dhf):
     """An unknown type exits 1, whatever the format."""
     for fmt in ('md', 'html'):
         result = CliRunner().invoke(main, [
-            '--dhf', str(populated_dhf), 'doc', 'NONEXISTENT_TYPE_XYZ', '--format', fmt,
+            '--dhf', str(populated_dhf), 'build', 'doc', 'NONEXISTENT_TYPE_XYZ', '--format', fmt,
         ])
         assert result.exit_code == 1, fmt
 
@@ -63,7 +63,7 @@ def test_every_format_reports_the_markdown_it_rendered(populated_dhf):
     if not doc_types:
         pytest.skip("No doc types with document_specifications in test DHF")
     result = CliRunner().invoke(main, [
-        '--dhf', str(populated_dhf), 'doc', doc_types[0], '--format', 'html',
+        '--dhf', str(populated_dhf), 'build', 'doc', doc_types[0], '--format', 'html',
     ])
     assert result.exit_code == 0
     data = _parse_json(result.output)

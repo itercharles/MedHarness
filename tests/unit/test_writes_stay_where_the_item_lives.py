@@ -3,7 +3,7 @@
 The saver always wrote to the doc type's configured directory, so an item kept
 elsewhere — a DHF laid out before the default directories changed, `09_cr/`
 where the default is `07_cr/` — gained a second file with the same ID on its
-first update, and `dhfkit validate` failed on the duplicate.
+first update, and the schema check failed on the duplicate.
 """
 
 from __future__ import annotations
@@ -12,7 +12,7 @@ from pathlib import Path
 
 from click.testing import CliRunner
 
-from dhfkit.cli import main
+from medharness.cli import main
 from dhfkit.local_adapter import LocalDHFAdapter
 from dhfkit.tests.fixtures import bare_dhf
 
@@ -47,7 +47,7 @@ def test_transition_rewrites_the_file_in_place(tmp_path: Path) -> None:
     assert result.exit_code == 0, result.output
     assert _copies(dhf, "CR-001") == ["items/09_cr/CR-001.yaml"]
     assert "status: design" in (dhf / "items" / "09_cr" / "CR-001.yaml").read_text()
-    assert CliRunner().invoke(main, ["--dhf", str(dhf), "validate"]).exit_code == 0
+    assert LocalDHFAdapter(dhf).validate_schema()["valid"]
 
 
 def test_a_new_item_goes_to_its_doc_types_directory(tmp_path: Path) -> None:

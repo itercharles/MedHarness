@@ -733,9 +733,9 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> di
         prompt = (
             f"Read the DHF items in DHF/ related to {cr_id}, "
             f"then revise them based on the following pull request review feedback. "
-            f"Continue using the CLI (`dhfkit item create` / `dhfkit item update`) only. "
+            f"Continue using the CLI (`medharness item create` / `medharness item update`) only. "
             f"After making changes, re-run:\n"
-            f"  dhfkit --dhf DHF validate\n"
+            f"  medharness --dhf DHF verify dhf\n"
             f"  medharness --dhf DHF verify dhf\n\n"
             f"Review feedback:\n{feedback['prompt_text']}"
         )
@@ -786,10 +786,10 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> di
         fix_prompt = (
             f"The DHF cascade for {cr_id} failed deterministic validation:\n"
             f"{_format_error_lines(errors)}\n\n"
-            f"Fix only the items needed to clear these errors via the dhfkit "
-            f"CLI (`dhfkit item create` / `dhfkit item update`). Do not introduce other "
+            f"Fix only the items needed to clear these errors via the medharness "
+            f"CLI (`medharness item create` / `medharness item update`). Do not introduce other "
             f"changes. After fixing, re-run:\n"
-            f"  dhfkit --dhf DHF validate\n"
+            f"  medharness --dhf DHF verify dhf\n"
             f"  medharness --dhf DHF verify dhf"
         )
         rc, _, fix_session_id = _run_claude_step(
@@ -851,9 +851,9 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> di
         fix_review_prompt = (
             f"The design review for {cr_id} found issues. "
             f"Read the review at docs/reviews/{cr_id}-Design-Review.md for the specific issues, "
-            f"then fix each item via the dhfkit CLI (dhfkit item create / dhfkit item update). "
+            f"then fix each item via `medharness item create` / `medharness item update`. "
             f"After making changes, re-run:\n"
-            f"  dhfkit --dhf DHF validate\n"
+            f"  medharness --dhf DHF verify dhf\n"
             f"  medharness --dhf DHF verify dhf\n"
             f"Do not modify the review file itself."
         )

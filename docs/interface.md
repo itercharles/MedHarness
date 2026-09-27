@@ -36,7 +36,7 @@ The table is checked against the gates the CLI registers, so it cannot list one 
   "passed": false,
   "summary": "1/3 requirement(s) covered by passing tests.",
   "errors": ["SYS: 0/1 requirements covered"],
-  "warnings": ["SRS-001: no verification_method declared — pass --fail-on-missing-method to block on this"]
+  "warnings": ["SRS-001: no verification_method declared — pass --strict to block on this"]
 }
 ```
 
@@ -89,11 +89,11 @@ The `Blocking` column above means:
 
 For the `conditional` gates, which findings fail and which only warn:
 
-- `verify dhf` — schema errors, required-link failures and dangling links always fail. Coverage gaps warn unless `--fail-on-uncovered`.
-- `verify tests` — uncovered requirements and unverified tests always fail. A missing `verification_method` warns unless `--fail-on-missing-method`.
-- `verify soup` — known vulnerabilities always fail, and so does an unreachable osv.dev unless `--offline-mode warn`. Drift from the manifests warns unless `--fail-on-drift`.
+- `verify dhf` — schema errors, required-link failures and dangling links always fail. Coverage gaps warn unless `--strict`.
+- `verify tests` — uncovered requirements and unverified tests always fail. A missing `verification_method` warns unless `--strict`.
+- `verify soup` — known vulnerabilities always fail, and so does an unreachable osv.dev unless `--offline-mode warn`. Drift from the manifests warns unless `--strict`.
 
-One distinction worth knowing before you wire anything. **Broken references versus incomplete design:** `verify dhf` always fails on a link whose target does not exist — that is a typo or a deleted item. An item with no downstream child yet is normal mid-project and only fails under `--fail-on-uncovered`. They need different fixes, so they are reported differently.
+One distinction worth knowing before you wire anything. **Broken references versus incomplete design:** `verify dhf` always fails on a link whose target does not exist — that is a typo or a deleted item. An item with no downstream child yet is normal mid-project and only fails under `--strict`. They need different fixes, so they are reported differently.
 
 ---
 
@@ -119,7 +119,7 @@ The simplest correct consumer checks exit status and lets stderr reach the log:
 ```yaml
 - name: DHF gates
   run: |
-    medharness --dhf DHF verify dhf --fail-on-uncovered
+    medharness --dhf DHF verify dhf --strict
     medharness --dhf DHF verify tests --junit test-results
     medharness --dhf DHF verify soup
 ```
@@ -127,7 +127,7 @@ The simplest correct consumer checks exit status and lets stderr reach the log:
 To turn findings into annotations, read the envelope:
 
 ```bash
-medharness --dhf DHF verify dhf --fail-on-uncovered > result.json || true
+medharness --dhf DHF verify dhf --strict > result.json || true
 jq -r '.errors[] | "::error::\(.)"' result.json
 jq -r '.warnings[] | "::warning::\(.)"' result.json
 exit "$(jq -r 'if .passed then 0 else 1 end' result.json)"
@@ -141,7 +141,7 @@ Because every gate answers alike, one loop covers all of them:
 import json, subprocess
 
 GATES = [
-    ["verify", "dhf", "--fail-on-uncovered"],
+    ["verify", "dhf", "--strict"],
     ["verify", "tests", "--junit", "test-results"],
     ["verify", "soup"],
 ]
@@ -176,11 +176,11 @@ verification_method: [Test]
 |---|---|
 | One file per item | Named anything ending `.yaml`; the directory under `items/` does not matter, so an export can use its own |
 | `id` | Required. Its prefix (`SRS-`) picks the doc type |
-| Fields | Only those the doc type declares. An undeclared field fails `dhfkit validate`, naming it — declare it by overriding the doc type first |
+| Fields | Only those the doc type declares. An undeclared field fails `medharness verify dhf`, naming it — declare it by overriding the doc type first |
 | Links | Fields of format `relationship` or `item_multiselect`: a list of IDs pointing up the V-model. Which are required is `required_traceability` in `global.yaml` |
 | Types | The 13 defaults, plus any `DHF/config/doc_types/<type>.yaml` of your own, which replaces the default of that code — see [adopting.md](adopting.md#changing-the-defaults) |
 
-Check an export in two steps: `dhfkit validate` for the files, then
+Check an export in two steps: `medharness verify dhf` for the files, then
 `medharness verify dhf` for the design they describe.
 
 The format is covered by `CONTRACT_VERSION`: renaming or removing a field the
@@ -188,6 +188,6 @@ defaults declare is a breaking change.
 
 ## Beyond the gates
 
-`dhfkit` follows the same output convention for DHF data operations — item CRUD, schema validation, document generation, the SBOM — but those commands predate the envelope and keep their own result shapes. Read `--help` for the command you need. `dhfkit` has no dependency on `medharness`, so a project that wants only the engine can use it alone; see [architecture.md](architecture.md#two-packages-one-install).
+`item` and `build doc` follow the same output convention — JSON on stdout, lines on stderr — but answer in their own shapes, listed in the [README](../README.md#commands). The storage engine underneath, `dhfkit`, is a library with no dependency on `medharness`; see [architecture.md](architecture.md#two-packages-one-install).
 
 The `build` commands are not gates and do not answer with the envelope. `build plan --prompt` and `build code --prompt` print Markdown, not JSON: their reader is an agent following the steps. `build plan` and `build code` report in their own shape — `outcome` (`ok`, `corrected`, `completed_with_errors` or `tool_error`), `summary`, `artifacts`, `errors`, and the review — listed in the [README](../README.md#commands); their execution boundary is described in [ai-security.md](ai-security.md).

@@ -7,7 +7,7 @@ import pytest
 from click.testing import CliRunner
 
 
-from dhfkit.cli import main
+from medharness.cli import main
 
 def _parse_json(output: str):
     """Return the first JSON line from CLI output, skipping warning/status lines."""

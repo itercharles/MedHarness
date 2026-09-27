@@ -3,8 +3,7 @@
 A mistyped field in a hand-edited item is the likeliest mistake a DHF user
 makes. It used to raise ValidationError out of nine of thirteen commands as a
 traceback — including `verify dhf`, whose whole purpose is reporting exactly
-that kind of problem, and `dhfkit validate` was the only command that
-handled it.
+that kind of problem.
 
 Every command is checked, not a chosen few: the defect was that most of them
 had never been run against a broken DHF at all.
@@ -25,14 +24,11 @@ from medharness.workflows.init import _replace_placeholders, _scaffold_dhf
 COMMANDS = [
     ("medharness", ["verify", "dhf"]),
     ("medharness", ["verify", "tests", "--junit", "{dhf}"]),
-    ("medharness", ["verify", "classification"]),
-        ("medharness", ["verify", "completion", "--cr", "CR-001"]),
+    ("medharness", ["verify", "completion", "--cr", "CR-001"]),
     ("medharness", ["verify", "soup", "--offline-mode", "warn"]),
-    ("dhfkit", ["validate"]),
-    ("dhfkit", ["validate", "traceability"]),
-    ("dhfkit", ["sbom"]),
-    ("dhfkit", ["item", "list"]),
-    ("dhfkit", ["release-baseline", "--version", "1.0", "--out-dir", "{tmp}/out"]),
+    ("medharness", ["item", "list"]),
+    ("medharness", ["build", "doc", "SOUP", "--format", "cyclonedx", "--out-dir", "{tmp}/out"]),
+    ("medharness", ["build", "release", "--version", "1.0", "--out-dir", "{tmp}/out"]),
 ]
 
 
@@ -73,9 +69,8 @@ def test_a_read_failure_names_the_file_and_the_field(
     """A reader has to know which item to fix.
 
     Only commands that actually reached the item are checked. Some fail
-    earlier for their own reasons — `verify tests` has no JUnit evidence, and
-    `verify classification` is inert without a declared class — and those are
-    correct outcomes, not misses.
+    earlier for their own reasons, such as `verify tests` with no JUnit
+    evidence, and those are correct outcomes, not misses.
     """
     proc = _run(module, args, broken)
     combined = proc.stderr + proc.stdout
@@ -91,9 +86,7 @@ def test_the_fixture_actually_reaches_most_commands(broken: Path) -> None:
         f"{m} {args[0]}" for m, args in COMMANDS
         if "could not be read" in (lambda p: p.stderr + p.stdout)(_run(m, args, broken))
     ]
-    # Was 8 before `dhfkit validate traceability` and `dhfkit report` were
-    # removed — both read the DHF, and both were analysis that moved to
-    # medharness. The floor tracks the command surface, not a fixed number.
+    # The floor tracks the command surface, not a fixed number.
     assert len(reached) >= 5, f"only {len(reached)} commands read the DHF: {reached}"
     assert len(reached) >= len(COMMANDS) // 2, (
         f"the fixture reaches {len(reached)} of {len(COMMANDS)} commands — "
@@ -104,7 +97,7 @@ def test_the_fixture_actually_reaches_most_commands(broken: Path) -> None:
 class TestAMissingDHFIsAlsoAMessage:
     def test_pointing_at_a_directory_that_is_not_a_dhf(self, tmp_path: Path) -> None:
         proc = subprocess.run(
-            [sys.executable, "-m", "dhfkit", "--dhf", str(tmp_path / "nope"),
+            [sys.executable, "-m", "medharness", "--dhf", str(tmp_path / "nope"),
              "item", "list"],
             capture_output=True, text=True,
         )
@@ -115,9 +108,9 @@ class TestAMissingDHFIsAlsoAMessage:
 
 class TestAHealthyDHFIsUnaffected:
     def test_commands_still_work(self, tmp_path: Path) -> None:
-        from dhfkit.cli import main as dhfkit_main
+        from medharness.cli import main
 
         _scaffold_dhf(tmp_path)
         _replace_placeholders(tmp_path, "Fine")
-        r = CliRunner().invoke(dhfkit_main, ["--dhf", str(tmp_path / "DHF"), "item", "list"])
+        r = CliRunner().invoke(main, ["--dhf", str(tmp_path / "DHF"), "item", "list"])
         assert r.exit_code == 0, r.output

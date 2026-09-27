@@ -6,7 +6,7 @@ CR ID: {{cr_id}}
 
 ## Inputs
 
-- CR item: `dhfkit --dhf DHF item get {{cr_id}}` — read this first; the
+- CR item: `medharness --dhf DHF item get {{cr_id}}` — read this first; the
   `implementation_notes` field contains the reviewed implementation plan from
   the design phase; `affected_items` lists the DHF items (SRS, SWDD, etc.)
   produced by that phase
@@ -72,14 +72,14 @@ this run to commit.
       `implementation_notes` (different file, different approach, extra edge
       case), update the field to reflect what was actually built:
 
-          dhfkit --dhf DHF item update {{cr_id}} \
+          medharness --dhf DHF item update {{cr_id}} \
             --data '{"implementation_notes": "<updated plan>"}'
 
    b. **Code vs SWDD** — if a module ended up structured differently than its
       SWDD describes (component split, interface changed shape), update the
       SWDD to match:
 
-          dhfkit --dhf DHF item update <SWDD-ID> \
+          medharness --dhf DHF item update <SWDD-ID> \
             --data '{"content": "<updated description>"}'
 
    If nothing deviated, no updates are needed — do not make cosmetic edits.

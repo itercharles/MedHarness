@@ -102,7 +102,7 @@ CALLS = _documented_calls()
 
 def test_the_docs_actually_show_commands() -> None:
     """A scan finding nothing would make every case below vacuous."""
-    assert len(CALLS) >= 20, f"only {len(CALLS)} documented commands found"
+    assert len(CALLS) >= 15, f"only {len(CALLS)} documented commands found"
 
 
 @pytest.mark.parametrize(
@@ -135,14 +135,13 @@ def test_a_documented_command_exists(
 def _parse_error(line: str) -> str | None:
     """Click's own verdict on the line, or None when it parses.
 
-    `--help` exits 0 before Click looks at the rest, so `dhfkit validate
+    `--help` exits 0 before Click looks at the rest, so `medharness verify dhf
     traceability` and `verify tests --dhf DHF` passed the check above while
     failing for everyone who ran them — the second inside the prompt `build
     code` hands its agent.
     """
     import click
 
-    from dhfkit.cli import main as dhfkit_main
     from medharness.cli import main as medharness_main
 
     module, _, rest = line.partition(" ")
@@ -155,7 +154,7 @@ def _parse_error(line: str) -> str | None:
         if arg in {"|", "||", "&&", ";", "#", ">", ">>"} or arg.startswith("#"):
             args = args[:i]
             break
-    node = medharness_main if module == "medharness" else dhfkit_main
+    node = medharness_main
     ctx = None
     while True:
         ctx = click.Context(node, parent=ctx, info_name=node.name)
@@ -182,7 +181,7 @@ def test_a_documented_command_line_parses(line: str) -> None:
 
 
 def test_the_parse_check_catches_both_faults() -> None:
-    assert _parse_error("dhfkit --dhf DHF validate traceability")
+    assert _parse_error("medharness --dhf DHF verify dhf traceability")
     assert _parse_error("medharness verify tests --dhf DHF --junit x")
     assert _parse_error("medharness --dhf DHF verify tests --junit x") is None
 

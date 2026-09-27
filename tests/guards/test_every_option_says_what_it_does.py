@@ -10,7 +10,6 @@ from __future__ import annotations
 import click
 import pytest
 
-from dhfkit.cli import main as dhfkit_main
 from medharness.cli import main as medharness_main
 
 
@@ -27,11 +26,11 @@ def _options(cli: str, group: click.Group, path: tuple[str, ...] = ()):
                     yield cli, path + (name,), param
 
 
-OPTIONS = list(_options("medharness", medharness_main)) + list(_options("dhfkit", dhfkit_main))
+OPTIONS = list(_options("medharness", medharness_main))
 
 
 def test_the_walk_found_options() -> None:
-    assert len(OPTIONS) >= 35, f"only {len(OPTIONS)} options found"
+    assert len(OPTIONS) >= 25, f"only {len(OPTIONS)} options found"
 
 
 @pytest.mark.parametrize(

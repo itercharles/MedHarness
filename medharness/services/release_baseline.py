@@ -360,10 +360,6 @@ def build_release(
     manifest_paths: list[Path] = (),
     cr_ids: list[str] = (),
     junit_paths: list[Path] = (),
-    traceability_types: tuple[str, ...] = (),
-    run_id: str = "",
-    run_url: str = "",
-    commit_sha: str = "",
     doc_format: str = "html",
     write: bool = False,
 ) -> dict:
@@ -376,12 +372,11 @@ def build_release(
     from medharness.services.release_artifacts import build_evidence_bundle
     from medharness.services.verify_dhf import ci_structural_gate
 
-    gate = ci_structural_gate(dhf, fail_on_uncovered=True)
+    gate = ci_structural_gate(dhf, strict=True)
     baseline = build_release_baseline(dhf, version, list(manifest_paths), list(cr_ids), out_dir)
     # Last, so its manifest hashes the baseline's files as well as its own.
     manifest = build_evidence_bundle(
-        dhf, out_dir, junit_paths=list(junit_paths), traceability_types=traceability_types,
-        run_id=run_id, run_url=run_url, commit_sha=commit_sha, doc_format=doc_format,
+        dhf, out_dir, junit_paths=list(junit_paths), doc_format=doc_format,
         gate=gate,
     )
 

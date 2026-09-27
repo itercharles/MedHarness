@@ -3,7 +3,7 @@
 Two invariants are pinned here:
 
 1. A dangling link always blocks — it is a broken reference, not a design gap.
-2. Uncovered items are advisory unless --fail-on-uncovered is passed, and must
+2. Uncovered items are advisory unless --strict is passed, and must
    never print FAIL while the command exits 0. A CI log full of FAIL lines on a
    green build tells the reader the gate ran when it did not.
 """
@@ -82,13 +82,13 @@ class TestCoverageIsAdvisoryByDefault:
         dhf = _scaffold(tmp_path)
         self._strip_swdd(dhf)
         r = CliRunner().invoke(main, ["--dhf", str(dhf), "verify", "dhf"])
-        assert "--fail-on-uncovered" in r.output
+        assert "--strict" in r.output
 
     def test_flag_makes_gap_blocking(self, tmp_path: Path) -> None:
         dhf = _scaffold(tmp_path)
         self._strip_swdd(dhf)
         r = CliRunner().invoke(
-            main, ["--dhf", str(dhf), "verify", "dhf", "--fail-on-uncovered"]
+            main, ["--dhf", str(dhf), "verify", "dhf", "--strict"]
         )
         assert r.exit_code != 0, r.output
         assert "FAIL [coverage]" in r.output
@@ -97,7 +97,7 @@ class TestCoverageIsAdvisoryByDefault:
         """The JSON contract and the exit code must not disagree."""
         dhf = _scaffold(tmp_path)
         self._strip_swdd(dhf)
-        for flags, expect_pass in (([], True), (["--fail-on-uncovered"], False)):
+        for flags, expect_pass in (([], True), (["--strict"], False)):
             r = CliRunner().invoke(main, ["--dhf", str(dhf), "verify", "dhf", *flags])
             payload = json.loads(r.output.splitlines()[0])
             assert payload["passed"] is expect_pass
@@ -111,7 +111,7 @@ class TestDocumentedWorkflowEnforcesCoverage:
         recipe = (Path(__file__).resolve().parents[2]
                   / "dhfkit" / "templates" / "github" / "workflows" / "dhf.yml").read_text()
         line = next(l for l in recipe.splitlines() if "verify dhf" in l)
-        assert "--fail-on-uncovered" in line, line
+        assert "--strict" in line, line
 
     def test_scaffold_does_not_create_a_workflow(self, tmp_path: Path) -> None:
         """Scaffolding it would silently do nothing on an installed package."""

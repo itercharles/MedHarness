@@ -64,7 +64,7 @@ def _quoted_invocations() -> list[tuple[str, str, tuple[str, ...]]]:
                     if not re.fullmatch(r"[a-z][\w-]*", arg):
                         break
                     tokens.append(arg)
-                # A bare group name ("dhfkit validate") proves nothing: the group
+                # A bare group name ("medharness verify dhf") proves nothing: the group
                 # exists whatever the subcommand was. Only a full path counts,
                 # and a trailing English word is not one.
                 tokens = [t for t in tokens if t not in {"then", "and", "or", "to"}]
@@ -77,7 +77,7 @@ CALLS = _quoted_invocations()
 
 
 def test_the_scan_found_invocations() -> None:
-    assert len(CALLS) >= 5, f"only {len(CALLS)} found — the scan is broken"
+    assert len(CALLS) >= 4, f"only {len(CALLS)} found — the scan is broken"
 
 
 @pytest.mark.parametrize(
@@ -93,16 +93,16 @@ def test_a_named_command_exists(source: str, module: str, tokens: tuple[str, ...
     )
     output = result.stderr + result.stdout
     # A group's --help lists its subcommands and exits 0, so "No such command"
-    # alone would let `dhfkit validate` stand in for a removed
+    # alone would let `medharness verify dhf` stand in for a removed
     # `validate traceability`. Require the path to be a leaf.
     # A group's --help lists subcommands and exits 0, so "No such command"
-    # alone would let `dhfkit validate` stand in for a removed
+    # alone would let `medharness verify dhf` stand in for a removed
     # `validate traceability`. `dhfkit init` is a leaf and says so.
     is_group = "Commands:" in output
     if is_group:
         pytest.skip(
             f"{module} {' '.join(tokens)} is a group, not an invocation — prose "
-            f"naming a group ('DHF mutations go through `dhfkit item` commands') "
+            f"naming a group ('DHF mutations go through `medharness item` commands') "
             f"is not telling anyone to run it"
         )
     assert "No such command" not in output, (

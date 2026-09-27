@@ -1,7 +1,7 @@
 """The README's command reference must list every command.
 
 It had drifted twice: `medharness verify dhf` appeared on two rows with
-different descriptions after a bulk edit replaced `dhfkit validate links` with
+different descriptions after a bulk edit replaced `medharness verify dhf links` with
 it, and eight commands were absent entirely. `test_documented_commands_exist`
 checks that what the docs name is real; nothing checked the other direction.
 """
@@ -13,7 +13,6 @@ from pathlib import Path
 
 import click
 
-from dhfkit.cli import main as dhfkit_main
 from medharness.cli import main as medharness_main
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -34,13 +33,11 @@ def _leaves(group: click.Group) -> list[str]:
     return found
 
 
-ALL = [("dhfkit", c) for c in _leaves(dhfkit_main)] + [
-    ("medharness", c) for c in _leaves(medharness_main)
-]
+ALL = [("medharness", c) for c in _leaves(medharness_main)]
 
 
 def test_the_scan_found_commands() -> None:
-    assert len(ALL) >= 20, f"only {len(ALL)} — the walk is broken"
+    assert len(ALL) >= 15, f"only {len(ALL)} — the walk is broken"
 
 
 def _commands_section() -> str:

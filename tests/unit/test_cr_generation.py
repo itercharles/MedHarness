@@ -45,7 +45,7 @@ class TestLoadPrompt:
         assert "{{cr_id}}" in text
         assert "verification_criteria" in text
         assert "V-model" in text or "V-Model" in text
-        assert "dhfkit --dhf DHF item" in text
+        assert "medharness --dhf DHF item" in text
         assert "medharness --dhf DHF verify dhf" in text
 
     def test_missing_prompt_raises(self):

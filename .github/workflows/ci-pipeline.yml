@@ -160,11 +160,11 @@ jobs:
               _scaffold_dhf(dhf_dir)
               _replace_placeholders(dhf_dir, 'Test Project')
               dhf = str(dhf_dir / 'DHF')
-              subprocess.run([sys.executable, '-m', 'dhfkit', '--dhf', dhf, 'validate'], check=True)
-              subprocess.run([sys.executable, '-m', 'dhfkit', '--dhf', dhf, 'item', 'list', '--type', 'CRS'], check=True)
-              subprocess.run([sys.executable, '-m', 'dhfkit', '--dhf', dhf, 'item', 'list', '--type', 'SYS'], check=True)
+              subprocess.run([sys.executable, '-m', 'medharness', '--dhf', dhf, 'verify', 'dhf'], check=True)
+              subprocess.run([sys.executable, '-m', 'medharness', '--dhf', dhf, 'item', 'list', '--type', 'CRS'], check=True)
+              subprocess.run([sys.executable, '-m', 'medharness', '--dhf', dhf, 'item', 'list', '--type', 'SYS'], check=True)
               for dt in 'UC CRS SYS SRS SWDD SYSARCH RISK RCM CR'.split():
-                  subprocess.run([sys.executable, '-m', 'dhfkit', '--dhf', dhf, 'doc', dt], check=True)
+                  subprocess.run([sys.executable, '-m', 'medharness', '--dhf', dhf, 'build', 'doc', dt], check=True)
               print('OK: starter DHF workflow valid')
           "
 
@@ -180,12 +180,12 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -e .
-      - name: Verify CLI entrypoints
+      - name: Verify CLI entrypoint
         run: |
           export PYTHONPATH="${PYTHONPATH}:${PWD}"
           python -m medharness --help > /dev/null
-          python -m dhfkit --help > /dev/null
-          echo 'OK: both CLI entrypoints available'
+          medharness --help > /dev/null
+          echo 'OK: CLI entrypoint available'
 
   # ── OSS BUILD HYGIENE AUDIT ───────────────────────────────────────────────
 

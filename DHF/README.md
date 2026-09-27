@@ -13,7 +13,7 @@ DHF/
 ├── config/
 │   └── global.yaml        # the project name, and anything you change
 ├── items/                 # one YAML file per item, one directory per type
-└── documents/specs/       # specifications rendered by `dhfkit doc`
+└── documents/specs/       # specifications rendered by `medharness build doc`
 ```
 
 The item types, lifecycles, required links and templates are defaults from
@@ -45,9 +45,9 @@ required is `required_traceability` — a default you can override in `global.ya
 ## Commands
 
 ```bash
-dhfkit item list --type SYS
-dhfkit item create --type SYS --data '{"title": "…", "satisfies": ["CRS-001"]}'
-dhfkit item update SYS-001 --data '{"title": "…"}'
+medharness item list --type SYS
+medharness item create --type SYS --data '{"title": "…", "satisfies": ["CRS-001"]}'
+medharness item update SYS-001 --data '{"title": "…"}'
 medharness verify dhf        # does the V-model hold together
 ```
 

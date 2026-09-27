@@ -1,7 +1,7 @@
 """stdout is JSON, from every command; prose goes to stderr.
 
-The README promised it. `doctor` printed a checklist to stdout unless given
-`--json`, and `init` printed a banner and a walkthrough — whose "next steps"
+The README promised it. A removed `doctor` printed a checklist to stdout, and
+`init` printed a banner and a walkthrough — whose "next steps"
 named a removed command and an option the command no longer took. A caller
 redirecting stdout to a file got text it could not parse.
 
@@ -29,12 +29,10 @@ COMMANDS = [
     ("medharness", ["workflow", "check-changes", "--cr", "CR-001", "--since-ref", "HEAD"]),
     ("medharness", ["build", "soup"]),
     ("medharness", ["build", "release", "--version", "0.1.0", "--out-dir", "release"]),
-    ("medharness", ["doctor"]),
-    ("dhfkit", ["item", "list"]),
-    ("dhfkit", ["item", "get", "SRS-001"]),
-    ("dhfkit", ["validate"]),
-    ("dhfkit", ["doc", "SRS"]),
-    ("dhfkit", ["sbom", "--output", "-"]),
+    ("medharness", ["build", "doc", "SRS"]),
+    ("medharness", ["build", "doc", "SOUP", "--format", "cyclonedx"]),
+    ("medharness", ["item", "list"]),
+    ("medharness", ["item", "get", "SRS-001"]),
 ]
 
 

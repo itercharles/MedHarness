@@ -31,7 +31,7 @@ def dhf():
 def _dhf(dhf_root: str, *args: str) -> "subprocess.CompletedProcess":
     import subprocess
     return subprocess.run(
-        [sys.executable, "-m", "dhfkit", "--dhf", dhf_root] + list(args),
+        [sys.executable, "-m", "medharness", "--dhf", dhf_root] + list(args),
         capture_output=True, text=True, cwd=REPO_ROOT,
     )
 
@@ -52,7 +52,7 @@ class TestSchemaValidation:
 
     def test_validate_schema_passes(self, dhf):
         dhf_root = str(dhf / "DHF")
-        r = _dhf(dhf_root, "validate")
+        r = _dhf(dhf_root, "verify", "dhf")
         assert r.returncode == 0, f"Schema validation failed:\n{r.stderr}"
 
 
@@ -85,7 +85,7 @@ class TestDocGeneration:
     def test_doc_renders_every_type(self, dhf):
         dhf_root = str(dhf / "DHF")
         for dt in ("UC", "CRS", "SYS", "SRS", "SWDD", "SYSARCH", "RISK", "RCM", "CR"):
-            r = _dhf(dhf_root, "doc", dt)
+            r = _dhf(dhf_root, "build", "doc", dt)
             if r.returncode != 0:
                 stderr = r.stderr
                 if "cannot load library" in stderr:

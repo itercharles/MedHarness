@@ -47,12 +47,12 @@ jobs:
 
       - run: pip install medharness=={{medharness_version}}
 
-      # --fail-on-uncovered makes a requirement with no downstream design or test
+      # --strict makes a requirement with no downstream design or test
       # block the build. Drop the flag while backfilling an existing DHF; coverage
       # gaps then report as WARN and only schema, required links, and dangling
       # links block.
       - name: Schema and traceability check
-        run: medharness --dhf DHF verify dhf --fail-on-uncovered
+        run: medharness --dhf DHF verify dhf --strict
 
   release:
     name: Release
@@ -140,7 +140,7 @@ Traceability links between items are typed fields on child items (`derives_from`
 
 Which findings block a build and which only warn is in
 [interface.md](interface.md#what-blocks-a-build). While backfilling, leave
-`--fail-on-uncovered` off: coverage gaps then warn, and schema, required links
+`--strict` off: coverage gaps then warn, and schema, required links
 and dangling links still fail.
 
 ## Test-driven development with test points
@@ -201,17 +201,17 @@ for Claude Code. A project that predates it adds the section by hand:
 This repository keeps its Design History File in `DHF/`, checked by MedHarness.
 A change to what the product does is not finished until its DHF is.
 
-- **Start a change:** `dhfkit item create --type CR --data '{"title": "…", "description": "…"}'`,
-  then `dhfkit item transition CR-NNN design`.
+- **Start a change:** `medharness item create --type CR --data '{"title": "…", "description": "…"}'`,
+  then `medharness item transition CR-NNN design`.
 - **Design it:** run `medharness build plan --cr CR-NNN --prompt` and do what it says.
 - **Build it:** run `medharness build code --cr CR-NNN --prompt` and do what it says.
 - **Check it**, and fix what they report:
   - `medharness verify dhf`
   - `medharness verify completion --cr CR-NNN --junit <results>`
   - `medharness workflow check-changes --cr CR-NNN`
-- **Close it:** `dhfkit item transition CR-NNN completed`.
+- **Close it:** `medharness item transition CR-NNN completed`.
 
-Change items with `dhfkit item create|update|transition`, never by editing IDs.
+Change items with `medharness item create|update|transition`, never by editing IDs.
 ```
 
 Then ask your agent to "open a CR for the PDF export and update the DHF": it
@@ -248,7 +248,7 @@ medharness --dhf DHF verify completion --cr CR-001 --junit test-results
 
 Run it on the branch to block the merge, and again on `main`, where the tests re-run against whatever else landed. Checks, for the items this CR touched only:
 
-1. All four CR fields above are populated. A CR planned by hand records them with `dhfkit item update`.
+1. All four CR fields above are populated. A CR planned by hand records them with `medharness item update`.
 2. Every item in `affected_items` exists in the DHF.
 3. Those that are requirements (CRS, SYS, SRS) or SOUP have `verification_method` set.
 4. Those with `Test` have passing JUnit evidence.
@@ -395,17 +395,17 @@ medharness --dhf DHF build soup --write
 medharness --dhf DHF build soup --write --manifest uv.lock
 ```
 
-## Exporting an SBOM (`dhfkit sbom`)
+## Exporting an SBOM
 
 The SOUP register already holds what an SBOM needs — name, version, ecosystem,
 licence, supplier — recorded there because IEC 62304 §8.1.2 asks for it. FDA's
 premarket cybersecurity guidance and the EU Cyber Resilience Act want that in a
-standard machine-readable format:
+standard machine-readable format. The SBOM is the SOUP register rendered as
+CycloneDX, the way a specification is the requirements rendered as a document:
 
 ```bash
-dhfkit --dhf DHF sbom                      # writes DHF/sbom.cdx.json
-dhfkit --dhf DHF sbom --output build/sbom.cdx.json
-dhfkit --dhf DHF sbom --output -           # to stdout, for a pipeline
+medharness build doc SOUP --format cyclonedx                   # DHF/documents/exports/sbom.cdx.json
+medharness build doc SOUP --format cyclonedx --out-dir build    # build/sbom.cdx.json
 ```
 
 The output is CycloneDX 1.6 JSON, checked against the official schema by the

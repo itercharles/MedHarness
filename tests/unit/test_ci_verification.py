@@ -9,7 +9,6 @@ from pathlib import Path
 import pytest
 from click.testing import CliRunner
 
-from dhfkit.cli import main as dhfkit_main
 from medharness.cli import main
 from medharness.services.envelope import ENVELOPE_KEYS
 from medharness.services.verify_tests import validate_verification_completeness
@@ -193,7 +192,7 @@ def test_fail_on_missing_method_makes_it_fail(tmp_path: Path) -> None:
     dhf = _make_dhf(tmp_path, [{"id": "SRS-001", "title": "No method"}])
     result = CliRunner().invoke(
         main,
-        ["--dhf", str(dhf), "verify", "tests", "--fail-on-missing-method"],
+        ["--dhf", str(dhf), "verify", "tests", "--strict"],
     )
     assert result.exit_code != 0
 

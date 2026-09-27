@@ -29,7 +29,6 @@ _EXTRA_DOC_TYPES = {"CRS": "crs"}
 
 
 def _make_dhf(tmp_path: Path, items: list[dict], item_type: str = "SRS") -> Path:
-    from dhfkit.cli import main as dhfkit_main
 
     dhf = tmp_path / "DHF"
     bare_dhf(dhf)

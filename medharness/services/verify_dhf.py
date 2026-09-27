@@ -11,7 +11,7 @@ from medharness.services.traceability import analyse
 
 def ci_structural_gate(
     dhf_path: Path,
-    fail_on_uncovered: bool = False,
+    strict: bool = False,
 ) -> dict[str, Any]:
     """Run the DHF structural validation gate.
 
@@ -72,7 +72,7 @@ def ci_structural_gate(
     if cycles:
         passed = False
     for c in coverage_list:
-        if not c.get("passed", True) and fail_on_uncovered:
+        if not c.get("passed", True) and strict:
             passed = False
 
     # Structured extracts for machine consumers
@@ -116,7 +116,7 @@ def ci_structural_gate(
         )
     results["verification_gaps"] = verification_gaps
 
-    errors, warnings = _structural_messages(results, fail_on_uncovered)
+    errors, warnings = _structural_messages(results, strict)
     schema_n = results.get("schema", {}).get("item_count", 0)
     # `errors` is what made the gate fail (docs/interface.md), so a gate cannot
     # carry one and still pass. `passed` was computed before the messages were
@@ -130,7 +130,7 @@ def ci_structural_gate(
     )
 
 
-def _structural_messages(results: dict, fail_on_uncovered: bool) -> tuple[list[str], list[str]]:
+def _structural_messages(results: dict, strict: bool) -> tuple[list[str], list[str]]:
     """Split structural findings into what blocks and what merely advises."""
     errors: list[str] = []
     warnings: list[str] = []
@@ -150,9 +150,9 @@ def _structural_messages(results: dict, fail_on_uncovered: bool) -> tuple[list[s
         path = " → ".join(cycle + [cycle[0]]) if len(cycle) > 1 else f"{cycle[0]} → itself"
         errors.append(f"Traceability cycle: {path}")
 
-    # Uncovered items block only under --fail-on-uncovered; anywhere else they
+    # Uncovered items block only under --strict; anywhere else they
     # are a gap in design still to be written, not a broken reference.
-    bucket = errors if fail_on_uncovered else warnings
+    bucket = errors if strict else warnings
     for gap in results.get("coverage_gaps", []):
         bucket.append(
             f"{gap['parent_type']}->{gap['child_type']}: "

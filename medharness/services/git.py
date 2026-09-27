@@ -264,7 +264,7 @@ def judge_branch(
                 f"but {cr_id} does not list them in affected_items."
             ),
             "fix": (
-                f"Add them: dhfkit item update {cr_id} --data "
+                f"Add them: medharness item update {cr_id} --data "
                 f"'{{\"affected_items\": [...]}}' — or revert the changes this CR "
                 f"should not make."
             ),

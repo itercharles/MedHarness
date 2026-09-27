@@ -8,7 +8,6 @@ from pathlib import Path
 
 from click.testing import CliRunner
 
-from dhfkit.cli import main as dhfkit_main
 from medharness.cli import main
 from medharness.services.verify_completion import cr_closure_gate
 from dhfkit.tests.fixtures import bare_dhf

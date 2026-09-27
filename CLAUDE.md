@@ -15,10 +15,16 @@ Before proposing or implementing any significant change, read:
 
 ## CLI Boundary
 
-| CLI | Owns | Commands |
-|-----|------|----------|
-| `dhfkit` | DHF **data**: items, schemas, documents, the SBOM. Storage and retrieval only — no analysis. | `doc` · `item` · `sbom` · `validate` |
-| `medharness` | The **process** around it: AI CR workflow, CI gates, scaffolding, approval, releases, and all traceability analysis over the item set | `build` · `doctor` · `init` · `verify` · `workflow` |
+One CLI, `medharness`. `dhfkit` is its storage engine: a library with no
+dependency on `medharness`, and no CLI of its own.
+
+| Group | Touches | Commands |
+|-------|---------|----------|
+| `item` | one DHF item at a time | `list` · `get` · `create` · `update` · `transition` |
+| `verify` | reads the DHF | `dhf` · `tests` · `soup` · `completion` |
+| `build` | writes items, code or artifacts | `plan` · `code` · `soup` · `doc` · `release` |
+| `workflow` | Git or GitHub | `check-changes` · `check-approval` |
+| `init` | scaffolds a project | — |
 
 `tests/guards/test_cli_boundary_is_documented.py` checks this table against the
 live command tree.
@@ -33,7 +39,7 @@ reason no reader could recover.
 | Verb | Reads | Examples |
 |------|-------|----------|
 | `verify` | the DHF, and nothing else — never Git or GitHub | `dhf`, `tests`, `soup`, `completion` |
-| `build` | whatever it needs; **writes** items, code, or artifacts | `plan`, `code`, `soup`, `release` |
+| `build` | whatever it needs; **writes** items, code, or artifacts | `plan`, `code`, `soup`, `doc`, `release` |
 | `workflow` | the repository; cannot answer without Git or GitHub | `check-changes`, `check-approval` |
 
 `workflow *` are CI helper scripts, not the tool's value. A developer working
@@ -43,15 +49,14 @@ diff — what a command *requires* is what places it, not everything it touches.
 
 `tests/guards/test_gates_sit_where_they_belong.py` enforces the line.
 
-All DHF data operations use `dhfkit <command>`. Both CLIs take `--dhf PATH` before
-the command, defaulting to `DHF`; no command takes its own.
+`--dhf PATH` goes before the command and defaults to `DHF`; no command takes its own.
 
 ## Repo Responsibility
 
 | Directory | Purpose |
 |-----------|---------|
 | `medharness/` | Harness CLI, CI gate logic, scaffolding |
-| `dhfkit/` | DHF storage: items, config, schema validation, doc generation, SBOM |
+| `dhfkit/` | The storage engine, a library: items, config, schema validation, doc generation, SBOM |
 | `dhfkit/templates/` | The defaults every DHF reads (`config/`, `specs/`), the sample items `init` copies, and the CI recipe the docs publish |
 | `docs/` | Architecture docs and adopting guide |
 | `tests/unit/` | Unit tests — behaviour of a function or command |

@@ -349,7 +349,7 @@ class TestGenerateDhfFixPassFlow:
                     # the scaffold) with no SYS child — cascade check will fire.
                     subprocess.run(
                         [
-                            sys.executable, "-m", "dhfkit",
+                            sys.executable, "-m", "medharness",
                             "--dhf", str(dhf_path),
                             "item", "create",
                             "--type", "CRS",

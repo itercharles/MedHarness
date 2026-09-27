@@ -391,11 +391,16 @@ class LocalDHFAdapter:
     def export_html(self, doc_type_code: str, out_dir: Path | None = None) -> dict:
         return self._export(doc_type_code, "html", out_dir)
 
+    @property
+    def exports_dir(self) -> Path:
+        """Where exported documents go unless the caller names a directory."""
+        return self._dhf_root / "documents" / "exports"
+
     def _export(self, doc_type_code: str, fmt: str, out_dir: Path | None) -> dict:
         spec_result = self.generate_doc(doc_type_code)
         content = Path(spec_result["output_path"]).read_text(encoding="utf-8")
         path = self._generator().export(
-            doc_type_code, content, fmt, out_dir or (self._dhf_root / "documents" / "exports"))
+            doc_type_code, content, fmt, out_dir or self.exports_dir)
         return {"doc_type": doc_type_code, "md_path": spec_result["output_path"],
                 f"{fmt}_path": str(path), "version": spec_result["version"]}
 

@@ -63,17 +63,18 @@ def test_a_stale_spec_in_the_dhf_is_rendered_current_but_left_as_it_was(tmp_path
     assert "Renamed since the spec was written" in spec.read_text(encoding="utf-8")
 
 
-def test_choosing_matrix_columns_does_not_drop_specifications(tmp_path: Path) -> None:
-    """`--traceability-type` reached the argument naming which specifications to
-    render, so `--traceability-type SYS` bundled the SYS specification alone."""
+def test_the_traceability_report_follows_the_configured_chain(tmp_path: Path) -> None:
+    """The report's columns come from the first `traceability_matrices` chain."""
     project = _project(tmp_path)
+    (project / "DHF" / "config" / "global.yaml").write_text(
+        "project_name: Untouched\n"
+        "traceability_matrices:\n"
+        "  - name: Short chain\n"
+        "    description: System to software only\n"
+        "    path: [SYS, SRS]\n"
+    )
+    build_release(project / "DHF", "1.0.0", tmp_path / "out", write=False)
+    import json
 
-    build_release(project / "DHF", "1.0.0", tmp_path / "all", write=False)
-    build_release(project / "DHF", "1.0.0", tmp_path / "sys", write=False,
-                  traceability_types=("SYS",))
-
-    def names(out: Path) -> list[str]:
-        return sorted(p.name for p in (out / "specifications").iterdir())
-
-    assert len(names(tmp_path / "all")) > 1
-    assert names(tmp_path / "sys") == names(tmp_path / "all")
+    report = tmp_path / "out" / "traceability" / "Requirements_Traceability_Report.json"
+    assert json.loads(report.read_text(encoding="utf-8"))["columns"] == ["SYS", "SRS"]

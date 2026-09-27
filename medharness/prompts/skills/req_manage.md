@@ -83,12 +83,12 @@ across non-adjacent tiers unless the project's traceability rules explicitly all
 
 ```bash
 # Create a new item (use the type code from the Type Registry)
-dhfkit --dhf DHF item create \
+medharness --dhf DHF item create \
   --type <TYPE> \
   --data '<JSON>'
 
 # Update an existing item
-dhfkit --dhf DHF item update <ITEM_ID> \
+medharness --dhf DHF item update <ITEM_ID> \
   --data '<JSON>'
 ```
 
@@ -96,9 +96,9 @@ IDs are assigned automatically on creation.
 
 ## Design Workflow
 
-1. **Check existing coverage** — run `dhfkit --dhf DHF item list --type <TYPE>` for each relevant type
+1. **Check existing coverage** — run `medharness --dhf DHF item list --type <TYPE>` for each relevant type
 2. **Check for conflicts and duplicates** — read existing items before writing anything
 3. **List gaps** — identify missing items at each tier
 4. **Apply change preference top-down** — tier 0 first, then tier 1, tier 2, tier 3; for each: no change > update > create; apply quality rules
-5. **Validate schema** — run `dhfkit --dhf DHF validate`
+5. **Validate schema** — run `medharness --dhf DHF verify dhf`
 6. **Validate traceability** — run `medharness --dhf DHF verify dhf`; fix orphans or uncovered pairs, repeat until clean

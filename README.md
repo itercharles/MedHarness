@@ -45,7 +45,7 @@ WARN [coverage] RISK→RCM: 3/4 covered
 
 Broken structure — a cycle, a missing required link, a link to nothing — always
 fails. Design not yet written — an item with no child yet — only warns, unless
-you pass `--fail-on-uncovered`.
+you pass `--strict`.
 
 ## What a project looks like
 
@@ -97,8 +97,8 @@ testing: |
   smallest useful pipeline is two steps in a job that checks out the repository:
 
   ```yaml
-  - run: pip install medharness==0.43.2
-  - run: medharness verify dhf --fail-on-uncovered
+  - run: pip install medharness==0.44.0
+  - run: medharness verify dhf --strict
   ```
 
   The full recipe, including the release job, is in
@@ -139,29 +139,38 @@ runner — read [ai-security.md](docs/ai-security.md) first.
 
 ## Commands
 
-Two CLIs from one package: `medharness` runs the checks and the workflow;
-`dhfkit` stores and reads the items. Both take `--dhf PATH` before the command,
-defaulting to `DHF`. Every command writes JSON to stdout and readable lines to
-stderr; `--help` on any of them lists its options.
+One CLI. `--dhf PATH` goes before the command and defaults to `DHF`. Every
+command writes JSON to stdout and readable lines to stderr; `--help` on any of
+them lists its options. The group says what a command touches:
 
-### `verify` — reads the DHF only
-
-| Command | Returns |
+| Group | Touches |
 |---|---|
-| `medharness verify dhf` | gate result¹ |
-| `medharness verify tests --junit test-results` | gate result |
-| `medharness verify soup` | gate result |
-| `medharness verify completion --cr CR-034` | gate result |
+| `item` | one item at a time |
+| `verify` | reads the DHF, and nothing is written |
+| `build` | writes items, code or artifacts |
+| `workflow` | needs Git or GitHub; CI helpers |
 
-### `workflow` — needs Git or GitHub; CI helpers
+### `item` — the records
 
 | Command | What it does | Returns |
 |---|---|---|
-| `medharness workflow check-changes --cr CR-034` | Compares the branch diff with the CR's `affected_items`, both ways | gate result |
-| `medharness workflow check-approval --pr 42` | Requires an approving review of the PR's head commit; needs `GH_TOKEN` | gate result |
+| `medharness item list --type SYS` | Lists items of a type | one JSON object per line |
+| `medharness item get SRS-012` | One item | the item, with every ID it links to in `all_linked_uids` |
+| `medharness item create --type SRS --data '{...}'` | Adds an item; its ID is allocated | the item |
+| `medharness item update SRS-012 --data '{...}'` | Merges fields into an item; refuses what the schema would reject | the item |
+| `medharness item transition CR-034 completed` | Moves an item through its lifecycle; without a state, lists where it can go | the item; without a state, `current_status` and `transitions` |
 
-¹ Every gate answers `{gate, passed, summary, errors, warnings}`; see
-[interface.md](docs/interface.md).
+### `verify` — reads the DHF only
+
+Each answers `{gate, passed, summary, errors, warnings}` — see
+[interface.md](docs/interface.md). `--strict` makes what would only warn fail.
+
+| Command | Checks |
+|---|---|
+| `medharness verify dhf` | Schema, duplicate IDs, required and dangling links, cycles, coverage |
+| `medharness verify tests --junit test-results` | Each requirement is verified by the method it declares |
+| `medharness verify soup` | The SOUP register matches the manifests, and none of it is known-vulnerable |
+| `medharness verify completion --cr CR-034` | A CR's record is complete and every item it changed is verified |
 
 ### `build` — writes items, code or artifacts
 
@@ -170,27 +179,21 @@ stderr; `--help` on any of them lists its options.
 | `medharness build plan --cr CR-034` | AI drafts the CR's design items and impact analysis; `--prompt` prints the steps for an agent already running | `outcome`, `artifacts.items_changed`, `design_review`, `errors` |
 | `medharness build code --cr CR-034` | AI writes the code and tests for the approved design; `--prompt` likewise | `outcome`, `artifacts.files_changed`, `code_review`, `errors` |
 | `medharness build soup --write` | Reconciles SOUP items with your dependency manifests; without `--write`, only reports | `to_create`, `to_update`, `orphans` |
+| `medharness build doc SRS --format html` | Renders a specification from the items — `md` by default, `html`, `pdf` (needs `medharness[docs]`); `ALL` for every type; `SOUP --format cyclonedx` is the SBOM | `md_path`, plus `html_path`, `pdf_path` or `cyclonedx_path` |
 | `medharness build release --version 1.0.0 --out-dir release --write` | Checks the DHF, CRs and open defects, writes the baseline, BOM, SBOM and evidence, and — only if every check passed — records the REL item | `outcome`, `cr_ids`, `rel_uid`, `artifacts`, `errors` |
+
+### `workflow` — needs Git or GitHub
+
+| Command | What it does | Returns |
+|---|---|---|
+| `medharness workflow check-changes --cr CR-034` | Compares the branch diff with the CR's `affected_items`, both ways | gate result |
+| `medharness workflow check-approval --pr 42` | Requires an approving review of the PR's head commit; needs `GH_TOKEN` | gate result |
 
 ### Setup
 
 | Command | What it does | Returns |
 |---|---|---|
 | `medharness init` | Scaffolds `DHF/`, `AGENTS.md` and `CLAUDE.md` in the current directory, adding to either file if it exists; refuses if `DHF/` exists | `project_name`, `project_dir`, `created` |
-| `medharness doctor` | Checks Python, the CLIs, `gh` auth, and the DHF | `healthy`, `summary`, `checks` |
-
-### `dhfkit` — the items
-
-| Command | What it does | Returns |
-|---|---|---|
-| `dhfkit item list --type SYS` | Lists items of a type | one JSON object per line |
-| `dhfkit item get SRS-012` | One item | the item, with every ID it links to in `all_linked_uids` |
-| `dhfkit item create --type SRS --data '{...}'` | Adds an item; its ID is allocated | the item |
-| `dhfkit item update SRS-012 --data '{...}'` | Merges fields into an item | the item |
-| `dhfkit item transition CR-034 completed` | Moves an item through its lifecycle; without a state, lists where it can go | the item; without a state, `current_status` and `transitions` |
-| `dhfkit validate` | Checks every item against its type's schema, and that no two files claim one ID | `valid`, `errors`, `item_count` |
-| `dhfkit doc SRS --format html` | Renders a specification from the items — `md` by default, `html` or `pdf` (needs `medharness[docs]`); `ALL` for every type | `md_path`, plus `html_path` or `pdf_path` |
-| `dhfkit sbom` | CycloneDX 1.6 SBOM from the SOUP register; `--output -` for stdout | `path`, `components`, `without_purl`, `changed` |
 
 ## Example project
 

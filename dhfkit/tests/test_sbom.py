@@ -12,9 +12,7 @@ import json
 from pathlib import Path
 
 import pytest
-from click.testing import CliRunner
 
-from dhfkit.cli import main
 from dhfkit.sbom import (
     build_sbom,
     merge_release_components,
@@ -160,40 +158,6 @@ class TestRegenerationIsNotADiff:
                        project_name="P", tool_version="1.0.0"), out)
         assert changed is True
         assert json.loads(out.read_text())["components"][0]["version"] == "1.1"
-
-
-class TestCLI:
-    def test_it_reads_the_soup_register(self, dhf: Path) -> None:
-        _soup(dhf, "SOUP-001",
-              "title: requests\nname: requests\nversion: '2.31.0'\necosystem: PyPI\n")
-        r = CliRunner().invoke(main, ["--dhf", str(dhf), "sbom"])
-        assert r.exit_code == 0, r.output
-
-        payload = json.loads(r.stdout.splitlines()[0])
-        assert payload["components"] == 1
-        document = json.loads(Path(payload["path"]).read_text())
-        assert document["components"][0]["purl"] == "pkg:pypi/requests@2.31.0"
-
-    def test_only_soup_items_become_components(self, dhf: Path) -> None:
-        """The register is SOUP; a requirement is not a supplied component."""
-        _soup(dhf, "SOUP-001", "title: a\nname: a\nversion: '1'\necosystem: PyPI\n")
-        r = CliRunner().invoke(main, ["--dhf", str(dhf), "sbom"])
-        document = json.loads(Path(json.loads(r.stdout.splitlines()[0])["path"]).read_text())
-        assert {c["bom-ref"] for c in document["components"]} == {"SOUP-001"}
-
-    def test_unmapped_ecosystems_are_warned_about(self, dhf: Path) -> None:
-        """A component with no purl is the one a consumer cannot resolve."""
-        _soup(dhf, "SOUP-001", "title: x\nname: x\nversion: '1'\necosystem: Conan\n")
-        r = CliRunner().invoke(main, ["--dhf", str(dhf), "sbom"])
-        assert json.loads(r.stdout.splitlines()[0])["without_purl"] == 1
-        assert "no purl" in r.stderr
-
-    def test_stdout_mode_writes_no_file(self, dhf: Path) -> None:
-        _soup(dhf, "SOUP-001", "title: a\nname: a\nversion: '1'\necosystem: PyPI\n")
-        r = CliRunner().invoke(main, ["--dhf", str(dhf), "sbom", "--output", "-"])
-        assert r.exit_code == 0
-        assert json.loads(r.stdout)["bomFormat"] == "CycloneDX"
-        assert not (dhf / "sbom.cdx.json").exists()
 
 
 class TestMergingTheTwoRegisters:
@@ -410,21 +374,3 @@ class TestAVersionRangeIsNotAVersion:
         assert document["components"][0]["version"] == "^34.15.1", (
             "the SBOM must report what the DHF records, not a cleaned-up guess"
         )
-
-
-def test_the_output_dash_writes_to_stdout(tmp_path: Path) -> None:
-    dhf = bare_dhf(tmp_path / "DHF")
-    r = CliRunner().invoke(main, ["--dhf", str(dhf), "sbom", "--output", "-"])
-    assert r.exit_code == 0, r.output
-    assert json.loads(r.stdout)["bomFormat"] == "CycloneDX"
-    assert not (tmp_path / "-").exists() and not (dhf / "sbom.cdx.json").exists()
-
-
-def test_the_tool_version_is_the_installed_package(tmp_path: Path) -> None:
-    """It asked for a `dhfkit` distribution, which does not exist, and said "unknown"."""
-    from importlib.metadata import version
-
-    dhf = bare_dhf(tmp_path / "DHF")
-    r = CliRunner().invoke(main, ["--dhf", str(dhf), "sbom", "--output", "-"])
-    tool = json.loads(r.stdout)["metadata"]["tools"]["components"][0]
-    assert tool["version"] == version("medharness")

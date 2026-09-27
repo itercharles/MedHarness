@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "medharness"
-version = "0.43.2"
+version = "0.44.0"
 description = "Open-source design-controlled development infrastructure for medical device and SaMD teams — includes dhfkit"
 readme = "README.md"
 license = { text = "MIT" }
@@ -55,7 +55,6 @@ Documentation = "https://github.com/itercharles/MedHarness#readme"
 
 [project.scripts]
 medharness = "medharness.cli:main"
-dhfkit = "dhfkit.cli:main"
 
 [project.entry-points."pytest11"]
 dhfkit = "dhfkit.pytest_plugin"
