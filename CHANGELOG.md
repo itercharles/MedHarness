@@ -11,6 +11,8 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.39.0] — 2026-09-27
+
 ### Breaking Changes
 
 - **`verify completion` reads `affected_items`; `proposed_new_items` is gone.**
@@ -107,6 +109,14 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
   now catches both.
 
 ### Fixed
+
+- **`dhfkit item update` and `item transition` rewrite the item where it is.**
+  They wrote to the doc type's configured directory, so an item kept elsewhere
+  — a DHF laid out before the default directories changed, `09_cr/` where the
+  default is `07_cr/` — gained a second file with the same ID, and
+  `dhfkit validate` failed on it. Every `build plan` that updated such an item
+  did the same. Only a new item goes to the configured directory. Found
+  migrating ContourLab.
 
 - **`workflow check-approval` reads every page of reviews.** `gh api
   --paginate` applies `--jq` to each page separately, so the filter built one

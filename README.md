@@ -96,7 +96,7 @@ testing: |
   smallest useful pipeline is two steps in a job that checks out the repository:
 
   ```yaml
-  - run: pip install medharness==0.38.1
+  - run: pip install medharness==0.39.0
   - run: medharness verify dhf --fail-on-uncovered
   ```
 
