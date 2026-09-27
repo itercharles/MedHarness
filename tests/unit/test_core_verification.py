@@ -121,7 +121,7 @@ class TestCRPhases:
         assert get_cr_phase(LocalDHFAdapter(dhf), "CR-001") is CRPhase.NEW
 
     def test_rejected_is_terminal_not_missing(self, dhf: Path) -> None:
-        """generate-dhf triage writes 'rejected'; it was read as 'not found'."""
+        """`build plan` triage writes 'rejected'; it was read as 'not found'."""
         cr = dhf / "items" / "07_cr" / "CR-001.yaml"
         cr.write_text(cr.read_text().replace("status: new", "status: rejected"))
 

@@ -33,7 +33,7 @@ def _record_design_impact_in_cr(
     recorded_affected = sorted(set(touched_ids) - {cr_id})
 
     # Only update affected_items — implementation_notes is LLM-authored
-    # during generate-dhf and must not be overwritten by the harness.
+    # during `build plan` and must not be overwritten by the harness.
     adapter.update_item(cr_id, {"affected_items": recorded_affected})
     return {
         "recorded": True,

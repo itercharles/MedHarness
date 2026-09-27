@@ -11,6 +11,24 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.38.1] — 2026-09-27
+
+### Fixed
+
+- **`build release` no longer changes the DHF.** It rendered each specification
+  into `DHF/documents/specs/` and `DHF/documents/exports/` and copied it to
+  `--out-dir`, so even a dry run left the working tree modified. It now renders
+  them straight into `--out-dir`, at the version `dhfkit doc` would give them;
+  the only thing it writes to the DHF is the REL item, with `--write`. Updating
+  the specifications in the DHF is `dhfkit doc`'s job. Found migrating
+  ContourLab.
+- **Messages name the commands that exist.** `verify completion` told a reader
+  to "re-run generate-dhf Step 4", and prompts and messages still said
+  `generate-dhf`, `develop-cr` and `ci cr-complete`. They now say `build plan`,
+  `build code` and `verify completion`, and `verify completion`'s stderr lines
+  are tagged `[completion]`. A guard scans the package's source and prompts for
+  retired names, as it already did the docs.
+
 ## [0.38.0] — 2026-09-27
 
 ### Breaking Changes

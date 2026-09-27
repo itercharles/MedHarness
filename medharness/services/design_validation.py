@@ -6,7 +6,7 @@ error dicts suitable for assembling a fix-only LLM prompt.
 Checks:
 - Schema validity of all DHF items
 - Required traceability rules, coverage gaps
-- verification_criteria present on verifiable items touched by generate-dhf
+- verification_criteria present on verifiable items touched by `build plan`
 """
 
 from __future__ import annotations
@@ -41,7 +41,7 @@ _VAGUE_VC_PHRASES: frozenset[str] = frozenset({
 })
 
 # Maps parent tier code → expected child tier codes.
-# If generate-dhf creates a parent item, at least one child-tier item in the
+# If `build plan` creates a parent item, at least one child-tier item in the
 # same CR's changed_items should link back to it.
 _CASCADE_CHILDREN: dict[str, list[str]] = {
     "CRS": ["SYS"],
@@ -179,9 +179,9 @@ def _validate_cascade_completeness(
     """Check that newly created parent-tier items have at least one child-tier
     item anywhere in the current DHF that links back to them.
 
-    Searches by_id (the full post-generate-dhf DHF state) rather than only the
+    Searches by_id (the full post-`build plan` DHF state) rather than only the
     items touched in this run, so that child items created or updated in the same
-    generate-dhf pass are found regardless of how the caller bucketed them.
+    `build plan` pass are found regardless of how the caller bucketed them.
     """
     errors: list[dict] = []
     child_prefixes_for = {
@@ -207,7 +207,7 @@ def _validate_cascade_completeness(
             errors.append({
                 "field": f"cascade.{uid}",
                 "issue": (
-                    f"'{uid}' ({parent_type}) was created by generate-dhf but no "
+                    f"'{uid}' ({parent_type}) was created by `build plan` but no "
                     f"{' or '.join(child_codes)} item in the DHF links back to it."
                 ),
                 "fix": (
@@ -221,7 +221,7 @@ def _validate_cascade_completeness(
 def validate_dhf_structure(dhf_path: Path) -> list[dict]:
     """Run schema and traceability checks only — no item-level or reconciliation logic.
 
-    Used as a pre-flight inside develop-cr to surface structural DHF gaps
+    Used as a pre-flight inside `build code` to surface structural DHF gaps
     before the LLM runs, without triggering false positives from reconciliation
     checks that require a non-empty created_ids list.
     """
@@ -300,7 +300,7 @@ def validate_generate_dhf(
     dhf_path: Path,
     changed_items: dict[str, list[str]],
 ) -> list[dict]:
-    """Validate generate-dhf output without relying on a spec artifact."""
+    """Validate `build plan` output without relying on a spec artifact."""
     _api, errors = _load_api()
     if _api is None:
         return errors
@@ -335,7 +335,7 @@ def validate_generate_dhf(
             errors.append({
                 "field": f"changed_items[{idx}]",
                 "issue": (
-                    f"`generate-dhf` reported changed item '{uid}', "
+                    f"`build plan` reported changed item '{uid}', "
                     "but it is not present in the current DHF item list."
                 ),
                 "fix": (
@@ -349,7 +349,7 @@ def validate_generate_dhf(
             errors.append({
                 "field": f"changed_items[{idx}].verification_criteria",
                 "issue": (
-                    f"`generate-dhf` changed verifiable item '{uid}', "
+                    f"`build plan` changed verifiable item '{uid}', "
                     "but the DHF item has no `verification_criteria`."
                 ),
                 "fix": (

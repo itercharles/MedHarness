@@ -114,7 +114,7 @@ def validate_atomic_branch(
 ) -> dict:
     """Validate that a branch carries the coupled change set a CR expects.
 
-    DHF item changes are always required — generate-dhf must run on every CR
+    DHF item changes are always required — `build plan` must run on every CR
     branch. When ``code_paths`` is non-empty, at least one file under those
     paths must also have changed.
     """

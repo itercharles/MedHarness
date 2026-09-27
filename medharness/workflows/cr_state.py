@@ -19,11 +19,11 @@ class CRPhase(str, Enum):
     REJECTED = "rejected"
 
 
-# Phases where a CR may still accept work (generate-dhf, develop-cr).
+# Phases where a CR may still accept work (`build plan`, `build code`).
 ACTIVE_PHASES = frozenset({CRPhase.NEW, CRPhase.DESIGN, CRPhase.DEVELOP})
 
 # Phases that are terminal — no further transitions are permitted.
-# 'rejected' is written by the generate-dhf triage step; omitting it made a
+# 'rejected' is written by the `build plan` triage step; omitting it made a
 # rejected CR indistinguishable from a missing one.
 TERMINAL_PHASES = frozenset({CRPhase.COMPLETED, CRPhase.CANCELLED, CRPhase.REJECTED})
 
@@ -53,7 +53,7 @@ def assert_cr_active(adapter, cr_id: str) -> CRPhase:
     """Return the current phase if the CR is active; raise ValueError otherwise.
 
     Callers use this to gate workflow commands that require an in-progress CR
-    (generate-dhf, develop-cr). Idempotent re-runs on terminal CRs get a clear
+    (`build plan`, `build code`). Idempotent re-runs on terminal CRs get a clear
     error rather than a silent no-op or a traceback.
     """
     item = adapter.get_item(cr_id)

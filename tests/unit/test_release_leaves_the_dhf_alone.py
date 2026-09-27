@@ -1,0 +1,63 @@
+"""`build release` without `--write` does not change the DHF.
+
+Its specifications were rendered into `DHF/documents/specs/` and
+`DHF/documents/exports/` and then copied to `--out-dir`, so a dry run left the
+working tree modified.
+"""
+
+from __future__ import annotations
+
+import hashlib
+from pathlib import Path
+
+from medharness.services.release_baseline import build_release
+
+
+def _project(tmp_path: Path) -> Path:
+    from medharness.workflows.init import _replace_placeholders, _scaffold_dhf
+
+    _scaffold_dhf(tmp_path / "project")
+    _replace_placeholders(tmp_path / "project", "Untouched")
+    return tmp_path / "project"
+
+
+def _snapshot(root: Path) -> dict[str, str]:
+    return {
+        str(p.relative_to(root)): hashlib.sha256(p.read_bytes()).hexdigest()
+        for p in sorted(root.rglob("*")) if p.is_file()
+    }
+
+
+def test_a_dry_run_writes_only_to_the_out_dir(tmp_path: Path) -> None:
+    project = _project(tmp_path)
+    before = _snapshot(project)
+
+    result = build_release(project / "DHF", "1.0.0", tmp_path / "out", write=False)
+
+    assert result["errors"] == [], result["errors"]
+    assert _snapshot(project) == before
+
+
+def test_the_specifications_still_reach_the_out_dir(tmp_path: Path) -> None:
+    """Otherwise the test above passes on a release that renders nothing."""
+    project = _project(tmp_path)
+
+    build_release(project / "DHF", "1.0.0", tmp_path / "out", write=False)
+
+    specs = list((tmp_path / "out").rglob("specifications/SRS_Specification_*.html"))
+    assert specs and "SRS-001" in specs[0].read_text(encoding="utf-8")
+
+
+def test_a_stale_spec_in_the_dhf_is_rendered_current_but_left_as_it_was(tmp_path: Path) -> None:
+    import dhfkit.api as api
+
+    project = _project(tmp_path)
+    md = Path(api.generate_doc(project / "DHF", "SRS")["output_path"])
+    api.update_item(project / "DHF", "SRS-001", {"title": "Renamed since the spec was written"})
+    stale = md.read_bytes()
+
+    build_release(project / "DHF", "1.0.0", tmp_path / "out", write=False)
+
+    assert md.read_bytes() == stale
+    spec = next((tmp_path / "out").rglob("specifications/SRS_Specification_*.html"))
+    assert "Renamed since the spec was written" in spec.read_text(encoding="utf-8")

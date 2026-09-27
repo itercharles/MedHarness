@@ -118,7 +118,7 @@ def _build_dhf_context_block(dhf_path: Path) -> str:
                 lines.append(f"{label}: {', '.join(by_role[role])}\n")
         lines.append("\n")
 
-    # Relationship model — injected once so every generate-dhf session has
+    # Relationship model — injected once so every `build plan` session has
     # the full traceability graph in context without reading external docs.
     lines.append(
         "### Traceability Link Model\n"
@@ -181,7 +181,7 @@ def _build_dhf_context_block(dhf_path: Path) -> str:
 
 
 def _build_risk_context_block(dhf_path: Path) -> str:
-    """Summarise the current RISK/RCM landscape for injection into generate-dhf prompts."""
+    """Summarise the current RISK/RCM landscape for injection into `build plan` prompts."""
     adapter = _load_adapter(dhf_path, "risk context")
     config = adapter.config
     items = adapter.list_items()

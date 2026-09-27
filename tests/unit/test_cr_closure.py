@@ -133,7 +133,7 @@ def test_missing_proposed_new_items_fails(tmp_path: Path) -> None:
 
 
 def test_absent_cr_item_fails(tmp_path: Path) -> None:
-    """No CR item at all → closure gate fails (generate-dhf Step 4 not run)."""
+    """No CR item at all → closure gate fails (`build plan` never recorded proposed_new_items)."""
     dhf = _make_dhf(tmp_path)
     result = cr_closure_gate("CR-001", dhf)
     assert result["passed"] is False
@@ -423,7 +423,7 @@ def test_cli_cr_complete_passes(tmp_path: Path) -> None:
 
 
 def test_cli_cr_complete_fails_on_incomplete_cr_fields(tmp_path: Path) -> None:
-    """CLI prints FAIL [cr-complete] lines for each missing mandatory CR field."""
+    """CLI prints FAIL [completion] lines for each missing mandatory CR field."""
     dhf = _make_dhf(tmp_path)
     _write_cr_proposed(dhf, "CR-001", [], implementation_notes=None, affected_risk_items=None)
     result = CliRunner().invoke(
@@ -436,7 +436,7 @@ def test_cli_cr_complete_fails_on_incomplete_cr_fields(tmp_path: Path) -> None:
     assert len(payload["errors"]) >= 2, (
         f"two CR fields are incomplete; the caller receives {payload['errors']}"
     )
-    assert "FAIL [cr-complete]" in result.output
+    assert "FAIL [completion]" in result.output
 
 
 def test_cli_cr_complete_fails_on_missing_item(tmp_path: Path) -> None:

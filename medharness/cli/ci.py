@@ -315,19 +315,19 @@ def register(main):
         _emit(result)
 
         for field in _d(result).get("incomplete_cr_fields", []):
-            click.echo(f"FAIL [cr-complete] {field['issue']}", err=True)
+            click.echo(f"FAIL [completion] {field['issue']}", err=True)
         for item in _d(result).get("missing_items", []):
             click.echo(
-                f"FAIL [cr-complete] {item['type']}: {item.get('issue', 'proposed item not found')}",
+                f"FAIL [completion] {item['type']}: {item.get('issue', 'proposed item not found')}",
                 err=True,
             )
         for item in _d(result).get("verification_gaps", []):
-            click.echo(f"FAIL [cr-complete] {item['id']}: no verification_method declared", err=True)
+            click.echo(f"FAIL [completion] {item['id']}: no verification_method declared", err=True)
         for item in _d(result).get("unverified_test", []):
-            click.echo(f"FAIL [cr-complete] {item['id']}: Test method declared but no passing TC linked", err=True)
+            click.echo(f"FAIL [completion] {item['id']}: Test method declared but no passing TC linked", err=True)
         for item in _d(result).get("manual_review_required", []):
             methods = ", ".join(item.get("methods", []))
-            click.echo(f"WARN [cr-complete] {item['id']}: {methods} — requires manual sign-off record", err=True)
+            click.echo(f"WARN [completion] {item['id']}: {methods} — requires manual sign-off record", err=True)
 
         click.echo(result["summary"], err=True)
         if not result["passed"]:

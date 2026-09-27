@@ -224,7 +224,7 @@ relevant to this CR — even if they required no structural changes.
 ## Step 4: Record Proposed Items
 
 After all items are created, validated, and risk impact recorded, write
-`proposed_new_items` onto the CR item. The `ci cr-complete` closure gate
+`proposed_new_items` onto the CR item. The `verify completion` closure gate
 reads this field from the CR item to verify every promised item was materialised.
 
 1. Collect every DHF item you **created** in this session — type code and title.

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 """Shared CLI helpers."""
 import json
-import shutil
 from datetime import datetime
 from pathlib import Path
 import click
@@ -291,33 +290,17 @@ def _available_doc_types(adapter) -> list[str]:
 def _generate_specification_artifacts(adapter, out_dir: Path,
                                       doc_types: tuple[str, ...],
                                       doc_format: str = "html") -> list[dict]:
-    # HTML is the default so a base `pip install medharness` can build a bundle;
-    # PDF needs the docs extra plus native cairo/pango.
-    exporter = f"export_{doc_format}"
-    if not hasattr(adapter, exporter):
-        raise click.ClickException(
-            f"Configured DHF adapter does not support {doc_format.upper()} export."
-        )
+    # Rendered straight into out_dir: evidence is a copy of the DHF's state,
+    # and producing it must not change the DHF.
     spec_dir = out_dir / "specifications"
-    spec_dir.mkdir(parents=True, exist_ok=True)
     generated = []
     for doc_type in doc_types:
         try:
-            result = getattr(adapter, exporter)(doc_type)
+            generated.append(adapter.render_spec(doc_type, doc_format, spec_dir))
         except RuntimeError as exc:
             # Renderer unavailable (e.g. PDF without native libs) — the message
             # already says what to install, so present it rather than traceback.
             raise click.ClickException(str(exc)) from exc
-        source_path = Path(result[f"{doc_format}_path"])
-        destination = spec_dir / source_path.name
-        if source_path.resolve() != destination.resolve():
-            shutil.copy2(source_path, destination)
-        generated.append({
-            "doc_type": doc_type,
-            "path": str(destination),
-            "source": str(source_path),
-            "version": result.get("version"),
-        })
     return generated
 
 
