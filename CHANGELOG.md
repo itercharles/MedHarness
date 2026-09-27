@@ -11,6 +11,18 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.43.1] — 2026-09-27
+
+### Fixed
+
+- **`dhfkit item update` wrote values its own schema rejects**, such as
+  `verification_method: Test` where the doc type wants a list. The next read
+  failed on that file — and with it every command, including the `item update`
+  that would have corrected it. It now checks the merged item against the doc
+  type before writing, refuses with the message `dhfkit validate` gives, and
+  leaves the file untouched. `item create` already did. Found migrating
+  ContourLab.
+
 ## [0.43.0] — 2026-09-27
 
 Two ways to run the same steps: unattended in CI, or by the coding agent an
