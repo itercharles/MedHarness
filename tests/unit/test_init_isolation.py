@@ -119,7 +119,7 @@ class TestTheReleaseGate:
         for crs in (dhf / "items" / "01_crs").glob("*.yaml"):
             crs.write_text(re.sub(r"derives_from:\n(  - UC-\d+\n)+", "", crs.read_text()))
 
-        gate = ci_structural_gate(dhf, fail_on_uncovered=True)
+        gate = ci_structural_gate(dhf, strict=True)
         assert not [e for e in gate["errors"] if "UC" in e], gate["errors"]
 
 

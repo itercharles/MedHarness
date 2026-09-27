@@ -51,12 +51,12 @@ class TestItSeesTheRegisterDrift:
         result = _gate(dhf)
         assert result["details"]["drift"]["undocumented"]
         assert result["passed"] is True, (
-            "drift blocked without --fail-on-drift; a project backfilling its "
+            "drift blocked without --strict; a project backfilling its "
             "register would be stopped on day one"
         )
 
     def test_fail_on_drift_blocks(self, dhf: Path) -> None:
-        assert _gate(dhf, fail_on_drift=True)["passed"] is False
+        assert _gate(dhf, strict=True)["passed"] is False
 
 
 class TestTheDriftHalfIsLocal:
@@ -72,7 +72,7 @@ class TestTheDriftHalfIsLocal:
 class TestTheGateDoesNotWrite:
     def test_no_soup_item_is_created(self, dhf: Path) -> None:
         before = sorted(p.name for p in (dhf / "items").rglob("SOUP-*.yaml"))
-        _gate(dhf, fail_on_drift=True)
+        _gate(dhf, strict=True)
         after = sorted(p.name for p in (dhf / "items").rglob("SOUP-*.yaml"))
         assert before == after, (
             "the gate wrote to the DHF it is judging; writing back is the "

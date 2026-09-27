@@ -18,7 +18,7 @@ Only two commands send anything to a model:
 | `medharness build plan --cr <ID>` | Design | DHF item updates, impact analysis, design review |
 | `medharness build code --cr <ID>` | Develop | Source code and tests for the approved design |
 
-**Every other command is deterministic** and makes no call to any model. `dhfkit` (item CRUD, schema validation, document generation, the SBOM) has no dependency on `medharness`. The `verify` gates, `workflow` gates, `build soup` and `build release` compute their answers from their inputs; the only network they touch is osv.dev for `verify soup` and GitHub for `workflow check-approval`.
+**Every other command is deterministic** and makes no call to any model. The `item` commands, the `verify` and `workflow` gates, `build soup`, `build doc` and `build release` compute their answers from their inputs; the only network they touch is osv.dev for `verify soup` and GitHub for `workflow check-approval`.
 
 This split is intentional: you can adopt the traceability engine and CI gates with no AI in the pipeline at all. See [adopting.md](adopting.md#what-to-adopt-in-what-order).
 
@@ -101,7 +101,7 @@ The model is never the record. Git is the record, and every AI action lands as a
 
 MedHarness treats the AI as a **tool operated under design control**, not as a validated component of your device. The generated output is a design input proposal and a code proposal; the controls that make it acceptable are the review and verification gates around it, which are deterministic and testable.
 
-Under IEC 62304, this places the AI stages in your **software development process** rather than in the device software itself. Your `verify` gates and review records are the process evidence. If your quality system requires tool validation for development tools, the deterministic commands (`dhfkit`, `verify *`, `build release`) are the ones with defined inputs and outputs suitable for that exercise — the AI stages are not, and should not be relied on as a validated transformation.
+Under IEC 62304, this places the AI stages in your **software development process** rather than in the device software itself. Your `verify` gates and review records are the process evidence. If your quality system requires tool validation for development tools, the deterministic commands (`item`, `verify *`, `build soup`, `build doc`, `build release`) are the ones with defined inputs and outputs suitable for that exercise — the AI stages are not, and should not be relied on as a validated transformation.
 
 Nothing here is regulatory advice. How you classify and justify AI-assisted development in your QMS is your organisation's decision.
 
@@ -112,7 +112,7 @@ Nothing here is regulatory advice. How you classify and justify AI-assisted deve
 Never invoke `build plan` or `build code` — the shipped CI recipe runs neither. Everything else keeps working:
 
 ```bash
-dhfkit --dhf DHF validate
+medharness --dhf DHF verify dhf
 medharness --dhf DHF verify dhf
 medharness --dhf DHF verify tests --junit test-results
 medharness --dhf DHF verify soup

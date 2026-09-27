@@ -11,7 +11,6 @@ import json
 
 from click.testing import CliRunner
 
-from dhfkit.cli import main
 from dhfkit.traceability import find_dangling_links
 
 

@@ -81,7 +81,6 @@ class TestTheCommandSourceRunsForReal:
     def test_a_block_scalar_command_produces_items(self, tmp_path: Path) -> None:
         from click.testing import CliRunner
 
-        from dhfkit.cli import main as dhfkit_main
         from medharness.cli import main
 
         dhf = tmp_path / "DHF"

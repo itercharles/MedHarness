@@ -7,7 +7,7 @@ import pytest
 from click.testing import CliRunner
 
 
-from dhfkit.cli import main
+from medharness.cli import main
 
 
 def _parse_lines(output: str) -> list[dict]:

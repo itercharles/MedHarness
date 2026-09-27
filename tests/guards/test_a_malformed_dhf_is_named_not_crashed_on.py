@@ -144,17 +144,14 @@ def test_a_broken_item_does_not_leave_the_denominator(tmp_path: Path) -> None:
 
 @pytest.mark.parametrize("broken", ["an item is not YAML", "an item is a list"], indirect=True)
 def test_the_schema_validator_reports_it_as_a_finding(broken) -> None:
-    """`dhfkit validate` exists to report a bad item, so it answers.
+    """The schema check exists to report a bad item, so it answers.
 
     The loader's error is only half of what it runs: the duplicate-ID scan
     re-reads every file afterwards, and it assumed each one was a mapping.
     """
+    from dhfkit.local_adapter import LocalDHFAdapter
+
     dhf, target = broken
-    proc = subprocess.run(
-        [sys.executable, "-m", "dhfkit", "--dhf", str(dhf), "validate"],
-        capture_output=True, text=True, cwd=ROOT,
-    )
-    assert "Traceback" not in proc.stderr, proc.stderr[-600:]
-    result = json.loads(proc.stdout.splitlines()[-1])
+    result = LocalDHFAdapter(dhf).validate_schema()
     assert result["valid"] is False
     assert any(target.name in e for e in result["errors"]), result["errors"]

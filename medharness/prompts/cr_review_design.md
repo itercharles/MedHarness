@@ -10,7 +10,7 @@ enough to hand off to a developer.
 
 ## Inputs
 
-- CR item: run `dhfkit --dhf DHF item get {{cr_id}}`
+- CR item: run `medharness --dhf DHF item get {{cr_id}}`
 - Items changed in this session:
 
       git diff --name-only origin/main -- DHF/

@@ -7,7 +7,7 @@ medical device regulations (21 CFR 820.30, MDR Annex IX, ISO 13485).
 ## Inputs
 
 Read:
-- `dhfkit --dhf DHF item get <CR_ID>`
+- `medharness --dhf DHF item get <CR_ID>`
 - `DHF/documents/plans/development_plan.md`
 - `DHF/documents/plans/regulatory_strategy_plan.md` (if present)
 - Related system requirements, risk items, and SOUP items identified during

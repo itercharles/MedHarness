@@ -10,8 +10,11 @@ How the code is organised, for contributors. What a user calls is in the
 
 | Package | CLI | Owns |
 |---------|-----|------|
-| `dhfkit` | `dhfkit` | Storage: item CRUD and lifecycle, config and schemas, schema validation, dangling-link detection, document generation, JUnit parsing and the pytest plugin, the CycloneDX SBOM |
+| `dhfkit` | — (a library) | Storage: item CRUD and lifecycle, config and schemas, schema validation, dangling-link detection, document generation, JUnit parsing and the pytest plugin, the CycloneDX SBOM |
 | `medharness` | `medharness` | Analysis and process: traceability over the whole item set, the gates, SOUP sync, releases, the AI change workflow, scaffolding |
+
+There is one CLI, `medharness`; its `item` and `build doc` commands are thin
+wrappers over `dhfkit`.
 
 - `medharness` imports from `dhfkit`; `dhfkit` never imports from `medharness`.
 - `medharness` uses only `dhfkit`'s public surface — no underscored names.
@@ -78,7 +81,7 @@ wheel and requires every default to be in it.
 ```
 
 `build plan` writes its design reviews to `docs/reviews/`, creating it on first
-use; `dhfkit doc` writes specifications to `DHF/documents/specs/`.
+use; `medharness build doc` writes specifications to `DHF/documents/specs/`.
 Placeholders: `{{project_name}}` (from the directory name) and
 `{{medharness_version}}`.
 
@@ -119,7 +122,7 @@ using, which reads them from `--prompt` (local). There is one copy of the steps.
 4. Code review; up to three fix-and-review cycles.
 
 Neither command moves the CR through its lifecycle. The project does, with
-`dhfkit item transition`: `new → design → develop → completed`, `rejected`
+`medharness item transition`: `new → design → develop → completed`, `rejected`
 from `new` or `design`, or `cancelled` from any of the three. `completed` is refused until `implementation_notes`,
 `affected_risk_items` and `triage_result` are recorded. `build plan` and
 `build code` refuse a CR that is `completed`, `rejected` or `cancelled`.

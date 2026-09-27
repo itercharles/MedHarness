@@ -100,7 +100,7 @@ def _vuln_detail(vuln_id: str, batch_entry: dict, *, fetch: bool,
 
 
 def _drift_messages(drift: dict) -> list[str]:
-    """The drift findings that change severity with `--fail-on-drift`."""
+    """The drift findings that change severity with `--strict`."""
     return [
         f"{name} ships but has no SOUP item — it is also never scanned for "
         f"vulnerabilities." for name in drift.get("undocumented", [])
@@ -112,7 +112,7 @@ def soup_gate(
     *,
     offline_mode: str = "fail",
     manifest_paths: list[Path] | None = None,
-    fail_on_drift: bool = False,
+    strict: bool = False,
     query: Callable[[list[dict]], list[dict]] = osv_querybatch,
     lookup: Callable[[str], dict] = osv_vuln,
 ) -> dict:
@@ -124,7 +124,7 @@ def soup_gate(
     absent.
 
     Drift warns by default so a project backfilling its register is not blocked;
-    `fail_on_drift` makes an undocumented or misversioned component fail.
+    `strict` makes an undocumented or misversioned component fail.
 
 
     For each SOUP item that has both ``name`` and ``ecosystem`` fields, queries
@@ -162,8 +162,8 @@ def soup_gate(
     adapter = LocalDHFAdapter(dhf_path)
     all_items = adapter.list_items()
     soup_items = [it for it in all_items if it.get("type") == "SOUP"]
-    drift = _soup_drift(dhf_path, soup_items, manifest_paths, fail_on_drift)
-    drift_blocks = fail_on_drift and bool(
+    drift = _soup_drift(dhf_path, soup_items, manifest_paths, strict)
+    drift_blocks = strict and bool(
         drift["drift"]["undocumented"] or drift["drift"]["misversioned"]
     )
 
@@ -327,7 +327,7 @@ def _soup_drift(
     dhf_path: Path,
     soup_items: list[dict],
     manifest_paths: list[Path] | None,
-    fail_on_drift: bool,
+    strict: bool,
 ) -> dict:
     """The register against the manifests, read-only.
 
@@ -360,7 +360,7 @@ def _soup_drift(
             "undescribed": sorted(
                 it["id"] for it in soup_items if not str(it.get("purpose") or "").strip()
             ),
-            "blocking": fail_on_drift,
+            "blocking": strict,
             "errors": errors,
         }
     }

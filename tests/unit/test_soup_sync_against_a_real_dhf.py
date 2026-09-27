@@ -17,7 +17,6 @@ from pathlib import Path
 import pytest
 from click.testing import CliRunner
 
-from dhfkit.cli import main as dhfkit_main
 from medharness.cli import main as mh_main
 from dhfkit.tests.fixtures import bare_dhf
 

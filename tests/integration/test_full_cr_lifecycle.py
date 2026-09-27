@@ -65,7 +65,7 @@ def _cli(dhf_root: str, *args: str) -> subprocess.CompletedProcess:
 
 def _dhf(dhf_root: str, *args: str) -> subprocess.CompletedProcess:
     return subprocess.run(
-        [sys.executable, "-m", "dhfkit", "--dhf", dhf_root] + list(args),
+        [sys.executable, "-m", "medharness", "--dhf", dhf_root] + list(args),
         capture_output=True, text=True, cwd=REPO_ROOT,
     )
 
@@ -74,7 +74,7 @@ class TestScaffoldBaseline:
     """Verify the scaffolded DHF is healthy before lifecycle tests run."""
 
     def test_schema_valid(self, dhf):
-        r = _dhf(str(dhf / "DHF"), "validate")
+        r = _dhf(str(dhf / "DHF"), "verify", "dhf")
         assert r.returncode == 0, f"Schema invalid:\n{r.stderr}"
 
     def test_starter_cr_exists(self, dhf):
@@ -94,7 +94,7 @@ class TestCRItemLifecycle:
     defined in the template's global_lifecycle.states, so execute_transition
     skips them (lifecycle engine requires target state to be in global config).
 
-    We bypass this template gap by using dhfkit item update to set status='develop'
+    We bypass this template gap by using medharness item update to set status='develop'
     directly — this does not invoke the lifecycle engine, only the saver. The
     develop→completed transition then works because 'completed' IS in global
     lifecycle and the CR doc-type has [develop]→completed defined.
@@ -196,35 +196,6 @@ class TestItemCreationValidation:
             }),
         )
         assert r.returncode != 0, "Should reject item with malformed UID in link"
-
-
-class TestDoctorCommand:
-    """Smoke-test the doctor command output shape."""
-
-    def test_doctor_answers_in_json_like_every_command(self, dhf):
-        """It printed prose to stdout unless given --json, alone among commands."""
-        r = _cli(str(dhf / "DHF"), "doctor")
-        assert r.returncode in (0, 1)
-        report = json.loads(r.stdout)
-        assert {"checks", "healthy", "summary"} <= set(report)
-        for check in report["checks"]:
-            assert {"check", "passed", "detail"} <= set(check)
-        assert "python_version" in r.stderr, "the readable lines belong on stderr"
-
-    def test_doctor_checks_the_dhf_it_is_given(self, dhf, tmp_path):
-        named = _cli(str(tmp_path / "nowhere"), "doctor")
-        assert named.returncode == 1
-        failed = {c["check"] for c in json.loads(named.stdout)["checks"] if not c["passed"]}
-        assert "dhf_config" in failed
-
-    def test_doctor_before_init_does_not_fail_on_the_missing_dhf(self, tmp_path):
-        """Nothing is named and ./DHF does not exist: there is no DHF to check yet."""
-        r = subprocess.run(
-            [sys.executable, "-m", "medharness", "doctor"],
-            capture_output=True, text=True, cwd=tmp_path,
-        )
-        checks = {c["check"] for c in json.loads(r.stdout)["checks"]}
-        assert "dhf_config" not in checks, "doctor judged a DHF that nobody asked about"
 
 
 class TestCRPhaseEnum:

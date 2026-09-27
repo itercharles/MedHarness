@@ -81,15 +81,11 @@ class TestSpecificationsLandInsideTheDHF:
     itself."""
 
     def test_a_dhf_not_named_dhf_keeps_its_documents(self, tmp_path: Path) -> None:
-        from click.testing import CliRunner
-
-        from dhfkit.cli import main
+        from dhfkit.local_adapter import LocalDHFAdapter
         from dhfkit.tests.fixtures import bare_dhf
 
         dhf = bare_dhf(tmp_path / "mydhf")
-        runner = CliRunner()
-        result = runner.invoke(main, ["--dhf", str(dhf), "doc", "SRS"])
-        assert result.exit_code == 0, result.output
+        LocalDHFAdapter(dhf).generate_doc("SRS")
         assert (dhf / "documents" / "specs").is_dir()
         assert not (tmp_path / "DHF").exists(), "wrote outside the DHF"
 

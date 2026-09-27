@@ -13,7 +13,7 @@ from pathlib import Path
 
 from click.testing import CliRunner
 
-from dhfkit.cli import main as dhfkit_main
+from medharness.cli import main
 from dhfkit.local_adapter import LocalDHFAdapter
 from medharness.services.context import cr_context
 from dhfkit.tests.fixtures import bare_dhf
@@ -52,7 +52,7 @@ def _context(dhf: Path, cr_id: str) -> dict:
 
 
 def _srs(dhf: Path) -> str:
-    created = CliRunner().invoke(dhfkit_main, [
+    created = CliRunner().invoke(main, [
         "--dhf", str(dhf), "item", "create", "--type", "SRS",
         "--data", json.dumps({"title": "Req", "verification_criteria": "T1 passes"}),
     ])

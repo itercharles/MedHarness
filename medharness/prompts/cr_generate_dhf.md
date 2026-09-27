@@ -9,7 +9,7 @@ CR ID: {{cr_id}}
 
 ## Inputs
 
-- CR item: `dhfkit --dhf DHF item get {{cr_id}}`
+- CR item: `medharness --dhf DHF item get {{cr_id}}`
 - Repository context: `AGENTS.md` (or `CLAUDE.md`), `README.md`
 - Source code: relevant modules under `apps/`, `packages/`, or equivalent
   source roots described in `AGENTS.md`/`CLAUDE.md` — identify and read these based on
@@ -32,7 +32,7 @@ Before generating any DHF items, evaluate whether the CR should proceed.
 
 **If the CR should be rejected**, update the CR item with the rejection reason and stop:
 
-    dhfkit --dhf DHF item update {{cr_id}} \
+    medharness --dhf DHF item update {{cr_id}} \
       --data '{"status": "rejected", "impact_assessment": "<reason for rejection>"}'
 
 Do **not** generate any DHF items if rejecting. Output a brief explanation of the
@@ -40,7 +40,7 @@ rejection reason and stop.
 
 **If the CR is approved**, record the triage findings before proceeding:
 
-    dhfkit --dhf DHF item update {{cr_id}} \
+    medharness --dhf DHF item update {{cr_id}} \
       --data '{"triage_result": {"verdict": "approved", "complexity": "<small|medium|large>", "affected_subsystems": ["<name>"], "related_crs": [], "notes": "<one sentence: why approved and the key constraint>"}}'
 
 Complexity scale: `small` = 1 subsystem, <5 DHF items likely; `medium` = 2 subsystems
@@ -67,7 +67,7 @@ CR (input -- do not modify)
 
 Before writing any items, enumerate existing items for each type you plan to touch:
 
-    dhfkit --dhf DHF item list --type <TYPE>
+    medharness --dhf DHF item list --type <TYPE>
 
 Apply the change preference: **no change > update existing > create new**.
 Only create a new item when no existing item covers the need.
@@ -94,7 +94,7 @@ requirement alone.** Each SWDD item belongs to a software module (MODULE) and
 must carry both `implements` (SRS IDs) and `module` (MODULE ID). List existing
 MODULE items first to find or create the right module:
 
-    dhfkit --dhf DHF item list --type MODULE
+    medharness --dhf DHF item list --type MODULE
 
 **Apply this threshold before creating or updating a SWDD:**
 
@@ -136,18 +136,18 @@ absent or vague, add or improve it.
 
 **Create a new item (ID assigned automatically):**
 
-    dhfkit --dhf DHF item create \
+    medharness --dhf DHF item create \
       --type <TYPE> --data '<JSON>'
 
 **Update an existing item:**
 
-    dhfkit --dhf DHF item update <ITEM_ID> \
+    medharness --dhf DHF item update <ITEM_ID> \
       --data '<JSON>'
 
 **List items for context:**
 
-    dhfkit --dhf DHF item list --type <TYPE>
-    dhfkit --dhf DHF item list
+    medharness --dhf DHF item list --type <TYPE>
+    medharness --dhf DHF item list
 
 Do **not** write YAML files directly. Do **not** modify the CR item itself.
 
@@ -187,17 +187,17 @@ SRS/SYS item IDs that each test covers.
 
 Write this to the CR item:
 
-    dhfkit --dhf DHF item update {{cr_id}} \
+    medharness --dhf DHF item update {{cr_id}} \
       --data '{"implementation_notes": "<plan>"}'
 
 ## Inline Validation Hook
 
 After writing all DHF items and recording risk impact, validate and self-correct:
 
-    dhfkit --dhf DHF validate
+    medharness --dhf DHF verify dhf
     medharness --dhf DHF verify dhf
 
-If either reports errors introduced by your changes, fix them via `dhfkit item update`
+If either reports errors introduced by your changes, fix them via `medharness item update`
 and re-validate. Repeat until both pass cleanly.
 
 ## Step 2.5: Risk Impact Recording
@@ -207,8 +207,8 @@ relevant to this CR — even if they required no structural changes.
 
 1. List all existing risk items:
 
-       dhfkit --dhf DHF item list --type RISK
-       dhfkit --dhf DHF item list --type RCM
+       medharness --dhf DHF item list --type RISK
+       medharness --dhf DHF item list --type RCM
 
 2. For each, assess: does this CR change behavior that could alter the hazard
    likelihood, harm severity, or effectiveness of the control?
@@ -216,7 +216,7 @@ relevant to this CR — even if they required no structural changes.
 3. Collect the IDs of all affected items — those you created, updated, or
    determined are relevant but unchanged — and write them to the CR:
 
-       dhfkit --dhf DHF item update {{cr_id}} \
+       medharness --dhf DHF item update {{cr_id}} \
          --data '{"affected_risk_items": ["RISK-001", "RCM-002"]}'
 
    Use `[]` if no risk items are relevant. Do not omit this step.
@@ -226,7 +226,7 @@ relevant to this CR — even if they required no structural changes.
 Write every DHF item you created or updated for this CR — not the CR itself —
 to its `affected_items`:
 
-    dhfkit --dhf DHF item update {{cr_id}} \
+    medharness --dhf DHF item update {{cr_id}} \
       --data '{"affected_items": ["SYS-004", "SRS-012", "SWDD-007"]}'
 
 `medharness workflow check-changes --cr {{cr_id}}` compares this list with the

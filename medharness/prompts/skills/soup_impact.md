@@ -6,7 +6,7 @@ upgrade, replace, or materially change the use of third-party software.
 ## Inputs
 
 Read:
-- `dhfkit --dhf DHF item get <CR_ID>`
+- `medharness --dhf DHF item get <CR_ID>`
 - `DHF/documents/plans/configuration_management_plan.md`
 - `DHF/documents/plans/maintenance_plan.md`
 - SOUP items (see Type Registry — `soup` role)

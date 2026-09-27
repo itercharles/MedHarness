@@ -19,21 +19,21 @@ def register(main):
     verify = main.commands["verify"]
 
     @verify.command("dhf")
-    @click.option("--fail-on-uncovered", is_flag=True, default=False,
+    @click.option("--strict", is_flag=True, default=False,
                   help="Exit non-zero when items lack downstream coverage. "
                        "Without it, coverage gaps are reported as WARN only.")
     @click.pass_context
-    def verify_dhf(ctx: click.Context, fail_on_uncovered: bool) -> None:
+    def verify_dhf(ctx: click.Context, strict: bool) -> None:
         """Check the DHF holds together: schema, links, cycles, coverage.
 
         Always blocking: schema errors, required-traceability failures, and
         dangling links (a link whose target ID does not exist).
 
-        Advisory by default: coverage gaps — pass --fail-on-uncovered to enforce.
+        Advisory by default: coverage gaps — pass --strict to enforce.
         """
         effective_dhf = ctx.obj["dhf"]
         result = ci_structural_gate(dhf_path=effective_dhf,
-                                     fail_on_uncovered=fail_on_uncovered)
+                                     strict=strict)
         emit(result)
         r = details(result)["results"]
         dhf_arg = f"--dhf {effective_dhf}"
@@ -48,11 +48,11 @@ def register(main):
                     m = _ITEM_ID_RE.match(str(err))
                     if m:
                         iid = m.group(1)
-                        click.echo(f"    Fix: dhfkit {dhf_arg} item update {iid}"
+                        click.echo(f"    Fix: medharness {dhf_arg} item update {iid}"
                                    f" --data '{{\"<field>\": \"<value>\"}}'", err=True)
         for gap in r.get("verification_gaps", []):
             click.echo(f"WARN [verification] {gap['id']}: {gap['issue']}", err=True)
-            click.echo(f"      Fix: dhfkit {dhf_arg} item update {gap['id']}"
+            click.echo(f"      Fix: medharness {dhf_arg} item update {gap['id']}"
                        f" --data '{{\"verification_criteria\": \"<how this is verified>\"}}'",
                        err=True)
         if "traceability" in r:
@@ -63,7 +63,7 @@ def register(main):
                     click.echo(f"FAIL [required] {f['id']}: {f['issue']}", err=True)
                     click.echo(f"    Fix: add 'dhf_links: [<parent-id>]' to"
                                f" {f['id']}.yaml, or:", err=True)
-                    click.echo(f"         dhfkit {dhf_arg} item update {f['id']}"
+                    click.echo(f"         medharness {dhf_arg} item update {f['id']}"
                                f" --data '{{\"dhf_links\": [\"<parent-id>\"]}}'", err=True)
             for message in [e for e in result["errors"] if "target does not exist" in e]:
                 click.echo(f"FAIL [dangling] {message}", err=True)
@@ -76,19 +76,19 @@ def register(main):
                 click.echo("    Fix: the V-model is directed. Remove whichever link "
                            "reverses the chain so each item has an origin.", err=True)
 
-            # Uncovered items are advisory unless --fail-on-uncovered is set; label
+            # Uncovered items are advisory unless --strict is set; label
             # them WARN so a green build never prints FAIL.
-            gap_label = "FAIL" if fail_on_uncovered else "WARN"
+            gap_label = "FAIL" if strict else "WARN"
             for c in t.get("coverage", []):
                 click.echo(f"{'PASS' if c['passed'] else gap_label} [coverage] "
                            f"{c['parent_type']}→{c['child_type']}: "
                            f"{c['covered']}/{c['total']} covered", err=True)
                 if not c["passed"]:
-                    click.echo(f"    Fix: dhfkit {dhf_arg} item list"
+                    click.echo(f"    Fix: medharness {dhf_arg} item list"
                                f" --type {c['child_type']} to find uncovered items,"
                                f" then add dhf_links to their YAML.", err=True)
-                    if not fail_on_uncovered:
-                        click.echo("         Advisory only — pass --fail-on-uncovered"
+                    if not strict:
+                        click.echo("         Advisory only — pass --strict"
                                    " to block the build on this.", err=True)
         if "coverage" in r:
             for row in r["coverage"].get("pairs", []):
@@ -110,13 +110,13 @@ def register(main):
 
     @verify.command("tests")
     @junit_option("JUnit XML results: a file, or a directory searched for *.xml (repeatable).")
-    @click.option("--fail-on-missing-method", is_flag=True, default=False,
+    @click.option("--strict", is_flag=True, default=False,
                   help="Make a requirement with no declared verification_method fail. "
                        "Warns by default, so a project adding the field is not blocked.")
     @click.pass_context
     def verify_tests(ctx: click.Context,
                          junit_paths: tuple[Path, ...],
-                         fail_on_missing_method: bool = False) -> None:
+                         strict: bool = False) -> None:
         """Check each requirement is verified by the method it declares.
 
         A requirement declaring Test needs a passing JUnit case linked to it;
@@ -125,7 +125,7 @@ def register(main):
         effective_dhf = ctx.obj["dhf"]
         result = ci_test_coverage_gate(dhf_path=effective_dhf,
                                        junit_paths=collect_junit_paths(junit_paths),
-                                       fail_on_missing_method=fail_on_missing_method)
+                                       strict=strict)
         emit(result)
         # The rows below print per-type coverage; the envelope's warnings are
         # about the gate as a whole and have no row to be printed beside.
@@ -221,7 +221,7 @@ def register(main):
                   metavar="PATH",
                   help="Dependency manifest to compare the register against (repeatable). "
                        "Auto-discovers when omitted.")
-    @click.option("--fail-on-drift", is_flag=True, default=False,
+    @click.option("--strict", is_flag=True, default=False,
                   help="Make an undocumented or misversioned component fail the gate. "
                        "Warns by default, so a project backfilling its register is not blocked.")
     @click.option("--offline-mode", type=click.Choice(["fail", "warn"]), default="fail",
@@ -231,14 +231,14 @@ def register(main):
     def verify_soup(
         ctx: click.Context,
         manifest_paths: tuple[Path, ...],
-        fail_on_drift: bool,
+        strict: bool,
         offline_mode: str,
     ) -> None:
         """Check the SOUP register matches what ships, and is not known-vulnerable.
 
         Compares the register against the dependency manifests, then each item
         against the OSV database. A package in a manifest with no SOUP item, or
-        at a different version, warns unless --fail-on-drift is passed.
+        at a different version, warns unless --strict is passed.
 
         SOUP items must have an 'ecosystem' field (e.g. PyPI, npm) to be checked.
         Exits non-zero if any unresolved vulnerabilities are found.
@@ -258,7 +258,7 @@ def register(main):
 
         effective_dhf = ctx.obj["dhf"]
         result = soup_gate(effective_dhf, offline_mode=offline_mode,
-                           manifest_paths=list(manifest_paths), fail_on_drift=fail_on_drift)
+                           manifest_paths=list(manifest_paths), strict=strict)
         emit(result)
 
         for entry in details(result).get("accepted", []):
@@ -272,7 +272,7 @@ def register(main):
         if details(result).get("drift", {}).get("undocumented") or \
                 details(result).get("drift", {}).get("misversioned"):
             click.echo("    Fix: medharness --dhf DHF build soup --write, then commit. "
-                       "Pass --fail-on-drift to block the build on this.", err=True)
+                       "Pass --strict to block the build on this.", err=True)
         click.echo(result["summary"], err=True)
         if not result["passed"]:
             raise click.ClickException("SOUP check failed.")

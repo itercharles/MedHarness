@@ -19,7 +19,7 @@ from pathlib import Path
 )
 @click.pass_context
 def main(ctx: click.Context, dhf: str) -> None:
-    """MedHarness CLI — AI harness and DHF tooling for medical device software."""
+    """MedHarness — a Design History File in the repository, and the checks and steps around it."""
     ctx.ensure_object(dict)
     ctx.obj["dhf"] = Path(dhf)
 
@@ -46,10 +46,10 @@ from medharness.cli.verify import register as register_verify
 from medharness.cli.build import register as register_build
 from medharness.cli.workflow import register as register_workflow
 from medharness.cli.init import register as register_init
-from medharness.cli.doctor import register as register_doctor
+from medharness.cli.item import register as register_item
 
 register_verify(main)
 register_build(main)
 register_workflow(main)
 register_init(main)
-register_doctor(main)
+register_item(main)

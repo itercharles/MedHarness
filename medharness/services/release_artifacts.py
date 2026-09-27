@@ -10,7 +10,8 @@ from typing import Any
 
 import click
 
-DEFAULT_TRACEABILITY_DOC_TYPES = ("UC", "CRS", "SYS", "SRS", "SWDD")
+from medharness.services import git
+
 
 
 class _MissingPDFDeps(RuntimeError):
@@ -189,11 +190,14 @@ def generate_release_artifacts(
     adapter,
     dhf_path: Path,
     out_dir: Path,
-    traceability_types: tuple[str, ...],
     junit_paths: list[Path],
     doc_format: str = "html",
 ) -> dict:
-    """Every specification, every plan, and the traceability report, into out_dir."""
+    """Every specification, every plan, and the traceability report, into out_dir.
+
+    The report follows the first chain in `traceability_matrices`, the one the
+    project's config puts first.
+    """
     out_dir.mkdir(parents=True, exist_ok=True)
     specifications = _generate_specification_artifacts(
         adapter, out_dir, tuple(sorted(adapter.get_available_doc_types())), doc_format
@@ -201,7 +205,7 @@ def generate_release_artifacts(
     plans = _generate_plan_artifacts(dhf_path, out_dir, doc_format)
     traceability = write_traceability_report(
         adapter,
-        traceability_types or DEFAULT_TRACEABILITY_DOC_TYPES,
+        tuple(adapter.config.traceability_matrices[0].path),
         out_dir / "traceability" / f"Requirements_Traceability_Report.{doc_format}",
         [str(path) for path in junit_paths],
     )
@@ -277,10 +281,6 @@ def build_evidence_bundle(
     out_dir: Path,
     *,
     junit_paths: list[Path] = (),
-    traceability_types: tuple[str, ...] = (),
-    run_id: str = "",
-    run_url: str = "",
-    commit_sha: str = "",
     doc_format: str = "html",
     gate: dict,
 ) -> dict[str, Any]:
@@ -296,14 +296,12 @@ def build_evidence_bundle(
 
     out_dir.mkdir(parents=True, exist_ok=True)
     artifacts = generate_release_artifacts(
-        adapter, dhf_path, out_dir, traceability_types, list(junit_paths),
+        adapter, dhf_path, out_dir, list(junit_paths),
         doc_format=doc_format,
     )
 
     provenance = {
-        "run_id": run_id,
-        "run_url": run_url,
-        "commit_sha": commit_sha,
+        "commit_sha": git.head(dhf_path.resolve().parent) or "",
         "dhf_root": str(dhf_path),
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "gate_passed": gate["passed"],

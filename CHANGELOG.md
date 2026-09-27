@@ -11,6 +11,28 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.44.0] — 2026-09-27
+
+One CLI. `dhfkit` is the storage library underneath and no longer a command;
+every command sits under the verb that says what it touches. 17 commands, from
+20. Contract version 16.0.
+
+### Breaking Changes
+
+| Was | Now |
+|---|---|
+| `dhfkit item list\|get\|create\|update\|transition` | `medharness item …`, unchanged otherwise |
+| `dhfkit validate` | `medharness verify dhf`, which already ran it |
+| `dhfkit doc TYPE` | `medharness build doc TYPE` |
+| `dhfkit sbom` | `medharness build doc SOUP --format cyclonedx`, written to `DHF/documents/exports/sbom.cdx.json` or `--out-dir`. The SBOM is the SOUP register rendered, as a specification is the requirements rendered. Stdout mode is gone |
+| `medharness doctor` | Removed. `verify dhf` reports what is wrong with a DHF |
+| `--fail-on-uncovered`, `--fail-on-missing-method`, `--fail-on-drift` | `--strict` on `verify dhf`, `verify tests` and `verify soup`: what would warn fails |
+| `build release --traceability-type` | Removed. The report follows the first chain in `traceability_matrices` |
+| `build release --run-id`, `--run-url`, `--commit` | Removed. The manifest records the commit from git; the artifacts belong to the CI run that made them |
+
+AGENTS.md written by earlier versions of `init` names `dhfkit` commands;
+replace its "Design History File" section with the one in adopting.md.
+
 ## [0.43.2] — 2026-09-27
 
 ### Fixed

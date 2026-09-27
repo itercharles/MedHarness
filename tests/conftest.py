@@ -31,3 +31,13 @@ def governance_dir(tmp_path):
     gov_dir = tmp_path / "governance"
     populate_governance(gov_dir)
     return gov_dir
+
+
+@pytest.fixture
+def populated_dhf():
+    """The dhfkit test DHF, populated, for command tests that pass it as --dhf."""
+    from dhfkit.tests.fixtures import create_test_dhf, populate_test_dhf_direct
+
+    root = create_test_dhf()
+    populate_test_dhf_direct(root)
+    return root

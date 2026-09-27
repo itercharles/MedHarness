@@ -28,7 +28,7 @@ ROOT = Path(__file__).resolve().parents[2]
 
 #: `Fix:` lines carry a runnable command. The hint spells the real --dhf path,
 #: not a literal, so it is copy-pasteable as printed.
-HINT = re.compile(r"Fix:\s*(dhfkit --dhf \S+ .*?\}')")
+HINT = re.compile(r"Fix:\s*(medharness --dhf \S+ .*?\}')")
 
 
 @pytest.fixture
@@ -62,7 +62,7 @@ class TestTheHintIsUsable:
         assert match, before[-400:]
 
         args = shlex.split(match.group(1))
-        assert args[0] == "dhfkit" and args[1] == "--dhf"
+        assert args[0] == "medharness" and args[1] == "--dhf"
         assert Path(args[2]) == dhf, (
             f"the hint names {args[2]}, not the DHF it was run against — a "
             f"reader pasting it would edit the wrong tree"
@@ -71,7 +71,7 @@ class TestTheHintIsUsable:
         item_id = args[args.index("update") + 1]
 
         result = subprocess.run(
-            [sys.executable, "-m", "dhfkit", *args[1:]],
+            [sys.executable, "-m", "medharness", *args[1:]],
             capture_output=True, text=True, cwd=ROOT,
         )
         assert result.returncode == 0, (

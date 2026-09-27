@@ -83,7 +83,7 @@ def _validate_schema_and_traceability(_api, dhf_path: Path) -> list[dict]:
                 "field": "schema",
                 "issue": str(msg),
                 "fix": "Fix the offending DHF item via "
-                       "`dhfkit --dhf DHF item update <ITEM_ID> --data '<JSON>'`.",
+                       "`medharness --dhf DHF item update <ITEM_ID> --data '<JSON>'`.",
             })
 
     try:
@@ -139,7 +139,7 @@ def _list_items(_api, dhf_path: Path, field: str) -> tuple[list[dict], list[dict
         return [], [{
             "field": field,
             "issue": f"Could not enumerate DHF items to verify expectations: {exc}",
-            "fix": "Run `dhfkit --dhf DHF item list` locally to debug.",
+            "fix": "Run `medharness --dhf DHF item list` locally to debug.",
         }]
 
 
@@ -269,7 +269,7 @@ def _check_cr_workflow_fields(_api, dhf_path: Path, cr_id: str) -> list[dict]:
                 f"triage decision and it was not written."
             ),
             "fix": (
-                f"dhfkit --dhf DHF item update {cr_id} --data "
+                f"medharness --dhf DHF item update {cr_id} --data "
                 f"'{{\"triage_result\": {{\"verdict\": \"approved\", "
                 f"\"complexity\": \"<small|medium|large>\", "
                 f"\"affected_subsystems\": [\"<name>\"], \"related_crs\": [], "

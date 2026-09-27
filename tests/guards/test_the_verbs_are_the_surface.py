@@ -24,7 +24,7 @@ from medharness.cli import main
 ROOT = Path(__file__).resolve().parents[2]
 
 #: Removed top-level groups and commands.
-RETIRED_GROUPS = ("change", "automation", "soup-sync", "upgrade", "context")
+RETIRED_GROUPS = ("change", "automation", "soup-sync", "upgrade", "context", "doctor")
 
 #: old invocation -> what replaced it.
 RENAMED = {
@@ -39,18 +39,24 @@ RENAMED = {
     "workflow branch": "workflow check-changes",
     # 0.37.0 folded three context commands into one; 0.39.0 removed it, since
     # the AI stages call services.context directly and nothing ran the command.
-    "context overview": "dhfkit item list",
-    "context implementation": "dhfkit item get",
-    "context for-stage": "dhfkit item get",
-    "medharness context": "dhfkit item list",
-    "doc generate": "doc",
-    "doc export": "doc --format html",
-    # 0.38.0. A group with one command in it.
-    "validate schema": "validate",
+    "context overview": "medharness item list",
+    "context implementation": "medharness item get",
+    "context for-stage": "medharness item get",
+    "medharness context": "medharness item list",
+    "doc generate": "build doc",
+    "doc export": "build doc --format html",
+    "validate schema": "verify dhf",
     # 0.40.0. The name said the whole DHF; it syncs SOUP. Event routing is the
     # CI workflow's own job.
     "build dhf": "build soup",
     "workflow github-event": "the workflow's own `if:`",
+    # 0.44.0. One CLI: dhfkit is a library, and its commands moved to where
+    # the verbs put them.
+    "dhfkit item": "medharness item",
+    "dhfkit validate": "medharness verify dhf",
+    "dhfkit doc": "medharness build doc",
+    "dhfkit sbom": "medharness build doc SOUP --format cyclonedx",
+    "dhfkit init": "medharness init",
 }
 
 #: Stage names from before the verbs, which messages kept after the commands went.
@@ -88,20 +94,15 @@ def test_a_retired_group_is_not_registered(name: str) -> None:
 
 
 def _resolves(path: list[str]) -> bool:
-    """Whether a command path names a command in either CLI's tree."""
+    """Whether a command path names a command in the CLI's tree."""
     import click
 
-    from dhfkit.cli import main as dhfkit_main
-
-    for root in (main, dhfkit_main):
-        node = root
-        for token in path:
-            if not isinstance(node, click.Group) or token not in node.commands:
-                break
-            node = node.commands[token]
-        else:
-            return True
-    return False
+    node = main
+    for token in path:
+        if not isinstance(node, click.Group) or token not in node.commands:
+            return False
+        node = node.commands[token]
+    return True
 
 
 @pytest.mark.parametrize("old", sorted(RENAMED), ids=lambda s: s)

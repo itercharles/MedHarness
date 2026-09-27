@@ -1,6 +1,6 @@
 """An option named in a prompt, a doc, or a shipped workflow must exist.
 
-`--author` and `--cr` on `dhfkit item create/update`, `--by` on `item
+`--author` and `--cr` on `medharness item create/update`, `--by` on `item
 transition`, and `--author` on `release baseline` and `build soup` all ended at
 an auto-commit path no entry point enabled, so the attribution was dropped on
 the floor. Thirteen places across the prompts, `docs/adopting.md`, and the

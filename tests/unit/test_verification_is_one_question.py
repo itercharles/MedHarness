@@ -23,7 +23,6 @@ def _dhf(tmp_path: Path, items: list[dict]) -> Path:
     """A real minimal DHF, scaffolded the way dhfkit does it."""
     from click.testing import CliRunner
 
-    from dhfkit.cli import main as dhfkit_main
 
     dhf = tmp_path / "DHF"
     bare_dhf(dhf)
@@ -77,7 +76,7 @@ class TestAMissingMethodWarnsUntilAsked:
     def test_fail_on_missing_method_blocks(self, tmp_path: Path) -> None:
         dhf = _dhf(tmp_path, [{"id": "SRS-001"}])
         result = ci_test_coverage_gate(
-            dhf_path=dhf, junit_paths=[_junit(tmp_path)], fail_on_missing_method=True,
+            dhf_path=dhf, junit_paths=[_junit(tmp_path)], strict=True,
         )
         assert result["passed"] is False
 

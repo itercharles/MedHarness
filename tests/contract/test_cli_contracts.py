@@ -141,10 +141,10 @@ class TestCLIEntrypoints:
 class TestOutputContract:
     """Verify automation commands write JSON to stdout, human messages to stderr."""
 
-    def test_dhfkit_item_get_json_on_stdout(self, scaffolded_dhf):
-        """dhfkit item get writes JSON to stdout."""
+    def test_item_get_json_on_stdout(self, scaffolded_dhf):
+        """medharness item get writes JSON to stdout."""
         import json
-        r = _run("dhfkit", "--dhf", str(scaffolded_dhf / "DHF"), "item", "get", "SYS-001")
+        r = _run("medharness", "--dhf", str(scaffolded_dhf / "DHF"), "item", "get", "SYS-001")
         assert r.returncode == 0
         item = json.loads(r.stdout)
         assert "id" in item
@@ -156,16 +156,10 @@ class TestOutputContract:
             except json.JSONDecodeError:
                 pass
 
-    def test_dhfkit_validate_schema_output(self, scaffolded_dhf):
-        """dhfkit validate produces output."""
-        r = _run("dhfkit", "--dhf", str(scaffolded_dhf / "DHF"), "validate")
-        assert r.returncode == 0
-        assert len(r.stdout.strip() + r.stderr.strip()) > 0, "produced no output"
-
-    def test_dhfkit_item_list_ndjson(self, scaffolded_dhf):
-        """dhfkit item list writes NDJSON to stdout."""
+    def test_item_list_ndjson(self, scaffolded_dhf):
+        """medharness item list writes NDJSON to stdout."""
         import json
-        r = _run("dhfkit", "--dhf", str(scaffolded_dhf / "DHF"), "item", "list", "--type", "SYS")
+        r = _run("medharness", "--dhf", str(scaffolded_dhf / "DHF"), "item", "list", "--type", "SYS")
         assert r.returncode == 0
         lines = r.stdout.strip().split("\n")
         assert len(lines) > 0
