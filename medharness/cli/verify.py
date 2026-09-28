@@ -1,4 +1,4 @@
-"""`verify` — ask the DHF whether a change is sound. Reads the DHF, nothing else."""
+"""`verify` — check a change against the DHF and the working tree. Never GitHub."""
 
 from __future__ import annotations
 
@@ -214,6 +214,62 @@ def register(main):
         click.echo(result["summary"], err=True)
         if not result["passed"]:
             raise click.ClickException(f"CR {cr_id} closure verification failed.")
+
+    @verify.command("changes")
+    @click.option("--cr", "cr_id", required=True, metavar="CR_ID",
+                  help="The CR whose affected_items the branch must change.")
+    @click.option("--since-ref", default="origin/main", metavar="REF",
+                  help="What the branch is compared against.")
+    @click.option("--code-path", "code_paths", multiple=True, metavar="PATH",
+                  help="Opt into code-change enforcement: path(s) under which at least one file must be modified. "
+                       "Omitting this option skips the code-change check entirely.")
+    @click.pass_context
+    def verify_changes(
+        ctx: click.Context,
+        cr_id: str,
+        since_ref: str,
+        code_paths: tuple[str, ...],
+    ) -> None:
+        """Check the branch changed the items the CR said it would.
+
+        Reads `affected_items` off the CR and diffs the branch against
+        `--since-ref`. An item the CR promised that the branch never touches
+        fails, and so does a CR that promised nothing and changed no DHF item
+        at all — that means `build plan` never ran.
+
+        `--code-path src/` adds a second requirement: at least one file under
+        those paths must have changed too. Without the flag that check is
+        skipped, so a design-only branch passes.
+
+        Compares the working tree, so it runs locally before anything is
+        committed as well as in CI. Needs a reachable `--since-ref`.
+        """
+        from medharness.services.git import validate_atomic_branch  # noqa: PLC0415
+
+        dhf_path: Path = ctx.obj["dhf"]
+        repo_root = dhf_path.resolve().parent
+        payload = validate_atomic_branch(
+            repo_root,
+            dhf_path,
+            cr_id,
+            since_ref=since_ref,
+            code_paths=code_paths,
+        )
+        emit(payload)
+        if payload["passed"]:
+            if code_paths:
+                click.echo(f"PASS [changes] {cr_id}: branch carries coupled DHF and code changes.", err=True)
+            else:
+                click.echo(
+                    f"PASS [changes] {cr_id}: branch carries DHF changes "
+                    f"(pass --code-path to also enforce code changes).",
+                    err=True,
+                )
+            return
+        for error in details(payload).get("findings", []):
+            click.echo(f"FAIL [changes] {error['field']}: {error['issue']}", err=True)
+            click.echo(f"    Fix: {error['fix']}", err=True)
+        raise click.exceptions.Exit(1)
 
     @verify.command("soup")
     @click.option("--manifest", "manifest_paths", multiple=True,

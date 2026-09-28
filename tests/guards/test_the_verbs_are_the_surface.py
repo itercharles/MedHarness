@@ -24,19 +24,19 @@ from medharness.cli import main
 ROOT = Path(__file__).resolve().parents[2]
 
 #: Removed top-level groups and commands.
-RETIRED_GROUPS = ("change", "automation", "soup-sync", "upgrade", "context", "doctor")
+RETIRED_GROUPS = ("change", "automation", "soup-sync", "upgrade", "context", "doctor", "workflow")
 
 #: old invocation -> what replaced it.
 RENAMED = {
     "change verify-completion": "verify completion",
-    "change verify-branch": "workflow check-changes",
-    "change verify-approval": "workflow check-approval",
+    "change verify-branch": "verify changes",
+    "change verify-approval": "GitHub branch protection",
     "change plan": "build plan",
     "change implement": "build code",
     "automation github-event": "the workflow's own `if:`",
     # 0.33.0. Both named the object; the commands ask a question about it.
-    "workflow approval": "workflow check-approval",
-    "workflow branch": "workflow check-changes",
+    "workflow approval": "GitHub branch protection",
+    "workflow branch": "verify changes",
     # 0.37.0 folded three context commands into one; 0.39.0 removed it, since
     # the AI stages call services.context directly and nothing ran the command.
     "context overview": "medharness item list",
@@ -60,6 +60,10 @@ RENAMED = {
     # without --write.
     "build doc": "build release",
     "dhfkit init": "medharness init",
+    # 0.47.0. The diff check runs locally too, so it is a verify; approval is
+    # what GitHub's branch protection already enforces.
+    "workflow check-changes": "verify changes",
+    "workflow check-approval": "GitHub branch protection",
 }
 
 #: Stage names from before the verbs, which messages kept after the commands went.
@@ -82,9 +86,9 @@ DOCS = sorted(
 )
 
 
-def test_the_three_verbs_exist() -> None:
+def test_the_verbs_exist() -> None:
     """Without this the absence checks below pass on a CLI that failed to load."""
-    for verb in ("verify", "build", "workflow"):
+    for verb in ("item", "verify", "build"):
         assert verb in main.commands, f"`{verb}` is not registered"
 
 

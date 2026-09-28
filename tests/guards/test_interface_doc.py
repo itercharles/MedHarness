@@ -61,7 +61,7 @@ class TestTheGateTableMatchesTheCLI:
 
     def _rows(self, text: str) -> dict[str, tuple[str, str]]:
         rows = re.findall(
-            r"^\|\s*`((?:verify|workflow) [a-z-]+)`\s*\|[^|]*\|[^|]*\|\s*([^|]+?)\s*\|\s*`(\w+)`\s*\|",
+            r"^\|\s*`(verify [a-z-]+)`\s*\|[^|]*\|[^|]*\|\s*([^|]+?)\s*\|\s*`(\w+)`\s*\|",
             text, re.M,
         )
         return {cmd: (network, blocking) for cmd, network, blocking in rows}

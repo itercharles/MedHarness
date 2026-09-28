@@ -17,10 +17,9 @@ MedHarness deliberately does not scaffold a CI workflow — a pipeline carries y
 | `verify tests` | the DHF, JUnit results | `--junit` | no | `conditional` |
 | `verify soup` | the DHF, dependency manifests | — | osv.dev | `conditional` |
 | `verify completion` | the DHF | `--cr` | no | `always` |
-| `workflow check-changes` | the DHF, the git diff | `--cr` | no | `always` |
-| `workflow check-approval` | the pull request's reviews | `--pr` | GitHub | `always` |
+| `verify changes` | the DHF, the working tree's diff | `--cr` | no | `always` |
 
-`verify *` answers from the DHF alone, so it runs anywhere the DHF is. `workflow *` cannot answer without the repository; those are CI helpers. Every command takes `--dhf PATH` before the command name, defaulting to `DHF`.
+Every gate answers from the machine it runs on, so each runs locally as well as in CI. Approval is not a gate here: GitHub's branch protection (required approvals, stale approvals dismissed on push) enforces it. Every command takes `--dhf PATH` before the command name, defaulting to `DHF`.
 
 The table is checked against the gates the CLI registers, so it cannot list one that does not exist or omit one that does.
 

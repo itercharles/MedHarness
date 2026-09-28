@@ -28,7 +28,7 @@ GATES = {
     "verify dhf": [],
     "verify tests": ["--junit", "{dhf}"],
     "verify soup": ["--offline-mode", "warn"],
-    "workflow check-changes": ["--cr", "CR-001"],
+    "verify changes": ["--cr", "CR-001"],
     "verify completion": ["--cr", "CR-001"],
 }
 

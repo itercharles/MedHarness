@@ -33,8 +33,7 @@ Replace the sample items with your own, then add the checks to CI.
 | `verify tests` | Is each requirement verified by the method it declares — a Test requirement by a passing test? |
 | `verify soup` | Is the SOUP register what actually ships, and is any of it known-vulnerable? |
 | `verify completion` | Is a change request's record complete, and is every item it changed verified? |
-| `workflow check-changes` | Does the branch change exactly the items its change request lists? |
-| `workflow check-approval` | Did a reviewer approve the exact commit being merged? |
+| `verify changes` | Does the branch, uncommitted work included, change exactly the items its change request lists? |
 
 ```console
 $ medharness verify dhf
@@ -97,7 +96,7 @@ testing: |
   smallest useful pipeline is two steps in a job that checks out the repository:
 
   ```yaml
-  - run: pip install medharness==0.46.2
+  - run: pip install medharness==0.47.0
   - run: medharness verify dhf --strict
   ```
 
@@ -146,9 +145,8 @@ them lists its options. The group says what a command touches:
 | Group | Touches |
 |---|---|
 | `item` | one item at a time |
-| `verify` | reads the DHF, and nothing is written |
+| `verify` | reads the DHF and the working tree, and nothing is written |
 | `build` | writes items, code or artifacts |
-| `workflow` | needs Git or GitHub; CI helpers |
 
 ### `item` — the records
 
@@ -160,7 +158,7 @@ them lists its options. The group says what a command touches:
 | `medharness item update SRS-012 --data '{...}'` | Merges fields into an item; refuses what the schema would reject | the item |
 | `medharness item transition CR-034 completed` | Moves an item through its lifecycle; without a state, lists where it can go | the item; without a state, `current_status` and `transitions` |
 
-### `verify` — reads the DHF only
+### `verify` — reads the DHF and the working tree
 
 Each answers `{gate, passed, summary, errors, warnings}` — see
 [interface.md](docs/interface.md). `--strict` makes what would only warn fail.
@@ -171,6 +169,7 @@ Each answers `{gate, passed, summary, errors, warnings}` — see
 | `medharness verify tests --junit test-results` | Each requirement is verified by the method it declares |
 | `medharness verify soup` | The SOUP register matches the manifests, and none of it is known-vulnerable |
 | `medharness verify completion --cr CR-034` | A CR's record is complete and every item it changed is verified |
+| `medharness verify changes --cr CR-034` | The branch diff against `origin/main`, uncommitted work included, matches the CR's `affected_items`, both ways |
 
 ### `build` — writes items, code or artifacts
 
@@ -181,12 +180,10 @@ Each answers `{gate, passed, summary, errors, warnings}` — see
 | `medharness build soup` | Reconciles SOUP items with your dependency manifests, in the working tree | `to_create`, `to_update`, `orphans` |
 | `medharness build release --version 1.0.0 --out-dir release --write` | Checks the DHF, CRs and open defects; writes the specifications, traceability, baseline, BOM, SBOM and evidence; and — only if every check passed — records the REL item. Without `--write` it is a preview that changes nothing | `outcome`, `cr_ids`, `rel_uid`, `artifacts`, `errors`, `warnings` |
 
-### `workflow` — needs Git or GitHub
-
-| Command | What it does | Returns |
-|---|---|---|
-| `medharness workflow check-changes --cr CR-034` | Compares the branch diff with the CR's `affected_items`, both ways | gate result |
-| `medharness workflow check-approval --pr 42` | Requires an approving review of the PR's head commit; needs `GH_TOKEN` | gate result |
+Approval has no command. Turn on GitHub branch protection for `main` with
+*Require approvals* and *Dismiss stale pull request approvals when new commits
+are pushed*: GitHub then refuses a merge unless the commit being merged was
+approved.
 
 ### Setup
 

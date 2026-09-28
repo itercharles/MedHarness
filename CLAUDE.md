@@ -21,9 +21,8 @@ dependency on `medharness`, and no CLI of its own.
 | Group | Touches | Commands |
 |-------|---------|----------|
 | `item` | one DHF item at a time | `list` · `get` · `create` · `update` · `transition` |
-| `verify` | reads the DHF | `dhf` · `tests` · `soup` · `completion` |
+| `verify` | reads the DHF and the working tree | `dhf` · `tests` · `soup` · `completion` · `changes` |
 | `build` | writes items, code or artifacts | `plan` · `code` · `soup` · `release` |
-| `workflow` | Git or GitHub | `check-changes` · `check-approval` |
 | `init` | scaffolds a project | — |
 
 `tests/guards/test_cli_boundary_is_documented.py` checks this table against the
@@ -31,21 +30,17 @@ live command tree.
 
 ### What each verb means
 
-A new command goes under the verb that matches what it *reads*, not who calls it
-or when. The line was drawn this way because "does it need a CR" — the old rule —
-was invisible in the name, so the gates ended up split across two groups for a
-reason no reader could recover.
+A command is a `verify` if it only judges, a `build` if it writes. Every command
+runs locally; `--pr` on `build plan|code` is the only thing that is CI-specific.
 
 | Verb | Reads | Examples |
 |------|-------|----------|
-| `verify` | the DHF, and nothing else — never Git or GitHub | `dhf`, `tests`, `soup`, `completion` |
+| `verify` | what is on the machine — the DHF and the working tree, never GitHub | `dhf`, `tests`, `soup`, `completion`, `changes` |
 | `build` | whatever it needs; **writes** items, code, or artifacts | `plan`, `code`, `soup`, `release` |
-| `workflow` | the repository; cannot answer without Git or GitHub | `check-changes`, `check-approval` |
 
-`workflow *` are CI helper scripts, not the tool's value. A developer working
-locally runs `verify *` and `build *` and never needs them. `workflow check-changes`
-does open the DHF to read what the CR promised, but it cannot answer without a
-diff — what a command *requires* is what places it, not everything it touches.
+Approval is not a command: GitHub's branch protection (required approvals,
+stale approvals dismissed on push) enforces it on the server, where a PR cannot
+edit the check away.
 
 `tests/guards/test_gates_sit_where_they_belong.py` enforces the line.
 

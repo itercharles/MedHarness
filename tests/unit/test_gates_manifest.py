@@ -23,18 +23,8 @@ from medharness.services.gates import BLOCKING, GATES
 
 
 def _cli_gate_commands() -> set[str]:
-    """Every gate the CLI exposes, wherever it lives.
-
-    Gates sit under two verbs, not one: `verify *` answers from the DHF,
-    `workflow *` cannot answer without the repository. Reading one group would
-    silently stop checking the other — which is how `change`'s two gates went
-    undescribed the first time this was a single-group walk.
-    """
-    found = set()
-    for group in ("verify", "workflow"):
-        for name in main.commands[group].commands:
-            found.add(f"{group} {name}")
-    return found
+    """Every gate the CLI exposes: the `verify` commands."""
+    return {f"verify {name}" for name in main.commands["verify"].commands}
 
 
 class TestManifestMatchesTheCLI:
@@ -92,7 +82,7 @@ class TestManifestMatchesTheCLI:
     def test_every_required_option_is_declared(self, gate: dict) -> None:
         """The other direction.
 
-        Checking only declared→exists let `workflow check-changes` ship a
+        Checking only declared→exists let `verify changes` ship a
         `required` list that omitted an option the command will not run without.
         A caller building from the manifest gets a usage error.
         """
@@ -138,4 +128,4 @@ class TestEveryGateAnswersWithTheEnvelope:
     """Discovery through the CLI, so a gate implemented anywhere is covered."""
 
     def test_every_gate_is_registered(self) -> None:
-        assert len(_cli_gate_commands()) == len(GATES) == 6
+        assert len(_cli_gate_commands()) == len(GATES) == 5

@@ -229,7 +229,7 @@ to its `affected_items`:
     medharness --dhf DHF item update {{cr_id}} \
       --data '{"affected_items": ["SYS-004", "SRS-012", "SWDD-007"]}'
 
-`medharness workflow check-changes --cr {{cr_id}}` compares this list with the
+`medharness verify changes --cr {{cr_id}}` compares this list with the
 items the branch actually changes, in both directions.
 
 ## Scope Constraints

@@ -24,12 +24,12 @@ def main(ctx: click.Context, dhf: str) -> None:
     ctx.obj["dhf"] = Path(dhf)
 
 
-# The three verbs are defined here, not in the module that happens to register
+# The verbs are defined here, not in the module that happens to register
 # first: several modules attach commands to the same group, and whoever created
 # it would silently decide the group's help text.
 @main.group("verify")
 def verify() -> None:
-    """Ask the DHF whether a change is sound."""
+    """Check a change against the DHF and the working tree. Runs locally and in CI."""
 
 
 @main.group("build")
@@ -37,19 +37,12 @@ def build() -> None:
     """Produce DHF items, code, and delivery artifacts."""
 
 
-@main.group("workflow")
-def workflow() -> None:
-    """Check what Git and GitHub say about a change. CI helpers."""
-
-
 from medharness.cli.verify import register as register_verify
 from medharness.cli.build import register as register_build
-from medharness.cli.workflow import register as register_workflow
 from medharness.cli.init import register as register_init
 from medharness.cli.item import register as register_item
 
 register_verify(main)
 register_build(main)
-register_workflow(main)
 register_init(main)
 register_item(main)

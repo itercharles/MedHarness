@@ -208,7 +208,7 @@ A change to what the product does is not finished until its DHF is.
 - **Check it**, and fix what they report:
   - `medharness verify dhf`
   - `medharness verify completion --cr CR-NNN --junit <results>`
-  - `medharness workflow check-changes --cr CR-NNN`
+  - `medharness verify changes --cr CR-NNN`
 - **Close it:** `medharness item transition CR-NNN completed`.
 
 Change items with `medharness item create|update|transition`, never by editing IDs.
@@ -253,7 +253,7 @@ Run it on the branch to block the merge, and again on `main`, where the tests re
 3. Those that are requirements (CRS, SYS, SRS) or SOUP have `verification_method` set.
 4. Those with `Test` have passing JUnit evidence.
 
-Approval is not its question — that is `workflow check-approval`, which reads the pull request's reviews. Exits non-zero and prints `FAIL [completion]` lines for each gap.
+Approval is not its question — GitHub's branch protection enforces that (required approvals, stale approvals dismissed on push). Exits non-zero and prints `FAIL [completion]` lines for each gap.
 
 ### Wiring it into GitHub Actions
 

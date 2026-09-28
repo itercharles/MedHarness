@@ -35,7 +35,7 @@ class TestInitCmd:
         _write_agent_files(tmp_path, "Device")
         agents = (tmp_path / "AGENTS.md").read_text()
         for step in ("build plan --cr CR-NNN --prompt", "build code --cr CR-NNN --prompt",
-                     "verify completion --cr CR-NNN", "workflow check-changes --cr CR-NNN"):
+                     "verify completion --cr CR-NNN", "verify changes --cr CR-NNN"):
             assert step in agents, step
 
     def test_existing_files_are_added_to_not_replaced(self, tmp_path):
