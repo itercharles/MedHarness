@@ -40,6 +40,8 @@ def _documented_calls() -> list[tuple[str, tuple[str, ...], str]]:
         sorted((ROOT / "docs").glob("*.md")) + [ROOT / "README.md"]
         + sorted((ROOT / "dhfkit" / "templates").rglob("*.md"))
         + sorted((ROOT / "medharness" / "prompts").rglob("*.md"))
+        # The repository's own CI runs commands too, as Python argument lists.
+        + sorted((ROOT / ".github" / "workflows").glob("*.yml"))
     )
     for path in sources:
         for raw in path.read_text(encoding="utf-8").splitlines():
@@ -51,7 +53,14 @@ def _documented_calls() -> list[tuple[str, tuple[str, ...], str]]:
             # agent example kept calling `medharness gates` after it was removed.
             as_list = [
                 " ".join(re.findall(r'"([^"]+)"', m))
-                for m in re.findall(r'\[\s*("(?:dhfkit|medharness)"(?:\s*,\s*"[^"]*")+)', raw)
+                for m in re.findall(r'\[\s*("(?:dhfkit|medharness)"(?:\s*,\s*"[^"]*")+)',
+                                    raw.replace("'", '"'))
+            ] + [
+                # `[sys.executable, "-m", "medharness", "--dhf", dhf, ...]`: the
+                # quoted words after the module, less the --dhf whose value is a name.
+                "medharness " + " ".join(w for w in re.findall(r'"([^"]+)"', m) if w != "--dhf")
+                for m in re.findall(r'"-m",\s*"medharness"((?:\s*,\s*[^\]]+?)*)\]',
+                                    raw.replace("'", '"'))
             ]
             for candidate in [raw] + re.findall(r"`([^`]+)`", raw) + as_list:
                 for line in _alternatives(candidate.replace(r"\|", "|")):
@@ -84,6 +93,8 @@ def _parse(line: str) -> tuple[str, tuple[str, ...]] | None:
     except ValueError:              # an unbalanced quote in prose
         args = match.group(2).split()
     for arg in args:
+        if arg in {">", ">>", "|", "||", "&&", ";"}:
+            break                   # the rest of the line is another command
         if skip:
             skip = False
             continue

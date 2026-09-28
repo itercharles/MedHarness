@@ -34,6 +34,8 @@ Documents are what a release ships. 16 commands. Contract version 17.0.
   - `document_specifications.<type>.output` is no longer read.
 - `build release` answers with `warnings`: each SBOM component without a purl,
   and why — what the removed `sbom` command printed.
+- The documented-commands guard now reads the repository's own CI workflows,
+  where the starter check still called `build doc`.
 
 ## [0.44.0] — 2026-09-27
 
