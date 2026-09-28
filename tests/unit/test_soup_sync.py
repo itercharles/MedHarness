@@ -219,21 +219,11 @@ class TestDiffAgainstDhf:
 # ---------------------------------------------------------------------------
 
 class TestSyncSoupItems:
-    def test_dry_run_returns_diff_without_writing(self, tmp_path):
-        req = _req_txt(tmp_path, "requests==2.31.0\n")
-        with patch("dhfkit.api.list_items", return_value=[]), \
-             patch("dhfkit.api.create_item") as mock_create:
-            result = sync_soup_items(tmp_path / "DHF", [req], write=False)
-
-        assert result["outcome"] == "completed"
-        assert "requests" in result["to_create"]
-        mock_create.assert_not_called()
-
     def test_write_creates_new_items(self, tmp_path):
         req = _req_txt(tmp_path, "flask==3.0.0\n")
         with patch("dhfkit.api.list_items", return_value=[]), \
              patch("dhfkit.api.create_item", return_value={"id": "SOUP-001"}) as mock_create:
-            result = sync_soup_items(tmp_path / "DHF", [req], write=True)
+            result = sync_soup_items(tmp_path / "DHF", [req])
 
         mock_create.assert_called_once()
         assert result["items_created"] == ["SOUP-001"]
@@ -243,7 +233,7 @@ class TestSyncSoupItems:
         existing = _make_soup_item("SOUP-001", "click", "8.0.0")
         with patch("dhfkit.api.list_items", return_value=[existing]), \
              patch("dhfkit.api.update_item", return_value=existing) as mock_update:
-            result = sync_soup_items(tmp_path / "DHF", [req], write=True)
+            result = sync_soup_items(tmp_path / "DHF", [req])
 
         mock_update.assert_called_once_with(
             tmp_path / "DHF", "SOUP-001", {"version": "8.1.7"},
@@ -254,7 +244,7 @@ class TestSyncSoupItems:
         bad = tmp_path / "setup.cfg"
         bad.write_text("not a manifest", encoding="utf-8")
         with patch("dhfkit.api.list_items", return_value=[]):
-            result = sync_soup_items(tmp_path / "DHF", [bad], write=False)
+            result = sync_soup_items(tmp_path / "DHF", [bad])
 
         assert result["outcome"] == "completed_with_errors"
         assert any("Unsupported manifest" in e for e in result["errors"])
@@ -264,7 +254,7 @@ class TestSyncSoupItems:
         req = _req_txt(tmp_path, "flask==3.0.0\n")
         pkg = _pkg_json(tmp_path, {"dependencies": {"react": "^18.2.0"}})
         with patch("dhfkit.api.list_items", return_value=[]):
-            result = sync_soup_items(tmp_path / "DHF", [req, pkg], write=False)
+            result = sync_soup_items(tmp_path / "DHF", [req, pkg])
 
         assert set(result["to_create"]) == {"flask", "react"}
         assert len(result["manifests_parsed"]) == 2
@@ -272,7 +262,7 @@ class TestSyncSoupItems:
     def test_dhf_list_failure_adds_error(self, tmp_path):
         req = _req_txt(tmp_path, "requests==2.31.0\n")
         with patch("dhfkit.api.list_items", side_effect=RuntimeError("boom")):
-            result = sync_soup_items(tmp_path / "DHF", [req], write=False)
+            result = sync_soup_items(tmp_path / "DHF", [req])
 
         assert result["outcome"] == "completed_with_errors"
         assert any("Failed to list SOUP" in e for e in result["errors"])
@@ -286,7 +276,7 @@ class TestSyncSoupItems:
         pkg = _pkg_json(tmp_path, {"peerDependencies": {"requests": "^2.31.0"}})
         with patch("dhfkit.api.list_items", return_value=[]), \
              patch("dhfkit.api.create_item", return_value={"id": "SOUP-001"}) as mock_create:
-            result = sync_soup_items(tmp_path / "DHF", [req1, pkg], write=True)
+            result = sync_soup_items(tmp_path / "DHF", [req1, pkg])
 
         # "requests" appears in requirements.txt (pypi) and peerDependencies (npm) but
         # after deduplication only one create call should happen
@@ -299,7 +289,7 @@ class TestSyncSoupItems:
             "peerDependencies": {"axios": "^1.0.0"},
         })
         with patch("dhfkit.api.list_items", return_value=[]):
-            result = sync_soup_items(tmp_path / "DHF", [pkg], write=False)
+            result = sync_soup_items(tmp_path / "DHF", [pkg])
 
         assert result["to_create"].count("axios") == 1
 
@@ -309,7 +299,7 @@ class TestSyncSoupItems:
         side_effects = [{"id": "SOUP-001"}, RuntimeError("db error")]
         with patch("dhfkit.api.list_items", return_value=[]), \
              patch("dhfkit.api.create_item", side_effect=side_effects):
-            result = sync_soup_items(tmp_path / "DHF", [req], write=True)
+            result = sync_soup_items(tmp_path / "DHF", [req])
 
         assert result["outcome"] == "completed_with_errors"
         assert result["items_created"] == ["SOUP-001"]

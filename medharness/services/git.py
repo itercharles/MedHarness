@@ -58,6 +58,24 @@ def uncommit_since(repo_root: Path, start: str | None) -> list[str]:
     return commits
 
 
+def commit_and_push(repo_root: Path, message: str, branch: str) -> str | None:
+    """Stage everything, commit it if anything changed, push to ``branch``.
+
+    Returns why it failed, or None.
+    """
+    def run(*args: str) -> subprocess.CompletedProcess:
+        return subprocess.run(["git", *args], capture_output=True, text=True,
+                              cwd=str(repo_root), check=False)
+
+    run("add", "-A")
+    if run("diff", "--cached", "--quiet").returncode != 0:
+        committed = run("commit", "-m", message)
+        if committed.returncode != 0:
+            return (committed.stderr or committed.stdout).strip()
+    pushed = run("push", "origin", f"HEAD:{branch}")
+    return None if pushed.returncode == 0 else (pushed.stderr or pushed.stdout).strip()
+
+
 class DiffUnavailable(Exception):
     """git could not produce the diff — not the same answer as an empty one."""
 

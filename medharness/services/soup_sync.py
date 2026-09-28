@@ -1,7 +1,7 @@
 """SOUP manifest synchronisation — compare package manifests against DHF SOUP items.
 
 Parses lockfiles and dependency manifests from multiple ecosystems, diffs them
-against the current SOUP items in the DHF, and optionally writes creates/updates
+against the current SOUP items in the DHF, and writes creates/updates
 back through dhfkit.api.
 
 Supported manifest formats
@@ -603,11 +603,10 @@ def sync_soup_items(
     dhf: Path,
     manifest_paths: list[Path],
     *,
-    write: bool = False,
     extra_commands: list[str] | None = None,
     use_sources_file: bool = True,
 ) -> dict:
-    """Parse manifests, diff against DHF SOUP items, optionally write changes.
+    """Parse manifests, diff against DHF SOUP items, and write the changes.
 
     Source priority (highest wins on name collision):
     1. Explicit ``manifest_paths``
@@ -636,36 +635,35 @@ def sync_soup_items(
     items_created: list[str] = []
     items_updated: list[str] = []
 
-    if write:
-        for pkg in diff["to_create"]:
-            try:
-                data = {
-                    "type": "SOUP",
-                    "name": pkg["name"],
-                    "version": pkg["version"],
-                    "ecosystem": pkg.get("ecosystem") or "",
-                    "manufacturer": pkg.get("manufacturer") or "",
-                    # Left empty on purpose. §8.1.2 asks why a component is
-                    # used; "Dependency from PyPI" answers nothing and would
-                    # make the register look complete while saying nothing.
-                    # `verify soup` reports the gap until a person fills it.
-                    "purpose": "",
-                    "license": "",
-                    "source": pkg.get("source") or "",
-                }
-                new_item = api.create_item(dhf, data)
-                items_created.append(new_item["id"])
-            except Exception as exc:
-                errors.append(f"Failed to create SOUP item for {pkg['name']}: {exc}")
+    for pkg in diff["to_create"]:
+        try:
+            data = {
+                "type": "SOUP",
+                "name": pkg["name"],
+                "version": pkg["version"],
+                "ecosystem": pkg.get("ecosystem") or "",
+                "manufacturer": pkg.get("manufacturer") or "",
+                # Left empty on purpose. §8.1.2 asks why a component is
+                # used; "Dependency from PyPI" answers nothing and would
+                # make the register look complete while saying nothing.
+                # `verify soup` reports the gap until a person fills it.
+                "purpose": "",
+                "license": "",
+                "source": pkg.get("source") or "",
+            }
+            new_item = api.create_item(dhf, data)
+            items_created.append(new_item["id"])
+        except Exception as exc:
+            errors.append(f"Failed to create SOUP item for {pkg['name']}: {exc}")
 
-        for entry in diff["to_update"]:
-            pkg = entry["pkg"]
-            item = entry["item"]
-            try:
-                api.update_item(dhf, item["id"], {"version": pkg["version"]})
-                items_updated.append(item["id"])
-            except Exception as exc:
-                errors.append(f"Failed to update {item['uid']}: {exc}")
+    for entry in diff["to_update"]:
+        pkg = entry["pkg"]
+        item = entry["item"]
+        try:
+            api.update_item(dhf, item["id"], {"version": pkg["version"]})
+            items_updated.append(item["id"])
+        except Exception as exc:
+            errors.append(f"Failed to update {item['uid']}: {exc}")
 
     outcome = "completed_with_errors" if errors else "completed"
     return {
@@ -682,6 +680,5 @@ def sync_soup_items(
         "matched_count": len(diff["matched"]),
         "items_created": items_created,
         "items_updated": items_updated,
-        "write": write,
         "errors": errors,
     }

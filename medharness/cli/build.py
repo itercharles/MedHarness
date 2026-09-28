@@ -70,7 +70,9 @@ def register(main):
     @click.option("--cr", "cr_id", required=True, metavar="CR_ID",
                   help="The CR to design: its item cascade and impact analysis.")
     @click.option("--pr", "pr_number", default=None, type=int, metavar="N",
-                  help="PR number — revision mode: revise DHF cascade based on review comments")
+                  help="The PR this run belongs to, in CI: revise from its reviews if any, then "
+                       "commit and push the result to its branch. Without it, local files "
+                       "change and nothing is committed.")
     @click.option("--prompt", "print_prompt", is_flag=True, default=False,
                   help="Print the stage's instructions, with this CR's DHF context, for an "
                        "agent that is already running, instead of starting a model.")
@@ -85,7 +87,8 @@ def register(main):
 
         The model is MEDHARNESS_DESIGN_MODEL (and MEDHARNESS_DESIGN_REVIEW_MODEL
         for the review) as "provider:model", else Anthropic with ANTHROPIC_MODEL.
-        Pass --pr N to revise the items from that PR's review comments.
+        Locally it edits files and commits nothing; in CI, --pr N commits and
+        pushes to that PR, revising from its reviews when there are any.
         """
         from medharness.services.cr_generation import generate_dhf  # noqa: PLC0415
         from medharness.workflows.cr_state import assert_cr_active  # noqa: PLC0415
@@ -115,7 +118,9 @@ def register(main):
     @click.option("--cr", "cr_id", required=True, metavar="CR_ID",
                   help="The CR whose approved design to implement.")
     @click.option("--pr", "pr_number", default=None, type=int, metavar="N",
-                  help="PR number — revision mode: revise implementation based on review comments")
+                  help="The PR this run belongs to, in CI: revise from its reviews if any, then "
+                       "commit and push the result to its branch. Without it, local files "
+                       "change and nothing is committed.")
     @click.option("--prompt", "print_prompt", is_flag=True, default=False,
                   help="Print the stage's instructions, with this CR's DHF context, for an "
                        "agent that is already running, instead of starting a model.")
@@ -129,7 +134,8 @@ def register(main):
 
         The model is MEDHARNESS_DEVELOP_MODEL (and MEDHARNESS_CODE_REVIEW_MODEL
         for the review) as "provider:model", else Anthropic with ANTHROPIC_MODEL.
-        Pass --pr N to revise the code from that PR's review comments.
+        Locally it edits files and commits nothing; in CI, --pr N commits and
+        pushes to that PR, revising from its reviews when there are any.
         """
         from medharness.services.cr_generation import generate_code  # noqa: PLC0415
         from medharness.workflows.cr_state import assert_cr_active  # noqa: PLC0415
@@ -217,10 +223,8 @@ def register(main):
                   metavar="PATH", help="Manifest to read (repeatable). Auto-discovers when omitted.")
     @click.option("--from-command", "extra_commands", multiple=True, metavar="CMD",
                   help="External tool emitting NDJSON components (repeatable).")
-    @click.option("--write", is_flag=True, default=False,
-                  help="Create or update SOUP items (report-only by default).")
     @click.pass_context
-    def build_soup(ctx, manifest_paths, extra_commands, write) -> None:
+    def build_soup(ctx, manifest_paths, extra_commands) -> None:
         """Reconcile SOUP items from the project's dependency manifests.
 
         IEC 62304 §8.1.2 wants the SOUP a release ships to be the SOUP it
@@ -232,14 +236,11 @@ def register(main):
 
         result = sync_soup_items(
             ctx.obj["dhf"], list(manifest_paths),
-            write=write,
             extra_commands=list(extra_commands),
         )
         click.echo(json.dumps(result))
-        written = (
-            f" ({len(result.get('items_created', []))} created, "
-            f"{len(result.get('items_updated', []))} updated)" if write else " (dry-run)"
-        )
+        written = (f" ({len(result.get('items_created', []))} created, "
+                   f"{len(result.get('items_updated', []))} updated)")
         click.echo(
             f"OK build soup{written}: +{len(result.get('to_create') or [])} new, "
             f"~{len(result.get('to_update') or [])} drift, "

@@ -25,6 +25,12 @@ from medharness.workflows.init import _scaffold_dhf, _replace_placeholders
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 
 
+@pytest.fixture(autouse=True)
+def _no_push(monkeypatch):
+    """These tests are about generation; pushing to a PR is tested on its own."""
+    monkeypatch.setattr("medharness.services.cr_generation._push_to_pr", lambda *a, **k: None)
+
+
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
@@ -219,7 +225,8 @@ class TestGenerateDhfRevisionMode:
             lambda pr_number: {
                 "prompt_text": "(stubbed feedback)",
                 "diagnostics": {"attempted": True, "pr_number": pr_number,
-                                "comments_status": "ok", "reviews_status": "ok"},
+                                "comments_status": "ok", "reviews_status": "ok",
+                                "comments_count": 1, "reviews_count": 0},
                 "warnings": [],
             },
         )

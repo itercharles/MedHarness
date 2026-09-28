@@ -40,13 +40,8 @@ def _sync(project: Path, *extra: str) -> dict:
 
 
 class TestItRunsAtAll:
-    def test_dry_run_on_an_empty_register(self, project: Path) -> None:
-        result = _sync(project)
-        assert result["outcome"] == "completed"
-        assert set(result["to_create"]) == {"flask", "numpy"}
-
     def test_writing_creates_items(self, project: Path) -> None:
-        result = _sync(project, "--write")
+        result = _sync(project)
         assert result["outcome"] == "completed"
         assert len(result["items_created"]) == 2
         assert all(i.startswith("SOUP-") for i in result["items_created"]), \
@@ -54,19 +49,19 @@ class TestItRunsAtAll:
 
     def test_a_second_run_matches_instead_of_duplicating(self, project: Path) -> None:
         """The path that read item["uid"] and crashed on every existing item."""
-        _sync(project, "--write")
+        _sync(project)
         again = _sync(project)
         assert again["to_create"] == []
         assert again["matched_count"] == 2
 
     def test_a_drifted_version_is_reported(self, project: Path) -> None:
-        _sync(project, "--write")
+        _sync(project)
         (project / "requirements.txt").write_text("flask==3.1.0\nnumpy==1.26.0\n")
         result = _sync(project)
         assert {e["name"] for e in result["to_update"]} == {"flask"}
 
     def test_an_item_no_longer_in_the_manifest_is_an_orphan(self, project: Path) -> None:
-        _sync(project, "--write")
+        _sync(project)
         (project / "requirements.txt").write_text("flask==3.0.0\n")
         result = _sync(project)
         assert [o["name"] for o in result["orphans"]] == ["numpy"]
