@@ -59,7 +59,7 @@ def _documented_calls() -> list[tuple[str, tuple[str, ...], str]]:
                 # `[sys.executable, "-m", "medharness", "--dhf", dhf, ...]`: the
                 # quoted words after the module, less the --dhf whose value is a name.
                 "medharness " + " ".join(w for w in re.findall(r'"([^"]+)"', m) if w != "--dhf")
-                for m in re.findall(r'"-m",\s*"medharness"((?:\s*,\s*[^\]]+?)*)\]',
+                for m in re.findall(r'"-m",\s*"medharness"([^\]]*)\]',
                                     raw.replace("'", '"'))
             ]
             for candidate in [raw] + re.findall(r"`([^`]+)`", raw) + as_list:
