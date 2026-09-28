@@ -400,12 +400,12 @@ medharness --dhf DHF build soup --write --manifest uv.lock
 The SOUP register already holds what an SBOM needs — name, version, ecosystem,
 licence, supplier — recorded there because IEC 62304 §8.1.2 asks for it. FDA's
 premarket cybersecurity guidance and the EU Cyber Resilience Act want that in a
-standard machine-readable format. The SBOM is the SOUP register rendered as
-CycloneDX, the way a specification is the requirements rendered as a document:
+standard machine-readable format. `build release` writes it as
+`sbom.cdx.json`, beside the specifications; without `--write` that is a preview
+that changes nothing:
 
 ```bash
-medharness build doc SOUP --format cyclonedx                   # DHF/documents/exports/sbom.cdx.json
-medharness build doc SOUP --format cyclonedx --out-dir build    # build/sbom.cdx.json
+medharness build release --version 1.2.0 --out-dir release
 ```
 
 The output is CycloneDX 1.6 JSON, checked against the official schema by the
@@ -414,8 +414,8 @@ test suite rather than by assertion. Each component carries its SOUP id as
 to the DHF item holding the justification and any documented vulnerability
 acceptance.
 
-**A component gets no `purl` when one cannot be built honestly**, and the command
-names the reason per component. Two causes need different fixes:
+**A component gets no `purl` when one cannot be built honestly**, and the release
+names the reason per component as a `WARN [release]` line and in its `warnings`. Two causes need different fixes:
 
 - the ecosystem has no package-URL type — the mapping is a fixed table;
 - the version is a range (`^34.15.1`) rather than a version. §8.1.2 wants the
@@ -431,7 +431,7 @@ Regenerating an unchanged SBOM leaves the file alone, timestamp included — the
 serial number is derived from the component set rather than randomised, so a
 regeneration is not a diff in a repository whose purpose is showing what changed.
 
-`build release` writes one too, alongside the rest of the release:
+Everything `build release` writes:
 
 ```
 release/release-baseline.json

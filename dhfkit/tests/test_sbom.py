@@ -374,3 +374,12 @@ class TestAVersionRangeIsNotAVersion:
         assert document["components"][0]["version"] == "^34.15.1", (
             "the SBOM must report what the DHF records, not a cleaned-up guess"
         )
+
+
+def test_the_release_names_each_component_without_a_purl(dhf: Path, tmp_path: Path) -> None:
+    """The per-component warning the removed `sbom` command printed."""
+    from medharness.services.release_baseline import build_release
+
+    _soup(dhf, "SOUP-001", "title: x\nname: x\nversion: '1'\necosystem: Conan\n")
+    result = build_release(dhf, "1.0.0", tmp_path / "out", write=False)
+    assert any("SOUP-001" in w and "no purl" in w for w in result["warnings"]), result["warnings"]

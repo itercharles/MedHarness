@@ -73,25 +73,3 @@ def test_global_yaml_still_marks_a_dhf(tmp_path: Path) -> None:
     (tmp_path / "config").mkdir()
     with pytest.raises(FileNotFoundError, match="global.yaml"):
         ProjectConfig.load(tmp_path / "config")
-
-
-class TestSpecificationsLandInsideTheDHF:
-    """The defaults spelled outputs `DHF/documents/...` from the project root, so
-    a DHF in a directory with any other name wrote its specifications outside
-    itself."""
-
-    def test_a_dhf_not_named_dhf_keeps_its_documents(self, tmp_path: Path) -> None:
-        from dhfkit.local_adapter import LocalDHFAdapter
-        from dhfkit.tests.fixtures import bare_dhf
-
-        dhf = bare_dhf(tmp_path / "mydhf")
-        LocalDHFAdapter(dhf).generate_doc("SRS")
-        assert (dhf / "documents" / "specs").is_dir()
-        assert not (tmp_path / "DHF").exists(), "wrote outside the DHF"
-
-    def test_an_older_project_relative_path_still_resolves(self, tmp_path: Path) -> None:
-        from dhfkit.document_generation import spec_output_path
-
-        dhf = tmp_path / "DHF"
-        assert spec_output_path(dhf, "DHF/documents/specs/x.md") == dhf / "documents" / "specs" / "x.md"
-        assert spec_output_path(dhf, "documents/specs/x.md") == dhf / "documents" / "specs" / "x.md"

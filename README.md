@@ -97,7 +97,7 @@ testing: |
   smallest useful pipeline is two steps in a job that checks out the repository:
 
   ```yaml
-  - run: pip install medharness==0.44.0
+  - run: pip install medharness==0.45.0
   - run: medharness verify dhf --strict
   ```
 
@@ -179,8 +179,7 @@ Each answers `{gate, passed, summary, errors, warnings}` — see
 | `medharness build plan --cr CR-034` | AI drafts the CR's design items and impact analysis; `--prompt` prints the steps for an agent already running | `outcome`, `artifacts.items_changed`, `design_review`, `errors` |
 | `medharness build code --cr CR-034` | AI writes the code and tests for the approved design; `--prompt` likewise | `outcome`, `artifacts.files_changed`, `code_review`, `errors` |
 | `medharness build soup --write` | Reconciles SOUP items with your dependency manifests; without `--write`, only reports | `to_create`, `to_update`, `orphans` |
-| `medharness build doc SRS --format html` | Renders a specification from the items — `md` by default, `html`, `pdf` (needs `medharness[docs]`); `ALL` for every type; `SOUP --format cyclonedx` is the SBOM | `md_path`, plus `html_path`, `pdf_path` or `cyclonedx_path` |
-| `medharness build release --version 1.0.0 --out-dir release --write` | Checks the DHF, CRs and open defects, writes the baseline, BOM, SBOM and evidence, and — only if every check passed — records the REL item | `outcome`, `cr_ids`, `rel_uid`, `artifacts`, `errors` |
+| `medharness build release --version 1.0.0 --out-dir release --write` | Checks the DHF, CRs and open defects; writes the specifications, traceability, baseline, BOM, SBOM and evidence; and — only if every check passed — records the REL item. Without `--write` it is a preview that changes nothing | `outcome`, `cr_ids`, `rel_uid`, `artifacts`, `errors`, `warnings` |
 
 ### `workflow` — needs Git or GitHub
 

@@ -13,7 +13,7 @@ DHF/
 ├── config/
 │   └── global.yaml        # the project name, and anything you change
 ├── items/                 # one YAML file per item, one directory per type
-└── documents/specs/       # specifications rendered by `medharness build doc`
+└── documents/specs/       # your own specification templates, if any; `build release` renders them
 ```
 
 The item types, lifecycles, required links and templates are defaults from

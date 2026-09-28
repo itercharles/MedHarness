@@ -1,8 +1,4 @@
-"""Smoke test: document generation works with template-only specs/ directory.
-
-Verifies that generated specification Markdown is produced correctly
-without pre-existing committed .md files in the specs/ directory.
-"""
+"""Smoke test: a project template in DHF/documents/specs renders a specification."""
 
 import tempfile
 from pathlib import Path
@@ -42,7 +38,6 @@ def _make_test_dhf_with_flat_templates(tmpdir: str) -> tuple[Path, Path]:
         "document_specifications": {
             "TEST": {
                 "template": "test_template.md.j2",
-                "output": "DHF/documents/specs/Test_Specification.md",
                 "doc_type_name": "Test Spec",
             }
         },
@@ -76,36 +71,17 @@ def _make_test_dhf_with_flat_templates(tmpdir: str) -> tuple[Path, Path]:
     return project_root, dhf_root, specs_dir
 
 
-def test_doc_generation_creates_spec_md_from_templates_only(tmpdir):
-    """Generate a spec from a clean template-only DHF."""
+def test_a_project_template_renders(tmpdir):
     from dhfkit.local_adapter import LocalDHFAdapter
 
     project_root, dhf_root, specs_dir = _make_test_dhf_with_flat_templates(tmpdir)
-    output_file = dhf_root / "documents" / "specs" / "Test_Specification.md"
+    out = Path(tmpdir) / "out"
 
-    assert not output_file.exists(), "Output .md must not exist before generation"
+    result = LocalDHFAdapter(dhf_root).render_spec("TEST", "html", out, "3.1.0")
 
-    adapter = LocalDHFAdapter(dhf_root)
-    result = adapter.generate_doc("TEST")
-
-    assert output_file.exists(), f"Expected {output_file} to be created"
-    content = output_file.read_text()
+    content = Path(result["path"]).read_text()
     assert "Test Spec Specification" in content
-    assert "TEST-001" in content
-    assert "This is a smoke test" in content
-    assert result is not None
-
-
-def test_generation_cleans_up_after_itself(tmpdir):
-    """Generated spec is placed at configured output path, not polluting template dir."""
-    from dhfkit.local_adapter import LocalDHFAdapter
-
-    project_root, dhf_root, specs_dir = _make_test_dhf_with_flat_templates(tmpdir)
-
-    adapter = LocalDHFAdapter(dhf_root)
-    adapter.generate_doc("TEST")
-
-    # Template .j2 files are still there
+    assert "TEST-001" in content and "This is a smoke test" in content
+    assert "3.1.0" in content
     assert (specs_dir / "test_template.md.j2").exists()
-    # Generated .md is at the configured output path
-    assert (dhf_root / "documents" / "specs" / "Test_Specification.md").exists()
+    assert not list(specs_dir.glob("*.md")), "rendering wrote into the DHF"

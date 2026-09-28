@@ -373,50 +373,12 @@ class LocalDHFAdapter:
         from dhfkit.document_generation import DocumentGenerator
         return DocumentGenerator(self._loader, self._config, self._template_dirs())
 
-    @staticmethod
-    def _version(content: str) -> str:
-        m = re.search(r'\|\s*\*\*Version\*\*\s*\|\s*([\d.]+)\s*\|', content)
-        return m.group(1) if m else "unknown"
-
-    def generate_doc(self, doc_type_code: str) -> dict:
-        content, output_path = self._generator().generate_markdown_spec(
-            doc_type_code, self._doc_specs, self._dhf_root)
-        self._rebuild_doc_index()
-        return {"doc_type": doc_type_code, "output_path": str(output_path),
-                "version": self._version(content)}
-
-    def export_pdf(self, doc_type_code: str, out_dir: Path | None = None) -> dict:
-        return self._export(doc_type_code, "pdf", out_dir)
-
-    def export_html(self, doc_type_code: str, out_dir: Path | None = None) -> dict:
-        return self._export(doc_type_code, "html", out_dir)
-
-    @property
-    def exports_dir(self) -> Path:
-        """Where exported documents go unless the caller names a directory."""
-        return self._dhf_root / "documents" / "exports"
-
-    def _export(self, doc_type_code: str, fmt: str, out_dir: Path | None) -> dict:
-        spec_result = self.generate_doc(doc_type_code)
-        content = Path(spec_result["output_path"]).read_text(encoding="utf-8")
-        path = self._generator().export(
-            doc_type_code, content, fmt, out_dir or self.exports_dir)
-        return {"doc_type": doc_type_code, "md_path": spec_result["output_path"],
-                f"{fmt}_path": str(path), "version": spec_result["version"]}
-
-    def render_spec(self, doc_type_code: str, fmt: str, out_dir: Path) -> dict:
-        """Render a specification into ``out_dir`` only; the DHF is not written.
-
-        The version is the one ``generate_doc`` would give it now.
-        """
+    def render_spec(self, doc_type_code: str, fmt: str, out_dir: Path, version: str) -> dict:
+        """Render a specification into ``out_dir`` at ``version``; the DHF is not written."""
         gen = self._generator()
-        content, _, _ = gen.render_markdown_spec(doc_type_code, self._doc_specs, self._dhf_root)
-        path = gen.export(doc_type_code, content, fmt, out_dir)
-        return {"doc_type": doc_type_code, "path": str(path), "version": self._version(content)}
-
-    # ------------------------------------------------------------------
-    # Test results
-    # ------------------------------------------------------------------
+        content = gen.render_markdown_spec(doc_type_code, self._doc_specs, version)
+        path = gen.export(doc_type_code, content, fmt, out_dir, version)
+        return {"doc_type": doc_type_code, "path": str(path), "version": version}
 
     # ------------------------------------------------------------------
     # Document access

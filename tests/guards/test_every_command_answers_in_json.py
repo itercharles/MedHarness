@@ -29,8 +29,6 @@ COMMANDS = [
     ("medharness", ["workflow", "check-changes", "--cr", "CR-001", "--since-ref", "HEAD"]),
     ("medharness", ["build", "soup"]),
     ("medharness", ["build", "release", "--version", "0.1.0", "--out-dir", "release"]),
-    ("medharness", ["build", "doc", "SRS"]),
-    ("medharness", ["build", "doc", "SOUP", "--format", "cyclonedx"]),
     ("medharness", ["item", "list"]),
     ("medharness", ["item", "get", "SRS-001"]),
 ]

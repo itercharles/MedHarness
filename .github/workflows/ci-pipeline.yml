@@ -163,8 +163,7 @@ jobs:
               subprocess.run([sys.executable, '-m', 'medharness', '--dhf', dhf, 'verify', 'dhf'], check=True)
               subprocess.run([sys.executable, '-m', 'medharness', '--dhf', dhf, 'item', 'list', '--type', 'CRS'], check=True)
               subprocess.run([sys.executable, '-m', 'medharness', '--dhf', dhf, 'item', 'list', '--type', 'SYS'], check=True)
-              for dt in 'UC CRS SYS SRS SWDD SYSARCH RISK RCM CR'.split():
-                  subprocess.run([sys.executable, '-m', 'medharness', '--dhf', dhf, 'build', 'doc', dt], check=True)
+              subprocess.run([sys.executable, '-m', 'medharness', '--dhf', dhf, 'build', 'release', '--version', '0.0.0', '--out-dir', str(Path(tmp) / 'release')], check=True)
               print('OK: starter DHF workflow valid')
           "
 

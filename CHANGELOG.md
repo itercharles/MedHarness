@@ -11,6 +11,32 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.45.0] — 2026-09-28
+
+Documents are what a release ships. 16 commands. Contract version 17.0.
+
+### Breaking Changes
+
+- **`build doc` is removed; `build release` renders every document.** Nothing
+  called it — not the prompts, not the services, not ContourLab's CI — and what
+  it wrote into the DHF went stale: a specification is rendered from the items,
+  so a committed copy is the same content twice, and nobody regenerated it.
+  - To preview specifications, the SBOM or the traceability matrix, run
+    `build release --version <any> --out-dir <dir>` without `--write`; it changes
+    nothing.
+  - A specification's version is now the release version, and its file name
+    carries it (`SRS_Specification_1.2.0.html`). It used to be counted from the
+    copy committed in `DHF/documents/specs/`, bumped when the content changed;
+    the items' git history and each release's evidence are the revision history.
+  - `DHF/documents/specs/*.md` and `DHF/documents/exports/` are no longer read
+    or written; delete them. Your own templates, `DHF/documents/specs/*.md.j2`,
+    still override the defaults.
+  - `document_specifications.<type>.output` is no longer read.
+- `build release` answers with `warnings`: each SBOM component without a purl,
+  and why — what the removed `sbom` command printed.
+- The documented-commands guard now reads the repository's own CI workflows,
+  where the starter check still called `build doc`.
+
 ## [0.44.0] — 2026-09-27
 
 One CLI. `dhfkit` is the storage library underneath and no longer a command;
