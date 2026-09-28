@@ -11,6 +11,16 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.46.2] — 2026-09-28
+
+### Fixed
+
+- **`item update` rewrote the whole item file to change one field.** Pinning
+  ContourLab's SOUP-001 version re-quoted, re-wrapped and re-blocked twenty
+  lines of a controlled record, so the review diff hid the one real change.
+  An update now replaces only the top-level fields whose value changed; every
+  other line stays exactly as written. New items are written as before.
+
 ## [0.46.1] — 2026-09-28
 
 ### Fixed
