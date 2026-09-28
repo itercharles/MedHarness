@@ -43,7 +43,7 @@ def _soup_items(dhf: Path) -> list[dict]:
 class TestAnAutoCreatedItemRecordsItsOrigin:
     def test_the_manifest_is_recorded(self, project: Path) -> None:
         dhf = project / "DHF"
-        sync_soup_items(dhf, [project / "requirements.txt"], write=True)
+        sync_soup_items(dhf, [project / "requirements.txt"])
         created = [i for i in _soup_items(dhf) if i.get("name") == "flask"]
         assert created, "build soup created nothing"
         assert created[0].get("source") == str(project / "requirements.txt"), (

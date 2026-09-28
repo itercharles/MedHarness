@@ -110,6 +110,35 @@ def _model_label(config: LLMConfig) -> str:
 
 # ── GitHub PR feedback ────────────────────────────────────────────────────────
 
+def _pr_feedback(pr_number: int, steps: list, diagnostics: dict, warnings: list) -> dict | None:
+    """The PR's review feedback, or None when it has none to act on.
+
+    `--pr` says the run belongs to that PR; it revises only when a reviewer has
+    said something, so the first run on a new PR generates.
+    """
+    step, perf = _begin_step("fetch_pr_feedback")
+    feedback = _get_pr_feedback(pr_number)
+    diagnostics["github_feedback"] = feedback["diagnostics"]
+    warnings.extend(feedback["warnings"])
+    steps.append(_finish_step(step, perf, "warning" if feedback["warnings"] else "ok",
+                              feedback["diagnostics"]))
+    said = feedback["diagnostics"]["comments_count"] + feedback["diagnostics"]["reviews_count"]
+    return feedback if said else None
+
+
+def _push_to_pr(repo_root: Path, pr_number: int, message: str, errors: list[dict]) -> None:
+    """Commit the run's work and push it to the PR's branch."""
+    rc, branch = gh(["pr", "view", str(pr_number), "--json", "headRefName", "-q", ".headRefName"])
+    if rc != 0 or not branch:
+        errors.append({"field": "pr_push", "issue": f"PR #{pr_number}'s branch could not be read: {branch}",
+                       "fix": "Check GH_TOKEN and that the PR exists."})
+        return
+    problem = git.commit_and_push(repo_root, message, branch)
+    if problem:
+        errors.append({"field": "pr_push", "issue": f"The run's work did not reach PR #{pr_number}: {problem}",
+                       "fix": "Commit and push the working tree by hand; nothing was lost locally."})
+
+
 def _get_pr_feedback(pr_number: int) -> dict:
     """The PR's review comments and reviews, for the revision prompt, via gh."""
 
@@ -696,7 +725,7 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> di
         "dhf_path": str(dhf_path),
         "repo_root": str(repo_root),
         "pr_number": pr_number,
-        "revision_mode": pr_number is not None,
+        "revision_mode": False,
         "since_ref": "origin/main",
     }
 
@@ -713,19 +742,9 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> di
             )
         )
 
-    if pr_number:
-        feedback_step, feedback_perf = _begin_step("fetch_pr_feedback")
-        feedback = _get_pr_feedback(pr_number)
-        diagnostics["github_feedback"] = feedback["diagnostics"]
-        warnings.extend(feedback["warnings"])
-        steps.append(
-            _finish_step(
-                feedback_step,
-                feedback_perf,
-                "warning" if feedback["warnings"] else "ok",
-                feedback["diagnostics"],
-            )
-        )
+    feedback = _pr_feedback(pr_number, steps, diagnostics, warnings) if pr_number else None
+    inputs["revision_mode"] = feedback is not None
+    if feedback is not None:
         prompt_step, prompt_perf = _begin_step(
             "prepare_prompt",
             {"prompt_kind": "generate_dhf_revision", "used_pr_feedback": True},
@@ -735,7 +754,6 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> di
             f"then revise them based on the following pull request review feedback. "
             f"Continue using the CLI (`medharness item create` / `medharness item update`) only. "
             f"After making changes, re-run:\n"
-            f"  medharness --dhf DHF verify dhf\n"
             f"  medharness --dhf DHF verify dhf\n\n"
             f"Review feedback:\n{feedback['prompt_text']}"
         )
@@ -928,6 +946,8 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> di
 
     if session_id and pr_number:
         put_session(pr_number, session_id)
+    if pr_number:
+        _push_to_pr(repo_root, pr_number, f"design({cr_id}): build plan", errors)
 
     result = _build_response(
         cr_id=cr_id,
@@ -985,7 +1005,7 @@ def generate_code(
         "dhf_path": str(dhf_path),
         "repo_root": str(repo_root),
         "pr_number": pr_number,
-        "revision_mode": pr_number is not None,
+        "revision_mode": False,
         "since_ref": "origin/main",
     }
 
@@ -1006,7 +1026,9 @@ def generate_code(
     # so the prompt can include specific fixes rather than the LLM discovering them later.
     # Uses validate_dhf_structure (schema + traceability only) to avoid false positives
     # from reconciliation checks that require a non-empty created_ids list.
-    if not pr_number:
+    feedback = _pr_feedback(pr_number, steps, diagnostics, warnings) if pr_number else None
+    inputs["revision_mode"] = feedback is not None
+    if feedback is None:
         preflight_step, preflight_perf = _begin_step("preflight_traceability")
         try:
             preflight_errors = design_validation.validate_dhf_structure(dhf_path)
@@ -1022,19 +1044,7 @@ def generate_code(
             for e in preflight_errors:
                 warnings.append({"source": "preflight_traceability", **e})
 
-    if pr_number:
-        feedback_step, feedback_perf = _begin_step("fetch_pr_feedback")
-        feedback = _get_pr_feedback(pr_number)
-        diagnostics["github_feedback"] = feedback["diagnostics"]
-        warnings.extend(feedback["warnings"])
-        steps.append(
-            _finish_step(
-                feedback_step,
-                feedback_perf,
-                "warning" if feedback["warnings"] else "ok",
-                feedback["diagnostics"],
-            )
-        )
+    if feedback is not None:
         prompt_step, prompt_perf = _begin_step(
             "prepare_prompt",
             {"prompt_kind": "develop_revision", "used_pr_feedback": True},
@@ -1140,6 +1150,9 @@ def generate_code(
         warnings.append(_warning("diff_unavailable", f"affected_items not updated: {unreadable[-1]}"))
     else:
         _record_design_impact_in_cr(cr_id, dhf_path, items_changed)
+    errors: list[dict] = []
+    if pr_number:
+        _push_to_pr(repo_root, pr_number, f"feat({cr_id}): build code", errors)
     artifact_step, artifact_perf = _begin_step("collect_artifacts", {"kind": "files_changed"})
     try:
         files_changed = git.collect_path_changes(repo_root, "origin/main", *_DEFAULT_CODE_PATHS)
@@ -1163,7 +1176,7 @@ def generate_code(
         },
         diagnostics=diagnostics,
         warnings=warnings,
-        errors=[],
+        errors=errors,
         critical_step_failed=critical_step_failed,
     )
     result["code_review"] = _build_review_result("Implementation", code_review_log)

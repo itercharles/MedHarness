@@ -270,9 +270,12 @@ on:
     types: [submitted]
 
 jobs:
-  start:            # a person starts a stage by hand
+  start:            # a person starts a stage by hand; there is no PR yet
     if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      BRANCH: ${{ inputs.stage == 'plan' && 'design' || 'develop' }}/${{ inputs.cr }}
     steps:
       - uses: actions/checkout@v4
       - run: pip install medharness
@@ -280,7 +283,12 @@ jobs:
         run: medharness build plan --cr "${{ inputs.cr }}"
       - if: inputs.stage == 'code'
         run: medharness build code --cr "${{ inputs.cr }}"
-      # then commit to design/<CR> or develop/<CR> and open a pull request
+      - run: |          # without --pr the files changed and nothing was committed
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH" && git add -A && git commit -m "$BRANCH"
+          git push origin "$BRANCH"
+          gh pr create --head "$BRANCH" --title "$BRANCH" --body "Opened by the CR workflow."
 
   revise:           # a reviewer asked for changes on a stage's pull request
     if: github.event_name == 'pull_request_review' && github.event.review.state == 'changes_requested'
@@ -293,19 +301,23 @@ jobs:
       - uses: actions/checkout@v4
         with: { ref: "${{ github.event.pull_request.head.ref }}" }
       - run: pip install medharness
-      - run: |
+      - run: |          # --pr: revise from the reviews, then commit and push to the PR
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
           case "${BRANCH%%/*}" in
             design)  medharness build plan --cr "${BRANCH#*/}" --pr "$PR" ;;
             develop) medharness build code --cr "${BRANCH#*/}" --pr "$PR" ;;
           esac
-      # then commit and push to the same branch
 ```
 
-**The job commits, not the agent.** `build plan` and `build code` leave their
-work uncommitted: if the agent commits anyway — a repository's `CLAUDE.md` may
-tell it to — the commits are undone, their changes left staged, and the answer
-carries an `agent_commits_undone` warning. So `git add -A && git commit` after
-the step always picks up the whole run.
+**`--pr` is CI; without it, local.** Without `--pr`, `build plan` and `build
+code` change files in the working tree and commit nothing — at your desk, or in
+a job that commits itself, like `start` above. With `--pr N` they revise from
+that PR's reviews when a reviewer has said something, and commit and push the
+result to its branch; the job needs git's user configured and a token that can
+push. Either way the agent does not commit: if it does anyway — a repository's
+`CLAUDE.md` may tell it to — its commits are undone, their changes kept, and the
+answer carries an `agent_commits_undone` warning.
 
 `artifacts.items_changed` and `artifacts.files_changed` are the branch against
 `origin/main`, committed or not — the CR's whole change set across every run,
@@ -388,11 +400,12 @@ Source priority when multiple are configured: explicit `--manifest` flags → `-
 
 ### Applying changes
 
-By default `build soup` prints a diff and exits. Pass `--write` to create and update SOUP items:
+`build soup` creates and updates the SOUP items in the working tree, and commits
+nothing; review the change with `git diff DHF/` before you commit it:
 
 ```bash
-medharness --dhf DHF build soup --write
-medharness --dhf DHF build soup --write --manifest uv.lock
+medharness --dhf DHF build soup
+medharness --dhf DHF build soup --manifest uv.lock
 ```
 
 ## Exporting an SBOM

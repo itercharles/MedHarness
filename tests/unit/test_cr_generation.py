@@ -33,6 +33,12 @@ from medharness.services.prompt_assembly import (
 )
 
 
+@pytest.fixture(autouse=True)
+def _no_push(monkeypatch):
+    """These tests are about generation; pushing to a PR is tested on its own."""
+    monkeypatch.setattr("medharness.services.cr_generation._push_to_pr", lambda *a, **k: None)
+
+
 # ── Prompt loading ────────────────────────────────────────────────────────────
 
 class TestLoadPrompt:
@@ -651,7 +657,7 @@ class TestGenerateDhf:
             mock_claude.return_value = (0, "", "")
             mock_fb.return_value = {
                 "prompt_text": "some review feedback",
-                "diagnostics": {"attempted": True, "comments_status": "ok"},
+                "diagnostics": {"attempted": True, "comments_status": "ok", "comments_count": 1, "reviews_count": 0},
                 "warnings": [],
             }
             generate_dhf("CR-056", dhf, pr_number=12)
@@ -809,7 +815,7 @@ class TestGenerateCode:
             mock_claude.return_value = (0, "", "")
             mock_fb.return_value = {
                 "prompt_text": '{"comments": [], "reviews": []}',
-                "diagnostics": {"attempted": True, "comments_status": "ok", "reviews_status": "ok"},
+                "diagnostics": {"attempted": True, "comments_status": "ok", "reviews_status": "ok", "comments_count": 1, "reviews_count": 0},
                 "warnings": [],
             }
             generate_code("CR-023", dhf, pr_number=7)
@@ -882,22 +888,26 @@ class TestGenerateCode:
 
         with patch("medharness.services.cr_generation._run_claude", side_effect=_stub), \
              patch("medharness.services.cr_generation._get_pr_feedback",
-                   return_value={"prompt_text": "", "diagnostics": {}, "warnings": []}):
+                   return_value={"prompt_text": "", "diagnostics": {"comments_count": 0, "reviews_count": 0}, "warnings": []}):
             generate_code("CR-030", dhf, pr_number=99)
         assert all(s == "" for s in resume_sessions_captured[:1]), (
             f"initial develop step must start fresh; got resume_session={resume_sessions_captured[0]!r}"
         )
 
     def test_auto_posts_warnings_when_pr_number_given(self, tmp_path):
-        dhf = tmp_path / "DHF"
-        dhf.mkdir()
+        from dhfkit.tests.fixtures import bare_dhf
+
+        dhf = bare_dhf(tmp_path / "DHF")
         posted_bodies: list[str] = []
         with patch("medharness.services.cr_generation._run_claude", return_value=(0, "", "")), \
              patch("medharness.services.cr_generation._get_pr_feedback",
-                   return_value={"prompt_text": "", "diagnostics": {}, "warnings": []}), \
+                   return_value={"prompt_text": "", "diagnostics": {"comments_count": 0, "reviews_count": 0}, "warnings": []}), \
              patch("medharness.services.cr_generation.post_pr_comment",
                    side_effect=lambda pr, body, **kw: posted_bodies.append(body) or "url") as mock_post, \
-             patch("medharness.services.git.collect_path_changes", return_value={"created": [], "updated": [], "deleted": []}):
+             patch("medharness.services.git.collect_path_changes", return_value={"created": [], "updated": [], "deleted": []}), \
+             patch("medharness.services.design_validation.validate_dhf_structure", return_value=[]), \
+             patch("medharness.services.cr_generation._items_changed",
+                   return_value={"created": [], "updated": [], "deleted": []}):
             result = generate_code("CR-099", dhf, pr_number=55)
         assert mock_post.call_count == 0, "no warnings → no comment expected"
         assert result.get("pr_comments") == []
@@ -1595,12 +1605,12 @@ class TestNonAnthropicProviderSessionWarning:
         dhf.mkdir()
         with patch("medharness.services.cr_generation._run_llm", return_value=(0, "", "")), \
              patch("medharness.services.cr_generation._get_pr_feedback",
-                   return_value={"diagnostics": {}, "warnings": [], "prompt_text": ""}), \
+                   return_value={"diagnostics": {"comments_count": 0, "reviews_count": 0}, "warnings": [], "prompt_text": ""}), \
              patch("medharness.services.cr_generation.git.collect_dhf_item_changes",
                    return_value={"created": [], "updated": [], "deleted": []}), \
              patch("medharness.services.design_validation.validate_generate_dhf", return_value=[]):
             result = generate_dhf("CR-080", dhf, pr_number=42)
-        codes = [w["code"] for w in result["warnings"]]
+        codes = [w.get("code") for w in result["warnings"]]
         assert "non_anthropic_provider_no_session" in codes
 
     def test_generate_dhf_no_warning_when_all_anthropic_with_pr(self, tmp_path, monkeypatch):
@@ -1608,12 +1618,12 @@ class TestNonAnthropicProviderSessionWarning:
         dhf.mkdir()
         with patch("medharness.services.cr_generation._run_llm", return_value=(0, "", "")), \
              patch("medharness.services.cr_generation._get_pr_feedback",
-                   return_value={"diagnostics": {}, "warnings": [], "prompt_text": ""}), \
+                   return_value={"diagnostics": {"comments_count": 0, "reviews_count": 0}, "warnings": [], "prompt_text": ""}), \
              patch("medharness.services.cr_generation.git.collect_dhf_item_changes",
                    return_value={"created": [], "updated": [], "deleted": []}), \
              patch("medharness.services.design_validation.validate_generate_dhf", return_value=[]):
             result = generate_dhf("CR-081", dhf, pr_number=42)
-        codes = [w["code"] for w in result["warnings"]]
+        codes = [w.get("code") for w in result["warnings"]]
         assert "non_anthropic_provider_no_session" not in codes
 
     def test_generate_dhf_no_warning_when_non_anthropic_without_pr(self, tmp_path, monkeypatch):
@@ -1626,7 +1636,7 @@ class TestNonAnthropicProviderSessionWarning:
                    return_value={"created": [], "updated": [], "deleted": []}), \
              patch("medharness.services.design_validation.validate_generate_dhf", return_value=[]):
             result = generate_dhf("CR-082", dhf)
-        codes = [w["code"] for w in result["warnings"]]
+        codes = [w.get("code") for w in result["warnings"]]
         assert "non_anthropic_provider_no_session" not in codes
 
     def test_generate_code_warns_when_develop_model_non_anthropic_with_pr(self, tmp_path, monkeypatch):
@@ -1636,9 +1646,9 @@ class TestNonAnthropicProviderSessionWarning:
         dhf.mkdir()
         with patch("medharness.services.cr_generation._run_llm", return_value=(0, "", "")), \
              patch("medharness.services.cr_generation._get_pr_feedback",
-                   return_value={"diagnostics": {}, "warnings": [], "prompt_text": ""}):
+                   return_value={"diagnostics": {"comments_count": 0, "reviews_count": 0}, "warnings": [], "prompt_text": ""}):
             result = generate_code("CR-083", dhf, pr_number=42)
-        codes = [w["code"] for w in result["warnings"]]
+        codes = [w.get("code") for w in result["warnings"]]
         assert "non_anthropic_provider_no_session" in codes
 
     def test_generate_code_no_warning_when_all_anthropic_with_pr(self, tmp_path, monkeypatch):
@@ -1646,9 +1656,9 @@ class TestNonAnthropicProviderSessionWarning:
         dhf.mkdir()
         with patch("medharness.services.cr_generation._run_llm", return_value=(0, "", "")), \
              patch("medharness.services.cr_generation._get_pr_feedback",
-                   return_value={"diagnostics": {}, "warnings": [], "prompt_text": ""}):
+                   return_value={"diagnostics": {"comments_count": 0, "reviews_count": 0}, "warnings": [], "prompt_text": ""}):
             result = generate_code("CR-084", dhf, pr_number=42)
-        codes = [w["code"] for w in result["warnings"]]
+        codes = [w.get("code") for w in result["warnings"]]
         assert "non_anthropic_provider_no_session" not in codes
 
     def test_generate_code_warns_when_review_model_non_anthropic_with_pr(self, tmp_path, monkeypatch):
@@ -1658,7 +1668,7 @@ class TestNonAnthropicProviderSessionWarning:
         dhf.mkdir()
         with patch("medharness.services.cr_generation._run_llm", return_value=(0, "", "")), \
              patch("medharness.services.cr_generation._get_pr_feedback",
-                   return_value={"diagnostics": {}, "warnings": [], "prompt_text": ""}):
+                   return_value={"diagnostics": {"comments_count": 0, "reviews_count": 0}, "warnings": [], "prompt_text": ""}):
             result = generate_code("CR-085", dhf, pr_number=42)
-        codes = [w["code"] for w in result["warnings"]]
+        codes = [w.get("code") for w in result["warnings"]]
         assert "non_anthropic_provider_no_session" in codes

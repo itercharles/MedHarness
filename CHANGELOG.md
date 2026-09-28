@@ -11,6 +11,24 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.46.0] — 2026-09-28
+
+One rule for where a `build` command's work goes. Contract version 18.0.
+
+### Breaking Changes
+
+- **Without `--pr`, a command changes local files and commits nothing; with
+  `--pr N`, it is running in CI for that PR and writes into it.**
+  - `build plan --pr N` and `build code --pr N` now commit and push what they did
+    to the PR's branch, besides posting their warnings on it. They revise from
+    the PR's reviews only when a reviewer has said something, so the first run
+    on a new PR generates. A push that fails is an error in the answer; the
+    work stays in the working tree. The job needs git's user configured.
+  - `build soup` no longer takes `--write`: it writes the SOUP items in the
+    working tree, and commits nothing.
+  - `build release` keeps `--write`. Recording a release is a controlled act,
+    and without it the release is a preview that changes nothing.
+
 ## [0.45.0] — 2026-09-28
 
 Documents are what a release ships. 16 commands. Contract version 17.0.

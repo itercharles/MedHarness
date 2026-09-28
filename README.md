@@ -97,7 +97,7 @@ testing: |
   smallest useful pipeline is two steps in a job that checks out the repository:
 
   ```yaml
-  - run: pip install medharness==0.45.0
+  - run: pip install medharness==0.46.0
   - run: medharness verify dhf --strict
   ```
 
@@ -176,9 +176,9 @@ Each answers `{gate, passed, summary, errors, warnings}` — see
 
 | Command | What it does | Returns |
 |---|---|---|
-| `medharness build plan --cr CR-034` | AI drafts the CR's design items and impact analysis; `--prompt` prints the steps for an agent already running | `outcome`, `artifacts.items_changed`, `design_review`, `errors` |
-| `medharness build code --cr CR-034` | AI writes the code and tests for the approved design; `--prompt` likewise | `outcome`, `artifacts.files_changed`, `code_review`, `errors` |
-| `medharness build soup --write` | Reconciles SOUP items with your dependency manifests; without `--write`, only reports | `to_create`, `to_update`, `orphans` |
+| `medharness build plan --cr CR-034` | AI drafts the CR's design items and impact analysis in the working tree, committing nothing; `--pr N` (CI) revises from that PR's reviews and pushes to it; `--prompt` prints the steps for an agent already running | `outcome`, `artifacts.items_changed`, `design_review`, `errors` |
+| `medharness build code --cr CR-034` | AI writes the code and tests for the approved design; `--pr` and `--prompt` as for `plan` | `outcome`, `artifacts.files_changed`, `code_review`, `errors` |
+| `medharness build soup` | Reconciles SOUP items with your dependency manifests, in the working tree | `to_create`, `to_update`, `orphans` |
 | `medharness build release --version 1.0.0 --out-dir release --write` | Checks the DHF, CRs and open defects; writes the specifications, traceability, baseline, BOM, SBOM and evidence; and — only if every check passed — records the REL item. Without `--write` it is a preview that changes nothing | `outcome`, `cr_ids`, `rel_uid`, `artifacts`, `errors`, `warnings` |
 
 ### `workflow` — needs Git or GitHub
