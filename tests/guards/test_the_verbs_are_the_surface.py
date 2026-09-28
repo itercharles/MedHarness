@@ -43,8 +43,8 @@ RENAMED = {
     "context implementation": "medharness item get",
     "context for-stage": "medharness item get",
     "medharness context": "medharness item list",
-    "doc generate": "build doc",
-    "doc export": "build doc --format html",
+    "doc generate": "build release",
+    "doc export": "build release",
     "validate schema": "verify dhf",
     # 0.40.0. The name said the whole DHF; it syncs SOUP. Event routing is the
     # CI workflow's own job.
@@ -54,8 +54,11 @@ RENAMED = {
     # the verbs put them.
     "dhfkit item": "medharness item",
     "dhfkit validate": "medharness verify dhf",
-    "dhfkit doc": "medharness build doc",
-    "dhfkit sbom": "medharness build doc SOUP --format cyclonedx",
+    "dhfkit doc": "medharness build release",
+    "dhfkit sbom": "medharness build release",
+    # 0.45.0. Documents are what a release ships; a preview is a release
+    # without --write.
+    "build doc": "build release",
     "dhfkit init": "medharness init",
 }
 

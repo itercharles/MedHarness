@@ -58,16 +58,6 @@ def list_doc_types(dhf_root: Path) -> list[str]:
     return _adapter(dhf_root).get_available_doc_types()
 
 
-def generate_doc(dhf_root: Path, doc_type_code: str) -> dict:
-    return _adapter(dhf_root).generate_doc(doc_type_code)
-
-
-def export_pdf(dhf_root: Path, doc_type_code: str) -> dict:
-    return _adapter(dhf_root).export_pdf(doc_type_code)
-
-
-# -- Config operations --------------------------------------------------------
-
 def get_config(dhf_root: Path):
     """The project's configuration — safety class, doc types, traceability rules.
 

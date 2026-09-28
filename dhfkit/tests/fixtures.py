@@ -67,12 +67,10 @@ def create_test_dhf() -> Path:
         'document_specifications': {
             'SYS': {
                 'source': 'requirements_specification.md.j2',
-                'output': 'DHF/documents/specifications/SYS/system_requirement_specification.md',
                 'doc_type_name': 'System Requirement',
             },
             'CRS': {
                 'source': 'customer_requirement_specification.md.j2',
-                'output': 'DHF/documents/specifications/CRS/customer_requirement_specification.md',
                 'doc_type_name': 'Customer Requirement',
             },
         },

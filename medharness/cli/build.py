@@ -63,39 +63,6 @@ def _print_prompt(assemble, cr_id: str, dhf: Path) -> None:
         click.echo(f"WARN [prompt] {w.get('message', w)}", err=True)
 
 
-def _write_cyclonedx(adapter, dhf: Path, out_dir: Path) -> dict:
-    """The SOUP register as a CycloneDX SBOM, the form FDA and the EU CRA expect.
-
-    A component whose ecosystem has no package-URL type gets no `purl` rather
-    than a guessed one: a wrong purl resolves against a real registry.
-    Regenerating an unchanged SBOM leaves the file alone, timestamp included.
-    """
-    from importlib.metadata import version as pkg_version
-
-    from dhfkit.sbom import build_sbom, purl_gap, write_sbom
-
-    soup_items = [i for i in adapter.list_items() if i.get("type") == "SOUP"]
-    document = build_sbom(
-        soup_items,
-        project_name=adapter.config.project_name or dhf.resolve().parent.name,
-        tool_version=pkg_version("medharness"),
-    )
-    written, changed = write_sbom(document, out_dir / "sbom.cdx.json")
-    for component in document["components"]:
-        if "purl" not in component:
-            props = {p["name"]: p["value"] for p in component.get("properties", [])}
-            reason = purl_gap(component["name"], component["version"],
-                              props.get("dhfkit:ecosystem", ""))
-            click.echo(f"WARN [sbom] {component['bom-ref']}: no purl — {reason}", err=True)
-    return {
-        "doc_type": "SOUP",
-        "cyclonedx_path": str(written),
-        "components": len(document["components"]),
-        "without_purl": sum(1 for c in document["components"] if "purl" not in c),
-        "changed": changed,
-    }
-
-
 def register(main):
     build = main.commands["build"]
 
@@ -227,6 +194,8 @@ def register(main):
             doc_format=doc_format, write=write,
         )
         click.echo(json.dumps(result))
+        for warning in result["warnings"]:
+            click.echo(f"WARN [release] {warning}", err=True)
         for err in result["errors"]:
             click.echo(f"FAIL [release] {err}", err=True)
         if result["errors"]:
@@ -281,48 +250,3 @@ def register(main):
             for err in result.get("errors") or []:
                 click.echo(f"  FAIL: {err}", err=True)
             sys.exit(1)
-
-    @build.command("doc")
-    @click.argument("doc_type")
-    @click.option("--format", "fmt", type=click.Choice(["md", "html", "pdf", "cyclonedx"]),
-                  default="md", show_default=True,
-                  help="md renders the specification into the DHF; html and pdf also export "
-                       "it (pdf needs medharness[docs] plus cairo/pango); cyclonedx, for SOUP "
-                       "only, writes the SBOM.")
-    @click.option("--out-dir", "out_dir", default=None,
-                  type=click.Path(file_okay=False, path_type=Path),
-                  help="Where html, pdf and cyclonedx go (default: DHF/documents/exports).")
-    @click.pass_context
-    def build_doc(ctx: click.Context, doc_type: str, fmt: str, out_dir: Path | None) -> None:
-        """Render a document from the items.
-
-        DOC_TYPE is a configured code (e.g. SRS) or ALL; one JSON object per type:
-        {doc_type, md_path, version}, plus html_path or pdf_path. `SOUP --format
-        cyclonedx` answers {doc_type, cyclonedx_path, components, without_purl, changed}.
-        """
-        dhf: Path = ctx.obj["dhf"]
-        adapter = LocalDHFAdapter(dhf)
-        if fmt == "cyclonedx":
-            if doc_type.upper() != "SOUP":
-                raise click.UsageError("--format cyclonedx is the SBOM, and only SOUP has one.")
-            result = _write_cyclonedx(adapter, dhf, out_dir or adapter.exports_dir)
-            click.echo(json.dumps(result))
-            click.echo(f"{'Wrote' if result['changed'] else 'Unchanged'} "
-                       f"{result['cyclonedx_path']} — {result['components']} component(s).", err=True)
-            return
-        codes = adapter.get_available_doc_types() if doc_type.upper() == "ALL" else [doc_type]
-        for code in codes:
-            try:
-                if fmt == "md":
-                    generated = adapter.generate_doc(code)
-                    result = {"doc_type": generated["doc_type"], "md_path": generated["output_path"],
-                              "version": generated["version"]}
-                else:
-                    result = (adapter.export_html(code, out_dir) if fmt == "html"
-                              else adapter.export_pdf(code, out_dir))
-                click.echo(json.dumps(result))
-                click.echo(f"✓ {code} → {result.get(f'{fmt}_path')}", err=True)
-            except Exception as e:
-                click.echo(f"✗ {code}: {e}", err=True)
-                if len(codes) == 1:
-                    raise SystemExit(1)

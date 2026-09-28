@@ -171,14 +171,14 @@ def format_traceability_matrix_markdown(matrix: dict) -> str:
 
 def _generate_specification_artifacts(adapter, out_dir: Path,
                                       doc_types: tuple[str, ...],
-                                      doc_format: str = "html") -> list[dict]:
+                                      doc_format: str, version: str) -> list[dict]:
     # Rendered straight into out_dir: evidence is a copy of the DHF's state,
     # and producing it must not change the DHF.
     spec_dir = out_dir / "specifications"
     generated = []
     for doc_type in doc_types:
         try:
-            generated.append(adapter.render_spec(doc_type, doc_format, spec_dir))
+            generated.append(adapter.render_spec(doc_type, doc_format, spec_dir, version))
         except RuntimeError as exc:
             # Renderer unavailable (e.g. PDF without native libs) — the message
             # already says what to install, so present it rather than traceback.
@@ -191,6 +191,7 @@ def generate_release_artifacts(
     dhf_path: Path,
     out_dir: Path,
     junit_paths: list[Path],
+    version: str,
     doc_format: str = "html",
 ) -> dict:
     """Every specification, every plan, and the traceability report, into out_dir.
@@ -200,7 +201,7 @@ def generate_release_artifacts(
     """
     out_dir.mkdir(parents=True, exist_ok=True)
     specifications = _generate_specification_artifacts(
-        adapter, out_dir, tuple(sorted(adapter.get_available_doc_types())), doc_format
+        adapter, out_dir, tuple(sorted(adapter.get_available_doc_types())), doc_format, version
     )
     plans = _generate_plan_artifacts(dhf_path, out_dir, doc_format)
     traceability = write_traceability_report(
@@ -280,6 +281,7 @@ def build_evidence_bundle(
     dhf_path: Path,
     out_dir: Path,
     *,
+    version: str,
     junit_paths: list[Path] = (),
     doc_format: str = "html",
     gate: dict,
@@ -296,7 +298,7 @@ def build_evidence_bundle(
 
     out_dir.mkdir(parents=True, exist_ok=True)
     artifacts = generate_release_artifacts(
-        adapter, dhf_path, out_dir, list(junit_paths),
+        adapter, dhf_path, out_dir, list(junit_paths), version,
         doc_format=doc_format,
     )
 

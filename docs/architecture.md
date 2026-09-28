@@ -13,8 +13,8 @@ How the code is organised, for contributors. What a user calls is in the
 | `dhfkit` | — (a library) | Storage: item CRUD and lifecycle, config and schemas, schema validation, dangling-link detection, document generation, JUnit parsing and the pytest plugin, the CycloneDX SBOM |
 | `medharness` | `medharness` | Analysis and process: traceability over the whole item set, the gates, SOUP sync, releases, the AI change workflow, scaffolding |
 
-There is one CLI, `medharness`; its `item` and `build doc` commands are thin
-wrappers over `dhfkit`.
+There is one CLI, `medharness`; its `item` commands are thin wrappers over
+`dhfkit`.
 
 - `medharness` imports from `dhfkit`; `dhfkit` never imports from `medharness`.
 - `medharness` uses only `dhfkit`'s public surface — no underscored names.
@@ -81,7 +81,8 @@ wheel and requires every default to be in it.
 ```
 
 `build plan` writes its design reviews to `docs/reviews/`, creating it on first
-use; `medharness build doc` writes specifications to `DHF/documents/specs/`.
+use. Specifications, traceability and the SBOM are rendered by `build release`
+into its `--out-dir`, never into the DHF.
 Placeholders: `{{project_name}}` (from the directory name) and
 `{{medharness_version}}`.
 

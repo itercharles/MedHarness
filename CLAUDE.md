@@ -22,7 +22,7 @@ dependency on `medharness`, and no CLI of its own.
 |-------|---------|----------|
 | `item` | one DHF item at a time | `list` · `get` · `create` · `update` · `transition` |
 | `verify` | reads the DHF | `dhf` · `tests` · `soup` · `completion` |
-| `build` | writes items, code or artifacts | `plan` · `code` · `soup` · `doc` · `release` |
+| `build` | writes items, code or artifacts | `plan` · `code` · `soup` · `release` |
 | `workflow` | Git or GitHub | `check-changes` · `check-approval` |
 | `init` | scaffolds a project | — |
 
@@ -39,7 +39,7 @@ reason no reader could recover.
 | Verb | Reads | Examples |
 |------|-------|----------|
 | `verify` | the DHF, and nothing else — never Git or GitHub | `dhf`, `tests`, `soup`, `completion` |
-| `build` | whatever it needs; **writes** items, code, or artifacts | `plan`, `code`, `soup`, `doc`, `release` |
+| `build` | whatever it needs; **writes** items, code, or artifacts | `plan`, `code`, `soup`, `release` |
 | `workflow` | the repository; cannot answer without Git or GitHub | `check-changes`, `check-approval` |
 
 `workflow *` are CI helper scripts, not the tool's value. A developer working

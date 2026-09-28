@@ -48,21 +48,16 @@ def test_the_specifications_still_reach_the_out_dir(tmp_path: Path) -> None:
     assert specs and "SRS-001" in specs[0].read_text(encoding="utf-8")
 
 
-def test_a_stale_spec_in_the_dhf_is_rendered_current_but_left_as_it_was(tmp_path: Path) -> None:
+def test_the_specifications_render_the_items_as_they_are(tmp_path: Path) -> None:
     import dhfkit.api as api
 
     project = _project(tmp_path)
-    md = Path(api.generate_doc(project / "DHF", "SRS")["output_path"])
-    api.update_item(project / "DHF", "SRS-001", {"title": "Renamed since the spec was written"})
-    stale = md.read_bytes()
+    api.update_item(project / "DHF", "SRS-001", {"title": "Renamed just before release"})
 
     build_release(project / "DHF", "1.0.0", tmp_path / "out", write=False)
 
-    assert md.read_bytes() == stale
-    spec = next((tmp_path / "out").rglob("specifications/SRS_Specification_*.html"))
-    assert "Renamed since the spec was written" in spec.read_text(encoding="utf-8")
-
-
+    spec = tmp_path / "out" / "specifications" / "SRS_Specification_1.0.0.html"
+    assert "Renamed just before release" in spec.read_text(encoding="utf-8")
 def test_the_traceability_report_follows_the_configured_chain(tmp_path: Path) -> None:
     """The report's columns come from the first `traceability_matrices` chain."""
     project = _project(tmp_path)

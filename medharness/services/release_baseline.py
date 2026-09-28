@@ -210,6 +210,7 @@ def build_release_baseline(
     import dhfkit.api as api
 
     errors: list[str] = []
+    warnings: list[str] = []
 
     # Auto-collect CRs if none provided
     if not cr_ids:
@@ -300,7 +301,7 @@ def build_release_baseline(
         from importlib.metadata import version as pkg_version
 
         from dhfkit.local_adapter import LocalDHFAdapter
-        from dhfkit.sbom import build_sbom, merge_release_components, write_sbom
+        from dhfkit.sbom import build_sbom, merge_release_components, purl_gap, write_sbom
 
         soup_items = [i for i in api.list_items(dhf) if i.get("type") == "SOUP"]
         components = merge_release_components(soup_items, bom["manifest_packages"])
@@ -320,6 +321,14 @@ def build_release_baseline(
         )
         sbom_path, _changed = write_sbom(document, out_dir / "sbom.cdx.json")
         artifacts.append(str(sbom_path))
+        # A component with no purl is one a consumer of the SBOM cannot resolve;
+        # the two causes need different fixes, so each is named.
+        for component in document["components"]:
+            if "purl" not in component:
+                props = {p["name"]: p["value"] for p in component.get("properties", [])}
+                reason = purl_gap(component["name"], component["version"],
+                                  props.get("dhfkit:ecosystem", ""))
+                warnings.append(f"{component['bom-ref']}: no purl in the SBOM — {reason}")
     except Exception as exc:  # noqa: BLE001
         errors.append(f"Failed to write sbom.cdx.json: {exc}")
 
@@ -333,6 +342,7 @@ def build_release_baseline(
         "soup_count": soup_count,
         "manifest_packages_count": manifest_packages_count,
         "errors": errors,
+        "warnings": warnings,
     }
 
 
@@ -376,7 +386,7 @@ def build_release(
     baseline = build_release_baseline(dhf, version, list(manifest_paths), list(cr_ids), out_dir)
     # Last, so its manifest hashes the baseline's files as well as its own.
     manifest = build_evidence_bundle(
-        dhf, out_dir, junit_paths=list(junit_paths), doc_format=doc_format,
+        dhf, out_dir, version=version, junit_paths=list(junit_paths), doc_format=doc_format,
         gate=gate,
     )
 
@@ -398,4 +408,5 @@ def build_release(
         "soup_count": baseline["soup_count"],
         "artifacts": [f["path"] for f in manifest["files"]],
         "errors": errors,
+        "warnings": baseline.get("warnings", []),
     }
