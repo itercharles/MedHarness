@@ -1,6 +1,7 @@
 """YAML file saver for items."""
 
 from pathlib import Path
+import json
 import os
 import yaml
 from typing import Optional, Dict, Any
@@ -59,13 +60,10 @@ class ItemSaver:
         tmp_path = file_path.with_name(f".{file_path.name}.tmp")
         try:
             with open(tmp_path, 'w', encoding='utf-8') as f:
-                yaml.dump(
-                    data,
-                    f,
-                    default_flow_style=False,
-                    allow_unicode=True,
-                    sort_keys=False
-                )
+                if file_path.exists():
+                    _patch(file_path, data, f)
+                else:
+                    _dump(data, f)
             os.replace(tmp_path, file_path)
         finally:
             tmp_path.unlink(missing_ok=True)
@@ -128,3 +126,47 @@ class ItemSaver:
                 subdir = 'other'
 
         return self.specs_dir / subdir
+
+
+def _dump(data: Dict[str, Any], f) -> None:
+    yaml.dump(data, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
+
+
+def _patch(file_path: Path, data: Dict[str, Any], out) -> None:
+    """Rewrite only the top-level keys whose value changed; every other line stays as written.
+
+    A controlled record is reviewed as a diff: a one-field update must show as
+    one field, not as the whole file re-quoted and re-wrapped.
+    """
+    blocks: list[list[str]] = []
+    text = file_path.read_text(encoding='utf-8')
+    for line in (text if text.endswith('\n') else text + '\n').splitlines(keepends=True):
+        starts_key = line[:1] not in ('', ' ', '\t', '\n', '#', '-')
+        if starts_key or not blocks:
+            blocks.append([line])
+        else:
+            blocks[-1].append(line)
+
+    written: set[str] = set()
+    for block in blocks:
+        parsed = yaml.safe_load(''.join(block))
+        if not isinstance(parsed, dict) or len(parsed) != 1:
+            out.write(''.join(block))
+            continue
+        key, old = next(iter(parsed.items()))
+        if key not in data:
+            if key == 'active' and old is True:
+                out.write(''.join(block))
+            continue
+        written.add(key)
+        if _plain(old) == _plain(data[key]):
+            out.write(''.join(block))
+        else:
+            _dump({key: data[key]}, out)
+    rest = {k: v for k, v in data.items() if k not in written}
+    if rest:
+        _dump(rest, out)
+
+
+def _plain(value: Any) -> Any:
+    return json.loads(json.dumps(value, default=str))
