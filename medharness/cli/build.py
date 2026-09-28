@@ -70,7 +70,7 @@ def register(main):
     @click.option("--cr", "cr_id", required=True, metavar="CR_ID",
                   help="The CR to design: its item cascade and impact analysis.")
     @click.option("--pr", "pr_number", default=None, type=int, metavar="N",
-                  help="The PR this run belongs to, in CI: revise from its reviews if any, then "
+                  help="The PR this run belongs to, in CI: revise if a reviewer asked for changes, then "
                        "commit and push the result to its branch. Without it, local files "
                        "change and nothing is committed.")
     @click.option("--prompt", "print_prompt", is_flag=True, default=False,
@@ -88,7 +88,7 @@ def register(main):
         The model is MEDHARNESS_DESIGN_MODEL (and MEDHARNESS_DESIGN_REVIEW_MODEL
         for the review) as "provider:model", else Anthropic with ANTHROPIC_MODEL.
         Locally it edits files and commits nothing; in CI, --pr N commits and
-        pushes to that PR, revising from its reviews when there are any.
+        pushes to that PR, revising when a reviewer asked for changes.
         """
         from medharness.services.cr_generation import generate_dhf  # noqa: PLC0415
         from medharness.workflows.cr_state import assert_cr_active  # noqa: PLC0415
@@ -118,7 +118,7 @@ def register(main):
     @click.option("--cr", "cr_id", required=True, metavar="CR_ID",
                   help="The CR whose approved design to implement.")
     @click.option("--pr", "pr_number", default=None, type=int, metavar="N",
-                  help="The PR this run belongs to, in CI: revise from its reviews if any, then "
+                  help="The PR this run belongs to, in CI: revise if a reviewer asked for changes, then "
                        "commit and push the result to its branch. Without it, local files "
                        "change and nothing is committed.")
     @click.option("--prompt", "print_prompt", is_flag=True, default=False,
@@ -135,7 +135,7 @@ def register(main):
         The model is MEDHARNESS_DEVELOP_MODEL (and MEDHARNESS_CODE_REVIEW_MODEL
         for the review) as "provider:model", else Anthropic with ANTHROPIC_MODEL.
         Locally it edits files and commits nothing; in CI, --pr N commits and
-        pushes to that PR, revising from its reviews when there are any.
+        pushes to that PR, revising when a reviewer asked for changes.
         """
         from medharness.services.cr_generation import generate_code  # noqa: PLC0415
         from medharness.workflows.cr_state import assert_cr_active  # noqa: PLC0415

@@ -297,15 +297,38 @@ class TestGetPrFeedback:
 
     GH = "medharness.services.cr_generation.gh"
 
-    def test_comments_and_reviews_reach_the_prompt(self):
-        pages = {"comments": '[{"body": "rename it"}]', "reviews": '[{"state": "CHANGES_REQUESTED"}]'}
-        with patch(self.GH, side_effect=lambda args: (0, pages[args[1].rsplit("/", 1)[1]])) as gh:
+    def _gh(self, reviews: list, comments: list, head: str = "c2"):
+        pages = {"42": json.dumps({"head": {"sha": head}}),
+                 "comments": json.dumps(comments), "reviews": json.dumps(reviews)}
+        return patch(self.GH, side_effect=lambda args: (0, pages[args[1].rsplit("/", 1)[1]]))
+
+    def test_changes_requested_on_the_head_reach_the_prompt(self):
+        review = {"id": 1, "state": "CHANGES_REQUESTED", "commit_id": "c2", "body": "rename it"}
+        comment = {"pull_request_review_id": 1, "body": "here"}
+        with self._gh([review], [comment]):
             result = _get_pr_feedback(42)
-        assert gh.call_args_list[0].args[0] == ["api", "repos/{owner}/{repo}/pulls/42/comments"]
-        assert json.loads(result["prompt_text"]) == {
-            "comments": [{"body": "rename it"}], "reviews": [{"state": "CHANGES_REQUESTED"}]}
+        assert json.loads(result["prompt_text"]) == {"reviews": [review], "comments": [comment]}
+        assert result["diagnostics"]["reviews_count"] == 1
         assert result["diagnostics"]["comments_count"] == 1
         assert result["warnings"] == []
+
+    def test_an_approval_asks_for_nothing(self):
+        """The design approval that starts develop is a review, not a request."""
+        with self._gh([{"id": 1, "state": "APPROVED", "commit_id": "c2", "body": ""}], []):
+            result = _get_pr_feedback(42)
+        assert result["diagnostics"]["reviews_count"] == 0
+
+    def test_a_request_on_an_earlier_commit_is_not_feedback(self):
+        with self._gh([{"id": 1, "state": "CHANGES_REQUESTED", "commit_id": "c1", "body": "x"}], []):
+            result = _get_pr_feedback(42)
+        assert result["diagnostics"]["reviews_count"] == 0
+
+    def test_a_comment_review_counts_when_it_says_something(self):
+        said = {"id": 1, "state": "COMMENTED", "commit_id": "c2", "body": ""}
+        silent = {"id": 2, "state": "COMMENTED", "commit_id": "c2", "body": " "}
+        with self._gh([said, silent], [{"pull_request_review_id": 1, "body": "nit"}]):
+            result = _get_pr_feedback(42)
+        assert [r["id"] for r in json.loads(result["prompt_text"])["reviews"]] == [1]
 
     def test_a_gh_failure_carries_its_reason(self):
         with patch(self.GH, return_value=(1, "HTTP 404: Not Found")):
