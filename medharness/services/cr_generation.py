@@ -114,7 +114,7 @@ def _pr_feedback(pr_number: int, steps: list, diagnostics: dict, warnings: list)
     """The PR's review feedback, or None when it has none to act on.
 
     `--pr` says the run belongs to that PR; it revises only when a reviewer has
-    said something, so the first run on a new PR generates.
+    asked for a change on the current commit, so a new or approved PR generates.
     """
     step, perf = _begin_step("fetch_pr_feedback")
     feedback = _get_pr_feedback(pr_number)
@@ -140,14 +140,20 @@ def _push_to_pr(repo_root: Path, pr_number: int, message: str, errors: list[dict
 
 
 def _get_pr_feedback(pr_number: int) -> dict:
-    """The PR's review comments and reviews, for the revision prompt, via gh."""
+    """What reviewers asked to change on the PR's current commit, via gh.
 
-    def _fetch(kind: str) -> dict[str, object]:
-        rc, out = gh(["api", f"repos/{{owner}}/{{repo}}/pulls/{pr_number}/{kind}"])
+    An approval asks for nothing, and a review of an earlier commit was about
+    code that has since changed; neither is feedback to revise from. What is:
+    a review requesting changes, or a review with something to say — a body or
+    inline comments — on the commit the PR now points at.
+    """
+
+    def _fetch(kind: str, path: str) -> dict[str, object]:
+        rc, out = gh(["api", f"repos/{{owner}}/{{repo}}/pulls/{pr_number}{path}"])
         if rc != 0:
             return {
                 "status": "gh_error",
-                "data": [{"error": out}],
+                "data": [],
                 "error": out,
                 "warning": _warning(f"github_{kind}_unavailable", f"GitHub {kind} fetch failed: {out}."),
             }
@@ -156,30 +162,44 @@ def _get_pr_feedback(pr_number: int) -> dict:
         except json.JSONDecodeError as exc:
             return {
                 "status": "decode_error",
-                "data": [{"error": str(exc)}],
+                "data": [],
                 "error": str(exc),
                 "warning": _warning(f"github_{kind}_decode_error",
                                     f"GitHub {kind} response could not be decoded: {exc}."),
             }
 
-    comments = _fetch("comments")
-    reviews = _fetch("reviews")
+    pull = _fetch("pull", "")
+    comments = _fetch("comments", "/comments")
+    reviews = _fetch("reviews", "/reviews")
+    head = (pull["data"] or {}).get("head", {}).get("sha") if isinstance(pull["data"], dict) else None
+
+    with_comments = {c.get("pull_request_review_id") for c in comments["data"] if isinstance(c, dict)}
+    asked = [
+        r for r in reviews["data"]
+        if isinstance(r, dict)
+        and (head is None or r.get("commit_id") == head)
+        and (r.get("state") == "CHANGES_REQUESTED"
+             or (r.get("state") == "COMMENTED"
+                 and ((r.get("body") or "").strip() or r.get("id") in with_comments)))
+    ]
+    asked_ids = {r.get("id") for r in asked}
+    asked_comments = [c for c in comments["data"]
+                      if isinstance(c, dict) and c.get("pull_request_review_id") in asked_ids]
     return {
-        "prompt_text": json.dumps(
-            {"comments": comments["data"], "reviews": reviews["data"]},
-            indent=2,
-        ),
+        "prompt_text": json.dumps({"reviews": asked, "comments": asked_comments}, indent=2),
         "diagnostics": {
             "attempted": True,
             "pr_number": pr_number,
+            "head_sha": head,
             "comments_status": comments["status"],
             "comments_error": comments["error"],
             "reviews_status": reviews["status"],
             "reviews_error": reviews["error"],
-            "comments_count": len(comments["data"]) if isinstance(comments["data"], list) else 0,
-            "reviews_count": len(reviews["data"]) if isinstance(reviews["data"], list) else 0,
+            "comments_count": len(asked_comments),
+            "reviews_count": len(asked),
         },
-        "warnings": [w for w in (comments.get("warning"), reviews.get("warning")) if isinstance(w, dict)],
+        "warnings": [w for w in (pull.get("warning"), comments.get("warning"), reviews.get("warning"))
+                     if isinstance(w, dict)],
     }
 
 

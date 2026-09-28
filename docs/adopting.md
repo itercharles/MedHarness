@@ -312,8 +312,9 @@ jobs:
 
 **`--pr` is CI; without it, local.** Without `--pr`, `build plan` and `build
 code` change files in the working tree and commit nothing — at your desk, or in
-a job that commits itself, like `start` above. With `--pr N` they revise from
-that PR's reviews when a reviewer has said something, and commit and push the
+a job that commits itself, like `start` above. With `--pr N` they revise when a
+reviewer has asked for a change on the PR's current commit — an approval asks for
+nothing — and commit and push the
 result to its branch; the job needs git's user configured and a token that can
 push. Either way the agent does not commit: if it does anyway — a repository's
 `CLAUDE.md` may tell it to — its commits are undone, their changes kept, and the

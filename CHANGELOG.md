@@ -11,6 +11,18 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.46.1] — 2026-09-28
+
+### Fixed
+
+- **`--pr` revised whenever the PR had any review, including the approval that
+  starts the develop stage.** ContourLab's CR-014 develop runs both went into
+  revision mode on four reviews that were approvals or requests against older
+  commits. Only a review requesting changes, or a review with something to say
+  (a body or inline comments), on the PR's current commit now counts; an
+  approved or unreviewed PR generates. The revision prompt carries only those
+  reviews and their comments.
+
 ## [0.46.0] — 2026-09-28
 
 One rule for where a `build` command's work goes. Contract version 18.0.
