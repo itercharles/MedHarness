@@ -80,8 +80,8 @@ def cr_closure_gate(
        evidence is not checked, and the result says so rather than passing
        quietly.
 
-    Approval is not checked here. It lives in the pull request, which this gate
-    does not read — ``workflow check-approval`` does.
+    Approval is not checked here. It lives in the pull request, and GitHub's
+    branch protection enforces it.
     """
     from dhfkit.local_adapter import LocalDHFAdapter
 

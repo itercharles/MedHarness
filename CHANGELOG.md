@@ -11,6 +11,25 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.47.0] — 2026-09-28
+
+### Changed (breaking)
+
+- **The `workflow` group is gone. Contract 19.0.**
+  - `workflow check-changes` is now **`verify changes`**. It diffs the working
+    tree, so uncommitted and untracked files count, and it never needed
+    GitHub, so it runs locally before a commit as well as in CI. `verify` now
+    means "judges from what is on the machine: the DHF and the working tree,
+    never GitHub".
+  - `workflow check-approval` is **removed**. It checked for an approving
+    review of the PR's head commit, which GitHub's branch protection already
+    enforces on the server with *Require approvals* and *Dismiss stale pull
+    request approvals when new commits are pushed*. A check in the PR's own CI
+    can be edited by that PR; branch protection cannot.
+  - Migration: rename `workflow check-changes` to `verify changes`; delete
+    `workflow check-approval` steps and turn on the two branch-protection
+    settings for `main`.
+
 ## [0.46.2] — 2026-09-28
 
 ### Fixed

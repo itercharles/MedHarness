@@ -35,7 +35,7 @@ COMMANDS = [
     "verify tests --junit {dhf}",
     "verify soup --offline-mode warn",
     "verify completion --cr CR-001",
-    "workflow check-changes --cr CR-001",
+    "verify changes --cr CR-001",
 ]
 
 
@@ -55,14 +55,14 @@ FAULTS = {
     "a doc type is not YAML": (_first_doc_type, "not: yaml: [\n"),
     "an item is not YAML": (_first_srs, "not: yaml: [\n"),
     "an item is a list": (_first_srs, "- x\n"),
-    # `workflow check-changes` caught FileNotFoundError and skipped the promise
+    # `verify changes` caught FileNotFoundError and skipped the promise
     # check, so a CR that broke its promise passed once the config was gone.
     "global.yaml is missing": (lambda d: d / "config" / "global.yaml", None),
 }
 
 
 def _commit_with_origin_main(root: Path) -> None:
-    """So `workflow check-changes` gets past the diff and reaches the DHF."""
+    """So `verify changes` gets past the diff and reaches the DHF."""
     for args in (["init", "-q"], ["add", "-A"],
                  ["-c", "user.email=t@e", "-c", "user.name=t", "commit", "-qm", "base"],
                  ["update-ref", "refs/remotes/origin/main", "HEAD"]):

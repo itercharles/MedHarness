@@ -178,7 +178,7 @@ def validate_atomic_branch(
                 f"{since_ref}."
             ),
         }
-        return envelope_from("workflow check-changes", {
+        return envelope_from("verify changes", {
             "cr_id": cr_id,
             "since_ref": since_ref,
             "passed": False,
@@ -288,7 +288,7 @@ def judge_branch(
             ),
         })
 
-    return envelope_from("workflow check-changes", {
+    return envelope_from("verify changes", {
         "cr_id": cr_id,
         "since_ref": since_ref,
         "passed": not errors,

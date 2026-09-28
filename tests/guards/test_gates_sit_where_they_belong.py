@@ -1,18 +1,14 @@
-"""A verify command answers from the DHF. Git and GitHub belong to workflow.
+"""A verify command answers from what is on the machine: the DHF and the working tree.
 
-The old rule was "does it need a CR", which split the gates across `verify` and
-`change` for a reason no reader could recover from the names: a project not
-running the CR workflow could not tell which four of the six applied to it.
-
-The rule now is what a command reads. `verify *` answers from the DHF and runs
-anywhere the DHF is — including a developer's laptop with no remote, no branch
-and no PR. `workflow *` cannot answer without the repository. `build *` writes,
-and may talk to either.
+The old rules drew the line at "does it need a CR", then at "does it read Git".
+Both put `verify changes` — a diff of the working tree, which a developer runs
+before committing — in a CI-only group. The line that matters is GitHub: a
+`verify` command runs on a laptop with no remote and no PR, so it may read the
+local repository but never the pull request.
 
 Checked by reachability rather than by name, so a `verify` command that grows a
-`git diff` three calls down is caught. `build plan --pr` legitimately reads PR
-comments, which is why the ban is on `verify` alone and not on "anything outside
-workflow".
+`gh` call three calls down is caught. `build plan --pr` legitimately reads PR
+reviews, which is why the ban is on `verify` alone.
 """
 
 from __future__ import annotations
@@ -25,11 +21,8 @@ from pathlib import Path
 from medharness.cli import main
 from medharness.services.gates import GATES
 
-#: Reaching any of these means the command cannot answer without Git or GitHub.
-VCS_MODULES = {
-    "medharness.services.git",
-    "medharness.services.pr_approval",
-    "medharness.services.github_event",
+#: Reaching any of these means the command cannot answer without GitHub.
+GITHUB_MODULES = {
     "medharness.services.github_session",
     "medharness.services.github_pr",
     "medharness.services.gh",
@@ -58,7 +51,7 @@ def _seed(command) -> set[str]:
     """Modules the callback itself pulls in, by either import style.
 
     Module-level imports of its *defining* module do not count on their own:
-    `cli/workflow.py` imports the GitHub event parser for one command, and charging
+    `cli/build.py` imports what one command needs, and charging
     every command in the file with it would make the check meaningless. Only
     names the callback actually mentions are followed.
     """
@@ -98,37 +91,25 @@ def _reaches(command) -> set[str]:
 
 def test_the_groups_are_not_empty() -> None:
     """Every assertion below is vacuous if a group failed to register."""
-    for verb in ("verify", "build", "workflow"):
+    for verb in ("verify", "build"):
         assert main.commands[verb].commands, f"`{verb}` has no commands"
 
 
-def test_no_verify_command_reaches_git_or_github() -> None:
+def test_no_verify_command_reaches_github() -> None:
     offenders = {
-        name: sorted(_reaches(cmd) & VCS_MODULES)
+        name: sorted(_reaches(cmd) & GITHUB_MODULES)
         for name, cmd in main.commands["verify"].commands.items()
-        if _reaches(cmd) & VCS_MODULES
+        if _reaches(cmd) & GITHUB_MODULES
     }
     assert not offenders, (
-        f"`verify` must answer from the DHF alone, so it runs on a laptop with "
-        f"no remote and no PR. These reach the repository: {offenders}"
+        f"`verify` must answer from the machine it runs on, so it works on a "
+        f"laptop with no remote and no PR. These reach GitHub: {offenders}"
     )
 
 
-def test_every_workflow_command_reaches_git_or_github() -> None:
-    """The converse. A workflow command that reads only the DHF is a verify one."""
-    idle = [
-        name for name, cmd in main.commands["workflow"].commands.items()
-        if not _reaches(cmd) & VCS_MODULES
-    ]
-    assert not idle, (
-        f"these sit under `workflow` but never read the repository, which is the "
-        f"only thing that puts a command there: {idle}"
-    )
-
-
-def test_the_check_can_see_a_vcs_module() -> None:
-    """Falsifier: if the walk resolved nothing, both tests above pass silently."""
-    assert _reaches(main.commands["workflow"].commands["check-changes"]) & VCS_MODULES
+def test_the_check_can_see_a_github_module() -> None:
+    """Falsifier: if the walk resolved nothing, the test above passes silently."""
+    assert _reaches(main.commands["build"].commands["plan"]) & GITHUB_MODULES
 
 
 def test_every_manifest_command_resolves() -> None:

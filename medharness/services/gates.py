@@ -64,7 +64,7 @@ GATES: tuple[dict[str, Any], ...] = (
     {
         "command": "verify completion",
         "checks": "CR closure: mandatory CR fields, that the CR's affected_items "
-                  "exist, and verification evidence for each. Approval is `workflow check-approval`.",
+                  "exist, and verification evidence for each.",
         "options": {
             "required": ["--cr"],
             "optional": ["--junit"],
@@ -74,8 +74,9 @@ GATES: tuple[dict[str, Any], ...] = (
         "needs_network": False,
     },
     {
-        "command": "workflow check-changes",
-        "checks": "That a branch carries the DHF and code changes its CR implies.",
+        "command": "verify changes",
+        "checks": "That the branch, uncommitted work included, changes exactly the "
+                  "items its CR lists, and code when asked.",
         "options": {
             "required": ["--cr"],
             "optional": ["--since-ref", "--code-path"],
@@ -84,17 +85,5 @@ GATES: tuple[dict[str, Any], ...] = (
         "blocking_note": "Code-change enforcement applies only when --code-path "
                          "is given.",
         "needs_network": False,
-    },
-    {
-        "command": "workflow check-approval",
-        "checks": "That an approving review on the PR names the commit being "
-                  "merged, so the approval covers what ships.",
-        "options": {
-            "required": ["--pr"],
-            "optional": ["--token"],
-        },
-        "blocking": "always",
-        "blocking_note": "An approval of an earlier commit is stale and fails.",
-        "needs_network": True,
     },
 )

@@ -18,7 +18,7 @@ Only two commands send anything to a model:
 | `medharness build plan --cr <ID>` | Design | DHF item updates, impact analysis, design review |
 | `medharness build code --cr <ID>` | Develop | Source code and tests for the approved design |
 
-**Every other command is deterministic** and makes no call to any model. The `item` commands, the `verify` and `workflow` gates, `build soup` and `build release` compute their answers from their inputs; the only network they touch is osv.dev for `verify soup` and GitHub for `workflow check-approval`.
+**Every other command is deterministic** and makes no call to any model. The `item` commands, the `verify` gates, `build soup` and `build release` compute their answers from their inputs; the only network they touch is osv.dev for `verify soup`.
 
 This split is intentional: you can adopt the traceability engine and CI gates with no AI in the pipeline at all. See [adopting.md](adopting.md#what-to-adopt-in-what-order).
 
@@ -75,7 +75,7 @@ Locally, do not start the stages at all: `build plan --prompt` and `build code -
 The AI cannot advance a change on its own. Every stage transition is gated:
 
 1. **`build plan` produces a design PR.** No code is written. A human reviews the DHF diff and the generated design review.
-2. **Approval is evidence.** `medharness workflow check-approval` requires an approving GitHub review of the commit the PR would merge — author, timestamp and revision, all recorded outside this tool's control. A label is not accepted: anyone with write access can add or remove one, and it says nothing about what was reviewed.
+2. **Approval is evidence.** Branch protection with required approvals and stale approvals dismissed on push makes GitHub refuse a merge without an approving review of the commit being merged — author, timestamp and revision, all recorded outside this tool's control. A label is not accepted: anyone with write access can add or remove one, and it says nothing about what was reviewed.
 3. **`build code` produces a code PR.** Start it only once the design PR is approved: your workflow decides when it runs, and `build code` itself refuses only a CR that is `completed`, `rejected` or `cancelled`.
 4. **Closure is gated deterministically.** `verify completion` requires the CR's recorded fields, every item in its `affected_items` to exist, and passing JUnit evidence for each of those declaring `Test` — none of which the AI can satisfy by assertion.
 

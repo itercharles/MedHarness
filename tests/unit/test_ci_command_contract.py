@@ -90,7 +90,7 @@ class TestValidateBranchJsonContract:
         from medharness.services.envelope import ENVELOPE_KEYS, envelope_from
 
         runner = CliRunner()
-        branch_result = envelope_from("workflow check-changes", {
+        branch_result = envelope_from("verify changes", {
             "cr_id": "CR-500",
             "since_ref": "origin/main",
             "passed": True,
@@ -103,10 +103,10 @@ class TestValidateBranchJsonContract:
             "findings": [],
         })
         with patch("medharness.services.git.validate_atomic_branch", return_value=branch_result):
-            r = runner.invoke(main, ["--dhf", str(dhf), "workflow", "check-changes", "--cr", "CR-500"])
+            r = runner.invoke(main, ["--dhf", str(dhf), "verify", "changes", "--cr", "CR-500"])
         assert r.exit_code == 0, (r.output, r.stderr)
         payload = _split_stdout_json(r.stdout)
-        assert set(payload) == set(ENVELOPE_KEYS), "workflow check-changes left the envelope"
+        assert set(payload) == set(ENVELOPE_KEYS), "verify changes left the envelope"
         assert payload["passed"] is True
 
 
@@ -119,7 +119,7 @@ class TestValidateBranchJsonContract:
         from medharness.services.envelope import envelope_from
 
         finding = {"field": "code_branch", "issue": "x", "fix": "y"}
-        branch_result = envelope_from("workflow check-changes", {
+        branch_result = envelope_from("verify changes", {
             "cr_id": "CR-501",
             "since_ref": "origin/main",
             "passed": False,
@@ -132,7 +132,7 @@ class TestValidateBranchJsonContract:
         })
         runner = CliRunner()
         with patch("medharness.services.git.validate_atomic_branch", return_value=branch_result):
-            r = runner.invoke(main, ["--dhf", str(dhf), "workflow", "check-changes", "--cr", "CR-501"])
+            r = runner.invoke(main, ["--dhf", str(dhf), "verify", "changes", "--cr", "CR-501"])
         assert r.exit_code == 1
         payload = _split_stdout_json(r.stdout)
         assert payload["passed"] is False

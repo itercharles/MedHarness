@@ -1163,7 +1163,7 @@ def generate_code(
 
     _leave_uncommitted(repo_root, start_head, warnings)
     # Implementing may reconcile SWDD or SRS; the CR's record has to follow, or
-    # `workflow check-changes` finds the branch changing items it does not list.
+    # `verify changes` finds the branch changing items it does not list.
     unreadable: list[str] = []
     items_changed = _items_changed(repo_root, unreadable)
     if unreadable:

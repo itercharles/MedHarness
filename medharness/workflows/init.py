@@ -138,7 +138,7 @@ A change to what the product does is not finished until its DHF is.
 - **Check it**, and fix what they report:
   - `medharness verify dhf`
   - `medharness verify completion --cr CR-NNN --junit <results>`
-  - `medharness workflow check-changes --cr CR-NNN`
+  - `medharness verify changes --cr CR-NNN`
 - **Close it:** `medharness item transition CR-NNN completed`.
 
 Change items with `medharness item create|update|transition`, never by editing IDs.

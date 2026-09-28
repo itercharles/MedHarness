@@ -2,7 +2,7 @@
 
 Covers the validation surface that does NOT require LLM calls:
   - verify dhf (ci_structural_gate): schema, traceability, structured reporting
-  - workflow check-changes: DHF change detection, spec item existence
+  - verify changes: DHF change detection, spec item existence
   - validate_generate_dhf: verification_criteria, V-model cascade completeness
   - ItemType display_name / code contract
 
@@ -108,7 +108,7 @@ class TestCiStructuralGate:
 
 
 # ---------------------------------------------------------------------------
-# workflow check-changes — change detection and spec item existence
+# verify changes — change detection and spec item existence
 # ---------------------------------------------------------------------------
 
 class TestValidateBranch:

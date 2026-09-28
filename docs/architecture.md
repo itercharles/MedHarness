@@ -22,7 +22,7 @@ There is one CLI, `medharness`; its `item` commands are thin wrappers over
 `tests/guards/test_package_boundary.py` enforces both.
 
 Each top-level command group lives in the file named after it:
-`medharness/cli/verify.py`, `build.py` and `workflow.py`. A new
+`medharness/cli/item.py`, `verify.py`, `build.py` and `init.py`. A new
 command goes in the file of its verb. `cli/output.py` holds the JSON-to-stdout,
 lines-to-stderr helpers every command shares. Each `verify` check sits in its own
 module, `services/verify_<name>.py`, and answers in the envelope from
@@ -142,18 +142,12 @@ as `provider:model` — `anthropic` (the `claude` CLI, the default), `openai`,
 | `services/cr_impact.py` | Writes `affected_items` back onto the CR |
 | `services/design_validation.py` | The deterministic check after each design pass |
 
-## The `workflow` gates
+## `verify changes`: a reader and a judge
 
-Each `workflow` command is a reader and a judge. The reader talks to Git or
-GitHub and hands plain values to the judge, which decides and touches nothing:
-
-| Command | Reader | Judge |
-|---|---|---|
-| `check-changes` | `services/git.py` `validate_atomic_branch` | `judge_branch(cr_id, cr_item, dhf_item_changes, code_changes)` |
-| `check-approval` | `services/pr_approval.py` `approval_evidence` | `judge_approval(head_sha, reviews)` |
-
-Test a rule by calling its judge with the values you want. Patch the reader only
-to test the reading itself.
+`services/git.py` `validate_atomic_branch` reads the diff and hands plain values
+to `judge_branch(cr_id, cr_item, dhf_item_changes, code_changes)`, which decides
+and touches nothing. Test a rule by calling the judge with the values you want;
+patch the reader only to test the reading itself.
 
 ## Tests
 

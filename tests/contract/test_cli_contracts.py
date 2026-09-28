@@ -74,8 +74,8 @@ class TestCRGenerationCommands:
 
 
     def test_check_changes_help(self):
-        """medharness workflow check-changes --help exits 0."""
-        r = _run("medharness", "workflow", "check-changes", "--help")
+        """medharness verify changes --help exits 0."""
+        r = _run("medharness", "verify", "changes", "--help")
         assert r.returncode == 0, r.stderr
 
     def test_develop_cr_requires_cr_flag(self):
@@ -94,8 +94,8 @@ class TestCRGenerationCommands:
         assert r.returncode != 0
 
     def test_validate_branch_requires_cr_flag(self):
-        """medharness workflow check-changes without --cr exits non-zero."""
-        r = _run("medharness", "workflow", "check-changes")
+        """medharness verify changes without --cr exits non-zero."""
+        r = _run("medharness", "verify", "changes")
         assert r.returncode != 0
 
     def test_develop_cr_accepts_pr_flag(self):
@@ -105,16 +105,15 @@ class TestCRGenerationCommands:
 
 
     def test_validate_branch_accepts_code_path_flag(self):
-        """medharness workflow check-changes --help shows --code-path option."""
-        r = _run("medharness", "workflow", "check-changes", "--help")
+        """medharness verify changes --help shows --code-path option."""
+        r = _run("medharness", "verify", "changes", "--help")
         assert "--code-path" in r.stdout
 
     def test_commands_appear_in_help_groups(self):
         """Each verb lists its own commands, so `--help` finds them all."""
         expected = {
-            "verify": ["dhf", "tests", "soup", "completion"],
+            "verify": ["dhf", "tests", "soup", "completion", "changes"],
             "build": ["plan", "code", "soup", "release"],
-            "workflow": ["check-changes", "check-approval"],
         }
         for verb, commands in expected.items():
             r = _run("medharness", verb, "--help")
