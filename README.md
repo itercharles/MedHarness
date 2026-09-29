@@ -56,10 +56,8 @@ The same stages run two ways:
 - **Fully automated in CI.** An issue starts it: the pipeline opens the CR,
   `build plan` drafts the design into a pull request, a reviewer approves or asks
   for changes — `build plan --pr N` revises from the review — and `build code`
-  does the same for the code. [adopting.md](docs/adopting.md#wiring-it-into-github-actions)
-  has the recipe for the stages and the review loop;
-  [ContourLab](https://github.com/itercharles/ContourLab)'s `issue-to-cr.yml`
-  adds the issue trigger, opening a CR when an issue gets a milestone.
+  does the same for the code. The recipe, from issue label to merge, is in
+  [adopting.md](docs/adopting.md#wiring-it-into-github-actions).
 
 In CI, `build plan` and `build code` run the `claude` CLI by default
 (`npm install -g @anthropic-ai/claude-code`), or any
@@ -67,24 +65,6 @@ In CI, `build plan` and `build code` run the `claude` CLI by default
 (`anthropic`, `openai`, `deepseek`; `MEDHARNESS_{STAGE}_BASE_URL` for Azure,
 Ollama or vLLM). They run an agent with a shell, so run them on an ephemeral CI
 runner — read [ai-security.md](docs/ai-security.md) first.
-
-## What checks the result
-
-No model decides whether a change is done. Five `verify` commands check the DHF
-and the change against it — they are listed under [Commands](#commands) — and
-each prints what it found:
-
-```console
-$ medharness verify dhf
-FAIL [cycle] SRS-014 → SYS-006 → SRS-014
-FAIL [required] SRS-022: SRS derives_from → SYS (count=0, need ≥1)
-WARN [coverage] RISK→RCM: 3/4 covered
-```
-
-Broken structure — a cycle, a missing required link, a link to nothing — always
-fails. Design not yet written — an item with no child yet — only warns, unless
-you pass `--strict`. The checks and the `item` commands need no model, so a team
-that writes its DHF by hand uses them the same way.
 
 ## What a project looks like
 
@@ -167,8 +147,10 @@ them lists its options. A failing check exits `1`.
 
 ### `verify` — reads the DHF and the working tree, writes nothing
 
-Each answers `{gate, passed, summary, errors, warnings}` — see
-[interface.md](docs/interface.md). `--strict` makes what would only warn fail.
+Ordinary code, never a model, decides whether a change is done; a team writing
+its DHF by hand uses these the same way. Each answers `{gate, passed, summary,
+errors, warnings}` — see [interface.md](docs/interface.md). Broken structure
+always fails; what is only not yet written warns, unless you pass `--strict`.
 
 | Command | Checks |
 |---|---|
