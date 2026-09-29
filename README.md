@@ -50,14 +50,16 @@ my-device/
 │   └── items/                   # one YAML file per item, one directory per type
 │       ├── 01_crs/CRS-001.yaml
 │       ├── 03_srs/SRS-001.yaml
-│       └── …                    # UC SYS SYSARCH MODULE SWDD RISK RCM SOUP CR DEF REL
+│       └── …                    # one directory per configured type
 ├── AGENTS.md                    # product context and DHF steps, for any coding agent
 └── CLAUDE.md                    # @AGENTS.md, so Claude Code reads it too
 ```
 
-The 13 item types, their lifecycles, which links are required, and the
-specification templates are **defaults inside the package**, so a project gets
-their improvements by upgrading `medharness`. To change one, override it:
+Item types are configuration, not code. The package ships 13 default types —
+CRS, UC, SYS, SYSARCH, MODULE, SRS, SWDD, RISK, RCM, SOUP, CR, DEF, REL — with
+their fields, lifecycles, required links and specification templates. A project
+uses those defaults as they are and keeps only what it overrides, so it picks up
+improved defaults by upgrading `medharness`:
 
 | To change | Do this |
 |---|---|
@@ -87,8 +89,8 @@ testing: |
 - **Tests.** Any runner that writes JUnit XML. Tag each test case with the
   requirement it verifies — the `medharness.links` property, or `@links:SRS-012`
   in the test name. In pytest: `@pytest.mark.dhf_links("SRS-012")`.
-- **CI.** Every check prints JSON to stdout and exits `0` pass, `1` fail. The
-  smallest useful pipeline is two steps in a job that checks out the repository:
+- **CI.** The smallest useful pipeline is two steps in a job that checks out
+  the repository:
 
   ```yaml
   - run: pip install medharness==0.47.0
@@ -101,7 +103,6 @@ testing: |
   `DHF/items/`. To check requirements that live in another tool, export them
   into that format — one YAML file per item — and run the same commands. The
   format is specified in [interface.md](docs/interface.md#the-item-format--integrating-another-system).
-- **No AI.** Nothing above needs a model. The AI workflow below is opt-in.
 
 ## The AI change workflow (optional)
 
@@ -135,13 +136,7 @@ runner — read [ai-security.md](docs/ai-security.md) first.
 
 One CLI. `--dhf PATH` goes before the command and defaults to `DHF`. Every
 command writes JSON to stdout and readable lines to stderr; `--help` on any of
-them lists its options. The group says what a command touches:
-
-| Group | Touches |
-|---|---|
-| `item` | one item at a time |
-| `verify` | reads the DHF and the working tree, and nothing is written |
-| `build` | writes items, code or artifacts |
+them lists its options. A failing check exits `1`.
 
 ### `item` — the records
 
@@ -153,7 +148,7 @@ them lists its options. The group says what a command touches:
 | `medharness item update SRS-012 --data '{...}'` | Merges fields into an item; refuses what the schema would reject | the item |
 | `medharness item transition CR-034 completed` | Moves an item through its lifecycle; without a state, lists where it can go | the item; without a state, `current_status` and `transitions` |
 
-### `verify` — reads the DHF and the working tree
+### `verify` — reads the DHF and the working tree, writes nothing
 
 Each answers `{gate, passed, summary, errors, warnings}` — see
 [interface.md](docs/interface.md). `--strict` makes what would only warn fail.
@@ -173,7 +168,7 @@ Each answers `{gate, passed, summary, errors, warnings}` — see
 | `medharness build plan --cr CR-034` | AI drafts the CR's design items and impact analysis in the working tree, committing nothing; `--pr N` (CI) revises from that PR's reviews and pushes to it; `--prompt` prints the steps for an agent already running | `outcome`, `artifacts.items_changed`, `design_review`, `errors` |
 | `medharness build code --cr CR-034` | AI writes the code and tests for the approved design; `--pr` and `--prompt` as for `plan` | `outcome`, `artifacts.files_changed`, `code_review`, `errors` |
 | `medharness build soup` | Reconciles SOUP items with your dependency manifests, in the working tree | `to_create`, `to_update`, `orphans` |
-| `medharness build release --version 1.0.0 --out-dir release --write` | Checks the DHF, CRs and open defects; writes the specifications, traceability, baseline, BOM, SBOM and evidence; and — only if every check passed — records the REL item. Without `--write` it is a preview that changes nothing | `outcome`, `cr_ids`, `rel_uid`, `artifacts`, `errors`, `warnings` |
+| `medharness build release --version 1.0.0 --out-dir release --write` | Checks the DHF, CRs and open defects; writes the specifications, traceability, baseline, BOM, SBOM and evidence; and — only if every check passed — records the REL item. Without `--write` the DHF is not changed | `outcome`, `cr_ids`, `rel_uid`, `artifacts`, `errors`, `warnings` |
 
 Approval has no command. Turn on GitHub branch protection for `main` with
 *Require approvals* and *Dismiss stale pull request approvals when new commits
