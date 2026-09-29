@@ -262,6 +262,8 @@ sketch, with branches named `design/CR-NNN` and `develop/CR-NNN`:
 
 ```yaml
 on:
+  issues:
+    types: [labeled]
   workflow_dispatch:
     inputs:
       cr:    { description: "CR ID, e.g. CR-012", required: true }
@@ -270,6 +272,27 @@ on:
     types: [submitted]
 
 jobs:
+  intake:           # labelling an issue `cr` opens a CR from it and drafts the design
+    if: github.event_name == 'issues' && github.event.label.name == 'cr'
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TITLE: ${{ github.event.issue.title }}
+      BODY: ${{ github.event.issue.body }}
+      ISSUE: ${{ github.event.issue.number }}
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install medharness
+      - run: |          # the issue text reaches the shell through env only, never ${{ }}
+          DATA=$(jq -n --arg t "$TITLE" --arg d "$BODY" '{title: $t, description: $d}')
+          CR=$(medharness item create --type CR --data "$DATA" | jq -r .id)
+          medharness build plan --cr "$CR"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "design/$CR" && git add -A && git commit -m "design/$CR"
+          git push origin "design/$CR"
+          gh pr create --head "design/$CR" --title "$CR: $TITLE" --body "Closes #$ISSUE"
+
   start:            # a person starts a stage by hand; there is no PR yet
     if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
@@ -309,6 +332,12 @@ jobs:
             develop) medharness build code --cr "${BRANCH#*/}" --pr "$PR" ;;
           esac
 ```
+
+**An issue is the agent's instructions.** `intake` turns the issue's title and
+body into the CR that `build plan` works from, so label only issues whose text
+you would hand to an agent with a shell — adding a label already needs triage
+access. PRs opened with `github.token` start no workflows, so give `gh pr create`
+another token if the PR's own checks should run on it.
 
 **`--pr` is CI; without it, local.** Without `--pr`, `build plan` and `build
 code` change files in the working tree and commit nothing — at your desk, or in
