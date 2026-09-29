@@ -1,34 +1,78 @@
 # MedHarness
 
-**Design-control checks for software teams — traceability, verification, SOUP
-and releases, as CI gates.**
+**AI-assisted development with design control. For every change, an AI drafts
+the design history — requirements, design, risk impact — and the code; ordinary
+code checks that the two agree before anything merges.**
 
 [![PyPI](https://img.shields.io/pypi/v/medharness)](https://pypi.org/project/medharness/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://python.org)
 
-MedHarness keeps a Design History File (DHF) as plain YAML in your repository
-and checks it with ordinary code: does every requirement trace to its parent, is
-each one verified the way it says, does the SOUP register match what ships. Each
-check is a command that answers in JSON with an exit code, so it drops into any
-CI. An optional AI workflow drafts the design and the code for a change request;
-the checks never ask a model.
+Regulated software needs a Design History File (DHF): every change traced from
+requirement to design to test, with its risks assessed. MedHarness keeps the DHF
+as plain YAML in your repository and makes it part of AI development: the agent
+that writes the code also writes the DHF change, and deterministic checks, not a
+model, decide whether the result traces and is verified.
 
 ## Quick start
 
 ```bash
 pip install medharness
 mkdir my-device && cd my-device
-medharness init            # writes DHF/ with sample items, and AGENTS.md
-medharness verify dhf      # does the design hold together?
+medharness init            # writes DHF/ with sample items, and AGENTS.md for your agent
 ```
 
-Replace the sample items with your own, then add the checks to CI.
+Then ask your coding agent: *"open a CR for PDF export and implement it"*.
+`AGENTS.md` tells it how: open a change request, draft the DHF change, write the
+code, run the checks.
 
-## What it checks
+## AI development
 
-Five `verify` commands check the DHF and the change against it; they are listed
-under [Commands](#commands). Each prints what it found:
+Every change is a change request (CR) that goes through two stages, each ending
+in a human review — of the pull request in CI, of the diff at your desk:
+
+```mermaid
+flowchart LR
+    CR["CR opened"] --> PLAN["build plan<br/>AI analyses impact,<br/>drafts the DHF change"]
+    PLAN --> REV{"Human review"}
+    REV -.->|changes requested| PLAN
+    REV -->|approved| CODE["build code<br/>AI writes code and tests"]
+    CODE --> GATES["verify *<br/>ordinary code decides"]
+    GATES -.->|fails| CODE
+    GATES ==>|passes| MERGE["merge"]
+    MERGE -.->|"tag v*"| REL["build release"]
+```
+
+`build plan` triages the CR, assesses its impact on risk, and writes the item
+cascade it needs — requirements, design, test points — and an implementation
+plan. `build code` implements that plan with tests linked to the requirements.
+The same stages run two ways:
+
+- **At your desk, with the agent you already use.** `build plan --cr CR-012
+  --prompt` prints the stage's steps and the CR's DHF context, and starts
+  nothing; your agent — Claude Code, Cursor, Codex, Copilot and the rest — does
+  the work in your working tree, and you commit. The `AGENTS.md` that `init`
+  writes tells any agent when to run it.
+- **Fully automated in CI.** An issue starts it: the pipeline opens the CR,
+  `build plan` drafts the design into a pull request, a reviewer approves or asks
+  for changes — `build plan --pr N` revises from the review — and `build code`
+  does the same for the code. [adopting.md](docs/adopting.md#wiring-it-into-github-actions)
+  has the recipe for the stages and the review loop;
+  [ContourLab](https://github.com/itercharles/ContourLab)'s `issue-to-cr.yml`
+  adds the issue trigger, opening a CR when an issue gets a milestone.
+
+In CI, `build plan` and `build code` run the `claude` CLI by default
+(`npm install -g @anthropic-ai/claude-code`), or any
+`MEDHARNESS_{DESIGN,DESIGN_REVIEW,DEVELOP,CODE_REVIEW}_MODEL=provider:model`
+(`anthropic`, `openai`, `deepseek`; `MEDHARNESS_{STAGE}_BASE_URL` for Azure,
+Ollama or vLLM). They run an agent with a shell, so run them on an ephemeral CI
+runner — read [ai-security.md](docs/ai-security.md) first.
+
+## What checks the result
+
+No model decides whether a change is done. Five `verify` commands check the DHF
+and the change against it — they are listed under [Commands](#commands) — and
+each prints what it found:
 
 ```console
 $ medharness verify dhf
@@ -39,7 +83,8 @@ WARN [coverage] RISK→RCM: 3/4 covered
 
 Broken structure — a cycle, a missing required link, a link to nothing — always
 fails. Design not yet written — an item with no child yet — only warns, unless
-you pass `--strict`.
+you pass `--strict`. The checks and the `item` commands need no model, so a team
+that writes its DHF by hand uses them the same way.
 
 ## What a project looks like
 
@@ -104,34 +149,6 @@ testing: |
   into that format — one YAML file per item — and run the same commands. The
   format is specified in [interface.md](docs/interface.md#the-item-format--integrating-another-system).
 
-## The AI change workflow (optional)
-
-The same steps run two ways. **In CI**, `build plan` and `build code` start a
-model and do the work unattended. **At your desk**, the coding agent you
-already use does it: `build plan --cr CR-012 --prompt` prints the steps and the
-CR's DHF context instead of starting anything, and the `AGENTS.md` that `init`
-writes tells any agent — Claude Code, Cursor, Codex, Copilot and the rest —
-when to run it. Either way, ordinary code checks the result.
-
-```mermaid
-flowchart LR
-    CR["CR opened"] --> PLAN["build plan<br/>AI drafts the design"]
-    PLAN --> REV{"Human review"}
-    REV -.->|rejected| PLAN
-    REV -->|approved| CODE["build code<br/>AI writes code and tests"]
-    CODE --> GATES["verify *<br/>ordinary code decides"]
-    GATES -.->|fails| CODE
-    GATES ==>|passes| MERGE["merge"]
-    MERGE -.->|"tag v*"| REL["build release"]
-```
-
-Unattended, `build plan` and `build code` run the `claude` CLI by default
-(`npm install -g @anthropic-ai/claude-code`), or any
-`MEDHARNESS_{DESIGN,DESIGN_REVIEW,DEVELOP,CODE_REVIEW}_MODEL=provider:model`
-(`anthropic`, `openai`, `deepseek`; `MEDHARNESS_{STAGE}_BASE_URL` for Azure,
-Ollama or vLLM). They run an agent with a shell, so run them on an ephemeral CI
-runner — read [ai-security.md](docs/ai-security.md) first.
-
 ## Commands
 
 One CLI. `--dhf PATH` goes before the command and defaults to `DHF`. Every
@@ -185,7 +202,7 @@ approved.
 
 [ContourLab](https://github.com/itercharles/ContourLab) is an example project
 used to exercise MedHarness end to end: its DHF, its CI, and changes made
-through the AI workflow.
+through AI development.
 
 ## Documentation
 
