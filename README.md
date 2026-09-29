@@ -27,13 +27,8 @@ Replace the sample items with your own, then add the checks to CI.
 
 ## What it checks
 
-| Command | The question it answers |
-|---|---|
-| `verify dhf` | Does the V-model hold together — schema, required links, dangling links, cycles, coverage? |
-| `verify tests` | Is each requirement verified by the method it declares — a Test requirement by a passing test? |
-| `verify soup` | Is the SOUP register what actually ships, and is any of it known-vulnerable? |
-| `verify completion` | Is a change request's record complete, and is every item it changed verified? |
-| `verify changes` | Does the branch, uncommitted work included, change exactly the items its change request lists? |
+Five `verify` commands check the DHF and the change against it; they are listed
+under [Commands](#commands). Each prints what it found:
 
 ```console
 $ medharness verify dhf
