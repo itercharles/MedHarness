@@ -22,7 +22,7 @@ jobs:
 
   tests-unit:
     name: Test | Unit
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v6
@@ -43,7 +43,7 @@ jobs:
 
   tests-integration:
     name: Test | Integration
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v6
@@ -62,7 +62,7 @@ jobs:
 
   tests-contract:
     name: Test | Contract
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v6
@@ -81,13 +81,13 @@ jobs:
 
   tests-dhf-util:
     name: Test | dhfkit Engine
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v6
         with:
           python-version: '3.11'
-      - uses: astral-sh/setup-uv@v6
+      - uses: astral-sh/setup-uv@v7
       # This suite installs from uv.lock rather than resolving fresh, so the
       # locked versions are the ones a test run actually exercises. Every other
       # job installs with pip, which is how users install.
@@ -104,7 +104,7 @@ jobs:
 
   check-scaffold:
     name: Check | Scaffold
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v6
@@ -138,7 +138,7 @@ jobs:
 
   check-starter:
     name: Check | Starter DHF
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v6
@@ -169,7 +169,7 @@ jobs:
 
   check-cli-entrypoints:
     name: Check | CLI Entrypoints
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v6
@@ -190,7 +190,7 @@ jobs:
 
   audit-oss-delivery:
     name: Audit | OSS Build Hygiene
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v6
@@ -202,6 +202,6 @@ jobs:
           pip install build
       - name: Run OSS delivery audit
         run: bash scripts/audit_oss_delivery.sh
-      - uses: astral-sh/setup-uv@v6
+      - uses: astral-sh/setup-uv@v7
       - name: Assert uv.lock matches pyproject.toml
         run: uv lock --check
