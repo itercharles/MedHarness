@@ -198,15 +198,17 @@ def test_the_parse_check_catches_both_faults() -> None:
 
 
 def test_readme_pins_the_current_version() -> None:
-    """The README's copy-paste CI snippet names a real, current version.
+    """A CI snippet in the README that pins a version pins the current one.
 
     docs/adopting.md uses a `{{medharness_version}}` placeholder, which cannot
-    go stale. The README shows a concrete version so the snippet runs as pasted,
+    go stale. A README snippet shows a concrete version so it runs as pasted,
     and that one does — silently, on every release, telling new users to install
-    whatever was current when the line was last touched.
+    whatever was current when the line was last touched. The README may have no
+    such snippet; it may not have a stale one.
     """
     pinned = re.search(r"pip install medharness==([\d.]+)", (ROOT / "README.md").read_text())
-    assert pinned, "the README no longer shows a pinned install"
+    if not pinned:
+        return
     current = re.search(r'^version = "([^"]+)"', (ROOT / "pyproject.toml").read_text(), re.M)
     assert pinned.group(1) == current.group(1), (
         f"README pins medharness=={pinned.group(1)} but pyproject.toml is at "
