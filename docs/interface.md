@@ -179,8 +179,8 @@ verification_method: [Test]
 | Links | Fields of format `relationship` or `item_multiselect`: a list of IDs pointing up the V-model. Which are required is `required_traceability` in `global.yaml` |
 | Types | The 13 defaults, plus any `DHF/config/doc_types/<type>.yaml` of your own, which replaces the default of that code — see [adopting.md](adopting.md#changing-the-defaults) |
 
-Check an export in two steps: `medharness verify dhf` for the files, then
-`medharness verify dhf` for the design they describe.
+Check an export with `medharness verify dhf`: it validates each file against its
+type, then the links and coverage of the design they describe.
 
 The format is covered by `CONTRACT_VERSION`: renaming or removing a field the
 defaults declare is a breaking change.
