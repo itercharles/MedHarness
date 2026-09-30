@@ -195,9 +195,8 @@ Write this to the CR item:
 After writing all DHF items and recording risk impact, validate and self-correct:
 
     medharness --dhf DHF verify dhf
-    medharness --dhf DHF verify dhf
 
-If either reports errors introduced by your changes, fix them via `medharness item update`
+If it reports errors introduced by your changes, fix them via `medharness item update`
 and re-validate. Repeat until both pass cleanly.
 
 ## Step 2.5: Risk Impact Recording
