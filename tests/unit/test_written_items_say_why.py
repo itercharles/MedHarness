@@ -35,9 +35,9 @@ def project(tmp_path: Path) -> Path:
 
 
 def _soup_items(dhf: Path) -> list[dict]:
-    from dhfkit.local_adapter import LocalDHFAdapter
+    from dhfkit.item_store import ItemStore
 
-    return [i for i in LocalDHFAdapter(dhf).list_items() if i.get("type") == "SOUP"]
+    return [i for i in ItemStore(dhf).list_items() if i.get("type") == "SOUP"]
 
 
 class TestAnAutoCreatedItemRecordsItsOrigin:

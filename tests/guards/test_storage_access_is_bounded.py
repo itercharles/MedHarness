@@ -70,7 +70,7 @@ class TestTheStoreCanAnswerWhatWasAskedOfTheFilesystem:
     """The rule is only fair if the store offers the alternative."""
 
     def _adapter(self, tmp_path: Path):
-        from dhfkit.local_adapter import LocalDHFAdapter
+        from dhfkit.item_store import ItemStore
         from medharness.workflows.init import _replace_placeholders, _scaffold_dhf
 
         _scaffold_dhf(tmp_path)
@@ -80,7 +80,7 @@ class TestTheStoreCanAnswerWhatWasAskedOfTheFilesystem:
         plans = tmp_path / "DHF" / "documents" / "plans"
         plans.mkdir(parents=True, exist_ok=True)
         (plans / "development_plan.md").write_text("# Development Plan\n")
-        return LocalDHFAdapter(tmp_path / "DHF")
+        return ItemStore(tmp_path / "DHF")
 
     def test_documents_can_be_listed_by_category(self, tmp_path: Path) -> None:
         plans = self._adapter(tmp_path).list_documents("plans")

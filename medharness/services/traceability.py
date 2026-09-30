@@ -10,7 +10,7 @@ data — not a storage path, not an adapter.
 
 Referential integrity stays with the store. Two files claiming one ID, or a link
 naming an item that does not exist, are questions about whether the data is
-well-formed, and each backend answers them its own way; a Jira link cannot point
+well-formed, and each adapter answers them its own way; a Jira link cannot point
 at a missing issue in the first place. Everything below needs the set.
 """
 

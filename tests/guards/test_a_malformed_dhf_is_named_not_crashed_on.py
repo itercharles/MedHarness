@@ -149,9 +149,9 @@ def test_the_schema_validator_reports_it_as_a_finding(broken) -> None:
     The loader's error is only half of what it runs: the duplicate-ID scan
     re-reads every file afterwards, and it assumed each one was a mapping.
     """
-    from dhfkit.local_adapter import LocalDHFAdapter
+    from dhfkit.item_store import ItemStore
 
     dhf, target = broken
-    result = LocalDHFAdapter(dhf).validate_schema()
+    result = ItemStore(dhf).validate_schema()
     assert result["valid"] is False
     assert any(target.name in e for e in result["errors"]), result["errors"]

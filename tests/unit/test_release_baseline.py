@@ -19,7 +19,7 @@ from medharness.services.release_baseline import (
 # ---------------------------------------------------------------------------
 
 def _cr_item(uid: str, state: str, title: str = "") -> dict:
-    # Items are keyed by "id" — both LocalDHFAdapter and the stub produce that.
+    # Items are keyed by "id" — both ItemStore and the stub produce that.
     # These helpers used "uid", a shape neither one emits, and the production
     # code read the same wrong key, so the two agreed with each other while
     # both disagreed with reality: release-baseline crashed on any real DHF

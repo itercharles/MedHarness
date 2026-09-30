@@ -70,14 +70,14 @@ class TestTheResultPassesTheGateThatCaughtIt:
     """The check that matters: does the recorded impact survive `verify dhf`."""
 
     def test_no_cycle_is_produced(self, dhf: Path) -> None:
-        from dhfkit.local_adapter import LocalDHFAdapter
+        from dhfkit.item_store import ItemStore
         from medharness.services.traceability import find_link_cycles
 
         _record_design_impact_in_cr(
             "CR-001", dhf,
             {"created": [], "updated": ["CR-001", "SYS-001"], "deleted": []},
         )
-        items = LocalDHFAdapter(dhf).list_items()
+        items = ItemStore(dhf).list_items()
         assert find_link_cycles(items) == []
 
     def test_the_unfixed_shape_would_have_cycled(self, dhf: Path) -> None:

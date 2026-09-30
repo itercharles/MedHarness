@@ -19,7 +19,7 @@ from dhfkit.models.config import ProjectConfig, DocTypeConfig
 from dhfkit.exceptions import ValidationError
 from dhfkit.junit_parser import parse_junit_xml, ExecutionResult
 from dhfkit.repository.loader import ItemLoader
-from dhfkit.local_adapter import LocalDHFAdapter
+from dhfkit.item_store import ItemStore
 
 __all__ = [
     "ItemType",
@@ -30,5 +30,5 @@ __all__ = [
     "parse_junit_xml",
     "ExecutionResult",
     "ItemLoader",
-    "LocalDHFAdapter",
+    "ItemStore",
 ]

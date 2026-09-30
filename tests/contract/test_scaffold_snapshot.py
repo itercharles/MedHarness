@@ -82,9 +82,9 @@ class TestScaffoldStructure:
         assert {f.split(".")[0].upper() for f in self.REQUIRED_DOC_TYPES} <= codes
 
     def test_every_default_template_is_found(self, scaffolded):
-        from dhfkit.local_adapter import LocalDHFAdapter
+        from dhfkit.item_store import ItemStore
 
-        dirs = LocalDHFAdapter(scaffolded / "DHF")._template_dirs()
+        dirs = ItemStore(scaffolded / "DHF")._template_dirs()
         for tmpl in self.REQUIRED_TEMPLATES:
             assert any((d / tmpl).is_file() for d in dirs), f"no {tmpl} anywhere"
 

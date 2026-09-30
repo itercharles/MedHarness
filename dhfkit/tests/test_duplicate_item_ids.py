@@ -21,7 +21,7 @@ from pathlib import Path
 import pytest
 
 import dhfkit.api as api
-from dhfkit.local_adapter import LocalDHFAdapter
+from dhfkit.item_store import ItemStore
 from medharness.workflows.init import _replace_placeholders, _scaffold_dhf
 
 
@@ -42,7 +42,7 @@ def _duplicate(dhf: Path, item_id: str, new_name: str) -> Path:
 class TestDuplicatesAreReported:
     def test_validate_schema_names_both_files(self, dhf: Path) -> None:
         _duplicate(dhf, "SRS-001", "SRS-001-copy.yaml")
-        result = LocalDHFAdapter(dhf).validate_schema()
+        result = ItemStore(dhf).validate_schema()
         assert not result["valid"]
         assert "Duplicate item ID 'SRS-001'" in " ".join(result["errors"])
         assert "SRS-001.yaml" in " ".join(result["errors"])
@@ -67,7 +67,7 @@ class TestDuplicatesAreReported:
             copy.read_text(encoding="utf-8").replace("title:", "title: Divergent —", 1),
             encoding="utf-8",
         )
-        result = LocalDHFAdapter(dhf).validate_schema()
+        result = ItemStore(dhf).validate_schema()
         assert not result["valid"]
         assert "Duplicate item ID 'SRS-001'" in " ".join(result["errors"])
 
@@ -78,30 +78,30 @@ class TestDuplicatesAreReported:
         whose name matches nothing is fine as long as its id is unique.
         """
         _duplicate(dhf, "SRS-001", "notes-about-srs.yaml")
-        result = LocalDHFAdapter(dhf).validate_schema()
+        result = ItemStore(dhf).validate_schema()
         assert not result["valid"]
         assert "notes-about-srs.yaml" in " ".join(result["errors"])
 
 
 class TestAHealthyDhfIsUnaffected:
     def test_the_scaffold_passes(self, dhf: Path) -> None:
-        result = LocalDHFAdapter(dhf).validate_schema()
+        result = ItemStore(dhf).validate_schema()
         assert result["valid"], result["errors"]
 
     def test_the_item_count_is_still_reported(self, dhf: Path) -> None:
-        result = LocalDHFAdapter(dhf).validate_schema()
+        result = ItemStore(dhf).validate_schema()
         assert result["item_count"] > 0
 
     def test_a_renamed_file_with_a_unique_id_is_fine(self, dhf: Path) -> None:
         source = next((dhf / "items").rglob("SRS-001.yaml"))
         renamed = source.parent / "some-other-name.yaml"
         source.rename(renamed)
-        result = LocalDHFAdapter(dhf).validate_schema()
+        result = ItemStore(dhf).validate_schema()
         assert result["valid"], result["errors"]
         assert api.get_item(dhf, "SRS-001") is not None
 
     def test_an_unparseable_file_is_left_to_the_loader(self, dhf: Path) -> None:
         """The duplicate scan must not become a second YAML error reporter."""
         (dhf / "items" / "03_srs" / "broken.yaml").write_text("{[not yaml", encoding="utf-8")
-        result = LocalDHFAdapter(dhf).validate_schema()
+        result = ItemStore(dhf).validate_schema()
         assert "Duplicate" not in " ".join(result["errors"])

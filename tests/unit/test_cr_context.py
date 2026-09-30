@@ -14,7 +14,7 @@ from pathlib import Path
 from click.testing import CliRunner
 
 from medharness.cli import main
-from dhfkit.local_adapter import LocalDHFAdapter
+from dhfkit.item_store import ItemStore
 from medharness.services.context import cr_context
 from dhfkit.tests.fixtures import bare_dhf
 
@@ -48,7 +48,7 @@ def _write_cr(dhf: Path, cr_id: str, **fields) -> None:
 
 
 def _context(dhf: Path, cr_id: str) -> dict:
-    return cr_context(LocalDHFAdapter(dhf), cr_id)
+    return cr_context(ItemStore(dhf), cr_id)
 
 
 def _srs(dhf: Path) -> str:

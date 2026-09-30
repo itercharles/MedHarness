@@ -45,43 +45,66 @@ its own:
 
 The analysis in `medharness.services.traceability`, and the release's
 traceability matrix in `medharness.services.traceability_report`, take a list
-of items and a config, never a path. The commands reach items through the item
-store: `medharness` calls `dhfkit.store.open_store` and sees only the `DHFStore`
-interface, never the class behind it, which keeps the items wherever the
-project's backend does — see [Item backends](#item-backends).
-`tests/guards/test_the_business_layer_sees_only_the_store_interface.py` holds
-that line.
+of items and a config, never a path. The commands reach items through
+`dhfkit.store.open_store` and the `DHFStore` interface it returns; which adapter
+holds them is invisible to a check — see [Item adapters](#item-adapters).
 
 The one place `medharness` writes DHF files directly is `init`, which creates
 the skeleton. Everything else goes through the store — `tests/guards/test_storage_access_is_bounded.py` holds
 that line.
 
-## Item backends
+## Item adapters
 
-The item store owns everything that is the same wherever items live: the
-doc-type schema, link checks, ID allocation, the lifecycle, and the shape
-callers get back. A **backend** owns only persistence, five methods
-(`dhfkit.backend.ItemBackend`): `load_all`, `load_by_uid`, `save`, `delete`,
-`used_ids`, plus `integrity_errors` and a `tracks_files` flag. The project's
-`config/` and `documents/` stay in the repository whichever backend is chosen,
-so the item types, links and rules are configured the same way for every store.
+Three layers separate the commands from wherever a DHF's items live:
 
-`DHF/config/global.yaml` chooses one:
+```
+Commands (medharness)   the checks and build steps — the business layer
+   │  sees only the DHFStore interface, through open_store()
+   ▼
+ItemStore         what is the same for every system: reads DHF/config, checks an
+   │              item's fields against its doc type, checks links, allocates IDs,
+   │              runs the lifecycle, renders documents
+   │  reaches items only through the DHFAdapter interface
+   ▼
+an adapter        one per system, one file each: how items are read and written
+                  LocalDHFAdapter (dhfkit/local_adapter.py)  YAML files in the repository
+                  JiraDHFAdapter  (a jira_adapter.py, when written)  Jira issues
+```
+
+- **`DHFStore`** (`dhfkit/store.py`) is what `medharness` depends on, with the
+  `open_store(dhf_root)` factory. `medharness` never imports the class behind it,
+  the adapters or the YAML loader, and
+  `tests/guards/test_the_business_layer_sees_only_the_store_interface.py` fails the
+  build if it does.
+- **`ItemStore`** (`dhfkit/item_store.py`) implements `DHFStore`. Because the schema,
+  links, IDs and lifecycle live here, they behave the same on every adapter, and
+  an adapter does not reimplement them.
+- **`DHFAdapter`** (`dhfkit/adapter.py`) is what a system implements: `load_all`,
+  `load_by_uid`, `save`, `delete` and `used_ids`, plus `integrity_errors` and a
+  `tracks_files` flag. `LocalDHFAdapter` is the implementation for a DHF kept as
+  files; another system adds a file beside it.
+
+The project's `config/` (item types, links, rules, lifecycle) and `documents/`
+stay in the repository whichever adapter is chosen, so they are configured the
+same way for every system.
+
+`DHF/config/global.yaml` chooses the adapter:
 
 ```yaml
 store:
-  type: yaml        # the default; any other type is an installed backend
+  type: yaml        # the default; any other type is an installed adapter
 ```
 
-A backend is a package that registers an entry point in the `dhfkit.backends`
-group, named for its `type`, and is called with `settings` (the rest of `store:`),
-`config` and `dhf_root`. `tests/integration/test_a_store_that_is_not_files.py`
-is the reference: an in-memory backend that passes the same commands.
+An adapter that is not in this repository is a package that registers an entry
+point in the `dhfkit.adapters` group, named for its `type`; it is called with
+`settings` (the rest of `store:`), `config` and `dhf_root`.
+`tests/integration/test_a_store_that_is_not_files.py` is the reference: an
+in-memory adapter that runs the same commands.
 
-What depends on items being files in Git, and so refuses another backend with a
+What depends on items being files in Git, and so refuses another adapter with a
 message naming the store: `verify changes`, `build plan` and `build code`, which
 read the branch's diff. Everything else — `item`, `verify dhf|tests|soup|completion`,
-`build soup`, `build release` — runs on any backend.
+`build soup`, `build release` — runs on any adapter.
 
 ## Defaults and overrides
 

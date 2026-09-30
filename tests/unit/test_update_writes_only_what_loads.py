@@ -11,7 +11,7 @@ from pathlib import Path
 
 from click.testing import CliRunner
 
-from dhfkit.local_adapter import LocalDHFAdapter
+from dhfkit.item_store import ItemStore
 from medharness.cli import main
 from dhfkit.tests.fixtures import bare_dhf
 
@@ -34,7 +34,7 @@ def test_a_value_of_the_wrong_shape_is_refused_and_nothing_is_written(tmp_path: 
     assert "CRS-001 not updated" in r.output and "must be a list" in r.output
     assert "could not be read" not in r.output, "the DHF is fine; the write was refused"
     assert item.read_bytes() == before
-    assert LocalDHFAdapter(dhf).validate_schema()["valid"]
+    assert ItemStore(dhf).validate_schema()["valid"]
 
 
 def test_the_right_shape_is_written(tmp_path: Path) -> None:
@@ -42,4 +42,4 @@ def test_the_right_shape_is_written(tmp_path: Path) -> None:
     r = CliRunner().invoke(main, ["--dhf", str(dhf), "item", "update", "CRS-001",
                                   "--data", '{"verification_method": ["Test"]}'])
     assert r.exit_code == 0, r.output
-    assert LocalDHFAdapter(dhf).validate_schema()["valid"]
+    assert ItemStore(dhf).validate_schema()["valid"]

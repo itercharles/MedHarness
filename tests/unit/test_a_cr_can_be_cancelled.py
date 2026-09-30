@@ -12,28 +12,28 @@ from pathlib import Path
 
 import pytest
 
-from dhfkit.local_adapter import LocalDHFAdapter
+from dhfkit.item_store import ItemStore
 from medharness.workflows.cr_state import assert_cr_active
 from medharness.workflows.init import _replace_placeholders, _scaffold_dhf
 
 
 @pytest.fixture
-def adapter(tmp_path: Path) -> LocalDHFAdapter:
+def adapter(tmp_path: Path) -> ItemStore:
     _scaffold_dhf(tmp_path)
     _replace_placeholders(tmp_path, "Cancel")
-    return LocalDHFAdapter(tmp_path / "DHF")
+    return ItemStore(tmp_path / "DHF")
 
 
 @pytest.mark.parametrize("path", [[], ["design"], ["design", "develop"]],
                          ids=["from new", "from design", "from develop"])
-def test_an_active_cr_can_be_cancelled(adapter: LocalDHFAdapter, path: list[str]) -> None:
+def test_an_active_cr_can_be_cancelled(adapter: ItemStore, path: list[str]) -> None:
     for state in path:
         adapter.execute_transition("CR-001", state)
     adapter.execute_transition("CR-001", "cancelled")
     assert adapter.get_item("CR-001")["status"] == "cancelled"
 
 
-def test_the_ai_stages_refuse_a_cancelled_cr(adapter: LocalDHFAdapter) -> None:
+def test_the_ai_stages_refuse_a_cancelled_cr(adapter: ItemStore) -> None:
     adapter.execute_transition("CR-001", "cancelled")
     with pytest.raises(ValueError, match="already 'cancelled'"):
         assert_cr_active(adapter, "CR-001")

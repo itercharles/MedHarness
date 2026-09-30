@@ -121,7 +121,7 @@ class ProjectConfig(BaseModel):
     required_traceability: Optional[List[RequiredTraceabilityRule]] = Field(None, description="Required traceability rules")
     test_integration: dict = Field(default_factory=dict, description="Test integration configuration")
     document_specifications: dict = Field(default_factory=dict, description="Document specification configurations")
-    store: dict = Field(default_factory=lambda: {"type": "yaml"}, description="Where items are kept: `type`, and that backend's settings")
+    store: dict = Field(default_factory=lambda: {"type": "yaml"}, description="Where items are kept: `type`, and that adapter's settings")
 
     @classmethod
     def load(cls, config_dir: Path) -> "ProjectConfig":
