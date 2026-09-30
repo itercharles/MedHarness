@@ -11,6 +11,8 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.48.0] — 2026-09-30
+
 ### Added
 
 - **Item adapters.** Where items are kept is now a setting: `store:` in
