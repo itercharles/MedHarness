@@ -8,11 +8,50 @@ code checks that the two agree before anything merges.**
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://python.org)
 
-Regulated software needs a Design History File (DHF): every change traced from
-requirement to design to test, with its risks assessed. MedHarness keeps the DHF
-as plain YAML in your repository and makes it part of AI development: the agent
-that writes the code also writes the DHF change, and deterministic checks, not a
-model, decide whether the result traces and is verified.
+## AI development
+
+Your AI coding agent writes the code. MedHarness makes it write the design
+record too — the Design History File (DHF): requirements, risks and tests, traced
+from each to the next — and checks that it did, so a change arrives ready to
+review, not just written.
+
+```mermaid
+flowchart LR
+    A["<b>1 · Design</b><br/>AI drafts the DHF"] -->|"<b>you review</b>"| B["<b>2 · Code</b><br/>AI codes and tests"]
+    B -->|"<b>you review</b>"| C(["Merge"])
+```
+
+For each change request, the agent **designs** first — it assesses the change's
+risk, then writes the requirements, design and test points it needs as items in
+your repository's DHF — and **codes** second, tagging each
+test with the requirement it verifies. You review the design, then the code.
+Between them, ordinary code — never a model — checks that the design traces,
+every requirement is verified, and the branch changed what the request said.
+
+What MedHarness gives the agent:
+
+- **The process, in its own instructions.** `init` writes an `AGENTS.md` (and a
+  `CLAUDE.md` that imports it) telling the agent when to open a change request
+  and which commands to run; `build plan --prompt` prints the exact steps and
+  this change's DHF context for whichever agent you use.
+- **Commands instead of files.** The agent reads and writes the DHF with
+  `medharness item`, which checks the schema first: a bad edit is refused, not
+  saved.
+- **Feedback it can act on.** The checks name the item and field that are
+  wrong, so the agent fixes them and runs the check again.
+
+Run it two ways:
+
+- **At your desk**, with the agent you already use: it does the work in your
+  working tree and you commit.
+- **Unattended**, from an issue: CI opens the change request and a pull request
+  with the design; ask for changes and it revises; the code stage runs the same
+  way. The recipe is in [adopting.md](docs/adopting.md#wiring-it-into-github-actions).
+
+Unattended, `build plan` and `build code` run the `claude` CLI, or any
+`provider:model` you set (`anthropic`, `openai`, `deepseek`) — they run an agent
+with a shell, so use an ephemeral runner and read
+[ai-security.md](docs/ai-security.md) first.
 
 ## Quick start
 
@@ -23,48 +62,8 @@ medharness init            # writes DHF/ with sample items, and AGENTS.md for yo
 ```
 
 Then ask your coding agent: *"open a CR for PDF export and implement it"*.
-`AGENTS.md` tells it how: open a change request, draft the DHF change, write the
-code, run the checks.
-
-## AI development
-
-Every change is a change request (CR) that goes through two stages, each ending
-in a human review — of the pull request in CI, of the diff at your desk:
-
-```mermaid
-flowchart LR
-    CR["CR opened"] --> PLAN["build plan<br/>AI analyses impact,<br/>drafts the DHF change"]
-    PLAN --> REV{"Human review"}
-    REV -.->|changes requested| PLAN
-    REV -->|approved| CODE["build code<br/>AI writes code and tests"]
-    CODE --> GATES["verify *<br/>ordinary code decides"]
-    GATES -.->|fails| CODE
-    GATES ==>|passes| MERGE["merge"]
-    MERGE -.->|"tag v*"| REL["build release"]
-```
-
-`build plan` triages the CR, assesses its impact on risk, and writes the item
-cascade it needs — requirements, design, test points — and an implementation
-plan. `build code` implements that plan with tests linked to the requirements.
-The same stages run two ways:
-
-- **At your desk, with the agent you already use.** `build plan --cr CR-012
-  --prompt` prints the stage's steps and the CR's DHF context, and starts
-  nothing; your agent — Claude Code, Cursor, Codex, Copilot and the rest — does
-  the work in your working tree, and you commit. The `AGENTS.md` that `init`
-  writes tells any agent when to run it.
-- **Fully automated in CI.** An issue starts it: the pipeline opens the CR,
-  `build plan` drafts the design into a pull request, a reviewer approves or asks
-  for changes — `build plan --pr N` revises from the review — and `build code`
-  does the same for the code. The recipe, from issue label to merge, is in
-  [adopting.md](docs/adopting.md#wiring-it-into-github-actions).
-
-In CI, `build plan` and `build code` run the `claude` CLI by default
-(`npm install -g @anthropic-ai/claude-code`), or any
-`MEDHARNESS_{DESIGN,DESIGN_REVIEW,DEVELOP,CODE_REVIEW}_MODEL=provider:model`
-(`anthropic`, `openai`, `deepseek`; `MEDHARNESS_{STAGE}_BASE_URL` for Azure,
-Ollama or vLLM). They run an agent with a shell, so run them on an ephemeral CI
-runner — read [ai-security.md](docs/ai-security.md) first.
+Or use the checks alone, with no AI: `medharness verify dhf` checks that the
+design holds together.
 
 ## What a project looks like
 
