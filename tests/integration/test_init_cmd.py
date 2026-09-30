@@ -38,6 +38,14 @@ class TestInitCmd:
                      "verify completion --cr CR-NNN", "verify changes --cr CR-NNN"):
             assert step in agents, step
 
+    def test_the_instructions_route_every_dhf_read_and_write_through_item(self, tmp_path):
+        """Without this an agent answering a question outside a CR edits the YAML."""
+        _write_agent_files(tmp_path, "Device")
+        agents = (tmp_path / "AGENTS.md").read_text()
+        for text in ("item list --type", "item get", "item create|update|transition",
+                     "never by editing the\n  files under `DHF/`"):
+            assert text in agents, text
+
     def test_existing_files_are_added_to_not_replaced(self, tmp_path):
         """init used to overwrite a repository's own CLAUDE.md."""
         (tmp_path / "AGENTS.md").write_text("# Ours\n\nKeep this.\n")

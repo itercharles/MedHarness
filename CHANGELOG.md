@@ -11,6 +11,17 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+### Changed
+
+- **`AGENTS.md` sends every DHF read and write through `medharness item`.** The
+  section said only "never by editing IDs", so an agent handling a request
+  outside a CR read and edited the YAML directly, skipping schema checks, ID
+  allocation and the lifecycle. It now says to read with `item list|get`, write
+  with `item create|update|transition` and never edit files under `DHF/`, and to
+  run `verify dhf` after any change. `init` adds the section only when it is
+  missing, so an existing project replaces its `## Design History File` section
+  with the one in [adopting.md](docs/adopting.md#with-the-coding-agent-you-already-use).
+
 ## [0.47.0] — 2026-09-28
 
 ### Changed (breaking)

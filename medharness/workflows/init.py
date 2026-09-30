@@ -141,7 +141,14 @@ A change to what the product does is not finished until its DHF is.
   - `medharness verify changes --cr CR-NNN`
 - **Close it:** `medharness item transition CR-NNN completed`.
 
-Change items with `medharness item create|update|transition`, never by editing IDs.
+Go through `medharness item` for every DHF question and change, inside a CR or not:
+
+- **Read** with `medharness item list --type <TYPE>` and `medharness item get <ID>`;
+  `get` includes every ID the item links to.
+- **Write** with `medharness item create|update|transition`, never by editing the
+  files under `DHF/`: these check the schema before writing, allocate IDs, enforce
+  the lifecycle, and change only the fields you pass.
+- After any change, run `medharness verify dhf`.
 """
 
 _PRODUCT_TEMPLATE = """\
