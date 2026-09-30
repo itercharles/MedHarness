@@ -153,8 +153,8 @@ patch the reader only to test the reading itself.
 
 | Layer | Directory | Scope |
 |-------|-----------|-------|
-| Unit | `tests/unit/` | One function or command |
+| Unit | `tests/unit/` | Logic worth isolating: parsers, judges, mappings |
 | Guards | `tests/guards/` | The repository about itself: boundaries, documented commands, packaging |
-| Integration | `tests/integration/` | `init`, the CR workflow end to end |
+| Integration | `tests/integration/` | A command run against a real project and repository: `init`, the CR workflow end to end |
 | Contract | `tests/contract/` | The CLI and scaffold as a caller sees them |
 | Engine | `dhfkit/tests/` | Storage: CRUD, validation, documents |
