@@ -11,6 +11,13 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+### Fixed
+
+- **`verify soup` told the reader to run `build soup --write`,** an option that
+  no longer exists (`build soup` always writes). The documented-commands guard
+  now also reads the commands that messages in `medharness/` tell people to run,
+  so a stale hint fails the build instead of a reader.
+
 ### Changed
 
 - **`AGENTS.md` sends every DHF read and write through `medharness item`.** The

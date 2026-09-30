@@ -134,7 +134,7 @@ the links between them are listed in the `DHF/README.md` that `init` writes.
 
 Artifacts from common sources map directly to item types. A requirements spreadsheet becomes SRS and SYS items — one row per item, with `title` and `content` fields. A risk register becomes RISK items paired with RCM items (each RCM carries a `mitigates` field pointing to the RISK ID it controls). A SOUP list becomes SOUP items with `name`, `version`, and `purpose` fields.
 
-What you do not need to migrate: test code (it stays in pytest, linked to DHF items via `medharness.links` annotations in JUnit output), generated documents (they are produced from items on demand), and CI scripts (start from the recipe in [Setting up CI](#setting-up-ci)). Migration is writing YAML files. The schema is self-documenting — look at the sample items from `init` to see every field and its expected values.
+What you do not need to migrate: test code (it stays in pytest, linked to DHF items via `medharness.links` annotations in JUnit output), generated documents (`build release` renders them from the items), and CI scripts (start from the recipe in [Setting up CI](#setting-up-ci)). Migration is writing YAML files. The schema is self-documenting — look at the sample items from `init` to see every field and its expected values.
 
 Traceability links between items are typed fields on child items (`derives_from`, `satisfies`, `implements`, `mitigates`, etc.). Run `medharness --dhf DHF verify dhf` at any point to check link integrity. The validator names the exact item, field, and target for every broken link.
 
@@ -451,8 +451,8 @@ The SOUP register already holds what an SBOM needs — name, version, ecosystem,
 licence, supplier — recorded there because IEC 62304 §8.1.2 asks for it. FDA's
 premarket cybersecurity guidance and the EU Cyber Resilience Act want that in a
 standard machine-readable format. `build release` writes it as
-`sbom.cdx.json`, beside the specifications; without `--write` that is a preview
-that changes nothing:
+`sbom.cdx.json`, beside the specifications. Without `--write` the DHF is not
+changed:
 
 ```bash
 medharness build release --version 1.2.0 --out-dir release
@@ -537,7 +537,7 @@ accepted_vulns:
 
 Both keys are required. An entry without a `rationale` — or a bare ID string — is reported as a warning and the vulnerability **keeps blocking**, because an acceptance with no recorded reason is not an assessment.
 
-Acceptance is per-vulnerability-ID by design. A newly published CVE against the same package still fails the gate, so blanket suppression cannot silently absorb future findings. `verify soup` prints accepted entries as `ACCEPTED [soup-vuln]` lines and includes them in its JSON output, so they stay visible in CI logs and evidence bundles.
+Acceptance is per-vulnerability-ID by design. A newly published CVE against the same package still fails the gate, so blanket suppression cannot silently absorb future findings. `verify soup` prints accepted entries as `ACCEPTED [soup-vuln]` lines and lists them in the `warnings` of its answer, so they stay visible in CI logs and evidence bundles.
 
 ### Air-gapped and proxy-restricted pipelines
 
@@ -547,7 +547,7 @@ Acceptance is per-vulnerability-ID by design. A newly published CVE against the 
 medharness --dhf DHF verify soup --offline-mode warn
 ```
 
-The gate then passes, but still records the outage in its JSON output and prints a `WARN [soup-vuln]` line — so the gap is visible in the evidence bundle rather than invisible. Keep the default (`--offline-mode fail`) anywhere the scan is expected to run.
+The gate then passes, but still records the outage in the `warnings` of its answer and prints a `WARN [soup-vuln]` line — so the gap is visible in the evidence bundle rather than invisible. Keep the default (`--offline-mode fail`) anywhere the scan is expected to run.
 
 ## Cutting a release (`build release`)
 
@@ -589,7 +589,7 @@ Each layer is useful on its own. None requires the next.
 |------|-----|-------|
 | 1 | `verify dhf` as a PR gate | Nothing — works on day one |
 | 2 | `verify tests` | Test annotations in JUnit output |
-| 3 | `build soup`, `sbom`, `verify soup` | A dependency manifest |
+| 3 | `build soup`, `verify soup` | A dependency manifest |
 | 4 | `build release` on version tags | Steps 1–3 passing |
 | 5 | `build plan` / `build code` | An AI key, and the appetite for it |
 

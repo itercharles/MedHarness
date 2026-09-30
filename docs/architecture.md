@@ -1,7 +1,7 @@
 # Architecture
 
 > **Stability:** Stable
-> **Last reviewed:** 2026-09-27
+> **Last reviewed:** 2026-09-30
 
 How the code is organised, for contributors. What a user calls is in the
 [README](../README.md) and [interface.md](interface.md).
@@ -10,7 +10,7 @@ How the code is organised, for contributors. What a user calls is in the
 
 | Package | CLI | Owns |
 |---------|-----|------|
-| `dhfkit` | — (a library) | Storage: item CRUD and lifecycle, config and schemas, schema validation, dangling-link detection, document generation, JUnit parsing and the pytest plugin, the CycloneDX SBOM |
+| `dhfkit` | — (a library) | Storage: item CRUD (an update rewrites only the fields whose value changed) and lifecycle, config and schemas, schema validation, dangling-link detection, document generation, JUnit parsing and the pytest plugin, the CycloneDX SBOM |
 | `medharness` | `medharness` | Analysis and process: traceability over the whole item set, the gates, SOUP sync, releases, the AI change workflow, scaffolding |
 
 There is one CLI, `medharness`; its `item` commands are thin wrappers over

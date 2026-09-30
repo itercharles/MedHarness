@@ -31,6 +31,30 @@ VALUE_FLAGS = {
 }
 
 
+#: A command a message tells its reader to run, inside a Python string: the
+#: fragment ends at the next comma, full stop or quote.
+_SOURCE_HINT = re.compile(
+    r"medharness(?: --dhf \S+)? (?:item|verify|build)\b[^\"'`\n]*?"
+    r"(?=,\s|\.\s|\.$|[\"'`]|$)"
+)
+
+
+def _source_hints(raw: str) -> list[str]:
+    """The commands a source line's strings tell a reader to run.
+
+    `verify soup` told people to run `build soup --write` for a release after
+    that option was gone: the docs were checked, the messages were not.
+    """
+    hints = []
+    for match in _SOURCE_HINT.finditer(raw):
+        hint = match.group(0).split("\\n")[0].strip()
+        if hint.endswith("--data"):
+            hint += " {}"                       # the value is a JSON literal on the next token
+        if "|" not in hint and "—" not in hint:  # a choice list, or prose
+            hints.append(hint)
+    return hints
+
+
 def _documented_calls() -> list[tuple[str, tuple[str, ...], str]]:
     found: dict[tuple[str, tuple[str, ...]], str] = {}
     # Templates land in every project, and prompts are what the model runs:
@@ -42,6 +66,8 @@ def _documented_calls() -> list[tuple[str, tuple[str, ...], str]]:
         + sorted((ROOT / "medharness" / "prompts").rglob("*.md"))
         # The repository's own CI runs commands too, as Python argument lists.
         + sorted((ROOT / ".github" / "workflows").glob("*.yml"))
+        # And what the tools themselves print: Fix: lines, error messages.
+        + sorted(p for p in (ROOT / "medharness").rglob("*.py"))
     )
     for path in sources:
         for raw in path.read_text(encoding="utf-8").splitlines():
@@ -62,7 +88,8 @@ def _documented_calls() -> list[tuple[str, tuple[str, ...], str]]:
                 for m in re.findall(r'"-m",\s*"medharness"([^\]]*)\]',
                                     raw.replace("'", '"'))
             ]
-            for candidate in [raw] + re.findall(r"`([^`]+)`", raw) + as_list:
+            hints = _source_hints(raw) if path.suffix == ".py" else []
+            for candidate in [raw] + re.findall(r"`([^`]+)`", raw) + as_list + hints:
                 for line in _alternatives(candidate.replace(r"\|", "|")):
                     call = _parse(line)
                     if call:
@@ -195,6 +222,12 @@ def test_the_parse_check_catches_both_faults() -> None:
     assert _parse_error("medharness --dhf DHF verify dhf traceability")
     assert _parse_error("medharness verify tests --dhf DHF --junit x")
     assert _parse_error("medharness --dhf DHF verify tests --junit x") is None
+
+
+def test_a_message_that_names_a_dead_option_is_caught() -> None:
+    assert _source_hints('click.echo("Fix: medharness --dhf DHF build soup --write, then commit. ")') == [
+        "medharness --dhf DHF build soup --write"]
+    assert _parse_error("medharness --dhf DHF build soup --write")
 
 
 def test_readme_pins_the_current_version() -> None:
