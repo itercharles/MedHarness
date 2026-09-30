@@ -54,10 +54,10 @@ edit the check away.
 | `dhfkit/` | The storage engine, a library: items, config, schema validation, doc generation, SBOM |
 | `dhfkit/templates/` | The defaults every DHF reads (`config/`, `specs/`), the sample items `init` copies, and the CI recipe the docs publish |
 | `docs/` | Architecture docs and adopting guide |
-| `tests/unit/` | Unit tests — behaviour of a function or command |
+| `tests/unit/` | Unit tests — logic worth isolating: parsers, judges, mappings |
 | `tests/guards/` | Checks on the repo itself: import boundaries, documented commands, packaging, mock contracts |
-| `tests/integration/` | Integration tests |
-| `tests/contract/` | Contract tests |
+| `tests/integration/` | Interface tests — a command run against a real project, in a real repository |
+| `tests/contract/` | Interface tests — the CLI and scaffold as a caller sees them |
 | `dhfkit/tests/` | dhfkit tests |
 
 ## Key Rules
@@ -76,9 +76,20 @@ edit the check away.
   fault was found ("used to fall off the end of this chain and let the
   transition through") belongs in the commit message; the code needs the one
   line that says what must hold. Two lines is usually the ceiling.
-- Every code change must be accompanied by tests. If a change genuinely cannot
-  be tested (e.g., prompt text, LLM-dependent behavior), state explicitly why
-  it is untestable and what manual verification step is required instead.
+- Test at the interface. A change in behavior comes with a test that runs the
+  command (`CliRunner`, or a subprocess for exit codes and streams) and asserts
+  stdout, the exit code and the files it changed. Spend the cases on what
+  breaks: bad input, a missing or malformed DHF, empty and boundary values, git
+  or network failing. A defect in a helper shows up at the interface, so that is
+  where it is caught; a reader can find the helper from there.
+- Unit-test only logic worth isolating: a parser, a judge, or a mapping with
+  many branches, where enumerating the edge cases directly is cheaper than
+  reaching them through a command. A function that mostly moves values around
+  gets no unit test, and neither does a change an interface test already fails
+  on. Guards (`tests/guards/`) check invariants of the repository itself.
+- If a change genuinely cannot be tested (e.g., prompt text, LLM-dependent
+  behavior), state explicitly why it is untestable and what manual verification
+  step is required instead.
 - If a change affects documented behavior, update the relevant documentation in
   the same commit or PR — docs and code ship together.
   The command reference and gate table in `docs/interface.md` are generated from
