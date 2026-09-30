@@ -141,7 +141,7 @@ An item is its file's fields plus `type` (the doc type's code), `file_path`, and
 
 ## The item format — integrating another system
 
-Every command reads one thing: YAML files under `DHF/items/`. That format is the integration surface. A team whose requirements live in another tool exports them into it and runs the same commands; there is no plugin to write.
+By default every command reads YAML files under `DHF/items/`, and that format is the simplest integration surface: a team whose requirements live in another tool exports them into it and runs the same commands. To read items from the tool directly instead, an installed backend is chosen with `store:` in `global.yaml` — see [architecture.md](architecture.md#item-backends). `verify changes`, `build plan` and `build code` need the files in Git and refuse another store.
 
 ```yaml
 # DHF/items/03_srs/SRS-012.yaml

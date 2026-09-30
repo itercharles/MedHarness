@@ -71,6 +71,12 @@ def _check_version(ctx, param, value: str) -> str:
     return value
 
 
+def _needs_files(store, command: str) -> str:
+    from medharness.services.git import FILES_IN_GIT  # noqa: PLC0415
+
+    return FILES_IN_GIT.format(command=command, store=store.store_type)
+
+
 def register(main):
     build = main.commands["build"]
 
@@ -102,7 +108,10 @@ def register(main):
         from medharness.workflows.cr_state import assert_cr_active  # noqa: PLC0415
         dhf: Path = ctx.obj["dhf"]
         try:
-            assert_cr_active(LocalDHFAdapter(ctx.obj["dhf"]), cr_id)
+            store = LocalDHFAdapter(ctx.obj["dhf"])
+            if not store.tracks_files:
+                raise click.ClickException(_needs_files(store, "build plan"))
+            assert_cr_active(store, cr_id)
         except ValueError as exc:
             raise click.ClickException(str(exc)) from exc
         except (FileNotFoundError, OSError):
@@ -149,7 +158,10 @@ def register(main):
         from medharness.workflows.cr_state import assert_cr_active  # noqa: PLC0415
         dhf: Path = ctx.obj["dhf"]
         try:
-            assert_cr_active(LocalDHFAdapter(ctx.obj["dhf"]), cr_id)
+            store = LocalDHFAdapter(ctx.obj["dhf"])
+            if not store.tracks_files:
+                raise click.ClickException(_needs_files(store, "build code"))
+            assert_cr_active(store, cr_id)
         except ValueError as exc:
             raise click.ClickException(str(exc)) from exc
         except (FileNotFoundError, OSError):

@@ -10,9 +10,8 @@ from dhfkit.exceptions import RefusedWrite, ValidationError
 from dhfkit.item_type import ItemType
 from dhfkit.models.config import ProjectConfig
 from dhfkit.models.item import Item
-from dhfkit.repository.git import item_ids_ever_added
 from dhfkit.repository.loader import ItemLoader
-from dhfkit.repository.saver import ItemSaver
+from dhfkit.backend import ItemBackend, resolve_backend
 from dhfkit.id_generator import get_next_id
 
 # V-model traceability link fields — used for orphan and coverage checks.
@@ -30,15 +29,15 @@ _UID_PATTERN = re.compile(r"^[A-Z][A-Z0-9]*(-[A-Z0-9]+)*-\d+$")
 
 
 class LocalDHFAdapter:
-    """The item store for a DHF directory on disk."""
+    """The item store for a DHF directory: the project's config and documents on
+    disk, and its items wherever the configured backend keeps them."""
 
-    def __init__(self, dhf_root: Path):
+    def __init__(self, dhf_root: Path, backend: ItemBackend | None = None):
         self._dhf_root = Path(dhf_root)
         self._config = ProjectConfig.load(self._dhf_root / "config")
-        items_dir = self._dhf_root / "items"
-        self._items_dir = items_dir
-        self._loader = ItemLoader(items_dir, project_config=self._config)
-        self._saver = ItemSaver(items_dir, project_config=self._config)
+        self._backend = backend or resolve_backend(self._config, self._dhf_root)
+        # Checks an item's fields against its doc type, whatever holds the item.
+        self._loader = ItemLoader(self._dhf_root / "items", project_config=self._config)
 
 
         # document_specifications lives in global config
@@ -126,13 +125,13 @@ class LocalDHFAdapter:
         return d
 
     def get_item(self, uid: str) -> Optional[dict]:
-        item = self._loader.load_by_uid(uid)
+        item = self._backend.load_by_uid(uid)
         if item is None:
             return None
         return self._enrich_item_dict(item)
 
     def list_items(self, doc_type: Optional[str] = None) -> List[dict]:
-        items = self._loader.load_all()
+        items = self._backend.load_all()
         result = []
         for item in items:
             if doc_type:
@@ -190,13 +189,11 @@ class LocalDHFAdapter:
         dt_cfg = self._config.get_doc_type(doc_type_code)
         if not dt_cfg:
             raise ValueError(f"Unknown doc type: {doc_type_code}")
-        all_items = self._loader.load_all()
         # Every ID ever used, not only those present. Reusing a deleted ID makes
         # one identifier mean two different items over a project's life, and
         # every reference to it — a CR's affected_items, an approval record, a
         # test's dhf_links — silently retargets.
-        existing_ids = {i.uid for i in all_items}
-        existing_ids |= item_ids_ever_added(self._items_dir)
+        existing_ids = self._backend.used_ids()
         data['id'] = get_next_id(
             dt_cfg.prefix,
             [i for i in existing_ids if i.startswith(dt_cfg.prefix)],
@@ -220,13 +217,13 @@ class LocalDHFAdapter:
             self._loader._validate_against_schema(data, _Path(f"{data['id']}.yaml"))
 
         item = Item.model_validate(data)
-        self._saver.save(item)
+        self._backend.save(item)
         return self._enrich_item_dict(item)
 
     def update_item(self, uid: str, data: dict) -> Optional[dict]:
         from dhfkit.lifecycle import get_initial_state, is_stable
 
-        existing = self._loader.load_by_uid(uid)
+        existing = self._backend.load_by_uid(uid)
         if not existing:
             return None
 
@@ -271,7 +268,7 @@ class LocalDHFAdapter:
         except ValidationError as exc:
             raise RefusedWrite(f"{uid} not updated: {exc}") from exc
         item = Item.model_validate(updated_data)
-        self._saver.save(item, Path(existing.file_path))
+        self._backend.save(item)
         return self._enrich_item_dict(item)
 
     def get_available_transitions(self, item_id: str) -> List[Dict]:
@@ -294,52 +291,29 @@ class LocalDHFAdapter:
         )
 
     def delete_item(self, uid: str) -> bool:
-        return self._saver.delete(uid)
+        return self._backend.delete(uid)
 
     def validate_schema(self) -> dict:
         """Validate all YAML files; returns {'valid': bool, 'errors': [...]}."""
         errors = []
         items = []
         try:
-            items = self._loader.load_all()
+            items = self._backend.load_all()
         except ValidationError as e:
             errors.append(str(e))
-        errors.extend(self._duplicate_id_errors())
+        errors.extend(self._backend.integrity_errors())
         return {'valid': len(errors) == 0, 'errors': errors,
                 'item_count': len(items) if not errors else 0}
 
-    def _duplicate_id_errors(self) -> List[str]:
-        """Two files claiming one ID make every reference to it ambiguous.
+    @property
+    def store_type(self) -> str:
+        """The `type` in `store:` of global.yaml."""
+        return str((self._config.store or {}).get("type", "yaml"))
 
-        An ID is what the rest of the DHF points at — dhf_links, affected_items,
-        an approval's scope, a test's evidence. With two items answering to
-        SRS-001, `get_item` returns whichever the loader saw first and the other
-        exists unreferenced. Nothing reported it: the schema passed both files
-        as individually valid, and the only visible symptom was a traceability
-        warning printed twice, which reads as a rendering glitch.
-        """
-        import yaml
-
-        seen: Dict[str, List[str]] = {}
-        items_root = self._dhf_root / "items"
-        if not items_root.is_dir():
-            return []
-        for path in sorted(items_root.rglob("*.yaml")):
-            try:
-                data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
-            except (OSError, yaml.YAMLError):
-                continue  # a file that will not parse is the loader's to report
-            if not isinstance(data, dict):
-                continue
-            uid = str(data.get("id") or "").strip()
-            if uid:
-                seen.setdefault(uid, []).append(
-                    str(path.relative_to(self._dhf_root))
-                )
-        return [
-            f"Duplicate item ID {uid!r} in: {', '.join(paths)}"
-            for uid, paths in sorted(seen.items()) if len(paths) > 1
-        ]
+    @property
+    def tracks_files(self) -> bool:
+        """Whether items are files in Git, which `verify changes` and the build stages read."""
+        return bool(getattr(self._backend, "tracks_files", False))
 
     @property
     def config(self):
@@ -371,7 +345,7 @@ class LocalDHFAdapter:
 
     def _generator(self):
         from dhfkit.document_generation import DocumentGenerator
-        return DocumentGenerator(self._loader, self._config, self._template_dirs())
+        return DocumentGenerator(self._backend, self._config, self._template_dirs())
 
     def render_spec(self, doc_type_code: str, fmt: str, out_dir: Path, version: str) -> dict:
         """Render a specification into ``out_dir`` at ``version``; the DHF is not written."""

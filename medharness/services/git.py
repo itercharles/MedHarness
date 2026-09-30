@@ -152,6 +152,13 @@ def collect_dhf_item_changes(repo_root: Path, since_ref: str) -> dict[str, list[
     return out
 
 
+#: Said by every command that answers from the repository's diff.
+FILES_IN_GIT = (
+    "`{command}` compares files in Git, and this DHF keeps its items in the "
+    "'{store}' store. Use a DHF whose store is 'yaml' for it."
+)
+
+
 def validate_atomic_branch(
     repo_root: Path,
     dhf_path: Path,
@@ -161,6 +168,17 @@ def validate_atomic_branch(
     code_paths: tuple[str, ...] = (),
 ) -> dict:
     """Read the branch's diff and the CR, then ``judge_branch`` them."""
+    from dhfkit.local_adapter import LocalDHFAdapter
+
+    store = LocalDHFAdapter(dhf_path)
+    if not store.tracks_files:
+        return envelope_from("verify changes", {
+            "cr_id": cr_id,
+            "since_ref": since_ref,
+            "passed": False,
+            "summary": f"{cr_id}: the items are not files in Git, so there is no diff to check.",
+            "errors": [FILES_IN_GIT.format(command="verify changes", store=store.store_type)],
+        })
     try:
         dhf_item_changes = collect_dhf_item_changes(repo_root, since_ref)
         code_changes = collect_path_changes(repo_root, since_ref, *code_paths) if code_paths else {
@@ -187,11 +205,9 @@ def validate_atomic_branch(
             "findings": [finding],
         })
 
-    from dhfkit.local_adapter import LocalDHFAdapter
-
     # A DHF that will not load must stop the gate: skipping the promise check
     # passed a branch that broke one. A CR that does not exist is not applicable.
-    cr_item = LocalDHFAdapter(dhf_path).get_item(cr_id)
+    cr_item = store.get_item(cr_id)
     return judge_branch(
         cr_id,
         cr_item,
