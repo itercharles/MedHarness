@@ -81,6 +81,9 @@ edit the check away.
   it is untestable and what manual verification step is required instead.
 - If a change affects documented behavior, update the relevant documentation in
   the same commit or PR — docs and code ship together.
+  The command reference and gate table in `docs/interface.md` are generated from
+  the CLI: after changing a command, its options or help text, run
+  `python scripts/generate_interface.py` (a guard fails the build otherwise).
 - Keep code minimal. No speculative abstractions, no over-engineering. Three
   similar lines is better than a premature abstraction.
 - Do not invent what nothing uses yet. This applies to output as much as to

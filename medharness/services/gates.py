@@ -7,8 +7,9 @@ is written from these facts and checked against them.
 
 The registry is hand-written rather than derived from Click, because the facts
 that matter most — whether a gate blocks, whether it reaches the network — are
-not expressible as command metadata. Tests assert both directions: every gate
-command appears here, and every option declared here exists on the command.
+not expressible as command metadata. What Click does state, the options, is not
+repeated here: `scripts/generate_interface.py` reads it from the command. Tests
+assert that every gate command appears here and every entry names a real one.
 """
 
 from __future__ import annotations
@@ -26,10 +27,6 @@ GATES: tuple[dict[str, Any], ...] = (
         "command": "verify dhf",
         "checks": "Schema validity, required traceability, dangling links, and "
                   "coverage between V-model layers.",
-        "options": {
-            "required": [],
-            "optional": ["--strict"],
-        },
         "blocking": "conditional",
         "blocking_note": "Schema errors, required-link failures, and dangling "
                          "links always fail. Coverage gaps warn unless "
@@ -40,10 +37,6 @@ GATES: tuple[dict[str, Any], ...] = (
         "command": "verify tests",
         "checks": "Requirement-to-test coverage from JUnit evidence, including "
                   "declared test points.",
-        "options": {
-            "required": ["--junit"],
-            "optional": ["--strict"],
-        },
         "blocking": "conditional",
         "blocking_note": "Uncovered requirements and unverified tests always fail. "
                          "A missing verification_method warns unless --strict.",
@@ -54,7 +47,6 @@ GATES: tuple[dict[str, Any], ...] = (
         "checks": "The SOUP register against the dependency manifests, and each "
                   "item against the OSV vulnerability database, honouring "
                   "documented per-CVE acceptances.",
-        "options": {"required": [], "optional": ["--manifest", "--strict", "--offline-mode"]},
         "blocking": "conditional",
         "blocking_note": "Known vulnerabilities always fail, and so does an unreachable "
                          "osv.dev unless --offline-mode warn. Drift from the manifests "
@@ -65,10 +57,6 @@ GATES: tuple[dict[str, Any], ...] = (
         "command": "verify completion",
         "checks": "CR closure: mandatory CR fields, that the CR's affected_items "
                   "exist, and verification evidence for each.",
-        "options": {
-            "required": ["--cr"],
-            "optional": ["--junit"],
-        },
         "blocking": "always",
         "blocking_note": "",
         "needs_network": False,
@@ -77,10 +65,6 @@ GATES: tuple[dict[str, Any], ...] = (
         "command": "verify changes",
         "checks": "That the branch, uncommitted work included, changes exactly the "
                   "items its CR lists, and code when asked.",
-        "options": {
-            "required": ["--cr"],
-            "optional": ["--since-ref", "--code-path"],
-        },
         "blocking": "always",
         "blocking_note": "Code-change enforcement applies only when --code-path "
                          "is given.",

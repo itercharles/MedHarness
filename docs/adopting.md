@@ -567,15 +567,33 @@ Add `--write` to record the REL item. It is recorded **only when every check pas
 
 ## Changing the defaults
 
-The item types, their fields and lifecycles, the required links and the
-specification templates are defaults inside the package; the
-[README](../README.md#what-a-project-looks-like) lists how to override each. Start
-a doc-type override from the default in
-[`dhfkit/templates/config/doc_types`](../dhfkit/templates/config/doc_types).
+MedHarness reads two layers. The **defaults** ship inside the package: 13 item
+types — CRS, UC, SYS, SYSARCH, MODULE, SRS, SWDD, RISK, RCM, SOUP, CR, DEF, REL —
+each with its fields and lifecycle, plus the rules for which links are required
+and the templates for the specifications. **Your project** adds files under
+`DHF/config/` and `DHF/documents/specs/`. Where your project has one, it is used
+instead of the default; where it has none, the default applies. That is why a new
+project's `global.yaml` holds only its name, and why upgrading `medharness`
+upgrades every default you have not overridden.
 
-An override replaces the whole default of its kind, so an overridden doc type
-no longer follows the package's changes to that type. Keep overrides to what you
-actually change.
+An override replaces the whole default it names; it never merges into it. Each
+kind of default is overridden in its own place:
+
+| To change | Do this | Example |
+|---|---|---|
+| A setting, such as which links are required | Write that key in `DHF/config/global.yaml`. Your value replaces the default value of that key, so copy the default value and edit it | `required_traceability: [...]` — your list is the whole list |
+| The fields or lifecycle of an item type | Add `DHF/config/doc_types/srs.yaml` with `code: SRS`. It replaces the default SRS, so start from a copy of the default | give SRS a `hazard_ref` field |
+| An item type of your own | Add a file in the same folder with a new `code` | `code: HWR` for hardware requirements |
+| An item type you don't use | List its code in `omit_doc_types` in `global.yaml` | `omit_doc_types: [UC]` |
+| A specification template | Add a file of the same name in `DHF/documents/specs/` | your own `requirements_specification.md.j2` |
+
+Copy from the defaults in
+[`dhfkit/templates/config/doc_types`](../dhfkit/templates/config/doc_types),
+[`dhfkit/templates/config/global.yaml`](../dhfkit/templates/config/global.yaml)
+and [`dhfkit/templates/specs`](../dhfkit/templates/specs).
+
+The trade-off: an overridden item type stops following the package's changes to
+that type, so override only what you change.
 
 Projects scaffolded before 0.37 carry full copies of the config and templates.
 They keep working: each copy overrides the default it duplicates. To follow the
