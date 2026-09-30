@@ -46,8 +46,11 @@ its own:
 The analysis in `medharness.services.traceability`, and the release's
 traceability matrix in `medharness.services.traceability_report`, take a list
 of items and a config, never a path. The commands reach items through the item
-store (`dhfkit.local_adapter.LocalDHFAdapter`), which keeps them wherever the
+store: `medharness` calls `dhfkit.store.open_store` and sees only the `DHFStore`
+interface, never the class behind it, which keeps the items wherever the
 project's backend does — see [Item backends](#item-backends).
+`tests/guards/test_the_business_layer_sees_only_the_store_interface.py` holds
+that line.
 
 The one place `medharness` writes DHF files directly is `init`, which creates
 the skeleton. Everything else goes through the store — `tests/guards/test_storage_access_is_bounded.py` holds

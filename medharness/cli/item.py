@@ -7,7 +7,7 @@ import sys
 
 import click
 
-from dhfkit.local_adapter import LocalDHFAdapter
+from dhfkit.store import open_store
 
 
 def _json_object(data: str) -> dict:
@@ -33,7 +33,7 @@ def register(main):
     @click.pass_context
     def item_get(ctx: click.Context, item_id: str) -> None:
         """Get a single DHF item by ID. Outputs JSON."""
-        adapter = LocalDHFAdapter(ctx.obj["dhf"])
+        adapter = open_store(ctx.obj["dhf"])
         result = adapter.get_item(item_id)
         if result is None:
             click.echo(f"ERROR: Item '{item_id}' not found.", err=True)
@@ -46,7 +46,7 @@ def register(main):
     @click.pass_context
     def item_list(ctx: click.Context, doc_type: str | None) -> None:
         """List DHF items. Outputs one JSON object per line."""
-        adapter = LocalDHFAdapter(ctx.obj["dhf"])
+        adapter = open_store(ctx.obj["dhf"])
         items = adapter.list_items(doc_type)
         for it in items:
             click.echo(json.dumps(it, default=str))
@@ -61,7 +61,7 @@ def register(main):
         """Create a new DHF item. Outputs the created item as JSON."""
         item_data = _json_object(data)
         item_data["type"] = doc_type
-        adapter = LocalDHFAdapter(ctx.obj["dhf"])
+        adapter = open_store(ctx.obj["dhf"])
         from dhfkit.exceptions import ValidationError
         try:
             result = adapter.create_item(item_data)
@@ -79,7 +79,7 @@ def register(main):
     def item_update(ctx: click.Context, item_id: str, data: str) -> None:
         """Update fields of an existing DHF item."""
         update_data = _json_object(data)
-        adapter = LocalDHFAdapter(ctx.obj["dhf"])
+        adapter = open_store(ctx.obj["dhf"])
         from dhfkit.exceptions import RefusedWrite
         try:
             result = adapter.update_item(item_id, update_data)
@@ -99,7 +99,7 @@ def register(main):
     @click.pass_context
     def item_transition(ctx: click.Context, item_id: str, to_state: str | None) -> None:
         """Move an item to TO_STATE, or list where it can go when TO_STATE is omitted."""
-        adapter = LocalDHFAdapter(ctx.obj["dhf"])
+        adapter = open_store(ctx.obj["dhf"])
         if to_state is None:
             it = adapter.get_item(item_id)
             if it is None:

@@ -83,9 +83,9 @@ def cr_closure_gate(
     Approval is not checked here. It lives in the pull request, and GitHub's
     branch protection enforces it.
     """
-    from dhfkit.local_adapter import LocalDHFAdapter
+    from dhfkit.store import open_store
 
-    adapter = LocalDHFAdapter(dhf_path)
+    adapter = open_store(dhf_path)
     cr_item = adapter.get_item(cr_id) or {}
     incomplete_cr_fields = _check_cr_fields(cr_item, cr_id)
 

@@ -157,9 +157,9 @@ def soup_gate(
           "summary": str,
         }
     """
-    from dhfkit.local_adapter import LocalDHFAdapter
+    from dhfkit.store import open_store
 
-    adapter = LocalDHFAdapter(dhf_path)
+    adapter = open_store(dhf_path)
     all_items = adapter.list_items()
     soup_items = [it for it in all_items if it.get("type") == "SOUP"]
     drift = _soup_drift(dhf_path, soup_items, manifest_paths, strict)

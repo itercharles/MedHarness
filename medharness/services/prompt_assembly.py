@@ -73,10 +73,10 @@ def _load_adapter(dhf_path: Path, purpose: str):
     """
     # Inline import avoids coupling prompt_assembly to dhfkit at import-time;
     # it is only needed when a real DHF path is provided at runtime.
-    from dhfkit.local_adapter import LocalDHFAdapter
+    from dhfkit.store import open_store
 
     try:
-        return LocalDHFAdapter(dhf_path)
+        return open_store(dhf_path)
     except Exception as exc:
         raise RuntimeError(
             f"Cannot load DHF at {dhf_path} for {purpose}: {exc}"

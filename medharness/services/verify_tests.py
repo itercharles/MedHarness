@@ -33,7 +33,7 @@ def ci_test_coverage_gate(
     If a requirement declares numbered test points in its ``testing`` field,
     each declared point must also be covered by at least one passing linked test.
     """
-    from dhfkit.local_adapter import LocalDHFAdapter
+    from dhfkit.store import open_store
 
     if not junit_paths:
         # Declaring a verification method needs no test run, so returning here
@@ -99,7 +99,7 @@ def ci_test_coverage_gate(
                 for point_id in all_points:
                     covered_pairs.add((req_id, point_id))
 
-    adapter = LocalDHFAdapter(dhf_path)
+    adapter = open_store(dhf_path)
     all_items = adapter.list_items()
 
     passed = True
@@ -264,9 +264,9 @@ def validate_verification_completeness(
     """
     import xml.etree.ElementTree as ET
 
-    from dhfkit.local_adapter import LocalDHFAdapter
+    from dhfkit.store import open_store
 
-    adapter = LocalDHFAdapter(dhf_path)
+    adapter = open_store(dhf_path)
     all_items = adapter.list_items()
     if item_ids is not None:
         in_scope = set(item_ids)
