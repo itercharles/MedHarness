@@ -37,6 +37,16 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ### Fixed
 
+- **`build code` looked for the code it wrote only under `apps/` and `packages/`.**
+  A project with its code anywhere else, `src/` included, got an empty
+  `files_changed`, and on a revision the model was shown no diff of its earlier
+  work. The default is now the whole repository except the DHF;
+  `MEDHARNESS_CODE_PATHS` still narrows it.
+- **`build plan` reported `ok` for a design with a dangling link or a
+  traceability cycle,** which `verify dhf` then failed in CI. Its own validation
+  now reports both, and the fix pass is given them.
+- **The fix prompts and the plan prompt told the model to run
+  `verify dhf` twice in a row,** a leftover of merging `validate schema` into it.
 - **`verify completion` held only CRS, SRS, SYS and SOUP to verification.** The
   list was written into the command, so an item type a project added (hardware
   requirements, say) closed its change requests without anyone asking whether the

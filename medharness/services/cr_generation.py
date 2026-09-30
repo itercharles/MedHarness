@@ -33,16 +33,21 @@ __all__ = [
     "generate_dhf",
 ]
 
-# Default source paths scanned by `build code` for diff injection and artifact
-# collection. Override via the MEDHARNESS_CODE_PATHS environment variable
-# (comma-separated, e.g. "src/,lib/") or by assigning a tuple before calling
-# generate_code(). Projects using different layouts should set this once in
-# their CI configuration or product repo entry point.
-_DEFAULT_CODE_PATHS: tuple[str, ...] = tuple(
-    p.strip()
-    for p in os.environ.get("MEDHARNESS_CODE_PATHS", "apps/,packages/").split(",")
-    if p.strip()
-)
+def _code_paths(dhf_path: Path, repo_root: Path) -> tuple[str, ...]:
+    """Where `build code` looks for the code it wrote, for the diff it shows the model
+    and for `files_changed`.
+
+    MEDHARNESS_CODE_PATHS (comma-separated, e.g. "src/,lib/") narrows it; otherwise it
+    is the whole repository except the DHF, which `items_changed` reports. A default
+    of particular directories reported no changes, silently, for any project that
+    did not lay its code out that way.
+    """
+    configured = tuple(p.strip() for p in os.environ.get("MEDHARNESS_CODE_PATHS", "").split(",") if p.strip())
+    if configured:
+        return configured
+    dhf = os.path.relpath(dhf_path.resolve(), repo_root.resolve())
+    return (".", f":(exclude){dhf}", ":(exclude)docs/reviews")
+
 
 _MAX_DESIGN_REVIEW_CYCLES = 3
 _MAX_CODE_REVIEW_CYCLES = 3
@@ -827,7 +832,6 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> di
             f"Fix only the items needed to clear these errors via the medharness "
             f"CLI (`medharness item create` / `medharness item update`). Do not introduce other "
             f"changes. After fixing, re-run:\n"
-            f"  medharness --dhf DHF verify dhf\n"
             f"  medharness --dhf DHF verify dhf"
         )
         rc, _, fix_session_id = _run_claude_step(
@@ -891,7 +895,6 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> di
             f"Read the review at docs/reviews/{cr_id}-Design-Review.md for the specific issues, "
             f"then fix each item via `medharness item create` / `medharness item update`. "
             f"After making changes, re-run:\n"
-            f"  medharness --dhf DHF verify dhf\n"
             f"  medharness --dhf DHF verify dhf\n"
             f"Do not modify the review file itself."
         )
@@ -1081,7 +1084,7 @@ def generate_code(
             {"prompt_kind": "develop_generation", "used_pr_feedback": False},
         )
         prompt = _assemble_develop_prompt(cr_id, dhf_path=dhf_path, warnings=warnings)
-        diff = git.compute_diff(repo_root, "origin/main", *_DEFAULT_CODE_PATHS)
+        diff = git.compute_diff(repo_root, "origin/main", *_code_paths(dhf_path, repo_root))
         if diff:
             truncated = len(diff) > MAX_DIFF_CHARS
             diff_body = diff[:MAX_DIFF_CHARS]
@@ -1175,7 +1178,7 @@ def generate_code(
         _push_to_pr(repo_root, pr_number, f"feat({cr_id}): build code", errors)
     artifact_step, artifact_perf = _begin_step("collect_artifacts", {"kind": "files_changed"})
     try:
-        files_changed = git.collect_path_changes(repo_root, "origin/main", *_DEFAULT_CODE_PATHS)
+        files_changed = git.collect_path_changes(repo_root, "origin/main", *_code_paths(dhf_path, repo_root))
     except git.DiffUnavailable as exc:
         files_changed = None
         warnings.append(_warning(

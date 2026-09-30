@@ -247,6 +247,8 @@ medharness --dhf DHF build code --cr CR-001
 
 Reads `implementation_notes` as the primary spec and implements the code, annotates tests with `@links:<ITEM_ID>`, and runs a code review loop.
 
+The answer's `artifacts.files_changed` lists the code changed on the branch, committed or not: the whole repository except the DHF. Set `MEDHARNESS_CODE_PATHS` (comma-separated, e.g. `src/,lib/`) to narrow it.
+
 ### `verify completion` — closure gate
 
 ```bash

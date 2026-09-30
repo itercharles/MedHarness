@@ -97,6 +97,25 @@ def _validate_schema_and_traceability(_api, dhf_path: Path) -> list[dict]:
         })
         trace_result = {"passed": True}
 
+    # Broken references, unlike coverage gaps, are never "still to be written":
+    # `verify dhf` fails on them, so a run that reports ok here fails in CI.
+    for d in trace_result.get("dangling", []):
+        errors.append({
+            "field": f"traceability.dangling.{d['field']}",
+            "issue": f"{d['source']}.{d['field']} → {d['target']}: target does not exist",
+            "fix": (
+                f"Point {d['source']}'s `{d['field']}` at an item that exists, "
+                f"or create {d['target']}."
+            ),
+        })
+    for cycle in trace_result.get("cycles", []):
+        path = " → ".join(cycle + [cycle[0]]) if len(cycle) > 1 else f"{cycle[0]} → itself"
+        errors.append({
+            "field": "traceability.cycle",
+            "issue": f"Traceability cycle: {path}",
+            "fix": "Remove one of the links so the chain points up the V-model only.",
+        })
+
     if not trace_result.get("passed", True):
         required = trace_result.get("required") or {}
         for failure in required.get("failures", []):
