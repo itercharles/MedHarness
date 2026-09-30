@@ -107,7 +107,7 @@ Releases are fully automated via `.github/workflows/release.yml` using PyPI Trus
 
 Steps:
 1. Open a PR to `main` with the version bump in `pyproject.toml`, the pinned
-   version in the README's CI snippet, and a `CHANGELOG.md` entry
+   version in the README's CI snippet if it has one, and a `CHANGELOG.md` entry
 2. Run `uv lock` — the version is recorded in `uv.lock` too, and CI's
    `uv lock --check` blocks the build when the two disagree
 3. Merge the PR

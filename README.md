@@ -109,44 +109,6 @@ testing: |
   T1: an 11-character password is rejected
 ```
 
-## Bring your existing DHF, tests and CI
-
-You do not start over, and you do not adopt a platform. There is no server, no
-database and no plugin: the checks read YAML files in your repository and your
-test runner's ordinary output.
-
-- **A DHF you already have.** The integration surface is one YAML file per item
-  under `DHF/items/`, and that is all MedHarness reads. Export your requirements
-  from a spreadsheet, a requirements tool or a wiki into that format — a
-  script, one file per row, IDs kept as they are — and run the same commands.
-  The rules are one table in
-  [interface.md](docs/interface.md#the-item-format--integrating-another-system);
-  [adopting.md](docs/adopting.md#bringing-an-existing-dhf) maps common sources to
-  item types. Item types and their fields are configuration, so a DHF with its
-  own types and fields overrides the defaults rather than being reshaped to fit
-  them.
-- **Backfill at your own pace.** Broken structure — a cycle, a link to nothing,
-  a field the type does not declare — fails from the first run, and names the
-  item, the field and the target. Gaps only warn, so a half-migrated DHF passes
-  until you turn on `--strict`.
-- **Tests stay where they are.** Any runner that writes JUnit XML, pytest and Jest
-  among them. Tag each test case with the requirement it verifies
-  — the `medharness.links` property, or `@links:SRS-012` in the test name; in
-  pytest, `@pytest.mark.dhf_links("SRS-012")`. Nothing else about the tests
-  changes, and `verify tests --junit <results>` then fails a requirement that
-  lacks coverage or a declared test point no test covers.
-- **CI is two steps.** In a job that checks out the repository:
-
-  ```yaml
-  - run: pip install medharness==0.47.0
-  - run: medharness verify dhf --strict
-  ```
-
-  Every check prints JSON to stdout and exits `0` pass, `1` fail, so it fits
-  GitHub Actions, GitLab, Jenkins or a pre-commit hook without an adapter. The
-  full recipe, including the release job, is in
-  [adopting.md](docs/adopting.md#setting-up-ci).
-
 ## Commands
 
 One CLI. `--dhf PATH` goes before the command and defaults to `DHF`. Every
