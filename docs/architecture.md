@@ -45,14 +45,40 @@ its own:
 
 The analysis in `medharness.services.traceability`, and the release's
 traceability matrix in `medharness.services.traceability_report`, take a list
-of items and a config, never a path. **The commands, though, always read the YAML store**
-(`dhfkit.local_adapter.LocalDHFAdapter`); nothing lets you hand them another
-backend. Requirements kept in another system are checked by exporting them into
-`DHF/items/` in the YAML format.
+of items and a config, never a path. The commands reach items through the item
+store (`dhfkit.local_adapter.LocalDHFAdapter`), which keeps them wherever the
+project's backend does — see [Item backends](#item-backends).
 
 The one place `medharness` writes DHF files directly is `init`, which creates
 the skeleton. Everything else goes through the store — `tests/guards/test_storage_access_is_bounded.py` holds
 that line.
+
+## Item backends
+
+The item store owns everything that is the same wherever items live: the
+doc-type schema, link checks, ID allocation, the lifecycle, and the shape
+callers get back. A **backend** owns only persistence, five methods
+(`dhfkit.backend.ItemBackend`): `load_all`, `load_by_uid`, `save`, `delete`,
+`used_ids`, plus `integrity_errors` and a `tracks_files` flag. The project's
+`config/` and `documents/` stay in the repository whichever backend is chosen,
+so the item types, links and rules are configured the same way for every store.
+
+`DHF/config/global.yaml` chooses one:
+
+```yaml
+store:
+  type: yaml        # the default; any other type is an installed backend
+```
+
+A backend is a package that registers an entry point in the `dhfkit.backends`
+group, named for its `type`, and is called with `settings` (the rest of `store:`),
+`config` and `dhf_root`. `tests/integration/test_a_store_that_is_not_files.py`
+is the reference: an in-memory backend that passes the same commands.
+
+What depends on items being files in Git, and so refuses another backend with a
+message naming the store: `verify changes`, `build plan` and `build code`, which
+read the branch's diff. Everything else — `item`, `verify dhf|tests|soup|completion`,
+`build soup`, `build release` — runs on any backend.
 
 ## Defaults and overrides
 

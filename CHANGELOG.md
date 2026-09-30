@@ -11,6 +11,16 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+### Added
+
+- **Item backends.** Where items are kept is now a setting: `store:` in
+  `DHF/config/global.yaml` (default `type: yaml`, the files under `DHF/items/`).
+  Any other type is an installed package that registers a `dhfkit.backends`
+  entry point and implements `dhfkit.backend.ItemBackend` — five methods; the
+  schema, links, IDs and lifecycle stay the same on top of it. The item types
+  and rules are still configured in `DHF/config/`. `verify changes`, `build plan`
+  and `build code` compare files in Git and refuse another store, naming it.
+
 ### Fixed
 
 - **`item create` and `item update` crashed with a traceback on `--data '[1]'`,**
