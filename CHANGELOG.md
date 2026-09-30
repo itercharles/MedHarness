@@ -13,6 +13,11 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ### Fixed
 
+- **`item create` and `item update` crashed with a traceback on `--data '[1]'`,**
+  a JSON array or scalar. They now exit 1 with "--data must be a JSON object".
+- **`build release --version ''` was accepted,** and a version such as `../x`
+  would have named files outside `--out-dir`. The version must now be letters,
+  digits and `. _ + -`; anything else is a usage error (exit 2).
 - **`verify soup` told the reader to run `build soup --write`,** an option that
   no longer exists (`build soup` always writes). The documented-commands guard
   now also reads the commands that messages in `medharness/` tell people to run,

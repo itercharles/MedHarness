@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -61,6 +62,13 @@ def _print_prompt(assemble, cr_id: str, dhf: Path) -> None:
     click.echo(assemble(cr_id, dhf_path=dhf, warnings=warnings))
     for w in warnings:
         click.echo(f"WARN [prompt] {w.get('message', w)}", err=True)
+
+
+def _check_version(ctx, param, value: str) -> str:
+    """The version names the artifacts, so it must be a safe file name part."""
+    if not re.fullmatch(r"[0-9A-Za-z][0-9A-Za-z._+-]*", value or ""):
+        raise click.BadParameter("use letters, digits and . _ + - only, e.g. 1.2.0")
+    return value
 
 
 def register(main):
@@ -160,7 +168,7 @@ def register(main):
 
     @build.command("release")
     @click.option("--version", "version", required=True, metavar="VERSION",
-                  help="The version being released, e.g. 1.2.0.")
+                  callback=_check_version, help="The version being released, e.g. 1.2.0.")
     @click.option("--out-dir", required=True, type=click.Path(file_okay=False, path_type=Path),
                   help="Where to write the baseline, BOM, SBOM and evidence bundle.")
     @click.option("--write", is_flag=True, default=False,

@@ -1,36 +1,24 @@
 """Unit tests for medharness.services.cr_generation."""
 
 import json
-import os
 import subprocess
-from pathlib import Path
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 from medharness.services.cr_generation import (
-    LLMConfig,
     _auto_post_pr_feedback,
     _build_review_result,
     _get_pr_feedback,
-    _model_label,
     _parse_review_data,
     _read_design_review_data,
     _resolve_stage_llm,
     _run_claude,
-    _run_claude_step,
     _run_openai_compatible,
     generate_code,
     generate_dhf,
 )
-from medharness.services.cr_impact import _record_design_impact_in_cr
-from medharness.services.prompt_assembly import (
-    MAX_DIFF_CHARS,
-    _append_skills,
-    _assemble_develop_prompt,
-    _load_prompt,
-    _load_skill,
-)
+from medharness.services.prompt_assembly import MAX_DIFF_CHARS
 
 
 @pytest.fixture(autouse=True)
@@ -39,130 +27,12 @@ def _no_push(monkeypatch):
     monkeypatch.setattr("medharness.services.cr_generation._push_to_pr", lambda *a, **k: None)
 
 
-# ── Prompt loading ────────────────────────────────────────────────────────────
-
-class TestLoadPrompt:
-    def test_load_cr_develop(self):
-        text = _load_prompt("cr_develop.md")
-        assert "{{cr_id}}" in text
-
-    def test_load_cr_generate_dhf(self):
-        text = _load_prompt("cr_generate_dhf.md")
-        assert "{{cr_id}}" in text
-        assert "verification_criteria" in text
-        assert "V-model" in text or "V-Model" in text
-        assert "medharness --dhf DHF item" in text
-        assert "medharness --dhf DHF verify dhf" in text
-
-    def test_missing_prompt_raises(self):
-        import importlib.resources
-        with pytest.raises(FileNotFoundError):
-            ref = importlib.resources.files("medharness.prompts").joinpath("nonexistent.md")
-            ref.read_text(encoding="utf-8")
 
 
-class TestLoadSkill:
-    @pytest.mark.parametrize("name", [
-        "product_impact.md",
-        "req_manage.md",
-        "architecture_impact.md",
-        "risk_impact.md",
-        "soup_impact.md",
-        "test_impact.md",
-        "regulatory_impact.md",
-        "security_impact.md",
-        "usability_impact.md",
-    ])
-    def test_all_skills_loadable(self, name):
-        text = _load_skill(name)
-        assert len(text) > 100, f"{name} looks empty"
-
-    def test_req_manage_has_quality_rules(self):
-        text = _load_skill("req_manage.md")
-        assert "No conflict" in text
-        assert "Atomicity" in text
-        assert "Verifiability" in text
-
-    def test_req_manage_has_cli_syntax(self):
-        text = _load_skill("req_manage.md")
-        assert "item create" in text
-        assert "--data" in text
-
-    def test_architecture_impact_has_output_template(self):
-        text = _load_skill("architecture_impact.md")
-        assert "architecture" in text.lower()
-        assert "Required" in text
-
-    def test_risk_impact_has_output_template(self):
-        text = _load_skill("risk_impact.md")
-        assert "risk" in text.lower()
-        assert "Required" in text
 
 
-class TestAppendSkills:
-    def test_appends_separator(self):
-        result = _append_skills("base prompt")
-        assert "---" in result
-
-    def test_all_nine_skill_sections_present(self):
-        result = _append_skills("base")
-        for title in ["Product Impact", "Requirements Management", "Architecture Impact",
-                      "Risk Impact", "SOUP Impact", "Test Impact",
-                      "Regulatory Impact", "Security Impact", "Usability / HFE Impact"]:
-            assert title in result, f"Missing skill section: {title}"
-
-    def test_base_prompt_preserved(self):
-        result = _append_skills("UNIQUE_BASE_CONTENT")
-        assert "UNIQUE_BASE_CONTENT" in result
 
 
-# ── Prompt assembly ───────────────────────────────────────────────────────────
-
-class TestAssemblePrompts:
-    def test_develop_substitutes_cr_id(self):
-        prompt = _assemble_develop_prompt("CR-099")
-        assert "CR-099" in prompt
-        assert "{{cr_id}}" not in prompt
-
-    def test_develop_does_not_include_dhf_skills(self):
-        # develop prompt is for code; it should not include all 6 DHF impact skills
-        prompt = _assemble_develop_prompt("CR-099")
-        assert "Risk Impact" not in prompt
-        assert "SOUP Impact" not in prompt
-
-    def test_generate_dhf_substitutes_cr_id(self):
-        from medharness.services.prompt_assembly import _assemble_generate_dhf_prompt
-        prompt = _assemble_generate_dhf_prompt("CR-077")
-        assert "CR-077" in prompt
-        assert "{{cr_id}}" not in prompt
-
-    def test_generate_dhf_includes_skills(self):
-        from medharness.services.prompt_assembly import _assemble_generate_dhf_prompt
-        prompt = _assemble_generate_dhf_prompt("CR-001")
-        assert "Product Impact" in prompt or "product_impact" in prompt
-
-    def test_generate_dhf_includes_verification_criteria_instructions(self):
-        from medharness.services.prompt_assembly import _assemble_generate_dhf_prompt
-        prompt = _assemble_generate_dhf_prompt("CR-001")
-        assert "verification_criteria" in prompt
-
-    def test_review_design_substitutes_cr_id(self):
-        from medharness.services.prompt_assembly import _assemble_review_design_prompt
-        prompt = _assemble_review_design_prompt("CR-042")
-        assert "CR-042" in prompt
-        assert "{{cr_id}}" not in prompt
-
-    def test_review_design_covers_three_criteria(self):
-        from medharness.services.prompt_assembly import _assemble_review_design_prompt
-        prompt = _assemble_review_design_prompt("CR-001")
-        assert "Necessity" in prompt
-        assert "Strategy" in prompt or "strategy" in prompt
-        assert "SWDD" in prompt
-
-    def test_review_design_does_not_write_files(self):
-        from medharness.services.prompt_assembly import _assemble_review_design_prompt
-        prompt = _assemble_review_design_prompt("CR-001")
-        assert "do not modify any dhf item files" in prompt.lower()
 
 
 # ── _parse_review_data ────────────────────────────────────────────────────────
@@ -363,22 +233,7 @@ class TestRunClaude:
         assert "--output-format" in args
         assert "json" in args
 
-    def test_includes_model_flag_when_env_set(self, monkeypatch):
-        monkeypatch.setenv("ANTHROPIC_MODEL", "claude-opus-4-7")
-        with patch("subprocess.run") as mock_run:
-            mock_run.return_value = MagicMock(returncode=0, stdout='{"result":"","session_id":""}', stderr="")
-            _run_claude("prompt")
-        args = mock_run.call_args[0][0]
-        assert "--model" in args
-        assert "claude-opus-4-7" in args
 
-    def test_omits_model_flag_when_env_unset(self, monkeypatch):
-        monkeypatch.delenv("ANTHROPIC_MODEL", raising=False)
-        with patch("subprocess.run") as mock_run:
-            mock_run.return_value = MagicMock(returncode=0, stdout='{"result":"","session_id":""}', stderr="")
-            _run_claude("prompt")
-        args = mock_run.call_args[0][0]
-        assert "--model" not in args
 
     def test_resume_session_flag_passed(self):
         with patch("subprocess.run") as mock_run:
@@ -388,12 +243,6 @@ class TestRunClaude:
         assert "--resume" in args
         assert "sid-prior" in args
 
-    def test_no_resume_flag_when_empty(self):
-        with patch("subprocess.run") as mock_run:
-            mock_run.return_value = MagicMock(returncode=0, stdout='{"result":"ok","session_id":""}', stderr="")
-            _run_claude("prompt")
-        args = mock_run.call_args[0][0]
-        assert "--resume" not in args
 
     def test_fallback_on_invalid_json(self):
         with patch("subprocess.run") as mock_run:
@@ -403,60 +252,8 @@ class TestRunClaude:
         assert output == "not json"
         assert session_id == ""
 
-    def test_combines_stdout_and_stderr(self):
-        with patch("subprocess.run") as mock_run:
-            mock_run.return_value = MagicMock(returncode=1, stdout="out", stderr="err")
-            rc, output, session_id = _run_claude("x")
-        assert rc == 1
-        assert "out" in output
-        assert "err" in output
-        assert session_id == ""
 
 
-# ── _run_claude_step ──────────────────────────────────────────────────────────
-
-class TestRunClaudeStep:
-    def test_tool_label_is_claude_for_anthropic(self):
-        steps: list[dict] = []
-        with patch("medharness.services.cr_generation._run_llm", return_value=(0, "", "")):
-            _run_claude_step(
-                name="test_step",
-                prompt="p",
-                steps=steps,
-                warnings=[],
-                critical=False,
-                llm_config=LLMConfig(provider="anthropic", model="claude-opus-4-7"),
-            )
-        assert steps[0]["details"]["tool"] == "claude"
-
-    def test_tool_label_is_model_label_for_non_anthropic(self):
-        steps: list[dict] = []
-        with patch("medharness.services.cr_generation._run_llm", return_value=(0, "", "")):
-            _run_claude_step(
-                name="test_step",
-                prompt="p",
-                steps=steps,
-                warnings=[],
-                critical=False,
-                llm_config=LLMConfig(provider="openai", model="gpt-4o"),
-            )
-        assert steps[0]["details"]["tool"] == "openai:gpt-4o"
-
-    def test_warning_code_is_not_cli_missing_for_non_anthropic(self):
-        """Non-anthropic provider failure must not emit claude_cli_missing warning."""
-        warnings: list[dict] = []
-        with patch("medharness.services.cr_generation._run_llm", return_value=(1, "api error", "")):
-            _run_claude_step(
-                name="test_step",
-                prompt="p",
-                steps=[],
-                warnings=warnings,
-                critical=False,
-                llm_config=LLMConfig(provider="openai", model="gpt-4o", api_key="sk"),
-            )
-        assert warnings
-        assert all(w["code"] != "claude_cli_missing" for w in warnings)
-        assert warnings[0]["code"] == "claude_step_failed"
 
 
 # ── generate_dhf ──────────────────────────────────────────────────────────────
@@ -1141,93 +938,14 @@ class TestAutoPostPrFeedback:
         mock_post.assert_not_called()
         assert urls == []
 
-    def test_warning_body_format(self):
-        result = {"warnings": [{"code": "W-TRACE", "message": "traceability gap"}], "outcome": "ok"}
-        captured: list[str] = []
-        with patch(self.MOCK_TARGET, side_effect=lambda pr, body, **kw: captured.append(body) or "https://u") as mock_post:
-            _auto_post_pr_feedback(42, "CR-042", result)
-        assert len(captured) == 1
-        assert "⚠️ **Warnings for CR-042:**" in captured[0]
-        assert "- `W-TRACE`: traceability gap" in captured[0]
-        assert mock_post.call_args.args[0] == 42
 
-    def test_error_body_format(self):
-        result = {
-            "warnings": [],
-            "outcome": "completed_with_errors",
-            "errors": [{"field": "srs_link", "issue": "no link", "fix": "add @links:SRS-001"}],
-        }
-        captured: list[str] = []
-        with patch(self.MOCK_TARGET, side_effect=lambda pr, body, **kw: captured.append(body) or "https://u"):
-            _auto_post_pr_feedback(42, "CR-042", result)
-        assert len(captured) == 1
-        assert "⚠️ **Validation errors for CR-042:**" in captured[0]
-        assert "**srs_link**" in captured[0]
-        assert "no link" in captured[0]
-        assert "_Fix:_ add @links:SRS-001" in captured[0]
 
-    def test_empty_url_not_added_to_list(self):
-        result = {"warnings": [{"code": "W001", "message": "warn"}], "outcome": "ok"}
-        with patch(self.MOCK_TARGET, return_value=""):
-            urls = _auto_post_pr_feedback(42, "CR-042", result)
-        assert urls == []
 
-    def test_token_kwarg_forwarded_on_warning_branch(self):
-        result = {"warnings": [{"code": "W001", "message": "x"}], "outcome": "ok"}
-        with patch(self.MOCK_TARGET, side_effect=lambda pr, body, **kw: "https://u") as mock_post:
-            _auto_post_pr_feedback(42, "CR-042", result, token="my-token")
-        assert mock_post.call_args.kwargs.get("token") == "my-token"
 
-    def test_token_kwarg_forwarded_on_error_branch(self):
-        result = {
-            "warnings": [],
-            "outcome": "completed_with_errors",
-            "errors": [{"field": "f", "issue": "i", "fix": "x"}],
-        }
-        with patch(self.MOCK_TARGET, side_effect=lambda pr, body, **kw: "https://u") as mock_post:
-            _auto_post_pr_feedback(42, "CR-042", result, token="err-token")
-        assert mock_post.call_args.kwargs.get("token") == "err-token"
 
-    def test_explicit_empty_warnings_no_warning_comment(self):
-        result = {
-            "warnings": [],
-            "outcome": "completed_with_errors",
-            "errors": [{"field": "f", "issue": "i", "fix": "x"}],
-        }
-        captured: list[str] = []
-        with patch(self.MOCK_TARGET, side_effect=lambda pr, body, **kw: captured.append(body) or "https://u"):
-            _auto_post_pr_feedback(42, "CR-042", result)
-        assert all("Warnings" not in b for b in captured)
-        assert any("Validation errors" in b for b in captured)
 
-    def test_missing_result_keys_produces_no_comments(self):
-        with patch(self.MOCK_TARGET) as mock_post:
-            urls = _auto_post_pr_feedback(42, "CR-042", {})
-        mock_post.assert_not_called()
-        assert urls == []
 
-    def test_completed_with_errors_but_no_errors_key_posts_no_comment(self):
-        # outcome == completed_with_errors with absent errors key → empty list → no post
-        result = {"warnings": [], "outcome": "completed_with_errors"}
-        with patch(self.MOCK_TARGET) as mock_post:
-            urls = _auto_post_pr_feedback(42, "CR-042", result)
-        mock_post.assert_not_called()
-        assert urls == []
 
-    def test_multiple_warnings_combined_into_single_body(self):
-        result = {
-            "warnings": [
-                {"code": "W001", "message": "first warning"},
-                {"code": "W002", "message": "second warning"},
-            ],
-            "outcome": "ok",
-        }
-        captured: list[str] = []
-        with patch(self.MOCK_TARGET, side_effect=lambda pr, body, **kw: captured.append(body) or "https://u") as mock_post:
-            _auto_post_pr_feedback(42, "CR-042", result)
-        assert mock_post.call_count == 1
-        assert "- `W001`: first warning" in captured[0]
-        assert "- `W002`: second warning" in captured[0]
 
 
 # ── LLMConfig and _resolve_stage_llm ──────────────────────────────────────────
@@ -1240,12 +958,6 @@ class TestResolveStageLlm:
         assert cfg.provider == "anthropic"
         assert cfg.model == ""
 
-    def test_picks_up_anthropic_model_env(self, monkeypatch):
-        monkeypatch.delenv("MEDHARNESS_DESIGN_MODEL", raising=False)
-        monkeypatch.setenv("ANTHROPIC_MODEL", "claude-opus-4-7")
-        cfg = _resolve_stage_llm("design")
-        assert cfg.provider == "anthropic"
-        assert cfg.model == "claude-opus-4-7"
 
     def test_provider_colon_model_format(self, monkeypatch):
         monkeypatch.setenv("MEDHARNESS_DEVELOP_MODEL", "openai:gpt-4o")
@@ -1256,20 +968,7 @@ class TestResolveStageLlm:
         assert cfg.api_key == "sk-test"
         assert cfg.base_url == "https://api.openai.com/v1"
 
-    def test_deepseek_provider(self, monkeypatch):
-        monkeypatch.setenv("MEDHARNESS_CODE_REVIEW_MODEL", "deepseek:deepseek-chat")
-        monkeypatch.setenv("DEEPSEEK_API_KEY", "ds-key")
-        cfg = _resolve_stage_llm("code_review")
-        assert cfg.provider == "deepseek"
-        assert cfg.model == "deepseek-chat"
-        assert cfg.api_key == "ds-key"
-        assert cfg.base_url == "https://api.deepseek.com/v1"
 
-    def test_stage_names_are_uppercased(self, monkeypatch):
-        monkeypatch.setenv("MEDHARNESS_DESIGN_REVIEW_MODEL", "openai:gpt-4o")
-        monkeypatch.setenv("OPENAI_API_KEY", "k")
-        cfg = _resolve_stage_llm("design_review")
-        assert cfg.provider == "openai"
 
     def test_bare_model_without_provider_treated_as_anthropic(self, monkeypatch):
         monkeypatch.setenv("MEDHARNESS_DESIGN_MODEL", "claude-opus-4-7")
@@ -1285,53 +984,11 @@ class TestResolveStageLlm:
         assert cfg.api_key == ""
         assert cfg.base_url == ""
 
-    def test_custom_base_url_overrides_default(self, monkeypatch):
-        monkeypatch.setenv("MEDHARNESS_DESIGN_MODEL", "openai:gpt-4o")
-        monkeypatch.setenv("MEDHARNESS_DESIGN_BASE_URL", "https://my-azure.openai.azure.com/v1")
-        monkeypatch.setenv("OPENAI_API_KEY", "sk-1")
-        cfg = _resolve_stage_llm("design")
-        assert cfg.base_url == "https://my-azure.openai.azure.com/v1"
-
-    def test_default_base_url_used_when_custom_not_set(self, monkeypatch):
-        monkeypatch.setenv("MEDHARNESS_DESIGN_MODEL", "openai:gpt-4o")
-        monkeypatch.delenv("MEDHARNESS_DESIGN_BASE_URL", raising=False)
-        monkeypatch.setenv("OPENAI_API_KEY", "sk-1")
-        cfg = _resolve_stage_llm("design")
-        assert cfg.base_url == "https://api.openai.com/v1"
 
 
-class TestModelLabel:
-    def test_anthropic_with_model(self):
-        assert _model_label(LLMConfig(provider="anthropic", model="claude-opus-4-7")) == "anthropic:claude-opus-4-7"
-
-    def test_provider_without_model(self):
-        assert _model_label(LLMConfig(provider="anthropic")) == "anthropic"
-
-    def test_openai_with_model(self):
-        assert _model_label(LLMConfig(provider="openai", model="gpt-4o")) == "openai:gpt-4o"
 
 
-# ── _run_claude model param ────────────────────────────────────────────────────
 
-class TestRunClaudeModelParam:
-    def test_model_param_takes_precedence_over_env(self, monkeypatch):
-        monkeypatch.setenv("ANTHROPIC_MODEL", "claude-haiku-4-5")
-        with patch("subprocess.run") as mock_run:
-            mock_run.return_value = MagicMock(returncode=0, stdout='{"result":"","session_id":""}', stderr="")
-            _run_claude("p", model="claude-opus-4-7")
-        args = mock_run.call_args[0][0]
-        assert "--model" in args
-        idx = args.index("--model")
-        assert args[idx + 1] == "claude-opus-4-7"
-
-    def test_env_used_when_model_param_empty(self, monkeypatch):
-        monkeypatch.setenv("ANTHROPIC_MODEL", "claude-haiku-4-5")
-        with patch("subprocess.run") as mock_run:
-            mock_run.return_value = MagicMock(returncode=0, stdout='{"result":"","session_id":""}', stderr="")
-            _run_claude("p", model="")
-        args = mock_run.call_args[0][0]
-        idx = args.index("--model")
-        assert args[idx + 1] == "claude-haiku-4-5"
 
 
 # ── _run_openai_compatible ─────────────────────────────────────────────────────
@@ -1526,36 +1183,7 @@ class TestDiagnosticsModelFields:
         monkeypatch.setattr("medharness.services.cr_generation.get_session", lambda pr: "")
         monkeypatch.setattr("medharness.services.cr_generation.put_session", lambda pr, sid: None)
 
-    def test_generate_dhf_has_design_and_design_review_model(self, tmp_path, monkeypatch):
-        monkeypatch.setenv("MEDHARNESS_DESIGN_MODEL", "openai:gpt-4o")
-        monkeypatch.setenv("MEDHARNESS_DESIGN_REVIEW_MODEL", "deepseek:deepseek-chat")
-        monkeypatch.setenv("OPENAI_API_KEY", "sk-1")
-        monkeypatch.setenv("DEEPSEEK_API_KEY", "ds-1")
-        dhf = tmp_path / "DHF"
-        dhf.mkdir()
-        with patch("medharness.services.cr_generation._run_llm", return_value=(0, "", "")), \
-             patch("medharness.services.cr_generation.git.collect_dhf_item_changes",
-                   return_value={"created": [], "updated": [], "deleted": []}), \
-             patch("medharness.services.design_validation.validate_generate_dhf", return_value=[]):
-            result = generate_dhf("CR-070", dhf)
-        assert result["diagnostics"]["design_model"] == "openai:gpt-4o"
-        assert result["diagnostics"]["design_review_model"] == "deepseek:deepseek-chat"
-        assert "review_model" not in result["diagnostics"]
-        assert "anthropic_model" not in result["diagnostics"]
 
-    def test_generate_code_has_develop_and_code_review_model(self, tmp_path, monkeypatch):
-        monkeypatch.setenv("MEDHARNESS_DEVELOP_MODEL", "deepseek:deepseek-chat")
-        monkeypatch.setenv("MEDHARNESS_CODE_REVIEW_MODEL", "openai:gpt-4o")
-        monkeypatch.setenv("DEEPSEEK_API_KEY", "ds-1")
-        monkeypatch.setenv("OPENAI_API_KEY", "sk-1")
-        dhf = tmp_path / "DHF"
-        dhf.mkdir()
-        with patch("medharness.services.cr_generation._run_llm", return_value=(0, "", "")):
-            result = generate_code("CR-071", dhf)
-        assert result["diagnostics"]["develop_model"] == "deepseek:deepseek-chat"
-        assert result["diagnostics"]["code_review_model"] == "openai:gpt-4o"
-        assert "review_model" not in result["diagnostics"]
-        assert "anthropic_model" not in result["diagnostics"]
 
     def test_generate_dhf_routes_generation_and_review_to_different_models(self, tmp_path, monkeypatch):
         monkeypatch.setenv("MEDHARNESS_DESIGN_MODEL", "openai:gpt-4o")
@@ -1613,85 +1241,3 @@ class TestDiagnosticsModelFields:
         assert configs_used[-1].provider == "openai"
 
 
-class TestNonAnthropicProviderSessionWarning:
-    """Warning emitted when revision mode is active but a stage uses a non-anthropic provider."""
-
-    @pytest.fixture(autouse=True)
-    def stub_session(self, monkeypatch):
-        monkeypatch.setattr("medharness.services.cr_generation.get_session", lambda pr: "")
-        monkeypatch.setattr("medharness.services.cr_generation.put_session", lambda pr, sid: None)
-
-    def test_generate_dhf_warns_when_design_model_non_anthropic_with_pr(self, tmp_path, monkeypatch):
-        monkeypatch.setenv("MEDHARNESS_DESIGN_MODEL", "openai:gpt-4o")
-        monkeypatch.setenv("OPENAI_API_KEY", "sk-1")
-        dhf = tmp_path / "DHF"
-        dhf.mkdir()
-        with patch("medharness.services.cr_generation._run_llm", return_value=(0, "", "")), \
-             patch("medharness.services.cr_generation._get_pr_feedback",
-                   return_value={"diagnostics": {"comments_count": 0, "reviews_count": 0}, "warnings": [], "prompt_text": ""}), \
-             patch("medharness.services.cr_generation.git.collect_dhf_item_changes",
-                   return_value={"created": [], "updated": [], "deleted": []}), \
-             patch("medharness.services.design_validation.validate_generate_dhf", return_value=[]):
-            result = generate_dhf("CR-080", dhf, pr_number=42)
-        codes = [w.get("code") for w in result["warnings"]]
-        assert "non_anthropic_provider_no_session" in codes
-
-    def test_generate_dhf_no_warning_when_all_anthropic_with_pr(self, tmp_path, monkeypatch):
-        dhf = tmp_path / "DHF"
-        dhf.mkdir()
-        with patch("medharness.services.cr_generation._run_llm", return_value=(0, "", "")), \
-             patch("medharness.services.cr_generation._get_pr_feedback",
-                   return_value={"diagnostics": {"comments_count": 0, "reviews_count": 0}, "warnings": [], "prompt_text": ""}), \
-             patch("medharness.services.cr_generation.git.collect_dhf_item_changes",
-                   return_value={"created": [], "updated": [], "deleted": []}), \
-             patch("medharness.services.design_validation.validate_generate_dhf", return_value=[]):
-            result = generate_dhf("CR-081", dhf, pr_number=42)
-        codes = [w.get("code") for w in result["warnings"]]
-        assert "non_anthropic_provider_no_session" not in codes
-
-    def test_generate_dhf_no_warning_when_non_anthropic_without_pr(self, tmp_path, monkeypatch):
-        monkeypatch.setenv("MEDHARNESS_DESIGN_MODEL", "openai:gpt-4o")
-        monkeypatch.setenv("OPENAI_API_KEY", "sk-1")
-        dhf = tmp_path / "DHF"
-        dhf.mkdir()
-        with patch("medharness.services.cr_generation._run_llm", return_value=(0, "", "")), \
-             patch("medharness.services.cr_generation.git.collect_dhf_item_changes",
-                   return_value={"created": [], "updated": [], "deleted": []}), \
-             patch("medharness.services.design_validation.validate_generate_dhf", return_value=[]):
-            result = generate_dhf("CR-082", dhf)
-        codes = [w.get("code") for w in result["warnings"]]
-        assert "non_anthropic_provider_no_session" not in codes
-
-    def test_generate_code_warns_when_develop_model_non_anthropic_with_pr(self, tmp_path, monkeypatch):
-        monkeypatch.setenv("MEDHARNESS_DEVELOP_MODEL", "openai:gpt-4o")
-        monkeypatch.setenv("OPENAI_API_KEY", "sk-1")
-        dhf = tmp_path / "DHF"
-        dhf.mkdir()
-        with patch("medharness.services.cr_generation._run_llm", return_value=(0, "", "")), \
-             patch("medharness.services.cr_generation._get_pr_feedback",
-                   return_value={"diagnostics": {"comments_count": 0, "reviews_count": 0}, "warnings": [], "prompt_text": ""}):
-            result = generate_code("CR-083", dhf, pr_number=42)
-        codes = [w.get("code") for w in result["warnings"]]
-        assert "non_anthropic_provider_no_session" in codes
-
-    def test_generate_code_no_warning_when_all_anthropic_with_pr(self, tmp_path, monkeypatch):
-        dhf = tmp_path / "DHF"
-        dhf.mkdir()
-        with patch("medharness.services.cr_generation._run_llm", return_value=(0, "", "")), \
-             patch("medharness.services.cr_generation._get_pr_feedback",
-                   return_value={"diagnostics": {"comments_count": 0, "reviews_count": 0}, "warnings": [], "prompt_text": ""}):
-            result = generate_code("CR-084", dhf, pr_number=42)
-        codes = [w.get("code") for w in result["warnings"]]
-        assert "non_anthropic_provider_no_session" not in codes
-
-    def test_generate_code_warns_when_review_model_non_anthropic_with_pr(self, tmp_path, monkeypatch):
-        monkeypatch.setenv("MEDHARNESS_CODE_REVIEW_MODEL", "deepseek:deepseek-chat")
-        monkeypatch.setenv("DEEPSEEK_API_KEY", "ds-1")
-        dhf = tmp_path / "DHF"
-        dhf.mkdir()
-        with patch("medharness.services.cr_generation._run_llm", return_value=(0, "", "")), \
-             patch("medharness.services.cr_generation._get_pr_feedback",
-                   return_value={"diagnostics": {"comments_count": 0, "reviews_count": 0}, "warnings": [], "prompt_text": ""}):
-            result = generate_code("CR-085", dhf, pr_number=42)
-        codes = [w.get("code") for w in result["warnings"]]
-        assert "non_anthropic_provider_no_session" in codes

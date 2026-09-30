@@ -10,6 +10,19 @@ import click
 from dhfkit.local_adapter import LocalDHFAdapter
 
 
+def _json_object(data: str) -> dict:
+    """`--data` parsed, or exit 1: a JSON array or scalar is not a set of fields."""
+    try:
+        value = json.loads(data)
+    except json.JSONDecodeError as e:
+        click.echo(f"ERROR: --data is not valid JSON: {e}", err=True)
+        sys.exit(1)
+    if not isinstance(value, dict):
+        click.echo("ERROR: --data must be a JSON object, e.g. '{\"title\": \"...\"}'.", err=True)
+        sys.exit(1)
+    return value
+
+
 def register(main):
     @main.group("item")
     def item() -> None:
@@ -46,12 +59,7 @@ def register(main):
     @click.pass_context
     def item_create(ctx: click.Context, doc_type: str, data: str) -> None:
         """Create a new DHF item. Outputs the created item as JSON."""
-        import json as _json
-        try:
-            item_data = _json.loads(data)
-        except _json.JSONDecodeError as e:
-            click.echo(f"ERROR: --data is not valid JSON: {e}", err=True)
-            sys.exit(1)
+        item_data = _json_object(data)
         item_data["type"] = doc_type
         adapter = LocalDHFAdapter(ctx.obj["dhf"])
         from dhfkit.exceptions import ValidationError
@@ -70,12 +78,7 @@ def register(main):
     @click.pass_context
     def item_update(ctx: click.Context, item_id: str, data: str) -> None:
         """Update fields of an existing DHF item."""
-        import json as _json
-        try:
-            update_data = _json.loads(data)
-        except _json.JSONDecodeError as e:
-            click.echo(f"ERROR: --data is not valid JSON: {e}", err=True)
-            sys.exit(1)
+        update_data = _json_object(data)
         adapter = LocalDHFAdapter(ctx.obj["dhf"])
         from dhfkit.exceptions import RefusedWrite
         try:
