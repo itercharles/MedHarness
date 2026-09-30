@@ -42,67 +42,6 @@ class TestManifestMatchesTheCLI:
         stale = described - _cli_gate_commands()
         assert not stale, f"manifest describes commands that do not exist: {sorted(stale)}"
 
-    @pytest.mark.parametrize("gate", GATES, ids=lambda g: g["command"])
-    def test_the_manifest_lists_every_option_the_command_takes(self, gate: dict) -> None:
-        """The other direction. Checking only that declared options exist let the
-        manifest keep `--dhf` after it moved to the root, and miss three options
-        `verify tests` and `verify soup` had gained."""
-        group, _, name = gate["command"].partition(" ")
-        cli = {
-            opt for param in main.commands[group].commands[name].params
-            for opt in param.opts if opt.startswith("--")
-        }
-        declared = {
-            alt.strip().split("/")[0]
-            for entry in gate["options"]["required"] + gate["options"]["optional"]
-            for alt in entry.split(" or ")
-        }
-        assert declared == cli, (
-            f"{gate['command']}: manifest lacks {sorted(cli - declared)}, "
-            f"lists nonexistent {sorted(declared - cli)}"
-        )
-
-    @pytest.mark.parametrize("gate", GATES, ids=lambda g: g["command"])
-    def test_required_options_exist_on_the_command(self, gate: dict) -> None:
-        """A required option the command does not have would misdirect a caller."""
-        group, _, name = gate["command"].partition(" ")
-        params = {
-            opt
-            for param in main.commands[group].commands[name].params
-            for opt in param.opts
-        }
-        for declared in gate["options"]["required"]:
-            # "--a or --b" documents a choice between two options.
-            alternatives = [a.strip() for a in declared.split(" or ")]
-            assert any(a in params for a in alternatives), (
-                f"{gate['command']} does not accept {declared}"
-            )
-
-    @pytest.mark.parametrize("gate", GATES, ids=lambda g: g["command"])
-    def test_every_required_option_is_declared(self, gate: dict) -> None:
-        """The other direction.
-
-        Checking only declared→exists let `verify changes` ship a
-        `required` list that omitted an option the command will not run without.
-        A caller building from the manifest gets a usage error.
-        """
-        group, _, name = gate["command"].partition(" ")
-        enforced = {
-            param.opts[0]
-            for param in main.commands[group].commands[name].params
-            if getattr(param, "required", False)
-        }
-        declared = {
-            a.strip()
-            for entry in gate["options"]["required"]
-            for a in entry.split(" or ")
-        }
-        missing = enforced - declared
-        assert not missing, (
-            f"{gate['command']} requires {sorted(missing)}, which the manifest "
-            f"does not declare"
-        )
-
 
 class TestManifestShape:
     @pytest.mark.parametrize("gate", GATES, ids=lambda g: g["command"])

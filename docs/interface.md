@@ -11,14 +11,12 @@ MedHarness does not scaffold a CI workflow — a pipeline carries your runner la
 
 ## The commands
 
-| Command | What it does | Answers with |
-|---|---|---|
-| `item list` · `get` · `create` · `update` · `transition` | Reads or changes one DHF item at a time | the item — see [Records](#records-item) |
-| `verify dhf` · `tests` · `soup` · `completion` · `changes` | Judges the DHF, and a change against it. Writes nothing | the [result envelope](#the-result-envelope) |
-| `build plan` · `code` | An AI drafts a change request's design, or its code | a run report — see [Build](#build); `--prompt` prints Markdown instead |
-| `build soup` | Reconciles SOUP items with dependency manifests | a report |
-| `build release` | Checks the DHF and writes the release evidence | a report |
-| `init` | Scaffolds `DHF/`, `AGENTS.md` and `CLAUDE.md` | `project_name`, `project_dir`, `created` |
+One CLI, four groups. What each does is in the [command reference](#command-reference), generated from the CLI itself, so it lists every command and option and cannot drift.
+
+- **`item`** reads or changes one DHF item at a time.
+- **`verify`** judges the DHF, and a change against it. It writes nothing.
+- **`build`** produces items, code or release artifacts.
+- **`init`** scaffolds a project.
 
 Rules every command shares:
 
@@ -50,17 +48,17 @@ result = json.loads(lines[0])
 
 ## The checks (`verify`)
 
-| Gate | Reads | Needs | Network | Blocking |
-|------|-------|-------|---------|----------|
-| `verify dhf` | the DHF | — | no | `conditional` |
-| `verify tests` | the DHF, JUnit results | `--junit` | no | `conditional` |
-| `verify soup` | the DHF, dependency manifests | — | osv.dev | `conditional` |
-| `verify completion` | the DHF | `--cr` | no | `always` |
-| `verify changes` | the DHF, the working tree's diff | `--cr` | no | `always` |
+<!-- BEGIN GENERATED: gates — python scripts/generate_interface.py -->
+| Gate | Checks | Options | Network | Blocking |
+|---|---|---|---|---|
+| `verify dhf` | Schema validity, required traceability, dangling links, and coverage between V-model layers. | `--strict` | no | `conditional` |
+| `verify tests` | Requirement-to-test coverage from JUnit evidence, including declared test points. | `--junit`, `--strict` | no | `conditional` |
+| `verify soup` | The SOUP register against the dependency manifests, and each item against the OSV vulnerability database, honouring documented per-CVE acceptances. | `--manifest`, `--strict`, `--offline-mode` | yes | `conditional` |
+| `verify completion` | CR closure: mandatory CR fields, that the CR's affected_items exist, and verification evidence for each. | `--cr` (required), `--junit` | no | `always` |
+| `verify changes` | That the branch, uncommitted work included, changes exactly the items its CR lists, and code when asked. | `--cr` (required), `--since-ref`, `--code-path` | no | `always` |
+<!-- END GENERATED: gates -->
 
 Every check answers from the machine it runs on, and none reads GitHub. Approval is not a check: GitHub's branch protection — required approvals, stale approvals dismissed on push — enforces it, on the server, where a pull request cannot edit the rule away.
-
-The table is checked against the checks the CLI registers, so it cannot list one that does not exist or omit one that does.
 
 ### The result envelope
 
@@ -228,3 +226,155 @@ for check in CHECKS:
 ```
 
 An agent that only needs to read or change the DHF uses `item`, never the files: see [the section `init` writes into `AGENTS.md`](adopting.md#with-the-coding-agent-you-already-use).
+
+---
+
+## Command reference
+
+Generated from the CLI by `python scripts/generate_interface.py`; a test fails when it is out of date. `--help` on any command prints its full description.
+
+<!-- BEGIN GENERATED: reference — python scripts/generate_interface.py -->
+| Command | What it does |
+|---|---|
+| `item get` | Get a single DHF item by ID. Outputs JSON. |
+| `item list` | List DHF items. Outputs one JSON object per line. |
+| `item create` | Create a new DHF item. Outputs the created item as JSON. |
+| `item update` | Update fields of an existing DHF item. |
+| `item transition` | Move an item to TO_STATE, or list where it can go when TO_STATE is omitted. |
+| `verify dhf` | Check the DHF holds together: schema, links, cycles, coverage. |
+| `verify tests` | Check each requirement is verified by the method it declares. |
+| `verify completion` | Check a CR's record is complete and the items it changed are verified. |
+| `verify changes` | Check the branch changed the items the CR said it would. |
+| `verify soup` | Check the SOUP register matches what ships, and is not known-vulnerable. |
+| `build plan` | Draft the DHF item cascade and impact analysis for a CR, with a model. |
+| `build code` | Write the code and tests for a CR's approved design, with a model. |
+| `build release` | Build everything one release needs (IEC 62304 §9). |
+| `build soup` | Reconcile SOUP items from the project's dependency manifests. |
+| `init` | Scaffold a DHF, and the AGENTS.md coding agents read, in the current directory. |
+
+#### `medharness item get ITEM_ID`
+
+Get a single DHF item by ID. Outputs JSON.
+
+#### `medharness item list`
+
+List DHF items. Outputs one JSON object per line.
+
+| Option | |
+|---|---|
+| `--type CODE` | Filter by doc type code (e.g. SYS). |
+
+#### `medharness item create`
+
+Create a new DHF item. Outputs the created item as JSON.
+
+| Option | |
+|---|---|
+| `--type CODE` | Doc type code (e.g. SYS, SRS). [required] |
+| `--data JSON` | Item fields as JSON object. [required] |
+
+#### `medharness item update ITEM_ID`
+
+Update fields of an existing DHF item.
+
+| Option | |
+|---|---|
+| `--data JSON` | Fields to update as JSON (merged into existing). [required] |
+
+#### `medharness item transition ITEM_ID [TO_STATE]`
+
+Move an item to TO_STATE, or list where it can go when TO_STATE is omitted.
+
+#### `medharness verify dhf`
+
+Check the DHF holds together: schema, links, cycles, coverage.
+
+| Option | |
+|---|---|
+| `--strict` | Exit non-zero when items lack downstream coverage. Without it, coverage gaps are reported as WARN only. |
+
+#### `medharness verify tests`
+
+Check each requirement is verified by the method it declares.
+
+| Option | |
+|---|---|
+| `--junit PATH` | JUnit XML results: a file, or a directory searched for *.xml (repeatable). |
+| `--strict` | Make a requirement with no declared verification_method fail. Warns by default, so a project adding the field is not blocked. |
+
+#### `medharness verify completion`
+
+Check a CR's record is complete and the items it changed are verified.
+
+| Option | |
+|---|---|
+| `--cr CR_ID` | The CR to close. [required] |
+| `--junit PATH` | JUnit XML results for the items this CR touched: a file, or a directory searched for *.xml (repeatable). |
+
+#### `medharness verify changes`
+
+Check the branch changed the items the CR said it would.
+
+| Option | |
+|---|---|
+| `--cr CR_ID` | The CR whose affected_items the branch must change. [required] |
+| `--since-ref REF` | What the branch is compared against. |
+| `--code-path PATH` | Opt into code-change enforcement: path(s) under which at least one file must be modified. Omitting this option skips the code-change check entirely. |
+
+#### `medharness verify soup`
+
+Check the SOUP register matches what ships, and is not known-vulnerable.
+
+| Option | |
+|---|---|
+| `--manifest PATH` | Dependency manifest to compare the register against (repeatable). Auto-discovers when omitted. |
+| `--strict` | Make an undocumented or misversioned component fail the gate. Warns by default, so a project backfilling its register is not blocked. |
+| `--offline-mode [fail|warn]` | Behaviour when osv.dev is unreachable. 'warn' keeps the gate passing for air-gapped or proxy-restricted pipelines. |
+
+#### `medharness build plan`
+
+Draft the DHF item cascade and impact analysis for a CR, with a model.
+
+| Option | |
+|---|---|
+| `--cr CR_ID` | The CR to design: its item cascade and impact analysis. [required] |
+| `--pr N` | The PR this run belongs to, in CI: revise if a reviewer asked for changes, then commit and push the result to its branch. Without it, local files change and nothing is committed. |
+| `--prompt` | Print the stage's instructions, with this CR's DHF context, for an agent that is already running, instead of starting a model. |
+
+#### `medharness build code`
+
+Write the code and tests for a CR's approved design, with a model.
+
+| Option | |
+|---|---|
+| `--cr CR_ID` | The CR whose approved design to implement. [required] |
+| `--pr N` | The PR this run belongs to, in CI: revise if a reviewer asked for changes, then commit and push the result to its branch. Without it, local files change and nothing is committed. |
+| `--prompt` | Print the stage's instructions, with this CR's DHF context, for an agent that is already running, instead of starting a model. |
+
+#### `medharness build release`
+
+Build everything one release needs (IEC 62304 §9).
+
+| Option | |
+|---|---|
+| `--version VERSION` | The version being released, e.g. 1.2.0. [required] |
+| `--out-dir DIRECTORY` | Where to write the baseline, BOM, SBOM and evidence bundle. [required] |
+| `--write` | Record a REL item in the DHF. Happens only when every check passed; without it the DHF is not changed. |
+| `--cr CR_ID` | A CR to include (repeatable). Default: every completed CR not yet in a release. |
+| `--manifest PATH` | Dependency manifest whose packages the BOM lists beside the SOUP register (repeatable). |
+| `--junit PATH` | JUnit XML to include as test evidence: a file, or a directory searched for *.xml (repeatable). |
+| `--doc-format [html|pdf]` | Format of the bundled specifications. PDF needs medharness[docs] plus cairo/pango. [default: html] |
+
+#### `medharness build soup`
+
+Reconcile SOUP items from the project's dependency manifests.
+
+| Option | |
+|---|---|
+| `--manifest PATH` | Manifest to read (repeatable). Auto-discovers when omitted. |
+| `--from-command CMD` | External tool emitting NDJSON components (repeatable). |
+
+#### `medharness init`
+
+Scaffold a DHF, and the AGENTS.md coding agents read, in the current directory.
+<!-- END GENERATED: reference -->
