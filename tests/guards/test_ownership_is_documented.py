@@ -3,7 +3,7 @@
 This has drifted twice. `architecture.md` listed traceability under `dhfkit`
 while, thirty lines later, "The line between them" said dhfkit only stores. The
 README's opening demo led with schema and dangling links — both dhfkit's, and a
-dangling link is the one check a real backend makes impossible.
+dangling link is the one check a real adapter makes impossible.
 
 Analysis over the whole item set is what the project is for. A summary that
 omits it describes a different product.

@@ -21,7 +21,7 @@ import pytest
 import yaml
 
 import dhfkit.api as api
-from dhfkit.local_adapter import LocalDHFAdapter
+from dhfkit.item_store import ItemStore
 from medharness.workflows.init import _replace_placeholders, _scaffold_dhf
 
 
@@ -103,7 +103,7 @@ class TestDhfkitDoesNotCommit:
     def test_a_new_item_is_left_uncommitted(self, tmp_path: Path) -> None:
         root = self._repo(tmp_path)
         before = self._head(root)
-        LocalDHFAdapter(root / "DHF").create_item(
+        ItemStore(root / "DHF").create_item(
             {"type": "SRS", "title": "new", "derives_from": ["SYS-001"]}
         )
         assert self._head(root) == before, "dhfkit made a commit of its own"
@@ -115,7 +115,7 @@ class TestDhfkitDoesNotCommit:
 
     def test_an_edit_is_left_uncommitted(self, tmp_path: Path) -> None:
         root = self._repo(tmp_path)
-        adapter = LocalDHFAdapter(root / "DHF")
+        adapter = ItemStore(root / "DHF")
         created = adapter.create_item(
             {"type": "SRS", "title": "new", "derives_from": ["SYS-001"]}
         )

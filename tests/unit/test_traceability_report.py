@@ -129,11 +129,11 @@ class TestTheReport:
 
 def test_a_real_dhf_resolves_types_by_code() -> None:
     """`list_item_types()` names carry display names; columns are codes."""
-    from dhfkit.local_adapter import LocalDHFAdapter
+    from dhfkit.item_store import ItemStore
     from dhfkit.tests.fixtures import create_test_dhf, populate_test_dhf_direct
 
     dhf_path = create_test_dhf()
     populate_test_dhf_direct(dhf_path)
-    adapter = LocalDHFAdapter(dhf_path)
+    adapter = ItemStore(dhf_path)
     rows = traceability_matrix(adapter.list_items(), adapter.list_item_types(), ["SYS", "SRS"])["rows"]
     assert any(r["SYS"] is not None for r in rows)

@@ -21,7 +21,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-from dhfkit.local_adapter import LocalDHFAdapter
+from dhfkit.item_store import ItemStore
 from dhfkit.traceability import find_dangling_links
 from dhfkit.models.config import ProjectConfig
 from medharness.workflows.init import _replace_placeholders, _scaffold_dhf
@@ -61,7 +61,7 @@ def test_a_dangling_link_is_detected(field: str, code: str, tmp_path: Path) -> N
     data[field] = ["ZZZ-999"]
     target.write_text(yaml.safe_dump(data, sort_keys=False, allow_unicode=True))
 
-    adapter = LocalDHFAdapter(dhf)
+    adapter = ItemStore(dhf)
     result = {"dangling": find_dangling_links(
         adapter.list_items(), adapter.config.relationship_fields() or ()
     )}
@@ -105,7 +105,7 @@ class TestTheFieldSetComesFromTheSchema:
         data["supersedes"] = ["ZZZ-999"]
         item.write_text(yaml.safe_dump(data, sort_keys=False, allow_unicode=True))
 
-        adapter = LocalDHFAdapter(dhf)
+        adapter = ItemStore(dhf)
         result = {"dangling": find_dangling_links(
             adapter.list_items(), adapter.config.relationship_fields() or ()
         )}

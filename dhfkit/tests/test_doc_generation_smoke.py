@@ -72,12 +72,12 @@ def _make_test_dhf_with_flat_templates(tmpdir: str) -> tuple[Path, Path]:
 
 
 def test_a_project_template_renders(tmpdir):
-    from dhfkit.local_adapter import LocalDHFAdapter
+    from dhfkit.item_store import ItemStore
 
     project_root, dhf_root, specs_dir = _make_test_dhf_with_flat_templates(tmpdir)
     out = Path(tmpdir) / "out"
 
-    result = LocalDHFAdapter(dhf_root).render_spec("TEST", "html", out, "3.1.0")
+    result = ItemStore(dhf_root).render_spec("TEST", "html", out, "3.1.0")
 
     content = Path(result["path"]).read_text()
     assert "Test Spec Specification" in content

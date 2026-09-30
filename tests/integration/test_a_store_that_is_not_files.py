@@ -1,8 +1,8 @@
 """The CLI works on items kept somewhere other than YAML files.
 
-A backend is five methods (`dhfkit.backend.ItemBackend`); everything else — the
+An adapter is five methods (`dhfkit.adapter.DHFAdapter`); everything else — the
 schema, links, ID allocation, the lifecycle, the checks — must behave the same
-on top of it. This registers an in-memory backend the way an installed package
+on top of it. This registers an in-memory adapter the way an installed package
 would, points a project's `global.yaml` at it, and runs the real commands.
 """
 
@@ -15,13 +15,13 @@ import pytest
 import yaml
 from click.testing import CliRunner
 
-import dhfkit.backend as backend_module
-from dhfkit.backend import YamlBackend
+import dhfkit.adapter as adapter_module
+from dhfkit.local_adapter import LocalDHFAdapter
 from medharness.cli import main
 from medharness.workflows.init import _replace_placeholders, _scaffold_dhf
 
 
-class MemoryBackend:
+class MemoryAdapter:
     tracks_files = False
 
     def __init__(self, items: dict):
@@ -62,14 +62,14 @@ def memory_project(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     _scaffold_dhf(tmp_path)
     _replace_placeholders(tmp_path, "Memory")
     dhf = tmp_path / "DHF"
-    yaml_backend = YamlBackend(dhf / "items", None)
-    items = {i.uid: i for i in yaml_backend.load_all()}
+    yaml_adapter = LocalDHFAdapter(dhf / "items", None)
+    items = {i.uid: i for i in yaml_adapter.load_all()}
     for path in (dhf / "items").rglob("*.yaml"):
         path.unlink()
-    shared = MemoryBackend(items)
+    shared = MemoryAdapter(items)
     monkeypatch.setattr(
-        backend_module, "entry_points",
-        lambda group: [_EntryPoint("memory", lambda **_: shared)] if group == "dhfkit.backends" else [],
+        adapter_module, "entry_points",
+        lambda group: [_EntryPoint("memory", lambda **_: shared)] if group == "dhfkit.adapters" else [],
     )
     global_yaml = dhf / "config" / "global.yaml"
     global_yaml.write_text(global_yaml.read_text() + "\nstore:\n  type: memory\n")
@@ -83,7 +83,7 @@ def _run(dhf: Path, *args: str):
 
 
 class TestItemsInMemory:
-    def test_items_are_read_from_the_backend_not_from_files(self, memory_project) -> None:
+    def test_items_are_read_from_the_adapter_not_from_files(self, memory_project) -> None:
         dhf, store = memory_project
         assert not list((dhf / "items").rglob("*.yaml"))
         result = _run(dhf, "item", "list", "--type", "SRS")
@@ -92,7 +92,7 @@ class TestItemsInMemory:
         assert ids and all(i.startswith("SRS-") for i in ids)
         assert _run(dhf, "item", "get", ids[0]).exit_code == 0
 
-    def test_a_created_item_is_stored_in_the_backend_with_a_fresh_id(self, memory_project) -> None:
+    def test_a_created_item_is_stored_in_the_adapter_with_a_fresh_id(self, memory_project) -> None:
         dhf, store = memory_project
         before = set(store.items)
         result = _run(dhf, "item", "create", "--type", "SRS",
@@ -147,7 +147,7 @@ class TestWhatNeedsFilesSaysSo:
 class TestChoosingAStore:
     def test_an_uninstalled_store_names_what_is_installed(self, tmp_path: Path, monkeypatch) -> None:
         _scaffold_dhf(tmp_path)
-        monkeypatch.setattr(backend_module, "entry_points", lambda group: [])
+        monkeypatch.setattr(adapter_module, "entry_points", lambda group: [])
         global_yaml = tmp_path / "DHF" / "config" / "global.yaml"
         global_yaml.write_text(global_yaml.read_text() + "\nstore:\n  type: jira\n")
         result = _run(tmp_path / "DHF", "verify", "dhf")

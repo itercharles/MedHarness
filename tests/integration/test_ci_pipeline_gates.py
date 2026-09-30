@@ -233,8 +233,8 @@ class TestItemTypeDisplayNameContract:
     """Verify adapter returns display_name (not name) and code is separate."""
 
     def test_local_adapter_returns_display_name_key(self, dhf):
-        from dhfkit.local_adapter import LocalDHFAdapter
-        adapter = LocalDHFAdapter(dhf / "DHF")
+        from dhfkit.item_store import ItemStore
+        adapter = ItemStore(dhf / "DHF")
         types = adapter.list_item_types()
         assert types, "expect at least one item type"
         for t in types:
@@ -242,16 +242,16 @@ class TestItemTypeDisplayNameContract:
             assert "name" not in t, f"item type {t.get('code')} must not use ambiguous 'name' key"
 
     def test_display_name_is_human_readable(self, dhf):
-        from dhfkit.local_adapter import LocalDHFAdapter
-        adapter = LocalDHFAdapter(dhf / "DHF")
+        from dhfkit.item_store import ItemStore
+        adapter = ItemStore(dhf / "DHF")
         t = adapter.get_item_type("SYS-")
         assert t is not None
         assert t["display_name"] == "System Requirement"
         assert t["code"] == "SYS"
 
     def test_display_name_differs_from_code(self, dhf):
-        from dhfkit.local_adapter import LocalDHFAdapter
-        adapter = LocalDHFAdapter(dhf / "DHF")
+        from dhfkit.item_store import ItemStore
+        adapter = ItemStore(dhf / "DHF")
         for t in adapter.list_item_types():
             assert t["display_name"] != t["code"], (
                 f"display_name should be human-readable, not the code ({t['code']})"

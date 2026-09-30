@@ -126,7 +126,7 @@ class TestTheGateCopiesEveryFinding:
     """
 
     def test_no_finding_key_is_left_behind(self, tmp_path: Path) -> None:
-        from dhfkit.local_adapter import LocalDHFAdapter
+        from dhfkit.item_store import ItemStore
         from medharness.services.verify_dhf import ci_structural_gate
         from medharness.services.traceability import analyse
 
@@ -134,7 +134,7 @@ class TestTheGateCopiesEveryFinding:
         _replace_placeholders(tmp_path, "Copy")
         dhf = tmp_path / "DHF"
 
-        produced = set(analyse(LocalDHFAdapter(dhf)))
+        produced = set(analyse(ItemStore(dhf)))
         copied = set(ci_structural_gate(dhf)["details"]["results"]["traceability"])
 
         # Keys the gate deliberately reshapes or reports elsewhere.

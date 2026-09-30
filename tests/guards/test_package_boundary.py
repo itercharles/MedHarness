@@ -3,7 +3,7 @@
 The documented boundary says `dhfkit` can be used standalone, which means it
 has a contract. `medharness` read `adapter._config` in ten places — a private
 attribute of a `dhfkit` class, reached across the package boundary. Any
-refactor of `LocalDHFAdapter` would have broken `medharness` silently, and
+refactor of `ItemStore` would have broken `medharness` silently, and
 nothing checked.
 
 The import direction was already guarded. What a consumer may *touch* was not.
@@ -93,10 +93,10 @@ def test_no_private_dhfkit_attribute_is_read(where: str, line: int, expr: str) -
 
 class TestThePublicSurfaceCoversWhatIsNeeded:
     def test_the_adapter_exposes_its_config(self) -> None:
-        from dhfkit.local_adapter import LocalDHFAdapter
+        from dhfkit.item_store import ItemStore
 
         assert isinstance(
-            getattr(LocalDHFAdapter, "config", None), property
+            getattr(ItemStore, "config", None), property
         ), "the config every gate needs is not on the public surface"
 
     def test_the_api_exposes_it_by_path(self, tmp_path: Path) -> None:

@@ -1,7 +1,7 @@
 """Referential integrity of the stored links.
 
 A link naming an item that does not exist is a question about whether the data
-is well-formed, which is the store's to answer — and each backend answers it its
+is well-formed, which is the store's to answer — and each adapter answers it its
 own way, since a Jira issue link cannot point at a missing issue in the first
 place.
 

@@ -1,7 +1,7 @@
 """
 StubDHFAdapter — an in-memory item store for medharness unit tests.
 
-It answers the calls medharness makes of LocalDHFAdapter, with no filesystem.
+It answers the calls medharness makes of the DHFStore interface, with no filesystem.
 Use build_test_adapter() from tests/fixtures/data.py for a pre-populated instance.
 """
 

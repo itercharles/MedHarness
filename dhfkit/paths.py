@@ -1,6 +1,6 @@
 """Where things live inside a DHF.
 
-A consumer that joins these paths itself is coupled to this backend's layout.
+A consumer that joins these paths itself is coupled to this adapter's layout.
 Keeping them here means `medharness` can ask without knowing, and a different
 store can answer differently.
 """

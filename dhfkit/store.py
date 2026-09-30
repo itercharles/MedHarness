@@ -2,7 +2,7 @@
 
 `medharness` depends on this interface and on `open_store`, never on the class
 behind it, so what holds the items — YAML files today, another system through a
-backend (`dhfkit.backend`) — is invisible to every check and build step.
+adapter (`dhfkit.adapter`) — is invisible to every check and build step.
 `tests/guards/test_the_business_layer_sees_only_the_store_interface.py` holds
 that line.
 """
@@ -48,7 +48,7 @@ class DHFStore(Protocol):
 
 
 def open_store(dhf_root: Path) -> DHFStore:
-    """The DHF at `dhf_root`, with its items in whatever backend its config names."""
-    from dhfkit.local_adapter import LocalDHFAdapter
+    """The DHF at `dhf_root`, with its items in whatever adapter its config names."""
+    from dhfkit.item_store import ItemStore
 
-    return LocalDHFAdapter(dhf_root)
+    return ItemStore(dhf_root)

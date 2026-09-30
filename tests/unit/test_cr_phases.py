@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-from dhfkit.local_adapter import LocalDHFAdapter
+from dhfkit.item_store import ItemStore
 from medharness.workflows.cr_state import (
     ACTIVE_PHASES,
     TERMINAL_PHASES,
@@ -31,16 +31,16 @@ def dhf(tmp_path: Path) -> Path:
 class TestCRPhases:
     def test_scaffolded_cr_is_active(self, dhf: Path) -> None:
         """The documented first command must work on a fresh project."""
-        assert assert_cr_active(LocalDHFAdapter(dhf), "CR-001") in ACTIVE_PHASES
+        assert assert_cr_active(ItemStore(dhf), "CR-001") in ACTIVE_PHASES
 
     def test_missing_cr_says_not_found(self, dhf: Path) -> None:
         with pytest.raises(ValueError, match="not found"):
-            assert_cr_active(LocalDHFAdapter(dhf), "CR-999")
+            assert_cr_active(ItemStore(dhf), "CR-999")
 
     def test_absent_status_reads_as_new(self, dhf: Path) -> None:
         cr = dhf / "items" / "07_cr" / "CR-001.yaml"
         cr.write_text(cr.read_text().replace("status: new\n", ""))
-        assert get_cr_phase(LocalDHFAdapter(dhf), "CR-001") is CRPhase.NEW
+        assert get_cr_phase(ItemStore(dhf), "CR-001") is CRPhase.NEW
 
     def test_rejected_is_terminal_not_missing(self, dhf: Path) -> None:
         """`build plan` triage writes 'rejected'; it was read as 'not found'."""
@@ -48,7 +48,7 @@ class TestCRPhases:
         cr.write_text(cr.read_text().replace("status: new", "status: rejected"))
 
         with pytest.raises(ValueError) as exc:
-            assert_cr_active(LocalDHFAdapter(dhf), "CR-001")
+            assert_cr_active(ItemStore(dhf), "CR-001")
         assert "not found" not in str(exc.value)
         assert "rejected" in str(exc.value)
 
@@ -57,7 +57,7 @@ class TestCRPhases:
         cr.write_text(cr.read_text().replace("status: new", "status: banana"))
 
         with pytest.raises(ValueError) as exc:
-            assert_cr_active(LocalDHFAdapter(dhf), "CR-001")
+            assert_cr_active(ItemStore(dhf), "CR-001")
         assert "not found" not in str(exc.value)
         assert "banana" in str(exc.value)
 

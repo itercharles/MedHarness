@@ -16,7 +16,7 @@ from pathlib import Path
 
 import pytest
 
-from dhfkit.local_adapter import LocalDHFAdapter
+from dhfkit.item_store import ItemStore
 from medharness.services.traceability_report import verification_evidence
 from medharness.workflows.init import (
     _NON_SCAFFOLD_DIRS,
@@ -152,7 +152,7 @@ class TestPrefixConsistency:
             "<property name='medharness.links' value='VER-SW-001'/>"
             "</properties></testcase></testsuite></testsuites>"
         )
-        adapter = LocalDHFAdapter(dhf)
+        adapter = ItemStore(dhf)
         evidence = verification_evidence(adapter.list_items(), adapter.list_item_types(), [junit])
 
         assert evidence["VER-SW-001"]["verification_status"] == "verified"

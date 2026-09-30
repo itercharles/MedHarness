@@ -13,7 +13,7 @@ from pathlib import Path
 from click.testing import CliRunner
 
 from medharness.cli import main
-from dhfkit.local_adapter import LocalDHFAdapter
+from dhfkit.item_store import ItemStore
 from dhfkit.tests.fixtures import bare_dhf
 
 
@@ -33,7 +33,7 @@ def _copies(dhf: Path, uid: str) -> list[str]:
 def test_update_rewrites_the_file_in_place(tmp_path: Path) -> None:
     dhf = _dhf_with_a_cr_in_a_legacy_directory(tmp_path)
 
-    LocalDHFAdapter(dhf).update_item("CR-001", {"affected_items": []})
+    ItemStore(dhf).update_item("CR-001", {"affected_items": []})
 
     assert _copies(dhf, "CR-001") == ["items/09_cr/CR-001.yaml"]
     assert "affected_items" in (dhf / "items" / "09_cr" / "CR-001.yaml").read_text()
@@ -47,13 +47,13 @@ def test_transition_rewrites_the_file_in_place(tmp_path: Path) -> None:
     assert result.exit_code == 0, result.output
     assert _copies(dhf, "CR-001") == ["items/09_cr/CR-001.yaml"]
     assert "status: design" in (dhf / "items" / "09_cr" / "CR-001.yaml").read_text()
-    assert LocalDHFAdapter(dhf).validate_schema()["valid"]
+    assert ItemStore(dhf).validate_schema()["valid"]
 
 
 def test_a_new_item_goes_to_its_doc_types_directory(tmp_path: Path) -> None:
     """The other half: with no file yet, the configured directory decides."""
     dhf = _dhf_with_a_cr_in_a_legacy_directory(tmp_path)
 
-    created = LocalDHFAdapter(dhf).create_item({"type": "CR", "title": "Another change"})
+    created = ItemStore(dhf).create_item({"type": "CR", "title": "Another change"})
 
     assert _copies(dhf, created["id"]) == [f"items/07_cr/{created['id']}.yaml"]

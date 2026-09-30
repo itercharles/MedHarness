@@ -4,7 +4,7 @@ A change-controlled organisation may already keep its DHF in Jira, Azure DevOps
 or a system of its own, and those manage a single item well. What none of them
 do is take the items together and ask whether the V-model holds. That analysis
 is what this project is for, so it cannot live inside one storage
-implementation — `dhfkit` is one backend among possible others, and an
+implementation — `dhfkit` is one adapter among possible others, and an
 organisation swapping it must keep the analysis.
 
 The line is what a store already answers on its own: item well-formed, IDs
@@ -81,7 +81,7 @@ class TestTheAnalysisTakesDataNotStorage:
         for node in ast.walk(self._module()):
             if isinstance(node, ast.ImportFrom) and node.module:
                 assert "local_adapter" not in node.module, (
-                    "the analysis imported one storage backend — it takes items "
+                    "the analysis imported one storage adapter — it takes items "
                     "as data so any adapter works"
                 )
 

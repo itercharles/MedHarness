@@ -16,7 +16,7 @@ from pathlib import Path
 
 import pytest
 
-from dhfkit.local_adapter import LocalDHFAdapter
+from dhfkit.item_store import ItemStore
 
 
 @pytest.fixture
@@ -40,7 +40,7 @@ def dhf(tmp_path: Path) -> Path:
 
 
 def _render(dhf: Path, code: str, out: Path, version: str = "1.2.0") -> str:
-    result = LocalDHFAdapter(dhf).render_spec(code, "html", out, version)
+    result = ItemStore(dhf).render_spec(code, "html", out, version)
     return Path(result["path"]).read_text(encoding="utf-8")
 
 
@@ -56,7 +56,7 @@ class TestItemFilter:
 
 class TestVersion:
     def test_the_document_carries_the_release_version(self, dhf: Path, tmp_path: Path) -> None:
-        result = LocalDHFAdapter(dhf).render_spec("SRS", "html", tmp_path, "2.4.1")
+        result = ItemStore(dhf).render_spec("SRS", "html", tmp_path, "2.4.1")
         assert result["version"] == "2.4.1"
         assert Path(result["path"]).name == "SRS_Specification_2.4.1.html"
         assert "2.4.1" in Path(result["path"]).read_text(encoding="utf-8")
@@ -98,4 +98,4 @@ class TestPdfFallback:
 
         monkeypatch.setattr(builtins, "__import__", _no_weasyprint)
         with pytest.raises(RuntimeError, match=r"medharness\[docs\]"):
-            LocalDHFAdapter(dhf).render_spec("SRS", "pdf", tmp_path, "1.0.0")
+            ItemStore(dhf).render_spec("SRS", "pdf", tmp_path, "1.0.0")

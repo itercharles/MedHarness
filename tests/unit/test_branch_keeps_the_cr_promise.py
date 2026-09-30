@@ -83,7 +83,7 @@ class TestAgainstARealChangeSet:
         with patch("medharness.services.git.collect_dhf_item_changes",
                    return_value={"created": ["SWDD-007"], "updated": ["SRS-001", "SYS-001"],
                                  "deleted": []}), \
-             patch("dhfkit.local_adapter.LocalDHFAdapter") as adapter:
+             patch("dhfkit.item_store.ItemStore") as adapter:
             adapter.return_value.get_item.return_value = {
                 "id": "CR-001", "affected_items": ["SRS-001", "SYS-001", "SWDD-007"],
             }
@@ -97,7 +97,7 @@ class TestAgainstARealChangeSet:
         with patch("medharness.services.git.collect_dhf_item_changes",
                    return_value={"created": [], "updated": ["SRS-002"],
                                  "deleted": ["SRS-001"]}), \
-             patch("dhfkit.local_adapter.LocalDHFAdapter") as adapter:
+             patch("dhfkit.item_store.ItemStore") as adapter:
             adapter.return_value.get_item.return_value = {
                 "id": "CR-001", "affected_items": ["SRS-001", "SRS-002"],
             }
@@ -120,7 +120,7 @@ class TestCouldNotCheckIsNotABrokenPromise:
 
         with patch("medharness.services.git.collect_dhf_item_changes",
                    side_effect=DiffUnavailable("fatal: bad revision 'origin/main'")), \
-             patch("dhfkit.local_adapter.LocalDHFAdapter") as adapter:
+             patch("dhfkit.item_store.ItemStore") as adapter:
             adapter.return_value.get_item.return_value = cr_item
             dhf = tmp_path / "DHF"
             dhf.mkdir(exist_ok=True)

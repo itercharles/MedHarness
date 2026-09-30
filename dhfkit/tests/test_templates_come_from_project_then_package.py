@@ -14,12 +14,12 @@ from dhfkit.paths import DEFAULT_SPECS_DIR
 
 
 def _adapter(dhf_root: Path):
-    from dhfkit.local_adapter import LocalDHFAdapter
+    from dhfkit.item_store import ItemStore
 
     (dhf_root / "config").mkdir(parents=True, exist_ok=True)
     (dhf_root / "config" / "global.yaml").write_text(yaml.dump({"project_name": "T"}))
     (dhf_root / "items").mkdir(exist_ok=True)
-    return LocalDHFAdapter(dhf_root)
+    return ItemStore(dhf_root)
 
 
 def test_the_package_supplies_templates_the_project_does_not_have(tmp_path: Path) -> None:

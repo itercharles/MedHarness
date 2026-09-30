@@ -13,13 +13,27 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ### Added
 
-- **Item backends.** Where items are kept is now a setting: `store:` in
+- **Item adapters.** Where items are kept is now a setting: `store:` in
   `DHF/config/global.yaml` (default `type: yaml`, the files under `DHF/items/`).
-  Any other type is an installed package that registers a `dhfkit.backends`
-  entry point and implements `dhfkit.backend.ItemBackend` — five methods; the
-  schema, links, IDs and lifecycle stay the same on top of it. The item types
-  and rules are still configured in `DHF/config/`. `verify changes`, `build plan`
-  and `build code` compare files in Git and refuse another store, naming it.
+  An adapter implements `dhfkit.adapter.DHFAdapter` — `load_all`, `load_by_uid`,
+  `save`, `delete`, `used_ids` — and another system is installed as an entry
+  point in the `dhfkit.adapters` group. The schema, links, IDs and lifecycle stay
+  the same on top of it, and the item types and rules are still configured in
+  `DHF/config/`. `verify changes`, `build plan` and `build code` compare files in
+  Git and refuse another store, naming it.
+- **`medharness` depends on an interface, not a class.** It calls
+  `dhfkit.store.open_store` and sees only `DHFStore`; a guard fails the build if
+  any module under `medharness/` imports the store, an adapter or the loader.
+
+### Changed (breaking for `dhfkit` as a library)
+
+- **Names now say what each thing is.** `dhfkit.local_adapter.LocalDHFAdapter`,
+  the class that held the schema, links, IDs and lifecycle, is
+  `dhfkit.item_store.ItemStore`. `LocalDHFAdapter` now names what it always
+  stood for in the adapter design: the implementation for a DHF of YAML files
+  (`dhfkit/local_adapter.py`), one of the adapters behind `DHFAdapter`. Code that
+  imported the old class changes `LocalDHFAdapter` to `ItemStore`, or better
+  calls `open_store(dhf_root)`.
 
 ### Fixed
 

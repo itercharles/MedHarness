@@ -218,13 +218,13 @@ class TestACheckThatCouldNotRunIsReported:
     def test_the_structural_gate_says_when_it_could_not_check(self, tmp_path) -> None:
         from unittest.mock import patch
 
-        from dhfkit.local_adapter import LocalDHFAdapter
+        from dhfkit.item_store import ItemStore
         from medharness.services.verify_dhf import ci_structural_gate
         from medharness.workflows.init import _replace_placeholders, _scaffold_dhf
 
         _scaffold_dhf(tmp_path)
         _replace_placeholders(tmp_path, "Flaky")
-        real = LocalDHFAdapter.list_items
+        real = ItemStore.list_items
         calls = {"n": 0}
 
         def flaky(self, *a, **k):
@@ -233,7 +233,7 @@ class TestACheckThatCouldNotRunIsReported:
                 raise RuntimeError("boom")
             return real(self, *a, **k)
 
-        with patch.object(LocalDHFAdapter, "list_items", flaky):
+        with patch.object(ItemStore, "list_items", flaky):
             result = ci_structural_gate(tmp_path / "DHF")
 
         assert any("could not be checked" in e for e in result["errors"]), result["errors"]
