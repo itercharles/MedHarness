@@ -1,8 +1,8 @@
 # MedHarness
 
-**AI-assisted development with design control. For every change, an AI drafts
-the design history — requirements, design, risk impact — and the code; ordinary
-code checks that the two agree before anything merges.**
+**AI-assisted development with design control: your AI agent writes the code and
+the design record, and ordinary code checks that they agree before anything
+merges.**
 
 [![PyPI](https://img.shields.io/pypi/v/medharness)](https://pypi.org/project/medharness/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
@@ -10,23 +10,19 @@ code checks that the two agree before anything merges.**
 
 ## AI development
 
-Your AI coding agent writes the code. MedHarness makes it write the design
-record too — the Design History File (DHF): requirements, risks and tests, traced
-from each to the next — and checks that it did, so a change arrives ready to
-review, not just written.
-
 ```mermaid
 flowchart LR
-    A["<b>1 · Design</b><br/>AI drafts the DHF"] -->|"<b>you review</b>"| B["<b>2 · Code</b><br/>AI codes and tests"]
+    A["<b>1 · Design</b><br/>AI drafts the design"] -->|"<b>you review</b>"| B["<b>2 · Code</b><br/>AI codes and tests"]
     B -->|"<b>you review</b>"| C(["Merge"])
 ```
 
 For each change request, the agent **designs** first — it assesses the change's
 risk, then writes the requirements, design and test points it needs as items in
-your repository's DHF — and **codes** second, tagging each
-test with the requirement it verifies. You review the design, then the code.
-Between them, ordinary code — never a model — checks that the design traces,
-every requirement is verified, and the branch changed what the request said.
+your repository's Design History File (DHF), each traced to the next — and
+**codes** second, tagging each test with the requirement it verifies. You review
+the design, then the code. Between them, ordinary code — never a model — checks
+that the design traces, every requirement is verified, and the branch changed
+what the request said.
 
 What MedHarness gives the agent:
 
