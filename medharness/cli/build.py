@@ -9,7 +9,7 @@ from pathlib import Path
 
 import click
 
-from dhfkit.local_adapter import LocalDHFAdapter
+from dhfkit.store import open_store
 from medharness.cli.options import collect_junit_paths, junit_option
 from medharness.cli.output import emit
 
@@ -108,7 +108,7 @@ def register(main):
         from medharness.workflows.cr_state import assert_cr_active  # noqa: PLC0415
         dhf: Path = ctx.obj["dhf"]
         try:
-            store = LocalDHFAdapter(ctx.obj["dhf"])
+            store = open_store(ctx.obj["dhf"])
             if not store.tracks_files:
                 raise click.ClickException(_needs_files(store, "build plan"))
             assert_cr_active(store, cr_id)
@@ -158,7 +158,7 @@ def register(main):
         from medharness.workflows.cr_state import assert_cr_active  # noqa: PLC0415
         dhf: Path = ctx.obj["dhf"]
         try:
-            store = LocalDHFAdapter(ctx.obj["dhf"])
+            store = open_store(ctx.obj["dhf"])
             if not store.tracks_files:
                 raise click.ClickException(_needs_files(store, "build code"))
             assert_cr_active(store, cr_id)

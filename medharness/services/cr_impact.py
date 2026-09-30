@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from dhfkit.local_adapter import LocalDHFAdapter
+from dhfkit.store import open_store
 
 
 def _record_design_impact_in_cr(
@@ -13,7 +13,7 @@ def _record_design_impact_in_cr(
     items_changed: dict[str, list[str]],
 ) -> dict[str, object]:
     try:
-        adapter = LocalDHFAdapter(dhf_path)
+        adapter = open_store(dhf_path)
     except FileNotFoundError:
         return {"recorded": False, "reason": "dhf_not_found"}
 

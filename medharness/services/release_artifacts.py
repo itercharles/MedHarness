@@ -221,11 +221,11 @@ def generate_release_artifacts(
 
 def _generate_plan_artifacts(dhf_path: Path, out_dir: Path,
                              doc_format: str = "html") -> list[dict]:
-    from dhfkit.local_adapter import LocalDHFAdapter
+    from dhfkit.store import open_store
 
     # The plans are records: the store lists them and hands over their text.
     # Only the output directory below is this command's own.
-    adapter = LocalDHFAdapter(dhf_path)
+    adapter = open_store(dhf_path)
     plan_ids = sorted(adapter.list_documents("plans"))
     if not plan_ids:
         return []
@@ -292,9 +292,9 @@ def build_evidence_bundle(
     hashes every file in ``out_dir``, so whatever was written there before this
     runs is covered too. Returns the manifest.
     """
-    from dhfkit.local_adapter import LocalDHFAdapter
+    from dhfkit.store import open_store
 
-    adapter = LocalDHFAdapter(dhf_path)
+    adapter = open_store(dhf_path)
 
     out_dir.mkdir(parents=True, exist_ok=True)
     artifacts = generate_release_artifacts(

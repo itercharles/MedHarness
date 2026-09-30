@@ -87,8 +87,8 @@ def _validate_schema_and_traceability(_api, dhf_path: Path) -> list[dict]:
             })
 
     try:
-        from dhfkit.local_adapter import LocalDHFAdapter
-        trace_result = analyse(LocalDHFAdapter(dhf_path))
+        from dhfkit.store import open_store
+        trace_result = analyse(open_store(dhf_path))
     except (FileNotFoundError, ValidationError, ValueError, yaml.YAMLError) as exc:
         errors.append({
             "field": "traceability",

@@ -19,9 +19,9 @@ def ci_structural_gate(
     ``schema``, ``traceability``, and ``coverage``.  Each result entry
     is a dict with its own ``passed`` and details.
     """
-    from dhfkit.local_adapter import LocalDHFAdapter
+    from dhfkit.store import open_store
 
-    adapter = LocalDHFAdapter(dhf_path)
+    adapter = open_store(dhf_path)
 
     passed = True
     results: dict[str, Any] = {

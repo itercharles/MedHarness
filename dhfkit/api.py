@@ -7,11 +7,11 @@ No Click, no stdout/stderr, no CLI concerns.
 from pathlib import Path
 from typing import Optional
 
-from dhfkit.local_adapter import LocalDHFAdapter
+from dhfkit.store import DHFStore, open_store
 
 
-def _adapter(dhf_root: Path) -> LocalDHFAdapter:
-    return LocalDHFAdapter(dhf_root)
+def _adapter(dhf_root: Path) -> DHFStore:
+    return open_store(dhf_root)
 
 
 # -- Item operations ----------------------------------------------------------
@@ -66,7 +66,7 @@ def get_config(dhf_root: Path):
     usable standalone, which means it has a public surface, and a consumer
     pinned to an underscore has no contract at all.
     """
-    return _adapter(dhf_root)._config
+    return _adapter(dhf_root).config
 
 
 def list_doc_type_configs(dhf_root: Path) -> list[dict]:

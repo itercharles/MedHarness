@@ -168,9 +168,9 @@ def validate_atomic_branch(
     code_paths: tuple[str, ...] = (),
 ) -> dict:
     """Read the branch's diff and the CR, then ``judge_branch`` them."""
-    from dhfkit.local_adapter import LocalDHFAdapter
+    from dhfkit.store import open_store
 
-    store = LocalDHFAdapter(dhf_path)
+    store = open_store(dhf_path)
     if not store.tracks_files:
         return envelope_from("verify changes", {
             "cr_id": cr_id,

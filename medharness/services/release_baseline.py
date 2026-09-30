@@ -300,7 +300,7 @@ def build_release_baseline(
     try:
         from importlib.metadata import version as pkg_version
 
-        from dhfkit.local_adapter import LocalDHFAdapter
+        from dhfkit.store import open_store
         from dhfkit.sbom import build_sbom, merge_release_components, purl_gap, write_sbom
 
         soup_items = [i for i in api.list_items(dhf) if i.get("type") == "SOUP"]
@@ -310,7 +310,7 @@ def build_release_baseline(
         except Exception:  # noqa: BLE001
             tool_version = "unknown"
         try:
-            project_name = LocalDHFAdapter(dhf).config.project_name
+            project_name = open_store(dhf).config.project_name
         except Exception:  # noqa: BLE001
             # Cosmetic metadata. It must not turn a successful release into
             # completed_with_errors — a name the SBOM cannot read is not a
