@@ -1,7 +1,7 @@
 # AI Execution Model
 
 > **Stability:** Stable
-> **Last reviewed:** 2026-09-27
+> **Last reviewed:** 2026-09-30
 
 This document describes what the AI stages of MedHarness are allowed to do, where they run, and what evidence they leave behind. It exists because MedHarness is used in regulated environments where "an AI wrote this code" is not an acceptable answer to an auditor — the boundary has to be stated, not assumed.
 
@@ -112,7 +112,6 @@ Nothing here is regulatory advice. How you classify and justify AI-assisted deve
 Never invoke `build plan` or `build code` — the shipped CI recipe runs neither. Everything else keeps working:
 
 ```bash
-medharness --dhf DHF verify dhf
 medharness --dhf DHF verify dhf
 medharness --dhf DHF verify tests --junit test-results
 medharness --dhf DHF verify soup
