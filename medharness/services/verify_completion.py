@@ -8,8 +8,14 @@ from medharness.services.envelope import envelope_from
 from medharness.services.verify_tests import validate_verification_completeness
 
 
-# Item types that carry a verification_method field — RISK, RCM, SWDD, etc. do not.
-_VERIFIABLE_ITEM_TYPES = frozenset({"CRS", "SRS", "SYS", "SOUP"})
+def _verifiable_types(config) -> frozenset[str]:
+    """Doc types that declare a `verification_method` — the config says, so a type
+    a project adds (hardware requirements, say) is held to it too."""
+    return frozenset(
+        dt.code for dt in config.doc_types
+        if any(p == "verification_method" or (isinstance(p, dict) and p.get("name") == "verification_method")
+               for p in dt.properties or [])
+    )
 
 
 def _check_cr_fields(cr_item: dict, cr_id: str) -> list[dict]:
@@ -89,12 +95,13 @@ def cr_closure_gate(
     cr_item = adapter.get_item(cr_id) or {}
     incomplete_cr_fields = _check_cr_fields(cr_item, cr_id)
 
+    verifiable_types = _verifiable_types(adapter.config)
     items_by_id = {it["id"]: it for it in adapter.list_items()}
     affected = [uid for uid in cr_item.get("affected_items") or [] if isinstance(uid, str)]
     missing_items = sorted(uid for uid in affected if uid not in items_by_id)
     verifiable = sorted({
         items_by_id[uid].get("type") for uid in affected
-        if uid in items_by_id and items_by_id[uid].get("type") in _VERIFIABLE_ITEM_TYPES
+        if uid in items_by_id and items_by_id[uid].get("type") in verifiable_types
     })
 
     gaps: list = []

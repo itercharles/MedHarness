@@ -601,14 +601,17 @@ defaults again, delete the copies you have not changed.
 
 ## What to adopt, in what order
 
-Each layer is useful on its own. None requires the next.
+Start with the AI development, and add the checks that make it trustworthy. Each
+step is useful on its own.
 
 | Step | Add | Needs |
 |------|-----|-------|
-| 1 | `verify dhf` as a PR gate | Nothing — works on day one |
-| 2 | `verify tests` | Test annotations in JUnit output |
-| 3 | `build soup`, `verify soup` | A dependency manifest |
-| 4 | `build release` on version tags | Steps 1–3 passing |
-| 5 | `build plan` / `build code` | An AI key, and the appetite for it |
+| 1 | Your coding agent follows the process: `init` writes `AGENTS.md`, and the agent runs `build plan --prompt` and `build code --prompt` | A coding agent you already use. No key, nothing in CI |
+| 2 | `verify dhf` as a PR gate | Nothing — works on day one. It is what checks the design the agent wrote |
+| 3 | Unattended AI in CI: `build plan` and `build code` from an issue | An AI key, an ephemeral runner, and branch protection that requires an approving review. Put it behind step 2 |
+| 4 | `verify tests` | Test annotations in JUnit output |
+| 5 | `build soup`, `verify soup` | A dependency manifest |
+| 6 | `build release` on version tags | Steps 2, 4 and 5 passing |
 
-Step 5 is optional in the strong sense: teams that prefer manual design with automated validation stop at step 4 and lose nothing the standard asks for.
+Steps 1 and 3 are optional in the strong sense: a team that writes its DHF by hand
+starts at step 2 and loses nothing the standard asks for.

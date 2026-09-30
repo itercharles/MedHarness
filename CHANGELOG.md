@@ -37,6 +37,11 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ### Fixed
 
+- **`verify completion` held only CRS, SRS, SYS and SOUP to verification.** The
+  list was written into the command, so an item type a project added (hardware
+  requirements, say) closed its change requests without anyone asking whether the
+  item was verified. A type now counts when its config declares a
+  `verification_method`.
 - **`item create` and `item update` crashed with a traceback on `--data '[1]'`,**
   a JSON array or scalar. They now exit 1 with "--data must be a JSON object".
 - **`build release --version ''` was accepted,** and a version such as `../x`
