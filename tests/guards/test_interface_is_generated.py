@@ -46,3 +46,12 @@ def test_every_command_and_option_is_in_the_reference() -> None:
             for param in cmd.params:
                 if isinstance(param, click.Option) and "--help" not in param.opts:
                     assert f"`{param.opts[0]}" in reference, f"{path}: {param.opts[0]} is missing"
+
+
+def test_every_command_that_reports_has_its_shape_declared() -> None:
+    """A `build` command or `init` answers with a report; each one is declared in
+    medharness/results.py, so the interface document lists its fields."""
+    shapes = _generator().render_shapes()
+    reporting = [f"build {name}" for name in main.commands["build"].commands] + ["init"]
+    missing = [c for c in reporting if f"#### `{c}`" not in shapes]
+    assert not missing, f"no declared result shape for {missing}; add one to medharness/results.py"

@@ -20,6 +20,7 @@ import pytest
 from click.testing import CliRunner
 
 from medharness.cli import main
+from medharness.results import CodeReport, PlanReport
 from medharness.workflows.init import _replace_placeholders, _scaffold_dhf
 
 FAKE = Path(__file__).resolve().parents[1] / "fixtures" / "fake_claude.py"
@@ -107,7 +108,10 @@ def _run(*args: str):
 
 
 def _report(result) -> dict:
-    return json.loads(result.stdout.splitlines()[0])
+    """The run report, which must match what interface.md declares for the command."""
+    report = json.loads(result.stdout.splitlines()[0])
+    (PlanReport if report["stage"] == "generate_dhf" else CodeReport).model_validate(report)
+    return report
 
 
 class TestBuildPlan:
