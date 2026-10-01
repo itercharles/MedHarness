@@ -4,12 +4,14 @@ from __future__ import annotations
 
 from typing import Any
 
+from medharness.results import GateResult
+
 
 #: Keys every gate result carries, whatever the gate. A caller — a CI script or
 #: an agent — parses this once and handles any gate, present or future.
 #: What a gate writes to stdout. `details` is built alongside it for the CLI
 #: to render lines from, in-process, and is deliberately not serialised.
-ENVELOPE_KEYS = ("gate", "passed", "summary", "errors", "warnings")
+ENVELOPE_KEYS = tuple(GateResult.model_fields)
 
 
 #: What a gate hands back in-process. One key wider than what is emitted: the

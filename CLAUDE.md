@@ -92,9 +92,12 @@ edit the check away.
   step is required instead.
 - If a change affects documented behavior, update the relevant documentation in
   the same commit or PR — docs and code ship together.
-  The command reference and gate table in `docs/interface.md` are generated from
-  the CLI: after changing a command, its options or help text, run
-  `python scripts/generate_interface.py` (a guard fails the build otherwise).
+  The command reference, gate table and report fields in `docs/interface.md` are
+  generated from the CLI and from the result models in `medharness/results.py`:
+  after changing a command, its options or help text, or what it answers with,
+  run `python scripts/generate_interface.py` (a guard fails the build otherwise).
+  A new key in a report goes into its model first; tests validate real output
+  against the models.
 - Keep code minimal. No speculative abstractions, no over-engineering. Three
   similar lines is better than a premature abstraction.
 - Do not invent what nothing uses yet. This applies to output as much as to

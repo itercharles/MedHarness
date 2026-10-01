@@ -18,6 +18,7 @@ import pytest
 from click.testing import CliRunner
 
 from medharness.cli import main as mh_main
+from medharness.results import SoupReport
 from dhfkit.tests.fixtures import bare_dhf
 
 
@@ -36,6 +37,7 @@ def _sync(project: Path, *extra: str) -> dict:
     ])
     assert "Traceback" not in (r.stderr or ""), r.stderr[-500:]
     assert r.exit_code == 0, (r.exit_code, r.output, r.stderr)
+    SoupReport.model_validate_json(r.stdout.splitlines()[0])      # what interface.md declares
     return json.loads(r.stdout.splitlines()[0])
 
 

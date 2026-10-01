@@ -1,8 +1,9 @@
 """Regenerate the parts of docs/interface.md that the code already states.
 
 The command reference (every command, its summary and options) is read from the
-Click tree, and the gate table from `services/gates.py`, so neither can drift
-from the CLI. The prose around them is written by hand.
+Click tree, the gate table from `services/gates.py`, and what each command
+answers with from the models in `medharness/results.py`, so none of them can
+drift from the code. The prose around them is written by hand.
 
     python scripts/generate_interface.py           # rewrite docs/interface.md
     python scripts/generate_interface.py --check   # exit 1 if it is out of date
@@ -13,9 +14,12 @@ from __future__ import annotations
 import inspect
 import re
 import sys
+import types
+import typing
 from pathlib import Path
 
 import click
+from pydantic import BaseModel
 
 ROOT = Path(__file__).resolve().parents[1]
 DOC = ROOT / "docs" / "interface.md"
@@ -88,7 +92,80 @@ def render_gate_table() -> str:
     return "\n".join(lines)
 
 
-BLOCKS = {"reference": render_reference, "gates": render_gate_table}
+def _type_name(annotation) -> str:
+    """A type as a caller reads it: `string`, `list of strings`, `integer or null`."""
+    origin, args = typing.get_origin(annotation), typing.get_args(annotation)
+    if origin in (typing.Union, types.UnionType):
+        rest = [a for a in args if a is not type(None)]
+        name = " or ".join(_type_name(a) for a in rest)
+        return f"{name} or null" if len(rest) < len(args) else name
+    if origin is typing.Literal:
+        return " · ".join(f"`{v}`" for v in args)
+    if origin is list:
+        inner = _type_name(args[0])
+        return "list of strings" if inner == "string" else f"list of {inner}"
+    if origin is dict or annotation is typing.Any:
+        return "object"
+    if isinstance(annotation, type) and issubclass(annotation, BaseModel):
+        return f"`{annotation.__name__}`"
+    return {str: "string", bool: "boolean", int: "integer"}.get(annotation, getattr(annotation, "__name__", str(annotation)))
+
+
+def _models_in(annotation) -> list[type[BaseModel]]:
+    found = []
+    if isinstance(annotation, type) and issubclass(annotation, BaseModel):
+        found.append(annotation)
+    for arg in typing.get_args(annotation):
+        found += _models_in(arg)
+    return found
+
+
+def _field_table(model: type[BaseModel], first: str) -> list[str]:
+    rows = [f"| {first} | Type | Meaning |", "|---|---|---|"]
+    for name, field in model.model_fields.items():
+        rows.append(f"| `{name}` | {_type_name(field.annotation)} | {field.description or ''} |")
+    return rows
+
+
+def render_envelope() -> str:
+    from medharness.results import GateResult
+
+    return "\n".join(_field_table(GateResult, "Key"))
+
+
+def render_shapes() -> str:
+    from medharness.results import SHAPES
+
+    lines: list[str] = []
+    shown: set[type[BaseModel]] = set()
+    for command, models in SHAPES:
+        for model in models:
+            lines += [f"#### {command}", ""]
+            doc = inspect.cleandoc(model.__doc__ or "")
+            lines += _field_table(model, "Field")
+            nested: list[type[BaseModel]] = []
+            queue = [model]
+            while queue:
+                for field in queue.pop(0).model_fields.values():
+                    for sub in _models_in(field.annotation):
+                        if sub not in nested:
+                            nested.append(sub)
+                            queue.append(sub)
+            reused = [sub for sub in nested if sub in shown]
+            for sub in nested:
+                if sub in shown:
+                    continue
+                shown.add(sub)
+                lines += ["", f"`{sub.__name__}`:", ""] + _field_table(sub, "Field")
+            if reused:
+                names = ", ".join(f"`{sub.__name__}`" for sub in reused)
+                lines += ["", f"{names} are as listed above."]
+            lines.append("")
+    return "\n".join(lines).rstrip()
+
+
+BLOCKS = {"reference": render_reference, "gates": render_gate_table,
+          "envelope": render_envelope, "shapes": render_shapes}
 
 
 def update(text: str) -> str:

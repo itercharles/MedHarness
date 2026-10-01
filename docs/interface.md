@@ -74,13 +74,15 @@ Every check answers from the machine it runs on, and none reads GitHub. Approval
 }
 ```
 
+<!-- BEGIN GENERATED: envelope — python scripts/generate_interface.py -->
 | Key | Type | Meaning |
-|-----|------|---------|
+|---|---|---|
 | `gate` | string | The command that produced this, e.g. `verify tests` |
 | `passed` | boolean | Whether the check is satisfied. Always agrees with the exit code |
 | `summary` | string | One line, never empty |
 | `errors` | list of strings | What made the check fail. Empty when `passed` is true |
 | `warnings` | list of strings | What the check noticed without failing |
+<!-- END GENERATED: envelope -->
 
 `errors` and `warnings` are **strings already phrased for a reader**, and they are the whole of what the check found: a caller that prints them produces a usable report without knowing which check it ran. There is no structured second copy — checks used to carry one under `details`, no caller read it, and its documented shape was wrong in three places by the time it was removed.
 
@@ -130,12 +132,206 @@ An item is its file's fields plus `type` (the doc type's code), `file_path`, and
 
 ## Build
 
-`build` commands are not checks and do not answer with the envelope.
+`build` commands are not checks and do not answer with the envelope; each answers with its own report, whose fields are listed [below](#reports).
 
-- **`build plan` and `build code`** answer with a run report that includes `cr_id`, `stage`, `outcome` (`ok`, `corrected`, `completed_with_errors` or `tool_error`), `summary`, `artifacts` (`items_changed` or `files_changed`: the branch against `origin/main`, committed or not), `steps`, `warnings` and `errors`. Each entry in `errors` is an object with `field`, `issue` and `fix`. Exit `1` for the last two outcomes. Their execution boundary is in [ai-security.md](ai-security.md).
+- **`build plan` and `build code`** exit `1` when the `outcome` is `completed_with_errors` or `tool_error`. Their execution boundary is in [ai-security.md](ai-security.md).
 - **`--prompt`** on either prints Markdown, not JSON: the stage's steps and the CR's DHF context, for an agent that is already running. It starts no model and changes nothing. It is the only output that is not JSON.
-- **`build soup`** answers with `outcome`, `to_create`, `to_update`, `orphans`, `items_created`, `items_updated` and `errors`, and always writes the SOUP items in the working tree. Exit `1` on `completed_with_errors`.
-- **`build release`** answers with `outcome`, `version`, `cr_ids`, `rel_uid`, `soup_count`, `artifacts`, `errors` and `warnings`. Exit `1` when any check failed; a failing release still writes its evidence to `--out-dir`, so you can read why, but records no REL item.
+- **`build soup`** always writes the SOUP items in the working tree. Exit `1` on `completed_with_errors`.
+- **`build release`** exits `1` when any check failed; a failing release still writes its evidence to `--out-dir`, so you can read why, but records no REL item.
+
+## Reports
+
+The fields of what each command above answers with, generated from the models in `medharness/results.py`. Tests validate real output against them, so a key that is not listed here, or listed and missing, fails the build.
+
+<!-- BEGIN GENERATED: shapes — python scripts/generate_interface.py -->
+#### `build plan`
+
+| Field | Type | Meaning |
+|---|---|---|
+| `cr_id` | string | The CR the run was for |
+| `outcome` | `ok` · `corrected` · `completed_with_errors` · `tool_error` | `ok`; `corrected` after a fix pass; `completed_with_errors` when errors remain; `tool_error` when a critical step failed. The last two exit 1 |
+| `summary` | string | The outcome in a sentence |
+| `timing` | `Timing` | When it started and how long it took |
+| `inputs` | `Inputs` | What the run was given |
+| `progress` | `Progress` | How far it got |
+| `steps` | list of `Step` | Every step, in order |
+| `diagnostics` | object | Models used, the session id, fix and review counts, PR feedback; the keys vary by stage |
+| `warnings` | list of `RunWarning` | What the run noticed without failing |
+| `errors` | list of `RunError` | Empty unless the run ended with errors |
+| `pr_comments` | list of strings or null | With `--pr`: the URLs of the comments it posted on the PR to report warnings or errors |
+| `stage` | `generate_dhf` | Always `generate_dhf` for `build plan` |
+| `artifacts` | `PlanArtifacts` | What the run changed |
+| `design_review` | `Review` or null | The design review rounds, when one ran |
+
+`Timing`:
+
+| Field | Type | Meaning |
+|---|---|---|
+| `started_at` | string | When the run started, ISO 8601 UTC |
+| `elapsed_ms` | integer | How long it took |
+
+`Inputs`:
+
+| Field | Type | Meaning |
+|---|---|---|
+| `dhf_path` | string | The `--dhf` the run used |
+| `repo_root` | string | The repository the DHF is in |
+| `pr_number` | integer or null | The `--pr` it was given, or null |
+| `revision_mode` | boolean | True when it revised from a reviewer's changes instead of generating |
+| `since_ref` | string | What the branch is compared against |
+
+`Progress`:
+
+| Field | Type | Meaning |
+|---|---|---|
+| `current_step` | string or null | The step running when the report was written, or null |
+| `completed_steps` | integer | Steps finished |
+| `total_steps` | integer | Steps in the run |
+
+`Step`:
+
+| Field | Type | Meaning |
+|---|---|---|
+| `name` | string | The step, e.g. `run_initial_generation`, `validate_initial`, `run_review` |
+| `started_at` | string | When it started, ISO 8601 UTC |
+| `elapsed_ms` | integer | How long it took |
+| `outcome` | string | `ok`, `warning` or `error` |
+| `details` | object | Facts about the step; the keys vary by step |
+
+`RunWarning`:
+
+| Field | Type | Meaning |
+|---|---|---|
+| `code` | string | A stable identifier, e.g. `agent_commits_undone` |
+| `message` | string | The warning, phrased for a reader |
+| `details` | object or null | Extra facts, when the warning has any |
+
+`RunError`:
+
+| Field | Type | Meaning |
+|---|---|---|
+| `field` | string | What was wrong, as a dotted path such as `traceability.dangling.satisfies` |
+| `issue` | string | The problem, phrased for a reader |
+| `fix` | string | What to do about it |
+| `code` | string | A stable identifier derived from `field` |
+
+`PlanArtifacts`:
+
+| Field | Type | Meaning |
+|---|---|---|
+| `items_changed` | `ChangeSet` or null | The DHF items changed on the branch, the CR's whole change set; null when the diff could not be read |
+| `design_impact` | `DesignImpact` or null | The CR's `affected_items` write-back |
+
+`Review`:
+
+| Field | Type | Meaning |
+|---|---|---|
+| `cycles` | list of `ReviewCycle` | One entry per review round |
+| `narrative` | list of strings | The rounds as sentences, for a log |
+
+`ChangeSet`:
+
+| Field | Type | Meaning |
+|---|---|---|
+| `created` | list of strings | Created since `since_ref`, committed or not |
+| `updated` | list of strings | Modified since `since_ref` |
+| `deleted` | list of strings | Deleted since `since_ref` |
+
+`DesignImpact`:
+
+| Field | Type | Meaning |
+|---|---|---|
+| `recorded` | boolean | Whether the CR's `affected_items` was written |
+| `reason` | string | Why or why not, e.g. `updated` |
+| `affected_items` | list of strings or null | The items recorded, when they were |
+
+`ReviewCycle`:
+
+| Field | Type | Meaning |
+|---|---|---|
+| `cycle` | integer | 1 for the first review, up to 3 |
+| `verdict` | `approved` · `needs_revision` · `unknown` | What the reviewer concluded |
+| `issues` | list of strings | What it asked to change |
+
+#### `build code`
+
+| Field | Type | Meaning |
+|---|---|---|
+| `cr_id` | string | The CR the run was for |
+| `outcome` | `ok` · `corrected` · `completed_with_errors` · `tool_error` | `ok`; `corrected` after a fix pass; `completed_with_errors` when errors remain; `tool_error` when a critical step failed. The last two exit 1 |
+| `summary` | string | The outcome in a sentence |
+| `timing` | `Timing` | When it started and how long it took |
+| `inputs` | `Inputs` | What the run was given |
+| `progress` | `Progress` | How far it got |
+| `steps` | list of `Step` | Every step, in order |
+| `diagnostics` | object | Models used, the session id, fix and review counts, PR feedback; the keys vary by stage |
+| `warnings` | list of `RunWarning` | What the run noticed without failing |
+| `errors` | list of `RunError` | Empty unless the run ended with errors |
+| `pr_comments` | list of strings or null | With `--pr`: the URLs of the comments it posted on the PR to report warnings or errors |
+| `stage` | `develop` | Always `develop` for `build code` |
+| `artifacts` | `CodeArtifacts` | What the run changed |
+| `code_review` | `Review` or null | The code review rounds, when one ran |
+
+`CodeArtifacts`:
+
+| Field | Type | Meaning |
+|---|---|---|
+| `files_changed` | `ChangeSet` or null | The code changed on the branch; null when the diff could not be read |
+
+`Timing`, `Inputs`, `Progress`, `Step`, `RunWarning`, `RunError`, `Review`, `ChangeSet`, `ReviewCycle` are as listed above.
+
+#### `build soup`
+
+| Field | Type | Meaning |
+|---|---|---|
+| `outcome` | `completed` · `completed_with_errors` | `completed_with_errors` exits 1 |
+| `manifests_parsed` | list of strings | The manifests it read |
+| `packages_found` | integer | Packages across them |
+| `to_create` | list of strings | Packages with no SOUP item |
+| `to_update` | list of `SoupDrift` | SOUP items whose version has drifted |
+| `orphans` | list of `SoupOrphan` | SOUP items no manifest resolves |
+| `matched_count` | integer | Packages that already have a matching SOUP item |
+| `items_created` | list of strings | SOUP items it wrote, in the working tree |
+| `items_updated` | list of strings | SOUP items it changed, in the working tree |
+| `errors` | list of strings | Manifests or commands that could not be read |
+
+`SoupDrift`:
+
+| Field | Type | Meaning |
+|---|---|---|
+| `uid` | string | The SOUP item |
+| `name` | string | The package |
+| `old_version` | string | What the register says |
+| `new_version` | string | What the manifest says |
+
+`SoupOrphan`:
+
+| Field | Type | Meaning |
+|---|---|---|
+| `uid` | string | The SOUP item no manifest resolves |
+| `name` | string | The package |
+
+#### `build release`
+
+| Field | Type | Meaning |
+|---|---|---|
+| `outcome` | `completed` · `completed_with_errors` | `completed_with_errors` exits 1; a failing release still writes its evidence |
+| `version` | string | The version released |
+| `cr_ids` | list of strings | The completed CRs it includes |
+| `rel_uid` | string or null | The REL item recorded; null without `--write` or when a check failed |
+| `soup_count` | integer | SOUP items in the BOM |
+| `artifacts` | list of strings | Files written under `--out-dir`, relative to it |
+| `errors` | list of strings | What blocked the release |
+| `warnings` | list of strings | What it noticed without blocking, such as a component with no purl |
+
+#### `init`
+
+| Field | Type | Meaning |
+|---|---|---|
+| `project_name` | string | The name written into `global.yaml` |
+| `project_dir` | string | Where the project was scaffolded |
+| `created` | list of strings | Files created, relative to `project_dir` |
+<!-- END GENERATED: shapes -->
 
 ---
 

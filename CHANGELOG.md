@@ -11,6 +11,16 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+### Added
+
+- **What each command answers with is declared in one place.**
+  `medharness/results.py` has a model for the `verify` envelope and for the
+  reports of `build plan`, `build code`, `build soup`, `build release` and
+  `init`. The field tables in `docs/interface.md` are generated from them, and
+  tests validate real command output against them, so the document cannot drift.
+  Declaring them found one undocumented field: `pr_comments` in the plan and
+  code reports.
+
 ## [0.48.0] — 2026-09-30
 
 ### Added

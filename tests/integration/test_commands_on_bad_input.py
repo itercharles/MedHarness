@@ -18,6 +18,7 @@ import yaml
 from click.testing import CliRunner
 
 from medharness.cli import main
+from medharness.results import GateResult, InitReport, ReleaseReport
 from medharness.workflows.init import _replace_placeholders, _scaffold_dhf
 
 
@@ -38,6 +39,7 @@ def _run(project: Path, *args: str):
 def _envelope(result) -> dict:
     lines = result.stdout.strip().splitlines()
     assert len(lines) == 1, f"expected one JSON line, got {result.stdout!r}"
+    GateResult.model_validate_json(lines[0])      # what interface.md declares
     return json.loads(lines[0])
 
 
@@ -140,7 +142,7 @@ class TestBuildArguments:
     def test_a_release_without_write_leaves_the_dhf_alone(self, project: Path) -> None:
         before = {p: p.read_bytes() for p in (project / "DHF").rglob("*.yaml")}
         result = _run(project, "build", "release", "--version", "1.0.0", "--out-dir", str(project / "r"))
-        assert result.exit_code == 0 and json.loads(result.stdout)["rel_uid"] in (None, "")
+        assert result.exit_code == 0 and ReleaseReport.model_validate_json(result.stdout).rel_uid is None
         assert {p: p.read_bytes() for p in (project / "DHF").rglob("*.yaml")} == before
 
     def test_a_manifest_that_does_not_exist_is_a_usage_error(self, project: Path) -> None:
@@ -177,3 +179,12 @@ class TestInit:
         result = CliRunner().invoke(main, ["init"])
         assert result.exit_code == 1 and "already exists" in result.stderr
         assert snapshot() == before
+
+
+class TestReportsMatchTheirDeclaredShape:
+    def test_init(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.chdir(tmp_path)
+        result = CliRunner().invoke(main, ["init"])
+        assert result.exit_code == 0
+        report = InitReport.model_validate_json(result.stdout)
+        assert "DHF/config/global.yaml" in report.created and "AGENTS.md" in report.created
