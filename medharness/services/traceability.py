@@ -24,6 +24,52 @@ from dhfkit.item_type import ItemType
 from dhfkit.models.config import RequiredTraceabilityRule, TraceabilityMatrix
 from dhfkit.traceability import LINK_FIELDS, find_dangling_links
 
+def _ids(value: Any) -> list[str]:
+    values = [value] if isinstance(value, str) else value if isinstance(value, list) else []
+    return [v for v in values if isinstance(v, str) and v]
+
+
+def link_targets(item: dict, config: Any, target_code: str) -> set[str]:
+    """The IDs `item` links to through a field that may point at `target_code`.
+
+    A link in a field of another type does not make the item a child of a
+    `target_code` item, whatever the ID says: a SWDD listing SRS-002 under
+    `module` points at nothing the schema allows. A doc type that declares no link
+    fields falls back to every link the item carries.
+    """
+    doc_type = config.doc_type_of(item["id"]) if hasattr(config, "doc_type_of") else None
+    declared = config.link_properties(doc_type.code) if doc_type else {}
+    if not declared:
+        return set(item.get("all_linked_uids") or [])
+    found: set[str] = set()
+    for field, allowed in declared.items():
+        if allowed is None or target_code in allowed:
+            found.update(_ids(item.get(field)))
+    return found
+
+
+def find_mistyped_links(items: list[dict], config: Any) -> list[dict]:
+    """Links whose target is of a type the field does not allow.
+
+    A field that declares `target_types` (`satisfies` → CRS) accepts nothing else.
+    Targets that do not exist are `find_dangling_links`'s, not this one's.
+    """
+    mistyped = []
+    for item in items:
+        doc_type = config.doc_type_of(item["id"]) if hasattr(config, "doc_type_of") else None
+        if doc_type is None:
+            continue
+        for field, allowed in config.link_properties(doc_type.code).items():
+            if not allowed:
+                continue
+            for target in _ids(item.get(field)):
+                target_type = config.doc_type_of(target)
+                if target_type is not None and target_type.code not in allowed:
+                    mistyped.append({"source": item["id"], "field": field, "target": target,
+                                     "found": target_type.code, "expected": list(allowed)})
+    return sorted(mistyped, key=lambda m: (m["source"], m["field"], m["target"]))
+
+
 def check_required_traceability(items: list[dict], config: Any) -> dict:
     """Check mandatory traceability rules.
 
@@ -75,7 +121,7 @@ def check_required_traceability(items: list[dict], config: Any) -> dict:
                     1
                     for t_item in items
                     if t_item["id"].startswith(target_prefix)
-                    and s_item["id"] in (t_item.get("all_linked_uids") or [])
+                    and s_item["id"] in link_targets(t_item, config, rule.source_type)
                 )
 
             if count < rule.min_count:
@@ -240,7 +286,6 @@ def check_traceability(items: list[dict], config: Any) -> dict:
         }
     """
 
-    by_id = {item["id"]: item for item in items}
     required_result = check_required_traceability(items, config)
 
     matrices = config.traceability_matrices or []
@@ -266,7 +311,7 @@ def check_traceability(items: list[dict], config: Any) -> dict:
             uncovered = []
             for p_item in parent_items:
                 covered = any(
-                    p_item["id"] in (by_id.get(c_item["id"], {}).get("all_linked_uids") or [])
+                    p_item["id"] in link_targets(c_item, config, parent_code)
                     for c_item in items
                     if c_item["id"].startswith(child_dt.prefix)
                 )
@@ -289,9 +334,11 @@ def check_traceability(items: list[dict], config: Any) -> dict:
     cycles = find_link_cycles(
         items, getattr(config, "relationship_fields", lambda: ())()
     )
+    mistyped = find_mistyped_links(items, config)
     passed = (
         required_result["passed"]
         and not dangling
+        and not mistyped
         and not cycles
         and all(r["passed"] for r in coverage_results)
     )
@@ -301,6 +348,8 @@ def check_traceability(items: list[dict], config: Any) -> dict:
         parts.append(f"{len(required_result['failures'])} required failure(s)")
     if dangling:
         parts.append(f"{len(dangling)} dangling link(s)")
+    if mistyped:
+        parts.append(f"{len(mistyped)} link(s) to the wrong type")
     if cycles:
         parts.append(f"{len(cycles)} link cycle(s)")
     uncovered_count = sum(len(r["uncovered"]) for r in coverage_results)
@@ -312,6 +361,7 @@ def check_traceability(items: list[dict], config: Any) -> dict:
         "passed": passed,
         "required": required_result,
         "dangling": dangling,
+        "mistyped": mistyped,
         "cycles": cycles,
         "coverage": coverage_results,
         "summary": summary,

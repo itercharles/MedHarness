@@ -26,8 +26,9 @@ def register(main):
     def verify_dhf(ctx: click.Context, strict: bool) -> None:
         """Check the DHF holds together: schema, links, cycles, coverage.
 
-        Always blocking: schema errors, required-traceability failures, and
-        dangling links (a link whose target ID does not exist).
+        Always blocking: schema errors, required-traceability failures, dangling
+        links (a link whose target ID does not exist), and links to a type the
+        field does not accept.
 
         Advisory by default: coverage gaps, and title or content that is still a
         placeholder (TBD, the starter items' "Replace with your own") — pass
@@ -76,6 +77,10 @@ def register(main):
                 click.echo(f"FAIL [dangling] {message}", err=True)
                 click.echo("    Fix: correct the ID in the source item, or create the "
                            "target. The link exists but resolves to nothing.", err=True)
+            for message in [e for e in result["errors"] if " is not one of " in e]:
+                click.echo(f"FAIL [link-type] {message}", err=True)
+                click.echo("    Fix: link to an item of a type the field accepts, or move the link "
+                           "to the field that takes that type.", err=True)
             for message in [e for e in result["errors"] if e.startswith("Traceability cycle:")]:
                 # The gate's own wording, not a second rendering of it: two
                 # spellings of one finding is two findings to a reader.

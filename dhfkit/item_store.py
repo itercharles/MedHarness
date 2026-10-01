@@ -177,8 +177,27 @@ class ItemStore:
                         f"{field}: '{uid}' has unknown prefix '{prefix}' "
                         f"(known: {sorted(known_prefixes)})"
                     )
+        errors += self._link_type_errors(data)
         if errors:
             raise ValidationError("Item link validation failed:\n" + "\n".join(f"  - {e}" for e in errors))
+
+    def _link_type_errors(self, data: dict) -> list[str]:
+        """Links whose target is of a type the field does not accept (`satisfies` → CRS only)."""
+        uid = data.get("id") or data.get("uid") or ""
+        doc_type = self._config.doc_type_of(uid) if uid else None
+        errors = []
+        for field, allowed in (self._config.link_properties(doc_type.code) if doc_type else {}).items():
+            if not allowed:
+                continue
+            value = data.get(field)
+            for target in [value] if isinstance(value, str) else value or []:
+                target_type = self._config.doc_type_of(target) if isinstance(target, str) else None
+                if target_type is not None and target_type.code not in allowed:
+                    errors.append(
+                        f"{field}: '{target}' is a {target_type.code}, and {doc_type.code}.{field} "
+                        f"accepts only {', '.join(allowed)}"
+                    )
+        return errors
 
     def create_item(self, data: dict) -> dict:
         # CR-006: ID is always auto-generated; any caller-supplied id is ignored

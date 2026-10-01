@@ -101,7 +101,7 @@ The `Blocking` column means:
 
 `--strict` exists on `verify dhf`, `tests` and `soup`. For those three:
 
-- `verify dhf` — schema errors, required-link failures and dangling links always fail. Coverage gaps, and title or content that is still a placeholder (`placeholder_patterns` in `global.yaml`; the starter items' "Replace with your own", `TBD`), warn unless `--strict`. `build release` runs it strict, so the starter DHF cannot ship.
+- `verify dhf` — schema errors, required-link failures, dangling links and links to a type the field does not accept (`satisfies` takes CRS only) always fail. Coverage gaps, and title or content that is still a placeholder (`placeholder_patterns` in `global.yaml`; the starter items' "Replace with your own", `TBD`), warn unless `--strict`. `build release` runs it strict, so the starter DHF cannot ship.
 - `verify tests` — uncovered requirements and unverified tests always fail. A missing `verification_method` warns unless `--strict`.
 - `verify soup` — known vulnerabilities always fail, and so does an unreachable osv.dev unless `--offline-mode warn`. Drift from the manifests warns unless `--strict`.
 
@@ -352,7 +352,7 @@ verification_method: [Test]
 | One file per item | Named anything ending `.yaml`; the directory under `items/` does not matter, so an export can use its own |
 | `id` | Required. Its prefix (`SRS-`) picks the doc type |
 | Fields | Only those the doc type declares. An undeclared field fails `medharness verify dhf`, naming it — declare it by overriding the doc type first |
-| Links | Fields of format `relationship` or `item_multiselect`: a list of IDs pointing up the V-model. Which are required is `required_traceability` in `global.yaml` |
+| Links | Fields of format `relationship` or `item_multiselect`: a list of IDs pointing up the V-model, each of a type the field's `target_types` accepts. Which are required is `required_traceability` in `global.yaml` |
 | Types | The 13 defaults, plus any `DHF/config/doc_types/<type>.yaml` of your own, which replaces the default of that code — see [adopting.md](adopting.md#changing-the-defaults) |
 
 Check an export with `medharness verify dhf`: it validates each file against its type, then the links and coverage of the design they describe.

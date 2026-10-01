@@ -51,13 +51,16 @@ def ci_structural_gate(
     coverage_list = tr.get("coverage", [])
     dangling = tr.get("dangling", [])
     cycles = tr.get("cycles", [])
+    mistyped = tr.get("mistyped", [])
     results["traceability"] = {
         "passed": required.get("passed", True)
         and not dangling
+        and not mistyped
         and not cycles
         and all(c.get("passed", True) for c in coverage_list),
         "required": required,
         "dangling": dangling,
+        "mistyped": mistyped,
         "cycles": cycles,
         "coverage": coverage_list,
         "summary": tr.get("summary", ""),
@@ -69,7 +72,7 @@ def ci_structural_gate(
     if dangling:
         passed = False
     # Same class as a dangling link: a broken reference, not a design gap.
-    if cycles:
+    if cycles or mistyped:
         passed = False
     for c in coverage_list:
         if not c.get("passed", True) and strict:
@@ -168,6 +171,10 @@ def _structural_messages(results: dict, strict: bool) -> tuple[list[str], list[s
     for d in trace.get("dangling", []):
         errors.append(
             f"{d['source']}.{d['field']} → {d['target']}: target does not exist"
+        )
+    for m in trace.get("mistyped", []):
+        errors.append(
+            f"{m['source']}.{m['field']} → {m['target']}: {m['found']} is not one of {', '.join(m['expected'])}"
         )
     for cycle in trace.get("cycles", []):
 

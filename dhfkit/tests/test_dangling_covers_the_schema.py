@@ -2,7 +2,9 @@
 
 Two hand-written lists decided this between them — `_TRACEABILITY_LINK_FIELDS`
 in the adapter and `LINK_FIELDS` in the checker — and they disagreed. Of the
-nine relationship fields in the shipped schema, four were checked.
+nine relationship fields in the shipped schema, four were checked. A field of
+format `item_multiselect` (a defect's `violated_requirements`, a release's
+`included_items`) holds IDs just the same, and was missed in the same way.
 
 `affected_risk_items` is the sharpest case: the checker listed it, so someone
 meant it to be checked, and the adapter never supplied it. A link the checker
@@ -35,7 +37,7 @@ def _relationship_fields() -> list[tuple[str, str]]:
     for path in sorted(TEMPLATES.glob("*.yaml")):
         doc = yaml.safe_load(path.read_text())
         for prop in doc.get("properties", []):
-            if isinstance(prop, dict) and prop.get("format") == "relationship":
+            if isinstance(prop, dict) and prop.get("format") in ("relationship", "item_multiselect"):
                 found.setdefault(prop["name"], doc["code"])
     return sorted(found.items())
 
