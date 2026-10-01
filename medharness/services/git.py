@@ -207,6 +207,8 @@ def validate_atomic_branch(
 
     # A DHF that will not load must stop the gate: skipping the promise check
     # passed a branch that broke one. A CR that does not exist is not applicable.
+    from medharness.services.impact import unreviewed_dependents
+
     cr_item = store.get_item(cr_id)
     return judge_branch(
         cr_id,
@@ -215,6 +217,7 @@ def validate_atomic_branch(
         code_changes,
         since_ref=since_ref,
         code_paths=code_paths,
+        unreviewed=unreviewed_dependents(store, cr_item, dhf_item_changes),
     )
 
 
@@ -226,6 +229,7 @@ def judge_branch(
     *,
     since_ref: str = "origin/main",
     code_paths: tuple[str, ...] = (),
+    unreviewed: dict[str, list[str]] | None = None,
 ) -> dict:
     """Whether a branch carries the coupled change set a CR expects.
 
@@ -233,8 +237,10 @@ def judge_branch(
     change sets are ``{created, updated, deleted}`` — item IDs and file paths.
 
     The branch's DHF item changes and the CR's ``affected_items`` must match,
-    both ways, apart from the CR itself. When ``code_paths`` is non-empty, at
-    least one file under those paths must also have changed.
+    both ways, apart from the CR itself. ``unreviewed`` maps an item that depends on
+    a changed one to what it depends on; each is a finding unless the CR reviewed it.
+    When ``code_paths`` is non-empty, at least one file under those paths must also have
+    changed.
     """
     errors: list[dict] = []
     code_change_count = sum(len(code_changes[b]) for b in ("created", "updated", "deleted"))
@@ -301,6 +307,19 @@ def judge_branch(
                 f"Add them: medharness item update {cr_id} --data "
                 f"'{{\"affected_items\": [...]}}' — or revert the changes this CR "
                 f"should not make."
+            ),
+        })
+
+    for dependent, origins in sorted((unreviewed or {}).items()):
+        errors.append({
+            "field": "impact",
+            "issue": (
+                f"{dependent} depends on {', '.join(origins)}, which this branch changes, "
+                f"but {dependent} is neither changed nor listed in {cr_id}'s reviewed_items."
+            ),
+            "fix": (
+                f"Update {dependent} to follow the change, or record that it was reviewed and "
+                f"needs none: medharness item update {cr_id} --data '{{\"reviewed_items\": [\"{dependent}\"]}}'."
             ),
         })
 

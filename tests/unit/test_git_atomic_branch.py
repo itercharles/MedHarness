@@ -62,6 +62,7 @@ def test_validate_reads_the_diff_and_the_cr_it_judges(tmp_path: Path) -> None:
                return_value={"created": [], "updated": ["SYS-001"], "deleted": []}) as items, \
          patch("medharness.services.git.collect_path_changes", return_value=NOTHING) as paths, \
          patch("dhfkit.item_store.ItemStore") as adapter:
+        adapter.return_value.config.impact_depth = 0   # these judge the promise, not the impact
         adapter.return_value.get_item.return_value = {"id": "CR-001", "affected_items": ["SRS-001"]}
         result = validate_atomic_branch(tmp_path, dhf, "CR-001", since_ref="main",
                                         code_paths=("src/",))

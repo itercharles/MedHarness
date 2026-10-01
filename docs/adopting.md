@@ -238,6 +238,7 @@ Runs triage, then generates the V-model DHF item cascade (CRS → SYS → SRS �
 | `affected_risk_items` | Step 2.5 (risk impact) | ✓ explicit list (can be `[]`) |
 | `implementation_notes` | Step 3 (impl plan) | ✓ non-empty |
 | `affected_items` | Step 4; in CI, `build plan` and `build code` rewrite it from the branch | ✓ explicit list (can be `[]`) |
+| `reviewed_items` | Step 4: items that depend on a changed one and were reviewed, needing no change | only as `verify changes` requires (below) |
 
 ### `build code` — development phase
 

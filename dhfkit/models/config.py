@@ -126,6 +126,7 @@ class ProjectConfig(BaseModel):
     required_traceability: Optional[List[RequiredTraceabilityRule]] = Field(None, description="Required traceability rules")
     test_integration: dict = Field(default_factory=dict, description="Test integration configuration")
     document_specifications: dict = Field(default_factory=dict, description="Document specification configurations")
+    impact_depth: int = Field(1, description="How many links from a changed item `verify changes` looks for dependents that were not reviewed; 0 turns it off")
     placeholder_patterns: List[str] = Field(default_factory=list, description="Regular expressions for text that stands in for content (TBD, the starter items' 'Replace with your own')")
     store: dict = Field(default_factory=lambda: {"type": "yaml"}, description="Where items are kept: `type`, and that adapter's settings")
 

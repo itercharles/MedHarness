@@ -254,6 +254,11 @@ def register(main):
         fails, and so does a CR that promised nothing and changed no DHF item
         at all — that means `build plan` never ran.
 
+        Change reaches further than the items it edits: an item that depends on a
+        changed one, through a typed link in a traceability chain, must be changed
+        too or listed in the CR's `reviewed_items`. `impact_depth` in global.yaml
+        sets how many links out (default 1; 0 turns it off).
+
         `--code-path src/` adds a second requirement: at least one file under
         those paths must have changed too. Without the flag that check is
         skipped, so a design-only branch passes.
