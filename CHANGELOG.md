@@ -13,6 +13,15 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ### Fixed
 
+- **`verify tests`, `verify completion` and the release's traceability report read
+  JUnit three different ways.** One reader now serves all three
+  (`dhfkit.junit_parser.read_test_evidence`: the `medharness.links` property or an
+  `@links:` tag in the name). Consequences: a test tagged only in its name counts
+  everywhere; a requirement whose methods are only Inspection, Analysis or
+  Demonstration no longer fails coverage for having no test, so the only way through
+  is no longer a fake link (it is listed for sign-off instead); and a test linking
+  an ID the DHF does not have is reported (`SRS-999: linked by 'test_x' but not in
+  the DHF`), as a warning, and an error under `--strict`.
 - **`status` was a free field.** A defect or change request written as `banana`
   passed `verify dhf --strict`. A status must now be a state of the item's type: the
   states its lifecycle's transitions name, or the global lifecycle's for a type
