@@ -107,7 +107,7 @@ The `Blocking` column means:
 
 One distinction worth knowing before you wire anything: **broken references versus incomplete design.** `verify dhf` always fails on a link whose target does not exist — a typo or a deleted item. An item with no downstream child yet is normal mid-project and fails only under `--strict`. They need different fixes, so they are reported differently.
 
-`verify changes` compares the working tree, uncommitted and untracked files included, against `--since-ref` (default `origin/main`), and needs that ref to be reachable — in CI, fetch it or check out with full history.
+`verify changes` compares the working tree, uncommitted and untracked files included, against `--since-ref` (default `origin/main`), and needs that ref to be reachable — in CI, fetch it or check out with full history. It also fails on **change impact**: an item that depends on a changed one (through a typed link, in an item type that sits in a traceability chain) that is neither changed nor listed in the CR's `reviewed_items`. `impact_depth` in `global.yaml` sets how many links out it looks; `0` turns it off.
 
 ---
 

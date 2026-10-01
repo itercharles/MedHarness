@@ -211,6 +211,34 @@ CODE = [_write("src/pdf.py", "def write():\n    return b'%PDF'\n"),
         _write("tests/test_pdf.py", "def test_write():\n    assert True\n")]
 
 
+class TestBuildPlanChangeImpact:
+    UPDATE = [
+        f"{MH} item update SYS-001 --data " + _json({"content": "Changed.", "verification_criteria": "PDF opens"}),
+        f"{MH} item update CR-001 --data " + _json({
+            "triage_result": {"verdict": "approved"}, "affected_risk_items": [], "implementation_notes": "Change SYS-001."}),
+    ]
+    REVIEW = f"{MH} item update CR-001 --data " + _json({"reviewed_items": ["SRS-001", "SYSARCH-001", "RCM-001"]})
+
+    def test_a_dependent_the_model_left_alone_is_fixed_in_the_second_pass(self, project: Path, tmp_path: Path) -> None:
+        _plan(tmp_path, design=[{"run": self.UPDATE}, {"run": [self.REVIEW]}],
+              design_review=[{"run": [APPROVED_REVIEW]}])
+
+        result = _run("build", "plan", "--cr", "CR-001")
+
+        report = _report(result)
+        assert result.exit_code == 0, result.stderr
+        assert report["outcome"] == "corrected"
+        fix_pass = [c for c in _calls(project) if c["stage"] == "design"][1]
+        assert "SRS-001 depends on SYS-001" in fix_pass["prompt"]
+
+    def test_a_dependent_that_stays_unreviewed_is_reported(self, project: Path, tmp_path: Path) -> None:
+        _plan(tmp_path, design=[{"run": self.UPDATE}, {"run": []}], design_review=[{"run": [APPROVED_REVIEW]}])
+        result = _run("build", "plan", "--cr", "CR-001")
+        report = _report(result)
+        assert result.exit_code == 1 and report["outcome"] == "completed_with_errors"
+        assert {e["field"] for e in report["errors"]} == {"impact.RCM-001", "impact.SRS-001", "impact.SYSARCH-001"}
+
+
 class TestBuildCode:
     def test_a_compliant_run_leaves_the_code_uncommitted_and_lists_it(
         self, project: Path, tmp_path: Path,

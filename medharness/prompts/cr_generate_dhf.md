@@ -231,6 +231,14 @@ to its `affected_items`:
 `medharness verify changes --cr {{cr_id}}` compares this list with the
 items the branch actually changes, in both directions.
 
+It also looks at what depends on the items you changed (items that link to them
+through a typed field: an SRS that derives from a SYS you updated, say). Each one
+must either be updated to follow the change, or be recorded as reviewed when it needs
+none:
+
+    medharness --dhf DHF item update {{cr_id}} \
+      --data '{"reviewed_items": ["SRS-012"]}'
+
 ## Scope Constraints
 
 - Only create or update items **directly required** by this CR.

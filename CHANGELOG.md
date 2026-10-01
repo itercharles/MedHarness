@@ -11,6 +11,18 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+### Added
+
+- **Change impact.** A change reaches the items that depend on it. `verify changes`
+  now fails when an item that depends on a changed one — through a typed link, in an
+  item type that sits in a traceability chain — is neither changed nor listed in the
+  CR's new `reviewed_items`; `build plan` runs the same check so its fix pass can
+  correct it, and its prompt says so. `impact_depth` in `global.yaml` sets how many
+  links out (default 1, 0 turns it off). A CR's `affected_items`,
+  `affected_risk_items` and similar bookkeeping links do not count as dependence.
+  A project whose CR doc type is overridden needs `reviewed_items` in it (copy it
+  from the default).
+
 ### Fixed
 
 - **`verify tests`, `verify completion` and the release's traceability report read

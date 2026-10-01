@@ -345,7 +345,27 @@ def validate_generate_dhf(
             })
 
     errors.extend(_validate_cascade_completeness(created_ids, by_id, _api.get_config(dhf_path)))
+    errors.extend(_unreviewed_impact(dhf_path, cr_id, changed_items))
     return errors
+
+
+def _unreviewed_impact(dhf_path: Path, cr_id: str, changed_items: dict[str, list[str]]) -> list[dict]:
+    """The same dependents `verify changes` will fail on, found while the model can still fix them."""
+    from dhfkit.store import open_store
+    from medharness.services.impact import unreviewed_dependents
+
+    store = open_store(dhf_path)
+    unreviewed = unreviewed_dependents(store, store.get_item(cr_id), {
+        "created": changed_items.get("created", []), "updated": changed_items.get("updated", []),
+        "deleted": changed_items.get("deleted", []),
+    })
+    return [{
+        "field": f"impact.{dependent}",
+        "issue": f"{dependent} depends on {', '.join(origins)}, which `build plan` changed, "
+                 f"but {dependent} is neither changed nor listed in {cr_id}'s reviewed_items.",
+        "fix": f"Update {dependent} to follow the change, or if it needs none run "
+               f"`medharness item update {cr_id} --data '{{\"reviewed_items\": [..., \"{dependent}\"]}}'`.",
+    } for dependent, origins in unreviewed.items()]
 
 
 def check_verification_quality(
