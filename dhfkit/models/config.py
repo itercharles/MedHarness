@@ -204,6 +204,27 @@ class ProjectConfig(BaseModel):
                         fields.add(str(name))
         return fields
 
+    def valid_states(self, code: str) -> Optional[set[str]]:
+        """The `status` values an item of this type may carry, or None when nothing says.
+
+        A type with a lifecycle takes the states its transitions name. A type without
+        one takes the global lifecycle's states.
+        """
+        doc_type = self.get_doc_type(code)
+        lifecycle = (doc_type.lifecycle if doc_type else None) or {}
+        states: set[str] = set()
+        for state in lifecycle.get("states") or []:
+            states.add(state["id"] if isinstance(state, dict) else str(state))
+        for transition in lifecycle.get("transitions") or []:
+            states.update(s for s in transition.get("from_states") or [] if s)
+            if transition.get("to_state"):
+                states.add(transition["to_state"])
+        if states:
+            return states
+        if self.global_lifecycle and self.global_lifecycle.states:
+            return {s.id for s in self.global_lifecycle.states}
+        return None
+
     def doc_type_of(self, uid: str) -> Optional[DocTypeConfig]:
         """The doc type an ID belongs to, by the longest prefix it starts with."""
         matches = [dt for dt in self.doc_types if uid.startswith(dt.prefix)]
