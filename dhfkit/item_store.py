@@ -188,8 +188,19 @@ class ItemStore:
                         f"(known: {sorted(known_prefixes)})"
                     )
         errors += self._link_type_errors(data)
+        errors += self._status_errors(data)
         if errors:
             raise ValidationError("Item link validation failed:\n" + "\n".join(f"  - {e}" for e in errors))
+
+    def _status_errors(self, data: dict) -> list[str]:
+        """A `status` that is not a state of the item's type (`banana`)."""
+        status = data.get("status")
+        uid = data.get("id") or data.get("uid") or ""
+        doc_type = self._config.doc_type_of(uid) if uid else None
+        allowed = self._config.valid_states(doc_type.code) if doc_type else None
+        if status and allowed is not None and status not in allowed:
+            return [f"status: '{status}' is not a state of {doc_type.code} (one of {', '.join(sorted(allowed))})"]
+        return []
 
     def _link_type_errors(self, data: dict) -> list[str]:
         """Links whose target is of a type the field does not accept (`satisfies` → CRS only)."""

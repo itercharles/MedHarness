@@ -63,6 +63,11 @@ def register(main):
             click.echo(f"{label} [placeholder] {found['id']}: placeholder text in {', '.join(found['fields'])}", err=True)
             click.echo(f"    Fix: medharness {dhf_arg} item update {found['id']}"
                        f" --data '{{\"{found['fields'][0]}\": \"<the real text>\"}}'", err=True)
+        for bad in r.get("invalid_statuses", []):
+            click.echo(f"FAIL [status] {bad['id']}: status '{bad['status']}' is not a state of {bad['type']} "
+                       f"(one of {', '.join(bad['allowed'])})", err=True)
+            click.echo(f"    Fix: medharness {dhf_arg} item update {bad['id']}"
+                       f" --data '{{\"status\": \"{bad['allowed'][0]}\"}}'", err=True)
         if "traceability" in r:
             t = r["traceability"]
             req = t.get("required", {})

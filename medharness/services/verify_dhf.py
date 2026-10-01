@@ -111,6 +111,7 @@ def ci_structural_gate(
                                  "criterion to verify against",
                     })
         results["placeholders"] = _placeholders(adapter)
+        results["invalid_statuses"] = _invalid_statuses(adapter)
     except Exception as exc:  # noqa: BLE001
         # Say so. Swallowing this reported "no verification_criteria gaps"
         # on a DHF whose items could not be read — a pass indistinguishable
@@ -132,6 +133,17 @@ def ci_structural_gate(
         f"{schema_n} item(s) checked; {len(errors)} error(s), {len(warnings)} warning(s).",
         errors=errors, warnings=warnings, results=results,
     )
+
+
+def _invalid_statuses(adapter) -> list[dict]:
+    """Items whose `status` is not a state of their type: anyone can write one by hand."""
+    found = []
+    for item in adapter.list_items():
+        allowed = adapter.config.valid_states(item.get("type", ""))
+        status = item.get("status")
+        if status and allowed is not None and status not in allowed:
+            found.append({"id": item["id"], "type": item["type"], "status": status, "allowed": sorted(allowed)})
+    return found
 
 
 def _placeholders(adapter) -> list[dict]:
@@ -191,6 +203,11 @@ def _structural_messages(results: dict, strict: bool) -> tuple[list[str], list[s
         )
     for gap in results.get("verification_gaps", []):
         warnings.append(f"{gap['id']}: {gap['issue']}")
+    # A status that is no state of its type is a broken record, like a broken link.
+    errors.extend(
+        f"{s['id']}: status '{s['status']}' is not a state of {s['type']} (one of {', '.join(s['allowed'])})"
+        for s in results.get("invalid_statuses", [])
+    )
     # Content that still says nothing is design to be written, like an uncovered
     # item: it advises, and blocks under --strict.
     bucket.extend(f"{p['id']}: placeholder text in {', '.join(p['fields'])}" for p in results.get("placeholders", []))

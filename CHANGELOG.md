@@ -13,6 +13,12 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ### Fixed
 
+- **`status` was a free field.** A defect or change request written as `banana`
+  passed `verify dhf --strict`. A status must now be a state of the item's type: the
+  states its lifecycle's transitions name, or the global lifecycle's for a type
+  without one. `verify dhf` fails on the others, and `item create|update` refuses
+  them. Existing DHFs with custom statuses fail until the lifecycle in
+  `DHF/config` names them.
 - **`traceability_matrices: []` could not turn coverage off.** An empty list fell
   back to the V-model chains, so the one key meant to opt out did not, unlike
   `required_traceability: []`. `[]` now means no coverage is checked (and the
