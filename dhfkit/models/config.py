@@ -113,6 +113,7 @@ class RequiredTraceabilityRule(BaseModel):
     field: Optional[str] = Field(None, description="Field name on source item (required for upstream)")
     target_type: str = Field(..., description="Target document type code (e.g., 'SYS')")
     min_count: int = Field(1, description="Minimum required links")
+    or_covered_by: Optional[str] = Field(None, description="Another type code: an item of that type linking to the source also satisfies this rule")
 
 
 class ProjectConfig(BaseModel):
