@@ -597,6 +597,49 @@ and [`dhfkit/templates/specs`](../dhfkit/templates/specs).
 The trade-off: an overridden item type stops following the package's changes to
 that type, so override only what you change.
 
+### Your own types and relationships
+
+A relationship is a field on the child item, declared in its doc type with the
+types it may point at. This adds hardware requirements that refine a SYS:
+
+```yaml
+# DHF/config/doc_types/hwr.yaml
+code: HWR
+name: Hardware Requirement
+prefix: HWR-
+directory: hwr
+properties:
+- id
+- name: title
+  format: short_text
+- name: content
+  format: long_text
+- name: refines
+  format: relationship        # or item_multiselect; both hold item IDs
+  description: Hardware requirement refines a system requirement
+  target_types: [SYS]         # a link to anything else fails verify dhf and item create|update
+```
+
+```yaml
+# DHF/config/global.yaml
+required_traceability:        # replaces the default list, so copy the rules you keep
+- source_type: HWR
+  direction: upstream
+  field: refines
+  target_type: SYS
+  min_count: 1
+traceability_matrices:        # the chains: coverage is checked along them
+- name: Hardware chain
+  description: SYS to HWR
+  path: [SYS, HWR]
+```
+
+Everything reads this: `verify dhf` (dangling and wrong-type links, required links,
+coverage), `item get` (`all_linked_uids`), the release's traceability reports (one per
+matrix), and `build plan`, whose prompt describes your link fields and chains and
+whose check expects an item it creates to get a child next along a chain. Only
+what is configured is checked: a type with no `target_types` accepts any target.
+
 Projects scaffolded before 0.37 carry full copies of the config and templates.
 They keep working: each copy overrides the default it duplicates. To follow the
 defaults again, delete the copies you have not changed.

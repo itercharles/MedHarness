@@ -114,14 +114,24 @@ class ItemStore:
     # ------------------------------------------------------------------
 
     def _enrich_item_dict(self, item) -> dict:
-        """Add medharness domain fields (type, all_linked_uids) to an item dict."""
+        """Add medharness domain fields (type, all_linked_uids) to an item dict.
+
+        `all_linked_uids` is every ID the item links to, through the link fields its
+        doc type declares: a project's own relationship field is one of them. A type
+        that declares none keeps the model's fixed list.
+        """
         d = item.model_dump(by_alias=True, exclude_none=True)
-        d['all_linked_uids'] = item.all_linked_uids
-        dt = self._config.get_doc_type_by_prefix(item.prefix)
-        if dt:
-            d['type'] = dt.code
+        dt = self._config.doc_type_of(item.uid)
+        d['type'] = dt.code if dt else item.uid.split('-')[0]
+        declared = self._config.link_properties(dt.code) if dt else {}
+        if declared:
+            linked = set()
+            for field in declared:
+                value = d.get(field)
+                linked.update(v for v in ([value] if isinstance(value, str) else value or []) if isinstance(v, str) and v)
+            d['all_linked_uids'] = sorted(linked)
         else:
-            d['type'] = item.uid.split('-')[0]
+            d['all_linked_uids'] = item.all_linked_uids
         return d
 
     def get_item(self, uid: str) -> Optional[dict]:

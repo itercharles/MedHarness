@@ -89,6 +89,39 @@ def _cr_context(dhf_path: Path, cr_id: str) -> dict:
     return cr_context(_load_adapter(dhf_path, "DHF context"), cr_id)
 
 
+def _link_model(ctx: dict) -> str:
+    """The project's own link fields and chains, so a custom type or relationship is
+    described to the model the way the checks will read it."""
+    rows = [
+        f"| {t['code']} | `{link['field']}` | {' or '.join(link['targets']) or 'any'} | {link['meaning']} |\n"
+        for t in ctx["types"] for link in t.get("links", [])
+    ]
+    text = (
+        "### Traceability Link Model\n"
+        "(This project's link fields: what each is written on, what it points to, what it means.)\n\n"
+        "| Written on | Field | Points to | Meaning |\n"
+        "|------------|-------|-----------|---------|\n" + "".join(rows) + "\n"
+    )
+    chains = ctx.get("chains") or []
+    if chains:
+        text += (
+            "### Traceability Chains\n"
+            "(Write items top-down along these chains. An item you create needs at least one item of the next "
+            "type linking back to it; the first type of a chain is where requirements enter and is exempt.)\n\n"
+            + "".join(f"- {' → '.join(chain)}\n" for chain in chains) + "\n"
+        )
+    codes = {t["code"] for t in ctx["types"]}
+    if {"SYSARCH", "MODULE", "SWDD"} <= codes:
+        text += (
+            "Design layer roles:\n"
+            "- SYSARCH — one per SYS requirement; records the system-level design decision for that requirement\n"
+            "- MODULE — one per software unit; defines the module's responsibility and interfaces (module-oriented, not requirement-oriented)\n"
+            "- SWDD — one per SRS requirement; records design decisions within a specific module; must carry both `implements` (SRS) and `module` (MODULE)\n"
+            "\n"
+        )
+    return text
+
+
 def _render_plan_context(ctx: dict) -> str:
     """The `build plan` prompt's view of `cr_context`."""
     lines = ["## Pre-computed DHF Context\n"]
@@ -117,26 +150,8 @@ def _render_plan_context(ctx: dict) -> str:
                 lines.append(f"{label}: {', '.join(by_role[role])}\n")
         lines.append("\n")
 
-    lines.append(
-        "### Traceability Link Model\n"
-        "(Canonical link fields and what each relationship means.)\n\n"
-        "| Written on | Field | Points to | Meaning |\n"
-        "|------------|-------|-----------|---------|\n"
-        "| CRS | `derives_from` | UC | customer requirement ← use case |\n"
-        "| SYS | `satisfies` | CRS | system requirement ← customer need |\n"
-        "| SYSARCH | `design` | SYS | arch decision designs this SYS requirement |\n"
-        "| SRS | `derives_from` | SYS | software requirement ← system requirement |\n"
-        "| SWDD | `implements` | SRS | detailed design implements this SRS |\n"
-        "| SWDD | `module` | MODULE | detailed design belongs to this module |\n"
-        "| RCM | `mitigates` | RISK | control measure mitigates this risk |\n"
-        "| RCM | `implements` | SYS | control measure is a system requirement |\n"
-        "\n"
-        "Design layer roles:\n"
-        "- SYSARCH — one per SYS requirement; records the system-level design decision for that requirement\n"
-        "- MODULE — one per software unit; defines the module's responsibility and interfaces (module-oriented, not requirement-oriented)\n"
-        "- SWDD — one per SRS requirement; records design decisions within a specific module; must carry both `implements` (SRS) and `module` (MODULE)\n"
-        "\n"
-    )
+    lines.append(_link_model(ctx))
+
 
     if items:
         heading = "All DHF Items" if ctx["scope"] == "whole_dhf" else "Items This CR Affects"

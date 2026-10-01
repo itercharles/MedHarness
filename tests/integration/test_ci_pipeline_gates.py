@@ -149,6 +149,18 @@ class TestValidateBranch:
 # validate_generate_dhf — V-model cascade completeness
 # ---------------------------------------------------------------------------
 
+def _config():
+    import tempfile
+    from pathlib import Path
+
+    from dhfkit.models.config import ProjectConfig
+
+    config_dir = Path(tempfile.mkdtemp()) / "config"
+    config_dir.mkdir()
+    (config_dir / "global.yaml").write_text("project_name: Cascade\n")
+    return ProjectConfig.load(config_dir)
+
+
 class TestValidateGenerateDhfCascade:
     """Unit-level tests for the cascade completeness check."""
 
@@ -157,16 +169,16 @@ class TestValidateGenerateDhfCascade:
 
         by_id = {
             "CRS-001": {"id": "CRS-001"},
-            "SYS-001": {"id": "SYS-001", "derives_from": ["CRS-001"]},
+            "SYS-001": {"id": "SYS-001", "satisfies": ["CRS-001"]},
         }
-        errors = _validate_cascade_completeness(["CRS-001"], by_id)
+        errors = _validate_cascade_completeness(["CRS-001"], by_id, _config())
         assert not any(e["field"].startswith("cascade.CRS-001") for e in errors)
 
     def test_cascade_error_when_child_missing(self):
         from medharness.services.design_validation import _validate_cascade_completeness
 
         by_id = {"CRS-001": {"id": "CRS-001"}}
-        errors = _validate_cascade_completeness(["CRS-001"], by_id)
+        errors = _validate_cascade_completeness(["CRS-001"], by_id, _config())
         assert any(e["field"].startswith("cascade.CRS-001") for e in errors)
 
     def test_cascade_no_error_for_leaf_types(self):
@@ -177,7 +189,7 @@ class TestValidateGenerateDhfCascade:
             "SWDD-001": {"id": "SWDD-001"},
             "RISK-001": {"id": "RISK-001"},
         }
-        errors = _validate_cascade_completeness(["SWDD-001", "RISK-001"], by_id)
+        errors = _validate_cascade_completeness(["SWDD-001", "RISK-001"], by_id, _config())
         assert errors == []
 
     def test_cascade_not_triggered_for_updated_items(self):
@@ -186,7 +198,7 @@ class TestValidateGenerateDhfCascade:
 
         by_id = {"SYS-001": {"id": "SYS-001"}}
         # SYS-001 is not in created_ids
-        errors = _validate_cascade_completeness([], by_id)
+        errors = _validate_cascade_completeness([], by_id, _config())
         assert errors == []
 
     def test_cascade_uses_link_fields_not_all_linked_uids(self):
@@ -197,7 +209,7 @@ class TestValidateGenerateDhfCascade:
             "SRS-001": {"id": "SRS-001"},
             "SWDD-001": {"id": "SWDD-001", "implements": ["SRS-001"]},
         }
-        errors = _validate_cascade_completeness(["SRS-001"], by_id)
+        errors = _validate_cascade_completeness(["SRS-001"], by_id, _config())
         assert not any(e["field"].startswith("cascade.SRS-001") for e in errors)
 
     def test_cascade_finds_child_anywhere_in_dhf(self):
@@ -208,18 +220,18 @@ class TestValidateGenerateDhfCascade:
         # SYS-099 exists in DHF (pre-existing, not "changed") but links to new CRS-010
         by_id = {
             "CRS-010": {"id": "CRS-010"},
-            "SYS-099": {"id": "SYS-099", "derives_from": ["CRS-010"]},
+            "SYS-099": {"id": "SYS-099", "satisfies": ["CRS-010"]},
         }
         # Only CRS-010 is in created_ids; SYS-099 is a pre-existing item that was
         # updated in the same run and already persisted to the DHF
-        errors = _validate_cascade_completeness(["CRS-010"], by_id)
+        errors = _validate_cascade_completeness(["CRS-010"], by_id, _config())
         assert not any(e["field"].startswith("cascade.CRS-010") for e in errors)
 
     def test_cascade_error_has_fix_hint(self):
         from medharness.services.design_validation import _validate_cascade_completeness
 
         by_id = {"SYS-001": {"id": "SYS-001"}}
-        errors = _validate_cascade_completeness(["SYS-001"], by_id)
+        errors = _validate_cascade_completeness(["SYS-001"], by_id, _config())
         assert errors
         assert "fix" in errors[0]
         assert "SRS" in errors[0]["fix"] or "SYSARCH" in errors[0]["fix"]

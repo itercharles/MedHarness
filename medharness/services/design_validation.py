@@ -40,14 +40,23 @@ _VAGUE_VC_PHRASES: frozenset[str] = frozenset({
     "implemented correctly",
 })
 
-# Maps parent tier code → expected child tier codes.
-# If `build plan` creates a parent item, at least one child-tier item in the
-# same CR's changed_items should link back to it.
-_CASCADE_CHILDREN: dict[str, list[str]] = {
-    "CRS": ["SYS"],
-    "SYS": ["SRS", "SYSARCH"],
-    "SRS": ["SWDD"],
-}
+def cascade_children(config) -> dict[str, list[str]]:
+    """Parent type code → the child type codes a parent `build plan` creates must get.
+
+    Read from the project's `traceability_matrices`. A type is a parent when it sits
+    below the head of some chain: the head is where requirements enter, written by
+    people, so a head with nothing under it yet is not a gap `build plan` left.
+    """
+    from medharness.services.traceability import default_coverage_chains
+
+    chains = [m.path for m in (config.traceability_matrices or default_coverage_chains())]
+    below = {code for chain in chains for code in chain[1:]}
+    children: dict[str, list[str]] = {}
+    for chain in chains:
+        for parent, child in zip(chain, chain[1:]):
+            if parent in below and child not in children.setdefault(parent, []):
+                children[parent].append(child)
+    return children
 
 
 def _load_api():
@@ -166,34 +175,10 @@ def _item_has_verification_criteria(item: dict | None) -> bool:
     return bool(str((item or {}).get("verification_criteria") or "").strip())
 
 
-def _item_type_from_id(uid: str) -> str:
-    return uid.split("-", 1)[0] if uid else ""
-
-
-_CASCADE_LINK_FIELDS = (
-    "derives_from", "implements", "design", "mitigates",
-    "satisfies", "guided_by", "informs",
-)
-
-
-def _item_references(item: dict, uid: str) -> bool:
-    """Return True if any link field in item contains uid."""
-    for field in _CASCADE_LINK_FIELDS:
-        val = item.get(field)
-        if val is None:
-            continue
-        if isinstance(val, str):
-            if val == uid:
-                return True
-        elif isinstance(val, list):
-            if uid in val:
-                return True
-    return False
-
-
 def _validate_cascade_completeness(
     created_ids: list[str],
     by_id: dict[str, dict],
+    config,
 ) -> list[dict]:
     """Check that newly created parent-tier items have at least one child-tier
     item anywhere in the current DHF that links back to them.
@@ -202,27 +187,24 @@ def _validate_cascade_completeness(
     items touched in this run, so that child items created or updated in the same
     `build plan` pass are found regardless of how the caller bucketed them.
     """
+    from medharness.services.traceability import link_targets
+
     errors: list[dict] = []
-    child_prefixes_for = {
-        code: tuple(f"{c}-" for c in children)
-        for code, children in _CASCADE_CHILDREN.items()
-    }
+    cascade = cascade_children(config)
 
     for uid in created_ids:
-        parent_type = _item_type_from_id(uid)
-        child_prefixes = child_prefixes_for.get(parent_type)
-        if not child_prefixes:
+        doc_type = config.doc_type_of(uid)
+        child_codes = cascade.get(doc_type.code) if doc_type else None
+        if not child_codes or by_id.get(uid) is None:
             continue
-
-        if by_id.get(uid) is None:
-            continue
+        parent_type = doc_type.code
+        child_prefixes = tuple(dt.prefix for dt in (config.get_doc_type(c) for c in child_codes) if dt)
 
         covered = any(
-            cid.startswith(child_prefixes) and _item_references(item, uid)
+            cid.startswith(child_prefixes) and uid in link_targets(item, config, parent_type)
             for cid, item in by_id.items()
         )
         if not covered:
-            child_codes = _CASCADE_CHILDREN[parent_type]
             errors.append({
                 "field": f"cascade.{uid}",
                 "issue": (
@@ -349,7 +331,7 @@ def validate_generate_dhf(
             })
             continue
 
-        if _item_type_from_id(uid) in verifiable and not _item_has_verification_criteria(item):
+        if item.get("type") in verifiable and not _item_has_verification_criteria(item):
             errors.append({
                 "field": f"changed_items[{idx}].verification_criteria",
                 "issue": (
@@ -362,7 +344,7 @@ def validate_generate_dhf(
                 ),
             })
 
-    errors.extend(_validate_cascade_completeness(created_ids, by_id))
+    errors.extend(_validate_cascade_completeness(created_ids, by_id, _api.get_config(dhf_path)))
     return errors
 
 
@@ -394,11 +376,8 @@ def check_verification_quality(
             continue
         seen.add(uid)
 
-        if _item_type_from_id(uid) not in verifiable:
-            continue
-
         item = by_id.get(uid)
-        if item is None:
+        if item is None or item.get("type") not in verifiable:
             continue
 
         vc = str((item.get("verification_criteria") or "")).strip()
