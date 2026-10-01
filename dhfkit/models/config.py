@@ -92,6 +92,10 @@ class DocTypeConfig(BaseModel):
     verification_states: Optional[List[str]] = Field(None, description="Verification state labels")
 
 
+#: Property formats whose value is one or more item IDs.
+_LINK_FORMATS = ('relationship', 'item_multiselect')
+
+
 class TraceabilityMatrix(BaseModel):
     """Configuration for a traceability matrix."""
     name: str = Field(..., description="Matrix name")
@@ -193,11 +197,28 @@ class ProjectConfig(BaseModel):
             # properties is optional on a doc type, and a config assembled in
             # code rather than loaded from YAML often leaves it unset.
             for prop in doc_type.properties or ():
-                if isinstance(prop, dict) and prop.get("format") == "relationship":
+                if isinstance(prop, dict) and prop.get("format") in _LINK_FORMATS:
                     name = prop.get("name")
                     if name:
                         fields.add(str(name))
         return fields
+
+    def doc_type_of(self, uid: str) -> Optional[DocTypeConfig]:
+        """The doc type an ID belongs to, by the longest prefix it starts with."""
+        matches = [dt for dt in self.doc_types if uid.startswith(dt.prefix)]
+        return max(matches, key=lambda dt: len(dt.prefix), default=None)
+
+    def link_properties(self, code: str) -> dict[str, Optional[list[str]]]:
+        """The link fields a doc type declares, each with the type codes it may point at.
+
+        `None` means the field declares no restriction.
+        """
+        doc_type = self.get_doc_type(code)
+        links: dict[str, Optional[list[str]]] = {}
+        for prop in (doc_type.properties if doc_type else None) or ():
+            if isinstance(prop, dict) and prop.get("format") in _LINK_FORMATS and prop.get("name"):
+                links[str(prop["name"])] = list(prop["target_types"]) if prop.get("target_types") else None
+        return links
 
     def get_doc_type(self, code: str) -> Optional[DocTypeConfig]:
         """Get document type configuration by code."""

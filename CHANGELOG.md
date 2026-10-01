@@ -13,6 +13,15 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ### Changed
 
+- **A link's target type is checked, and a link counts as coverage only in a field
+  that can mean it.** `SYS satisfies RISK-001` passed `verify dhf --strict`
+  although a SYS satisfies a CRS; it now fails (`SYS-001.satisfies → RISK-001:
+  RISK is not one of CRS`), and `item create|update` refuses it. A SWDD listing
+  `SRS-002` under `module` no longer makes SRS-002 count as implemented.
+  Dangling targets are now found in `item_multiselect` fields too (a defect's
+  `violated_requirements`, a release's `included_items`). Existing DHFs with
+  such links start failing until they are corrected; an `item update` of an
+  item that carries one is refused until it is.
 - **`verify dhf` flags placeholder text.** A title or content field that is only
   `TBD`, or that says "Replace with your own", warns, and fails under `--strict`;
   the untouched starter DHF used to pass `--strict` and `build release` shipped
