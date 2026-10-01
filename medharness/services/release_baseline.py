@@ -391,6 +391,16 @@ def build_release(
     )
 
     errors = [f"DHF: {e}" for e in gate["errors"]] + baseline["errors"]
+    warnings = list(baseline.get("warnings", []))
+    # `completed` is a status anyone can write. A CR ships only if it still passes
+    # the same closure gate `verify completion` runs.
+    from medharness.services.verify_completion import cr_closure_gate
+
+    for cr_id in baseline["cr_ids"]:
+        closure = cr_closure_gate(cr_id, dhf, junit_paths=list(junit_paths))
+        errors += [f"{cr_id}: {e}" for e in closure["errors"]]
+        if "test evidence not checked" in closure["summary"]:
+            warnings.append(f"{cr_id}: test evidence not checked — pass --junit to check the Test-verified items")
     rel_uid: Optional[str] = None
     if write and not errors:
         try:
@@ -408,5 +418,5 @@ def build_release(
         "soup_count": baseline["soup_count"],
         "artifacts": [f["path"] for f in manifest["files"]],
         "errors": errors,
-        "warnings": baseline.get("warnings", []),
+        "warnings": warnings,
     }

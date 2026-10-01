@@ -557,12 +557,12 @@ The gate then passes, but still records the outage in the `warnings` of its answ
 medharness --dhf DHF build release --version 1.2.0 --out-dir release --junit test-results
 ```
 
-One command builds everything a release needs, into one directory: the release baseline, the software BOM, a CycloneDX SBOM, the specifications, traceability matrices, test evidence, and `evidence-manifest.json` hashing every file.
+One command builds everything a release needs, into one directory: the release baseline, the software BOM, a CycloneDX SBOM, the specifications, a traceability report for each matrix in `traceability_matrices`, test evidence, and `evidence-manifest.json` hashing every file.
 
 Before writing anything to the DHF it checks that:
 
 - the DHF passes `verify dhf` — with coverage gaps failing, since a release is not the place for advisory findings;
-- every included CR is `completed` (by default, every completed CR not yet in a release; `--cr` to choose);
+- every included CR is `completed` (by default, every completed CR not yet in a release; `--cr` to choose) **and still passes `verify completion`** — `completed` is a status anyone can write, so the gate is run again, with the `--junit` evidence if you pass it. Without `--junit`, a Test-verified item's evidence cannot be checked, and the release says so in `warnings`;
 - every open defect carries a `release_rationale` (IEC 62304 §9.7).
 
 Add `--write` to record the REL item. It is recorded **only when every check passed** — a failing release still writes its evidence, so you can read why, but leaves the DHF unchanged. The [CI recipe](#setting-up-ci) runs it on `v*` tags and brings the REL item back to `main` through a pull request.
