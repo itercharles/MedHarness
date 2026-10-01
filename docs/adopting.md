@@ -634,6 +634,12 @@ traceability_matrices:        # the chains: coverage is checked along them
   path: [SYS, HWR]
 ```
 
+A rule can name a second way to be satisfied with `or_covered_by: <type>`: the default
+`SYS satisfies CRS` carries `or_covered_by: RCM`, so a system requirement either comes
+from a customer need or is implemented for a risk control (an RCM that lists it under
+`implements`). Write the list again without `or_covered_by` to require a CRS always, or
+without the rule to drop it; `required_traceability: []` turns every rule off.
+
 Everything reads this: `verify dhf` (dangling and wrong-type links, required links,
 coverage), `item get` (`all_linked_uids`), the release's traceability reports (one per
 matrix), and `build plan`, whose prompt describes your link fields and chains and

@@ -124,6 +124,16 @@ def check_required_traceability(items: list[dict], config: Any) -> dict:
                     and s_item["id"] in link_targets(t_item, config, rule.source_type)
                 )
 
+            if count < rule.min_count and rule.or_covered_by:
+                alternative_dt = config.get_doc_type(rule.or_covered_by)
+                alternative_prefix = alternative_dt.prefix if alternative_dt else f"{rule.or_covered_by}-"
+                if any(
+                    t_item["id"].startswith(alternative_prefix)
+                    and s_item["id"] in link_targets(t_item, config, rule.source_type)
+                    for t_item in items
+                ):
+                    continue
+
             if count < rule.min_count:
                 direction_label = f"{rule.field} →" if rule.direction == "upstream" else "covered by"
                 failures.append({
@@ -138,6 +148,7 @@ def check_required_traceability(items: list[dict], config: Any) -> dict:
                     "issue": (
                         f"{rule.source_type} {direction_label} {rule.target_type} "
                         f"(count={count}, need ≥{rule.min_count})"
+                        + (f", or covered by {rule.or_covered_by}" if rule.or_covered_by else "")
                     ),
                 })
 

@@ -13,6 +13,13 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ### Changed
 
+- **A system requirement must have an origin.** Nothing was required upstream of a
+  SYS, so one with no CRS and no risk control behind it passed `verify dhf
+  --strict`. The default rules now include `SYS satisfies CRS, or covered by RCM`
+  (an RCM that lists the SYS under `implements`), using a new rule option,
+  `or_covered_by`. It is a rule in `global.yaml` like the others: a project
+  rewrites it, for instance without `or_covered_by` to require a CRS always, or
+  drops it. Existing DHFs with such a SYS start failing until it is linked.
 - **`build plan` and `item get` follow the project's own relationships.** The
   plan prompt's link table was fixed text and its check expected a fixed
   `CRS → SYS → SRS/SYSARCH → SWDD` cascade; both now come from the project's

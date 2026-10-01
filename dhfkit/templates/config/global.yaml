@@ -137,6 +137,14 @@ required_traceability:
   direction: downstream
   target_type: SYS
   min_count: 1
+# A system requirement comes from a customer need, or exists to implement a risk
+# control. `or_covered_by` is the second way in; remove it to require a CRS always.
+- source_type: SYS
+  direction: upstream
+  field: satisfies
+  target_type: CRS
+  min_count: 1
+  or_covered_by: RCM
 document_specifications:
   UC:
     source: requirements_specification.md.j2
