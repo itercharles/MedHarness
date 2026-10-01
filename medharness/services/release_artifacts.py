@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -194,22 +195,26 @@ def generate_release_artifacts(
     version: str,
     doc_format: str = "html",
 ) -> dict:
-    """Every specification, every plan, and the traceability report, into out_dir.
+    """Every specification, every plan, and a traceability report per configured matrix, into out_dir.
 
-    The report follows the first chain in `traceability_matrices`, the one the
-    project's config puts first.
+    The first matrix keeps the name `Requirements_Traceability_Report`; the others
+    are named for their matrix. A release that shipped only the first left the
+    risk-to-control chain out of its own evidence.
     """
     out_dir.mkdir(parents=True, exist_ok=True)
     specifications = _generate_specification_artifacts(
         adapter, out_dir, tuple(sorted(adapter.get_available_doc_types())), doc_format, version
     )
     plans = _generate_plan_artifacts(dhf_path, out_dir, doc_format)
-    traceability = write_traceability_report(
-        adapter,
-        tuple(adapter.config.traceability_matrices[0].path),
-        out_dir / "traceability" / f"Requirements_Traceability_Report.{doc_format}",
-        [str(path) for path in junit_paths],
-    )
+    traceability = [
+        write_traceability_report(
+            adapter,
+            tuple(matrix.path),
+            out_dir / "traceability" / f"{_report_stem(matrix.name, first=index == 0)}.{doc_format}",
+            [str(path) for path in junit_paths],
+        )
+        for index, matrix in enumerate(adapter.config.traceability_matrices)
+    ]
     return {
         "out_dir": str(out_dir),
         "specifications": specifications,
@@ -217,6 +222,12 @@ def generate_release_artifacts(
         "traceability": traceability,
         "junit_files": [str(path) for path in junit_paths],
     }
+
+
+def _report_stem(matrix_name: str, *, first: bool) -> str:
+    if first:
+        return "Requirements_Traceability_Report"
+    return re.sub(r"[^A-Za-z0-9]+", "_", matrix_name).strip("_") + "_Traceability_Report"
 
 
 def _generate_plan_artifacts(dhf_path: Path, out_dir: Path,
