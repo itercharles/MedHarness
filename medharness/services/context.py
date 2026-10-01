@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from medharness.services.traceability import build_module_map
+from medharness.services.traceability import build_module_map, default_coverage_chains
 
 _FULL_ITEM_FIELDS = (
     "id", "type", "title", "status",
@@ -60,13 +60,24 @@ def cr_context(adapter: Any, cr_id: str) -> dict:
         "scope": scope,
         "types": [
             {"code": dt["code"], "display_name": dt.get("display_name", ""),
-             "role": dt.get("role") or ""}
+             "role": dt.get("role") or "", "links": _link_fields(dt)}
             for dt in adapter.list_item_types()
         ],
+        "chains": [m.path for m in (adapter.config.traceability_matrices or default_coverage_chains())],
         "items": chosen,
         "modules": modules,
         "risks": _risks(items, adapter.config),
     }
+
+
+def _link_fields(item_type: dict) -> list[dict]:
+    """The link fields a type declares: where they point, and what they mean."""
+    return [
+        {"field": f["name"], "targets": list(f.get("target_types") or []),
+         "meaning": f.get("description") or f.get("label") or ""}
+        for f in item_type.get("fields") or []
+        if isinstance(f, dict) and f.get("format") in ("relationship", "item_multiselect") and f.get("name")
+    ]
 
 
 def _as_list(value: Any) -> list:

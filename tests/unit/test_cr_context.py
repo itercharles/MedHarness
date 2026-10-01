@@ -60,7 +60,7 @@ def _srs(dhf: Path) -> str:
     return json.loads(created.output.splitlines()[0])["id"]
 
 
-KEYS = {"project", "cr", "scope", "types", "items", "modules", "risks"}
+KEYS = {"project", "cr", "scope", "types", "items", "modules", "risks", "chains"}
 
 
 class TestTheShapeDoesNotDependOnTheCR:
@@ -105,8 +105,9 @@ def test_an_unknown_cr_says_so(tmp_path: Path) -> None:
 
 def test_types_name_the_project_codes(tmp_path: Path) -> None:
     types = _context(_make_dhf(tmp_path), "CR-001")["types"]
-    assert {"code": "SYS", "display_name": "System Requirement",
-            "role": "system_requirement"} in types
+    sys_type = next(t for t in types if t["code"] == "SYS")
+    assert sys_type["display_name"] == "System Requirement" and sys_type["role"] == "system_requirement"
+    assert [(l["field"], l["targets"]) for l in sys_type["links"]] == [("satisfies", ["CRS"])]
 
 
 def test_project_survives_a_relative_dhf_path(tmp_path: Path, monkeypatch) -> None:

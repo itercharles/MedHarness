@@ -13,6 +13,14 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ### Changed
 
+- **`build plan` and `item get` follow the project's own relationships.** The
+  plan prompt's link table was fixed text and its check expected a fixed
+  `CRS → SYS → SRS/SYSARCH → SWDD` cascade; both now come from the project's
+  doc types and `traceability_matrices`, so a custom type or link field is
+  described to the model the way the checks read it. `all_linked_uids` is built
+  from the link fields the type declares, so a project's own field is in it (it
+  also now includes fields like `affected_items`, `target_release` and
+  `included_items`). Projects on the standard chains see no difference.
 - **A link's target type is checked, and a link counts as coverage only in a field
   that can mean it.** `SYS satisfies RISK-001` passed `verify dhf --strict`
   although a SYS satisfies a CRS; it now fails (`SYS-001.satisfies → RISK-001:
