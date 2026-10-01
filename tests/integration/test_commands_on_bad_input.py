@@ -18,6 +18,7 @@ import yaml
 from click.testing import CliRunner
 
 from medharness.cli import main
+from fixtures.starter import keep_the_starter_text
 from medharness.results import GateResult, InitReport, ReleaseReport
 from medharness.workflows.init import _replace_placeholders, _scaffold_dhf
 
@@ -140,6 +141,7 @@ class TestBuildArguments:
         assert not (project / "r").exists() and not (project.parent / "evil").exists()
 
     def test_a_release_without_write_leaves_the_dhf_alone(self, project: Path) -> None:
+        keep_the_starter_text(project / "DHF")
         before = {p: p.read_bytes() for p in (project / "DHF").rglob("*.yaml")}
         result = _run(project, "build", "release", "--version", "1.0.0", "--out-dir", str(project / "r"))
         assert result.exit_code == 0 and ReleaseReport.model_validate_json(result.stdout).rel_uid is None

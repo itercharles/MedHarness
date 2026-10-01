@@ -107,6 +107,7 @@ def ci_structural_gate(
                                  "field, but §5.7 verification needs a stated "
                                  "criterion to verify against",
                     })
+        results["placeholders"] = _placeholders(adapter)
     except Exception as exc:  # noqa: BLE001
         # Say so. Swallowing this reported "no verification_criteria gaps"
         # on a DHF whose items could not be read — a pass indistinguishable
@@ -128,6 +129,29 @@ def ci_structural_gate(
         f"{schema_n} item(s) checked; {len(errors)} error(s), {len(warnings)} warning(s).",
         errors=errors, warnings=warnings, results=results,
     )
+
+
+def _placeholders(adapter) -> list[dict]:
+    """Per item, the title and content fields whose text matches one of the config's `placeholder_patterns`."""
+    import re
+
+    patterns = [re.compile(p, re.IGNORECASE) for p in adapter.config.placeholder_patterns]
+    if not patterns:
+        return []
+    text_fields = {
+        dt.code: [p["name"] for p in dt.properties or []
+                  if isinstance(p, dict) and p.get("format") in ("short_text", "long_text")]
+        for dt in adapter.config.doc_types
+    }
+    found = []
+    for item in adapter.list_items():
+        fields = [
+            field for field in text_fields.get(item.get("type"), [])
+            if isinstance(item.get(field), str) and any(p.search(item[field]) for p in patterns)
+        ]
+        if fields:
+            found.append({"id": item["id"], "fields": fields})
+    return found
 
 
 def _structural_messages(results: dict, strict: bool) -> tuple[list[str], list[str]]:
@@ -160,6 +184,9 @@ def _structural_messages(results: dict, strict: bool) -> tuple[list[str], list[s
         )
     for gap in results.get("verification_gaps", []):
         warnings.append(f"{gap['id']}: {gap['issue']}")
+    # Content that still says nothing is design to be written, like an uncovered
+    # item: it advises, and blocks under --strict.
+    bucket.extend(f"{p['id']}: placeholder text in {', '.join(p['fields'])}" for p in results.get("placeholders", []))
     # A check that could not run is an error, not silence: reporting zero gaps
     # because the items would not load is the same output as a clean DHF.
     if results.get("verification_gaps_error"):

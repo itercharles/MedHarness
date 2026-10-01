@@ -14,6 +14,7 @@ from pathlib import Path
 import yaml
 from click.testing import CliRunner
 
+from fixtures.starter import keep_the_starter_text
 from medharness.cli import main
 from medharness.results import ReleaseReport
 from medharness.workflows.init import _replace_placeholders, _scaffold_dhf
@@ -23,6 +24,7 @@ def _project(tmp_path: Path, **cr_fields) -> Path:
     _scaffold_dhf(tmp_path)
     _replace_placeholders(tmp_path, "Rel")
     dhf = tmp_path / "DHF"
+    keep_the_starter_text(dhf)
     cr = next((dhf / "items").rglob("CR-001.yaml"))
     data = yaml.safe_load(cr.read_text())
     data.update({"status": "completed", **cr_fields})
