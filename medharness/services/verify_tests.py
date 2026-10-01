@@ -2,16 +2,10 @@
 
 from __future__ import annotations
 
-import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Any, Iterable
 
-from dhfkit.junit_parser import (
-    JUNIT_LINKS,
-    JUNIT_TESTING,
-    LINKS_TAG_RE,
-    TESTING_TAG_RE,
-)
+from dhfkit.junit_parser import read_test_evidence
 from dhfkit.testing_points import parse_testing_points
 from medharness.services.envelope import envelope_from, gate_result
 
@@ -29,8 +23,9 @@ def ci_test_coverage_gate(
     Returns a dict with ``passed`` (bool) and a ``results`` list of
     per-type coverage dicts.
 
-    Every requirement must have at least one passing linked test.
-    If a requirement declares numbered test points in its ``testing`` field,
+    Every requirement that needs a test must have at least one passing linked test:
+    one whose methods are only Inspection, Analysis or Demonstration does not, and is
+    listed for sign-off instead. If a requirement declares numbered test points in its ``testing`` field,
     each declared point must also be covered by at least one passing linked test.
     """
     from dhfkit.store import open_store
@@ -65,39 +60,14 @@ def ci_test_coverage_gate(
             manual_review_required=md.get("manual_review_required", []),
         )
 
+    evidence = read_test_evidence(junit_paths)
     covered_reqs: set[str] = set()
     covered_pairs: set[tuple[str, str]] = set()
-    for jp in junit_paths:
-        if not jp.is_file():
+    for test in evidence:
+        if test.status != "PASS":
             continue
-        tree = ET.parse(jp)
-        for tc in tree.iter("testcase"):
-            failures = list(tc.iter("failure"))
-            errors = list(tc.iter("error"))
-            skipped = list(tc.iter("skipped"))
-            if failures or errors or skipped:
-                continue
-            name = tc.get("name", "")
-            props: dict[str, str] = {}
-            properties_el = tc.find("properties")
-            if properties_el is not None:
-                for prop in properties_el.findall("property"):
-                    pname = prop.get("name", "")
-                    if pname:
-                        props[pname] = prop.get("value", "")
-
-            links_from_props = [v.strip() for v in props.get(JUNIT_LINKS, "").split(",") if v.strip()]
-            testing_from_props = [v.strip() for v in props.get(JUNIT_TESTING, "").split(",") if v.strip()]
-            links_from_name = LINKS_TAG_RE.findall(name)
-            testing_from_name = TESTING_TAG_RE.findall(name)
-
-            all_links = list(dict.fromkeys(links_from_props + links_from_name))
-            all_points = list(dict.fromkeys(testing_from_props + testing_from_name))
-
-            covered_reqs.update(all_links)
-            for req_id in all_links:
-                for point_id in all_points:
-                    covered_pairs.add((req_id, point_id))
+        covered_reqs.update(test.links)
+        covered_pairs.update((link, point) for link in test.links for point in test.testing_points)
 
     adapter = open_store(dhf_path)
     all_items = adapter.list_items()
@@ -108,7 +78,7 @@ def ci_test_coverage_gate(
 
     for rt in adapter.config.requirement_types():
         prefix = adapter.config.get_doc_type(rt).prefix
-        req_items = [it for it in all_items if it["id"].startswith(prefix)]
+        req_items = [it for it in all_items if it["id"].startswith(prefix) and _needs_a_test(it)]
         if not req_items:
             continue
         covered_count = 0
@@ -191,6 +161,22 @@ def ci_test_coverage_gate(
             "No JUnit evidence given, so test results were not checked — "
             "pass --junit to verify them."
         )
+    # A test that links an ID the DHF does not have is evidence for nothing: the item
+    # was renamed or deleted, or the link is a typo. Like a missing method, it warns
+    # until asked to block.
+    known = {item["id"] for item in all_items}
+    stale: dict[str, list[str]] = {}
+    for test in evidence:
+        if test.status != "SKIP":
+            for link in test.links:
+                if link not in known:
+                    stale.setdefault(link, []).append(test.name)
+    unknown_links = [{"id": uid, "tests": sorted(set(names))} for uid, names in sorted(stale.items())]
+    (errors if strict else warnings).extend(
+        f"{u['id']}: linked by {', '.join(repr(n) for n in u['tests'][:3])} but not in the DHF" for u in unknown_links
+    )
+    if strict and unknown_links:
+        passed = False
     # A requirement with no declared method is a §5.7 gap, but a project that
     # adopted this before the field existed has one on every item. It warns
     # until asked to block, the call `verify dhf` makes for coverage gaps.
@@ -211,6 +197,7 @@ def ci_test_coverage_gate(
         errors=errors, warnings=warnings,
         results=results,
         testing_points=testing_points,
+        unknown_links=unknown_links,
         missing_method=md.get("missing_method", []),
         unverified_test=md.get("unverified_test", []),
         manual_review_required=md.get("manual_review_required", []),
@@ -218,6 +205,25 @@ def ci_test_coverage_gate(
 
 
 _NON_TEST_METHODS = frozenset({"Inspection", "Analysis", "Demonstration"})
+
+
+def _methods(item: dict) -> list[str]:
+    """The verification methods an item declares, from either a list or a comma-separated string."""
+    raw = item.get("verification_method")
+    if isinstance(raw, str):
+        return [m.strip() for m in raw.split(",") if m.strip()]
+    if isinstance(raw, list):
+        return [str(m).strip() for m in raw if str(m).strip()]
+    return []
+
+
+def _needs_a_test(item: dict) -> bool:
+    """A requirement verified only by Inspection, Analysis or Demonstration has no test by design.
+
+    One with no declared method is expected to have one: nothing says otherwise.
+    """
+    methods = _methods(item)
+    return not methods or "Test" in methods
 
 
 def validate_verification_completeness(
@@ -262,8 +268,6 @@ def validate_verification_completeness(
           "summary": str,
         }
     """
-    import xml.etree.ElementTree as ET
-
     from dhfkit.store import open_store
 
     adapter = open_store(dhf_path)
@@ -281,22 +285,10 @@ def validate_verification_completeness(
         if dt:
             prefix_to_code[dt.prefix] = rt
 
-    # Build set of requirement IDs covered by passing tests
-    covered_by_test: set[str] = set()
-    for jp in junit_paths:
-        if not jp.is_file():
-            continue
-        tree = ET.parse(jp)
-        for tc in tree.iter("testcase"):
-            if list(tc.iter("failure")) or list(tc.iter("error")) or list(tc.iter("skipped")):
-                continue
-            for props in tc.iter("properties"):
-                for prop in props.iter("property"):
-                    if prop.get("name") == JUNIT_LINKS:
-                        for link in (prop.get("value") or "").split(","):
-                            link = link.strip()
-                            if link:
-                                covered_by_test.add(link)
+    # Requirement IDs covered by passing tests
+    covered_by_test = {
+        link for test in read_test_evidence(junit_paths) if test.status == "PASS" for link in test.links
+    }
 
     missing_method: list[dict] = []
     unverified_test: list[dict] = []
@@ -308,13 +300,7 @@ def validate_verification_completeness(
         if not type_code:
             continue
 
-        raw_method = item.get("verification_method")
-        if isinstance(raw_method, str):
-            methods = [m.strip() for m in raw_method.split(",") if m.strip()] if raw_method.strip() else []
-        elif isinstance(raw_method, list):
-            methods = [str(m).strip() for m in raw_method if str(m).strip()]
-        else:
-            methods = []
+        methods = _methods(item)
 
         title = item.get("title", "")
         entry = {"id": uid, "type": type_code, "title": title}

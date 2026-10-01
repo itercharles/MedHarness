@@ -6,11 +6,10 @@ a path. `build release` renders the result into its evidence bundle.
 
 from __future__ import annotations
 
-import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Any, Iterable
 
-from dhfkit.junit_parser import JUNIT_LINKS
+from dhfkit.junit_parser import read_test_evidence
 
 
 def _type_of(item_id: str, by_prefix: dict[str, dict]) -> dict | None:
@@ -32,23 +31,12 @@ def verification_evidence(
     ID is needed. A requirement whose tests were deleted is ``not_verified``.
     """
     results: dict[str, list[dict]] = {}
-    for path in junit_paths:
-        for testcase in ET.parse(path).getroot().iter("testcase"):
-            if testcase.find("skipped") is not None:
-                continue
-            props = testcase.find("properties")
-            if props is None:
-                continue
-            failed = testcase.find("failure") is not None or testcase.find("error") is not None
-            name, suite = testcase.get("name", ""), testcase.get("classname", "")
-            test = {"name": f"{suite} › {name}" if suite else name,
-                    "status": "FAIL" if failed else "PASS"}
-            for prop in props.findall("property"):
-                if prop.get("name") != JUNIT_LINKS:
-                    continue
-                for item_id in prop.get("value", "").split(","):
-                    if item_id.strip():
-                        results.setdefault(item_id.strip(), []).append(test)
+    for run in read_test_evidence(junit_paths):
+        if run.status == "SKIP":
+            continue
+        test = {"name": f"{run.suite} › {run.name}" if run.suite else run.name, "status": run.status}
+        for item_id in run.links:
+            results.setdefault(item_id, []).append(test)
 
     by_prefix = {t["prefix"]: t for t in item_types if t.get("prefix")}
     evidence: dict[str, dict] = {}
