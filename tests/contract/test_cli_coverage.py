@@ -1,5 +1,6 @@
 """Contract tests: functional coverage for CI gate, evidence, and artifact commands."""
 import json
+from fixtures.starter import keep_the_starter_text
 import sys
 from pathlib import Path
 
@@ -76,6 +77,7 @@ class TestBuildRelease:
         on every run to get past it.
         """
         out_dir = tmp_path / "release"
+        keep_the_starter_text(scaffolded_dhf / "DHF")
         r = _run(
             "medharness", "--dhf", str(scaffolded_dhf / "DHF"),
             "build", "release", "--version", "1.0.0", "--out-dir", str(out_dir),

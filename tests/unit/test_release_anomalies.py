@@ -16,6 +16,7 @@ import shutil
 from pathlib import Path
 
 import pytest
+from fixtures.starter import keep_the_starter_text
 
 from medharness.services.release_baseline import (
     _collect_known_anomalies,
@@ -204,6 +205,7 @@ class TestARelIsRecordedOnlyWhenEverythingPassed:
 
         _scaffold_dhf(tmp_path / "project")
         _replace_placeholders(tmp_path / "project", "Gated")
+        keep_the_starter_text(tmp_path / "project" / "DHF")
         return tmp_path / "project" / "DHF"
 
     def _releases(self, dhf: Path) -> set[str]:

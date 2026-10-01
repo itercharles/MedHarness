@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import hashlib
 from pathlib import Path
+from fixtures.starter import keep_the_starter_text
 
 from medharness.services.release_baseline import build_release
 
@@ -18,6 +19,7 @@ def _project(tmp_path: Path) -> Path:
 
     _scaffold_dhf(tmp_path / "project")
     _replace_placeholders(tmp_path / "project", "Untouched")
+    keep_the_starter_text(tmp_path / "project" / "DHF")
     return tmp_path / "project"
 
 

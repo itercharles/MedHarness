@@ -79,6 +79,6 @@ class TestTheHintIsUsable:
         )
 
         after = _verify_dhf(dhf)
-        assert item_id not in after or "verification_criteria is empty" not in after, (
+        assert f"{item_id}: verification_criteria is empty" not in after, (
             f"the fix ran but the gate still reports {item_id}:\n{after[-400:]}"
         )

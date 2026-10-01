@@ -101,7 +101,7 @@ The `Blocking` column means:
 
 `--strict` exists on `verify dhf`, `tests` and `soup`. For those three:
 
-- `verify dhf` — schema errors, required-link failures and dangling links always fail. Coverage gaps warn unless `--strict`.
+- `verify dhf` — schema errors, required-link failures and dangling links always fail. Coverage gaps, and title or content that is still a placeholder (`placeholder_patterns` in `global.yaml`; the starter items' "Replace with your own", `TBD`), warn unless `--strict`. `build release` runs it strict, so the starter DHF cannot ship.
 - `verify tests` — uncovered requirements and unverified tests always fail. A missing `verification_method` warns unless `--strict`.
 - `verify soup` — known vulnerabilities always fail, and so does an unreachable osv.dev unless `--offline-mode warn`. Drift from the manifests warns unless `--strict`.
 

@@ -11,6 +11,16 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+### Changed
+
+- **`verify dhf` flags placeholder text.** A title or content field that is only
+  `TBD`, or that says "Replace with your own", warns, and fails under `--strict`;
+  the untouched starter DHF used to pass `--strict` and `build release` shipped
+  it. The patterns are `placeholder_patterns` in `global.yaml` (a project
+  replaces the list, `[]` turns the check off). After `init`, `verify dhf` now
+  warns about every starter item until you replace them, and a strict CI fails
+  until you do.
+
 ### Fixed
 
 - **`build release` shipped a CR that `verify completion` fails.** It only checked

@@ -29,7 +29,9 @@ def register(main):
         Always blocking: schema errors, required-traceability failures, and
         dangling links (a link whose target ID does not exist).
 
-        Advisory by default: coverage gaps — pass --strict to enforce.
+        Advisory by default: coverage gaps, and title or content that is still a
+        placeholder (TBD, the starter items' "Replace with your own") — pass
+        --strict to enforce.
         """
         effective_dhf = ctx.obj["dhf"]
         result = ci_structural_gate(dhf_path=effective_dhf,
@@ -55,6 +57,11 @@ def register(main):
             click.echo(f"      Fix: medharness {dhf_arg} item update {gap['id']}"
                        f" --data '{{\"verification_criteria\": \"<how this is verified>\"}}'",
                        err=True)
+        label = "FAIL" if strict else "WARN"
+        for found in r.get("placeholders", []):
+            click.echo(f"{label} [placeholder] {found['id']}: placeholder text in {', '.join(found['fields'])}", err=True)
+            click.echo(f"    Fix: medharness {dhf_arg} item update {found['id']}"
+                       f" --data '{{\"{found['fields'][0]}\": \"<the real text>\"}}'", err=True)
         if "traceability" in r:
             t = r["traceability"]
             req = t.get("required", {})
