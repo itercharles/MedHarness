@@ -110,6 +110,6 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
 
       - name: Upload wheel to GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: dist/*.whl

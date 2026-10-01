@@ -137,6 +137,10 @@ git checkout main && git pull && git tag v0.X.0 && git push origin v0.X.0
 
 GitHub Actions then: runs preflight checks → builds wheel + sdist → publishes to PyPI → attaches wheel to the GitHub Release.
 
+If the publish step fails with `ReadTimeout` on `upload.pypi.org`, that is the
+OIDC token exchange timing out, before anything was uploaded: re-run only the
+failed job (`gh run rerun <run-id> --failed`) rather than re-tagging.
+
 > **Critical**: the tag must point to the current tip of `origin/main`. Pushing the tag
 > before the changelog PR is merged will fail the preflight "tag == main tip" check and
 > block the publish. Always merge first, tag second.
