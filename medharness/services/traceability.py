@@ -299,9 +299,7 @@ def check_traceability(items: list[dict], config: Any) -> dict:
 
     required_result = check_required_traceability(items, config)
 
-    matrices = config.traceability_matrices or []
-    if not matrices:
-        matrices = default_coverage_chains()
+    matrices = coverage_matrices(config)
 
     coverage_results = []
     for matrix in matrices:
@@ -406,6 +404,12 @@ def default_traceability_rules() -> List[RequiredTraceabilityRule]:
                 min_count=1,
             ))
     return rules
+
+def coverage_matrices(config: Any) -> List[TraceabilityMatrix]:
+    """The chains coverage is checked along: the project's, `[]` for none, the V-model's when unset."""
+    matrices = config.traceability_matrices
+    return default_coverage_chains() if matrices is None else list(matrices)
+
 
 def default_coverage_chains() -> List[TraceabilityMatrix]:
     """Generate traceability matrices from ItemType coverage_children metadata."""

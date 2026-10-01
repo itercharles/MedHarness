@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from medharness.services.traceability import build_module_map, default_coverage_chains
+from medharness.services.traceability import build_module_map, coverage_matrices
 
 _FULL_ITEM_FIELDS = (
     "id", "type", "title", "status",
@@ -63,7 +63,7 @@ def cr_context(adapter: Any, cr_id: str) -> dict:
              "role": dt.get("role") or "", "links": _link_fields(dt)}
             for dt in adapter.list_item_types()
         ],
-        "chains": [m.path for m in (adapter.config.traceability_matrices or default_coverage_chains())],
+        "chains": [m.path for m in coverage_matrices(adapter.config)],
         "items": chosen,
         "modules": modules,
         "risks": _risks(items, adapter.config),

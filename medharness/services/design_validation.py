@@ -47,9 +47,9 @@ def cascade_children(config) -> dict[str, list[str]]:
     below the head of some chain: the head is where requirements enter, written by
     people, so a head with nothing under it yet is not a gap `build plan` left.
     """
-    from medharness.services.traceability import default_coverage_chains
+    from medharness.services.traceability import coverage_matrices
 
-    chains = [m.path for m in (config.traceability_matrices or default_coverage_chains())]
+    chains = [m.path for m in coverage_matrices(config)]
     below = {code for chain in chains for code in chain[1:]}
     children: dict[str, list[str]] = {}
     for chain in chains:
