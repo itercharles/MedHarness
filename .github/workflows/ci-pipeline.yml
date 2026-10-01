@@ -161,8 +161,16 @@ jobs:
               _replace_placeholders(dhf_dir, 'Test Project')
               dhf = str(dhf_dir / 'DHF')
               subprocess.run([sys.executable, '-m', 'medharness', '--dhf', dhf, 'verify', 'dhf'], check=True)
+              # The starter items say 'Replace with your own': strict refuses them, so they cannot ship.
+              strict = subprocess.run([sys.executable, '-m', 'medharness', '--dhf', dhf, 'verify', 'dhf', '--strict'], capture_output=True, text=True)
+              assert strict.returncode == 1 and 'placeholder text' in strict.stdout, strict
               subprocess.run([sys.executable, '-m', 'medharness', '--dhf', dhf, 'item', 'list', '--type', 'CRS'], check=True)
               subprocess.run([sys.executable, '-m', 'medharness', '--dhf', dhf, 'item', 'list', '--type', 'SYS'], check=True)
+              # A release of the starter content is refused until the project replaces it, or opts out.
+              refused = subprocess.run([sys.executable, '-m', 'medharness', '--dhf', dhf, 'build', 'release', '--version', '0.0.0', '--out-dir', str(Path(tmp) / 'refused')], capture_output=True, text=True)
+              assert refused.returncode == 1, refused
+              global_yaml = dhf_dir / 'DHF' / 'config' / 'global.yaml'
+              global_yaml.write_text(global_yaml.read_text() + '\nplaceholder_patterns: []\n')
               subprocess.run([sys.executable, '-m', 'medharness', '--dhf', dhf, 'build', 'release', '--version', '0.0.0', '--out-dir', str(Path(tmp) / 'release')], check=True)
               print('OK: starter DHF workflow valid')
           "
