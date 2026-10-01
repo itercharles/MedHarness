@@ -122,7 +122,7 @@ class ProjectConfig(BaseModel):
     project_name: str = Field("DHF Project", description="Product name, shown on generated documents")
     global_lifecycle: Optional[GlobalLifecycle] = Field(None, description="Global lifecycle configuration")
     doc_types: List[DocTypeConfig] = Field(..., description="Document type configurations")
-    traceability_matrices: List[TraceabilityMatrix] = Field(default_factory=list, description="Traceability matrix configurations")
+    traceability_matrices: Optional[List[TraceabilityMatrix]] = Field(None, description="Traceability matrix configurations; [] means no coverage is checked, unset means the V-model defaults")
     required_traceability: Optional[List[RequiredTraceabilityRule]] = Field(None, description="Required traceability rules")
     test_integration: dict = Field(default_factory=dict, description="Test integration configuration")
     document_specifications: dict = Field(default_factory=dict, description="Document specification configurations")

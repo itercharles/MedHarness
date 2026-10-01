@@ -12,6 +12,7 @@ from typing import Any
 import click
 
 from medharness.services import git
+from medharness.services.traceability import coverage_matrices
 
 
 
@@ -213,7 +214,7 @@ def generate_release_artifacts(
             out_dir / "traceability" / f"{_report_stem(matrix.name, first=index == 0)}.{doc_format}",
             [str(path) for path in junit_paths],
         )
-        for index, matrix in enumerate(adapter.config.traceability_matrices)
+        for index, matrix in enumerate(coverage_matrices(adapter.config))
     ]
     return {
         "out_dir": str(out_dir),

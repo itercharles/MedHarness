@@ -11,6 +11,13 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+### Fixed
+
+- **`traceability_matrices: []` could not turn coverage off.** An empty list fell
+  back to the V-model chains, so the one key meant to opt out did not, unlike
+  `required_traceability: []`. `[]` now means no coverage is checked (and the
+  release writes no matrix report); unset still means the V-model defaults.
+
 ### Changed
 
 - **A system requirement must have an origin.** Nothing was required upstream of a
