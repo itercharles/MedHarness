@@ -20,7 +20,6 @@ from medharness.services.gh import gh
 from medharness.services.github_pr import post_pr_comment
 from medharness.services.prompt_assembly import (
     MAX_DIFF_CHARS,
-    _append_skills,
     _assemble_develop_prompt,
     _assemble_generate_dhf_prompt,
     _assemble_review_code_prompt,
@@ -778,12 +777,12 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> di
             f"Read the DHF items in DHF/ related to {cr_id}, "
             f"then revise them based on the following pull request review feedback. "
             f"Continue using the CLI (`medharness item create` / `medharness item update`) only. "
+            f"Keep the CR's `impact_analysis`, `reviewed_items` and `affected_*` fields consistent with what you change. "
             f"After making changes, re-run:\n"
             f"  medharness --dhf DHF verify dhf\n\n"
             f"Review feedback:\n{feedback['prompt_text']}"
         )
         prompt = _enrich_with_plan_context(prompt, cr_id, dhf_path, warnings)
-        prompt = _append_skills(prompt)
         steps.append(_finish_step(prompt_step, prompt_perf, "ok"))
     else:
         prompt_step, prompt_perf = _begin_step(
@@ -894,6 +893,7 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> di
             f"The design review for {cr_id} found issues. "
             f"Read the review at docs/reviews/{cr_id}-Design-Review.md for the specific issues, "
             f"then fix each item via `medharness item create` / `medharness item update`. "
+            f"Keep the CR's `impact_analysis`, `reviewed_items` and `affected_*` fields consistent with what you change. "
             f"After making changes, re-run:\n"
             f"  medharness --dhf DHF verify dhf\n"
             f"Do not modify the review file itself."

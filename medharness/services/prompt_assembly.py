@@ -6,38 +6,13 @@ import importlib.resources
 from pathlib import Path
 
 
-MAX_ITEMS = 200
+MAX_ITEMS = 300
 MAX_DIFF_CHARS = 40_000
 
 
 def _load_prompt(name: str) -> str:
     ref = importlib.resources.files("medharness.prompts").joinpath(name)
     return ref.read_text(encoding="utf-8")
-
-
-def _load_skill(name: str) -> str:
-    ref = importlib.resources.files("medharness.prompts.skills").joinpath(name)
-    return ref.read_text(encoding="utf-8")
-
-
-_SKILL_FILES = [
-    ("product_impact.md", "Product Impact"),
-    ("req_manage.md", "Requirements Management"),
-    ("architecture_impact.md", "Architecture Impact"),
-    ("risk_impact.md", "Risk Impact"),
-    ("soup_impact.md", "SOUP Impact"),
-    ("test_impact.md", "Test Impact"),
-    ("regulatory_impact.md", "Regulatory Impact"),
-    ("security_impact.md", "Security Impact"),
-    ("usability_impact.md", "Usability / HFE Impact"),
-]
-
-
-def _append_skills(prompt: str) -> str:
-    parts = [prompt, "\n\n---\n"]
-    for fname, title in _SKILL_FILES:
-        parts.append(f"\n### {title}\n\n{_load_skill(fname)}\n")
-    return "".join(parts)
 
 
 # ---------------------------------------------------------------------------
@@ -114,9 +89,9 @@ def _link_model(ctx: dict) -> str:
     if {"SYSARCH", "MODULE", "SWDD"} <= codes:
         text += (
             "Design layer roles:\n"
-            "- SYSARCH — one per SYS requirement; records the system-level design decision for that requirement\n"
+            "- SYSARCH — a system-level design decision for the SYS it designs; only when the change alters boundaries, data flow or deployment\n"
             "- MODULE — one per software unit; defines the module's responsibility and interfaces (module-oriented, not requirement-oriented)\n"
-            "- SWDD — one per SRS requirement; records design decisions within a specific module; must carry both `implements` (SRS) and `module` (MODULE)\n"
+            "- SWDD — a design decision within a module, only past the threshold in the prompt; must carry both `implements` (SRS) and `module` (MODULE)\n"
             "\n"
         )
     return text
@@ -143,7 +118,7 @@ def _render_plan_context(ctx: dict) -> str:
         lines.append(
             "### Type Registry\n"
             "(Maps abstract DHF roles to this project's type codes."
-            " Skills reference these roles — resolve to codes here.)\n\n"
+            " Resolve a role to this project's codes here.)\n\n"
         )
         for role, label in _ROLE_LABELS.items():
             if role in by_role:
@@ -154,12 +129,21 @@ def _render_plan_context(ctx: dict) -> str:
 
 
     if items:
-        heading = "All DHF Items" if ctx["scope"] == "whole_dhf" else "Items This CR Affects"
-        lines.append(f"### {heading}\n")
-        for item in items[:MAX_ITEMS]:
-            lines.append(f"- {item['id']} — {item.get('title', '')}\n")
-        if len(items) > MAX_ITEMS:
-            lines.append(f"\n_(truncated — showing {MAX_ITEMS} of {len(items)} items)_\n")
+        if ctx["scope"] == "whole_dhf" and len(items) > MAX_ITEMS:
+            entry_types = {chain[0] for chain in ctx.get("chains") or []}
+            lines.append("### Entry-tier Items\n")
+            lines.append(
+                "(The DHF is too large to list. Only the entry types of the chains are shown; "
+                "use `item list --brief`, `--match` and `--linked-to` for the rest.)\n\n"
+            )
+            for item in items:
+                if item["type"] in entry_types:
+                    lines.append(f"- {item['id']} — {item.get('title', '')}\n")
+        else:
+            heading = "All DHF Items" if ctx["scope"] == "whole_dhf" else "Items This CR Affects"
+            lines.append(f"### {heading}\n")
+            for item in items:
+                lines.append(f"- {item['id']} — {item.get('title', '')}\n")
         lines.append("\n")
 
     if ctx["risks"]:
@@ -170,8 +154,7 @@ def _render_plan_context(ctx: dict) -> str:
             "RCM-linked SYS item, flag the related RISK for re-evaluation.)\n\n",
         ]
         for risk in ctx["risks"]:
-            lines.append(f"**{risk['id']}** [{risk['severity'] or '—'} · "
-                         f"{risk['risk_level'] or '—'}] — {risk['title']}\n")
+            lines.append(f"**{risk['id']}** — {risk['title']}\n")
             for rcm in risk["controls"]:
                 impl_str = ", ".join(rcm["implements"]) or "—"
                 lines.append(f"  ↳ {rcm['id']} — {rcm['title']} (implements: {impl_str})\n")
@@ -252,6 +235,6 @@ def _assemble_generate_dhf_prompt(cr_id: str, dhf_path: Path | None = None,
     prompt = _load_prompt("cr_generate_dhf.md").replace("{{cr_id}}", cr_id)
     if dhf_path is not None:
         prompt = _enrich_with_plan_context(prompt, cr_id, dhf_path, warnings)
-    return _append_skills(prompt)
+    return prompt
 
 

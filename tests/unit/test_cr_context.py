@@ -116,3 +116,69 @@ def test_project_survives_a_relative_dhf_path(tmp_path: Path, monkeypatch) -> No
     _make_dhf(tmp_path)
     monkeypatch.chdir(tmp_path)
     assert _context(Path("DHF"), "CR-001")["project"], "project name came back empty"
+
+
+class TestThePlanPromptForALargeDHF:
+    """`build plan` cannot list a thousand items; it lists where requirements enter."""
+
+    def _plan_prompt(self, dhf: Path) -> str:
+        from medharness.services.prompt_assembly import _assemble_generate_dhf_prompt
+
+        return _assemble_generate_dhf_prompt("CR-001", dhf_path=dhf)
+
+    def _items(self, dhf: Path) -> tuple[str, str]:
+        runner = CliRunner()
+        entry = json.loads(runner.invoke(main, [
+            "--dhf", str(dhf), "item", "create", "--type", "UC", "--data", '{"title": "Entry item"}',
+        ]).output.splitlines()[0])["id"]
+        return entry, _srs(dhf)
+
+    def test_above_the_limit_only_entry_types_are_listed(self, tmp_path: Path, monkeypatch) -> None:
+        dhf = _make_dhf(tmp_path)
+        _write_cr(dhf, "CR-001")
+        entry, srs = self._items(dhf)
+        monkeypatch.setattr("medharness.services.prompt_assembly.MAX_ITEMS", 2)
+
+        prompt = self._plan_prompt(dhf)
+
+        assert f"- {entry} — Entry item" in prompt
+        assert f"- {srs} —" not in prompt
+        assert "item list --brief" in prompt
+        assert "SRS: 1" in prompt, "the type counts still say what the DHF holds"
+
+    def test_at_the_limit_every_item_is_listed(self, tmp_path: Path, monkeypatch) -> None:
+        dhf = _make_dhf(tmp_path)
+        _write_cr(dhf, "CR-001")
+        entry, srs = self._items(dhf)
+        monkeypatch.setattr("medharness.services.prompt_assembly.MAX_ITEMS", 3)
+
+        prompt = self._plan_prompt(dhf)
+
+        assert f"- {entry} —" in prompt and f"- {srs} —" in prompt
+
+
+class TestWhatThePlanPromptRenders:
+    def test_a_risk_line_carries_no_empty_severity_bracket(self, tmp_path: Path) -> None:
+        from medharness.services.prompt_assembly import _assemble_generate_dhf_prompt
+
+        dhf = _make_dhf(tmp_path)
+        _write_cr(dhf, "CR-001")
+        CliRunner().invoke(main, [
+            "--dhf", str(dhf), "item", "create", "--type", "RISK", "--data", '{"title": "Wrong patient"}',
+        ])
+
+        prompt = _assemble_generate_dhf_prompt("CR-001", dhf_path=dhf)
+
+        assert "Wrong patient" in prompt
+        assert "[—" not in prompt
+
+    def test_the_prompt_is_generic(self, tmp_path: Path) -> None:
+        from medharness.services.prompt_assembly import _assemble_generate_dhf_prompt
+
+        dhf = _make_dhf(tmp_path)
+        _write_cr(dhf, "CR-001")
+
+        prompt = _assemble_generate_dhf_prompt("CR-001", dhf_path=dhf)
+
+        for stale in ("one per SRS requirement", "one per SYS requirement", "development_plan.md", "DICOM"):
+            assert stale not in prompt
