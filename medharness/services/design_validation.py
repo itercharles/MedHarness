@@ -552,11 +552,16 @@ def impact_analysis_closure_errors(cr_item: dict, items: list[dict], config,
         doc_type = config.doc_type_of(uid)
         return (doc_type.role if doc_type else None) or ""
 
-    # An SWDD's module is where it lives, not a requirement it refines; architecture covers it.
+    # Only a changed requirement can stop its parent holding; a design item does not
+    # change the requirements it designs.
     up = parents(items, config)
+    requirement_types = set(config.requirement_types())
     for uid in changed:
+        doc_type = config.doc_type_of(uid)
+        if doc_type is None or doc_type.code not in requirement_types:
+            continue
         for parent in up.get(uid, []):
-            if parent in by_id and role(parent) != "software_module" and parent not in affected | reviewed:
+            if parent in by_id and parent not in affected | reviewed:
                 err("parents", f"{uid} changed but its parent {parent} is neither changed nor in `reviewed_items`.",
                     f"Update {parent} to follow the change, or list it in `reviewed_items` with an `unchanged` entry.")
 

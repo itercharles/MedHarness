@@ -301,7 +301,7 @@ class TestBuildPlanImpactAnalysis:
         parents = [e["issue"] for e in report["errors"] if e["field"] == "impact_analysis.parents"]
         assert any("CRS-002 changed but its parent UC-001" in issue for issue in parents)
 
-    def test_the_module_an_swdd_belongs_to_need_not_be_reviewed(self, project: Path, tmp_path: Path) -> None:
+    def test_the_parents_of_a_design_item_need_not_be_reviewed(self, project: Path, tmp_path: Path) -> None:
         report = self._plan_and_run(tmp_path, DESIGN[:-1] + [self._cr(
             reviewed_items=["UC-001"], impact_analysis=_impact(created=self.CREATED, unchanged=("UC-001",)))])
         assert "impact_analysis.parents" not in self._fields(report)

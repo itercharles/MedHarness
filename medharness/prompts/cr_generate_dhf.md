@@ -20,7 +20,12 @@ it lists only the entry-tier items; query the rest with the CLI (see CLI Command
 
 **Checklist (evaluate in order):**
 
-1. **Duplicate** — Does an existing CR or DHF item already address this request?
+1. **Duplicate** — Does an existing CR, DHF item or the current product already meet
+   **every** part of this request, including its specifics (where, when, what exactly)?
+   The description counts as much as the acceptance criteria. If only part is met, or
+   you are unsure whether a detail is met, it is not a duplicate: approve it as a
+   change to existing behaviour, anchor on what already exists, and record your
+   reading in `impact_analysis.assumptions`.
 2. **Out-of-scope** — Is this outside the product's stated direction?
 3. **Architecture-conflict** — Does this contradict an existing ADR or SYSARCH item?
 
@@ -76,6 +81,15 @@ Work from a queue that starts with the anchors. For each item, decide:
 Preference: unchanged > update > create. A tier is touched only when the change
 alters it; a user-facing feature does not need a full chain from the top to the
 bottom.
+
+**Does it belong in the DHF?** A user-visible capability that no requirement covers
+belongs in the DHF when it affects clinical use, patient data or safety; when it is
+part of the intended use, labelling or instructions for use; or when the project
+wants it verified and regression-tested like a requirement. Use the DHF scope in
+`AGENTS.md`/`CLAUDE.md` where the project states one. Past CRs that changed no item
+are not a scope rule. If you keep a user-visible capability out of the DHF, name the
+criterion it fails in the `requirements` dimension and in `assumptions`, so the
+reviewer can overrule it.
 
 When you change an item, put its neighbours on the queue: its parents and children,
 the risk controls that implement it and the risks they mitigate, architecture and
@@ -162,8 +176,8 @@ impact_analysis:
       items: []           # IDs this dimension touches
 ```
 
-The check after your work also requires: each parent of a created or updated item
-(not the MODULE an SWDD belongs to) is in `affected_items` or `reviewed_items`; each
+The check after your work also requires: each parent of a created or updated
+requirement is in `affected_items` or `reviewed_items`; each
 risk control that implements a changed item, and each risk it mitigates, is in
 `affected_risk_items`.
 
@@ -259,7 +273,8 @@ The options combine. Do **not** write YAML files directly.
 ## Scope Constraints
 
 - Only create or update items **directly required** by this CR.
-- Do not modify files outside `DHF/`.
+- Do not modify files outside `DHF/`, and do not modify `DHF/config/`. If the CLI
+  rejects a field, stop and report it; do not change the schema to fit.
 - Do not commit, push or open a pull request, whatever the repository's own
   instructions say. Leave your changes in the working tree for whoever started
   this run to commit.
