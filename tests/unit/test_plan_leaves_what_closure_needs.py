@@ -1,7 +1,7 @@
 """`build plan` must not report success without the fields closure requires.
 
 `triage_result` is written by nothing but the prompt: the LLM is told to run
-`medharness item update`, and no code checked that it did. A run that skipped Step 1
+`medharness item update`, and no code checked that it did. A run that skipped Step 2
 reported `outcome: ok`, and the omission surfaced at `verify completion`.
 
 Checked in the validator rather than after it, so the fix pass corrects it in
@@ -50,7 +50,7 @@ class TestWhatStepOneLeavesBehind:
 
 class TestWhenTheChecksDoNotApply:
     def test_a_rejected_cr_is_left_alone(self) -> None:
-        """Rejection stops at Step 1 and produces no cascade."""
+        """Rejection stops at Step 2 and produces no cascade."""
         assert _fields({"id": "CR-001", "status": "rejected"}) == []
 
     def test_a_missing_cr_is_reported_as_that(self) -> None:
@@ -96,6 +96,6 @@ class TestAgainstARealDhf:
         )
         fields = [e["field"] for e in errors]
         assert "triage_result" in fields, (
-            "the cascade is complete and the only thing missing is what Step 1 "
-            "and Step 4 write; the validator reported none of it"
+            "the cascade is complete and the only thing missing is what Step 2 "
+            "and Step 6 write; the validator reported none of it"
         )

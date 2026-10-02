@@ -257,7 +257,7 @@ def _check_cr_workflow_fields(_api, dhf_path: Path, cr_id: str) -> list[dict]:
             "fix": f"Create {cr_id} before running `build plan`.",
         }]
 
-    # A rejected CR stops at Step 1 and produces no cascade, so the check does not apply.
+    # A rejected CR stops at Step 2 and produces no cascade, so the check does not apply.
     if str(cr_item.get("status") or "") == "rejected":
         return []
 
@@ -267,7 +267,7 @@ def _check_cr_workflow_fields(_api, dhf_path: Path, cr_id: str) -> list[dict]:
         errors.append({
             "field": "triage_result",
             "issue": (
-                f"{cr_id} has no approved `triage_result`; Step 1 records the "
+                f"{cr_id} has no approved `triage_result`; Step 2 records the "
                 f"triage decision and it was not written."
             ),
             "fix": (
@@ -446,7 +446,7 @@ def impact_analysis_shape_errors(cr_id: str, ia) -> list[dict]:
     fix = _IA_FIX.format(cr=cr_id)
     if not isinstance(ia, dict):
         return [{"field": "impact_analysis",
-                 "issue": f"{cr_id} has no `impact_analysis` mapping; Steps 2-5 record it and it was not written.",
+                 "issue": f"{cr_id} has no `impact_analysis` mapping; Steps 1-5 record it and it was not written.",
                  "fix": fix}]
     errors = []
 
@@ -585,7 +585,7 @@ def impact_analysis_closure_errors(cr_item: dict, items: list[dict], config,
 
 def _check_impact_analysis(cr_item: dict | None, items: list[dict], config,
                            changed_items: dict[str, list[str]]) -> list[dict]:
-    # A rejected CR stops at Step 1; a missing one is `_check_cr_workflow_fields`'s to report.
+    # A rejected CR stops at Step 2; a missing one is `_check_cr_workflow_fields`'s to report.
     if cr_item is None or str(cr_item.get("status") or "") == "rejected":
         return []
     errors = impact_analysis_shape_errors(cr_item["id"], cr_item.get("impact_analysis"))

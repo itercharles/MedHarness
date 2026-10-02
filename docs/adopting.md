@@ -252,8 +252,8 @@ Runs triage, works out what the change touches and what it leaves alone (test fi
 
 | Field | Written by | Required at closure |
 |-------|-----------|-------------------|
-| `triage_result` | Step 1 (triage) | ✓ verdict must be `approved` |
-| `impact_analysis` | Steps 2-5: assumptions, anchors with their evidence, every item examined and left unchanged, why each created item is not an update, and a verdict for each of nine dimensions | checked by `build plan`; not a closure gate |
+| `triage_result` | Step 2 (triage) | ✓ verdict must be `approved` |
+| `impact_analysis` | Steps 1-5: assumptions, anchors with their evidence, every item examined and left unchanged, why each created item is not an update, and a verdict for each of nine dimensions | checked by `build plan`; not a closure gate |
 | `affected_risk_items` | Step 6 (every risk and control relevant, changed or not) | ✓ explicit list (can be `[]`) |
 | `implementation_notes` | Step 6 (impl plan) | ✓ non-empty |
 | `affected_items` | Step 6; in CI, `build plan` and `build code` rewrite it from the branch | ✓ explicit list (can be `[]`) |

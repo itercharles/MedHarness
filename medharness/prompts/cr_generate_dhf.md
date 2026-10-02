@@ -16,16 +16,26 @@ CR ID: {{cr_id}}
 The DHF context below lists the project's types, links and chains. For a large DHF
 it lists only the entry-tier items; query the rest with the CLI (see CLI Commands).
 
-## Step 1: Triage
+## Step 1: Characterise
+
+Before judging the CR, write down what it asks for:
+
+- The **behaviour delta**: "X changes from A to B", where A is what the product does
+  today and B what the CR asks. Read the code and tests to establish A; take B from
+  every part of the CR — its description counts as much as its acceptance criteria,
+  including specifics such as where, when and what exactly.
+- Its category: changed behaviour, defect, new capability, non-functional, dependency,
+  or removal.
+- Where the CR is ambiguous, the reading you will work with, as a string in
+  `impact_analysis.assumptions`.
+
+## Step 2: Triage
 
 **Checklist (evaluate in order):**
 
-1. **Duplicate** — Does an existing CR, DHF item or the current product already meet
-   **every** part of this request, including its specifics (where, when, what exactly)?
-   The description counts as much as the acceptance criteria. If only part is met, or
-   you are unsure whether a detail is met, it is not a duplicate: approve it as a
-   change to existing behaviour, anchor on what already exists, and record your
-   reading in `impact_analysis.assumptions`.
+1. **Duplicate** — Only when A already equals B in every detail of Step 1's delta.
+   If any part of B is not yet true, or you are unsure, it is not a duplicate: approve
+   it as a change to existing behaviour and anchor on what already exists.
 2. **Out-of-scope** — Is this outside the product's stated direction?
 3. **Architecture-conflict** — Does this contradict an existing ADR or SYSARCH item?
 
@@ -44,13 +54,6 @@ Complexity: `small` = 1 subsystem, <5 items likely; `medium` = 2 subsystems or
 5–15 items; `large` = 3+ top-level branches or >15 items. A change that spans several
 top-level branches is still approved with `complexity: large`; say in `notes` how it
 should be split into smaller CRs.
-
-## Step 2: Characterise
-
-Write down the **behaviour delta** — "X changes from A to B" — and its category:
-changed behaviour, defect, new capability, non-functional, dependency, or removal.
-Where the CR is ambiguous, pick the reading you will work with and keep it as a
-string in `impact_analysis.assumptions`.
 
 ## Step 3: Locate
 
@@ -149,7 +152,7 @@ Then record the result on the CR in one update:
   changed item or that a check may require. Each must have an `unchanged` entry.
 - `affected_risk_items` — every RISK and RCM item that is relevant, changed or not;
   `[]` when none. Do not omit it.
-- `impact_analysis` — the record of Steps 2–5 (shape below).
+- `impact_analysis` — the record of Steps 1–5 (shape below).
 - `implementation_notes` — the plan (format below).
 
       medharness --dhf DHF item update {{cr_id}} --data '{"affected_items": [...], "reviewed_items": [...], "affected_risk_items": [...], "impact_analysis": {...}, "implementation_notes": "..."}'
@@ -258,6 +261,12 @@ Cover the module's responsibility, key types, the main control flow and the
 interfaces to adjacent modules. One SWDD per module or component boundary, not per
 function.
 
+**When the project's chains require a SWDD for a new SRS** (the check reports an SRS
+with no covering SWDD) and the threshold above is not met, cover it with the existing
+SWDD of the module whose code the change touches: add the SRS to its `implements` and
+one line to its content. Create a SWDD only when no existing one covers that code, and
+a MODULE only when the code lives in no existing module.
+
 ## CLI Commands
 
     medharness --dhf DHF item create --type <TYPE> --data '<JSON>'    # ID assigned automatically
@@ -280,5 +289,5 @@ The options combine. Do **not** write YAML files directly.
   this run to commit.
 - Do not move the CR through its lifecycle.
 - Do not edit the CR item except: `status: rejected` and `impact_assessment` when
-  rejecting (Step 1); `triage_result` (Step 1); `affected_items`, `reviewed_items`,
+  rejecting (Step 2); `triage_result` (Step 2); `affected_items`, `reviewed_items`,
   `affected_risk_items`, `impact_analysis` and `implementation_notes` (Step 6).
