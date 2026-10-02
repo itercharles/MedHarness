@@ -514,7 +514,7 @@ Check the branch changed the items the CR said it would.
 | Option | |
 |---|---|
 | `--cr CR_ID` | The CR whose affected_items the branch must change. [required] |
-| `--since-ref REF` | What the branch is compared against. |
+| `--since-ref REF` | What the branch is compared against: its changes since it left this ref. Needs enough history to reach the fork. |
 | `--code-path PATH` | Opt into code-change enforcement: path(s) under which at least one file must be modified. Omitting this option skips the code-change check entirely. |
 
 #### `medharness verify soup`

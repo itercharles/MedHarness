@@ -114,3 +114,16 @@ def test_a_branch_that_changes_no_item_has_no_impact(repo: Path) -> None:
     _edit(repo, "CR-001.yaml", title="Retitled")
     _, answer = _changes(repo)
     assert _impact(answer) == []
+
+
+def test_work_that_landed_on_main_after_the_branch_forked_is_not_the_branchs(repo: Path):
+    _change_sys(repo, reviewed_items=["SRS-001", "SYSARCH-001", "RCM-001"])
+    _git(repo, "commit", "-qam", "branch work")
+    _git(repo, "checkout", "-q", "main")
+    _edit(repo, "UC-001.yaml", content="Landed on main.")
+    _git(repo, "commit", "-qam", "main moved on")
+    _git(repo, "checkout", "-q", "feat")
+
+    result, answer = _changes(repo)
+
+    assert result.exit_code == 0, answer["errors"]

@@ -26,7 +26,7 @@ class TestCollectPathChanges:
             "M\tapps/client/src/modified.ts\n"
             "D\tapps/client/src/deleted.ts\n"
         )
-        with patch("subprocess.run", side_effect=[_completed(diff, 0), _completed("", 0)]):
+        with patch("subprocess.run", side_effect=[_completed("base\n", 0), _completed(diff, 0), _completed("", 0)]):
             result = collect_path_changes(tmp_path, "origin/main", "apps/")
         assert result == {
             "created": ["apps/client/src/added.ts"],
@@ -36,7 +36,7 @@ class TestCollectPathChanges:
 
     def test_rename_counted_as_update_on_new_path(self, tmp_path: Path):
         diff = "R100\tapps/old.ts\tapps/new.ts\n"
-        with patch("subprocess.run", side_effect=[_completed(diff, 0), _completed("", 0)]):
+        with patch("subprocess.run", side_effect=[_completed("base\n", 0), _completed(diff, 0), _completed("", 0)]):
             result = collect_path_changes(tmp_path, "origin/main", "apps/")
         assert result == {"created": [], "updated": ["apps/new.ts"], "deleted": []}
 
@@ -62,7 +62,7 @@ class TestCollectDhfItemChanges:
             "D\tDHF/items/02_srs/SRS-099.yaml\n"
             "M\tDHF/items/02_srs/README.md\n"     # non-yaml — skipped
         )
-        with patch("subprocess.run", side_effect=[_completed(diff, 0), _completed("", 0)]):
+        with patch("subprocess.run", side_effect=[_completed("base\n", 0), _completed(diff, 0), _completed("", 0)]):
             result = collect_dhf_item_changes(tmp_path, "origin/main")
         assert result == {
             "created": ["SYS-001"],
