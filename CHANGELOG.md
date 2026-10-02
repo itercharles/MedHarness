@@ -85,7 +85,9 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
   that the CR's status was `completed`, which anyone can write; hand-editing
   one let a release through with four closure errors. It now runs the closure
   gate for each included CR, with `--junit` when given, and warns when Test
-  evidence could not be checked.
+  evidence could not be checked. A DHF whose change requests were closed before the closure
+  fields existed baselines them once, in a REL item: see
+  [Change requests you already have](docs/adopting.md#change-requests-you-already-have).
 - **The release's traceability report followed only the first configured
   matrix.** Every matrix in `traceability_matrices` now gets one, so the chain
   from risk to control is in the release's own evidence.
