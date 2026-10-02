@@ -248,15 +248,18 @@ creates the CR, runs `build plan --cr CR-015 --prompt`, and does what it says.
 medharness --dhf DHF build plan --cr CR-001
 ```
 
-Runs triage, then generates the V-model DHF item cascade (CRS → SYS → SRS → SWDD), then writes an implementation plan into `implementation_notes` on the CR item. On completion the CR item carries:
+Runs triage, works out what the change touches and what it leaves alone (test files first, then a top-down drill), writes the items that need to change, and writes an implementation plan into `implementation_notes` on the CR item. Before it finishes it checks that the record is complete (below), so the fix pass can correct it. On completion the CR item carries:
 
 | Field | Written by | Required at closure |
 |-------|-----------|-------------------|
 | `triage_result` | Step 1 (triage) | ✓ verdict must be `approved` |
-| `affected_risk_items` | Step 2.5 (risk impact) | ✓ explicit list (can be `[]`) |
-| `implementation_notes` | Step 3 (impl plan) | ✓ non-empty |
-| `affected_items` | Step 4; in CI, `build plan` and `build code` rewrite it from the branch | ✓ explicit list (can be `[]`) |
-| `reviewed_items` | Step 4: items that depend on a changed one and were reviewed, needing no change | only as `verify changes` requires (below) |
+| `impact_analysis` | Steps 2-5: assumptions, anchors with their evidence, every item examined and left unchanged, why each created item is not an update, and a verdict for each of nine dimensions | checked by `build plan`; not a closure gate |
+| `affected_risk_items` | Step 6 (every risk and control relevant, changed or not) | ✓ explicit list (can be `[]`) |
+| `implementation_notes` | Step 6 (impl plan) | ✓ non-empty |
+| `affected_items` | Step 6; in CI, `build plan` and `build code` rewrite it from the branch | ✓ explicit list (can be `[]`) |
+| `reviewed_items` | Step 6: items that depend on a changed one and were reviewed, needing no change | only as `verify changes` requires (below) |
+
+`build plan` fails the run, after one fix pass, when the `impact_analysis` is missing a key or one of the nine dimensions; names an item the DHF does not have; leaves an anchor, a created item or a reviewed item without its evidence or reason; leaves a parent of a changed item neither changed nor reviewed; or leaves out a risk control that implements a changed item, or a risk it mitigates, from `affected_risk_items`. A created item that reads like an existing item of its type (similarity of 0.75 or more) is a warning. A rejected CR is not checked.
 
 ### `build code` — development phase
 

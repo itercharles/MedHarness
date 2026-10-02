@@ -863,6 +863,8 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> di
 
     for w in design_validation.check_verification_quality(dhf_path, items_changed):
         warnings.append(_warning(w["code"], w["message"], {"field": w["field"]}))
+    for w in design_validation.check_near_duplicates(dhf_path, items_changed):
+        warnings.append(_warning(w["code"], w["message"], {"field": w["field"]}))
 
     design_review_log: list[dict] = []
     design_review_verdict = "unknown"

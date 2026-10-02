@@ -76,6 +76,19 @@ def _json(data: dict) -> str:
     return shlex.quote(json.dumps(data))
 
 
+def _impact(created=(), unchanged=(), anchors=()) -> dict:
+    """A complete `impact_analysis`, as `build plan` leaves it."""
+    return {
+        "assumptions": ["the issue means what it says"],
+        "anchors": [{"id": uid, "evidence": "named in the issue"} for uid in anchors],
+        "unchanged": [{"id": uid, "reason": "still holds"} for uid in unchanged],
+        "created": [{"id": uid, "reason": "nothing covers it"} for uid in created],
+        "dimensions": [{"dimension": d, "verdict": "not_required", "reason": "no effect", "items": []}
+                       for d in ("product", "requirements", "architecture", "risk", "soup",
+                                 "test", "regulatory", "security", "usability")],
+    }
+
+
 DESIGN = [
     f"{MH} item create --type CRS --data " + _json({
         "title": "Export PDF", "content": "The user can export a report as PDF.",
@@ -94,6 +107,10 @@ DESIGN = [
         "module": ["MODULE-001"]}),
     f"{MH} item update CR-001 --data " + _json({
         "triage_result": {"verdict": "approved"}, "affected_risk_items": [],
+        "reviewed_items": ["UC-001", "MODULE-001"],
+        "impact_analysis": _impact(
+            created=("CRS-002", "SYS-002", "SYSARCH-002", "SRS-002", "SWDD-002"),
+            unchanged=("UC-001", "MODULE-001"), anchors=("UC-001",)),
         "implementation_notes": "Add a PDF writer."}),
 ]
 APPROVED_REVIEW = (
@@ -215,9 +232,14 @@ class TestBuildPlanChangeImpact:
     UPDATE = [
         f"{MH} item update SYS-001 --data " + _json({"content": "Changed.", "verification_criteria": "PDF opens"}),
         f"{MH} item update CR-001 --data " + _json({
-            "triage_result": {"verdict": "approved"}, "affected_risk_items": [], "implementation_notes": "Change SYS-001."}),
+            "triage_result": {"verdict": "approved"}, "implementation_notes": "Change SYS-001.",
+            "affected_risk_items": ["RCM-001", "RISK-001"], "reviewed_items": ["CRS-001"],
+            "impact_analysis": _impact(unchanged=("CRS-001",), anchors=("SYS-001",))}),
     ]
-    REVIEW = f"{MH} item update CR-001 --data " + _json({"reviewed_items": ["SRS-001", "SYSARCH-001", "RCM-001"]})
+    DEPENDENTS = ["SRS-001", "SYSARCH-001", "RCM-001"]
+    REVIEW = f"{MH} item update CR-001 --data " + _json({
+        "reviewed_items": ["CRS-001", *DEPENDENTS],
+        "impact_analysis": _impact(unchanged=("CRS-001", *DEPENDENTS), anchors=("SYS-001",))})
 
     def test_a_dependent_the_model_left_alone_is_fixed_in_the_second_pass(self, project: Path, tmp_path: Path) -> None:
         _plan(tmp_path, design=[{"run": self.UPDATE}, {"run": [self.REVIEW]}],
@@ -237,6 +259,75 @@ class TestBuildPlanChangeImpact:
         report = _report(result)
         assert result.exit_code == 1 and report["outcome"] == "completed_with_errors"
         assert {e["field"] for e in report["errors"]} == {"impact.RCM-001", "impact.SRS-001", "impact.SYSARCH-001"}
+
+
+class TestBuildPlanImpactAnalysis:
+    """The record of what was looked at and left alone is checked inside `build plan`."""
+
+    CREATED = ("CRS-002", "SYS-002", "SYSARCH-002", "SRS-002", "SWDD-002")
+
+    def _plan_and_run(self, tmp_path: Path, commands: list[str]) -> dict:
+        _plan(tmp_path, design=[{"run": commands}, {"run": []}], design_review=[{"run": [APPROVED_REVIEW]}])
+        return _report(_run("build", "plan", "--cr", "CR-001"))
+
+    def _cr(self, **fields) -> str:
+        base = {"triage_result": {"verdict": "approved"}, "affected_risk_items": [],
+                "implementation_notes": "Plan."}
+        return f"{MH} item update CR-001 --data " + _json({**base, **fields})
+
+    def _fields(self, report: dict) -> set[str]:
+        return {e["field"] for e in report["errors"]}
+
+    def test_a_complete_record_adds_no_error(self, project: Path, tmp_path: Path) -> None:
+        report = self._plan_and_run(tmp_path, DESIGN)
+        assert not [f for f in self._fields(report) if f.startswith("impact_analysis")]
+
+    def test_a_run_that_wrote_no_record_is_told_which_field(self, project: Path, tmp_path: Path) -> None:
+        report = self._plan_and_run(tmp_path, DESIGN[:-1] + [self._cr()])
+        assert "impact_analysis" in self._fields(report)
+        fix = next(e["fix"] for e in report["errors"] if e["field"] == "impact_analysis")
+        assert "item update CR-001" in fix
+
+    def test_a_created_item_without_a_reason_is_an_error(self, project: Path, tmp_path: Path) -> None:
+        record = _impact(created=self.CREATED[:-1], unchanged=("UC-001", "MODULE-001"), anchors=("UC-001",))
+        report = self._plan_and_run(tmp_path, DESIGN[:-1] + [
+            self._cr(reviewed_items=["UC-001", "MODULE-001"], impact_analysis=record)])
+        errors = [e for e in report["errors"] if e["field"] == "impact_analysis.created"]
+        assert [e["issue"].split()[1] for e in errors] == ["SWDD-002"]
+
+    def test_a_parent_that_is_neither_changed_nor_reviewed_is_an_error(self, project: Path, tmp_path: Path) -> None:
+        report = self._plan_and_run(tmp_path, DESIGN[:-1] + [self._cr(
+            reviewed_items=["UC-001"], impact_analysis=_impact(unchanged=("UC-001",), anchors=("UC-001",)))])
+        parents = [e["issue"] for e in report["errors"] if e["field"] == "impact_analysis.parents"]
+        assert any("SWDD-002 changed but its parent MODULE-001" in issue for issue in parents)
+
+    def test_a_risk_control_of_a_changed_item_must_be_recorded(self, project: Path, tmp_path: Path) -> None:
+        update = f"{MH} item update SYS-001 --data " + _json({"content": "Changed.", "verification_criteria": "PDF opens"})
+        reviewed = ["CRS-001", "SRS-001", "SYSARCH-001", "RCM-001"]
+        report = self._plan_and_run(tmp_path, [update, self._cr(
+            reviewed_items=reviewed, impact_analysis=_impact(unchanged=reviewed, anchors=("SYS-001",)))])
+        risk = [e for e in report["errors"] if e["field"] == "impact_analysis.risk"]
+        assert {e["issue"].split(" ")[1] for e in risk} == {"RCM-001", "RISK-001"}
+        assert any("RCM-001 controls SYS-001" in e["issue"] for e in risk)
+        assert any("RISK-001" in e["fix"] and "affected_risk_items" in e["fix"] for e in risk)
+        assert not [f for f in self._fields(report) if f.startswith("impact.")]
+
+    def test_a_created_item_that_reads_like_an_existing_one_is_a_warning(self, project: Path, tmp_path: Path) -> None:
+        sys_001 = json.loads(_run("item", "get", "SYS-001").stdout)
+        copy = {k: sys_001[k] for k in ("title", "content", "category", "satisfies", "verification_method",
+                                        "verification_criteria") if k in sys_001}
+        create = f"{MH} item create --type SYS --data " + _json(copy)
+        report = self._plan_and_run(tmp_path, [create, self._cr()])
+        duplicate = [w for w in report["warnings"] if w["code"] == "possible_duplicate"]
+        assert len(duplicate) == 1
+        assert "SYS-002 reads like SYS-001" in duplicate[0]["message"]
+        assert "possible_duplicate" not in {e["field"] for e in report["errors"]}, "a warning, not an error"
+
+    def test_a_rejected_cr_needs_no_record(self, project: Path, tmp_path: Path) -> None:
+        reject = f"{MH} item update CR-001 --data " + _json(
+            {"status": "rejected", "impact_assessment": "duplicate of CR-002"})
+        report = self._plan_and_run(tmp_path, [reject])
+        assert not [f for f in self._fields(report) if f.startswith("impact_analysis")]
 
 
 class TestBuildCode:
