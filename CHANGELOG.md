@@ -11,6 +11,13 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.49.0] — 2026-10-02
+
+Breaking for projects whose DHF relied on the old leniency (wrong-type links, free-form `status`,
+placeholder text, a SYS with no origin, a release of unclosed CRs): `verify dhf --strict` and
+`build release` now refuse them. See the entries below and
+[Change requests you already have](docs/adopting.md#change-requests-you-already-have).
+
 ### Added
 
 - **Change impact.** A change reaches the items that depend on it. `verify changes`
