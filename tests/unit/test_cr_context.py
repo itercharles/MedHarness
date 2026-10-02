@@ -146,6 +146,22 @@ class TestThePlanPromptForALargeDHF:
         assert "item list --brief" in prompt
         assert "SRS: 1" in prompt, "the type counts still say what the DHF holds"
 
+    def test_a_type_that_starts_one_chain_but_sits_inside_another_is_not_listed(
+            self, tmp_path: Path, monkeypatch) -> None:
+        dhf = _make_dhf(tmp_path)
+        _write_cr(dhf, "CR-001")
+        entry, _ = self._items(dhf)
+        sys_ = json.loads(CliRunner().invoke(main, [
+            "--dhf", str(dhf), "item", "create", "--type", "SYS",
+            "--data", '{"title": "System item", "category": "Functional", "content": "x"}',
+        ]).output.splitlines()[0])["id"]
+        monkeypatch.setattr("medharness.services.prompt_assembly.MAX_ITEMS", 2)
+
+        prompt = self._plan_prompt(dhf)
+
+        assert f"- {entry} — Entry item" in prompt
+        assert f"- {sys_} —" not in prompt, "SYS starts SYS→SYSARCH but CRS→SYS leads into it"
+
     def test_at_the_limit_every_item_is_listed(self, tmp_path: Path, monkeypatch) -> None:
         dhf = _make_dhf(tmp_path)
         _write_cr(dhf, "CR-001")
@@ -215,6 +231,20 @@ class TestTheDesignReviewSeesTheNeighbourhood:
         assert f"Parent chain: {sys_} — Export report" in prompt
         assert f"{srs[1]} — Export rule 1" in prompt and f"{srs[2]} — Export rule 2" in prompt
         assert "(2)" in prompt
+
+    def test_several_parents_give_one_line_per_level_not_one_per_path(self, tmp_path: Path) -> None:
+        dhf = _make_dhf(tmp_path)
+        tops = [self._create(dhf, "SYS", title=f"Top {n}", category="Functional", content="x")
+                for n in range(2)]
+        mids = [self._create(dhf, "SRS", title=f"Mid {n}", derives_from=tops, verification_criteria="T1")
+                for n in range(2)]
+        swdd = self._create(dhf, "SWDD", title="Leaf", implements=mids)
+
+        prompt = self._review_prompt(dhf, updated=[swdd])
+
+        assert prompt.count("Parent chain:") == 1
+        assert (f"Parent chain: {mids[0]} — Mid 0; {mids[1]} — Mid 1 → "
+                f"{tops[0]} — Top 0; {tops[1]} — Top 1") in prompt
 
     def test_siblings_are_capped_with_a_count_of_the_rest(self, tmp_path: Path) -> None:
         dhf, sys_, srs = self._dhf(tmp_path)

@@ -130,7 +130,10 @@ def _render_plan_context(ctx: dict) -> str:
 
     if items:
         if ctx["scope"] == "whole_dhf" and len(items) > MAX_ITEMS:
-            entry_types = {chain[0] for chain in ctx.get("chains") or []}
+            chains = ctx.get("chains") or []
+            starts = {chain[0] for chain in chains}
+            # SYS starts SYS→SYSARCH but sits inside CRS→SYS: an entry type is one no chain leads into.
+            entry_types = (starts - {code for chain in chains for code in chain[1:]}) or starts
             lines.append("### Entry-tier Items\n")
             lines.append(
                 "(The DHF is too large to list. Only the entry types of the chains are shown; "
@@ -250,24 +253,29 @@ def _render_neighbourhoods(store, changed_items: dict[str, list[str]], cr_id: st
     def label(uid: str) -> str:
         return f"{uid} — {by_id[uid].get('title', '')}" if uid in by_id else uid
 
-    def chains(uid: str, seen: tuple[str, ...]) -> list[list[str]]:
-        above = [p for p in up.get(uid, []) if p in by_id and p not in seen]
-        if not above:
-            return [[]]
-        return [[p, *rest] for p in above for rest in chains(p, (*seen, p))]
+    def capped(uids: list[str]) -> str:
+        more = f"; and {len(uids) - MAX_SIBLINGS} more" if len(uids) > MAX_SIBLINGS else ""
+        return "; ".join(label(u) for u in uids[:MAX_SIBLINGS]) + more
+
+    # One line per level, not one per path: with several parents per item, paths multiply.
+    def ancestor_levels(uid: str) -> list[list[str]]:
+        levels, frontier, seen = [], [uid], {uid}
+        while frontier := sorted({p for n in frontier for p in up.get(n, []) if p in by_id and p not in seen}):
+            seen.update(frontier)
+            levels.append(frontier)
+        return levels
 
     blocks = []
     for uid in changed:
         lines = [f"### {label(uid)} ({'created' if uid in created else 'updated'})\n"]
-        paths = [path for path in chains(uid, (uid,)) if path]
-        lines += [f"- Parent chain: {' → '.join(label(p) for p in path)}\n" for path in paths]
-        if not paths:
+        levels = ancestor_levels(uid)
+        if levels:
+            lines.append(f"- Parent chain: {' → '.join(capped(level) for level in levels)}\n")
+        else:
             lines.append("- Parent chain: none (this is where requirements enter)\n")
-        siblings = sorted({sib for path in paths for sib in down.get(path[0], [])} - {uid})
+        siblings = sorted({sib for parent in (levels[0] if levels else []) for sib in down.get(parent, [])} - {uid})
         if siblings:
-            shown = "; ".join(label(s) for s in siblings[:MAX_SIBLINGS])
-            more = f"; and {len(siblings) - MAX_SIBLINGS} more" if len(siblings) > MAX_SIBLINGS else ""
-            lines.append(f"- Siblings under the same parent ({len(siblings)}): {shown}{more}\n")
+            lines.append(f"- Siblings under the same parent ({len(siblings)}): {capped(siblings)}\n")
         if uid in created:
             closest = closest_same_type(by_id[uid], items, created)
             if closest and closest[1] >= NEAR_DUPLICATE_RATIO:
