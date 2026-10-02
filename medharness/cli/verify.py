@@ -236,7 +236,7 @@ def register(main):
     @click.option("--cr", "cr_id", required=True, metavar="CR_ID",
                   help="The CR whose affected_items the branch must change.")
     @click.option("--since-ref", default="origin/main", metavar="REF",
-                  help="What the branch is compared against.")
+                  help="What the branch is compared against: its changes since it left this ref. Needs enough history to reach the fork.")
     @click.option("--code-path", "code_paths", multiple=True, metavar="PATH",
                   help="Opt into code-change enforcement: path(s) under which at least one file must be modified. "
                        "Omitting this option skips the code-change check entirely.")

@@ -7,6 +7,29 @@ from medharness.services.envelope import envelope_from
 from pathlib import Path
 
 
+class DiffUnavailable(Exception):
+    """git could not produce the diff — not the same answer as an empty one."""
+
+
+def _branch_point(repo_root: Path, since_ref: str) -> str:
+    """Where the branch left ``since_ref``, so work that landed on it since is not the branch's.
+
+    Raises DiffUnavailable when git is missing or there is no common ancestor — an
+    unfetched ref, or a shallow clone too short to reach the fork.
+    """
+    try:
+        result = subprocess.run(
+            ["git", "merge-base", since_ref, "HEAD"],
+            capture_output=True, text=True, cwd=str(repo_root), check=False,
+        )
+    except FileNotFoundError as exc:
+        raise DiffUnavailable("git is not installed") from exc
+    if result.returncode != 0:
+        reason = (result.stderr or "").strip().splitlines()
+        raise DiffUnavailable(reason[0] if reason else f"no common ancestor of {since_ref} and HEAD")
+    return result.stdout.strip()
+
+
 def compute_diff(
     repo_root: Path,
     since_ref: str,
@@ -21,14 +44,15 @@ def compute_diff(
         Otherwise the diff text.
     """
     try:
+        base = _branch_point(repo_root, since_ref)
         result = subprocess.run(
-            ["git", "diff", since_ref, "--", *paths],
+            ["git", "diff", base, "--", *paths],
             capture_output=True,
             text=True,
             cwd=str(repo_root),
             check=False,
         )
-    except FileNotFoundError:
+    except (FileNotFoundError, DiffUnavailable):
         return None
     if result.returncode != 0:
         return None
@@ -76,24 +100,21 @@ def commit_and_push(repo_root: Path, message: str, branch: str) -> str | None:
     return None if pushed.returncode == 0 else (pushed.stderr or pushed.stdout).strip()
 
 
-class DiffUnavailable(Exception):
-    """git could not produce the diff — not the same answer as an empty one."""
-
-
 def collect_path_changes(
     repo_root: Path,
     since_ref: str,
     *paths: str,
 ) -> dict[str, list[str]]:
-    """Return ``{created, updated, deleted}`` lists of file paths changed since ``since_ref``.
+    """Return ``{created, updated, deleted}`` lists of file paths the branch changed since it left ``since_ref``.
 
     Paths are returned exactly as git reports them (relative to ``repo_root``).
     Raises DiffUnavailable when git is missing or the diff fails — an unfetched
     ref in a shallow clone, or no remote at all — with git's own reason.
     """
+    base = _branch_point(repo_root, since_ref)
     try:
         result = subprocess.run(
-            ["git", "diff", "--name-status", since_ref, "--", *paths],
+            ["git", "diff", "--name-status", base, "--", *paths],
             capture_output=True,
             text=True,
             cwd=str(repo_root),

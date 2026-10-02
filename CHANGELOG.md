@@ -11,6 +11,16 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.49.1] — 2026-10-02
+
+### Fixed
+
+- `verify changes` and `build plan|code --pr` compared the branch tip with the tip of `--since-ref`, so a
+  branch that had fallen behind `main` was blamed for everything that landed there after it forked (and a
+  revision wrote those items into the CR's `affected_items`). They now compare against the point where the
+  branch left the ref. That needs history back to the fork: a shallow clone fails with git's own reason
+  instead of guessing, so CI jobs should fetch full history.
+
 ## [0.49.0] — 2026-10-02
 
 Breaking for projects whose DHF relied on the old leniency (wrong-type links, free-form `status`,
