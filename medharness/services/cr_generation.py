@@ -870,7 +870,8 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> di
     design_review_verdict = "unknown"
     for review_cycle in range(1, _MAX_DESIGN_REVIEW_CYCLES + 1):
         review_step_name = "run_design_review" if review_cycle == 1 else f"run_design_review_{review_cycle}"
-        review_prompt = _augment_review_prompt(_assemble_review_design_prompt(cr_id), errors)
+        review_prompt = _augment_review_prompt(
+            _assemble_review_design_prompt(cr_id, dhf_path, items_changed, warnings), errors)
         _, _, review_session_id = _run_claude_step(
             name=review_step_name,
             prompt=review_prompt,

@@ -44,6 +44,22 @@ Read each changed item in full.
    field on the CR item: are the steps concrete, ordered, and complete enough to
    implement without additional context?
 
+5. Read the CR's `impact_analysis` (anchors, `unchanged`, `created`, dimension
+   verdicts) and the **Neighbourhood of the Changed Items** below, which lists each
+   changed item's parent chain, its siblings and any near-duplicate. Then judge what
+   the diff alone does not show:
+
+   **Omission** — Given the CR and the neighbourhood, is there an item that should have
+   been examined but appears in neither `anchors`, `unchanged` nor the changed items?
+
+   **Overlap** — Should any created item have been an update of a neighbour (a sibling,
+   or the closest existing item named in the neighbourhood)?
+
+   **Conflict** — Does a changed item contradict one of its siblings or its parent?
+
+   **Reasons** — Does each `unchanged` reason hold, and does each dimension verdict
+   (`not_required` above all) hold given what the CR changes?
+
 Do not re-verify schema or traceability links — those are checked deterministically.
 If you spot a mechanical issue the deterministic check should have caught, flag it
 as a harness bug, not a design issue.

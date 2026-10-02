@@ -31,6 +31,11 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
   command. A created item that reads like an existing one is a warning. A project that
   overrides the CR doc type must add `impact_analysis` to it (copy it from the default).
 
+- **The design review sees what was not changed.** Its prompt now carries, for each
+  item the CR created or updated, the parent chain, the siblings (up to 15) and, for a
+  created item, the closest same-type item when it reads alike; the reviewer judges
+  omission, overlap and conflict against `impact_analysis`.
+
 ### Fixed
 
 - The plan prompt printed `[— · —]` before every risk, reading `severity` and

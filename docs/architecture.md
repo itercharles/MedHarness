@@ -173,7 +173,9 @@ using, which reads them from `--prompt` (local). There is one copy of the steps.
 
 After it, deterministic validation, and one fix pass if it fails; then the design
 review, written to `docs/reviews/<CR>-Design-Review.md`, with up to three
-fix-and-review cycles. The harness rewrites `affected_items` from the branch.
+fix-and-review cycles. The reviewer is also given each changed item's parent chain,
+its siblings and any near-duplicate, and judges omission, overlap and conflict
+against the CR's `impact_analysis`. The harness rewrites `affected_items` from the branch.
 
 **`build code`**
 

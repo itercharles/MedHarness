@@ -226,8 +226,70 @@ def _assemble_review_code_prompt(cr_id: str) -> str:
     return _load_prompt("cr_review_code.md").replace("{{cr_id}}", cr_id)
 
 
-def _assemble_review_design_prompt(cr_id: str) -> str:
-    return _load_prompt("cr_review_design.md").replace("{{cr_id}}", cr_id)
+MAX_SIBLINGS = 15
+
+
+def _render_neighbourhoods(store, changed_items: dict[str, list[str]], cr_id: str) -> str:
+    """For each item the CR created or updated: where it sits, what is beside it, what it may duplicate.
+
+    The review sees only the diff, so an item the change should have reached, or one it
+    duplicates, would otherwise never be in front of the reviewer.
+    """
+    from medharness.services.impact import NEAR_DUPLICATE_RATIO, chain_links, closest_same_type, parents
+
+    items = store.list_items()
+    by_id = {it["id"]: it for it in items}
+    up = parents(items, store.config)
+    down: dict[str, list[str]] = {}
+    for item, target in chain_links(items, store.config):
+        down.setdefault(target, []).append(item)
+    created = set(changed_items.get("created", []))
+    changed = [uid for uid in dict.fromkeys([*changed_items.get("created", []), *changed_items.get("updated", [])])
+               if uid != cr_id and uid in by_id]
+
+    def label(uid: str) -> str:
+        return f"{uid} — {by_id[uid].get('title', '')}" if uid in by_id else uid
+
+    def chains(uid: str, seen: tuple[str, ...]) -> list[list[str]]:
+        above = [p for p in up.get(uid, []) if p in by_id and p not in seen]
+        if not above:
+            return [[]]
+        return [[p, *rest] for p in above for rest in chains(p, (*seen, p))]
+
+    blocks = []
+    for uid in changed:
+        lines = [f"### {label(uid)} ({'created' if uid in created else 'updated'})\n"]
+        paths = [path for path in chains(uid, (uid,)) if path]
+        lines += [f"- Parent chain: {' → '.join(label(p) for p in path)}\n" for path in paths]
+        if not paths:
+            lines.append("- Parent chain: none (this is where requirements enter)\n")
+        siblings = sorted({sib for path in paths for sib in down.get(path[0], [])} - {uid})
+        if siblings:
+            shown = "; ".join(label(s) for s in siblings[:MAX_SIBLINGS])
+            more = f"; and {len(siblings) - MAX_SIBLINGS} more" if len(siblings) > MAX_SIBLINGS else ""
+            lines.append(f"- Siblings under the same parent ({len(siblings)}): {shown}{more}\n")
+        if uid in created:
+            closest = closest_same_type(by_id[uid], items, created)
+            if closest and closest[1] >= NEAR_DUPLICATE_RATIO:
+                lines.append(f"- Closest existing item of the same type: {label(closest[0])} "
+                             f"(similarity {closest[1]:.2f})\n")
+        blocks.append("".join(lines))
+    if not blocks:
+        return ""
+    return ("## Neighbourhood of the Changed Items\n\n"
+            "(What sits around each item this CR created or updated, so you can judge what it "
+            "left out and what it overlaps.)\n\n" + "\n".join(blocks))
+
+
+def _assemble_review_design_prompt(cr_id: str, dhf_path: Path | None = None,
+                                   changed_items: dict[str, list[str]] | None = None,
+                                   warnings: list[dict] | None = None) -> str:
+    prompt = _load_prompt("cr_review_design.md").replace("{{cr_id}}", cr_id)
+    if dhf_path is not None and changed_items:
+        prompt = _enrich(
+            prompt, lambda p: _render_neighbourhoods(_load_adapter(p, "the design review"), changed_items, cr_id),
+            dhf_path, warnings)
+    return prompt
 
 
 def _assemble_generate_dhf_prompt(cr_id: str, dhf_path: Path | None = None,
