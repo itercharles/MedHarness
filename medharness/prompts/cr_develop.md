@@ -62,7 +62,7 @@ this run to commit.
    automated, add a `// @links:SRS-xxx manual` comment in the nearest test
    file and note it in `implementation_notes`.
 
-6. **Reconcile implementation against the plan and DHF items.**
+5. **Reconcile implementation against the plan and DHF items.**
 
    Run `git diff origin/main` scoped to the source roots listed in `AGENTS.md`/`CLAUDE.md`
    to see every file changed.
@@ -84,7 +84,7 @@ this run to commit.
 
    If nothing deviated, no updates are needed — do not make cosmetic edits.
 
-7. Do not modify CR lifecycle or status fields.
+6. Do not modify CR lifecycle or status fields.
 
-8. Keep changes focused on what the CR describes — no unrelated refactoring or
+7. Keep changes focused on what the CR describes — no unrelated refactoring or
    speculative additions.

@@ -297,9 +297,14 @@ class TestBuildPlanImpactAnalysis:
 
     def test_a_parent_that_is_neither_changed_nor_reviewed_is_an_error(self, project: Path, tmp_path: Path) -> None:
         report = self._plan_and_run(tmp_path, DESIGN[:-1] + [self._cr(
-            reviewed_items=["UC-001"], impact_analysis=_impact(unchanged=("UC-001",), anchors=("UC-001",)))])
+            reviewed_items=[], impact_analysis=_impact(created=self.CREATED))])
         parents = [e["issue"] for e in report["errors"] if e["field"] == "impact_analysis.parents"]
-        assert any("SWDD-002 changed but its parent MODULE-001" in issue for issue in parents)
+        assert any("CRS-002 changed but its parent UC-001" in issue for issue in parents)
+
+    def test_the_module_an_swdd_belongs_to_need_not_be_reviewed(self, project: Path, tmp_path: Path) -> None:
+        report = self._plan_and_run(tmp_path, DESIGN[:-1] + [self._cr(
+            reviewed_items=["UC-001"], impact_analysis=_impact(created=self.CREATED, unchanged=("UC-001",)))])
+        assert "impact_analysis.parents" not in self._fields(report)
 
     def test_a_risk_control_of_a_changed_item_must_be_recorded(self, project: Path, tmp_path: Path) -> None:
         update = f"{MH} item update SYS-001 --data " + _json({"content": "Changed.", "verification_criteria": "PDF opens"})

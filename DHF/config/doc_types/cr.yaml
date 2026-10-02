@@ -36,6 +36,10 @@ properties:
 - name: affected_items
   format: relationship
   label: Affected Items
+- name: reviewed_items
+  format: relationship
+  label: Reviewed Items
+  description: Items that depend on a changed item and were reviewed, needing no change
 - name: affected_risk_items
   format: relationship
   target_types:
@@ -51,12 +55,12 @@ properties:
 - name: implementation_notes
   format: long_text
   label: Implementation Notes
-- name: proposed_new_items
-  label: Proposed New Items
-  # list of {type, title} dicts written by `build plan`; no format validator applies
 - name: triage_result
   label: Triage Result
   # {verdict, complexity, affected_subsystems, related_crs, notes} written by `build plan`, step 1
+- name: impact_analysis
+  label: Impact Analysis
+  # {assumptions, anchors, unchanged, created, dimensions} written by `build plan`, steps 2-5
 - name: target_release
   format: relationship
   target_types:

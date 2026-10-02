@@ -162,9 +162,10 @@ impact_analysis:
       items: []           # IDs this dimension touches
 ```
 
-The check after your work also requires: each parent of a created or updated item is
-in `affected_items` or `reviewed_items`; each risk control that implements a changed
-item, and each risk it mitigates, is in `affected_risk_items`.
+The check after your work also requires: each parent of a created or updated item
+(not the MODULE an SWDD belongs to) is in `affected_items` or `reviewed_items`; each
+risk control that implements a changed item, and each risk it mitigates, is in
+`affected_risk_items`.
 
 ### implementation_notes
 

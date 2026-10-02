@@ -548,16 +548,17 @@ def impact_analysis_closure_errors(cr_item: dict, items: list[dict], config,
                     f"reviewed or in `affected_risk_items`.",
                     f"Drop {uid} from the dimension, or review it ({update(reviewed_items=['...', uid])}).")
 
-    up = parents(items, config)
-    for uid in changed:
-        for parent in up.get(uid, []):
-            if parent in by_id and parent not in affected | reviewed:
-                err("parents", f"{uid} changed but its parent {parent} is neither changed nor in `reviewed_items`.",
-                    f"Update {parent} to follow the change, or list it in `reviewed_items` with an `unchanged` entry.")
-
     def role(uid: str) -> str:
         doc_type = config.doc_type_of(uid)
         return (doc_type.role if doc_type else None) or ""
+
+    # An SWDD's module is where it lives, not a requirement it refines; architecture covers it.
+    up = parents(items, config)
+    for uid in changed:
+        for parent in up.get(uid, []):
+            if parent in by_id and role(parent) != "software_module" and parent not in affected | reviewed:
+                err("parents", f"{uid} changed but its parent {parent} is neither changed nor in `reviewed_items`.",
+                    f"Update {parent} to follow the change, or list it in `reviewed_items` with an `unchanged` entry.")
 
     missing_risk: dict[str, str] = {}
     for uid in changed:
