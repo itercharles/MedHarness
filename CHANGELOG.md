@@ -11,6 +11,36 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+### Added
+
+- **`build plan` follows an impact-analysis process.** The prompt is rewritten around
+  triage, characterise, locate (test files first, then a top-down drill, then a text
+  search), propagate (unchanged over update over create), gaps (a verdict for nine
+  dimensions) and write. A change that spans several top-level branches is approved as
+  `complexity: large` with a note on how to split it, instead of rejected. The nine skill
+  files appended to the prompt are gone; the prompt for the template project is about
+  half as long. For a DHF above 300 items the plan context lists the entry-tier items
+  and the type counts, not the first items alphabetically.
+- **`item list --match TEXT`, `--linked-to ID` and `--brief`.** Find items by words in
+  any field, by what they link to or from, and print only `id`, `type`, `title`, `links`.
+- **The CR records `impact_analysis`**, and `build plan` checks it: all nine dimensions
+  each with a verdict and reason, every anchor with evidence, every created item with a
+  reason, every reviewed item with an `unchanged` entry, each parent of a changed
+  requirement changed or reviewed, and each risk control of a changed item (and the risks it
+  mitigates) in `affected_risk_items`. These run in `build plan`, not in a `verify`
+  command. A created item that reads like an existing one is a warning. A project that
+  overrides the CR doc type must add `impact_analysis` to it (copy it from the default).
+
+- **The design review sees what was not changed.** Its prompt now carries, for each
+  item the CR created or updated, the parent chain, the siblings (up to 15) and, for a
+  created item, the closest same-type item when it reads alike; the reviewer judges
+  omission, overlap and conflict against `impact_analysis`.
+
+### Fixed
+
+- The plan prompt printed `[— · —]` before every risk, reading `severity` and
+  `risk_level` fields the template RISK does not have.
+
 ## [0.49.1] — 2026-10-02
 
 ### Fixed

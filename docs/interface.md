@@ -459,6 +459,9 @@ List DHF items. Outputs one JSON object per line.
 | Option | |
 |---|---|
 | `--type CODE` | Filter by doc type code (e.g. SYS). |
+| `--match TEXT` | Keep items where every word of TEXT occurs, case-insensitively, in any text field. |
+| `--linked-to ID` | Keep items that link to ID or that ID links to. |
+| `--brief` | Print only id, type, title and links. |
 
 #### `medharness item create`
 

@@ -23,6 +23,21 @@ def _json_object(data: str) -> dict:
     return value
 
 
+def _strings(value) -> list[str]:
+    if isinstance(value, str):
+        return [value]
+    if isinstance(value, dict):
+        return [s for v in value.values() for s in _strings(v)]
+    if isinstance(value, (list, tuple)):
+        return [s for v in value for s in _strings(v)]
+    return []
+
+
+def _has_every_term(item: dict, terms: list[str]) -> bool:
+    text = "\n".join(_strings(item)).casefold()
+    return all(term in text for term in terms)
+
+
 def register(main):
     @main.group("item")
     def item() -> None:
@@ -43,12 +58,35 @@ def register(main):
 
     @item.command("list")
     @click.option("--type", "doc_type", default=None, metavar="CODE", help="Filter by doc type code (e.g. SYS).")
+    @click.option("--match", "match", default=None, metavar="TEXT",
+                  help="Keep items where every word of TEXT occurs, case-insensitively, in any text field.")
+    @click.option("--linked-to", "linked_to", default=None, metavar="ID",
+                  help="Keep items that link to ID or that ID links to.")
+    @click.option("--brief", is_flag=True, help="Print only id, type, title and links.")
     @click.pass_context
-    def item_list(ctx: click.Context, doc_type: str | None) -> None:
+    def item_list(ctx: click.Context, doc_type: str | None, match: str | None,
+                  linked_to: str | None, brief: bool) -> None:
         """List DHF items. Outputs one JSON object per line."""
+        terms = match.casefold().split() if match is not None else None
+        if terms == []:
+            click.echo("ERROR: --match needs at least one word.", err=True)
+            sys.exit(1)
         adapter = open_store(ctx.obj["dhf"])
         items = adapter.list_items(doc_type)
+        if linked_to is not None:
+            anchor = adapter.get_item(linked_to)
+            if anchor is None:
+                click.echo(f"ERROR: Item '{linked_to}' not found.", err=True)
+                sys.exit(1)
+            reached = set(anchor.get("all_linked_uids") or [])
+            items = [it for it in items
+                     if it["id"] in reached or linked_to in (it.get("all_linked_uids") or [])]
+        if terms:
+            items = [it for it in items if _has_every_term(it, terms)]
         for it in items:
+            if brief:
+                it = {"id": it["id"], "type": it.get("type", ""), "title": it.get("title", ""),
+                      "links": it.get("all_linked_uids") or []}
             click.echo(json.dumps(it, default=str))
         click.echo(f"({len(items)} item(s))", err=True)
 

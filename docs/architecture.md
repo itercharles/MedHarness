@@ -155,16 +155,27 @@ using, which reads them from `--prompt` (local). There is one copy of the steps.
 
 **`build plan`**
 
-1. Triage: duplicate, out of scope, architecture conflict or too large. Writes
-   `triage_result` on the CR.
-2. V-model cascade: creates or updates items top-down — CRS → SYS → SYSARCH,
-   RISK, RCM → SRS → SWDD — reading the relevant source before writing SWDD.
-   Writes `affected_risk_items` on the CR.
-3. Implementation plan into the CR's `implementation_notes`.
-4. Deterministic validation (`verify dhf`), and one fix pass if it fails.
-5. Design review, written to `docs/reviews/<CR>-Design-Review.md`; up to three
-   fix-and-review cycles.
-6. Records the items it changed as the CR's `affected_items`.
+1. Triage: duplicate, out of scope or architecture conflict. Writes
+   `triage_result` on the CR; a change that spans several branches is approved
+   as `large`, with a note on how to split it.
+2. Characterise the change: the behaviour delta, its category, the ambiguities
+   resolved.
+3. Locate it: test files first (every requirement has a test), then a top-down
+   drill with `item list --brief` and `--linked-to`, then `--match`.
+4. Propagate: from the anchors, decide each item unchanged, updated or created
+   beside, and queue the neighbours of every change — unchanged over update
+   over create.
+5. Gaps: a verdict for each of nine dimensions (product, requirements,
+   architecture, risk, SOUP, test, regulatory, security, usability).
+6. Write the items, run `verify dhf`, and record on the CR `affected_items`,
+   `reviewed_items`, `affected_risk_items`, `impact_analysis` and
+   `implementation_notes`.
+
+After it, deterministic validation, and one fix pass if it fails; then the design
+review, written to `docs/reviews/<CR>-Design-Review.md`, with up to three
+fix-and-review cycles. The reviewer is also given each changed item's parent chain,
+its siblings and any near-duplicate, and judges omission, overlap and conflict
+against the CR's `impact_analysis`. The harness rewrites `affected_items` from the branch.
 
 **`build code`**
 

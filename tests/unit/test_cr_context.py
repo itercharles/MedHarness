@@ -116,3 +116,168 @@ def test_project_survives_a_relative_dhf_path(tmp_path: Path, monkeypatch) -> No
     _make_dhf(tmp_path)
     monkeypatch.chdir(tmp_path)
     assert _context(Path("DHF"), "CR-001")["project"], "project name came back empty"
+
+
+class TestThePlanPromptForALargeDHF:
+    """`build plan` cannot list a thousand items; it lists where requirements enter."""
+
+    def _plan_prompt(self, dhf: Path) -> str:
+        from medharness.services.prompt_assembly import _assemble_generate_dhf_prompt
+
+        return _assemble_generate_dhf_prompt("CR-001", dhf_path=dhf)
+
+    def _items(self, dhf: Path) -> tuple[str, str]:
+        runner = CliRunner()
+        entry = json.loads(runner.invoke(main, [
+            "--dhf", str(dhf), "item", "create", "--type", "UC", "--data", '{"title": "Entry item"}',
+        ]).output.splitlines()[0])["id"]
+        return entry, _srs(dhf)
+
+    def test_above_the_limit_only_entry_types_are_listed(self, tmp_path: Path, monkeypatch) -> None:
+        dhf = _make_dhf(tmp_path)
+        _write_cr(dhf, "CR-001")
+        entry, srs = self._items(dhf)
+        monkeypatch.setattr("medharness.services.prompt_assembly.MAX_ITEMS", 2)
+
+        prompt = self._plan_prompt(dhf)
+
+        assert f"- {entry} — Entry item" in prompt
+        assert f"- {srs} —" not in prompt
+        assert "item list --brief" in prompt
+        assert "SRS: 1" in prompt, "the type counts still say what the DHF holds"
+
+    def test_a_type_that_starts_one_chain_but_sits_inside_another_is_not_listed(
+            self, tmp_path: Path, monkeypatch) -> None:
+        dhf = _make_dhf(tmp_path)
+        _write_cr(dhf, "CR-001")
+        entry, _ = self._items(dhf)
+        sys_ = json.loads(CliRunner().invoke(main, [
+            "--dhf", str(dhf), "item", "create", "--type", "SYS",
+            "--data", '{"title": "System item", "category": "Functional", "content": "x"}',
+        ]).output.splitlines()[0])["id"]
+        monkeypatch.setattr("medharness.services.prompt_assembly.MAX_ITEMS", 2)
+
+        prompt = self._plan_prompt(dhf)
+
+        assert f"- {entry} — Entry item" in prompt
+        assert f"- {sys_} —" not in prompt, "SYS starts SYS→SYSARCH but CRS→SYS leads into it"
+
+    def test_at_the_limit_every_item_is_listed(self, tmp_path: Path, monkeypatch) -> None:
+        dhf = _make_dhf(tmp_path)
+        _write_cr(dhf, "CR-001")
+        entry, srs = self._items(dhf)
+        monkeypatch.setattr("medharness.services.prompt_assembly.MAX_ITEMS", 3)
+
+        prompt = self._plan_prompt(dhf)
+
+        assert f"- {entry} —" in prompt and f"- {srs} —" in prompt
+
+
+class TestWhatThePlanPromptRenders:
+    def test_a_risk_line_carries_no_empty_severity_bracket(self, tmp_path: Path) -> None:
+        from medharness.services.prompt_assembly import _assemble_generate_dhf_prompt
+
+        dhf = _make_dhf(tmp_path)
+        _write_cr(dhf, "CR-001")
+        CliRunner().invoke(main, [
+            "--dhf", str(dhf), "item", "create", "--type", "RISK", "--data", '{"title": "Wrong patient"}',
+        ])
+
+        prompt = _assemble_generate_dhf_prompt("CR-001", dhf_path=dhf)
+
+        assert "Wrong patient" in prompt
+        assert "[—" not in prompt
+
+    def test_the_prompt_is_generic(self, tmp_path: Path) -> None:
+        from medharness.services.prompt_assembly import _assemble_generate_dhf_prompt
+
+        dhf = _make_dhf(tmp_path)
+        _write_cr(dhf, "CR-001")
+
+        prompt = _assemble_generate_dhf_prompt("CR-001", dhf_path=dhf)
+
+        for stale in ("one per SRS requirement", "one per SYS requirement", "development_plan.md", "DICOM"):
+            assert stale not in prompt
+
+
+class TestTheDesignReviewSeesTheNeighbourhood:
+    """The review reads a diff; what sits beside a changed item is added from the DHF."""
+
+    def _create(self, dhf: Path, type_: str, **data) -> str:
+        r = CliRunner().invoke(main, ["--dhf", str(dhf), "item", "create", "--type", type_,
+                                      "--data", json.dumps(data)])
+        assert r.exit_code == 0, r.output
+        return json.loads(r.stdout.splitlines()[0])["id"]
+
+    def _review_prompt(self, dhf: Path, **changed) -> str:
+        from medharness.services.prompt_assembly import _assemble_review_design_prompt
+
+        return _assemble_review_design_prompt(
+            "CR-001", dhf, {"created": [], "updated": [], "deleted": [], **changed})
+
+    def _dhf(self, tmp_path: Path) -> tuple[Path, str, list[str]]:
+        dhf = _make_dhf(tmp_path)
+        sys_ = self._create(dhf, "SYS", title="Export report", category="Functional", content="Exports.")
+        srs = [self._create(dhf, "SRS", title=f"Export rule {n}", derives_from=[sys_],
+                            verification_criteria="T1 passes") for n in range(3)]
+        return dhf, sys_, srs
+
+    def test_a_changed_item_comes_with_its_parent_and_its_siblings(self, tmp_path: Path) -> None:
+        dhf, sys_, srs = self._dhf(tmp_path)
+
+        prompt = self._review_prompt(dhf, updated=[srs[0]])
+
+        assert f"### {srs[0]} — Export rule 0 (updated)" in prompt
+        assert f"Parent chain: {sys_} — Export report" in prompt
+        assert f"{srs[1]} — Export rule 1" in prompt and f"{srs[2]} — Export rule 2" in prompt
+        assert "(2)" in prompt
+
+    def test_several_parents_give_one_line_per_level_not_one_per_path(self, tmp_path: Path) -> None:
+        dhf = _make_dhf(tmp_path)
+        tops = [self._create(dhf, "SYS", title=f"Top {n}", category="Functional", content="x")
+                for n in range(2)]
+        mids = [self._create(dhf, "SRS", title=f"Mid {n}", derives_from=tops, verification_criteria="T1")
+                for n in range(2)]
+        swdd = self._create(dhf, "SWDD", title="Leaf", implements=mids)
+
+        prompt = self._review_prompt(dhf, updated=[swdd])
+
+        assert prompt.count("Parent chain:") == 1
+        assert (f"Parent chain: {mids[0]} — Mid 0; {mids[1]} — Mid 1 → "
+                f"{tops[0]} — Top 0; {tops[1]} — Top 1") in prompt
+
+    def test_siblings_are_capped_with_a_count_of_the_rest(self, tmp_path: Path) -> None:
+        dhf, sys_, srs = self._dhf(tmp_path)
+        for n in range(3, 20):
+            self._create(dhf, "SRS", title=f"Export rule {n}", derives_from=[sys_], verification_criteria="T1")
+
+        prompt = self._review_prompt(dhf, updated=[srs[0]])
+
+        assert "(19)" in prompt and "and 4 more" in prompt
+
+    def test_a_created_item_that_duplicates_a_neighbour_names_it(self, tmp_path: Path) -> None:
+        dhf, sys_, srs = self._dhf(tmp_path)
+        twin = self._create(dhf, "SRS", title="Export rule 1", derives_from=[sys_], verification_criteria="T1")
+
+        prompt = self._review_prompt(dhf, created=[twin])
+
+        assert f"Closest existing item of the same type: {srs[1]} — Export rule 1 (similarity 1.00)" in prompt
+
+    def test_an_unlike_created_item_names_no_twin(self, tmp_path: Path) -> None:
+        dhf, sys_, _ = self._dhf(tmp_path)
+        other = self._create(dhf, "SRS", title="Authenticate users with a one-time code",
+                             content="Send a six digit code by SMS.", derives_from=[sys_],
+                             verification_criteria="T1")
+
+        assert "Closest existing item" not in self._review_prompt(dhf, created=[other])
+
+    def test_an_item_where_requirements_enter_has_no_parent_chain(self, tmp_path: Path) -> None:
+        dhf = _make_dhf(tmp_path)
+        uc = self._create(dhf, "UC", title="Export a report")
+
+        assert "none (this is where requirements enter)" in self._review_prompt(dhf, updated=[uc])
+
+    def test_a_change_that_touched_no_item_adds_nothing(self, tmp_path: Path) -> None:
+        dhf, _, _ = self._dhf(tmp_path)
+
+        assert "## Neighbourhood of the Changed Items" not in self._review_prompt(dhf)

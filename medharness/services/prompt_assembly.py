@@ -6,38 +6,13 @@ import importlib.resources
 from pathlib import Path
 
 
-MAX_ITEMS = 200
+MAX_ITEMS = 300
 MAX_DIFF_CHARS = 40_000
 
 
 def _load_prompt(name: str) -> str:
     ref = importlib.resources.files("medharness.prompts").joinpath(name)
     return ref.read_text(encoding="utf-8")
-
-
-def _load_skill(name: str) -> str:
-    ref = importlib.resources.files("medharness.prompts.skills").joinpath(name)
-    return ref.read_text(encoding="utf-8")
-
-
-_SKILL_FILES = [
-    ("product_impact.md", "Product Impact"),
-    ("req_manage.md", "Requirements Management"),
-    ("architecture_impact.md", "Architecture Impact"),
-    ("risk_impact.md", "Risk Impact"),
-    ("soup_impact.md", "SOUP Impact"),
-    ("test_impact.md", "Test Impact"),
-    ("regulatory_impact.md", "Regulatory Impact"),
-    ("security_impact.md", "Security Impact"),
-    ("usability_impact.md", "Usability / HFE Impact"),
-]
-
-
-def _append_skills(prompt: str) -> str:
-    parts = [prompt, "\n\n---\n"]
-    for fname, title in _SKILL_FILES:
-        parts.append(f"\n### {title}\n\n{_load_skill(fname)}\n")
-    return "".join(parts)
 
 
 # ---------------------------------------------------------------------------
@@ -114,9 +89,9 @@ def _link_model(ctx: dict) -> str:
     if {"SYSARCH", "MODULE", "SWDD"} <= codes:
         text += (
             "Design layer roles:\n"
-            "- SYSARCH — one per SYS requirement; records the system-level design decision for that requirement\n"
+            "- SYSARCH — a system-level design decision for the SYS it designs; only when the change alters boundaries, data flow or deployment\n"
             "- MODULE — one per software unit; defines the module's responsibility and interfaces (module-oriented, not requirement-oriented)\n"
-            "- SWDD — one per SRS requirement; records design decisions within a specific module; must carry both `implements` (SRS) and `module` (MODULE)\n"
+            "- SWDD — a design decision within a module, only past the threshold in the prompt; must carry both `implements` (SRS) and `module` (MODULE)\n"
             "\n"
         )
     return text
@@ -143,7 +118,7 @@ def _render_plan_context(ctx: dict) -> str:
         lines.append(
             "### Type Registry\n"
             "(Maps abstract DHF roles to this project's type codes."
-            " Skills reference these roles — resolve to codes here.)\n\n"
+            " Resolve a role to this project's codes here.)\n\n"
         )
         for role, label in _ROLE_LABELS.items():
             if role in by_role:
@@ -154,12 +129,24 @@ def _render_plan_context(ctx: dict) -> str:
 
 
     if items:
-        heading = "All DHF Items" if ctx["scope"] == "whole_dhf" else "Items This CR Affects"
-        lines.append(f"### {heading}\n")
-        for item in items[:MAX_ITEMS]:
-            lines.append(f"- {item['id']} — {item.get('title', '')}\n")
-        if len(items) > MAX_ITEMS:
-            lines.append(f"\n_(truncated — showing {MAX_ITEMS} of {len(items)} items)_\n")
+        if ctx["scope"] == "whole_dhf" and len(items) > MAX_ITEMS:
+            chains = ctx.get("chains") or []
+            starts = {chain[0] for chain in chains}
+            # SYS starts SYS→SYSARCH but sits inside CRS→SYS: an entry type is one no chain leads into.
+            entry_types = (starts - {code for chain in chains for code in chain[1:]}) or starts
+            lines.append("### Entry-tier Items\n")
+            lines.append(
+                "(The DHF is too large to list. Only the entry types of the chains are shown; "
+                "use `item list --brief`, `--match` and `--linked-to` for the rest.)\n\n"
+            )
+            for item in items:
+                if item["type"] in entry_types:
+                    lines.append(f"- {item['id']} — {item.get('title', '')}\n")
+        else:
+            heading = "All DHF Items" if ctx["scope"] == "whole_dhf" else "Items This CR Affects"
+            lines.append(f"### {heading}\n")
+            for item in items:
+                lines.append(f"- {item['id']} — {item.get('title', '')}\n")
         lines.append("\n")
 
     if ctx["risks"]:
@@ -170,8 +157,7 @@ def _render_plan_context(ctx: dict) -> str:
             "RCM-linked SYS item, flag the related RISK for re-evaluation.)\n\n",
         ]
         for risk in ctx["risks"]:
-            lines.append(f"**{risk['id']}** [{risk['severity'] or '—'} · "
-                         f"{risk['risk_level'] or '—'}] — {risk['title']}\n")
+            lines.append(f"**{risk['id']}** — {risk['title']}\n")
             for rcm in risk["controls"]:
                 impl_str = ", ".join(rcm["implements"]) or "—"
                 lines.append(f"  ↳ {rcm['id']} — {rcm['title']} (implements: {impl_str})\n")
@@ -243,8 +229,75 @@ def _assemble_review_code_prompt(cr_id: str) -> str:
     return _load_prompt("cr_review_code.md").replace("{{cr_id}}", cr_id)
 
 
-def _assemble_review_design_prompt(cr_id: str) -> str:
-    return _load_prompt("cr_review_design.md").replace("{{cr_id}}", cr_id)
+MAX_SIBLINGS = 15
+
+
+def _render_neighbourhoods(store, changed_items: dict[str, list[str]], cr_id: str) -> str:
+    """For each item the CR created or updated: where it sits, what is beside it, what it may duplicate.
+
+    The review sees only the diff, so an item the change should have reached, or one it
+    duplicates, would otherwise never be in front of the reviewer.
+    """
+    from medharness.services.impact import NEAR_DUPLICATE_RATIO, chain_links, closest_same_type, parents
+
+    items = store.list_items()
+    by_id = {it["id"]: it for it in items}
+    up = parents(items, store.config)
+    down: dict[str, list[str]] = {}
+    for item, target in chain_links(items, store.config):
+        down.setdefault(target, []).append(item)
+    created = set(changed_items.get("created", []))
+    changed = [uid for uid in dict.fromkeys([*changed_items.get("created", []), *changed_items.get("updated", [])])
+               if uid != cr_id and uid in by_id]
+
+    def label(uid: str) -> str:
+        return f"{uid} — {by_id[uid].get('title', '')}" if uid in by_id else uid
+
+    def capped(uids: list[str]) -> str:
+        more = f"; and {len(uids) - MAX_SIBLINGS} more" if len(uids) > MAX_SIBLINGS else ""
+        return "; ".join(label(u) for u in uids[:MAX_SIBLINGS]) + more
+
+    # One line per level, not one per path: with several parents per item, paths multiply.
+    def ancestor_levels(uid: str) -> list[list[str]]:
+        levels, frontier, seen = [], [uid], {uid}
+        while frontier := sorted({p for n in frontier for p in up.get(n, []) if p in by_id and p not in seen}):
+            seen.update(frontier)
+            levels.append(frontier)
+        return levels
+
+    blocks = []
+    for uid in changed:
+        lines = [f"### {label(uid)} ({'created' if uid in created else 'updated'})\n"]
+        levels = ancestor_levels(uid)
+        if levels:
+            lines.append(f"- Parent chain: {' → '.join(capped(level) for level in levels)}\n")
+        else:
+            lines.append("- Parent chain: none (this is where requirements enter)\n")
+        siblings = sorted({sib for parent in (levels[0] if levels else []) for sib in down.get(parent, [])} - {uid})
+        if siblings:
+            lines.append(f"- Siblings under the same parent ({len(siblings)}): {capped(siblings)}\n")
+        if uid in created:
+            closest = closest_same_type(by_id[uid], items, created)
+            if closest and closest[1] >= NEAR_DUPLICATE_RATIO:
+                lines.append(f"- Closest existing item of the same type: {label(closest[0])} "
+                             f"(similarity {closest[1]:.2f})\n")
+        blocks.append("".join(lines))
+    if not blocks:
+        return ""
+    return ("## Neighbourhood of the Changed Items\n\n"
+            "(What sits around each item this CR created or updated, so you can judge what it "
+            "left out and what it overlaps.)\n\n" + "\n".join(blocks))
+
+
+def _assemble_review_design_prompt(cr_id: str, dhf_path: Path | None = None,
+                                   changed_items: dict[str, list[str]] | None = None,
+                                   warnings: list[dict] | None = None) -> str:
+    prompt = _load_prompt("cr_review_design.md").replace("{{cr_id}}", cr_id)
+    if dhf_path is not None and changed_items:
+        prompt = _enrich(
+            prompt, lambda p: _render_neighbourhoods(_load_adapter(p, "the design review"), changed_items, cr_id),
+            dhf_path, warnings)
+    return prompt
 
 
 def _assemble_generate_dhf_prompt(cr_id: str, dhf_path: Path | None = None,
@@ -252,6 +305,6 @@ def _assemble_generate_dhf_prompt(cr_id: str, dhf_path: Path | None = None,
     prompt = _load_prompt("cr_generate_dhf.md").replace("{{cr_id}}", cr_id)
     if dhf_path is not None:
         prompt = _enrich_with_plan_context(prompt, cr_id, dhf_path, warnings)
-    return _append_skills(prompt)
+    return prompt
 
 

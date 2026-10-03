@@ -9,23 +9,58 @@ requirements, so none of them drag the CR into the impact of what it changes.
 
 from __future__ import annotations
 
+from difflib import SequenceMatcher
 from typing import Any
 
 from medharness.services.traceability import _ids, coverage_matrices
 
 
-def dependents(items: list[dict], config: Any, changed: set[str], depth: int) -> dict[str, list[str]]:
-    """``{dependent: [changed items it depends on]}`` within ``depth`` links of a changed item."""
+NEAR_DUPLICATE_RATIO = 0.75
+
+
+def chain_links(items: list[dict], config: Any) -> list[tuple[str, str]]:
+    """``(item, target)`` for each typed link an item in a traceability chain carries."""
     chain_types = {code for matrix in coverage_matrices(config) for code in matrix.path}
-    depends_on_me: dict[str, list[str]] = {}
+    links = []
     for item in items:
         doc_type = config.doc_type_of(item["id"])
         if doc_type is None or doc_type.code not in chain_types:
             continue
         for field, allowed in config.link_properties(doc_type.code).items():
             if allowed:
-                for target in _ids(item.get(field)):
-                    depends_on_me.setdefault(target, []).append(item["id"])
+                links.extend((item["id"], target) for target in _ids(item.get(field)))
+    return links
+
+
+def parents(items: list[dict], config: Any) -> dict[str, list[str]]:
+    """``{item: [the items it depends on]}``: the edges `dependents` follows, reversed."""
+    up: dict[str, list[str]] = {}
+    for item, target in chain_links(items, config):
+        up.setdefault(item, []).append(target)
+    return up
+
+
+def closest_same_type(item: dict, items: list[dict], excluded: set[str]) -> tuple[str, float] | None:
+    """The item of the same type, outside ``excluded``, whose title and content read most like ``item``'s."""
+    def text(it: dict) -> str:
+        return " ".join(f"{it.get('title', '')} {it.get('content', '')}".lower().split())
+
+    mine = text(item)
+    best = None
+    for other in items:
+        if other["id"] == item["id"] or other["id"] in excluded or other.get("type") != item.get("type"):
+            continue
+        ratio = SequenceMatcher(None, mine, text(other)).ratio()
+        if best is None or ratio > best[1]:
+            best = (other["id"], ratio)
+    return best
+
+
+def dependents(items: list[dict], config: Any, changed: set[str], depth: int) -> dict[str, list[str]]:
+    """``{dependent: [changed items it depends on]}`` within ``depth`` links of a changed item."""
+    depends_on_me: dict[str, list[str]] = {}
+    for item, target in chain_links(items, config):
+        depends_on_me.setdefault(target, []).append(item)
 
     reached: dict[str, set[str]] = {}
     for origin in sorted(changed):

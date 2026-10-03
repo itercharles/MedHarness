@@ -57,7 +57,10 @@ properties:
   label: Implementation Notes
 - name: triage_result
   label: Triage Result
-  # {verdict, complexity, affected_subsystems, related_crs, notes} written by `build plan`, step 1
+  # {verdict, complexity, affected_subsystems, related_crs, notes} written by `build plan`, step 2
+- name: impact_analysis
+  label: Impact Analysis
+  # {assumptions, anchors, unchanged, created, dimensions} written by `build plan`, steps 1-5
 - name: target_release
   format: relationship
   target_types:

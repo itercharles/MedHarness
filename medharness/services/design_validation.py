@@ -11,6 +11,7 @@ Checks:
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import yaml
@@ -256,7 +257,7 @@ def _check_cr_workflow_fields(_api, dhf_path: Path, cr_id: str) -> list[dict]:
             "fix": f"Create {cr_id} before running `build plan`.",
         }]
 
-    # A rejected CR stops at Step 1 and produces no cascade, so the check does not apply.
+    # A rejected CR stops at Step 2 and produces no cascade, so the check does not apply.
     if str(cr_item.get("status") or "") == "rejected":
         return []
 
@@ -266,7 +267,7 @@ def _check_cr_workflow_fields(_api, dhf_path: Path, cr_id: str) -> list[dict]:
         errors.append({
             "field": "triage_result",
             "issue": (
-                f"{cr_id} has no approved `triage_result`; Step 1 records the "
+                f"{cr_id} has no approved `triage_result`; Step 2 records the "
                 f"triage decision and it was not written."
             ),
             "fix": (
@@ -346,6 +347,7 @@ def validate_generate_dhf(
 
     errors.extend(_validate_cascade_completeness(created_ids, by_id, _api.get_config(dhf_path)))
     errors.extend(_unreviewed_impact(dhf_path, cr_id, changed_items))
+    errors.extend(_check_impact_analysis(by_id.get(cr_id), listed_items, _api.get_config(dhf_path), changed_items))
     return errors
 
 
@@ -418,4 +420,199 @@ def check_verification_quality(
                 ),
             })
 
+    return warnings
+
+
+DIMENSIONS = ("product", "requirements", "architecture", "risk", "soup",
+              "test", "regulatory", "security", "usability")
+VERDICTS = ("required", "not_required", "follow_up")
+_IA_KEYS = ("assumptions", "anchors", "unchanged", "created", "dimensions")
+_IA_FIX = ("medharness --dhf DHF item update {cr} --data "
+           "'{{\"impact_analysis\": {{\"assumptions\": [], \"anchors\": [], \"unchanged\": [], "
+           "\"created\": [], \"dimensions\": [...]}}}}' (shape in the `build plan` prompt)")
+
+
+def _text(value) -> bool:
+    return isinstance(value, str) and bool(value.strip())
+
+
+def _entries(ia: dict, key: str) -> list[dict]:
+    value = ia.get(key)
+    return [e for e in value if isinstance(e, dict)] if isinstance(value, list) else []
+
+
+def impact_analysis_shape_errors(cr_id: str, ia) -> list[dict]:
+    """What is wrong with the form of a CR's `impact_analysis`, without reading the DHF."""
+    fix = _IA_FIX.format(cr=cr_id)
+    if not isinstance(ia, dict):
+        return [{"field": "impact_analysis",
+                 "issue": f"{cr_id} has no `impact_analysis` mapping; Steps 1-5 record it and it was not written.",
+                 "fix": fix}]
+    errors = []
+
+    def err(field: str, issue: str) -> None:
+        errors.append({"field": f"impact_analysis.{field}", "issue": f"{cr_id}: {issue}", "fix": fix})
+
+    for key in _IA_KEYS:
+        if key not in ia:
+            err(key, f"`impact_analysis.{key}` is missing (use [] when there is nothing to say).")
+        elif not isinstance(ia[key], list):
+            err(key, f"`impact_analysis.{key}` must be a list.")
+    for i, text in enumerate(ia.get("assumptions") if isinstance(ia.get("assumptions"), list) else []):
+        if not _text(text):
+            err(f"assumptions[{i}]", f"assumptions[{i}] must be a non-empty string.")
+    for key in ("anchors", "unchanged", "created"):
+        for i, entry in enumerate(ia.get(key) if isinstance(ia.get(key), list) else []):
+            if not isinstance(entry, dict) or not _text(entry.get("id")):
+                err(f"{key}[{i}]", f"{key}[{i}] must be a mapping with an `id`.")
+
+    seen: dict[str, int] = {}
+    for i, entry in enumerate(ia.get("dimensions") if isinstance(ia.get("dimensions"), list) else []):
+        if not isinstance(entry, dict):
+            err(f"dimensions[{i}]", f"dimensions[{i}] must be a mapping.")
+            continue
+        name = entry.get("dimension")
+        if name not in DIMENSIONS:
+            err(f"dimensions[{i}]", f"dimensions[{i}] names '{name}'; it must be one of {', '.join(DIMENSIONS)}.")
+            continue
+        seen[name] = seen.get(name, 0) + 1
+        if entry.get("verdict") not in VERDICTS:
+            err(f"dimensions[{i}]", f"'{name}' has verdict '{entry.get('verdict')}'; use {', '.join(VERDICTS)}.")
+        if not _text(entry.get("reason")):
+            err(f"dimensions[{i}]", f"'{name}' has no `reason`.")
+        if not isinstance(entry.get("items", []), list):
+            err(f"dimensions[{i}]", f"'{name}' `items` must be a list of IDs.")
+    if isinstance(ia.get("dimensions"), list):
+        for name in DIMENSIONS:
+            if seen.get(name, 0) != 1:
+                err("dimensions", f"dimension '{name}' appears {seen.get(name, 0)} times; each of the nine must appear exactly once.")
+    return errors
+
+
+def impact_analysis_closure_errors(cr_item: dict, items: list[dict], config,
+                                   changed_items: dict[str, list[str]]) -> list[dict]:
+    """What a well-formed `impact_analysis` still leaves unsaid about the items this run changed."""
+    from medharness.services.impact import parents
+
+    cr_id = cr_item["id"]
+    ia = cr_item["impact_analysis"]
+    by_id = {it["id"]: it for it in items}
+    changed = [uid for bucket in ("created", "updated") for uid in changed_items.get(bucket, []) if uid != cr_id]
+    created = [uid for uid in changed_items.get("created", []) if uid != cr_id]
+    affected = set(cr_item.get("affected_items") or []) | set(changed)
+    reviewed = set(cr_item.get("reviewed_items") or [])
+    risk_items = set(cr_item.get("affected_risk_items") or [])
+    errors = []
+
+    def err(field: str, issue: str, fix: str) -> None:
+        errors.append({"field": f"impact_analysis.{field}", "issue": f"{cr_id}: {issue}", "fix": fix})
+
+    def update(**fields) -> str:
+        return f"medharness --dhf DHF item update {cr_id} --data '{json.dumps(fields)}'"
+
+    anchors, unchanged = _entries(ia, "anchors"), _entries(ia, "unchanged")
+    created_entries = _entries(ia, "created")
+    dimensions = _entries(ia, "dimensions")
+
+    named = [e["id"] for e in (*anchors, *unchanged, *created_entries)]
+    named += [i for d in dimensions for i in (d.get("items") or []) if isinstance(i, str)]
+    for uid in sorted(set(named) - set(by_id)):
+        err("ids", f"`impact_analysis` names {uid}, which is not in the DHF.",
+            f"Correct or remove {uid} in `impact_analysis` of {cr_id}.")
+
+    for entry in anchors:
+        uid = entry["id"]
+        if uid not in affected | reviewed:
+            err("anchors", f"anchor {uid} is neither changed nor in `reviewed_items`.",
+                f"Change {uid}, or list it in `reviewed_items` with an `unchanged` entry, or drop the anchor.")
+        if not _text(entry.get("evidence")):
+            err("anchors", f"anchor {uid} has no `evidence`.",
+                f"Say what found {uid}: a test file and tag, item text, or the search.")
+
+    created_reasons = {e["id"]: e.get("reason") for e in created_entries}
+    for uid in created:
+        if not _text(created_reasons.get(uid)):
+            err("created", f"{uid} was created but has no `created` entry with a reason.",
+                f"Add {{\"id\": \"{uid}\", \"reason\": \"why no existing item could be updated\"}} to `impact_analysis.created`.")
+
+    unchanged_reasons = {e["id"]: e.get("reason") for e in unchanged}
+    for uid in sorted(reviewed):
+        if not _text(unchanged_reasons.get(uid)):
+            err("unchanged", f"{uid} is in `reviewed_items` but has no `unchanged` entry with a reason.",
+                f"Add {{\"id\": \"{uid}\", \"reason\": \"why it still holds\"}} to `impact_analysis.unchanged`.")
+
+    for entry in dimensions:
+        for uid in entry.get("items") or []:
+            if uid in by_id and uid not in affected | reviewed | risk_items:
+                err("dimensions", f"dimension '{entry['dimension']}' touches {uid}, which is not changed, "
+                    f"reviewed or in `affected_risk_items`.",
+                    f"Drop {uid} from the dimension, or review it ({update(reviewed_items=['...', uid])}).")
+
+    def role(uid: str) -> str:
+        doc_type = config.doc_type_of(uid)
+        return (doc_type.role if doc_type else None) or ""
+
+    # Only a changed requirement can stop its parent holding; a design item does not
+    # change the requirements it designs.
+    up = parents(items, config)
+    requirement_types = set(config.requirement_types())
+    for uid in changed:
+        doc_type = config.doc_type_of(uid)
+        if doc_type is None or doc_type.code not in requirement_types:
+            continue
+        for parent in up.get(uid, []):
+            if parent in by_id and parent not in affected | reviewed:
+                err("parents", f"{uid} changed but its parent {parent} is neither changed nor in `reviewed_items`.",
+                    f"Update {parent} to follow the change, or list it in `reviewed_items` with an `unchanged` entry.")
+
+    missing_risk: dict[str, str] = {}
+    for uid in changed:
+        if role(uid) in ("risk", "risk_control") and uid not in risk_items:
+            missing_risk[uid] = f"{uid} is a changed risk item"
+        for control in items:
+            if role(control["id"]) != "risk_control" or uid not in (control.get("all_linked_uids") or []):
+                continue
+            if control["id"] not in risk_items:
+                missing_risk.setdefault(control["id"], f"{control['id']} controls {uid}, which changed")
+            for linked in control.get("all_linked_uids") or []:
+                if role(linked) == "risk" and linked not in risk_items:
+                    missing_risk.setdefault(linked, f"{linked} is mitigated by {control['id']}, which controls {uid}")
+    for uid, why in sorted(missing_risk.items()):
+        err("risk", f"{why}, but {uid} is not in `affected_risk_items`.",
+            update(affected_risk_items=sorted(risk_items | {uid})))
+    return errors
+
+
+def _check_impact_analysis(cr_item: dict | None, items: list[dict], config,
+                           changed_items: dict[str, list[str]]) -> list[dict]:
+    # A rejected CR stops at Step 2; a missing one is `_check_cr_workflow_fields`'s to report.
+    if cr_item is None or str(cr_item.get("status") or "") == "rejected":
+        return []
+    errors = impact_analysis_shape_errors(cr_item["id"], cr_item.get("impact_analysis"))
+    return errors or impact_analysis_closure_errors(cr_item, items, config, changed_items)
+
+
+def check_near_duplicates(dhf_path: Path, changed_items: dict[str, list[str]]) -> list[dict]:
+    """Warnings for created items that read like an existing item of the same type."""
+    from medharness.services.impact import NEAR_DUPLICATE_RATIO, closest_same_type
+
+    _api, _ = _load_api()
+    if _api is None:
+        return []
+    try:
+        items = _api.list_items(dhf_path)
+    except Exception:
+        return []
+    by_id = {it["id"]: it for it in items}
+    created = set(changed_items.get("created", []))
+    warnings = []
+    for uid in sorted(created):
+        closest = closest_same_type(by_id[uid], items, created) if uid in by_id else None
+        if closest and closest[1] >= NEAR_DUPLICATE_RATIO:
+            warnings.append({
+                "code": "possible_duplicate",
+                "field": uid,
+                "message": f"{uid} reads like {closest[0]} (similarity {closest[1]:.2f}); "
+                           f"update {closest[0]} instead if it is the same requirement.",
+            })
     return warnings

@@ -146,3 +146,91 @@ class TestCheckVerificationQuality:
                 dhf, {"created": ["SRS-001"], "updated": ["SRS-001"]}
             )
         assert len(result) == 1
+
+
+class TestImpactAnalysisShape:
+    """The judge of a CR's `impact_analysis` form: many branches, so each is enumerated here."""
+
+    NINE = ("product", "requirements", "architecture", "risk", "soup",
+            "test", "regulatory", "security", "usability")
+
+    def _record(self, **overrides) -> dict:
+        record = {
+            "assumptions": ["a reading of the issue"],
+            "anchors": [{"id": "SRS-001", "evidence": "tests/a.spec.ts @links:SRS-001"}],
+            "unchanged": [{"id": "SYS-001", "reason": "still holds"}],
+            "created": [],
+            "dimensions": [{"dimension": d, "verdict": "not_required", "reason": "no effect", "items": []}
+                           for d in self.NINE],
+        }
+        record.update(overrides)
+        return record
+
+    def _fields(self, record) -> list[str]:
+        from medharness.services.design_validation import impact_analysis_shape_errors
+
+        return [e["field"] for e in impact_analysis_shape_errors("CR-001", record)]
+
+    def test_a_complete_record_is_clean(self):
+        assert self._fields(self._record()) == []
+
+    @pytest.mark.parametrize("record", [None, "text", [], 0])
+    def test_a_record_that_is_not_a_mapping_is_one_error(self, record):
+        assert self._fields(record) == ["impact_analysis"]
+
+    @pytest.mark.parametrize("key", ["assumptions", "anchors", "unchanged", "created", "dimensions"])
+    def test_a_missing_key_is_named(self, key):
+        record = self._record()
+        del record[key]
+        assert f"impact_analysis.{key}" in self._fields(record)
+
+    def test_a_key_that_is_not_a_list_is_named(self):
+        assert "impact_analysis.anchors" in self._fields(self._record(anchors={"id": "SRS-001"}))
+
+    def test_an_assumption_must_be_text(self):
+        assert self._fields(self._record(assumptions=["ok", ""])) == ["impact_analysis.assumptions[1]"]
+
+    @pytest.mark.parametrize("key", ["anchors", "unchanged", "created"])
+    @pytest.mark.parametrize("entry", ["SRS-001", {"reason": "no id"}, {"id": ""}])
+    def test_an_entry_needs_an_id(self, key, entry):
+        assert self._fields(self._record(**{key: [entry]})) == [f"impact_analysis.{key}[0]"]
+
+    def test_a_missing_dimension_is_named(self):
+        record = self._record(dimensions=self._record()["dimensions"][:-1])
+        errors = self._issues(record)
+        assert len(errors) == 1 and "'usability' appears 0 times" in errors[0]
+
+    def test_a_repeated_dimension_is_named(self):
+        dims = self._record()["dimensions"]
+        errors = self._issues(self._record(dimensions=dims + [dims[0]]))
+        assert len(errors) == 1 and "'product' appears 2 times" in errors[0]
+
+    def test_an_unknown_dimension_is_named(self):
+        dims = self._record()["dimensions"]
+        dims[0] = {**dims[0], "dimension": "ethics"}
+        issues = self._issues(self._record(dimensions=dims))
+        assert any("'ethics'" in i for i in issues) and any("'product' appears 0 times" in i for i in issues)
+
+    @pytest.mark.parametrize("verdict", ["maybe", None, "Required"])
+    def test_a_verdict_is_one_of_three(self, verdict):
+        dims = self._record()["dimensions"]
+        dims[3] = {**dims[3], "verdict": verdict}
+        assert self._fields(self._record(dimensions=dims)) == ["impact_analysis.dimensions[3]"]
+
+    @pytest.mark.parametrize("reason", ["", "  ", None])
+    def test_a_dimension_needs_a_reason(self, reason):
+        dims = self._record()["dimensions"]
+        dims[0] = {**dims[0], "reason": reason}
+        assert self._fields(self._record(dimensions=dims)) == ["impact_analysis.dimensions[0]"]
+
+    def test_a_dimension_may_omit_items_but_not_make_them_a_string(self):
+        dims = self._record()["dimensions"]
+        del dims[0]["items"]
+        assert self._fields(self._record(dimensions=dims)) == []
+        dims[0]["items"] = "SRS-001"
+        assert self._fields(self._record(dimensions=dims)) == ["impact_analysis.dimensions[0]"]
+
+    def _issues(self, record) -> list[str]:
+        from medharness.services.design_validation import impact_analysis_shape_errors
+
+        return [e["issue"] for e in impact_analysis_shape_errors("CR-001", record)]

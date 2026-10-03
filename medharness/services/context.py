@@ -97,8 +97,6 @@ def _risks(items: list[dict], config: Any) -> list[dict]:
         {
             "id": risk["id"],
             "title": risk.get("title", ""),
-            "severity": risk.get("severity", ""),
-            "risk_level": risk.get("risk_level", ""),
             "controls": [
                 {"id": rcm["id"], "title": rcm.get("title", ""),
                  "implements": _as_list(rcm.get("implements"))}

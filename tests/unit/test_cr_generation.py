@@ -454,7 +454,7 @@ class TestGenerateDhf:
         prompt = mock_claude.call_args_list[0][0][0]
         assert "CR-055" in prompt
         assert "verification_criteria" in prompt
-        assert "V-model" in prompt or "V-Model" in prompt
+        assert "impact_analysis" in prompt
 
     def test_no_spec_path_validates_changed_items_not_spec(self, tmp_path):
         dhf = tmp_path / "DHF"
@@ -484,7 +484,7 @@ class TestGenerateDhf:
         mock_fb.assert_called_once_with(12)
         prompt = mock_claude.call_args_list[0][0][0]
         assert "review feedback" in prompt.lower()
-        assert "Product Impact" in prompt
+        assert "impact_analysis" in prompt
 
     def test_design_impact_not_recorded_on_residual_errors(self, tmp_path):
         dhf = tmp_path / "DHF"
@@ -851,17 +851,15 @@ class TestPlanContext:
         assert "All DHF Items" in result
         assert "SYS-001 — System requirement 1" in result
 
-    def test_caps_items_at_max(self):
+    def test_lists_every_item_up_to_the_limit(self):
         from tests.fixtures.stub_adapter import StubDHFAdapter
 
         adapter = StubDHFAdapter()
         for i in range(250):
             adapter.create_item({"id": f"SYS-{i+1:03d}", "title": f"Req {i}"})
         result = self._render(adapter)
-        assert "200 of 250" in result
         assert "SYS-001 —" in result
-        assert "SYS-200 —" in result
-        assert "SYS-250 —" not in result
+        assert "SYS-250 —" in result
 
     def test_a_cr_that_records_what_it_affects_gets_only_those(self):
         from tests.fixtures.stub_adapter import StubDHFAdapter
@@ -883,7 +881,7 @@ class TestPlanContext:
         adapter.create_item({"id": "RCM-001", "title": "Limit", "mitigates": ["RISK-001"],
                              "implements": "SYS-001"})
         result = self._render(adapter)
-        assert "**RISK-001** [critical · —] — Overdose" in result
+        assert "**RISK-001** — Overdose" in result
         assert "RCM-001 — Limit (implements: SYS-001)" in result
 
     def test_type_registry_uses_the_project_codes(self):
