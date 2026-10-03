@@ -156,6 +156,23 @@ def collect_path_changes(
     return {"created": created, "updated": updated, "deleted": deleted}
 
 
+def added_line_counts(repo_root: Path, since_ref: str, *paths: str) -> dict[str, int]:
+    """Lines each tracked file gained since the branch left ``since_ref``, working tree included."""
+    base = _branch_point(repo_root, since_ref)
+    result = subprocess.run(
+        ["git", "diff", "--numstat", base, "--", *paths],
+        capture_output=True, text=True, cwd=str(repo_root), check=False,
+    )
+    if result.returncode != 0:
+        raise DiffUnavailable((result.stderr or "").strip().splitlines()[0] if result.stderr else "git diff failed")
+    counts: dict[str, int] = {}
+    for line in result.stdout.splitlines():
+        added, _, path = line.split("\t", 2)
+        if added.isdigit():
+            counts[path] = int(added)
+    return counts
+
+
 def collect_dhf_item_changes(repo_root: Path, since_ref: str) -> dict[str, list[str]]:
     """Return ``{created, updated, deleted}`` lists of DHF item IDs changed since ``since_ref``.
 

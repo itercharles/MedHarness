@@ -26,6 +26,8 @@ def noisy_weasyprint(tmp_path, monkeypatch):
     )
     monkeypatch.syspath_prepend(str(tmp_path))
     monkeypatch.delitem(sys.modules, "weasyprint", raising=False)
+    yield
+    sys.modules.pop("weasyprint", None)
 
 
 def test_the_banner_goes_to_stderr(noisy_weasyprint, capsys) -> None:

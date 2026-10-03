@@ -259,7 +259,7 @@ Runs triage, works out what the change touches and what it leaves alone (test fi
 | `affected_items` | Step 6; in CI, `build plan` and `build code` rewrite it from the branch | ✓ explicit list (can be `[]`) |
 | `reviewed_items` | Step 6: items that depend on a changed one and were reviewed, needing no change | only as `verify changes` requires (below) |
 
-`build plan` fails the run, after one fix pass, when the `impact_analysis` is missing a key or one of the nine dimensions; names an item the DHF does not have; leaves an anchor, a created item or a reviewed item without its evidence or reason; leaves a parent of a changed requirement neither changed nor reviewed; or leaves out a risk control that implements a changed item, or a risk it mitigates, from `affected_risk_items`. A created item that reads like an existing item of its type (similarity of 0.75 or more) is a warning. A rejected CR is not checked.
+`build plan` fails the run, after one fix pass, when the `impact_analysis` is missing a key or one of the nine dimensions; names an item the DHF does not have; leaves an anchor, a created item or a reviewed item without its evidence or reason; leaves a parent of a changed requirement neither changed nor reviewed; or leaves out a risk control that implements a changed item, or a risk it mitigates, from `affected_risk_items`. A created item that reads like an existing item of its type (similarity of 0.75 or more) is a warning, and so is an existing item that gained more than 40 lines (`large_edit`): a change to one behaviour is a line or two. A rejected CR is not checked.
 
 ### `build code` — development phase
 

@@ -616,3 +616,30 @@ def check_near_duplicates(dhf_path: Path, changed_items: dict[str, list[str]]) -
                            f"update {closest[0]} instead if it is the same requirement.",
             })
     return warnings
+
+
+LARGE_EDIT_LINES = 40
+
+
+def check_large_edits(repo_root: Path, since_ref: str) -> list[dict]:
+    """Warnings for existing items that gained more than ``LARGE_EDIT_LINES`` lines.
+
+    A change to one behaviour is a line or two; a large addition usually means the item
+    absorbed a second behaviour that deserves its own.
+    """
+    from medharness.services import git
+
+    try:
+        updated = git.collect_path_changes(repo_root, since_ref, "DHF/items/")["updated"]
+        added = git.added_line_counts(repo_root, since_ref, *updated) if updated else {}
+    except git.DiffUnavailable:
+        return []
+    return [
+        {
+            "code": "large_edit",
+            "field": Path(path).stem,
+            "message": f"{Path(path).stem} gained {count} lines; a change to one behaviour is usually a line or two. "
+                       f"Check it has not taken on a second behaviour that needs its own item.",
+        }
+        for path, count in sorted(added.items()) if count > LARGE_EDIT_LINES
+    ]
