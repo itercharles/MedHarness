@@ -12,6 +12,7 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 ## [Unreleased]
 
 ## [0.51.0] — 2026-10-03
+
 ### Added
 
 - **A doc type has a `description`**: what belongs at that level, what does not, one example.
