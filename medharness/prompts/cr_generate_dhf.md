@@ -235,7 +235,7 @@ per line, as `T<n>: <what is checked>`:
 - A number never changes once used.
 - A changed expectation edits `Tk` in place.
 - A new case of the same behaviour adds `T<n+1>`.
-- A test claims a point with `@testing:Tn` beside `@links:<ID>` (or the
+- A test claims a point with `@testing:Tn` beside `@links:<ID>` in its name (or the
   `medharness.testing` JUnit property).
 
 ## SWDD Items

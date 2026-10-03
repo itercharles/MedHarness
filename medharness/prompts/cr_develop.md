@@ -46,16 +46,21 @@ this run to commit.
 
    `verify completion` checks exactly this CR's items: each requirement it
    touched must be verified by a passing test. If it reports an item without a
-   passing test, write that test or add `@links:<ITEM_ID>`
-   annotations to the relevant test(s) and re-run tests + coverage until it
-   passes:
+   passing test, write that test or put `@links:<ITEM_ID>` in the name of the
+   relevant test(s) and re-run tests + coverage until it passes:
 
    ```ts
-   // @links:SRS-012
-   it('authenticates within 2 s at p95 under nominal load', async () => {
+   it('@links:SRS-012 @testing:T1 authenticates within 2 s at p95 under nominal load', async () => {
      ...
    });
    ```
+
+   A requirement's `testing` field lists its test points as `T<n>: <what is checked>`.
+   Claim each point in the name of the test that checks it, as above
+   (`@testing:T2`; pytest can set the `medharness.links` and `medharness.testing`
+   JUnit properties instead). A point with no passing test
+   fails `verify tests`. Never renumber a point; a test whose point changed
+   follows the new wording.
 
    Use the `verification_criteria` field on each requirement item as the
    pass/fail condition for the test. If a requirement genuinely cannot be

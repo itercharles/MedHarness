@@ -75,6 +75,7 @@ class ItemStore:
         )
         return {
             "display_name": dt.name or dt.code,
+            "description": dt.description or "",
             "code": dt.code,
             "prefix": dt.prefix,
             "role": role,

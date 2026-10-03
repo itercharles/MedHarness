@@ -1,6 +1,10 @@
 code: SRS
 role: software_requirement
 name: Software Requirement
+description: |-
+  Belongs here: the behaviour of a software item, specific enough to be tested at software level with a stated input and result.
+  Not here: a restatement of a system requirement, or a design choice (SWDD). One shall per item; a second behaviour is a second SRS or a new test point.
+  Example: "The About dialog shall list the version string from the build metadata."
 prefix: SRS-
 directory: 03_srs
 properties:

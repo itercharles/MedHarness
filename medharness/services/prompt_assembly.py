@@ -125,6 +125,15 @@ def _render_plan_context(ctx: dict) -> str:
                 lines.append(f"{label}: {', '.join(by_role[role])}\n")
         lines.append("\n")
 
+    levels = [t for t in ctx["types"] if t.get("description")]
+    if levels:
+        lines.append(
+            "### What Belongs at Each Level\n"
+            "(This project's own definition of each type. Decide the level of a new item from these, "
+            "and create nothing at a level whose existing item already covers the change.)\n\n"
+        )
+        lines += [f"**{t['code']} — {t['display_name']}**\n{t['description'].strip()}\n\n" for t in levels]
+
     lines.append(_link_model(ctx))
 
 

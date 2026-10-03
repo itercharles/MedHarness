@@ -81,6 +81,7 @@ class DocTypeConfig(BaseModel):
 
     code: str = Field(..., description="Document type code (e.g., 'SYS')")
     name: str = Field(..., description="Human-readable name")
+    description: Optional[str] = Field(None, description="What belongs at this type's level, in the project's own words")
     prefix: str = Field(..., description="ID prefix (e.g., 'SYS-')")
     directory: Optional[str] = Field(None, description="Storage directory name")
     role: Optional[str] = Field(None, description="Semantic role; derived from ItemType when code is a known V-model type")

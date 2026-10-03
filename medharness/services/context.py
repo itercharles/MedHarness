@@ -60,7 +60,7 @@ def cr_context(adapter: Any, cr_id: str) -> dict:
         "scope": scope,
         "types": [
             {"code": dt["code"], "display_name": dt.get("display_name", ""),
-             "role": dt.get("role") or "", "links": _link_fields(dt)}
+             "description": dt.get("description", ""), "role": dt.get("role") or "", "links": _link_fields(dt)}
             for dt in adapter.list_item_types()
         ],
         "chains": [m.path for m in coverage_matrices(adapter.config)],

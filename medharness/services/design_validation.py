@@ -653,3 +653,40 @@ def check_large_edits(repo_root: Path, since_ref: str) -> list[dict]:
         }
         for path, count in sorted(added.items()) if count > LARGE_EDIT_LINES
     ]
+
+
+def check_test_points_follow_requirements(repo_root: Path, dhf_path: Path, since_ref: str) -> list[dict]:
+    """Warnings for requirements whose statement or criteria changed while `testing` did not.
+
+    A changed expectation edits its test point, and a new case adds one; leaving
+    `testing` alone means the tests are still held to the old behaviour.
+    """
+    import yaml
+
+    from medharness.services import git
+
+    try:
+        requirement_types = _verifiable_types(dhf_path)
+        by_id = {it["id"]: it for it in _load_api()[0].list_items(dhf_path)}
+        updated = git.collect_path_changes(repo_root, since_ref, "DHF/items/")["updated"]
+    except Exception:
+        return []
+    warnings = []
+    for path in sorted(updated):
+        uid = Path(path).stem
+        if by_id.get(uid, {}).get("type") not in requirement_types:
+            continue
+        try:
+            before = yaml.safe_load(git.file_at_branch_point(repo_root, since_ref, path) or "") or {}
+            after = yaml.safe_load((repo_root / path).read_text(encoding="utf-8")) or {}
+        except (OSError, yaml.YAMLError, git.DiffUnavailable):
+            continue
+        said_more = any(before.get(f) != after.get(f) for f in ("content", "verification_criteria"))
+        if said_more and before.get("testing") == after.get("testing"):
+            warnings.append({
+                "code": "test_points_unchanged",
+                "field": uid,
+                "message": f"{uid} changed what it requires but its `testing` points did not. "
+                           f"Edit the point whose expectation changed, or add the next `T<n>` for a new case.",
+            })
+    return warnings
