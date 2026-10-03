@@ -357,6 +357,22 @@ class TestBuildPlanImpactAnalysis:
         cancel = f"{MH} item update SYS-001 --data " + _json({"status": "cancelled"})
         assert self._duplicates(tmp_path, [cancel, self._copy_of("SYS-001", "SYS")]) == []
 
+    def _points(self, tmp_path: Path, **fields) -> list[dict]:
+        update = f"{MH} item update SRS-001 --data " + _json(fields)
+        report = self._plan_and_run(tmp_path, [update, self._cr()])
+        return [w for w in report["warnings"] if w["code"] == "test_points_unchanged"]
+
+    def test_a_requirement_that_says_more_without_new_test_points_is_a_warning(self, project: Path, tmp_path: Path) -> None:
+        warnings = self._points(tmp_path, content="The export also writes a checksum.")
+        assert [w["message"].split()[0] for w in warnings] == ["SRS-001"]
+
+    def test_a_requirement_whose_test_points_changed_with_it_is_not(self, project: Path, tmp_path: Path) -> None:
+        assert self._points(tmp_path, content="The export also writes a checksum.",
+                            testing="T1: export opens\nT2: the checksum matches") == []
+
+    def test_a_change_that_leaves_the_requirement_unsaid_is_not(self, project: Path, tmp_path: Path) -> None:
+        assert self._points(tmp_path, status="draft") == []
+
     def test_a_rejected_cr_needs_no_record(self, project: Path, tmp_path: Path) -> None:
         reject = f"{MH} item update CR-001 --data " + _json(
             {"status": "rejected", "impact_assessment": "duplicate of CR-002"})

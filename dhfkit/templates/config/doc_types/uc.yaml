@@ -1,6 +1,10 @@
 code: UC
 role: use_case
 name: Use Case
+description: |-
+  Belongs here: a workflow a user carries out, in the user's terms, from trigger to outcome.
+  Not here: a rule the system must satisfy (that is a requirement), or one step inside a workflow that changes nothing the user sees.
+  Example: "A planner imports a scan and starts a review."
 prefix: UC-
 directory: 00_uc
 properties:

@@ -259,7 +259,7 @@ Runs triage, works out what the change touches and what it leaves alone (test fi
 | `affected_items` | Step 6; in CI, `build plan` and `build code` rewrite it from the branch | ✓ explicit list (can be `[]`) |
 | `reviewed_items` | Step 6: items that depend on a changed one and were reviewed, needing no change | only as `verify changes` requires (below) |
 
-`build plan` fails the run, after one fix pass, when the `impact_analysis` is missing a key or one of the nine dimensions; names an item the DHF does not have; leaves an anchor, a created item or a reviewed item without its evidence or reason; leaves a parent of a changed requirement neither changed nor reviewed; or leaves out a risk control that implements a changed item, or a risk it mitigates, from `affected_risk_items`. A created item that reads like an existing item of its type (similarity of 0.75 or more) is a warning, and so is an existing item that gained more than 40 lines (`large_edit`): a change to one behaviour is a line or two. A rejected CR is not checked.
+`build plan` fails the run, after one fix pass, when the `impact_analysis` is missing a key or one of the nine dimensions; names an item the DHF does not have; leaves an anchor, a created item or a reviewed item without its evidence or reason; leaves a parent of a changed requirement neither changed nor reviewed; or leaves out a risk control that implements a changed item, or a risk it mitigates, from `affected_risk_items`. A created item that reads like an existing item of its type (similarity of 0.75 or more) is a warning, and so is an existing item that gained more than 40 lines (`large_edit`): a change to one behaviour is a line or two. A requirement whose `content` or `verification_criteria` changed while its `testing` points did not is a warning too (`test_points_unchanged`). A rejected CR is not checked.
 
 ### `build code` — development phase
 
@@ -674,6 +674,13 @@ coverage), `item get` (`all_linked_uids`), the release's traceability reports (o
 matrix), and `build plan`, whose prompt describes your link fields and chains and
 whose check expects an item it creates to get a child next along a chain. Only
 what is configured is checked: a type with no `target_types` accepts any target.
+
+**Say what belongs at each level.** A doc type's `description` is your own definition of
+its tier: what belongs there, what does not, one example. `build plan` puts it in the
+prompt ("What Belongs at Each Level"), and the model decides from it where a new item sits
+and whether a change needs one at all. The defaults for UC, CRS, SYS, SRS and SYSARCH
+say it for a typical product; a project with its own copy of those files adds a
+`description:` key to them, in its own words. A type without one is left out.
 
 Projects scaffolded before 0.37 carry full copies of the config and templates.
 They keep working: each copy overrides the default it duplicates. To follow the

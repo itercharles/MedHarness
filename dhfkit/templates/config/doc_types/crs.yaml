@@ -1,6 +1,10 @@
 code: CRS
 role: customer_requirement
 name: Customer Requirement
+description: |-
+  Belongs here: a need a user or customer would state, in user language, with the value it delivers.
+  Not here: how the system meets it, or a detail of one screen. A wording, styling or label change that leaves every existing need true needs no new CRS.
+  Example: "The planner can see which software version produced a plan."
 prefix: CRS-
 directory: 01_crs
 properties:

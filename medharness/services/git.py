@@ -173,6 +173,14 @@ def added_line_counts(repo_root: Path, since_ref: str, *paths: str) -> dict[str,
     return counts
 
 
+def file_at_branch_point(repo_root: Path, since_ref: str, path: str) -> str | None:
+    """A file as it was where the branch left ``since_ref``; None when it did not exist there."""
+    base = _branch_point(repo_root, since_ref)
+    result = subprocess.run(["git", "show", f"{base}:{path}"], capture_output=True, text=True,
+                            cwd=str(repo_root), check=False)
+    return result.stdout if result.returncode == 0 else None
+
+
 def collect_dhf_item_changes(repo_root: Path, since_ref: str) -> dict[str, list[str]]:
     """Return ``{created, updated, deleted}`` lists of DHF item IDs changed since ``since_ref``.
 

@@ -1,6 +1,10 @@
 code: SYSARCH
 role: architecture
 name: System Architecture
+description: |-
+  Belongs here: a system-level design decision for one system requirement: a boundary, data flow, external interface or deployment choice.
+  Not here: copy, styling or visibility changes, or a decision inside a single module (SWDD).
+  Example: "Version metadata is read from the build manifest at start-up, not queried from the server."
 prefix: SYSARCH-
 directory: 06_sysarch
 properties:

@@ -1,6 +1,10 @@
 code: SYS
 role: system_requirement
 name: System Requirement
+description: |-
+  Belongs here: behaviour observable at the system boundary, black-box, testable without knowing the software's structure.
+  Not here: how a module achieves it (SRS or SWDD), or the user's need itself (CRS). An internal change that no one outside the system can observe needs no new SYS.
+  Example: "The system shall display the software version in the About dialog."
 prefix: SYS-
 directory: 02_sys
 properties:

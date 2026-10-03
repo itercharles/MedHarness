@@ -11,6 +11,23 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.51.0] — 2026-10-03
+
+### Added
+
+- **A doc type has a `description`**: what belongs at that level, what does not, one example.
+  `build plan` renders it as "What Belongs at Each Level", so the model decides where a new item
+  sits, and whether a change needs one, from the project's own definition. The default UC, CRS, SYS,
+  SRS and SYSARCH carry one; a project with its own copy of those files adds the key.
+- **`build plan` warns when a requirement's `content` or `verification_criteria` changed but its
+  `testing` points did not** (`test_points_unchanged`). Warning only.
+
+### Changed
+
+- **`build code` tells the agent how to claim a test point**, and its example tags the test's name
+  (`@links:SRS-012 @testing:T1`), which is where the JUnit reader looks; it showed a source comment
+  before.
+
 ## [0.50.1] — 2026-10-03
 
 ### Fixed
