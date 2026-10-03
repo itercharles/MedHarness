@@ -28,7 +28,8 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
   reason, every reviewed item with an `unchanged` entry, each parent of a changed
   requirement changed or reviewed, and each risk control of a changed item (and the risks it
   mitigates) in `affected_risk_items`. These run in `build plan`, not in a `verify`
-  command. A created item that reads like an existing one is a warning. A project that
+  command. A created item that reads like an existing one is a warning, and so is an
+  existing item that gained more than 40 lines (`large_edit`). A project that
   overrides the CR doc type must add `impact_analysis` to it (copy it from the default).
 
 - **The design review sees what was not changed.** Its prompt now carries, for each

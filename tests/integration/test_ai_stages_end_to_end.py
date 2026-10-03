@@ -328,6 +328,18 @@ class TestBuildPlanImpactAnalysis:
         assert "SYS-002 reads like SYS-001" in duplicate[0]["message"]
         assert "possible_duplicate" not in {e["field"] for e in report["errors"]}, "a warning, not an error"
 
+    def _edit_swdd(self, tmp_path: Path, content: str) -> list[dict]:
+        update = f"{MH} item update SWDD-001 --data " + _json({"content": content})
+        report = self._plan_and_run(tmp_path, [update, self._cr()])
+        return [w for w in report["warnings"] if w["code"] == "large_edit"]
+
+    def test_an_existing_item_that_gains_many_lines_is_a_warning(self, project: Path, tmp_path: Path) -> None:
+        warnings = self._edit_swdd(tmp_path, "\n".join(f"Step {n} of a second behaviour." for n in range(60)))
+        assert [w["message"].split()[0] for w in warnings] == ["SWDD-001"]
+
+    def test_a_one_line_change_to_an_existing_item_is_not(self, project: Path, tmp_path: Path) -> None:
+        assert self._edit_swdd(tmp_path, "One changed line.") == []
+
     def test_a_rejected_cr_needs_no_record(self, project: Path, tmp_path: Path) -> None:
         reject = f"{MH} item update CR-001 --data " + _json(
             {"status": "rejected", "impact_assessment": "duplicate of CR-002"})
