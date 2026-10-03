@@ -11,6 +11,8 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.50.0] — 2026-10-03
+
 ### Added
 
 - **`build plan` follows an impact-analysis process.** The prompt is rewritten around
