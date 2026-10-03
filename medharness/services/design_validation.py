@@ -592,8 +592,15 @@ def _check_impact_analysis(cr_item: dict | None, items: list[dict], config,
     return errors or impact_analysis_closure_errors(cr_item, items, config, changed_items)
 
 
+WITHDRAWN_STATES = {"cancelled", "rejected"}
+
+
 def check_near_duplicates(dhf_path: Path, changed_items: dict[str, list[str]]) -> list[dict]:
-    """Warnings for created items that read like an existing item of the same type."""
+    """Warnings for created items that read like an existing item of the same type.
+
+    The CR being planned is created by intake, not by the model, and a withdrawn item is
+    not something to update instead, so neither is compared.
+    """
     from medharness.services.impact import NEAR_DUPLICATE_RATIO, closest_same_type
 
     _api, _ = _load_api()
@@ -605,9 +612,12 @@ def check_near_duplicates(dhf_path: Path, changed_items: dict[str, list[str]]) -
         return []
     by_id = {it["id"]: it for it in items}
     created = set(changed_items.get("created", []))
+    withdrawn = {it["id"] for it in items if str(it.get("status") or "") in WITHDRAWN_STATES}
     warnings = []
     for uid in sorted(created):
-        closest = closest_same_type(by_id[uid], items, created) if uid in by_id else None
+        if uid not in by_id or by_id[uid].get("type") == "CR":
+            continue
+        closest = closest_same_type(by_id[uid], items, created | withdrawn)
         if closest and closest[1] >= NEAR_DUPLICATE_RATIO:
             warnings.append({
                 "code": "possible_duplicate",

@@ -340,6 +340,23 @@ class TestBuildPlanImpactAnalysis:
     def test_a_one_line_change_to_an_existing_item_is_not(self, project: Path, tmp_path: Path) -> None:
         assert self._edit_swdd(tmp_path, "One changed line.") == []
 
+    def _copy_of(self, uid: str, item_type: str, **extra) -> str:
+        item = json.loads(_run("item", "get", uid).stdout)
+        copy = {k: item[k] for k in ("title", "content", "category", "satisfies", "verification_method",
+                                     "verification_criteria", "description") if k in item}
+        return f"{MH} item create --type {item_type} --data " + _json({**copy, **extra})
+
+    def _duplicates(self, tmp_path: Path, commands: list[str]) -> list[dict]:
+        report = self._plan_and_run(tmp_path, commands + [self._cr()])
+        return [w for w in report["warnings"] if w["code"] == "possible_duplicate"]
+
+    def test_a_cr_that_reads_like_another_cr_is_not_a_possible_duplicate(self, project: Path, tmp_path: Path) -> None:
+        assert self._duplicates(tmp_path, [self._copy_of("CR-001", "CR")]) == []
+
+    def test_an_item_that_reads_like_a_cancelled_one_is_not_a_possible_duplicate(self, project: Path, tmp_path: Path) -> None:
+        cancel = f"{MH} item update SYS-001 --data " + _json({"status": "cancelled"})
+        assert self._duplicates(tmp_path, [cancel, self._copy_of("SYS-001", "SYS")]) == []
+
     def test_a_rejected_cr_needs_no_record(self, project: Path, tmp_path: Path) -> None:
         reject = f"{MH} item update CR-001 --data " + _json(
             {"status": "rejected", "impact_assessment": "duplicate of CR-002"})

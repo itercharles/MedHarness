@@ -11,6 +11,14 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.50.1] — 2026-10-03
+
+### Fixed
+
+- `possible_duplicate` no longer fires on the CR being planned (intake creates it, the model does
+  not) or against `cancelled` and `rejected` items, so re-running intake for an issue whose earlier
+  CRs were cancelled no longer warns that the new CR reads like the old one.
+
 ## [0.50.0] — 2026-10-03
 
 ### Added
