@@ -332,6 +332,7 @@ jobs:
       BRANCH: ${{ inputs.stage == 'plan' && 'design' || 'develop' }}/${{ inputs.cr }}
     steps:
       - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
       - run: pip install medharness
       - if: inputs.stage == 'plan'
         run: medharness build plan --cr "${{ inputs.cr }}"
@@ -353,7 +354,7 @@ jobs:
       PR: ${{ github.event.pull_request.number }}
     steps:
       - uses: actions/checkout@v4
-        with: { ref: "${{ github.event.pull_request.head.ref }}" }
+        with: { ref: "${{ github.event.pull_request.head.ref }}", fetch-depth: 0 }
       - run: pip install medharness
       - run: |          # --pr: revise from the reviews, then commit and push to the PR
           git config user.name "github-actions[bot]"
@@ -363,6 +364,12 @@ jobs:
             develop) medharness build code --cr "${BRANCH#*/}" --pr "$PR" ;;
           esac
 ```
+
+**Check out full history** (`fetch-depth: 0`) wherever a job runs `build plan|code`:
+they compare the branch with where it left `origin/main`, and a shallow clone cannot
+reach that point (the run stops with git's own reason). A `pull_request_review` run
+also uses the workflow file of the PR's head commit, so a branch cut before you fixed
+the workflow keeps the old one until you update it with `main`.
 
 **An issue is the agent's instructions.** `intake` turns the issue's title and
 body into the CR that `build plan` works from, so label only issues whose text
