@@ -13,21 +13,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 
-from typing import Any
-
-def _prefix_of(uid: str) -> str:
-    parts = uid.rsplit("-", 1)
-    return parts[0] + "-" if len(parts) == 2 else ""
-
-LINK_FIELDS = (
-    "derives_from", "implements", "guided_by", "informs", "design",
-    "mitigates", "satisfies", "verifies", "validates", "module",
-    "affected_risk_items", "affected_items",
-)
-
-def find_dangling_links(
-    items: list[dict], link_fields: Iterable[str] | None = None
-) -> list[dict]:
+def find_dangling_links(items: list[dict], link_fields: Iterable[str]) -> list[dict]:
     """Find traceability links pointing at IDs that do not exist in the DHF.
 
     A dangling link is not the same failure as missing coverage: the author did
@@ -38,10 +24,7 @@ def find_dangling_links(
     Returns [{"source", "field", "target"}] sorted for stable output.
     """
     known = {item["id"] for item in items}
-    # The schema decides what a link is; LINK_FIELDS is only the floor. Two
-    # hand-written lists used to decide it between them and disagreed, leaving
-    # five of the nine relationship fields in the shipped schema unchecked.
-    fields = sorted(set(LINK_FIELDS) | set(link_fields or ()))
+    fields = sorted(set(link_fields))
     dangling: list[dict] = []
     for item in items:
         source = item.get("id", "")

@@ -11,10 +11,11 @@ from __future__ import annotations
 from dhfkit.models.config import DocTypeConfig, ProjectConfig
 from medharness.services.traceability import check_traceability
 
+LINK = {"name": "derives_from", "format": "relationship"}
 CONFIG = ProjectConfig(
     doc_types=[
-        DocTypeConfig(code="SYS", name="System Requirement", prefix="SYS-"),
-        DocTypeConfig(code="SRS", name="Software Requirement", prefix="SRS-"),
+        DocTypeConfig(code="SYS", name="System Requirement", prefix="SYS-", properties=[LINK]),
+        DocTypeConfig(code="SRS", name="Software Requirement", prefix="SRS-", properties=[LINK]),
     ],
     required_traceability=[],
 )

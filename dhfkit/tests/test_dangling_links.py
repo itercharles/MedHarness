@@ -18,20 +18,23 @@ from dhfkit.traceability import find_dangling_links
 # find_dangling_links
 # ---------------------------------------------------------------------------
 
+FIELDS = ("derives_from", "implements", "mitigates", "verifies")
+
+
 class TestFindDanglingLinks:
     def test_clean_items_have_none(self) -> None:
         items = [
             {"id": "SYS-001"},
             {"id": "SRS-001", "derives_from": ["SYS-001"]},
         ]
-        assert find_dangling_links(items) == []
+        assert find_dangling_links(items, FIELDS) == []
 
     def test_detects_missing_target(self) -> None:
         items = [
             {"id": "SYS-001"},
             {"id": "SRS-001", "derives_from": ["SYS-999"]},
         ]
-        assert find_dangling_links(items) == [
+        assert find_dangling_links(items, FIELDS) == [
             {"source": "SRS-001", "field": "derives_from", "target": "SYS-999"},
         ]
 
@@ -40,7 +43,7 @@ class TestFindDanglingLinks:
             {"id": "RCM-001", "mitigates": ["RISK-404"], "implements": ["SYS-404"]},
             {"id": "TC-001", "verifies": ["SRS-404"]},
         ]
-        found = {(d["field"], d["target"]) for d in find_dangling_links(items)}
+        found = {(d["field"], d["target"]) for d in find_dangling_links(items, FIELDS)}
         assert found == {
             ("mitigates", "RISK-404"),
             ("implements", "SYS-404"),
@@ -52,7 +55,7 @@ class TestFindDanglingLinks:
             {"id": "SYS-001"},
             {"id": "SRS-001", "derives_from": ["SYS-001", "SYS-999"]},
         ]
-        dangling = find_dangling_links(items)
+        dangling = find_dangling_links(items, FIELDS)
         assert len(dangling) == 1
         assert dangling[0]["target"] == "SYS-999"
 
@@ -61,14 +64,14 @@ class TestFindDanglingLinks:
             {"id": "SYS-001", "derives_from": [], "mitigates": None},
             {"id": "SYS-002"},
         ]
-        assert find_dangling_links(items) == []
+        assert find_dangling_links(items, FIELDS) == []
 
     def test_output_is_sorted(self) -> None:
         items = [
             {"id": "SRS-002", "derives_from": ["ZZZ-1"]},
             {"id": "SRS-001", "derives_from": ["ZZZ-2"]},
         ]
-        assert [d["source"] for d in find_dangling_links(items)] == ["SRS-001", "SRS-002"]
+        assert [d["source"] for d in find_dangling_links(items, FIELDS)] == ["SRS-001", "SRS-002"]
 
 
 # ---------------------------------------------------------------------------

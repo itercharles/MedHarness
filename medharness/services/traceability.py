@@ -22,7 +22,7 @@ import networkx as nx
 
 from dhfkit.item_type import ItemType
 from dhfkit.models.config import RequiredTraceabilityRule, TraceabilityMatrix
-from dhfkit.traceability import LINK_FIELDS, find_dangling_links
+from dhfkit.traceability import find_dangling_links
 
 def _ids(value: Any) -> list[str]:
     values = [value] if isinstance(value, str) else value if isinstance(value, list) else []
@@ -245,9 +245,7 @@ def build_module_map(items: list[dict], config: Any) -> list[dict]:
 
     return sorted(result, key=lambda x: x["module_id"])
 
-def find_link_cycles(
-    items: list[dict], link_fields: Iterable[str] | None = None
-) -> list[list[str]]:
+def find_link_cycles(items: list[dict], link_fields: Iterable[str]) -> list[list[str]]:
     """Find traceability links that form a cycle.
 
     The V-model is directed: a customer requirement gives rise to a system
@@ -258,7 +256,7 @@ def find_link_cycles(
     Returns each cycle as the list of IDs in it, rotated to start at its lowest
     ID so the same cycle reads the same way between runs.
     """
-    fields = sorted(set(LINK_FIELDS) | set(link_fields or ()))
+    fields = sorted(set(link_fields))
     known = {str(i.get("id")) for i in items if i.get("id")}
 
     graph = nx.DiGraph()
@@ -337,12 +335,9 @@ def check_traceability(items: list[dict], config: Any) -> dict:
                 "passed": len(uncovered) == 0,
             })
 
-    dangling = find_dangling_links(
-        items, getattr(config, "relationship_fields", lambda: ())()
-    )
-    cycles = find_link_cycles(
-        items, getattr(config, "relationship_fields", lambda: ())()
-    )
+    link_fields = config.relationship_fields()
+    dangling = find_dangling_links(items, link_fields)
+    cycles = find_link_cycles(items, link_fields)
     mistyped = find_mistyped_links(items, config)
     passed = (
         required_result["passed"]

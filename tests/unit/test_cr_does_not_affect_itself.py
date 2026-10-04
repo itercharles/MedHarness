@@ -25,6 +25,8 @@ import dhfkit.api as api
 from medharness.services.cr_impact import _record_design_impact_in_cr
 from medharness.scaffold import replace_placeholders, scaffold_dhf
 
+LINKS = ("derives_from", "implements", "affected_items")
+
 
 @pytest.fixture
 def dhf(tmp_path: Path) -> Path:
@@ -78,7 +80,7 @@ class TestTheResultPassesTheGateThatCaughtIt:
             {"created": [], "updated": ["CR-001", "SYS-001"], "deleted": []},
         )
         items = ItemStore(dhf).list_items()
-        assert find_link_cycles(items) == []
+        assert find_link_cycles(items, LINKS) == []
 
     def test_the_unfixed_shape_would_have_cycled(self, dhf: Path) -> None:
         """Pins why this matters rather than trusting the fix on its own."""
@@ -86,7 +88,7 @@ class TestTheResultPassesTheGateThatCaughtIt:
 
         as_written_before = [{"id": "CR-001", "affected_items": ["CR-001", "SYS-001"]},
                              {"id": "SYS-001"}]
-        assert find_link_cycles(as_written_before) == [["CR-001"]]
+        assert find_link_cycles(as_written_before, LINKS) == [["CR-001"]]
 
 
 class TestTheSuiteExercisesANonEmptyChangeSet:
