@@ -25,7 +25,7 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[2]
 
-SHIPPED = sorted(ROOT.glob("dhfkit/templates/**/*.yml")) + [ROOT / "docs" / "adopting.md"]
+SHIPPED = sorted(ROOT.glob("dhfkit/templates/**/*.yml")) + [ROOT / "docs" / "ci.md", ROOT / "docs" / "ai-workflow.md"]
 
 #: `git push <remote> HEAD:main`, `git push origin main`, and the ref-spec forms.
 _PUSH_TO_DEFAULT = re.compile(

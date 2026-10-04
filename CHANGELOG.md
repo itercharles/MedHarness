@@ -11,6 +11,14 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+### Changed
+
+- **`docs/adopting.md` is five pages.** It had grown to 700 lines. It now holds starting fresh, bringing
+  an existing DHF, test points and the adoption order, with a map to the rest: [ci.md](docs/ci.md) (the CI
+  recipe, releases), [ai-workflow.md](docs/ai-workflow.md) (the AI stages, and wiring them into Actions),
+  [soup.md](docs/soup.md) and [configuration.md](docs/configuration.md). Headings keep their names, so only the
+  file part of a link changes; `init` now points at `docs/ci.md`.
+
 ## [0.53.0] — 2026-10-04
 
 ### Added

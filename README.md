@@ -42,7 +42,7 @@ Run it two ways:
   working tree and you commit.
 - **Unattended**, from an issue: CI opens the change request and a pull request
   with the design; ask for changes and it revises; the code stage runs the same
-  way. The recipe is in [adopting.md](docs/adopting.md#wiring-it-into-github-actions).
+  way. The recipe is in [the AI workflow page](docs/ai-workflow.md#wiring-it-into-github-actions).
 
 Unattended, `build plan` and `build code` run the `claude` CLI, or any
 `provider:model` you set (`anthropic`, `openai`, `deepseek`) — they run an agent
@@ -78,7 +78,7 @@ my-device/
 The item types (13 by default), their fields and lifecycles, the required links
 and the specification templates are defaults shipped in the package, so
 upgrading `medharness` upgrades them. A project overrides only what it changes,
-in `DHF/config/`: see [Changing the defaults](docs/adopting.md#changing-the-defaults).
+in `DHF/config/`: see [Changing the defaults](docs/configuration.md#changing-the-defaults).
 
 An item is a small YAML file. Links are written on the child and point up:
 
@@ -117,7 +117,11 @@ through AI development.
 
 | | |
 |---|---|
-| [adopting.md](docs/adopting.md) | starting fresh, the CI recipe, bringing an existing DHF, releases |
+| [adopting.md](docs/adopting.md) | starting fresh, bringing an existing DHF, what to adopt in what order |
+| [ci.md](docs/ci.md) | the CI recipe, cutting a release |
+| [ai-workflow.md](docs/ai-workflow.md) | a change request from design to code: your own agent, or unattended in CI |
+| [soup.md](docs/soup.md) | the SOUP register, SBOM, vulnerability scanning |
+| [configuration.md](docs/configuration.md) | changing the defaults, your own types and relationships |
 | [interface.md](docs/interface.md) | the gate result, exit codes, what may change |
 | [ai-security.md](docs/ai-security.md) | what the AI stages can do, and running without them |
 | [architecture.md](docs/architecture.md) | how the code is organised |

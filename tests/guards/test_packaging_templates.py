@@ -30,7 +30,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
 WORKFLOW_TEMPLATE = REPO_ROOT / "dhfkit" / "templates" / "github" / "workflows" / "dhf.yml"
-ADOPTING_DOC = REPO_ROOT / "docs" / "adopting.md"
+ADOPTING_DOC = REPO_ROOT / "docs" / "ci.md"
 
 
 class TestDocumentedRecipeMatchesTemplate:
@@ -40,7 +40,7 @@ class TestDocumentedRecipeMatchesTemplate:
         recipe = WORKFLOW_TEMPLATE.read_text().rstrip("\n")
         doc = ADOPTING_DOC.read_text()
         assert recipe in doc, (
-            "docs/adopting.md no longer embeds the workflow template verbatim — "
+            "docs/ci.md no longer embeds the workflow template verbatim — "
             "adopters copy the recipe from there, so the two must not drift"
         )
 

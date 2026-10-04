@@ -1,4 +1,4 @@
-"""The soup-sources.yaml example in adopting.md must actually work.
+"""The soup-sources.yaml example in soup.md must actually work.
 
 The `command` source is the only escape hatch for a package manager with no
 parser. Its example embedded multi-line Python in a double-quoted YAML string —
@@ -19,7 +19,7 @@ import pytest
 import yaml
 from dhfkit.tests.fixtures import bare_dhf
 
-ADOPTING = Path(__file__).resolve().parents[2] / "docs" / "adopting.md"
+ADOPTING = Path(__file__).resolve().parents[2] / "docs" / "soup.md"
 
 
 def _examples() -> list[dict]:

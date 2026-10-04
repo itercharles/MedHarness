@@ -52,4 +52,4 @@ def test_every_relative_link_resolves(doc: Path) -> None:
 
 def test_the_scan_found_links() -> None:
     assert sum(len(_links(d)) for d in DOCS) >= 20
-    assert "setting-up-ci" in _anchors(ROOT / "docs" / "adopting.md")
+    assert "setting-up-ci" in _anchors(ROOT / "docs" / "ci.md")
