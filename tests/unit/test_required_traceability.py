@@ -281,19 +281,13 @@ def test_module_swdd_coverage_fails_when_no_swdd_links_module():
 
 def test_swdd_module_required_link_rule():
     from medharness.services.traceability import check_traceability
-    from dhfkit.models.item import Item
 
     config = _module_swdd_config(extra_rules=[
         {"source_type": "SWDD", "direction": "upstream", "field": "module", "target_type": "MODULE", "min_count": 1},
     ])
-    swdd_missing = Item.model_validate({"id": "SWDD-001", "title": "t", "implements": ["SRS-001"]})
     items = [
         {"id": "MODULE-001", "all_linked_uids": []},
-        {
-            "id": "SWDD-001",
-            "all_linked_uids": ["SRS-001"],
-            "module": swdd_missing.module or [],
-        },
+        {"id": "SWDD-001", "all_linked_uids": ["SRS-001"], "module": []},
     ]
     result = check_traceability(items, config)
     failures = [f["id"] for f in result["required"]["failures"]]
