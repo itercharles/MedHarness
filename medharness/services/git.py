@@ -6,6 +6,8 @@ import subprocess
 from medharness.services.envelope import envelope_from
 from pathlib import Path
 
+DEFAULT_SINCE_REF = "origin/main"
+
 
 class DiffUnavailable(Exception):
     """git could not produce the diff — not the same answer as an empty one."""
@@ -210,7 +212,7 @@ def validate_atomic_branch(
     dhf_path: Path,
     cr_id: str,
     *,
-    since_ref: str = "origin/main",
+    since_ref: str = DEFAULT_SINCE_REF,
     code_paths: tuple[str, ...] = (),
 ) -> dict:
     """Read the branch's diff and the CR, then ``judge_branch`` them."""
@@ -273,7 +275,7 @@ def judge_branch(
     dhf_item_changes: dict[str, list[str]],
     code_changes: dict[str, list[str]],
     *,
-    since_ref: str = "origin/main",
+    since_ref: str = DEFAULT_SINCE_REF,
     code_paths: tuple[str, ...] = (),
     unreviewed: dict[str, list[str]] | None = None,
 ) -> dict:

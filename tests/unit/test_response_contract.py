@@ -78,7 +78,7 @@ class TestGenerateCodeContract:
         monkeypatch.setattr("medharness.services.cr_generation.put_session", lambda pr, sid: None)
 
     def test_keys_present_and_no_legacy_leak(self, dhf):
-        with patch("medharness.services.cr_generation._run_claude",
+        with patch("medharness.services.llm._run_claude",
                    return_value=(0, "", "")), \
              patch("subprocess.run", return_value=_empty_diff()):
             result = generate_code("CR-200", dhf)
@@ -90,7 +90,7 @@ class TestGenerateCodeContract:
         )
 
     def test_value_domains(self, dhf):
-        with patch("medharness.services.cr_generation._run_claude",
+        with patch("medharness.services.llm._run_claude",
                    return_value=(0, "", "")), \
              patch("subprocess.run", return_value=_empty_diff()):
             result = generate_code("CR-200", dhf)
@@ -98,7 +98,7 @@ class TestGenerateCodeContract:
         assert result["outcome"] in OUTCOME_VALUES
 
     def test_files_changed_shape(self, dhf):
-        with patch("medharness.services.cr_generation._run_claude",
+        with patch("medharness.services.llm._run_claude",
                    return_value=(0, "", "")), \
              patch("subprocess.run", return_value=_empty_diff()):
             result = generate_code("CR-200", dhf)
@@ -118,7 +118,7 @@ class TestResponseIsJsonSerializable:
 
     def test_code_response_is_json(self, dhf):
         import json
-        with patch("medharness.services.cr_generation._run_claude",
+        with patch("medharness.services.llm._run_claude",
                    return_value=(0, "", "")), \
              patch("subprocess.run", return_value=_empty_diff()):
             result = generate_code("CR-301", dhf)

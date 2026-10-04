@@ -61,7 +61,7 @@ class TestDevelopCrJsonContract:
 
     def test_json_payload_has_documented_keys(self, dhf):
         runner = CliRunner()
-        with patch("medharness.services.cr_generation._run_claude",
+        with patch("medharness.services.llm._run_claude",
                    return_value=(0, "", "")), \
              patch("subprocess.run", return_value=_empty_diff()):
             r = runner.invoke(main, ["--dhf", str(dhf), "build", "code", "--cr", "CR-200"])

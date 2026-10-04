@@ -59,10 +59,10 @@ def _no_github(monkeypatch):
 
 
 def test_build_code_uncommits_and_reports_both_files(repo: Path, monkeypatch) -> None:
-    from medharness.services import cr_generation
+    from medharness.services import cr_generation, llm
 
     start = _git(repo, "rev-parse", "HEAD")
-    monkeypatch.setattr(cr_generation, "_run_claude",
+    monkeypatch.setattr(llm, "_run_claude",
                         _agent(repo, "apps/new_untracked.py", "apps/new_committed.py"))
 
     result = cr_generation.generate_code("CR-001", repo / "DHF")
@@ -75,9 +75,9 @@ def test_build_code_uncommits_and_reports_both_files(repo: Path, monkeypatch) ->
 
 
 def test_build_plan_records_an_uncommitted_item(repo: Path, monkeypatch) -> None:
-    from medharness.services import cr_generation
+    from medharness.services import cr_generation, llm
 
-    monkeypatch.setattr(cr_generation, "_run_claude", _agent(
+    monkeypatch.setattr(llm, "_run_claude", _agent(
         repo, "DHF/items/03_srs/SRS-901.yaml", "DHF/items/03_srs/SRS-902.yaml"))
 
     result = cr_generation.generate_dhf("CR-001", repo / "DHF")
@@ -87,9 +87,9 @@ def test_build_plan_records_an_uncommitted_item(repo: Path, monkeypatch) -> None
 
 
 def test_a_run_that_commits_nothing_warns_nothing(repo: Path, monkeypatch) -> None:
-    from medharness.services import cr_generation
+    from medharness.services import cr_generation, llm
 
-    monkeypatch.setattr(cr_generation, "_run_claude",
+    monkeypatch.setattr(llm, "_run_claude",
                         lambda prompt, *, resume_session="", model="": (0, "done", "s"))
     result = cr_generation.generate_code("CR-001", repo / "DHF")
     assert not any(w["code"] == "agent_commits_undone" for w in result["warnings"])

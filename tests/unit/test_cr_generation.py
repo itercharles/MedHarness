@@ -6,18 +6,10 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from medharness.services.cr_generation import (
-    _auto_post_pr_feedback,
-    _build_review_result,
-    _get_pr_feedback,
-    _parse_review_data,
-    _read_design_review_data,
-    _resolve_stage_llm,
-    _run_claude,
-    _run_openai_compatible,
-    generate_code,
-    generate_dhf,
-)
+from medharness.services.cr_generation import generate_code, generate_dhf
+from medharness.services.llm import _resolve_stage_llm, _run_claude, _run_openai_compatible
+from medharness.services.pr_feedback import _auto_post_pr_feedback, _get_pr_feedback
+from medharness.services.stage_run import _build_review_result, _parse_review_data, _read_design_review_data
 from medharness.services.prompt_assembly import MAX_DIFF_CHARS
 
 
@@ -165,7 +157,7 @@ class TestBuildReviewResult:
 class TestGetPrFeedback:
     """Read through gh, so a test replaces one function instead of urllib."""
 
-    GH = "medharness.services.cr_generation.gh"
+    GH = "medharness.services.pr_feedback.gh"
 
     def _gh(self, reviews: list, comments: list, head: str = "c2"):
         pages = {"42": json.dumps({"head": {"sha": head}}),
@@ -267,7 +259,7 @@ class TestGenerateDhf:
     def test_returns_dict_with_required_keys(self, tmp_path):
         dhf = tmp_path / "DHF"
         dhf.mkdir()
-        with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
+        with patch("medharness.services.llm._run_claude") as mock_claude, \
              patch("medharness.services.cr_generation.git.collect_dhf_item_changes",
                    return_value={"created": [], "updated": [], "deleted": []}), \
              patch("medharness.services.design_validation.validate_generate_dhf", return_value=[]):
@@ -290,7 +282,7 @@ class TestGenerateDhf:
 
         dhf = tmp_path / "DHF"
         dhf.mkdir()
-        with patch("medharness.services.cr_generation._run_claude", return_value=(0, "", "")) as mock_claude, \
+        with patch("medharness.services.llm._run_claude", return_value=(0, "", "")) as mock_claude, \
              patch("medharness.services.cr_generation.git.collect_dhf_item_changes",
                    side_effect=DiffUnavailable("fatal: bad revision 'origin/main'")), \
              patch("medharness.services.design_validation.validate_generate_dhf", return_value=[]), \
@@ -309,7 +301,7 @@ class TestGenerateDhf:
         # generation + design review; no fix pass on happy path
         dhf = tmp_path / "DHF"
         dhf.mkdir()
-        with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
+        with patch("medharness.services.llm._run_claude") as mock_claude, \
              patch("medharness.services.cr_generation.git.collect_dhf_item_changes",
                    return_value={"created": [], "updated": [], "deleted": []}), \
              patch("medharness.services.design_validation.validate_generate_dhf", return_value=[]):
@@ -330,7 +322,7 @@ class TestGenerateDhf:
             {"verdict": "approved", "issues": []},
         ])
 
-        with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
+        with patch("medharness.services.llm._run_claude") as mock_claude, \
              patch("medharness.services.cr_generation.git.collect_dhf_item_changes",
                    return_value={"created": [], "updated": [], "deleted": []}), \
              patch("medharness.services.design_validation.validate_generate_dhf", return_value=[]), \
@@ -360,7 +352,7 @@ class TestGenerateDhf:
         # verdict always needs_revision → loop runs _MAX_DESIGN_REVIEW_CYCLES times then stops
         dhf = tmp_path / "DHF"
         dhf.mkdir()
-        with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
+        with patch("medharness.services.llm._run_claude") as mock_claude, \
              patch("medharness.services.cr_generation.git.collect_dhf_item_changes",
                    return_value={"created": [], "updated": [], "deleted": []}), \
              patch("medharness.services.design_validation.validate_generate_dhf", return_value=[]), \
@@ -370,7 +362,7 @@ class TestGenerateDhf:
             result = generate_dhf("CR-061", dhf)
 
         # generation + (fix + review) * (MAX-1) + final_review
-        from medharness.services.cr_generation import _MAX_DESIGN_REVIEW_CYCLES
+        from medharness.services.stage_run import _MAX_DESIGN_REVIEW_CYCLES
         expected_claude_calls = 1 + (_MAX_DESIGN_REVIEW_CYCLES - 1) * 2 + 1
         assert mock_claude.call_count == expected_claude_calls
         assert result["diagnostics"]["design_review_cycles"] == _MAX_DESIGN_REVIEW_CYCLES
@@ -386,7 +378,7 @@ class TestGenerateDhf:
             {"verdict": "needs_revision", "issues": ["SYS-001: out of scope"]},
             {"verdict": "approved", "issues": []},
         ])
-        with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
+        with patch("medharness.services.llm._run_claude") as mock_claude, \
              patch("medharness.services.cr_generation.git.collect_dhf_item_changes",
                    return_value={"created": [], "updated": [], "deleted": []}), \
              patch("medharness.services.design_validation.validate_generate_dhf",
@@ -417,7 +409,7 @@ class TestGenerateDhf:
             {"verdict": "needs_revision", "issues": ["SYS-001: incomplete"]},
             {"verdict": "approved", "issues": []},
         ])
-        with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
+        with patch("medharness.services.llm._run_claude") as mock_claude, \
              patch("medharness.services.cr_generation.git.collect_dhf_item_changes",
                    side_effect=lambda *_: next(collect_calls)), \
              patch("medharness.services.design_validation.validate_generate_dhf", return_value=[]), \
@@ -433,7 +425,7 @@ class TestGenerateDhf:
         dhf = tmp_path / "DHF"
         dhf.mkdir()
         errors = [{"field": "schema", "issue": "x", "fix": "y"}]
-        with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
+        with patch("medharness.services.llm._run_claude") as mock_claude, \
              patch("medharness.services.cr_generation.git.collect_dhf_item_changes",
                    return_value={"created": [], "updated": [], "deleted": []}), \
              patch("medharness.services.design_validation.validate_generate_dhf",
@@ -445,7 +437,7 @@ class TestGenerateDhf:
     def test_generation_prompt_contains_cr_id_and_key_phrases(self, tmp_path):
         dhf = tmp_path / "DHF"
         dhf.mkdir()
-        with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
+        with patch("medharness.services.llm._run_claude") as mock_claude, \
              patch("medharness.services.cr_generation.git.collect_dhf_item_changes",
                    return_value={"created": [], "updated": [], "deleted": []}), \
              patch("medharness.services.design_validation.validate_generate_dhf", return_value=[]):
@@ -460,7 +452,7 @@ class TestGenerateDhf:
         dhf = tmp_path / "DHF"
         dhf.mkdir()
         items_changed = {"created": ["SYS-001"], "updated": ["SRS-001"], "deleted": []}
-        with patch("medharness.services.cr_generation._run_claude", return_value=(0, "", "")), \
+        with patch("medharness.services.llm._run_claude", return_value=(0, "", "")), \
              patch("medharness.services.cr_generation.git.collect_dhf_item_changes", return_value=items_changed), \
              patch("medharness.services.design_validation.validate_generate_dhf", return_value=[]) as mock_validate:
             generate_dhf("CR-054", dhf)
@@ -469,8 +461,8 @@ class TestGenerateDhf:
     def test_revision_mode_uses_pr_feedback(self, tmp_path):
         dhf = tmp_path / "DHF"
         dhf.mkdir()
-        with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
-             patch("medharness.services.cr_generation._get_pr_feedback") as mock_fb, \
+        with patch("medharness.services.llm._run_claude") as mock_claude, \
+             patch("medharness.services.pr_feedback._get_pr_feedback") as mock_fb, \
              patch("medharness.services.cr_generation.git.collect_dhf_item_changes",
                    return_value={"created": [], "updated": [], "deleted": []}), \
              patch("medharness.services.design_validation.validate_generate_dhf", return_value=[]):
@@ -490,7 +482,7 @@ class TestGenerateDhf:
         dhf = tmp_path / "DHF"
         dhf.mkdir()
         errors = [{"field": "schema", "issue": "x", "fix": "y"}]
-        with patch("medharness.services.cr_generation._run_claude", return_value=(0, "", "")), \
+        with patch("medharness.services.llm._run_claude", return_value=(0, "", "")), \
              patch("medharness.services.cr_generation.git.collect_dhf_item_changes",
                    return_value={"created": [], "updated": [], "deleted": []}), \
              patch("medharness.services.design_validation.validate_generate_dhf",
@@ -509,7 +501,7 @@ class TestGenerateDhf:
             return 0, "", f"sess-{len(resume_sessions_captured)}"
 
         first_errors = [{"field": "f", "issue": "i", "fix": "x"}]
-        with patch("medharness.services.cr_generation._run_claude", side_effect=_stub), \
+        with patch("medharness.services.llm._run_claude", side_effect=_stub), \
              patch("medharness.services.cr_generation.git.collect_dhf_item_changes",
                    return_value={"created": [], "updated": [], "deleted": []}), \
              patch("medharness.services.design_validation.validate_generate_dhf",
@@ -523,12 +515,12 @@ class TestGenerateDhf:
         dhf.mkdir()
         posted_bodies: list[str] = []
         errors = [{"field": "crs", "issue": "no CRS item", "fix": "create CRS-001"}]
-        with patch("medharness.services.cr_generation._run_claude", return_value=(0, "", "")), \
+        with patch("medharness.services.llm._run_claude", return_value=(0, "", "")), \
              patch("medharness.services.cr_generation.git.collect_dhf_item_changes",
                    return_value={"created": [], "updated": [], "deleted": []}), \
              patch("medharness.services.design_validation.validate_generate_dhf",
                    return_value=errors), \
-             patch("medharness.services.cr_generation.post_pr_comment",
+             patch("medharness.services.pr_feedback.post_pr_comment",
                    side_effect=lambda pr, body, **kw: posted_bodies.append(body) or "https://err-url"):
             result = generate_dhf("CR-099", dhf, pr_number=55)
         assert result["outcome"] == "completed_with_errors"
@@ -539,12 +531,12 @@ class TestGenerateDhf:
         dhf = tmp_path / "DHF"
         dhf.mkdir()
         errors = [{"field": "crs", "issue": "no CRS item", "fix": "create CRS-001"}]
-        with patch("medharness.services.cr_generation._run_claude", return_value=(0, "", "")), \
+        with patch("medharness.services.llm._run_claude", return_value=(0, "", "")), \
              patch("medharness.services.cr_generation.git.collect_dhf_item_changes",
                    return_value={"created": [], "updated": [], "deleted": []}), \
              patch("medharness.services.design_validation.validate_generate_dhf",
                    return_value=errors), \
-             patch("medharness.services.cr_generation.post_pr_comment") as mock_post:
+             patch("medharness.services.pr_feedback.post_pr_comment") as mock_post:
             result = generate_dhf("CR-099", dhf, pr_number=None)
         mock_post.assert_not_called()
         assert "pr_comments" not in result
@@ -563,7 +555,7 @@ class TestGenerateCode:
     def test_returns_dict_with_required_keys(self, tmp_path):
         dhf = tmp_path / "DHF"
         dhf.mkdir()
-        with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
+        with patch("medharness.services.llm._run_claude") as mock_claude, \
              patch("medharness.services.git.collect_path_changes", return_value={"created": [], "updated": [], "deleted": []}):
             mock_claude.return_value = (0, "", "")
             result = generate_code("CR-020", dhf)
@@ -578,7 +570,7 @@ class TestGenerateCode:
     def test_happy_path_runs_develop_then_review(self, tmp_path):
         dhf = tmp_path / "DHF"
         dhf.mkdir()
-        with patch("medharness.services.cr_generation._run_claude") as mock_claude:
+        with patch("medharness.services.llm._run_claude") as mock_claude:
             mock_claude.return_value = (0, "", "")
             result = generate_code("CR-021", dhf)
         assert mock_claude.call_count == 2
@@ -597,7 +589,7 @@ class TestGenerateCode:
             "M\tapps/client/src/bar.tsx\n"
             "D\tpackages/shared-types/src/old.ts\n"
         )
-        with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
+        with patch("medharness.services.llm._run_claude") as mock_claude, \
              patch("subprocess.run", side_effect=lambda cmd, **kw: MagicMock(
                  stdout=diff_output if "diff" in cmd else "", returncode=0)):
             mock_claude.return_value = (0, "", "")
@@ -612,7 +604,7 @@ class TestGenerateCode:
         """No git here, so the diff cannot be read — which is not "no files changed"."""
         dhf = tmp_path / "DHF"
         dhf.mkdir()
-        with patch("medharness.services.cr_generation._run_claude", return_value=(0, "", "")):
+        with patch("medharness.services.llm._run_claude", return_value=(0, "", "")):
             result = generate_code("CR-026", dhf)
         assert result["artifacts"]["files_changed"] is None
         assert any(w.get("code") == "diff_unavailable" for w in result["warnings"]), result["warnings"]
@@ -620,7 +612,7 @@ class TestGenerateCode:
     def test_develop_prompt_passed_to_claude(self, tmp_path):
         dhf = tmp_path / "DHF"
         dhf.mkdir()
-        with patch("medharness.services.cr_generation._run_claude") as mock_claude:
+        with patch("medharness.services.llm._run_claude") as mock_claude:
             mock_claude.return_value = (0, "", "")
             generate_code("CR-022", dhf)
         prompt = mock_claude.call_args_list[0][0][0]
@@ -630,8 +622,8 @@ class TestGenerateCode:
     def test_revision_mode_uses_pr_feedback(self, tmp_path):
         dhf = tmp_path / "DHF"
         dhf.mkdir()
-        with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
-             patch("medharness.services.cr_generation._get_pr_feedback") as mock_fb:
+        with patch("medharness.services.llm._run_claude") as mock_claude, \
+             patch("medharness.services.pr_feedback._get_pr_feedback") as mock_fb:
             mock_claude.return_value = (0, "", "")
             mock_fb.return_value = {
                 "prompt_text": '{"comments": [], "reviews": []}',
@@ -647,7 +639,7 @@ class TestGenerateCode:
         dhf = tmp_path / "DHF"
         dhf.mkdir()
         diff_output = "+console.log('new code')\n"
-        with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
+        with patch("medharness.services.llm._run_claude") as mock_claude, \
              patch("medharness.services.git.compute_diff",
                     return_value=diff_output):
             mock_claude.return_value = (0, "", "")
@@ -660,7 +652,7 @@ class TestGenerateCode:
     def test_diff_not_injected_when_no_changes(self, tmp_path):
         dhf = tmp_path / "DHF"
         dhf.mkdir()
-        with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
+        with patch("medharness.services.llm._run_claude") as mock_claude, \
              patch("medharness.services.git.compute_diff",
                     return_value=""):
             mock_claude.return_value = (0, "", "")
@@ -671,7 +663,7 @@ class TestGenerateCode:
     def test_diff_not_injected_on_git_failure(self, tmp_path):
         dhf = tmp_path / "DHF"
         dhf.mkdir()
-        with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
+        with patch("medharness.services.llm._run_claude") as mock_claude, \
              patch("medharness.services.git.compute_diff",
                     return_value=None):
             mock_claude.return_value = (0, "", "")
@@ -683,7 +675,7 @@ class TestGenerateCode:
         dhf = tmp_path / "DHF"
         dhf.mkdir()
         large_diff = "+" + "x" * (MAX_DIFF_CHARS + 1000)
-        with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
+        with patch("medharness.services.llm._run_claude") as mock_claude, \
              patch("medharness.services.git.compute_diff",
                     return_value=large_diff):
             mock_claude.return_value = (0, "", "")
@@ -706,8 +698,8 @@ class TestGenerateCode:
             resume_sessions_captured.append(resume_session)
             return 0, "", f"sess-{len(resume_sessions_captured)}"
 
-        with patch("medharness.services.cr_generation._run_claude", side_effect=_stub), \
-             patch("medharness.services.cr_generation._get_pr_feedback",
+        with patch("medharness.services.llm._run_claude", side_effect=_stub), \
+             patch("medharness.services.pr_feedback._get_pr_feedback",
                    return_value={"prompt_text": "", "diagnostics": {"comments_count": 0, "reviews_count": 0}, "warnings": []}):
             generate_code("CR-030", dhf, pr_number=99)
         assert all(s == "" for s in resume_sessions_captured[:1]), (
@@ -719,10 +711,10 @@ class TestGenerateCode:
 
         dhf = bare_dhf(tmp_path / "DHF")
         posted_bodies: list[str] = []
-        with patch("medharness.services.cr_generation._run_claude", return_value=(0, "", "")), \
-             patch("medharness.services.cr_generation._get_pr_feedback",
+        with patch("medharness.services.llm._run_claude", return_value=(0, "", "")), \
+             patch("medharness.services.pr_feedback._get_pr_feedback",
                    return_value={"prompt_text": "", "diagnostics": {"comments_count": 0, "reviews_count": 0}, "warnings": []}), \
-             patch("medharness.services.cr_generation.post_pr_comment",
+             patch("medharness.services.pr_feedback.post_pr_comment",
                    side_effect=lambda pr, body, **kw: posted_bodies.append(body) or "url") as mock_post, \
              patch("medharness.services.git.collect_path_changes", return_value={"created": [], "updated": [], "deleted": []}), \
              patch("medharness.services.design_validation.validate_dhf_structure", return_value=[]), \
@@ -743,7 +735,7 @@ class TestGenerateCode:
             {"verdict": "needs_revision", "issues": ["src/foo.ts:12: missing null check"]},
             {"verdict": "approved", "issues": []},
         ])
-        with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
+        with patch("medharness.services.llm._run_claude") as mock_claude, \
              patch("medharness.services.cr_generation._parse_review_data",
                    side_effect=lambda text: next(data_sequence)):
             mock_claude.return_value = (0, "", "")
@@ -770,13 +762,13 @@ class TestGenerateCode:
         # verdict always needs_revision → loop runs _MAX_CODE_REVIEW_CYCLES times then stops
         dhf = tmp_path / "DHF"
         dhf.mkdir()
-        with patch("medharness.services.cr_generation._run_claude") as mock_claude, \
+        with patch("medharness.services.llm._run_claude") as mock_claude, \
              patch("medharness.services.cr_generation._parse_review_data",
                    return_value={"verdict": "needs_revision", "issues": ["file.ts:1: problem"]}):
             mock_claude.return_value = (0, "", "")
             result = generate_code("CR-071", dhf)
 
-        from medharness.services.cr_generation import _MAX_CODE_REVIEW_CYCLES
+        from medharness.services.stage_run import _MAX_CODE_REVIEW_CYCLES
         # develop + (_MAX - 1) * (review + fix) + final review
         expected = 1 + (_MAX_CODE_REVIEW_CYCLES - 1) * 2 + 1
         assert mock_claude.call_count == expected
@@ -898,7 +890,7 @@ class TestPlanContext:
 
 
 class TestAutoPostPrFeedback:
-    MOCK_TARGET = "medharness.services.cr_generation.post_pr_comment"
+    MOCK_TARGET = "medharness.services.pr_feedback.post_pr_comment"
 
     def test_warnings_only_posts_one_comment(self):
         result = {"warnings": [{"code": "W001", "message": "something odd"}], "outcome": "ok"}
@@ -1191,14 +1183,14 @@ class TestDiagnosticsModelFields:
         dhf = tmp_path / "DHF"
         dhf.mkdir()
 
-        from medharness.services.cr_generation import LLMConfig
+        from medharness.services.llm import LLMConfig
         configs_used: list[LLMConfig] = []
 
         def capture(prompt, *, config, resume_session=""):
             configs_used.append(config)
             return 0, "", ""
 
-        with patch("medharness.services.cr_generation._run_llm", side_effect=capture), \
+        with patch("medharness.services.stage_run._run_llm", side_effect=capture), \
              patch("medharness.services.cr_generation.git.collect_dhf_item_changes",
                    return_value={"created": [], "updated": [], "deleted": []}), \
              patch("medharness.services.design_validation.validate_generate_dhf", return_value=[]):
@@ -1220,14 +1212,14 @@ class TestDiagnosticsModelFields:
         dhf = tmp_path / "DHF"
         dhf.mkdir()
 
-        from medharness.services.cr_generation import LLMConfig
+        from medharness.services.llm import LLMConfig
         configs_used: list[LLMConfig] = []
 
         def capture(prompt, *, config, resume_session=""):
             configs_used.append(config)
             return 0, "", ""
 
-        with patch("medharness.services.cr_generation._run_llm", side_effect=capture):
+        with patch("medharness.services.stage_run._run_llm", side_effect=capture):
             generate_code("CR-073", dhf)
 
         providers = [c.provider for c in configs_used]
