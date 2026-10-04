@@ -362,11 +362,11 @@ verification_method: [Test]
 | `id` | Required. Its prefix (`SRS-`) picks the doc type |
 | Fields | Only those the doc type declares. An undeclared field fails `medharness verify dhf`, naming it — declare it by overriding the doc type first |
 | Links | Fields of format `relationship` or `item_multiselect`: a list of IDs pointing up the V-model, each of a type the field's `target_types` accepts. Which are required is `required_traceability` in `global.yaml` |
-| Types | The 13 defaults, plus any `DHF/config/doc_types/<type>.yaml` of your own, which replaces the default of that code — see [adopting.md](configuration.md#changing-the-defaults) |
+| Types | The 13 defaults, plus any `DHF/config/doc_types/<type>.yaml` of your own, which replaces the default of that code — see [configuration.md](configuration.md#changing-the-defaults) |
 
 Check an export with `medharness verify dhf`: it validates each file against its type, then the links and coverage of the design they describe.
 
-The format is covered by `CONTRACT_VERSION`: renaming or removing a field the defaults declare is a breaking change.
+Renaming or removing a field the defaults declare is a breaking change, and the changelog says so.
 
 ---
 

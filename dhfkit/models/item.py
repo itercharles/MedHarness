@@ -3,14 +3,6 @@
 from pydantic import BaseModel, Field, ConfigDict
 from typing import Optional, List, Dict
 from datetime import date
-from enum import Enum
-
-
-class VerificationStatus(str, Enum):
-    """Verification status for items."""
-    PASS = "PASS"
-    FAIL = "FAIL"
-    PENDING = "PENDING"
 
 
 class Item(BaseModel):
@@ -90,7 +82,3 @@ class Item(BaseModel):
             if len(parts) == 2:
                 return parts[0] + '-'
         return ''
-
-    def get_parent_uids(self) -> List[str]:
-        """Get list of parent UIDs (all linked items)."""
-        return self.all_linked_uids

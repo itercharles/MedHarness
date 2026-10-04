@@ -5,9 +5,6 @@ makes, and it used to reach the terminal as a `ValidationError` traceback out
 of nine of the thirteen commands — `verify dhf` included, whose whole purpose
 is reporting exactly that kind of problem.
 
-Both CLIs use this group. `dhfkit` owns it because `dhfkit` must not import
-`medharness`, and a DHF data fault is a `dhfkit` concept.
-
 The gates keep their documented shape: exit 1 with nothing on stdout, which
 `docs/interface.md` defines as "the gate never ran". That is true here — the
 input could not be read — and it is what the commands already did, minus the

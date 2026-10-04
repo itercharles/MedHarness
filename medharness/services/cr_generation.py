@@ -8,9 +8,15 @@ from pathlib import Path
 from medharness.services import checks as check_runner
 from medharness.services import design_validation, git
 from medharness.services.cr_impact import _record_design_impact_in_cr
-from medharness.services.github_session import get_session, put_session
 from medharness.services.llm import _model_label, _resolve_stage_llm
-from medharness.services.pr_feedback import _auto_post_pr_feedback, _pr_base, _pr_feedback, _push_to_pr
+from medharness.services.pr_feedback import (
+    _auto_post_pr_feedback,
+    _pr_base,
+    _pr_feedback,
+    _push_to_pr,
+    get_session,
+    put_session,
+)
 from medharness.services.prompt_assembly import (
     MAX_DIFF_CHARS,
     _assemble_develop_prompt,

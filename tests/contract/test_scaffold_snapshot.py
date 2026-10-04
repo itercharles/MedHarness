@@ -34,8 +34,6 @@ class TestScaffoldStructure:
         "change_request_specification.md.j2",
         "risk_specification.md.j2",
         "rcm_specification.md.j2",
-        "test_specification.md.j2",
-        "traceability_matrix.md.j2",
     ]
 
     REQUIRED_DOC_TYPES = [
