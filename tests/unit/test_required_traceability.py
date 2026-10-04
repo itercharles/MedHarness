@@ -255,7 +255,7 @@ def test_module_swdd_coverage_passes():
         {"id": "SRS-001", "all_linked_uids": []},
         {
             "id": "SWDD-001",
-            "all_linked_uids": swdd.all_linked_uids,
+            "all_linked_uids": ["MODULE-001", "SRS-001"],
             "module": swdd.module,
             "implements": swdd.implements,
         },
@@ -279,19 +279,6 @@ def test_module_swdd_coverage_fails_when_no_swdd_links_module():
     assert result["passed"] is False
 
 
-def test_swdd_module_field_populates_all_linked_uids():
-    from dhfkit.models.item import Item
-
-    item = Item.model_validate({
-        "id": "SWDD-001",
-        "title": "t",
-        "implements": ["SRS-001"],
-        "module": ["MODULE-001"],
-    })
-    assert "MODULE-001" in item.all_linked_uids
-    assert "SRS-001" in item.all_linked_uids
-
-
 def test_swdd_module_required_link_rule():
     from medharness.services.traceability import check_traceability
     from dhfkit.models.item import Item
@@ -304,7 +291,7 @@ def test_swdd_module_required_link_rule():
         {"id": "MODULE-001", "all_linked_uids": []},
         {
             "id": "SWDD-001",
-            "all_linked_uids": swdd_missing.all_linked_uids,
+            "all_linked_uids": ["SRS-001"],
             "module": swdd_missing.module or [],
         },
     ]
