@@ -89,7 +89,7 @@ class TestGenerateDhfSuccessStub:
     @pytest.fixture(autouse=True)
     def stub_claude_ok(self, monkeypatch):
         monkeypatch.setattr(
-            "medharness.services.cr_generation._run_claude",
+            "medharness.services.llm._run_claude",
             lambda prompt, *, resume_session="", model="": (0, "DHF generation complete.", "sess-abc"),
         )
         monkeypatch.setattr("medharness.services.cr_generation.get_session", lambda pr: "")
@@ -177,7 +177,7 @@ class TestGenerateDhfToolErrorStub:
     @pytest.fixture(autouse=True)
     def stub_claude_fail(self, monkeypatch):
         monkeypatch.setattr(
-            "medharness.services.cr_generation._run_claude",
+            "medharness.services.llm._run_claude",
             lambda prompt, *, resume_session="", model="": (1, "fatal: claude not found", ""),
         )
         monkeypatch.setattr("medharness.services.cr_generation.get_session", lambda pr: "")
@@ -216,12 +216,12 @@ class TestGenerateDhfRevisionMode:
     @pytest.fixture(autouse=True)
     def stub_claude_ok(self, monkeypatch):
         monkeypatch.setattr(
-            "medharness.services.cr_generation._run_claude",
+            "medharness.services.llm._run_claude",
             lambda prompt, *, resume_session="", model="": (0, "Revision complete.", "sess-rev"),
         )
         # Stub PR feedback fetch so no network call is made.
         monkeypatch.setattr(
-            "medharness.services.cr_generation._get_pr_feedback",
+            "medharness.services.pr_feedback._get_pr_feedback",
             lambda pr_number: {
                 "prompt_text": "(stubbed feedback)",
                 "diagnostics": {"attempted": True, "pr_number": pr_number,
@@ -279,7 +279,7 @@ class TestGenerateCodeSuccessStub:
     @pytest.fixture(autouse=True)
     def stub_claude_ok(self, monkeypatch):
         monkeypatch.setattr(
-            "medharness.services.cr_generation._run_claude",
+            "medharness.services.llm._run_claude",
             lambda prompt, *, resume_session="", model="": (0, "Implementation complete.", "sess-code"),
         )
         monkeypatch.setattr("medharness.services.cr_generation.get_session", lambda pr: "")
@@ -382,7 +382,7 @@ class TestGenerateDhfFixPassFlow:
                 # Fix-pass call (n >= 2): noop — cascade error remains.
                 return 0, "ok", ""
 
-            with mock.patch("medharness.services.cr_generation._run_claude", _stub), \
+            with mock.patch("medharness.services.llm._run_claude", _stub), \
                  mock.patch("medharness.services.cr_generation.get_session", return_value=""), \
                  mock.patch("medharness.services.cr_generation.put_session", return_value=""):
                 from medharness.services.cr_generation import generate_dhf

@@ -22,7 +22,7 @@ def dhf(tmp_path: Path, monkeypatch) -> Path:
 
     def no_model(*a, **k):
         raise AssertionError("--prompt started a model")
-    monkeypatch.setattr("medharness.services.cr_generation._run_claude", no_model)
+    monkeypatch.setattr("medharness.services.llm._run_claude", no_model)
     return tmp_path / "DHF"
 
 

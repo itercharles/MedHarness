@@ -375,8 +375,8 @@ shipping the guess. Without `--check`, the model finds the commands in `AGENTS.m
 `CLAUDE.md` and nothing enforces them.
 
 **Check out full history** (`fetch-depth: 0`) wherever a job runs `build plan|code`:
-they compare the branch with where it left `origin/main`, and a shallow clone cannot
-reach that point (the run stops with git's own reason). A `pull_request_review` run
+they compare the branch with where it left `origin/main` (`--since-ref REF` names another
+base, such as `origin/develop`), and a shallow clone cannot reach that point (the run stops with git's own reason). A `pull_request_review` run
 also uses the workflow file of the PR's head commit, so a branch cut before you fixed
 the workflow keeps the old one until you update it with `main`.
 
@@ -397,7 +397,7 @@ push. Either way the agent does not commit: if it does anyway — a repository's
 answer carries an `agent_commits_undone` warning.
 
 `artifacts.items_changed` and `artifacts.files_changed` are the branch against
-`origin/main`, committed or not — the CR's whole change set across every run,
+its base (`origin/main`, or `--since-ref`), committed or not — the CR's whole change set across every run,
 not what this run added. `build plan` records `items_changed` as the CR's
 `affected_items`.
 
@@ -677,6 +677,10 @@ A rule can name a second way to be satisfied with `or_covered_by: <type>`: the d
 from a customer need or is implemented for a risk control (an RCM that lists it under
 `implements`). Write the list again without `or_covered_by` to require a CRS always, or
 without the rule to drop it; `required_traceability: []` turns every rule off.
+
+`item create` and `item update` refuse a link to an item that does not exist, so a
+typo never reaches the DHF; `affected_items` is the exception, because it also names
+items the branch deleted.
 
 Everything reads this: `verify dhf` (dangling and wrong-type links, required links,
 coverage), `item get` (`all_linked_uids`), the release's traceability reports (one per

@@ -69,7 +69,7 @@ this run to commit.
 
 5. **Reconcile implementation against the plan and DHF items.**
 
-   Run `git diff origin/main` scoped to the source roots listed in `AGENTS.md`/`CLAUDE.md`
+   Run `git diff $(git merge-base {{since_ref}} HEAD)` scoped to the source roots listed in `AGENTS.md`/`CLAUDE.md`
    to see every file changed.
    Then check:
 

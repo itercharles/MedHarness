@@ -5,6 +5,8 @@ from __future__ import annotations
 import importlib.resources
 from pathlib import Path
 
+from medharness.services.git import DEFAULT_SINCE_REF
+
 
 MAX_ITEMS = 300
 MAX_DIFF_CHARS = 40_000
@@ -241,16 +243,17 @@ def checks_section(checks: tuple[str, ...]) -> str:
 
 def _assemble_develop_prompt(cr_id: str, dhf_path: Path | None = None,
                              warnings: list[str] | None = None,
-                             checks: tuple[str, ...] = ()) -> str:
-    prompt = _load_prompt("cr_develop.md").replace("{{cr_id}}", cr_id)
+                             checks: tuple[str, ...] = (),
+                             since_ref: str = DEFAULT_SINCE_REF) -> str:
+    prompt = _load_prompt("cr_develop.md").replace("{{cr_id}}", cr_id).replace("{{since_ref}}", since_ref)
     if dhf_path is not None:
         prompt = _enrich(prompt, lambda p: _render_code_context(_cr_context(p, cr_id)),
                          dhf_path, warnings)
     return prompt + checks_section(checks)
 
 
-def _assemble_review_code_prompt(cr_id: str) -> str:
-    return _load_prompt("cr_review_code.md").replace("{{cr_id}}", cr_id)
+def _assemble_review_code_prompt(cr_id: str, since_ref: str = DEFAULT_SINCE_REF) -> str:
+    return _load_prompt("cr_review_code.md").replace("{{cr_id}}", cr_id).replace("{{since_ref}}", since_ref)
 
 
 MAX_SIBLINGS = 15
@@ -315,8 +318,9 @@ def _render_neighbourhoods(store, changed_items: dict[str, list[str]], cr_id: st
 
 def _assemble_review_design_prompt(cr_id: str, dhf_path: Path | None = None,
                                    changed_items: dict[str, list[str]] | None = None,
-                                   warnings: list[dict] | None = None) -> str:
-    prompt = _load_prompt("cr_review_design.md").replace("{{cr_id}}", cr_id)
+                                   warnings: list[dict] | None = None,
+                                   since_ref: str = DEFAULT_SINCE_REF) -> str:
+    prompt = _load_prompt("cr_review_design.md").replace("{{cr_id}}", cr_id).replace("{{since_ref}}", since_ref)
     if dhf_path is not None and changed_items:
         prompt = _enrich(
             prompt, lambda p: _render_neighbourhoods(_load_adapter(p, "the design review"), changed_items, cr_id),

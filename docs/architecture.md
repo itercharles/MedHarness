@@ -199,7 +199,10 @@ as `provider:model` — `anthropic` (the `claude` CLI, the default), `openai`,
 
 | Module | Does |
 |---|---|
-| `services/cr_generation.py` | Stage orchestration, model calls, PR feedback |
+| `services/cr_generation.py` | The two stages, `generate_dhf` (`build plan`) and `generate_code` (`build code`) |
+| `services/stage_run.py` | What the stages share: `Run` (steps, warnings, the session, the answer's shape), the model step, review parsing |
+| `services/llm.py` | Running a model: provider config, the `claude` CLI, the OpenAI-compatible loop |
+| `services/pr_feedback.py` | What a reviewer asked for on a PR, and pushing a run's work back to it |
 | `services/context.py` | What the model is told about the DHF for one CR: the whole DHF summarized until the CR records `affected_items`, then those items in full |
 | `services/prompt_assembly.py` | Loads prompts from `medharness/prompts/` and renders `services/context.py` into them |
 | `services/cr_impact.py` | Writes `affected_items` back onto the CR |

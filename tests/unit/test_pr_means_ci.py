@@ -13,7 +13,7 @@ from unittest.mock import patch
 
 import pytest
 
-from medharness.services import cr_generation, git
+from medharness.services import cr_generation, git, llm, pr_feedback
 
 
 def _git(repo: Path, *args: str) -> str:
@@ -59,16 +59,16 @@ class TestCommitAndPush:
 class TestPushToThePr:
     def test_an_unreadable_pr_is_an_error(self, clone: Path) -> None:
         errors: list[dict] = []
-        with patch("medharness.services.cr_generation.gh", return_value=(1, "no such PR")):
-            cr_generation._push_to_pr(clone, 7, "m", errors)
+        with patch("medharness.services.pr_feedback.gh", return_value=(1, "no such PR")):
+            pr_feedback._push_to_pr(clone, 7, "m", errors)
         assert errors and errors[0]["field"] == "pr_push"
         assert "no such PR" in errors[0]["issue"]
 
     def test_it_pushes_to_the_prs_branch(self, clone: Path) -> None:
         (clone / "new.txt").write_text("x\n")
         errors: list[dict] = []
-        with patch("medharness.services.cr_generation.gh", return_value=(0, "design/CR-001")):
-            cr_generation._push_to_pr(clone, 7, "m", errors)
+        with patch("medharness.services.pr_feedback.gh", return_value=(0, "design/CR-001")):
+            pr_feedback._push_to_pr(clone, 7, "m", errors)
         assert errors == []
         assert _git(clone, "status", "--porcelain") == ""
 
@@ -79,19 +79,19 @@ class TestRevisionNeedsSomethingToRevise:
                 "diagnostics": {"comments_count": comments, "reviews_count": reviews}}
 
     def test_a_new_pr_with_no_reviews_generates(self) -> None:
-        with patch.object(cr_generation, "_get_pr_feedback", return_value=self._feedback(0, 0)):
-            assert cr_generation._pr_feedback(7, [], {}, []) is None
+        with patch.object(pr_feedback, "_get_pr_feedback", return_value=self._feedback(0, 0)):
+            assert pr_feedback._pr_feedback(7, [], {}, []) is None
 
     def test_a_reviewed_pr_revises(self) -> None:
-        with patch.object(cr_generation, "_get_pr_feedback", return_value=self._feedback(0, 1)):
-            assert cr_generation._pr_feedback(7, [], {}, []) is not None
+        with patch.object(pr_feedback, "_get_pr_feedback", return_value=self._feedback(0, 1)):
+            assert pr_feedback._pr_feedback(7, [], {}, []) is not None
 
 
 def test_without_pr_nothing_is_pushed(tmp_path: Path) -> None:
     from dhfkit.tests.fixtures import bare_dhf
 
     dhf = bare_dhf(tmp_path / "DHF")
-    with patch.object(cr_generation, "_run_claude", return_value=(0, "", "")), \
+    with patch.object(llm, "_run_claude", return_value=(0, "", "")), \
          patch.object(cr_generation, "_push_to_pr") as push:
         cr_generation.generate_code("CR-001", dhf)
     push.assert_not_called()

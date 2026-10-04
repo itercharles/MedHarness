@@ -25,6 +25,8 @@ _ITEM_LINK_FIELDS = _TRACEABILITY_LINK_FIELDS + (
     "affected_items", "affected_risk_items",
     "target_release", "found_in_release", "fixed_in_release",
 )
+# What a branch changed, deleted items included: they stay named after they are gone.
+_HISTORICAL_LINK_FIELDS = frozenset({"affected_items"})
 _UID_PATTERN = re.compile(r"^[A-Z][A-Z0-9]*(-[A-Z0-9]+)*-\d+$")
 
 
@@ -153,16 +155,21 @@ class ItemStore:
             result.append(self._enrich_item_dict(item))
         return result
 
-    def _validate_item_links(self, data: dict) -> None:
-        """Raise ValidationError if any relationship field references an unknown prefix.
+    def _validate_item_links(self, data: dict, written: set[str] | None = None) -> None:
+        """Raise ValidationError if a link field holds something that is not an item.
 
-        Checks all known link fields (derives_from, implements, mitigates, etc.)
-        to ensure every UID value matches a known doc-type prefix. This guards
-        against malformed LLM output being persisted silently.
+        Checks all known link fields (derives_from, implements, mitigates, etc.): each
+        value must be a UID of a known type, of an item that exists. This guards against
+        malformed LLM output being persisted silently. ``written`` limits the existence
+        check to the fields an update writes, so an old dangling link elsewhere on the
+        item does not block an unrelated edit.
         """
         known_prefixes = {dt.prefix for dt in self._config.doc_types}
+        uid = data.get("id") or data.get("uid") or ""
+        doc_type = self._config.doc_type_of(uid) if uid else None
+        declared = tuple(self._config.link_properties(doc_type.code)) if doc_type else ()
         errors = []
-        for field in _ITEM_LINK_FIELDS:
+        for field in dict.fromkeys(_ITEM_LINK_FIELDS + declared):
             val = data.get(field)
             if not val:
                 continue
@@ -188,6 +195,9 @@ class ItemStore:
                         f"{field}: '{uid}' has unknown prefix '{prefix}' "
                         f"(known: {sorted(known_prefixes)})"
                     )
+                elif (field not in _HISTORICAL_LINK_FIELDS and (written is None or field in written)
+                      and self._adapter.load_by_uid(uid) is None):
+                    errors.append(f"{field}: '{uid}' does not exist; create it first, or leave it out")
         errors += self._link_type_errors(data)
         errors += self._status_errors(data)
         if errors:
@@ -299,7 +309,7 @@ class ItemStore:
         updated_data.update(data)
         # Remove keys explicitly set to None (signal to clear the field)
         updated_data = {k: v for k, v in updated_data.items() if v is not None}
-        self._validate_item_links(updated_data)
+        self._validate_item_links(updated_data, written=set(data))
         # What the loader would refuse must not be written: one unreadable item
         # makes the whole DHF unreadable, this command included.
         try:

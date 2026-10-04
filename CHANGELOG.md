@@ -11,6 +11,23 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.53.0] — 2026-10-04
+
+### Added
+
+- **`build plan` and `build code` take `--since-ref REF`**, as `verify changes` already did. A repository whose
+  base branch is not `origin/main` could not use either stage: the base was fixed in seven places. The prompts
+  the agent follows (`git diff ...`) use the same ref.
+
+### Changed
+
+- **`item create` and `item update` refuse a link to an item that does not exist.** `reviewed_items:
+  ["CRS-999"]` used to be written and found only by `verify dhf`. The check covers the link fields the item's
+  type declares, and on an update only the fields it writes, so an old dangling link elsewhere does not block
+  an unrelated edit. `affected_items` is exempt: it names items the branch deleted too.
+- **`cr_generation.py` is split** into `llm.py` (model calls), `pr_feedback.py`, `stage_run.py` (a `Run` that
+  both stages share) and the two stage functions. No behaviour change.
+
 ## [0.52.0] — 2026-10-04
 
 ### Added

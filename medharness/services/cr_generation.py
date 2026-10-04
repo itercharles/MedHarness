@@ -2,23 +2,15 @@
 
 from __future__ import annotations
 
-import json
 import os
-import re
-import subprocess
-import time
-import urllib.error
-import urllib.request
-from dataclasses import dataclass
-from datetime import datetime, timezone
 from pathlib import Path
 
 from medharness.services import checks as check_runner
 from medharness.services import design_validation, git
 from medharness.services.cr_impact import _record_design_impact_in_cr
 from medharness.services.github_session import get_session, put_session
-from medharness.services.gh import gh
-from medharness.services.github_pr import post_pr_comment
+from medharness.services.llm import _model_label, _resolve_stage_llm
+from medharness.services.pr_feedback import _auto_post_pr_feedback, _pr_feedback, _push_to_pr
 from medharness.services.prompt_assembly import (
     MAX_DIFF_CHARS,
     _assemble_develop_prompt,
@@ -28,11 +20,26 @@ from medharness.services.prompt_assembly import (
     _enrich_with_plan_context,
     checks_section,
 )
+from medharness.services.stage_run import (
+    Run,
+    _MAX_CHECK_FIX_CYCLES,
+    _MAX_CODE_REVIEW_CYCLES,
+    _MAX_DESIGN_REVIEW_CYCLES,
+    _augment_review_prompt,
+    _begin_step,
+    _build_review_result,
+    _finish_step,
+    _format_error_lines,
+    _parse_review_data,
+    _read_design_review_data,
+    _warning,
+)
 
 __all__ = [
     "generate_code",
     "generate_dhf",
 ]
+
 
 def _code_paths(dhf_path: Path, repo_root: Path) -> tuple[str, ...]:
     """Where `build code` looks for the code it wrote, for the diff it shows the model
@@ -50,693 +57,25 @@ def _code_paths(dhf_path: Path, repo_root: Path) -> tuple[str, ...]:
     return (".", f":(exclude){dhf}", ":(exclude)docs/reviews")
 
 
-_MAX_DESIGN_REVIEW_CYCLES = 3
-_MAX_CODE_REVIEW_CYCLES = 3
-_MAX_CHECK_FIX_CYCLES = 2
-
-
-# ── Multi-provider LLM config ─────────────────────────────────────────────────
-
-@dataclass
-class LLMConfig:
-    provider: str = "anthropic"  # "anthropic" | "openai" | "deepseek"
-    model: str = ""
-    api_key: str = ""
-    base_url: str = ""
-
-
-_PROVIDER_BASE_URLS: dict[str, str] = {
-    "openai": "https://api.openai.com/v1",
-    "deepseek": "https://api.deepseek.com/v1",
-}
-
-_PROVIDER_API_KEY_ENVS: dict[str, str] = {
-    "openai": "OPENAI_API_KEY",
-    "deepseek": "DEEPSEEK_API_KEY",
-}
-
-
-def _resolve_stage_llm(stage: str) -> LLMConfig:
-    """Resolve LLM config for a workflow stage.
-
-    Reads MEDHARNESS_{stage}_MODEL (e.g. MEDHARNESS_DESIGN_MODEL,
-    MEDHARNESS_DESIGN_REVIEW_MODEL, MEDHARNESS_DEVELOP_MODEL,
-    MEDHARNESS_CODE_REVIEW_MODEL). Format: "provider:model"
-    (e.g. "deepseek:deepseek-chat", "openai:gpt-4o").
-    Falls back to anthropic + ANTHROPIC_MODEL if not set.
-
-    For non-anthropic providers, MEDHARNESS_{stage}_BASE_URL overrides the
-    default endpoint, enabling Azure OpenAI, Ollama, vLLM, LM Studio, etc.
-    """
-    raw = os.environ.get(f"MEDHARNESS_{stage.upper()}_MODEL", "")
-    if raw:
-        provider, _, model = raw.partition(":")
-        if not model:
-            provider, model = "anthropic", raw
-    else:
-        provider = "anthropic"
-        model = os.environ.get("ANTHROPIC_MODEL", "")
-
-    if provider == "anthropic":
-        return LLMConfig(provider=provider, model=model)
-
-    api_key_env = _PROVIDER_API_KEY_ENVS.get(provider, "")
-    api_key = os.environ.get(api_key_env, "") if api_key_env else ""
-    base_url = (
-        os.environ.get(f"MEDHARNESS_{stage.upper()}_BASE_URL")
-        or _PROVIDER_BASE_URLS.get(provider, "")
-    )
-    return LLMConfig(provider=provider, model=model, api_key=api_key, base_url=base_url)
-
-
-def _model_label(config: LLMConfig) -> str:
-    if config.model:
-        return f"{config.provider}:{config.model}"
-    return config.provider
-
-
-# ── GitHub PR feedback ────────────────────────────────────────────────────────
-
-def _pr_feedback(pr_number: int, steps: list, diagnostics: dict, warnings: list) -> dict | None:
-    """The PR's review feedback, or None when it has none to act on.
-
-    `--pr` says the run belongs to that PR; it revises only when a reviewer has
-    asked for a change on the current commit, so a new or approved PR generates.
-    """
-    step, perf = _begin_step("fetch_pr_feedback")
-    feedback = _get_pr_feedback(pr_number)
-    diagnostics["github_feedback"] = feedback["diagnostics"]
-    warnings.extend(feedback["warnings"])
-    steps.append(_finish_step(step, perf, "warning" if feedback["warnings"] else "ok",
-                              feedback["diagnostics"]))
-    said = feedback["diagnostics"]["comments_count"] + feedback["diagnostics"]["reviews_count"]
-    return feedback if said else None
-
-
-def _push_to_pr(repo_root: Path, pr_number: int, message: str, errors: list[dict]) -> None:
-    """Commit the run's work and push it to the PR's branch."""
-    rc, branch = gh(["pr", "view", str(pr_number), "--json", "headRefName", "-q", ".headRefName"])
-    if rc != 0 or not branch:
-        errors.append({"field": "pr_push", "issue": f"PR #{pr_number}'s branch could not be read: {branch}",
-                       "fix": "Check GH_TOKEN and that the PR exists."})
-        return
-    problem = git.commit_and_push(repo_root, message, branch)
-    if problem:
-        errors.append({"field": "pr_push", "issue": f"The run's work did not reach PR #{pr_number}: {problem}",
-                       "fix": "Commit and push the working tree by hand; nothing was lost locally."})
-
-
-def _get_pr_feedback(pr_number: int) -> dict:
-    """What reviewers asked to change on the PR's current commit, via gh.
-
-    An approval asks for nothing, and a review of an earlier commit was about
-    code that has since changed; neither is feedback to revise from. What is:
-    a review requesting changes, or a review with something to say — a body or
-    inline comments — on the commit the PR now points at.
-    """
-
-    def _fetch(kind: str, path: str) -> dict[str, object]:
-        rc, out = gh(["api", f"repos/{{owner}}/{{repo}}/pulls/{pr_number}{path}"])
-        if rc != 0:
-            return {
-                "status": "gh_error",
-                "data": [],
-                "error": out,
-                "warning": _warning(f"github_{kind}_unavailable", f"GitHub {kind} fetch failed: {out}."),
-            }
-        try:
-            return {"status": "ok", "data": json.loads(out or "[]"), "error": None}
-        except json.JSONDecodeError as exc:
-            return {
-                "status": "decode_error",
-                "data": [],
-                "error": str(exc),
-                "warning": _warning(f"github_{kind}_decode_error",
-                                    f"GitHub {kind} response could not be decoded: {exc}."),
-            }
-
-    pull = _fetch("pull", "")
-    comments = _fetch("comments", "/comments")
-    reviews = _fetch("reviews", "/reviews")
-    head = (pull["data"] or {}).get("head", {}).get("sha") if isinstance(pull["data"], dict) else None
-
-    with_comments = {c.get("pull_request_review_id") for c in comments["data"] if isinstance(c, dict)}
-    asked = [
-        r for r in reviews["data"]
-        if isinstance(r, dict)
-        and (head is None or r.get("commit_id") == head)
-        and (r.get("state") == "CHANGES_REQUESTED"
-             or (r.get("state") == "COMMENTED"
-                 and ((r.get("body") or "").strip() or r.get("id") in with_comments)))
-    ]
-    asked_ids = {r.get("id") for r in asked}
-    asked_comments = [c for c in comments["data"]
-                      if isinstance(c, dict) and c.get("pull_request_review_id") in asked_ids]
-    return {
-        "prompt_text": json.dumps({"reviews": asked, "comments": asked_comments}, indent=2),
-        "diagnostics": {
-            "attempted": True,
-            "pr_number": pr_number,
-            "head_sha": head,
-            "comments_status": comments["status"],
-            "comments_error": comments["error"],
-            "reviews_status": reviews["status"],
-            "reviews_error": reviews["error"],
-            "comments_count": len(asked_comments),
-            "reviews_count": len(asked),
-        },
-        "warnings": [w for w in (pull.get("warning"), comments.get("warning"), reviews.get("warning"))
-                     if isinstance(w, dict)],
-    }
-
-
-# ── Claude invocation ─────────────────────────────────────────────────────────
-
-def _run_claude(prompt: str, *, resume_session: str = "", model: str = "") -> tuple[int, str, str]:
-    """Invoke claude -p. Returns (exit_code, text_output, session_id).
-
-    Uses --output-format json so the session_id is always captured from the
-    structured response envelope. Falls back gracefully if JSON cannot be parsed.
-    """
-    effective_model = model or os.environ.get("ANTHROPIC_MODEL", "")
-    cmd = ["claude", "-p", "--dangerously-skip-permissions", "--output-format", "json"]
-    if effective_model:
-        cmd += ["--model", effective_model]
-    if resume_session:
-        cmd += ["--resume", resume_session]
-    cmd.append(prompt)
-    try:
-        result = subprocess.run(cmd, capture_output=True, text=True)  # noqa: S603
-    except FileNotFoundError:
-        return 1, "claude CLI not found — install @anthropic-ai/claude-code", ""
-    session_id = ""
-    text_output = result.stdout
-    if result.stdout.strip():
-        try:
-            data = json.loads(result.stdout)
-            result_val = data.get("result")
-            text_output = result_val if result_val is not None else result.stdout
-            session_id = data.get("session_id") or ""
-        except (json.JSONDecodeError, AttributeError):
-            pass
-    if result.stderr:
-        text_output += "\n" + result.stderr
-    return result.returncode, text_output, session_id
-
-
-def _run_openai_compatible(
-    prompt: str,
-    *,
-    model: str,
-    api_key: str,
-    base_url: str,
-    max_turns: int = 100,
-) -> tuple[int, str, str]:
-    """Run an agentic loop against an OpenAI-compatible chat completions API.
-
-    Exposes a single `bash` function tool. Loops until the model stops calling
-    tools or max_turns is reached. Returns (exit_code, text_output, session_id).
-    Session IDs are not supported by OpenAI-compatible APIs; always returns "".
-    """
-    if not api_key:
-        return 1, f"API key not configured for provider at {base_url}", ""
-
-    bash_tool = {
-        "type": "function",
-        "function": {
-            "name": "bash",
-            "description": "Run a shell command and return its output.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "command": {"type": "string", "description": "Shell command to run."},
-                },
-                "required": ["command"],
-            },
-        },
-    }
-
-    messages: list[dict] = [
-        {
-            "role": "system",
-            "content": (
-                "You are an expert software engineering assistant. "
-                "Use the bash tool to read files, run CLI commands, create and modify "
-                "DHF items, and verify your work. Complete the task fully before stopping."
-            ),
-        },
-        {"role": "user", "content": prompt},
-    ]
-    output_parts: list[str] = []
-
-    for _ in range(max_turns):
-        payload = json.dumps({"model": model, "tools": [bash_tool], "messages": messages}).encode()
-        req = urllib.request.Request(
-            f"{base_url}/chat/completions",
-            data=payload,
-            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-            method="POST",
-        )
-        try:
-            with urllib.request.urlopen(req, timeout=300) as resp:
-                data = json.loads(resp.read())
-        except urllib.error.HTTPError as exc:
-            return 1, f"HTTP {exc.code}: {exc.reason}", ""
-        except (urllib.error.URLError, OSError, json.JSONDecodeError) as exc:
-            return 1, f"API error: {exc}", ""
-
-        choice = (data.get("choices") or [{}])[0]
-        message = choice.get("message", {})
-        messages.append(message)
-
-        content = message.get("content") or ""
-        if content:
-            output_parts.append(content)
-
-        tool_calls = message.get("tool_calls") or []
-        if not tool_calls:
-            break
-
-        tool_results: list[dict] = []
-        for tc in tool_calls:
-            tc_id = tc.get("id", "")
-            fn = tc.get("function", {})
-            try:
-                args = json.loads(fn.get("arguments", "{}"))
-                command = args.get("command", "")
-                proc = subprocess.run(  # noqa: S603 S602
-                    command, shell=True, capture_output=True, text=True, timeout=120
-                )
-                tc_output = proc.stdout + (("\n" + proc.stderr) if proc.stderr else "")
-            except subprocess.TimeoutExpired:
-                tc_output = "Command timed out."
-            except Exception as exc:  # noqa: BLE001
-                tc_output = f"Error: {exc}"
-            tool_results.append({"role": "tool", "tool_call_id": tc_id, "content": tc_output})
-        messages.extend(tool_results)
-
-    return 0, "\n".join(output_parts), ""
-
-
-#: What `claude --resume` prints when the transcript is not on this machine.
-_SESSION_GONE = "no conversation found with session id"
-
-
-def _resume_unavailable(output: str) -> bool:
-    """Whether a failure was the stored session being absent, not the work failing."""
-    return _SESSION_GONE in output.lower()
-
-
-def _run_llm(
-    prompt: str,
-    *,
-    config: LLMConfig,
-    resume_session: str = "",
-) -> tuple[int, str, str]:
-    """Dispatch to the appropriate LLM runner based on config.provider."""
-    if config.provider == "anthropic":
-        return _run_claude(prompt, resume_session=resume_session, model=config.model)
-    return _run_openai_compatible(
-        prompt,
-        model=config.model,
-        api_key=config.api_key,
-        base_url=config.base_url,
-    )
-
-
-def _now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat(timespec="seconds")
-
-
-def _warning(code: str, message: str, details: dict | None = None) -> dict:
-    warning = {"code": code, "message": message}
-    if details:
-        warning["details"] = details
-    return warning
-
-
-def _error_code(field: str) -> str:
-    normalized = re.sub(r"[^a-zA-Z0-9]+", "_", field).strip("_").lower()
-    return normalized or "validation_error"
-
-
-def _normalize_errors(errors: list[dict]) -> list[dict]:
-    normalized: list[dict] = []
-    for error in errors:
-        item = dict(error)
-        item.setdefault("code", _error_code(str(item.get("field", ""))))
-        normalized.append(item)
-    return normalized
-
-
-def _begin_step(name: str, details: dict | None = None) -> tuple[dict, float]:
-    return {
-        "name": name,
-        "started_at": _now_iso(),
-        "details": dict(details or {}),
-    }, time.perf_counter()
-
-
-def _finish_step(step: dict, started_perf: float, outcome: str, details: dict | None = None) -> dict:
-    merged = dict(step.get("details") or {})
-    if details:
-        merged.update(details)
-    step["outcome"] = outcome
-    step["elapsed_ms"] = int((time.perf_counter() - started_perf) * 1000)
-    step["details"] = merged
-    return step
-
-
-def _truncate(text: str, limit: int = 300) -> str:
-    stripped = text.strip()
-    if len(stripped) <= limit:
-        return stripped
-    return stripped[:limit].rstrip() + "..."
-
-
-def _run_claude_step(
-    *,
-    name: str,
-    prompt: str,
-    steps: list[dict],
-    warnings: list[dict],
-    critical: bool,
-    resume_session: str = "",
-    llm_config: LLMConfig | None = None,
-) -> tuple[int, str, str]:
-    """Run an LLM step. Returns (exit_code, output, session_id)."""
-    config = llm_config or LLMConfig()
-    is_anthropic = config.provider == "anthropic"
-    tool_label = "claude" if is_anthropic else _model_label(config)
-    step, step_perf = _begin_step(name, {"tool": tool_label})
-    rc, output, session_id = _run_llm(prompt, config=config, resume_session=resume_session)
-
-    # A session lives on the machine that created it, so a CI runner can never
-    # resume one. The prompt reads the branch and carries its feedback inline,
-    # so the session is continuity, not a precondition.
-    resume_dropped = False
-    if rc != 0 and resume_session and _resume_unavailable(output):
-        resume_dropped = True
-        rc, output, session_id = _run_llm(prompt, config=config, resume_session="")
-
-    cli_found = "claude CLI not found" not in output if is_anthropic else True
-    outcome = "ok" if rc == 0 else ("failed" if critical else "warning")
-    details: dict[str, object] = {"exit_code": rc, "cli_found": cli_found}
-    if session_id:
-        details["session_id"] = session_id
-    if resume_session:
-        details["resumed_session_id"] = resume_session
-    if resume_dropped:
-        details["resume_unavailable"] = True
-    if output.strip():
-        details["output_excerpt"] = _truncate(output)
-    steps.append(_finish_step(step, step_perf, outcome, details))
-    if resume_dropped:
-        warnings.append(
-            _warning(
-                "resume_session_unavailable",
-                f"Session `{resume_session}` is not on this machine; "
-                f"step `{name}` ran without it.",
-                {"step": name, "session_id": resume_session},
-            )
-        )
-    if rc != 0:
-        warnings.append(
-            _warning(
-                "claude_cli_missing" if (is_anthropic and not cli_found) else "claude_step_failed",
-                f"Step `{name}` exited with code {rc}.",
-                {"step": name, "exit_code": rc},
-            )
-        )
-    return rc, output, session_id
-
-
-def _final_progress(steps: list[dict]) -> dict:
-    return {
-        "current_step": None,
-        "completed_steps": len(steps),
-        "total_steps": len(steps),
-    }
-
-
-def _determine_outcome(
-    *,
-    errors: list[dict],
-    fix_attempted: bool,
-    critical_step_failed: bool,
-) -> str:
-    if critical_step_failed:
-        return "tool_error"
-    if errors:
-        return "completed_with_errors"
-    if fix_attempted:
-        return "corrected"
-    return "ok"
-
-
-def _build_summary(
-    *,
-    stage: str,
-    outcome: str,
-    errors: list[dict],
-    fix_attempted: bool,
-    warnings: list[dict],
-) -> str:
-    stage_label = {
-        "spec": "Spec",
-        "design": "Design generation",
-        "develop": "Implementation generation",
-        "generate_dhf": "DHF cascade generation",
-    }.get(stage, stage.capitalize())
-    if outcome == "tool_error":
-        if warnings:
-            return f"{stage_label} hit a tool or environment error: {warnings[0]['message']}"
-        return f"{stage_label} hit a tool or environment error."
-    if outcome == "completed_with_errors":
-        suffix = " after one fix attempt" if fix_attempted else ""
-        return (
-            f"{stage_label} completed, but deterministic validation still found "
-            f"{len(errors)} error(s){suffix}."
-        )
-    if outcome == "corrected":
-        return f"{stage_label} completed after one successful fix pass."
-    return f"{stage_label} completed successfully."
-
-
-def _build_response(
-    *,
-    cr_id: str,
-    stage: str,
-    started_at: str,
-    started_perf: float,
-    inputs: dict,
-    steps: list[dict],
-    artifacts: dict,
-    diagnostics: dict,
-    warnings: list[dict],
-    errors: list[dict],
-    critical_step_failed: bool,
-) -> dict:
-    normalized_errors = _normalize_errors(errors)
-    fix_attempted = bool(diagnostics.get("fix_attempted"))
-    outcome = _determine_outcome(
-        errors=normalized_errors,
-        fix_attempted=fix_attempted,
-        critical_step_failed=critical_step_failed,
-    )
-    return {
-        "cr_id": cr_id,
-        "stage": stage,
-        "outcome": outcome,
-        "summary": _build_summary(
-            stage=stage,
-            outcome=outcome,
-            errors=normalized_errors,
-            fix_attempted=fix_attempted,
-            warnings=warnings,
-        ),
-        "timing": {
-            "started_at": started_at,
-            "elapsed_ms": int((time.perf_counter() - started_perf) * 1000),
-        },
-        "inputs": inputs,
-        "progress": _final_progress(steps),
-        "steps": steps,
-        "artifacts": artifacts,
-        "diagnostics": diagnostics,
-        "warnings": warnings,
-        "errors": normalized_errors,
-    }
-
-
-
-
-def _format_error_lines(errors: list[dict]) -> str:
-    return "\n".join(
-        f"- {e.get('field', '?')}: {e.get('issue', '')} (fix: {e.get('fix', '')})"
-        for e in errors
-    )
-
-
-def _augment_review_prompt(base: str, errors: list[dict]) -> str:
-    """Attach a 'Deterministic Checks' note to a soft-review prompt.
-
-    When deterministic checks pass we tell the reviewer not to re-derive them;
-    when residual issues remain we surface them so the review captures the gap.
-    """
-    if not errors:
-        return base + (
-            "\n\n## Deterministic Checks (already passed)\n\n"
-            "Schema, traceability, and the presence of all spec `affected_items` "
-            "(or required `@links:` test annotations) have been verified "
-            "mechanically. Do not re-derive them — focus on judgment questions "
-            "that a script cannot answer."
-        )
-    residual = "\n".join(f"- {e.get('field', '?')}: {e.get('issue', '')}" for e in errors)
-    return base + (
-        "\n\n## Deterministic Checks (residual issues)\n\n"
-        f"The following deterministic-check failures remain after one fix attempt:\n"
-        f"{residual}\n\nNote these in the review output."
-    )
-
-
-def _parse_review_data(text: str) -> dict:
-    """Parse a review response into verdict and issue list.
-
-    Returns {"verdict": "approved"|"needs_revision"|"unknown", "issues": [str, ...]}.
-    Issues are extracted from Markdown task-list lines starting with "- [ ]".
-    """
-    verdict = "unknown"
-    issues: list[str] = []
-    for line in text.splitlines():
-        stripped = line.strip()
-        if stripped.startswith("**Verdict:**"):
-            lower = stripped.lower()
-            if "approved" in lower:
-                verdict = "approved"
-            elif "needs revision" in lower:
-                verdict = "needs_revision"
-        elif stripped.startswith("- [ ]"):
-            issues.append(stripped[5:].strip())
-    return {"verdict": verdict, "issues": issues}
-
-
-def _read_design_review_data(repo_root: Path, cr_id: str) -> dict:
-    """Read and parse the design review file.
-
-    Returns {"verdict": ..., "issues": [...]} or {"verdict": "unknown", "issues": []}
-    if the file is absent or unparseable.
-    """
-    review_file = repo_root / "docs" / "reviews" / f"{cr_id}-Design-Review.md"
-    try:
-        content = review_file.read_text(encoding="utf-8")
-    except OSError:
-        return {"verdict": "unknown", "issues": []}
-    return _parse_review_data(content)
-
-
-def _build_review_result(stage_label: str, log: list[dict]) -> dict:
-    """Build the client-facing review summary from per-cycle log entries.
-
-    Returns {"cycles": [...], "narrative": [str, ...]}.
-    """
-    narrative = [f"{stage_label} completed."]
-    for entry in log:
-        cycle = entry["cycle"]
-        verdict = entry["verdict"]
-        issues = entry.get("issues") or []
-        prefix = "Review" if cycle == 1 else f"Re-review (cycle {cycle})"
-        if verdict == "needs_revision":
-            n = len(issues)
-            issue_str = f"{n} issue{'s' if n != 1 else ''}" if n else "issues"
-            narrative.append(f"{prefix}: {issue_str} found — fix pass triggered.")
-        elif verdict == "approved":
-            msg = f"{prefix}: approved." if cycle == 1 else f"{prefix}: all issues resolved, approved."
-            narrative.append(msg)
-        else:
-            narrative.append(f"{prefix}: completed (verdict unknown).")
-    return {
-        "cycles": [
-            {"cycle": e["cycle"], "verdict": e["verdict"], "issues": e.get("issues") or []}
-            for e in log
-        ],
-        "narrative": narrative,
-    }
-
-
-def _auto_post_pr_feedback(pr_number: int, cr_id: str, result: dict, *, token: str = "") -> list[str]:
-    """Post warning and error comments to the PR. Returns list of posted comment URLs."""
-    comments: list[str] = []
-
-    warnings = result.get("warnings") or []
-    if warnings:
-        lines = "\n".join(
-            f"- `{w.get('code', '?')}`: {w.get('message', '')}" for w in warnings
-        )
-        url = post_pr_comment(pr_number, f"⚠️ **Warnings for {cr_id}:**\n\n{lines}", token=token)
-        if url:
-            comments.append(url)
-
-    errors = result.get("errors") or []
-    if result.get("outcome") == "completed_with_errors" and errors:
-        lines = "\n".join(
-            f"- **{e.get('field', '?')}**: {e.get('issue', '')}\n  _Fix:_ {e.get('fix', '')}"
-            for e in errors
-        )
-        url = post_pr_comment(
-            pr_number,
-            f"⚠️ **Validation errors for {cr_id}:**\n\n{lines}",
-            token=token,
-        )
-        if url:
-            comments.append(url)
-
-    return comments
-
-
-def _leave_uncommitted(repo_root: Path, start_head: str | None, warnings: list[dict]) -> None:
-    """The caller commits a stage's work. Commits the agent made are undone, staged."""
-    undone = git.uncommit_since(repo_root, start_head)
-    if undone:
-        warnings.append(_warning(
-            "agent_commits_undone",
-            f"The agent committed {len(undone)} time(s); the commits were undone and "
-            f"their changes left staged for the caller to commit: {', '.join(c[:7] for c in undone)}.",
-        ))
-
-
-def _items_changed(repo_root: Path, unreadable: list[str]) -> dict[str, list[str]]:
-    """The DHF items this branch changed, noting in ``unreadable`` when git could not say."""
-    try:
-        return git.collect_dhf_item_changes(repo_root, "origin/main")
-    except git.DiffUnavailable as exc:
-        unreadable.append(str(exc))
-        return {"created": [], "updated": [], "deleted": []}
-
-
-def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> dict:
+def _validate_design(run: Run, name: str, items_changed: dict) -> list[dict]:
+    step, perf = _begin_step(name, {"validator": "validate_generate_dhf"})
+    errors = design_validation.validate_generate_dhf(run.cr_id, run.dhf_path, items_changed)
+    run.diagnostics["final_error_count"] = len(errors)
+    run.steps.append(_finish_step(step, perf, "failed" if errors else "ok", {"error_count": len(errors)}))
+    return errors
+
+
+def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None,
+                 since_ref: str = git.DEFAULT_SINCE_REF) -> dict:
     """Generate the complete DHF item cascade for a CR in a single LLM session.
 
-    The V-model (CR→CRS→SYS→{SYSARCH,RISK,RCM}→SRS→SWDD) is the reasoning
-    framework embedded in the prompt. The LLM writes items via the medharness
-    CLI and validates traceability inline before returning.
-
-    Python-side validation runs as a safety net. If errors remain after the
-    LLM's inline self-correction, one deterministic fix pass is attempted.
-    No spec file is produced; this command replaces analyze-cr + design-cr.
+    The model works out what the change touches and writes the items with
+    `medharness item`. Deterministic validation follows; if errors remain, one fix
+    pass is attempted, and a design review after it.
     """
-    started_at = _now_iso()
-    started_perf = time.perf_counter()
-
-    repo_root = dhf_path.resolve().parent
-    start_head = git.head(repo_root)
-    steps: list[dict] = []
-    warnings: list[dict] = []
-    unreadable: list[str] = []
-    critical_step_failed = False
     design_llm = _resolve_stage_llm("design")
     review_llm = _resolve_stage_llm("design_review")
-    diagnostics: dict = {
+    run = Run(cr_id, dhf_path, pr_number, since_ref, (design_llm, review_llm), {
         "design_model": _model_label(design_llm),
         "design_review_model": _model_label(review_llm),
         "github_feedback": {"attempted": False},
@@ -747,30 +86,12 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> di
         "design_review_cycles": 0,
         "session_id": None,
         "resumed_session_id": None,
-    }
-    inputs = {
-        "dhf_path": str(dhf_path),
-        "repo_root": str(repo_root),
-        "pr_number": pr_number,
-        "revision_mode": False,
-        "since_ref": "origin/main",
-    }
-
+    })
     prior_session = get_session(pr_number) if pr_number else ""
-    if prior_session:
-        diagnostics["resumed_session_id"] = prior_session
-    if pr_number and any(llm.provider != "anthropic" for llm in (design_llm, review_llm)):
-        warnings.append(
-            _warning(
-                "non_anthropic_provider_no_session",
-                "Revision mode is active but one or more stages use a non-anthropic provider. "
-                "Session continuity is not supported outside the Anthropic Claude CLI; "
-                "this run cannot resume from or persist to a previous session.",
-            )
-        )
+    run.resume_from(prior_session)
 
-    feedback = _pr_feedback(pr_number, steps, diagnostics, warnings) if pr_number else None
-    inputs["revision_mode"] = feedback is not None
+    feedback = _pr_feedback(pr_number, run.steps, run.diagnostics, run.warnings) if pr_number else None
+    run.inputs["revision_mode"] = feedback is not None
     if feedback is not None:
         prompt_step, prompt_perf = _begin_step(
             "prepare_prompt",
@@ -785,218 +106,113 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> di
             f"  medharness --dhf DHF verify dhf\n\n"
             f"Review feedback:\n{feedback['prompt_text']}"
         )
-        prompt = _enrich_with_plan_context(prompt, cr_id, dhf_path, warnings)
-        steps.append(_finish_step(prompt_step, prompt_perf, "ok"))
+        prompt = _enrich_with_plan_context(prompt, cr_id, dhf_path, run.warnings)
     else:
         prompt_step, prompt_perf = _begin_step(
             "prepare_prompt",
             {"prompt_kind": "generate_dhf_generation", "used_pr_feedback": False},
         )
-        prompt = _assemble_generate_dhf_prompt(cr_id, dhf_path, warnings)
-        steps.append(_finish_step(prompt_step, prompt_perf, "ok"))
+        prompt = _assemble_generate_dhf_prompt(cr_id, dhf_path, run.warnings)
+    run.steps.append(_finish_step(prompt_step, prompt_perf, "ok"))
 
-    rc, _, session_id = _run_claude_step(
-        name="run_initial_generation",
-        prompt=prompt,
-        steps=steps,
-        warnings=warnings,
-        critical=True,
-        resume_session=prior_session,
-        llm_config=design_llm,
-    )
-    critical_step_failed = critical_step_failed or rc != 0
-    if session_id:
-        diagnostics["session_id"] = session_id
+    run.call("run_initial_generation", prompt, design_llm, critical=True, resume=prior_session)
 
-    items_changed = _items_changed(repo_root, unreadable)
-    validate_step, validate_perf = _begin_step(
-        "validate_initial", {"validator": "validate_generate_dhf"}
-    )
-    errors: list[dict] = design_validation.validate_generate_dhf(
-        cr_id, dhf_path, items_changed
-    )
-    diagnostics["initial_error_count"] = len(errors)
-    diagnostics["final_error_count"] = len(errors)
-    steps.append(
-        _finish_step(
-            validate_step,
-            validate_perf,
-            "failed" if errors else "ok",
-            {"error_count": len(errors)},
-        )
-    )
+    items_changed = run.items_changed()
+    errors = _validate_design(run, "validate_initial", items_changed)
+    run.diagnostics["initial_error_count"] = len(errors)
 
     if errors:
-        diagnostics["fix_attempted"] = True
-        fix_prompt = (
+        run.diagnostics["fix_attempted"] = True
+        run.call(
+            "run_fix_generation",
             f"The DHF cascade for {cr_id} failed deterministic validation:\n"
             f"{_format_error_lines(errors)}\n\n"
             f"Fix only the items needed to clear these errors via the medharness "
             f"CLI (`medharness item create` / `medharness item update`). Do not introduce other "
             f"changes. After fixing, re-run:\n"
-            f"  medharness --dhf DHF verify dhf"
+            f"  medharness --dhf DHF verify dhf",
+            design_llm, critical=True,
         )
-        rc, _, fix_session_id = _run_claude_step(
-            name="run_fix_generation",
-            prompt=fix_prompt,
-            steps=steps,
-            warnings=warnings,
-            critical=True,
-            resume_session=session_id,
-            llm_config=design_llm,
-        )
-        critical_step_failed = critical_step_failed or rc != 0
-        if fix_session_id:
-            session_id = fix_session_id
-            diagnostics["session_id"] = session_id
-        items_changed = _items_changed(repo_root, unreadable)
-        validate_fix_step, validate_fix_perf = _begin_step(
-            "validate_after_fix", {"validator": "validate_generate_dhf"}
-        )
-        errors = design_validation.validate_generate_dhf(cr_id, dhf_path, items_changed)
-        diagnostics["final_error_count"] = len(errors)
-        steps.append(
-            _finish_step(
-                validate_fix_step,
-                validate_fix_perf,
-                "failed" if errors else "ok",
-                {"error_count": len(errors)},
-            )
-        )
+        items_changed = run.items_changed()
+        errors = _validate_design(run, "validate_after_fix", items_changed)
 
-    for w in design_validation.check_verification_quality(dhf_path, items_changed):
-        warnings.append(_warning(w["code"], w["message"], {"field": w["field"]}))
-    for w in design_validation.check_near_duplicates(dhf_path, items_changed):
-        warnings.append(_warning(w["code"], w["message"], {"field": w["field"]}))
-    for w in design_validation.check_large_edits(repo_root, "origin/main"):
-        warnings.append(_warning(w["code"], w["message"], {"field": w["field"]}))
-    for w in design_validation.check_test_points_follow_requirements(repo_root, dhf_path, "origin/main"):
-        warnings.append(_warning(w["code"], w["message"], {"field": w["field"]}))
+    run.warn(design_validation.check_verification_quality(dhf_path, items_changed))
+    run.warn(design_validation.check_near_duplicates(dhf_path, items_changed))
+    run.warn(design_validation.check_large_edits(run.repo_root, since_ref))
+    run.warn(design_validation.check_test_points_follow_requirements(run.repo_root, dhf_path, since_ref))
 
     design_review_log: list[dict] = []
     design_review_verdict = "unknown"
     for review_cycle in range(1, _MAX_DESIGN_REVIEW_CYCLES + 1):
-        review_step_name = "run_design_review" if review_cycle == 1 else f"run_design_review_{review_cycle}"
-        review_prompt = _augment_review_prompt(
-            _assemble_review_design_prompt(cr_id, dhf_path, items_changed, warnings), errors)
-        _, _, review_session_id = _run_claude_step(
-            name=review_step_name,
-            prompt=review_prompt,
-            steps=steps,
-            warnings=warnings,
-            critical=False,
-            resume_session=session_id,
-            llm_config=review_llm,
+        run.call(
+            "run_design_review" if review_cycle == 1 else f"run_design_review_{review_cycle}",
+            _augment_review_prompt(
+                _assemble_review_design_prompt(cr_id, dhf_path, items_changed, run.warnings, since_ref), errors),
+            review_llm, critical=False,
         )
-        if review_session_id:
-            session_id = review_session_id
-            diagnostics["session_id"] = session_id
 
-        review_data = _read_design_review_data(repo_root, cr_id)
+        review_data = _read_design_review_data(run.repo_root, cr_id)
         design_review_verdict = review_data["verdict"]
         design_review_log.append({"cycle": review_cycle, **review_data})
 
         if design_review_verdict != "needs_revision" or review_cycle >= _MAX_DESIGN_REVIEW_CYCLES:
             break
 
-        fix_review_prompt = (
+        run.call(
+            f"run_design_fix_{review_cycle}",
             f"The design review for {cr_id} found issues. "
             f"Read the review at docs/reviews/{cr_id}-Design-Review.md for the specific issues, "
             f"then fix each item via `medharness item create` / `medharness item update`. "
             f"Keep the CR's `impact_analysis`, `reviewed_items` and `affected_*` fields consistent with what you change. "
             f"After making changes, re-run:\n"
             f"  medharness --dhf DHF verify dhf\n"
-            f"Do not modify the review file itself."
+            f"Do not modify the review file itself.",
+            design_llm, critical=False,
         )
-        _, _, fix_session_id = _run_claude_step(
-            name=f"run_design_fix_{review_cycle}",
-            prompt=fix_review_prompt,
-            steps=steps,
-            warnings=warnings,
-            critical=False,
-            resume_session=session_id,
-            llm_config=design_llm,
-        )
-        if fix_session_id:
-            session_id = fix_session_id
-            diagnostics["session_id"] = session_id
+        items_changed = run.items_changed()
+        errors = _validate_design(run, f"validate_after_review_fix_{review_cycle}", items_changed)
 
-        items_changed = _items_changed(repo_root, unreadable)
-        validate_review_fix_step, validate_review_fix_perf = _begin_step(
-            f"validate_after_review_fix_{review_cycle}", {"validator": "validate_generate_dhf"}
-        )
-        errors = design_validation.validate_generate_dhf(cr_id, dhf_path, items_changed)
-        diagnostics["final_error_count"] = len(errors)
-        steps.append(
-            _finish_step(
-                validate_review_fix_step,
-                validate_review_fix_perf,
-                "failed" if errors else "ok",
-                {"error_count": len(errors)},
-            )
-        )
+    run.diagnostics["design_review_verdict"] = design_review_verdict
+    run.diagnostics["design_review_cycles"] = review_cycle
+    run.leave_uncommitted()
 
-    diagnostics["design_review_verdict"] = design_review_verdict
-    diagnostics["design_review_cycles"] = review_cycle
-    _leave_uncommitted(repo_root, start_head, warnings)
-
-    items_changed = _items_changed(repo_root, unreadable)
-    if unreadable:
+    items_changed = run.items_changed()
+    if run.unreadable:
         # Added after the fix loop on purpose: an LLM fix pass cannot fetch a ref.
         # It must be in `errors` before design impact, which would otherwise write
         # an empty affected_items onto the CR.
         errors.append({
             "field": "changed_items",
             "issue": (
-                f"Could not diff against origin/main ({unreadable[-1]}), so the "
+                f"Could not diff against {since_ref} ({run.unreadable[-1]}), so the "
                 f"items this run changed were not checked."
             ),
             "fix": (
-                "Fetch origin/main and re-run. A shallow clone or a repo with no "
-                "remote cannot diff."
+                f"Fetch {since_ref} with full history and re-run. A shallow clone or a repo "
+                f"with no remote cannot diff."
             ),
         })
         items_changed = None
     artifact_step, artifact_perf = _begin_step(
         "collect_artifacts", {"kind": "dhf_items_changed", "snapshot_only": True}
     )
-    steps.append(
-        _finish_step(artifact_step, artifact_perf, "ok", {"items_changed": items_changed})
-    )
+    run.steps.append(_finish_step(artifact_step, artifact_perf, "ok", {"items_changed": items_changed}))
 
     design_impact: dict = {"recorded": False, "reason": "skipped_due_to_validation_errors"}
     if not errors:
         impact_step, impact_perf = _begin_step("record_design_impact")
         design_impact = _record_design_impact_in_cr(cr_id, dhf_path, items_changed)
-        steps.append(
-            _finish_step(
-                impact_step,
-                impact_perf,
-                "ok" if design_impact.get("recorded") else "warning",
-                design_impact,
-            )
-        )
+        run.steps.append(_finish_step(
+            impact_step, impact_perf, "ok" if design_impact.get("recorded") else "warning", design_impact,
+        ))
 
-    if session_id and pr_number:
-        put_session(pr_number, session_id)
+    if run.session_id and pr_number:
+        put_session(pr_number, run.session_id)
     if pr_number:
-        _push_to_pr(repo_root, pr_number, f"design({cr_id}): build plan", errors)
+        _push_to_pr(run.repo_root, pr_number, f"design({cr_id}): build plan", errors)
 
-    result = _build_response(
-        cr_id=cr_id,
-        stage="generate_dhf",
-        started_at=started_at,
-        started_perf=started_perf,
-        inputs=inputs,
-        steps=steps,
-        artifacts={
-            "items_changed": items_changed,
-            "design_impact": design_impact,
-        },
-        diagnostics=diagnostics,
-        warnings=warnings,
-        errors=errors,
-        critical_step_failed=critical_step_failed,
+    result = run.respond(
+        "generate_dhf", {"items_changed": items_changed, "design_impact": design_impact}, errors,
     )
     result["design_review"] = _build_review_result("Design", design_review_log)
     if pr_number:
@@ -1005,24 +221,38 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None) -> di
     return result
 
 
+def _run_checks(run: Run, checks: tuple[str, ...], develop_llm) -> list[dict]:
+    """Run the `--check` commands, sending a failure back to the model for a fix."""
+    results: list[dict] = []
+    for attempt in range(_MAX_CHECK_FIX_CYCLES + 1):
+        step, perf = _begin_step("run_checks", {"attempt": attempt + 1})
+        results = check_runner.run_checks(run.repo_root, checks)
+        failed = [c for c in results if not c["passed"]]
+        run.steps.append(_finish_step(step, perf, "failed" if failed else "ok",
+                                      {"failed": [c["command"] for c in failed]}))
+        if not failed or attempt == _MAX_CHECK_FIX_CYCLES:
+            break
+        report = "\n\n".join(f"`{c['command']}` exited {c['exit_code']}:\n{c['output']}" for c in failed)
+        run.call(
+            f"run_check_fix_{attempt + 1}",
+            f"The checks for {run.cr_id} failed when the harness ran them. Fix the code so each exits 0; "
+            f"do not change the checks.\n\n{report}",
+            develop_llm, critical=False,
+        )
+    return results
+
+
 def generate_code(
     cr_id: str,
     dhf_path: Path,
     pr_number: int | None = None,
     checks: tuple[str, ...] = (),
+    since_ref: str = git.DEFAULT_SINCE_REF,
 ) -> dict:
     """Generate or revise implementation code for a CR."""
-    started_at = _now_iso()
-    started_perf = time.perf_counter()
-
-    repo_root = dhf_path.resolve().parent
-    start_head = git.head(repo_root)
-    steps: list[dict] = []
-    warnings: list[dict] = []
-    critical_step_failed = False
     develop_llm = _resolve_stage_llm("develop")
     review_llm = _resolve_stage_llm("code_review")
-    diagnostics = {
+    run = Run(cr_id, dhf_path, pr_number, since_ref, (develop_llm, review_llm), {
         "develop_model": _model_label(develop_llm),
         "code_review_model": _model_label(review_llm),
         "github_feedback": {"attempted": False},
@@ -1034,49 +264,30 @@ def generate_code(
         "code_review_cycles": 0,
         "session_id": None,
         "resumed_session_id": None,
-    }
-    inputs = {
-        "dhf_path": str(dhf_path),
-        "repo_root": str(repo_root),
-        "pr_number": pr_number,
-        "revision_mode": False,
-        "since_ref": "origin/main",
-    }
-
+    })
     prior_session = get_session(pr_number) if pr_number else ""
-    if prior_session:
-        diagnostics["resumed_session_id"] = prior_session
-    if pr_number and any(llm.provider != "anthropic" for llm in (develop_llm, review_llm)):
-        warnings.append(
-            _warning(
-                "non_anthropic_provider_no_session",
-                "Revision mode is active but one or more stages use a non-anthropic provider. "
-                "Session continuity is not supported outside the Anthropic Claude CLI; "
-                "this run cannot resume from or persist to a previous session.",
-            )
-        )
+    run.resume_from(prior_session)
 
     # Pre-flight DHF traceability check — catch structural gaps before the LLM runs
     # so the prompt can include specific fixes rather than the LLM discovering them later.
     # Uses validate_dhf_structure (schema + traceability only) to avoid false positives
     # from reconciliation checks that require a non-empty created_ids list.
-    feedback = _pr_feedback(pr_number, steps, diagnostics, warnings) if pr_number else None
-    inputs["revision_mode"] = feedback is not None
+    feedback = _pr_feedback(pr_number, run.steps, run.diagnostics, run.warnings) if pr_number else None
+    run.inputs["revision_mode"] = feedback is not None
     if feedback is None:
         preflight_step, preflight_perf = _begin_step("preflight_traceability")
         try:
             preflight_errors = design_validation.validate_dhf_structure(dhf_path)
         except Exception:
             preflight_errors = []
-        diagnostics["preflight_errors"] = len(preflight_errors)
-        steps.append(_finish_step(
+        run.diagnostics["preflight_errors"] = len(preflight_errors)
+        run.steps.append(_finish_step(
             preflight_step, preflight_perf,
             "warning" if preflight_errors else "ok",
             {"error_count": len(preflight_errors)},
         ))
-        if preflight_errors:
-            for e in preflight_errors:
-                warnings.append({"source": "preflight_traceability", **e})
+        for e in preflight_errors:
+            run.warnings.append({"source": "preflight_traceability", **e})
 
     if feedback is not None:
         prompt_step, prompt_perf = _begin_step(
@@ -1088,19 +299,20 @@ def generate_code(
             f"then revise it based on the following pull request review feedback.\n\n"
             f"Review feedback:\n{feedback['prompt_text']}"
         ) + checks_section(checks)
-        steps.append(_finish_step(prompt_step, prompt_perf, "ok"))
+        run.steps.append(_finish_step(prompt_step, prompt_perf, "ok"))
     else:
         prompt_step, prompt_perf = _begin_step(
             "prepare_prompt",
             {"prompt_kind": "develop_generation", "used_pr_feedback": False},
         )
-        prompt = _assemble_develop_prompt(cr_id, dhf_path=dhf_path, warnings=warnings, checks=checks)
-        diff = git.compute_diff(repo_root, "origin/main", *_code_paths(dhf_path, repo_root))
+        prompt = _assemble_develop_prompt(cr_id, dhf_path=dhf_path, warnings=run.warnings, checks=checks,
+                                          since_ref=since_ref)
+        diff = git.compute_diff(run.repo_root, since_ref, *_code_paths(dhf_path, run.repo_root))
         if diff:
             truncated = len(diff) > MAX_DIFF_CHARS
             diff_body = diff[:MAX_DIFF_CHARS]
             prompt += (
-                "\n\n## Existing Implementation (since origin/main)\n\n"
+                f"\n\n## Existing Implementation (since {since_ref})\n\n"
                 "The following changes have already been made on this branch. "
                 "Implement only what is still missing according to the spec "
                 "— do not rewrite existing work.\n\n"
@@ -1111,38 +323,18 @@ def generate_code(
                     f"_(diff truncated at {MAX_DIFF_CHARS} chars — "
                     "remaining changes not shown)_\n"
                 )
-        steps.append(_finish_step(prompt_step, prompt_perf, "ok", {"diff_injected": bool(diff)}))
+        run.steps.append(_finish_step(prompt_step, prompt_perf, "ok", {"diff_injected": bool(diff)}))
 
-    rc, _, session_id = _run_claude_step(
-        name="run_initial_generation",
-        prompt=prompt,
-        steps=steps,
-        warnings=warnings,
-        critical=True,
-        resume_session=prior_session,
-        llm_config=develop_llm,
-    )
-    critical_step_failed = critical_step_failed or rc != 0
-    if session_id:
-        diagnostics["session_id"] = session_id
+    run.call("run_initial_generation", prompt, develop_llm, critical=True, resume=prior_session)
 
     code_review_log: list[dict] = []
     code_review_verdict = "unknown"
     for review_cycle in range(1, _MAX_CODE_REVIEW_CYCLES + 1):
-        review_step_name = "run_review" if review_cycle == 1 else f"run_review_{review_cycle}"
-        review_prompt = _assemble_review_code_prompt(cr_id)
-        _, review_output, review_session_id = _run_claude_step(
-            name=review_step_name,
-            prompt=review_prompt,
-            steps=steps,
-            warnings=warnings,
-            critical=False,
-            resume_session=session_id,
-            llm_config=review_llm,
+        _, review_output = run.call(
+            "run_review" if review_cycle == 1 else f"run_review_{review_cycle}",
+            _assemble_review_code_prompt(cr_id, since_ref),
+            review_llm, critical=False,
         )
-        if review_session_id:
-            session_id = review_session_id
-            diagnostics["session_id"] = session_id
 
         review_data = _parse_review_data(review_output)
         code_review_verdict = review_data["verdict"]
@@ -1151,63 +343,28 @@ def generate_code(
         if code_review_verdict != "needs_revision" or review_cycle >= _MAX_CODE_REVIEW_CYCLES:
             break
 
-        fix_review_prompt = (
+        run.call(
+            f"run_code_fix_{review_cycle}",
             f"The code review for {cr_id} found issues. "
             f"Fix each issue flagged in the review above — modify only the affected files. "
-            f"Do not make unrelated changes."
+            f"Do not make unrelated changes.",
+            develop_llm, critical=False,
         )
-        _, _, fix_session_id = _run_claude_step(
-            name=f"run_code_fix_{review_cycle}",
-            prompt=fix_review_prompt,
-            steps=steps,
-            warnings=warnings,
-            critical=False,
-            resume_session=session_id,
-            llm_config=develop_llm,
-        )
-        if fix_session_id:
-            session_id = fix_session_id
-            diagnostics["session_id"] = session_id
 
-    diagnostics["code_review_verdict"] = code_review_verdict
-    diagnostics["code_review_cycles"] = review_cycle
+    run.diagnostics["code_review_verdict"] = code_review_verdict
+    run.diagnostics["code_review_cycles"] = review_cycle
 
-    check_results: list[dict] = []
-    for attempt in range(_MAX_CHECK_FIX_CYCLES + 1):
-        if not checks:
-            break
-        check_step, check_perf = _begin_step("run_checks", {"attempt": attempt + 1})
-        check_results = check_runner.run_checks(repo_root, checks)
-        failed = [c for c in check_results if not c["passed"]]
-        steps.append(_finish_step(check_step, check_perf, "failed" if failed else "ok",
-                                  {"failed": [c["command"] for c in failed]}))
-        if not failed or attempt == _MAX_CHECK_FIX_CYCLES:
-            break
-        report = "\n\n".join(f"`{c['command']}` exited {c['exit_code']}:\n{c['output']}" for c in failed)
-        _, _, fix_session_id = _run_claude_step(
-            name=f"run_check_fix_{attempt + 1}",
-            prompt=f"The checks for {cr_id} failed when the harness ran them. Fix the code so each exits 0; "
-                   f"do not change the checks.\n\n{report}",
-            steps=steps,
-            warnings=warnings,
-            critical=False,
-            resume_session=session_id,
-            llm_config=develop_llm,
-        )
-        if fix_session_id:
-            session_id = fix_session_id
-            diagnostics["session_id"] = session_id
+    check_results = _run_checks(run, checks, develop_llm) if checks else []
 
-    if session_id and pr_number:
-        put_session(pr_number, session_id)
+    if run.session_id and pr_number:
+        put_session(pr_number, run.session_id)
 
-    _leave_uncommitted(repo_root, start_head, warnings)
+    run.leave_uncommitted()
     # Implementing may reconcile SWDD or SRS; the CR's record has to follow, or
     # `verify changes` finds the branch changing items it does not list.
-    unreadable: list[str] = []
-    items_changed = _items_changed(repo_root, unreadable)
-    if unreadable:
-        warnings.append(_warning("diff_unavailable", f"affected_items not updated: {unreadable[-1]}"))
+    items_changed = run.items_changed()
+    if run.unreadable:
+        run.warnings.append(_warning("diff_unavailable", f"affected_items not updated: {run.unreadable[-1]}"))
     else:
         _record_design_impact_in_cr(cr_id, dhf_path, items_changed)
     errors: list[dict] = [
@@ -1217,33 +374,19 @@ def generate_code(
         for c in check_results if not c["passed"]
     ]
     if pr_number and not errors:
-        _push_to_pr(repo_root, pr_number, f"feat({cr_id}): build code", errors)
+        _push_to_pr(run.repo_root, pr_number, f"feat({cr_id}): build code", errors)
     artifact_step, artifact_perf = _begin_step("collect_artifacts", {"kind": "files_changed"})
     try:
-        files_changed = git.collect_path_changes(repo_root, "origin/main", *_code_paths(dhf_path, repo_root))
+        files_changed = git.collect_path_changes(run.repo_root, since_ref, *_code_paths(dhf_path, run.repo_root))
     except git.DiffUnavailable as exc:
         files_changed = None
-        warnings.append(_warning(
+        run.warnings.append(_warning(
             "diff_unavailable",
-            f"Could not diff against origin/main ({exc}); files_changed is unknown, not empty.",
+            f"Could not diff against {since_ref} ({exc}); files_changed is unknown, not empty.",
         ))
-    steps.append(_finish_step(artifact_step, artifact_perf, "ok", {"files_changed": files_changed}))
+    run.steps.append(_finish_step(artifact_step, artifact_perf, "ok", {"files_changed": files_changed}))
 
-    result = _build_response(
-        cr_id=cr_id,
-        stage="develop",
-        started_at=started_at,
-        started_perf=started_perf,
-        inputs=inputs,
-        steps=steps,
-        artifacts={
-            "files_changed": files_changed,
-        },
-        diagnostics=diagnostics,
-        warnings=warnings,
-        errors=errors,
-        critical_step_failed=critical_step_failed,
-    )
+    result = run.respond("develop", {"files_changed": files_changed}, errors)
     result["code_review"] = _build_review_result("Implementation", code_review_log)
     if checks:
         result["checks"] = [{k: c[k] for k in ("command", "exit_code", "passed")} for c in check_results]

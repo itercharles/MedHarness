@@ -10,13 +10,13 @@ quality.
 ## Inputs
 
 - CR item: run `medharness --dhf DHF item get {{cr_id}}`
-- Code changes since main: run `git diff origin/main -- . ':(exclude)DHF' ':(exclude)docs/reviews'`
+- Code changes since main: run `git diff $(git merge-base {{since_ref}} HEAD) -- . ':(exclude)DHF' ':(exclude)docs/reviews'`
 
 ## Review Steps
 
 1. Read the CR item (`medharness --dhf DHF item get {{cr_id}}`) to understand what was required.
 
-2. Run `git diff origin/main -- . ':(exclude)DHF' ':(exclude)docs/reviews'` to see the implementation.
+2. Run `git diff $(git merge-base {{since_ref}} HEAD) -- . ':(exclude)DHF' ':(exclude)docs/reviews'` to see the implementation.
 
 3. Judge:
    - **Completeness** — does the code implement everything the CR and its

@@ -24,7 +24,8 @@ from unittest.mock import patch
 
 import pytest
 
-from medharness.services.cr_generation import _resume_unavailable, _run_claude_step
+from medharness.services.llm import _resume_unavailable
+from medharness.services.stage_run import _run_claude_step
 
 GONE = "No conversation found with session ID: 158a6d1a-29cc-408f-9787-551d67865578"
 
@@ -51,7 +52,7 @@ def _step(calls: list, outcomes: list[tuple[int, str, str]]):
 
     steps: list[dict] = []
     warnings: list[dict] = []
-    with patch("medharness.services.cr_generation._run_llm", side_effect=fake):
+    with patch("medharness.services.stage_run._run_llm", side_effect=fake):
         rc, output, session_id = _run_claude_step(
             name="run_initial_generation",
             prompt="revise it",
@@ -113,7 +114,7 @@ class TestTheFallback:
             calls.append(resume_session)
             return (1, GONE, "")
 
-        with patch("medharness.services.cr_generation._run_llm", side_effect=fake):
+        with patch("medharness.services.stage_run._run_llm", side_effect=fake):
             rc, _o, _s = _run_claude_step(
                 name="run_initial_generation", prompt="p", steps=steps,
                 warnings=warnings, critical=True,
