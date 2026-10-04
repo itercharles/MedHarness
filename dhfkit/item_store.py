@@ -7,7 +7,6 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 from dhfkit.exceptions import RefusedWrite, ValidationError
-from dhfkit.item_type import ItemType
 from dhfkit.models.config import ProjectConfig
 from dhfkit.models.item import Item
 from dhfkit.repository.loader import ItemLoader
@@ -57,21 +56,13 @@ class ItemStore:
     # ------------------------------------------------------------------
 
     def _item_type_dict(self, dt) -> dict:
-        it = ItemType.from_code(dt.code)
-        role = dt.role or (it.value.role if it else dt.code)
-        parent_types = [r[1] for r in it.value.required_upstream] if it else []
-        has_verification = (
-            dt.has_verification if dt.has_verification is not None
-            else (it.value.has_verification if it else False)
-        )
         return {
             "display_name": dt.name or dt.code,
             "description": dt.description or "",
             "code": dt.code,
             "prefix": dt.prefix,
-            "role": role,
-            "parent_types": parent_types,
-            "has_verification": bool(has_verification),
+            "role": dt.role or dt.code,
+            "has_verification": dt.has_verification,
             "lifecycle": dt.lifecycle,
             "fields": dt.properties or [],
         }
@@ -109,21 +100,16 @@ class ItemStore:
         """Add medharness domain fields (type, all_linked_uids) to an item dict.
 
         `all_linked_uids` is every ID the item links to, through the link fields its
-        doc type declares: a project's own relationship field is one of them. A type
-        that declares none keeps the model's fixed list.
+        doc type declares: a project's own relationship field is one of them.
         """
         d = item.model_dump(by_alias=True, exclude_none=True)
         dt = self._config.doc_type_of(item.uid)
         d['type'] = dt.code if dt else item.uid.split('-')[0]
-        declared = self._config.link_properties(dt.code) if dt else {}
-        if declared:
-            linked = set()
-            for field in declared:
-                value = d.get(field)
-                linked.update(v for v in ([value] if isinstance(value, str) else value or []) if isinstance(v, str) and v)
-            d['all_linked_uids'] = sorted(linked)
-        else:
-            d['all_linked_uids'] = item.all_linked_uids
+        linked = set()
+        for field in (self._config.link_properties(dt.code) if dt else {}):
+            value = d.get(field)
+            linked.update(v for v in ([value] if isinstance(value, str) else value or []) if isinstance(v, str) and v)
+        d['all_linked_uids'] = sorted(linked)
         return d
 
     def get_item(self, uid: str) -> Optional[dict]:

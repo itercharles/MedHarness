@@ -11,6 +11,24 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.56.0] — 2026-10-04
+
+### Changed
+
+- **The V-model is defined in one place: the shipped YAML.** A Python copy (`dhfkit/item_type.py`: roles,
+  required links, coverage chains) sat beside `global.yaml` and the doc-type files, and the two already
+  disagreed (`CRS`→`UC` and `SYSARCH`→`SYS` were required in one and not the other). `ProjectConfig.load`
+  always merged the YAML, so the copy ran only for a config built in code. It is gone, with
+  `default_traceability_rules()`, `default_coverage_chains()` and the unused `parent_types` of an item type.
+  `traceability_matrices` and `required_traceability` are lists (none means none) instead of "unset means the
+  defaults"; a type's `role` and `has_verification` come from its YAML (`swdd.yaml` now says
+  `has_verification: true`, which the copy used to supply). The required-traceability answer lost
+  `using_vmodel_defaults`, which was always false for a loaded config.
+- **`Item` no longer lists the link fields.** It carried twelve typed link attributes, `all_links` and
+  `all_linked_uids` (missing `mitigated_by`), a fourth hand-written list beside the types' declarations. An
+  item is its id and a few common fields plus whatever its type declares; `all_linked_uids` comes from the
+  type's declared links only, so a type that declares none has none.
+
 ## [0.55.1] — 2026-10-04
 
 ### Changed

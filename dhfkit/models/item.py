@@ -1,7 +1,7 @@
 """Pydantic v2 models for MedHarness items."""
 
 from pydantic import BaseModel, Field, ConfigDict
-from typing import Optional, List, Dict
+from typing import Optional
 from datetime import date
 
 
@@ -20,23 +20,8 @@ class Item(BaseModel):
         populate_by_name=True,
     )
 
-    # Core fields (Doorstop-inspired)
     uid: str = Field(..., description="Unique identifier", alias="id")
-    # Typed relationship fields (preserve semantic meaning)
-    derives_from: Optional[List[str]] = Field(default=None, description="Items this derives from")
-    implements: Optional[List[str]] = Field(default=None, description="Items this implements")
-    guided_by: Optional[List[str]] = Field(default=None, description="Items that guide this")
-    informs: Optional[List[str]] = Field(default=None, description="Items this informs")
-    design: Optional[List[str]] = Field(default=None, description="Items this designs/addresses")
-    mitigated_by: Optional[List[str]] = Field(default=None, description="Items that mitigate this")
-    mitigates: Optional[List[str]] = Field(default=None, description="Items this mitigates")
-    satisfies: Optional[List[str]] = Field(default=None, description="Items this satisfies")
-    verifies: Optional[List[str]] = Field(default=None, description="Items this verifies")
-    validates: Optional[List[str]] = Field(default=None, description="Items this validates")
-    module: Optional[List[str]] = Field(default=None, description="Module this item belongs to")
-    affected_risk_items: Optional[List[str]] = Field(default=None, description="Risk/RCM items affected by this CR")
 
-    # Common fields
     title: Optional[str] = Field(None, description="Item title")
     reviewer: Optional[str] = Field(None, description="Reviewer name")
     review_date: Optional[date] = Field(None, description="Review date")
@@ -47,31 +32,6 @@ class Item(BaseModel):
 
     # Dynamic attributes are handled by model_config['extra'] = 'allow'
     # This allows any field defined in project_config.yaml to be stored on the item
-
-    @property
-    def all_links(self) -> Dict[str, List[str]]:
-        """Get all relationships with their types."""
-        return {
-            'derives_from': self.derives_from or [],
-            'implements': self.implements or [],
-            'guided_by': self.guided_by or [],
-            'informs': self.informs or [],
-            'design': self.design or [],
-            'mitigates': self.mitigates or [],
-            'satisfies': self.satisfies or [],
-            'verifies': self.verifies or [],
-            'validates': self.validates or [],
-            'module': self.module or [],
-            'affected_risk_items': self.affected_risk_items or [],
-        }
-
-    @property
-    def all_linked_uids(self) -> List[str]:
-        """Get flat list of all linked UIDs for graph traversal."""
-        all_uids = set()
-        for relationship_type, uids in self.all_links.items():
-            all_uids.update(uids)
-        return sorted(list(all_uids))
 
     @property
     def prefix(self) -> str:
