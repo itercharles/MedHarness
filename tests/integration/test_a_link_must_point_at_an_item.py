@@ -65,3 +65,20 @@ def test_an_update_that_leaves_an_old_dangling_link_alone_still_goes_through(dhf
     result = _item(dhf, "update", "CR-001", "--data", json.dumps({"description": "Reworded."}))
 
     assert result.exit_code == 0, result.output
+
+
+def test_a_link_field_a_project_declares_is_checked_too(dhf: Path) -> None:
+    import yaml
+
+    (dhf / "config" / "doc_types").mkdir(exist_ok=True)
+    (dhf / "config" / "doc_types" / "hwr.yaml").write_text(yaml.safe_dump({
+        "code": "HWR", "name": "Hardware requirement", "prefix": "HWR-", "directory": "hwr",
+        "properties": ["id", {"name": "title", "format": "short_text"},
+                       {"name": "refines", "format": "relationship", "target_types": ["SYS"]}]}))
+
+    refused = _item(dhf, "create", "--type", "HWR", "--data", json.dumps({"title": "T", "refines": ["SYS-999"]}))
+    assert refused.exit_code != 0
+    assert "refines: 'SYS-999' does not exist" in refused.output + (refused.stderr or "")
+
+    accepted = _item(dhf, "create", "--type", "HWR", "--data", json.dumps({"title": "T", "refines": ["SYS-001"]}))
+    assert accepted.exit_code == 0, accepted.output

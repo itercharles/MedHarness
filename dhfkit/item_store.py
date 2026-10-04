@@ -14,17 +14,6 @@ from dhfkit.repository.loader import ItemLoader
 from dhfkit.adapter import DHFAdapter, resolve_adapter
 from dhfkit.id_generator import get_next_id
 
-# V-model traceability link fields — used for orphan and coverage checks.
-_TRACEABILITY_LINK_FIELDS = (
-    "derives_from", "implements", "mitigates", "satisfies",
-    "guided_by", "informs", "design", "verifies", "validates",
-    "mitigated_by", "module",
-)
-# Full set of relationship fields on any item — superset of traceability fields.
-_ITEM_LINK_FIELDS = _TRACEABILITY_LINK_FIELDS + (
-    "affected_items", "affected_risk_items",
-    "target_release", "found_in_release", "fixed_in_release",
-)
 # What a branch changed, deleted items included: they stay named after they are gone.
 _HISTORICAL_LINK_FIELDS = frozenset({"affected_items"})
 _UID_PATTERN = re.compile(r"^[A-Z][A-Z0-9]*(-[A-Z0-9]+)*-\d+$")
@@ -169,7 +158,7 @@ class ItemStore:
         doc_type = self._config.doc_type_of(uid) if uid else None
         declared = tuple(self._config.link_properties(doc_type.code)) if doc_type else ()
         errors = []
-        for field in dict.fromkeys(_ITEM_LINK_FIELDS + declared):
+        for field in declared:
             val = data.get(field)
             if not val:
                 continue

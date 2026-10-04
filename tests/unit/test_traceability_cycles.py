@@ -25,28 +25,30 @@ import yaml
 from medharness.services.traceability import find_link_cycles
 from medharness.scaffold import replace_placeholders, scaffold_dhf
 
+LINKS = ("derives_from", "implements", "affected_items")
+
 
 class TestFindLinkCycles:
     def test_a_two_item_cycle(self) -> None:
         items = [{"id": "SYS-001", "derives_from": ["SRS-001"]},
                  {"id": "SRS-001", "derives_from": ["SYS-001"]}]
-        assert find_link_cycles(items) == [["SRS-001", "SYS-001"]]
+        assert find_link_cycles(items, LINKS) == [["SRS-001", "SYS-001"]]
 
     def test_a_longer_cycle(self) -> None:
         items = [{"id": "A-1", "derives_from": ["A-2"]},
                  {"id": "A-2", "derives_from": ["A-3"]},
                  {"id": "A-3", "derives_from": ["A-1"]}]
-        assert find_link_cycles(items) == [["A-1", "A-2", "A-3"]]
+        assert find_link_cycles(items, LINKS) == [["A-1", "A-2", "A-3"]]
 
     def test_a_self_link_is_the_degenerate_cycle(self) -> None:
         """An item deriving from itself is as wrong as a two-item loop."""
-        assert find_link_cycles([{"id": "S-1", "derives_from": ["S-1"]}]) == [["S-1"]]
+        assert find_link_cycles([{"id": "S-1", "derives_from": ["S-1"]}], LINKS) == [["S-1"]]
 
     def test_a_directed_chain_is_not_a_cycle(self) -> None:
         items = [{"id": "SYS-001"},
                  {"id": "SRS-001", "derives_from": ["SYS-001"]},
                  {"id": "SRS-002", "derives_from": ["SYS-001"]}]
-        assert find_link_cycles(items) == []
+        assert find_link_cycles(items, LINKS) == []
 
     def test_a_dangling_link_yields_no_cycle(self) -> None:
         """A link to something absent belongs to find_dangling_links.
@@ -61,21 +63,21 @@ class TestFindLinkCycles:
             {"id": "SRS-001", "derives_from": ["SYS-404"]},
             {"id": "SRS-002", "derives_from": ["SYS-404", "SRS-001"]},
         ]
-        assert find_link_cycles(items) == []
+        assert find_link_cycles(items, LINKS) == []
 
     def test_one_cycle_is_reported_once(self) -> None:
         """Entering the same loop from two places is still one finding."""
         items = [{"id": "A-1", "derives_from": ["A-2"]},
                  {"id": "A-2", "derives_from": ["A-1"]},
                  {"id": "B-1", "derives_from": ["A-1"]}]
-        assert find_link_cycles(items) == [["A-1", "A-2"]]
+        assert find_link_cycles(items, LINKS) == [["A-1", "A-2"]]
 
     def test_the_ordering_is_stable(self) -> None:
         """Each cycle starts from its lowest ID, so a re-run reads the same."""
         forward = [{"id": "A-2", "derives_from": ["A-1"]},
                    {"id": "A-1", "derives_from": ["A-2"]}]
         reversed_ = list(reversed(forward))
-        assert find_link_cycles(forward) == find_link_cycles(reversed_) == [["A-1", "A-2"]]
+        assert find_link_cycles(forward, LINKS) == find_link_cycles(reversed_, LINKS) == [["A-1", "A-2"]]
 
 
 class TestTheGateReportsIt:

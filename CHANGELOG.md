@@ -11,6 +11,17 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.54.2] — 2026-10-04
+
+### Changed
+
+- **One source for "which fields are links": the types' own declarations.** `dhfkit/traceability.py`
+  and `item_store.py` each kept a hand-written list on top of the schema (the same duplication that once
+  left five relationship fields unchecked). Both are gone: dangling-link detection, cycle detection and the
+  write-time link check read the fields a doc type declares (`relationship`, `item_multiselect`). A type
+  that declares no link fields has no links; the shipped types declare theirs. `find_dangling_links` and
+  `find_link_cycles` now take the fields explicitly.
+
 ## [0.54.1] — 2026-10-04
 
 ### Fixed
