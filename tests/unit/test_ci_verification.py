@@ -220,10 +220,10 @@ class TestACheckThatCouldNotRunIsReported:
 
         from dhfkit.item_store import ItemStore
         from medharness.services.verify_dhf import ci_structural_gate
-        from medharness.workflows.init import _replace_placeholders, _scaffold_dhf
+        from medharness.scaffold import replace_placeholders, scaffold_dhf
 
-        _scaffold_dhf(tmp_path)
-        _replace_placeholders(tmp_path, "Flaky")
+        scaffold_dhf(tmp_path)
+        replace_placeholders(tmp_path, "Flaky")
         real = ItemStore.list_items
         calls = {"n": 0}
 
@@ -243,9 +243,9 @@ class TestACheckThatCouldNotRunIsReported:
 
     def test_a_healthy_dhf_reports_no_such_error(self, tmp_path) -> None:
         from medharness.services.verify_dhf import ci_structural_gate
-        from medharness.workflows.init import _replace_placeholders, _scaffold_dhf
+        from medharness.scaffold import replace_placeholders, scaffold_dhf
 
-        _scaffold_dhf(tmp_path)
-        _replace_placeholders(tmp_path, "Fine")
+        scaffold_dhf(tmp_path)
+        replace_placeholders(tmp_path, "Fine")
         result = ci_structural_gate(tmp_path / "DHF")
         assert not any("could not be checked" in e for e in result["errors"])

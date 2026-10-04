@@ -22,13 +22,13 @@ import yaml
 
 import dhfkit.api as api
 from dhfkit.item_store import ItemStore
-from medharness.workflows.init import _replace_placeholders, _scaffold_dhf
+from medharness.scaffold import replace_placeholders, scaffold_dhf
 
 
 @pytest.fixture
 def dhf(tmp_path: Path) -> Path:
-    _scaffold_dhf(tmp_path)
-    _replace_placeholders(tmp_path, "Atomic")
+    scaffold_dhf(tmp_path)
+    replace_placeholders(tmp_path, "Atomic")
     return tmp_path / "DHF"
 
 
@@ -86,8 +86,8 @@ class TestDhfkitDoesNotCommit:
     """
 
     def _repo(self, tmp_path: Path) -> Path:
-        _scaffold_dhf(tmp_path)
-        _replace_placeholders(tmp_path, "Labels")
+        scaffold_dhf(tmp_path)
+        replace_placeholders(tmp_path, "Labels")
         for args in (["init", "-q"], ["add", "-A"],
                      ["-c", "user.email=t@e", "-c", "user.name=t",
                       "commit", "-qm", "scaffold"]):

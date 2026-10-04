@@ -19,7 +19,7 @@ from click.testing import CliRunner
 
 from medharness.cli import main
 from medharness.services.design_validation import _validate_cascade_completeness, cascade_children
-from medharness.workflows.init import _replace_placeholders, _scaffold_dhf
+from medharness.scaffold import replace_placeholders, scaffold_dhf
 
 
 def _doc_type(code: str, link: str | None = None, target: str | None = None) -> dict:
@@ -34,8 +34,8 @@ def _doc_type(code: str, link: str | None = None, target: str | None = None) -> 
 @pytest.fixture
 def dhf(tmp_path: Path) -> Path:
     """The starter DHF plus hardware requirements that refine SYS and are tested by TST."""
-    _scaffold_dhf(tmp_path)
-    _replace_placeholders(tmp_path, "Hw")
+    scaffold_dhf(tmp_path)
+    replace_placeholders(tmp_path, "Hw")
     dhf = tmp_path / "DHF"
     config = dhf / "config"
     (config / "doc_types").mkdir(exist_ok=True)

@@ -198,7 +198,7 @@ else
 fi
 
 # Init no longer does git clone or pip install -e dhf/
-if file_has_pattern "pip install -e dhf/" medharness/workflows/init.py; then
+if file_has_pattern "pip install -e dhf/" medharness/scaffold.py; then
   fail "init still references pip install -e dhf/ (no longer needed)"
 else
   pass "init does not reference separate dhfkit install"
@@ -227,28 +227,28 @@ fi
 echo "=== 4. SCAFFOLD-CONTRACT AUDIT ==="
 
 # init must scaffold from local bundled templates, not remote fetch
-if file_has_pattern "_scaffold_dhf|scaffolds from" medharness/workflows/init.py; then
+if file_has_pattern "scaffold_dhf|scaffolds from" medharness/scaffold.py; then
   pass "init scaffolds DHF from local templates"
 else
   fail "init missing local scaffold logic"
 fi
 
 # init must NOT reference git clone or remote fetch
-if file_has_pattern "git clone|DHF_TEMPLATE_REPO|_fetch_dhf_template" medharness/workflows/init.py; then
+if file_has_pattern "git clone|DHF_TEMPLATE_REPO|_fetch_dhf_template" medharness/scaffold.py; then
   fail "init still references remote DHF fetch"
 else
   pass "init has no remote DHF fetch logic"
 fi
 
 # Generated workflows: no compliance-check
-if file_has_pattern 'ci compliance-check' medharness/workflows/init.py; then
+if file_has_pattern 'ci compliance-check' medharness/scaffold.py; then
   fail "generated workflow references ci compliance-check"
 else
   pass "generated workflows: no compliance-check references"
 fi
 
 # CLAUDE.md template points to existing docs
-if file_has_pattern 'README.md' medharness/workflows/init.py; then
+if file_has_pattern 'README.md' medharness/scaffold.py; then
   pass "CLAUDE.md template references README.md"
 fi
 

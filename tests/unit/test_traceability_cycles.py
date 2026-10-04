@@ -23,7 +23,7 @@ import pytest
 import yaml
 
 from medharness.services.traceability import find_link_cycles
-from medharness.workflows.init import _replace_placeholders, _scaffold_dhf
+from medharness.scaffold import replace_placeholders, scaffold_dhf
 
 
 class TestFindLinkCycles:
@@ -81,8 +81,8 @@ class TestFindLinkCycles:
 class TestTheGateReportsIt:
     @pytest.fixture
     def cyclic(self, tmp_path: Path) -> Path:
-        _scaffold_dhf(tmp_path)
-        _replace_placeholders(tmp_path, "Cycles")
+        scaffold_dhf(tmp_path)
+        replace_placeholders(tmp_path, "Cycles")
         dhf = tmp_path / "DHF"
         sys_item = next((dhf / "items").rglob("SYS-001.yaml"))
         data = yaml.safe_load(sys_item.read_text(encoding="utf-8"))
@@ -109,8 +109,8 @@ class TestTheGateReportsIt:
 
     def test_the_scaffold_itself_has_none(self, tmp_path: Path) -> None:
         """The check is only useful if a healthy DHF stays green."""
-        _scaffold_dhf(tmp_path)
-        _replace_placeholders(tmp_path, "Clean")
+        scaffold_dhf(tmp_path)
+        replace_placeholders(tmp_path, "Clean")
         code, payload = self._verify(tmp_path / "DHF")
         assert code == 0, payload["errors"]
 
@@ -130,8 +130,8 @@ class TestTheGateCopiesEveryFinding:
         from medharness.services.verify_dhf import ci_structural_gate
         from medharness.services.traceability import analyse
 
-        _scaffold_dhf(tmp_path)
-        _replace_placeholders(tmp_path, "Copy")
+        scaffold_dhf(tmp_path)
+        replace_placeholders(tmp_path, "Copy")
         dhf = tmp_path / "DHF"
 
         produced = set(analyse(ItemStore(dhf)))

@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-from medharness.workflows.init import _scaffold_dhf, _replace_placeholders
+from medharness.scaffold import scaffold_dhf, replace_placeholders
 
 
 class TestScaffoldStructure:
@@ -48,8 +48,8 @@ class TestScaffoldStructure:
     def scaffolded(self):
         with tempfile.TemporaryDirectory() as tmp:
             dhf_dir = Path(tmp) / "test-dhf"
-            _scaffold_dhf(dhf_dir)
-            _replace_placeholders(dhf_dir, "Test Project")
+            scaffold_dhf(dhf_dir)
+            replace_placeholders(dhf_dir, "Test Project")
             yield dhf_dir
 
     def test_core_directories_exist(self, scaffolded):
@@ -136,9 +136,9 @@ class TestScaffoldStructure:
         """
         with tempfile.TemporaryDirectory() as tmp:
             dhf_dir = Path(tmp) / "test-dhf"
-            _scaffold_dhf(dhf_dir)
+            scaffold_dhf(dhf_dir)
             first = sorted(p.relative_to(dhf_dir) for p in dhf_dir.rglob("*") if p.is_file())
-            _scaffold_dhf(dhf_dir)  # should not raise
+            scaffold_dhf(dhf_dir)  # should not raise
             second = sorted(p.relative_to(dhf_dir) for p in dhf_dir.rglob("*") if p.is_file())
 
             # "does not crash" is not the property that matters: the scaffold

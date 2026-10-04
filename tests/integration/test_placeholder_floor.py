@@ -13,12 +13,12 @@ import yaml
 from click.testing import CliRunner
 
 from medharness.cli import main
-from medharness.workflows.init import _replace_placeholders, _scaffold_dhf
+from medharness.scaffold import replace_placeholders, scaffold_dhf
 
 
 def _project(tmp_path: Path) -> Path:
-    _scaffold_dhf(tmp_path)
-    _replace_placeholders(tmp_path, "Floor")
+    scaffold_dhf(tmp_path)
+    replace_placeholders(tmp_path, "Floor")
     return tmp_path / "DHF"
 
 

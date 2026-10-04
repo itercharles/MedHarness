@@ -24,7 +24,7 @@ import pytest
 import yaml
 
 import dhfkit.api as api
-from medharness.workflows.init import _replace_placeholders, _scaffold_dhf
+from medharness.scaffold import replace_placeholders, scaffold_dhf
 
 
 @pytest.fixture
@@ -32,8 +32,8 @@ def aged(tmp_path: Path) -> Path:
     """A DHF whose own lifecycle override predates the states its doc types use."""
     from dhfkit.paths import DEFAULT_CONFIG_DIR
 
-    _scaffold_dhf(tmp_path)
-    _replace_placeholders(tmp_path, "Aged")
+    scaffold_dhf(tmp_path)
+    replace_placeholders(tmp_path, "Aged")
     dhf = tmp_path / "DHF"
     config = dhf / "config" / "global.yaml"
     data = yaml.safe_load(config.read_text())

@@ -109,7 +109,7 @@ def register(main):
         pushes to that PR, revising when a reviewer asked for changes.
         """
         from medharness.services.cr_generation import generate_dhf  # noqa: PLC0415
-        from medharness.workflows.cr_state import assert_cr_active  # noqa: PLC0415
+        from medharness.services.cr_state import assert_cr_active  # noqa: PLC0415
         dhf: Path = ctx.obj["dhf"]
         try:
             store = open_store(ctx.obj["dhf"])
@@ -167,7 +167,7 @@ def register(main):
         pushes to that PR, revising when a reviewer asked for changes.
         """
         from medharness.services.cr_generation import generate_code  # noqa: PLC0415
-        from medharness.workflows.cr_state import assert_cr_active  # noqa: PLC0415
+        from medharness.services.cr_state import assert_cr_active  # noqa: PLC0415
         dhf: Path = ctx.obj["dhf"]
         try:
             store = open_store(ctx.obj["dhf"])

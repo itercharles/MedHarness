@@ -16,15 +16,15 @@ from click.testing import CliRunner
 import dhfkit
 
 from medharness.cli import main
-from medharness.workflows.init import _replace_placeholders, _scaffold_dhf
+from medharness.scaffold import replace_placeholders, scaffold_dhf
 
 DEFAULTS = Path(dhfkit.__file__).parent / "templates" / "config" / "doc_types"
 SECTION = "### What Belongs at Each Level"
 
 
 def _project(tmp_path: Path) -> Path:
-    _scaffold_dhf(tmp_path)
-    _replace_placeholders(tmp_path, "Levels")
+    scaffold_dhf(tmp_path)
+    replace_placeholders(tmp_path, "Levels")
     return tmp_path / "DHF"
 
 

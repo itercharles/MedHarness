@@ -3,7 +3,7 @@
 Most of these pin regressions introduced by the previous review round, plus one
 older defect that made `medharness init` permanently corrupt the installed
 package: the documented setup creates `.venv` **inside** the project, and
-`_replace_placeholders` walked the whole tree, so it rewrote
+`replace_placeholders` walked the whole tree, so it rewrote
 `site-packages/dhfkit/templates` in place. Every later project scaffolded from
 that virtualenv then inherited the first project's name.
 """
@@ -18,10 +18,10 @@ import pytest
 
 from dhfkit.item_store import ItemStore
 from medharness.services.traceability_report import verification_evidence
-from medharness.workflows.init import (
+from medharness.scaffold import (
     _NON_SCAFFOLD_DIRS,
-    _replace_placeholders,
-    _scaffold_dhf,
+    replace_placeholders,
+    scaffold_dhf,
     _substitutable_files,
     _write_gitignore,
 )
@@ -42,14 +42,14 @@ class TestScaffoldIsolation:
         template = installed / "context.md"
         template.write_text("# AI Agent Context — {{project_name}}")
 
-        _scaffold_dhf(tmp_path)
-        _replace_placeholders(tmp_path, "Trial")
+        scaffold_dhf(tmp_path)
+        replace_placeholders(tmp_path, "Trial")
 
         assert template.read_text() == "# AI Agent Context — {{project_name}}"
 
     def test_project_files_are_still_rewritten(self, tmp_path: Path) -> None:
-        _scaffold_dhf(tmp_path)
-        _replace_placeholders(tmp_path, "Trial")
+        scaffold_dhf(tmp_path)
+        replace_placeholders(tmp_path, "Trial")
         assert "{{project_name}}" not in (tmp_path / "DHF" / "README.md").read_text()
 
     @pytest.mark.parametrize("pruned", sorted(_NON_SCAFFOLD_DIRS))
@@ -69,17 +69,17 @@ class TestScaffoldIsolation:
         assert "x.md" in found
 
     def test_unreadable_file_does_not_abort_the_scaffold(self, tmp_path: Path) -> None:
-        _scaffold_dhf(tmp_path)
+        scaffold_dhf(tmp_path)
         locked = tmp_path / "DHF" / "locked.md"
         locked.write_text("{{project_name}}")
         locked.chmod(0o000)
         try:
-            _replace_placeholders(tmp_path, "Trial")  # must not raise
+            replace_placeholders(tmp_path, "Trial")  # must not raise
         finally:
             locked.chmod(0o644)
 
         # "does not abort" is a claim about the files after the unreadable one.
-        # Without this the test passes if _replace_placeholders becomes a no-op.
+        # Without this the test passes if replace_placeholders becomes a no-op.
         substituted = [
             f for f in (tmp_path / "DHF").rglob("*")
             if f.is_file() and f != locked and "Trial" in _safe_read(f)
@@ -108,8 +108,8 @@ class TestTheReleaseGate:
         entitled to omit the use-case layer must still be releasable."""
         from medharness.services.verify_dhf import ci_structural_gate
 
-        _scaffold_dhf(tmp_path)
-        _replace_placeholders(tmp_path, "Trial")
+        scaffold_dhf(tmp_path)
+        replace_placeholders(tmp_path, "Trial")
         dhf = tmp_path / "DHF"
         config = dhf / "config" / "global.yaml"
         config.write_text(config.read_text().replace("omit_doc_types: []", "omit_doc_types: [UC]"))
@@ -127,8 +127,8 @@ class TestPrefixConsistency:
     """services/traceability_report.py must agree with dhfkit's Item.prefix."""
 
     def test_core_resolves_multi_segment_prefixes(self, tmp_path: Path) -> None:
-        _scaffold_dhf(tmp_path)
-        _replace_placeholders(tmp_path, "Trial")
+        scaffold_dhf(tmp_path)
+        replace_placeholders(tmp_path, "Trial")
         dhf = tmp_path / "DHF"
         # The loader resolves the doc-type code from the ID's first segment, so
         # a multi-segment prefix must keep that segment as its code: code VER,

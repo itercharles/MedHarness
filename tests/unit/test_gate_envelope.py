@@ -24,7 +24,7 @@ from medharness.services.verify_dhf import ci_structural_gate
 from medharness.services.verify_soup import soup_gate
 from medharness.services.envelope import GATE_RESULT_KEYS, ENVELOPE_KEYS, gate_result
 from medharness.services.verify_tests import ci_test_coverage_gate
-from medharness.workflows.init import _replace_placeholders, _scaffold_dhf
+from medharness.scaffold import replace_placeholders, scaffold_dhf
 
 #: Gates that take only a DHF path, so they can be called generically.
 SIMPLE_GATES = (
@@ -64,8 +64,8 @@ def _run_gate(command: str, dhf) -> dict:
 
 @pytest.fixture
 def dhf(tmp_path: Path) -> Path:
-    _scaffold_dhf(tmp_path)
-    _replace_placeholders(tmp_path, "Trial")
+    scaffold_dhf(tmp_path)
+    replace_placeholders(tmp_path, "Trial")
     return tmp_path / "DHF"
 
 
@@ -243,8 +243,8 @@ def failing_dhf(tmp_path: Path) -> Path:
     """
     import subprocess
 
-    _scaffold_dhf(tmp_path)
-    _replace_placeholders(tmp_path, "Broken")
+    scaffold_dhf(tmp_path)
+    replace_placeholders(tmp_path, "Broken")
     dhf = tmp_path / "DHF"
 
     # A link that resolves to nothing.
@@ -454,8 +454,8 @@ class TestGateLevelWarningsReachStderr:
 
     @pytest.fixture
     def inert_dhf(self, tmp_path: Path) -> Path:
-        _scaffold_dhf(tmp_path)
-        _replace_placeholders(tmp_path, "Inert")
+        scaffold_dhf(tmp_path)
+        replace_placeholders(tmp_path, "Inert")
         dhf = tmp_path / "DHF"
         results = dhf / "test-results"
         results.mkdir(exist_ok=True)

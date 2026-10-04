@@ -25,7 +25,7 @@ from pathlib import Path
 
 import pytest
 
-from medharness.workflows.init import _replace_placeholders, _scaffold_dhf
+from medharness.scaffold import replace_placeholders, scaffold_dhf
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -71,8 +71,8 @@ def _commit_with_origin_main(root: Path) -> None:
 
 @pytest.fixture
 def broken(request, tmp_path: Path) -> tuple[Path, Path]:
-    _scaffold_dhf(tmp_path)
-    _replace_placeholders(tmp_path, "Broken")
+    scaffold_dhf(tmp_path)
+    replace_placeholders(tmp_path, "Broken")
     _commit_with_origin_main(tmp_path)
     dhf = tmp_path / "DHF"
     locate, content = FAULTS[request.param]
@@ -129,8 +129,8 @@ def test_a_broken_item_does_not_leave_the_denominator(tmp_path: Path) -> None:
     Before, `verify tests` still produced an answer — a smaller one. Asserting
     the command stops is what rules that out; this names why it matters.
     """
-    _scaffold_dhf(tmp_path)
-    _replace_placeholders(tmp_path, "Shrink")
+    scaffold_dhf(tmp_path)
+    replace_placeholders(tmp_path, "Shrink")
     dhf = tmp_path / "DHF"
     _first_srs(dhf).write_text("- x\n", encoding="utf-8")
 

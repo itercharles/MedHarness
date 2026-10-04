@@ -10,9 +10,9 @@ Tests the zero-prompt init command:
 import inspect
 
 
-from medharness.workflows.init import (
-    _scaffold_dhf,
-    _replace_placeholders,
+from medharness.scaffold import (
+    scaffold_dhf,
+    replace_placeholders,
     _write_agent_files,
     _write_gitignore,
 )
@@ -60,29 +60,29 @@ class TestInitCmd:
     # ── placeholder substitution ─────────────────────────────────────────────
 
     def test_replace_placeholders_substitutes_project_name(self, tmp_path):
-        """_replace_placeholders substitutes {{project_name}} in DHF template files."""
+        """replace_placeholders substitutes {{project_name}} in DHF template files."""
         (tmp_path / "DHF").mkdir(parents=True)
         readme = tmp_path / "README.md"
         readme.write_text("# {{project_name}} DHF")
-        _replace_placeholders(tmp_path, "Test Device")
+        replace_placeholders(tmp_path, "Test Device")
         assert "Test Device" in readme.read_text()
         assert "{{project_name}}" not in readme.read_text()
 
     def test_replace_placeholders_substitutes_medharness_version(self, tmp_path):
-        """_replace_placeholders substitutes {{medharness_version}}."""
+        """replace_placeholders substitutes {{medharness_version}}."""
         (tmp_path / "DHF").mkdir(parents=True)
         wf = tmp_path / "workflow.yml"
         wf.write_text("pip install medharness=={{medharness_version}}")
-        _replace_placeholders(tmp_path, "Device")
+        replace_placeholders(tmp_path, "Device")
         assert "{{medharness_version}}" not in wf.read_text()
 
     def test_replace_placeholders_handles_missing_dir(self, tmp_path):
-        """_replace_placeholders handles directories with no substitutable files gracefully."""
+        """replace_placeholders handles directories with no substitutable files gracefully."""
         (tmp_path / "DHF").mkdir()
         untouched = tmp_path / "DHF" / "keep.txt"
         untouched.write_text("no placeholders here")
 
-        _replace_placeholders(tmp_path, "Device")
+        replace_placeholders(tmp_path, "Device")
 
         # A no-op would pass on "does not raise" alone; what matters is that it
         # left a file with nothing to substitute exactly as it was.
@@ -109,8 +109,8 @@ class TestInitCmd:
     # ── DHF scaffold ─────────────────────────────────────────────────────────
 
     def test_scaffold_uses_local_templates(self):
-        """_scaffold_dhf copies from bundled templates, not remote git."""
-        src = inspect.getsource(_scaffold_dhf)
+        """scaffold_dhf copies from bundled templates, not remote git."""
+        src = inspect.getsource(scaffold_dhf)
         assert "shutil.copytree" in src
         assert "_TEMPLATES_DIR" in src
         assert "git clone" not in src
@@ -119,23 +119,23 @@ class TestInitCmd:
     def test_scaffold_writes_nothing_that_nothing_reads(self, tmp_path):
         """`.github/prompts/*.md` and `AI-harness/context.md` were scaffolded and
         kept current by `upgrade`, and no code or prompt read them."""
-        _scaffold_dhf(tmp_path)
+        scaffold_dhf(tmp_path)
         assert not (tmp_path / ".github").exists()
         assert not (tmp_path / "AI-harness").exists()
 
     def test_scaffold_omits_github_workflow(self, tmp_path):
         """CI is not in the release payload, so init must not claim to create it."""
-        _scaffold_dhf(tmp_path)
+        scaffold_dhf(tmp_path)
         assert not (tmp_path / ".github" / "workflows").exists()
 
     def test_scaffold_creates_dhf_readme_inside_dhf(self, tmp_path):
-        """_scaffold_dhf places README inside DHF/, not at repo root."""
-        _scaffold_dhf(tmp_path)
+        """scaffold_dhf places README inside DHF/, not at repo root."""
+        scaffold_dhf(tmp_path)
         assert (tmp_path / "DHF" / "README.md").exists()
 
     def test_scaffold_creates_items_directories(self, tmp_path):
-        """_scaffold_dhf creates DHF item directories for all doc types."""
-        _scaffold_dhf(tmp_path)
+        """scaffold_dhf creates DHF item directories for all doc types."""
+        scaffold_dhf(tmp_path)
         for d in ("00_uc", "01_crs", "02_sys", "03_srs", "04_modules", "05_swdd", "07_cr"):
             assert (tmp_path / "DHF" / "items" / d).is_dir(), f"Missing items/{d}"
 
@@ -143,7 +143,7 @@ class TestInitCmd:
 
     def test_run_init_no_github_calls(self):
         """run_init makes no GitHub API or gh CLI calls."""
-        from medharness.workflows.init import run_init
+        from medharness.scaffold import run_init
         src = inspect.getsource(run_init)
         assert "gh(" not in src
         assert "_repo_exists" not in src
@@ -153,7 +153,7 @@ class TestInitCmd:
 
     def test_run_init_no_prompts(self):
         """run_init contains no click.prompt calls — it is zero-prompt."""
-        from medharness.workflows.init import run_init
+        from medharness.scaffold import run_init
         src = inspect.getsource(run_init)
         assert "click.prompt" not in src
 
@@ -162,7 +162,7 @@ def test_the_ai_workflow_page_shows_the_section_init_writes():
     """A project that predates AGENTS.md copies it from there."""
     from pathlib import Path
 
-    from medharness.workflows.init import DHF_INSTRUCTIONS
+    from medharness.scaffold import DHF_INSTRUCTIONS
 
     adopting = (Path(__file__).resolve().parents[2] / "docs" / "ai-workflow.md").read_text()
     assert DHF_INSTRUCTIONS in adopting

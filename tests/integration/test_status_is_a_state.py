@@ -17,13 +17,13 @@ from click.testing import CliRunner
 from fixtures.starter import keep_the_starter_text
 
 from medharness.cli import main
-from medharness.workflows.init import _replace_placeholders, _scaffold_dhf
+from medharness.scaffold import replace_placeholders, scaffold_dhf
 
 
 @pytest.fixture
 def dhf(tmp_path: Path) -> Path:
-    _scaffold_dhf(tmp_path)
-    _replace_placeholders(tmp_path, "States")
+    scaffold_dhf(tmp_path)
+    replace_placeholders(tmp_path, "States")
     keep_the_starter_text(tmp_path / "DHF")
     return tmp_path / "DHF"
 

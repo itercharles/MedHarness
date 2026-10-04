@@ -17,7 +17,7 @@ import pytest
 import yaml
 
 import dhfkit.api as api
-from medharness.workflows.init import _replace_placeholders, _scaffold_dhf
+from medharness.scaffold import replace_placeholders, scaffold_dhf
 
 TEMPLATES = Path(__file__).resolve().parents[1] / "templates" / "config"
 
@@ -59,8 +59,8 @@ class TestTheScaffoldedCRCanReachCompleted:
 
     def test_the_full_path(self, tmp_path: Path) -> None:
         """Closing needs the record that closure is supposed to mean."""
-        _scaffold_dhf(tmp_path)
-        _replace_placeholders(tmp_path, "Lifecycle")
+        scaffold_dhf(tmp_path)
+        replace_placeholders(tmp_path, "Lifecycle")
         dhf = tmp_path / "DHF"
         for state in ("design", "develop"):
             api.transition_item(dhf, "CR-001", state)
@@ -83,8 +83,8 @@ class TestTheScaffoldedCRCanReachCompleted:
         Filling in a CR's required fields sent it back to `new`, so the criteria
         above could never be satisfied — the act of qualifying disqualified it.
         """
-        _scaffold_dhf(tmp_path)
-        _replace_placeholders(tmp_path, "Lifecycle")
+        scaffold_dhf(tmp_path)
+        replace_placeholders(tmp_path, "Lifecycle")
         dhf = tmp_path / "DHF"
         api.transition_item(dhf, "CR-001", "design")
         api.update_item(dhf, "CR-001", {"implementation_notes": "x"})
@@ -92,13 +92,13 @@ class TestTheScaffoldedCRCanReachCompleted:
 
     def test_an_undefined_state_is_still_refused(self, tmp_path: Path) -> None:
         """Widening the state list must not make the machine permissive."""
-        _scaffold_dhf(tmp_path)
-        _replace_placeholders(tmp_path, "Lifecycle")
+        scaffold_dhf(tmp_path)
+        replace_placeholders(tmp_path, "Lifecycle")
         with pytest.raises(ValueError):
             api.transition_item(tmp_path / "DHF", "CR-001", "nonexistent")
 
     def test_skipping_a_state_is_still_refused(self, tmp_path: Path) -> None:
-        _scaffold_dhf(tmp_path)
-        _replace_placeholders(tmp_path, "Lifecycle")
+        scaffold_dhf(tmp_path)
+        replace_placeholders(tmp_path, "Lifecycle")
         with pytest.raises(ValueError):
             api.transition_item(tmp_path / "DHF", "CR-001", "completed")

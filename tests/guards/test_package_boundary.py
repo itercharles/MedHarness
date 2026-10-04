@@ -101,9 +101,9 @@ class TestThePublicSurfaceCoversWhatIsNeeded:
 
     def test_the_api_exposes_it_by_path(self, tmp_path: Path) -> None:
         import dhfkit.api as api
-        from medharness.workflows.init import _replace_placeholders, _scaffold_dhf
+        from medharness.scaffold import replace_placeholders, scaffold_dhf
 
-        _scaffold_dhf(tmp_path)
-        _replace_placeholders(tmp_path, "Boundary")
+        scaffold_dhf(tmp_path)
+        replace_placeholders(tmp_path, "Boundary")
         config = api.get_config(tmp_path / "DHF")
         assert config.project_name == "Boundary"

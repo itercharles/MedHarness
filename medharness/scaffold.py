@@ -43,7 +43,7 @@ omit_doc_types: []
 # DHF scaffold
 # ---------------------------------------------------------------------------
 
-def _scaffold_dhf(project_dir: Path) -> None:
+def scaffold_dhf(project_dir: Path) -> None:
     """Create DHF structure inside project_dir from bundled templates."""
     project_dir.mkdir(parents=True, exist_ok=True)
 
@@ -93,7 +93,7 @@ def _substitutable_files(project_dir: Path):
             yield Path(dirpath) / filename
 
 
-def _replace_placeholders(project_dir: Path, project_name: str) -> None:
+def replace_placeholders(project_dir: Path, project_name: str) -> None:
     """Substitute template placeholders in scaffolded content."""
     try:
         medharness_version = pkg_version("medharness")
@@ -252,8 +252,8 @@ def run_init() -> dict:
 
     before = {f for f in project_dir.rglob("*") if f.is_file()}
     steps = [
-        ("Scaffold DHF structure", lambda: (_scaffold_dhf(project_dir),
-                                            _replace_placeholders(project_dir, project_name))),
+        ("Scaffold DHF structure", lambda: (scaffold_dhf(project_dir),
+                                            replace_placeholders(project_dir, project_name))),
         ("Write AGENTS.md and CLAUDE.md", lambda: _write_agent_files(project_dir, project_name)),
         ("Write .gitignore", lambda: _write_gitignore(project_dir)),
     ]

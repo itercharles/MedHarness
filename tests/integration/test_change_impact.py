@@ -17,7 +17,7 @@ from click.testing import CliRunner
 from fixtures.starter import keep_the_starter_text
 
 from medharness.cli import main
-from medharness.workflows.init import _replace_placeholders, _scaffold_dhf
+from medharness.scaffold import replace_placeholders, scaffold_dhf
 
 
 def _git(repo: Path, *args: str) -> None:
@@ -26,8 +26,8 @@ def _git(repo: Path, *args: str) -> None:
 
 @pytest.fixture
 def repo(tmp_path: Path) -> Path:
-    _scaffold_dhf(tmp_path)
-    _replace_placeholders(tmp_path, "Impact")
+    scaffold_dhf(tmp_path)
+    replace_placeholders(tmp_path, "Impact")
     keep_the_starter_text(tmp_path / "DHF")
     _git(tmp_path, "init", "-q", "-b", "main")
     _git(tmp_path, "config", "user.email", "t@example.com")

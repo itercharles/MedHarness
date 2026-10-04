@@ -18,7 +18,7 @@ from pathlib import Path
 
 import pytest
 
-from medharness.workflows.init import _replace_placeholders, _scaffold_dhf
+from medharness.scaffold import replace_placeholders, scaffold_dhf
 
 
 def _git(repo: Path, *args: str) -> str:
@@ -28,8 +28,8 @@ def _git(repo: Path, *args: str) -> str:
 
 @pytest.fixture
 def repo(tmp_path: Path) -> Path:
-    _scaffold_dhf(tmp_path)
-    _replace_placeholders(tmp_path, "Stages")
+    scaffold_dhf(tmp_path)
+    replace_placeholders(tmp_path, "Stages")
     _git(tmp_path, "init", "-q", "-b", "main")
     _git(tmp_path, "-c", "user.email=t@e", "-c", "user.name=t", "add", "-A")
     _git(tmp_path, "-c", "user.email=t@e", "-c", "user.name=t", "commit", "-qm", "base")

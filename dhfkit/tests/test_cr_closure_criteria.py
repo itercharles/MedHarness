@@ -19,7 +19,7 @@ from pathlib import Path
 import pytest
 
 import dhfkit.api as api
-from medharness.workflows.init import _replace_placeholders, _scaffold_dhf
+from medharness.scaffold import replace_placeholders, scaffold_dhf
 
 CLOSURE = {
     "implementation_notes": "Toolbar updated.",
@@ -31,8 +31,8 @@ CLOSURE = {
 
 @pytest.fixture
 def cr(tmp_path: Path) -> tuple[Path, str]:
-    _scaffold_dhf(tmp_path)
-    _replace_placeholders(tmp_path, "Closure")
+    scaffold_dhf(tmp_path)
+    replace_placeholders(tmp_path, "Closure")
     dhf = tmp_path / "DHF"
     for state in ("design", "develop"):
         api.transition_item(dhf, "CR-001", state)
