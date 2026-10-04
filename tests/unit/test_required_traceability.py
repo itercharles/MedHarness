@@ -204,24 +204,6 @@ def test_explicit_empty_rules_skips_vmodel_defaults():
     assert "No required_traceability rules" in result["summary"]
 
 
-def test_none_rules_applies_vmodel_defaults():
-    """required_traceability=None (not configured) falls back to V-model defaults."""
-    config = ProjectConfig(
-        doc_types=[
-            DocTypeConfig(code="SRS", name="Software Requirement", prefix="SRS-"),
-            DocTypeConfig(code="SYS", name="System Requirement", prefix="SYS-"),
-        ],
-    )
-    # SRS-001 has no derives_from SYS → should fail under V-model defaults
-    items = [
-        {"id": "SRS-001", "derives_from": [], "all_linked_uids": []},
-        {"id": "SYS-001", "all_linked_uids": []},
-    ]
-    result = check_required_traceability(items, config)
-    assert result["passed"] is False
-    assert any(f["id"] == "SRS-001" for f in result["failures"])
-
-
 def test_vmodel_defaults_pass_when_links_correct():
     """V-model default rules pass when items have proper upstream links."""
     config = ProjectConfig(
@@ -308,60 +290,6 @@ def test_swdd_module_field_populates_all_linked_uids():
     })
     assert "MODULE-001" in item.all_linked_uids
     assert "SRS-001" in item.all_linked_uids
-
-
-def test_swdd_module_in_default_rules():
-    from medharness.services.traceability import default_traceability_rules
-    rules = default_traceability_rules()
-    rule_keys = {(r.source_type, r.field, r.target_type) for r in rules}
-    assert ("SWDD", "module", "MODULE") in rule_keys
-
-
-def test_swdd_module_default_rule_skipped_when_module_not_configured():
-    """Default SWDD→MODULE rule is skipped when MODULE isn't in the project's doc types."""
-    from medharness.services.traceability import check_traceability
-    from dhfkit.models.item import Item
-
-    config = ProjectConfig(
-        doc_types=[
-            DocTypeConfig(code="SRS", name="Software Requirement", prefix="SRS-"),
-            DocTypeConfig(code="SWDD", name="Detailed Design", prefix="SWDD-"),
-        ],
-        required_traceability=None,  # use defaults
-    )
-    swdd = Item.model_validate({"id": "SWDD-001", "title": "t", "implements": ["SRS-001"]})
-    items = [
-        {"id": "SRS-001", "all_linked_uids": []},
-        {"id": "SWDD-001", "all_linked_uids": swdd.all_linked_uids, "implements": swdd.implements},
-    ]
-    result = check_traceability(items, config)
-    # SWDD→MODULE rule should be skipped since MODULE is not configured
-    swdd_module_failures = [f for f in result["required"]["failures"] if f.get("field") == "module"]
-    assert swdd_module_failures == [], f"Unexpected module failures: {swdd_module_failures}"
-
-
-def test_swdd_module_default_rule_enforced_when_module_configured():
-    """Default SWDD→MODULE rule fires when MODULE is in doc types but SWDD has no module link."""
-    from medharness.services.traceability import check_traceability
-    from dhfkit.models.item import Item
-
-    config = ProjectConfig(
-        doc_types=[
-            DocTypeConfig(code="SRS", name="Software Requirement", prefix="SRS-"),
-            DocTypeConfig(code="SWDD", name="Detailed Design", prefix="SWDD-"),
-            DocTypeConfig(code="MODULE", name="Software Module", prefix="MODULE-"),
-        ],
-        required_traceability=None,  # use defaults
-    )
-    swdd = Item.model_validate({"id": "SWDD-001", "title": "t", "implements": ["SRS-001"]})
-    items = [
-        {"id": "SRS-001", "all_linked_uids": []},
-        {"id": "MODULE-001", "all_linked_uids": []},
-        {"id": "SWDD-001", "all_linked_uids": swdd.all_linked_uids, "implements": swdd.implements},
-    ]
-    result = check_traceability(items, config)
-    swdd_module_failures = [f for f in result["required"]["failures"] if f.get("field") == "module"]
-    assert any(f["id"] == "SWDD-001" for f in swdd_module_failures)
 
 
 def test_swdd_module_required_link_rule():

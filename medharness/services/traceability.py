@@ -20,8 +20,7 @@ from typing import Any, Iterable, List
 
 import networkx as nx
 
-from dhfkit.item_type import ItemType
-from dhfkit.models.config import RequiredTraceabilityRule, TraceabilityMatrix
+from dhfkit.models.config import TraceabilityMatrix
 from dhfkit.traceability import find_dangling_links
 
 def _ids(value: Any) -> list[str]:
@@ -73,8 +72,8 @@ def find_mistyped_links(items: list[dict], config: Any) -> list[dict]:
 def check_required_traceability(items: list[dict], config: Any) -> dict:
     """Check mandatory traceability rules.
 
-    Uses rules from config.required_traceability when present; falls back to
-    the V-model defaults derived from ItemType when the list is empty.
+    Uses the rules in config.required_traceability: the shipped defaults, or the
+    project's own list in place of them.
 
     Args:
         items: List of item dicts with 'id', 'all_linked_uids', and item fields.
@@ -84,12 +83,7 @@ def check_required_traceability(items: list[dict], config: Any) -> dict:
         {"passed": bool, "failures": [...], "summary": str}
     """
 
-    # None = not configured → use V-model defaults; [] = explicitly empty → no rules
     rules = config.required_traceability
-    using_defaults = rules is None
-    if using_defaults:
-        rules = default_traceability_rules()
-
     if not rules:
         return {"passed": True, "failures": [], "summary": "No required_traceability rules configured."}
 
@@ -101,10 +95,6 @@ def check_required_traceability(items: list[dict], config: Any) -> dict:
 
         source_items = [it for it in items if it["id"].startswith(source_dt.prefix)]
         target_dt = config.get_doc_type(rule.target_type)
-        if target_dt is None and using_defaults:
-            # Target type not configured in this project — rule is not applicable.
-            # Explicit config rules (using_defaults=False) are always enforced.
-            continue
         target_prefix = target_dt.prefix if target_dt else f"{rule.target_type}-"
 
         for s_item in source_items:
@@ -153,14 +143,12 @@ def check_required_traceability(items: list[dict], config: Any) -> dict:
                 })
 
     passed = len(failures) == 0
-    suffix = " (V-model defaults; set required_traceability: [] in global.yaml to opt out)" if using_defaults else ""
-    summary = f"{'PASS' if passed else 'FAIL'} — {len(failures)} required traceability failure(s){suffix}"
+    summary = f"{'PASS' if passed else 'FAIL'} — {len(failures)} required traceability failure(s)"
 
     return {
         "passed": passed,
         "failures": failures,
         "summary": summary,
-        "using_vmodel_defaults": using_defaults,
     }
 
 
@@ -385,36 +373,6 @@ def analyse(adapter) -> dict:
     return check_traceability(adapter.list_items(), adapter.config)
 
 
-def default_traceability_rules() -> List[RequiredTraceabilityRule]:
-    """Generate required traceability rules from ItemType V-model metadata."""
-    rules = []
-    for member in ItemType:
-        meta = member.value
-        for link_field, target_code in meta.required_upstream:
-            rules.append(RequiredTraceabilityRule(
-                source_type=meta.code,
-                direction="upstream",
-                field=link_field,
-                target_type=target_code,
-                min_count=1,
-            ))
-    return rules
-
 def coverage_matrices(config: Any) -> List[TraceabilityMatrix]:
-    """The chains coverage is checked along: the project's, `[]` for none, the V-model's when unset."""
-    matrices = config.traceability_matrices
-    return default_coverage_chains() if matrices is None else list(matrices)
-
-
-def default_coverage_chains() -> List[TraceabilityMatrix]:
-    """Generate traceability matrices from ItemType coverage_children metadata."""
-    matrices = []
-    for member in ItemType:
-        meta = member.value
-        for child_code in meta.coverage_children:
-            matrices.append(TraceabilityMatrix(
-                name=f"{meta.code} → {child_code}",
-                description=f"{meta.display_name} covered by {child_code}",
-                path=[meta.code, child_code],
-            ))
-    return matrices
+    """The chains coverage is checked along: the shipped defaults, or the project's own list in place of them."""
+    return list(config.traceability_matrices)

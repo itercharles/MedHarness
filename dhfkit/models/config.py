@@ -75,8 +75,7 @@ class GlobalLifecycle(BaseModel):
 class DocTypeConfig(BaseModel):
     """Configuration for a document type.
 
-    Only project-variable fields live here. V-model relationships, default
-    roles, and traceability rules are derived from ItemType for known codes.
+    What a type is, and what it links to, is declared here and nowhere else.
     """
 
     code: str = Field(..., description="Document type code (e.g., 'SYS')")
@@ -84,12 +83,12 @@ class DocTypeConfig(BaseModel):
     description: Optional[str] = Field(None, description="What belongs at this type's level, in the project's own words")
     prefix: str = Field(..., description="ID prefix (e.g., 'SYS-')")
     directory: Optional[str] = Field(None, description="Storage directory name")
-    role: Optional[str] = Field(None, description="Semantic role; derived from ItemType when code is a known V-model type")
+    role: Optional[str] = Field(None, description="Semantic role: a type whose role ends in `_requirement` is a requirement")
     type: Optional[str] = Field(None, description="Special type marker (e.g., 'test')")
     verifies: Optional[List[str]] = Field(None, description="Document types this verifies")
     properties: Optional[List[Any]] = Field(None, description="Project-specific field schema")
     lifecycle: Optional[dict] = Field(None, description="Lifecycle configuration with states and transitions")
-    has_verification: Optional[bool] = Field(None, description="Whether this type supports verification tracking; derived from ItemType when absent")
+    has_verification: bool = Field(False, description="Whether items of this type carry a verification status")
     verification_states: Optional[List[str]] = Field(None, description="Verification state labels")
 
 
@@ -123,8 +122,8 @@ class ProjectConfig(BaseModel):
     project_name: str = Field("DHF Project", description="Product name, shown on generated documents")
     global_lifecycle: Optional[GlobalLifecycle] = Field(None, description="Global lifecycle configuration")
     doc_types: List[DocTypeConfig] = Field(..., description="Document type configurations")
-    traceability_matrices: Optional[List[TraceabilityMatrix]] = Field(None, description="Traceability matrix configurations; [] means no coverage is checked, unset means the V-model defaults")
-    required_traceability: Optional[List[RequiredTraceabilityRule]] = Field(None, description="Required traceability rules")
+    traceability_matrices: List[TraceabilityMatrix] = Field(default_factory=list, description="The chains coverage is checked along; none means no coverage is checked")
+    required_traceability: List[RequiredTraceabilityRule] = Field(default_factory=list, description="Required traceability rules; none means no link is required")
     test_integration: dict = Field(default_factory=dict, description="Test integration configuration")
     document_specifications: dict = Field(default_factory=dict, description="Document specification configurations")
     impact_depth: int = Field(1, description="How many links from a changed item `verify changes` looks for dependents that were not reviewed; 0 turns it off")
@@ -166,22 +165,11 @@ class ProjectConfig(BaseModel):
     def requirement_types(self) -> list[str]:
         """Codes of the doc types that are requirements — each must be verified.
 
-        A type is a requirement when its role ends in ``_requirement``: the
-        config's ``role``, or the built-in role of a known V-model type. This is
+        A type is a requirement when its ``role`` ends in ``_requirement``. This is
         what `verify tests` checks, instead of a list kept in each gate. Design
         items (SWDD) track a verification status too, but are not requirements.
         """
-        from dhfkit.item_type import ItemType
-
-        codes = []
-        for dt in self.doc_types:
-            role = dt.role
-            if not role:
-                known = ItemType.from_code(dt.code)
-                role = known.value.role if known else ""
-            if role.endswith("_requirement"):
-                codes.append(dt.code)
-        return codes
+        return [dt.code for dt in self.doc_types if (dt.role or "").endswith("_requirement")]
 
     def relationship_fields(self) -> set[str]:
         """Every field any doc type declares as a link, from the schema itself.

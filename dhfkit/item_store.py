@@ -7,7 +7,6 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 from dhfkit.exceptions import RefusedWrite, ValidationError
-from dhfkit.item_type import ItemType
 from dhfkit.models.config import ProjectConfig
 from dhfkit.models.item import Item
 from dhfkit.repository.loader import ItemLoader
@@ -57,21 +56,13 @@ class ItemStore:
     # ------------------------------------------------------------------
 
     def _item_type_dict(self, dt) -> dict:
-        it = ItemType.from_code(dt.code)
-        role = dt.role or (it.value.role if it else dt.code)
-        parent_types = [r[1] for r in it.value.required_upstream] if it else []
-        has_verification = (
-            dt.has_verification if dt.has_verification is not None
-            else (it.value.has_verification if it else False)
-        )
         return {
             "display_name": dt.name or dt.code,
             "description": dt.description or "",
             "code": dt.code,
             "prefix": dt.prefix,
-            "role": role,
-            "parent_types": parent_types,
-            "has_verification": bool(has_verification),
+            "role": dt.role or dt.code,
+            "has_verification": dt.has_verification,
             "lifecycle": dt.lifecycle,
             "fields": dt.properties or [],
         }
