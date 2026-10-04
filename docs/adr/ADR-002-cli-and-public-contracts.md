@@ -1,6 +1,6 @@
 # ADR-002: CLI and Public Contracts
 
-**Status:** Accepted
+**Status:** Superseded. The CLI is one command, `medharness item|verify|build|init`, and `docs/interface.md` is the contract; `dhfkit` has no CLI of its own.
 **Date:** 2026-05-02
 
 ## Context

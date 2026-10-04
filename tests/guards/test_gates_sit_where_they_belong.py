@@ -23,8 +23,7 @@ from medharness.services.gates import GATES
 
 #: Reaching any of these means the command cannot answer without GitHub.
 GITHUB_MODULES = {
-    "medharness.services.github_session",
-    "medharness.services.github_pr",
+    "medharness.services.pr_feedback",
     "medharness.services.gh",
 }
 

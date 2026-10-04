@@ -11,6 +11,18 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.55.1] — 2026-10-04
+
+### Changed
+
+- **Dead code and small pieces removed.** The unused `VerificationStatus` enum and `Item.get_parent_uids`;
+  the `test_specification` and `traceability_matrix` spec templates (nothing rendered them: the matrix is
+  built in Python); `medharness/contracts.py` and its hand-kept `CONTRACT_VERSION` (nothing read it; the
+  changelog says what breaks); `github_pr.py` and `github_session.py`, folded into `pr_feedback.py`.
+- `DHFAwareGroup` moved from `dhfkit` to `medharness/cli/errors.py`: it was the only place `dhfkit` imported
+  `click`, and only the `medharness` CLI uses it.
+- ADR-002 is marked superseded: it described commands that no longer exist.
+
 ## [0.55.0] — 2026-10-04
 
 ### Changed

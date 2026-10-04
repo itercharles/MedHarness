@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import click
 
-from dhfkit.cli_errors import DHFAwareGroup
+from medharness.cli.errors import DHFAwareGroup
 from pathlib import Path
 
 
