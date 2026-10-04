@@ -20,7 +20,7 @@ from pathlib import Path
 
 import pytest
 
-import dhfkit.api as api
+from dhfkit.store import open_store
 from dhfkit.item_store import ItemStore
 from medharness.scaffold import replace_placeholders, scaffold_dhf
 
@@ -98,7 +98,7 @@ class TestAHealthyDhfIsUnaffected:
         source.rename(renamed)
         result = ItemStore(dhf).validate_schema()
         assert result["valid"], result["errors"]
-        assert api.get_item(dhf, "SRS-001") is not None
+        assert open_store(dhf).get_item("SRS-001") is not None
 
     def test_an_unparseable_file_is_left_to_the_loader(self, dhf: Path) -> None:
         """The duplicate scan must not become a second YAML error reporter."""

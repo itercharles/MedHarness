@@ -10,7 +10,7 @@ from __future__ import annotations
 import difflib
 from pathlib import Path
 
-import dhfkit.api as api
+from dhfkit.store import open_store
 from dhfkit.tests.fixtures import bare_dhf
 
 HAND_WRITTEN = '''id: SRS-001
@@ -40,28 +40,28 @@ def _item(tmp_path: Path) -> tuple[Path, Path]:
 
 def test_only_the_changed_line_differs(tmp_path: Path) -> None:
     dhf, path = _item(tmp_path)
-    api.update_item(dhf, "SRS-001", {"title": "A clearer requirement"})
+    open_store(dhf).update_item("SRS-001", {"title": "A clearer requirement"})
     assert _changed_lines(HAND_WRITTEN, path.read_text(encoding="utf-8")) == [
         '-title: "A requirement"', '+title: A clearer requirement']
 
 
 def test_a_new_field_is_one_added_line(tmp_path: Path) -> None:
     dhf, path = _item(tmp_path)
-    api.update_item(dhf, "SRS-001", {"testing": "Unit"})
+    open_store(dhf).update_item("SRS-001", {"testing": "Unit"})
     assert _changed_lines(HAND_WRITTEN, path.read_text(encoding="utf-8")) == ["+testing: Unit"]
 
 
 def test_a_cleared_field_is_one_removed_line(tmp_path: Path) -> None:
     dhf, path = _item(tmp_path)
-    api.update_item(dhf, "SRS-001", {"performance": None})
+    open_store(dhf).update_item("SRS-001", {"performance": None})
     changed = _changed_lines(HAND_WRITTEN, path.read_text(encoding="utf-8"))
     assert all(line.startswith("-") for line in changed) and len(changed) == 2
-    assert api.get_item(dhf, "SRS-001").get("performance") is None
+    assert open_store(dhf).get_item("SRS-001").get("performance") is None
 
 
 def test_a_file_without_a_final_newline_gets_its_field_on_its_own_line(tmp_path: Path) -> None:
     dhf, path = _item(tmp_path)
     path.write_text(HAND_WRITTEN.rstrip("\n"), encoding="utf-8")
-    api.update_item(dhf, "SRS-001", {"testing": "Unit"})
-    assert api.get_item(dhf, "SRS-001")["verification_method"] == ["Test", "Inspection"]
+    open_store(dhf).update_item("SRS-001", {"testing": "Unit"})
+    assert open_store(dhf).get_item("SRS-001")["verification_method"] == ["Test", "Inspection"]
     assert path.read_text(encoding="utf-8").endswith("  - Inspection\ntesting: Unit\n")

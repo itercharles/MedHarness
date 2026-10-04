@@ -2,6 +2,7 @@
 
 import json
 from pathlib import Path
+import pytest
 from unittest.mock import patch
 
 from medharness.services.release_baseline import (
@@ -12,6 +13,15 @@ from medharness.services.release_baseline import (
     build_release_baseline,
     record_release,
 )
+
+
+@pytest.fixture(autouse=True)
+def _the_dhf_exists(tmp_path):
+    """The store opens a real DHF; what it holds is patched per test."""
+    from dhfkit.tests.fixtures import bare_dhf
+
+    bare_dhf(tmp_path / "DHF")
+    bare_dhf(tmp_path)
 
 
 # ---------------------------------------------------------------------------
@@ -43,41 +53,41 @@ def _req_txt(tmp_path: Path, content: str) -> Path:
 
 class TestVerifyCrGates:
     def test_completed_cr_passes(self, tmp_path):
-        with patch("dhfkit.api.get_item", return_value=_cr_item("CR-001", "completed")):
+        with patch("dhfkit.item_store.ItemStore.get_item", return_value=_cr_item("CR-001", "completed")):
             violations = _verify_cr_gates(tmp_path / "DHF", ["CR-001"])
         assert violations == []
 
     def test_cancelled_cr_is_violation(self, tmp_path):
         # cancelled CRs are not deliverables — including them would break validate_release()
-        with patch("dhfkit.api.get_item", return_value=_cr_item("CR-001", "cancelled")):
+        with patch("dhfkit.item_store.ItemStore.get_item", return_value=_cr_item("CR-001", "cancelled")):
             violations = _verify_cr_gates(tmp_path / "DHF", ["CR-001"])
         assert len(violations) == 1
         assert "completed" in violations[0]["issue"]
 
     def test_rejected_cr_is_violation(self, tmp_path):
-        with patch("dhfkit.api.get_item", return_value=_cr_item("CR-001", "rejected")):
+        with patch("dhfkit.item_store.ItemStore.get_item", return_value=_cr_item("CR-001", "rejected")):
             violations = _verify_cr_gates(tmp_path / "DHF", ["CR-001"])
         assert len(violations) == 1
         assert "completed" in violations[0]["issue"]
 
     def test_open_cr_is_violation(self, tmp_path):
-        with patch("dhfkit.api.get_item", return_value=_cr_item("CR-001", "develop")):
+        with patch("dhfkit.item_store.ItemStore.get_item", return_value=_cr_item("CR-001", "develop")):
             violations = _verify_cr_gates(tmp_path / "DHF", ["CR-001"])
         assert len(violations) == 1
         assert violations[0]["cr"] == "CR-001"
         assert "develop" in violations[0]["issue"]
 
     def test_missing_cr_is_violation(self, tmp_path):
-        with patch("dhfkit.api.get_item", return_value=None):
+        with patch("dhfkit.item_store.ItemStore.get_item", return_value=None):
             violations = _verify_cr_gates(tmp_path / "DHF", ["CR-999"])
         assert violations[0]["issue"] == "CR not found"
 
     def test_multiple_crs_all_checked(self, tmp_path):
-        def side_effect(dhf, uid):
+        def side_effect(uid):
             states = {"CR-001": "completed", "CR-002": "design"}
             return _cr_item(uid, states[uid])
 
-        with patch("dhfkit.api.get_item", side_effect=side_effect):
+        with patch("dhfkit.item_store.ItemStore.get_item", side_effect=side_effect):
             violations = _verify_cr_gates(tmp_path / "DHF", ["CR-001", "CR-002"])
         assert len(violations) == 1
         assert violations[0]["cr"] == "CR-002"
@@ -93,7 +103,7 @@ class TestAutoCollectCrs:
             _cr_item("CR-001", "completed"),
             _cr_item("CR-002", "develop"),
         ]
-        with patch("dhfkit.api.list_items", return_value=items):
+        with patch("dhfkit.item_store.ItemStore.list_items", return_value=items):
             crs = _auto_collect_crs(tmp_path / "DHF")
         assert "CR-001" in crs
         assert "CR-002" not in crs
@@ -103,7 +113,7 @@ class TestAutoCollectCrs:
             _cr_item("CR-001", "completed"),
             _rel_item("REL-001", ["CR-001"]),
         ]
-        with patch("dhfkit.api.list_items", return_value=items):
+        with patch("dhfkit.item_store.ItemStore.list_items", return_value=items):
             crs = _auto_collect_crs(tmp_path / "DHF")
         assert "CR-001" not in crs
 
@@ -113,7 +123,7 @@ class TestAutoCollectCrs:
             _cr_item("CR-001", "completed"),
             _rel_item("REL-001", []),
         ]
-        with patch("dhfkit.api.list_items", return_value=items) as mock_list:
+        with patch("dhfkit.item_store.ItemStore.list_items", return_value=items) as mock_list:
             _auto_collect_crs(tmp_path / "DHF")
         assert mock_list.call_count == 1
 
@@ -122,12 +132,12 @@ class TestAutoCollectCrs:
             _cr_item("CR-003", "completed"),
             _cr_item("CR-001", "completed"),
         ]
-        with patch("dhfkit.api.list_items", return_value=items):
+        with patch("dhfkit.item_store.ItemStore.list_items", return_value=items):
             crs = _auto_collect_crs(tmp_path / "DHF")
         assert crs == sorted(crs)
 
     def test_empty_dhf_returns_empty(self, tmp_path):
-        with patch("dhfkit.api.list_items", return_value=[]):
+        with patch("dhfkit.item_store.ItemStore.list_items", return_value=[]):
             crs = _auto_collect_crs(tmp_path / "DHF")
         assert crs == []
 
@@ -140,7 +150,7 @@ class TestCollectBom:
     def test_dhf_soup_items_included(self, tmp_path):
         soup = {"id": "SOUP-001", "type": "SOUP", "name": "requests", "version": "2.31.0",
                 "manufacturer": "", "license": "Apache-2.0", "safety_class": ""}
-        with patch("dhfkit.api.list_items", return_value=[soup]):
+        with patch("dhfkit.item_store.ItemStore.list_items", return_value=[soup]):
             bom, errors = _collect_bom(tmp_path / "DHF", [])
         assert errors == []
         assert len(bom["dhf_soup"]) == 1
@@ -148,7 +158,7 @@ class TestCollectBom:
 
     def test_manifest_packages_included(self, tmp_path):
         req = _req_txt(tmp_path, "click==8.1.7\n")
-        with patch("dhfkit.api.list_items", return_value=[]):
+        with patch("dhfkit.item_store.ItemStore.list_items", return_value=[]):
             bom, errors = _collect_bom(tmp_path / "DHF", [req])
         assert errors == []
         assert any(p["name"] == "click" for p in bom["manifest_packages"])
@@ -156,7 +166,7 @@ class TestCollectBom:
     def test_unreadable_manifest_returns_error(self, tmp_path):
         bad = tmp_path / "setup.cfg"
         bad.write_text("not a manifest")
-        with patch("dhfkit.api.list_items", return_value=[]):
+        with patch("dhfkit.item_store.ItemStore.list_items", return_value=[]):
             bom, errors = _collect_bom(tmp_path / "DHF", [bad])
         assert bom["manifest_packages"] == []
         assert len(errors) == 1
@@ -165,14 +175,14 @@ class TestCollectBom:
     def test_malformed_manifest_returns_error(self, tmp_path):
         bad = tmp_path / "package.json"
         bad.write_text("{not valid json}")
-        with patch("dhfkit.api.list_items", return_value=[]):
+        with patch("dhfkit.item_store.ItemStore.list_items", return_value=[]):
             bom, errors = _collect_bom(tmp_path / "DHF", [bad])
         assert bom["manifest_packages"] == []
         assert any("Failed to parse" in e for e in errors)
 
     def test_non_soup_items_excluded(self, tmp_path):
         cr = _cr_item("CR-001", "completed")
-        with patch("dhfkit.api.list_items", return_value=[cr]):
+        with patch("dhfkit.item_store.ItemStore.list_items", return_value=[cr]):
             bom, errors = _collect_bom(tmp_path / "DHF", [])
         assert errors == []
         assert bom["dhf_soup"] == []
@@ -184,18 +194,18 @@ class TestCollectBom:
 
 class TestGenerateReleaseNotes:
     def test_version_in_heading(self, tmp_path):
-        with patch("dhfkit.api.get_item", return_value=_cr_item("CR-001", "completed", "My fix")):
+        with patch("dhfkit.item_store.ItemStore.get_item", return_value=_cr_item("CR-001", "completed", "My fix")):
             notes = _generate_release_notes("1.0.0", ["CR-001"], {"dhf_soup": [], "manifest_packages": []}, tmp_path)
         assert "# Release 1.0.0" in notes
 
     def test_cr_title_included(self, tmp_path):
-        with patch("dhfkit.api.get_item", return_value=_cr_item("CR-001", "completed", "Add login")):
+        with patch("dhfkit.item_store.ItemStore.get_item", return_value=_cr_item("CR-001", "completed", "Add login")):
             notes = _generate_release_notes("1.0.0", ["CR-001"], {"dhf_soup": [], "manifest_packages": []}, tmp_path)
         assert "CR-001: Add login" in notes
 
     def test_soup_count_mentioned(self, tmp_path):
         soup = [{"id": "SOUP-001", "name": "requests"}]
-        with patch("dhfkit.api.get_item", return_value=None):
+        with patch("dhfkit.item_store.ItemStore.get_item", return_value=None):
             notes = _generate_release_notes("1.0.0", [], {"dhf_soup": soup, "manifest_packages": []}, tmp_path)
         assert "1 SOUP component(s)" in notes
 
@@ -210,8 +220,8 @@ class TestGenerateReleaseNotes:
 
 class TestBuildReleaseBaseline:
     def test_gate_failure_returns_error_outcome(self, tmp_path):
-        with patch("dhfkit.api.get_item", return_value=_cr_item("CR-001", "design")), \
-             patch("dhfkit.api.list_items", return_value=[]):
+        with patch("dhfkit.item_store.ItemStore.get_item", return_value=_cr_item("CR-001", "design")), \
+             patch("dhfkit.item_store.ItemStore.list_items", return_value=[]):
             result = build_release_baseline(
                 tmp_path / "DHF", "1.0.0", [], ["CR-001"], tmp_path / "out",
             )
@@ -219,8 +229,8 @@ class TestBuildReleaseBaseline:
         assert len(result["gate_violations"]) == 1
 
     def test_gate_failure_response_has_consistent_shape(self, tmp_path):
-        with patch("dhfkit.api.get_item", return_value=_cr_item("CR-001", "cancelled")), \
-             patch("dhfkit.api.list_items", return_value=[]):
+        with patch("dhfkit.item_store.ItemStore.get_item", return_value=_cr_item("CR-001", "cancelled")), \
+             patch("dhfkit.item_store.ItemStore.list_items", return_value=[]):
             result = build_release_baseline(
                 tmp_path / "DHF", "1.0.0", [], ["CR-001"], tmp_path / "out",
             )
@@ -229,8 +239,8 @@ class TestBuildReleaseBaseline:
         assert result["artifacts"] == []
 
     def test_cancelled_cr_fails_gate(self, tmp_path):
-        with patch("dhfkit.api.get_item", return_value=_cr_item("CR-001", "cancelled")), \
-             patch("dhfkit.api.list_items", return_value=[]):
+        with patch("dhfkit.item_store.ItemStore.get_item", return_value=_cr_item("CR-001", "cancelled")), \
+             patch("dhfkit.item_store.ItemStore.list_items", return_value=[]):
             result = build_release_baseline(
                 tmp_path / "DHF", "1.0.0", [], ["CR-001"], tmp_path / "out",
             )
@@ -238,8 +248,8 @@ class TestBuildReleaseBaseline:
 
     def test_happy_path_writes_artifacts(self, tmp_path):
         out = tmp_path / "out"
-        with patch("dhfkit.api.get_item", return_value=_cr_item("CR-001", "completed")), \
-             patch("dhfkit.api.list_items", return_value=[]):
+        with patch("dhfkit.item_store.ItemStore.get_item", return_value=_cr_item("CR-001", "completed")), \
+             patch("dhfkit.item_store.ItemStore.list_items", return_value=[]):
             result = build_release_baseline(
                 tmp_path / "DHF", "1.0.0", [], ["CR-001"], out,
             )
@@ -249,8 +259,8 @@ class TestBuildReleaseBaseline:
 
     def test_artifact_contents(self, tmp_path):
         out = tmp_path / "out"
-        with patch("dhfkit.api.get_item", return_value=_cr_item("CR-001", "completed", "Fix")), \
-             patch("dhfkit.api.list_items", return_value=[]):
+        with patch("dhfkit.item_store.ItemStore.get_item", return_value=_cr_item("CR-001", "completed", "Fix")), \
+             patch("dhfkit.item_store.ItemStore.list_items", return_value=[]):
             build_release_baseline(tmp_path / "DHF", "2.0.0", [], ["CR-001"], out)
         data = json.loads((out / "release-baseline.json").read_text())
         assert data["version"] == "2.0.0"
@@ -258,20 +268,20 @@ class TestBuildReleaseBaseline:
 
     def test_record_release_creates_the_rel_item(self, tmp_path):
         out = tmp_path / "out"
-        with patch("dhfkit.api.get_item", return_value=_cr_item("CR-001", "completed")), \
-             patch("dhfkit.api.list_items", return_value=[]), \
-             patch("dhfkit.api.create_item", return_value={"id": "REL-001"}) as mock_create:
+        with patch("dhfkit.item_store.ItemStore.get_item", return_value=_cr_item("CR-001", "completed")), \
+             patch("dhfkit.item_store.ItemStore.list_items", return_value=[]), \
+             patch("dhfkit.item_store.ItemStore.create_item", return_value={"id": "REL-001"}) as mock_create:
             baseline = build_release_baseline(tmp_path / "DHF", "1.0.0", [], ["CR-001"], out)
             rel_uid = record_release(tmp_path / "DHF", baseline)
         mock_create.assert_called_once()
         assert rel_uid == "REL-001"
-        assert mock_create.call_args[0][1]["included_items"] == ["CR-001"]
+        assert mock_create.call_args[0][0]["included_items"] == ["CR-001"]
 
     def test_the_baseline_alone_never_writes_to_the_dhf(self, tmp_path):
         out = tmp_path / "out"
-        with patch("dhfkit.api.get_item", return_value=_cr_item("CR-001", "completed")), \
-             patch("dhfkit.api.list_items", return_value=[]), \
-             patch("dhfkit.api.create_item") as mock_create:
+        with patch("dhfkit.item_store.ItemStore.get_item", return_value=_cr_item("CR-001", "completed")), \
+             patch("dhfkit.item_store.ItemStore.list_items", return_value=[]), \
+             patch("dhfkit.item_store.ItemStore.create_item") as mock_create:
             build_release_baseline(tmp_path / "DHF", "1.0.0", [], ["CR-001"], out)
         mock_create.assert_not_called()
 
@@ -281,8 +291,8 @@ class TestBuildReleaseBaseline:
             _cr_item("CR-005", "completed"),
             _rel_item("REL-001", []),
         ]
-        with patch("dhfkit.api.list_items", return_value=items_for_list), \
-             patch("dhfkit.api.get_item", return_value=_cr_item("CR-005", "completed")):
+        with patch("dhfkit.item_store.ItemStore.list_items", return_value=items_for_list), \
+             patch("dhfkit.item_store.ItemStore.get_item", return_value=_cr_item("CR-005", "completed")):
             result = build_release_baseline(
                 tmp_path / "DHF", "1.0.0", [], [], out,
             )
@@ -291,8 +301,8 @@ class TestBuildReleaseBaseline:
     def test_manifest_soup_in_bom(self, tmp_path):
         out = tmp_path / "out"
         req = _req_txt(tmp_path, "flask==3.0.0\n")
-        with patch("dhfkit.api.get_item", return_value=_cr_item("CR-001", "completed")), \
-             patch("dhfkit.api.list_items", return_value=[]):
+        with patch("dhfkit.item_store.ItemStore.get_item", return_value=_cr_item("CR-001", "completed")), \
+             patch("dhfkit.item_store.ItemStore.list_items", return_value=[]):
             build_release_baseline(
                 tmp_path / "DHF", "1.0.0", [req], ["CR-001"], out,
             )
@@ -303,8 +313,8 @@ class TestBuildReleaseBaseline:
         out = tmp_path / "out"
         bad = tmp_path / "package.json"
         bad.write_text("{bad json}")
-        with patch("dhfkit.api.get_item", return_value=_cr_item("CR-001", "completed")), \
-             patch("dhfkit.api.list_items", return_value=[]):
+        with patch("dhfkit.item_store.ItemStore.get_item", return_value=_cr_item("CR-001", "completed")), \
+             patch("dhfkit.item_store.ItemStore.list_items", return_value=[]):
             result = build_release_baseline(
                 tmp_path / "DHF", "1.0.0", [bad], ["CR-001"], out,
             )
@@ -313,7 +323,7 @@ class TestBuildReleaseBaseline:
 
     def test_out_dir_created_if_missing(self, tmp_path):
         out = tmp_path / "deeply" / "nested" / "out"
-        with patch("dhfkit.api.get_item", return_value=_cr_item("CR-001", "completed")), \
-             patch("dhfkit.api.list_items", return_value=[]):
+        with patch("dhfkit.item_store.ItemStore.get_item", return_value=_cr_item("CR-001", "completed")), \
+             patch("dhfkit.item_store.ItemStore.list_items", return_value=[]):
             build_release_baseline(tmp_path / "DHF", "1.0.0", [], ["CR-001"], out)
         assert out.is_dir()

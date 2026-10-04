@@ -21,7 +21,7 @@ from pathlib import Path
 
 import pytest
 
-import dhfkit.api as api
+from dhfkit.store import open_store
 from medharness.services.cr_impact import _record_design_impact_in_cr
 from medharness.scaffold import replace_placeholders, scaffold_dhf
 
@@ -50,7 +50,7 @@ class TestTheCrIsExcludedFromItsOwnImpact:
         _record_design_impact_in_cr(
             "CR-001", dhf, {"created": [], "updated": ["CR-001"], "deleted": []},
         )
-        assert api.get_item(dhf, "CR-001")["affected_items"] == []
+        assert open_store(dhf).get_item("CR-001")["affected_items"] == []
 
     def test_other_items_are_still_recorded(self, dhf: Path) -> None:
         """Excluding the CR must not exclude anything else."""

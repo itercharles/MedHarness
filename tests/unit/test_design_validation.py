@@ -34,9 +34,9 @@ class TestValidateGenerateDhf:
 
     @patch("medharness.services.design_validation._check_cr_workflow_fields", return_value=[])
     def test_missing_verification_criteria_on_changed_sys_produces_error(self, _cr, dhf):
-        with patch("dhfkit.api.validate_schema", return_value={"valid": True, "errors": []}), \
+        with patch("dhfkit.item_store.ItemStore.validate_schema", return_value={"valid": True, "errors": []}), \
              patch("medharness.services.design_validation.analyse", return_value={"passed": True}), \
-             patch("dhfkit.api.list_items", return_value=[
+             patch("dhfkit.item_store.ItemStore.list_items", return_value=[
                  {"id": "SYS-001", "type": "SYS", "title": "Existing req",
                   "all_linked_uids": [], "verification_criteria": ""},
              ]):
@@ -49,9 +49,9 @@ class TestValidateGenerateDhf:
 
     @patch("medharness.services.design_validation._check_cr_workflow_fields", return_value=[])
     def test_populated_verification_criteria_on_changed_sys_passes(self, _cr, dhf):
-        with patch("dhfkit.api.validate_schema", return_value={"valid": True, "errors": []}), \
+        with patch("dhfkit.item_store.ItemStore.validate_schema", return_value={"valid": True, "errors": []}), \
              patch("medharness.services.design_validation.analyse", return_value={"passed": True}), \
-             patch("dhfkit.api.list_items", return_value=[
+             patch("dhfkit.item_store.ItemStore.list_items", return_value=[
                  {"id": "SYS-001", "type": "SYS", "title": "Existing req",
                   "all_linked_uids": [], "verification_criteria": "Response < 2s."},
              ]):
@@ -62,9 +62,9 @@ class TestValidateGenerateDhf:
 
     @patch("medharness.services.design_validation._check_cr_workflow_fields", return_value=[])
     def test_swdd_change_does_not_require_verification_criteria(self, _cr, dhf):
-        with patch("dhfkit.api.validate_schema", return_value={"valid": True, "errors": []}), \
+        with patch("dhfkit.item_store.ItemStore.validate_schema", return_value={"valid": True, "errors": []}), \
              patch("medharness.services.design_validation.analyse", return_value={"passed": True}), \
-             patch("dhfkit.api.list_items", return_value=[
+             patch("dhfkit.item_store.ItemStore.list_items", return_value=[
                  {"id": "SWDD-001", "type": "SWDD", "title": "Existing design",
                   "all_linked_uids": []},
              ]):
@@ -80,7 +80,7 @@ class TestCheckVerificationQuality:
                  "title": "Test", "all_linked_uids": [], "verification_criteria": vc}]
 
     def test_vague_phrase_returns_warning(self, dhf):
-        with patch("dhfkit.api.list_items", return_value=self._items("The feature works correctly.")):
+        with patch("dhfkit.item_store.ItemStore.list_items", return_value=self._items("The feature works correctly.")):
             result = check_verification_quality(dhf, {"created": ["SRS-001"], "updated": []})
         assert len(result) == 1
         assert result[0]["code"] == "vague_verification_criteria"
@@ -89,19 +89,19 @@ class TestCheckVerificationQuality:
 
     def test_measurable_criterion_returns_no_warning(self, dhf):
         vc = "Response latency shall be ≤ 200 ms at the 95th percentile under 1000 concurrent users."
-        with patch("dhfkit.api.list_items", return_value=self._items(vc)):
+        with patch("dhfkit.item_store.ItemStore.list_items", return_value=self._items(vc)):
             result = check_verification_quality(dhf, {"created": ["SRS-001"], "updated": []})
         assert result == []
 
     def test_absent_vc_returns_no_warning(self, dhf):
-        with patch("dhfkit.api.list_items", return_value=self._items("")):
+        with patch("dhfkit.item_store.ItemStore.list_items", return_value=self._items("")):
             result = check_verification_quality(dhf, {"created": ["SRS-001"], "updated": []})
         assert result == []
 
     def test_swdd_item_not_checked(self, dhf):
         items = [{"id": "SWDD-001", "type": "SWDD", "title": "Design",
                   "all_linked_uids": [], "verification_criteria": "behaves as expected"}]
-        with patch("dhfkit.api.list_items", return_value=items):
+        with patch("dhfkit.item_store.ItemStore.list_items", return_value=items):
             result = check_verification_quality(dhf, {"created": ["SWDD-001"], "updated": []})
         assert result == []
 
@@ -112,13 +112,13 @@ class TestCheckVerificationQuality:
             {"id": "SRS-002", "type": "SRS", "title": "B",
              "all_linked_uids": [], "verification_criteria": "works correctly"},
         ]
-        with patch("dhfkit.api.list_items", return_value=items):
+        with patch("dhfkit.item_store.ItemStore.list_items", return_value=items):
             result = check_verification_quality(dhf, {"created": ["SRS-001"], "updated": []})
         assert len(result) == 1
         assert result[0]["field"] == "SRS-001.verification_criteria"
 
     def test_updated_items_also_checked(self, dhf):
-        with patch("dhfkit.api.list_items", return_value=self._items("behaves as expected")):
+        with patch("dhfkit.item_store.ItemStore.list_items", return_value=self._items("behaves as expected")):
             result = check_verification_quality(dhf, {"created": [], "updated": ["SRS-001"]})
         assert len(result) == 1
 
@@ -130,18 +130,18 @@ class TestCheckVerificationQuality:
             "This should work for all users.",
         ]
         for phrase in vague_phrases:
-            with patch("dhfkit.api.list_items", return_value=self._items(phrase)):
+            with patch("dhfkit.item_store.ItemStore.list_items", return_value=self._items(phrase)):
                 result = check_verification_quality(dhf, {"created": ["SRS-001"], "updated": []})
             assert len(result) == 1, f"Expected warning for: {phrase!r}"
 
     def test_crs_and_sys_items_also_checked(self, dhf):
         for item_id in ("CRS-001", "SYS-001"):
-            with patch("dhfkit.api.list_items", return_value=self._items("functions properly", item_id)):
+            with patch("dhfkit.item_store.ItemStore.list_items", return_value=self._items("functions properly", item_id)):
                 result = check_verification_quality(dhf, {"created": [item_id], "updated": []})
             assert len(result) == 1, f"Expected warning for {item_id}"
 
     def test_duplicate_item_ids_not_double_counted(self, dhf):
-        with patch("dhfkit.api.list_items", return_value=self._items("works correctly")):
+        with patch("dhfkit.item_store.ItemStore.list_items", return_value=self._items("works correctly")):
             result = check_verification_quality(
                 dhf, {"created": ["SRS-001"], "updated": ["SRS-001"]}
             )

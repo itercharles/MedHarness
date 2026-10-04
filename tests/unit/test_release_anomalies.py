@@ -96,7 +96,7 @@ class TestGate:
         End to end, so on a scaffolded DHF: `build release` renders documents,
         which the config-and-items fixture above does not carry templates for.
         """
-        import dhfkit.api as api
+        from dhfkit.store import open_store
         from medharness.services.release_baseline import build_release
         from medharness.scaffold import replace_placeholders, scaffold_dhf
 
@@ -106,7 +106,7 @@ class TestGate:
         _defect(dhf, "DEF-001", "open")
 
         def releases() -> set[str]:
-            return {i["id"] for i in api.list_items(dhf) if i.get("type") == "REL"}
+            return {i["id"] for i in open_store(dhf).list_items() if i.get("type") == "REL"}
 
         before = releases()
         result = build_release(dhf, "1.0.0", tmp_path / "out", write=True)
@@ -160,13 +160,13 @@ class TestArtifactAndRecord:
 
     def test_rel_item_carries_them_too(self, dhf: Path, tmp_path: Path) -> None:
         """The record, not only the generated artifact."""
-        import dhfkit.api as api
+        from dhfkit.store import open_store
 
         _defect(dhf, "DEF-001", "open", rationale="Assessed under RISK-001.")
         baseline = _baseline(dhf, tmp_path / "out")
         assert not baseline["errors"], baseline["errors"]
 
-        rel = api.get_item(dhf, record_release(dhf, baseline))
+        rel = open_store(dhf).get_item(record_release(dhf, baseline))
         assert rel["known_anomalies"][0]["defect"] == "DEF-001"
 
 
@@ -209,9 +209,9 @@ class TestARelIsRecordedOnlyWhenEverythingPassed:
         return tmp_path / "project" / "DHF"
 
     def _releases(self, dhf: Path) -> set[str]:
-        import dhfkit.api as api
+        from dhfkit.store import open_store
 
-        return {i["id"] for i in api.list_items(dhf) if i.get("type") == "REL"}
+        return {i["id"] for i in open_store(dhf).list_items() if i.get("type") == "REL"}
 
     def test_a_dhf_that_fails_its_check_is_not_recorded(self, tmp_path: Path) -> None:
         from medharness.services.release_baseline import build_release

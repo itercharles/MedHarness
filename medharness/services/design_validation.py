@@ -17,14 +17,13 @@ from pathlib import Path
 import yaml
 
 from dhfkit.exceptions import ValidationError
+from dhfkit.store import open_store
 from medharness.services.traceability import analyse
 
 
 
 def _verifiable_types(dhf_path: Path) -> frozenset[str]:
-    import dhfkit.api as api
-
-    return frozenset(api.get_config(dhf_path).requirement_types())
+    return frozenset(open_store(dhf_path).config.requirement_types())
 
 _VAGUE_VC_PHRASES: frozenset[str] = frozenset({
     "works correctly",
@@ -60,23 +59,11 @@ def cascade_children(config) -> dict[str, list[str]]:
     return children
 
 
-def _load_api():
-    try:
-        import dhfkit.api as _api
-    except ImportError as exc:
-        return None, [{
-            "field": "environment",
-            "issue": f"Could not import dhfkit.api: {exc}",
-            "fix": "Ensure medharness is installed and dhfkit is on the Python path.",
-        }]
-    return _api, []
-
-
-def _validate_schema_and_traceability(_api, dhf_path: Path) -> list[dict]:
+def _validate_schema_and_traceability(dhf_path: Path) -> list[dict]:
     errors: list[dict] = []
 
     try:
-        schema_result = _api.validate_schema(dhf_path)
+        schema_result = open_store(dhf_path).validate_schema()
     except (FileNotFoundError, ValidationError, ValueError, yaml.YAMLError) as exc:
         errors.append({
             "field": "schema",
@@ -97,7 +84,6 @@ def _validate_schema_and_traceability(_api, dhf_path: Path) -> list[dict]:
             })
 
     try:
-        from dhfkit.store import open_store
         trace_result = analyse(open_store(dhf_path))
     except (FileNotFoundError, ValidationError, ValueError, yaml.YAMLError) as exc:
         errors.append({
@@ -161,9 +147,9 @@ def _validate_schema_and_traceability(_api, dhf_path: Path) -> list[dict]:
     return errors
 
 
-def _list_items(_api, dhf_path: Path, field: str) -> tuple[list[dict], list[dict]]:
+def _list_items(dhf_path: Path, field: str) -> tuple[list[dict], list[dict]]:
     try:
-        return _api.list_items(dhf_path), []
+        return open_store(dhf_path).list_items(), []
     except (FileNotFoundError, ValidationError, ValueError, yaml.YAMLError) as exc:
         return [], [{
             "field": field,
@@ -227,14 +213,10 @@ def validate_dhf_structure(dhf_path: Path) -> list[dict]:
     before the LLM runs, without triggering false positives from reconciliation
     checks that require a non-empty created_ids list.
     """
-    _api, errors = _load_api()
-    if _api is None:
-        return errors
-    errors.extend(_validate_schema_and_traceability(_api, dhf_path))
-    return errors
+    return _validate_schema_and_traceability(dhf_path)
 
 
-def _check_cr_workflow_fields(_api, dhf_path: Path, cr_id: str) -> list[dict]:
+def _check_cr_workflow_fields(dhf_path: Path, cr_id: str) -> list[dict]:
     """The triage decision `build plan` is supposed to leave behind.
 
     Nothing but the prompt writes it, so a run that skipped a step reported
@@ -242,7 +224,7 @@ def _check_cr_workflow_fields(_api, dhf_path: Path, cr_id: str) -> list[dict]:
     Reported here so the fix pass can correct it in the same run.
     """
     try:
-        cr_item = _api.get_item(dhf_path, cr_id) or {}
+        cr_item = open_store(dhf_path).get_item(cr_id) or {}
     except Exception as exc:  # noqa: BLE001 — reported, not swallowed
         return [{
             "field": "cr_item",
@@ -288,14 +270,10 @@ def validate_generate_dhf(
     changed_items: dict[str, list[str]],
 ) -> list[dict]:
     """Validate `build plan` output without relying on a spec artifact."""
-    _api, errors = _load_api()
-    if _api is None:
-        return errors
+    errors = _validate_schema_and_traceability(dhf_path)
+    errors.extend(_check_cr_workflow_fields(dhf_path, cr_id))
 
-    errors.extend(_validate_schema_and_traceability(_api, dhf_path))
-    errors.extend(_check_cr_workflow_fields(_api, dhf_path, cr_id))
-
-    listed_items, item_errors = _list_items(_api, dhf_path, "changed_items")
+    listed_items, item_errors = _list_items(dhf_path, "changed_items")
     errors.extend(item_errors)
     by_id = {item["id"]: item for item in listed_items}
 
@@ -345,15 +323,14 @@ def validate_generate_dhf(
                 ),
             })
 
-    errors.extend(_validate_cascade_completeness(created_ids, by_id, _api.get_config(dhf_path)))
+    errors.extend(_validate_cascade_completeness(created_ids, by_id, open_store(dhf_path).config))
     errors.extend(_unreviewed_impact(dhf_path, cr_id, changed_items))
-    errors.extend(_check_impact_analysis(by_id.get(cr_id), listed_items, _api.get_config(dhf_path), changed_items))
+    errors.extend(_check_impact_analysis(by_id.get(cr_id), listed_items, open_store(dhf_path).config, changed_items))
     return errors
 
 
 def _unreviewed_impact(dhf_path: Path, cr_id: str, changed_items: dict[str, list[str]]) -> list[dict]:
     """The same dependents `verify changes` will fail on, found while the model can still fix them."""
-    from dhfkit.store import open_store
     from medharness.services.impact import unreviewed_dependents
 
     store = open_store(dhf_path)
@@ -379,12 +356,8 @@ def check_verification_quality(
     Detects vague, non-measurable criteria on changed verifiable items (CRS, SYS, SRS).
     Does not trigger fix passes — caller surfaces these as warnings only.
     """
-    _api, _ = _load_api()
-    if _api is None:
-        return []
-
     try:
-        listed = _api.list_items(dhf_path)
+        listed = open_store(dhf_path).list_items()
     except Exception:
         return []
 
@@ -603,11 +576,8 @@ def check_near_duplicates(dhf_path: Path, changed_items: dict[str, list[str]]) -
     """
     from medharness.services.impact import NEAR_DUPLICATE_RATIO, closest_same_type
 
-    _api, _ = _load_api()
-    if _api is None:
-        return []
     try:
-        items = _api.list_items(dhf_path)
+        items = open_store(dhf_path).list_items()
     except Exception:
         return []
     by_id = {it["id"]: it for it in items}
@@ -667,7 +637,7 @@ def check_test_points_follow_requirements(repo_root: Path, dhf_path: Path, since
 
     try:
         requirement_types = _verifiable_types(dhf_path)
-        by_id = {it["id"]: it for it in _load_api()[0].list_items(dhf_path)}
+        by_id = {it["id"]: it for it in open_store(dhf_path).list_items()}
         updated = git.collect_path_changes(repo_root, since_ref, "DHF/items/")["updated"]
     except Exception:
         return []

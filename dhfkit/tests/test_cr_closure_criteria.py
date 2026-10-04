@@ -18,7 +18,7 @@ from pathlib import Path
 
 import pytest
 
-import dhfkit.api as api
+from dhfkit.store import open_store
 from medharness.scaffold import replace_placeholders, scaffold_dhf
 
 CLOSURE = {
@@ -35,7 +35,7 @@ def cr(tmp_path: Path) -> tuple[Path, str]:
     replace_placeholders(tmp_path, "Closure")
     dhf = tmp_path / "DHF"
     for state in ("design", "develop"):
-        api.transition_item(dhf, "CR-001", state)
+        open_store(dhf).execute_transition("CR-001", state)
     return dhf, "CR-001"
 
 
@@ -43,17 +43,17 @@ class TestClosureIsRefusedUntilTheRecordExists:
     def test_a_bare_cr_cannot_be_completed(self, cr) -> None:
         dhf, cr_id = cr
         with pytest.raises(ValueError) as exc:
-            api.transition_item(dhf, cr_id, "completed")
+            open_store(dhf).execute_transition(cr_id, "completed")
         assert "implementation_recorded" in str(exc.value)
-        assert api.get_item(dhf, cr_id)["status"] == "develop", "state changed anyway"
+        assert open_store(dhf).get_item(cr_id)["status"] == "develop", "state changed anyway"
 
     @pytest.mark.parametrize("omit", sorted(CLOSURE))
     def test_each_field_is_required_on_its_own(self, cr, omit: str) -> None:
         """Named individually, so a reader knows which one to go and write."""
         dhf, cr_id = cr
-        api.update_item(dhf, cr_id, {k: v for k, v in CLOSURE.items() if k != omit})
+        open_store(dhf).update_item(cr_id, {k: v for k, v in CLOSURE.items() if k != omit})
         with pytest.raises(ValueError) as exc:
-            api.transition_item(dhf, cr_id, "completed")
+            open_store(dhf).execute_transition(cr_id, "completed")
         expected = {
             "implementation_notes": "implementation_recorded",
             "affected_risk_items": "risk_impact_assessed",
@@ -64,9 +64,9 @@ class TestClosureIsRefusedUntilTheRecordExists:
 
     def test_a_complete_record_closes(self, cr) -> None:
         dhf, cr_id = cr
-        api.update_item(dhf, cr_id, CLOSURE)
-        api.transition_item(dhf, cr_id, "completed")
-        assert api.get_item(dhf, cr_id)["status"] == "completed"
+        open_store(dhf).update_item(cr_id, CLOSURE)
+        open_store(dhf).execute_transition(cr_id, "completed")
+        assert open_store(dhf).get_item(cr_id)["status"] == "completed"
 
 
 class TestAssessedAndEmptyIsAnAnswer:
@@ -80,18 +80,18 @@ class TestAssessedAndEmptyIsAnAnswer:
 
     def test_an_empty_list_satisfies_the_criterion(self, cr) -> None:
         dhf, cr_id = cr
-        api.update_item(dhf, cr_id, {**CLOSURE, "affected_risk_items": []})
-        api.transition_item(dhf, cr_id, "completed")
-        assert api.get_item(dhf, cr_id)["status"] == "completed"
+        open_store(dhf).update_item(cr_id, {**CLOSURE, "affected_risk_items": []})
+        open_store(dhf).execute_transition(cr_id, "completed")
+        assert open_store(dhf).get_item(cr_id)["status"] == "completed"
 
     def test_an_absent_field_still_blocks(self, cr) -> None:
         """Absent is not the same as empty: one is unassessed, one is assessed."""
         dhf, cr_id = cr
-        api.update_item(dhf, cr_id, {
+        open_store(dhf).update_item(cr_id, {
             k: v for k, v in CLOSURE.items() if k != "affected_risk_items"
         })
         with pytest.raises(ValueError, match="risk_impact_assessed"):
-            api.transition_item(dhf, cr_id, "completed")
+            open_store(dhf).execute_transition(cr_id, "completed")
 
 
 class TestTheCriteriaMirrorTheGate:

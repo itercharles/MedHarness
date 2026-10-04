@@ -51,10 +51,10 @@ def test_the_specifications_still_reach_the_out_dir(tmp_path: Path) -> None:
 
 
 def test_the_specifications_render_the_items_as_they_are(tmp_path: Path) -> None:
-    import dhfkit.api as api
+    from dhfkit.store import open_store
 
     project = _project(tmp_path)
-    api.update_item(project / "DHF", "SRS-001", {"title": "Renamed just before release"})
+    open_store(project / "DHF").update_item("SRS-001", {"title": "Renamed just before release"})
 
     build_release(project / "DHF", "1.0.0", tmp_path / "out", write=False)
 
