@@ -11,6 +11,12 @@ from medharness.services.github_pr import post_pr_comment
 from medharness.services.stage_run import _begin_step, _finish_step, _warning
 
 
+def _pr_base(pr_number: int) -> str | None:
+    """The branch the PR targets, as a remote ref; None when GitHub will not say."""
+    rc, base = gh(["pr", "view", str(pr_number), "--json", "baseRefName", "-q", ".baseRefName"])
+    return f"origin/{base}" if rc == 0 and base else None
+
+
 def _pr_feedback(pr_number: int, steps: list, diagnostics: dict, warnings: list) -> dict | None:
     """The PR's review feedback, or None when it has none to act on.
 

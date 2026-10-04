@@ -168,6 +168,22 @@ class TestBuildPlan:
         assert result.exit_code == 0, result.stderr
         assert report["inputs"]["since_ref"] == "origin/trunk" and report["errors"] == []
 
+    def test_the_branch_origin_points_at_is_the_base_without_any_option(
+        self, project: Path, tmp_path: Path,
+    ) -> None:
+        _git(project, "push", "-q", "origin", "HEAD:trunk")
+        _git(project, "fetch", "-q", "origin")
+        _git(project, "update-ref", "-d", "refs/remotes/origin/main")
+        _git(project, "remote", "set-head", "origin", "trunk")
+        _plan(tmp_path, design=[{"run": DESIGN}, {"run": []}], design_review=[{"run": [APPROVED_REVIEW]}])
+
+        result = _run("build", "plan", "--cr", "CR-001")
+
+        assert result.exit_code == 0, result.stderr
+        assert _report(result)["inputs"]["since_ref"] == "origin/trunk"
+        changes = _run("verify", "changes", "--cr", "CR-001")
+        assert "since origin/trunk" in json.loads(changes.stdout.splitlines()[0])["summary"]
+
     def test_a_design_that_leaves_out_an_item_it_records_is_fixed_in_a_second_pass(
         self, project: Path, tmp_path: Path,
     ) -> None:
@@ -570,6 +586,18 @@ class TestWithAPullRequest:
         assert result.exit_code == 0, result.stderr
         assert _git(project, "status", "--porcelain") == ""
         assert any(f.endswith("SRS-002.yaml") for f in _remote_files(project, "design/CR-001"))
+
+    def test_the_prs_base_branch_is_what_the_run_compares_against(
+        self, project: Path, tmp_path: Path, pr,
+    ) -> None:
+        _git(project, "push", "-q", "origin", "HEAD:release")
+        _git(project, "fetch", "-q", "origin")
+        pr(base="release")
+        _plan(tmp_path, design=[{"run": DESIGN}, {"run": []}], design_review=[{"run": [APPROVED_REVIEW]}])
+
+        result = _run("build", "plan", "--cr", "CR-001", "--pr", "7")
+
+        assert _report(result)["inputs"]["since_ref"] == "origin/release"
 
     def test_a_reviewer_asking_for_changes_reaches_the_model(
         self, project: Path, tmp_path: Path, pr,

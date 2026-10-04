@@ -9,7 +9,6 @@ import click
 
 from medharness.cli.options import collect_junit_paths, junit_option
 from medharness.cli.output import details, emit, render_envelope
-from medharness.services.git import DEFAULT_SINCE_REF
 from medharness.services.verify_dhf import ci_structural_gate
 from medharness.services.verify_tests import ci_test_coverage_gate
 
@@ -236,8 +235,10 @@ def register(main):
     @verify.command("changes")
     @click.option("--cr", "cr_id", required=True, metavar="CR_ID",
                   help="The CR whose affected_items the branch must change.")
-    @click.option("--since-ref", default=DEFAULT_SINCE_REF, show_default=True, metavar="REF",
-                  help="What the branch is compared against: its changes since it left this ref. Needs enough history to reach the fork.")
+    @click.option("--since-ref", default=None, metavar="REF",
+                  help="What the branch is compared against: its changes since it left this ref. "
+                       "Default: the branch origin's HEAD points at, else origin/main. "
+                       "Needs enough history to reach the fork.")
     @click.option("--code-path", "code_paths", multiple=True, metavar="PATH",
                   help="Opt into code-change enforcement: path(s) under which at least one file must be modified. "
                        "Omitting this option skips the code-change check entirely.")
@@ -245,7 +246,7 @@ def register(main):
     def verify_changes(
         ctx: click.Context,
         cr_id: str,
-        since_ref: str,
+        since_ref: str | None,
         code_paths: tuple[str, ...],
     ) -> None:
         """Check the branch changed the items the CR said it would.

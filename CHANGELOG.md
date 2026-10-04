@@ -11,6 +11,16 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.54.0] — 2026-10-04
+
+### Changed
+
+- **The base a branch is compared against is found, not configured.** `build plan`, `build code` and
+  `verify changes` took `origin/main` unless `--since-ref` said otherwise. Now, without the option: `build
+  plan|code --pr N` use the PR's target branch, and otherwise (and in `verify changes`, which never asks
+  GitHub) the branch `origin`'s HEAD points at, falling back to `origin/main`. `--since-ref` still
+  overrides. A repository whose main branch is `develop` or `trunk` needs no option.
+
 ### Changed
 
 - **`docs/adopting.md` is five pages.** It had grown to 700 lines. It now holds starting fresh, bringing
