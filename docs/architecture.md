@@ -140,7 +140,7 @@ Placeholders: `{{project_name}}` (from the directory name) and
 
 The CI recipe, `dhfkit/templates/github/workflows/dhf.yml`, is **not** installed:
 it names branches, runners and secrets that differ per project. It is published
-through [adopting.md](adopting.md#setting-up-ci), and a test keeps the two
+through [ci.md](ci.md#setting-up-ci), and a test keeps the two
 identical.
 
 ## The AI change workflow

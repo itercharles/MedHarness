@@ -282,7 +282,7 @@ def run_init() -> dict:
     say("       medharness verify dhf")
     say("       medharness verify tests --junit test-results")
     say()
-    say("  4. Add CI: copy the recipe in docs/adopting.md, 'Setting up CI'.", bold=True)
+    say("  4. Add CI: copy the recipe in docs/ci.md, 'Setting up CI'.", bold=True)
     say()
 
     return {"project_dir": str(project_dir), "project_name": project_name, "created": created}

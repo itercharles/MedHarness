@@ -362,7 +362,7 @@ verification_method: [Test]
 | `id` | Required. Its prefix (`SRS-`) picks the doc type |
 | Fields | Only those the doc type declares. An undeclared field fails `medharness verify dhf`, naming it — declare it by overriding the doc type first |
 | Links | Fields of format `relationship` or `item_multiselect`: a list of IDs pointing up the V-model, each of a type the field's `target_types` accepts. Which are required is `required_traceability` in `global.yaml` |
-| Types | The 13 defaults, plus any `DHF/config/doc_types/<type>.yaml` of your own, which replaces the default of that code — see [adopting.md](adopting.md#changing-the-defaults) |
+| Types | The 13 defaults, plus any `DHF/config/doc_types/<type>.yaml` of your own, which replaces the default of that code — see [adopting.md](configuration.md#changing-the-defaults) |
 
 Check an export with `medharness verify dhf`: it validates each file against its type, then the links and coverage of the design they describe.
 
@@ -430,7 +430,7 @@ for check in CHECKS:
         report(result["gate"], result["errors"])
 ```
 
-An agent that only needs to read or change the DHF uses `item`, never the files: see [the section `init` writes into `AGENTS.md`](adopting.md#with-the-coding-agent-you-already-use).
+An agent that only needs to read or change the DHF uses `item`, never the files: see [the section `init` writes into `AGENTS.md`](ai-workflow.md#with-the-coding-agent-you-already-use).
 
 ---
 

@@ -56,7 +56,7 @@ Bounded only by `max_turns=100` and a 120-second per-command timeout.
 
 ## Recommended isolation
 
-Run the AI stages in a disposable, credential-minimal environment. A GitHub-hosted Actions runner satisfies this: ephemeral, separate from your internal systems, and scoped to a single repository token. The shipped CI recipe runs neither stage; [adopting.md](adopting.md#wiring-it-into-github-actions) sketches a workflow that does.
+Run the AI stages in a disposable, credential-minimal environment. A GitHub-hosted Actions runner satisfies this: ephemeral, separate from your internal systems, and scoped to a single repository token. The shipped CI recipe runs neither stage; [the AI workflow page](ai-workflow.md#wiring-it-into-github-actions) sketches a workflow that does.
 
 | Control | Recommendation |
 |---------|----------------|

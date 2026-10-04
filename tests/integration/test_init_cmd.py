@@ -158,11 +158,11 @@ class TestInitCmd:
         assert "click.prompt" not in src
 
 
-def test_adopting_md_shows_the_section_init_writes():
+def test_the_ai_workflow_page_shows_the_section_init_writes():
     """A project that predates AGENTS.md copies it from there."""
     from pathlib import Path
 
     from medharness.workflows.init import DHF_INSTRUCTIONS
 
-    adopting = (Path(__file__).resolve().parents[2] / "docs" / "adopting.md").read_text()
+    adopting = (Path(__file__).resolve().parents[2] / "docs" / "ai-workflow.md").read_text()
     assert DHF_INSTRUCTIONS in adopting
