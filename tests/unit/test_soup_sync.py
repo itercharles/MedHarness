@@ -1,6 +1,7 @@
 """Unit tests for medharness.services.soup_sync."""
 
 from pathlib import Path
+import pytest
 from unittest.mock import patch
 
 from medharness.services.soup_sync import (
@@ -12,6 +13,14 @@ from medharness.services.soup_sync import (
     parse_requirements_txt,
     sync_soup_items,
 )
+
+
+@pytest.fixture(autouse=True)
+def _the_dhf_exists(tmp_path):
+    """The store opens a real DHF; what it holds is patched per test."""
+    from dhfkit.tests.fixtures import bare_dhf
+
+    bare_dhf(tmp_path / "DHF")
 
 
 # ---------------------------------------------------------------------------
@@ -221,8 +230,8 @@ class TestDiffAgainstDhf:
 class TestSyncSoupItems:
     def test_write_creates_new_items(self, tmp_path):
         req = _req_txt(tmp_path, "flask==3.0.0\n")
-        with patch("dhfkit.api.list_items", return_value=[]), \
-             patch("dhfkit.api.create_item", return_value={"id": "SOUP-001"}) as mock_create:
+        with patch("dhfkit.item_store.ItemStore.list_items", return_value=[]), \
+             patch("dhfkit.item_store.ItemStore.create_item", return_value={"id": "SOUP-001"}) as mock_create:
             result = sync_soup_items(tmp_path / "DHF", [req])
 
         mock_create.assert_called_once()
@@ -231,19 +240,17 @@ class TestSyncSoupItems:
     def test_write_updates_drifted_items(self, tmp_path):
         req = _req_txt(tmp_path, "click==8.1.7\n")
         existing = _make_soup_item("SOUP-001", "click", "8.0.0")
-        with patch("dhfkit.api.list_items", return_value=[existing]), \
-             patch("dhfkit.api.update_item", return_value=existing) as mock_update:
+        with patch("dhfkit.item_store.ItemStore.list_items", return_value=[existing]), \
+             patch("dhfkit.item_store.ItemStore.update_item", return_value=existing) as mock_update:
             result = sync_soup_items(tmp_path / "DHF", [req])
 
-        mock_update.assert_called_once_with(
-            tmp_path / "DHF", "SOUP-001", {"version": "8.1.7"},
-        )
+        mock_update.assert_called_once_with("SOUP-001", {"version": "8.1.7"})
         assert result["items_updated"] == ["SOUP-001"]
 
     def test_invalid_manifest_adds_error(self, tmp_path):
         bad = tmp_path / "setup.cfg"
         bad.write_text("not a manifest", encoding="utf-8")
-        with patch("dhfkit.api.list_items", return_value=[]):
+        with patch("dhfkit.item_store.ItemStore.list_items", return_value=[]):
             result = sync_soup_items(tmp_path / "DHF", [bad])
 
         assert result["outcome"] == "completed_with_errors"
@@ -253,7 +260,7 @@ class TestSyncSoupItems:
     def test_multiple_manifests_merged(self, tmp_path):
         req = _req_txt(tmp_path, "flask==3.0.0\n")
         pkg = _pkg_json(tmp_path, {"dependencies": {"react": "^18.2.0"}})
-        with patch("dhfkit.api.list_items", return_value=[]):
+        with patch("dhfkit.item_store.ItemStore.list_items", return_value=[]):
             result = sync_soup_items(tmp_path / "DHF", [req, pkg])
 
         assert set(result["to_create"]) == {"flask", "react"}
@@ -261,7 +268,7 @@ class TestSyncSoupItems:
 
     def test_dhf_list_failure_adds_error(self, tmp_path):
         req = _req_txt(tmp_path, "requests==2.31.0\n")
-        with patch("dhfkit.api.list_items", side_effect=RuntimeError("boom")):
+        with patch("dhfkit.item_store.ItemStore.list_items", side_effect=RuntimeError("boom")):
             result = sync_soup_items(tmp_path / "DHF", [req])
 
         assert result["outcome"] == "completed_with_errors"
@@ -274,8 +281,8 @@ class TestSyncSoupItems:
         # Use a second file with same name logic won't trigger (not named requirements.txt)
         # Simulate by calling with package.json that also lists 'requests' as peerDep
         pkg = _pkg_json(tmp_path, {"peerDependencies": {"requests": "^2.31.0"}})
-        with patch("dhfkit.api.list_items", return_value=[]), \
-             patch("dhfkit.api.create_item", return_value={"id": "SOUP-001"}) as mock_create:
+        with patch("dhfkit.item_store.ItemStore.list_items", return_value=[]), \
+             patch("dhfkit.item_store.ItemStore.create_item", return_value={"id": "SOUP-001"}) as mock_create:
             result = sync_soup_items(tmp_path / "DHF", [req1, pkg])
 
         # "requests" appears in requirements.txt (pypi) and peerDependencies (npm) but
@@ -288,7 +295,7 @@ class TestSyncSoupItems:
             "dependencies": {"axios": "^1.6.0"},
             "peerDependencies": {"axios": "^1.0.0"},
         })
-        with patch("dhfkit.api.list_items", return_value=[]):
+        with patch("dhfkit.item_store.ItemStore.list_items", return_value=[]):
             result = sync_soup_items(tmp_path / "DHF", [pkg])
 
         assert result["to_create"].count("axios") == 1
@@ -297,8 +304,8 @@ class TestSyncSoupItems:
         # create_item succeeds for first package, fails for second
         req = _req_txt(tmp_path, "flask==3.0.0\nnumpy==1.26.0\n")
         side_effects = [{"id": "SOUP-001"}, RuntimeError("db error")]
-        with patch("dhfkit.api.list_items", return_value=[]), \
-             patch("dhfkit.api.create_item", side_effect=side_effects):
+        with patch("dhfkit.item_store.ItemStore.list_items", return_value=[]), \
+             patch("dhfkit.item_store.ItemStore.create_item", side_effect=side_effects):
             result = sync_soup_items(tmp_path / "DHF", [req])
 
         assert result["outcome"] == "completed_with_errors"

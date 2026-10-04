@@ -20,7 +20,7 @@ from unittest.mock import patch
 import pytest
 import yaml
 
-import dhfkit.api as api
+from dhfkit.store import open_store
 from dhfkit.item_store import ItemStore
 from medharness.scaffold import replace_placeholders, scaffold_dhf
 
@@ -44,7 +44,7 @@ class TestAFailedWriteLeavesTheItemIntact:
 
         with patch("dhfkit.repository.saver.yaml.dump", fail_midway):
             with pytest.raises(OSError):
-                api.update_item(dhf, "SRS-001", {"title": "new"})
+                open_store(dhf).update_item("SRS-001", {"title": "new"})
 
         assert item.read_text(encoding="utf-8") == before, "the item was truncated"
 
@@ -57,9 +57,9 @@ class TestAFailedWriteLeavesTheItemIntact:
 
         with patch("dhfkit.repository.saver.yaml.dump", fail_midway):
             with pytest.raises(OSError):
-                api.update_item(dhf, "SRS-001", {"title": "new"})
+                open_store(dhf).update_item("SRS-001", {"title": "new"})
 
-        assert api.list_items(dhf), "the DHF no longer loads after a failed write"
+        assert open_store(dhf).list_items(), "the DHF no longer loads after a failed write"
 
     def test_no_temporary_file_is_left_behind(self, dhf: Path) -> None:
         real_dump = yaml.dump
@@ -70,7 +70,7 @@ class TestAFailedWriteLeavesTheItemIntact:
 
         with patch("dhfkit.repository.saver.yaml.dump", fail_midway):
             with pytest.raises(OSError):
-                api.update_item(dhf, "SRS-001", {"title": "new"})
+                open_store(dhf).update_item("SRS-001", {"title": "new"})
 
         leftovers = list((dhf / "items").rglob(".*.tmp"))
         assert not leftovers, f"temporary files left behind: {leftovers}"

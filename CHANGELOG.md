@@ -11,6 +11,16 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.55.0] — 2026-10-04
+
+### Changed
+
+- **`dhfkit.api` is gone: `open_store(path)` is the one way into the store.** The module was a set of
+  path-in, dict-out wrappers that each reopened the store, and three `medharness` modules reached it
+  alongside `open_store`. A caller of the library uses `open_store(path).list_items()` (and
+  `.get_item`, `.create_item`, `.update_item`, `.execute_transition`, `.config`, ...). `design_validation`
+  also lost its "could not import dhfkit.api" fallback: `dhfkit` is a hard dependency.
+
 ## [0.54.2] — 2026-10-04
 
 ### Changed

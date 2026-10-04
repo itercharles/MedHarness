@@ -16,7 +16,7 @@ from pathlib import Path
 
 import pytest
 
-import dhfkit.api as api
+from dhfkit.store import open_store
 from medharness.scaffold import replace_placeholders, scaffold_dhf
 
 
@@ -39,8 +39,7 @@ def repo(tmp_path: Path) -> Path:
 
 
 def _new_srs(dhf: Path, title: str) -> str:
-    return api.create_item(
-        dhf, {"type": "SRS", "title": title, "derives_from": ["SYS-001"]}
+    return open_store(dhf).create_item({"type": "SRS", "title": title, "derives_from": ["SYS-001"]}
     )["id"]
 
 
@@ -50,7 +49,7 @@ class TestADeletedIdIsRetired:
         first = _new_srs(dhf, "first")
         _commit(repo, "add")
 
-        api.delete_item(dhf, first)
+        open_store(dhf).delete_item(first)
         _commit(repo, "delete")
 
         second = _new_srs(dhf, "second")
@@ -64,7 +63,7 @@ class TestADeletedIdIsRetired:
         created = [_new_srs(dhf, f"r{i}") for i in range(3)]
         _commit(repo, "add three")
         for uid in created:
-            api.delete_item(dhf, uid)
+            open_store(dhf).delete_item(uid)
         _commit(repo, "delete three")
 
         again = [_new_srs(dhf, f"s{i}") for i in range(3)]

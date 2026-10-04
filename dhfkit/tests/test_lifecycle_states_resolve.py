@@ -16,7 +16,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-import dhfkit.api as api
+from dhfkit.store import open_store
 from medharness.scaffold import replace_placeholders, scaffold_dhf
 
 TEMPLATES = Path(__file__).resolve().parents[1] / "templates" / "config"
@@ -63,19 +63,19 @@ class TestTheScaffoldedCRCanReachCompleted:
         replace_placeholders(tmp_path, "Lifecycle")
         dhf = tmp_path / "DHF"
         for state in ("design", "develop"):
-            api.transition_item(dhf, "CR-001", state)
+            open_store(dhf).execute_transition("CR-001", state)
 
         with pytest.raises(ValueError, match="implementation_recorded"):
-            api.transition_item(dhf, "CR-001", "completed")
+            open_store(dhf).execute_transition("CR-001", "completed")
 
-        api.update_item(dhf, "CR-001", {
+        open_store(dhf).update_item("CR-001", {
             "implementation_notes": "Toolbar updated.",
             "affected_risk_items": ["RISK-001"],
             "affected_items": ["SRS-001"],
             "triage_result": {"verdict": "approved"},
         })
-        api.transition_item(dhf, "CR-001", "completed")
-        assert api.get_item(dhf, "CR-001")["status"] == "completed"
+        open_store(dhf).execute_transition("CR-001", "completed")
+        assert open_store(dhf).get_item("CR-001")["status"] == "completed"
 
     def test_updating_a_field_does_not_undo_the_lifecycle(self, tmp_path: Path) -> None:
         """`update_item` reset any non-stable state to the initial one.
@@ -86,19 +86,19 @@ class TestTheScaffoldedCRCanReachCompleted:
         scaffold_dhf(tmp_path)
         replace_placeholders(tmp_path, "Lifecycle")
         dhf = tmp_path / "DHF"
-        api.transition_item(dhf, "CR-001", "design")
-        api.update_item(dhf, "CR-001", {"implementation_notes": "x"})
-        assert api.get_item(dhf, "CR-001")["status"] == "design"
+        open_store(dhf).execute_transition("CR-001", "design")
+        open_store(dhf).update_item("CR-001", {"implementation_notes": "x"})
+        assert open_store(dhf).get_item("CR-001")["status"] == "design"
 
     def test_an_undefined_state_is_still_refused(self, tmp_path: Path) -> None:
         """Widening the state list must not make the machine permissive."""
         scaffold_dhf(tmp_path)
         replace_placeholders(tmp_path, "Lifecycle")
         with pytest.raises(ValueError):
-            api.transition_item(tmp_path / "DHF", "CR-001", "nonexistent")
+            open_store(tmp_path / "DHF").execute_transition("CR-001", "nonexistent")
 
     def test_skipping_a_state_is_still_refused(self, tmp_path: Path) -> None:
         scaffold_dhf(tmp_path)
         replace_placeholders(tmp_path, "Lifecycle")
         with pytest.raises(ValueError):
-            api.transition_item(tmp_path / "DHF", "CR-001", "completed")
+            open_store(tmp_path / "DHF").execute_transition("CR-001", "completed")

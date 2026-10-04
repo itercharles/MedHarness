@@ -20,14 +20,18 @@ from medharness.services.design_validation import _check_cr_workflow_fields
 APPROVED = {"verdict": "approved", "complexity": "small"}
 
 
-def _api(cr_item: dict | None):
-    api = MagicMock()
-    api.get_item.return_value = cr_item
-    return api
+def _check(cr_item: dict | None = None, error: Exception | None = None) -> list[dict]:
+    store = MagicMock()
+    if error:
+        store.get_item.side_effect = error
+    else:
+        store.get_item.return_value = cr_item
+    with patch("medharness.services.design_validation.open_store", return_value=store):
+        return _check_cr_workflow_fields(Path("DHF"), "CR-001")
 
 
 def _fields(cr_item: dict | None) -> list[str]:
-    return [e["field"] for e in _check_cr_workflow_fields(_api(cr_item), Path("DHF"), "CR-001")]
+    return [e["field"] for e in _check(cr_item)]
 
 
 class TestWhatStepOneLeavesBehind:
@@ -57,9 +61,7 @@ class TestWhenTheChecksDoNotApply:
         assert _fields(None) == ["cr_item"]
 
     def test_an_unreadable_dhf_is_reported_not_swallowed(self) -> None:
-        api = MagicMock()
-        api.get_item.side_effect = OSError("disk gone")
-        errors = _check_cr_workflow_fields(api, Path("DHF"), "CR-001")
+        errors = _check(error=OSError("disk gone"))
         assert [e["field"] for e in errors] == ["cr_item"]
         assert "disk gone" in errors[0]["issue"]
 
@@ -69,7 +71,7 @@ class TestTheMessageIsActionable:
 
     @pytest.mark.parametrize("field", ["triage_result"])
     def test_the_fix_names_the_command_to_run(self, field: str) -> None:
-        errors = _check_cr_workflow_fields(_api({"id": "CR-001"}), Path("DHF"), "CR-001")
+        errors = _check({"id": "CR-001"})
         fix = next(e["fix"] for e in errors if e["field"] == field)
         assert "medharness" in fix and "item update" in fix and field in fix
 

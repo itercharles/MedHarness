@@ -12,6 +12,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
+from dhfkit.store import open_store
 from medharness.services.soup_sync import _KNOWN_MANIFESTS, _dispatch_parser
 
 
@@ -42,12 +43,10 @@ def _collect_known_anomalies(dhf: Path) -> tuple[list[dict], list[str]]:
 
     Returns (anomalies, errors).
     """
-    import dhfkit.api as api
-
     anomalies: list[dict] = []
     errors: list[str] = []
 
-    for item in api.list_items(dhf):
+    for item in open_store(dhf).list_items():
         uid = str(item.get("id") or item.get("uid") or "")
         if not uid.startswith("DEF-"):
             continue
@@ -77,11 +76,9 @@ def _collect_known_anomalies(dhf: Path) -> tuple[list[dict], list[str]]:
 
 def _verify_cr_gates(dhf: Path, cr_ids: list[str]) -> list[dict]:
     """Return violation dicts for any CR not in `completed` state."""
-    import dhfkit.api as api
-
     violations: list[dict] = []
     for cr_id in cr_ids:
-        item = api.get_item(dhf, cr_id)
+        item = open_store(dhf).get_item(cr_id)
         if item is None:
             violations.append({"cr": cr_id, "issue": "CR not found"})
             continue
@@ -96,12 +93,10 @@ def _verify_cr_gates(dhf: Path, cr_ids: list[str]) -> list[dict]:
 
 def _auto_collect_crs(dhf: Path) -> list[str]:
     """Return IDs of completed CRs not already referenced in a REL item."""
-    import dhfkit.api as api
-
     released_crs: set[str] = set()
     completed_unreleased: list[str] = []
 
-    for item in api.list_items(dhf):
+    for item in open_store(dhf).list_items():
         item_type = item.get("type")
         if item_type == "REL":
             for cr_id in item.get("included_items") or []:
@@ -125,12 +120,10 @@ def _collect_bom(dhf: Path, manifest_paths: list[Path]) -> tuple[dict, list[str]
     is unreadable or unsupported — callers must propagate these to avoid
     producing an incomplete BOM that silently looks successful.
     """
-    import dhfkit.api as api
-
     bom_errors: list[str] = []
 
     dhf_soup: list[dict] = []
-    for item in api.list_items(dhf):
+    for item in open_store(dhf).list_items():
         if item.get("type") == "SOUP":
             dhf_soup.append({
                 # Items expose "id"; keep the artifact key as "uid" so existing
@@ -174,14 +167,12 @@ def _generate_release_notes(
     bom: dict,
     dhf: Path,
 ) -> str:
-    import dhfkit.api as api
-
     lines: list[str] = [f"# Release {version}", ""]
 
     if cr_ids:
         lines.append("## Included Change Requests")
         for cr_id in sorted(cr_ids):
-            item = api.get_item(dhf, cr_id)
+            item = open_store(dhf).get_item(cr_id)
             title = item.get("title", "") if item else ""
             lines.append(f"- {cr_id}: {title}")
         lines.append("")
@@ -207,8 +198,6 @@ def build_release_baseline(
     out_dir: Path,
 ) -> dict:
     """Check the CRs and anomalies, and write the baseline and BOM artifacts."""
-    import dhfkit.api as api
-
     errors: list[str] = []
     warnings: list[str] = []
 
@@ -300,10 +289,9 @@ def build_release_baseline(
     try:
         from importlib.metadata import version as pkg_version
 
-        from dhfkit.store import open_store
         from dhfkit.sbom import build_sbom, merge_release_components, purl_gap, write_sbom
 
-        soup_items = [i for i in api.list_items(dhf) if i.get("type") == "SOUP"]
+        soup_items = [i for i in open_store(dhf).list_items() if i.get("type") == "SOUP"]
         components = merge_release_components(soup_items, bom["manifest_packages"])
         try:
             tool_version = pkg_version("medharness")
@@ -348,9 +336,7 @@ def build_release_baseline(
 
 def record_release(dhf: Path, baseline: dict) -> str:
     """Create the REL item for a baseline that passed. Returns its ID."""
-    import dhfkit.api as api
-
-    item = api.create_item(dhf, {
+    item = open_store(dhf).create_item({
         "type": "REL",
         "version": baseline["version"],
         "included_items": baseline["cr_ids"],

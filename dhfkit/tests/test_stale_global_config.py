@@ -23,7 +23,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-import dhfkit.api as api
+from dhfkit.store import open_store
 from medharness.scaffold import replace_placeholders, scaffold_dhf
 
 
@@ -49,14 +49,14 @@ def aged(tmp_path: Path) -> Path:
 
 class TestAnUndefinedTargetIsReportedNotDropped:
     def test_the_transition_still_appears(self, aged: Path) -> None:
-        offered = {t["to_state"] for t in api.get_item_transitions(aged, "CR-001")}
+        offered = {t["to_state"] for t in open_store(aged).get_available_transitions("CR-001")}
         assert "design" in offered, (
             "the transition vanished — a reader sees a rule where there is a "
             "broken config"
         )
 
     def test_it_is_marked_unavailable_with_the_reason(self, aged: Path) -> None:
-        design = next(t for t in api.get_item_transitions(aged, "CR-001")
+        design = next(t for t in open_store(aged).get_available_transitions("CR-001")
                       if t["to_state"] == "design")
         assert design["can_transition"] is False
         reason = " ".join(design["blocking_criteria"])
@@ -64,7 +64,7 @@ class TestAnUndefinedTargetIsReportedNotDropped:
 
     def test_executing_it_says_what_is_wrong(self, aged: Path) -> None:
         with pytest.raises(ValueError) as exc:
-            api.transition_item(aged, "CR-001", "design")
+            open_store(aged).execute_transition("CR-001", "design")
         message = str(exc.value)
         assert "not defined in global_lifecycle.states" in message, message
         assert "is not allowed from state" not in message, (
@@ -72,7 +72,7 @@ class TestAnUndefinedTargetIsReportedNotDropped:
         )
 
     def test_a_resolvable_transition_is_unaffected(self, aged: Path) -> None:
-        rejected = next(t for t in api.get_item_transitions(aged, "CR-001")
+        rejected = next(t for t in open_store(aged).get_available_transitions("CR-001")
                         if t["to_state"] == "rejected")
         assert rejected["can_transition"] is True
 

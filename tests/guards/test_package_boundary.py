@@ -100,10 +100,10 @@ class TestThePublicSurfaceCoversWhatIsNeeded:
         ), "the config every gate needs is not on the public surface"
 
     def test_the_api_exposes_it_by_path(self, tmp_path: Path) -> None:
-        import dhfkit.api as api
+        from dhfkit.store import open_store
         from medharness.scaffold import replace_placeholders, scaffold_dhf
 
         scaffold_dhf(tmp_path)
         replace_placeholders(tmp_path, "Boundary")
-        config = api.get_config(tmp_path / "DHF")
+        config = open_store(tmp_path / "DHF").config
         assert config.project_name == "Boundary"

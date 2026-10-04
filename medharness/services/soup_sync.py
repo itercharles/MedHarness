@@ -2,7 +2,7 @@
 
 Parses lockfiles and dependency manifests from multiple ecosystems, diffs them
 against the current SOUP items in the DHF, and writes creates/updates
-back through dhfkit.api.
+back through the store.
 
 Supported manifest formats
 --------------------------
@@ -46,6 +46,8 @@ import subprocess
 import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Optional
+
+from dhfkit.store import open_store
 
 
 # ---------------------------------------------------------------------------
@@ -617,8 +619,6 @@ def sync_soup_items(
 
     Returns a structured result dict with outcome and counts.
     """
-    import dhfkit.api as api
-
     packages, manifests_parsed, errors = collect_manifest_packages(
         dhf, list(manifest_paths),
         extra_commands=extra_commands, use_sources_file=use_sources_file,
@@ -626,7 +626,7 @@ def sync_soup_items(
 
     soup_items: list[dict] = []
     try:
-        soup_items = [it for it in api.list_items(dhf) if it.get("type") == "SOUP"]
+        soup_items = [it for it in open_store(dhf).list_items() if it.get("type") == "SOUP"]
     except Exception as exc:
         errors.append(f"Failed to list SOUP items: {exc}")
 
@@ -651,7 +651,7 @@ def sync_soup_items(
                 "license": "",
                 "source": pkg.get("source") or "",
             }
-            new_item = api.create_item(dhf, data)
+            new_item = open_store(dhf).create_item(data)
             items_created.append(new_item["id"])
         except Exception as exc:
             errors.append(f"Failed to create SOUP item for {pkg['name']}: {exc}")
@@ -660,7 +660,7 @@ def sync_soup_items(
         pkg = entry["pkg"]
         item = entry["item"]
         try:
-            api.update_item(dhf, item["id"], {"version": pkg["version"]})
+            open_store(dhf).update_item(item["id"], {"version": pkg["version"]})
             items_updated.append(item["id"])
         except Exception as exc:
             errors.append(f"Failed to update {item['uid']}: {exc}")
