@@ -383,9 +383,9 @@ class Run:
             ))
 
     def call(self, name: str, prompt: str, llm: LLMConfig, *, critical: bool,
-             resume: str | None = _FROM_RUN) -> int:
+             resume: str | None = _FROM_RUN) -> tuple[int, str]:
         """One model step. A critical one that fails fails the run; the session carries on."""
-        rc, _, session_id = _run_claude_step(
+        rc, output, session_id = _run_claude_step(
             name=name,
             prompt=prompt,
             steps=self.steps,
@@ -398,7 +398,7 @@ class Run:
         if session_id:
             self.session_id = session_id
             self.diagnostics["session_id"] = session_id
-        return rc
+        return rc, output
 
     def items_changed(self) -> dict[str, list[str]]:
         return _items_changed(self.repo_root, self.unreadable, self.since_ref)

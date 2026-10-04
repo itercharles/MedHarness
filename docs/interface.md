@@ -526,7 +526,7 @@ Check the branch changed the items the CR said it would.
 | Option | |
 |---|---|
 | `--cr CR_ID` | The CR whose affected_items the branch must change. [required] |
-| `--since-ref REF` | What the branch is compared against: its changes since it left this ref. Needs enough history to reach the fork. |
+| `--since-ref REF` | What the branch is compared against: its changes since it left this ref. Needs enough history to reach the fork. [default: origin/main] |
 | `--code-path PATH` | Opt into code-change enforcement: path(s) under which at least one file must be modified. Omitting this option skips the code-change check entirely. |
 
 #### `medharness verify soup`
@@ -547,6 +547,7 @@ Draft the DHF item cascade and impact analysis for a CR, with a model.
 |---|---|
 | `--cr CR_ID` | The CR to design: its item cascade and impact analysis. [required] |
 | `--pr N` | The PR this run belongs to, in CI: revise if a reviewer asked for changes, then commit and push the result to its branch. Without it, local files change and nothing is committed. |
+| `--since-ref REF` | What the branch is compared against: its changes since it left this ref. Set it when the base branch is not origin/main. [default: origin/main] |
 | `--prompt` | Print the stage's instructions, with this CR's DHF context, for an agent that is already running, instead of starting a model. |
 
 #### `medharness build code`
@@ -558,6 +559,7 @@ Write the code and tests for a CR's approved design, with a model.
 | `--cr CR_ID` | The CR whose approved design to implement. [required] |
 | `--pr N` | The PR this run belongs to, in CI: revise if a reviewer asked for changes, then commit and push the result to its branch. Without it, local files change and nothing is committed. |
 | `--check CMD` | A command that must exit 0 (typecheck, tests). The model is told to pass it, the harness runs it when the model is done and sends a failure back for a fix, and a run whose check still fails exits non-zero and pushes nothing. Repeatable. |
+| `--since-ref REF` | What the branch is compared against: its changes since it left this ref. Set it when the base branch is not origin/main. [default: origin/main] |
 | `--prompt` | Print the stage's instructions, with this CR's DHF context, for an agent that is already running, instead of starting a model. |
 
 #### `medharness build release`

@@ -718,7 +718,7 @@ class TestGenerateCode:
                    side_effect=lambda pr, body, **kw: posted_bodies.append(body) or "url") as mock_post, \
              patch("medharness.services.git.collect_path_changes", return_value={"created": [], "updated": [], "deleted": []}), \
              patch("medharness.services.design_validation.validate_dhf_structure", return_value=[]), \
-             patch("medharness.services.cr_generation._items_changed",
+             patch("medharness.services.stage_run._items_changed",
                    return_value={"created": [], "updated": [], "deleted": []}):
             result = generate_code("CR-099", dhf, pr_number=55)
         assert mock_post.call_count == 0, "no warnings → no comment expected"

@@ -149,13 +149,31 @@ class TestBuildPlan:
         assert cr["affected_items"] and all(not i.startswith("CR-") for i in cr["affected_items"])
         assert [c["stage"] for c in _calls(project)] == ["design", "design_review"]
 
-    def test_a_design_with_a_dangling_link_is_fixed_in_a_second_pass(
+    def test_a_repository_whose_base_branch_is_not_main_names_it_with_since_ref(
         self, project: Path, tmp_path: Path,
     ) -> None:
-        broken = [DESIGN[0], DESIGN[1].replace("CRS-002", "CRS-404")] + DESIGN[2:]
-        _plan(tmp_path, design=[{"run": broken}, {"run": [
-            f"{MH} item update SYS-002 --data " + _json({"satisfies": ["CRS-002"]})]}],
-            design_review=[{"run": [APPROVED_REVIEW]}])
+        _git(project, "push", "-q", "origin", "HEAD:trunk")
+        _git(project, "fetch", "-q", "origin")
+        _git(project, "update-ref", "-d", "refs/remotes/origin/main")
+        _plan(tmp_path, design=[{"run": DESIGN}, {"run": DESIGN}, {"run": []}],
+              design_review=[{"run": [APPROVED_REVIEW]}])
+
+        by_default = _report(_run("build", "plan", "--cr", "CR-001"))
+        assert any(e["field"] == "changed_items" and "origin/main" in e["issue"] for e in by_default["errors"])
+
+        _git(project, "checkout", "-q", "--", ".")
+        _git(project, "clean", "-fdq", "--", "DHF", "docs")
+        result = _run("build", "plan", "--cr", "CR-001", "--since-ref", "origin/trunk")
+        report = _report(result)
+        assert result.exit_code == 0, result.stderr
+        assert report["inputs"]["since_ref"] == "origin/trunk" and report["errors"] == []
+
+    def test_a_design_that_leaves_out_an_item_it_records_is_fixed_in_a_second_pass(
+        self, project: Path, tmp_path: Path,
+    ) -> None:
+        broken = DESIGN[:4] + DESIGN[5:]
+        _plan(tmp_path, design=[{"run": broken}, {"run": [DESIGN[4]]}],
+              design_review=[{"run": [APPROVED_REVIEW]}])
 
         result = _run("build", "plan", "--cr", "CR-001")
 
@@ -168,14 +186,14 @@ class TestBuildPlan:
     def test_a_design_that_stays_broken_is_reported_and_exits_1(
         self, project: Path, tmp_path: Path,
     ) -> None:
-        broken = [DESIGN[0], DESIGN[1].replace("CRS-002", "CRS-404")] + DESIGN[2:]
-        _plan(tmp_path, design=[{"run": broken}, {"run": []}], design_review=[{"run": [APPROVED_REVIEW]}])
+        _plan(tmp_path, design=[{"run": DESIGN[:4] + DESIGN[5:]}, {"run": []}],
+              design_review=[{"run": [APPROVED_REVIEW]}])
 
         result = _run("build", "plan", "--cr", "CR-001")
 
         report = _report(result)
         assert result.exit_code == 1 and report["outcome"] == "completed_with_errors"
-        assert any("CRS-404" in e["issue"] for e in report["errors"]), report["errors"]
+        assert any("SWDD-002" in e["issue"] for e in report["errors"]), report["errors"]
 
     def test_a_model_that_fails_is_a_tool_error(self, project: Path, tmp_path: Path) -> None:
         _plan(tmp_path, design=[{"exit": 1, "say": "rate limited"}])

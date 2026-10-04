@@ -12,6 +12,7 @@ import click
 from dhfkit.store import open_store
 from medharness.cli.options import collect_junit_paths, junit_option
 from medharness.cli.output import emit
+from medharness.services.git import DEFAULT_SINCE_REF
 
 
 def _format_summary(stage_label: str, verb: str, cr_id: str, result: dict) -> str:
@@ -87,11 +88,14 @@ def register(main):
                   help="The PR this run belongs to, in CI: revise if a reviewer asked for changes, then "
                        "commit and push the result to its branch. Without it, local files "
                        "change and nothing is committed.")
+    @click.option("--since-ref", "since_ref", default=DEFAULT_SINCE_REF, show_default=True, metavar="REF",
+                  help="What the branch is compared against: its changes since it left this ref. "
+                       "Set it when the base branch is not origin/main.")
     @click.option("--prompt", "print_prompt", is_flag=True, default=False,
                   help="Print the stage's instructions, with this CR's DHF context, for an "
                        "agent that is already running, instead of starting a model.")
     @click.pass_context
-    def change_plan(ctx: click.Context, cr_id: str, pr_number: int | None,
+    def change_plan(ctx: click.Context, cr_id: str, pr_number: int | None, since_ref: str,
                     print_prompt: bool) -> None:
         """Draft the DHF item cascade and impact analysis for a CR, with a model.
 
@@ -120,7 +124,7 @@ def register(main):
             from medharness.services.prompt_assembly import _assemble_generate_dhf_prompt
             _print_prompt(_assemble_generate_dhf_prompt, cr_id, dhf)
             return
-        result = generate_dhf(cr_id, dhf, pr_number=pr_number)
+        result = generate_dhf(cr_id, dhf, pr_number=pr_number, since_ref=since_ref)
         emit(result)
         click.echo(
             _format_summary("DHF cascade", "revised" if pr_number else "generated", cr_id, result),
@@ -142,12 +146,15 @@ def register(main):
                   help="A command that must exit 0 (typecheck, tests). The model is told to pass it, "
                        "the harness runs it when the model is done and sends a failure back for a fix, and "
                        "a run whose check still fails exits non-zero and pushes nothing. Repeatable.")
+    @click.option("--since-ref", "since_ref", default=DEFAULT_SINCE_REF, show_default=True, metavar="REF",
+                  help="What the branch is compared against: its changes since it left this ref. "
+                       "Set it when the base branch is not origin/main.")
     @click.option("--prompt", "print_prompt", is_flag=True, default=False,
                   help="Print the stage's instructions, with this CR's DHF context, for an "
                        "agent that is already running, instead of starting a model.")
     @click.pass_context
     def change_implement(ctx: click.Context, cr_id: str, pr_number: int | None,
-                         checks: tuple[str, ...], print_prompt: bool) -> None:
+                         checks: tuple[str, ...], since_ref: str, print_prompt: bool) -> None:
         """Write the code and tests for a CR's approved design, with a model.
 
         Reads the CR's implementation_notes and the items it affects, and
@@ -172,9 +179,9 @@ def register(main):
             pass  # DHF config not loadable yet; generate_code will surface the error
         if print_prompt:
             from medharness.services.prompt_assembly import _assemble_develop_prompt
-            _print_prompt(_assemble_develop_prompt, cr_id, dhf, checks=checks)
+            _print_prompt(_assemble_develop_prompt, cr_id, dhf, checks=checks, since_ref=since_ref)
             return
-        result = generate_code(cr_id, dhf, pr_number=pr_number, checks=checks)
+        result = generate_code(cr_id, dhf, pr_number=pr_number, checks=checks, since_ref=since_ref)
         emit(result)
         click.echo(_format_summary("Implementation", "revised" if pr_number else "generated", cr_id, result), err=True)
         for error in result.get("errors") or []:
