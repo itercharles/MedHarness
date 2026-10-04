@@ -11,6 +11,15 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.56.1] — 2026-10-04
+
+### Fixed
+
+- **`verify completion` no longer asks a CR that changed a SOUP item for test evidence.** It checked every type
+  that declares a `verification_method`, which includes SOUP, so a CR whose `build soup` updated a dependency
+  could not close ("SOUP-001: no verification_method declared"). It now checks the requirement types, the same
+  definition `verify tests` and `build plan` use.
+
 ## [0.56.0] — 2026-10-04
 
 ### Changed
