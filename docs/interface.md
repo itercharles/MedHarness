@@ -271,12 +271,21 @@ The fields of what each command above answers with, generated from the models in
 | `stage` | `develop` | Always `develop` for `build code` |
 | `artifacts` | `CodeArtifacts` | What the run changed |
 | `code_review` | `Review` or null | The code review rounds, when one ran |
+| `checks` | list of `CheckResult` or null | Each `--check` as the harness last ran it; absent without `--check` |
 
 `CodeArtifacts`:
 
 | Field | Type | Meaning |
 |---|---|---|
 | `files_changed` | `ChangeSet` or null | The code changed on the branch; null when the diff could not be read |
+
+`CheckResult`:
+
+| Field | Type | Meaning |
+|---|---|---|
+| `command` | string | The `--check` command, as given |
+| `exit_code` | integer | What it exited with in the last run; 124 when it timed out |
+| `passed` | boolean | Whether it exited 0 |
 
 `Timing`, `Inputs`, `Progress`, `Step`, `RunWarning`, `RunError`, `Review`, `ChangeSet`, `ReviewCycle` are as listed above.
 
@@ -548,6 +557,7 @@ Write the code and tests for a CR's approved design, with a model.
 |---|---|
 | `--cr CR_ID` | The CR whose approved design to implement. [required] |
 | `--pr N` | The PR this run belongs to, in CI: revise if a reviewer asked for changes, then commit and push the result to its branch. Without it, local files change and nothing is committed. |
+| `--check CMD` | A command that must exit 0 (typecheck, tests). The model is told to pass it, the harness runs it when the model is done and sends a failure back for a fix, and a run whose check still fails exits non-zero and pushes nothing. Repeatable. |
 | `--prompt` | Print the stage's instructions, with this CR's DHF context, for an agent that is already running, instead of starting a model. |
 
 #### `medharness build release`

@@ -225,13 +225,28 @@ def _enrich_with_plan_context(prompt: str, cr_id: str, dhf_path: Path,
                    dhf_path, warnings)
 
 
+def checks_section(checks: tuple[str, ...]) -> str:
+    """Tells the model which commands the harness will run, and that they must pass."""
+    if not checks:
+        return ""
+    listed = "".join(f"- `{command}`\n" for command in checks)
+    return (
+        "\n\n## Checks That Must Pass\n\n"
+        "When you finish, the harness runs these commands itself. The run fails if any exits non-zero, "
+        "and nothing is pushed. Use them as the build, typecheck and test commands for step 4, run them "
+        "yourself first, and fix the code until each exits 0. Do not edit, skip or work around a check; "
+        "if one cannot run here, say why in `implementation_notes`.\n\n" + listed
+    )
+
+
 def _assemble_develop_prompt(cr_id: str, dhf_path: Path | None = None,
-                             warnings: list[str] | None = None) -> str:
+                             warnings: list[str] | None = None,
+                             checks: tuple[str, ...] = ()) -> str:
     prompt = _load_prompt("cr_develop.md").replace("{{cr_id}}", cr_id)
     if dhf_path is not None:
         prompt = _enrich(prompt, lambda p: _render_code_context(_cr_context(p, cr_id)),
                          dhf_path, warnings)
-    return prompt
+    return prompt + checks_section(checks)
 
 
 def _assemble_review_code_prompt(cr_id: str) -> str:

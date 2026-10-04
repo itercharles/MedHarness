@@ -22,6 +22,7 @@ stage = (
     else "code_review" if "CR Code Review" in prompt
     else "develop" if "CR Implementation Task" in prompt
     else "code_fix" if prompt.startswith("The code review for")
+    else "check_fix" if prompt.startswith("The checks for")
     else "design_fix" if prompt.startswith("The design review for")
     else "design"
 )

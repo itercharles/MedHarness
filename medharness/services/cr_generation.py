@@ -13,6 +13,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
+from medharness.services import checks as check_runner
 from medharness.services import design_validation, git
 from medharness.services.cr_impact import _record_design_impact_in_cr
 from medharness.services.github_session import get_session, put_session
@@ -25,6 +26,7 @@ from medharness.services.prompt_assembly import (
     _assemble_review_code_prompt,
     _assemble_review_design_prompt,
     _enrich_with_plan_context,
+    checks_section,
 )
 
 __all__ = [
@@ -50,6 +52,7 @@ def _code_paths(dhf_path: Path, repo_root: Path) -> tuple[str, ...]:
 
 _MAX_DESIGN_REVIEW_CYCLES = 3
 _MAX_CODE_REVIEW_CYCLES = 3
+_MAX_CHECK_FIX_CYCLES = 2
 
 
 # ── Multi-provider LLM config ─────────────────────────────────────────────────
@@ -1006,6 +1009,7 @@ def generate_code(
     cr_id: str,
     dhf_path: Path,
     pr_number: int | None = None,
+    checks: tuple[str, ...] = (),
 ) -> dict:
     """Generate or revise implementation code for a CR."""
     started_at = _now_iso()
@@ -1083,14 +1087,14 @@ def generate_code(
             f"Read the implementation on this branch related to {cr_id}, "
             f"then revise it based on the following pull request review feedback.\n\n"
             f"Review feedback:\n{feedback['prompt_text']}"
-        )
+        ) + checks_section(checks)
         steps.append(_finish_step(prompt_step, prompt_perf, "ok"))
     else:
         prompt_step, prompt_perf = _begin_step(
             "prepare_prompt",
             {"prompt_kind": "develop_generation", "used_pr_feedback": False},
         )
-        prompt = _assemble_develop_prompt(cr_id, dhf_path=dhf_path, warnings=warnings)
+        prompt = _assemble_develop_prompt(cr_id, dhf_path=dhf_path, warnings=warnings, checks=checks)
         diff = git.compute_diff(repo_root, "origin/main", *_code_paths(dhf_path, repo_root))
         if diff:
             truncated = len(diff) > MAX_DIFF_CHARS
@@ -1168,6 +1172,32 @@ def generate_code(
     diagnostics["code_review_verdict"] = code_review_verdict
     diagnostics["code_review_cycles"] = review_cycle
 
+    check_results: list[dict] = []
+    for attempt in range(_MAX_CHECK_FIX_CYCLES + 1):
+        if not checks:
+            break
+        check_step, check_perf = _begin_step("run_checks", {"attempt": attempt + 1})
+        check_results = check_runner.run_checks(repo_root, checks)
+        failed = [c for c in check_results if not c["passed"]]
+        steps.append(_finish_step(check_step, check_perf, "failed" if failed else "ok",
+                                  {"failed": [c["command"] for c in failed]}))
+        if not failed or attempt == _MAX_CHECK_FIX_CYCLES:
+            break
+        report = "\n\n".join(f"`{c['command']}` exited {c['exit_code']}:\n{c['output']}" for c in failed)
+        _, _, fix_session_id = _run_claude_step(
+            name=f"run_check_fix_{attempt + 1}",
+            prompt=f"The checks for {cr_id} failed when the harness ran them. Fix the code so each exits 0; "
+                   f"do not change the checks.\n\n{report}",
+            steps=steps,
+            warnings=warnings,
+            critical=False,
+            resume_session=session_id,
+            llm_config=develop_llm,
+        )
+        if fix_session_id:
+            session_id = fix_session_id
+            diagnostics["session_id"] = session_id
+
     if session_id and pr_number:
         put_session(pr_number, session_id)
 
@@ -1180,8 +1210,13 @@ def generate_code(
         warnings.append(_warning("diff_unavailable", f"affected_items not updated: {unreadable[-1]}"))
     else:
         _record_design_impact_in_cr(cr_id, dhf_path, items_changed)
-    errors: list[dict] = []
-    if pr_number:
+    errors: list[dict] = [
+        {"field": "check", "issue": f"`{c['command']}` exited {c['exit_code']} after {_MAX_CHECK_FIX_CYCLES} "
+                                   f"fix attempts:\n{c['output'][-1000:]}",
+         "fix": "Make the check pass in the working tree, then run `build code` again; nothing was pushed."}
+        for c in check_results if not c["passed"]
+    ]
+    if pr_number and not errors:
         _push_to_pr(repo_root, pr_number, f"feat({cr_id}): build code", errors)
     artifact_step, artifact_perf = _begin_step("collect_artifacts", {"kind": "files_changed"})
     try:
@@ -1210,6 +1245,8 @@ def generate_code(
         critical_step_failed=critical_step_failed,
     )
     result["code_review"] = _build_review_result("Implementation", code_review_log)
+    if checks:
+        result["checks"] = [{k: c[k] for k in ("command", "exit_code", "passed")} for c in check_results]
     if pr_number:
         token = os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN") or ""
         result["pr_comments"] = _auto_post_pr_feedback(pr_number, cr_id, result, token=token)

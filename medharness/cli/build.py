@@ -56,10 +56,10 @@ def _raise_for_outcome_error(result: dict) -> None:
         raise click.exceptions.Exit(1)
 
 
-def _print_prompt(assemble, cr_id: str, dhf: Path) -> None:
+def _print_prompt(assemble, cr_id: str, dhf: Path, **options) -> None:
     """Markdown, not JSON: the reader is an agent following it, not a parser."""
     warnings: list[dict] = []
-    click.echo(assemble(cr_id, dhf_path=dhf, warnings=warnings))
+    click.echo(assemble(cr_id, dhf_path=dhf, warnings=warnings, **options))
     for w in warnings:
         click.echo(f"WARN [prompt] {w.get('message', w)}", err=True)
 
@@ -138,12 +138,16 @@ def register(main):
                   help="The PR this run belongs to, in CI: revise if a reviewer asked for changes, then "
                        "commit and push the result to its branch. Without it, local files "
                        "change and nothing is committed.")
+    @click.option("--check", "checks", multiple=True, metavar="CMD",
+                  help="A command that must exit 0 (typecheck, tests). The model is told to pass it, "
+                       "the harness runs it when the model is done and sends a failure back for a fix, and "
+                       "a run whose check still fails exits non-zero and pushes nothing. Repeatable.")
     @click.option("--prompt", "print_prompt", is_flag=True, default=False,
                   help="Print the stage's instructions, with this CR's DHF context, for an "
                        "agent that is already running, instead of starting a model.")
     @click.pass_context
     def change_implement(ctx: click.Context, cr_id: str, pr_number: int | None,
-                         print_prompt: bool) -> None:
+                         checks: tuple[str, ...], print_prompt: bool) -> None:
         """Write the code and tests for a CR's approved design, with a model.
 
         Reads the CR's implementation_notes and the items it affects, and
@@ -168,9 +172,9 @@ def register(main):
             pass  # DHF config not loadable yet; generate_code will surface the error
         if print_prompt:
             from medharness.services.prompt_assembly import _assemble_develop_prompt
-            _print_prompt(_assemble_develop_prompt, cr_id, dhf)
+            _print_prompt(_assemble_develop_prompt, cr_id, dhf, checks=checks)
             return
-        result = generate_code(cr_id, dhf, pr_number=pr_number)
+        result = generate_code(cr_id, dhf, pr_number=pr_number, checks=checks)
         emit(result)
         click.echo(_format_summary("Implementation", "revised" if pr_number else "generated", cr_id, result), err=True)
         for error in result.get("errors") or []:

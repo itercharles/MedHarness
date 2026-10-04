@@ -468,6 +468,79 @@ def _remote_files(project: Path, branch: str) -> list[str]:
                           capture_output=True, text=True, check=True).stdout.split()
 
 
+class TestBuildCodeChecks:
+    """`--check` is run by the harness, so the model cannot skip it or report a guess."""
+
+    APPROVED = [{"say": "**Verdict:** Approved"}]
+
+    def _code(self, project: Path, tmp_path: Path, *extra: str, **stages) -> object:
+        _design_merged(project)
+        _plan(tmp_path, develop=[{"run": CODE}], code_review=self.APPROVED, **stages)
+        return _run("build", "code", "--cr", "CR-001", *extra)
+
+    def test_the_model_is_told_which_commands_the_harness_will_run(self, project: Path, tmp_path: Path) -> None:
+        self._code(project, tmp_path, "--check", "true")
+        develop = next(c for c in _calls(project) if c["stage"] == "develop")
+        assert "## Checks That Must Pass" in develop["prompt"] and "- `true`" in develop["prompt"]
+
+    def test_a_passing_check_is_in_the_report(self, project: Path, tmp_path: Path) -> None:
+        result = self._code(project, tmp_path, "--check", "true")
+        assert result.exit_code == 0, result.stderr
+        assert _report(result)["checks"] == [{"command": "true", "exit_code": 0, "passed": True}]
+        assert "check_fix" not in [c["stage"] for c in _calls(project)]
+
+    def test_a_run_without_check_reports_none(self, project: Path, tmp_path: Path) -> None:
+        assert "checks" not in _report(self._code(project, tmp_path))
+        develop = next(c for c in _calls(project) if c["stage"] == "develop")
+        assert "Checks That Must Pass" not in develop["prompt"]
+
+    def test_a_failure_goes_back_to_the_model_and_the_run_passes_once_it_is_fixed(
+        self, project: Path, tmp_path: Path,
+    ) -> None:
+        result = self._code(project, tmp_path, "--check", "test -f src/fixed.txt",
+                            check_fix=[{"run": ["touch src/fixed.txt"]}])
+        assert result.exit_code == 0, result.stderr
+        assert [c["stage"] for c in _calls(project)] == ["develop", "code_review", "check_fix"]
+        fix = next(c for c in _calls(project) if c["stage"] == "check_fix")
+        assert "`test -f src/fixed.txt` exited 1" in fix["prompt"]
+        assert _report(result)["checks"][0]["passed"] is True
+
+    def test_a_check_that_never_passes_fails_the_run_after_two_fix_attempts(
+        self, project: Path, tmp_path: Path,
+    ) -> None:
+        result = self._code(project, tmp_path, "--check", "echo broken >&2; exit 3", check_fix=[{"run": []}])
+        report = _report(result)
+        assert result.exit_code == 1
+        assert [c["stage"] for c in _calls(project)].count("check_fix") == 2
+        assert report["checks"] == [{"command": "echo broken >&2; exit 3", "exit_code": 3, "passed": False}]
+        error = next(e for e in report["errors"] if e["field"] == "check")
+        assert "exited 3" in error["issue"] and "broken" in error["issue"]
+
+    def test_a_command_that_cannot_run_is_a_failure_not_a_guess(self, project: Path, tmp_path: Path) -> None:
+        result = self._code(project, tmp_path, "--check", "no-such-tool-for-this-test", check_fix=[{"run": []}])
+        assert result.exit_code == 1
+        assert _report(result)["checks"][0]["exit_code"] == 127
+
+    def test_every_check_must_pass(self, project: Path, tmp_path: Path) -> None:
+        result = self._code(project, tmp_path, "--check", "true", "--check", "false", check_fix=[{"run": []}])
+        assert result.exit_code == 1
+        assert [c["passed"] for c in _report(result)["checks"]] == [True, False]
+
+    def test_the_prompt_for_an_agent_already_running_lists_them_too(self, project: Path, tmp_path: Path) -> None:
+        _design_merged(project)
+        result = _run("build", "code", "--cr", "CR-001", "--check", "pnpm test", "--prompt")
+        assert "- `pnpm test`" in result.stdout
+
+    def test_a_pull_request_gets_nothing_pushed_while_a_check_fails(
+        self, project: Path, tmp_path: Path, pr,
+    ) -> None:
+        before = _remote_files(project, "design/CR-001")
+        result = self._code(project, tmp_path, "--check", "false", "--pr", "7", check_fix=[{"run": []}])
+        assert result.exit_code == 1
+        assert not any(e["field"] == "pr_push" for e in _report(result)["errors"])
+        assert _remote_files(project, "design/CR-001") == before
+
+
 class TestWithAPullRequest:
     def test_the_work_is_committed_and_pushed_to_the_prs_branch(
         self, project: Path, tmp_path: Path, pr,

@@ -337,7 +337,7 @@ jobs:
       - if: inputs.stage == 'plan'
         run: medharness build plan --cr "${{ inputs.cr }}"
       - if: inputs.stage == 'code'
-        run: medharness build code --cr "${{ inputs.cr }}"
+        run: medharness build code --cr "${{ inputs.cr }}" --check "pnpm typecheck" --check "pnpm test"
       - run: |          # without --pr the files changed and nothing was committed
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -361,9 +361,18 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           case "${BRANCH%%/*}" in
             design)  medharness build plan --cr "${BRANCH#*/}" --pr "$PR" ;;
-            develop) medharness build code --cr "${BRANCH#*/}" --pr "$PR" ;;
+            develop) medharness build code --cr "${BRANCH#*/}" --pr "$PR" --check "pnpm typecheck" --check "pnpm test" ;;
           esac
 ```
+
+**Make `build code` pass your tests.** `--check CMD` (repeatable) names the commands the
+code must pass. The model is told to run them and fix until they exit 0; when it is done,
+MedHarness runs them itself and sends a failure back for a fix (two attempts). If one still
+fails, the run exits non-zero, `checks` in the answer says which, and `--pr` pushes nothing.
+A command that cannot run counts as failed (exit 127), so the job needs the project's
+toolchain installed: without it the model can only guess, and the run fails instead of
+shipping the guess. Without `--check`, the model finds the commands in `AGENTS.md` or
+`CLAUDE.md` and nothing enforces them.
 
 **Check out full history** (`fetch-depth: 0`) wherever a job runs `build plan|code`:
 they compare the branch with where it left `origin/main`, and a shallow clone cannot
