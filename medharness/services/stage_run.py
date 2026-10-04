@@ -241,9 +241,8 @@ def _augment_review_prompt(base: str, errors: list[dict]) -> str:
     if not errors:
         return base + (
             "\n\n## Deterministic Checks (already passed)\n\n"
-            "Schema, traceability, and the presence of all spec `affected_items` "
-            "(or required `@links:` test annotations) have been verified "
-            "mechanically. Do not re-derive them — focus on judgment questions "
+            "Schema, traceability, and the CR's recorded `affected_items` "
+            "have been verified mechanically. Do not re-derive them — focus on judgment questions "
             "that a script cannot answer."
         )
     residual = "\n".join(f"- {e.get('field', '?')}: {e.get('issue', '')}" for e in errors)

@@ -345,11 +345,11 @@ def generate_code(
         if code_review_verdict != "needs_revision" or review_cycle >= _MAX_CODE_REVIEW_CYCLES:
             break
 
+        issues = "\n".join(f"- {issue}" for issue in review_data["issues"])
         run.call(
             f"run_code_fix_{review_cycle}",
-            f"The code review for {cr_id} found issues. "
-            f"Fix each issue flagged in the review above — modify only the affected files. "
-            f"Do not make unrelated changes.",
+            f"The code review for {cr_id} found issues:\n{issues}\n\n"
+            f"Fix each one — modify only the affected files. Do not make unrelated changes.",
             develop_llm, critical=False,
         )
 

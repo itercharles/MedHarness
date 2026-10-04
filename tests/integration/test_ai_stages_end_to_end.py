@@ -457,6 +457,8 @@ class TestBuildCode:
         assert result.exit_code == 0, result.stderr
         assert [c["stage"] for c in _calls(project)] == ["develop", "code_review", "code_fix", "code_review"]
         assert "empty report handled" in (project / "src" / "pdf.py").read_text()
+        fix = next(c for c in _calls(project) if c["stage"] == "code_fix")
+        assert "no test for an empty report" in fix["prompt"], "a model with no session must still be told the issue"
 
     def test_a_review_that_never_approves_stops_after_three_rounds(
         self, project: Path, tmp_path: Path,
