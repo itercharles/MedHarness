@@ -32,6 +32,20 @@ def _branch_point(repo_root: Path, since_ref: str) -> str:
     return result.stdout.strip()
 
 
+def resolve_since_ref(repo_root: Path, explicit: str | None = None) -> str:
+    """What the branch is compared against: what the caller named, else the branch
+    ``origin``'s HEAD points at, else ``origin/main``."""
+    if explicit:
+        return explicit
+    try:
+        done = subprocess.run(["git", "symbolic-ref", "--short", "refs/remotes/origin/HEAD"],
+                              capture_output=True, text=True, cwd=str(repo_root), check=False)
+    except FileNotFoundError:
+        return DEFAULT_SINCE_REF
+    ref = done.stdout.strip()
+    return ref if done.returncode == 0 and ref else DEFAULT_SINCE_REF
+
+
 def compute_diff(
     repo_root: Path,
     since_ref: str,
@@ -212,12 +226,13 @@ def validate_atomic_branch(
     dhf_path: Path,
     cr_id: str,
     *,
-    since_ref: str = DEFAULT_SINCE_REF,
+    since_ref: str | None = None,
     code_paths: tuple[str, ...] = (),
 ) -> dict:
     """Read the branch's diff and the CR, then ``judge_branch`` them."""
     from dhfkit.store import open_store
 
+    since_ref = resolve_since_ref(repo_root, since_ref)
     store = open_store(dhf_path)
     if not store.tracks_files:
         return envelope_from("verify changes", {

@@ -10,7 +10,7 @@ from medharness.services import design_validation, git
 from medharness.services.cr_impact import _record_design_impact_in_cr
 from medharness.services.github_session import get_session, put_session
 from medharness.services.llm import _model_label, _resolve_stage_llm
-from medharness.services.pr_feedback import _auto_post_pr_feedback, _pr_feedback, _push_to_pr
+from medharness.services.pr_feedback import _auto_post_pr_feedback, _pr_base, _pr_feedback, _push_to_pr
 from medharness.services.prompt_assembly import (
     MAX_DIFF_CHARS,
     _assemble_develop_prompt,
@@ -66,7 +66,7 @@ def _validate_design(run: Run, name: str, items_changed: dict) -> list[dict]:
 
 
 def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None,
-                 since_ref: str = git.DEFAULT_SINCE_REF) -> dict:
+                 since_ref: str | None = None) -> dict:
     """Generate the complete DHF item cascade for a CR in a single LLM session.
 
     The model works out what the change touches and writes the items with
@@ -75,6 +75,7 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None,
     """
     design_llm = _resolve_stage_llm("design")
     review_llm = _resolve_stage_llm("design_review")
+    since_ref = git.resolve_since_ref(dhf_path.resolve().parent, since_ref or (pr_number and _pr_base(pr_number)))
     run = Run(cr_id, dhf_path, pr_number, since_ref, (design_llm, review_llm), {
         "design_model": _model_label(design_llm),
         "design_review_model": _model_label(review_llm),
@@ -247,11 +248,12 @@ def generate_code(
     dhf_path: Path,
     pr_number: int | None = None,
     checks: tuple[str, ...] = (),
-    since_ref: str = git.DEFAULT_SINCE_REF,
+    since_ref: str | None = None,
 ) -> dict:
     """Generate or revise implementation code for a CR."""
     develop_llm = _resolve_stage_llm("develop")
     review_llm = _resolve_stage_llm("code_review")
+    since_ref = git.resolve_since_ref(dhf_path.resolve().parent, since_ref or (pr_number and _pr_base(pr_number)))
     run = Run(cr_id, dhf_path, pr_number, since_ref, (develop_llm, review_llm), {
         "develop_model": _model_label(develop_llm),
         "code_review_model": _model_label(review_llm),

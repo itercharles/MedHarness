@@ -1,7 +1,7 @@
 """A stand-in for the `gh` CLI, answering what `build plan|code --pr` asks of GitHub.
 
 State comes from the JSON file in FAKE_GH_STATE: {"head_sha", "branch", "reviews",
-"comments"}. Anything else succeeds with no output.
+"comments", "base"}. Anything else succeeds with no output.
 """
 
 import json
@@ -20,6 +20,6 @@ if args[:1] == ["api"]:
     else:
         print(json.dumps({"head": {"sha": state["head_sha"]}}))
 elif args[:2] == ["pr", "view"]:
-    print(state["branch"])
+    print(state.get("base", "main") if "baseRefName" in joined else state["branch"])
 elif args[:2] == ["pr", "comment"]:
     print("https://example.test/pull/1#comment")
