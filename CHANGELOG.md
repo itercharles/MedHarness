@@ -24,6 +24,10 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
   defaults"; a type's `role` and `has_verification` come from its YAML (`swdd.yaml` now says
   `has_verification: true`, which the copy used to supply). The required-traceability answer lost
   `using_vmodel_defaults`, which was always false for a loaded config.
+- **`Item` no longer lists the link fields.** It carried twelve typed link attributes, `all_links` and
+  `all_linked_uids` (missing `mitigated_by`), a fourth hand-written list beside the types' declarations. An
+  item is its id and a few common fields plus whatever its type declares; `all_linked_uids` comes from the
+  type's declared links only, so a type that declares none has none.
 
 ## [0.55.1] — 2026-10-04
 
