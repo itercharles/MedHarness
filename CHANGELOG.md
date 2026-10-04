@@ -11,6 +11,16 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.52.0] — 2026-10-04
+
+### Added
+
+- **`build code --check CMD`** (repeatable): commands the code must pass. The model is told which
+  they are and to run them; when it finishes, MedHarness runs them itself, sends a failure back to
+  the model for a fix (two attempts), and fails the run if one still exits non-zero. `--pr` pushes
+  nothing in that case. A command that cannot run (exit 127) is a failure, not a guess. The
+  answer carries `checks` (`command`, `exit_code`, `passed`).
+
 ## [0.51.0] — 2026-10-03
 
 ### Added

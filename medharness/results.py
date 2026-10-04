@@ -132,12 +132,19 @@ class PlanReport(StageReport):
     design_review: Review | None = Field(default=None, description="The design review rounds, when one ran")
 
 
+class CheckResult(Shape):
+    command: str = Field(description="The `--check` command, as given")
+    exit_code: int = Field(description="What it exited with in the last run; 124 when it timed out")
+    passed: bool = Field(description="Whether it exited 0")
+
+
 class CodeReport(StageReport):
     """`build code`."""
 
     stage: Literal["develop"] = Field(description="Always `develop` for `build code`")
     artifacts: CodeArtifacts = Field(description="What the run changed")
     code_review: Review | None = Field(default=None, description="The code review rounds, when one ran")
+    checks: list[CheckResult] | None = Field(default=None, description="Each `--check` as the harness last ran it; absent without `--check`")
 
 
 # ── build soup / build release / init ────────────────────────────────────────
