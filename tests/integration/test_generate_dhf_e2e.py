@@ -20,7 +20,7 @@ from pathlib import Path
 
 import pytest
 
-from medharness.workflows.init import _scaffold_dhf, _replace_placeholders
+from medharness.scaffold import scaffold_dhf, replace_placeholders
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 
@@ -55,8 +55,8 @@ def dhf_repo():
     """Scaffold a DHF with a git repo initialised at origin/main."""
     with tempfile.TemporaryDirectory() as tmp:
         dhf_dir = Path(tmp) / "e2e-dhf"
-        _scaffold_dhf(dhf_dir)
-        _replace_placeholders(dhf_dir, "E2E Test Project")
+        scaffold_dhf(dhf_dir)
+        replace_placeholders(dhf_dir, "E2E Test Project")
         _init_dhf_repo(dhf_dir, "E2E Test", "e2e@test.local")
         yield dhf_dir
 
@@ -331,8 +331,8 @@ class TestGenerateCodeSuccessStub:
 def _make_fix_pass_dhf(tmp: str) -> Path:
     """Scaffold an isolated DHF with origin/main wired for the fix-pass tests."""
     dhf_dir = Path(tmp) / "fix-pass-dhf"
-    _scaffold_dhf(dhf_dir)
-    _replace_placeholders(dhf_dir, "Fix Pass Test")
+    scaffold_dhf(dhf_dir)
+    replace_placeholders(dhf_dir, "Fix Pass Test")
     _init_dhf_repo(dhf_dir, "Fix Pass Test", "fix@test.local")
     return dhf_dir
 

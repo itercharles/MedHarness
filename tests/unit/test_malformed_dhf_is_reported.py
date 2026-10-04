@@ -18,7 +18,7 @@ from pathlib import Path
 import pytest
 from click.testing import CliRunner
 
-from medharness.workflows.init import _replace_placeholders, _scaffold_dhf
+from medharness.scaffold import replace_placeholders, scaffold_dhf
 
 #: Every command that reads DHF items, with the arguments it needs to get there.
 COMMANDS = [
@@ -36,8 +36,8 @@ COMMANDS = [
 def broken(tmp_path_factory) -> Path:
     """A DHF with one mistyped field — otherwise a clean scaffold."""
     root = tmp_path_factory.mktemp("broken")
-    _scaffold_dhf(root)
-    _replace_placeholders(root, "Broken")
+    scaffold_dhf(root)
+    replace_placeholders(root, "Broken")
     risk = next((root / "DHF" / "items").rglob("RISK-*.yaml"))
     risk.write_text(risk.read_text() + "typo_field: oops\n")
     return root
@@ -110,7 +110,7 @@ class TestAHealthyDHFIsUnaffected:
     def test_commands_still_work(self, tmp_path: Path) -> None:
         from medharness.cli import main
 
-        _scaffold_dhf(tmp_path)
-        _replace_placeholders(tmp_path, "Fine")
+        scaffold_dhf(tmp_path)
+        replace_placeholders(tmp_path, "Fine")
         r = CliRunner().invoke(main, ["--dhf", str(tmp_path / "DHF"), "item", "list"])
         assert r.exit_code == 0, r.output

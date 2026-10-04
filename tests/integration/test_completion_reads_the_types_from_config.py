@@ -14,7 +14,7 @@ import yaml
 from click.testing import CliRunner
 
 from medharness.cli import main
-from medharness.workflows.init import _replace_placeholders, _scaffold_dhf
+from medharness.scaffold import replace_placeholders, scaffold_dhf
 
 HWR = {
     "code": "HWR", "name": "Hardware Requirement", "prefix": "HWR-", "directory": "hwr",
@@ -26,8 +26,8 @@ HWR = {
 
 
 def _project(tmp_path: Path, *, verification_method: list[str] | None) -> Path:
-    _scaffold_dhf(tmp_path)
-    _replace_placeholders(tmp_path, "Hw")
+    scaffold_dhf(tmp_path)
+    replace_placeholders(tmp_path, "Hw")
     dhf = tmp_path / "DHF"
     (dhf / "config" / "doc_types").mkdir(exist_ok=True)
     (dhf / "config" / "doc_types" / "hwr.yaml").write_text(yaml.safe_dump(HWR))

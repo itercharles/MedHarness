@@ -15,10 +15,10 @@ from medharness.services.release_baseline import build_release
 
 
 def _project(tmp_path: Path) -> Path:
-    from medharness.workflows.init import _replace_placeholders, _scaffold_dhf
+    from medharness.scaffold import replace_placeholders, scaffold_dhf
 
-    _scaffold_dhf(tmp_path / "project")
-    _replace_placeholders(tmp_path / "project", "Untouched")
+    scaffold_dhf(tmp_path / "project")
+    replace_placeholders(tmp_path / "project", "Untouched")
     keep_the_starter_text(tmp_path / "project" / "DHF")
     return tmp_path / "project"
 

@@ -17,7 +17,7 @@ from pathlib import Path
 import pytest
 
 import dhfkit.api as api
-from medharness.workflows.init import _replace_placeholders, _scaffold_dhf
+from medharness.scaffold import replace_placeholders, scaffold_dhf
 
 
 def _git(root: Path, *args: str) -> None:
@@ -31,8 +31,8 @@ def _commit(root: Path, message: str) -> None:
 
 @pytest.fixture
 def repo(tmp_path: Path) -> Path:
-    _scaffold_dhf(tmp_path)
-    _replace_placeholders(tmp_path, "Reuse")
+    scaffold_dhf(tmp_path)
+    replace_placeholders(tmp_path, "Reuse")
     _git(tmp_path, "init", "-q")
     _commit(tmp_path, "scaffold")
     return tmp_path
@@ -81,8 +81,8 @@ class TestADeletedIdIsRetired:
 class TestOutsideGit:
     def test_a_dhf_with_no_repository_still_creates_items(self, tmp_path: Path) -> None:
         """History is unavailable there; behave as before rather than fail."""
-        _scaffold_dhf(tmp_path)
-        _replace_placeholders(tmp_path, "NoGit")
+        scaffold_dhf(tmp_path)
+        replace_placeholders(tmp_path, "NoGit")
         dhf = tmp_path / "DHF"
         assert _new_srs(dhf, "a").startswith("SRS-")
         assert _new_srs(dhf, "b").startswith("SRS-")

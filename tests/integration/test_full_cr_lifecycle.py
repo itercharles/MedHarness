@@ -17,7 +17,7 @@ from pathlib import Path
 
 import pytest
 
-from medharness.workflows.init import _scaffold_dhf, _replace_placeholders
+from medharness.scaffold import scaffold_dhf, replace_placeholders
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 
@@ -31,8 +31,8 @@ def dhf():
     """
     with tempfile.TemporaryDirectory() as tmp:
         dhf_dir = Path(tmp) / "lifecycle-dhf"
-        _scaffold_dhf(dhf_dir)
-        _replace_placeholders(dhf_dir, "Lifecycle Test Project")
+        scaffold_dhf(dhf_dir)
+        replace_placeholders(dhf_dir, "Lifecycle Test Project")
         subprocess.run(
             ["git", "init", "-b", "main", str(dhf_dir)],
             capture_output=True, check=True,
@@ -202,7 +202,7 @@ class TestCRPhaseEnum:
     """Unit-level checks for the CRPhase state machine helpers."""
 
     def test_active_phases_are_correct(self):
-        from medharness.workflows.cr_state import CRPhase, ACTIVE_PHASES, TERMINAL_PHASES
+        from medharness.services.cr_state import CRPhase, ACTIVE_PHASES, TERMINAL_PHASES
         assert CRPhase.NEW in ACTIVE_PHASES
         assert CRPhase.DESIGN in ACTIVE_PHASES
         assert CRPhase.DEVELOP in ACTIVE_PHASES
@@ -210,6 +210,6 @@ class TestCRPhaseEnum:
         assert CRPhase.CANCELLED in TERMINAL_PHASES
 
     def test_phase_values_match_dhf_status_strings(self):
-        from medharness.workflows.cr_state import CRPhase
+        from medharness.services.cr_state import CRPhase
         assert CRPhase.NEW.value == "new"
         assert CRPhase.COMPLETED.value == "completed"

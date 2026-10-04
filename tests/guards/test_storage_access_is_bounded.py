@@ -23,7 +23,7 @@ ROOT = Path(__file__).resolve().parents[2]
 MEDHARNESS = ROOT / "medharness"
 
 #: Scaffolding: creating a DHF and keeping its skeleton current.
-SCAFFOLD = {"medharness/workflows/init.py"}
+SCAFFOLD = {"medharness/scaffold.py"}
 
 #: A path *built* into the DHF: the `/` join operator followed by one of its
 #: directories. A JSON key, a git argument, a variable named doc_types, and a
@@ -71,10 +71,10 @@ class TestTheStoreCanAnswerWhatWasAskedOfTheFilesystem:
 
     def _adapter(self, tmp_path: Path):
         from dhfkit.item_store import ItemStore
-        from medharness.workflows.init import _replace_placeholders, _scaffold_dhf
+        from medharness.scaffold import replace_placeholders, scaffold_dhf
 
-        _scaffold_dhf(tmp_path)
-        _replace_placeholders(tmp_path, "Bounded")
+        scaffold_dhf(tmp_path)
+        replace_placeholders(tmp_path, "Bounded")
         # The scaffold ships no plans; a project writes its own, and this asks
         # whether the store can find one once it exists.
         plans = tmp_path / "DHF" / "documents" / "plans"

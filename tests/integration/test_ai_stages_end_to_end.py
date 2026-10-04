@@ -21,7 +21,7 @@ from click.testing import CliRunner
 
 from medharness.cli import main
 from medharness.results import CodeReport, PlanReport
-from medharness.workflows.init import _replace_placeholders, _scaffold_dhf
+from medharness.scaffold import replace_placeholders, scaffold_dhf
 
 FAKE = Path(__file__).resolve().parents[1] / "fixtures" / "fake_claude.py"
 MH = f"{shlex.quote(sys.executable)} -m medharness --dhf DHF"
@@ -40,8 +40,8 @@ def project(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     subprocess.run(["git", "clone", "-q", str(remote), str(work)], check=True, capture_output=True)
     _git(work, "config", "user.email", "ci@example.com")
     _git(work, "config", "user.name", "ci")
-    _scaffold_dhf(work)
-    _replace_placeholders(work, "Ai")
+    scaffold_dhf(work)
+    replace_placeholders(work, "Ai")
     _git(work, "add", "-A")
     _git(work, "commit", "-qm", "base")
     _git(work, "push", "-q", "origin", "HEAD:main")

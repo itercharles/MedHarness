@@ -17,13 +17,13 @@ from click.testing import CliRunner
 from fixtures.starter import keep_the_starter_text
 
 from medharness.cli import main
-from medharness.workflows.init import _replace_placeholders, _scaffold_dhf
+from medharness.scaffold import replace_placeholders, scaffold_dhf
 
 
 @pytest.fixture
 def dhf(tmp_path: Path) -> Path:
-    _scaffold_dhf(tmp_path)
-    _replace_placeholders(tmp_path, "Verify")
+    scaffold_dhf(tmp_path)
+    replace_placeholders(tmp_path, "Verify")
     keep_the_starter_text(tmp_path / "DHF")
     for name, methods in (("CRS-001.yaml", ["Test"]), ("SYS-001.yaml", ["Test"]), ("SRS-001.yaml", ["Test"])):
         _set(tmp_path / "DHF", name, verification_method=methods, verification_criteria="c")

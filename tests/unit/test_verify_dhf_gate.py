@@ -17,12 +17,12 @@ from click.testing import CliRunner
 
 from medharness.cli import main
 from medharness.services.verify_dhf import ci_structural_gate
-from medharness.workflows.init import _replace_placeholders, _scaffold_dhf
+from medharness.scaffold import replace_placeholders, scaffold_dhf
 
 
 def _scaffold(tmp_path: Path) -> Path:
-    _scaffold_dhf(tmp_path)
-    _replace_placeholders(tmp_path, "Trial")
+    scaffold_dhf(tmp_path)
+    replace_placeholders(tmp_path, "Trial")
     return tmp_path / "DHF"
 
 
@@ -115,5 +115,5 @@ class TestDocumentedWorkflowEnforcesCoverage:
 
     def test_scaffold_does_not_create_a_workflow(self, tmp_path: Path) -> None:
         """Scaffolding it would silently do nothing on an installed package."""
-        _scaffold_dhf(tmp_path)
+        scaffold_dhf(tmp_path)
         assert not (tmp_path / ".github" / "workflows").exists()

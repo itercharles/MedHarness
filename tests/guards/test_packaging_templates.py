@@ -1,7 +1,7 @@
 """Guards on what the wheel does and does not carry.
 
 The CI workflow is deliberately not part of the release payload — adopters copy
-it from `docs/adopting.md` and own it. That policy had drifted: `_scaffold_dhf`
+it from `docs/adopting.md` and own it. That policy had drifted: `scaffold_dhf`
 copied the template, `_UPGRADE_MAP` claimed to manage it, and the README showed
 it as init output, while `exclude-package-data` kept it out of the wheel. So
 `init` silently created no workflow and `upgrade` reported "all up to date"

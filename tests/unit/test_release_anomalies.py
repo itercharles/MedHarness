@@ -98,10 +98,10 @@ class TestGate:
         """
         import dhfkit.api as api
         from medharness.services.release_baseline import build_release
-        from medharness.workflows.init import _replace_placeholders, _scaffold_dhf
+        from medharness.scaffold import replace_placeholders, scaffold_dhf
 
-        _scaffold_dhf(tmp_path / "project")
-        _replace_placeholders(tmp_path / "project", "Anomalies")
+        scaffold_dhf(tmp_path / "project")
+        replace_placeholders(tmp_path / "project", "Anomalies")
         dhf = tmp_path / "project" / "DHF"
         _defect(dhf, "DEF-001", "open")
 
@@ -201,10 +201,10 @@ class TestARelIsRecordedOnlyWhenEverythingPassed:
     """
 
     def _project(self, tmp_path: Path) -> Path:
-        from medharness.workflows.init import _replace_placeholders, _scaffold_dhf
+        from medharness.scaffold import replace_placeholders, scaffold_dhf
 
-        _scaffold_dhf(tmp_path / "project")
-        _replace_placeholders(tmp_path / "project", "Gated")
+        scaffold_dhf(tmp_path / "project")
+        replace_placeholders(tmp_path / "project", "Gated")
         keep_the_starter_text(tmp_path / "project" / "DHF")
         return tmp_path / "project" / "DHF"
 

@@ -22,13 +22,13 @@ import pytest
 
 import dhfkit.api as api
 from dhfkit.item_store import ItemStore
-from medharness.workflows.init import _replace_placeholders, _scaffold_dhf
+from medharness.scaffold import replace_placeholders, scaffold_dhf
 
 
 @pytest.fixture
 def dhf(tmp_path: Path) -> Path:
-    _scaffold_dhf(tmp_path)
-    _replace_placeholders(tmp_path, "Duplicates")
+    scaffold_dhf(tmp_path)
+    replace_placeholders(tmp_path, "Duplicates")
     return tmp_path / "DHF"
 
 

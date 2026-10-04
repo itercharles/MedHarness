@@ -13,14 +13,14 @@ from pathlib import Path
 import pytest
 
 from dhfkit.item_store import ItemStore
-from medharness.workflows.cr_state import assert_cr_active
-from medharness.workflows.init import _replace_placeholders, _scaffold_dhf
+from medharness.services.cr_state import assert_cr_active
+from medharness.scaffold import replace_placeholders, scaffold_dhf
 
 
 @pytest.fixture
 def adapter(tmp_path: Path) -> ItemStore:
-    _scaffold_dhf(tmp_path)
-    _replace_placeholders(tmp_path, "Cancel")
+    scaffold_dhf(tmp_path)
+    replace_placeholders(tmp_path, "Cancel")
     return ItemStore(tmp_path / "DHF")
 
 

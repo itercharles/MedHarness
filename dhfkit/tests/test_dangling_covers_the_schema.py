@@ -26,7 +26,7 @@ import yaml
 from dhfkit.item_store import ItemStore
 from dhfkit.traceability import find_dangling_links
 from dhfkit.models.config import ProjectConfig
-from medharness.workflows.init import _replace_placeholders, _scaffold_dhf
+from medharness.scaffold import replace_placeholders, scaffold_dhf
 
 TEMPLATES = Path(__file__).resolve().parents[1] / "templates" / "config" / "doc_types"
 
@@ -51,8 +51,8 @@ def test_the_scan_found_fields() -> None:
 
 @pytest.mark.parametrize("field,code", FIELDS, ids=[f for f, _ in FIELDS])
 def test_a_dangling_link_is_detected(field: str, code: str, tmp_path: Path) -> None:
-    _scaffold_dhf(tmp_path)
-    _replace_placeholders(tmp_path, "Dangling")
+    scaffold_dhf(tmp_path)
+    replace_placeholders(tmp_path, "Dangling")
     dhf = tmp_path / "DHF"
 
     target = next(((dhf / "items").rglob(f"{code}-*.yaml")), None)
@@ -78,15 +78,15 @@ def test_a_dangling_link_is_detected(field: str, code: str, tmp_path: Path) -> N
 
 class TestTheFieldSetComesFromTheSchema:
     def test_config_reports_every_declared_relationship(self, tmp_path: Path) -> None:
-        _scaffold_dhf(tmp_path)
-        _replace_placeholders(tmp_path, "Derived")
+        scaffold_dhf(tmp_path)
+        replace_placeholders(tmp_path, "Derived")
         config = ProjectConfig.load(tmp_path / "DHF" / "config")
         assert config.relationship_fields() == {f for f, _ in FIELDS}
 
     def test_a_project_defined_field_is_picked_up(self, tmp_path: Path) -> None:
         """The point of deriving: a field this package has never heard of."""
-        _scaffold_dhf(tmp_path)
-        _replace_placeholders(tmp_path, "Custom")
+        scaffold_dhf(tmp_path)
+        replace_placeholders(tmp_path, "Custom")
         dhf = tmp_path / "DHF"
         from dhfkit.paths import DEFAULT_CONFIG_DIR
 

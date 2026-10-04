@@ -19,7 +19,7 @@ from pathlib import Path
 
 import pytest
 
-from medharness.workflows.init import _scaffold_dhf, _replace_placeholders
+from medharness.scaffold import scaffold_dhf, replace_placeholders
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 
@@ -33,8 +33,8 @@ def dhf():
     """Scaffold a DHF with an initialised git repo for all gate tests."""
     with tempfile.TemporaryDirectory() as tmp:
         dhf_dir = Path(tmp) / "gate-dhf"
-        _scaffold_dhf(dhf_dir)
-        _replace_placeholders(dhf_dir, "Gate Test Project")
+        scaffold_dhf(dhf_dir)
+        replace_placeholders(dhf_dir, "Gate Test Project")
         for cmd in [
             ["git", "init", "-b", "main", str(dhf_dir)],
             ["git", "-C", str(dhf_dir), "config", "user.email", "gate@test.local"],

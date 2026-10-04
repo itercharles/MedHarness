@@ -12,5 +12,5 @@ def register(main):
         Takes no prompts — the project name is derived from the directory name.
         Existing files are not overwritten.
         """
-        from medharness.workflows.init import run_init
+        from medharness.scaffold import run_init
         click.echo(json.dumps(run_init()))

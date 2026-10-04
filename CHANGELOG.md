@@ -11,6 +11,21 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.54.1] — 2026-10-04
+
+### Fixed
+
+- **The code review's fix pass now carries the issues it must fix.** The prompt said "the review above",
+  which only a model resuming the session could see; a model from another provider (no sessions) was
+  told to fix nothing in particular. The issues are in the prompt.
+- The design review's "already checked" note no longer mentions a spec file that no stage writes.
+
+### Changed
+
+- `medharness/workflows/` is gone: `init.py` is `medharness/scaffold.py` (its test helpers lose the
+  underscore: `scaffold_dhf`, `replace_placeholders`) and `cr_state.py` is `medharness/services/cr_state.py`.
+  Nothing in it was a workflow. No behaviour change.
+
 ## [0.54.0] — 2026-10-04
 
 ### Changed
@@ -2976,7 +2991,7 @@ a compliance record is the defect class that matters most.
 
 ### Internal
 
-- `dhfkit/tests/test_document_generation.py` imported `medharness.workflows.init`,
+- `dhfkit/tests/test_document_generation.py` imported `medharness.scaffold`,
   breaking the `dhfkit` → `medharness` boundary and the ability to run dhfkit's
   suite standalone. It now builds its fixture from the bundled templates
   directly. A check over the whole package confirms no such import remains.

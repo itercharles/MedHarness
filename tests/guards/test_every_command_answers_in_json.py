@@ -19,7 +19,7 @@ from pathlib import Path
 
 import pytest
 
-from medharness.workflows.init import _replace_placeholders, _scaffold_dhf
+from medharness.scaffold import replace_placeholders, scaffold_dhf
 
 #: (module, args). Each must exit 0 or 1 and put JSON on stdout.
 COMMANDS = [
@@ -37,8 +37,8 @@ COMMANDS = [
 @pytest.fixture(scope="module")
 def project(tmp_path_factory) -> Path:
     root = tmp_path_factory.mktemp("project")
-    _scaffold_dhf(root)
-    _replace_placeholders(root, "Json")
+    scaffold_dhf(root)
+    replace_placeholders(root, "Json")
     (root / "test-results").mkdir()
     for args in (["init", "-q"], ["add", "-A"],
                  ["-c", "user.email=t@e", "-c", "user.name=t", "commit", "-qm", "base"]):

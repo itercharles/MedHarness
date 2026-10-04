@@ -18,7 +18,7 @@ from click.testing import CliRunner
 import dhfkit.adapter as adapter_module
 from dhfkit.local_adapter import LocalDHFAdapter
 from medharness.cli import main
-from medharness.workflows.init import _replace_placeholders, _scaffold_dhf
+from medharness.scaffold import replace_placeholders, scaffold_dhf
 
 
 class MemoryAdapter:
@@ -59,8 +59,8 @@ class _EntryPoint:
 @pytest.fixture
 def memory_project(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     """A scaffolded project whose items live in memory, none on disk."""
-    _scaffold_dhf(tmp_path)
-    _replace_placeholders(tmp_path, "Memory")
+    scaffold_dhf(tmp_path)
+    replace_placeholders(tmp_path, "Memory")
     dhf = tmp_path / "DHF"
     yaml_adapter = LocalDHFAdapter(dhf / "items", None)
     items = {i.uid: i for i in yaml_adapter.load_all()}
@@ -123,8 +123,8 @@ class TestItemsInMemory:
         dhf, _ = memory_project
         on_memory = json.loads(_run(dhf, "verify", "dhf").stdout)
         plain = tmp_path_factory.mktemp("plain")
-        _scaffold_dhf(plain)
-        _replace_placeholders(plain, "Memory")
+        scaffold_dhf(plain)
+        replace_placeholders(plain, "Memory")
         on_files = json.loads(_run(plain / "DHF", "verify", "dhf").stdout)
         assert on_memory["passed"] == on_files["passed"]
         assert on_memory["summary"] == on_files["summary"]
@@ -146,7 +146,7 @@ class TestWhatNeedsFilesSaysSo:
 
 class TestChoosingAStore:
     def test_an_uninstalled_store_names_what_is_installed(self, tmp_path: Path, monkeypatch) -> None:
-        _scaffold_dhf(tmp_path)
+        scaffold_dhf(tmp_path)
         monkeypatch.setattr(adapter_module, "entry_points", lambda group: [])
         global_yaml = tmp_path / "DHF" / "config" / "global.yaml"
         global_yaml.write_text(global_yaml.read_text() + "\nstore:\n  type: jira\n")
@@ -155,7 +155,7 @@ class TestChoosingAStore:
         assert "'jira' " in result.stderr and "not installed" in result.stderr and "yaml" in result.stderr
 
     def test_no_store_key_means_yaml_files(self, tmp_path: Path) -> None:
-        _scaffold_dhf(tmp_path)
+        scaffold_dhf(tmp_path)
         result = _run(tmp_path / "DHF", "item", "list", "--type", "SRS")
         assert result.exit_code == 0 and result.stdout.strip()
         assert yaml.safe_load((tmp_path / "DHF" / "config" / "global.yaml").read_text()).get("store") is None

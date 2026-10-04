@@ -104,7 +104,7 @@ UNENCODED = _text_io_without_encoding()
 
 
 def test_the_encoding_scan_sees_real_calls() -> None:
-    text = (ROOT / "medharness" / "workflows" / "init.py").read_text(encoding="utf-8")
+    text = (ROOT / "medharness" / "scaffold.py").read_text(encoding="utf-8")
     assert "read_text(" in text, "the probe file no longer does text IO"
 
 

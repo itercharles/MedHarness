@@ -11,20 +11,20 @@ from pathlib import Path
 import pytest
 
 from dhfkit.item_store import ItemStore
-from medharness.workflows.cr_state import (
+from medharness.services.cr_state import (
     ACTIVE_PHASES,
     TERMINAL_PHASES,
     CRPhase,
     assert_cr_active,
     get_cr_phase,
 )
-from medharness.workflows.init import _replace_placeholders, _scaffold_dhf
+from medharness.scaffold import replace_placeholders, scaffold_dhf
 
 
 @pytest.fixture
 def dhf(tmp_path: Path) -> Path:
-    _scaffold_dhf(tmp_path)
-    _replace_placeholders(tmp_path, "Trial")
+    scaffold_dhf(tmp_path)
+    replace_placeholders(tmp_path, "Trial")
     return tmp_path / "DHF"
 
 
