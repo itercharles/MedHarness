@@ -11,6 +11,13 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+### Changed
+
+- CI now installs WeasyPrint and its native libraries (Unit and Integration jobs) and sets
+  `MEDHARNESS_REQUIRE_PDF=1`, so the PDF tests run instead of skipping. A new test runs
+  `build release --doc-format pdf` and checks the files it wrote are PDFs. Until now the PDF path ran only on
+  machines that happened to have the libraries.
+
 ## [0.56.1] — 2026-10-04
 
 ### Fixed
