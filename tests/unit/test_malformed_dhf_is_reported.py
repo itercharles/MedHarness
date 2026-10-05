@@ -27,9 +27,14 @@ COMMANDS = [
     ("medharness", ["verify", "completion", "--cr", "CR-001"]),
     ("medharness", ["verify", "soup", "--offline-mode", "warn"]),
     ("medharness", ["item", "list"]),
-    ("medharness", ["build", "doc", "SOUP", "--format", "cyclonedx", "--out-dir", "{tmp}/out"]),
+    ("medharness", ["build", "soup"]),
     ("medharness", ["build", "release", "--version", "1.0", "--out-dir", "{tmp}/out"]),
 ]
+
+
+def _reached_the_item(output: str) -> bool:
+    """A command that read the broken item says so: the item's file or the offending field is named."""
+    return "could not be read" in output or "typo_field" in output
 
 
 @pytest.fixture(scope="module")
@@ -74,7 +79,7 @@ def test_a_read_failure_names_the_file_and_the_field(
     """
     proc = _run(module, args, broken)
     combined = proc.stderr + proc.stdout
-    if "could not be read" not in combined:
+    if not _reached_the_item(combined):
         pytest.skip("this command did not reach the broken item")
     assert "RISK-001" in combined, f"the failing item is not named:\n{combined[-400:]}"
     assert "typo_field" in combined, f"the offending field is not named:\n{combined[-400:]}"
@@ -84,7 +89,7 @@ def test_the_fixture_actually_reaches_most_commands(broken: Path) -> None:
     """Otherwise every check above could pass by never getting there."""
     reached = [
         f"{m} {args[0]}" for m, args in COMMANDS
-        if "could not be read" in (lambda p: p.stderr + p.stdout)(_run(m, args, broken))
+        if _reached_the_item((lambda p: p.stderr + p.stdout)(_run(m, args, broken)))
     ]
     # The floor tracks the command surface, not a fixed number.
     assert len(reached) >= 5, f"only {len(reached)} commands read the DHF: {reached}"
