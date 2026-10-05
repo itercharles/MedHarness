@@ -157,4 +157,6 @@ The repo has a `.venv` at the root. `pytest.ini` sets `pythonpath = .` so no
 .venv/bin/pytest dhfkit/tests/ tests/ -q
 ```
 
-PDF tests skip themselves when WeasyPrint's native libraries are missing.
+PDF tests skip themselves when WeasyPrint's native libraries are missing. CI installs them
+and sets `MEDHARNESS_REQUIRE_PDF=1`, which turns that skip into a failure, so the PDF path cannot go
+unverified there.
