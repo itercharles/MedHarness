@@ -11,6 +11,22 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.57.2] — 2026-10-06
+
+### Changed
+
+- **`init` rewrites placeholders only under `DHF/`**, the files it wrote, instead of walking the whole project and
+  skipping a list of directories (`.venv`, `node_modules`, ...) it must not enter. It no longer walks the project
+  twice to list what it created, no longer skips a missing template without a word, and prints `Created N files.`
+  in place of three progress lines for steps that finish instantly.
+- **`item` errors are one `Error: ...` line on stderr and exit 1**, as every other command's are; the ten
+  hand-written `ERROR:` lines are gone. stderr was never a contract.
+- **`scripts/audit_oss_delivery.sh` is gone** (353 lines of bash that checked a removed code base had not come
+  back: `policy.py`, `ci compliance-check`, `MedHarness-DHF`, a retired `dhf-util`). It grepped implementation
+  text, and failed the build when a file was renamed. The wheel checks it duplicated live in
+  `tests/guards/test_packaging_templates.py`, which now also checks both packages are in the wheel. The CI job
+  that ran it is `Check | Lockfile` and runs `uv lock --check`.
+
 ## [0.57.1] — 2026-10-06
 
 ### Changed

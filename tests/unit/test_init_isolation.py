@@ -19,10 +19,8 @@ import pytest
 from dhfkit.item_store import ItemStore
 from medharness.services.traceability_report import verification_evidence
 from medharness.scaffold import (
-    _NON_SCAFFOLD_DIRS,
     replace_placeholders,
     scaffold_dhf,
-    _substitutable_files,
     _write_gitignore,
 )
 
@@ -52,21 +50,26 @@ class TestScaffoldIsolation:
         replace_placeholders(tmp_path, "Trial")
         assert "{{project_name}}" not in (tmp_path / "DHF" / "README.md").read_text()
 
-    @pytest.mark.parametrize("pruned", sorted(_NON_SCAFFOLD_DIRS))
-    def test_every_pruned_dir_is_skipped(self, tmp_path: Path, pruned: str) -> None:
-        nested = tmp_path / pruned / "deep"
-        nested.mkdir(parents=True)
-        (nested / "x.md").write_text("{{project_name}}")
+    @pytest.mark.parametrize("outside", [".venv/x.md", "node_modules/pkg/x.yaml", "docs/x.md", "x.md", "src/lib/x.yml"])
+    def test_a_file_outside_the_dhf_is_left_alone(self, tmp_path: Path, outside: str) -> None:
+        """Only what `scaffold_dhf` wrote is rewritten: no list of directories to avoid."""
+        stray = tmp_path / outside
+        stray.parent.mkdir(parents=True, exist_ok=True)
+        stray.write_text("{{project_name}}")
 
-        assert not [p for p in _substitutable_files(tmp_path) if pruned in p.parts]
+        scaffold_dhf(tmp_path)
+        replace_placeholders(tmp_path, "Trial")
 
-    def test_walk_still_reaches_nested_project_files(self, tmp_path: Path) -> None:
+        assert stray.read_text() == "{{project_name}}"
+
+    def test_nested_dhf_files_are_still_rewritten(self, tmp_path: Path) -> None:
         nested = tmp_path / "DHF" / "documents" / "specs"
         nested.mkdir(parents=True)
-        (nested / "x.md").write_text("{{project_name}}")
+        (nested / "x.md").write_text("{{project_name}} {{medharness_version}}")
 
-        found = {p.name for p in _substitutable_files(tmp_path)}
-        assert "x.md" in found
+        replace_placeholders(tmp_path, "Trial")
+
+        assert "{{" not in (nested / "x.md").read_text() and "Trial" in (nested / "x.md").read_text()
 
     def test_unreadable_file_does_not_abort_the_scaffold(self, tmp_path: Path) -> None:
         scaffold_dhf(tmp_path)

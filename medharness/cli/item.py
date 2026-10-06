@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import sys
 
 import click
 
@@ -15,11 +14,9 @@ def _json_object(data: str) -> dict:
     try:
         value = json.loads(data)
     except json.JSONDecodeError as e:
-        click.echo(f"ERROR: --data is not valid JSON: {e}", err=True)
-        sys.exit(1)
+        raise click.ClickException(f"--data is not valid JSON: {e}") from e
     if not isinstance(value, dict):
-        click.echo("ERROR: --data must be a JSON object, e.g. '{\"title\": \"...\"}'.", err=True)
-        sys.exit(1)
+        raise click.ClickException("--data must be a JSON object, e.g. '{\"title\": \"...\"}'.")
     return value
 
 
@@ -51,8 +48,7 @@ def register(main):
         adapter = open_store(ctx.obj["dhf"])
         result = adapter.get_item(item_id)
         if result is None:
-            click.echo(f"ERROR: Item '{item_id}' not found.", err=True)
-            sys.exit(1)
+            raise click.ClickException(f"Item '{item_id}' not found.")
         click.echo(json.dumps(result, default=str))
 
 
@@ -69,15 +65,13 @@ def register(main):
         """List DHF items. Outputs one JSON object per line."""
         terms = match.casefold().split() if match is not None else None
         if terms == []:
-            click.echo("ERROR: --match needs at least one word.", err=True)
-            sys.exit(1)
+            raise click.ClickException("--match needs at least one word.")
         adapter = open_store(ctx.obj["dhf"])
         items = adapter.list_items(doc_type)
         if linked_to is not None:
             anchor = adapter.get_item(linked_to)
             if anchor is None:
-                click.echo(f"ERROR: Item '{linked_to}' not found.", err=True)
-                sys.exit(1)
+                raise click.ClickException(f"Item '{linked_to}' not found.")
             reached = set(anchor.get("all_linked_uids") or [])
             items = [it for it in items
                      if it["id"] in reached or linked_to in (it.get("all_linked_uids") or [])]
@@ -104,8 +98,7 @@ def register(main):
         try:
             result = adapter.create_item(item_data)
         except (ValidationError, ValueError) as e:
-            click.echo(f"ERROR: {e}", err=True)
-            sys.exit(1)
+            raise click.ClickException(str(e)) from e
         click.echo(json.dumps(result, default=str))
         click.echo(f"✓ Created {result['id']}.", err=True)
 
@@ -122,11 +115,9 @@ def register(main):
         try:
             result = adapter.update_item(item_id, update_data)
         except RefusedWrite as e:
-            click.echo(f"ERROR: {e}", err=True)
-            sys.exit(1)
+            raise click.ClickException(str(e)) from e
         if result is None:
-            click.echo(f"ERROR: Item '{item_id}' not found.", err=True)
-            sys.exit(1)
+            raise click.ClickException(f"Item '{item_id}' not found.")
         click.echo(json.dumps(result, default=str))
         click.echo(f"✓ Updated {item_id}.", err=True)
 
@@ -141,8 +132,7 @@ def register(main):
         if to_state is None:
             it = adapter.get_item(item_id)
             if it is None:
-                click.echo(f"ERROR: Item '{item_id}' not found.", err=True)
-                sys.exit(1)
+                raise click.ClickException(f"Item '{item_id}' not found.")
             click.echo(json.dumps({
                 "item_id": item_id,
                 "current_status": it.get("status"),
@@ -152,7 +142,6 @@ def register(main):
         try:
             result = adapter.execute_transition(item_id, to_state)
         except ValueError as e:
-            click.echo(f"ERROR: {e}", err=True)
-            sys.exit(1)
+            raise click.ClickException(str(e)) from e
         click.echo(json.dumps(result, default=str))
         click.echo(f"✓ {item_id}: {result.get('status')}.", err=True)

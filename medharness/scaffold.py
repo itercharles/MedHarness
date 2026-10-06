@@ -13,9 +13,8 @@ No prompts — everything is derived from the current directory.
 
 from __future__ import annotations
 
-import os
 import shutil
-from importlib.metadata import version as pkg_version
+from importlib.metadata import PackageNotFoundError, version as pkg_version
 from pathlib import Path
 
 import click
@@ -45,78 +44,39 @@ omit_doc_types: []
 
 def scaffold_dhf(project_dir: Path) -> None:
     """Create DHF structure inside project_dir from bundled templates."""
-    project_dir.mkdir(parents=True, exist_ok=True)
-
-    def _cp(rel_src: str, rel_dst: str) -> None:
-        src = _TEMPLATES_DIR / rel_src
-        dst = project_dir / rel_dst
-        if not src.exists():
-            return
-        if src.is_dir():
-            dst.mkdir(parents=True, exist_ok=True)
-            shutil.copytree(
-                src, dst, dirs_exist_ok=True,
-                ignore=shutil.ignore_patterns("__pycache__", "*.pyc", ".DS_Store"),
-            )
-        else:
-            dst.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(src, dst)
-
-    config = project_dir / "DHF" / "config" / "global.yaml"
-    config.parent.mkdir(parents=True, exist_ok=True)
-    config.write_text(_GLOBAL_YAML, encoding="utf-8")
-    _cp("items", "DHF/items")
-    # DHF README goes inside DHF/ — root README is the project README
-    _cp("README.md", "DHF/README.md")
-
-
-# Directories that may sit inside a project root but are never scaffold output.
-# A virtualenv is the dangerous one: the documented setup creates .venv inside
-# the project, so an unrestricted walk rewrote the installed package's own
-# templates — permanently, and for every later project built from that venv.
-_NON_SCAFFOLD_DIRS = frozenset({
-    ".venv", "venv", ".git", "node_modules", "__pycache__",
-    "site-packages", ".tox", ".mypy_cache", ".pytest_cache",
-})
-
-def _substitutable_files(project_dir: Path):
-    """Yield project files, pruning trees the scaffold never owns.
-
-    Pruning rather than allow-listing: an allow-list would silently stop
-    covering any directory the scaffold gains later, while the failure this
-    guards against is specifically a walk descending into an environment
-    directory that happens to sit inside the project root.
-    """
-    for dirpath, dirnames, filenames in os.walk(project_dir):
-        dirnames[:] = [d for d in dirnames if d not in _NON_SCAFFOLD_DIRS]
-        for filename in filenames:
-            yield Path(dirpath) / filename
+    dhf = project_dir / "DHF"
+    (dhf / "config").mkdir(parents=True, exist_ok=True)
+    (dhf / "config" / "global.yaml").write_text(_GLOBAL_YAML, encoding="utf-8")
+    shutil.copytree(
+        _TEMPLATES_DIR / "items", dhf / "items", dirs_exist_ok=True,
+        ignore=shutil.ignore_patterns("__pycache__", "*.pyc", ".DS_Store"),
+    )
+    # The DHF README goes inside DHF/: the project's own README stays at the root.
+    shutil.copy2(_TEMPLATES_DIR / "README.md", dhf / "README.md")
 
 
 def replace_placeholders(project_dir: Path, project_name: str) -> None:
-    """Substitute template placeholders in scaffolded content."""
+    """Substitute template placeholders in the files `scaffold_dhf` wrote.
+
+    Only `DHF/` is touched. The documented setup puts a virtualenv inside the project
+    root, and rewriting its installed templates made every later project inherit the
+    first one's name.
+    """
     try:
         medharness_version = pkg_version("medharness")
-    except Exception:
+    except PackageNotFoundError:
         medharness_version = "latest"
 
-    text_extensions = {".md", ".yaml", ".yml", ".j2", ".css", ".txt", ".gitkeep"}
-
-    for path in _substitutable_files(project_dir):
-        if path.suffix not in text_extensions:
+    for path in (project_dir / "DHF").rglob("*"):
+        if not path.is_file() or path.suffix not in {".md", ".yaml", ".yml"}:
             continue
         try:
             text = path.read_text(encoding="utf-8")
-        except UnicodeDecodeError:
-            continue
-        except OSError:
-            continue  # read-only or otherwise unreadable — not ours to rewrite
-        original = text
-        text = text.replace("{{project_name}}", project_name)
-        text = text.replace("{{medharness_version}}", medharness_version)
-        if text != original:
-            path.write_text(text, encoding="utf-8")
-
+        except (OSError, UnicodeDecodeError):
+            continue  # unreadable is not ours to rewrite
+        replaced = text.replace("{{project_name}}", project_name).replace("{{medharness_version}}", medharness_version)
+        if replaced != text:
+            path.write_text(replaced, encoding="utf-8")
 
 
 # ---------------------------------------------------------------------------
@@ -250,21 +210,17 @@ def run_init() -> dict:
             "Remove it or run from a fresh directory."
         )
 
-    before = {f for f in project_dir.rglob("*") if f.is_file()}
-    steps = [
-        ("Scaffold DHF structure", lambda: (scaffold_dhf(project_dir),
-                                            replace_placeholders(project_dir, project_name))),
-        ("Write AGENTS.md and CLAUDE.md", lambda: _write_agent_files(project_dir, project_name)),
-        ("Write .gitignore", lambda: _write_gitignore(project_dir)),
-    ]
-    for n, (label, run) in enumerate(steps, start=1):
-        click.echo(f"[{n}/{len(steps)}] {label}...", nl=False, err=True)
-        run()
-        click.secho(" ✓", fg="green", err=True)
+    root_files = ("AGENTS.md", "CLAUDE.md", ".gitignore")
+    existing = {name for name in root_files if (project_dir / name).exists()}
+    scaffold_dhf(project_dir)
+    replace_placeholders(project_dir, project_name)
+    _write_agent_files(project_dir, project_name)
+    _write_gitignore(project_dir)
     created = sorted(
-        str(f.relative_to(project_dir))
-        for f in project_dir.rglob("*") if f.is_file() and f not in before
+        [str(f.relative_to(project_dir)) for f in (project_dir / "DHF").rglob("*") if f.is_file()]
+        + [name for name in root_files if name not in existing]
     )
+    say(f"  Created {len(created)} files.")
 
     say()
     say("━" * 45)
