@@ -276,7 +276,7 @@ class TestReleaseBaselineEmitsAnSbom:
 class TestReleaseBaselineReadsEveryManifestSoupSyncDoes:
     """The two commands disagreed on what a manifest is.
 
-    `build soup` reads nine formats; `release-baseline --manifest` listed two by
+    `build soup` reads several formats; `release-baseline --manifest` listed two by
     hand and failed the whole baseline on the rest. A project that synced its
     SOUP register from a lockfile could not then build a release from it.
     """
@@ -286,8 +286,8 @@ class TestReleaseBaselineReadsEveryManifestSoupSyncDoes:
         ("package-lock.json",
          '{"lockfileVersion":3,"packages":{"node_modules/lodash":{"version":"4.17.21"}}}',
          "lodash"),
-        ("go.mod", "module example.com/m\n\nrequire github.com/pkg/errors v0.9.1\n",
-         "github.com/pkg/errors"),
+        ("pnpm-lock.yaml", "lockfileVersion: '9.0'\npackages:\n  chalk@5.3.0:\n    resolution: {}\n",
+         "chalk"),
     ])
     def test_a_supported_manifest_does_not_fail_the_baseline(
         self, dhf: Path, tmp_path: Path, filename, content, expected

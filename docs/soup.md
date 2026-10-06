@@ -4,7 +4,7 @@ The register of third-party software, and what is built from it.
 
 ## Syncing SOUP items from dependency manifests (`medharness build soup`)
 
-The `build soup` command reads dependency files from your project and creates or updates SOUP items in the DHF. It supports nine lockfile/manifest formats across multiple ecosystems:
+The `build soup` command reads dependency files from your project and creates or updates SOUP items in the DHF. It reads these lockfile and manifest formats:
 
 | File | Ecosystem |
 |------|-----------|
@@ -14,9 +14,12 @@ The `build soup` command reads dependency files from your project and creates or
 | `pyproject.toml` | PyPI (best-effort; prefer lockfile) |
 | `package.json` | npm |
 | `package-lock.json` | npm (v1/v2/v3) |
-| `go.mod` | Go |
-| `Cargo.lock` | crates.io |
-| `pom.xml` | Maven |
+| `pnpm-lock.yaml` | npm (lockfile v6 and later; a package from a git or tarball URL has no version and is left out) |
+
+A lockfile lists every package, direct and transitive, and `build soup` registers every one of them. A
+register of direct dependencies only comes from a `command` source (below). Any other ecosystem (Go,
+Cargo, Maven, yarn, conda, ...) goes the same way, or through `--from-command`: one JSON object per line,
+`{"name": ..., "version": ..., "ecosystem": ...}`.
 
 ### Auto-discovery
 
@@ -30,7 +33,7 @@ To target a specific file:
 
 ```bash
 medharness --dhf DHF build soup --manifest uv.lock
-medharness --dhf DHF build soup --manifest go.mod --manifest Cargo.lock
+medharness --dhf DHF build soup --manifest uv.lock --manifest pnpm-lock.yaml
 ```
 
 ### Persistent source configuration (`soup-sources.yaml`)
@@ -127,7 +130,7 @@ release/evidence-manifest.json # every file above and below, hashed
 release/specifications/ …      # plus traceability and test evidence
 ```
 
-`--manifest` accepts every format `build soup` reads — `requirements.txt`, `uv.lock`, `poetry.lock`, `pyproject.toml`, `package.json`, `package-lock.json`, `go.mod`, `Cargo.lock`, `pom.xml`.
+`--manifest` accepts every format `build soup` reads — `requirements.txt`, `uv.lock`, `poetry.lock`, `pyproject.toml`, `package.json`, `package-lock.json`, `pnpm-lock.yaml`.
 
 The release SBOM merges both registers. A package read from a `--manifest` but
 absent from the SOUP register still ships, so it appears — carrying a

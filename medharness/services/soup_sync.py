@@ -14,9 +14,10 @@ Supported manifest formats
 | pyproject.toml      | PyPI       | best-effort; lockfile preferred    |
 | package.json        | npm        | semver ranges stripped             |
 | package-lock.json   | npm        | v2/v3 lockfile; pinned             |
-| go.mod              | Go         | required block                     |
-| Cargo.lock          | crates.io  | TOML lockfile                      |
-| pom.xml             | Maven      | <dependencies> block               |
+| pnpm-lock.yaml      | npm        | lockfile v6+; registry packages    |
+
+Any other ecosystem (Go, Cargo, Maven, ...) goes through ``--from-command`` or a
+``command`` source: one JSON object per line, ``{name, version, ecosystem}``.
 
 Extension mechanisms
 --------------------
@@ -43,9 +44,10 @@ from __future__ import annotations
 import json
 import re
 import subprocess
-import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Optional
+
+import yaml
 
 from dhfkit.store import open_store
 
@@ -57,13 +59,11 @@ from dhfkit.store import open_store
 _KNOWN_MANIFESTS: list[str] = [
     "uv.lock",
     "poetry.lock",
-    "Cargo.lock",
     "package-lock.json",
+    "pnpm-lock.yaml",
     "requirements.txt",
-    "go.mod",
     "pyproject.toml",
     "package.json",
-    "pom.xml",
 ]
 
 
@@ -224,83 +224,27 @@ def parse_package_lock_json(path: Path) -> list[dict]:
     return packages
 
 
-_GO_REQUIRE_RE = re.compile(
-    r"^\s+(?P<module>[^\s]+)\s+v(?P<version>[^\s]+)(?:\s+//\s*indirect)?",
-)
+_PNPM_KEY_RE = re.compile(r"^/?(?P<name>@?[^@]+)@(?P<version>\d[^()\s]*)")
 
 
-def parse_go_mod(path: Path) -> list[dict]:
-    """Direct and indirect requires from go.mod."""
+def parse_pnpm_lock(path: Path) -> list[dict]:
+    """Registry packages from pnpm-lock.yaml (lockfile v6 and later).
+
+    A package that is not on a registry (a git or tarball URL) has no version to
+    record and is left out.
+    """
+    data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    major = str(data.get("lockfileVersion", "")).split(".")[0]
+    if not major.isdigit() or int(major) < 6:
+        raise ValueError(
+            f"Unsupported pnpm lockfileVersion {data.get('lockfileVersion')!r} in {path.name}: need 6 or later"
+        )
     packages: list[dict] = []
-    source = str(path)
-    in_require = False
-    for line in path.read_text(encoding="utf-8").splitlines():
-        stripped = line.strip()
-        if stripped.startswith("require ("):
-            in_require = True
-            continue
-        if in_require and stripped == ")":
-            in_require = False
-            continue
-        # single-line require
-        single = re.match(r"^require\s+(?P<module>[^\s]+)\s+v(?P<version>[^\s]+)", stripped)
-        if single:
-            packages.append({"name": single.group("module"), "version": single.group("version"),
-                             "source": source, "ecosystem": "Go"})
-            continue
-        if in_require:
-            m = _GO_REQUIRE_RE.match(line)
-            if m:
-                packages.append({"name": m.group("module"), "version": m.group("version"),
-                                 "source": source, "ecosystem": "Go"})
-    return packages
-
-
-def parse_cargo_lock(path: Path) -> list[dict]:
-    """All packages from Cargo.lock."""
-    data = _load_toml(path)
-    packages: list[dict] = []
-    for pkg in data.get("package", []):
-        name = pkg.get("name")
-        version = pkg.get("version")
-        if name and version:
-            packages.append({"name": name, "version": str(version),
-                             "source": str(path), "ecosystem": "crates.io"})
-    return packages
-
-
-_MVN_NS = {"mvn": "http://maven.apache.org/POM/4.0.0"}
-
-
-def parse_pom_xml(path: Path) -> list[dict]:
-    """Dependencies from Maven pom.xml."""
-    packages: list[dict] = []
-    source = str(path)
-    try:
-        tree = ET.parse(path)
-    except ET.ParseError:
-        return []
-    root = tree.getroot()
-    # Try with and without Maven namespace
-    for ns in (_MVN_NS, {}):
-        mvn = _MVN_NS["mvn"]
-        dep_tag = f"{{{mvn}}}dependency" if ns else "dependency"
-        g_tag = f"{{{mvn}}}groupId" if ns else "groupId"
-        a_tag = f"{{{mvn}}}artifactId" if ns else "artifactId"
-        v_tag = f"{{{mvn}}}version" if ns else "version"
-        for dep in root.iter(dep_tag):
-            group = dep.find(g_tag)
-            artifact = dep.find(a_tag)
-            version_el = dep.find(v_tag)
-            if artifact is not None and version_el is not None:
-                ver = (version_el.text or "").strip()
-                gid = (group.text or "").strip() if group is not None else ""
-                name = f"{gid}:{artifact.text.strip()}" if gid else (artifact.text or "").strip()
-                if name and ver and not ver.startswith("${"):
-                    packages.append({"name": name, "version": ver,
-                                     "source": source, "ecosystem": "Maven"})
-        if packages:
-            break
+    for key in data.get("packages") or {}:
+        m = _PNPM_KEY_RE.match(str(key))
+        if m:
+            packages.append({"name": m.group("name"), "version": m.group("version"),
+                             "source": str(path), "ecosystem": "npm"})
     return packages
 
 
@@ -319,12 +263,8 @@ def _dispatch_parser(path: Path) -> list[dict]:
         return parse_package_json(path)
     if name == "package-lock.json":
         return parse_package_lock_json(path)
-    if name == "go.mod":
-        return parse_go_mod(path)
-    if name == "Cargo.lock":
-        return parse_cargo_lock(path)
-    if name == "pom.xml":
-        return parse_pom_xml(path)
+    if name == "pnpm-lock.yaml":
+        return parse_pnpm_lock(path)
     raise ValueError(f"Unsupported manifest format: {name}")
 
 
@@ -352,7 +292,6 @@ def load_soup_sources(dhf_path: Path, project_dir: Path) -> tuple[list[dict], li
     Returns (packages, errors).  Each package is a dict with at least
     {name, version, ecosystem}.  Manual entries may omit ecosystem.
     """
-    import yaml  # type: ignore[import]
 
     sources_file = config_file(dhf_path, "soup-sources.yaml")
     if sources_file is None:

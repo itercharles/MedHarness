@@ -8,7 +8,7 @@
 #               not in a package manager (no ecosystem = no CVE scan)
 #
 # Auto-detected formats: requirements.txt · uv.lock · poetry.lock · pyproject.toml
-#                        package.json · package-lock.json · go.mod · Cargo.lock · pom.xml
+#                        package.json · package-lock.json · pnpm-lock.yaml
 #
 # Edit this file to add your project's dependency sources.
 
@@ -25,10 +25,7 @@ sources:
   #   path: frontend/package-lock.json   # pinned npm lockfile
 
   # - type: manifest
-  #   path: go.mod
-
-  # - type: manifest
-  #   path: Cargo.lock
+  #   path: pnpm-lock.yaml               # every package in the lockfile, direct and transitive
 
   # --- External tools ---
   # Run any tool that prints one JSON object per line on stdout.
@@ -46,10 +43,12 @@ sources:
   #                           'ecosystem': a['type']}))
   #     "
   #
-  # A package manager with no parser here — pnpm, yarn, conda, Bazel — goes in
-  # this form too, and lets you choose the depth. Direct dependencies are usually
-  # what a SOUP register should hold; the full transitive closure is rarely a set
-  # anyone assesses one by one (IEC 62304 §8.1.2).
+  # A package manager with no parser here — yarn, conda, Bazel, Go, Cargo, Maven —
+  # goes in this form too, and lets you choose the depth. A lockfile parser reads
+  # every package; direct dependencies are usually what a SOUP register should
+  # hold, since the full transitive closure is rarely a set anyone assesses one
+  # by one (IEC 62304 §8.1.2). This one lists a pnpm project's direct dependencies
+  # only, in place of its lockfile.
   #
   # - type: command
   #   run: |
