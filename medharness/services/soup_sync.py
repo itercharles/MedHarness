@@ -14,7 +14,7 @@ Supported manifest formats
 | pyproject.toml      | PyPI       | best-effort; lockfile preferred    |
 | package.json        | npm        | semver ranges stripped             |
 | package-lock.json   | npm        | v2/v3 lockfile; pinned             |
-| pnpm-lock.yaml      | npm        | lockfile v6+; registry packages    |
+| pnpm-lock.yaml      | npm        | lockfile v6+; direct dependencies  |
 
 Any other ecosystem (Go, Cargo, Maven, ...) goes through ``--from-command`` or a
 ``command`` source: one JSON object per line, ``{name, version, ecosystem}``.
@@ -224,14 +224,15 @@ def parse_package_lock_json(path: Path) -> list[dict]:
     return packages
 
 
-_PNPM_KEY_RE = re.compile(r"^/?(?P<name>@?[^@]+)@(?P<version>\d[^()\s]*)")
+_PNPM_SECTIONS = ("dependencies", "devDependencies", "optionalDependencies")
+_PNPM_VERSION_RE = re.compile(r"^\d[^()\s]*")
 
 
 def parse_pnpm_lock(path: Path) -> list[dict]:
-    """Registry packages from pnpm-lock.yaml (lockfile v6 and later).
+    """The direct dependencies of every project in pnpm-lock.yaml, at the versions pnpm installed.
 
-    A package that is not on a registry (a git or tarball URL) has no version to
-    record and is left out.
+    Lockfile v6 and later. A dependency that is a workspace link or a git or tarball URL has no
+    registry version and is left out; the peer-dependency suffix on a version is dropped.
     """
     data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
     major = str(data.get("lockfileVersion", "")).split(".")[0]
@@ -239,13 +240,17 @@ def parse_pnpm_lock(path: Path) -> list[dict]:
         raise ValueError(
             f"Unsupported pnpm lockfileVersion {data.get('lockfileVersion')!r} in {path.name}: need 6 or later"
         )
-    packages: list[dict] = []
-    for key in data.get("packages") or {}:
-        m = _PNPM_KEY_RE.match(str(key))
-        if m:
-            packages.append({"name": m.group("name"), "version": m.group("version"),
-                             "source": str(path), "ecosystem": "npm"})
-    return packages
+    # A single-project v6 lockfile keeps its dependencies at the top level.
+    importers = data.get("importers") or {".": data}
+    found: dict[tuple[str, str], dict] = {}
+    for importer in importers.values():
+        for section in _PNPM_SECTIONS:
+            for name, info in (importer.get(section) or {}).items():
+                m = _PNPM_VERSION_RE.match(str(info.get("version", "") if isinstance(info, dict) else info))
+                if m:
+                    found.setdefault((name, m.group()), {"name": name, "version": m.group(),
+                                                          "source": str(path), "ecosystem": "npm"})
+    return list(found.values())
 
 
 def _dispatch_parser(path: Path) -> list[dict]:

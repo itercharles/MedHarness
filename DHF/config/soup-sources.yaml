@@ -25,7 +25,7 @@ sources:
   #   path: frontend/package-lock.json   # pinned npm lockfile
 
   # - type: manifest
-  #   path: pnpm-lock.yaml               # every package in the lockfile, direct and transitive
+  #   path: pnpm-lock.yaml               # the direct dependencies of every project in it
 
   # --- External tools ---
   # Run any tool that prints one JSON object per line on stdout.
@@ -44,11 +44,10 @@ sources:
   #     "
   #
   # A package manager with no parser here — yarn, conda, Bazel, Go, Cargo, Maven —
-  # goes in this form too, and lets you choose the depth. A lockfile parser reads
-  # every package; direct dependencies are usually what a SOUP register should
-  # hold, since the full transitive closure is rarely a set anyone assesses one
-  # by one (IEC 62304 §8.1.2). This one lists a pnpm project's direct dependencies
-  # only, in place of its lockfile.
+  # goes in this form too, and lets you choose the depth. Direct dependencies are
+  # usually what a SOUP register should hold, since the full transitive closure is
+  # rarely a set anyone assesses one by one (IEC 62304 §8.1.2). The example below
+  # prints a pnpm project's direct dependencies; swap in your own tool.
   #
   # - type: command
   #   run: |

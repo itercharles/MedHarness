@@ -202,48 +202,63 @@ class TestPackageLockJson:
 # ---------------------------------------------------------------------------
 
 class TestPnpmLock:
-    def test_v9_packages_scoped_and_not(self, tmp_path: Path) -> None:
+    def test_v9_reads_the_direct_dependencies_of_every_project(self, tmp_path: Path) -> None:
         f = tmp_path / "pnpm-lock.yaml"
         f.write_text(textwrap.dedent("""\
             lockfileVersion: '9.0'
             importers:
               .:
+                devDependencies:
+                  typescript: {specifier: ^5.7, version: 5.9.3}
+              apps/client:
                 dependencies:
-                  lodash:
-                    specifier: ^4.17.0
-                    version: 4.17.21
+                  '@scope/pkg': {specifier: ^1.2.3, version: 1.2.3}
+                optionalDependencies:
+                  fsevents: {specifier: ^2.3.0, version: 2.3.3}
             packages:
-              '@adobe/css-tools@4.4.4':
-                resolution: {integrity: sha512-a}
               lodash@4.17.21:
                 resolution: {integrity: sha512-b}
-            snapshots:
-              lodash@4.17.21: {}
             """))
         pkgs = parse_pnpm_lock(f)
-        assert [(p["name"], p["version"]) for p in pkgs] == [("@adobe/css-tools", "4.4.4"), ("lodash", "4.17.21")]
+        assert [(p["name"], p["version"]) for p in pkgs] == [
+            ("typescript", "5.9.3"), ("@scope/pkg", "1.2.3"), ("fsevents", "2.3.3")], "lodash is transitive"
         assert all(p["ecosystem"] == "npm" and p["source"] == str(f) for p in pkgs)
 
-    def test_v6_keys_carry_a_slash_and_a_peer_suffix(self, tmp_path: Path) -> None:
+    def test_the_peer_suffix_on_a_version_is_dropped_however_deeply_it_nests(self, tmp_path: Path) -> None:
         f = tmp_path / "pnpm-lock.yaml"
-        f.write_text("lockfileVersion: '6.0'\npackages:\n  /react-dom@18.2.0(react@18.2.0):\n    resolution: {}\n"
-                     "  /@babel/core@7.29.0:\n    resolution: {}\n")
-        assert [(p["name"], p["version"]) for p in parse_pnpm_lock(f)] == [
-            ("react-dom", "18.2.0"), ("@babel/core", "7.29.0")]
+        f.write_text("lockfileVersion: '9.0'\nimporters:\n  .:\n    dependencies:\n"
+                     "      react-router-dom:\n        specifier: ^7\n"
+                     "        version: 7.14.0(react-dom@18.3.1(react@18.3.1))(react@18.3.1)\n")
+        assert [(p["name"], p["version"]) for p in parse_pnpm_lock(f)] == [("react-router-dom", "7.14.0")]
 
-    def test_a_package_with_no_registry_version_is_left_out(self, tmp_path: Path) -> None:
+    def test_a_workspace_link_or_url_has_no_registry_version_and_is_left_out(self, tmp_path: Path) -> None:
         f = tmp_path / "pnpm-lock.yaml"
-        f.write_text("lockfileVersion: '9.0'\npackages:\n  'left-pad@https://codeload.github.com/x/y/tar.gz/abc':\n"
-                     "    resolution: {}\n  ok@1.0.0-beta.1:\n    resolution: {}\n")
+        f.write_text("lockfileVersion: '9.0'\nimporters:\n  .:\n    dependencies:\n"
+                     "      shared: {specifier: workspace:*, version: link:../shared}\n"
+                     "      left-pad: {specifier: 'github:x/y', version: 'https://codeload.github.com/x/y/tar.gz/abc'}\n"
+                     "      ok: {specifier: ^1, version: 1.0.0-beta.1}\n")
         assert [(p["name"], p["version"]) for p in parse_pnpm_lock(f)] == [("ok", "1.0.0-beta.1")]
+
+    def test_the_same_dependency_in_two_projects_is_listed_once_per_version(self, tmp_path: Path) -> None:
+        f = tmp_path / "pnpm-lock.yaml"
+        f.write_text("lockfileVersion: '9.0'\nimporters:\n  a:\n    dependencies:\n      x: {specifier: ^1, version: 1.0.0}\n"
+                     "  b:\n    dependencies:\n      x: {specifier: ^1, version: 1.0.0}\n      y: {specifier: ^2, version: 2.0.0}\n"
+                     "  c:\n    dependencies:\n      x: {specifier: ^2, version: 2.0.0}\n")
+        assert [(p["name"], p["version"]) for p in parse_pnpm_lock(f)] == [("x", "1.0.0"), ("y", "2.0.0"), ("x", "2.0.0")]
+
+    def test_a_single_project_v6_lockfile_keeps_its_dependencies_at_the_top(self, tmp_path: Path) -> None:
+        f = tmp_path / "pnpm-lock.yaml"
+        f.write_text("lockfileVersion: '6.0'\ndependencies:\n  lodash:\n    specifier: ^4\n    version: 4.17.21\n"
+                     "packages:\n  /lodash@4.17.21:\n    resolution: {}\n  /dep-of-dep@1.0.0:\n    resolution: {}\n")
+        assert [(p["name"], p["version"]) for p in parse_pnpm_lock(f)] == [("lodash", "4.17.21")]
 
     def test_a_lockfile_older_than_v6_is_refused_not_misread(self, tmp_path: Path) -> None:
         f = tmp_path / "pnpm-lock.yaml"
-        f.write_text("lockfileVersion: 5.4\npackages:\n  /lodash/4.17.21:\n    resolution: {}\n")
+        f.write_text("lockfileVersion: 5.4\nspecifiers:\n  lodash: ^4\ndependencies:\n  lodash: 4.17.21\n")
         with pytest.raises(ValueError, match="lockfileVersion 5.4"):
             parse_pnpm_lock(f)
 
-    def test_no_packages_is_an_empty_list(self, tmp_path: Path) -> None:
+    def test_no_dependencies_is_an_empty_list(self, tmp_path: Path) -> None:
         f = tmp_path / "pnpm-lock.yaml"
         f.write_text("lockfileVersion: '9.0'\n")
         assert parse_pnpm_lock(f) == []
