@@ -286,7 +286,8 @@ class TestReleaseBaselineReadsEveryManifestSoupSyncDoes:
         ("package-lock.json",
          '{"lockfileVersion":3,"packages":{"node_modules/lodash":{"version":"4.17.21"}}}',
          "lodash"),
-        ("pnpm-lock.yaml", "lockfileVersion: '9.0'\npackages:\n  chalk@5.3.0:\n    resolution: {}\n",
+        ("pnpm-lock.yaml",
+         "lockfileVersion: '9.0'\nimporters:\n  .:\n    dependencies:\n      chalk: {specifier: ^5, version: 5.3.0}\n",
          "chalk"),
     ])
     def test_a_supported_manifest_does_not_fail_the_baseline(

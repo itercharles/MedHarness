@@ -14,11 +14,12 @@ The `build soup` command reads dependency files from your project and creates or
 | `pyproject.toml` | PyPI (best-effort; prefer lockfile) |
 | `package.json` | npm |
 | `package-lock.json` | npm (v1/v2/v3) |
-| `pnpm-lock.yaml` | npm (lockfile v6 and later; a package from a git or tarball URL has no version and is left out) |
+| `pnpm-lock.yaml` | npm: the direct dependencies of every project in it, at the versions pnpm installed (lockfile v6 and later; a workspace link or a git or tarball URL has no registry version and is left out) |
 
-A lockfile lists every package, direct and transitive, and `build soup` registers every one of them. A
-register of direct dependencies only comes from a `command` source (below). Any other ecosystem (Go,
-Cargo, Maven, yarn, conda, ...) goes the same way, or through `--from-command`: one JSON object per line,
+The other lockfile parsers (`uv.lock`, `poetry.lock`, `package-lock.json`) register every package the lockfile
+lists, transitive ones included; the pnpm one registers only what a project declares, since the whole closure is
+rarely a set anyone assesses one by one. Any ecosystem without a parser (Go, Cargo, Maven, yarn, conda, ...) goes
+through `--from-command` or a `command` source: one JSON object per line,
 `{"name": ..., "version": ..., "ecosystem": ...}`.
 
 ### Auto-discovery

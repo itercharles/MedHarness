@@ -11,6 +11,16 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.57.1] — 2026-10-06
+
+### Changed
+
+- **The `pnpm-lock.yaml` parser registers direct dependencies, not the whole lockfile.** 0.57.0 registered every
+  package in it, which for a real pnpm workspace is 591 names where the projects declare 36, and a SOUP register
+  is the set of software you chose and assess. It reads each project's `dependencies`, `devDependencies` and
+  `optionalDependencies` at the version pnpm installed (peer-dependency suffixes dropped); a workspace link or
+  URL has no registry version and is left out. The other lockfile parsers still register every package.
+
 ## [0.57.0] — 2026-10-06
 
 ### Added
