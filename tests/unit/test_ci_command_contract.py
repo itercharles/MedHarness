@@ -102,7 +102,7 @@ class TestValidateBranchJsonContract:
             "errors": [],
             "findings": [],
         })
-        with patch("medharness.services.git.validate_atomic_branch", return_value=branch_result):
+        with patch("medharness.services.verify_changes.validate_atomic_branch", return_value=branch_result):
             r = runner.invoke(main, ["--dhf", str(dhf), "verify", "changes", "--cr", "CR-500"])
         assert r.exit_code == 0, (r.output, r.stderr)
         payload = _split_stdout_json(r.stdout)
@@ -131,7 +131,7 @@ class TestValidateBranchJsonContract:
             "findings": [finding],
         })
         runner = CliRunner()
-        with patch("medharness.services.git.validate_atomic_branch", return_value=branch_result):
+        with patch("medharness.services.verify_changes.validate_atomic_branch", return_value=branch_result):
             r = runner.invoke(main, ["--dhf", str(dhf), "verify", "changes", "--cr", "CR-501"])
         assert r.exit_code == 1
         payload = _split_stdout_json(r.stdout)

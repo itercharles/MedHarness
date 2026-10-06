@@ -9,7 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 from unittest.mock import patch
 
-from medharness.services.git import judge_branch, validate_atomic_branch
+from medharness.services.verify_changes import judge_branch, validate_atomic_branch
 
 NOTHING = {"created": [], "updated": [], "deleted": []}
 

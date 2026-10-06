@@ -268,7 +268,7 @@ def register(main):
         Compares the working tree, so it runs locally before anything is
         committed as well as in CI. Needs a reachable `--since-ref`.
         """
-        from medharness.services.git import validate_atomic_branch  # noqa: PLC0415
+        from medharness.services.verify_changes import validate_atomic_branch  # noqa: PLC0415
 
         dhf_path: Path = ctx.obj["dhf"]
         repo_root = dhf_path.resolve().parent

@@ -210,7 +210,7 @@ as `provider:model` — `anthropic` (the `claude` CLI, the default), `openai`,
 
 ## `verify changes`: a reader and a judge
 
-`services/git.py` `validate_atomic_branch` reads the diff and hands plain values
+`services/verify_changes.py` `validate_atomic_branch` reads the diff and hands plain values
 to `judge_branch(cr_id, cr_item, dhf_item_changes, code_changes)`, which decides
 and touches nothing. Test a rule by calling the judge with the values you want;
 patch the reader only to test the reading itself.
