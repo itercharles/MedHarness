@@ -12,12 +12,10 @@ from medharness.services.soup_sync import (
     _run_external_command,
     discover_manifests,
     load_soup_sources,
-    parse_cargo_lock,
-    parse_go_mod,
     parse_package_json,
     parse_package_lock_json,
+    parse_pnpm_lock,
     parse_poetry_lock,
-    parse_pom_xml,
     parse_pyproject_toml,
     parse_requirements_txt,
     parse_uv_lock,
@@ -200,108 +198,55 @@ class TestPackageLockJson:
 
 
 # ---------------------------------------------------------------------------
-# go.mod
+# pnpm-lock.yaml
 # ---------------------------------------------------------------------------
 
-class TestGoMod:
-    def test_parses_require_block(self, tmp_path: Path) -> None:
-        f = tmp_path / "go.mod"
+class TestPnpmLock:
+    def test_v9_packages_scoped_and_not(self, tmp_path: Path) -> None:
+        f = tmp_path / "pnpm-lock.yaml"
         f.write_text(textwrap.dedent("""\
-            module github.com/myorg/myapp
+            lockfileVersion: '9.0'
+            importers:
+              .:
+                dependencies:
+                  lodash:
+                    specifier: ^4.17.0
+                    version: 4.17.21
+            packages:
+              '@adobe/css-tools@4.4.4':
+                resolution: {integrity: sha512-a}
+              lodash@4.17.21:
+                resolution: {integrity: sha512-b}
+            snapshots:
+              lodash@4.17.21: {}
+            """))
+        pkgs = parse_pnpm_lock(f)
+        assert [(p["name"], p["version"]) for p in pkgs] == [("@adobe/css-tools", "4.4.4"), ("lodash", "4.17.21")]
+        assert all(p["ecosystem"] == "npm" and p["source"] == str(f) for p in pkgs)
 
-            go 1.21
+    def test_v6_keys_carry_a_slash_and_a_peer_suffix(self, tmp_path: Path) -> None:
+        f = tmp_path / "pnpm-lock.yaml"
+        f.write_text("lockfileVersion: '6.0'\npackages:\n  /react-dom@18.2.0(react@18.2.0):\n    resolution: {}\n"
+                     "  /@babel/core@7.29.0:\n    resolution: {}\n")
+        assert [(p["name"], p["version"]) for p in parse_pnpm_lock(f)] == [
+            ("react-dom", "18.2.0"), ("@babel/core", "7.29.0")]
 
-            require (
-                github.com/gorilla/mux v1.8.0
-                golang.org/x/net v0.17.0 // indirect
-            )
-        """))
-        pkgs = parse_go_mod(f)
-        names = {p["name"] for p in pkgs}
-        assert "github.com/gorilla/mux" in names
-        assert "golang.org/x/net" in names
-        assert all(p["ecosystem"] == "Go" for p in pkgs)
+    def test_a_package_with_no_registry_version_is_left_out(self, tmp_path: Path) -> None:
+        f = tmp_path / "pnpm-lock.yaml"
+        f.write_text("lockfileVersion: '9.0'\npackages:\n  'left-pad@https://codeload.github.com/x/y/tar.gz/abc':\n"
+                     "    resolution: {}\n  ok@1.0.0-beta.1:\n    resolution: {}\n")
+        assert [(p["name"], p["version"]) for p in parse_pnpm_lock(f)] == [("ok", "1.0.0-beta.1")]
 
-    def test_single_line_require(self, tmp_path: Path) -> None:
-        f = tmp_path / "go.mod"
-        f.write_text("module m\ngo 1.21\nrequire github.com/pkg/errors v0.9.1\n")
-        pkgs = parse_go_mod(f)
-        assert pkgs[0]["name"] == "github.com/pkg/errors"
-        assert pkgs[0]["version"] == "0.9.1"
+    def test_a_lockfile_older_than_v6_is_refused_not_misread(self, tmp_path: Path) -> None:
+        f = tmp_path / "pnpm-lock.yaml"
+        f.write_text("lockfileVersion: 5.4\npackages:\n  /lodash/4.17.21:\n    resolution: {}\n")
+        with pytest.raises(ValueError, match="lockfileVersion 5.4"):
+            parse_pnpm_lock(f)
 
-
-# ---------------------------------------------------------------------------
-# Cargo.lock
-# ---------------------------------------------------------------------------
-
-class TestCargoLock:
-    def test_parses_packages(self, tmp_path: Path) -> None:
-        f = tmp_path / "Cargo.lock"
-        f.write_text(textwrap.dedent("""\
-            version = 3
-
-            [[package]]
-            name = "serde"
-            version = "1.0.195"
-            source = "registry+https://github.com/rust-lang/crates.io-index"
-
-            [[package]]
-            name = "tokio"
-            version = "1.35.1"
-            source = "registry+https://github.com/rust-lang/crates.io-index"
-        """))
-        pkgs = parse_cargo_lock(f)
-        assert len(pkgs) == 2
-        assert all(p["ecosystem"] == "crates.io" for p in pkgs)
-        names = {p["name"] for p in pkgs}
-        assert names == {"serde", "tokio"}
-
-
-# ---------------------------------------------------------------------------
-# pom.xml
-# ---------------------------------------------------------------------------
-
-class TestPomXml:
-    def test_parses_dependencies(self, tmp_path: Path) -> None:
-        f = tmp_path / "pom.xml"
-        f.write_text(textwrap.dedent("""\
-            <?xml version="1.0"?>
-            <project>
-              <dependencies>
-                <dependency>
-                  <groupId>org.apache.commons</groupId>
-                  <artifactId>commons-lang3</artifactId>
-                  <version>3.12.0</version>
-                </dependency>
-                <dependency>
-                  <groupId>junit</groupId>
-                  <artifactId>junit</artifactId>
-                  <version>4.13.2</version>
-                </dependency>
-              </dependencies>
-            </project>
-        """))
-        pkgs = parse_pom_xml(f)
-        assert len(pkgs) == 2
-        assert all(p["ecosystem"] == "Maven" for p in pkgs)
-        names = {p["name"] for p in pkgs}
-        assert "org.apache.commons:commons-lang3" in names
-
-    def test_property_placeholder_skipped(self, tmp_path: Path) -> None:
-        f = tmp_path / "pom.xml"
-        f.write_text(textwrap.dedent("""\
-            <project>
-              <dependencies>
-                <dependency>
-                  <groupId>com.example</groupId>
-                  <artifactId>mylib</artifactId>
-                  <version>${mylib.version}</version>
-                </dependency>
-              </dependencies>
-            </project>
-        """))
-        pkgs = parse_pom_xml(f)
-        assert pkgs == []  # placeholder version skipped
+    def test_no_packages_is_an_empty_list(self, tmp_path: Path) -> None:
+        f = tmp_path / "pnpm-lock.yaml"
+        f.write_text("lockfileVersion: '9.0'\n")
+        assert parse_pnpm_lock(f) == []
 
 
 # ---------------------------------------------------------------------------
@@ -316,10 +261,10 @@ class TestDiscoverManifests:
 
     def test_finds_multiple(self, tmp_path: Path) -> None:
         (tmp_path / "requirements.txt").write_text("")
-        (tmp_path / "go.mod").write_text("module m\ngo 1.21\n")
+        (tmp_path / "pnpm-lock.yaml").write_text("lockfileVersion: '9.0'\n")
         found = discover_manifests(tmp_path)
         names = {p.name for p in found}
-        assert {"requirements.txt", "go.mod"} <= names
+        assert {"requirements.txt", "pnpm-lock.yaml"} <= names
 
     def test_empty_dir(self, tmp_path: Path) -> None:
         assert discover_manifests(tmp_path) == []

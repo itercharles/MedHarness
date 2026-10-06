@@ -11,6 +11,22 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.57.0] — 2026-10-06
+
+### Added
+
+- **`build soup` and `verify soup` read `pnpm-lock.yaml`** (lockfile v6 and later; an older one is refused with
+  its version, not misread). A pnpm project used to reach the SOUP register only through the version ranges in
+  `package.json`, never the versions pnpm installed. Like the other lockfile parsers it registers every package
+  in the lockfile, transitive ones included; a package from a git or tarball URL has no version and is left out.
+
+### Removed
+
+- **`go.mod`, `Cargo.lock` and `pom.xml` are no longer read** (about 75 lines and their tests): no project used
+  them. `build soup --manifest` names them as unsupported, and auto-discovery skips them. Go, Cargo, Maven and
+  any other ecosystem go through `--from-command` or a `command` source in `soup-sources.yaml`, one JSON object
+  per line; the SBOM still maps their ecosystems to purls.
+
 ### Changed
 
 - CI now installs WeasyPrint and its native libraries (Unit and Integration jobs) and sets
