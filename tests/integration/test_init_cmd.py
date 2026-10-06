@@ -62,7 +62,7 @@ class TestInitCmd:
     def test_replace_placeholders_substitutes_project_name(self, tmp_path):
         """replace_placeholders substitutes {{project_name}} in DHF template files."""
         (tmp_path / "DHF").mkdir(parents=True)
-        readme = tmp_path / "README.md"
+        readme = tmp_path / "DHF" / "README.md"
         readme.write_text("# {{project_name}} DHF")
         replace_placeholders(tmp_path, "Test Device")
         assert "Test Device" in readme.read_text()
@@ -71,7 +71,7 @@ class TestInitCmd:
     def test_replace_placeholders_substitutes_medharness_version(self, tmp_path):
         """replace_placeholders substitutes {{medharness_version}}."""
         (tmp_path / "DHF").mkdir(parents=True)
-        wf = tmp_path / "workflow.yml"
+        wf = tmp_path / "DHF" / "workflow.yml"
         wf.write_text("pip install medharness=={{medharness_version}}")
         replace_placeholders(tmp_path, "Device")
         assert "{{medharness_version}}" not in wf.read_text()

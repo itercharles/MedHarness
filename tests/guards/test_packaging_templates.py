@@ -88,8 +88,12 @@ def built_wheel(tmp_path_factory: pytest.TempPathFactory) -> Path:
 
 
 class TestWheelContents:
+    def test_both_packages_are_packaged(self, built_wheel: Path) -> None:
+        with zipfile.ZipFile(built_wheel) as zf:
+            names = zf.namelist()
+        assert "medharness/__main__.py" in names and "dhfkit/store.py" in names
+
     def test_workflow_templates_are_not_packaged(self, built_wheel: Path) -> None:
-        """Mirrors scripts/audit_oss_delivery.sh, but fails in the dev loop."""
         with zipfile.ZipFile(built_wheel) as zf:
             names = zf.namelist()
         bundled = [n for n in names if "templates/github/workflows/" in n]
