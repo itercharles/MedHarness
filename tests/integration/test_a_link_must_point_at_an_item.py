@@ -82,3 +82,21 @@ def test_a_link_field_a_project_declares_is_checked_too(dhf: Path) -> None:
 
     accepted = _item(dhf, "create", "--type", "HWR", "--data", json.dumps({"title": "T", "refines": ["SYS-001"]}))
     assert accepted.exit_code == 0, accepted.output
+
+
+def test_the_existence_check_reads_the_dhf_once_however_many_links_there_are(dhf: Path) -> None:
+    """Each link target used to cost a read of every item: 40 `reviewed_items` took seconds on a real DHF."""
+    from unittest.mock import patch
+
+    from dhfkit.repository.loader import ItemLoader
+
+    def reads(targets: list[str]) -> int:
+        with patch.object(ItemLoader, "load_all", autospec=True, side_effect=ItemLoader.load_all) as spy:
+            result = _item(dhf, "update", "CR-001", "--data", json.dumps({"reviewed_items": targets}))
+        assert result.exit_code == 0, result.output
+        return spy.call_count
+
+    one = reads(["SYS-001"])
+    many = reads(["SYS-001", "SRS-001", "CRS-001", "UC-001", "SWDD-001", "SYSARCH-001", "MODULE-001", "RCM-001"])
+
+    assert many == one, f"{one} reads for one link, {many} for eight"
