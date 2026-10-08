@@ -11,6 +11,11 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.58.3] — 2026-10-08
+
+### Changed
+- `build_module_map`, which only the AI context uses, lives in `services/context.py` instead of `services/traceability.py`; the traceability checks no longer guard against a config without `doc_type_of`.
+
 ## [0.58.2] — 2026-10-08
 
 ### Changed

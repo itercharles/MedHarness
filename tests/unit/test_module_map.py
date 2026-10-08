@@ -1,10 +1,10 @@
-"""Tests for medharness.services.traceability.build_module_map."""
+"""Tests for medharness.services.context.build_module_map."""
 
 from __future__ import annotations
 
 import pytest
 
-from medharness.services.traceability import build_module_map
+from medharness.services.context import build_module_map
 
 
 class _FakeDocType:
