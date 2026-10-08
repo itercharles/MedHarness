@@ -92,38 +92,3 @@ class TestAssessedAndEmptyIsAnAnswer:
         })
         with pytest.raises(ValueError, match="risk_impact_assessed"):
             open_store(dhf).execute_transition(cr_id, "completed")
-
-
-class TestTheCriteriaMirrorTheGate:
-    """Two checks of the same thing must not disagree.
-
-    A criterion stricter than `verify completion` would refuse a CR the gate
-    would pass — the tool contradicting itself, with no way for a project to
-    satisfy both.
-    """
-
-    def test_every_criterion_names_a_field_the_gate_checks(self) -> None:
-        import importlib.resources as resources
-
-        import yaml
-
-        cr_yaml = yaml.safe_load(
-            resources.files("dhfkit")
-            .joinpath("templates/config/doc_types/cr.yaml").read_text()
-        )
-        transition = next(
-            t for t in cr_yaml["lifecycle"]["transitions"]
-            if t.get("to_state") == "completed"
-        )
-        fields = {c["field"] for c in transition.get("criteria", [])}
-        assert fields, "the closing transition has no criteria"
-
-        gate = (
-            Path(__file__).resolve().parents[2]
-            / "medharness" / "services" / "verify_completion.py"
-        ).read_text()
-        for field in fields:
-            assert field in gate, (
-                f"closure requires {field!r}, which verify completion never "
-                f"checks — the two would be enforcing different contracts"
-            )

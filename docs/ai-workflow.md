@@ -54,7 +54,7 @@ Runs triage, works out what the change touches and what it leaves alone (test fi
 
 | Field | Written by | Required at closure |
 |-------|-----------|-------------------|
-| `triage_result` | Step 2 (triage) | ✓ verdict must be `approved` |
+| `triage_result` | Step 2 (triage) | ✓ non-empty (`build plan` itself requires the verdict `approved`) |
 | `impact_analysis` | Steps 1-5: assumptions, anchors with their evidence, every item examined and left unchanged, why each created item is not an update, and a verdict for each of nine dimensions | checked by `build plan`; not a closure gate |
 | `affected_risk_items` | Step 6 (every risk and control relevant, changed or not) | ✓ explicit list (can be `[]`) |
 | `implementation_notes` | Step 6 (impl plan) | ✓ non-empty |
@@ -81,9 +81,9 @@ medharness --dhf DHF verify completion --cr CR-001 --junit test-results
 
 Run it on the branch to block the merge, and again on `main`, where the tests re-run against whatever else landed. Checks, for the items this CR touched only:
 
-1. All four CR fields above are populated. A CR planned by hand records them with `medharness item update`.
+1. The CR carries what its type requires of the move to `completed`: the criteria on that transition in `cr.yaml`, which `item transition CR-NNN completed` refuses on too (by default the four marked ✓ above). A project that changes them there changes this check. A CR planned by hand records the fields with `medharness item update`.
 2. Every item in `affected_items` exists in the DHF.
-3. Those that are requirements (CRS, SYS, SRS) or SOUP have `verification_method` set.
+3. Those that are requirements (CRS, SYS, SRS) have `verification_method` set.
 4. Those with `Test` have passing JUnit evidence.
 
 Approval is not its question — GitHub's branch protection enforces that (required approvals, stale approvals dismissed on push). Exits non-zero and prints `FAIL [completion]` lines for each gap.

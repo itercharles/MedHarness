@@ -86,7 +86,7 @@ def test_absent_cr_item_fails(tmp_path: Path) -> None:
     dhf = _make_dhf(tmp_path)
     result = cr_closure_gate("CR-001", dhf)
     assert result["passed"] is False
-    assert "affected_items" in _incomplete(result)
+    assert _incomplete(result) == ["cr_item"]
 
 
 def test_missing_affected_items_fails(tmp_path: Path) -> None:
@@ -146,10 +146,39 @@ def test_missing_triage_result_fails(tmp_path: Path) -> None:
     assert "triage_result" in _incomplete(cr_closure_gate("CR-001", dhf))
 
 
-def test_triage_result_not_approved_fails(tmp_path: Path) -> None:
+def test_closure_asks_what_the_cr_type_asks_for_the_move_to_completed(tmp_path: Path) -> None:
+    """One definition: the criteria on the transition into `completed` in cr.yaml, not a list kept here."""
+    import yaml
+
+    dhf = _make_dhf(tmp_path)
+    _write_cr(dhf, "CR-001", [])
+    assert cr_closure_gate("CR-001", dhf)["passed"] is True
+
+    default = Path(__import__("dhfkit").__file__).parent / "templates" / "config" / "doc_types" / "cr.yaml"
+    cr_type = yaml.safe_load(default.read_text())
+    to_completed = next(t for t in cr_type["lifecycle"]["transitions"] if t["to_state"] == "completed")
+    to_completed["criteria"].append(
+        {"id": "described", "name": "Description written", "check_type": "field_not_empty",
+         "field": "description", "required": True})
+    (dhf / "config" / "doc_types").mkdir(exist_ok=True)
+    (dhf / "config" / "doc_types" / "cr.yaml").write_text(yaml.safe_dump(cr_type))
+
+    result = cr_closure_gate("CR-001", dhf)
+
+    assert result["passed"] is False and _incomplete(result) == ["description"]
+    assert "Description written" in result["errors"][0]
+
+    to_completed["criteria"] = []
+    (dhf / "config" / "doc_types" / "cr.yaml").write_text(yaml.safe_dump(cr_type))
+    _write_cr(dhf, "CR-001", None, implementation_notes=None, affected_risk_items=None, triage_result=None)
+    assert cr_closure_gate("CR-001", dhf)["passed"] is True, "a project that requires nothing is asked for nothing"
+
+
+def test_a_triage_result_with_any_verdict_counts_as_recorded(tmp_path: Path) -> None:
+    """cr.yaml asks that triage was recorded; whether it approved is `build plan`'s check, not closure's."""
     dhf = _make_dhf(tmp_path)
     _write_cr(dhf, "CR-001", [], triage_result={"verdict": "rejected"})
-    assert "triage_result" in _incomplete(cr_closure_gate("CR-001", dhf))
+    assert "triage_result" not in _incomplete(cr_closure_gate("CR-001", dhf))
 
 
 # ---------------------------------------------------------------------------
