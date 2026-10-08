@@ -232,10 +232,3 @@ class ProjectConfig(BaseModel):
             if dt.code == code:
                 return dt
         return None
-
-    def get_doc_type_by_prefix(self, prefix: str) -> Optional[DocTypeConfig]:
-        """Get document type configuration by prefix."""
-        for dt in self.doc_types:
-            if dt.prefix == prefix:
-                return dt
-        return None
