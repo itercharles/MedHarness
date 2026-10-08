@@ -11,6 +11,11 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.58.10] — 2026-10-08
+
+### Fixed
+- Generated specifications state only what the items hold. They no longer print approved/draft/retired counts and an approval rate (no requirement type has a lifecycle, so every figure was zero), a status of UNKNOWN per item, an invented "Document Owner" and "Next Review: TBD", or "in accordance with ISO 14971". A requirement lists the items it links to, which the templates asked of a field that does not exist, and the change request specification summarises the statuses its CRs have and shows the status the document was rendered with.
+
 ## [0.58.9] — 2026-10-08
 
 ### Removed

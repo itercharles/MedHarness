@@ -110,7 +110,7 @@ Focus on stability and adoption across real product programs through:
 
 <div class="requirement-section" markdown="1">
 
-**Status**: <span class="status-{{ item.status or "unknown" }}">{{ item.status | status_badge }}</span>  
+{% if item.status %}**Status**: <span class="status-{{ item.status or "unknown" }}">{{ item.status | status_badge }}</span>  {% endif %}
 {% if item.reviewer %}**Reviewer**: {{ item.reviewer }}  {% endif %}
 {% if item.review_date %}**Review Date**: {{ item.review_date | format_date }}  {% endif %}
 {% if item.category %}**Category**: {{ item.category }}  {% endif %}
@@ -141,25 +141,13 @@ Focus on stability and adoption across real product programs through:
 | Metric | Count |
 |--------|-------|
 | **Total Requirements** | {{ items | length }} |
-| **Approved** | {{ items | selectattr('status', 'equalto', 'approved') | list | length }} |
-| **Draft** | {{ items | selectattr('status', 'equalto', 'draft') | list | length }} |
-| **Retired** | {{ items | selectattr('status', 'equalto', 'retired') | list | length }} |
 
-### 6.2 Approval Status
-
-{% set approved_count = items | selectattr('status', 'equalto', 'approved') | list | length %}
-{% set total_count = items | length %}
-{% if total_count > 0 %}
-**Approval Rate**: {{ (approved_count / total_count * 100) | round(1) }}% ({{ approved_count }}/{{ total_count }})
-{% endif %}
 
 ---
 
 ## 7. Document Control
 
-**Document Owner**: Quality Assurance  
 **Last Updated**: {{ generation_date }}  
-**Next Review**: TBD
 
 ---
 

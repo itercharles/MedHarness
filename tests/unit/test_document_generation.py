@@ -72,10 +72,10 @@ class TestContent:
         html = _render(dhf, "SRS", tmp_path)
         assert html.count("Software Requirement Specification</h1>") == 1
 
-    def test_absent_status_renders_a_usable_badge(self, dhf: Path, tmp_path: Path) -> None:
+    def test_an_item_without_a_status_gets_no_status_line(self, dhf: Path, tmp_path: Path) -> None:
         html = _render(dhf, "SRS", tmp_path)
-        assert 'class="status-"' not in html
-        assert "UNKNOWN" in html
+        assert 'class="status-' not in html
+        assert "UNKNOWN" not in html
 
     def test_html_is_self_contained(self, dhf: Path, tmp_path: Path) -> None:
         html = _render(dhf, "SRS", tmp_path)
