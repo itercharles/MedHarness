@@ -11,6 +11,13 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.58.7] — 2026-10-08
+
+### Changed
+- The design layers (SYSARCH, MODULE, SWDD) are described to the model by their `description` in the doc type YAML, like every other level, instead of a paragraph hard-coded in `build plan`. MODULE and SWDD now ship a description.
+- A provider other than `anthropic`, `openai` and `deepseek` (`ollama:llama3`, `vllm:…`) works against `MEDHARNESS_<STAGE>_BASE_URL` with no API key; none is sent. Without that variable the run says what to set.
+- `verify dhf` prints dangling, wrong-type and cyclic links from the gate's structured findings instead of matching its error text.
+
 ## [0.58.6] — 2026-10-08
 
 ### Fixed

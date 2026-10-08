@@ -193,7 +193,9 @@ from `new` or `design`, or `cancelled` from any of the three. `completed` is ref
 
 Each stage takes its model from `MEDHARNESS_{DESIGN|DESIGN_REVIEW|DEVELOP|CODE_REVIEW}_MODEL`
 as `provider:model` — `anthropic` (the `claude` CLI, the default), `openai`,
-`deepseek` — with `MEDHARNESS_{STAGE}_BASE_URL` for other endpoints.
+`deepseek` — with `MEDHARNESS_{STAGE}_BASE_URL` for other endpoints. Any other
+provider name (`ollama:llama3`) speaks the same OpenAI-compatible API and needs
+that variable; it needs no API key, and none is sent.
 
 ### Where the code is
 

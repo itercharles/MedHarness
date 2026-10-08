@@ -9,7 +9,12 @@ import click
 
 from medharness.cli.options import collect_junit_paths, junit_option
 from medharness.cli.output import details, emit, render_envelope
-from medharness.services.verify_dhf import ci_structural_gate
+from medharness.services.verify_dhf import (
+    ci_structural_gate,
+    cycle_message,
+    dangling_message,
+    mistyped_message,
+)
 from medharness.services.verify_tests import ci_test_coverage_gate
 
 _ITEM_ID_RE = re.compile(r"^([A-Z]+-\d+)")
@@ -79,18 +84,16 @@ def register(main):
                                    f" --data '{{\"{f['field']}\": [\"<{f['target_type']} id>\"]}}'", err=True)
                     else:
                         click.echo(f"    Fix: create a {f['target_type']} item that links to {f['id']}.", err=True)
-            for message in [e for e in result["errors"] if "target does not exist" in e]:
-                click.echo(f"FAIL [dangling] {message}", err=True)
+            for d in t.get("dangling", []):
+                click.echo(f"FAIL [dangling] {dangling_message(d)}", err=True)
                 click.echo("    Fix: correct the ID in the source item, or create the "
                            "target. The link exists but resolves to nothing.", err=True)
-            for message in [e for e in result["errors"] if " is not one of " in e]:
-                click.echo(f"FAIL [link-type] {message}", err=True)
+            for m in t.get("mistyped", []):
+                click.echo(f"FAIL [link-type] {mistyped_message(m)}", err=True)
                 click.echo("    Fix: link to an item of a type the field accepts, or move the link "
                            "to the field that takes that type.", err=True)
-            for message in [e for e in result["errors"] if e.startswith("Traceability cycle:")]:
-                # The gate's own wording, not a second rendering of it: two
-                # spellings of one finding is two findings to a reader.
-                click.echo(f"FAIL [cycle] {message}", err=True)
+            for cycle in t.get("cycles", []):
+                click.echo(f"FAIL [cycle] {cycle_message(cycle)}", err=True)
                 click.echo("    Fix: the V-model is directed. Remove whichever link "
                            "reverses the chain so each item has an origin.", err=True)
 

@@ -1001,6 +1001,28 @@ class TestRunOpenaiCompatible:
         assert "API key" in output
         assert sid == ""
 
+    def test_a_local_endpoint_needs_no_api_key_and_is_sent_none(self):
+        mock_resp = MagicMock()
+        mock_resp.__enter__ = lambda s: s
+        mock_resp.__exit__ = MagicMock(return_value=False)
+        mock_resp.read.return_value = self._make_response("local ok")
+        sent: list = []
+
+        def fake_urlopen(req, timeout=None):
+            sent.append(req)
+            return mock_resp
+
+        with patch("urllib.request.urlopen", side_effect=fake_urlopen):
+            rc, output, _ = _run_openai_compatible(
+                "prompt", model="llama3", api_key="", base_url="http://localhost:11434/v1")
+        assert (rc, output) == (0, "local ok")
+        assert sent[0].get_header("Authorization") is None
+
+    def test_a_provider_without_an_endpoint_says_what_to_set(self):
+        rc, output, _ = _run_openai_compatible("prompt", model="m", api_key="", base_url="")
+        assert rc == 1
+        assert "BASE_URL" in output
+
     def test_system_message_included_in_first_request(self):
         response_body = self._make_response("ok")
         mock_resp = MagicMock()

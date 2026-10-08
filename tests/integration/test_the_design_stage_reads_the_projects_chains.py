@@ -93,12 +93,3 @@ def test_the_plan_prompt_describes_the_projects_links_and_chains(dhf: Path) -> N
 def test_a_custom_link_field_is_among_the_linked_ids(dhf: Path) -> None:
     result = CliRunner().invoke(main, ["--dhf", str(dhf), "item", "get", "HWR-001"])
     assert json.loads(result.stdout)["all_linked_uids"] == ["SYS-001"]
-
-
-def test_the_standard_design_roles_are_described_only_to_a_project_that_has_those_types() -> None:
-    from medharness.services.prompt_assembly import _link_model
-
-    bare = {"types": [{"code": "HWR", "links": []}], "chains": []}
-    standard = {"types": [{"code": c, "links": []} for c in ("SYSARCH", "MODULE", "SWDD")], "chains": []}
-    assert "Design layer roles" not in _link_model(bare)
-    assert "Design layer roles" in _link_model(standard)

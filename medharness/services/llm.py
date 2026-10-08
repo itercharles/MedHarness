@@ -119,7 +119,9 @@ def _run_openai_compatible(
     tools or max_turns is reached. Returns (exit_code, text_output, session_id).
     Session IDs are not supported by OpenAI-compatible APIs; always returns "".
     """
-    if not api_key:
+    if not base_url:
+        return 1, "No endpoint: set MEDHARNESS_<STAGE>_BASE_URL for this provider.", ""
+    if not api_key and base_url in _PROVIDER_BASE_URLS.values():
         return 1, f"API key not configured for provider at {base_url}", ""
 
     bash_tool = {
@@ -155,7 +157,8 @@ def _run_openai_compatible(
         req = urllib.request.Request(
             f"{base_url}/chat/completions",
             data=payload,
-            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+            headers={**({"Authorization": f"Bearer {api_key}"} if api_key else {}),
+                     "Content-Type": "application/json"},
             method="POST",
         )
         try:

@@ -87,15 +87,6 @@ def _link_model(ctx: dict) -> str:
             "type linking back to it; the first type of a chain is where requirements enter and is exempt.)\n\n"
             + "".join(f"- {' → '.join(chain)}\n" for chain in chains) + "\n"
         )
-    codes = {t["code"] for t in ctx["types"]}
-    if {"SYSARCH", "MODULE", "SWDD"} <= codes:
-        text += (
-            "Design layer roles:\n"
-            "- SYSARCH — a system-level design decision for the SYS it designs; only when the change alters boundaries, data flow or deployment\n"
-            "- MODULE — one per software unit; defines the module's responsibility and interfaces (module-oriented, not requirement-oriented)\n"
-            "- SWDD — a design decision within a module, only past the threshold in the prompt; must carry both `implements` (SRS) and `module` (MODULE)\n"
-            "\n"
-        )
     return text
 
 
