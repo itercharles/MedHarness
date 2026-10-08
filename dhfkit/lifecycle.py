@@ -64,9 +64,6 @@ def _validate_criteria(
         if check_type == "field_not_empty":
             if not item.get(field):
                 blocking.append(criterion["id"])
-        elif check_type == "relationship_field":
-            if not item.get(field):
-                blocking.append(criterion["id"])
         elif check_type == "field_present":
             # Present but possibly empty: "assessed, nothing affected" is a
             # complete answer, and the checks above read [] as absent.

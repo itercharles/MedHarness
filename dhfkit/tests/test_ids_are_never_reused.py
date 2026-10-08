@@ -38,6 +38,11 @@ def repo(tmp_path: Path) -> Path:
     return tmp_path
 
 
+def _delete(dhf: Path, uid: str) -> None:
+    """What deleting an item is: its file goes (`git rm`); no command does it."""
+    next((dhf / "items").rglob(f"{uid}.yaml")).unlink()
+
+
 def _new_srs(dhf: Path, title: str) -> str:
     return open_store(dhf).create_item({"type": "SRS", "title": title, "derives_from": ["SYS-001"]}
     )["id"]
@@ -49,7 +54,7 @@ class TestADeletedIdIsRetired:
         first = _new_srs(dhf, "first")
         _commit(repo, "add")
 
-        open_store(dhf).delete_item(first)
+        _delete(dhf, first)
         _commit(repo, "delete")
 
         second = _new_srs(dhf, "second")
@@ -63,7 +68,7 @@ class TestADeletedIdIsRetired:
         created = [_new_srs(dhf, f"r{i}") for i in range(3)]
         _commit(repo, "add three")
         for uid in created:
-            open_store(dhf).delete_item(uid)
+            _delete(dhf, uid)
         _commit(repo, "delete three")
 
         again = [_new_srs(dhf, f"s{i}") for i in range(3)]

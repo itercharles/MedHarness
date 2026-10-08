@@ -261,7 +261,7 @@ class TestReleaseBaselineEmitsAnSbom:
 
         out = tmp_path / "out"
         store = MagicMock()
-        store.get_item.return_value = {"id": "CR-001", "type": "CR", "state": "completed", "title": "x"}
+        store.get_item.return_value = {"id": "CR-001", "type": "CR", "status": "completed", "title": "x"}
         store.list_items.return_value = []
         type(store).config = PropertyMock(side_effect=FileNotFoundError("global.yaml not found"))
         with patch("medharness.services.release_baseline.open_store", return_value=store):

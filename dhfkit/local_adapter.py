@@ -41,9 +41,6 @@ class LocalDHFAdapter:
         origin = getattr(item, "file_path", None)
         self._saver.save(item, Path(origin) if origin else None)
 
-    def delete(self, uid: str) -> bool:
-        return self._saver.delete(uid)
-
     def used_ids(self) -> set[str]:
         return {i.uid for i in self.load_all()} | item_ids_ever_added(self.items_dir)
 

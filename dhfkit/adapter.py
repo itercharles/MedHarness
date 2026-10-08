@@ -41,8 +41,6 @@ class DHFAdapter(Protocol):
     def save(self, item: Item) -> None:
         """Create the item, or replace the one with the same `uid`."""
 
-    def delete(self, uid: str) -> bool: ...
-
     def used_ids(self) -> set[str]:
         """Every ID ever allocated, deleted items included.
 

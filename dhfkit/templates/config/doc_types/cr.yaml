@@ -93,7 +93,7 @@ lifecycle:
       required: true
     - id: risk_impact_assessed
       name: Risk impact recorded
-      # `field_present`, not `relationship_field`: an empty list means the risks
+      # `field_present`, not `field_not_empty`: an empty list means the risks
       # were assessed and none are affected, which is a complete answer.
       check_type: field_present
       field: affected_risk_items

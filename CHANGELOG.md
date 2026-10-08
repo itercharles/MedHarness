@@ -11,6 +11,14 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.58.1] — 2026-10-08
+
+### Removed
+- Code nothing called: the TC-era JUnit parser (`ExecutionResult`, `dhf_id` marker), the `delete` operation through adapter, store and saver, the `active` field special-casing, `id_generator` (the next ID is computed in `ItemStore.create_item`), the `relationship_field` criterion type (identical to `field_not_empty`), and the always-empty `gate_violations` key in the anomaly early-return of `build release`.
+
+### Fixed
+- A missing specifications directory no longer prints a warning to stdout, which corrupted the JSON a command answers with.
+
 ## [0.58.0] — 2026-10-08
 
 ### Changed

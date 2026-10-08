@@ -6,7 +6,7 @@ Shared data types (safe to import anywhere):
     Item, ProjectConfig, DocTypeConfig, ValidationError
 
 DHF I/O utilities (for direct DHF-layer consumers such as tests and adapters):
-    ItemLoader, parse_junit_xml, ExecutionResult
+    ItemLoader
 
 Internal (not part of the public API):
     ItemSaver, DocumentGenerator
@@ -16,7 +16,6 @@ Internal (not part of the public API):
 from dhfkit.models.item import Item
 from dhfkit.models.config import ProjectConfig, DocTypeConfig
 from dhfkit.exceptions import ValidationError
-from dhfkit.junit_parser import parse_junit_xml, ExecutionResult
 from dhfkit.repository.loader import ItemLoader
 from dhfkit.item_store import ItemStore
 
@@ -25,8 +24,6 @@ __all__ = [
     "ProjectConfig",
     "DocTypeConfig",
     "ValidationError",
-    "parse_junit_xml",
-    "ExecutionResult",
     "ItemLoader",
     "ItemStore",
 ]

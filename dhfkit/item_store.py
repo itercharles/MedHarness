@@ -11,7 +11,6 @@ from dhfkit.models.config import ProjectConfig
 from dhfkit.models.item import Item
 from dhfkit.repository.loader import ItemLoader
 from dhfkit.adapter import DHFAdapter, resolve_adapter
-from dhfkit.id_generator import get_next_id
 
 # What a branch changed, deleted items included: they stay named after they are gone.
 _HISTORICAL_LINK_FIELDS = frozenset({"affected_items"})
@@ -222,11 +221,12 @@ class ItemStore:
         # one identifier mean two different items over a project's life, and
         # every reference to it — a CR's affected_items, an approval record, a
         # test's dhf_links — silently retargets.
-        existing_ids = self._adapter.used_ids()
-        data['id'] = get_next_id(
-            dt_cfg.prefix,
-            [i for i in existing_ids if i.startswith(dt_cfg.prefix)],
-        )
+        prefix = dt_cfg.prefix
+        numbers = [
+            int(i[len(prefix):]) for i in self._adapter.used_ids()
+            if i.startswith(prefix) and i[len(prefix):].isdigit()
+        ]
+        data['id'] = f"{prefix}{max(numbers, default=0) + 1:03d}"
 
         doc_type_code = data['id'].split('-')[0]
         dt_cfg = self._config.get_doc_type(doc_type_code)
@@ -324,9 +324,6 @@ class ItemStore:
             item_id=item_id,
             to_state=to_state,
         )
-
-    def delete_item(self, uid: str) -> bool:
-        return self._adapter.delete(uid)
 
     def validate_schema(self) -> dict:
         """Validate all YAML files; returns {'valid': bool, 'errors': [...]}."""

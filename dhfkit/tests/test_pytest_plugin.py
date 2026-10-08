@@ -56,26 +56,11 @@ def test_dhf_links_marker_injects_links_property(pytester: pytest.Pytester) -> N
     assert props.get("medharness.links") == "SRS-001,SYS-004"
 
 
-def test_dhf_id_marker_injects_id_property(pytester: pytest.Pytester) -> None:
+def test_links_and_testing_markers_combine(pytester: pytest.Pytester) -> None:
     pytester.makepyfile("""
         import pytest
 
-        @pytest.mark.dhf_id("TC-SYS-001")
-        def test_explicit():
-            pass
-    """)
-    xml = pytester.path / "result.xml"
-    pytester.runpytest(f"--junit-xml={xml}")
-
-    props = _properties(xml, "test_explicit")
-    assert props.get("medharness.id") == "TC-SYS-001"
-
-
-def test_both_markers_combined(pytester: pytest.Pytester) -> None:
-    pytester.makepyfile("""
-        import pytest
-
-        @pytest.mark.dhf_id("TC-SRS-007")
+        @pytest.mark.dhf_testing("T1", "T2")
         @pytest.mark.dhf_links("SRS-007", "SYS-002")
         def test_full():
             pass
@@ -84,8 +69,7 @@ def test_both_markers_combined(pytester: pytest.Pytester) -> None:
     pytester.runpytest(f"--junit-xml={xml}")
 
     props = _properties(xml, "test_full")
-    assert props.get("medharness.id") == "TC-SRS-007"
-    assert props.get("medharness.links") == "SRS-007,SYS-002"
+    assert props == {"medharness.links": "SRS-007,SYS-002", "medharness.testing": "T1,T2"}
 
 
 def test_unmarked_test_has_no_dhf_properties(pytester: pytest.Pytester) -> None:
@@ -97,8 +81,7 @@ def test_unmarked_test_has_no_dhf_properties(pytester: pytest.Pytester) -> None:
     pytester.runpytest(f"--junit-xml={xml}")
 
     props = _properties(xml, "test_plain")
-    assert "medharness.links" not in props
-    assert "medharness.id" not in props
+    assert props == {}
 
 
 def test_markers_registered_no_unknown_warning(pytester: pytest.Pytester) -> None:
@@ -126,37 +109,3 @@ def test_single_dhf_link(pytester: pytest.Pytester) -> None:
 
     props = _properties(xml, "test_one")
     assert props.get("medharness.links") == "SRS-001"
-
-
-def test_dhf_links_alone_auto_emits_tc_id(pytester: pytest.Pytester) -> None:
-    """dhf_links without dhf_id should auto-emit medharness.id for evidence ingestion."""
-    pytester.makepyfile("""
-        import pytest
-
-        @pytest.mark.dhf_links("SRS-007", "SYS-002")
-        def test_auto_id():
-            pass
-    """)
-    xml = pytester.path / "result.xml"
-    pytester.runpytest(f"--junit-xml={xml}")
-
-    props = _properties(xml, "test_auto_id")
-    assert props.get("medharness.id") == "TC-SRS-007"
-    assert props.get("medharness.links") == "SRS-007,SYS-002"
-
-
-def test_explicit_dhf_id_takes_precedence(pytester: pytest.Pytester) -> None:
-    """Explicit dhf_id wins over the auto-derived value."""
-    pytester.makepyfile("""
-        import pytest
-
-        @pytest.mark.dhf_id("TC-SRS-099")
-        @pytest.mark.dhf_links("SRS-007")
-        def test_override():
-            pass
-    """)
-    xml = pytester.path / "result.xml"
-    pytester.runpytest(f"--junit-xml={xml}")
-
-    props = _properties(xml, "test_override")
-    assert props.get("medharness.id") == "TC-SRS-099"
