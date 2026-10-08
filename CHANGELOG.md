@@ -11,6 +11,11 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.58.4] — 2026-10-08
+
+### Fixed
+- The traceability matrix in the release evidence decides what a child is the way `verify dhf` does: an item links to a parent only through a field its type declares for the parent's type. Before, any link counted, so a link in the wrong field put the item in a chain the gate did not see.
+
 ## [0.58.3] — 2026-10-08
 
 ### Changed
