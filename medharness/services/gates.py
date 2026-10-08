@@ -28,9 +28,10 @@ GATES: tuple[dict[str, Any], ...] = (
         "checks": "Schema validity, required traceability, dangling links, and "
                   "coverage between V-model layers.",
         "blocking": "conditional",
-        "blocking_note": "Schema errors, required-link failures, and dangling "
-                         "links always fail. Coverage gaps warn unless "
-                         "--strict is passed.",
+        "blocking_note": "Schema errors, required-link failures, broken links "
+                         "(dangling, wrong type, cycles) and a status no state of "
+                         "its type always fail. Coverage gaps and placeholder text "
+                         "warn unless --strict is passed.",
         "needs_network": False,
     },
     {

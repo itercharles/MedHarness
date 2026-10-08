@@ -26,15 +26,6 @@ def _default_item_types() -> list[dict]:
     ]
 
 
-def _default_lifecycle_states() -> list[dict]:
-    return [
-        {"id": "draft", "label": "Draft", "is_stable": False, "action_label": None, "icon": None, "color": None},
-        {"id": "under_review", "label": "Under Review", "is_stable": False, "action_label": None, "icon": None, "color": None},
-        {"id": "approved", "label": "Approved", "is_stable": True, "action_label": None, "icon": None, "color": None},
-        {"id": "rejected", "label": "Rejected", "is_stable": True, "action_label": None, "icon": None, "color": None},
-    ]
-
-
 class StubDHFAdapter:
     """An in-memory store for testing."""
 
@@ -43,7 +34,6 @@ class StubDHFAdapter:
         self._documents: Dict[str, str] = {}
         self._test_results: Dict[str, dict] = {}
         self._item_types: list[dict] = _default_item_types()
-        self._lifecycle_states: list[dict] = _default_lifecycle_states()
         # The shipped defaults, as the real store would load them.
         from dhfkit.models.config import ProjectConfig
         from dhfkit.paths import DEFAULTS_DIR as _TEMPLATES_DIR
@@ -102,9 +92,6 @@ class StubDHFAdapter:
 
     def list_item_types(self) -> List[dict]:
         return [dict(t) for t in self._item_types]
-
-    def get_lifecycle_states(self) -> List[dict]:
-        return [dict(s) for s in self._lifecycle_states]
 
     # ------------------------------------------------------------------
     # Validation

@@ -21,8 +21,6 @@ def get_state_info(config: ProjectConfig, state_id: str) -> Dict[str, Any]:
                     "id": state.id,
                     "label": state.label,
                     "action_label": state.action_label or state.label,
-                    "icon": state.icon,
-                    "color": state.color,
                     "is_stable": state.is_stable,
                 }
     raise ValueError(f"State '{state_id}' not found in global lifecycle configuration.")
@@ -109,8 +107,6 @@ def get_available_transitions(
             available.append({
                 "to_state": to_state,
                 "action_label": to_state.title(),
-                "icon": None,
-                "color": None,
                 "can_transition": False,
                 "blocking_criteria": [
                     f"state {to_state!r} is not defined in global_lifecycle.states"
@@ -124,8 +120,6 @@ def get_available_transitions(
         available.append({
             "to_state": to_state,
             "action_label": state_info.get("action_label", to_state.title()),
-            "icon": state_info.get("icon"),
-            "color": state_info.get("color"),
             "criteria": transition.get("criteria", []),
             "can_transition": can_transition,
             "blocking_criteria": blocking,

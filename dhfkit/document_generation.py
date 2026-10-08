@@ -66,7 +66,7 @@ class DocumentGenerator:
 
         # Match on the configured prefix, not the bare code: "SYSARCH-001"
         # startswith("SYS") is true.
-        prefix = getattr(doc_type_config, "prefix", None) or f"{doc_type_code}-"
+        prefix = doc_type_config.prefix
         items = sorted(
             (item.model_dump(by_alias=True, exclude_none=True)
              for item in self.loader.load_all() if item.uid.startswith(prefix)),
@@ -77,12 +77,11 @@ class DocumentGenerator:
             doc_type_code=doc_type_code,
             doc_type_name=spec_config.get('doc_type_name', doc_type_config.name),
             test_type=spec_config.get('test_type', ''),
-            project_name=getattr(self.config, 'project_name', 'DHF Project'),
+            project_name=self.config.project_name,
             version=version,
             generation_date=datetime.now().isoformat()[:10],
             status='Draft',
             items=items,
-            directory=getattr(doc_type_config, 'directory', ''),
         )
 
     def export(self, doc_type_code: str, markdown_content: str, fmt: str, out_dir: Path,

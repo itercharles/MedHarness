@@ -32,9 +32,6 @@ class ItemStore:
         # document_specifications lives in global config
         self._doc_specs = self._config.document_specifications
 
-        # Lazy-fetch flag: set True once GitHub auto-fetch has been attempted this session
-        self._results_fetched = False
-
         # Document index: stem → Path, built once at init to avoid per-call rglob scans
         self._doc_index: dict[str, Path] = {}
         self._rebuild_doc_index()
@@ -74,22 +71,6 @@ class ItemStore:
 
     def list_item_types(self) -> List[dict]:
         return [self._item_type_dict(dt) for dt in self._config.doc_types]
-
-    def get_lifecycle_states(self) -> List[dict]:
-        gl = self._config.global_lifecycle
-        if gl is None:
-            return []
-        return [
-            {
-                "id": s.id,
-                "label": s.label,
-                "is_stable": s.is_stable,
-                "action_label": s.action_label,
-                "icon": s.icon,
-                "color": s.color,
-            }
-            for s in gl.states
-        ]
 
     # ------------------------------------------------------------------
     # Items

@@ -104,6 +104,14 @@ def _validate_schema_and_traceability(dhf_path: Path) -> list[dict]:
                 f"or create {d['target']}."
             ),
         })
+    for m in trace_result.get("mistyped", []):
+        errors.append({
+            "field": f"traceability.mistyped.{m['field']}",
+            "issue": f"{m['source']}.{m['field']} → {m['target']}: {m['found']} is not one of {', '.join(m['expected'])}",
+            "fix": f"Point {m['source']}'s `{m['field']}` at a {' or '.join(m['expected'])} item, "
+                   "or move the link to the field that takes a "
+                   f"{m['found']}.",
+        })
     for cycle in trace_result.get("cycles", []):
         path = " → ".join(cycle + [cycle[0]]) if len(cycle) > 1 else f"{cycle[0]} → itself"
         errors.append({

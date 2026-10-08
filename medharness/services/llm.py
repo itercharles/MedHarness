@@ -84,9 +84,10 @@ def _run_claude(prompt: str, *, resume_session: str = "", model: str = "") -> tu
         cmd += ["--model", effective_model]
     if resume_session:
         cmd += ["--resume", resume_session]
-    cmd.append(prompt)
     try:
-        result = subprocess.run(cmd, capture_output=True, text=True)  # noqa: S603
+        # On stdin, not argv: Linux caps one argument at 128 KiB and a prompt
+        # carrying the DHF context can be larger.
+        result = subprocess.run(cmd, input=prompt, capture_output=True, text=True)  # noqa: S603
     except FileNotFoundError:
         return 1, "claude CLI not found — install @anthropic-ai/claude-code", ""
     session_id = ""

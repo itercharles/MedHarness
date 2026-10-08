@@ -38,7 +38,3 @@ properties:
   - Analysis
   - Demonstration
 has_verification: true
-verification_states:
-- not_verified
-- verified
-- failed

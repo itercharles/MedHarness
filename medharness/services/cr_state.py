@@ -74,9 +74,4 @@ def assert_cr_active(adapter, cr_id: str) -> CRPhase:
             f"CR '{cr_id}' is already '{phase.value}' and cannot accept further work. "
             f"Create a new CR if additional changes are needed."
         )
-    if phase not in ACTIVE_PHASES:
-        raise ValueError(
-            f"CR '{cr_id}' has unexpected status '{phase.value}'. "
-            f"Expected one of: {sorted(p.value for p in ACTIVE_PHASES)}."
-        )
     return phase

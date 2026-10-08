@@ -61,8 +61,6 @@ class LifecycleState(BaseModel):
     id: str = Field(..., description="Unique state identifier (e.g., 'draft', 'approved')")
     label: str = Field(..., description="Human-readable label")
     action_label: Optional[str] = Field(None, description="Label for action to reach this state")
-    icon: Optional[str] = Field(None, description="Emoji icon for the state")
-    color: Optional[str] = Field(None, description="Color for UI display")
     is_initial: bool = Field(False, description="Whether this is an initial state for new items")
     is_stable: bool = Field(False, description="Whether items in this state are stable/locked")
 
@@ -84,12 +82,9 @@ class DocTypeConfig(BaseModel):
     prefix: str = Field(..., description="ID prefix (e.g., 'SYS-')")
     directory: Optional[str] = Field(None, description="Storage directory name")
     role: Optional[str] = Field(None, description="Semantic role: a type whose role ends in `_requirement` is a requirement")
-    type: Optional[str] = Field(None, description="Special type marker (e.g., 'test')")
-    verifies: Optional[List[str]] = Field(None, description="Document types this verifies")
     properties: Optional[List[Any]] = Field(None, description="Project-specific field schema")
     lifecycle: Optional[dict] = Field(None, description="Lifecycle configuration with states and transitions")
     has_verification: bool = Field(False, description="Whether items of this type carry a verification status")
-    verification_states: Optional[List[str]] = Field(None, description="Verification state labels")
 
 
 #: Property formats whose value is one or more item IDs.
@@ -124,7 +119,6 @@ class ProjectConfig(BaseModel):
     doc_types: List[DocTypeConfig] = Field(..., description="Document type configurations")
     traceability_matrices: List[TraceabilityMatrix] = Field(default_factory=list, description="The chains coverage is checked along; none means no coverage is checked")
     required_traceability: List[RequiredTraceabilityRule] = Field(default_factory=list, description="Required traceability rules; none means no link is required")
-    test_integration: dict = Field(default_factory=dict, description="Test integration configuration")
     document_specifications: dict = Field(default_factory=dict, description="Document specification configurations")
     impact_depth: int = Field(1, description="How many links from a changed item `verify changes` looks for dependents that were not reviewed; 0 turns it off")
     placeholder_patterns: List[str] = Field(default_factory=list, description="Regular expressions for text that stands in for content (TBD, the starter items' 'Replace with your own')")
