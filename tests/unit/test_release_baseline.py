@@ -34,7 +34,7 @@ def _cr_item(uid: str, state: str, title: str = "") -> dict:
     # code read the same wrong key, so the two agreed with each other while
     # both disagreed with reality: release-baseline crashed on any real DHF
     # while this suite stayed green.
-    return {"id": uid, "type": "CR", "state": state, "title": title}
+    return {"id": uid, "type": "CR", "status": state, "title": title}
 
 
 def _rel_item(uid: str, included: list[str]) -> dict:

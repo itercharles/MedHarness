@@ -79,12 +79,6 @@ class StubDHFAdapter:
         self._items[uid] = {**self._items[uid], **data}
         return self._items[uid]
 
-    def delete_item(self, uid: str, author: Optional[str] = None) -> bool:
-        if uid not in self._items:
-            return False
-        del self._items[uid]
-        return True
-
     # ------------------------------------------------------------------
     # Lifecycle
 

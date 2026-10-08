@@ -91,7 +91,6 @@ class TestCICoverageGate:
   <testsuite name="demo" tests="1">
     <testcase name="test_starter_crs_coverage">
       <properties>
-        <property name="medharness.id" value="TC-CRS-001-001"/>
         <property name="medharness.links" value="CRS-001"/>
       </properties>
     </testcase>

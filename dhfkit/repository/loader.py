@@ -15,7 +15,7 @@ from dhfkit.exceptions import ValidationError
 # dynamically from the doc type's lifecycle config in _build_lifecycle_fields().
 _SYSTEM_FIELDS = {
     # Written by the saver
-    'id', 'doc_type', 'type', 'status', 'active', 'file_path', 'timestamp',
+    'id', 'doc_type', 'type', 'status', 'file_path', 'timestamp',
     # Explicit fields on the Item model — available for any doc type
     'reviewer', 'review_date',
 }
@@ -43,7 +43,6 @@ class ItemLoader:
         items = []
 
         if not self.specs_dir.exists():
-            print(f"Warning: Specifications directory {self.specs_dir} does not exist")
             return items
 
         for yaml_file in self.specs_dir.rglob("*.yaml"):

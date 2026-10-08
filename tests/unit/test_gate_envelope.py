@@ -193,7 +193,6 @@ class TestNoGateEscapesTheEnvelope:
         junit.write_text(
             "<testsuites><testsuite name='s' tests='1'>"
             "<testcase classname='t' name='test_x' time='0.1'><properties>"
-            "<property name='medharness.id' value='TC-SRS-001'/>"
             "<property name='medharness.links' value='SRS-001'/>"
             "</properties></testcase></testsuite></testsuites>"
         )

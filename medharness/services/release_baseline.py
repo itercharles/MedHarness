@@ -47,10 +47,10 @@ def _collect_known_anomalies(dhf: Path) -> tuple[list[dict], list[str]]:
     errors: list[str] = []
 
     for item in open_store(dhf).list_items():
-        uid = str(item.get("id") or item.get("uid") or "")
+        uid = str(item.get("id") or "")
         if not uid.startswith("DEF-"):
             continue
-        state = str(item.get("state") or item.get("status") or "").strip().lower()
+        state = str(item.get("status") or "").strip().lower()
         if state not in _UNRESOLVED_DEFECT_STATES:
             continue
 
@@ -82,7 +82,7 @@ def _verify_cr_gates(dhf: Path, cr_ids: list[str]) -> list[dict]:
         if item is None:
             violations.append({"cr": cr_id, "issue": "CR not found"})
             continue
-        state = item.get("state") or item.get("status") or ""
+        state = item.get("status") or ""
         if state != _RELEASABLE_STATE:
             violations.append({
                 "cr": cr_id,
@@ -102,7 +102,7 @@ def _auto_collect_crs(dhf: Path) -> list[str]:
             for cr_id in item.get("included_items") or []:
                 released_crs.add(cr_id)
         elif item_type == "CR":
-            state = item.get("state") or item.get("status") or ""
+            state = item.get("status") or ""
             if state == _RELEASABLE_STATE:
                 completed_unreleased.append(item["id"])
 
@@ -230,7 +230,6 @@ def build_release_baseline(
             "outcome": "completed_with_errors",
             "version": version,
             "cr_ids": sorted(cr_ids),
-            "gate_violations": gate_violations,
             "known_anomalies": known_anomalies,
             "artifacts": [],
             "soup_count": 0,

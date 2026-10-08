@@ -50,9 +50,6 @@ class ItemSaver:
         data.pop('text', None)
         data.pop('file_path', None)
 
-        if data.get('active') == True:
-            data.pop('active', None)
-
         # Written to a sibling and moved into place: `open(path, 'w')` truncates
         # first, so a failure part-way through yaml.dump left a half-written
         # item that no longer loads. os.replace is atomic on the same
@@ -69,27 +66,6 @@ class ItemSaver:
             tmp_path.unlink(missing_ok=True)
 
         return file_path
-
-    def delete(self, uid: str) -> bool:
-        """
-        Delete an item file.
-
-        Args:
-            uid: Item UID
-
-        Returns:
-            True if deleted successfully
-        """
-        for yaml_file in self.specs_dir.rglob(f"{uid}.yaml"):
-            try:
-                yaml_file.unlink()
-                return True
-
-            except Exception as e:
-                print(f"Error deleting {yaml_file}: {e}")
-                return False
-
-        return False
 
     def _build_prefix_map(self) -> Dict[str, str]:
         """Build prefix-to-directory mapping from project config."""
@@ -155,8 +131,6 @@ def _patch(file_path: Path, data: Dict[str, Any], out) -> None:
             continue
         key, old = next(iter(parsed.items()))
         if key not in data:
-            if key == 'active' and old is True:
-                out.write(''.join(block))
             continue
         written.add(key)
         if _plain(old) == _plain(data[key]):

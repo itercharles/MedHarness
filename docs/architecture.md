@@ -80,7 +80,7 @@ an adapter        one per system, one file each: how items are read and written
   links, IDs and lifecycle live here, they behave the same on every adapter, and
   an adapter does not reimplement them.
 - **`DHFAdapter`** (`dhfkit/adapter.py`) is what a system implements: `load_all`,
-  `load_by_uid`, `save`, `delete` and `used_ids`, plus `integrity_errors` and a
+  `load_by_uid`, `save` and `used_ids`, plus `integrity_errors` and a
   `tracks_files` flag. `LocalDHFAdapter` is the implementation for a DHF kept as
   files; another system adds a file beside it.
 

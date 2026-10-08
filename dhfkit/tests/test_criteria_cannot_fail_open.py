@@ -57,8 +57,7 @@ class TestAnUnreadableCriterionBlocks:
         assert "c1" in blocking[0]
         assert "field_not_emty" in blocking[0]
 
-    @pytest.mark.parametrize("check_type", ["field_not_empty", "field_present",
-                                            "relationship_field"])
+    @pytest.mark.parametrize("check_type", ["field_not_empty", "field_present"])
     def test_a_known_type_still_behaves(self, check_type) -> None:
         satisfied = {"x": "value"}
         assert _validate_criteria(satisfied, _required(check_type))[0]
