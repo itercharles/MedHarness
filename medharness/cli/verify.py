@@ -74,10 +74,11 @@ def register(main):
             if not req.get("passed", True):
                 for f in req.get("failures", []):
                     click.echo(f"FAIL [required] {f['id']}: {f['issue']}", err=True)
-                    click.echo(f"    Fix: add 'dhf_links: [<parent-id>]' to"
-                               f" {f['id']}.yaml, or:", err=True)
-                    click.echo(f"         medharness {dhf_arg} item update {f['id']}"
-                               f" --data '{{\"dhf_links\": [\"<parent-id>\"]}}'", err=True)
+                    if f["direction"] == "upstream":
+                        click.echo(f"    Fix: medharness {dhf_arg} item update {f['id']}"
+                                   f" --data '{{\"{f['field']}\": [\"<{f['target_type']} id>\"]}}'", err=True)
+                    else:
+                        click.echo(f"    Fix: create a {f['target_type']} item that links to {f['id']}.", err=True)
             for message in [e for e in result["errors"] if "target does not exist" in e]:
                 click.echo(f"FAIL [dangling] {message}", err=True)
                 click.echo("    Fix: correct the ID in the source item, or create the "
@@ -101,27 +102,12 @@ def register(main):
                            f"{c['parent_type']}→{c['child_type']}: "
                            f"{c['covered']}/{c['total']} covered", err=True)
                 if not c["passed"]:
-                    click.echo(f"    Fix: medharness {dhf_arg} item list"
-                               f" --type {c['child_type']} to find uncovered items,"
-                               f" then add dhf_links to their YAML.", err=True)
+                    click.echo(f"    Fix: link a {c['child_type']} item to each uncovered "
+                               f"{c['parent_type']} ({', '.join(c['uncovered'][:5])}"
+                               f"{', ...' if len(c['uncovered']) > 5 else ''}).", err=True)
                     if not strict:
                         click.echo("         Advisory only — pass --strict"
                                    " to block the build on this.", err=True)
-        if "coverage" in r:
-            for row in r["coverage"].get("pairs", []):
-                if row.get("error"):
-                    # Without this the line read as a coverage shortfall, which
-                    # sent people looking for missing items rather than a typo.
-                    click.echo(f"FAIL [gate] {row['parent_type']}→{row['child_type']}: "
-                               f"{row['error']}", err=True)
-                    continue
-                if row.get("skipped"):
-                    click.echo(f"SKIP [gate] {row['parent_type']}→{row['child_type']}: "
-                               f"{row['skipped']}", err=True)
-                    continue
-                click.echo(f"{'PASS' if row.get('passed') else 'FAIL'} [gate] "
-                           f"{row['parent_type']}→{row['child_type']}: "
-                           f"{row['covered']}/{row['total']} covered", err=True)
         if not result["passed"]:
             raise click.ClickException("DHF validation failed.")
 

@@ -82,3 +82,32 @@ class TestTheHintIsUsable:
         assert f"{item_id}: verification_criteria is empty" not in after, (
             f"the fix ran but the gate still reports {item_id}:\n{after[-400:]}"
         )
+
+
+class TestTheHintForAMissingLinkNamesTheRealField:
+    """The hint said `dhf_links`, a field no type has, and running it failed."""
+
+    def _break_srs(self, dhf: Path) -> None:
+        import yaml
+
+        path = next((dhf / "items").rglob("SRS-001.yaml"))
+        data = yaml.safe_load(path.read_text())
+        data.pop("derives_from", None)
+        path.write_text(yaml.safe_dump(data))
+
+    def test_the_suggested_command_adds_the_link_and_the_finding_goes(self, dhf: Path) -> None:
+        self._break_srs(dhf)
+        before = _verify_dhf(dhf)
+        assert "SRS-001: SRS derives_from" in before
+        line = next(l for l in before.splitlines() if "item update SRS-001" in l and "derives_from" in l)
+
+        command = shlex.split(HINT.search("Fix: " + line.split("Fix:")[-1].strip()).group(1).replace("<SYS id>", "SYS-001"))
+        result = subprocess.run([sys.executable, "-m", "medharness", *command[1:]],
+                                capture_output=True, text=True, cwd=ROOT)
+
+        assert result.returncode == 0, result.stderr[-400:]
+        assert "SRS-001: SRS derives_from" not in _verify_dhf(dhf)
+
+    def test_no_hint_names_a_field_that_does_not_exist(self, dhf: Path) -> None:
+        self._break_srs(dhf)
+        assert "dhf_links" not in _verify_dhf(dhf)

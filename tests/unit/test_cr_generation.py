@@ -1090,7 +1090,7 @@ class TestRunOpenaiCompatible:
         assert output == ""
 
     def test_max_turns_terminates_loop(self):
-        """Loop exits after max_turns even when the model keeps requesting tool calls."""
+        """Loop exits after max_turns even when the model keeps requesting tool calls, and says it did not finish."""
         tool_call = {"id": "c1", "type": "function", "function": {"name": "bash", "arguments": '{"command": "true"}'}}
         always_tool = json.dumps({
             "choices": [{"message": {"role": "assistant", "content": None, "tool_calls": [tool_call]}, "finish_reason": "tool_calls"}]
@@ -1105,10 +1105,10 @@ class TestRunOpenaiCompatible:
         mock_resp.read.side_effect = _read
         with patch("urllib.request.urlopen", return_value=mock_resp), \
              patch("subprocess.run", return_value=MagicMock(returncode=0, stdout="", stderr="")):
-            rc, _, _ = _run_openai_compatible(
+            rc, output, _ = _run_openai_compatible(
                 "prompt", model="gpt-4o", api_key="sk-test", base_url=self.BASE_URL, max_turns=3
             )
-        assert rc == 0
+        assert rc == 1 and "Stopped after 3 turns" in output
         assert api_call_count["n"] == 3
 
     def test_subprocess_timeout_captured_as_tool_result(self):

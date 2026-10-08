@@ -115,6 +115,21 @@ class TestVerifyArguments:
         result = _run(project, "verify", "tests", "--junit", str(project / "no-such"))
         assert result.exit_code == 2 and result.stdout == ""
 
+    @pytest.mark.parametrize("strict", [[], ["--strict"]])
+    def test_verify_tests_with_no_junit_always_says_why_it_failed(self, project: Path, strict: list[str]) -> None:
+        """`--strict` with every requirement declaring a method failed with `errors: []`."""
+        for path in (project / "DHF" / "items").rglob("*.yaml"):
+            data = yaml.safe_load(path.read_text())
+            if data.get("id", "").split("-")[0] in {"CRS", "SYS", "SRS"}:
+                data["verification_method"] = ["Inspection"]
+                path.write_text(yaml.safe_dump(data))
+
+        result = _run(project, "verify", "tests", *strict)
+
+        envelope = _envelope(result)
+        assert result.exit_code == 1 and envelope["passed"] is False
+        assert any("pass --junit" in e for e in envelope["errors"]), envelope["errors"]
+
     def test_an_unknown_option_is_a_usage_error(self, project: Path) -> None:
         assert _run(project, "verify", "dhf", "--nope").exit_code == 2
 

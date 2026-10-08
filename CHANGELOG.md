@@ -11,6 +11,20 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.57.5] — 2026-10-08
+
+### Fixed
+
+- **`verify dhf` told you to set a field no type has.** For a missing required link its `Fix:` line was
+  `item update X --data '{"dhf_links": [...]}'`, and running it failed with "Unknown field 'dhf_links'". It now
+  names the rule's own field (`derives_from`, ...), says to create a child for a "covered by" rule, and the
+  coverage hint no longer tells you to add `dhf_links` either. A guard now runs the hint and re-checks the gate.
+  The `[gate]` lines it printed for a `coverage` section its result never had are gone.
+- **`verify tests --strict` with no JUnit and every requirement declaring a method failed with `errors: []`**,
+  exit 1 and no reason. It always says "No JUnit files found — pass --junit."
+- **An OpenAI-compatible model that is still calling tools after `max_turns` (100) is a failure**, not a success
+  with the work half done.
+
 ## [0.57.4] — 2026-10-08
 
 ### Fixed
