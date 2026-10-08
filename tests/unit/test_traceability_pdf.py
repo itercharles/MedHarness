@@ -127,3 +127,9 @@ def test_format_matrix_markdown_handles_dict_tests():
     md = release_artifacts.format_traceability_matrix_markdown(matrix)
     assert "Boot › cold start [PASS]" in md
     assert "Boot › warm start [FAIL]" in md
+
+
+def test_the_report_makes_no_claim_about_a_standard() -> None:
+    """Which standard a project follows is the project's to say, not a footer's."""
+    md = release_artifacts.format_traceability_matrix_markdown({"columns": [], "rows": [], "coverage": {}})
+    assert "IEC" not in md and "Compliance" not in md
