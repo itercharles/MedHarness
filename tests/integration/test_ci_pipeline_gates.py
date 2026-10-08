@@ -120,7 +120,7 @@ class TestValidateBranch:
 
     @pytest.fixture(scope="class")
     def result(self, dhf):
-        from medharness.services.git import validate_atomic_branch
+        from medharness.services.verify_changes import validate_atomic_branch
 
         return validate_atomic_branch(dhf, dhf / "DHF", "CR-001", since_ref="HEAD")
 

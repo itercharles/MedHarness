@@ -11,6 +11,14 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.57.3] — 2026-10-08
+
+### Changed
+
+- **`verify changes` lives in `services/verify_changes.py`**, beside the other gates' `verify_*.py`, instead of in
+  the git helpers. `git.py` is now only git: diffs, commit and push, and where a branch left its base. No behaviour
+  change.
+
 ## [0.57.2] — 2026-10-06
 
 ### Changed

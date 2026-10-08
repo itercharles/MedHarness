@@ -16,7 +16,7 @@ from unittest.mock import patch
 
 import pytest
 
-from medharness.services.git import judge_branch, validate_atomic_branch
+from medharness.services.verify_changes import judge_branch, validate_atomic_branch
 
 CHANGED = {"created": [], "updated": ["SRS-001"], "deleted": []}
 NOTHING = {"created": [], "updated": [], "deleted": []}
