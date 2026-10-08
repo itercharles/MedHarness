@@ -73,6 +73,6 @@ def test_a_type_without_a_description_is_left_out(tmp_path: Path) -> None:
 
 def test_a_project_that_describes_nothing_gets_no_empty_section(tmp_path: Path) -> None:
     dhf = _project(tmp_path)
-    for code in ("UC", "CRS", "SYS", "SRS", "SYSARCH"):
+    for code in ("UC", "CRS", "SYS", "SRS", "SYSARCH", "MODULE", "SWDD"):
         _set_description(dhf, code, None)
     assert SECTION not in _prompt(dhf)

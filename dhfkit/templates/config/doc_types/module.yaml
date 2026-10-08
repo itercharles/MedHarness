@@ -1,6 +1,9 @@
 code: MODULE
 role: software_module
 name: Software Module
+description: |-
+  Belongs here: one software unit, with its responsibility and interfaces. A module is described by what it owns, not by the requirement that created it.
+  Not here: a design decision inside the module (SWDD).
 prefix: MODULE-
 directory: 04_modules
 has_verification: false

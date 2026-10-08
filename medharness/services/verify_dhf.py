@@ -140,6 +140,19 @@ def _placeholders(adapter) -> list[dict]:
     return found
 
 
+def dangling_message(d: dict) -> str:
+    return f"{d['source']}.{d['field']} → {d['target']}: target does not exist"
+
+
+def mistyped_message(m: dict) -> str:
+    return f"{m['source']}.{m['field']} → {m['target']}: {m['found']} is not one of {', '.join(m['expected'])}"
+
+
+def cycle_message(cycle: list[str]) -> str:
+    path = " → ".join(cycle + [cycle[0]]) if len(cycle) > 1 else f"{cycle[0]} → itself"
+    return f"Traceability cycle: {path}"
+
+
 def _structural_messages(results: dict, strict: bool) -> tuple[list[str], list[str]]:
     """Split structural findings into what blocks and what merely advises."""
     errors: list[str] = []
@@ -151,18 +164,9 @@ def _structural_messages(results: dict, strict: bool) -> tuple[list[str], list[s
     trace = results.get("traceability") or {}
     for failure in (trace.get("required") or {}).get("failures", []):
         errors.append(f"{failure.get('id')}: {failure.get('issue')}")
-    for d in trace.get("dangling", []):
-        errors.append(
-            f"{d['source']}.{d['field']} → {d['target']}: target does not exist"
-        )
-    for m in trace.get("mistyped", []):
-        errors.append(
-            f"{m['source']}.{m['field']} → {m['target']}: {m['found']} is not one of {', '.join(m['expected'])}"
-        )
-    for cycle in trace.get("cycles", []):
-
-        path = " → ".join(cycle + [cycle[0]]) if len(cycle) > 1 else f"{cycle[0]} → itself"
-        errors.append(f"Traceability cycle: {path}")
+    errors.extend(dangling_message(d) for d in trace.get("dangling", []))
+    errors.extend(mistyped_message(m) for m in trace.get("mistyped", []))
+    errors.extend(cycle_message(c) for c in trace.get("cycles", []))
 
     # Uncovered items block only under --strict; anywhere else they
     # are a gap in design still to be written, not a broken reference.

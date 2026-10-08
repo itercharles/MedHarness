@@ -2,6 +2,9 @@ code: SWDD
 role: design_detail
 has_verification: true
 name: Software Detailed Design
+description: |-
+  Belongs here: a design decision inside one module that a developer given only the software requirement could get meaningfully wrong. It carries both `implements` (the SRS) and `module` (the MODULE).
+  Not here: visual-only changes, copy, configuration values or trivial fixes obvious from the requirement.
 prefix: SWDD-
 directory: 05_swdd
 properties:
