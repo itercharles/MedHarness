@@ -45,10 +45,8 @@ def ci_test_coverage_gate(
         return gate_result(
             "verify tests", False,
             "No JUnit evidence given — test results were not checked.",
-            errors=(
-                [f"{g['id']}: no verification_method declared" for g in missing]
-                if strict else
-                ["No JUnit files found — pass --junit."]
+            errors=["No JUnit files found — pass --junit."] + (
+                [f"{g['id']}: no verification_method declared" for g in missing] if strict else []
             ),
             warnings=(
                 [] if strict else

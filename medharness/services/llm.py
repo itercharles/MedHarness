@@ -194,6 +194,8 @@ def _run_openai_compatible(
                 tc_output = f"Error: {exc}"
             tool_results.append({"role": "tool", "tool_call_id": tc_id, "content": tc_output})
         messages.extend(tool_results)
+    else:
+        return 1, "\n".join([*output_parts, f"Stopped after {max_turns} turns without finishing."]), ""
 
     return 0, "\n".join(output_parts), ""
 
