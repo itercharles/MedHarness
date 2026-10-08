@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any, Iterable
 
 from dhfkit.junit_parser import read_test_evidence
+from medharness.services.traceability import link_targets
 
 
 def _type_of(item_id: str, by_prefix: dict[str, dict]) -> dict | None:
@@ -59,11 +60,14 @@ def traceability_matrix(
     items: list[dict],
     item_types: list[dict],
     doc_types: list[str],
+    config: Any,
 ) -> dict[str, Any]:
     """Every chain down the ordered *doc_types*, one row per chain.
 
     ``{"columns": doc_types, "rows": [{<code>: id | None, ..., "is_orphan",
-    "orphan_type", "is_complete"}]}``. An item no chain reaches from the top
+    "orphan_type", "is_complete"}]}``. A child belongs to a parent when it links
+    to it through a field its type declares for that parent's type, the same
+    definition `verify dhf` judges coverage by. An item no chain reaches from the top
     gets its own row, marked orphan at its level.
     """
     if not doc_types:
@@ -97,7 +101,7 @@ def traceability_matrix(
         current = chain[doc_types[level]]
         children = [
             child for child in by_code.get(doc_types[level + 1], [])
-            if current["id"] in child.get("all_linked_uids", [])
+            if current["id"] in link_targets(child, config, doc_types[level])
         ]
         if not children:
             chains.append(chain)
@@ -120,10 +124,11 @@ def traceability_report(
     items: list[dict],
     item_types: list[dict],
     doc_types: list[str],
+    config: Any,
     junit_paths: Iterable[Path] = (),
 ) -> dict[str, Any]:
     """The matrix, each row's verification status, and coverage by level."""
-    matrix = traceability_matrix(items, item_types, doc_types)
+    matrix = traceability_matrix(items, item_types, doc_types, config)
     evidence = verification_evidence(items, item_types, junit_paths)
     by_prefix = {t["prefix"]: t for t in item_types if t.get("prefix")}
     titles = {item["id"]: item.get("title", "") for item in items}

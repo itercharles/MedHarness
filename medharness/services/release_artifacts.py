@@ -25,7 +25,7 @@ def write_traceability_report(adapter, doc_types: tuple[str, ...], output: Path,
     from medharness.services.traceability_report import traceability_report
 
     matrix = traceability_report(adapter.list_items(), adapter.list_item_types(),
-                                 list(doc_types), [Path(p) for p in junit_paths])
+                                 list(doc_types), adapter.config, [Path(p) for p in junit_paths])
     output.parent.mkdir(parents=True, exist_ok=True)
 
     json_output = output.with_suffix(".json")
