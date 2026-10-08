@@ -74,9 +74,6 @@ def create_test_dhf() -> Path:
                 'doc_type_name': 'Customer Requirement',
             },
         },
-        'test_integration': {
-            'result_store': {'path': 'test-results/results.yaml'},
-        },
     }
 
     with open(config_dir / "global.yaml", 'w') as f:
@@ -123,7 +120,6 @@ def create_test_dhf() -> Path:
             'prefix': 'SYS-',
             'directory': '02_sys',
             'has_verification': True,
-            'verification_states': ['not_verified', 'verified', 'failed'],
             'properties': [
                 'id',
                 {'name': 'title', 'format': 'short_text', 'label': 'Title'},

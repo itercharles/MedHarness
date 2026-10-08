@@ -220,7 +220,8 @@ class TestRunClaude:
         assert session_id == "sid-1"
         args = mock_run.call_args[0][0]
         assert "claude" in args
-        assert "my prompt" in args
+        assert "my prompt" not in args
+        assert mock_run.call_args.kwargs["input"] == "my prompt"
         assert "--dangerously-skip-permissions" in args
         assert "--output-format" in args
         assert "json" in args

@@ -11,6 +11,15 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.58.5] — 2026-10-08
+
+### Fixed
+- `build plan`'s structural check reports a link to a type the field does not accept, as `verify dhf` does; a run it called ok no longer fails there afterwards.
+- The `claude` CLI receives the prompt on stdin instead of as an argument, so a prompt larger than Linux's 128 KiB argument limit no longer fails to start.
+
+### Removed
+- Configuration nothing read: `verifies`, `type` and `verification_states` on a doc type, `test_integration` in `global.yaml`, and `icon`/`color` on a lifecycle state (`item get` no longer lists them on a transition). Also `ItemStore.get_lifecycle_states`.
+
 ## [0.58.4] — 2026-10-08
 
 ### Fixed

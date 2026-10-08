@@ -41,7 +41,6 @@ def _make_test_dhf_with_flat_templates(tmpdir: str) -> tuple[Path, Path]:
                 "doc_type_name": "Test Spec",
             }
         },
-        "test_integration": {},
     }
     (config_dir / "global.yaml").write_text(yaml.dump(config))
 

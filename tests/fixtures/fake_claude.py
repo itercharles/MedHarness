@@ -1,6 +1,6 @@
 """A stand-in for the `claude` CLI, driven by a plan file.
 
-`build plan` and `build code` call `claude -p ... --output-format json <prompt>` and
+`build plan` and `build code` call `claude -p ... --output-format json` with the prompt on stdin and
 read `{"result", "session_id"}` back. This answers that call the way a model
 would, by running the shell commands the plan lists for the stage the prompt
 belongs to — so the real orchestration, prompts, validation, fix and review
@@ -16,7 +16,7 @@ import os
 import subprocess
 import sys
 
-prompt = sys.argv[-1]
+prompt = sys.stdin.read()
 stage = (
     "design_review" if "CR Design Review" in prompt
     else "code_review" if "CR Code Review" in prompt
@@ -29,7 +29,7 @@ stage = (
 log = os.environ["FAKE_CLAUDE_LOG"]
 seen = [json.loads(line) for line in open(log)] if os.path.exists(log) else []
 with open(log, "a") as f:
-    f.write(json.dumps({"stage": stage, "flags": sys.argv[1:-1], "prompt": prompt}) + "\n")
+    f.write(json.dumps({"stage": stage, "flags": sys.argv[1:], "prompt": prompt}) + "\n")
 
 steps = json.load(open(os.environ["FAKE_CLAUDE_PLAN"])).get(stage, [])
 step = steps[min(sum(1 for s in seen if s["stage"] == stage), len(steps) - 1)] if steps else {}
