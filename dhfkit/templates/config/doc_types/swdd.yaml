@@ -22,11 +22,3 @@ properties:
   target_types:
   - MODULE
   label: Module
-- name: verification_status
-  format: enum
-  values:
-  - not_verified
-  - verified
-  - failed
-  label: Verification Status
-  default: not_verified

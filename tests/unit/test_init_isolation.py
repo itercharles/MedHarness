@@ -133,10 +133,8 @@ class TestPrefixConsistency:
         scaffold_dhf(tmp_path)
         replace_placeholders(tmp_path, "Trial")
         dhf = tmp_path / "DHF"
-        # The loader resolves the doc-type code from the ID's first segment, so
-        # a multi-segment prefix must keep that segment as its code: code VER,
-        # prefix VER-SW-. get_item_type() is keyed on the full prefix, which is
-        # where split("-")[0] and rsplit("-", 1)[0] diverge.
+        # get_item_type() is keyed on the full prefix (VER-SW-), which is where
+        # split("-")[0] and rsplit("-", 1)[0] diverge.
         (dhf / "config" / "doc_types").mkdir(exist_ok=True)
         (dhf / "config" / "doc_types" / "versw.yaml").write_text(
             "code: VER\nname: Software Verification\nprefix: VER-SW-\n"

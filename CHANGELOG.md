@@ -11,6 +11,15 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.58.6] — 2026-10-08
+
+### Fixed
+- A doc type whose code differs from its ID prefix (code `HWREQ`, prefix `HWR-`) can be used: the loader, `item create|update` and the lifecycle took the type from the ID's first segment, so its items were refused as "Unknown doc type 'HWR'".
+- `build code` no longer tells the model that a `// @links:… manual` comment in a test file satisfies a requirement; nothing reads it. A requirement that cannot be tested takes `verification_method: Inspection | Analysis | Demonstration`.
+
+### Removed
+- The stored `verification_status` field on items, and the "Verification Status" block the specification templates printed from it. Verification is derived from JUnit evidence and never read from the item; nothing wrote the field any more, so what the documents showed was a hand-typed claim the traceability matrix refuses to believe. An item that still carries the field is refused as an unknown field.
+
 ## [0.58.5] — 2026-10-08
 
 ### Fixed

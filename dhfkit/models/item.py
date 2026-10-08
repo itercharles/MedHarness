@@ -26,10 +26,6 @@ class Item(BaseModel):
     reviewer: Optional[str] = Field(None, description="Reviewer name")
     review_date: Optional[date] = Field(None, description="Review date")
 
-    # Verification — accepts both TC-level (PASS/FAIL/PENDING) and
-    # requirement-level (verified/failed/not_verified) status strings.
-    verification_status: Optional[str] = Field(None, description="Verification status")
-
     # Dynamic attributes are handled by model_config['extra'] = 'allow'
     # This allows any field defined in project_config.yaml to be stored on the item
 

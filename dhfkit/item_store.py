@@ -209,9 +209,7 @@ class ItemStore:
         ]
         data['id'] = f"{prefix}{max(numbers, default=0) + 1:03d}"
 
-        doc_type_code = data['id'].split('-')[0]
-        dt_cfg = self._config.get_doc_type(doc_type_code)
-        if dt_cfg and dt_cfg.lifecycle:
+        if dt_cfg.lifecycle:
             # Find initial state
             for t in dt_cfg.lifecycle.get('transitions', []):
                 from_states = t.get('from_states', [])
@@ -244,15 +242,14 @@ class ItemStore:
 
         # If the item has a lifecycle and is currently in a stable state,
         # reset it to the initial state and clear approval fields.
-        doc_type_code = uid.split("-")[0]
-        dt = self._config.get_doc_type_by_prefix(doc_type_code + "-")
+        dt = self._config.doc_type_of(uid)
         if dt and dt.lifecycle:
             # Only a *stable* state resets: editing an approved item returns it
             # for re-approval, but editing one mid-lifecycle must not discard its
             # progress — that made a CR's closure criteria unsatisfiable.
             old_status = existing.model_dump().get("status")
             if old_status and is_stable(self._config, old_status):
-                initial = get_initial_state(self._config, doc_type_code)
+                initial = get_initial_state(self._config, dt.code)
                 approval_fields = [
                     "approved_by", "approved_date", "reviewer", "review_date",
                     "verified_by", "verified_date", "released_by", "released_date",
