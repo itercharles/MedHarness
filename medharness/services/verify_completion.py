@@ -81,19 +81,21 @@ def cr_closure_gate(
             enforce_test_evidence=True,
             item_ids=set(affected),
         )
-        gaps = verify_result["details"].get("missing_method", [])
-        unverified = verify_result["details"].get("unverified_test", [])
-        manual = verify_result["details"].get("manual_review_required", [])
+        gaps = verify_result.get("missing_method", [])
+        unverified = verify_result.get("unverified_test", [])
+        manual = verify_result.get("manual_review_required", [])
         if not verify_result["passed"]:
             verify_summary = verify_result["summary"]
 
     passed = not (incomplete_cr_fields or missing_items or gaps or unverified)
 
     parts: list[str] = []
+    warnings: list[str] = []
     if verifiable and not junit_paths:
         # Test evidence cannot be enforced against nothing, so a Test-verified
         # item passes on the strength of no evidence. Say so.
         parts.append("test evidence not checked (no JUnit given)")
+        warnings.append("test evidence not checked — pass --junit to check the Test-verified items")
     if incomplete_cr_fields:
         parts.append(f"{len(incomplete_cr_fields)} CR field(s) incomplete")
     if missing_items:
@@ -110,6 +112,7 @@ def cr_closure_gate(
         "passed": passed,
         "errors": _closure_errors(incomplete=incomplete_cr_fields, missing=missing_items,
                                   gaps=gaps, unverified=unverified),
+        "warnings": warnings,
         "cr_id": cr_id,
         "incomplete_cr_fields": incomplete_cr_fields,
         "missing_items": missing_items,
