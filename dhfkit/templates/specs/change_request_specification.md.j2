@@ -12,7 +12,7 @@
 |-------|-------|
 | Document ID | {{ doc_type_code }}-SPEC |
 | Version | {{ version }} |
-| Status | {{ 'RELEASED' if all_released else 'DRAFT' }} |
+| Status | {{ status }} |
 | Last Updated | {{ generation_date }} |
 | Total Change Requests | {{ items|length }} |
 
@@ -28,11 +28,8 @@ This document provides a comprehensive specification of all Change Requests (CRs
 
 ### By Status
 
-{% for status in ['planned', 'completed'] %}
-{% set status_items = items|selectattr('status', 'equalto', status)|list %}
-{% if status_items|length > 0 %}
-- **{{ status|upper }}**: {{ status_items|length }} change request(s)
-{% endif %}
+{% for state, state_items in items|selectattr('status')|groupby('status') %}
+- **{{ state|upper }}**: {{ state_items|length }} change request(s)
 {% endfor %}
 
 ### By Priority
@@ -83,37 +80,16 @@ This document provides a comprehensive specification of all Change Requests (CRs
 {{ item.implementation_notes }}
 {% endif %}
 
-{% if item.implementation_prs %}
-#### Implementation Pull Requests
-
-{{ item.implementation_prs }}
-{% endif %}
-
 {% if item.target_release %}
 #### Target Release
 
 {{ item.target_release }}
 {% endif %}
 
+{% if item.links %}
 #### Traceability
 
-{% if item.links_to and item.links_to|length > 0 %}
-**Links To:**
-{% for link in item.links_to %}
-- {{ link }}
-{% endfor %}
-{% endif %}
-
-{% if item.links_from and item.links_from|length > 0 %}
-**Referenced By:**
-{% for link in item.links_from %}
-- {{ link }}
-{% endfor %}
-{% endif %}
-
-{% if item.all_linked_uids and item.all_linked_uids|length > 0 %}
-**All Related Items:**
-{% for link in item.all_linked_uids %}
+{% for link in item.links %}
 - {{ link }}
 {% endfor %}
 {% endif %}

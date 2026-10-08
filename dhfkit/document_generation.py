@@ -51,6 +51,17 @@ class DocumentGenerator:
             return date_str.isoformat()[:10]
         return str(date_str)[:10]
 
+    @staticmethod
+    def _links(data: dict, link_fields) -> list[str]:
+        """The IDs an item links to, through the link fields its type declares."""
+        found: list[str] = []
+        for field in link_fields:
+            value = data.get(field)
+            for uid in ([value] if isinstance(value, str) else value or []):
+                if isinstance(uid, str) and uid and uid not in found:
+                    found.append(uid)
+        return found
+
     def render_markdown_spec(self, doc_type_code: str, doc_specs: dict, version: str) -> str:
         """A specification of one doc type's items, as Markdown, at ``version``.
 
@@ -67,9 +78,11 @@ class DocumentGenerator:
         # Match on the configured prefix, not the bare code: "SYSARCH-001"
         # startswith("SYS") is true.
         prefix = doc_type_config.prefix
+        link_fields = self.config.link_properties(doc_type_code)
         items = sorted(
-            (item.model_dump(by_alias=True, exclude_none=True)
-             for item in self.loader.load_all() if item.uid.startswith(prefix)),
+            ({**data, 'links': self._links(data, link_fields)}
+             for data in (item.model_dump(by_alias=True, exclude_none=True)
+                          for item in self.loader.load_all() if item.uid.startswith(prefix))),
             key=lambda x: x['id'],
         )
         template = self.jinja_env.get_template(spec_config.get('source') or spec_config['template'])
