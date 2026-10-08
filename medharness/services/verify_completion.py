@@ -8,46 +8,19 @@ from medharness.services.envelope import envelope_from
 from medharness.services.verify_tests import validate_verification_completeness
 
 
-def _check_cr_fields(cr_item: dict, cr_id: str) -> list[dict]:
-    """Check that the CR fields `build plan` records are populated.
+def _check_cr_fields(adapter, cr_item: dict | None, cr_id: str) -> list[dict]:
+    """The CR's own record: what its type's lifecycle requires of the move to `completed`.
 
-    Returns a list of issue dicts for each missing or invalid field.
+    `cr.yaml` says it, once, and `item transition ... completed` refuses on it; this asks the
+    same question after the fact, in CI, where a hand-edited status cannot skip it.
     """
-    issues: list[dict] = []
-    if not str(cr_item.get("implementation_notes") or "").strip():
-        issues.append({
-            "field": "implementation_notes",
-            "issue": (
-                f"CR {cr_id} — implementation_notes is absent; "
-                "`build plan` records the implementation plan."
-            ),
-        })
-    if not isinstance(cr_item.get("affected_risk_items"), list):
-        issues.append({
-            "field": "affected_risk_items",
-            "issue": (
-                f"CR {cr_id} — affected_risk_items is absent; "
-                "`build plan` records the risk impact ([] if none)."
-            ),
-        })
-    if not isinstance(cr_item.get("affected_items"), list):
-        issues.append({
-            "field": "affected_items",
-            "issue": (
-                f"CR {cr_id} — affected_items is absent; "
-                "`build plan` records the items it changed ([] if none)."
-            ),
-        })
-    triage = cr_item.get("triage_result")
-    if not isinstance(triage, dict) or triage.get("verdict") != "approved":
-        issues.append({
-            "field": "triage_result",
-            "issue": (
-                f"CR {cr_id} — triage_result.verdict is not 'approved'; "
-                "`build plan` records the triage decision."
-            ),
-        })
-    return issues
+    if cr_item is None:
+        return [{"field": "cr_item", "issue": f"CR {cr_id} is not in the DHF."}]
+    return [
+        {"field": c["field"],
+         "issue": f"CR {cr_id} — {c['name']}: `{c['field']}` is not recorded."}
+        for c in adapter.unmet_criteria(cr_id, "completed")
+    ]
 
 
 def _closure_errors(incomplete=(), missing=(), gaps=(), unverified=()) -> list[str]:
@@ -68,8 +41,7 @@ def cr_closure_gate(
     """Verify that a CR is closed: its record complete, its items present and verified.
 
     Checks:
-    1. The CR carries implementation_notes, affected_risk_items, affected_items
-       and an approved triage_result.
+    1. The CR meets the criteria its type puts on the move to ``completed`` (cr.yaml).
     2. Every item in ``affected_items`` exists in the DHF.
     3. Those of a verifiable type have ``verification_method`` set.
     4. Those with ``Test`` have passing JUnit evidence. Without JUnit paths the
@@ -82,8 +54,9 @@ def cr_closure_gate(
     from dhfkit.store import open_store
 
     adapter = open_store(dhf_path)
-    cr_item = adapter.get_item(cr_id) or {}
-    incomplete_cr_fields = _check_cr_fields(cr_item, cr_id)
+    cr_item = adapter.get_item(cr_id)
+    incomplete_cr_fields = _check_cr_fields(adapter, cr_item, cr_id)
+    cr_item = cr_item or {}
 
     verifiable_types = set(adapter.config.requirement_types())
     items_by_id = {it["id"]: it for it in adapter.list_items()}

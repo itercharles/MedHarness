@@ -11,6 +11,21 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.58.0] — 2026-10-08
+
+### Changed
+
+- **What closes a CR is defined once, in `cr.yaml`.** The fields a CR needs before it is `completed` were listed
+  three times: as criteria on the transition in `cr.yaml`, in `verify completion`, and (the triage decision) in
+  `build plan`, and they disagreed. `verify completion` now asks the CR's type which criteria the move to
+  `completed` has and evaluates those, whatever state the CR is in, so a project that changes them in its own
+  `cr.yaml` changes the check, and `item transition ... completed` and `verify completion` can no longer differ.
+  New: `unmet_criteria(item_id, to_state)` on the store.
+- **`verify completion` no longer requires `triage_result.verdict` to be `approved`**, only that a triage result is
+  recorded, as `cr.yaml` always said. `build plan` still requires an approved verdict of the plan it writes.
+  A CR that does not exist is reported as that, not as four missing fields.
+- The closure docs no longer say SOUP items need a verification method (not since 0.56.1).
+
 ## [0.57.5] — 2026-10-08
 
 ### Fixed

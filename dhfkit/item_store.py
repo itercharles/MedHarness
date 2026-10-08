@@ -308,6 +308,12 @@ class ItemStore:
             return []
         return get_available_transitions(self._config, item)
 
+    def unmet_criteria(self, item_id: str, to_state: str) -> List[Dict]:
+        """The required criteria of the transition into *to_state* the item does not meet."""
+        from dhfkit.lifecycle import unmet_criteria
+        item = self.get_item(item_id)
+        return unmet_criteria(self._config, item, to_state) if item is not None else []
+
     def execute_transition(self, item_id: str, to_state: str) -> Dict:
         """Execute a lifecycle state transition for an item."""
         from dhfkit.lifecycle import execute_transition

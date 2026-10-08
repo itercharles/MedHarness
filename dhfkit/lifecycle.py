@@ -136,6 +136,28 @@ def get_available_transitions(
     return available
 
 
+def unmet_criteria(config: ProjectConfig, item: Dict[str, Any], to_state: str) -> List[Dict[str, Any]]:
+    """The required criteria of the transition into *to_state* that *item* does not meet.
+
+    Whatever state the item is in now: a gate that runs after the transition, on `main`, asks
+    the same question the transition itself asked. Each is ``{id, name, field}``.
+    """
+    dt = config.doc_type_of(item["id"])
+    unmet: Dict[str, Dict[str, Any]] = {}
+    for transition in ((dt.lifecycle if dt else None) or {}).get("transitions", []):
+        if transition.get("to_state") != to_state:
+            continue
+        criteria = transition.get("criteria", [])
+        _, blocking = _validate_criteria(item, criteria)
+        for criterion in criteria:
+            if criterion.get("id") in blocking:
+                unmet.setdefault(criterion["id"], {
+                    "id": criterion["id"], "name": criterion.get("name", criterion["id"]),
+                    "field": criterion.get("field", ""),
+                })
+    return list(unmet.values())
+
+
 def execute_transition(
     config: ProjectConfig,
     get_item_fn,
