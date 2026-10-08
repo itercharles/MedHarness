@@ -60,6 +60,9 @@ class StubDHFAdapter:
             uid = self._next_id(prefix)
             data = {**data, "id": uid}
         self._items[uid] = dict(data)
+        if "type" not in self._items[uid]:
+            doc_type = self.config.doc_type_of(uid)
+            self._items[uid]["type"] = doc_type.code if doc_type else uid.split("-")[0]
         _add_all_linked_uids(self._items[uid])
         return self._items[uid]
 

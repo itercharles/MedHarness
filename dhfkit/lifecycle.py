@@ -82,8 +82,7 @@ def get_available_transitions(
     item: Dict[str, Any],
 ) -> List[Dict[str, Any]]:
     """Return the list of allowed transitions from the item's current state."""
-    doc_type_code = item["id"].split("-")[0]
-    dt = config.get_doc_type_by_prefix(doc_type_code + "-")
+    dt = config.doc_type_of(item["id"])
     if not dt or not dt.lifecycle:
         return []
 

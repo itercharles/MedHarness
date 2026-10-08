@@ -1,6 +1,6 @@
-from __future__ import annotations
-
 """Prompt loading and assembly helpers for CR generation flows."""
+
+from __future__ import annotations
 
 import importlib.resources
 from pathlib import Path
@@ -107,9 +107,8 @@ def _render_plan_context(ctx: dict) -> str:
     if ctx["scope"] == "whole_dhf" and items:
         counts: dict[str, int] = {}
         for item in items:
-            prefix = item["id"].rsplit("-", 1)[0]
-            counts[prefix] = counts.get(prefix, 0) + 1
-        type_summary = "  ".join(f"{p}: {n}" for p, n in sorted(counts.items()))
+            counts[item["type"]] = counts.get(item["type"], 0) + 1
+        type_summary = "  ".join(f"{code}: {n}" for code, n in sorted(counts.items()))
         lines.append(f"### Item Type Summary\n\n{type_summary}\n")
 
     by_role: dict[str, list[str]] = {}

@@ -34,9 +34,3 @@ properties:
   - Planned
   - Implemented
   label: Implementation Status
-- name: verification_status
-  format: select
-  options:
-  - Not Verified
-  - Verified
-  label: Verification Status

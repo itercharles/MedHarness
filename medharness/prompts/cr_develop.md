@@ -64,8 +64,12 @@ this run to commit.
 
    Use the `verification_criteria` field on each requirement item as the
    pass/fail condition for the test. If a requirement genuinely cannot be
-   automated, add a `// @links:SRS-xxx manual` comment in the nearest test
-   file and note it in `implementation_notes`.
+   automated, set its `verification_method` to Inspection, Analysis or
+   Demonstration (`medharness --dhf DHF item update <ID> --data
+   '{"verification_method": ["Inspection"]}'`) and say why in
+   `implementation_notes`. A comment in a test file is evidence of nothing:
+   only a passing test that claims the ID, or a method that needs no test,
+   satisfies `verify completion`.
 
 5. **Reconcile implementation against the plan and DHF items.**
 

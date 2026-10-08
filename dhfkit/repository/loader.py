@@ -124,13 +124,12 @@ class ItemLoader:
         if not item_id:
             raise ValidationError(f"{file_path.name}: Missing required 'id' field")
 
-        # Resolve doc-type code (first segment of the ID, e.g. "SYS" from "SYS-001")
-        doc_type_code = item_id.split('-')[0]
-        doc_type = self.project_config.get_doc_type(doc_type_code)
+        doc_type = self.project_config.doc_type_of(item_id)
         if not doc_type:
             raise ValidationError(
-                f"{file_path.name}: Unknown doc type '{doc_type_code}' for ID '{item_id}'"
+                f"{file_path.name}: No doc type has a prefix that '{item_id}' starts with"
             )
+        doc_type_code = doc_type.code
 
         # Build allowed / required field sets from the property definitions
         allowed_fields = set(_SYSTEM_FIELDS)
@@ -180,7 +179,6 @@ class ItemLoader:
         Covers:
           - {state}_by / {state}_date for every transition target state
           - review_by / review_date for the in_review state
-          - verification_status when the doc type has has_verification: true
           - field names referenced by field_not_empty criteria
         """
         fields: set = set()
@@ -202,9 +200,6 @@ class ItemLoader:
                         field_name = criterion.get('field')
                         if field_name:
                             fields.add(field_name)
-
-        if doc_type.has_verification:
-            fields.add('verification_status')
 
         return fields
 
