@@ -11,6 +11,14 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.57.4] — 2026-10-08
+
+### Fixed
+
+- **`item create|update` reads the DHF once to check its links, not once per link.** The existence check added
+  in 0.53.0 loaded and validated every item for each link target, so on a DHF of about a thousand items an
+  update listing 40 `reviewed_items` took 6.6 s (now 0.5 s), and `build plan` makes many such calls.
+
 ## [0.57.3] — 2026-10-08
 
 ### Changed

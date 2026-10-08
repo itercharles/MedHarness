@@ -144,6 +144,7 @@ class ItemStore:
         doc_type = self._config.doc_type_of(uid) if uid else None
         declared = tuple(self._config.link_properties(doc_type.code)) if doc_type else ()
         errors = []
+        existing: set[str] | None = None
         for field in declared:
             val = data.get(field)
             if not val:
@@ -170,9 +171,11 @@ class ItemStore:
                         f"{field}: '{uid}' has unknown prefix '{prefix}' "
                         f"(known: {sorted(known_prefixes)})"
                     )
-                elif (field not in _HISTORICAL_LINK_FIELDS and (written is None or field in written)
-                      and self._adapter.load_by_uid(uid) is None):
-                    errors.append(f"{field}: '{uid}' does not exist; create it first, or leave it out")
+                elif field not in _HISTORICAL_LINK_FIELDS and (written is None or field in written):
+                    if existing is None:
+                        existing = {item.uid for item in self._adapter.load_all()}
+                    if uid not in existing:
+                        errors.append(f"{field}: '{uid}' does not exist; create it first, or leave it out")
         errors += self._link_type_errors(data)
         errors += self._status_errors(data)
         if errors:
