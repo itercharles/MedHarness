@@ -226,7 +226,7 @@ class TestBuildReleaseBaseline:
                 tmp_path / "DHF", "1.0.0", [], ["CR-001"], tmp_path / "out",
             )
         assert result["outcome"] == "completed_with_errors"
-        assert len(result["gate_violations"]) == 1
+        assert len(result["errors"]) == 1 and "CR-001" in result["errors"][0]
 
     def test_gate_failure_response_has_consistent_shape(self, tmp_path):
         with patch("dhfkit.item_store.ItemStore.get_item", return_value=_cr_item("CR-001", "cancelled")), \

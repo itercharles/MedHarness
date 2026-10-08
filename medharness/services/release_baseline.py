@@ -190,6 +190,23 @@ def _generate_release_notes(
 # Main entrypoint
 # ---------------------------------------------------------------------------
 
+def _refused(version: str, cr_ids: list[str], errors: list[str],
+             known_anomalies: list[dict] = ()) -> dict:
+    """The baseline of a release that failed a gate before anything was written."""
+    return {
+        "outcome": "completed_with_errors",
+        "version": version,
+        "cr_ids": sorted(cr_ids),
+        "known_anomalies": list(known_anomalies),
+        "release_notes": "",
+        "artifacts": [],
+        "soup_count": 0,
+        "manifest_packages_count": 0,
+        "errors": errors,
+        "warnings": [],
+    }
+
+
 def build_release_baseline(
     dhf: Path,
     version: str,
@@ -211,31 +228,13 @@ def build_release_baseline(
         errors.append(f"{v['cr']}: {v['issue']}")
 
     if gate_violations:
-        return {
-            "outcome": "completed_with_errors",
-            "version": version,
-            "cr_ids": sorted(cr_ids),
-            "gate_violations": gate_violations,
-            "artifacts": [],
-            "soup_count": 0,
-            "manifest_packages_count": 0,
-            "errors": errors,
-        }
+        return _refused(version, cr_ids, errors)
 
     # Gate: unresolved defects must each carry an assessment (§9.7)
     known_anomalies, anomaly_errors = _collect_known_anomalies(dhf)
     errors.extend(anomaly_errors)
     if anomaly_errors:
-        return {
-            "outcome": "completed_with_errors",
-            "version": version,
-            "cr_ids": sorted(cr_ids),
-            "known_anomalies": known_anomalies,
-            "artifacts": [],
-            "soup_count": 0,
-            "manifest_packages_count": 0,
-            "errors": errors,
-        }
+        return _refused(version, cr_ids, errors, known_anomalies)
 
     # Collect BOM — propagate any manifest errors so an incomplete BOM fails loudly
     bom, bom_errors = _collect_bom(dhf, manifest_paths)
@@ -384,8 +383,7 @@ def build_release(
     for cr_id in baseline["cr_ids"]:
         closure = cr_closure_gate(cr_id, dhf, junit_paths=list(junit_paths))
         errors += [f"{cr_id}: {e}" for e in closure["errors"]]
-        if "test evidence not checked" in closure["summary"]:
-            warnings.append(f"{cr_id}: test evidence not checked — pass --junit to check the Test-verified items")
+        warnings += [f"{cr_id}: {w}" for w in closure["warnings"]]
     rel_uid: Optional[str] = None
     if write and not errors:
         try:

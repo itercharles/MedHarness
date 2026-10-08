@@ -37,7 +37,7 @@ class TestScopeIsHonoured:
         dhf = _dhf_with_two_requirements(tmp_path)
 
         unscoped = validate_verification_completeness(dhf, req_types=("SRS",))
-        assert any(g["id"] == "SRS-001" for g in unscoped["details"]["missing_method"]), (
+        assert any(g["id"] == "SRS-001" for g in unscoped["missing_method"]), (
             "the starter SRS-001 declares no verification_method; if it stops "
             "being a gap this test proves nothing"
         )
@@ -46,7 +46,7 @@ class TestScopeIsHonoured:
             dhf, req_types=("SRS",), item_ids={"SRS-002"},
         )
         assert not any(g["id"] == "SRS-001"
-                       for g in scoped["details"]["missing_method"]), (
+                       for g in scoped["missing_method"]), (
             "SRS-001 is outside the given scope and was still reported"
         )
 
@@ -61,19 +61,19 @@ class TestScopeIsHonoured:
             dhf, req_types=("SRS",), item_ids={"SRS-002"},
         )
         assert scoped["passed"] is False
-        assert [g["id"] for g in scoped["details"]["missing_method"]] == ["SRS-002"]
+        assert [g["id"] for g in scoped["missing_method"]] == ["SRS-002"]
 
     def test_no_scope_still_scans_everything(self, tmp_path: Path) -> None:
         """`verify tests` is a DHF-wide gate and must keep seeing the whole DHF."""
         dhf = _dhf_with_two_requirements(tmp_path)
         result = validate_verification_completeness(dhf, req_types=("SRS",))
-        assert any(g["id"] == "SRS-001" for g in result["details"]["missing_method"])
+        assert any(g["id"] == "SRS-001" for g in result["missing_method"])
 
     def test_an_empty_scope_reports_nothing(self, tmp_path: Path) -> None:
         """An empty set is a known-empty scope, not "unknown, scan it all"."""
         dhf = _dhf_with_two_requirements(tmp_path)
         result = validate_verification_completeness(dhf, req_types=("SRS",), item_ids=set())
-        assert result["details"]["missing_method"] == []
+        assert result["missing_method"] == []
 
 
 class TestTheGateUsesTheScope:

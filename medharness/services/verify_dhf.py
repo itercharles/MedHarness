@@ -23,7 +23,6 @@ def ci_structural_gate(
 
     adapter = open_store(dhf_path)
 
-    passed = True
     results: dict[str, Any] = {
         "coverage_gaps": [],
         "verification_gaps": [],
@@ -31,13 +30,11 @@ def ci_structural_gate(
 
     r = adapter.validate_schema()
     results["schema"] = {
-        "passed": r.get("valid", True),
-        "valid": r.get("valid", True),
-        "item_count": r.get("item_count", 0),
-        "errors": r.get("errors", []),
+        "passed": r["valid"],
+        "valid": r["valid"],
+        "item_count": r["item_count"],
+        "errors": r["errors"],
     }
-    if not r.get("valid", True):
-        passed = False
 
     try:
         tr = analyse(adapter)
@@ -46,37 +43,16 @@ def ci_structural_gate(
         # pass indistinguishable from a sound one. Say it could not run.
         tr = {}
         results["traceability_error"] = f"traceability could not be checked: {exc}"
-        passed = False
-    required = tr.get("required", {})
     coverage_list = tr.get("coverage", [])
-    dangling = tr.get("dangling", [])
-    cycles = tr.get("cycles", [])
-    mistyped = tr.get("mistyped", [])
     results["traceability"] = {
-        "passed": required.get("passed", True)
-        and not dangling
-        and not mistyped
-        and not cycles
-        and all(c.get("passed", True) for c in coverage_list),
-        "required": required,
-        "dangling": dangling,
-        "mistyped": mistyped,
-        "cycles": cycles,
+        "passed": tr.get("passed", True),
+        "required": tr.get("required", {}),
+        "dangling": tr.get("dangling", []),
+        "mistyped": tr.get("mistyped", []),
+        "cycles": tr.get("cycles", []),
         "coverage": coverage_list,
         "summary": tr.get("summary", ""),
     }
-    if not required.get("passed", True):
-        passed = False
-    # A link that resolves to nothing is always an error — unlike an uncovered
-    # item, it is not a gap in the design but a broken reference.
-    if dangling:
-        passed = False
-    # Same class as a dangling link: a broken reference, not a design gap.
-    if cycles or mistyped:
-        passed = False
-    for c in coverage_list:
-        if not c.get("passed", True) and strict:
-            passed = False
 
     # Structured extracts for machine consumers
     results["coverage_gaps"] = [
@@ -95,8 +71,8 @@ def ci_structural_gate(
     verification_gaps = []
     try:
         for item in adapter.list_items():
-            uid = item.get("id", "")
-            type_code = uid.split("-")[0] if "-" in uid else ""
+            uid = item["id"]
+            type_code = item["type"]
             if type_code in _REQUIREMENTS:
                 vc = str(item.get("verification_criteria") or "").strip()
                 if not vc:
@@ -123,13 +99,8 @@ def ci_structural_gate(
 
     errors, warnings = _structural_messages(results, strict)
     schema_n = results.get("schema", {}).get("item_count", 0)
-    # `errors` is what made the gate fail (docs/interface.md), so a gate cannot
-    # carry one and still pass. `passed` was computed before the messages were
-    # built, so an error added there — a check that could not run, say — left
-    # the two disagreeing.
-    passed = passed and not errors
     return gate_result(
-        "verify dhf", passed,
+        "verify dhf", not errors,
         f"{schema_n} item(s) checked; {len(errors)} error(s), {len(warnings)} warning(s).",
         errors=errors, warnings=warnings, results=results,
     )

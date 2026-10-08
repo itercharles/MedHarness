@@ -7,7 +7,7 @@ from typing import Any, Iterable
 
 from dhfkit.junit_parser import read_test_evidence
 from dhfkit.testing_points import parse_testing_points
-from medharness.services.envelope import envelope_from, gate_result
+from medharness.services.envelope import gate_result
 
 
 def ci_test_coverage_gate(
@@ -36,8 +36,7 @@ def ci_test_coverage_gate(
         methods = validate_verification_completeness(
             dhf_path, [], enforce_test_evidence=False,
         )
-        md = methods.get("details", methods)
-        missing = md.get("missing_method", [])
+        missing = methods["missing_method"]
         # Missing evidence still fails: this gate's job is to confirm the tests
         # ran and passed, and it cannot. The method check is extra, not a
         # replacement — reporting FAIL on stderr while exiting 0 was the bug
@@ -55,7 +54,7 @@ def ci_test_coverage_gate(
             results=[],
             missing_method=missing,
             unverified_test=[],
-            manual_review_required=md.get("manual_review_required", []),
+            manual_review_required=methods["manual_review_required"],
         )
 
     evidence = read_test_evidence(junit_paths)
@@ -70,7 +69,6 @@ def ci_test_coverage_gate(
     adapter = open_store(dhf_path)
     all_items = adapter.list_items()
 
-    passed = True
     results: list[dict] = []
     testing_points: list[dict] = []
 
@@ -88,7 +86,6 @@ def ci_test_coverage_gate(
             points = parse_testing_points(testing_text)
             uncovered_points = [pt for pt in points if (req_id, pt) not in covered_pairs]
             if uncovered_points:
-                passed = False
                 testing_points.append({
                     "req_id": req_id,
                     "total": len(points),
@@ -110,12 +107,9 @@ def ci_test_coverage_gate(
             else:
                 uncovered.append(req_id)
         total = len(req_items)
-        type_passed = covered_count == total
-        if not type_passed:
-            passed = False
         results.append({
             "type": rt,
-            "passed": type_passed,
+            "passed": covered_count == total,
             "covered": covered_count,
             "total": total,
             "uncovered": uncovered,
@@ -141,18 +135,14 @@ def ci_test_coverage_gate(
         dhf_path, list(junit_paths),
         enforce_test_evidence=bool(junit_paths),
     )
-    md = methods.get("details", methods)
     errors += [
-        f"{gap['id']}: no verification_method declared"
-        for gap in md.get("missing_method", [])
-    ] + [
         f"{gap['id']}: declares Test but no passing case is linked"
-        for gap in md.get("unverified_test", [])
+        for gap in methods["unverified_test"]
     ]
     warnings += [
         f"{gap['id']}: verified by {', '.join(gap.get('methods', []))} — needs a "
         f"human sign-off record"
-        for gap in md.get("manual_review_required", [])
+        for gap in methods["manual_review_required"]
     ]
     if not junit_paths:
         warnings.append(
@@ -173,32 +163,25 @@ def ci_test_coverage_gate(
     (errors if strict else warnings).extend(
         f"{u['id']}: linked by {', '.join(repr(n) for n in u['tests'][:3])} but not in the DHF" for u in unknown_links
     )
-    if strict and unknown_links:
-        passed = False
     # A requirement with no declared method is a §5.7 gap, but a project that
     # adopted this before the field existed has one on every item. It warns
     # until asked to block, the call `verify dhf` makes for coverage gaps.
+    missing_messages = [f"{gap['id']}: no verification_method declared" for gap in methods["missing_method"]]
     if strict:
-        passed = passed and not md.get("missing_method")
+        errors += missing_messages
     else:
-        warnings += [
-            f"{gap['id']}: no verification_method declared — pass "
-            f"--strict to block on this"
-            for gap in md.get("missing_method", [])
-        ]
-        errors = [e for e in errors if "no verification_method declared" not in e]
-    passed = passed and not md.get("unverified_test")
+        warnings += [f"{m} — pass --strict to block on this" for m in missing_messages]
 
     return gate_result(
-        "verify tests", passed,
+        "verify tests", not errors,
         f"{covered}/{total} requirement(s) covered by passing tests.",
         errors=errors, warnings=warnings,
         results=results,
         testing_points=testing_points,
         unknown_links=unknown_links,
-        missing_method=md.get("missing_method", []),
-        unverified_test=md.get("unverified_test", []),
-        manual_review_required=md.get("manual_review_required", []),
+        missing_method=methods["missing_method"],
+        unverified_test=methods["unverified_test"],
+        manual_review_required=methods["manual_review_required"],
     )
 
 
@@ -257,7 +240,8 @@ def validate_verification_completeness(
             them; scanning the whole DHF charges one CR with every pre-existing
             requirement that never declared a method.
 
-    Returns:
+    Returns a plain dict, not a gate envelope: callers fold it into their own.
+
         {
           "passed": bool,
           "missing_method": [{"id": str, "type": str, "title": str}],
@@ -331,18 +315,10 @@ def validate_verification_completeness(
         parts.append(f"{len(manual_review_required)} require manual sign-off")
     summary = ("PASS" if passed else "FAIL") + " — " + ", ".join(parts) if parts else "All verification checks passed."
 
-    return envelope_from("verify verification", {
+    return {
         "passed": passed,
-        "errors": (
-            [f"{g['id']}: no verification_method declared" for g in missing_method]
-            + [f"{g['id']}: declares Test but has no passing evidence" for g in unverified_test]
-        ),
-        "warnings": [
-            f"{g['id']}: verified by {', '.join(g['methods'])} — needs manual review"
-            for g in manual_review_required
-        ],
         "missing_method": missing_method,
         "unverified_test": unverified_test,
         "manual_review_required": manual_review_required,
         "summary": summary,
-    })
+    }

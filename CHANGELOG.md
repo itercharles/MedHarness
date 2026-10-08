@@ -11,6 +11,13 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.58.2] — 2026-10-08
+
+### Changed
+- `verify dhf`, `verify tests` and `verify soup` decide `passed` from the errors they report, not from a second tally kept beside them, so the two cannot disagree. `verify soup` assembles its answer in one place; its `drift` block no longer carries `blocking`, and the unread `error` key is gone (an outage is in `errors`/`warnings`).
+- `verify completion` reports "test evidence not checked" as a warning of its own, and `build release` repeats it from there instead of matching the summary text.
+- `build release` answers with one shape whichever gate refused it.
+
 ## [0.58.1] — 2026-10-08
 
 ### Removed

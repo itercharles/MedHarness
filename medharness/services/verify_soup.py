@@ -153,7 +153,6 @@ def soup_gate(
           "accepted": [{"soup_id", "name", "version", "vuln_id", "rationale"}],
           "skipped": [{"soup_id", "reason"}],
           "acceptance_problems": [str],
-          "error": str | None,
           "summary": str,
         }
     """
@@ -162,10 +161,8 @@ def soup_gate(
     adapter = open_store(dhf_path)
     all_items = adapter.list_items()
     soup_items = [it for it in all_items if it.get("type") == "SOUP"]
-    drift = _soup_drift(dhf_path, soup_items, manifest_paths, strict)
-    drift_blocks = strict and bool(
-        drift["drift"]["undocumented"] or drift["drift"]["misversioned"]
-    )
+    drift = _soup_drift(dhf_path, soup_items, manifest_paths)
+    drift_blocks = strict and bool(drift["undocumented"] or drift["misversioned"])
 
     checkable: list[dict] = []
     skipped: list[dict] = []
@@ -189,40 +186,40 @@ def soup_gate(
             "ecosystem": ecosystem, "accepted": accepted,
         })
 
-    # Assembled once: the gate returns from three places and two of them used
-    # to forget, so the JSON said `warnings: []` beside warnings in the log.
-    found = drift["drift"]
-    base_errors = _drift_messages(found) if drift_blocks else []
+    base_errors = _drift_messages(drift) if drift_blocks else []
     base_warnings = (
         list(acceptance_problems)
         + [f"{item['soup_id']} was not checked: {item['reason']}" for item in skipped]
-        + ([] if drift_blocks else _drift_messages(found))
+        + ([] if drift_blocks else _drift_messages(drift))
         + [f"{soup_id} has no purpose recorded — §8.1.2 asks why the component "
-           f"is used." for soup_id in found.get("undescribed", [])]
+           f"is used." for soup_id in drift["undescribed"]]
         + [f"{soup_id} is in the register but no manifest resolves it."
-           for soup_id in found.get("no_longer_shipped", [])]
-        + list(found.get("errors", []))
+           for soup_id in drift["no_longer_shipped"]]
+        + list(drift["errors"])
     )
+
+    def outcome(passed: bool, summary: str, *, errors: list[str], warnings: list[str],
+               checked: int = 0, vulnerable: list[dict] = (), accepted: list[dict] = ()) -> dict:
+        return envelope_from("verify soup", {
+            "passed": passed and not drift_blocks,
+            "errors": base_errors + errors,
+            "warnings": base_warnings + warnings,
+            "soup_count": len(soup_items),
+            "checked_count": checked,
+            "vulnerable": list(vulnerable),
+            "accepted": list(accepted),
+            "skipped": skipped,
+            "acceptance_problems": acceptance_problems,
+            "drift": drift,
+            "summary": summary,
+        })
 
     if not checkable:
         n_soup = len(soup_items)
-        return envelope_from("verify soup", {
-            "passed": not drift_blocks,
-            "errors": base_errors,
-            "warnings": base_warnings,
-            "soup_count": n_soup,
-            "checked_count": 0,
-            "vulnerable": [],
-            "accepted": [],
-            "skipped": skipped,
-            "acceptance_problems": acceptance_problems,
-            **drift,
-            "error": None,
-            "summary": (
-                f"{n_soup} SOUP item(s) found; none checkable "
-                "(add 'ecosystem' field to enable vulnerability scanning)."
-            ) if n_soup else "No SOUP items in DHF.",
-        })
+        return outcome(True, (
+            f"{n_soup} SOUP item(s) found; none checkable "
+            "(add 'ecosystem' field to enable vulnerability scanning)."
+        ) if n_soup else "No SOUP items in DHF.", errors=[], warnings=[])
 
     queries = [
         {"package": {"name": c["name"], "ecosystem": c["ecosystem"]}, "version": c["version"]}
@@ -233,28 +230,13 @@ def soup_gate(
     except OSError as exc:
         tolerated = offline_mode == "warn"
         outage = f"osv.dev unreachable: {exc}"
-        return envelope_from("verify soup", {
-            "passed": tolerated and not drift_blocks,
-            # The outage belongs in the envelope, not a private key: a caller
-            # that handles `errors`/`warnings` for every gate handles this too.
-            "errors": base_errors + ([] if tolerated else [outage]),
-            "warnings": base_warnings + ([outage] if tolerated else []),
-            "soup_count": len(soup_items),
-            "checked_count": 0,
-            "vulnerable": [],
-            "accepted": [],
-            "skipped": skipped,
-            "acceptance_problems": acceptance_problems,
-            **drift,
-            "error": f"osv.dev unreachable: {exc}",
-            "summary": (
-                f"SOUP vulnerability scan skipped — osv.dev unreachable ({exc}). "
-                "Gate tolerated the outage (--offline-mode warn); scan SOUP through "
-                "your offline process to keep IEC 62304 §8.1.2 evidence complete."
-                if tolerated
-                else f"SOUP vulnerability check failed: {exc}"
-            ),
-        })
+        return outcome(tolerated, (
+            f"SOUP vulnerability scan skipped — osv.dev unreachable ({exc}). "
+            "Gate tolerated the outage (--offline-mode warn); scan SOUP through "
+            "your offline process to keep IEC 62304 §8.1.2 evidence complete."
+            if tolerated
+            else f"SOUP vulnerability check failed: {exc}"
+        ), errors=[] if tolerated else [outage], warnings=[outage] if tolerated else [])
 
     vulnerable: list[dict] = []
     accepted_found: list[dict] = []
@@ -296,38 +278,29 @@ def soup_gate(
     ]
     if accepted_found:
         summary_parts.append(f"{len(accepted_found)} documented as accepted.")
-    return envelope_from("verify soup", {
-        "passed": passed and not drift_blocks,
+    return outcome(
+        passed, " ".join(summary_parts), checked=len(checkable),
+        vulnerable=vulnerable, accepted=accepted_found,
         # Phrased exactly as a reader needs it — severity and a URL fallback
         # included — so the CLI renders the envelope instead of rebuilding the
-        # same line beside it. Two renderers printed every vulnerability twice.
-        "errors": [
+        # same line beside it.
+        errors=[
             f"{item['soup_id']} ({item['name']}@{item['version']}): {v['id']} — "
             + (f"[{v['severity']}] " if v.get("severity") else "")
             + (v.get("summary") or v.get("url") or "see osv.dev")
             for item in vulnerable for v in item["vulns"]
-        ] + base_errors,
-        "warnings": base_warnings + [
+        ],
+        warnings=[
             f"{a['soup_id']}: {a['vuln_id']} accepted — {a['rationale']}"
             for a in accepted_found
         ],
-        "soup_count": len(soup_items),
-        "checked_count": len(checkable),
-        "vulnerable": vulnerable,
-        "accepted": accepted_found,
-        "skipped": skipped,
-        "acceptance_problems": acceptance_problems,
-        **drift,
-        "error": None,
-        "summary": " ".join(summary_parts),
-    })
+    )
 
 
 def _soup_drift(
     dhf_path: Path,
     soup_items: list[dict],
     manifest_paths: list[Path] | None,
-    strict: bool,
 ) -> dict:
     """The register against the manifests, read-only.
 
@@ -344,23 +317,20 @@ def _soup_drift(
     )
     diff = diff_against_dhf(packages, soup_items)
     return {
-        "drift": {
-            "manifests_read": len(packages),
-            "undocumented": [p["name"] for p in diff["to_create"]],
-            "misversioned": [
-                f"{e['item']['id']} records {e['old_version']}, manifests resolve "
-                f"{e['pkg']['version']}"
-                for e in diff["to_update"]
-            ],
-            "no_longer_shipped": [it["id"] for it in diff["orphans"]],
-            # An entry with no purpose satisfies "is it documented" and answers
-            # nothing §8.1.2 asks. `build soup` leaves it empty rather than filling
-            # in "Dependency from PyPI", so the gap is visible instead of
-            # papered over.
-            "undescribed": sorted(
-                it["id"] for it in soup_items if not str(it.get("purpose") or "").strip()
-            ),
-            "blocking": strict,
-            "errors": errors,
-        }
+        "manifests_read": len(packages),
+        "undocumented": [p["name"] for p in diff["to_create"]],
+        "misversioned": [
+            f"{e['item']['id']} records {e['old_version']}, manifests resolve "
+            f"{e['pkg']['version']}"
+            for e in diff["to_update"]
+        ],
+        "no_longer_shipped": [it["id"] for it in diff["orphans"]],
+        # An entry with no purpose satisfies "is it documented" and answers
+        # nothing §8.1.2 asks. `build soup` leaves it empty rather than filling
+        # in "Dependency from PyPI", so the gap is visible instead of
+        # papered over.
+        "undescribed": sorted(
+            it["id"] for it in soup_items if not str(it.get("purpose") or "").strip()
+        ),
+        "errors": errors,
     }
