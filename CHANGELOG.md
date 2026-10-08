@@ -11,6 +11,11 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.58.9] — 2026-10-08
+
+### Removed
+- The "Compliance References" footer of the traceability report, which named four IEC 62304 clauses for every project whatever standard it follows.
+
 ## [0.58.8] — 2026-10-08
 
 ### Removed
