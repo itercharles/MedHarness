@@ -190,7 +190,6 @@ def _generate_specification_artifacts(adapter, out_dir: Path,
 
 def generate_release_artifacts(
     adapter,
-    dhf_path: Path,
     out_dir: Path,
     junit_paths: list[Path],
     version: str,
@@ -206,7 +205,7 @@ def generate_release_artifacts(
     specifications = _generate_specification_artifacts(
         adapter, out_dir, tuple(sorted(adapter.get_available_doc_types())), doc_format, version
     )
-    plans = _generate_plan_artifacts(dhf_path, out_dir, doc_format)
+    plans = _generate_plan_artifacts(adapter, out_dir, doc_format)
     traceability = [
         write_traceability_report(
             adapter,
@@ -231,13 +230,9 @@ def _report_stem(matrix_name: str, *, first: bool) -> str:
     return re.sub(r"[^A-Za-z0-9]+", "_", matrix_name).strip("_") + "_Traceability_Report"
 
 
-def _generate_plan_artifacts(dhf_path: Path, out_dir: Path,
-                             doc_format: str = "html") -> list[dict]:
-    from dhfkit.store import open_store
-
+def _generate_plan_artifacts(adapter, out_dir: Path, doc_format: str = "html") -> list[dict]:
     # The plans are records: the store lists them and hands over their text.
     # Only the output directory below is this command's own.
-    adapter = open_store(dhf_path)
     plan_ids = sorted(adapter.list_documents("plans"))
     if not plan_ids:
         return []
@@ -281,8 +276,7 @@ def _generate_plan_artifacts(dhf_path: Path, out_dir: Path,
         )
         output = output_dir / f"{plan_id}.{doc_format}"
         if render_pdf is not None:
-            base = str(source.parent) if source else str(dhf_path)
-            render_pdf(string=document, base_url=base).write_pdf(str(output))
+            render_pdf(string=document, base_url=str(source.parent)).write_pdf(str(output))
         else:
             output.write_text(document, encoding="utf-8")
         generated.append({"source": str(source or plan_id), "path": str(output)})
@@ -310,7 +304,7 @@ def build_evidence_bundle(
 
     out_dir.mkdir(parents=True, exist_ok=True)
     artifacts = generate_release_artifacts(
-        adapter, dhf_path, out_dir, list(junit_paths), version,
+        adapter, out_dir, list(junit_paths), version,
         doc_format=doc_format,
     )
 

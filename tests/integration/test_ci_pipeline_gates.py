@@ -256,7 +256,7 @@ class TestItemTypeDisplayNameContract:
     def test_display_name_is_human_readable(self, dhf):
         from dhfkit.item_store import ItemStore
         adapter = ItemStore(dhf / "DHF")
-        t = adapter.get_item_type("SYS-")
+        t = next((t for t in adapter.list_item_types() if t["prefix"] == "SYS-"), None)
         assert t is not None
         assert t["display_name"] == "System Requirement"
         assert t["code"] == "SYS"

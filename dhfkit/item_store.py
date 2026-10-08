@@ -63,12 +63,6 @@ class ItemStore:
             "fields": dt.properties or [],
         }
 
-    def get_item_type(self, prefix: str) -> Optional[dict]:
-        dt = self._config.get_doc_type_by_prefix(prefix)
-        if dt is None:
-            return None
-        return self._item_type_dict(dt)
-
     def list_item_types(self) -> List[dict]:
         return [self._item_type_dict(dt) for dt in self._config.doc_types]
 
@@ -335,17 +329,6 @@ class ItemStore:
         """
         return self._config
 
-    def config_file(self, name: str) -> Optional[Path]:
-        """Path to a project config file, or None when it is absent.
-
-        Config lives under the store's own layout, so a caller that joins the
-        path itself is coupled to this adapter. `soup-sources.yaml` is the one
-        a consumer needs by name.
-        """
-        from dhfkit.paths import config_file
-
-        return config_file(self._dhf_root, name)
-
     # ------------------------------------------------------------------
     # Document generation
     # ------------------------------------------------------------------
@@ -403,8 +386,7 @@ class ItemStore:
         `category` narrows to one subdirectory — `list_documents("plans")` gives
         the plan documents. Without it the subdirectory is invisible in the
         result, so a caller wanting only the plans had to go to the filesystem
-        itself, which is how `verify plans` came to read `documents/plans/*.md`
-        directly.
+        itself.
         """
         if category is None:
             return list(self._doc_index.keys())
@@ -415,20 +397,5 @@ class ItemStore:
         ]
 
     def document_path(self, doc_id: str) -> Optional[Path]:
-        """Where a document lives, for a caller that must report the filename.
-
-        `verify plans` names the file it is complaining about, and a stem is not
-        a filename. Returning the path keeps that possible without a second
-        filesystem walk in the caller.
-        """
+        """Where a document lives, for a caller that needs the file rather than its text."""
         return self._doc_index.get(doc_id)
-
-    # ------------------------------------------------------------------
-    # CR context
-    # ------------------------------------------------------------------
-
-    # ------------------------------------------------------------------
-    # Compliance run history (extension point — not persisted by default)
-    # ------------------------------------------------------------------
-
-

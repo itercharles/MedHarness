@@ -87,12 +87,6 @@ class StubDHFAdapter:
     # ------------------------------------------------------------------
     # Item type metadata
 
-    def get_item_type(self, prefix: str) -> Optional[dict]:
-        for t in self._item_types:
-            if t["prefix"] == prefix:
-                return dict(t)
-        return None
-
     def list_item_types(self) -> List[dict]:
         return [dict(t) for t in self._item_types]
 

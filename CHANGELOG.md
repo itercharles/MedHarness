@@ -11,6 +11,11 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.58.8] — 2026-10-08
+
+### Removed
+- API nothing called: `ItemStore.get_item_type`, `ItemStore.config_file`, `ProjectConfig.get_doc_type_by_prefix`; `build release` no longer reopens the DHF to find the plans; comments and docstrings that named a `verify plans` command that does not exist.
+
 ## [0.58.7] — 2026-10-08
 
 ### Changed
