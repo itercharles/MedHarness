@@ -196,20 +196,3 @@ class TestItemCreationValidation:
             }),
         )
         assert r.returncode != 0, "Should reject item with malformed UID in link"
-
-
-class TestCRPhaseEnum:
-    """Unit-level checks for the CRPhase state machine helpers."""
-
-    def test_active_phases_are_correct(self):
-        from medharness.services.cr_state import CRPhase, ACTIVE_PHASES, TERMINAL_PHASES
-        assert CRPhase.NEW in ACTIVE_PHASES
-        assert CRPhase.DESIGN in ACTIVE_PHASES
-        assert CRPhase.DEVELOP in ACTIVE_PHASES
-        assert CRPhase.COMPLETED in TERMINAL_PHASES
-        assert CRPhase.CANCELLED in TERMINAL_PHASES
-
-    def test_phase_values_match_dhf_status_strings(self):
-        from medharness.services.cr_state import CRPhase
-        assert CRPhase.NEW.value == "new"
-        assert CRPhase.COMPLETED.value == "completed"

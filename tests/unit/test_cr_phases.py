@@ -1,4 +1,4 @@
-"""Tests for CR phases.
+"""Which CRs `build plan` and `build code` will work on: those `cr.yaml` still lets move.
 
 ``build plan --cr CR-001`` on a freshly scaffolded project once answered
 "CR 'CR-001' not found" for the CR the scaffold had just written.
@@ -9,15 +9,9 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+from click.testing import CliRunner
 
-from dhfkit.item_store import ItemStore
-from medharness.services.cr_state import (
-    ACTIVE_PHASES,
-    TERMINAL_PHASES,
-    CRPhase,
-    assert_cr_active,
-    get_cr_phase,
-)
+from medharness.cli import main
 from medharness.scaffold import replace_placeholders, scaffold_dhf
 
 
@@ -28,41 +22,44 @@ def dhf(tmp_path: Path) -> Path:
     return tmp_path / "DHF"
 
 
-class TestCRPhases:
-    def test_scaffolded_cr_is_active(self, dhf: Path) -> None:
+def _run(dhf: Path, stage: str, cr: str = "CR-001"):
+    return CliRunner().invoke(main, ["--dhf", str(dhf), "build", stage, "--cr", cr, "--prompt"])
+
+
+def _set_status(dhf: Path, status: str | None) -> None:
+    cr = dhf / "items" / "07_cr" / "CR-001.yaml"
+    text = cr.read_text().replace("status: new\n", "")
+    cr.write_text(text if status is None else text + f"status: {status}\n")
+
+
+@pytest.mark.parametrize("stage", ["plan", "code"])
+class TestWhichCRsTheStagesAccept:
+    def test_the_scaffolded_cr_is_accepted(self, dhf: Path, stage: str) -> None:
         """The documented first command must work on a fresh project."""
-        assert assert_cr_active(ItemStore(dhf), "CR-001") in ACTIVE_PHASES
+        assert _run(dhf, stage).exit_code == 0
 
-    def test_missing_cr_says_not_found(self, dhf: Path) -> None:
-        with pytest.raises(ValueError, match="not found"):
-            assert_cr_active(ItemStore(dhf), "CR-999")
+    @pytest.mark.parametrize("status", [None, "new", "design", "develop"])
+    def test_a_cr_that_can_still_move_is_accepted(self, dhf: Path, stage: str, status) -> None:
+        _set_status(dhf, status)
+        assert _run(dhf, stage).exit_code == 0
 
-    def test_absent_status_reads_as_new(self, dhf: Path) -> None:
-        cr = dhf / "items" / "07_cr" / "CR-001.yaml"
-        cr.write_text(cr.read_text().replace("status: new\n", ""))
-        assert get_cr_phase(ItemStore(dhf), "CR-001") is CRPhase.NEW
+    @pytest.mark.parametrize("status", ["completed", "rejected", "cancelled"])
+    def test_a_cr_with_no_move_left_is_refused_and_named(self, dhf: Path, stage: str, status: str) -> None:
+        """`build plan` triage writes 'rejected'; it was once read as 'not found'."""
+        _set_status(dhf, status)
+        result = _run(dhf, stage)
+        assert result.exit_code == 1
+        assert f"already '{status}'" in result.stderr
+        assert "not found" not in result.stderr
 
-    def test_rejected_is_terminal_not_missing(self, dhf: Path) -> None:
-        """`build plan` triage writes 'rejected'; it was read as 'not found'."""
-        cr = dhf / "items" / "07_cr" / "CR-001.yaml"
-        cr.write_text(cr.read_text().replace("status: new", "status: rejected"))
+    def test_a_missing_cr_says_not_found(self, dhf: Path, stage: str) -> None:
+        result = _run(dhf, stage, "CR-999")
+        assert result.exit_code == 1
+        assert "not found" in result.stderr
 
-        with pytest.raises(ValueError) as exc:
-            assert_cr_active(ItemStore(dhf), "CR-001")
-        assert "not found" not in str(exc.value)
-        assert "rejected" in str(exc.value)
-
-    def test_unrecognised_status_is_reported_as_such(self, dhf: Path) -> None:
-        cr = dhf / "items" / "07_cr" / "CR-001.yaml"
-        cr.write_text(cr.read_text().replace("status: new", "status: banana"))
-
-        with pytest.raises(ValueError) as exc:
-            assert_cr_active(ItemStore(dhf), "CR-001")
-        assert "not found" not in str(exc.value)
-        assert "banana" in str(exc.value)
-
-    def test_rejected_is_a_terminal_phase(self) -> None:
-        assert CRPhase.REJECTED in TERMINAL_PHASES
-        assert CRPhase.REJECTED not in ACTIVE_PHASES
-
-
+    def test_a_status_the_lifecycle_does_not_declare_is_reported_as_such(self, dhf: Path, stage: str) -> None:
+        _set_status(dhf, "banana")
+        result = _run(dhf, stage)
+        assert result.exit_code == 1
+        assert "banana" in result.stderr and "not a state of a CR" in result.stderr
+        assert "not found" not in result.stderr
