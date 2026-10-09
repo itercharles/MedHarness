@@ -1,11 +1,12 @@
+"""MedHarness CLI — main entrypoint and group registration."""
+
 from __future__ import annotations
 
-"""MedHarness CLI — main entrypoint and group registration."""
+from pathlib import Path
 
 import click
 
 from medharness.cli.errors import DHFAwareGroup
-from pathlib import Path
 
 
 @click.group(cls=DHFAwareGroup)

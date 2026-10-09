@@ -2,7 +2,7 @@
 
 A hand-edited item with a mistyped field is the likeliest mistake a DHF user
 makes, and it used to reach the terminal as a `ValidationError` traceback out
-of nine of the thirteen commands — `verify dhf` included, whose whole purpose
+of most commands — `verify dhf` included, whose whole purpose
 is reporting exactly that kind of problem.
 
 The gates keep their documented shape: exit 1 with nothing on stdout, which
@@ -12,7 +12,6 @@ traceback.
 """
 
 from __future__ import annotations
-
 
 import click
 
@@ -25,11 +24,7 @@ class DHFAwareGroup(click.Group):
     def invoke(self, ctx: click.Context):
         try:
             return super().invoke(ctx)
-        except ValidationError as exc:
-            raise click.ClickException(
-                f"The DHF could not be read: {exc}"
-            ) from exc
-        except DHFDataError as exc:
+        except (ValidationError, DHFDataError) as exc:
             raise click.ClickException(f"The DHF could not be read: {exc}") from exc
         except FileNotFoundError as exc:
             # A missing global.yaml is the common case: running outside the

@@ -8,10 +8,10 @@ import click
 
 
 def details(result: dict) -> dict:
-    """The gate's structured findings, for rendering the lines below.
+    """The gate's structured findings, for the lines a command prints.
 
-    In-process only. `emit` does not serialise them: a caller acts on the
-    verdict and reads the messages, and nothing has ever read the structures.
+    In-process only: `emit` does not serialise them. A caller acts on the
+    verdict and reads the messages in `errors` and `warnings`.
     """
     return result.get("details") or {}
 
