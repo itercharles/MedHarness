@@ -19,7 +19,7 @@ import pytest
 from fixtures.starter import keep_the_starter_text
 
 from medharness.services.verify_release import known_anomalies
-from medharness.services.release_baseline import (
+from medharness.services.release import (
     build_release_baseline,
     record_release,
 )
@@ -97,7 +97,7 @@ class TestGate:
         which the config-and-items fixture above does not carry templates for.
         """
         from dhfkit.store import open_store
-        from medharness.services.release_baseline import build_release
+        from medharness.services.release import build_release
         from medharness.scaffold import replace_placeholders, scaffold_dhf
 
         scaffold_dhf(tmp_path / "project")
@@ -214,7 +214,7 @@ class TestARelIsRecordedOnlyWhenEverythingPassed:
         return {i["id"] for i in open_store(dhf).list_items() if i.get("type") == "REL"}
 
     def test_a_dhf_that_fails_its_check_is_not_recorded(self, tmp_path: Path) -> None:
-        from medharness.services.release_baseline import build_release
+        from medharness.services.release import build_release
 
         dhf = self._project(tmp_path)
         rcm = next((dhf / "items").rglob("RCM-*.yaml"))
@@ -229,7 +229,7 @@ class TestARelIsRecordedOnlyWhenEverythingPassed:
 
     def test_a_release_that_passed_is_recorded(self, tmp_path: Path) -> None:
         """The other half, so the test above cannot pass by never recording."""
-        from medharness.services.release_baseline import build_release
+        from medharness.services.release import build_release
 
         dhf = self._project(tmp_path)
         before = self._releases(dhf)

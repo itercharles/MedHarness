@@ -204,7 +204,7 @@ class TestMergingTheTwoRegisters:
 
 class TestReleaseBaselineEmitsAnSbom:
     def test_the_release_carries_a_cyclonedx_file(self, dhf: Path, tmp_path: Path) -> None:
-        from medharness.services.release_baseline import build_release_baseline
+        from medharness.services.release import build_release_baseline
 
         _soup(dhf, "SOUP-001",
               "title: requests\nname: requests\nversion: '2.31.0'\n"
@@ -233,7 +233,7 @@ class TestReleaseBaselineEmitsAnSbom:
 
     def test_the_existing_artifacts_are_unchanged(self, dhf: Path, tmp_path: Path) -> None:
         """software-bom.json keeps its own shape; consumers of it are unaffected."""
-        from medharness.services.release_baseline import build_release_baseline
+        from medharness.services.release import build_release_baseline
 
         _soup(dhf, "SOUP-001", "title: a\nname: a\nversion: '1'\necosystem: PyPI\n")
         out = tmp_path / "out"
@@ -257,14 +257,14 @@ class TestReleaseBaselineEmitsAnSbom:
         """
         from unittest.mock import MagicMock, PropertyMock, patch
 
-        from medharness.services.release_baseline import build_release_baseline
+        from medharness.services.release import build_release_baseline
 
         out = tmp_path / "out"
         store = MagicMock()
         store.get_item.return_value = {"id": "CR-001", "type": "CR", "status": "completed", "title": "x"}
         store.list_items.return_value = []
         type(store).config = PropertyMock(side_effect=FileNotFoundError("global.yaml not found"))
-        with patch("medharness.services.release_baseline.open_store", return_value=store), patch("medharness.services.verify_release.open_store", return_value=store):
+        with patch("medharness.services.release.open_store", return_value=store), patch("medharness.services.verify_release.open_store", return_value=store):
             result = build_release_baseline(
                 tmp_path / "nonexistent-DHF", "1.0.0", [], ["CR-001"], out,
             )
@@ -293,7 +293,7 @@ class TestReleaseBaselineReadsEveryManifestSoupSyncDoes:
     def test_a_supported_manifest_does_not_fail_the_baseline(
         self, dhf: Path, tmp_path: Path, filename, content, expected
     ) -> None:
-        from medharness.services.release_baseline import build_release_baseline
+        from medharness.services.release import build_release_baseline
 
         manifest = tmp_path / filename
         manifest.write_text(content)
@@ -309,7 +309,7 @@ class TestReleaseBaselineReadsEveryManifestSoupSyncDoes:
 
     def test_an_unknown_format_is_still_reported(self, dhf: Path, tmp_path: Path) -> None:
         """Widening the set must not swallow a genuinely unreadable file."""
-        from medharness.services.release_baseline import build_release_baseline
+        from medharness.services.release import build_release_baseline
 
         manifest = tmp_path / "Gemfile.lock"
         manifest.write_text("GEM\n")
@@ -328,7 +328,7 @@ class TestReleaseBaselineReadsEveryManifestSoupSyncDoes:
         a malformed package.json as an unsupported format, sending a reader
         after the wrong problem. Support is decided by filename instead.
         """
-        from medharness.services.release_baseline import build_release_baseline
+        from medharness.services.release import build_release_baseline
 
         manifest = tmp_path / "package.json"
         manifest.write_text("{not valid json}")
@@ -381,7 +381,7 @@ class TestAVersionRangeIsNotAVersion:
 
 def test_the_release_names_each_component_without_a_purl(dhf: Path, tmp_path: Path) -> None:
     """The per-component warning the removed `sbom` command printed."""
-    from medharness.services.release_baseline import build_release
+    from medharness.services.release import build_release
 
     _soup(dhf, "SOUP-001", "title: x\nname: x\nversion: '1'\necosystem: Conan\n")
     result = build_release(dhf, "1.0.0", tmp_path / "out", write=False)

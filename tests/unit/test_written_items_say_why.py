@@ -75,9 +75,9 @@ def test_a_release_record_names_the_crs_it_contains() -> None:
     """REL needs no separate provenance — `included_items` is it."""
     import inspect
 
-    from medharness.services import release_baseline
+    from medharness.services import release
 
-    source = inspect.getsource(release_baseline.record_release)
+    source = inspect.getsource(release.record_release)
     assert '"included_items"' in source, (
         "a REL item no longer records which CRs the release contains, so a "
         "release record would have no change attribution at all"

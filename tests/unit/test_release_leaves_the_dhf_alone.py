@@ -11,7 +11,7 @@ import hashlib
 from pathlib import Path
 from fixtures.starter import keep_the_starter_text
 
-from medharness.services.release_baseline import build_release
+from medharness.services.release import build_release
 
 
 def _project(tmp_path: Path) -> Path:

@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from medharness.services import release_artifacts
+from medharness.services import release
 
 
 def _weasyprint_runtime_ok() -> bool:
@@ -26,7 +26,7 @@ def test_write_report_with_pdf_path_writes_both(stub_adapter, tmp_path):
 
     output = tmp_path / "traceability" / "Requirements_Traceability_Report.pdf"
 
-    result = release_artifacts.write_traceability_report(
+    result = release.write_traceability_report(
         stub_adapter, ("UC", "CRS", "SYS", "SRS"), output
     )
 
@@ -48,7 +48,7 @@ def test_write_report_with_json_path_only_writes_json(stub_adapter, tmp_path):
     """A non-PDF output path keeps the legacy JSON-only behavior."""
     output = tmp_path / "trace" / "report.json"
 
-    result = release_artifacts.write_traceability_report(
+    result = release.write_traceability_report(
         stub_adapter, ("UC", "CRS", "SYS", "SRS"), output
     )
 
@@ -66,7 +66,7 @@ def test_write_report_skips_pdf_when_weasyprint_missing(
 
     monkeypatch.setitem(sys.modules, "weasyprint", None)
 
-    result = release_artifacts.write_traceability_report(
+    result = release.write_traceability_report(
         stub_adapter, ("UC", "CRS", "SYS", "SRS"), output
     )
 
@@ -94,7 +94,7 @@ def test_format_matrix_markdown_renders_summary_and_matrix():
             ],
         },
     }
-    md = release_artifacts.format_traceability_matrix_markdown(matrix)
+    md = release.format_traceability_matrix_markdown(matrix)
 
     assert "# Requirements Traceability Matrix" in md
     assert "UC → CRS → SYS" in md
@@ -124,12 +124,12 @@ def test_format_matrix_markdown_handles_dict_tests():
             ],
         },
     }
-    md = release_artifacts.format_traceability_matrix_markdown(matrix)
+    md = release.format_traceability_matrix_markdown(matrix)
     assert "Boot › cold start [PASS]" in md
     assert "Boot › warm start [FAIL]" in md
 
 
 def test_the_report_makes_no_claim_about_a_standard() -> None:
     """Which standard a project follows is the project's to say, not a footer's."""
-    md = release_artifacts.format_traceability_matrix_markdown({"columns": [], "rows": [], "coverage": {}})
+    md = release.format_traceability_matrix_markdown({"columns": [], "rows": [], "coverage": {}})
     assert "IEC" not in md and "Compliance" not in md
