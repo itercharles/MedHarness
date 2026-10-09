@@ -45,7 +45,8 @@ Run it two ways:
   way. The recipe is in [the AI workflow page](docs/ai-workflow.md#wiring-it-into-github-actions).
 
 Unattended, `build plan` and `build code` run the `claude` CLI, or any
-`provider:model` you set (`anthropic`, `openai`, `deepseek`) — they run an agent
+`provider:model` you set (`anthropic`, `openai`, `deepseek`, or a local
+OpenAI-compatible endpoint such as `ollama`) — they run an agent
 with a shell, so use an ephemeral runner and read
 [ai-security.md](docs/ai-security.md) first.
 

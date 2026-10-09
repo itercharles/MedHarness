@@ -1,7 +1,7 @@
 # Architecture
 
 > **Stability:** Stable
-> **Last reviewed:** 2026-09-30
+> **Last reviewed:** 2026-10-09
 
 How the code is organised, for contributors. What a user calls is in the
 [README](../README.md) and [interface.md](interface.md).

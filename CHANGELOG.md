@@ -11,6 +11,11 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.58.11] — 2026-10-09
+
+### Changed
+- Documentation brought in line with the code: `ai-security.md` points at `llm.py`, says the prompt travels on stdin and that any non-`anthropic` provider runs the OpenAI-compatible loop; `configuration.md` lists MODULE and SWDD among the types that ship a description; ADR-002 is marked superseded in the index and ADR-001 no longer promises two CLIs; the README names local endpoints.
+
 ## [0.58.10] — 2026-10-08
 
 ### Fixed

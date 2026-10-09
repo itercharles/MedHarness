@@ -1,7 +1,7 @@
 # AI Execution Model
 
 > **Stability:** Stable
-> **Last reviewed:** 2026-09-30
+> **Last reviewed:** 2026-10-09
 
 This document describes what the AI stages of MedHarness are allowed to do, where they run, and what evidence they leave behind. It exists because MedHarness is used in regulated environments where "an AI wrote this code" is not an acceptable answer to an auditor — the boundary has to be stated, not assumed.
 
@@ -30,7 +30,7 @@ Both AI stages execute an **agentic loop with an unrestricted shell tool**. The 
 
 Concretely:
 
-**Anthropic path (default)** — [`cr_generation.py`](../medharness/services/cr_generation.py) shells out to the separately-installed `claude` CLI:
+**Anthropic path (default)** — [`llm.py`](../medharness/services/llm.py) shells out to the separately-installed `claude` CLI, passing the prompt on stdin:
 
 ```python
 cmd = ["claude", "-p", "--dangerously-skip-permissions", "--output-format", "json"]
@@ -38,7 +38,7 @@ cmd = ["claude", "-p", "--dangerously-skip-permissions", "--output-format", "jso
 
 `--dangerously-skip-permissions` disables Claude Code's interactive per-action approval prompts. This is deliberate — the stages are designed to run unattended in CI, where there is no human at a terminal to answer prompts. It also means **there is no per-action gate between the model and your filesystem.**
 
-**OpenAI-compatible path** — when `MEDHARNESS_*_MODEL` names an `openai:` or `deepseek:` model, MedHarness runs its own loop exposing a single `bash` function tool:
+**OpenAI-compatible path** — when `MEDHARNESS_*_MODEL` names any provider other than `anthropic` (`openai:`, `deepseek:`, or a local endpoint such as `ollama:`), MedHarness runs its own loop exposing a single `bash` function tool:
 
 ```python
 proc = subprocess.run(command, shell=True, capture_output=True, text=True, timeout=120)
