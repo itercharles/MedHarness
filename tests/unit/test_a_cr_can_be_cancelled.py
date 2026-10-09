@@ -13,7 +13,9 @@ from pathlib import Path
 import pytest
 
 from dhfkit.item_store import ItemStore
-from medharness.services.cr_state import assert_cr_active
+from click.testing import CliRunner
+
+from medharness.cli import main
 from medharness.scaffold import replace_placeholders, scaffold_dhf
 
 
@@ -33,7 +35,10 @@ def test_an_active_cr_can_be_cancelled(adapter: ItemStore, path: list[str]) -> N
     assert adapter.get_item("CR-001")["status"] == "cancelled"
 
 
-def test_the_ai_stages_refuse_a_cancelled_cr(adapter: ItemStore) -> None:
+def test_the_ai_stages_refuse_a_cancelled_cr(adapter: ItemStore, tmp_path: Path) -> None:
     adapter.execute_transition("CR-001", "cancelled")
-    with pytest.raises(ValueError, match="already 'cancelled'"):
-        assert_cr_active(adapter, "CR-001")
+    for stage in ("plan", "code"):
+        result = CliRunner().invoke(
+            main, ["--dhf", str(tmp_path / "DHF"), "build", stage, "--cr", "CR-001", "--prompt"])
+        assert result.exit_code == 1
+        assert "already 'cancelled'" in result.stderr

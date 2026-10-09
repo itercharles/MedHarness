@@ -11,6 +11,11 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.58.15] — 2026-10-09
+
+### Changed
+- `build plan` and `build code` decide whether a CR can be worked on from `cr.yaml`: a CR is workable while its lifecycle has a move out of its state, and a status the lifecycle does not declare is reported as that. The hard-coded list of CR phases (`services/cr_state.py`) is gone, so a project that changes the CR lifecycle changes this too.
+
 ## [0.58.14] — 2026-10-09
 
 ### Changed

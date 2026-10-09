@@ -77,6 +77,38 @@ def _needs_files(store, command: str) -> str:
     return FILES_IN_GIT.format(command=command, store=store.store_type)
 
 
+def _require_workable_cr(dhf: Path, cr_id: str, command: str) -> None:
+    """Refuse a CR the AI stages cannot work on, as `cr.yaml` defines it.
+
+    A CR is workable while its lifecycle still has a move out of its state; `completed`,
+    `rejected` and `cancelled` have none. A status `cr.yaml` does not declare is reported
+    as that, not as a missing CR.
+    """
+    try:
+        store = open_store(dhf)
+        if not store.tracks_files:
+            raise click.ClickException(_needs_files(store, command))
+        item = store.get_item(cr_id)
+        if item is None:
+            raise ValueError(f"CR '{cr_id}' not found.")
+        status = str(item.get("status") or "").strip()
+        states = store.config.valid_states("CR")
+        if status and states is not None and status not in states:
+            raise ValueError(
+                f"CR '{cr_id}' has status '{status}', which is not a state of a CR. "
+                f"Expected one of: {', '.join(sorted(states))}."
+            )
+        if not store.get_available_transitions(cr_id):
+            raise ValueError(
+                f"CR '{cr_id}' is already '{status}' and cannot accept further work. "
+                f"Create a new CR if additional changes are needed."
+            )
+    except ValueError as exc:
+        raise click.ClickException(str(exc)) from exc
+    except (FileNotFoundError, OSError):
+        pass  # DHF config not loadable yet; the stage will surface the error
+
+
 def register(main):
     build = main.commands["build"]
 
@@ -109,17 +141,8 @@ def register(main):
         pushes to that PR, revising when a reviewer asked for changes.
         """
         from medharness.services.cr_generation import generate_dhf  # noqa: PLC0415
-        from medharness.services.cr_state import assert_cr_active  # noqa: PLC0415
         dhf: Path = ctx.obj["dhf"]
-        try:
-            store = open_store(ctx.obj["dhf"])
-            if not store.tracks_files:
-                raise click.ClickException(_needs_files(store, "build plan"))
-            assert_cr_active(store, cr_id)
-        except ValueError as exc:
-            raise click.ClickException(str(exc)) from exc
-        except (FileNotFoundError, OSError):
-            pass  # DHF config not loadable yet; generate_dhf will surface the error
+        _require_workable_cr(dhf, cr_id, "build plan")
         if print_prompt:
             from medharness.services.prompt_assembly import _assemble_generate_dhf_prompt
             _print_prompt(_assemble_generate_dhf_prompt, cr_id, dhf)
@@ -167,17 +190,8 @@ def register(main):
         pushes to that PR, revising when a reviewer asked for changes.
         """
         from medharness.services.cr_generation import generate_code  # noqa: PLC0415
-        from medharness.services.cr_state import assert_cr_active  # noqa: PLC0415
         dhf: Path = ctx.obj["dhf"]
-        try:
-            store = open_store(ctx.obj["dhf"])
-            if not store.tracks_files:
-                raise click.ClickException(_needs_files(store, "build code"))
-            assert_cr_active(store, cr_id)
-        except ValueError as exc:
-            raise click.ClickException(str(exc)) from exc
-        except (FileNotFoundError, OSError):
-            pass  # DHF config not loadable yet; generate_code will surface the error
+        _require_workable_cr(dhf, cr_id, "build code")
         if print_prompt:
             from medharness.services.prompt_assembly import _assemble_develop_prompt
             from medharness.services.git import resolve_since_ref
