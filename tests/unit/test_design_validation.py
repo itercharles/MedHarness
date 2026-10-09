@@ -34,8 +34,8 @@ class TestValidateGenerateDhf:
 
     @patch("medharness.services.design_validation._check_cr_workflow_fields", return_value=[])
     def test_missing_verification_criteria_on_changed_sys_produces_error(self, _cr, dhf):
-        with patch("dhfkit.item_store.ItemStore.validate_schema", return_value={"valid": True, "errors": []}), \
-             patch("medharness.services.design_validation.analyse", return_value={"passed": True}), \
+        with patch("dhfkit.item_store.ItemStore.validate_schema", return_value={"valid": True, "errors": [], "item_count": 1}), \
+             patch("medharness.services.verify_dhf.analyse", return_value={"passed": True}), \
              patch("dhfkit.item_store.ItemStore.list_items", return_value=[
                  {"id": "SYS-001", "type": "SYS", "title": "Existing req",
                   "all_linked_uids": [], "verification_criteria": ""},
@@ -49,8 +49,8 @@ class TestValidateGenerateDhf:
 
     @patch("medharness.services.design_validation._check_cr_workflow_fields", return_value=[])
     def test_populated_verification_criteria_on_changed_sys_passes(self, _cr, dhf):
-        with patch("dhfkit.item_store.ItemStore.validate_schema", return_value={"valid": True, "errors": []}), \
-             patch("medharness.services.design_validation.analyse", return_value={"passed": True}), \
+        with patch("dhfkit.item_store.ItemStore.validate_schema", return_value={"valid": True, "errors": [], "item_count": 1}), \
+             patch("medharness.services.verify_dhf.analyse", return_value={"passed": True}), \
              patch("dhfkit.item_store.ItemStore.list_items", return_value=[
                  {"id": "SYS-001", "type": "SYS", "title": "Existing req",
                   "all_linked_uids": [], "verification_criteria": "Response < 2s."},
@@ -62,8 +62,8 @@ class TestValidateGenerateDhf:
 
     @patch("medharness.services.design_validation._check_cr_workflow_fields", return_value=[])
     def test_swdd_change_does_not_require_verification_criteria(self, _cr, dhf):
-        with patch("dhfkit.item_store.ItemStore.validate_schema", return_value={"valid": True, "errors": []}), \
-             patch("medharness.services.design_validation.analyse", return_value={"passed": True}), \
+        with patch("dhfkit.item_store.ItemStore.validate_schema", return_value={"valid": True, "errors": [], "item_count": 1}), \
+             patch("medharness.services.verify_dhf.analyse", return_value={"passed": True}), \
              patch("dhfkit.item_store.ItemStore.list_items", return_value=[
                  {"id": "SWDD-001", "type": "SWDD", "title": "Existing design",
                   "all_linked_uids": []},

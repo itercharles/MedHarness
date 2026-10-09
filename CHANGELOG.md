@@ -11,6 +11,11 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.58.16] — 2026-10-09
+
+### Changed
+- The structural findings of `verify dhf` are produced once, in `services/verify_dhf.py` (`structural_findings`): the gate's `errors` and `warnings`, the lines it prints, and the fix pass of `build plan` all read that list. `build plan` therefore also finds a status that is no state of its type, which it did not before. The lines `verify dhf` prints are now one per finding, `FAIL|WARN [kind] message` followed by `Fix:`; a schema error is no longer under a `FAIL [schema]: validation errors found` header.
+
 ## [0.58.15] — 2026-10-09
 
 ### Changed
