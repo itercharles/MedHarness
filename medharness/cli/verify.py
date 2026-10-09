@@ -9,16 +9,8 @@ import click
 
 from medharness.cli.options import collect_junit_paths, junit_option
 from medharness.cli.output import details, emit, render_envelope
-from medharness.services.verify_dhf import (
-    ci_structural_gate,
-    cycle_message,
-    dangling_message,
-    mistyped_message,
-)
+from medharness.services.verify_dhf import ci_structural_gate
 from medharness.services.verify_tests import ci_test_coverage_gate
-
-_ITEM_ID_RE = re.compile(r"^([A-Z]+-\d+)")
-
 
 def register(main):
     verify = main.commands["verify"]
@@ -44,73 +36,19 @@ def register(main):
                                      strict=strict)
         emit(result)
         r = details(result)["results"]
-        dhf_arg = f"--dhf {effective_dhf}"
-        if "schema" in r:
-            s = r["schema"]
-            if s["passed"]:
-                click.echo(f"PASS [schema]: {s.get('item_count', 0)} items valid", err=True)
-            else:
-                click.echo("FAIL [schema]: validation errors found", err=True)
-                for err in s.get("errors", []):
-                    click.echo(f"  ✗ {err}", err=True)
-                    m = _ITEM_ID_RE.match(str(err))
-                    if m:
-                        iid = m.group(1)
-                        click.echo(f"    Fix: medharness {dhf_arg} item update {iid}"
-                                   f" --data '{{\"<field>\": \"<value>\"}}'", err=True)
-        for gap in r.get("verification_gaps", []):
-            click.echo(f"WARN [verification] {gap['id']}: {gap['issue']}", err=True)
-            click.echo(f"      Fix: medharness {dhf_arg} item update {gap['id']}"
-                       f" --data '{{\"verification_criteria\": \"<how this is verified>\"}}'",
-                       err=True)
-        label = "FAIL" if strict else "WARN"
-        for found in r.get("placeholders", []):
-            click.echo(f"{label} [placeholder] {found['id']}: placeholder text in {', '.join(found['fields'])}", err=True)
-            click.echo(f"    Fix: medharness {dhf_arg} item update {found['id']}"
-                       f" --data '{{\"{found['fields'][0]}\": \"<the real text>\"}}'", err=True)
-        for bad in r.get("invalid_statuses", []):
-            click.echo(f"FAIL [status] {bad['id']}: status '{bad['status']}' is not a state of {bad['type']} "
-                       f"(one of {', '.join(bad['allowed'])})", err=True)
-            click.echo(f"    Fix: medharness {dhf_arg} item update {bad['id']}"
-                       f" --data '{{\"status\": \"{bad['allowed'][0]}\"}}'", err=True)
-        if "traceability" in r:
-            t = r["traceability"]
-            req = t.get("required", {})
-            if not req.get("passed", True):
-                for f in req.get("failures", []):
-                    click.echo(f"FAIL [required] {f['id']}: {f['issue']}", err=True)
-                    if f["direction"] == "upstream":
-                        click.echo(f"    Fix: medharness {dhf_arg} item update {f['id']}"
-                                   f" --data '{{\"{f['field']}\": [\"<{f['target_type']} id>\"]}}'", err=True)
-                    else:
-                        click.echo(f"    Fix: create a {f['target_type']} item that links to {f['id']}.", err=True)
-            for d in t.get("dangling", []):
-                click.echo(f"FAIL [dangling] {dangling_message(d)}", err=True)
-                click.echo("    Fix: correct the ID in the source item, or create the "
-                           "target. The link exists but resolves to nothing.", err=True)
-            for m in t.get("mistyped", []):
-                click.echo(f"FAIL [link-type] {mistyped_message(m)}", err=True)
-                click.echo("    Fix: link to an item of a type the field accepts, or move the link "
-                           "to the field that takes that type.", err=True)
-            for cycle in t.get("cycles", []):
-                click.echo(f"FAIL [cycle] {cycle_message(cycle)}", err=True)
-                click.echo("    Fix: the V-model is directed. Remove whichever link "
-                           "reverses the chain so each item has an origin.", err=True)
-
-            # Uncovered items are advisory unless --strict is set; label
-            # them WARN so a green build never prints FAIL.
-            gap_label = "FAIL" if strict else "WARN"
-            for c in t.get("coverage", []):
-                click.echo(f"{'PASS' if c['passed'] else gap_label} [coverage] "
-                           f"{c['parent_type']}→{c['child_type']}: "
+        if r["schema"]["passed"]:
+            click.echo(f"PASS [schema]: {r['schema'].get('item_count', 0)} items valid", err=True)
+        for c in r.get("traceability", {}).get("coverage", []):
+            if c["passed"]:
+                click.echo(f"PASS [coverage] {c['parent_type']}→{c['child_type']}: "
                            f"{c['covered']}/{c['total']} covered", err=True)
-                if not c["passed"]:
-                    click.echo(f"    Fix: link a {c['child_type']} item to each uncovered "
-                               f"{c['parent_type']} ({', '.join(c['uncovered'][:5])}"
-                               f"{', ...' if len(c['uncovered']) > 5 else ''}).", err=True)
-                    if not strict:
-                        click.echo("         Advisory only — pass --strict"
-                                   " to block the build on this.", err=True)
+        findings = details(result)["findings"]
+        for finding in findings:
+            label = "FAIL" if finding["severity"] == "error" else "WARN"
+            click.echo(f"{label} [{finding['kind']}] {finding['issue']}", err=True)
+            click.echo(f"    Fix: {finding['fix']}", err=True)
+        if any(f["kind"] == "coverage" and f["severity"] == "warning" for f in findings):
+            click.echo("    Coverage gaps are advisory only — pass --strict to block the build on them.", err=True)
         if not result["passed"]:
             raise click.ClickException("DHF validation failed.")
 

@@ -18,7 +18,7 @@ import yaml
 
 from dhfkit.exceptions import ValidationError
 from dhfkit.store import open_store
-from medharness.services.traceability import analyse
+from medharness.services.verify_dhf import ci_structural_gate
 
 
 
@@ -59,100 +59,30 @@ def cascade_children(config) -> dict[str, list[str]]:
     return children
 
 
+#: The findings of `verify dhf` that are not the fix pass's business: design still to be written.
+_ADVISORY_KINDS = frozenset({"verification", "placeholder"})
+
+
 def _validate_schema_and_traceability(dhf_path: Path) -> list[dict]:
-    errors: list[dict] = []
+    """What `verify dhf` would fail on or call a gap, as the fix pass needs it.
 
+    The findings are `verify dhf`'s own (`structural_findings`), so what `build plan` calls
+    clean cannot fail there afterwards. A missing `verification_criteria` is judged
+    separately, on the items this run changed.
+    """
     try:
-        schema_result = open_store(dhf_path).validate_schema()
+        gate = ci_structural_gate(dhf_path, strict=False)
     except (FileNotFoundError, ValidationError, ValueError, yaml.YAMLError) as exc:
-        errors.append({
+        return [{
             "field": "schema",
-            "issue": f"Schema validation raised: {exc}",
+            "issue": f"The DHF could not be read: {exc}",
             "fix": "Inspect DHF/items/ for malformed YAML and fix the offending file.",
-        })
-        schema_result = {"valid": False, "errors": []}
-
-    if not schema_result.get("valid"):
-        for msg in schema_result.get("errors", []) or [
-            "Schema validation failed without a specific message."
-        ]:
-            errors.append({
-                "field": "schema",
-                "issue": str(msg),
-                "fix": "Fix the offending DHF item via "
-                       "`medharness --dhf DHF item update <ITEM_ID> --data '<JSON>'`.",
-            })
-
-    try:
-        trace_result = analyse(open_store(dhf_path))
-    except (FileNotFoundError, ValidationError, ValueError, yaml.YAMLError) as exc:
-        errors.append({
-            "field": "traceability",
-            "issue": f"Traceability validation raised: {exc}",
-            "fix": "Run `medharness --dhf DHF verify dhf` locally to reproduce.",
-        })
-        trace_result = {"passed": True}
-
-    # Broken references, unlike coverage gaps, are never "still to be written":
-    # `verify dhf` fails on them, so a run that reports ok here fails in CI.
-    for d in trace_result.get("dangling", []):
-        errors.append({
-            "field": f"traceability.dangling.{d['field']}",
-            "issue": f"{d['source']}.{d['field']} → {d['target']}: target does not exist",
-            "fix": (
-                f"Point {d['source']}'s `{d['field']}` at an item that exists, "
-                f"or create {d['target']}."
-            ),
-        })
-    for m in trace_result.get("mistyped", []):
-        errors.append({
-            "field": f"traceability.mistyped.{m['field']}",
-            "issue": f"{m['source']}.{m['field']} → {m['target']}: {m['found']} is not one of {', '.join(m['expected'])}",
-            "fix": f"Point {m['source']}'s `{m['field']}` at a {' or '.join(m['expected'])} item, "
-                   "or move the link to the field that takes a "
-                   f"{m['found']}.",
-        })
-    for cycle in trace_result.get("cycles", []):
-        path = " → ".join(cycle + [cycle[0]]) if len(cycle) > 1 else f"{cycle[0]} → itself"
-        errors.append({
-            "field": "traceability.cycle",
-            "issue": f"Traceability cycle: {path}",
-            "fix": "Remove one of the links so the chain points up the V-model only.",
-        })
-
-    if not trace_result.get("passed", True):
-        required = trace_result.get("required") or {}
-        for failure in required.get("failures", []):
-            errors.append({
-                "field": f"traceability.required.{failure.get('field', 'links')}",
-                "issue": (
-                    f"{failure.get('id')}: "
-                    f"{failure.get('issue', 'required traceability missing')}"
-                ),
-                "fix": (
-                    f"Update {failure.get('id')} so its `{failure.get('field')}` "
-                    f"references a {failure.get('target_type')} item "
-                    f"(need at least {failure.get('min_count', 1)})."
-                ),
-            })
-
-        for coverage in trace_result.get("coverage", []):
-            if coverage.get("passed"):
-                continue
-            for uncovered in coverage.get("uncovered", []):
-                errors.append({
-                    "field": f"traceability.coverage.{coverage.get('parent_type')}",
-                    "issue": (
-                        f"{uncovered} ({coverage.get('parent_type')}) has no covering "
-                        f"{coverage.get('child_type')} child."
-                    ),
-                    "fix": (
-                        f"Create a {coverage.get('child_type')} item linked to "
-                        f"{uncovered}, or remove {uncovered} if it should not exist."
-                    ),
-                })
-
-    return errors
+        }]
+    return [
+        {"field": f["field"], "issue": f["issue"], "fix": f["fix"]}
+        for f in gate["details"]["findings"]
+        if f["kind"] not in _ADVISORY_KINDS
+    ]
 
 
 def _list_items(dhf_path: Path, field: str) -> tuple[list[dict], list[dict]]:

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Any
 
@@ -97,12 +98,14 @@ def ci_structural_gate(
         )
     results["verification_gaps"] = verification_gaps
 
-    errors, warnings = _structural_messages(results, strict)
+    findings = structural_findings(results, dhf_path, strict)
+    errors = [f["issue"] for f in findings if f["severity"] == "error"]
+    warnings = [f["issue"] for f in findings if f["severity"] == "warning"]
     schema_n = results.get("schema", {}).get("item_count", 0)
     return gate_result(
         "verify dhf", not errors,
         f"{schema_n} item(s) checked; {len(errors)} error(s), {len(warnings)} warning(s).",
-        errors=errors, warnings=warnings, results=results,
+        errors=errors, warnings=warnings, results=results, findings=findings,
     )
 
 
@@ -140,6 +143,78 @@ def _placeholders(adapter) -> list[dict]:
     return found
 
 
+_ITEM_ID_RE = re.compile(r"^([A-Z]+-\d+)")
+
+
+def structural_findings(results: dict, dhf_path: Path, strict: bool) -> list[dict]:
+    """Every structural finding once: what it is, whether it blocks, and how to fix it.
+
+    ``{kind, severity, field, issue, fix}``. The gate's ``errors`` and ``warnings``,
+    the lines `verify dhf` prints and the fix pass of `build plan` are all read from
+    this list, so a finding added here reaches all of them. ``fix`` is a command with the
+    real ``--dhf`` path where one exists.
+    """
+    update = f"medharness --dhf {dhf_path} item update"
+    found: list[dict] = []
+
+    def add(kind: str, severity: str, field: str, issue: str, fix: str) -> None:
+        found.append({"kind": kind, "severity": severity, "field": field, "issue": issue, "fix": fix})
+
+    for err in (results.get("schema") or {}).get("errors") or []:
+        match = _ITEM_ID_RE.match(str(err))
+        add("schema", "error", "schema", str(err),
+            f"{update} {match.group(1)} --data '{{\"<field>\": \"<value>\"}}'" if match
+            else "Correct the file the message names, then run `medharness verify dhf`.")
+
+    trace = results.get("traceability") or {}
+    for failure in (trace.get("required") or {}).get("failures", []):
+        target = failure.get("target_type")
+        add("required", "error", f"traceability.required.{failure.get('field') or 'links'}",
+            f"{failure.get('id')}: {failure.get('issue')}",
+            f"{update} {failure['id']} --data '{{\"{failure['field']}\": [\"<{target} id>\"]}}'"
+            if failure.get("direction") == "upstream"
+            else f"create a {target} item that links to {failure.get('id')}.")
+    for d in trace.get("dangling", []):
+        add("dangling", "error", f"traceability.dangling.{d['field']}", dangling_message(d),
+            "correct the ID in the source item, or create the target. The link exists but resolves to nothing.")
+    for m in trace.get("mistyped", []):
+        add("link-type", "error", f"traceability.mistyped.{m['field']}", mistyped_message(m),
+            "link to an item of a type the field accepts, or move the link to the field that takes that type.")
+    for cycle in trace.get("cycles", []):
+        add("cycle", "error", "traceability.cycle", cycle_message(cycle),
+            "the V-model is directed. Remove whichever link reverses the chain so each item has an origin.")
+
+    # Uncovered items block only under --strict; anywhere else they
+    # are a gap in design still to be written, not a broken reference.
+    for gap in results.get("coverage_gaps", []):
+        uncovered = gap.get("uncovered") or []
+        add("coverage", "error" if strict else "warning", f"traceability.coverage.{gap['parent_type']}",
+            f"{gap['parent_type']}->{gap['child_type']}: {len(uncovered)} uncovered",
+            f"link a {gap['child_type']} item to each uncovered {gap['parent_type']} "
+            f"({', '.join(uncovered[:20])}{', ...' if len(uncovered) > 20 else ''}).")
+    for gap in results.get("verification_gaps", []):
+        add("verification", "warning", f"{gap['id']}.verification_criteria", f"{gap['id']}: {gap['issue']}",
+            f"{update} {gap['id']} --data '{{\"verification_criteria\": \"<how this is verified>\"}}'")
+    # A status that is no state of its type is a broken record, like a broken link.
+    for bad in results.get("invalid_statuses", []):
+        add("status", "error", f"{bad['id']}.status",
+            f"{bad['id']}: status '{bad['status']}' is not a state of {bad['type']} (one of {', '.join(bad['allowed'])})",
+            f"{update} {bad['id']} --data '{{\"status\": \"{bad['allowed'][0]}\"}}'")
+    # Content that still says nothing is design to be written, like an uncovered
+    # item: it advises, and blocks under --strict.
+    for p in results.get("placeholders", []):
+        add("placeholder", "error" if strict else "warning", f"{p['id']}.{p['fields'][0]}",
+            f"{p['id']}: placeholder text in {', '.join(p['fields'])}",
+            f"{update} {p['id']} --data '{{\"{p['fields'][0]}\": \"<the real text>\"}}'")
+    # A check that could not run is an error, not silence: reporting zero gaps
+    # because the items would not load is the same output as a clean DHF.
+    for key in ("verification_gaps_error", "traceability_error"):
+        if results.get(key):
+            add("unchecked", "error", key, results[key],
+                "run `medharness verify dhf` and read what it reports.")
+    return found
+
+
 def dangling_message(d: dict) -> str:
     return f"{d['source']}.{d['field']} → {d['target']}: target does not exist"
 
@@ -151,46 +226,3 @@ def mistyped_message(m: dict) -> str:
 def cycle_message(cycle: list[str]) -> str:
     path = " → ".join(cycle + [cycle[0]]) if len(cycle) > 1 else f"{cycle[0]} → itself"
     return f"Traceability cycle: {path}"
-
-
-def _structural_messages(results: dict, strict: bool) -> tuple[list[str], list[str]]:
-    """Split structural findings into what blocks and what merely advises."""
-    errors: list[str] = []
-    warnings: list[str] = []
-
-    schema = results.get("schema") or {}
-    errors.extend(str(e) for e in (schema.get("errors") or []))
-
-    trace = results.get("traceability") or {}
-    for failure in (trace.get("required") or {}).get("failures", []):
-        errors.append(f"{failure.get('id')}: {failure.get('issue')}")
-    errors.extend(dangling_message(d) for d in trace.get("dangling", []))
-    errors.extend(mistyped_message(m) for m in trace.get("mistyped", []))
-    errors.extend(cycle_message(c) for c in trace.get("cycles", []))
-
-    # Uncovered items block only under --strict; anywhere else they
-    # are a gap in design still to be written, not a broken reference.
-    bucket = errors if strict else warnings
-    for gap in results.get("coverage_gaps", []):
-        bucket.append(
-            f"{gap['parent_type']}->{gap['child_type']}: "
-            f"{len(gap.get('uncovered') or [])} uncovered"
-        )
-    for gap in results.get("verification_gaps", []):
-        warnings.append(f"{gap['id']}: {gap['issue']}")
-    # A status that is no state of its type is a broken record, like a broken link.
-    errors.extend(
-        f"{s['id']}: status '{s['status']}' is not a state of {s['type']} (one of {', '.join(s['allowed'])})"
-        for s in results.get("invalid_statuses", [])
-    )
-    # Content that still says nothing is design to be written, like an uncovered
-    # item: it advises, and blocks under --strict.
-    bucket.extend(f"{p['id']}: placeholder text in {', '.join(p['fields'])}" for p in results.get("placeholders", []))
-    # A check that could not run is an error, not silence: reporting zero gaps
-    # because the items would not load is the same output as a clean DHF.
-    if results.get("verification_gaps_error"):
-        errors.append(results["verification_gaps_error"])
-    if results.get("traceability_error"):
-        errors.append(results["traceability_error"])
-
-    return errors, warnings
