@@ -18,8 +18,8 @@ from pathlib import Path
 import pytest
 from fixtures.starter import keep_the_starter_text
 
+from medharness.services.verify_release import known_anomalies
 from medharness.services.release_baseline import (
-    _collect_known_anomalies,
     build_release_baseline,
     record_release,
 )
@@ -63,7 +63,7 @@ class TestAnomalyCollection:
     @pytest.mark.parametrize("status", ["draft", "open", "in_progress"])
     def test_unresolved_states_are_collected(self, dhf: Path, status: str) -> None:
         _defect(dhf, "DEF-001", status, rationale="Assessed under RISK-001.")
-        anomalies, errors = _collect_known_anomalies(dhf)
+        anomalies, errors = known_anomalies(dhf)
         assert [a["defect"] for a in anomalies] == ["DEF-001"]
         assert errors == []
 
@@ -71,13 +71,13 @@ class TestAnomalyCollection:
     def test_settled_states_are_not_anomalies(self, dhf: Path, status: str) -> None:
         """A cancelled report means the report was withdrawn, not that it shipped."""
         _defect(dhf, "DEF-001", status)
-        anomalies, errors = _collect_known_anomalies(dhf)
+        anomalies, errors = known_anomalies(dhf)
         assert anomalies == []
         assert errors == []
 
     def test_carries_severity_and_state(self, dhf: Path) -> None:
         _defect(dhf, "DEF-001", "open", severity="High", rationale="Assessed.")
-        entry = _collect_known_anomalies(dhf)[0][0]
+        entry = known_anomalies(dhf)[0][0]
         assert entry["severity"] == "High"
         assert entry["state"] == "open"
         assert entry["title"]
@@ -85,7 +85,7 @@ class TestAnomalyCollection:
     def test_output_is_sorted(self, dhf: Path) -> None:
         for uid in ("DEF-003", "DEF-001", "DEF-002"):
             _defect(dhf, uid, "open", rationale="Assessed.")
-        anomalies, _ = _collect_known_anomalies(dhf)
+        anomalies, _ = known_anomalies(dhf)
         assert [a["defect"] for a in anomalies] == ["DEF-001", "DEF-002", "DEF-003"]
 
 

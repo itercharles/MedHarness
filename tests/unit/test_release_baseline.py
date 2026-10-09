@@ -5,11 +5,11 @@ from pathlib import Path
 import pytest
 from unittest.mock import patch
 
+from medharness.services.verify_release import unreleasable_crs
 from medharness.services.release_baseline import (
     _auto_collect_crs,
     _collect_bom,
     _generate_release_notes,
-    _verify_cr_gates,
     build_release_baseline,
     record_release,
 )
@@ -48,38 +48,38 @@ def _req_txt(tmp_path: Path, content: str) -> Path:
 
 
 # ---------------------------------------------------------------------------
-# _verify_cr_gates
+# unreleasable_crs
 # ---------------------------------------------------------------------------
 
 class TestVerifyCrGates:
     def test_completed_cr_passes(self, tmp_path):
         with patch("dhfkit.item_store.ItemStore.get_item", return_value=_cr_item("CR-001", "completed")):
-            violations = _verify_cr_gates(tmp_path / "DHF", ["CR-001"])
+            violations = unreleasable_crs(tmp_path / "DHF", ["CR-001"])
         assert violations == []
 
     def test_cancelled_cr_is_violation(self, tmp_path):
         # cancelled CRs are not deliverables — including them would break validate_release()
         with patch("dhfkit.item_store.ItemStore.get_item", return_value=_cr_item("CR-001", "cancelled")):
-            violations = _verify_cr_gates(tmp_path / "DHF", ["CR-001"])
+            violations = unreleasable_crs(tmp_path / "DHF", ["CR-001"])
         assert len(violations) == 1
         assert "completed" in violations[0]["issue"]
 
     def test_rejected_cr_is_violation(self, tmp_path):
         with patch("dhfkit.item_store.ItemStore.get_item", return_value=_cr_item("CR-001", "rejected")):
-            violations = _verify_cr_gates(tmp_path / "DHF", ["CR-001"])
+            violations = unreleasable_crs(tmp_path / "DHF", ["CR-001"])
         assert len(violations) == 1
         assert "completed" in violations[0]["issue"]
 
     def test_open_cr_is_violation(self, tmp_path):
         with patch("dhfkit.item_store.ItemStore.get_item", return_value=_cr_item("CR-001", "develop")):
-            violations = _verify_cr_gates(tmp_path / "DHF", ["CR-001"])
+            violations = unreleasable_crs(tmp_path / "DHF", ["CR-001"])
         assert len(violations) == 1
         assert violations[0]["cr"] == "CR-001"
         assert "develop" in violations[0]["issue"]
 
     def test_missing_cr_is_violation(self, tmp_path):
         with patch("dhfkit.item_store.ItemStore.get_item", return_value=None):
-            violations = _verify_cr_gates(tmp_path / "DHF", ["CR-999"])
+            violations = unreleasable_crs(tmp_path / "DHF", ["CR-999"])
         assert violations[0]["issue"] == "CR not found"
 
     def test_multiple_crs_all_checked(self, tmp_path):
@@ -88,7 +88,7 @@ class TestVerifyCrGates:
             return _cr_item(uid, states[uid])
 
         with patch("dhfkit.item_store.ItemStore.get_item", side_effect=side_effect):
-            violations = _verify_cr_gates(tmp_path / "DHF", ["CR-001", "CR-002"])
+            violations = unreleasable_crs(tmp_path / "DHF", ["CR-001", "CR-002"])
         assert len(violations) == 1
         assert violations[0]["cr"] == "CR-002"
 

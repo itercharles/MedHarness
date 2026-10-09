@@ -11,6 +11,11 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.58.13] — 2026-10-09
+
+### Changed
+- What makes a release unfit (a CR that is not `completed`, an unresolved defect with no `release_rationale`, a completed CR that no longer passes `verify completion`) is judged in `services/verify_release.py`, beside the other `verify_*` modules; `release_baseline.py` only builds. No behaviour change.
+
 ## [0.58.12] — 2026-10-09
 
 ### Fixed
