@@ -11,6 +11,11 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.58.17] — 2026-10-09
+
+### Changed
+- The release workflow reads the tag's version through `env:` in its shell steps instead of interpolating `${{ }}` into the script, as `docs/ai-workflow.md` asks of any workflow. Small tidy-ups in `cli/__init__.py`, `cli/errors.py` and `cli/output.py` (a docstring placed after `from __future__`, two identical `except` branches, a comment that no longer matched). No behaviour change.
+
 ## [0.58.16] — 2026-10-09
 
 ### Changed
