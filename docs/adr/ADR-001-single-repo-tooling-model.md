@@ -19,7 +19,7 @@ Merge the former DHF companion repo into the main MedHarness repository:
 
 ## Consequences
 
-- Single checkout for contributors; everything is available after `pip install -e .` (two CLIs then; one, `medharness`, since ADR-002 was superseded)
+- Single checkout for contributors; both CLIs available after `pip install -e .`
 - `init` has no network dependency; always uses bundled templates
 - User DHF repos no longer contain `dhfkit/`, `pyproject.toml`, or engine source
 - the DHF engine is installed through `medharness`

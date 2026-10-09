@@ -995,11 +995,37 @@ class TestRunOpenaiCompatible:
             "choices": [{"message": message, "finish_reason": "stop" if not tool_calls else "tool_calls"}]
         }).encode()
 
-    def test_returns_error_when_no_api_key(self):
-        rc, output, sid = _run_openai_compatible("prompt", model="gpt-4o", api_key="", base_url=self.BASE_URL)
-        assert rc == 1
-        assert "API key" in output
-        assert sid == ""
+    def test_a_hosted_provider_without_its_key_names_the_variable(self):
+        from medharness.services.llm import LLMConfig, _run_llm
+
+        for provider, var in (("openai", "OPENAI_API_KEY"), ("deepseek", "DEEPSEEK_API_KEY")):
+            cfg = LLMConfig(provider=provider, model="m", api_key="", base_url="https://gateway.example/v1")
+            rc, output, sid = _run_llm("prompt", config=cfg)
+            assert (rc, sid) == (1, "")
+            assert var in output
+
+    def test_a_tool_result_is_cut_before_it_goes_back_to_the_model(self):
+        from medharness.services.llm import _MAX_TOOL_OUTPUT
+
+        call = [{"id": "c1", "function": {"name": "bash", "arguments": json.dumps({"command": f"head -c {_MAX_TOOL_OUTPUT * 3} /dev/zero | tr '\\0' x"})}}]
+        bodies = [self._make_response("", tool_calls=call), self._make_response("done")]
+        sent: list[dict] = []
+
+        def fake_urlopen(req, timeout=None):
+            sent.append(json.loads(req.data))
+            resp = MagicMock()
+            resp.__enter__ = lambda s: s
+            resp.__exit__ = MagicMock(return_value=False)
+            resp.read.return_value = bodies[len(sent) - 1]
+            return resp
+
+        with patch("urllib.request.urlopen", side_effect=fake_urlopen):
+            rc, output, _ = _run_openai_compatible("p", model="m", api_key="k", base_url=self.BASE_URL)
+        assert (rc, output) == (0, "done")
+        tool_message = sent[1]["messages"][-1]
+        assert tool_message["role"] == "tool"
+        assert len(tool_message["content"]) < _MAX_TOOL_OUTPUT + 100
+        assert "truncated" in tool_message["content"]
 
     def test_a_local_endpoint_needs_no_api_key_and_is_sent_none(self):
         mock_resp = MagicMock()

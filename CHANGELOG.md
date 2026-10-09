@@ -11,6 +11,12 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.58.12] — 2026-10-09
+
+### Fixed
+- The OpenAI-compatible loop returns at most 20,000 characters of a command's output to the model; one large file used to be resent on every later turn until the request failed with a context-length error.
+- `openai` and `deepseek` without their API key name the variable to set, whatever the base URL; the check no longer compares the URL with the default endpoints.
+
 ## [0.58.11] — 2026-10-09
 
 ### Changed

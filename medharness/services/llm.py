@@ -12,7 +12,7 @@ from dataclasses import dataclass
 
 @dataclass
 class LLMConfig:
-    provider: str = "anthropic"  # "anthropic" | "openai" | "deepseek"
+    provider: str = "anthropic"  # "anthropic" runs the claude CLI; any other name is OpenAI-compatible
     model: str = ""
     api_key: str = ""
     base_url: str = ""
@@ -69,6 +69,9 @@ def _model_label(config: LLMConfig) -> str:
     return config.provider
 
 
+# A tool result is resent on every later turn; one large file would crowd out the context.
+_MAX_TOOL_OUTPUT = 20_000
+
 _SESSION_GONE = "no conversation found with session id"
 
 
@@ -121,8 +124,6 @@ def _run_openai_compatible(
     """
     if not base_url:
         return 1, "No endpoint: set MEDHARNESS_<STAGE>_BASE_URL for this provider.", ""
-    if not api_key and base_url in _PROVIDER_BASE_URLS.values():
-        return 1, f"API key not configured for provider at {base_url}", ""
 
     bash_tool = {
         "type": "function",
@@ -192,6 +193,9 @@ def _run_openai_compatible(
                     command, shell=True, capture_output=True, text=True, timeout=120
                 )
                 tc_output = proc.stdout + (("\n" + proc.stderr) if proc.stderr else "")
+                if len(tc_output) > _MAX_TOOL_OUTPUT:
+                    tc_output = (tc_output[:_MAX_TOOL_OUTPUT]
+                                 + f"\n[output truncated at {_MAX_TOOL_OUTPUT} characters]")
             except subprocess.TimeoutExpired:
                 tc_output = "Command timed out."
             except Exception as exc:  # noqa: BLE001
@@ -218,6 +222,9 @@ def _run_llm(
     """Dispatch to the appropriate LLM runner based on config.provider."""
     if config.provider == "anthropic":
         return _run_claude(prompt, resume_session=resume_session, model=config.model)
+    key_env = _PROVIDER_API_KEY_ENVS.get(config.provider)
+    if key_env and not config.api_key:
+        return 1, f"{key_env} is not set.", ""
     return _run_openai_compatible(
         prompt,
         model=config.model,

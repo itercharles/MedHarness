@@ -9,7 +9,7 @@ Uses [ADR-TEMPLATE.md](ADR-TEMPLATE.md).
 | ID | Title | Status |
 |----|-------|--------|
 | ADR-001 | [Single-Repo Tooling Model](ADR-001-single-repo-tooling-model.md) | Accepted |
-| ADR-002 | [CLI and Public Contracts](ADR-002-cli-and-public-contracts.md) | Superseded |
+| ADR-002 | [CLI and Public Contracts](ADR-002-cli-and-public-contracts.md) | Superseded by [interface.md](../interface.md) |
 | ADR-003 | [Templates as Starter DHF](ADR-003-templates-as-starter-dhf.md) | Accepted |
 
 ## When to Write an ADR
