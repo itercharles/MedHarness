@@ -34,6 +34,7 @@ Concretely:
 
 ```python
 cmd = ["claude", "-p", "--dangerously-skip-permissions", "--output-format", "json"]
+# plus --model <model> and --resume <session> when set
 ```
 
 `--dangerously-skip-permissions` disables Claude Code's interactive per-action approval prompts. This is deliberate — the stages are designed to run unattended in CI, where there is no human at a terminal to answer prompts. It also means **there is no per-action gate between the model and your filesystem.**
@@ -44,7 +45,7 @@ cmd = ["claude", "-p", "--dangerously-skip-permissions", "--output-format", "jso
 proc = subprocess.run(command, shell=True, capture_output=True, text=True, timeout=120)
 ```
 
-Bounded only by `max_turns=100` and a 120-second per-command timeout.
+Bounded only by `max_turns=100`, a 120-second per-command timeout, and 20,000 characters of output returned to the model per command.
 
 ### What this means
 
