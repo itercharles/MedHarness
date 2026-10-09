@@ -1,4 +1,4 @@
-"""Unit tests for medharness.services.release_baseline."""
+"""Unit tests for medharness.services.release."""
 
 import json
 from pathlib import Path
@@ -6,7 +6,7 @@ import pytest
 from unittest.mock import patch
 
 from medharness.services.verify_release import unreleasable_crs
-from medharness.services.release_baseline import (
+from medharness.services.release import (
     _auto_collect_crs,
     _collect_bom,
     _generate_release_notes,

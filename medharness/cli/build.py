@@ -225,7 +225,7 @@ def register(main):
 
         With --write, and only if all of that passed, records the REL item.
         """
-        from medharness.services.release_baseline import build_release
+        from medharness.services.release import build_release
 
         result = build_release(
             ctx.obj["dhf"], version, out_dir,

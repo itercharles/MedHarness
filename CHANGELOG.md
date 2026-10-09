@@ -11,6 +11,11 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.58.14] — 2026-10-09
+
+### Changed
+- `services/release_baseline.py` and `services/release_artifacts.py`, which both wrote release records into one directory, are one module, `services/release.py`. No behaviour change.
+
 ## [0.58.13] — 2026-10-09
 
 ### Changed
