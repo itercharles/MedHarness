@@ -88,7 +88,7 @@ what is configured is checked: a type with no `target_types` accepts any target.
 **Say what belongs at each level.** A doc type's `description` is your own definition of
 its tier: what belongs there, what does not, one example. `build plan` puts it in the
 prompt ("What Belongs at Each Level"), and the model decides from it where a new item sits
-and whether a change needs one at all. The defaults for UC, CRS, SYS, SRS and SYSARCH
+and whether a change needs one at all. The defaults for UC, CRS, SYS, SRS, SYSARCH, MODULE and SWDD
 say it for a typical product; a project with its own copy of those files adds a
 `description:` key to them, in its own words. A type without one is left out.
 
