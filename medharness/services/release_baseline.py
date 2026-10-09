@@ -1,8 +1,9 @@
 """Everything one release needs, built in one pass — IEC 62304 §9.
 
-`build_release` checks the DHF and the included CRs, writes the baseline, the
-software BOM and the evidence bundle to one directory, and — only when all of
-that passed — records the REL item.
+`build_release` runs the checks (`services/verify_release.py` and the other
+`verify_*` gates), writes the baseline, the software BOM and the evidence
+bundle to one directory, and — only when all of that passed — records the REL
+item. This module only builds; what makes a release unfit is judged there.
 """
 
 from __future__ import annotations
@@ -13,82 +14,13 @@ from pathlib import Path
 from typing import Optional
 
 from dhfkit.store import open_store
+from medharness.services.verify_release import (
+    RELEASABLE_STATE,
+    known_anomalies,
+    still_closed,
+    unreleasable_crs,
+)
 from medharness.services.soup_sync import _KNOWN_MANIFESTS, _dispatch_parser
-
-
-# ---------------------------------------------------------------------------
-# Gate helpers
-# ---------------------------------------------------------------------------
-
-# Only completed CRs may be included in a release.  cancelled/rejected CRs
-# represent abandoned work and are not deliverables; including them would
-# produce a REL item that fails validate_release() in dhfkit/core.py.
-_RELEASABLE_STATE = "completed"
-
-
-# A defect in any of these states still affects the software being released.
-# 'cancelled' means the report was withdrawn, not that the software changed.
-_UNRESOLVED_DEFECT_STATES = ("draft", "open", "in_progress")
-
-
-def _collect_known_anomalies(dhf: Path) -> tuple[list[dict], list[str]]:
-    """Gather unresolved defects and the rationale each carries.
-
-    IEC 62304 §9.7 requires a release to document its residual known anomalies
-    and why each is acceptable. A defect may ship — but not silently, and not
-    without someone having judged it.
-
-    Mirrors the SOUP accepted_vulns mechanism: an assessment recorded against
-    the specific finding, not a blanket suppression.
-
-    Returns (anomalies, errors).
-    """
-    anomalies: list[dict] = []
-    errors: list[str] = []
-
-    for item in open_store(dhf).list_items():
-        uid = str(item.get("id") or "")
-        if not uid.startswith("DEF-"):
-            continue
-        state = str(item.get("status") or "").strip().lower()
-        if state not in _UNRESOLVED_DEFECT_STATES:
-            continue
-
-        rationale = str(item.get("release_rationale") or "").strip()
-        entry = {
-            "defect": uid,
-            "title": item.get("title", ""),
-            "severity": item.get("severity", ""),
-            "state": state,
-            "rationale": rationale,
-        }
-        anomalies.append(entry)
-        if not rationale:
-            errors.append(
-                f"{uid} is unresolved (state '{state}') and has no "
-                f"release_rationale. §9.7 requires the residual anomalies a "
-                f"release ships with to be documented and assessed — record why "
-                f"it is acceptable, or resolve it before baselining."
-            )
-
-    return sorted(anomalies, key=lambda a: a["defect"]), errors
-
-
-def _verify_cr_gates(dhf: Path, cr_ids: list[str]) -> list[dict]:
-    """Return violation dicts for any CR not in `completed` state."""
-    violations: list[dict] = []
-    for cr_id in cr_ids:
-        item = open_store(dhf).get_item(cr_id)
-        if item is None:
-            violations.append({"cr": cr_id, "issue": "CR not found"})
-            continue
-        state = item.get("status") or ""
-        if state != _RELEASABLE_STATE:
-            violations.append({
-                "cr": cr_id,
-                "issue": f"CR is in state '{state}', must be '{_RELEASABLE_STATE}' to be included in a release",
-            })
-    return violations
 
 
 def _auto_collect_crs(dhf: Path) -> list[str]:
@@ -103,7 +35,7 @@ def _auto_collect_crs(dhf: Path) -> list[str]:
                 released_crs.add(cr_id)
         elif item_type == "CR":
             state = item.get("status") or ""
-            if state == _RELEASABLE_STATE:
+            if state == RELEASABLE_STATE:
                 completed_unreleased.append(item["id"])
 
     return sorted(uid for uid in completed_unreleased if uid not in released_crs)
@@ -223,7 +155,7 @@ def build_release_baseline(
         cr_ids = _auto_collect_crs(dhf)
 
     # Gate: all CRs must be completed
-    gate_violations = _verify_cr_gates(dhf, cr_ids)
+    gate_violations = unreleasable_crs(dhf, cr_ids)
     for v in gate_violations:
         errors.append(f"{v['cr']}: {v['issue']}")
 
@@ -231,10 +163,10 @@ def build_release_baseline(
         return _refused(version, cr_ids, errors)
 
     # Gate: unresolved defects must each carry an assessment (§9.7)
-    known_anomalies, anomaly_errors = _collect_known_anomalies(dhf)
+    anomalies, anomaly_errors = known_anomalies(dhf)
     errors.extend(anomaly_errors)
     if anomaly_errors:
-        return _refused(version, cr_ids, errors, known_anomalies)
+        return _refused(version, cr_ids, errors, anomalies)
 
     # Collect BOM — propagate any manifest errors so an incomplete BOM fails loudly
     bom, bom_errors = _collect_bom(dhf, manifest_paths)
@@ -253,7 +185,7 @@ def build_release_baseline(
         "included_crs": sorted(cr_ids),
         "soup_count": soup_count,
         "manifest_packages_count": manifest_packages_count,
-        "known_anomalies": known_anomalies,
+        "known_anomalies": anomalies,
         "release_notes": release_notes,
     }
 
@@ -322,7 +254,7 @@ def build_release_baseline(
         "outcome": "completed_with_errors" if errors else "completed",
         "version": version,
         "cr_ids": sorted(cr_ids),
-        "known_anomalies": known_anomalies,
+        "known_anomalies": anomalies,
         "release_notes": release_notes,
         "artifacts": artifacts,
         "soup_count": soup_count,
@@ -374,16 +306,9 @@ def build_release(
         gate=gate,
     )
 
-    errors = [f"DHF: {e}" for e in gate["errors"]] + baseline["errors"]
-    warnings = list(baseline.get("warnings", []))
-    # `completed` is a status anyone can write. A CR ships only if it still passes
-    # the same closure gate `verify completion` runs.
-    from medharness.services.verify_completion import cr_closure_gate
-
-    for cr_id in baseline["cr_ids"]:
-        closure = cr_closure_gate(cr_id, dhf, junit_paths=list(junit_paths))
-        errors += [f"{cr_id}: {e}" for e in closure["errors"]]
-        warnings += [f"{cr_id}: {w}" for w in closure["warnings"]]
+    closure_errors, closure_warnings = still_closed(dhf, baseline["cr_ids"], list(junit_paths))
+    errors = [f"DHF: {e}" for e in gate["errors"]] + baseline["errors"] + closure_errors
+    warnings = list(baseline.get("warnings", [])) + closure_warnings
     rel_uid: Optional[str] = None
     if write and not errors:
         try:

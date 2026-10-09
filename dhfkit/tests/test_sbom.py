@@ -264,7 +264,7 @@ class TestReleaseBaselineEmitsAnSbom:
         store.get_item.return_value = {"id": "CR-001", "type": "CR", "status": "completed", "title": "x"}
         store.list_items.return_value = []
         type(store).config = PropertyMock(side_effect=FileNotFoundError("global.yaml not found"))
-        with patch("medharness.services.release_baseline.open_store", return_value=store):
+        with patch("medharness.services.release_baseline.open_store", return_value=store), patch("medharness.services.verify_release.open_store", return_value=store):
             result = build_release_baseline(
                 tmp_path / "nonexistent-DHF", "1.0.0", [], ["CR-001"], out,
             )
