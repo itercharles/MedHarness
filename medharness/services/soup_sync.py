@@ -49,6 +49,7 @@ from typing import Optional
 
 import yaml
 
+from dhfkit.paths import config_file
 from dhfkit.store import open_store
 
 
@@ -82,19 +83,9 @@ def _normalize_version(v: str) -> str:
 
 
 def _load_toml(path: Path) -> dict:
-    """Load TOML using stdlib tomllib (Python 3.11+)."""
-    try:
-        import tomllib
-        return tomllib.loads(path.read_text(encoding="utf-8"))
-    except ModuleNotFoundError:
-        # Python <3.11 fallback
-        try:
-            import tomli  # type: ignore[import]
-            return tomli.loads(path.read_text(encoding="utf-8"))
-        except ModuleNotFoundError:
-            raise RuntimeError(
-                f"Cannot parse {path.name}: requires Python 3.11+ or 'tomli' package"
-            )
+    import tomllib
+
+    return tomllib.loads(path.read_text(encoding="utf-8"))
 
 
 # ---------------------------------------------------------------------------
@@ -126,25 +117,19 @@ def parse_requirements_txt(path: Path) -> list[dict]:
     return packages
 
 
-def parse_uv_lock(path: Path) -> list[dict]:
-    """All packages from a uv.lock file."""
-    data = _load_toml(path)
+def parse_python_lock(path: Path) -> list[dict]:
+    """The packages of a uv.lock or poetry.lock, bar the project's own.
+
+    uv lists the project (and each workspace member) among its packages with an editable or
+    virtual source. That is the software being built, not SOUP.
+    """
     packages: list[dict] = []
-    for pkg in data.get("package", []):
+    for pkg in _load_toml(path).get("package", []):
         name = pkg.get("name")
         version = pkg.get("version")
-        if name and version:
-            packages.append({"name": name, "version": str(version), "source": str(path), "ecosystem": "PyPI"})
-    return packages
-
-
-def parse_poetry_lock(path: Path) -> list[dict]:
-    """All packages from a poetry.lock file."""
-    data = _load_toml(path)
-    packages: list[dict] = []
-    for pkg in data.get("package", []):
-        name = pkg.get("name")
-        version = pkg.get("version")
+        source = pkg.get("source")
+        if isinstance(source, dict) and ("editable" in source or "virtual" in source):
+            continue
         if name and version:
             packages.append({"name": name, "version": str(version), "source": str(path), "ecosystem": "PyPI"})
     return packages
@@ -211,7 +196,8 @@ def parse_package_lock_json(path: Path) -> list[dict]:
     for key, info in (data.get("packages") or {}).items():
         if not key or key == "":
             continue  # root package
-        name = info.get("name") or key.removeprefix("node_modules/").split("/")[-1]
+        # The name is what follows the last `node_modules/`, scope included: `@types/node`.
+        name = info.get("name") or key.rsplit("node_modules/", 1)[-1]
         version = info.get("version")
         if name and version:
             packages.append({"name": name, "version": version, "source": source, "ecosystem": "npm"})
@@ -258,10 +244,8 @@ def _dispatch_parser(path: Path) -> list[dict]:
     name = path.name
     if name == "requirements.txt":
         return parse_requirements_txt(path)
-    if name == "uv.lock":
-        return parse_uv_lock(path)
-    if name == "poetry.lock":
-        return parse_poetry_lock(path)
+    if name in ("uv.lock", "poetry.lock"):
+        return parse_python_lock(path)
     if name == "pyproject.toml":
         return parse_pyproject_toml(path)
     if name == "package.json":
@@ -311,6 +295,9 @@ def load_soup_sources(dhf_path: Path, project_dir: Path) -> tuple[list[dict], li
     errors: list[str] = []
 
     for entry in data.get("sources") or []:
+        if not isinstance(entry, dict):
+            errors.append(f"soup-sources.yaml: a source must be a mapping with a 'type', not {entry!r}")
+            continue
         entry_type = entry.get("type")
 
         if entry_type == "manifest":
@@ -473,8 +460,6 @@ def diff_against_dhf(
 # Main entrypoint
 # ---------------------------------------------------------------------------
 
-from dhfkit.paths import config_file
-
 
 def collect_manifest_packages(
     dhf: Path,
@@ -569,12 +554,17 @@ def sync_soup_items(
     )
 
     soup_items: list[dict] = []
+    store = None
     try:
-        soup_items = [it for it in open_store(dhf).list_items() if it.get("type") == "SOUP"]
+        store = open_store(dhf)
+        soup_items = [it for it in store.list_items() if it.get("type") == "SOUP"]
     except Exception as exc:
         errors.append(f"Failed to list SOUP items: {exc}")
 
     diff = diff_against_dhf(packages, soup_items)
+    if store is None:
+        # The register could not be read, so "no SOUP item for this package" proves nothing.
+        diff["to_create"] = diff["to_update"] = []
 
     items_created: list[str] = []
     items_updated: list[str] = []
@@ -595,7 +585,7 @@ def sync_soup_items(
                 "license": "",
                 "source": pkg.get("source") or "",
             }
-            new_item = open_store(dhf).create_item(data)
+            new_item = store.create_item(data)
             items_created.append(new_item["id"])
         except Exception as exc:
             errors.append(f"Failed to create SOUP item for {pkg['name']}: {exc}")
@@ -604,10 +594,10 @@ def sync_soup_items(
         pkg = entry["pkg"]
         item = entry["item"]
         try:
-            open_store(dhf).update_item(item["id"], {"version": pkg["version"]})
+            store.update_item(item["id"], {"version": pkg["version"]})
             items_updated.append(item["id"])
         except Exception as exc:
-            errors.append(f"Failed to update {item['uid']}: {exc}")
+            errors.append(f"Failed to update {item['id']}: {exc}")
 
     outcome = "completed_with_errors" if errors else "completed"
     return {

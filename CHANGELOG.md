@@ -11,6 +11,18 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.58.21] — 2026-10-10
+
+### Fixed
+- `build soup` on an npm lockfile registers a scoped package under its full name. `@types/node` was registered as `node` and `@babel/core` as `core`, so the vulnerability lookup and the SBOM's purl named a different package.
+- `build soup` on a `uv.lock` no longer registers the project itself (an editable or virtual package in the lockfile) as SOUP.
+- A SOUP item whose update fails is reported by its ID; the report used a key the item does not have and crashed. A `soup-sources.yaml` source that is not a mapping is an error in the answer, not a traceback. When the SOUP register cannot be read, `build soup` creates and updates nothing instead of treating every package as new.
+- The changed-file lists (`artifacts.files_changed`, `verify changes`) name a file with non-ASCII characters as it is named, not as git's quoted, octal-escaped form.
+- `git.head` returns nothing, as the other git helpers do, when git is not installed.
+
+### Changed
+- `uv.lock` and `poetry.lock` share one parser, and the unreachable Python 3.10 `tomli` fallback is gone.
+
 ## [0.58.20] — 2026-10-10
 
 ### Fixed
