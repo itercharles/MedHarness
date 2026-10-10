@@ -11,6 +11,11 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.58.23] — 2026-10-10
+
+### Fixed
+- `build soup` and `build release` read a `package.json` dependency at the version a lockfile installed, not the floor of its range. `^2.1.0` was recorded as 2.1.0, so `verify soup` asked OSV about versions nobody runs (21 advisories where the installed versions had 9). The lockfile is the `pnpm-lock.yaml` or `package-lock.json` beside the manifest or in a directory above it, up to the repository root, so a workspace member finds the root lockfile's entry for its own directory. A dependency the lockfile does not list, or a manifest with no lockfile, still gets the range floor.
+
 ## [0.58.22] — 2026-10-10
 
 ### Changed

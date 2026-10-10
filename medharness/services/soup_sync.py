@@ -12,7 +12,7 @@ Supported manifest formats
 | uv.lock             | PyPI       | uv lockfile (TOML)                 |
 | poetry.lock         | PyPI       | Poetry lockfile (TOML)             |
 | pyproject.toml      | PyPI       | best-effort; lockfile preferred    |
-| package.json        | npm        | semver ranges stripped             |
+| package.json        | npm        | installed version from a lockfile  |
 | package-lock.json   | npm        | v2/v3 lockfile; pinned             |
 | pnpm-lock.yaml      | npm        | lockfile v6+; direct dependencies  |
 
@@ -168,8 +168,15 @@ def parse_pyproject_toml(path: Path) -> list[dict]:
 
 
 def parse_package_json(path: Path) -> list[dict]:
-    """Version-range deps from package.json (semver operators stripped)."""
+    """The dependencies package.json declares, at the version a lockfile resolved them to.
+
+    A lockfile in the manifest's directory, or in one above it up to the repository root (a
+    workspace), says what is installed; a range such as ``^2.1.0`` does not, and its floor is
+    not what ships. A dependency the lockfile does not list keeps the range with its operators
+    stripped.
+    """
     data = json.loads(path.read_text(encoding="utf-8"))
+    installed = _installed_versions(path)
     packages: list[dict] = []
     for section, is_dev in (
         ("dependencies", False),
@@ -179,7 +186,7 @@ def parse_package_json(path: Path) -> list[dict]:
         for name, version_spec in (data.get(section) or {}).items():
             packages.append({
                 "name": name,
-                "version": _normalize_version(version_spec),
+                "version": installed.get(name) or _normalize_version(version_spec),
                 "source": str(path),
                 "ecosystem": "npm",
                 "dev": is_dev,
@@ -220,6 +227,16 @@ def parse_pnpm_lock(path: Path) -> list[dict]:
     Lockfile v6 and later. A dependency that is a workspace link or a git or tarball URL has no
     registry version and is left out; the peer-dependency suffix on a version is dropped.
     """
+    found: dict[tuple[str, str], dict] = {}
+    for versions in _pnpm_importers(path).values():
+        for name, version in versions.items():
+            found.setdefault((name, version), {"name": name, "version": version,
+                                               "source": str(path), "ecosystem": "npm"})
+    return list(found.values())
+
+
+def _pnpm_importers(path: Path) -> dict[str, dict[str, str]]:
+    """``{project path: {dependency: installed version}}`` from a pnpm-lock.yaml (v6 and later)."""
     data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
     major = str(data.get("lockfileVersion", "")).split(".")[0]
     if not major.isdigit() or int(major) < 6:
@@ -228,15 +245,58 @@ def parse_pnpm_lock(path: Path) -> list[dict]:
         )
     # A single-project v6 lockfile keeps its dependencies at the top level.
     importers = data.get("importers") or {".": data}
-    found: dict[tuple[str, str], dict] = {}
-    for importer in importers.values():
+    resolved: dict[str, dict[str, str]] = {}
+    for key, importer in importers.items():
+        versions: dict[str, str] = {}
         for section in _PNPM_SECTIONS:
             for name, info in (importer.get(section) or {}).items():
                 m = _PNPM_VERSION_RE.match(str(info.get("version", "") if isinstance(info, dict) else info))
                 if m:
-                    found.setdefault((name, m.group()), {"name": name, "version": m.group(),
-                                                          "source": str(path), "ecosystem": "npm"})
-    return list(found.values())
+                    versions[name] = m.group()
+        resolved[key] = versions
+    return resolved
+
+
+def _installed_versions(manifest: Path) -> dict[str, str]:
+    """What a lockfile beside or above ``manifest`` says is installed, by package name.
+
+    The search stops at the repository root, so a lockfile that belongs to another project
+    further up is never read. Empty when there is none, or it cannot be read.
+    """
+    manifest = manifest.resolve()
+    directory = manifest.parent
+    while True:
+        try:
+            for lock in ("pnpm-lock.yaml", "package-lock.json"):
+                if (directory / lock).is_file():
+                    rel = _relative_to(manifest.parent, directory)
+                    return (_pnpm_importers(directory / lock).get(rel, {}) if lock == "pnpm-lock.yaml"
+                            else _npm_lock_versions(directory / lock, rel))
+        except (ValueError, OSError, json.JSONDecodeError, yaml.YAMLError):
+            return {}
+        if (directory / ".git").exists() or directory.parent == directory:
+            return {}
+        directory = directory.parent
+
+
+def _relative_to(project: Path, root: Path) -> str:
+    """``project`` as a path from ``root`` the way a lockfile writes it: ``.`` or ``apps/client``."""
+    return project.relative_to(root).as_posix() if project != root else "."
+
+
+def _npm_lock_versions(path: Path, project: str) -> dict[str, str]:
+    """The top-level installed versions of the project at ``project`` in a package-lock.json."""
+    data = json.loads(path.read_text(encoding="utf-8"))
+    prefix = "" if project == "." else f"{project}/"
+    versions: dict[str, str] = {}
+    for key, info in (data.get("packages") or {}).items():
+        for tail in (f"{prefix}node_modules/", "node_modules/"):
+            if key.startswith(tail) and "/node_modules/" not in key[len(tail):]:
+                versions.setdefault(key[len(tail):], str(info.get("version", "")))
+                break
+    if not data.get("packages"):
+        versions = {name: str(info.get("version", "")) for name, info in (data.get("dependencies") or {}).items()}
+    return {name: version for name, version in versions.items() if version}
 
 
 def _dispatch_parser(path: Path) -> list[dict]:
