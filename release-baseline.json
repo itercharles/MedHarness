@@ -1,9 +1,0 @@
-{
-  "version": "9.9.9",
-  "generated_at": "2026-09-26T17:45:28.900392+00:00",
-  "included_crs": [],
-  "soup_count": 1,
-  "manifest_packages_count": 0,
-  "known_anomalies": [],
-  "release_notes": "# Release 9.9.9\n\n## Software BOM\n1 SOUP component(s) in DHF \u2014 see software-bom.json for details.\n"
-}

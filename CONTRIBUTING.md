@@ -1,8 +1,8 @@
 # Contributing to MedHarness
 
-MedHarness keeps its own DHF in `DHF/` and maintainers work through change
-requests, the process the tool supports for medical device teams. External
-contributors can open a standard GitHub issue or PR directly.
+Open a standard GitHub issue or PR. The repository's own history and
+`CHANGELOG.md` are the record of what changed and why; the DHF a project keeps is
+what `medharness init` writes, from `dhfkit/templates/`.
 
 ## Development Setup
 
