@@ -11,6 +11,11 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.58.18] — 2026-10-10
+
+### Removed
+- The repository's own `DHF/` (old full copies of the type configs and spec templates, plans, sample items), the three release outputs committed at its root (`release-baseline.json`, `sbom.cdx.json`, `software-bom.json`) and the guard that kept `DHF/README.md` equal to the template. Nothing read them: `init` copies from `dhfkit/templates/`, and every test builds its own DHF.
+
 ## [0.58.17] — 2026-10-09
 
 ### Changed
