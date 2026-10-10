@@ -7,6 +7,10 @@ from pathlib import Path
 
 DEFAULT_SINCE_REF = "origin/main"
 
+# Without this git writes a path with non-ASCII characters as a quoted, octal-escaped string,
+# which matches no `--code-path` and names no file.
+_PLAIN_PATHS = ("-c", "core.quotePath=false")
+
 
 class DiffUnavailable(Exception):
     """git could not produce the diff — not the same answer as an empty one."""
@@ -61,7 +65,7 @@ def compute_diff(
     try:
         base = _branch_point(repo_root, since_ref)
         result = subprocess.run(
-            ["git", "diff", base, "--", *paths],
+            ["git", *_PLAIN_PATHS, "diff", base, "--", *paths],
             capture_output=True,
             text=True,
             cwd=str(repo_root),
@@ -75,9 +79,12 @@ def compute_diff(
 
 
 def head(repo_root: Path) -> str | None:
-    """The commit HEAD names, or None outside a repository."""
-    result = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True,
-                            text=True, cwd=str(repo_root), check=False)
+    """The commit HEAD names, or None outside a repository or without git."""
+    try:
+        result = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True,
+                                text=True, cwd=str(repo_root), check=False)
+    except FileNotFoundError:
+        return None
     return result.stdout.strip() if result.returncode == 0 else None
 
 
@@ -129,7 +136,7 @@ def collect_path_changes(
     base = _branch_point(repo_root, since_ref)
     try:
         result = subprocess.run(
-            ["git", "diff", "--name-status", base, "--", *paths],
+            ["git", *_PLAIN_PATHS, "diff", "--name-status", base, "--", *paths],
             capture_output=True,
             text=True,
             cwd=str(repo_root),
@@ -147,7 +154,7 @@ def collect_path_changes(
     # `git diff` compares tracked files only; a file an agent created and left
     # uncommitted is a change too.
     untracked = subprocess.run(
-        ["git", "ls-files", "--others", "--exclude-standard", "--", *paths],
+        ["git", *_PLAIN_PATHS, "ls-files", "--others", "--exclude-standard", "--", *paths],
         capture_output=True, text=True, cwd=str(repo_root), check=False,
     )
     created.extend(line for line in (untracked.stdout or "").splitlines() if line)
@@ -175,7 +182,7 @@ def added_line_counts(repo_root: Path, since_ref: str, *paths: str) -> dict[str,
     """Lines each tracked file gained since the branch left ``since_ref``, working tree included."""
     base = _branch_point(repo_root, since_ref)
     result = subprocess.run(
-        ["git", "diff", "--numstat", base, "--", *paths],
+        ["git", *_PLAIN_PATHS, "diff", "--numstat", base, "--", *paths],
         capture_output=True, text=True, cwd=str(repo_root), check=False,
     )
     if result.returncode != 0:

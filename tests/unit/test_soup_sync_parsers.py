@@ -15,10 +15,9 @@ from medharness.services.soup_sync import (
     parse_package_json,
     parse_package_lock_json,
     parse_pnpm_lock,
-    parse_poetry_lock,
     parse_pyproject_toml,
     parse_requirements_txt,
-    parse_uv_lock,
+    parse_python_lock,
 )
 
 
@@ -74,7 +73,7 @@ class TestUvLock:
             version = "8.1.7"
             source = { registry = "https://pypi.org/simple" }
         """))
-        pkgs = parse_uv_lock(f)
+        pkgs = parse_python_lock(f)
         assert len(pkgs) == 2
         names = {p["name"] for p in pkgs}
         assert names == {"requests", "click"}
@@ -83,7 +82,7 @@ class TestUvLock:
     def test_version_is_string(self, tmp_path: Path) -> None:
         f = tmp_path / "uv.lock"
         f.write_text('version = 1\n\n[[package]]\nname = "lib"\nversion = "1.0.0"\n')
-        pkgs = parse_uv_lock(f)
+        pkgs = parse_python_lock(f)
         assert isinstance(pkgs[0]["version"], str)
 
 
@@ -107,7 +106,7 @@ class TestPoetryLock:
             description = "Certificates"
             category = "main"
         """))
-        pkgs = parse_poetry_lock(f)
+        pkgs = parse_python_lock(f)
         assert len(pkgs) == 2
         assert pkgs[0]["ecosystem"] == "PyPI"
 

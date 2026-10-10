@@ -69,3 +69,30 @@ class TestCollectDhfItemChanges:
             "updated": ["SRS-002"],
             "deleted": ["SRS-099"],
         }
+
+
+class TestARealRepository:
+    def test_a_path_with_non_ascii_characters_is_reported_as_it_is_named(self, tmp_path: Path):
+        """git writes such a path quoted and octal-escaped unless told not to; the escaped
+        string names no file, and it is what `artifacts.files_changed` showed."""
+        import subprocess
+
+        def git(*args: str) -> None:
+            subprocess.run(["git", "-C", str(tmp_path), *args], check=True, capture_output=True)
+
+        git("init", "-q", "-b", "main")
+        git("config", "user.email", "t@example.com")
+        git("config", "user.name", "t")
+        (tmp_path / "base.txt").write_text("x")
+        git("add", "-A")
+        git("commit", "-qm", "base")
+        (tmp_path / "src").mkdir()
+        (tmp_path / "src" / "文档.py").write_text("x = 1\n", encoding="utf-8")
+        (tmp_path / "base.txt").write_text("y")
+        (tmp_path / "文档.md").write_text("z", encoding="utf-8")
+        git("add", "文档.md")
+
+        changed = collect_path_changes(tmp_path, "main", "src/", "文档.md", "base.txt")
+
+        assert sorted(changed["created"]) == ["src/文档.py", "文档.md"]
+        assert changed["updated"] == ["base.txt"]
