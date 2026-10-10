@@ -159,7 +159,7 @@ class TestPackageJson:
         assert len(pkgs) == 2
         assert all(p["ecosystem"] == "npm" for p in pkgs)
         express = next(p for p in pkgs if p["name"] == "express")
-        assert express["version"] == "4.18.2"
+        assert express["version"] == "^4.18.2"
 
 
 # ---------------------------------------------------------------------------

@@ -100,10 +100,10 @@ class TestParsePackageJson:
         pkgs = parse_package_json(path)
         assert any(p["name"] == "vitest" and p["dev"] is True for p in pkgs)
 
-    def test_version_stripping(self, tmp_path):
+    def test_a_range_without_a_lockfile_is_kept_as_written(self, tmp_path):
         path = _pkg_json(tmp_path, {"dependencies": {"lodash": "^4.17.21"}})
         pkgs = parse_package_json(path)
-        assert pkgs[0]["version"] == "4.17.21"
+        assert pkgs[0]["version"] == "^4.17.21"
 
     def test_empty_manifest(self, tmp_path):
         path = _pkg_json(tmp_path, {})

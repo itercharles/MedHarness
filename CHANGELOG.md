@@ -11,6 +11,11 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.58.24] — 2026-10-10
+
+### Fixed
+- A `package.json` dependency no lockfile resolves is kept as the range it was written (`^2.1.0`), not its floor (`2.1.0`). `verify soup` does not send a range to OSV, which looked up a version nobody runs and could pass a project whose installed version is vulnerable; it reports the item as not checked and says to record the version in use or pass the lockfile. The SBOM's existing rule, no purl for a range, now applies to these too, and a range written with `x` (`1.2.x`) counts as one.
+
 ## [0.58.23] — 2026-10-10
 
 ### Fixed

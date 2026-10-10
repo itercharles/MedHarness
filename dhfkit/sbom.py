@@ -48,7 +48,7 @@ _NAMESPACE_SEPARATORS = {"maven": ":", "npm": "/"}
 #: A version that is not one. A purl carrying a range resolves against a real
 #: registry and matches nothing — the exact harm `purl_for` claims to avoid, and
 #: the reference project hit it: `pkg:npm/@kitware/vtk.js@%5E34.15.1`.
-_NOT_A_VERSION = re.compile(r"[\^~*<>|\s]|(?:^(?:latest|next|\*)$)")
+_NOT_A_VERSION = re.compile(r"[\^~*<>|\s]|(?:^|\.)[xX](?:\.|$)|^(?:latest|next)$")
 
 
 def _quote(text: str) -> str:
@@ -57,6 +57,11 @@ def _quote(text: str) -> str:
         c if re.match(r"[A-Za-z0-9._~!$&'()*+,;=:@-]", c) else f"%{ord(c):02X}"
         for c in text
     )
+
+
+def is_a_range(version: str) -> bool:
+    """Whether ``version`` is a range or a tag (``^2.1.0``, ``1.x``, ``latest``) and not a version."""
+    return bool(version) and bool(_NOT_A_VERSION.search(version))
 
 
 def purl_for(name: str, version: str, ecosystem: str) -> str | None:
@@ -68,7 +73,7 @@ def purl_for(name: str, version: str, ecosystem: str) -> str | None:
     purl_type = _PURL_TYPES.get((ecosystem or "").strip().lower())
     if not purl_type or not name:
         return None
-    if version and _NOT_A_VERSION.search(version):
+    if is_a_range(version):
         # A range, not a version. §8.1.2 wants the version actually used, and a
         # purl built from "^34.15.1" points at nothing.
         return None
@@ -96,7 +101,7 @@ def purl_gap(name: str, version: str, ecosystem: str) -> str | None:
         return None
     if not _PURL_TYPES.get((ecosystem or "").strip().lower()):
         return f"ecosystem {ecosystem or '(unset)'!s} has no package-URL type"
-    if version and _NOT_A_VERSION.search(version):
+    if is_a_range(version):
         return (
             f"version {version!r} is a range, not a version — record the version "
             f"actually used (IEC 62304 §8.1.2)"

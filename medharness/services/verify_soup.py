@@ -8,6 +8,7 @@ import urllib.request
 from pathlib import Path
 from typing import Callable
 
+from dhfkit.sbom import is_a_range
 from medharness.services.envelope import envelope_from
 
 
@@ -180,6 +181,11 @@ def soup_gate(
             continue
         if not ecosystem:
             skipped.append({"soup_id": soup_id, "reason": "ecosystem not specified — add e.g. ecosystem: PyPI"})
+            continue
+        if is_a_range(version):
+            skipped.append({"soup_id": soup_id, "reason": (
+                f"version {version!r} is a range, not a version — record the one in use, "
+                f"or pass the lockfile to `build soup`")})
             continue
         checkable.append({
             "soup_id": soup_id, "name": name, "version": version,
