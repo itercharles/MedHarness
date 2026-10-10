@@ -11,6 +11,11 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.58.20] — 2026-10-10
+
+### Fixed
+- A relationship field holding one bare ID (`derives_from: SYS-001`), which the loader accepts, made `verify dhf` report a dangling link for every character of the ID. The dangling-link check now reads it as the one link it is, as every other reader already did.
+
 ## [0.58.19] — 2026-10-10
 
 ### Removed

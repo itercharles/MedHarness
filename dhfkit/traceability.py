@@ -29,7 +29,8 @@ def find_dangling_links(items: list[dict], link_fields: Iterable[str]) -> list[d
     for item in items:
         source = item.get("id", "")
         for field in fields:
-            for target in item.get(field) or []:
+            value = item.get(field) or []
+            for target in [value] if isinstance(value, str) else value:
                 if target and target not in known:
                     dangling.append({"source": source, "field": field, "target": target})
     return sorted(dangling, key=lambda d: (d["source"], d["field"], d["target"]))
