@@ -350,11 +350,11 @@ class TestAVersionRangeIsNotAVersion:
     project found it in the first SBOM they generated.
     """
 
-    @pytest.mark.parametrize("version", ["^34.15.1", "~4.17.0", ">=1.0,<2.0", "*", "latest"])
+    @pytest.mark.parametrize("version", ["^34.15.1", "~4.17.0", ">=1.0,<2.0", "*", "latest", "1.x", "1.2.X", "x"])
     def test_a_range_yields_no_purl(self, version: str) -> None:
         assert purl_for("pkg", version, "npm") is None
 
-    @pytest.mark.parametrize("version", ["34.15.1", "1.0.0-rc.1", "2.0.0+build", "0.9"])
+    @pytest.mark.parametrize("version", ["34.15.1", "1.0.0-rc.1", "2.0.0+build", "0.9", "1.0.0-next.1", "6.0.0-xray"])
     def test_a_real_version_still_does(self, version: str) -> None:
         assert purl_for("pkg", version, "npm") == f"pkg:npm/pkg@{version}"
 

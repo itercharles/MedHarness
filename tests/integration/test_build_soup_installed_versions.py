@@ -1,7 +1,8 @@
 """A package.json range is not the version that ships; the lockfile beside it is.
 
 `^2.1.0` was recorded as 2.1.0, the floor of the range. verify soup then asked OSV about versions
-nobody runs: 21 advisories where the installed versions had 9.
+nobody runs: 21 advisories where the installed versions had 9. Without a lockfile the range is
+kept as written, and verify soup says it did not check it.
 """
 
 from __future__ import annotations
@@ -69,11 +70,11 @@ def test_a_package_lock_beside_the_manifest_is_read(project: Path) -> None:
     assert _versions(project, manifest) == {"express": "4.19.2"}
 
 
-def test_a_dependency_the_lockfile_does_not_list_keeps_the_range_floor(project: Path) -> None:
+def test_a_dependency_the_lockfile_does_not_list_keeps_its_range_as_written(project: Path) -> None:
     (project / "pnpm-lock.yaml").write_text(PNPM)
     manifest = _manifest(project / "apps" / "client", vitest="^2.1.0", missing="^3.0.0")
 
-    assert _versions(project, manifest) == {"vitest": "2.1.9", "missing": "3.0.0"}
+    assert _versions(project, manifest) == {"vitest": "2.1.9", "missing": "^3.0.0"}
 
 
 def test_a_lockfile_above_the_repository_root_is_not_read(tmp_path: Path) -> None:
@@ -83,4 +84,22 @@ def test_a_lockfile_above_the_repository_root_is_not_read(tmp_path: Path) -> Non
     (repo / ".git").mkdir()
     manifest = _manifest(repo, **{"left-pad": "^1.0.0"})
 
-    assert _versions(repo, manifest) == {"left-pad": "1.0.0"}
+    assert _versions(repo, manifest) == {"left-pad": "^1.0.0"}
+
+
+def test_verify_soup_does_not_look_a_range_up_and_says_so(project: Path) -> None:
+    manifest = _manifest(project, vitest="^2.1.0")
+    _versions(project, manifest)
+    queried: list[dict] = []
+
+    from medharness.services.verify_soup import soup_gate
+
+    def query(queries):
+        queried.extend(queries)
+        return [{} for _ in queries]
+
+    answer = soup_gate(project / "DHF", query=query)
+
+    assert queried == [], "a range was sent to OSV as if it were a version"
+    assert any("vitest" in w or "SOUP-" in w for w in answer["warnings"])
+    assert any("is a range, not a version" in w for w in answer["warnings"]), answer["warnings"]

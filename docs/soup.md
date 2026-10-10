@@ -12,7 +12,7 @@ The `build soup` command reads dependency files from your project and creates or
 | `uv.lock` | PyPI |
 | `poetry.lock` | PyPI |
 | `pyproject.toml` | PyPI (best-effort; prefer lockfile) |
-| `package.json` | npm: the versions a pnpm or npm lockfile beside it, or in a directory above it up to the repository root, says are installed; a dependency the lockfile does not list keeps its range with the operators stripped (`^2.1.0` becomes `2.1.0`, the floor, not what ships) |
+| `package.json` | npm: the versions a pnpm or npm lockfile beside it, or in a directory above it up to the repository root, says are installed; a dependency the lockfile does not list, or a manifest with no lockfile, keeps its range as written (`^2.1.0`): `verify soup` does not look a range up in OSV and says so, and the SBOM gives it no purl |
 | `package-lock.json` | npm (v1/v2/v3) |
 | `pnpm-lock.yaml` | npm: the direct dependencies of every project in it, at the versions pnpm installed (lockfile v6 and later; a workspace link or a git or tarball URL has no registry version and is left out) |
 

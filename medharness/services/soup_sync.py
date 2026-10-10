@@ -172,8 +172,8 @@ def parse_package_json(path: Path) -> list[dict]:
 
     A lockfile in the manifest's directory, or in one above it up to the repository root (a
     workspace), says what is installed; a range such as ``^2.1.0`` does not, and its floor is
-    not what ships. A dependency the lockfile does not list keeps the range with its operators
-    stripped.
+    not what ships. A dependency the lockfile does not list keeps its range as written, which
+    `verify soup` reports as not checked and the SBOM gives no purl.
     """
     data = json.loads(path.read_text(encoding="utf-8"))
     installed = _installed_versions(path)
@@ -186,7 +186,7 @@ def parse_package_json(path: Path) -> list[dict]:
         for name, version_spec in (data.get(section) or {}).items():
             packages.append({
                 "name": name,
-                "version": installed.get(name) or _normalize_version(version_spec),
+                "version": installed.get(name) or version_spec,
                 "source": str(path),
                 "ecosystem": "npm",
                 "dev": is_dev,
