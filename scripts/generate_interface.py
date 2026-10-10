@@ -141,7 +141,6 @@ def render_shapes() -> str:
     for command, models in SHAPES:
         for model in models:
             lines += [f"#### {command}", ""]
-            doc = inspect.cleandoc(model.__doc__ or "")
             lines += _field_table(model, "Field")
             nested: list[type[BaseModel]] = []
             queue = [model]

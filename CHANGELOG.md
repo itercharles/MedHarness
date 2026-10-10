@@ -11,6 +11,11 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.58.22] — 2026-10-10
+
+### Changed
+- Two comments in `services/envelope.py` that ran together are one, and an unused variable in `scripts/generate_interface.py` is gone. No behaviour change.
+
 ## [0.58.21] — 2026-10-10
 
 ### Fixed

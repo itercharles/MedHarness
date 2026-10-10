@@ -7,10 +7,9 @@ from typing import Any
 from medharness.results import GateResult
 
 
-#: Keys every gate result carries, whatever the gate. A caller — a CI script or
-#: an agent — parses this once and handles any gate, present or future.
-#: What a gate writes to stdout. `details` is built alongside it for the CLI
-#: to render lines from, in-process, and is deliberately not serialised.
+#: Keys every gate result carries, whatever the gate, and what a gate writes to stdout.
+#: A caller — a CI script or an agent — parses this once and handles any gate, present
+#: or future.
 ENVELOPE_KEYS = tuple(GateResult.model_fields)
 
 
@@ -36,8 +35,8 @@ def gate_result(
     answer, so anything only in ``details`` is invisible to a caller.
 
     ``details`` carries the same findings structured, for the CLI to render its
-    stderr lines from in the same process. It is not serialised: no caller has
-    ever read it, and a shape nobody reads is one that drifts.
+    stderr lines from in the same process. It is not serialised: no caller of the
+    command has ever read it, and a shape nobody reads is one that drifts.
     """
     return {
         "gate": gate,
