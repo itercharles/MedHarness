@@ -7,9 +7,8 @@ patched so no LLM is invoked). Asserts that:
 - The JSON has the documented keys.
 - The stderr summary contains the elements clients display.
 
-This complements ``test_response_contract.py`` (which tests the service
-function directly) by also exercising ``cli/build.py`` ``_format_summary``
-and the ``json.dumps``/``click.echo`` plumbing.
+The answer's own shape is checked against ``results.PlanReport`` and
+``results.CodeReport`` by ``tests/integration/test_ai_stages_end_to_end.py``.
 
 Covered stages: `build code`, and the gates it runs.
 """

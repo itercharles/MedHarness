@@ -725,6 +725,15 @@ class TestGenerateCode:
         assert mock_post.call_count == 0, "no warnings → no comment expected"
         assert result.get("pr_comments") == []
 
+    def test_a_comment_that_could_not_be_posted_leaves_no_url_behind(self):
+        from medharness.services.pr_feedback import _auto_post_pr_feedback
+
+        result = {"outcome": "completed_with_errors", "warnings": [{"code": "w", "message": "m"}],
+                  "errors": [{"field": "f", "issue": "i", "fix": "x"}]}
+        with patch("medharness.services.pr_feedback.post_pr_comment", return_value="") as post:
+            assert _auto_post_pr_feedback(7, "CR-001", result) == []
+        assert post.call_count == 2
+
 
 
     def test_code_review_loop_fixes_and_reruns_until_approved(self, tmp_path):

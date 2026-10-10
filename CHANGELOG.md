@@ -11,6 +11,11 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.58.19] — 2026-10-10
+
+### Removed
+- Two test files that checked the shape of the `build plan` / `build code` answer with a stubbed model (34 tests, about 20 seconds): `test_generate_dhf_e2e.py` and `test_response_contract.py`. `test_ai_stages_end_to_end.py` runs both stages through the CLI with a scripted `claude` and validates every answer against `PlanReport` / `CodeReport`. Measured by line coverage, removing them loses no line and one branch (a PR comment that could not be posted), which now has its own test.
+
 ## [0.58.18] — 2026-10-10
 
 ### Removed
