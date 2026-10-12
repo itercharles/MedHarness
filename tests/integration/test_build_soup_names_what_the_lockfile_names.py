@@ -76,3 +76,28 @@ def test_a_malformed_source_in_soup_sources_is_an_error_not_a_traceback(project:
 
     assert result.exit_code == 1
     assert any("must be a mapping" in e for e in answer["errors"]), answer["errors"]
+
+
+def test_a_package_at_two_versions_is_checked_at_both(project: Path) -> None:
+    """The second version was dropped, so a vulnerable copy in one manifest passed unnoticed."""
+    (project / "be").mkdir()
+    (project / "fe").mkdir()
+    (project / "be" / "requirements.txt").write_text("requests==2.33.0\n")
+    (project / "fe" / "requirements.txt").write_text("requests==2.19.0\n")
+    manifests = ["--manifest", str(project / "be" / "requirements.txt"),
+                 "--manifest", str(project / "fe" / "requirements.txt")]
+
+    result, answer = _soup(project, *manifests)
+    assert result.exit_code == 1
+    assert any("requests ships at 2.33.0" in e and "2.19.0" in e for e in answer["errors"]), answer["errors"]
+    assert answer["items_created"] == [] and answer["items_updated"] == []
+
+    (project / "fe" / "requirements.txt").write_text("requests==2.33.0\n")
+    _soup(project, "--manifest", str(project / "be" / "requirements.txt"))
+    (project / "fe" / "requirements.txt").write_text("requests==2.19.0\n")
+    from medharness.services.verify_soup import soup_gate
+
+    answer = soup_gate(project / "DHF", strict=True, query=lambda queries: [{} for _ in queries],
+                       manifest_paths=[project / "be" / "requirements.txt", project / "fe" / "requirements.txt"])
+    assert answer["passed"] is False
+    assert any("manifests resolve 2.19.0" in e for e in answer["errors"]), answer["errors"]

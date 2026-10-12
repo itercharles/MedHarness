@@ -45,15 +45,14 @@ class ItemLoader:
         if not self.specs_dir.exists():
             return items
 
-        for yaml_file in self.specs_dir.rglob("*.yaml"):
-            item = self.load_file(yaml_file)
-            if item:
-                items.append(item)
+        # Items are `.yaml` files, and only those: every other reader (the duplicate-ID check,
+        # the branch diff) looks for that suffix, so a `.yml` item would escape them.
+        stray = sorted(self.specs_dir.rglob("*.yml"))
+        if stray:
+            raise ValidationError(f"{stray[0]}: an item file ends in .yaml; rename it")
 
-        for yml_file in self.specs_dir.rglob("*.yml"):
-            item = self.load_file(yml_file)
-            if item:
-                items.append(item)
+        for yaml_file in self.specs_dir.rglob("*.yaml"):
+            items.append(self.load_file(yaml_file))
 
         return items
 
@@ -74,7 +73,8 @@ class ItemLoader:
             raise ValidationError(f"{file_path} could not be read: {exc}") from exc
 
         if not data:
-            return None
+            # An emptied requirement would otherwise vanish from every coverage count.
+            raise ValidationError(f"{file_path} is empty: an item file holds at least its id")
         if not isinstance(data, dict):
             raise ValidationError(
                 f"{file_path} must be a mapping of fields to values, "

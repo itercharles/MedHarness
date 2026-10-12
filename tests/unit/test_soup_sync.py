@@ -275,7 +275,7 @@ class TestSyncSoupItems:
         assert any("Failed to list SOUP" in e for e in result["errors"])
 
     def test_deduplication_across_manifests(self, tmp_path):
-        # Same package in two manifests should create only one SOUP item.
+        # One name in two ecosystems is two packages.
         req1 = _req_txt(tmp_path, "requests==2.31.0\n")
         req2 = tmp_path / "req2.txt"
         # Use a second file with same name logic won't trigger (not named requirements.txt)
@@ -285,9 +285,8 @@ class TestSyncSoupItems:
              patch("dhfkit.item_store.ItemStore.create_item", return_value={"id": "SOUP-001"}) as mock_create:
             result = sync_soup_items(tmp_path / "DHF", [req1, pkg])
 
-        # "requests" appears in requirements.txt (pypi) and peerDependencies (npm) but
-        # after deduplication only one create call should happen
-        assert mock_create.call_count == 1
+        # "requests" on PyPI and "requests" on npm are two packages: each gets its item.
+        assert mock_create.call_count == 2
 
     def test_deduplication_peer_and_direct_dep(self, tmp_path):
         # Same npm package in both dependencies and peerDependencies — only one entry.

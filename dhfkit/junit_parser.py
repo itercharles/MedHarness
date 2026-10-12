@@ -77,3 +77,23 @@ def read_test_evidence(paths: Iterable[Path]) -> List[TestEvidence]:
                 testing_points=list(dict.fromkeys(points + TESTING_TAG_RE.findall(name))),
             ))
     return evidence
+
+
+def verified(evidence: List[TestEvidence]) -> tuple[set[str], set[tuple[str, str]]]:
+    """The IDs, and (ID, test point) pairs, with a passing test and no failing one.
+
+    One failing test is enough to say a requirement is not met, whatever else passed:
+    the traceability report already calls such a requirement `failed`, and the gates
+    must not call it covered.
+    """
+    passed: set[str] = set()
+    failed: set[str] = set()
+    passed_points: set[tuple[str, str]] = set()
+    failed_points: set[tuple[str, str]] = set()
+    for test in evidence:
+        if test.status == "SKIP":
+            continue
+        ids, points = (passed, passed_points) if test.status == "PASS" else (failed, failed_points)
+        ids.update(test.links)
+        points.update((link, point) for link in test.links for point in test.testing_points)
+    return passed - failed, passed_points - failed_points

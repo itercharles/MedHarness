@@ -11,6 +11,24 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.59.0] — 2026-10-12
+
+Found by an independent review: places where a gate said "all clear" when it should not have.
+
+### Changed (breaking)
+- `build release` requires `--junit`, and every requirement must be verified by it as `verify tests --strict` judges it, whether or not an included CR touched it. A release with no CR in it used to ship on no test evidence. The CI recipe's release job runs the tests first (`{{test_command}}`) and passes `--junit test-results`.
+- `item update` no longer changes the `status` of an item whose type has a lifecycle; `item transition` does, and checks the criteria of the move. `item update CR-001 --data '{"status": "completed"}'` from `new` used to be accepted. A status that is no state of the type can still be overwritten with a real one, which is the repair `verify dhf` suggests. `build plan` rejects a CR with `item transition CR-xxx rejected`.
+- An item file ending in `.yml` is an error (items are `.yaml`; the duplicate-ID check and the branch diff only ever looked at `.yaml`), and so is an empty item file, which used to vanish from every coverage count.
+
+### Fixed
+- One failing test linked to a requirement now outweighs a passing one in `verify tests` and `verify completion`, as the release's traceability report already said.
+- An item moved to another file name is a deletion and a creation in `verify changes` and the stages; git's rename detection used to hide the deletion.
+- A defect with no status, or in a state other than `resolved`, `closed` or `cancelled`, is a known anomaly at release. The starter DEF-001 is `closed`.
+- One SOUP item with an ecosystem osv.dev does not know (`pypi`) made osv.dev refuse the whole scan, which was reported as an outage and, with `--offline-mode warn`, passed with nothing scanned. The other items are now scanned and the refused one is named as an error.
+- A package resolved at two versions across manifests is checked at both, and `build soup` reports it instead of keeping the first and dropping the second. The same name in two ecosystems is two packages.
+- A link field holding one bare ID is a one-element list for every reader (0.58.20 fixed only the dangling-link check).
+- `item update` that a link check refuses says the item was not updated, not that the DHF could not be read.
+
 ## [0.58.24] — 2026-10-10
 
 ### Fixed

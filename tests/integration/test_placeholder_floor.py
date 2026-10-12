@@ -93,6 +93,6 @@ def test_a_project_can_opt_out(tmp_path: Path) -> None:
 def test_the_starter_dhf_cannot_be_released(tmp_path: Path) -> None:
     dhf = _project(tmp_path)
     result = CliRunner().invoke(main, ["--dhf", str(dhf), "build", "release", "--version", "1.0.0",
-                                       "--out-dir", str(tmp_path / "rel")])
+                                       "--out-dir", str(tmp_path / "rel"), "--junit", str(dhf)])
     report = json.loads(result.stdout.splitlines()[0])
     assert result.exit_code == 1 and any("placeholder text" in e for e in report["errors"])

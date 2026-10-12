@@ -16,7 +16,7 @@ import shutil
 from pathlib import Path
 
 import pytest
-from fixtures.starter import keep_the_starter_text
+from fixtures.starter import keep_the_starter_text, verify_the_starter
 
 from medharness.services.verify_release import known_anomalies
 from medharness.services.release import (
@@ -109,7 +109,8 @@ class TestGate:
             return {i["id"] for i in open_store(dhf).list_items() if i.get("type") == "REL"}
 
         before = releases()
-        result = build_release(dhf, "1.0.0", tmp_path / "out", write=True)
+        result = build_release(dhf, "1.0.0", tmp_path / "out", write=True,
+                               junit_paths=[verify_the_starter(dhf, tmp_path / "tr")])
 
         assert result["outcome"] == "completed_with_errors"
         assert any("§9.7" in e for e in result["errors"])
@@ -221,7 +222,8 @@ class TestARelIsRecordedOnlyWhenEverythingPassed:
         rcm.write_text(rcm.read_text().replace("RISK-001", "RISK-404"))
         before = self._releases(dhf)
 
-        result = build_release(dhf, "1.0.0", tmp_path / "out", write=True)
+        result = build_release(dhf, "1.0.0", tmp_path / "out", write=True,
+                               junit_paths=[verify_the_starter(dhf, tmp_path / "tr")])
 
         assert any(e.startswith("DHF:") and "RISK-404" in e for e in result["errors"]), result["errors"]
         assert result["rel_uid"] is None
@@ -234,7 +236,8 @@ class TestARelIsRecordedOnlyWhenEverythingPassed:
         dhf = self._project(tmp_path)
         before = self._releases(dhf)
 
-        result = build_release(dhf, "1.0.0", tmp_path / "out", write=True)
+        result = build_release(dhf, "1.0.0", tmp_path / "out", write=True,
+                               junit_paths=[verify_the_starter(dhf, tmp_path / "tr")])
 
         assert result["errors"] == [], result["errors"]
         assert result["rel_uid"] and result["rel_uid"] not in before

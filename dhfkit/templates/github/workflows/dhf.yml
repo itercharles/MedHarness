@@ -54,11 +54,19 @@ jobs:
         id: ver
         run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
 
+      # Every requirement must be verified by this run's JUnit: the release is cut
+      # from the tests of the commit it ships, not from a result produced elsewhere.
+      - name: Run the tests
+        run: "{{test_command}}"
+
       - name: Build the release
+        env:
+          VERSION: ${{ steps.ver.outputs.version }}
         run: |
           medharness --dhf DHF build release \
-            --version ${{ steps.ver.outputs.version }} \
+            --version "$VERSION" \
             --out-dir artifacts \
+            --junit test-results \
             --write
 
       # Through a pull request, not a push to main: a branch protection rule

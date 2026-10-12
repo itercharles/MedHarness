@@ -43,6 +43,6 @@ def test_it_prints_what_the_ci_agent_is_given(dhf: Path, stage: str, assemble: s
 def test_a_closed_cr_is_refused_here_too(dhf: Path) -> None:
     from dhfkit.store import open_store
 
-    open_store(dhf).update_item("CR-001", {"status": "rejected"})
+    open_store(dhf).execute_transition("CR-001", "rejected")
     r = CliRunner().invoke(main, ["--dhf", str(dhf), "build", "plan", "--cr", "CR-001", "--prompt"])
     assert r.exit_code != 0

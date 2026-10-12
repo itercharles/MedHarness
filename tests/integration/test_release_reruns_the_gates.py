@@ -14,7 +14,7 @@ from pathlib import Path
 import yaml
 from click.testing import CliRunner
 
-from fixtures.starter import keep_the_starter_text
+from fixtures.starter import keep_the_starter_text, verify_the_starter
 from medharness.cli import main
 from medharness.results import ReleaseReport
 from medharness.scaffold import replace_placeholders, scaffold_dhf
@@ -35,9 +35,10 @@ def _project(tmp_path: Path, **cr_fields) -> Path:
 CLOSED = {"implementation_notes": "n", "affected_risk_items": [], "triage_result": {"verdict": "approved"}}
 
 
-def _release(dhf: Path, *extra: str):
+def _release(dhf: Path, *extra: str, junit: Path | None = None):
+    junit = junit or verify_the_starter(dhf, dhf.parent / "test-results")
     result = CliRunner().invoke(main, ["--dhf", str(dhf), "build", "release", "--version", "1.0.0",
-                                       "--out-dir", str(dhf.parent / "rel"), *extra])
+                                       "--out-dir", str(dhf.parent / "rel"), "--junit", str(junit), *extra])
     return result, ReleaseReport.model_validate_json(result.stdout.splitlines()[0])
 
 
@@ -65,21 +66,23 @@ def test_a_properly_closed_cr_releases(tmp_path: Path) -> None:
     assert report.cr_ids == ["CR-001"]
 
 
-def test_test_evidence_is_checked_when_given_and_flagged_when_not(tmp_path: Path) -> None:
+def test_every_requirement_must_be_verified_by_the_junit_given(tmp_path: Path) -> None:
+    """Not only those the included CRs touched: a release with no CR shipped on no evidence."""
     dhf = _project(tmp_path, **CLOSED, affected_items=["SRS-001"])
-    srs = next((dhf / "items").rglob("SRS-001.yaml"))
-    data = yaml.safe_load(srs.read_text())
-    data["verification_method"] = ["Test"]
-    srs.write_text(yaml.safe_dump(data))
+    verify_the_starter(dhf, tmp_path / "unused")
 
-    _, without = _release(dhf)
-    assert any("test evidence not checked" in w for w in without.warnings), without.warnings
+    result, failing = _release(dhf, junit=_junit(tmp_path, "CRS-001,SYS-001"))
+    assert result.exit_code == 1 and any(e.startswith("Tests:") and "SRS" in e for e in failing.errors), failing.errors
 
-    result, failing = _release(dhf, "--junit", str(_junit(tmp_path, "CRS-001")))
-    assert result.exit_code == 1 and any("SRS-001" in e for e in failing.errors), failing.errors
-
-    result, passing = _release(dhf, "--junit", str(_junit(tmp_path, "SRS-001")))
+    result, passing = _release(dhf, junit=_junit(tmp_path, "CRS-001,SYS-001,SRS-001"))
     assert result.exit_code == 0, passing.errors
+
+
+def test_a_release_without_junit_is_refused(tmp_path: Path) -> None:
+    dhf = _project(tmp_path, **CLOSED, affected_items=[])
+    result = CliRunner().invoke(main, ["--dhf", str(dhf), "build", "release", "--version", "1.0.0",
+                                       "--out-dir", str(tmp_path / "rel")])
+    assert result.exit_code == 2 and "--junit" in result.output
 
 
 def test_every_configured_matrix_gets_a_traceability_report(tmp_path: Path) -> None:

@@ -623,8 +623,12 @@ def build_release(
     "the DHF is sound" is how two gates came to disagree before.
     """
     from medharness.services.verify_dhf import ci_structural_gate
+    from medharness.services.verify_tests import ci_test_coverage_gate
 
     gate = ci_structural_gate(dhf, strict=True)
+    # Every requirement, not only those the included CRs touched: a release with no CR in it
+    # would otherwise ship on no test evidence at all.
+    tests = ci_test_coverage_gate(dhf, list(junit_paths), strict=True)
     baseline = build_release_baseline(dhf, version, list(manifest_paths), list(cr_ids), out_dir)
     # Last, so its manifest hashes the baseline's files as well as its own.
     manifest = build_evidence_bundle(
@@ -633,7 +637,8 @@ def build_release(
     )
 
     closure_errors, closure_warnings = still_closed(dhf, baseline["cr_ids"], list(junit_paths))
-    errors = [f"DHF: {e}" for e in gate["errors"]] + baseline["errors"] + closure_errors
+    errors = ([f"DHF: {e}" for e in gate["errors"]] + [f"Tests: {e}" for e in tests["errors"]]
+              + baseline["errors"] + closure_errors)
     warnings = list(baseline.get("warnings", [])) + closure_warnings
     rel_uid: Optional[str] = None
     if write and not errors:

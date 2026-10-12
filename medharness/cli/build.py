@@ -221,8 +221,8 @@ def register(main):
                   type=click.Path(exists=True, dir_okay=False, path_type=Path), metavar="PATH",
                   help="Dependency manifest whose packages the BOM lists beside the "
                        "SOUP register (repeatable).")
-    @junit_option("JUnit XML to include as test evidence: a file, or a directory "
-                  "searched for *.xml (repeatable).")
+    @junit_option("JUnit XML from the tests of this release: a file, or a directory searched "
+                  "for *.xml (repeatable). Every requirement must be verified by it.", required=True)
     @click.option("--doc-format", type=click.Choice(["html", "pdf"]), default="html",
                   show_default=True,
                   help="Format of the bundled specifications. PDF needs "
@@ -232,8 +232,9 @@ def register(main):
                           junit_paths, doc_format) -> None:
         """Build everything one release needs (IEC 62304 §9).
 
-        Checks the DHF — coverage gaps fail here — and that every included CR is
-        completed and every open defect assessed. Writes to --out-dir the release
+        Checks the DHF — coverage gaps fail here — that every requirement is verified
+        by the JUnit given, as `verify tests --strict` judges it, and that every included
+        CR is completed and every open defect assessed. Writes to --out-dir the release
         baseline, the software BOM, a CycloneDX SBOM, the specifications,
         traceability, test evidence, and a manifest hashing every file.
 
