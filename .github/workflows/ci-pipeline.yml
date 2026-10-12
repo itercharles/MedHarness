@@ -181,11 +181,19 @@ jobs:
               subprocess.run([sys.executable, '-m', 'medharness', '--dhf', dhf, 'item', 'list', '--type', 'CRS'], check=True)
               subprocess.run([sys.executable, '-m', 'medharness', '--dhf', dhf, 'item', 'list', '--type', 'SYS'], check=True)
               # A release of the starter content is refused until the project replaces it, or opts out.
-              refused = subprocess.run([sys.executable, '-m', 'medharness', '--dhf', dhf, 'build', 'release', '--version', '0.0.0', '--out-dir', str(Path(tmp) / 'refused')], capture_output=True, text=True)
-              assert refused.returncode == 1, refused
+              # Every requirement gets a declared method and a passing test, which a release requires.
+              from dhfkit.store import open_store
+              store = open_store(dhf_dir / 'DHF')
+              reqs = [i['id'] for i in store.list_items() if i['type'] in store.config.requirement_types()]
+              for uid in reqs:
+                  store.update_item(uid, {'verification_method': ['Test'], 'verification_criteria': 'It works as stated.'})
+              junit = Path(tmp) / 'junit.xml'
+              junit.write_text('<testsuite><testcase classname=\"c\" name=\"t\"><properties><property name=\"medharness.links\" value=\"' + ','.join(reqs) + '\"/></properties></testcase></testsuite>')
+              refused = subprocess.run([sys.executable, '-m', 'medharness', '--dhf', dhf, 'build', 'release', '--version', '0.0.0', '--out-dir', str(Path(tmp) / 'refused'), '--junit', str(junit)], capture_output=True, text=True)
+              assert refused.returncode == 1 and 'placeholder text' in refused.stdout, refused
               global_yaml = dhf_dir / 'DHF' / 'config' / 'global.yaml'
               global_yaml.write_text(global_yaml.read_text() + '\nplaceholder_patterns: []\n')
-              subprocess.run([sys.executable, '-m', 'medharness', '--dhf', dhf, 'build', 'release', '--version', '0.0.0', '--out-dir', str(Path(tmp) / 'release')], check=True)
+              subprocess.run([sys.executable, '-m', 'medharness', '--dhf', dhf, 'build', 'release', '--version', '0.0.0', '--out-dir', str(Path(tmp) / 'release'), '--junit', str(junit)], check=True)
               print('OK: starter DHF workflow valid')
           "
 
