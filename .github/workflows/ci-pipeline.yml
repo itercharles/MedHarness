@@ -187,13 +187,13 @@ jobs:
               reqs = [i['id'] for i in store.list_items() if i['type'] in store.config.requirement_types()]
               for uid in reqs:
                   store.update_item(uid, {'verification_method': ['Test'], 'verification_criteria': 'It works as stated.'})
-              junit = Path(tmp) / 'junit.xml'
+              junit = Path(tmp) / 'junit.xml'  # passed as a name, from tmp, so the line reads as a command
               junit.write_text('<testsuite><testcase classname=\"c\" name=\"t\"><properties><property name=\"medharness.links\" value=\"' + ','.join(reqs) + '\"/></properties></testcase></testsuite>')
-              refused = subprocess.run([sys.executable, '-m', 'medharness', '--dhf', dhf, 'build', 'release', '--version', '0.0.0', '--out-dir', str(Path(tmp) / 'refused'), '--junit', str(junit)], capture_output=True, text=True)
+              refused = subprocess.run([sys.executable, '-m', 'medharness', '--dhf', dhf, 'build', 'release', '--version', '0.0.0', '--out-dir', 'refused', '--junit', 'junit.xml'], capture_output=True, text=True, cwd=tmp)
               assert refused.returncode == 1 and 'placeholder text' in refused.stdout, refused
               global_yaml = dhf_dir / 'DHF' / 'config' / 'global.yaml'
               global_yaml.write_text(global_yaml.read_text() + '\nplaceholder_patterns: []\n')
-              subprocess.run([sys.executable, '-m', 'medharness', '--dhf', dhf, 'build', 'release', '--version', '0.0.0', '--out-dir', str(Path(tmp) / 'release'), '--junit', str(junit)], check=True)
+              subprocess.run([sys.executable, '-m', 'medharness', '--dhf', dhf, 'build', 'release', '--version', '0.0.0', '--out-dir', 'release', '--junit', 'junit.xml'], check=True, cwd=tmp)
               print('OK: starter DHF workflow valid')
           "
 
