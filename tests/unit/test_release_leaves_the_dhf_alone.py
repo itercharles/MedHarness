@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import hashlib
 from pathlib import Path
-from fixtures.starter import keep_the_starter_text
+from fixtures.starter import keep_the_starter_text, verify_the_starter
 
 from medharness.services.release import build_release
 
@@ -20,6 +20,7 @@ def _project(tmp_path: Path) -> Path:
     scaffold_dhf(tmp_path / "project")
     replace_placeholders(tmp_path / "project", "Untouched")
     keep_the_starter_text(tmp_path / "project" / "DHF")
+    verify_the_starter(tmp_path / "project" / "DHF", tmp_path / "tr")
     return tmp_path / "project"
 
 
@@ -34,7 +35,7 @@ def test_a_dry_run_writes_only_to_the_out_dir(tmp_path: Path) -> None:
     project = _project(tmp_path)
     before = _snapshot(project)
 
-    result = build_release(project / "DHF", "1.0.0", tmp_path / "out", write=False)
+    result = build_release(project / "DHF", "1.0.0", tmp_path / "out", write=False, junit_paths=[tmp_path / "tr" / "junit.xml"])
 
     assert result["errors"] == [], result["errors"]
     assert _snapshot(project) == before
@@ -44,7 +45,7 @@ def test_the_specifications_still_reach_the_out_dir(tmp_path: Path) -> None:
     """Otherwise the test above passes on a release that renders nothing."""
     project = _project(tmp_path)
 
-    build_release(project / "DHF", "1.0.0", tmp_path / "out", write=False)
+    build_release(project / "DHF", "1.0.0", tmp_path / "out", write=False, junit_paths=[tmp_path / "tr" / "junit.xml"])
 
     specs = list((tmp_path / "out").rglob("specifications/SRS_Specification_*.html"))
     assert specs and "SRS-001" in specs[0].read_text(encoding="utf-8")
@@ -56,7 +57,7 @@ def test_the_specifications_render_the_items_as_they_are(tmp_path: Path) -> None
     project = _project(tmp_path)
     open_store(project / "DHF").update_item("SRS-001", {"title": "Renamed just before release"})
 
-    build_release(project / "DHF", "1.0.0", tmp_path / "out", write=False)
+    build_release(project / "DHF", "1.0.0", tmp_path / "out", write=False, junit_paths=[tmp_path / "tr" / "junit.xml"])
 
     spec = tmp_path / "out" / "specifications" / "SRS_Specification_1.0.0.html"
     assert "Renamed just before release" in spec.read_text(encoding="utf-8")
@@ -70,7 +71,7 @@ def test_the_traceability_report_follows_the_configured_chain(tmp_path: Path) ->
         "    description: System to software only\n"
         "    path: [SYS, SRS]\n"
     )
-    build_release(project / "DHF", "1.0.0", tmp_path / "out", write=False)
+    build_release(project / "DHF", "1.0.0", tmp_path / "out", write=False, junit_paths=[tmp_path / "tr" / "junit.xml"])
     import json
 
     report = tmp_path / "out" / "traceability" / "Requirements_Traceability_Report.json"

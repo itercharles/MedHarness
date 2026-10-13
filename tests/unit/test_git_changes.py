@@ -34,12 +34,6 @@ class TestCollectPathChanges:
             "deleted": ["apps/client/src/deleted.ts"],
         }
 
-    def test_rename_counted_as_update_on_new_path(self, tmp_path: Path):
-        diff = "R100\tapps/old.ts\tapps/new.ts\n"
-        with patch("subprocess.run", side_effect=[_completed("base\n", 0), _completed(diff, 0), _completed("", 0)]):
-            result = collect_path_changes(tmp_path, "origin/main", "apps/")
-        assert result == {"created": [], "updated": ["apps/new.ts"], "deleted": []}
-
     def test_git_unavailable_is_not_an_empty_diff(self, tmp_path: Path):
         with patch("subprocess.run", side_effect=FileNotFoundError), \
              pytest.raises(DiffUnavailable, match="not installed"):
@@ -96,3 +90,26 @@ class TestARealRepository:
 
         assert sorted(changed["created"]) == ["src/文档.py", "文档.md"]
         assert changed["updated"] == ["base.txt"]
+
+
+    def test_an_item_moved_to_another_name_is_a_deletion_and_a_creation(self, tmp_path: Path):
+        """git reported the move as a rename, and the deleted ID appeared nowhere."""
+        import subprocess
+
+        def git(*args: str) -> None:
+            subprocess.run(["git", "-C", str(tmp_path), *args], check=True, capture_output=True)
+
+        git("init", "-q", "-b", "main")
+        git("config", "user.email", "t@example.com")
+        git("config", "user.name", "t")
+        items = tmp_path / "DHF" / "items"
+        items.mkdir(parents=True)
+        (items / "SWDD-002.yaml").write_text("id: SWDD-002\ntitle: A design\ncontent: the same long text\n")
+        git("add", "-A")
+        git("commit", "-qm", "base")
+        git("mv", "DHF/items/SWDD-002.yaml", "DHF/items/SWDD-003.yaml")
+        moved = items / "SWDD-003.yaml"
+        moved.write_text(moved.read_text().replace("SWDD-002", "SWDD-003"))
+
+        assert collect_dhf_item_changes(tmp_path, "main") == {
+            "created": ["SWDD-003"], "updated": [], "deleted": ["SWDD-002"]}

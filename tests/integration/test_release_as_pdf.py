@@ -15,7 +15,7 @@ import pytest
 import yaml
 from click.testing import CliRunner
 
-from fixtures.starter import keep_the_starter_text
+from fixtures.starter import keep_the_starter_text, verify_the_starter
 from medharness.cli import main
 from medharness.scaffold import replace_placeholders, scaffold_dhf
 
@@ -53,7 +53,8 @@ def test_a_release_writes_its_documents_as_pdf(tmp_path: Path) -> None:
     out = tmp_path / "rel"
 
     result = CliRunner().invoke(main, ["--dhf", str(dhf), "build", "release", "--version", "1.0.0",
-                                       "--out-dir", str(out), "--doc-format", "pdf"])
+                                       "--out-dir", str(out), "--doc-format", "pdf",
+                                       "--junit", str(verify_the_starter(dhf, tmp_path / "tr"))])
 
     assert result.exit_code == 0, result.stderr
     pdfs = sorted(out.rglob("*.pdf"))

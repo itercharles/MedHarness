@@ -573,7 +573,7 @@ Build everything one release needs (IEC 62304 §9).
 | `--write` | Record a REL item in the DHF. Happens only when every check passed; without it the DHF is not changed. |
 | `--cr CR_ID` | A CR to include (repeatable). Default: every completed CR not yet in a release. |
 | `--manifest PATH` | Dependency manifest whose packages the BOM lists beside the SOUP register (repeatable). |
-| `--junit PATH` | JUnit XML to include as test evidence: a file, or a directory searched for *.xml (repeatable). |
+| `--junit PATH` | JUnit XML from the tests of this release: a file, or a directory searched for *.xml (repeatable). Every requirement must be verified by it. [required] |
 | `--doc-format [html|pdf]` | Format of the bundled specifications. PDF needs medharness[docs] plus cairo/pango. [default: html] |
 
 #### `medharness build soup`

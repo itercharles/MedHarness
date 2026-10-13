@@ -80,7 +80,7 @@ class TestWrites:
         path = _file(dhf, "DEF-001.yaml")
         before = path.read_bytes()
         result = _item(dhf, "update", "DEF-001", "--data", '{"status": "banana"}')
-        assert result.exit_code == 1 and "is not a state of DEF" in result.stderr
+        assert result.exit_code == 1 and "item transition DEF-001" in result.stderr
         assert path.read_bytes() == before
 
     def test_create_with_a_status_that_is_no_state_is_refused(self, dhf: Path) -> None:
@@ -89,9 +89,53 @@ class TestWrites:
             {"title": "t", "content": "c", "derives_from": ["SYS-001"], "status": "banana"}))
         assert result.exit_code == 1 and "is not a state of SRS" in result.stderr
 
-    def test_update_to_a_state_of_the_type_is_accepted(self, dhf: Path) -> None:
-        assert _item(dhf, "update", "DEF-001", "--data", '{"status": "open"}').exit_code == 0
+    def test_update_cannot_move_a_lifecycle_even_to_a_state_of_the_type(self, dhf: Path) -> None:
+        """`item update CR-001 --data '{"status": "completed"}'` from `new` skipped every criterion."""
+        result = _item(dhf, "update", "CR-001", "--data", '{"status": "completed"}')
+        assert result.exit_code == 1 and "item transition CR-001" in result.stderr
+        assert json.loads(_item(dhf, "get", "CR-001").stdout)["status"] == "new"
+
+    def test_update_that_leaves_the_status_as_it_is_is_accepted(self, dhf: Path) -> None:
+        status = json.loads(_item(dhf, "get", "CR-001").stdout)["status"]
+        assert _item(dhf, "update", "CR-001", "--data", json.dumps({"status": status, "priority": "High"})).exit_code == 0
 
     def test_the_lifecycle_still_moves_an_item(self, dhf: Path) -> None:
         assert _item(dhf, "transition", "CR-001", "design").exit_code == 0
         assert json.loads(_item(dhf, "get", "CR-001").stdout)["status"] == "design"
+
+
+def test_a_defect_with_no_status_is_a_known_anomaly_at_release(dhf: Path, tmp_path: Path) -> None:
+    """Only `resolved`, `closed` and `cancelled` count as resolved; a missing status is not one."""
+    from medharness.services.verify_release import known_anomalies
+
+    path = _file(dhf, "DEF-001.yaml")
+    path.write_text("\n".join(l for l in path.read_text().splitlines() if not l.startswith("status:")) + "\n")
+
+    anomalies, errors = known_anomalies(dhf)
+    assert [a["defect"] for a in anomalies] == ["DEF-001"]
+    assert any("DEF-001" in e and "release_rationale" in e for e in errors)
+
+
+class TestAnItemFileThatSaysNothing:
+    """An emptied item vanished from every count; a `.yml` item escaped the duplicate check."""
+
+    def test_an_empty_item_file_is_an_error(self, dhf: Path) -> None:
+        _file(dhf, "CRS-001.yaml").write_text("# nothing here any more\n")
+        result, answer = _verify(dhf)
+        assert result.exit_code == 1
+        assert any("CRS-001.yaml is empty" in e for e in answer["errors"]), answer["errors"]
+
+    def test_an_item_file_ending_in_yml_is_an_error(self, dhf: Path) -> None:
+        source = _file(dhf, "SRS-001.yaml")
+        (source.parent / "SRS-001-copy.yml").write_text(source.read_text())
+        result, answer = _verify(dhf)
+        assert result.exit_code == 1
+        assert any("SRS-001-copy.yml" in e and ".yaml" in e for e in answer["errors"]), answer["errors"]
+
+
+def test_a_status_that_is_no_state_can_be_repaired_by_update(dhf: Path) -> None:
+    """The fix `verify dhf` prints for it is an `item update`; there is no transition out of it."""
+    path = _file(dhf, "CR-001.yaml")
+    path.write_text(path.read_text().replace("status: new", "status: implementing"))
+    assert _item(dhf, "update", "CR-001", "--data", '{"status": "develop"}').exit_code == 0
+    assert json.loads(_item(dhf, "get", "CR-001").stdout)["status"] == "develop"

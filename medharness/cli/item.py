@@ -111,11 +111,11 @@ def register(main):
         """Update fields of an existing DHF item."""
         update_data = _json_object(data)
         adapter = open_store(ctx.obj["dhf"])
-        from dhfkit.exceptions import RefusedWrite
+        from dhfkit.exceptions import ValidationError
         try:
             result = adapter.update_item(item_id, update_data)
-        except RefusedWrite as e:
-            raise click.ClickException(str(e)) from e
+        except (ValidationError, ValueError) as e:
+            raise click.ClickException(f"{item_id} not updated: {e}" if not str(e).startswith(item_id) else str(e)) from e
         if result is None:
             raise click.ClickException(f"Item '{item_id}' not found.")
         click.echo(json.dumps(result, default=str))

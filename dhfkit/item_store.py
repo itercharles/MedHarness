@@ -81,8 +81,11 @@ class ItemStore:
         d['type'] = dt.code if dt else item.uid.split('-')[0]
         linked = set()
         for field in (self._config.link_properties(dt.code) if dt else {}):
+            # A link field may hold one bare ID; every reader gets a list, so none iterates the string.
+            if isinstance(d.get(field), str):
+                d[field] = [d[field]] if d[field] else []
             value = d.get(field)
-            linked.update(v for v in ([value] if isinstance(value, str) else value or []) if isinstance(v, str) and v)
+            linked.update(v for v in value or [] if isinstance(v, str) and v)
         d['all_linked_uids'] = sorted(linked)
         return d
 
@@ -223,6 +226,24 @@ class ItemStore:
         return self._enrich_item_dict(item)
 
     def update_item(self, uid: str, data: dict) -> Optional[dict]:
+        """Write the fields given. A lifecycle state is not one of them: it moves only by transition,
+        which is what enforces the criteria on the way."""
+        existing = self._adapter.load_by_uid(uid)
+        if not existing:
+            return None
+        dt = self._config.doc_type_of(uid)
+        current = existing.model_dump().get("status")
+        # A status that is no state of the type has no move out of it; writing a real state
+        # over it is the repair `verify dhf` asks for, so that one write is allowed.
+        broken = bool(current) and current not in (self._config.valid_states(dt.code) or ()) if dt else False
+        if dt and dt.lifecycle and "status" in data and data["status"] != current and not broken:
+            raise RefusedWrite(
+                f"{uid} not updated: its status moves only by `item transition {uid} <state>`, "
+                f"which checks the criteria of the move; it is '{current}'."
+            )
+        return self._update_item(uid, data)
+
+    def _update_item(self, uid: str, data: dict) -> Optional[dict]:
         from dhfkit.lifecycle import get_initial_state, is_stable
 
         existing = self._adapter.load_by_uid(uid)
@@ -292,7 +313,7 @@ class ItemStore:
         return execute_transition(
             config=self._config,
             get_item_fn=self.get_item,
-            update_item_fn=self.update_item,
+            update_item_fn=self._update_item,
             item_id=item_id,
             to_state=to_state,
         )

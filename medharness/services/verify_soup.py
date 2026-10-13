@@ -231,8 +231,27 @@ def soup_gate(
         {"package": {"name": c["name"], "ecosystem": c["ecosystem"]}, "version": c["version"]}
         for c in checkable
     ]
+    refused: list[str] = []
     try:
-        results = query(queries)
+        try:
+            results = query(queries)
+        except urllib.error.HTTPError as exc:
+            if not 400 <= exc.code < 500:
+                raise
+            # osv.dev refuses the whole batch for one query it cannot read, such as an
+            # ecosystem it does not know. That is the item's data, not an outage: ask
+            # for each item alone and name the ones refused.
+            results = []
+            for meta, single in zip(checkable, queries):
+                try:
+                    results += query([single])
+                except urllib.error.HTTPError as one:
+                    if not 400 <= one.code < 500:
+                        raise
+                    results.append({})
+                    refused.append(f"{meta['soup_id']} ({meta['name']}, ecosystem {meta['ecosystem']!r}) "
+                                   f"was refused by osv.dev (HTTP {one.code}) and not checked — "
+                                   f"is the ecosystem spelt as osv.dev names it (PyPI, npm, Go, …)?")
     except OSError as exc:
         tolerated = offline_mode == "warn"
         outage = f"osv.dev unreachable: {exc}"
@@ -274,7 +293,7 @@ def soup_gate(
                 "vulns": blocking,
             })
 
-    passed = len(vulnerable) == 0
+    passed = not vulnerable and not refused
     n_vuln = sum(len(v["vulns"]) for v in vulnerable)
     summary_parts = [
         f"{len(soup_items)} SOUP item(s), {len(checkable)} checked.",
@@ -295,7 +314,7 @@ def soup_gate(
             + (f"[{v['severity']}] " if v.get("severity") else "")
             + (v.get("summary") or v.get("url") or "see osv.dev")
             for item in vulnerable for v in item["vulns"]
-        ],
+        ] + refused,
         warnings=[
             f"{a['soup_id']}: {a['vuln_id']} accepted — {a['rationale']}"
             for a in accepted_found
@@ -324,7 +343,7 @@ def _soup_drift(
     diff = diff_against_dhf(packages, soup_items)
     return {
         "manifests_read": len(packages),
-        "undocumented": [p["name"] for p in diff["to_create"]],
+        "undocumented": list(dict.fromkeys(p["name"] for p in diff["to_create"])),
         "misversioned": [
             f"{e['item']['id']} records {e['old_version']}, manifests resolve "
             f"{e['pkg']['version']}"

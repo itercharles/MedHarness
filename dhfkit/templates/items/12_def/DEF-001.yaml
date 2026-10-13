@@ -3,3 +3,5 @@ title: "Starter Defect — Replace with your own"
 description: "Example defect record demonstrating the DEF format"
 severity: Low
 priority: Low
+resolution: "Example resolution: what was changed, and the test that now passes."
+status: closed

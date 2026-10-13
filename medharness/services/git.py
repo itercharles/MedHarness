@@ -136,7 +136,7 @@ def collect_path_changes(
     base = _branch_point(repo_root, since_ref)
     try:
         result = subprocess.run(
-            ["git", *_PLAIN_PATHS, "diff", "--name-status", base, "--", *paths],
+            ["git", *_PLAIN_PATHS, "diff", "--name-status", "--no-renames", base, "--", *paths],
             capture_output=True,
             text=True,
             cwd=str(repo_root),
@@ -161,7 +161,8 @@ def collect_path_changes(
     for line in (result.stdout or "").splitlines():
         if not line:
             continue
-        # Lines: "A\tpath", "M\tpath", "D\tpath", "R100\told\tnew" (rename).
+        # Lines: "A\tpath", "M\tpath", "D\tpath". Renames are off: a file moved to another
+        # name is the old item deleted and a new one created, and must read as both.
         parts = line.split("\t")
         if len(parts) < 2:
             continue
@@ -172,9 +173,6 @@ def collect_path_changes(
             updated.append(parts[1])
         elif status_code.startswith("D"):
             deleted.append(parts[1])
-        elif status_code.startswith("R") and len(parts) >= 3:
-            # Rename — count as an update on the new path.
-            updated.append(parts[2])
     return {"created": created, "updated": updated, "deleted": deleted}
 
 
@@ -182,7 +180,7 @@ def added_line_counts(repo_root: Path, since_ref: str, *paths: str) -> dict[str,
     """Lines each tracked file gained since the branch left ``since_ref``, working tree included."""
     base = _branch_point(repo_root, since_ref)
     result = subprocess.run(
-        ["git", *_PLAIN_PATHS, "diff", "--numstat", base, "--", *paths],
+        ["git", *_PLAIN_PATHS, "diff", "--numstat", "--no-renames", base, "--", *paths],
         capture_output=True, text=True, cwd=str(repo_root), check=False,
     )
     if result.returncode != 0:

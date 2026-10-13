@@ -1,6 +1,6 @@
 """Contract tests: functional coverage for CI gate, evidence, and artifact commands."""
 import json
-from fixtures.starter import keep_the_starter_text
+from fixtures.starter import keep_the_starter_text, verify_the_starter
 import sys
 from pathlib import Path
 
@@ -78,9 +78,10 @@ class TestBuildRelease:
         """
         out_dir = tmp_path / "release"
         keep_the_starter_text(scaffolded_dhf / "DHF")
+        junit = verify_the_starter(scaffolded_dhf / "DHF", tmp_path / "tr")
         r = _run(
             "medharness", "--dhf", str(scaffolded_dhf / "DHF"),
-            "build", "release", "--version", "1.0.0", "--out-dir", str(out_dir),
+            "build", "release", "--version", "1.0.0", "--out-dir", str(out_dir), "--junit", str(junit),
         )
         assert r.returncode == 0, r.stderr
         data = json.loads(r.stdout)
@@ -106,6 +107,7 @@ class TestBuildRelease:
         r = _run(
             "medharness", "--dhf", str(dhf),
             "build", "release", "--version", "1.0.0", "--out-dir", str(out_dir), "--write",
+            "--junit", str(verify_the_starter(dhf, tmp_path / "tr")),
         )
         assert r.returncode == 1
         assert "RISK-404" in r.stderr and "No REL item was recorded" in r.stderr

@@ -139,16 +139,15 @@ class TestCRItemLifecycle:
         assert item["status"] == "new", f"Expected 'new', got '{item['status']}'"
 
 
-    def test_advance_to_develop_via_update(self, dhf, cr_id):
-        """Set status to 'develop' directly — global lifecycle lacks 'design' state."""
+    def test_a_status_cannot_be_set_by_update(self, dhf, cr_id):
+        """Only `item transition` moves a CR, so its criteria cannot be skipped."""
         r = _dhf(
             str(dhf / "DHF"),
             "item", "update", cr_id,
             "--data", json.dumps({"status": "develop"}),
         )
-        assert r.returncode == 0, f"update to develop failed:\n{r.stderr}"
-        item = json.loads(r.stdout)
-        assert item["status"] == "develop"
+        assert r.returncode == 1
+        assert "item transition" in r.stderr
 
 
 

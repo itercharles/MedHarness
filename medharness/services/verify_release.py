@@ -15,9 +15,9 @@ from dhfkit.store import open_store
 RELEASABLE_STATE = "completed"
 
 
-# A defect in any of these states still affects the software being released.
-# 'cancelled' means the report was withdrawn, not that the software changed.
-_UNRESOLVED_DEFECT_STATES = ("draft", "open", "in_progress")
+# A defect in any other state, no state included, still affects the software being
+# released. 'cancelled' means the report was withdrawn, not that the software changed.
+_RESOLVED_DEFECT_STATES = ("resolved", "closed", "cancelled")
 
 
 def known_anomalies(dhf: Path) -> tuple[list[dict], list[str]]:
@@ -36,11 +36,11 @@ def known_anomalies(dhf: Path) -> tuple[list[dict], list[str]]:
     errors: list[str] = []
 
     for item in open_store(dhf).list_items():
-        uid = str(item.get("id") or "")
-        if not uid.startswith("DEF-"):
+        if item.get("type") != "DEF":
             continue
+        uid = item["id"]
         state = str(item.get("status") or "").strip().lower()
-        if state not in _UNRESOLVED_DEFECT_STATES:
+        if state in _RESOLVED_DEFECT_STATES:
             continue
 
         rationale = str(item.get("release_rationale") or "").strip()

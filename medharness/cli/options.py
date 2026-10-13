@@ -7,8 +7,8 @@ from pathlib import Path
 import click
 
 
-def junit_option(help_text: str):
-    return click.option("--junit", "junit_paths", multiple=True, metavar="PATH",
+def junit_option(help_text: str, *, required: bool = False):
+    return click.option("--junit", "junit_paths", multiple=True, metavar="PATH", required=required,
                         type=click.Path(exists=True, path_type=Path), help=help_text)
 
 

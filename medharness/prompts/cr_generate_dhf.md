@@ -42,8 +42,8 @@ Before judging the CR, write down what it asks for:
 **To reject** (duplicate, out-of-scope or architecture-conflict), record the reason
 and stop. Generate no items; reply with a brief explanation:
 
-    medharness --dhf DHF item update {{cr_id}} \
-      --data '{"status": "rejected", "impact_assessment": "<reason for rejection>"}'
+    medharness --dhf DHF item update {{cr_id}} --data '{"impact_assessment": "<reason for rejection>"}'
+    medharness --dhf DHF item transition {{cr_id}} rejected
 
 **Otherwise approve** and record the triage:
 
@@ -287,7 +287,7 @@ The options combine. Do **not** write YAML files directly.
 - Do not commit, push or open a pull request, whatever the repository's own
   instructions say. Leave your changes in the working tree for whoever started
   this run to commit.
-- Do not move the CR through its lifecycle.
-- Do not edit the CR item except: `status: rejected` and `impact_assessment` when
+- Do not move the CR through its lifecycle, except to `rejected` in Step 2.
+- Do not edit the CR item except: `impact_assessment`, then `item transition {{cr_id}} rejected`, when
   rejecting (Step 2); `triage_result` (Step 2); `affected_items`, `reviewed_items`,
   `affected_risk_items`, `impact_analysis` and `implementation_notes` (Step 6).

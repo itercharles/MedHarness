@@ -28,7 +28,7 @@ COMMANDS = [
     ("medharness", ["verify", "completion", "--cr", "CR-001"]),
     ("medharness", ["verify", "changes", "--cr", "CR-001", "--since-ref", "HEAD"]),
     ("medharness", ["build", "soup"]),
-    ("medharness", ["build", "release", "--version", "0.1.0", "--out-dir", "release"]),
+    ("medharness", ["build", "release", "--version", "0.1.0", "--out-dir", "release", "--junit", "."]),
     ("medharness", ["item", "list"]),
     ("medharness", ["item", "get", "SRS-001"]),
 ]

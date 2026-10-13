@@ -408,9 +408,8 @@ class TestBuildPlanImpactAnalysis:
         assert self._points(tmp_path, status="draft") == []
 
     def test_a_rejected_cr_needs_no_record(self, project: Path, tmp_path: Path) -> None:
-        reject = f"{MH} item update CR-001 --data " + _json(
-            {"status": "rejected", "impact_assessment": "duplicate of CR-002"})
-        report = self._plan_and_run(tmp_path, [reject])
+        record = f"{MH} item update CR-001 --data " + _json({"impact_assessment": "duplicate of CR-002"})
+        report = self._plan_and_run(tmp_path, [record, f"{MH} item transition CR-001 rejected"])
         assert not [f for f in self._fields(report) if f.startswith("impact_analysis")]
 
 

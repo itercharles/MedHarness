@@ -56,6 +56,6 @@ def test_a_project_chain_replaces_the_defaults(dhf: Path) -> None:
 def test_a_release_with_no_chains_writes_no_matrix_report(dhf: Path, tmp_path: Path) -> None:
     _config(dhf, "traceability_matrices: []\n")
     result = CliRunner().invoke(main, ["--dhf", str(dhf), "build", "release", "--version", "1.0.0",
-                                       "--out-dir", str(tmp_path / "rel")])
+                                       "--out-dir", str(tmp_path / "rel"), "--junit", str(dhf)])
     artifacts = json.loads(result.stdout.splitlines()[0])["artifacts"]
     assert not any(a.startswith("traceability/") for a in artifacts), artifacts

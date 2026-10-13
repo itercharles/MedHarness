@@ -178,12 +178,16 @@ def parse_package_json(path: Path) -> list[dict]:
     data = json.loads(path.read_text(encoding="utf-8"))
     installed = _installed_versions(path)
     packages: list[dict] = []
+    declared: set[str] = set()
     for section, is_dev in (
         ("dependencies", False),
         ("devDependencies", True),
         ("peerDependencies", False),
     ):
         for name, version_spec in (data.get(section) or {}).items():
+            if name in declared:
+                continue  # one package, listed again as a peer or dev dependency
+            declared.add(name)
             packages.append({
                 "name": name,
                 "version": installed.get(name) or version_spec,
@@ -577,11 +581,13 @@ def collect_manifest_packages(
                 except Exception as exc:
                     errors.append(f"Failed to parse {manifest_path.name}: {exc}")
 
-    # Deduplicate by normalised name — first occurrence wins.
-    seen: set[str] = set()
+    # One entry per package and version. Two versions of one package both ship, so neither
+    # may be dropped: the register is checked against each.
+    seen: set[tuple[str, str, str]] = set()
     deduped: list[dict] = []
     for pkg in packages:
-        key = _normalize_name(pkg["name"])
+        key = (str(pkg.get("ecosystem") or "").lower(), _normalize_name(pkg["name"]),
+               _normalize_version(pkg["version"]))
         if key not in seen:
             seen.add(key)
             deduped.append(pkg)
@@ -622,6 +628,20 @@ def sync_soup_items(
         errors.append(f"Failed to list SOUP items: {exc}")
 
     diff = diff_against_dhf(packages, soup_items)
+    # One SOUP item records one version; writing would flip it between the two on every run.
+    versions: dict[tuple[str, str], list[dict]] = {}
+    for pkg in packages:
+        versions.setdefault((str(pkg.get("ecosystem") or "").lower(), _normalize_name(pkg["name"])), []).append(pkg)
+    several = {name for (_eco, name), pkgs in versions.items() if len(pkgs) > 1}
+    for key in [k for k, pkgs in versions.items() if len(pkgs) <= 1]:
+        del versions[key]
+    for pkgs in versions.values():
+        errors.append(
+            f"{pkgs[0]['name']} ships at " + " and ".join(f"{p['version']} ({p.get('source') or '?'})" for p in pkgs)
+            + "; one SOUP item records one version — align the manifests, or register each version itself"
+        )
+    diff["to_create"] = [p for p in diff["to_create"] if _normalize_name(p["name"]) not in several]
+    diff["to_update"] = [e for e in diff["to_update"] if _normalize_name(e["pkg"]["name"]) not in several]
     if store is None:
         # The register could not be read, so "no SOUP item for this package" proves nothing.
         diff["to_create"] = diff["to_update"] = []

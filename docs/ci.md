@@ -6,7 +6,7 @@ The CI recipe is the whole deployment; a release is cut from it. The AI stages i
 
 `init` does not write a CI workflow, because the pipeline references your branch names, runner labels and secrets. You own it.
 
-Copy the recipe below into `.github/workflows/dhf.yml` and replace `{{medharness_version}}` with the version you pin. It is the whole deployment — two jobs, no server, no database, no account:
+Copy the recipe below into `.github/workflows/dhf.yml`, replace `{{medharness_version}}` with the version you pin, and `{{test_command}}` with the command that runs your tests and writes JUnit XML into `test-results/` (for pytest, `pytest --junit-xml=test-results/junit.xml`). It is the whole deployment — two jobs, no server, no database, no account:
 
 <details>
 <summary><code>.github/workflows/dhf.yml</code></summary>
@@ -68,11 +68,19 @@ jobs:
         id: ver
         run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
 
+      # Every requirement must be verified by this run's JUnit: the release is cut
+      # from the tests of the commit it ships, not from a result produced elsewhere.
+      - name: Run the tests
+        run: "{{test_command}}"
+
       - name: Build the release
+        env:
+          VERSION: ${{ steps.ver.outputs.version }}
         run: |
           medharness --dhf DHF build release \
-            --version ${{ steps.ver.outputs.version }} \
+            --version "$VERSION" \
             --out-dir artifacts \
+            --junit test-results \
             --write
 
       # Through a pull request, not a push to main: a branch protection rule
@@ -123,12 +131,12 @@ Writing your own pipeline instead? [interface.md](interface.md) is the contract 
 medharness --dhf DHF build release --version 1.2.0 --out-dir release --junit test-results
 ```
 
-One command builds everything a release needs, into one directory: the release baseline, the software BOM, a CycloneDX SBOM, the specifications, a traceability report for each matrix in `traceability_matrices`, test evidence, and `evidence-manifest.json` hashing every file.
+`--junit` is required: every requirement must be verified by it, as `verify tests --strict` judges it, whether or not an included CR touched it. One command builds everything a release needs, into one directory: the release baseline, the software BOM, a CycloneDX SBOM, the specifications, a traceability report for each matrix in `traceability_matrices`, test evidence, and `evidence-manifest.json` hashing every file.
 
 Before writing anything to the DHF it checks that:
 
 - the DHF passes `verify dhf` — with coverage gaps failing, since a release is not the place for advisory findings;
-- every included CR is `completed` (by default, every completed CR not yet in a release; `--cr` to choose) **and still passes `verify completion`** — `completed` is a status anyone can write, so the gate is run again, with the `--junit` evidence if you pass it. Without `--junit`, a Test-verified item's evidence cannot be checked, and the release says so in `warnings`;
+- every included CR is `completed` (by default, every completed CR not yet in a release; `--cr` to choose) **and still passes `verify completion`** — `completed` is a status anyone can write, so the gate is run again, with the `--junit` evidence;
 - every open defect carries a `release_rationale` (IEC 62304 §9.7).
 
 Add `--write` to record the REL item. It is recorded **only when every check passed** — a failing release still writes its evidence, so you can read why, but leaves the DHF unchanged. The [CI recipe](#setting-up-ci) runs it on `v*` tags and brings the REL item back to `main` through a pull request.

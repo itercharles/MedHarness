@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Iterable
 
-from dhfkit.junit_parser import read_test_evidence
+from dhfkit.junit_parser import read_test_evidence, verified
 from dhfkit.testing_points import parse_testing_points
 from medharness.services.envelope import gate_result
 
@@ -58,13 +58,7 @@ def ci_test_coverage_gate(
         )
 
     evidence = read_test_evidence(junit_paths)
-    covered_reqs: set[str] = set()
-    covered_pairs: set[tuple[str, str]] = set()
-    for test in evidence:
-        if test.status != "PASS":
-            continue
-        covered_reqs.update(test.links)
-        covered_pairs.update((link, point) for link in test.links for point in test.testing_points)
+    covered_reqs, covered_pairs = verified(evidence)
 
     adapter = open_store(dhf_path)
     all_items = adapter.list_items()
@@ -268,9 +262,7 @@ def validate_verification_completeness(
             prefix_to_code[dt.prefix] = rt
 
     # Requirement IDs covered by passing tests
-    covered_by_test = {
-        link for test in read_test_evidence(junit_paths) if test.status == "PASS" for link in test.links
-    }
+    covered_by_test, _points = verified(read_test_evidence(junit_paths))
 
     missing_method: list[dict] = []
     unverified_test: list[dict] = []
