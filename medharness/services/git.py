@@ -88,6 +88,20 @@ def head(repo_root: Path) -> str | None:
     return result.stdout.strip() if result.returncode == 0 else None
 
 
+def dirty_paths(repo_root: Path) -> set[str]:
+    """Every path the working tree differs from HEAD in, untracked files included. Empty without git."""
+    try:
+        done = subprocess.run(["git", *_PLAIN_PATHS, "status", "--porcelain", "--untracked-files=all"],
+                              capture_output=True, text=True, cwd=str(repo_root), check=False)
+    except FileNotFoundError:
+        return set()
+    paths: set[str] = set()
+    for line in done.stdout.splitlines() if done.returncode == 0 else []:
+        entry = line[3:]
+        paths.update(part.strip('"') for part in entry.split(" -> "))
+    return paths
+
+
 def uncommit_since(repo_root: Path, start: str | None) -> list[str]:
     """Undo commits made after ``start``, keeping their changes staged.
 

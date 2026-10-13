@@ -215,6 +215,22 @@ class TestBuildPlan:
         _plan(tmp_path, design=[{"exit": 1, "say": "rate limited"}])
         result = _run("build", "plan", "--cr", "CR-001")
         assert result.exit_code == 1 and _report(result)["outcome"] == "tool_error"
+        assert [c["stage"] for c in _calls(project)] == ["design"], "fix passes and reviews ran on nothing"
+
+    def test_a_design_run_that_writes_code_fails_and_says_which_files(self, project: Path, tmp_path: Path) -> None:
+        """A design PR is reviewed as a DHF diff; code or a workflow riding along would be missed."""
+        _plan(tmp_path, design=[{"run": DESIGN + [_write("src/backdoor.py", "x = 1\n")]}, {"run": []}],
+              design_review=[{"run": [APPROVED_REVIEW]}])
+        result = _run("build", "plan", "--cr", "CR-001")
+        report = _report(result)
+        assert result.exit_code == 1
+        assert any(e["field"] == "scope" and "src/backdoor.py" in e["issue"] for e in report["errors"]), report["errors"]
+
+    def test_files_that_were_already_uncommitted_are_not_the_runs(self, project: Path, tmp_path: Path) -> None:
+        (project / "notes.md").write_text("mine\n")
+        _plan(tmp_path, design=[{"run": DESIGN}, {"run": []}], design_review=[{"run": [APPROVED_REVIEW]}])
+        result = _run("build", "plan", "--cr", "CR-001")
+        assert not [e for e in _report(result)["errors"] if e["field"] == "scope"]
 
     def test_a_missing_claude_cli_says_so(self, project: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         import shutil
@@ -471,12 +487,14 @@ class TestBuildCode:
         stages = [c["stage"] for c in _calls(project)]
         assert stages.count("code_review") == 3 and stages.count("code_fix") == 2, stages
         assert _report(result)["diagnostics"]["code_review_verdict"] == "needs_revision"
+        assert "review_not_approved" in [w["code"] for w in _report(result)["warnings"]]
 
     def test_a_model_that_fails_is_a_tool_error(self, project: Path, tmp_path: Path) -> None:
         _design_merged(project)
         _plan(tmp_path, develop=[{"exit": 1, "say": "overloaded"}])
         result = _run("build", "code", "--cr", "CR-001")
         assert result.exit_code == 1 and _report(result)["outcome"] == "tool_error"
+        assert [c["stage"] for c in _calls(project)] == ["develop"], "a review ran on nothing"
 
 
 @pytest.fixture
@@ -604,7 +622,7 @@ class TestWithAPullRequest:
         self, project: Path, tmp_path: Path, pr,
     ) -> None:
         head = _git(project, "rev-parse", "HEAD")
-        pr(reviews=[{"state": "CHANGES_REQUESTED", "commit_id": head, "body": "Please assess the battery risk",
+        pr(reviews=[{"state": "CHANGES_REQUESTED", "author_association": "MEMBER", "commit_id": head, "body": "Please assess the battery risk",
                      "user": {"login": "reviewer"}}])
         _plan(tmp_path, design=[{"run": DESIGN}, {"run": []}], design_review=[{"run": [APPROVED_REVIEW]}])
 
@@ -617,7 +635,7 @@ class TestWithAPullRequest:
         self, project: Path, tmp_path: Path, pr,
     ) -> None:
         head = _git(project, "rev-parse", "HEAD")
-        pr(reviews=[{"state": "APPROVED", "commit_id": head, "body": "Looks good", "user": {"login": "reviewer"}}])
+        pr(reviews=[{"state": "APPROVED", "author_association": "MEMBER", "commit_id": head, "body": "Looks good", "user": {"login": "reviewer"}}])
         _plan(tmp_path, design=[{"run": DESIGN}, {"run": []}], design_review=[{"run": [APPROVED_REVIEW]}])
 
         _run("build", "plan", "--cr", "CR-001", "--pr", "7")

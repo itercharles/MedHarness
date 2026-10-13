@@ -148,7 +148,9 @@ jobs:
           gh pr create --head "$BRANCH" --title "$BRANCH" --body "Opened by the CR workflow."
 
   revise:           # a reviewer asked for changes on a stage's pull request
-    if: github.event_name == 'pull_request_review' && github.event.review.state == 'changes_requested'
+    if: >-
+      github.event_name == 'pull_request_review' && github.event.review.state == 'changes_requested'
+      && contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.review.author_association)
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ github.token }}

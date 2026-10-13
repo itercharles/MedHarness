@@ -11,6 +11,20 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.60.0] — 2026-10-13
+
+Batch 2 of the independent review: the AI stages.
+
+### Changed (breaking)
+- `build plan` fails with a `scope` error, and pushes nothing, when the run wrote anything other than DHF items and its design review. Files that were already uncommitted before the run are not counted.
+- With `--pr`, only reviews by an owner, member or collaborator reach the agent; others are left out with an `untrusted_reviews_ignored` warning. The `revise` job in docs/ai-workflow.md checks the same.
+
+### Fixed
+- The review verdict is read from the words right after `**Verdict:**`: "Not approved — needs revision", "Needs Revision (cannot be approved yet)" and the unfilled template line "Approved | Needs Revision" were all read as approved. A design review file the reviewer did not rewrite (a crashed review leaving last run's file) is no verdict, not an approval. A review loop that ends without approval warns `review_not_approved`.
+- When the first, generating model call fails, the stage stops: no fix pass or review runs on nothing, and `build plan` no longer pushes after a `tool_error`.
+- A `claude` call that hangs is stopped after `MEDHARNESS_MODEL_TIMEOUT` seconds (default 7200).
+- The agent no longer inherits `GH_TOKEN`, `GITHUB_TOKEN`, `OPENAI_API_KEY` or `DEEPSEEK_API_KEY`; the harness does the pushing and the endpoint calls.
+
 ## [0.59.0] — 2026-10-12
 
 Found by an independent review: places where a gate said "all clear" when it should not have.

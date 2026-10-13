@@ -51,7 +51,14 @@ Bounded only by `max_turns=100`, a 120-second per-command timeout, and 20,000 ch
 
 - **Do not run AI stages against a workstation holding credentials you would not give a contractor.** The model can read `~/.aws`, `~/.ssh`, `.env`, and your git credentials, and can exfiltrate them through any command that reaches the network.
 - **Do not point AI stages at a production or validated environment.**
-- **Treat the CR prompt and DHF content as an injection surface.** The model acts on text from your DHF items and, when `--pr` is used, from PR comments. A CR description or review comment authored by an untrusted party is untrusted input to a shell-capable agent.
+- **Treat the CR prompt and DHF content as an injection surface.** The model acts on text from your DHF items and, when `--pr` is used, from PR reviews. A CR description or review comment authored by an untrusted party is untrusted input to a shell-capable agent.
+
+What the harness limits on its own:
+
+- **PR reviews.** With `--pr`, only reviews by an owner, member or collaborator of the repository reach the agent; any other review is left out and the run warns `untrusted_reviews_ignored`.
+- **The agent's environment.** `GH_TOKEN`, `GITHUB_TOKEN`, `OPENAI_API_KEY` and `DEEPSEEK_API_KEY` are removed from the environment of the `claude` CLI and of the OpenAI-compatible loop's shell. The harness pushes, comments and calls the endpoint itself; the agent needs none of them. The model's own credentials (for `claude`, `ANTHROPIC_API_KEY` or its OAuth token) stay, since the CLI needs them.
+- **Time.** A single model call is stopped after `MEDHARNESS_MODEL_TIMEOUT` seconds (default 7200). If the first, generating call fails, the stage stops there: no fix pass or review runs on nothing, and nothing is pushed.
+- **Scope of `build plan`.** A design run that writes anything other than DHF items and its review file fails with a `scope` error naming the files, and nothing is pushed.
 
 ---
 
