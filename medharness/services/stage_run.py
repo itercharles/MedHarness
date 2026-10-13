@@ -264,28 +264,46 @@ def _parse_review_data(text: str) -> dict:
     for line in text.splitlines():
         stripped = line.strip()
         if stripped.startswith("**Verdict:**"):
-            lower = stripped.lower()
-            if "approved" in lower:
-                verdict = "approved"
-            elif "needs revision" in lower:
+            # The words right after the label decide. "Not approved — needs revision" and the
+            # unfilled template line "Approved | Needs Revision" both contain "approved".
+            said = stripped[len("**Verdict:**"):].strip().lower()
+            if "|" in said:
+                verdict = "unknown"
+            elif said.startswith("needs revision") or said.startswith("not approved"):
                 verdict = "needs_revision"
+            elif said.startswith("approved"):
+                verdict = "approved"
         elif stripped.startswith("- [ ]"):
             issues.append(stripped[5:].strip())
     return {"verdict": verdict, "issues": issues}
 
 
-def _read_design_review_data(repo_root: Path, cr_id: str) -> dict:
-    """Read and parse the design review file.
+def design_review_file(repo_root: Path, cr_id: str) -> Path:
+    return repo_root / "docs" / "reviews" / f"{cr_id}-Design-Review.md"
 
-    Returns {"verdict": ..., "issues": [...]} or {"verdict": "unknown", "issues": []}
-    if the file is absent or unparseable.
+
+def _read_design_review_data(repo_root: Path, cr_id: str, before: str | None = None) -> dict:
+    """The verdict and issues of the review file the reviewer just wrote.
+
+    ``before`` is the file as it was before the review ran: a file the reviewer left as it
+    was is an earlier review, not this one, and says nothing about the design now.
     """
-    review_file = repo_root / "docs" / "reviews" / f"{cr_id}-Design-Review.md"
     try:
-        content = review_file.read_text(encoding="utf-8")
+        content = design_review_file(repo_root, cr_id).read_text(encoding="utf-8")
     except OSError:
         return {"verdict": "unknown", "issues": []}
+    if before is not None and content == before:
+        return {"verdict": "unknown", "issues": []}
     return _parse_review_data(content)
+
+
+def _review_not_approved(kind: str, verdict: str) -> dict | None:
+    """A warning when a review loop ended without an approval, so the caller sees it."""
+    if verdict == "approved":
+        return None
+    return _warning("review_not_approved",
+                    f"The {kind} review's last verdict is '{verdict}', not approved. "
+                    f"Read the review before merging.")
 
 
 def _build_review_result(stage_label: str, log: list[dict]) -> dict:
@@ -356,6 +374,8 @@ class Run:
         self.started_perf = time.perf_counter()
         self.repo_root = dhf_path.resolve().parent
         self.start_head = git.head(self.repo_root)
+        # What was already uncommitted before the run, so only the run's own writes are judged.
+        self.dirty_before = git.dirty_paths(self.repo_root)
         self.steps: list[dict] = []
         self.warnings: list[dict] = []
         self.unreadable: list[str] = []

@@ -38,7 +38,9 @@ from medharness.services.stage_run import (
     _format_error_lines,
     _parse_review_data,
     _read_design_review_data,
+    _review_not_approved,
     _warning,
+    design_review_file,
 )
 
 __all__ = [
@@ -69,6 +71,28 @@ def _validate_design(run: Run, name: str, items_changed: dict) -> list[dict]:
     run.diagnostics["final_error_count"] = len(errors)
     run.steps.append(_finish_step(step, perf, "failed" if errors else "ok", {"error_count": len(errors)}))
     return errors
+
+
+def _written_outside_the_design(run: Run, dhf_path: Path) -> list[str]:
+    """Paths the run wrote that are neither DHF items nor the design review."""
+    dhf = Path(os.path.relpath(dhf_path.resolve(), run.repo_root)).as_posix()
+    return sorted(
+        path for path in git.dirty_paths(run.repo_root) - run.dirty_before
+        if not path.startswith((f"{dhf}/", "docs/reviews/"))
+    )
+
+
+def _stopped(run: Run, stage: str, artifacts: dict) -> dict:
+    """The answer of a stage whose first model call failed: nothing after it runs or is pushed.
+
+    Fix passes and reviews on top of a generation that never happened cost calls and say nothing.
+    """
+    run.leave_uncommitted()
+    result = run.respond(stage, artifacts, [])
+    if run.pr_number:
+        token = os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN") or ""
+        result["pr_comments"] = _auto_post_pr_feedback(run.pr_number, run.cr_id, result, token=token)
+    return result
 
 
 def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None,
@@ -123,6 +147,8 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None,
     run.steps.append(_finish_step(prompt_step, prompt_perf, "ok"))
 
     run.call("run_initial_generation", prompt, design_llm, critical=True, resume=prior_session)
+    if run.critical_failed:
+        return _stopped(run, "generate_dhf", {"items_changed": None})
 
     items_changed = run.items_changed()
     errors = _validate_design(run, "validate_initial", items_changed)
@@ -151,6 +177,8 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None,
     design_review_log: list[dict] = []
     design_review_verdict = "unknown"
     for review_cycle in range(1, _MAX_DESIGN_REVIEW_CYCLES + 1):
+        review_file = design_review_file(run.repo_root, cr_id)
+        before = review_file.read_text(encoding="utf-8") if review_file.is_file() else ""
         run.call(
             "run_design_review" if review_cycle == 1 else f"run_design_review_{review_cycle}",
             _augment_review_prompt(
@@ -158,7 +186,7 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None,
             review_llm, critical=False,
         )
 
-        review_data = _read_design_review_data(run.repo_root, cr_id)
+        review_data = _read_design_review_data(run.repo_root, cr_id, before)
         design_review_verdict = review_data["verdict"]
         design_review_log.append({"cycle": review_cycle, **review_data})
 
@@ -179,7 +207,18 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None,
         items_changed = run.items_changed()
         errors = _validate_design(run, f"validate_after_review_fix_{review_cycle}", items_changed)
 
+    outside = _written_outside_the_design(run, dhf_path)
+    if outside:
+        errors.append({
+            "field": "scope",
+            "issue": f"`build plan` changed files outside the DHF: {', '.join(outside[:10])}"
+                     + (f" and {len(outside) - 10} more" if len(outside) > 10 else ""),
+            "fix": "Revert them. A design run writes the DHF and its review only; code is `build code`'s. "
+                   "Nothing was pushed.",
+        })
     run.diagnostics["design_review_verdict"] = design_review_verdict
+    if warning := _review_not_approved("design", design_review_verdict):
+        run.warnings.append(warning)
     run.diagnostics["design_review_cycles"] = review_cycle
     run.leave_uncommitted()
 
@@ -215,7 +254,7 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None,
 
     if run.session_id and pr_number:
         put_session(pr_number, run.session_id)
-    if pr_number:
+    if pr_number and not run.critical_failed and not outside:
         _push_to_pr(run.repo_root, pr_number, f"design({cr_id}): build plan", errors)
 
     result = run.respond(
@@ -334,6 +373,8 @@ def generate_code(
         run.steps.append(_finish_step(prompt_step, prompt_perf, "ok", {"diff_injected": bool(diff)}))
 
     run.call("run_initial_generation", prompt, develop_llm, critical=True, resume=prior_session)
+    if run.critical_failed:
+        return _stopped(run, "develop", {"files_changed": None})
 
     code_review_log: list[dict] = []
     code_review_verdict = "unknown"
@@ -360,6 +401,8 @@ def generate_code(
         )
 
     run.diagnostics["code_review_verdict"] = code_review_verdict
+    if warning := _review_not_approved("code", code_review_verdict):
+        run.warnings.append(warning)
     run.diagnostics["code_review_cycles"] = review_cycle
 
     check_results = _run_checks(run, checks, develop_llm) if checks else []

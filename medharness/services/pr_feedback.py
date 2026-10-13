@@ -45,6 +45,11 @@ def _push_to_pr(repo_root: Path, pr_number: int, message: str, errors: list[dict
                        "fix": "Commit and push the working tree by hand; nothing was lost locally."})
 
 
+#: Who may tell the agent what to change. A review is text a shell-capable agent acts on, and
+#: on a public repository anyone can leave one.
+_TRUSTED = frozenset({"OWNER", "MEMBER", "COLLABORATOR"})
+
+
 def _get_pr_feedback(pr_number: int) -> dict:
     """What reviewers asked to change on the PR's current commit, via gh.
 
@@ -80,10 +85,12 @@ def _get_pr_feedback(pr_number: int) -> dict:
     head = (pull["data"] or {}).get("head", {}).get("sha") if isinstance(pull["data"], dict) else None
 
     with_comments = {c.get("pull_request_review_id") for c in comments["data"] if isinstance(c, dict)}
+    on_head = [r for r in reviews["data"]
+               if isinstance(r, dict) and (head is None or r.get("commit_id") == head)]
+    outsiders = [r for r in on_head if r.get("author_association") not in _TRUSTED]
     asked = [
-        r for r in reviews["data"]
-        if isinstance(r, dict)
-        and (head is None or r.get("commit_id") == head)
+        r for r in on_head
+        if r.get("author_association") in _TRUSTED
         and (r.get("state") == "CHANGES_REQUESTED"
              or (r.get("state") == "COMMENTED"
                  and ((r.get("body") or "").strip() or r.get("id") in with_comments)))
@@ -105,7 +112,10 @@ def _get_pr_feedback(pr_number: int) -> dict:
             "reviews_count": len(asked),
         },
         "warnings": [w for w in (pull.get("warning"), comments.get("warning"), reviews.get("warning"))
-                     if isinstance(w, dict)],
+                     if isinstance(w, dict)] + ([_warning(
+                         "untrusted_reviews_ignored",
+                         f"{len(outsiders)} review(s) by someone who is not an owner, member or collaborator "
+                         f"were not given to the agent.")] if outsiders else []),
     }
 
 

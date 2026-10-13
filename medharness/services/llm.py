@@ -72,6 +72,20 @@ def _model_label(config: LLMConfig) -> str:
 # A tool result is resent on every later turn; one large file would crowd out the context.
 _MAX_TOOL_OUTPUT = 20_000
 
+#: What the harness needs and the agent does not: the harness pushes and comments on the PR,
+#: and calls the OpenAI-compatible endpoint itself. An agent with a shell reads anything in its
+#: environment and can send it anywhere, so these are not in it.
+_HARNESS_SECRETS = frozenset({"GH_TOKEN", "GITHUB_TOKEN", "OPENAI_API_KEY", "DEEPSEEK_API_KEY"})
+
+
+def _agent_env() -> dict[str, str]:
+    return {k: v for k, v in os.environ.items() if k not in _HARNESS_SECRETS}
+
+
+#: Seconds one model call may run before it is stopped; a hung call otherwise holds the
+#: runner until the job's own limit.
+_MODEL_TIMEOUT = 7200
+
 _SESSION_GONE = "no conversation found with session id"
 
 
@@ -87,12 +101,16 @@ def _run_claude(prompt: str, *, resume_session: str = "", model: str = "") -> tu
         cmd += ["--model", effective_model]
     if resume_session:
         cmd += ["--resume", resume_session]
+    timeout = int(os.environ.get("MEDHARNESS_MODEL_TIMEOUT") or _MODEL_TIMEOUT)
     try:
         # On stdin, not argv: Linux caps one argument at 128 KiB and a prompt
         # carrying the DHF context can be larger.
-        result = subprocess.run(cmd, input=prompt, capture_output=True, text=True)  # noqa: S603
+        result = subprocess.run(cmd, input=prompt, capture_output=True, text=True,  # noqa: S603
+                                timeout=timeout, env=_agent_env())
     except FileNotFoundError:
         return 1, "claude CLI not found — install @anthropic-ai/claude-code", ""
+    except subprocess.TimeoutExpired:
+        return 1, f"The model did not finish within {timeout} s (MEDHARNESS_MODEL_TIMEOUT).", ""
     session_id = ""
     text_output = result.stdout
     if result.stdout.strip():
@@ -190,7 +208,7 @@ def _run_openai_compatible(
                 args = json.loads(fn.get("arguments", "{}"))
                 command = args.get("command", "")
                 proc = subprocess.run(  # noqa: S603 S602
-                    command, shell=True, capture_output=True, text=True, timeout=120
+                    command, shell=True, capture_output=True, text=True, timeout=120, env=_agent_env()
                 )
                 tc_output = proc.stdout + (("\n" + proc.stderr) if proc.stderr else "")
                 if len(tc_output) > _MAX_TOOL_OUTPUT:
