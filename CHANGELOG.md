@@ -11,6 +11,18 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.61.0] — 2026-10-13
+
+Batch 3 of the independent review: consistency.
+
+### Changed (breaking)
+- A field whose doc type declares it `short_text` or `long_text` must hold text. `testing` written as a list passed `verify dhf` and then crashed `verify tests` with a traceback; it is now a schema error that names the field.
+
+### Fixed
+- A DHF directory not named `DHF` works end to end. The branch diff looked under `DHF/items/` whatever `--dhf` said, so `verify changes` reported every promised item as unchanged; the prompts and fix hints now name the directory in use (`--dhf Records`), and so does the `build soup` hint of `verify soup`.
+- `build code`'s pre-flight findings are warnings of the documented shape (`code`, `message`), not raw dicts that the answer's own schema rejected and PR comments printed as "- `?`:".
+- The shipped SYS type declared `verification_method` twice, with two labels; it declares it once.
+
 ## [0.60.0] — 2026-10-13
 
 Batch 2 of the independent review: the AI stages.

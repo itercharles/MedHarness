@@ -215,13 +215,13 @@ def file_at_branch_point(repo_root: Path, since_ref: str, path: str) -> str | No
     return result.stdout if result.returncode == 0 else None
 
 
-def collect_dhf_item_changes(repo_root: Path, since_ref: str) -> dict[str, list[str]]:
+def collect_dhf_item_changes(repo_root: Path, since_ref: str, dhf_path: Path | str = "DHF") -> dict[str, list[str]]:
     """Return ``{created, updated, deleted}`` lists of DHF item IDs changed since ``since_ref``.
 
     Item IDs are extracted as the file stem (e.g. ``DHF/items/01_sys/SYS-001.yaml``
     becomes ``"SYS-001"``). Non-YAML files under ``DHF/items/`` are skipped.
     """
-    raw = collect_path_changes(repo_root, since_ref, "DHF/items/")
+    raw = collect_path_changes(repo_root, since_ref, f"{Path(dhf_path).resolve().name}/items/")
     out: dict[str, list[str]] = {"created": [], "updated": [], "deleted": []}
     for bucket in out:
         for path in raw[bucket]:

@@ -129,12 +129,12 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None,
             {"prompt_kind": "generate_dhf_revision", "used_pr_feedback": True},
         )
         prompt = (
-            f"Read the DHF items in DHF/ related to {cr_id}, "
+            f"Read the DHF items in {dhf_path.resolve().name}/ related to {cr_id}, "
             f"then revise them based on the following pull request review feedback. "
             f"Continue using the CLI (`medharness item create` / `medharness item update`) only. "
             f"Keep the CR's `impact_analysis`, `reviewed_items` and `affected_*` fields consistent with what you change. "
             f"After making changes, re-run:\n"
-            f"  medharness --dhf DHF verify dhf\n\n"
+            f"  medharness --dhf {dhf_path.resolve().name} verify dhf\n\n"
             f"Review feedback:\n{feedback['prompt_text']}"
         )
         prompt = _enrich_with_plan_context(prompt, cr_id, dhf_path, run.warnings)
@@ -163,7 +163,7 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None,
             f"Fix only the items needed to clear these errors via the medharness "
             f"CLI (`medharness item create` / `medharness item update`). Do not introduce other "
             f"changes. After fixing, re-run:\n"
-            f"  medharness --dhf DHF verify dhf",
+            f"  medharness --dhf {dhf_path.resolve().name} verify dhf",
             design_llm, critical=True,
         )
         items_changed = run.items_changed()
@@ -171,7 +171,7 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None,
 
     run.warn(design_validation.check_verification_quality(dhf_path, items_changed))
     run.warn(design_validation.check_near_duplicates(dhf_path, items_changed))
-    run.warn(design_validation.check_large_edits(run.repo_root, since_ref))
+    run.warn(design_validation.check_large_edits(run.repo_root, since_ref, dhf_path))
     run.warn(design_validation.check_test_points_follow_requirements(run.repo_root, dhf_path, since_ref))
 
     design_review_log: list[dict] = []
@@ -200,7 +200,7 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None,
             f"then fix each item via `medharness item create` / `medharness item update`. "
             f"Keep the CR's `impact_analysis`, `reviewed_items` and `affected_*` fields consistent with what you change. "
             f"After making changes, re-run:\n"
-            f"  medharness --dhf DHF verify dhf\n"
+            f"  medharness --dhf {dhf_path.resolve().name} verify dhf\n"
             f"Do not modify the review file itself.",
             design_llm, critical=False,
         )
@@ -334,7 +334,8 @@ def generate_code(
             {"error_count": len(preflight_errors)},
         ))
         for e in preflight_errors:
-            run.warnings.append({"source": "preflight_traceability", **e})
+            run.warnings.append(_warning("preflight_traceability", f"{e['issue']} Fix: {e['fix']}",
+                                         {"field": e["field"]}))
 
     if feedback is not None:
         prompt_step, prompt_perf = _begin_step(
@@ -381,7 +382,7 @@ def generate_code(
     for review_cycle in range(1, _MAX_CODE_REVIEW_CYCLES + 1):
         _, review_output = run.call(
             "run_review" if review_cycle == 1 else f"run_review_{review_cycle}",
-            _assemble_review_code_prompt(cr_id, since_ref),
+            _assemble_review_code_prompt(cr_id, since_ref, dhf_path),
             review_llm, critical=False,
         )
 

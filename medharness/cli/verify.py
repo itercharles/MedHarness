@@ -278,7 +278,7 @@ def register(main):
         render_envelope(result, "soup-vuln")
         if details(result).get("drift", {}).get("undocumented") or \
                 details(result).get("drift", {}).get("misversioned"):
-            click.echo("    Fix: medharness --dhf DHF build soup, then commit. "
+            click.echo(f"    Fix: medharness --dhf {ctx.obj['dhf']} build soup, then commit. "
                        "Pass --strict to block the build on this.", err=True)
         click.echo(result["summary"], err=True)
         if not result["passed"]:

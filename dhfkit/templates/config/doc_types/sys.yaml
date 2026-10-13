@@ -52,12 +52,4 @@ properties:
 - name: verification_criteria
   format: long_text
   label: Verification Criteria
-- name: verification_method
-  format: multiselect
-  label: Verification Method
-  options:
-  - Test
-  - Inspection
-  - Analysis
-  - Demonstration
 has_verification: true

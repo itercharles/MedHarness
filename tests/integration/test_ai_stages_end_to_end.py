@@ -489,6 +489,18 @@ class TestBuildCode:
         assert _report(result)["diagnostics"]["code_review_verdict"] == "needs_revision"
         assert "review_not_approved" in [w["code"] for w in _report(result)["warnings"]]
 
+    def test_a_structural_gap_found_before_the_run_is_reported_as_a_warning(self, project: Path, tmp_path: Path) -> None:
+        """The pre-flight findings were added as raw dicts, which the answer's own shape rejects."""
+        _design_merged(project)
+        swdd = next((project / "DHF" / "items").rglob("SWDD-001.yaml"))
+        swdd.write_text(swdd.read_text().replace("SRS-001", "SRS-404"))
+        _plan(tmp_path, develop=[{"run": CODE}], code_review=[{"say": "**Verdict:** Approved"}])
+
+        report = _report(_run("build", "code", "--cr", "CR-001"))
+
+        found = [w for w in report["warnings"] if w["code"] == "preflight_traceability"]
+        assert found and "SRS-404" in found[0]["message"], report["warnings"]
+
     def test_a_model_that_fails_is_a_tool_error(self, project: Path, tmp_path: Path) -> None:
         _design_merged(project)
         _plan(tmp_path, develop=[{"exit": 1, "say": "overloaded"}])

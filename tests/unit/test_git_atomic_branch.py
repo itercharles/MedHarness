@@ -67,7 +67,7 @@ def test_validate_reads_the_diff_and_the_cr_it_judges(tmp_path: Path) -> None:
         result = validate_atomic_branch(tmp_path, dhf, "CR-001", since_ref="main",
                                         code_paths=("src/",))
 
-    items.assert_called_once_with(tmp_path, "main")
+    items.assert_called_once_with(tmp_path, "main", dhf)
     paths.assert_called_once_with(tmp_path, "main", "src/")
     adapter.assert_called_once_with(dhf)
     assert {e["field"] for e in result["details"]["findings"]} == {"code_branch", "dhf_branch"}

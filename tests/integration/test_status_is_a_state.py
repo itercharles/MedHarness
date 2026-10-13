@@ -139,3 +139,23 @@ def test_a_status_that_is_no_state_can_be_repaired_by_update(dhf: Path) -> None:
     path.write_text(path.read_text().replace("status: new", "status: implementing"))
     assert _item(dhf, "update", "CR-001", "--data", '{"status": "develop"}').exit_code == 0
     assert json.loads(_item(dhf, "get", "CR-001").stdout)["status"] == "develop"
+
+
+def test_a_text_field_holding_a_list_is_refused_where_it_is_read(dhf: Path) -> None:
+    """`testing` as a list passed `verify dhf` and then crashed `verify tests` with a traceback."""
+    path = _file(dhf, "SRS-001.yaml")
+    data = yaml.safe_load(path.read_text())
+    data["testing"] = ["T1: one", "T2: two"]
+    path.write_text(yaml.safe_dump(data))
+
+    result, answer = _verify(dhf)
+    assert result.exit_code == 1
+    assert any("'testing' must be text" in e for e in answer["errors"]), answer["errors"]
+
+
+def test_no_shipped_doc_type_declares_a_field_twice() -> None:
+    from dhfkit.paths import DEFAULT_CONFIG_DIR
+
+    for path in sorted((DEFAULT_CONFIG_DIR / "doc_types").glob("*.yaml")):
+        names = [p["name"] for p in yaml.safe_load(path.read_text())["properties"] if isinstance(p, dict)]
+        assert len(names) == len(set(names)), f"{path.name} declares {sorted({n for n in names if names.count(n) > 1})} twice"
