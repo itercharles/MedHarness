@@ -210,7 +210,15 @@ class ItemLoader:
         field_name = field_config['name']
         field_format = field_config.get('format', 'short_text')
 
-        if field_format == 'select':
+        if field_config.get('format') in ('short_text', 'long_text'):
+            # Read as text everywhere: `testing` as a list made `verify tests` crash. A field
+            # that declares no format holds a structure (`triage_result`), so only a declared one.
+            if not isinstance(value, (str, int, float)):
+                raise ValidationError(
+                    f"{file_path.name}: Field '{field_name}' must be text, got {type(value).__name__}"
+                )
+
+        elif field_format == 'select':
             options = field_config.get('options', [])
             if options and value not in options:
                 raise ValidationError(

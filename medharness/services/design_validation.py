@@ -76,7 +76,7 @@ def _validate_schema_and_traceability(dhf_path: Path) -> list[dict]:
         return [{
             "field": "schema",
             "issue": f"The DHF could not be read: {exc}",
-            "fix": "Inspect DHF/items/ for malformed YAML and fix the offending file.",
+            "fix": f"Inspect {dhf_path.resolve().name}/items/ for malformed YAML and fix the offending file.",
         }]
     return [
         {"field": f["field"], "issue": f["issue"], "fix": f["fix"]}
@@ -92,7 +92,7 @@ def _list_items(dhf_path: Path, field: str) -> tuple[list[dict], list[dict]]:
         return [], [{
             "field": field,
             "issue": f"Could not enumerate DHF items to verify expectations: {exc}",
-            "fix": "Run `medharness --dhf DHF item list` locally to debug.",
+            "fix": f"Run `medharness --dhf {dhf_path.resolve().name} item list` locally to debug.",
         }]
 
 
@@ -191,7 +191,7 @@ def _check_cr_workflow_fields(dhf_path: Path, cr_id: str) -> list[dict]:
                 f"triage decision and it was not written."
             ),
             "fix": (
-                f"medharness --dhf DHF item update {cr_id} --data "
+                f"medharness --dhf {dhf_path.resolve().name} item update {cr_id} --data "
                 f"'{{\"triage_result\": {{\"verdict\": \"approved\", "
                 f"\"complexity\": \"<small|medium|large>\", "
                 f"\"affected_subsystems\": [\"<name>\"], \"related_crs\": [], "
@@ -263,7 +263,7 @@ def validate_generate_dhf(
 
     errors.extend(_validate_cascade_completeness(created_ids, by_id, open_store(dhf_path).config))
     errors.extend(_unreviewed_impact(dhf_path, cr_id, changed_items))
-    errors.extend(_check_impact_analysis(by_id.get(cr_id), listed_items, open_store(dhf_path).config, changed_items))
+    errors.extend(_check_impact_analysis(by_id.get(cr_id), listed_items, open_store(dhf_path).config, changed_items, dhf_path.resolve().name))
     return errors
 
 
@@ -338,7 +338,7 @@ DIMENSIONS = ("product", "requirements", "architecture", "risk", "soup",
               "test", "regulatory", "security", "usability")
 VERDICTS = ("required", "not_required", "follow_up")
 _IA_KEYS = ("assumptions", "anchors", "unchanged", "created", "dimensions")
-_IA_FIX = ("medharness --dhf DHF item update {cr} --data "
+_IA_FIX = ("medharness --dhf {dhf} item update {cr} --data "
            "'{{\"impact_analysis\": {{\"assumptions\": [], \"anchors\": [], \"unchanged\": [], "
            "\"created\": [], \"dimensions\": [...]}}}}' (shape in the `build plan` prompt)")
 
@@ -352,9 +352,9 @@ def _entries(ia: dict, key: str) -> list[dict]:
     return [e for e in value if isinstance(e, dict)] if isinstance(value, list) else []
 
 
-def impact_analysis_shape_errors(cr_id: str, ia) -> list[dict]:
+def impact_analysis_shape_errors(cr_id: str, ia, dhf: str = "DHF") -> list[dict]:
     """What is wrong with the form of a CR's `impact_analysis`, without reading the DHF."""
-    fix = _IA_FIX.format(cr=cr_id)
+    fix = _IA_FIX.format(cr=cr_id, dhf=dhf)
     if not isinstance(ia, dict):
         return [{"field": "impact_analysis",
                  "issue": f"{cr_id} has no `impact_analysis` mapping; Steps 1-5 record it and it was not written.",
@@ -401,7 +401,7 @@ def impact_analysis_shape_errors(cr_id: str, ia) -> list[dict]:
 
 
 def impact_analysis_closure_errors(cr_item: dict, items: list[dict], config,
-                                   changed_items: dict[str, list[str]]) -> list[dict]:
+                                   changed_items: dict[str, list[str]], dhf: str = "DHF") -> list[dict]:
     """What a well-formed `impact_analysis` still leaves unsaid about the items this run changed."""
     from medharness.services.impact import parents
 
@@ -419,7 +419,7 @@ def impact_analysis_closure_errors(cr_item: dict, items: list[dict], config,
         errors.append({"field": f"impact_analysis.{field}", "issue": f"{cr_id}: {issue}", "fix": fix})
 
     def update(**fields) -> str:
-        return f"medharness --dhf DHF item update {cr_id} --data '{json.dumps(fields)}'"
+        return f"medharness --dhf {dhf} item update {cr_id} --data '{json.dumps(fields)}'"
 
     anchors, unchanged = _entries(ia, "anchors"), _entries(ia, "unchanged")
     created_entries = _entries(ia, "created")
@@ -495,12 +495,12 @@ def impact_analysis_closure_errors(cr_item: dict, items: list[dict], config,
 
 
 def _check_impact_analysis(cr_item: dict | None, items: list[dict], config,
-                           changed_items: dict[str, list[str]]) -> list[dict]:
+                           changed_items: dict[str, list[str]], dhf: str = "DHF") -> list[dict]:
     # A rejected CR stops at Step 2; a missing one is `_check_cr_workflow_fields`'s to report.
     if cr_item is None or str(cr_item.get("status") or "") == "rejected":
         return []
-    errors = impact_analysis_shape_errors(cr_item["id"], cr_item.get("impact_analysis"))
-    return errors or impact_analysis_closure_errors(cr_item, items, config, changed_items)
+    errors = impact_analysis_shape_errors(cr_item["id"], cr_item.get("impact_analysis"), dhf)
+    return errors or impact_analysis_closure_errors(cr_item, items, config, changed_items, dhf)
 
 
 WITHDRAWN_STATES = {"cancelled", "rejected"}
@@ -539,7 +539,7 @@ def check_near_duplicates(dhf_path: Path, changed_items: dict[str, list[str]]) -
 LARGE_EDIT_LINES = 40
 
 
-def check_large_edits(repo_root: Path, since_ref: str) -> list[dict]:
+def check_large_edits(repo_root: Path, since_ref: str, dhf_path: Path) -> list[dict]:
     """Warnings for existing items that gained more than ``LARGE_EDIT_LINES`` lines.
 
     A change to one behaviour is a line or two; a large addition usually means the item
@@ -548,7 +548,7 @@ def check_large_edits(repo_root: Path, since_ref: str) -> list[dict]:
     from medharness.services import git
 
     try:
-        updated = git.collect_path_changes(repo_root, since_ref, "DHF/items/")["updated"]
+        updated = git.collect_path_changes(repo_root, since_ref, f"{dhf_path.resolve().name}/items/")["updated"]
         added = git.added_line_counts(repo_root, since_ref, *updated) if updated else {}
     except git.DiffUnavailable:
         return []
@@ -576,7 +576,7 @@ def check_test_points_follow_requirements(repo_root: Path, dhf_path: Path, since
     try:
         requirement_types = _verifiable_types(dhf_path)
         by_id = {it["id"]: it for it in open_store(dhf_path).list_items()}
-        updated = git.collect_path_changes(repo_root, since_ref, "DHF/items/")["updated"]
+        updated = git.collect_path_changes(repo_root, since_ref, f"{dhf_path.resolve().name}/items/")["updated"]
     except Exception:
         return []
     warnings = []

@@ -12,9 +12,11 @@ MAX_ITEMS = 300
 MAX_DIFF_CHARS = 40_000
 
 
-def _load_prompt(name: str) -> str:
-    ref = importlib.resources.files("medharness.prompts").joinpath(name)
-    return ref.read_text(encoding="utf-8")
+def _load_prompt(name: str, cr_id: str, dhf_path: Path | None, since_ref: str = DEFAULT_SINCE_REF) -> str:
+    """A stage's steps for this CR, naming the DHF directory the project actually uses."""
+    text = importlib.resources.files("medharness.prompts").joinpath(name).read_text(encoding="utf-8")
+    dhf = Path(dhf_path).resolve().name if dhf_path is not None else "DHF"
+    return text.replace("{{cr_id}}", cr_id).replace("{{since_ref}}", since_ref).replace("{{dhf}}", dhf)
 
 
 # ---------------------------------------------------------------------------
@@ -235,15 +237,15 @@ def _assemble_develop_prompt(cr_id: str, dhf_path: Path | None = None,
                              warnings: list[str] | None = None,
                              checks: tuple[str, ...] = (),
                              since_ref: str = DEFAULT_SINCE_REF) -> str:
-    prompt = _load_prompt("cr_develop.md").replace("{{cr_id}}", cr_id).replace("{{since_ref}}", since_ref)
+    prompt = _load_prompt("cr_develop.md", cr_id, dhf_path, since_ref)
     if dhf_path is not None:
         prompt = _enrich(prompt, lambda p: _render_code_context(_cr_context(p, cr_id)),
                          dhf_path, warnings)
     return prompt + checks_section(checks)
 
 
-def _assemble_review_code_prompt(cr_id: str, since_ref: str = DEFAULT_SINCE_REF) -> str:
-    return _load_prompt("cr_review_code.md").replace("{{cr_id}}", cr_id).replace("{{since_ref}}", since_ref)
+def _assemble_review_code_prompt(cr_id: str, since_ref: str = DEFAULT_SINCE_REF, dhf_path: Path | None = None) -> str:
+    return _load_prompt("cr_review_code.md", cr_id, dhf_path, since_ref)
 
 
 MAX_SIBLINGS = 15
@@ -310,7 +312,7 @@ def _assemble_review_design_prompt(cr_id: str, dhf_path: Path | None = None,
                                    changed_items: dict[str, list[str]] | None = None,
                                    warnings: list[dict] | None = None,
                                    since_ref: str = DEFAULT_SINCE_REF) -> str:
-    prompt = _load_prompt("cr_review_design.md").replace("{{cr_id}}", cr_id).replace("{{since_ref}}", since_ref)
+    prompt = _load_prompt("cr_review_design.md", cr_id, dhf_path, since_ref)
     if dhf_path is not None and changed_items:
         prompt = _enrich(
             prompt, lambda p: _render_neighbourhoods(_load_adapter(p, "the design review"), changed_items, cr_id),
@@ -320,7 +322,7 @@ def _assemble_review_design_prompt(cr_id: str, dhf_path: Path | None = None,
 
 def _assemble_generate_dhf_prompt(cr_id: str, dhf_path: Path | None = None,
                                   warnings: list[str] | None = None) -> str:
-    prompt = _load_prompt("cr_generate_dhf.md").replace("{{cr_id}}", cr_id)
+    prompt = _load_prompt("cr_generate_dhf.md", cr_id, dhf_path)
     if dhf_path is not None:
         prompt = _enrich_with_plan_context(prompt, cr_id, dhf_path, warnings)
     return prompt

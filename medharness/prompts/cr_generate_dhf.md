@@ -8,7 +8,7 @@ CR ID: {{cr_id}}
 
 ## Inputs
 
-- CR item: `medharness --dhf DHF item get {{cr_id}}`
+- CR item: `medharness --dhf {{dhf}} item get {{cr_id}}`
 - Repository context: `AGENTS.md` (or `CLAUDE.md`), `README.md`
 - Source code: the modules the CR touches, as `AGENTS.md`/`CLAUDE.md` describe
   the source roots. Read them before writing any SWDD item.
@@ -42,12 +42,12 @@ Before judging the CR, write down what it asks for:
 **To reject** (duplicate, out-of-scope or architecture-conflict), record the reason
 and stop. Generate no items; reply with a brief explanation:
 
-    medharness --dhf DHF item update {{cr_id}} --data '{"impact_assessment": "<reason for rejection>"}'
-    medharness --dhf DHF item transition {{cr_id}} rejected
+    medharness --dhf {{dhf}} item update {{cr_id}} --data '{"impact_assessment": "<reason for rejection>"}'
+    medharness --dhf {{dhf}} item transition {{cr_id}} rejected
 
 **Otherwise approve** and record the triage:
 
-    medharness --dhf DHF item update {{cr_id}} \
+    medharness --dhf {{dhf}} item update {{cr_id}} \
       --data '{"triage_result": {"verdict": "approved", "complexity": "<small|medium|large>", "affected_subsystems": ["<name>"], "related_crs": [], "notes": "<one sentence: why approved and the key constraint>"}}'
 
 Complexity: `small` = 1 subsystem, <5 items likely; `medium` = 2 subsystems or
@@ -63,10 +63,10 @@ Find where the change lands, in this order:
    words, UI strings, routes and component names (`git grep -n -i "<term>" -- <test dirs>`).
    Follow each match's `@links:` tag or `medharness.links` property to requirement IDs.
 2. **Drill down.** Read the entry-tier items one line each
-   (`medharness --dhf DHF item list --type <ENTRY_TYPE> --brief`), pick the 2–3
+   (`medharness --dhf {{dhf}} item list --type <ENTRY_TYPE> --brief`), pick the 2–3
    suspect branches, and follow them down with
-   `medharness --dhf DHF item list --linked-to <ID> --brief`.
-3. **Fall back to text search**: `medharness --dhf DHF item list --match "<words>" --brief`,
+   `medharness --dhf {{dhf}} item list --linked-to <ID> --brief`.
+3. **Fall back to text search**: `medharness --dhf {{dhf}} item list --match "<words>" --brief`,
    rewording the CR in the DHF's own vocabulary.
 
 Record each place the change lands as an anchor with its evidence. When nothing
@@ -139,7 +139,7 @@ Use `follow_up` for a consequence that belongs in another change, and say which.
 
 Write items with the CLI (see CLI Commands), then validate:
 
-    medharness --dhf DHF verify dhf
+    medharness --dhf {{dhf}} verify dhf
 
 Fix what it reports with `medharness item update` and run it again until it is clean.
 
@@ -155,7 +155,7 @@ Then record the result on the CR in one update:
 - `impact_analysis` — the record of Steps 1–5 (shape below).
 - `implementation_notes` — the plan (format below).
 
-      medharness --dhf DHF item update {{cr_id}} --data '{"affected_items": [...], "reviewed_items": [...], "affected_risk_items": [...], "impact_analysis": {...}, "implementation_notes": "..."}'
+      medharness --dhf {{dhf}} item update {{cr_id}} --data '{"affected_items": [...], "reviewed_items": [...], "affected_risk_items": [...], "impact_analysis": {...}, "implementation_notes": "..."}'
 
 ### impact_analysis
 
@@ -242,7 +242,7 @@ per line, as `T<n>: <what is checked>`:
 
 **An SWDD captures a design decision that is not obvious from the requirement alone.**
 Each carries `implements` (SRS IDs) and `module` (a MODULE ID); list existing MODULE
-items first (`medharness --dhf DHF item list --type MODULE`).
+items first (`medharness --dhf {{dhf}} item list --type MODULE`).
 
 Apply this threshold before creating or updating one:
 
@@ -269,20 +269,20 @@ a MODULE only when the code lives in no existing module.
 
 ## CLI Commands
 
-    medharness --dhf DHF item create --type <TYPE> --data '<JSON>'    # ID assigned automatically
-    medharness --dhf DHF item update <ITEM_ID> --data '<JSON>'
-    medharness --dhf DHF item get <ITEM_ID>
-    medharness --dhf DHF item list --type <TYPE>
-    medharness --dhf DHF item list --brief                    # id, type, title, links only
-    medharness --dhf DHF item list --match "<words>"         # every word, any field, case-insensitive
-    medharness --dhf DHF item list --linked-to <ITEM_ID>    # items linked to or from it
+    medharness --dhf {{dhf}} item create --type <TYPE> --data '<JSON>'    # ID assigned automatically
+    medharness --dhf {{dhf}} item update <ITEM_ID> --data '<JSON>'
+    medharness --dhf {{dhf}} item get <ITEM_ID>
+    medharness --dhf {{dhf}} item list --type <TYPE>
+    medharness --dhf {{dhf}} item list --brief                    # id, type, title, links only
+    medharness --dhf {{dhf}} item list --match "<words>"         # every word, any field, case-insensitive
+    medharness --dhf {{dhf}} item list --linked-to <ITEM_ID>    # items linked to or from it
 
 The options combine. Do **not** write YAML files directly.
 
 ## Scope Constraints
 
 - Only create or update items **directly required** by this CR.
-- Do not modify files outside `DHF/`, and do not modify `DHF/config/`. If the CLI
+- Do not modify files outside `{{dhf}}/`, and do not modify `{{dhf}}/config/`. If the CLI
   rejects a field, stop and report it; do not change the schema to fit.
 - Do not commit, push or open a pull request, whatever the repository's own
   instructions say. Leave your changes in the working tree for whoever started

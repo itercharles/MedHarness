@@ -10,10 +10,10 @@ enough to hand off to a developer.
 
 ## Inputs
 
-- CR item: run `medharness --dhf DHF item get {{cr_id}}`
+- CR item: run `medharness --dhf {{dhf}} item get {{cr_id}}`
 - Items changed in this session:
 
-      git diff --name-only $(git merge-base {{since_ref}} HEAD) -- DHF/
+      git diff --name-only $(git merge-base {{since_ref}} HEAD) -- {{dhf}}/
 
 Read each changed item in full.
 
@@ -23,7 +23,7 @@ Read each changed item in full.
 
 2. List changed DHF items:
 
-       git diff --name-only $(git merge-base {{since_ref}} HEAD) -- DHF/
+       git diff --name-only $(git merge-base {{since_ref}} HEAD) -- {{dhf}}/
 
 3. Read each changed item.
 

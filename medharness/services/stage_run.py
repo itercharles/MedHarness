@@ -347,10 +347,10 @@ def _leave_uncommitted(repo_root: Path, start_head: str | None, warnings: list[d
 
 
 def _items_changed(repo_root: Path, unreadable: list[str],
-                   since_ref: str = git.DEFAULT_SINCE_REF) -> dict[str, list[str]]:
+                   since_ref: str = git.DEFAULT_SINCE_REF, dhf_path: Path | str = "DHF") -> dict[str, list[str]]:
     """The DHF items this branch changed, noting in ``unreadable`` when git could not say."""
     try:
-        return git.collect_dhf_item_changes(repo_root, since_ref)
+        return git.collect_dhf_item_changes(repo_root, since_ref, dhf_path)
     except git.DiffUnavailable as exc:
         unreadable.append(str(exc))
         return {"created": [], "updated": [], "deleted": []}
@@ -420,7 +420,7 @@ class Run:
         return rc, output
 
     def items_changed(self) -> dict[str, list[str]]:
-        return _items_changed(self.repo_root, self.unreadable, self.since_ref)
+        return _items_changed(self.repo_root, self.unreadable, self.since_ref, self.dhf_path)
 
     def warn(self, found: list[dict]) -> None:
         for w in found:

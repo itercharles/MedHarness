@@ -34,7 +34,7 @@ def validate_atomic_branch(
             "errors": [git.FILES_IN_GIT.format(command="verify changes", store=store.store_type)],
         })
     try:
-        dhf_item_changes = git.collect_dhf_item_changes(repo_root, since_ref)
+        dhf_item_changes = git.collect_dhf_item_changes(repo_root, since_ref, dhf_path)
         code_changes = git.collect_path_changes(repo_root, since_ref, *code_paths) if code_paths else {
             "created": [], "updated": [], "deleted": [],
         }
