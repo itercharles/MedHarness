@@ -84,7 +84,17 @@ class ItemSaver:
         return prefix_map
 
     def _get_directory_for_prefix(self, prefix: str) -> Path:
-        """Get appropriate directory for a prefix."""
+        """Where a new item of this prefix goes: beside the items of its type, else its configured directory.
+
+        A DHF laid out before the default directory names changed keeps its own (`01_req_crs/`);
+        a new item in the configured `01_crs/` would sit apart from its siblings.
+        """
+        sibling = next(
+            (p for p in sorted(self.specs_dir.rglob(f"{prefix}*.yaml")) if p.stem[len(prefix):].isdigit()),
+            None,
+        )
+        if sibling is not None:
+            return sibling.parent
         prefix_map = self._build_prefix_map()
 
         if prefix in prefix_map:

@@ -50,10 +50,11 @@ def test_transition_rewrites_the_file_in_place(tmp_path: Path) -> None:
     assert ItemStore(dhf).validate_schema()["valid"]
 
 
-def test_a_new_item_goes_to_its_doc_types_directory(tmp_path: Path) -> None:
-    """The other half: with no file yet, the configured directory decides."""
+def test_a_new_item_goes_beside_the_items_of_its_type(tmp_path: Path) -> None:
+    """The other half: a new item joins the existing CRs, in the directory they are in. Only a
+    type with no item yet takes its configured directory."""
     dhf = _dhf_with_a_cr_in_a_legacy_directory(tmp_path)
 
     created = ItemStore(dhf).create_item({"type": "CR", "title": "Another change"})
 
-    assert _copies(dhf, created["id"]) == [f"items/07_cr/{created['id']}.yaml"]
+    assert _copies(dhf, created["id"]) == [f"items/09_cr/{created['id']}.yaml"]
