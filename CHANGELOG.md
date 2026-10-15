@@ -11,6 +11,14 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.61.1] — 2026-10-15
+
+### Fixed
+- `item create` writes a new item beside the existing items of its type, in whatever directory they are in. A DHF laid out before the default directory names changed (`01_req_crs/`, `12_risks/`) got each new item in a new directory of the configured name (`01_crs/`), apart from its siblings, and had to move them by hand. A type with no item yet still takes its configured directory.
+
+### Changed
+- A test fails a pull request whose version in `pyproject.toml` has no CHANGELOG entry, or differs from the one `uv.lock` records; the release workflow only caught that after the merge, at the tag.
+
 ## [0.61.0] — 2026-10-13
 
 Batch 3 of the independent review: consistency.
