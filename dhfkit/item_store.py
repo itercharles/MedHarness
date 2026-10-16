@@ -299,7 +299,7 @@ class ItemStore:
         item = self.get_item(item_id)
         if item is None:
             return []
-        return get_available_transitions(self._config, item)
+        return get_available_transitions(self._config, item, self._listed_in)
 
     def unmet_criteria(self, item_id: str, to_state: str) -> List[Dict]:
         """The required criteria of the transition into *to_state* the item does not meet."""
@@ -316,6 +316,14 @@ class ItemStore:
             update_item_fn=self._update_item,
             item_id=item_id,
             to_state=to_state,
+            listed_in=self._listed_in,
+        )
+
+    def _listed_in(self, type_code: str, field: str, uid: str) -> bool:
+        """Whether any item of *type_code* names *uid* in *field* (a release listing a CR)."""
+        return any(
+            uid in (item.get(field) or [])
+            for item in self.list_items(type_code)
         )
 
     def validate_schema(self) -> dict:

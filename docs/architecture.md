@@ -189,7 +189,11 @@ Neither command moves the CR through its lifecycle. The project does, with
 `medharness item transition`: `new → design → develop → completed`, `rejected`
 from `new` or `design`, or `cancelled` from any of the three. `completed` is refused until `implementation_notes`,
 `affected_risk_items` and `triage_result` are recorded. `build plan` and
-`build code` refuse a CR that is `completed`, `rejected` or `cancelled`.
+`build code` refuse a CR that is `completed`, `rejected` or `cancelled`. A `completed` CR whose
+approval no longer stands (a reviewer asked for changes after it) is reopened with
+`medharness item transition CR-NNN develop`, and completed again when the new code is approved. A CR
+that a release lists in `included_items` shipped and cannot be reopened; a new CR changes it. Until it
+is completed again, a reopened CR is left out of `build release`.
 
 Each stage takes its model from `MEDHARNESS_{DESIGN|DESIGN_REVIEW|DEVELOP|CODE_REVIEW}_MODEL`
 as `provider:model` — `anthropic` (the `claude` CLI, the default), `openai`,

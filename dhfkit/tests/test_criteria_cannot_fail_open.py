@@ -63,6 +63,15 @@ class TestAnUnreadableCriterionBlocks:
         assert _validate_criteria(satisfied, _required(check_type))[0]
         assert not _validate_criteria({}, _required(check_type))[0]
 
+    def test_a_criterion_that_needs_the_store_blocks_without_one(self) -> None:
+        """`not_listed_in` asks whether another item names this one. Nothing to ask means no answer,
+        and no answer is not a yes."""
+        crit = [{"id": "c1", "check_type": "not_listed_in", "type": "REL", "field": "included_items",
+                 "required": True}]
+        assert _validate_criteria({"id": "CR-001"}, crit)[0] is False
+        assert _validate_criteria({"id": "CR-001"}, crit, lambda *_: False)[0] is True
+        assert _validate_criteria({"id": "CR-001"}, crit, lambda *_: True)[0] is False
+
     def test_an_optional_criterion_is_still_skipped(self) -> None:
         """`required: false` means advisory; an unknown type must not promote it."""
         crit = [{"id": "c1", "check_type": "nonsense", "field": "x", "required": False}]

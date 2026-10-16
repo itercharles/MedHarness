@@ -12,6 +12,7 @@ import click
 from dhfkit.store import open_store
 from medharness.cli.options import collect_junit_paths, junit_option
 from medharness.cli.output import emit
+from medharness.services.verify_release import RELEASABLE_STATE
 
 
 def _format_summary(stage_label: str, verb: str, cr_id: str, result: dict) -> str:
@@ -80,9 +81,10 @@ def _needs_files(store, command: str) -> str:
 def _require_workable_cr(dhf: Path, cr_id: str, command: str) -> None:
     """Refuse a CR the AI stages cannot work on, as `cr.yaml` defines it.
 
-    A CR is workable while its lifecycle still has a move out of its state; `completed`,
-    `rejected` and `cancelled` have none. A status `cr.yaml` does not declare is reported
-    as that, not as a missing CR.
+    A CR is workable while its lifecycle still has a move out of its state, and it is not
+    `completed`: a completed CR is approved, and is reopened (`item transition CR-X develop`)
+    when its approval no longer stands. `rejected` and `cancelled` have no move out. A status
+    `cr.yaml` does not declare is reported as that, not as a missing CR.
     """
     try:
         store = open_store(dhf)
@@ -97,6 +99,12 @@ def _require_workable_cr(dhf: Path, cr_id: str, command: str) -> None:
             raise ValueError(
                 f"CR '{cr_id}' has status '{status}', which is not a state of a CR. "
                 f"Expected one of: {', '.join(sorted(states))}."
+            )
+        if status == RELEASABLE_STATE:
+            raise ValueError(
+                f"CR '{cr_id}' is already '{status}' and cannot accept further work. If its approval no "
+                f"longer stands, reopen it with `medharness item transition {cr_id} develop`; a CR "
+                f"that a release lists cannot be reopened, create a new CR."
             )
         if not store.get_available_transitions(cr_id):
             raise ValueError(
