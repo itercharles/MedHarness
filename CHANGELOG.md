@@ -11,6 +11,15 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.62.0] — 2026-10-16
+
+### Added
+- A completed CR can be reopened: `medharness item transition CR-NNN develop`, declared in `cr.yaml` (`completed` → `develop`, "Reopen"). A CR approved on its own branch and then sent back by a reviewer could not be revised, because `completed` had no way out and the AI stages refuse a completed CR. A reopened CR is completed again when the new code is approved, and `build release` leaves it out until then. The refusal of `build plan` and `build code` on a completed CR now names this command.
+- A CR that a release lists in `included_items` cannot be reopened (criterion `not_listed_in`, new in the lifecycle: no other item of the given type may name this one). It shipped; a new CR changes it.
+
+### Changed
+- A project that keeps its own full copy of `cr.yaml` does not get the transition until it adds it (copy the `completed` → `develop` block from the shipped file).
+
 ## [0.61.1] — 2026-10-15
 
 ### Fixed

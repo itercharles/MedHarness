@@ -4,7 +4,7 @@ Pure functions that operate on ProjectConfig and item dicts.
 No dependency on MedHarness.
 """
 
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from dhfkit.models.config import ProjectConfig
 
@@ -45,9 +45,15 @@ def is_stable(config: ProjectConfig, status: str) -> bool:
         return False
 
 
+#: ``listed_in(type_code, field, uid)``: whether any item of that type lists *uid* in *field*.
+#: Only the store can answer it; a criterion that needs it is blocking without one.
+ListedIn = Callable[[str, str, str], bool]
+
+
 def _validate_criteria(
     item: Dict[str, Any],
     criteria: List[Dict[str, Any]],
+    listed_in: Optional[ListedIn] = None,
 ) -> Tuple[bool, List[str]]:
     """Check transition criteria against an item dict.
 
@@ -61,6 +67,10 @@ def _validate_criteria(
         field = criterion.get("field")
         if check_type == "field_not_empty":
             if not item.get(field):
+                blocking.append(criterion["id"])
+        elif check_type == "not_listed_in":
+            # The item may not be named by another: a CR in a release is part of what shipped.
+            if listed_in is None or listed_in(criterion["type"], field, item["id"]):
                 blocking.append(criterion["id"])
         elif check_type == "field_present":
             # Present but possibly empty: "assessed, nothing affected" is a
@@ -80,6 +90,7 @@ def _validate_criteria(
 def get_available_transitions(
     config: ProjectConfig,
     item: Dict[str, Any],
+    listed_in: Optional[ListedIn] = None,
 ) -> List[Dict[str, Any]]:
     """Return the list of allowed transitions from the item's current state."""
     dt = config.doc_type_of(item["id"])
@@ -114,7 +125,7 @@ def get_available_transitions(
             continue
 
         can_transition, blocking = _validate_criteria(
-            item, transition.get("criteria", [])
+            item, transition.get("criteria", []), listed_in
         )
         available.append({
             "to_state": to_state,
@@ -154,6 +165,7 @@ def execute_transition(
     update_item_fn,
     item_id: str,
     to_state: str,
+    listed_in: Optional[ListedIn] = None,
 ) -> Dict[str, Any]:
     """Execute a lifecycle transition.
 
@@ -171,7 +183,7 @@ def execute_transition(
     if item is None:
         raise ValueError(f"Item '{item_id}' not found.")
 
-    available = get_available_transitions(config, item)
+    available = get_available_transitions(config, item, listed_in)
     transition = next((t for t in available if t["to_state"] == to_state), None)
     if transition is None:
         raise ValueError(

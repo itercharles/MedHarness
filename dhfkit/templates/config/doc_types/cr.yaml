@@ -109,6 +109,20 @@ lifecycle:
       check_type: field_not_empty
       field: triage_result
       required: true
+  # A completed CR whose approval no longer stands (changes were requested after it) goes back to
+  # `develop`, and is completed again when the new code is approved. One that a release lists
+  # shipped; it is not reopened, a new CR changes it.
+  - from_states:
+    - completed
+    to_state: develop
+    label: Reopen
+    criteria:
+    - id: not_released
+      name: Not part of a release
+      check_type: not_listed_in
+      type: REL
+      field: included_items
+      required: true
   - from_states:
     - new
     - design
