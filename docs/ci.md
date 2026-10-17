@@ -123,6 +123,25 @@ What each job does:
 
 Adopt it incrementally: `dhf-validate` alone is useful from day one. Add `release` when you start cutting versions. Evidence is produced once per release, not on every merge.
 
+### Holding code to an approved design
+
+A code pull request must come after the design pull request is merged: the CR is `develop` on `main` only then. Add a job that fails a code branch otherwise, and make it a required check. Branches are named `develop/CR-NNN`, as in [the AI workflow](ai-workflow.md#wiring-it-into-github-actions):
+
+```yaml
+  code-after-design:
+    if: startsWith(github.head_ref, 'develop/')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.11' }
+      - run: pip install medharness=={{medharness_version}}
+      - run: medharness --dhf DHF verify changes --cr "${GITHUB_HEAD_REF#develop/}" --code-path src/
+```
+
+It fails with `design_not_approved` when the CR was not `develop` where the branch left `main`.
+
 Writing your own pipeline instead? [interface.md](interface.md) is the contract — the result shape every gate returns, exit-code semantics, and what may change between versions.
 
 ## Cutting a release (`build release`)

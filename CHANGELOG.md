@@ -11,6 +11,11 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.63.1] — 2026-10-17
+
+### Changed
+- Documentation for 0.63.0's CR states: the README, the AI workflow, architecture, AI security, adoption and CI pages now say what `new`, `design`, `develop` and `completed` mean, that merging the design pull request approves the design, and how to make `verify changes --code-path` a required check on code pull requests (a job in the CI page).
+
 ## [0.63.0] — 2026-10-17
 
 ### Changed

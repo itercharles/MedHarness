@@ -82,9 +82,9 @@ Locally, do not start the stages at all: `build plan --prompt` and `build code -
 
 The AI cannot advance a change on its own. Every stage transition is gated:
 
-1. **`build plan` produces a design PR.** No code is written. A human reviews the DHF diff and the generated design review.
+1. **`build plan` produces a design PR.** No code is written. A human reviews the DHF diff and the generated design review. The PR also moves the CR to `develop`; merging it is the approval of the design.
 2. **Approval is evidence.** Branch protection with required approvals and stale approvals dismissed on push makes GitHub refuse a merge without an approving review of the commit being merged — author, timestamp and revision, all recorded outside this tool's control. A label is not accepted: anyone with write access can add or remove one, and it says nothing about what was reviewed.
-3. **`build code` produces a code PR.** Start it only once the design PR is approved: your workflow decides when it runs, and `build code` itself refuses only a CR that is `completed`, `rejected` or `cancelled`.
+3. **`build code` produces a code PR.** Start it only once the design PR is merged: your workflow decides when it runs, and `build code` itself refuses only a CR that is `completed`, `rejected` or `cancelled`. The check that holds is `verify changes --code-path`: it fails a code branch unless the CR was `develop` where the branch left `main`, which only a merged design PR makes it. Make it a required check on the code PR.
 4. **Closure is gated deterministically.** `verify completion` requires the CR's recorded fields, every item in its `affected_items` to exist, and passing JUnit evidence for each of those declaring `Test` — none of which the AI can satisfy by assertion.
 
 The gates in step 4 are ordinary code. They do not ask a model whether the work is done.
