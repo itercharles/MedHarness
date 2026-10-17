@@ -215,6 +215,20 @@ def file_at_branch_point(repo_root: Path, since_ref: str, path: str) -> str | No
     return result.stdout if result.returncode == 0 else None
 
 
+def item_at_branch_point(repo_root: Path, since_ref: str, dhf_path: Path | str, item_id: str) -> dict | None:
+    """An item as it was where the branch left ``since_ref``; None when it did not exist there."""
+    import yaml
+
+    base = _branch_point(repo_root, since_ref)
+    listing = subprocess.run(
+        ["git", *_PLAIN_PATHS, "ls-tree", "-r", "--name-only", base, "--", f"{Path(dhf_path).resolve().name}/items/"],
+        capture_output=True, text=True, cwd=str(repo_root), check=False)
+    path = next((p for p in listing.stdout.splitlines() if Path(p).name == f"{item_id}.yaml"), None)
+    text = file_at_branch_point(repo_root, since_ref, path) if path else None
+    loaded = yaml.safe_load(text) if text else None
+    return loaded if isinstance(loaded, dict) else None
+
+
 def collect_dhf_item_changes(repo_root: Path, since_ref: str, dhf_path: Path | str = "DHF") -> dict[str, list[str]]:
     """Return ``{created, updated, deleted}`` lists of DHF item IDs changed since ``since_ref``.
 

@@ -79,6 +79,19 @@ lifecycle:
     - design
     to_state: develop
     label: Start Development
+    # `develop` is a design that was recorded and approved; a design pull request carries this
+    # move, and merging it is the approval.
+    criteria:
+    - id: triaged_for_design
+      name: Triage decision recorded
+      check_type: field_not_empty
+      field: triage_result
+      required: true
+    - id: design_recorded
+      name: Implementation notes written
+      check_type: field_not_empty
+      field: implementation_notes
+      required: true
   - from_states:
     - develop
     to_state: completed

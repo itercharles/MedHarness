@@ -62,10 +62,15 @@ class TestTheScaffoldedCRCanReachCompleted:
         scaffold_dhf(tmp_path)
         replace_placeholders(tmp_path, "Lifecycle")
         dhf = tmp_path / "DHF"
-        for state in ("design", "develop"):
-            open_store(dhf).execute_transition("CR-001", state)
+        open_store(dhf).execute_transition("CR-001", "design")
+        with pytest.raises(ValueError, match="design_recorded"):
+            open_store(dhf).execute_transition("CR-001", "develop")
+        open_store(dhf).update_item("CR-001", {
+            "implementation_notes": "Plan.", "triage_result": {"verdict": "approved"},
+        })
+        open_store(dhf).execute_transition("CR-001", "develop")
 
-        with pytest.raises(ValueError, match="implementation_recorded"):
+        with pytest.raises(ValueError, match="risk_impact_assessed"):
             open_store(dhf).execute_transition("CR-001", "completed")
 
         open_store(dhf).update_item("CR-001", {

@@ -12,6 +12,9 @@ from medharness.services import git
 from medharness.services.envelope import envelope_from
 
 
+DESIGN_APPROVED_STATE = "develop"
+
+
 def validate_atomic_branch(
     repo_root: Path,
     dhf_path: Path,
@@ -35,6 +38,7 @@ def validate_atomic_branch(
         })
     try:
         dhf_item_changes = git.collect_dhf_item_changes(repo_root, since_ref, dhf_path)
+        cr_at_base = git.item_at_branch_point(repo_root, since_ref, dhf_path, cr_id) if code_paths else None
         code_changes = git.collect_path_changes(repo_root, since_ref, *code_paths) if code_paths else {
             "created": [], "updated": [], "deleted": [],
         }
@@ -72,6 +76,7 @@ def validate_atomic_branch(
         since_ref=since_ref,
         code_paths=code_paths,
         unreviewed=unreviewed_dependents(store, cr_item, dhf_item_changes),
+        status_at_base=(cr_at_base or {}).get("status"),
     )
 
 
@@ -84,6 +89,7 @@ def judge_branch(
     since_ref: str = git.DEFAULT_SINCE_REF,
     code_paths: tuple[str, ...] = (),
     unreviewed: dict[str, list[str]] | None = None,
+    status_at_base: str | None = None,
 ) -> dict:
     """Whether a branch carries the coupled change set a CR expects.
 
@@ -94,9 +100,20 @@ def judge_branch(
     both ways, apart from the CR itself. ``unreviewed`` maps an item that depends on
     a changed one to what it depends on; each is a finding unless the CR reviewed it.
     When ``code_paths`` is non-empty, at least one file under those paths must also have
-    changed.
+    changed, and the CR must already have been `develop` where the branch left its base: its
+    design was merged, which is where it is approved. ``status_at_base`` is None when the CR
+    did not exist there.
     """
     errors: list[dict] = []
+    if code_paths and status_at_base != DESIGN_APPROVED_STATE:
+        where = f"was '{status_at_base}'" if status_at_base else "did not exist"
+        errors.append({
+            "field": "design_not_approved",
+            "issue": f"{cr_id} {where} where this branch left {since_ref}; code needs it to be "
+                     f"'{DESIGN_APPROVED_STATE}', which a merged design pull request sets.",
+            "fix": f"Merge the design first (`build plan --cr {cr_id}` on its own branch), then cut the "
+                   f"code branch from the updated {since_ref}.",
+        })
     code_change_count = sum(len(code_changes[b]) for b in ("created", "updated", "deleted"))
     dhf_change_count = sum(len(dhf_item_changes[b]) for b in ("created", "updated", "deleted"))
 

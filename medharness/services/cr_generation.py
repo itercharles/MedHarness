@@ -5,6 +5,8 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
+from dhfkit.exceptions import ValidationError
+from dhfkit.store import open_store
 from medharness.services import checks as check_runner
 from medharness.services import design_validation, git
 from medharness.services.cr_impact import _record_design_impact_in_cr
@@ -82,13 +84,40 @@ def _written_outside_the_design(run: Run, dhf_path: Path) -> list[str]:
     )
 
 
+def _cr_state(dhf_path: Path, cr_id: str) -> str | None:
+    item = open_store(dhf_path).get_item(cr_id)
+    return str(item.get("status") or "") if item else None
+
+
+def _move_cr(run: Run, from_state: str, to_state: str) -> dict | None:
+    """Move the CR on when it is in *from_state*; the error when `cr.yaml` refuses the move.
+
+    A CR in any other state is left where it is: a revision finds it already moved, and a
+    CR the model rejected stays rejected.
+    """
+    store = open_store(run.dhf_path)
+    item = store.get_item(run.cr_id)
+    if item is None or item.get("status") != from_state:
+        return None
+    try:
+        store.execute_transition(run.cr_id, to_state)
+    except (ValueError, ValidationError) as exc:
+        return {
+            "field": "cr_state",
+            "issue": f"{run.cr_id} was not moved from '{from_state}' to '{to_state}': {exc}",
+            "fix": f"Record what the move needs, then `medharness item transition {run.cr_id} {to_state}`. "
+                   f"Nothing was pushed.",
+        }
+    return None
+
+
 def _stopped(run: Run, stage: str, artifacts: dict) -> dict:
     """The answer of a stage whose first model call failed: nothing after it runs or is pushed.
 
     Fix passes and reviews on top of a generation that never happened cost calls and say nothing.
     """
     run.leave_uncommitted()
-    result = run.respond(stage, artifacts, [])
+    result = run.respond(stage, {**artifacts, "cr_state": _cr_state(run.dhf_path, run.cr_id)}, [])
     if run.pr_number:
         token = os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN") or ""
         result["pr_comments"] = _auto_post_pr_feedback(run.pr_number, run.cr_id, result, token=token)
@@ -120,6 +149,7 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None,
     })
     prior_session = get_session(pr_number) if pr_number else ""
     run.resume_from(prior_session)
+    _move_cr(run, "new", "design")
 
     feedback = _pr_feedback(pr_number, run.steps, run.diagnostics, run.warnings) if pr_number else None
     run.inputs["revision_mode"] = feedback is not None
@@ -245,12 +275,18 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None,
     run.steps.append(_finish_step(artifact_step, artifact_perf, "ok", {"items_changed": items_changed}))
 
     design_impact: dict = {"recorded": False, "reason": "skipped_due_to_validation_errors"}
-    if not errors:
+    if not errors and _cr_state(dhf_path, cr_id) == "rejected":
+        # Writing to a rejected CR returns it to `new` for re-approval; a rejected CR has no design to record.
+        design_impact = {"recorded": False, "reason": "cr_rejected"}
+    elif not errors:
         impact_step, impact_perf = _begin_step("record_design_impact")
         design_impact = _record_design_impact_in_cr(cr_id, dhf_path, items_changed)
         run.steps.append(_finish_step(
             impact_step, impact_perf, "ok" if design_impact.get("recorded") else "warning", design_impact,
         ))
+
+    if not errors and (refused := _move_cr(run, "design", "develop")):
+        errors.append(refused)
 
     if run.session_id and pr_number:
         put_session(pr_number, run.session_id)
@@ -258,7 +294,9 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None,
         _push_to_pr(run.repo_root, pr_number, f"design({cr_id}): build plan", errors)
 
     result = run.respond(
-        "generate_dhf", {"items_changed": items_changed, "design_impact": design_impact}, errors,
+        "generate_dhf",
+        {"items_changed": items_changed, "design_impact": design_impact, "cr_state": _cr_state(dhf_path, cr_id)},
+        errors,
     )
     result["design_review"] = _build_review_result("Design", design_review_log)
     if pr_number:
@@ -314,6 +352,7 @@ def generate_code(
     })
     prior_session = get_session(pr_number) if pr_number else ""
     run.resume_from(prior_session)
+    _move_cr(run, "completed", "develop")
 
     # Pre-flight DHF traceability check — catch structural gaps before the LLM runs
     # so the prompt can include specific fixes rather than the LLM discovering them later.
@@ -425,6 +464,15 @@ def generate_code(
          "fix": "Make the check pass in the working tree, then run `build code` again; nothing was pushed."}
         for c in check_results if not c["passed"]
     ]
+    if not errors:
+        if refused := _move_cr(run, "develop", "completed"):
+            errors.append(refused)
+        elif (state := _cr_state(dhf_path, cr_id)) != "completed":
+            run.warnings.append(_warning(
+                "cr_state_not_moved",
+                f"{cr_id} is '{state}', not 'develop', so it was not completed. Its design is approved "
+                f"by merging a `build plan` pull request that moves it to 'develop'.",
+            ))
     if pr_number and not errors:
         _push_to_pr(run.repo_root, pr_number, f"feat({cr_id}): build code", errors)
     artifact_step, artifact_perf = _begin_step("collect_artifacts", {"kind": "files_changed"})
@@ -438,7 +486,7 @@ def generate_code(
         ))
     run.steps.append(_finish_step(artifact_step, artifact_perf, "ok", {"files_changed": files_changed}))
 
-    result = run.respond("develop", {"files_changed": files_changed}, errors)
+    result = run.respond("develop", {"files_changed": files_changed, "cr_state": _cr_state(dhf_path, cr_id)}, errors)
     result["code_review"] = _build_review_result("Implementation", code_review_log)
     if checks:
         result["checks"] = [{k: c[k] for k in ("command", "exit_code", "passed")} for c in check_results]

@@ -57,6 +57,8 @@ class TestDevelopCrJsonContract:
     def stub_session(self, monkeypatch):
         monkeypatch.setattr("medharness.services.cr_generation.get_session", lambda pr: "")
         monkeypatch.setattr("medharness.services.cr_generation.put_session", lambda pr, sid: None)
+        monkeypatch.setattr("medharness.services.cr_generation._move_cr", lambda *a, **k: None)
+        monkeypatch.setattr("medharness.services.cr_generation._cr_state", lambda *a, **k: "completed")
 
     def test_json_payload_has_documented_keys(self, dhf):
         runner = CliRunner()

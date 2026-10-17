@@ -34,8 +34,11 @@ def cr(tmp_path: Path) -> tuple[Path, str]:
     scaffold_dhf(tmp_path)
     replace_placeholders(tmp_path, "Closure")
     dhf = tmp_path / "DHF"
-    for state in ("design", "develop"):
-        open_store(dhf).execute_transition("CR-001", state)
+    store = open_store(dhf)
+    store.execute_transition("CR-001", "design")
+    store.update_item("CR-001", {"implementation_notes": "Plan.", "triage_result": {"verdict": "approved"}})
+    store.execute_transition("CR-001", "develop")
+    store.update_item("CR-001", {"implementation_notes": "", "triage_result": None})
     return dhf, "CR-001"
 
 
