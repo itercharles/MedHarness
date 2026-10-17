@@ -11,6 +11,19 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.63.0] — 2026-10-17
+
+### Changed
+- A CR's state follows the pipeline. `build plan` moves a CR from `new` to `design` when it starts, and to `develop` when it ends without errors; `build code` moves it from `develop` to `completed` when it ends without errors and its `--check`s pass. A run that fails moves nothing, and a CR the model rejected stays rejected. The answer says the state in `artifacts.cr_state`. Until now nothing moved a CR, so a designed-but-unbuilt CR looked like one still being designed.
+- `develop` needs a recorded design: `design` → `develop` in `cr.yaml` now requires `triage_result` and `implementation_notes`. A project that keeps its own full copy of `cr.yaml` adds those criteria itself.
+- `build code --pr N` on a code pull request whose own branch completed the CR revises it (reopening the CR, then completing it again); a CR completed before the branch began is still refused.
+
+### Added
+- `verify changes --code-path` fails a branch (`design_not_approved`) unless the CR was `develop` where the branch left its base: the design pull request is merged, which approves it, before code is written.
+
+### Fixed
+- `build plan` on a CR the model rejected no longer returns it to `new`: it recorded `affected_items` on the rejected CR, and writing to a rejected CR resets it.
+
 ## [0.62.0] — 2026-10-16
 
 ### Added

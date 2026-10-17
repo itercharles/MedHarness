@@ -30,6 +30,8 @@ def adapter(tmp_path: Path) -> ItemStore:
                          ids=["from new", "from design", "from develop"])
 def test_an_active_cr_can_be_cancelled(adapter: ItemStore, path: list[str]) -> None:
     for state in path:
+        if state == "develop":
+            adapter.update_item("CR-001", {"implementation_notes": "Plan.", "triage_result": {"verdict": "approved"}})
         adapter.execute_transition("CR-001", state)
     adapter.execute_transition("CR-001", "cancelled")
     assert adapter.get_item("CR-001")["status"] == "cancelled"

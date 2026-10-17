@@ -23,13 +23,16 @@ A change to what the product does is not finished until its DHF is.
 
 - **Start a change:** `medharness item create --type CR --data '{"title": "…", "description": "…"}'`,
   then `medharness item transition CR-NNN design`.
-- **Design it:** run `medharness build plan --cr CR-NNN --prompt` and do what it says.
-- **Build it:** run `medharness build code --cr CR-NNN --prompt` and do what it says.
+- **Design it:** run `medharness build plan --cr CR-NNN --prompt` and do what it says, then
+  `medharness item transition CR-NNN develop`. The design goes in its own pull request;
+  merging it approves the design.
+- **Build it** from a branch cut after that merge: run `medharness build code --cr CR-NNN --prompt`
+  and do what it says.
 - **Check it**, and fix what they report:
   - `medharness verify dhf`
   - `medharness verify completion --cr CR-NNN --junit <results>`
   - `medharness verify changes --cr CR-NNN`
-- **Close it:** `medharness item transition CR-NNN completed`.
+- **Close it** in the code pull request: `medharness item transition CR-NNN completed`.
 
 Go through `medharness item` for every DHF question and change, inside a CR or not:
 
@@ -43,6 +46,21 @@ Go through `medharness item` for every DHF question and change, inside a CR or n
 
 Then ask your agent to "open a CR for the PDF export and update the DHF": it
 creates the CR, runs `build plan --cr CR-015 --prompt`, and does what it says.
+
+### The CR's state follows the pipeline
+
+A CR's state on `main` says how far its change has got, and each move is made by a pull request a person approves:
+
+| State | Means | Set by |
+|-------|-------|--------|
+| `new` | Submitted, not yet analysed | `item create` |
+| `design` | Being designed; the design pull request is not merged | `build plan`, when it starts |
+| `develop` | **Design approved**, not yet implemented | `build plan`, when it ends without errors; merging its pull request approves the design |
+| `completed` | Implemented | `build code`, when it ends without errors and its `--check`s pass; merging its pull request approves the code |
+
+`develop` needs `triage_result` and `implementation_notes` (the criteria on that move in `cr.yaml`), so a CR cannot be `develop` without a recorded design. A run that ends with errors moves nothing. Where a stage is run by a coding agent with `--prompt`, the agent makes the moves with `item transition`. The state on a branch is a proposal; `main` is what was approved.
+
+Code is held to this: `verify changes --code-path` fails a branch (`design_not_approved`) unless the CR was `develop` where the branch left its base, so the design has to be merged before the code branch is cut.
 
 ### `build plan` — design phase
 

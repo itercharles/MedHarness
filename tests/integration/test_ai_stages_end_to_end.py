@@ -259,8 +259,8 @@ class TestBuildPlan:
 
 
 def _design_merged(project: Path) -> None:
-    """The design PR has been merged: the items and the CR's notes are on `origin/main`."""
-    for command in DESIGN:
+    """The design PR has been merged: the items and the CR's notes are on `origin/main`, the CR is `develop`."""
+    for command in [*DESIGN, f"{MH} item transition CR-001 design", f"{MH} item transition CR-001 develop"]:
         subprocess.run(command, shell=True, check=True, capture_output=True, cwd=project)
     _git(project, "add", "-A")
     _git(project, "commit", "-qm", "design")
@@ -666,3 +666,124 @@ class TestWithAPullRequest:
         assert result.exit_code == 1
         assert any(e["field"] == "pr_push" for e in _report(result)["errors"])
 
+
+
+class TestTheCrStateFollowsThePipeline:
+    """`build plan` moves a CR to `develop`, `build code` to `completed`; a run that fails moves nothing."""
+
+    @staticmethod
+    def _status(cr: str = "CR-001") -> str:
+        return json.loads(_run("item", "get", cr).stdout)["status"]
+
+    def test_a_design_that_passes_leaves_the_cr_develop(self, project: Path, tmp_path: Path) -> None:
+        _plan(tmp_path, design=[{"run": DESIGN}, {"run": []}], design_review=[{"run": [APPROVED_REVIEW]}])
+        report = _report(_run("build", "plan", "--cr", "CR-001"))
+        assert report["artifacts"]["cr_state"] == "develop" and self._status() == "develop"
+
+    def test_a_design_with_errors_leaves_the_cr_in_design(self, project: Path, tmp_path: Path) -> None:
+        _plan(tmp_path, design=[{"run": DESIGN[:4] + DESIGN[5:]}, {"run": []}],
+              design_review=[{"run": [APPROVED_REVIEW]}])
+        report = _report(_run("build", "plan", "--cr", "CR-001"))
+        assert report["artifacts"]["cr_state"] == "design" and self._status() == "design"
+
+    def test_a_design_without_the_notes_the_move_needs_is_refused(self, project: Path, tmp_path: Path) -> None:
+        bare = [c.replace('"implementation_notes": "Add a PDF writer."', '"implementation_notes": ""') for c in DESIGN]
+        _plan(tmp_path, design=[{"run": bare}, {"run": []}], design_review=[{"run": [APPROVED_REVIEW]}])
+        report = _report(_run("build", "plan", "--cr", "CR-001"))
+        assert report["artifacts"]["cr_state"] == "design"
+        assert any(e["field"] in {"cr_state", "implementation_notes"} for e in report["errors"]), report["errors"]
+
+    def test_a_model_that_fails_leaves_the_cr_where_the_run_found_it(self, project: Path, tmp_path: Path) -> None:
+        _plan(tmp_path, design=[{"exit": 1, "say": "rate limited"}])
+        report = _report(_run("build", "plan", "--cr", "CR-001"))
+        assert report["artifacts"]["cr_state"] == "design"
+
+    def test_a_cr_the_model_rejected_stays_rejected(self, project: Path, tmp_path: Path) -> None:
+        reject = [f"{MH} item update CR-001 --data " + _json({"triage_result": {"verdict": "rejected"}}),
+                  f"{MH} item transition CR-001 rejected"]
+        _plan(tmp_path, design=[{"run": reject}, {"run": []}], design_review=[{"run": [APPROVED_REVIEW]}])
+        report = _report(_run("build", "plan", "--cr", "CR-001"))
+        assert report["artifacts"]["cr_state"] == "rejected"
+
+    def test_code_that_passes_completes_the_cr(self, project: Path, tmp_path: Path) -> None:
+        _design_merged(project)
+        _plan(tmp_path, develop=[{"run": CODE}], code_review=[{"say": "**Verdict:** Approved"}])
+        report = _report(_run("build", "code", "--cr", "CR-001"))
+        assert report["artifacts"]["cr_state"] == "completed" and self._status() == "completed"
+        assert not [w for w in report["warnings"] if w["code"] == "cr_state_not_moved"]
+
+    def test_a_check_that_fails_leaves_the_cr_develop(self, project: Path, tmp_path: Path) -> None:
+        _design_merged(project)
+        _plan(tmp_path, develop=[{"run": CODE}], code_review=[{"say": "**Verdict:** Approved"}], check_fix=[{"run": []}])
+        report = _report(_run("build", "code", "--cr", "CR-001", "--check", "false"))
+        assert report["artifacts"]["cr_state"] == "develop" and self._status() == "develop"
+
+    def test_code_for_a_cr_whose_design_was_never_approved_is_not_completed_and_says_so(
+        self, project: Path, tmp_path: Path,
+    ) -> None:
+        _plan(tmp_path, develop=[{"run": CODE}], code_review=[{"say": "**Verdict:** Approved"}])
+        report = _report(_run("build", "code", "--cr", "CR-001"))
+        assert report["artifacts"]["cr_state"] == "new" and self._status() == "new"
+        assert "cr_state_not_moved" in [w["code"] for w in report["warnings"]]
+
+    def test_a_code_pull_request_that_completed_the_cr_can_still_be_revised(
+        self, project: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        _design_merged(project)
+        monkeypatch.setattr("medharness.services.pr_feedback._pr_base", lambda pr: "origin/main")
+        _plan(tmp_path, develop=[{"run": CODE}], code_review=[{"say": "**Verdict:** Approved"}])
+        _run("build", "code", "--cr", "CR-001")
+
+        revised = _run("build", "code", "--cr", "CR-001", "--pr", "7", "--prompt")
+
+        assert revised.exit_code == 0, revised.stderr
+
+    def test_a_cr_completed_before_the_branch_began_is_still_refused(
+        self, project: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        _design_merged(project)
+        subprocess.run(f"{MH} item update CR-001 --data " + _json({"affected_risk_items": [], "affected_items": []}),
+                       shell=True, check=True, capture_output=True, cwd=project)
+        subprocess.run(f"{MH} item transition CR-001 completed", shell=True, check=True, capture_output=True, cwd=project)
+        _git(project, "add", "-A")
+        _git(project, "commit", "-qm", "done")
+        _git(project, "push", "-q", "origin", "HEAD:main")
+        _git(project, "fetch", "-q", "origin")
+        monkeypatch.setattr("medharness.services.pr_feedback._pr_base", lambda pr: "origin/main")
+
+        result = _run("build", "code", "--cr", "CR-001", "--pr", "7", "--prompt")
+
+        assert result.exit_code == 1 and "already 'completed'" in result.stderr
+
+
+class TestCodeNeedsAnApprovedDesign:
+    """`verify changes --code-path` fails a branch cut from a main where the CR is not yet `develop`."""
+
+    @staticmethod
+    def _changes(cr: str = "CR-001", *extra: str) -> dict:
+        result = _run("verify", "changes", "--cr", cr, *extra)
+        return json.loads(result.stdout.splitlines()[0])
+
+    @staticmethod
+    def _unapproved(payload: dict) -> list[str]:
+        return [e for e in payload["errors"] if e.startswith("design_not_approved")]
+
+    def test_a_cr_that_is_still_new_on_main_fails_with_its_state(self, project: Path) -> None:
+        subprocess.run(CODE[0], shell=True, check=True, cwd=project)
+        payload = self._changes("CR-001", "--code-path", "src/")
+        assert any("was 'new'" in e for e in self._unapproved(payload)), payload["errors"]
+
+    def test_a_cr_that_is_develop_on_main_passes_that_check(self, project: Path) -> None:
+        _design_merged(project)
+        subprocess.run(CODE[0], shell=True, check=True, cwd=project)
+        assert not self._unapproved(self._changes("CR-001", "--code-path", "src/"))
+
+    def test_a_cr_the_branch_made_did_not_exist_on_main(self, project: Path) -> None:
+        subprocess.run(f"{MH} item create --type CR --data " + _json({"title": "New", "description": "x"}),
+                       shell=True, check=True, capture_output=True, cwd=project)
+        subprocess.run(CODE[0], shell=True, check=True, cwd=project)
+        payload = self._changes("CR-002", "--code-path", "src/")
+        assert any("did not exist" in e for e in self._unapproved(payload)), payload["errors"]
+
+    def test_without_code_path_a_design_only_branch_is_not_asked(self, project: Path) -> None:
+        assert not self._unapproved(self._changes("CR-001"))
