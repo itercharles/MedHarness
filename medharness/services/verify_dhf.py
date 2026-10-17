@@ -10,6 +10,22 @@ from medharness.services.envelope import gate_result
 from medharness.services.traceability import analyse
 
 
+#: The CR fields `build plan` records and `build code` and the gates read; `cr.yaml` must declare them.
+CR_PLAN_FIELDS = (
+    "triage_result", "impact_analysis", "implementation_notes",
+    "affected_items", "reviewed_items", "affected_risk_items",
+)
+
+
+def missing_cr_fields(config) -> list[str]:
+    """The `CR_PLAN_FIELDS` the project's CR type does not declare; none when it has no CR type."""
+    doc_type = config.get_doc_type("CR")
+    if doc_type is None:
+        return []
+    declared = {p.get("name") for p in doc_type.properties or [] if isinstance(p, dict)}
+    return [name for name in CR_PLAN_FIELDS if name not in declared]
+
+
 def ci_structural_gate(
     dhf_path: Path,
     strict: bool = False,
@@ -28,6 +44,8 @@ def ci_structural_gate(
         "coverage_gaps": [],
         "verification_gaps": [],
     }
+
+    results["cr_fields_missing"] = missing_cr_fields(adapter.config)
 
     r = adapter.validate_schema()
     results["schema"] = {
@@ -206,6 +224,11 @@ def structural_findings(results: dict, dhf_path: Path, strict: bool) -> list[dic
         add("placeholder", "error" if strict else "warning", f"{p['id']}.{p['fields'][0]}",
             f"{p['id']}: placeholder text in {', '.join(p['fields'])}",
             f"{update} {p['id']} --data '{{\"{p['fields'][0]}\": \"<the real text>\"}}'")
+    if results.get("cr_fields_missing"):
+        add("cr-fields", "error", "config.cr_fields",
+            f"CR does not declare {', '.join(results['cr_fields_missing'])}, which `build plan` records and "
+            f"`build code` and the gates read",
+            "add them to the CR type in config/doc_types/cr.yaml, as the shipped cr.yaml declares them.")
     # A check that could not run is an error, not silence: reporting zero gaps
     # because the items would not load is the same output as a clean DHF.
     for key in ("verification_gaps_error", "traceability_error"):

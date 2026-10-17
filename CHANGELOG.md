@@ -11,6 +11,11 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.65.0] — 2026-10-17
+
+### Added
+- `verify dhf` fails when the CR type does not declare the fields `build plan` records and `build code` and the gates read (`triage_result`, `impact_analysis`, `implementation_notes`, `affected_items`, `reviewed_items`, `affected_risk_items`), and `build plan` and `build code` refuse before any model runs, naming the missing fields. The dependency was there already, in comments only: a project that dropped a field from its `cr.yaml` met a schema refusal mid-run, or a gate that found nothing. A project with its own full `cr.yaml` that lacks one of them has to add it.
+
 ## [0.64.0] — 2026-10-17
 
 ### Changed

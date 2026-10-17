@@ -59,8 +59,9 @@ def cascade_children(config) -> dict[str, list[str]]:
     return children
 
 
-#: The findings of `verify dhf` that are not the fix pass's business: design still to be written.
-_ADVISORY_KINDS = frozenset({"verification", "placeholder"})
+#: The findings of `verify dhf` that are not the fix pass's business: design still to be written,
+#: and the project's config, which a model run cannot change.
+_ADVISORY_KINDS = frozenset({"verification", "placeholder", "cr-fields"})
 
 
 def _validate_schema_and_traceability(dhf_path: Path) -> list[dict]:

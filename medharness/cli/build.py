@@ -12,6 +12,7 @@ import click
 from dhfkit.store import open_store
 from medharness.cli.options import collect_junit_paths, junit_option
 from medharness.cli.output import emit
+from medharness.services.verify_dhf import missing_cr_fields
 
 
 def _format_summary(stage_label: str, verb: str, cr_id: str, result: dict) -> str:
@@ -89,6 +90,11 @@ def _require_cr(dhf: Path, cr_id: str, command: str, *, needs_plan: bool = False
         item = store.get_item(cr_id)
         if item is None:
             raise ValueError(f"CR '{cr_id}' not found.")
+        if missing := missing_cr_fields(store.config):
+            raise ValueError(
+                f"The CR type does not declare {', '.join(missing)}, which `{command}` records or reads. "
+                f"Add them to config/doc_types/cr.yaml, as the shipped cr.yaml declares them."
+            )
         if needs_plan and not str(item.get("implementation_notes") or "").strip():
             raise ValueError(
                 f"CR '{cr_id}' has no implementation_notes to implement. Run `medharness build plan --cr {cr_id}`, "
