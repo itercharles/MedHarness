@@ -185,18 +185,13 @@ against the CR's `impact_analysis`. The harness rewrites `affected_items` from t
 3. Reconciles `implementation_notes` and SWDD if the code deviated.
 4. Code review; up to three fix-and-review cycles.
 
-The CR's lifecycle is `new → design → develop → completed`, `rejected` from `new` or `design`,
-or `cancelled` from any of the three. `build plan` moves a CR to `design` when it starts and to `develop` when
-it ends without errors (`develop` is refused until `triage_result` and `implementation_notes` are recorded;
-merging that pull request approves the design); `build code` moves it to `completed` when it ends without
-errors. A run that fails moves nothing. `completed` is refused until `implementation_notes`,
-`affected_risk_items` and `triage_result` are recorded. `verify changes --code-path` fails a branch cut from a
-`main` where the CR is not yet `develop`. `build plan` and
-`build code` refuse a CR that is `completed`, `rejected` or `cancelled`. A `completed` CR whose
-approval no longer stands (a reviewer asked for changes after it) is reopened with
-`medharness item transition CR-NNN develop`, and completed again when the new code is approved. A CR
-that a release lists in `included_items` shipped and cannot be reopened; a new CR changes it. Until it
-is completed again, a reopened CR is left out of `build release`.
+Neither command reads or moves the CR's state. The project does, with `medharness item transition`, as
+`cr.yaml` defines it: by default `new → design → develop → completed`, `rejected` from `new` or `design`,
+`cancelled` from any of the three, and `completed → develop` to reopen a CR whose approval no longer stands
+(refused for a CR a release lists in `included_items`; a new CR changes it). `design → develop` is refused
+until `triage_result` and `implementation_notes` are recorded, and `completed` until those two,
+`affected_risk_items` and `affected_items` are. `build plan` needs the CR to exist, and `build code` needs
+it to carry `implementation_notes`.
 
 Each stage takes its model from `MEDHARNESS_{DESIGN|DESIGN_REVIEW|DEVELOP|CODE_REVIEW}_MODEL`
 as `provider:model` — `anthropic` (the `claude` CLI, the default), `openai`,

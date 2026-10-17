@@ -24,12 +24,6 @@ the design, then the code. Between them, ordinary code — never a model — che
 that the design traces, every requirement is verified, and the branch changed
 what the request said.
 
-The change request's state says how far it has got: `new`, `design` (being
-designed), `develop` (**design approved**, not yet built), `completed`. Each
-move rides in a pull request a person approves, so the state on `main` is what
-was approved. Code is held to it: a code branch must be cut after the design
-was merged.
-
 What MedHarness gives the agent:
 
 - **The process, in its own instructions.** `init` writes an `AGENTS.md` (and a

@@ -1,7 +1,7 @@
-"""Which CRs `build plan` and `build code` will work on: those `cr.yaml` still lets move.
+"""Which CRs `build plan` and `build code` will work on.
 
-``build plan --cr CR-001`` on a freshly scaffolded project once answered
-"CR 'CR-001' not found" for the CR the scaffold had just written.
+`build plan` needs the CR to exist; `build code` also needs a plan to implement, the CR's
+`implementation_notes`. The CR's state is the project's to move: the stages neither read nor change it.
 """
 
 from __future__ import annotations
@@ -11,6 +11,7 @@ from pathlib import Path
 import pytest
 from click.testing import CliRunner
 
+from dhfkit.store import open_store
 from medharness.cli import main
 from medharness.scaffold import replace_placeholders, scaffold_dhf
 
@@ -32,34 +33,27 @@ def _set_status(dhf: Path, status: str | None) -> None:
     cr.write_text(text if status is None else text + f"status: {status}\n")
 
 
+def test_the_scaffolded_cr_can_be_planned(dhf: Path) -> None:
+    """The documented first command must work on a fresh project."""
+    assert _run(dhf, "plan").exit_code == 0
+
+
+@pytest.mark.parametrize("status", [None, "new", "design", "develop", "completed", "rejected", "cancelled"])
+def test_the_state_of_the_cr_is_not_looked_at(dhf: Path, status) -> None:
+    _set_status(dhf, status)
+    assert _run(dhf, "plan").exit_code == 0
+    open_store(dhf).update_item("CR-001", {"implementation_notes": "Plan."})
+    assert _run(dhf, "code").exit_code == 0
+
+
+def test_code_needs_a_plan_to_implement(dhf: Path) -> None:
+    result = _run(dhf, "code")
+    assert result.exit_code == 1
+    assert "no implementation_notes" in result.stderr and "build plan --cr CR-001" in result.stderr
+
+
 @pytest.mark.parametrize("stage", ["plan", "code"])
-class TestWhichCRsTheStagesAccept:
-    def test_the_scaffolded_cr_is_accepted(self, dhf: Path, stage: str) -> None:
-        """The documented first command must work on a fresh project."""
-        assert _run(dhf, stage).exit_code == 0
-
-    @pytest.mark.parametrize("status", [None, "new", "design", "develop"])
-    def test_a_cr_that_can_still_move_is_accepted(self, dhf: Path, stage: str, status) -> None:
-        _set_status(dhf, status)
-        assert _run(dhf, stage).exit_code == 0
-
-    @pytest.mark.parametrize("status", ["completed", "rejected", "cancelled"])
-    def test_a_cr_with_no_move_left_is_refused_and_named(self, dhf: Path, stage: str, status: str) -> None:
-        """`build plan` triage writes 'rejected'; it was once read as 'not found'."""
-        _set_status(dhf, status)
-        result = _run(dhf, stage)
-        assert result.exit_code == 1
-        assert f"already '{status}'" in result.stderr
-        assert "not found" not in result.stderr
-
-    def test_a_missing_cr_says_not_found(self, dhf: Path, stage: str) -> None:
-        result = _run(dhf, stage, "CR-999")
-        assert result.exit_code == 1
-        assert "not found" in result.stderr
-
-    def test_a_status_the_lifecycle_does_not_declare_is_reported_as_such(self, dhf: Path, stage: str) -> None:
-        _set_status(dhf, "banana")
-        result = _run(dhf, stage)
-        assert result.exit_code == 1
-        assert "banana" in result.stderr and "not a state of a CR" in result.stderr
-        assert "not found" not in result.stderr
+def test_a_missing_cr_says_not_found(dhf: Path, stage: str) -> None:
+    result = _run(dhf, stage, "CR-999")
+    assert result.exit_code == 1
+    assert "not found" in result.stderr

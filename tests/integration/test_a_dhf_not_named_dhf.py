@@ -57,6 +57,7 @@ def test_verify_changes_reads_the_items_of_the_dhf_it_is_given(records: Path) ->
 
 
 def test_the_prompts_name_the_dhf_directory_in_use(records: Path) -> None:
+    _edit(records, "CR-001.yaml", implementation_notes="Plan.")
     for stage in ("plan", "code"):
         out = CliRunner().invoke(main, ["--dhf", str(records), "build", stage, "--cr", "CR-001", "--prompt"]).stdout
         assert "--dhf Records" in out and "--dhf DHF" not in out, stage

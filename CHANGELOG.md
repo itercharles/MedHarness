@@ -11,6 +11,18 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.64.0] — 2026-10-17
+
+### Changed
+- `build plan` and `build code` no longer read or move a CR's state. The state is the project's: move it with `medharness item transition`, from a workflow or by hand. `build plan` needs the CR to exist; `build code` needs it to carry `implementation_notes`, the plan it implements, and refuses with that message when it does not. They used to refuse a CR that was `completed`, `rejected` or `cancelled`, and 0.63.0 moved it themselves; a project that defines its own states, or moves them on its own approval, was working against both.
+- `artifacts.cr_state` (0.63.0) is gone from the answers of `build plan` and `build code`.
+
+### Removed
+- `verify changes --code-path` no longer fails a branch whose CR was not `develop` where it left its base (`design_not_approved`, 0.63.0): what a state means is the project's, not the tool's.
+
+### Kept
+- `design → develop` in `cr.yaml` still requires `triage_result` and `implementation_notes` (a rule of the shipped lifecycle, applied by `item transition`), and `build plan` still does not write `affected_items` onto a CR the model rejected, which used to return it to `new`.
+
 ## [0.63.1] — 2026-10-17
 
 ### Changed

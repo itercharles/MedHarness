@@ -19,21 +19,6 @@ def _no_push(monkeypatch):
     monkeypatch.setattr("medharness.services.cr_generation._push_to_pr", lambda *a, **k: None)
 
 
-@pytest.fixture(autouse=True)
-def _no_lifecycle(monkeypatch):
-    """There is no DHF here to move a CR in; the end-to-end tests cover the moves."""
-    monkeypatch.setattr("medharness.services.cr_generation._move_cr", lambda *a, **k: None)
-    monkeypatch.setattr("medharness.services.cr_generation._cr_state", lambda *a, **k: "completed")
-
-
-
-
-
-
-
-
-
-
 # ── _parse_review_data ────────────────────────────────────────────────────────
 
 class TestParseReviewData:

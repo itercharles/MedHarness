@@ -20,6 +20,9 @@ def _record_design_impact_in_cr(
     existing = adapter.get_item(cr_id)
     if existing is None:
         return {"recorded": False, "reason": "cr_item_not_found"}
+    if existing.get("status") == "rejected":
+        # Triage rejected it and wrote no design; writing to it would return it to `new`.
+        return {"recorded": False, "reason": "cr_rejected"}
 
     touched_ids: list[str] = []
     for bucket in ("created", "updated", "deleted"):
