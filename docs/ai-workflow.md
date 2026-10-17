@@ -44,6 +44,10 @@ Go through `medharness item` for every DHF question and change, inside a CR or n
 Then ask your agent to "open a CR for the PDF export and update the DHF": it
 creates the CR, runs `build plan --cr CR-015 --prompt`, and does what it says.
 
+### The CR fields the stages need
+
+`build plan` records its analysis on the CR (`triage_result`, `impact_analysis`, `implementation_notes`, `affected_items`, `reviewed_items`, `affected_risk_items`) and `build code` and the gates read them back, so the CR type in `cr.yaml` has to declare all six. A project that edits its `cr.yaml` and drops one gets an error from `verify dhf`, and `build plan` and `build code` refuse before any model runs, each naming the field.
+
 ### The CR's state is yours
 
 `build plan` and `build code` do not read or move a CR's state: move it with `medharness item transition`, from your workflow or by hand (`cr.yaml` says which moves exist and what each requires). `build plan` needs the CR to exist; `build code` needs it to carry `implementation_notes`, the plan it implements, and says so when it does not.
