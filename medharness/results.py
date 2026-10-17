@@ -99,13 +99,11 @@ class PlanArtifacts(Shape):
     items_changed: ChangeSet | None = Field(
         description="The DHF items changed on the branch, the CR's whole change set; null when the diff could not be read")
     design_impact: DesignImpact | None = Field(default=None, description="The CR's `affected_items` write-back")
-    cr_state: str | None = Field(description="The CR's state after the run: `design` while the design has errors, `develop` once it is complete")
 
 
 class CodeArtifacts(Shape):
     files_changed: ChangeSet | None = Field(
         description="The code changed on the branch; null when the diff could not be read")
-    cr_state: str | None = Field(description="The CR's state after the run: `completed` once the code passes, `develop` before")
 
 
 class StageReport(Shape):

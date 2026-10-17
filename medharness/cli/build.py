@@ -12,7 +12,6 @@ import click
 from dhfkit.store import open_store
 from medharness.cli.options import collect_junit_paths, junit_option
 from medharness.cli.output import emit
-from medharness.services.verify_release import RELEASABLE_STATE
 
 
 def _format_summary(stage_label: str, verb: str, cr_id: str, result: dict) -> str:
@@ -78,30 +77,10 @@ def _needs_files(store, command: str) -> str:
     return FILES_IN_GIT.format(command=command, store=store.store_type)
 
 
-def _branch_completed_it(dhf: Path, cr_id: str, since_ref: str | None, pr_number: int | None) -> bool:
-    """Whether this branch is what moved the CR to `completed`: a code pull request under revision."""
-    from medharness.services import git  # noqa: PLC0415
-    from medharness.services.pr_feedback import _pr_base  # noqa: PLC0415
+def _require_cr(dhf: Path, cr_id: str, command: str, *, needs_plan: bool = False) -> None:
+    """Refuse a CR that is not in the DHF, or, for `build code`, has no plan to implement.
 
-    if pr_number is None:
-        return False
-    try:
-        base = git.resolve_since_ref(dhf.resolve().parent, since_ref or _pr_base(pr_number))
-        changes = git.collect_dhf_item_changes(dhf.resolve().parent, base, dhf)
-    except git.DiffUnavailable:
-        return False
-    return cr_id in changes["created"] + changes["updated"]
-
-
-def _require_workable_cr(dhf: Path, cr_id: str, command: str, *,
-                         since_ref: str | None = None, pr_number: int | None = None) -> None:
-    """Refuse a CR the AI stages cannot work on, as `cr.yaml` defines it.
-
-    A CR is workable while its lifecycle still has a move out of its state, and it is not
-    `completed`: a completed CR is approved, and is reopened (`item transition CR-X develop`)
-    when its approval no longer stands. The exception is a code pull request under revision,
-    whose own branch moved the CR to `completed`. `rejected` and `cancelled` have no move out. A status
-    `cr.yaml` does not declare is reported as that, not as a missing CR.
+    The CR's state is the project's to move (`item transition`); the stages do not read it.
     """
     try:
         store = open_store(dhf)
@@ -110,25 +89,10 @@ def _require_workable_cr(dhf: Path, cr_id: str, command: str, *,
         item = store.get_item(cr_id)
         if item is None:
             raise ValueError(f"CR '{cr_id}' not found.")
-        status = str(item.get("status") or "").strip()
-        states = store.config.valid_states("CR")
-        if status and states is not None and status not in states:
+        if needs_plan and not str(item.get("implementation_notes") or "").strip():
             raise ValueError(
-                f"CR '{cr_id}' has status '{status}', which is not a state of a CR. "
-                f"Expected one of: {', '.join(sorted(states))}."
-            )
-        if status == RELEASABLE_STATE and not (
-            command == "build code" and _branch_completed_it(dhf, cr_id, since_ref, pr_number)
-        ):
-            raise ValueError(
-                f"CR '{cr_id}' is already '{status}' and cannot accept further work. If its approval no "
-                f"longer stands, reopen it with `medharness item transition {cr_id} develop`; a CR "
-                f"that a release lists cannot be reopened, create a new CR."
-            )
-        if status != RELEASABLE_STATE and not store.get_available_transitions(cr_id):
-            raise ValueError(
-                f"CR '{cr_id}' is already '{status}' and cannot accept further work. "
-                f"Create a new CR if additional changes are needed."
+                f"CR '{cr_id}' has no implementation_notes to implement. Run `medharness build plan --cr {cr_id}`, "
+                f"or record them with `medharness item update`."
             )
     except ValueError as exc:
         raise click.ClickException(str(exc)) from exc
@@ -169,7 +133,7 @@ def register(main):
         """
         from medharness.services.cr_generation import generate_dhf  # noqa: PLC0415
         dhf: Path = ctx.obj["dhf"]
-        _require_workable_cr(dhf, cr_id, "build plan")
+        _require_cr(dhf, cr_id, "build plan")
         if print_prompt:
             from medharness.services.prompt_assembly import _assemble_generate_dhf_prompt
             _print_prompt(_assemble_generate_dhf_prompt, cr_id, dhf)
@@ -218,7 +182,7 @@ def register(main):
         """
         from medharness.services.cr_generation import generate_code  # noqa: PLC0415
         dhf: Path = ctx.obj["dhf"]
-        _require_workable_cr(dhf, cr_id, "build code", since_ref=since_ref, pr_number=pr_number)
+        _require_cr(dhf, cr_id, "build code", needs_plan=True)
         if print_prompt:
             from medharness.services.prompt_assembly import _assemble_develop_prompt
             from medharness.services.git import resolve_since_ref

@@ -221,7 +221,6 @@ The fields of what each command above answers with, generated from the models in
 |---|---|---|
 | `items_changed` | `ChangeSet` or null | The DHF items changed on the branch, the CR's whole change set; null when the diff could not be read |
 | `design_impact` | `DesignImpact` or null | The CR's `affected_items` write-back |
-| `cr_state` | string or null | The CR's state after the run: `design` while the design has errors, `develop` once it is complete |
 
 `Review`:
 
@@ -279,7 +278,6 @@ The fields of what each command above answers with, generated from the models in
 | Field | Type | Meaning |
 |---|---|---|
 | `files_changed` | `ChangeSet` or null | The code changed on the branch; null when the diff could not be read |
-| `cr_state` | string or null | The CR's state after the run: `completed` once the code passes, `develop` before |
 
 `CheckResult`:
 

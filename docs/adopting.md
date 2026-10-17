@@ -42,7 +42,7 @@ and dangling links still fail.
 
 A DHF that kept change requests before MedHarness's closure criteria existed has two things to settle once, before its first release.
 
-**A status that is no state of the type.** A CR written as `implementing` fails `verify dhf`: a CR's states are `new`, `design`, `develop`, `completed`, `rejected` and `cancelled`. Set each to what it really is — `develop` for a design that was approved and a change still being built, `completed` or `cancelled` for work that finished or stopped (the move into `develop` itself needs `triage_result` and `implementation_notes`, so record them first on a CR that lacks them):
+**A status that is no state of the type.** A CR written as `implementing` fails `verify dhf`: a CR's states are `new`, `design`, `develop`, `completed`, `rejected` and `cancelled`. Set each to what it really is — `develop` for work in flight, `completed` or `cancelled` for work that finished or stopped:
 
 ```bash
 medharness --dhf DHF item update CR-004 --data '{"status": "develop"}'

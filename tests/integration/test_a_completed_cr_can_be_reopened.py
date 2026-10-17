@@ -72,19 +72,6 @@ def test_a_cr_a_release_lists_cannot_be_reopened(dhf: Path) -> None:
     assert _status(dhf) == "completed"
 
 
-def test_the_stages_refuse_a_completed_cr_and_say_how_to_reopen_it(dhf: Path) -> None:
-    for stage in ("plan", "code"):
-        result = _run(dhf, "build", stage, "--cr", "CR-001", "--prompt")
-        assert result.exit_code == 1
-        assert "item transition CR-001 develop" in result.stderr, result.stderr
-
-
-def test_the_stages_accept_it_once_reopened(dhf: Path) -> None:
-    _run(dhf, "item", "transition", "CR-001", "develop")
-    for stage in ("plan", "code"):
-        assert _run(dhf, "build", stage, "--cr", "CR-001", "--prompt").exit_code == 0
-
-
 def test_a_reopened_cr_is_left_out_of_a_release_until_it_is_completed_again(dhf: Path, tmp_path: Path) -> None:
     junit = verify_the_starter(dhf, tmp_path / "tr")
     release = lambda: json.loads(_run(dhf, "build", "release", "--version", "1.0.0", "--out-dir",

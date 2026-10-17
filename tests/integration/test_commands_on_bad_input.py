@@ -177,14 +177,9 @@ class TestBuildArguments:
         result = _run(project, "build", stage, "--cr", "CR-999", *extra)
         assert result.exit_code == 1 and "not found" in result.stderr
 
-    @pytest.mark.parametrize("stage", ["plan", "code"])
-    def test_a_finished_cr_accepts_no_more_work(self, project: Path, stage: str) -> None:
-        path = next((project / "DHF" / "items").rglob("CR-001.yaml"))
-        data = yaml.safe_load(path.read_text())
-        data["status"] = "completed"
-        path.write_text(yaml.safe_dump(data))
-        result = _run(project, "build", stage, "--cr", "CR-001")
-        assert result.exit_code == 1 and "completed" in result.stderr
+    def test_code_without_a_plan_is_refused_before_any_model_runs(self, project: Path) -> None:
+        result = _run(project, "build", "code", "--cr", "CR-001")
+        assert result.exit_code == 1 and "no implementation_notes" in result.stderr
 
 
 class TestInit:

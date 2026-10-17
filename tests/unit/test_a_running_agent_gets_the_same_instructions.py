@@ -31,18 +31,13 @@ def dhf(tmp_path: Path, monkeypatch) -> Path:
     ("code", "_assemble_develop_prompt"),
 ])
 def test_it_prints_what_the_ci_agent_is_given(dhf: Path, stage: str, assemble: str) -> None:
+    from dhfkit.store import open_store
     from medharness.services import prompt_assembly
+
+    open_store(dhf).update_item("CR-001", {"implementation_notes": "Plan."})
 
     r = CliRunner().invoke(main, ["--dhf", str(dhf), "build", stage, "--cr", "CR-001", "--prompt"])
 
     assert r.exit_code == 0, r.output
     assert r.stdout == getattr(prompt_assembly, assemble)("CR-001", dhf_path=dhf) + "\n"
     assert "CR-001" in r.stdout
-
-
-def test_a_closed_cr_is_refused_here_too(dhf: Path) -> None:
-    from dhfkit.store import open_store
-
-    open_store(dhf).execute_transition("CR-001", "rejected")
-    r = CliRunner().invoke(main, ["--dhf", str(dhf), "build", "plan", "--cr", "CR-001", "--prompt"])
-    assert r.exit_code != 0

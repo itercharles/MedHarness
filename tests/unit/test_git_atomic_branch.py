@@ -19,7 +19,7 @@ def test_code_and_dhf_changes_pass() -> None:
         "CR-001", None,
         {"created": ["SRS-010"], "updated": ["SYS-001"], "deleted": []},
         {"created": [], "updated": ["src/app.py"], "deleted": []},
-        code_paths=("src/",), status_at_base="develop",
+        code_paths=("src/",),
     )
 
     assert result["passed"] is True
@@ -61,7 +61,6 @@ def test_validate_reads_the_diff_and_the_cr_it_judges(tmp_path: Path) -> None:
     with patch("medharness.services.git.collect_dhf_item_changes",
                return_value={"created": [], "updated": ["SYS-001"], "deleted": []}) as items, \
          patch("medharness.services.git.collect_path_changes", return_value=NOTHING) as paths, \
-         patch("medharness.services.git.item_at_branch_point", return_value={"status": "design"}), \
          patch("dhfkit.item_store.ItemStore") as adapter:
         adapter.return_value.config.impact_depth = 0   # these judge the promise, not the impact
         adapter.return_value.get_item.return_value = {"id": "CR-001", "affected_items": ["SRS-001"]}
@@ -71,5 +70,5 @@ def test_validate_reads_the_diff_and_the_cr_it_judges(tmp_path: Path) -> None:
     items.assert_called_once_with(tmp_path, "main", dhf)
     paths.assert_called_once_with(tmp_path, "main", "src/")
     adapter.assert_called_once_with(dhf)
-    assert {e["field"] for e in result["details"]["findings"]} == {"design_not_approved", "code_branch", "dhf_branch"}
+    assert {e["field"] for e in result["details"]["findings"]} == {"code_branch", "dhf_branch"}
     assert result["details"]["promised_but_unchanged"] == ["SRS-001"]

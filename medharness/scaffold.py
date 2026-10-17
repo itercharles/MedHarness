@@ -93,16 +93,13 @@ A change to what the product does is not finished until its DHF is.
 
 - **Start a change:** `medharness item create --type CR --data '{"title": "…", "description": "…"}'`,
   then `medharness item transition CR-NNN design`.
-- **Design it:** run `medharness build plan --cr CR-NNN --prompt` and do what it says, then
-  `medharness item transition CR-NNN develop`. The design goes in its own pull request;
-  merging it approves the design.
-- **Build it** from a branch cut after that merge: run `medharness build code --cr CR-NNN --prompt`
-  and do what it says.
+- **Design it:** run `medharness build plan --cr CR-NNN --prompt` and do what it says.
+- **Build it:** run `medharness build code --cr CR-NNN --prompt` and do what it says.
 - **Check it**, and fix what they report:
   - `medharness verify dhf`
   - `medharness verify completion --cr CR-NNN --junit <results>`
   - `medharness verify changes --cr CR-NNN`
-- **Close it** in the code pull request: `medharness item transition CR-NNN completed`.
+- **Close it:** `medharness item transition CR-NNN completed`.
 
 Go through `medharness item` for every DHF question and change, inside a CR or not:
 
