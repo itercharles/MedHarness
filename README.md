@@ -36,6 +36,9 @@ What MedHarness gives the agent:
 - **Feedback it can act on.** The checks name the item and field that are
   wrong, so the agent fixes them and runs the check again.
 
+How the agent and MedHarness fit together — what to call when, a skill, and two Claude Code hooks —
+is in [Working with your coding agent](docs/agents.md).
+
 Run it two ways:
 
 - **At your desk**, with the agent you already use: it does the work in your

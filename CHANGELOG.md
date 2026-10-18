@@ -11,6 +11,11 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.66.1] — 2026-10-18
+
+### Added
+- Documentation for working with a coding agent (`docs/agents.md`, linked from the README): the three layers (advice, local feedback, enforcement), which command to call at which point and what a non-zero exit means, and for Claude Code a skill (`docs/skills/medharness/SKILL.md`) and two hooks (stop on a broken DHF, refuse hand edits of `DHF/items`). The hook scripts were run against a scratch project; they were not run inside a live Claude Code session. MedHarness writes none of this into a project: hooks and skills are written differently by every agent.
+
 ## [0.66.0] — 2026-10-18
 
 ### Changed
