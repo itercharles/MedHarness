@@ -11,6 +11,11 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.67.0] — 2026-10-18
+
+### Changed
+- A CR that triage turns down makes `build plan` exit 1 with `outcome: rejected`, and the reason (`triage_result.notes`) in `errors` and in `summary`, instead of exiting 0 with a `triage_rejected` warning (0.66.0). A run that produced no design is not a success to a caller that checks only the exit code. With `--pr` the reason is posted on the pull request like any other error. The warning is gone. Checked against a real model: given a CR that duplicates a feature the DHF already has, it records `triage_result` as `{"verdict": "rejected", "notes": "<reason>"}`, writes nothing else and leaves the CR's state alone, as the prompt asks.
+
 ## [0.66.1] — 2026-10-18
 
 ### Added

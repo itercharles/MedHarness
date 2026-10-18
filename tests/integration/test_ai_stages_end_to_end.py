@@ -232,7 +232,7 @@ class TestBuildPlan:
         result = _run("build", "plan", "--cr", "CR-001")
         assert not [e for e in _report(result)["errors"] if e["field"] == "scope"]
 
-    def test_a_cr_triage_rejects_stops_there_with_its_state_untouched(self, project: Path, tmp_path: Path) -> None:
+    def test_a_cr_triage_rejects_stops_there_failing_with_its_state_untouched(self, project: Path, tmp_path: Path) -> None:
         reject = [f"{MH} item update CR-001 --data " + _json(
             {"triage_result": {"verdict": "rejected", "notes": "duplicate of CRS-001"}})]
         _plan(tmp_path, design=[{"run": reject}])
@@ -240,8 +240,10 @@ class TestBuildPlan:
         result = _run("build", "plan", "--cr", "CR-001")
 
         report = _report(result)
-        assert result.exit_code == 0 and report["outcome"] == "ok" and report["errors"] == []
-        assert "triage_rejected" in [w["code"] for w in report["warnings"]]
+        assert result.exit_code == 1 and report["outcome"] == "rejected"
+        assert [e["field"] for e in report["errors"]] == ["triage_result"]
+        assert "duplicate of CRS-001" in report["errors"][0]["issue"] and "duplicate of CRS-001" in report["summary"]
+        assert not [w for w in report["warnings"] if w["code"] == "triage_rejected"]
         assert [c["stage"] for c in _calls(project)] == ["design"], "a design review ran on no design"
         cr = json.loads(_run("item", "get", "CR-001").stdout)
         assert cr["status"] == "new" and cr["triage_result"]["verdict"] == "rejected"

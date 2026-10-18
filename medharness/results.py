@@ -108,9 +108,10 @@ class CodeArtifacts(Shape):
 
 class StageReport(Shape):
     cr_id: str = Field(description="The CR the run was for")
-    outcome: Literal["ok", "corrected", "completed_with_errors", "tool_error"] = Field(
+    outcome: Literal["ok", "corrected", "completed_with_errors", "tool_error", "rejected"] = Field(
         description="`ok`; `corrected` after a fix pass; `completed_with_errors` when errors remain; "
-                    "`tool_error` when a critical step failed. The last two exit 1")
+                    "`tool_error` when a critical step failed; `rejected` when triage turned the CR down "
+                    "(the reason is in `errors`, no design was generated). The last three exit 1")
     summary: str = Field(description="The outcome in a sentence")
     timing: Timing = Field(description="When it started and how long it took")
     inputs: Inputs = Field(description="What the run was given")
