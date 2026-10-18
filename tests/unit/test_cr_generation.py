@@ -19,6 +19,12 @@ def _no_push(monkeypatch):
     monkeypatch.setattr("medharness.services.cr_generation._push_to_pr", lambda *a, **k: None)
 
 
+@pytest.fixture(autouse=True)
+def _not_rejected(monkeypatch):
+    """There is no DHF here to read a triage verdict from."""
+    monkeypatch.setattr("medharness.services.design_validation.cr_triage_rejected", lambda *a, **k: False)
+
+
 # ── _parse_review_data ────────────────────────────────────────────────────────
 
 class TestParseReviewData:

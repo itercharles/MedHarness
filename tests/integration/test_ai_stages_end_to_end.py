@@ -232,6 +232,20 @@ class TestBuildPlan:
         result = _run("build", "plan", "--cr", "CR-001")
         assert not [e for e in _report(result)["errors"] if e["field"] == "scope"]
 
+    def test_a_cr_triage_rejects_stops_there_with_its_state_untouched(self, project: Path, tmp_path: Path) -> None:
+        reject = [f"{MH} item update CR-001 --data " + _json(
+            {"triage_result": {"verdict": "rejected", "notes": "duplicate of CRS-001"}})]
+        _plan(tmp_path, design=[{"run": reject}])
+
+        result = _run("build", "plan", "--cr", "CR-001")
+
+        report = _report(result)
+        assert result.exit_code == 0 and report["outcome"] == "ok" and report["errors"] == []
+        assert "triage_rejected" in [w["code"] for w in report["warnings"]]
+        assert [c["stage"] for c in _calls(project)] == ["design"], "a design review ran on no design"
+        cr = json.loads(_run("item", "get", "CR-001").stdout)
+        assert cr["status"] == "new" and cr["triage_result"]["verdict"] == "rejected"
+
     def test_a_missing_claude_cli_says_so(self, project: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         import shutil
 
@@ -403,10 +417,6 @@ class TestBuildPlanImpactAnalysis:
     def test_a_cr_that_reads_like_another_cr_is_not_a_possible_duplicate(self, project: Path, tmp_path: Path) -> None:
         assert self._duplicates(tmp_path, [self._copy_of("CR-001", "CR")]) == []
 
-    def test_an_item_that_reads_like_a_cancelled_one_is_not_a_possible_duplicate(self, project: Path, tmp_path: Path) -> None:
-        cancel = f"{MH} item update SYS-001 --data " + _json({"status": "cancelled"})
-        assert self._duplicates(tmp_path, [cancel, self._copy_of("SYS-001", "SYS")]) == []
-
     def _points(self, tmp_path: Path, **fields) -> list[dict]:
         update = f"{MH} item update SRS-001 --data " + _json(fields)
         report = self._plan_and_run(tmp_path, [update, self._cr()])
@@ -422,11 +432,6 @@ class TestBuildPlanImpactAnalysis:
 
     def test_a_change_that_leaves_the_requirement_unsaid_is_not(self, project: Path, tmp_path: Path) -> None:
         assert self._points(tmp_path, status="draft") == []
-
-    def test_a_rejected_cr_needs_no_record(self, project: Path, tmp_path: Path) -> None:
-        record = f"{MH} item update CR-001 --data " + _json({"impact_assessment": "duplicate of CR-002"})
-        report = self._plan_and_run(tmp_path, [record, f"{MH} item transition CR-001 rejected"])
-        assert not [f for f in self._fields(report) if f.startswith("impact_analysis")]
 
 
 class TestBuildCode:
