@@ -140,9 +140,12 @@ def _determine_outcome(
     errors: list[dict],
     fix_attempted: bool,
     critical_step_failed: bool,
+    rejected: bool = False,
 ) -> str:
     if critical_step_failed:
         return "tool_error"
+    if rejected:
+        return "rejected"
     if errors:
         return "completed_with_errors"
     if fix_attempted:
@@ -168,6 +171,8 @@ def _build_summary(
         if warnings:
             return f"{stage_label} hit a tool or environment error: {warnings[0]['message']}"
         return f"{stage_label} hit a tool or environment error."
+    if outcome == "rejected":
+        return f"{stage_label} stopped: {errors[0]['issue']}"
     if outcome == "completed_with_errors":
         suffix = " after one fix attempt" if fix_attempted else ""
         return (
@@ -192,6 +197,7 @@ def _build_response(
     warnings: list[dict],
     errors: list[dict],
     critical_step_failed: bool,
+    rejected: bool = False,
 ) -> dict:
     normalized_errors = _normalize_errors(errors)
     fix_attempted = bool(diagnostics.get("fix_attempted"))
@@ -199,6 +205,7 @@ def _build_response(
         errors=normalized_errors,
         fix_attempted=fix_attempted,
         critical_step_failed=critical_step_failed,
+        rejected=rejected,
     )
     return {
         "cr_id": cr_id,
@@ -429,7 +436,7 @@ class Run:
     def leave_uncommitted(self) -> None:
         _leave_uncommitted(self.repo_root, self.start_head, self.warnings)
 
-    def respond(self, stage: str, artifacts: dict, errors: list[dict]) -> dict:
+    def respond(self, stage: str, artifacts: dict, errors: list[dict], *, rejected: bool = False) -> dict:
         return _build_response(
             cr_id=self.cr_id,
             stage=stage,
@@ -442,4 +449,5 @@ class Run:
             warnings=self.warnings,
             errors=errors,
             critical_step_failed=self.critical_failed,
+            rejected=rejected,
         )

@@ -149,7 +149,7 @@ The fields of what each command above answers with, generated from the models in
 | Field | Type | Meaning |
 |---|---|---|
 | `cr_id` | string | The CR the run was for |
-| `outcome` | `ok` · `corrected` · `completed_with_errors` · `tool_error` | `ok`; `corrected` after a fix pass; `completed_with_errors` when errors remain; `tool_error` when a critical step failed. The last two exit 1 |
+| `outcome` | `ok` · `corrected` · `completed_with_errors` · `tool_error` · `rejected` | `ok`; `corrected` after a fix pass; `completed_with_errors` when errors remain; `tool_error` when a critical step failed; `rejected` when triage turned the CR down (the reason is in `errors`, no design was generated). The last three exit 1 |
 | `summary` | string | The outcome in a sentence |
 | `timing` | `Timing` | When it started and how long it took |
 | `inputs` | `Inputs` | What the run was given |
@@ -258,7 +258,7 @@ The fields of what each command above answers with, generated from the models in
 | Field | Type | Meaning |
 |---|---|---|
 | `cr_id` | string | The CR the run was for |
-| `outcome` | `ok` · `corrected` · `completed_with_errors` · `tool_error` | `ok`; `corrected` after a fix pass; `completed_with_errors` when errors remain; `tool_error` when a critical step failed. The last two exit 1 |
+| `outcome` | `ok` · `corrected` · `completed_with_errors` · `tool_error` · `rejected` | `ok`; `corrected` after a fix pass; `completed_with_errors` when errors remain; `tool_error` when a critical step failed; `rejected` when triage turned the CR down (the reason is in `errors`, no design was generated). The last three exit 1 |
 | `summary` | string | The outcome in a sentence |
 | `timing` | `Timing` | When it started and how long it took |
 | `inputs` | `Inputs` | What the run was given |

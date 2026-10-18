@@ -83,13 +83,14 @@ def _written_outside_the_design(run: Run, dhf_path: Path) -> list[str]:
     )
 
 
-def _stopped(run: Run, stage: str, artifacts: dict) -> dict:
+def _stopped(run: Run, stage: str, artifacts: dict, errors: list[dict] | None = None,
+             rejected: bool = False) -> dict:
     """The answer of a stage whose first model call failed: nothing after it runs or is pushed.
 
     Fix passes and reviews on top of a generation that never happened cost calls and say nothing.
     """
     run.leave_uncommitted()
-    result = run.respond(stage, artifacts, [])
+    result = run.respond(stage, artifacts, errors or [], rejected=rejected)
     if run.pr_number:
         token = os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN") or ""
         result["pr_comments"] = _auto_post_pr_feedback(run.pr_number, run.cr_id, result, token=token)
@@ -151,11 +152,15 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None,
     if run.critical_failed:
         return _stopped(run, "generate_dhf", {"items_changed": None})
 
-    if design_validation.cr_triage_rejected(dhf_path, cr_id):
-        run.warnings.append(_warning(
-            "triage_rejected", f"Triage rejected {cr_id}, so no design was generated; its reason is in `triage_result`."))
-        return _stopped(run, "generate_dhf", {"items_changed": run.items_changed(),
-                                              "design_impact": {"recorded": False, "reason": "cr_rejected"}})
+    if (reason := design_validation.cr_triage_rejection(dhf_path, cr_id)) is not None:
+        return _stopped(
+            run, "generate_dhf",
+            {"items_changed": run.items_changed(), "design_impact": {"recorded": False, "reason": "cr_rejected"}},
+            [{"field": "triage_result",
+              "issue": f"Triage rejected {cr_id}, so no design was generated: {reason}",
+              "fix": f"Close the change request, or reword it and run `build plan --cr {cr_id}` again."}],
+            rejected=True,
+        )
 
     items_changed = run.items_changed()
     errors = _validate_design(run, "validate_initial", items_changed)

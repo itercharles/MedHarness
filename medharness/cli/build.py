@@ -47,13 +47,13 @@ def _format_summary(stage_label: str, verb: str, cr_id: str, result: dict) -> st
         if created or updated or deleted:
             details.append(f"{label}: +{created} ~{updated} -{deleted}")
 
-    prefix = "ERROR" if result.get("outcome") == "tool_error" else "OK"
+    prefix = {"tool_error": "ERROR", "rejected": "REJECTED"}.get(result.get("outcome"), "OK")
     return f"{prefix} {stage_label} {verb} for {cr_id} ({', '.join(details)})."
 
 
 def _raise_for_outcome_error(result: dict) -> None:
-    """Exit non-zero for tool_error and completed_with_errors outcomes."""
-    if result.get("outcome") in ("tool_error", "completed_with_errors"):
+    """Exit non-zero for every outcome that did not produce what the stage is for."""
+    if result.get("outcome") in ("tool_error", "completed_with_errors", "rejected"):
         raise click.exceptions.Exit(1)
 
 

@@ -22,7 +22,7 @@ def _no_push(monkeypatch):
 @pytest.fixture(autouse=True)
 def _not_rejected(monkeypatch):
     """There is no DHF here to read a triage verdict from."""
-    monkeypatch.setattr("medharness.services.design_validation.cr_triage_rejected", lambda *a, **k: False)
+    monkeypatch.setattr("medharness.services.design_validation.cr_triage_rejection", lambda *a, **k: None)
 
 
 # ── _parse_review_data ────────────────────────────────────────────────────────

@@ -70,8 +70,12 @@ def triage_rejected(cr_item: dict | None) -> bool:
     return isinstance(triage, dict) and triage.get("verdict") == "rejected"
 
 
-def cr_triage_rejected(dhf_path: Path, cr_id: str) -> bool:
-    return triage_rejected(open_store(dhf_path).get_item(cr_id))
+def cr_triage_rejection(dhf_path: Path, cr_id: str) -> str | None:
+    """The reason triage gave for turning the CR down, or None when it did not."""
+    cr_item = open_store(dhf_path).get_item(cr_id)
+    if not triage_rejected(cr_item):
+        return None
+    return str(cr_item["triage_result"].get("notes") or "").strip() or "no reason was recorded"
 
 
 def _validate_schema_and_traceability(dhf_path: Path) -> list[dict]:
