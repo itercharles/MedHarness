@@ -62,7 +62,7 @@ Runs triage, works out what the change touches and what it leaves alone (test fi
 
 | Field | Written by | Required at closure |
 |-------|-----------|-------------------|
-| `triage_result` | Step 2 (triage) | ✓ non-empty (`build plan` itself requires the verdict `approved`) |
+| `triage_result` | Step 2 (triage) | ✓ non-empty (`build plan` itself requires the verdict `approved`, or `rejected` with the reason in `notes`) |
 | `impact_analysis` | Steps 1-5: assumptions, anchors with their evidence, every item examined and left unchanged, why each created item is not an update, and a verdict for each of nine dimensions | checked by `build plan`; not a closure gate |
 | `affected_risk_items` | Step 6 (every risk and control relevant, changed or not) | ✓ explicit list (can be `[]`) |
 | `implementation_notes` | Step 6 (impl plan) | ✓ non-empty |
@@ -77,7 +77,7 @@ Runs triage, works out what the change touches and what it leaves alone (test fi
 medharness --dhf DHF build code --cr CR-001
 ```
 
-Reads `implementation_notes` as the primary spec and implements the code, annotates tests with `@links:<ITEM_ID>`, and runs a code review loop.
+Reads `implementation_notes` as the primary spec (it refuses a CR that has none, naming `build plan`) and implements the code, annotates tests with `@links:<ITEM_ID>`, and runs a code review loop.
 
 The answer's `artifacts.files_changed` lists the code changed on the branch, committed or not: the whole repository except the DHF. Set `MEDHARNESS_CODE_PATHS` (comma-separated, e.g. `src/,lib/`) to narrow it.
 
