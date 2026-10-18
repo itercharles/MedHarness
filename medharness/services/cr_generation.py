@@ -151,6 +151,12 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None,
     if run.critical_failed:
         return _stopped(run, "generate_dhf", {"items_changed": None})
 
+    if design_validation.cr_triage_rejected(dhf_path, cr_id):
+        run.warnings.append(_warning(
+            "triage_rejected", f"Triage rejected {cr_id}, so no design was generated; its reason is in `triage_result`."))
+        return _stopped(run, "generate_dhf", {"items_changed": run.items_changed(),
+                                              "design_impact": {"recorded": False, "reason": "cr_rejected"}})
+
     items_changed = run.items_changed()
     errors = _validate_design(run, "validate_initial", items_changed)
     run.diagnostics["initial_error_count"] = len(errors)

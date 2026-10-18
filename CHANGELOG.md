@@ -11,6 +11,15 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.66.0] — 2026-10-18
+
+### Changed
+- `build plan` no longer reads a CR's state anywhere. A CR that triage turns down is recognised by `triage_result.verdict` being `rejected` (with the reason in `notes`), the data the stage itself writes, not by the CR being in a state named `rejected`. The prompt now has the model record the rejection in `triage_result` and stop; it no longer sets `impact_assessment` and moves the CR to `rejected`, since moving a CR is the project's to do. A rejected run ends with exit 0, a `triage_rejected` warning, no design review and no design checks.
+- The near-duplicate warning compares against every item of the type; it used to leave out items in `rejected` or `cancelled` states.
+
+### Removed
+- The guard that stopped `build plan` writing `affected_items` onto a CR in state `rejected` (0.64.0): it only mattered because the model moved the CR there, which it no longer does.
+
 ## [0.65.0] — 2026-10-17
 
 ### Added

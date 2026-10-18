@@ -64,6 +64,16 @@ def cascade_children(config) -> dict[str, list[str]]:
 _ADVISORY_KINDS = frozenset({"verification", "placeholder", "cr-fields"})
 
 
+def triage_rejected(cr_item: dict | None) -> bool:
+    """Whether triage turned the CR down: it stops at Step 2 and produces no cascade to check."""
+    triage = (cr_item or {}).get("triage_result")
+    return isinstance(triage, dict) and triage.get("verdict") == "rejected"
+
+
+def cr_triage_rejected(dhf_path: Path, cr_id: str) -> bool:
+    return triage_rejected(open_store(dhf_path).get_item(cr_id))
+
+
 def _validate_schema_and_traceability(dhf_path: Path) -> list[dict]:
     """What `verify dhf` would fail on or call a gap, as the fix pass needs it.
 
@@ -178,8 +188,7 @@ def _check_cr_workflow_fields(dhf_path: Path, cr_id: str) -> list[dict]:
             "fix": f"Create {cr_id} before running `build plan`.",
         }]
 
-    # A rejected CR stops at Step 2 and produces no cascade, so the check does not apply.
-    if str(cr_item.get("status") or "") == "rejected":
+    if triage_rejected(cr_item):
         return []
 
     errors: list[dict] = []
@@ -497,21 +506,17 @@ def impact_analysis_closure_errors(cr_item: dict, items: list[dict], config,
 
 def _check_impact_analysis(cr_item: dict | None, items: list[dict], config,
                            changed_items: dict[str, list[str]], dhf: str = "DHF") -> list[dict]:
-    # A rejected CR stops at Step 2; a missing one is `_check_cr_workflow_fields`'s to report.
-    if cr_item is None or str(cr_item.get("status") or "") == "rejected":
+    # A CR triage rejected has no design; a missing one is `_check_cr_workflow_fields`'s to report.
+    if cr_item is None or triage_rejected(cr_item):
         return []
     errors = impact_analysis_shape_errors(cr_item["id"], cr_item.get("impact_analysis"), dhf)
     return errors or impact_analysis_closure_errors(cr_item, items, config, changed_items, dhf)
 
 
-WITHDRAWN_STATES = {"cancelled", "rejected"}
-
-
 def check_near_duplicates(dhf_path: Path, changed_items: dict[str, list[str]]) -> list[dict]:
     """Warnings for created items that read like an existing item of the same type.
 
-    The CR being planned is created by intake, not by the model, and a withdrawn item is
-    not something to update instead, so neither is compared.
+    The CR being planned is created by intake, not by the model, so it is not compared.
     """
     from medharness.services.impact import NEAR_DUPLICATE_RATIO, closest_same_type
 
@@ -521,12 +526,11 @@ def check_near_duplicates(dhf_path: Path, changed_items: dict[str, list[str]]) -
         return []
     by_id = {it["id"]: it for it in items}
     created = set(changed_items.get("created", []))
-    withdrawn = {it["id"] for it in items if str(it.get("status") or "") in WITHDRAWN_STATES}
     warnings = []
     for uid in sorted(created):
         if uid not in by_id or by_id[uid].get("type") == "CR":
             continue
-        closest = closest_same_type(by_id[uid], items, created | withdrawn)
+        closest = closest_same_type(by_id[uid], items, created)
         if closest and closest[1] >= NEAR_DUPLICATE_RATIO:
             warnings.append({
                 "code": "possible_duplicate",

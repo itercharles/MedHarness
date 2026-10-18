@@ -53,9 +53,12 @@ class TestWhatStepOneLeavesBehind:
 
 
 class TestWhenTheChecksDoNotApply:
-    def test_a_rejected_cr_is_left_alone(self) -> None:
+    def test_a_cr_triage_rejected_is_left_alone(self) -> None:
         """Rejection stops at Step 2 and produces no cascade."""
-        assert _fields({"id": "CR-001", "status": "rejected"}) == []
+        assert _fields({"id": "CR-001", "triage_result": {"verdict": "rejected", "notes": "duplicate"}}) == []
+
+    def test_the_state_of_the_cr_is_not_what_decides_it(self) -> None:
+        assert "triage_result" in _fields({"id": "CR-001", "status": "rejected"})
 
     def test_a_missing_cr_is_reported_as_that(self) -> None:
         assert _fields(None) == ["cr_item"]
