@@ -562,11 +562,12 @@ def check_near_duplicates(dhf_path: Path, changed_items: dict[str, list[str]]) -
 LARGE_EDIT_LINES = 40
 
 
-def check_large_edits(repo_root: Path, since_ref: str, dhf_path: Path) -> list[dict]:
+def check_large_edits(repo_root: Path, since_ref: str, dhf_path: Path, cr_id: str) -> list[dict]:
     """Warnings for existing items that gained more than ``LARGE_EDIT_LINES`` lines.
 
     A change to one behaviour is a line or two; a large addition usually means the item
-    absorbed a second behaviour that deserves its own.
+    absorbed a second behaviour that deserves its own. The CR itself is not judged: planning
+    writes its `impact_analysis` and `implementation_notes`, which run to a hundred lines.
     """
     from medharness.services import git
 
@@ -582,7 +583,7 @@ def check_large_edits(repo_root: Path, since_ref: str, dhf_path: Path) -> list[d
             "message": f"{Path(path).stem} gained {count} lines; a change to one behaviour is usually a line or two. "
                        f"Check it has not taken on a second behaviour that needs its own item.",
         }
-        for path, count in sorted(added.items()) if count > LARGE_EDIT_LINES
+        for path, count in sorted(added.items()) if count > LARGE_EDIT_LINES and Path(path).stem != cr_id
     ]
 
 

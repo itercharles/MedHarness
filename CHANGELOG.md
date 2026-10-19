@@ -11,6 +11,11 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.69.3] — 2026-10-20
+
+### Fixed
+- The `large_edit` warning of `build plan` and `verify impact` no longer judges the CR itself. Planning writes the CR's `impact_analysis` and `implementation_notes`, a hundred lines or more, so any CR that already existed on the base branch warned that it "gained 149 lines" on every plan. Found running `build plan` and `build code` unattended against a real model for the first time since the AI stages were reworked: plan, design review, code, a code-review fix pass and `--check` all went through, and `verify dhf`, `verify impact`, `verify tests`, `verify completion` and `verify changes` all passed on the result.
+
 ## [0.69.2] — 2026-10-20
 
 ### Changed

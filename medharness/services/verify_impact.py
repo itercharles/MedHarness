@@ -47,7 +47,7 @@ def verify_impact(repo_root: Path, dhf_path: Path, cr_id: str, *, since_ref: str
     warnings = [
         *design_validation.check_verification_quality(dhf_path, changed),
         *design_validation.check_near_duplicates(dhf_path, changed),
-        *design_validation.check_large_edits(repo_root, since_ref, dhf_path),
+        *design_validation.check_large_edits(repo_root, since_ref, dhf_path, cr_id),
         *design_validation.check_test_points_follow_requirements(repo_root, dhf_path, since_ref),
     ]
     return envelope_from("verify impact", {
