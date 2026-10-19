@@ -16,6 +16,13 @@ reads `AGENTS.md` and runs shell commands gets the first two sections as they st
 Only the last layer is a control. The first two make the agent right earlier and cheaper, so CI rarely has to
 say no.
 
+## Local by default
+
+Every command changes local files and commits nothing; `build plan|code --pr N` is what reaches a pull request.
+An agent follows the same line: it designs and builds in the working tree, and starts a CI pipeline (an issue, a
+milestone, a workflow run, a push) only when the person asks for it. Say so in the project's `CLAUDE.md` when a
+pipeline exists, since "follow the project's process" can mean either.
+
 ## What to call, and when
 
 Every command writes JSON to stdout, a human summary to stderr, and exits non-zero when it found something

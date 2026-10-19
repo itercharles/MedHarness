@@ -110,6 +110,8 @@ Go through `medharness item` for every DHF question and change, inside a CR or n
   files under `DHF/`: these check the schema before writing, allocate IDs, enforce
   the lifecycle, and change only the fields you pass.
 - After any change, run `medharness verify dhf`.
+
+Work locally. Do not push, open an issue or a pull request, or start a workflow unless you are asked to use CI.
 """
 
 _PRODUCT_TEMPLATE = """\

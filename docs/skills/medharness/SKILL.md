@@ -25,4 +25,7 @@ product does is not finished until its DHF is.
   than to quote inline; `--data -` reads standard input.
 - A failing check names the item and field that are wrong. Fix that, then run the check again; do not
   describe a check as passing before it has.
-- Moving a CR between states (`item transition`) is the project's call: do it only when asked.
+- Work locally. Do not push, open an issue or a pull request, set a milestone, or start a workflow unless
+  you are asked to use CI: the commands change local files by default, and `--pr` is what reaches a pull request.
+- A CR's states are the project's (`medharness item transition CR-NNN` lists where it can go). Move it when
+  you start designing; a move that means "approved" (the design, the code) is made only when the user says so.
