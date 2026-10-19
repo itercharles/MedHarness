@@ -57,8 +57,17 @@ this run to commit.
 
    A requirement's `testing` field lists its test points as `T<n>: <what is checked>`.
    Claim each point in the name of the test that checks it, as above
-   (`@testing:T2`; pytest can set the `medharness.links` and `medharness.testing`
-   JUnit properties instead). A point with no passing test
+   (`@testing:T2`). In pytest, the `dhf_links` and `dhf_testing` markers write the
+   `medharness.links` and `medharness.testing` JUnit properties instead:
+
+   ```python
+   @pytest.mark.dhf_links("SRS-012")
+   @pytest.mark.dhf_testing("T1")
+   def test_authenticates_within_2s_at_p95():
+       ...
+   ```
+
+   A point with no passing test
    fails `verify tests`. Never renumber a point; a test whose point changed
    follows the new wording.
 
