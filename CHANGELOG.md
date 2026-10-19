@@ -11,6 +11,11 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.69.2] — 2026-10-20
+
+### Changed
+- `build plan --prompt` (and the prompt `build plan` gives its own model) now says at the top that the stage ends at the design, that the user is told it is ready for review, and that the next stage, `build code --cr CR-NNN --prompt`, prints its own instructions once the design is approved. A coding agent that had just designed a CR and was told to go on wrote the code from its own plan and never read the code stage's instructions: the reconcile step (does the code still match `implementation_notes` and the SWDD) has no gate behind it. A skill cannot force this and would drift from the prompt, so the pointer lives in the prompt. Checked once against a real agent: told "approved, next step" after designing, it moved the CR on and ran `build code --prompt` before writing any code. The prompt text itself cannot be tested for effect, only for presence (a test asserts the command and the DHF in use are named before the DHF context).
+
 ## [0.69.1] — 2026-10-19
 
 ### Changed
