@@ -21,7 +21,7 @@ dependency on `medharness`, and no CLI of its own.
 | Group | Touches | Commands |
 |-------|---------|----------|
 | `item` | one DHF item at a time | `list` · `get` · `create` · `update` · `transition` |
-| `verify` | reads the DHF and the working tree | `dhf` · `tests` · `soup` · `completion` · `changes` |
+| `verify` | reads the DHF and the working tree | `dhf` · `tests` · `soup` · `completion` · `impact` · `changes` |
 | `build` | writes items, code or artifacts | `plan` · `code` · `soup` · `release` |
 | `init` | scaffolds a project | — |
 
@@ -35,7 +35,7 @@ runs locally; `--pr` on `build plan|code` is the only thing that is CI-specific.
 
 | Verb | Reads | Examples |
 |------|-------|----------|
-| `verify` | what is on the machine — the DHF and the working tree, never GitHub | `dhf`, `tests`, `soup`, `completion`, `changes` |
+| `verify` | what is on the machine — the DHF and the working tree, never GitHub | `dhf`, `tests`, `soup`, `completion`, `impact`, `changes` |
 | `build` | whatever it needs; **writes** items, code, or artifacts | `plan`, `code`, `soup`, `release` |
 
 Approval is not a command: GitHub's branch protection (required approvals,

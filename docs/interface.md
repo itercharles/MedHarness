@@ -55,6 +55,7 @@ result = json.loads(lines[0])
 | `verify tests` | Requirement-to-test coverage from JUnit evidence, including declared test points. | `--junit`, `--strict` | no | `conditional` |
 | `verify soup` | The SOUP register against the dependency manifests, and each item against the OSV vulnerability database, honouring documented per-CVE acceptances. | `--manifest`, `--strict`, `--offline-mode` | yes | `conditional` |
 | `verify completion` | CR closure: mandatory CR fields, that the CR's affected_items exist, and verification evidence for each. | `--cr` (required), `--junit` | no | `always` |
+| `verify impact` | That the CR's record of its impact (impact_analysis, reviewed_items, affected_risk_items) is complete, evidenced and settles every item the branch's changes reach. | `--cr` (required), `--since-ref` | no | `always` |
 | `verify changes` | That the branch, uncommitted work included, changes exactly the items its CR lists, and code when asked. | `--cr` (required), `--since-ref`, `--code-path` | no | `always` |
 <!-- END GENERATED: gates -->
 
@@ -107,7 +108,9 @@ The `Blocking` column means:
 
 One distinction worth knowing before you wire anything: **broken references versus incomplete design.** `verify dhf` always fails on a link whose target does not exist — a typo or a deleted item. An item with no downstream child yet is normal mid-project and fails only under `--strict`. They need different fixes, so they are reported differently.
 
-`verify changes` compares the working tree, uncommitted and untracked files included, against `--since-ref` (default `origin/main`), and needs that ref to be reachable — in CI, fetch it or check out with full history. It also fails on **change impact**: an item that depends on a changed one (through a typed link, in an item type that sits in a traceability chain) that is neither changed nor listed in the CR's `reviewed_items`. `impact_depth` in `global.yaml` sets how many links out it looks; `0` turns it off.
+`verify changes` compares the working tree, uncommitted and untracked files included, against `--since-ref` (default `origin/main`), and needs that ref to be reachable — in CI, fetch it or check out with full history. 
+
+`verify impact` runs the same comparison for the CR's record of its impact, the judgement `build plan` makes before it finishes: `impact_analysis` complete and evidenced, naming only items the DHF has, and an item that depends on a changed one (through a typed link, in an item type that sits in a traceability chain) that is neither changed nor listed in the CR's `reviewed_items`. `impact_depth` in `global.yaml` sets how many links out it looks; `0` turns that off. `verify changes` no longer judges it (before 0.69.0 it did).
 
 ---
 
@@ -450,6 +453,7 @@ Generated from the CLI by `python scripts/generate_interface.py`; a test fails w
 | `verify tests` | Check each requirement is verified by the method it declares. |
 | `verify completion` | Check a CR's record is complete and the items it changed are verified. |
 | `verify changes` | Check the branch changed the items the CR said it would. |
+| `verify impact` | Check the CR's record of its impact against the items the branch changed. |
 | `verify soup` | Check the SOUP register matches what ships, and is not known-vulnerable. |
 | `build plan` | Draft the DHF item cascade and impact analysis for a CR, with a model. |
 | `build code` | Write the code and tests for a CR's approved design, with a model. |
@@ -528,6 +532,15 @@ Check the branch changed the items the CR said it would.
 | `--cr CR_ID` | The CR whose affected_items the branch must change. [required] |
 | `--since-ref REF` | What the branch is compared against: its changes since it left this ref. Default: the branch origin's HEAD points at, else origin/main. Needs enough history to reach the fork. |
 | `--code-path PATH` | Opt into code-change enforcement: path(s) under which at least one file must be modified. Omitting this option skips the code-change check entirely. |
+
+#### `medharness verify impact`
+
+Check the CR's record of its impact against the items the branch changed.
+
+| Option | |
+|---|---|
+| `--cr CR_ID` | The CR whose record of its impact is checked against the branch. [required] |
+| `--since-ref REF` | What the branch is compared against: its changes since it left this ref. Default: the branch origin's HEAD points at, else origin/main. Needs enough history to reach the fork. |
 
 #### `medharness verify soup`
 

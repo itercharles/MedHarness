@@ -63,6 +63,15 @@ GATES: tuple[dict[str, Any], ...] = (
         "needs_network": False,
     },
     {
+        "command": "verify impact",
+        "checks": "That the CR's record of its impact (impact_analysis, reviewed_items, "
+                  "affected_risk_items) is complete, evidenced and settles every item the "
+                  "branch's changes reach.",
+        "blocking": "always",
+        "blocking_note": "",
+        "needs_network": False,
+    },
+    {
         "command": "verify changes",
         "checks": "That the branch, uncommitted work included, changes exactly the "
                   "items its CR lists, and code when asked.",

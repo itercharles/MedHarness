@@ -11,6 +11,14 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.69.0] — 2026-10-19
+
+### Added
+- `verify impact --cr CR-NNN`: the CR's record of its impact, judged on whatever is on the machine. It is the judgement `build plan` makes before it finishes: `impact_analysis` complete and evidenced (assumptions, anchors, every item examined and left alone, why each created item is not an update, nine dimensions), naming only items the DHF has; a changed requirement's parent, and the risk controls and risks a changed item reaches, changed or reviewed; and items that depend on a changed one settled. Items that read like an existing one, grew by more than 40 lines, changed wording without their test points, or have vague verification criteria are warnings. A coding agent that wrote the record itself had no command that made this judgement: it handed in a design `verify dhf` and `verify changes` passed and `build plan` would have refused (an anchor neither changed nor reviewed). `build plan` and `verify impact` now share one function, `impact_findings`.
+
+### Changed
+- `verify changes` no longer fails on **change impact** (an item that depends on a changed one and is neither changed nor listed in `reviewed_items`): that check moved to `verify impact`, with the rest of the impact record. A pipeline that ran only `verify changes` loses it until it also runs `verify impact --cr …`. The finding's field is now `impact.<ITEM>`.
+
 ## [0.68.0] — 2026-10-19
 
 ### Added

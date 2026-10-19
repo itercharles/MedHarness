@@ -183,11 +183,6 @@ def register(main):
         fails, and so does a CR that promised nothing and changed no DHF item
         at all — that means `build plan` never ran.
 
-        Change reaches further than the items it edits: an item that depends on a
-        changed one, through a typed link in a traceability chain, must be changed
-        too or listed in the CR's `reviewed_items`. `impact_depth` in global.yaml
-        sets how many links out (default 1; 0 turns it off).
-
         `--code-path src/` adds a second requirement: at least one file under
         those paths must have changed too. Without the flag that check is
         skipped, so a design-only branch passes.
@@ -220,6 +215,45 @@ def register(main):
         for error in details(payload).get("findings", []):
             click.echo(f"FAIL [changes] {error['field']}: {error['issue']}", err=True)
             click.echo(f"    Fix: {error['fix']}", err=True)
+        raise click.exceptions.Exit(1)
+
+    @verify.command("impact")
+    @click.option("--cr", "cr_id", required=True, metavar="CR_ID",
+                  help="The CR whose record of its impact is checked against the branch.")
+    @click.option("--since-ref", default=None, metavar="REF",
+                  help="What the branch is compared against: its changes since it left this ref. "
+                       "Default: the branch origin's HEAD points at, else origin/main. "
+                       "Needs enough history to reach the fork.")
+    @click.pass_context
+    def verify_impact(ctx: click.Context, cr_id: str, since_ref: str | None) -> None:
+        """Check the CR's record of its impact against the items the branch changed.
+
+        `impact_analysis` must be complete and evidenced (assumptions, anchors, every item
+        examined and left alone, why each created item is not an update, a verdict for each of
+        nine dimensions), name only items the DHF has, and say nothing false about what changed.
+        An item that depends on a changed one, through a typed link in a traceability chain,
+        must be changed or listed in `reviewed_items`; `impact_depth` in global.yaml sets how
+        many links out (default 1; 0 turns that off). A requirement's parent and a changed
+        item's risk controls must be settled the same way. Items that read like an existing one,
+        grew by more than 40 lines, or changed wording without their test points are warnings.
+
+        This is the judgement `build plan` makes before it finishes. A CR that triage rejected
+        has no design and is not checked. Compares the working tree, so it runs before anything
+        is committed as well as in CI. Needs a reachable `--since-ref`.
+        """
+        from medharness.services.verify_impact import verify_impact as run  # noqa: PLC0415
+
+        dhf_path: Path = ctx.obj["dhf"]
+        payload = run(dhf_path.resolve().parent, dhf_path, cr_id, since_ref=since_ref)
+        emit(payload)
+        for warning in payload.get("warnings") or []:
+            click.echo(f"WARN [impact] {warning}", err=True)
+        if payload["passed"]:
+            click.echo(f"PASS [impact] {cr_id}: its impact record holds for the branch.", err=True)
+            return
+        for finding in details(payload).get("findings", []):
+            click.echo(f"FAIL [impact] {finding['field']}: {finding['issue']}", err=True)
+            click.echo(f"    Fix: {finding['fix']}", err=True)
         raise click.exceptions.Exit(1)
 
     @verify.command("soup")

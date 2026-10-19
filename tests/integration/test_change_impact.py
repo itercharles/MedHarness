@@ -1,4 +1,4 @@
-"""A change reaches the items that depend on it, and `verify changes` says which.
+"""A change reaches the items that depend on it, and `verify impact` says which.
 
 Changing SYS-001 passed `verify changes` although SRS-001, SYSARCH-001 and RCM-001 hang
 off it untouched. Now an item that depends on a changed one, through a typed link in a
@@ -51,13 +51,14 @@ def _change_sys(repo: Path, **cr_fields) -> None:
 
 
 def _changes(repo: Path):
-    result = CliRunner().invoke(main, ["--dhf", str(repo / "DHF"), "verify", "changes", "--cr", "CR-001",
+    result = CliRunner().invoke(main, ["--dhf", str(repo / "DHF"), "verify", "impact", "--cr", "CR-001",
                                        "--since-ref", "main"])
     return result, json.loads(result.stdout.splitlines()[0])
 
 
 def _impact(answer: dict) -> list[str]:
-    return sorted(e.split(" depends on")[0].removeprefix("impact: ") for e in answer["errors"] if e.startswith("impact:"))
+    """The dependents named as unsettled; the `impact_analysis` findings these CRs lack are not what is judged here."""
+    return sorted(e.split(":")[0].removeprefix("impact.") for e in answer["errors"] if e.startswith("impact."))
 
 
 def test_items_that_depend_on_a_changed_one_are_named(repo: Path) -> None:
@@ -71,7 +72,7 @@ def test_items_that_depend_on_a_changed_one_are_named(repo: Path) -> None:
 def test_reviewing_them_settles_it(repo: Path) -> None:
     _change_sys(repo, reviewed_items=["SRS-001", "SYSARCH-001", "RCM-001"])
     result, answer = _changes(repo)
-    assert result.exit_code == 0, answer["errors"]
+    assert _impact(answer) == [], answer["errors"]
 
 
 def test_changing_a_dependent_settles_it_and_reaches_its_own_dependents(repo: Path) -> None:
@@ -84,7 +85,7 @@ def test_changing_a_dependent_settles_it_and_reaches_its_own_dependents(repo: Pa
 
     _edit(repo, "CR-001.yaml", reviewed_items=["SYSARCH-001", "RCM-001", "SWDD-001"])
     result, answer = _changes(repo)
-    assert result.exit_code == 0, answer["errors"]
+    assert _impact(answer) == [], answer["errors"]
 
 
 def test_the_depth_is_configurable(repo: Path) -> None:
@@ -96,7 +97,7 @@ def test_the_depth_is_configurable(repo: Path) -> None:
     assert _impact(deeper) == ["SWDD-001"], deeper["errors"]      # SWDD-001 implements SRS-001
     global_yaml.write_text(original + "\nimpact_depth: 0\n")
     result, off = _changes(repo)
-    assert result.exit_code == 0, off["errors"]
+    assert _impact(off) == [], off["errors"]
 
 
 def test_a_cr_that_lists_a_changed_item_is_not_its_dependent(repo: Path) -> None:
@@ -126,4 +127,4 @@ def test_work_that_landed_on_main_after_the_branch_forked_is_not_the_branchs(rep
 
     result, answer = _changes(repo)
 
-    assert result.exit_code == 0, answer["errors"]
+    assert _impact(answer) == [], answer["errors"]

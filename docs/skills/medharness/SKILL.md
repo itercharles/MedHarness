@@ -9,7 +9,9 @@ product does is not finished until its DHF is.
 
 1. **Start a change:** `medharness item create --type CR --data '{"title": "…", "description": "…"}'`.
 2. **Design it:** run `medharness build plan --cr CR-NNN --prompt` and do what it says.
-3. **Check it:** `medharness verify dhf`, and fix what it reports.
+3. **Check it**, and fix what each reports:
+   - `medharness verify dhf`
+   - `medharness verify impact --cr CR-NNN`
 4. **Build it:** run `medharness build code --cr CR-NNN --prompt` and do what it says.
 5. **Check it again**, and fix what each reports:
    - `medharness verify changes --cr CR-NNN`
