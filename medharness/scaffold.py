@@ -97,6 +97,7 @@ A change to what the product does is not finished until its DHF is.
 - **Build it:** run `medharness build code --cr CR-NNN --prompt` and do what it says.
 - **Check it**, and fix what they report:
   - `medharness verify dhf`
+  - `medharness verify impact --cr CR-NNN`
   - `medharness verify completion --cr CR-NNN --junit <results>`
   - `medharness verify changes --cr CR-NNN`
 - **Close it:** `medharness item transition CR-NNN completed`.

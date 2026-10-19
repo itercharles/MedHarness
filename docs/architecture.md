@@ -102,7 +102,7 @@ point in the `dhfkit.adapters` group, named for its `type`; it is called with
 in-memory adapter that runs the same commands.
 
 What depends on items being files in Git, and so refuses another adapter with a
-message naming the store: `verify changes`, `build plan` and `build code`, which
+message naming the store: `verify changes`, `verify impact`, `build plan` and `build code`, which
 read the branch's diff. Everything else — `item`, `verify dhf|tests|soup|completion`,
 `build soup`, `build release` — runs on any adapter.
 
@@ -210,7 +210,8 @@ that variable; it needs no API key, and none is sent.
 | `services/context.py` | What the model is told about the DHF for one CR: the whole DHF summarized until the CR records `affected_items`, then those items in full |
 | `services/prompt_assembly.py` | Loads prompts from `medharness/prompts/` and renders `services/context.py` into them |
 | `services/cr_impact.py` | Writes `affected_items` back onto the CR |
-| `services/design_validation.py` | The deterministic check after each design pass |
+| `services/design_validation.py` | The deterministic check after each design pass; `impact_findings` is the part `verify impact` shares |
+| `services/verify_impact.py` | `verify impact`: the CR's record of its impact, judged by `impact_findings` against the branch's diff |
 
 ## `verify changes`: a reader and a judge
 

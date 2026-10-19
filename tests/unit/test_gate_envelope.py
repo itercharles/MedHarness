@@ -36,6 +36,7 @@ SIMPLE_GATES = (
 GATE_ARGS = {
     "verify tests": ["--junit", "{dhf}"],
     "verify completion": ["--cr", "CR-001"],
+    "verify impact": ["--cr", "CR-001"],
     "verify changes": ["--cr", "CR-001"],
 }
 
@@ -156,6 +157,7 @@ class TestNoGateEscapesTheEnvelope:
         extra = {
             "verify tests": ["--junit", str(dhf)],
             "verify completion": ["--cr", "CR-001"],
+            "verify impact": ["--cr", "CR-001"],
             "verify changes": ["--cr", "CR-001"],
         }
         offenders = []
@@ -279,7 +281,7 @@ class TestFailurePathsHonourTheContract:
     """
 
     FAILING = ("verify dhf", "verify tests",
-               "verify completion", "verify changes")
+               "verify completion", "verify impact", "verify changes")
 
     @pytest.mark.parametrize("command", FAILING)
     def test_no_crash_on_the_failure_path(self, command: str, failing_dhf: Path) -> None:
@@ -368,7 +370,7 @@ class TestStderrCarriesTheEnvelope:
     """
 
     ALL = ("verify dhf", "verify tests",
-           "verify completion", "verify changes")
+           "verify completion", "verify impact", "verify changes")
 
     @pytest.mark.parametrize("command", ALL)
     def test_stderr_reports_the_envelope(self, command: str, failing_dhf: Path) -> None:

@@ -102,7 +102,7 @@ One CLI, four groups:
 ```
 medharness init
 medharness item    list | get | create | update | transition
-medharness verify  dhf | tests | soup | completion | changes
+medharness verify  dhf | tests | soup | completion | impact | changes
 medharness build   plan | code | soup | release
 ```
 

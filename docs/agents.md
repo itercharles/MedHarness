@@ -26,6 +26,7 @@ wrong, so an agent, a script and a hook all use them the same way. `--dhf PATH` 
 | A change begins | `medharness item create --type CR --data '{"title": "…", "description": "…"}'` | The CR was refused; the message names the field |
 | Designing it | `medharness build plan --cr CR-NNN --prompt` | The CR is not in the DHF, or its type lacks a field the stage records |
 | After any DHF edit | `medharness verify dhf` | A broken record: schema, links, cycles; under `--strict` also uncovered items |
+| After designing it | `medharness verify impact --cr CR-NNN` | The CR's record of its impact is incomplete or unevidenced, or leaves an item the change reaches unsettled |
 | Building it | `medharness build code --cr CR-NNN --prompt` | The CR has no `implementation_notes` to implement |
 | After the code | `medharness verify changes --cr CR-NNN --code-path src/` | The branch did not change what the CR promised, or changed more than it lists |
 | Before closing | `medharness verify completion --cr CR-NNN --junit test-results` | The CR's record is incomplete, or an item it affects has no passing test |

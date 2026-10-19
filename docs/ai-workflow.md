@@ -27,6 +27,7 @@ A change to what the product does is not finished until its DHF is.
 - **Build it:** run `medharness build code --cr CR-NNN --prompt` and do what it says.
 - **Check it**, and fix what they report:
   - `medharness verify dhf`
+  - `medharness verify impact --cr CR-NNN`
   - `medharness verify completion --cr CR-NNN --junit <results>`
   - `medharness verify changes --cr CR-NNN`
 - **Close it:** `medharness item transition CR-NNN completed`.
@@ -67,7 +68,7 @@ Runs triage, works out what the change touches and what it leaves alone (test fi
 | `affected_risk_items` | Step 6 (every risk and control relevant, changed or not) | ✓ explicit list (can be `[]`) |
 | `implementation_notes` | Step 6 (impl plan) | ✓ non-empty |
 | `affected_items` | Step 6; in CI, `build plan` and `build code` rewrite it from the branch | ✓ explicit list (can be `[]`) |
-| `reviewed_items` | Step 6: items that depend on a changed one and were reviewed, needing no change | only as `verify changes` requires (below) |
+| `reviewed_items` | Step 6: items that depend on a changed one and were reviewed, needing no change | only as `verify impact` requires (below) |
 
 `build plan` fails the run, after one fix pass, when the `impact_analysis` is missing a key or one of the nine dimensions; names an item the DHF does not have; leaves an anchor, a created item or a reviewed item without its evidence or reason; leaves a parent of a changed requirement neither changed nor reviewed; or leaves out a risk control that implements a changed item, or a risk it mitigates, from `affected_risk_items`. A created item that reads like an existing item of its type (similarity of 0.75 or more) is a warning, and so is an existing item that gained more than 40 lines (`large_edit`): a change to one behaviour is a line or two. A requirement whose `content` or `verification_criteria` changed while its `testing` points did not is a warning too (`test_points_unchanged`). A CR that triage rejects (`triage_result.verdict` is `rejected`, with its reason in `notes`) stops there: no design is generated or checked, no design review runs, and the run ends with `outcome: rejected` and exit 1, the reason in `errors` (a caller that treats a non-zero exit as "no design" needs nothing more). `build plan` does not move the CR to any state; that is the project's to do.
 
