@@ -11,6 +11,12 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.69.1] — 2026-10-19
+
+### Changed
+- `init` writes one more rule into `AGENTS.md`: an agent works locally and does not push, open an issue or a pull request, or start a workflow unless it is asked to use CI. It matches the commands, which change local files by default and reach a pull request only with `--pr`. Found when a coding agent, told to "follow the project's process", started a CI pipeline (an issue and a milestone) from a chat request. A project that already has `AGENTS.md` adds the line by hand; `docs/agents.md` says why.
+- The Claude Code skill (`docs/skills/medharness/SKILL.md`) says the same, and says when a CR's state is moved: when design starts, and, for a move that means "approved", only when the user says so. `docs/agents.md` gains a "Local by default" section.
+
 ### Changed
 - `docs/agents.md`: the Stop hook runs the project's own `medharness` (`.venv/bin/medharness`) when there is one, and only watches `DHF/items`. It ran whatever `medharness` came first on `PATH`; a stale one (0.26.2 on a real machine) could not read a current DHF and held a Claude Code turn with "Unknown doc type 'UC'", and an untracked SBOM under `DHF/` woke it. Found by ContourLab, which fixed it in its own copy.
 
