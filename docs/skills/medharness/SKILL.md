@@ -19,6 +19,8 @@ product does is not finished until its DHF is.
 
 - Read and write the DHF with `medharness item list|get|create|update|transition`, never by editing
   the files under `DHF/`: the commands check the schema, allocate IDs and change only the fields given.
+- A long value (a CR's `impact_analysis`) is easier to write to a file and pass as `--data @fields.json`
+  than to quote inline; `--data -` reads standard input.
 - A failing check names the item and field that are wrong. Fix that, then run the check again; do not
   describe a check as passing before it has.
 - Moving a CR between states (`item transition`) is the project's call: do it only when asked.

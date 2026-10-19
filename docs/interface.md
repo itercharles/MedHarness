@@ -479,7 +479,7 @@ Create a new DHF item. Outputs the created item as JSON.
 | Option | |
 |---|---|
 | `--type CODE` | Doc type code (e.g. SYS, SRS). [required] |
-| `--data JSON` | Item fields as JSON object. [required] |
+| `--data JSON` | Item fields as a JSON object, or @FILE / - to read it from a file / standard input. [required] |
 
 #### `medharness item update ITEM_ID`
 
@@ -487,7 +487,7 @@ Update fields of an existing DHF item.
 
 | Option | |
 |---|---|
-| `--data JSON` | Fields to update as JSON (merged into existing). [required] |
+| `--data JSON` | Fields to update as a JSON object (merged into existing), or @FILE / - to read it from a file / standard input. [required] |
 
 #### `medharness item transition ITEM_ID [TO_STATE]`
 

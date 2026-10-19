@@ -30,6 +30,9 @@ wrong, so an agent, a script and a hook all use them the same way. `--dhf PATH` 
 | After the code | `medharness verify changes --cr CR-NNN --code-path src/` | The branch did not change what the CR promised, or changed more than it lists |
 | Before closing | `medharness verify completion --cr CR-NNN --junit test-results` | The CR's record is incomplete, or an item it affects has no passing test |
 
+`item create|update --data` takes the JSON inline, from a file (`--data @fields.json`) or from standard input
+(`--data -`); use a file for anything long, such as a CR's `impact_analysis`.
+
 `--prompt` prints the stage's steps and this CR's DHF context as Markdown, and starts no model: the agent that
 is already running does the work.
 

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 import click
 
@@ -10,7 +11,17 @@ from dhfkit.store import open_store
 
 
 def _json_object(data: str) -> dict:
-    """`--data` parsed, or exit 1: a JSON array or scalar is not a set of fields."""
+    """`--data` parsed, or exit 1: a JSON array or scalar is not a set of fields.
+
+    `@FILE` reads the JSON from a file and `-` from standard input; JSON that is an object never starts with either.
+    """
+    if data == "-":
+        data = click.get_text_stream("stdin").read()
+    elif data.startswith("@"):
+        try:
+            data = Path(data[1:]).read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError) as e:
+            raise click.ClickException(f"--data: cannot read {data[1:]}: {getattr(e, 'strerror', None) or e}") from e
     try:
         value = json.loads(data)
     except json.JSONDecodeError as e:
@@ -87,7 +98,7 @@ def register(main):
 
     @item.command("create")
     @click.option("--type", "doc_type", required=True, metavar="CODE", help="Doc type code (e.g. SYS, SRS).")
-    @click.option("--data", required=True, metavar="JSON", help="Item fields as JSON object.")
+    @click.option("--data", required=True, metavar="JSON", help="Item fields as a JSON object, or @FILE / - to read it from a file / standard input.")
     @click.pass_context
     def item_create(ctx: click.Context, doc_type: str, data: str) -> None:
         """Create a new DHF item. Outputs the created item as JSON."""
@@ -105,7 +116,7 @@ def register(main):
 
     @item.command("update")
     @click.argument("item_id")
-    @click.option("--data", required=True, metavar="JSON", help="Fields to update as JSON (merged into existing).")
+    @click.option("--data", required=True, metavar="JSON", help="Fields to update as a JSON object (merged into existing), or @FILE / - to read it from a file / standard input.")
     @click.pass_context
     def item_update(ctx: click.Context, item_id: str, data: str) -> None:
         """Update fields of an existing DHF item."""
