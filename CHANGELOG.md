@@ -11,6 +11,11 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.69.4] — 2026-10-20
+
+### Changed
+- The code prompt (`build code --prompt`) shows how a pytest test claims a requirement: the `dhf_links` and `dhf_testing` markers, with an example, beside the existing TypeScript one. It only said that pytest "can set the JUnit properties", and an agent writing Python tests went and read MedHarness's own source to find out how.
+
 ## [0.69.3] — 2026-10-20
 
 ### Fixed

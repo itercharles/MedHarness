@@ -26,3 +26,16 @@ def test_the_prompt_names_build_code_for_this_cr_and_the_dhf_in_use(tmp_path: Pa
     assert "medharness --dhf Records build code --cr CR-001 --prompt" in result.stdout
     assert result.stdout.index("build code --cr CR-001 --prompt") < result.stdout.index("## Inputs"), (
         "the pointer is read before the DHF context, which can run to tens of thousands of characters")
+
+
+def test_the_code_prompt_shows_how_a_python_test_claims_a_requirement(tmp_path: Path) -> None:
+    """An agent writing Python tests read MedHarness's own source to learn the pytest markers."""
+    scaffold_dhf(tmp_path)
+    replace_placeholders(tmp_path, "Markers")
+    CliRunner().invoke(main, ["--dhf", str(tmp_path / "DHF"), "item", "update", "CR-001", "--data",
+                              '{"implementation_notes": "Plan."}'])
+
+    result = CliRunner().invoke(main, ["--dhf", str(tmp_path / "DHF"), "build", "code", "--cr", "CR-001", "--prompt"])
+
+    assert result.exit_code == 0, result.stderr
+    assert '@pytest.mark.dhf_links("SRS-012")' in result.stdout and '@pytest.mark.dhf_testing("T1")' in result.stdout
