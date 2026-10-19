@@ -508,7 +508,7 @@ wheels = [
 
 [[package]]
 name = "medharness"
-version = "0.69.2"
+version = "0.69.3"
 source = { editable = "." }
 dependencies = [
     { name = "click" },

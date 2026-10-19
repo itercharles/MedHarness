@@ -183,7 +183,7 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None,
 
     run.warn(design_validation.check_verification_quality(dhf_path, items_changed))
     run.warn(design_validation.check_near_duplicates(dhf_path, items_changed))
-    run.warn(design_validation.check_large_edits(run.repo_root, since_ref, dhf_path))
+    run.warn(design_validation.check_large_edits(run.repo_root, since_ref, dhf_path, cr_id))
     run.warn(design_validation.check_test_points_follow_requirements(run.repo_root, dhf_path, since_ref))
 
     design_review_log: list[dict] = []

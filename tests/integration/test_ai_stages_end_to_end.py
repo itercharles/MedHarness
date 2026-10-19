@@ -406,6 +406,12 @@ class TestBuildPlanImpactAnalysis:
     def test_a_one_line_change_to_an_existing_item_is_not(self, project: Path, tmp_path: Path) -> None:
         assert self._edit_swdd(tmp_path, "One changed line.") == []
 
+    def test_the_cr_recording_its_own_plan_is_not(self, project: Path, tmp_path: Path) -> None:
+        """A real `impact_analysis` is a hundred lines; the CR existing on main made every plan warn about itself."""
+        notes = "\n".join(f"Step {n} of the plan." for n in range(80))
+        report = self._plan_and_run(tmp_path, [self._cr(implementation_notes=notes)])
+        assert [w for w in report["warnings"] if w["code"] == "large_edit"] == []
+
     def _copy_of(self, uid: str, item_type: str, **extra) -> str:
         item = json.loads(_run("item", "get", uid).stdout)
         copy = {k: item[k] for k in ("title", "content", "category", "satisfies", "verification_method",
