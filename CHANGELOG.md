@@ -11,6 +11,11 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.68.0] — 2026-10-19
+
+### Added
+- `item create|update --data` reads the JSON from a file with `--data @FILE`, or from standard input with `--data -`. A CR's `impact_analysis` is several kilobytes of nested JSON, and quoting it inline for the shell took a coding agent most of a session. A file that cannot be read, or is not a JSON object, is named in the error as inline JSON is.
+
 ## [0.67.0] — 2026-10-18
 
 ### Changed
