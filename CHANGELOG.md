@@ -11,6 +11,9 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+### Changed
+- `docs/agents.md`: the Stop hook runs the project's own `medharness` (`.venv/bin/medharness`) when there is one, and only watches `DHF/items`. It ran whatever `medharness` came first on `PATH`; a stale one (0.26.2 on a real machine) could not read a current DHF and held a Claude Code turn with "Unknown doc type 'UC'", and an untracked SBOM under `DHF/` woke it. Found by ContourLab, which fixed it in its own copy.
+
 ## [0.69.0] — 2026-10-19
 
 ### Added

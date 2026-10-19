@@ -85,7 +85,8 @@ failure it cannot fix:
 # .claude/hooks/medharness-stop.sh
 [ "$(jq -r '.stop_hook_active' )" = "true" ] && exit 0
 cd "$CLAUDE_PROJECT_DIR" || exit 0
-[ -z "$(git status --porcelain -- DHF)" ] && exit 0
+[ -x .venv/bin/medharness ] && PATH="$PWD/.venv/bin:$PATH"
+[ -z "$(git status --porcelain -- DHF/items)" ] && exit 0
 findings=$(medharness --dhf DHF verify dhf 2>&1 >/dev/null) && exit 0
 echo "$findings" | grep -A1 '^FAIL' >&2 || echo "$findings" >&2
 exit 2
@@ -101,6 +102,10 @@ case "$(jq -r '.tool_input.file_path // empty')" in
   */DHF/items/*) echo "Change DHF items with medharness item create|update, not by editing the file." >&2; exit 2 ;;
 esac
 ```
+
+The script runs the project's own `medharness` (`.venv/bin/medharness`) when there is one, and otherwise the first on
+`PATH`: an older `medharness` on `PATH` cannot read a current DHF, and blaming a good DHF is worse than no hook. It
+looks only at `DHF/items`, so a generated file elsewhere under `DHF/` (an SBOM) does not wake it.
 
 Exit code 2 is the one that blocks; any other non-zero code only shows a notice and lets the action through.
 Make both scripts executable (`chmod +x .claude/hooks/*.sh`).
