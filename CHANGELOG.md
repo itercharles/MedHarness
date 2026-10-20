@@ -15,7 +15,7 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ### Changed
 - The process has an explicit stop for the user's approval of the design before any code is written. The Claude Code skill gets a step between checking the design and building it ("show the user the design, do not write code until they approve it; if another session started you, report to it and stop"), the `AGENTS.md` that `init` writes says the same, and the plan prompt now says "do not write the code until the design is approved, by hand or otherwise" and to report to the session that started the agent. Found when a session, handed a brief that listed pre-analyze, create the CR, `build plan --prompt`, implement, test and verify, went from the design straight to writing code: nothing told it to stop, since the stop was only implied by "tell the user it is ready for review", which a delegated session cannot do and which forbade only starting `build code`.
-- Not yet checked against a real agent (the CLI's login had expired when this was written); the text is covered by tests for presence only.
+- Checked once against a real agent: given the request "add the Select tool, the button is there but does nothing", it created the CR, ran `build plan --prompt`, wrote the SRS and updated two items, ran `verify dhf`, then stopped with "tell me if you approve this design before I write the code"; no application code was written. The text itself is covered by tests for presence only.
 
 ## [0.69.4] — 2026-10-20
 
