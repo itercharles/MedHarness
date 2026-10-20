@@ -36,6 +36,11 @@ class TestInitCmd:
         agents = (tmp_path / "AGENTS.md").read_text()
         assert "Work locally. Do not push, open an issue or a pull request, or start a workflow" in agents
 
+    def test_the_agent_is_told_to_wait_for_the_design_to_be_approved(self, tmp_path):
+        _write_agent_files(tmp_path, "Cardiac Monitor")
+        agents = (tmp_path / "AGENTS.md").read_text()
+        assert "wait for their approval before any code is written" in " ".join(agents.split())
+
     def test_the_instructions_name_the_high_level_steps(self, tmp_path):
         _write_agent_files(tmp_path, "Device")
         agents = (tmp_path / "AGENTS.md").read_text()

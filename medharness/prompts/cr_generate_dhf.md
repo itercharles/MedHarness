@@ -6,9 +6,10 @@ using the medharness CLI.
 
 CR ID: {{cr_id}}
 
-This stage ends at the design. When it is done, tell the user it is ready for review. The code
-is written by the next stage once the design is approved; it prints its own instructions, and
-you do not start it here: `medharness --dhf {{dhf}} build code --cr {{cr_id}} --prompt`
+This stage ends at the design. When it is done, say that it is ready for review (to the user, or
+to the session that started you) and stop. Do not write the code until the design is approved,
+by hand or otherwise. The code is written by the next stage, which prints its own instructions:
+`medharness --dhf {{dhf}} build code --cr {{cr_id}} --prompt`
 
 ## Inputs
 
