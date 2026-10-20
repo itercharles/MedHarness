@@ -12,8 +12,10 @@ product does is not finished until its DHF is.
 3. **Check it**, and fix what each reports:
    - `medharness verify dhf`
    - `medharness verify impact --cr CR-NNN`
-4. **Build it:** run `medharness build code --cr CR-NNN --prompt` and do what it says.
-5. **Check it again**, and fix what each reports:
+4. **Stop and show the user the design**: what changed, what was reviewed and left alone. Do not write code
+   until they approve it. If another session started you, report the design to it and stop there.
+5. **Build it:** run `medharness build code --cr CR-NNN --prompt` and do what it says.
+6. **Check it again**, and fix what each reports:
    - `medharness verify changes --cr CR-NNN`
    - `medharness verify completion --cr CR-NNN --junit <results>`
 

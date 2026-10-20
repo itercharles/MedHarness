@@ -93,7 +93,8 @@ A change to what the product does is not finished until its DHF is.
 
 - **Start a change:** `medharness item create --type CR --data '{"title": "…", "description": "…"}'`,
   then `medharness item transition CR-NNN design`.
-- **Design it:** run `medharness build plan --cr CR-NNN --prompt` and do what it says.
+- **Design it:** run `medharness build plan --cr CR-NNN --prompt` and do what it says. Then show the user
+  the design and wait for their approval before any code is written.
 - **Build it:** run `medharness build code --cr CR-NNN --prompt` and do what it says.
 - **Check it**, and fix what they report:
   - `medharness verify dhf`

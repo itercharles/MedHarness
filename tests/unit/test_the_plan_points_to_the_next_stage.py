@@ -24,6 +24,7 @@ def test_the_prompt_names_build_code_for_this_cr_and_the_dhf_in_use(tmp_path: Pa
 
     assert result.exit_code == 0, result.stderr
     assert "medharness --dhf Records build code --cr CR-001 --prompt" in result.stdout
+    assert "Do not write the code until the design is approved" in result.stdout
     assert result.stdout.index("build code --cr CR-001 --prompt") < result.stdout.index("## Inputs"), (
         "the pointer is read before the DHF context, which can run to tens of thousands of characters")
 
