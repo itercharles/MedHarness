@@ -11,6 +11,9 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+### Added
+- `verify impact` follows changed code to the items it reaches. MODULE has a `paths` property, the repository paths it owns (a trailing `/` is a directory, anything else a file or glob); each file the branch changed outside the DHF reaches the SWDD items naming that module and the requirements they implement, and each must be changed or in the CR's `reviewed_items`, or the gate fails with a `code.<path>` finding. A changed file no module owns fails too, unless `unowned_paths` in `global.yaml` exempts it (by default `docs/`, `.github/`, Markdown, licences, `.gitignore` and lockfiles). Off until some module declares `paths`, and with `impact_depth: 0`. `build plan` makes the same check. Closes charter gap G1: the seeded omissions "code changed without a requirement" and "outside the declared scope" are now stopped.
+
 ## [0.69.5] — 2026-10-21
 
 ### Changed

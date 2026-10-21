@@ -54,6 +54,17 @@ global_lifecycle:
 # that depends on a changed one is neither changed nor listed in the CR's
 # `reviewed_items`; 0 turns the check off.
 impact_depth: 1
+# Changed files that need no owning MODULE once modules declare `paths`: a directory
+# ends in "/", anything else is a file or a glob, where `*` also crosses directories.
+unowned_paths:
+- docs/
+- .github/
+- '*.md'
+- LICENSE*
+- .gitignore
+- '*.lock'
+- '*-lock.json'
+- '*-lock.yaml'
 # Text in a title or content field that says nothing yet. `verify dhf` warns, and
 # fails under --strict, so the starter items cannot ship in a release.
 placeholder_patterns:

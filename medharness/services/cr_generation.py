@@ -68,7 +68,7 @@ def _code_paths(dhf_path: Path, repo_root: Path) -> tuple[str, ...]:
 
 def _validate_design(run: Run, name: str, items_changed: dict) -> list[dict]:
     step, perf = _begin_step(name, {"validator": "validate_generate_dhf"})
-    errors = design_validation.validate_generate_dhf(run.cr_id, run.dhf_path, items_changed)
+    errors = design_validation.validate_generate_dhf(run.cr_id, run.dhf_path, items_changed, run.code_changed())
     run.diagnostics["final_error_count"] = len(errors)
     run.steps.append(_finish_step(step, perf, "failed" if errors else "ok", {"error_count": len(errors)}))
     return errors

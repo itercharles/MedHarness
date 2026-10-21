@@ -25,3 +25,9 @@ properties:
   label: Segregation Rationale
   # Required when safety_class is set below the system class — how separation
   # from higher-class items is achieved and assured.
+- name: paths
+  format: list
+  label: Code Paths
+  # Repository-relative paths this module owns: a directory ends in "/", anything
+  # else is a file or a glob. Once any module declares them, `verify impact`
+  # ties changed code to the module's SWDD and SRS items.

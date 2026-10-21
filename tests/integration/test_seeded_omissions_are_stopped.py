@@ -23,7 +23,7 @@ from medharness.cli import main
 from medharness.scaffold import replace_placeholders, scaffold_dhf
 
 DIMENSIONS = ("product", "requirements", "architecture", "risk", "soup", "test", "regulatory", "security", "usability")
-REVIEWED = ["CRS-001", "SRS-001", "SYSARCH-001", "RCM-001"]
+REVIEWED = ["CRS-001", "SRS-001", "SWDD-001", "SYSARCH-001", "RCM-001"]
 RISK_ITEMS = ["RCM-001", "RISK-001"]
 
 DOSE = "def dose_cgy(mu: float, factor: float) -> float:\n    return mu * factor\n"
@@ -84,6 +84,19 @@ def _junit(repo: Path, ids: list[str]) -> Path:
     return junit
 
 
+def _module_for_export(repo: Path) -> None:
+    """A second module, with its own design item, that owns the export code."""
+    for uid, directory in (("MODULE-001", "04_modules"), ("SWDD-001", "05_swdd")):
+        data = yaml.safe_load(_item(repo, uid).read_text())
+        data["id"] = uid.replace("001", "002")
+        data["title"] = "Export"
+        if uid.startswith("MODULE"):
+            data["paths"] = ["src/export.py"]
+        else:
+            data["module"] = ["MODULE-002"]
+        (repo / "DHF" / "items" / directory / f"{data['id']}.yaml").write_text(yaml.safe_dump(data))
+
+
 @pytest.fixture
 def repo(tmp_path: Path) -> Path:
     """The honest change: SYS-001 and its test point change with the code, and the CR settles what they reach."""
@@ -91,6 +104,9 @@ def repo(tmp_path: Path) -> Path:
     replace_placeholders(tmp_path, "Seeded")
     keep_the_starter_text(tmp_path / "DHF")
     verify_the_starter(tmp_path / "DHF", tmp_path / "results")
+    (tmp_path / ".gitignore").write_text("results/\n")
+    _edit(tmp_path, "MODULE-001", paths=["src/dose.py", "src/test_dose.py"])
+    _module_for_export(tmp_path)
     (tmp_path / "src").mkdir()
     (tmp_path / "src" / "dose.py").write_text(DOSE)
     (tmp_path / "src" / "export.py").write_text("def export(plan):\n    return dict(plan)\n")
@@ -214,8 +230,8 @@ OMISSIONS: list = [
     pytest.param(parent_left_unreviewed, "verify impact"),
     pytest.param(changed_requirement_lost_its_test, "verify tests"),
     pytest.param(old_test_point_kept, None, marks=_missed("warning", "test_points_unchanged warns, it does not stop")),
-    pytest.param(code_changed_without_a_requirement, None, marks=_missed("G1", "code changes reach no item")),
-    pytest.param(code_changed_outside_the_declared_scope, None, marks=_missed("G1", "code changes reach no item")),
+    pytest.param(code_changed_without_a_requirement, "verify impact"),
+    pytest.param(code_changed_outside_the_declared_scope, "verify impact"),
     pytest.param(new_hazard_not_recorded, None, marks=_missed("G2", "a hazard linked to nothing has no way in")),
     pytest.param(verifying_test_weakened, None, marks=_missed("adequacy", "a passing test is taken at its word")),
 ]

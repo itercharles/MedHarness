@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import subprocess
 from pathlib import Path
 
@@ -230,6 +231,13 @@ def collect_dhf_item_changes(repo_root: Path, since_ref: str, dhf_path: Path | s
                 continue
             out[bucket].append(p.stem)
     return out
+
+
+def collect_code_changes(repo_root: Path, since_ref: str, dhf_path: Path | str = "DHF") -> list[str]:
+    """Every file the branch changed since ``since_ref`` outside the DHF, whatever the change."""
+    dhf = os.path.relpath(Path(dhf_path).resolve(), repo_root.resolve())
+    changes = collect_path_changes(repo_root, since_ref, ".", f":(exclude){dhf}", ":(exclude)docs/reviews")
+    return sorted({path for paths in changes.values() for path in paths})
 
 
 #: Said by every command that answers from the repository's diff.
