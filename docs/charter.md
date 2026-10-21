@@ -105,19 +105,19 @@ What serves none of the promises:
 - **`verify soup` vulnerability scanning** (OSV) — cybersecurity evidence, outside the
   62304 and change-related 14971 scope. **Frozen**; extending it starts with this charter.
 - **The `triage_result` gate** — it checks only that the model wrote `approved`, about
-  its own work. **To be removed**, or folded into `impact_analysis`.
+  its own work. **To be removed**, or folded into `impact_analysis`. Removed in #454.
 
 Gaps in promise 3, the input to iteration 2:
 
 - **G1. Code changes do not reach the impact check.** It starts from the DHF items a
   branch changed; MODULE items name no code paths, and `verify changes --code-path` only
   asks that some file changed. A CR that changes dose calculation while declaring an
-  unrelated SRS passes every gate.
+  unrelated SRS passes every gate. Closed in #453.
 - **G2. A new hazard has no way in.** Risk closure follows existing RCM links; a hazard
   linked to nothing is invisible. Code cannot find it, so it must be challenged: the
   `risk` dimension of `impact_analysis` has to carry evidence.
 - **G3. Nothing is measured.** There is no seeded-omission fixture, so the share of
-  omissions the gates stop is unknown.
+  omissions the gates stop is unknown. Closed in #452.
 
 Iteration 2 builds G3 first, measures, then closes G1 and shows the same fixture catch it.
 
@@ -154,3 +154,36 @@ The baseline found one more gap:
 
 Next: close G1 by mapping code paths to MODULE items, so a changed file reaches the
 items above it. Done when both G1 cases are stopped and the honest change still passes.
+
+## Iteration 2: result (2026-10-21)
+
+**The gates stop 9 of 12.** DHF-level omissions: 6 of 7. Code-level: 2 of 4. Self-exemption: 1 of 1.
+
+- **G1 closed (#453).** A MODULE lists the code `paths` it owns. `verify impact` follows each
+  changed file to its module's SWDD items and the requirements they implement, and each
+  must be changed or reviewed. Once any module declares `paths`, a changed file no module
+  owns fails too, unless `unowned_paths` in `global.yaml` exempts it (docs, CI, lockfiles
+  by default). Both G1 cases are stopped.
+- **The `triage_result` gate removed (#454).** The honest change passes every gate without
+  a triage record. The field remains for a rejection.
+- **The rejected-CR loophole closed (#455).** Writing `rejected` on a CR used to exempt
+  it from the code and `impact_analysis` checks, and any agent can write that field. A
+  rejected CR is now skipped only while its branch changes nothing but the CR. A new case,
+  a CR that rejects itself while changing code it never accounts for, passed every gate
+  before the fix and is now stopped.
+
+| Omission | Result |
+|---|---|
+| Code changed without a requirement | Stopped by `verify impact` (was missed: G1) |
+| Code changed outside the declared scope | Stopped by `verify impact` (was missed: G1) |
+| CR rejects itself to skip the checks | Stopped by `verify impact` (new case) |
+| Test point left unchanged | Missed: a warning only |
+| New hazard not recorded | Missed: G2 |
+| Verifying test weakened | Missed: G4 |
+
+The six cases stopped at the baseline are still stopped.
+
+Still open: G2 (a new hazard has no way in), G4 (a passing test is taken at its word),
+and the test point that only warns.
+
+Next: iteration 3, approval and accountability.
