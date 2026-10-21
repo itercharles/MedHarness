@@ -9,6 +9,8 @@ Includes `dhfkit`, the DHF storage and document engine.
 
 Before proposing or implementing any significant change, read:
 
+- [`docs/charter.md`](docs/charter.md) — the problem, the three promises and the
+  non-goals. A change that serves none of the promises is not made.
 - [`docs/architecture.md`](docs/architecture.md) — package boundaries, CR workflow
   topology, layer responsibilities, and test organisation. Do not violate the
   `dhfkit` → `medharness` import boundary.
