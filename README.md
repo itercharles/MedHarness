@@ -129,6 +129,7 @@ through AI development.
 | [interface.md](docs/interface.md) | the gate result, exit codes, what may change |
 | [ai-security.md](docs/ai-security.md) | what the AI stages can do, and running without them |
 | [architecture.md](docs/architecture.md) | how the code is organised |
+| [charter.md](docs/charter.md) | what MedHarness is for, and what it does not do |
 | [CHANGELOG.md](CHANGELOG.md) | version history |
 
 ## License
