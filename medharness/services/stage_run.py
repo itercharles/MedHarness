@@ -429,6 +429,12 @@ class Run:
     def items_changed(self) -> dict[str, list[str]]:
         return _items_changed(self.repo_root, self.unreadable, self.since_ref, self.dhf_path)
 
+    def code_changed(self) -> list[str]:
+        try:
+            return git.collect_code_changes(self.repo_root, self.since_ref, self.dhf_path)
+        except git.DiffUnavailable:
+            return []
+
     def warn(self, found: list[dict]) -> None:
         for w in found:
             self.warnings.append(_warning(w["code"], w["message"], {"field": w["field"]}))

@@ -220,6 +220,7 @@ def validate_generate_dhf(
     cr_id: str,
     dhf_path: Path,
     changed_items: dict[str, list[str]],
+    code_changed: list[str] | None = None,
 ) -> list[dict]:
     """Validate `build plan` output without relying on a spec artifact."""
     errors = _validate_schema_and_traceability(dhf_path)
@@ -276,21 +277,24 @@ def validate_generate_dhf(
             })
 
     errors.extend(_validate_cascade_completeness(created_ids, by_id, open_store(dhf_path).config))
-    errors.extend(impact_findings(dhf_path, cr_id, changed_items))
+    errors.extend(impact_findings(dhf_path, cr_id, changed_items, code_changed))
     return errors
 
 
-def impact_findings(dhf_path: Path, cr_id: str, changed_items: dict[str, list[str]]) -> list[dict]:
+def impact_findings(dhf_path: Path, cr_id: str, changed_items: dict[str, list[str]],
+                    code_changed: list[str] | None = None) -> list[dict]:
     """What the CR's record of its impact leaves wrong or unsaid about the items its branch changed.
 
     The one judgement `verify impact` and `build plan` share: dependents of a changed item nobody
-    settled, and an `impact_analysis` that is malformed, unevidenced or silent about what changed.
+    settled, code no module owns or whose module's items nobody settled, and an `impact_analysis`
+    that is malformed, unevidenced or silent about what changed.
     """
     store = open_store(dhf_path)
     items = store.list_items()
     by_id = {item["id"]: item for item in items}
     return [
         *_unreviewed_impact(dhf_path, cr_id, changed_items),
+        *_unreviewed_code(dhf_path, cr_id, changed_items, code_changed or []),
         *_check_impact_analysis(by_id.get(cr_id), items, store.config, changed_items, dhf_path.resolve().name),
     ]
 
@@ -311,6 +315,37 @@ def _unreviewed_impact(dhf_path: Path, cr_id: str, changed_items: dict[str, list
         "fix": f"Update {dependent} to follow the change, or if it needs none run "
                f"`medharness item update {cr_id} --data '{{\"reviewed_items\": [..., \"{dependent}\"]}}'`.",
     } for dependent, origins in unreviewed.items()]
+
+
+def _unreviewed_code(dhf_path: Path, cr_id: str, changed_items: dict[str, list[str]],
+                     code_changed: list[str]) -> list[dict]:
+    """Changed code that belongs to no module, or whose module's items are neither changed nor reviewed."""
+    from medharness.services.impact import code_dependents
+
+    store = open_store(dhf_path)
+    cr_item = store.get_item(cr_id)
+    if triage_rejected(cr_item):
+        return []
+    findings = []
+    for path, modules in code_dependents(store, cr_item, code_changed, {
+        "created": changed_items.get("created", []), "updated": changed_items.get("updated", []),
+        "deleted": changed_items.get("deleted", []),
+    }).items():
+        if "" in modules:
+            findings.append({
+                "field": f"code.{path}",
+                "issue": f"{path} changed, but it belongs to no module: no MODULE's `paths` matches it.",
+                "fix": f"Add {path} to the `paths` of the MODULE that owns it, or create that MODULE.",
+            })
+        for module, unsettled in modules.items():
+            findings.extend({
+                "field": f"code.{path}",
+                "issue": f"{path} changed in {module}, whose design reaches {item}, "
+                         f"but {item} is neither changed nor listed in {cr_id}'s reviewed_items.",
+                "fix": f"Update {item} to follow the change, or if it needs none run "
+                       f"`medharness item update {cr_id} --data '{{\"reviewed_items\": [..., \"{item}\"]}}'`.",
+            } for item in unsettled)
+    return findings
 
 
 def check_verification_quality(

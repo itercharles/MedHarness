@@ -35,6 +35,7 @@ def verify_impact(repo_root: Path, dhf_path: Path, cr_id: str, *, since_ref: str
                        f"CR item '{cr_id}' is not in the DHF.", f"Create {cr_id}, or name the CR the branch is for.")
     try:
         changed = git.collect_dhf_item_changes(repo_root, since_ref, dhf_path)
+        code_changed = git.collect_code_changes(repo_root, since_ref, dhf_path)
     except git.DiffUnavailable as exc:
         return _failed(
             cr_id, since_ref, f"{cr_id}: could not read the diff against {since_ref}.", "diff_unavailable",
@@ -43,7 +44,7 @@ def verify_impact(repo_root: Path, dhf_path: Path, cr_id: str, *, since_ref: str
             f"A shallow clone or a repo with no remote has no {since_ref}.",
         )
 
-    findings = design_validation.impact_findings(dhf_path, cr_id, changed)
+    findings = design_validation.impact_findings(dhf_path, cr_id, changed, code_changed)
     warnings = [
         *design_validation.check_verification_quality(dhf_path, changed),
         *design_validation.check_near_duplicates(dhf_path, changed),
