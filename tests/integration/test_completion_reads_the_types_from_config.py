@@ -39,7 +39,7 @@ def _project(tmp_path: Path, *, verification_method: list[str] | None) -> Path:
     cr = next((dhf / "items").rglob("CR-001.yaml"))
     data = yaml.safe_load(cr.read_text())
     data.update({"implementation_notes": "n", "affected_risk_items": [],
-                 "triage_result": {"verdict": "approved"}, "affected_items": ["HWR-001"]})
+                 "affected_items": ["HWR-001"]})
     cr.write_text(yaml.safe_dump(data))
     return dhf
 

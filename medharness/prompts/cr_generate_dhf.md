@@ -39,7 +39,7 @@ Before judging the CR, write down what it asks for:
 **Checklist (evaluate in order):**
 
 1. **Duplicate** — Only when A already equals B in every detail of Step 1's delta.
-   If any part of B is not yet true, or you are unsure, it is not a duplicate: approve
+   If any part of B is not yet true, or you are unsure, it is not a duplicate: treat
    it as a change to existing behaviour and anchor on what already exists.
 2. **Out-of-scope** — Is this outside the product's stated direction?
 3. **Architecture-conflict** — Does this contradict an existing ADR or SYSARCH item?
@@ -50,15 +50,7 @@ and stop. Generate no items; reply with a brief explanation:
     medharness --dhf {{dhf}} item update {{cr_id}} \
       --data '{"triage_result": {"verdict": "rejected", "notes": "<reason for rejection>"}}'
 
-**Otherwise approve** and record the triage:
-
-    medharness --dhf {{dhf}} item update {{cr_id}} \
-      --data '{"triage_result": {"verdict": "approved", "complexity": "<small|medium|large>", "affected_subsystems": ["<name>"], "related_crs": [], "notes": "<one sentence: why approved and the key constraint>"}}'
-
-Complexity: `small` = 1 subsystem, <5 items likely; `medium` = 2 subsystems or
-5–15 items; `large` = 3+ top-level branches or >15 items. A change that spans several
-top-level branches is still approved with `complexity: large`; say in `notes` how it
-should be split into smaller CRs.
+Otherwise continue to Step 3, writing nothing for the triage.
 
 ## Step 3: Locate
 
@@ -293,5 +285,5 @@ The options combine. Do **not** write YAML files directly.
   instructions say. Leave your changes in the working tree for whoever started
   this run to commit.
 - Do not move the CR through its lifecycle; that is the project's to do.
-- Do not edit the CR item except: `triage_result` (Step 2); `affected_items`, `reviewed_items`,
-  `affected_risk_items`, `impact_analysis` and `implementation_notes` (Step 6).
+- Do not edit the CR item except: `triage_result`, only when rejecting (Step 2); `affected_items`,
+  `reviewed_items`, `affected_risk_items`, `impact_analysis` and `implementation_notes` (Step 6).

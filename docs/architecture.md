@@ -155,9 +155,9 @@ using, which reads them from `--prompt` (local). There is one copy of the steps.
 
 **`build plan`**
 
-1. Triage: duplicate, out of scope or architecture conflict. Writes
-   `triage_result` on the CR; a change that spans several branches is approved
-   as `large`, with a note on how to split it.
+1. Triage: duplicate, out of scope or architecture conflict. A rejection is
+   written to `triage_result` on the CR and the run stops; an accepted change
+   records nothing for triage.
 2. Characterise the change: the behaviour delta, its category, the ambiguities
    resolved.
 3. Locate it: test files first (every requirement has a test), then a top-down
@@ -189,8 +189,8 @@ Neither command reads or moves the CR's state. The project does, with `medharnes
 `cr.yaml` defines it: by default `new → design → develop → completed`, `rejected` from `new` or `design`,
 `cancelled` from any of the three, and `completed → develop` to reopen a CR whose approval no longer stands
 (refused for a CR a release lists in `included_items`; a new CR changes it). `design → develop` is refused
-until `triage_result` and `implementation_notes` are recorded, and `completed` until those two,
-`affected_risk_items` and `affected_items` are. `build plan` needs the CR to exist, and `build code` needs
+until `implementation_notes` is recorded, and `completed` until it, `affected_risk_items` and
+`affected_items` are. `build plan` needs the CR to exist, and `build code` needs
 it to carry `implementation_notes`.
 
 Each stage takes its model from `MEDHARNESS_{DESIGN|DESIGN_REVIEW|DEVELOP|CODE_REVIEW}_MODEL`

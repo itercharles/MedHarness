@@ -126,7 +126,6 @@ class TestCRItemLifecycle:
             "--data", json.dumps({
                 "implementation_notes": "Implemented by the golden test.",
                 "affected_risk_items": [],
-                "triage_result": {"verdict": "approved"},
             }),
         )
         assert u.returncode == 0, f"CR update failed:\n{u.stderr}"

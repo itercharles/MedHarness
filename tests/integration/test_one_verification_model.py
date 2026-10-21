@@ -95,7 +95,7 @@ def test_a_name_tag_counts_everywhere(dhf: Path, tmp_path: Path) -> None:
 def test_the_closure_gate_reads_name_tags_too(dhf: Path, tmp_path: Path) -> None:
     cr = next((dhf / "items").rglob("CR-001.yaml"))
     data = yaml.safe_load(cr.read_text())
-    data.update({"implementation_notes": "n", "affected_risk_items": [], "triage_result": {"verdict": "approved"},
+    data.update({"implementation_notes": "n", "affected_risk_items": [],
                  "affected_items": ["SYS-001"]})
     cr.write_text(yaml.safe_dump(data))
     junit = _junit(tmp_path, ("test_it @links:SYS-001", None, False))

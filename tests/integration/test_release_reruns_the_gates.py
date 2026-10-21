@@ -32,7 +32,7 @@ def _project(tmp_path: Path, **cr_fields) -> Path:
     return dhf
 
 
-CLOSED = {"implementation_notes": "n", "affected_risk_items": [], "triage_result": {"verdict": "approved"}}
+CLOSED = {"implementation_notes": "n", "affected_risk_items": []}
 
 
 def _release(dhf: Path, *extra: str, junit: Path | None = None):

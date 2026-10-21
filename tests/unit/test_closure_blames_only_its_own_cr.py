@@ -89,7 +89,6 @@ class TestTheGateUsesTheScope:
             "affected_items": ["SRS-002"],
             "implementation_notes": "n",
             "affected_risk_items": [],
-            "triage_result": {"verdict": "approved"},
         })
         cr.write_text(yaml.safe_dump(data), encoding="utf-8")
 

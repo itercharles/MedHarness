@@ -47,8 +47,7 @@ def test_a_release_writes_its_documents_as_pdf(tmp_path: Path) -> None:
     keep_the_starter_text(dhf)
     cr = next((dhf / "items").rglob("CR-001.yaml"))
     data = yaml.safe_load(cr.read_text())
-    data.update(status="completed", implementation_notes="n", affected_risk_items=[],
-                triage_result={"verdict": "approved"}, affected_items=[])
+    data.update(status="completed", implementation_notes="n", affected_risk_items=[], affected_items=[])
     cr.write_text(yaml.safe_dump(data))
     out = tmp_path / "rel"
 

@@ -106,7 +106,7 @@ DESIGN = [
         "title": "PDF writer design", "content": "Uses a PDF library.", "implements": ["SRS-002"],
         "module": ["MODULE-001"]}),
     f"{MH} item update CR-001 --data " + _json({
-        "triage_result": {"verdict": "approved"}, "affected_risk_items": [],
+        "affected_risk_items": [],
         "reviewed_items": ["UC-001", "MODULE-001"],
         "impact_analysis": _impact(
             created=("CRS-002", "SYS-002", "SYSARCH-002", "SRS-002", "SWDD-002"),
@@ -298,7 +298,7 @@ class TestBuildPlanChangeImpact:
     UPDATE = [
         f"{MH} item update SYS-001 --data " + _json({"content": "Changed.", "verification_criteria": "PDF opens"}),
         f"{MH} item update CR-001 --data " + _json({
-            "triage_result": {"verdict": "approved"}, "implementation_notes": "Change SYS-001.",
+            "implementation_notes": "Change SYS-001.",
             "affected_risk_items": ["RCM-001", "RISK-001"], "reviewed_items": ["CRS-001"],
             "impact_analysis": _impact(unchanged=("CRS-001",), anchors=("SYS-001",))}),
     ]
@@ -337,7 +337,7 @@ class TestBuildPlanImpactAnalysis:
         return _report(_run("build", "plan", "--cr", "CR-001"))
 
     def _cr(self, **fields) -> str:
-        base = {"triage_result": {"verdict": "approved"}, "affected_risk_items": [],
+        base = {"affected_risk_items": [],
                 "implementation_notes": "Plan."}
         return f"{MH} item update CR-001 --data " + _json({**base, **fields})
 

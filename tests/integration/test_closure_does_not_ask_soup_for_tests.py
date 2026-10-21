@@ -24,8 +24,7 @@ def _closure(tmp_path: Path, affected: list[str]):
     dhf = tmp_path / "DHF"
     path = next((dhf / "items").rglob("CR-001.yaml"))
     data = yaml.safe_load(path.read_text())
-    data.update(affected_items=affected, implementation_notes="Done.", affected_risk_items=[],
-                triage_result={"verdict": "approved", "complexity": "small"})
+    data.update(affected_items=affected, implementation_notes="Done.", affected_risk_items=[])
     path.write_text(yaml.safe_dump(data))
     result = CliRunner().invoke(main, ["--dhf", str(dhf), "verify", "completion", "--cr", "CR-001"])
     return result, json.loads(result.stdout.splitlines()[0])
