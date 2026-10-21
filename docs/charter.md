@@ -77,3 +77,46 @@ Each iteration answers one question, in this order:
 3. **Approval and accountability.** How a person's approval becomes a compliant
    review record.
 4. **Tool validation.** MedHarness's own validation evidence.
+
+## Iteration 1: inventory (2026-10-21)
+
+Every command and gate, against the promises (● serves it, ○ serves it indirectly):
+
+| Capability | 1 | 2 | 3 | Verdict |
+|---|---|---|---|---|
+| `item` (CRUD, `transition`) | ● | | | Keep: foundation |
+| `verify dhf` | ● | | | Keep |
+| `verify changes` | ● | | ○ | Keep |
+| `verify tests` | ● | ● | | Keep |
+| `verify completion` | ● | ● | | Keep |
+| `build release` | | ● | | Keep |
+| `build soup`, and `verify soup` drift | ● | ● | | Keep |
+| `verify impact` | | | ● | Keep: where iteration 2 invests |
+| Heuristic warnings (vague criteria, near duplicates, large edits, test points left unchanged) | | | ○ | Keep as warnings; add no more |
+| `build plan`, `build code` with `--prompt` | | ○ | ○ | Keep |
+| `init` | | | | Keep: adoption needs it |
+
+What serves none of the promises:
+
+- **The unattended CI runner** — `--pr` write-back and comments, session resume, the
+  non-Claude model providers, and model-on-model design and code review. **Frozen**: it
+  keeps working, gains no features. `--prompt` with the user's own agent covers the same
+  ground, and a model reviewing a model is not a check made by code.
+- **`verify soup` vulnerability scanning** (OSV) — cybersecurity evidence, outside the
+  62304 and change-related 14971 scope. **Frozen**; extending it starts with this charter.
+- **The `triage_result` gate** — it checks only that the model wrote `approved`, about
+  its own work. **To be removed**, or folded into `impact_analysis`.
+
+Gaps in promise 3, the input to iteration 2:
+
+- **G1. Code changes do not reach the impact check.** It starts from the DHF items a
+  branch changed; MODULE items name no code paths, and `verify changes --code-path` only
+  asks that some file changed. A CR that changes dose calculation while declaring an
+  unrelated SRS passes every gate.
+- **G2. A new hazard has no way in.** Risk closure follows existing RCM links; a hazard
+  linked to nothing is invisible. Code cannot find it, so it must be challenged: the
+  `risk` dimension of `impact_analysis` has to carry evidence.
+- **G3. Nothing is measured.** There is no seeded-omission fixture, so the share of
+  omissions the gates stop is unknown.
+
+Iteration 2 builds G3 first, measures, then closes G1 and shows the same fixture catch it.
