@@ -50,7 +50,7 @@ creates the CR, runs `build plan --cr CR-015 --prompt`, and does what it says.
 
 ### The CR fields the stages need
 
-`build plan` records its analysis on the CR (`triage_result`, `impact_analysis`, `implementation_notes`, `affected_items`, `reviewed_items`, `affected_risk_items`) and `build code` and the gates read them back, so the CR type in `cr.yaml` has to declare all six. A project that edits its `cr.yaml` and drops one gets an error from `verify dhf`, and `build plan` and `build code` refuse before any model runs, each naming the field.
+`build plan` records its analysis on the CR (`triage_result` when it rejects, `impact_analysis`, `implementation_notes`, `affected_items`, `reviewed_items`, `affected_risk_items`) and `build code` and the gates read them back, so the CR type in `cr.yaml` has to declare all six. A project that edits its `cr.yaml` and drops one gets an error from `verify dhf`, and `build plan` and `build code` refuse before any model runs, each naming the field.
 
 ### The CR's state is yours
 
@@ -66,7 +66,7 @@ Runs triage, works out what the change touches and what it leaves alone (test fi
 
 | Field | Written by | Required at closure |
 |-------|-----------|-------------------|
-| `triage_result` | Step 2 (triage) | ✓ non-empty (`build plan` itself requires the verdict `approved`, or `rejected` with the reason in `notes`) |
+| `triage_result` | Step 2 (triage), only when it rejects the CR: `verdict: rejected`, the reason in `notes` | no; an accepted CR has none, and a rejected one stops before the rest is written |
 | `impact_analysis` | Steps 1-5: assumptions, anchors with their evidence, every item examined and left unchanged, why each created item is not an update, and a verdict for each of nine dimensions | checked by `build plan`; not a closure gate |
 | `affected_risk_items` | Step 6 (every risk and control relevant, changed or not) | ✓ explicit list (can be `[]`) |
 | `implementation_notes` | Step 6 (impl plan) | ✓ non-empty |

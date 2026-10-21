@@ -1,6 +1,6 @@
 """A CR is always in its own change set, and was recorded as affecting itself.
 
-`build plan` writes `triage_result`, `affected_risk_items` and
+`build plan` writes `affected_risk_items`, `impact_analysis` and
 `implementation_notes` onto the CR item, so the CR appears among the items
 changed on the branch. `_record_design_impact_in_cr` then wrote that whole set
 into the CR's own `affected_items` — including the CR.

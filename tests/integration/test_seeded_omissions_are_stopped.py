@@ -68,8 +68,6 @@ def _honest_cr(repo: Path, **overrides) -> None:
         "affected_risk_items": RISK_ITEMS,
         "impact_analysis": _analysis(),
         "implementation_notes": "Scale the dose by the calibration factor.",
-        "triage_result": {"verdict": "approved", "complexity": "small", "affected_subsystems": ["dose"],
-                          "related_crs": [], "notes": "one formula"},
     }
     _edit(repo, "CR-001", **{**fields, **overrides})
 

@@ -57,7 +57,7 @@ properties:
   label: Implementation Notes
 - name: triage_result
   label: Triage Result
-  # {verdict, complexity, affected_subsystems, related_crs, notes} written by `build plan`, step 2
+  # {verdict, notes} written by `build plan` only when it rejects the CR (step 2); an accepted CR has none
 - name: impact_analysis
   label: Impact Analysis
   # {assumptions, anchors, unchanged, created, dimensions} written by `build plan`, steps 1-5
@@ -82,11 +82,6 @@ lifecycle:
     # `develop` is a design that was recorded and approved; a design pull request carries this
     # move, and merging it is the approval.
     criteria:
-    - id: triaged_for_design
-      name: Triage decision recorded
-      check_type: field_not_empty
-      field: triage_result
-      required: true
     - id: design_recorded
       name: Implementation notes written
       check_type: field_not_empty
@@ -116,11 +111,6 @@ lifecycle:
       # What `verify completion` checks; [] means the CR changed no item.
       check_type: field_present
       field: affected_items
-      required: true
-    - id: triaged
-      name: Triage decision recorded
-      check_type: field_not_empty
-      field: triage_result
       required: true
   # A completed CR whose approval no longer stands (changes were requested after it) goes back to
   # `develop`, and is completed again when the new code is approved. One that a release lists

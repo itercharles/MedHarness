@@ -180,7 +180,6 @@ class TestOutputContract:
             "title: Contract test CR\n"
             "implementation_notes: 'plan'\n"
             "affected_risk_items: []\n"
-            "triage_result:\n  verdict: approved\n"
             "affected_items: []\n"
         )
         # Write an approved design review file (required by closure gate)

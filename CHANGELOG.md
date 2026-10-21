@@ -14,6 +14,9 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 ### Added
 - `verify impact` follows changed code to the items it reaches. MODULE has a `paths` property, the repository paths it owns (a trailing `/` is a directory, anything else a file or glob); each file the branch changed outside the DHF reaches the SWDD items naming that module and the requirements they implement, and each must be changed or in the CR's `reviewed_items`, or the gate fails with a `code.<path>` finding. A changed file no module owns fails too, unless `unowned_paths` in `global.yaml` exempts it (by default `docs/`, `.github/`, Markdown, licences, `.gitignore` and lockfiles). Off until some module declares `paths`, and with `impact_depth: 0`. `build plan` makes the same check. Closes charter gap G1: the seeded omissions "code changed without a requirement" and "outside the declared scope" are now stopped.
 
+### Removed
+- `build plan` no longer requires, and CR transitions no longer check, an approved `triage_result`: the `design → develop` and `develop → completed` criteria in `cr.yaml` that asked for it are gone, and `build plan` no longer reports a missing approval. The check only read back what the model wrote about its own work. The field remains, written when triage rejects a CR (`verdict: rejected`, the reason in `notes`), and a rejected CR still stops the run. A project that copied `cr.yaml` into its own config keeps its own criteria until it removes them.
+
 ## [0.69.5] — 2026-10-21
 
 ### Changed

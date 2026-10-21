@@ -66,7 +66,7 @@ class TestTheScaffoldedCRCanReachCompleted:
         with pytest.raises(ValueError, match="design_recorded"):
             open_store(dhf).execute_transition("CR-001", "develop")
         open_store(dhf).update_item("CR-001", {
-            "implementation_notes": "Plan.", "triage_result": {"verdict": "approved"},
+            "implementation_notes": "Plan.",
         })
         open_store(dhf).execute_transition("CR-001", "develop")
 
@@ -77,7 +77,6 @@ class TestTheScaffoldedCRCanReachCompleted:
             "implementation_notes": "Toolbar updated.",
             "affected_risk_items": ["RISK-001"],
             "affected_items": ["SRS-001"],
-            "triage_result": {"verdict": "approved"},
         })
         open_store(dhf).execute_transition("CR-001", "completed")
         assert open_store(dhf).get_item("CR-001")["status"] == "completed"

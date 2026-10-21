@@ -170,12 +170,7 @@ def validate_dhf_structure(dhf_path: Path) -> list[dict]:
 
 
 def _check_cr_workflow_fields(dhf_path: Path, cr_id: str) -> list[dict]:
-    """The triage decision `build plan` is supposed to leave behind.
-
-    Nothing but the prompt writes it, so a run that skipped a step reported
-    success and the omission only surfaced at the closure gate, releases later.
-    Reported here so the fix pass can correct it in the same run.
-    """
+    """Report a CR that cannot be read or is not in the DHF, so `build plan` has something to work on."""
     try:
         cr_item = open_store(dhf_path).get_item(cr_id) or {}
     except Exception as exc:  # noqa: BLE001 — reported, not swallowed
@@ -192,28 +187,7 @@ def _check_cr_workflow_fields(dhf_path: Path, cr_id: str) -> list[dict]:
             "fix": f"Create {cr_id} before running `build plan`.",
         }]
 
-    if triage_rejected(cr_item):
-        return []
-
-    errors: list[dict] = []
-    triage = cr_item.get("triage_result")
-    if not isinstance(triage, dict) or triage.get("verdict") != "approved":
-        errors.append({
-            "field": "triage_result",
-            "issue": (
-                f"{cr_id} has no approved `triage_result`; Step 2 records the "
-                f"triage decision and it was not written."
-            ),
-            "fix": (
-                f"medharness --dhf {dhf_path.resolve().name} item update {cr_id} --data "
-                f"'{{\"triage_result\": {{\"verdict\": \"approved\", "
-                f"\"complexity\": \"<small|medium|large>\", "
-                f"\"affected_subsystems\": [\"<name>\"], \"related_crs\": [], "
-                f"\"notes\": \"<why approved and the key constraint>\"}}}}'"
-            ),
-        })
-
-    return errors
+    return []
 
 
 def validate_generate_dhf(

@@ -25,7 +25,6 @@ CLOSURE = {
     "implementation_notes": "Toolbar updated.",
     "affected_risk_items": ["RISK-001"],
     "affected_items": ["SRS-001"],
-    "triage_result": {"verdict": "approved"},
 }
 
 
@@ -36,9 +35,9 @@ def cr(tmp_path: Path) -> tuple[Path, str]:
     dhf = tmp_path / "DHF"
     store = open_store(dhf)
     store.execute_transition("CR-001", "design")
-    store.update_item("CR-001", {"implementation_notes": "Plan.", "triage_result": {"verdict": "approved"}})
+    store.update_item("CR-001", {"implementation_notes": "Plan."})
     store.execute_transition("CR-001", "develop")
-    store.update_item("CR-001", {"implementation_notes": "", "triage_result": None})
+    store.update_item("CR-001", {"implementation_notes": ""})
     return dhf, "CR-001"
 
 
@@ -61,7 +60,6 @@ class TestClosureIsRefusedUntilTheRecordExists:
             "implementation_notes": "implementation_recorded",
             "affected_risk_items": "risk_impact_assessed",
             "affected_items": "affected_items_recorded",
-            "triage_result": "triaged",
         }[omit]
         assert expected in str(exc.value)
 

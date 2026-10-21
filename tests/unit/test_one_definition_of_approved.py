@@ -63,7 +63,6 @@ class TestClosureDoesNotRuleOnApproval:
         data.update({
             "implementation_notes": "n",
             "affected_risk_items": [],
-            "triage_result": {"verdict": "approved"},
             "affected_items": ["SRS-404"],
         })
         cr.write_text(yaml.safe_dump(data), encoding="utf-8")
