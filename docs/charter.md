@@ -120,3 +120,37 @@ Gaps in promise 3, the input to iteration 2:
   omissions the gates stop is unknown.
 
 Iteration 2 builds G3 first, measures, then closes G1 and shows the same fixture catch it.
+
+## Iteration 2: baseline (2026-10-21)
+
+`tests/integration/test_seeded_omissions_are_stopped.py` closes G3. An honest change
+request passes all five pre-merge gates; each of eleven cases leaves one thing out of it.
+A stopped case must be stopped by the gate whose job it is. Misses are strict xfails
+tagged with their gap, so the test summary is the catch rate.
+
+**Today the gates stop 6 of 11.** DHF-level omissions: 6 of 7. Code-level: 0 of 4.
+
+| Omission | Result |
+|---|---|
+| Dependent left unreviewed | Stopped by `verify impact` |
+| Risk control left out | Stopped by `verify impact` |
+| Undeclared item change | Stopped by `verify changes` |
+| Declared item not changed | Stopped by `verify changes` |
+| Parent left unreviewed | Stopped by `verify impact` |
+| Changed requirement lost its test | Stopped by `verify tests` |
+| Test point left unchanged | Missed: a warning only |
+| Code changed without a requirement | Missed: G1 |
+| Code changed outside the declared scope | Missed: G1 |
+| New hazard not recorded | Missed: G2 |
+| Verifying test weakened | Missed: G4 |
+
+A change request that changes dose calculation and names no item passes every gate,
+`verify completion` included.
+
+The baseline found one more gap:
+
+- **G4. A passing test is taken at its word.** A test rewritten to `assert True` still
+  counts as verification.
+
+Next: close G1 by mapping code paths to MODULE items, so a changed file reaches the
+items above it. Done when both G1 cases are stopped and the honest change still passes.
