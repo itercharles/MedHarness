@@ -103,6 +103,14 @@ def test_changing_the_items_it_reaches_settles_it(repo: Path) -> None:
     assert result.exit_code == 0, answer["errors"]
 
 
+def test_a_cr_marked_rejected_whose_branch_changes_a_file_is_stopped(repo: Path) -> None:
+    _edit(repo, "CR-001.yaml", triage_result={"verdict": "rejected", "notes": "duplicate"})
+    result, answer = _impact(repo)
+    assert result.exit_code == 1
+    assert answer["errors"][0].startswith("triage_result: ")
+    assert any(e.startswith("code.src/dose.py: ") for e in answer["errors"]), answer["errors"]
+
+
 def test_a_file_no_module_owns_fails_once_a_module_declares_paths(repo: Path) -> None:
     _review(repo, ["SWDD-001", "SRS-001"])
     (repo / "src" / "export.py").write_text("EXPORT = 1\n")

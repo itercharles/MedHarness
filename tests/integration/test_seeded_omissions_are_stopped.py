@@ -206,6 +206,12 @@ def code_changed_outside_the_declared_scope(repo: Path) -> None:
     (repo / "src" / "export.py").write_text("def export(plan):\n    return {k: v for k, v in plan.items() if v}\n")
 
 
+def rejected_to_skip_the_checks(repo: Path) -> None:
+    """The CR marks itself rejected, so the export change it never accounted for goes unchecked."""
+    code_changed_outside_the_declared_scope(repo)
+    _honest_cr(repo, triage_result={"verdict": "rejected", "notes": "duplicate"})
+
+
 def new_hazard_not_recorded(repo: Path) -> None:
     """The code now rounds the dose; a new way to under-dose, and the risk dimension says not_required."""
     (repo / "src" / "dose.py").write_text(DOSE.replace("mu * factor", "round(mu * factor * calibration())"))
@@ -230,6 +236,7 @@ OMISSIONS: list = [
     pytest.param(old_test_point_kept, None, marks=_missed("warning", "test_points_unchanged warns, it does not stop")),
     pytest.param(code_changed_without_a_requirement, "verify impact"),
     pytest.param(code_changed_outside_the_declared_scope, "verify impact"),
+    pytest.param(rejected_to_skip_the_checks, "verify impact"),
     pytest.param(new_hazard_not_recorded, None, marks=_missed("G2", "a hazard linked to nothing has no way in")),
     pytest.param(verifying_test_weakened, None, marks=_missed("adequacy", "a passing test is taken at its word")),
 ]

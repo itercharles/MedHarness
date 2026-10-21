@@ -266,11 +266,34 @@ def impact_findings(dhf_path: Path, cr_id: str, changed_items: dict[str, list[st
     store = open_store(dhf_path)
     items = store.list_items()
     by_id = {item["id"]: item for item in items}
+    rejected = triage_rejected(by_id.get(cr_id))
+    beyond = _changes_beyond(cr_id, changed_items, code_changed or [])
+    findings = []
+    if rejected and beyond:
+        findings.append(_rejected_but_changed(cr_id, beyond))
+    findings.extend(_unreviewed_impact(dhf_path, cr_id, changed_items))
+    if rejected and not beyond:
+        return findings
     return [
-        *_unreviewed_impact(dhf_path, cr_id, changed_items),
+        *findings,
         *_unreviewed_code(dhf_path, cr_id, changed_items, code_changed or []),
         *_check_impact_analysis(by_id.get(cr_id), items, store.config, changed_items, dhf_path.resolve().name),
     ]
+
+
+def _changes_beyond(cr_id: str, changed_items: dict[str, list[str]], code_changed: list[str]) -> list[str]:
+    """What the branch changes besides the CR: items first, then files."""
+    items = [uid for bucket in ("created", "updated", "deleted") for uid in changed_items.get(bucket, []) if uid != cr_id]
+    return [*dict.fromkeys(items), *code_changed]
+
+
+def _rejected_but_changed(cr_id: str, beyond: list[str]) -> dict:
+    shown = ", ".join(beyond[:5]) + (f" and {len(beyond) - 5} more" if len(beyond) > 5 else "")
+    return {
+        "field": "triage_result",
+        "issue": f"{cr_id} is marked rejected, but the branch changes {shown}; a rejected CR changes nothing.",
+        "fix": f"Revert the changes, or remove the rejection from {cr_id}'s triage_result and record its impact.",
+    }
 
 
 def _unreviewed_impact(dhf_path: Path, cr_id: str, changed_items: dict[str, list[str]]) -> list[dict]:
@@ -298,8 +321,6 @@ def _unreviewed_code(dhf_path: Path, cr_id: str, changed_items: dict[str, list[s
 
     store = open_store(dhf_path)
     cr_item = store.get_item(cr_id)
-    if triage_rejected(cr_item):
-        return []
     findings = []
     for path, modules in code_dependents(store, cr_item, code_changed, {
         "created": changed_items.get("created", []), "updated": changed_items.get("updated", []),
@@ -533,8 +554,8 @@ def impact_analysis_closure_errors(cr_item: dict, items: list[dict], config,
 
 def _check_impact_analysis(cr_item: dict | None, items: list[dict], config,
                            changed_items: dict[str, list[str]], dhf: str = "DHF") -> list[dict]:
-    # A CR triage rejected has no design; a missing one is `_check_cr_workflow_fields`'s to report.
-    if cr_item is None or triage_rejected(cr_item):
+    # A missing CR is `_check_cr_workflow_fields`'s to report.
+    if cr_item is None:
         return []
     errors = impact_analysis_shape_errors(cr_item["id"], cr_item.get("impact_analysis"), dhf)
     return errors or impact_analysis_closure_errors(cr_item, items, config, changed_items, dhf)

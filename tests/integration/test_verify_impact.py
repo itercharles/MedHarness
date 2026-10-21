@@ -105,7 +105,8 @@ def test_a_dependent_of_a_changed_item_nobody_reviewed_fails(repo: Path) -> None
     assert any(e.startswith("impact.RCM-001") for e in answer["errors"]), answer["errors"]
 
 
-def test_a_cr_triage_rejected_is_not_checked(repo: Path) -> None:
+def test_a_cr_triage_rejected_on_a_branch_that_changes_only_the_cr_is_not_checked(repo: Path) -> None:
+    _git(repo, "checkout", "main", "--", str(next((repo / "DHF" / "items").rglob("SYS-001.yaml")).relative_to(repo)))
     path = next((repo / "DHF" / "items").rglob("CR-001.yaml"))
     data = yaml.safe_load(path.read_text())
     del data["impact_analysis"]
@@ -113,6 +114,18 @@ def test_a_cr_triage_rejected_is_not_checked(repo: Path) -> None:
     path.write_text(yaml.safe_dump(data))
     result, answer = _impact(repo)
     assert result.exit_code == 0, answer["errors"]
+
+
+def test_a_cr_marked_rejected_whose_branch_changes_items_is_checked(repo: Path) -> None:
+    path = next((repo / "DHF" / "items").rglob("CR-001.yaml"))
+    data = yaml.safe_load(path.read_text())
+    del data["impact_analysis"]
+    data["triage_result"] = {"verdict": "rejected", "notes": "duplicate"}
+    path.write_text(yaml.safe_dump(data))
+    result, answer = _impact(repo)
+    assert result.exit_code == 1
+    assert answer["errors"][0].startswith("triage_result:"), answer["errors"]
+    assert any(e.startswith("impact_analysis") for e in answer["errors"]), answer["errors"]
 
 
 def test_a_cr_that_is_not_in_the_dhf_is_named(repo: Path) -> None:
