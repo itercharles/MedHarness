@@ -4,8 +4,8 @@ Everything in `DHF/config/` that you can change, and what each change reaches.
 
 ## Changing the defaults
 
-MedHarness reads two layers. The **defaults** ship inside the package: 13 item
-types — CRS, UC, SYS, SYSARCH, MODULE, SRS, SWDD, RISK, RCM, SOUP, CR, DEF, REL —
+MedHarness reads two layers. The **defaults** ship inside the package: 14 item
+types — CRS, UC, SYS, SYSARCH, MODULE, SRS, SWDD, RISK, RCM, SOUP, CR, DEF, REL, APPROVAL —
 each with its fields and lifecycle, plus the rules for which links are required
 and the templates for the specifications. **Your project** adds files under
 `DHF/config/` and `DHF/documents/specs/`. Where your project has one, it is used

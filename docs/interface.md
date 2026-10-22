@@ -57,6 +57,7 @@ result = json.loads(lines[0])
 | `verify completion` | CR closure: mandatory CR fields, that the CR's affected_items exist, and verification evidence for each. | `--cr` (required), `--junit` | no | `always` |
 | `verify impact` | That the CR's record of its impact (impact_analysis, reviewed_items, affected_risk_items) is complete, evidenced and settles every item the branch's changes reach. | `--cr` (required), `--since-ref` | no | `always` |
 | `verify changes` | That the branch, uncommitted work included, changes exactly the items its CR lists, and code when asked. | `--cr` (required), `--since-ref`, `--code-path` | no | `always` |
+| `verify approval` | That each changed item carries a current signed approval from the role its type needs, that approvals are only added, and that a change to the approvers list is approved from the list as it was. | `--since-ref`, `--all` | no | `always` |
 <!-- END GENERATED: gates -->
 
 Every check answers from the machine it runs on, and none reads GitHub. Approval is not a check: GitHub's branch protection — required approvals, stale approvals dismissed on push — enforces it, on the server, where a pull request cannot edit the rule away.
@@ -365,7 +366,7 @@ verification_method: [Test]
 | `id` | Required. Its prefix (`SRS-`) picks the doc type |
 | Fields | Only those the doc type declares. An undeclared field fails `medharness verify dhf`, naming it — declare it by overriding the doc type first |
 | Links | Fields of format `relationship` or `item_multiselect`: a list of IDs pointing up the V-model, each of a type the field's `target_types` accepts. Which are required is `required_traceability` in `global.yaml` |
-| Types | The 13 defaults, plus any `DHF/config/doc_types/<type>.yaml` of your own, which replaces the default of that code — see [configuration.md](configuration.md#changing-the-defaults) |
+| Types | The 14 defaults, plus any `DHF/config/doc_types/<type>.yaml` of your own, which replaces the default of that code — see [configuration.md](configuration.md#changing-the-defaults) |
 
 Check an export with `medharness verify dhf`: it validates each file against its type, then the links and coverage of the design they describe.
 
@@ -449,11 +450,13 @@ Generated from the CLI by `python scripts/generate_interface.py`; a test fails w
 | `item create` | Create a new DHF item. Outputs the created item as JSON. |
 | `item update` | Update fields of an existing DHF item. |
 | `item transition` | Move an item to TO_STATE, or list where it can go when TO_STATE is omitted. |
+| `item approve` | Sign an approval of the items the key's roles may approve and that lack a current one. |
 | `verify dhf` | Check the DHF holds together: schema, links, cycles, coverage. |
 | `verify tests` | Check each requirement is verified by the method it declares. |
 | `verify completion` | Check a CR's record is complete and the items it changed are verified. |
 | `verify changes` | Check the branch changed the items the CR said it would. |
 | `verify impact` | Check the CR's record of its impact against the items the branch changed. |
+| `verify approval` | Check each changed item carries a current, signed approval from its role. |
 | `verify soup` | Check the SOUP register matches what ships, and is not known-vulnerable. |
 | `build plan` | Draft the DHF item cascade and impact analysis for a CR, with a model. |
 | `build code` | Write the code and tests for a CR's approved design, with a model. |
@@ -496,6 +499,21 @@ Update fields of an existing DHF item.
 #### `medharness item transition ITEM_ID [TO_STATE]`
 
 Move an item to TO_STATE, or list where it can go when TO_STATE is omitted.
+
+#### `medharness item approve`
+
+Sign an approval of the items the key's roles may approve and that lack a current one.
+
+| Option | |
+|---|---|
+| `--key PATH` | The private key to sign with. Never ssh-agent: name the key. [required] |
+| `--role ROLE` | A role to approve as (repeatable). Default: every role the key's owner holds. |
+| `--cr CR_ID` | Only the items this CR lists in affected_items that the branch changed, and the CR itself. |
+| `--since-ref REF` | What the branch is compared against: its changes since it left this ref. Default: the branch origin's HEAD points at, else origin/main. |
+| `--all` | Approve every item without a current approval, not only those the branch changed. |
+| `--approvers` | Also approve the current approvers list (DHF/config/approvers.yaml). |
+| `--statement TEXT` | What the signer states; it is signed with the approval. [default: I have reviewed these items and approve them as written.] |
+| `--yes` | Do not ask for confirmation. |
 
 #### `medharness verify dhf`
 
@@ -541,6 +559,15 @@ Check the CR's record of its impact against the items the branch changed.
 |---|---|
 | `--cr CR_ID` | The CR whose record of its impact is checked against the branch. [required] |
 | `--since-ref REF` | What the branch is compared against: its changes since it left this ref. Default: the branch origin's HEAD points at, else origin/main. Needs enough history to reach the fork. |
+
+#### `medharness verify approval`
+
+Check each changed item carries a current, signed approval from its role.
+
+| Option | |
+|---|---|
+| `--since-ref REF` | What the branch is compared against: its changes since it left this ref. Default: the branch origin's HEAD points at, else origin/main. Needs enough history to reach the fork. |
+| `--all` | Check every item, not only those the branch changed. |
 
 #### `medharness verify soup`
 

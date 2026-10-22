@@ -156,3 +156,61 @@ def register(main):
             raise click.ClickException(str(e)) from e
         click.echo(json.dumps(result, default=str))
         click.echo(f"✓ {item_id}: {result.get('status')}.", err=True)
+
+
+    @item.command("approve")
+    @click.option("--key", "key_path", required=True, metavar="PATH",
+                  type=click.Path(exists=True, dir_okay=False, path_type=Path),
+                  help="The private key to sign with. Never ssh-agent: name the key.")
+    @click.option("--role", "roles", multiple=True, metavar="ROLE",
+                  help="A role to approve as (repeatable). Default: every role the key's owner holds.")
+    @click.option("--cr", "cr_id", default=None, metavar="CR_ID",
+                  help="Only the items this CR lists in affected_items that the branch changed, and the CR itself.")
+    @click.option("--since-ref", default=None, metavar="REF",
+                  help="What the branch is compared against: its changes since it left this ref. "
+                       "Default: the branch origin's HEAD points at, else origin/main.")
+    @click.option("--all", "all_items", is_flag=True, default=False,
+                  help="Approve every item without a current approval, not only those the branch changed.")
+    @click.option("--approvers", "approvers_list", is_flag=True, default=False,
+                  help="Also approve the current approvers list (DHF/config/approvers.yaml).")
+    @click.option("--statement", default="I have reviewed these items and approve them as written.", show_default=True,
+                  help="What the signer states; it is signed with the approval.")
+    @click.option("--yes", is_flag=True, default=False, help="Do not ask for confirmation.")
+    @click.pass_context
+    def item_approve(ctx: click.Context, key_path: Path, roles: tuple[str, ...], cr_id: str | None,
+                     since_ref: str | None, all_items: bool, approvers_list: bool,
+                     statement: str, yes: bool) -> None:
+        """Sign an approval of the items the key's roles may approve and that lack a current one.
+
+        Lists the pending items, asks, then records one APPROVAL item and signs its file with the
+        key, so one touch approves a whole review. Outputs the APPROVAL item as JSON; with nothing
+        pending it records nothing and says so. Needs `DHF/config/approvers.yaml`.
+        """
+        from dhfkit.exceptions import DHFDataError  # noqa: PLC0415
+        from medharness.services import approve  # noqa: PLC0415
+        from medharness.services.approval import ApprovalError  # noqa: PLC0415
+
+        if cr_id and all_items:
+            raise click.UsageError("--cr and --all choose different scopes; pass one.")
+        dhf_path: Path = ctx.obj["dhf"]
+        try:
+            plan = approve.prepare(dhf_path, key_path, roles=roles, cr_id=cr_id, since_ref=since_ref,
+                                   all_items=all_items, approvers_list=approvers_list)
+            if plan is None:
+                raise click.ClickException("Approvals are not configured: add DHF/config/approvers.yaml first.")
+            if not plan.entries:
+                click.echo(json.dumps({"summary": f"Nothing pending for {plan.approver.name} as {', '.join(roles) or 'any role'}."}))
+                click.echo("Nothing pending: no item needs an approval this key's roles may give.", err=True)
+                return
+            click.echo(f"{plan.approver.name} approves, as {', '.join(plan.roles)}:", err=True)
+            for gap in plan.gaps:
+                click.echo(f"  {gap.id} ({gap.type}, {' or '.join(gap.roles)})", err=True)
+            if approvers_list:
+                click.echo("  the approvers list", err=True)
+            if not yes:
+                click.confirm("Sign?", abort=True, err=True)
+            created = approve.sign(key_path, plan, statement)
+        except (ApprovalError, DHFDataError) as e:
+            raise click.ClickException(str(e)) from e
+        click.echo(json.dumps(created, default=str))
+        click.echo(f"✓ Created {created['id']}, signed with {key_path.name}. Commit it with the files it approves.", err=True)

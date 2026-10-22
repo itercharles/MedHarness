@@ -38,6 +38,7 @@ replaces the default type of that code.
 | `CR` | Change request | `affected_items`, `affected_risk_items` → RISK/RCM, `target_release` → REL |
 | `DEF` | Defect | `affected_items`, `found_in_release` → REL |
 | `REL` | Release record | `included_items` → CR |
+| `APPROVAL` | Signed approval of items | `items` (id, content hash), written by `item approve` |
 
 A link is written on the child and points up to its parent. Which links are
 required is `required_traceability` — a default you can override in `global.yaml`.

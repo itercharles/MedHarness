@@ -256,6 +256,35 @@ def register(main):
             click.echo(f"    Fix: {finding['fix']}", err=True)
         raise click.exceptions.Exit(1)
 
+    @verify.command("approval")
+    @click.option("--since-ref", default=None, metavar="REF",
+                  help="What the branch is compared against: its changes since it left this ref. "
+                       "Default: the branch origin's HEAD points at, else origin/main. "
+                       "Needs enough history to reach the fork.")
+    @click.option("--all", "all_items", is_flag=True, default=False,
+                  help="Check every item, not only those the branch changed.")
+    @click.pass_context
+    def verify_approval(ctx: click.Context, since_ref: str | None, all_items: bool) -> None:
+        """Check each changed item carries a current, signed approval from its role.
+
+        An approval binds to the item file's bytes, so editing an item leaves its approval
+        behind. Checks every signature against `DHF/config/approvers.yaml`, that each signer
+        holds the role the item's type needs (`approval_roles` in global.yaml), that approvals
+        are only ever added, and that a change to the approvers list is approved by someone
+        on the list as it was before. A signature made without a proven touch of the key warns.
+
+        Does nothing until `approvers.yaml` exists. Compares the working tree, so it runs
+        before anything is committed as well as in CI. Needs a reachable `--since-ref`.
+        """
+        from medharness.services.verify_approval import approval_gate  # noqa: PLC0415
+
+        result = approval_gate(ctx.obj["dhf"], since_ref=since_ref, all_items=all_items)
+        emit(result)
+        render_envelope(result, "approval")
+        click.echo(result["summary"], err=True)
+        if not result["passed"]:
+            raise click.exceptions.Exit(1)
+
     @verify.command("soup")
     @click.option("--manifest", "manifest_paths", multiple=True,
                   type=click.Path(exists=True, dir_okay=False, path_type=Path),

@@ -80,4 +80,14 @@ GATES: tuple[dict[str, Any], ...] = (
                          "is given.",
         "needs_network": False,
     },
+    {
+        "command": "verify approval",
+        "checks": "That each changed item carries a current signed approval from the role "
+                  "its type needs, that approvals are only added, and that a change to the "
+                  "approvers list is approved from the list as it was.",
+        "blocking": "always",
+        "blocking_note": "Does nothing until DHF/config/approvers.yaml exists. A signature "
+                         "made without a proven touch of the key only warns.",
+        "needs_network": False,
+    },
 )
