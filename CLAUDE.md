@@ -22,8 +22,8 @@ dependency on `medharness`, and no CLI of its own.
 
 | Group | Touches | Commands |
 |-------|---------|----------|
-| `item` | one DHF item at a time | `list` · `get` · `create` · `update` · `transition` |
-| `verify` | reads the DHF and the working tree | `dhf` · `tests` · `soup` · `completion` · `impact` · `changes` |
+| `item` | one DHF item at a time | `list` · `get` · `create` · `update` · `transition` · `approve` |
+| `verify` | reads the DHF and the working tree | `dhf` · `tests` · `soup` · `completion` · `impact` · `changes` · `approval` |
 | `build` | writes items, code or artifacts | `plan` · `code` · `soup` · `release` |
 | `init` | scaffolds a project | — |
 

@@ -121,6 +121,8 @@ class ProjectConfig(BaseModel):
     required_traceability: List[RequiredTraceabilityRule] = Field(default_factory=list, description="Required traceability rules; none means no link is required")
     document_specifications: dict = Field(default_factory=dict, description="Document specification configurations")
     impact_depth: int = Field(1, description="How many links from a changed item `verify changes` looks for dependents that were not reviewed; 0 turns it off")
+    approval_roles: dict[str, List[str]] = Field(default_factory=dict, description="Per item type code, the roles whose signature the release's specification of that type needs; a type with no entry needs none. Read only when DHF/config/approvers.yaml exists")
+    release_role: str = Field("quality-lead", description="The role whose signature the release as a whole needs, over its manifest. Read only when DHF/config/approvers.yaml exists")
     unowned_paths: List[str] = Field(default_factory=list, description="Paths no MODULE has to own (docs, CI, lockfiles): a directory ends in '/', anything else is a file or glob")
     placeholder_patterns: List[str] = Field(default_factory=list, description="Regular expressions for text that stands in for content (TBD, the starter items' 'Replace with your own')")
     store: dict = Field(default_factory=lambda: {"type": "yaml"}, description="Where items are kept: `type`, and that adapter's settings")
