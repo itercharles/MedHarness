@@ -6,20 +6,19 @@ import json
 from pathlib import Path
 
 from fixtures.approvals import build_project
-from fixtures.starter import keep_the_starter_text
 
 
 def test_strict_verify_dhf_gives_the_same_answer_with_an_approval_on_file(tmp_path: Path) -> None:
     project = build_project(tmp_path)
-    keep_the_starter_text(project.dhf)
-    project.edit("SRS-001", content="Changed.")
+    project.ready_to_release()
+    project.release()
 
     def strict() -> dict:
         result = project.run("verify", "dhf", "--strict")
         return json.loads(result.stdout.splitlines()[0])
 
     before = strict()
-    assert project.approve("Lead").exit_code == 0
+    assert project.sign("Lead").exit_code == 0
     after = strict()
 
     assert after["errors"] == before["errors"] and after["warnings"] == before["warnings"]
@@ -34,9 +33,10 @@ def test_the_starter_dhf_ships_no_approval(tmp_path: Path) -> None:
 
 def test_item_list_does_not_show_approval_records(tmp_path: Path) -> None:
     project = build_project(tmp_path)
-    project.edit("SRS-001", content="Changed.")
+    project.ready_to_release()
+    project.release()
     before = project.run("item", "list").stdout
-    assert project.approve("Lead").exit_code == 0
+    assert project.sign("Lead").exit_code == 0
     uid = project.records()[0].stem
 
     result = project.run("item", "list")

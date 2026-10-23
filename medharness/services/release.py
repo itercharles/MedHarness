@@ -21,6 +21,8 @@ import click
 
 from dhfkit.store import open_store
 from medharness.services import git
+from medharness.services.approval import ApprovalError
+from medharness.services.release_manifest import write_release_files
 from medharness.services.soup_sync import _KNOWN_MANIFESTS, _dispatch_parser
 from medharness.services.traceability import coverage_matrices
 from medharness.services.verify_release import (
@@ -308,7 +310,7 @@ def build_evidence_bundle(
 
     Records the gate it is given rather than running its own. The manifest
     hashes every file in ``out_dir``, so whatever was written there before this
-    runs is covered too. Returns the manifest.
+    runs is covered too. Returns the manifest, and the specifications it rendered.
     """
     adapter = open_store(dhf_path)
 
@@ -343,7 +345,7 @@ def build_evidence_bundle(
     (out_dir / "evidence-manifest.json").write_text(
         json.dumps(manifest, indent=2, default=str) + "\n", encoding="utf-8"
     )
-    return manifest
+    return {**manifest, "specifications": artifacts["specifications"]}
 
 
 # ---------------------------------------------------------------------------
@@ -648,6 +650,17 @@ def build_release(
             # The artifacts are written; a REL the store refused is reported,
             # not raised, so the run still says what it produced.
             errors.append(f"Failed to create REL item: {exc}")
+        else:
+            store = open_store(dhf)
+            if store.tracks_files:
+                try:
+                    # After the REL, so the manifest's DHF hash covers it.
+                    write_release_files(dhf, version, store.list_items(), manifest["specifications"], out_dir,
+                                        baseline["cr_ids"], store.config)
+                except ApprovalError as exc:
+                    errors.append(f"Failed to write the release manifest: {exc}")
+            else:
+                warnings.append(f"No release manifest: the '{store.store_type}' store keeps no item files to hash.")
 
     return {
         "outcome": "completed_with_errors" if errors else "completed",

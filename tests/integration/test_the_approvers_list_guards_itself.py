@@ -27,7 +27,7 @@ def test_adding_a_key_without_an_approval_from_the_old_list_fails(project: Proje
 
     assert answer["passed"] is False
     assert "approvers.yaml changed" in answer["errors"][0]
-    assert "Lead, Pat" in answer["errors"][0]
+    assert "Lead, Pat, Sam, Quinn" in answer["errors"][0]
 
 
 def test_an_added_key_cannot_approve_its_own_addition(project: Project) -> None:

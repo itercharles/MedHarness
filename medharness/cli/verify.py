@@ -261,24 +261,30 @@ def register(main):
                   help="What the branch is compared against: its changes since it left this ref. "
                        "Default: the branch origin's HEAD points at, else origin/main. "
                        "Needs enough history to reach the fork.")
-    @click.option("--all", "all_items", is_flag=True, default=False,
-                  help="Check every item, not only those the branch changed.")
+    @click.option("--release", "release", default=None, metavar="VERSION",
+                  help="Also check that release VERSION is signed: every document of its manifest by the role "
+                       "that owns it, the release by the release role, and the manifest still matches the DHF.")
     @click.pass_context
-    def verify_approval(ctx: click.Context, since_ref: str | None, all_items: bool) -> None:
-        """Check each changed item carries a current, signed approval from its role.
+    def verify_approval(ctx: click.Context, since_ref: str | None, release: str | None) -> None:
+        """Check the approval log is sound and, with --release, that the release is signed.
 
-        An approval binds to the item file's bytes, so editing an item leaves its approval
-        behind. Checks every signature against `DHF/config/approvers.yaml`, that each signer
-        holds the role the item's type needs (`approval_roles` in global.yaml), that approvals
-        are only ever added, and that a change to the approvers list is approved by someone
-        on the list as it was before. A signature made without a proven touch of the key warns.
+        Always checks every signature against `DHF/config/approvers.yaml`, that each signer holds
+        the roles the record claims, that approvals are only ever added, and that a change to the
+        approvers list is approved by someone on the list as it was before. It never asks for a
+        signature by itself. A signature made without a proven touch of the key warns.
 
-        Does nothing until `approvers.yaml` exists. Compares the working tree, so it runs
-        before anything is committed as well as in CI. Needs a reachable `--since-ref`.
+        With --release, each document in `DHF/releases/VERSION/manifest.yaml` whose type has a role
+        (`approval_roles` in global.yaml) needs a signature from that role over its current hash,
+        the release needs one from `release_role`, and an item edited since the manifest was
+        written fails here: rerun `build release`.
+
+        Does nothing until `approvers.yaml` exists, except that --release then fails. Compares the
+        working tree, so it runs before anything is committed as well as in CI. Needs a reachable
+        `--since-ref`.
         """
         from medharness.services.verify_approval import approval_gate  # noqa: PLC0415
 
-        result = approval_gate(ctx.obj["dhf"], since_ref=since_ref, all_items=all_items)
+        result = approval_gate(ctx.obj["dhf"], since_ref=since_ref, release=release)
         emit(result)
         render_envelope(result, "approval")
         click.echo(result["summary"], err=True)

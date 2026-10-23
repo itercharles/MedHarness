@@ -11,39 +11,47 @@ from fixtures.approvals import Project, build_project, git
 @pytest.fixture
 def project(tmp_path: Path) -> Project:
     project = build_project(tmp_path)
-    project.edit("SRS-001", content="Changed requirement.")
-    assert project.approve("Lead").exit_code == 0
-    assert project.verify()["passed"] is True
+    project.ready_to_release()
+    project.release()
+    assert project.sign("Lead").exit_code == 0
     git(project.root, "add", "-A")
-    git(project.root, "commit", "-qm", "approved")
+    git(project.root, "commit", "-qm", "signed")
     git(project.root, "checkout", "-q", "main")
     git(project.root, "merge", "-q", "--ff-only", "feat")
     git(project.root, "checkout", "-q", "-b", "next")
     return project
 
 
-def test_a_tampered_approval_fails_its_signature(project: Project) -> None:
-    file = project.records()[0]
-    file.write_text(file.read_text().replace("SRS-001", "SRS-002"), encoding="utf-8")
+def _srs_is_unsigned(answer: dict) -> bool:
+    return any("SRS document" in e for e in answer["errors"])
 
-    answer = project.verify("--all")
+
+def test_a_signed_release_stands_once_merged(project: Project) -> None:
+    assert not _srs_is_unsigned(project.verify("--release", "1.0.0"))
+
+
+def test_a_tampered_approval_fails_its_signature_and_stops_counting(project: Project) -> None:
+    file = project.records()[0]
+    file.write_text(file.read_text().replace("id: SRS", "id: SYS"), encoding="utf-8")
+
+    answer = project.verify("--release", "1.0.0")
 
     assert answer["passed"] is False
     assert any("signature does not verify" in e for e in answer["errors"])
-    assert any("SRS-001" in e and "no current approval" in e for e in answer["errors"])
+    assert _srs_is_unsigned(answer)
 
 
 def test_an_approval_without_its_signature_counts_for_nothing(project: Project) -> None:
     project.records()[0].with_suffix(".yaml.sig").unlink()
 
-    answer = project.verify()
+    answer = project.verify("--release", "1.0.0")
 
-    assert answer["passed"] is False
     assert any("no signature file" in e for e in answer["errors"])
+    assert _srs_is_unsigned(answer)
 
 
 def test_an_approval_that_names_another_signer_is_invalid(project: Project) -> None:
-    project.forge("Lead", signer="Pat", roles=["software-lead"], items=[project.pin("SRS-001")])
+    project.forge("Lead", signer="Pat", roles=["software-lead"], documents=[project.pin("SRS")])
 
     assert any("its key belongs to Lead" in e for e in project.verify()["errors"])
 

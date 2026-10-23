@@ -9,7 +9,8 @@ from fixtures.approvals import build_project
 
 def test_a_project_without_an_approvers_list_passes_untouched(tmp_path: Path) -> None:
     project = build_project(tmp_path, with_approvers=False)
-    project.edit("SRS-001", content="Changed.")
+    project.ready_to_release()
+    project.release()
 
     answer = project.verify()
 
@@ -20,7 +21,7 @@ def test_a_project_without_an_approvers_list_passes_untouched(tmp_path: Path) ->
 def test_approving_without_an_approvers_list_says_how_to_turn_it_on(tmp_path: Path) -> None:
     project = build_project(tmp_path, with_approvers=False)
 
-    result = project.approve("Lead")
+    result = project.sign("Lead")
 
     assert result.exit_code == 1
     assert "approvers.yaml" in result.stderr

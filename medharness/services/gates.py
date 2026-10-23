@@ -82,12 +82,14 @@ GATES: tuple[dict[str, Any], ...] = (
     },
     {
         "command": "verify approval",
-        "checks": "That each changed item carries a current signed approval from the role "
-                  "its type needs, that approvals are only added, and that a change to the "
-                  "approvers list is approved from the list as it was.",
+        "checks": "That every approval is signed by an approver holding its roles, that approvals "
+                  "are only added, and that a change to the approvers list is approved from the "
+                  "list as it was. With --release: that each document of the release manifest "
+                  "and the release itself carry a current signature from their role.",
         "blocking": "always",
-        "blocking_note": "Does nothing until DHF/config/approvers.yaml exists. A signature "
-                         "made without a proven touch of the key only warns.",
+        "blocking_note": "Does nothing until DHF/config/approvers.yaml exists, and never asks for a "
+                         "signature without --release. A signature made without a proven touch of "
+                         "the key only warns.",
         "needs_network": False,
     },
 )

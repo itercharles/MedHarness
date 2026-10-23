@@ -57,7 +57,7 @@ result = json.loads(lines[0])
 | `verify completion` | CR closure: mandatory CR fields, that the CR's affected_items exist, and verification evidence for each. | `--cr` (required), `--junit` | no | `always` |
 | `verify impact` | That the CR's record of its impact (impact_analysis, reviewed_items, affected_risk_items) is complete, evidenced and settles every item the branch's changes reach. | `--cr` (required), `--since-ref` | no | `always` |
 | `verify changes` | That the branch, uncommitted work included, changes exactly the items its CR lists, and code when asked. | `--cr` (required), `--since-ref`, `--code-path` | no | `always` |
-| `verify approval` | That each changed item carries a current signed approval from the role its type needs, that approvals are only added, and that a change to the approvers list is approved from the list as it was. | `--since-ref`, `--all` | no | `always` |
+| `verify approval` | That every approval is signed by an approver holding its roles, that approvals are only added, and that a change to the approvers list is approved from the list as it was. With --release: that each document of the release manifest and the release itself carry a current signature from their role. | `--since-ref`, `--release` | no | `always` |
 <!-- END GENERATED: gates -->
 
 Every check answers from the machine it runs on, and none reads GitHub. Approval is not a check: GitHub's branch protection — required approvals, stale approvals dismissed on push — enforces it, on the server, where a pull request cannot edit the rule away.
@@ -450,13 +450,13 @@ Generated from the CLI by `python scripts/generate_interface.py`; a test fails w
 | `item create` | Create a new DHF item. Outputs the created item as JSON. |
 | `item update` | Update fields of an existing DHF item. |
 | `item transition` | Move an item to TO_STATE, or list where it can go when TO_STATE is omitted. |
-| `item approve` | Sign an approval of the items the key's roles may approve and that lack a current one. |
+| `item approve` | Sign a release's documents, or the approvers list. |
 | `verify dhf` | Check the DHF holds together: schema, links, cycles, coverage. |
 | `verify tests` | Check each requirement is verified by the method it declares. |
 | `verify completion` | Check a CR's record is complete and the items it changed are verified. |
 | `verify changes` | Check the branch changed the items the CR said it would. |
 | `verify impact` | Check the CR's record of its impact against the items the branch changed. |
-| `verify approval` | Check each changed item carries a current, signed approval from its role. |
+| `verify approval` | Check the approval log is sound and, with --release, that the release is signed. |
 | `verify soup` | Check the SOUP register matches what ships, and is not known-vulnerable. |
 | `build plan` | Draft the DHF item cascade and impact analysis for a CR, with a model. |
 | `build code` | Write the code and tests for a CR's approved design, with a model. |
@@ -502,17 +502,14 @@ Move an item to TO_STATE, or list where it can go when TO_STATE is omitted.
 
 #### `medharness item approve`
 
-Sign an approval of the items the key's roles may approve and that lack a current one.
+Sign a release's documents, or the approvers list.
 
 | Option | |
 |---|---|
 | `--key PATH` | The private key to sign with. Never ssh-agent: name the key. [required] |
-| `--role ROLE` | A role to approve as (repeatable). Default: every role the key's owner holds. |
-| `--cr CR_ID` | Only the items this CR lists in affected_items that the branch changed, and the CR itself. |
-| `--since-ref REF` | What the branch is compared against: its changes since it left this ref. Default: the branch origin's HEAD points at, else origin/main. |
-| `--all` | Approve every item without a current approval, not only those the branch changed. |
-| `--approvers` | Also approve the current approvers list (DHF/config/approvers.yaml). |
-| `--statement TEXT` | What the signer states; it is signed with the approval. [default: I have reviewed these items and approve them as written.] |
+| `--release VERSION` | Sign the documents of this release that the key's roles own (and the release itself, for the release role). Needs the manifest `build release --write` made. |
+| `--approvers` | Instead, approve the current approvers list (DHF/config/approvers.yaml). |
+| `--statement TEXT` | What the signer states; it is signed with the approval. [default: I have reviewed the changes to these documents and approve them for release.] |
 | `--yes` | Do not ask for confirmation. |
 
 #### `medharness verify dhf`
@@ -562,12 +559,12 @@ Check the CR's record of its impact against the items the branch changed.
 
 #### `medharness verify approval`
 
-Check each changed item carries a current, signed approval from its role.
+Check the approval log is sound and, with --release, that the release is signed.
 
 | Option | |
 |---|---|
 | `--since-ref REF` | What the branch is compared against: its changes since it left this ref. Default: the branch origin's HEAD points at, else origin/main. Needs enough history to reach the fork. |
-| `--all` | Check every item, not only those the branch changed. |
+| `--release VERSION` | Also check that release VERSION is signed: every document of its manifest by the role that owns it, the release by the release role, and the manifest still matches the DHF. |
 
 #### `medharness verify soup`
 
@@ -610,7 +607,7 @@ Build everything one release needs (IEC 62304 §9).
 |---|---|
 | `--version VERSION` | The version being released, e.g. 1.2.0. [required] |
 | `--out-dir DIRECTORY` | Where to write the baseline, BOM, SBOM and evidence bundle. [required] |
-| `--write` | Record a REL item in the DHF. Happens only when every check passed; without it the DHF is not changed. |
+| `--write` | Record a REL item in the DHF and write DHF/releases/VERSION/manifest.yaml and changes.md. Happens only when every check passed; without it the DHF is not changed. |
 | `--cr CR_ID` | A CR to include (repeatable). Default: every completed CR not yet in a release. |
 | `--manifest PATH` | Dependency manifest whose packages the BOM lists beside the SOUP register (repeatable). |
 | `--junit PATH` | JUnit XML from the tests of this release: a file, or a directory searched for *.xml (repeatable). Every requirement must be verified by it. [required] |

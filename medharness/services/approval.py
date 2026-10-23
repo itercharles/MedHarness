@@ -1,9 +1,10 @@
-"""Signed approvals: content hashes, keys, and which items the approvals on file cover.
+"""Signed approvals: content hashes, keys, and the records on file.
 
 Shared by `verify approval`, which judges them, and `item approve`, which writes one.
 An approval is a record in the log `DHF/approvals/<scope>/<ULID>.yaml`, kept apart from the
 items; its file is signed with `ssh-keygen -Y sign` and the signature sits beside it as
-`<file>.sig`, covering the file's bytes.
+`<file>.sig`, covering the file's bytes. A record signs `documents`: a release's
+specifications and the release itself, or the approvers list.
 """
 
 from __future__ import annotations
@@ -22,10 +23,11 @@ from dhfkit.approvers import Approver, load_approvers
 from dhfkit.store import DHFStore, open_store
 
 NAMESPACE = "medharness-approval"
-#: The `id` an approval's `items` entry uses for the approvers list.
+#: The `id` a record's `documents` entry uses for the approvers list, and for the release manifest.
 APPROVERS_ID = "approvers"
+RELEASE_ID = "release"
 APPROVALS_DIR = "approvals"
-#: The scope of an approval given outside any CR.
+#: The folder of an approval given outside any release.
 UNSCOPED = "unscoped"
 _CROCKFORD = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"
 
@@ -42,6 +44,10 @@ def new_ulid() -> str:
 
 def approvals_dir(dhf_path: Path) -> Path:
     return Path(dhf_path) / APPROVALS_DIR
+
+
+def release_folder(version: str) -> str:
+    return f"release-{version}"
 
 
 def content_hash(path: Path) -> str:
@@ -81,6 +87,7 @@ class Roster:
 @dataclass(frozen=True)
 class Approval:
     id: str
+    release: str | None
     roles: tuple[str, ...]
     hashes: dict[str, str]
     approver: Approver
@@ -117,7 +124,7 @@ def check_signature(record: dict, path: Path, roster: Roster) -> tuple[Approver 
 
 
 def _hashes(record: dict) -> dict[str, str] | None:
-    entries = record.get("items")
+    entries = record.get("documents")
     if not isinstance(entries, list):
         return None
     hashes: dict[str, str] = {}
@@ -147,43 +154,19 @@ def evaluate(dhf_path: Path, roster: Roster) -> tuple[list[Approval], list[str]]
             approver, problem = check_signature(record, path, roster)
             hashes = _hashes(record)
             if problem is None and hashes is None:
-                problem = f"{uid} does not list its items as {{id, hash}} entries"
+                problem = f"{uid} does not list its documents as {{id, hash}} entries"
         if problem is not None or approver is None or hashes is None:
             problems.append(f"{problem}. It counts for nothing; an approver records a new approval with `medharness item approve`.")
             continue
-        valid.append(Approval(uid, tuple(record["roles"]), hashes, approver))
+        valid.append(Approval(uid, record.get("release"), tuple(record["roles"]), hashes, approver))
     return valid, problems
-
-
-@dataclass(frozen=True)
-class Gap:
-    """An item whose current content no approval from its role covers."""
-    id: str
-    type: str
-    roles: tuple[str, ...]
-    hash: str
-
-
-def gaps(items: dict[str, dict], scope: list[str], approvals: list[Approval], approval_roles: dict[str, list[str]]) -> list[Gap]:
-    found = []
-    for uid in sorted(set(scope)):
-        record = items.get(uid)
-        if record is None or not approval_roles.get(record["type"]):
-            continue
-        needed = approval_roles[record["type"]]
-        now = content_hash(Path(record["file_path"]))
-        if not any(a.hashes.get(uid) == now and set(a.roles) & set(needed) for a in approvals):
-            found.append(Gap(uid, record["type"], tuple(needed), now))
-    return found
 
 
 @dataclass
 class Standing:
     """The approvals on file for a DHF whose project keeps an approvers list."""
     store: DHFStore
-    approvers: list[Approver]
     roster: Roster
-    items: dict[str, dict]
     approvals: list[Approval]
     problems: list[str]
 
@@ -195,6 +178,5 @@ def read_standing(dhf_path: Path) -> Standing | None:
         return None
     store = open_store(dhf_path)
     roster = Roster(approvers)
-    items = {item["id"]: item for item in store.list_items()}
     approvals, problems = evaluate(dhf_path, roster)
-    return Standing(store, approvers, roster, items, approvals, problems)
+    return Standing(store, roster, approvals, problems)

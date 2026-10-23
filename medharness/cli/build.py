@@ -209,8 +209,8 @@ def register(main):
     @click.option("--out-dir", required=True, type=click.Path(file_okay=False, path_type=Path),
                   help="Where to write the baseline, BOM, SBOM and evidence bundle.")
     @click.option("--write", is_flag=True, default=False,
-                  help="Record a REL item in the DHF. Happens only when every check "
-                       "passed; without it the DHF is not changed.")
+                  help="Record a REL item in the DHF and write DHF/releases/VERSION/manifest.yaml and "
+                       "changes.md. Happens only when every check passed; without it the DHF is not changed.")
     @click.option("--cr", "cr_ids", multiple=True, metavar="CR_ID",
                   help="A CR to include (repeatable). Default: every completed CR "
                        "not yet in a release.")
@@ -235,7 +235,10 @@ def register(main):
         baseline, the software BOM, a CycloneDX SBOM, the specifications,
         traceability, test evidence, and a manifest hashing every file.
 
-        With --write, and only if all of that passed, records the REL item.
+        With --write, and only if all of that passed, records the REL item and writes
+        `DHF/releases/VERSION/manifest.yaml`, the item hashes each specification consists of and
+        what `item approve --release` signs, and `changes.md`, what changed in each since the
+        previous release (the one with the next lower version number).
         """
         from medharness.services.release import build_release
 
