@@ -182,9 +182,10 @@ def register(main):
                      statement: str, yes: bool) -> None:
         """Sign an approval of the items the key's roles may approve and that lack a current one.
 
-        Lists the pending items, asks, then records one APPROVAL item and signs its file with the
-        key, so one touch approves a whole review. Outputs the APPROVAL item as JSON; with nothing
-        pending it records nothing and says so. Needs `DHF/config/approvers.yaml`.
+        Lists the pending items, asks, then writes one record into the approval log
+        (`DHF/approvals/<CR or unscoped>/<ULID>.yaml`) and signs it with the key, so one touch
+        approves a whole review. Outputs the record and its path as JSON; with nothing pending it
+        records nothing and says so. Needs `DHF/config/approvers.yaml`.
         """
         from dhfkit.exceptions import DHFDataError  # noqa: PLC0415
         from medharness.services import approve  # noqa: PLC0415
@@ -209,7 +210,7 @@ def register(main):
                 click.echo("  the approvers list", err=True)
             if not yes:
                 click.confirm("Sign?", abort=True, err=True)
-            created = approve.sign(key_path, plan, statement)
+            created = approve.sign(dhf_path, key_path, plan, statement)
         except (ApprovalError, DHFDataError) as e:
             raise click.ClickException(str(e)) from e
         click.echo(json.dumps(created, default=str))

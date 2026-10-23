@@ -14,7 +14,7 @@ from click.testing import CliRunner
 
 from medharness.cli import main
 from medharness.scaffold import replace_placeholders, scaffold_dhf
-from medharness.services.approval import content_hash, fingerprint
+from medharness.services.approval import content_hash, fingerprint, new_ulid
 
 
 def require_ssh_keygen() -> None:
@@ -59,6 +59,10 @@ class Project:
     def item_file(self, uid: str) -> Path:
         return next((self.dhf / "items").rglob(f"{uid}.yaml"))
 
+    def records(self) -> list[Path]:
+        """The approval records in the log, oldest first."""
+        return sorted((self.dhf / "approvals").rglob("*.yaml"), key=lambda p: p.stem)
+
     def edit(self, uid: str, **fields) -> None:
         path = self.item_file(uid)
         data = yaml.safe_load(path.read_text())
@@ -79,20 +83,24 @@ class Project:
     def approve(self, who: str, *extra: str):
         return self.run("item", "approve", "--key", str(self.keys[who]), "--since-ref", "main", "--yes", *extra)
 
-    def forge(self, who: str, *, signer: str, roles: list[str], items: list[dict]) -> str:
-        """An APPROVAL signed by *who*'s key with whatever it claims, which `item approve` would refuse."""
-        from dhfkit.store import open_store
+    def forge(self, who: str, *, signer: str, roles: list[str], items: list[dict], file_id: str | None = None) -> str:
+        """A record signed by *who*'s key with whatever it claims, which `item approve` would refuse.
 
-        store = open_store(self.dhf)
-        created = store.create_item({
-            "type": "APPROVAL", "signer": signer, "roles": roles, "signed_at": "2026-10-22T09:30:00Z",
+        *file_id* is what the record's `id` says; it defaults to the file name.
+        """
+        uid = new_ulid()
+        folder = self.dhf / "approvals" / "unscoped"
+        folder.mkdir(parents=True, exist_ok=True)
+        path = folder / f"{uid}.yaml"
+        record = {
+            "id": file_id or uid, "cr": None, "signer": signer, "roles": roles, "signed_at": "2026-10-22T09:30:00Z",
             "statement": "forged", "items": items,
             "key": fingerprint(self.keys[who].with_name(self.keys[who].name + ".pub").read_text()),
-        })
-        path = self.item_file(created["id"])
+        }
+        path.write_text(yaml.safe_dump(record, sort_keys=False), encoding="utf-8")
         subprocess.run(["ssh-keygen", "-q", "-Y", "sign", "-f", str(self.keys[who]), "-n", "medharness-approval", str(path)],
                        check=True, capture_output=True, stdin=subprocess.DEVNULL)
-        return created["id"]
+        return uid
 
     def pin(self, uid: str) -> dict:
         return {"id": uid, "hash": content_hash(self.item_file(uid))}

@@ -2,16 +2,19 @@
 
 from __future__ import annotations
 
+import contextlib
 import subprocess
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
+import yaml
+
 from dhfkit.approvers import Approver, approvers_path
 from medharness.services import git
 from medharness.services.approval import (
-    APPROVAL_TYPE, APPROVERS_ID, NAMESPACE, ApprovalError, Gap, Standing, check_signature, content_hash,
-    fingerprint, gaps, read_standing, ssh_keygen,
+    APPROVERS_ID, NAMESPACE, UNSCOPED, ApprovalError, Gap, Standing, approvals_dir, check_signature,
+    content_hash, fingerprint, gaps, new_ulid, read_standing, ssh_keygen,
 )
 from medharness.services.verify_approval import changed_scope
 
@@ -22,6 +25,7 @@ class Plan:
     approver: Approver
     fingerprint: str
     roles: list[str]
+    cr_id: str | None
     gaps: list[Gap]
     entries: list[dict]
 
@@ -84,34 +88,40 @@ def prepare(
     if approvers_list:
         entries.append({"id": APPROVERS_ID, "hash": content_hash(approvers_path(dhf_path))})
         used = used or sorted(chosen)
-    return Plan(standing, approver, key_fp, used, pending, entries)
+    return Plan(standing, approver, key_fp, used, cr_id, pending, entries)
 
 
-def sign(private_key: Path, plan: Plan, statement: str) -> dict:
-    """Create the APPROVAL item and sign its file; the file is not written again afterwards."""
-    standing = plan.standing
-    created = standing.store.create_item({
-        "type": APPROVAL_TYPE,
+def sign(dhf_path: Path, private_key: Path, plan: Plan, statement: str) -> dict:
+    """Write the record into the log and sign its file; the file is not written again afterwards."""
+    uid = new_ulid()
+    record = {
+        "id": uid,
+        "cr": plan.cr_id,
         "signer": plan.approver.name,
         "roles": plan.roles,
         "signed_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "statement": statement,
         "items": plan.entries,
         "key": plan.fingerprint,
-    })
-    path = Path(standing.store.get_item(created["id"])["file_path"])
+    }
+    folder = approvals_dir(dhf_path) / (plan.cr_id or UNSCOPED)
+    path = folder / f"{uid}.yaml"
     signature = path.with_name(path.name + ".sig")
     try:
+        folder.mkdir(parents=True, exist_ok=True)
+        path.write_text(yaml.safe_dump(record, sort_keys=False, allow_unicode=True), encoding="utf-8")
         # stderr stays attached so a passphrase or "confirm user presence" prompt reaches the signer.
         done = subprocess.run(["ssh-keygen", "-Y", "sign", "-f", str(private_key), "-n", NAMESPACE, str(path)],
                               stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, check=False)
         problem = f"ssh-keygen could not sign (exit {done.returncode})" if done.returncode else None
         if problem is None:
-            _, problem = check_signature(standing.store.get_item(created["id"]), path, standing.roster)
+            _, problem = check_signature(record, path, plan.standing.roster)
         if problem is not None:
-            raise ApprovalError(f"{created['id']} was not recorded: {problem}")
+            raise ApprovalError(f"{uid} was not recorded: {problem}")
     except BaseException:
         path.unlink(missing_ok=True)
         signature.unlink(missing_ok=True)
+        with contextlib.suppress(OSError):
+            folder.rmdir()
         raise
-    return created
+    return {**record, "path": str(path)}

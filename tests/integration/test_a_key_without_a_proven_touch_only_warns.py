@@ -16,7 +16,7 @@ def test_a_valid_approval_from_a_no_touch_key_warns(tmp_path: Path) -> None:
     answer = project.verify()
 
     assert answer["passed"] is True
-    assert answer["warnings"] == ["APR-001 was signed with a key marked no_touch_required: made without proven presence."]
+    assert answer["warnings"] == [f"{project.records()[0].stem} was signed with a key marked no_touch_required: made without proven presence."]
 
 
 def test_a_key_that_proves_presence_leaves_no_warning(tmp_path: Path) -> None:

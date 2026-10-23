@@ -1,17 +1,22 @@
 """Signed approvals: content hashes, keys, and which items the approvals on file cover.
 
 Shared by `verify approval`, which judges them, and `item approve`, which writes one.
-An approval is an APPROVAL item whose file is signed with `ssh-keygen -Y sign`; the
-signature sits beside it as `<file>.sig` and covers the file's bytes.
+An approval is a record in the log `DHF/approvals/<scope>/<ULID>.yaml`, kept apart from the
+items; its file is signed with `ssh-keygen -Y sign` and the signature sits beside it as
+`<file>.sig`, covering the file's bytes.
 """
 
 from __future__ import annotations
 
 import hashlib
+import secrets
 import subprocess
 import tempfile
+import time
 from dataclasses import dataclass
 from pathlib import Path
+
+import yaml
 
 from dhfkit.approvers import Approver, load_approvers
 from dhfkit.store import DHFStore, open_store
@@ -19,11 +24,24 @@ from dhfkit.store import DHFStore, open_store
 NAMESPACE = "medharness-approval"
 #: The `id` an approval's `items` entry uses for the approvers list.
 APPROVERS_ID = "approvers"
-APPROVAL_TYPE = "APPROVAL"
+APPROVALS_DIR = "approvals"
+#: The scope of an approval given outside any CR.
+UNSCOPED = "unscoped"
+_CROCKFORD = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"
 
 
 class ApprovalError(Exception):
     """Approvals cannot be read or made: ssh-keygen is missing, or a key is unusable."""
+
+
+def new_ulid() -> str:
+    """A 26-character ID that sorts by creation time and does not collide across branches."""
+    value = (time.time_ns() // 1_000_000) << 80 | secrets.randbits(80)
+    return "".join(_CROCKFORD[(value >> shift) & 31] for shift in range(125, -1, -5))
+
+
+def approvals_dir(dhf_path: Path) -> Path:
+    return Path(dhf_path) / APPROVALS_DIR
 
 
 def content_hash(path: Path) -> str:
@@ -70,7 +88,7 @@ class Approval:
 
 def check_signature(record: dict, path: Path, roster: Roster) -> tuple[Approver | None, str | None]:
     """Who signed the file at *path*, and what is wrong with it, if anything."""
-    uid = record["id"]
+    uid = path.stem
     roles = record.get("roles")
     if not isinstance(roles, list) or not all(isinstance(r, str) for r in roles):
         return None, f"{uid} has no list of roles it was signed for"
@@ -110,17 +128,26 @@ def _hashes(record: dict) -> dict[str, str] | None:
     return hashes
 
 
-def evaluate(items: dict[str, dict], roster: Roster) -> tuple[list[Approval], list[str]]:
-    """The approvals that stand, and a finding for each APPROVAL item that does not."""
+def evaluate(dhf_path: Path, roster: Roster) -> tuple[list[Approval], list[str]]:
+    """The approvals that stand, and a finding for each record in the log that does not."""
     valid: list[Approval] = []
     problems: list[str] = []
-    for uid, record in sorted(items.items()):
-        if record["type"] != APPROVAL_TYPE:
-            continue
-        approver, problem = check_signature(record, Path(record["file_path"]), roster)
-        hashes = _hashes(record)
-        if problem is None and hashes is None:
-            problem = f"{uid} does not list its items as {{id, hash}} entries"
+    for path in sorted(approvals_dir(dhf_path).glob("**/*.yaml"), key=lambda p: p.stem):
+        uid = path.stem
+        try:
+            record = yaml.safe_load(path.read_text(encoding="utf-8"))
+        except (yaml.YAMLError, UnicodeDecodeError):
+            record = None
+        approver = hashes = None
+        if not isinstance(record, dict):
+            problem = f"{uid} is not a readable approval record"
+        elif record.get("id") != uid:
+            problem = f"{uid} has id {record.get('id')!r}, which differs from its file name"
+        else:
+            approver, problem = check_signature(record, path, roster)
+            hashes = _hashes(record)
+            if problem is None and hashes is None:
+                problem = f"{uid} does not list its items as {{id, hash}} entries"
         if problem is not None or approver is None or hashes is None:
             problems.append(f"{problem}. It counts for nothing; an approver records a new approval with `medharness item approve`.")
             continue
@@ -141,7 +168,7 @@ def gaps(items: dict[str, dict], scope: list[str], approvals: list[Approval], ap
     found = []
     for uid in sorted(set(scope)):
         record = items.get(uid)
-        if record is None or record["type"] == APPROVAL_TYPE or not approval_roles.get(record["type"]):
+        if record is None or not approval_roles.get(record["type"]):
             continue
         needed = approval_roles[record["type"]]
         now = content_hash(Path(record["file_path"]))
@@ -169,5 +196,5 @@ def read_standing(dhf_path: Path) -> Standing | None:
     store = open_store(dhf_path)
     roster = Roster(approvers)
     items = {item["id"]: item for item in store.list_items()}
-    approvals, problems = evaluate(items, roster)
+    approvals, problems = evaluate(dhf_path, roster)
     return Standing(store, approvers, roster, items, approvals, problems)

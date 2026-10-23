@@ -79,7 +79,7 @@ my-device/
 └── CLAUDE.md                    # @AGENTS.md, so Claude Code reads it too
 ```
 
-The item types (14 by default), their fields and lifecycles, the required links
+The item types (13 by default), their fields and lifecycles, the required links
 and the specification templates are defaults shipped in the package, so
 upgrading `medharness` upgrades them. A project overrides only what it changes,
 in `DHF/config/`: see [Changing the defaults](docs/configuration.md#changing-the-defaults).

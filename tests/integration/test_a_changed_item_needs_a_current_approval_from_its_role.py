@@ -35,9 +35,11 @@ def test_the_software_lead_approving_makes_it_pass(project: Project) -> None:
 
     assert result.exit_code == 0, result.stderr
     created = json.loads(result.stdout)
-    assert created["id"] == "APR-001" and created["roles"] == ["software-lead"]
+    record = Path(created["path"])
+    assert created["id"] == record.stem and created["roles"] == ["software-lead"] and created["cr"] is None
+    assert record.parent == project.dhf / "approvals" / "unscoped"
     assert created["items"] == [project.pin("SRS-001")]
-    assert project.item_file("APR-001").with_name("APR-001.yaml.sig").is_file()
+    assert record.with_name(record.name + ".sig").is_file()
     assert project.verify()["passed"] is True
 
 
@@ -58,7 +60,7 @@ def test_approving_the_same_content_twice_records_nothing_the_second_time(projec
 
     assert result.exit_code == 0
     assert "Nothing pending" in json.loads(result.stdout)["summary"]
-    assert not project.item_file("APR-001").with_name("APR-002.yaml").exists()
+    assert len(project.records()) == 1
 
 
 def test_an_approver_cannot_choose_a_role_they_do_not_hold(project: Project) -> None:
@@ -139,6 +141,9 @@ def test_cr_narrows_approval_to_the_items_it_lists_and_itself(project: Project) 
     created = json.loads(project.approve("Lead", "--cr", "CR-001").stdout)
 
     assert [e["id"] for e in created["items"]] == ["CR-001"]
+    assert created["cr"] == "CR-001"
+    assert Path(created["path"]).parent == project.dhf / "approvals" / "CR-001"
+    assert project.verify()["passed"] is False, "SYS-001 is listed by the CR but needs the system architect"
 
 
 def test_all_approves_items_that_were_never_approved(project: Project) -> None:
@@ -158,4 +163,4 @@ def test_declining_the_confirmation_records_nothing(project: Project) -> None:
 
     assert result.exit_code == 1
     assert "SRS-001" in result.stderr
-    assert not (project.dhf / "items" / "13_approvals").exists()
+    assert not (project.dhf / "approvals").exists()

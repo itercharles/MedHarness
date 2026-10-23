@@ -109,7 +109,7 @@ read the branch's diff. Everything else — `item`, `verify dhf|tests|soup|compl
 ## Defaults and overrides
 
 `dhfkit/templates/config/` and `dhfkit/templates/specs/` are the defaults every
-DHF reads: the 14 doc types, the lifecycle, the traceability rules, the
+DHF reads: the 13 doc types, the lifecycle, the traceability rules, the
 specification templates. `ProjectConfig.load` merges them with the project's own
 config — each `global.yaml` key replaces the default key, a `doc_types/` file
 replaces the default type of its `code`, `omit_doc_types` drops one — and the

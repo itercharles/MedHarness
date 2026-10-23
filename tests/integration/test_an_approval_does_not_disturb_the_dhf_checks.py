@@ -1,4 +1,4 @@
-"""APPROVAL items sit outside every chain: `verify dhf` finds no coverage or placeholder problem in them."""
+"""Approval records are not items: `verify dhf` and `item list` know nothing about them."""
 
 from __future__ import annotations
 
@@ -23,11 +23,24 @@ def test_strict_verify_dhf_gives_the_same_answer_with_an_approval_on_file(tmp_pa
     after = strict()
 
     assert after["errors"] == before["errors"] and after["warnings"] == before["warnings"]
-    assert not any("APR-001" in message for message in after["errors"] + after["warnings"])
+    assert project.records() and not any(project.records()[0].stem in m for m in after["errors"] + after["warnings"])
 
 
 def test_the_starter_dhf_ships_no_approval(tmp_path: Path) -> None:
     project = build_project(tmp_path, with_approvers=False)
 
-    assert list((project.dhf / "items").rglob("APR-*")) == []
-    assert project.run("item", "list", "--type", "APPROVAL").stdout == ""
+    assert not (project.dhf / "approvals").exists()
+
+
+def test_item_list_does_not_show_approval_records(tmp_path: Path) -> None:
+    project = build_project(tmp_path)
+    project.edit("SRS-001", content="Changed.")
+    before = project.run("item", "list").stdout
+    assert project.approve("Lead").exit_code == 0
+    uid = project.records()[0].stem
+
+    result = project.run("item", "list")
+
+    assert result.stdout == before
+    assert uid not in result.stdout
+    assert project.run("item", "get", uid).exit_code != 0

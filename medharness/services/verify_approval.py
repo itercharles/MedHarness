@@ -13,7 +13,7 @@ from dhfkit.approvers import approvers_path, parse_approvers
 from dhfkit.exceptions import DHFDataError
 from medharness.services import git
 from medharness.services.approval import (
-    APPROVAL_TYPE, APPROVERS_ID, ApprovalError, Roster, content_hash, evaluate, gaps, read_standing,
+    APPROVALS_DIR, APPROVERS_ID, ApprovalError, Roster, content_hash, evaluate, gaps, read_standing,
 )
 from medharness.services.envelope import gate_result
 
@@ -63,20 +63,15 @@ def _judge(repo_root: Path, dhf_path: Path, since_ref: str, all_items: bool) -> 
 
     scope = list(standing.items) if all_items else changed_scope(repo_root, dhf_path, since_ref)
     missing = gaps(standing.items, scope, standing.approvals, config.approval_roles)
-    checked = {u for u in scope if u in standing.items and standing.items[u]["type"] != APPROVAL_TYPE
-               and config.approval_roles.get(standing.items[u]["type"])}
+    checked = {u for u in scope if u in standing.items and config.approval_roles.get(standing.items[u]["type"])}
     for gap in missing:
         errors.append(
             f"{gap.id} ({gap.type}) has no current approval. It needs one from {' or '.join(gap.roles)}: "
             f"{_who_may_approve(gap.roles, standing.roster)}. They run `medharness item approve --key <KEY>`.")
 
-    approval_type = config.get_doc_type(APPROVAL_TYPE)
-    if approval_type is None:
-        errors.append("The project has no APPROVAL item type, so approvals cannot be recorded. Remove APPROVAL from omit_doc_types.")
-    else:
-        errors += _append_only(repo_root, dhf_path, since_ref, approval_type.prefix)
+    errors += _append_only(repo_root, dhf_path, since_ref)
 
-    list_errors, list_warnings = _approvers_list(repo_root, dhf_path, since_ref, rel_list, standing.items)
+    list_errors, list_warnings = _approvers_list(repo_root, dhf_path, since_ref, rel_list)
     errors += list_errors
     warnings += list_warnings
 
@@ -94,21 +89,19 @@ def _existed_at(repo_root: Path, since_ref: str, rel_path: str) -> bool:
         return False
 
 
-def _append_only(repo_root: Path, dhf_path: Path, since_ref: str, prefix: str) -> list[str]:
-    items_dir = os.path.relpath(dhf_path.resolve(), repo_root.resolve()) + "/items/"
-    changes = git.collect_path_changes(repo_root, since_ref, items_dir)
+def _append_only(repo_root: Path, dhf_path: Path, since_ref: str) -> list[str]:
+    log_dir = os.path.relpath(dhf_path.resolve(), repo_root.resolve()) + f"/{APPROVALS_DIR}/"
+    changes = git.collect_path_changes(repo_root, since_ref, log_dir)
     found = []
     for bucket, verb in (("updated", "modified"), ("deleted", "deleted")):
         for path in changes[bucket]:
-            name = Path(path).name
-            if name.startswith(prefix) and name.endswith((".yaml", ".yaml.sig")):
-                found.append(f"{name} was {verb} since {since_ref}: approvals are append-only. "
+            if path.endswith((".yaml", ".yaml.sig")):
+                found.append(f"{path} was {verb} since {since_ref}: approvals are append-only. "
                              f"Restore it from {since_ref} and record a new approval instead.")
     return found
 
 
-def _approvers_list(repo_root: Path, dhf_path: Path, since_ref: str, rel_path: str,
-                    items: dict[str, dict]) -> tuple[list[str], list[str]]:
+def _approvers_list(repo_root: Path, dhf_path: Path, since_ref: str, rel_path: str) -> tuple[list[str], list[str]]:
     """Findings and warnings about a change to the approvers list since the ref."""
     path = approvers_path(dhf_path)
     before = git.file_at_branch_point(repo_root, since_ref, rel_path)
@@ -118,7 +111,7 @@ def _approvers_list(repo_root: Path, dhf_path: Path, since_ref: str, rel_path: s
     if before is None:
         return [], [f"{rel_path} is new since {since_ref}: it is the root of trust, accepted without an earlier signer."]
     old_roster = Roster(parse_approvers(before, f"{rel_path} at {since_ref}"))
-    approvals, _ = evaluate(items, old_roster)
+    approvals, _ = evaluate(dhf_path, old_roster)
     wanted = content_hash(path)
     if any(a.hashes.get(APPROVERS_ID) == wanted for a in approvals):
         return [], []
