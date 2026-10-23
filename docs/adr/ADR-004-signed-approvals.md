@@ -69,13 +69,16 @@ under rules the team sets. MedHarness does not check, export or vouch for code r
 Its concern with code is only that the code follows an approved design: the code's
 modules, through MODULE `paths` (#453), reach items in the CR's plan.
 
-### How an approval is recorded: a signed statement in the DHF
+### How an approval is recorded: a signed log beside the items
 
-An approval is an **APPROVAL item** in the DHF, with a detached signature beside it:
+An approval is a **signed record in an append-only log**, `DHF/approvals/`, kept apart
+from the items. Records are grouped by the CR they were given in, and each is named by a
+ULID:
 
 ```yaml
-# DHF/items/13_approvals/APR-012.yaml
-id: APR-012
+# DHF/approvals/CR-027/01JB3KQ7Z8X4M2N5P6R7S8T9VA.yaml
+id: 01JB3KQ7Z8X4M2N5P6R7S8T9VA
+cr: CR-027
 signer: Charles Chen
 roles: [software-lead, ccb]
 signed_at: 2026-10-22T09:30:00Z
@@ -86,15 +89,28 @@ items:
 key: SHA256:<public key fingerprint>
 ```
 
-The signature (`APR-012.yaml.sig`) is made with `ssh-keygen -Y sign` over the
-statement. OpenSSH is the only dependency, and git already uses this signature format.
+The signature (`<ULID>.yaml.sig`) is made with `ssh-keygen -Y sign` over the record
+file's bytes, so the signer, roles, items, hashes and key are all covered. OpenSSH is
+the only dependency, and git already uses this signature format.
 
 - **The hash is of the item's content**, not of a commit, so a squash merge leaves it valid.
-- **APPROVAL items are not themselves approved** and are left out of every content hash,
-  so recording an approval does not change what it approves.
-- **Approvals are append-only.** A branch that modifies or deletes an existing APPROVAL
-  item fails `verify approval`, which reads the branch's diff (`verify dhf` does not). A superseded approval stays as history: the CCB's acceptance,
-  signed before the code was written, is still there after the CR is closed.
+- **Approvals are not items.** They are records about items. The item store never loads
+  them, so every other command costs the same however many approvals accumulate. Only
+  `verify approval`, `item approve` and `build release` read the log.
+- **Records are named by ULID, not by a sequence.** Many approvals are written in
+  parallel branches, and a sequential ID would collide on merge. A ULID sorts by time and
+  never collides.
+- **Records are grouped by CR.** A CR's approvals read together, and no directory grows
+  without bound. An approval not given within a CR (the approvers list, or approving an
+  existing DHF on adoption) goes under `DHF/approvals/unscoped/`.
+- **Approvals are append-only.** A branch that modifies or deletes an existing record or
+  signature fails `verify approval`, which reads the branch's diff (`verify dhf` does not).
+  A superseded approval stays as history: the CCB's acceptance, signed before the code
+  was written, is still there after the CR is closed.
+- **A record holds hashes, not content.** If an item is approved, edited and approved again
+  within one pull request that is squash-merged, the first version never reaches the main
+  line, and the first record points at content that is no longer kept. The approval that
+  counts is the last one; the earlier one is a draft's.
 
 ### Who may sign: the approvers list
 
@@ -127,7 +143,7 @@ is already unlocked would sign silently. So:
 
 - **`medharness item approve`** (proposed): lists the items the signer's roles may
   approve that lack a current approval, shows each change, and on confirmation writes
-  the APPROVAL item and its signature. One statement can cover many items and roles, so
+  a record and its signature in the approval log. One statement can cover many items and roles, so
   one touch approves a whole review. `--cr` narrows it to one change request.
 - **`medharness verify approval`** (proposed): offline and in the usual envelope. It
   checks every signature, every signer against the approvers list for the role the item
@@ -145,6 +161,25 @@ is already unlocked would sign silently. So:
   quality lead. An approval skipped by an admin bypass at merge is caught here.
 - **Off until configured.** Without `DHF/config/approvers`, nothing changes for existing
   projects.
+
+### At scale
+
+A CR can need ten approvals, and a large team may close tens of CRs a day: about fifty
+thousand records a year. Two rules keep the cost from following that growth.
+
+- **A check verifies only the candidates** (phase 2). `verify approval` first reads each
+  record's item IDs and hashes, without checking signatures, which is cheap. It then
+  verifies signatures only for records the branch adds, and for records whose hash
+  matches the current content of an item in scope, stopping at the first valid one. A
+  record whose hash is stale cannot cover anything and is not verified. A pull request's
+  cost then follows the number of items it changes, not the size of the log.
+  `--all` and `build release` still verify every record.
+- **A release is a checkpoint** (phase 2). `build release` writes an approval manifest,
+  signed by the quality lead: for each item in the baseline, the record that covers its
+  current version. Records superseded before that release may then leave the working
+  tree; they remain in git history and in the release evidence. The next release checks
+  the records since the last checkpoint against that manifest. Append-only becomes:
+  **never modified, and removed only once a signed checkpoint holds them.**
 
 ### One pull request may carry both design and code
 
@@ -202,6 +237,9 @@ explaining the change in the pull request, so the signer can review it quickly.
   keeps the current flow and records the reviews. But it needs GitHub at release time,
   cannot record approvals in local mode where the author cannot approve, and keeps
   identity as safe as the least protected token on the account.
+- **Approvals as DHF items, with sequential IDs.** This was the first implementation.
+  Every command loads every item, so a growing log slowed everything, and parallel
+  branches allocated the same ID.
 - **Signed git tags on approved commits.** These are native to git, but squash merging
   means the approved commit is never on the main line.
 - **Stage gates within a CR** (approve design before code, then approve code). This
@@ -219,9 +257,8 @@ explaining the change in the pull request, so the signer can review it quickly.
 - **The CLI's four groups stay.** `item approve` writes a record, like `item create`;
   `verify approval` judges, like the other checks.
 - **New pieces:**
-  - in dhfkit, an APPROVAL item type and an append-only rule;
-  - in medharness, the two commands, a `global.yaml` role matrix and the approvers list
-    format;
+  - in dhfkit, the approvers list format and its loading; approvals are not an item type;
+  - in medharness, the approval log, the two commands, and a `global.yaml` role matrix;
   - in releases, approvals and the approvers list go into the evidence bundle;
   - in `cr.yaml`, transitions need nothing new, because a status edit is approved like
     any other edit.
