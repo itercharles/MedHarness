@@ -91,6 +91,9 @@ class Approval:
     roles: tuple[str, ...]
     hashes: dict[str, str]
     approver: Approver
+    signed_at: str
+    statement: str
+    key: str
 
 
 def check_signature(record: dict, path: Path, roster: Roster) -> tuple[Approver | None, str | None]:
@@ -158,7 +161,8 @@ def evaluate(dhf_path: Path, roster: Roster) -> tuple[list[Approval], list[str]]
         if problem is not None or approver is None or hashes is None:
             problems.append(f"{problem}. It counts for nothing; an approver records a new approval with `medharness item approve`.")
             continue
-        valid.append(Approval(uid, record.get("release"), tuple(record["roles"]), hashes, approver))
+        valid.append(Approval(uid, record.get("release"), tuple(record["roles"]), hashes, approver,
+                              str(record.get("signed_at") or ""), str(record.get("statement") or ""), record["key"]))
     return valid, problems
 
 

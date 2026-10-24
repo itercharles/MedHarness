@@ -266,6 +266,41 @@ def register(main):
             err=True,
         )
 
+    @build.command("approvals")
+    @click.option("--release", "version", required=True, metavar="VERSION",
+                  callback=_check_version, help="The release whose approval sheet to write.")
+    @click.option("--out-dir", required=True, type=click.Path(file_okay=False, path_type=Path),
+                  help="Where to write approval-sheet.html (or .pdf).")
+    @click.option("--doc-format", type=click.Choice(["html", "pdf"]), default="html",
+                  show_default=True, help="Format of the sheet. PDF needs medharness[docs] plus cairo/pango.")
+    @click.option("--since-ref", default=None, metavar="REF",
+                  help="What the branch is compared against: its changes since it left this ref. "
+                       "Default: the branch origin's HEAD points at, else origin/main. "
+                       "Needs enough history to reach the fork.")
+    @click.pass_context
+    def build_approvals(ctx, version, out_dir, doc_format, since_ref) -> None:
+        """Write the approval sheet of a signed release: who approved which documents.
+
+        Runs the judgement of `verify approval --release VERSION`; if the release is not
+        fully signed it writes nothing and exits 1. Otherwise `approval-sheet` lists the
+        manifest and approvers list hashes, and for each document its hashes and every
+        signature over it: signer, roles, time, statement, key and record. A signature made
+        without proven presence is marked. The records under DHF/approvals stay the evidence.
+        """
+        from medharness.services.approval_sheet import build_sheet  # noqa: PLC0415
+
+        result = build_sheet(ctx.obj["dhf"], version, out_dir, doc_format=doc_format, since_ref=since_ref)
+        click.echo(json.dumps(result))
+        for warning in result["warnings"]:
+            click.echo(f"WARN [approvals] {warning}", err=True)
+        for err in result["errors"]:
+            click.echo(f"FAIL [approvals] {err}", err=True)
+        if result["errors"]:
+            click.echo(f"No approval sheet written for release {version}.", err=True)
+            sys.exit(1)
+        click.echo(f"OK build approvals {version}: {result['documents']} document(s), "
+                   f"{result['signatures']} signature(s) in {result['path']}.", err=True)
+
     @build.command("soup")
     @click.option("--manifest", "manifest_paths", multiple=True,
                   type=click.Path(exists=True, dir_okay=False, path_type=Path),

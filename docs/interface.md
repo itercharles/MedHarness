@@ -1,7 +1,7 @@
 # Interface
 
 > **Stability:** Stable
-> **Last reviewed:** 2026-09-30
+> **Last reviewed:** 2026-10-23
 
 What a script, a CI pipeline or a coding agent can rely on when it calls `medharness`: what each command does, what it prints, how it exits, and what may change. Tests check the facts stated here against the CLI.
 
@@ -60,7 +60,7 @@ result = json.loads(lines[0])
 | `verify approval` | That every approval is signed by an approver holding its roles, that approvals are only added, and that a change to the approvers list is approved from the list as it was. With --release: that each document of the release manifest and the release itself carry a current signature from their role. | `--since-ref`, `--release` | no | `always` |
 <!-- END GENERATED: gates -->
 
-Every check answers from the machine it runs on, and none reads GitHub. Approval is not a check: GitHub's branch protection — required approvals, stale approvals dismissed on push — enforces it, on the server, where a pull request cannot edit the rule away.
+Every check answers from the machine it runs on, and none reads GitHub. During development, approval is the review of the pull request under the team's own rules, and no check reads it. At release, approval is a signature: `item approve --release` signs the documents a role owns, `verify approval --release` checks the signatures from the files in the repository, and `build approvals` renders who signed what ([ADR-004](adr/ADR-004-signed-approvals.md)).
 
 ### The result envelope
 
@@ -142,6 +142,7 @@ An item is its file's fields plus `type` (the doc type's code), `file_path`, and
 - **`--prompt`** on either prints Markdown, not JSON: the stage's steps and the CR's DHF context, for an agent that is already running. It starts no model and changes nothing. It is the only output that is not JSON.
 - **`build soup`** always writes the SOUP items in the working tree. Exit `1` on `completed_with_errors`.
 - **`build release`** exits `1` when any check failed; a failing release still writes its evidence to `--out-dir`, so you can read why, but records no REL item.
+- **`build approvals`** runs `verify approval --release` first and exits `1` when it fails, writing no sheet; the errors are the check's own.
 
 ## Reports
 
@@ -337,6 +338,18 @@ The fields of what each command above answers with, generated from the models in
 | `errors` | list of strings | What blocked the release |
 | `warnings` | list of strings | What it noticed without blocking, such as a component with no purl |
 
+#### `build approvals`
+
+| Field | Type | Meaning |
+|---|---|---|
+| `outcome` | `completed` · `completed_with_errors` | `completed_with_errors` exits 1 and writes nothing |
+| `version` | string | The release the sheet is for |
+| `path` | string or null | The sheet written; null when the release is not fully signed |
+| `documents` | integer | Documents on the sheet, the release itself included |
+| `signatures` | integer | Signature records the sheet shows |
+| `errors` | list of strings | Why no sheet was written, as `verify approval --release` reports it |
+| `warnings` | list of strings | What `verify approval --release` noticed, such as a signature made without proven presence |
+
 #### `init`
 
 | Field | Type | Meaning |
@@ -461,6 +474,7 @@ Generated from the CLI by `python scripts/generate_interface.py`; a test fails w
 | `build plan` | Draft the DHF item cascade and impact analysis for a CR, with a model. |
 | `build code` | Write the code and tests for a CR's approved design, with a model. |
 | `build release` | Build everything one release needs (IEC 62304 §9). |
+| `build approvals` | Write the approval sheet of a signed release: who approved which documents. |
 | `build soup` | Reconcile SOUP items from the project's dependency manifests. |
 | `init` | Scaffold a DHF, and the AGENTS.md coding agents read, in the current directory. |
 
@@ -612,6 +626,17 @@ Build everything one release needs (IEC 62304 §9).
 | `--manifest PATH` | Dependency manifest whose packages the BOM lists beside the SOUP register (repeatable). |
 | `--junit PATH` | JUnit XML from the tests of this release: a file, or a directory searched for *.xml (repeatable). Every requirement must be verified by it. [required] |
 | `--doc-format [html|pdf]` | Format of the bundled specifications. PDF needs medharness[docs] plus cairo/pango. [default: html] |
+
+#### `medharness build approvals`
+
+Write the approval sheet of a signed release: who approved which documents.
+
+| Option | |
+|---|---|
+| `--release VERSION` | The release whose approval sheet to write. [required] |
+| `--out-dir DIRECTORY` | Where to write approval-sheet.html (or .pdf). [required] |
+| `--doc-format [html|pdf]` | Format of the sheet. PDF needs medharness[docs] plus cairo/pango. [default: html] |
+| `--since-ref REF` | What the branch is compared against: its changes since it left this ref. Default: the branch origin's HEAD points at, else origin/main. Needs enough history to reach the fork. |
 
 #### `medharness build soup`
 

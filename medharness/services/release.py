@@ -19,6 +19,7 @@ from typing import Any, Optional
 
 import click
 
+from dhfkit.approvers import approvers_path
 from dhfkit.store import open_store
 from medharness.services import git
 from medharness.services.approval import ApprovalError
@@ -187,14 +188,14 @@ def format_traceability_matrix_markdown(matrix: dict) -> str:
 
 def _generate_specification_artifacts(adapter, out_dir: Path,
                                       doc_types: tuple[str, ...],
-                                      doc_format: str, version: str) -> list[dict]:
+                                      doc_format: str, version: str, notice: str) -> list[dict]:
     # Rendered straight into out_dir: evidence is a copy of the DHF's state,
     # and producing it must not change the DHF.
     spec_dir = out_dir / "specifications"
     generated = []
     for doc_type in doc_types:
         try:
-            generated.append(adapter.render_spec(doc_type, doc_format, spec_dir, version))
+            generated.append(adapter.render_spec(doc_type, doc_format, spec_dir, version, notice))
         except RuntimeError as exc:
             # Renderer unavailable (e.g. PDF without native libs) — the message
             # already says what to install, so present it rather than traceback.
@@ -208,6 +209,7 @@ def generate_release_artifacts(
     junit_paths: list[Path],
     version: str,
     doc_format: str = "html",
+    notice: str = "",
 ) -> dict:
     """Every specification, every plan, and a traceability report per configured matrix, into out_dir.
 
@@ -217,7 +219,7 @@ def generate_release_artifacts(
     """
     out_dir.mkdir(parents=True, exist_ok=True)
     specifications = _generate_specification_artifacts(
-        adapter, out_dir, tuple(sorted(adapter.get_available_doc_types())), doc_format, version
+        adapter, out_dir, tuple(sorted(adapter.get_available_doc_types())), doc_format, version, notice
     )
     plans = _generate_plan_artifacts(adapter, out_dir, doc_format)
     traceability = [
@@ -315,9 +317,10 @@ def build_evidence_bundle(
     adapter = open_store(dhf_path)
 
     out_dir.mkdir(parents=True, exist_ok=True)
+    notice = f"Approval: see the approval sheet of release {version}." if approvers_path(dhf_path).is_file() else ""
     artifacts = generate_release_artifacts(
         adapter, out_dir, list(junit_paths), version,
-        doc_format=doc_format,
+        doc_format=doc_format, notice=notice,
     )
 
     provenance = {

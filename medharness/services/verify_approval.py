@@ -13,7 +13,8 @@ from dhfkit.approvers import approvers_path, parse_approvers
 from dhfkit.exceptions import DHFDataError
 from medharness.services import git
 from medharness.services.approval import (
-    APPROVALS_DIR, APPROVERS_ID, RELEASE_ID, ApprovalError, Roster, Standing, content_hash, evaluate, read_standing,
+    APPROVALS_DIR, APPROVERS_ID, RELEASE_ID, Approval, ApprovalError, Roster, Standing, content_hash, evaluate,
+    read_standing,
 )
 from medharness.services.envelope import gate_result
 from medharness.services.release_manifest import documented, drift, load_manifest, manifest_path, roles_for
@@ -68,6 +69,11 @@ def _judge(repo_root: Path, dhf_path: Path, since_ref: str, release: str | None)
     return gate_result(GATE, not errors, summary, errors=errors, warnings=warnings)
 
 
+def covering(approvals: list[Approval], version: str, doc_id: str, hash_: str, roles: list[str]) -> list[Approval]:
+    """The approvals of release *version* that sign *doc_id* at *hash_* for one of *roles*."""
+    return [a for a in approvals if a.release == version and a.hashes.get(doc_id) == hash_ and set(a.roles) & set(roles)]
+
+
 def _release(standing: Standing, dhf_path: Path, version: str) -> tuple[list[str], int, int]:
     """Findings for a release, and how many of its signatures stand: each manifest document by its role, then the release."""
     manifest, problem = load_manifest(dhf_path, version)
@@ -80,7 +86,7 @@ def _release(standing: Standing, dhf_path: Path, version: str) -> tuple[list[str
     signed = 0
     for doc_id, hash_ in wanted:
         roles = roles_for(config, doc_id)
-        if any(a.release == version and a.hashes.get(doc_id) == hash_ and set(a.roles) & set(roles) for a in standing.approvals):
+        if covering(standing.approvals, version, doc_id, hash_, roles):
             signed += 1
             continue
         names = [a.name for a in standing.roster.holding(roles)]
