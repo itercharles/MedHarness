@@ -62,11 +62,13 @@ class DocumentGenerator:
                     found.append(uid)
         return found
 
-    def render_markdown_spec(self, doc_type_code: str, doc_specs: dict, version: str) -> str:
+    def render_markdown_spec(self, doc_type_code: str, doc_specs: dict, version: str,
+                             notice: str = "") -> str:
         """A specification of one doc type's items, as Markdown, at ``version``.
 
         The version is the release the document ships in: a specification is
         rendered for a release, and its revision history is the items' history.
+        ``notice`` is a line the templates print under the metadata table.
         """
         if doc_type_code not in doc_specs:
             raise ValueError(f"No document specification configured for {doc_type_code}")
@@ -95,7 +97,12 @@ class DocumentGenerator:
             generation_date=datetime.now().isoformat()[:10],
             status='Draft',
             items=items,
+            notice=notice,
         )
+
+    def render_template(self, template: str, context: dict) -> str:
+        """Markdown from a template of the specification template directories."""
+        return self.jinja_env.get_template(template).render(**context)
 
     def export(self, doc_type_code: str, markdown_content: str, fmt: str, out_dir: Path,
                version: str) -> Path:
@@ -103,8 +110,11 @@ class DocumentGenerator:
 
         HTML needs no native libraries; PDF needs WeasyPrint's cairo/pango stack.
         """
-        out_dir.mkdir(parents=True, exist_ok=True)
-        output_path = out_dir / f"{doc_type_code}_Specification_{version}.{fmt}"
+        return self.write(markdown_content, fmt, out_dir / f"{doc_type_code}_Specification_{version}.{fmt}")
+
+    def write(self, markdown_content: str, fmt: str, output_path: Path) -> Path:
+        """Write Markdown to ``output_path`` as ``html`` or ``pdf``."""
+        output_path.parent.mkdir(parents=True, exist_ok=True)
         if fmt == "pdf":
             return self._export_pdf(markdown_content, output_path)
         output_path.write_text(self._build_html(markdown_content), encoding="utf-8")

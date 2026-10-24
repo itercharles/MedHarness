@@ -11,7 +11,7 @@ reads `AGENTS.md` and runs shell commands gets the first two sections as they st
 |-------|-----------|------------------------|
 | Advice | `AGENTS.md`, `CLAUDE.md`, a skill: what to do and in what order | No. The agent can forget or skip it |
 | Local feedback | A hook in the agent that runs a MedHarness check and sends the result back | Only while the hook is installed. Whoever owns the machine can remove it |
-| Enforcement | `verify` in CI, and branch protection that needs a person's approval | Yes. A pull request cannot edit the check away |
+| Enforcement | `verify` in CI, and branch protection that needs a person's review | Yes. A pull request cannot edit the check away |
 
 Only the last layer is a control. The first two make the agent right earlier and cheaper, so CI rarely has to
 say no.
@@ -40,6 +40,8 @@ wrong, so an agent, a script and a hook all use them the same way. `--dhf PATH` 
 
 `item create|update --data` takes the JSON inline, from a file (`--data @fields.json`) or from standard input
 (`--data -`); use a file for anything long, such as a CR's `impact_analysis`.
+
+Signing a release is a person's. `item approve --release` shows the signer the changes and asks them to confirm, so an agent prepares the release (`build release --write`) and stops there; see [Signing a release](ci.md#signing-a-release).
 
 `--prompt` prints the stage's steps and this CR's DHF context as Markdown, and starts no model: the agent that
 is already running does the work.

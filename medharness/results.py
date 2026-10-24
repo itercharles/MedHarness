@@ -148,7 +148,7 @@ class CodeReport(StageReport):
     checks: list[CheckResult] | None = Field(default=None, description="Each `--check` as the harness last ran it; absent without `--check`")
 
 
-# ── build soup / build release / init ────────────────────────────────────────
+# ── build soup / build release / build approvals / init ────────────────────────────────────────
 
 class SoupDrift(Shape):
     uid: str = Field(description="The SOUP item")
@@ -192,6 +192,19 @@ class ReleaseReport(Shape):
     warnings: list[str] = Field(description="What it noticed without blocking, such as a component with no purl")
 
 
+class ApprovalSheetReport(Shape):
+    """`build approvals`."""
+
+    outcome: Literal["completed", "completed_with_errors"] = Field(
+        description="`completed_with_errors` exits 1 and writes nothing")
+    version: str = Field(description="The release the sheet is for")
+    path: str | None = Field(description="The sheet written; null when the release is not fully signed")
+    documents: int = Field(description="Documents on the sheet, the release itself included")
+    signatures: int = Field(description="Signature records the sheet shows")
+    errors: list[str] = Field(description="Why no sheet was written, as `verify approval --release` reports it")
+    warnings: list[str] = Field(description="What `verify approval --release` noticed, such as a signature made without proven presence")
+
+
 class InitReport(Shape):
     """`init`."""
 
@@ -206,5 +219,6 @@ SHAPES: tuple[tuple[str, tuple[type[Shape], ...]], ...] = (
     ("`build code`", (CodeReport,)),
     ("`build soup`", (SoupReport,)),
     ("`build release`", (ReleaseReport,)),
+    ("`build approvals`", (ApprovalSheetReport,)),
     ("`init`", (InitReport,)),
 )

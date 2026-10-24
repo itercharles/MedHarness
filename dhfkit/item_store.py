@@ -369,12 +369,20 @@ class ItemStore:
         from dhfkit.document_generation import DocumentGenerator
         return DocumentGenerator(self._adapter, self._config, self._template_dirs())
 
-    def render_spec(self, doc_type_code: str, fmt: str, out_dir: Path, version: str) -> dict:
-        """Render a specification into ``out_dir`` at ``version``; the DHF is not written."""
+    def render_spec(self, doc_type_code: str, fmt: str, out_dir: Path, version: str, notice: str = "") -> dict:
+        """Render a specification into ``out_dir`` at ``version``; the DHF is not written.
+
+        ``notice`` is one line the specification prints under its metadata table.
+        """
         gen = self._generator()
-        content = gen.render_markdown_spec(doc_type_code, self._doc_specs, version)
+        content = gen.render_markdown_spec(doc_type_code, self._doc_specs, version, notice)
         path = gen.export(doc_type_code, content, fmt, out_dir, version)
         return {"doc_type": doc_type_code, "path": str(path), "version": version}
+
+    def render_document(self, template: str, context: dict, fmt: str, output: Path) -> Path:
+        """Render a specification template with a caller's data to ``output``; the DHF is not written."""
+        gen = self._generator()
+        return gen.write(gen.render_template(template, context), fmt, output)
 
     # ------------------------------------------------------------------
     # Document access

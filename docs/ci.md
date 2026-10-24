@@ -140,3 +140,19 @@ Before writing anything to the DHF it checks that:
 - every open defect carries a `release_rationale` (IEC 62304 §9.7).
 
 Add `--write` to record the REL item. It is recorded **only when every check passed** — a failing release still writes its evidence, so you can read why, but leaves the DHF unchanged. The [CI recipe](#setting-up-ci) runs it on `v*` tags and brings the REL item back to `main` through a pull request.
+
+## Signing a release
+
+When the project keeps `DHF/config/approvers.yaml` (each person with their roles and public keys), a release is signed before it is issued. `approval_roles` and `release_role` in `global.yaml` say which role owns which specification. Without that file none of this applies. The reasoning is in [ADR-004](adr/ADR-004-signed-approvals.md).
+
+```bash
+medharness --dhf DHF build release --version 1.2.0 --out-dir release --junit test-results --write
+medharness --dhf DHF item approve --release 1.2.0 --key ~/.ssh/id_ed25519_sk
+medharness --dhf DHF verify approval --release 1.2.0
+medharness --dhf DHF build approvals --release 1.2.0 --out-dir release
+```
+
+1. **Run the release.** `--write` also writes `DHF/releases/1.2.0/manifest.yaml`, the item hashes each specification consists of, and `changes.md`, what changed in each since the previous release. Commit both on the release branch.
+2. **Each signer approves.** `item approve --release` shows the changes to the documents the signer's roles own, asks for confirmation, and writes one signed record under `DHF/approvals/release-1.2.0/`. Commit it; the record proves itself, so who commits it does not matter.
+3. **Check it.** `verify approval --release` passes when every document of the manifest has a valid signature from its role over its current content, and the release has the quality lead's. An item edited after the manifest was written fails it: run `build release --write` again and sign the affected documents again.
+4. **Render the sheet.** `build approvals` runs that same check and, only if it passes, writes `approval-sheet.html` (or `.pdf` with `--doc-format pdf`): for each document its hashes and every signature over it, with the signer, roles, time, statement, key fingerprint and record ID, and a warning on a signature made without proven presence. The sheet presents the records; they stay the evidence. Every specification a release renders says, when an approvers list exists, to see this sheet.
