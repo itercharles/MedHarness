@@ -101,6 +101,8 @@ class TestTheGateReportsIt:
         assert "Traceback" not in proc.stderr, proc.stderr[-400:]
         return proc.returncode, json.loads(proc.stdout.splitlines()[0])
 
+    @pytest.mark.dhf_links("SRS-038")
+    @pytest.mark.dhf_testing("T1")
     def test_verify_dhf_fails_and_names_the_path(self, cyclic: Path) -> None:
         code, payload = self._verify(cyclic)
         assert code == 1
@@ -109,6 +111,8 @@ class TestTheGateReportsIt:
         assert cycles, payload["errors"]
         assert "SRS-001" in cycles[0] and "SYS-001" in cycles[0]
 
+    @pytest.mark.dhf_links("SRS-038")
+    @pytest.mark.dhf_testing("T2")
     def test_the_scaffold_itself_has_none(self, tmp_path: Path) -> None:
         """The check is only useful if a healthy DHF stays green."""
         scaffold_dhf(tmp_path)

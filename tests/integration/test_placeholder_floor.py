@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
 import yaml
 from click.testing import CliRunner
 
@@ -37,6 +38,8 @@ def _write(path: Path, **fields) -> None:
     path.write_text(yaml.safe_dump(data))
 
 
+@pytest.mark.dhf_links("SRS-040")
+@pytest.mark.dhf_testing("T3")
 def test_the_starter_dhf_warns_and_fails_only_under_strict(tmp_path: Path) -> None:
     dhf = _project(tmp_path)
     loose, loose_answer = _verify(dhf)
@@ -48,6 +51,8 @@ def test_the_starter_dhf_warns_and_fails_only_under_strict(tmp_path: Path) -> No
     assert "[placeholder] SRS-001" in strict.stderr
 
 
+@pytest.mark.dhf_links("SRS-040")
+@pytest.mark.dhf_testing("T3")
 def test_one_finding_per_item_not_per_field(tmp_path: Path) -> None:
     _, answer = _verify(_project(tmp_path))
     mentions = [w for w in answer["warnings"] if w.startswith("SRS-001: placeholder")]
@@ -90,6 +95,8 @@ def test_a_project_can_opt_out(tmp_path: Path) -> None:
     assert result.exit_code == 0 and not any("placeholder" in m for m in answer["errors"] + answer["warnings"])
 
 
+@pytest.mark.dhf_links("SRS-043")
+@pytest.mark.dhf_testing("T2")
 def test_the_starter_dhf_cannot_be_released(tmp_path: Path) -> None:
     dhf = _project(tmp_path)
     result = CliRunner().invoke(main, ["--dhf", str(dhf), "build", "release", "--version", "1.0.0",

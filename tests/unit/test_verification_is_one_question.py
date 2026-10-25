@@ -44,6 +44,8 @@ def _junit(tmp_path: Path, body: str = "") -> Path:
 
 
 class TestTheDeclaredMethodDecides:
+    @pytest.mark.dhf_links("SRS-027")
+    @pytest.mark.dhf_testing("T1")
     def test_an_inspection_item_is_not_reported_as_a_test_gap(self, tmp_path: Path) -> None:
         dhf = _dhf(tmp_path, [{"id": "SRS-001", "verification_method": ["Inspection"]}])
         result = ci_test_coverage_gate(dhf_path=dhf, junit_paths=[_junit(tmp_path)])
@@ -53,6 +55,8 @@ class TestTheDeclaredMethodDecides:
         )
         assert [g["id"] for g in details["manual_review_required"]] == ["SRS-001"]
 
+    @pytest.mark.dhf_links("SRS-024")
+    @pytest.mark.dhf_testing("T1")
     def test_a_test_item_with_no_passing_case_fails(self, tmp_path: Path) -> None:
         dhf = _dhf(tmp_path, [{"id": "SRS-001", "verification_method": ["Test"]}])
         result = ci_test_coverage_gate(dhf_path=dhf, junit_paths=[_junit(tmp_path)])
@@ -67,12 +71,16 @@ class TestTheDeclaredMethodDecides:
 class TestAMissingMethodWarnsUntilAsked:
     """A project adding the field has a gap on every item at first."""
 
+    @pytest.mark.dhf_links("SRS-026")
+    @pytest.mark.dhf_testing("T2")
     def test_it_warns_by_default(self, tmp_path: Path) -> None:
         dhf = _dhf(tmp_path, [{"id": "SRS-001"}])
         result = ci_test_coverage_gate(dhf_path=dhf, junit_paths=[_junit(tmp_path)])
         assert [g["id"] for g in result["details"]["missing_method"]] == ["SRS-001"]
         assert any("no verification_method" in w for w in result["warnings"])
 
+    @pytest.mark.dhf_links("SRS-026")
+    @pytest.mark.dhf_testing("T1")
     def test_fail_on_missing_method_blocks(self, tmp_path: Path) -> None:
         dhf = _dhf(tmp_path, [{"id": "SRS-001"}])
         result = ci_test_coverage_gate(
@@ -82,12 +90,16 @@ class TestAMissingMethodWarnsUntilAsked:
 
 
 class TestWithoutEvidence:
+    @pytest.mark.dhf_links("SRS-024")
+    @pytest.mark.dhf_testing("T5")
     def test_missing_junit_still_fails(self, tmp_path: Path) -> None:
         """The gate confirms tests ran and passed. It cannot, so it fails."""
         dhf = _dhf(tmp_path, [{"id": "SRS-001", "verification_method": ["Test"]}])
         result = ci_test_coverage_gate(dhf_path=dhf, junit_paths=[])
         assert result["passed"] is False
 
+    @pytest.mark.dhf_links("SRS-026")
+    @pytest.mark.dhf_testing("T3")
     def test_the_method_check_still_runs(self, tmp_path: Path) -> None:
         """Declaring a method needs no test run; the early return used to skip it."""
         dhf = _dhf(tmp_path, [{"id": "SRS-001"}])

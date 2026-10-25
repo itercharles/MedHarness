@@ -1,0 +1,20 @@
+id: SRS-030
+title: verify changes refuses a branch that changes an item its CR does not list
+risk: high
+content: '`verify changes` shall fail when the branch, uncommitted work included,
+  creates, updates or deletes a DHF item that the CR does not list in `affected_items`,
+  apart from the CR itself, so that a change nothing records is not merged unseen.'
+verification_criteria: The exit code is 1, `passed` is false, `errors` holds a `dhf_branch`
+  finding naming each unlisted item and `unlisted_changes` lists them. The CR itself
+  need not list itself.
+testing: 'T1: An item the branch updates that the CR does not list fails, naming it.
+
+  T2: An item the branch creates or deletes that the CR does not list fails too.
+
+  T3: The CR''s own item changing is not a change it must list.
+
+  T4: Seeded on a real repository: a branch that also rewrites an unrelated item is
+  stopped.'
+verification_method:
+- Test
+type: SRS

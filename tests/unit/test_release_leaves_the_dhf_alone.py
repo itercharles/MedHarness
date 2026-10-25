@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import hashlib
 from pathlib import Path
+
+import pytest
 from fixtures.starter import keep_the_starter_text, verify_the_starter
 
 from medharness.services.release import build_release
@@ -31,6 +33,8 @@ def _snapshot(root: Path) -> dict[str, str]:
     }
 
 
+@pytest.mark.dhf_links("SRS-047")
+@pytest.mark.dhf_testing("T2")
 def test_a_dry_run_writes_only_to_the_out_dir(tmp_path: Path) -> None:
     project = _project(tmp_path)
     before = _snapshot(project)

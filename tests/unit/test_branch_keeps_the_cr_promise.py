@@ -27,16 +27,22 @@ def _run(cr_item, dhf_changes=CHANGED):
 
 
 class TestThePromiseIsChecked:
+    @pytest.mark.dhf_links("SRS-031")
+    @pytest.mark.dhf_testing("T1")
     def test_an_unchanged_promised_item_fails(self) -> None:
         result = _run({"id": "CR-001", "affected_items": ["SRS-001", "SYS-001"]})
         assert result["passed"] is False
         assert "SYS-001" in " ".join(result["errors"])
         assert result["details"]["promised_but_unchanged"] == ["SYS-001"]
 
+    @pytest.mark.dhf_links("SRS-034")
+    @pytest.mark.dhf_testing("T1")
     def test_keeping_the_promise_passes(self) -> None:
         result = _run({"id": "CR-001", "affected_items": ["SRS-001"]})
         assert result["passed"] is True, result["errors"]
 
+    @pytest.mark.dhf_links("SRS-030")
+    @pytest.mark.dhf_testing("T1")
     def test_changing_an_item_the_cr_does_not_list_fails(self) -> None:
         """Nothing else records it: `verify completion` checks only what is listed."""
         result = _run(
@@ -46,6 +52,18 @@ class TestThePromiseIsChecked:
         assert result["passed"] is False
         assert "SWDD-009" in " ".join(result["errors"])
 
+    @pytest.mark.dhf_links("SRS-030")
+    @pytest.mark.dhf_testing("T2")
+    @pytest.mark.parametrize("bucket", ["created", "deleted"])
+    def test_creating_or_deleting_an_item_the_cr_does_not_list_fails(self, bucket: str) -> None:
+        changes = {"created": [], "updated": ["SRS-001"], "deleted": []}
+        changes[bucket] = ["SWDD-009"]
+        result = _run({"id": "CR-001", "affected_items": ["SRS-001"]}, changes)
+        assert result["passed"] is False
+        assert result["details"]["unlisted_changes"] == ["SWDD-009"]
+
+    @pytest.mark.dhf_links("SRS-030")
+    @pytest.mark.dhf_testing("T3")
     def test_the_cr_itself_need_not_list_itself(self) -> None:
         result = _run(
             {"id": "CR-001", "affected_items": ["SRS-001"]},
@@ -79,6 +97,8 @@ class TestAgainstARealChangeSet:
     so these spell the dict out.
     """
 
+    @pytest.mark.dhf_links("SRS-034")
+    @pytest.mark.dhf_testing("T1")
     def test_a_promise_kept_across_several_changed_items(self, tmp_path: Path) -> None:
         with patch("medharness.services.git.collect_dhf_item_changes",
                    return_value={"created": ["SWDD-007"], "updated": ["SRS-001", "SYS-001"],
@@ -93,6 +113,8 @@ class TestAgainstARealChangeSet:
             result = validate_atomic_branch(tmp_path, dhf, "CR-001", since_ref="main")
         assert result["passed"] is True, result["errors"]
 
+    @pytest.mark.dhf_links("SRS-034")
+    @pytest.mark.dhf_testing("T2")
     def test_a_deleted_item_still_counts_as_changed(self, tmp_path: Path) -> None:
         """Retiring an item is how a CR keeps a promise to change it."""
         with patch("medharness.services.git.collect_dhf_item_changes",
@@ -133,6 +155,8 @@ class TestCouldNotCheckIsNotABrokenPromise:
         {"id": "CR-001"},
         {"id": "CR-001", "affected_items": ["SYS-001"]},
     ], ids=["promised nothing", "promised SYS-001"])
+    @pytest.mark.dhf_links("SRS-033")
+    @pytest.mark.dhf_testing("T1")
     def test_it_says_it_could_not_read_the_diff(self, tmp_path: Path, cr_item) -> None:
         result = self._unreadable(tmp_path, cr_item)
         assert result["passed"] is False
@@ -141,6 +165,8 @@ class TestCouldNotCheckIsNotABrokenPromise:
             "fatal: bad revision 'origin/main'."
         ], result["errors"]
 
+    @pytest.mark.dhf_links("SRS-033")
+    @pytest.mark.dhf_testing("T1")
     def test_it_does_not_accuse_the_cr(self, tmp_path: Path) -> None:
         result = self._unreadable(tmp_path, {"id": "CR-001", "affected_items": ["SYS-001"]})
         joined = " ".join(result["errors"])

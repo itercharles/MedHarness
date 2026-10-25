@@ -1,0 +1,14 @@
+id: SRS-042
+title: verify dhf passes a consistent DHF
+risk: high
+content: '`verify dhf` shall pass, under --strict too, a DHF whose items match their
+  schemas, whose links resolve to the right types, that meets the required traceability,
+  has no cycle and has every item covered, so that a sound DHF is not blocked.'
+verification_criteria: The exit code is 0 and `passed` is true with `errors` empty,
+  for the scaffolded starter DHF with its starter text replaced, with --strict.
+testing: 'T1: The starter chain passes under --strict.
+
+  T2: A clean scaffold passes without --strict and prints no FAIL.'
+verification_method:
+- Test
+type: SRS

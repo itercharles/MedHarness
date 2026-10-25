@@ -9,11 +9,15 @@ from __future__ import annotations
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
+
 from medharness.services.verify_changes import judge_branch, validate_atomic_branch
 
 NOTHING = {"created": [], "updated": [], "deleted": []}
 
 
+@pytest.mark.dhf_links("SRS-032")
+@pytest.mark.dhf_testing("T2")
 def test_code_and_dhf_changes_pass() -> None:
     result = judge_branch(
         "CR-001", None,
@@ -27,6 +31,8 @@ def test_code_and_dhf_changes_pass() -> None:
     assert result["details"]["cr_found"] is False
 
 
+@pytest.mark.dhf_links("SRS-032")
+@pytest.mark.dhf_testing("T1")
 def test_no_code_changes_fail_when_code_paths_are_given() -> None:
     result = judge_branch("CR-001", None, NOTHING, NOTHING, code_paths=("src/",))
 
@@ -34,6 +40,8 @@ def test_no_code_changes_fail_when_code_paths_are_given() -> None:
     assert any(e["field"] == "code_branch" for e in result["details"]["findings"])
 
 
+@pytest.mark.dhf_links("SRS-032")
+@pytest.mark.dhf_testing("T3")
 def test_without_code_paths_code_is_not_checked() -> None:
     result = judge_branch(
         "CR-001", None, {"created": ["SRS-010"], "updated": [], "deleted": []}, NOTHING,
@@ -43,6 +51,8 @@ def test_without_code_paths_code_is_not_checked() -> None:
     assert result["details"]["findings"] == []
 
 
+@pytest.mark.dhf_links("SRS-031")
+@pytest.mark.dhf_testing("T3")
 def test_a_cr_with_nothing_promised_and_nothing_changed_fails() -> None:
     """The old rule was "every CR branch must change the DHF". That fails any PR
     with no CR, which is why adopters had to guard this command with workflow

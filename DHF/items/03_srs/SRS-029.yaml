@@ -1,0 +1,18 @@
+id: SRS-029
+title: verify tests passes when every requirement and declared test point is covered
+risk: high
+content: '`verify tests` shall pass when every requirement that needs a test has a
+  passing linked test and every declared test point is covered, so that a fully verified
+  DHF is not blocked.'
+verification_criteria: The exit code is 0 and `passed` is true with `errors` empty;
+  every entry of `results` has `covered` equal to `total`, and every entry of `testing_points`
+  is passed.
+testing: 'T1: Every requirement has a passing linked test: passes, reporting all covered.
+
+  T2: Every declared test point is covered, across separate tests: passes.
+
+  T3: A test that carries its links and points in its name (@links, @testing) counts
+  the same as one that carries them as properties.'
+verification_method:
+- Test
+type: SRS

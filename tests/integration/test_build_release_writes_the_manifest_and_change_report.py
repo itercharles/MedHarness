@@ -6,6 +6,7 @@ import hashlib
 import json
 from pathlib import Path
 
+import pytest
 import yaml
 from fixtures.approvals import Project, build_project
 
@@ -25,6 +26,8 @@ def _released(tmp_path: Path, *, with_approvers: bool = True) -> Project:
     return project
 
 
+@pytest.mark.dhf_links("SRS-049")
+@pytest.mark.dhf_testing("T1")
 def test_the_manifest_hashes_every_item_and_each_document(tmp_path: Path) -> None:
     project = _released(tmp_path)
 
@@ -45,6 +48,8 @@ def test_the_manifest_hashes_every_item_and_each_document(tmp_path: Path) -> Non
     assert "REL" not in manifest["documents"]
 
 
+@pytest.mark.dhf_links("SRS-049")
+@pytest.mark.dhf_testing("T2")
 def test_the_manifest_is_written_without_an_approvers_list_too(tmp_path: Path) -> None:
     project = _released(tmp_path, with_approvers=False)
 
@@ -52,6 +57,8 @@ def test_the_manifest_is_written_without_an_approvers_list_too(tmp_path: Path) -
     assert (project.dhf / "releases" / "1.0.0" / "changes.md").is_file()
 
 
+@pytest.mark.dhf_links("SRS-047")
+@pytest.mark.dhf_testing("T1")
 def test_the_release_is_recorded_as_a_draft_for_the_signatures_to_cover(tmp_path: Path) -> None:
     project = _released(tmp_path)
 
@@ -61,6 +68,8 @@ def test_the_release_is_recorded_as_a_draft_for_the_signatures_to_cover(tmp_path
     assert yaml.safe_load(project.item_file(report["rel_uid"]).read_text())["status"] == "draft"
 
 
+@pytest.mark.dhf_links("SRS-048")
+@pytest.mark.dhf_testing("T1")
 def test_a_dry_run_and_a_failed_release_write_nothing_into_the_dhf(tmp_path: Path) -> None:
     project = build_project(tmp_path)
     project.ready_to_release()
@@ -73,6 +82,8 @@ def test_a_dry_run_and_a_failed_release_write_nothing_into_the_dhf(tmp_path: Pat
     assert not (project.dhf / "releases").exists()
 
 
+@pytest.mark.dhf_links("SRS-047")
+@pytest.mark.dhf_testing("T3")
 def test_the_first_release_lists_every_item_as_added(tmp_path: Path) -> None:
     project = _released(tmp_path)
 
@@ -83,6 +94,8 @@ def test_the_first_release_lists_every_item_as_added(tmp_path: Path) -> None:
     assert "Modified" not in changes and "Removed" not in changes
 
 
+@pytest.mark.dhf_links("SRS-047")
+@pytest.mark.dhf_testing("T4")
 def test_a_later_release_lists_only_what_changed_with_the_cr_that_lists_it(tmp_path: Path) -> None:
     project = _released(tmp_path)
     project.edit("SRS-001", content="Changed after the first release.")
@@ -98,6 +111,8 @@ def test_a_later_release_lists_only_what_changed_with_the_cr_that_lists_it(tmp_p
     assert "Added" not in changes.split("## SRS")[0] and "SRS-001 (CR-001)" not in changes.split("## SYS")[1]
 
 
+@pytest.mark.dhf_links("SRS-047")
+@pytest.mark.dhf_testing("T5")
 def test_an_item_removed_between_releases_is_listed_as_removed(tmp_path: Path) -> None:
     project = build_project(tmp_path)
     project.ready_to_release()

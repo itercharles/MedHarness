@@ -1,0 +1,25 @@
+id: SRS-045
+title: build release refuses a release with an unresolved defect that has no release_rationale
+risk: high
+content: '`build release` shall refuse the release when a defect that is not resolved,
+  closed or cancelled has no `release_rationale`, and shall carry the assessed ones
+  on the release, so that no anomaly ships without someone having judged it (IEC 62304
+  §9.7).'
+verification_criteria: The exit code is 1 and `errors` holds `<DEF> is unresolved
+  (state '<state>') and has no release_rationale` for each unassessed defect, one
+  among several included. A defect with no status counts as unresolved. A defect with
+  a rationale passes and appears in `known_anomalies` of the baseline and of the REL
+  item.
+testing: 'T1: An unresolved defect with no rationale fails the release, naming it
+  and recording no REL.
+
+  T2: One unassessed defect among several assessed ones fails the release.
+
+  T3: Resolved, closed and cancelled defects are not anomalies; draft, open, in progress
+  and no status are.
+
+  T4: A defect with a rationale passes and is carried on the baseline and the REL
+  item.'
+verification_method:
+- Test
+type: SRS

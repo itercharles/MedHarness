@@ -1,0 +1,18 @@
+id: SRS-039
+title: verify dhf refuses a status that is no state of the item's type
+risk: high
+content: '`verify dhf` shall fail, with or without --strict, when an item''s `status`
+  is not a state of its type''s lifecycle, or of the global states for a type with
+  none, so that a hand-written state cannot stand for a real one.'
+verification_criteria: 'The exit code is 1 and `errors` holds `<ID>: status ''<value>''
+  is not a state of <TYPE> (one of <states>)`.'
+testing: 'T1: A status that is no state of the type fails, naming the item, the value
+  and the allowed states.
+
+  T2: A type with a lifecycle takes only its own states: a global state it does not
+  have fails.
+
+  T3: A type without a lifecycle takes the global states and no others.'
+verification_method:
+- Test
+type: SRS

@@ -1,0 +1,19 @@
+id: SRS-046
+title: build release refuses a release whose requirements the JUnit does not verify
+risk: high
+content: '`build release` shall refuse the release when any requirement, not only
+  those the included CRs touched, is not verified by the JUnit given with --junit,
+  and shall not run without one, so that a release is never shipped on no test evidence.'
+verification_criteria: 'The exit code is 1 and `errors` holds `Tests: <finding>` of
+  `verify tests --strict` for each requirement or test point the JUnit does not cover;
+  without --junit the exit code is 2 and the output names --junit. With every requirement
+  verified the release passes.'
+testing: 'T1: A requirement the JUnit does not cover fails the release with a Tests:
+  finding.
+
+  T2: The same release passes once the JUnit covers every requirement.
+
+  T3: A release with no --junit is refused as a usage error naming the option.'
+verification_method:
+- Test
+type: SRS

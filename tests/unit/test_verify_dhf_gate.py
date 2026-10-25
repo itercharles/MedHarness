@@ -13,6 +13,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
 from click.testing import CliRunner
 
 from medharness.cli import main
@@ -36,6 +37,8 @@ def _break_link(dhf: Path, glob: str, old: str, new: str) -> None:
 
 
 class TestDanglingAlwaysBlocks:
+    @pytest.mark.dhf_links("SRS-036")
+    @pytest.mark.dhf_testing("T1")
     def test_dangling_link_fails_without_any_flag(self, tmp_path: Path) -> None:
         dhf = _scaffold(tmp_path)
         _break_link(dhf, "RCM-*.yaml", "RISK-001", "RISK-404")
@@ -58,6 +61,8 @@ class TestDanglingAlwaysBlocks:
         assert "correct the ID" in r.output
         assert "resolves to nothing" in r.output
 
+    @pytest.mark.dhf_links("SRS-042")
+    @pytest.mark.dhf_testing("T2")
     def test_clean_scaffold_passes(self, tmp_path: Path) -> None:
         dhf = _scaffold(tmp_path)
         r = CliRunner().invoke(main, ["--dhf", str(dhf), "verify", "dhf"])
@@ -70,6 +75,8 @@ class TestCoverageIsAdvisoryByDefault:
         for path in (dhf / "items").rglob("SWDD-*.yaml"):
             path.unlink()
 
+    @pytest.mark.dhf_links("SRS-040")
+    @pytest.mark.dhf_testing("T1")
     def test_gap_prints_warn_and_exits_zero(self, tmp_path: Path) -> None:
         dhf = _scaffold(tmp_path)
         self._strip_swdd(dhf)
@@ -84,6 +91,8 @@ class TestCoverageIsAdvisoryByDefault:
         r = CliRunner().invoke(main, ["--dhf", str(dhf), "verify", "dhf"])
         assert "--strict" in r.output
 
+    @pytest.mark.dhf_links("SRS-040")
+    @pytest.mark.dhf_testing("T2")
     def test_flag_makes_gap_blocking(self, tmp_path: Path) -> None:
         dhf = _scaffold(tmp_path)
         self._strip_swdd(dhf)
@@ -93,6 +102,8 @@ class TestCoverageIsAdvisoryByDefault:
         assert r.exit_code != 0, r.output
         assert "FAIL [coverage]" in r.output
 
+    @pytest.mark.dhf_links("SRS-040")
+    @pytest.mark.dhf_testing("T4")
     def test_json_passed_matches_exit_code(self, tmp_path: Path) -> None:
         """The JSON contract and the exit code must not disagree."""
         dhf = _scaffold(tmp_path)

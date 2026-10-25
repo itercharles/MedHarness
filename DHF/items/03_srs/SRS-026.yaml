@@ -1,0 +1,19 @@
+id: SRS-026
+title: verify tests refuses under --strict a requirement that declares no verification_method
+risk: high
+content: '`verify tests --strict` shall fail when a requirement declares no `verification_method`,
+  and without --strict shall warn, so that a requirement with no planned way of being
+  verified is not released, while a project adopting the field is not blocked at once.'
+verification_criteria: 'With --strict the exit code is 1 and `errors` holds `<ID>:
+  no verification_method declared`; without it the same text is in `warnings`. The
+  check runs whether or not JUnit evidence is given.'
+testing: 'T1: With --strict, a requirement with no verification_method fails, naming
+  it.
+
+  T2: Without --strict, it is a warning naming the requirement and does not by itself
+  fail the gate.
+
+  T3: With no JUnit evidence, the missing method is still reported.'
+verification_method:
+- Test
+type: SRS

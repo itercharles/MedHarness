@@ -1,0 +1,22 @@
+id: SRS-040
+title: verify dhf blocks coverage gaps and placeholder text only under --strict
+risk: high
+content: '`verify dhf` shall report an item with no downstream coverage, and a title
+  or content that is still a placeholder, as warnings, and shall fail on them only
+  under --strict, so that incomplete design is advised on mid-project and blocks when
+  asked.'
+verification_criteria: Without --strict the exit code is 0, the finding is in `warnings`
+  and the exit code agrees with `passed`; with --strict the exit code is 1 and the
+  same finding is in `errors`. A project's own `placeholder_patterns` apply, and an
+  empty list turns the check off.
+testing: 'T1: A coverage gap warns and exits 0 without --strict.
+
+  T2: The same coverage gap fails under --strict.
+
+  T3: Placeholder text warns without --strict and fails under it, one finding per
+  item.
+
+  T4: The passed field of the answer matches the exit code in both modes.'
+verification_method:
+- Test
+type: SRS

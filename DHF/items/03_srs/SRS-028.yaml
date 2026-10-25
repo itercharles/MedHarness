@@ -1,0 +1,17 @@
+id: SRS-028
+title: verify tests refuses under --strict a test that links an item the DHF does
+  not have
+risk: high
+content: '`verify tests --strict` shall fail when a test that ran links an ID the
+  DHF does not hold, and without --strict shall warn, so that evidence for a renamed
+  or deleted item, or a mistyped link, is not taken for coverage.'
+verification_criteria: 'Without --strict the exit code is 0 and `warnings` holds `<ID>:
+  linked by ''<test>'' but not in the DHF`; with --strict the exit code is 1 and the
+  same text is in `errors`.'
+testing: 'T1: Without --strict, a link to an unknown ID is a warning naming the ID
+  and the test.
+
+  T2: With --strict, the same link fails the gate.'
+verification_method:
+- Test
+type: SRS

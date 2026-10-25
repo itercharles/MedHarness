@@ -1,0 +1,21 @@
+id: SRS-033
+title: verify changes never reads a diff it cannot take as no changes
+risk: high
+content: '`verify changes` shall fail, and say it could not read the diff, when `--since-ref`
+  cannot be reached or the items are not files in Git, and shall not report the CR
+  as having broken its promise, so that an unchecked branch is not passed and a sound
+  CR is not blamed.'
+verification_criteria: The exit code is 1 and `errors` holds a `diff_unavailable`
+  finding naming the ref and git's reason, with a fix that fetches the ref; no `dhf_branch`
+  finding is made. For a store that keeps no item files the error names the store
+  and says to use a yaml store.
+testing: 'T1: An unreachable ref is reported as diff_unavailable, whether the CR promised
+  something or nothing, and the CR is not accused.
+
+  T2: On the command line a --since-ref that does not exist exits 1 and names the
+  ref.
+
+  T3: A store that keeps no item files in Git is refused with the reason.'
+verification_method:
+- Test
+type: SRS

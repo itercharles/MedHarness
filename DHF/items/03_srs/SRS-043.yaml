@@ -1,0 +1,18 @@
+id: SRS-043
+title: build release refuses a release whose DHF fails verify dhf --strict
+risk: high
+content: '`build release` shall refuse the release, exit 1 and record no REL item,
+  when `verify dhf --strict` fails on the DHF, so that a DHF with a broken link, a
+  coverage gap or placeholder text cannot ship.'
+verification_criteria: The exit code is 1, `outcome` is completed_with_errors, `rel_uid`
+  is null and `errors` holds each finding of the gate, prefixed `DHF:`; with --write
+  no REL item is created.
+testing: 'T1: A dangling link fails the release, with the DHF: finding, and --write
+  records no REL.
+
+  T2: The untouched starter DHF, whose text is placeholder, cannot be released.
+
+  T3: A coverage gap in the chain fails the release (the gate runs strict).'
+verification_method:
+- Test
+type: SRS

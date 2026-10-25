@@ -55,10 +55,13 @@ CI runs exactly this in the job `Check | Own DHF`. The DHF is not part of the pa
 | `verify completion` | SRS-002 to SRS-006 | covered |
 | `verify impact` | SRS-007 to SRS-015 | covered |
 | `verify approval --release` (and the approval log and approvers list it relies on) | SRS-016 to SRS-023 | covered |
-| `verify tests`, `build release`, `verify changes`, `verify dhf` | none yet | next: the rest of the high-risk commands |
-| Medium risk commands | none yet | after the high-risk ones |
+| `verify tests` | SRS-024 to SRS-029 | covered |
+| `verify changes` | SRS-030 to SRS-034 | covered |
+| `verify dhf` | SRS-035 to SRS-042 | covered |
+| `build release` | SRS-043 to SRS-050 | covered |
+| Medium risk commands | none yet | next: they follow the high-risk ones |
 | Low risk commands | none | rated, not specified: nothing evidence depends on them |
 
-"Covered" means every test point of every item has at least one passing test, which `verify tests --strict` enforces. It does not mean the requirements are complete for the command: an omission a requirement does not name is not tested. The commands not yet covered are the larger gap.
+"Covered" means every test point of every item has at least one passing test, which `verify tests --strict` enforces. It does not mean the requirements are complete for the command: an omission a requirement does not name is not tested. All seven high-risk commands are covered; the medium-risk commands, which a later gate checks again, are the remaining gap.
 
 The requirements were derived from what the commands do today ([interface](interface.md), the gates' docstrings and the tests that already existed), and the tests were annotated, not rewritten. Where a case was untested, a test was added.

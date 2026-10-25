@@ -1,0 +1,27 @@
+id: SRS-047
+title: build release writes the manifest, the change report and the REL item only
+  on --write with every check passed
+risk: high
+content: '`build release` shall record the REL item and write `releases/<version>/manifest.yaml`
+  and `changes.md` only when --write is given and every check passed, and shall record
+  the release as a draft, so that a dry run changes nothing in the DHF and a record
+  exists only for a release that passed.'
+verification_criteria: With --write and no errors, `rel_uid` is set, the REL item
+  has status draft, and the manifest and change report exist; the first release lists
+  every item as added, a later one lists, per type, what was added, modified or removed
+  since the previous release, with the CR that lists each. Without --write, a dry
+  run writes only to --out-dir and the DHF is byte-for-byte as it was.
+testing: 'T1: A passing release with --write records a draft REL and writes the manifest
+  and the change report.
+
+  T2: A dry run, without --write, writes only to the out directory: the DHF is unchanged.
+
+  T3: The first release lists every item as added.
+
+  T4: A later release lists only what changed since the previous one, with the CR
+  that lists it.
+
+  T5: An item removed between releases is listed as removed.'
+verification_method:
+- Test
+type: SRS

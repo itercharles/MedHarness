@@ -1,0 +1,17 @@
+id: SRS-032
+title: verify changes requires a code change under --code-path
+risk: high
+content: '`verify changes --code-path PATH` shall fail when no file under PATH has
+  been created, changed or deleted by the branch, and without the option shall not
+  look at code, so that a CR that records an implementation is not closed with none.'
+verification_criteria: With --code-path and no change under it the exit code is 1
+  and `errors` holds a `code_branch` finding naming the paths; with a change under
+  it that finding is absent; without the option no code finding is made.
+testing: 'T1: No changed file under the path fails with a code_branch finding.
+
+  T2: A changed file under the path passes the code check.
+
+  T3: Without --code-path the code is not checked.'
+verification_method:
+- Test
+type: SRS
