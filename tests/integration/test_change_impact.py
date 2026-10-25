@@ -61,6 +61,8 @@ def _impact(answer: dict) -> list[str]:
     return sorted(e.split(":")[0].removeprefix("impact.") for e in answer["errors"] if e.startswith("impact."))
 
 
+@pytest.mark.dhf_links("SRS-007")
+@pytest.mark.dhf_testing("T1")
 def test_items_that_depend_on_a_changed_one_are_named(repo: Path) -> None:
     _change_sys(repo)
     result, answer = _changes(repo)
@@ -69,12 +71,16 @@ def test_items_that_depend_on_a_changed_one_are_named(repo: Path) -> None:
     assert any("SRS-001 depends on SYS-001, which this branch changes" in e for e in answer["errors"])
 
 
+@pytest.mark.dhf_links("SRS-015")
+@pytest.mark.dhf_testing("T2")
 def test_reviewing_them_settles_it(repo: Path) -> None:
     _change_sys(repo, reviewed_items=["SRS-001", "SYSARCH-001", "RCM-001"])
     result, answer = _changes(repo)
     assert _impact(answer) == [], answer["errors"]
 
 
+@pytest.mark.dhf_links("SRS-007")
+@pytest.mark.dhf_testing("T2")
 def test_changing_a_dependent_settles_it_and_reaches_its_own_dependents(repo: Path) -> None:
     """SRS-001 followed the change, so it is settled; SWDD-001 now depends on a changed item."""
     _change_sys(repo)
@@ -88,6 +94,8 @@ def test_changing_a_dependent_settles_it_and_reaches_its_own_dependents(repo: Pa
     assert _impact(answer) == [], answer["errors"]
 
 
+@pytest.mark.dhf_links("SRS-007")
+@pytest.mark.dhf_testing("T3")
 def test_the_depth_is_configurable(repo: Path) -> None:
     _change_sys(repo, reviewed_items=["SRS-001", "SYSARCH-001", "RCM-001"])
     global_yaml = repo / "DHF" / "config" / "global.yaml"
@@ -117,6 +125,8 @@ def test_a_branch_that_changes_no_item_has_no_impact(repo: Path) -> None:
     assert _impact(answer) == []
 
 
+@pytest.mark.dhf_links("SRS-015")
+@pytest.mark.dhf_testing("T6")
 def test_work_that_landed_on_main_after_the_branch_forked_is_not_the_branchs(repo: Path):
     _change_sys(repo, reviewed_items=["SRS-001", "SYSARCH-001", "RCM-001"])
     _git(repo, "commit", "-qam", "branch work")

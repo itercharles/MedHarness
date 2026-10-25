@@ -1,0 +1,15 @@
+id: SRS-014
+title: verify impact never reads what it cannot judge as a pass
+risk: high
+content: '`verify impact` shall fail, naming the cause, when the CR is not in the
+  DHF or when the diff against `--since-ref` cannot be read, and shall not treat either
+  as a branch that changes nothing.'
+verification_criteria: The exit code is 1, `passed` is false and the first error begins
+  with `cr_item:` for an absent CR and with `diff_unavailable:` for an unreachable
+  ref.
+testing: 'T1: A CR ID the DHF does not hold: fails with a `cr_item` finding.
+
+  T2: A `--since-ref` that cannot be reached: fails with a `diff_unavailable` finding.'
+verification_method:
+- Test
+type: SRS

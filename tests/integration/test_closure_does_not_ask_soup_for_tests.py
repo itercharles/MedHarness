@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
 import yaml
 from click.testing import CliRunner
 
@@ -30,12 +31,16 @@ def _closure(tmp_path: Path, affected: list[str]):
     return result, json.loads(result.stdout.splitlines()[0])
 
 
+@pytest.mark.dhf_links("SRS-006")
+@pytest.mark.dhf_testing("T5")
 def test_a_changed_soup_item_needs_no_verification_method(tmp_path: Path) -> None:
     result, answer = _closure(tmp_path, ["SOUP-001"])
     assert result.exit_code == 0, answer["errors"]
     assert not any("SOUP-001" in e for e in answer["errors"])
 
 
+@pytest.mark.dhf_links("SRS-004")
+@pytest.mark.dhf_testing("T3")
 def test_a_changed_requirement_still_does(tmp_path: Path) -> None:
     """The requirement types keep their check: the starter SRS-001 declares no method."""
     result, answer = _closure(tmp_path, ["SRS-001"])

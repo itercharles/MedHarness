@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from fixtures.approvals import build_project, git
 
 
@@ -35,6 +37,8 @@ def test_two_signers_on_two_branches_from_one_release_both_merge(tmp_path: Path)
     assert "SYS document" in errors and "The release of 1.0.0" in errors
 
 
+@pytest.mark.dhf_links("SRS-019")
+@pytest.mark.dhf_testing("T4")
 def test_a_record_whose_id_differs_from_its_file_name_is_reported(tmp_path: Path) -> None:
     project = build_project(tmp_path)
     project.ready_to_release()

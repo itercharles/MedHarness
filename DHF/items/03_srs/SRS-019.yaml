@@ -1,0 +1,21 @@
+id: SRS-019
+title: verify approval refuses an approval record that is forged, unsigned or altered
+risk: high
+content: '`verify approval` shall give no standing to an approval record whose signature
+  does not verify against its own content, that has no signature file, that names
+  a signer other than the owner of its key, or whose `id` differs from its file name,
+  and shall report each, so that only a record the approver signed counts.'
+verification_criteria: The exit code is 1, `passed` is false, `errors` names the fault
+  (`signature does not verify`, `no signature file`, `its key belongs to <name>`,
+  `differs from its file name`) and the document the record covered is reported unsigned.
+testing: 'T1: A record edited after signing fails its signature and stops counting.
+
+  T2: A record without its signature file counts for nothing.
+
+  T3: A record naming a signer other than the owner of the key is invalid.
+
+  T4: A record whose `id` differs from its file name is reported, and its document
+  stays unsigned.'
+verification_method:
+- Test
+type: SRS

@@ -1,0 +1,10 @@
+# MedHarness's own DHF: the software requirements of the tool, for tool validation
+# (ISO 13485 4.1.6, IEC/TR 80002-2). See docs/validation.md.
+
+project_name: "MedHarness"
+
+# A tool's requirements are software requirements; the other item types are not used.
+omit_doc_types: [UC, CRS, SYS, SYSARCH, MODULE, SWDD, RISK, RCM, SOUP, CR, DEF, REL]
+# Only SRS items exist, so no chain or link rule applies.
+traceability_matrices: []
+required_traceability: []
