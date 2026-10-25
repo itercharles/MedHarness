@@ -1,0 +1,21 @@
+id: SRS-012
+title: verify impact refuses a CR marked rejected whose branch changes anything beyond
+  the CR
+risk: high
+content: '`verify impact` shall fail a change request whose `triage_result.verdict`
+  is rejected when its branch changes an item other than the CR, or a code file, and
+  shall check it as it checks any other CR, so that marking a CR rejected cannot excuse
+  a change from the gate.'
+verification_criteria: The exit code is 1, `passed` is false and the first error is
+  a `triage_result` finding naming what the branch changes; the impact record is then
+  checked as for any CR.
+testing: 'T1: A rejected CR on a branch that changes items: fails with a `triage_result`
+  finding, and its missing impact analysis is also reported.
+
+  T2: A rejected CR on a branch that changes a code file: fails.
+
+  T3: The seeded omission of a CR rejected to skip the checks is stopped by `verify
+  impact`.'
+verification_method:
+- Test
+type: SRS

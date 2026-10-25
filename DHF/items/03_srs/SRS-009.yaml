@@ -1,0 +1,17 @@
+id: SRS-009
+title: verify impact refuses a changed item whose risk control is not in affected_risk_items
+risk: high
+content: '`verify impact` shall fail a change request when an item the branch changed
+  is controlled by a risk control, or is a risk item, that is not listed in the CR''s
+  `affected_risk_items`, so that a change is never made without recording its effect
+  on risk.'
+verification_criteria: The exit code is 1, `passed` is false and `errors` contains
+  an `impact_analysis.risk` finding naming the control, the changed item and the risk
+  it mitigates.
+testing: 'T1: A changed SYS controlled by an RCM that mitigates a RISK, with `affected_risk_items`
+  empty: fails, naming the RCM and the RISK.
+
+  T2: The seeded omission of a risk control left out is stopped by `verify impact`.'
+verification_method:
+- Test
+type: SRS

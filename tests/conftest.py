@@ -1,11 +1,11 @@
 """Root conftest — shared fixtures for unit and integration tests.
 
-Previously this injected medharness.* JUnit XML properties from
-docstring @links / @test_id tags. That has been removed because the
-tool repo no longer governs itself through DHF requirement traceability.
-
-User projects that want requirement-linked JUnit evidence should use
-the medharness test framework guidance in their own repos.
+MedHarness keeps its own DHF (`DHF/`, see docs/validation.md). A test that verifies
+one of its requirements carries `@pytest.mark.dhf_links("SRS-nnn")` and, for a numbered
+test point, `@pytest.mark.dhf_testing("Tn")`. The `dhfkit` pytest plugin turns those into
+`medharness.links` and `medharness.testing` properties in the JUnit XML, which
+`medharness verify tests` reads. The plugin is the package's `pytest11` entry point;
+`pytest_configure` below loads it when the package is not installed.
 """
 
 import sys
@@ -17,6 +17,12 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from fixtures.data import build_test_adapter, populate_governance
+
+
+def pytest_configure(config):
+    pm = config.pluginmanager
+    if not pm.has_plugin("dhfkit") and not pm.has_plugin("dhfkit.pytest_plugin"):
+        pm.import_plugin("dhfkit.pytest_plugin")
 
 
 @pytest.fixture

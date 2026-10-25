@@ -1,0 +1,23 @@
+id: SRS-010
+title: verify impact refuses a changed code file that reaches an unsettled item through
+  MODULE paths
+risk: high
+content: '`verify impact` shall fail a change request when a file the branch changed
+  outside the DHF is owned by a MODULE, through the module''s `paths`, and an item
+  that module''s design reaches is neither changed nor listed in `reviewed_items`,
+  so that changing the code of a module obliges a look at its design and requirements.'
+verification_criteria: The exit code is 1, `passed` is false and `errors` holds one
+  `code.<path>` finding per unsettled item, naming the file, the module and the item.
+  A `paths` entry ending in `/` owns a directory; any other entry is a file or glob.
+testing: 'T1: A changed file reaches the design item and the requirement of its module:
+  fails, naming both.
+
+  T2: A deleted file reaches its module as a changed one does.
+
+  T3: A directory prefix and a glob each own their files.
+
+  T4: The seeded omission of code changed without a requirement is stopped by `verify
+  impact`.'
+verification_method:
+- Test
+type: SRS

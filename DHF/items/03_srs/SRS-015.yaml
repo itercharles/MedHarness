@@ -1,0 +1,24 @@
+id: SRS-015
+title: verify impact passes a CR whose record settles everything the branch reaches
+risk: high
+content: '`verify impact` shall pass a change request whose record settles every item
+  and file its branch reaches, and shall not charge it for work that is not the branch''s,
+  so that a sound record is not blocked.'
+verification_criteria: The exit code is 0 and `passed` is true when every reached
+  item is changed or reviewed and the impact analysis is complete; files exempted
+  by `unowned_paths` and work that landed on the base after the fork add no error.
+testing: 'T1: A complete record for a changed SYS passes.
+
+  T2: Listing the dependents in `reviewed_items` settles them.
+
+  T3: Listing the items a changed file reaches in `reviewed_items`, or changing them,
+  settles them.
+
+  T4: Changed docs, CI workflows and lockfiles need no owning module.
+
+  T5: A rejected CR on a branch that changes nothing but the CR is not checked.
+
+  T6: Work that landed on the base branch after the fork is not the branch''s.'
+verification_method:
+- Test
+type: SRS

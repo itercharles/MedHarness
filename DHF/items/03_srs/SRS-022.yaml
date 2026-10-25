@@ -1,0 +1,25 @@
+id: SRS-022
+title: verify approval refuses a change to the approvers list not signed from the
+  earlier list
+risk: high
+content: '`verify approval` shall fail when the approvers list differs from the one
+  at `--since-ref` unless a valid approval of its current content was signed by someone
+  on the earlier list, and shall fail when the list is deleted or malformed, so that
+  the roster cannot grant itself authority.'
+verification_criteria: The exit code is 1, `passed` is false and the first error says
+  `approvers.yaml` changed, is gone, or must be a list of approvers; for a change
+  it names the approvers of the earlier list.
+testing: 'T1: A key added without an approval from the earlier list fails, naming
+  the earlier approvers.
+
+  T2: A key that was added cannot approve its own addition.
+
+  T3: An approval goes stale when the list is edited again after it.
+
+  T4: An approval by a key on the list that is not an earlier approver does not stand
+  in for the earlier list.
+
+  T5: Deleting the list does not switch approvals off.'
+verification_method:
+- Test
+type: SRS

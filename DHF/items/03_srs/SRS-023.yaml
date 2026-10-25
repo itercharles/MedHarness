@@ -1,0 +1,22 @@
+id: SRS-023
+title: verify approval --release passes a release every role has signed
+risk: high
+content: '`verify approval --release` shall pass a release when every manifest document
+  with an owning role, and the release itself, carries a valid current signature,
+  so that a fully approved release is not blocked.'
+verification_criteria: The exit code is 0 and `passed` is true when every signature
+  is in place (for the scaffolded DHF, "11 of 11 signature(s) in place"); the release
+  record moving on to approved after signing is not drift.
+testing: 'T1: After each role has signed its documents, and the release role the manifest:
+  passes, with every signature in place.
+
+  T2: One person holding every role passes with a single record.
+
+  T3: The release record moving to approved after the signatures is not drift.
+
+  T4: The first approvers list is accepted as the root of trust, with a warning.
+
+  T5: A change to the approvers list approved by someone on the earlier list passes.'
+verification_method:
+- Test
+type: SRS
