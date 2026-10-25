@@ -11,6 +11,9 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+### Changed
+- A release now runs the full test suite on its tag, from the lockfile, before anything is published, and attaches its evidence to the GitHub Release: the JUnit results, a test summary (commit, Python, runner, pytest result) and `medharness-<version>-tested-with.txt`, a pip constraints file of the exact dependency versions the suite passed with. `docs/adopting.md` shows how to install that validated configuration.
+
 ## [0.70.0] — 2026-10-24
 
 ### Added

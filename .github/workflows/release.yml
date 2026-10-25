@@ -83,9 +83,76 @@ jobs:
           fi
           echo "PyPI check passed: $PACKAGE $VERSION not yet published."
 
+  tests:
+    name: Test the tagged source
+    needs: preflight
+    runs-on: ubuntu-24.04
+    # Read-only: the suite runs against the tag and nothing is written back.
+    permissions:
+      contents: read
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+
+      # The same lockfile and extras the CI jobs test with, so the environment
+      # recorded below is the one the suite ran in.
+      - name: Install from the lockfile
+        run: uv sync --locked --extra dev --extra docs
+
+      - name: Install WeasyPrint's native libraries
+        # The PDF tests skip without them, and a skipped test guards nothing.
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libpango-1.0-0 libpangoft2-1.0-0 libharfbuzz-subset0
+
+      - name: Run the full test suite
+        env:
+          MEDHARNESS_REQUIRE_PDF: "1"
+        run: |
+          set -o pipefail
+          mkdir -p test-results
+          uv run --no-sync pytest -q --junitxml=test-results/junit.xml 2>&1 | tee test-results/pytest-output.txt
+
+      # The constraints file pins every runtime and docs dependency to the version
+      # the suite passed with. `uv export` reads the lockfile, so it lists exactly
+      # what `uv sync` installed, and --no-emit-project leaves medharness itself out
+      # (the install names it with `medharness[docs]==<version>`).
+      - name: Record the tested configuration
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          mkdir -p evidence
+          uv export --frozen --no-hashes --no-emit-project --no-dev --extra docs \
+            --no-header --no-annotate > "evidence/medharness-${VERSION}-tested-with.txt"
+          mv test-results/junit.xml "evidence/medharness-${VERSION}-junit.xml"
+          . /etc/os-release
+          {
+            echo "medharness ${VERSION}"
+            echo "tag: ${GITHUB_REF_NAME}"
+            echo "commit: $(git rev-parse HEAD)"
+            echo "pytest: $(tail -n 1 test-results/pytest-output.txt)"
+            echo "python: $(uv run --no-sync python --version)"
+            echo "runner: ubuntu-24.04 (${PRETTY_NAME})"
+          } > "evidence/medharness-${VERSION}-test-summary.txt"
+
+      - name: Upload the release evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-evidence
+          path: evidence/
+          if-no-files-found: error
+
   build-and-publish:
     name: Build and publish wheel
-    needs: preflight
+    needs: [preflight, tests]
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -112,7 +179,15 @@ jobs:
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
 
-      - name: Upload wheel to GitHub Release
+      - name: Download the release evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: release-evidence
+          path: evidence
+
+      - name: Upload wheel and test evidence to GitHub Release
         uses: softprops/action-gh-release@v3
         with:
-          files: dist/*.whl
+          files: |
+            dist/*.whl
+            evidence/*
