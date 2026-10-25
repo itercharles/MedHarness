@@ -187,3 +187,66 @@ Still open: G2 (a new hazard has no way in), G4 (a passing test is taken at its 
 and the test point that only warns.
 
 Next: iteration 3, approval and accountability.
+
+## Iteration 3: result (2026-10-25)
+
+[ADR-004](adr/ADR-004-signed-approvals.md) settles approval and accountability. It went
+through three designs; the one that shipped in 0.70.0 (#457, #459, #460):
+
+- **During development, approval is pull-request review** under the team's rules, the
+  change control board's included. No gate asks for a signature.
+- **At release, each document is signed by the role that owns it.** `build release
+  --write` writes a manifest of each document's item hashes and a change report;
+  `item approve --release` signs; `verify approval --release` checks; `build approvals`
+  renders the approval sheet. Signatures are SSH signatures in an append-only log in the
+  DHF, checked against an approvers list that guards itself.
+- **ContourLab adopted it** (ContourLab #233, #234). Its CR agent jobs no longer hold the
+  owner's token: each pushes through a separate job that has no agent (ContourLab #235).
+
+Still open: proving that a hardware key's holder was present, revoking an approver's key,
+and whether the FDA's Part 11 is in scope.
+
+## Iteration 4: inventory (2026-10-25)
+
+What a quality system needs before it relies on a tool (ISO 13485 §4.1.6, IEC/TR 80002-2),
+against what MedHarness has:
+
+| Element | Today | Verdict |
+|---|---|---|
+| Intended use | The charter, the README and ai-security.md: the AI stages propose; the deterministic commands are the ones to rely on | Present |
+| Risk of the tool failing | None. A gate that wrongly passes (`verify completion`, `verify approval --release`, `build release`) matters far more than `item list` going wrong, and nothing says so | Missing |
+| Requirements | `interface.md` is a tested contract of commands, options and answers, but it says what a gate prints, not what it must stop | Partial |
+| Verification | About 2,100 tests (unit, integration, interface, guards) and the seeded-omission fixture, but none traces to a requirement, and coverage is not measured | Partial |
+| Configuration | Semantic versions, the changelog, `uv.lock` and the release preflight. The published package does not pin its dependencies, so an install can differ from what was tested | Gap |
+| Release record | The changelog and trusted publishing to PyPI. The release workflow runs no tests, the CI runs that did are not kept, and no release lists its known anomalies | Missing |
+| Validation where it is used | None. The tests do not ship, so a user cannot show that their install works | Missing |
+| Revalidation on upgrade | The changelog's categories, but not which gates a change touches | Partial |
+
+External tools are part of the configuration and are not listed: OpenSSH (signing),
+git, WeasyPrint and its native libraries (PDF), osv.dev (vulnerability scan), and `gh` and
+the `claude` CLI for the frozen CI runner.
+
+### Approach: MedHarness keeps its own DHF
+
+A traceability tool with no traceability of its own is the gap that matters. MedHarness
+will manage itself with itself, starting from the commands that are relied on:
+
+- **Requirements of its gates as DHF items**, each with what the gate must pass and must
+  stop, and a risk rating for a wrong pass.
+- **Its tests trace to them** with `@links` and test points, and `verify tests` holds every
+  requirement to a passing test. The seeded-omission fixture verifies that the gates stop
+  what they must.
+- **Each release carries its own evidence.** The release runs the tests, and `build release`
+  produces MedHarness's traceability, test evidence and known anomalies. The release also
+  carries the dependency versions it was tested with.
+- **A user can validate their install.** One command runs the validation tests against the
+  installed version, in the user's environment, and writes a report they can file.
+
+Order:
+
+1. Rate each command's risk of a wrong pass, which sets how much evidence each needs.
+2. Give the high-risk gates requirements and trace their tests.
+3. Make a release carry its evidence and its tested dependency versions.
+4. The user's validation command.
+
+The AI stages stay out of scope: they are not relied on as a validated transformation.
