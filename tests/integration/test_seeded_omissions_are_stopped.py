@@ -227,16 +227,22 @@ def _missed(gap: str, why: str):
 
 
 OMISSIONS: list = [
-    pytest.param(dependent_left_unreviewed, "verify impact"),
-    pytest.param(risk_control_left_out, "verify impact"),
+    pytest.param(dependent_left_unreviewed, "verify impact",
+                marks=[pytest.mark.dhf_links("SRS-007"), pytest.mark.dhf_testing("T4")]),
+    pytest.param(risk_control_left_out, "verify impact",
+                marks=[pytest.mark.dhf_links("SRS-009"), pytest.mark.dhf_testing("T2")]),
     pytest.param(undeclared_item_change, "verify changes"),
     pytest.param(declared_item_not_changed, "verify changes"),
-    pytest.param(parent_left_unreviewed, "verify impact"),
+    pytest.param(parent_left_unreviewed, "verify impact",
+                marks=[pytest.mark.dhf_links("SRS-008"), pytest.mark.dhf_testing("T2")]),
     pytest.param(changed_requirement_lost_its_test, "verify tests"),
     pytest.param(old_test_point_kept, None, marks=_missed("warning", "test_points_unchanged warns, it does not stop")),
-    pytest.param(code_changed_without_a_requirement, "verify impact"),
-    pytest.param(code_changed_outside_the_declared_scope, "verify impact"),
-    pytest.param(rejected_to_skip_the_checks, "verify impact"),
+    pytest.param(code_changed_without_a_requirement, "verify impact",
+                marks=[pytest.mark.dhf_links("SRS-010"), pytest.mark.dhf_testing("T4")]),
+    pytest.param(code_changed_outside_the_declared_scope, "verify impact",
+                marks=[pytest.mark.dhf_links("SRS-011"), pytest.mark.dhf_testing("T3")]),
+    pytest.param(rejected_to_skip_the_checks, "verify impact",
+                marks=[pytest.mark.dhf_links("SRS-012"), pytest.mark.dhf_testing("T3")]),
     pytest.param(new_hazard_not_recorded, None, marks=_missed("G2", "a hazard linked to nothing has no way in")),
     pytest.param(verifying_test_weakened, None, marks=_missed("adequacy", "a passing test is taken at its word")),
 ]

@@ -74,11 +74,15 @@ def _impact(repo: Path, cr: str = "CR-001", *extra: str):
     return _run(repo, "verify", "impact", "--cr", cr, "--since-ref", "main", *extra)
 
 
+@pytest.mark.dhf_links("SRS-015")
+@pytest.mark.dhf_testing("T1")
 def test_a_record_that_settles_what_the_branch_reaches_passes(repo: Path) -> None:
     result, answer = _impact(repo)
     assert result.exit_code == 0 and answer["passed"] is True, answer["errors"]
 
 
+@pytest.mark.dhf_links("SRS-013")
+@pytest.mark.dhf_testing("T1")
 def test_a_cr_with_no_impact_analysis_fails_naming_what_is_missing(repo: Path) -> None:
     path = next((repo / "DHF" / "items").rglob("CR-001.yaml"))
     data = yaml.safe_load(path.read_text())
@@ -89,6 +93,8 @@ def test_a_cr_with_no_impact_analysis_fails_naming_what_is_missing(repo: Path) -
     assert any(e.startswith("impact_analysis") for e in answer["errors"]), answer["errors"]
 
 
+@pytest.mark.dhf_links("SRS-013")
+@pytest.mark.dhf_testing("T2")
 def test_an_anchor_nobody_settled_fails(repo: Path) -> None:
     """The record `verify dhf` and `verify changes` both passed, and `build plan` refused."""
     _edit(repo, "CR-001.yaml", impact_analysis=_analysis(
@@ -98,6 +104,8 @@ def test_an_anchor_nobody_settled_fails(repo: Path) -> None:
     assert any("anchor UC-001 is neither changed nor in `reviewed_items`" in e for e in answer["errors"])
 
 
+@pytest.mark.dhf_links("SRS-007")
+@pytest.mark.dhf_testing("T1")
 def test_a_dependent_of_a_changed_item_nobody_reviewed_fails(repo: Path) -> None:
     _edit(repo, "CR-001.yaml", reviewed_items=["CRS-001", "SRS-001", "SYSARCH-001"])
     result, answer = _impact(repo)
@@ -105,6 +113,8 @@ def test_a_dependent_of_a_changed_item_nobody_reviewed_fails(repo: Path) -> None
     assert any(e.startswith("impact.RCM-001") for e in answer["errors"]), answer["errors"]
 
 
+@pytest.mark.dhf_links("SRS-015")
+@pytest.mark.dhf_testing("T5")
 def test_a_cr_triage_rejected_on_a_branch_that_changes_only_the_cr_is_not_checked(repo: Path) -> None:
     _git(repo, "checkout", "main", "--", str(next((repo / "DHF" / "items").rglob("SYS-001.yaml")).relative_to(repo)))
     path = next((repo / "DHF" / "items").rglob("CR-001.yaml"))
@@ -116,6 +126,8 @@ def test_a_cr_triage_rejected_on_a_branch_that_changes_only_the_cr_is_not_checke
     assert result.exit_code == 0, answer["errors"]
 
 
+@pytest.mark.dhf_links("SRS-012")
+@pytest.mark.dhf_testing("T1")
 def test_a_cr_marked_rejected_whose_branch_changes_items_is_checked(repo: Path) -> None:
     path = next((repo / "DHF" / "items").rglob("CR-001.yaml"))
     data = yaml.safe_load(path.read_text())
@@ -128,11 +140,15 @@ def test_a_cr_marked_rejected_whose_branch_changes_items_is_checked(repo: Path) 
     assert any(e.startswith("impact_analysis") for e in answer["errors"]), answer["errors"]
 
 
+@pytest.mark.dhf_links("SRS-014")
+@pytest.mark.dhf_testing("T1")
 def test_a_cr_that_is_not_in_the_dhf_is_named(repo: Path) -> None:
     result, answer = _impact(repo, "CR-099")
     assert result.exit_code == 1 and answer["errors"][0].startswith("cr_item:")
 
 
+@pytest.mark.dhf_links("SRS-014")
+@pytest.mark.dhf_testing("T2")
 def test_a_ref_that_cannot_be_reached_is_not_an_empty_diff(repo: Path) -> None:
     result, answer = _run(repo, "verify", "impact", "--cr", "CR-001", "--since-ref", "origin/nowhere")
     assert result.exit_code == 1 and answer["errors"][0].startswith("diff_unavailable:")
@@ -142,3 +158,29 @@ def test_verify_changes_no_longer_judges_impact(repo: Path) -> None:
     _edit(repo, "CR-001.yaml", reviewed_items=[])
     result, answer = _run(repo, "verify", "changes", "--cr", "CR-001", "--since-ref", "main")
     assert result.exit_code == 0, answer["errors"]
+
+
+@pytest.mark.dhf_links("SRS-008")
+@pytest.mark.dhf_testing("T1")
+def test_a_changed_requirement_whose_parent_nobody_settled_fails(repo: Path) -> None:
+    _git(repo, "checkout", "main", "--", str(next((repo / "DHF" / "items").rglob("SYS-001.yaml")).relative_to(repo)))
+    _edit(repo, "SRS-001.yaml", content="The module applies the calibration factor.")
+    _edit(repo, "CR-001.yaml", affected_items=["SRS-001"], reviewed_items=["SWDD-001"],
+          impact_analysis=_analysis(anchors=[{"id": "SRS-001", "evidence": "named in the request"}],
+                                    unchanged=[{"id": "SWDD-001", "reason": "still holds"}]))
+    result, answer = _impact(repo)
+    assert result.exit_code == 1 and answer["passed"] is False
+    assert any(e.startswith("impact_analysis.parents:") and "SRS-001 changed but its parent SYS-001" in e
+               for e in answer["errors"]), answer["errors"]
+
+
+@pytest.mark.dhf_links("SRS-009")
+@pytest.mark.dhf_testing("T1")
+def test_a_risk_control_of_a_changed_item_missing_from_affected_risk_items_fails(repo: Path) -> None:
+    _edit(repo, "CR-001.yaml", affected_risk_items=[])
+    result, answer = _impact(repo)
+    assert result.exit_code == 1 and answer["passed"] is False
+    risk = [e for e in answer["errors"] if e.startswith("impact_analysis.risk:")]
+    assert any("RCM-001 controls SYS-001, which changed, but RCM-001 is not in `affected_risk_items`" in e
+               for e in risk), answer["errors"]
+    assert any("RISK-001 is mitigated by RCM-001" in e for e in risk), answer["errors"]

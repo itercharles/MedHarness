@@ -54,6 +54,8 @@ def test_the_quality_lead_signs_the_manifest_file_as_the_release(project: Projec
     assert created["documents"] == [{"id": "release", "hash": "sha256:" + hashlib.sha256(manifest.read_bytes()).hexdigest()}]
 
 
+@pytest.mark.dhf_links("SRS-016")
+@pytest.mark.dhf_testing("T1")
 def test_the_release_fails_naming_each_missing_role_until_all_have_signed(project: Project) -> None:
     before = project.verify("--release", "1.0.0")
     assert before["passed"] is False
@@ -77,6 +79,45 @@ def test_the_release_fails_naming_each_missing_role_until_all_have_signed(projec
     assert after["summary"] == "release 1.0.0: 11 of 11 signature(s) in place"
 
 
+@pytest.mark.dhf_links("SRS-017")
+@pytest.mark.dhf_testing("T1")
+def test_the_release_needs_the_release_roles_signature_even_when_every_document_is_signed(project: Project) -> None:
+    for who in ("Lead", "Pat", "Sam"):
+        project.sign(who)
+
+    answer = project.verify("--release", "1.0.0")
+
+    assert answer["passed"] is False
+    assert len(answer["errors"]) == 1 and answer["errors"][0].startswith("The release of 1.0.0")
+    assert "quality-lead: Quinn" in answer["errors"][0]
+
+
+@pytest.mark.dhf_links("SRS-017")
+@pytest.mark.dhf_testing("T2")
+def test_a_manifest_rebuilt_after_the_release_role_signed_needs_the_signature_again(project: Project) -> None:
+    for who in ("Lead", "Pat", "Sam", "Quinn"):
+        project.sign(who)
+    assert project.verify("--release", "1.0.0")["passed"] is True
+    project.edit("SRS-001", content="A late fix.")
+    project.release("1.0.0", "--cr", "CR-001")
+
+    errors = project.verify("--release", "1.0.0")["errors"]
+
+    assert any(e.startswith("The release of 1.0.0") for e in errors), errors
+
+
+@pytest.mark.dhf_links("SRS-023")
+@pytest.mark.dhf_testing("T1")
+def test_every_role_signing_its_documents_and_the_release_passes(project: Project) -> None:
+    for who in ("Lead", "Pat", "Sam", "Quinn"):
+        project.sign(who)
+
+    answer = project.verify("--release", "1.0.0")
+
+    assert answer["passed"] is True, answer["errors"]
+    assert answer["summary"] == "release 1.0.0: 11 of 11 signature(s) in place"
+
+
 def test_plain_verify_never_asks_for_a_signature(project: Project) -> None:
     answer = project.verify()
 
@@ -84,6 +125,8 @@ def test_plain_verify_never_asks_for_a_signature(project: Project) -> None:
     assert answer["summary"] == "0 valid approval record(s) in the log"
 
 
+@pytest.mark.dhf_links("SRS-021")
+@pytest.mark.dhf_testing("T1")
 def test_editing_an_item_after_the_manifest_fails_with_a_drift_finding(project: Project) -> None:
     for who in ("Lead", "Pat", "Sam", "Quinn"):
         project.sign(who)
@@ -96,6 +139,8 @@ def test_editing_an_item_after_the_manifest_fails_with_a_drift_finding(project: 
     assert any("SWDD-001 (SWDD) was edited after the manifest" in e and "build release" in e for e in answer["errors"])
 
 
+@pytest.mark.dhf_links("SRS-021")
+@pytest.mark.dhf_testing("T2")
 def test_an_item_added_or_removed_after_the_manifest_is_named(project: Project) -> None:
     project.item_file("SOUP-001").unlink()
 
@@ -104,6 +149,8 @@ def test_an_item_added_or_removed_after_the_manifest_is_named(project: Project) 
     assert "SOUP-001 (SOUP) was removed after the manifest" in errors
 
 
+@pytest.mark.dhf_links("SRS-021")
+@pytest.mark.dhf_testing("T3")
 def test_an_item_outside_every_document_still_breaks_the_dhf_hash(project: Project) -> None:
     project.edit("DEF-001", title="Edited after the manifest.")
 
@@ -113,6 +160,8 @@ def test_an_item_outside_every_document_still_breaks_the_dhf_hash(project: Proje
     assert any("in an item no document lists" in e for e in answer["errors"])
 
 
+@pytest.mark.dhf_links("SRS-016")
+@pytest.mark.dhf_testing("T5")
 def test_a_signature_over_an_older_manifest_hash_does_not_count(project: Project) -> None:
     _created(project.sign("Lead"))
     project.edit("SRS-001", content="A late fix.")
@@ -144,6 +193,8 @@ def test_a_signer_is_shown_the_changes_to_each_document_and_may_decline(project:
     assert not (project.dhf / "approvals").exists()
 
 
+@pytest.mark.dhf_links("SRS-016")
+@pytest.mark.dhf_testing("T2")
 def test_a_signature_by_a_role_that_does_not_own_the_document_does_not_count(project: Project) -> None:
     project.forge("Pat", signer="Pat", roles=["product-manager"], documents=[project.pin("SRS")])
 
@@ -152,6 +203,8 @@ def test_a_signature_by_a_role_that_does_not_own_the_document_does_not_count(pro
     assert any("SRS document" in e and "software-lead" in e for e in answer["errors"])
 
 
+@pytest.mark.dhf_links("SRS-016")
+@pytest.mark.dhf_testing("T3")
 def test_a_role_the_signer_does_not_hold_does_not_count(project: Project) -> None:
     project.forge("Pat", signer="Pat", roles=["software-lead"], documents=[project.pin("SRS")])
 
@@ -161,12 +214,16 @@ def test_a_role_the_signer_does_not_hold_does_not_count(project: Project) -> Non
     assert any("SRS document" in e for e in answer["errors"])
 
 
+@pytest.mark.dhf_links("SRS-016")
+@pytest.mark.dhf_testing("T4")
 def test_a_signature_for_another_release_does_not_count(project: Project) -> None:
     project.forge("Lead", signer="Lead", roles=["software-lead"], documents=[project.pin("SRS")], release="0.9.0")
 
     assert any("SRS document" in e for e in project.verify("--release", "1.0.0")["errors"])
 
 
+@pytest.mark.dhf_links("SRS-018")
+@pytest.mark.dhf_testing("T1")
 def test_a_release_without_a_manifest_cannot_be_signed_or_verified(project: Project) -> None:
     signed = project.sign("Lead", "9.9.9")
     answer = project.verify("--release", "9.9.9")
@@ -175,6 +232,8 @@ def test_a_release_without_a_manifest_cannot_be_signed_or_verified(project: Proj
     assert answer["passed"] is False and "no manifest" in answer["errors"][0]
 
 
+@pytest.mark.dhf_links("SRS-018")
+@pytest.mark.dhf_testing("T2")
 def test_a_malformed_manifest_is_named_not_crashed_on(project: Project) -> None:
     (project.dhf / "releases" / "1.0.0" / "manifest.yaml").write_text("documents: 3\n", encoding="utf-8")
 
@@ -183,6 +242,8 @@ def test_a_malformed_manifest_is_named_not_crashed_on(project: Project) -> None:
     assert answer["passed"] is False and "is not a release manifest" in answer["errors"][0]
 
 
+@pytest.mark.dhf_links("SRS-021")
+@pytest.mark.dhf_testing("T4")
 def test_an_approvers_list_edited_after_the_manifest_is_reported(project: Project) -> None:
     entries = yaml.safe_load(project.approvers_file.read_text())
     entries.append(entry("Mallory", project.keys["Mallory"], ["software-lead"]))
@@ -191,6 +252,8 @@ def test_an_approvers_list_edited_after_the_manifest_is_reported(project: Projec
     assert any("approvers list changed after the manifest" in e for e in project.verify("--release", "1.0.0")["errors"])
 
 
+@pytest.mark.dhf_links("SRS-018")
+@pytest.mark.dhf_testing("T3")
 def test_a_release_cannot_be_verified_without_an_approvers_list(tmp_path: Path) -> None:
     project = build_project(tmp_path, with_approvers=False)
     project.ready_to_release()
@@ -202,6 +265,8 @@ def test_a_release_cannot_be_verified_without_an_approvers_list(tmp_path: Path) 
     assert "Approvals are not configured" in answer["errors"][0]
 
 
+@pytest.mark.dhf_links("SRS-023")
+@pytest.mark.dhf_testing("T2")
 def test_one_person_holding_every_role_signs_everything_in_one_record(tmp_path: Path) -> None:
     project = build_project(tmp_path, with_approvers=False)
     project.write_approvers([entry("Solo", project.keys["Lead"], ["software-lead", "product-manager", "risk-manager",
@@ -238,6 +303,8 @@ def test_release_and_approvers_are_exclusive(project: Project) -> None:
     assert "exactly one" in neither.output
 
 
+@pytest.mark.dhf_links("SRS-023")
+@pytest.mark.dhf_testing("T3")
 def test_the_rel_moving_on_after_signing_is_not_drift(project: Project) -> None:
     """The REL is the record of the release, not its content: approving it after the signatures must not undo them."""
     for name in ("Lead", "Pat", "Sam", "Quinn"):

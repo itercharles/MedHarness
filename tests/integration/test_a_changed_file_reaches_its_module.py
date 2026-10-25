@@ -80,6 +80,8 @@ def _impact(repo: Path):
     return result, json.loads(result.stdout.splitlines()[0])
 
 
+@pytest.mark.dhf_links("SRS-010")
+@pytest.mark.dhf_testing("T1")
 def test_a_changed_file_reaches_its_modules_design_and_requirement(repo: Path) -> None:
     result, answer = _impact(repo)
     assert result.exit_code == 1
@@ -88,12 +90,16 @@ def test_a_changed_file_reaches_its_modules_design_and_requirement(repo: Path) -
     assert "MODULE-001" in errors and "SWDD-001" in errors and "SRS-001" in errors
 
 
+@pytest.mark.dhf_links("SRS-015")
+@pytest.mark.dhf_testing("T3")
 def test_reviewing_what_the_file_reaches_settles_it(repo: Path) -> None:
     _review(repo, ["SWDD-001", "SRS-001"])
     result, answer = _impact(repo)
     assert result.exit_code == 0 and answer["passed"] is True, answer["errors"]
 
 
+@pytest.mark.dhf_links("SRS-015")
+@pytest.mark.dhf_testing("T3")
 def test_changing_the_items_it_reaches_settles_it(repo: Path) -> None:
     _edit(repo, "SWDD-001.yaml", content="Applies the new dose constant.")
     _edit(repo, "SRS-001.yaml", content="The dose constant is 2.")
@@ -103,6 +109,8 @@ def test_changing_the_items_it_reaches_settles_it(repo: Path) -> None:
     assert result.exit_code == 0, answer["errors"]
 
 
+@pytest.mark.dhf_links("SRS-012")
+@pytest.mark.dhf_testing("T2")
 def test_a_cr_marked_rejected_whose_branch_changes_a_file_is_stopped(repo: Path) -> None:
     _edit(repo, "CR-001.yaml", triage_result={"verdict": "rejected", "notes": "duplicate"})
     result, answer = _impact(repo)
@@ -111,6 +119,8 @@ def test_a_cr_marked_rejected_whose_branch_changes_a_file_is_stopped(repo: Path)
     assert any(e.startswith("code.src/dose.py: ") for e in answer["errors"]), answer["errors"]
 
 
+@pytest.mark.dhf_links("SRS-011")
+@pytest.mark.dhf_testing("T1")
 def test_a_file_no_module_owns_fails_once_a_module_declares_paths(repo: Path) -> None:
     _review(repo, ["SWDD-001", "SRS-001"])
     (repo / "src" / "export.py").write_text("EXPORT = 1\n")
@@ -120,6 +130,8 @@ def test_a_file_no_module_owns_fails_once_a_module_declares_paths(repo: Path) ->
     assert answer["errors"][0].startswith("code.src/export.py: ") and "belongs to no module" in answer["errors"][0]
 
 
+@pytest.mark.dhf_links("SRS-010")
+@pytest.mark.dhf_testing("T3")
 def test_a_directory_prefix_and_a_glob_each_own_their_files(repo: Path) -> None:
     _module_paths(repo, "src/")
     (repo / "src" / "export.py").write_text("EXPORT = 1\n")
@@ -129,6 +141,8 @@ def test_a_directory_prefix_and_a_glob_each_own_their_files(repo: Path) -> None:
     assert _impact(repo)[0].exit_code == 0
 
 
+@pytest.mark.dhf_links("SRS-010")
+@pytest.mark.dhf_testing("T2")
 def test_a_deleted_file_reaches_its_module_too(repo: Path) -> None:
     (repo / "src" / "dose.py").unlink()
     result, answer = _impact(repo)
@@ -149,6 +163,8 @@ def test_an_impact_depth_of_zero_turns_the_check_off(repo: Path) -> None:
     assert result.exit_code == 0 and answer["passed"] is True, answer["errors"]
 
 
+@pytest.mark.dhf_links("SRS-015")
+@pytest.mark.dhf_testing("T4")
 def test_docs_ci_and_lockfiles_need_no_module(repo: Path) -> None:
     _review(repo, ["SWDD-001", "SRS-001"])
     for name in ("README.md", "docs/guide.md", ".github/workflows/ci.yml", "uv.lock", "web/pnpm-lock.yaml"):
@@ -158,6 +174,8 @@ def test_docs_ci_and_lockfiles_need_no_module(repo: Path) -> None:
     assert result.exit_code == 0 and answer["passed"] is True, answer["errors"]
 
 
+@pytest.mark.dhf_links("SRS-011")
+@pytest.mark.dhf_testing("T2")
 def test_a_project_can_take_the_exemptions_away(repo: Path) -> None:
     _review(repo, ["SWDD-001", "SRS-001"])
     (repo / "README.md").write_text("changed\n")

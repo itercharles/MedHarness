@@ -1,0 +1,18 @@
+id: SRS-011
+title: verify impact refuses a changed code file that no module owns
+risk: high
+content: '`verify impact` shall fail a change request when, once any module declares
+  `paths`, a file the branch changed outside the DHF belongs to no module and is not
+  exempted by `unowned_paths`, so that code outside the traceable design cannot change
+  unnoticed.'
+verification_criteria: The exit code is 1, `passed` is false and `errors` contains
+  a `code.<path>` finding saying the file belongs to no module.
+testing: 'T1: A changed file that no module''s `paths` matches: fails.
+
+  T2: A project that empties `unowned_paths` loses the exemption of docs, CI and lockfiles.
+
+  T3: The seeded omission of code changed outside the declared scope is stopped by
+  `verify impact`.'
+verification_method:
+- Test
+type: SRS

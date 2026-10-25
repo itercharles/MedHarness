@@ -1,0 +1,22 @@
+id: SRS-004
+title: verify completion refuses a changed requirement that declares no verification
+  method
+risk: high
+content: '`verify completion` shall fail a change request that lists, as affected,
+  an item of a type that declares `verification_method` and has none set, so that
+  a changed requirement is never closed without a stated way of verifying it.'
+verification_criteria: The exit code is 1, `passed` is false, `verification_gaps`
+  holds the item and `errors` says no `verification_method` is declared. The types
+  checked are those the project's configuration says are requirements, including types
+  the project added.
+testing: 'T1: An affected SRS with no `verification_method` fails, and is listed in
+  `verification_gaps`.
+
+  T2: An affected item of a type the project added, which declares `verification_method`
+  and has none set, fails.
+
+  T3: A requirement of the scaffolded DHF that declares no method fails when the CR
+  lists it.'
+verification_method:
+- Test
+type: SRS

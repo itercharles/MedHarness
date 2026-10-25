@@ -1,0 +1,16 @@
+id: SRS-020
+title: verify approval refuses a change to the approval log that is not an addition
+risk: high
+content: '`verify approval` shall fail when a record or signature file of the approval
+  log that existed at `--since-ref` has been modified or deleted, so that history
+  cannot be rewritten.'
+verification_criteria: The exit code is 1, `passed` is false and `errors` names the
+  file, says it was modified or deleted since the ref, and that approvals are append-only.
+testing: 'T1: A committed record that is modified fails.
+
+  T2: A committed signature that is modified fails.
+
+  T3: A committed record that is deleted fails.'
+verification_method:
+- Test
+type: SRS

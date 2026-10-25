@@ -1,0 +1,22 @@
+id: SRS-005
+title: verify completion refuses a changed item that declares Test without passing
+  JUnit evidence
+risk: high
+content: '`verify completion` shall fail a change request that lists an item whose
+  `verification_method` includes Test unless the JUnit results given hold a passing
+  test linked to that item and no failing one, so that a requirement is never closed
+  on a test that did not run or did not pass.'
+verification_criteria: The exit code is 1, `passed` is false, `unverified_test` holds
+  the item and `errors` says it declares Test but has no passing JUnit evidence. A
+  test linked by a `medharness.links` property or by an `@links:` tag in its name
+  counts; a failing test does not.
+testing: 'T1: The JUnit results hold no test linked to the item: fails.
+
+  T2: No JUnit results are given at all: fails, rather than being left unchecked.
+
+  T3: The only test linked to the item failed: fails.
+
+  T4: One failing test and one passing test are linked to the item: fails.'
+verification_method:
+- Test
+type: SRS

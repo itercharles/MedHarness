@@ -72,6 +72,8 @@ def test_a_failing_test_is_not_evidence(dhf: Path, tmp_path: Path) -> None:
     assert result.exit_code == 1
 
 
+@pytest.mark.dhf_links("SRS-005")
+@pytest.mark.dhf_testing("T4")
 def test_one_failing_test_outweighs_a_passing_one(dhf: Path, tmp_path: Path) -> None:
     """The release report calls such a requirement `failed`; the gates called it covered."""
     junit = _junit(tmp_path, ("ok", "CRS-001,SYS-001,SRS-001", False), ("bad", "SRS-001", True))
@@ -92,6 +94,8 @@ def test_a_name_tag_counts_everywhere(dhf: Path, tmp_path: Path) -> None:
     assert not any("declares Test but no passing case" in e for e in answer["errors"])
 
 
+@pytest.mark.dhf_links("SRS-006")
+@pytest.mark.dhf_testing("T7")
 def test_the_closure_gate_reads_name_tags_too(dhf: Path, tmp_path: Path) -> None:
     cr = next((dhf / "items").rglob("CR-001.yaml"))
     data = yaml.safe_load(cr.read_text())

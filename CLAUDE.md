@@ -14,6 +14,9 @@ Before proposing or implementing any significant change, read:
 - [`docs/architecture.md`](docs/architecture.md) — package boundaries, CR workflow
   topology, layer responsibilities, and test organisation. Do not violate the
   `dhfkit` → `medharness` import boundary.
+- [`docs/validation.md`](docs/validation.md) — the tool's risk ratings and its own
+  DHF (`DHF/`). A change to the behaviour of a gate it covers changes that gate's SRS
+  items (`medharness --dhf DHF item update`) and the tests marked `dhf_links`/`dhf_testing`.
 
 ## CLI Boundary
 
@@ -57,6 +60,7 @@ what. See [ADR-004](docs/adr/ADR-004-signed-approvals.md).
 | `medharness/` | Harness CLI, CI gate logic, scaffolding |
 | `dhfkit/` | The storage engine, a library: items, config, schema validation, doc generation, SBOM |
 | `dhfkit/templates/` | The defaults every DHF reads (`config/`, `specs/`), the sample items `init` copies, and the CI recipe the docs publish |
+| `DHF/` | MedHarness's own requirements (SRS only), checked by itself; see `docs/validation.md` |
 | `docs/` | Architecture docs and adopting guide |
 | `tests/unit/` | Unit tests — logic worth isolating: parsers, judges, mappings |
 | `tests/guards/` | Checks on the repo itself: import boundaries, documented commands, packaging, mock contracts |

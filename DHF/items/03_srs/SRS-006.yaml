@@ -1,0 +1,31 @@
+id: SRS-006
+title: verify completion passes a complete, verified CR and blames it for nothing
+  else
+risk: high
+content: '`verify completion` shall pass a change request whose record is complete,
+  whose affected items exist and are verified, and shall hold it to the items it lists
+  and to nothing else, so that a sound closure is not blocked and an unrelated gap
+  is not charged to it.'
+verification_criteria: The exit code is 0 and `passed` is true when every affected
+  item is present and verified; an item the CR does not list, or of a type that needs
+  no test, adds no error.
+testing: 'T1: Affected items that are present, declare Test, and have a passing linked
+  test: passes.
+
+  T2: A CR that records `affected_items: []` passes.
+
+  T3: An affected item verified by Inspection, and an affected risk item, need no
+  passing test.
+
+  T4: An item the CR does not list, and which has no verification method, does not
+  fail it.
+
+  T5: A changed SOUP item is not asked for a verification method.
+
+  T6: On the command line the exit code is 0 and the summary names the CR.
+
+  T7: A passing test that carries its link as an `@links:` tag in its name counts
+  as evidence.'
+verification_method:
+- Test
+type: SRS

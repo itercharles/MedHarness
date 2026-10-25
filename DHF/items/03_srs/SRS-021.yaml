@@ -1,0 +1,21 @@
+id: SRS-021
+title: verify approval --release refuses an item or approvers list edited after the
+  manifest
+risk: high
+content: '`verify approval --release` shall fail a release when an item, or the approvers
+  list, differs from the content the release manifest recorded, so that what was signed
+  is what is released.'
+verification_criteria: The exit code is 1, `passed` is false and `errors` names the
+  item and says it was edited, added or removed after the manifest, or says the approvers
+  list changed after it, or that a change is in an item no document lists.
+testing: 'T1: An item edited after the manifest is reported as drift, even when every
+  signature is in place.
+
+  T2: An item removed after the manifest is named.
+
+  T3: An edit to an item that no document lists breaks the DHF hash and is reported.
+
+  T4: An approvers list edited after the manifest is reported.'
+verification_method:
+- Test
+type: SRS
