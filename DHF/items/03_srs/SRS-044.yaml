@@ -1,0 +1,25 @@
+id: SRS-044
+title: build release refuses a release that includes a CR that is not completed or
+  no longer passes verify completion
+risk: high
+content: '`build release` shall refuse the release when an included CR is missing,
+  is in any state but completed, or no longer passes `verify completion` with the
+  given JUnit, and by default shall include only completed CRs that no REL lists,
+  so that `completed` written by hand does not ship work that was never closed.'
+verification_criteria: 'The exit code is 1 and `errors` holds `<CR>: CR not found`,
+  `<CR>: CR is in state ''<state>'', must be ''completed'' ...` or the `<CR>: <finding>`
+  of the closure gate. Without --cr, `cr_ids` holds the completed CRs not listed by
+  an earlier REL, sorted, and a reopened CR is left out until it is completed again.'
+testing: 'T1: A CR in design, develop, cancelled or rejected state fails the release,
+  naming it.
+
+  T2: A CR the DHF does not have fails the release.
+
+  T3: A CR edited to completed by hand fails the release on its closure findings;
+  a properly closed CR releases.
+
+  T4: Without --cr, the completed CRs that no REL lists are included, sorted; one
+  already in a REL, or reopened, is not.'
+verification_method:
+- Test
+type: SRS

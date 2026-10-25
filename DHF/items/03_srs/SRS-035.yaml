@@ -1,0 +1,21 @@
+id: SRS-035
+title: verify dhf refuses an item that does not match its type's schema
+risk: high
+content: '`verify dhf` shall fail, with or without --strict, when an item has a field
+  its type does not declare, lacks the `id` every item requires, or is a file that
+  holds nothing, naming the item or its file and the field, so that a record that
+  cannot be trusted is never read as sound.'
+verification_criteria: The exit code is 1, `passed` is false and `errors` holds a
+  schema finding that names the item (or its file) and the field. A DHF that cannot
+  be read is reported with its file and field, never as a traceback.
+testing: 'T1: An undeclared field fails, naming the item and the field.
+
+  T2: An item with no id fails, naming its file.
+
+  T3: An item file that says nothing fails.
+
+  T4: A command run on a DHF with a mistyped field names the item and the field and
+  shows no traceback.'
+verification_method:
+- Test
+type: SRS

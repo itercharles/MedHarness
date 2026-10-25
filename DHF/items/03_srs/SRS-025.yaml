@@ -1,0 +1,23 @@
+id: SRS-025
+title: verify tests refuses a declared test point that no passing test covers
+risk: high
+content: '`verify tests` shall fail when a requirement declares numbered test points
+  in `testing` and a point has no passing test that links the requirement and claims
+  the point, so that a case a requirement names is never left unverified.'
+verification_criteria: 'The exit code is 1, `passed` is false and `errors` holds `<ID>:
+  test points <Tn> uncovered` for each requirement with a gap; `testing_points` lists
+  total, covered and uncovered points per requirement. A failing test does not cover
+  a point, and a point covered for one requirement does not cover the same label on
+  another.'
+testing: 'T1: A requirement with some declared points covered and one not fails, naming
+  the requirement and the point.
+
+  T2: A failing test does not cover the point it claims.
+
+  T3: Points covered by separate passing tests all count.
+
+  T4: A point covered on one requirement does not cover the same label on another
+  requirement.'
+verification_method:
+- Test
+type: SRS

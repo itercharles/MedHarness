@@ -1,0 +1,17 @@
+id: SRS-034
+title: verify changes passes a branch that changes exactly the items its CR lists
+risk: high
+content: '`verify changes` shall pass when the items the branch changes, created,
+  updated or deleted, uncommitted work included, are exactly the items the CR lists,
+  apart from the CR, so that a CR that did what it said is not blocked.'
+verification_criteria: The exit code is 0, `passed` is true, `errors` and `findings`
+  are empty and `promised_but_unchanged` and `unlisted_changes` are empty.
+testing: 'T1: A branch that changes several listed items, created and updated, passes.
+
+  T2: An item the branch deleted counts as changed.
+
+  T3: On a real repository, uncommitted changes to the listed items and code pass
+  `verify changes`.'
+verification_method:
+- Test
+type: SRS

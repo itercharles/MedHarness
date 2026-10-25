@@ -6,6 +6,7 @@ import json
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
+import pytest
 from click.testing import CliRunner
 
 from medharness.cli import main
@@ -68,6 +69,8 @@ def _make_junit(tmp_path: Path, testcases: list[dict], filename: str = "results.
     return path
 
 
+@pytest.mark.dhf_links("SRS-029")
+@pytest.mark.dhf_testing("T1")
 def test_requirement_without_test_points_only_needs_linked_test(tmp_path: Path) -> None:
     dhf = _make_dhf(tmp_path, [{"id": "SRS-001", "title": "Req"}])
     junit = _make_junit(tmp_path, [{"name": "test_req", "links": "SRS-001"}])
@@ -77,6 +80,8 @@ def test_requirement_without_test_points_only_needs_linked_test(tmp_path: Path) 
     assert result["details"]["testing_points"] == []
 
 
+@pytest.mark.dhf_links("SRS-025")
+@pytest.mark.dhf_testing("T1")
 def test_requirement_with_test_points_must_cover_all_points(tmp_path: Path) -> None:
     dhf = _make_dhf(tmp_path, [
         {"id": "SRS-001", "testing": "T1: One.\nT2: Two.\nT3: Three."},
@@ -108,6 +113,8 @@ def test_requirement_with_test_points_and_no_linked_test_still_fails_requirement
     assert result["details"]["testing_points"][0]["uncovered"] == ["T1"]
 
 
+@pytest.mark.dhf_links("SRS-025")
+@pytest.mark.dhf_testing("T2")
 def test_failing_tests_do_not_count_for_requirement_or_point_coverage(tmp_path: Path) -> None:
     dhf = _make_dhf(tmp_path, [
         {"id": "SRS-001", "testing": "T1: Point."},
@@ -121,6 +128,8 @@ def test_failing_tests_do_not_count_for_requirement_or_point_coverage(tmp_path: 
     assert result["details"]["testing_points"][0]["uncovered"] == ["T1"]
 
 
+@pytest.mark.dhf_links("SRS-029")
+@pytest.mark.dhf_testing("T3")
 def test_js_style_tags_count_for_requirement_and_point_coverage(tmp_path: Path) -> None:
     dhf = _make_dhf(tmp_path, [
         {"id": "SRS-001", "testing": "T1: A point."},
@@ -134,6 +143,8 @@ def test_js_style_tags_count_for_requirement_and_point_coverage(tmp_path: Path) 
     assert result["details"]["testing_points"][0]["uncovered"] == []
 
 
+@pytest.mark.dhf_links("SRS-025")
+@pytest.mark.dhf_testing("T1")
 def test_cli_test_coverage_reports_point_gaps_in_json(tmp_path: Path) -> None:
     dhf = _make_dhf(tmp_path, [
         {"id": "SRS-001", "testing": "T1: One.\nT2: Two."},
@@ -153,6 +164,8 @@ def test_cli_test_coverage_reports_point_gaps_in_json(tmp_path: Path) -> None:
     )
 
 
+@pytest.mark.dhf_links("SRS-025")
+@pytest.mark.dhf_testing("T3")
 def test_test_points_covered_across_separate_tests(tmp_path: Path) -> None:
     dhf = _make_dhf(tmp_path, [{"id": "SRS-001", "testing": "T1: First.\nT2: Second.\nT3: Third."}])
     junit = _make_junit(tmp_path, [
@@ -186,6 +199,8 @@ def test_multiple_reqs_mixed_point_coverage(tmp_path: Path) -> None:
     assert failing[0]["uncovered"] == ["T2"]
 
 
+@pytest.mark.dhf_links("SRS-025")
+@pytest.mark.dhf_testing("T4")
 def test_point_coverage_is_isolated_per_requirement(tmp_path: Path) -> None:
     dhf = _make_dhf(tmp_path, [
         {"id": "SRS-001", "testing": "T1: Point."},

@@ -55,6 +55,8 @@ def _tests(dhf: Path, junit: Path, *flags: str):
     return result, json.loads(result.stdout.splitlines()[0])
 
 
+@pytest.mark.dhf_links("SRS-027")
+@pytest.mark.dhf_testing("T1")
 def test_a_requirement_verified_by_inspection_needs_no_test(dhf: Path, tmp_path: Path) -> None:
     _set(dhf, "SRS-001.yaml", verification_method=["Inspection"])
     result, answer = _tests(dhf, _junit(tmp_path, ("t", "CRS-001,SYS-001", False)))
@@ -62,11 +64,15 @@ def test_a_requirement_verified_by_inspection_needs_no_test(dhf: Path, tmp_path:
     assert any("SRS-001: verified by Inspection" in w for w in answer["warnings"]), answer["warnings"]
 
 
+@pytest.mark.dhf_links("SRS-024")
+@pytest.mark.dhf_testing("T1")
 def test_a_requirement_that_declares_a_test_still_needs_one(dhf: Path, tmp_path: Path) -> None:
     result, answer = _tests(dhf, _junit(tmp_path, ("t", "CRS-001,SYS-001", False)))
     assert result.exit_code == 1 and any(e.startswith("SRS:") for e in answer["errors"]), answer["errors"]
 
 
+@pytest.mark.dhf_links("SRS-024")
+@pytest.mark.dhf_testing("T2")
 def test_a_failing_test_is_not_evidence(dhf: Path, tmp_path: Path) -> None:
     result, _ = _tests(dhf, _junit(tmp_path, ("t", "CRS-001,SYS-001,SRS-001", True)))
     assert result.exit_code == 1
@@ -107,6 +113,8 @@ def test_the_closure_gate_reads_name_tags_too(dhf: Path, tmp_path: Path) -> None
     assert result.exit_code == 0, result.stdout
 
 
+@pytest.mark.dhf_links("SRS-028")
+@pytest.mark.dhf_testing("T1", "T2")
 def test_a_link_to_an_id_the_dhf_does_not_have_warns_and_fails_under_strict(dhf: Path, tmp_path: Path) -> None:
     junit = _junit(tmp_path, ("test_gone", "CRS-001,SYS-001,SRS-001,SRS-999", False))
     loose, loose_answer = _tests(dhf, junit)

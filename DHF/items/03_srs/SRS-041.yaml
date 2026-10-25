@@ -1,0 +1,19 @@
+id: SRS-041
+title: verify dhf never reports a check it could not run as a pass
+risk: high
+content: '`verify dhf` shall fail, saying so, when a check could not run, because
+  the items could not be read or the traceability could not be analysed, or when the
+  CR type does not declare a field the stages need, so that an unreadable DHF is not
+  indistinguishable from a clean one.'
+verification_criteria: 'The exit code is 1, `passed` is false and `errors` holds `...
+  could not be checked: <reason>` for the check that failed to run, or `CR does not
+  declare <fields>` for the missing CR fields.'
+testing: 'T1: A scan that raises is reported as could not be checked and the gate
+  fails.
+
+  T2: A CR type that does not declare the plan fields fails, naming them.
+
+  T3: A healthy DHF reports no such error.'
+verification_method:
+- Test
+type: SRS

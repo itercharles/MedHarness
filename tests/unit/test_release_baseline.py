@@ -64,12 +64,16 @@ class TestVerifyCrGates:
         assert len(violations) == 1
         assert "completed" in violations[0]["issue"]
 
+    @pytest.mark.dhf_links("SRS-044")
+    @pytest.mark.dhf_testing("T1")
     def test_rejected_cr_is_violation(self, tmp_path):
         with patch("dhfkit.item_store.ItemStore.get_item", return_value=_cr_item("CR-001", "rejected")):
             violations = unreleasable_crs(tmp_path / "DHF", ["CR-001"])
         assert len(violations) == 1
         assert "completed" in violations[0]["issue"]
 
+    @pytest.mark.dhf_links("SRS-044")
+    @pytest.mark.dhf_testing("T1")
     def test_open_cr_is_violation(self, tmp_path):
         with patch("dhfkit.item_store.ItemStore.get_item", return_value=_cr_item("CR-001", "develop")):
             violations = unreleasable_crs(tmp_path / "DHF", ["CR-001"])
@@ -77,6 +81,8 @@ class TestVerifyCrGates:
         assert violations[0]["cr"] == "CR-001"
         assert "develop" in violations[0]["issue"]
 
+    @pytest.mark.dhf_links("SRS-044")
+    @pytest.mark.dhf_testing("T2")
     def test_missing_cr_is_violation(self, tmp_path):
         with patch("dhfkit.item_store.ItemStore.get_item", return_value=None):
             violations = unreleasable_crs(tmp_path / "DHF", ["CR-999"])
@@ -98,6 +104,8 @@ class TestVerifyCrGates:
 # ---------------------------------------------------------------------------
 
 class TestAutoCollectCrs:
+    @pytest.mark.dhf_links("SRS-044")
+    @pytest.mark.dhf_testing("T4")
     def test_collects_completed_unreleased_crs(self, tmp_path):
         items = [
             _cr_item("CR-001", "completed"),
@@ -108,6 +116,8 @@ class TestAutoCollectCrs:
         assert "CR-001" in crs
         assert "CR-002" not in crs
 
+    @pytest.mark.dhf_links("SRS-044")
+    @pytest.mark.dhf_testing("T4")
     def test_excludes_crs_already_in_rel(self, tmp_path):
         items = [
             _cr_item("CR-001", "completed"),
@@ -127,6 +137,8 @@ class TestAutoCollectCrs:
             _auto_collect_crs(tmp_path / "DHF")
         assert mock_list.call_count == 1
 
+    @pytest.mark.dhf_links("SRS-044")
+    @pytest.mark.dhf_testing("T4")
     def test_returns_sorted(self, tmp_path):
         items = [
             _cr_item("CR-003", "completed"),
@@ -147,6 +159,8 @@ class TestAutoCollectCrs:
 # ---------------------------------------------------------------------------
 
 class TestCollectBom:
+    @pytest.mark.dhf_links("SRS-050")
+    @pytest.mark.dhf_testing("T3")
     def test_dhf_soup_items_included(self, tmp_path):
         soup = {"id": "SOUP-001", "type": "SOUP", "name": "requests", "version": "2.31.0",
                 "manufacturer": "", "license": "Apache-2.0", "safety_class": ""}
@@ -163,6 +177,8 @@ class TestCollectBom:
         assert errors == []
         assert any(p["name"] == "click" for p in bom["manifest_packages"])
 
+    @pytest.mark.dhf_links("SRS-050")
+    @pytest.mark.dhf_testing("T1")
     def test_unreadable_manifest_returns_error(self, tmp_path):
         bad = tmp_path / "setup.cfg"
         bad.write_text("not a manifest")
@@ -238,6 +254,8 @@ class TestBuildReleaseBaseline:
         assert result["manifest_packages_count"] == 0
         assert result["artifacts"] == []
 
+    @pytest.mark.dhf_links("SRS-044")
+    @pytest.mark.dhf_testing("T1")
     def test_cancelled_cr_fails_gate(self, tmp_path):
         with patch("dhfkit.item_store.ItemStore.get_item", return_value=_cr_item("CR-001", "cancelled")), \
              patch("dhfkit.item_store.ItemStore.list_items", return_value=[]):
@@ -298,6 +316,8 @@ class TestBuildReleaseBaseline:
             )
         assert "CR-005" in result["cr_ids"]
 
+    @pytest.mark.dhf_links("SRS-050")
+    @pytest.mark.dhf_testing("T3")
     def test_manifest_soup_in_bom(self, tmp_path):
         out = tmp_path / "out"
         req = _req_txt(tmp_path, "flask==3.0.0\n")
@@ -309,6 +329,8 @@ class TestBuildReleaseBaseline:
         bom = json.loads((out / "software-bom.json").read_text())
         assert any(p["name"] == "flask" for p in bom["manifest_packages"])
 
+    @pytest.mark.dhf_links("SRS-050")
+    @pytest.mark.dhf_testing("T2")
     def test_malformed_manifest_produces_error_outcome(self, tmp_path):
         out = tmp_path / "out"
         bad = tmp_path / "package.json"

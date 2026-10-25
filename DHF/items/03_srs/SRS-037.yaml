@@ -1,0 +1,20 @@
+id: SRS-037
+title: verify dhf refuses an item missing a link its type requires
+risk: high
+content: '`verify dhf` shall fail when an item lacks a link the project''s `required_traceability`
+  rules ask of its type, so that a requirement with no origin does not pass, and shall
+  ask nothing a project dropped.'
+verification_criteria: 'The exit code is 1 and `errors` holds `<ID>: <rule text>`
+  for each item that fails a rule, such as `SYS-002: SYS satisfies → CRS (count=0,
+  need ≥1), or covered by RCM`. An item that meets the rule through either alternative
+  passes, and a project that sets `required_traceability: []` is asked for nothing.'
+testing: 'T1: A SYS with no origin fails, naming it and the rule.
+
+  T2: A SYS that satisfies a CRS, or implements a risk control, passes.
+
+  T3: A rule the project changes is applied as it changed it.
+
+  T4: A project that drops the rules is not asked for the links.'
+verification_method:
+- Test
+type: SRS

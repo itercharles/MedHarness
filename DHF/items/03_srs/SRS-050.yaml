@@ -1,0 +1,20 @@
+id: SRS-050
+title: build release refuses a release whose software BOM cannot be built
+risk: high
+content: '`build release` shall fail when a dependency manifest given with --manifest
+  cannot be read or is not a supported format, and shall list the SOUP items and the
+  manifest packages in the BOM, so that an incomplete BOM does not look like a successful
+  one.'
+verification_criteria: 'The exit code is 1 and `errors` holds `Unsupported manifest
+  format for BOM: <path>` or `Failed to parse BOM manifest <path>: <reason>`; with
+  readable manifests `software-bom.json` lists the DHF''s SOUP items and the packages
+  of every manifest.'
+testing: 'T1: A manifest that cannot be read or parsed is an error naming it.
+
+  T2: A malformed package.json fails the release as a parse failure, not as an unsupported
+  format.
+
+  T3: SOUP items and manifest packages both appear in the BOM.'
+verification_method:
+- Test
+type: SRS

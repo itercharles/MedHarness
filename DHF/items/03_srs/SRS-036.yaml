@@ -1,0 +1,26 @@
+id: SRS-036
+title: verify dhf refuses a link that points at nothing or at the wrong type
+risk: high
+content: '`verify dhf` shall fail, with or without --strict, when a link names an
+  item that does not exist or an item of a type the field does not accept, and shall
+  not count a link in the wrong field as coverage, so that a typo or a deleted item
+  never passes as traceability.'
+verification_criteria: 'The exit code is 1 and `errors` holds `<source>.<field> →
+  <target>: target does not exist` or `<source>.<field> → <target>: <TYPE> is not
+  one of <accepted types>`, as a dangling or link-type finding; a link in a field
+  that takes any type passes.'
+testing: 'T1: A dangling link fails without --strict, naming the source, the field
+  and the target.
+
+  T2: A dangling link in a multi-select field is found.
+
+  T3: A link to an item of a type the field does not accept fails, naming the types
+  it accepts.
+
+  T4: A link in the wrong field does not count as coverage: the requirement stays
+  uncovered.
+
+  T5: A link in a field that accepts any type is not a finding.'
+verification_method:
+- Test
+type: SRS

@@ -1,0 +1,18 @@
+id: SRS-048
+title: build release writes its evidence for a failing release but changes no DHF
+  item
+risk: high
+content: '`build release` shall, when a check fails, still write the evidence bundle
+  to --out-dir so the cause can be read, exit 1, and record no REL item and write
+  nothing into the DHF, so that a failing release leaves a readable report and no
+  record that it happened.'
+verification_criteria: The exit code is 1, `rel_uid` is null, `evidence-manifest.json`
+  and the specifications exist under --out-dir, no REL item is created and `DHF/releases/`
+  does not exist.
+testing: 'T1: A failing release exits 1 with no REL item and nothing under DHF/releases.
+
+  T2: A failing release still writes the evidence manifest and the specifications
+  to the out directory.'
+verification_method:
+- Test
+type: SRS

@@ -146,6 +146,8 @@ def _stopped_by(repo: Path) -> dict[str, list[str]]:
     return {gate: answer["errors"] for gate, answer in _gates(repo).items() if not answer["passed"]}
 
 
+@pytest.mark.dhf_links("SRS-034")
+@pytest.mark.dhf_testing("T3")
 def test_the_honest_change_passes_every_gate(repo: Path) -> None:
     """The control: without it, a case 'stopped' by a fixture the gates reject anyway would count as caught."""
     assert _stopped_by(repo) == {}
@@ -231,8 +233,10 @@ OMISSIONS: list = [
                 marks=[pytest.mark.dhf_links("SRS-007"), pytest.mark.dhf_testing("T4")]),
     pytest.param(risk_control_left_out, "verify impact",
                 marks=[pytest.mark.dhf_links("SRS-009"), pytest.mark.dhf_testing("T2")]),
-    pytest.param(undeclared_item_change, "verify changes"),
-    pytest.param(declared_item_not_changed, "verify changes"),
+    pytest.param(undeclared_item_change, "verify changes",
+                marks=[pytest.mark.dhf_links("SRS-030"), pytest.mark.dhf_testing("T4")]),
+    pytest.param(declared_item_not_changed, "verify changes",
+                marks=[pytest.mark.dhf_links("SRS-031"), pytest.mark.dhf_testing("T2")]),
     pytest.param(parent_left_unreviewed, "verify impact",
                 marks=[pytest.mark.dhf_links("SRS-008"), pytest.mark.dhf_testing("T2")]),
     pytest.param(changed_requirement_lost_its_test, "verify tests"),

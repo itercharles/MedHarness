@@ -61,6 +61,8 @@ def _baseline(dhf: Path, out: Path, version: str = "1.0.0") -> dict:
 
 class TestAnomalyCollection:
     @pytest.mark.parametrize("status", ["draft", "open", "in_progress"])
+    @pytest.mark.dhf_links("SRS-045")
+    @pytest.mark.dhf_testing("T3")
     def test_unresolved_states_are_collected(self, dhf: Path, status: str) -> None:
         _defect(dhf, "DEF-001", status, rationale="Assessed under RISK-001.")
         anomalies, errors = known_anomalies(dhf)
@@ -68,6 +70,8 @@ class TestAnomalyCollection:
         assert errors == []
 
     @pytest.mark.parametrize("status", ["resolved", "closed", "cancelled"])
+    @pytest.mark.dhf_links("SRS-045")
+    @pytest.mark.dhf_testing("T3")
     def test_settled_states_are_not_anomalies(self, dhf: Path, status: str) -> None:
         """A cancelled report means the report was withdrawn, not that it shipped."""
         _defect(dhf, "DEF-001", status)
@@ -90,6 +94,8 @@ class TestAnomalyCollection:
 
 
 class TestGate:
+    @pytest.mark.dhf_links("SRS-045")
+    @pytest.mark.dhf_testing("T1")
     def test_unassessed_defect_blocks_the_release(self, tmp_path: Path) -> None:
         """The deliberate break: shipping an unassessed anomaly is not allowed.
 
@@ -138,6 +144,8 @@ class TestGate:
         assert result["outcome"] == "completed", result["errors"]
         assert result["known_anomalies"] == []
 
+    @pytest.mark.dhf_links("SRS-045")
+    @pytest.mark.dhf_testing("T2")
     def test_one_unassessed_among_several_blocks(self, dhf: Path, tmp_path: Path) -> None:
         _defect(dhf, "DEF-001", "open", rationale="Assessed.")
         _defect(dhf, "DEF-002", "open")
@@ -149,6 +157,8 @@ class TestGate:
 
 
 class TestArtifactAndRecord:
+    @pytest.mark.dhf_links("SRS-045")
+    @pytest.mark.dhf_testing("T4")
     def test_baseline_artifact_carries_the_anomalies(self, dhf: Path, tmp_path: Path) -> None:
         _defect(dhf, "DEF-001", "open", rationale="Assessed under RISK-001.")
         out = tmp_path / "out"
@@ -159,6 +169,8 @@ class TestArtifactAndRecord:
         assert payload["known_anomalies"][0]["defect"] == "DEF-001"
         assert "RISK-001" in payload["known_anomalies"][0]["rationale"]
 
+    @pytest.mark.dhf_links("SRS-045")
+    @pytest.mark.dhf_testing("T4")
     def test_rel_item_carries_them_too(self, dhf: Path, tmp_path: Path) -> None:
         """The record, not only the generated artifact."""
         from dhfkit.store import open_store
@@ -214,6 +226,8 @@ class TestARelIsRecordedOnlyWhenEverythingPassed:
 
         return {i["id"] for i in open_store(dhf).list_items() if i.get("type") == "REL"}
 
+    @pytest.mark.dhf_links("SRS-043")
+    @pytest.mark.dhf_testing("T1")
     def test_a_dhf_that_fails_its_check_is_not_recorded(self, tmp_path: Path) -> None:
         from medharness.services.release import build_release
 

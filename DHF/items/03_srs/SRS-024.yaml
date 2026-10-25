@@ -1,0 +1,24 @@
+id: SRS-024
+title: verify tests refuses a requirement that no passing test covers
+risk: high
+content: '`verify tests` shall fail when a requirement that needs a test has no passing
+  test linked to it, so that a requirement with no evidence is never reported verified.'
+verification_criteria: 'The exit code is 1, `passed` is false and `errors` names the
+  requirement type with its covered count (`SRS: 0/1 requirements covered`) and each
+  requirement that declares Test but has no passing linked case. A test that failed,
+  errored or was skipped does not count, and one failing test outweighs any number
+  of passing ones for the same requirement. With no JUnit file the gate also fails
+  and says to pass --junit.'
+testing: 'T1: A requirement with no linked test fails, naming its type and the requirement.
+
+  T2: A linked test that failed or errored does not count as evidence.
+
+  T3: A linked test that was skipped does not count as evidence.
+
+  T4: One failing test linked to a requirement outweighs a passing one: the requirement
+  is not covered.
+
+  T5: No JUnit evidence given: the gate fails and says to pass --junit.'
+verification_method:
+- Test
+type: SRS

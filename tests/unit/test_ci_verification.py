@@ -162,6 +162,8 @@ def test_custom_type_code_not_in_defaults_is_checked_when_specified(tmp_path: Pa
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.dhf_links("SRS-029")
+@pytest.mark.dhf_testing("T1")
 def test_cli_validate_verification_passes(tmp_path: Path) -> None:
     dhf = _make_dhf(tmp_path, [{"id": "SRS-001", "verification_method": ["Test"]}])
     junit = _make_junit(tmp_path, ["SRS-001"])
@@ -175,6 +177,8 @@ def test_cli_validate_verification_passes(tmp_path: Path) -> None:
     assert payload["passed"] is True
 
 
+@pytest.mark.dhf_links("SRS-026")
+@pytest.mark.dhf_testing("T2")
 def test_a_missing_method_warns_by_default(tmp_path: Path) -> None:
     """A project adding verification_method has a gap on every item at first."""
     dhf = _make_dhf(tmp_path, [{"id": "SRS-001", "title": "No method"}])
@@ -188,6 +192,8 @@ def test_a_missing_method_warns_by_default(tmp_path: Path) -> None:
     )
 
 
+@pytest.mark.dhf_links("SRS-026")
+@pytest.mark.dhf_testing("T1")
 def test_fail_on_missing_method_makes_it_fail(tmp_path: Path) -> None:
     dhf = _make_dhf(tmp_path, [{"id": "SRS-001", "title": "No method"}])
     result = CliRunner().invoke(
@@ -215,6 +221,8 @@ class TestACheckThatCouldNotRunIsReported:
     reported no gaps — the same answer as a clean one — and the gate passed.
     """
 
+    @pytest.mark.dhf_links("SRS-041")
+    @pytest.mark.dhf_testing("T1")
     def test_the_structural_gate_says_when_it_could_not_check(self, tmp_path) -> None:
         from unittest.mock import patch
 
@@ -241,6 +249,8 @@ class TestACheckThatCouldNotRunIsReported:
             "the gate passed while reporting a check it could not run"
         )
 
+    @pytest.mark.dhf_links("SRS-041")
+    @pytest.mark.dhf_testing("T3")
     def test_a_healthy_dhf_reports_no_such_error(self, tmp_path) -> None:
         from medharness.services.verify_dhf import ci_structural_gate
         from medharness.scaffold import replace_placeholders, scaffold_dhf

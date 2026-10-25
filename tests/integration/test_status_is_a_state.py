@@ -53,6 +53,8 @@ def test_the_starter_dhf_has_valid_statuses(dhf: Path) -> None:
     assert result.exit_code == 0, answer["errors"]
 
 
+@pytest.mark.dhf_links("SRS-039")
+@pytest.mark.dhf_testing("T1")
 def test_a_status_that_is_no_state_fails(dhf: Path) -> None:
     _set(dhf, "DEF-001.yaml", status="banana")
     result, answer = _verify(dhf)
@@ -61,6 +63,8 @@ def test_a_status_that_is_no_state_fails(dhf: Path) -> None:
     assert "FAIL [status] DEF-001" in result.stderr
 
 
+@pytest.mark.dhf_links("SRS-039")
+@pytest.mark.dhf_testing("T2")
 def test_a_type_with_a_lifecycle_takes_only_its_own_states(dhf: Path) -> None:
     """`draft` is a state of the global lifecycle but not of a CR's."""
     _set(dhf, "CR-001.yaml", status="draft")
@@ -68,6 +72,8 @@ def test_a_type_with_a_lifecycle_takes_only_its_own_states(dhf: Path) -> None:
     assert any(e.startswith("CR-001: status 'draft' is not a state of CR") for e in answer["errors"])
 
 
+@pytest.mark.dhf_links("SRS-039")
+@pytest.mark.dhf_testing("T3")
 def test_a_type_without_a_lifecycle_takes_the_global_states(dhf: Path) -> None:
     _set(dhf, "SRS-001.yaml", status="approved")
     assert _verify(dhf)[0].exit_code == 0
@@ -104,6 +110,8 @@ class TestWrites:
         assert json.loads(_item(dhf, "get", "CR-001").stdout)["status"] == "design"
 
 
+@pytest.mark.dhf_links("SRS-045")
+@pytest.mark.dhf_testing("T3")
 def test_a_defect_with_no_status_is_a_known_anomaly_at_release(dhf: Path, tmp_path: Path) -> None:
     """Only `resolved`, `closed` and `cancelled` count as resolved; a missing status is not one."""
     from medharness.services.verify_release import known_anomalies
@@ -119,6 +127,8 @@ def test_a_defect_with_no_status_is_a_known_anomaly_at_release(dhf: Path, tmp_pa
 class TestAnItemFileThatSaysNothing:
     """An emptied item vanished from every count; a `.yml` item escaped the duplicate check."""
 
+    @pytest.mark.dhf_links("SRS-035")
+    @pytest.mark.dhf_testing("T3")
     def test_an_empty_item_file_is_an_error(self, dhf: Path) -> None:
         _file(dhf, "CRS-001.yaml").write_text("# nothing here any more\n")
         result, answer = _verify(dhf)

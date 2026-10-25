@@ -1,0 +1,14 @@
+id: SRS-038
+title: verify dhf refuses a cycle in the traceability links
+risk: high
+content: '`verify dhf` shall fail, with or without --strict, when the typed links
+  form a cycle, so that an item with no origin in a directed V-model is not accepted.'
+verification_criteria: 'The exit code is 1 and `errors` holds `Traceability cycle:
+  A → B → A`, naming the items on the path.'
+testing: 'T1: A link that reverses an existing chain fails, naming the items on the
+  cycle.
+
+  T2: A DHF with no cycle is not reported as having one.'
+verification_method:
+- Test
+type: SRS

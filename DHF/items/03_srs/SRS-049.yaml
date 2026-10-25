@@ -1,0 +1,17 @@
+id: SRS-049
+title: build release leaves the release records out of the manifest's hashes
+risk: high
+content: '`build release --write` shall hash every item of the DHF in the manifest
+  by type and in total except the REL items, and the approvers list, so that a release
+  record moving through its states after signing is not mistaken for a change of content.'
+verification_criteria: '`dhf_hash` is the digest of the hashes of every item but REL
+  items, each document''s `items` lists its items with their hashes and `hash` is
+  their digest, `REL` is not among the documents, and `approvers_hash` is the hash
+  of the approvers list or null without one.'
+testing: 'T1: The manifest hashes every item but the REL items and each document by
+  type, and has no REL document.
+
+  T2: Without an approvers list the manifest is written with a null approvers_hash.'
+verification_method:
+- Test
+type: SRS

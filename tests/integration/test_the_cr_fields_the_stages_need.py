@@ -46,6 +46,8 @@ def test_the_shipped_cr_type_declares_every_field(dhf: Path) -> None:
     assert not [e for e in json.loads(result.stdout.splitlines()[0])["errors"] if "does not declare" in e]
 
 
+@pytest.mark.dhf_links("SRS-041")
+@pytest.mark.dhf_testing("T2")
 def test_verify_dhf_names_the_missing_fields(dhf: Path) -> None:
     _drop(dhf, "impact_analysis", "triage_result")
     result = _run(dhf, "verify", "dhf")

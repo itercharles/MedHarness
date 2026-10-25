@@ -48,11 +48,15 @@ def _item(dhf: Path, *args: str):
     return CliRunner().invoke(main, ["--dhf", str(dhf), "item", *args])
 
 
+@pytest.mark.dhf_links("SRS-042")
+@pytest.mark.dhf_testing("T1")
 def test_the_starter_chain_passes_strict(dhf: Path) -> None:
     result, answer = _verify(dhf, "--strict")
     assert result.exit_code == 0, answer["errors"]
 
 
+@pytest.mark.dhf_links("SRS-036")
+@pytest.mark.dhf_testing("T3")
 def test_a_link_to_the_wrong_type_fails(dhf: Path) -> None:
     _write(_file(dhf, "SYS-001.yaml"), satisfies=["CRS-001", "RISK-001"])
     result, answer = _verify(dhf)
@@ -61,12 +65,16 @@ def test_a_link_to_the_wrong_type_fails(dhf: Path) -> None:
     assert "[link-type]" in result.stderr
 
 
+@pytest.mark.dhf_links("SRS-036")
+@pytest.mark.dhf_testing("T5")
 def test_a_link_in_a_field_that_accepts_any_type_is_fine(dhf: Path) -> None:
     _write(_file(dhf, "CR-001.yaml"), affected_items=["SRS-001", "RISK-001", "SOUP-001"])
     result, answer = _verify(dhf, "--strict")
     assert result.exit_code == 0, answer["errors"]
 
 
+@pytest.mark.dhf_links("SRS-036")
+@pytest.mark.dhf_testing("T4")
 def test_a_link_in_the_wrong_field_does_not_count_as_coverage(dhf: Path) -> None:
     """SRS-002 exists; the only link to it from a SWDD is under `module`, which takes MODULEs."""
     _write(_file(dhf, "SRS-001.yaml"))   # untouched; SRS-002 below
@@ -86,6 +94,8 @@ def test_a_link_in_the_wrong_field_does_not_count_as_coverage(dhf: Path) -> None
     ("DEF-001.yaml", "violated_requirements", "SRS-999"),
     ("REL-001.yaml", "included_items", "CR-777"),
 ])
+@pytest.mark.dhf_links("SRS-036")
+@pytest.mark.dhf_testing("T2")
 def test_a_dangling_link_in_a_multiselect_field_is_found(dhf: Path, name: str, field: str, target: str) -> None:
     _write(_file(dhf, name), **{field: [target]})
     result, answer = _verify(dhf)

@@ -1,0 +1,19 @@
+id: SRS-031
+title: verify changes refuses a CR that lists an item the branch did not change
+risk: high
+content: '`verify changes` shall fail when the CR lists an item in `affected_items`
+  that the branch has not changed, and when a CR that exists lists none and the branch
+  changes no DHF item, so that a CR is not closed on work it never did.'
+verification_criteria: The exit code is 1, `passed` is false, `errors` holds a `dhf_branch`
+  finding naming each promised item left unchanged and `promised_but_unchanged` lists
+  them; for the empty case the finding says the CR lists no affected_items to check
+  against.
+testing: 'T1: A listed item the branch leaves alone fails, naming it.
+
+  T2: Seeded on a real repository: a CR that lists an item the branch does not change
+  is stopped.
+
+  T3: A CR that lists nothing, on a branch that changes no DHF item, fails.'
+verification_method:
+- Test
+type: SRS
