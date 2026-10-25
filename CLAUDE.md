@@ -146,7 +146,7 @@ git checkout main && git pull && git tag v0.X.0 && git push origin v0.X.0
    behind, so tagging in the right order still puts the tag on the wrong commit
    — v0.21.0 landed on the v0.20.0 commit this way.
 
-GitHub Actions then: runs preflight checks → builds wheel + sdist → publishes to PyPI → attaches wheel to the GitHub Release.
+GitHub Actions then: runs preflight checks → runs the full test suite on the tag, from the lockfile → builds wheel + sdist → publishes to PyPI → attaches the wheel and the test evidence (JUnit, test summary, and the `-tested-with.txt` constraints of the exact dependency versions) to the GitHub Release. A failing test publishes nothing.
 
 If the publish step fails with `ReadTimeout` on `upload.pypi.org`, that is the
 OIDC token exchange timing out, before anything was uploaded: re-run only the

@@ -112,3 +112,21 @@ step is useful on its own.
 
 Steps 1 and 3 are optional in the strong sense: a team that writes its DHF by hand
 starts at step 2 and loses nothing the standard asks for.
+
+## Installing a validated configuration
+
+Every MedHarness release runs its full test suite before it is published, against the exact dependency versions in the release's lockfile. The GitHub Release attaches three files that record that run:
+
+| File | What it is |
+|------|------------|
+| `medharness-<version>-tested-with.txt` | A pip constraints file: every runtime and `docs` dependency, pinned to the version the suite passed with |
+| `medharness-<version>-junit.xml` | The JUnit results of the full suite |
+| `medharness-<version>-test-summary.txt` | The pytest summary line, Python version, runner image and commit |
+
+To install that configuration, pass the constraints file to pip:
+
+```bash
+pip install "medharness[docs]==<version>" -c medharness-<version>-tested-with.txt
+```
+
+The `==` pins MedHarness itself; the constraints pin everything it pulls in, so an install done later resolves to the versions the suite ran against rather than the newest ones on PyPI. The JUnit file and the test summary are the evidence of what that configuration passed. Keep them with your release records.
