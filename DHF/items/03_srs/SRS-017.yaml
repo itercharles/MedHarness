@@ -1,0 +1,18 @@
+id: SRS-017
+title: verify approval --release refuses a release without the release role's signature
+  over the manifest
+risk: high
+content: '`verify approval --release` shall fail a release whose manifest file lacks
+  a valid signature from the release role over its current content, even when every
+  document is signed, so that the release as a whole is approved.'
+verification_criteria: The exit code is 1, `passed` is false and `errors` contains
+  a finding beginning "The release of <version>" that names the release role and its
+  approvers.
+testing: 'T1: Every document role has signed and the release role has not: fails with
+  the release finding alone.
+
+  T2: The manifest is rebuilt after the release role signed: fails with the release
+  finding.'
+verification_method:
+- Test
+type: SRS

@@ -1,0 +1,24 @@
+id: SRS-007
+title: verify impact refuses a dependent of a changed item that is neither changed
+  nor reviewed
+risk: high
+content: '`verify impact` shall fail a change request when an item that depends on
+  an item the branch changed, through a typed link in a traceability chain and within
+  `impact_depth` links, is neither changed by the branch nor listed in the CR''s `reviewed_items`,
+  so that a change is never left unexamined where it reaches.'
+verification_criteria: The exit code is 1, `passed` is false and `errors` holds one
+  `impact.<ID>` finding per unsettled dependent, naming the changed item it depends
+  on.
+testing: 'T1: A changed SYS leaves its SRS, SYSARCH and RCM dependents unsettled:
+  fails, naming each.
+
+  T2: A dependent that the branch changed is settled, and its own dependents are then
+  reached.
+
+  T3: `impact_depth` sets how many links are followed: a greater depth reaches the
+  next dependent.
+
+  T4: The seeded omission of a dependent left unreviewed is stopped by `verify impact`.'
+verification_method:
+- Test
+type: SRS

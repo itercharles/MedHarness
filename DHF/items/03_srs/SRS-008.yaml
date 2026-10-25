@@ -1,0 +1,17 @@
+id: SRS-008
+title: verify impact refuses a changed requirement whose parent is neither changed
+  nor reviewed
+risk: high
+content: '`verify impact` shall fail a change request when a requirement the branch
+  changed has a parent, along a typed link, that is neither changed nor listed in
+  `reviewed_items`, so that a change to a requirement is not made without asking whether
+  what it derives from still holds.'
+verification_criteria: The exit code is 1, `passed` is false and `errors` contains
+  an `impact_analysis.parents` finding naming the changed requirement and its parent.
+testing: 'T1: A changed SRS whose parent SYS is untouched and unreviewed: fails, naming
+  both.
+
+  T2: The seeded omission of a parent left unreviewed is stopped by `verify impact`.'
+verification_method:
+- Test
+type: SRS

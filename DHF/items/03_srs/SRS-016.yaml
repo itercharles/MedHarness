@@ -1,0 +1,27 @@
+id: SRS-016
+title: verify approval --release refuses a document without a valid signature from
+  its owning role over its current hash
+risk: high
+content: '`verify approval --release` shall fail a release unless each document of
+  the release manifest that has an owning role carries a valid signature by an approver
+  who holds that role, for that release and over the document''s hash in the manifest,
+  so that no document is released unapproved.'
+verification_criteria: The exit code is 1, `passed` is false and `errors` holds one
+  finding per unsigned document, naming the document, the role needed and the approvers
+  who hold it. A signature by a role that does not own the document, by a signer who
+  does not hold the role they claim, for another release or over an older hash does
+  not count.
+testing: 'T1: A release with no signatures fails, naming each document with its role
+  and approvers; each signature recorded removes only its own findings.
+
+  T2: A signature by a role that does not own the document does not count.
+
+  T3: A record claiming a role its signer does not hold does not count.
+
+  T4: A signature made for another release does not count.
+
+  T5: A signature over an older hash of a document does not count once the manifest
+  changes it; the documents that did not change stay signed.'
+verification_method:
+- Test
+type: SRS

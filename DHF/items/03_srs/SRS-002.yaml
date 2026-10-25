@@ -1,0 +1,24 @@
+id: SRS-002
+title: verify completion refuses a CR whose own record is incomplete
+risk: high
+content: '`verify completion` shall fail a change request that is missing, or lacks
+  a field its type requires for the move to completed, so that a CR with no record
+  of what was planned, changed or assessed for risk is never reported closed.'
+verification_criteria: For each case, the exit code is 1, `passed` is false and `errors`
+  names the CR or the field. The fields are the criteria on the CR type's transition
+  into `completed` (by default `affected_items`, `implementation_notes` and `affected_risk_items`).
+testing: 'T1: The CR is not in the DHF: fails, naming `cr_item`.
+
+  T2: `affected_items` is not recorded: fails, naming it.
+
+  T3: `implementation_notes` is missing or empty: fails, naming it.
+
+  T4: `affected_risk_items` is missing or null: fails, naming it.
+
+  T5: A criterion the project adds to the CR type''s move to `completed` is enforced,
+  and a project that requires nothing is asked for nothing.
+
+  T6: On the command line the exit code is non-zero and each incomplete field is reported.'
+verification_method:
+- Test
+type: SRS

@@ -127,6 +127,7 @@ through AI development.
 | [soup.md](docs/soup.md) | the SOUP register, SBOM, vulnerability scanning |
 | [configuration.md](docs/configuration.md) | changing the defaults, your own types and relationships |
 | [interface.md](docs/interface.md) | the gate result, exit codes, what may change |
+| [validation.md](docs/validation.md) | the tool's intended use, the risk of each command, and its own requirements and tests |
 | [ai-security.md](docs/ai-security.md) | what the AI stages can do, and running without them |
 | [architecture.md](docs/architecture.md) | how the code is organised |
 | [charter.md](docs/charter.md) | what MedHarness is for, and what it does not do |

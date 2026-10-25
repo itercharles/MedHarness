@@ -1,0 +1,19 @@
+id: SRS-018
+title: verify approval --release fails when the release, its manifest or the approvers
+  list is absent or malformed
+risk: high
+content: '`verify approval --release` shall fail, naming the cause, when the release
+  has no manifest, the manifest is malformed, or the project has no approvers list,
+  and shall not report approval as not required.'
+verification_criteria: The exit code is 1, `passed` is false and the first error says
+  there is no manifest, that the file is not a release manifest, or that approvals
+  are not configured.
+testing: 'T1: A release with no manifest: fails, saying so.
+
+  T2: A malformed manifest: fails, naming it and not crashing.
+
+  T3: A release checked in a project with no approvers list: fails, saying approvals
+  are not configured.'
+verification_method:
+- Test
+type: SRS

@@ -6,6 +6,7 @@ import json
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
+import pytest
 from click.testing import CliRunner
 
 from medharness.cli import main
@@ -79,6 +80,8 @@ def _incomplete(result: dict) -> list[str]:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.dhf_links("SRS-002")
+@pytest.mark.dhf_testing("T1")
 def test_absent_cr_item_fails(tmp_path: Path) -> None:
     dhf = _make_dhf(tmp_path)
     result = cr_closure_gate("CR-001", dhf)
@@ -86,6 +89,8 @@ def test_absent_cr_item_fails(tmp_path: Path) -> None:
     assert _incomplete(result) == ["cr_item"]
 
 
+@pytest.mark.dhf_links("SRS-002")
+@pytest.mark.dhf_testing("T2")
 def test_missing_affected_items_fails(tmp_path: Path) -> None:
     dhf = _make_dhf(tmp_path)
     _write_cr(dhf, "CR-001", None)
@@ -95,6 +100,8 @@ def test_missing_affected_items_fails(tmp_path: Path) -> None:
     assert any("affected_items" in e for e in result["errors"])
 
 
+@pytest.mark.dhf_links("SRS-006")
+@pytest.mark.dhf_testing("T2")
 def test_empty_affected_items_passes(tmp_path: Path) -> None:
     """A CR that changed no items says so with []."""
     dhf = _make_dhf(tmp_path)
@@ -104,24 +111,32 @@ def test_empty_affected_items_passes(tmp_path: Path) -> None:
     assert result["details"]["missing_items"] == []
 
 
+@pytest.mark.dhf_links("SRS-002")
+@pytest.mark.dhf_testing("T3")
 def test_missing_implementation_notes_fails(tmp_path: Path) -> None:
     dhf = _make_dhf(tmp_path)
     _write_cr(dhf, "CR-001", [], implementation_notes=None)
     assert "implementation_notes" in _incomplete(cr_closure_gate("CR-001", dhf))
 
 
+@pytest.mark.dhf_links("SRS-002")
+@pytest.mark.dhf_testing("T3")
 def test_empty_implementation_notes_fails(tmp_path: Path) -> None:
     dhf = _make_dhf(tmp_path)
     _write_cr(dhf, "CR-001", [], implementation_notes="")
     assert "implementation_notes" in _incomplete(cr_closure_gate("CR-001", dhf))
 
 
+@pytest.mark.dhf_links("SRS-002")
+@pytest.mark.dhf_testing("T4")
 def test_missing_affected_risk_items_fails(tmp_path: Path) -> None:
     dhf = _make_dhf(tmp_path)
     _write_cr(dhf, "CR-001", [], affected_risk_items=None)
     assert "affected_risk_items" in _incomplete(cr_closure_gate("CR-001", dhf))
 
 
+@pytest.mark.dhf_links("SRS-002")
+@pytest.mark.dhf_testing("T4")
 def test_null_affected_risk_items_fails(tmp_path: Path) -> None:
     """Only an explicit list is an answer."""
     dhf = _make_dhf(tmp_path)
@@ -136,6 +151,8 @@ def test_null_affected_risk_items_fails(tmp_path: Path) -> None:
     assert "affected_risk_items" in _incomplete(cr_closure_gate("CR-001", dhf))
 
 
+@pytest.mark.dhf_links("SRS-002")
+@pytest.mark.dhf_testing("T5")
 def test_closure_asks_what_the_cr_type_asks_for_the_move_to_completed(tmp_path: Path) -> None:
     """One definition: the criteria on the transition into `completed` in cr.yaml, not a list kept here."""
     import yaml
@@ -169,6 +186,8 @@ def test_closure_asks_what_the_cr_type_asks_for_the_move_to_completed(tmp_path: 
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.dhf_links("SRS-006")
+@pytest.mark.dhf_testing("T1")
 def test_affected_items_present_and_verified_passes(tmp_path: Path) -> None:
     dhf = _make_dhf(tmp_path)
     _write_cr(dhf, "CR-001", ["SRS-010", "SRS-011"])
@@ -179,6 +198,8 @@ def test_affected_items_present_and_verified_passes(tmp_path: Path) -> None:
     assert result["passed"] is True, result["errors"]
 
 
+@pytest.mark.dhf_links("SRS-003")
+@pytest.mark.dhf_testing("T1")
 def test_an_affected_item_absent_from_the_dhf_fails(tmp_path: Path) -> None:
     dhf = _make_dhf(tmp_path)
     _write_cr(dhf, "CR-001", ["SRS-404"])
@@ -188,6 +209,8 @@ def test_an_affected_item_absent_from_the_dhf_fails(tmp_path: Path) -> None:
     assert any("SRS-404" in e for e in result["errors"])
 
 
+@pytest.mark.dhf_links("SRS-004")
+@pytest.mark.dhf_testing("T1")
 def test_item_without_verification_method_fails(tmp_path: Path) -> None:
     dhf = _make_dhf(tmp_path)
     _write_cr(dhf, "CR-001", ["SRS-010"])
@@ -197,6 +220,8 @@ def test_item_without_verification_method_fails(tmp_path: Path) -> None:
     assert [i["id"] for i in result["details"]["verification_gaps"]] == ["SRS-010"]
 
 
+@pytest.mark.dhf_links("SRS-005")
+@pytest.mark.dhf_testing("T1")
 def test_test_method_without_junit_evidence_fails(tmp_path: Path) -> None:
     dhf = _make_dhf(tmp_path)
     _write_cr(dhf, "CR-001", ["SRS-010"])
@@ -207,6 +232,8 @@ def test_test_method_without_junit_evidence_fails(tmp_path: Path) -> None:
     assert "SRS-010" in [i["id"] for i in result["details"]["unverified_test"]]
 
 
+@pytest.mark.dhf_links("SRS-005")
+@pytest.mark.dhf_testing("T2")
 def test_test_method_with_no_junit_at_all_fails(tmp_path: Path) -> None:
     """Closure requires evidence; no JUnit is not 'not yet checked'."""
     dhf = _make_dhf(tmp_path)
@@ -217,6 +244,8 @@ def test_test_method_with_no_junit_at_all_fails(tmp_path: Path) -> None:
     assert "SRS-010" in [i["id"] for i in result["details"]["unverified_test"]]
 
 
+@pytest.mark.dhf_links("SRS-006")
+@pytest.mark.dhf_testing("T3")
 def test_risk_items_need_no_verification_method(tmp_path: Path) -> None:
     dhf = _make_dhf(tmp_path)
     _write_cr(dhf, "CR-001", ["RISK-002", "SRS-010"])
@@ -227,6 +256,8 @@ def test_risk_items_need_no_verification_method(tmp_path: Path) -> None:
     assert result["details"]["verification_gaps"] == []
 
 
+@pytest.mark.dhf_links("SRS-006")
+@pytest.mark.dhf_testing("T4")
 def test_an_item_the_cr_did_not_touch_is_not_its_problem(tmp_path: Path) -> None:
     dhf = _make_dhf(tmp_path)
     _write_cr(dhf, "CR-001", ["SRS-010"])
@@ -245,6 +276,8 @@ def _cli(dhf: Path, *args: str):
     return CliRunner().invoke(main, ["--dhf", str(dhf), "verify", "completion", "--cr", "CR-001", *args])
 
 
+@pytest.mark.dhf_links("SRS-006")
+@pytest.mark.dhf_testing("T6")
 def test_cli_passes(tmp_path: Path) -> None:
     dhf = _make_dhf(tmp_path)
     _write_cr(dhf, "CR-001", ["SRS-010"])
@@ -257,6 +290,8 @@ def test_cli_passes(tmp_path: Path) -> None:
     assert "CR-001" in payload["summary"]
 
 
+@pytest.mark.dhf_links("SRS-002")
+@pytest.mark.dhf_testing("T6")
 def test_cli_fails_on_incomplete_cr_fields(tmp_path: Path) -> None:
     dhf = _make_dhf(tmp_path)
     _write_cr(dhf, "CR-001", [], implementation_notes=None, affected_risk_items=None)
@@ -268,6 +303,8 @@ def test_cli_fails_on_incomplete_cr_fields(tmp_path: Path) -> None:
     assert "FAIL [completion]" in result.output
 
 
+@pytest.mark.dhf_links("SRS-003")
+@pytest.mark.dhf_testing("T2")
 def test_cli_names_a_missing_item(tmp_path: Path) -> None:
     dhf = _make_dhf(tmp_path)
     _write_cr(dhf, "CR-001", ["SRS-404"])

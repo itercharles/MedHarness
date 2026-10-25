@@ -1,0 +1,17 @@
+id: SRS-013
+title: verify impact refuses an impact record that is missing or names an anchor nobody
+  settled
+risk: high
+content: '`verify impact` shall fail a change request whose `impact_analysis` is absent,
+  or names an anchor that the branch neither changed nor the CR reviewed, so that
+  the record of what a change was grounded in is complete and acted upon.'
+verification_criteria: The exit code is 1, `passed` is false and `errors` begins with
+  `impact_analysis` for an absent record, or states that the anchor is neither changed
+  nor in `reviewed_items`.
+testing: 'T1: A CR with no `impact_analysis`: fails, naming it.
+
+  T2: An anchor that is neither changed nor in `reviewed_items`: fails, naming the
+  anchor.'
+verification_method:
+- Test
+type: SRS
