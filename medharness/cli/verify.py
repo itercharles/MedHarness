@@ -256,6 +256,41 @@ def register(main):
             click.echo(f"    Fix: {finding['fix']}", err=True)
         raise click.exceptions.Exit(1)
 
+    @verify.command("approval")
+    @click.option("--since-ref", default=None, metavar="REF",
+                  help="What the branch is compared against: its changes since it left this ref. "
+                       "Default: the branch origin's HEAD points at, else origin/main. "
+                       "Needs enough history to reach the fork.")
+    @click.option("--release", "release", default=None, metavar="VERSION",
+                  help="Also check that release VERSION is signed: every document of its manifest by the role "
+                       "that owns it, the release by the release role, and the manifest still matches the DHF.")
+    @click.pass_context
+    def verify_approval(ctx: click.Context, since_ref: str | None, release: str | None) -> None:
+        """Check the approval log is sound and, with --release, that the release is signed.
+
+        Always checks every signature against `DHF/config/approvers.yaml`, that each signer holds
+        the roles the record claims, that approvals are only ever added, and that a change to the
+        approvers list is approved by someone on the list as it was before. It never asks for a
+        signature by itself. A signature made without a proven touch of the key warns.
+
+        With --release, each document in `DHF/releases/VERSION/manifest.yaml` whose type has a role
+        (`approval_roles` in global.yaml) needs a signature from that role over its current hash,
+        the release needs one from `release_role`, and an item edited since the manifest was
+        written fails here: rerun `build release`.
+
+        Does nothing until `approvers.yaml` exists, except that --release then fails. Compares the
+        working tree, so it runs before anything is committed as well as in CI. Needs a reachable
+        `--since-ref`.
+        """
+        from medharness.services.verify_approval import approval_gate  # noqa: PLC0415
+
+        result = approval_gate(ctx.obj["dhf"], since_ref=since_ref, release=release)
+        emit(result)
+        render_envelope(result, "approval")
+        click.echo(result["summary"], err=True)
+        if not result["passed"]:
+            raise click.exceptions.Exit(1)
+
     @verify.command("soup")
     @click.option("--manifest", "manifest_paths", multiple=True,
                   type=click.Path(exists=True, dir_okay=False, path_type=Path),

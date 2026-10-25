@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
 import yaml
 from click.testing import CliRunner
 
@@ -49,6 +50,8 @@ def _completion(dhf: Path):
     return result, json.loads(result.stdout.splitlines()[0])
 
 
+@pytest.mark.dhf_links("SRS-004")
+@pytest.mark.dhf_testing("T2")
 def test_an_added_type_with_no_verification_method_blocks_closure(tmp_path: Path) -> None:
     result, envelope = _completion(_project(tmp_path, verification_method=None))
     assert result.exit_code == 1 and envelope["passed"] is False

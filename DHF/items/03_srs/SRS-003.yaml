@@ -1,0 +1,16 @@
+id: SRS-003
+title: verify completion refuses an affected item that is absent from the DHF
+risk: high
+content: '`verify completion` shall fail a change request whose `affected_items` lists
+  an ID that is not an item of the DHF, so that a closure cannot rest on an item that
+  does not exist.'
+verification_criteria: The exit code is 1, `passed` is false, `missing_items` holds
+  the absent ID and `errors` says it is in `affected_items` but absent from the DHF.
+testing: 'T1: A CR lists an ID the DHF does not hold: fails, and the ID is in `missing_items`
+  and `errors`.
+
+  T2: On the command line the exit code is non-zero and the output names the missing
+  ID.'
+verification_method:
+- Test
+type: SRS

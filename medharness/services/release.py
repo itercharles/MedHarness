@@ -19,8 +19,11 @@ from typing import Any, Optional
 
 import click
 
+from dhfkit.approvers import approvers_path
 from dhfkit.store import open_store
 from medharness.services import git
+from medharness.services.approval import ApprovalError
+from medharness.services.release_manifest import write_release_files
 from medharness.services.soup_sync import _KNOWN_MANIFESTS, _dispatch_parser
 from medharness.services.traceability import coverage_matrices
 from medharness.services.verify_release import (
@@ -185,14 +188,14 @@ def format_traceability_matrix_markdown(matrix: dict) -> str:
 
 def _generate_specification_artifacts(adapter, out_dir: Path,
                                       doc_types: tuple[str, ...],
-                                      doc_format: str, version: str) -> list[dict]:
+                                      doc_format: str, version: str, notice: str) -> list[dict]:
     # Rendered straight into out_dir: evidence is a copy of the DHF's state,
     # and producing it must not change the DHF.
     spec_dir = out_dir / "specifications"
     generated = []
     for doc_type in doc_types:
         try:
-            generated.append(adapter.render_spec(doc_type, doc_format, spec_dir, version))
+            generated.append(adapter.render_spec(doc_type, doc_format, spec_dir, version, notice))
         except RuntimeError as exc:
             # Renderer unavailable (e.g. PDF without native libs) — the message
             # already says what to install, so present it rather than traceback.
@@ -206,6 +209,7 @@ def generate_release_artifacts(
     junit_paths: list[Path],
     version: str,
     doc_format: str = "html",
+    notice: str = "",
 ) -> dict:
     """Every specification, every plan, and a traceability report per configured matrix, into out_dir.
 
@@ -215,7 +219,7 @@ def generate_release_artifacts(
     """
     out_dir.mkdir(parents=True, exist_ok=True)
     specifications = _generate_specification_artifacts(
-        adapter, out_dir, tuple(sorted(adapter.get_available_doc_types())), doc_format, version
+        adapter, out_dir, tuple(sorted(adapter.get_available_doc_types())), doc_format, version, notice
     )
     plans = _generate_plan_artifacts(adapter, out_dir, doc_format)
     traceability = [
@@ -308,14 +312,15 @@ def build_evidence_bundle(
 
     Records the gate it is given rather than running its own. The manifest
     hashes every file in ``out_dir``, so whatever was written there before this
-    runs is covered too. Returns the manifest.
+    runs is covered too. Returns the manifest, and the specifications it rendered.
     """
     adapter = open_store(dhf_path)
 
     out_dir.mkdir(parents=True, exist_ok=True)
+    notice = f"Approval: see the approval sheet of release {version}." if approvers_path(dhf_path).is_file() else ""
     artifacts = generate_release_artifacts(
         adapter, out_dir, list(junit_paths), version,
-        doc_format=doc_format,
+        doc_format=doc_format, notice=notice,
     )
 
     provenance = {
@@ -343,7 +348,7 @@ def build_evidence_bundle(
     (out_dir / "evidence-manifest.json").write_text(
         json.dumps(manifest, indent=2, default=str) + "\n", encoding="utf-8"
     )
-    return manifest
+    return {**manifest, "specifications": artifacts["specifications"]}
 
 
 # ---------------------------------------------------------------------------
@@ -648,6 +653,17 @@ def build_release(
             # The artifacts are written; a REL the store refused is reported,
             # not raised, so the run still says what it produced.
             errors.append(f"Failed to create REL item: {exc}")
+        else:
+            store = open_store(dhf)
+            if store.tracks_files:
+                try:
+                    # After the REL, so the manifest's DHF hash covers it.
+                    write_release_files(dhf, version, store.list_items(), manifest["specifications"], out_dir,
+                                        baseline["cr_ids"], store.config)
+                except ApprovalError as exc:
+                    errors.append(f"Failed to write the release manifest: {exc}")
+            else:
+                warnings.append(f"No release manifest: the '{store.store_type}' store keeps no item files to hash.")
 
     return {
         "outcome": "completed_with_errors" if errors else "completed",

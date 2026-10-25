@@ -54,6 +54,21 @@ global_lifecycle:
 # that depends on a changed one is neither changed nor listed in the CR's
 # `reviewed_items`; 0 turns the check off.
 impact_depth: 1
+# Which role signs the release's specification of each item type (`medharness item approve
+# --release`). A type missing here needs no signature. Only read once DHF/config/approvers.yaml exists.
+approval_roles:
+  UC: [product-manager]
+  CRS: [product-manager]
+  SYS: [system-architect]
+  SYSARCH: [system-architect]
+  SRS: [software-lead]
+  SWDD: [software-lead]
+  MODULE: [software-lead]
+  SOUP: [software-lead]
+  RISK: [risk-manager]
+  RCM: [risk-manager]
+# The role that signs the release as a whole.
+release_role: quality-lead
 # Changed files that need no owning MODULE once modules declare `paths`: a directory
 # ends in "/", anything else is a file or a glob, where `*` also crosses directories.
 unowned_paths:

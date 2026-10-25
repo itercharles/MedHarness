@@ -14,6 +14,9 @@ Before proposing or implementing any significant change, read:
 - [`docs/architecture.md`](docs/architecture.md) — package boundaries, CR workflow
   topology, layer responsibilities, and test organisation. Do not violate the
   `dhfkit` → `medharness` import boundary.
+- [`docs/validation.md`](docs/validation.md) — the tool's risk ratings and its own
+  DHF (`DHF/`). A change to the behaviour of a gate it covers changes that gate's SRS
+  items (`medharness --dhf DHF item update`) and the tests marked `dhf_links`/`dhf_testing`.
 
 ## CLI Boundary
 
@@ -22,9 +25,9 @@ dependency on `medharness`, and no CLI of its own.
 
 | Group | Touches | Commands |
 |-------|---------|----------|
-| `item` | one DHF item at a time | `list` · `get` · `create` · `update` · `transition` |
-| `verify` | reads the DHF and the working tree | `dhf` · `tests` · `soup` · `completion` · `impact` · `changes` |
-| `build` | writes items, code or artifacts | `plan` · `code` · `soup` · `release` |
+| `item` | one DHF item at a time | `list` · `get` · `create` · `update` · `transition` · `approve` |
+| `verify` | reads the DHF and the working tree | `dhf` · `tests` · `soup` · `completion` · `impact` · `changes` · `approval` |
+| `build` | writes items, code or artifacts | `plan` · `code` · `soup` · `release` · `approvals` |
 | `init` | scaffolds a project | — |
 
 `tests/guards/test_cli_boundary_is_documented.py` checks this table against the
@@ -37,12 +40,14 @@ runs locally; `--pr` on `build plan|code` is the only thing that is CI-specific.
 
 | Verb | Reads | Examples |
 |------|-------|----------|
-| `verify` | what is on the machine — the DHF and the working tree, never GitHub | `dhf`, `tests`, `soup`, `completion`, `impact`, `changes` |
-| `build` | whatever it needs; **writes** items, code, or artifacts | `plan`, `code`, `soup`, `release` |
+| `verify` | what is on the machine — the DHF and the working tree, never GitHub | `dhf`, `tests`, `soup`, `completion`, `impact`, `changes`, `approval` |
+| `build` | whatever it needs; **writes** items, code, or artifacts | `plan`, `code`, `soup`, `release`, `approvals` |
 
-Approval is not a command: GitHub's branch protection (required approvals,
-stale approvals dismissed on push) enforces it on the server, where a PR cannot
-edit the check away.
+During development approval is the review of the pull request, under the team's
+rules, and no check reads GitHub. At release it is a signature: `item approve
+--release` signs the documents a role owns, `verify approval --release` checks
+them against `DHF/config/approvers.yaml`, and `build approvals` renders who signed
+what. See [ADR-004](docs/adr/ADR-004-signed-approvals.md).
 
 `tests/guards/test_gates_sit_where_they_belong.py` enforces the line.
 
@@ -55,6 +60,7 @@ edit the check away.
 | `medharness/` | Harness CLI, CI gate logic, scaffolding |
 | `dhfkit/` | The storage engine, a library: items, config, schema validation, doc generation, SBOM |
 | `dhfkit/templates/` | The defaults every DHF reads (`config/`, `specs/`), the sample items `init` copies, and the CI recipe the docs publish |
+| `DHF/` | MedHarness's own requirements (SRS only), checked by itself; see `docs/validation.md` |
 | `docs/` | Architecture docs and adopting guide |
 | `tests/unit/` | Unit tests — logic worth isolating: parsers, judges, mappings |
 | `tests/guards/` | Checks on the repo itself: import boundaries, documented commands, packaging, mock contracts |

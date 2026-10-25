@@ -15,6 +15,10 @@
 | Status | {{ status }} |
 | Last Updated | {{ generation_date }} |
 | Total Change Requests | {{ items|length }} |
+{% if notice %}
+
+{{ notice }}
+{% endif %}
 
 ---
 

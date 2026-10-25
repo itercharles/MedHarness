@@ -98,7 +98,7 @@ Run it on the branch to block the merge, and again on `main`, where the tests re
 3. Those that are requirements (CRS, SYS, SRS) have `verification_method` set.
 4. Those with `Test` have passing JUnit evidence.
 
-Approval is not its question — GitHub's branch protection enforces that (required approvals, stale approvals dismissed on push). Exits non-zero and prints `FAIL [completion]` lines for each gap.
+Approval is not its question. During development it is the review of the pull request, under your team's rules, and no check reads it; at release the documents are signed and [`verify approval --release`](ci.md#signing-a-release) checks that. Exits non-zero and prints `FAIL [completion]` lines for each gap.
 
 ### Wiring it into GitHub Actions
 

@@ -10,6 +10,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from medharness.services.verify_tests import validate_verification_completeness
 
 
@@ -77,6 +79,8 @@ class TestScopeIsHonoured:
 
 
 class TestTheGateUsesTheScope:
+    @pytest.mark.dhf_links("SRS-006")
+    @pytest.mark.dhf_testing("T4")
     def test_the_closure_gate_does_not_report_an_unrelated_item(self, tmp_path: Path) -> None:
         import yaml
 
