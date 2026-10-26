@@ -1,0 +1,21 @@
+id: SRS-064
+title: verify approval without --release passes a sound log without asking for a signature
+content: '`verify approval` without `--release` shall pass when every record in the
+  approval log is valid, only added to and the approvers list is unchanged or approved,
+  whatever is still unsigned, and shall warn of each signature made with a key marked
+  `no_touch_required`, so that development is not blocked on signatures that belong
+  to the release.'
+verification_criteria: The exit code is 0, `passed` is true and `summary` counts the
+  valid approval records; a record signed with a `no_touch_required` key gives one
+  warning naming it, and a key that proves presence gives none.
+testing: 'T1: A project with an approvers list and no signatures passes, counting
+  no records.
+
+  T2: A valid signature made with a no_touch_required key passes with a warning naming
+  it.
+
+  T3: A signature made with a key that proves presence passes with no warning.'
+risk: medium
+verification_method:
+- Test
+type: SRS

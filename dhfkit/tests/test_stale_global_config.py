@@ -55,6 +55,8 @@ class TestAnUndefinedTargetIsReportedNotDropped:
             "broken config"
         )
 
+    @pytest.mark.dhf_links("SRS-060")
+    @pytest.mark.dhf_testing("T3")
     def test_it_is_marked_unavailable_with_the_reason(self, aged: Path) -> None:
         design = next(t for t in open_store(aged).get_available_transitions("CR-001")
                       if t["to_state"] == "design")
@@ -62,6 +64,8 @@ class TestAnUndefinedTargetIsReportedNotDropped:
         reason = " ".join(design["blocking_criteria"])
         assert "design" in reason and "global_lifecycle.states" in reason
 
+    @pytest.mark.dhf_links("SRS-060")
+    @pytest.mark.dhf_testing("T3")
     def test_executing_it_says_what_is_wrong(self, aged: Path) -> None:
         with pytest.raises(ValueError) as exc:
             open_store(aged).execute_transition("CR-001", "design")

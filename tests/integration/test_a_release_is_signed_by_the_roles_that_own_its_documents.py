@@ -118,6 +118,8 @@ def test_every_role_signing_its_documents_and_the_release_passes(project: Projec
     assert answer["summary"] == "release 1.0.0: 11 of 11 signature(s) in place"
 
 
+@pytest.mark.dhf_links("SRS-064")
+@pytest.mark.dhf_testing("T1")
 def test_plain_verify_never_asks_for_a_signature(project: Project) -> None:
     answer = project.verify()
 

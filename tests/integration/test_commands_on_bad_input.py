@@ -48,14 +48,22 @@ class TestItemCommands:
     @pytest.mark.parametrize("args,reason", [
         (["get", "NOPE-1"], "not found"),
         (["update", "NOPE-1", "--data", "{}"], "not found"),
-        (["transition", "NOPE-1"], "not found"),
-        (["create", "--type", "ZZZ", "--data", "{}"], "Unknown doc type"),
-        (["create", "--type", "SRS", "--data", "not json"], "not valid JSON"),
-        (["create", "--type", "SRS", "--data", "[1]"], "must be a JSON object"),
-        (["create", "--type", "SRS", "--data", "null"], "must be a JSON object"),
-        (["update", "SRS-001", "--data", '"text"'], "must be a JSON object"),
-        (["update", "SRS-001", "--data", '{"nope": 1}'], "Unknown field"),
-        (["transition", "CR-001", "completed"], "not allowed"),
+        pytest.param(["transition", "NOPE-1"], "not found",
+                     marks=[pytest.mark.dhf_links("SRS-060"), pytest.mark.dhf_testing("T4")]),
+        pytest.param(["create", "--type", "ZZZ", "--data", "{}"], "Unknown doc type",
+                     marks=[pytest.mark.dhf_links("SRS-055"), pytest.mark.dhf_testing("T4")]),
+        pytest.param(["create", "--type", "SRS", "--data", "not json"], "not valid JSON",
+                     marks=[pytest.mark.dhf_links("SRS-055"), pytest.mark.dhf_testing("T5")]),
+        pytest.param(["create", "--type", "SRS", "--data", "[1]"], "must be a JSON object",
+                     marks=[pytest.mark.dhf_links("SRS-055"), pytest.mark.dhf_testing("T5")]),
+        pytest.param(["create", "--type", "SRS", "--data", "null"], "must be a JSON object",
+                     marks=[pytest.mark.dhf_links("SRS-055"), pytest.mark.dhf_testing("T5")]),
+        pytest.param(["update", "SRS-001", "--data", '"text"'], "must be a JSON object",
+                     marks=[pytest.mark.dhf_links("SRS-055"), pytest.mark.dhf_testing("T5")]),
+        pytest.param(["update", "SRS-001", "--data", '{"nope": 1}'], "Unknown field",
+                     marks=[pytest.mark.dhf_links("SRS-055"), pytest.mark.dhf_testing("T1")]),
+        pytest.param(["transition", "CR-001", "completed"], "not allowed",
+                     marks=[pytest.mark.dhf_links("SRS-060"), pytest.mark.dhf_testing("T1")]),
     ])
     def test_a_bad_request_exits_1_with_the_reason_and_no_stdout(
         self, project: Path, args: list[str], reason: str,
@@ -65,12 +73,16 @@ class TestItemCommands:
         assert result.stdout == ""
         assert reason in result.stderr
 
+    @pytest.mark.dhf_links("SRS-055")
+    @pytest.mark.dhf_testing("T1")
     def test_a_refused_update_leaves_the_file_as_it_was(self, project: Path) -> None:
         path = next((project / "DHF" / "items").rglob("SRS-001.yaml"))
         before = path.read_bytes()
         assert _run(project, "item", "update", "SRS-001", "--data", '{"nope": 1}').exit_code == 1
         assert path.read_bytes() == before
 
+    @pytest.mark.dhf_links("SRS-055")
+    @pytest.mark.dhf_testing("T2")
     def test_a_refused_create_writes_no_file(self, project: Path) -> None:
         before = sorted((project / "DHF" / "items").rglob("*.yaml"))
         assert _run(project, "item", "create", "--type", "SRS", "--data", '{"bogus": 1}').exit_code == 1

@@ -1,0 +1,23 @@
+id: SRS-059
+title: item create allocates the next ID never used, and the initial state
+content: '`item create` shall give the new item the next ID of its type''s prefix
+  after every ID used before, a deleted item''s included, ignoring any `id` the caller
+  gives, and shall set the initial state of its type''s lifecycle, so that an ID means
+  one item for the life of the project.'
+verification_criteria: Without deletions the IDs are consecutive; after an item is
+  deleted and committed, the next item gets a new number; a given `id` is not used;
+  outside a git repository items are still created; an item of a type with a lifecycle
+  starts in its initial state.
+testing: 'T1: Items created one after another get consecutive IDs.
+
+  T2: A deleted ID is not given to the next item, across several deletions.
+
+  T3: An `id` the caller gives is ignored.
+
+  T4: A DHF outside a git repository still creates items.
+
+  T5: A new CR starts in its initial state.'
+risk: medium
+verification_method:
+- Test
+type: SRS

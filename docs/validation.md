@@ -1,9 +1,9 @@
 # Tool validation
 
 > **Stability:** Draft
-> **Last reviewed:** 2026-10-25
+> **Last reviewed:** 2026-10-26
 
-What MedHarness is trusted to do, how much a wrong answer matters for each command, and the requirements and tests that back the commands rated highest. It is the start of [iteration 4](charter.md#iterations) of the charter.
+What MedHarness is trusted to do, how much a wrong answer matters for each command, and the requirements and tests that back the commands rated high and medium. It is the start of [iteration 4](charter.md#iterations) of the charter.
 
 ISO 13485 §4.1.6 asks a manufacturer to validate software used in its quality system in proportion to the risk, and IEC/TR 80002-2 describes how: state what the tool must do, rate the risk of it doing that wrongly, and keep evidence that it does it. This page does the first two for MedHarness; the repository's own DHF holds the requirements and the tests are the evidence.
 
@@ -59,9 +59,14 @@ CI runs exactly this in the job `Check | Own DHF`. The DHF is not part of the pa
 | `verify changes` | SRS-030 to SRS-034 | covered |
 | `verify dhf` | SRS-035 to SRS-042 | covered |
 | `build release` | SRS-043 to SRS-050 | covered |
-| Medium risk commands | none yet | next: they follow the high-risk ones |
+| `verify soup` | SRS-051 to SRS-054 | covered |
+| `item create` / `update` | SRS-055 to SRS-059 | covered |
+| `item transition` | SRS-060 to SRS-062 | covered |
+| `verify approval` without `--release` | SRS-063 to SRS-065, with SRS-019, SRS-020 and SRS-022 for the log and the approvers list | covered |
+| `build approvals` | SRS-066 and SRS-067 | covered |
+| `build soup` | SRS-068 to SRS-070 | covered |
 | Low risk commands | none | rated, not specified: nothing evidence depends on them |
 
-"Covered" means every test point of every item has at least one passing test, which `verify tests --strict` enforces. It does not mean the requirements are complete for the command: an omission a requirement does not name is not tested. All seven high-risk commands are covered; the medium-risk commands, which a later gate checks again, are the remaining gap.
+"Covered" means every test point of every item has at least one passing test, which `verify tests --strict` enforces. It does not mean the requirements are complete for the command: an omission a requirement does not name is not tested. All seven high-risk commands and all six medium-risk ones are covered. The low-risk commands are rated and not specified, and the next step is a command that runs these tests where MedHarness is installed.
 
 The requirements were derived from what the commands do today ([interface](interface.md), the gates' docstrings and the tests that already existed), and the tests were annotated, not rewritten. Where a case was untested, a test was added.

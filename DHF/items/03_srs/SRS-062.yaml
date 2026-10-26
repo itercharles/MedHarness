@@ -1,0 +1,21 @@
+id: SRS-062
+title: item transition moves an item whose move is allowed and met, and lists each
+  move with what blocks it
+content: '`item transition` shall move an item to the state asked when the lifecycle
+  allows the move and its criteria are met, and without a target state shall list
+  the moves from the current state with whether each can be made and what blocks it,
+  so that a valid change of state is not blocked.'
+verification_criteria: The exit code is 0 and the item answered and stored has the
+  new status; with no target, stdout holds `item_id`, `current_status` and `transitions`,
+  each with `can_transition` and `blocking_criteria`.
+testing: 'T1: A CR with its closure record completes.
+
+  T2: A completed CR can be reopened to develop, and completed again.
+
+  T3: The moves from a state are listed with whether each can be made.
+
+  T4: An active CR can be cancelled.'
+risk: medium
+verification_method:
+- Test
+type: SRS

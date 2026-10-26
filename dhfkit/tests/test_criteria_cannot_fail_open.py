@@ -42,6 +42,8 @@ class TestAnUnreadableCriterionBlocks:
         "",
         None,                    # omitted entirely
     ])
+    @pytest.mark.dhf_links("SRS-061")
+    @pytest.mark.dhf_testing("T5")
     def test_it_does_not_silently_pass(self, check_type) -> None:
         ok, blocking = _validate_criteria({}, _required(check_type))
         assert not ok, (
@@ -50,6 +52,8 @@ class TestAnUnreadableCriterionBlocks:
         )
         assert blocking
 
+    @pytest.mark.dhf_links("SRS-061")
+    @pytest.mark.dhf_testing("T5")
     def test_the_reason_names_the_criterion_and_the_type(self) -> None:
         """`Blocking criteria not met: c1` alone would send a reader to the
         field, which is fine. The cause is the check_type."""

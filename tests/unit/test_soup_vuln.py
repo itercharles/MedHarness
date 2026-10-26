@@ -67,6 +67,8 @@ def _no_detail(vuln_id):
 
 
 class TestSoupVulnGate:
+    @pytest.mark.dhf_links("SRS-054")
+    @pytest.mark.dhf_testing("T2")
     def test_no_soup_items_passes(self, tmp_path: Path) -> None:
         dhf = _make_dhf(tmp_path)
         result = soup_gate(dhf, query=_down)
@@ -74,6 +76,8 @@ class TestSoupVulnGate:
         assert result["details"]["soup_count"] == 0
         assert result["details"]["checked_count"] == 0
 
+    @pytest.mark.dhf_links("SRS-052")
+    @pytest.mark.dhf_testing("T4")
     def test_soup_without_ecosystem_skipped(self, tmp_path: Path) -> None:
         dhf = _make_dhf(tmp_path)
         _write_soup(dhf, "SOUP-001", "requests", "2.25.0")  # no ecosystem
@@ -82,6 +86,8 @@ class TestSoupVulnGate:
         assert result["details"]["checked_count"] == 0
         assert any("ecosystem" in s["reason"] for s in result["details"]["skipped"])
 
+    @pytest.mark.dhf_links("SRS-054")
+    @pytest.mark.dhf_testing("T1")
     def test_clean_soup_passes(self, tmp_path: Path) -> None:
         dhf = _make_dhf(tmp_path)
         _write_soup(dhf, "SOUP-001", "requests", "2.28.0", ecosystem="PyPI")
@@ -90,6 +96,8 @@ class TestSoupVulnGate:
         assert result["details"]["checked_count"] == 1
         assert result["details"]["vulnerable"] == []
 
+    @pytest.mark.dhf_links("SRS-051")
+    @pytest.mark.dhf_testing("T1")
     def test_vulnerable_soup_fails(self, tmp_path: Path) -> None:
         dhf = _make_dhf(tmp_path)
         _write_soup(dhf, "SOUP-001", "requests", "2.6.0", ecosystem="PyPI")
@@ -99,6 +107,8 @@ class TestSoupVulnGate:
         assert result["details"]["vulnerable"][0]["soup_id"] == "SOUP-001"
         assert result["details"]["vulnerable"][0]["vulns"][0]["id"] == "GHSA-x84v-xcm2-53pg"
 
+    @pytest.mark.dhf_links("SRS-052")
+    @pytest.mark.dhf_testing("T1")
     def test_network_error_fails(self, tmp_path: Path) -> None:
         dhf = _make_dhf(tmp_path)
         _write_soup(dhf, "SOUP-001", "requests", "2.28.0", ecosystem="PyPI")
@@ -106,6 +116,8 @@ class TestSoupVulnGate:
         assert result["passed"] is False
         assert any("unreachable" in e for e in result["errors"])
 
+    @pytest.mark.dhf_links("SRS-052")
+    @pytest.mark.dhf_testing("T2")
     def test_network_error_tolerated_in_warn_mode(self, tmp_path: Path) -> None:
         dhf = _make_dhf(tmp_path)
         _write_soup(dhf, "SOUP-001", "requests", "2.28.0", ecosystem="PyPI")
@@ -114,6 +126,8 @@ class TestSoupVulnGate:
         assert any("unreachable" in w for w in result["warnings"])
         assert "offline process" in result["summary"]
 
+    @pytest.mark.dhf_links("SRS-054")
+    @pytest.mark.dhf_testing("T3")
     def test_multiple_items_batched(self, tmp_path: Path) -> None:
         dhf = _make_dhf(tmp_path)
         _write_soup(dhf, "SOUP-001", "requests", "2.28.0", ecosystem="PyPI")
@@ -125,6 +139,8 @@ class TestSoupVulnGate:
         assert len(batches) == 1, "every checkable item goes in one querybatch"
         assert sorted(x["package"]["name"] for x in batches[0]) == ["flask", "requests"]
 
+    @pytest.mark.dhf_links("SRS-052")
+    @pytest.mark.dhf_testing("T4")
     def test_soup_without_name_skipped(self, tmp_path: Path) -> None:
         dhf = _make_dhf(tmp_path)
         soup_dir = dhf / "items" / "09_soup"
@@ -156,6 +172,8 @@ class TestVulnDetail:
         assert vuln["summary"] == "CRLF injection in requests"
         assert vuln["severity"] == "HIGH"
 
+    @pytest.mark.dhf_links("SRS-051")
+    @pytest.mark.dhf_testing("T5")
     def test_url_present_when_detail_lookup_fails(self, tmp_path: Path) -> None:
         """A failed enrichment must still leave the finding actionable."""
         dhf = _make_dhf(tmp_path)
@@ -166,6 +184,8 @@ class TestVulnDetail:
         assert vuln["summary"] == ""
         assert vuln["url"] == "https://osv.dev/vulnerability/GHSA-x84v-xcm2-53pg"
 
+    @pytest.mark.dhf_links("SRS-051")
+    @pytest.mark.dhf_testing("T5")
     def test_cli_falls_back_to_url_when_summary_empty(self, tmp_path: Path) -> None:
         import urllib.error
         dhf = _make_dhf(tmp_path)
@@ -257,6 +277,8 @@ def _found(*vulns):
 
 
 class TestAcceptedVulns:
+    @pytest.mark.dhf_links("SRS-051")
+    @pytest.mark.dhf_testing("T2")
     def test_documented_acceptance_does_not_block(self, tmp_path: Path) -> None:
         dhf = _make_dhf(tmp_path)
         _write_soup(
@@ -271,6 +293,8 @@ class TestAcceptedVulns:
         assert result["details"]["accepted"][0]["vuln_id"] == "GHSA-x84v-xcm2-53pg"
         assert "not reachable" in result["details"]["accepted"][0]["rationale"]
 
+    @pytest.mark.dhf_links("SRS-051")
+    @pytest.mark.dhf_testing("T3")
     def test_unlisted_vuln_still_blocks(self, tmp_path: Path) -> None:
         """Acceptance is per-ID, so a newly published CVE is not absorbed."""
         dhf = _make_dhf(tmp_path)
@@ -283,6 +307,8 @@ class TestAcceptedVulns:
         assert result["details"]["vulnerable"][0]["vulns"][0]["id"] == "GHSA-x84v-xcm2-53pg"
         assert result["details"]["accepted"] == []
 
+    @pytest.mark.dhf_links("SRS-051")
+    @pytest.mark.dhf_testing("T4")
     def test_acceptance_without_rationale_still_blocks(self, tmp_path: Path) -> None:
         dhf = _make_dhf(tmp_path)
         _write_soup(
@@ -293,6 +319,8 @@ class TestAcceptedVulns:
         assert result["passed"] is False
         assert any("rationale" in p for p in result["details"]["acceptance_problems"])
 
+    @pytest.mark.dhf_links("SRS-051")
+    @pytest.mark.dhf_testing("T4")
     def test_bare_string_entry_still_blocks(self, tmp_path: Path) -> None:
         dhf = _make_dhf(tmp_path)
         _write_soup(
@@ -303,6 +331,8 @@ class TestAcceptedVulns:
         assert result["passed"] is False
         assert any("mapping" in p for p in result["details"]["acceptance_problems"])
 
+    @pytest.mark.dhf_links("SRS-051")
+    @pytest.mark.dhf_testing("T3")
     def test_partial_acceptance_blocks_on_remainder(self, tmp_path: Path) -> None:
         dhf = _make_dhf(tmp_path)
         other = {"id": "GHSA-second-vuln", "modified": "2024-01-01T00:00:00Z"}
@@ -321,6 +351,8 @@ class TestAcceptedVulns:
 # ---------------------------------------------------------------------------
 
 class TestVerifySoupCLI:
+    @pytest.mark.dhf_links("SRS-054")
+    @pytest.mark.dhf_testing("T2")
     def test_verify_soup_no_items_exits_zero(self, tmp_path: Path) -> None:
         dhf = _make_dhf(tmp_path)
         r = CliRunner().invoke(main, ["--dhf", str(dhf), "verify", "soup"])
@@ -328,6 +360,8 @@ class TestVerifySoupCLI:
         payload = json.loads(r.output.splitlines()[0])
         assert payload["passed"] is True
 
+    @pytest.mark.dhf_links("SRS-051")
+    @pytest.mark.dhf_testing("T1")
     def test_verify_soup_vulnerable_exits_nonzero(self, tmp_path: Path) -> None:
         dhf = _make_dhf(tmp_path)
         _write_soup(dhf, "SOUP-001", "requests", "2.6.0", ecosystem="PyPI")
@@ -346,6 +380,8 @@ class TestVerifySoupCLI:
         assert payload["passed"] is False
         assert "FAIL [soup-vuln]" in r.output
 
+    @pytest.mark.dhf_links("SRS-052")
+    @pytest.mark.dhf_testing("T2")
     def test_offline_mode_warn_exits_zero(self, tmp_path: Path) -> None:
         import urllib.error
         dhf = _make_dhf(tmp_path)
@@ -358,6 +394,8 @@ class TestVerifySoupCLI:
         assert json.loads(r.output.splitlines()[0])["passed"] is True
         assert "WARN [soup-vuln]" in r.output
 
+    @pytest.mark.dhf_links("SRS-052")
+    @pytest.mark.dhf_testing("T1")
     def test_offline_mode_defaults_to_fail(self, tmp_path: Path) -> None:
         import urllib.error
         dhf = _make_dhf(tmp_path)
@@ -367,6 +405,8 @@ class TestVerifySoupCLI:
         assert r.exit_code != 0
         assert "FAIL [soup-vuln]" in r.output
 
+    @pytest.mark.dhf_links("SRS-051")
+    @pytest.mark.dhf_testing("T2")
     def test_accepted_vuln_reported_and_exits_zero(self, tmp_path: Path) -> None:
         dhf = _make_dhf(tmp_path)
         _write_soup(

@@ -4,10 +4,13 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
 import yaml
 from fixtures.approvals import build_project
 
 
+@pytest.mark.dhf_links("SRS-064")
+@pytest.mark.dhf_testing("T2")
 def test_a_valid_signature_from_a_no_touch_key_warns(tmp_path: Path) -> None:
     project = build_project(tmp_path)
     project.ready_to_release()
@@ -20,6 +23,8 @@ def test_a_valid_signature_from_a_no_touch_key_warns(tmp_path: Path) -> None:
     assert answer["warnings"] == [f"{project.records()[0].stem} was signed with a key marked no_touch_required: made without proven presence."]
 
 
+@pytest.mark.dhf_links("SRS-064")
+@pytest.mark.dhf_testing("T3")
 def test_a_key_that_proves_presence_leaves_no_warning(tmp_path: Path) -> None:
     project = build_project(tmp_path)
     entries = yaml.safe_load(project.approvers_file.read_text())

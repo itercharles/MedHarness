@@ -1,0 +1,25 @@
+id: SRS-055
+title: item create and item update refuse what the doc type's schema refuses, and
+  write nothing
+content: '`item create` and `item update` shall validate the item against its doc
+  type''s schema before writing, and refuse an unknown field, a value of the wrong
+  shape, an unknown doc type and `--data` that is not a JSON object, so that nothing
+  the DHF could not read back is ever written.'
+verification_criteria: The exit code is 1, stdout is empty, stderr gives the reason
+  (`Unknown field`, `must be a list`, `Unknown doc type`, `must be a JSON object`)
+  and no item file is created or changed.
+testing: 'T1: An update with an unknown field exits 1 with the reason and no stdout,
+  and leaves the file as it was.
+
+  T2: A create with an unknown field writes no file.
+
+  T3: An update giving a field a value of the wrong shape is refused and nothing is
+  written.
+
+  T4: A create of an unknown doc type is refused.
+
+  T5: --data that is not a JSON object is refused, for create and update.'
+risk: medium
+verification_method:
+- Test
+type: SRS

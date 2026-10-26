@@ -26,6 +26,8 @@ def adapter(tmp_path: Path) -> ItemStore:
 
 @pytest.mark.parametrize("path", [[], ["design"], ["design", "develop"]],
                          ids=["from new", "from design", "from develop"])
+@pytest.mark.dhf_links("SRS-062")
+@pytest.mark.dhf_testing("T4")
 def test_an_active_cr_can_be_cancelled(adapter: ItemStore, path: list[str]) -> None:
     for state in path:
         if state == "develop":

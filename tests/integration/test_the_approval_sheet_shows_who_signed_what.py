@@ -51,6 +51,8 @@ def _fingerprint(project: Project, who: str) -> str:
     return fingerprint(project.keys[who].with_name(project.keys[who].name + ".pub").read_text())
 
 
+@pytest.mark.dhf_links("SRS-066")
+@pytest.mark.dhf_testing("T1")
 def test_nothing_is_written_while_a_signature_is_missing(project: Project) -> None:
     project.sign("Lead")
 
@@ -62,6 +64,8 @@ def test_nothing_is_written_while_a_signature_is_missing(project: Project) -> No
     assert not (project.root / "sheet").exists()
 
 
+@pytest.mark.dhf_links("SRS-067")
+@pytest.mark.dhf_testing("T1")
 def test_a_signed_release_gets_a_sheet_naming_every_signer_record_and_key(project: Project) -> None:
     records = _sign_all(project)
 
@@ -82,6 +86,8 @@ def test_a_signed_release_gets_a_sheet_naming_every_signer_record_and_key(projec
     assert "Verified" in html
 
 
+@pytest.mark.dhf_links("SRS-067")
+@pytest.mark.dhf_testing("T2")
 def test_a_signature_without_proven_presence_is_marked_on_the_sheet(project: Project) -> None:
     _sign_all(project)
 
@@ -92,6 +98,8 @@ def test_a_signature_without_proven_presence_is_marked_on_the_sheet(project: Pro
     assert len(report.warnings) == 4 and all("no_touch_required" in w for w in report.warnings)
 
 
+@pytest.mark.dhf_links("SRS-067")
+@pytest.mark.dhf_testing("T3")
 def test_a_document_nobody_owns_needs_no_signature_and_shows_none(project: Project) -> None:
     _sign_all(project)
 
@@ -101,6 +109,8 @@ def test_a_document_nobody_owns_needs_no_signature_and_shows_none(project: Proje
     assert "no role: no signature is required" in html
 
 
+@pytest.mark.dhf_links("SRS-067")
+@pytest.mark.dhf_testing("T4")
 def test_the_sheet_lists_the_approvers_list_the_release_pins(project: Project) -> None:
     _sign_all(project)
 
@@ -113,6 +123,8 @@ def test_the_sheet_lists_the_approvers_list_the_release_pins(project: Project) -
     assert "software-lead" in section and "product-manager, risk-manager" in section
 
 
+@pytest.mark.dhf_links("SRS-066")
+@pytest.mark.dhf_testing("T2")
 def test_a_release_edited_after_it_was_signed_gets_no_sheet(project: Project) -> None:
     _sign_all(project)
     project.edit("SRS-001", title="changed after signing")
@@ -123,6 +135,8 @@ def test_a_release_edited_after_it_was_signed_gets_no_sheet(project: Project) ->
     assert any("SRS-001" in e for e in report.errors)
 
 
+@pytest.mark.dhf_links("SRS-066")
+@pytest.mark.dhf_testing("T3")
 def test_a_project_without_approvers_cannot_have_a_sheet(tmp_path: Path) -> None:
     project = build_project(tmp_path, with_approvers=False)
     project.ready_to_release()
@@ -134,6 +148,8 @@ def test_a_project_without_approvers_cannot_have_a_sheet(tmp_path: Path) -> None
     assert "not configured" in report.errors[0]
 
 
+@pytest.mark.dhf_links("SRS-066")
+@pytest.mark.dhf_testing("T4")
 def test_a_bad_version_is_refused_before_anything_runs(project: Project) -> None:
     result = project.run("build", "approvals", "--release", "../x", "--out-dir", str(project.root / "sheet"))
 

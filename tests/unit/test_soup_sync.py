@@ -247,6 +247,8 @@ class TestSyncSoupItems:
         mock_update.assert_called_once_with("SOUP-001", {"version": "8.1.7"})
         assert result["items_updated"] == ["SOUP-001"]
 
+    @pytest.mark.dhf_links("SRS-070")
+    @pytest.mark.dhf_testing("T4")
     def test_invalid_manifest_adds_error(self, tmp_path):
         bad = tmp_path / "setup.cfg"
         bad.write_text("not a manifest", encoding="utf-8")
@@ -266,6 +268,8 @@ class TestSyncSoupItems:
         assert set(result["to_create"]) == {"flask", "react"}
         assert len(result["manifests_parsed"]) == 2
 
+    @pytest.mark.dhf_links("SRS-070")
+    @pytest.mark.dhf_testing("T5")
     def test_dhf_list_failure_adds_error(self, tmp_path):
         req = _req_txt(tmp_path, "requests==2.31.0\n")
         with patch("dhfkit.item_store.ItemStore.list_items", side_effect=RuntimeError("boom")):
