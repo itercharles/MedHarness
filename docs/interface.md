@@ -121,7 +121,7 @@ One distinction worth knowing before you wire anything: **broken references vers
 
 | Command | stdout |
 |---|---|
-| `item list [--type T]` | one JSON object per line, one per item; the count goes to stderr |
+| `item list [--type T]` | one JSON object per line, one per item, in ID order (by prefix, then number: `SRS-999` before `SRS-1000`); the count goes to stderr |
 | `item get ID` | the item |
 | `item create --type T --data JSON` | the item, with its allocated ID |
 | `item update ID --data JSON` | the item after the merge |
@@ -459,7 +459,7 @@ Generated from the CLI by `python scripts/generate_interface.py`; a test fails w
 | Command | What it does |
 |---|---|
 | `item get` | Get a single DHF item by ID. Outputs JSON. |
-| `item list` | List DHF items. Outputs one JSON object per line. |
+| `item list` | List DHF items in ID order. Outputs one JSON object per line. |
 | `item create` | Create a new DHF item. Outputs the created item as JSON. |
 | `item update` | Update fields of an existing DHF item. |
 | `item transition` | Move an item to TO_STATE, or list where it can go when TO_STATE is omitted. |
@@ -484,7 +484,7 @@ Get a single DHF item by ID. Outputs JSON.
 
 #### `medharness item list`
 
-List DHF items. Outputs one JSON object per line.
+List DHF items in ID order. Outputs one JSON object per line.
 
 | Option | |
 |---|---|

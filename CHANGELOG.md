@@ -14,6 +14,9 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 ### Added
 - MedHarness keeps its own DHF (`DHF/`, SRS only, with a required `risk` rating): 49 requirements for its seven highest-risk gates, `verify completion`, `verify impact`, `verify approval --release`, `verify tests`, `verify changes`, `verify dhf` and `build release`, each with numbered test points, and its tests trace to them with `dhf_links` and `dhf_testing`. CI's new "Check | Own DHF" job runs the suite and holds every requirement to a passing test with `verify dhf --strict` and `verify tests --strict`. `docs/validation.md` gives the tool's intended use, the risk rating of every command, and what is covered so far.
 
+### Fixed
+- `item list`, and everything else that reads the item store, returns items in ID order, by prefix and then by number (`SRS-999` before `SRS-1000`). It followed the filesystem's directory order, which differs between filesystems, so the same DHF could list in a different order on another machine.
+
 ### Changed
 - A release now runs the full test suite on its tag, from the lockfile, before anything is published, and attaches its evidence to the GitHub Release: the JUnit results, a test summary (commit, Python, runner, pytest result) and `medharness-<version>-tested-with.txt`, a pip constraints file of the exact dependency versions the suite passed with. `docs/adopting.md` shows how to install that validated configuration.
 

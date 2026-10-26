@@ -73,7 +73,7 @@ def register(main):
     @click.pass_context
     def item_list(ctx: click.Context, doc_type: str | None, match: str | None,
                   linked_to: str | None, brief: bool) -> None:
-        """List DHF items. Outputs one JSON object per line."""
+        """List DHF items in ID order. Outputs one JSON object per line."""
         terms = match.casefold().split() if match is not None else None
         if terms == []:
             raise click.ClickException("--match needs at least one word.")

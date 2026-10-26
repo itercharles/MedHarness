@@ -109,7 +109,7 @@ def cr_context(adapter: Any, cr_id: str) -> dict:
     own them — and ``"whole_dhf"`` otherwise, with every item summarized and
     every module.
     """
-    items = sorted(adapter.list_items(), key=lambda it: it["id"])
+    items = adapter.list_items()
     cr = adapter.get_item(cr_id)
     affected = set((cr or {}).get("affected_items") or [])
     modules = build_module_map(items, adapter.config)

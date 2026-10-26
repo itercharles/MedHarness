@@ -118,6 +118,15 @@ class TestRetrievalOptions:
         assert all(set(row) == {"id", "type", "title", "links"} for row in rows)
         assert rows[0] == {"id": self.srs_a, "type": "SRS", "title": "PDF layout", "links": [self.sys_a]}
 
+    def test_items_come_in_id_order_numbers_compared_as_numbers(self, dhf: Path) -> None:
+        srs_dir = next((dhf / "items").glob("*_srs"))
+        source = (srs_dir / f"{self.srs_a}.yaml").read_text(encoding="utf-8")
+        for uid in ("SRS-1000", "SRS-999"):
+            (srs_dir / f"{uid}.yaml").write_text(source.replace(self.srs_a, uid), encoding="utf-8")
+        r, ids = self._list(dhf)
+        assert r.exit_code == 0
+        assert ids == [self.srs_a, self.srs_b, "SRS-999", "SRS-1000", self.sys_a, self.sys_b]
+
     def test_no_match_is_empty_success(self, dhf: Path) -> None:
         r, ids = self._list(dhf, "--match", "nonexistent-term")
         assert r.exit_code == 0 and r.stdout == ""
