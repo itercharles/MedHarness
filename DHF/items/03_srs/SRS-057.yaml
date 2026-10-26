@@ -1,0 +1,27 @@
+id: SRS-057
+title: item update changes only the fields it is given
+content: '`item update` shall write only the fields it is given, leaving every other
+  field and line of the item as it was, shall clear a field given as null, and shall
+  refuse to change the item''s ID; an item in a stable state returns to its type''s
+  initial state when edited, so that a review sees only what changed and an approved
+  item is not edited unnoticed.'
+verification_criteria: After an update the item's file differs from before only in
+  the lines of the fields given; a field set to null is removed; an update giving
+  another ID exits 1 saying the ID is immutable and leaves the file unchanged; an
+  update of an item mid-lifecycle keeps its status, and one of an item in a stable
+  state sets it back to the initial state.
+testing: 'T1: Changing one field changes only its line.
+
+  T2: A new field is one added line.
+
+  T3: A field given as null is removed.
+
+  T4: An update giving another ID is refused and nothing is written.
+
+  T5: Updating a field of an item mid-lifecycle keeps its status.
+
+  T6: Updating an item in a stable state returns it to the initial state.'
+risk: medium
+verification_method:
+- Test
+type: SRS

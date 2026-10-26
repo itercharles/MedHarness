@@ -49,6 +49,8 @@ def _new_srs(dhf: Path, title: str) -> str:
 
 
 class TestADeletedIdIsRetired:
+    @pytest.mark.dhf_links("SRS-059")
+    @pytest.mark.dhf_testing("T2")
     def test_the_next_item_does_not_take_it(self, repo: Path) -> None:
         dhf = repo / "DHF"
         first = _new_srs(dhf, "first")
@@ -63,6 +65,8 @@ class TestADeletedIdIsRetired:
             f"reference to it now points at the wrong item."
         )
 
+    @pytest.mark.dhf_links("SRS-059")
+    @pytest.mark.dhf_testing("T2")
     def test_it_stays_retired_across_several_deletions(self, repo: Path) -> None:
         dhf = repo / "DHF"
         created = [_new_srs(dhf, f"r{i}") for i in range(3)]
@@ -74,6 +78,8 @@ class TestADeletedIdIsRetired:
         again = [_new_srs(dhf, f"s{i}") for i in range(3)]
         assert not (set(again) & set(created)), f"reused: {sorted(set(again) & set(created))}"
 
+    @pytest.mark.dhf_links("SRS-059")
+    @pytest.mark.dhf_testing("T1")
     def test_ids_are_still_sequential_without_deletions(self, repo: Path) -> None:
         """The common path must not get holes."""
         dhf = repo / "DHF"
@@ -83,6 +89,8 @@ class TestADeletedIdIsRetired:
 
 
 class TestOutsideGit:
+    @pytest.mark.dhf_links("SRS-059")
+    @pytest.mark.dhf_testing("T4")
     def test_a_dhf_with_no_repository_still_creates_items(self, tmp_path: Path) -> None:
         """History is unavailable there; behave as before rather than fail."""
         scaffold_dhf(tmp_path)

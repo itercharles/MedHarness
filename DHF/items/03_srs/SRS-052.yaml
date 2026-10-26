@@ -1,0 +1,26 @@
+id: SRS-052
+title: verify soup never reports a scan it could not make as a pass
+content: '`verify soup` shall fail when osv.dev cannot be reached, unless `--offline-mode
+  warn` is given, shall fail naming each SOUP item osv.dev refused to look up while
+  still scanning the others, and shall report each SOUP item it did not query (no
+  name, version or ecosystem, or a version range) as not checked, so that an unscanned
+  register is not read as a clean one.'
+verification_criteria: An unreachable osv.dev gives exit code 1 with an `osv.dev unreachable`
+  error; with `--offline-mode warn` the exit code is 0 and the outage is a warning.
+  An item osv.dev refuses is an error naming it and its ecosystem, and the vulnerabilities
+  of the other items are still reported. An item not queried is a warning saying it
+  was not checked and why.
+testing: 'T1: osv.dev unreachable fails by default.
+
+  T2: With --offline-mode warn, osv.dev unreachable passes with a warning that the
+  scan was skipped.
+
+  T3: An item whose ecosystem osv.dev refuses fails, naming it, and the other items
+  are still scanned.
+
+  T4: An item with no ecosystem, no name or a version range is not queried and is
+  reported as not checked.'
+risk: medium
+verification_method:
+- Test
+type: SRS

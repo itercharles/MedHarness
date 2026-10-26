@@ -1,0 +1,29 @@
+id: SRS-051
+title: verify soup refuses a SOUP item with a known vulnerability that is not accepted
+  by its ID with a rationale
+content: '`verify soup` shall fail when osv.dev reports a vulnerability for the name,
+  ecosystem and version a SOUP item records, unless the item''s `accepted_vulns` lists
+  that vulnerability''s ID with a rationale, so that no known-vulnerable component
+  ships unassessed.'
+verification_criteria: The exit code is 1, `passed` is false and `errors` holds one
+  line per unaccepted vulnerability naming the SOUP item, the package, the version
+  and the vulnerability, with its summary or its osv.dev URL. An accepted vulnerability
+  is reported in `warnings` with its rationale and does not fail; an acceptance of
+  another ID, one without a rationale or one that is not a mapping accepts nothing.
+testing: 'T1: A SOUP item osv.dev reports a vulnerability for fails, naming the item
+  and the vulnerability.
+
+  T2: A vulnerability accepted by its ID with a rationale passes and is reported as
+  accepted.
+
+  T3: An acceptance of one ID does not absorb another vulnerability of the same item.
+
+  T4: An acceptance without a rationale, or written as a bare string, still blocks
+  and is reported.
+
+  T5: When the vulnerability''s detail cannot be read, the finding still names its
+  osv.dev URL.'
+risk: medium
+verification_method:
+- Test
+type: SRS

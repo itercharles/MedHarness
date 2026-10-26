@@ -1,0 +1,12 @@
+id: SRS-065
+title: verify approval fails when it cannot compare the approval log against --since-ref
+content: '`verify approval` shall, in a project that keeps an approvers list, fail
+  naming the ref when it cannot diff against `--since-ref`, so that an append-only
+  log or an approvers list it could not compare is not reported as sound.'
+verification_criteria: The exit code is 1, `passed` is false and the error says it
+  could not diff against the ref and how to make it reachable.
+testing: 'T1: A --since-ref that does not exist fails, naming it.'
+risk: medium
+verification_method:
+- Test
+type: SRS

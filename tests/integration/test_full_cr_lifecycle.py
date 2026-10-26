@@ -131,6 +131,8 @@ class TestCRItemLifecycle:
         assert u.returncode == 0, f"CR update failed:\n{u.stderr}"
         return item["id"]
 
+    @pytest.mark.dhf_links("SRS-059")
+    @pytest.mark.dhf_testing("T5")
     def test_initial_status_is_new(self, dhf, cr_id):
         r = _dhf(str(dhf / "DHF"), "item", "get", cr_id)
         assert r.returncode == 0, r.stderr
@@ -138,6 +140,8 @@ class TestCRItemLifecycle:
         assert item["status"] == "new", f"Expected 'new', got '{item['status']}'"
 
 
+    @pytest.mark.dhf_links("SRS-058")
+    @pytest.mark.dhf_testing("T1")
     def test_a_status_cannot_be_set_by_update(self, dhf, cr_id):
         """Only `item transition` moves a CR, so its criteria cannot be skipped."""
         r = _dhf(
@@ -156,6 +160,8 @@ class TestCRItemLifecycle:
 class TestItemCreationValidation:
     """Verify item link validation rejects malformed LLM output."""
 
+    @pytest.mark.dhf_links("SRS-056")
+    @pytest.mark.dhf_testing("T5")
     def test_create_item_with_valid_link(self, dhf):
         r = _dhf(
             str(dhf / "DHF"),
@@ -170,6 +176,8 @@ class TestItemCreationValidation:
         item = json.loads(r.stdout)
         assert item["id"].startswith("SRS-")
 
+    @pytest.mark.dhf_links("SRS-056")
+    @pytest.mark.dhf_testing("T1")
     def test_create_item_with_unknown_prefix_rejected(self, dhf):
         r = _dhf(
             str(dhf / "DHF"),
@@ -183,6 +191,8 @@ class TestItemCreationValidation:
         assert r.returncode != 0, "Should reject item with unknown link prefix"
         assert "GARBAGE" in (r.stdout + r.stderr) or "unknown prefix" in (r.stdout + r.stderr).lower()
 
+    @pytest.mark.dhf_links("SRS-056")
+    @pytest.mark.dhf_testing("T2")
     def test_create_item_with_malformed_uid_rejected(self, dhf):
         r = _dhf(
             str(dhf / "DHF"),

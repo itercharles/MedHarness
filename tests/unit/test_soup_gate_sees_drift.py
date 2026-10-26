@@ -11,11 +11,14 @@ on day one, the same call `verify dhf` makes for coverage gaps.
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from unittest.mock import patch
 
 import pytest
+from click.testing import CliRunner
 
+from medharness.cli import main
 from medharness.services.verify_soup import soup_gate
 
 
@@ -40,6 +43,8 @@ def _gate(dhf: Path, **kw):
 
 
 class TestItSeesTheRegisterDrift:
+    @pytest.mark.dhf_links("SRS-053")
+    @pytest.mark.dhf_testing("T1")
     def test_a_package_with_no_soup_item_is_reported(self, dhf: Path) -> None:
         drift = _gate(dhf)["details"]["drift"]
         assert "flask" in drift["undocumented"]
@@ -47,6 +52,8 @@ class TestItSeesTheRegisterDrift:
     def test_the_manifests_were_actually_read(self, dhf: Path) -> None:
         assert _gate(dhf)["details"]["drift"]["manifests_read"] >= 2
 
+    @pytest.mark.dhf_links("SRS-053")
+    @pytest.mark.dhf_testing("T1")
     def test_drift_does_not_block_by_default(self, dhf: Path) -> None:
         result = _gate(dhf)
         assert result["details"]["drift"]["undocumented"]
@@ -55,11 +62,27 @@ class TestItSeesTheRegisterDrift:
             "register would be stopped on day one"
         )
 
+    @pytest.mark.dhf_links("SRS-053")
+    @pytest.mark.dhf_testing("T2")
     def test_fail_on_drift_blocks(self, dhf: Path) -> None:
         assert _gate(dhf, strict=True)["passed"] is False
 
+    @pytest.mark.dhf_links("SRS-053")
+    @pytest.mark.dhf_testing("T3")
+    def test_a_component_at_another_version_fails_under_strict_naming_both(self, dhf: Path) -> None:
+        manifest = dhf.parent / "requirements.txt"
+        manifest.write_text("example-library==2.0.0\n")
+        with patch("urllib.request.urlopen", side_effect=OSError("offline")):
+            result = CliRunner().invoke(main, ["--dhf", str(dhf), "verify", "soup", "--strict",
+                                               "--manifest", str(manifest), "--offline-mode", "warn"])
+        answer = json.loads(result.stdout.splitlines()[0])
+        assert result.exit_code == 1
+        assert "SOUP-001 records 1.0.0, manifests resolve 2.0.0" in answer["errors"], answer["errors"]
+
 
 class TestTheDriftHalfIsLocal:
+    @pytest.mark.dhf_links("SRS-053")
+    @pytest.mark.dhf_testing("T4")
     def test_it_reports_drift_even_when_osv_is_unreachable(self, dhf: Path) -> None:
         """The register check needs no network; only the CVE half does."""
         result = _gate(dhf)
@@ -70,6 +93,8 @@ class TestTheDriftHalfIsLocal:
 
 
 class TestTheGateDoesNotWrite:
+    @pytest.mark.dhf_links("SRS-054")
+    @pytest.mark.dhf_testing("T4")
     def test_no_soup_item_is_created(self, dhf: Path) -> None:
         before = sorted(p.name for p in (dhf / "items").rglob("SOUP-*.yaml"))
         _gate(dhf, strict=True)
@@ -89,6 +114,8 @@ class TestAnEntryWithNoPurposeIsNotDocumented:
     leaves the field empty, and the gate says so.
     """
 
+    @pytest.mark.dhf_links("SRS-053")
+    @pytest.mark.dhf_testing("T5")
     def test_an_empty_purpose_is_reported(self, dhf: Path) -> None:
         (dhf / "items" / "09_soup").mkdir(parents=True, exist_ok=True)
         (dhf / "items" / "09_soup" / "SOUP-900.yaml").write_text(

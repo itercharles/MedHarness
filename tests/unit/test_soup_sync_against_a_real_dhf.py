@@ -17,6 +17,7 @@ from pathlib import Path
 import pytest
 from click.testing import CliRunner
 
+from dhfkit.store import open_store
 from medharness.cli import main as mh_main
 from medharness.results import SoupReport
 from dhfkit.tests.fixtures import bare_dhf
@@ -42,6 +43,8 @@ def _sync(project: Path, *extra: str) -> dict:
 
 
 class TestItRunsAtAll:
+    @pytest.mark.dhf_links("SRS-068")
+    @pytest.mark.dhf_testing("T1")
     def test_writing_creates_items(self, project: Path) -> None:
         result = _sync(project)
         assert result["outcome"] == "completed"
@@ -49,6 +52,8 @@ class TestItRunsAtAll:
         assert all(i.startswith("SOUP-") for i in result["items_created"]), \
             result["items_created"]
 
+    @pytest.mark.dhf_links("SRS-068")
+    @pytest.mark.dhf_testing("T2")
     def test_a_second_run_matches_instead_of_duplicating(self, project: Path) -> None:
         """The path that read item["uid"] and crashed on every existing item."""
         _sync(project)
@@ -62,6 +67,18 @@ class TestItRunsAtAll:
         result = _sync(project)
         assert {e["name"] for e in result["to_update"]} == {"flask"}
 
+    @pytest.mark.dhf_links("SRS-068")
+    @pytest.mark.dhf_testing("T3")
+    def test_a_drifted_version_is_written_to_its_item(self, project: Path) -> None:
+        _sync(project)
+        (project / "requirements.txt").write_text("flask==3.1.0\nnumpy==1.26.0\n")
+        result = _sync(project)
+        flask = next(it for it in open_store(project / "DHF").list_items("SOUP") if it["name"] == "flask")
+        assert result["items_updated"] == [flask["id"]]
+        assert flask["version"] == "3.1.0"
+
+    @pytest.mark.dhf_links("SRS-068")
+    @pytest.mark.dhf_testing("T4")
     def test_an_item_no_longer_in_the_manifest_is_an_orphan(self, project: Path) -> None:
         _sync(project)
         (project / "requirements.txt").write_text("flask==3.0.0\n")

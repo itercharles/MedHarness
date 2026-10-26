@@ -1,0 +1,23 @@
+id: SRS-068
+title: build soup creates a SOUP item for each shipped package without one, and records
+  a drifted version
+content: '`build soup` shall create a SOUP item for each package the manifests list
+  that the register does not record, set the version of an item whose package now
+  ships at another version, match an existing item rather than create a second one,
+  and report an item no manifest resolves as an orphan, so that the register follows
+  what ships.'
+verification_criteria: '`items_created` names a new SOUP item per new package; a second
+  run creates nothing and counts the packages as matched; after a version changes
+  in the manifest, `items_updated` names the item and the item records the new version;
+  an item no manifest resolves is listed in `orphans`. The exit code is 0.'
+testing: 'T1: Packages with no SOUP item get one each.
+
+  T2: A second run matches instead of duplicating.
+
+  T3: A package that ships at another version updates its item''s version.
+
+  T4: An item no manifest resolves is reported as an orphan.'
+risk: medium
+verification_method:
+- Test
+type: SRS

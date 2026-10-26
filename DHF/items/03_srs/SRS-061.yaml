@@ -1,0 +1,24 @@
+id: SRS-061
+title: item transition refuses a move whose required criteria the item does not meet
+content: '`item transition` shall refuse a move while any required criterion of that
+  transition is unmet, naming each one, and shall leave the item unchanged; a criterion
+  it cannot read blocks, so that a CR is not closed, or a released CR reopened, without
+  what the move requires.'
+verification_criteria: The exit code is 1, stderr names each unmet criterion (for
+  a CR's closure `implementation_recorded`, `risk_impact_assessed`, `affected_items_recorded`;
+  for reopening a released CR `not_released`) and the item keeps its status. A field
+  present and empty satisfies `field_present`; an absent one does not. A criterion
+  with an unknown `check_type` blocks, naming it.
+testing: 'T1: A CR without its closure record cannot be completed, and keeps its state.
+
+  T2: Each closure field is required on its own, and named.
+
+  T3: An empty list satisfies a field_present criterion; an absent field blocks.
+
+  T4: A CR a release lists cannot be reopened.
+
+  T5: A criterion with an unknown check_type blocks, naming it.'
+risk: medium
+verification_method:
+- Test
+type: SRS

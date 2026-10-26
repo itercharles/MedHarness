@@ -1,0 +1,23 @@
+id: SRS-054
+title: verify soup passes a register with no unaccepted vulnerability, and writes
+  nothing
+content: '`verify soup` shall pass when every SOUP item it queries has no vulnerability
+  left unaccepted and nothing else fails, saying how many items it found and checked,
+  and shall never create or change a SOUP item, so that a clean register is not blocked
+  and the gate does not edit what it judges.'
+verification_criteria: The exit code is 0, `passed` is true and `summary` states the
+  number of SOUP items and of those checked (`No SOUP items in DHF.` when there are
+  none). All checkable items go to osv.dev in one query. No SOUP item file is created
+  or changed, under --strict included.
+testing: 'T1: A SOUP item with no known vulnerability passes, with the count of items
+  checked.
+
+  T2: A DHF with no SOUP items passes, saying so.
+
+  T3: Several items are looked up in one batch.
+
+  T4: The gate creates no SOUP item, even for an undocumented package under --strict.'
+risk: medium
+verification_method:
+- Test
+type: SRS
