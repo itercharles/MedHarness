@@ -1,0 +1,21 @@
+id: SRS-058
+title: item update refuses to move an item's lifecycle status
+content: '`item update` shall refuse a `status` different from the item''s current
+  one when the item''s type has a lifecycle, pointing to `item transition`, except
+  to repair a status that is no state of the type, so that a lifecycle''s criteria
+  cannot be skipped by writing the field.'
+verification_criteria: The exit code is 1, stderr names `item transition <ID>` and
+  the item's status and file are unchanged. Restating the current status is accepted,
+  and so is writing a real state over one that is no state of the type.
+testing: 'T1: An update setting a CR''s status to another state of its type is refused
+  and the CR stays where it was.
+
+  T2: An update setting a status that is no state is refused and the file is unchanged.
+
+  T3: An update restating the current status is accepted.
+
+  T4: An update writing a real state over one that is no state of the type is accepted.'
+risk: medium
+verification_method:
+- Test
+type: SRS

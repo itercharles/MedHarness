@@ -42,6 +42,8 @@ def cr(tmp_path: Path) -> tuple[Path, str]:
 
 
 class TestClosureIsRefusedUntilTheRecordExists:
+    @pytest.mark.dhf_links("SRS-061")
+    @pytest.mark.dhf_testing("T1")
     def test_a_bare_cr_cannot_be_completed(self, cr) -> None:
         dhf, cr_id = cr
         with pytest.raises(ValueError) as exc:
@@ -50,6 +52,8 @@ class TestClosureIsRefusedUntilTheRecordExists:
         assert open_store(dhf).get_item(cr_id)["status"] == "develop", "state changed anyway"
 
     @pytest.mark.parametrize("omit", sorted(CLOSURE))
+    @pytest.mark.dhf_links("SRS-061")
+    @pytest.mark.dhf_testing("T2")
     def test_each_field_is_required_on_its_own(self, cr, omit: str) -> None:
         """Named individually, so a reader knows which one to go and write."""
         dhf, cr_id = cr
@@ -63,6 +67,8 @@ class TestClosureIsRefusedUntilTheRecordExists:
         }[omit]
         assert expected in str(exc.value)
 
+    @pytest.mark.dhf_links("SRS-062")
+    @pytest.mark.dhf_testing("T1")
     def test_a_complete_record_closes(self, cr) -> None:
         dhf, cr_id = cr
         open_store(dhf).update_item(cr_id, CLOSURE)
@@ -79,12 +85,16 @@ class TestAssessedAndEmptyIsAnAnswer:
     to invent an affected risk to close a CR that affects none.
     """
 
+    @pytest.mark.dhf_links("SRS-061")
+    @pytest.mark.dhf_testing("T3")
     def test_an_empty_list_satisfies_the_criterion(self, cr) -> None:
         dhf, cr_id = cr
         open_store(dhf).update_item(cr_id, {**CLOSURE, "affected_risk_items": []})
         open_store(dhf).execute_transition(cr_id, "completed")
         assert open_store(dhf).get_item(cr_id)["status"] == "completed"
 
+    @pytest.mark.dhf_links("SRS-061")
+    @pytest.mark.dhf_testing("T3")
     def test_an_absent_field_still_blocks(self, cr) -> None:
         """Absent is not the same as empty: one is unassessed, one is assessed."""
         dhf, cr_id = cr

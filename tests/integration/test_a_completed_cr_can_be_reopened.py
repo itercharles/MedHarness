@@ -42,6 +42,8 @@ def _status(dhf: Path) -> str:
     return json.loads(_run(dhf, "item", "get", "CR-001").stdout)["status"]
 
 
+@pytest.mark.dhf_links("SRS-062")
+@pytest.mark.dhf_testing("T2")
 def test_a_completed_cr_is_reopened_to_develop(dhf: Path) -> None:
     assert _status(dhf) == "completed"
     result = _run(dhf, "item", "transition", "CR-001", "develop")
@@ -49,17 +51,23 @@ def test_a_completed_cr_is_reopened_to_develop(dhf: Path) -> None:
     assert _status(dhf) == "develop"
 
 
+@pytest.mark.dhf_links("SRS-062")
+@pytest.mark.dhf_testing("T3")
 def test_the_transition_is_offered_on_a_completed_cr(dhf: Path) -> None:
     moves = {t["to_state"]: t for t in json.loads(_run(dhf, "item", "transition", "CR-001").stdout)["transitions"]}
     assert moves["develop"]["can_transition"] is True
 
 
+@pytest.mark.dhf_links("SRS-062")
+@pytest.mark.dhf_testing("T2")
 def test_a_reopened_cr_is_completed_again_on_the_next_approval(dhf: Path) -> None:
     _run(dhf, "item", "transition", "CR-001", "develop")
     assert _run(dhf, "item", "transition", "CR-001", "completed").exit_code == 0
     assert _status(dhf) == "completed"
 
 
+@pytest.mark.dhf_links("SRS-061")
+@pytest.mark.dhf_testing("T4")
 def test_a_cr_a_release_lists_cannot_be_reopened(dhf: Path) -> None:
     created = _run(dhf, "item", "create", "--type", "REL", "--data", json.dumps(
         {"title": "r", "version": "1.0.0", "included_items": ["CR-001"], "release_notes": "n"}))

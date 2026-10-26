@@ -1,0 +1,28 @@
+id: SRS-053
+title: verify soup reports a shipped component the register does not record, and fails
+  on it under --strict
+content: '`verify soup` shall compare the SOUP register with the dependency manifests
+  and report each package that ships with no SOUP item, or at a version other than
+  the one its item records, as a warning, or as an error under `--strict`; and shall
+  report a SOUP item with no purpose. It shall do so without the network, so that
+  an undocumented component is never simply absent from the scan.'
+verification_criteria: Without `--strict` the drift is in `warnings` and does not
+  fail; with `--strict` the exit code is 1 and `errors` names each undocumented package
+  and each item whose recorded version differs from the manifests, with both versions.
+  The comparison is made even when osv.dev is unreachable. A SOUP item with an empty
+  purpose is reported.
+testing: 'T1: A package in a manifest with no SOUP item is reported, and does not
+  fail without --strict.
+
+  T2: The same drift fails under --strict.
+
+  T3: A SOUP item recording another version than the manifest resolves fails under
+  --strict, naming both versions.
+
+  T4: The drift is reported when osv.dev is unreachable.
+
+  T5: A SOUP item with no purpose is reported.'
+risk: medium
+verification_method:
+- Test
+type: SRS

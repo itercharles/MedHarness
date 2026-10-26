@@ -1,0 +1,22 @@
+id: SRS-066
+title: build approvals writes no sheet unless verify approval --release passes
+content: '`build approvals` shall run `verify approval --release` first and, when
+  it fails, exit 1 with the check''s errors and write nothing, so that no approval
+  sheet exists for a release that is not fully signed.'
+verification_criteria: The exit code is 1, `outcome` is `completed_with_errors`, `path`
+  is null, `errors` are the check's own (a missing signature names the document and
+  the role's approvers; an edited item names the item; no approvers list says approvals
+  are not configured) and --out-dir is not created. A version that cannot name a release
+  is refused as a usage error before anything runs.
+testing: 'T1: A release with a signature missing gets no sheet, and the error names
+  the document and who must sign it.
+
+  T2: A release edited after it was signed gets no sheet.
+
+  T3: A project without an approvers list gets no sheet.
+
+  T4: A version that cannot name a release is refused before anything runs.'
+risk: medium
+verification_method:
+- Test
+type: SRS

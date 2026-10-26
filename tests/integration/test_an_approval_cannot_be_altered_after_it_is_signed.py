@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -94,3 +95,13 @@ def test_deleting_a_committed_approval_fails_append_only(project: Project) -> No
 
     assert answer["passed"] is False
     assert any(f"{record.name} was deleted" in e for e in answer["errors"])
+
+
+@pytest.mark.dhf_links("SRS-065")
+@pytest.mark.dhf_testing("T1")
+def test_a_since_ref_that_cannot_be_reached_fails_rather_than_passing_the_log(project: Project) -> None:
+    result = project.run("verify", "approval", "--since-ref", "no-such-ref")
+
+    answer = json.loads(result.stdout.splitlines()[0])
+    assert result.exit_code == 1 and answer["passed"] is False
+    assert "Could not diff against no-such-ref" in answer["errors"][0]

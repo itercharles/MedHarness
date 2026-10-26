@@ -71,6 +71,8 @@ def test_each_direct_dependency_becomes_an_npm_soup_item(project: Path) -> None:
     assert items["react-dom"]["ecosystem"] == "npm"
 
 
+@pytest.mark.dhf_links("SRS-070")
+@pytest.mark.dhf_testing("T4")
 def test_a_lockfile_pnpm_no_longer_writes_is_an_error_not_a_guess(project: Path) -> None:
     (project / "pnpm-lock.yaml").write_text("lockfileVersion: 5.4\ndependencies:\n  lodash: 4.17.21\n")
 
@@ -81,6 +83,8 @@ def test_a_lockfile_pnpm_no_longer_writes_is_an_error_not_a_guess(project: Path)
 
 
 @pytest.mark.parametrize("name", ["go.mod", "Cargo.lock", "pom.xml"])
+@pytest.mark.dhf_links("SRS-070")
+@pytest.mark.dhf_testing("T4")
 def test_a_manifest_that_was_dropped_is_reported_as_unsupported(project: Path, name: str) -> None:
     (project / name).write_text("")
 

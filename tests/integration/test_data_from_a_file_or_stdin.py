@@ -67,6 +67,8 @@ def test_a_file_that_is_not_text_is_named(dhf: Path, tmp_path: Path) -> None:
 
 
 @pytest.mark.parametrize("content", ["", "[1, 2]", "{broken"])
+@pytest.mark.dhf_links("SRS-055")
+@pytest.mark.dhf_testing("T5")
 def test_a_file_that_is_not_a_json_object_is_refused_like_inline_json(dhf: Path, tmp_path: Path, content: str) -> None:
     bad = tmp_path / "bad.json"
     bad.write_text(content)

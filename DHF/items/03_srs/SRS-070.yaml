@@ -1,0 +1,24 @@
+id: SRS-070
+title: build soup exits 1 naming each manifest, source or item it could not handle
+content: '`build soup` shall end `completed_with_errors` and exit 1, naming the cause,
+  when a manifest is unsupported or unreadable, a source in `soup-sources.yaml` is
+  malformed, a package ships at two versions, the register cannot be read or an item
+  cannot be written, and shall then create or update no item for what it could not
+  ground, so that a partial register is never reported as complete.'
+verification_criteria: The exit code is 1, `outcome` is `completed_with_errors` and
+  `errors` names the manifest, source, package or item. A package at two versions
+  is neither created nor updated; when the register cannot be read nothing is created.
+testing: 'T1: A package that ships at two versions is an error, and no item is created
+  or updated for it.
+
+  T2: An item that cannot be updated is named.
+
+  T3: A malformed source in soup-sources.yaml is an error, not a traceback.
+
+  T4: An unsupported manifest is an error naming it.
+
+  T5: A register that cannot be read is an error.'
+risk: medium
+verification_method:
+- Test
+type: SRS

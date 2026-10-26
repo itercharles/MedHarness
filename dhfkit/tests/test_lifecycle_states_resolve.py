@@ -57,6 +57,8 @@ def test_a_transition_target_exists_globally(code: str, target: str) -> None:
 class TestTheScaffoldedCRCanReachCompleted:
     """The state every gate and release baseline depends on."""
 
+    @pytest.mark.dhf_links("SRS-062")
+    @pytest.mark.dhf_testing("T1")
     def test_the_full_path(self, tmp_path: Path) -> None:
         """Closing needs the record that closure is supposed to mean."""
         scaffold_dhf(tmp_path)
@@ -81,6 +83,8 @@ class TestTheScaffoldedCRCanReachCompleted:
         open_store(dhf).execute_transition("CR-001", "completed")
         assert open_store(dhf).get_item("CR-001")["status"] == "completed"
 
+    @pytest.mark.dhf_links("SRS-057")
+    @pytest.mark.dhf_testing("T5")
     def test_updating_a_field_does_not_undo_the_lifecycle(self, tmp_path: Path) -> None:
         """`update_item` reset any non-stable state to the initial one.
 
@@ -94,6 +98,8 @@ class TestTheScaffoldedCRCanReachCompleted:
         open_store(dhf).update_item("CR-001", {"implementation_notes": "x"})
         assert open_store(dhf).get_item("CR-001")["status"] == "design"
 
+    @pytest.mark.dhf_links("SRS-060")
+    @pytest.mark.dhf_testing("T2")
     def test_an_undefined_state_is_still_refused(self, tmp_path: Path) -> None:
         """Widening the state list must not make the machine permissive."""
         scaffold_dhf(tmp_path)
@@ -101,6 +107,8 @@ class TestTheScaffoldedCRCanReachCompleted:
         with pytest.raises(ValueError):
             open_store(tmp_path / "DHF").execute_transition("CR-001", "nonexistent")
 
+    @pytest.mark.dhf_links("SRS-060")
+    @pytest.mark.dhf_testing("T1")
     def test_skipping_a_state_is_still_refused(self, tmp_path: Path) -> None:
         scaffold_dhf(tmp_path)
         replace_placeholders(tmp_path, "Lifecycle")

@@ -1,0 +1,13 @@
+id: SRS-063
+title: verify approval is off, and says so, while the project has no approvers list
+content: '`verify approval` without `--release` shall pass, saying approvals are not
+  configured, when the project has no approvers list and never had one at `--since-ref`,
+  so that a project that does not sign releases is not blocked.'
+verification_criteria: The exit code is 0, `passed` is true and `summary` says approvals
+  are not configured and nothing was checked.
+testing: 'T1: A project without an approvers list passes, saying approvals are not
+  configured.'
+risk: medium
+verification_method:
+- Test
+type: SRS

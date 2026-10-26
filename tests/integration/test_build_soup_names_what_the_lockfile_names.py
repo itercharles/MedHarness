@@ -30,6 +30,8 @@ def _soup(project: Path, *args: str):
     return result, json.loads(result.stdout.splitlines()[0])
 
 
+@pytest.mark.dhf_links("SRS-069")
+@pytest.mark.dhf_testing("T4")
 def test_a_scoped_npm_package_keeps_its_scope(project: Path) -> None:
     (project / "package-lock.json").write_text(json.dumps({"lockfileVersion": 3, "packages": {
         "": {"name": "app"},
@@ -44,6 +46,8 @@ def test_a_scoped_npm_package_keeps_its_scope(project: Path) -> None:
     assert sorted(answer["to_create"]) == ["@babel/core", "@types/node", "express"]
 
 
+@pytest.mark.dhf_links("SRS-069")
+@pytest.mark.dhf_testing("T5")
 def test_the_project_a_uv_lockfile_lists_is_not_soup(project: Path) -> None:
     (project / "uv.lock").write_text(
         'version = 1\n\n'
@@ -57,6 +61,8 @@ def test_the_project_a_uv_lockfile_lists_is_not_soup(project: Path) -> None:
     assert answer["to_create"] == ["requests"]
 
 
+@pytest.mark.dhf_links("SRS-070")
+@pytest.mark.dhf_testing("T2")
 def test_a_failed_update_names_the_item_instead_of_crashing(project: Path) -> None:
     (project / "requirements.txt").write_text("requests==2.31.0\n")
     _soup(project)
@@ -69,6 +75,8 @@ def test_a_failed_update_names_the_item_instead_of_crashing(project: Path) -> No
     assert any("Failed to update SOUP-" in e and "refused" in e for e in answer["errors"]), answer["errors"]
 
 
+@pytest.mark.dhf_links("SRS-070")
+@pytest.mark.dhf_testing("T3")
 def test_a_malformed_source_in_soup_sources_is_an_error_not_a_traceback(project: Path) -> None:
     (project / "DHF" / "config" / "soup-sources.yaml").write_text("sources:\n  - just a string\n")
 
@@ -78,6 +86,8 @@ def test_a_malformed_source_in_soup_sources_is_an_error_not_a_traceback(project:
     assert any("must be a mapping" in e for e in answer["errors"]), answer["errors"]
 
 
+@pytest.mark.dhf_links("SRS-070")
+@pytest.mark.dhf_testing("T1")
 def test_a_package_at_two_versions_is_checked_at_both(project: Path) -> None:
     """The second version was dropped, so a vulnerable copy in one manifest passed unnoticed."""
     (project / "be").mkdir()

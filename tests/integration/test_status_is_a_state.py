@@ -82,6 +82,8 @@ def test_a_type_without_a_lifecycle_takes_the_global_states(dhf: Path) -> None:
 
 
 class TestWrites:
+    @pytest.mark.dhf_links("SRS-058")
+    @pytest.mark.dhf_testing("T2")
     def test_update_to_a_status_that_is_no_state_is_refused(self, dhf: Path) -> None:
         path = _file(dhf, "DEF-001.yaml")
         before = path.read_bytes()
@@ -89,18 +91,24 @@ class TestWrites:
         assert result.exit_code == 1 and "item transition DEF-001" in result.stderr
         assert path.read_bytes() == before
 
+    @pytest.mark.dhf_links("SRS-056")
+    @pytest.mark.dhf_testing("T4")
     def test_create_with_a_status_that_is_no_state_is_refused(self, dhf: Path) -> None:
         """A type with a lifecycle is given its initial state; one without takes what it is told."""
         result = _item(dhf, "create", "--type", "SRS", "--data", json.dumps(
             {"title": "t", "content": "c", "derives_from": ["SYS-001"], "status": "banana"}))
         assert result.exit_code == 1 and "is not a state of SRS" in result.stderr
 
+    @pytest.mark.dhf_links("SRS-058")
+    @pytest.mark.dhf_testing("T1")
     def test_update_cannot_move_a_lifecycle_even_to_a_state_of_the_type(self, dhf: Path) -> None:
         """`item update CR-001 --data '{"status": "completed"}'` from `new` skipped every criterion."""
         result = _item(dhf, "update", "CR-001", "--data", '{"status": "completed"}')
         assert result.exit_code == 1 and "item transition CR-001" in result.stderr
         assert json.loads(_item(dhf, "get", "CR-001").stdout)["status"] == "new"
 
+    @pytest.mark.dhf_links("SRS-058")
+    @pytest.mark.dhf_testing("T3")
     def test_update_that_leaves_the_status_as_it_is_is_accepted(self, dhf: Path) -> None:
         status = json.loads(_item(dhf, "get", "CR-001").stdout)["status"]
         assert _item(dhf, "update", "CR-001", "--data", json.dumps({"status": status, "priority": "High"})).exit_code == 0
@@ -143,6 +151,8 @@ class TestAnItemFileThatSaysNothing:
         assert any("SRS-001-copy.yml" in e and ".yaml" in e for e in answer["errors"]), answer["errors"]
 
 
+@pytest.mark.dhf_links("SRS-058")
+@pytest.mark.dhf_testing("T4")
 def test_a_status_that_is_no_state_can_be_repaired_by_update(dhf: Path) -> None:
     """The fix `verify dhf` prints for it is an `item update`; there is no transition out of it."""
     path = _file(dhf, "CR-001.yaml")

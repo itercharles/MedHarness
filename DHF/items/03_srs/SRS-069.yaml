@@ -1,0 +1,25 @@
+id: SRS-069
+title: build soup records the version that ships under the name the lockfile gives
+content: '`build soup` shall record for each package the version its lockfile installs,
+  not the range a manifest declares, under the name the lockfile gives it, scope included,
+  keep a range as written only when no lockfile in the repository lists the package,
+  and shall not register the project itself, so that the register names what actually
+  ships.'
+verification_criteria: A dependency declared as a range is recorded at the lockfile's
+  version; one the lockfile does not list keeps its range; a lockfile above the repository
+  root is not read; a scoped npm package keeps its scope; the project a uv lockfile
+  lists is not created as SOUP.
+testing: 'T1: A range is recorded at the version the lockfile beside it installs,
+  for a workspace member too.
+
+  T2: A dependency no lockfile lists keeps its range as written.
+
+  T3: A lockfile above the repository root is not read.
+
+  T4: A scoped npm package keeps its scope.
+
+  T5: The project a uv lockfile lists is not SOUP.'
+risk: medium
+verification_method:
+- Test
+type: SRS
