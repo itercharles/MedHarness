@@ -17,6 +17,12 @@ _HISTORICAL_LINK_FIELDS = frozenset({"affected_items"})
 _UID_PATTERN = re.compile(r"^[A-Z][A-Z0-9]*(-[A-Z0-9]+)*-\d+$")
 
 
+def _id_order(uid: str) -> tuple[str, int, str]:
+    """Prefix, then number, so SRS-2 comes before SRS-10 and TC-VER-001 sorts under TC-VER-."""
+    prefix, _, number = uid.rpartition("-")
+    return (prefix, int(number), uid) if number.isdigit() else (uid, -1, uid)
+
+
 class ItemStore:
     """The item store for a DHF directory: the project's config and documents on
     disk, and its items wherever the configured adapter keeps them."""
@@ -96,7 +102,8 @@ class ItemStore:
         return self._enrich_item_dict(item)
 
     def list_items(self, doc_type: Optional[str] = None) -> List[dict]:
-        items = self._adapter.load_all()
+        """Items in ID order, whatever order the adapter yields them in."""
+        items = sorted(self._adapter.load_all(), key=lambda item: _id_order(item.uid))
         result = []
         for item in items:
             if doc_type:
