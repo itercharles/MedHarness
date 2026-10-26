@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
 from click.testing import CliRunner
 
 from dhfkit.item_store import ItemStore
@@ -22,6 +23,8 @@ def _dhf(tmp_path: Path) -> Path:
     return dhf
 
 
+@pytest.mark.dhf_links("SRS-055")
+@pytest.mark.dhf_testing("T3")
 def test_a_value_of_the_wrong_shape_is_refused_and_nothing_is_written(tmp_path: Path) -> None:
     dhf = _dhf(tmp_path)
     item = dhf / "items" / "01_crs" / "CRS-001.yaml"

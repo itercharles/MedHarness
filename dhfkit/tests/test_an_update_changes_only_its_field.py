@@ -10,6 +10,8 @@ from __future__ import annotations
 import difflib
 from pathlib import Path
 
+import pytest
+
 from dhfkit.store import open_store
 from dhfkit.tests.fixtures import bare_dhf
 
@@ -38,6 +40,8 @@ def _item(tmp_path: Path) -> tuple[Path, Path]:
     return dhf, path
 
 
+@pytest.mark.dhf_links("SRS-057")
+@pytest.mark.dhf_testing("T1")
 def test_only_the_changed_line_differs(tmp_path: Path) -> None:
     dhf, path = _item(tmp_path)
     open_store(dhf).update_item("SRS-001", {"title": "A clearer requirement"})
@@ -45,12 +49,16 @@ def test_only_the_changed_line_differs(tmp_path: Path) -> None:
         '-title: "A requirement"', '+title: A clearer requirement']
 
 
+@pytest.mark.dhf_links("SRS-057")
+@pytest.mark.dhf_testing("T2")
 def test_a_new_field_is_one_added_line(tmp_path: Path) -> None:
     dhf, path = _item(tmp_path)
     open_store(dhf).update_item("SRS-001", {"testing": "Unit"})
     assert _changed_lines(HAND_WRITTEN, path.read_text(encoding="utf-8")) == ["+testing: Unit"]
 
 
+@pytest.mark.dhf_links("SRS-057")
+@pytest.mark.dhf_testing("T3")
 def test_a_cleared_field_is_one_removed_line(tmp_path: Path) -> None:
     dhf, path = _item(tmp_path)
     open_store(dhf).update_item("SRS-001", {"performance": None})

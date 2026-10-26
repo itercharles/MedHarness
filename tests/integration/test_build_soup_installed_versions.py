@@ -55,6 +55,8 @@ def _versions(project: Path, manifest: Path) -> dict[str, str]:
     return items
 
 
+@pytest.mark.dhf_links("SRS-069")
+@pytest.mark.dhf_testing("T1")
 def test_a_workspace_member_gets_the_version_its_importer_installed(project: Path) -> None:
     (project / "pnpm-lock.yaml").write_text(PNPM)
     manifest = _manifest(project / "apps" / "client", vitest="^2.1.0")
@@ -62,6 +64,8 @@ def test_a_workspace_member_gets_the_version_its_importer_installed(project: Pat
     assert _versions(project, manifest) == {"vitest": "2.1.9"}
 
 
+@pytest.mark.dhf_links("SRS-069")
+@pytest.mark.dhf_testing("T1")
 def test_a_package_lock_beside_the_manifest_is_read(project: Path) -> None:
     (project / "package-lock.json").write_text(json.dumps({"lockfileVersion": 3, "packages": {
         "": {"name": "app"}, "node_modules/express": {"version": "4.19.2"}}}))
@@ -70,6 +74,8 @@ def test_a_package_lock_beside_the_manifest_is_read(project: Path) -> None:
     assert _versions(project, manifest) == {"express": "4.19.2"}
 
 
+@pytest.mark.dhf_links("SRS-069")
+@pytest.mark.dhf_testing("T2")
 def test_a_dependency_the_lockfile_does_not_list_keeps_its_range_as_written(project: Path) -> None:
     (project / "pnpm-lock.yaml").write_text(PNPM)
     manifest = _manifest(project / "apps" / "client", vitest="^2.1.0", missing="^3.0.0")
@@ -77,6 +83,8 @@ def test_a_dependency_the_lockfile_does_not_list_keeps_its_range_as_written(proj
     assert _versions(project, manifest) == {"vitest": "2.1.9", "missing": "^3.0.0"}
 
 
+@pytest.mark.dhf_links("SRS-069")
+@pytest.mark.dhf_testing("T3")
 def test_a_lockfile_above_the_repository_root_is_not_read(tmp_path: Path) -> None:
     (tmp_path / "pnpm-lock.yaml").write_text(PNPM)
     repo = tmp_path / "repo"
@@ -87,6 +95,8 @@ def test_a_lockfile_above_the_repository_root_is_not_read(tmp_path: Path) -> Non
     assert _versions(repo, manifest) == {"left-pad": "^1.0.0"}
 
 
+@pytest.mark.dhf_links("SRS-052")
+@pytest.mark.dhf_testing("T4")
 def test_verify_soup_does_not_look_a_range_up_and_says_so(project: Path) -> None:
     manifest = _manifest(project, vitest="^2.1.0")
     _versions(project, manifest)
@@ -105,6 +115,8 @@ def test_verify_soup_does_not_look_a_range_up_and_says_so(project: Path) -> None
     assert any("is a range, not a version" in w for w in answer["warnings"]), answer["warnings"]
 
 
+@pytest.mark.dhf_links("SRS-052")
+@pytest.mark.dhf_testing("T3")
 def test_an_ecosystem_osv_does_not_know_is_named_and_the_rest_is_still_scanned(project: Path) -> None:
     """osv.dev answers HTTP 400 to the whole batch for one bad ecosystem; that was read as an
     outage, so with `--offline-mode warn` no package was scanned and the gate passed."""

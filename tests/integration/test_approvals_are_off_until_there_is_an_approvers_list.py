@@ -9,6 +9,8 @@ import pytest
 from fixtures.approvals import build_project
 
 
+@pytest.mark.dhf_links("SRS-063")
+@pytest.mark.dhf_testing("T1")
 def test_a_project_without_an_approvers_list_passes_untouched(tmp_path: Path) -> None:
     project = build_project(tmp_path, with_approvers=False)
     project.ready_to_release()

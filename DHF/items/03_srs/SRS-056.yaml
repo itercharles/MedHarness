@@ -1,0 +1,24 @@
+id: SRS-056
+title: item create and item update refuse a link to nothing or to an unknown type,
+  and a status that is no state of the type
+content: '`item create` and `item update` shall refuse a link field holding a value
+  that is not an item ID, an ID of an unknown type, or the ID of an item that does
+  not exist, and a `status` that is no state of the item''s type, and shall accept
+  a link to an item that exists, so that a broken record is not written.'
+verification_criteria: A refused write exits 1 naming the field and the value (`unknown
+  prefix`, `does not match expected UID pattern`, `does not exist`, `is not a state
+  of`) and writes nothing; a link to an existing item of an accepted type is created
+  with exit code 0.
+testing: 'T1: A link to an ID of an unknown type is refused.
+
+  T2: A link holding something that is not an ID is refused.
+
+  T3: A link to an item that does not exist is refused and no file is written.
+
+  T4: A create with a status that is no state of the type is refused.
+
+  T5: A link to an item that exists is accepted.'
+risk: medium
+verification_method:
+- Test
+type: SRS
