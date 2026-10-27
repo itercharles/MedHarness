@@ -9,6 +9,7 @@ the way an installer does, and `build validation` runs from there, not from this
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -23,6 +24,8 @@ from medharness.results import ValidationReport
 from medharness.validation import CASES
 
 ROOT = Path(__file__).resolve().parents[2]
+# The venv's interpreter runs without this process's PYTHONPATH, which CI points at the checkout.
+CLEAN = {k: v for k, v in os.environ.items() if k != "PYTHONPATH"}
 NOISE = shutil.ignore_patterns(".git", ".venv", "build", "dist", "*.egg-info", "__pycache__", ".pytest_cache")
 
 
@@ -47,17 +50,17 @@ def installed(tmp_path_factory: pytest.TempPathFactory) -> Path:
     (wheel,) = (work / "dist").glob("*.whl")
 
     venv = work / "venv"
-    subprocess.run([sys.executable, "-m", "venv", "--without-pip", str(venv)], check=True)
+    subprocess.run([sys.executable, "-m", "venv", "--without-pip", str(venv)], check=True, env=CLEAN)
     python = venv / ("Scripts/python.exe" if sys.platform == "win32" else "bin/python")
     site = Path(subprocess.run([str(python), "-c", "import sysconfig; print(sysconfig.get_paths()['purelib'])"],
-                               capture_output=True, text=True, check=True).stdout.strip())
+                               capture_output=True, text=True, check=True, env=CLEAN).stdout.strip())
     with zipfile.ZipFile(wheel) as zf:
         zf.extractall(site)
     # The dependencies come from this environment, after the wheel on the path: a plain path
     # line, so the editable install of this checkout that lives there is not activated.
     (site / "zz_dependencies.pth").write_text(sysconfig.get_paths()["purelib"] + "\n", encoding="utf-8")
     where = subprocess.run([str(python), "-c", "import medharness; print(medharness.__file__)"],
-                           capture_output=True, text=True, check=True, cwd=work).stdout.strip()
+                           capture_output=True, text=True, check=True, cwd=work, env=CLEAN).stdout.strip()
     assert Path(where).is_relative_to(site), f"the venv imports medharness from {where}, not the wheel"
     return python
 
@@ -66,7 +69,7 @@ def installed(tmp_path_factory: pytest.TempPathFactory) -> Path:
 # directory first on the path, and from the repository that would import its source instead.
 def _validate(python: Path, out: Path) -> tuple[subprocess.CompletedProcess, dict]:
     proc = subprocess.run([str(python), "-m", "medharness", "build", "validation", "--out-dir", str(out)],
-                          capture_output=True, text=True, cwd=out.parent)
+                          capture_output=True, text=True, cwd=out.parent, env=CLEAN)
     return proc, ValidationReport.model_validate_json(proc.stdout).model_dump()
 
 
@@ -96,13 +99,13 @@ def test_the_installed_wheel_is_checked_against_its_release_record(installed: Pa
 @pytest.mark.dhf_testing("T5")
 def test_an_installed_file_that_was_changed_is_named(installed: Path, tmp_path: Path) -> None:
     site = Path(subprocess.run([str(installed), "-c", "import medharness, pathlib; print(pathlib.Path(medharness.__file__).parents[1])"],
-                               capture_output=True, text=True, check=True, cwd=tmp_path).stdout.strip())
+                               capture_output=True, text=True, check=True, cwd=tmp_path, env=CLEAN).stdout.strip())
     target = site / "medharness" / "services" / "verify_impact.py"
     original = target.read_text(encoding="utf-8")
     target.write_text(original + "\n# changed after installation\n", encoding="utf-8")
     try:
         proc = subprocess.run([str(installed), "-c", "import json; from medharness.services.validation import _installation;"
-                               "print(json.dumps(_installation()))"], capture_output=True, text=True, check=True, cwd=tmp_path)
+                               "print(json.dumps(_installation()))"], capture_output=True, text=True, check=True, cwd=tmp_path, env=CLEAN)
     finally:
         target.write_text(original, encoding="utf-8")
     assert json.loads(proc.stdout)["altered"] == ["medharness/services/verify_impact.py"]
