@@ -76,7 +76,7 @@ The requirements were derived from what the commands do today ([interface](inter
 
 The suite above is the vendor's verification: it runs in this repository, with `pytest` and a checkout. `medharness build validation` is what a user runs where MedHarness is installed ([ADR-005](adr/ADR-005-installation-validation.md), [adopting](adopting.md#validating-your-installation)). It runs the validation set in `medharness/validation/`, which ships in the wheel: each case runs the CLI against a scratch project in a temporary directory and checks test points of a high-risk requirement. A case checks with `check()`, never `assert`, which `python -O` would remove. The set covers the gates, not `build validation` itself, which cannot be validated by the set it runs; the suite verifies it (SRS-071 to SRS-073).
 
-The set's goal is every test point of the high-risk requirements, 170 points, each through the CLI. It grows gate by gate; today it exercises 64:
+The set's goal is every test point of the high-risk requirements, 170 points, each through the CLI. It grows gate by gate; today it exercises 117:
 
 | Module | What it covers | Points |
 |---|---|---|
@@ -84,6 +84,8 @@ The set's goal is every test point of the high-risk requirements, 170 points, ea
 | `medharness/validation/completion.py` | `verify completion`, every point | SRS-002 to SRS-006 (22) |
 | `medharness/validation/verification.py` | `verify tests`, every point | SRS-024 to SRS-029 (20) |
 | `medharness/validation/changes.py` | `verify changes`, every point the seeded project does not cover; a store that keeps no item files is an adapter installed for the case through a real entry point | SRS-030 to SRS-034 (13) |
+| `medharness/validation/structure.py` | `verify dhf`, every point; a check that could not run is shown by making the store fail after its first read | SRS-035 to SRS-042 (27) |
+| `medharness/validation/release.py` | `build release`, every point | SRS-043 to SRS-050 (26) |
 
 Each case is checked against a broken gate as well as a sound one: run against a gate that always passes, every case that expects a refusal fails, and against one that always refuses, every case that expects a pass fails.
 
