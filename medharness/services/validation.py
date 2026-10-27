@@ -36,7 +36,10 @@ def _digest(path: Path) -> str:
 
 def _installation() -> dict:
     """Each file of the installed distribution against the hash its RECORD gives it."""
-    dist = metadata.distribution("medharness")
+    try:
+        dist = metadata.distribution("medharness")
+    except metadata.PackageNotFoundError:
+        return {"version": "not installed", "verifiable": False, "files_checked": 0, "altered": []}
     checked, altered = 0, []
     for file in dist.files or []:
         if file.hash is None or file.hash.mode != "sha256":
@@ -66,8 +69,9 @@ def _dependencies(record: dict | None) -> list[dict]:
 def _tool_version(*command: str) -> str:
     if shutil.which(command[0]) is None:
         return "not found"
-    proc = subprocess.run(command, capture_output=True, text=True)
-    return (proc.stdout or proc.stderr).strip().splitlines()[0] if (proc.stdout or proc.stderr).strip() else "found"
+    out = subprocess.run(command, capture_output=True, text=True)
+    text = (out.stdout or out.stderr).strip()
+    return text.splitlines()[0] if text else "found"
 
 
 def _pdf() -> str:
