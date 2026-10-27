@@ -120,7 +120,7 @@ jobs:
         run: |
           set -o pipefail
           mkdir -p test-results
-          uv run --no-sync pytest -q --junitxml=test-results/junit.xml 2>&1 | tee test-results/pytest-output.txt
+          uv run --no-sync pytest -q -n auto --junitxml=test-results/junit.xml 2>&1 | tee test-results/pytest-output.txt
 
       # The constraints file pins every runtime and docs dependency to the version
       # the suite passed with. `uv export` reads the lockfile, so it lists exactly

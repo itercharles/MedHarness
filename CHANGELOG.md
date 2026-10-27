@@ -20,6 +20,7 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 - `item list`, and everything else that reads the item store, returns items in ID order, by prefix and then by number (`SRS-999` before `SRS-1000`). It followed the filesystem's directory order, which differs between filesystems, so the same DHF could list in a different order on another machine.
 
 ### Changed
+- CI and the release's test run use pytest-xdist (`-n auto`, now in the `dev` extra) to run the suite on every core of the runner. The longest job, `Check | Own DHF`, ran the whole suite on one core in about ten minutes.
 - A release now runs the full test suite on its tag, from the lockfile, before anything is published, and attaches its evidence to the GitHub Release: the JUnit results, a test summary (commit, Python, runner, pytest result) and `medharness-<version>-tested-with.txt`, a pip constraints file of the exact dependency versions the suite passed with. `docs/adopting.md` shows how to install that validated configuration.
 
 ## [0.70.0] — 2026-10-24

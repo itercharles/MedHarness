@@ -46,7 +46,7 @@ jobs:
           MEDHARNESS_REQUIRE_PDF: "1"
         run: |
           export PYTHONPATH="${PYTHONPATH}:${PWD}"
-          pytest tests/unit/ tests/guards/ -v
+          pytest tests/unit/ tests/guards/ -n auto
 
   tests-integration:
     name: Test | Integration
@@ -60,8 +60,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pytest
-          pip install -e ".[docs]"
+          pip install -e ".[dev,docs]"
       - name: Install WeasyPrint's native libraries
         # The PDF tests skip without them, and a skipped test guards nothing.
         run: |
@@ -72,7 +71,7 @@ jobs:
           MEDHARNESS_REQUIRE_PDF: "1"
         run: |
           export PYTHONPATH="${PYTHONPATH}:${PWD}"
-          pytest tests/integration/ -v
+          pytest tests/integration/ -n auto
 
   tests-contract:
     name: Test | Contract
@@ -139,7 +138,7 @@ jobs:
           MEDHARNESS_REQUIRE_PDF: "1"
         run: |
           export PYTHONPATH="${PYTHONPATH}:${PWD}"
-          pytest dhfkit/tests/ tests/ -q --junitxml=test-results/junit.xml
+          pytest dhfkit/tests/ tests/ -q -n auto --junitxml=test-results/junit.xml
       - name: Verify the DHF
         run: medharness --dhf DHF verify dhf --strict
       - name: Verify every requirement and test point has a passing test

@@ -162,8 +162,11 @@ The repo has a `.venv` at the root. `pytest.ini` sets `pythonpath = .` so no
 `PYTHONPATH` prefix is needed.
 
 ```bash
-.venv/bin/pytest dhfkit/tests/ tests/ -q
+.venv/bin/pytest dhfkit/tests/ tests/ -q -n auto
 ```
+
+`-n auto` (pytest-xdist, in the `dev` extra) runs the suite on every core, as CI does; the
+tests share no state, so a test that needs to run alone is a bug in that test.
 
 PDF tests skip themselves when WeasyPrint's native libraries are missing. CI installs them
 and sets `MEDHARNESS_REQUIRE_PDF=1`, which turns that skip into a failure, so the PDF path cannot go

@@ -45,7 +45,7 @@ dependencies = [
 
 [project.optional-dependencies]
 docs = ["weasyprint"]
-dev = ["pytest", "pytest-cov", "build", "jsonschema"]
+dev = ["pytest", "pytest-cov", "pytest-xdist", "build", "jsonschema"]
 
 [project.urls]
 Homepage = "https://github.com/itercharles/MedHarness"
