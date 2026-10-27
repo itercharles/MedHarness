@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import subprocess
 from pathlib import Path
+from xml.sax.saxutils import escape
 
 import yaml
 
@@ -55,10 +56,34 @@ def verify_the_starter(dhf: Path, out: Path) -> Path:
     return junit
 
 
-def starter(root: Path, name: str) -> None:
-    """The starter DHF, its text kept and every requirement verified, committed on `main`."""
+def junit(path: Path, *tests: tuple) -> Path:
+    """JUnit results of *tests*, each `(name, linked IDs or None, outcome[, test points])`.
+
+    The outcome is `passed`, `failed`, `error` or `skipped`.
+    """
+    cases = []
+    for name, links, outcome, *points in tests:
+        props = [("medharness.links", links)] if links else []
+        props += [("medharness.testing", points[0])] if points and points[0] else []
+        body = "".join(f'<property name="{k}" value="{v}"/>' for k, v in props)
+        body = f"<properties>{body}</properties>" if body else ""
+        body += {"passed": "", "failed": '<failure message="assertion failed"/>',
+                 "error": '<error message="crashed"/>', "skipped": '<skipped message="skipped"/>'}[outcome]
+        cases.append(f'<testcase classname="c" name="{escape(name)}">{body}</testcase>')
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(f'<testsuite name="s">{"".join(cases)}</testsuite>', encoding="utf-8")
+    return path
+
+
+def scaffolded(root: Path, name: str) -> None:
+    """The starter DHF exactly as `init` writes it, with the project's name."""
     scaffold_dhf(root)
     replace_placeholders(root, name)
+
+
+def starter(root: Path, name: str) -> None:
+    """The starter DHF, its text kept and every requirement verified, with its JUnit in `results/`."""
+    scaffolded(root, name)
     keep_the_starter_text(root / "DHF")
     verify_the_starter(root / "DHF", root / "results")
     (root / ".gitignore").write_text("results/\n", encoding="utf-8")
