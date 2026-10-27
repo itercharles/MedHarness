@@ -5,6 +5,6 @@ test points of a high-risk requirement in MedHarness's own DHF. The cases ship i
 wheel, so they need nothing a plain install lacks: no pytest, no checkout.
 """
 
-from medharness.validation import changes, completion, seeded, verification
+from medharness.validation import changes, completion, release, seeded, structure, verification
 
-CASES = [*seeded.CASES, *completion.CASES, *verification.CASES, *changes.CASES]
+CASES = [*seeded.CASES, *completion.CASES, *verification.CASES, *changes.CASES, *structure.CASES, *release.CASES]
