@@ -10,6 +10,7 @@ from __future__ import annotations
 import base64
 import hashlib
 import json
+import os
 import platform
 import shutil
 import subprocess
@@ -32,6 +33,22 @@ TEMPLATE = "validation_report.md.j2"
 
 def _digest(path: Path) -> str:
     return base64.urlsafe_b64encode(hashlib.sha256(path.read_bytes()).digest()).rstrip(b"=").decode()
+
+
+def _quietly(run):
+    """Run with file descriptor 2 closed to the terminal.
+
+    The signing cases run `ssh-keygen`, which writes to the terminal so that a real signer sees a
+    touch prompt; here the report is the record, and the chatter would bury its summary.
+    """
+    saved = os.dup(2)
+    with open(os.devnull, "w") as devnull:
+        os.dup2(devnull.fileno(), 2)
+        try:
+            return run()
+        finally:
+            os.dup2(saved, 2)
+            os.close(saved)
 
 
 def _installation() -> dict:
@@ -149,7 +166,7 @@ def build_validation(out_dir: Path, doc_format: str = "html") -> dict:
     ran_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
     installation = _installation()
     with tempfile.TemporaryDirectory(prefix="medharness-validation-") as tmp:
-        outcomes = run_cases(CASES, Path(tmp) / "run")
+        outcomes = _quietly(lambda: run_cases(CASES, Path(tmp) / "run"))
         requirements, stale = _requirements(record, outcomes)
         result, errors = _verdict(installation, record, requirements, stale)
         report = {

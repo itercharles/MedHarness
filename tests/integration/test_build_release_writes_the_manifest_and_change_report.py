@@ -8,7 +8,8 @@ from pathlib import Path
 
 import pytest
 import yaml
-from fixtures.approvals import Project, build_project
+from fixtures.approvals import build_project
+from medharness.validation.signing import Project
 
 
 def _sha(path: Path) -> str:

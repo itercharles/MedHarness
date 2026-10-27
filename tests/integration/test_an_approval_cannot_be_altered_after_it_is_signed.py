@@ -6,7 +6,9 @@ import json
 from pathlib import Path
 
 import pytest
-from fixtures.approvals import Project, build_project, git
+from fixtures.approvals import build_project
+from medharness.validation.signing import Project
+from medharness.validation.project import git
 
 
 @pytest.fixture
