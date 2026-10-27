@@ -12,7 +12,7 @@ Uses [ADR-TEMPLATE.md](ADR-TEMPLATE.md).
 | ADR-002 | [CLI and Public Contracts](ADR-002-cli-and-public-contracts.md) | Superseded by [interface.md](../interface.md) |
 | ADR-003 | [Templates as Starter DHF](ADR-003-templates-as-starter-dhf.md) | Accepted |
 | ADR-004 | [Signed Approval of Released Documents](ADR-004-signed-approvals.md) | Proposed |
-| ADR-005 | [Validating an Installation Where It Is Used](ADR-005-installation-validation.md) | Proposed |
+| ADR-005 | [Validating an Installation Where It Is Used](ADR-005-installation-validation.md) | Accepted |
 
 ## When to Write an ADR
 

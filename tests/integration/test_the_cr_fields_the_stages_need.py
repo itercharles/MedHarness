@@ -15,7 +15,7 @@ from click.testing import CliRunner
 
 from medharness.cli import main
 from medharness.scaffold import replace_placeholders, scaffold_dhf
-from fixtures.starter import keep_the_starter_text
+from medharness.validation.project import keep_the_starter_text
 
 SHIPPED = Path(__file__).resolve().parents[2] / "dhfkit" / "templates" / "config" / "doc_types" / "cr.yaml"
 

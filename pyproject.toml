@@ -69,7 +69,7 @@ exclude = ["tests*", "dhfkit.tests*"]
 
 [tool.setuptools.package-data]
 "dhfkit" = ["templates/**/*"]
-"medharness" = ["prompts/**/*"]
+"medharness" = ["prompts/**/*", "validation/release.json"]
 
 [tool.setuptools.exclude-package-data]
 # The CI workflow is deliberately not part of the release payload — adopters

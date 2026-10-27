@@ -148,7 +148,7 @@ class CodeReport(StageReport):
     checks: list[CheckResult] | None = Field(default=None, description="Each `--check` as the harness last ran it; absent without `--check`")
 
 
-# ── build soup / build release / build approvals / init ────────────────────────────────────────
+# ── build soup / build release / build approvals / build validation / init ────────────────────────────────────────
 
 class SoupDrift(Shape):
     uid: str = Field(description="The SOUP item")
@@ -205,6 +205,71 @@ class ApprovalSheetReport(Shape):
     warnings: list[str] = Field(description="What `verify approval --release` noticed, such as a signature made without proven presence")
 
 
+class InstalledFiles(Shape):
+    version: str = Field(description="The installed `medharness` version")
+    verifiable: bool = Field(description="Whether the package's own files are in its RECORD; false for an editable install")
+    files_checked: int = Field(description="Files whose hash was compared with the RECORD")
+    altered: list[str] = Field(description="Files missing or different from the RECORD; any fails the validation")
+
+
+class TestedDependency(Shape):
+    name: str = Field(description="The package")
+    tested: str = Field(description="The version the release's suite passed with")
+    marker: str | None = Field(description="The environment marker of the pin, such as `sys_platform == 'win32'`, or null")
+    installed: str | None = Field(description="The version installed here, or null")
+    status: Literal["equal", "different", "missing"] = Field(
+        description="`different` and `missing` are deviations for the user to assess; they do not fail the validation")
+
+
+class Environment(Shape):
+    platform: str = Field(description="The operating system and its version")
+    architecture: str = Field(description="The machine architecture")
+    python: str = Field(description="The Python implementation and version")
+    git: str = Field(description="`git --version`, or `not found`")
+    ssh_keygen: str = Field(description="Where `ssh-keygen` is, or `not found`")
+    pdf: str = Field(description="The WeasyPrint version, or why PDF rendering is not available")
+
+
+class ValidationPoint(Shape):
+    id: str = Field(description="The test point, e.g. `T2`")
+    text: str | None = Field(description="What the point checks, from the release's DHF; null without a release record")
+    cases: list[str] = Field(description="The validation cases that exercised it")
+    status: Literal["passed", "failed", "not_run"] = Field(
+        description="`not_run` when a tool a case needs is missing, or no case exercises the point yet")
+    message: str = Field(description="Why it failed or did not run; empty when it passed")
+
+
+class ValidatedRequirement(Shape):
+    id: str = Field(description="The requirement in MedHarness's own DHF, e.g. `SRS-016`")
+    title: str | None = Field(description="Its title; null without a release record")
+    risk: str | None = Field(description="Its risk rating; null without a release record")
+    points: list[ValidationPoint] = Field(description="Each of its test points")
+
+
+class ReleaseRecord(Shape):
+    version: str = Field(description="The release the installation was built as")
+    commit: str = Field(description="The commit the release was tagged on")
+    evidence: list[str] = Field(description="The evidence files attached to the release's GitHub Release")
+
+
+class ValidationReport(Shape):
+    """`build validation`."""
+
+    result: Literal["passed", "failed", "incomplete"] = Field(
+        description="`failed` when a point failed or an installed file differs; `incomplete` when a point did not run, "
+                    "the build has no release record or the install cannot be checked. Only `passed` exits 0")
+    ran_at: str = Field(description="When it ran, ISO 8601 UTC")
+    path: str | None = Field(description="The report written; null when it could not be rendered")
+    installation: InstalledFiles = Field(description="The installed files against the release")
+    dependencies: list[TestedDependency] = Field(
+        description="Each dependency the release was tested with, beside the installed version; empty without a release record")
+    environment: Environment = Field(description="Where it ran")
+    requirements: list[ValidatedRequirement] = Field(description="The result of each test point, by requirement")
+    release: ReleaseRecord | None = Field(description="The release record the package carries; null in a build that is not a release")
+    report_hash: str = Field(description="SHA-256 over the report's content, printed on the report")
+    errors: list[str] = Field(description="Why the result is not `passed`")
+
+
 class InitReport(Shape):
     """`init`."""
 
@@ -220,5 +285,6 @@ SHAPES: tuple[tuple[str, tuple[type[Shape], ...]], ...] = (
     ("`build soup`", (SoupReport,)),
     ("`build release`", (ReleaseReport,)),
     ("`build approvals`", (ApprovalSheetReport,)),
+    ("`build validation`", (ValidationReport,)),
     ("`init`", (InitReport,)),
 )

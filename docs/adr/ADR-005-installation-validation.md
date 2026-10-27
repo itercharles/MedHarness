@@ -1,7 +1,7 @@
 # ADR-005: Validating an Installation Where It Is Used
 
-**Status:** Proposed
-**Date:** 2026-10-26
+**Status:** Accepted
+**Date:** 2026-10-26 (proposed), 2026-10-27 (accepted)
 
 ## Context
 
@@ -146,20 +146,31 @@ point, same case name.
   and as a case. The guard keeps them in step, at the cost that changing a high-risk
   behaviour means changing its case in the same pull request.
 
-## Open questions
+## Decisions on the open questions
 
-1. **Name.** `build validation` or `build install-report`? `verify install` reads better
-   but breaks the verb rule (it writes a file) and the envelope.
-2. **Scope of the set.** High-risk points only (170), or medium too (83 more)? And every
-   point, or the points that stop something (each requirement's "refuses" cases plus one
-   pass per gate)? The second keeps the run under a minute.
-3. **Tested configuration.** Embed it in the wheel (above), or take
-   `--tested-with PATH` from the GitHub Release? Embedding needs the build job to produce
-   it; a path relies on the user downloading the right file.
-4. **Missing tools.** Should a missing `ssh-keygen` make the result `incomplete`
-   (above, exit 1), or `passed` with the signing points listed as not applicable for a
-   user who does not sign releases with MedHarness?
-5. **Report format.** HTML by default and PDF with the `docs` extra, as the
-   specifications, or always PDF, which many quality systems prefer for filing?
-6. **Requirement text in the wheel.** Export `DHF/` into `release.json`, or ship the
-   items themselves as package data? The DHF is deliberately not packaged today.
+Proposed with six open questions; accepted with these answers.
+
+1. **Name.** `build validation`. It writes a report, so it is a `build`, and the four
+   groups stay as they are.
+2. **Scope of the set.** Every test point of the high-risk requirements (SRS-002 to
+   SRS-050, 170 points), each exercised through the CLI. A point that the suite verifies
+   only below the CLI today gets a case that runs the command. Medium-risk points are a
+   later addition. The set is built over several pull requests: the command, the report,
+   `release.json` and the seeded-omission cases first, then the remaining points gate by
+   gate. Until the last of them lands, the report lists the points the set does not
+   exercise yet, and a result can be `passed` only when it exercised them all.
+3. **Tested configuration.** Embedded in the wheel as `release.json`. The release job that
+   runs the suite writes it, beside the `tested-with` file it comes from, and the job that
+   builds the wheel puts it into the package before building.
+4. **Missing tools.** A point whose tool is missing is `not_run` and the result is
+   `incomplete`, which exits 1.
+5. **Report format.** HTML by default, PDF with `--doc-format pdf` and the `docs` extra, as
+   for the specifications and the approval sheet.
+6. **Requirement text in the wheel.** Exported into `release.json`: each high-risk
+   requirement's ID, title, risk and test points. `DHF/` stays out of the package.
+
+Two details follow from shipping the cases as code. A case checks with an explicit
+`check()` that raises, never with `assert`, which `python -O` removes. And the cases run
+under pytest from `tests/integration/test_the_validation_set_passes.py`, which carries
+each case's `dhf_links` and `dhf_testing`, so `verify tests --strict` holds the set to the
+requirements and the release's JUnit contains every validation point.

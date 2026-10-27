@@ -27,7 +27,7 @@ dependency on `medharness`, and no CLI of its own.
 |-------|---------|----------|
 | `item` | one DHF item at a time | `list` · `get` · `create` · `update` · `transition` · `approve` |
 | `verify` | reads the DHF and the working tree | `dhf` · `tests` · `soup` · `completion` · `impact` · `changes` · `approval` |
-| `build` | writes items, code or artifacts | `plan` · `code` · `soup` · `release` · `approvals` |
+| `build` | writes items, code or artifacts | `plan` · `code` · `soup` · `release` · `approvals` · `validation` |
 | `init` | scaffolds a project | — |
 
 `tests/guards/test_cli_boundary_is_documented.py` checks this table against the
@@ -41,7 +41,7 @@ runs locally; `--pr` on `build plan|code` is the only thing that is CI-specific.
 | Verb | Reads | Examples |
 |------|-------|----------|
 | `verify` | what is on the machine — the DHF and the working tree, never GitHub | `dhf`, `tests`, `soup`, `completion`, `impact`, `changes`, `approval` |
-| `build` | whatever it needs; **writes** items, code, or artifacts | `plan`, `code`, `soup`, `release`, `approvals` |
+| `build` | whatever it needs; **writes** items, code, or artifacts | `plan`, `code`, `soup`, `release`, `approvals`, `validation` |
 
 During development approval is the review of the pull request, under the team's
 rules, and no check reads GitHub. At release it is a signature: `item approve

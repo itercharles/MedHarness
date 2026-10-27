@@ -11,7 +11,7 @@ import hashlib
 from pathlib import Path
 
 import pytest
-from fixtures.starter import keep_the_starter_text, verify_the_starter
+from medharness.validation.project import keep_the_starter_text, verify_the_starter
 
 from medharness.services.release import build_release
 

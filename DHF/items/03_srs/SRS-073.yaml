@@ -1,0 +1,28 @@
+id: SRS-073
+title: build validation reports an installed wheel against its release, without reading
+  the user's project
+content: '`build validation` shall run every case in a temporary directory, never
+  reading the DHF that `--dhf` names, and shall write a report, and the same content
+  as JSON, that checks each installed file of a wheel against its RECORD, lists each
+  dependency of the release record''s tested configuration beside the installed version,
+  and gives a result for every test point of the release record with its text.'
+verification_criteria: From a wheel built with a release record and installed outside
+  the source tree, `installation.verifiable` is true and `altered` is empty, `release`
+  names the record's version and commit, every dependency of an identical configuration
+  is `equal`, the report lists all 170 high-risk test points, and every point a case
+  exercises passed. A dependency at another version is `different` and one not installed
+  is `missing`, and neither fails the validation. The DHF named by `--dhf` is not
+  read or created, and the report file contains the requirement text.
+testing: 'T1: An installed wheel is checked against its release record: its files,
+  its release, an identical configuration and every high-risk test point.
+
+  T2: A dependency at another version, or not installed, is listed as a deviation
+  without failing the validation.
+
+  T3: The DHF that --dhf names is never read or created.
+
+  T4: The report file is written, with the requirement text of each point.'
+verification_method:
+- Test
+risk: medium
+type: SRS

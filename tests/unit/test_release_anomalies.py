@@ -16,7 +16,7 @@ import shutil
 from pathlib import Path
 
 import pytest
-from fixtures.starter import keep_the_starter_text, verify_the_starter
+from medharness.validation.project import keep_the_starter_text, verify_the_starter
 
 from medharness.services.verify_release import known_anomalies
 from medharness.services.release import (
