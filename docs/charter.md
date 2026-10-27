@@ -250,3 +250,22 @@ Order:
 4. The user's validation command.
 
 The AI stages stay out of scope: they are not relied on as a validated transformation.
+
+## Iteration 4: validation where it is used (2026-10-27)
+
+[ADR-005](adr/ADR-005-installation-validation.md) is accepted, and step 4 has begun:
+
+- **One command, `medharness build validation`,** runs a validation set shipped in the wheel
+  against a scratch project in a temporary directory and writes a report the user files: the
+  installed files checked against the release, each dependency beside the version the release
+  was tested with, the environment, and a result for every test point of the high-risk
+  requirements. It never reads the user's DHF and never reaches the network.
+- **The release carries what the report compares against.** `release.json` in the wheel holds
+  the version, the commit, the evidence file names, the tested dependency versions and the
+  requirement text.
+- **The set's target is all 170 high-risk test points,** each through the CLI. It starts with
+  the seeded-omission project: 9 points. Until the rest have cases, the report says
+  `incomplete`, never `passed`.
+
+The inventory's "Validation where it is used" row moves from Missing to Partial; it is Present
+when the set exercises every high-risk point.

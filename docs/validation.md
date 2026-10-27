@@ -1,7 +1,7 @@
 # Tool validation
 
 > **Stability:** Draft
-> **Last reviewed:** 2026-10-26
+> **Last reviewed:** 2026-10-27
 
 What MedHarness is trusted to do, how much a wrong answer matters for each command, and the requirements and tests that back the commands rated high and medium. It is the start of [iteration 4](charter.md#iterations) of the charter.
 
@@ -20,7 +20,7 @@ The risk is what a wrong **pass** would cause: a command that fails something so
 | Risk | Commands | A wrong pass means |
 |---|---|---|
 | High | `verify completion`, `verify tests`, `verify approval --release`, `build release`, `verify impact`, `verify changes`, `verify dhf` | unverified, unapproved or untraced content is released, or an omission is hidden |
-| Medium | `verify soup`, `item transition`, `item create` / `update`, `verify approval` without `--release`, `build approvals`, `build soup` | wrong data or a missed vulnerability, which a later gate checks again |
+| Medium | `verify soup`, `item transition`, `item create` / `update`, `verify approval` without `--release`, `build approvals`, `build soup`, `build validation` | wrong data or a missed vulnerability, which a later gate checks again; for `build validation`, a user's validation evidence that overstates, while the release's own suite still verifies every gate |
 | Low | `item get` / `list`, `init` | nothing evidence depends on |
 | Out of scope | `build plan`, `build code` | AI proposals, not relied on |
 
@@ -65,8 +65,27 @@ CI runs exactly this in the job `Check | Own DHF`. The DHF is not part of the pa
 | `verify approval` without `--release` | SRS-063 to SRS-065, with SRS-019, SRS-020 and SRS-022 for the log and the approvers list | covered |
 | `build approvals` | SRS-066 and SRS-067 | covered |
 | `build soup` | SRS-068 to SRS-070 | covered |
+| `build validation` | SRS-071 to SRS-073 | covered |
 | Low risk commands | none | rated, not specified: nothing evidence depends on them |
 
-"Covered" means every test point of every item has at least one passing test, which `verify tests --strict` enforces. It does not mean the requirements are complete for the command: an omission a requirement does not name is not tested. All seven high-risk commands and all six medium-risk ones are covered. The low-risk commands are rated and not specified, and the next step is a command that runs these tests where MedHarness is installed.
+"Covered" means every test point of every item has at least one passing test, which `verify tests --strict` enforces. It does not mean the requirements are complete for the command: an omission a requirement does not name is not tested. All seven high-risk commands and all seven medium-risk ones are covered. The low-risk commands are rated and not specified.
 
 The requirements were derived from what the commands do today ([interface](interface.md), the gates' docstrings and the tests that already existed), and the tests were annotated, not rewritten. Where a case was untested, a test was added.
+
+## Validation where it is used
+
+The suite above is the vendor's verification: it runs in this repository, with `pytest` and a checkout. `medharness build validation` is what a user runs where MedHarness is installed ([ADR-005](adr/ADR-005-installation-validation.md), [adopting](adopting.md#validating-your-installation)). It runs the validation set in `medharness/validation/`, which ships in the wheel: each case runs the CLI against a scratch project in a temporary directory and checks test points of a high-risk requirement. A case checks with `check()`, never `assert`, which `python -O` would remove. The set covers the gates, not `build validation` itself, which cannot be validated by the set it runs; the suite verifies it (SRS-071 to SRS-073).
+
+The set's goal is every test point of the high-risk requirements, 170 points, each through the CLI. Today it exercises 9 of them, through the seeded-omission project in `medharness/validation/seeded.py`:
+
+| Case | Point |
+|---|---|
+| The honest change passes every gate | SRS-034 T3 |
+| A dependent left unreviewed, a parent left unreviewed, a risk control left out | SRS-007 T4, SRS-008 T2, SRS-009 T2 |
+| Code changed without a requirement, or outside the declared scope; a CR that rejects itself to skip the checks | SRS-010 T4, SRS-011 T3, SRS-012 T3 |
+| An undeclared item change, a declared item not changed | SRS-030 T4, SRS-031 T2 |
+
+Until the set exercises all 170 points the report lists the others as `not_run`, and its result is `incomplete`. `tests/integration/test_the_validation_set_passes.py` runs every case under pytest with its `dhf_links` and `dhf_testing`, so the release's JUnit contains each validation point. `tests/integration/test_a_released_wheel_validates_itself.py` builds a wheel as the release does and runs the command from it.
+
+The release writes `release.json` into the wheel (`scripts/write_release_record.py`): its version and commit, the names of its evidence files, the dependency versions of `medharness-<version>-tested-with.txt`, and the text of each high-risk requirement. The command compares the installation against it without downloading anything.
+

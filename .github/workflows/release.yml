@@ -120,7 +120,7 @@ jobs:
         run: |
           set -o pipefail
           mkdir -p test-results
-          uv run --no-sync pytest -q --junitxml=test-results/junit.xml 2>&1 | tee test-results/pytest-output.txt
+          uv run --no-sync pytest -q -n auto --junitxml=test-results/junit.xml 2>&1 | tee test-results/pytest-output.txt
 
       # The constraints file pins every runtime and docs dependency to the version
       # the suite passed with. `uv export` reads the lockfile, so it lists exactly
@@ -143,11 +143,26 @@ jobs:
             echo "runner: ubuntu-24.04 (${PRETTY_NAME})"
           } > "evidence/medharness-${VERSION}-test-summary.txt"
 
+      # What `build validation` compares an installation against, carried in the wheel
+      # (ADR-005): written here, beside the tested-with list it is read from.
+      - name: Write the release record
+        run: |
+          uv run --no-sync python scripts/write_release_record.py --version "${GITHUB_REF_NAME#v}" \
+            --commit "$(git rev-parse HEAD)" --evidence-dir evidence --dhf DHF \
+            --out release-record/release.json
+
       - name: Upload the release evidence
         uses: actions/upload-artifact@v4
         with:
           name: release-evidence
           path: evidence/
+          if-no-files-found: error
+
+      - name: Upload the release record
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-record
+          path: release-record/release.json
           if-no-files-found: error
 
   build-and-publish:
@@ -170,11 +185,20 @@ jobs:
       - name: Install build tools
         run: pip install build
 
+      - name: Put the release record into the package
+        uses: actions/download-artifact@v4
+        with:
+          name: release-record
+          path: medharness/validation
+
       - name: Build sdist and wheel
         run: |
           rm -rf build dist
           python -m build --wheel
           python -m build --sdist
+
+      - name: Assert the wheel carries the release record
+        run: unzip -l dist/*.whl | grep -q 'medharness/validation/release.json'
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1

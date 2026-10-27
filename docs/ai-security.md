@@ -18,7 +18,7 @@ Only two commands send anything to a model:
 | `medharness build plan --cr <ID>` | Design | DHF item updates, impact analysis, design review |
 | `medharness build code --cr <ID>` | Develop | Source code and tests for the approved design |
 
-**Every other command is deterministic** and makes no call to any model. The `item` commands, the `verify` gates, `build soup`, `build release` and `build approvals` compute their answers from their inputs; the only network they touch is osv.dev for `verify soup`.
+**Every other command is deterministic** and makes no call to any model. The `item` commands, the `verify` gates, `build soup`, `build release`, `build approvals` and `build validation` compute their answers from their inputs; the only network they touch is osv.dev for `verify soup`.
 
 This split is intentional: you can adopt the traceability engine and CI gates with no AI in the pipeline at all. See [adopting.md](adopting.md#what-to-adopt-in-what-order).
 

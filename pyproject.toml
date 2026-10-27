@@ -45,7 +45,7 @@ dependencies = [
 
 [project.optional-dependencies]
 docs = ["weasyprint"]
-dev = ["pytest", "pytest-cov", "build", "jsonschema"]
+dev = ["pytest", "pytest-cov", "pytest-xdist", "build", "jsonschema"]
 
 [project.urls]
 Homepage = "https://github.com/itercharles/MedHarness"
@@ -69,7 +69,7 @@ exclude = ["tests*", "dhfkit.tests*"]
 
 [tool.setuptools.package-data]
 "dhfkit" = ["templates/**/*"]
-"medharness" = ["prompts/**/*"]
+"medharness" = ["prompts/**/*", "validation/release.json"]
 
 [tool.setuptools.exclude-package-data]
 # The CI workflow is deliberately not part of the release payload — adopters

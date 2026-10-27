@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 from click.testing import CliRunner
-from fixtures.starter import keep_the_starter_text
+from medharness.validation.project import keep_the_starter_text
 
 from medharness.cli import main
 from medharness.scaffold import replace_placeholders, scaffold_dhf

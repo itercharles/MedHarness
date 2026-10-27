@@ -15,7 +15,7 @@ import pytest
 import yaml
 from click.testing import CliRunner
 
-from fixtures.starter import keep_the_starter_text, verify_the_starter
+from medharness.validation.project import keep_the_starter_text, verify_the_starter
 from medharness.cli import main
 from medharness.results import ReleaseReport
 from medharness.scaffold import replace_placeholders, scaffold_dhf

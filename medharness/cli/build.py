@@ -301,6 +301,35 @@ def register(main):
         click.echo(f"OK build approvals {version}: {result['documents']} document(s), "
                    f"{result['signatures']} signature(s) in {result['path']}.", err=True)
 
+    @build.command("validation")
+    @click.option("--out-dir", required=True, type=click.Path(file_okay=False, path_type=Path),
+                  help="Where to write validation-report.html (or .pdf).")
+    @click.option("--doc-format", type=click.Choice(["html", "pdf"]), default="html",
+                  show_default=True, help="Format of the report. PDF needs medharness[docs] plus cairo/pango.")
+    def build_validation(out_dir, doc_format) -> None:
+        """Validate this installation: run the shipped validation set and write a report to file.
+
+        Each case runs the CLI against a scratch project in a temporary directory, never
+        the DHF of --dhf, and checks a test point of a high-risk requirement. The report
+        also checks the installed files against the release, the installed dependencies
+        against the versions the release was tested with, and records the environment.
+        Exits 1 unless the result is `passed`: a point that failed, a modified install,
+        or a point that could not run (a missing tool, a build with no release record).
+        """
+        from medharness.services.validation import build_validation as run  # noqa: PLC0415
+
+        report = run(out_dir, doc_format)
+        click.echo(json.dumps(report))
+        for err in report["errors"]:
+            click.echo(f"{'FAIL' if report['result'] == 'failed' else 'WARN'} [validation] {err}", err=True)
+        points = [p for r in report["requirements"] for p in r["points"]]
+        passed = sum(p["status"] == "passed" for p in points)
+        written = f" in {report['path']}" if report["path"] else "; no report was written"
+        click.echo(f"{report['result'].upper()} build validation: {passed} of {len(points)} test point(s) "
+                   f"passed{written}.", err=True)
+        if report["result"] != "passed" or not report["path"]:
+            sys.exit(1)
+
     @build.command("soup")
     @click.option("--manifest", "manifest_paths", multiple=True,
                   type=click.Path(exists=True, dir_okay=False, path_type=Path),

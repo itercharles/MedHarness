@@ -1,0 +1,22 @@
+id: SRS-072
+title: build validation is incomplete, never passed, when it could not check everything
+content: '`build validation` shall report `incomplete` and exit 1, unless something
+  failed, when a test point did not run because a tool its case needs is missing,
+  when a test point of the release record has no case, when the installation carries
+  no release record, or when the installed files cannot be checked against a RECORD,
+  so that a validation that skipped something is never reported as passed.'
+verification_criteria: The exit code is 1, `result` is `incomplete`, each point that
+  did not run is `not_run` with the reason (the missing tool, or that no case exercises
+  it yet), and `errors` says how many points did not run, that there is no release
+  record, or that the installation cannot be checked.
+testing: 'T1: A missing tool leaves its case''s points not run and the result incomplete.
+
+  T2: A build without a release record, installed in editable mode, is incomplete
+  even when every point passes.
+
+  T3: A point of the release record that no case exercises is not run, and the result
+  is incomplete.'
+verification_method:
+- Test
+risk: medium
+type: SRS

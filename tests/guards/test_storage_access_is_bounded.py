@@ -25,6 +25,10 @@ MEDHARNESS = ROOT / "medharness"
 #: Scaffolding: creating a DHF and keeping its skeleton current.
 SCAFFOLD = {"medharness/scaffold.py"}
 
+#: The validation set's scratch projects. A case edits item files the way a person on a
+#: branch does, because that is what the gates it checks are run against.
+SCRATCH_PROJECTS = "medharness/validation/"
+
 #: A path *built* into the DHF: the `/` join operator followed by one of its
 #: directories. A JSON key, a git argument, a variable named doc_types, and a
 #: filename quoted inside an error message written for a person are all strings
@@ -50,7 +54,7 @@ def test_only_the_scaffold_names_dhf_directories() -> None:
     offending = []
     for path in MODULES:
         rel = str(path.relative_to(ROOT))
-        if rel in SCAFFOLD:
+        if rel in SCAFFOLD or rel.startswith(SCRATCH_PROJECTS):
             continue
         offending += [
             f"{rel}:{i + 1}: {line.strip()[:90]}"

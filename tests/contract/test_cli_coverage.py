@@ -1,6 +1,6 @@
 """Contract tests: functional coverage for CI gate, evidence, and artifact commands."""
 import json
-from fixtures.starter import keep_the_starter_text, verify_the_starter
+from medharness.validation.project import keep_the_starter_text, verify_the_starter
 import sys
 from pathlib import Path
 

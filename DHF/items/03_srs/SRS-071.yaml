@@ -1,0 +1,26 @@
+id: SRS-071
+title: build validation fails when a point fails or the installed files differ from
+  the release
+content: '`build validation` shall report `failed` and exit 1 when a validation case
+  fails or crashes, when the scratch project a case needs cannot be built, when a
+  case exercises a test point the release record does not define, or when an installed
+  file of the distribution is missing or differs from the hash in its RECORD, so that
+  a broken installation is never reported as validated.'
+verification_criteria: The exit code is 1, `result` is `failed`, and `errors` and
+  the point's `message` name the failing point and case, the crash's exception, the
+  case whose point the release does not define, or the installed file that differs.
+  A crash is reported, not printed as a traceback.
+testing: 'T1: A failing case fails the validation and names its point; the other points
+  keep their own result.
+
+  T2: A case that crashes is a failure, not a traceback.
+
+  T3: A scratch project that cannot be built fails every case that needs it.
+
+  T4: A case for a point the release record does not define fails the validation.
+
+  T5: An installed file changed after installation is named.'
+verification_method:
+- Test
+risk: medium
+type: SRS

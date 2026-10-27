@@ -130,3 +130,19 @@ pip install "medharness[docs]==<version>" -c medharness-<version>-tested-with.tx
 ```
 
 The `==` pins MedHarness itself; the constraints pin everything it pulls in, so an install done later resolves to the versions the suite ran against rather than the newest ones on PyPI. The JUnit file and the test summary are the evidence of what that configuration passed. Keep them with your release records.
+
+## Validating your installation
+
+The release's evidence shows the suite passed where MedHarness was built. To show the copy you installed behaves the same in your environment, run:
+
+```bash
+medharness build validation --out-dir validation
+```
+
+It runs the validation set that ships in the package against a scratch project in a temporary directory, never your DHF, and writes `validation/validation-report.html` (`--doc-format pdf` with the `docs` extra). The report gives the result, `passed`, `failed` or `incomplete`; the installed files checked against the release; each installed dependency beside the version the release was tested with; your platform, Python, `git` and `ssh-keygen`; and, for each high-risk requirement of MedHarness's own DHF, every test point with the case that exercised it and its result. It ends with blank fields for who performed and reviewed the validation. The command exits 0 only when the result is `passed`.
+
+- **A dependency at another version** is listed as a deviation, not a failure. Whether it matters is your assessment; the results show whether the tool behaves with it.
+- **A missing `ssh-keygen`** leaves the signing points not run, and the result `incomplete`: a validation that skipped them has not validated signing.
+- **An install from a source checkout or in editable mode** carries no release record and cannot be checked file by file, so its result is `incomplete`. Validate the wheel you install from PyPI.
+
+Run it where MedHarness makes the decisions you rely on: on the CI runner that runs your gates and `build release`, or in the same image, and on any machine where people run gates or sign releases. Run it when you adopt a version, again after every upgrade, and when that environment changes in a way that matters, such as a new operating system or Python version. The changelog and the requirement IDs in the report show which gates changed. File the report with the release's JUnit and test summary: each point in your report has the same requirement ID, test point and case name as in the vendor's run. The decision that MedHarness is fit for your intended use, and the signature, are yours ([ADR-005](adr/ADR-005-installation-validation.md)).

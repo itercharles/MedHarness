@@ -143,6 +143,7 @@ An item is its file's fields plus `type` (the doc type's code), `file_path`, and
 - **`build soup`** always writes the SOUP items in the working tree. Exit `1` on `completed_with_errors`.
 - **`build release`** exits `1` when any check failed; a failing release still writes its evidence to `--out-dir`, so you can read why, but records no REL item.
 - **`build approvals`** runs `verify approval --release` first and exits `1` when it fails, writing no sheet; the errors are the check's own.
+- **`build validation`** runs the validation set that ships in the package against scratch projects in a temporary directory; it reads no DHF, and `--dhf` is ignored. It exits `1` unless `result` is `passed`: `failed` when a point failed or an installed file differs from the release, `incomplete` when a point did not run, the build carries no release record, or the install is editable. See [adopting.md](adopting.md#validating-your-installation).
 
 ## Reports
 
@@ -350,6 +351,78 @@ The fields of what each command above answers with, generated from the models in
 | `errors` | list of strings | Why no sheet was written, as `verify approval --release` reports it |
 | `warnings` | list of strings | What `verify approval --release` noticed, such as a signature made without proven presence |
 
+#### `build validation`
+
+| Field | Type | Meaning |
+|---|---|---|
+| `result` | `passed` · `failed` · `incomplete` | `failed` when a point failed or an installed file differs; `incomplete` when a point did not run, the build has no release record or the install cannot be checked. Only `passed` exits 0 |
+| `ran_at` | string | When it ran, ISO 8601 UTC |
+| `path` | string or null | The report written; null when it could not be rendered |
+| `installation` | `InstalledFiles` | The installed files against the release |
+| `dependencies` | list of `TestedDependency` | Each dependency the release was tested with, beside the installed version; empty without a release record |
+| `environment` | `Environment` | Where it ran |
+| `requirements` | list of `ValidatedRequirement` | The result of each test point, by requirement |
+| `release` | `ReleaseRecord` or null | The release record the package carries; null in a build that is not a release |
+| `report_hash` | string | SHA-256 over the report's content, printed on the report |
+| `errors` | list of strings | Why the result is not `passed` |
+
+`InstalledFiles`:
+
+| Field | Type | Meaning |
+|---|---|---|
+| `version` | string | The installed `medharness` version |
+| `verifiable` | boolean | Whether the package's own files are in its RECORD; false for an editable install |
+| `files_checked` | integer | Files whose hash was compared with the RECORD |
+| `altered` | list of strings | Files missing or different from the RECORD; any fails the validation |
+
+`TestedDependency`:
+
+| Field | Type | Meaning |
+|---|---|---|
+| `name` | string | The package |
+| `tested` | string | The version the release's suite passed with |
+| `marker` | string or null | The environment marker of the pin, such as `sys_platform == 'win32'`, or null |
+| `installed` | string or null | The version installed here, or null |
+| `status` | `equal` · `different` · `missing` | `different` and `missing` are deviations for the user to assess; they do not fail the validation |
+
+`Environment`:
+
+| Field | Type | Meaning |
+|---|---|---|
+| `platform` | string | The operating system and its version |
+| `architecture` | string | The machine architecture |
+| `python` | string | The Python implementation and version |
+| `git` | string | `git --version`, or `not found` |
+| `ssh_keygen` | string | Where `ssh-keygen` is, or `not found` |
+| `pdf` | string | The WeasyPrint version, or why PDF rendering is not available |
+
+`ValidatedRequirement`:
+
+| Field | Type | Meaning |
+|---|---|---|
+| `id` | string | The requirement in MedHarness's own DHF, e.g. `SRS-016` |
+| `title` | string or null | Its title; null without a release record |
+| `risk` | string or null | Its risk rating; null without a release record |
+| `points` | list of `ValidationPoint` | Each of its test points |
+
+`ReleaseRecord`:
+
+| Field | Type | Meaning |
+|---|---|---|
+| `version` | string | The release the installation was built as |
+| `commit` | string | The commit the release was tagged on |
+| `evidence` | list of strings | The evidence files attached to the release's GitHub Release |
+
+`ValidationPoint`:
+
+| Field | Type | Meaning |
+|---|---|---|
+| `id` | string | The test point, e.g. `T2` |
+| `text` | string or null | What the point checks, from the release's DHF; null without a release record |
+| `cases` | list of strings | The validation cases that exercised it |
+| `status` | `passed` · `failed` · `not_run` | `not_run` when a tool a case needs is missing, or no case exercises the point yet |
+| `message` | string | Why it failed or did not run; empty when it passed |
+
 #### `init`
 
 | Field | Type | Meaning |
@@ -475,6 +548,7 @@ Generated from the CLI by `python scripts/generate_interface.py`; a test fails w
 | `build code` | Write the code and tests for a CR's approved design, with a model. |
 | `build release` | Build everything one release needs (IEC 62304 §9). |
 | `build approvals` | Write the approval sheet of a signed release: who approved which documents. |
+| `build validation` | Validate this installation: run the shipped validation set and write a report to file. |
 | `build soup` | Reconcile SOUP items from the project's dependency manifests. |
 | `init` | Scaffold a DHF, and the AGENTS.md coding agents read, in the current directory. |
 
@@ -637,6 +711,15 @@ Write the approval sheet of a signed release: who approved which documents.
 | `--out-dir DIRECTORY` | Where to write approval-sheet.html (or .pdf). [required] |
 | `--doc-format [html|pdf]` | Format of the sheet. PDF needs medharness[docs] plus cairo/pango. [default: html] |
 | `--since-ref REF` | What the branch is compared against: its changes since it left this ref. Default: the branch origin's HEAD points at, else origin/main. Needs enough history to reach the fork. |
+
+#### `medharness build validation`
+
+Validate this installation: run the shipped validation set and write a report to file.
+
+| Option | |
+|---|---|
+| `--out-dir DIRECTORY` | Where to write validation-report.html (or .pdf). [required] |
+| `--doc-format [html|pdf]` | Format of the report. PDF needs medharness[docs] plus cairo/pango. [default: html] |
 
 #### `medharness build soup`
 
