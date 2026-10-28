@@ -10,7 +10,8 @@ import os
 from pathlib import Path
 
 import pytest
-from fixtures.approvals import Project, build_project
+from fixtures.approvals import build_project
+from medharness.validation.signing import Project
 
 from medharness.results import ApprovalSheetReport
 from medharness.services.approval import fingerprint

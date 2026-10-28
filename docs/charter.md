@@ -263,9 +263,10 @@ The AI stages stay out of scope: they are not relied on as a validated transform
 - **The release carries what the report compares against.** `release.json` in the wheel holds
   the version, the commit, the evidence file names, the tested dependency versions and the
   requirement text.
-- **The set's target is all 170 high-risk test points,** each through the CLI. It starts with
-  the seeded-omission project: 9 points. Until the rest have cases, the report says
-  `incomplete`, never `passed`.
+- **The set exercises all 170 high-risk test points,** each through the CLI, the seeded-omission
+  project among them. For 48 of those points the suite had checked the service below the CLI
+  only; each now has a case that runs the command. Every case is checked against a gate made to
+  always pass and one made to always refuse, and fails under one of the two.
 
-The inventory's "Validation where it is used" row moves from Missing to Partial; it is Present
-when the set exercises every high-risk point.
+The inventory's "Validation where it is used" row moves from Missing to Present. A user's
+result is `passed` on a wheel install of a release, with `git` and `ssh-keygen` present.

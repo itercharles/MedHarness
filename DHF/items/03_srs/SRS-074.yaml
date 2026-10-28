@@ -1,0 +1,21 @@
+id: SRS-074
+title: build validation gives the same result however many cases it runs at once
+content: '`build validation` shall run its cases `--jobs` at a time, each case in
+  a worker process, and shall report for every test point the same status and message
+  as when it runs them one after another, so that a faster run is no weaker evidence.'
+verification_criteria: With `--jobs N` greater than 1 the cases run in at most N worker
+  processes, and `requirements` holds the same status and message for every test point
+  as with `--jobs 1`. A worker process that dies fails the cases that did not finish,
+  saying so, and the exit code is 1, with no traceback and the report still written.
+  A `--jobs` below 1 is refused as a usage error, with exit code 2, before anything
+  runs.
+testing: 'T1: Cases run in worker processes and give the same results as when run
+  one after another.
+
+  T2: A worker that dies fails the cases it did not finish and says so.
+
+  T3: Fewer than one job is a usage error.'
+verification_method:
+- Test
+risk: medium
+type: SRS

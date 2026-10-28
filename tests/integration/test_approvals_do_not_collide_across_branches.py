@@ -6,7 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from fixtures.approvals import build_project, git
+from fixtures.approvals import build_project
+from medharness.validation.project import git
 
 
 def test_two_signers_on_two_branches_from_one_release_both_merge(tmp_path: Path) -> None:

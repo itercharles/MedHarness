@@ -65,7 +65,7 @@ CI runs exactly this in the job `Check | Own DHF`. The DHF is not part of the pa
 | `verify approval` without `--release` | SRS-063 to SRS-065, with SRS-019, SRS-020 and SRS-022 for the log and the approvers list | covered |
 | `build approvals` | SRS-066 and SRS-067 | covered |
 | `build soup` | SRS-068 to SRS-070 | covered |
-| `build validation` | SRS-071 to SRS-073 | covered |
+| `build validation` | SRS-071 to SRS-074 | covered |
 | Low risk commands | none | rated, not specified: nothing evidence depends on them |
 
 "Covered" means every test point of every item has at least one passing test, which `verify tests --strict` enforces. It does not mean the requirements are complete for the command: an omission a requirement does not name is not tested. All seven high-risk commands and all seven medium-risk ones are covered. The low-risk commands are rated and not specified.
@@ -74,14 +74,16 @@ The requirements were derived from what the commands do today ([interface](inter
 
 ## Validation where it is used
 
-The suite above is the vendor's verification: it runs in this repository, with `pytest` and a checkout. `medharness build validation` is what a user runs where MedHarness is installed ([ADR-005](adr/ADR-005-installation-validation.md), [adopting](adopting.md#validating-your-installation)). It runs the validation set in `medharness/validation/`, which ships in the wheel: each case runs the CLI against a scratch project in a temporary directory and checks test points of a high-risk requirement. A case checks with `check()`, never `assert`, which `python -O` would remove. The set covers the gates, not `build validation` itself, which cannot be validated by the set it runs; the suite verifies it (SRS-071 to SRS-073).
+The suite above is the vendor's verification: it runs in this repository, with `pytest` and a checkout. `medharness build validation` is what a user runs where MedHarness is installed ([ADR-005](adr/ADR-005-installation-validation.md), [adopting](adopting.md#validating-your-installation)). It runs the validation set in `medharness/validation/`, which ships in the wheel: each case runs the CLI against a scratch project in a temporary directory and checks test points of a high-risk requirement. A case checks with `check()`, never `assert`, which `python -O` would remove. The set covers the gates, not `build validation` itself, which cannot be validated by the set it runs; the suite verifies it (SRS-071 to SRS-074).
 
-The set's goal is every test point of the high-risk requirements, 170 points, each through the CLI. It grows gate by gate; today it exercises 117:
+The set exercises every test point of the high-risk requirements, 170 points, each through the CLI:
 
 | Module | What it covers | Points |
 |---|---|---|
 | `medharness/validation/seeded.py` | The seeded-omission project: the honest change passes every gate, and each omission is stopped by the gate whose job it is | SRS-007 T4, SRS-008 T2, SRS-009 T2, SRS-010 T4, SRS-011 T3, SRS-012 T3, SRS-030 T4, SRS-031 T2, SRS-034 T3 |
 | `medharness/validation/completion.py` | `verify completion`, every point | SRS-002 to SRS-006 (22) |
+| `medharness/validation/impact.py` | `verify impact`, every point the seeded project does not cover | SRS-007 to SRS-015 (22) |
+| `medharness/validation/approval.py` | `verify approval`, every point, with throwaway SSH keys (`medharness/validation/signing.py`); needs `ssh-keygen` | SRS-016 to SRS-023 (31) |
 | `medharness/validation/verification.py` | `verify tests`, every point | SRS-024 to SRS-029 (20) |
 | `medharness/validation/changes.py` | `verify changes`, every point the seeded project does not cover; a store that keeps no item files is an adapter installed for the case through a real entry point | SRS-030 to SRS-034 (13) |
 | `medharness/validation/structure.py` | `verify dhf`, every point; a check that could not run is shown by making the store fail after its first read | SRS-035 to SRS-042 (27) |
@@ -89,7 +91,7 @@ The set's goal is every test point of the high-risk requirements, 170 points, ea
 
 Each case is checked against a broken gate as well as a sound one: run against a gate that always passes, every case that expects a refusal fails, and against one that always refuses, every case that expects a pass fails.
 
-Until the set exercises all 170 points the report lists the others as `not_run`, and its result is `incomplete`. `tests/integration/test_the_validation_set_passes.py` runs every case under pytest with its `dhf_links` and `dhf_testing`, so the release's JUnit contains each validation point. `tests/integration/test_a_released_wheel_validates_itself.py` builds a wheel as the release does and runs the command from it.
+A run takes about two minutes one case after another, and about half a minute on four cores: `--jobs N` runs the cases N at a time (default: the number of CPUs, at most 8), each in a worker process that finds its case by name in the shipped set, and reports the same result for every point (SRS-074). Threads would not do: the cases patch process-wide state, and the in-process CLI runner swaps `sys.stdout`. `tests/integration/test_the_validation_set_passes.py` runs every case under pytest with its `dhf_links` and `dhf_testing`, so the release's JUnit contains each validation point. `tests/integration/test_a_released_wheel_validates_itself.py` builds a wheel as the release does and runs the command from it.
 
 The release writes `release.json` into the wheel (`scripts/write_release_record.py`): its version and commit, the names of its evidence files, the dependency versions of `medharness-<version>-tested-with.txt`, and the text of each high-risk requirement. The command compares the installation against it without downloading anything.
 

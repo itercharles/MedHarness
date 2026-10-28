@@ -8,7 +8,8 @@ from pathlib import Path
 
 import pytest
 import yaml
-from fixtures.approvals import Project, build_project, entry
+from fixtures.approvals import build_project
+from medharness.validation.signing import Project, entry
 
 SOFTWARE_LEAD_DOCUMENTS = ["SRS", "SWDD", "MODULE", "SOUP"]
 
