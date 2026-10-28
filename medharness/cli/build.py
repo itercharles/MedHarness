@@ -306,7 +306,10 @@ def register(main):
                   help="Where to write validation-report.html (or .pdf).")
     @click.option("--doc-format", type=click.Choice(["html", "pdf"]), default="html",
                   show_default=True, help="Format of the report. PDF needs medharness[docs] plus cairo/pango.")
-    def build_validation(out_dir, doc_format) -> None:
+    @click.option("--jobs", type=click.IntRange(min=1), default=None, metavar="N",
+                  help="Cases to run at the same time, each in a worker process; 1 runs them one after another. "
+                       "Default: the number of CPUs, at most 8.")
+    def build_validation(out_dir, doc_format, jobs) -> None:
         """Validate this installation: run the shipped validation set and write a report to file.
 
         Each case runs the CLI against a scratch project in a temporary directory, never
@@ -316,9 +319,9 @@ def register(main):
         Exits 1 unless the result is `passed`: a point that failed, a modified install,
         or a point that could not run (a missing tool, a build with no release record).
         """
-        from medharness.services.validation import build_validation as run  # noqa: PLC0415
+        from medharness.services.validation import build_validation as run, default_jobs  # noqa: PLC0415
 
-        report = run(out_dir, doc_format)
+        report = run(out_dir, doc_format, jobs or default_jobs())
         click.echo(json.dumps(report))
         for err in report["errors"]:
             click.echo(f"{'FAIL' if report['result'] == 'failed' else 'WARN'} [validation] {err}", err=True)

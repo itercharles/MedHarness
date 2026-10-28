@@ -720,6 +720,7 @@ Validate this installation: run the shipped validation set and write a report to
 |---|---|
 | `--out-dir DIRECTORY` | Where to write validation-report.html (or .pdf). [required] |
 | `--doc-format [html|pdf]` | Format of the report. PDF needs medharness[docs] plus cairo/pango. [default: html] |
+| `--jobs N` | Cases to run at the same time, each in a worker process; 1 runs them one after another. Default: the number of CPUs, at most 8. [x>=1] |
 
 #### `medharness build soup`
 

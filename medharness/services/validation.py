@@ -160,13 +160,17 @@ def _verdict(installation: dict, record: dict | None, requirements: list[dict], 
     return ("incomplete" if errors else "passed"), errors
 
 
-def build_validation(out_dir: Path, doc_format: str = "html") -> dict:
-    """Run the validation set and write `validation-report.<doc_format>` to *out_dir*."""
+def default_jobs() -> int:
+    return min(os.cpu_count() or 1, 8)
+
+
+def build_validation(out_dir: Path, doc_format: str = "html", jobs: int = 1) -> dict:
+    """Run the validation set, *jobs* cases at a time, and write `validation-report.<doc_format>` to *out_dir*."""
     record = json.loads(RELEASE_RECORD.read_text(encoding="utf-8")) if RELEASE_RECORD.is_file() else None
     ran_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
     installation = _installation()
     with tempfile.TemporaryDirectory(prefix="medharness-validation-") as tmp:
-        outcomes = _quietly(lambda: run_cases(CASES, Path(tmp) / "run"))
+        outcomes = _quietly(lambda: run_cases(CASES, Path(tmp) / "run", jobs))
         requirements, stale = _requirements(record, outcomes)
         result, errors = _verdict(installation, record, requirements, stale)
         report = {

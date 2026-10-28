@@ -8,6 +8,8 @@ The set is replaced with small cases to reach each verdict quickly.
 from __future__ import annotations
 
 import json
+from concurrent.futures import Future, ProcessPoolExecutor
+from concurrent.futures.process import BrokenProcessPool
 from pathlib import Path
 
 import pytest
@@ -16,6 +18,8 @@ from click.testing import CliRunner
 from medharness.cli import main
 from medharness.results import ValidationReport
 from medharness.services import validation
+from medharness.validation import CASES
+from medharness.validation import case as case_module
 from medharness.validation.case import Case, check
 
 
@@ -35,10 +39,11 @@ def _crashes(root: Path) -> None:
     raise KeyError("errors")
 
 
-def _run(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, cases: list[Case], *args: str):
+def _run(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, cases: list[Case], *args: str, jobs: int = 1):
+    """Cases built by a test run in this process: a worker process finds its case in the shipped set."""
     monkeypatch.setattr(validation, "CASES", cases)
     out = tmp_path / "report"
-    result = CliRunner().invoke(main, ["build", "validation", "--out-dir", str(out), *args])
+    result = CliRunner().invoke(main, ["build", "validation", "--out-dir", str(out), "--jobs", str(jobs), *args])
     report = json.loads(result.stdout)
     ValidationReport.model_validate(report)
     return result, report, out
@@ -161,6 +166,73 @@ def test_a_case_for_a_point_the_release_does_not_define_fails(tmp_path, monkeypa
 def test_it_never_reads_the_dhf_it_is_given(tmp_path, monkeypatch) -> None:
     monkeypatch.setattr(validation, "CASES", [Case("a", "SRS-034", ("T3",), _nothing, _passes, tools=())])
     result = CliRunner().invoke(main, ["--dhf", str(tmp_path / "no-such-dhf"), "build", "validation",
-                                       "--out-dir", str(tmp_path / "out")])
+                                       "--out-dir", str(tmp_path / "out"), "--jobs", "1"])
     assert json.loads(result.stdout)["requirements"][0]["points"][0]["status"] == "passed"
     assert not (tmp_path / "no-such-dhf").exists()
+
+
+SAMPLE = ("the_honest_change_passes_every_gate", "cr_not_in_the_dhf", "unknown_link_warns",
+          "dependent_left_unreviewed", "starter_chain_passes_strict", "junit_is_required")
+
+
+def _shipped(*names: str) -> list[Case]:
+    by_name = {c.name: c for c in CASES}
+    return [by_name[name] for name in names]
+
+
+@pytest.mark.dhf_links("SRS-074")
+@pytest.mark.dhf_testing("T1")
+def test_cases_run_in_workers_and_give_the_same_results_as_one_after_another(tmp_path, monkeypatch) -> None:
+    pools = []
+
+    class Recording(ProcessPoolExecutor):
+        def __init__(self, *args, **kwargs):
+            pools.append(kwargs["max_workers"])
+            super().__init__(*args, **kwargs)
+
+    monkeypatch.setattr(case_module, "ProcessPoolExecutor", Recording)
+    cases = _shipped(*SAMPLE)
+
+    _, one_after_another, _ = _run(tmp_path / "serial", monkeypatch, cases, jobs=1)
+    assert pools == [], "one job started worker processes"
+    _, in_workers, _ = _run(tmp_path / "parallel", monkeypatch, cases, jobs=2)
+
+    assert pools == [2]
+    assert _points(in_workers) == _points(one_after_another)
+    assert [status for status, _ in _points(in_workers).values()] == ["passed"] * len(SAMPLE)
+    assert in_workers["errors"] == one_after_another["errors"]
+
+
+@pytest.mark.dhf_links("SRS-074")
+@pytest.mark.dhf_testing("T2")
+def test_a_worker_that_dies_fails_the_cases_it_did_not_finish(tmp_path, monkeypatch) -> None:
+    class Dying:
+        def __init__(self, *args, **kwargs): ...
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return False
+
+        def submit(self, *args):
+            future = Future()
+            future.set_exception(BrokenProcessPool("a child process terminated abruptly"))
+            return future
+
+    monkeypatch.setattr(case_module, "ProcessPoolExecutor", Dying)
+
+    result, report, out = _run(tmp_path, monkeypatch, _shipped(*SAMPLE[:3]), jobs=2)
+
+    assert result.exit_code == 1 and report["result"] == "failed" and "Traceback" not in result.stderr
+    assert all(status == "failed" and "a worker process died" in message for status, message in _points(report).values())
+    assert len(_points(report)) == 3 and (out / "validation-report.html").is_file()
+
+
+@pytest.mark.dhf_links("SRS-074")
+@pytest.mark.dhf_testing("T3")
+def test_fewer_than_one_job_is_a_usage_error(tmp_path) -> None:
+    result = CliRunner().invoke(main, ["build", "validation", "--out-dir", str(tmp_path / "report"), "--jobs", "0"])
+
+    assert result.exit_code == 2 and "--jobs" in result.output
+    assert not (tmp_path / "report").exists()
