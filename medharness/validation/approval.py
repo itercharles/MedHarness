@@ -338,6 +338,14 @@ def release_record_moving_on_is_not_drift(root: Path) -> None:
     _passes(project.verify("--release", "1.0.0"))
 
 
+def malformed_list_is_named(root: Path) -> None:
+    project = project_in(root)
+    project.approvers_file.write_text("name: Lead\n", encoding="utf-8")
+    answer = project.verify()
+    _fails(answer)
+    check("must be a list of approvers" in answer["errors"][0], f"errors: {answer['errors']}")
+
+
 def first_list_is_the_root_of_trust(root: Path) -> None:
     project = project_in(root)
     project.write_approvers([entry("Lead", project.keys["Lead"], ["software-lead"])])
@@ -386,6 +394,7 @@ CASES = [
     Case("unrelated_key_does_not_stand_in", "SRS-022", ("T4",), approvers_on_main, unrelated_key_does_not_stand_in, TOOLS),
     Case("deleting_the_list_does_not_switch_approvals_off", "SRS-022", ("T5",), approvers_on_main,
          deleting_the_list_does_not_switch_approvals_off, TOOLS),
+    Case("malformed_list_is_named", "SRS-022", ("T6",), approvers_on_main, malformed_list_is_named, TOOLS),
     Case("every_role_signed", "SRS-023", ("T1",), released, every_role_signed, TOOLS),
     Case("one_person_holding_every_role", "SRS-023", ("T2",), released_without_approvers, one_person_holding_every_role, TOOLS),
     Case("release_record_moving_on_is_not_drift", "SRS-023", ("T3",), released, release_record_moving_on_is_not_drift, TOOLS),
