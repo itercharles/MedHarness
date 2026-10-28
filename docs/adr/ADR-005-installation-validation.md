@@ -10,7 +10,7 @@ MedHarness in its quality system validates it for that use (ISO 13485 §4.1.6), 
 IEC/TR 80002-2 expects part of that evidence to come from the environment the tool
 runs in, not only from the vendor's. MedHarness now has the vendor's half:
 
-- its own DHF, `DHF/`, with 49 requirements and 170 test points for the high-risk gates
+- its own DHF, `DHF/`, with 49 requirements and 171 test points for the high-risk gates
   (20 more, with 83 points, for the medium-risk commands are proposed in #465), which the
   suite verifies and CI checks with `verify dhf --strict` and `verify tests --strict`
   ([validation.md](../validation.md));
@@ -153,7 +153,7 @@ Proposed with six open questions; accepted with these answers.
 1. **Name.** `build validation`. It writes a report, so it is a `build`, and the four
    groups stay as they are.
 2. **Scope of the set.** Every test point of the high-risk requirements (SRS-002 to
-   SRS-050, 170 points), each exercised through the CLI. A point that the suite verifies
+   SRS-050, 171 points), each exercised through the CLI. A point that the suite verifies
    only below the CLI today gets a case that runs the command. Medium-risk points are a
    later addition. The set is built over several pull requests: the command, the report,
    `release.json` and the seeded-omission cases first, then the remaining points gate by

@@ -11,6 +11,9 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+### Changed
+- SRS-022 gains test point T6 (a malformed approvers list is named, not crashed on), which its test already claimed without the requirement declaring it, so the high-risk requirements now have 171 test points and the validation set a case for each (`malformed_list_is_named`).
+
 ## [0.71.0] — 2026-10-28
 
 ### Added

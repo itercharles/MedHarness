@@ -82,7 +82,7 @@ def test_the_installed_wheel_is_checked_against_its_release_record(installed: Pa
     assert report["installation"]["files_checked"] > 50
     assert report["release"]["version"] == "9.9.9" and report["release"]["commit"] == "abc123"
     assert report["dependencies"] and {d["status"] for d in report["dependencies"]} == {"equal"}
-    assert sum(len(r["points"]) for r in report["requirements"]) == 170
+    assert sum(len(r["points"]) for r in report["requirements"]) == 171
 
     exercised = {(c.requirement, p) for c in CASES for p in c.points}
     statuses = {(r["id"], p["id"]): p["status"] for r in report["requirements"] for p in r["points"]}

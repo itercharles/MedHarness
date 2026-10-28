@@ -76,7 +76,7 @@ The requirements were derived from what the commands do today ([interface](inter
 
 The suite above is the vendor's verification: it runs in this repository, with `pytest` and a checkout. `medharness build validation` is what a user runs where MedHarness is installed ([ADR-005](adr/ADR-005-installation-validation.md), [adopting](adopting.md#validating-your-installation)). It runs the validation set in `medharness/validation/`, which ships in the wheel: each case runs the CLI against a scratch project in a temporary directory and checks test points of a high-risk requirement. A case checks with `check()`, never `assert`, which `python -O` would remove. The set covers the gates, not `build validation` itself, which cannot be validated by the set it runs; the suite verifies it (SRS-071 to SRS-074).
 
-The set exercises every test point of the high-risk requirements, 170 points, each through the CLI:
+The set exercises every test point of the high-risk requirements, 171 points, each through the CLI:
 
 | Module | What it covers | Points |
 |---|---|---|
