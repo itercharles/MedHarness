@@ -8,12 +8,14 @@ temporary directory that is removed afterwards, and nothing reaches the network.
 from __future__ import annotations
 
 import base64
+import contextlib
 import hashlib
 import json
 import os
 import platform
 import shutil
 import subprocess
+import sys
 import tempfile
 from datetime import datetime, timezone
 from importlib import metadata
@@ -93,7 +95,8 @@ def _tool_version(*command: str) -> str:
 
 def _pdf() -> str:
     try:
-        import weasyprint  # noqa: PLC0415
+        with contextlib.redirect_stdout(sys.stderr):  # WeasyPrint prints its missing-library notice to stdout
+            import weasyprint  # noqa: PLC0415
     except Exception as exc:  # noqa: BLE001  (missing native libraries raise OSError, not ImportError)
         return f"not available ({type(exc).__name__})"
     return f"WeasyPrint {weasyprint.__version__}"
