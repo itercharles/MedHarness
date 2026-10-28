@@ -19,6 +19,7 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 - `build validation` runs its cases in parallel: `--jobs N` (default: the number of CPUs, at most 8; `--jobs 1` runs them one after another) sets how many run at once, each case in a worker process that finds it by name in the shipped set. All 170 points take about half a minute on four cores instead of a minute and a half, with the same result for every point. A worker that dies fails the cases it did not finish.
 
 ### Fixed
+- `build validation` no longer prints WeasyPrint's missing-library notice into its JSON. It reads the WeasyPrint version for the report's environment section, and on a machine with WeasyPrint installed but without its native libraries (pango, cairo) the import prints a notice to stdout, so stdout was no longer JSON and `build validation` failed with a parse error for any caller, though the HTML report does not need WeasyPrint at all. The notice now goes to stderr. Found when the suite was run on a machine without those libraries: twelve tests of `build validation` failed on `main`.
 - `item list`, and everything else that reads the item store, returns items in ID order, by prefix and then by number (`SRS-999` before `SRS-1000`). It followed the filesystem's directory order, which differs between filesystems, so the same DHF could list in a different order on another machine.
 
 ### Changed

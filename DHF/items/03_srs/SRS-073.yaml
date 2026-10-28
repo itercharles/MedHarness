@@ -21,7 +21,9 @@ testing: 'T1: An installed wheel is checked against its release record: its file
 
   T3: The DHF that --dhf names is never read or created.
 
-  T4: The report file is written, with the requirement text of each point.'
+  T4: The report file is written, with the requirement text of each point.
+
+  T5: A PDF library that prints when it is imported does not spoil the JSON on stdout.'
 verification_method:
 - Test
 risk: medium

@@ -8,6 +8,7 @@ The set is replaced with small cases to reach each verdict quickly.
 from __future__ import annotations
 
 import json
+import sys
 from concurrent.futures import Future, ProcessPoolExecutor
 from concurrent.futures.process import BrokenProcessPool
 from pathlib import Path
@@ -236,3 +237,20 @@ def test_fewer_than_one_job_is_a_usage_error(tmp_path) -> None:
 
     assert result.exit_code == 2 and "--jobs" in result.output
     assert not (tmp_path / "report").exists()
+
+
+@pytest.mark.dhf_links("SRS-073")
+@pytest.mark.dhf_testing("T5")
+def test_a_pdf_library_that_prints_when_imported_does_not_spoil_the_json(tmp_path, monkeypatch) -> None:
+    """WeasyPrint prints a notice to stdout when its native libraries are missing; stdout is the JSON report."""
+    fake = tmp_path / "fakelib"
+    fake.mkdir()
+    (fake / "weasyprint.py").write_text('print("WeasyPrint could not import some external libraries.")\nraise OSError("no pango")\n')
+    monkeypatch.syspath_prepend(str(fake))
+    monkeypatch.delitem(sys.modules, "weasyprint", raising=False)
+
+    result, report, out = _run(tmp_path, monkeypatch, [Case("a", "SRS-034", ("T3",), _nothing, _passes, tools=())])
+
+    assert report["environment"]["pdf"] == "not available (OSError)"
+    assert "could not import" not in result.stdout
+    assert (out / "validation-report.html").is_file()
