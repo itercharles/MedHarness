@@ -19,7 +19,9 @@ testing: 'T1: A key added without an approval from the earlier list fails, namin
   T4: An approval by a key on the list that is not an earlier approver does not stand
   in for the earlier list.
 
-  T5: Deleting the list does not switch approvals off.'
+  T5: Deleting the list does not switch approvals off.
+
+  T6: A malformed approvers list is named in the error, not crashed on.'
 verification_method:
 - Test
 type: SRS
