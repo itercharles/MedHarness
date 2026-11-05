@@ -1,6 +1,6 @@
 code: SWDD
 role: design_detail
-has_verification: true
+has_verification: false
 name: Software Detailed Design
 description: |-
   Belongs here: a design decision inside one module that a developer given only the software requirement could get meaningfully wrong. It carries both `implements` (the SRS) and `module` (the MODULE).

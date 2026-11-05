@@ -4,12 +4,14 @@ from __future__ import annotations
 
 import hashlib
 import json
+import subprocess
+from importlib import metadata
 from pathlib import Path
 
 import yaml
 
 from medharness.validation.case import Case, check, invoke
-from medharness.validation.project import edit, item_path, junit, scaffolded, starter, verify_the_starter
+from medharness.validation.project import edit, git, item_path, junit, scaffolded, starter, verify_the_starter
 
 CLOSED = {"status": "completed", "implementation_notes": "Scale the dose by the calibration factor.",
           "affected_risk_items": [], "affected_items": ["SRS-001"]}
@@ -236,6 +238,36 @@ def failing_release_writes_its_evidence(root: Path) -> None:
           f"no specification in {report['artifacts']}")
 
 
+def manifest_hashes_the_test_results(root: Path) -> None:
+    _released(root)
+    out = root / "out" / "1.0.0"
+    manifest = json.loads((out / "evidence-manifest.json").read_text(encoding="utf-8"))
+    hashes = {f["path"]: f["sha256"] for f in manifest["files"]}
+    check("test-results/junit.xml" in hashes, f"the test results are not in the manifest: {sorted(hashes)[:6]}")
+    check(hashes["test-results/junit.xml"] == hashlib.sha256((root / "results" / "junit.xml").read_bytes()).hexdigest(),
+          "the manifest's hash of the test results is not the hash of the file the release was given")
+    summary = json.loads((out / "evidence-summary.json").read_text(encoding="utf-8"))
+    check(summary["artifacts"]["junit_files"] == ["test-results/junit.xml"],
+          f"the summary names {summary['artifacts']['junit_files']}")
+
+
+def baseline_names_the_build(root: Path) -> None:
+    git(root, "init", "-q", "-b", "main")
+    git(root, "config", "user.email", "validation@medharness.invalid")
+    git(root, "config", "user.name", "validation")
+    git(root, "add", "-A")
+    git(root, "commit", "-qm", "base")
+    head = subprocess.run(["git", "-C", str(root), "rev-parse", "HEAD"], capture_output=True, text=True, check=True).stdout.strip()
+    _released(root)
+    out = root / "out" / "1.0.0"
+    baseline = json.loads((out / "release-baseline.json").read_text(encoding="utf-8"))
+    check(baseline["commit_sha"] == head, f"the baseline names commit {baseline['commit_sha']!r}, not {head!r}")
+    check(baseline["medharness_version"] == metadata.version("medharness"),
+          f"the baseline names tool version {baseline['medharness_version']!r}")
+    sbom = json.loads((out / "sbom.cdx.json").read_text(encoding="utf-8"))
+    check(sbom["metadata"]["component"].get("version") == "1.0.0", f"the SBOM subject: {sbom['metadata']['component']}")
+
+
 # --- SRS-049: the manifest leaves the release records out ----------------------------------------
 
 def _sha(path: Path) -> str:
@@ -315,6 +347,8 @@ CASES = [
     Case("removed_item_is_listed", "SRS-047", ("T5",), releasable, removed_item_is_listed, tools=()),
     Case("failing_release_records_nothing", "SRS-048", ("T1",), releasable, failing_release_records_nothing, tools=()),
     Case("failing_release_writes_its_evidence", "SRS-048", ("T2",), releasable, failing_release_writes_its_evidence, tools=()),
+    Case("manifest_hashes_the_test_results", "SRS-048", ("T3",), releasable, manifest_hashes_the_test_results, tools=()),
+    Case("baseline_names_the_build", "SRS-048", ("T4",), releasable, baseline_names_the_build, tools=("git",)),
     Case("manifest_hashes_everything_but_releases", "SRS-049", ("T1",), releasable,
          manifest_hashes_everything_but_releases, tools=()),
     Case("manifest_without_approvers", "SRS-049", ("T2",), releasable, manifest_without_approvers, tools=()),

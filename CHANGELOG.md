@@ -11,6 +11,18 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.71.2] — 2026-11-05
+
+Found by a mock audit of a real project's release evidence (ContourLab's CI bundle), checked by hand.
+
+### Fixed
+- Every chain of the traceability report read `not_verified`. The shipped `swdd.yaml` set `has_verification: true`, so design items were expected to carry tests, they never do (a design item is verified through the requirement it implements), and a chain takes the status of its last level. In that bundle the requirement levels were `verified` in 35 chains of 36 and the report still said 0 of 36. `swdd.yaml` now sets `has_verification: false`, and a chain reads the status of its deepest verifiable level. A project that keeps its own `swdd.yaml` with `has_verification: true` changes it by hand.
+
+### Changed
+- `build release` copies the test results it was given into the bundle (`test-results/`), so the evidence manifest hashes them, and the evidence summary names them there. The manifest covered everything but the test evidence it was judged on, and the summary named the paths of the CI machine.
+- `release-baseline.json` carries `commit_sha` and `medharness_version`, and the CycloneDX SBOM's subject carries the release version. The baseline named neither what was built nor what built it.
+- SRS-048 gains T3 and T4 for these, and the validation set a case for each: the high-risk requirements now have 175 test points.
+
 ## [0.71.1] — 2026-11-05
 
 ### Fixed

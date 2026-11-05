@@ -128,8 +128,11 @@ release/release-baseline.json
 release/software-bom.json      # dhfkit's own shape, unchanged
 release/sbom.cdx.json          # the same release in CycloneDX
 release/evidence-manifest.json # every file above and below, hashed
-release/specifications/ …      # plus traceability and test evidence
+release/specifications/ …      # plus traceability reports
+release/test-results/ …        # the JUnit files the release was judged on, copied here so they are hashed
 ```
+
+The baseline names the commit and the `medharness` version that built it, and the SBOM's subject carries the release version.
 
 `--manifest` accepts every format `build soup` reads — `requirements.txt`, `uv.lock`, `poetry.lock`, `pyproject.toml`, `package.json`, `package-lock.json`, `pnpm-lock.yaml`.
 
