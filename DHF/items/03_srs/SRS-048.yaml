@@ -12,7 +12,13 @@ verification_criteria: The exit code is 1, `rel_uid` is null, `evidence-manifest
 testing: 'T1: A failing release exits 1 with no REL item and nothing under DHF/releases.
 
   T2: A failing release still writes the evidence manifest and the specifications
-  to the out directory.'
+  to the out directory.
+
+  T3: The evidence manifest hashes the test results the release was given, which are
+  copied into the bundle, and the summary names them there.
+
+  T4: The baseline names the commit and the medharness version that built the release,
+  and the SBOM''s subject carries the release version.'
 verification_method:
 - Test
 type: SRS

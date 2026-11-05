@@ -13,6 +13,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+import shutil
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
@@ -299,6 +300,26 @@ def _generate_plan_artifacts(adapter, out_dir: Path, doc_format: str = "html") -
     return generated
 
 
+def _copy_test_results(junit_paths: list[Path], out_dir: Path) -> list[str]:
+    """The test results the release was judged on, copied into the bundle so the manifest hashes them.
+
+    Returns their paths relative to *out_dir*, which is what the evidence summary names.
+    """
+    copied: list[str] = []
+    for index, given in enumerate(junit_paths):
+        source = Path(given)
+        pairs = ([(f, Path(source.name) / f.relative_to(source)) for f in sorted(source.rglob("*.xml"))]
+                 if source.is_dir() else [(source, Path(source.name))])
+        for file, relative in pairs:
+            target = out_dir / "test-results" / relative
+            if target.exists():
+                target = target.with_name(f"{index}_{target.name}")
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(file, target)
+            copied.append(str(target.relative_to(out_dir)))
+    return copied
+
+
 def build_evidence_bundle(
     dhf_path: Path,
     out_dir: Path,
@@ -322,6 +343,8 @@ def build_evidence_bundle(
         adapter, out_dir, list(junit_paths), version,
         doc_format=doc_format, notice=notice,
     )
+
+    artifacts["junit_files"] = _copy_test_results(junit_paths, out_dir)
 
     provenance = {
         "commit_sha": git.head(dhf_path.resolve().parent) or "",
@@ -510,9 +533,18 @@ def build_release_baseline(
     soup_count = len(bom.get("dhf_soup") or [])
     manifest_packages_count = len(bom.get("manifest_packages") or [])
 
+    try:
+        from importlib.metadata import version as pkg_version
+
+        tool_version = pkg_version("medharness")
+    except Exception:  # noqa: BLE001
+        tool_version = "unknown"
+
     # Build baseline record
     baseline = {
         "version": version,
+        "commit_sha": git.head(dhf.resolve().parent) or "",
+        "medharness_version": tool_version,
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "included_crs": sorted(cr_ids),
         "soup_count": soup_count,
@@ -549,16 +581,10 @@ def build_release_baseline(
     # is dhfkit's own shape and stays as it is; this is the CycloneDX view of
     # the release, which is what FDA cybersecurity guidance and the EU CRA want.
     try:
-        from importlib.metadata import version as pkg_version
-
         from dhfkit.sbom import build_sbom, merge_release_components, purl_gap, write_sbom
 
         soup_items = [i for i in open_store(dhf).list_items() if i.get("type") == "SOUP"]
         components = merge_release_components(soup_items, bom["manifest_packages"])
-        try:
-            tool_version = pkg_version("medharness")
-        except Exception:  # noqa: BLE001
-            tool_version = "unknown"
         try:
             project_name = open_store(dhf).config.project_name
         except Exception:  # noqa: BLE001
@@ -567,7 +593,7 @@ def build_release_baseline(
             # reason to fail the baseline.
             project_name = dhf.resolve().parent.name
         document = build_sbom(
-            components, project_name=project_name, tool_version=tool_version,
+            components, project_name=project_name, tool_version=tool_version, subject_version=version,
         )
         sbom_path, _changed = write_sbom(document, out_dir / "sbom.cdx.json")
         artifacts.append(str(sbom_path))

@@ -210,6 +210,7 @@ def build_sbom(
     tool_version: str,
     *,
     timestamp: str | None = None,
+    subject_version: str | None = None,
 ) -> dict[str, Any]:
     """Assemble the CycloneDX document. Pure — no filesystem, no clock."""
     components = sorted(
@@ -234,6 +235,7 @@ def build_sbom(
                 "type": "application",
                 "bom-ref": "subject",
                 "name": project_name,
+                **({"version": subject_version} if subject_version else {}),
             },
         },
         "components": components,
