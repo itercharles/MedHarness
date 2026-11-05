@@ -40,10 +40,10 @@ def _judge(repo_root: Path, dhf_path: Path, since_ref: str, release: str | None)
     list_path = approvers_path(dhf_path)
     rel_list = os.path.relpath(list_path.resolve(), repo_root.resolve())
     if standing is None:
-        if _existed_at(repo_root, since_ref, rel_list):
+        if _existed_at(repo_root, since_ref, rel_list) or git.in_history(repo_root, rel_list):
             return gate_result(GATE, False, "The approvers list is gone.", errors=[
-                f"{rel_list} existed at {since_ref} and is deleted: removing it would switch approvals off. "
-                f"Restore it."])
+                f"{rel_list} existed on this branch or at {since_ref} and is deleted: removing it would switch "
+                f"approvals off. Restore it."])
         if release is not None:
             return gate_result(GATE, False, "Approvals are not configured.", errors=[
                 f"Approvals are not configured: {rel_list} does not exist, so release {release} cannot be signed."])

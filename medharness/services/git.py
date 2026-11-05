@@ -216,6 +216,13 @@ def file_at_branch_point(repo_root: Path, since_ref: str, path: str) -> str | No
     return result.stdout if result.returncode == 0 else None
 
 
+def in_history(repo_root: Path, path: str) -> bool:
+    """Whether any commit reachable from HEAD touched *path*: the branch's own history, no other ref needed."""
+    result = subprocess.run(["git", *_PLAIN_PATHS, "log", "-1", "--format=%H", "HEAD", "--", path],
+                            capture_output=True, text=True, cwd=str(repo_root), check=False)
+    return result.returncode == 0 and bool(result.stdout.strip())
+
+
 def collect_dhf_item_changes(repo_root: Path, since_ref: str, dhf_path: Path | str = "DHF") -> dict[str, list[str]]:
     """Return ``{created, updated, deleted}`` lists of DHF item IDs changed since ``since_ref``.
 

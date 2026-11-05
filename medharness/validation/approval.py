@@ -306,6 +306,15 @@ def deleting_the_list_does_not_switch_approvals_off(root: Path) -> None:
     check("approvers.yaml" in answer["errors"][0], f"errors: {answer['errors']}")
 
 
+def deleting_the_list_with_an_unreachable_reference(root: Path) -> None:
+    project = project_in(root)
+    project.approvers_file.unlink()
+    result = project.run("verify", "approval", "--since-ref", "origin/nowhere")
+    answer = json.loads(result.stdout.splitlines()[0])
+    _fails(answer)
+    check("existed on this branch" in answer["errors"][0], f"errors: {answer['errors']}")
+
+
 # --- SRS-023: a fully signed release passes ------------------------------------------------------
 
 def every_role_signed(root: Path) -> None:
@@ -395,6 +404,8 @@ CASES = [
     Case("deleting_the_list_does_not_switch_approvals_off", "SRS-022", ("T5",), approvers_on_main,
          deleting_the_list_does_not_switch_approvals_off, TOOLS),
     Case("malformed_list_is_named", "SRS-022", ("T6",), approvers_on_main, malformed_list_is_named, TOOLS),
+    Case("deleting_the_list_with_an_unreachable_reference", "SRS-022", ("T5",), approvers_on_main,
+         deleting_the_list_with_an_unreachable_reference, TOOLS),
     Case("every_role_signed", "SRS-023", ("T1",), released, every_role_signed, TOOLS),
     Case("one_person_holding_every_role", "SRS-023", ("T2",), released_without_approvers, one_person_holding_every_role, TOOLS),
     Case("release_record_moving_on_is_not_drift", "SRS-023", ("T3",), released, release_record_moving_on_is_not_drift, TOOLS),

@@ -136,6 +136,16 @@ def unknown_link_fails_under_strict(root: Path) -> None:
     _fails(_tests(root, ("test_all", f"{ALL},SRS-999", "passed"), strict=True), "SRS-999: linked by 'test_all'")
 
 
+def undeclared_point_warns(root: Path) -> None:
+    result = _passes(_tests(root, ("test_all", ALL, "passed"), ("test_extra", "SRS-001", "passed", "T9")))
+    _warns(result, "SRS-001: T9 is claimed by 'test_extra' but SRS-001 does not declare it")
+
+
+def undeclared_point_fails_under_strict(root: Path) -> None:
+    _fails(_tests(root, ("test_all", ALL, "passed"), ("test_extra", "SRS-001", "passed", "T9"), strict=True),
+           "SRS-001: T9 is claimed by 'test_extra'")
+
+
 # --- SRS-029: everything covered passes ----------------------------------------------------------
 
 def every_requirement_covered(root: Path) -> None:
@@ -176,6 +186,9 @@ CASES = [
          inspection_is_not_counted_as_covered, tools=()),
     Case("unknown_link_warns", "SRS-028", ("T1",), verified_starter, unknown_link_warns, tools=()),
     Case("unknown_link_fails_under_strict", "SRS-028", ("T2",), verified_starter, unknown_link_fails_under_strict, tools=()),
+    Case("undeclared_point_warns", "SRS-028", ("T3",), verified_starter, undeclared_point_warns, tools=()),
+    Case("undeclared_point_fails_under_strict", "SRS-028", ("T4",), verified_starter,
+         undeclared_point_fails_under_strict, tools=()),
     Case("every_requirement_covered", "SRS-029", ("T1",), verified_starter, every_requirement_covered, tools=()),
     Case("every_point_covered", "SRS-029", ("T2",), with_two_points, every_point_covered, tools=()),
     Case("name_tags_count_as_properties_do", "SRS-029", ("T3",), with_two_points, name_tags_count_as_properties_do, tools=()),

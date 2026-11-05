@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -53,3 +54,32 @@ def test_a_malformed_approvers_list_is_named_not_crashed_on(tmp_path: Path) -> N
 
     assert answer["passed"] is False
     assert "must be a list of approvers" in answer["errors"][0]
+
+
+def _verify_against(project, ref: str) -> dict:
+    result = project.run("verify", "approval", "--since-ref", ref)
+    return json.loads(result.stdout.splitlines()[0])
+
+
+@pytest.mark.dhf_links("SRS-022")
+@pytest.mark.dhf_testing("T5")
+def test_deleting_the_list_is_refused_even_when_the_reference_cannot_be_reached(tmp_path: Path) -> None:
+    """A branch could delete the list and name a reference no one can fetch, so the gate looked at nothing."""
+    project = build_project(tmp_path)
+    project.approvers_file.unlink()
+
+    answer = _verify_against(project, "origin/nowhere")
+
+    assert answer["passed"] is False
+    assert "existed on this branch" in answer["errors"][0] and "approvers.yaml" in answer["errors"][0]
+
+
+@pytest.mark.dhf_links("SRS-063")
+@pytest.mark.dhf_testing("T1")
+def test_a_project_that_never_had_a_list_still_passes_when_the_reference_cannot_be_reached(tmp_path: Path) -> None:
+    project = build_project(tmp_path, with_approvers=False)
+
+    answer = _verify_against(project, "origin/nowhere")
+
+    assert answer["passed"] is True
+    assert "not configured" in answer["summary"]

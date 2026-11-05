@@ -157,6 +157,20 @@ def ci_test_coverage_gate(
     (errors if strict else warnings).extend(
         f"{u['id']}: linked by {', '.join(repr(n) for n in u['tests'][:3])} but not in the DHF" for u in unknown_links
     )
+    # The same for a test point: one the requirement does not declare is evidence for nothing, and
+    # a test tagged with a point that was never written down passes unseen.
+    declared = {item["id"]: set(parse_testing_points(item.get("testing") or "")) for item in all_items}
+    unclaimed: dict[tuple[str, str], list[str]] = {}
+    for test in evidence:
+        if test.status != "SKIP":
+            for link in test.links:
+                for point in test.testing_points:
+                    if link in declared and point not in declared[link]:
+                        unclaimed.setdefault((link, point), []).append(test.name)
+    (errors if strict else warnings).extend(
+        f"{uid}: {point} is claimed by {', '.join(repr(n) for n in sorted(set(names))[:3])} but {uid} does not declare it"
+        for (uid, point), names in sorted(unclaimed.items())
+    )
     # A requirement with no declared method is a §5.7 gap, but a project that
     # adopted this before the field existed has one on every item. It warns
     # until asked to block, the call `verify dhf` makes for coverage gaps.
