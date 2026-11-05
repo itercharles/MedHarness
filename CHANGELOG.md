@@ -11,8 +11,14 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.71.1] — 2026-11-05
+
+### Fixed
+- `verify approval` no longer lets a branch switch approvals off by deleting `approvers.yaml` and naming a reference nobody can fetch. With the list gone it looked at `--since-ref` to see whether it had existed there, and an unreachable reference read as "never existed", so the gate passed with "not configured". It now also looks at the branch's own history: a list that was ever committed on it and is now missing fails the gate, whatever the reference. A project that never had a list is unaffected, and still passes when the reference cannot be reached. SRS-022 T5 now says so, with a second test and a validation case for it.
+
 ### Changed
-- SRS-022 gains test point T6 (a malformed approvers list is named, not crashed on), which its test already claimed without the requirement declaring it, so the high-risk requirements now have 171 test points and the validation set a case for each (`malformed_list_is_named`).
+- `verify tests` warns (and fails under `--strict`) when a passing or failing test claims a test point that its requirement does not declare (`SRS-001: T9 is claimed by 'test_x' but SRS-001 does not declare it`), as it already does for a link to an item the DHF does not have. A test tagged with a point nobody wrote down passed unseen: MedHarness's own test for a malformed approvers list was one. SRS-028 gains T3 and T4 and the validation set a case for each, so the high-risk requirements now have 173 test points. A project whose tests tag undeclared points sees new warnings.
+- SRS-022 gains test point T6 (a malformed approvers list is named, not crashed on), which its test already claimed without the requirement declaring it, so the validation set has a case for it (`malformed_list_is_named`).
 
 ## [0.71.0] — 2026-10-28
 

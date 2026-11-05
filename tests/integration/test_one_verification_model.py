@@ -37,11 +37,16 @@ def _set(dhf: Path, name: str, **fields) -> None:
     path.write_text(yaml.safe_dump(data))
 
 
-def _junit(tmp_path: Path, *cases: tuple[str, str | None, bool]) -> Path:
-    """(name, medharness.links value or None, failed)."""
+def _junit(tmp_path: Path, *cases: tuple) -> Path:
+    """(name, medharness.links value or None, failed[, medharness.testing value])."""
     xml = ["<testsuite>"]
-    for name, links, failed in cases:
-        props = f'<properties><property name="medharness.links" value="{links}"/></properties>' if links else ""
+    for name, links, failed, *points in cases:
+        props = ""
+        if links:
+            props = f'<property name="medharness.links" value="{links}"/>'
+            if points:
+                props += f'<property name="medharness.testing" value="{points[0]}"/>'
+            props = f"<properties>{props}</properties>"
         failure = '<failure message="x"/>' if failed else ""
         xml.append(f'<testcase name="{name}" classname="c">{props}{failure}</testcase>')
     xml.append("</testsuite>")
@@ -123,3 +128,16 @@ def test_a_link_to_an_id_the_dhf_does_not_have_warns_and_fails_under_strict(dhf:
     assert any("SRS-999: linked by 'test_gone' but not in the DHF" in w for w in loose_answer["warnings"])
     assert strict.exit_code == 1
     assert any("SRS-999: linked by 'test_gone'" in e for e in strict_answer["errors"])
+
+
+@pytest.mark.dhf_links("SRS-028")
+@pytest.mark.dhf_testing("T3", "T4")
+def test_a_test_point_the_requirement_does_not_declare_warns_and_fails_under_strict(dhf: Path, tmp_path: Path) -> None:
+    junit = _junit(tmp_path, ("test_all", "CRS-001,SYS-001,SRS-001", False), ("test_extra", "SRS-001", False, "T9"))
+    loose, loose_answer = _tests(dhf, junit)
+    strict, strict_answer = _tests(dhf, junit, "--strict")
+    assert any("SRS-001: T9 is claimed by 'test_extra' but SRS-001 does not declare it" in w
+               for w in loose_answer["warnings"])
+    assert strict.exit_code == 1
+    assert any("SRS-001: T9 is claimed by 'test_extra'" in e for e in strict_answer["errors"])
+
