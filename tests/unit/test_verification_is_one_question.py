@@ -54,6 +54,8 @@ class TestTheDeclaredMethodDecides:
             "an item verified by Inspection was reported as missing a test"
         )
         assert [g["id"] for g in details["manual_review_required"]] == ["SRS-001"]
+        warning = next(w for w in result["warnings"] if w.startswith("SRS-001"))
+        assert "no test evidence" in warning and "record" not in warning, "the DHF has nowhere to write a record"
 
     @pytest.mark.dhf_links("SRS-024")
     @pytest.mark.dhf_testing("T1")
