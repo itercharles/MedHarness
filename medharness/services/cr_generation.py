@@ -9,7 +9,7 @@ from dhfkit.store import open_store
 from medharness.services import checks as check_runner
 from medharness.services import design_validation, git
 from medharness.services.cr_impact import _record_design_impact_in_cr
-from medharness.services.llm import _model_label, _resolve_stage_llm
+from medharness.services.llm import _resolve_stage_llm
 from medharness.services.pr_feedback import (
     _auto_post_pr_feedback,
     _pr_base,
@@ -69,7 +69,6 @@ def _code_paths(dhf_path: Path, repo_root: Path) -> tuple[str, ...]:
 def _validate_design(run: Run, name: str, items_changed: dict) -> list[dict]:
     step, perf = _begin_step(name, {"validator": "validate_generate_dhf"})
     errors = design_validation.validate_generate_dhf(run.cr_id, run.dhf_path, items_changed, run.code_changed())
-    run.diagnostics["final_error_count"] = len(errors)
     run.steps.append(_finish_step(step, perf, "failed" if errors else "ok", {"error_count": len(errors)}))
     return errors
 
@@ -108,23 +107,11 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None,
     design_llm = _resolve_stage_llm("design")
     review_llm = _resolve_stage_llm("design_review")
     since_ref = git.resolve_since_ref(dhf_path.resolve().parent, since_ref or (pr_number and _pr_base(pr_number)))
-    run = Run(cr_id, dhf_path, pr_number, since_ref, (design_llm, review_llm), {
-        "design_model": _model_label(design_llm),
-        "design_review_model": _model_label(review_llm),
-        "github_feedback": {"attempted": False},
-        "fix_attempted": False,
-        "initial_error_count": 0,
-        "final_error_count": 0,
-        "design_review_verdict": None,
-        "design_review_cycles": 0,
-        "session_id": None,
-        "resumed_session_id": None,
-    })
+    run = Run(cr_id, dhf_path, pr_number, since_ref, (design_llm, review_llm))
     prior_session = get_session(pr_number) if pr_number else ""
     run.resume_from(prior_session)
 
-    feedback = _pr_feedback(pr_number, run.steps, run.diagnostics, run.warnings) if pr_number else None
-    run.inputs["revision_mode"] = feedback is not None
+    feedback = _pr_feedback(pr_number, run.steps, run.warnings) if pr_number else None
     if feedback is not None:
         prompt_step, prompt_perf = _begin_step(
             "prepare_prompt",
@@ -164,10 +151,9 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None,
 
     items_changed = run.items_changed()
     errors = _validate_design(run, "validate_initial", items_changed)
-    run.diagnostics["initial_error_count"] = len(errors)
 
     if errors:
-        run.diagnostics["fix_attempted"] = True
+        run.fix_attempted = True
         run.call(
             "run_fix_generation",
             f"The DHF cascade for {cr_id} failed deterministic validation:\n"
@@ -228,10 +214,8 @@ def generate_dhf(cr_id: str, dhf_path: Path, pr_number: int | None = None,
             "fix": "Revert them. A design run writes the DHF and its review only; code is `build code`'s. "
                    "Nothing was pushed.",
         })
-    run.diagnostics["design_review_verdict"] = design_review_verdict
     if warning := _review_not_approved("design", design_review_verdict):
         run.warnings.append(warning)
-    run.diagnostics["design_review_cycles"] = review_cycle
     run.leave_uncommitted()
 
     items_changed = run.items_changed()
@@ -311,19 +295,7 @@ def generate_code(
     develop_llm = _resolve_stage_llm("develop")
     review_llm = _resolve_stage_llm("code_review")
     since_ref = git.resolve_since_ref(dhf_path.resolve().parent, since_ref or (pr_number and _pr_base(pr_number)))
-    run = Run(cr_id, dhf_path, pr_number, since_ref, (develop_llm, review_llm), {
-        "develop_model": _model_label(develop_llm),
-        "code_review_model": _model_label(review_llm),
-        "github_feedback": {"attempted": False},
-        "preflight_errors": 0,
-        "fix_attempted": False,
-        "initial_error_count": 0,
-        "final_error_count": 0,
-        "code_review_verdict": None,
-        "code_review_cycles": 0,
-        "session_id": None,
-        "resumed_session_id": None,
-    })
+    run = Run(cr_id, dhf_path, pr_number, since_ref, (develop_llm, review_llm))
     prior_session = get_session(pr_number) if pr_number else ""
     run.resume_from(prior_session)
 
@@ -331,15 +303,13 @@ def generate_code(
     # so the prompt can include specific fixes rather than the LLM discovering them later.
     # Uses validate_dhf_structure (schema + traceability only) to avoid false positives
     # from reconciliation checks that require a non-empty created_ids list.
-    feedback = _pr_feedback(pr_number, run.steps, run.diagnostics, run.warnings) if pr_number else None
-    run.inputs["revision_mode"] = feedback is not None
+    feedback = _pr_feedback(pr_number, run.steps, run.warnings) if pr_number else None
     if feedback is None:
         preflight_step, preflight_perf = _begin_step("preflight_traceability")
         try:
             preflight_errors = design_validation.validate_dhf_structure(dhf_path)
         except Exception:
             preflight_errors = []
-        run.diagnostics["preflight_errors"] = len(preflight_errors)
         run.steps.append(_finish_step(
             preflight_step, preflight_perf,
             "warning" if preflight_errors else "ok",
@@ -413,10 +383,8 @@ def generate_code(
             develop_llm, critical=False,
         )
 
-    run.diagnostics["code_review_verdict"] = code_review_verdict
     if warning := _review_not_approved("code", code_review_verdict):
         run.warnings.append(warning)
-    run.diagnostics["code_review_cycles"] = review_cycle
 
     check_results = _run_checks(run, checks, develop_llm) if checks else []
 

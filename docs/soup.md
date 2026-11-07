@@ -19,7 +19,7 @@ The `build soup` command reads dependency files from your project and creates or
 The other lockfile parsers (`uv.lock`, `poetry.lock`, `package-lock.json`) register every package the lockfile
 lists, transitive ones included; the pnpm one registers only what a project declares, since the whole closure is
 rarely a set anyone assesses one by one. Any ecosystem without a parser (Go, Cargo, Maven, yarn, conda, ...) goes
-through `--from-command` or a `command` source: one JSON object per line,
+through a `command` source in `soup-sources.yaml`: one JSON object per line,
 `{"name": ..., "version": ..., "ecosystem": ...}`.
 
 ### Auto-discovery
@@ -73,7 +73,7 @@ sources:
         ecosystem: null
 ```
 
-Source priority when multiple are configured: explicit `--manifest` flags → `--from-command` flags → `soup-sources.yaml` → auto-discovery.
+Source priority when multiple are configured: explicit `--manifest` flags → `soup-sources.yaml` → auto-discovery.
 
 ### Applying changes
 

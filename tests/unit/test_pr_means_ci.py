@@ -80,11 +80,11 @@ class TestRevisionNeedsSomethingToRevise:
 
     def test_a_new_pr_with_no_reviews_generates(self) -> None:
         with patch.object(pr_feedback, "_get_pr_feedback", return_value=self._feedback(0, 0)):
-            assert pr_feedback._pr_feedback(7, [], {}, []) is None
+            assert pr_feedback._pr_feedback(7, [], []) is None
 
     def test_a_reviewed_pr_revises(self) -> None:
         with patch.object(pr_feedback, "_get_pr_feedback", return_value=self._feedback(0, 1)):
-            assert pr_feedback._pr_feedback(7, [], {}, []) is not None
+            assert pr_feedback._pr_feedback(7, [], []) is not None
 
 
 def test_without_pr_nothing_is_pushed(tmp_path: Path) -> None:

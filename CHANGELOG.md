@@ -11,6 +11,20 @@ MedHarness follows [Semantic Versioning](https://semver.org/):
 
 ## [Unreleased]
 
+## [0.72.0] — 2026-11-07
+
+The interface and its documents, cut to what a caller or a reader uses. Each removal below is breaking; nothing else changes.
+
+### Removed
+- `build plan` and `build code` no longer report `timing`, `inputs`, `progress` or `diagnostics`. `progress` was computed from `steps`, `inputs` echoed the arguments, `timing` fed one stderr line, and the documentation said the keys of `diagnostics` "vary by stage". What the run found is in `outcome`, `summary`, `errors`, `warnings`, `steps`, `artifacts` and the review. The stderr summary still shows the elapsed time.
+- `build validation` prints only `result`, `path` and `errors` on stdout. The installed files, dependencies, environment and each test point were a second copy of the report it writes; they are in that file.
+- `item approve --statement`: the signed statement is the fixed text, which no one changed.
+- `build soup --from-command`: a `command` source in `DHF/config/soup-sources.yaml` does the same.
+
+### Changed
+- `docs/interface.md` shrinks from 737 lines to about 340: no option tables (`--help` lists them), one gate table, and the item-file rules and the settings `verify impact` reads move to `configuration.md`. The README no longer lists the commands, a list that had already drifted.
+- SRS-073 says what `build validation` prints.
+
 ## [0.71.2] — 2026-11-05
 
 Found by a mock audit of a real project's release evidence (ContourLab's CI bundle), checked by hand.

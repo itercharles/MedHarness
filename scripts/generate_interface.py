@@ -1,8 +1,8 @@
 """Regenerate the parts of docs/interface.md that the code already states.
 
-The command reference (every command, its summary and options) is read from the
-Click tree, the gate table from `services/gates.py`, and what each command
-answers with from the models in `medharness/results.py`, so none of them can
+The command list is read from the Click tree, the gate table from
+`services/gates.py`, and what each command answers with from the models in
+`medharness/results.py`, so none of them can
 drift from the code. The prose around them is written by hand.
 
     python scripts/generate_interface.py           # rewrite docs/interface.md
@@ -49,45 +49,21 @@ def _commands(main: click.Group) -> list[tuple[str, click.Command]]:
 
 
 def render_reference() -> str:
+    """Every command but the checks, which the gate table describes; options are `--help`'s."""
     from medharness.cli import main
 
-    ctx = click.Context(main, info_name="medharness")
     lines = ["| Command | What it does |", "|---|---|"]
-    commands = _commands(main)
-    lines += [f"| `{path}` | {_summary(cmd)} |" for path, cmd in commands]
-
-    for path, cmd in commands:
-        options = []
-        for param in cmd.get_params(click.Context(cmd, parent=ctx, info_name=path)):
-            if not isinstance(param, click.Option) or "--help" in param.opts:
-                continue
-            record = param.get_help_record(click.Context(cmd, parent=ctx))
-            options.append(f"| `{record[0]}` | {' '.join(record[1].split())} |")
-        arguments = " ".join(
-            p.make_metavar(click.Context(cmd)) for p in cmd.params if isinstance(p, click.Argument)
-        )
-        usage = f"medharness {path}" + (f" {arguments}" if arguments else "")
-        lines += ["", f"#### `{usage}`", "", _summary(cmd)]
-        if options:
-            lines += ["", "| Option | |", "|---|---|", *options]
+    lines += [f"| `{path}` | {_summary(cmd)} |" for path, cmd in _commands(main) if not path.startswith("verify ")]
     return "\n".join(lines)
 
 
 def render_gate_table() -> str:
-    from medharness.cli import main
     from medharness.services.gates import GATES
 
-    lines = ["| Gate | Checks | Options | Network | Blocking |", "|---|---|---|---|---|"]
+    lines = ["| Gate | Checks | Network | Blocking |", "|---|---|---|---|"]
     for gate in GATES:
-        group, _, name = gate["command"].partition(" ")
-        params = main.commands[group].commands[name].params
-        options = [
-            f"`{p.opts[0]}`" + (" (required)" if p.required else "")
-            for p in params if isinstance(p, click.Option) and "--help" not in p.opts
-        ]
         lines.append(
-            f"| `{gate['command']}` | {gate['checks']} | {', '.join(options) or '—'} "
-            f"| {'yes' if gate['needs_network'] else 'no'} | `{gate['blocking']}` |"
+            f"| `{gate['command']}` | {gate['checks']} | {'yes' if gate['needs_network'] else 'no'} | `{gate['blocking']}` |"
         )
     return "\n".join(lines)
 

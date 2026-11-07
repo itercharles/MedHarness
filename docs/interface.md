@@ -1,66 +1,73 @@
 # Interface
 
 > **Stability:** Stable
-> **Last reviewed:** 2026-10-23
+> **Last reviewed:** 2026-11-07
 
-What a script, a CI pipeline or a coding agent can rely on when it calls `medharness`: what each command does, what it prints, how it exits, and what may change. Tests check the facts stated here against the CLI.
+What a script, a CI pipeline or a coding agent can rely on when it calls `medharness`: what it prints, how it exits, and what may change. Tests check the facts stated here against the CLI. Options are not repeated: `--help` on any command lists them.
 
-MedHarness does not scaffold a CI workflow — a pipeline carries your runner labels, secrets and branch names, and a generated one would be wrong for most projects. This document is the other half of that decision: build the pipeline against it.
+MedHarness does not scaffold a CI workflow — a pipeline carries your runner labels, secrets and branch names, and a generated one would be wrong for most projects. Build yours against this page; [ci.md](ci.md) has a recipe to start from.
 
 ---
 
-## The commands
+## Every command
 
-One CLI, four groups. What each does is in the [command reference](#command-reference), generated from the CLI itself, so it lists every command and option and cannot drift.
-
-- **`item`** reads or changes one DHF item at a time.
-- **`verify`** judges the DHF, and a change against it. It writes nothing.
-- **`build`** produces items, code or release artifacts.
-- **`init`** scaffolds a project.
-
-Rules every command shares:
-
-- **The answer is on stdout, as JSON.** stderr carries readable lines for a person. **stderr is not a contract**: its wording changes freely, so never parse it — everything a caller needs is in the answer.
-- **`--dhf PATH` goes before the command** (`medharness --dhf DHF verify dhf`) and defaults to `DHF`. No command takes its own.
-- **Every command runs locally, as well as in CI.** Nothing commits or pushes, with one exception: `build plan` and `build code` take `--pr N` in CI, which revises from that pull request's reviews and then commits and pushes to its branch. Without `--pr` they change files in the working tree and stop. `build release` writes its artifacts to `--out-dir`, and records the REL item in the DHF only with `--write`.
+- **The answer is on stdout, as JSON.** stderr carries readable lines for a person. **stderr is not a contract**: its wording changes freely, so never parse it.
+- **`--dhf PATH` goes before the command** (`medharness --dhf DHF verify dhf`) and defaults to `DHF`.
+- **Commands run locally, as well as in CI.** Nothing commits or pushes, with one exception: `build plan` and `build code` take `--pr N` in CI, which revises from that pull request's reviews and then commits and pushes to its branch. `build release` writes its artifacts to `--out-dir` and records the REL item in the DHF only with `--write`.
+- **`--prompt`** on `build plan` and `build code` prints Markdown, not JSON: the stage's steps and the CR's DHF context, for an agent that is already running. It starts no model and changes nothing.
 
 ### Exit codes
 
 | Code | stdout | Meaning |
 |------|--------|---------|
 | `0` | JSON | The command succeeded, or the check passed |
-| `1` | JSON | It ran and failed — a check found errors, or a build run ended in `tool_error` or `completed_with_errors` |
+| `1` | JSON | It ran and failed — a check found errors, or a build run ended in `tool_error`, `rejected` or `completed_with_errors` |
 | `1` | *empty* | It never got to answer: a DHF that could not be read, an unknown item, an update the schema refuses |
 | `2` | *empty* | Argument parsing error, e.g. an unknown flag |
 
-A pipeline that only checks exit status is a valid consumer and needs to parse nothing.
+A pipeline that only checks exit status needs to parse nothing. If you parse, check stdout is non-empty first: exit `1` means either a finding or a command that never answered, and only the first writes JSON.
 
-**If you parse, check stdout is non-empty first.** Exit `1` means either a finding or a command that never answered, and only the first writes JSON. Treating an empty stdout as parseable is the one mistake this interface invites:
+---
 
-```python
-lines = proc.stdout.splitlines()
-if not lines:                     # the command never answered
-    raise SystemExit(proc.stderr)
-result = json.loads(lines[0])
-```
+## Commands
+
+`verify` commands answer with the [envelope](#the-checks-verify), `item` with the record, and the rest with the [report](#build) below.
+
+<!-- BEGIN GENERATED: reference — python scripts/generate_interface.py -->
+| Command | What it does |
+|---|---|
+| `item get` | Get a single DHF item by ID. Outputs JSON. |
+| `item list` | List DHF items in ID order. Outputs one JSON object per line. |
+| `item create` | Create a new DHF item. Outputs the created item as JSON. |
+| `item update` | Update fields of an existing DHF item. |
+| `item transition` | Move an item to TO_STATE, or list where it can go when TO_STATE is omitted. |
+| `item approve` | Sign a release's documents, or the approvers list. |
+| `build plan` | Draft the DHF item cascade and impact analysis for a CR, with a model. |
+| `build code` | Write the code and tests for a CR's approved design, with a model. |
+| `build release` | Build everything one release needs (IEC 62304 §9). |
+| `build approvals` | Write the approval sheet of a signed release: who approved which documents. |
+| `build validation` | Validate this installation: run the shipped validation set and write a report to file. |
+| `build soup` | Reconcile SOUP items from the project's dependency manifests. |
+| `init` | Scaffold a DHF, and the AGENTS.md coding agents read, in the current directory. |
+<!-- END GENERATED: reference -->
 
 ---
 
 ## The checks (`verify`)
 
 <!-- BEGIN GENERATED: gates — python scripts/generate_interface.py -->
-| Gate | Checks | Options | Network | Blocking |
-|---|---|---|---|---|
-| `verify dhf` | Schema validity, required traceability, dangling links, and coverage between V-model layers. | `--strict` | no | `conditional` |
-| `verify tests` | Requirement-to-test coverage from JUnit evidence, including declared test points. | `--junit`, `--strict` | no | `conditional` |
-| `verify soup` | The SOUP register against the dependency manifests, and each item against the OSV vulnerability database, honouring documented per-CVE acceptances. | `--manifest`, `--strict`, `--offline-mode` | yes | `conditional` |
-| `verify completion` | CR closure: mandatory CR fields, that the CR's affected_items exist, and verification evidence for each. | `--cr` (required), `--junit` | no | `always` |
-| `verify impact` | That the CR's record of its impact (impact_analysis, reviewed_items, affected_risk_items) is complete, evidenced and settles every item the branch's changes reach. | `--cr` (required), `--since-ref` | no | `always` |
-| `verify changes` | That the branch, uncommitted work included, changes exactly the items its CR lists, and code when asked. | `--cr` (required), `--since-ref`, `--code-path` | no | `always` |
-| `verify approval` | That every approval is signed by an approver holding its roles, that approvals are only added, and that a change to the approvers list is approved from the list as it was. With --release: that each document of the release manifest and the release itself carry a current signature from their role. | `--since-ref`, `--release` | no | `always` |
+| Gate | Checks | Network | Blocking |
+|---|---|---|---|
+| `verify dhf` | Schema validity, required traceability, dangling links, and coverage between V-model layers. | no | `conditional` |
+| `verify tests` | Requirement-to-test coverage from JUnit evidence, including declared test points. | no | `conditional` |
+| `verify soup` | The SOUP register against the dependency manifests, and each item against the OSV vulnerability database, honouring documented per-CVE acceptances. | yes | `conditional` |
+| `verify completion` | CR closure: mandatory CR fields, that the CR's affected_items exist, and verification evidence for each. | no | `always` |
+| `verify impact` | That the CR's record of its impact (impact_analysis, reviewed_items, affected_risk_items) is complete, evidenced and settles every item the branch's changes reach. | no | `always` |
+| `verify changes` | That the branch, uncommitted work included, changes exactly the items its CR lists, and code when asked. | no | `always` |
+| `verify approval` | That every approval is signed by an approver holding its roles, that approvals are only added, and that a change to the approvers list is approved from the list as it was. With --release: that each document of the release manifest and the release itself carry a current signature from their role. | no | `always` |
 <!-- END GENERATED: gates -->
 
-Every check answers from the machine it runs on, and none reads GitHub. During development, approval is the review of the pull request under the team's own rules, and no check reads it. At release, approval is a signature: `item approve --release` signs the documents a role owns, `verify approval --release` checks the signatures from the files in the repository, and `build approvals` renders who signed what ([ADR-004](adr/ADR-004-signed-approvals.md)).
+Every check answers from the machine it runs on, and none reads GitHub. During development, approval is the review of the pull request under the team's own rules. At release, approval is a signature: `item approve --release` signs the documents a role owns, `verify approval --release` checks the signatures from the files in the repository, and `build approvals` renders who signed what ([ADR-004](adr/ADR-004-signed-approvals.md)).
 
 ### The result envelope
 
@@ -86,32 +93,22 @@ Every check answers from the machine it runs on, and none reads GitHub. During d
 | `warnings` | list of strings | What the check noticed without failing |
 <!-- END GENERATED: envelope -->
 
-`errors` and `warnings` are **strings already phrased for a reader**, and they are the whole of what the check found: a caller that prints them produces a usable report without knowing which check it ran. There is no structured second copy — checks used to carry one under `details`, no caller read it, and its documented shape was wrong in three places by the time it was removed.
-
-`summary` is where "what was checked" lives: `13 item(s) checked` distinguishes a real pass from a check that examined nothing.
-
-A check that fails always populates `errors`. The test suite enforces that across every check; a `passed: false` with nothing to act on is a defect.
+`errors` and `warnings` are strings already phrased for a reader, and they are the whole of what the check found: a caller that prints them produces a usable report without knowing which check it ran. `summary` is where "what was checked" lives: `13 item(s) checked` distinguishes a real pass from a check that examined nothing. A check that fails always populates `errors`.
 
 ### What blocks a build
-
-The `Blocking` column means:
 
 | Value | Meaning |
 |-------|---------|
 | `always` | Any finding fails the check |
 | `conditional` | Some findings always fail; others only under `--strict` (or, for `verify soup`, `--offline-mode`) |
 
-`--strict` exists on `verify dhf`, `tests` and `soup`. For those three:
-
-- `verify dhf` — schema errors, required-link failures, dangling links, links to a type the field does not accept (`satisfies` takes CRS only) and a `status` that is no state of the item's type always fail. Coverage gaps, and title or content that is still a placeholder (`placeholder_patterns` in `global.yaml`; the starter items' "Replace with your own", `TBD`), warn unless `--strict`. `build release` runs it strict, so the starter DHF cannot ship.
-- `verify tests` — uncovered requirements and unverified tests always fail. A missing `verification_method` warns unless `--strict`.
+- `verify dhf` — schema errors, required-link failures, dangling links, links to a type the field does not accept and a `status` that is no state of the item's type always fail. Coverage gaps, and title or content that is still a placeholder (`placeholder_patterns` in `global.yaml`), warn unless `--strict`. `build release` runs it strict, so the starter DHF cannot ship.
+- `verify tests` — uncovered requirements and unverified tests always fail. A missing `verification_method`, and a test that claims a test point its requirement does not declare, warn unless `--strict`.
 - `verify soup` — known vulnerabilities always fail, and so does an unreachable osv.dev unless `--offline-mode warn`. Drift from the manifests warns unless `--strict`.
 
-One distinction worth knowing before you wire anything: **broken references versus incomplete design.** `verify dhf` always fails on a link whose target does not exist — a typo or a deleted item. An item with no downstream child yet is normal mid-project and fails only under `--strict`. They need different fixes, so they are reported differently.
+A link whose target does not exist (a typo, a deleted item) always fails; an item with no downstream child yet is normal mid-project and fails only under `--strict`.
 
-`verify changes` compares the working tree, uncommitted and untracked files included, against `--since-ref` (default `origin/main`), and needs that ref to be reachable — in CI, fetch it or check out with full history. 
-
-`verify impact` runs the same comparison for the CR's record of its impact, the judgement `build plan` makes before it finishes: `impact_analysis` complete and evidenced, naming only items the DHF has, and an item that depends on a changed one (through a typed link, in an item type that sits in a traceability chain) that is neither changed nor listed in the CR's `reviewed_items`. `impact_depth` in `global.yaml` sets how many links out it looks; `0` turns that off. Code reaches items too: a MODULE lists the repository paths it owns in `paths` (an entry ending in `/` is a directory, any other a file or glob), and each file the branch changed outside the DHF reaches the SWDD items that name that module and the requirements they implement, which must be changed or listed in `reviewed_items`. Once any module declares `paths`, a changed file that no module owns fails as well, unless `unowned_paths` in `global.yaml` exempts it (by default docs, CI workflows, Markdown, licences and lockfiles; `*` in a glob also crosses directories); until then the code check is off. `verify changes` no longer judges it (before 0.69.0 it did). A CR marked rejected (`triage_result.verdict: rejected`) is not checked only while its branch changes nothing but the CR; otherwise it fails and is checked like any other.
+`verify changes` and `verify impact` compare the working tree, uncommitted and untracked files included, against `--since-ref` (default `origin/main`), which must be reachable: in CI, fetch it or check out with full history. `verify changes` checks that the branch changes exactly the items its CR lists. `verify impact` checks the CR's record of its impact: `impact_analysis` complete and evidenced, naming only items the DHF has, and every item the branch's changes reach either changed or listed in `reviewed_items`; what it reads is in [configuration.md](configuration.md#what-verify-impact-reads). A CR marked rejected (`triage_result.verdict: rejected`) is exempt only while its branch changes nothing but the CR.
 
 ---
 
@@ -121,33 +118,28 @@ One distinction worth knowing before you wire anything: **broken references vers
 
 | Command | stdout |
 |---|---|
-| `item list [--type T]` | one JSON object per line, one per item, in ID order (by prefix, then number: `SRS-999` before `SRS-1000`); the count goes to stderr |
+| `item list` | one JSON object per line, in ID order (by prefix, then number: `SRS-999` before `SRS-1000`); the count goes to stderr |
 | `item get ID` | the item |
-| `item create --type T --data JSON` | the item, with its allocated ID |
-| `item update ID --data JSON` | the item after the merge |
+| `item create`, `item update ID` | the item after the write, with its ID |
 | `item transition ID STATE` | the item in its new state |
 | `item transition ID` | `item_id`, `current_status` and `transitions` — where it can go, and what blocks each move |
+| `item approve` | the approval record written, with its path |
 
-An item is its file's fields plus `type` (the doc type's code), `file_path`, and `all_linked_uids` — every ID it links to, so a caller need not know which fields are links.
+An item is its file's fields plus `type` (the item type's code), `file_path`, and `all_linked_uids` — every ID it links to, so a caller need not know which fields are links.
 
-`create` and `update` validate against the doc type's schema **before writing**: an unknown field or a missing required field exits `1` with nothing on stdout and the reason on stderr, and no file is written. `update` changes only the fields it is given, and rewrites only the fields whose value changed, so a review shows the field that changed and nothing else.
+`create` and `update` validate against the item type's schema **before writing**: an unknown field or a missing required field exits `1` with nothing on stdout and the reason on stderr, and no file is written. `update` changes only the fields it is given, and rewrites only those whose value changed, so a review shows the field that changed and nothing else.
 
 ---
 
 ## Build
 
-`build` commands are not checks and do not answer with the envelope; each answers with its own report, whose fields are listed [below](#reports).
+`build` commands do not answer with the envelope; each answers with its own report.
 
-- **`build plan` and `build code`** exit `1` when the `outcome` is `completed_with_errors` or `tool_error`. Their execution boundary is in [ai-security.md](ai-security.md).
-- **`--prompt`** on either prints Markdown, not JSON: the stage's steps and the CR's DHF context, for an agent that is already running. It starts no model and changes nothing. It is the only output that is not JSON.
+- **`build plan` and `build code`** exit `1` when the `outcome` is `completed_with_errors`, `tool_error` or `rejected`. Their execution boundary is in [ai-security.md](ai-security.md).
 - **`build soup`** always writes the SOUP items in the working tree. Exit `1` on `completed_with_errors`.
 - **`build release`** exits `1` when any check failed; a failing release still writes its evidence to `--out-dir`, so you can read why, but records no REL item.
-- **`build approvals`** runs `verify approval --release` first and exits `1` when it fails, writing no sheet; the errors are the check's own.
-- **`build validation`** runs the validation set that ships in the package against scratch projects in a temporary directory; it reads no DHF, and `--dhf` is ignored. It exits `1` unless `result` is `passed`: `failed` when a point failed or an installed file differs from the release, `incomplete` when a point did not run, the build carries no release record, or the install is editable. See [adopting.md](adopting.md#validating-your-installation).
-
-## Reports
-
-The fields of what each command above answers with, generated from the models in `medharness/results.py`. Tests validate real output against them, so a key that is not listed here, or listed and missing, fails the build.
+- **`build approvals`** runs `verify approval --release` first and exits `1` when it fails, writing no sheet.
+- **`build validation`** runs the validation set that ships in the package against scratch projects; it reads no DHF, and `--dhf` is ignored. It answers with the verdict and the path of the report it wrote, which holds the rest. It exits `1` unless `result` is `passed`. See [adopting.md](adopting.md#validating-your-installation).
 
 <!-- BEGIN GENERATED: shapes — python scripts/generate_interface.py -->
 #### `build plan`
@@ -157,42 +149,13 @@ The fields of what each command above answers with, generated from the models in
 | `cr_id` | string | The CR the run was for |
 | `outcome` | `ok` · `corrected` · `completed_with_errors` · `tool_error` · `rejected` | `ok`; `corrected` after a fix pass; `completed_with_errors` when errors remain; `tool_error` when a critical step failed; `rejected` when triage turned the CR down (the reason is in `errors`, no design was generated). The last three exit 1 |
 | `summary` | string | The outcome in a sentence |
-| `timing` | `Timing` | When it started and how long it took |
-| `inputs` | `Inputs` | What the run was given |
-| `progress` | `Progress` | How far it got |
 | `steps` | list of `Step` | Every step, in order |
-| `diagnostics` | object | Models used, the session id, fix and review counts, PR feedback; the keys vary by stage |
 | `warnings` | list of `RunWarning` | What the run noticed without failing |
 | `errors` | list of `RunError` | Empty unless the run ended with errors |
 | `pr_comments` | list of strings or null | With `--pr`: the URLs of the comments it posted on the PR to report warnings or errors |
 | `stage` | `generate_dhf` | Always `generate_dhf` for `build plan` |
 | `artifacts` | `PlanArtifacts` | What the run changed |
 | `design_review` | `Review` or null | The design review rounds, when one ran |
-
-`Timing`:
-
-| Field | Type | Meaning |
-|---|---|---|
-| `started_at` | string | When the run started, ISO 8601 UTC |
-| `elapsed_ms` | integer | How long it took |
-
-`Inputs`:
-
-| Field | Type | Meaning |
-|---|---|---|
-| `dhf_path` | string | The `--dhf` the run used |
-| `repo_root` | string | The repository the DHF is in |
-| `pr_number` | integer or null | The `--pr` it was given, or null |
-| `revision_mode` | boolean | True when it revised from a reviewer's changes instead of generating |
-| `since_ref` | string | What the branch is compared against |
-
-`Progress`:
-
-| Field | Type | Meaning |
-|---|---|---|
-| `current_step` | string or null | The step running when the report was written, or null |
-| `completed_steps` | integer | Steps finished |
-| `total_steps` | integer | Steps in the run |
 
 `Step`:
 
@@ -266,11 +229,7 @@ The fields of what each command above answers with, generated from the models in
 | `cr_id` | string | The CR the run was for |
 | `outcome` | `ok` · `corrected` · `completed_with_errors` · `tool_error` · `rejected` | `ok`; `corrected` after a fix pass; `completed_with_errors` when errors remain; `tool_error` when a critical step failed; `rejected` when triage turned the CR down (the reason is in `errors`, no design was generated). The last three exit 1 |
 | `summary` | string | The outcome in a sentence |
-| `timing` | `Timing` | When it started and how long it took |
-| `inputs` | `Inputs` | What the run was given |
-| `progress` | `Progress` | How far it got |
 | `steps` | list of `Step` | Every step, in order |
-| `diagnostics` | object | Models used, the session id, fix and review counts, PR feedback; the keys vary by stage |
 | `warnings` | list of `RunWarning` | What the run noticed without failing |
 | `errors` | list of `RunError` | Empty unless the run ended with errors |
 | `pr_comments` | list of strings or null | With `--pr`: the URLs of the comments it posted on the PR to report warnings or errors |
@@ -293,7 +252,7 @@ The fields of what each command above answers with, generated from the models in
 | `exit_code` | integer | What it exited with in the last run; 124 when it timed out |
 | `passed` | boolean | Whether it exited 0 |
 
-`Timing`, `Inputs`, `Progress`, `Step`, `RunWarning`, `RunError`, `Review`, `ChangeSet`, `ReviewCycle` are as listed above.
+`Step`, `RunWarning`, `RunError`, `Review`, `ChangeSet`, `ReviewCycle` are as listed above.
 
 #### `build soup`
 
@@ -356,72 +315,8 @@ The fields of what each command above answers with, generated from the models in
 | Field | Type | Meaning |
 |---|---|---|
 | `result` | `passed` · `failed` · `incomplete` | `failed` when a point failed or an installed file differs; `incomplete` when a point did not run, the build has no release record or the install cannot be checked. Only `passed` exits 0 |
-| `ran_at` | string | When it ran, ISO 8601 UTC |
 | `path` | string or null | The report written; null when it could not be rendered |
-| `installation` | `InstalledFiles` | The installed files against the release |
-| `dependencies` | list of `TestedDependency` | Each dependency the release was tested with, beside the installed version; empty without a release record |
-| `environment` | `Environment` | Where it ran |
-| `requirements` | list of `ValidatedRequirement` | The result of each test point, by requirement |
-| `release` | `ReleaseRecord` or null | The release record the package carries; null in a build that is not a release |
-| `report_hash` | string | SHA-256 over the report's content, printed on the report |
 | `errors` | list of strings | Why the result is not `passed` |
-
-`InstalledFiles`:
-
-| Field | Type | Meaning |
-|---|---|---|
-| `version` | string | The installed `medharness` version |
-| `verifiable` | boolean | Whether the package's own files are in its RECORD; false for an editable install |
-| `files_checked` | integer | Files whose hash was compared with the RECORD |
-| `altered` | list of strings | Files missing or different from the RECORD; any fails the validation |
-
-`TestedDependency`:
-
-| Field | Type | Meaning |
-|---|---|---|
-| `name` | string | The package |
-| `tested` | string | The version the release's suite passed with |
-| `marker` | string or null | The environment marker of the pin, such as `sys_platform == 'win32'`, or null |
-| `installed` | string or null | The version installed here, or null |
-| `status` | `equal` · `different` · `missing` | `different` and `missing` are deviations for the user to assess; they do not fail the validation |
-
-`Environment`:
-
-| Field | Type | Meaning |
-|---|---|---|
-| `platform` | string | The operating system and its version |
-| `architecture` | string | The machine architecture |
-| `python` | string | The Python implementation and version |
-| `git` | string | `git --version`, or `not found` |
-| `ssh_keygen` | string | Where `ssh-keygen` is, or `not found` |
-| `pdf` | string | The WeasyPrint version, or why PDF rendering is not available |
-
-`ValidatedRequirement`:
-
-| Field | Type | Meaning |
-|---|---|---|
-| `id` | string | The requirement in MedHarness's own DHF, e.g. `SRS-016` |
-| `title` | string or null | Its title; null without a release record |
-| `risk` | string or null | Its risk rating; null without a release record |
-| `points` | list of `ValidationPoint` | Each of its test points |
-
-`ReleaseRecord`:
-
-| Field | Type | Meaning |
-|---|---|---|
-| `version` | string | The release the installation was built as |
-| `commit` | string | The commit the release was tagged on |
-| `evidence` | list of strings | The evidence files attached to the release's GitHub Release |
-
-`ValidationPoint`:
-
-| Field | Type | Meaning |
-|---|---|---|
-| `id` | string | The test point, e.g. `T2` |
-| `text` | string or null | What the point checks, from the release's DHF; null without a release record |
-| `cases` | list of strings | The validation cases that exercised it |
-| `status` | `passed` · `failed` · `not_run` | `not_run` when a tool a case needs is missing, or no case exercises the point yet |
-| `message` | string | Why it failed or did not run; empty when it passed |
 
 #### `init`
 
@@ -434,304 +329,15 @@ The fields of what each command above answers with, generated from the models in
 
 ---
 
-## The item format — integrating another system
-
-By default every command reads YAML files under `DHF/items/`, and that format is the simplest integration surface: a team whose requirements live in another tool exports them into it and runs the same commands. To read items from the tool directly instead, an installed adapter is chosen with `store:` in `global.yaml` — see [architecture.md](architecture.md#item-adapters). `verify changes`, `build plan` and `build code` need the files in Git and refuse another store.
-
-```yaml
-# DHF/items/03_srs/SRS-012.yaml
-id: SRS-012                       # required; the prefix decides the type
-title: Password must be at least 12 characters
-derives_from: [SYS-004]           # a link: a list of IDs, written on the child
-verification_method: [Test]
-```
-
-| Rule | |
-|---|---|
-| One file per item | Named anything ending `.yaml`; the directory under `items/` does not matter, so an export can use its own |
-| `id` | Required. Its prefix (`SRS-`) picks the doc type |
-| Fields | Only those the doc type declares. An undeclared field fails `medharness verify dhf`, naming it — declare it by overriding the doc type first |
-| Links | Fields of format `relationship` or `item_multiselect`: a list of IDs pointing up the V-model, each of a type the field's `target_types` accepts. Which are required is `required_traceability` in `global.yaml` |
-| Types | The 13 defaults, plus any `DHF/config/doc_types/<type>.yaml` of your own, which replaces the default of that code — see [configuration.md](configuration.md#changing-the-defaults) |
-
-Check an export with `medharness verify dhf`: it validates each file against its type, then the links and coverage of the design they describe.
-
-Renaming or removing a field the defaults declare is a breaking change, and the changelog says so.
-
----
-
 ## Stability
 
 What a caller may rely on:
 
-- **The five envelope keys** are stable. New keys may be added at the top level; existing ones will not be removed or change type without a major version.
-- **Exit code meanings** are stable.
+- **The five envelope keys.** New keys may be added at the top level; existing ones will not be removed or change type without a major version.
+- **Exit code meanings.**
 - **The commands and their options.** A new one is announced in the changelog; a renamed or removed one is a breaking change.
-- **The item file format**, as above.
-- **stderr, and the exact wording of `errors`, `warnings` and `summary`,** are not stable — they are written for a person.
+- **The fields of each report**, as above.
+- **The item file format**, described in [configuration.md](configuration.md#items-from-another-system).
+- **Not stable:** stderr, and the exact wording of `errors`, `warnings` and `summary`, which are written for a person.
 
 Changes to any of the stable items are called out as breaking in the changelog.
-
----
-
-## Consuming it
-
-### From a pipeline
-
-The simplest correct consumer checks exit status and lets stderr reach the log:
-
-```yaml
-- name: DHF checks
-  run: |
-    medharness --dhf DHF verify dhf --strict
-    medharness --dhf DHF verify tests --junit test-results
-    medharness --dhf DHF verify soup
-```
-
-To turn findings into annotations, read the envelope:
-
-```bash
-medharness --dhf DHF verify dhf --strict > result.json || true
-jq -r '.errors[] | "::error::\(.)"' result.json
-jq -r '.warnings[] | "::warning::\(.)"' result.json
-exit "$(jq -r 'if .passed then 0 else 1 end' result.json)"
-```
-
-### From an agent or a script
-
-Because every check answers alike, one loop covers all of them:
-
-```python
-import json, subprocess
-
-CHECKS = [
-    ["verify", "dhf", "--strict"],
-    ["verify", "tests", "--junit", "test-results"],
-    ["verify", "soup"],
-]
-
-for check in CHECKS:
-    proc = subprocess.run(["medharness", *check], capture_output=True, text=True)
-    lines = proc.stdout.splitlines()
-    if not lines:                 # the check never ran
-        raise SystemExit(f"{' '.join(check)}: {proc.stderr.strip()}")
-    result = json.loads(lines[0])
-    if not result["passed"]:
-        report(result["gate"], result["errors"])
-```
-
-An agent that only needs to read or change the DHF uses `item`, never the files: see [the section `init` writes into `AGENTS.md`](ai-workflow.md#with-the-coding-agent-you-already-use).
-
----
-
-## Command reference
-
-Generated from the CLI by `python scripts/generate_interface.py`; a test fails when it is out of date. `--help` on any command prints its full description.
-
-<!-- BEGIN GENERATED: reference — python scripts/generate_interface.py -->
-| Command | What it does |
-|---|---|
-| `item get` | Get a single DHF item by ID. Outputs JSON. |
-| `item list` | List DHF items in ID order. Outputs one JSON object per line. |
-| `item create` | Create a new DHF item. Outputs the created item as JSON. |
-| `item update` | Update fields of an existing DHF item. |
-| `item transition` | Move an item to TO_STATE, or list where it can go when TO_STATE is omitted. |
-| `item approve` | Sign a release's documents, or the approvers list. |
-| `verify dhf` | Check the DHF holds together: schema, links, cycles, coverage. |
-| `verify tests` | Check each requirement is verified by the method it declares. |
-| `verify completion` | Check a CR's record is complete and the items it changed are verified. |
-| `verify changes` | Check the branch changed the items the CR said it would. |
-| `verify impact` | Check the CR's record of its impact against the items the branch changed. |
-| `verify approval` | Check the approval log is sound and, with --release, that the release is signed. |
-| `verify soup` | Check the SOUP register matches what ships, and is not known-vulnerable. |
-| `build plan` | Draft the DHF item cascade and impact analysis for a CR, with a model. |
-| `build code` | Write the code and tests for a CR's approved design, with a model. |
-| `build release` | Build everything one release needs (IEC 62304 §9). |
-| `build approvals` | Write the approval sheet of a signed release: who approved which documents. |
-| `build validation` | Validate this installation: run the shipped validation set and write a report to file. |
-| `build soup` | Reconcile SOUP items from the project's dependency manifests. |
-| `init` | Scaffold a DHF, and the AGENTS.md coding agents read, in the current directory. |
-
-#### `medharness item get ITEM_ID`
-
-Get a single DHF item by ID. Outputs JSON.
-
-#### `medharness item list`
-
-List DHF items in ID order. Outputs one JSON object per line.
-
-| Option | |
-|---|---|
-| `--type CODE` | Filter by doc type code (e.g. SYS). |
-| `--match TEXT` | Keep items where every word of TEXT occurs, case-insensitively, in any text field. |
-| `--linked-to ID` | Keep items that link to ID or that ID links to. |
-| `--brief` | Print only id, type, title and links. |
-
-#### `medharness item create`
-
-Create a new DHF item. Outputs the created item as JSON.
-
-| Option | |
-|---|---|
-| `--type CODE` | Doc type code (e.g. SYS, SRS). [required] |
-| `--data JSON` | Item fields as a JSON object, or @FILE / - to read it from a file / standard input. [required] |
-
-#### `medharness item update ITEM_ID`
-
-Update fields of an existing DHF item.
-
-| Option | |
-|---|---|
-| `--data JSON` | Fields to update as a JSON object (merged into existing), or @FILE / - to read it from a file / standard input. [required] |
-
-#### `medharness item transition ITEM_ID [TO_STATE]`
-
-Move an item to TO_STATE, or list where it can go when TO_STATE is omitted.
-
-#### `medharness item approve`
-
-Sign a release's documents, or the approvers list.
-
-| Option | |
-|---|---|
-| `--key PATH` | The private key to sign with. Never ssh-agent: name the key. [required] |
-| `--release VERSION` | Sign the documents of this release that the key's roles own (and the release itself, for the release role). Needs the manifest `build release --write` made. |
-| `--approvers` | Instead, approve the current approvers list (DHF/config/approvers.yaml). |
-| `--statement TEXT` | What the signer states; it is signed with the approval. [default: I have reviewed the changes to these documents and approve them for release.] |
-| `--yes` | Do not ask for confirmation. |
-
-#### `medharness verify dhf`
-
-Check the DHF holds together: schema, links, cycles, coverage.
-
-| Option | |
-|---|---|
-| `--strict` | Exit non-zero when items lack downstream coverage. Without it, coverage gaps are reported as WARN only. |
-
-#### `medharness verify tests`
-
-Check each requirement is verified by the method it declares.
-
-| Option | |
-|---|---|
-| `--junit PATH` | JUnit XML results: a file, or a directory searched for *.xml (repeatable). |
-| `--strict` | Make a requirement with no declared verification_method fail. Warns by default, so a project adding the field is not blocked. |
-
-#### `medharness verify completion`
-
-Check a CR's record is complete and the items it changed are verified.
-
-| Option | |
-|---|---|
-| `--cr CR_ID` | The CR to close. [required] |
-| `--junit PATH` | JUnit XML results for the items this CR touched: a file, or a directory searched for *.xml (repeatable). |
-
-#### `medharness verify changes`
-
-Check the branch changed the items the CR said it would.
-
-| Option | |
-|---|---|
-| `--cr CR_ID` | The CR whose affected_items the branch must change. [required] |
-| `--since-ref REF` | What the branch is compared against: its changes since it left this ref. Default: the branch origin's HEAD points at, else origin/main. Needs enough history to reach the fork. |
-| `--code-path PATH` | Opt into code-change enforcement: path(s) under which at least one file must be modified. Omitting this option skips the code-change check entirely. |
-
-#### `medharness verify impact`
-
-Check the CR's record of its impact against the items the branch changed.
-
-| Option | |
-|---|---|
-| `--cr CR_ID` | The CR whose record of its impact is checked against the branch. [required] |
-| `--since-ref REF` | What the branch is compared against: its changes since it left this ref. Default: the branch origin's HEAD points at, else origin/main. Needs enough history to reach the fork. |
-
-#### `medharness verify approval`
-
-Check the approval log is sound and, with --release, that the release is signed.
-
-| Option | |
-|---|---|
-| `--since-ref REF` | What the branch is compared against: its changes since it left this ref. Default: the branch origin's HEAD points at, else origin/main. Needs enough history to reach the fork. |
-| `--release VERSION` | Also check that release VERSION is signed: every document of its manifest by the role that owns it, the release by the release role, and the manifest still matches the DHF. |
-
-#### `medharness verify soup`
-
-Check the SOUP register matches what ships, and is not known-vulnerable.
-
-| Option | |
-|---|---|
-| `--manifest PATH` | Dependency manifest to compare the register against (repeatable). Auto-discovers when omitted. |
-| `--strict` | Make an undocumented or misversioned component fail the gate. Warns by default, so a project backfilling its register is not blocked. |
-| `--offline-mode [fail|warn]` | Behaviour when osv.dev is unreachable. 'warn' keeps the gate passing for air-gapped or proxy-restricted pipelines. |
-
-#### `medharness build plan`
-
-Draft the DHF item cascade and impact analysis for a CR, with a model.
-
-| Option | |
-|---|---|
-| `--cr CR_ID` | The CR to design: its item cascade and impact analysis. [required] |
-| `--pr N` | The PR this run belongs to, in CI: revise if a reviewer asked for changes, then commit and push the result to its branch. Without it, local files change and nothing is committed. |
-| `--since-ref REF` | What the branch is compared against: its changes since it left this ref. Default: the base branch of the --pr, else the branch origin's HEAD points at, else origin/main. |
-| `--prompt` | Print the stage's instructions, with this CR's DHF context, for an agent that is already running, instead of starting a model. |
-
-#### `medharness build code`
-
-Write the code and tests for a CR's approved design, with a model.
-
-| Option | |
-|---|---|
-| `--cr CR_ID` | The CR whose approved design to implement. [required] |
-| `--pr N` | The PR this run belongs to, in CI: revise if a reviewer asked for changes, then commit and push the result to its branch. Without it, local files change and nothing is committed. |
-| `--check CMD` | A command that must exit 0 (typecheck, tests). The model is told to pass it, the harness runs it when the model is done and sends a failure back for a fix, and a run whose check still fails exits non-zero and pushes nothing. Repeatable. |
-| `--since-ref REF` | What the branch is compared against: its changes since it left this ref. Default: the base branch of the --pr, else the branch origin's HEAD points at, else origin/main. |
-| `--prompt` | Print the stage's instructions, with this CR's DHF context, for an agent that is already running, instead of starting a model. |
-
-#### `medharness build release`
-
-Build everything one release needs (IEC 62304 §9).
-
-| Option | |
-|---|---|
-| `--version VERSION` | The version being released, e.g. 1.2.0. [required] |
-| `--out-dir DIRECTORY` | Where to write the baseline, BOM, SBOM and evidence bundle. [required] |
-| `--write` | Record a REL item in the DHF and write DHF/releases/VERSION/manifest.yaml and changes.md. Happens only when every check passed; without it the DHF is not changed. |
-| `--cr CR_ID` | A CR to include (repeatable). Default: every completed CR not yet in a release. |
-| `--manifest PATH` | Dependency manifest whose packages the BOM lists beside the SOUP register (repeatable). |
-| `--junit PATH` | JUnit XML from the tests of this release: a file, or a directory searched for *.xml (repeatable). Every requirement must be verified by it. [required] |
-| `--doc-format [html|pdf]` | Format of the bundled specifications. PDF needs medharness[docs] plus cairo/pango. [default: html] |
-
-#### `medharness build approvals`
-
-Write the approval sheet of a signed release: who approved which documents.
-
-| Option | |
-|---|---|
-| `--release VERSION` | The release whose approval sheet to write. [required] |
-| `--out-dir DIRECTORY` | Where to write approval-sheet.html (or .pdf). [required] |
-| `--doc-format [html|pdf]` | Format of the sheet. PDF needs medharness[docs] plus cairo/pango. [default: html] |
-| `--since-ref REF` | What the branch is compared against: its changes since it left this ref. Default: the branch origin's HEAD points at, else origin/main. Needs enough history to reach the fork. |
-
-#### `medharness build validation`
-
-Validate this installation: run the shipped validation set and write a report to file.
-
-| Option | |
-|---|---|
-| `--out-dir DIRECTORY` | Where to write validation-report.html (or .pdf). [required] |
-| `--doc-format [html|pdf]` | Format of the report. PDF needs medharness[docs] plus cairo/pango. [default: html] |
-| `--jobs N` | Cases to run at the same time, each in a worker process; 1 runs them one after another. Default: the number of CPUs, at most 8. [x>=1] |
-
-#### `medharness build soup`
-
-Reconcile SOUP items from the project's dependency manifests.
-
-| Option | |
-|---|---|
-| `--manifest PATH` | Manifest to read (repeatable). Auto-discovers when omitted. |
-| `--from-command CMD` | External tool emitting NDJSON components (repeatable). |
-
-#### `medharness init`
-
-Scaffold a DHF, and the AGENTS.md coding agents read, in the current directory.
-<!-- END GENERATED: reference -->

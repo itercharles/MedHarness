@@ -43,11 +43,26 @@ def _crashes(root: Path) -> None:
 def _run(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, cases: list[Case], *args: str, jobs: int = 1):
     """Cases built by a test run in this process: a worker process finds its case in the shipped set."""
     monkeypatch.setattr(validation, "CASES", cases)
+    report = _spy_on_the_report(monkeypatch)
     out = tmp_path / "report"
     result = CliRunner().invoke(main, ["build", "validation", "--out-dir", str(out), "--jobs", str(jobs), *args])
-    report = json.loads(result.stdout)
-    ValidationReport.model_validate(report)
-    return result, report, out
+    answer = json.loads(result.stdout)
+    ValidationReport.model_validate(answer)
+    assert answer == {key: report[0][key] for key in ("result", "path", "errors")}
+    return result, report[0], out
+
+
+def _spy_on_the_report(monkeypatch: pytest.MonkeyPatch) -> list[dict]:
+    """The command prints only the verdict; what it found is in the report file, and in what it was built from."""
+    seen: list[dict] = []
+    real = validation.build_validation
+
+    def build(*args, **kwargs):
+        seen.append(real(*args, **kwargs))
+        return seen[-1]
+
+    monkeypatch.setattr(validation, "build_validation", build)
+    return seen
 
 
 def _points(report: dict) -> dict[str, tuple[str, str]]:
@@ -166,9 +181,10 @@ def test_a_case_for_a_point_the_release_does_not_define_fails(tmp_path, monkeypa
 @pytest.mark.dhf_testing("T3")
 def test_it_never_reads_the_dhf_it_is_given(tmp_path, monkeypatch) -> None:
     monkeypatch.setattr(validation, "CASES", [Case("a", "SRS-034", ("T3",), _nothing, _passes, tools=())])
-    result = CliRunner().invoke(main, ["--dhf", str(tmp_path / "no-such-dhf"), "build", "validation",
-                                       "--out-dir", str(tmp_path / "out"), "--jobs", "1"])
-    assert json.loads(result.stdout)["requirements"][0]["points"][0]["status"] == "passed"
+    report = _spy_on_the_report(monkeypatch)
+    CliRunner().invoke(main, ["--dhf", str(tmp_path / "no-such-dhf"), "build", "validation",
+                              "--out-dir", str(tmp_path / "out"), "--jobs", "1"])
+    assert report[0]["requirements"][0]["points"][0]["status"] == "passed"
     assert not (tmp_path / "no-such-dhf").exists()
 
 

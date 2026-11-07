@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import re
 import sys
+import time
 from pathlib import Path
 
 import click
@@ -15,26 +16,14 @@ from medharness.cli.output import emit
 from medharness.services.verify_dhf import missing_cr_fields
 
 
-def _format_summary(stage_label: str, verb: str, cr_id: str, result: dict) -> str:
-    """Compose the human-readable stderr summary for CI generate-* commands.
-
-    Surfaces client-facing outcome, fix attempts, residual error count,
-    elapsed time, and changed-item / changed-file counts when present.
-    """
-    diagnostics = result.get("diagnostics") or {}
+def _format_summary(stage_label: str, verb: str, cr_id: str, result: dict, started: float) -> str:
+    """The readable stderr line of `build plan` and `build code`: outcome, errors left, time, what changed."""
     artifacts = result.get("artifacts") or {}
-    timing = result.get("timing") or {}
-    details = [
-        f"outcome: {result.get('outcome', 'unknown')}",
-    ]
-    if diagnostics.get("fix_attempted"):
-        details.append("fix attempted")
+    details = [f"outcome: {result.get('outcome', 'unknown')}"]
     err_count = len(result.get("errors") or [])
     if err_count:
         details.append(f"errors: {err_count}")
-    elapsed_ms = timing.get("elapsed_ms")
-    if elapsed_ms is not None:
-        details.append(f"{elapsed_ms} ms")
+    details.append(f"{int((time.perf_counter() - started) * 1000)} ms")
 
     # The branch's change set against origin/main, across every run — not this run's.
     for label, bucket in (
@@ -144,10 +133,11 @@ def register(main):
             from medharness.services.prompt_assembly import _assemble_generate_dhf_prompt
             _print_prompt(_assemble_generate_dhf_prompt, cr_id, dhf)
             return
+        started = time.perf_counter()
         result = generate_dhf(cr_id, dhf, pr_number=pr_number, since_ref=since_ref)
         emit(result)
         click.echo(
-            _format_summary("DHF cascade", "revised" if pr_number else "generated", cr_id, result),
+            _format_summary("DHF cascade", "revised" if pr_number else "generated", cr_id, result, started),
             err=True,
         )
         for error in result.get("errors") or []:
@@ -195,9 +185,11 @@ def register(main):
             _print_prompt(_assemble_develop_prompt, cr_id, dhf, checks=checks,
                           since_ref=resolve_since_ref(dhf.resolve().parent, since_ref))
             return
+        started = time.perf_counter()
         result = generate_code(cr_id, dhf, pr_number=pr_number, checks=checks, since_ref=since_ref)
         emit(result)
-        click.echo(_format_summary("Implementation", "revised" if pr_number else "generated", cr_id, result), err=True)
+        click.echo(
+            _format_summary("Implementation", "revised" if pr_number else "generated", cr_id, result, started), err=True)
         for error in result.get("errors") or []:
             click.echo(f"  FAIL ({error['field']}): {error['issue']}", err=True)
             click.echo(f"    Fix: {error['fix']}", err=True)
@@ -322,7 +314,7 @@ def register(main):
         from medharness.services.validation import build_validation as run, default_jobs  # noqa: PLC0415
 
         report = run(out_dir, doc_format, jobs or default_jobs())
-        click.echo(json.dumps(report))
+        click.echo(json.dumps({key: report[key] for key in ("result", "path", "errors")}))
         for err in report["errors"]:
             click.echo(f"{'FAIL' if report['result'] == 'failed' else 'WARN'} [validation] {err}", err=True)
         points = [p for r in report["requirements"] for p in r["points"]]
@@ -337,10 +329,8 @@ def register(main):
     @click.option("--manifest", "manifest_paths", multiple=True,
                   type=click.Path(exists=True, dir_okay=False, path_type=Path),
                   metavar="PATH", help="Manifest to read (repeatable). Auto-discovers when omitted.")
-    @click.option("--from-command", "extra_commands", multiple=True, metavar="CMD",
-                  help="External tool emitting NDJSON components (repeatable).")
     @click.pass_context
-    def build_soup(ctx, manifest_paths, extra_commands) -> None:
+    def build_soup(ctx, manifest_paths) -> None:
         """Reconcile SOUP items from the project's dependency manifests.
 
         IEC 62304 §8.1.2 wants the SOUP a release ships to be the SOUP it
@@ -350,10 +340,7 @@ def register(main):
         """
         from medharness.services.soup_sync import sync_soup_items
 
-        result = sync_soup_items(
-            ctx.obj["dhf"], list(manifest_paths),
-            extra_commands=list(extra_commands),
-        )
+        result = sync_soup_items(ctx.obj["dhf"], list(manifest_paths))
         click.echo(json.dumps(result))
         written = (f" ({len(result.get('items_created', []))} created, "
                    f"{len(result.get('items_updated', []))} updated)")

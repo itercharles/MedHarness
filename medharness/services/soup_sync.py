@@ -16,8 +16,7 @@ Supported manifest formats
 | package-lock.json   | npm        | v2/v3 lockfile; pinned             |
 | pnpm-lock.yaml      | npm        | lockfile v6+; direct dependencies  |
 
-Any other ecosystem (Go, Cargo, Maven, ...) goes through ``--from-command`` or a
-``command`` source: one JSON object per line, ``{name, version, ecosystem}``.
+Any other ecosystem (Go, Cargo, Maven, ...) goes through a ``command`` source: one JSON object per line, ``{name, version, ecosystem}``.
 
 Extension mechanisms
 --------------------
@@ -529,7 +528,6 @@ def collect_manifest_packages(
     dhf: Path,
     manifest_paths: list[Path] | None = None,
     *,
-    extra_commands: list[str] | None = None,
     use_sources_file: bool = True,
 ) -> tuple[list[dict], list[str], list[str]]:
     """Every package the project's manifests resolve, deduplicated by name.
@@ -554,17 +552,8 @@ def collect_manifest_packages(
         except Exception as exc:
             errors.append(f"Failed to parse {path}: {exc}")
 
-    # 2. External commands
-    for cmd in (extra_commands or []):
-        try:
-            pkgs = _run_external_command(cmd, cwd=project_dir)
-            packages.extend(pkgs)
-            manifests_parsed.append(f"command:{cmd[:40]}")
-        except Exception as exc:
-            errors.append(f"Command failed '{cmd}': {exc}")
-
-    # 3. soup-sources.yaml (when no explicit sources given)
-    if not manifest_paths and not extra_commands:
+    # 2. soup-sources.yaml (when no explicit sources given)
+    if not manifest_paths:
         if use_sources_file and config_file(dhf, "soup-sources.yaml"):
             src_pkgs, src_errors = load_soup_sources(dhf, project_dir)
             packages.extend(src_pkgs)
@@ -572,7 +561,7 @@ def collect_manifest_packages(
             if src_pkgs:
                 manifests_parsed.append("soup-sources.yaml")
         else:
-            # 4. Auto-discovery
+            # 3. Auto-discovery
             for manifest_path in discover_manifests(project_dir):
                 try:
                     pkgs = _dispatch_parser(manifest_path)
@@ -600,23 +589,20 @@ def sync_soup_items(
     dhf: Path,
     manifest_paths: list[Path],
     *,
-    extra_commands: list[str] | None = None,
     use_sources_file: bool = True,
 ) -> dict:
     """Parse manifests, diff against DHF SOUP items, and write the changes.
 
     Source priority (highest wins on name collision):
     1. Explicit ``manifest_paths``
-    2. ``extra_commands`` (--from-command)
-    3. ``DHF/config/soup-sources.yaml`` (when ``use_sources_file=True``)
-    4. Auto-discovery of manifest files in the project root (when all above
+    2. ``DHF/config/soup-sources.yaml`` (when ``use_sources_file=True``)
+    3. Auto-discovery of manifest files in the project root (when all above
        are empty and no sources file is present)
 
     Returns a structured result dict with outcome and counts.
     """
     packages, manifests_parsed, errors = collect_manifest_packages(
-        dhf, list(manifest_paths),
-        extra_commands=extra_commands, use_sources_file=use_sources_file,
+        dhf, list(manifest_paths), use_sources_file=use_sources_file,
     )
 
     soup_items: list[dict] = []

@@ -100,7 +100,7 @@ what. See [ADR-004](docs/adr/ADR-004-signed-approvals.md).
   step is required instead.
 - If a change affects documented behavior, update the relevant documentation in
   the same commit or PR — docs and code ship together.
-  The command reference, gate table and report fields in `docs/interface.md` are
+  The command list, gate table and report fields in `docs/interface.md` are
   generated from the CLI and from the result models in `medharness/results.py`:
   after changing a command, its options or help text, or what it answers with,
   run `python scripts/generate_interface.py` (a guard fails the build otherwise).
